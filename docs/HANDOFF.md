@@ -151,6 +151,58 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
+最終更新 第235セッション＝**第234 が「移植から始められる唯一の項」と名指した残債は*実在しなかった*。§2 の ledger 引用を全数突き合わせ、stale を 5 件直し、二度と静かに腐らないよう番人を建てた**（3 file＝新テスト 3 本・`BezierBow` の remark・HANDOFF §1/§2E/§2H/§3）。
+**① 何が起きていたか**：第234 は末尾の委任「有利なら着手／不利なら着手するな」に対し §2 の 2000 行を triage し、**「⑴ 移植から始められる項は 1 つだけ＝符尾の attachment X が黒玉固定（§2 E・▶ 先頭）」**と書いて断った。**その項は 2026-08-03＝起票と同じ日に閉じている**（`LayoutUtilities.StemAttachX` は `noteValue`＋`NoteheadStyle` を取り `GlyphMetrics.GetNoteheadStemAttachment` に訊く・観測者 `StyledHeadStemAttachmentTests`・台帳 `stem.up.right-edge.half-head` は **residual 0**、`why` は "CLOSED by…"）。**第234 の断り方は健全だった（文脈の重なりで決める＝骨として残す価値がある）が、選別の入力が 157 便前から嘘だった。**
+**② 5 件の stale は全部同じ形**：**棚が「着手根拠」として現在形で挙げている数を、台帳がとっくに 0 にしている**——⑴ 符尾 attachment X（−0.073200000 → 0・2026-08-03）⑵ タイの列アウトライン（`tie.width.seconds.upper` +0.888699999 → −1e-09・`TieChordOutline` が移植済み）⑶ courtesy 調号（`courtesy.meter.barline-to-cancellation` −0.2 → 0・ユーザー承認済みの移植）⑷ grace の接近（`grace.column.approach` +0.850449 → 0・`SpringIntoGraceRun`）⑸ `page.stretched.first-staff-refpoint`（−0.000042 → −4.46e-07）。**加えて `Bezier` 型の ⒝ 債務も stale**（`Bezier.cs` は実在し 8 ファイルが読む・論拠に挙がっていた `SlurScoringProblem.InterpolateSlurY` は消滅）——**その出所は `BezierBow` の remark が "this engine has no Bezier type at all" と書き続けていたこと**なので**コード側も同じ便で直した**。
+**③ 番人＝`HandoffLedgerCitationTests`（3 本）**：HANDOFF.md の `<!-- ledger: NAME = VALUE -->` タグを全部読み、⑴ **名前が台帳に在るか**（typo は「検証済みに見えて永久に赤くならない」ので無いより悪い）⑵ **数が台帳の残差と一致するか**（許容差 1e-06）⑶ **タグの数が減っていないか**（通す最安の手はタグを消すこと＝ratchet・現在 23 点）。**タグは「その一節を人が読んだ」記録**なので、**読まずにタグだけ動かすのが drift** だと失敗メッセージ自身が言う。⚠️ **HANDOFF-ARCHIVE.md は対象外**——逐語の歴史は当時の数を持っているのが正しい。
+**④ 証明**：**毒を 2 つ当てて赤を見た**（§2 の掟「0 冊を証拠に引く前に毒を当てる」）——タグを stale 当時の `-0.073200000` に戻すと **"THE POINT IS NOW EXACT — the shelf is probably describing a closed defect" を行番号つきで出す**（＝**第234 の triage を救ったはずのメッセージ**）、名前を 1 文字崩すと未知名として `HANDOFF.md:539` を名指す。engine には 1 行も触っていない（`BezierBow` は doc comment のみ）ので**出力は構成上不動**＝台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2 完全不動**・**snapshot 222 枚不動**・**追跡コーパス 572 冊不動**。
+
+★ **開始時裏取り**: HEAD `84ed2309`（第234 の triage handoff）・未 push 29・未追跡 0/木 0・Windows suite **5796/0/4**・WSL **5796/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2・追跡コーパス 572 冊・Core 0 警告＝**前便の閉幕数と全一致**（⚠️ 前便 §1 は「未 push 28」と書いたが、**その行を書いたあとに ⑸' の triage handoff を 1 本積んでいる**ので 29 が正しい＝§0 の「両端を書く」が効いた例）。
+終了時: **未 push 30（push はユーザー＝RULES §5.1）**＝本便 1 本・未追跡 0/木 0・suite **Windows 5799/0/4・WSL 5799/0/4＝両 OS 完全緑（開始比 +3＝`HandoffLedgerCitationTests`）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊（1 冊も触っていない）**・Core 0 警告。
+
+★ **この便の値段**:
+
+| 便 | 何が動いたか | 射程 |
+|---|---|---|
+| ① §2 の ledger 引用 23 点を全数突き合わせ・stale 5 件＋⒝ 債務 1 件を訂正 | HANDOFF §1／§2E（符尾・タイ・Interval・Bezier）／§2H（courtesy・grace）／§2D（refpoint 2 件）／§3 ⑵ | **prose のみ**・engine 0 接触 |
+| ② 番人 `HandoffLedgerCitationTests` 3 本＋`BezierBow` remark 訂正 | 新テスト 3 本（名前・数・ratchet）・doc comment 1 件 | **出力は構成上不動**（doc comment のみ）・両 OS 完全緑 |
+
+- **⑸ ★★★ 次に触るなら＝残債（第234 の一覧から stale を落としたもの）**: 言語仕様の宿題は §1.2 リネーム（ユーザーが MSVS で）だけ／**名指し穴**＝⒤ exporter の paper 未輸出（**需要待ち**＝`LilyPondExporter.cs:662` が「no tracked book writes paper{} as of 2026-08-23」と書いており、**第234 の importer が paper を*出す*ようになったので、MusicXML → .lys → 双子の往復を測る日が来たらここが最初に効く**）／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示・着手はユーザー決定から）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・非ペア ToCoda の reserve≠draw・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示・実譜の `%` 記号。Marketplace は PAT 待ちのまま（第220 ①）。
+  ⚠️ **⑴ ゲート無しで移植から始められる項は、数え直しても 0 件**（第234 の答えは「1 件」だったが、その 1 件が幻だった）。**⒣・condensedStaff・skyline 参加者列挙・▶ perf ⒜ は自分で「ユーザー決定から」「専用の便」と書いてある**／**小粒 7 件は §2 に本文が無い＝起票から**（§5.0 の 1 番）。
+  ⚠️ **⑵ 実コードで開いていることを確かめた項**（本便で裏取り済み・stale ではない）: **第97 の二重走査**（`StaffAccidentalColumns.cs:103` と `ElementCoordinator.cs:131` が同じ `CalculateVoiceOffsets` を回す＝健在・+0.3% でコスト対効果の判断が要る）／**§2 E の未移植 LP 計算**（volta shorten・hairpin niente・`ledger_positions` は綴りが 1 つも無い＝伝聞どおり未移植）／**courtesy 群の第131 起票分**（「拍子の右側 0.455 ss」＝点が 1 つも無いので起票から）。
+
+> ## ★★★ 骨 1＝**規則が在るのに守られないなら、足りないのは規律ではなく機械**
+> ⚠️⚠️ **RULES §5.1 は既にこう書いてある**——「**閉じる commit で、その項目を名指している
+> §1・§2 の行も同じ commit で消す**」「**消し忘れのコストは『読む時間』ではなく
+> 『セッション 1 本の方向』**」。しかも**その条文は 2026-07-31 に第54 が同じ穴に落ちた実例から
+> 書かれている**（閉じた項を ▶ に格上げして着手した）。**規則は正しく、実例つきで、5 年分の
+> 語彙で書かれていて、それでも 5 件が平均 150 便生き延びた。**
+> ⇒ ★★★ **差は機械の有無だった**: 台帳の残差は `LpGeometryLedgerTests` が突き合わせるので
+> **0 にする以外の選択肢が無い**が、**同じ量を綴った棚の prose は誰も突き合わせない**
+> ——§2 A の主題（同じ量が 2 か所）が、**片方にだけ機械が付いている**形で文書に出ていた。
+> ★★ **判定法**: **同じ規則を 2 回以上破ったら、条文を強くするのをやめて計器を書く。**
+> 条文を強く書き直すのは「次は気をつける」の別綴りで、**当repo の記録では 1 度も効いていない。**
+
+> ## ★★★ 骨 2＝**triage の結論より、triage が読んだ入力の鮮度を先に疑う**
+> 第234 は 2000 行を丁寧に選別し、⑴⑵⑶ と番号を振り、断る理由まで一般化して書いた——
+> **選別の質は高く、入力が腐っていた。** 手間をかけた分だけ結論は確からしく見える。
+> ⚠️ **§0 は「stale を毎セッション複数踏む」と 7 例ぶん書いてあるのに、triage 自身には
+> 裏取りの手順が無かった**（裏取りは §0 の*数*＝HEAD・テスト数・台帳の総和にしか掛かっていない）。
+> ⇒ ★★ **一般化**: **裏取りの対象は「引き継がれた数」だけでなく「引き継がれた*仕事の一覧*」。**
+> **着手を決める前に、その項の falsifier を 1 つ引く**——本便はそれを 1 コマンドでやった
+> （台帳の `residual` と `why` を読む・約 10 秒）。**2000 行の選別より安い。**
+
+> ## ★★ 骨 3＝**残差を「名前の付いた 1 量」まで分解できたら、そこで止めて別の点に回す**
+> タイの列アウトラインは **+0.888699999 → −0.073200001** で止めて開けたまま置かれた——
+> 残りが「符尾の attachment が 1 量ぶん左」と*名指せた*から。そして**符尾の点を閉じた瞬間、
+> タイのコードを 1 行も触らずに −1e-09 へ落ちた**（タイの右端は符尾の引き戻しが持つ）。
+> ⇒ **分解できている残差は、別の場所で閉じたときにひとりでに返ってくる。**
+> **分解できないまま調整すると、その調整が次の欠陥になる**（§5.0 の「調整せず名指す」の実例）。
+
+---
+
+## 以下は第234セッションの経緯
+
 最終更新 第234セッション＝**残債 ⒥「MusicXML importer の page-layout → paper 写像」を閉じた（`7c372aef`・4 file＝importer 3 本＋新テスト 9 本・委任「有利なら着手」→着手＝直近 2 便が建てた paper の自然な続きで、ユーザー決定待ちの項が 1 つも要らない唯一の残債だった）**。`<defaults><page-layout>` が emit ヘッダの `paper { }` になる——paperWidth/Height＋余白 4 つ・**mm 綴り**で、**書くのは source が述べた key だけ**（欠けは paper block 自身の a4 既定に任せる）。
 **① 橋は reader が一人で持つ**：`<scaling>`（M mm ＝ T tenths）が tenths→物理単位の**唯一の**換算なので、`ImportPaper` は mm を運び **serializer は tenth を見ない**。mm は 2 桁丸め（1 tenth ≈ 0.18mm＝source 自身の解像度より細かい・1200 tenths は `210mm` と読み戻せる）。scaling 無しの page-layout は**推測換算せず drop＋warning**（importer の契約「never emitted wrong」）。
 **② 写せないものは全部 report で名指す**：⑴ odd/even の余白が割れたら odd 採用を宣言 ⑵ 単独 `type="odd"`（even は**鏡映**）は左右不等のときだけ警告（等しければ鏡映＝恒等で沈黙）⑶ **staff サイズ違い（Lily# は knob 非搭載＝GRAMMAR 2.5「staff space は単位そのもの」）は「整数 pt 解像度」で読む**——Lily# の 20 TeX pt＝19.93 DTP pt と MusicXML 常用既定 7.05556mm/40tenths＝20.00 DTP pt は**両方「20pt」に丸まる**（0.4% は TeX 対 DTP の*綴り差*でありサイズ選択ではない）ので沈黙・24pt 大譜面は「about 24pt」と名指し＋**ページは述べられたまま採用**（page-as-stated＋warning が唯一の正直な組合せ）。
@@ -188,61 +240,6 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 > サイズ差だけ warning で名指す**のが唯一の正直な組合せ。第232 骨 4（exporter の
 > 「動かす量なら黙らず warning」）の**輸入側の鏡**＝方向が逆でも規則は同じ
 > 「表せない量は、黙って近似せず名前を付けて手渡す」。
-
----
-
-## 以下は第233セッションの経緯
-
-最終更新 第233セッション＝**fonts/paper の名前付き宣言と score 内参照＋部分上書きを実装し（ユーザー発案 → 設計往復で推奨案を承認 → 実装だけの便）、続き便で `size`（紙名プリセット・jisb5 込み）を実装した**。意味論の決定 3 つ＝⑴ **参照は無名既定を置換**（隠れた 3 層チェーンを作らない）⑵ **patch は「名前付き block の末尾に書いたのと同じ」**＝同キーは後勝ち・**層またぎの重複 warning は出さない**（上書きが目的）⑶ **narrower-wins は出所不問**＝house の role 束縛は score の group 上書きに勝つ（**意図した驚き・名指しで pin**＝`TheNarrowerSpellingWins_WhicheverBlockItCameFrom`）。
-**① 形（GRAMMAR §2.4 末尾の注記・§2.5・§7 ScoreItem）**：top-level `fonts NAME { }`／`paper NAME { }`＝**宣言**（単独では何も束ねない・未参照は warning）・score 内 `fonts NAME [{ patch }]`＝**参照＋部分上書き**。node は 1 形（`NameToken` 追加・**位置が宣言/参照を決める**＝title の file/score と同じ構造的文脈）。無名 block は従来どおりファイル既定で挙動完全不変。
-**② 配管は HeaderOverrides の完全鏡**：`RenderSpec.FontsRef/PaperRef` → collector の `FontsOverride/PaperOverride` → **定義 walk の後に解決して「解決値を `_meta` に置く」**——増分 gate（`MetaMatchesShifted`）は `_meta` を比べるので、**named block の中身の編集が自動的に recollect を強制する**（cache キーの追加ゼロで正しい）。reader は `TryResolve`（未知名の文の ONE HOME）＋`ReadReference`（merge＝**entry 連結**——builder の dict 代入と既存の後勝ち・narrower-wins が全部面倒を見るので、**新しい解決規則をひとつも書いていない**）。
-**③ 診断は fonts LYS8009〜8014／paper LYS9007〜9012 の対**（未知名〈宣言名を列挙〉・重複名 error・未参照 warning・top-level 名前付き無 block・score 内無名・1 score 内重複参照 warning 後勝ち）。DuplicateGlobalSetting は**無名のみ**が対象に。**形エラーの anchor は語の上に置かない**（`score { fonts }` は名前が立つ位置に報告——DocKeywordListTests の機械が「拒否された語」と「引数不足の枝」を span で区別するため。この機械は production・stray message・**span の置き場**の 3 点を同時に要求する）。
-**④ LSP**：score 内 `fonts `/`paper ` → **宣言名補完**（`GetDeclaredNameCompletions` の道・score item 一覧にも 2 項追加）・named block 内のキー補完は **Prefix 検出**（part block と同じ器＝`fonts house {` は Name=house/Prefix=fonts）。tmLanguage は begin に optional name（`entity.name.section`）。docs 3 本更新。
-**⑤ 証明**：lp-regression **A/B 再レンダ 0/81**・**572 冊 `lysc check` 新診断 0**（exit 非零は既存 3 probe のみ）・台帳 **566 点完全不動**・snapshot **0 枚**・suite **+15＝5776/0/4**（新テスト＝`NamedBlockReferenceTests` 15 本：置換・merge・層またぎ pin・E2E 2 score 2 紙幅・診断全種・round trip）。
-**⑥ 続き便＝`size`（`8cde820a`・13 file）**：`paper { size b5 }`＝**紙名 1 語で幅・高さ・余白 4 つ**。余白は **LP の `set-paper-dimensions` の式そのまま**（既定余白 × a4 比・横＝幅比／縦＝高さ比・**整数 mm へ round**＝Guile の half-to-even＝`Math.Round` 既定）→ 6 桁 mm→ss。**`size a4` は恒等**（pin）。表は **LP の documented-paper-alist 丸写し＋`jisb5`（182×257・Lily#-own・ユーザー指示）**＝`PaperSizes.cs` が唯一の家。**綴りは bare が正典**（`size jisb5`——**最初 quoted で書いたのをユーザーレビューが 2 度指して直させた**。閉じた語彙の値は裸が家風＝clef/tuning/instrument と同列）。`b5`/`17x11`/`2a0` は字句が割れるので **walker が「size キーの後ろの隣接 run」を 1 語に戻す**（§8.1 の接着 run の器・語彙非依存）。**引用符は空白入り名の escape**（`size "ansi a"`＝lyrics の規則・単語名の引用も受理）。**KEPT DIVERGENCE 1 つ**＝LP は set-paper-size より前の左右余白だけ生かし上下は潰す非対称——移植せず **block 内は常に後勝ち** の 1 規則（ApplySize の remark と GRAMMAR に明記・pin 両方向）。診断 LYS9013（未知名＝表全列挙）。証明は⑤と同じ 3 点を取り直し＝**A/B 0/81・572 冊 新診断 0・snapshot 0**・suite **+11＝5787/0/4**。
-
-★ **開始時裏取り**: HEAD `1e3847eb`（第232 の閉幕 handoff・§1 と一致）・未 push 22・未追跡 0/木 0・Windows suite **5761/0/4**・WSL **5761/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2・追跡コーパス 572 冊・Core 0 警告＝**前便の閉幕数と全一致**。
-終了時: **未 push 26（push はユーザー＝RULES §5.1）**＝本セッション 4 本（named 実装／handoff／`8cde820a` size／この行の handoff）・未追跡 0/木 0・suite **Windows 5787/0/4・WSL 5787/0/4＝両 OS 完全緑（開始比 +26＝named 15＋size 11）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊（1 冊も触っていない）**・Core 0 警告。
-
-★ **この便の値段**:
-
-| 便 | 何が動いたか | 射程 |
-|---|---|---|
-| ① 名前付き fonts/paper＋score 参照・部分上書き一式 | parser 2 本（名前＋inScore）・NameToken・reader の TryResolve/ReadReference・RenderSpec→collector 配線・診断 12 本・validator 2 本の名前層・LSP・tmLanguage・docs 3 本・新テスト 15 本 | **既存本の出力ゼロ移動を再証明**（A/B 0/81・台帳不動・snapshot 0・572 冊 check 新診断 0）・両 OS 完全緑 |
-| ② `size` 紙名プリセット（`8cde820a`・13 file） | `PaperSizes.cs`（LP 表丸写し＋jisb5）・walker の接着 run 値・reader の ApplySize（LP の余白 scale 式）・LYS9013・補完 2 context・tmLanguage・docs 3 本・新テスト 11 本 | 同じ 3 点証明を取り直し（A/B 0/81・572 冊 新診断 0・snapshot 0）・両 OS 完全緑 |
-
-- **⑸ ★★★ 次に触るなら＝残債**: 言語仕様の宿題は §1.2 リネーム（ユーザーが MSVS で）だけ／**名指し穴**＝⒤ exporter の paper 未輸出（named 参照も同じ warning が受ける・paper を書く本が生まれて probe が要る日に）・⒥ MusicXML importer の page-layout → paper 写像（未起票のまま）／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・非ペア ToCoda の reserve≠draw（第227 起票・症状未観測なので点が先）・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示・実譜の `%` 記号（audit §8.1 ②・未起票のまま）。Marketplace は PAT 待ちのまま（第220 ①）。
-
-> ## ★★ 骨 1＝**層を足すときは、新しい規則ではなく「既存の 1 規則に足し込める表現」を探す**
-> merge を「entry 列の連結（宣言→patch の順）」に落とした瞬間、後勝ち・narrower-wins・
-> builder の dict 代入という既存機構が全部面倒を見て、**新しい解決規則をひとつも書かずに済んだ**
-> （15/15 一発緑の主因）。対案の「score 層が幅によらず勝つ」は解決規則が 2 軸になる——
-> 設計往復でそこまで畳んで承認を取ってから書いたので、実装は器だけだった（第232 骨 1 の続き）。
-
-> ## ★★ 骨 2＝**score item を足すときは、エラーの anchoring から設計する**
-> DocKeywordListTests の機械は「production に載る・stray message が名指す」だけでなく
-> **「引数不足のエラーが*語の上*に立たない」**を要求する（`IsStrayInsideAScore` は span 重なりで
-> 「拒否された語」と「枝はあるが引数が無い」を区別する）。`score { fonts }` の名前欠落を
-> 語の上に報告していたら、機械は fonts を「score が拒む語」と数え、production に載せることと矛盾した。
-> ⇒ **新 item の shape エラーは keyword の後ろ（引数の立つ位置）に anchor する**——staff の欠落と同じ規約。
-
-> ## ★★ 骨 3＝**per-score 状態は「解決済みの値」を比較面（_meta）に置く**
-> 参照の解決を _meta の外でやると、named block の編集が増分の再収集を起こさない穴になる。
-> HeaderOverrides と同じ道で **walk の後に解決し、解決値を _meta に置いた**ので、
-> `MetaMatchesShifted` が**無料で**正しくなった（cache キーの追加ゼロ）。
-> ⇒ **キャッシュ等値の面には「参照」ではなく「解決結果」を置く**——参照を置くと参照先の変更が見えない。
-
-> ## ★★★ 骨 4＝**値の綴りは 3 分類で決める——「構文の連なり」「語彙値 1 語」「自由テキスト」**
-> `size` を最初 quoted（`size "b5"`）で書き、**ユーザーレビューが 2 問（「bare にすべきでは」
-> 「`ds al coda` は空白入りでも裸なのに一貫しているか」）で正させた**。整理して家訓になった:
-> ⑴ **予約語の連なり**（`ds al coda`・`as lines 3`）＝各語が文法の終端記号・production が
-> 構造を与える → 裸。⑵ **語彙値**（clef/tuning/instrument/size）＝表引きの 1 値スロット →
-> **裸 1 語**（字句が割れる名前は*隣接 glue*で 1 語に戻す＝語彙非依存）。⑶ **自由テキスト**
-> （title・フォント名・表示名）＝引用符。**空白入りの語彙名だけ引用符に落ちる**（lyrics の
-> 「裸で書けない音節は引用符」と同じ escape）——空白名を裸で受けると**トークン消費量が語彙に
-> 依存**し、「entry の延長は構造だけで決まる」という block 設計の背骨が折れる。
-> ⇒ **quoted を選びたくなったら、それが ⑶ である証拠を先に言う**（LP が引用符でも、それは
-> Scheme の都合であって設計論拠にならない——今回それを論拠に使いかけた）。
 
 ---
 
@@ -535,15 +532,22 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   「per-walk の whitelist は drift する」と書いていて、その通りに drift していた。
   ⇒ **▶ ⑵（cue 混在列の packing）はこれで解禁**——cue と原寸が 1 つの列に立つ綴りが
   書けるようになった（踏む対が作れる）。
-- ★★★ **符尾の attachment X が「符頭ごと」でなく「黒玉固定」**（2026-08-03・第77セッション。
-  **測って名指しただけ・未修正**・▶ の先頭）。`LayoutUtilities.StemAttachX` は
-  `NoteheadBlackStemAttachment.X` を**符頭によらず**返す。LP は**符頭ごとの ink 右端 − thickness/2**
-  （実測 6 桁一致: 黒玉 1.304200 − 0.065 ／ 半玉 1.377400 − 0.065）。
-  ⇒ **半音符の上向き符尾は 0.073200 左**。⚠️ ★★ **これは「綴りが 2 つ」ではなく「house が 1 つ
-  足りない」型**——`MetronomeMarkGeometry.StemAttachment` は**同じ知識を拍単位で選び分けている**
-  ので、**engine は答えを持っていて 1 か所だけが訊いていない**。
-  ★ **対はもう開いた**（`97737c2f`）: `stem.up.right-edge.{half,black}-head`＝発散 −0.073200000 と
-  **exact な対照**。⇒ **次は移植そのものから始められる**（▶ の先頭）。
+- ✅✅ ★★★ **閉じた（2026-08-03・起票と同じ日）。符尾の attachment X は符頭ごとになった。**
+  <!-- ledger: stem.up.right-edge.half-head = 0 -->
+  <!-- ledger: stem.up.right-edge.black-head = 0 -->
+  起票時の姿は「`LayoutUtilities.StemAttachX` が `NoteheadBlackStemAttachment.X` を**符頭によらず**
+  返す／LP は**符頭ごとの ink 右端 − thickness/2**（黒玉 1.304200 − 0.065 ／ 半玉 1.377400 − 0.065）
+  ⇒ **半音符の上向き符尾が 0.073200 左**」。**予測を先に書いてから測り、9 桁で着地した**
+  （`stem.up.right-edge.half-head` −0.073200000・対照 `black-head` 0）。
+  **修理は house に `noteValue` を足して `GlyphMetrics.GetNoteheadStemAttachment` に訊かせただけ**
+  ——`scm/define-grobs.scm:2608` が宣言する callback（LP は**頭に訊く**＝`note-head.cc:201-213`）の
+  移植で、**1 つの数が形ごとの問いの代わりをしていた**のが正体。観測者 `StyledHeadStemAttachmentTests`。
+  ⚠️ **対は捨てていない**——**両側 exact の恒等対**になったので、**符尾の x を動かす何かが入った瞬間に
+  第2の計器へ変わる**（§5.0）。⚠️ **全音符だけは意図的に未閉**（LP は不可視符尾を中心に置く
+  ＝`stem.cc:1063-1064`・**描画側が全部 `noteValue >= 2` で門番するので点も観測者も無い**）。
+  ★★ **残った教訓**（起票時の読みがそのまま正しかった）: **これは「綴りが 2 つ」ではなく
+  「house が 1 つ足りない」型**——`MetronomeMarkGeometry.StemAttachment` が同じ知識を拍単位で
+  選び分けていたので、**engine は答えを持っていて 1 か所だけが訊いていなかった**。
 - ★★★ **符尾の長さに綴りが 3 つあり、cue はどれにも属していない**（第84セッション・**測って
   名指しただけ・未修正**）。`StemCalculator.CalculateStemEndY`（記譜・音符も和音もここ）／
   `SharedRenderer.GraceNotes.cs:325` の `DefaultStemLength × scale`（**grace は自分で縮めている**）／
@@ -592,7 +596,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 - ~~**同一譜 knee の実 ink seed**~~ — ⚠️ **測った。ページには届かない**（`system.knee-beam-notes`
   = 18.090000 exact・§1）。knee の stem は内向きで、帯も stem も符頭の間にある。
-  **構造の乖離は残るが観測不能**で、点が guard になっている。
+  **構造の乖離は残るが観測不能**で、点が guard になっている。<!-- ledger: system.knee-beam-notes = 0 -->
 - **`BuildSystemSkylines` の全譜 union** — ⚠️ **測った。内側譜は届かない**（probe `IS3`/`IS3C`・
   §1）。「内側譜の ink が edge 譜の silhouette を突き抜ける」は**音高では起こらない**（詰め offset
   9 ss ＝ 約 2.5 オクターブ）。
@@ -675,6 +679,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   **NoteHead:2595・StaffSymbol:3391・Dots:1272 は宣言なし＝ extent**）。
   ⇒ **12 点が 1e-7 まで閉じ、3 点は exact**。**clef sliver 族は消滅**し、
   `system.stretched-distance` の「未説明の 0.005＝フォント量」も**符頭ではなく clef だった**。
+  <!-- ledger: system.stretched-distance = -4.63e-07 -->
   ⚠️ **一般則を一律に当てるのは誤り**（notehead は extent のまま＝アウトラインを seed したら
   0.001 の発明になる）。**新しい grob を足すときは define-grobs.scm の行を先に読む。**
   ⚠️ 残った lyrics 3 点の上昇は**打ち消しの解除**（§5.3）。
@@ -693,7 +698,9 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   ★ **摂動で確定済**（bbox の top / bottom を振ると、対応する点だけが係数 1 で動く）。
   ⇒ **これ 1 個で次が全部説明できる**: `page.ossia-{control,pair}.compressed.first-staff-refpoint`
   の頭（+0.024000）／同 `last-staff-to-foot` の足（+0.010000 ×2）／
-  `page.clef.first-staff-refpoint`（−8.3e-5＝**足の 0.010 が force 経由で薄まった姿**）。
+  `page.clef.first-staff-refpoint`（−8.3e-5＝**足の 0.010 が force 経由で薄まった姿**。
+  ⚠️ **その −8.3e-5 は当時の値**——上の多角形 seed 以降 **−1.24e-07＝許容差以下**）。
+  <!-- ledger: page.clef.first-staff-refpoint = -1.24e-07 -->
   ⚠️ **はみ出しは非対称なので scale ではない**。⚠️ **既知の 0.27% 実効 scale でもない**
   （0.27% は下の 0.010 は説明するが、上は 0.012960 にしかならず実測 0.024000 に届かない）。
   ★★★ **機構は割れた（2026-07-28・LP を dump した）＝「保留」ではなくなった。**
@@ -738,13 +745,18 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   という当時の読みは正しかった
 - ~~**圧縮 regime は未実装**~~ — ⚠️ **この記述は stale だった**（2026-07-26 に実測で確認）。
   ページは両方向に solve しており、`page.compressed.staff-staff-inside` /
-  `system.compressed-distance.two-staff`（book JSK）は **exact**。⚠️ **圧縮強度は伸長強度と別**
+  `system.compressed-distance.two-staff`（book JSK）は **exact**。
+  <!-- ledger: page.compressed.staff-staff-inside = 0 -->
+  <!-- ledger: system.compressed-distance.two-staff = 0 -->
+  ⚠️ **圧縮強度は伸長強度と別**
   （`ideal − minimum`。staff 2 / system 4 に対し伸長は 5 / 60）なので、**片方だけ緑の移植は
   もう片方で落ちる**——`8b7b2615` が実際にそれで移植の欠陥を捕まえている
 - ~~**LP の top spring はページ justify で伸びる**が Lily# は先頭 system を固定~~ —
   ⚠️ **この記述は stale だった**（2026-07-26 に実コードで確認）。`PageLayouter.cs:290-294` が
   spring 0 として top spring を鎖に積んでおり、`page.stretched.first-staff-refpoint` は
   残差 **−0.000042**（＝符頭インク族。§1 の非ゼロ表）。**乖離ではない**
+  ⚠️ **その −0.000042 も当時の値**——**今は −4.46e-07＝許容差（1e-06）以下**。
+  <!-- ledger: page.stretched.first-staff-refpoint = -4.46e-07 -->
 - **`PageLayouter` は systemDetails の `i == 0` で `vs.SystemSystem`、配置側は `vs.TopSystem`**＝
   ブレーカーと配置で spec が食い違う（本数見積りにしか効かない）
 - **`LayoutEngine` の単一ページ経路が今も自前で積む**（二重実装）。⚠️ **「force 0 なので鎖と一致する」は嘘だった**——帯の床を `SysHeight`（trailing 行の描画帯を含む）から測っていて、**行を挟む本で帯を二重計上**（第218 実測: rowgap probe 19.836 vs LP 12.000・Twinkle 23.500 vs 12.225）。**frame は `b232d979` で直した**（帯の項はアンカー譜の外側線から＝PageLayouter の `HalfLast` と同型）。**二重実装そのものは残っている。**
@@ -824,25 +836,35 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   **`LedgerLineSpannerEngraver` の出力（`LedgerLineSpan`）は `ScoreLayout` に載るだけで
   誰も描かない**（描くのは符頭経路）＝**加算メタデータのまま**。その engraver は
   `MergeThreshold 1.5` という独自装置を持つので、**短縮を移植する人はそこが家**。
-- ★★★ **タイの列アウトライン（2026-08-03・第76セッション・点あり＝`tie.width.seconds.upper`
-  +0.888699999）**。Lily# の `TieFormattingProblem` は**そのタイ自身の符頭の箱**しか知らないので、
-  候補が自分の箱を出た瞬間に**符頭の中心へ後退する**。LP は列の箱を全部持つ:
+- ✅✅ ★★★ **閉じた（2026-08-03）。タイの列アウトラインは移植済み＝`TieChordOutline`。**
+  <!-- ledger: tie.width.seconds.upper = -1e-09 -->
+  <!-- ledger: tie.width.seconds.lower = 0 -->
+  <!-- ledger: tie.width.clears-head = 0 -->
   `set_column_chord_outline`（`tie-formatting-problem.cc:96-287`）＝各符頭・付点（LEFT のみ）・
-  **符尾**・旗（LEFT のみ）・臨時記号（RIGHT のみ）・同じ列の他の符頭。後退箱は `:243-258` で
-  **列の一番外の符頭**から立つので、**和音の内側では後退しない**。そのうえで `:583-609` が
-  **符尾の Y 範囲に入る attachment を `stem端 − stem_gap(0.35)` へ引き戻し**、`:565-579` が
-  短いタイで `close_by` と intersect する。
-  ⚠️ **`tie.width.clears-head` と `tie.width.seconds.lower` は今 9 桁 EXACT** ＝**この移植の
-  falsifier**。⚠️ **snapshot は動く**（第76セッションで動いた 9 枚のうち 3 枚は戻る側）。
-  ★★ **先に `Interval` 型を作ると字面移植になる**（2026-08-03 の自己監査で名前が付いた ⒝ 債務）。
+  **符尾**・旗（LEFT のみ）・臨時記号（RIGHT のみ）・同じ列の他の符頭を持つ列ごとの skyline に、
+  後退箱（`:243-258`）・`close_by` の intersect（`:565-579`）・符尾の引き戻し（`:583-609`）・
+  **列レベルの outer-tie-length-symmetry 項（`:890-908`）**まで入っている。
+  ⚠️ **falsifier は生きて緑**＝`tie.width.clears-head` と `tie.width.seconds.lower` は 9 桁 EXACT。
+  ★★★ **この項の値打ちは「2 段で閉じ、2 段目はタイの修理ではなかった」ところ**（`why` に全文）:
+  アウトライン移植で **+0.888699999 → −0.073200001** まで来て、**残りは名前の付いた 1 量**だったので
+  **調整せずに開けたまま置いた**——そして**上の符尾 attachment を閉じた瞬間に、タイのコードを
+  1 行も触らずに −1e-09 へ落ちた**（タイの右端は符尾の引き戻しが持っているため）。
+  ⇒ ★★ **教訓**: **残差を「名前の付いた 1 量」まで分解できたら、そこで止めて別の点に回す。**
+  **分解できていれば、その量は別の場所で閉じたときに*ひとりでに*返ってくる。**
+- ★ **`Interval` 型は今も無い**（2026-08-03 の自己監査で名前が付いた ⒝ 債務・**残っている側**）。
   LP の `Interval`（`lily/interval.hh`）は `distance` / `widen` / `linear_combination` /
   `intersect` を持つ**一級の値**で、**タイのコードだけで 4 つ全部**を使う——
-  水平距離罰（今は手で展開）・`GetAttachment` の 2 つの `widen`・そして**この島が要る `intersect`**
-  （`:565-579` の `close_by`）。**器が無いから開いたコードになっている**のであって判断ではない。
-- ★★ **`Bezier` 型が無い**（同じ自己監査の ⒝ 債務）。`BezierBow.MidpointHeight` は LP の
-  `slur_shape(…).curve_point(0.5)` を **`0.75 * h` の閉じた式**で書いている（係数は厳密）。
-  **読み手は 2 つになる**——`SlurScoringProblem.InterpolateSlurY` も自前で曲線を標本化している。
-  ⇒ **`curve_point` を持つ Bezier を 1 つ作れば両方が LP の字面になる。**
+  水平距離罰（今は手で展開）・`GetAttachment` の 2 つの `widen`・`close_by` の `intersect`。
+  ⚠️ ★★ **ただし起票時の論拠「器が無いから移植できない」は反証された**——**上の列アウトラインは
+  `Interval` 無しで移植され、点は 9 桁で閉じた**。⇒ **残っているのは*読みやすさ*の債務であって
+  忠実度の債務ではない**（着手根拠を書き換えること・§5.0「着手根拠は点」）。
+- ~~★★ **`Bezier` 型が無い**~~ — ⚠️ **stale だった（2026-08-23 に裏取り）**。`Bezier`（`Bezier.cs`・
+  `lily/bezier.cc` 引用付き・`CurveX`/`CurveY`＝`curve_point`）は**実在し 8 ファイルが読んでいる**
+  ——**slur scorer 込み**で、**論拠に挙がっていた `SlurScoringProblem.InterpolateSlurY` は消滅済み**。
+  残るのは `BezierBow.MidpointHeight` の閉じた式 `0.75 * h` **1 行だけ**（係数は厳密）＝
+  **読み手が 2 つになる**という payoff が消えたので、**器の債務ではなく 1 行の判断**。
+  ⚠️ **その remark 自身が「this engine has no Bezier type at all」と書き続けていた**のがこの棚の出所
+  ——**同じ便で直した**（§7 の「棚と remark は同じ量の 2 綴り」）。
 - **座標系の島2（device 島群）は繰延**: TieVariant / 水平 skyline の Y horizon / TabStaffGeometry /
   beam collision island。`StaffOffsetInSystemDown` の残り呼び出しは**意図的な device 境界＝消さない**。
   島1 が残した手順: ①格納を反転する前に格納値を主張するテストを書く ②生産側は全部同時に
@@ -1235,6 +1257,9 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
     **空白の拍子はその枝へ行かないので、音符として測られていた。**
   - **台帳 3 点**（521 点・全部 exact）: `mid-piece.tab-numbers.meter-identity` ＋
     `mid-piece.tab-numbers.change-bar-vs-plain-bar` ＋ `mid-measure.tab-numbers.meter-identity`。
+    <!-- ledger: mid-piece.tab-numbers.meter-identity = 0 -->
+    <!-- ledger: mid-piece.tab-numbers.change-bar-vs-plain-bar = 0 -->
+    <!-- ledger: mid-measure.tab-numbers.meter-identity = 0 -->
     **プローブは `audit/lp-geometry/probes/tab-numbers-meter.ly`**（**TN/TW/TL/MN/MW ＋
     対照 FN/FW**——**`\tabFullNotation` の 2 本が差を出すことで「掃きが届く」を示す**）。
   - ★★ **`+1.229159055` は幅の欠陥ではなかった**——**LP が拍子を*描く*ときに払う幅と 9 桁一致**
@@ -1538,6 +1563,8 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   `\new CueVoice` が 1 個か 2 個かだけが違う対**）: 境界の歩幅は **2.898044999134611（素の ideal）
   対 2.513393907138011（精錬済み）**。台帳 `cue.column.region-edge` −0.384653432 → **0（exact）**、
   対照 `cue.column.region-edge-control` は **−0.000002340 のまま不動**。
+  <!-- ledger: cue.column.region-edge = 0 -->
+  <!-- ledger: cue.column.region-edge-control = -2.34e-06 -->
   ⚠️ ★★ **「閉じたら −0.000002340 に着地するはず」と書いた予測は外れて 0 になった**——
   **その丸めは head-width 項に乗って来ていた**ので、**項ごと消えた**（外れ方が機構の裏取り）。
   ⚠️ **残る近似は「別々の声部で cue 領域が*同時に*生きている」形だけ**＝
@@ -2075,7 +2102,8 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 `separation-item.cc:166-179` ②spring 最小＝縦 padding 0.08 込みの padding-free 距離
 `note-spacing.cc:78-83` ③rod＝**縦 padding 無し**の距離＋spanner の padding 0.1
 `separation-item.cc:47-68` ＋ `spacing-spanner.cc:315-316`）に置換。`compressed.note-to-note.quarter`
-が **1.604200 で exact**。`SeparatingPaddingTests` は LP 由来の期待値に書き直し済みで、
+が **1.604200 で exact**。<!-- ledger: compressed.note-to-note.quarter = 0 -->
+`SeparatingPaddingTests` は LP 由来の期待値に書き直し済みで、
 「`MinItemGap` を何に設定しても音符間が動かない」ことを主張するテストを追加＝**戻ってこない**。
 
 - ✅ **歌詞の列間隔の発明 2 つ＝第222 で移植完了**（`b5a973ee` 起票 → `c7beded3` 移植）。
@@ -2104,6 +2132,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 - ✅ **歌詞の小節線またぎ＝barline-split モデル＝第223 で移植完了**（`8cdeca0e`・
   `lyrics.column.word-gap.cross-barline` **+0.540000000 → 0.000000000 ちょうど**）。
+  <!-- ledger: lyrics.column.word-gap.cross-barline = 0 -->
   **LP は音節と小節線のあいだに何も予約しない**（extra-spacing-height (0.2 . -0.2)）——
   継続する歌詞線は halves（0.4＋bar ink＋0.4）を落とし、`CrossBarLyricRodDistance`＝
   inkR＋0.45/0.1＋inkL−bar ink を rods リスト（ApplyRods）へ。**門は各小節の
@@ -2118,6 +2147,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   とも exact 着地・隣接 bump と halves は据え置き）。**残りは §1 ⒦**＝歌詞 sliver 族
   （voice-blind な列表 +0.0366／+0.0732・観測者は lyrics.column.bound-voice.primary-control /
   no-bind.skip-gap / bound-voice.skip-gap）。
+  <!-- ledger: lyrics.column.bound-voice.primary-control = 0 -->
 - **行頭 wish の `ownFixedFloor` ガード**（`LineStartSpringForLine` → `LineStartColumn.LineStartSpring`）
   — LP は leading grace と lyrics を**独立した paper column** にするので min_dist がそこまで測る。
   Lily# は spring に畳み込んでいる＝**「今の構造では表現できないから畳み込む」型**（§5.2 が
@@ -2132,8 +2162,17 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   3 本**（`SpacingRules.BarlineToCourtesyKey` 0.8 / `BarlineToCourtesyTime` 0.75 /
   `CourtesyKeyToTimeGap` 1.15）で綴っている。**⑵ と同じ「合成が厳密なら乖離ゼロ」ではない**——
   `courtesy.meter.barline-to-cancellation` が **−0.2**（LP は取消まで 1.00、拍子単独なら 0.75。
-  **小節線からの間隔は 1 つの数ではない**＝grob ごとの `space-alist`）。⚠️ **0.8 を 1.0 にするだけでは
-  駄目**：予約 `KeyCourtesySuffixWidth` が同じ定数を読むので描画と予約が一緒に動く必要がある。
+  **小節線からの間隔は 1 つの数ではない**＝grob ごとの `space-alist`）。
+  ✅ ★★★ **この −0.2 は閉じた（2026-08-03・ユーザー承認）**。<!-- ledger: courtesy.meter.barline-to-cancellation = 0 -->
+  <!-- ledger: courtesy.meter.barline-to-meter = 0 -->
+  `SpacingRules.BarlineToCourtesyKey` は **1.0**（`define-grobs.scm:296`/`:297` は
+  key-signature と key-cancellation の**両方**に `extra-space . 1.0` を宣言しているので、
+  **courtesy 群が取消で開いても新調号で開いても 1 つの定数で正しい**）。
+  ⚠️ **下の警告は無視ではなく*尊重*して閉じた**——「予約 `KeyCourtesySuffixWidth` が同じ定数を読む」
+  はまさに**安全な理由**だった（**定数は 1 つで、描画も予約もそれを読む**ので一緒に動く）。
+  ⇒ ★★ **「2 か所が同じ定数を読む」は危険の印ではなく*安全*の印**——危険なのは**2 か所が同じ量を
+  別々に綴っている**とき（§2 A）。**着手前にどちらかを見分けること。**
+  ⚠️ **以下の ⑷ の残りは*別の乖離*で、今も開いている**（第131 起票・点は 1 つも無い）。
   ⚠️ **出所は 1 軒**＝`SpacingRules.BarlineToCourtesyKey` の remarks（`break-alignment-interface.cc:228-243`）。
   **space-alist の値を写したのではない**——宣言は `extra-space 1.0` なのに印字は 0.750000（walk は
   group extent で回り `break-align-anchor` が後で動かす）。**「宣言値＝定数」と書けば偽の住所になる。**
@@ -2168,8 +2207,14 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   min に*足す***（`AdjustSpringForGraceNotes`）。**足すと引くでは、run の幅が動いても
   `前の音符 → 最初の grace` が動かない**——実際この点は列の幅を 46% 変えても 1 桁も動かなかった。
   ⇒ **⑴ は「表現できないから畳み込んだ」だけでなく「畳み込んだせいで別の機構になっている」。**
-  **着手根拠はもう regime ではなく点**（同じ本の中に対照 `grace.column.approach.main-control`
-  があり、そちらは exact なので**普通の音符間は無罪**と分かっている）。
+  ✅ ★★★ **その +0.850449 は閉じた（2026-08-02・2 段の移植）**。<!-- ledger: grace.column.approach = 0 -->
+  <!-- ledger: grace.column.approach.main-control = 0 -->
+  `SpacingRules.SpringIntoGraceRun` が **先に縮めてから run を足す**（`Spring.Scale`＝
+  `Spring::operator*=` なので **ideal を rod の下へ押し込まない**）。⚠️ **移植は*両方*のばね系に
+  要った**——片方だけ直すと同じ量の 2 綴りになる。
+  ⇒ ★★ **対照 `grace.column.approach.main-control` は当時も今も exact**＝**普通の音符間は無罪**で、
+  **発散側だけが動いた**＝**恒等の対が「修理が形の項に効いた」ことを言っている**（§5.0）。
+  ⚠️ **⑴ の*モデル*の話（独立列を持たない）は残っている**——**閉じたのは点であって列ではない。**
 - ~~**中心合わせされた 2 つの text grob**~~ — **両方とも片付いた**（和音記号 `dcbf08e9`・
   音節 `98672c3a`）。⚠️ ただし `ChordNameEngraver` の `Math.Max(2.0, …)` 幅の床は**残っている**
   （`LILYSHARP-OWN` と明示済・1 文字の "C" 1.877882 を上書きするので**実際に効く**）
@@ -2194,10 +2239,12 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   ここに戻る。⚠️ 部分修理（臨時状態だけ staff 時間順の別 pass にする等）は
   **3 つ目の walk を増やす**ことになるので、§2A の主題（同じ量の N 個目の綴り）と
   引き換えにしないこと。
-- ★★ **⑵ 残っている「同じ量の 2 つ目の綴り」**——§2A の既存 3 項を指す（詳細はそちら）:
-  符尾 attachment X の黒玉固定（▶ 先頭・対 `stem.up.right-edge.{half,black}-head` 開設済み）・
+- ★★ **⑵ 残っている「同じ量の 2 つ目の綴り」**——§2A の既存項を指す（詳細はそちら）:
   符尾長の 3 綴り（cue がどれにも属さない）・タイ列の greedy（`Ties_configuration` 丸ごと
   採点への置換）。
+  ⚠️ **~~符尾 attachment X の黒玉固定~~ はここから外した（2026-08-23 裏取り）**——**2026-08-03 に
+  閉じている**（§2E）。**この行が「▶ 先頭」と書き続けていたことが、第234 の triage を
+  丸ごと誤誘導した**（§1 参照）。
 - ★★ **⑶ record モデルの同値性（identity の欠如）**（**未着手・設計判断が要る**）。
   音楽モデルが C# record なので **unison・同音の 2 項が「等しい」**——`IndexOf`／`Contains`／
   `Dictionary` キーが黙って衝突する。実例 = fixed 第18号（`TieItem` の unison 対が

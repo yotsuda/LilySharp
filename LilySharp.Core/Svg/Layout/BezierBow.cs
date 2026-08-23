@@ -84,16 +84,18 @@ internal static class BezierBow
     /// audit/lp-geometry <c>tie.direction.beam-opposes-stem</c> is the book that says so.
     /// </para>
     /// <para>
-    /// ⚠️ NOT A LITERAL PORT, and the debt is the missing器: LilyPond writes
-    /// <c>slur_shape (…).curve_point (0.5)</c> because it HAS a Bezier that can be evaluated
-    /// (lily/bezier.cc <c>Bezier::curve_point</c>), and this engine has no Bezier type at all
-    /// — every bow is four loose tuples carried to the renderer. So the value is written as
-    /// the closed form of that same evaluation instead. ⚠️ THE FACTOR IS EXACT, not an
+    /// ⚠️ NOT A LITERAL PORT. LilyPond writes <c>slur_shape (…).curve_point (0.5)</c>; this
+    /// writes the closed form of that same evaluation. ⚠️ THE FACTOR IS EXACT, not an
     /// approximation: with <c>slur_shape</c>'s ends at Y 0 and both middle controls at Y
-    /// <c>h</c>, the cubic at t=0.5 is <c>(0 + 3h + 3h + 0) / 8</c>. TO MAKE IT LITERAL, give
-    /// the layout a Bezier with <c>curve_point</c> and let this call it — the slur scorer
-    /// samples its own curve by hand too (<c>SlurScoringProblem.InterpolateSlurY</c>), so
-    /// that器 would have two readers, not one.
+    /// <c>h</c>, the cubic at t=0.5 is <c>(0 + 3h + 3h + 0) / 8</c>.
+    /// ⚠️ THE REASON RECORDED HERE UNTIL 2026-08-23 HAS EXPIRED, and it is worth saying why
+    /// rather than deleting it: it read "this engine has no Bezier type at all", and offered
+    /// as the payoff that <c>SlurScoringProblem.InterpolateSlurY</c> would become a second
+    /// reader of one. Both halves are now false — <see cref="Bezier"/> is a LilyPond-cited
+    /// port of lily/bezier.cc with <c>CurveX</c>/<c>CurveY</c> for <c>curve_point</c>, read by
+    /// eight files INCLUDING the slur scorer, and that method no longer exists. So the
+    /// literal spelling is now cheap and has exactly ONE reader: this line. That is a
+    /// judgement about a one-line closed form, not a missing器.
     /// </para>
     /// </remarks>
     public static double MidpointHeight(double heightLimit, double ratio, double width)
