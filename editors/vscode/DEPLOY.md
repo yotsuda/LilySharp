@@ -92,9 +92,57 @@ so users need nothing but VS Code. `publish-marketplace.ps1` does all of this.
 
 ### Prerequisites (once per machine)
 
-1. A Personal Access Token for the `yotsuda` publisher:
+Whichever you pick, **sign in with the Microsoft account that OWNS the publisher** —
+the one that shows the publisher at
+https://marketplace.visualstudio.com/manage/publishers/yotsuda. A different account of
+your own is the failure mode here, and it looks like a permissions error at upload
+time.
+
+⚠️ **MEASURED 2026-08-23: option A DOES NOT WORK for these publishers, and the reason is
+not obvious.** `az login` succeeds as `ytsuda@gmail.com`, but a personal Microsoft
+account signs Azure CLI in against an auto-created "Default Directory" tenant, and the
+Entra user there (`630f65e8-…`) is a DIFFERENT PRINCIPAL from the Microsoft account that
+owns the publisher. vsce gets a valid token and the Marketplace then refuses it:
+
+```
+Access Denied: 630f65e8-… needs the following permission(s) on the resource
+/yotsuda to perform this action: View user permissions on a resource
+```
+
+The same identity is refused on `/ytsuda` too, which is what rules out "wrong publisher"
+and leaves "wrong kind of identity". So **take option B** unless the publisher is one day
+owned by a work/school (Entra) account — the `-AzureCredential` switch is kept for that
+day, and for anyone forking this who publishes under an Entra account.
+
+**Option A — Microsoft Entra ID (only for Entra-owned publishers; see the warning above):**
+
+```powershell
+winget install --id Microsoft.AzureCLI -e   # then open a NEW terminal: PATH is stale
+az login                                    # add --allow-no-subscriptions if it
+                                            # complains; a Marketplace publisher does
+                                            # not imply an Azure subscription
+npx @vscode/vsce verify-pat --azure-credential yotsuda
+```
+
+Then pass `-AzureCredential` to the publish script. There is no Azure DevOps
+organization to create and nothing that expires.
+
+**Option B — Personal Access Token (the working path for this publisher):**
+
+0. Sign in everywhere as the SAME Microsoft account that owns the publisher —
+   `ytsuda@gmail.com` here, the one that shows the publisher at
+   /manage/publishers/yotsuda. This is the step option A gets wrong for you.
+1. A PAT for the `yotsuda` publisher:
    - https://dev.azure.com/ -> User settings -> Personal access tokens -> New Token
    - Organization: **All accessible organizations**, Scopes: **Marketplace -> Manage**
+   - ⚠️ `Marketplace` is hidden until you click **Show all scopes** at the bottom.
+   - ⚠️ Signing in at `dev.azure.com` with no organization redirects to the Azure
+     portal (portal.azure.com), which is a different product and has no PATs. A PAT
+     lives under an organization, so create one first at https://aex.dev.azure.com/me
+     — it is free and its name has nothing to do with the publisher id.
+   - ⚠️ A PAT lasts a year at most, so this path breaks on a schedule nobody watches.
+     Put the expiry date in the release checklist rather than discovering it at the
+     next release.
 2. Store it for vsce (kept in `~/.vsce`, never in the repo):
    ```bash
    cd editors/vscode
@@ -113,9 +161,13 @@ cd editors/vscode
 ./publish-marketplace.ps1
 code --install-extension dist/lilysharp-win32-x64.vsix
 
-# 3. Publish every target
+# 3. Publish every target — add -AzureCredential if you took option A
 ./publish-marketplace.ps1 -Publish
 ```
+
+The script runs `verify-pat` once before the first build: eight ~50 MB targets each
+cross-publish a runtime before uploading, so an identity that cannot publish should
+be caught in one request rather than eight builds.
 
 `npm run package` / `npm run publish` build a single *universal* VSIX from whatever
 is in `./server`; they are for local experiments, not for the Marketplace.

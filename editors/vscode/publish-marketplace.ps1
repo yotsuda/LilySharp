@@ -17,12 +17,21 @@
 # Builds platform-specific, SELF-CONTAINED VSIXs for the Marketplace — one per
 # target, each bundling that platform's .NET runtime so users need NO system .NET.
 #
-#   ./publish-marketplace.ps1            # package .vsix files into ./dist (default)
-#   ./publish-marketplace.ps1 -Publish   # upload each target to the Marketplace
+#   ./publish-marketplace.ps1                     # package .vsix files into ./dist (default)
+#   ./publish-marketplace.ps1 -Publish            # upload each target, PAT auth
+#   ./publish-marketplace.ps1 -Publish -AzureCredential   # ...Microsoft Entra ID auth
 #
-# Requires: dotnet SDK, npm deps installed, and (for -Publish) a vsce PAT for the
-# `yotsuda` publisher (VSCE_PAT env var or `npx @vscode/vsce login yotsuda`).
-param([switch]$Publish)
+# Requires: dotnet SDK and npm deps installed. -Publish additionally needs ONE of:
+#   * a vsce PAT for the publisher — VSCE_PAT env var, or `npx @vscode/vsce login <pub>`.
+#     The PAT comes from an Azure DevOps organization and expires (one year at most),
+#     so a release stops working on a schedule nobody is watching.
+#   * -AzureCredential, which takes a Microsoft Entra ID token instead: `az login`
+#     once (Azure CLI, or any other credential in @azure/identity's chain) and there
+#     is no Azure DevOps organization to create and no token to rotate.
+# Either way the identity must OWN the publisher named in package.json; signing in
+# with a different Microsoft account is the failure this script now checks for up
+# front rather than discovering on the first upload.
+param([switch]$Publish, [switch]$AzureCredential)
 
 $ErrorActionPreference = 'Stop'
 $vscodeDir = $PSScriptRoot
@@ -38,6 +47,25 @@ try {
         'alpine-x64'   = 'linux-musl-x64'
         'darwin-x64'   = 'osx-x64'
         'darwin-arm64' = 'osx-arm64'
+    }
+
+    # ONE AUTH CHECK BEFORE EIGHT ~50 MB UPLOADS. Without it the first thing a wrong
+    # identity meets is `vsce publish` for win32-x64 — after that target's runtime has
+    # been cross-published and packed — and the seven that follow each pay the same
+    # build before failing the same way. verify-pat asks the Marketplace whether this
+    # identity may publish for this publisher and costs one request.
+    # ⚠️ THE PUBLISHER IS READ FROM package.json, not spelled again here: it is the
+    # value vsce itself will use, so the check cannot drift from the upload.
+    if ($Publish) {
+        $publisher = (Get-Content package.json -Raw | ConvertFrom-Json).publisher
+        Write-Host "Verifying publish rights for '$publisher'..." -ForegroundColor Cyan
+        if ($AzureCredential) { npx @vscode/vsce verify-pat --azure-credential $publisher }
+        else                  { npx @vscode/vsce verify-pat $publisher }
+        if ($LASTEXITCODE -ne 0) {
+            throw "verify-pat failed for publisher '$publisher' — nothing was published. " +
+                  "Check that the signed-in identity owns that publisher at " +
+                  "https://marketplace.visualstudio.com/manage/publishers/$publisher"
+        }
     }
 
     Write-Host "Compiling extension TypeScript..." -ForegroundColor Cyan
@@ -67,7 +95,11 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $rid" }
 
         if ($Publish) {
-            npx @vscode/vsce publish --target $target
+            # Spelled as two whole calls rather than a spliced argument array: the
+            # command already begins with a literal `@vscode/vsce`, and a second `@`
+            # in argument position is PowerShell's splatting sigil.
+            if ($AzureCredential) { npx @vscode/vsce publish --target $target --azure-credential }
+            else                  { npx @vscode/vsce publish --target $target }
         } else {
             npx @vscode/vsce package --target $target -o "dist/lilysharp-$target.vsix"
         }
