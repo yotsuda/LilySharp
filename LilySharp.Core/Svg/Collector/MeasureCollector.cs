@@ -982,6 +982,14 @@ public sealed partial class MeasureCollector
     private readonly List<CustomTextItem> _customTexts = new();
     // Volta brackets (first/second ending)
     private readonly List<VoltaBracketItem> _voltaBrackets = new();
+    // The repeat barlines a ROWS-ONLY score's form writes, by measure index. A score with
+    // no staff never runs ProcessForm, so nothing turns its `|: … :|` into a barline on any
+    // voice; EnsureSectionStartsForRows records them here and CollectMultiStaff hands them
+    // to SynchronizeBarlines as one synthetic voice, the same road HarvestOmittedStructure
+    // uses for an undrawn part's bars. Empty for every score that draws a staff.
+    private readonly Dictionary<int, (BarlineType Start, BarlineType End)> _rowsOnlyFormBars = new();
+    // Bars in that grid — the synthetic voice's length, so it never claims bars the rows lack.
+    private int _rowsOnlyFormGridBars;
     // Inline volta endings collected during the current voice walk; finalized
     // (and marked closed/open) once the whole voice has been processed.
     private readonly List<(int startMeasure, int endMeasure, string voltaText, bool isClosed, int sourcePosition)> _pendingInlineVoltas = new();
@@ -1817,6 +1825,28 @@ public sealed partial class MeasureCollector
         if (harvestStructureMarks)
             foreach (var v in HarvestOmittedStructure(tree, renderSpec))
                 flatVoices["omit:" + v.Name] = v;
+        // A score with NO staff has no voice that ran ProcessForm, so nothing turned its
+        // form's `|: … :|` into a barline anywhere — the grid landed on the right bars but
+        // drew none of the lines around them. EnsureSectionStartsForRows recorded them;
+        // hand them over as one synthetic voice and the sync above spreads them onto the
+        // drawn rows, exactly as it does for an undrawn part's. Added LAST so the pairing
+        // scan below still reads a real voice, and behind the same "omit:" sentinel so the
+        // write-back never draws it.
+        // ⚠️ This is the ONE road for both shapes of a staffless score. The harvest cannot
+        // serve the other one: a part-less chord grid (`chords X { section A { … } }`) has
+        // no omitted part to collect, and a `|:` written in the FORM is invisible to
+        // PartHasStructure either way, since that gate reads a part's MUSIC.
+        if (_rowsOnlyFormBars.Count > 0 && _rowsOnlyFormGridBars > 0)
+            flatVoices["omit:form-structure"] = new Voice("form-structure",
+                Enumerable.Range(0, _rowsOnlyFormGridBars)
+                    .Select(i =>
+                    {
+                        var (start, end) = _rowsOnlyFormBars.TryGetValue(i, out var b)
+                            ? b : (BarlineType.None, BarlineType.None);
+                        return new Measure(ImmutableArray<MusicItem>.Empty, start, end,
+                            sectionLabel: null, sourceStart: 0, sourceEnd: 0);
+                    })
+                    .ToImmutableArray());
         SynchronizeBarlines(flatVoices);
         // The repeat-bar pairing is a SCORE-level fact, so it is read here — after the sync
         // that gives every voice the score's barlines, and including the omitted parts fed
@@ -2734,6 +2764,8 @@ public sealed partial class MeasureCollector
     {
         _sectionState.Reset();
         _variables.Clear();
+        _rowsOnlyFormBars.Clear();
+        _rowsOnlyFormGridBars = 0;
         _dynamics.Clear();
         _currentStaffIndex = 0;
         _currentVoiceIndex = 0;
@@ -4690,6 +4722,28 @@ public sealed partial class MeasureCollector
             cur += secBars;
         }
 
+        // The two barline edits ProcessRepeatBlock gets for free by pushing a BarlineSyntax
+        // through MeasureBuilder.HandleBarline — restated here against a bar cursor because
+        // a rows-only score has no builder. Both mirror that method's own branches:
+        //   `|:` (RepeatStart)  -> HandleBarline sets _pendingStartBarline, i.e. it opens the
+        //                          NEXT measure, which at this point in the walk is `cur`.
+        //   `:|` on an empty span -> HandleBarline retro-applies the type to _measures[^1],
+        //                          i.e. it closes the PREVIOUS measure, `cur - 1`.
+        // An adjacent `:|` + `|:` is left as two edits on two measures; the renderer fuses
+        // them into the RepeatBoth glyph, which is what `:|:` means (Form.cs:59-66).
+        void OpenRepeatAt(int measure)
+        {
+            var (s, e) = _rowsOnlyFormBars.TryGetValue(measure, out var p) ? p : (BarlineType.None, BarlineType.None);
+            _rowsOnlyFormBars[measure] = (Stronger(s, BarlineType.RepeatStart), e);
+        }
+        void CloseRepeatBefore(int measure)
+        {
+            if (measure <= 0)
+                return;
+            var (s, e) = _rowsOnlyFormBars.TryGetValue(measure - 1, out var p) ? p : (BarlineType.None, BarlineType.None);
+            _rowsOnlyFormBars[measure - 1] = (s, Stronger(e, BarlineType.RepeatEnd));
+        }
+
         // `|: … :|` — the slot walk ProcessRepeatBlock does (MeasureCollector.Form.cs:42-129),
         // with the music build removed: the block's own bars are raw tokens rather than
         // BarlineSyntax, and only the nodes AFTER the opening `|:` are played. A barline
@@ -4704,7 +4758,16 @@ public sealed partial class MeasureCollector
                 {
                     // ':|:' closes one repeat and opens the next, so it arms the gate too.
                     if (token.Text is "|:" or ":|:")
+                    {
+                        if (token.Text == ":|:")
+                            CloseRepeatBefore(cur);
+                        OpenRepeatAt(cur);
                         afterRepeatStart = true;
+                    }
+                    else if (token.Text == ":|")
+                    {
+                        CloseRepeatBefore(cur);
+                    }
                     continue;
                 }
                 if (!afterRepeatStart)
@@ -4715,9 +4778,16 @@ public sealed partial class MeasureCollector
                         AdvanceSection(r.SectionName, ResolveSectionLabel(r), SectionDeclPos(r.SectionName));
                         break;
                     case FormAlternativeSyntax alt:
+                        // The bracket spans the bars this ending occupies, so it is measured
+                        // ACROSS the advance — the same start/end pair ProcessRepeatBlock
+                        // reads off the builder (Form.cs:105-125).
+                        int altStart = cur;
                         AdvanceSection(alt.SectionName.Text,
                             alt.IsSilent ? null : alt.DisplayLabel ?? alt.SectionName.Text,
                             SectionDeclPos(alt.SectionName.Text));
+                        if (alt.HasBracket && !alt.IsSilent && cur > altStart)
+                            _voltaBrackets.Add(new VoltaBracketItem(
+                                altStart, cur - 1, alt.VoltaText, alt.IsClosed, alt.Position));
                         break;
                     case { Kind: SyntaxKind.SilentSectionReference } silent
                             when silent.GetChild(1) is SyntaxTokenNode silentName:
@@ -4777,7 +4847,12 @@ public sealed partial class MeasureCollector
         {
             foreach (var s in _sectionState.Sections.Values.OrderBy(s => s.Name.Span.Start))
                 AdvanceSection(s.SectionName, s.SectionName, s.Name.Span.Start);
+            // (No form, no repeat block — _rowsOnlyFormBars stays empty on this branch.)
         }
+
+        // The grid the walk laid out. Bounds the synthetic structure voice so it never
+        // claims a bar the rows do not have.
+        _rowsOnlyFormGridBars = cur;
     }
 
     /// <summary>

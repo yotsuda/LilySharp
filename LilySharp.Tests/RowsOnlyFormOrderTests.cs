@@ -92,6 +92,25 @@ public class RowsOnlyFormOrderTests
     private static int RowBars(LilySharp.Core.Svg.Model.MultiStaffScore score)
         => score.Lyrics.Where(l => l.IsLyricsRow).Select(l => l.MeasureIndex).DefaultIfEmpty(-1).Max() + 1;
 
+    // The barlines the lyrics ROW ends up carrying. Both renders reach these through the
+    // same score-wide SynchronizeBarlines; the difference is who fed it the form's
+    // `|: … :|` — a staff voice that ran ProcessForm, or the synthetic structure voice
+    // EnsureSectionStartsForRows builds. If the two agree, the substitute walk reads
+    // HandleBarline's semantics the same way (`|:` opens the NEXT bar, `:|` closes the
+    // PREVIOUS one).
+    private static List<(LilySharp.Core.Svg.Model.BarlineType Start,
+                         LilySharp.Core.Svg.Model.BarlineType End)> RowBarlines(
+        LilySharp.Core.Svg.Model.MultiStaffScore score, string rowName)
+        => score.StaffGroups.SelectMany(g => g.Staves).SelectMany(s => s.Voices)
+            .Where(v => v.Name == rowName)
+            .SelectMany(v => v.Measures)
+            .Select(m => (m.StartBarline, m.EndBarline)).ToList();
+
+    private static List<(int Start, int End, string Text)> Voltas(
+        LilySharp.Core.Svg.Model.MultiStaffScore score)
+        => score.VoltaBrackets.OrderBy(v => v.StartMeasureIndex).ThenBy(v => v.VoltaText)
+            .Select(v => (v.StartMeasureIndex, v.EndMeasureIndex, v.VoltaText)).ToList();
+
     // The seam itself, for each shape of the playback order.
     [Theory]
     [InlineData("A B")]           // no reprise — the shape every tracked staffless book writes
@@ -115,6 +134,44 @@ public class RowsOnlyFormOrderTests
         Assert.Equal(
             staffful.MusicMarks.Select(m => (m.Type, m.MeasureIndex)).OrderBy(m => m.MeasureIndex).ToList(),
             staffless.MusicMarks.Select(m => (m.Type, m.MeasureIndex)).OrderBy(m => m.MeasureIndex).ToList());
+        // …and the LINES around those bars. A staffless score has no voice that ran
+        // ProcessForm, so until the synthetic structure voice existed the grid landed on
+        // the right bars and drew none of the repeat barlines the form asked for.
+        Assert.Equal(RowBarlines(staffful, "verse"), RowBarlines(staffless, "verse"));
+        Assert.Equal(Voltas(staffful), Voltas(staffless));
+    }
+
+    // Two written-out endings around one repeat — the shape GRAMMAR.md gives for voltas.
+    // Its own differential, because the fixture needs three sections rather than two.
+    [Fact]
+    public void VoltaEndings_DrawTheSameBracketsWithoutAStaff()
+    {
+        const string head = """
+            time 4/4
+            part melody {
+              clef treble
+              section A { c4 c g' g | a a g2 | }
+              section D { f4 f e e | }
+              section O { d4 d c2 | }
+            }
+            lyrics verse {
+              section A { one two three four | five six sev- en | }
+              section D { eight nine ten e- le- ven | }
+              section O { twelve thir- teen | }
+            }
+            form main { |: A [1. D] :| [2. O] }
+            """;
+        var staffless = Collect($"{head}\nscore main {{\n  lyrics verse\n}}");
+        var staffful = Collect($"{head}\nscore main {{\n  staff melody\n  lyrics verse\n}}");
+
+        Assert.Equal(RowSyllables(staffful), RowSyllables(staffless));
+        Assert.Equal(RowBarlines(staffful, "verse"), RowBarlines(staffless, "verse"));
+        Assert.Equal(Voltas(staffful), Voltas(staffless));
+        // Pinned independently of the differential, so a regression that moves BOTH walks
+        // the same way still fails something. A is 2 bars, D and O are 1 each, and a
+        // bracket spans its ENDING — not the repeat — so `[1. D]` is bar 2 alone and
+        // `[2. O]` is bar 3.
+        Assert.Equal(new[] { (2, 2, "1."), (3, 3, "2.") }, Voltas(staffless));
     }
 
     // The measured answer, pinned independently of the differential above — so a
