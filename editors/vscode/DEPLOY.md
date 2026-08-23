@@ -101,13 +101,18 @@ time.
 ⚠️ **MEASURED 2026-08-23: option A DOES NOT WORK for these publishers, and the reason is
 not obvious.** `az login` succeeds as `ytsuda@gmail.com`, but a personal Microsoft
 account signs Azure CLI in against an auto-created "Default Directory" tenant, and the
-Entra user there (`630f65e8-…`) is a DIFFERENT PRINCIPAL from the Microsoft account that
-owns the publisher. vsce gets a valid token and the Marketplace then refuses it:
+Entra user there is a DIFFERENT PRINCIPAL from the Microsoft account that owns the
+publisher. vsce gets a valid token and the Marketplace then refuses it:
 
 ```
-Access Denied: 630f65e8-… needs the following permission(s) on the resource
+Access Denied: <entra-object-id> needs the following permission(s) on the resource
 /yotsuda to perform this action: View user permissions on a resource
 ```
+
+⚠️ The object id is elided on purpose and should not be pasted back in. A GUID's first
+group is eight hex characters, which is exactly the shape of an abbreviated commit, so
+`HistoryCitationTests.DeadCitationsDoNotGrow` counts it as a citation that resolves to
+nothing and goes red. It caught this paragraph on CI.
 
 The same identity is refused on `/ytsuda` too, which is what rules out "wrong publisher"
 and leaves "wrong kind of identity". So **take option B** unless the publisher is one day
