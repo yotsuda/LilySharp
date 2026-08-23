@@ -101,8 +101,14 @@ public class HistoryCitationTests
     /// This is the number that fell 547 → 503 unnoticed. Had it been under a ratchet then,
     /// the drop would have been the thing that opened the investigation instead of a stray
     /// observation at the end of a long session.
+    /// <para>
+    /// Raised as sessions cite: 510 when written, then 515 once the handoff for the session
+    /// after it landed. Follow the measured number up in the same commit that raises it —
+    /// leaving the floor behind means a later fall back to it is exactly the silent drop the
+    /// ratchet exists to catch.
+    /// </para>
     /// </remarks>
-    private const int LiveCitationsWhenWritten = 510;
+    private const int LiveCitationsWhenWritten = 515;
 
     /// <summary>
     /// The number of citation-shaped tokens whose commit is not in the history, when this

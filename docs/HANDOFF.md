@@ -151,6 +151,89 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
+最終更新 第237セッション＝**第236 が「1 行の訂正＝次便の最安の一手」と名指した stale 札を直したら、同じ形の札は *grep で数えられる母集団*だと判り、5 件目が出た**（3 commit＝`6e822136` exporter の remark／`3081eb7e` transpose の class doc／この行。**engine 0 接触**）。
+**① 名指された 1 件＝`MusicXmlExporter.cs` の `WalkForm` の remark**。主張 3 つのうち **2 つは移植済み**だった。⑴ nav marks＝`BuildNavDirection` が `NavigationMarkType` の **10 種を全部**持つ（segno/coda は `<segno>`/`<coda>` で jump TARGET として次 section の初小節に置かれ、残り 8 種は `<words>` ＋対応する `<sound>`）⑵ volta ending＝`EmitVoltaRepeatBlock` が `EndingStartNumbers`／`EndingStopNumbers`／`EndingStopType` を置き、`MusicXmlTypes` が `<barline><ending>` に書く。**観測者は `MusicXmlExportShapeTests` に両方在る。** ⑶ **生き残りは custom text だけ。**
+⚠️ ★★ **その生き残りを第236 は*型名を間違えて*名指していた**——commit message は「`WalkForm` は `MusicMarkSyntax` を見ない」と書いたが、form の `_"text"` は **`CustomTextSyntax`**（`Parser.Form` の `ParseCustomText`）で、**`MusicMarkSyntax` のほうは exporter が実際に扱う**（`ProcessDirectionMark`）。⇒ ★ **札を直すときは*残った 1 件*の綴りも実コードで取る**——間違った型名は次の人を**もう配線済みの class** へ送り、そこで「札のほうが stale だ」と**逆向きに**結論させる。
+⚠️ ★ **その doc は付いている宣言も間違っていた**。`<summary>` は `WalkForm` を説明しているのに `_pendingTargetDirections` の上に座っていた（そのフィールドは 2 行下に自分のコメントを持つ）。**`CS1591` が `NoWarn` なので、doc の無い method と、他人の doc を着たフィールドは、どちらも永久に静か**——§0 の「0 警告は XML doc の健全性も含む」は**壊れた cref・閉じていない XML まで**で、**付け間違いは見ない**。
+
+**② ★★★ そこで札を*数えた*＝5 件目が出た。** 第234〜236 は同じ形の stale を 4 件、**1 件ずつ偶然**見つけている。**母集団は 1 コマンドで出る**:
+```powershell
+# 「未実装」札の母集団（`ToDouble` の "todo" 等の誤爆は落とす）
+grep -rniE "not (yet|currently) [a-z]+|no (support|mapping|channel) for|unsupported|unimplemented|NOT IMPLEMENTED|TODO:|FIXME" --include=*.cs LilySharp.Core LilySharp.Cli LilySharp.Lsp
+```
+**40 行・うち能力の主張は約 12・実コードで反証可能なのは 8**。5 件目はその中に居た＝**`PitchTransposer.cs` の class doc**（`3081eb7e`）。「a downward / wider interval needs an octave mark on the target, **which the part-option parser does not yet carry**」——**parser は 2 か所とも運ぶ**（`ParsePartProperty` が値の後ろの `'`／`,` を食い、`ParseTopLevelTranspose` も同じ。**どちらも自分のコメントに「octave marks 可」と書いてある**）。`PartTranspose` がそれを `oct` に積み、`Transpose`／`IntervalSemitones` が `toOctave` を取る。
+⚠️⚠️ ★★★ **反証は同じ repo のテストに在り、しかも*同じ日に*入っていた**（本便が実測）——doc を書いたのは `d7d3add2`「**Transpose (1/n)**: diatonic-interval pitch transposer + unit tests」（2026-06-24）で、**機能を出したのは同じ日の `0a7a0f27`「Transpose (6/n): octave-marked targets (downward / wide intervals)」**。⚠️⚠️ **その 6/n は `PitchTransposer.cs` 自身を書き換えており、その手で 1/n の一文を残した**（fixture `transpose-down.lys`・snapshot 1 枚・`PitchTransposerTests` の `c,`＝1 オクターブ下／`bes,`＝長 2 度下／`d'`＝9 度上 も全部この commit）。⇒ **札は 60 日・5806 本の緑と共存した。**
+
+**③ 残りの札は本物だった**（実コードで確かめた 6 件。**次便はこの 6 件を調べ直さないこと**）: `SharedRenderer.GraceNotes.cs:470` 束ねた acciaccatura の beam 上スラッシュ（`SharedRenderer.Beams.cs` に "slash" は 1 件も出ない）／`SharedRenderer.Marks.cs:1154` beamed stem の tremolo（`DrawTremolo` の stem 側呼び出しは `if (noteValue >= 2 && !isBeamed)` の中＝**beamed は構造上通らない**）／`NoteCollision.cs:188` half+eighth の merge shift（`ComputeMergeInfo` は shift を `0, 0` で返す・実読）／同 `:194` FA notehead（`fa_style`／`FaStyle` の grep に当たるのは**この remark 行だけ**）／`GlyphMetrics.cs:148` `rests.M3`（`Extract-EmmentalerMetrics.py` の一覧は `rests.M2`・`rests.M1` 止まり。⚠️ **`Extract-EmmentalerGlyphs.py` のほうは `rests.M3` を持つが、それは*字形*であって*metric* ではない＝別の抽出器**）／`EngravingDefaults.cs:949` `BassFigurePadding` は `SkylineDrop` でも払われている（`FiguredBassEngraver.cs:258,438`）。
+⚠️ ★ **射程の限界を書いておく**：残り（`BoundaryColumn.cs:219`・`SpacingRules.cs:1977`・`MusicXmlReader.cs:31`・`IncrementalCompiler.cs:572` 等）は**内部設計の記述**で、**読んで妥当と判断しただけ＝反証していない**。**「数えた」と「全部確かめた」を同じ顔で並べないこと**（§5.0 の「測定と判断を混ぜない」）。
+
+★ **開始時裏取り**: HEAD `bab19f52`（第236 の閉幕 handoff・§1 と一致）・未 push 3・未追跡 0/木 0・Windows suite **5806/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2・追跡コーパス 572 冊・snapshot 222 枚・Core 0 警告＝**前便の閉幕数と全一致**。
+✅✅ ★★★ **`refs/tags/v0.3.0` の origin 修復は本便の末尾で完了した**（ユーザーが `git push --force origin refs/tags/v0.3.0` を実行・本便が前後を実測）。**origin の ref は今 `master`＝`75093b53` と `v0.3.0`＝tag object `b5d8a9f7` → `ee672314` の 2 本だけで、後者は前者の祖先**——⇒ **origin に到達不能な履歴は 1 つも残っていない。**⚠️ **WSL clone も同じ tag object を持つ**（第236 が `--tags --force` で更新済み・本便が実測。ref は 4 本とも到達可能）。⇒ ★★ **第235 の書き換えは、3 か所（Windows・WSL・origin）で、branch もタグも、これで初めて全部完了した**——**commit の集合では 2026-08-23 に完了しており、ref の集合では 2 日おくれた**（第236 骨 1 の「*全部*が何の集合を指すか」がそのまま値段になった形）。⚠️ **旧 tag object の SHA はここにも書かない**（第236 と同じ理由）。⚠️ **新しい `b5d8a9f7` のほうは書いてよい**——`cat-file` が `tag` と答え、番人の分類器は commit 以外を dead から外す（`HistoryCitationTests` :282-284）ので、**しかも clone に付いてくる**＝第236 骨 2 の判定法で「木の性質」側。
+⚠️ **副作用は 1 つだけ想定され、そして起きなかった**：`release.yml` は `on: push: tags: ['v*']` なので run が 1 本起きたが（`32618867362`）、**annotation は例の "recent account payments have failed" で `test` は 2 秒で止まっており、既存 Release `v0.3.0`（2026-08-19・draft でも prerelease でもない・asset 5 本）は 1 バイトも触られていない**（本便が `gh run view`／`gh release view` で確認）。⇒ ★ **課金停止は、公開済みタグを貼り直すには一番静かな窓だった**——**復旧後に同じ push をすると `softprops/action-gh-release@v2` が既存 Release を上書き更新する**ので、**もう一度タグを動かす用があるなら、それは復旧前にやること。**
+⚠️ **GitHub の門は課金停止のまま**（第235 が中身を読み、第236 と本便は再調査していない）。**Linux の証拠は WSL 脚だけ。次便も同じ調査をやり直さないこと。**
+終了時: 本便 3 本（`6e822136`／`3081eb7e`／この行＝handoff ＋ archive の 3.5 ＋ live 引用ラチェット）＝**未 push 6**（開始 3 ＋本便 3。⚠️ **ユーザーは本便の途中で master を push していない**＝`git log -1 origin/master` は第236 の `75093b53` のまま）・未追跡 0/木 0・suite **Windows 5806/0/4・WSL 5806/0/4＝両 OS 完全緑・開始比 ±0**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊**・Core 0 警告。**live 引用 510 → 515（床を測った値まで上げた）・dead 469＝天井のまま不動**（⚠️ **旧 tag object の SHA を書かなかったので増えていない**＝第236 の警告どおり）。⚠️⚠️ **ref が 1 つ動いている＝`refs/tags/v0.3.0` を origin で貼り替えた**（ユーザーが実行・上の行に詳細）——**`git status` にも `rev-list` にも出ないので、この行が唯一の記録**（第236 骨 4）。**それ以外の ref は 3 か所とも不動。**
+
+★ **この便の値段**:
+
+| 便 | 何が動いたか | 射程 |
+|---|---|---|
+| ① exporter の remark（第236 が名指した「最安の一手」） | `MusicXmlExporter.cs` の doc 4 行 | **engine 0 接触**・**残った 1 件の型名と、doc の付き先も直した** |
+| ② 札の国勢調査 → 5 件目 | `PitchTransposer.cs` の class doc 3 行 | 同上・**反証が同じ repo のテストに在った** |
+| ③ 残り 6 件の照合 | 変更なし | **「本物だ」と機械で言えるようにした**＝次便の再調査を落とす |
+| ④ §7 3.5（archive へ 1 便落とす）＋ live 引用の床 | `HANDOFF-ARCHIVE.md` に第235 ブロック 99 行・`HistoryCitationTests` の床 510 → 515 | **第236 が建てた番人の初仕事**＝継ぎ目は緑（§1 は 236・archive は 235）・穴は 9 のまま |
+| ⑤ **origin のタグ修復**（ユーザーが実行・本便は材料を出しただけ） | ref のみ（`v0.3.0` → `b5d8a9f7`／`ee672314`）。木は 1 バイトも動かない | **第235 の書き換えが 3 か所とも完了**＝`gh` 実測で Release は無傷・**次の clone から番人は緑** |
+
+- **⑸ ★★★ 次に触るなら＝残債**（第236 の一覧を引き継ぎ、閉じたものを落とし、1 件足した）: 言語仕様の宿題は §1.2 リネーム（ユーザーが MSVS で）だけ／**名指し穴**＝⒤ exporter の paper 未輸出（**需要待ち**＝`LilyPondExporter.cs:662`）／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty・pedal の score 移行検討（ユーザー決定から）／**ブロック回収 9 便**（ユーザー決定・回収するなら dead 天井 469 と live 床を同じ commit で上げ直す）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・非ペア ToCoda の reserve≠draw・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示・実譜の `%` 記号。Marketplace は PAT 待ちのまま（第220 ①）。第97 の二重走査（`StaffAccidentalColumns.cs:103` と `ElementCoordinator.cs:131`）・§2 E の未移植 LP 計算（volta shorten・hairpin niente・`ledger_positions`）・courtesy 群の第131 起票分は**第235 が実コードで開いていることを確かめてある**。
+  - 🆕 **本便が新しく名指した 1 件＝`CustomTextSyntax`（form の `_"text"`）が MusicXML に出ない**。`MusicXmlExporter` は `CustomTextSyntax` を 1 度も見ない（`WalkForm` の switch は section 参照・repeat block・alternative・nav mark・barline だけ）。**着手するなら `<direction><direction-type><words>`** ——`ApplyNavMark` が既に `<words>` を出しているので**器はある**。⚠️ **観測者が要る**＝`MusicXmlExportShapeTests` に 1 本。**この項は本便では開けていない**（札を正しくしただけ）。
+  - ⚠️ **⑹ 本便は §2 を triage していない**。第236 ⑹ が「§2 の再 triage から始めなくてよい」と書いた根拠は**engine 0 接触**で、**本便も同じ**——ただし本便は `LilySharp.Core` の 2 ファイルを触っているので、**空 diff では示せない**。**代わりに「差分行が全部 doc コメント」で示す**（実測・1 コマンド）:
+    ```powershell
+    $b = git -c color.ui=false diff bab19f52..HEAD -- LilySharp.Core LilySharp.Cli LilySharp.Lsp |
+         Where-Object { $_ -match '^[+-]' -and $_ -notmatch '^(\+\+\+|---)' }
+    "差分行 $(@($b).Count) / うち doc コメント以外 $(@($b | Where-Object { $_ -notmatch '^[+-]\s*///' }).Count)"
+    # → 20 / 0
+    ```
+    ⇒ ★ **鮮度証明は「触っていない」だけでなく「触ったが実行される行ではない」でも立つ。** 前者は次便で必ず偽になる（誰かが engine を触った瞬間に）が、後者は**触った便でも使える**ので射程が広い。
+
+> ## ★★★ 骨 1＝**同じ形の欠陥を 2 回踏んだら、3 回目を待たずに*母集団*を数える**
+> stale な「未実装」札は第234・235・236 で 1 件ずつ、**全部たまたま**見つかっている
+> ——README を読んでいて、triage をしていて、別件の裏取りをしていて。
+> **数えたら 1 コマンドで、反証可能な候補は 8 件しかなかった。**
+> ⇒ ⚠️ **「見つけた」を 3 回繰り返すのは調査ではなく*遭遇*である。**
+> **母集団を定義できるなら、それは調査に変えられる**——そして**変えた瞬間に
+> 「あと何件あるか」が言えるようになる**（本便は「残り 6 件は本物」と言えた）。
+> ⚠️ **これは第236 の骨 1「計器は*未完に気づく*ほうが価値が大きい」の grep 版**で、
+> **計器を建てる前に 1 回 grep するだけでも同じ効き方をする。**
+
+> ## ★★★ 骨 2＝**「まだ無い」と書いた札は、*同じ連番の後ろの便*が真っ先に嘘にする**
+> `PitchTransposer` の class doc は「parser がオクターブ記号を運ばない」と書いた。
+> **書いたのは `d7d3add2`＝「Transpose (1/n)」。嘘にしたのは `0a7a0f27`＝「Transpose (6/n):
+> octave-marked targets (downward / wide intervals)」で、同じ日である。**
+> ⚠️⚠️ **6/n は `PitchTransposer.cs` を書き換えている**——**同じファイルを開いた手が、
+> 自分が今まさに実装した機能を「無い」と書いた一文を残した。**
+> ⇒ ★★★ **1/n の doc に書く「まだ無い」は、n/n の *TODO リスト*である。**
+> 連番で出す設計をしたら、**最後の便で 1 本目の doc を読み直す**——
+> **その連番の存在自体が「後で嘘になる」と宣言している。**
+> ⚠️ **そして doc は実行されないので、緑の suite はこれを一切止めない。**
+> **5806 本が緑で、反証する 3 本もその中に居た**（`PitchTransposerTests` の 3 点は
+> **嘘にした当の commit が足したもの**）。§5.2.1 の計器は全部コードを見ており、
+> **doc を見る計器は `LpReferenceCitationTests`（REF の記号名）と
+> `HistoryCitationTests`（引用先の commit）だけ**——**どちらも「引用が実在するか」で、
+> 「主張が真か」ではない。** ⇒ **札は人が読むしかない。読む回数を減らすには母集団を
+> 小さく保つ**（骨 1）。**「まだ無い」と書くときは*消える条件*も書く**（`NoteCollision`
+> の 2 件がその形＝**LP の行番号と記号名まで在るので、次の人は照合だけで済む**）。
+
+> ## ★★ 骨 3＝**札を直すとき、札が*どの宣言に付いているか*も見る**
+> `WalkForm` の `<summary>` は 1 つ下の**フィールド**に付いていた。
+> **`CS1591`（public に doc 無し）が `NoWarn` なので、これは永久に静か**——
+> doc を失った method も、他人の doc を着た member も、どちらも警告を出さない。
+> ⇒ ⚠️ **§0 の「0 警告は XML doc の健全性も含む」を過信しないこと。**
+> あれが赤くするのは**壊れた cref・閉じていない XML・間違った `param` 名**までで、
+> **「正しい XML が間違った物に付いている」は通る。**
+
+---
+
+## 以下は第236セッションの経緯
+
 最終更新 第236セッション＝**第235 が「次便が書くところから」と名指した `is-ancestor` 検査を建てたら、初回が*無毒で*赤になり、trailer 除去が 2 か所で未完だったことが出た**（8 commit＝番人 `HistoryCitationTests` 3 本＋workflow 2 本／番人自身の射程訂正／handoff＋分類器の訂正⑤／番人 `HandoffArchiveContinuityTests` 3 本／handoff＋床の更新／委任を断った triage ⑹／README の残債欄をコードと突き合わせ⑥／この行。**engine 0 接触**）。⚠️ 3 本目は**単独では入れられない**——この §1 が引く tree の SHA を番人が dead に数えるので、散文と分類器は同じ commit に入る（RULES §5.1「依存があるなら同時投入」）。
 **① 何を建てたか**：`HistoryCitationTests`——追跡下の `.md/.cs/.json/.ps1/.csv/.yml` から 7〜40 桁の hex を全部拾い、**1 回の `cat-file --batch-check`** で commit かどうかを訊き、**`rev-list <tip>` の集合**と突き合わせる（`merge-base --is-ancestor` の集合版・git 呼び出しは 3 回）。⑴ **他の ref に生かされている引用は赤**（本体）⑵ **live 引用のラチェット 510**（＝**547 → 503 の落下を「調査の入口」にしたはずの計器**）⑶ **dead の天井 469**（＝修理不能な旧引用の国勢調査。「今日書く引用は今日在る commit を指す」ので、**この数が増えるのは書き換えが貼り替えを取りこぼしたときだけ**）。⚠️ **git が使えないときは skip ではなく赤**——§0 の「無変更の増分ビルドは警告 0 を*自明に*報告する」と同型の偽の緑になるから。**そのため `ci.yml`／`release.yml` の suite を回す脚に `fetch-depth: 0` を足した**（`actions/checkout` の既定は shallow＝1 commit で、全引用が一斉に死んで見える）。
 **② 1 か所目＝`refs/tags/v0.3.0`（ローカルにも origin にも）**。第235 の filter-branch は**第1パスが全 ref（タグ込み）を書き換え、第2パスが master だけ**を書き換えた（`df013810` の trailer が**独立行ではなく長い 1 行の末尾**に居て `/^Co-Authored-By:/` に当たらなかったので第2パスが要った）。⇒ **タグは第1パスの履歴を指したまま 98 commit を生かしており、その中に「除去したかったその 1 本」が座っていた**。tree は新旧完全一致（`bb1a1b43`）・suite は緑・branch からは何も見えない。**ユーザー承認で `ee672314`（tree・author・author email・author date・subject が一致する master 側の双子）へ張り直し**、tag object は **object 行以外バイト同一**（tagger と tagger date を保存）。reflog expire ＋ `gc --prune=now` で 98 を落とし、fsck clean・pack 42495 → 42401 object。⚠️ **origin の push はユーザー**＝`git push --force origin refs/tags/v0.3.0`（**release.yml が tag push で再起動する**——今は課金停止で走らないが、復旧後は既存 Release と衝突しうる）。
@@ -225,105 +308,6 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 > **commit と作業ツリーしか見ていない**ので、**ref を動かした便は §1 に自分で書く以外に
 > 記録が残らない**（本便の「終了時」行の末尾がそれ）。
 > ⇒ ⚠️ **タグや branch を動かしたら、その行を書くまで終わっていない。**
-
----
-
-## 以下は第235セッションの経緯
-
-最終更新 第235セッション＝**第234 が「移植から始められる唯一の項」と名指した残債は*実在しなかった*。§2 の ledger 引用を全数突き合わせ、stale を 5 件直し、二度と静かに腐らないよう番人を建てた**（3 file＝新テスト 3 本・`BezierBow` の remark・HANDOFF §1/§2E/§2H/§3）。
-**① 何が起きていたか**：第234 は末尾の委任「有利なら着手／不利なら着手するな」に対し §2 の 2000 行を triage し、**「⑴ 移植から始められる項は 1 つだけ＝符尾の attachment X が黒玉固定（§2 E・▶ 先頭）」**と書いて断った。**その項は 2026-08-03＝起票と同じ日に閉じている**（`LayoutUtilities.StemAttachX` は `noteValue`＋`NoteheadStyle` を取り `GlyphMetrics.GetNoteheadStemAttachment` に訊く・観測者 `StyledHeadStemAttachmentTests`・台帳 `stem.up.right-edge.half-head` は **residual 0**、`why` は "CLOSED by…"）。**第234 の断り方は健全だった（文脈の重なりで決める＝骨として残す価値がある）が、選別の入力が 157 便前から嘘だった。**
-**② 5 件の stale は全部同じ形**：**棚が「着手根拠」として現在形で挙げている数を、台帳がとっくに 0 にしている**——⑴ 符尾 attachment X（−0.073200000 → 0・2026-08-03）⑵ タイの列アウトライン（`tie.width.seconds.upper` +0.888699999 → −1e-09・`TieChordOutline` が移植済み）⑶ courtesy 調号（`courtesy.meter.barline-to-cancellation` −0.2 → 0・ユーザー承認済みの移植）⑷ grace の接近（`grace.column.approach` +0.850449 → 0・`SpringIntoGraceRun`）⑸ `page.stretched.first-staff-refpoint`（−0.000042 → −4.46e-07）。**加えて `Bezier` 型の ⒝ 債務も stale**（`Bezier.cs` は実在し 8 ファイルが読む・論拠に挙がっていた `SlurScoringProblem.InterpolateSlurY` は消滅）——**その出所は `BezierBow` の remark が "this engine has no Bezier type at all" と書き続けていたこと**なので**コード側も同じ便で直した**。
-**③ 番人＝`HandoffLedgerCitationTests`（4 本・タグ 27 点）**：HANDOFF.md の `<!-- ledger: NAME = VALUE -->` タグを全部読み、⑴ **名前が台帳に在るか**（typo は「検証済みに見えて永久に赤くならない」ので無いより悪い）⑵ **数が台帳の残差と一致するか**（許容差 1e-06）⑶ **タグの数が減っていないか**（通す最安の手はタグを消すこと＝ratchet・**現在 36 点／3 文書**）⑷ **名指された点にタグが在るか**（＝射程の穴）。**射程は `Covered` 表 1 軒**＝`HANDOFF.md` の §2 以降・`COORDINATE_AUDIT.md`・`cue-context-design.md`。⚠️ **外した文書は理由ごと remark に書いた**——`RULES.md` の 6 引用は**過去形の方法論の実例**（「台帳もコードも別の持ち主を名指していた」等）で、**点が今いくつでも教訓は真**だから課税しない／`HANDOFF-ARCHIVE.md` は逐語の歴史／**HANDOFF §1 は毎便書き換える**。**タグは「その一節を人が読んだ」記録**なので、**読まずにタグだけ動かすのが drift** だと失敗メッセージ自身が言う。⚠️ **HANDOFF-ARCHIVE.md は対象外**——逐語の歴史は当時の数を持っているのが正しい。
-**④ 証明**：**毒を 2 つ当てて赤を見た**（§2 の掟「0 冊を証拠に引く前に毒を当てる」）——タグを stale 当時の `-0.073200000` に戻すと **"THE POINT IS NOW EXACT — the shelf is probably describing a closed defect" を行番号つきで出す**（＝**第234 の triage を救ったはずのメッセージ**）、名前を 1 文字崩すと未知名として `HANDOFF.md:539` を名指す。engine には 1 行も触っていない（`BezierBow` は doc comment のみ）ので**出力は構成上不動**＝台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2 完全不動**・**snapshot 222 枚不動**・**追跡コーパス 572 冊不動**。
-
-★ **開始時裏取り**: HEAD `e11894dd`（第234 の triage handoff）・未 push 29・未追跡 0/木 0・Windows suite **5796/0/4**・WSL **5796/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2・追跡コーパス 572 冊・Core 0 警告＝**前便の閉幕数と全一致**（⚠️ 前便 §1 は「未 push 28」と書いたが、**その行を書いたあとに ⑸' の triage handoff を 1 本積んでいる**ので 29 が正しい＝§0 の「両端を書く」が効いた例）。
-⚠️⚠️ ★★★ **GitHub の門は「赤」だが理由はコードではない＝*課金停止***（本便で中身を読んだ・**§0 が「`X` を見たら中身を読め」と言う所**）。最新 3 run とも**全脚が 3〜4 秒で死んでおり**、annotation は **"The job was not started because recent account payments have failed or your spending limit needs to be increased"**——**1 行もビルドしていない**（残りの `X` は fail-fast の巻き添え）。⇒ **`gh run list` はコードについて何も言っていない**ので、**Linux の証拠は WSL 脚だけ**（第213 が建てた道が唯一の門）。⚠️ **これはユーザーの操作でしか直らない**（Billing & plans）。**次便は同じ調査をやり直さないこと**——`gh run list` が赤でも、annotation が課金のままなら情報はゼロ。
-⚠️⚠️ ★★★ **⑥ 本便で全履歴を書き換えた＝`Co-Authored-By` trailer の除去**（ユーザー指示・**private repo なので force-push 承認済み**）。**RULES §5.1 の「Co-Authored を付けない」が正典**で、**787 commit がそれを破っていた**（うち 761 は push 済み）⇒ `git filter-branch --msg-filter` で全 2887 commit を書き換え、**trailer 0 本**に。⚠️ **`Claude-Session` は指示に含まれないので残した**（217 本）。
-⚠️ **消していないものが 2 本ある＝*散文*として "Co-Authored-By" を含む commit**（`b8f20760` は**過去のセッションが「trailer を付けた＝禁止事項」と自己申告している本文**・`1d2ee6bd` は workflow 文書の雛形の引用）。**trailer と、trailer について書いた文は別物。**
-⚠️ ★★ **1 本だけ `/^Co-Authored-By:/` に当たらなかった**（`df013810`＝**trailer が独立行ではなく長大な 1 行の末尾に埋まっていた**）。**その 1 本を名指す第 2 パス**で閉じた——**「同族は同じ綴りで座っている」と仮定すると取りこぼす。**
-★★★ **代償は SHA 引用**: **文書とコードは commit SHA を 538 個引用しており**（HANDOFF-ARCHIVE 492／HANDOFF 124）、**全履歴書き換えはそれを全部 nowhere にする**——**この repo が commit 表題にするほど嫌う欠陥を自分で作ることになる**。⇒ **旧→新の対応表で 958 引用を貼り替えた**（39 ファイル・765 行・**貼り替え後 547 トークンが commit に解決**）。
-⚠️⚠️ ★★★ **対応表は「作った」ではなく「証明した」**: msg-filter は **tree も author も変えない**ので、旧新を位置で対にしたうえで **2887 組すべてが tree・author・author email・author date・subject まで一致することを確かめ、1 組でも食い違えば貼り替えを拒否する**ようにした（実測 **2887/2887・食い違い 0**・217 は SHA 不変／2670 が移動）。**§5.0 の「壊れた対から出た強い言明は、ただの強い間違い」の履歴版。**
-⚠️⚠️ ★★★ **第 1 稿はテキストモードで書き戻して改行を壊した**——`SkylineBuilder.cs` が **1 トークンの置換で 2287 行の diff**（RULES §5.1「スクリプトで書き戻すときは LF で」の*逆向き*）。**バイト列として読み書きし直して 765 行**に。⇒ ★★ **機械で文字列を貼り替えるときはバイトで扱う**（改行も BOM も「内容」ではないが「ファイル」ではある）。**検算は `--numstat`＝置換数と行数が桁で合うか。**
-✅ **⑦ 退避 `refs/original/*` は落とした**（ユーザー指示）。**reflog expire ＋ `gc --prune=now` まで実施＝旧履歴は復元不能**。`fsck` clean・pack 47102 → 42495 object。**`master` = `c4226f5c` ＝ origin と一致**。
-⚠️ **書き換え直後の罠だけ記録に残す**——**`git log --all` / `rev-list --all` は退避 ref も数える**。本便で実際に踏んだ: 書き換え直後に「Co-Authored **790** 本」と出て一瞬失敗に見えたが、**`--all` が退避を見ていただけ**で `master` では 3 本だった。⇒ **履歴を数えるときは `--all` ではなく `master`。**
-⚠️⚠️ ★★★ **`gc` が既存の欠陥を 1 つ露出させた＝「解決する SHA 引用」が 547 → 503 に落ちた。** 切り分けた結果 **私の貼り替えの取りこぼしではない**——**解決しない全 1804 トークンのうち、旧 SHA のプレフィックスは 0 個・新 SHA も 0 個**（＝master の履歴に属する引用は 1 つ残らず貼り替わっている）。**消えた 44 個は旧履歴にも新履歴にも属さないオブジェクトを指していた**＝**amend / reset で孤立し、object DB にゴミとして生き残っていた commit への引用**で、**`gc` 前は「解決する」ように見えていた**。
-⇒ ★★★ **骨**: **「その SHA は解決するか」は「その SHA は履歴に在るか」ではない。** 孤立オブジェクトが残っている限り、**死んだ引用は生きているふりをする**——`git rev-parse` は object DB を見るのであって、到達可能性を見ない。**引用を検査するなら `git merge-base --is-ancestor <sha> master` まで見ること**（`audit/citation_drift.csv` が「範囲が実在するかしか見ない」のと同じ穴の、SHA 版）。**この 44 件は元から nowhere を指していた**＝`5f349902`「audit: one row's five citations pointed nowhere」と同族で、**未修理のまま残っている**（どの引用かは `gc` 後は特定できない——**特定したければ次便が `is-ancestor` 検査を書くところから**）。
-終了時: **未 push 0（全て push 済み）**＝本便 7 本（実装一式／CI 課金／射程の穴／多文書化＋予測表／SHA 引用の貼り替え／退避の記録／この行）・未追跡 0/木 0・suite **Windows 5800/0/4・WSL 5800/0/4＝両 OS 完全緑（開始比 +4＝`HandoffLedgerCitationTests`）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊（1 冊も触っていない）**・Core 0 警告。
-
-★ **この便の値段**:
-
-| 便 | 何が動いたか | 射程 |
-|---|---|---|
-| ① §2 の ledger 引用 23 点を全数突き合わせ・stale 5 件＋⒝ 債務 1 件を訂正 | HANDOFF §1／§2E（符尾・タイ・Interval・Bezier）／§2H（courtesy・grace）／§2D（refpoint 2 件）／§3 ⑵ | **prose のみ**・engine 0 接触 |
-| ② 番人 `HandoffLedgerCitationTests` 3 本＋`BezierBow` remark 訂正 | 新テスト 3 本（名前・数・ratchet）・doc comment 1 件 | **出力は構成上不動**（doc comment のみ）・両 OS 完全緑 |
-| ③ **番人の射程の穴を閉じた**（続き便＝委任「有利なら着手」→着手） | 4 本目のテスト（**§2/§3 で名指された点はタグ必須**）・§3 に 4 タグ（歌詞床・語間 narrow・行の staff-to-lyric・verse-step） | 同上・**§3 が初めて機械の下に入った** |
-| ④ **他の恒久文書へ射程を広げ、`COORDINATE_AUDIT.md` の予測表を閉じた**（3 便目＝同じ委任→着手） | 番人を多文書化（`Covered` 表＝入る文書と**外す理由**を remark に列挙）・COORDINATE_AUDIT に 7 タグ・cue-context-design に 2 タグ・**予測表 4 行の「現在」列を実際の着地に更新** | 同上・**タグ 27 → 36 点／3 文書** |
-
-- **⑸ ★★★ 次に触るなら＝残債（第234 の一覧から stale を落としたもの）**: 言語仕様の宿題は §1.2 リネーム（ユーザーが MSVS で）だけ／**名指し穴**＝⒤ exporter の paper 未輸出（**需要待ち**＝`LilyPondExporter.cs:662` が「no tracked book writes paper{} as of 2026-08-23」と書いており、**第234 の importer が paper を*出す*ようになったので、MusicXML → .lys → 双子の往復を測る日が来たらここが最初に効く**）／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示・着手はユーザー決定から）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・非ペア ToCoda の reserve≠draw・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示・実譜の `%` 記号。Marketplace は PAT 待ちのまま（第220 ①）。
-  ⚠️ **⑴ ゲート無しで移植から始められる項は、数え直しても 0 件**（第234 の答えは「1 件」だったが、その 1 件が幻だった）。**⒣・condensedStaff・skyline 参加者列挙・▶ perf ⒜ は自分で「ユーザー決定から」「専用の便」と書いてある**／**小粒 7 件は §2 に本文が無い＝起票から**（§5.0 の 1 番）。
-  ⚠️ **⑵ 実コードで開いていることを確かめた項**（本便で裏取り済み・stale ではない）: **第97 の二重走査**（`StaffAccidentalColumns.cs:103` と `ElementCoordinator.cs:131` が同じ `CalculateVoiceOffsets` を回す＝健在・+0.3% でコスト対効果の判断が要る）／**§2 E の未移植 LP 計算**（volta shorten・hairpin niente・`ledger_positions` は綴りが 1 つも無い＝伝聞どおり未移植）／**courtesy 群の第131 起票分**（「拍子の右側 0.455 ss」＝点が 1 つも無いので起票から）。
-
-> ## ★★★ 骨 1＝**規則が在るのに守られないなら、足りないのは規律ではなく機械**
-> ⚠️⚠️ **RULES §5.1 は既にこう書いてある**——「**閉じる commit で、その項目を名指している
-> §1・§2 の行も同じ commit で消す**」「**消し忘れのコストは『読む時間』ではなく
-> 『セッション 1 本の方向』**」。しかも**その条文は 2026-07-31 に第54 が同じ穴に落ちた実例から
-> 書かれている**（閉じた項を ▶ に格上げして着手した）。**規則は正しく、実例つきで、5 年分の
-> 語彙で書かれていて、それでも 5 件が平均 150 便生き延びた。**
-> ⇒ ★★★ **差は機械の有無だった**: 台帳の残差は `LpGeometryLedgerTests` が突き合わせるので
-> **0 にする以外の選択肢が無い**が、**同じ量を綴った棚の prose は誰も突き合わせない**
-> ——§2 A の主題（同じ量が 2 か所）が、**片方にだけ機械が付いている**形で文書に出ていた。
-> ★★ **判定法**: **同じ規則を 2 回以上破ったら、条文を強くするのをやめて計器を書く。**
-> 条文を強く書き直すのは「次は気をつける」の別綴りで、**当repo の記録では 1 度も効いていない。**
-
-> ## ★★★ 骨 2＝**triage の結論より、triage が読んだ入力の鮮度を先に疑う**
-> 第234 は 2000 行を丁寧に選別し、⑴⑵⑶ と番号を振り、断る理由まで一般化して書いた——
-> **選別の質は高く、入力が腐っていた。** 手間をかけた分だけ結論は確からしく見える。
-> ⚠️ **§0 は「stale を毎セッション複数踏む」と 7 例ぶん書いてあるのに、triage 自身には
-> 裏取りの手順が無かった**（裏取りは §0 の*数*＝HEAD・テスト数・台帳の総和にしか掛かっていない）。
-> ⇒ ★★ **一般化**: **裏取りの対象は「引き継がれた数」だけでなく「引き継がれた*仕事の一覧*」。**
-> **着手を決める前に、その項の falsifier を 1 つ引く**——本便はそれを 1 コマンドでやった
-> （台帳の `residual` と `why` を読む・約 10 秒）。**2000 行の選別より安い。**
-
-> ## ★★★ 骨 3＝**番人を建てたら、次に測るのは「番人が見ていない所」**
-> 続き便の委任で着手したのはこれ。**§2 の 23 点にタグを付けた時点で「§2 は守られている」**
-> ——しかし**§1/§3 は射程外**で、しかも**その事実自体が新しい罠**だった（番人が在ることが
-> 「全部見ている」と読める）。⇒ **§2/§3 で名指された点はタグ必須**を 4 本目の番人にした。
-> ★★★ **効いたのは §3**＝「**決定済み ← 蒸し返さない**」。**誰も読み返すなと書いてある節が、
-> 数が腐っても最も気づかれない場所**——実際そこに 4 点が裸で座っており、うち 2 点
-> （`lyrics.band-floor.staff-to-lyric` −0.092・`lyrics.column.word-gap.narrow` +0.034）は
-> **ライセンス判断の根拠として引かれた実測値**（Schola を同梱し AGPL の C059 に合わせない）。
-> **その数が動いたら決定の根拠が変わっている**のに、節の見出しが再読を禁じていた。
-> ⚠️ **§1 は意図的に対象外**（毎便書き換えるのでタグは課税になる）——**除外は理由ごと remark に書く。**
->
-> ⚠️⚠️ ★★ **そして射程を測る計器自身が最初は間違っていた**: 点名は**入れ子**なので
-> （`note-to-note.quarter` ⊂ `compressed.note-to-note.quarter`／`lyrics.column.word-gap` ⊂
-> `…word-gap.narrow`）、素朴な部分一致は**短い名前を「引用されている」と数える**——
-> **最初の測定は穴 6 と言い、境界付きで測り直すと 4 だった**。§0 の数え方の罠
-> （`-like` の `?`・`$e.Count`）と**同型が 8 例目**。⇒ **名前の集合が入れ子なら、
-> 一致は必ず境界付きで取る**（テストの実装もそうしてある・remark に理由あり）。
-
-> ## ★★★ 骨 4＝**予測は「書いた」ではなく「着地を書き戻した」で完成する**
-> 3 便目で `COORDINATE_AUDIT.md` の**反証可能な予測表**（「現在／予測／予測残差の帰属」）を
-> 台帳と突き合わせたら、**4 行とも「現在」列が起票時のままで、着地が 1 行も書かれていなかった。**
-> **予測は 2 行が的中、2 行は*良い側に*外れて全部閉じていた**——そして§5.0 が
-> 「**外れたときこそ収穫・外れの方向が真因を指す**」と言う、その収穫が**どこにも残っていなかった**。
-> ⑴ `key-change-to-notehead`＝**族は当たり・数は外れ**（0.034272 を「臨時記号→符頭の距離」に
-> 帰属したが、実際は**箱と skyline の差 0.017606 ＋ padding**。台帳の `why` は
-> "Predicted to close with the accidental horizontal-skyline; it did" と書いている）。
-> ⑵ `time-change-to-notehead`＝**表が「LP がどこで 0.004735 を足しているか未特定」と
-> 書いた問いは解けている**——**Pango の device pixel 1 個への量子化**（0.034143 ss 格子・
-> 1.600000 → 47px ＝ 1.604735 が 10 桁一致）。**文書だけが問いのまま止まっていた。**
-> ⇒ ★★ **予測を書いた表には「実際」列を最初から置く。** 空欄が**閉じていない**ことを表すなら、
-> **埋まっていない表は「まだ測っていない」と読めて正しい**——列が無いと、
-> **当たったのか外れたのかを誰も言えないまま「現在」が古びる。**
-> ⚠️ **この便の番人はこれを機械にした**（表の各行がタグを持ち、着地が動けば赤くなる）。
-
-> ## ★★ 骨 5＝**残差を「名前の付いた 1 量」まで分解できたら、そこで止めて別の点に回す**
-> タイの列アウトラインは **+0.888699999 → −0.073200001** で止めて開けたまま置かれた——
-> 残りが「符尾の attachment が 1 量ぶん左」と*名指せた*から。そして**符尾の点を閉じた瞬間、
-> タイのコードを 1 行も触らずに −1e-09 へ落ちた**（タイの右端は符尾の引き戻しが持つ）。
-> ⇒ **分解できている残差は、別の場所で閉じたときにひとりでに返ってくる。**
-> **分解できないまま調整すると、その調整が次の欠陥になる**（§5.0 の「調整せず名指す」の実例）。
 
 ---
 
