@@ -1095,6 +1095,22 @@ holds the previous chord one more beat:
 chords prog { C | F G | C . . G7 | }
 ```
 
+An entry may also be a **Roman degree of the key** at that bar, which is how a
+progression is written once and follows the key:
+
+```
+chords prog { section A { Imaj7 | V7 | IIm7 | bVII | } }
+```
+
+In C that is `Cmaj7 G7 Dm7 B♭`; in E♭ the same source is `E♭maj7 B♭7 Fm7 D♭`. A degree is
+an optional `b`/`#`, a numeral `I`–`VII`, the ordinary quality (`Imaj7`, `IIm7`, `V7`,
+`VIIdim`, `Vaug`, `IIm7-5`) and an optional `/` bass written as a degree too (`V7/VII`).
+Degrees and absolute names may not collide — a root is `A`–`G`, a numeral is `I` or `V` —
+and both resolve to the same chord, so the written form and the displayed form stay
+independent: a degree chart prints names by default and degrees under `as roman`.
+⚠️ Use the ASCII `b`/`#`: the printed `♭ ♯ ° ø` are refused by the lexer, so write
+`bVII` and `VIIdim`, not `♭VII` and `VII°`.
+
 That fragment is the row's *contents*. Where it may sit depends on the file's layout:
 inside the section whose bars it fills (`section A { chords prog { … } }`), or — in a
 part-major file, where the parts carry their own sections — at the top level with the

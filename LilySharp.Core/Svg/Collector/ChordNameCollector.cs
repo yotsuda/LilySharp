@@ -219,7 +219,7 @@ internal sealed class ChordNameCollector
                 }
                 else if (node is ChordEntrySyntax entry)
                 {
-                    var (text, structure) = ResolveChordEntry(entry);
+                    var (text, structure) = ResolveChordEntry(entry, mi);
                     _items.Add(new ChordNameItem(
                         text, mi, itemIndex: -1, entry.Position, staffIndex,
                         useTiming: true, timing: timing, structure: structure)
@@ -518,7 +518,7 @@ internal sealed class ChordNameCollector
             int position = PositionOf(node);
             if (node is ChordEntrySyntax entry)
             {
-                var (text, structure) = ResolveChordEntry(entry);
+                var (text, structure) = ResolveChordEntry(entry, measureIndex);
                 _items.Add(new ChordNameItem(
                     text, measureIndex, itemIndex: -1, position,
                     staffIndex: staffIndex, useTiming: true, timing: timing, structure: structure,
@@ -554,11 +554,24 @@ internal sealed class ChordNameCollector
     /// (no note expansion), but the root resolves to a Roman degree, so
     /// <c>Cm13</c> shows "Cm13" / "Im13" instead of an un-converted literal.
     /// </summary>
-    private static (string Text, LilySharp.Core.Music.ChordStructure? Structure) ResolveChordEntry(ChordEntrySyntax entry)
+    private (string Text, LilySharp.Core.Music.ChordStructure? Structure) ResolveChordEntry(
+        ChordEntrySyntax entry, int measure)
     {
         string symbol = entry.SymbolText;
         if (LilySharp.Core.Music.ChordStructure.TryParseChordEntry(symbol, out var parsed))
             return (parsed.DisplayName, parsed);
+
+        // A ROMAN degree of the key in force at this bar (Imaj7, V7, bVII, V7/VII). It
+        // resolves to the SAME structure an absolute symbol would give, so everything
+        // downstream — the printed name, the degree the `as roman` display re-derives, the
+        // transposition — is the one road. That is also what makes the WRITTEN form and the
+        // DISPLAYED form independent: a chart written in degrees prints absolute names by
+        // default, and one written in names prints degrees under `as roman`.
+        // ⚠️ Tried AFTER the absolute parse, and the two cannot both match: an absolute
+        // root is A-G, a numeral is I or V.
+        var (tonicStep, sharps) = KeyAt(measure);
+        if (LilySharp.Core.Music.ChordStructure.TryParseRomanEntry(symbol, tonicStep, sharps, out var degree))
+            return (degree.DisplayName, degree);
 
         int slash = symbol.IndexOf('/');
         string main = slash >= 0 ? symbol[..slash] : symbol;

@@ -944,6 +944,24 @@ DisplayName    = String ;
    score main "sheet" { chords prog lyrics words }
 *)
 
+(* WRITING THE CHORDS AS DEGREES. An entry may be an absolute symbol (C, Am, G7, F#m,
+   Bb7/D) or a ROMAN DEGREE of the key at that bar:
+
+     chords prog { section A { Imaj7 | V7 | IIm7 | bVII | } }
+
+   In C that is Cmaj7 G7 Dm7 B♭; in E♭ the same source is E♭maj7 B♭7 Fm7 D♭. The two
+   spellings cannot collide — an absolute root is A-G and a numeral is I or V — and both
+   resolve to the same chord, so the WRITTEN form and the DISPLAYED form are independent:
+   a degree chart prints names by default and degrees under 'as roman', and a name chart
+   does the same. A mid-piece 'key' rebases every degree after it.
+   The degree grammar: an optional accidental 'b'/'#' (as many as needed), a numeral
+   I II III IV V VI VII, the ordinary quality (Imaj7, IIm7, V7, VIIdim, Vaug, IIm7-5),
+   and an optional '/' bass written as a degree too (V7/VII).
+   ⚠️ Written with the ASCII 'b' and '#'. The PRINTED accidentals (♭ ♯) and the printed
+   roman quality symbols (° ø) are refused by the lexer, so a degree cannot be pasted
+   back into the source from the score it came out of — write 'bVII', not '♭VII', and
+   'VIIdim', not 'VII°'. *)
+
 (* SHOWING ONE TRACK TWO WAYS. A chord row takes 'as roman' (degrees for the key) or
    'as names' (the default). There is no third mode: to show BOTH, place the track twice —
 

@@ -384,6 +384,138 @@ public sealed record ChordStructure(
         _ => ChordQualityRegistry.GetSuffix(quality),
     };
 
+    /// <summary>The seven numerals, LONGEST FIRST so a prefix never wins over the word
+    /// that contains it.</summary>
+    /// <remarks>
+    /// ⚠️ The order is the whole correctness of <see cref="TryParseRomanEntry"/>. Written
+    /// ascending, "V" matches the head of "VI" and "I" the head of "II"/"III"/"IV", so
+    /// every compound numeral would parse as its first letter with the remainder falling
+    /// into the quality — <c>IV</c> would read as <c>I</c> with quality "V". The same trap
+    /// the duration alternation hit in the editor grammar (HANDOFF §1, session 239 ③).
+    /// </remarks>
+    private static readonly string[] RomanNumeralsLongestFirst =
+        { "VII", "III", "VI", "IV", "II", "V", "I" };
+
+    private static readonly string[] RomanNumeralsInOrder =
+        { "I", "II", "III", "IV", "V", "VI", "VII" };
+
+    /// <summary>
+    /// Reads a chord written as a ROMAN DEGREE of the key — <c>Imaj7</c>, <c>V7</c>,
+    /// <c>IIm7</c>, <c>bVII</c>, <c>#IVm7-5</c>, <c>V7/VII</c> — into the same
+    /// <see cref="ChordStructure"/> an absolute symbol produces, resolved against the key
+    /// in force where it is written.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The EXACT inverse of <see cref="ToRomanNumeral"/>, and deliberately next to it: the
+    /// degree vocabulary — which numeral, which accidental, which quality spelling — is one
+    /// thing written twice, so the two have to be read together whenever either changes.
+    /// Round trip: a structure printed by <c>ToRomanNumeral</c> and read back here against
+    /// the SAME key is that structure again.
+    /// </para>
+    /// <para>
+    /// The accidental is what separates the written degree from the key's own note on that
+    /// letter, exactly as <c>ToRomanNumeral</c> emits it: <c>bIII</c> in C major is E♭
+    /// because E is natural there, and the same <c>bIII</c> in E♭ major is G♭.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE PRINTED GLYPHS DO NOT ROUND-TRIP THROUGH THE LEXER, and this method's
+    /// tolerance of them does not change that. ♭ ♯ ° ø are read here so the string parser
+    /// is total, but MEASURED: the lexer refuses each of them outright ("Unexpected
+    /// character '♭'"), so they never reach a chord entry and a symbol cannot be pasted
+    /// back into the source from the score it came out of. The typeable spellings are the
+    /// ASCII ones — <c>bVII</c>, <c>#IV</c>, <c>VIIdim</c>, <c>IIm7-5</c> — and those are
+    /// what the grammar documents. Admitting the glyphs is a lexer change, not this one.
+    /// </para>
+    /// <para>
+    /// The quality is read by the printed roman spellings first (° ø7 +, which
+    /// <see cref="RomanSuffix"/> emits and which <c>ChordQualityRegistry</c> does not
+    /// know), then by the ordinary registry — so <c>VIIdim</c> resolves, <c>+</c> resolves
+    /// (it lexes, unlike the other three), and <c>Imaj7</c> / <c>V7</c> / <c>IIm7</c> need
+    /// no special case at all.
+    /// </para>
+    /// </remarks>
+    public static bool TryParseRomanEntry(string s, int tonicStep, int keySharps,
+        out ChordStructure result)
+    {
+        result = default!;
+        if (string.IsNullOrEmpty(s))
+            return false;
+
+        int slash = s.IndexOf('/');
+        string main = slash >= 0 ? s.Substring(0, slash) : s;
+        string? bass = slash >= 0 ? s.Substring(slash + 1) : null;
+
+        if (!TryParseDegree(main, tonicStep, keySharps, out int step, out int alter, out string qualStr))
+            return false;
+        if (!TryResolveRomanQuality(qualStr, out var quality))
+            return false;
+
+        int? bassStep = null, bassAlter = null;
+        if (bass != null)
+        {
+            if (!TryParseDegree(bass, tonicStep, keySharps, out int bs, out int ba, out string rest)
+                || rest.Length != 0)
+                return false;
+            bassStep = bs;
+            bassAlter = ba;
+        }
+
+        result = new ChordStructure(step, alter, quality, bassStep, bassAlter);
+        return true;
+    }
+
+    /// <summary>One roman degree: optional accidental prefix, a numeral, and whatever
+    /// follows it (the quality for a root, which must be empty for a bass).</summary>
+    private static bool TryParseDegree(string s, int tonicStep, int keySharps,
+        out int step, out int alter, out string rest)
+    {
+        step = 0;
+        alter = 0;
+        rest = "";
+        if (string.IsNullOrEmpty(s))
+            return false;
+
+        int i = 0, acc = 0;
+        while (i < s.Length && (s[i] == '#' || s[i] == '♯' || s[i] == 'b' || s[i] == '♭'))
+        {
+            acc += s[i] == '#' || s[i] == '♯' ? 1 : -1;
+            i++;
+        }
+
+        string tail = s.Substring(i);
+        string? numeral = null;
+        foreach (var n in RomanNumeralsLongestFirst)
+            if (tail.StartsWith(n, System.StringComparison.Ordinal))
+            {
+                numeral = n;
+                break;
+            }
+        if (numeral == null)
+            return false;
+
+        int degree = System.Array.IndexOf(RomanNumeralsInOrder, numeral);
+        step = (tonicStep + degree) % 7;
+        // The inverse of ToRomanNumeral's `acc = alter - KeySpelling.Alteration(step, sharps)`.
+        alter = KeySpelling.Alteration(step, keySharps) + acc;
+        rest = tail.Substring(numeral.Length);
+        return true;
+    }
+
+    /// <summary>The quality of a roman entry: the printed roman-only spellings first,
+    /// then the ordinary name-style registry.</summary>
+    private static bool TryResolveRomanQuality(string suffix, out ChordQuality quality)
+    {
+        switch (suffix)
+        {
+            case "°": quality = ChordQuality.Diminished; return true;      // °
+            case "°7": quality = ChordQuality.Diminished7; return true;    // °7
+            case "ø7": quality = ChordQuality.HalfDiminished7; return true; // ø7
+            case "+": quality = ChordQuality.Augmented; return true;
+            default: return ChordQualityRegistry.TryResolve(suffix, out quality);
+        }
+    }
+
     /// <summary>
     /// The chord as a Lily# note chord, e.g. "&lt;c e g b&gt;" (Cmaj7),
     /// "&lt;c ees g&gt;" (Cm). The notes are bare (no octave marks): in relative

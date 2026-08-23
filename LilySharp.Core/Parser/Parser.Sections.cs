@@ -320,6 +320,12 @@ internal sealed partial class Parser
         if (Current.Kind == SyntaxKind.Identifier
             && Current.Text.Length > 0 && Current.Text[0] is >= 'A' and <= 'G')
             return ParseChordEntry();
+        // …or a ROMAN degree of the key (Imaj7, V7, IIm7, bVII, #IVm7-5, V7/VII). The two
+        // spellings cannot collide: an absolute root is A-G and a numeral is I or V, so
+        // this arm decides only what it alone can start. Which KEY it means is not the
+        // parser's business — ChordNameCollector resolves it against the key at the bar.
+        if (StartsRomanChordEntry())
+            return ParseChordEntry();
         // r / s / R in a chord row: rests print the no-chord symbol, spacers
         // print nothing; each occupies ONE SLOT of the grid (no duration — a
         // glued digit falls to the stray-token report like any other).
@@ -328,6 +334,44 @@ internal sealed partial class Parser
         if (Current.Kind is SyntaxKind.RestR or SyntaxKind.RestS or SyntaxKind.RestR_Full)
             return new RestGreen(Advance(), null);
         return null;
+    }
+
+    /// <summary>True when the token run starting here opens a ROMAN degree entry: a
+    /// numeral (I… / V…), or an accidental prefix GLUED to one (<c>bVII</c>, <c>#IV</c>).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The flat prefix is where this needs a second token. <c>#</c> lexes as a BadToken
+    /// (tolerated inside a chords body) and <c>b</c> as a PITCH — the lowercase note — so
+    /// neither says "chord" on its own, and a bare <c>b</c> must keep falling through to
+    /// the stray report that names the retired lowercase entry format. Only when the next
+    /// token is glued AND is a numeral does the run open. The numeral test is a first
+    /// letter, not a full parse: the string grammar is
+    /// <c>ChordStructure.TryParseRomanEntry</c>'s, and this only decides where the run
+    /// begins (the same division of labour <see cref="IsChordSymbolToken"/> has).
+    /// </remarks>
+    private bool StartsRomanChordEntry()
+    {
+        // A numeral, possibly behind flat prefixes: `bVII` lexes as ONE identifier (the
+        // lowercase b is not a pitch token here — MEASURED: the stray report quoted the
+        // whole word, and took its non-pitch arm), so the accidental is stripped from the
+        // TEXT rather than looked for in an earlier token.
+        if (Current.Kind == SyntaxKind.Identifier && StartsWithNumeral(Current.Text))
+            return true;
+        // `#` is the one prefix that stays its own token: it lexes as a BadToken, which the
+        // chords-body region tolerates, and glues onto the numeral through the run.
+        return Current.Kind == SyntaxKind.BadToken && Current.Text == "#"
+            && Current.TrailingTriviaWidth == 0
+            && Peek(1) is { Kind: SyntaxKind.Identifier } next && StartsWithNumeral(next.Text);
+
+        // First letter only. The string grammar is ChordStructure.TryParseRomanEntry's;
+        // this decides where the RUN begins, the same division IsChordSymbolToken keeps.
+        static bool StartsWithNumeral(string text)
+        {
+            int i = 0;
+            while (i < text.Length && (text[i] == 'b' || text[i] == '♭' || text[i] == '♯'))
+                i++;
+            return i < text.Length && (text[i] == 'I' || text[i] == 'V');
+        }
     }
 
     // A token a chord-symbol run may continue with, GLUED to the previous one:
