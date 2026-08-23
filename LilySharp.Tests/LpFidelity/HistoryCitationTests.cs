@@ -102,7 +102,7 @@ public class HistoryCitationTests
     /// the drop would have been the thing that opened the investigation instead of a stray
     /// observation at the end of a long session.
     /// </remarks>
-    private const int LiveCitationsWhenWritten = 502;
+    private const int LiveCitationsWhenWritten = 505;
 
     /// <summary>
     /// The number of citation-shaped tokens whose commit is not in the history, when this
@@ -211,6 +211,7 @@ public class HistoryCitationTests
         IReadOnlyDictionary<string, string?> ResolvedTo,
         IReadOnlySet<string> Reachable,
         IReadOnlySet<string> HeldByAnotherRef,
+        IReadOnlySet<string> ResolvesToANonCommit,
         string Tip);
 
     private static readonly Lazy<Survey> Shared = new(Take, isThreadSafe: true);
@@ -267,10 +268,14 @@ public class HistoryCitationTests
         Assert.Equal(unique.Length, answers.Length);
 
         var resolved = new Dictionary<string, string?>(StringComparer.Ordinal);
+        var otherObject = new HashSet<string>(StringComparer.Ordinal);
         for (int i = 0; i < unique.Length; i++)
         {
             var parts = answers[i].Split(' ');
-            resolved[unique[i]] = parts.Length >= 2 && parts[1] == "commit" ? parts[0] : null;
+            bool named = parts.Length >= 2 && parts[1] is not ("missing" or "ambiguous");
+            resolved[unique[i]] = named && parts[1] == "commit" ? parts[0] : null;
+            if (named && parts[1] != "commit")
+                otherObject.Add(unique[i]);   // a tree or blob quoted on purpose, not a dead commit
         }
 
         var reachable = Git(new[] { "rev-list", tip }).Out
@@ -287,7 +292,7 @@ public class HistoryCitationTests
             .Select(l => l.Trim())
             .ToHashSet(StringComparer.Ordinal);
 
-        return new Survey(occurrences, resolved, reachable, heldElsewhere, tip);
+        return new Survey(occurrences, resolved, reachable, heldElsewhere, otherObject, tip);
     }
 
     /// <summary>
@@ -376,11 +381,21 @@ public class HistoryCitationTests
     /// grow.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Dead is defined as NOT LIVE — not as "git could not answer it". Those are different
     /// sets on a working clone, by exactly the objects a <c>gc</c> has not swept yet, and
     /// defining it the other way is what made this census read 469 on one machine and 421 on
     /// another for the same tree. Reachability from the branch is a property of the history;
     /// resolvability is a property of a disk.
+    /// </para>
+    /// <para>
+    /// A token naming a TREE or a BLOB is neither, and is excluded. §1 of the handoff quotes
+    /// the tree both sides of the repaired tag share, which is a citation of something that
+    /// plainly exists; counting it as a dead commit reference would have taxed the prose for
+    /// being precise. The census caught it on the first run after that sentence was written,
+    /// which is the census working — but the right repair was the classifier, not the
+    /// sentence.
+    /// </para>
     /// </remarks>
     [Fact]
     public void DeadCitationsDoNotGrow()
@@ -389,6 +404,7 @@ public class HistoryCitationTests
         var dead = s.Occurrences
             .Select(o => o.Text).Distinct(StringComparer.Ordinal)
             .Where(t => LooksLikeCitation(t)
+                        && !s.ResolvesToANonCommit.Contains(t)
                         && !(s.ResolvedTo[t] is string sha && s.Reachable.Contains(sha)))
             .ToArray();
 

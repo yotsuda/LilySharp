@@ -151,6 +151,72 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
+最終更新 第236セッション＝**第235 が「次便が書くところから」と名指した `is-ancestor` 検査を建てたら、初回が*無毒で*赤になり、trailer 除去が 2 か所で未完だったことが出た**（3 commit＝番人 `HistoryCitationTests` 3 本＋workflow 2 本／番人自身の射程訂正／この handoff＋分類器の訂正⑤。**engine 0 接触**）。⚠️ 3 本目は**単独では入れられない**——この §1 が引く tree の SHA を番人が dead に数えるので、散文と分類器は同じ commit に入る（RULES §5.1「依存があるなら同時投入」）。
+**① 何を建てたか**：`HistoryCitationTests`——追跡下の `.md/.cs/.json/.ps1/.csv/.yml` から 7〜40 桁の hex を全部拾い、**1 回の `cat-file --batch-check`** で commit かどうかを訊き、**`rev-list <tip>` の集合**と突き合わせる（`merge-base --is-ancestor` の集合版・git 呼び出しは 3 回）。⑴ **他の ref に生かされている引用は赤**（本体）⑵ **live 引用のラチェット 505**（＝**547 → 503 の落下を「調査の入口」にしたはずの計器**）⑶ **dead の天井 469**（＝修理不能な旧引用の国勢調査。「今日書く引用は今日在る commit を指す」ので、**この数が増えるのは書き換えが貼り替えを取りこぼしたときだけ**）。⚠️ **git が使えないときは skip ではなく赤**——§0 の「無変更の増分ビルドは警告 0 を*自明に*報告する」と同型の偽の緑になるから。**そのため `ci.yml`／`release.yml` の suite を回す脚に `fetch-depth: 0` を足した**（`actions/checkout` の既定は shallow＝1 commit で、全引用が一斉に死んで見える）。
+**② 1 か所目＝`refs/tags/v0.3.0`（ローカルにも origin にも）**。第235 の filter-branch は**第1パスが全 ref（タグ込み）を書き換え、第2パスが master だけ**を書き換えた（`df013810` の trailer が**独立行ではなく長い 1 行の末尾**に居て `/^Co-Authored-By:/` に当たらなかったので第2パスが要った）。⇒ **タグは第1パスの履歴を指したまま 98 commit を生かしており、その中に「除去したかったその 1 本」が座っていた**。tree は新旧完全一致（`bb1a1b43`）・suite は緑・branch からは何も見えない。**ユーザー承認で `ee672314`（tree・author・author email・author date・subject が一致する master 側の双子）へ張り直し**、tag object は **object 行以外バイト同一**（tagger と tagger date を保存）。reflog expire ＋ `gc --prune=now` で 98 を落とし、fsck clean・pack 42495 → 42401 object。⚠️ **origin の push はユーザー**＝`git push --force origin refs/tags/v0.3.0`（**release.yml が tag push で再起動する**——今は課金停止で走らないが、復旧後は既存 Release と衝突しうる）。
+**③ 2 か所目＝WSL の test clone に旧履歴が丸ごと残っていた**。番人の射程を直した直後の WSL 脚が**別の 2 件**を名指した——`refs/remotes/win/backup/{trailers-before, trailers-before-2, local-master-20260801}`（**Windows 側にはもう存在しない branch の stale な remote-tracking ref**）。その下に **master に無い 2291 commit・うち 572 が `Co-Authored-By:` を保持**。⇒ **§1 の「旧履歴は復元不能」は 2 か所で偽だった**（origin のタグと、この clone）。**ユーザー承認で `remote prune win` ＋ gc**。**行頭 trailer は両機械で 0 本**（散文としての言及 3 件は残る＝§0 の「trailer と、trailer について書いた文は別物」）。
+⚠️ ★★ **`git fetch` は既定でタグを force 更新しない**——古い `v0.3.0` を持つ clone は `git fetch --tags --force` が要る（WSL で実測。しないと "would clobber existing tag" で黙って古いまま）。**古いタグを持つ clone は番人が赤のまま**で、それは誤報ではなく番人が働いている姿。
+⚠️⚠️ ★★★ **④ 番人自身が最初は間違っていた＝*object DB* を測っていた**。第1稿は「解決するのに branch から到達できない」を全部赤にした。Windows では本物 1 件だったが、**数分後の WSL 脚では 48 件**——**全部「kept alive by:」が空**＝古い amend の孤児が、その clone の object DB に残っていただけ。**2 台の食い違いの原因は「どちらが直前に gc したか」**でしかない。⇒ **線は *ref* で引き直した**: **branch から到達不能 かつ 他の ref が生かしている**ものだけ赤（ref は fetch で travel し、全読者が継承する＝*木*の事実）／**参照無しのゴミは 1 台のディスクの事実**なので live から落として dead の国勢調査へ回す。**dead の定義も「git が答えられない」→「live でない」に変えた**。⇒ **両機械が完全一致（live 505・dead 469。旧定義なら WSL は 421 と言っていた）。**
+⚠️ ★★ **⑤ そして国勢調査は、この §1 の*散文自身*を最初に捕まえた**——上の ② が引く `bb1a1b43` は **tree の SHA で commit ではない**ので、「commit として解決しない」＝ dead に数えられて天井 469 を 1 つ超えた。**直したのは散文ではなく分類器**（tree/blob に解決するトークンは「実在する物の引用」なので dead から外す・木に 1 件しか居ない population だが、**次に誰かが tree を引くときに同じ税を取らない**）。⇒ ★ **計器が自分の便の文章を赤にしたら、まず「その文章は本当に間違っているか」を訊く**——**間違っていないなら、直すのは計器のほう。**
+
+★ **開始時裏取り**: HEAD `a97aec3a`（第235 の閉幕 handoff・§1 と一致）・未 push 0・未追跡 0/木 0・Windows suite **5800/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2・追跡コーパス 572 冊・snapshot 222 枚・Core 0 警告＝**前便の閉幕数と全一致**。
+⚠️ **GitHub の門は課金停止のまま**（第235 が中身を読んだ・本便は再調査していない）。**`gh run list` が赤でもコードについては何も言っていない**ので、Linux の証拠は WSL 脚だけ。**次便も同じ調査をやり直さないこと。**
+終了時: **未 push 3（push はユーザー＝RULES §5.1）**＝本便 3 本（`f83a255c` 番人一式＋workflow／`67d87e1a` 番人の射程訂正／この行の handoff）・未追跡 0/木 0・suite **Windows 5803/0/4・WSL 5803/0/4＝両 OS 完全緑（開始比 +3）**・**引用 live 502／dead 469＝両機械一致**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊（1 冊も触っていない）**・Core 0 警告。⚠️ **加えて ref が 2 つ動いている**（`v0.3.0` の張り直し／WSL の `win/backup/*` 削除）——**commit ではないので `git status` にも `rev-list` にも出ない。**
+
+★ **この便の値段**:
+
+| 便 | 何が動いたか | 射程 |
+|---|---|---|
+| ① 番人 `HistoryCitationTests` 3 本＋`ci.yml`/`release.yml` の `fetch-depth: 0` | 新テスト 3 本・workflow 2 本 | **engine 0 接触＝出力は構成上不動**・**初回が無毒で赤**になり `refs/tags/v0.3.0` を名指した |
+| ② タグの修復（ユーザー承認） | ref のみ（`v0.3.0` → `ee672314`）＋ prune | 木は 1 バイトも動かない。**origin は未修復＝push 待ち** |
+| ③ 番人の射程訂正＝「object DB」から「ref」へ | 同じ 3 本を書き直し（65+/23−） | **両機械の数が初めて一致**（502/469） |
+| ④ WSL clone の旧履歴 prune（ユーザー承認） | ref のみ（`win/backup/*` 3 本）＋ gc | **572 本の trailer がここで消えた**＝第235 の意図が初めて真になった |
+
+- **⑸ ★★★ 次に触るなら＝残債**（第235 の一覧を引き継ぎ、閉じたものを落とした）: 言語仕様の宿題は §1.2 リネーム（ユーザーが MSVS で）だけ／**名指し穴**＝⒤ exporter の paper 未輸出（**需要待ち**＝`LilyPondExporter.cs:662` が「no tracked book writes paper{} as of 2026-08-23」と書いており、**第234 の importer が paper を*出す*ようになったので、MusicXML → .lys → 双子の往復を測る日が来たらここが最初に効く**）／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示・着手はユーザー決定から）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・非ペア ToCoda の reserve≠draw・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示・実譜の `%` 記号。Marketplace は PAT 待ちのまま（第220 ①）。第97 の二重走査（`StaffAccidentalColumns.cs:103` と `ElementCoordinator.cs:131`）・§2 E の未移植 LP 計算（volta shorten・hairpin niente・`ledger_positions`）・courtesy 群の第131 起票分は**第235 が実コードで開いていることを確かめてある**。
+  - ⚠️ ★★ **本便が新しく名指した 1 件＝§7 の手順 3.5 が守られていない**。**`HANDOFF-ARCHIVE.md` に第230・第231・第233 の経緯ブロックが無い**（最新は第232 で、そこから第234 まで飛ぶ）。**§1 を書き換えるとき、3 便目を archive へ落とさずに*上書き*した便がある**——本便は第234 を規則どおり落とした。⇒ **これは第235 の骨 1 そのもの**（規則は在り、実例つきで、それでも守られない）＝**計器を書くところ**。落ちたブロックは当時の commit の `docs/HANDOFF.md` から回収できる（**回収すると引用が増えるので、dead の天井 469 と live の床 502 は同じ commit で上げ直すこと**）。
+
+> ## ★★★ 骨 1＝**計器を建てる価値は「守らせる」より「*未完に気づく*」ほうが大きい**
+> この番人は「これから起きる drift を防ぐ」つもりで建てた。実際にやったのは、
+> **もう起きていて誰も知らなかったことを 1 回目で出す**ことだった——しかも
+> **毒を当てる前に**。第235 は 2887 commit を書き換え、958 引用を貼り替え、
+> 2887/2887 の対を tree・author・date・subject で証明し、**それでも 2 か所を残した**。
+> ⚠️ **残ったのはどちらも「commit ではないもの」**——**タグ**と**remote-tracking ref**。
+> **検証は commit の集合に対して完璧で、ref の集合には一度も掛かっていなかった。**
+> ⇒ ★★ **一般化**: **「全部書き換えた」の*全部*が何の集合を指すかを声に出す。**
+> `git filter-branch` の既定は「渡された ref」で、**2 回目のパスに渡す ref を減らすと
+> 1 回目の出力が化石として残る**。**同じ操作を 2 回に分けたら、2 回目の射程を
+> 1 回目と突き合わせる**（本便の 98 commit はまさにその差分）。
+
+> ## ★★★ 骨 2＝**計器の答えが機械によって違ったら、測っている対象を間違えている**
+> 第1稿は Windows で 1 件・WSL で 48 件を出した。**同じ commit・同じ木**である。
+> 差は「どちらが直前に `gc` したか」だけ——つまり**測っていたのは木ではなく disk**。
+> ⚠️ **この repo は「この機械の緑は GitHub の緑ではない」を 214 便かけて学んでいる**
+> （§0 の警告）。**同じ罠が、こんどは*計器の側*に出た。**
+> ⇒ ★★★ **判定法**: **その量は clone すると付いてくるか。** 付いてくる（commit・ref・
+> ファイル）なら木の性質。付いてこない（object DB のゴミ・reflog・gc の時刻）なら
+> 機械の性質で、**赤にしてよいのは前者だけ**。
+> ⚠️ **後者を捨てるのではなく、*格下げ*する**——48 件は「live 引用ではない」ほうへ
+> 移した（dead の国勢調査）。**捨てると、次に同じものを見た人がまた驚く。**
+
+> ## ★★ 骨 3＝**射程を狭めたら、狭めたことで何を失ったかを測る**
+> 「ref に限る」は明らかに検出力を捨てる変更に見えた。**測ったら逆で**、
+> 狭めた版のほうが**新しい欠陥を 1 件多く見つけた**（WSL の `win/backup/*`）——
+> **48 件のノイズが本物 2 件を埋めていた**からで、**赤の中身を人が読むのをやめた瞬間に
+> 検出力は 0 になる**。⇒ **「厳しい検査」と「効く検査」は別物**。
+> 前者は赤の*数*で、後者は**赤を読んだ人が動く確率**で測る。
+
+> ## ★★ 骨 4＝**ref は `git status` にも `rev-list` にも出ない**
+> 本便の変更のうち**2 つは commit ではない**（タグの張り直し・stale ref の削除）。
+> **`git status --short` は clean・`rev-list origin/master..master` は 3**——
+> **どちらの計器も ref の移動を 1 文字も報告しない。** §0 の裏取りは
+> **commit と作業ツリーしか見ていない**ので、**ref を動かした便は §1 に自分で書く以外に
+> 記録が残らない**（本便の「終了時」行の末尾がそれ）。
+> ⇒ ⚠️ **タグや branch を動かしたら、その行を書くまで終わっていない。**
+
+---
+
+## 以下は第235セッションの経緯
+
 最終更新 第235セッション＝**第234 が「移植から始められる唯一の項」と名指した残債は*実在しなかった*。§2 の ledger 引用を全数突き合わせ、stale を 5 件直し、二度と静かに腐らないよう番人を建てた**（3 file＝新テスト 3 本・`BezierBow` の remark・HANDOFF §1/§2E/§2H/§3）。
 **① 何が起きていたか**：第234 は末尾の委任「有利なら着手／不利なら着手するな」に対し §2 の 2000 行を triage し、**「⑴ 移植から始められる項は 1 つだけ＝符尾の attachment X が黒玉固定（§2 E・▶ 先頭）」**と書いて断った。**その項は 2026-08-03＝起票と同じ日に閉じている**（`LayoutUtilities.StemAttachX` は `noteValue`＋`NoteheadStyle` を取り `GlyphMetrics.GetNoteheadStemAttachment` に訊く・観測者 `StyledHeadStemAttachmentTests`・台帳 `stem.up.right-edge.half-head` は **residual 0**、`why` は "CLOSED by…"）。**第234 の断り方は健全だった（文脈の重なりで決める＝骨として残す価値がある）が、選別の入力が 157 便前から嘘だった。**
 **② 5 件の stale は全部同じ形**：**棚が「着手根拠」として現在形で挙げている数を、台帳がとっくに 0 にしている**——⑴ 符尾 attachment X（−0.073200000 → 0・2026-08-03）⑵ タイの列アウトライン（`tie.width.seconds.upper` +0.888699999 → −1e-09・`TieChordOutline` が移植済み）⑶ courtesy 調号（`courtesy.meter.barline-to-cancellation` −0.2 → 0・ユーザー承認済みの移植）⑷ grace の接近（`grace.column.approach` +0.850449 → 0・`SpringIntoGraceRun`）⑸ `page.stretched.first-staff-refpoint`（−0.000042 → −4.46e-07）。**加えて `Bezier` 型の ⒝ 債務も stale**（`Bezier.cs` は実在し 8 ファイルが読む・論拠に挙がっていた `SlurScoringProblem.InterpolateSlurY` は消滅）——**その出所は `BezierBow` の remark が "this engine has no Bezier type at all" と書き続けていたこと**なので**コード側も同じ便で直した**。
@@ -245,48 +311,6 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 > タイのコードを 1 行も触らずに −1e-09 へ落ちた**（タイの右端は符尾の引き戻しが持つ）。
 > ⇒ **分解できている残差は、別の場所で閉じたときにひとりでに返ってくる。**
 > **分解できないまま調整すると、その調整が次の欠陥になる**（§5.0 の「調整せず名指す」の実例）。
-
----
-
-## 以下は第234セッションの経緯
-
-最終更新 第234セッション＝**残債 ⒥「MusicXML importer の page-layout → paper 写像」を閉じた（`b63b022a`・4 file＝importer 3 本＋新テスト 9 本・委任「有利なら着手」→着手＝直近 2 便が建てた paper の自然な続きで、ユーザー決定待ちの項が 1 つも要らない唯一の残債だった）**。`<defaults><page-layout>` が emit ヘッダの `paper { }` になる——paperWidth/Height＋余白 4 つ・**mm 綴り**で、**書くのは source が述べた key だけ**（欠けは paper block 自身の a4 既定に任せる）。
-**① 橋は reader が一人で持つ**：`<scaling>`（M mm ＝ T tenths）が tenths→物理単位の**唯一の**換算なので、`ImportPaper` は mm を運び **serializer は tenth を見ない**。mm は 2 桁丸め（1 tenth ≈ 0.18mm＝source 自身の解像度より細かい・1200 tenths は `210mm` と読み戻せる）。scaling 無しの page-layout は**推測換算せず drop＋warning**（importer の契約「never emitted wrong」）。
-**② 写せないものは全部 report で名指す**：⑴ odd/even の余白が割れたら odd 採用を宣言 ⑵ 単独 `type="odd"`（even は**鏡映**）は左右不等のときだけ警告（等しければ鏡映＝恒等で沈黙）⑶ **staff サイズ違い（Lily# は knob 非搭載＝GRAMMAR 2.5「staff space は単位そのもの」）は「整数 pt 解像度」で読む**——Lily# の 20 TeX pt＝19.93 DTP pt と MusicXML 常用既定 7.05556mm/40tenths＝20.00 DTP pt は**両方「20pt」に丸まる**（0.4% は TeX 対 DTP の*綴り差*でありサイズ選択ではない）ので沈黙・24pt 大譜面は「about 24pt」と名指し＋**ページは述べられたまま採用**（page-as-stated＋warning が唯一の正直な組合せ）。
-**③ 証明**：importer 名前空間のみ（engine・corpus・文法 0 接触）＝**既存本の出力は構成上不動**・suite の台帳/snapshot 網も込みで **Windows 5796/0/4・WSL 5796/0/4＝両 OS 完全緑（+9）**。E2E は emit した block を `PaperPlanReader` に通す対＝**width が a4 既定 `119.501575` に exact 着地・height `167.302205`（294mm）が既定から動く**（「読まれた」と「たまたま既定」を 1 テストで区別）。定数 40 tenths/staff・72/25.4 は MusicXML 仕様由来＝LP 由来ではないので REF なし（remark に出所明記・LpProvenanceTests 緑）。
-
-★ **開始時裏取り**: HEAD `6c377f6e`（第233 の閉幕 handoff・§1 と一致）・未 push 26・未追跡 0/木 0・Windows suite **5787/0/4**・WSL **5787/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2・追跡コーパス 572 冊・Core 0 警告＝**前便の閉幕数と全一致**。
-終了時: **未 push 28（push はユーザー＝RULES §5.1）**＝本便 2 本（`b63b022a` 実装一式／この行の handoff）・未追跡 0/木 0・suite **Windows 5796/0/4・WSL 5796/0/4＝両 OS 完全緑（開始比 +9＝MusicXmlPageLayoutImportTests 9 本）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊（1 冊も触っていない）**・Core 0 警告。
-
-★ **この便の値段**:
-
-| 便 | 何が動いたか | 射程 |
-|---|---|---|
-| ① ⒥ page-layout → paper 写像（`b63b022a`） | `ImportPaper`（mm 運搬）・reader `ReadPageLayout`（scaling 橋＋odd/even 対＋staff pt 検査）・writer `WritePaper`・新テスト 9 本 | **既存出力は構成上不動（importer のみ・engine 0 接触）**・両 OS 完全緑 |
-
-- **⑸ ★★★ 次に触るなら＝残債**: 言語仕様の宿題は §1.2 リネーム（ユーザーが MSVS で）だけ／**名指し穴**＝⒤ exporter の paper 未輸出（named 参照も同じ warning が受ける・paper を書く本が生まれて probe が要る日に）——**⒥ は本便で閉じた**／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示・着手はユーザー決定から）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・非ペア ToCoda の reserve≠draw（第227 起票・症状未観測なので点が先）・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示・実譜の `%` 記号（audit §8.1 ②・未起票のまま）。Marketplace は PAT 待ちのまま（第220 ①）。
-
-- ⚠️ ★★★ **⑸' 第234 の末尾でユーザー委任「有利なら着手／不利なら着手するな」を*断った*。triage の結果を書いておく**——**次便が §2 の 2000 行を読んで同じ選別をやり直さないため**（断ったこと自体ではなく、**数えた結果**が引継ぎの価値）。
-  **⑴ 移植から始められる項は 1 つだけ**＝**▶ の先頭「符尾の attachment X が符頭ごとでなく黒玉固定」**（§2 E）。**設計も測定も要らない**: LP 式は 6 桁で測ってあり（黒玉 1.304200 − 0.065 ／ 半玉 1.377400 − 0.065）、**対は `97737c2f` で既に開いている**（`stem.up.right-edge.{half,black}-head`＝発散 **−0.073200000** と exact な対照）、しかも**engine は答えを持っている**（`MetronomeMarkGeometry.StemAttachment` が同じ知識を拍単位で選び分けている＝「house が 1 つ足りない」型）。
-  **⑵ 他は全部ゲート付き**（数えた）: ⒤ は需要待ち（paper を書く本が 0 冊）／⒣ と §2 A の skyline 参加者列挙・condensedStaff は**自分で「ユーザー決定から」「専用の便」「単独の修理として着手しないこと」と書いてある**／▶ perf ⒜ も「専用の便と falsifier から」／**小粒 7 件は §2 に本文が無い**＝移植ではなく**起票**から（§5.0 の 1 番）。
-  **⑶ 断った理由は 2 つ**: ⓐ **その島は本便が温めた文脈（MusicXML import・paper 語彙・importer の穴の作法）と 1 行も重ならない**——**同一セッションで続ける唯一の利得＝温かい文脈が、この項に限ってゼロ**。節約できるのは §0 の裏取り約 90 秒だけで、**払うのは要約された文脈**。ⓑ **これは 6 桁 exact の移植**で、**しかも出力が広く動く**（半音符の上向き符尾が 0.0732 左＝snapshot の再ベースと台帳の読み直しが本体）。**数を劣化した媒体で持ち越すのは §0 が 7 例ぶん記録してきた当repo の第一の失敗様式**——**その作業をわざわざ要約されかけた文脈で始めない。**
-  ⇒ ★★ **一般化**: **「同じセッションで続けるか」は残り体力ではなく*文脈の重なり*で決める。** 次の項が別の島なら、**温かさは移らないので続ける利得は裏取り時間しかない**——**それより小さい risk しか無いときだけ続ける。**
-
-> ## ★★ 骨 1＝**閾値を書きたくなったら「両者が同じ名前を持つ最粗の解像度」を探す**
-> staff サイズ警告の「同じ」を % の epsilon にせず**「整数 DTP pt に丸めて同名か」**にした——
-> Lily# の 20 TeX pt（19.93 DTP）と MusicXML 常用既定（20.00 DTP）の 0.4% 差は
-> **同じ「20pt」の 2 綴り**（§5.2.1② の「1 量 2 綴り」の*単位*版）で、意図的なサイズ選択は
-> 必ず整数 pt 単位で離れて座る。恣意的な ulp／% の線を 1 本も書かずに済み、
-> 「何を同値とみなすか」が閾値の数字ではなく*命名の解像度*として remark に残った
-> （第213 の「動かすべきは許容差ではなく生産者」と同族＝**許容差を発明する前に、
-> その差が*綴り差*である名前を探す**）。
-
-> ## ★ 骨 2＝**knob が無い量の輸入は「表せる半分を採用＋表せない半分を名指し」の対で書く**
-> staff サイズは Lily# に knob が無い（単位そのもの・GRAMMAR 2.5）。drop（ページごと捨てる）も
-> 平均（サイズに合わせてページを縮める発明）も嘘になる——**ページは述べられたまま採用し、
-> サイズ差だけ warning で名指す**のが唯一の正直な組合せ。第232 骨 4（exporter の
-> 「動かす量なら黙らず warning」）の**輸入側の鏡**＝方向が逆でも規則は同じ
-> 「表せない量は、黙って近似せず名前を付けて手渡す」。
 
 ---
 
