@@ -154,12 +154,12 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 最終更新 第235セッション＝**第234 が「移植から始められる唯一の項」と名指した残債は*実在しなかった*。§2 の ledger 引用を全数突き合わせ、stale を 5 件直し、二度と静かに腐らないよう番人を建てた**（3 file＝新テスト 3 本・`BezierBow` の remark・HANDOFF §1/§2E/§2H/§3）。
 **① 何が起きていたか**：第234 は末尾の委任「有利なら着手／不利なら着手するな」に対し §2 の 2000 行を triage し、**「⑴ 移植から始められる項は 1 つだけ＝符尾の attachment X が黒玉固定（§2 E・▶ 先頭）」**と書いて断った。**その項は 2026-08-03＝起票と同じ日に閉じている**（`LayoutUtilities.StemAttachX` は `noteValue`＋`NoteheadStyle` を取り `GlyphMetrics.GetNoteheadStemAttachment` に訊く・観測者 `StyledHeadStemAttachmentTests`・台帳 `stem.up.right-edge.half-head` は **residual 0**、`why` は "CLOSED by…"）。**第234 の断り方は健全だった（文脈の重なりで決める＝骨として残す価値がある）が、選別の入力が 157 便前から嘘だった。**
 **② 5 件の stale は全部同じ形**：**棚が「着手根拠」として現在形で挙げている数を、台帳がとっくに 0 にしている**——⑴ 符尾 attachment X（−0.073200000 → 0・2026-08-03）⑵ タイの列アウトライン（`tie.width.seconds.upper` +0.888699999 → −1e-09・`TieChordOutline` が移植済み）⑶ courtesy 調号（`courtesy.meter.barline-to-cancellation` −0.2 → 0・ユーザー承認済みの移植）⑷ grace の接近（`grace.column.approach` +0.850449 → 0・`SpringIntoGraceRun`）⑸ `page.stretched.first-staff-refpoint`（−0.000042 → −4.46e-07）。**加えて `Bezier` 型の ⒝ 債務も stale**（`Bezier.cs` は実在し 8 ファイルが読む・論拠に挙がっていた `SlurScoringProblem.InterpolateSlurY` は消滅）——**その出所は `BezierBow` の remark が "this engine has no Bezier type at all" と書き続けていたこと**なので**コード側も同じ便で直した**。
-**③ 番人＝`HandoffLedgerCitationTests`（3 本）**：HANDOFF.md の `<!-- ledger: NAME = VALUE -->` タグを全部読み、⑴ **名前が台帳に在るか**（typo は「検証済みに見えて永久に赤くならない」ので無いより悪い）⑵ **数が台帳の残差と一致するか**（許容差 1e-06）⑶ **タグの数が減っていないか**（通す最安の手はタグを消すこと＝ratchet・現在 23 点）。**タグは「その一節を人が読んだ」記録**なので、**読まずにタグだけ動かすのが drift** だと失敗メッセージ自身が言う。⚠️ **HANDOFF-ARCHIVE.md は対象外**——逐語の歴史は当時の数を持っているのが正しい。
+**③ 番人＝`HandoffLedgerCitationTests`（4 本・タグ 27 点）**：HANDOFF.md の `<!-- ledger: NAME = VALUE -->` タグを全部読み、⑴ **名前が台帳に在るか**（typo は「検証済みに見えて永久に赤くならない」ので無いより悪い）⑵ **数が台帳の残差と一致するか**（許容差 1e-06）⑶ **タグの数が減っていないか**（通す最安の手はタグを消すこと＝ratchet・現在 27 点）⑷ **§2/§3 で名指された点にタグが在るか**（＝射程の穴。**§1 は毎便書き換えるので意図的に対象外**）。**タグは「その一節を人が読んだ」記録**なので、**読まずにタグだけ動かすのが drift** だと失敗メッセージ自身が言う。⚠️ **HANDOFF-ARCHIVE.md は対象外**——逐語の歴史は当時の数を持っているのが正しい。
 **④ 証明**：**毒を 2 つ当てて赤を見た**（§2 の掟「0 冊を証拠に引く前に毒を当てる」）——タグを stale 当時の `-0.073200000` に戻すと **"THE POINT IS NOW EXACT — the shelf is probably describing a closed defect" を行番号つきで出す**（＝**第234 の triage を救ったはずのメッセージ**）、名前を 1 文字崩すと未知名として `HANDOFF.md:539` を名指す。engine には 1 行も触っていない（`BezierBow` は doc comment のみ）ので**出力は構成上不動**＝台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2 完全不動**・**snapshot 222 枚不動**・**追跡コーパス 572 冊不動**。
 
 ★ **開始時裏取り**: HEAD `84ed2309`（第234 の triage handoff）・未 push 29・未追跡 0/木 0・Windows suite **5796/0/4**・WSL **5796/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2・追跡コーパス 572 冊・Core 0 警告＝**前便の閉幕数と全一致**（⚠️ 前便 §1 は「未 push 28」と書いたが、**その行を書いたあとに ⑸' の triage handoff を 1 本積んでいる**ので 29 が正しい＝§0 の「両端を書く」が効いた例）。
 ⚠️⚠️ ★★★ **GitHub の門は「赤」だが理由はコードではない＝*課金停止***（本便で中身を読んだ・**§0 が「`X` を見たら中身を読め」と言う所**）。最新 3 run とも**全脚が 3〜4 秒で死んでおり**、annotation は **"The job was not started because recent account payments have failed or your spending limit needs to be increased"**——**1 行もビルドしていない**（残りの `X` は fail-fast の巻き添え）。⇒ **`gh run list` はコードについて何も言っていない**ので、**Linux の証拠は WSL 脚だけ**（第213 が建てた道が唯一の門）。⚠️ **これはユーザーの操作でしか直らない**（Billing & plans）。**次便は同じ調査をやり直さないこと**——`gh run list` が赤でも、annotation が課金のままなら情報はゼロ。
-終了時: **未 push 31（push はユーザー＝RULES §5.1）**＝本便 2 本（実装一式／この行）・未追跡 0/木 0・suite **Windows 5799/0/4・WSL 5799/0/4＝両 OS 完全緑（開始比 +3＝`HandoffLedgerCitationTests`）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊（1 冊も触っていない）**・Core 0 警告。
+終了時: **未 push 32（push はユーザー＝RULES §5.1）**＝本便 3 本（実装一式／CI 課金／射程の穴）・未追跡 0/木 0・suite **Windows 5800/0/4・WSL 5800/0/4＝両 OS 完全緑（開始比 +4＝`HandoffLedgerCitationTests`）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊（1 冊も触っていない）**・Core 0 警告。
 
 ★ **この便の値段**:
 
@@ -167,6 +167,7 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 |---|---|---|
 | ① §2 の ledger 引用 23 点を全数突き合わせ・stale 5 件＋⒝ 債務 1 件を訂正 | HANDOFF §1／§2E（符尾・タイ・Interval・Bezier）／§2H（courtesy・grace）／§2D（refpoint 2 件）／§3 ⑵ | **prose のみ**・engine 0 接触 |
 | ② 番人 `HandoffLedgerCitationTests` 3 本＋`BezierBow` remark 訂正 | 新テスト 3 本（名前・数・ratchet）・doc comment 1 件 | **出力は構成上不動**（doc comment のみ）・両 OS 完全緑 |
+| ③ **番人の射程の穴を閉じた**（続き便＝委任「有利なら着手」→着手） | 4 本目のテスト（**§2/§3 で名指された点はタグ必須**）・§3 に 4 タグ（歌詞床・語間 narrow・行の staff-to-lyric・verse-step） | 同上・**§3 が初めて機械の下に入った** |
 
 - **⑸ ★★★ 次に触るなら＝残債（第234 の一覧から stale を落としたもの）**: 言語仕様の宿題は §1.2 リネーム（ユーザーが MSVS で）だけ／**名指し穴**＝⒤ exporter の paper 未輸出（**需要待ち**＝`LilyPondExporter.cs:662` が「no tracked book writes paper{} as of 2026-08-23」と書いており、**第234 の importer が paper を*出す*ようになったので、MusicXML → .lys → 双子の往復を測る日が来たらここが最初に効く**）／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示・着手はユーザー決定から）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・非ペア ToCoda の reserve≠draw・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示・実譜の `%` 記号。Marketplace は PAT 待ちのまま（第220 ①）。
   ⚠️ **⑴ ゲート無しで移植から始められる項は、数え直しても 0 件**（第234 の答えは「1 件」だったが、その 1 件が幻だった）。**⒣・condensedStaff・skyline 参加者列挙・▶ perf ⒜ は自分で「ユーザー決定から」「専用の便」と書いてある**／**小粒 7 件は §2 に本文が無い＝起票から**（§5.0 の 1 番）。
@@ -193,7 +194,25 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 > **着手を決める前に、その項の falsifier を 1 つ引く**——本便はそれを 1 コマンドでやった
 > （台帳の `residual` と `why` を読む・約 10 秒）。**2000 行の選別より安い。**
 
-> ## ★★ 骨 3＝**残差を「名前の付いた 1 量」まで分解できたら、そこで止めて別の点に回す**
+> ## ★★★ 骨 3＝**番人を建てたら、次に測るのは「番人が見ていない所」**
+> 続き便の委任で着手したのはこれ。**§2 の 23 点にタグを付けた時点で「§2 は守られている」**
+> ——しかし**§1/§3 は射程外**で、しかも**その事実自体が新しい罠**だった（番人が在ることが
+> 「全部見ている」と読める）。⇒ **§2/§3 で名指された点はタグ必須**を 4 本目の番人にした。
+> ★★★ **効いたのは §3**＝「**決定済み ← 蒸し返さない**」。**誰も読み返すなと書いてある節が、
+> 数が腐っても最も気づかれない場所**——実際そこに 4 点が裸で座っており、うち 2 点
+> （`lyrics.band-floor.staff-to-lyric` −0.092・`lyrics.column.word-gap.narrow` +0.034）は
+> **ライセンス判断の根拠として引かれた実測値**（Schola を同梱し AGPL の C059 に合わせない）。
+> **その数が動いたら決定の根拠が変わっている**のに、節の見出しが再読を禁じていた。
+> ⚠️ **§1 は意図的に対象外**（毎便書き換えるのでタグは課税になる）——**除外は理由ごと remark に書く。**
+>
+> ⚠️⚠️ ★★ **そして射程を測る計器自身が最初は間違っていた**: 点名は**入れ子**なので
+> （`note-to-note.quarter` ⊂ `compressed.note-to-note.quarter`／`lyrics.column.word-gap` ⊂
+> `…word-gap.narrow`）、素朴な部分一致は**短い名前を「引用されている」と数える**——
+> **最初の測定は穴 6 と言い、境界付きで測り直すと 4 だった**。§0 の数え方の罠
+> （`-like` の `?`・`$e.Count`）と**同型が 8 例目**。⇒ **名前の集合が入れ子なら、
+> 一致は必ず境界付きで取る**（テストの実装もそうしてある・remark に理由あり）。
+
+> ## ★★ 骨 4＝**残差を「名前の付いた 1 量」まで分解できたら、そこで止めて別の点に回す**
 > タイの列アウトラインは **+0.888699999 → −0.073200001** で止めて開けたまま置かれた——
 > 残りが「符尾の attachment が 1 量ぶん左」と*名指せた*から。そして**符尾の点を閉じた瞬間、
 > タイのコードを 1 行も触らずに −1e-09 へ落ちた**（タイの右端は符尾の引き戻しが持つ）。
@@ -2322,13 +2341,13 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 | **休符の実インク化はやらない** | 実測で棄却。休符は中央線に座るので縦インクが極値にならず、LP でも 1 ビット違わない＝箱が名目なのは事実だが**不活性** |
 | **単一ページは紙面サイズにしない**（意図的乖離） | Lily# は 1 ページに収まるスコアを内容サイズで出す（明示的な設計）。台帳に載せると total が ~109 になり指標が壊れるので**載せない** |
 | **本数（count）の点は ss の総和に入れない** | 距離ではないから（`unit` フィールドで分離） |
-| ★ **セリフ体は TeX Gyre Schola のまま同梱する。LP の C059 には合わせない**（ユーザー判断・2026-08-02） | **量を測ったうえでの決定**。LP は `"LilyPond Serif"` を **C059** に解決し（`ly:stencil-expr` がファイルパスごと吐く）、C059 は **AGPLv3**（URW の例外は PS/PDF への埋め込み限定で**フォントプログラムの同梱は覆わない**）。**両者は advance は完全一致するが、カーンと合字が違う**: カーン値は **471 有効ペア中 438 が食い違い**、丸め後に予約幅が変わるのは **2 文字組の 11.2%（475/4225）**。合字は**両方とも合字にするがグリフ幅が違う**（`ff` 605 対 686＝5px、`ffi` 878 対 904、`fi` は一致）。**現実の文字列で 0〜4px＝0〜0.137 ss**（`Violoncello` が最大・`Allegro` +1px・`Ave verum corpus` は 0）。⇒ **0.03〜0.14 ss の恒久差**を受け入れ、**AGPL を持ち込まない**。⚠️ **帰結**: `text.width.{aa,va}` は**永久に非ゼロ**（原因は台帳に完全記述）、**今後テキスト幅の点は 1/9 の確率で非ゼロで開く**、そして**紙面そのものが LP と字送りで違う**（測定だけの話ではない）。⚠️ **測っていないのは regular/bold/bold-italic 面**（italic だけ全ペア走査した）。★ **第221 追記＝垂直 ink の初 member**: **i/j の点だけ 0.135818 ss 違う**（C059 1.765633 / Schola 1.629815・**h/x/g/p は bit 同一**・fontTools bbox 実測）。歌詞床が i/j 頂点の音節で縛る本は恒久差——最初の顔は台帳 `lyrics.band-floor.staff-to-lyric` −0.092。★ **第222 追記＝列間隔に出た初 member**: **"ru" の kern が Schola +20 / C059 +18**（fontTools GPOS 実測）で、per-glyph hinting が 2/1000em を **Pango pixel 1 個（0.034143307 ss）**に増幅——台帳 `lyrics.column.word-gap.narrow` が恒久 +1px（この行の「丸め後に予約幅が変わる 11.2%」の列間隔側の最初の顔。mum/nu は kern 対を持たず exact）。★ **差し替えは後からできる**——`TextFontMetrics.SerifFamily` と `Fonts/` とライセンス表記だけで、対照本 `TS1`/`TS2` が効果を即座に示す |
+| ★ **セリフ体は TeX Gyre Schola のまま同梱する。LP の C059 には合わせない**（ユーザー判断・2026-08-02） | **量を測ったうえでの決定**。LP は `"LilyPond Serif"` を **C059** に解決し（`ly:stencil-expr` がファイルパスごと吐く）、C059 は **AGPLv3**（URW の例外は PS/PDF への埋め込み限定で**フォントプログラムの同梱は覆わない**）。**両者は advance は完全一致するが、カーンと合字が違う**: カーン値は **471 有効ペア中 438 が食い違い**、丸め後に予約幅が変わるのは **2 文字組の 11.2%（475/4225）**。合字は**両方とも合字にするがグリフ幅が違う**（`ff` 605 対 686＝5px、`ffi` 878 対 904、`fi` は一致）。**現実の文字列で 0〜4px＝0〜0.137 ss**（`Violoncello` が最大・`Allegro` +1px・`Ave verum corpus` は 0）。⇒ **0.03〜0.14 ss の恒久差**を受け入れ、**AGPL を持ち込まない**。⚠️ **帰結**: `text.width.{aa,va}` は**永久に非ゼロ**（原因は台帳に完全記述）、**今後テキスト幅の点は 1/9 の確率で非ゼロで開く**、そして**紙面そのものが LP と字送りで違う**（測定だけの話ではない）。⚠️ **測っていないのは regular/bold/bold-italic 面**（italic だけ全ペア走査した）。★ **第221 追記＝垂直 ink の初 member**: **i/j の点だけ 0.135818 ss 違う**（C059 1.765633 / Schola 1.629815・**h/x/g/p は bit 同一**・fontTools bbox 実測）。歌詞床が i/j 頂点の音節で縛る本は恒久差——最初の顔は台帳 `lyrics.band-floor.staff-to-lyric` −0.092。★ **第222 追記＝列間隔に出た初 member**: **"ru" の kern が Schola +20 / C059 +18**（fontTools GPOS 実測）で、per-glyph hinting が 2/1000em を **Pango pixel 1 個（0.034143307 ss）**に増幅——台帳 `lyrics.column.word-gap.narrow` が恒久 +1px（この行の「丸め後に予約幅が変わる 11.2%」の列間隔側の最初の顔。mum/nu は kern 対を持たず exact）。★ **差し替えは後からできる**——`TextFontMetrics.SerifFamily` と `Fonts/` とライセンス表記だけで、対照本 `TS1`/`TS2` が効果を即座に示す |<!-- ledger: lyrics.band-floor.staff-to-lyric = -0.091999532 --><!-- ledger: lyrics.column.word-gap.narrow = 0.034143307 -->
 | **LP の「正」は 2.26.0** | 版で PUA コードポイントも Emmentaler も動く。**必ず feta 名で引く** |
 | **cross-staff beam は skyline から除外**（LP の字面） | `axis-group-interface.cc:850-858` の LP 自身のコメント。Lily# の「固定 3.5 stem を残す」は発明だった |
 | ★ **和音記号は LP に合わせる＝中心合わせしない**（ユーザー判断・2026-07-25 明示） | 意図的乖離かを問うたうえでの決定。`ChordName` は X-offset も self-alignment も持たない（`define-grobs.scm:837-855`）＝ink 左が列。`dcbf08e9` で移植し `staffless.line-start.chords-vs-staff` が閉じた。⚠️ **和音グリッドは別 grob（`GridChordName`）で LP も中心合わせする**が、中心を取る相手は小節の四角。Lily# に四角は無いので chords-only シートは ChordName 経路のまま＝**「グリッドも直す」で触らない** |
 | ❌ **撤回（2026-07-27・ユーザー判断）: 独立 lyrics 行を「譜のような帯」として置く** — **もう決定ではない。蒸し返し禁止の対象から外れた。** | **旧決定**（2026-07-26）: 独立行は「譜に付く歌詞」ではなく**リードシートの word トラック**なので譜グループとして置く＝**9.600000 対 LP 5.500000＝+4.100000**、台帳には載せず導出形で主張。**撤回の理由**は「間違いだったから」ではなく**射程が二度狭まって残らなかった**から: ①2026-07-27 に「鎖に参加しない」部分が `lyrics.chord-row.between-systems.*` の実測で落ち、②同日 LYRR/LYRRV が **LP 側の恒等を 59 行の機械差分で確定**させ（`\lyricsto` の有無で LP は 1 行も変わらない）、**残っていた「距離」も Lily# 単独の量**だと分かった。⇒ 行は `nonstaff-relatedstaff-spacing` で自分のインクから置かれる（`dee2c045` 系）。**いまの状態**: `lyrics.row.staff-to-lyric` は**台帳点で exact**、`LyricRowIsSpacedLikeTheLyricsContextItIs` が**2 つの綴りが一致すること**（＝LP の恒等の再現）を主張する。⚠️ **帯そのものは残っている**——行は自前の小節線を持ち verse を band 内に積む（`LyricRowBaseline` は `LILYSHARP-OWN` のまま）。**消えたのは「どこに置くか」だけ。** ★ **2026-07-28 に鎖にも入った**（§1 の第20セッション）。**帯そのものはまだ残る**が、
 system の最後の spaceable 譜の下に立つ行は **verse ごとに鎖の要素**で、帯の上端は解に従う。
-`lyrics.row.two-verse.verse-step` は exact、LYRRV ≡ LYRV|
+`lyrics.row.two-verse.verse-step` は exact、LYRRV ≡ LYRV|<!-- ledger: lyrics.row.staff-to-lyric = 0 --><!-- ledger: lyrics.row.two-verse.verse-step = 0 -->
 | ★ **タブの*和音*のタイは LP の広げ方に譲る**（ユーザー判断・2026-08-16 明示） | **LP をタブ側で直接測ってから決めた**: `<c' e' g'>2~ <c' e' g'>4` の TabStaff で LP 2.26.0 は **dir = −1, +1, +1**（TabNoteHead・staffpos 1/3/5＝**一番下の弦は数字の下・上 2 本は上**。双子に `Tie.direction` を吐かせた実測）。⇒ 旧「タイは stem と反対側に固定」という Lily# 独自規則を**和音では通さない**。★★ **実装は規則を書き直していない**——`TieFormattingProblem` の中に既に移植済みだった `set_ties_config_standard_directions` を static に出し、**タブが*自分の* staff position** （`TabStaffGeometry.StaffPositionOfString` ＝ LP の `tablature-position-on-lines` ＝ `StringCount+1−2·string`）で呼ぶ。★★★ **単音は数学的に不変**: 旧規則は `string > (N+1)/2`（符尾と反対）、新しい位置の符号は `string < (N+1)/2` で正、列が 1 本なら `sign(position)` と `neutral-direction`＝UP なので**全チューニングの全弦で答えが一致する**（中央弦も両方 UP）。⇒ **`LILYSHARP-OWN` が 1 件 `LILYPOND-REF` になった。** 観測は `TabChordTieTests` |
 | ★ **タブのタイは自分の数字の縁から出る**（第180・LP に対応物なし） | Lily# の数字はジグザグで 2 列に分かれるので、**タイは自分の列の数字の縁から縁へ**引く（`軸 + dx ± 数字幅/2`）。⚠️ **LP には問えない**——**LP のタブ数字は 3 つとも同じ x**（実測 8.82 / 12.951）なので、選ぶべき第 2 の x が存在しない。⚠️ **帰結として単音のタイが短くなる**（`test/tab-tie` で 1.29 → 0.89）。LP は**中心から中心へ引いて `whiteout` で抜く**（頭間 2.787 に対しタイ 2.467＝88%）が、**その whiteout は Lily# には移植できない**（§2 の ✅ ⒳＝LP の数字 1.180 は弦間 1.5 に収まるが Lily# の 2.166 は収まらず、隣の弦の線を消す／占有子は色を使うのでダークモードで穴になる）。⇒ **タイが短いのは大きい数字の帰結として受け入れる。「短いから戻す」で数字の縁を捨てないこと** |
 | ★ **占有（不透明な箱）ではなく除去（インクを切る）で重なりを解く**（第180 で再確認・元は `digitGaps` の実装時） | **理由は 2 つあり、どちらも実測**: ⑴ **箱は色を使う**——ページを反転してテーマを当てる viewer（VS Code のダークモード）では箱が黒くなり、**数字の周りが黒・背景がグレー**で数字が穴に座る（ユーザー・2026-08-16 明示）。⑵ **箱は数字と同じ高さ**＝Lily# では **2.166 対 弦間 1.5** なので**隣の弦の線を両側 0.333 ずつ消す**——**数字を大きくできなくしていた天井そのもの**。⇒ `digitGaps` は**色を 1 つも使わず自分の線の中だけで完結する**。⚠️ **LP の `TabNoteHead (whiteout . #t)` を「LP がやっているから」で移植しないこと**——**LP の数字は 1.180 高で 1.5 に収まる**（2.26.0 実測）ので LP では安全なだけ。**重なりを消すなら、覆うのではなく切る** |

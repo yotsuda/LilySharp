@@ -91,11 +91,13 @@ public class HandoffLedgerCitationTests
     /// <see cref="LpProvenanceTests"/>'s: it may rise freely and must never fall silently,
     /// because the cheapest way to make a citation test pass is to delete the citation.
     /// </summary>
-    private const int CitationsWhenWritten = 23;
+    private const int CitationsWhenWritten = 27;
 
     private static readonly Regex Tag = new(
         @"<!--\s*ledger:\s*(?<name>[A-Za-z0-9._\-]+)\s*=\s*(?<value>[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)\s*-->",
         RegexOptions.Compiled);
+
+    private static readonly Regex AnyComment = new(@"<!--.*?-->", RegexOptions.Compiled);
 
     private sealed record Citation(string Name, double Value, int Line);
 
@@ -219,7 +221,79 @@ public class HandoffLedgerCitationTests
     }
 
     /// <summary>
-    /// The cheapest way to make the guard above pass is to delete the tags, so the count is a
+    /// A point NAMED in the durable sections must carry a tag somewhere in them, or the guards
+    /// above are checking a set that quietly shrinks as new prose is written.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// §1 is excluded on purpose and not by oversight: it is rewritten from scratch every
+    /// session, so requiring a tag there would tax every handoff for a passage that is gone
+    /// two sessions later. §2 (open work) and §3 (settled decisions) are the durable ones, and
+    /// §3 is the sharper case of the two — it is headed 蒸し返さない, "do not relitigate", so
+    /// it is the section nobody re-reads, which makes it the worst place for a number to rot
+    /// unobserved. The four points this guard first pulled in are all §3's, and two of them
+    /// (lyrics.band-floor.staff-to-lyric, lyrics.column.word-gap.narrow) are the measured
+    /// consequences cited as the basis of a LICENSING decision — ship TeX Gyre Schola rather
+    /// than match LilyPond's AGPL C059. If those move, the stated basis of that decision has
+    /// changed and someone should be told.
+    /// </para>
+    /// <para>
+    /// ⚠️ Matching is boundary-aware against the ledger's own name alphabet, because the names
+    /// nest: <c>note-to-note.quarter</c> is a substring of
+    /// <c>compressed.note-to-note.quarter</c>, and <c>lyrics.column.word-gap</c> of
+    /// <c>lyrics.column.word-gap.narrow</c>. A plain Contains reports the shorter name as cited
+    /// on every line that cites the longer one — the measurement that scoped this guard did
+    /// exactly that and claimed six gaps where there are four.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void EveryPointNamedInTheDurableSections_CarriesATag()
+    {
+        var (residuals, _) = Ledger();
+        var lines = File.ReadAllLines(Path.Combine(RepoRoot(), "docs", "HANDOFF.md"));
+
+        int start = Array.FindIndex(lines, l => l.StartsWith("## 2. ", StringComparison.Ordinal));
+        Assert.True(start >= 0,
+            "docs/HANDOFF.md has no '## 2. ' heading — this guard locates the durable sections "
+            + "by that heading, so a rename must be reflected here.");
+
+        var tagged = new HashSet<string>(StringComparer.Ordinal);
+        var named = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        for (int i = start; i < lines.Length; i++)
+        {
+            foreach (Match m in Tag.Matches(lines[i]))
+                tagged.Add(m.Groups["name"].Value);
+
+            string bare = AnyComment.Replace(lines[i], string.Empty);
+            foreach (var name in residuals.Keys)
+            {
+                if (named.ContainsKey(name))
+                    continue;
+                var cited = new Regex(
+                    @"(?<![A-Za-z0-9._\-])" + Regex.Escape(name) + @"(?![A-Za-z0-9._\-])");
+                if (cited.IsMatch(bare))
+                    named[name] = i + 1;
+            }
+        }
+
+        var untagged = named.Where(kv => !tagged.Contains(kv.Key))
+            .OrderBy(kv => kv.Value).ToList();
+
+        Assert.True(untagged.Count == 0,
+            "docs/HANDOFF.md §2/§3 name LP geometry points that carry no "
+            + "<!-- ledger: NAME = VALUE --> tag, so nothing would notice if they went stale:\n"
+            + string.Join("\n", untagged.Select(kv =>
+                $"  HANDOFF.md:{kv.Value}  {kv.Key}  (ledger residual "
+                + $"{(residuals[kv.Key]?.ToString("G9") ?? "none recorded")})"))
+            + "\nAdd the tag with the ledger's CURRENT residual, having read the passage and "
+            + "checked that what it says is still true. If the passage only mentions the point "
+            + "in passing and asserts nothing about it, the tag is still the cheaper answer — "
+            + "it costs one comment and buys the passage a falsifier.");
+    }
+
+    /// <summary>
+    /// The cheapest way to make the guards above pass is to delete the tags, so the count is a
     /// ratchet: it may rise and must not fall without saying so here.
     /// </summary>
     [Fact]
