@@ -113,6 +113,13 @@ jobs:
     # leaving a platform out is worse than the runtime prompt was - VS Code offers such
     # users nothing at all rather than a fallback. If a leg fails at tag time, drop
     # PublishReadyToRun for it: R2R is a startup optimisation, not a correctness one.
+    #
+    # ⚠️ THIS LIST AND publish-marketplace.ps1's MUST NAME THE SAME EIGHT TARGETS. It
+    # named six until 2026-08-23, and the two it left out were linux-armhf and
+    # alpine-x64 - so a release driven by a tag silently offered Alpine and 32-bit ARM
+    # Linux users nothing, while the local script had been building for them all along.
+    # That is exactly the failure the paragraph above calls worse than a runtime prompt,
+    # arrived at by the two lists drifting rather than by a decision.
     strategy:
       matrix:
         include:
@@ -120,6 +127,8 @@ jobs:
           - { rid: win-arm64,  target: win32-arm64 }
           - { rid: linux-x64,  target: linux-x64   }
           - { rid: linux-arm64, target: linux-arm64 }
+          - { rid: linux-arm,  target: linux-armhf }
+          - { rid: linux-musl-x64, target: alpine-x64 }
           - { rid: osx-x64,    target: darwin-x64  }
           - { rid: osx-arm64,  target: darwin-arm64 }
     steps:
@@ -163,10 +172,15 @@ jobs:
         run: npm version --no-git-tag-version "${GITHUB_REF_NAME#v}" || true
       - name: Build VSIX
         working-directory: editors/vscode
+        # ⚠️ --pre-release DROPPED HERE TOO (2026-08-23). It was on this step as well as
+        # the publish one, and leaving it would have flagged the .vsix attached to the
+        # GitHub Release as a pre-release while the Marketplace copy was not - the same
+        # version, two answers, and the GitHub one is what anyone installing by hand
+        # gets. The two steps package independently, so the flag has to come off both.
         run: |
           npm ci
           npm run compile
-          npx @vscode/vsce package --pre-release --target ${{ matrix.target }}
+          npx @vscode/vsce package --target ${{ matrix.target }}
       - name: Extract release notes
         # Same extraction as the CLI job: whichever upload step runs first
         # creates the Release, so both must carry the body or the winner
@@ -178,16 +192,29 @@ jobs:
           body_path: RELEASE_NOTES.md
           files: editors/vscode/*.vsix
 
-      # Marketplace publication is a deliberate, separate decision.
-      # To enable: register the publisher, create a Personal Access Token,
-      # store it as the VSCE_PAT repository secret, then uncomment:
+      # Marketplace publication, enabled 2026-08-23 for 0.4.0. Each matrix leg publishes
+      # its own platform build under one version, which is how VS Code hands a user the
+      # package matching their machine.
       #
-      # - name: Publish to VS Code Marketplace
-      #   working-directory: editors/vscode
-      #   run: >
-      #     npx @vscode/vsce publish --pre-release
-      #     --target ${{ matrix.target }}
-      #     -p ${{ secrets.VSCE_PAT }}
+      # ⚠️ NO --pre-release, AND THAT IS THE POINT OF THIS STEP EXISTING AT ALL. The
+      # commented draft this replaces carried it, and a pre-release version reaches only
+      # users who have opted into pre-releases for this extension - which would have made
+      # "installable from the extension page" quietly false for everyone else. Add it back
+      # only for a version that is genuinely meant to be opt-in, and then say so in the
+      # tag's changelog entry.
       #
-      # Each matrix leg publishes its own platform build under one version, which is
-      # how VS Code hands a user the package matching their machine.
+      # ⚠️ THE MARKETPLACE REFUSES A VERSION IT ALREADY HAS. Re-running this job for a tag
+      # whose version is published fails here, by design on their side; bump the version
+      # rather than retrying. The same rule makes publishing by hand and by tag mutually
+      # exclusive for one version.
+      #
+      # ⚠️ vsce reads the PAT from -p. It must be a Marketplace -> Manage token belonging
+      # to the Microsoft account that OWNS the publisher; an Entra ID token for the same
+      # e-mail address is a different principal and is refused (editors/vscode/DEPLOY.md
+      # carries the measurement).
+      - name: Publish to VS Code Marketplace
+        working-directory: editors/vscode
+        run: >
+          npx @vscode/vsce publish
+          --target ${{ matrix.target }}
+          -p ${{ secrets.VSCE_PAT }}
