@@ -416,14 +416,17 @@ public sealed class MusicXmlExporter
                 EmitSection(section);
     }
 
-    /// <summary>Emits the structure's items in order: a section reference plays its
-    /// section, a repeat block brackets its span with repeat barlines. Nav marks,
-    /// custom text and volta ENDING brackets are not yet mapped to MusicXML (the
-    /// alternative's music is still emitted so nothing is lost).</summary>
     // Segno / coda jump TARGETS wait here for the next section, whose first
     // measure they open (they mark where a jump lands).
     private readonly List<System.Xml.Linq.XElement> _pendingTargetDirections = new();
 
+    /// <summary>Emits the structure's items in order: a section reference plays its
+    /// section, a repeat block brackets its span with repeat barlines, a volta writes
+    /// its <c>&lt;ending&gt;</c> brackets (<see cref="EmitVoltaRepeatBlock"/>) and a nav
+    /// mark its <c>&lt;segno&gt;</c> / <c>&lt;coda&gt;</c> / <c>&lt;words&gt;</c>
+    /// direction (<see cref="ApplyNavMark"/>, all ten <see cref="NavigationMarkType"/>).
+    /// Only <see cref="CustomTextSyntax"/> (<c>_"text"</c>) has no mapping yet — the
+    /// music around it is still emitted, so nothing is lost.</summary>
     private void WalkForm(SyntaxNode container, Dictionary<string, List<SectionDeclarationSyntax>> byName)
     {
         _pendingTargetDirections.Clear();
