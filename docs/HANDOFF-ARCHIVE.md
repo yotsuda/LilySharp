@@ -18,6 +18,53 @@
 
 ---
 
+## 以下は第232セッションの経緯
+
+最終更新 第232セッション＝**ユーザー判断 4 つを締めて §2.1 `paper { }` を実装した（`1c19d384`・38 file）**——第231 が測った決定材料に対する判断＝⑴ 狙い＝ハウススタイル（§2.1 単独・A/B/C は需要待ちで見送り）⑵ **単位接尾辞を導入**（`210mm`/`29.7cm`/`8.5in`・**数字に糊付け＝1 量**・裸の数値は ss）⑶ 語彙＝寸法系全部（アルゴリズム切替は載せない）⑷ **段間隔の分担＝paper に寄せる**（override 側は「効かない scope」の傷か位置配管の費用・paper は綴り＝意味が一致）。**これで GRAMMAR_AUDIT §9 は全項 ✅**（残りは §1.2 リネームのみ＝ユーザーが MSVS で）。
+**① 形（GRAMMAR §2.5）**：top-level `paper { KEY VALUE… }`＝LP の `\paper` 変数の camelCase。scalar 10（paperWidth/Height・margin×4・indent×2・topSystemPadding・spacingIncrement）＋ flag 1（raggedRight）＋ **spacing spec block 13×4**（systemSystemSpacing…nonStaffNonStaffSpacing × basicDistance/minimumDistance/padding/stretchability）。**mm→ss は ×72.27/127 を 6 桁丸め＝LayoutOptions 既定値の計算と同一**なので**「既定を書いた本は既定と byte 一致」**（PaperBlockTests が pin・空 block／既定明記／無指定の 3 綴りが同一絵）。**露出しなかった**：StaffHeight（単位の枠そのもの・LP も `\paper` 外）・SystemSpacing（不活性の実測札あり）・breaking 切替。
+**② 配管は fonts の完全鏡**：`PaperPlanReader`（ONE HOME・collector＋`PaperValidator` の 2 呼び手）→ `Score.Paper` → **`new LayoutEngine(score.Paper)` ×6 生産 site**（Svg/Pdf/Png×2/Incremental/LayoutReport）・増分の meta 等値・重複 global・診断 **LYS9001〜9006**（spaced unit `210 mm` は「糊付けの綴り」を名指す）・LSP 補完 3 context＋top-level snippet（既定 prefill＝受けて何も変えなければ絵は動かない）・tmLanguage `paper-block`（入れ子 begin/end）＋ EditorColouringTests の両方向網（語彙の家は `LanguageVocabulary.Paper*`＝public 転送）。
+**③ exporter は未輸出を warning で名指す**（drummap 型の「名前の付いた穴」）——**fonts の「書かない」判断と理由が逆向き**：paper は Lily# 側の絵を動かすので、書かない双子は対照でなくなる。追跡本に paper を書く本は 0＝今日盲目の probe は無い。真の `\paper` 変数は 1:1 で写せるが staff-spacing 族は LP では grob/context 側＝`\layout` override が要る——半分だけの輸出は穴の名指しより悪い、で保留。
+**④ 出力同一の証明 3 点**（§5.1）：⑴ lp-regression **A/B 再レンダ＝絵が動いた本 0/81**（stash→旧 build で baseline→pop→新 build で比較）⑵ 台帳 **566 点・残差完全不動** ⑶ suite 全緑＋**snapshot 0 枚**。製品面は **572 冊 `lysc check`＝LYS9 出現 0・exit 非零は既存 3 probe のみ**（lines 未対応×2・repeat volta×1＝本便と無関係）。**旧文言の掃き＝「paper 綴りが無い」と言う生きた 4 箇所**（break.lys・spacing-accidental-stretch.lys・lpreg/spacc-stretch.lys・lp-regression README）**を直し、3 冊とも data-pos 剥がし byte 一致で幾何不動を機械確認**（baseline.json は書き換え後の姿で更新済み）。
+
+★ **開始時裏取り**: HEAD `e658c44f`（第231 の閉幕 handoff・§1 と一致）・未 push 20・未追跡 0/木 0・Windows suite **5737/0/4**・WSL **5737/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2・追跡コーパス 572 冊・Core 0 警告＝**前便の閉幕数と全一致**。
+終了時: **未 push 22（push はユーザー＝RULES §5.1）**＝本便 2 本（`1c19d384` 実装一式／この行の handoff）・未追跡 0/木 0・suite **Windows 5761/0/4・WSL 5761/0/4＝両 OS 完全緑（開始比 +24＝PaperBlockTests 23＋彩色網 1）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊**（冊数不変・3 冊はコメント行のみ書き換え＝幾何不動を機械確認済み）・Core 0 警告。
+
+★ **この便の値段**:
+
+| 便 | 何が動いたか | 射程 |
+|---|---|---|
+| ① `paper { }` 一式（`1c19d384`・38 file） | 文法＋reader＋validator＋Score→LayoutEngine 配管 6 site＋診断 6 本＋LSP 補完＋tmLanguage＋docs 4 本＋監査 close＋corpus 旧文言 4 箇所 | **既存本の出力ゼロ移動を 3 点証明**（A/B 0/81・台帳不動・snapshot 0）・572 冊 check 新診断 0・両 OS 完全緑・+24 テスト |
+
+- **⑸ ★★★ 次に触るなら＝残債**: **GRAMMAR_AUDIT §9 は全項 ✅**＝言語仕様の宿題は §1.2 リネーム（ユーザーが MSVS で）だけ／**新規の名指し穴**＝⒤ exporter の paper 未輸出（warning 済み・paper を書く本が生まれて probe が要る日に `\paper` 1:1 写像＋staff-spacing 族の `\layout` 輸出）・⒥ MusicXML importer の page-layout → paper 写像（未着手・未起票のまま）／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・非ペア ToCoda の reserve≠draw（第227 起票・症状未観測なので点が先）・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示・実譜の `%` 記号（audit §8.1 ②・未起票のまま）。Marketplace は PAT 待ちのまま（第220 ①）。
+
+> ## ★★ 骨 1＝**「値札の付いた選択肢」まで畳んであれば、判断は 1 往復で締まる**
+> 第231 骨 3 の実証側。§2.2/§2.1 は測定済みの候補 A〜D＋判断 3 つの形で置いてあったので、
+> 質問 3 つ（狙い・単位・分担）を 1 度出すだけで実装便に入れた——ただし 1 度目の答えは
+> 「メリデメを整理して。お勧めは？」だった。**表（得るもの／費用／実測需要／難点）と推奨を
+> 添えて出し直すと 3 つとも即決**。⇒ **判断を求めるときは、測定の生データではなく
+> 「推奨付きの比較表」まで畳んでから出す**（§5.0「測定と判断を混ぜない」の運用形）。
+
+> ## ★★★ 骨 2＝**「既定を書いた本は既定」は丸め規則まで揃えて初めて成立する**
+> mm→ss を素朴に全精度で変換すると `paperWidth 210mm` ≠ 既定 `119.501575`（既定値リテラルは
+> 6 桁丸め）＝**同じ量の 2 綴りが 2e-7 だけ違う絵を作る**。変換側にも「×72.27/127 を 6 桁丸め」
+> ＝**既定値が計算された方法そのもの**を敷いて恒等にした（pin あり）。
+> ⇒ **新しい綴りが既存の定数と同じ量を指すときは、値ではなく*計算方法*を共有する**
+> （§5.2.1② の「1 量 2 綴り」の数値版）。
+
+> ## ★★ 骨 3＝**data-pos の罠は Equal 側だけでなく NotEqual 側にも効く**
+> 新テストの「paper で絵が動く／空 paper では動かない」は、素の byte 比較だと**両側とも
+> data-pos で成立してしまう**（ブロックを前置しただけで全 offset がずれる）——NotEqual は
+> 「正しい答えを誤った理由で出す計器」（§0 の 5 例目）になり、Equal は赤くなる。
+> **比較は両方向とも data-pos 剥がしが先**（第230 骨 3 の器具を新規テストに恒久化）。
+
+> ## ★ 骨 4＝**exporter の穴は「知っている等価」と「名指した穴」を区別して書く**
+> fonts は「書かないほうが対照として正しい」（Lily# 側の絵を動かさない）＝知っている等価。
+> paper は逆＝**書かないと双子が対照でなくなる**ので、これは drummap 型の穴として
+> warning で名指した。⇒ **未輸出を決めるときは「Lily# 側の絵を動かす量か」で二分し、
+> 動かす量なら黙らず warning**（動かさない量なら書くほうが比較を壊す）。
+
+---
+
 ## 以下は第229セッションの経緯
 
 最終更新 第229セッション＝**残債筆頭 ⑵-b「増分パースが診断を 1 つ落とす」を閉じ（`d1e2eeba`）、開いた出口から §1.1 `$` 廃止一式を完了し（`25d8c5f1`）、続き便でユーザー承認を取って §4.2＋§4.3 の対（`34969715`）と §3.1 DisplayName（`6d0bf3db`）も閉じた**——4 便で GRAMMAR_AUDIT §9 の 1・2・5 の §3.1 まで済み。

@@ -151,6 +151,42 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
+最終更新 第234セッション＝**残債 ⒥「MusicXML importer の page-layout → paper 写像」を閉じた（`7c372aef`・4 file＝importer 3 本＋新テスト 9 本・委任「有利なら着手」→着手＝直近 2 便が建てた paper の自然な続きで、ユーザー決定待ちの項が 1 つも要らない唯一の残債だった）**。`<defaults><page-layout>` が emit ヘッダの `paper { }` になる——paperWidth/Height＋余白 4 つ・**mm 綴り**で、**書くのは source が述べた key だけ**（欠けは paper block 自身の a4 既定に任せる）。
+**① 橋は reader が一人で持つ**：`<scaling>`（M mm ＝ T tenths）が tenths→物理単位の**唯一の**換算なので、`ImportPaper` は mm を運び **serializer は tenth を見ない**。mm は 2 桁丸め（1 tenth ≈ 0.18mm＝source 自身の解像度より細かい・1200 tenths は `210mm` と読み戻せる）。scaling 無しの page-layout は**推測換算せず drop＋warning**（importer の契約「never emitted wrong」）。
+**② 写せないものは全部 report で名指す**：⑴ odd/even の余白が割れたら odd 採用を宣言 ⑵ 単独 `type="odd"`（even は**鏡映**）は左右不等のときだけ警告（等しければ鏡映＝恒等で沈黙）⑶ **staff サイズ違い（Lily# は knob 非搭載＝GRAMMAR 2.5「staff space は単位そのもの」）は「整数 pt 解像度」で読む**——Lily# の 20 TeX pt＝19.93 DTP pt と MusicXML 常用既定 7.05556mm/40tenths＝20.00 DTP pt は**両方「20pt」に丸まる**（0.4% は TeX 対 DTP の*綴り差*でありサイズ選択ではない）ので沈黙・24pt 大譜面は「about 24pt」と名指し＋**ページは述べられたまま採用**（page-as-stated＋warning が唯一の正直な組合せ）。
+**③ 証明**：importer 名前空間のみ（engine・corpus・文法 0 接触）＝**既存本の出力は構成上不動**・suite の台帳/snapshot 網も込みで **Windows 5796/0/4・WSL 5796/0/4＝両 OS 完全緑（+9）**。E2E は emit した block を `PaperPlanReader` に通す対＝**width が a4 既定 `119.501575` に exact 着地・height `167.302205`（294mm）が既定から動く**（「読まれた」と「たまたま既定」を 1 テストで区別）。定数 40 tenths/staff・72/25.4 は MusicXML 仕様由来＝LP 由来ではないので REF なし（remark に出所明記・LpProvenanceTests 緑）。
+
+★ **開始時裏取り**: HEAD `b7787215`（第233 の閉幕 handoff・§1 と一致）・未 push 26・未追跡 0/木 0・Windows suite **5787/0/4**・WSL **5787/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2・追跡コーパス 572 冊・Core 0 警告＝**前便の閉幕数と全一致**。
+終了時: **未 push 28（push はユーザー＝RULES §5.1）**＝本便 2 本（`7c372aef` 実装一式／この行の handoff）・未追跡 0/木 0・suite **Windows 5796/0/4・WSL 5796/0/4＝両 OS 完全緑（開始比 +9＝MusicXmlPageLayoutImportTests 9 本）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊（1 冊も触っていない）**・Core 0 警告。
+
+★ **この便の値段**:
+
+| 便 | 何が動いたか | 射程 |
+|---|---|---|
+| ① ⒥ page-layout → paper 写像（`7c372aef`） | `ImportPaper`（mm 運搬）・reader `ReadPageLayout`（scaling 橋＋odd/even 対＋staff pt 検査）・writer `WritePaper`・新テスト 9 本 | **既存出力は構成上不動（importer のみ・engine 0 接触）**・両 OS 完全緑 |
+
+- **⑸ ★★★ 次に触るなら＝残債**: 言語仕様の宿題は §1.2 リネーム（ユーザーが MSVS で）だけ／**名指し穴**＝⒤ exporter の paper 未輸出（named 参照も同じ warning が受ける・paper を書く本が生まれて probe が要る日に）——**⒥ は本便で閉じた**／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示・着手はユーザー決定から）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・非ペア ToCoda の reserve≠draw（第227 起票・症状未観測なので点が先）・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示・実譜の `%` 記号（audit §8.1 ②・未起票のまま）。Marketplace は PAT 待ちのまま（第220 ①）。
+
+> ## ★★ 骨 1＝**閾値を書きたくなったら「両者が同じ名前を持つ最粗の解像度」を探す**
+> staff サイズ警告の「同じ」を % の epsilon にせず**「整数 DTP pt に丸めて同名か」**にした——
+> Lily# の 20 TeX pt（19.93 DTP）と MusicXML 常用既定（20.00 DTP）の 0.4% 差は
+> **同じ「20pt」の 2 綴り**（§5.2.1② の「1 量 2 綴り」の*単位*版）で、意図的なサイズ選択は
+> 必ず整数 pt 単位で離れて座る。恣意的な ulp／% の線を 1 本も書かずに済み、
+> 「何を同値とみなすか」が閾値の数字ではなく*命名の解像度*として remark に残った
+> （第213 の「動かすべきは許容差ではなく生産者」と同族＝**許容差を発明する前に、
+> その差が*綴り差*である名前を探す**）。
+
+> ## ★ 骨 2＝**knob が無い量の輸入は「表せる半分を採用＋表せない半分を名指し」の対で書く**
+> staff サイズは Lily# に knob が無い（単位そのもの・GRAMMAR 2.5）。drop（ページごと捨てる）も
+> 平均（サイズに合わせてページを縮める発明）も嘘になる——**ページは述べられたまま採用し、
+> サイズ差だけ warning で名指す**のが唯一の正直な組合せ。第232 骨 4（exporter の
+> 「動かす量なら黙らず warning」）の**輸入側の鏡**＝方向が逆でも規則は同じ
+> 「表せない量は、黙って近似せず名前を付けて手渡す」。
+
+---
+
+## 以下は第233セッションの経緯
+
 最終更新 第233セッション＝**fonts/paper の名前付き宣言と score 内参照＋部分上書きを実装し（ユーザー発案 → 設計往復で推奨案を承認 → 実装だけの便）、続き便で `size`（紙名プリセット・jisb5 込み）を実装した**。意味論の決定 3 つ＝⑴ **参照は無名既定を置換**（隠れた 3 層チェーンを作らない）⑵ **patch は「名前付き block の末尾に書いたのと同じ」**＝同キーは後勝ち・**層またぎの重複 warning は出さない**（上書きが目的）⑶ **narrower-wins は出所不問**＝house の role 束縛は score の group 上書きに勝つ（**意図した驚き・名指しで pin**＝`TheNarrowerSpellingWins_WhicheverBlockItCameFrom`）。
 **① 形（GRAMMAR §2.4 末尾の注記・§2.5・§7 ScoreItem）**：top-level `fonts NAME { }`／`paper NAME { }`＝**宣言**（単独では何も束ねない・未参照は warning）・score 内 `fonts NAME [{ patch }]`＝**参照＋部分上書き**。node は 1 形（`NameToken` 追加・**位置が宣言/参照を決める**＝title の file/score と同じ構造的文脈）。無名 block は従来どおりファイル既定で挙動完全不変。
 **② 配管は HeaderOverrides の完全鏡**：`RenderSpec.FontsRef/PaperRef` → collector の `FontsOverride/PaperOverride` → **定義 walk の後に解決して「解決値を `_meta` に置く」**——増分 gate（`MetaMatchesShifted`）は `_meta` を比べるので、**named block の中身の編集が自動的に recollect を強制する**（cache キーの追加ゼロで正しい）。reader は `TryResolve`（未知名の文の ONE HOME）＋`ReadReference`（merge＝**entry 連結**——builder の dict 代入と既存の後勝ち・narrower-wins が全部面倒を見るので、**新しい解決規則をひとつも書いていない**）。
@@ -201,53 +237,6 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 > 依存**し、「entry の延長は構造だけで決まる」という block 設計の背骨が折れる。
 > ⇒ **quoted を選びたくなったら、それが ⑶ である証拠を先に言う**（LP が引用符でも、それは
 > Scheme の都合であって設計論拠にならない——今回それを論拠に使いかけた）。
-
----
-
-## 以下は第232セッションの経緯
-
-最終更新 第232セッション＝**ユーザー判断 4 つを締めて §2.1 `paper { }` を実装した（`1c19d384`・38 file）**——第231 が測った決定材料に対する判断＝⑴ 狙い＝ハウススタイル（§2.1 単独・A/B/C は需要待ちで見送り）⑵ **単位接尾辞を導入**（`210mm`/`29.7cm`/`8.5in`・**数字に糊付け＝1 量**・裸の数値は ss）⑶ 語彙＝寸法系全部（アルゴリズム切替は載せない）⑷ **段間隔の分担＝paper に寄せる**（override 側は「効かない scope」の傷か位置配管の費用・paper は綴り＝意味が一致）。**これで GRAMMAR_AUDIT §9 は全項 ✅**（残りは §1.2 リネームのみ＝ユーザーが MSVS で）。
-**① 形（GRAMMAR §2.5）**：top-level `paper { KEY VALUE… }`＝LP の `\paper` 変数の camelCase。scalar 10（paperWidth/Height・margin×4・indent×2・topSystemPadding・spacingIncrement）＋ flag 1（raggedRight）＋ **spacing spec block 13×4**（systemSystemSpacing…nonStaffNonStaffSpacing × basicDistance/minimumDistance/padding/stretchability）。**mm→ss は ×72.27/127 を 6 桁丸め＝LayoutOptions 既定値の計算と同一**なので**「既定を書いた本は既定と byte 一致」**（PaperBlockTests が pin・空 block／既定明記／無指定の 3 綴りが同一絵）。**露出しなかった**：StaffHeight（単位の枠そのもの・LP も `\paper` 外）・SystemSpacing（不活性の実測札あり）・breaking 切替。
-**② 配管は fonts の完全鏡**：`PaperPlanReader`（ONE HOME・collector＋`PaperValidator` の 2 呼び手）→ `Score.Paper` → **`new LayoutEngine(score.Paper)` ×6 生産 site**（Svg/Pdf/Png×2/Incremental/LayoutReport）・増分の meta 等値・重複 global・診断 **LYS9001〜9006**（spaced unit `210 mm` は「糊付けの綴り」を名指す）・LSP 補完 3 context＋top-level snippet（既定 prefill＝受けて何も変えなければ絵は動かない）・tmLanguage `paper-block`（入れ子 begin/end）＋ EditorColouringTests の両方向網（語彙の家は `LanguageVocabulary.Paper*`＝public 転送）。
-**③ exporter は未輸出を warning で名指す**（drummap 型の「名前の付いた穴」）——**fonts の「書かない」判断と理由が逆向き**：paper は Lily# 側の絵を動かすので、書かない双子は対照でなくなる。追跡本に paper を書く本は 0＝今日盲目の probe は無い。真の `\paper` 変数は 1:1 で写せるが staff-spacing 族は LP では grob/context 側＝`\layout` override が要る——半分だけの輸出は穴の名指しより悪い、で保留。
-**④ 出力同一の証明 3 点**（§5.1）：⑴ lp-regression **A/B 再レンダ＝絵が動いた本 0/81**（stash→旧 build で baseline→pop→新 build で比較）⑵ 台帳 **566 点・残差完全不動** ⑶ suite 全緑＋**snapshot 0 枚**。製品面は **572 冊 `lysc check`＝LYS9 出現 0・exit 非零は既存 3 probe のみ**（lines 未対応×2・repeat volta×1＝本便と無関係）。**旧文言の掃き＝「paper 綴りが無い」と言う生きた 4 箇所**（break.lys・spacing-accidental-stretch.lys・lpreg/spacc-stretch.lys・lp-regression README）**を直し、3 冊とも data-pos 剥がし byte 一致で幾何不動を機械確認**（baseline.json は書き換え後の姿で更新済み）。
-
-★ **開始時裏取り**: HEAD `e658c44f`（第231 の閉幕 handoff・§1 と一致）・未 push 20・未追跡 0/木 0・Windows suite **5737/0/4**・WSL **5737/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2・追跡コーパス 572 冊・Core 0 警告＝**前便の閉幕数と全一致**。
-終了時: **未 push 22（push はユーザー＝RULES §5.1）**＝本便 2 本（`1c19d384` 実装一式／この行の handoff）・未追跡 0/木 0・suite **Windows 5761/0/4・WSL 5761/0/4＝両 OS 完全緑（開始比 +24＝PaperBlockTests 23＋彩色網 1）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊**（冊数不変・3 冊はコメント行のみ書き換え＝幾何不動を機械確認済み）・Core 0 警告。
-
-★ **この便の値段**:
-
-| 便 | 何が動いたか | 射程 |
-|---|---|---|
-| ① `paper { }` 一式（`1c19d384`・38 file） | 文法＋reader＋validator＋Score→LayoutEngine 配管 6 site＋診断 6 本＋LSP 補完＋tmLanguage＋docs 4 本＋監査 close＋corpus 旧文言 4 箇所 | **既存本の出力ゼロ移動を 3 点証明**（A/B 0/81・台帳不動・snapshot 0）・572 冊 check 新診断 0・両 OS 完全緑・+24 テスト |
-
-- **⑸ ★★★ 次に触るなら＝残債**: **GRAMMAR_AUDIT §9 は全項 ✅**＝言語仕様の宿題は §1.2 リネーム（ユーザーが MSVS で）だけ／**新規の名指し穴**＝⒤ exporter の paper 未輸出（warning 済み・paper を書く本が生まれて probe が要る日に `\paper` 1:1 写像＋staff-spacing 族の `\layout` 輸出）・⒥ MusicXML importer の page-layout → paper 写像（未着手・未起票のまま）／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・非ペア ToCoda の reserve≠draw（第227 起票・症状未観測なので点が先）・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示・実譜の `%` 記号（audit §8.1 ②・未起票のまま）。Marketplace は PAT 待ちのまま（第220 ①）。
-
-> ## ★★ 骨 1＝**「値札の付いた選択肢」まで畳んであれば、判断は 1 往復で締まる**
-> 第231 骨 3 の実証側。§2.2/§2.1 は測定済みの候補 A〜D＋判断 3 つの形で置いてあったので、
-> 質問 3 つ（狙い・単位・分担）を 1 度出すだけで実装便に入れた——ただし 1 度目の答えは
-> 「メリデメを整理して。お勧めは？」だった。**表（得るもの／費用／実測需要／難点）と推奨を
-> 添えて出し直すと 3 つとも即決**。⇒ **判断を求めるときは、測定の生データではなく
-> 「推奨付きの比較表」まで畳んでから出す**（§5.0「測定と判断を混ぜない」の運用形）。
-
-> ## ★★★ 骨 2＝**「既定を書いた本は既定」は丸め規則まで揃えて初めて成立する**
-> mm→ss を素朴に全精度で変換すると `paperWidth 210mm` ≠ 既定 `119.501575`（既定値リテラルは
-> 6 桁丸め）＝**同じ量の 2 綴りが 2e-7 だけ違う絵を作る**。変換側にも「×72.27/127 を 6 桁丸め」
-> ＝**既定値が計算された方法そのもの**を敷いて恒等にした（pin あり）。
-> ⇒ **新しい綴りが既存の定数と同じ量を指すときは、値ではなく*計算方法*を共有する**
-> （§5.2.1② の「1 量 2 綴り」の数値版）。
-
-> ## ★★ 骨 3＝**data-pos の罠は Equal 側だけでなく NotEqual 側にも効く**
-> 新テストの「paper で絵が動く／空 paper では動かない」は、素の byte 比較だと**両側とも
-> data-pos で成立してしまう**（ブロックを前置しただけで全 offset がずれる）——NotEqual は
-> 「正しい答えを誤った理由で出す計器」（§0 の 5 例目）になり、Equal は赤くなる。
-> **比較は両方向とも data-pos 剥がしが先**（第230 骨 3 の器具を新規テストに恒久化）。
-
-> ## ★ 骨 4＝**exporter の穴は「知っている等価」と「名指した穴」を区別して書く**
-> fonts は「書かないほうが対照として正しい」（Lily# 側の絵を動かさない）＝知っている等価。
-> paper は逆＝**書かないと双子が対照でなくなる**ので、これは drummap 型の穴として
-> warning で名指した。⇒ **未輸出を決めるときは「Lily# 側の絵を動かす量か」で二分し、
-> 動かす量なら黙らず warning**（動かさない量なら書くほうが比較を壊す）。
 
 ---
 
