@@ -102,13 +102,13 @@ public class HistoryCitationTests
     /// the drop would have been the thing that opened the investigation instead of a stray
     /// observation at the end of a long session.
     /// <para>
-    /// Raised as sessions cite: 510 when written, then 515 once the handoff for the session
-    /// after it landed. Follow the measured number up in the same commit that raises it —
-    /// leaving the floor behind means a later fall back to it is exactly the silent drop the
-    /// ratchet exists to catch.
+    /// Raised as sessions cite: 510 when written, then 515 and 517 across the two handoff
+    /// commits of the session after it. Follow the measured number up in the same commit that
+    /// raises it — leaving the floor behind means a later fall back to it is exactly the
+    /// silent drop the ratchet exists to catch.
     /// </para>
     /// </remarks>
-    private const int LiveCitationsWhenWritten = 515;
+    private const int LiveCitationsWhenWritten = 517;
 
     /// <summary>
     /// The number of citation-shaped tokens whose commit is not in the history, when this
