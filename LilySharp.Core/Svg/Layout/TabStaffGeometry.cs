@@ -319,10 +319,10 @@ internal static class TabBeamMath
 /// </code>
 /// ⚠️ THE STRINGS ARE ONE STAFF SPACE APART IN THAT FRAME, not 1.5. A four-string tab is
 /// positions (3, 1, −1, −3), exactly what LilyPond's TabNoteHead reports; the 1.5 lives in
-/// the staff's space, not in the positions. An earlier attempt at this route (<c>26e553d9</c>)
+/// the staff's space, not in the positions. An earlier attempt at this route (<c>0251bb0f</c>)
 /// spelled the strings three half-spaces apart and left the notation staff's thicknesses in
 /// place — a stretched notation staff rather than a tab one — and was replaced by hand-fitted
-/// arithmetic (<c>88f98480</c>) whose flat groups sat 0.297 past LilyPond's.
+/// arithmetic (<c>d06686ee</c>) whose flat groups sat 0.297 past LilyPond's.
 /// <para>
 /// ⚠️ Directions come from the STRINGS (<c>Compute</c>'s <c>stemUp</c>), not the notated pitch, so
 /// the group handed to the quanter is re-stemmed. A tab beam is never kneed.

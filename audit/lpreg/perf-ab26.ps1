@@ -1,7 +1,7 @@
 # A/B perf round 26 (session 125: LYS0020 top-level-music rejection, empty-chord slur +
 # duration, condensedStaff).
 # 1000-bar inputs, interleaved runs, median-of-5 BOTH orders.
-# Base = 0bda152b (the commit before this session's first change).
+# Base = dd6de6f6 (the commit before this session's first change).
 #
 # Heavy sides of THESE changes:
 #  - chordsemi1k / chordsec1k: CHORDS every bar. MeasureDurations.ItemDuration now asks
@@ -13,7 +13,7 @@
 #    check (once per item) show up with nothing to hide behind.
 # Output must be HASH-IDENTICAL on every input: none of this session's changes moves a
 # glyph in a file that was already valid.
-$base = 'C:\MyProj\LilySharp-perfbase-0bda152b\LilySharp.Cli\bin\Release\net9.0\lysc.dll'
+$base = 'C:\MyProj\LilySharp-perfbase-dd6de6f6\LilySharp.Cli\bin\Release\net9.0\lysc.dll'
 $curr = 'C:\MyProj\LilySharp\LilySharp.Cli\bin\Release\net9.0\lysc.dll'
 if (-not (Test-Path $base)) { throw 'baseline dll missing' }
 if (-not (Test-Path $curr)) { throw 'current dll missing' }

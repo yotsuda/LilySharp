@@ -5,7 +5,7 @@
 #                 and every beamed item's skyline band is taller.
 #   plain1k     — quarters, no beams: the bake never fires; only the added null
 #                 check on StemSpacingInfo. Hash must MATCH base.
-# Base = 87c4c62f worktree (before ALL of session 120 — the cumulative session cost).
+# Base = a03ba916 worktree (before ALL of session 120 — the cumulative session cost).
 # Interleaved, median-of-3, BOTH orders. ⚠️ No tests running alongside.
 $base = 'C:\MyProj\LilySharp-perfbase-87c4\LilySharp.Cli\bin\Release\net9.0\lysc.dll'
 $curr = 'C:\MyProj\LilySharp\LilySharp.Cli\bin\Release\net9.0\lysc.dll'

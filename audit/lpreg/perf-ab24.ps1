@@ -18,7 +18,7 @@
 #               sloped.
 #   plain1k   — control: none of the changed code runs (no tuplets, no
 #               scripts, no voltas). Drift gauge + hash.
-# Base = 31a08b0f worktree (session 123 start, before the first code change).
+# Base = 0618241e worktree (session 123 start, before the first code change).
 # Interleaved, median-of-3, BOTH orders. ⚠️ No tests running alongside.
 $base = 'C:\MyProj\LilySharp-perfbase-31a0\LilySharp.Cli\bin\Release\net9.0\lysc.dll'
 $curr = 'C:\MyProj\LilySharp\LilySharp.Cli\bin\Release\net9.0\lysc.dll'

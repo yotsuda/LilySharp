@@ -157,7 +157,7 @@ LP と同じ Y-down のまま残す。**
 | " | `_beamThickness/…Translation`, quant 定数 | Y/scalar | — | ss | `EngravingDefaults` |
 | " | Solve() 戻り値 | Y | Y-up | **half-space**（境界で ×2） | caller 契約（下記 render /2） |
 | StemCalculator.cs | `StemInfo.IdealY/ShortestY` | Y | Y-up | **ss（絶対）** | `calc_stem_info` 式一致を確認 |
-| BeamSubdivision.cs | rank→Y = primary + `BeamTranslation`×rank | Y | Y-up | ss | `beam.cc calc_beam_segments`（c307edcc で移植） |
+| BeamSubdivision.cs | rank→Y = primary + `BeamTranslation`×rank | Y | Y-up | ss | `beam.cc calc_beam_segments`（17d237a5 で移植） |
 | SharedRenderer.Beams.cs | `leftBeamY=staffMiddleY+beam.LeftY/2` | Y | Y-up(native) | 境界 half→ss→page | render 境界 |
 | BeamCollision.MinY/MaxY | 衝突対象 Y | Y | Y-up | **half-space** | ElementCoordinator 入力（未 ss 化） |
 
@@ -204,7 +204,7 @@ LP と同じ Y-down のまま残す。**
   config を staff-相対化）。
 - ~~**[med] TieFormattingProblem.cs:256** — `center_tie_vertically` の 0.5·h 対 0.375·h~~ ／
   ~~**[med] :458-473** — tie-tie center の 1.0·h 対 0.75·h~~ — **どちらも閉じた**（第76セッション・
-  `4c57d7a5`）。**2 つは同じ 1 件だった**: `Tie_configuration::height` は制御点の高さではなく
+  `176681b7`）。**2 つは同じ 1 件だった**: `Tie_configuration::height` は制御点の高さではなく
   **曲線の中点**（`tie-configuration.cc:80-87`）で、`BezierBow.MidpointHeight` に名前が付いた瞬間に
   両方が LP と一致した。**現コードを読んで確認済**（`deltaY = -dir * height / 2` の `height` が
   midpoint＝0.75·control なので `−dir·0.375·control`／tie-tie center も同じ `Height`）。
@@ -424,12 +424,12 @@ renderer-local staff frame（`EngravingDefaults.StaffMiddle`/Rest 位置）と `
 
 #### 忠実性所見（座標=単位/方向は全 faithful。以下は**値/スタイルの staleness**）
 - **[✅解消] BreakAlignSpacing.cs GetClefSpacing** — 監査時は `minimum-space 3.5/3.5/4.2/3.7`（旧 LP 値＋
-  別スタイル）で行頭 clef→key/time/bar が数 ss 広かった。**対処済**（`9c76abf9`）: 現行は LP
+  別スタイル）で行頭 clef→key/time/bar が数 ss 広かった。**対処済**（`bb47861f`）: 現行は LP
   `define-grobs.scm:914-925` の extra-space をそのまま持つ — key-cancellation 0.82 / key-signature 0.82 /
   time-signature 1.52 / first-note `minimum-fixed-space` 5.0 / right-edge 0.5 / **staff-bar 0.7**。
   （2026-07-21 再確認。この staff-bar 0.7 は clef が bar line の**前**に立つときの間隙で、実測一致 → §3.I。）
 - **[✅解消] GetKeyCancellationSpacing / GetTimeSignatureSpacing→StaffBar** — key-sig `0.3`(LP0.5)/
-  time-sig `1.15`(LP1.25)/`2.0`(LP1.0) が stale だった。**対処済**（`9c76abf9` に含む）。
+  time-sig `1.15`(LP1.25)/`2.0`(LP1.0) が stale だった。**対処済**（`bb47861f` に含む）。
 - **[low・line-stale] EngravingDefaults.cs:359-373** — tie/slur 太さ**値は faithful**（1.2/0.8, LP `:2039/2841`）だが
   引用行番号 `:3175/:3898` が旧レイアウト（行ドリフト）。
 - **[low] TabStaffGeometry.cs:84** — TabBeamQuant が `0.6*tanh` のみで LP `:766` の `/(damping+concaveness)`
@@ -448,19 +448,19 @@ LP の格子の半分が型として存在しない。**
 | LP | Lily# | 状態 |
 |---|---|---|
 | `PaperColumn`（musical） | `ColumnLayout(Fraction Timing, double X, double Width)` | 対応あり |
-| **`NonMusicalPaperColumn`**（breakable） | `BoundaryColumn`（**Phase 1 で導入**・`a87f2e6d`） | 🔄**型は入った/載せ替え途中** |
+| **`NonMusicalPaperColumn`**（breakable） | `BoundaryColumn`（**Phase 1 で導入**・`c19a6d52`） | 🔄**型は入った/載せ替え途中** |
 | **`BreakAlignment` group**（clef→staff-bar→key-cancel→key-sig→time-sig） | `BreakAlignSpacing`（順序・space-alist 完備）＋ `BoundaryColumn` が行内境界で参照 | 🔄**行頭専用ではなくなった** |
 
-> **Phase 1 完了（`a87f2e6d`, `b8fecfca`）**: `BoundaryColumn` が LP の unbroken break-align 順で
+> **Phase 1 完了（`c19a6d52`, `90f53160`）**: `BoundaryColumn` が LP の unbroken break-align 順で
 > clef/staff-bar/key/time を列内 X に配置し、間隔は `BreakAlignSpacing` の space-alist を引く。
 > `MmrRodMinimumDistance` はこの列の `RightSkylineFromBarLine()` を使う形に載せ替え済み。
 > **出力は1バイトも変えていない**（snapshot 移動ゼロが合格条件）。
 > 副産物として `GetStaffBarSpacing` の値誤り（staff-bar→time-signature が既定 1.0 に落ちていた。
 > LP は `0.75`）を修正。`CalculatePrefixWidth` が staff-bar を左シンボルとして歩かないため
-> 本番未到達で露見していなかった。`b8fecfca` で自己レビューし、`space-alist` の `SpacingStyle`
+> 本番未到達で露見していなかった。`90f53160` で自己レビューし、`space-alist` の `SpacingStyle`
 > 無視（`minimum-space` を黙って誤配置する）と空 extent grob の非スキップを字面移植に直した。
 >
-> **Phase 2 完了（`a47029bc`, `94656b84`）**: clef の描画を bar line の**前**へ。幅は
+> **Phase 2 完了（`eefd4460`, `114df85e`）**: clef の描画を bar line の**前**へ。幅は
 > `BoundaryClefAllowance` で**前の小節の終端 spring の min** に加算し（ideal は LP が
 > `note-spacing.cc:99-100` で bar line 基準に落としているため不変）、`BarlineToFirstColumnSpring`
 > 側の二重予約を撤回。描画も同じ `BoundaryColumn` から位置を読むので定数の二重持ちが無い。
@@ -692,19 +692,19 @@ Lily# のレンダラも同形（`BeginGroup(scale)` ＋ `UnscaledXDrawingContex
 ### 4.5 対処状況（2026-07-19 起票／2026-07-21 更新）
 | # | 項目 | 状況 |
 |---|---|---|
-| 1 | Slur staff-line frame 不一致 | ✅**修正**（staffMiddleY 導入で絶対-page frame へ・commit `1c902285`） |
-| 2 | BreakAlignSpacing clef/key/time 値 | ✅**LP 値採用**（extra-space 0.82/1.52/0.7 等・目視で LP 一致確認・171 snapshot 再ベース・`9c76abf9`） |
+| 1 | Slur staff-line frame 不一致 | ✅**修正**（staffMiddleY 導入で絶対-page frame へ・commit `18a25880`） |
+| 2 | BreakAlignSpacing clef/key/time 値 | ✅**LP 値採用**（extra-space 0.82/1.52/0.7 等・目視で LP 一致確認・171 snapshot 再ベース・`bb47861f`） |
 | 3 | NoteCollision 混在幅残差 | ✅**LP式化（②局所修正）**: extent 比 `(extent_down[R]−extent_up[L])/downW`＋down-note 幅 scaling を literal 移植（`note-collision.cc:339-348`）。等幅は identity、up>down 幅の稀ケースのみ LP 通り tighten。全 177 snapshot 不変。実測で混在幅は既に LP 近似と判明したため、フル stem-anchor 移行(Stage-1)でなく局所修正を採用（保守性優先）。 |
-| 4 | Tie center 係数 | ✅**修正**（0.375·h / 0.75·h・`d81d379d`） |
-| 5 | Hairpin decrescendo 分数 | ✅**修正**（`1342012b`） |
-| 6 | BreakAlign KeyCancel/TimeSig 値 | ✅**LP 値採用**（`9c76abf9` に含む） |
-| 7 | LedgerLine 単位 | ✅**修正**（比率×head幅・`f5a4f89d`） |
+| 4 | Tie center 係数 | ✅**修正**（0.375·h / 0.75·h・`3d5aca52`） |
+| 5 | Hairpin decrescendo 分数 | ✅**修正**（`5e443e2e`） |
+| 6 | BreakAlign KeyCancel/TimeSig 値 | ✅**LP 値採用**（`bb47861f` に含む） |
+| 7 | LedgerLine 単位 | ✅**修正**（比率×head幅・`dcd31291`） |
 | 8 | GetRestShift half-space | ✅**問題なし**（consumer 無し＝vestigial・単位混在の実害なし） |
-| 9 | **non-musical PaperColumn の欠落**（§3.I） | 🔄**進行中**。①LP 境界幾何の導出＝**完了**（`820504e2`、rod の式を実測と6桁一致で検証）／②列の導入＝**完了**（`a87f2e6d`+`b8fecfca`、出力中立・`GetStaffBarSpacing` の値誤りも修正）／③clef を bar line の前へ＝**完了**（`a47029bc`+`94656b84`、既存 snapshot 1件のみ変更・LP 照合済）／④残る3ヘルパの吸収と item→bar line 最小値の LP 式化＝**未着手**（全小節が動くため要承認） |
-| 10 | **X 基準点未統一**（§4.7） | 🔄**進行中**。①音符/休符を左端基準へ＋`GetItemToBarlineSpace`=0.2＝**完了**（`8448749a`）／③`CalculateLeftExtent` の stale doc＝**完了**（`86dbb093`）／④`BarlineToFirstColumnSpring` の `Staff_spacing::get_spacing` 字面移植（min/stretch/0.3補正/compress/optical）＝**完了**（`9b31c2ba`+`9ffeef8f`、snapshot 43+59 再ベース・LP 実測照合済）／①変更 item の frame＋定数と②`CalculateRightExtent` の統廃合＝**未着手** |
+| 9 | **non-musical PaperColumn の欠落**（§3.I） | 🔄**進行中**。①LP 境界幾何の導出＝**完了**（`90ecf026`、rod の式を実測と6桁一致で検証）／②列の導入＝**完了**（`c19a6d52`+`90f53160`、出力中立・`GetStaffBarSpacing` の値誤りも修正）／③clef を bar line の前へ＝**完了**（`eefd4460`+`114df85e`、既存 snapshot 1件のみ変更・LP 照合済）／④残る3ヘルパの吸収と item→bar line 最小値の LP 式化＝**未着手**（全小節が動くため要承認） |
+| 10 | **X 基準点未統一**（§4.7） | 🔄**進行中**。①音符/休符を左端基準へ＋`GetItemToBarlineSpace`=0.2＝**完了**（`cc913cbb`）／③`CalculateLeftExtent` の stale doc＝**完了**（`ddddee20`）／④`BarlineToFirstColumnSpring` の `Staff_spacing::get_spacing` 字面移植（min/stretch/0.3補正/compress/optical）＝**完了**（`99fc6b38`+`2c6625df`、snapshot 43+59 再ベース・LP 実測照合済）／①変更 item の frame＋定数と②`CalculateRightExtent` の統廃合＝**未着手** |
 | doc | StemCalculator / COORDINATE_SYSTEM | ✅ doc 修正済 |
 | doc | IDrawingContext.cs:37-39 | ✅**対処済**（2026-07-26）。装飾前=Y-up/装飾後=Y-down の2フレームと「実装者=backend=flip の後ろ／呼び出し側=renderer=flip の前／decorator は変換しない」を remark に明記。当初「false-positive」としたのは**誤り**だった |
-| 島1 | **譜間/system 縦積み Y-up 化＋YFlip 配線（=Stage-4 全体）** | ✅**完了**。YFlip 配線＋全 grob レイアウト Y-up 化（Phase 2i〜2z、`e09d4e72`ほか）→ `system.Y` の page Y-up 格納（`477c5452`）→ 共有 device stacking の de-island（DynamicEngraver `ece55e9a`・SkylineBuilder `db7b0c5b`・OutsideStaffStacker `39da7084`・Y-up skyline 2 パス `7f2f8ff8`）→ **`staff.Y` の Y-up 格納（`ff64f38e`）で締めた**。全段階が boundary-shim で byte 不変。詳細は §2.1 |
+| 島1 | **譜間/system 縦積み Y-up 化＋YFlip 配線（=Stage-4 全体）** | ✅**完了**。YFlip 配線＋全 grob レイアウト Y-up 化（Phase 2i〜2z、`5dc65dc0`ほか）→ `system.Y` の page Y-up 格納（`28d55340`）→ 共有 device stacking の de-island（DynamicEngraver `b0648918`・SkylineBuilder `d15228fe`・OutsideStaffStacker `39da7084`・Y-up skyline 2 パス `7f2f8ff8`）→ **`staff.Y` の Y-up 格納（`ff64f38e`）で締めた**。全段階が boundary-shim で byte 不変。詳細は §2.1 |
 | 島2 | device 島群（TieVariant/Pedal[dead]/水平 skyline/TabStaffGeometry/beam collision island）/ LILYPOND-REF 行再採番 | ⏸**繰延**（frame 忠実性の残・数値は正）。島1 が完了したので次はここ |
 
 ### 4.6 結論（2026-07-21 更新）
@@ -737,11 +737,11 @@ paper column フレームでの extent。2.24.4 で PaperColumn と NoteHead の
 |---|---|---|---|
 | `CalculateLeftExtent`（public） | **左端基準**（変換済・符頭で 0） | 中心基準 `width/2` | Grace / `ChangeItemPrefixWidth` / `CalculateSkylineDistance` |
 | `CalculateRightExtent`（public） | **中心基準** `W−CenterX` | 中心基準 `width/2` | **無し**（`SvgTests.cs` のみ） |
-| `CalculateNoteheadRightExtent`（private） | **左端基準**（`8448749a` で変換） | 中心基準 `width/2` | `CalculateSkylineDistance` |
+| `CalculateNoteheadRightExtent`（private） | **左端基準**（`cc913cbb` で変換） | 中心基準 `width/2` | `CalculateSkylineDistance` |
 
 **発見の経緯**: 音符の左が左端基準・右が中心基準という**同じ box の左右不一致**があり、
 `GetItemToBarlineSpace = 0.8`（非 LP 値）がその差を埋めていたため値としては辻褄が合っていた。
-`8448749a` で音符/休符側を左端基準へそろえ、0.8 を LP の `esw+esw = 0.2` へ置換。
+`cc913cbb` で音符/休符側を左端基準へそろえ、0.8 を LP の `esw+esw = 0.2` へ置換。
 
 **残り（本項目の作業内容）**:
 1. 🔲**未着手**. **変更 item（clef/key/time）が3ヘルパとも中心基準** — 内部的には一貫しているが LP と異なる。
@@ -754,8 +754,8 @@ paper column フレームでの extent。2.24.4 で PaperColumn と NoteHead の
 2. 🔲**未着手**. **`CalculateRightExtent` が中心基準のまま production 未使用** — `SvgTests.cs:166-167` が
    左（左端基準）と右（中心基準）を**ペアで**使っており、テスト自体が2 frame で box を測っている。
    §3.11 の手順（横断 grep →`<see cref>` →承認）を経てから統廃合すること。
-3. ✅**完了**（`86dbb093`）. `CalculateLeftExtent` の XML doc が stale だった。
-4. ✅**完了**（`9b31c2ba` ＋ `9ffeef8f`）. `BarlineToFirstColumnSpring` を
+3. ✅**完了**（`ddddee20`）. `CalculateLeftExtent` の XML doc が stale だった。
+4. ✅**完了**（`99fc6b38` ＋ `2c6625df`）. `BarlineToFirstColumnSpring` を
    `Staff_spacing::get_spacing` の字面移植へ。**§4.7.1 参照**。
 
 #### 4.7.1 `Staff_spacing::get_spacing` の導出済みモデル（`lily/staff-spacing.cc:118-221`）
@@ -799,7 +799,7 @@ ret.set_inverse_stretch_strength (max (0.0, stretchability));           // :218
 > | clef 有り | **0.900000** | **1.089365** |
 >
 > **clef 有り＋上向きは補正ゼロ**（0.900000）で、**clef 無し＋下向きが第3の値**（1.042857）を出す。
-> clef を変数にしたモデルではこの3値を説明できない。移植は `9ffeef8f`、
+> clef を変数にしたモデルではこの3値を説明できない。移植は `2c6625df`、
 > `SpacingRules.BarlineToNextNotesCorrection` に 2×2 ごと記録してある。
 
 **Lily# との差分**（`BarlineToFirstColumnSpring`）:
@@ -812,7 +812,7 @@ ret.set_inverse_stretch_strength (max (0.0, stretchability));           // :218
 | 0.3 補正 | `max(0, 0.3 + min_dist − fixed)` | 無し |
 
 **ideal は既に LP 一致なので位置は合っている**が、min と stretch が違うため
-`merge_springs` の floor を掛けると全小節頭が +0.3 太る（`8448749a` で floor 適用を見送った理由）。
+`merge_springs` の floor を掛けると全小節頭が +0.3 太る（`cc913cbb` で floor 適用を見送った理由）。
 min を 0.39 側へ直せば floor は no-op（0.39+0.3=0.69 < 1.09）になり、全 spring に floor を
 掛けられるようになる。**min・stretch・0.3 補正・floor は同時に入れる**こと。
 
@@ -831,7 +831,7 @@ min を 0.39 側へ直せば floor は no-op（0.39+0.3=0.69 < 1.09）になり�
 | `min_dist` | 0.29+0.1 = 0.39 | **0.1 + `CalculateLeftExtent` + 左端 grob の esw** | ✅（旧: 0.9） |
 | `stretch` | ideal−fixed = 0.45（:200、**0.3 補正の前**に確定） | **0.45** | ✅（旧: 0＝剛体） |
 | 0.3 補正 | `fixed = max(fixed, 0.3+min_dist)` → 0.50 | 同 | ✅（旧: 無し） |
-| optical | `next_notes_correction`（:206-208） | 同（下向き符尾のみ） | ✅ `9ffeef8f` |
+| optical | `next_notes_correction`（:206-208） | 同（下向き符尾のみ） | ✅ `2c6625df` |
 | compress | `ideal − fixed`（:219） | 同 | ✅（旧: `ideal − min`） |
 
 **`min_dist` の esw は grob 依存**: 既定は 0.1 だが **Accidental は `(-0.2 . 0.0)`**
@@ -854,7 +854,7 @@ min として使っているのが不具合の実体。
 LP 化すると**均等割り時の力配分が全体で変わる**（snapshot 再ベース必須・要 LP 照合）。
 
 **なぜ③より先か**: `BoundaryColumn`（③）を入れても、その中身を測る extent ヘルパが別 frame だと
-境界ロジックを字面移植するたびに変換が要る。`8448749a` で実際にそれが起き、2か所で移植を
+境界ロジックを字面移植するたびに変換が要る。`cc913cbb` で実際にそれが起き、2か所で移植を
 見送らざるを得なかった。**④は③の下層**。
 
 #### 4.7.2 行中（mid-measure）変更 item の導出済みモデル（2026-07-21・LP 2.24.4 で実測確定）

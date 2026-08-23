@@ -124,7 +124,7 @@ ew DrumStaff { \m }` ＝**staff ごとドラム譜に化け、フレーズ本体
 > **`IncrementalReuseMap.HasDiagnosticIn` の strict 重なり判定**——`Expect` は「見つかった
 > トークン＝次アイテムの先頭」の span で報告するので、**産み手のアイテムの span に*接するだけ*で
 > 重ならない診断**があり、産み手が再利用されると診断だけが消えた（2026-08-16 の zero-width 修理の
-> 幅 2 版）。接触も数える 1 本の arm に直し（`d1e2eeba`）、**先に建てた Probe `reuse` 計器で
+> 幅 2 版）。接触も数える 1 本の arm に直し（`b957ae5b`）、**先に建てた Probe `reuse` 計器で
 > before/after 同値**（perf 3 冊・toggle/type-in とも不動）を確認してから patch を適用した。
 
 **移行診断は入れない**（2026-08-21・ユーザー決定）。未リリースにつき移行対象が存在しない。
@@ -413,7 +413,7 @@ whitelist にあり検証を通るのに、`ElementCoordinator.cs:49` の `Force
 
 ---
 
-## 5. 完了（`8c54084` で push 済み・doc のみ）
+## 5. 完了（`ffc8f7f` で push 済み・doc のみ）
 
 - `grob-override-scope-design.md` — §4 の実態に全面書き換え。旧版は `NoteHead.color`/`Stem.color` を
   「消費する」としつつ他を落としており、**それを「消費しない」と直した第一版はさらに誤りだった**
@@ -745,7 +745,7 @@ snapshot の再ベースは**不要**であり、**してはならない**。再
    force-hshift は whitelist から外して正直な LYS1029 に（本実装が載る便で row と flag を同時に戻す）。
    コーパス使用は両者 0 冊＝実本の出力不変
 2. ✅ **§1.1 `$` 廃止一式 — 第229 が完了（2026-08-22）**。出口を塞いでいた増分パースの
-   診断落ち（`IncrementalReuseMap` の接触判定）を先に閉じ（`d1e2eeba`・再利用率の計器つき）、
+   診断落ち（`IncrementalReuseMap` の接触判定）を先に閉じ（`b957ae5b`・再利用率の計器つき）、
    第228 の patch を適用、docs 7 本と tmLanguage の `$` 規則も掃いた。
    書き換え 4 冊は sweep A/B で**幾何不動**（grammar-tour は data-pos のみ＝コメント追加ぶん）
 3. ✅ **§2.2 override の語彙 — 判断済み（2026-08-23・ユーザー）＝A/B/C とも見送り・

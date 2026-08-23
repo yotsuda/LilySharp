@@ -3,7 +3,7 @@
 # never had: outer slurs COVERING grace runs (per-segment grace scan +
 # QuantGraceBeam re-solve) and beamed slurred books (per-column stem lookup
 # scans beamLayouts).
-# Base = 27dacde7 (before ALL of this session's slur work).
+# Base = 490f3696 (before ALL of this session's slur work).
 # Interleaved, median-of-3, BOTH orders.
 $base = 'C:\MyProj\LilySharp-perfbase-27da\LilySharp.Cli\bin\Release\net9.0\lysc.dll'
 $curr = 'C:\MyProj\LilySharp\LilySharp.Cli\bin\Release\net9.0\lysc.dll'

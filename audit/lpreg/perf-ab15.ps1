@@ -2,7 +2,7 @@
 # encompass obstacles, grace columns join the slur's encompass, stem-attach X
 # rule :738-760).
 # Interleaved runs, median-of-3 BOTH orders.
-# Base = 27dacde7 (the commit before the stem plumbing).
+# Base = 490f3696 (the commit before the stem plumbing).
 # Heavy sides of THIS change:
 #  - perf-slur300: every slur now resolves per-column stems (NoteColumnLayout /
 #    beam lookup) and runs the per-candidate stem-attach X rule. Slur curves may

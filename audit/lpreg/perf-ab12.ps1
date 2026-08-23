@@ -1,7 +1,7 @@
 # A/B perf round 12 (session 115: script-tie-collision no.44 — scripts take ties
 # as side-position supports; chord-member gate).
 # 999-bar inputs, interleaved runs, median-of-5 BOTH orders.
-# Base = 2c143080 (the commit before this session's repair).
+# Base = 6b740373 (the commit before this session's repair).
 # Heavy sides of THIS change:
 #  - perf-tiescript1k: 2 half notes per bar, every note tied AND accented = every
 #    script reads both tie bounds (dict hit + bow-outline skyline + pointwise

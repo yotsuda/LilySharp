@@ -1,7 +1,7 @@
 # A/B perf round 11 (session 114: script-stack-order1 no.43 — fingering joins the
 # script column, script-column +0.1 bump, priority table completed).
 # 999-bar inputs, interleaved runs, median-of-5 BOTH orders.
-# Base = b0b4e12b (the commit before this session's repair).
+# Base = 37203165 (the commit before this session's repair).
 # Heavy sides of THESE changes:
 #  - perf-fingstack1k: 4 notes per bar, each @staccato@tenuto@finger(3)@upbow =
 #    per-note fingering flush (chain distance over 2 placed profiles) + walk

@@ -1,6 +1,6 @@
 # A/B perf round 27 (session 126: combinedStaff / the part combiner).
 # 1000-bar inputs, interleaved runs, median-of-5 BOTH orders.
-# Base = 875d7324 (the commit before this session's first change).
+# Base = f3adc99e (the commit before this session's first change).
 #
 # WHAT THIS SESSION ADDED TO A SCORE THAT HAS NO combinedStaff — the only thing worth
 # measuring, since the combiner itself runs for nothing else:

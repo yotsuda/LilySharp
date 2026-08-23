@@ -7,7 +7,7 @@
 #   plain1k        — dense single staff control: wish scan order moved but runs the
 #                    same pairs; SVG hash must MATCH base (no wishless pair, no
 #                    change column, no multi-spring rod).
-# Base = 87c4c62f (HEAD before this session).
+# Base = a03ba916 (HEAD before this session).
 # Interleaved, median-of-3, BOTH orders. ⚠️ No tests running alongside.
 $base = 'C:\MyProj\LilySharp-perfbase-87c4\LilySharp.Cli\bin\Release\net9.0\lysc.dll'
 $curr = 'C:\MyProj\LilySharp\LilySharp.Cli\bin\Release\net9.0\lysc.dll'

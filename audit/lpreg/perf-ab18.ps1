@@ -6,7 +6,7 @@
 #   plain1k    — dense single voice: the spring reorder + min replacement runs on
 #                every inter-column pair; SVG hash must MATCH base (no voiced
 #                rests, no knees, floors unreached).
-# Base = ae2afd25 (before ALL of session 119).
+# Base = 0d304af7 (before ALL of session 119).
 # Interleaved, median-of-3, BOTH orders. ⚠️ No tests running alongside.
 $base = 'C:\MyProj\LilySharp-perfbase-ae2a\LilySharp.Cli\bin\Release\net9.0\lysc.dll'
 $curr = 'C:\MyProj\LilySharp\LilySharp.Cli\bin\Release\net9.0\lysc.dll'

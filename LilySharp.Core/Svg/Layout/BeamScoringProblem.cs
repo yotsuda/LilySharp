@@ -192,7 +192,7 @@ internal sealed class BeamScoringProblem
     /// concaveness head positions) — used to quant a TAB beam from the notes'
     /// STRING lines instead of their pitch. One value per member, in staff
     /// positions (half-spaces). Null keeps the notation-staff behaviour.
-    /// ⚠️ NO CALLER PASSES IT — <c>88f98480</c> (2026-07-12) took tab beams off this
+    /// ⚠️ NO CALLER PASSES IT — <c>d06686ee</c> (2026-07-12) took tab beams off this
     /// quanter and onto <c>TabBeamQuant</c>'s own arithmetic, and this seam is what a
     /// port would come back through. It is kept, not deleted, for that reason; it has
     /// no observer, so treat it as unverified until one measures it.

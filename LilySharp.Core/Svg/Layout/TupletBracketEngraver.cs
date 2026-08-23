@@ -159,7 +159,7 @@ internal static class TupletBracketEngraver
     /// <para>
     /// A PROPERTY, not a <c>static readonly</c>: static initialisation order between
     /// partial classes is undefined in C#, and reading a not-yet-initialised default is
-    /// how <c>ec7a2254</c> silently zeroed every change-clef width.
+    /// how <c>22673bbb</c> silently zeroed every change-clef width.
     /// </para>
     /// </remarks>
     internal static double NumberFontSize => 11.0 * Math.Pow(2.0, -2.0 / 6.0) / 5.0;
@@ -758,7 +758,7 @@ internal static class TupletBracketEngraver
     //   ⑶ LilyPond QUANTIZES a near-flat bracket onto staff positions when it lies inside
     //      the widened staff (:726-746); Lily# does not quantize at all.
     // ⚠️ WHY IT IS SIMPLER: NOT a trade-off anyone made, and NOT performance. The body
-    //   predates the porting discipline (it arrives whole in the bulk commit 26f91d85 of
+    //   predates the porting discipline (it arrives whole in the bulk commit dc363123 of
     //   2026-02-24, before the ledger existed); the words "simpler than LilyPond's" were
     //   written on 2026-07-29 while the encompass beside it was being ported, i.e. they
     //   DESCRIBE an unported device rather than record a decision. Read them that way.

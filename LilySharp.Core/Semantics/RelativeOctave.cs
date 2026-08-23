@@ -28,7 +28,7 @@ namespace LilySharp.Core.Semantics;
 /// octaves through this method. The three walkers keep their own running
 /// state and octave conventions; only the algorithm is shared, so it cannot
 /// drift between render, MIDI, and MusicXML again (cf. the chord-octave
-/// divergence fixed in 96a38ad).
+/// divergence fixed in 5b6e757).
 /// LILYPOND-REF: lily/pitch.cc Pitch::to_relative_octave — closest-octave rule.
 /// </remarks>
 public static class RelativeOctave

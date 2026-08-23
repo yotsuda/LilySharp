@@ -10,7 +10,7 @@
 #                 (no halves = no 0.355→0.5 double stems, no split ties) →
 #                 hash must MATCH base.
 #   plain1k     — control: none of the changed code runs. Drift gauge + hash.
-# Base = b9646b54 worktree (session 122 start, before the first code change).
+# Base = 1ef16476 worktree (session 122 start, before the first code change).
 # Interleaved, median-of-3, BOTH orders. ⚠️ No tests running alongside.
 $base = 'C:\MyProj\LilySharp-perfbase-b964\LilySharp.Cli\bin\Release\net9.0\lysc.dll'
 $curr = 'C:\MyProj\LilySharp\LilySharp.Cli\bin\Release\net9.0\lysc.dll'

@@ -1,7 +1,7 @@
 # A/B perf round 9 (session 112: hyphen print rewrite no.38, melisma left-align +
 # span reservation + extender held-end no.39, audit tags only thereafter).
 # 999-bar inputs, interleaved runs, median-of-5 BOTH orders.
-# Base = 502660d2 (the commit before this session's first repair).
+# Base = fc028f84 (the commit before this session's first repair).
 # Heavy sides of THESE changes:
 #  - perf-lyrmel1k: hyphen + __ ~ extender EVERY bar = AppendDashes per hyphen,
 #    collector marker rewrites, melisma left-align edges, HeldEndInkRight's

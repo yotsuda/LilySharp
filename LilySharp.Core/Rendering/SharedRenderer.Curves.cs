@@ -315,7 +315,7 @@ internal static partial class SharedRenderer
         /// CONJUGATE, under the output flip (<c>H − ·</c>), of a device-frame sibling
         /// <c>Y</c> that contracted about the same staff top in device coordinates — two
         /// affines that had to agree. <c>Y</c> was removed as dead code by the Y-up
-        /// unification (2026-07-20, <c>1bf18bdb</c>), so there is no second frame left
+        /// unification (2026-07-20, <c>804ff06d</c>), so there is no second frame left
         /// for this one to be the conjugate OF: it is simply THE ossia affine now.
         /// </remarks>
         public double YUp(double yUp, int staffIndex, int measureIndex)

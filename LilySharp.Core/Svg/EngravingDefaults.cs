@@ -698,7 +698,7 @@ internal static class EngravingDefaults
     /// <summary>Nominal half-height of a notehead for collision/support (staff spaces).</summary>
     public const double NoteheadHalfHeight = 0.5;
     // ⚠️ NoteheadHeight = 1.0 stood here with nothing reading it. HANDOFF 5.2.1⑥ recorded
-    //   why in 2026-07: the vertical skyline moved to the LILC ink in cff877c8, and this
+    //   why in 2026-07: the vertical skyline moved to the LILC ink in 498d2501, and this
     //   survived as an unused argument threaded through five signatures — which is exactly
     //   how it kept being diagnosed as live. Deleted 2026-08-04.
 

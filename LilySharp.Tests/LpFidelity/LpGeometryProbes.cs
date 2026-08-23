@@ -1621,7 +1621,7 @@ internal static class LpGeometryProbes
     /// ⚠️ THE PARAGRAPH THAT STOOD HERE IS STALE AND HAS BEEN CORRECTED. It said
     /// <c>LayoutEngine.BuildLooseChainEnds</c> returns null for the whole score as soon as a
     /// system holds more than one staff, so every chain on this book ran at force 0. That was
-    /// true when the entry was opened and stopped being true in <c>90e47848</c>, which moved
+    /// true when the entry was opened and stopped being true in <c>3e7bd94b</c>, which moved
     /// the room to the refpoint frame: a multi-staff system's chain is now solved like a
     /// one-staff system's. What is left is <b>+0.271310</b> and it is the two lyric faces
     /// rather than a mechanism — see the ledger's <c>why</c>, and ⚠️ do not drive it to zero,
@@ -1823,7 +1823,7 @@ internal static class LpGeometryProbes
     /// The question is whether the room a loose chain is solved into belongs to the SYSTEM the
     /// block hangs under or to the SCORE. Every other lyric book is uniform, so reading the
     /// origin-to-last-spaceable-staff span off <c>systemsArray[0]</c> and reading it per system
-    /// give the same answer on all of them; <c>c64ee958</c> went per system and reported that
+    /// give the same answer on all of them; <c>387c08d0</c> went per system and reported that
     /// nothing measured the difference. This book is where the two cannot agree.
     /// </para>
     /// <para>
@@ -1982,14 +1982,14 @@ internal static class LpGeometryProbes
 
     /// <summary>
     /// HARA-KIRI WHERE THE INK BETWEEN TWO SURVIVING STAVES BEATS THE SPEC — the mirrors of
-    /// books HKW and HKWN, and the regime commit 41f9749d moved a snapshot in without being
+    /// books HKW and HKWN, and the regime commit 4e7834df moved a snapshot in without being
     /// able to name a ledger key for it.
     /// </summary>
     /// <remarks>
     /// <para>
     /// Every hara-kiri book above keeps its staves' ink inside their own lines, so all of
     /// them sit on StaffGrouper's basic-distance and would still read 9.000000 with the
-    /// skylines unplugged — which is what the second placement walk did until 41f9749d.
+    /// skylines unplugged — which is what the second placement walk did until 4e7834df.
     /// This pair is book P's arithmetic under a <c>removeEmpty</c> declaration:
     /// <c>d,</c> (LilyPond <c>d</c>) hangs 6 staff spaces below the treble staff's middle
     /// line and its head reaches 0.545 further, while the same written pitch is the bass
@@ -2035,7 +2035,7 @@ internal static class LpGeometryProbes
     /// <summary>
     /// THE DECLARATION ON ITS OWN, ON A COMPRESSED PAGE AND WITHOUT LYRICS — the mirrors of
     /// books HKCD and HKCN, and the net for the one stage of the hara-kiri island that had no
-    /// ledger key: b415dd16, which gave the hara-kiri staff springs their skylines.
+    /// ledger key: a69245ec, which gave the hara-kiri staff springs their skylines.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -10131,7 +10131,7 @@ internal static class LpGeometryProbes
             g => g.StavesOnPage(0), EightSystemsPerPageJustified),
 
         // HARA-KIRI WITH THE INK BETWEEN THE STAVES BEATING THE SPEC (HKW/HKWN) — the regime
-        // 41f9749d moved test/hara-kiri's snapshot in (9.000000 -> 9.500000 on one system)
+        // 4e7834df moved test/hara-kiri's snapshot in (9.000000 -> 9.500000 on one system)
         // and could not name an entry for, because every hara-kiri book above sits on
         // basic-distance and reads 9.000000 whether or not a skyline was ever consulted.
         // Book P's arithmetic under a removeEmpty declaration: 6.545 + 2.05 + 1 = 9.595.
@@ -10164,7 +10164,7 @@ internal static class LpGeometryProbes
 
         // THE DECLARATION ON ITS OWN, COMPRESSED AND WITHOUT LYRICS (HKCD/HKCN) — JSK's book
         // plus removeEmpty on the upper part, nothing else changed, and no staff ever empty.
-        // This is the net for b415dd16, the one stage of the island with no ledger key: before
+        // This is the net for a69245ec, the one stage of the island with no ledger key: before
         // it, a declared score rebuilt its staff springs WITHOUT skylines, so the floor fell
         // back to the drawn distance and the page could not squeeze (9.000000 declared against
         // 8.651797 undeclared, on this music). LYRHKD/LYRHKN were built to be that key and

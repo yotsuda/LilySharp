@@ -54,7 +54,7 @@ public sealed class UsingTests
 
     // ---- HasUsings looks at the root's children only, and may ----------------------
     //
-    // It is asked on every keystroke — by the preview and, since 49aadc2c, by the
+    // It is asked on every keystroke — by the preview and, since a0809fc9, by the
     // Problems panel — so it must not walk the tree. `DescendantNodes().OfType<T>()`
     // materializes a red wrapper for EVERY descendant just to type-test it: measured
     // 43,043 of them for `perf-plain1k` and 234,030 for `perf-fingbeam1k`, against 7 and

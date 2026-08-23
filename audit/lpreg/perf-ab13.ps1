@@ -1,6 +1,6 @@
 # A/B perf round 13 (session 115: script avoid-slur — outside_slur_callback port).
 # 999-bar inputs, interleaved runs, median-of-5 BOTH orders.
-# Base = f2ada471 (the commit before the avoid-slur port; ties already in).
+# Base = 286cea23 (the commit before the avoid-slur port; ties already in).
 # Heavy sides of THIS change:
 #  - perf-slurscript1k: every bar one slur over 4 accented notes = every script
 #    hits the measure-keyed slur dict, scans that measure's pieces and samples the

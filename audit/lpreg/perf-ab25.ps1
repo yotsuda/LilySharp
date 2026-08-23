@@ -6,7 +6,7 @@
 # ⚠️ restdot300 hash will NOT match base BY DESIGN (sessions 124-1..3 moved rest
 # and dot Y toward LP). plain1k = untouched control (hash must match).
 # tab300 = tab path control, single voice (CreateTab overload; hash must match).
-# Base = 3fce5fea worktree (session 124 start). Median-of-3, both orders.
+# Base = 66fefd8f worktree (session 124 start). Median-of-3, both orders.
 $base = 'C:\MyProj\LilySharp-perfbase-3fce\LilySharp.Cli\bin\Release\net9.0\lysc.dll'
 $curr = 'C:\MyProj\LilySharp\LilySharp.Cli\bin\Release\net9.0\lysc.dll'
 if (-not (Test-Path $base)) { throw 'baseline dll missing' }

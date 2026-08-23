@@ -55,7 +55,7 @@ namespace LilySharp.Core.Semantics;
 /// <para>
 /// ⚠️ That construct WORKS now, so the case is writable — this paragraph used to say it
 /// was "under its own suspicion" and that there was therefore nothing to report
-/// truthfully, which <c>de4acbd0</c> ended in the same session (a score's own
+/// truthfully, which <c>077e5c98</c> ended in the same session (a score's own
 /// <c>transpose</c> was being counted as the file's default, so the declaring score got
 /// it twice and its neighbour got it once unasked). Measured: two scores over one form,
 /// one with <c>transpose d</c>, draw different pages (135,854 vs 135,903 bytes, distinct

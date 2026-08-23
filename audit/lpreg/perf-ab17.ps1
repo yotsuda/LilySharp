@@ -7,7 +7,7 @@
 #                   the annotation phase; LayoutSlurs' gate must keep it silent.
 #   slurbeam300   — control WITHOUT tuplets (round 16's book): unbeamed-flag and
 #                   tuplet code must not touch it; SVG hash must MATCH base.
-# Base = 0c63deac (before ALL of session 118).
+# Base = 99db7ed3 (before ALL of session 118).
 # Interleaved, median-of-3, BOTH orders. ⚠️ No tests running alongside (round 15's trap).
 $base = 'C:\MyProj\LilySharp-perfbase-0c63\LilySharp.Cli\bin\Release\net9.0\lysc.dll'
 $curr = 'C:\MyProj\LilySharp\LilySharp.Cli\bin\Release\net9.0\lysc.dll'

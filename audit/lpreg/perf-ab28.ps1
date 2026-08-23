@@ -1,6 +1,6 @@
 # A/B perf round 28 (session 127: part-combine silence / condensed rest voicing / R1*N bars).
 # Interleaved runs, median-of-5 BOTH orders, SVG hash compared.
-# Base = 2222418d (the commit this session started from).
+# Base = 38d111aa (the commit this session started from).
 #
 # WHAT THIS SESSION ADDED, COUNTED FIRST (HANDOFF §5.3) — three changes, three reaches:
 #  1. PartCombiner: slots carry an onset, Materialise sorts each measure's entries and fills

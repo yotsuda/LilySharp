@@ -1,7 +1,7 @@
 # A/B perf round 10 (session 113: repeat-tie chord fan + SemiTiesOf shared column
 # no.40, chord tremolo wiring no.41, rest voiced-position + spanning collision no.42).
 # 999-bar inputs, interleaved runs, median-of-5 BOTH orders.
-# Base = 8a1e92db (the commit before this session's first repair).
+# Base = 2ca0d3b7 (the commit before this session's first repair).
 # Heavy sides of THESE changes:
 #  - perf-chordsemi1k: 4 tie-less quarter chords per bar = ItemSkylineFactory now
 #    walks every chord's members TWICE (once per semi-tie kind) per column build,

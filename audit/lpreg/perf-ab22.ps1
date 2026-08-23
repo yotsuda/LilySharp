@@ -7,7 +7,7 @@
 #                inter-SYSTEM silhouette is the consumer.
 #   plain1k    — single voice: the shift path never fires; only the <= in the
 #                distance walks. Hash must MATCH base.
-# Base = ca46fc07 worktree (HEAD before session 121's fix).
+# Base = ce9e8774 worktree (HEAD before session 121's fix).
 # Interleaved, median-of-3, BOTH orders. ⚠️ No tests running alongside.
 $base = 'C:\MyProj\LilySharp-perfbase-ca46\LilySharp.Cli\bin\Release\net9.0\lysc.dll'
 $curr = 'C:\MyProj\LilySharp\LilySharp.Cli\bin\Release\net9.0\lysc.dll'

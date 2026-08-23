@@ -1,6 +1,6 @@
 # A/B perf round 29 (session 128: written-rest run boundaries + the combiner's boundary union).
 # Interleaved runs, median-of-5 BOTH orders, SVG hash compared.
-# Base = ee1e8a52 (the commit this session started from) in C:\MyProj\LilySharp-perfbase-ee1e.
+# Base = c1f504fd (the commit this session started from) in C:\MyProj\LilySharp-perfbase-ee1e.
 #
 # WHAT THIS SESSION ADDED, COUNTED FIRST (HANDOFF §5.3) — two changes, two reaches:
 #  1. RestItem.OpensWrittenRun + MultiMeasureRestEngraver.StartsWrittenRest. The flag is one

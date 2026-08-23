@@ -1,7 +1,7 @@
 # A/B perf round 14 (session 116: slur-scoring rebuild — real curve generation,
 # LP attachment grid, dot extra-encompass).
 # Interleaved runs, median-of-5 BOTH orders.
-# Base = 6e80a05c (the commit before the slur-scoring rebuild).
+# Base = 2f87aaa5 (the commit before the slur-scoring rebuild).
 # Heavy sides of THIS change:
 #  - perf-slur300: every bar two slurred quarter pairs = every slur runs the
 #    full grid (≈100 candidates × real bezier generation + cubic-solve scoring).

@@ -2112,7 +2112,7 @@ internal sealed class SkylineBuilder
         // LILYPOND-REF: lily/grob.cc:81-85 Grob::simple_vertical_skylines_from_extents_proc — the `vertical-skylines` default, set for a grob that declares none
         //   The extents are the stencil's, and those come from the font's LILC table.
         // LILYPOND-REF: lily/open-type-font.cc:288-289,389-393 lily_character_table_ — load_scheme_table ("LILC", face_), then the per-glyph `bbox` alist read out of it
-        //   ec7a2254 moved the X axis onto the same table.
+        //   22673bbb moved the X axis onto the same table.
         // ⚠️ THE ADDRESS SAID :85-89 UNTIL 2026-08-05 (session 96), AND THAT IS THE
         //   HORIZONTAL BRANCH — `horizontal-skylines`, three lines further down. The name
         //   beside it was right and the range pointed at the neighbour, which is the exact
