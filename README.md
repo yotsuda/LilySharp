@@ -325,7 +325,7 @@ The LSP server supports incremental text synchronization:
 - [x] Multi-system layout with Knuth-Plass line breaking
 - [x] Multi-staff / GrandStaff rendering (cross-staff beam layout is not yet implemented)
 - [x] Lead sheets — staff-less chord rows and lyric rows drawn as a measure grid (chords, lyrics, or both)
-- [x] MusicXML export (notes, ties, slurs, grace notes, dynamics, articulations, ornaments, multi-part) — lyrics and tuplet numbers are not yet emitted
+- [x] MusicXML export (notes, ties, slurs, grace notes, dynamics, articulations, ornaments, multi-part, lyrics, tuplets, navigation marks, volta endings) — custom text marks written in a `form` are not yet mapped
 - [x] MusicXML import (`lysc import`)
 - [x] LilyPond (`.ly`) export
 - [x] VOCALOID (`.vsqx`) export — vocal part with lyrics
@@ -335,7 +335,6 @@ The LSP server supports incremental text synchronization:
 ### Planned
 
 - [ ] Cross-staff beam layout
-- [ ] MusicXML export: lyrics and tuplet output
 - [ ] LilyPond → Lily# conversion tool
 
 ## Relationship to LilyPond
