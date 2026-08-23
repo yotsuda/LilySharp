@@ -2,6 +2,63 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
+## 0.4.0
+
+First Marketplace release — 0.3.0 was tagged and shipped as GitHub binaries only, so
+this is the first version installable from the extension page. It is also the first
+release with breaking changes to the language; the four below are all diagnosed, so a
+0.3.0 file tells you what to change rather than failing silently.
+
+### Breaking changes
+
+- **A chord is written the way it prints.** `Am`, `G7`, `F#m`, `Bb7`, `Gm7-5`,
+  `Cmaj7/E` — an uppercase root, optional `#`/`b`, and a bare quality. The lowercase
+  `:` entry (`a:m`, `g2:7`) and its per-chord durations are gone: a bar's entries now
+  divide it on the beat grid the beams already use, and `.` holds the previous chord
+  one more beat. The case *is* the grammar, which is why `R` never collides with a
+  rest and every altered tension spells `+`/`-` (`m7-5`, not `m7b5`, so `Bb5` stays
+  B-flat's power chord). Diagnostic: `LYS1028`.
+- **The `$` sigil is gone.** `$theme` no longer marks a phrase reference; a bare name
+  is one. Drum vocabulary and `q` are refused as phrase *names* at the declaration
+  (`LYS1030`) rather than being disambiguated by a sigil at every use.
+- **A staff's display name must be quoted.** `staff flute "Flute"`. A trailing bare
+  word is now always a part reference, so `staff flute click` plays the click track
+  instead of silently relabelling the flute.
+- **`NoteColumn.force-hshift` now errors** (`LYS1029`) instead of being accepted and
+  ignored. In exchange, `NoteHead.color` and `Stem.color` are supported — a correctly
+  coloured score used to ship with an error and a non-zero exit.
+
+### New
+
+- **`paper` blocks.** The page's dimensions come from the source. `size b5` (or
+  `jisb5`, `letter`, …) sets width, height and all four margins, each margin scaled
+  from a4 the way LilyPond's `set-paper-size` scales it.
+- **Named `fonts` and `paper` blocks.** Declare `fonts house { … }` or
+  `paper wide { … }` once at the top level, reference it per score, and override part
+  of it in place — one file can carry a wide conductor page and default part pages.
+- **MusicXML round-trip.** Import carries the source's page across as a `paper` block;
+  export now emits a form's custom text.
+
+### Engraving
+
+- Lyrics: syllables align on their own voice's notehead, melisma spans reserve the
+  range they occupy, a word crossing a barline is spaced as one, and a row standing
+  below a multi-staff system clears the staff above it on every system.
+- Lead sheets: every line opens with a bar, no bar runs through a word, stanza
+  numbers anchor clear of the opening bar, and the grid row prints the meter.
+- Pedal brackets and bar numbers hang from their own staff rather than the system.
+
+### Performance
+
+- Typing in a score with lyrics is markedly faster: the loose-line chain caches its
+  prefix, verse skylines share one store with the measure layouts, and the lyric band
+  joins the per-system memo.
+
+### Packaging
+
+- One VSIX per platform, each carrying its own .NET runtime and native rendering, so
+  the extension needs nothing installed but VS Code.
+
 ## 0.3.0
 
 First public release.

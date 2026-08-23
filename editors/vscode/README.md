@@ -1,6 +1,6 @@
 # Lily# VS Code Extension
 
-**Version 0.3.0** — the bundled language server and the `lysc` compiler carry the
+**Version 0.4.0** — the bundled language server and the `lysc` compiler carry the
 same number. See the [changelog](https://github.com/yotsuda/LilySharp/blob/master/editors/vscode/CHANGELOG.md) for what is in this release.
 
 Language support for Lily# music notation files (`.lys`).

@@ -79,7 +79,7 @@ if (Test-Path $serverDir) {
 }
 
 # Step 2: Bump the extension version (LOCAL dev-install convenience ONLY).
-# A monotonically-newer 0.3.0-dev.N makes VS Code treat each deploy as a fresh
+# A monotonically-newer <version>-dev.N makes VS Code treat each deploy as a fresh
 # build. This bump is EPHEMERAL: the finally block below restores package.json to
 # its exact original bytes, so it never lingers as a working-tree diff and can
 # never be swept into a commit. Releases do NOT use this path at all - release.yml
