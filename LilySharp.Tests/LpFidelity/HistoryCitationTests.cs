@@ -103,12 +103,19 @@ public class HistoryCitationTests
     /// observation at the end of a long session.
     /// <para>
     /// Raised as sessions cite: 510 when written, then 515, 517 and 518 across the handoff
-    /// commits of the session after it. Follow the measured number up in the same commit that
-    /// raises it — leaving the floor behind means a later fall back to it is exactly the
-    /// silent drop the ratchet exists to catch.
+    /// commits of the session after it, and 520 by the one after that. Follow the measured
+    /// number up in the same commit that raises it — leaving the floor behind means a later
+    /// fall back to it is exactly the silent drop the ratchet exists to catch.
+    /// <para>
+    /// ⚠️ THE CEILING BELOW CAUGHT THE SESSION THAT RAISED THIS ONE. Its §1 said the two
+    /// commits an amend had orphaned were cited nowhere — in a sentence that cited both, so
+    /// dead went 469 → 471 within the minute. The repair is the prose, never the ceiling;
+    /// an orphan's name is a dead citation the moment it is written down, and what a handoff
+    /// actually needs is the COUNT of amends, which reflog keeps anyway.
+    /// </para>
     /// </para>
     /// </remarks>
-    private const int LiveCitationsWhenWritten = 518;
+    private const int LiveCitationsWhenWritten = 520;
 
     /// <summary>
     /// The number of citation-shaped tokens whose commit is not in the history, when this
