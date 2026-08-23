@@ -15,7 +15,12 @@ jobs:
         configuration: [Debug, Release]
 
     steps:
+    # Full history, not the default one-commit clone: HistoryCitationTests asks git
+    # whether the SHAs the documents quote are reachable from the branch, and a shallow
+    # checkout would make every one of them look dead.
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4

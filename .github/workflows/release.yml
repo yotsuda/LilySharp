@@ -19,7 +19,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      # Full history — see the note on the same step in ci.yml. This is the leg that
+      # runs the suite, so it is the leg HistoryCitationTests needs it on.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
