@@ -154,12 +154,12 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 最終更新 第235セッション＝**第234 が「移植から始められる唯一の項」と名指した残債は*実在しなかった*。§2 の ledger 引用を全数突き合わせ、stale を 5 件直し、二度と静かに腐らないよう番人を建てた**（3 file＝新テスト 3 本・`BezierBow` の remark・HANDOFF §1/§2E/§2H/§3）。
 **① 何が起きていたか**：第234 は末尾の委任「有利なら着手／不利なら着手するな」に対し §2 の 2000 行を triage し、**「⑴ 移植から始められる項は 1 つだけ＝符尾の attachment X が黒玉固定（§2 E・▶ 先頭）」**と書いて断った。**その項は 2026-08-03＝起票と同じ日に閉じている**（`LayoutUtilities.StemAttachX` は `noteValue`＋`NoteheadStyle` を取り `GlyphMetrics.GetNoteheadStemAttachment` に訊く・観測者 `StyledHeadStemAttachmentTests`・台帳 `stem.up.right-edge.half-head` は **residual 0**、`why` は "CLOSED by…"）。**第234 の断り方は健全だった（文脈の重なりで決める＝骨として残す価値がある）が、選別の入力が 157 便前から嘘だった。**
 **② 5 件の stale は全部同じ形**：**棚が「着手根拠」として現在形で挙げている数を、台帳がとっくに 0 にしている**——⑴ 符尾 attachment X（−0.073200000 → 0・2026-08-03）⑵ タイの列アウトライン（`tie.width.seconds.upper` +0.888699999 → −1e-09・`TieChordOutline` が移植済み）⑶ courtesy 調号（`courtesy.meter.barline-to-cancellation` −0.2 → 0・ユーザー承認済みの移植）⑷ grace の接近（`grace.column.approach` +0.850449 → 0・`SpringIntoGraceRun`）⑸ `page.stretched.first-staff-refpoint`（−0.000042 → −4.46e-07）。**加えて `Bezier` 型の ⒝ 債務も stale**（`Bezier.cs` は実在し 8 ファイルが読む・論拠に挙がっていた `SlurScoringProblem.InterpolateSlurY` は消滅）——**その出所は `BezierBow` の remark が "this engine has no Bezier type at all" と書き続けていたこと**なので**コード側も同じ便で直した**。
-**③ 番人＝`HandoffLedgerCitationTests`（4 本・タグ 27 点）**：HANDOFF.md の `<!-- ledger: NAME = VALUE -->` タグを全部読み、⑴ **名前が台帳に在るか**（typo は「検証済みに見えて永久に赤くならない」ので無いより悪い）⑵ **数が台帳の残差と一致するか**（許容差 1e-06）⑶ **タグの数が減っていないか**（通す最安の手はタグを消すこと＝ratchet・現在 27 点）⑷ **§2/§3 で名指された点にタグが在るか**（＝射程の穴。**§1 は毎便書き換えるので意図的に対象外**）。**タグは「その一節を人が読んだ」記録**なので、**読まずにタグだけ動かすのが drift** だと失敗メッセージ自身が言う。⚠️ **HANDOFF-ARCHIVE.md は対象外**——逐語の歴史は当時の数を持っているのが正しい。
+**③ 番人＝`HandoffLedgerCitationTests`（4 本・タグ 27 点）**：HANDOFF.md の `<!-- ledger: NAME = VALUE -->` タグを全部読み、⑴ **名前が台帳に在るか**（typo は「検証済みに見えて永久に赤くならない」ので無いより悪い）⑵ **数が台帳の残差と一致するか**（許容差 1e-06）⑶ **タグの数が減っていないか**（通す最安の手はタグを消すこと＝ratchet・**現在 36 点／3 文書**）⑷ **名指された点にタグが在るか**（＝射程の穴）。**射程は `Covered` 表 1 軒**＝`HANDOFF.md` の §2 以降・`COORDINATE_AUDIT.md`・`cue-context-design.md`。⚠️ **外した文書は理由ごと remark に書いた**——`RULES.md` の 6 引用は**過去形の方法論の実例**（「台帳もコードも別の持ち主を名指していた」等）で、**点が今いくつでも教訓は真**だから課税しない／`HANDOFF-ARCHIVE.md` は逐語の歴史／**HANDOFF §1 は毎便書き換える**。**タグは「その一節を人が読んだ」記録**なので、**読まずにタグだけ動かすのが drift** だと失敗メッセージ自身が言う。⚠️ **HANDOFF-ARCHIVE.md は対象外**——逐語の歴史は当時の数を持っているのが正しい。
 **④ 証明**：**毒を 2 つ当てて赤を見た**（§2 の掟「0 冊を証拠に引く前に毒を当てる」）——タグを stale 当時の `-0.073200000` に戻すと **"THE POINT IS NOW EXACT — the shelf is probably describing a closed defect" を行番号つきで出す**（＝**第234 の triage を救ったはずのメッセージ**）、名前を 1 文字崩すと未知名として `HANDOFF.md:539` を名指す。engine には 1 行も触っていない（`BezierBow` は doc comment のみ）ので**出力は構成上不動**＝台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2 完全不動**・**snapshot 222 枚不動**・**追跡コーパス 572 冊不動**。
 
 ★ **開始時裏取り**: HEAD `84ed2309`（第234 の triage handoff）・未 push 29・未追跡 0/木 0・Windows suite **5796/0/4**・WSL **5796/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2・追跡コーパス 572 冊・Core 0 警告＝**前便の閉幕数と全一致**（⚠️ 前便 §1 は「未 push 28」と書いたが、**その行を書いたあとに ⑸' の triage handoff を 1 本積んでいる**ので 29 が正しい＝§0 の「両端を書く」が効いた例）。
 ⚠️⚠️ ★★★ **GitHub の門は「赤」だが理由はコードではない＝*課金停止***（本便で中身を読んだ・**§0 が「`X` を見たら中身を読め」と言う所**）。最新 3 run とも**全脚が 3〜4 秒で死んでおり**、annotation は **"The job was not started because recent account payments have failed or your spending limit needs to be increased"**——**1 行もビルドしていない**（残りの `X` は fail-fast の巻き添え）。⇒ **`gh run list` はコードについて何も言っていない**ので、**Linux の証拠は WSL 脚だけ**（第213 が建てた道が唯一の門）。⚠️ **これはユーザーの操作でしか直らない**（Billing & plans）。**次便は同じ調査をやり直さないこと**——`gh run list` が赤でも、annotation が課金のままなら情報はゼロ。
-終了時: **未 push 32（push はユーザー＝RULES §5.1）**＝本便 3 本（実装一式／CI 課金／射程の穴）・未追跡 0/木 0・suite **Windows 5800/0/4・WSL 5800/0/4＝両 OS 完全緑（開始比 +4＝`HandoffLedgerCitationTests`）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊（1 冊も触っていない）**・Core 0 警告。
+終了時: **未 push 33（push はユーザー＝RULES §5.1）**＝本便 4 本（実装一式／CI 課金／射程の穴／多文書化＋予測表）・未追跡 0/木 0・suite **Windows 5800/0/4・WSL 5800/0/4＝両 OS 完全緑（開始比 +4＝`HandoffLedgerCitationTests`）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊（1 冊も触っていない）**・Core 0 警告。
 
 ★ **この便の値段**:
 
@@ -168,6 +168,7 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 | ① §2 の ledger 引用 23 点を全数突き合わせ・stale 5 件＋⒝ 債務 1 件を訂正 | HANDOFF §1／§2E（符尾・タイ・Interval・Bezier）／§2H（courtesy・grace）／§2D（refpoint 2 件）／§3 ⑵ | **prose のみ**・engine 0 接触 |
 | ② 番人 `HandoffLedgerCitationTests` 3 本＋`BezierBow` remark 訂正 | 新テスト 3 本（名前・数・ratchet）・doc comment 1 件 | **出力は構成上不動**（doc comment のみ）・両 OS 完全緑 |
 | ③ **番人の射程の穴を閉じた**（続き便＝委任「有利なら着手」→着手） | 4 本目のテスト（**§2/§3 で名指された点はタグ必須**）・§3 に 4 タグ（歌詞床・語間 narrow・行の staff-to-lyric・verse-step） | 同上・**§3 が初めて機械の下に入った** |
+| ④ **他の恒久文書へ射程を広げ、`COORDINATE_AUDIT.md` の予測表を閉じた**（3 便目＝同じ委任→着手） | 番人を多文書化（`Covered` 表＝入る文書と**外す理由**を remark に列挙）・COORDINATE_AUDIT に 7 タグ・cue-context-design に 2 タグ・**予測表 4 行の「現在」列を実際の着地に更新** | 同上・**タグ 27 → 36 点／3 文書** |
 
 - **⑸ ★★★ 次に触るなら＝残債（第234 の一覧から stale を落としたもの）**: 言語仕様の宿題は §1.2 リネーム（ユーザーが MSVS で）だけ／**名指し穴**＝⒤ exporter の paper 未輸出（**需要待ち**＝`LilyPondExporter.cs:662` が「no tracked book writes paper{} as of 2026-08-23」と書いており、**第234 の importer が paper を*出す*ようになったので、MusicXML → .lys → 双子の往復を測る日が来たらここが最初に効く**）／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示・着手はユーザー決定から）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・非ペア ToCoda の reserve≠draw・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示・実譜の `%` 記号。Marketplace は PAT 待ちのまま（第220 ①）。
   ⚠️ **⑴ ゲート無しで移植から始められる項は、数え直しても 0 件**（第234 の答えは「1 件」だったが、その 1 件が幻だった）。**⒣・condensedStaff・skyline 参加者列挙・▶ perf ⒜ は自分で「ユーザー決定から」「専用の便」と書いてある**／**小粒 7 件は §2 に本文が無い＝起票から**（§5.0 の 1 番）。
@@ -212,7 +213,23 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 > （`-like` の `?`・`$e.Count`）と**同型が 8 例目**。⇒ **名前の集合が入れ子なら、
 > 一致は必ず境界付きで取る**（テストの実装もそうしてある・remark に理由あり）。
 
-> ## ★★ 骨 4＝**残差を「名前の付いた 1 量」まで分解できたら、そこで止めて別の点に回す**
+> ## ★★★ 骨 4＝**予測は「書いた」ではなく「着地を書き戻した」で完成する**
+> 3 便目で `COORDINATE_AUDIT.md` の**反証可能な予測表**（「現在／予測／予測残差の帰属」）を
+> 台帳と突き合わせたら、**4 行とも「現在」列が起票時のままで、着地が 1 行も書かれていなかった。**
+> **予測は 2 行が的中、2 行は*良い側に*外れて全部閉じていた**——そして§5.0 が
+> 「**外れたときこそ収穫・外れの方向が真因を指す**」と言う、その収穫が**どこにも残っていなかった**。
+> ⑴ `key-change-to-notehead`＝**族は当たり・数は外れ**（0.034272 を「臨時記号→符頭の距離」に
+> 帰属したが、実際は**箱と skyline の差 0.017606 ＋ padding**。台帳の `why` は
+> "Predicted to close with the accidental horizontal-skyline; it did" と書いている）。
+> ⑵ `time-change-to-notehead`＝**表が「LP がどこで 0.004735 を足しているか未特定」と
+> 書いた問いは解けている**——**Pango の device pixel 1 個への量子化**（0.034143 ss 格子・
+> 1.600000 → 47px ＝ 1.604735 が 10 桁一致）。**文書だけが問いのまま止まっていた。**
+> ⇒ ★★ **予測を書いた表には「実際」列を最初から置く。** 空欄が**閉じていない**ことを表すなら、
+> **埋まっていない表は「まだ測っていない」と読めて正しい**——列が無いと、
+> **当たったのか外れたのかを誰も言えないまま「現在」が古びる。**
+> ⚠️ **この便の番人はこれを機械にした**（表の各行がタグを持ち、着地が動けば赤くなる）。
+
+> ## ★★ 骨 5＝**残差を「名前の付いた 1 量」まで分解できたら、そこで止めて別の点に回す**
 > タイの列アウトラインは **+0.888699999 → −0.073200001** で止めて開けたまま置かれた——
 > 残りが「符尾の attachment が 1 量ぶん左」と*名指せた*から。そして**符尾の点を閉じた瞬間、
 > タイのコードを 1 行も触らずに −1e-09 へ落ちた**（タイの右端は符尾の引き戻しが持つ）。

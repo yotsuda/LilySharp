@@ -97,7 +97,8 @@ LILYPOND-REF: `align-interface.cc:274`（`where += stacking_dir * dy`, `stacking
 LP の `is_spaceable` は `staff-affinity` の有無だけを見る（`page-layout-problem.cc:1173-1177`）。
 Lily# は 4 か所で ossia を外していて、**system の先頭に立つ ossia はページのアンカーから
 落ちて上マージンにはみ出していた**（台帳 `page.ossia-pair.compressed.first-staff-refpoint`
-**−6.850208 → +0.073104**）。
+**−6.850208 → +0.073104**。⚠️ **その +0.073104 も当時の値で、いまは −5.71e-07＝許容差以下**）。
+<!-- ledger: page.ossia-pair.compressed.first-staff-refpoint = -5.71e-07 -->
 
 ⚠️ **これは 3 つの枠が並んでいる層で、統合されたのは 1 つだけ**:
 
@@ -121,7 +122,7 @@ Lily# は 4 か所で ossia を外していて、**system の先頭に立つ oss
 ⚠️ **線引きは値段に影響された**——中央線/clef まで placement から採ると snapshot が **1 枚 → 22 枚**。
 ⇒ **揃えるのが HANDOFF §1 ▶0 の扉 ⑷**で、**先に「タブ譜の音符と clef が silhouette に入る高さ」の
 台帳点**が要る（譜線の点 `tab.staff.line-span.six-string` では通せない）。**分割不可**（選択の修正は
-placed offset を要求する）。
+placed offset を要求する）。<!-- ledger: tab.staff.line-span.six-string = 0 -->
 
 ⚠️ **`staffTopUp` は消せる項ではない**。engraver 側の出力枠が上端線基準であることの反映で、
 **原点から導出**して 1 箇所に置いてある（上端線原点の時代は 0 だった）。
@@ -979,15 +980,37 @@ fixed = max(fixed, 0.3 + min_dist);  ideal = max(ideal, fixed)      // :213-215
 
 上のモデルを入れると:
 
-| 台帳キー | 現在 | **予測** | 予測残差の帰属 |
-|---|---|---|---|
-| `barline.next.key-change-glyph` | −0.500000 | **0** | — |
-| `barline.next.time-change-glyph` | −0.250000 | **0** | — |
-| `barline.next.key-change-to-notehead` | −2.234272 | **−0.034272** | 臨時記号→符頭の距離（Lily# 0.866666 / LP 1.034272）が `min_dist` 経由で入る。**③ではなく padding 側の欠陥** |
-| `barline.next.time-change-to-notehead` | −1.454735 | **−0.004735** | TimeSignature grob 幅 Lily# 1.600000 / LP 1.604735。**OPEN**（`fattened.four` の LILC は 1.600000 ちょうどなので、LP がどこで 0.004735 を足しているか未特定） |
+| 台帳キー | 起票時 | **予測** | 予測残差の帰属 | **実際（2026-08-23 裏取り）** |
+|---|---|---|---|---|
+| `barline.next.key-change-glyph` | −0.500000 | **0** | — | **0 ✓ 予測どおり** <!-- ledger: barline.next.key-change-glyph = 0 --> |
+| `barline.next.time-change-glyph` | −0.250000 | **0** | — | **0 ✓ 予測どおり** <!-- ledger: barline.next.time-change-glyph = 0 --> |
+| `barline.next.key-change-to-notehead` | −2.234272 | **−0.034272** | 臨時記号→符頭の距離（Lily# 0.866666 / LP 1.034272）が `min_dist` 経由で入る。**③ではなく padding 側の欠陥** | **0**（予測より良い側に外れた） <!-- ledger: barline.next.key-change-to-notehead = 0 --> |
+| `barline.next.time-change-to-notehead` | −1.454735 | **−0.004735** | TimeSignature grob 幅 Lily# 1.600000 / LP 1.604735。**OPEN**（LP がどこで 0.004735 を足しているか未特定） | **+4.33e-07**（0.004735 の出所が判明） <!-- ledger: barline.next.time-change-to-notehead = 4.33e-07 --> |
 
-**合計 4.439007 → 0.039007 ss。exact は 15/21 → 17/21 の見込み。**
-**外れたら診断が違う。**
+**予測時の見込みは「合計 4.439007 → 0.039007 ss・exact 15/21 → 17/21」。**
+**外れたら診断が違う**と書いた——**外れた。両方とも良い側に。** 以下が実際に起きたこと:
+
+- ★★ **`key-change-to-notehead`＝族は当たり・数は外れ**。予測は「臨時記号→符頭の距離」に
+  **0.034272** を帰属したが、実際の欠陥は**箱と skyline の差 0.017606 ＋ `position_apes` の padding**
+  で、島2 が**単音の左 extent を `AccidentalPlacement.CalculateSinglePosition`
+  （描画と同じ skyline 配置）から採る**ようにして閉じた。⇒ **「臨時記号の水平 skyline で閉じる」
+  という*機構*の予測は当たり、数の分解だけが外れた**（台帳の `why` が
+  "Predicted to close with the accidental horizontal-skyline; it did" と記録している）。
+- ★★★ **`time-change-to-notehead`＝この表が「未特定」と書いた 0.004735 は解けている**。
+  **LP はテキスト幅を device pixel 1 個へ量子化する**——`INCH_TO_BP / (PANGO_RESOLUTION ×
+  output_scale)` ＝ `72 × 72.27 / (1200 × 5 × 25.4)` ＝ **0.034143 ss**
+  （`pango-font.cc:109-112` の `scale_`・`PANGO_RESOLUTION` 1200・`dimensions.hh:31,27`）。
+  素の advance **1.600000** をその格子へ丸めると **46.86 → 47 px ＝ 1.604735** で **10 桁一致**。
+  ⇒ **グリフ metric の誤りではなく*量子化*だった**ので、`fattened.four` の LILC を疑った
+  この表の推測は筋を外していた。残る **4.3e-07 は float ノイズ**。
+  ⚠️ **同じ機構が `staff.staff.dynamic-under-whole-note` の −0.000076 にも効いているが、
+  そちらは意図的に開いたまま**（幅は advance 1 個の snap で済むが、skyline は済まない）。
+  <!-- ledger: staff.staff.dynamic-under-whole-note = -7.6e-05 -->
+- ⇒ **`barline.next.*` 一族 13 点は、いま 12 点 exact ＋ 1 点 4.33e-07**（＝全点が許容差内）。
+
+⚠️ **この表は 2026-08-23 まで「現在」列に起票時の 4 値を載せたままだった**——**予測が当たった
+記録も、未特定が解けた記録も、どこにも書かれていなかった**。§5.0 は「予測が外れたときこそ収穫」
+と言うが、**収穫は書き戻して初めて残る**。
 
 ##### これが §4.7 項目1（＝ HANDOFF §2①）に意味すること
 

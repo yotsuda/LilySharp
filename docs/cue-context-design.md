@@ -12,6 +12,7 @@
 **隣り合う 2 つの `cue { … }` が 2 声部であることを、診断（`3312b4f8`）と spacing（`e84513e7`）の
 両方が見るようになった**。**刻印は `MusicItem.BeginsCueRegion`（領域の最初の音符）1 軒**で、
 **LP 側は先に測ってある**（`voice-boundary-spacing.ly` §F・台帳 `cue.column.region-edge` は exact）。
+<!-- ledger: cue.column.region-edge = 0 -->
 ⚠️ **実装したとき §1.2 の表が 1 行足りないことが分かった**——**cue から*出る*タイを LP は
 無警告で捨てる**（表は「入る」向きしか測っていない）。**下の §1.2 を実測で埋めた。**
 ★ **仕様書 2 冊は 2026-08-15 まで `@cue` を教え続けていた**——**この決定の 100 便あと**まで。
@@ -173,6 +174,7 @@ cue-expression := "cue" music-block
   境界の歩幅は **2.898044999134611（素の duration ideal）対 2.513393907138011（精錬済み）**。
   台帳 `cue.column.region-edge` は **−0.384653432 → 0（exact）**、対照
   `cue.column.region-edge-control` は **−0.000002340 のまま不動**。
+  <!-- ledger: cue.column.region-edge-control = -2.34e-06 -->
   ⚠️ **残る近似は「別々の声部で cue 領域が*同時に*生きている」形だけ**で、
   **ディスク上 0 冊**（1 小節に cue 領域を 2 つ書く本自体が無い）。
 - 連桁は Lily# が自動で決めるので「跨ごうとする」入力が存在しない。

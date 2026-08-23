@@ -91,7 +91,37 @@ public class HandoffLedgerCitationTests
     /// <see cref="LpProvenanceTests"/>'s: it may rise freely and must never fall silently,
     /// because the cheapest way to make a citation test pass is to delete the citation.
     /// </summary>
-    private const int CitationsWhenWritten = 27;
+    private const int CitationsWhenWritten = 36;
+
+    /// <summary>
+    /// The documents that assert CURRENT state about a ledger point, and so must be held to
+    /// it. Each carries the reason it is in or out, because "which files does this cover" is
+    /// itself the thing that rots — a guard that exists reads as a guard that covers.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// IN: <c>HANDOFF.md</c> from its §2 heading down (open work and settled decisions — §1 is
+    /// excluded below and says why); <c>COORDINATE_AUDIT.md</c>, which carries a falsifiable
+    /// prediction table with a "現在" column and is exactly the shape that goes stale;
+    /// <c>cue-context-design.md</c>, which states two points as the LilyPond-side evidence for
+    /// a design.
+    /// </para>
+    /// <para>
+    /// OUT: <c>RULES.md</c>, deliberately. Its six citations are PAST-TENSE worked examples
+    /// inside methodological lessons — "the ledger and the code both named the wrong owner,
+    /// and perturbation found the real one", "we tried to decompose a number that turned out
+    /// to be measuring a floor". The lesson is true whatever the point reads today, so a tag
+    /// there would tax every anecdote to protect a claim nobody is making. OUT:
+    /// <c>HANDOFF-ARCHIVE.md</c>, verbatim history, which is supposed to hold the numbers as
+    /// they read. OUT: HANDOFF §1, rewritten from scratch every session.
+    /// </para>
+    /// </remarks>
+    private static readonly (string File, string FromHeading)[] Covered =
+    {
+        ("HANDOFF.md", "## 2. "),
+        ("COORDINATE_AUDIT.md", null!),
+        ("cue-context-design.md", null!),
+    };
 
     private static readonly Regex Tag = new(
         @"<!--\s*ledger:\s*(?<name>[A-Za-z0-9._\-]+)\s*=\s*(?<value>[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)\s*-->",
@@ -99,7 +129,35 @@ public class HandoffLedgerCitationTests
 
     private static readonly Regex AnyComment = new(@"<!--.*?-->", RegexOptions.Compiled);
 
-    private sealed record Citation(string Name, double Value, int Line);
+    private sealed record Citation(string Name, double Value, string File, int Line);
+
+    /// <summary>
+    /// The covered lines of every covered document, as (file, 1-based line, text). A document
+    /// with a heading is covered from that heading down; one without is covered whole.
+    /// </summary>
+    private static IEnumerable<(string File, int Line, string Text)> CoveredLines()
+    {
+        var docs = Path.Combine(RepoRoot(), "docs");
+        foreach (var (file, fromHeading) in Covered)
+        {
+            var path = Path.Combine(docs, file);
+            Assert.True(File.Exists(path), $"docs/{file} not found at {path}");
+            var lines = File.ReadAllLines(path);
+
+            int start = 0;
+            if (fromHeading is not null)
+            {
+                start = Array.FindIndex(lines,
+                    l => l.StartsWith(fromHeading, StringComparison.Ordinal));
+                Assert.True(start >= 0,
+                    $"docs/{file} has no '{fromHeading}' heading — this guard locates the "
+                    + "covered region by it, so a rename must be reflected in Covered.");
+            }
+
+            for (int i = start; i < lines.Length; i++)
+                yield return (file, i + 1, lines[i]);
+        }
+    }
 
     private static string RepoRoot()
     {
@@ -116,19 +174,15 @@ public class HandoffLedgerCitationTests
 
     private static IReadOnlyList<Citation> Citations()
     {
-        var path = Path.Combine(RepoRoot(), "docs", "HANDOFF.md");
-        Assert.True(File.Exists(path), $"docs/HANDOFF.md not found at {path}");
-
         var found = new List<Citation>();
-        var lines = File.ReadAllLines(path);
-        for (int i = 0; i < lines.Length; i++)
+        foreach (var (file, line, text) in CoveredLines())
         {
-            foreach (Match m in Tag.Matches(lines[i]))
+            foreach (Match m in Tag.Matches(text))
             {
                 found.Add(new Citation(
                     m.Groups["name"].Value,
                     double.Parse(m.Groups["value"].Value, CultureInfo.InvariantCulture),
-                    i + 1));
+                    file, line));
             }
         }
         return found;
@@ -162,9 +216,9 @@ public class HandoffLedgerCitationTests
         var unknown = Citations().Where(c => !residuals.ContainsKey(c.Name)).ToList();
 
         Assert.True(unknown.Count == 0,
-            "docs/HANDOFF.md cites LP geometry points that are not in the ledger:\n"
+            "The covered docs cite LP geometry points that are not in the ledger:\n"
             + string.Join("\n", unknown.Select(c =>
-                $"  HANDOFF.md:{c.Line}  '{c.Name}'"))
+                $"  {c.File}:{c.Line}  '{c.Name}'"))
             + "\nEither the name is a typo, or the point was renamed or removed. A citation "
             + "that names nothing can never go red, so it is worse than no citation at all.");
     }
@@ -188,8 +242,8 @@ public class HandoffLedgerCitationTests
             if (actual is null)
             {
                 drifted.Add(
-                    $"  HANDOFF.md:{c.Line}  {c.Name}\n"
-                    + $"      handoff says {c.Value:G9}, ledger has NO residual recorded yet");
+                    $"  {c.File}:{c.Line}  {c.Name}\n"
+                    + $"      the doc says {c.Value:G9}, ledger has NO residual recorded yet");
                 continue;
             }
 
@@ -202,8 +256,8 @@ public class HandoffLedgerCitationTests
                 : "the point moved";
 
             drifted.Add(
-                $"  HANDOFF.md:{c.Line}  {c.Name}\n"
-                + $"      handoff says {c.Value:G9}, ledger says {actual.Value:G9} "
+                $"  {c.File}:{c.Line}  {c.Name}\n"
+                + $"      the doc says {c.Value:G9}, ledger says {actual.Value:G9} "
                 + $"(drift {drift:G6}) — {verdict}");
         }
 
@@ -211,7 +265,7 @@ public class HandoffLedgerCitationTests
             _output.WriteLine(string.Join("\n", drifted));
 
         Assert.True(drifted.Count == 0,
-            "docs/HANDOFF.md quotes divergences the ledger no longer holds:\n"
+            "The covered docs quote divergences the ledger no longer holds:\n"
             + string.Join("\n", drifted)
             + "\n\nRE-READ THOSE PASSAGES before touching this test. A shelf whose point has "
             + "gone exact is the failure this guard exists for: the session that reads it will "
@@ -250,42 +304,45 @@ public class HandoffLedgerCitationTests
     public void EveryPointNamedInTheDurableSections_CarriesATag()
     {
         var (residuals, _) = Ledger();
-        var lines = File.ReadAllLines(Path.Combine(RepoRoot(), "docs", "HANDOFF.md"));
 
-        int start = Array.FindIndex(lines, l => l.StartsWith("## 2. ", StringComparison.Ordinal));
-        Assert.True(start >= 0,
-            "docs/HANDOFF.md has no '## 2. ' heading — this guard locates the durable sections "
-            + "by that heading, so a rename must be reflected here.");
+        // Per document: a name tagged anywhere in it covers that document's mentions of it.
+        var tagged = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        var named = new Dictionary<(string File, string Name), int>();
 
-        var tagged = new HashSet<string>(StringComparer.Ordinal);
-        var named = new Dictionary<string, int>(StringComparer.Ordinal);
+        var patterns = residuals.Keys.ToDictionary(n => n, n => new Regex(
+            @"(?<![A-Za-z0-9._\-])" + Regex.Escape(n) + @"(?![A-Za-z0-9._\-])",
+            RegexOptions.Compiled));
 
-        for (int i = start; i < lines.Length; i++)
+        foreach (var (file, line, text) in CoveredLines())
         {
-            foreach (Match m in Tag.Matches(lines[i]))
-                tagged.Add(m.Groups["name"].Value);
-
-            string bare = AnyComment.Replace(lines[i], string.Empty);
-            foreach (var name in residuals.Keys)
+            foreach (Match m in Tag.Matches(text))
             {
-                if (named.ContainsKey(name))
+                if (!tagged.TryGetValue(file, out var set))
+                    tagged[file] = set = new HashSet<string>(StringComparer.Ordinal);
+                set.Add(m.Groups["name"].Value);
+            }
+
+            string bare = AnyComment.Replace(text, string.Empty);
+            foreach (var (name, pattern) in patterns)
+            {
+                if (named.ContainsKey((file, name)))
                     continue;
-                var cited = new Regex(
-                    @"(?<![A-Za-z0-9._\-])" + Regex.Escape(name) + @"(?![A-Za-z0-9._\-])");
-                if (cited.IsMatch(bare))
-                    named[name] = i + 1;
+                if (pattern.IsMatch(bare))
+                    named[(file, name)] = line;
             }
         }
 
-        var untagged = named.Where(kv => !tagged.Contains(kv.Key))
-            .OrderBy(kv => kv.Value).ToList();
+        var untagged = named
+            .Where(kv => !(tagged.TryGetValue(kv.Key.File, out var set)
+                           && set.Contains(kv.Key.Name)))
+            .OrderBy(kv => kv.Key.File).ThenBy(kv => kv.Value).ToList();
 
         Assert.True(untagged.Count == 0,
-            "docs/HANDOFF.md §2/§3 name LP geometry points that carry no "
+            "The covered docs name LP geometry points that carry no "
             + "<!-- ledger: NAME = VALUE --> tag, so nothing would notice if they went stale:\n"
             + string.Join("\n", untagged.Select(kv =>
-                $"  HANDOFF.md:{kv.Value}  {kv.Key}  (ledger residual "
-                + $"{(residuals[kv.Key]?.ToString("G9") ?? "none recorded")})"))
+                $"  {kv.Key.File}:{kv.Value}  {kv.Key.Name}  (ledger residual "
+                + $"{(residuals[kv.Key.Name]?.ToString("G9") ?? "none recorded")})"))
             + "\nAdd the tag with the ledger's CURRENT residual, having read the passage and "
             + "checked that what it says is still true. If the passage only mentions the point "
             + "in passing and asserts nothing about it, the tag is still the cheaper answer — "
@@ -300,11 +357,13 @@ public class HandoffLedgerCitationTests
     public void TheCitationsAreNotQuietlyDeleted()
     {
         int count = Citations().Count;
-        _output.WriteLine($"docs/HANDOFF.md cites {count} ledger points "
-            + $"(was {CitationsWhenWritten} when this guard was written)");
+        _output.WriteLine($"the covered docs cite {count} ledger points "
+            + $"(was {CitationsWhenWritten} when this guard was written): "
+            + string.Join(", ", Citations().GroupBy(c => c.File)
+                .OrderBy(g => g.Key).Select(g => $"{g.Key} {g.Count()}")));
 
         Assert.True(count >= CitationsWhenWritten,
-            $"docs/HANDOFF.md now cites {count} ledger points, down from "
+            $"The covered docs now cite {count} ledger points, down from "
             + $"{CitationsWhenWritten}. Removing a citation removes the only thing that makes "
             + "a shelf's number go stale LOUDLY. If a passage was deleted for a good reason, "
             + "lower CitationsWhenWritten in the same commit and say which passage went.");
