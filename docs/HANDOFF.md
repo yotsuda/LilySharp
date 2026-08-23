@@ -158,7 +158,8 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 **④ 証明**：**毒を 2 つ当てて赤を見た**（§2 の掟「0 冊を証拠に引く前に毒を当てる」）——タグを stale 当時の `-0.073200000` に戻すと **"THE POINT IS NOW EXACT — the shelf is probably describing a closed defect" を行番号つきで出す**（＝**第234 の triage を救ったはずのメッセージ**）、名前を 1 文字崩すと未知名として `HANDOFF.md:539` を名指す。engine には 1 行も触っていない（`BezierBow` は doc comment のみ）ので**出力は構成上不動**＝台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2 完全不動**・**snapshot 222 枚不動**・**追跡コーパス 572 冊不動**。
 
 ★ **開始時裏取り**: HEAD `84ed2309`（第234 の triage handoff）・未 push 29・未追跡 0/木 0・Windows suite **5796/0/4**・WSL **5796/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2・追跡コーパス 572 冊・Core 0 警告＝**前便の閉幕数と全一致**（⚠️ 前便 §1 は「未 push 28」と書いたが、**その行を書いたあとに ⑸' の triage handoff を 1 本積んでいる**ので 29 が正しい＝§0 の「両端を書く」が効いた例）。
-終了時: **未 push 30（push はユーザー＝RULES §5.1）**＝本便 1 本・未追跡 0/木 0・suite **Windows 5799/0/4・WSL 5799/0/4＝両 OS 完全緑（開始比 +3＝`HandoffLedgerCitationTests`）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊（1 冊も触っていない）**・Core 0 警告。
+⚠️⚠️ ★★★ **GitHub の門は「赤」だが理由はコードではない＝*課金停止***（本便で中身を読んだ・**§0 が「`X` を見たら中身を読め」と言う所**）。最新 3 run とも**全脚が 3〜4 秒で死んでおり**、annotation は **"The job was not started because recent account payments have failed or your spending limit needs to be increased"**——**1 行もビルドしていない**（残りの `X` は fail-fast の巻き添え）。⇒ **`gh run list` はコードについて何も言っていない**ので、**Linux の証拠は WSL 脚だけ**（第213 が建てた道が唯一の門）。⚠️ **これはユーザーの操作でしか直らない**（Billing & plans）。**次便は同じ調査をやり直さないこと**——`gh run list` が赤でも、annotation が課金のままなら情報はゼロ。
+終了時: **未 push 31（push はユーザー＝RULES §5.1）**＝本便 2 本（実装一式／この行）・未追跡 0/木 0・suite **Windows 5799/0/4・WSL 5799/0/4＝両 OS 完全緑（開始比 +3＝`HandoffLedgerCitationTests`）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊（1 冊も触っていない）**・Core 0 警告。
 
 ★ **この便の値段**:
 
