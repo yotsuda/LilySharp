@@ -81,6 +81,15 @@ correct, and it is not a design constraint.
 - Keep `LILYPOND-REF` citations accurate — a stale line number is worse than none,
   because it invites the next reader to trust it.
 
+## Releasing
+
+Maintainers only, and it is a written procedure rather than a habit:
+[`docs/RELEASING.md`](docs/RELEASING.md). One pushed tag builds the CLI binaries,
+publishes eight platform-specific VSIXs to the Marketplace and creates the GitHub
+Release — none of which can be taken back, since the Marketplace never accepts a version
+number twice. The packaging mechanics it builds on are in
+[`editors/vscode/DEPLOY.md`](editors/vscode/DEPLOY.md).
+
 ## Scope
 
 Lily# is not trying to be LilyPond's front end, and its language is deliberately
