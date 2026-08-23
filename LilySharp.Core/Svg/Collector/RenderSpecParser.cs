@@ -605,11 +605,20 @@ public static class RenderSpecParser
             PedalStyle: pedalStyle);
     }
 
-    /// <summary>Maps the `as roman | both | names` selector text to its mode.</summary>
+    /// <summary>Maps the `as roman | names` selector text to its mode.</summary>
+    /// <remarks>
+    /// The <c>_</c> arm is names, and it is NOT the place an unknown word is caught: an
+    /// unrecognised selector is an error (LYS2012, <c>ChordDisplayModeValidator</c>), so by
+    /// the time a book renders, the only words that reach here are the two above and null.
+    /// This arm exists so a book with that error still previews something rather than
+    /// throwing — the same "a typo still draws" rule the unresolved-form fallback follows.
+    /// ⚠️ It was the only reader of the retired <c>both</c>, and while the validator did not
+    /// exist it was also what made the retirement unsafe: `as both` would have kept parsing
+    /// and silently become `as names`.
+    /// </remarks>
     private static ChordDisplayMode ParseChordMode(string? text) => text?.ToLowerInvariant() switch
     {
         "roman" => ChordDisplayMode.Roman,
-        "both" => ChordDisplayMode.Both,
         _ => ChordDisplayMode.Names,
     };
 
@@ -620,7 +629,7 @@ public static class RenderSpecParser
         if (toks.Count == 0) return null;
 
         // Trailing `as numbers | full` — the tab STYLE selector (parallel to the
-        // chord `as roman|both|names`). Strip it before reading the part/tuning so
+        // chord `as roman|names`). Strip it before reading the part/tuning so
         // the part stays the last token. `numbers` = fret digits only; `full` (or
         // absent) = this renderer's default rhythm-drawing tab.
         bool numbersOnly = false;

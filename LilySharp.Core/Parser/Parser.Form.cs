@@ -626,7 +626,7 @@ internal sealed partial class Parser
     }
 
     /// <summary>
-    /// Parse chord-row render: <c>chords partName [as roman|both|names]</c> (places a
+    /// Parse chord-row render: <c>chords partName [as roman|names]</c> (places a
     /// chord part as a row, with an optional display selector).
     /// </summary>
     private ChordRowRenderGreen ParseChordRowRender()
@@ -638,7 +638,7 @@ internal sealed partial class Parser
     }
 
     /// <summary>Consumes an optional <c>as WORD</c> selector, appending its two tokens.
-    /// Shared by the chord display mode (<c>as roman | both | names</c>) and the tab
+    /// Shared by the chord display mode (<c>as roman | names</c>) and the tab
     /// style (<c>as numbers | full</c>). NB: <c>as</c> also lexes as the Dutch A-flat
     /// pitch, so match it by TEXT, not token kind; the mode word follows. This position
     /// (right after the target name) is unambiguous — a bare pitch there is meaningless —
@@ -648,7 +648,7 @@ internal sealed partial class Parser
         if (string.Equals(Current.Text, "as", System.StringComparison.Ordinal) && Peek(1) != null)
         {
             tokens.Add(Advance()); // as
-            tokens.Add(Advance()); // roman | both | names
+            tokens.Add(Advance()); // roman | names
         }
     }
 

@@ -23,9 +23,10 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// The chord display selector: <c>staff X with chords Y as roman | both | names</c>
-/// (and the same on a chord row). Absolute names by default, Roman-numeral degrees
-/// for the key, or both stacked.
+/// The chord display selector on a chord row: <c>chords NAME as roman | names</c>.
+/// Absolute names by default, Roman-numeral degrees for the key. To show one track BOTH
+/// ways, place it twice (<c>StackedTrackRowTests</c>) — which is what replaced the
+/// retired <c>as both</c>.
 /// </summary>
 public class ChordDisplayModeTests
 {
@@ -39,7 +40,6 @@ public class ChordDisplayModeTests
         form main { A }
         score main "names" { chords harmony  staff melody }
         score main "roman" { chords harmony as roman  staff melody }
-        score main "both"  { chords harmony as both  staff melody }
         score main "row"   { chords harmony as roman }
         """;
 
@@ -54,7 +54,40 @@ public class ChordDisplayModeTests
         // guards that the selector still reads correctly.
         Assert.Equal(ChordDisplayMode.Names, StaffMode("names"));
         Assert.Equal(ChordDisplayMode.Roman, StaffMode("roman"));
-        Assert.Equal(ChordDisplayMode.Both, StaffMode("both"));
+    }
+
+    /// <summary>
+    /// There are TWO displays. <c>both</c> — the degree stacked above the name as one
+    /// symbol — was retired 2026-08-23 (user decision): a track shown both ways is placed
+    /// twice, which is two rows the writer can see and order (<c>StackedTrackRowTests</c>).
+    /// The word is now rejected by name, not silently read as <c>names</c>.
+    /// </summary>
+    [Fact]
+    public void Both_IsRetired_AndSaysWhatToWriteInstead()
+    {
+        var tree = SyntaxTree.Parse(Doc.Replace(
+            "score main \"row\"   { chords harmony as roman }",
+            "score main \"row\"   { chords harmony as both }"));
+        var d = LilySharp.Core.Semantics.SemanticValidation.Run(tree)
+            .Single(x => x.Code == DiagnosticCodes.UnknownChordDisplayMode);
+
+        Assert.Equal(DiagnosticSeverity.Error, d.Severity);
+        Assert.Contains("chords harmony as roman", d.Message);
+        Assert.Contains("chords harmony as names", d.Message);
+    }
+
+    [Fact]
+    public void AnUnknownDisplay_IsRejectedRatherThanReadAsNames()
+    {
+        // The pre-existing hole the retirement had to close first: ParseChordMode's `_`
+        // arm meant any unrecognised word drew absolute names and reported nothing.
+        var tree = SyntaxTree.Parse(Doc.Replace(
+            "score main \"row\"   { chords harmony as roman }",
+            "score main \"row\"   { chords harmony as romn }"));
+
+        Assert.Contains(LilySharp.Core.Semantics.SemanticValidation.Run(tree),
+            x => x.Code == DiagnosticCodes.UnknownChordDisplayMode
+              && x.Severity == DiagnosticSeverity.Error);
     }
 
     [Fact]
@@ -73,7 +106,8 @@ public class ChordDisplayModeTests
         // C major: c1 -> I, a1:m -> VIm.
         Assert.Equal(new[] { "I", "VIm" }, score.ChordNames.Select(c => c.RomanText).ToArray());
         Assert.All(score.ChordNames, c => Assert.Equal(ChordDisplayMode.Roman, c.DisplayMode));
-        // The absolute name is still carried (Both mode shows it below the degree).
+        // The absolute name is still carried, so the SAME track placed again `as names`
+        // shows names from the same items.
         Assert.Equal(new[] { "C", "Am" }, score.ChordNames.Select(c => c.ChordText).ToArray());
     }
 

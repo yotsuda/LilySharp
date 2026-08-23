@@ -740,6 +740,14 @@ public static class DiagnosticCodes
     /// anchor to, so its bars run from bar 0 across whatever the form plays.</summary>
     public const string ChordTrackNeedsSections = "LYS2011";
 
+    /// <summary>Chord error: the word after <c>as</c> on a chord row is not a display.
+    /// The displays are <c>roman</c> and <c>names</c>; omitting <c>as</c> means names.
+    /// Until 2026-08-23 an unrecognised word fell through to names in silence, so a typo
+    /// changed the picture and said nothing — and that silence is what made retiring
+    /// <c>both</c> unsafe, since `as both` would simply have become `as names`. The
+    /// message spells the replacement for <c>both</c> by name.</summary>
+    public const string UnknownChordDisplayMode = "LYS2012";
+
     // Lyric diagnostics (LYS4xxx — warnings, plus one error)
 
     /// <summary>Lyric warning: more lyric syllables than available notes.</summary>

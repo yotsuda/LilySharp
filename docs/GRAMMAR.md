@@ -944,6 +944,17 @@ DisplayName    = String ;
    score main "sheet" { chords prog lyrics words }
 *)
 
+(* SHOWING ONE TRACK TWO WAYS. A chord row takes 'as roman' (degrees for the key) or
+   'as names' (the default). There is no third mode: to show BOTH, place the track twice —
+
+     score main "sheet" { chords prog as roman  chords prog as names  lyrics words }
+
+   which is two rows, in the order written, each its own band. 'as both' — one symbol with
+   the degree stacked above the name — was retired 2026-08-23. ⚠️ The two are not quite the
+   same and the difference is worth knowing: a slot with no chord (an 'r' printing N.C.)
+   has no degree, so a roman row shows its NAME there. Stacked, that slot reads once per
+   row. Anything else after 'as' is an error (LYS2012). *)
+
 (* WHERE A TRACK'S CELLS GO. The example above is SECTION-major: each track block sits
    inside the section whose bars it fills, so the binding is where it is written. The
    PART-major spelling puts the track at the top level and names the sections inside it:

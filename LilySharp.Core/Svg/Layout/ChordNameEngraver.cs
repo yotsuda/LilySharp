@@ -35,8 +35,7 @@ public readonly record struct ChordNameLayout(
     double YUp,
     string ChordText,        // Display text (e.g., "Cm7", "B♭7", or "IIm7" in Roman mode)
     int SourcePosition,
-    int SourceIndex = -1,    // F3/B: index into score.ChordNames (data-pos resolved at render)
-    string? AboveLine = null // `as both`: the Roman degree stacked ABOVE ChordText
+    int SourceIndex = -1     // F3/B: index into score.ChordNames (data-pos resolved at render)
 );
 
 /// <summary>
@@ -246,12 +245,12 @@ internal static class ChordNameEngraver
             if (p.chord.IsChordRow)
             {
                 double rowBaseline = RowTextBaseline(chordGridSheet);
-                var (rowText, rowAbove) = DisplayText(p.chord);
+                string rowText = DisplayText(p.chord);
                 // Store Y-up from the system top (= negation of the system-relative
                 // device baseline); no staff offset is baked.
                 results.Add(new ChordNameLayout(
                     p.chord.MeasureIndex, p.x, -(p.staffOffset + rowBaseline),
-                    rowText, p.chord.SourcePosition, p.idx, AboveLine: rowAbove));
+                    rowText, p.chord.SourcePosition, p.idx));
                 continue;
             }
 
@@ -266,10 +265,10 @@ internal static class ChordNameEngraver
             double protrusion = linePeak.TryGetValue((p.sysIdx, p.chord.StaffIndex), out var pk) ? pk : 0;
             double y = -(StaffPadding + protrusion) + p.staffOffset;
 
-            var (text, above) = DisplayText(p.chord);
+            string text = DisplayText(p.chord);
             // Store Y-up from the system top (= -y); no staff offset is baked.
             results.Add(new ChordNameLayout(
-                p.chord.MeasureIndex, p.x, -y, text, p.chord.SourcePosition, p.idx, AboveLine: above));
+                p.chord.MeasureIndex, p.x, -y, text, p.chord.SourcePosition, p.idx));
         }
 
         return results.ToImmutable();
@@ -355,7 +354,7 @@ internal static class ChordNameEngraver
     /// with the other named inventions in docs/HANDOFF.md section 2H.
     /// </remarks>
     private static double SymbolWidth(Rendering.ScoreTextMetrics fonts, ChordNameItem c) =>
-        Math.Max(2.0, SymbolInkWidth(fonts, DisplayText(c).Text));
+        Math.Max(2.0, SymbolInkWidth(fonts, DisplayText(c)));
 
     /// <summary>
     /// <paramref name="curX"/> shifted right, if it has to be, so its box clears the
@@ -392,11 +391,11 @@ internal static class ChordNameEngraver
     /// quantity the row is spaced BY. The two are one seam, named here.
     /// </para>
     /// <para>
-    /// ⚠️ THE `as both` SECOND LINE IS NOT IN THIS. A Roman degree stacked above the name
-    /// (<c>AboveLine</c>) is drawn higher than the ink measured here, so a row that uses it
-    /// under-reserves. Named rather than approximated: the stacking distance lives in the
-    /// renderer and moving it here without a point to measure it is how a port acquires an
-    /// untested branch.
+    /// ✅ EVERY ROW'S INK IS NOW IN THIS. Until 2026-08-23 it was not: `as both` drew a
+    /// second line ABOVE the measured text, so a row using it under-reserved by the
+    /// stacking distance — a known hole this remark named rather than approximated.
+    /// Retiring that mode closed it. A track shown both ways is now two ROWS, and a row is
+    /// reserved for by the band machinery, one line of text each.
     /// </para>
     /// <para>
     /// ⚠️ BY <c>MeasureIndex</c>, NOT BY POSITION — the caller hands ONE SYSTEM's layouts,
@@ -441,7 +440,7 @@ internal static class ChordNameEngraver
         foreach (var (x, chord) in placed)
         {
             var (bottom, top) = fonts.Ink(
-                DisplayText(chord).Text, ChordFontSize,
+                DisplayText(chord), ChordFontSize,
                 Rendering.TextRole.ChordName, EngravingDefaults.ChordNameFontStyle);
             double right = x + SymbolWidth(fonts, chord);
             up.Merge(VerticalSkyline.FromBox(x, right, bottom, top, VerticalDirection.Up));
@@ -450,13 +449,18 @@ internal static class ChordNameEngraver
         return (up, down);
     }
 
-    /// <summary>The symbol's display text for its mode, plus the optional line stacked
-    /// above it: Names → the absolute name; Roman → the degree (falling back to the
-    /// name when no structure resolved); Both → the name with the degree above it.</summary>
-    private static (string Text, string? Above) DisplayText(ChordNameItem c) => c.DisplayMode switch
+    /// <summary>The symbol's display text for its mode: Names → the absolute name;
+    /// Roman → the degree, falling back to the NAME when no structure resolved.</summary>
+    /// <remarks>
+    /// ⚠️ That fallback is a real behaviour, not a safety net: a slot with no chord — an
+    /// <c>r</c>'s "N.C." — has no degree, and a row must print something at its slot. It is
+    /// also the reason a track shown BOTH ways (placed twice, `as roman` above `as names`)
+    /// prints such a slot once per row. That is each row saying what it can, not a
+    /// duplicate, and it is the one thing the retired <c>Both</c> mode did differently.
+    /// </remarks>
+    private static string DisplayText(ChordNameItem c) => c.DisplayMode switch
     {
-        ChordDisplayMode.Roman => (c.RomanText ?? c.ChordText, null),
-        ChordDisplayMode.Both => (c.ChordText, c.RomanText),
-        _ => (c.ChordText, null),
+        ChordDisplayMode.Roman => c.RomanText ?? c.ChordText,
+        _ => c.ChordText,
     };
 }

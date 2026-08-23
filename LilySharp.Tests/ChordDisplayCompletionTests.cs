@@ -55,10 +55,13 @@ public class ChordDisplayCompletionTests
     {
         var items = LilySharpLanguageServer.GetChordAttachNameCompletions().Items;
         Assert.Contains(items, i => i.Label == "as roman");
-        Assert.Contains(items, i => i.Label == "as both");
         Assert.Contains(items, i => i.Label == "as names");
         // A following render item is not blocked.
         Assert.Contains(items, i => i.Label == "staff");
+        // …and that is also how a track is shown BOTH ways now: the next `chords` row.
+        // `as both` was retired 2026-08-23, so it must not be taught here.
+        Assert.Contains(items, i => i.Label == "chords");
+        Assert.DoesNotContain(items, i => i.Label == "as both");
     }
 
     [Fact]
@@ -197,12 +200,29 @@ public class ChordDisplayCompletionTests
         Assert.Null(items.Single(i => i.Label == "grandStaff").Command);
     }
 
+    /// <summary>
+    /// The list after <c>as</c> is EXACTLY the words the validator accepts. It was three
+    /// until 2026-08-23; <c>both</c> was retired, and an editor that still offered it would
+    /// be handing the writer a LYS2012 (the shape session 240 hit twice in one day — a
+    /// completion item that teaches a spelling the compiler rejects).
+    /// </summary>
     [Fact]
-    public void DisplayModeCompletions_AreTheThreeModes()
+    public void DisplayModeCompletions_AreExactlyTheAcceptedWords()
     {
         var labels = LilySharpLanguageServer.GetChordDisplayModeCompletions().Items
             .Select(i => i.Label).ToArray();
-        Assert.Equal(new[] { "roman", "both", "names" }, labels);
+        Assert.Equal(new[] { "roman", "names" }, labels);
+
+        // …and each one really is accepted, so the two lists cannot drift apart.
+        foreach (var label in labels)
+        {
+            var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(
+                "part m { section A { c4 d e f } }\n"
+                + "chords h { section A { C | } }\n"
+                + $"form main {{ A }}\nscore main {{ staff m  chords h as {label} }}\n");
+            Assert.DoesNotContain(LilySharp.Core.Semantics.SemanticValidation.Run(tree),
+                d => d.Code == LilySharp.Core.Syntax.DiagnosticCodes.UnknownChordDisplayMode);
+        }
     }
 
     // A global value keyword adds the space and re-opens suggestions (triggerSuggest) so

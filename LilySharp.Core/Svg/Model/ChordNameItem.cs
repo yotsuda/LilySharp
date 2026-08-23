@@ -34,14 +34,22 @@ namespace LilySharp.Core.Svg.Model;
 /// The chord symbol text is specified directly and displayed above the staff.
 /// </remarks>
 /// <summary>How a chord row / attachment wants its symbols shown.</summary>
+/// <remarks>
+/// ⚠️ <c>Both</c> — the degree stacked above the name as ONE symbol — was retired
+/// 2026-08-23 (user decision, LYS2012 carries the message). To show a track both ways,
+/// place it twice: <c>chords prog as roman</c> above <c>chords prog as names</c>. That is
+/// two rows the writer can see, order and space, rather than a third mode with its own
+/// stacking distance. ⚠️ The two were never identical, and the difference is worth
+/// remembering if this is ever revisited: a symbol with NO degree (an <c>r</c> slot's
+/// "N.C.") printed ONCE under <c>Both</c>, and prints once PER ROW when stacked, because a
+/// roman row falls back to the name.
+/// </remarks>
 public enum ChordDisplayMode
 {
     /// <summary>Absolute chord names (C, Am7, G7). The default.</summary>
     Names,
     /// <summary>Roman-numeral scale degrees for the key (I, IIm7, V7).</summary>
     Roman,
-    /// <summary>Both, stacked: the degree above the absolute name.</summary>
-    Both,
 }
 
 /// <summary>A resolved chord symbol to be engraved above the staff (or as an

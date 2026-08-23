@@ -346,16 +346,15 @@ internal static class MusicMarkEngraver
     // (chord font = 4.0 * 0.65 = 2.6 ss; cap height ≈ 0.72 em).
     private const double ChordTextAscent = 1.9;
 
-    // `as both`: the Roman-degree row is drawn this far ABOVE the chord-text
-    // baseline (renderer DrawChordNames stackLineHeight), so a two-row chord's
-    // real top is that much higher. A mark clearing such a chord must clear the
-    // UPPER row, or the tempo / section label overprints the degree line.
-    private const double ChordStackLineHeight = 2.2;
-
-    /// <summary>Cap-height ascent of a chord symbol above its baseline Y,
-    /// including the stacked Roman-degree row when the chord is drawn `as both`.</summary>
-    private static double ChordAscent(ChordNameLayout cn)
-        => ChordTextAscent + (cn.AboveLine != null ? ChordStackLineHeight : 0);
+    /// <summary>Cap-height ascent of a chord symbol above its baseline Y.</summary>
+    /// <remarks>
+    /// It used to add a stacked Roman-degree row's height when the chord was drawn
+    /// `as both`, because that row was drawn 2.2 ss higher than this baseline and a mark
+    /// clearing the chord had to clear the UPPER line. `both` was retired 2026-08-23 —
+    /// a track shown both ways is placed twice, and each ROW is its own band with its own
+    /// one line — so every chord symbol is one line again and the ascent is the text's.
+    /// </remarks>
+    private static double ChordAscent(ChordNameLayout cn) => ChordTextAscent;
 
     // LILYPOND-REF: define-grobs.scm RehearsalMark padding=0.8
     private const double AboveStaffOffset = -2.0;

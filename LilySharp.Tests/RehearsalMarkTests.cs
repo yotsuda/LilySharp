@@ -279,34 +279,43 @@ public class RehearsalMarkTests
         Assert.Equal("B", result[1].Text);
     }
 
+    /// <summary>
+    /// A mark sharing a column with a chord symbol is lifted clear of it.
+    /// </summary>
+    /// <remarks>
+    /// This used to be <c>Calculate_MarkClearsTwoRowChord_AsBoth</c>, and it measured the
+    /// EXTRA lift a second stacked line needed: `as both` drew the Roman degree 2.2 ss above
+    /// the name, so a mark that cleared only the name overprinted the degree. `both` was
+    /// retired 2026-08-23 — a track shown both ways is placed twice, and a row is one line —
+    /// so the per-chord extra is gone and there is one height again. What survives, and is
+    /// what this now pins, is the clearance itself: without it the mark sat at its default
+    /// height and the chord ran into it.
+    /// </remarks>
     [Fact]
-    public void Calculate_MarkClearsTwoRowChord_AsBoth()
+    public void Calculate_MarkIsLiftedClearOfAChordInItsColumn()
     {
-        // `as both` stacks the Roman degree ABOVE the chord name, making the
-        // chord band ~2.2 ss taller. A mark over that chord must clear the
-        // UPPER row — before the fix it cleared only the name row and the mark
-        // (tempo / section label) overprinted the degree line.
         var systems = CreateSingleSystem(2);
         var ml = systems.SelectMany(s => s.Measures).ToImmutableArray();
         var mark = ImmutableArray.Create(
             new MusicMarkItem(MusicMarkType.Rehearsal, "A", 0, 0));
 
-        // An inline top-staff chord (negative Y) at the mark's own column, so
-        // its ink certainly overlaps the mark horizontally.
+        // An inline top-staff chord at the mark's own column, so its ink certainly
+        // overlaps the mark horizontally. YUp = +3.0: 3 ss ABOVE the system top.
         double markX = MusicMarkEngraver.Calculate(ScoreTextMetrics.Bundled, null, mark, systems, ml)[0].X;
-        ChordNameLayout Chord(string? above) =>
-            // YUp = +3.0: the chord sits 3 ss ABOVE the system top (old device Y = -3.0).
-            new ChordNameLayout(0, markX, 3.0, "Cmaj7", 0, AboveLine: above);
+        var chord = new ChordNameLayout(0, markX, 3.0, "Cmaj7", 0);
 
-        double oneRowY = MusicMarkEngraver
-            .Calculate(ScoreTextMetrics.Bundled, null, mark, systems, ml, chordNames: ImmutableArray.Create(Chord(null)))[0].YUp;
-        double twoRowY = MusicMarkEngraver
-            .Calculate(ScoreTextMetrics.Bundled, null, mark, systems, ml, chordNames: ImmutableArray.Create(Chord("Imaj7")))[0].YUp;
+        double bare = MusicMarkEngraver
+            .Calculate(ScoreTextMetrics.Bundled, null, mark, systems, ml)[0].YUp;
+        double overChord = MusicMarkEngraver
+            .Calculate(ScoreTextMetrics.Bundled, null, mark, systems, ml,
+                chordNames: ImmutableArray.Create(chord))[0].YUp;
 
-        // Y-up (frame B): the stacked degree row lifts the mark higher (larger YUp)
-        // by the row height, so it clears the top line instead of overprinting it.
-        Assert.True(twoRowY > oneRowY + 2.0,
-            $"two-row mark YUp ({twoRowY:F2}) should sit well above one-row ({oneRowY:F2})");
+        // Y-up (frame B): larger is higher. The chord's baseline is at 3.0 and its text
+        // ascends above that, so the mark must end up higher than the chord's baseline.
+        Assert.True(overChord > bare,
+            $"a mark over a chord should be lifted (bare {bare:F2} -> {overChord:F2})");
+        Assert.True(overChord > 3.0,
+            $"the mark ({overChord:F2}) must clear the chord's baseline (3.00)");
     }
 
     // --- WHICH measure a mark belongs to (the COLLECTOR decides; every test above

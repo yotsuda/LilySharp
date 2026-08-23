@@ -106,7 +106,7 @@ internal sealed class ChordNameCollector
 
     /// <summary>Applies a display mode to the INLINE <c>@chord</c> symbols already
     /// collected on a staff (aligned/row items already carry their own mode). Called
-    /// when a staff attaches chords <c>as roman|both</c>, so an inline mark on the same
+    /// when a staff attaches chords <c>as roman</c>, so an inline mark on the same
     /// staff shows the same way instead of clashing with the track's symbol.</summary>
     public void ApplyDisplayMode(int staffIndex, ChordDisplayMode mode)
     {

@@ -45,7 +45,7 @@ public sealed record StaffSpec(
     // staff ~flute: the writer opted OUT of the default
     // instrument-name label for this staff.
     bool NameSuppressed = false,
-    // How the attached chords are shown (`... as roman | both | names`).
+    // How the attached chords are shown (`... as roman | names`).
     ChordDisplayMode ChordDisplay = ChordDisplayMode.Names,
     // Named lyrics parts aligned note-by-note BELOW this staff
     // (staff NAME with lyrics L [with lyrics L2 ...]); multiple stack as verses.
@@ -143,7 +143,7 @@ public sealed record TabStaffSpec(StaffSpec Staff, TuningType Tuning, int Transp
     // the opposite, and stays this renderer's default). Ties/slurs still print.
     bool NumbersOnly = false,
     // A named chord part whose symbols align above this tab staff
-    // (`tab part with chords CHORDPART [as roman|both|names]`) — exactly like the
+    // (`tab part with chords CHORDPART [as roman|names]`) — exactly like the
     // notation-staff `staff … with chords …` attachment.
     string? WithChords = null,
     ChordDisplayMode ChordDisplay = ChordDisplayMode.Names) : RenderItemSpec;

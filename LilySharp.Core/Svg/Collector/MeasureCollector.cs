@@ -1642,7 +1642,7 @@ public sealed partial class MeasureCollector
             // Part-body grob defaults (`part <voice> { override … }`) scope to this staff.
             CollectPartBodyOverrides(tree.GetRoot(), voiceName, _currentStaffIndex);
 
-            // `staff NAME with chords CHORDPART [as roman|both]`: remember the
+            // `staff NAME with chords CHORDPART [as roman]`: remember the
             // attachment (and its display); the chord symbols are collected AFTER
             // the voice loop, once every section's start measure is registered.
             if (withChords != null)
@@ -1653,7 +1653,7 @@ public sealed partial class MeasureCollector
             foreach (var lyName in withLyrics)
                 attachedLyrics.Add((lyName, _currentStaffIndex, voiceName));
 
-            // An independent chord row (`chords name [as roman|both]` in the score).
+            // An independent chord row (`chords name [as roman]` in the score).
             // Defer its collection until AFTER the music voices: the section start
             // table fills while music is processed, and a row spec listed first (or a
             // rows-only score) would otherwise collect every section's block from bar

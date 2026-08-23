@@ -87,7 +87,7 @@ cd C:\MyProj\LilySharp
 
 ⚠️ **判定は機械ではない。** 次のものは「値 site」から**外した**——数え直す人が
 別の線を引けるように、外した根拠を書いておく:
-- **閉じた語彙**（clef 名・旋法・drum 名・強弱名・`up`/`down`・repeat 種別・`as roman|both|names`）＝§3.4。
+- **閉じた語彙**（clef 名・旋法・drum 名・強弱名・`up`/`down`・repeat 種別・`as roman|names`）＝§3.4。
 - **名前・参照**（part 名・変数参照・section ラベル・`lyrics sop` の voice 束縛名）——
   そこに入るのは値ではなく**参照**。
 - **誤り回復の読み飛ばし**と**構造の約物**（`(` `)` `[` `]` `|` `*` `+` `.`）。
@@ -293,7 +293,7 @@ hairpin の `@cresc.up`）——*消費して捨てる*のが欠陥そのもの�
 ### 3.4 閉じた語彙（式にしなくてよい）
 
 clef 名・旋法・instrument preset・accidental style・drum 名・強弱名・`up`/`down`・
-repeat 種別・`as roman|both|names`。**列挙であって値ではない。**
+repeat 種別・`as roman|names`。**列挙であって値ではない。**
 
 ---
 

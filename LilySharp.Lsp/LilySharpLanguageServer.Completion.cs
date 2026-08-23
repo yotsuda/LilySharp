@@ -869,7 +869,7 @@ public sealed partial class LilySharpLanguageServer
         {
             // `… as |` → a display selector, but which one depends on what the `as`
             // governs: `tab … as` takes numbers|full, `chords … as` takes
-            // roman|both|names.
+            // roman|names.
             if (prevWord == "as")
                 return AsSelectorContext(text, offset);
             switch (prevWord)
@@ -929,7 +929,7 @@ public sealed partial class LilySharpLanguageServer
                 }
             }
             // `chords NAME |`: after the chord row's name, offer the
-            // `as roman|both|names` display selector (plus the normal
+            // `as roman|names` display selector (plus the normal
             // continuations, so a following render item is not blocked).
             if (SecondWordBeforeCursor(text, offset) == "chords")
                 return CompletionContext.AfterChordAttachName;
@@ -1180,7 +1180,7 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>
     /// Which display selector an <c>as</c> in a score block governs. <c>tab … as</c>
     /// takes <c>numbers | full</c>; a <c>chords</c> row's <c>as</c> takes
-    /// <c>roman | both | names</c>. The word right before <c>as</c> is the target NAME
+    /// <c>roman | names</c>. The word right before <c>as</c> is the target NAME
     /// in every case, so it can't disambiguate — scan the words before <c>as</c> for
     /// the nearest governing keyword. A <c>chords</c> seen first is the chord display;
     /// a <c>tab</c> seen first is the tab style; a <c>staff</c> or <c>ossia</c> seen
@@ -2241,15 +2241,19 @@ public sealed partial class LilySharpLanguageServer
     };
 
     /// <summary>After <c>chords NAME</c>: the chord DISPLAY
-    /// selector (<c>as roman | as both | as names</c>), then the ordinary render-item
+    /// selector (<c>as roman | as names</c>), then the ordinary render-item
     /// continuations so a following <c>staff</c>/<c>chords</c>/… is not blocked.</summary>
+    /// <remarks>
+    /// ⚠️ <c>as both</c> is NOT offered — it was retired 2026-08-23. To show a track both
+    /// ways the writer places it twice, and the render-item continuations kept below are
+    /// what makes that reachable from here: the next <c>chords</c> is one of them.
+    /// </remarks>
     internal static CompletionList GetChordAttachNameCompletions()
     {
         var items = new System.Collections.Generic.List<CompletionItem>
         {
             AsItem("as roman", "Show chord symbols as Roman-numeral degrees (I, IIm7, V7)", "0"),
-            AsItem("as both", "Show both: the Roman degree stacked above the chord name", "1"),
-            AsItem("as names", "Show absolute chord names (C, Am7) — the default", "2"),
+            AsItem("as names", "Show absolute chord names (C, Am7) — the default", "1"),
         };
         // The next render item can also start here; keep those, sorted after `as …`.
         foreach (var it in GetScoreBlockCompletions().Items)
@@ -2269,13 +2273,12 @@ public sealed partial class LilySharpLanguageServer
         };
     }
 
-    /// <summary>After <c>… as</c>: the three chord display modes.</summary>
+    /// <summary>After <c>… as</c>: the two chord display modes.</summary>
     internal static CompletionList GetChordDisplayModeCompletions()
     {
         var modes = new (string Label, string Detail)[]
         {
             ("roman", "Roman-numeral degrees for the key (I, IIm7, V7)"),
-            ("both", "The Roman degree stacked above the absolute chord name"),
             ("names", "Absolute chord names (C, Am7)"),
         };
         return new CompletionList
