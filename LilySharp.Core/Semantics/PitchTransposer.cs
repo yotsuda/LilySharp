@@ -26,9 +26,12 @@ namespace LilySharp.Core.Semantics;
 /// <remarks>
 /// LILYPOND-REF: lily/pitch.cc Pitch::transpose — add the interval's diatonic
 /// step (carrying the octave past b) then set the alteration to land on the
-/// target semitone. The single-token target gives an UP interval within one
-/// octave (c→c … c→b); a downward / wider interval needs an octave mark on the
-/// target, which the part-option parser does not yet carry.
+/// target semitone. A BARE target gives an UP interval within one octave
+/// (c→c … c→b); octave marks on the target widen it in either direction —
+/// <c>transpose: d'</c> is up a ninth, <c>transpose: c,</c> down an octave.
+/// The parser consumes those marks (<c>ParsePartProperty</c> and
+/// <c>ParseTopLevelTranspose</c> in Parser.Declarations) and
+/// <c>PartTranspose</c> folds them into the <c>toOctave</c> this class takes.
 /// </remarks>
 public static class PitchTransposer
 {
