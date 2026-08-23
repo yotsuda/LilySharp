@@ -86,6 +86,67 @@ public class EmptyMeasureValidatorTests
         Assert.Equal(1, PlaceholderCountIn(src));
     }
 
+    /// <summary>
+    /// A part-major TRACK declares its cells with the same <c>section</c> keyword the parts
+    /// use — <c>chords prog { section A { Dmaj7 | Em7 | … } }</c> — but a track cell holds
+    /// chord symbols or syllables, which own no duration. Measured as MUSIC every one of its
+    /// bars is empty, and that is what happened: the scope list took any section with no
+    /// part-block children, so a sectioned chord track reported an empty measure per bar
+    /// (user report, session 240). The class remark above already stated the principle for
+    /// lyrics — "their barlines ARE the structure" — the code just did not reach the cells.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Every case is FOUR bars, and that is not cosmetic. The warning fires on a bar
+    /// standing between two written barlines, so a two-bar cell has none to give and passes
+    /// with the fix reverted — a case that cannot go red is documentation, not a net. The
+    /// first version of this theory used two-bar cells and only half of it could fail.
+    /// ⚠️ MEASURED with the guard reverted: the three CHORD cases go red, the lyrics one does
+    /// not. Lyric cells were never affected — MeasureModel does not read syllables as bars
+    /// with durations — so that case is a GUARD, not an observer: it pins that lyrics stay
+    /// out of the music measurement if MeasureModel ever learns to split them. Do not read
+    /// its green as evidence that this fix works.
+    /// </remarks>
+    [Theory]
+    [InlineData("chords prog { section A { Dmaj7 | Em7 | Gmaj7 | A7 } }")]  // the reported spelling
+    [InlineData("chords prog { section A { C | F | G | C | } }")]           // …closed by a trailing bar
+    [InlineData("lyrics v { section A { one | two | three | four | } }")]
+    [InlineData("chords prog { section A { C | F | G | Am } section B { G | C | F | C } }")]
+    public void PartMajorTrackCells_AreNotMeasuredAsMusic(string track)
+    {
+        var src = "time 4/4 part m { section A { c4 d e f | g a b c' | } section B { c'4 b a g | } } "
+                + track + " form main { A B } score main { staff m }";
+        Assert.Equal(0, PlaceholderCountIn(src));
+    }
+
+    /// <summary>
+    /// The SECTION-major reach of the same defect, and the one that was in a shipped sample:
+    /// a lead sheet writes its track inside the section — <c>section X { chords prog { … } }</c>
+    /// — and a section holding only track blocks has no part block either, so it was scoped
+    /// and its chord bars measured as music. <c>samples/drunken-sailor.lys</c> printed nine
+    /// of these. The test that was wanted is "does this section hold inline MUSIC", which
+    /// this file already had for the pickup rule.
+    /// </summary>
+    [Theory]
+    [InlineData("section X { chords prog { Dm | Dm | C | C | } }")]
+    [InlineData("section X { lyrics v { one | two | three | four | } }")]
+    [InlineData("section X { chords prog { Dm | Dm | C | C | } lyrics v { one | two | three | four | } }")]
+    public void StafflessLeadSheetSection_IsNotMeasuredAsMusic(string section)
+    {
+        var src = "time 4/4 " + section + " form main { X } score main { chords prog }";
+        Assert.Equal(0, PlaceholderCountIn(src));
+    }
+
+    [Fact]
+    public void AMusicSectionStillWarns_SoTheTrackExemptionIsNotABlanketOne()
+    {
+        // The exemption is the track ANCESTRY, not "any section". A real part-major music
+        // section with a written `| |` keeps its warning while a track sits beside it.
+        var src = "time 4/4 part m { section A { c4 d e f | | g a b c' } } "
+                + "chords prog { section A { C | F } } "
+                + "form main { A } score main { staff m }";
+        Assert.Equal(1, PlaceholderCountIn(src));
+    }
+
     [Fact]
     public void PhraseTrailingBarline_DoesNotPairWithAnOuterBarline()
     {

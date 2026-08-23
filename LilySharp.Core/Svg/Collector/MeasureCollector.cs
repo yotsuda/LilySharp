@@ -4635,7 +4635,15 @@ public sealed partial class MeasureCollector
     /// <summary>True when <paramref name="node"/> sits inside a <c>chords</c> or
     /// <c>lyrics</c> block (a part-major track's inner section), so it is that track's
     /// cell rather than a structure section.</summary>
-    private static bool IsInsidePartMajorTrack(SyntaxNode node)
+    /// <remarks>
+    /// internal because the VALIDATORS need the same answer: a track cell's body is chord
+    /// symbols or syllables, which own no duration, so anything that measures MUSIC has to
+    /// skip it. <c>MeasureValidator.ValidateEmptyPlaceholders</c> did not, and reported
+    /// every inner bar of a <c>chords prog { section A { Dmaj7 | Em7 | … } }</c> as an empty
+    /// measure (LYS2001, user report session 240). One spelling, so the collector and the
+    /// validator cannot disagree about what a section IS.
+    /// </remarks>
+    internal static bool IsInsidePartMajorTrack(SyntaxNode node)
     {
         for (var p = node.Parent; p != null; p = p.Parent)
             if (p is ChordPartBlockSyntax or LyricsBlockSyntax)

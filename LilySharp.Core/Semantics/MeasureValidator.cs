@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Linq;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Semantics;
@@ -104,9 +105,25 @@ internal sealed class MeasureValidator : ISemanticValidator
         var scopes = new List<SyntaxNode>();
         // Section-major: each part block's own music.
         scopes.AddRange(root.DescendantNodes().OfType<PartBlockSyntax>());
-        // Part-major: a section whose body is inline music (no part-block children).
+        // Part-major: a section whose body is inline MUSIC.
+        // ⚠️ "No part-block children" was not that test, and a chord track failed it twice
+        // over (user report, session 240 — every bar of a chord track reported as an empty
+        // measure). Chord symbols and syllables own no duration, so measured as music every
+        // bar of a track cell is empty, and a track reaches this list two ways:
+        //   ⒜ SECTION-major — `section X { chords prog { Dm | Dm | C | } }` — a section
+        //      holding only track blocks has no part block either, so it was scoped and its
+        //      chord bars measured. SectionHasInlineMusic is the test that was wanted: it
+        //      already skips part / chord / lyric blocks and section-level directives, and
+        //      already exists in this file for the pickup rule.
+        //   ⒝ PART-major — `chords prog { section A { Dm | C | } }` — the cell IS a section
+        //      whose direct children are chord entries, so SectionHasInlineMusic says yes.
+        //      Only the ANCESTRY separates it from real music, and that predicate is the
+        //      collector's own so the two cannot disagree about what a section is.
+        // Both conditions only ever REMOVE scopes, so this can drop a warning, never add one.
         foreach (var sec in root.DescendantNodes().OfType<SectionDeclarationSyntax>())
-            if (!sec.DescendantNodes().OfType<PartBlockSyntax>().Any())
+            if (!sec.DescendantNodes().OfType<PartBlockSyntax>().Any()
+                && SectionHasInlineMusic(sec)
+                && !MeasureCollector.IsInsidePartMajorTrack(sec))
                 scopes.Add(sec);
         // A bare top-level note stream (no parts/sections at all).
         if (!root.DescendantNodes().Any(n =>
