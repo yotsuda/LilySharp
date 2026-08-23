@@ -151,7 +151,7 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
-最終更新 第237セッション＝**第236 が「1 行の訂正＝次便の最安の一手」と名指した stale 札を直したら、同じ形の札は *grep で数えられる母集団*だと判って 5 件目が出た。末尾で同じ委任を受け、本便が名指した穴に*着手して閉じた***（5 commit＝`6e822136` exporter の remark／`3081eb7e` transpose の class doc／`5f6a607a` handoff＋archive 3.5＋引用ラチェット／`64502ec3` custom text の輸出／この行）。⚠️ **①〜③ は engine 0 接触・④ だけが出力を動かす**（追跡 1 冊）。
+最終更新 第237セッション＝**第236 が「1 行の訂正＝次便の最安の一手」と名指した stale 札を直したら、同じ形の札は *grep で数えられる母集団*だと判って 5 件目が出た。末尾で同じ委任を 2 度受け、1 度目は着手し 2 度目は断った***（6 commit＝`6e822136` exporter の remark／`3081eb7e` transpose の class doc／`5f6a607a` handoff＋archive 3.5＋引用ラチェット／`64502ec3` custom text の輸出／`3c224ffe` handoff＋骨 4／この行＝断った triage ⑺）。⚠️ **①〜③ は engine 0 接触・④ だけが出力を動かす**（追跡 1 冊）。
 **① 名指された 1 件＝`MusicXmlExporter.cs` の `WalkForm` の remark**。主張 3 つのうち **2 つは移植済み**だった。⑴ nav marks＝`BuildNavDirection` が `NavigationMarkType` の **10 種を全部**持つ（segno/coda は `<segno>`/`<coda>` で jump TARGET として次 section の初小節に置かれ、残り 8 種は `<words>` ＋対応する `<sound>`）⑵ volta ending＝`EmitVoltaRepeatBlock` が `EndingStartNumbers`／`EndingStopNumbers`／`EndingStopType` を置き、`MusicXmlTypes` が `<barline><ending>` に書く。**観測者は `MusicXmlExportShapeTests` に両方在る。** ⑶ **生き残りは custom text だけ。**
 ⚠️ ★★ **その生き残りを第236 は*型名を間違えて*名指していた**——commit message は「`WalkForm` は `MusicMarkSyntax` を見ない」と書いたが、form の `_"text"` は **`CustomTextSyntax`**（`Parser.Form` の `ParseCustomText`）で、**`MusicMarkSyntax` のほうは exporter が実際に扱う**（`ProcessDirectionMark`）。⇒ ★ **札を直すときは*残った 1 件*の綴りも実コードで取る**——間違った型名は次の人を**もう配線済みの class** へ送り、そこで「札のほうが stale だ」と**逆向きに**結論させる。
 ⚠️ ★ **その doc は付いている宣言も間違っていた**。`<summary>` は `WalkForm` を説明しているのに `_pendingTargetDirections` の上に座っていた（そのフィールドは 2 行下に自分のコメントを持つ）。**`CS1591` が `NoWarn` なので、doc の無い method と、他人の doc を着たフィールドは、どちらも永久に静か**——§0 の「0 警告は XML doc の健全性も含む」は**壊れた cref・閉じていない XML まで**で、**付け間違いは見ない**。
@@ -171,7 +171,7 @@ grep -rniE "not (yet|currently) [a-z]+|no (support|mapping|channel) for|unsuppor
 ✅✅ ★★★ **`refs/tags/v0.3.0` の origin 修復は本便の末尾で完了した**（ユーザーが `git push --force origin refs/tags/v0.3.0` を実行・本便が前後を実測）。**origin の ref は今 `master`＝`75093b53` と `v0.3.0`＝tag object `b5d8a9f7` → `ee672314` の 2 本だけで、後者は前者の祖先**——⇒ **origin に到達不能な履歴は 1 つも残っていない。**⚠️ **WSL clone も同じ tag object を持つ**（第236 が `--tags --force` で更新済み・本便が実測。ref は 4 本とも到達可能）。⇒ ★★ **第235 の書き換えは、3 か所（Windows・WSL・origin）で、branch もタグも、これで初めて全部完了した**——**commit の集合では 2026-08-23 に完了しており、ref の集合では 2 日おくれた**（第236 骨 1 の「*全部*が何の集合を指すか」がそのまま値段になった形）。⚠️ **旧 tag object の SHA はここにも書かない**（第236 と同じ理由）。⚠️ **新しい `b5d8a9f7` のほうは書いてよい**——`cat-file` が `tag` と答え、番人の分類器は commit 以外を dead から外す（`HistoryCitationTests` :282-284）ので、**しかも clone に付いてくる**＝第236 骨 2 の判定法で「木の性質」側。
 ⚠️ **副作用は 1 つだけ想定され、そして起きなかった**：`release.yml` は `on: push: tags: ['v*']` なので run が 1 本起きたが（`32618867362`）、**annotation は例の "recent account payments have failed" で `test` は 2 秒で止まっており、既存 Release `v0.3.0`（2026-08-19・draft でも prerelease でもない・asset 5 本）は 1 バイトも触られていない**（本便が `gh run view`／`gh release view` で確認）。⇒ ★ **課金停止は、公開済みタグを貼り直すには一番静かな窓だった**——**復旧後に同じ push をすると `softprops/action-gh-release@v2` が既存 Release を上書き更新する**ので、**もう一度タグを動かす用があるなら、それは復旧前にやること。**
 ⚠️ **GitHub の門は課金停止のまま**（第235 が中身を読み、第236 と本便は再調査していない）。**Linux の証拠は WSL 脚だけ。次便も同じ調査をやり直さないこと。**
-終了時: 本便 5 本（`6e822136`／`3081eb7e`／`5f6a607a`／`64502ec3`／この行）＝**未 push 8**（開始 3 ＋本便 5。⚠️ **ユーザーは本便の途中で master を push していない**＝`git log -1 origin/master` は第236 の `75093b53` のまま）・未追跡 0/木 0・suite **Windows 5807/0/4・WSL 5807/0/4＝両 OS 完全緑（開始比 +1＝④ の観測者 1 本）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊**・Core 0 警告。**live 引用 510 → 515（床を測った値まで上げた）・dead 469＝天井のまま不動**（⚠️ **旧 tag object の SHA を書かなかったので増えていない**＝第236 の警告どおり）。⚠️⚠️ **ref が 1 つ動いている＝`refs/tags/v0.3.0` を origin で貼り替えた**（ユーザーが実行・上に詳細）——**`git status` にも `rev-list` にも出ないので、この行が唯一の記録**（第236 骨 4）。**それ以外の ref は 3 か所とも不動。**
+終了時: 本便 6 本（`6e822136`／`3081eb7e`／`5f6a607a`／`64502ec3`／`3c224ffe`／この行）＝**未 push 9**（開始 3 ＋本便 6。⚠️ **ユーザーは本便の途中で master を push していない**＝`git log -1 origin/master` は第236 の `75093b53` のまま）・未追跡 0/木 0・suite **Windows 5807/0/4・WSL 5807/0/4＝両 OS 完全緑（開始比 +1＝④ の観測者 1 本）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊**・Core 0 警告。**live 引用 510 → 515 → 517（測るたびに床を追従）・dead 469＝天井のまま不動**（⚠️ **旧 tag object の SHA を書かなかったので増えていない**＝第236 の警告どおり）。⚠️⚠️ **ref が 1 つ動いている＝`refs/tags/v0.3.0` を origin で貼り替えた**（ユーザーが実行・上に詳細）——**`git status` にも `rev-list` にも出ないので、この行が唯一の記録**（第236 骨 4）。**それ以外の ref は 3 か所とも不動。**
 
 ★ **この便の値段**:
 
@@ -183,6 +183,7 @@ grep -rniE "not (yet|currently) [a-z]+|no (support|mapping|channel) for|unsuppor
 | ④ §7 3.5（archive へ 1 便落とす）＋ live 引用の床 | `HANDOFF-ARCHIVE.md` に第235 ブロック 99 行・`HistoryCitationTests` の床 510 → 515 | **第236 が建てた番人の初仕事**＝継ぎ目は緑（§1 は 236・archive は 235）・穴は 9 のまま |
 | ⑤ **origin のタグ修復**（ユーザーが実行・本便は材料を出しただけ） | ref のみ（`v0.3.0` → `b5d8a9f7`／`ee672314`）。木は 1 バイトも動かない | **第235 の書き換えが 3 か所とも完了**＝`gh` 実測で Release は無傷・**次の clone から番人は緑** |
 | ⑥ ★★★ **custom text の輸出**（末尾の委任→**着手**・`64502ec3`） | `MusicXmlExporter` に 1 case ＋ `ApplyCustomText`・shape test 1 本 | **本便で唯一 engine を動かした項**＝追跡 1 冊（`custom-text.lys`）のみ出力変化・**毒 2 回とも赤** |
+| ⑦ 委任 2 回目＝**断った**（`⑺`） | 変更なし（grep 3 回） | **穴の実寸を出した**＝importer は `<direction>` から 2 つしか読まない・**form に置き場所が無い** |
 
 - **⑸ ★★★ 次に触るなら＝残債**（第236 の一覧を引き継ぎ、閉じたものを落とし、1 件足した）: 言語仕様の宿題は §1.2 リネーム（ユーザーが MSVS で）だけ／**名指し穴**＝⒤ exporter の paper 未輸出（**需要待ち**＝`LilyPondExporter.cs:662`）／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty・pedal の score 移行検討（ユーザー決定から）／**ブロック回収 9 便**（ユーザー決定・回収するなら dead 天井 469 と live 床を同じ commit で上げ直す）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・非ペア ToCoda の reserve≠draw・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示・実譜の `%` 記号。Marketplace は PAT 待ちのまま（第220 ①）。第97 の二重走査（`StaffAccidentalColumns.cs:103` と `ElementCoordinator.cs:131`）・§2 E の未移植 LP 計算（volta shorten・hairpin niente・`ledger_positions`）・courtesy 群の第131 起票分は**第235 が実コードで開いていることを確かめてある**。
   - ✅ **本便が名指し、そのまま閉じた 1 件＝`CustomTextSyntax`（form の `_"text"`）の MusicXML 輸出**（`64502ec3`。末尾の委任「有利なら着手」→**着手**。**判断根拠は文脈の重なり**＝`WalkForm`／`ApplyNavMark`／`BuildNavDirection`／shape test を全部読んだ直後で、**次便は同じ読解を買い直すことになる**）。`WalkForm` に 1 case ＋ `ApplyCustomText`＝`<direction placement="below"><direction-type><words>` を**直前に出した小節**へ。⚠️ **観測者つき**（`MusicXmlExportShapeTests.CustomText_EmitsWordsAtEndOfTheSectionJustPlayed`）・**毒 2 回**（case 除去→`Assert.Single` が空／`below`→`above`→文字列不一致）。⚠️ **importer は `<words>` を 1 つも読まないので往復しない**——ただし**それは `<words>` の nav mark 8 種で既にそうだった**ので、本便が作った非対称ではない（**次に custom text を往復させたい人は、nav mark と同じ 1 つの穴を埋めることになる**）。
@@ -194,6 +195,12 @@ grep -rniE "not (yet|currently) [a-z]+|no (support|mapping|channel) for|unsuppor
     "差分行 $(@($b).Count) / うち doc コメント以外 $(@($b | Where-Object { $_ -notmatch '^[+-]\s*///' }).Count)"
     ```
     ⇒ ★ **前者（触っていない）は次便で必ず偽になる**（誰かが engine を触った瞬間に）が、**後者は触った便でも使える**ので射程が広い。**そして本便自身が、同じ便の中で前者から後者へ移った。**
+  - ⚠️ ★★★ **⑺ 本便の末尾でもう一度同じ委任を受け、今度は*断った*。数えた結果を置く**（第234 ⑸'・第236 ⑹ と同じ形＝**次便が §2 と importer を読み直さないため**）。
+    **⑴ 温かい島の項は 4 つとも閉じた**（引用の番人とタグ／札の国勢調査／§7 3.5／custom text の輸出）。**第2半が新しく名指したのは 1 件＝importer が `<words>` を読まない**で、それを測った。
+    **⑵ ★★ 穴の実寸＝`<direction>` から importer が読むのは 2 つだけ**（`MusicXmlReader.cs:156` `ReadDirectionTempo`→`<sound tempo>`／`:162` `ReadDirectionDynamics`→`<dynamics>`）。**`<segno>`・`<coda>`・`<words>`・`<sound dacapo|dalsegno|tocoda|fine>` は grep で 1 件も当たらない**——⇒ **穴は「custom text の `<words>`」ではなく*構造系 direction の族まるごと*。**
+    **⑶ ★★★ そして難所は写経ではなく*置き場所*だった。** importer が書く form は **repeat と volta からしか合成されない**（`LysWriter.cs:223` が「null（→ flat layout）when there are no endings」・`:190` は `form main { A }`）。⇒ **section の途中に錨を下ろした `<direction>` には、その form 上の位置が存在しない。** 入れるには ⒜ section を割る ⒝ form 級の `_"text"` ではなく音中の `@text(…)` として取り込む——**どちらも輸入された .lys の見え方が変わる＝ユーザー決定**。
+    ⇒ ★★★ **断りの根拠は「冷たいから」ではなく「型が違うから」**。**本便が着手した ④ は「規則が別のエンジンに明文で在り、写すだけ」**（`MeasureCollector` の 1 文と 2 つの engraver 定数）。**この項は規則を*作る*ところから**で、しかも `LysWriter`／`ImportModel` は本便が 1 行も読んでいない＝**読むところから始まる＝次便と同じスタート地点。今やる利点が無い。**
+    ⚠️ **⑸ の残りは全部ゲート付きか冷えている**（実査済み）: §1.2 リネーム＝MSVS でユーザー／⒤ paper＝需要待ち／⒣ removeEmpty・pedal とブロック回収＝ユーザー決定／Marketplace＝PAT／▶ perf 小粒・⒡ 配管 6 site・小粒 8 件・courtesy 第131＝**§2 に本文が無く起票から**／第97 二重走査＝自分で「+0.3% でコスト対効果の判断」と書いてある／§2 E の未移植 LP 計算＝**6 桁 exact で出力が広く動く**（第234・第236 が同じ理由で断った 3 例目）。
 
 > ## ★★★ 骨 1＝**同じ形の欠陥を 2 回踏んだら、3 回目を待たずに*母集団*を数える**
 > stale な「未実装」札は第234・235・236 で 1 件ずつ、**全部たまたま**見つかっている
@@ -247,6 +254,21 @@ grep -rniE "not (yet|currently) [a-z]+|no (support|mapping|channel) for|unsuppor
 > あとで両方を同じ値に倒す変更が緑のまま通る。**
 > ⚠️ **これは §5.0「再ベースは承認であって観測ではない」のテスト版**で、
 > **snapshot ではなく `Assert.Equal` の右辺で同じことが起きた。**
+
+> ## ★★★ 骨 5＝**委任を断る根拠は「冷たいから」ではなく「*型*が違うから」**
+> 本便は同じ委任を 2 回受け、**1 回目は着手し 2 回目は断った**。両方 MusicXML の島で、
+> **温度はほとんど同じ**——違ったのは**規則の出所**だった。
+> - **着手した ④**: 置き場所を **`MeasureCollector` が 1 文で明文化**しており、
+>   側は **2 つの engraver 定数**が持っていた。⇒ **写すだけ＝今やるのが安い。**
+> - **断った ⑺**: importer には**そもそも置き場所が無い**（form が repeat/volta からしか
+>   合成されない）。⇒ **規則を*作る*＝設計＝ユーザーに見え方が変わる。**
+> ⇒ ★★★ **判定の 1 問**: **「その規則は、もう木のどこかに書いてあるか。」**
+> 書いてあるなら**読んだ人が今やるのが最安**（第236 の「文脈の重なり」はこれの近似）。
+> 書いていないなら、**温めても安くならない**——**読解ではなく決定が律速**だから。
+> ⚠️ **温度だけで決めると、この 2 つは同じ答えになる。** 実際どちらも
+> 「MusicXML・今読んだ・小さそう」に見えた。**分けたのは grep 3 回**（importer が
+> `<direction>` から何を読むか／form をどう合成するか）。**断る前にそれは払う価値がある**
+> ——**払わないと「冷たいから」としか書けず、次便は同じところで同じ判断をやり直す。**
 
 ---
 
