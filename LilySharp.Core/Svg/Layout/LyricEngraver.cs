@@ -393,7 +393,7 @@ internal sealed class LyricEngraver
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
         IReadOnlyDictionary<int, double>? staffYByIndex = null,
         IReadOnlyDictionary<int, double>? noteBoundAnchorY = null,
-        Func<int, int, VerticalSkyline?>? noteBoundStaffDownSkyline = null,
+        Func<int, int, VerticalSkyline?>? anchorStaffDownSkyline = null,
         Func<int, LooseLineSpacer.ChainEnd?>? looseChainEnd = null,
         Func<int, int, (double Room, VerticalSkyline NextStaffUp)?>? betweenStavesEnd = null,
         double lastSpaceableStaffY = 0,
@@ -492,7 +492,7 @@ internal sealed class LyricEngraver
         // left between this staff and the next spaceable one.
         if (!systems.IsDefaultOrEmpty)
             layouts = DistributeLooseLines(layouts, systems, systemSkylines, staffBottom,
-                noteBoundAnchorY, noteBoundStaffDownSkyline, looseChainEnd, betweenStavesEnd,
+                noteBoundAnchorY, anchorStaffDownSkyline, looseChainEnd, betweenStavesEnd,
                 lastSpaceableStaffY, trailingRowStaves, verseSkylineMemo, chainMemo);
 
         return layouts.ToImmutableArray();
@@ -604,7 +604,7 @@ internal sealed class LyricEngraver
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
         double staffBottom,
         IReadOnlyDictionary<int, double>? noteBoundAnchorY,
-        Func<int, int, VerticalSkyline?>? noteBoundStaffDownSkyline,
+        Func<int, int, VerticalSkyline?>? anchorStaffDownSkyline,
         Func<int, LooseLineSpacer.ChainEnd?>? looseChainEnd,
         Func<int, int, (double Room, VerticalSkyline NextStaffUp)?>? betweenStavesEnd,
         double lastSpaceableStaffY,
@@ -717,9 +717,9 @@ internal sealed class LyricEngraver
                 var sysAnchor = isUpperFamily || sysIdx >= systems.Length
                     ? null : LastSpaceableStaffOf(systems[sysIdx]);
                 var perStaffAnchorDown = isUpperFamily
-                    ? noteBoundStaffDownSkyline?.Invoke(sysIdx, familyKey)
+                    ? anchorStaffDownSkyline?.Invoke(sysIdx, familyKey)
                     : sysAnchor is { } a
-                        ? noteBoundStaffDownSkyline?.Invoke(sysIdx, a.StaffIndex)
+                        ? anchorStaffDownSkyline?.Invoke(sysIdx, a.StaffIndex)
                         : null;
                 var anchorDown = perStaffAnchorDown
                     ?? (systemSkylines != null && sysIdx < systemSkylines.Count

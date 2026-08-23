@@ -4407,15 +4407,40 @@ internal sealed class LayoutEngine
             return staffIndex >= 0 && staffIndex < perStaff.Count ? perStaff[staffIndex].Up : null;
         }
 
-        // Wired whenever any note-bound line exists: the upper families read their own
+        // Wired whenever the score carries ANY lyric line: the upper families read their own
         // staff's Down through it, and the block below the system reads its ANCHOR staff's
         // — same list, same reason (the system silhouette knows nothing of dynamics, and a
         // sung staff's f was engraved over the syllable it should have pushed down;
         // audit/lp-geometry lyrics.dynamic.staff-to-lyric).
-        Func<int, int, VerticalSkyline?>? noteBoundStaffDownSkyline = null;
+        // ⚠️ IT USED TO ASK FOR A NOTE-BOUND LINE (`lyrics.Any(l => !l.IsLyricsRow)`), and the
+        // remark above already named the reader that condition forgets: THE BLOCK BELOW THE
+        // SYSTEM. That block exists with no note-bound line at all — a score whose every
+        // lyric is an independent ROW is exactly the case `DistributeLooseLines` adds the
+        // empty `-1` family for ("a book whose only lyrics ARE a row still has that block"),
+        // and it is what `score { staff a  staff b  lyrics v }` builds whenever the row sings
+        // a staff that is NOT the one directly above it. The condition was written for the
+        // families and applied to both.
+        // ⚠️ WHAT THE CLOSED GATE COST IS NOT A THINNER SILHOUETTE, IT IS THE FLOOR ITSELF.
+        // With no per-staff skyline, `ResolveAnchor` falls through to the system silhouette
+        // and pays the `skylineToAnchor` frame step, which is subtracted from the FIRST gap's
+        // minimum — so that minimum went NEGATIVE (−2.994200 on the two-staff repro) where
+        // the anchor staff's own ink floor is +6.362500, and `nonstaff-relatedstaff-spacing`
+        // stopped binding. What the syllable was then drawn at is whatever the spring solve
+        // left: 5.500000 — the spring's NATURAL LENGTH, not a floor — where the room was
+        // loose, and 3.443800 on the system whose chain also carries the next system's
+        // leading row. MEASURED on scratch/…/lyrics.lys: the lower staff's whole notes hang
+        // 2.000000 below its bottom line and verse 1's baseline landed 1.443800 below it, so
+        // the syllables were engraved THROUGH the notes on every system but the last (the
+        // last one runs to the page edge, where the slack hides it).
+        // ⚠️ THE RESERVATION NEVER HAD THIS SPLIT — `LyricReservationBelowSystem` seeds its
+        // walk from `staffSkylines[anchorStaff.StaffIndex].Down` for any anchor staff — so
+        // the page reserved the room and the chain declined to use it. One quantity, two
+        // representations (HANDOFF 5.2.1②), and the disagreement was invisible to the suite
+        // because the reserved side is the one every ledger point reads.
+        Func<int, int, VerticalSkyline?>? anchorStaffDownSkyline = null;
         var nbAnchor = ctx.NoteBoundAnchorY;
-        if (staffByIndex != null && lyrics.Any(l => !l.IsLyricsRow))
-            noteBoundStaffDownSkyline = StaffDownSkyline;
+        if (staffByIndex != null && !lyrics.IsDefaultOrEmpty)
+            anchorStaffDownSkyline = StaffDownSkyline;
 
         // ...and the OTHER end of that block's chain: the next spaceable staff of the same
         // system. Per (system, anchor staff), how much room the two reference points leave
@@ -4460,7 +4485,7 @@ internal sealed class LayoutEngine
             fonts: ctx.Fonts);
         var laid = engraver.CalculateLayouts(
             lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, ctx.StaffYByIndex,
-            ctx.NoteBoundAnchorY, noteBoundStaffDownSkyline, ctx.LooseChainEnd,
+            ctx.NoteBoundAnchorY, anchorStaffDownSkyline, ctx.LooseChainEnd,
             betweenStavesEnd, ctx.LastSpaceableStaffY, ctx.TrailingRowStaves,
             ctx.VerseSkylines, ctx.LyricChains);
 
