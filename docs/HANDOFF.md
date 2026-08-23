@@ -165,7 +165,14 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ★★★ **代償は SHA 引用**: **文書とコードは commit SHA を 538 個引用しており**（HANDOFF-ARCHIVE 492／HANDOFF 124）、**全履歴書き換えはそれを全部 nowhere にする**——**この repo が commit 表題にするほど嫌う欠陥を自分で作ることになる**。⇒ **旧→新の対応表で 958 引用を貼り替えた**（39 ファイル・765 行・**貼り替え後 547 トークンが commit に解決**）。
 ⚠️⚠️ ★★★ **対応表は「作った」ではなく「証明した」**: msg-filter は **tree も author も変えない**ので、旧新を位置で対にしたうえで **2887 組すべてが tree・author・author email・author date・subject まで一致することを確かめ、1 組でも食い違えば貼り替えを拒否する**ようにした（実測 **2887/2887・食い違い 0**・217 は SHA 不変／2670 が移動）。**§5.0 の「壊れた対から出た強い言明は、ただの強い間違い」の履歴版。**
 ⚠️⚠️ ★★★ **第 1 稿はテキストモードで書き戻して改行を壊した**——`SkylineBuilder.cs` が **1 トークンの置換で 2287 行の diff**（RULES §5.1「スクリプトで書き戻すときは LF で」の*逆向き*）。**バイト列として読み書きし直して 765 行**に。⇒ ★★ **機械で文字列を貼り替えるときはバイトで扱う**（改行も BOM も「内容」ではないが「ファイル」ではある）。**検算は `--numstat`＝置換数と行数が桁で合うか。**
-終了時: **未 push 0（本便で force-push 実施＝ユーザー承認）**＝本便 5 本（実装一式／CI 課金／射程の穴／多文書化＋予測表／SHA 引用の貼り替え）・未追跡 0/木 0・suite **Windows 5800/0/4・WSL 5800/0/4＝両 OS 完全緑（開始比 +4＝`HandoffLedgerCitationTests`）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊（1 冊も触っていない）**・Core 0 警告。
+⚠️⚠️ ★★★ **⑦ 旧履歴が `refs/original/*` に残っている＝*安全網*として意図的に置いた**（filter-branch の既定）。**`master` は `ad9ceb3c`・origin と一致**。
+⚠️ **これは次便への罠になる**——**`git log --all` / `git rev-list --all` は旧履歴も数える**（本便で実際に踏んだ: 書き換え直後に「Co-Authored 790 本」と出て一瞬失敗に見えたが、**`--all` が退避 ref を見ていただけ**で `master` では 3 本だった）。⇒ **履歴を数えるときは `--all` ではなく `master` を使うこと。**
+★ **納得したら退避を落とす**（そのあと旧履歴は復元不能）:
+```powershell
+git for-each-ref --format='%(refname)' refs/original | ForEach-Object { git update-ref -d $_ }
+git reflog expire --expire=now --all; git gc --prune=now
+```
+終了時: **未 push 1（この handoff 行のみ。本体 5 本は force-push 済み＝ユーザー承認）**＝本便 6 本（実装一式／CI 課金／射程の穴／多文書化＋予測表／SHA 引用の貼り替え／この行）・未追跡 0/木 0・suite **Windows 5800/0/4・WSL 5800/0/4＝両 OS 完全緑（開始比 +4＝`HandoffLedgerCitationTests`）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊（1 冊も触っていない）**・Core 0 警告。
 
 ★ **この便の値段**:
 
