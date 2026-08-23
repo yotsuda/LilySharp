@@ -4,6 +4,7 @@ A music notation language and engraving engine — publication-quality sheet mus
 from plain text, with an IDE-first toolchain.
 
 [![CI](https://github.com/yotsuda/LilySharp/actions/workflows/ci.yml/badge.svg)](https://github.com/yotsuda/LilySharp/actions/workflows/ci.yml)
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/yotsuda.lilysharp?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=yotsuda.lilysharp)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3%20or%20later-blue.svg)](LICENSE)
 
 ## Overview
@@ -184,8 +185,10 @@ score main "out" { staff melody }
 ### VS Code extension (recommended)
 
 Open the Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`), search for **Lily#**, and
-install `yotsuda.lilysharp`. Then open any `.lys` file: you get diagnostics as you
-type, completion, and a live score preview beside the source.
+install `yotsuda.lilysharp` — or go straight to the
+[Marketplace listing](https://marketplace.visualstudio.com/items?itemName=yotsuda.lilysharp).
+Then open any `.lys` file: you get diagnostics as you type, completion, and a live
+score preview beside the source.
 
 Nothing else to install — each platform's package bundles its own .NET runtime, and
 VS Code picks the one for your machine. See

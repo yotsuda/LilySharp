@@ -8,6 +8,12 @@ tsconfig.json
 *.vsix
 dist/**
 publish-marketplace.ps1
+# ...and the runbook that drives it. DEPLOY.md shipped inside 0.4.0 (7.75 KB of build
+# instructions, PAT setup and Marketplace troubleshooting) because only the script beside
+# it was listed here. It is documentation for whoever publishes the extension, not for
+# whoever installs it. The licence and notice files below are the opposite case and MUST
+# ship: the vsix conveys the code they cover.
+DEPLOY.md
 esbuild.js
 
 # Dependencies are bundled into out/extension.js by esbuild, so ship none of them.
