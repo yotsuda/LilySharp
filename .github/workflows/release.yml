@@ -121,6 +121,20 @@ jobs:
     # That is exactly the failure the paragraph above calls worse than a runtime prompt,
     # arrived at by the two lists drifting rather than by a decision.
     strategy:
+      # ⚠️ ONE LEG AT A TIME, AND 0.4.0 IS WHY. Publishing to the Marketplace is not a
+      # per-target-independent operation the first time an extension is seen: every leg
+      # asks whether the extension exists, all eight got "no" at once, all eight tried to
+      # CREATE it, one won and seven died on "The extension already exists." Five targets
+      # landed anyway, three did not, and 0.4.0 had to be completed by hand -- with the
+      # version already burned, since the Marketplace never accepts a version twice.
+      # Serialised, each leg sees the extension the previous one created. A release costs
+      # about twelve minutes instead of two, which is nothing against finishing a release
+      # by hand.
+      max-parallel: 1
+      # ...and a target that fails must not cancel the others. With fail-fast the seven
+      # survivors were cancelled mid-flight, which is what made the wreckage hard to read:
+      # "cancelled" hides whether a leg would have worked.
+      fail-fast: false
       matrix:
         include:
           - { rid: win-x64,    target: win32-x64   }
