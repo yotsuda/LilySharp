@@ -63,12 +63,15 @@ namespace LilySharp.Tests.LpFidelity;
 /// as confidently as any live commit.
 /// </para>
 /// <para>
-/// <b>What is deliberately NOT asserted.</b> There is no demand that every citation resolve.
-/// Several hundred in the tree name commits that were amended or reset away years of sessions
-/// ago; they are unrepairable, because the commit they meant no longer exists anywhere and
-/// nothing records what it was. <see cref="DeadCitationsDoNotGrow"/> census-counts them under
-/// a ceiling instead, so the backlog cannot quietly grow, in the same bargain as
-/// <c>LpProvenanceTests</c>: not that the backlog be cleared, but that it stop expanding.
+/// <b>What is deliberately NOT asserted.</b> There is no demand that every citation land in
+/// the history. Several hundred in the tree name commits that were amended or reset away
+/// sessions ago; they are unrepairable, because the commit they meant no longer exists
+/// anywhere and nothing records what it was. <see cref="DeadCitationsDoNotGrow"/> census-
+/// counts them under a ceiling instead, so the backlog cannot quietly grow, in the same
+/// bargain as <c>LpProvenanceTests</c>: not that the backlog be cleared, but that it stop
+/// expanding. Nor is unreferenced garbage in the local object database a failure — see
+/// <see cref="CitedCommitsAreNotHeldAliveByAnotherRef"/> for where that line is drawn and
+/// what it cost to find it.
 /// </para>
 /// <para>
 /// <b>Why this shells out to git and refuses to skip.</b> It is the only test in the suite
@@ -102,8 +105,8 @@ public class HistoryCitationTests
     private const int LiveCitationsWhenWritten = 502;
 
     /// <summary>
-    /// The number of citation-shaped tokens that resolve to nothing, when this guard was
-    /// written. A CEILING, not a floor — the backlog may shrink, and must not grow.
+    /// The number of citation-shaped tokens whose commit is not in the history, when this
+    /// guard was written. A CEILING, not a floor — the backlog may shrink, and must not grow.
     /// </summary>
     /// <remarks>
     /// These are commits that an amend or a reset orphaned before anyone thought to check.
@@ -132,8 +135,8 @@ public class HistoryCitationTests
     private static readonly Regex HexRun = new(@"\b[0-9a-f]{7,40}\b", RegexOptions.Compiled);
 
     /// <summary>
-    /// Of the tokens git could NOT resolve, the ones shaped like a citation rather than like a
-    /// number. Every citation in this repository that git does resolve is 7 or 8 characters
+    /// Of the tokens that are not live citations, the ones shaped like a citation rather than
+    /// like a number. Every citation in this repository that is live is 7 or 8 characters
     /// long, and the tree is full of hexadecimal-looking decimals — residuals such as
     /// <c>034143669</c> and <c>004735433</c> — which carry no letters at all. Requiring two
     /// letters inside a 7-to-10 run separates them; it also, honestly, misses the dead
@@ -207,6 +210,7 @@ public class HistoryCitationTests
         IReadOnlyList<Token> Occurrences,
         IReadOnlyDictionary<string, string?> ResolvedTo,
         IReadOnlySet<string> Reachable,
+        IReadOnlySet<string> HeldByAnotherRef,
         string Tip);
 
     private static readonly Lazy<Survey> Shared = new(Take, isThreadSafe: true);
@@ -276,21 +280,49 @@ public class HistoryCitationTests
         Assert.True(reachable.Count > 1000,
             $"rev-list {tip} returned {reachable.Count} commits — that is not this history.");
 
-        return new Survey(occurrences, resolved, reachable, tip);
+        // Commits some OTHER ref keeps alive. This is the line between a defect that travels
+        // with the repository and a local housekeeping detail: see HeldOnlyByAnotherRef.
+        var heldElsewhere = Git(new[] { "rev-list", "--all", "--not", tip }).Out
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(l => l.Trim())
+            .ToHashSet(StringComparer.Ordinal);
+
+        return new Survey(occurrences, resolved, reachable, heldElsewhere, tip);
     }
 
     /// <summary>
-    /// No cited SHA may resolve to a commit that the branch cannot reach. This is the whole
-    /// bone: such a citation is worse than a dead one, because it answers every check anyone
-    /// would think to run.
+    /// No cited SHA may resolve to a commit that the branch cannot reach but SOME OTHER REF
+    /// holds alive. That is a ref left behind by a partial rewrite, and the citation under it
+    /// answers every check anyone would think to run.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The qualifier is not a softening, and the first version of this test did not have it.
+    /// It failed on Windows with the one real defect, then failed on the Linux leg with FORTY-
+    /// EIGHT more — every one of them "kept alive by:" nothing at all. Those are orphans of
+    /// old amends sitting in that clone's object database, and the two machines disagreed only
+    /// because one had been garbage-collected the day before and the other had not. A test
+    /// that goes red because of when someone last ran <c>gc</c> is measuring the machine, not
+    /// the tree, and this suite has a name for a check whose answer depends on where it ran.
+    /// </para>
+    /// <para>
+    /// So the line is drawn at REFS, which travel: a tag or branch pointing off the history is
+    /// a fact about the repository that every clone fetches and every reader inherits, and it
+    /// is the shape the trailer rewrite actually left behind. Unreferenced garbage is a fact
+    /// about one disk. It is not ignored — it stops counting as a live citation and falls into
+    /// <see cref="DeadCitationsDoNotGrow"/>, which is what it honestly is: a citation whose
+    /// commit is not in the history, that happens to still get an answer here.
+    /// </para>
+    /// </remarks>
     [Fact]
-    public void CitedCommitsAreReachableFromTheBranch()
+    public void CitedCommitsAreNotHeldAliveByAnotherRef()
     {
         var s = Shared.Value;
 
         var zombies = s.Occurrences
-            .Where(o => s.ResolvedTo[o.Text] is string sha && !s.Reachable.Contains(sha))
+            .Where(o => s.ResolvedTo[o.Text] is string sha
+                        && !s.Reachable.Contains(sha)
+                        && s.HeldByAnotherRef.Contains(sha))
             .GroupBy(o => o.Text, StringComparer.Ordinal)
             .OrderBy(g => g.Key, StringComparer.Ordinal)
             .ToArray();
@@ -300,11 +332,12 @@ public class HistoryCitationTests
 
         var report = new StringBuilder();
         report.AppendLine(
-            $"{zombies.Length} cited commit(s) resolve here but are NOT reachable from "
-            + $"{s.Tip}. A SHA that resolves is not a SHA that is in the history: git "
-            + "rev-parse reads the object database, so an object kept alive by some OTHER ref "
-            + "— a tag a partial rewrite forgot, a stale remote-tracking branch — answers just "
-            + "like a live commit, and the citation looks verified forever.");
+            $"{zombies.Length} cited commit(s) are NOT reachable from {s.Tip}, yet another ref "
+            + "holds them alive. A SHA that resolves is not a SHA that is in the history: git "
+            + "rev-parse reads the object database, so a commit anchored by a tag that a "
+            + "partial rewrite forgot — or by a stale remote-tracking branch — answers just "
+            + "like a live commit, and the citation looks verified forever. Re-point or delete "
+            + "the ref; do not re-point the citation.");
         report.AppendLine();
         foreach (var z in zombies)
         {
@@ -339,15 +372,24 @@ public class HistoryCitationTests
     }
 
     /// <summary>
-    /// The backlog of citations that resolve to nothing may shrink and must not grow.
+    /// The backlog of citations whose commit is not in the history may shrink and must not
+    /// grow.
     /// </summary>
+    /// <remarks>
+    /// Dead is defined as NOT LIVE — not as "git could not answer it". Those are different
+    /// sets on a working clone, by exactly the objects a <c>gc</c> has not swept yet, and
+    /// defining it the other way is what made this census read 469 on one machine and 421 on
+    /// another for the same tree. Reachability from the branch is a property of the history;
+    /// resolvability is a property of a disk.
+    /// </remarks>
     [Fact]
     public void DeadCitationsDoNotGrow()
     {
         var s = Shared.Value;
         var dead = s.Occurrences
             .Select(o => o.Text).Distinct(StringComparer.Ordinal)
-            .Where(t => s.ResolvedTo[t] is null && LooksLikeCitation(t))
+            .Where(t => LooksLikeCitation(t)
+                        && !(s.ResolvedTo[t] is string sha && s.Reachable.Contains(sha)))
             .ToArray();
 
         _output.WriteLine($"dead citation-shaped tokens: {dead.Length} (ceiling {DeadCitationsWhenWritten})");
