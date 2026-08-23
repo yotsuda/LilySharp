@@ -293,6 +293,63 @@ public class MusicXmlExportShapeTests
         Assert.Contains(doc.Descendants("sound"), s => s.Attribute("fine")?.Value == "yes");
     }
 
+    /// <summary>
+    /// A form-level <c>_"text"</c> reaches MusicXML as a bare <c>&lt;words&gt;</c> on the
+    /// last measure of the section just played — the position MeasureCollector already
+    /// gives it, and the one the jump-from navigation marks above use.
+    /// </summary>
+    /// <remarks>
+    /// The exporter walked past this node while the mapping existed for every one of its
+    /// siblings, and the remark above WalkForm said so — but that remark said the same about
+    /// nav marks and volta endings, which had both shipped. So the assertions here pin the
+    /// POSITION and the absence of <c>&lt;sound&gt;</c> rather than merely that a
+    /// <c>&lt;words&gt;</c> appears somewhere: "it is exported" is the claim that rotted.
+    /// <para>
+    /// ⚠️ <c>placement</c> is asserted as "below" against the ENGINE, not against the
+    /// exporter: CustomTextEngraver's baseline is below the staff middle while
+    /// MusicMarkEngraver's is above it. The first draft of both this test and the method it
+    /// covers said "above", copied from the nav marks — the test agreed with the code and
+    /// they were wrong together, which is the failure mode a test written after the code is
+    /// prone to. The number to check a placement against lives in the engraver.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void CustomText_EmitsWordsAtEndOfTheSectionJustPlayed()
+    {
+        var doc = Export("""
+            octave absolute
+            time 4/4
+            part m { clef treble }
+            section A { m { c'4 d' e' f' | } }
+            section B { m { g'4 a' b' c'' | } }
+            form main { A _"rit." B fine }
+            score main { staff m }
+            """);
+        var measures = doc.Descendants("measure").ToList();
+        Assert.Equal(2, measures.Count);
+
+        // END of the section just played — measure 1 (A), not the start of B.
+        var words = doc.Descendants("words").Where(w => w.Value == "rit.").ToList();
+        Assert.Single(words);
+        Assert.Contains(measures[0].Descendants("words"), w => w.Value == "rit.");
+        Assert.DoesNotContain(measures[1].Descendants("words"), w => w.Value == "rit.");
+
+        // BELOW the staff — CustomTextEngraver's baseline (2.0 - 5.5 Y-up from the staff
+        // middle) is under it. The Fine in the same form is a nav mark, whose engraver puts
+        // it at 2.0 - (-2.0), over the staff: one document, the two sides opposed, so a later
+        // edit cannot quietly collapse them onto one value.
+        var dir = words[0].Ancestors("direction").Single();
+        var fine = doc.Descendants("words").Single(w => w.Value == "Fine")
+                      .Ancestors("direction").Single();
+        Assert.Equal("below", dir.Attribute("placement")?.Value);
+        Assert.Equal("above", fine.Attribute("placement")?.Value);
+
+        // Free text carries no playback meaning: the <direction> holding it has no <sound>
+        // — while Fine, which does, keeps its own.
+        Assert.Empty(dir.Elements("sound"));
+        Assert.NotEmpty(fine.Elements("sound"));
+    }
+
     [Fact]
     public void PercentRepeat_ExportsMeasureRepeatSign()
     {

@@ -424,9 +424,9 @@ public sealed class MusicXmlExporter
     /// section, a repeat block brackets its span with repeat barlines, a volta writes
     /// its <c>&lt;ending&gt;</c> brackets (<see cref="EmitVoltaRepeatBlock"/>) and a nav
     /// mark its <c>&lt;segno&gt;</c> / <c>&lt;coda&gt;</c> / <c>&lt;words&gt;</c>
-    /// direction (<see cref="ApplyNavMark"/>, all ten <see cref="NavigationMarkType"/>).
-    /// Only <see cref="CustomTextSyntax"/> (<c>_"text"</c>) has no mapping yet — the
-    /// music around it is still emitted, so nothing is lost.</summary>
+    /// direction (<see cref="ApplyNavMark"/>, all ten <see cref="NavigationMarkType"/>),
+    /// and a <c>_"text"</c> directive its own <c>&lt;words&gt;</c>
+    /// (<see cref="ApplyCustomText"/>).</summary>
     private void WalkForm(SyntaxNode container, Dictionary<string, List<SectionDeclarationSyntax>> byName)
     {
         _pendingTargetDirections.Clear();
@@ -449,6 +449,9 @@ public sealed class MusicXmlExporter
                     break;
                 case NavigationMarkSyntax nav:
                     ApplyNavMark(nav.MarkType);
+                    break;
+                case CustomTextSyntax custom:
+                    ApplyCustomText(custom.Text);
                     break;
                 // A ':|' written in the form itself, outside any '|: … :|' block. It caps
                 // the section just played, on every part — the barline is a score-level
@@ -507,6 +510,49 @@ public sealed class MusicXmlExporter
                     p.Measures[^1].Notes.Add(
                         new MusicXmlNote { RawElement = new System.Xml.Linq.XElement(dir) });
         }
+    }
+
+    /// <summary>Places a form-level <c>_"text"</c> directive as a plain
+    /// <c>&lt;words&gt;</c> direction, BELOW the staff, on the last measure emitted.</summary>
+    /// <remarks>
+    /// Neither the measure nor the side is chosen here; both are read off the engine that
+    /// already draws this node.
+    /// <list type="bullet">
+    /// <item>MEASURE — MeasureCollector states the rule in as many words: free text between
+    /// sections, "engraved like the jump-from navigation text at the END of the section just
+    /// played", and it gives the item the same measure index those marks get
+    /// (<c>CurrentMeasureIndex - 1</c>). That is what <see cref="ApplyNavMark"/>'s non-target
+    /// branch already does here, so the attachment is shared rather than reinvented.</item>
+    /// <item>SIDE — NOT shared, which is worth saying precisely because of the resemblance
+    /// above. CustomTextEngraver's baseline is <c>2.0 - 5.5</c> Y-up from the staff middle,
+    /// i.e. BELOW the staff; MusicMarkEngraver's is <c>2.0 - (-2.0)</c>, ABOVE it. The nav
+    /// marks are rightly <c>placement="above"</c> and this one is <c>"below"</c>. Copying
+    /// the whole of ApplyNavMark put it on the wrong side of the staff in the first draft,
+    /// and nothing else in the suite reads placement.</item>
+    /// </list>
+    /// <para>
+    /// No <c>&lt;sound&gt;</c>: unlike the ten navigation marks this carries no playback
+    /// meaning, and a <c>&lt;sound&gt;</c> attribute would assert a jump nobody wrote. No
+    /// empty-text guard either, for the same reason the side is not decided here — the
+    /// collector adds the item whatever the string is, and a guard would make the two
+    /// engines disagree about <c>_""</c>.
+    /// </para>
+    /// <para>
+    /// ⚠️ The importer does not read <c>&lt;words&gt;</c> at all, so this does not round
+    /// trip — but that is the state it was already in for the eight <c>&lt;words&gt;</c>
+    /// navigation marks, not something this mapping introduces.
+    /// </para>
+    /// </remarks>
+    private void ApplyCustomText(string text)
+    {
+        var dir = new System.Xml.Linq.XElement("direction",
+            new System.Xml.Linq.XAttribute("placement", "below"),
+            new System.Xml.Linq.XElement("direction-type",
+                new System.Xml.Linq.XElement("words", text)));
+        foreach (var p in Document.Parts)
+            if (p.Measures.Count > 0)
+                p.Measures[^1].Notes.Add(
+                    new MusicXmlNote { RawElement = new System.Xml.Linq.XElement(dir) });
     }
 
     /// <summary>The MusicXML &lt;direction&gt; for a navigation mark, and whether it
