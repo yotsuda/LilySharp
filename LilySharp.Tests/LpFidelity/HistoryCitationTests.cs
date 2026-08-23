@@ -102,7 +102,7 @@ public class HistoryCitationTests
     /// the drop would have been the thing that opened the investigation instead of a stray
     /// observation at the end of a long session.
     /// </remarks>
-    private const int LiveCitationsWhenWritten = 507;
+    private const int LiveCitationsWhenWritten = 508;
 
     /// <summary>
     /// The number of citation-shaped tokens whose commit is not in the history, when this
