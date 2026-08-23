@@ -53,6 +53,14 @@ public readonly record struct DiatonicChord(
     // are both the display and the insert text.)
 
     /// <summary>Roman-numeral degree: uppercase major, lowercase minor/dim, with °/+.</summary>
+    /// <remarks>
+    /// ⚠️ THIS IS ANALYSIS NOTATION, NOT A LILY# ENTRY. It is shown to a reader (the
+    /// completion's Detail line names the function of a chord it is offering by name);
+    /// Lily#'s own degree spelling is <see cref="RomanSymbol"/>, which keeps the numeral
+    /// uppercase and carries the quality as a suffix, exactly as
+    /// <c>ChordStructure.ToRomanNumeral</c> prints it. Do not insert this one: the
+    /// lowercase numeral is not the grammar and the ° does not even lex.
+    /// </remarks>
     public string Roman
     {
         get
@@ -62,6 +70,26 @@ public readonly record struct DiatonicChord(
             return Quality switch { "dim" => r + "°", "aug" => r + "+", _ => r };
         }
     }
+
+    /// <summary>The numeral alone, always uppercase — the head of a Lily# degree entry.</summary>
+    public string Numeral => new[] { "I", "II", "III", "IV", "V", "VI", "VII" }[Degree];
+
+    /// <summary>This degree written as a Lily# chord ENTRY: <c>I</c>, <c>IIm</c>,
+    /// <c>VIIdim</c>. The numeral plus the SAME quality suffix the absolute
+    /// <see cref="Symbol"/> carries.</summary>
+    /// <remarks>
+    /// ⚠️ No accidental prefix, and that is a property of being DIATONIC: the degree's root
+    /// is the key's own note on that letter, so <c>ChordStructure.ToRomanNumeral</c> emits
+    /// no ♭/♯ for it. A chromatic degree would need one, and would not come from here.
+    /// ⚠️ The suffix is the ASCII one (<c>dim</c>, <c>m7-5</c>), not the printed roman
+    /// symbols (° ø7) — MEASURED: the lexer refuses those characters outright, so offering
+    /// them would hand the writer a spelling the compiler cannot read.
+    /// </remarks>
+    public string RomanSymbol => Numeral + Quality;
+
+    /// <summary>The diatonic seventh as a Lily# degree entry: <c>Imaj7</c>, <c>IIm7</c>,
+    /// <c>V7</c>, <c>VIIm7-5</c>.</summary>
+    public string RomanSeventhSymbol => Numeral + SeventhQuality;
 }
 
 /// <summary>

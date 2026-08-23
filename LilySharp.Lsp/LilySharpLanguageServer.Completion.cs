@@ -109,8 +109,13 @@ public sealed partial class LilySharpLanguageServer
 
         // Inside a @chord(…) argument OR a chords { } block, offer the current key's
         // diatonic chords — one format for both (insert text is the chords{} form).
-        if (IsInsideChordAnnotation(doc.Text, offset) || IsInsideChordsBlock(doc.Text, offset))
+        // ⚠️ The ROMAN degrees are offered only in the BLOCK. The annotation reads
+        // TryParseChordEntry alone, so `@chord(V7)` is refused — measured, and the reason
+        // this is one call with a flag rather than one list for both contexts.
+        if (IsInsideChordAnnotation(doc.Text, offset))
             return GetDiatonicChordCompletions(doc.Text, offset);
+        if (IsInsideChordsBlock(doc.Text, offset))
+            return GetDiatonicChordCompletions(doc.Text, offset, degreesToo: true);
 
         return context switch
         {
@@ -3365,7 +3370,15 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>The seven diatonic chords of the key in force at
     /// <paramref name="offset"/> (C major when none), each a chord-name symbol like
     /// C, Dm, Em, F, G, Am, Bdim — computed from the key's tonic + signature.</summary>
-    internal static CompletionList GetDiatonicChordCompletions(string text, int offset)
+    /// <param name="degreesToo">Offer each degree's ROMAN entry (<c>I</c>, <c>IIm7</c>,
+    /// <c>V7</c>) beside the absolute symbol. ⚠️ Only true inside a <c>chords { }</c>
+    /// block: MEASURED that <c>@chord(V7)</c> is refused ("Unknown annotation '@chord(V7)'
+    /// — it is ignored"), because the annotation reads
+    /// <c>ChordStructure.TryParseChordEntry</c> alone. Offering degrees there would teach
+    /// a spelling the compiler rejects — the failure two of this session's other islands
+    /// already shipped once each.</param>
+    internal static CompletionList GetDiatonicChordCompletions(
+        string text, int offset, bool degreesToo = false)
     {
         var prefix = text.Substring(0, Math.Min(offset, text.Length));
         var matches = KeyDeclRegex().Matches(prefix);
@@ -3391,13 +3404,31 @@ public sealed partial class LilySharpLanguageServer
             SortText = $"{degree:D2}{rank}",
         };
 
+        // Grouped by DEGREE, not by spelling: the writer is choosing a harmonic function
+        // first and how to spell it second, so a degree's four name forms and its two
+        // degree forms sit together under it.
         var items = DiatonicChords.ForKey(tonic, sharps)
-            .SelectMany(c => new[]
+            .SelectMany(c =>
             {
-                Item(c.Symbol, $"Diatonic triad ({c.Roman})", c.Degree, 0),
-                Item(c.SeventhSymbol, "Diatonic 7th", c.Degree, 1),
-                Item(c.SusFourthSymbol, "Suspended 4th", c.Degree, 2),
-                Item(c.SusSecondSymbol, "Suspended 2nd", c.Degree, 3),
+                var forDegree = new List<CompletionItem>
+                {
+                    Item(c.Symbol, $"Diatonic triad ({c.Roman})", c.Degree, 0),
+                    Item(c.SeventhSymbol, "Diatonic 7th", c.Degree, 1),
+                    Item(c.SusFourthSymbol, "Suspended 4th", c.Degree, 2),
+                    Item(c.SusSecondSymbol, "Suspended 2nd", c.Degree, 3),
+                };
+                if (degreesToo)
+                {
+                    // Only the SCALE's chords are offered as degrees, so no entry here ever
+                    // needs an accidental prefix and every one of them resolves to the
+                    // absolute symbol printed beside it. A chromatic degree (bVII, #IVm7-5)
+                    // is writable but is not a completion: it is not in this key.
+                    forDegree.Add(Item(c.RomanSymbol,
+                        $"Degree of the key — {c.Symbol}", c.Degree, 4));
+                    forDegree.Add(Item(c.RomanSeventhSymbol,
+                        $"Degree 7th — {c.SeventhSymbol}", c.Degree, 5));
+                }
+                return forDegree;
             })
             .ToArray();
         return new CompletionList { Items = items };
