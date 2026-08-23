@@ -49,6 +49,8 @@ internal static class LysWriter
             sb.Append("composer \"").Append(EscapeString(doc.Composer!)).Append("\"\n");
         sb.Append('\n');
 
+        WritePaper(sb, doc.Paper);
+
         if (doc.Tempo is int tempo)
             sb.Append("tempo ").Append(tempo).Append('\n');
 
@@ -128,6 +130,42 @@ internal static class LysWriter
         sb.Append("}\n");
 
         return sb.ToString();
+    }
+
+    // ---- paper ------------------------------------------------------------
+
+    /// <summary>
+    /// Writes the page the source stated as a <c>paper { }</c> block — only the keys it
+    /// stated, so everything else keeps the paper block's own (a4) defaults.
+    /// </summary>
+    /// <remarks>
+    /// Values arrive in millimetres (the reader owns the tenths bridge) and are written
+    /// to two decimals: one tenth is about 0.18mm at the common scaling, so 0.01mm
+    /// out-resolves the source's own unit while trimming the noise a tenths-times-scale
+    /// product carries (a 1190.55-tenths A4 width must read back as a width, not as a
+    /// 15-digit decimal).
+    /// </remarks>
+    private static void WritePaper(StringBuilder sb, ImportPaper? paper)
+    {
+        if (paper == null)
+            return;
+        (string Key, double? Mm)[] entries =
+        [
+            ("paperWidth", paper.WidthMm), ("paperHeight", paper.HeightMm),
+            ("leftMargin", paper.LeftMm), ("rightMargin", paper.RightMm),
+            ("topMargin", paper.TopMm), ("bottomMargin", paper.BottomMm),
+        ];
+        if (!entries.Any(e => e.Mm != null))
+            return;
+        sb.Append("paper {\n");
+        foreach (var (key, mm) in entries)
+        {
+            if (mm is { } value)
+                sb.Append("  ").Append(key).Append(' ')
+                  .Append(value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))
+                  .Append("mm\n");
+        }
+        sb.Append("}\n\n");
     }
 
     // ---- sections ---------------------------------------------------------

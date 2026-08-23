@@ -76,6 +76,7 @@ internal static class MusicXmlReader
             Composer = Els(Local(root, "identification"), "creator")
                 .FirstOrDefault(c => (string?)c.Attribute("type") == "composer")?.Value.Trim(),
         };
+        doc.Paper = ReadPageLayout(root, report);
 
         // Part names come from the part-list; the <part> elements carry the music.
         var names = new Dictionary<string, string?>();
@@ -833,6 +834,92 @@ internal static class MusicXmlReader
         using var reader = new StreamReader(es);
         return reader.ReadToEnd();
     }
+
+    // ---- page layout ------------------------------------------------------
+
+    /// <summary>
+    /// Reads <c>&lt;defaults&gt;&lt;page-layout&gt;</c> into millimetres, or null when the
+    /// document states no page. Only the keys the source states are filled — an absent
+    /// margin stays null and the paper block's own default covers it.
+    /// </summary>
+    /// <remarks>
+    /// <c>&lt;scaling&gt;</c> is the ONLY bridge from tenths to a physical unit, so a
+    /// page-layout without a usable scaling is dropped with a warning rather than
+    /// converted by a guessed scale — the report's contract is "never emitted wrong".
+    /// <para>
+    /// The same scaling states the STAFF size (40 tenths = one staff height), which
+    /// Lily# deliberately does not have as a knob (GRAMMAR 2.5: the staff space is the
+    /// unit itself). A source staff of a DIFFERENT size is said out loud, because the
+    /// page is kept while the music on it is not the source's size — the one honest
+    /// combination is page-as-stated plus a warning. "Different" is read at whole-point
+    /// resolution: Lily#'s staff is 20 TeX points = 19.93 DTP points and the common
+    /// MusicXML default (7.05556mm per 40 tenths) is 20.00 DTP points — the 0.4% gap is
+    /// the TeX-vs-DTP point, a spelling difference, not a size choice, and both round
+    /// to 20pt; any deliberate size choice sits whole points away.
+    /// </para>
+    /// </remarks>
+    private static ImportPaper? ReadPageLayout(XElement root, ImportReport report)
+    {
+        var defaults = Local(root, "defaults");
+        var pageLayout = Local(defaults, "page-layout");
+        if (pageLayout == null)
+            return null;
+
+        var scaling = Local(defaults, "scaling");
+        double millimeters = ParseDouble(Local(scaling, "millimeters")?.Value);
+        double tenths = ParseDouble(Local(scaling, "tenths")?.Value);
+        if (millimeters <= 0 || tenths <= 0)
+        {
+            report.Warn("the <page-layout> is stated in tenths but the document has no "
+                + "usable <scaling>, so the page dimensions cannot be converted and are dropped.");
+            return null;
+        }
+        double mmPerTenth = millimeters / tenths;
+
+        double staffPt = mmPerTenth * 40.0 * 72.0 / 25.4;
+        if (Math.Round(staffPt) != 20)
+            report.Warn($"the source staff is about {Math.Round(staffPt)}pt; Lily# engraves "
+                + "a fixed 20pt staff, so the music will fill the stated page differently.");
+
+        var paper = new ImportPaper();
+        if (Local(pageLayout, "page-width") is { } w)
+            paper.WidthMm = ParseDouble(w.Value) * mmPerTenth;
+        if (Local(pageLayout, "page-height") is { } h)
+            paper.HeightMm = ParseDouble(h.Value) * mmPerTenth;
+
+        // <page-margins> comes as one set for both parities, or an odd/even pair.
+        // Lily#'s margins are per-document, so the odd (first-page) set wins and a
+        // DIFFERING even set is reported, not silently averaged or dropped.
+        var marginSets = Els(pageLayout, "page-margins").ToList();
+        var odd = marginSets.FirstOrDefault(m => ((string?)m.Attribute("type") ?? "both") != "even");
+        var even = marginSets.FirstOrDefault(m => (string?)m.Attribute("type") == "even");
+        var margins = odd ?? even;
+        if (margins != null)
+        {
+            paper.LeftMm = MarginMm(margins, "left-margin", mmPerTenth);
+            paper.RightMm = MarginMm(margins, "right-margin", mmPerTenth);
+            paper.TopMm = MarginMm(margins, "top-margin", mmPerTenth);
+            paper.BottomMm = MarginMm(margins, "bottom-margin", mmPerTenth);
+
+            if (odd != null && even != null && !SameMargins(odd, even))
+                report.Warn("the even-page margins differ from the odd-page ones; Lily# "
+                    + "margins are per-document, so the odd-page set is used.");
+            // A lone type="odd" set means even pages MIRROR it (left and right swap) —
+            // the identity when the sides are equal, unrepresentable when they are not.
+            else if (even == null && (string?)odd?.Attribute("type") == "odd"
+                     && paper.LeftMm != paper.RightMm)
+                report.Warn("the margins are stated for odd pages only (even pages mirror "
+                    + "them); Lily# margins are per-document, so every page gets the odd-page set.");
+        }
+        return paper;
+    }
+
+    private static double? MarginMm(XElement margins, string name, double mmPerTenth)
+        => Local(margins, name) is { } el ? ParseDouble(el.Value) * mmPerTenth : null;
+
+    private static bool SameMargins(XElement a, XElement b)
+        => new[] { "left-margin", "right-margin", "top-margin", "bottom-margin" }
+            .All(n => ParseDouble(Local(a, n)?.Value) == ParseDouble(Local(b, n)?.Value));
 
     // ---- helpers ----------------------------------------------------------
 

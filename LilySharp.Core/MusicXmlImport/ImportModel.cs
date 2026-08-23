@@ -31,7 +31,26 @@ internal sealed class ImportDocument
     public string? Composer { get; set; }
     /// <summary>Opening tempo (quarter BPM), or null when the source gives none.</summary>
     public int? Tempo { get; set; }
+    /// <summary>The page the document states (<c>&lt;defaults&gt;&lt;page-layout&gt;</c>),
+    /// or null when it states none.</summary>
+    public ImportPaper? Paper { get; set; }
     public List<ImportPart> Parts { get; } = new();
+}
+
+/// <summary>
+/// The page dimensions from <c>&lt;defaults&gt;&lt;page-layout&gt;</c>, already converted
+/// to MILLIMETRES (the reader owns the tenths-to-mm bridge, <c>&lt;scaling&gt;</c>, so the
+/// serializer never sees a tenth). Each field is null when the source did not state it —
+/// only stated keys are written, the paper block's own defaults cover the rest.
+/// </summary>
+internal sealed class ImportPaper
+{
+    public double? WidthMm { get; set; }
+    public double? HeightMm { get; set; }
+    public double? LeftMm { get; set; }
+    public double? RightMm { get; set; }
+    public double? TopMm { get; set; }
+    public double? BottomMm { get; set; }
 }
 
 /// <summary>One part (staff) of the score.</summary>
