@@ -1631,6 +1631,70 @@ internal static class LpGeometryProbes
     private static readonly string LYRMV = LyricTwoStaffPageScore("LYRMV", secondVerse: true);
 
     /// <summary>
+    /// AN INDEPENDENT LYRICS ROW STANDING BELOW *TWO* STAVES — the mirror of books RD/RF in
+    /// probes/lyric-row-two-staff.ly. Two staves, two verses, three systems of identical
+    /// content, and the row sings the UPPER staff while hanging under the LOWER one.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE CELL NO OTHER BOOK HERE FILLS, and the reason it was empty is worth keeping:
+    /// the tracked corpus never spells this arrangement. Census, session 238 — 575 score
+    /// blocks, 36 with two or more staves, NONE of those with a lyrics row. Every instrument
+    /// in the tree agreed about the shape for free, which is not the same as being right
+    /// about it, and a user reported syllables engraved through the lower staff's noteheads.
+    /// <para>
+    /// ⚠️ THE ROW ARRANGEMENT IS THE WHOLE POINT — `lyrics one` stands on its OWN line after
+    /// both staves, where <see cref="LYRM"/> writes `staff melody  lyrics one` and gets the
+    /// NOTE-BOUND line. LilyPond spells the same difference by placing its Lyrics context
+    /// after the SECOND Staff context, and reads the two arrangements identically
+    /// (page-layout-problem.cc:919-925 — a Lyrics context is a non-spaceable line wherever it
+    /// stands). Lily# did not: the per-staff down-skyline was wired only when SOME line was
+    /// note-bound, so a row-only score fell through to the system silhouette and the chain's
+    /// first gap carried a NEGATIVE minimum.
+    /// </para>
+    /// <para>
+    /// ★ THE PAIR IS ONE VARIABLE APART: the LOWER staff's pitch, and nothing else. RD hangs
+    /// c1 a ledger line BELOW its staff (the reported book's shape); RF puts b1 on the middle
+    /// line, where the staff's own bottom line is the deepest ink at the syllables' X. That is
+    /// what separates "the skyline term binds" from "the 5.5 ideal binds", and the two books
+    /// fork by 1.454003 in LilyPond.
+    /// </para>
+    /// <para>
+    /// ★★ THREE SYSTEMS, AND EVERY ONE OF THEM IS READ. Both engines FORK BY SYSTEM: the two
+    /// systems that have another one after them read the skyline minimum, and the LAST one
+    /// reads the 5.5 ideal, because its chain runs to the page edge where the room is
+    /// unbounded. A one-system or two-system book cannot state that, and the pre-fix Lily#
+    /// agreed with LilyPond on the last system alone — so a probe that read only the first
+    /// staff it found would have called the broken build exact.
+    /// </para>
+    /// </remarks>
+    private static string LyricRowUnderTwoStavesScore(string name, string lowerNote) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { section A { e2 e2 | e2 e2 | } }
+        part lower  { section A { {{lowerNote}}1 | {{lowerNote}}1 | } }
+
+        lyrics one sings melody { section A { gyp gyp | gyp gyp } }
+        lyrics two sings melody { section A { pug pug | pug pug } }
+
+        form main { ~A break ~A break ~A }
+
+        score main "{{name}}" {
+          staff melody
+          staff lower
+          lyrics one
+          lyrics two
+        }
+        """;
+
+    /// <summary>The lower staff's ink HANGS BELOW it — the mirror of book RD.</summary>
+    private static readonly string ROWD = LyricRowUnderTwoStavesScore("RD", "c");
+
+    /// <summary>The same book with that ink INSIDE the staff — the mirror of book RF.</summary>
+    private static readonly string ROWF = LyricRowUnderTwoStavesScore("RF", "b");
+
+    /// <summary>
     /// The lyric block BETWEEN two staves of one system — the mirror of books LYRB/LYRBV.
     /// </summary>
     /// <remarks>
@@ -9988,6 +10052,44 @@ internal static class LpGeometryProbes
             g => g.StaffGapAt(0), FourSystemsPerPageRagged),
         new("lyrics.two-staff.two-verse.staves-on-first-page", LYRMV,
             g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+
+        // ★★ A ROW BELOW *TWO* STAVES — books ROWD / ROWF, the cell this table did not have
+        // and the corpus never spells (census, session 238: 575 score blocks, 36 with two or
+        // more staves, none of those with a lyrics row). Read on THREE systems each, because
+        // both engines fork by system: the systems that have another one after them are
+        // solved into a bounded room and land on the chain's MINIMUM, and the last one runs
+        // to the page edge and relaxes to the 5.5 ideal.
+        //
+        // ⚠️ THE INDEX IS STAVES DOWN THE PAGE, not systems (LyricBaselineBelowStaff's own
+        // remark): on a two-staff book 1 is the FIRST system's lower staff, 3 the second's,
+        // 5 the third's. The staves-on-first-page guards below are what make those indices
+        // mean the systems they are named for (HANDOFF 5.0, trap 8).
+        //
+        // ⚠️ WHAT THESE WOULD HAVE CAUGHT. Before session 238 Lily# read 2.970000 / 3.080000
+        // / 5.500000 on ROWD against LilyPond's 5.226460 / 5.226460 / 5.500001 — TWO STAFF
+        // SPACES high on both bounded systems and exact on the last. An entry that read only
+        // the last system would have been exact on the broken build, which is the whole
+        // reason the middle system is carried as a point of its own rather than as prose.
+        new("lyrics.row.two-staff.deep-ink.staff-to-lyric", ROWD,
+            g => g.LyricBaselineBelowStaff(1), RaggedBottomPaper),
+        new("lyrics.row.two-staff.deep-ink.staff-to-lyric.mid-system", ROWD,
+            g => g.LyricBaselineBelowStaff(3), RaggedBottomPaper),
+        new("lyrics.row.two-staff.deep-ink.staff-to-lyric.last-system", ROWD,
+            g => g.LyricBaselineBelowStaff(5), RaggedBottomPaper),
+        new("lyrics.row.two-staff.deep-ink.staves-on-first-page", ROWD,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+
+        // ...and the control, one variable apart: the same book with the lower staff's notes
+        // ON the middle line, so the deepest ink at the syllables' X is that staff's own
+        // bottom line rather than a notehead and its ledger. The FORK between the two books
+        // is the mechanism — an engine that does not read the anchor staff's ink cannot
+        // produce two different numbers here.
+        new("lyrics.row.two-staff.flat-ink.staff-to-lyric", ROWF,
+            g => g.LyricBaselineBelowStaff(1), RaggedBottomPaper),
+        new("lyrics.row.two-staff.flat-ink.staff-to-lyric.last-system", ROWF,
+            g => g.LyricBaselineBelowStaff(5), RaggedBottomPaper),
+        new("lyrics.row.two-staff.flat-ink.staves-on-first-page", ROWF,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
         new("lyrics.two-staff.two-verse.staff-to-lyric", LYRMV,
             g => g.LyricBaselineBelowStaff(1), FourSystemsPerPageRagged),
         new("lyrics.two-staff.staff-staff-inside", LYRM,

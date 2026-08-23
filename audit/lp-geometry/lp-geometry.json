@@ -2234,6 +2234,57 @@
       "residual": 0.0,
       "why": "EXACT. HANDOFF 5.0 trap 8: both entries above are read by INDEX, and an index means the gap it is supposed to mean only while the page holds the staves this probe assumes. Four systems of two staves. ⚠️ It also guards the regime: page 1 must not be the LAST page, where ragged-last-bottom would suppress justification and leave the chain measuring something else -- 120 bars put this book on more than three pages, all reading alike."
     },
+    "lyrics.row.two-staff.deep-ink.staff-to-lyric": {
+      "probe": "lyric-row-two-staff.ly",
+      "score": "ROWD",
+      "lilypond": 5.2264602478959645,
+      "residual": 0.040900923,
+      "why": "AN INDEPENDENT LYRICS ROW BELOW TWO STAVES -- the cell this table did not have, and the corpus never spells it (census, session 238: 575 score blocks, 36 with two or more staves, none of those with a lyrics row), which is why 5807 tests, 222 snapshots and every point here stayed green while the row was engraved THROUGH the lower staff's noteheads. Both engines FORK BY SYSTEM and that is not a defect on either side: a system with another one after it is solved into a BOUNDED room and lands on the chain's minimum, while the last system's chain runs to the page edge (page-layout-problem.cc:1004-1013) and relaxes to the 5.5 basic-distance ideal. LilyPond's two bounded systems agree to the last digit, so the fork is 'bounded vs unbounded', not a gradient. This is the FIRST system of book ROWD, whose lower staff hangs c1 a ledger line below itself -- the reported book's shape. The number is the skyline term: the notehead's ink bottom 3.545 under the staff refpoint, the syllable's own rise 1.222457, and nonstaff-relatedstaff-spacing's padding 0.55, less the sliver where the deepest head and the tallest syllable part in X. WHAT IT WOULD HAVE CAUGHT: before session 238 Lily# read 2.970000 here -- two staff spaces high, the syllables through the noteheads -- because LayoutLyrics wired the per-staff down-skyline only when some line was note-bound, and a row-only score fell through to the system silhouette with a NEGATIVE first-gap minimum. RESIDUAL +0.040900923, AND THE CONTROL NAMES IT. It is the X-RESOLVED SLIVER, not a face difference: the flat-ink twin agrees to 0.000096, so the syllable's own rise is the same quantity on both engines and cannot be what this is. The naive sum here is 3.545 + 1.222457 + 0.55 = 5.317457; LilyPond takes 0.090997 off it where the deepest notehead-plus-ledger ink and the tallest syllable part stand apart in X, and Lily# takes 0.050096. So the two engines agree about every term and differ only about how far apart those two points are horizontally. Do not drive it to zero by moving a vertical term -- that would fit a spacing quantity with a font one, which is the trap lyrics.two-staff.two-verse.staff-to-lyric's why already carries."
+    },
+    "lyrics.row.two-staff.deep-ink.staff-to-lyric.mid-system": {
+      "probe": "lyric-row-two-staff.ly",
+      "score": "ROWD",
+      "lilypond": 5.2264602478959645,
+      "residual": 0.040900923,
+      "why": "AN INDEPENDENT LYRICS ROW BELOW TWO STAVES -- the cell this table did not have, and the corpus never spells it (census, session 238: 575 score blocks, 36 with two or more staves, none of those with a lyrics row), which is why 5807 tests, 222 snapshots and every point here stayed green while the row was engraved THROUGH the lower staff's noteheads. The SECOND of ROWD's three systems, carried as a point of its own rather than as prose because it is the second independent witness that the bounded systems agree: LilyPond reads it identical to the first to the last digit. It is ALSO the guard against a half-repair -- the defect was invisible on the LAST system of every book it touched, so an entry that read only the last would have been exact on the broken build (Lily# read 5.500000 there, matching); this one read 3.080000 against 5.226460. RESIDUAL +0.040900923, AND THE CONTROL NAMES IT. It is the X-RESOLVED SLIVER, not a face difference: the flat-ink twin agrees to 0.000096, so the syllable's own rise is the same quantity on both engines and cannot be what this is. The naive sum here is 3.545 + 1.222457 + 0.55 = 5.317457; LilyPond takes 0.090997 off it where the deepest notehead-plus-ledger ink and the tallest syllable part stand apart in X, and Lily# takes 0.050096. So the two engines agree about every term and differ only about how far apart those two points are horizontally. Do not drive it to zero by moving a vertical term -- that would fit a spacing quantity with a font one, which is the trap lyrics.two-staff.two-verse.staff-to-lyric's why already carries."
+    },
+    "lyrics.row.two-staff.deep-ink.staff-to-lyric.last-system": {
+      "probe": "lyric-row-two-staff.ly",
+      "score": "ROWD",
+      "lilypond": 5.500000910948245,
+      "residual": -8.89e-07,
+      "why": "AN INDEPENDENT LYRICS ROW BELOW TWO STAVES -- the cell this table did not have, and the corpus never spells it (census, session 238: 575 score blocks, 36 with two or more staves, none of those with a lyrics row), which is why 5807 tests, 222 snapshots and every point here stayed green while the row was engraved THROUGH the lower staff's noteheads. The LAST of ROWD's three systems, where the chain has no next staff to close on and runs to the page edge -- so the room is unbounded, the skyline minimum never binds, and the line sits at nonstaff-relatedstaff-spacing's basic-distance 5.5. THIS POINT WAS ALREADY EXACT ON THE BROKEN BUILD AND IS CARRIED ANYWAY: it is what says the two bounded readings above are a FORK rather than a constant, and it records that pre-fix Lily# reached the same 5.5 as the spring's NATURAL LENGTH with no floor under it -- agreement for the wrong reason (HANDOFF 5.2.1 (4): exact can mean 'that regime does not move'). RESIDUAL -0.000000889, WHICH IS LILYPOND'S OWN TAIL AND NOT A DIVERGENCE. The ideal is 5.5; LilyPond reports 5.500000910948245 because its page solve carries the distance through a spring, and Lily# lands on 5.5 flat. The residual IS that tail, so it is recorded rather than rounded away -- a 0.0 here would be a number nobody measured."
+    },
+    "lyrics.row.two-staff.deep-ink.staves-on-first-page": {
+      "probe": "lyric-row-two-staff.ly",
+      "score": "ROWD",
+      "lilypond": 6,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "HANDOFF 5.0 trap 8: the three entries above are read by staff INDEX (1, 3, 5 = the lower staff of each system), and an index means the system it is named for only while the page holds these staves. Three systems of two staves on one page, ragged bottom. EXACT."
+    },
+    "lyrics.row.two-staff.flat-ink.staff-to-lyric": {
+      "probe": "lyric-row-two-staff.ly",
+      "score": "ROWF",
+      "lilypond": 3.77245709737943,
+      "residual": -9.5927e-05,
+      "why": "AN INDEPENDENT LYRICS ROW BELOW TWO STAVES -- the cell this table did not have, and the corpus never spells it (census, session 238: 575 score blocks, 36 with two or more staves, none of those with a lyrics row), which is why 5807 tests, 222 snapshots and every point here stayed green while the row was engraved THROUGH the lower staff's noteheads. THE CONTROL, one variable apart from ROWD: the same book with the lower staff's notes on the MIDDLE LINE, so the deepest ink at the syllables' X is that staff's own bottom line rather than a notehead and its ledger. 2.0 + the syllable's rise 1.222457 + padding 0.55 = 3.772457 exactly, and the arithmetic closing on the nose here is what says the ROWD reading's missing sliver is an X effect and not a term left out. THE FORK ROWD - ROWF = 1.454003 IS THE MECHANISM: an engine that does not read the anchor staff's own ink cannot produce two different numbers on these two books, and pre-fix Lily# read 1.700000 here. RESIDUAL -0.000095927, essentially exact and worth saying why it is not 0.0: the binding ink here is the staff's own bottom line, a horizontal that both engines place identically, so the only term that can differ is the syllable's rise -- and it differs by 1e-4, which is the two lyric faces agreeing about 'gyp' to four places. This is the entry that makes the deep-ink residual diagnosable: with the face pinned down to 1e-4 here, the +0.0409 there cannot be one."
+    },
+    "lyrics.row.two-staff.flat-ink.staff-to-lyric.last-system": {
+      "probe": "lyric-row-two-staff.ly",
+      "score": "ROWF",
+      "lilypond": 5.500000913282669,
+      "residual": -8.91e-07,
+      "why": "AN INDEPENDENT LYRICS ROW BELOW TWO STAVES -- the cell this table did not have, and the corpus never spells it (census, session 238: 575 score blocks, 36 with two or more staves, none of those with a lyrics row), which is why 5807 tests, 222 snapshots and every point here stayed green while the row was engraved THROUGH the lower staff's noteheads. ROWF's last system. It reads the same 5.5 ideal as ROWD's last system even though the two books' bounded systems differ by 1.454003 -- the cleanest statement of what the ideal is: where the room is unbounded the ink term leaves no trace at all, on either book. RESIDUAL -0.000000891 -- the same LilyPond page-solve tail as the ROWD last system, and its being the same to the digit on two books whose bounded systems differ by 1.454003 is the point: where the room is unbounded the ink term leaves no trace on either book."
+    },
+    "lyrics.row.two-staff.flat-ink.staves-on-first-page": {
+      "probe": "lyric-row-two-staff.ly",
+      "score": "ROWF",
+      "lilypond": 6,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "The regime guard for the two ROWF entries above, same reason as ROWD's (HANDOFF 5.0 trap 8). EXACT."
+    },
     "lyrics.two-staff.two-verse.staff-to-lyric": {
       "probe": "page-vertical.ly",
       "score": "LYRMV",
