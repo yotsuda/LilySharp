@@ -306,23 +306,11 @@ internal sealed class LyricsCollector
         return new VoltaSpec(primary == 0 ? 1 : primary, hide, nums);
     }
 
-    /// <summary>The lyric measures inside a <c>[ … . measures ]</c> verse: the non-token
-    /// children AFTER the header's '.', skipping the optional closing ']' and null slots.</summary>
+    /// <summary>The lyric measures inside a <c>[ … . measures ]</c> verse. ONE HOME in
+    /// <see cref="LyricSyllableReader.VoltaMeasures"/> — the grid that sizes a rows-only
+    /// score counts the same measures this places, so the two cannot drift.</summary>
     private static IEnumerable<SyntaxNode> VoltaMeasures(SyntaxNode volta)
-    {
-        bool afterDot = false;
-        for (int i = 0; i < volta.SlotCount; i++)
-        {
-            var child = volta.GetChild(i);
-            if (!afterDot)
-            {
-                if (child is SyntaxTokenNode t && t.Kind == SyntaxKind.Dot) afterDot = true;
-                continue;
-            }
-            if (child is SyntaxNode node and not SyntaxTokenNode)
-                yield return node;
-        }
-    }
+        => LyricSyllableReader.VoltaMeasures(volta);
 
     /// <summary>The first verse's measures of a lyric body — plain measures if any, else
     /// the first <c>[N. …]</c> verse, else the body as written. Used where a run can't be

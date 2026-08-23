@@ -114,13 +114,50 @@ internal static class LyricSyllableReader
     /// anchor skip in <c>LyricCollector.ParseSyllablesFrom</c> /
     /// <c>LyricsCollector.PlaceRun</c> — any grid sized from lyric bars must use
     /// THIS, or a fenced verse pads a phantom bar.</summary>
+    /// <remarks>
+    /// <c>[N. …]</c> verses are ALTERNATIVE stanzas for the same bars, so they widen the
+    /// container rather than lengthening it: the answer is the widest single run, not the
+    /// sum. Counting only the direct <c>LyricMeasure</c> children answered 0 for a section
+    /// written entirely as bracketed verses — every bar sits one level down, inside the
+    /// brackets — and a rows-only score then gave that section NO bars, laying the section
+    /// after it on top of the section before it (<c>MeasureCollector.RowGridSectionBars</c>
+    /// is the caller that sizes the grid from this).
+    /// </remarks>
     public static int CountBars(SyntaxNode container)
     {
-        int bars = 0;
+        int plain = 0, widestVerse = 0;
         bool atRunStart = true;
         for (int i = 0; i < container.SlotCount; i++)
         {
-            if (container.GetChild(i) is not SyntaxNode m || m.Kind != SyntaxKind.LyricMeasure)
+            if (container.GetChild(i) is not SyntaxNode m)
+                continue;
+            if (m.Kind == SyntaxKind.LyricVolta)
+            {
+                widestVerse = Math.Max(widestVerse, CountRun(VoltaMeasures(m)));
+                continue;
+            }
+            if (m.Kind != SyntaxKind.LyricMeasure)
+                continue;
+            if (atRunStart)
+            {
+                atRunStart = false;
+                if (IsLeadingAnchor(m))
+                    continue;
+            }
+            plain++;
+        }
+        return Math.Max(plain, widestVerse);
+    }
+
+    /// <summary>Bars in one already-extracted run of lyric measures, with the same
+    /// leading-anchor rule <see cref="CountBars"/> applies to a container's own run.</summary>
+    private static int CountRun(IEnumerable<SyntaxNode> measures)
+    {
+        int bars = 0;
+        bool atRunStart = true;
+        foreach (var m in measures)
+        {
+            if (m.Kind != SyntaxKind.LyricMeasure)
                 continue;
             if (atRunStart)
             {
@@ -131,6 +168,26 @@ internal static class LyricSyllableReader
             bars++;
         }
         return bars;
+    }
+
+    /// <summary>The lyric measures inside a <c>[ … . measures ]</c> verse: the non-token
+    /// children AFTER the header's '.', skipping the optional closing ']' and null slots.
+    /// ONE HOME — <c>LyricsCollector</c> places the verses this reads, and a grid sized
+    /// from them must see the same measures the placer does.</summary>
+    internal static IEnumerable<SyntaxNode> VoltaMeasures(SyntaxNode volta)
+    {
+        bool afterDot = false;
+        for (int i = 0; i < volta.SlotCount; i++)
+        {
+            var child = volta.GetChild(i);
+            if (!afterDot)
+            {
+                if (child is SyntaxTokenNode t && t.Kind == SyntaxKind.Dot) afterDot = true;
+                continue;
+            }
+            if (child is SyntaxNode node and not SyntaxTokenNode)
+                yield return node;
+        }
     }
 
     /// <summary>

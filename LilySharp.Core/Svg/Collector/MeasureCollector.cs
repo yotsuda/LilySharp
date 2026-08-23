@@ -4629,12 +4629,31 @@ public sealed partial class MeasureCollector
     /// <summary>
     /// Rows-only scores reach row collection with an EMPTY section-start
     /// table — sections normally register while MUSIC is processed. Derive
-    /// the starts from the row blocks themselves: walk the structure (or
-    /// declaration) order, advancing by each section's widest row block
-    /// (chord bars preferred, lyric bars otherwise). Without this a
-    /// two-section chord grid printed both sections' symbols from bar 0,
-    /// overlapped. No-op when music already filled the table.
+    /// the starts from the row blocks themselves: replay the form's PLAYBACK
+    /// order (or, with no form, declaration order), advancing by each
+    /// section's widest row block (chord bars preferred, lyric bars
+    /// otherwise). Without this a two-section chord grid printed both
+    /// sections' symbols from bar 0, overlapped. No-op when music already
+    /// filled the table.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ SECOND SPELLING of <see cref="ProcessForm"/> (HANDOFF §5.2.1②). The two must
+    /// agree on the ORDER and the OCCURRENCE COUNT of every section and differ only in
+    /// what they advance — a bar cursor over the row grid here, a <c>MeasureBuilder</c>
+    /// over real music there. They cannot be folded into one: a part-less chord grid
+    /// (<c>chords X { section A { … } }</c>) declares its sections inside the TRACK, so
+    /// there is no music for <see cref="ProcessForm"/> to walk. The seam has a net
+    /// instead — <c>RowsOnlyFormOrderTests</c> renders the same book with and without a
+    /// staff and compares the section starts bar for bar.
+    /// <para>
+    /// Before that net existed this walk skipped <c>|: … :|</c> blocks whole (every arm
+    /// was gated on <c>!IsInsideRepeatBlock</c> and no arm handled the block itself) and
+    /// collapsed a section's second occurrence onto its first (a <c>ContainsKey</c> guard
+    /// that also REWOUND the cursor). So a staffless <c>form main { A B A }</c> engraved
+    /// 6 bars instead of 10 with the reprise's syllables landing on top of the first A's,
+    /// which is what the "lyrics overlap" report was.
+    /// </para>
+    /// </remarks>
     private void EnsureSectionStartsForRows(SyntaxNode root)
     {
         // Not `Sections.Count == 0`: a rows-only score's sections live INSIDE the chord / lyric
@@ -4655,13 +4674,57 @@ public sealed partial class MeasureCollector
             // An unknown name — neither a track cell nor a structure section — has nothing to place.
             if (secBars == 0 && !_sectionState.Sections.ContainsKey(name))
                 return;
-            if (!_sectionState.StartMeasure.ContainsKey(name))
+            // EVERY occurrence, not just the first — the same call ProcessForm makes.
+            // RecordSectionStart keeps the first pass in StartMeasure and APPENDS each
+            // pass to AllStarts, which is what the row collectors read to place a
+            // reprise's cells (LyricsCollector / ChordNameCollector's StartsFor). This
+            // used to write StartMeasure directly and never touch AllStarts, so both
+            // collectors fell through to their single-anchor fallback and a section the
+            // form names twice was engraved once.
+            RecordSectionStart(name, cur);
+            if (label != null)
+                _sectionState.RowLabels.Add((cur, label, pos));
+            // …and the cursor moves FORWARD by this pass's width. It used to be assigned
+            // `StartMeasure[name] + secBars`, which REWOUND the grid to the section's
+            // first occurrence, so every bar after a reprise overprinted bars already written.
+            cur += secBars;
+        }
+
+        // `|: … :|` — the slot walk ProcessRepeatBlock does (MeasureCollector.Form.cs:42-129),
+        // with the music build removed: the block's own bars are raw tokens rather than
+        // BarlineSyntax, and only the nodes AFTER the opening `|:` are played. A barline
+        // occupies no bar, so the cursor is moved by the section arms alone.
+        void AdvanceRepeatBlock(FormRepeatBlockSyntax repeat)
+        {
+            bool afterRepeatStart = false;
+            for (int i = 0; i < repeat.SlotCount; i++)
             {
-                _sectionState.StartMeasure[name] = cur;
-                if (label != null)
-                    _sectionState.RowLabels.Add((cur, label, pos));
+                var child = repeat.GetChild(i);
+                if (child is SyntaxTokenNode token)
+                {
+                    // ':|:' closes one repeat and opens the next, so it arms the gate too.
+                    if (token.Text is "|:" or ":|:")
+                        afterRepeatStart = true;
+                    continue;
+                }
+                if (!afterRepeatStart)
+                    continue;
+                switch (child)
+                {
+                    case SectionReferenceSyntax r:
+                        AdvanceSection(r.SectionName, ResolveSectionLabel(r), SectionDeclPos(r.SectionName));
+                        break;
+                    case FormAlternativeSyntax alt:
+                        AdvanceSection(alt.SectionName.Text,
+                            alt.IsSilent ? null : alt.DisplayLabel ?? alt.SectionName.Text,
+                            SectionDeclPos(alt.SectionName.Text));
+                        break;
+                    case { Kind: SyntaxKind.SilentSectionReference } silent
+                            when silent.GetChild(1) is SyntaxTokenNode silentName:
+                        AdvanceSection(silentName.Text, null, SectionDeclPos(silentName.Text));
+                        break;
+                }
             }
-            cur = _sectionState.StartMeasure[name] + secBars;
         }
 
         if (_form != null)
@@ -4672,6 +4735,27 @@ public sealed partial class MeasureCollector
                 {
                     case SectionReferenceSyntax r when !IsInsideRepeatBlock(r):
                         AdvanceSection(r.SectionName, ResolveSectionLabel(r), SectionDeclPos(r.SectionName));
+                        break;
+                    // The arm ProcessForm has and this walk did not. Every other arm is
+                    // gated on !IsInsideRepeatBlock, so without this one the whole block
+                    // was stepped over: its sections took no bars and everything after it
+                    // was laid on top of what came before.
+                    case FormRepeatBlockSyntax repeat:
+                        AdvanceRepeatBlock(repeat);
+                        break;
+                    // A volta ending that NO repeat block opened — `form main { A [1. B] }`.
+                    // It plays exactly once and engraves no bracket; see the same arm in
+                    // ProcessForm for the LilyPond reference that settles the play count.
+                    case FormAlternativeSyntax alt when !IsInsideRepeatBlock(alt):
+                        AdvanceSection(alt.SectionName.Text,
+                            alt.IsSilent ? null : alt.DisplayLabel ?? alt.SectionName.Text,
+                            SectionDeclPos(alt.SectionName.Text));
+                        break;
+                    // ~Name — its bars are played, its label is not shown.
+                    case { Kind: SyntaxKind.SilentSectionReference } silent
+                            when !IsInsideRepeatBlock(silent)
+                              && silent.GetChild(1) is SyntaxTokenNode nameTok:
+                        AdvanceSection(nameTok.Text, null, SectionDeclPos(nameTok.Text));
                         break;
                     case NavigationMarkSyntax nav when !IsInsideRepeatBlock(nav):
                         // Same anchoring as ProcessForm: targets (segno/coda)
