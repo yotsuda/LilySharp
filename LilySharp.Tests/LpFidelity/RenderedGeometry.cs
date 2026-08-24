@@ -633,6 +633,52 @@ internal sealed class RenderedGeometry
         return FirstBarNumberBaselineAboveStaff(page) + ink.Bottom;
     }
 
+    /// <summary>
+    /// The FIRST bar number's INK BOTTOM above the LYRIC ROW's reference point — the reading
+    /// for a system with no staff at all, where <see cref="FirstBarNumberInkBottomAboveStaff"/>
+    /// has nothing to measure against.
+    /// </summary>
+    /// <remarks>
+    /// A Lyrics VerticalAxisGroup's reference point IS the syllable baseline — LilyPond has
+    /// no band above it — so the datum here is the topmost syllable baseline BELOW the
+    /// number, i.e. the first verse of the system the number belongs to.
+    /// LILYPOND-REF: lily/side-position-interface.cc:347-370 aligned_side — with an empty
+    /// support set the `dim.is_empty ()' branch stands a FLAT SKYLINE AT HEIGHT 0 at that
+    /// reference point, and the number's ink bottom lands exactly `padding' above it:
+    /// 1.000000, measured on 2.26.0 in book SLP of probes/barnumber-staffless.ly, which
+    /// switches the outside-staff pass off so this stage is read on its own.
+    /// <para>
+    /// ⚠️ IT IS THE STAGE-ONE READING, DELIBERATELY. The number's final position in a real
+    /// LilyPond book is that plus an outside-staff translation whose size depends on the
+    /// GLYPH OUTLINE of whatever ink is nearest the number's column (0.104576 + 0.46 on book
+    /// SLN) — a quantity that changes with the syllable, so pinning it would pin the word.
+    /// Lily#'s own stage two contributes zero here, because a text row carries no ink
+    /// profile for the pass to work against, so this reading IS Lily#'s whole answer.
+    /// </para>
+    /// </remarks>
+    public double FirstBarNumberInkBottomAboveLyricRow(int page = 0)
+    {
+        var numbers = BarNumbers;
+        if (numbers.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: the probe drew no bar number.\nDrawn geometry:\n" + Describe());
+        }
+        var t = numbers[0];
+        var below = LyricSyllables.Select(s => s.Y).Where(r => r > t.Y).ToList();
+        if (below.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: the first bar number at {t.Y:F6} has no lyric row below it, so "
+                + "it is not riding over one.\nDrawn geometry:\n" + Describe());
+        }
+        var ink = LilySharp.Core.Rendering.TextFontMetrics.Ink(
+            t.Text, t.FontSize, sans: false, LilySharp.Core.Rendering.FontStyle.Bold);
+        // ink.Bottom is the digit's own overshoot BELOW the baseline (<= 0), the same term
+        // FirstBarNumberInkBottomAboveStaff removes, so the entry carries no font dependency.
+        return (below.Min() - t.Y) + ink.Bottom;
+    }
+
     public double FirstBarNumberBaselineAboveStaff(int page = 0)
     {
         var numbers = BarNumbers;

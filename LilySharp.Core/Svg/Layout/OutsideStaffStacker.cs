@@ -1491,13 +1491,16 @@ internal static class OutsideStaffStacker
                 bn.Text, BarNumberEngraver.FontSize,
                 fonts.Face(TextRole.BarNumber, FontStyle.Bold),
                 originX, bn.YUp);
-            // The tracker of the staff the number HANGS ON — its anchor staff (the top
-            // SPACEABLE one), which is the top PLACED staff except on a lead sheet, where
-            // the top placed \"staff\" is the chords/lyrics row the number tucks below.
-            // One spelling with the engraver: BarNumberEngraver.AnchorStaff.
-            int anchorStaff = sysIdx < systems.Length
-                && BarNumberEngraver.AnchorStaff(systems[sysIdx]) is { } anchor
-                ? anchor.StaffIndex : topStaff[sysIdx];
+            // The tracker of the staff or ROW the number HANGS ON. LilyPond re-parents the
+            // grob onto that element and the outside-staff pass then runs inside THAT
+            // element's axis group, so the pass and the placement have to name the same one.
+            // ⚠️ IT IS READ OFF THE LAYOUT, NOT RE-DERIVED. This used to call
+            // BarNumberEngraver.AnchorStaff a second time; the engraver now decides once —
+            // staff, else grid row, else nothing — and carries the answer, so the two cannot
+            // drift apart (HANDOFF 5.2.1②). Null means LilyPond's move_to_extremal_staff
+            // found nothing to re-parent onto, and the top placed staff stands in.
+            // LILYPOND-REF: lily/side-position-interface.cc:545-547 move_to_extremal_staff.
+            int anchorStaff = bn.AnchorStaffIndex ?? topStaff[sysIdx];
             double move = trackers(sysIdx, anchorStaff)
                 .Place(bnUp, bnDown, OutsideStaffPadding);
             b[i] = bn with { YUp = bn.YUp + move };

@@ -2287,6 +2287,49 @@ internal static class LpGeometryProbes
     private static readonly string BNH = BarNumberScore("BNH", "''");
 
     /// <summary>
+    /// A STAFFLESS lead sheet — a chord row over a lyric row and nothing else — the mirror of
+    /// books SLN/SLP in barnumber-staffless.ly. There is no staff for the number to hang on,
+    /// so LilyPond re-parents it onto the ROW that reaches its column and places it against
+    /// that row's own reference point, which is the syllable baseline.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE MUSIC IS NOT SLN's, AND IT MAY NOT BE. The reading this book serves is stage
+    /// ONE — ink bottom <c>padding</c> over the row's reference point — which LilyPond gives
+    /// as 1.000000 for ANY music: with an empty support set aligned_side stands a flat
+    /// skyline at height 0 there. SLN's full 1.564576 is stage one plus an outside-staff
+    /// translation that reads the GLYPH OUTLINE of the syllable nearest the number, so an
+    /// entry pinned to it would be pinned to the word "five" (HANDOFF 5.0: a match hides a
+    /// substituted book). ONE VERSE deliberately: a second one only makes Lily#'s band
+    /// deeper, and that band is the very term this entry measures.
+    /// ⚠️ Lily# <c>c'</c> is LilyPond <c>c''</c> (HANDOFF 5.5).
+    /// </remarks>
+    private static readonly string BNS = $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody {
+          clef treble
+          section Main { {{string.Concat(Enumerable.Repeat("c'4 d' e' f' | g' a' b' c'' | c''4 b' a' g' | f' e' d' c' | ", 3)).Trim()}} }
+        }
+
+        chords harm {
+          section Main { {{string.Concat(Enumerable.Repeat("C | G | Am | F | ", 3)).Trim()}} }
+        }
+
+        lyrics verse {
+          section Main { {{string.Concat(Enumerable.Repeat("one two three four | five six sev- en | eight nine ten e- | le- ven twelve thir- | ", 3)).Trim()}} }
+        }
+
+        form main { ~Main }
+
+        score main "BNS" {
+          chords harm as names
+          lyrics verse sings melody
+        }
+        """;
+
+    /// <summary>
     /// WHERE A TEXT SCRIPT SITS, per string — the mirrors of textscript-ink.ly's books
     /// TXD / TXP / TXS / TXL. Lily#'s <c>_"text"</c> engraves at the end of the section
     /// just played and stacks above the staff, which is LilyPond's
@@ -10312,6 +10355,18 @@ internal static class LpGeometryProbes
         // LilyPond's is 2.05 + padding 1.0 = 3.050000 for every numeral, chord row or not.
         new("barnumber.chord-row.staff-to-ink-bottom", BNC,
             g => g.FirstBarNumberInkBottomAboveStaff(), RaggedBottomPaper),
+
+        // ...and the shape BOTH of those were blind to: NO STAFF AT ALL (book BNS, mirroring
+        // barnumber-staffless.ly). The entries above measure over a staff refpoint, which a
+        // lead sheet has not got, so nothing watched where the number went — it was measured
+        // from the SYSTEM TOP, a whole chord row above where LilyPond leaves it. This entry
+        // measures over the ROW's refpoint (the syllable baseline, which is what a Lyrics
+        // VerticalAxisGroup's refpoint IS) and reads stage ONE of the placement, the half
+        // that is music-independent: 1.000000 for any book. See
+        // RenderedGeometry.FirstBarNumberInkBottomAboveLyricRow for why the full 1.564576 of
+        // book SLN is deliberately NOT the value here — it carries a glyph outline.
+        new("barnumber.rows-only.row-to-ink-bottom", BNS,
+            g => g.FirstBarNumberInkBottomAboveLyricRow(), RaggedBottomPaper),
 
         // --- where a TEXT SCRIPT sits, per string (books TXD/TXP/TXS/TXL) ---
         // The first ledger points that reach OutsideStaffStacker's letter-class constants

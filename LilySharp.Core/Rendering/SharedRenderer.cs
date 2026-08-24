@@ -381,21 +381,11 @@ internal static partial class SharedRenderer
         // (chords sit between the barlines, lyrics hang below). A score with any
         // real staff keeps that staff's own barlines and leaves text rows bare.
         bool leadSheet = score.IsLeadSheet;
-        // The grid goes on the top row (global index 0 is always the first staff)
-        // — unless the sheet has BOTH a chord row and a lyric row: then the
-        // barlines read best inside the LYRIC line (the words carry the
-        // phrase; chord names flow un-fenced above), so the grid moves to the
-        // first lyric row and the chord row stays bare.
-        int barlineRowIdx = leadSheet ? 0 : -1;
-        if (leadSheet)
-        {
-            var lyricRowIndices = score.Lyrics
-                .Where(l => l.IsLyricsRow).Select(l => l.StaffIndex).ToHashSet();
-            bool hasChordRow = score.EnumerateStaves().Any(t =>
-                t.Staff.IsTextRow && !lyricRowIndices.Contains(t.GlobalStaffIndex));
-            if (hasChordRow && lyricRowIndices.Count > 0)
-                barlineRowIdx = lyricRowIndices.Min();
-        }
+        // Which row carries the grid — the top row, or the first LYRIC row when the sheet
+        // has both kinds — is asked of the model, because the bar-number anchor asks the
+        // same question and a choice with two homes is HANDOFF 5.2.1②. See
+        // MultiStaffScore.GridBarlineRowIndex for the rule and its LilyPond address.
+        int barlineRowIdx = score.GridBarlineRowIndex;
 
         // Per-staff: staff lines + prefix glyphs + notes
         foreach (var (group, staff, globalIdx) in score.EnumerateStaves())

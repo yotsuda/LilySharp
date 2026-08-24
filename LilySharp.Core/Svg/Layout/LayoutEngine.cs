@@ -318,6 +318,7 @@ internal sealed class LayoutEngine
         {
             Score = primaryScore,
             IsLeadSheet = score.IsLeadSheet,
+            GridBarlineRowIndex = score.GridBarlineRowIndex,
             Fonts = score.TextMetrics,
             Systems = systemsArray,
             Dynamics = score.Dynamics,
@@ -846,6 +847,7 @@ internal sealed class LayoutEngine
         {
             Score = prelimScore,
             IsLeadSheet = score.IsLeadSheet,
+            GridBarlineRowIndex = score.GridBarlineRowIndex,
             Fonts = score.TextMetrics,
             Systems = prelimSystems,
             Dynamics = score.Dynamics,
@@ -3351,6 +3353,14 @@ internal sealed class LayoutEngine
         /// opens every line with a bar line the label must clear).</summary>
         public bool IsLeadSheet { get; init; }
 
+        /// <summary>The global staff index of the row that draws a lead sheet's barlines,
+        /// −1 when there is none — carried here for the same reason
+        /// <see cref="IsLeadSheet"/> is, and read from the same place the renderer reads it
+        /// (<c>MultiStaffScore.GridBarlineRowIndex</c>). The bar-number anchor needs it:
+        /// on a system with no staff at all, that row is the only one whose ink reaches the
+        /// number's column.</summary>
+        public int GridBarlineRowIndex { get; init; } = -1;
+
         /// <summary>
         /// The faces this score's text is measured against — the whole-score answer, not
         /// the primary staff's.
@@ -4189,7 +4199,12 @@ internal sealed class LayoutEngine
         // A leading \partial pickup is bar 0: shift displayed numbers down by one
         // so the first FULL measure is numbered 1, not 2.
         int barNumberOffset = (!measures.IsDefaultOrEmpty && measures[0].IsPickup) ? -1 : 0;
-        var barNumberLayouts = BarNumberEngraver.Calculate(ctx.Fonts, systems, numberOffset: barNumberOffset);
+        // A staffless system hangs its number on the row that draws the barlines — the only
+        // row whose ink reaches the number's column. One home for that choice, shared with
+        // the renderer that draws them (MultiStaffScore.GridBarlineRowIndex).
+        var barNumberLayouts = BarNumberEngraver.Calculate(ctx.Fonts, systems,
+            numberOffset: barNumberOffset,
+            gridBarlineRowIndex: ctx.GridBarlineRowIndex);
         // Forced-above dynamics (@f.up) join the above-staff pass so they clear, and are
         // cleared by, the other above-staff grobs. Below dynamics were already placed by
         // StackBelowStaff and pass through untouched.

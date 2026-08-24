@@ -387,6 +387,48 @@ public sealed record MultiStaffScore
         }
     }
 
+    /// <summary>
+    /// The global staff index of the row that carries a lead sheet's measure grid — the
+    /// barlines, including the one that OPENS each system at its left edge. −1 when the
+    /// score is not a lead sheet (a real staff draws its own barlines and the text rows
+    /// stay bare).
+    /// </summary>
+    /// <remarks>
+    /// The grid goes on the top row unless the sheet has BOTH a chord row and a lyric row:
+    /// then the barlines read best inside the LYRIC line (the words carry the phrase; chord
+    /// names flow un-fenced above), so the grid moves to the first lyric row.
+    /// <para>
+    /// ⚠️ ONE HOME, AND IT IS NOT ONLY THE RENDERER'S QUESTION ANY MORE. This lived inside
+    /// <c>SharedRenderer.DrawSystem</c> as a local until 2026-08-24, when the bar-number
+    /// anchor started needing the same answer: the grid row is the only row whose ink
+    /// reaches a line-start bar number's column, because it is the only one that draws
+    /// anything at the system's left edge. Two spellings of that choice would be
+    /// HANDOFF 5.2.1② with the number landing on a different row from the barlines the
+    /// moment either moved.
+    /// </para>
+    /// <para>
+    /// LILYPOND-REF: lily/staff-grouper-interface.cc <c>Staff_grouper_interface::get_extremal_staff</c>
+    /// — the row a bar number hangs on is the furthest one in the number's direction whose
+    /// X extent overlaps the number's own, and LilyPond tests neither <c>is_spaceable</c>
+    /// nor for a StaffSymbol. In an ordinary lead sheet a staff wins only because a
+    /// StaffSymbol spans the system from x≈0; here the grid row's opening barline is what
+    /// does. See <c>BarNumberEngraver.AnchorRow</c>.
+    /// </para>
+    /// </remarks>
+    public int GridBarlineRowIndex
+    {
+        get
+        {
+            if (!IsLeadSheet)
+                return -1;
+            var lyricRowIndices = Lyrics
+                .Where(l => l.IsLyricsRow).Select(l => l.StaffIndex).ToHashSet();
+            bool hasChordRow = EnumerateStaves().Any(t =>
+                t.Staff.IsTextRow && !lyricRowIndices.Contains(t.GlobalStaffIndex));
+            return hasChordRow && lyricRowIndices.Count > 0 ? lyricRowIndices.Min() : 0;
+        }
+    }
+
     /// <summary>Gets all voices across all staves.</summary>
     public IEnumerable<Voice> AllVoices
     {
