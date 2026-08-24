@@ -1528,6 +1528,18 @@ internal sealed class LayoutEngine
             perSystemHeights != null && i >= 0 && i < perSystemHeights.Count
                 ? perSystemHeights[i]
                 : systemHeight;
+        // Origin to the staff the spring LEAVES this system from — the far end of its
+        // chain, which is its last spaceable staff whenever it has staff springs at all.
+        // ⚠️ THE SAME RULE AS PageLayouter's `originToLast`, AND THE SAME REASON: a system
+        // contributes one chain node per staff SPRING, so one with no springs left never
+        // reached its last staff and the spring leaves from its FIRST refpoint. Reading
+        // ToLast anyway subtracts a span the chain never added — measured on book LYRHKG,
+        // whose hara-kiri'd system has no pair left to spring.
+        double OriginToChainEnd(int i)
+        {
+            var a = PageAnchorOffsets(systems[i].StaffGroups, lyricsRowStaves);
+            return systems[i].StaffSprings.IsDefaultOrEmpty ? a.ToFirst : a.ToLast;
+        }
         // An empty score (no systems) has nothing to page; return empty rather than
         // indexing perSystemExtents[0] below.
         if (systems.IsDefaultOrEmpty || perSystemExtents.Count == 0)
@@ -1669,13 +1681,44 @@ internal sealed class LayoutEngine
                     }
                 }
 
+                // FRAME. Everything above is ORIGIN-TO-ORIGIN — Distance() measures two
+                // skylines both built about their system's origin, and the scalar sum opens
+                // with SysHeight(i) for the same reason. The pair's numbers are not in that
+                // frame: system-system-spacing runs from the PREVIOUS system's LAST spaceable
+                // staff to the next system's FIRST, so the system's own body is not inside
+                // the quantity they floor. PageLayouter's chain already says this, in the
+                // same words and with the same reference —
+                // LILYPOND-REF: lily/page-layout-problem.cc:1120-1126 build_system_skyline —
+                //   first_spaceable_dy / last_spaceable_dy leave the up skyline relative to
+                //   the top spaceable staff and the down skyline relative to the bottom one.
+                // ⚠️ UNTIL 2026-08-25 THIS PATH FLOORED IN THE ORIGIN FRAME, and the floor
+                // therefore stopped flooring as soon as a system was taller than the numbers
+                // themselves: with two staves SysHeight is 13.000000 and BasicDistance is
+                // 12.000000, so `Math.Max(12, …)` could not bind and nothing stood under the
+                // skyline term at all. A one-staff system hid it exactly — its body is
+                // 4.000000 and 12.000000 - 4.000000 is the 8.000000 LilyPond draws — which is
+                // why 572 books never moved. MEASURED on the reported book
+                // (scratch/ベースタブLy/Untitled-6.lys, `staff melody` twice, user report
+                // 2026-08-25): the first system pair read Distance() 15.045000 against a
+                // scalar 20.205000 — the next system's rehearsal mark rises into the INDENT
+                // column, where the first system has no staff and so no silhouette, which
+                // LilyPond does too — and the gap collapsed to 3.050000, printing the mark's
+                // box through the instrument name. The same A→B pair later in the same score
+                // read 8.200000. LilyPond 2.26.0 answers 8.000000 for that pair and does so
+                // at one, two and three staves alike (probes/system-indent-floor.ly).
+                double originToLastHere = OriginToChainEnd(i);
+                double originToFirstNext = PageAnchorOffsets(
+                    systems[i + 1].StaffGroups, lyricsRowStaves).ToFirst;
+                double toStaffFrame = originToFirstNext - originToLastHere;
+
                 // LILYPOND-REF: lily/page-layout-problem.cc:625-632 + spring.cc:219-237 —
                 // the ink is a FLOOR under the spring, and at force 0 (which is what an
                 // unjustified single page runs at) the spring is
                 // max(min_distance, ideal_distance). Same shape as PageLayouter's chain.
+                double staffToStaff = skylineDistance + toStaffFrame;
                 double minDistance = Math.Max(
-                    pairSpec.MinimumDistance, skylineDistance + pairSpec.Padding);
-                skylineY += Math.Max(pairSpec.BasicDistance, minDistance);
+                    pairSpec.MinimumDistance, staffToStaff + pairSpec.Padding);
+                skylineY += Math.Max(pairSpec.BasicDistance, minDistance) - toStaffFrame;
             }
         }
         double lastDownExtent = perSystemExtents[systems.Length - 1].downExtent;

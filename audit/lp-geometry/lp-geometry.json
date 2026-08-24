@@ -2000,6 +2000,27 @@
       "residual": 0.0,
       "why": "THE SHIPPING-SPACING GUARD: the music of the SystemGap_ReadsARowsBandOnce pin with its section labels suppressed (the pin's own books print A/B marks; the LilyPond book never had any). LilyPond reads the IDEAL -- its X-resolved band distance is under basic-distance 12, so the skyline term leaves no trace: 12.000000 measured. Lily# reads 12.000000 EXACT TOO, before the port and after it: on this music even the scalar band floor sat under 12. WARNING, THE ENTRY'S FIRST TWO NUMBERS WERE BOTH ARTIFACTS -- the opening +1.076310 was the twins' section marks colliding with the band, and the 14.571 the pin's comment cites is a different quantity-frame (origin-to-origin system step) on those same mark-bearing books. What survives: this entry pins that the shipping ideal masks the band floor on both sides, which is why the X-blindness needed the floor-regime pair beside it to be measurable at all."
     },
+    "system.indent-floor.one-staff": {
+      "probe": "system-indent-floor.ly",
+      "score": "SIFO1",
+      "lilypond": 12.0,
+      "residual": 0.2,
+      "why": "THE MEMBER THAT DOES NOT MOVE, AND THE REASON THE DEFECT LIVED SO LONG. system-system-spacing's basic-distance 12.000000 is stated between the upper system's LAST spaceable staff and the lower one's FIRST (lily/page-layout-problem.cc:1120-1126 build_system_skyline, first_spaceable_dy / last_spaceable_dy), so a system's own body is OUTSIDE the quantity it floors. At ONE staff the body is 4.000000 and an origin-to-origin floor of 12.000000 leaves 8.000000 between the lines, which is exactly what the staff-to-staff floor leaves: the two frames agree on this book and on no other. MEASURED, Lily# reads 12.200000 both BEFORE and AFTER the 2026-08-25 frame correction while SIFO2 moved 10.540000 -> 12.000000 and SIFO3 moved 10.545000 -> 12.000000. That immobility is what this entry is for; read alone it proves nothing at all. ⚠️ THE 0.200000 IS NOT THE FLOOR AND MUST NOT BE READ AS IT. On this book LilyPond sits ON the floor and Lily# sits 0.200000 ABOVE it -- Lily#'s X-resolved skyline distance plus padding exceeds basic-distance where LilyPond's does not -- so what the residual measures is Lily#'s known excess in what it reserves over a continuation system's mark and bar number, the same family as the barnumber.* entries, and NOT the frame this trio was opened for. It closes when that excess does. OPEN."
+    },
+    "system.indent-floor.two-staff": {
+      "probe": "system-indent-floor.ly",
+      "score": "SIFO2",
+      "lilypond": 12.0,
+      "residual": 0.0,
+      "why": "THE ENTRY THE 2026-08-25 REPORT OPENED. The same book as system.indent-floor.one-staff with the part on TWO staves -- one variable -- so the body is 13.000000 and already past basic-distance. CreatePages' single-page path floored an ORIGIN-to-origin distance by these numbers, so Math.Max(12, ...) could not bind at this height and nothing at all stood under the skyline term: MEASURED 10.540000 here before the fix and 12.000000 after. On the reported book itself (scratch/beesutabuLy/Untitled-6.lys, the user's own, two staves and a section label) the same defect read 7.050000, and the second system's boxed label printed through the first system's instrument name. ⚠️ HALF THE MECHANISM IS NOT A DEFECT AND THE PROBE SAYS SO: the pair collapses because the lower system's label and bar number stand in the INDENT column, where the upper system has no staff and therefore no silhouette, and a per-X clearance rightly finds nothing to clear -- LilyPond collapses the same pair, and book SIF2N (indent removed, everything else equal) reads 17.705730 where SIF2 reads the floor. What LilyPond does not do is fall through the floor. ⚠️ THE PROBE'S TALL-MARK BOOKS SIF1/SIF2/SIF3 ARE WHAT MAKE 12.000000 READ AS A FLOOR rather than a coincidence: they are the only books there whose FREE pair reads something else (21.434270). They have no Lily# twin -- markup box column has no Lily# spelling -- which is why the ledger's books carry an ordinary mark. EXACT."
+    },
+    "system.indent-floor.three-staff": {
+      "probe": "system-indent-floor.ly",
+      "score": "SIFO3",
+      "lilypond": 12.0,
+      "residual": 0.0,
+      "why": "THE THIRD MEMBER, AND THE ONE THAT RULES OUT THE PLAUSIBLE WRONG FIX. Body 22.000000. A floor written as basic-distance PLUS THE BODY would read 21.000000 here and 12.000000 at one staff; a floor written in the staff-to-staff frame reads 12.000000 at all three. LilyPond reads 12.000000 -- MEASURED on 2.26.0 at one, two and three staves alike, on the tall-mark books and the ordinary-mark books both, six digits and no drift. That invariance IS the claim, and it takes the third book to state it, because two books can be fitted by a line through them. Lily# read 10.545000 before the 2026-08-25 frame correction and 12.000000 after. ⚠️ NOTE IT IS NOT 10.540000 LIKE SIFO2: the wrong frame let the skyline term decide, and the third staff changes the ink the silhouette is built from, so the two books diverged from LilyPond by DIFFERENT amounts. A defect that reads differently on every book is the signature of a missing floor rather than a wrong constant. EXACT."
+    },
     "lyrics.column.word-gap": {
       "probe": "lyric-column-spacing.ly",
       "score": "LCW",

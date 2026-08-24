@@ -553,6 +553,63 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// The Lily# half of books SIFO1 / SIFO2 / SIFO3 in probes/system-indent-floor.ly — the
+    /// SAME PART ON N STAVES, so every system carries an instrument name and therefore an
+    /// indent, and a boxed section label leads each system.
+    /// </summary>
+    /// <remarks>
+    /// THE INTER-SYSTEM FLOOR'S FRAME. <c>system-system-spacing</c>'s basic-distance
+    /// 12.000000 is stated between the upper system's LAST spaceable staff and the lower
+    /// one's FIRST (LILYPOND-REF: lily/page-layout-problem.cc:1120-1126 build_system_skyline,
+    /// first_spaceable_dy / last_spaceable_dy), so the system's own body is outside the
+    /// quantity it floors. MEASURED on 2.26.0: 12.000000 at one, two AND three staves.
+    /// <para>
+    /// ⚠️ THE STAFF COUNT IS THE VARIABLE, AND IT IS THE WHOLE POINT. Read in the wrong
+    /// frame the floor tracks the body — <c>CreatePages</c>'s single-page path floored an
+    /// origin-to-origin distance until 2026-08-25, which at ONE staff gives the same answer
+    /// by arithmetic accident (body 4.000000, and 12.000000 - 4.000000 is the 8.000000
+    /// LilyPond draws between the lines) and at two gives nothing at all, the body 13.000000
+    /// already exceeding the number. One book cannot see that; three can.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE PAIR THAT COLLAPSES IS THE FIRST ONE, and half of why is not a defect: the
+    /// second system's label and bar number stand in the INDENT column, where the first
+    /// system has no staff and so no silhouette, so the per-X clearance finds nothing to
+    /// clear. LilyPond does the same — book SIF2N is the control, and with the indent
+    /// removed the same pair reads 17.705730 instead. What LilyPond does not do is fall
+    /// through the floor; Lily# read 7.050000 there and printed the label's box through the
+    /// instrument name (user report, scratch/ベースタブLy/Untitled-6.lys, 2026-08-25).
+    /// </para>
+    /// <para>
+    /// ⚠️ AN ORDINARY MARK, NOT THE PROBE'S TALL ONE. <c>\markup \box \column</c> has no
+    /// Lily# spelling, so the tall-mark books SIF1/SIF2/SIF3 could never have a twin; they
+    /// stay in the probe because they are what shows 12.000000 is a FLOOR — they are the
+    /// only books there whose FREE pair reads something else (21.434270).
+    /// </para>
+    /// </remarks>
+    private static string SystemIndentFloorScore(string tag, int staffCount) =>
+        $$"""
+        octave absolute
+        key c major
+
+        part melody {
+          clef treble
+          section A { c'4 c' g'' g'' | a'' a'' g''2 | f''4 f'' e'' e'' | d'' d'' c''2 | break }
+          section B { g''4 g'' f'' f'' | e'' e'' d''2 | break }
+        }
+
+        form main { A B A B }
+
+        score main "{{tag}}" {
+        {{string.Join("\n", Enumerable.Repeat("  staff melody", staffCount))}}
+        }
+        """;
+
+    private static readonly string SIFO1 = SystemIndentFloorScore("SIFO1", 1);
+    private static readonly string SIFO2 = SystemIndentFloorScore("SIFO2", 2);
+    private static readonly string SIFO3 = SystemIndentFloorScore("SIFO3", 3);
+
+    /// <summary>
     /// One sung line for the LYRIC COLUMN DISTANCE — the shared shape of books LCW / LCH /
     /// LCM / LCN in probes/lyric-column-spacing.ly (HANDOFF 2H's two column-spacing
     /// inventions). The books differ only in duration and words.
@@ -10019,6 +10076,25 @@ internal static class LpGeometryProbes
             g => g.StavesOnPage(0), ClefFloorPaper),
         new("lyrics.band-shipping.system-gap", LBS,
             g => g.StaffGapAt(0), ClefFloorControlPaper),
+
+        // THE INTER-SYSTEM FLOOR'S FRAME (books SIFO1/SIFO2/SIFO3, system-indent-floor.ly).
+        // system-system-spacing's basic-distance runs from the upper system's LAST spaceable
+        // staff to the lower one's FIRST, so the system BODY is outside the quantity it
+        // floors — and the three entries are ONE VARIABLE apart, the staff count, because
+        // that is the only thing that tells a right frame from a wrong one. The index is the
+        // gap that crosses the systems: with N staves to a system the first N-1 gaps are
+        // inside system 1, so the crossing one is N-1.
+        // ⚠️ SIFO1 IS THE DEGENERATE MEMBER AND IS HERE ON PURPOSE. A one-staff body is
+        // 4.000000 and 12.000000 - 4.000000 is the 8.000000 LilyPond draws between the
+        // lines, so the two frames agree there and this entry read EXACT throughout the
+        // defect. It is the control: alone it proves nothing, and beside SIFO2/SIFO3 it is
+        // what says the number does not track the body.
+        new("system.indent-floor.one-staff", SIFO1,
+            g => g.StaffGapAt(0), ClefFloorControlPaper),
+        new("system.indent-floor.two-staff", SIFO2,
+            g => g.StaffGapAt(1), ClefFloorControlPaper),
+        new("system.indent-floor.three-staff", SIFO3,
+            g => g.StaffGapAt(2), ClefFloorControlPaper),
 
         // THE LYRIC COLUMN DISTANCE (books LCW/LCH/LCM/LCN/LCC, lyric-column-spacing.ly —
         // HANDOFF 2H's two inventions: syllables measured at the pre-em-correction 3.2 ss
