@@ -54,6 +54,44 @@ internal static class StaffAffinity
     public static bool IsSpaceable(int? staffAffinity) => !staffAffinity.HasValue;
 
     /// <summary>
+    /// A system's topmost non-hidden SPACEABLE staff — the element a SCORE-CONTEXT grob is
+    /// side-positioned against. Null on a staffless sheet.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONE IMPLEMENTATION, TWO NAMES, AND THAT IS THE POINT. This was
+    /// <c>BarNumberEngraver.AnchorStaff</c>, written for the bar number on 2026-08-20 —
+    /// whose ledger entry (<c>barnumber.chord-row.staff-to-ink-bottom</c>) already stated
+    /// the general fact, "the two differ exactly when a chords/lyrics row leads the
+    /// system", and called itself "one spelling shared with the stacker's tracker choice".
+    /// It was NOT shared: the REHEARSAL MARK went on hanging off the SYSTEM top and printed
+    /// 7.060 above the staff's top line where every other row order puts it at 2.660 (user
+    /// report, session 243). Half an island closed is how the closed half acquires a "done"
+    /// face — so the question lives here now, where neither grob owns it, and
+    /// <c>BarNumberEngraver.AnchorStaff</c> is a named alias keeping the bar number's own
+    /// X-disjointness measurement beside its own caller.
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1173-1177 Page_layout_problem::is_spaceable
+    ///   — a line is spaceable exactly when it declares no <c>staff-affinity</c>.
+    /// </remarks>
+    public static StaffLayout? TopSpaceableStaff(SystemLayout system)
+    {
+        if (system.StaffGroups.IsDefaultOrEmpty) return null;
+        StaffLayout? best = null;
+        foreach (var group in system.StaffGroups)
+        {
+            if (group.Staves.IsDefaultOrEmpty) continue;
+            foreach (var st in group.Staves)
+            {
+                if (st.IsHidden || !IsSpaceable(st.StaffAffinity))
+                    continue;
+                // st.Y is Y-up from the system top (0 or negative): topmost = largest.
+                if (best == null || st.Y > best.Y)
+                    best = st;
+            }
+        }
+        return best;
+    }
+
+    /// <summary>
     /// LilyPond's <c>LARGE_STRETCH</c> — what goes between a non-spaceable line and the
     /// staff its affinity does NOT point at.
     /// </summary>

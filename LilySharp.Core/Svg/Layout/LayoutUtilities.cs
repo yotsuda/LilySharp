@@ -528,6 +528,69 @@ internal static class LayoutUtilities
     /// reflection rather than the absolute <see cref="FindStaffYInSystem"/>, so they
     /// stay decoupled from <see cref="SystemLayout.Y"/>.
     /// </remarks>
+    /// <summary>
+    /// The staff a SCORE-CONTEXT grob hangs on — a rehearsal mark, a section label, a
+    /// bar number: the system's topmost SPACEABLE staff.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE WALK IS <see cref="StaffAffinity.TopSpaceableStaff"/>'s — the bar number's
+    /// <c>AnchorStaff</c> under its neutral name, whose remarks carry the LilyPond citation
+    /// and the 2026-08-20 measurement. What this adds is the STAFFLESS fall-back, which the
+    /// bar number answers differently (it has <c>BarNumberEngraver.AnchorRow</c>, chosen by
+    /// which row reaches x≈0); a mark has no such rule and keeps the topmost placed row.
+    /// ⚠️ ONE HOME FOR THE SENTINEL. Several above-staff layouts spell "the top staff" as
+    /// <c>StaffIndex = -1</c> and the number was being resolved in two places that
+    /// disagreed: <c>OutsideStaffStacker</c>'s tracker resolved it to the topmost PLACED
+    /// element, while <see cref="StaffOffsetInSystemUp"/> did not resolve it at all and
+    /// returned 0 — the SYSTEM TOP. The two coincide only while the system's top element
+    /// IS a staff. Written <c>chords / staff / lyrics</c> they part company, and the
+    /// section mark was PRICED against the melody staff's occupancy while being DRAWN
+    /// from the chord row's band: 7.060 above the staff's top line, where every other row
+    /// order puts it at 2.660 (user report, session 243).
+    /// <para>
+    /// ⚠️ A TEXT ROW IS NOT A STAFF. MEASURED against LilyPond 2.26.0 (a ChordNames
+    /// context above a Staff, with <c>\mark</c>): LP draws the mark ON THE CHORD ROW'S OWN
+    /// LINE, level with the symbols and immediately above the staff — a RehearsalMark's
+    /// Y-parent is a staff's axis group, and a ChordNames context is not one.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE FALL-BACK IS REACHED AND IS NOT A GUESS: a rows-only lead sheet (chords row
+    /// + lyrics row, no staff at all) has no spaceable line, and its marks and bar numbers
+    /// must still hang on something — the topmost placed row, which is where they hung
+    /// before. That book is <c>RowsOnlySystemGapTests</c>' arm.
+    /// </para>
+    /// </remarks>
+    public static int TopScoreGrobStaff(SystemLayout system)
+    {
+        if (StaffAffinity.TopSpaceableStaff(system) is { } staff)
+            return staff.StaffIndex;
+        // Staffless: the topmost placed ROW, which is where these grobs hung before.
+        int placed = -1;
+        double placedY = double.NegativeInfinity;
+        foreach (var group in system.StaffGroups.IsDefaultOrEmpty
+                     ? ImmutableArray<StaffGroupLayout>.Empty : system.StaffGroups)
+        {
+            if (group.Staves.IsDefaultOrEmpty) continue;
+            foreach (var row in group.Staves)
+                if (!row.IsHidden && row.Y > placedY) { placedY = row.Y; placed = row.StaffIndex; }
+        }
+        return placed;
+    }
+
+    /// <summary>
+    /// Resolves a score-context grob's staff index: its own when it carries one, and the
+    /// system's <see cref="TopScoreGrobStaff"/> for the <c>-1</c> sentinel.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONLY FOR THE LAYOUTS WHOSE <c>-1</c> MEANS "THE TOP STAFF" — MusicMarkLayout,
+    /// CustomTextLayout, BarNumberLayout and their kin. Several OTHER layouts spell an
+    /// UNKNOWN staff the same way (<c>ArpeggioLayout</c>, <c>GraceNoteLayout</c> and
+    /// <c>TupletBracketLayout</c> all say "-1 = unknown/test construction" at their
+    /// declaration), and for those the sentinel is not this question.
+    /// </remarks>
+    public static int ResolveScoreGrobStaff(SystemLayout system, int staffIndex)
+        => staffIndex >= 0 ? staffIndex : TopScoreGrobStaff(system);
+
     public static double StaffOffsetInSystemUp(SystemLayout system, int staffIndex)
     {
         if (!system.StaffGroups.IsDefaultOrEmpty && staffIndex >= 0)

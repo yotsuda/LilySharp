@@ -480,7 +480,14 @@ internal static partial class SharedRenderer
             // The mark's page Y-up anchor: the staff middle's Y-up refpoint plus the
             // stored offset. Marks do not shrink on an ossia staff (StaffMiddleYUp is
             // not run through the ossia affine), so no ossia affine is applied here.
-            double yUp = os.StaffMiddleYUp(m.StaffIndex, m.MeasureIndex, StaffHeight) + m.YUp;
+            // ⚠️ THE -1 SENTINEL IS RESOLVED HERE TOO, to the SAME staff the stacker priced
+            // the mark against (LayoutUtilities.TopScoreGrobStaff). Unresolved it reaches
+            // StaffOffsetInSystemUp's `staffIndex >= 0` guard and answers 0 — the SYSTEM
+            // TOP — which is the staff's top line only while the system's first element IS
+            // a staff. With a chords row leading, the mark was drawn a whole row band above
+            // the line its room was reserved on (user report, session 243).
+            double yUp = os.ScoreGrobStaffMiddleYUp(m.StaffIndex, m.MeasureIndex, StaffHeight)
+                + m.YUp;
             using (gc.Source(m.SourcePosition))
                 DrawSingleMusicMark(fonts, m, yUp, gc);
         }

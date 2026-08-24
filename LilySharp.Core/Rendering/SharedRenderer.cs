@@ -440,9 +440,23 @@ internal static partial class SharedRenderer
                     // is the same SolvePrefixColumns table the layout reserved
                     // from — one derivation, so the drawn meter lands where the
                     // first bar was spaced from (a lead sheet has no clef and no
-                    // key, so TimeX is the LeftEdge→prefix gap alone). The glyphs
-                    // hang from the grid band's top — the same 4-ss frame the
-                    // barlines run.
+                    // key, so TimeX is the LeftEdge→prefix gap alone).
+                    // ⚠️ AND IT IS CENTRED ON THE BAND, NOT HUNG FROM ITS TOP (user
+                    // report 2026-08-24). This passed `rowTopY`, and DrawTimeSignature
+                    // drops a NOMINAL half staff (StaffMiddleLineDrop = 2.0) from
+                    // whatever top line it is handed — which IS the band's centre only
+                    // while the band is four staff spaces tall. A grid row is
+                    // `StaffHeight + (verses-1) * LyricVerseSpacing`, so a two-verse row
+                    // is 7.2 and its centre is 3.6 down: the meter sat 1.600000 above the
+                    // middle of the very bars it opens, while the repeat dots beside it
+                    // were centred — those were folded the same way and unfolded in
+                    // session 226 (EngravingDefaults.RepeatDotHalfSpan). Same fold, one
+                    // grob later.
+                    // ⇒ Hand it the synthetic top line whose MIDDLE is the band's centre.
+                    // That is the inversion DrawTabStaff already makes for a tab staff
+                    // with no middle line of its own — StaffMiddleLineDrop's remark names
+                    // it as the reason that constant exists. ⚠️ A four-space band cancels
+                    // to `rowTopY` EXACTLY, so an ordinary one-verse grid does not move.
                     if (isFirstSystem && !score.TimeSignature.SenzaMisura)
                     {
                         var pc = BreakAlignSpacing.SolvePrefixColumns(
@@ -452,7 +466,9 @@ internal static partial class SharedRenderer
                             includeTimeSignature: true,
                             score.TimeSignature.NumeratorText, score.TimeSignature.DenominatorText);
                         using (SourceScope(gc, score.Header.Time))
-                            DrawTimeSignature(score.TimeSignature, systemStartX + pc.TimeX, rowTopY, gc);
+                            DrawTimeSignature(
+                                score.TimeSignature, systemStartX + pc.TimeX,
+                                rowTopY - h / 2 + StaffMiddleLineDrop, gc);
                     }
                 }
                 continue;

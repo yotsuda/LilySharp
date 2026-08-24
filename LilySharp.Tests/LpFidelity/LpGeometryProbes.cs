@@ -2287,6 +2287,50 @@ internal static class LpGeometryProbes
     private static readonly string BNH = BarNumberScore("BNH", "''");
 
     /// <summary>
+    /// A SECTION LABEL with a chords row leading the system — the mirror of book MKC
+    /// (mark-chord-row.ly). A mark's Y-parent is a STAFF's axis group and a ChordNames
+    /// context is not one, so LilyPond leaves the mark where it would be without the row:
+    /// baseline 2.850000 over the staff refpoint, the same number book MKP reads.
+    /// ⚠️ Lily# <c>c'</c> is LilyPond <c>c''</c> (HANDOFF 5.5).
+    /// </summary>
+    private static readonly string MKR = MarkScore("MKR", withChords: true);
+
+    /// <summary>The same book with NO chord row — the control, mirror of book MKP.</summary>
+    private static readonly string MKN = MarkScore("MKN", withChords: false);
+
+    /// <summary>
+    /// The mark pair's book: two labelled sections so every system opens with one, and a
+    /// chords row present or absent — the ONE variable (HANDOFF 5.0-1).
+    /// </summary>
+    private static string MarkScore(string name, bool withChords)
+    {
+        // ⚠️ THE BREAK IS LOAD-BEARING, and mirrors the `reak' in the LilyPond probe:
+        // it puts ONE mark at the start of each system, which is the X-DISJOINT case both
+        // engines read as 2.850000. Without it both sections share a system, section B's
+        // label lands ON its bar's chord symbol, LilyPond lifts it (5.845000) and so does
+        // Lily# -- correctly -- and the entry would then be reading the OVERLAP case while
+        // its `why' describes the other one.
+        string bars = "c'4 d' e' f' | g' a' b' c'' | c''4 b' a' g' | f' e' d' c' | break";
+        string chordPart = withChords
+            ? "\n  chords harm { section A { C | G | Am | F | } section B { C | G | Am | F | } }"
+            : "";
+        string chordRow = withChords ? "\n  chords harm" : "";
+        return $$"""
+            octave absolute
+            time 4/4
+            key c major
+
+            part melody { section A { {{bars}} } section B { {{bars}} } }{{chordPart}}
+
+            form main { A B }
+
+            score main "{{name}}" {{{chordRow}}
+              staff melody
+            }
+            """;
+    }
+
+    /// <summary>
     /// A STAFFLESS lead sheet — a chord row over a lyric row and nothing else — the mirror of
     /// books SLN/SLP in barnumber-staffless.ly. There is no staff for the number to hang on,
     /// so LilyPond re-parents it onto the ROW that reaches its column and places it against
@@ -10407,6 +10451,23 @@ internal static class LpGeometryProbes
         // LilyPond's is 2.05 + padding 1.0 = 3.050000 for every numeral, chord row or not.
         new("barnumber.chord-row.staff-to-ink-bottom", BNC,
             g => g.FirstBarNumberInkBottomAboveStaff(), RaggedBottomPaper),
+
+        // ...and the SAME QUESTION for the SECTION LABEL (books MKR/MKN), which the entry
+        // above did not settle even though its own `why' stated the general fact. A mark
+        // spells "the top staff" as StaffIndex = -1, and the sentinel was resolved in two
+        // places that disagreed — the stacker's tracker took the topmost PLACED element,
+        // StaffOffsetInSystemUp took the SYSTEM TOP — so the mark was priced on one line and
+        // drawn from another. THE PAIR IS THE POINT: LilyPond reads 2.850000 on BOTH books,
+        // because a RehearsalMark's Y-parent is a STAFF's axis group and a ChordNames
+        // context is not one. Lily# differed between them by 4.400000 until session 243.
+        // ⚠️ The absolute residual is an OLDER, separate quantity (Lily# boxes its label
+        // where LilyPond draws bare text, and MusicMarkEngraver.AboveStaffOffset has never
+        // been measured) — see FirstMusicMarkBaselineAboveStaff's remarks. What these two
+        // entries watch is that the ROW ORDER cannot move the mark.
+        new("mark.chord-row.staff-to-baseline", MKR,
+            g => g.FirstMusicMarkBaselineAboveStaff(), RaggedBottomPaper),
+        new("mark.plain.staff-to-baseline", MKN,
+            g => g.FirstMusicMarkBaselineAboveStaff(), RaggedBottomPaper),
 
         // ...and the shape BOTH of those were blind to: NO STAFF AT ALL (book BNS, mirroring
         // barnumber-staffless.ly). The entries above measure over a staff refpoint, which a

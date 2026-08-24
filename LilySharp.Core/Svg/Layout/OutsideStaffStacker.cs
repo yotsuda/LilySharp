@@ -1132,23 +1132,14 @@ internal static class OutsideStaffStacker
     {
         if (sys < 0 || sys >= systems.Length || systems[sys].StaffGroups.IsDefaultOrEmpty)
             return 0;
-        int best = 0;
-        double bestY = double.NegativeInfinity;
-        foreach (var group in systems[sys].StaffGroups)
-        {
-            if (group.Staves.IsDefaultOrEmpty)
-                continue;
-            foreach (var staff in group.Staves)
-            {
-                // staff.Y is Y-up ⇒ the TOP staff is the LARGEST.
-                if (!staff.IsHidden && staff.Y > bestY)
-                {
-                    bestY = staff.Y;
-                    best = staff.StaffIndex;
-                }
-            }
-        }
-        return best;
+        // ⚠️ NOT A SECOND WALK. This used to answer "the topmost PLACED element", which is
+        // the CHORD ROW when a score is written `chords / staff / lyrics` — while the draw
+        // resolved the same -1 sentinel to the SYSTEM TOP. One sentinel, two answers, and
+        // they part company exactly when the top element is not a staff (user report,
+        // session 243). Both seams now ask LayoutUtilities.TopScoreGrobStaff, whose remark
+        // carries the LilyPond citation and the measurement.
+        int resolved = LayoutUtilities.TopScoreGrobStaff(systems[sys]);
+        return resolved >= 0 ? resolved : 0;
     }
 
     /// <summary>
@@ -1200,6 +1191,25 @@ internal static class OutsideStaffStacker
             .SelectMany(g => g.Staves)
             .FirstOrDefault(s => !s.IsHidden && s.StaffIndex == staffIndex);
         if (staff == null)
+            return;
+        // ⚠️ A TEXT ROW DRAWS NO CLEF, and this seeded one anyway until session 243.
+        // StaffLayout.Clef defaults to Treble for every staff including a chords or lyrics
+        // row, so the switch below fell through to its `_ =>' arm and merged a PHANTOM
+        // treble clef -- 1.800000 tall (GlyphMetrics.ClefG.Top 4.8 less the 3.0 anchor
+        // line), spanning x 0.300..2.865 -- into the support of a row that prints nothing
+        // there. On a rows-only lead sheet that row is what a section label hangs on, and
+        // the label's own X is 0.300..2.373, so the label cleared a clef nobody drew.
+        // MEASURED (user report 2026-08-24, scratch/ベースタブLy/Untitled-6.lys):
+        // the label's ink bottom stood 1.960000 over the chord row's ink where LilyPond
+        // puts it at 0.460000 -- its own outside-staff-padding -- i.e. 1.500000 too far,
+        // and the support read exactly 1.800000 at the label's X and 0.000000 everywhere
+        // else. LP measured in audit/lp-geometry/probes/mark-chord-row.ly book MKT, the
+        // rows-only sheet with a \sectionLabel.
+        // ⚠️ THE PREDICATE IS SPACEABILITY, the same one everything else in this island
+        // asks: a text row is exactly a non-spaceable staff (Staff.CreateTextRow gives it a
+        // staff-affinity; an ossia has none and is a real staff with a real clef).
+        // LILYPOND-REF: lily/page-layout-problem.cc:1173-1177 Page_layout_problem::is_spaceable.
+        if (!StaffAffinity.IsSpaceable(staff.StaffAffinity))
             return;
         var (clefBox, anchorLine) = staff.Clef switch
         {
@@ -1834,7 +1844,14 @@ internal static class OutsideStaffStacker
             // m.YUp is Y-up; a mark below the staff-top line (m.YUp < 2.0, the top line
             // sits 2 above the middle) is not part of this above pass. The stacker frame
             // is system-relative Y-up, so shift against the WITHIN-SYSTEM staff middle.
-            double midUp = LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], m.StaffIndex) - 2.0;
+            // ⚠️ THE SENTINEL IS RESOLVED, and it was not until session 243: passing the
+            // raw -1 to StaffOffsetInSystemUp falls through its `staffIndex >= 0` guard and
+            // returns 0 — the SYSTEM TOP — so the mark was priced against the staff the
+            // tracker resolved and shifted against a different line. The draw resolves it
+            // the same way (SharedRenderer.DrawMusicMarks); both go through this one home.
+            double midUp = LayoutUtilities.StaffOffsetInSystemUp(
+                systems[sysIdx],
+                LayoutUtilities.ResolveScoreGrobStaff(systems[sysIdx], m.StaffIndex)) - 2.0;
             if (MusicMarkItem.IsSpannerHandled(m.MarkType) || m.YUp < 2.0)
                 continue;
             // The metronome mark's pair is its STENCIL's, piecewise like the draw:

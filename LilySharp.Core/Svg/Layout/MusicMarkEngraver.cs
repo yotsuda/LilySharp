@@ -362,6 +362,29 @@ internal static class MusicMarkEngraver
     // LILYPOND-REF: axis-group-interface.cc:45 default_outside_staff_padding_ = 0.46
     private const double OutsideStaffPadding = 0.46;
 
+    /// <summary>
+    /// What a mark leaves between its own ink and a CHORD SYMBOL whose column it shares.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm RehearsalMark padding=0.8 — the mark family's OWN
+    /// declared padding, not <see cref="OutsideStaffPadding"/>, which is the generic
+    /// <c>default_outside_staff_padding_</c> for a grob that declares none. This one does.
+    /// ⚠️ LILYSHARP-OWN: THAT THE MARK CLEARS A CHORD AT ALL. LilyPond was asked directly
+    /// (audit/lp-geometry/probes/mark-chord-row.ly — a 2x2 over {chords row, none} x {high
+    /// notes, low}) and in EVERY cell the mark and the nearest chord symbol are X-DISJOINT:
+    /// the mark occupies x 3.365..5.379 and the nearest chord starts at 5.800. LilyPond
+    /// never produced the arrangement this constant is for, so it gives it no number, and
+    /// the value is chosen as the mark family's own padding rather than measured.
+    /// ⚠️⚠️ AND THE PROBE REFUTED THE READING THIS FILE FIRST SHIPPED WITH (2026-08-24,
+    /// corrected the same day): "system 2 reads 5.845000 = the chords' 5.045 + padding 0.8,
+    /// so LP lifts the mark over the chord". IT DOES NOT. 5.845 is 1.138700 BELOW that same
+    /// chord's ink TOP (6.983700) — the +0.8 matched the chord's BASELINE, and matching a
+    /// baseline is not clearing an ink. What moves the mark between the two systems is still
+    /// OPEN: the pair is X-disjoint in both, and the only measured difference is that their
+    /// X gap narrows from 3.206 to 0.591. ⇒ Do not cite that reading as a mechanism.
+    /// </remarks>
+    private const double ChordClearancePadding = 0.8;
+
     // Extra drop for D.S./D.C. jump instructions so they sit clear of low notes.
     private const double JumpInstructionDrop = 1.5;
 
@@ -502,6 +525,19 @@ internal static class MusicMarkEngraver
             && measureToSystemIdx.TryGetValue(measureB, out int b)
             && a == b;
 
+        // How far the mark's ANCHOR STAFF's top line sits below the system top, Y-up —
+        // 0 while that staff leads the system, negative once a chords or lyrics row does.
+        // It is the conversion every "above the staff" comparison in this method needs and
+        // none of them had: a mark's own frame is its staff's, and ChordNameLayout's is the
+        // system's. The anchor is LayoutUtilities' (StaffAffinity.TopSpaceableStaff), the
+        // same staff the outside-staff pass prices the mark against.
+        double AnchorStaffUp(int measureIndex)
+            => measureToSystemIdx.TryGetValue(measureIndex, out int sysIdx)
+               && sysIdx >= 0 && sysIdx < systems.Length
+                ? LayoutUtilities.StaffOffsetInSystemUp(
+                    systems[sysIdx], LayoutUtilities.TopScoreGrobStaff(systems[sysIdx]))
+                : 0.0;
+
         var measureToSystemBottom = new Dictionary<int, double>();
         foreach (var system in systems)
         {
@@ -554,6 +590,26 @@ internal static class MusicMarkEngraver
             // Base Y-up for above-staff stacking (from the top-staff middle, up+).
             // AboveStaffOffset is a device (down+) offset, so its Y-up value is 2 − it.
             double baseAboveYUp = 2.0 - AboveStaffOffset;
+            // ⚠️ AND ON A STAFFLESS SHEET THAT CONSTANT IS A STAFF'S SHAPE WITH NO STAFF
+            // UNDER IT -- 2.0 - AboveStaffOffset is "two and a half above the top LINE",
+            // which is what clears five staff lines. A chords or lyrics ROW has none and its
+            // ink stops 0.300000 above its band top, so the base sits ABOVE the row's ink and
+            // the outside-staff pass -- the thing that would place the mark at the ink plus
+            // padding -- never engages. MEASURED (user report 2026-08-24): the label stands
+            // 0.900000 over the chord row's ink where LilyPond puts it at 0.460000 (probe
+            // mark-chord-row.ly book MKT), the last 0.440000 of a gap that was 1.960000
+            // before the phantom clef went (OutsideStaffStacker.SeedClefInk).
+            // ⚠️ ⚠️ NOT CLOSED HERE, AND THE OBVIOUS CLOSE OVERSHOOTS. Dropping the base to
+            // the row's band top and letting the pass place it reads 0.160000 -- 0.300000
+            // too CLOSE -- because the pass's own idea of where the row's ink is, is low by
+            // about that much: OutsideStaffStacker.AboveTrackers raises a staff's profile by
+            // `topUp - StaffBottom / 2.0', the NOMINAL half staff, while a TEXT ROW's profile
+            // is about its TEXT BASELINE (MultiStaffLayouter merges RowSkylines saying so).
+            // The same fold this session took out of the grid meter, one layer down.
+            // => It needs the row's own refpoint at that seam, and StaffLayout does not carry
+            // it (no IsTextRow, no baseline) -- a model change, not a constant. Left measured
+            // rather than half-closed: 0.440000 too far never overprints, 0.300000 too close
+            // can.
             if (hasVoltaOverlap)
             {
                 // Place marks above the volta bracket with outside-staff padding.
@@ -569,29 +625,70 @@ internal static class MusicMarkEngraver
             // chord several spaces away; LilyPond's outside-staff stacking is
             // extent-based, so compare real horizontal spans.
             // LILYPOND-REF: lily/axis-group-interface.cc:865-984 skyline_spacing.
-            // Only inline top-staff chords have negative Y here; chord ROWS and
-            // lower staves don't share the marks' band.
-            // Constraint on the box BOTTOM in Y-up: a mark's bottom must clear the
-            // highest chord top it overlaps. Init −inf, keep the largest (highest).
-            double markCeilingUp = double.NegativeInfinity;
-            if (!chordNames.IsDefaultOrEmpty && aboveMarks.Count > 0)
+            // Constraint on THIS mark's box BOTTOM in Y-up: it must clear the highest
+            // chord top its own ink overlaps. Negative infinity when it overlaps none.
+            // ⚠️ PER MARK, AND IT WAS ONE SCALAR FOR THE WHOLE SCORE until session 243.
+            // That could not show while only INLINE chords reached the loop -- an inline
+            // chord sits over its own note, so the marks that overlapped one were the
+            // marks beside it. With a leading chord ROW in the loop every system has a
+            // symbol at every bar, and ONE mark that genuinely sits on one lifted EVERY
+            // other mark in the book with it (MEASURED on book MKR: the section label
+            // "B" really does overlap its bar's chord, and "A" four bars earlier rose
+            // with it -- 7.805000 against LilyPond's 2.850000).
+            // LILYPOND-REF: lily/axis-group-interface.cc:865-984 skyline_spacing -- each
+            //   grob is placed against the skyline of what is already there, so an
+            //   X-disjoint neighbour cannot move it. The rule is per grob, not per book.
+            double MarkCeilingUp(MusicMarkItem mark, double markX)
             {
-                foreach (var e in aboveMarks)
+                double ceiling = double.NegativeInfinity;
+                if (chordNames.IsDefaultOrEmpty) return ceiling;
+                var (mx0, mx1) = MarkXExtent(fonts, mark, markX);
+                foreach (var cn in chordNames)
                 {
-                    var (mx0, mx1) = MarkXExtent(fonts, e.Mark, e.X);
-                    foreach (var cn in chordNames)
-                    {
-                        // Only inline chords ABOVE the top staff (mark-frame Y-up > 2.0,
-                        // i.e. cn.YUp > 0) share the marks' band.
-                        if (cn.YUp <= 0 || !SameSystem(cn.MeasureIndex, e.Mark.MeasureIndex))
-                            continue;
-                        double chHalf = ChordNameEngraver.SymbolInkWidth(fonts, cn.ChordText) / 2 + 0.3;
-                        if (mx1 < cn.X - chHalf || mx0 > cn.X + chHalf)
-                            continue; // no horizontal ink overlap
-                        double chordTopUp = (2.0 + cn.YUp) + ChordAscent(cn);
-                        markCeilingUp = Math.Max(markCeilingUp, chordTopUp + OutsideStaffPadding);
-                    }
+                    if (!SameSystem(cn.MeasureIndex, mark.MeasureIndex))
+                        continue;
+                    // The chord's baseline IN THE MARK'S FRAME, whose 2.0 is the mark's
+                    // ANCHOR STAFF's top line. ⚠️ ChordNameLayout.YUp is measured above
+                    // the SYSTEM top, so `2.0 + cn.YUp` — what stood here — is that
+                    // conversion only while the anchor staff LEADS the system.
+                    double chordUp = 2.0 + (cn.YUp - AnchorStaffUp(cn.MeasureIndex));
+                    // ...and only ink ABOVE that staff's top line shares the marks'
+                    // band. That test used to be spelled `cn.YUp <= 0`, which says the
+                    // same thing ONLY for a leading staff and otherwise discards a
+                    // leading chord ROW wholesale — harmless while the mark floated
+                    // above the whole band, and a collision the moment it stopped:
+                // samples/greensleeves.lys printed its tempo THROUGH the first
+                // chord symbol (session 243).
+                // ⚠️ WHAT LILYPOND DOES HERE IS NOT WHAT AN EARLIER DRAFT OF THIS
+                // COMMENT CLAIMED. It said LP lifts a mark over a chord whose X it
+                // overlaps; the probe (mark-chord-row.ly) shows LP never puts the two
+                // at overlapping X at all, so it answers nothing about this branch.
+                // See ChordClearancePadding for the measurement and the correction.
+                // The clearing itself is Lily#'s own: its marks DO land on a chord's
+                // column, so something has to move.
+                if (chordUp <= 2.0)
+                        continue;
+                    // ⚠️ cn.X IS THE SYMBOL'S LEFT EDGE, NOT ITS CENTRE — a chord name is
+                    // drawn with TextAnchor.Start (SharedRenderer.DrawChordNames). This
+                    // window was `cn.X ± (width/2 + 0.3)`, which reaches half a symbol
+                    // too far LEFT and stops half a symbol too early on the right. It
+                    // could not matter while only inline chords arrived here (the error
+                    // is a shift, and an inline chord sits over its own note far from
+                    // any line-start mark); with a leading chord ROW in the loop it
+                    // does — the first symbol of a system starts near x=0 and the shifted
+                    // window swallowed the mark that stands to its left, lifting it over
+                    // a chord it does not touch.
+                    const double chordInkPadding = 0.3;
+                    double chLeft = cn.X - chordInkPadding;
+                    double chRight = cn.X
+                        + ChordNameEngraver.SymbolInkWidth(fonts, cn.ChordText)
+                        + chordInkPadding;
+                    if (mx1 < chLeft || mx0 > chRight)
+                        continue; // no horizontal ink overlap
+                    double chordTopUp = chordUp + ChordAscent(cn);
+                    ceiling = Math.Max(ceiling, chordTopUp + ChordClearancePadding);
                 }
+                return ceiling;
             }
 
             // Above-staff estimate BEFORE the outside-staff pass: every mark rests at
@@ -642,6 +739,10 @@ internal static class MusicMarkEngraver
                     stackTopYUp = restUnderUp;
                 else if (chainStarted)
                     chainStarted = false;   // nothing under it: this one opens its own chain
+
+                // THIS mark's own chord ceiling — asked with its own X, not once for the
+                // whole book (see MarkCeilingUp's remark).
+                double markCeilingUp = MarkCeilingUp(mark, x);
 
                 double yUp;
                 if (mark.Type == MusicMarkType.Tempo)

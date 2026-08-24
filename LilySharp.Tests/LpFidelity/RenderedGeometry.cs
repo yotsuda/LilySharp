@@ -699,6 +699,65 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// Boxed section labels and rehearsal marks, top of the page down
+    /// (<c>SharedRenderer.DrawSingleMusicMark</c> draws them in
+    /// <see cref="TextRole.Mark"/>).
+    /// </summary>
+    public IReadOnlyList<DrawnText> MusicMarkLabels =>
+        Texts.Where(t => t.Role == TextRole.Mark).OrderBy(t => t.Y).ToList();
+
+    /// <summary>
+    /// The FIRST boxed mark's BASELINE above the staff reference point it rides over.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm RehearsalMark — <c>outside-staff-priority 1500</c>
+    /// and <c>padding 0.8</c>. LilyPond draws the letter ON its baseline (measured extent
+    /// bottom 0.0 in probes/mark-chord-row.ly), so LP's baseline IS its ink bottom and the
+    /// two engines are compared on the same datum here.
+    /// <para>
+    /// ⚠️ THE PAIR IS THE POINT, NOT THE ABSOLUTE. The two books differ in ONE thing —
+    /// whether a ChordNames line leads the system — and LilyPond reads the same number on
+    /// both: a mark's Y-parent is a STAFF's axis group, and a ChordNames context is not
+    /// one, so the row does not move it. Any difference Lily# shows BETWEEN the two books
+    /// is its own, and it was 4.400000 until session 243.
+    /// </para>
+    /// <para>
+    /// ⚠️⚠️ AND THE GROB HAS TO MATCH, WHICH IT DID NOT WHEN THIS WAS WRITTEN. Lily# draws
+    /// a <c>form</c> section name as a SECTION LABEL, and in LilyPond a SectionLabel and a
+    /// RehearsalMark are different grobs with different anchors — SectionLabel
+    /// <c>(break-align-symbols . (left-edge staff-bar))</c>, <c>self-alignment-X</c> LEFT,
+    /// priority 1450; RehearsalMark <c>(staff-bar key-signature clef)</c>, priority 1500.
+    /// The first stands at the LEFT EDGE (measured X 0.000, probe book MKB), the second
+    /// AFTER the clef (X 3.365, and 6.385 once a key signature is added — book MKK). These
+    /// entries first quoted the REHEARSAL mark's 2.850000, which made Lily# look 1.810 too
+    /// high and pointed a session at porting <c>break-alignable-interface</c> — a port that
+    /// would have moved the section label AWAY from LilyPond. The value is book MKB's
+    /// section label now, and the residual is 0.542971.
+    /// ⇒ ★★ When a ledger entry compares "the mark", name WHICH GROB on both sides. Two
+    /// grobs that draw the same-looking box can have different anchors, and the arithmetic
+    /// closes either way.
+    /// </para>
+    /// </remarks>
+    public double FirstMusicMarkBaselineAboveStaff(int page = 0)
+    {
+        var marks = MusicMarkLabels;
+        if (marks.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: the probe drew no section label.\nDrawn geometry:\n" + Describe());
+        }
+        double y = marks[0].Y;
+        var below = StaffRefpoints(page).Where(r => r > y).ToList();
+        if (below.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: the first mark at {y:F6} has no staff below it, so it is not "
+                + "riding over one.\nDrawn geometry:\n" + Describe());
+        }
+        return below.Min() - y;
+    }
+
+    /// <summary>
     /// Custom texts (<c>_"..."</c>), top of the page down — the serif runs at
     /// <c>EngravingDefaults.TextScriptFontSize</c>, the size <c>DrawCustomTexts</c> draws
     /// them at.

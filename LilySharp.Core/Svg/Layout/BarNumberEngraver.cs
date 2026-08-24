@@ -100,24 +100,15 @@ internal static class BarNumberEngraver
     /// For the staffless case it is answered structurally instead — see
     /// <see cref="AnchorRow"/>, whose whole justification is which row reaches x≈0.
     /// </remarks>
+    /// ⚠️ THE WALK ITSELF MOVED TO <see cref="StaffAffinity.TopSpaceableStaff"/> on
+    /// 2026-08-24; this is the bar number's NAME for it. The remarks above stay here because
+    /// they are the bar number's own measurement — the X-disjointness that keeps a
+    /// line-start number on the staff — and because the ledger's <c>why</c> cites this
+    /// member. The move happened because that entry already claimed this spelling was
+    /// "shared with the stacker's tracker choice" and it was not: the REHEARSAL MARK had a
+    /// spelling of its own, and with it the same defect, for four more sessions.
     internal static StaffLayout? AnchorStaff(SystemLayout system)
-    {
-        if (system.StaffGroups.IsDefaultOrEmpty) return null;
-        StaffLayout? best = null;
-        foreach (var group in system.StaffGroups)
-        {
-            if (group.Staves.IsDefaultOrEmpty) continue;
-            foreach (var st in group.Staves)
-            {
-                if (st.IsHidden || !StaffAffinity.IsSpaceable(st.StaffAffinity))
-                    continue;
-                // st.Y is Y-up from the system top (0 or negative): topmost = largest.
-                if (best == null || st.Y > best.Y)
-                    best = st;
-            }
-        }
-        return best;
-    }
+        => StaffAffinity.TopSpaceableStaff(system);
 
     /// <summary>
     /// The ROW a system with no staff at all hangs its bar number on: the grid row, the one

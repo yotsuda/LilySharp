@@ -285,6 +285,26 @@ internal static partial class SharedRenderer
                 : double.NaN;
 
         /// <summary>
+        /// The same refpoint for a SCORE-CONTEXT grob, whose <c>-1</c> means "the top
+        /// staff" rather than "unknown" — resolved through
+        /// <see cref="LayoutUtilities.ResolveScoreGrobStaff"/>, so the draw lands on the
+        /// staff the outside-staff pass priced the grob against.
+        /// </summary>
+        /// <remarks>
+        /// ⚠️ SEPARATE FROM <see cref="StaffMiddleYUp"/> ON PURPOSE, because the callers
+        /// differ in what their <c>-1</c> MEANS: <c>ArpeggioLayout</c>,
+        /// <c>GraceNoteLayout</c> and <c>TupletBracketLayout</c> all declare it as
+        /// "unknown/test construction" at their own declarations, and resolving those to
+        /// the top staff would move a grob whose staff simply was not recorded. Only the
+        /// layouts that document <c>-1</c> as "top staff" come here.
+        /// </remarks>
+        public double ScoreGrobStaffMiddleYUp(int staffIndex, int measureIndex, double staffHeight)
+            => _systems.TryGetValue(measureIndex, out var system)
+                ? LayoutUtilities.ResolveStaffMiddleY(
+                    system, LayoutUtilities.ResolveScoreGrobStaff(system, staffIndex), staffHeight)
+                : double.NaN;
+
+        /// <summary>
         /// The staff's PLACED layout in the measure's system — the carrier of its
         /// real height and tab identity (<see cref="StaffLayout.Tuning"/>), for
         /// drawers whose geometry follows the staff's own frame rather than the
