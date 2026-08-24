@@ -4641,8 +4641,19 @@ internal sealed class LayoutEngine
             foreach (int rowStaff in alignment.Trailing)
                 lines.AddRange(engraver.RowBlockSkylines(
                     score.Lyrics, measureLayouts, startMeasure, endMeasure, rowStaff));
+
+        // ...and when the chain DECLINES, those same trailing rows still get DRAWN — in the
+        // BAND the alignment stacked them in, because that is what a row the chain does not
+        // reach keeps (LyricEngraver.CalculateLayouts' `isRow` arm: "THE PRE-CHAIN PLACEMENT
+        // ONLY"). So the room they need is the BAND, and it is reserved here rather than
+        // nowhere.
+        var unmodelledBand = alignment.UnmodelledRow
+            ? TrailingRowBandBelowSystem(
+                alignment.Trailing, groups, measureLayouts, startMeasure, endMeasure)
+            : null;
+
         if (lines.Count == 0)
-            return null;
+            return unmodelledBand;
 
         var walk = new AlignmentWalk();
         walk.Seed(staffSkylines[anchorStaff.StaffIndex].Down);
@@ -4665,7 +4676,7 @@ internal sealed class LayoutEngine
                 profile.Merge(lineDown.Buildings, 0, -walk.Where);
         }
         if (profile.IsEmpty)
-            return null;
+            return unmodelledBand;
 
         // ⚠️ THE ANCHOR STAFF'S OWN INK IS DELIBERATELY NOT IN THIS — it stays the system
         // skyline's business (SkylineBuilder.AddEdgeStaffInk seeds the edge staff for the
@@ -4682,7 +4693,88 @@ internal sealed class LayoutEngine
         // the SYSTEM-ORIGIN frame. One shift, stated once — the same conversion
         // PageAnchorOffsets' ToLast carries for the springs.
         profile.Raise(MultiStaffLayouter.StaffRefpoint(anchorStaff));
+        // ⚠️ MERGED AFTER THE SHIFT, not before: the band is built in the SYSTEM-ORIGIN frame
+        // (a band top IS the system origin's business — it is a stacked staff's Y), while
+        // everything above this line is still in the anchor staff's refpoint frame.
+        if (unmodelledBand is { IsEmpty: false })
+            profile.Merge(unmodelledBand);
         return profile;
+    }
+
+    /// <summary>
+    /// The BAND a system's trailing lyrics rows occupy, in the system-origin frame — the room
+    /// they need while the loose chain declines to place them.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
+    /// <c>Page_layout_problem::append_system</c>, which collects EVERY non-spaceable line
+    /// between two spaceable ones and always solves it. GOES when the last un-modelled
+    /// arrangement does — see <see cref="SystemAlignment.UnmodelledRow"/>, whose list this
+    /// is the reservation side of. OBSERVED BY <c>TrailingLyricsRowBandTests</c>, which is
+    /// what keeps the band and the drawn position from drifting apart: it renders the book
+    /// and asserts no syllable lands inside a staff's line span, so the cross-file invariant
+    /// this remark leans on below is measured rather than merely asserted.
+    /// <para>
+    /// ⚠️ AND IT IS THE BAND RATHER THAN THE INK ON PURPOSE. LilyPond has no
+    /// band: a Lyrics context is a <c>VerticalAxisGroup</c> whose extent is its syllables, and
+    /// it is always solved (page-layout-problem.cc:919-925), so "the room a row keeps while
+    /// nothing solves it" is a Lily# state with no counterpart. While that state lasts, the
+    /// row is DRAWN in its stacked band — <c>LyricEngraver.CalculateLayouts</c>' <c>isRow</c>
+    /// arm, whose own remark says the pre-chain placement is what a row the chain does not
+    /// reach keeps — so the band is what the page must leave. Reserving the walked INK
+    /// instead would be a second model of a position the chain is not computing: its verse
+    /// step is <c>max(2.8, ink + 0.2)</c> (<c>RowSkylinesAboutBaseline</c>) while the drawn
+    /// step is the flat <c>VerseSpacing</c>, and the two disagree by 0.400000 per extra verse
+    /// on the reported book — the reservation would sit ABOVE the syllables it is for.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE WIDTH IS THE DRAWN WIDTH and the band spans all of it, which is why this is a
+    /// box and not a silhouette — the same argument <c>CreatePages</c> makes for the chord-row
+    /// band above the next system ("a band spans every X, so the X-disjoint argument for
+    /// preferring Distance() does not apply to it"), and the same construction
+    /// <c>MultiStaffLayouter.ReserveChordRowBand</c> uses for the mirror image above a staff.
+    /// </para>
+    /// </remarks>
+    private static VerticalSkyline? TrailingRowBandBelowSystem(
+        ImmutableArray<int> trailing, ImmutableArray<StaffGroupLayout> groups,
+        ImmutableArray<MeasureLayout> measureLayouts, int startMeasure, int endMeasure)
+    {
+        if (trailing.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
+            return null;
+
+        // The DEEPEST of them: they are stacked, so the lowest band bottom is the floor for
+        // all of them, and one box says it once.
+        double bottom = 0;
+        foreach (var group in groups)
+        {
+            if (group.Staves.IsDefaultOrEmpty) continue;
+            foreach (var st in group.Staves)
+                if (!st.IsHidden && trailing.Contains(st.StaffIndex))
+                    bottom = Math.Min(bottom, st.Y - st.Height);
+        }
+        if (bottom >= 0)
+            return null;
+
+        // ⚠️ THIS SYSTEM'S MEASURES, SELECTED BY MeasureIndex. The list handed in is the
+        // WHOLE SCORE's (the pairing RowBlockSkylines wants, and the reason this method is
+        // given the range at all); taking its full X span would stretch the band across
+        // every system's width at once, which is a claim about X this box has no right to
+        // make.
+        double xLeft = double.PositiveInfinity, xRight = double.NegativeInfinity;
+        foreach (var ml in measureLayouts)
+        {
+            if (ml.MeasureIndex < startMeasure || ml.MeasureIndex >= endMeasure) continue;
+            xLeft = Math.Min(xLeft, ml.X);
+            xRight = Math.Max(xRight, ml.X + ml.Width);
+        }
+        if (xRight <= xLeft)
+            return null;
+
+        // ⚠️ THE `0` IS NOT THE BAND'S TOP AND IS NOT READ. FromBox stores the edge on the
+        // skyline's OWN side — a DOWN skyline keeps yBottom and discards yTop — so the box
+        // is the floor alone, which is all a floor should say. Written as the system origin
+        // rather than as some larger number so it cannot be mistaken for a claim.
+        return VerticalSkyline.FromBox(xLeft, xRight, bottom, 0, VerticalDirection.Down);
     }
 
     /// <summary>A lyric engraver configured for geometry only — one X model, no layout.</summary>

@@ -46,6 +46,12 @@ namespace LilySharp.Tests;
 /// the first system's band of 19.42‥26.62. It is the one book of the 572 tracked whose
 /// picture this fix moves, and it moved because it was wrong.
 /// </para>
+/// <para>
+/// ⚠️ THE OTHER HALF OF THE SAME HOLE — a system that DOES have a staff but whose bottom
+/// element is a lyrics row — was reported one session later and is guarded by
+/// <see cref="TrailingLyricsRowBandTests"/>. See the comment on the theory below for why it
+/// could not be an arm of this one.
+/// </para>
 /// </remarks>
 [Trait("Category", "Unit")]
 public class RowsOnlySystemGapTests
@@ -107,11 +113,26 @@ public class RowsOnlySystemGapTests
     // band is 7.2, and it is that extra depth the under-measured silhouette lost. Verified
     // by reverting the guard: with one verse the theory stayed green, with two it goes red.
 
+    // ⚠️⚠️ ★★★ A SECOND ARM STOOD HERE AND ASSERTED NOTHING (removed session 243). It read
+    // `staff melody / chords prog as names / lyrics verse sings melody` and its own comment
+    // called it "the control that was always right" — while that exact arrangement was the
+    // NEXT user report, and this file stayed green all the way through it. The INSTRUMENT is
+    // why: `Bands()` measures BARLINES, and on a score WITH a staff the barlines span the
+    // staff only, never the chord and lyric rows hanging under it. `firstBottom` was
+    // therefore the staff's bottom, some six staff spaces above the deepest syllable, and
+    // every label below it cleared trivially. The arm could not go red.
+    // ⇒ ★★ A CONTROL THAT CANNOT GO RED IS NOT A CONTROL — it is a claim wearing a test's
+    // clothes, and this one bought a session of false confidence.
+    // ⚠️ AND IT CANNOT BE REPAIRED IN PLACE. On a staff score the label and the deepest
+    // syllable are X-DISJOINT — the mark leads system 2 while the last verse ends system 1 —
+    // so they legitimately share a Y, and a vertical-only assertion is WRONG there rather
+    // than merely weak (measured: it goes red on correct output). That arrangement is
+    // guarded by TrailingLyricsRowBandTests instead, whose instrument is X-free for a
+    // different reason: a staff LINE spans every X, so "a syllable inside a staff's line
+    // span" is an overlap without needing an X model at all.
     [Theory]
     // The reported shape: no staff at all.
     [InlineData("  chords prog as names\n  lyrics verse sings melody")]
-    // …and the control that was always right, so the test says which half it is guarding.
-    [InlineData("  staff melody\n  chords prog as names\n  lyrics verse sings melody")]
     public void WhatStandsAboveTheSecondSystem_ClearsTheFirst(string scoreBody)
     {
         var svg = Render(scoreBody);
