@@ -638,8 +638,17 @@ public sealed class MusicXmlExporter
     /// <summary>A <c>|: BODY [1. E1] :| [2. E2]</c> volta repeat. The body opens the
     /// forward repeat; each ending gets a &lt;ending&gt; start/stop bracket; the
     /// backward repeat sits on the last measure before the <c>:|</c>; endings AFTER
-    /// the <c>:|</c> are final (type "discontinue", no repeat). A silent <c>~</c>
-    /// ending suppresses its bracket (as the engraving does) but still plays.</summary>
+    /// the <c>:|</c> are final (type "discontinue", no repeat).
+    /// <para>
+    /// A silent <c>~</c> ending is INDISTINGUISHABLE HERE, and that is the correct answer
+    /// rather than a gap: the tilde binds to the section name and hides the section LABEL,
+    /// and this exporter writes no section label at all — <c>EmitSectionByName</c> takes a
+    /// name and emits music, so <c>~B</c> and <c>B</c> already reach it as the same call.
+    /// Its ending bracket is emitted like any other.
+    /// ⚠️ UNTIL 2026-08-25 THIS SUPPRESSED THE BRACKET, "as the engraving does" — and the
+    /// engraving was wrong. The citation is what carried the defect across the output
+    /// boundary; the quantity has three outputs and only one of them was ever right.
+    /// </para></summary>
     private void EmitVoltaRepeatBlock(FormRepeatBlockSyntax rb, Dictionary<string, List<SectionDeclarationSyntax>> byName)
     {
         bool forwardPending = true;
@@ -657,12 +666,9 @@ public sealed class MusicXmlExporter
                 foreach (var p in Document.Parts)
                 {
                     if (p.Measures.Count <= startIdx.GetValueOrDefault(p)) continue;
-                    if (!alt.IsSilent)
-                    {
-                        p.Measures[startIdx.GetValueOrDefault(p)].EndingStartNumbers = num;
-                        p.Measures[^1].EndingStopNumbers = num;
-                        p.Measures[^1].EndingStopType = stopType;
-                    }
+                    p.Measures[startIdx.GetValueOrDefault(p)].EndingStartNumbers = num;
+                    p.Measures[^1].EndingStopNumbers = num;
+                    p.Measures[^1].EndingStopType = stopType;
                     if (forwardPending) p.Measures[startIdx.GetValueOrDefault(p)].RepeatForward = true;
                 }
                 forwardPending = false;

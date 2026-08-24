@@ -1098,10 +1098,17 @@ public sealed class LilyPondExporter
 
                 // A volta ending OUTSIDE a repeat block is just its section: there is no
                 // \repeat for an \alternative to hang on. Its label rule mirrors
-                // MeasureCollector.Form.cs (alt.DisplayLabel ?? name).
+                // MeasureCollector.Form.cs (alt.DisplayLabel ?? name), and `~` hides it: the
+                // tilde binds to the SECTION NAME in the grammar, so it hides what a plain
+                // `~Name` hides.
+                // ⚠️ THE MIRROR WAS TAKEN OF A BROKEN ARM (2026-08-25). This line and
+                // CreateEnding's both stated that they mirrored MeasureCollector.Form.cs,
+                // and that arm was the one page reader of four that had never been taught
+                // IsSilent — so the citation carried the defect into the twin, twice.
+                // ⇒ A "mirrors X" comment is a claim about X AT THE TIME IT WAS WRITTEN.
                 case FormAlternativeSyntax alt:
                     AppendSection(alt.SectionName.Text, byName, result,
-                        markLabel: alt.DisplayLabel ?? alt.SectionName.Text);
+                        markLabel: alt.IsSilent ? null : alt.DisplayLabel ?? alt.SectionName.Text);
                     break;
 
                 // `break` / `nobreak`, navigation marks and `@` marks are music where they
@@ -1241,9 +1248,12 @@ public sealed class LilyPondExporter
     {
         var items = new List<SyntaxNode>();
         // The ending's label rule mirrors MeasureCollector.Form.cs's alternative arm
-        // (alt.DisplayLabel ?? name), like the outside-a-repeat FormAlternative case.
+        // (alt.DisplayLabel ?? name, hidden by `~`), like the outside-a-repeat
+        // FormAlternative case. ⚠️ The tilde takes the LABEL and not the ending: the volta
+        // green built below is emitted whatever IsSilent says, because an ending with no
+        // bracket is spelled by leaving the `[` out. See the note on that case.
         AppendSection(ending.SectionName.Text, byName, items,
-            markLabel: ending.DisplayLabel ?? ending.SectionName.Text);
+            markLabel: ending.IsSilent ? null : ending.DisplayLabel ?? ending.SectionName.Text);
 
         var green = new InternalSyntax.InlineVoltaGreen(
             new InternalSyntax.SyntaxToken(SyntaxKind.OpenBracket, "["),

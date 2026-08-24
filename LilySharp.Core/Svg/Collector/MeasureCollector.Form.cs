@@ -105,7 +105,23 @@ public sealed partial class MeasureCollector
                         int startMeasureIndex = builder.CurrentMeasureIndex;
                         RecordSectionStart(altSectionName, startMeasureIndex);
 
-                        builder.SectionLabel = alt.DisplayLabel ?? altSectionName;
+                        // `~` BINDS TO THE SECTION NAME, NOT TO THE ENDING — the grammar
+                        // spells the ending `'[' Integer '.' ['~'] Identifier [']']`, so the
+                        // tilde is the same one the plain `~Name` item carries and it hides
+                        // the same thing: the section LABEL. The bracket, its number and its
+                        // caps are the ending's own and are not the tilde's to take.
+                        // ⚠️ UNTIL 2026-08-25 THIS ARM APPLIED IT TO THE OTHER LINE, and both
+                        // halves were wrong at once: the label was written unconditionally
+                        // here while the bracket was gated on IsSilent below, so
+                        // `|: [1. ~B :|` printed B's label and drew no ending at all —
+                        // exactly inverted (user report, scratch/ベースタブLy/
+                        // repeat-disappear.lys). The sibling arm for an ending OUTSIDE a
+                        // repeat (MeasureCollector.cs, the `!IsInsideRepeatBlock` case) has
+                        // always read it this way and FormVoltaWithoutRepeatTests pins it;
+                        // so do the two resume arms. This was the ONE page reader of four
+                        // that had not been taught.
+                        builder.SectionLabel = alt.IsSilent
+                            ? null : alt.DisplayLabel ?? altSectionName;
                         builder.SectionLabelPosition = SectionDeclPos(altSectionName);
                         ProcessSection(section, processNodes, builder);
 
@@ -118,7 +134,10 @@ public sealed partial class MeasureCollector
                         // Collect volta bracket info if bracket style
                         // endMeasureIndex is exclusive (one-past-end); convert to inclusive
                         // for VoltaBracketItem which stores the last measure index
-                        if (alt.HasBracket && !alt.IsSilent)
+                        // ⚠️ NOT gated on IsSilent — see the label above. Writing an ending
+                        // with no bracket already has a spelling, and it is the one without
+                        // the `[`: `|: A :|` engraves the repeat and no volta.
+                        if (alt.HasBracket)
                         {
                             int lastMeasure = Math.Max(startMeasureIndex, endMeasureIndex - 1);
                             pendingVoltaBrackets.Add((startMeasureIndex, lastMeasure, alt.VoltaText, alt.IsClosed, alt.Position));
