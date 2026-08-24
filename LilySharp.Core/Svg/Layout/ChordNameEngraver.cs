@@ -138,7 +138,8 @@ internal static class ChordNameEngraver
         Func<int, double>? minStaffYAt = null,
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
         bool chordGridSheet = false,
-        Func<int, int, VerticalSkyline?>? lowerStaffUpSkyline = null)
+        Func<int, int, VerticalSkyline?>? lowerStaffUpSkyline = null,
+        IReadOnlyList<(int MeasureIndex, double X0, double X1)>? labelWindows = null)
     {
         if (chordNames.IsDefaultOrEmpty || systems.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
             return ImmutableArray<ChordNameLayout>.Empty;
@@ -186,6 +187,41 @@ internal static class ChordNameEngraver
             a.sysIdx != b.sysIdx ? a.sysIdx.CompareTo(b.sysIdx)
             : a.chord.StaffIndex != b.chord.StaffIndex ? a.chord.StaffIndex.CompareTo(b.chord.StaffIndex)
             : a.x.CompareTo(b.x));
+        // ...and against the BOXED SECTION LABELS that share this row's line, on the sheets
+        // where they do (MusicMarkEngraver.StafflessAnchorRefpointBelowTop: a staffless lead
+        // sheet sets its section letters ON the chord line, by the owner's decision of
+        // 2026-08-24). A label standing on a symbol's own column is exactly the case that
+        // decision creates, so the reservation travels in the same commit as the placement
+        // (HANDOFF 5.3): `A2' printed straight through `Dmaj7' with only the Y half in.
+        // ⚠️ LILYSHARP-OWN, and it is the SAME shift ClearOfPrevious makes — a symbol whose
+        // column is occupied moves right until its box is clear, with the same SymbolGap.
+        // LilyPond never creates the configuration (its label does not share the line), so
+        // there is no LilyPond rule to copy here; when the convention goes, this goes with it.
+        // ⚠️ THE LABEL LOOP RUNS FIRST so the neighbour cascade below sees the moved symbol
+        // and re-clears everything after it. Running it afterwards would push one symbol onto
+        // the next.
+        if (labelWindows is { Count: > 0 })
+        {
+            for (int i = 0; i < prepared.Count; i++)
+            {
+                var cur = prepared[i];
+                if (!cur.chord.UseTiming) continue;   // an inline @chord stays on its note
+                double x = cur.x;
+                foreach (var (measureIndex, x0, x1) in labelWindows)
+                {
+                    if (!measureToSystem.TryGetValue(measureIndex, out int labelSys)
+                        || labelSys != cur.sysIdx)
+                        continue;
+                    double width = SymbolWidth(fonts, cur.chord);
+                    if (x + width + SymbolGap <= x0 || x >= x1 + SymbolGap)
+                        continue;   // the box and the symbol do not meet
+                    x = Math.Max(x, x1 + SymbolGap);
+                }
+                if (x != cur.x)
+                    prepared[i] = (cur.chord, x, cur.staffOffset, cur.topStaff, cur.sysIdx, cur.idx);
+            }
+        }
+
         for (int i = 1; i < prepared.Count; i++)
         {
             var prev = prepared[i - 1];

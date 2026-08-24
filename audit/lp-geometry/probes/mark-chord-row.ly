@@ -195,3 +195,36 @@ probeM =
     \layout { \context { \Score \consists "Mark_engraver" } }
   }
 }
+
+%% MKV -- MKT WITH ONE VARIABLE CHANGED: the chord symbols are TALLER. `cis' prints a raised
+%% accidental, so every symbol's ink top rises while nothing else about the book moves --
+%% same lyrics, same labels, same paper, same break, same columns.
+%%
+%% WHY THE PAIR EXISTS (session 244, HANDOFF 5.0-1). MKT alone reads an absolute, and an
+%% absolute here carries a FONT TERM: the two engines' chord faces differ, so `the symbol's
+%% ink top' is not the same number on both sides and a residual taken from one book cannot
+%% say how much of itself is the defect. MKT/MKV is the identity form instead -- LilyPond
+%% places the label against the ROW'S OWN INK, so raising the ink raises the label and the
+%% GAP is the same on both books, while an engine whose label hangs off the row's BAND TOP
+%% instead reads a gap that SHRINKS by exactly the ink it grew. LilyPond's difference is
+%% zero by construction; whatever difference Lily# shows between the two is its own.
+%%
+%% PREDICTION, written before running (HANDOFF 5.0-2): both books read the same gap,
+%% outside-staff-padding 0.460000, because side-position-interface places the mark against
+%% the accumulated skyline of the ChordNames axis group and that skyline IS the symbols.
+%% FALSIFIER: a gap that GROWS on MKV means the label is placed against something other than
+%% the symbols' ink -- a context extent, or a fixed step -- and the port would then have a
+%% different quantity to copy.
+\book {
+  \probeM "MKV"
+  \score {
+    <<
+      \new ChordNames \chordmode { \sectionLabel "A" cis1 gis ais:m fis \break \sectionLabel "B" cis1 gis ais:m fis }
+      \new Lyrics \lyricmode {
+        \set stanza = "" one4 two three four five six sev -- en
+        eight nine ten e -- le -- ven twelve thir -- teen
+      }
+    >>
+    \layout { \context { \Score \consists "Mark_engraver" } }
+  }
+}

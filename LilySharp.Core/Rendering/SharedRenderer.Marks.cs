@@ -661,7 +661,11 @@ internal static partial class SharedRenderer
         if (m.MarkType == MusicMarkType.Rehearsal || m.MarkType == MusicMarkType.SectionLabel)
         {
             double fs = m.MarkType == MusicMarkType.Rehearsal ? FontSize * 0.6 : FontSize * 0.55;
-            const double pad = 0.2;
+            // The frame's padding has ONE home, shared with the two sites that RESERVE for
+            // this box (MusicMarkEngraver.GetMarkHalfExtent and MarkXExtent) — and with
+            // LabelBaselineBelowCentre, which is how the engraver knows where this call puts
+            // the baseline when it wants the label on a chord row's own line.
+            const double pad = MusicMarkEngraver.LabelBoxPadding;
             double textWidth = fonts.Advance(m.Text, fs, TextRole.Mark, FontStyle.Bold);
             double boxW = textWidth + pad * 2;
             double boxH = fs + pad * 2;

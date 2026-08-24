@@ -47,6 +47,37 @@ internal static class OutsideStaffStacker
     // Staff geometry
     private const double StaffBottom = 4.0;
 
+    /// <summary>
+    /// How far below its own top the element at <paramref name="staff"/> keeps its REFERENCE
+    /// POINT — the frame step between a profile (which is about that refpoint) and this
+    /// stacker's system-relative Y-up.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:201-285 internal_get_minimum_translations — the
+    /// alignment works between
+    /// VerticalAxisGroup REFERENCE POINTS, and a group's refpoint is not in general the middle
+    /// of its extent: a Lyrics or ChordNames group's IS the text baseline. The quantity is
+    /// decided once, in <c>MultiStaffLayouter.RefpointBelowTop</c>, and travels on the PLACED
+    /// layout; this reads it rather than holding a second copy (HANDOFF 5.2.1②).
+    /// <para>
+    /// ⚠️ THE FALLBACK IS THE OLD FOLD, and it is only for layouts nobody placed: the
+    /// harnesses that construct a <see cref="StaffLayout"/> by hand leave
+    /// <c>RefpointBelowTop</c> unset, and those are all ordinary four-space staves, for which
+    /// the two answers are the same 2.0.
+    /// </para>
+    /// </remarks>
+    private static double RefpointBelowTop(
+        ImmutableArray<SystemLayout> systems, int sys, int staff)
+    {
+        if (sys < 0 || sys >= systems.Length || systems[sys].StaffGroups.IsDefaultOrEmpty)
+            return StaffBottom / 2.0;
+        foreach (var sg in systems[sys].StaffGroups)
+            foreach (var st in sg.Staves)
+                if (st.StaffIndex == staff)
+                    return st.RefpointBelowTop ?? StaffBottom / 2.0;
+        return StaffBottom / 2.0;
+    }
+
     // LILYPOND-REF: scm/define-grobs.scm outside-staff-padding = 0.46 — governs stacking a
     // grob against OTHER outside-staff grobs.
     private const double OutsideStaffPadding = 0.46;
@@ -221,9 +252,12 @@ internal static class OutsideStaffStacker
                 //   all_v_skylines starts from the INSIDE-staff skylines.
                 if (staffProfile?.Invoke(sys, staff) is { } p)
                 {
-                    // The profile is about the staff MIDDLE; the tracker frame is
-                    // system-relative Y-up, where that middle sits at -(off + half staff).
-                    double toSystem = -(off + StaffBottom / 2.0);
+                    // The profile is about the element's own REFERENCE POINT; the tracker
+                    // frame is system-relative Y-up, where that refpoint sits at
+                    // -(off + how far below its top the refpoint is). For an ordinary staff
+                    // that is the half staff this line folded before; for a tab staff, an
+                    // ossia or a TEXT ROW it is not (RefpointBelowTop).
+                    double toSystem = -(off + RefpointBelowTop(systems, sys, staff));
                     p.Up.Raise(toSystem);
                     p.Down.Raise(toSystem);
                     t = new OutsideStaffSkylines(dir: -1, p.Up, p.Down);
@@ -1066,10 +1100,16 @@ internal static class OutsideStaffStacker
                 supportUp, FlatBase(topUp, VerticalDirection.Down));
             if (staffProfile?.Invoke(sys, staff) is { } p)
             {
-                // The profile is about the staff MIDDLE; the tracker frame is
-                // system-relative Y-up, where that middle sits half a staff below the
-                // staff's top line. The same reflection StackBelowStaff makes.
-                p.Up.Raise(topUp - StaffBottom / 2.0);
+                // The profile is about the element's own REFERENCE POINT; the tracker frame
+                // is system-relative Y-up, where that refpoint sits RefpointBelowTop below
+                // the element's top. The same reflection StackBelowStaff makes.
+                // ⚠️ IT USED TO FOLD THE NOMINAL HALF STAFF, which reads right for an
+                // ordinary staff and wrong for everything else: a TEXT ROW's profile is about
+                // its text BASELINE (MultiStaffLayouter merges RowSkylines saying so), so the
+                // pass placed marks and numbers against ink it thought was 0.6 lower than it
+                // is. HANDOFF 1 bone 9: the same nominal-half-staff fold, one layer down from
+                // the repeat dots and the grid meter.
+                p.Up.Raise(topUp - RefpointBelowTop(systems, sys, staff));
                 supportUp.Merge(p.Up);
             }
             else if (systemSkylines != null && sys >= 0 && sys < systemSkylines.Count

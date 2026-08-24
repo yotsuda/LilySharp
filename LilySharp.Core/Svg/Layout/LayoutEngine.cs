@@ -4373,10 +4373,22 @@ internal sealed class LayoutEngine
             }
         }
 
+        // The boxed section labels that will share this row's LINE — on a staffless sheet the
+        // label is set ON the chord line (MusicMarkEngraver.StafflessAnchorRefpointBelowTop),
+        // so the symbols have to keep out of its frame. Asked BEFORE the marks are laid out
+        // because the chord layouts are an input to that pass; a mark's X depends only on its
+        // break-align column, so the two readings agree by construction (see
+        // BoxedLabelXWindows). Empty — and free — on every book that has a staff.
+        var labelWindows = MusicMarkEngraver.BoxedLabelXWindows(
+            ctx.Fonts, ctx.MusicMarks, ctx.Measures, cn, systems, ml,
+            prefixTimeSignatureX: ctx.PrefixTimeSignatureX,
+            lineStartBarlineX: ctx.LineStartBarlineX);
+
         return ChordNameEngraver.Calculate(ctx.Fonts,
             cn, systems, ml, ctx.Measures,
             ctx.MeasuresByStaff, staffYAt, minStaffYAt, scriptedSkylines,
-            chordGridSheet: chordGridSheet, lowerStaffUpSkyline: lowerStaffUpSkyline);
+            chordGridSheet: chordGridSheet, lowerStaffUpSkyline: lowerStaffUpSkyline,
+            labelWindows: labelWindows);
     }
 
     /// <summary>

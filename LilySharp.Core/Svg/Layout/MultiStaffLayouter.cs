@@ -389,6 +389,26 @@ internal sealed class MultiStaffLayouter
         => RefpointSpanToGap(upper, lower,
             ChordNameEngraver.IsChordGridSheet(score.ChordNames, score.Lyrics));
 
+    /// <summary>
+    /// The <see cref="RefpointBelowTop(Staff, bool)"/> a PLACED staff carries with it, so that
+    /// the frame steps taken downstream of this file do not have to fold a nominal half staff.
+    /// </summary>
+    /// <remarks>
+    /// The score half of the same question <see cref="GapSpan"/> asks, and it goes through the
+    /// same one home: whether a book is a chord GRID decides a chord row's text baseline, and a
+    /// second copy of that choice is HANDOFF 5.2.1②.
+    /// <para>
+    /// ★ WHY IT TRAVELS ON THE LAYOUT. <c>OutsideStaffStacker</c> holds
+    /// <see cref="StaffLayout"/>s, not <c>Staff</c>es, and the step it applies to a staff's
+    /// profile — "the profile is about the element's reference point, the tracker frame is
+    /// system-relative Y-up" — is exactly this quantity. It folded the nominal 2.0 instead,
+    /// which reads right for an ordinary staff and wrong for every element that is not one.
+    /// </para>
+    /// </remarks>
+    private double PlacedRefpointBelowTop(MultiStaffScore score, Staff staff)
+        => RefpointBelowTop(staff,
+            ChordNameEngraver.IsChordGridSheet(score.ChordNames, score.Lyrics));
+
     /// <summary>Reserved vertical band (staff spaces) for an independent text row
     /// (chords / lyrics): a line of text (~1.5 ss tall) plus a little breathing room.</summary>
     private const double TextRowHeight = 2.5;
@@ -442,19 +462,19 @@ internal sealed class MultiStaffLayouter
 
             if (group.IsGrandStaff)
             {
-                var layout = LayoutGrandStaffGroup(group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex);
+                var layout = LayoutGrandStaffGroup(score, group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex);
                 builder.Add(layout);
                 currentY -= layout.Height;
             }
             else if (group.HasDelimiter)
             {
-                var layout = LayoutBracketGroup(group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex);
+                var layout = LayoutBracketGroup(score, group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex);
                 builder.Add(layout);
                 currentY -= layout.Height;
             }
             else
             {
-                var layout = LayoutSingleStaffGroup(group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex);
+                var layout = LayoutSingleStaffGroup(score, group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex);
                 builder.Add(layout);
                 currentY -= layout.Height;
             }
@@ -562,7 +582,8 @@ internal sealed class MultiStaffLayouter
                     InstrumentName: staff.InstrumentName,
                     IsOssia: staff.IsOssia,
                     IsHidden: true,
-                    StaffAffinity: staff.StaffAffinity));
+                    StaffAffinity: staff.StaffAffinity,
+                    RefpointBelowTop: PlacedRefpointBelowTop(score, staff)));
                 continue;
             }
 
@@ -605,7 +626,8 @@ internal sealed class MultiStaffLayouter
                 Tuning: staff.Tuning,
                 InstrumentName: staff.InstrumentName,
                 IsOssia: staff.IsOssia,
-                StaffAffinity: staff.StaffAffinity));
+                StaffAffinity: staff.StaffAffinity,
+                RefpointBelowTop: PlacedRefpointBelowTop(score, staff)));
             anyVisible = true;
             lastVisibleIndex = globalIndex;
             lastVisibleHeight = thisStaffHeight;
@@ -752,6 +774,7 @@ internal sealed class MultiStaffLayouter
     /// LILYPOND-REF: scm/define-grobs.scm:3352-3355 staff-staff-spacing
     /// </remarks>
     private StaffGroupLayout LayoutGrandStaffGroup(
+        MultiStaffScore score,
         StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec, int startIndex)
     {
         var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
@@ -770,7 +793,8 @@ internal sealed class MultiStaffLayouter
                 Height: staffHeight,
                 Tuning: staff.Tuning,
                 InstrumentName: staff.InstrumentName,
-                StaffAffinity: staff.StaffAffinity));
+                StaffAffinity: staff.StaffAffinity,
+                RefpointBelowTop: PlacedRefpointBelowTop(score, staff)));
 
             if (i < group.Staves.Length - 1)
                 currentY -= staffHeight + Math.Max(0, staffSpacing);
@@ -799,6 +823,7 @@ internal sealed class MultiStaffLayouter
     /// LILYPOND-REF: scm/define-grobs.scm:3352-3355 staff-staff-spacing
     /// </remarks>
     private StaffGroupLayout LayoutSingleStaffGroup(
+        MultiStaffScore score,
         StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec, int startIndex)
     {
         var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
@@ -819,7 +844,8 @@ internal sealed class MultiStaffLayouter
                 Tuning: staff.Tuning,
                 InstrumentName: staff.InstrumentName,
                 IsOssia: staff.IsOssia,
-                StaffAffinity: staff.StaffAffinity));
+                StaffAffinity: staff.StaffAffinity,
+                RefpointBelowTop: PlacedRefpointBelowTop(score, staff)));
 
             if (i < group.Staves.Length - 1)
                 currentY -= thisStaffHeight + Math.Max(0, staffSpacing);
@@ -844,6 +870,7 @@ internal sealed class MultiStaffLayouter
     /// LILYPOND-REF: ly/engraver-init.ly — StaffGroup/ChoirStaff use SystemStartBracket
     /// </remarks>
     private StaffGroupLayout LayoutBracketGroup(
+        MultiStaffScore score,
         StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec, int startIndex)
     {
         var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
@@ -862,7 +889,8 @@ internal sealed class MultiStaffLayouter
                 Tuning: staff.Tuning,
                 InstrumentName: staff.InstrumentName,
                 IsOssia: staff.IsOssia,
-                StaffAffinity: staff.StaffAffinity));
+                StaffAffinity: staff.StaffAffinity,
+                RefpointBelowTop: PlacedRefpointBelowTop(score, staff)));
 
             if (i < group.Staves.Length - 1)
                 currentY -= thisStaffHeight + Math.Max(0, staffSpacing);

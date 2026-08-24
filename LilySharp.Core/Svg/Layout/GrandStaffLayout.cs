@@ -54,7 +54,19 @@ public sealed record StaffLayout(
     // question gets asked: the page's anchor, the loose chain and the note-bound anchors all
     // classify staff LAYOUTS, and without it here they had to be handed the score's set of
     // text-row indices instead — the type enumeration standing in for the property.
-    int? StaffAffinity = null
+    int? StaffAffinity = null,
+    // How far below <see cref="Y"/> this element's own REFERENCE POINT sits — half a staff
+    // for a staff, and the TEXT BASELINE for a chords or lyrics row
+    // (MultiStaffLayouter.RefpointBelowTop, which is the one home for the choice).
+    // LILYPOND-REF: lily/align-interface.cc:201-285 — Align_interface works between
+    // VerticalAxisGroup REFERENCE POINTS, and a group's refpoint is not in general the middle
+    // of its extent: a Lyrics or ChordNames group's IS the text baseline. It travels with the
+    // PLACED staff for the same reason StaffAffinity does — OutsideStaffStacker holds layouts,
+    // not Staves, and the frame step it applies to a staff's profile is exactly this quantity.
+    // ⚠️ NULL means "not stated", and the stacker then keeps the nominal half staff it used
+    // before this field existed. Only the harnesses that build a StaffLayout by hand leave it
+    // unset; every layout MultiStaffLayouter places carries it.
+    double? RefpointBelowTop = null
 );
 
 /// <summary>
