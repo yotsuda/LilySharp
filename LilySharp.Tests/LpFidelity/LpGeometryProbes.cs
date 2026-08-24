@@ -8706,6 +8706,58 @@ internal static class LpGeometryProbes
     /// #`((3 . ,SHARP) (0 . ,SHARP)) \time 4/4 d'4 e' fis' g' | a'4 b' cis'' d'' }</c>.</remarks>
     private static readonly string KCC = Score("d4 e fis g | a b cis' d' |", "KCC", "custom fis cis");
 
+    // ===== how far round the circle of fifths a key signature reaches =====
+    // Four books, one bar of `c d e f` each, differing ONLY in the key word. The music is
+    // deliberately accidental-free so that every accidental on the page belongs to the
+    // signature (RenderedGeometry.KeySignatureAccidentals cuts at the first notehead).
+    // LilyPond twins: scores KSIG7 / KSIG8 / KSIG12 / KSIGT of key-signature-wrap.ly.
+
+    /// <summary>
+    /// SEVEN sharps — the far edge of what Lily#'s tonic table can spell. LilyPond: seven
+    /// single sharps, no doubles. This is the CONTROL of the pair below: it is the half a
+    /// port must not move, and it is exact today.
+    /// </summary>
+    private static readonly string KSIG7 = Score("c4 d e f |", "KSIG7", "cis major");
+
+    /// <summary>
+    /// EIGHT sharps, reached from the SAME tonic by one different mode word. LilyPond prints
+    /// seven symbols still — F double-sharp, then B/E/A/D/G/C sharp — because its alteration
+    /// list has one entry per letter and an entry may hold a whole tone.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS BOOK ALREADY COMPILES AND ALREADY DRAWS. Measured 2026-08-24: Lily# prints
+    /// seven SINGLE sharps here, which is the right count and the wrong first glyph — a
+    /// divergence no count of accidentals can see, which is why the point reads
+    /// <see cref="RenderedGeometry.KeySignatureDoubleCount"/> instead.
+    /// </remarks>
+    private static readonly string KSIG8 = Score("c4 d e f |", "KSIG8", "cis lydian");
+
+    /// <summary>
+    /// TWELVE flats — the same mechanism run deep enough that five of the seven letters carry
+    /// a double. LilyPond: five double flats, then F/C flat.
+    /// </summary>
+    /// <remarks>
+    /// The far side of the circle is worth a point of its own because the sharp and flat
+    /// orders are separate arrays in <c>KeySpelling</c> (SharpOrder / FlatOrder) and the
+    /// wrap arithmetic is written once per sign — one of the two could be right alone.
+    /// </remarks>
+    private static readonly string KSIG12 = Score("c4 d e f |", "KSIG12", "ces locrian");
+
+    /// <summary>
+    /// The SAME eight-sharp signature as <see cref="KSIG8"/>, reached by naming a tonic
+    /// Lily#'s fifteen-entry table does not contain rather than by moving off one it does.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ITS FAILURE IS A DIFFERENT SHAPE and that is why both books are here. Measured
+    /// 2026-08-24: <c>key gis major</c> draws NO signature at all — <c>SharpsFor</c> returns
+    /// null for a tonic outside the table and all eight of its callers coerce that to 0, so
+    /// the page is C major and nothing is said. Read as a GLYPH COUNT (7 against 0), where
+    /// KSIG8 is read as a double count (1 against 0): a port that only widened the table
+    /// would close this one and leave KSIG8 open, and one that only fixed the drawing would
+    /// close KSIG8 and leave this one open.
+    /// </remarks>
+    private static readonly string KSIGT = Score("c4 d e f |", "KSIGT", "gis major");
+
     /// <summary>
     /// The cut-common (2/2) half of the C-glyph width pair. LilyPond's default style
     /// prints ONLY 2/2 and 4/4 as glyphs (timesig.C22/C44, LILC ink 1.7 both); every
@@ -11737,6 +11789,36 @@ internal static class LpGeometryProbes
         // widening upstream of it does not move it. See RenderedGeometry.TabFretStep.
         new("mid-measure.tab-numbers.meter-identity", MMTW,
             g => g.TabFretStep(6) - FretStepOf(MMTN, 6)),
+
+        // --- how far round the circle of fifths a key signature reaches (key-signature-wrap.ly) ---
+        // FOUR points and TWO quantities, because a signature past seven fifths fails in two
+        // independent ways and neither reading sees the other.
+        //
+        // LilyPond does not look a key up. `\key` transposes a C-based scale, so
+        // `keyAlterations` is ALWAYS seven pairs — one per letter — and an entry may reach a
+        // WHOLE TONE, i.e. a double accidental. Eight sharps is therefore seven SYMBOLS, the
+        // first of which is a double sharp. Lily# reads a fifteen-entry tonic table and then
+        // draws `min(|sharps|, 7)` single accidentals, which gets the COUNT right and the
+        // GLYPH wrong — so a reading that counted glyphs alone would report the eight-sharp
+        // books exact and measure nothing.
+        //
+        // ⚠️ THE PAIR IS KSIG7 AGAINST KSIG8: same tonic, one word changed, and LilyPond
+        // answers them differently (0 doubles against 1). Any implementation reading a table
+        // capped at seven must answer them THE SAME, which is the claim stated as a pair
+        // rather than as one number (HANDOFF 5.0). KSIG7 is the CONTROL: it must not move.
+        new("key.signature.doubles.seven-sharps-control", KSIG7,
+            g => g.KeySignatureDoubleCount),
+        new("key.signature.doubles.eight-sharps", KSIG8,
+            g => g.KeySignatureDoubleCount),
+        new("key.signature.doubles.twelve-flats", KSIG12,
+            g => g.KeySignatureDoubleCount),
+        // ⚠️ AND THE FOURTH IS THE SAME SIGNATURE REACHED BY THE OTHER ROUTE. KSIGT spells a
+        // tonic the table LACKS (gis) instead of moving off one it has, and its failure is
+        // not a wrong glyph but NO SIGNATURE AT ALL — so it is read as a GLYPH COUNT. A port
+        // that only widened the table would close this one and leave KSIG8 open; one that
+        // only fixed the drawing would close KSIG8 and leave this one open.
+        new("key.signature.glyphs.tonic-past-the-table", KSIGT,
+            g => g.KeySignatureGlyphCount),
     };
 
     /// <summary>Bar line <paramref name="barIndex"/>'s ink right → the next fret digit in a

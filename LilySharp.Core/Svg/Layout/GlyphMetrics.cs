@@ -367,6 +367,32 @@ internal static partial class GlyphMetrics
     public static double GetKeySignatureAccidentalWidth(bool isSharps) =>
         isSharps ? KeySignatureSharpWidth : KeySignatureFlatWidth;
 
+    /// <summary>
+    /// The advance of one key-signature accidental by its ALTERATION — ±1 single, ±2 double.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/key-signature-interface.cc:44-117 Key_signature_interface::print —
+    /// each accidental is added with <c>mol.add_at_edge (X_AXIS, LEFT, column, padding)</c>,
+    /// so the step from one glyph to the next is that glyph's OWN stencil width; LilyPond
+    /// never prices a signature as a count times one width.
+    /// <para>
+    /// ⚠️ A DOUBLE IS NOT A SINGLE'S WIDTH. A double flat is 1.45 wide against a flat's 0.80,
+    /// so a signature past seven flats that priced its leading glyphs as singles would reserve
+    /// less than it draws and the meter would overlap the first note — the reserve/draw split
+    /// the ledger pair line-start.time-to-first-note.{standard,custom}-key was opened for.
+    /// Added 2026-08-24 with the wrap; before it, no standard signature could hold a double
+    /// and the non-traditional branch priced its doubles as singles.
+    /// </para>
+    /// </remarks>
+    public static double GetKeySignatureAccidentalWidth(int alter) => alter switch
+    {
+        >= 2 => AccidentalDoubleSharp.Width,
+        <= -2 => AccidentalDoubleFlat.Width,
+        < 0 => KeySignatureFlatWidth,
+        > 0 => KeySignatureSharpWidth,
+        _ => KeySignatureNaturalWidth,
+    };
+
     // ========== Time signature widths ==========
 
     /// <summary>

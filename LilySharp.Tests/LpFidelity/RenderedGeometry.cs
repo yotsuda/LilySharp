@@ -3168,6 +3168,71 @@ internal sealed class RenderedGeometry
         Glyphs.Where(g => IsAccidental(g.Glyph)).ToList();
 
     /// <summary>
+    /// The LINE-START key signature's accidental glyphs, left to right — every accidental
+    /// drawn before the TIME SIGNATURE.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The cut is by IDENTITY (the meter, which always follows the signature and precedes the
+    /// music) rather than by a glyph count, because the count is the thing being measured:
+    /// <see cref="KeySignatureGlyphCount"/> exists because Lily# can draw a different NUMBER
+    /// of accidentals from LilyPond, so an index into the glyph list would stop meaning the
+    /// same thing on the two sides — the hazard <see cref="Noteheads"/> records for its own
+    /// selection-by-identity.
+    /// </para>
+    /// <para>
+    /// ⚠️ CUTTING AT THE FIRST NOTEHEAD INSTEAD IS WRONG, AND IT LOOKS RIGHT. The first draft
+    /// did that and reported EIGHT accidentals for <c>key gis major</c> against LilyPond's
+    /// seven — a plausible off-by-one that reads as a defect in the port. It is not: eight
+    /// sharps make every letter sharp, so the written <c>c</c> that follows needs a NATURAL
+    /// to cancel the key, and that natural is a note's accidental standing between the meter
+    /// and the head. The instrument was counting the music (HANDOFF §5.0: the first
+    /// disagreement a new instrument reports is the instrument's).
+    /// </para>
+    /// </remarks>
+    public IReadOnlyList<DrawnGlyph> KeySignatureAccidentals
+    {
+        get
+        {
+            var meter = Glyphs.Where(g => IsTimeSignature(g.Glyph)).ToList();
+            if (meter.Count == 0)
+                throw new InvalidOperationException(
+                    "no time signature is drawn, so the key signature cannot be cut off the "
+                    + "music — write one in the book.\nDrawn geometry:\n" + Describe());
+            double meterX = meter[0].X;
+            return Glyphs.Where(g => IsAccidental(g.Glyph) && g.X < meterX - 1e-9).ToList();
+        }
+    }
+
+    /// <summary>
+    /// How many accidentals the line-start key signature draws. LilyPond's key signature is
+    /// the non-zero entries of <c>alteration-alist</c>, which has one entry per letter, so
+    /// this is at most SEVEN however far round the circle of fifths the key sits.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/music-functions-init.ly — `key` is `ly:music-transpose` of a C-based
+    /// pitch-alist, so the alist is always seven pairs; scm/output-lib.scm
+    /// key-signature-interface::alteration-positions places the non-zero ones.
+    /// </remarks>
+    public int KeySignatureGlyphCount => KeySignatureAccidentals.Count;
+
+    /// <summary>
+    /// How many of the line-start key signature's accidentals are DOUBLE. This is the half of
+    /// the reading that a count of glyphs cannot see: a signature eight fifths from C prints
+    /// seven symbols either way, and only the first one's identity says whether the eighth
+    /// accidental was applied or dropped.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond spells the alteration in WHOLE TONES, so its <c>alteration-alist</c> entry is
+    /// 1 for a double sharp and 1/2 for a single — see the probe
+    /// audit/lp-geometry/probes/key-signature-wrap.ly, which counts them that way.
+    /// </remarks>
+    public int KeySignatureDoubleCount =>
+        KeySignatureAccidentals.Count(g =>
+            g.Glyph is EmmentalerGlyphs.AccidentalDoubleSharp
+                    or EmmentalerGlyphs.AccidentalDoubleFlat);
+
+    /// <summary>
     /// The anchor distance from a single-note accidental of the given glyph to the notehead it
     /// sits before — the single-note accidental DRAW gap plus the glyph's own width. LilyPond
     /// seats each accidental so its real skyline / ink clears the head (a natural at 0.367672,

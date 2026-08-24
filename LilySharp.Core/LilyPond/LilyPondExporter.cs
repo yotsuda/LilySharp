@@ -2910,18 +2910,17 @@ public sealed class LilyPondExporter
     }
 
     /// <summary>
-    /// True for <c>tab part as numbers</c> — fret digits only. Mirrors
-    /// <c>RenderSpecParser</c>'s reading of the same trailing <c>as …</c> selector; the two
-    /// must agree, or the twin is drawn in the other mode from the page.
+    /// True for <c>tab part as numbers</c> — fret digits only.
     /// </summary>
-    private static bool TabIsNumbersOnly(TabRenderSyntax tab)
-    {
-        var toks = tab.DescendantNodes().OfType<SyntaxTokenNode>().ToList();
-        for (int i = 1; i < toks.Count - 1; i++)
-            if (string.Equals(toks[i].Text, "as", StringComparison.Ordinal))
-                return string.Equals(toks[i + 1].Text, "numbers", StringComparison.OrdinalIgnoreCase);
-        return false;
-    }
+    /// <remarks>
+    /// ⚠️ IT NO LONGER MIRRORS <c>RenderSpecParser</c>, IT SHARES WITH IT. This walked the
+    /// tokens for the <c>as</c> itself and then compared <c>OrdinalIgnoreCase</c> — the same
+    /// two lines, with the same case defect, as the page's copy; its own doc said "the two
+    /// must agree, or the twin is drawn in the other mode from the page", which is the
+    /// argument for one reading rather than two careful ones (HANDOFF §5.2.1②).
+    /// </remarks>
+    private static bool TabIsNumbersOnly(TabRenderSyntax tab) =>
+        Semantics.TabRenderVocabularyValidator.IsNumbersOnly(tab);
 
     /// <summary>Fills <see cref="_instrumentNames"/> from the page's own reading of the
     /// render block.</summary>

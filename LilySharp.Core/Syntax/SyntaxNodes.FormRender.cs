@@ -855,6 +855,54 @@ public sealed partial class TabRenderSyntax : SyntaxNode
 
     /// <summary>The <c>tab</c> keyword token.</summary>
     public SyntaxTokenNode TabKeyword => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>The token carrying the tab STYLE selector (<c>as numbers|full</c>), or null
+    /// when the item writes none — what a diagnostic about the selector underlines (the
+    /// WORD, not the whole item).</summary>
+    /// <remarks>
+    /// ⚠️ IT EXISTED FOR THE CHORD TWIN AND NOT FOR THIS ONE, and that asymmetry is where the
+    /// silence lived: <c>ChordRowRenderSyntax.DisplayModeToken</c> was added so
+    /// ChordDisplayModeValidator could underline a bad <c>as roman|names</c> word, while the
+    /// tab half of the very same <c>ConsumeAsSelector</c> had no accessor and therefore no
+    /// validator — measured 2026-08-24, <c>tab m as bogus</c> drew full notation in silence.
+    /// Matched by TEXT because <c>as</c> also lexes as the Dutch A-flat pitch.
+    /// </remarks>
+    public SyntaxTokenNode? DisplayModeToken
+    {
+        get
+        {
+            for (int i = 1; i + 1 < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode a
+                    && string.Equals(a.Text, "as", System.StringComparison.Ordinal)
+                    && GetChild(i + 1) is SyntaxTokenNode m)
+                    return m;
+            return null;
+        }
+    }
+
+    /// <summary>The token naming an explicit TUNING override (<c>tab bass m</c>), or null
+    /// when the tuning comes from the part definition.</summary>
+    /// <remarks>
+    /// The item is <c>tab [tuning] part [as style]</c>, so the tuning is present exactly when
+    /// TWO target tokens stand before the selector. Reading it from the node rather than
+    /// re-cutting the token list keeps RenderSpecParser, PartReferenceFinder and the
+    /// validator on one answer (HANDOFF §5.2.1②).
+    /// </remarks>
+    public SyntaxTokenNode? TuningToken
+    {
+        get
+        {
+            var targets = new List<SyntaxTokenNode>();
+            for (int i = 1; i < SlotCount; i++)
+            {
+                if (GetChild(i) is not SyntaxTokenNode t) continue;
+                if (t.Kind is SyntaxKind.OpenBrace or SyntaxKind.CloseBrace) continue;
+                if (string.Equals(t.Text, "as", System.StringComparison.Ordinal)) break;
+                targets.Add(t);
+            }
+            return targets.Count >= 2 ? targets[0] : null;
+        }
+    }
 }
 
 /// <summary>

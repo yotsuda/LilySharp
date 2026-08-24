@@ -174,13 +174,21 @@ internal static class SpacingRules
         {
             double w = 0.0;
             foreach (var (_, alter) in KeySignature.DecodeCustom(custom))
-                w += GlyphMetrics.GetKeySignatureAccidentalWidth(alter >= 0);
+                w += GlyphMetrics.GetKeySignatureAccidentalWidth(alter);
             return w;
         }
         if (key.Sharps == 0)
             return 0.0;
-        return Math.Min(Math.Abs(key.Sharps), 7)
-            * GlyphMetrics.GetKeySignatureAccidentalWidth(key.Sharps > 0);
+        // ⚠️ WALK THE SIGNATURE, do not multiply a count by one width. Past seven fifths the
+        // leading letters carry DOUBLE accidentals, which are a different glyph and a
+        // different advance (a double flat is 1.45 against a flat's 0.80) — so a reservation
+        // that priced `min(|sharps|, 7)` singles would under-reserve exactly the signature
+        // the drawer widened. This is the same list SharedRenderer.KeySignatureGlyphs draws:
+        // placement and reservation are ONE claim (HANDOFF §5.0).
+        double width = 0.0;
+        foreach (var (_, alter) in Music.KeySpelling.SignatureSteps(key.Sharps))
+            width += GlyphMetrics.GetKeySignatureAccidentalWidth(alter);
+        return width;
     }
 
     public static double CalculatePrefixWidth(KeySignature key, bool includeTimeSignature,

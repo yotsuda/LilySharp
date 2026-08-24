@@ -72,7 +72,20 @@ public static class LanguageVocabulary
     public static IReadOnlyCollection<string> PedalStyles => SymbolCaseValidator.PedalValueVocabulary;
 
     /// <summary>Every tuning name — also the vocabulary of <c>tab NAME</c> in a score.</summary>
+    /// <remarks>
+    /// ⚠️ THAT SECOND SENTENCE WAS HALF TRUE UNTIL 2026-08-24. It was measured 2026-08-19 by
+    /// checking that all seven are ACCEPTED in both positions, which is the
+    /// <c>Assert.DoesNotContain</c> shape: it says nothing about an EIGHTH word, and in the
+    /// score position an eighth fell through <c>RenderSpecParser.ParseTab</c>'s
+    /// <c>_ =&gt; TuningType.Guitar</c> in silence. <see cref="TabRenderVocabularyValidator"/>
+    /// now refuses it, so the sentence is true in both directions.
+    /// </remarks>
     public static IReadOnlyCollection<string> TuningNames => SymbolCaseValidator.TuningValueVocabulary;
+
+    /// <summary>The two tab STYLES a score item takes (<c>tab NAME as numbers|full</c>);
+    /// omitting the clause means <c>full</c>.</summary>
+    public static IReadOnlyCollection<string> TabStyles =>
+        TabRenderVocabularyValidator.StyleVocabulary;
 
     /// <summary>Every value <c>removeEmpty</c> accepts (enforced since 2026-08-19).</summary>
     public static IReadOnlyCollection<string> RemoveEmptyValues => SymbolCaseValidator.RemoveEmptyValueVocabulary;

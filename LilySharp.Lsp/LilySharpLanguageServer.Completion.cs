@@ -2299,22 +2299,31 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>After <c>tab … as</c>: the two tab display styles.</summary>
+    /// <remarks>
+    /// ⚠️ THE LABELS COME FROM THE COMPILER (<c>LanguageVocabulary.TabStyles</c>) and only the
+    /// prose is written here. Until 2026-08-24 this list was the ONLY enumeration of the two
+    /// words in the tree — the compiler tested <c>== "numbers"</c> and accepted anything else
+    /// — so it could not drift, because there was nothing to drift from. Now that the
+    /// compiler refuses an unknown style, an editor holding its own copy would be the
+    /// "suggests a word the compiler rejects" defect that shipped twice in session 240.
+    /// </remarks>
     internal static CompletionList GetTabDisplayModeCompletions()
     {
-        var modes = new (string Label, string Detail)[]
+        var detail = new Dictionary<string, string>
         {
-            ("numbers", "Fret digits only — no stems, dots or rests"),
-            ("full", "Full tablature staff with stems, dots and rests (the default)"),
+            ["numbers"] = "Fret digits only — no stems, dots or rests",
+            ["full"] = "Full tablature staff with stems, dots and rests (the default)",
         };
         return new CompletionList
         {
-            Items = modes.Select((t, i) => new CompletionItem
-            {
-                Label = t.Label,
-                Kind = CompletionItemKind.Keyword,
-                Detail = t.Detail,
-                SortText = i.ToString(),
-            }).ToArray()
+            Items = LilySharp.Core.Semantics.LanguageVocabulary.TabStyles
+                .Select((label, i) => new CompletionItem
+                {
+                    Label = label,
+                    Kind = CompletionItemKind.Keyword,
+                    Detail = detail.TryGetValue(label, out var d) ? d : null,
+                    SortText = i.ToString(),
+                }).ToArray()
         };
     }
 

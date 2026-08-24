@@ -632,11 +632,15 @@ public static class RenderSpecParser
         // chord `as roman|names`). Strip it before reading the part/tuning so
         // the part stays the last token. `numbers` = fret digits only; `full` (or
         // absent) = this renderer's default rhythm-drawing tab.
+        // ⚠️ ORDINAL. It was OrdinalIgnoreCase, so `as NUMBERS` engraved a numbers-only tab
+        // while every other symbol in the language is case-sensitive — the split `removeEmpty`
+        // had until 2026-08-19. TabRenderVocabularyValidator refuses the wrong case now, and
+        // a reader that still lowercased it would accept what the compiler had just rejected.
         bool numbersOnly = false;
         int asIdx = toks.FindIndex(t => string.Equals(t.Text, "as", System.StringComparison.Ordinal));
         if (asIdx >= 0 && asIdx + 1 < toks.Count)
         {
-            numbersOnly = string.Equals(toks[asIdx + 1].Text, "numbers", System.StringComparison.OrdinalIgnoreCase);
+            numbersOnly = string.Equals(toks[asIdx + 1].Text, "numbers", System.StringComparison.Ordinal);
             toks = toks.GetRange(0, asIdx);
         }
         if (toks.Count == 0) return null;

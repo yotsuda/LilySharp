@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Music;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Layout;
@@ -464,9 +465,9 @@ internal static partial class SharedRenderer
     // scm/define-grobs.scm sharp-positions / flat-positions.
     private static readonly int[] KeySigSharpPositions = [4, 5, 4, 2, 3, 2, 3];
     private static readonly int[] KeySigFlatPositions = [2, 3, 4, 2, 1, 2, 1];
-    // Order of accidentals: sharps F C G D A E B; flats B E A D G C F.
-    private static readonly int[] KeySigSharpSteps = [3, 0, 4, 1, 5, 2, 6];
-    private static readonly int[] KeySigFlatSteps = [6, 2, 5, 1, 4, 0, 3];
+    // The order of the accidentals themselves (sharps F C G D A E B; flats B E A D G C F)
+    // is KeySpelling.PrintOrder — it was spelled here too until 2026-08-24, byte-identical
+    // to KeySpelling.SharpOrder / FlatOrder.
 
     /// <param name="scale">The staff's notation scale — <c>EngravingDefaults.OssiaScale</c>
     /// on an ossia, 1.0 elsewhere. The signature's INTERNAL glyph advances are stencil
@@ -515,16 +516,14 @@ internal static partial class SharedRenderer
         {
             foreach (var (step, alter) in KeySignature.DecodeCustom(custom))
             {
-                string kind = alter switch
-                {
-                    2 => "doubleSharp",
-                    1 => "sharp",
-                    -1 => "flat",
-                    -2 => "doubleFlat",
-                    _ => "natural",
-                };
+                string kind = KeySignatureGlyphKind(alter);
                 glyphs.Add((kind, dx, KeySigStaffPositionForStep(clef, alter >= 0, step)));
-                dx += GlyphMetrics.GetKeySignatureAccidentalWidth(alter >= 0);
+                // ⚠️ BY THE ALTERATION, not by its sign. This branch drew a double flat and
+                // then advanced by a flat's 0.80, and drew a natural and advanced by a
+                // sharp's 1.10. Byte-safe to correct: the one book on disk that writes a
+                // custom key writes `key custom fis cis` — two single sharps, where the two
+                // spellings agree — measured 2026-08-24 over all 1335 .lys.
+                dx += GlyphMetrics.GetKeySignatureAccidentalWidth(alter);
             }
             width = dx;
             return glyphs;
@@ -532,18 +531,41 @@ internal static partial class SharedRenderer
 
         if (key.Sharps == 0) { width = 0; return glyphs; }
 
+        // ⚠️ NOT `min(|sharps|, 7)` COPIES OF ONE GLYPH. A signature past seven fifths has
+        // seven SYMBOLS still — there are seven letters — and the leading ones DOUBLE:
+        // C-sharp lydian is F double-sharp then six sharps. Until 2026-08-24 this loop drew
+        // seven single sharps for it, the right count and the wrong first glyph, silently
+        // (ledger key.signature.doubles.eight-sharps). KeySpelling.SignatureSteps IS
+        // LilyPond's alteration-alist minus its zero entries, and it is the same list the
+        // reservation walks.
         bool isSharps = key.Sharps > 0;
-        string kindStd = isSharps ? "sharp" : "flat";
-        int n = Math.Min(Math.Abs(key.Sharps), 7);
-        double accidentalWidth = GlyphMetrics.GetKeySignatureAccidentalWidth(isSharps);
-        for (int i = 0; i < n; i++)
+        foreach (var (step, alter) in KeySpelling.SignatureSteps(key.Sharps))
         {
-            glyphs.Add((kindStd, dx, KeySigStaffPosition(clef, isSharps, i)));
-            dx += accidentalWidth;
+            glyphs.Add((KeySignatureGlyphKind(alter), dx,
+                KeySigStaffPositionForStep(clef, isSharps, step)));
+            dx += GlyphMetrics.GetKeySignatureAccidentalWidth(alter);
         }
         width = dx;
         return glyphs;
     }
+
+    /// <summary>The glyph a key-signature alteration is drawn with. Shared by the standard
+    /// and non-traditional branches so a double sharp is one glyph name in one place.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/output-lib.scm:1136-1148 standard-alteration-glyph-name-alist — the
+    /// alist keyed by alteration in WHOLE TONES: 0 natural, -1/2 flat, 1/2 sharp,
+    /// 1 doublesharp, -1 flatflat. Lily# counts alterations in accidental STEPS, so its ±1 is
+    /// LilyPond's ±1/2 and its ±2 is LilyPond's ±1 — the same five rows, one unit apart. The
+    /// quarter-tone rows (±1/4, ±3/4) have no Lily# spelling and are deliberately absent.
+    /// </remarks>
+    private static string KeySignatureGlyphKind(int alter) => alter switch
+    {
+        >= 2 => "doubleSharp",
+        1 => "sharp",
+        -1 => "flat",
+        <= -2 => "doubleFlat",
+        _ => "natural",
+    };
 
     /// <summary>
     /// Kerning between two adjacent cancellation naturals. The naturals are
@@ -573,15 +595,14 @@ internal static partial class SharedRenderer
     /// standard order. LILYPOND-REF: key-signature-interface alteration-positions.</summary>
     /// <summary>The (step, alter) pairs of a STANDARD key signature in print
     /// order (sharps F C G D A E B / flats B E A D G C F).</summary>
-    private static List<(int Step, int Alter)> StandardKeySteps(int sharps)
-    {
-        var list = new List<(int, int)>();
-        int n = Math.Min(Math.Abs(sharps), 7);
-        int[] steps = sharps > 0 ? KeySigSharpSteps : KeySigFlatSteps;
-        for (int i = 0; i < n; i++)
-            list.Add((steps[i], Math.Sign(sharps)));
-        return list;
-    }
+    /// <remarks>
+    /// ⚠️ NOW A FORWARDER. It held a second spelling of the walk — <c>min(|sharps|, 7)</c>
+    /// copies of <c>sign(sharps)</c> — which is the same list <see cref="KeySignatureGlyphs"/>
+    /// and <c>SpacingRules.KeySignatureInkWidth</c> each built for themselves, and all three
+    /// would have had to learn the wrap past seven separately (HANDOFF §5.2.1②).
+    /// </remarks>
+    private static List<(int Step, int Alter)> StandardKeySteps(int sharps) =>
+        [.. KeySpelling.SignatureSteps(sharps)];
     private static int KeySigStaffPositionForStep(ClefType clef, bool sharpish, int step)
     {
         int c0Position = clef switch
@@ -601,24 +622,16 @@ internal static partial class SharedRenderer
         return hi - (((diff % 7) + 7) % 7);
     }
 
-    private static int KeySigStaffPosition(ClefType clef, bool isSharps, int index)
-    {
-        int c0Position = clef switch
-        {
-            ClefType.Bass or ClefType.Bass8Below => 6,
-            ClefType.Alto or ClefType.Percussion => 0,
-            ClefType.Tenor => 2,
-            ClefType.Soprano => -4,
-            ClefType.MezzoSoprano => -2,
-            ClefType.Baritone => 4,
-            _ => -6, // treble (and treble_8)
-        };
-        int cPos = ((c0Position % 7) + 7) % 7;
-        int[] positions = isSharps ? KeySigSharpPositions : KeySigFlatPositions;
-        int[] steps = isSharps ? KeySigSharpSteps : KeySigFlatSteps;
-        int hi = positions[cPos];
-        int diff = hi - (cPos + steps[index]);
-        int modDiff = ((diff % 7) + 7) % 7;
-        return hi - modDiff;
-    }
+    /// <summary>Staff position of the <paramref name="index"/>-th accidental in print
+    /// order — the by-INDEX face of <see cref="KeySigStaffPositionForStep"/>, kept for the
+    /// cancellation walk, which counts naturals rather than reading a signature.</summary>
+    /// <remarks>
+    /// ⚠️ It used to hold its own copy of the print order (<c>KeySigSharpSteps</c> /
+    /// <c>KeySigFlatSteps</c>, byte-identical to <c>KeySpelling.SharpOrder</c> /
+    /// <c>FlatOrder</c>) and its own copy of the modulo. Both are gone: the order comes from
+    /// <see cref="KeySpelling.PrintOrder"/> and the arithmetic from the by-step function, so
+    /// there is one home for each (HANDOFF §5.2.1②).
+    /// </remarks>
+    private static int KeySigStaffPosition(ClefType clef, bool isSharps, int index) =>
+        KeySigStaffPositionForStep(clef, isSharps, KeySpelling.PrintOrder(isSharps ? 1 : -1)[index]);
 }
