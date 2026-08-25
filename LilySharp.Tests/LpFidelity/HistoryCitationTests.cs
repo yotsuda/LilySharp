@@ -103,9 +103,21 @@ public class HistoryCitationTests
     /// observation at the end of a long session.
     /// <para>
     /// Raised as sessions cite: 510 when written, then 515, 517 and 518 across the handoff
-    /// commits of the session after it, and 520, 523, 525 then 533 by the one after that. Follow the measured
-    /// number up in the same commit that raises it — leaving the floor behind means a later
-    /// fall back to it is exactly the silent drop the ratchet exists to catch.
+    /// commits of the session after it, and 520, 523, 525 then 533 by the one after that.
+    /// Follow the measured number up in the same commit that raises it — leaving the floor
+    /// behind means a later fall back to it is exactly the silent drop the ratchet exists
+    /// to catch.
+    /// </para>
+    /// <para>
+    /// It then went 533 → 564 in one step, which no amount of citing does. A regroup
+    /// re-partitioned the 36 commits behind the tip into 8 without re-pointing anything, and
+    /// the 31 citations it orphaned were repaired by naming the commits that absorbed them.
+    /// The map was recoverable because the regroup preserved content exactly: every new
+    /// commit's tree equals the tree of the last old commit it took in, so old and new could
+    /// be paired by tree rather than guessed at by subject. What that repair does NOT restore
+    /// is the prose around the citation — a session that wrote "5 commit" and listed five
+    /// SHAs now names three, and the count had to be corrected with the SHAs or the sentence
+    /// would have cited the same commit three times over.
     /// <para>
     /// ⚠️ THE CEILING BELOW CAUGHT THE SESSION THAT RAISED THIS ONE. Its §1 said the two
     /// commits an amend had orphaned were cited nowhere — in a sentence that cited both, so
@@ -115,7 +127,7 @@ public class HistoryCitationTests
     /// </para>
     /// </para>
     /// </remarks>
-    private const int LiveCitationsWhenWritten = 533;
+    private const int LiveCitationsWhenWritten = 564;
 
     /// <summary>
     /// The number of citation-shaped tokens whose commit is not in the history, when this

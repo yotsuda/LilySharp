@@ -2943,3 +2943,161 @@ probeTag =
   \paper { indent = 0 ragged-bottom = ##t }
   \score { \new Staff { \repeat unfold 24 { g4 a g a } } }
 }
+
+%% ROWB / ROWH — AN INDEPENDENT LYRICS ROW STANDING BETWEEN TWO STAVES, and the pair that
+%%     says whether Lily#'s decline over that arrangement is a property of the SYSTEM it
+%%     stands on or of the SCORE. Every book above holds the arrangement constant down the
+%%     page, so none of them can tell the two apart.
+%%
+%%     ⚠️ WHY A ROW AND NOT A NOTE-BOUND VERSE. Book LYRB already puts a \lyricsto line
+%%     between two staves and its entries are exact. To Lily# those are two different
+%%     things: a note-bound verse hangs off its staff and is not an element of the
+%%     alignment at all, while a bare row lays out as a staff-like band and IS one
+%%     (Staff.IsLyricsTextRow). LayoutEngine.ClassifySystem calls a row between two
+%%     spaceable staves UNMODELLED, and BuildLooseChainEnds' `return null` on that flag
+%%     leaves the WHOLE SCORE's chain unbuilt. LilyPond has one model for both spellings
+%%     (book LYRR's identity), so its side of ROWB is LYRB's number and any difference
+%%     Lily# shows between them is entirely Lily#'s.
+%%
+%%     THE PAIR IS ONE VARIABLE: ROWH is ROWB with the LOWER staff silent from system 1 on
+%%     and \RemoveAllEmptyStaves declared, so the row is BETWEEN two staves on system 0 and
+%%     BELOW the only staff on every system after it. Same music otherwise, same paper,
+%%     same 19 breaks carried by the top staff (a break belongs to the score, not a staff —
+%%     LYRHKG's header).
+%%
+%%     PREDICTIONS, written before running (HANDOFF 5.0-2):
+%%       (a) ROWB staff -> row = 4.027851, LYRB's number to six digits. The arrangement is
+%%           LYRB's and the spelling is the one LilyPond does not read (LYRR).
+%%       (b) ROWB staff -> staff INSIDE a system = 9.000000, staff-staff-spacing.
+%%       (c) ROWB page 1 = 8 staves, four systems of two.
+%%       (d) ROWH system 0 = 4.027851 as well: that system's alignment is ROWB's, unchanged.
+%%       (e) ROWH systems 1 and 2 = 5.500000, LYRR's and LYRC's number — one loose line in a
+%%           12.000000 room reaches its ideal.
+%%       (f) ROWH system 3 (the last on the page, whose chain runs to the page edge instead
+%%           of to a next system) = 5.500001, LYRM's second reading.
+%%       (g) ROWH page 1 = 5 staves, 2 + 1 + 1 + 1.
+%%       (h) ROWH staff -> staff on system 0 = 9.000000, as ROWB.
+%%     (falsifier for (a)/(d): anything other than LYRB's number, which would mean the
+%%      association DOES reach the vertical spacing and LYRR's identity is regime-bound —
+%%      the pair would then be measuring two arrangements rather than one.)
+%%     (falsifier for (e): 4.027851 there, which would mean the removal did not happen and
+%%      the row is still between two staves on those systems; the book would be ROWB again
+%%      under another tag and could say nothing about granularity.)
+%%
+%%     MEASURED — ALL EIGHT HELD, which makes this pair a check on the port rather than a
+%%     discovery (HANDOFF 5.0: a prediction that lands is the collation).
+%%       ROWB  page 1: 4 systems, 8 staves.  staff -> row = 4.027851 on every system.
+%%                     staff -> staff INSIDE = 9.000000.  system-to-system = 12.000000.
+%%       ROWH  page 1: 4 systems, 5 staves (2 + 1 + 1 + 1).
+%%                     staff -> row = 4.027851, 5.500000, 5.500001 — one reading per system,
+%%                     and the THREE VALUES ARE THE POINT: system 0 still has the row between
+%%                     two staves, systems 1 and 2 have it below the only staff with another
+%%                     system under them, and system 3's chain runs to the page edge.
+%%                     staff -> staff INSIDE (system 0) = 9.000000.
+%%                     pages 2 and 3 read 5.500000 and 5.500001 only — no lower staff
+%%                     survives there at all.
+%%
+%%     ★★★ SO LILYPOND FORKS BY SYSTEM AND NOT BY SCORE, and it does so inside ONE book:
+%%     4.027851 and 5.500000 stand seven staff spaces apart on the same page of the same
+%%     score. Lily#'s `if (alignment.UnmodelledRow) return null;` is a `return` out of the
+%%     METHOD, so one system of this shape takes the chain away from all twenty. That is the
+%%     quantity ROWH carries and ROWB is the control for: ROWB has the arrangement on EVERY
+%%     system, so a per-system decline and a per-score decline read the same on it, and only
+%%     the pair separates them.
+%%     ⚠️ ROWB IS EXPECTED TO STAY DIVERGENT. Its arrangement — a row strictly between two
+%%     spaceable staves — is the one this port does not model at all (SystemAlignment.
+%%     UnmodelledRow's own remark), so narrowing the bail-out cannot close it. What the
+%%     narrowing closes is ROWH's systems 1..3, and ROWB is what proves the narrowing did
+%%     not quietly widen into the arrangement it has no formula for.
+\book {
+  \probeTag "ROWB"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new Staff {
+        \repeat unfold 19 { \repeat unfold 3 { g'4 a' g' a' } \break }
+        \repeat unfold 3 { g'4 a' g' a' }
+      }
+      \new Lyrics \lyricmode { \repeat unfold 240 { no4 } }
+      \new Staff { \repeat unfold 60 { g'4 a' g' a' } }
+    >>
+  }
+}
+
+\book {
+  \probeTag "ROWH"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new Staff {
+        \repeat unfold 19 { \repeat unfold 3 { g'4 a' g' a' } \break }
+        \repeat unfold 3 { g'4 a' g' a' }
+      }
+      \new Lyrics \lyricmode { \repeat unfold 240 { no4 } }
+      \new Staff \with { \RemoveAllEmptyStaves } {
+        \repeat unfold 3 { g'4 a' g' a' }
+        \repeat unfold 57 { r1 }
+      }
+    >>
+  }
+}
+
+%% ROWV / ROWVH — THE SAME PAIR WITH A SECOND VERSE, and it exists because ROWB/ROWH
+%%     MEASURED NOTHING. Lily# reads 5.500000 on ROWH's systems 1..3 and LilyPond reads
+%%     5.500000 there too, so the pair is EXACT on the very systems it was built to
+%%     separate — not because the chain is solved but because a chain that is never solved
+%%     sits at max(min, ideal) and ONE loose line in a 12.000000 room relaxes to that same
+%%     ideal. HANDOFF 5.2.1 (4): exact can mean "that regime does not move".
+%%
+%%     ⇒ THE FIX IS A SECOND VERSE, which is the one variable that takes the solved answer
+%%     off the ideal: two loose lines no longer fit in the room the system spring keeps, so
+%%     LilyPond solves at a NEGATIVE force and the first line drops to its ink floor
+%%     (book LYRV's header, and lyrics.two-staff.two-verse.staff-to-lyric carries it). An
+%%     engine that declines to solve still reads 5.500000 there, and now that is wrong by
+%%     1.762110 rather than right by accident.
+%%
+%%     PREDICTIONS, written before running (HANDOFF 5.0-2):
+%%       (i)  ROWV  staff -> verse 1 = 3.737890, verse step = 2.800000, staff -> staff
+%%            INSIDE = 11.073064, page 1 = 8 staves — book LYRBV's four numbers, since LYRR's
+%%            identity says LilyPond does not read the spelling.
+%%       (j)  ROWVH system 0 = the same three; its alignment is ROWV's, unchanged.
+%%       (k)  ROWVH systems 1 and 2 = 3.737890 with step 2.800000 — LYRV's inner systems.
+%%       (l)  ROWVH system 3, whose chain runs to the page edge, relaxes to 5.500001.
+%%       (m)  ROWVH page 1 = 5 staves, 2 + 1 + 1 + 1, as ROWH.
+%%     (falsifier for (k): 5.500000 there, which would mean two verses DO fit in the room on
+%%      this book and the pair measures nothing again — the next variable to try would then
+%%      be a third verse, not a different guard.)
+\book {
+  \probeTag "ROWV"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new Staff {
+        \repeat unfold 19 { \repeat unfold 3 { g'4 a' g' a' } \break }
+        \repeat unfold 3 { g'4 a' g' a' }
+      }
+      \new Lyrics \lyricmode { \repeat unfold 240 { no4 } }
+      \new Lyrics \lyricmode { \repeat unfold 240 { no4 } }
+      \new Staff { \repeat unfold 60 { g'4 a' g' a' } }
+    >>
+  }
+}
+
+\book {
+  \probeTag "ROWVH"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new Staff {
+        \repeat unfold 19 { \repeat unfold 3 { g'4 a' g' a' } \break }
+        \repeat unfold 3 { g'4 a' g' a' }
+      }
+      \new Lyrics \lyricmode { \repeat unfold 240 { no4 } }
+      \new Lyrics \lyricmode { \repeat unfold 240 { no4 } }
+      \new Staff \with { \RemoveAllEmptyStaves } {
+        \repeat unfold 3 { g'4 a' g' a' }
+        \repeat unfold 57 { r1 }
+      }
+    >>
+  }
+}

@@ -2702,10 +2702,23 @@ internal sealed class RenderedGeometry
     /// last-bit difference into a phantom row and silently return zero.
     /// </para>
     /// </remarks>
-    public double LyricVerseStep()
+    public double LyricVerseStep() => LyricVerseStep(0);
+
+    /// <summary>
+    /// The same step read below an ARBITRARY staff of page 1 — the two nearest baselines
+    /// under staff <paramref name="staffIndex"/>'s reference point.
+    /// </summary>
+    /// <remarks>
+    /// ★ IT EXISTS BECAUSE ONE SCORE CAN HOLD TWO ANSWERS. LilyPond calls
+    /// <c>distribute_loose_lines</c> once per RUN, so a system whose alignment this port
+    /// cannot express says nothing about the next system down the page; the step between two
+    /// row verses is therefore the BAND's on a declining system and the SPEC's 2.800000 on a
+    /// solved one, in the same book on the same page. <see cref="LyricVerseStep()"/> reads
+    /// staff 0 and so can only ever see the first of the two.
+    /// </remarks>
+    public double LyricVerseStep(int staffIndex, int page = 0)
     {
-        const int page = 0;
-        double staff = StaffRefpoints(page)[0];
+        double staff = StaffRefpoints(page)[staffIndex];
         var rows = LyricSyllables.Where(t => t.Y > staff)
                                  .Select(t => t.Y)
                                  .OrderBy(y => y)
@@ -2716,7 +2729,7 @@ internal sealed class RenderedGeometry
                                  });
         if (rows.Count < 2)
             throw new InvalidOperationException(
-                $"page {page}: found {rows.Count} lyric row(s) below the first staff; a verse "
+                $"page {page}: found {rows.Count} lyric row(s) below staff {staffIndex}; a verse "
                 + "step needs two.\nDrawn geometry:\n" + Describe());
         return rows[1] - rows[0];
     }

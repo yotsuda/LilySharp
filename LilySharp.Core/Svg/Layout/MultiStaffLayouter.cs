@@ -2290,31 +2290,84 @@ internal sealed class MultiStaffLayouter
         }
 
         var builder = ImmutableArray.CreateBuilder<StaffSpring>();
-        for (int i = 0; i + 1 < flat.Count; i++)
+        // CONSECUTIVE SPACEABLE, NOT ADJACENT — the walk this loop always claimed to be.
+        // LILYPOND-REF: lily/page-layout-problem.cc:660-672 append_system — the loop springs
+        // between consecutive `is_spaceable` elements and pushes everything else onto
+        // `loose_lines`, so a non-spaceable line standing between two staves does not break
+        // the pair; it becomes what the pair's floor is measured OVER (:919-925).
+        // ⚠️ IT USED TO PAIR `flat[i]` WITH `flat[i + 1]` and drop the pair when either was
+        // non-spaceable, which is the same walk only while nothing ever stands between two
+        // staves. A BARE `lyrics` ROW IS ITS OWN ELEMENT OF THE ALIGNMENT — a note-bound
+        // block is not, it is ink hanging off its staff — so `staff / lyrics / staff` left
+        // the system with NO SPRING AT ALL, and a system with no spring hands
+        // `LayoutEngine.CreatePages` its FIRST staff as the end of its chain
+        // (`OriginToChainEnd`). The inter-system floor was then written between the two
+        // systems' FIRST staves, and the second staff and the row below it fell outside the
+        // quantity entirely. MEASURED on the reported book
+        // (scratch/ベースタブLy/Untitled-6.lys, user report 2026-08-25): system 0's second
+        // staff and system 1's first were drawn 0.470000 apart — through each other — where
+        // the pair's own numbers put them 12.000000 apart.
+        int upperEntry = -1;
+        var between = new List<(Staff Staff, StaffLayout Layout)>();
+        for (int i = 0; i < flat.Count; i++)
         {
-            var upper = flat[i];
-            var lower = flat[i + 1];
+            var entry = flat[i];
+            // Hara-kiri leaves a hidden staff at the current Y with zero height, so it neither
+            // draws nor takes room and is not an element of the alignment at all.
+            // LILYPOND-REF: lily/page-layout-problem.cc:589 filter_dead_elements, which runs
+            // BEFORE append_system's walk. ⚠️ THE SAME SELECTION ClassifySystem MAKES — a
+            // hidden staff used to break the pair here while it was skipped there, so the two
+            // views of one alignment disagreed about which staves are consecutive.
+            if (entry.Layout.IsHidden)
+                continue;
             // LILYPOND-REF: lily/page-layout-problem.cc:1173-1177 Page_layout_problem::is_spaceable
-            // — the property, not the kind of line that happens to carry it. A spring is made
-            // between consecutive SPACEABLE elements (:660-672 append_system), and everything
-            // else is distributed afterwards.
-            if (!StaffAffinity.IsSpaceable(upper.Staff.StaffAffinity)
-                || !StaffAffinity.IsSpaceable(lower.Staff.StaffAffinity))
+            // — the property, not the kind of line that happens to carry it.
+            if (!StaffAffinity.IsSpaceable(entry.Staff.StaffAffinity))
+            {
+                // A line ABOVE the first spaceable staff LEADS the system and belongs to the
+                // run the PREVIOUS system's chain closes, not to any pair here
+                // (:948-990, LayoutEngine.BuildLooseChainEnds).
+                if (upperEntry >= 0)
+                    between.Add((entry.Staff, entry.Layout));
                 continue;
-            if (upper.Layout.IsHidden || lower.Layout.IsHidden)
-                continue;
+            }
+            if (upperEntry >= 0)
+                AddSpring(flat[upperEntry], entry, between);
+            upperEntry = i;
+            between.Clear();
+        }
+        return builder.ToImmutable();
+
+        void AddSpring(
+            (Staff Staff, StaffLayout Layout, StaffGroup Group, int GroupIndex) up,
+            (Staff Staff, StaffLayout Layout, StaffGroup Group, int GroupIndex) low,
+            List<(Staff Staff, StaffLayout Layout)> lines)
+        {
+            // The lines between have to be ones the walk below can price. It reads its three
+            // steps off a line whose affinity is UP — a Lyrics context
+            // (ly/engraver-init.ly:648-658) — and a CHORDS row hangs the other way, so its
+            // steps are `get_spacing_spec`'s other branches (page-layout-problem.cc:1280-1332).
+            // ⚠️ LILYSHARP-OWN: DECLINING HAS NO COUNTERPART — LilyPond springs the pair
+            // whatever stands between it and solves that run afterwards (:660-672, :919-925),
+            // so "the lines between are ones this port cannot price" is a Lily# state and not
+            // a LilyPond one. It is the SAME decline the rest of this island makes and shares
+            // its account: LayoutEngine.SystemAlignment.UnmodelledRow names a chords row below
+            // a staff as the arrangement no corpus point measures. It goes when that one does
+            // — with a point that measures the affinity-DOWN steps, not with a branch that
+            // guesses them.
+            foreach (var line in lines)
+                if (!line.Staff.IsLyricsTextRow)
+                    return;
+
             // ⚠️ NO OSSIA SKIP. An ossia pair is sprung like any other spaceable pair, and
             // the two lines that used to skip it here were worth +0.212184 on a page that
             // squeezes (audit/lp-geometry staff.ossia-pair.compressed.staff-staff-inside,
             // book OSSK: a rigid spring prints its ideal 9.000000 whatever force the page
-            // solves, where LilyPond compresses to 8.787816).
-            // LILYPOND-REF: lily/page-layout-problem.cc:660-672 — append_system's loop springs
-            // between consecutive is_spaceable elements, and :1173-1177 is_spaceable asks only
-            // whether the grob declares a `staff-affinity`. An ossia is a `\new Staff` and
-            // declares none.
-            var spec = upper.GroupIndex == lower.GroupIndex
+            // solves, where LilyPond compresses to 8.787816). An ossia is a `\new Staff` and
+            // declares no `staff-affinity`, so :1173-1177 makes it spaceable.
+            var spec = up.GroupIndex == low.GroupIndex
                 ? sp.StaffStaff
-                : InterGroupSpec(upper.Group, lower.Group, sp);
+                : InterGroupSpec(up.Group, low.Group, sp);
 
             // Refpoint to refpoint, the frame every vertical spring in LilyPond works in, and
             // asked for DIRECTLY: this is the number LilyPond indexes out of
@@ -2330,14 +2383,30 @@ internal sealed class MultiStaffLayouter
             // suite and the ledger; what it removes is a Lily#-only expression, not a number.
             // ⚠️ THE SAME LOOSE LINES THE PLACEMENT WALKED, or this floor is computed against
             // a different alignment from the one that drew the staves, and the block would be
-            // solved into a room it does not fit.
+            // solved into a room it does not fit. THE ROWS BETWEEN ARE PART OF THAT WALK: a
+            // note-bound block hangs off the upper staff and so comes first, then the rows
+            // standing between the two staves in alignment order, each with the skylines
+            // BuildAllStaffSkylines already seeded for it.
+            var walked = looseLines?.Invoke(up.Layout.StaffIndex, low.Layout.StaffIndex);
+            IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>? blocks = walked;
+            if (lines.Count > 0)
+            {
+                var all = new List<(VerticalSkyline Up, VerticalSkyline Down)>(
+                    (walked?.Count ?? 0) + lines.Count);
+                if (walked != null)
+                    all.AddRange(walked);
+                foreach (var line in lines)
+                    all.Add(line.Layout.StaffIndex < staffSkylines.Count
+                        ? staffSkylines[line.Layout.StaffIndex]
+                        : default);
+                blocks = all;
+            }
+
             double minimum = AlignmentMinimumWithSkylines(
-                spec, staffSkylines, upper.Layout.StaffIndex, lower.Layout.StaffIndex,
-                looseLines?.Invoke(upper.Layout.StaffIndex, lower.Layout.StaffIndex));
+                spec, staffSkylines, up.Layout.StaffIndex, low.Layout.StaffIndex, blocks);
             builder.Add(new StaffSpring(
-                upper.Layout.StaffIndex, lower.Layout.StaffIndex, spec, minimum));
+                up.Layout.StaffIndex, low.Layout.StaffIndex, spec, minimum));
         }
-        return builder.ToImmutable();
     }
 
     /// <summary>

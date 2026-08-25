@@ -270,6 +270,7 @@ internal sealed class LayoutEngine
             score, pages, systemsArray, perSystemExtents, lyricsRowStaves,
             multiStaffLayouter.RestCollisionsOf, placed.StaffSpanners, placed.StaffInside);
         var trailingRowStaves = BuildTrailingRowStaves(systemsArray, lyricsRowStaves);
+        var betweenRowStaves = BuildBetweenRowStaves(systemsArray, lyricsRowStaves);
 
         // Calculate beams/ties/slurs/glissandos per staff
         var (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts, restShifts) =
@@ -369,6 +370,7 @@ internal sealed class LayoutEngine
             StaffByIndex = anchors.StaffByIndex,
             LooseChainEnd = looseChainEnd,
             TrailingRowStaves = trailingRowStaves,
+            BetweenRowStaves = betweenRowStaves,
             LastSpaceableStaffY = anchors.LastSpaceableStaffY,
             PrefixTimeSignatureX = BuildPrefixTimeSignatureX(score, systemsArray),
             LineStartBarlineX = BuildLineStartBarlineX(score, systemsArray),
@@ -2751,6 +2753,7 @@ internal sealed class LayoutEngine
         StaffLayout? LastSpaceable,
         ImmutableArray<StaffLayout> Leading,
         ImmutableArray<int> Trailing,
+        ImmutableArray<(int Anchor, int Row)> Between,
         bool UnmodelledRow);
 
     /// <summary>Cuts one system's placed staves into that classification.</summary>
@@ -2760,6 +2763,13 @@ internal sealed class LayoutEngine
         StaffLayout? first = null, last = null;
         var leading = ImmutableArray.CreateBuilder<StaffLayout>();
         var trailing = ImmutableArray.CreateBuilder<int>();
+        // The rows that turned out to stand BETWEEN two spaceable staves, paired with the
+        // staff they hang under. They are collected in `trailing` first and moved here the
+        // moment a spaceable staff appears below them, because which of the two a row is
+        // cannot be known until the walk reaches the next staff -- the same reason LilyPond
+        // cuts its runs in one pass (page-layout-problem.cc:919-925).
+        var between = ImmutableArray.CreateBuilder<(int Anchor, int Row)>();
+        int anchor = -1;
         bool unmodelled = false;
 
         foreach (var group in groups)
@@ -2789,7 +2799,18 @@ internal sealed class LayoutEngine
                     continue;
                 }
                 // A spaceable staff below a row means that row stood BETWEEN two of them.
-                if (trailing.Count > 0) { unmodelled = true; trailing.Clear(); }
+                // ★ THAT USED TO BE A REASON TO DECLINE FOR THE WHOLE SYSTEM (2026-08-25).
+                // It is the OTHER call of distribute_loose_lines -- the one handed two
+                // spaceable positions of ONE system (page-layout-problem.cc:936-939) -- so the
+                // run is a run like any other and the rows in it are its elements. They are
+                // kept, keyed by the staff they hang under, and LyricEngraver walks them.
+                if (trailing.Count > 0)
+                {
+                    foreach (int row in trailing)
+                        between.Add((anchor, row));
+                    trailing.Clear();
+                }
+                anchor = st.StaffIndex;
                 double down = -st.Y;
                 if (first is null || down < -first.Y) first = st;
                 if (last is null || down > -last.Y) last = st;
@@ -2797,7 +2818,8 @@ internal sealed class LayoutEngine
         }
 
         return new SystemAlignment(
-            first, last, leading.ToImmutable(), trailing.ToImmutable(), unmodelled);
+            first, last, leading.ToImmutable(), trailing.ToImmutable(),
+            between.ToImmutable(), unmodelled);
     }
 
     /// <summary>
@@ -2889,6 +2911,51 @@ internal sealed class LayoutEngine
     /// <see cref="BuildLooseChainEnds"/> makes, out of the same classification.
     /// </para>
     /// </remarks>
+    /// <summary>
+    /// Per system and per spaceable staff, the independent lyrics ROWS standing between that
+    /// staff and the NEXT spaceable one — the elements of the run those two bound.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:936-939 distribute_loose_lines — the call
+    /// handed two spaceable positions of ONE system and the loose lines strictly between
+    /// them. The sibling of <see cref="BuildTrailingRowStaves"/>, which reads the OTHER call
+    /// (:1004-1013, the run that closes on the next system or the page edge); one walk
+    /// (<see cref="ClassifySystem"/>) answers both, because which run a row is in is decided
+    /// by where the next spaceable staff falls and nothing else.
+    /// <para>
+    /// ★ THE RUN USED TO BE ABANDONED. <see cref="SystemAlignment.UnmodelledRow"/> was set
+    /// the moment a spaceable staff appeared below a row, and every reader of that flag —
+    /// this table's twin, the chain ends, the reservation — declined for the whole system.
+    /// The row then kept the flat band <c>MultiStaffLayouter.GetStaffHeight</c> laid it out
+    /// in, whose per-verse step is a Lily#-only 3.2 against LilyPond's solved
+    /// <c>max(2.8, ink + 0.2)</c>, and whose HEIGHT is what the pair's gap is measured
+    /// against. MEASURED on the reported book (scratch/ベースタブLy/Untitled-6.lys, user
+    /// report 2026-08-25): a two-verse row left 0.440000 between its last syllable's baseline
+    /// and the staff below, where the one-verse systems of the same score leave 4.600000.
+    /// </para>
+    /// </remarks>
+    private static Func<int, int, IReadOnlyList<int>>? BuildBetweenRowStaves(
+        ImmutableArray<SystemLayout> systemsArray, IReadOnlySet<int> lyricsRowStaves)
+    {
+        if (lyricsRowStaves.Count == 0 || systemsArray.IsDefaultOrEmpty)
+            return null;
+
+        var perSystem = new List<ILookup<int, int>>(systemsArray.Length);
+        foreach (var system in systemsArray)
+        {
+            if (system.StaffGroups.IsDefaultOrEmpty)
+            {
+                perSystem.Add(Array.Empty<(int, int)>().ToLookup(p => p.Item1, p => p.Item2));
+                continue;
+            }
+            var alignment = ClassifySystem(system.StaffGroups, lyricsRowStaves);
+            perSystem.Add(alignment.Between.ToLookup(p => p.Anchor, p => p.Row));
+        }
+        return (s, anchor) => s >= 0 && s < perSystem.Count
+            ? perSystem[s][anchor].ToList()
+            : Array.Empty<int>();
+    }
+
     private static Func<int, IReadOnlyList<int>>? BuildTrailingRowStaves(
         ImmutableArray<SystemLayout> systemsArray, IReadOnlySet<int> lyricsRowStaves)
     {
@@ -3019,9 +3086,22 @@ internal sealed class LayoutEngine
         // The non-spaceable lines each system OPENS with, in placement order — the run
         // LilyPond hands to the previous block's chain (:948-990).
         var leading = new List<StaffLayout>[systemsArray.Length];
+        // Whether THIS system's alignment is one the chain can be written against.
+        // LILYPOND-REF: lily/page-layout-problem.cc:936-939 distribute_loose_lines — the call
+        // that solves ONE run, handed `last_spaceable_line_translation` and
+        // `-solution_[spring_idx]` and nothing else. There is one such call per run, so what
+        // one run holds says nothing about the next run down the page.
+        // ⚠️ LILYSHARP-OWN IS THE DECLINE ITSELF, not this: LilyPond always solves, and the
+        // bail-out is a Lily# state whose whole account is on SystemAlignment.UnmodelledRow.
+        // What is ported here is its GRAIN — the per-run fork above — and that is why this
+        // is an array rather than a `return`. It goes when the flag does.
+        // MEASURED on book ROWH: page 1 reads 4.027851 where the row still stands between two
+        // staves and 5.500000 two staves further down where it does not — one score, one
+        // page, two answers (audit/lp-geometry lyrics.row.between-staves.hara-kiri.*).
+        var usable = new bool[systemsArray.Length];
         for (int s = 0; s < systemsArray.Length; s++)
         {
-            if (systemsArray[s].StaffGroups.IsDefaultOrEmpty) return null;
+            if (systemsArray[s].StaffGroups.IsDefaultOrEmpty) continue;
             var alignment = ClassifySystem(systemsArray[s].StaffGroups, lyricsRowStaves);
             // A row this port does not model leaves its room to somebody else, so the room is
             // UNKNOWN — the remarks' bail-out. ⚠️ AN OSSIA USED TO BAIL OUT HERE TOO, on the
@@ -3030,10 +3110,11 @@ internal sealed class LayoutEngine
             // no `staff-affinity`, so LilyPond makes it SPACEABLE and it brackets runs rather
             // than filling them (page-layout-problem.cc:1173-1177 is_spaceable), and since 2026-07-28 Lily#
             // does the same. It is a chain END here like any other staff.
-            if (alignment.UnmodelledRow) return null;
+            if (alignment.UnmodelledRow) continue;
             if (alignment.FirstSpaceable is not { } firstStaff
-                || alignment.LastSpaceable is not { } lastStaff) return null;
+                || alignment.LastSpaceable is not { } lastStaff) continue;
 
+            usable[s] = true;
             firstSpaceable[s] = -firstStaff.Y;
             firstSpaceableIndex[s] = firstStaff.StaffIndex;
             lastSpaceable[s] = -lastStaff.Y;
@@ -3054,6 +3135,20 @@ internal sealed class LayoutEngine
             var onPage = page.Systems;
             for (int i = 0; i < onPage.Length; i++, index++)
             {
+                // TWO SYSTEMS ARE READ TO WRITE ONE END, so two have to be usable: this
+                // system's own last spaceable staff, and — when the run closes on a next
+                // system rather than on the page edge — that system's FIRST spaceable staff
+                // and the lines it opens with. So an un-modelled row takes the chain from the
+                // system it stands on and from the one above it when they share a page, and
+                // from no others. ⚠️ IT IS NOT `index` ALONE: the far end below reads
+                // firstSpaceable[index + 1], leading[index + 1] and that system's up extent,
+                // none of which a declining classification filled in.
+                // ⚠️ AND NOT THE NEXT PAGE'S EITHER — the else-branch closes this run on the
+                // page edge and starts the next page's with its own call, so `i + 1 <
+                // onPage.Length` is the whole of the question (:1004-1013, the remark below).
+                if (!usable[index]) continue;
+                if (i + 1 < onPage.Length && !usable[index + 1]) continue;
+
                 // LilyPond's `last_spaceable_line_translation`.
                 double anchor = onPage[i].Y - lastSpaceable[index] - halfStaff;
                 if (i + 1 < onPage.Length)
@@ -3680,6 +3775,10 @@ internal sealed class LayoutEngine
         /// which runs before the systems are placed, so that pass leaves a row in its
         /// band.</summary>
         public Func<int, IReadOnlyList<int>>? TrailingRowStaves { get; init; }
+
+        /// <summary>Per system and anchor staff, the rows standing between it and the next
+        /// spaceable staff. See <see cref="BuildBetweenRowStaves"/>.</summary>
+        public Func<int, int, IReadOnlyList<int>>? BetweenRowStaves { get; init; }
 
         /// <summary>
         /// FILLED BY THE PASS, not supplied to it: where the loose-line solve put each text
@@ -4555,8 +4654,16 @@ internal sealed class LayoutEngine
         // different amounts (PageLayouter.RespaceStaves) and hara-kiri can leave different
         // staves alive — the same reason BuildLooseChainEnds could not read systemsArray[0].
         Func<int, int, (double Room, VerticalSkyline NextStaffUp)?>? betweenStavesEnd = null;
+        // ⚠️ A ROW-ONLY BLOCK NEEDS THIS END TOO, and the gate used to ask only for a
+        // NOTE-BOUND line under an upper anchor. `score { staff m  lyrics v  staff m }` has
+        // none — its whole block is the row — so the end was never built, the chain had
+        // nothing to close on, and the row kept its band. What the run holds is not what says
+        // whether it has two ends.
         if (nbAnchor is { Count: > 0 } && staffByIndex != null
-            && lyrics.Any(l => !l.IsLyricsRow && nbAnchor.ContainsKey(l.StaffIndex)))
+            && (lyrics.Any(l => !l.IsLyricsRow && nbAnchor.ContainsKey(l.StaffIndex))
+                || (ctx.BetweenRowStaves is { } betweenRows
+                    && nbAnchor.Keys.Any(a => Enumerable.Range(0, systems.Length)
+                        .Any(sysIdx => betweenRows(sysIdx, a).Count > 0)))))
         {
             var endCache = new Dictionary<(int, int), (double, VerticalSkyline)?>();
             betweenStavesEnd = (sysIdx, anchorStaffIndex) =>
@@ -4580,7 +4687,7 @@ internal sealed class LayoutEngine
             lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, ctx.StaffYByIndex,
             ctx.NoteBoundAnchorY, anchorStaffDownSkyline, ctx.LooseChainEnd,
             betweenStavesEnd, ctx.LastSpaceableStaffY, ctx.TrailingRowStaves,
-            ctx.VerseSkylines, ctx.LyricChains);
+            ctx.BetweenRowStaves, ctx.VerseSkylines, ctx.LyricChains);
 
         // The rows the chain solved travel back out through the context — see
         // AnnotationLayoutContext.SolvedRowBaselines for why they are applied afterwards
@@ -4919,15 +5026,24 @@ internal sealed class LayoutEngine
     /// measure it, which the corpus does not have yet.
     /// </para>
     /// <para>
-    /// ⚠️ THE ROOM IS READ PER SYSTEM AND THE ANCHOR IT IS DRAWN FROM IS NOT, and that is
-    /// named rather than repaired here. <see cref="BuildStaffAnchorTables"/> takes
-    /// <c>NoteBoundAnchorY</c> off <c>systemsArray[0]</c> — the simplification its own remark
-    /// declares, shared by all four of its tables — while this walks the system it is asked
-    /// about, which is what LilyPond does (<c>-solution_[spring_idx]</c> is that system's
-    /// staff). The two disagree only where hara-kiri leaves different staves alive on
-    /// different systems AND the block hangs from a non-last group; no fixture and no ledger
-    /// point reaches that, so narrowing it would add a branch nothing measures — the same
-    /// judgement <see cref="BuildLooseChainEnds"/>'s coarse bail-out is left on.
+    /// ★ THE ROOM AND THE ANCHOR ARE BOTH READ PER SYSTEM SINCE 2026-08-25, and the note
+    /// this replaces is worth keeping in outline because it was wrong about its own reach.
+    /// It said <see cref="BuildStaffAnchorTables"/>'s <c>NoteBoundAnchorY</c>, read off
+    /// <c>systemsArray[0]</c>, disagrees with this per-system walk "only where hara-kiri
+    /// leaves different staves alive on different systems AND the block hangs from a
+    /// non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
+    /// WITH NO HARA-KIRI AT ALL: a row printed on one system and absent on another moves the
+    /// staff beneath it by the row's whole band, and the anchor is a distance from the
+    /// SYSTEM ORIGIN. MEASURED on the reported book (scratch/ベースタブLy/Untitled-6.lys with
+    /// <c>lyrics verse sings melody</c>, user report 2026-08-25): the chain solved
+    /// 0.000000 / 5.175000 / 7.975000 / 12.033515 and the syllables were drawn 1.895000 below
+    /// every one of those. <c>LyricEngraver</c>'s <c>ResolveAnchor</c> reads the system it is
+    /// asked about now, which is what LilyPond does (<c>-solution_[spring_idx]</c> is that
+    /// system's staff), and falls back to the table only where the staff is not in that
+    /// system at all.
+    /// ⚠️ THE LESSON IS ABOUT THE EXCLUSION, NOT THE ANCHOR: "no fixture reaches it" is a
+    /// statement about the fixtures, and it was carried for weeks as though it were a
+    /// statement about the geometry (HANDOFF 5.3).
     /// </para>
     /// </remarks>
     private (double Room, VerticalSkyline NextStaffUp)? ComputeBetweenStavesEnd(
@@ -4953,7 +5069,7 @@ internal sealed class LayoutEngine
         // at its own staff.
         double? anchorDown = null;
         var below = new List<(double Down, int StaffIndex)>();
-        var looseBands = new List<double>();
+        var looseBands = new List<(double Down, int StaffIndex)>();
         foreach (var group in groups)
         {
             if (group.Staves.IsDefaultOrEmpty) continue;
@@ -4963,7 +5079,7 @@ internal sealed class LayoutEngine
                 double down = -st.Y;
                 if (!StaffAffinity.IsSpaceable(st.StaffAffinity))
                 {
-                    looseBands.Add(down);
+                    looseBands.Add((down, st.StaffIndex));
                     continue;
                 }
                 if (st.StaffIndex == anchorStaffIndex)
@@ -4995,8 +5111,21 @@ internal sealed class LayoutEngine
         // said why it was left coarse: nothing measured it, and narrowing an exclusion
         // nothing measures is how a port acquires an untested branch. The corpus measures it
         // now — lyrics.chord-row.* on book LYRCH, where LilyPond is the identity with LYRB.
-        foreach (double band in looseBands)
-            if (band > anchor && band < next)
+        // ★ A LYRICS ROW IN THIS SPAN NO LONGER MAKES THE ROOM UNKNOWN (2026-08-25). It is
+        // an ELEMENT of the very chain this end closes now — LayoutEngine.BuildBetweenRowStaves
+        // hands it to LyricEngraver.BuildChainPrefix, which is what
+        // page-layout-problem.cc:919-925 does with it — so declining here would be declining
+        // because the run has an occupant.
+        // ⚠️ A CHORDS ROW STILL DOES, and the difference is not the kind of context but the
+        // walk: the chain reads its three steps off an affinity-UP line
+        // (ly/engraver-init.ly:648-658) and a chords row hangs the other way, so its steps are
+        // get_spacing_spec's other branches (:1280-1332). Same LILYSHARP-OWN decline as
+        // MultiStaffLayouter.StaffSprings makes for the same run, and it goes with the same
+        // point — one that measures the affinity-DOWN steps.
+        foreach (var (band, bandIndex) in looseBands)
+            if (band > anchor && band < next
+                && !(staffByIndex.TryGetValue(bandIndex, out var bandStaff)
+                     && bandStaff.IsLyricsTextRow))
                 return null;
 
         // ⚠️ THE ROOM'S OWN LIST, NOT A SECOND BUILD — the same rule the anchor's DOWN

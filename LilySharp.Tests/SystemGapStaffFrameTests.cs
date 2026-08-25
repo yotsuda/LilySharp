@@ -84,43 +84,6 @@ public class SystemGapStaffFrameTests
         return SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
     }
 
-    /// <summary>
-    /// Every staff's (top line, bottom line), in page order. A staff line is the one horizontal
-    /// stroke that spans the system, so this instrument needs no X model: consecutive lines one
-    /// staff space apart are one staff, and any larger step starts the next.
-    /// </summary>
-    private static List<(double Top, double Bottom)> Staves(string svg)
-    {
-        var ys = Regex.Matches(svg,
-                "<line x1=\"(-?[0-9.]+)\" y1=\"(-?[0-9.]+)\" x2=\"(-?[0-9.]+)\" y2=\"(-?[0-9.]+)\"")
-            .Select(m => (
-                X1: double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture),
-                Y1: double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture),
-                X2: double.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture),
-                Y2: double.Parse(m.Groups[4].Value, CultureInfo.InvariantCulture)))
-            .Where(l => l.Y1 == l.Y2 && l.X2 - l.X1 > 20)
-            .Select(l => l.Y1)
-            .Distinct().OrderBy(y => y).ToList();
-
-        var staves = new List<(double, double)>();
-        int start = 0;
-        for (int i = 1; i <= ys.Count; i++)
-        {
-            if (i < ys.Count && System.Math.Abs(ys[i] - ys[i - 1] - 1.0) < 1e-6) continue;
-            staves.Add((ys[start], ys[i - 1]));
-            start = i;
-        }
-        return staves;
-    }
-
-    /// <summary>The gap between consecutive staves, in page order: within a system it is the
-    /// staff-to-staff room, between systems it is the quantity under test.</summary>
-    private static List<double> Gaps(string svg)
-    {
-        var s = Staves(svg);
-        return Enumerable.Range(1, s.Count - 1).Select(i => s[i].Top - s[i - 1].Bottom).ToList();
-    }
-
     // LilyPond's floor for this pair, MEASURED: basic-distance 12.000000 between the two
     // staves' refpoints, which is 8.000000 between the staff lines that face each other.
     private const double LilyPondFloor = 8.0;
@@ -134,7 +97,7 @@ public class SystemGapStaffFrameTests
     [InlineData(3)]
     public void TheCollapsedPair_SitsOnLilyPondsFloor_WhateverTheSystemsHeight(int staffCount)
     {
-        var gaps = Gaps(Render(staffCount));
+        var gaps = StaffLineGeometry.Gaps(Render(staffCount));
         // Within a system the staves sit 5.000 apart, so the system gaps are every
         // staffCount-th entry: the first is the pair that collapses into the indent column.
         double firstSystemGap = gaps[staffCount - 1];
@@ -154,7 +117,7 @@ public class SystemGapStaffFrameTests
     [Fact]
     public void TheLaterPairs_AreStillDecidedByTheirSkylines()
     {
-        var gaps = Gaps(Render(2));
+        var gaps = StaffLineGeometry.Gaps(Render(2));
         double second = gaps[3], third = gaps[5];
         Assert.True(second > LilyPondFloor,
             $"the second system pair fell to the floor ({second:F3})");
@@ -192,7 +155,7 @@ public class SystemGapStaffFrameTests
     [Fact]
     public void ASingleStaffScore_IsDecidedByItsSkylineAtEveryPair()
     {
-        var gaps = Gaps(Render(1));
+        var gaps = StaffLineGeometry.Gaps(Render(1));
         Assert.Equal(3, gaps.Count);
         foreach (var g in gaps)
             Assert.True(g > LilyPondFloor,

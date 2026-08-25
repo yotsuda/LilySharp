@@ -398,6 +398,7 @@ internal sealed class LyricEngraver
         Func<int, int, (double Room, VerticalSkyline NextStaffUp)?>? betweenStavesEnd = null,
         double lastSpaceableStaffY = 0,
         Func<int, IReadOnlyList<int>>? trailingRowStaves = null,
+        Func<int, int, IReadOnlyList<int>>? betweenRowStaves = null,
         VerseSkylineMemo? verseSkylineMemo = null,
         LyricChainMemo? chainMemo = null)
     {
@@ -493,7 +494,8 @@ internal sealed class LyricEngraver
         if (!systems.IsDefaultOrEmpty)
             layouts = DistributeLooseLines(layouts, systems, systemSkylines, staffBottom,
                 noteBoundAnchorY, anchorStaffDownSkyline, looseChainEnd, betweenStavesEnd,
-                lastSpaceableStaffY, trailingRowStaves, verseSkylineMemo, chainMemo);
+                lastSpaceableStaffY, trailingRowStaves, betweenRowStaves,
+                verseSkylineMemo, chainMemo);
 
         return layouts.ToImmutableArray();
     }
@@ -609,6 +611,7 @@ internal sealed class LyricEngraver
         Func<int, int, (double Room, VerticalSkyline NextStaffUp)?>? betweenStavesEnd,
         double lastSpaceableStaffY,
         Func<int, IReadOnlyList<int>>? trailingRowStaves,
+        Func<int, int, IReadOnlyList<int>>? betweenRowStaves,
         VerseSkylineMemo? verseSkylineMemo,
         LyricChainMemo? chainMemo)
     {
@@ -644,6 +647,19 @@ internal sealed class LyricEngraver
             return rows;
         }
 
+        // ...and the independent rows standing between a staff and the NEXT spaceable
+        // staff of the same system, keyed by the staff they hang under. The same run
+        // LilyPond collects, read at the other call site of distribute_loose_lines
+        // (page-layout-problem.cc:936-939 against :1004-1013); cached for the same reason.
+        var betweenCache = new Dictionary<(int System, int Anchor), IReadOnlyList<int>>();
+        IReadOnlyList<int> BetweenRows(int system, int anchor)
+        {
+            if (betweenRowStaves == null) return Array.Empty<int>();
+            if (!betweenCache.TryGetValue((system, anchor), out var rows))
+                betweenCache[(system, anchor)] = rows = betweenRowStaves(system, anchor);
+            return rows;
+        }
+
         bool IsTrailingRow(LyricLayout lay, out int system)
         {
             system = -1;
@@ -675,6 +691,39 @@ internal sealed class LyricEngraver
         if (families.All(f => f.Key != -1) && layouts.Any(l => IsTrailingRow(l, out _)))
             families.Add((-1, Array.Empty<LyricLayout>()));
 
+        // ★ AND THE SAME IS TRUE ONE STAFF UP. A row standing BETWEEN two spaceable staves
+        // is in the run those two bound (page-layout-problem.cc:936-939), so it belongs to the
+        // block hanging off the UPPER one — whether or not that staff has note-bound verses of
+        // its own. `score { staff m  lyrics v  staff m }` has none, so without this the row has
+        // no family, never reaches the solve, and keeps the flat band it was laid out in: its
+        // syllables then sit wherever the band's height put them, which on a two-verse row is
+        // hard against the staff below (user report 2026-08-25).
+        // ⚠️ WHICH ROW BELONGS TO WHICH BLOCK IS THE ALIGNMENT'S ANSWER, not a guess made
+        // here — LayoutEngine.ClassifySystem walks the placed staves once and pairs each row
+        // with the spaceable staff above it, the same walk that cuts every other run.
+        // ⚠️ PER SYSTEM, NOT PER ROW. Hara-kiri changes which run a row is in from one
+        // system to the next — book ROWVH is exactly that shape: the row stands BETWEEN two
+        // staves on system 0 and BELOW the only surviving one after it — so the block a row
+        // belongs to is a fact about (system, row) and keying it by the row alone reads one
+        // system's answer for all of them. MEASURED while getting it wrong: the mid-system
+        // verse step went 2.800000 → 4.600000, i.e. the rows fell back to their band because
+        // the lookup asked the wrong family (ledger
+        // lyrics.row.between-staves.two-verse.hara-kiri.verse-step.mid-system).
+        var rowFamily = new Dictionary<(int System, int RowStaff), int>();
+        {
+            var anchorsWithRows = new SortedSet<int>();
+            for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
+                foreach (int anchor in noteBoundAnchorY?.Keys ?? Enumerable.Empty<int>())
+                    foreach (int rowStaff in BetweenRows(sysIdx, anchor))
+                    {
+                        rowFamily[(sysIdx, rowStaff)] = anchor;
+                        anchorsWithRows.Add(anchor);
+                    }
+            foreach (int anchor in anchorsWithRows)
+                if (families.All(f => f.Key != anchor))
+                    families.Add((anchor, Array.Empty<LyricLayout>()));
+        }
+
         foreach (var family in families)
         {
             int familyKey = family.Key;
@@ -688,9 +737,19 @@ internal sealed class LyricEngraver
                 if (measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s))
                     chainSystems.Add(s);
             if (!isUpperFamily)
+            {
                 foreach (var lay in layouts)
                     if (IsTrailingRow(lay, out int s))
                         chainSystems.Add(s);
+            }
+            else
+            {
+                // ...and an upper block runs on every system that has a row between its
+                // staff and the next spaceable one, whether or not it has verses there.
+                for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
+                    if (BetweenRows(sysIdx, familyKey).Count > 0)
+                        chainSystems.Add(sysIdx);
+            }
 
 
             // ── The chain PREFIX (elements, pre-closing gap minima, the walk's
@@ -727,8 +786,27 @@ internal sealed class LyricEngraver
                 // The anchor's Y is per-sysIdx with it: only the profile read keeps the two
                 // honest, because the silhouette arithmetic cancels anchorBase and the
                 // per-staff arithmetic does not.
-                double sysAnchorBase = !isUpperFamily && perStaffAnchorDown != null
-                    && sysAnchor is { } sa ? sa.DeviceDown : anchorBase;
+                // ★ PER SYSTEM ON BOTH ARMS SINCE 2026-08-25. The upper arm used to take
+                // `anchorBase` — LayoutEngine.BuildStaffAnchorTables' NoteBoundAnchorY, read off
+                // systemsArray[0] — and that table's own remark named the simplification and
+                // said no fixture reached it. A book reaches it: the anchor staff's distance
+                // from its SYSTEM ORIGIN is not a property of the score but of the system,
+                // because what stands above the staff can differ from one to the next. It
+                // takes no hara-kiri to differ — a chords row present on one system and absent
+                // on another moves the staff under it by the row's whole band.
+                // LILYPOND-REF: lily/page-layout-problem.cc:896-914 find_system_offsets — the
+                // solution entry a staff is translated by is THAT system's, and the loose
+                // lines below it (:1046-1053) are translated in the same frame.
+                // MEASURED on the reported book (scratch/ベースタブLy/Untitled-6.lys with
+                // `lyrics verse sings melody`, user report 2026-08-25): the chain solved
+                // 0.000000 / 5.175 / 7.975 / 12.034 and the syllables were DRAWN 1.895000
+                // lower than every one of those, because system 1 carries no chords row and
+                // system 0 does. The last verse landed 0.160000 above the next staff's top
+                // line, its descenders through the staff.
+                double sysAnchorBase = isUpperFamily
+                    ? UpperAnchorBase(sysIdx) ?? anchorBase
+                    : perStaffAnchorDown != null && sysAnchor is { } sa
+                        ? sa.DeviceDown : anchorBase;
 
                 // ⚠️ THE TWO SKYLINES ARE IN DIFFERENT FRAMES, and this is the conversion to
                 // the anchor's — the chain is solved between REFERENCE POINTS, so whatever
@@ -752,6 +830,24 @@ internal sealed class LyricEngraver
                 return (anchorDown, sysAnchorBase, skylineToAnchor);
             }
 
+            // Device-DOWN from THIS system's origin to the anchor staff's reference point.
+            // Null when the staff is not in that system at all (hara-kiri), which leaves the
+            // caller on the score-level table it used before.
+            double? UpperAnchorBase(int sysIdx)
+            {
+                if (sysIdx < 0 || sysIdx >= systems.Length) return null;
+                var groups = systems[sysIdx].StaffGroups;
+                if (groups.IsDefaultOrEmpty) return null;
+                foreach (var group in groups)
+                {
+                    if (group.Staves.IsDefaultOrEmpty) continue;
+                    foreach (var st in group.Staves)
+                        if (st.StaffIndex == familyKey && !st.IsHidden)
+                            return -st.Y;
+                }
+                return null;
+            }
+
             LyricChainMemo.ChainPrefix? BuildChainPrefix(int sysIdx)
             {
                 // THIS block's lines, in the order the alignment walks them: the note-bound
@@ -766,9 +862,9 @@ internal sealed class LyricEngraver
                                          && s == sysIdx)
                              .Select(l => l.Item.VerseNumber).Distinct().OrderBy(v => v))
                     elements.Add((familyKey, v));
-                if (!isUpperFamily)
+                foreach (int rowStaff in isUpperFamily
+                             ? BetweenRows(sysIdx, familyKey) : TrailingRows(sysIdx))
                 {
-                    foreach (int rowStaff in TrailingRows(sysIdx))
                     {
                         int before = elements.Count;
                         foreach (int v in layouts
@@ -1047,7 +1143,9 @@ internal sealed class LyricEngraver
             // sheet — simply has no entry and keeps the band it was laid out in.
             if (measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)
                 && newY.TryGetValue(
-                    (lay.Item.IsLyricsRow ? -1 : IsUpper(lay.Item) ? lay.Item.StaffIndex : -1,
+                    (lay.Item.IsLyricsRow
+                         ? rowFamily.TryGetValue((s, lay.Item.StaffIndex), out int rf) ? rf : -1
+                         : IsUpper(lay.Item) ? lay.Item.StaffIndex : -1,
                      s, LineKeyOf(lay.Item), lay.Item.VerseNumber),
                     out double y))
             {

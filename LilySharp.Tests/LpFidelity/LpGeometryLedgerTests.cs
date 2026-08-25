@@ -441,6 +441,78 @@ public class LpGeometryLedgerTests
     }
 
     /// <summary>
+    /// LilyPond solves each RUN on its own, so one score can give two answers on one page:
+    /// where the row stands between two staves it is compressed into the pair's room, and
+    /// where hara-kiri has left it below the only staff it sits at the spring's ideal.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:872-874, :936-939, :1012-1013 distribute_loose_lines
+    /// — the three calls, one per RUN. Each is handed only the two
+    /// spaceable positions that bound its own run, so what one run holds says nothing about
+    /// the next one down the page. <c>LayoutEngine.BuildLooseChainEnds</c> used to answer that
+    /// with a <c>return</c> out of the METHOD, which is a decline for the whole SCORE.
+    /// <para>
+    /// MEASURED on book ROWH (audit/lp-geometry/probes/page-vertical.ly): LilyPond reads
+    /// 4.027851 on system 0, where the row still stands between two staves, and 5.500000 and
+    /// 5.500001 further down the same page, where the lower staff has been removed. The
+    /// entries are <c>lyrics.row.between-staves.hara-kiri.*</c>.
+    /// </para>
+    /// <para>
+    /// ⚠️⚠️ WHAT THIS ASSERTS IS THE FORK, NOT THE FIDELITY, AND THE MARGIN IS ONE
+    /// MICRON — said plainly, because a reader who expects a big number here will think the
+    /// test is broken. The DISTANCE is still wrong on the systems in between, by +1.762110 on
+    /// the two-verse book, and narrowing the guard did not touch it: the room those chains are
+    /// solved into is Lily#'s own inflated one
+    /// (<c>lyrics.row.between-staves.hara-kiri.system-gap</c>, +1.220090 against LilyPond's
+    /// 12.000000), and a chain cannot compress into a room that is not tight. What IS
+    /// observable is that a chain is built AT ALL: the last system on a page runs to the page
+    /// EDGE, where the closing spring is the last line's own descent (:1004-1013), so a solved
+    /// system lands 1.021e-6 further from its staff than a declining one — the descent of
+    /// "no", which the band has no term for. The ledger carries the number as
+    /// <c>lyrics.row.between-staves.hara-kiri.last-system</c>, which went from -0.000001 to
+    /// exact on the narrowing; this states the RULE the number is an instance of.
+    /// </para>
+    /// <para>
+    /// ★ SO IT IS WRITTEN AS A DIFFERENCE BETWEEN THE TWO BOOKS, not as a threshold on one.
+    /// ROWB is ROWH with the lower staff kept alive, so EVERY system of it carries the
+    /// arrangement and none may be solved; the same reading on the same engine therefore
+    /// cancels the font, the paper and the ideal, and what is left is the descent term alone.
+    /// ⚠️ AN EARLIER VERSION ASSERTED <c>reading &gt; 5.5</c> AND PASSED WITH THE GUARD PUT
+    /// BACK — the declining reading is 5.5 plus a last-bit, so the threshold was met by
+    /// arithmetic noise. It was caught by running the revert (HANDOFF 5.4: show the net go red
+    /// before believing it went green), and that is why the comparison is a subtraction now.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void OneScoreOnePage_TwoArrangements_TwoAnswers()
+    {
+        var options = LpGeometryProbes.LyricRowOptions;
+        var mixed = RenderedGeometry.Render(LpGeometryProbes.ROWH, options);
+        var control = RenderedGeometry.Render(LpGeometryProbes.ROWB, options);
+
+        // The regime, HANDOFF 5.0 trap 8: page 1 is 2 + 1 + 1 + 1 in the mixed book and four
+        // systems of two in the control, so index 4 and index 6 are the LAST system of each.
+        Assert.Equal(5, mixed.StavesOnPage(0));
+        Assert.Equal(8, control.StavesOnPage(0));
+
+        // The CONTROL is uniform: every one of its systems carries the row between two
+        // staves, so every one is solved into the same room and reads the same number. This
+        // is the arm that goes red if the fork is made on anything but the arrangement.
+        double first = control.LyricBaselineBelowStaff(0);
+        double last = control.LyricBaselineBelowStaff(6);
+        Assert.Equal(first, last, 6);
+
+        // ...and the MIXED book changes arrangement half way down ONE page, so it must not.
+        // Its system 0 has the row between two staves; the lower staff is hara-kiri'd from
+        // system 1 on, and there the row hangs below the only staff left.
+        double between = mixed.LyricBaselineBelowStaff(0);
+        double below = mixed.LyricBaselineBelowStaff(4);
+        Assert.Equal(first, between, 6);
+        Assert.True(below - between > 1.0,
+            $"the two arrangements read {between:F6} and {below:F6} — a difference of "
+            + $"{below - between:E3}. One page, one score, one answer: the fork is gone.");
+    }
+    /// <summary>
     /// A note-bound line and an independent ROW under the SAME staff are ONE run of the
     /// alignment: the row is stepped off the line above it exactly as a second verse would be.
     /// </summary>

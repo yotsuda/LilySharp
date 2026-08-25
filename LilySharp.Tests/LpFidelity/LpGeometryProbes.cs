@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -1810,6 +1810,113 @@ internal static class LpGeometryProbes
 
     /// <summary>The two-verse book — the mirror of book LYRBV.</summary>
     private static readonly string LYRBV = LyricBetweenStavesPageScore("LYRBV", secondVerse: true);
+
+    /// <summary>
+    /// AN INDEPENDENT LYRICS ROW BETWEEN TWO STAVES, on every system and then on ONE —
+    /// the mirrors of books ROWB and ROWH, and the pair that says whether Lily#'s decline
+    /// over that arrangement belongs to the SYSTEM standing on it or to the SCORE.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="LYRB"/> already puts a lyric line between two staves and is exact. It
+    /// cannot serve here, because to Lily# a note-bound verse and a ROW are two different
+    /// things: the verse hangs off its staff and is not an element of the alignment at all,
+    /// while a bare <c>lyrics words</c> lays out as a staff-like band and IS one
+    /// (<c>Staff.IsLyricsTextRow</c>). <c>LayoutEngine.ClassifySystem</c> calls a row between
+    /// two spaceable staves UNMODELLED. LilyPond has one model for both spellings — the
+    /// identity book <see cref="LYRR"/> — so its side of ROWB is LYRB's number and any
+    /// difference Lily# shows between them is entirely Lily#'s.
+    /// <para>
+    /// ★★★ THE PAIR IS ONE VARIABLE: whether the LOWER staff falls silent after system 0.
+    /// In ROWH it does and declares <c>removeEmpty all</c>, so the row is BETWEEN two staves
+    /// on system 0 and BELOW the only staff on every system after it. MEASURED — LilyPond
+    /// reads THREE numbers on page 1 of that one book: 4.027851 on system 0, 5.500000 on
+    /// systems 1 and 2, 5.500001 on system 3 (whose chain runs to the page edge). So
+    /// LilyPond forks BY SYSTEM inside one score, and <c>BuildLooseChainEnds</c>' bail-out
+    /// is a <c>return</c> out of the METHOD: one system of this shape takes the chain away
+    /// from all twenty.
+    /// </para>
+    /// <para>
+    /// ⚠️ ROWB IS THE CONTROL AND IS EXPECTED TO STAY DIVERGENT. Its arrangement stands on
+    /// every system, so a per-system decline and a per-score decline read the same on it —
+    /// which is exactly what makes it able to say that narrowing the bail-out did not
+    /// quietly widen into the arrangement this port has no formula for.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE BREAKS ARE THE TOP STAFF'S, all nineteen of them: a break belongs to the score
+    /// and not to a staff, so the silent staff takes none of its own
+    /// (<see cref="BuildHaraKiriGrouperScore"/>'s remark). ⚠️ Both staves carry g/a for
+    /// <see cref="LyricBetweenStavesPageScore"/>'s reason — the quantity is the gap BELOW
+    /// the row, so neither staff's own ink may bind it. ⚠️ Lily# <c>g</c> is LilyPond
+    /// <c>g'</c> (HANDOFF 5.5).
+    /// </para>
+    /// </remarks>
+    private static string LyricRowBetweenStavesScore(
+        string name, bool haraKiri, bool secondVerse = false)
+    {
+        const int barsPerSystem = 3, systems = 20;
+        string play = string.Concat(Enumerable.Repeat("g4 a g a | ", barsPerSystem));
+        string rest = string.Concat(Enumerable.Repeat("r1 | ", barsPerSystem));
+        string melody = string.Join("break ", Enumerable.Repeat(play, systems)).Trim();
+        string lower = haraKiri
+            ? string.Concat(Enumerable.Range(0, systems).Select(s => s == 0 ? play : rest)).Trim()
+            : string.Concat(Enumerable.Repeat(play, systems)).Trim();
+        string row = string.Concat(
+            Enumerable.Repeat("no no no no | ", barsPerSystem * systems)).Trim();
+        return $$"""
+            octave absolute
+            time 4/4
+            key c major
+
+            part melody { clef treble }
+            part lower { clef treble{{(haraKiri ? " removeEmpty all" : "")}} }
+
+            section Main {
+              melody { {{melody}} }
+              lower { {{lower}} }
+              lyrics one { {{row}} }{{(secondVerse ? $"\n  lyrics two {{ {row} }}" : "")}}
+            }
+
+            form main { ~Main }
+
+            score main "{{name}}" {
+              staff melody
+              lyrics one{{(secondVerse ? "\n  lyrics two" : "")}}
+              staff lower
+            }
+            """;
+    }
+
+    /// <summary>The arrangement on every system — the mirror of book ROWB.</summary>
+    internal static readonly string ROWB = LyricRowBetweenStavesScore("ROWB", haraKiri: false);
+
+    /// <summary>The arrangement on system 0 alone — the mirror of book ROWH.</summary>
+    internal static readonly string ROWH = LyricRowBetweenStavesScore("ROWH", haraKiri: true);
+
+    /// <summary>
+    /// THE SAME PAIR WITH A SECOND VERSE — the mirrors of books ROWV and ROWVH, and the
+    /// books that exist because <see cref="ROWB"/>/<see cref="ROWH"/> MEASURED NOTHING.
+    /// </summary>
+    /// <remarks>
+    /// ROWH's systems 1..3 came out EXACT on the first measurement, and not because the
+    /// chain was solved: a chain that is never solved sits at <c>max(min, ideal)</c>, and ONE
+    /// loose line in the 12.000000 room the system spring keeps relaxes to that same ideal.
+    /// Both engines read 5.500000 and the pair could say nothing (HANDOFF 5.2.1 (4) — exact
+    /// can mean "that regime does not move").
+    /// <para>
+    /// ★★★ A SECOND VERSE IS THE ONE VARIABLE THAT TAKES THE SOLVED ANSWER OFF THE IDEAL.
+    /// Two loose lines no longer fit in that room, so LilyPond solves at a NEGATIVE force and
+    /// the first line drops to its ink floor 3.737890 (book LYRV's header;
+    /// <c>lyrics.two-staff.two-verse.staff-to-lyric</c> carries the same number for the
+    /// note-bound spelling). An engine that declines to solve still reads 5.500000, and that
+    /// is now wrong by 1.762110 instead of right by accident.
+    /// </para>
+    /// </remarks>
+    private static readonly string ROWV =
+        LyricRowBetweenStavesScore("ROWV", haraKiri: false, secondVerse: true);
+
+    /// <summary>The two-verse arrangement on system 0 alone — the mirror of book ROWVH.</summary>
+    private static readonly string ROWVH =
+        LyricRowBetweenStavesScore("ROWVH", haraKiri: true, secondVerse: true);
 
     /// <summary>
     /// LYRB WITH A CHORD ROW ADDED — the mirror of book LYRCH, and the control for the last
@@ -10335,6 +10442,127 @@ internal static class LpGeometryProbes
             g => g.StaffGapAt(0), FourSystemsPerPageRagged),
         new("lyrics.between-staves.staves-on-first-page", LYRB,
             g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+
+        // ★★★ THE SAME ARRANGEMENT SPELLED AS A ROW, AND THEN ON ONE SYSTEM ONLY — books
+        // ROWB / ROWH, the cell that separates a per-SYSTEM decline from a per-SCORE one.
+        // LYRB above cannot: its lyric is note-bound, which is not an element of Lily#'s
+        // alignment at all, so it never reaches the UnmodelledRow flag. A bare row does.
+        //
+        // ⚠️ LILYPOND READS THREE NUMBERS ON PAGE 1 OF ROWH, in one book on one page:
+        // 4.027851 where the row is still between two staves, 5.500000 where it hangs below
+        // the only staff with another system under it, and 5.500001 on the last system,
+        // whose chain runs to the page edge instead of to a next system. So the fork is BY
+        // SYSTEM. BuildLooseChainEnds' `if (alignment.UnmodelledRow) return null;` is a
+        // return out of the METHOD, so one system of ROWH's shape takes the chain away
+        // from all twenty. ⚠️ AND YET SYSTEMS 1..3 OF THIS BOOK MEASURE EXACT ANYWAY, which
+        // is why the two-verse pair below exists: a chain that is never solved sits at
+        // max(min, ideal), and ONE loose line in a 12.000000 room relaxes to that same
+        // ideal, so both engines read 5.500000 and the fork is invisible here.
+        //
+        // ⚠️ ROWB IS THE CONTROL AND STAYS DIVERGENT ON PURPOSE. Its arrangement stands on
+        // every system, so a per-system decline and a per-score decline read the SAME on it
+        // — which is what makes it able to say the narrowing did not widen into the
+        // arrangement this port has no formula for. Driving it to zero needs the row put
+        // into the alignment as a loose line, not a guard moved (SystemAlignment.
+        // UnmodelledRow's remark).
+        //
+        // ⚠️ THE INDICES ARE STAVES DOWN THE PAGE. ROWH's page 1 is 2 + 1 + 1 + 1, so 0 is
+        // system 0's melody staff, 1 its lower staff, and 2/3/4 are the melody staves of
+        // systems 1/2/3. ROWB's is 8, four systems of two. The count entries are what make
+        // those indices mean the systems they are named for (HANDOFF 5.0 trap 8).
+        new("lyrics.row.between-staves.staff-to-lyric", ROWB,
+            g => g.LyricBaselineBelowStaff(0), FourSystemsPerPageRagged),
+        new("lyrics.row.between-staves.staff-staff-inside", ROWB,
+            g => g.StaffGapAt(0), FourSystemsPerPageRagged),
+        new("lyrics.row.between-staves.staves-on-first-page", ROWB,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+
+        new("lyrics.row.between-staves.hara-kiri.first-system", ROWH,
+            g => g.LyricBaselineBelowStaff(0), FourSystemsPerPageRagged),
+        new("lyrics.row.between-staves.hara-kiri.mid-system", ROWH,
+            g => g.LyricBaselineBelowStaff(2), FourSystemsPerPageRagged),
+        new("lyrics.row.between-staves.hara-kiri.mid-system-2", ROWH,
+            g => g.LyricBaselineBelowStaff(3), FourSystemsPerPageRagged),
+        new("lyrics.row.between-staves.hara-kiri.last-system", ROWH,
+            g => g.LyricBaselineBelowStaff(4), FourSystemsPerPageRagged),
+        new("lyrics.row.between-staves.hara-kiri.staff-staff-inside", ROWH,
+            g => g.StaffGapAt(0), FourSystemsPerPageRagged),
+        new("lyrics.row.between-staves.hara-kiri.staves-on-first-page", ROWH,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+
+        // ★★★ THE SAME PAIR WITH A SECOND VERSE — books ROWV / ROWVH, and they exist
+        // because the eight entries above MEASURE THE DECLINE BUT NOT ITS GRAIN. ROWH's
+        // systems 1..3 are EXACT already, and not because the chain is solved: a chain that
+        // is never solved sits at max(min, ideal), and ONE loose line in the 12.000000 room
+        // the system spring keeps relaxes to that same ideal. Both engines read 5.500000 and
+        // the pair says nothing (HANDOFF 5.2.1 (4) — exact can mean "that regime does not
+        // move"). A second verse is the one variable that takes the solved answer OFF the
+        // ideal: two lines no longer fit, LilyPond solves at a negative force, and verse 1
+        // drops to its ink floor 3.737890 while an engine that declines still reads
+        // 5.500000. MEASURED on page 1 of ROWVH: 3.737890 on systems 0, 1 and 2, and
+        // 5.500001 on system 3, whose chain runs to the page edge and has room to relax.
+        //
+        // ⚠️ THE INDICES ARE THE PAIR ABOVE'S: ROWVH's page 1 is 2 + 1 + 1 + 1 and ROWV's is
+        // four systems of two. The count entries hold them (HANDOFF 5.0 trap 8).
+        new("lyrics.row.between-staves.two-verse.staff-to-lyric", ROWV,
+            g => g.LyricBaselineBelowStaff(0), FourSystemsPerPageRagged),
+        new("lyrics.row.between-staves.two-verse.verse-step", ROWV,
+            g => g.LyricVerseStep(), FourSystemsPerPageRagged),
+        new("lyrics.row.between-staves.two-verse.staff-staff-inside", ROWV,
+            g => g.StaffGapAt(0), FourSystemsPerPageRagged),
+        new("lyrics.row.between-staves.two-verse.staves-on-first-page", ROWV,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+
+        new("lyrics.row.between-staves.two-verse.hara-kiri.first-system", ROWVH,
+            g => g.LyricBaselineBelowStaff(0), FourSystemsPerPageRagged),
+        new("lyrics.row.between-staves.two-verse.hara-kiri.mid-system", ROWVH,
+            g => g.LyricBaselineBelowStaff(2), FourSystemsPerPageRagged),
+        new("lyrics.row.between-staves.two-verse.hara-kiri.mid-system-2", ROWVH,
+            g => g.LyricBaselineBelowStaff(3), FourSystemsPerPageRagged),
+        new("lyrics.row.between-staves.two-verse.hara-kiri.last-system", ROWVH,
+            g => g.LyricBaselineBelowStaff(4), FourSystemsPerPageRagged),
+        new("lyrics.row.between-staves.two-verse.hara-kiri.verse-step", ROWVH,
+            g => g.LyricVerseStep(), FourSystemsPerPageRagged),
+        new("lyrics.row.between-staves.two-verse.hara-kiri.staff-staff-inside", ROWVH,
+            g => g.StaffGapAt(0), FourSystemsPerPageRagged),
+        new("lyrics.row.between-staves.two-verse.hara-kiri.staves-on-first-page", ROWVH,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+
+        // ★★★ AND THE ROOM THOSE CHAINS ARE SOLVED INTO, which is what the narrowing
+        // UNCOVERED. With the chain built per system, the solve on ROWH's and ROWVH's inner
+        // systems still lands on the force-0 ideal -- because Lily# hands it a room of
+        // 17.702255 and 22.752175 where LilyPond's is 12.000000 on both. A chain cannot
+        // compress into a room that is not tight, so the two-verse readings above stay at
+        // +1.762110 with the guard narrowed and the reason has MOVED rather than gone: it is
+        // no longer "no chain is built", it is "the room is wrong".
+        //
+        // ⚠️ THIS IS THE BAND MODEL, not the guard (HANDOFF 3). LilyPond keeps its loose
+        // lines OUT of the page's spring chain and squeezes them into whatever
+        // system-system-spacing gives (page-layout-problem.cc:919-925, and this book's own
+        // dump: 12.000000 with the row and 12.000000 without it), while Lily# reserves the
+        // row's band and pushes the next system down by it -- the same defect
+        // lyrics.row.between-staves.staff-staff-inside reads INSIDE a system, here read
+        // BETWEEN two. ⇒ Closing it needs the row put into the alignment as a loose line,
+        // which is what SystemAlignment.UnmodelledRow's remark has said all along.
+        new("lyrics.row.between-staves.hara-kiri.system-gap", ROWH,
+            g => g.StaffGapAt(2), FourSystemsPerPageRagged),
+        new("lyrics.row.between-staves.two-verse.hara-kiri.system-gap", ROWVH,
+            g => g.StaffGapAt(2), FourSystemsPerPageRagged),
+
+        // ★★★ ...AND THE SAME STEP READ TWO STAVES FURTHER DOWN, which is what turns the
+        // entry above from a number into a NAME. Its twin reads staff 0 -- system 0, where the
+        // row stands BETWEEN two staves -- and stands at +1.800000; this reads staff 2, system
+        // 1's melody, where the row hangs below the only staff, and is EXACT. One book, one
+        // page, two answers, and LilyPond gives 2.800000 on both because
+        // nonstaff-nonstaff-spacing is rigid wherever the line stands
+        // (page-layout-problem.cc:1315-1332).
+        // ⚠️ MEASURED WITH THE GUARD PUT BACK, and the reading did NOT move: 2.800000 with the
+        // per-system decline and 2.800000 with the per-score one. So this is NOT evidence of
+        // the narrowing -- it is the BAND's own step, right below one staff and wrong between
+        // two -- and a comment claiming the port closed it stood here for one build until the
+        // revert was run (HANDOFF 5.4: show the net go red before believing it went green).
+        new("lyrics.row.between-staves.two-verse.hara-kiri.verse-step.mid-system", ROWVH,
+            g => g.LyricVerseStep(2), FourSystemsPerPageRagged),
 
         // THE SAME BOOK WITH A CHORD ROW ADDED, which is the branch that still runs at force
         // 0 — BuildLooseChainEnds and ComputeBetweenStavesEnd both decline a system carrying
