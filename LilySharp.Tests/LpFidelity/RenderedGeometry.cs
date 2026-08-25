@@ -2891,6 +2891,56 @@ internal sealed class RenderedGeometry
         return chords[index].X;
     }
 
+    /// <summary>
+    /// The chord row's baseline above staff <paramref name="staffIndex"/>, measured from
+    /// that staff's reference point.
+    /// </summary>
+    /// <remarks>
+    /// THE FIRST OF THE TWO TERMS THE TOP SPRING'S FLOOR IS MADE OF.
+    /// <c>page.chord-row.first-staff-refpoint</c> reads where the staff lands, which on the
+    /// side where the floor binds is <c>header + (baseline placement + the symbol's ascent)
+    /// + padding</c> — ONE number holding TWO, and its residual cannot say which of them
+    /// carries it. This reads the placement alone, so the two together split it.
+    /// <para>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1257-1338 <c>get_spacing_spec</c> — a
+    /// ChordNames line declares <c>staff-affinity</c> DOWN, so the spec that holds it is the
+    /// staff BELOW's <c>nonstaff-relatedstaff-spacing</c>, and this is the distance that spec
+    /// decides. LilyPond dumps it in as many words
+    /// (<c>staff refpoint -&gt; ChordName baseline</c>, Measure-LilyPondPageGeometry.ps1),
+    /// so no arithmetic on rounded prints stands between the two engines here.
+    /// </para>
+    /// <para>
+    /// ⚠️ Y GROWS DOWNWARD and the row is ABOVE the staff, so the row belonging to this staff
+    /// is the LARGEST Y among those above it — the mirror of
+    /// <see cref="LyricBaselineBelowStaff"/>, which takes the smallest Y below. Taking
+    /// <c>ChordSymbols[0]</c> instead would name whichever system happened to start furthest
+    /// left, exactly as the lyric reader warns.
+    /// </para>
+    /// <para>
+    /// ⚠️ PAGE 1 ONLY by construction, for the reason
+    /// <see cref="FirstStaffToLyricBaseline"/> gives: <see cref="Texts"/> reads the first
+    /// page alone, so a page argument here can only pair one page's staff with another
+    /// page's symbols. It is kept for symmetry with the refpoint readers and must stay 0.
+    /// </para>
+    /// </remarks>
+    public double ChordBaselineAboveStaff(int staffIndex = 0, int page = 0)
+    {
+        var refpoints = StaffRefpoints(page);
+        if (staffIndex < 0 || staffIndex >= refpoints.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for staff {staffIndex} but only {refpoints.Count} "
+                + "staff/staves are on it.");
+        }
+        double staff = refpoints[staffIndex];
+        var above = ChordSymbols.Where(t => t.Y < staff).ToList();
+        if (above.Count == 0)
+            throw new InvalidOperationException(
+                $"page {page}: no chord symbol was drawn above staff {staffIndex}'s refpoint "
+                + $"({staff:F6}).\nDrawn geometry:\n" + Describe());
+        return staff - above.Max(t => t.Y);
+    }
+
     /// <summary>Thin bar lines, left to right.</summary>
     public IReadOnlyList<DrawnRect> Barlines =>
         _page.Rects.Where(r => r.Width > 0 && r.Width <= ThinBarlineMaxWidth)

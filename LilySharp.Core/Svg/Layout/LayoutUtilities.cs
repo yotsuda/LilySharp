@@ -324,13 +324,21 @@ internal static class LayoutUtilities
     /// Calculates the upward extent of a system skyline.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/page-layout-problem.cc:622-626
-    /// MaxHeight() returns the topmost Y-up (positive for notes above the staff top).
-    /// It is already the positive extent above the staff top.
+    /// LILYPOND-REF: lily/page-layout-problem.cc:622-626 — the distance the floor is built
+    /// from is <c>Skyline::distance</c>, which is SIGNED: a system whose ink stops short of
+    /// the reference it is measured from answers a NEGATIVE number and the spring is floored
+    /// that much lower (lily/skyline.cc:667-680 <c>max_height</c> has no clamp either).
+    /// MaxHeight() returns the topmost Y-up about the system's ORIGIN.
+    /// ⚠️ IT WAS CLAMPED AT 0 UNTIL 2026-08-25, which reads "the origin is where the ink
+    /// starts". It is, while the topmost element is a STAFF — the staff symbol's own top
+    /// line IS the origin. A chord or lyric ROW is placed as a BAND whose top stands above
+    /// its own ink (MEASURED: a chord row's baseline sits <c>RefpointBelowTop</c> 2.900000
+    /// under the band top while its ink reaches 1.907250371, so 0.992749629 of the band is
+    /// empty), and the clamp charged the page for that empty strip.
     /// </remarks>
     public static double CalculateUpExtent(VerticalSkyline upSkyline)
     {
-        return upSkyline.IsEmpty ? 0 : Math.Max(0, upSkyline.MaxHeight());
+        return upSkyline.IsEmpty ? 0 : upSkyline.MaxHeight();
     }
 
     /// <summary>
@@ -362,26 +370,35 @@ internal static class LayoutUtilities
     /// spring through <c>Spring::ensure_min_distance</c> (lily/spring.cc:156-159), which
     /// raises the MINIMUM and leaves the ideal alone.
     ///
-    /// Two frames meet here and must not be confused (they differ by exactly halfStaff):
+    /// Two frames meet here and must not be confused:
     /// <list type="bullet">
-    /// <item>Lily#'s system origin and <paramref name="systemUpExtent"/> are the top
-    /// staff's TOP LINE and the ink above it.</item>
-    /// <item>LilyPond's <c>up_skyline.distance()</c> is measured from the staff REFPOINT
-    /// and always contains the staff symbol itself.</item>
+    /// <item>Lily#'s system origin and <paramref name="systemUpExtent"/> are the TOPMOST
+    /// ELEMENT's own top and the ink above it.</item>
+    /// <item>LilyPond's <c>up_skyline.distance()</c> is measured from the first SPACEABLE
+    /// staff's REFPOINT and always contains the staff symbol itself.</item>
     /// </list>
+    /// They differ by <paramref name="originToRefpoint"/>, which is LilyPond's
+    /// <c>-first_spaceable_dy</c> (page-layout-problem.cc:1120-1122) written in Lily#'s
+    /// frame: half a staff while the topmost element IS that staff, and half a staff PLUS
+    /// the rows the alignment stacked over it on a lead sheet.
+    /// ⚠️ IT WAS THE STAFF'S OWN HALF SPAN UNTIL 2026-08-25, which asserts the first case
+    /// for every score. MEASURED on the reported book (scratch/ベースタブLy/Untitled-6.lys,
+    /// user report): a system written <c>chords / lyrics / staff</c> reserved 2.000000
+    /// where its own alignment had stacked 27.782041 over that staff, so the two rows were
+    /// spaced into the paper's top margin and the chord symbols printed THROUGH the title.
     /// Placing the first system is done in the refpoint frame here and converted back to
     /// the origin frame ONCE, in <see cref="CalculateFirstSystemY"/>.
     /// </remarks>
     public static double CalculateFirstStaffRefpoint(
         double topMargin, double headerHeight, double systemUpExtent,
-        double halfStaff, VerticalSpacingSpec topSpec)
+        double originToRefpoint, VerticalSpacingSpec topSpec)
         // LILYPOND-REF: lily/simple-spacer.cc:295-305 spring_positions — a system's
         // position is the running sum of its springs' lengths, and for the FIRST system
         // that sum is the top spring alone. At force 0 Spring::length is
         // max(min_distance_, ideal_distance_) (spring.cc:219-237), which is why a system
         // whose ink is smaller than top-system-spacing's basic-distance is not measured by
         // its ink at all.
-        => topMargin + CreateTopSystemSpring(headerHeight, systemUpExtent, halfStaff, topSpec)
+        => topMargin + CreateTopSystemSpring(headerHeight, systemUpExtent, originToRefpoint, topSpec)
                        .Length(0);
 
     /// <summary>
@@ -397,14 +414,28 @@ internal static class LayoutUtilities
     /// <c>bottom_skyline_</c> set header_height_ below the top of the printable area
     /// (:441-444), which is what the comment at :471-473 means by anchoring the spring at
     /// the top of the header.
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1120-1122 — <c>build_system_skyline</c>
+    /// closes with <c>up->raise (-first_spaceable_dy)</c>, so the skyline
+    /// <c>append_system</c> takes the distance from is anchored on the first SPACEABLE
+    /// staff and carries every non-spaceable line stacked above it. Lily# keeps its
+    /// silhouette in the ORIGIN frame instead and makes that same raise here, which is
+    /// what <paramref name="originToRefpoint"/> is.
     /// </remarks>
+    /// <param name="originToRefpoint">
+    /// The distance DOWN from the system's ORIGIN to its first SPACEABLE staff's refpoint —
+    /// <c>PageAnchorOffsets</c>' <c>ToFirst</c>. ⚠️ NOT the staff's own half span: the two
+    /// agree only while the topmost element IS that staff, and a lead sheet's chord and
+    /// lyric rows are exactly the case where they part (see
+    /// <see cref="CalculateFirstStaffRefpoint"/>'s remark for the measurement).
+    /// </param>
     public static Spring CreateTopSystemSpring(
-        double headerHeight, double systemUpExtent, double halfStaff, VerticalSpacingSpec topSpec)
+        double headerHeight, double systemUpExtent, double originToRefpoint,
+        VerticalSpacingSpec topSpec)
     {
-        // Lily#'s up extent is the ink above the top staff LINE; LilyPond's up_skyline is
-        // measured from the staff REFPOINT and always contains the staff symbol itself, so
-        // the same quantity is halfStaff more there.
-        double inkAboveRefpoint = systemUpExtent + halfStaff;
+        // Lily#'s up extent is the ink above the system's ORIGIN; LilyPond's up_skyline is
+        // measured from the first spaceable staff's REFPOINT and always contains the staff
+        // symbol itself, so the same quantity is originToRefpoint more there.
+        double inkAboveRefpoint = systemUpExtent + originToRefpoint;
         return CreateSpring(topSpec, headerHeight + inkAboveRefpoint + topSpec.Padding);
     }
 
@@ -443,29 +474,29 @@ internal static class LayoutUtilities
     }
 
     /// <summary>
-    /// Distance DOWN from the paper's top edge to the FIRST system's ORIGIN (its top
-    /// staff's TOP LINE) — the frame <see cref="SystemLayout.Y"/> is stacked in.
+    /// Distance DOWN from the paper's top edge to the FIRST system's ORIGIN (its TOPMOST
+    /// ELEMENT's own top) — the frame <see cref="SystemLayout.Y"/> is stacked in.
     /// </summary>
     /// <remarks>
     /// The sole seam between the refpoint frame LilyPond's page spacing is written in and
     /// the origin frame Lily# stacks systems in; every caller placing a first system goes
-    /// through here so the halfStaff conversion exists in exactly one place.
+    /// through here so the conversion exists in exactly one place.
+    /// ⚠️ ONE PARAMETER, NOT TWO. It carried a <c>halfStaff</c> as well until 2026-08-25,
+    /// on the reading that the FLOOR is built from an extent measured from the staff while
+    /// only the ANSWER has to come back to the origin. Both are the same conversion — the
+    /// extent is measured from the ORIGIN — and splitting them is what let the floor lose
+    /// the rows a lead sheet stacks above its staff.
     /// </remarks>
-    /// <param name="halfStaff">
-    /// The first SPACEABLE staff's OWN half span, which is what converts an EXTENT (measured
-    /// from that staff) into ink above its refpoint.
-    /// </param>
     /// <param name="originToRefpoint">
-    /// The distance from the system's ORIGIN down to that same refpoint, which is what
-    /// converts the answer back into the frame systems are stacked in. The two differ exactly
-    /// when something stands above the staff inside the system — a lead sheet's chord row —
-    /// and they were one parameter until 2026-07-28, which is why such a row was counted
-    /// twice the moment either stopped being a nominal 2.000000.
+    /// The distance from the system's ORIGIN down to its first SPACEABLE staff's refpoint.
+    /// It converts the floor INTO the refpoint frame LilyPond writes the spring in, and the
+    /// answer back OUT of it. Half a staff exactly while the topmost element is that staff.
     /// </param>
     public static double CalculateFirstSystemY(
         double topMargin, double headerHeight, double systemUpExtent,
-        double halfStaff, double originToRefpoint, VerticalSpacingSpec topSpec)
-        => CalculateFirstStaffRefpoint(topMargin, headerHeight, systemUpExtent, halfStaff, topSpec)
+        double originToRefpoint, VerticalSpacingSpec topSpec)
+        => CalculateFirstStaffRefpoint(
+               topMargin, headerHeight, systemUpExtent, originToRefpoint, topSpec)
            - originToRefpoint;
 
     /// <summary>

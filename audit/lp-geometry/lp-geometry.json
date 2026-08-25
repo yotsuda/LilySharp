@@ -875,6 +875,43 @@
       "residual": 0.0,
       "why": "SEEDED 2026-07-28. The count for the NTL readings, for the reason page.tab-only.staves-on-first-page carries one. That both books break 24 bars into the same 3 systems is also what makes the pair a pair: had the tab staff broken differently, the two would be spacing pages of different shapes and the identity between them would say nothing."
     },
+    "page.chord-row.first-staff-refpoint": {
+      "probe": "page-vertical.ly",
+      "score": "CHR1",
+      "lilypond": 11.690551,
+      "residual": 0.001435575,
+      "why": "SEEDED 2026-08-25. WHERE THE FIRST STAFF SITS UNDER A CHORD ROW WHEN THE FLOOR LOSES. top-system-spacing's spring is max(basic-distance 6, header + the ink the system carries above its first SPACEABLE staff's refpoint + padding 1) at force 0 (page-layout-problem.cc:625-630 with spring.cc:219-237), so the ink is measured at all only while it beats 6. THIS BOOK IS THE SIDE WHERE IT DOES NOT: LilyPond's ChordName stencil is [3.000000, 4.998884] about the refpoint, the floor is 5.998884, and it loses by 0.001116 -- the dump says so in as many words (first ink top = top-margin + 1.001116). PREDICTION, written before running: 11.690551. HELD. WHY THE PAIR EXISTS: every chord-row book this corpus had sat on this side of the boundary, so no entry could see the floor at all, and session 255 shipped a port for a USER-REPORTED overlap (a lead sheet written chords/lyrics/staff printed its chord symbols THROUGH the title) with nothing here able to watch it. Its twin page.chord-row.sharp.first-staff-refpoint is the other side. RESIDUAL +0.001435575, AND THE PAIR IS WHAT MAKES IT LEGIBLE: Lily# reads 11.691986575 = top-margin + 6.001435575, so ITS floor BINDS where LilyPond's loses -- Lily#'s ink above the refpoint is 5.001435575 against LilyPond's 4.998884, taller by 0.002552. That 0.0026 is a chord symbol's reserved ink, and on any other book it would be invisible; it is readable here only because this book sits 0.001116 from the regime boundary, which is the whole reason the pair was placed across it rather than beside it. The twin, whose floor binds on both engines, is exact to nine digits (+0.000000283), so the top spring's ARITHMETIC is closed and what is left is the ink that feeds it. NAMED 2026-08-26 by page.chord-row.staff-to-chord-baseline, which split this residual: the row's PLACEMENT is exact (both engines stand its ink bottom on 3.000000, the up stem tops) and the whole 0.002552 is the FACE -- LilyPond sets chord names in Nimbus Sans and Lily# in TeX Gyre Heros, two URW faces that agree exactly on A, on m and on every advance, and differ only in the overshoot of a ROUND capital (C is [-0.023, 0.741] em in Nimbus, [-0.018, 0.747] em in Heros, i.e. 0.001 em taller). Not a spacing defect and not closable without shipping Nimbus Sans. ⚠️ This book prints the first round capital in the corpus, which is why nothing here had seen it."
+    },
+    "page.chord-row.staves-on-first-page": {
+      "probe": "page-vertical.ly",
+      "score": "CHR1",
+      "lilypond": 4,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "SEEDED 2026-08-25. The count for the CHR1 reading, for the reason page.tab-only.staves-on-first-page carries one (HANDOFF 5.0, trap 8): a refpoint read off a page holding a different number of systems is a plausible number about another page. max-systems-per-page is #4 in both books and both fill it, so the pair differs in the chord spelling and in nothing else."
+    },
+    "page.chord-row.sharp.first-staff-refpoint": {
+      "probe": "page-vertical.ly",
+      "score": "CHR2",
+      "lilypond": 13.368940,
+      "residual": 0.000000283,
+      "why": "SEEDED 2026-08-25. THE SAME BOOK ONE WORD APART -- the chords are cis1:m rather than c1 -- and THE FIRST BOOK IN THIS CORPUS WHOSE TOP-SYSTEM FLOOR BINDS: 13.368940 = top-margin 5.690551 + (ink 6.678389 + padding 1). PREDICTION, written before running: it would bind (HELD) at 12.007017 (MISSED by 1.361923), on the reading that an accidental raises the symbol's ink TOP by 0.317582017716528 and moves nothing else (measured session 254 on Am against A#m). THE MISS IS THE FINDING: the accidental moves BOTH ends of the row's ink -- LilyPond's dump reads [3.500000, 6.678389] here against [3.000000, 4.998884] in CHR1, a height grown by 1.179505 -- and because the loose line is spaced from its own BOTTOM, the row itself is pushed up 1.393333 (ChordName baseline 3.060184 -> 4.453517) before any of that reaches the top spring. So the top moves by (row shift + top growth), not by the top growth, and a prediction that reads only one end of a stencil is a prediction about a grob that does not move. ALSO: the sharp lifts the ink bottom AWAY from the staff (3.000000 -> 3.500000), which is why the row rises rather than the gap closing."
+    },
+    "page.chord-row.sharp.staves-on-first-page": {
+      "probe": "page-vertical.ly",
+      "score": "CHR2",
+      "lilypond": 4,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "SEEDED 2026-08-25. The count for the CHR2 reading, for the reason page.tab-only.staves-on-first-page carries one (HANDOFF 5.0, trap 8): a refpoint read off a page holding a different number of systems is a plausible number about another page. max-systems-per-page is #4 in both books and both fill it, so the pair differs in the chord spelling and in nothing else."
+    },
+    "page.chord-row.staff-to-chord-baseline": {
+      "probe": "page-vertical.ly",
+      "score": "CHR1",
+      "lilypond": 3.060184,
+      "residual": -0.013091398,
+      "why": "SEEDED 2026-08-26. WHERE THE CHORD ROW'S BASELINE SITS OVER THE STAFF, opened to split the +0.001435575 its own book's page.chord-row.first-staff-refpoint carries: that entry reads header + (where the row is put + how far the symbol's ink reaches above its baseline) + padding, one number holding two, and its residual could not say which half held it. PREDICTION, written before running (scratch/p256/PREDICTION.md): +0.0026, on the reading that the placement carried nearly all of it because session 254 had measured the chord face agreeing on ink to 0.000040109. MISSED, sign and all, and THE MISS IS THE FINDING: the answer is -0.013091398, and the split is not placement-against-ascent at all. THE PLACEMENT IS EXACT. LilyPond dumps the row's ink bottom at 3.000000 above the staff refpoint; Lily#'s baseline 3.047092602 less its own C descent 0.047092602 is 3.000000000 — the two agree to LilyPond's printed precision, and 3.000000 is the up stem tops (a' at -0.5 plus a 3.5 stem), so BOTH engines stand the row on the staff's skyline with padding 0. WHAT IS LEFT IS THE FACE, AND IT IS A DIFFERENT FONT. LilyPond sets chord names in Nimbus Sans (its own bundle, share/lilypond/2.26.0/fonts/otf/NimbusSans-Regular.otf) and Lily# sets them in TeX Gyre Heros (the face it may redistribute). Read out of the two OTFs, C is [-0.023, 0.741] em in Nimbus and [-0.018, 0.747] em in Heros, and both dumps are those numbers: LilyPond [-0.060184, 1.938700] about the baseline, Lily# [-0.047092602, 1.954342973] = [-0.018, 0.747] * ChordNameFontSize 2.61625565300599 EXACTLY. So this residual is the round capital's OVERSHOOT and nothing else: Heros drops C 0.005 em less below the baseline than Nimbus does. WHY THE CORPUS NEVER SAW IT: the two fonts are the same URW design and agree EXACTLY on A (0.729), m (0.539) and on every advance (A 0.667, C 0.722, m 0.833) — which is why every chord.symbol-width.* point is exact and why session 254, measuring Am and A#m, saw the faces agree to 0.000040109 and had no reason to doubt them. A ROUND CAPITAL IS THE FIRST LETTER THAT SEPARATES THEM, and this is the first ledger book to print one. NOT CLOSABLE WITHOUT A DECISION: the only fix is to measure chord names in Nimbus Sans, i.e. to ship it — a licensing choice, not a geometry one. USER DECISION. ⚠️ A REMAINDER OF ~1e-5 IS NOT EXPLAINED BY THE FONT: LilyPond's C-height over A-height is 1.04802176 where Nimbus's outlines give 1.04801097, and Heros would give 1.04938272, so the identification is certain (Heros misses by 130x more) but the last 1.1e-5 is something else — FreeType's 26.6 grid on the scaled outline is the first suspect, and it is the same order as the 0.000040109 the em already carries."
+    },
     "staff.notation-pair.staff-staff-inside": {
       "probe": "page-vertical.ly",
       "score": "NST",

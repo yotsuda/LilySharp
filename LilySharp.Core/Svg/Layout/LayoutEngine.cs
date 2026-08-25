@@ -205,11 +205,12 @@ internal sealed class LayoutEngine
         var firstEdgeBeams = EdgeStaffBeams(firstSystemMeasureLayouts, 0);
         var (firstUpSkyline, _) = _skylineBuilder.BuildSystemSkylines(
             score, firstSystemMeasureLayouts, systemHeight, indent,
-            firstEdgeBeams.first, firstEdgeBeams.last, firstStaffGroupLayouts);
+            firstEdgeBeams.first, firstEdgeBeams.last, firstStaffGroupLayouts,
+            firstStaffSkylines.Skylines);
         var firstAnchor = PageAnchorOffsets(firstStaffGroupLayouts, lyricsRowStaves);
         double currentY = LayoutUtilities.CalculateFirstSystemY(
             _options.MarginTop, headerHeight, LayoutUtilities.CalculateUpExtent(firstUpSkyline),
-            firstAnchor.HalfFirst, firstAnchor.ToFirst, _options.VerticalSpacing.TopSystem);
+            firstAnchor.ToFirst, _options.VerticalSpacing.TopSystem);
 
         var placed = LayoutSystems(new SystemPassContext
         {
@@ -243,9 +244,14 @@ internal sealed class LayoutEngine
         }
         var inlineChordNames = score.ChordNames
             .Where(c => !textRowStaves.Contains(c.StaffIndex)).ToImmutableArray();
+        // The raise that brings this pass's STAFF-framed estimates into the ORIGIN frame the
+        // extents are kept in — LilyPond's -first_spaceable_dy, per system.
+        var rowsAboveFirstStaff = systems
+            .Select(s => RowsAboveFirstStaff(s.StaffGroups, lyricsRowStaves))
+            .ToList();
         AugmentExtentsWithLooseLines(score.TextMetrics, perSystemExtents,
             score.MusicMarks, score.VoltaBrackets, multiMeasureRanges,
-            inlineChordNames, perSystemBandUps);
+            inlineChordNames, perSystemBandUps, rowsAboveFirstStaff);
 
         // Preliminary annotation pass (see the single-staff path): real
         // protrusions of brackets/marks/voltas/dynamics/ties/slurs join the
@@ -260,7 +266,7 @@ internal sealed class LayoutEngine
             score, multiStaffLayouter, systems.ToImmutableArray(), perSystemExtents,
             perSystemSkylines, multiStaffLayouter.RestCollisionsOf, systemCache,
             commonShortestDuration, placed.StaffSpanners, placed.StaffInside,
-            placed.LyricBands);
+            rowsAboveFirstStaff, placed.LyricBands);
 
         var (pages, systemsArray) = CreatePages(
             systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,
@@ -588,7 +594,8 @@ internal sealed class LayoutEngine
                 {
                     var edgeBeams = EdgeStaffBeams(measureLayouts, sysIdx);
                     return _skylineBuilder.BuildSystemSkylines(score, measureLayouts, sysHeight, sysIndent,
-                        edgeBeams.first, edgeBeams.last, sysStaffGroups);
+                        edgeBeams.first, edgeBeams.last, sysStaffGroups,
+                        sysStaffSkylines.Skylines);
                 });
             perSystemSkylines.Add((upSky, downSky));
             // The loose block's minimum profile, in the system-origin frame. Its deepest
@@ -734,6 +741,7 @@ internal sealed class LayoutEngine
         SystemLayoutCache? systemCache, double commonShortestDuration,
         List<List<MultiStaffLayouter.StaffInsideSpanners>> staffSpanners,
         List<List<(VerticalSkyline Up, VerticalSkyline Down)>> staffInside,
+        IReadOnlyList<double> rowsAboveFirstStaff,
         List<VerticalSkyline?>? lyricBands = null)
     {
         var (prelimStaff, prelimStaffIndex) = score.PrimaryContentStaffWithIndex();
@@ -910,7 +918,8 @@ internal sealed class LayoutEngine
             LyricChains = systemCache?.PreliminaryLyricChains,
         });
         EnrichExtentsWithAnnotationProtrusions(score.TextMetrics, perSystemExtents, prelimSystems,
-            prelimAnn, prelimTies.ToImmutableArray(), prelimSlurs.ToImmutableArray());
+            prelimAnn, prelimTies.ToImmutableArray(), prelimSlurs.ToImmutableArray(),
+            rowsAboveFirstStaff);
         return new PreliminaryPass(
             AugmentSkylinesForPaging(
                 score.TextMetrics,
@@ -1575,7 +1584,7 @@ internal sealed class LayoutEngine
         var pageAnchor = PageAnchorOffsets(systems[0].StaffGroups, lyricsRowStaves);
         double skylineY = LayoutUtilities.CalculateFirstSystemY(
             _options.MarginTop, headerHeight, perSystemExtents[0].upExtent,
-            pageAnchor.HalfFirst, pageAnchor.ToFirst, _options.VerticalSpacing.TopSystem);
+            pageAnchor.ToFirst, _options.VerticalSpacing.TopSystem);
 
         // ⚠️ THE SINGLE-PAGE STACK IS THROWN AWAY WHEN THE SCORE OVERFLOWS (the check below
         // hands the whole thing to OptimalPages), and it is not cheap to build: the loop
@@ -1876,16 +1885,35 @@ internal sealed class LayoutEngine
     /// build_system_skyline — page spacing reads COMPLETE system stencils
     /// (slurs, brackets, scripts included), not just note skylines.
     /// </remarks>
+    /// <param name="rowsAboveFirstStaff">
+    /// Per system, <see cref="RowsAboveFirstStaff"/>. The grobs below are anchored on the
+    /// TOP STAFF's middle line; this is what puts that middle where the alignment actually
+    /// placed it instead of at the nominal device 2.
+    /// </param>
     private static void EnrichExtentsWithAnnotationProtrusions(
         ScoreTextMetrics fonts,
         List<(double upExtent, double downExtent)> perSystemExtents,
         ImmutableArray<SystemLayout> systems,
         AnnotationLayouts ann,
         ImmutableArray<TieLayout> ties,
-        ImmutableArray<SlurLayout> slurs)
+        ImmutableArray<SlurLayout> slurs,
+        IReadOnlyList<double> rowsAboveFirstStaff)
     {
         int n = Math.Min(perSystemExtents.Count, systems.Length);
+        // ⚠️ NEGATIVE INFINITY, NOT 0. The up extent is SIGNED (LayoutUtilities'
+        // CalculateUpExtent), so a system whose topmost ink stops below its own origin
+        // carries a negative one; seeding this accumulator at 0 and max-merging would clamp
+        // that back and hand the page the empty top of a chord row's band.
+        double upSeed = double.NegativeInfinity;
+        // The top staff's MIDDLE line in this pass's system-relative device frame. It is
+        // the nominal 2 exactly while the topmost element is that staff; with a chord or
+        // lyric row stacked over it the middle sits that much further down, and reading 2
+        // anyway credits every mark with the rows' whole band.
+        // LILYPOND-REF: lily/page-layout-problem.cc:1120-1122 up->raise(-first_spaceable_dy).
+        double MiddleAt(int s) =>
+            2.0 + (s < rowsAboveFirstStaff.Count ? rowsAboveFirstStaff[s] : 0);
         var up = new double[n];
+        Array.Fill(up, upSeed);
         var down = new double[n];
 
         var measureToSystem = new Dictionary<int, int>();
@@ -1945,14 +1973,18 @@ internal sealed class LayoutEngine
             if (MusicMarkItem.IsSpannerHandled(m.MarkType))
                 continue;
             // m.YUp is Y-up above the top-staff middle; system-relative device
-            // (down+ from the system top) is 2 − YUp (the middle sits at device 2).
-            double mY = 2.0 - m.YUp;
+            // (down+ from the system top) is MiddleAt(s) − YUp.
+            if (!measureToSystem.TryGetValue(m.MeasureIndex, out int ms))
+                continue;
+            double mY = MiddleAt(ms) - m.YUp;
             Add(m.MeasureIndex, mY - 2.1, mY + 0.7);
         }
         foreach (var ct in ann.CustomTexts)
         {
-            // ct.YUp is Y-up above the top-staff middle; system-relative device is 2 − YUp.
-            double ctY = 2.0 - ct.YUp;
+            // ct.YUp is Y-up above the top-staff middle; same conversion as the marks.
+            if (!measureToSystem.TryGetValue(ct.MeasureIndex, out int cs))
+                continue;
+            double ctY = MiddleAt(cs) - ct.YUp;
             Add(ct.MeasureIndex, ctY - 1.8, ctY + 0.6);
         }
         // Chord names ride above the staff and rise (ChordNameEngraver skyline) to
@@ -2712,6 +2744,10 @@ internal sealed class LayoutEngine
         return result;
     }
 
+    /// <param name="rowsAboveFirstStaff">
+    /// Per system, <see cref="RowsAboveFirstStaff"/> — the raise that brings a STAFF-framed
+    /// estimate into the ORIGIN frame <paramref name="perSystemExtents"/> is kept in.
+    /// </param>
     private static void AugmentExtentsWithLooseLines(
         ScoreTextMetrics fonts,
         List<(double upExtent, double downExtent)> perSystemExtents,
@@ -2719,7 +2755,8 @@ internal sealed class LayoutEngine
         ImmutableArray<VoltaBracketItem> voltaBrackets,
         List<(int startMeasure, int measureCount)> systemMeasureRanges,
         ImmutableArray<ChordNameItem> chordNames,
-        List<double>? perSystemBandUps)
+        List<double>? perSystemBandUps,
+        IReadOnlyList<double> rowsAboveFirstStaff)
     {
         // ⚠️ THE UP SIDE ONLY, since 2026-08-20. The lyric block's DOWN reservation is no
         // longer a scalar anywhere: its minimum profile joins the paging silhouette itself
@@ -2735,9 +2772,19 @@ internal sealed class LayoutEngine
                 fonts, musicMarks, voltaBrackets, start, start + count, chordNames);
             perSystemBandUps?.Add(bandUp);
 
+            // ⚠️ TWO FRAMES MET IN THIS Math.Max UNTIL 2026-08-25. Every constant
+            // EstimateAboveStaffExtents returns is measured ABOVE THE STAFF (3.5 for a
+            // boxed section label, 3.0 for a rehearsal mark, 2.0 for a volta bracket) while
+            // ext.upExtent is the silhouette's ink above the system's ORIGIN, and the two
+            // are the same number only while the topmost element IS the staff. On a lead
+            // sheet the staff-framed one won the max and then had the rows' band added to it
+            // again downstream — HANDOFF 5.2.1② with the frames as the two spellings.
+            double looseUpFromOrigin = looseUp
+                - (i < rowsAboveFirstStaff.Count ? rowsAboveFirstStaff[i] : 0);
+            // ⚠️ NO `> 0` GUARD any more: the extent is SIGNED (CalculateUpExtent), so a
+            // system whose loose ink stops BELOW its origin has to be able to say so.
             var ext = perSystemExtents[i];
-            if (looseUp > 0)
-                perSystemExtents[i] = (Math.Max(ext.upExtent, looseUp), ext.downExtent);
+            perSystemExtents[i] = (Math.Max(ext.upExtent, looseUpFromOrigin), ext.downExtent);
         }
     }
 
@@ -2914,6 +2961,32 @@ internal sealed class LayoutEngine
     /// measured from the origin. Mixing them double-counts the band — MEASURED, it put
     /// <c>lyrics.chord-row.between-systems.system-gap</c> 1.883400 over LilyPond's 12.000000.
     /// </returns>
+    /// <summary>
+    /// How far a system's ORIGIN stands above its first SPACEABLE staff's TOP LINE — the
+    /// rows the alignment stacked over that staff, and exactly 0 for every system whose
+    /// topmost element IS the staff.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1120-1122 <c>build_system_skyline</c>'s
+    /// closing <c>up->raise (-first_spaceable_dy)</c>. LilyPond re-anchors the SKYLINE once and every consumer
+    /// then reads one frame; Lily# keeps its silhouette in the origin frame, so the same
+    /// raise has to be made by each consumer that mixes an origin-framed quantity with a
+    /// STAFF-framed one. This is that raise, named once.
+    /// <para>
+    /// ⚠️ IT IS THE DIFFERENCE, NOT <c>ToFirst</c>. A quantity already measured from the
+    /// staff (a mark's protrusion, <see cref="EstimateAboveStaffExtents"/>'s constants)
+    /// needs only the ROWS added; a quantity measured from the origin (a skyline extent)
+    /// needs the whole <c>ToFirst</c>. Handing either the other one is the double count
+    /// <c>PageAnchorOffsets</c>' own remark measured at 1.883400 over LilyPond.
+    /// </para>
+    /// </remarks>
+    private double RowsAboveFirstStaff(
+        ImmutableArray<StaffGroupLayout> groups, IReadOnlySet<int> lyricsRowStaves)
+    {
+        var a = PageAnchorOffsets(groups, lyricsRowStaves);
+        return a.ToFirst - a.HalfFirst;
+    }
+
     private (double ToFirst, double ToLast, double HalfFirst, double HalfLast) PageAnchorOffsets(
         ImmutableArray<StaffGroupLayout> groups, IReadOnlySet<int> lyricsRowStaves)
     {

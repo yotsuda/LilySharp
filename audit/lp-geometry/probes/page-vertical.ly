@@ -2562,6 +2562,66 @@ probeTag =
   }
 }
 
+%% CHR1 / CHR2 — WHERE THE FIRST STAFF SITS WHEN A CHORD ROW STANDS OVER IT, and the
+%%     pair is built to STRADDLE THE BOUNDARY that quantity has (HANDOFF 5.0: when a
+%%     quantity switches regime, put a point on either side of the switch and one across
+%%     it). top-system-spacing's spring is max(basic-distance 6, header + the ink the
+%%     system carries above its first SPACEABLE staff's refpoint + padding 1), so the ink
+%%     is measured at all only while it exceeds 5.
+%%
+%%     ⚠️ WHY THE CORPUS HAD NO SUCH POINT. Book LYRCH already reads that ink — its
+%%     ChordName's stencil is [3.000000, 4.998884] about the refpoint — and 4.998884 + 1
+%%     is 5.998884, which LOSES to 6 by 0.001116. So every chord-row book here reads
+%%     11.690551 whatever the floor does, and the corpus was blind to the floor for its
+%%     whole life: session 255 shipped a port for a USER-REPORTED overlap (a lead sheet's
+%%     chord symbols printed through the title) that no entry in this ledger could see.
+%%
+%%     THE TWO BOOKS DIFFER IN ONE WORD: the chords are `c1` in CHR1 and `cis1:m` in CHR2.
+%%     LilyPond prints a chord name's accidental as an Emmentaler glyph lifted magstep*0.6
+%%     above the baseline (scm/chord-name.scm:80-95), which raises the symbol's ink TOP and
+%%     moves nothing else — MEASURED session 254 on the same construction: Am's ink top is
+%%     1.907290480437992 and A#m's is 2.224872498154520, +0.317582017716528. Lily# ports
+%%     that as ChordNameGlyphRun and agrees with LilyPond to fifteen digits, so the one
+%%     word this pair varies is a quantity where the two engines are already identical.
+%%
+%%     PREDICTION, written before running (HANDOFF 5.0-2):
+%%       CHR1  first STAFF refpoint = 11.690551 = top-margin 5.690551 + basic-distance 6.
+%%             The floor is 4.998884 + 1 = 5.998884 and LOSES, exactly as in LYRCH.
+%%       CHR2  first STAFF refpoint = 12.007017
+%%             = 5.690551 + (4.998884 + 0.317582 + 1). The floor BINDS, and this is the
+%%             FIRST book in this corpus where it does.
+%%     FALSIFIER, and it is a real one: if CHR2 also reads 11.690551 then one accidental is
+%%     not enough to cross the boundary and the pair measures nothing until the symbol is
+%%     made taller (a second row, or a name with a superscript). The prediction is falsified
+%%     by 0.008 of margin, so it is worth writing down rather than assuming.
+%%     ⚠️ THE COUNTS TRAVEL WITH THEM (HANDOFF 5.0, trap 8): a refpoint reading off a page
+%%     holding a different number of systems is a plausible number about another page.
+%%     ⚠️ ONE STAFF ON PURPOSE. LYRCH carries two, so its page also solves a staff spring;
+%%     here the only spring above the first staff is the one being measured.
+
+\book {
+  \probeTag "CHR1"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new ChordNames { \chordmode { \repeat unfold 120 { c1 } } }
+      \new Staff { \repeat unfold 120 { g'4 a' g' a' } }
+    >>
+  }
+}
+
+\book {
+  \probeTag "CHR2"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new ChordNames { \chordmode { \repeat unfold 120 { cis1:m } } }
+      \new Staff { \repeat unfold 120 { g'4 a' g' a' } }
+    >>
+  }
+}
+
+
 %% TABS / NST — WHAT UNIT A STAFF-TO-STAFF DISTANCE IS IN when one of the staves is a
 %%     TAB staff, and the pair is built so that LilyPond's side is a CONTROL rather than
 %%     an unknown (HANDOFF 5.0): the two books are the same music on the same paper and

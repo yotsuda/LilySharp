@@ -65,7 +65,8 @@ internal sealed class SkylineBuilder
         double systemLeft = double.NaN,
         ImmutableArray<BeamLayout> firstStaffBeams = default,
         ImmutableArray<BeamLayout> lastStaffBeams = default,
-        ImmutableArray<StaffGroupLayout> placed = default)
+        ImmutableArray<StaffGroupLayout> placed = default,
+        IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines = null)
     {
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
@@ -162,6 +163,46 @@ internal sealed class SkylineBuilder
             var lastSpan = StaffSpan(lastLayout, lastStaffMiddleUp);
             SeedSystemStaffSymbol(measureLayouts, systemLeft,
                 seed: true, lastSpan.TopLineY, lastSpan.BottomLineY, upSkyline, downSkyline);
+        }
+
+        // ★ AND THE NON-SPACEABLE ROWS STANDING ABOVE THE FIRST SPACEABLE STAFF, each at its
+        // OWN translation. This is build_system_skyline's loop for the elements the two-edge
+        // shortcut above cannot reach: the shortcut's argument is that the interior is covered
+        // by the STAVES' own alignment, and a chord or lyric ROW is not a staff — it draws no
+        // lines, its ink is its own, and until 2026-08-25 none of it was in the system's
+        // silhouette at all. A system written `chords / lyrics / staff` therefore reported its
+        // topmost ink as the MELODY's, several staff spaces below the rows actually printed
+        // there, and the page's top spring was floored on that (user report, session 255).
+        // LILYPOND-REF: lily/page-layout-problem.cc:1093-1108 build_system_skyline merges
+        //   every element's own vertical-skylines raised by its dy, spaceable or not.
+        // ⚠️ THE UP SIDE ONLY, and that is not an asymmetry in LilyPond's favour: the rows
+        // hanging BELOW the last spaceable staff already reach the page through
+        // LayoutEngine.LyricReservationBelowSystem, which walks them at their ALIGNMENT
+        // MINIMUM (page-layout-problem.cc:593-599) rather than where they are drawn. Merging
+        // them here as well would put the drawn distance into the same floor — one quantity,
+        // two representations, HANDOFF 5.2.1②.
+        // ⚠️ A ROW'S OWN SKYLINE IS ABOUT ITS TEXT BASELINE (MultiStaffLayouter's
+        // BuildAllStaffSkylines merges RowSkylines/LyricRowInk there), which is where
+        // LilyPond's VerticalAxisGroup reference point is, so the raise is that refpoint's
+        // own Y-up offset — StaffLayout.Y less RefpointBelowTop.
+        if (staffSkylines is { Count: > 0 } && !placed.IsDefaultOrEmpty)
+        {
+            foreach (var group in placed)
+            {
+                if (group.Staves.IsDefaultOrEmpty) continue;
+                bool reachedStaff = false;
+                foreach (var lay in group.Staves)
+                {
+                    if (lay.IsHidden) continue;
+                    if (lay.StaffAffinity is null) { reachedStaff = true; break; }
+                    if (lay.StaffIndex < 0 || lay.StaffIndex >= staffSkylines.Count) continue;
+                    var rowSky = staffSkylines[lay.StaffIndex];
+                    double refpointUp = lay.Y - (lay.RefpointBelowTop ?? _staffHeight / 2.0);
+                    if (rowSky.Up is { IsEmpty: false } up)
+                        upSkyline.Merge(up.Buildings, 0, refpointUp);
+                }
+                if (reachedStaff) break;
+            }
         }
 
         upSkyline.EndBatch();

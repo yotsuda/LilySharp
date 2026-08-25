@@ -400,11 +400,18 @@ internal sealed class PageLayouter
 
         // Spring 0 — down to the first system's staff refpoint. Only the first page
         // carries a header, and the header enters this spring's FLOOR, not the anchor.
-        // ⚠️ HalfFirst, not ToFirst: the floor is built from an EXTENT, which is measured from
-        // the staff. On a lead sheet the chord row is already inside that extent.
+        // ⚠️ ToFirst, not HalfFirst. The floor is built from an EXTENT and the extent is
+        // measured from the system's ORIGIN, so the conversion into the refpoint frame the
+        // spring is written in is the whole origin-to-refpoint distance — LilyPond's
+        // `up->raise (-first_spaceable_dy)` (page-layout-problem.cc:1120-1122), which leaves
+        // its up skyline anchored on the first SPACEABLE staff with every non-spaceable line
+        // above it inside. This line read HalfFirst until 2026-08-25 on the reading that "on
+        // a lead sheet the chord row is already inside that extent"; it is not — the rows
+        // stand BELOW the origin the extent is measured from, so their whole band fell out
+        // of the floor and was spaced into the top margin (user report, session 255).
         springs.Add(LayoutUtilities.CreateTopSystemSpring(
             isFirstPage ? headerHeight : 0,
-            systemExtents[startIdx].upExtent, anchor(startIdx).HalfFirst, vs.TopSystem));
+            systemExtents[startIdx].upExtent, anchor(startIdx).ToFirst, vs.TopSystem));
 
         int count = endIdx - startIdx;
         // positions[FirstStaffPosition(local)] is that system's FIRST staff refpoint; its

@@ -2328,6 +2328,64 @@ internal static class LpGeometryProbes
     private static readonly string LYRCH = LyricChordRowPageScore("LYRCH");
 
     /// <summary>
+    /// A CHORD ROW OVER ONE STAFF — the mirror of books CHR1/CHR2, the pair that straddles
+    /// the boundary <c>top-system-spacing</c>'s floor has.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:625-630 <c>append_system</c> —
+    /// <c>minimum_distance = up_skyline.distance (bottom_skyline_, …) + padding</c>, then
+    /// <c>Spring::ensure_min_distance</c>; the spring's length at force 0 is
+    /// <c>max(min_distance_, ideal_distance_)</c> (lily/spring.cc:219-237), so the ink is
+    /// measured at all only while it beats <c>top-system-spacing</c>'s basic-distance 6.
+    /// <para>
+    /// ⚠️ THE PAIR EXISTS BECAUSE NO EXISTING BOOK CROSSES THAT BOUNDARY. LYRCH's ChordName
+    /// stencil is [3.000000, 4.998884] about the first staff's refpoint, so its floor is
+    /// 5.998884 and loses by 0.001116 — every chord-row book in this corpus reads the
+    /// basic-distance whatever the floor does. Session 255 shipped a port for a
+    /// USER-REPORTED overlap (a lead sheet's chord symbols printed through the title) with
+    /// no ledger entry able to see it; these two are that entry.
+    /// </para>
+    /// <para>
+    /// ⚠️ ONE WORD APART, and it is a word where the two engines already agree to fifteen
+    /// digits: LilyPond lifts a chord name's accidental as an Emmentaler glyph
+    /// <c>magstep*0.6</c> over the baseline (scm/chord-name.scm:80-95), which Lily# ports as
+    /// <c>ChordNameGlyphRun</c>. It raises the symbol's ink TOP by 0.317582017716528
+    /// (measured session 254 on Am against A#m) and moves nothing else, so CHR2's floor
+    /// clears 6 and CHR1's does not.
+    /// </para>
+    /// </remarks>
+    private static string ChordRowFloorPageScore(string name, bool sharp)
+    {
+        string bars = string.Concat(Enumerable.Repeat("g4 a g a | ", 120)).Trim();
+        string chords = string.Concat(Enumerable.Repeat((sharp ? "C#m" : "C") + " | ", 120)).Trim();
+        return $$"""
+            octave absolute
+            time 4/4
+            key c major
+
+            part melody { clef treble }
+
+            section Main {
+              melody { {{bars}} }
+              chords prog { {{chords}} }
+            }
+
+            form main { ~Main }
+
+            score main "{{name}}" {
+              chords prog
+              staff melody
+            }
+            """;
+    }
+
+    /// <summary>The plain-name half — the floor LOSES to basic-distance 6.</summary>
+    private static readonly string CHR1 = ChordRowFloorPageScore("CHR1", sharp: false);
+
+    /// <summary>The sharped half — the first book in this corpus whose floor BINDS.</summary>
+    private static readonly string CHR2 = ChordRowFloorPageScore("CHR2", sharp: true);
+
+    /// <summary>
     /// LYRB WITH AN OSSIA ADDED — the mirror of book LYROS, and the other half of the
     /// force-0 branch: <c>ComputeBetweenStavesEnd</c> declined an ossia for the same reason
     /// it declined a text row.
@@ -10499,6 +10557,60 @@ internal static class LpGeometryProbes
         new("page.tab-control.first-staff-refpoint", NTL, g => g.FirstStaffRefpoint()),
         new("system.tab-control.natural-distance", NTL, g => g.StaffGap()),
         new("page.tab-control.staves-on-first-page", NTL, g => g.StavesOnPage()),
+
+        // --- WHERE THE FIRST STAFF SITS UNDER A CHORD ROW, on BOTH sides of the boundary
+        // top-system-spacing's floor has (books CHR1/CHR2) ---
+        // The spring's length at force 0 is max(basic-distance 6, header + the ink above the
+        // first spaceable staff's refpoint + padding 1), so the ink is measured at all only
+        // while it beats 6. EVERY OTHER CHORD-ROW BOOK IN THIS CORPUS SITS BELOW THAT LINE —
+        // LYRCH's ChordName stencil is [3.000000, 4.998884] about the refpoint, floor
+        // 5.998884, short by 0.001116 — which is why a user-reported overlap could ship a
+        // port in session 255 with nothing here able to see it. CHR2 sharps the names, which
+        // raises the symbol's ink top by 0.317582017716528 and nothing else, and its floor
+        // clears 6. See ChordRowFloorPageScore.
+        // ⚠️ THE COUNTS TRAVEL WITH THEM (HANDOFF 5.0, trap 8): a refpoint read off a page
+        // holding a different number of systems is a plausible number about another page.
+        // ⚠️ THE PAPER TRAVELS WITH THEM, exactly as it does for LYRCH: the .ly books say
+        // `\paper { max-systems-per-page = #4 ragged-bottom = ##t }` and the .lys twins say
+        // it here. Without it the twin fills a whole page and the two are spacing pages of
+        // different shapes.
+        new("page.chord-row.first-staff-refpoint", CHR1,
+            g => g.FirstStaffRefpoint(), FourSystemsPerPageRagged),
+        new("page.chord-row.staves-on-first-page", CHR1,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+        new("page.chord-row.sharp.first-staff-refpoint", CHR2,
+            g => g.FirstStaffRefpoint(), FourSystemsPerPageRagged),
+        new("page.chord-row.sharp.staves-on-first-page", CHR2,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+
+        // ...and the TERM INSIDE the floor those two read. The refpoint entry above is one
+        // number holding two: on the side where the floor binds it is
+        // `header + (where the row's baseline is put + how far the symbol's ink reaches
+        // above it) + padding`, and a residual on the sum cannot say which half carries it.
+        // The pair's residual IS +0.001435575 on CHR1 — Lily#'s ink above the refpoint is
+        // 5.001435575 against LilyPond's 4.998884, taller by 0.002552 — so the split is the
+        // next question and this is the reading that answers it.
+        // ⚠️ AND THE ANSWER IS NOT "so much placement, so much ascent". THE PLACEMENT IS
+        // EXACT: LilyPond dumps the row's ink bottom at 3.000000 over the staff refpoint,
+        // and Lily#'s baseline 3.047092602 less its own C descent 0.047092602 is
+        // 3.000000000 — 3.000000 being the up stem tops (a' at -0.5 under a 3.5 stem), so
+        // both engines stand the row on the staff's skyline with padding 0. What is left is
+        // the FACE: LilyPond sets chord names in NIMBUS SANS and Lily# in TEX GYRE HEROS,
+        // and a ROUND CAPITAL is the first letter that separates them (C is [-0.023, 0.741]
+        // em in Nimbus against [-0.018, 0.747] in Heros; A, m and every advance agree
+        // EXACTLY, which is why every chord.symbol-width.* point is exact and why session
+        // 254, measuring Am and A#m, saw the two faces agree to 0.000040109). This book
+        // prints the corpus's first round capital. See the entry's `why`.
+        // ⚠️ IT IS A DUMPED QUANTITY ON BOTH SIDES, not a subtraction of two rounded prints
+        // (HANDOFF 5.3: that is how 3.544994 for 3.550000 got into this ledger once).
+        // LilyPond prints `staff refpoint -> ChordName baseline` directly.
+        // ⚠️ NO TWIN ON CHR2, and the reason is not cost: CHR2's row sits 1.393333 higher for
+        // a reason session 255 already named and closed (the accidental lifts the ink BOTTOM
+        // 3.000000 -> 3.500000 and a loose line is spaced from its own bottom), so its
+        // baseline reading is that same fact a second time. The unsplit residual lives on
+        // CHR1 alone, which is where the reading belongs.
+        new("page.chord-row.staff-to-chord-baseline", CHR1,
+            g => g.ChordBaselineAboveStaff(), FourSystemsPerPageRagged),
 
         // THE BOTTOM OF THE CHAIN, in both regimes. Every entry above reads a GAP — a
         // spring's length at the page's force — and a force is the page's slack over the
