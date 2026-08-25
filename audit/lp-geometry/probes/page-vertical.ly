@@ -3101,3 +3101,226 @@ probeTag =
     >>
   }
 }
+
+
+%% ROWA / ROWAC — A CHORD ROW THAT IS NOT ON EVERY SYSTEM, and the pair that isolates it.
+%%
+%%     THE REPORT.  The user read a delivered picture and said the gap between systems 2
+%%     and 3 looked longer than the one between 1 and 2.  It is: Lily# reads 12.000000 and
+%%     16.970000 between refpoints.  Their book (U6) spells
+%%
+%%         chords prog as names / staff melody / lyrics verse sings melody / staff melody
+%%         form main { A |: B :| A "A2" }        and `chords prog` HAS ONLY SECTION A
+%%
+%%     so the chord row is on systems 1 and 3 and absent from system 2.  These two books
+%%     carry that arrangement and nothing else.
+%%
+%%     ⚠️ WHY LYRMC DOES NOT ALREADY COVER THIS.  LYRMC's row is on EVERY system, and both
+%%     of its gaps read 12.000000 in BOTH engines -- it is exact and it has been exact
+%%     since the row was ported into the chain.  "No row -> row" is an arrangement the
+%%     ledger has never carried, and it is the only one that diverges.  An entry that is
+%%     exact on every arrangement it spells is not a guard against the arrangements it
+%%     does not spell (HANDOFF bone 2, 2026-08-25: an exclusion written as "no fixture
+%%     reaches it" is a fact about the corpus, not about the geometry).
+%%
+%%     ⚠️ AND LYRMC DIFFERS IN A SECOND WAY, so it could not be edited into this: its
+%%     lyrics hang UNDER the system's last staff.  U6 puts them BETWEEN the two staves,
+%%     which is the arrangement 2026-08-25 ported (the run through a bare row).  These
+%%     books keep U6's placement.
+%%
+%%     THE PAIR, and it is the strongest shape there is (HANDOFF 5.0): LilyPond is the
+%%     IDENTITY side.  ROWA has the row on systems 1 and 3; ROWAC is ROWA with the row on
+%%     system 2 as well and NOTHING else touched -- same three systems, same 12 bars, same
+%%     48 syllables, same paper, same pitches.  LilyPond does not widen a system gap for a
+%%     chords row (it puts the row INSIDE the room, alongside the lyrics, which is what
+%%     LYRMC's own header established term by term), so every gap in BOTH books should
+%%     read the same 12.000000.  With the LilyPond side flat, whatever Lily# does with the
+%%     difference IS the defect, in staff spaces, with no subtraction of engines.
+%%
+%%     THE FOUR READINGS, named before running:
+%%       ROWA   gap 1   system 1 -> 2   the NEXT system has NO row
+%%       ROWA   gap 2   system 2 -> 3   the NEXT system HAS a row, the previous one does not
+%%       ROWAC  gap 1   system 1 -> 2   both have a row
+%%       ROWAC  gap 2   system 2 -> 3   both have a row
+%%
+%%     ★ PREDICTION FOR LILYPOND, written before running: 12.000000 on all four.  This is
+%%     not a guess -- 2026-08-25 measured exactly this arrangement on 2.26.0 and got
+%%     12.000000 for both of ROWA's gaps, and LYRMC already carries 12.000000 for the
+%%     every-system case.  That book was never committed and is gone, which is why this
+%%     one exists.  ⚠️ FALSIFIER, and it is the reason to re-run rather than copy the
+%%     number across: anything other than 12.000000 means THIS book is not the book that
+%%     was measured, and the reading to trust is this one, because this one is in the tree.
+%%
+%%     ★ PREDICTION FOR LILY#, written before running: 12.000000 / 16.970000 on ROWA and
+%%     12.000000 / 12.000000 on ROWAC.  The second half is the half that carries the
+%%     question.  2026-08-25 measured, on U6 itself, that adding chords to section B moves
+%%     CreatePages' X-aware Distance() from 6.0949 to 19.0631 and moves toStaffFrame with
+%%     it, leaving the gap at 12.000000 -- THE SAME BAND CANCELS.  So the defect is not
+%%     "the band is counted"; it is that the band is counted twice on one pair and once on
+%%     the other, and the pair that cancels is the pair whose PREVIOUS system also has a
+%%     row.  ⚠️ FALSIFIER: if ROWAC's gaps are not both 12.000000, the cancellation is not
+%%     about the previous system and the arithmetic below is describing something else.
+%%
+%%     ★ THE TERM IS ALREADY NAMED (2026-08-25, on U6): BandUp is 0.0000 on both pairs and
+%%     is NOT involved.  What drives it is CreatePages' X-aware Distance(), 26.1075 on
+%%     ROWA's second pair, which becomes staffToStaff = 26.1075 - 10.1335 = 15.974 and
+%%     then max(12, 15.974 + 1) = 16.974.  ⚠️ That is 16.974 against the 16.970 the picture
+%%     reads; the four-micron difference is not accounted for and should not be smoothed
+%%     over -- it is a reading off a delivered picture against a reading off a probe.
+%%
+%%     ⚠️ THE PITCHES ARE DELIBERATELY INSIDE THE STAFF (g'/a' on both staves, LYRM's
+%%     melody).  The row-to-staff spring binds on the staff's UP SKYLINE AT THE CHORD'S x
+%%     (LYRMC's m3), so a note poking above the staff would put a notehead's ink into the
+%%     quantity being measured.  Nothing here needs that term, and leaving it out means a
+%%     residual cannot hide in it.
+%%
+%%     ⚠️ THE BREAKS ARE EXPLICIT.  Which bars share a system decides which system has a
+%%     row, so it cannot be left to the breaker: a re-measure on another machine, or after
+%%     a font change, has to get the same three systems or it is not the same book.
+\book {
+  \probeTag "ROWA"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new ChordNames { \chordmode {
+        \repeat unfold 4 { c1 } \repeat unfold 4 { s1 } \repeat unfold 4 { c1 } } }
+      \new Staff { \new Voice = "mel" {
+        \repeat unfold 4 { g'4 a' g' a' } \break
+        \repeat unfold 4 { g'4 a' g' a' } \break
+        \repeat unfold 4 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 48 { no } }
+      \new Staff { \repeat unfold 12 { g'4 a' g' a' } }
+    >>
+  }
+}
+
+%% ROWAC — THE CONTROL.  ROWA with system 2's four bars carrying chords too, and nothing
+%%     else changed.  See ROWA's header for what the pair decides.
+\book {
+  \probeTag "ROWAC"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new ChordNames { \chordmode {
+        \repeat unfold 4 { c1 } \repeat unfold 4 { c1 } \repeat unfold 4 { c1 } } }
+      \new Staff { \new Voice = "mel" {
+        \repeat unfold 4 { g'4 a' g' a' } \break
+        \repeat unfold 4 { g'4 a' g' a' } \break
+        \repeat unfold 4 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 48 { no } }
+      \new Staff { \repeat unfold 12 { g'4 a' g' a' } }
+    >>
+  }
+}
+
+
+%% ROWM / ROWMN — THE SAME ARRANGEMENT WITH A SECTION MARK, and the pair that replaces the
+%%     one ROWA/ROWAC was built for.
+%%
+%%     WHY THESE EXIST.  ROWA/ROWAC were built to carry the fifth report and they came out
+%%     EXACT on both sides -- LilyPond 12.000000 four times, Lily# 12.000000 four times.
+%%     The falsifier ROWA's header wrote ("12.000000 would mean the book does not reproduce
+%%     the report") fired, and the miss is the useful half: sweeping one variable at a time
+%%     back toward the user's book found that the chord row is NOT the term.
+%%
+%%     MEASURED IN LILY# 2026-08-25, three systems, gap 1 = system 1->2, gap 2 = 2->3:
+%%       no mark, chord row on systems 1 and 3   12.000000  12.000000
+%%       no mark, chord row on every system      12.000000  12.000000
+%%       MARK, chord row on systems 1 and 3      12.000000  16.188166
+%%       MARK, chord row on EVERY system         12.000000  16.188166   <- identical
+%%       MARK, NO chord row anywhere             12.000000  12.241073
+%%       MARK, no lyrics, chord row on 1 and 3   12.000000  16.188166
+%%       no mark, no chord row, no lyrics        12.000000  12.000000
+%%     ⇒ NEITHER INGREDIENT DOES IT ALONE.  A mark on its own costs 0.241073; a chord row on
+%%     its own costs nothing; the two together cost 4.188166.  ⇒ AND THE ALTERNATION IS NOT
+%%     THE VARIABLE: the row on EVERY system reads the same 16.188166, which is what the
+%%     ROWA/ROWAC pair was built to test and is the reading that refutes it.  The lyrics are
+%%     not involved either.
+%%
+%%     ⚠️ WHAT IS STILL UNMEASURED, AND IT IS THE WHOLE POINT OF THESE TWO BOOKS: whether
+%%     LilyPond widens that gap too.  Lily# reading 16.188166 is not a defect until LilyPond
+%%     has been asked the same question with the same book.  The Lily# numbers above say
+%%     WHERE to look; they do not say who is wrong.
+%%
+%%     THE PAIR: ROWMN is ROWM with the chord row taken out and NOTHING else changed -- same
+%%     marks, same three systems, same 12 bars, same 48 syllables, same indent, same
+%%     instrument names, same paper, same pitches.  So the difference between them is the
+%%     chord row's cost ON A MARKED SYSTEM, which is the quantity Lily# puts at 3.947093
+%%     (16.188166 - 12.241073) and LilyPond has never been asked about.
+%%
+%%     ★ PREDICTION FOR LILYPOND, written before running (HANDOFF 5.0): 12.000000 on all
+%%     four readings, i.e. the mark costs nothing and the row costs nothing.  The reasoning
+%%     is the one LYRMC's header established term by term -- a loose line is absent from the
+%%     page's own chain, so system-system-spacing is whatever it would have been without it
+%%     -- plus the fact that a RehearsalMark is a Score-level grob that LilyPond puts in the
+%%     system's own vertical skyline rather than into the page's springs.
+%%     ⚠️ FALSIFIER, and it is a real one: if LilyPond widens gap 2 in ROWM and not in ROWMN,
+%%     then the mark and the row DO share a floor in LilyPond too, Lily#'s 16.188166 is the
+%%     right SHAPE, and what is left is the size of it.  That outcome would move this from a
+%%     defect to a calibration and the ledger entries must be written so that either answer
+%%     is readable.
+%%
+%%     ⚠️ HAND-ADDED PARTS, NAMED (the exporter drops them, HANDOFF 5.0): `lysc ly` on the
+%%     Lily# book emits the two staves, the instrument names, the indent, the \fixed c'
+%%     octaves and the three \mark \markup \box lines; the ChordNames context and the Lyrics
+%%     context are written here BY HAND because `lysc ly` warns "chord row 'prog' is not
+%%     exported" and "lyrics row 'one' is not exported".  ⚠️ The exporter also duplicated the
+%%     marks onto the LOWER staff; a mark is a Score-level event, so they are on the top
+%%     staff only here.
+\book {
+  \probeTag "ROWM"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new ChordNames { \chordmode {
+        \repeat unfold 4 { c1 } \repeat unfold 4 { s1 } \repeat unfold 4 { c1 } } }
+      \new Staff \with { instrumentName = "Melody" } { \new Voice = "mel" {
+        \mark \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
+        \mark \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break
+        \mark \markup \box "C" \repeat unfold 4 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 48 { no } }
+      \new Staff \with { instrumentName = "Lower" } {
+        \repeat unfold 12 { g'4 a' g' a' } }
+    >>
+    \layout { indent = 15\mm }
+  }
+}
+
+%% ROWMN — THE CONTROL.  ROWM with the chord row taken out and nothing else changed.
+\book {
+  \probeTag "ROWMN"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new Staff \with { instrumentName = "Melody" } { \new Voice = "mel" {
+        \mark \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
+        \mark \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break
+        \mark \markup \box "C" \repeat unfold 4 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 48 { no } }
+      \new Staff \with { instrumentName = "Lower" } {
+        \repeat unfold 12 { g'4 a' g' a' } }
+    >>
+    \layout { indent = 15\mm }
+  }
+}
+
+%% ROWMA — THE THIRD READING: the mark with the chord row on EVERY system.  Lily# gives this
+%%     the SAME 16.188166 as ROWM, which is the reading that refutes "no row -> row".  It is
+%%     carried so that LilyPond's answer to the alternation question is in the tree too.
+\book {
+  \probeTag "ROWMA"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new ChordNames { \chordmode { \repeat unfold 12 { c1 } } }
+      \new Staff \with { instrumentName = "Melody" } { \new Voice = "mel" {
+        \mark \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
+        \mark \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break
+        \mark \markup \box "C" \repeat unfold 4 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 48 { no } }
+      \new Staff \with { instrumentName = "Lower" } {
+        \repeat unfold 12 { g'4 a' g' a' } }
+    >>
+    \layout { indent = 15\mm }
+  }
+}

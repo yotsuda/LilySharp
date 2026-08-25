@@ -2550,6 +2550,109 @@
       "why": "HANDOFF 5.0 trap 8: both readings on this book are BY INDEX, so the count has to be carried or an index means the gap it is supposed to mean only while the page holds the staves the probe assumes. Four two-staff systems on page 1; the chord row is not spaceable and does not enter the count.",
       "residual": 0.0
     },
+    "lyrics.chord-row.alternating.gap-into-rowless": {
+      "probe": "page-vertical.ly",
+      "score": "ROWA",
+      "lilypond": 12.0,
+      "why": "THE GAP INTO A SYSTEM THAT HAS NO ROW -- system 1 -> 2 of ROWA, StaffGapAt(1). READ BY StaffGapAt, not StaffGap(): with two staves per system the gaps alternate 9 inside a system and the system gap between two, so the uniform reading throws. MEASURED: LilyPond 12.000000, Lily# 12.000000, exact -- as predicted. WHY THIS ENTRY IS KEPT NOW THAT IT MEASURES NOTHING: it is what says the alternation is not the variable, and it says so on BOTH sides -- LilyPond is the identity across ROWA and ROWAC (every reading of both books agrees to six digits: system-to-system 12.000000, staff-to-staff inside 9.000000, the loose chain 4.027851, first ink 6.691667 below the paper edge, last ink 66.240551) and so is Lily#. A pair that pins BOTH engines flat across a variable is the guard that stops the next session re-deriving the same wrong lead; deleting it would leave only the prose saying so. HANDOFF 5.2.1 (4): exact can mean 'that regime does not move', and here that IS the result.",
+      "residual": 0.0
+    },
+    "lyrics.chord-row.alternating.gap-into-row": {
+      "probe": "page-vertical.ly",
+      "score": "ROWA",
+      "lilypond": 12.0,
+      "why": "THE GAP INTO A SYSTEM THAT HAS A ROW, FROM ONE THAT DOES NOT -- system 2 -> 3 of ROWA, StaffGapAt(3). This was written as 'THIS IS THE DEFECT THE USER SAW' with a prediction of 16.970000 and a falsifier of 12.000000. IT READS 12.000000. THE PREDICTION WAS FALSIFIED AND THE MISS IS THE USEFUL HALF (HANDOFF 5.0). This entry was opened to carry the user's fifth report, on the reading -- inherited from the session that measured it and could not commit its book -- that a chord row on the NEXT system widens the gap when the previous system has none. Both of ROWA's gaps came out at LilyPond's 12.000000, so the book does not reproduce the report and the arrangement is not the one that diverges. THE SWEEP THAT FOUND THE REAL TERM (Lily#, three systems, gap 1 = system 1->2, gap 2 = 2->3): no mark + row on 1 and 3 -> 12.000000 / 12.000000; no mark + row on every system -> 12.000000 / 12.000000; MARK + row on 1 and 3 -> 12.000000 / 16.188166; MARK + row on EVERY system -> 12.000000 / 16.188166 (identical); MARK + NO row anywhere -> 12.000000 / 12.241073; MARK + no lyrics + row on 1 and 3 -> 12.000000 / 16.188166. NEITHER INGREDIENT DOES IT ALONE: a mark alone costs 0.241073, a row alone costs nothing, the two together cost 4.188166. The lyrics are not involved. => THE TERM IS A SECTION MARK ON THE SYSTEM BELOW THE GAP, and the row matters only because the two share a floor. The books that carry it are ROWM / ROWMN / ROWMA (lyrics.chord-row.marked.*). WHAT WAS NEVER REPRODUCED, stated plainly rather than smoothed over: the 12.000 / 16.970 the fifth report records was measured on a book that was not committed and is gone, and no book in the tree prints 16.970000. The marked books print 16.188166 with a one-letter chord name and 17.211417 with 'Dmaj7'; 16.970 lies between them and is most likely the same defect at some third chord width, but that is an INFERENCE and the numbers in the tree are the ones to trust. WHY THIS ENTRY IS KEPT NOW THAT IT MEASURES NOTHING: it is what says the alternation is not the variable, and it says so on BOTH sides -- LilyPond is the identity across ROWA and ROWAC (every reading of both books agrees to six digits: system-to-system 12.000000, staff-to-staff inside 9.000000, the loose chain 4.027851, first ink 6.691667 below the paper edge, last ink 66.240551) and so is Lily#. A pair that pins BOTH engines flat across a variable is the guard that stops the next session re-deriving the same wrong lead; deleting it would leave only the prose saying so. HANDOFF 5.2.1 (4): exact can mean 'that regime does not move', and here that IS the result.",
+      "residual": 0.0
+    },
+    "lyrics.chord-row.alternating.control.gap-first": {
+      "probe": "page-vertical.ly",
+      "score": "ROWAC",
+      "lilypond": 12.0,
+      "why": "THE CONTROL, FIRST GAP -- system 1 -> 2 of ROWAC, StaffGapAt(1). ROWAC is ROWA with the row on system 2 as well, so both of its gaps are 'row -> row'. MEASURED: LilyPond 12.000000, Lily# 12.000000, exact -- as predicted. WHY THIS ENTRY IS KEPT NOW THAT IT MEASURES NOTHING: it is what says the alternation is not the variable, and it says so on BOTH sides -- LilyPond is the identity across ROWA and ROWAC (every reading of both books agrees to six digits: system-to-system 12.000000, staff-to-staff inside 9.000000, the loose chain 4.027851, first ink 6.691667 below the paper edge, last ink 66.240551) and so is Lily#. A pair that pins BOTH engines flat across a variable is the guard that stops the next session re-deriving the same wrong lead; deleting it would leave only the prose saying so. HANDOFF 5.2.1 (4): exact can mean 'that regime does not move', and here that IS the result.",
+      "residual": 0.0
+    },
+    "lyrics.chord-row.alternating.control.gap-second": {
+      "probe": "page-vertical.ly",
+      "score": "ROWAC",
+      "lilypond": 12.0,
+      "why": "THE CONTROL, SECOND GAP -- system 2 -> 3 of ROWAC, StaffGapAt(3). The SAME index as lyrics.chord-row.alternating.gap-into-row and the same book but for one word, which is what makes the two comparable. Its falsifier was '16.970000 here would mean the row's band is counted whenever it exists'; it reads 12.000000, so neither reading moves and the pair is flat on both sides. => THIS IS THE ENTRY THAT REFUTES THE ALTERNATION READING, and it does so twice: flat here, and flat again in the MARKED family, where ROWMA (row on every system) prints exactly what ROWM (row on systems 1 and 3) prints, 16.188166, in Lily# and 12.563793 in LilyPond. Whatever the row costs, it costs the same whether or not its neighbour has one. WHY THIS ENTRY IS KEPT NOW THAT IT MEASURES NOTHING: it is what says the alternation is not the variable, and it says so on BOTH sides -- LilyPond is the identity across ROWA and ROWAC (every reading of both books agrees to six digits: system-to-system 12.000000, staff-to-staff inside 9.000000, the loose chain 4.027851, first ink 6.691667 below the paper edge, last ink 66.240551) and so is Lily#. A pair that pins BOTH engines flat across a variable is the guard that stops the next session re-deriving the same wrong lead; deleting it would leave only the prose saying so. HANDOFF 5.2.1 (4): exact can mean 'that regime does not move', and here that IS the result.",
+      "residual": 0.0
+    },
+    "lyrics.chord-row.alternating.staves-on-first-page": {
+      "probe": "page-vertical.ly",
+      "score": "ROWA",
+      "lilypond": 6,
+      "unit": "count",
+      "why": "HANDOFF 5.0 trap 8: every reading on this book is BY INDEX, so the count has to be carried or an index means the gap it is supposed to mean only while the page holds the staves the probe assumes. Three two-staff systems on page 1. The chord row is not spaceable and does not enter the count -- NOR DOES ITS ABSENCE CHANGE IT, which is exactly what lets ROWA and ROWAC be compared index for index.",
+      "residual": 0.0
+    },
+    "lyrics.chord-row.alternating.control.staves-on-first-page": {
+      "probe": "page-vertical.ly",
+      "score": "ROWAC",
+      "lilypond": 6,
+      "unit": "count",
+      "why": "The control's count, carried for the same reason as its twin's (HANDOFF 5.0 trap 8) and ALSO as the check that the pair is a pair: if adding a row to system 2 changed how many staves the breaker put on page 1, the two books' indices would not name the same gaps and every comparison between them would be reading different springs.",
+      "residual": 0.0
+    },
+    "lyrics.chord-row.marked.no-row.gap-first": {
+      "probe": "page-vertical.ly",
+      "score": "ROWMN",
+      "lilypond": 12.0,
+      "why": "THE MARK ALONE, FIRST GAP -- system 1 -> 2 of ROWMN, StaffGapAt(1). ROWMN is ROWM with the chord row taken out and nothing else changed, so it is what isolates the mark. THE MARKED FAMILY. ROWM / ROWMN / ROWMA are the ROWA arrangement with the section marks put back (form 'A B C' rather than '~A ~B ~C'): three systems of two staves with lyrics between them, an indent and instrument names, and a chord row on systems 1 and 3 (ROWM), nowhere (ROWMN) or everywhere (ROWMA). They exist because ROWA/ROWAC came out exact and fired their own falsifier. THE SWEEP THAT FOUND THE REAL TERM (Lily#, three systems, gap 1 = system 1->2, gap 2 = 2->3): no mark + row on 1 and 3 -> 12.000000 / 12.000000; no mark + row on every system -> 12.000000 / 12.000000; MARK + row on 1 and 3 -> 12.000000 / 16.188166; MARK + row on EVERY system -> 12.000000 / 16.188166 (identical); MARK + NO row anywhere -> 12.000000 / 12.241073; MARK + no lyrics + row on 1 and 3 -> 12.000000 / 16.188166. NEITHER INGREDIENT DOES IT ALONE: a mark alone costs 0.241073, a row alone costs nothing, the two together cost 4.188166. The lyrics are not involved. WHY GAP 1 IS EXACT AND GAP 2 IS NOT, IN BOTH ENGINES: the gap is a distance between two silhouettes, and the mark and the row both sit at the LEFT EDGE of the system below it. The first system is INDENTED and its staff does not reach that x, so there is nothing there to push against; the second system is not indented and its staff ink is under the mark. LilyPond does the same thing, which is why a one-variable sweep had to reach the mark before anything moved at all. PREDICTION FOR LILY#, written before running: 12.000000, exact -- the sweep read 12.000000 for this gap in every one of the six variants. FALSIFIER: anything else means the indent is not what protects the first pair.",
+      "residual": 0.0
+    },
+    "lyrics.chord-row.marked.no-row.gap-second": {
+      "probe": "page-vertical.ly",
+      "score": "ROWMN",
+      "lilypond": 12.0,
+      "why": "THE MARK ALONE, SECOND GAP -- system 2 -> 3 of ROWMN, StaffGapAt(3). This is the gap that moves once the row is added, measured here WITHOUT it. THE MARKED FAMILY. ROWM / ROWMN / ROWMA are the ROWA arrangement with the section marks put back (form 'A B C' rather than '~A ~B ~C'): three systems of two staves with lyrics between them, an indent and instrument names, and a chord row on systems 1 and 3 (ROWM), nowhere (ROWMN) or everywhere (ROWMA). They exist because ROWA/ROWAC came out exact and fired their own falsifier. THE SWEEP THAT FOUND THE REAL TERM (Lily#, three systems, gap 1 = system 1->2, gap 2 = 2->3): no mark + row on 1 and 3 -> 12.000000 / 12.000000; no mark + row on every system -> 12.000000 / 12.000000; MARK + row on 1 and 3 -> 12.000000 / 16.188166; MARK + row on EVERY system -> 12.000000 / 16.188166 (identical); MARK + NO row anywhere -> 12.000000 / 12.241073; MARK + no lyrics + row on 1 and 3 -> 12.000000 / 16.188166. NEITHER INGREDIENT DOES IT ALONE: a mark alone costs 0.241073, a row alone costs nothing, the two together cost 4.188166. The lyrics are not involved. PREDICTION FOR LILY#, written before running: 12.241073, hence a residual near +0.241073 -- a mark on its own already costs something in Lily# and costs nothing in LilyPond (12.000000, measured). ⚠️ THAT IS A SECOND AND SMALLER DEFECT IN THE SAME PLACE, and it must not be folded into the row's: whoever ports the row's room should check this reading separately, because a fix that closes 4.188166 down to 0.563793 would still leave 0.241073 if the mark's own term is wrong too. FALSIFIER: 12.000000 would mean the mark is already right and the whole divergence belongs to the row.",
+      "residual": 0.241073263
+    },
+    "lyrics.chord-row.marked.gap-first": {
+      "probe": "page-vertical.ly",
+      "score": "ROWM",
+      "lilypond": 12.0,
+      "why": "THE ROW AND THE MARK, FIRST GAP -- system 1 -> 2 of ROWM, StaffGapAt(1). Carried although it is expected to be exact, because it is the reading that says the divergence is per-PAIR and not per-score. THE MARKED FAMILY. ROWM / ROWMN / ROWMA are the ROWA arrangement with the section marks put back (form 'A B C' rather than '~A ~B ~C'): three systems of two staves with lyrics between them, an indent and instrument names, and a chord row on systems 1 and 3 (ROWM), nowhere (ROWMN) or everywhere (ROWMA). They exist because ROWA/ROWAC came out exact and fired their own falsifier. THE SWEEP THAT FOUND THE REAL TERM (Lily#, three systems, gap 1 = system 1->2, gap 2 = 2->3): no mark + row on 1 and 3 -> 12.000000 / 12.000000; no mark + row on every system -> 12.000000 / 12.000000; MARK + row on 1 and 3 -> 12.000000 / 16.188166; MARK + row on EVERY system -> 12.000000 / 16.188166 (identical); MARK + NO row anywhere -> 12.000000 / 12.241073; MARK + no lyrics + row on 1 and 3 -> 12.000000 / 16.188166. NEITHER INGREDIENT DOES IT ALONE: a mark alone costs 0.241073, a row alone costs nothing, the two together cost 4.188166. The lyrics are not involved. WHY GAP 1 IS EXACT AND GAP 2 IS NOT, IN BOTH ENGINES: the gap is a distance between two silhouettes, and the mark and the row both sit at the LEFT EDGE of the system below it. The first system is INDENTED and its staff does not reach that x, so there is nothing there to push against; the second system is not indented and its staff ink is under the mark. LilyPond does the same thing, which is why a one-variable sweep had to reach the mark before anything moved at all. PREDICTION FOR LILY#: 12.000000, exact.",
+      "residual": 0.0
+    },
+    "lyrics.chord-row.marked.gap-second": {
+      "probe": "page-vertical.ly",
+      "score": "ROWM",
+      "lilypond": 12.563793,
+      "why": "★ THE DEFECT -- system 2 -> 3 of ROWM, StaffGapAt(3), the gap the user's fifth report is about. THE MARKED FAMILY. ROWM / ROWMN / ROWMA are the ROWA arrangement with the section marks put back (form 'A B C' rather than '~A ~B ~C'): three systems of two staves with lyrics between them, an indent and instrument names, and a chord row on systems 1 and 3 (ROWM), nowhere (ROWMN) or everywhere (ROWMA). They exist because ROWA/ROWAC came out exact and fired their own falsifier. THE SWEEP THAT FOUND THE REAL TERM (Lily#, three systems, gap 1 = system 1->2, gap 2 = 2->3): no mark + row on 1 and 3 -> 12.000000 / 12.000000; no mark + row on every system -> 12.000000 / 12.000000; MARK + row on 1 and 3 -> 12.000000 / 16.188166; MARK + row on EVERY system -> 12.000000 / 16.188166 (identical); MARK + NO row anywhere -> 12.000000 / 12.241073; MARK + no lyrics + row on 1 and 3 -> 12.000000 / 16.188166. NEITHER INGREDIENT DOES IT ALONE: a mark alone costs 0.241073, a row alone costs nothing, the two together cost 4.188166. The lyrics are not involved. MEASURED ON 2.26.0 2026-08-25: LilyPond gives 12.563793 here and 12.000000 for ROWMN's same gap, so LilyPond DOES widen a marked pair for a chord row -- by 0.563793. PREDICTION FOR LILY#, written before running: 16.188166, hence a residual near +3.624373. => THE SHAPE IS RIGHT AND THE SIZE IS NOT, which is a different defect from the one the fifth report named. LilyPond charges the row 0.563793 on a marked pair (12.563793 - 12.000000); Lily# charges it 4.188166 (16.188166 - 12.000000). Lily# is not widening a gap LilyPond leaves alone -- it is charging the row its NOMINAL BAND (MultiStaffLayouter.TextRowHeight, a LILYSHARP-OWN 2.5, plus what the mark already needs) where LilyPond charges its INK. That is the debt TextRowVerseSpacing's remark already names -- 'the port is to take the band's height from the same walk' -- now with a LilyPond number under it and a user-visible symptom on top of it. ⚠️ WHAT THE FIX MUST NOT DO: 12.563793 is not 12.000000, so a fix that stops charging the row anything at all would overshoot and break this entry in the other direction. The falsifier for any port is this number, not zero.",
+      "residual": 3.624372865
+    },
+    "lyrics.chord-row.marked.every-system.gap-second": {
+      "probe": "page-vertical.ly",
+      "score": "ROWMA",
+      "lilypond": 12.563793,
+      "why": "THE ALTERNATION CONTROL -- system 2 -> 3 of ROWMA, StaffGapAt(3). ROWMA is ROWM with the row on system 2 as well. THE MARKED FAMILY. ROWM / ROWMN / ROWMA are the ROWA arrangement with the section marks put back (form 'A B C' rather than '~A ~B ~C'): three systems of two staves with lyrics between them, an indent and instrument names, and a chord row on systems 1 and 3 (ROWM), nowhere (ROWMN) or everywhere (ROWMA). They exist because ROWA/ROWAC came out exact and fired their own falsifier. THE SWEEP THAT FOUND THE REAL TERM (Lily#, three systems, gap 1 = system 1->2, gap 2 = 2->3): no mark + row on 1 and 3 -> 12.000000 / 12.000000; no mark + row on every system -> 12.000000 / 12.000000; MARK + row on 1 and 3 -> 12.000000 / 16.188166; MARK + row on EVERY system -> 12.000000 / 16.188166 (identical); MARK + NO row anywhere -> 12.000000 / 12.241073; MARK + no lyrics + row on 1 and 3 -> 12.000000 / 16.188166. NEITHER INGREDIENT DOES IT ALONE: a mark alone costs 0.241073, a row alone costs nothing, the two together cost 4.188166. The lyrics are not involved. ★ AND BOTH ENGINES PRINT EXACTLY WHAT THEY PRINT FOR ROWM: LilyPond 12.563793, Lily# 16.188166 (predicted before running). => WHATEVER THE ROW COSTS, IT COSTS THE SAME WHETHER OR NOT ITS NEIGHBOUR HAS ONE. This is the entry that closes the 'no row -> row' reading for good; its twin lyrics.chord-row.alternating.control.gap-second closes it in the unmarked regime. FALSIFIER: a reading here that differs from ROWM's would reopen the alternation as a term.",
+      "residual": 3.624372865
+    },
+    "lyrics.chord-row.marked.no-row.staves-on-first-page": {
+      "probe": "page-vertical.ly",
+      "score": "ROWMN",
+      "lilypond": 6,
+      "unit": "count",
+      "why": "HANDOFF 5.0 trap 8: every reading on this book is BY INDEX, so the count has to be carried. Three two-staff systems on page 1. ALSO the check that the marked family is index-comparable with the unmarked one -- adding a mark must not change how many staves the breaker puts on page 1, or ROWMN's indices and ROWA's would not name the same gaps.",
+      "residual": 0.0
+    },
+    "lyrics.chord-row.marked.staves-on-first-page": {
+      "probe": "page-vertical.ly",
+      "score": "ROWM",
+      "lilypond": 6,
+      "unit": "count",
+      "why": "The count for ROWM (HANDOFF 5.0 trap 8). Three two-staff systems on page 1; the chord row is not spaceable and does not enter it, nor does the mark.",
+      "residual": 0.0
+    },
+    "lyrics.chord-row.marked.every-system.staves-on-first-page": {
+      "probe": "page-vertical.ly",
+      "score": "ROWMA",
+      "lilypond": 6,
+      "unit": "count",
+      "why": "The count for ROWMA (HANDOFF 5.0 trap 8), and the check that ROWM and ROWMA are a pair: if adding a row to system 2 changed the page's staff count, their indices would not name the same gaps and the comparison between them would be reading different springs.",
+      "residual": 0.0
+    },
     "lyrics.ossia.staff-to-lyric": {
       "probe": "page-vertical.ly",
       "score": "LYROS",

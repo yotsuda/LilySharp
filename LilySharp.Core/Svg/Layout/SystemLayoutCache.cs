@@ -108,15 +108,38 @@ internal sealed class SystemLayoutCache
     /// (see <see cref="PreliminaryFingScripts"/>).</summary>
     public FingScriptMemo FinalFingScripts { get; } = new();
 
-    /// <summary>The per-system lyric verse-skyline memo — ONE instance for BOTH
-    /// annotation passes, deliberately (the value is X-only and both passes hold the
-    /// same measure-layout instances; see <see cref="VerseSkylineMemo"/> for why that
-    /// sharing is sound here and not for the stacking memos above).</summary>
-    public VerseSkylineMemo VerseSkylines { get; } = new();
+    /// <summary>The PRELIMINARY annotation pass's per-system lyric verse-skyline memo.
+    /// </summary>
+    /// <remarks>
+    /// ★ ONE STORE PER PASS SINCE 2026-08-25, and it was ONE SHARED STORE before that on
+    /// the reading that "a verse skyline is X-only — it reads nothing the passes disagree
+    /// about". It reads one thing they do: the ALIGNMENT LINE a syllable is filed under.
+    /// <c>LyricEngraver.DistributeLooseLines</c> buckets the profiles by
+    /// <c>LineKeyOf</c>, which answers the staff index for a note-bound block hanging off
+    /// a non-last staff and -1 otherwise — and that question is decided by
+    /// <c>noteBoundAnchorY</c>, which the PRELIMINARY pass does not have yet. So the
+    /// preliminary pass filed a sung score's profiles under -1, the final pass asked for
+    /// them under the staff index, found nothing, and walked a chain with NO SYLLABLE INK
+    /// in it.
+    /// <para>
+    /// MEASURED on the reported book (scratch/ベースタブLy/Untitled-6.lys, user report
+    /// 2026-08-25): with a <see cref="SystemLayoutCache"/> in play the syllables landed
+    /// 4.214000 higher than a full compile put them — through the staff above them on the
+    /// one-verse systems. It reached only the EDITOR: the preview renders through
+    /// <c>IncrementalCompiler</c>, which is the only caller that passes a cache, so
+    /// <c>lysc</c> and every test that renders through <c>SvgGenerator.Generate</c> saw
+    /// the correct picture and the preview did not.
+    /// </para>
+    /// </remarks>
+    public VerseSkylineMemo PreliminaryVerseSkylines { get; } = new();
+
+    /// <summary>The FINAL annotation pass's lyric verse-skyline memo
+    /// (see <see cref="PreliminaryVerseSkylines"/>).</summary>
+    public VerseSkylineMemo FinalVerseSkylines { get; } = new();
 
     /// <summary>The PRELIMINARY annotation pass's lyric chain-prefix memo — one store
-    /// per pass, like <see cref="PreliminaryAboveStack"/> and unlike
-    /// <see cref="VerseSkylines"/>: the walk's SEED reads the pass's anchor profile
+    /// per pass, like <see cref="PreliminaryAboveStack"/> and for the same kind of
+    /// reason: the walk's SEED reads the pass's anchor profile
     /// (the scripted system silhouette on the fallback path, the staff profile
     /// otherwise), and the two passes' profiles are not the same object nor always the
     /// same value — MEASURED, session 224: one shared store served the preliminary

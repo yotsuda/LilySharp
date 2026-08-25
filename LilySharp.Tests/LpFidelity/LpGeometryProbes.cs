@@ -1919,6 +1919,174 @@ internal static class LpGeometryProbes
         LyricRowBetweenStavesScore("ROWVH", haraKiri: true, secondVerse: true);
 
     /// <summary>
+    /// A CHORD ROW THAT IS NOT ON EVERY SYSTEM — the mirrors of books ROWA and ROWAC, and the
+    /// arrangement the user's fifth report is about.
+    /// </summary>
+    /// <remarks>
+    /// The user read a delivered picture and said the gap between systems 2 and 3 looked
+    /// longer than the one between 1 and 2. It is: Lily# reads 12.000000 and 16.970000
+    /// between refpoints. Their book spells <c>chords prog as names / staff melody / lyrics
+    /// verse sings melody / staff melody</c> with <c>form main { A |: B :| A "A2" }</c> and a
+    /// <c>chords prog</c> that has ONLY section A — so the row is on systems 1 and 3 and
+    /// absent from system 2.
+    /// <para>
+    /// ⚠️ WHY <see cref="LYRMC"/> DOES NOT ALREADY COVER THIS. Its row is on EVERY system, and
+    /// its <c>system-gap</c> has been exact at 12.000000 since the row was ported into the
+    /// chain. "No row → row" is an arrangement the ledger has never carried, and it is the
+    /// only one that diverges. An entry that is exact on every arrangement it spells is not a
+    /// guard against the arrangements it does not spell (HANDOFF bone 2, 2026-08-25: an
+    /// exclusion written as "no fixture reaches it" is a fact about the CORPUS, not about the
+    /// geometry). ⚠️ LYRMC also differs in a second way and so could not be edited into this:
+    /// its lyrics hang UNDER the system's last staff, where these put them BETWEEN the two
+    /// staves, which is the arrangement 2026-08-25 ported.
+    /// </para>
+    /// <para>
+    /// ★★ THE PAIR, and LILYPOND IS THE IDENTITY SIDE — the strongest shape there is
+    /// (HANDOFF 5.0). ROWAC is ROWA with section B carrying chords too and NOTHING else
+    /// touched: same three systems, same 12 bars, same 48 syllables, same paper, same
+    /// pitches. LilyPond does not widen a system gap for a chords row — it puts the row
+    /// INSIDE the room alongside the lyrics, which is what LYRMC's header established term by
+    /// term — so with the LilyPond side flat, whatever Lily# does with the difference IS the
+    /// defect outright, in staff spaces, with no subtraction of engines and no font quantity
+    /// in it.
+    /// </para>
+    /// <para>
+    /// ★ MEASURED 2026-08-25 ON 2.26.0, AND THE IDENTITY IS STRONGER THAN THE PREDICTION ASKED
+    /// FOR: not merely both system gaps but EVERY reading the page dump takes is the same in
+    /// both books — system-to-system 12.000000, staff-to-staff inside 9.000000, the loose
+    /// chain 4.027851, first ink 6.691667 below the paper edge, last ink 66.240551. The row's
+    /// presence on system 2 moves nothing whatsoever on the page.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE PITCHES ARE DELIBERATELY INSIDE THE STAFF (g/a on both staves, LYRM's melody).
+    /// The row-to-staff spring binds on the staff's UP SKYLINE AT THE CHORD'S x (LYRMC's m3),
+    /// so a note poking above the staff would put a notehead's ink into the quantity being
+    /// measured. Nothing here needs that term, and leaving it out means a residual cannot hide
+    /// in it. ⚠️ AND THE FORM USES <c>~A ~B ~C</c>: a section mark is ink in the very band
+    /// above the top staff that the row occupies, so the marks are suppressed rather than
+    /// measured alongside the row. ⚠️ THE BREAKS ARE EXPLICIT and belong to the top staff
+    /// (<see cref="LyricRowBetweenStavesScore"/>'s remark) — which bars share a system decides
+    /// which system has a row, so it cannot be left to the breaker.
+    /// </para>
+    /// </remarks>
+    /// <summary>Which systems of <see cref="ChordRowAlternatingScore"/> carry a chord row.</summary>
+    private enum Rows
+    {
+        /// <summary>None of them — the control that isolates the mark.</summary>
+        None,
+
+        /// <summary>Systems 1 and 3, the user's arrangement.</summary>
+        Alternating,
+
+        /// <summary>All three — the control that isolates the alternation.</summary>
+        Every,
+    }
+
+    private static string ChordRowAlternatingScore(string name, Rows rows, bool marks)
+    {
+        string bars = string.Concat(Enumerable.Repeat("g4 a g a | ", 4)).Trim();
+        string syllables = string.Concat(Enumerable.Repeat("no no no no | ", 4)).Trim();
+        string chords = string.Concat(Enumerable.Repeat("C | ", 4)).Trim();
+        string outer = rows == Rows.None ? "" : $"\n  chords prog {{ {chords} }}";
+        string middle = rows == Rows.Every ? outer : "";
+        return $$"""
+            octave absolute
+            time 4/4
+            key c major
+
+            part melody { clef treble }
+            part lower { clef treble }
+
+            section A {
+              melody { {{bars}} break }
+              lower { {{bars}} }
+              lyrics one sings melody { {{syllables}} }{{outer}}
+            }
+
+            section B {
+              melody { {{bars}} break }
+              lower { {{bars}} }
+              lyrics one sings melody { {{syllables}} }{{middle}}
+            }
+
+            section C {
+              melody { {{bars}} }
+              lower { {{bars}} }
+              lyrics one sings melody { {{syllables}} }{{outer}}
+            }
+
+            form main { {{(marks ? "A B C" : "~A ~B ~C")}} }
+
+            score main "{{name}}" {
+            {{(rows == Rows.None ? "" : "  chords prog\n")}}  staff melody
+              lyrics one
+              staff lower
+            }
+            """;
+    }
+
+    /// <summary>The row on systems 1 and 3, no mark — the mirror of book ROWA.</summary>
+    private static readonly string ROWA =
+        ChordRowAlternatingScore("ROWA", Rows.Alternating, marks: false);
+
+    /// <summary>The row on every system, no mark — the mirror of book ROWAC.</summary>
+    private static readonly string ROWAC =
+        ChordRowAlternatingScore("ROWAC", Rows.Every, marks: false);
+
+    /// <summary>
+    /// THE SAME THREE BOOKS WITH A SECTION MARK — the mirrors of ROWM / ROWMN / ROWMA, and
+    /// the pair that carries the divergence ROWA/ROWAC was built for and did not find.
+    /// </summary>
+    /// <remarks>
+    /// ROWA/ROWAC came out exact on both sides, which fired their own falsifier. Sweeping one
+    /// variable at a time back toward the user's book found the term: it is not the chord row
+    /// and not the alternation, it is A SECTION MARK ON THE SYSTEM BELOW THE GAP, and the row
+    /// only matters because the two share a floor. MEASURED IN LILY#, three systems, gap 1 =
+    /// system 1 → 2 and gap 2 = 2 → 3:
+    /// <code>
+    ///   no mark, row on systems 1 and 3    12.000000   12.000000
+    ///   no mark, row on every system       12.000000   12.000000
+    ///   MARK,    row on systems 1 and 3    12.000000   16.188166
+    ///   MARK,    row on EVERY system       12.000000   16.188166   &lt;- identical
+    ///   MARK,    NO row anywhere           12.000000   12.241073
+    ///   MARK,    no lyrics, row on 1 and 3 12.000000   16.188166
+    /// </code>
+    /// ⇒ NEITHER INGREDIENT DOES IT ALONE: a mark alone costs 0.241073, a row alone costs
+    /// nothing, the two together cost 4.188166. ⇒ AND THE ALTERNATION IS NOT THE VARIABLE —
+    /// the row on EVERY system reads the same 16.188166. The lyrics are not involved.
+    /// <para>
+    /// ★★ WHY GAP 1 IS EXACT AND GAP 2 IS NOT, in BOTH engines: the gap is a distance between
+    /// two silhouettes, and the mark and the row both sit at the LEFT EDGE of the system below
+    /// it. The first system is INDENTED and its staff does not reach that x, so there is
+    /// nothing there to push against; the second system is not indented and its staff ink is
+    /// under the mark. LilyPond does the same thing — this is the shape both engines agree on
+    /// and it is why a one-variable sweep had to reach the mark before anything moved.
+    /// </para>
+    /// <para>
+    /// ★★★ AND LILYPOND WIDENS IT TOO, WHICH IS THE FINDING (measured 2.26.0, 2026-08-25,
+    /// probes ROWM / ROWMN / ROWMA): 12.000000 and 12.563793 for ROWM, 12.000000 twice for
+    /// ROWMN, 12.000000 and 12.563793 for ROWMA. ⇒ THE SHAPE IS RIGHT AND THE SIZE IS NOT.
+    /// LilyPond charges the row 0.563793 on a marked pair; Lily# charges it 4.188166. The
+    /// defect is not "Lily# widens a gap a chords row should not widen" — the previous
+    /// session's reading, refuted by ROWMN and ROWMA — it is that Lily# charges the row its
+    /// NOMINAL BAND (<c>MultiStaffLayouter.TextRowHeight</c>, a LILYSHARP-OWN 2.5) where
+    /// LilyPond charges its INK. That is the same debt <c>TextRowVerseSpacing</c>'s remark
+    /// names ("the port is to take the band's height from the same walk"), now with a
+    /// LilyPond number under it and a user-visible symptom on top of it.
+    /// </para>
+    /// </remarks>
+    private static readonly string ROWM =
+        ChordRowAlternatingScore("ROWM", Rows.Alternating, marks: true);
+
+    /// <inheritdoc cref="ROWM"/>
+    private static readonly string ROWMN =
+        ChordRowAlternatingScore("ROWMN", Rows.None, marks: true);
+
+    /// <inheritdoc cref="ROWM"/>
+    private static readonly string ROWMA =
+        ChordRowAlternatingScore("ROWMA", Rows.Every, marks: true);
+
+    /// <summary>
     /// LYRB WITH A CHORD ROW ADDED — the mirror of book LYRCH, and the control for the last
     /// branch of the loose chain Lily# still lays out at force 0.
     /// </summary>
@@ -10592,6 +10760,69 @@ internal static class LpGeometryProbes
             g => g.StaffGapAt(1), FourSystemsPerPageRagged),
         // ...and the count, because both readings above are BY INDEX (HANDOFF 5.0 trap 8).
         new("lyrics.chord-row.between-systems.staves-on-first-page", LYRMC,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+
+        // THE ROW THAT IS NOT ON EVERY SYSTEM — the user's fifth report, and the arrangement
+        // the entry above cannot speak for BECAUSE it is exact: LYRMC's row is on every
+        // system, so "no row -> row" is an arrangement the ledger has never carried. LilyPond is the
+        // IDENTITY side of this pair (every reading of ROWA and ROWAC agrees to six digits),
+        // so Lily#'s own difference between the two gaps IS the defect. See
+        // ChordRowAlternatingScore.
+        // ⚠️ StaffGapAt(1) and (3), not StaffGap(): with two staves per system the gaps
+        // alternate 9 inside a system and the system gap between two, so the uniform reading
+        // throws. Index 1 is system 1 -> 2 and index 3 is system 2 -> 3.
+        // ⚠️ AND THE TWO INDICES ARE THE WHOLE POINT — a single reading would report one of
+        // them and look like a plain divergence. What the pair says is that the SAME book
+        // gives two different answers depending on which side of it the row is on.
+        new("lyrics.chord-row.alternating.gap-into-rowless", ROWA,
+            g => g.StaffGapAt(1), FourSystemsPerPageRagged),
+        new("lyrics.chord-row.alternating.gap-into-row", ROWA,
+            g => g.StaffGapAt(3), FourSystemsPerPageRagged),
+        // The control: the same book with the row on system 2 as well. Both gaps are then
+        // "row -> row" and the band CANCELS (measured on the user's own book 2026-08-25:
+        // adding chords to section B moves CreatePages' X-aware Distance() 6.0949 -> 19.0631
+        // and moves toStaffFrame with it, leaving the gap at 12.000000).
+        new("lyrics.chord-row.alternating.control.gap-first", ROWAC,
+            g => g.StaffGapAt(1), FourSystemsPerPageRagged),
+        new("lyrics.chord-row.alternating.control.gap-second", ROWAC,
+            g => g.StaffGapAt(3), FourSystemsPerPageRagged),
+        // ...and the counts, because every reading above is BY INDEX (HANDOFF 5.0 trap 8).
+        // Three systems of two staves each, on one page. The row is not spaceable and does
+        // not enter the count — nor does its ABSENCE change it, which is what makes the two
+        // books index-comparable in the first place.
+        new("lyrics.chord-row.alternating.staves-on-first-page", ROWA,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+        new("lyrics.chord-row.alternating.control.staves-on-first-page", ROWAC,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+
+        // THE SAME THREE SYSTEMS WITH A SECTION MARK — where the divergence actually lives.
+        // The four entries above are exact, and being exact is what they say: the chord row
+        // and its alternation are NOT the term. Adding the mark back moves gap 2 and nothing
+        // else, in BOTH engines. See ChordRowAlternatingScore's remark for the sweep.
+        // ⚠️ GAP 1 IS EXACT IN ALL THREE BOOKS AND IS CARRIED ANYWAY: it is the reading that
+        // says the divergence is per-PAIR and not per-score, and it is exact for a reason
+        // both engines share — the first system is indented, so its staff has no ink under
+        // the next system's mark to push against.
+        new("lyrics.chord-row.marked.no-row.gap-first", ROWMN,
+            g => g.StaffGapAt(1), FourSystemsPerPageRagged),
+        new("lyrics.chord-row.marked.no-row.gap-second", ROWMN,
+            g => g.StaffGapAt(3), FourSystemsPerPageRagged),
+        new("lyrics.chord-row.marked.gap-first", ROWM,
+            g => g.StaffGapAt(1), FourSystemsPerPageRagged),
+        // ★ THE DEFECT. LilyPond widens this pair by 0.563793 for the row; Lily# widens it by
+        // 4.188166. The shape is right and the size is not.
+        new("lyrics.chord-row.marked.gap-second", ROWM,
+            g => g.StaffGapAt(3), FourSystemsPerPageRagged),
+        // ...and the same reading with the row on EVERY system, which is what refutes "no row
+        // -> row": both engines print exactly what they print for ROWM.
+        new("lyrics.chord-row.marked.every-system.gap-second", ROWMA,
+            g => g.StaffGapAt(3), FourSystemsPerPageRagged),
+        // ...and the counts, because every reading above is BY INDEX (HANDOFF 5.0 trap 8).
+        new("lyrics.chord-row.marked.no-row.staves-on-first-page", ROWMN,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+        new("lyrics.chord-row.marked.staves-on-first-page", ROWM,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+        new("lyrics.chord-row.marked.every-system.staves-on-first-page", ROWMA,
             g => g.StavesOnPage(0), FourSystemsPerPageRagged),
 
         // THE OSSIA HALF, chain reading only — the inside distance is not like-for-like

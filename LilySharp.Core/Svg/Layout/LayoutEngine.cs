@@ -382,7 +382,7 @@ internal sealed class LayoutEngine
             FingScriptMemo = systemCache?.FinalFingScripts,
             // The verse-skyline memo is the SAME instance the preliminary pass used —
             // X-only values, so the final pass hits what the preliminary computed.
-            VerseSkylines = systemCache?.VerseSkylines,
+            VerseSkylines = systemCache?.FinalVerseSkylines,
             LyricChains = systemCache?.FinalLyricChains,
         };
         var annotations = CalculateAnnotationLayouts(annotationContext);
@@ -906,7 +906,7 @@ internal sealed class LayoutEngine
             FingScriptMemo = systemCache?.PreliminaryFingScripts,
             // The verse-skyline memo is deliberately SHARED with the final pass — its
             // values are X-only, which is what the per-pass stores above are not.
-            VerseSkylines = systemCache?.VerseSkylines,
+            VerseSkylines = systemCache?.PreliminaryVerseSkylines,
             LyricChains = systemCache?.PreliminaryLyricChains,
         });
         EnrichExtentsWithAnnotationProtrusions(score.TextMetrics, perSystemExtents, prelimSystems,

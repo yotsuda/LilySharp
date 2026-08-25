@@ -69,12 +69,20 @@ public class LyricBandMemoTests
         var (hits0, misses0) = cache!.LyricBandStats;
         Assert.True(misses0 >= 2, $"expected a multi-system book (first render missed {misses0})");
         Assert.Equal(0, hits0);
-        // The verse-skyline memo is SHARED between the two annotation passes: the first
-        // render's preliminary pass computes every system (misses) and the final pass
-        // serves them (hits) — the pass-sharing half of the win, asserted.
-        var (vHits0, vMisses0) = cache.VerseSkylines.Stats;
-        Assert.True(vMisses0 >= 2 && vHits0 >= vMisses0,
-            $"first render: verse memo hits {vHits0} / misses {vMisses0} — the final pass should serve the preliminary's entries");
+        // ⚠️ THIS ARM USED TO ASSERT THE OPPOSITE AND THAT IS WHY THE DEFECT LIVED SO LONG.
+        // The verse-skyline memo was ONE store shared by both annotation passes, and this
+        // said so: "the final pass should serve the preliminary's entries". It did — with
+        // entries filed under the WRONG ALIGNMENT LINE, because LineKeyOf answers -1 in the
+        // preliminary pass (which has no noteBoundAnchorY yet) and the staff index in the
+        // final one. The final pass then walked a chain with no syllable ink and put the
+        // syllables 4.214000 too high, through the staff above them. A net that pins a
+        // sharing cannot notice that the sharing is wrong; what notices is the
+        // incremental==full comparison this file already makes on the NEXT line.
+        // One store per pass now, so the first render misses in BOTH.
+        var (vHits0, vMisses0) = VerseStats(cache);
+        Assert.Equal(0, vHits0);
+        Assert.True(vMisses0 >= 4,
+            $"first render: verse memo hits {vHits0} / misses {vMisses0} — each pass should compute every system");
 
         // Re-pitch one note in ONE measure: the content key moves for that measure's
         // neighbourhood only, so every other system's band must be a HIT.
@@ -84,13 +92,14 @@ public class LyricBandMemoTests
         var (hits1, misses1) = cache.LyricBandStats;
         Assert.True(hits1 - hits0 >= misses0 - 2,
             $"keystroke served {hits1 - hits0} bands of {misses0} systems (misses {misses1 - misses0})");
-        // ...and the verse memo re-fed only the edited system (a miss in the preliminary
-        // pass; the final pass hits the freshly stored entry), serving everything else.
-        var (vHits1, vMisses1) = cache.VerseSkylines.Stats;
+        // ...and the verse memo re-fed only the edited system, once per pass, serving
+        // every other system in each. The win is unchanged by the split: it was never the
+        // sharing, it was the keystroke-crossing reuse.
+        var (vHits1, vMisses1) = VerseStats(cache);
         Assert.True(vMisses1 - vMisses0 <= 2,
             $"the note keystroke recomputed {vMisses1 - vMisses0} systems' verse skylines — expected at most the edited one per pass");
-        Assert.True(vHits1 - vHits0 >= 2 * (vMisses0 - 2),
-            $"keystroke served {vHits1 - vHits0} verse-skyline entries of ~{2 * vMisses0} lookups");
+        Assert.True(vHits1 - vHits0 >= vMisses0 - 4,
+            $"keystroke served {vHits1 - vHits0} verse-skyline entries of ~{vMisses0} lookups");
         // ...and each pass's chain-prefix memo served every unchanged system's walk
         // (one store per pass — the walk's seed is pass-dependent; see LyricChainMemo).
         var (cHits1, cMisses1) = cache.FinalLyricChains.Stats;
@@ -106,7 +115,7 @@ public class LyricBandMemoTests
         var cache = session.SystemCache;
         Assert.NotNull(cache);
         var (_, misses0) = cache!.LyricBandStats;
-        var (_, vMisses0) = cache.VerseSkylines.Stats;
+        var (_, vMisses0) = VerseStats(cache);
         var (_, cMisses0) = cache.FinalLyricChains.Stats;
 
         // Change one syllable's TEXT (wider ink): the edited system's band must
@@ -123,11 +132,19 @@ public class LyricBandMemoTests
         // content key folds the lyrics, so the measures memo hands out NEW instances
         // there and the reference key declines (a stale profile would space the verse
         // against the old text's ink).
-        var (_, vMisses1) = cache.VerseSkylines.Stats;
+        var (_, vMisses1) = VerseStats(cache);
         Assert.True(vMisses1 > vMisses0,
             $"the lyric edit recomputed no verse skyline (misses {vMisses0} -> {vMisses1})");
         var (_, cMisses1) = cache.FinalLyricChains.Stats;
         Assert.True(cMisses1 > cMisses0,
             $"the lyric edit recomputed no chain prefix (misses {cMisses0} -> {cMisses1})");
     }
+    /// <summary>Both annotation passes' verse-skyline counters, summed. One store per pass
+    /// since 2026-08-25 (see <c>SystemLayoutCache.PreliminaryVerseSkylines</c>); the tests
+    /// here care about the total work, not which pass did it.</summary>
+    private static (int Hits, int Misses) VerseStats(
+        LilySharp.Core.Svg.Layout.SystemLayoutCache cache)
+        => (cache.PreliminaryVerseSkylines.Stats.Hits + cache.FinalVerseSkylines.Stats.Hits,
+            cache.PreliminaryVerseSkylines.Stats.Misses + cache.FinalVerseSkylines.Stats.Misses);
+
 }
