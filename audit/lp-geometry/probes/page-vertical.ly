@@ -3228,6 +3228,14 @@ probeTag =
 %% ROWM / ROWMN — THE SAME ARRANGEMENT WITH A SECTION MARK, and the pair that replaces the
 %%     one ROWA/ROWAC was built for.
 %%
+%%     ⚠️⚠️ ★★★ READ THE BLOCK ABOVE ROWMX FIRST (2026-08-25, session 253).  These books were
+%%     written `\mark \markup \box' -- a REHEARSAL MARK -- against a Lily# twin that engraves
+%%     a SECTION LABEL, and LilyPond gives the two different break-align-symbols.  They now
+%%     write \sectionLabel, and re-taking the family on 2.26.0 turned ROWM's and ROWMA's
+%%     gap 2 from 12.563793 into a flat 12.000000.  ⇒ EVERY "0.563793" AND EVERY "the mark is
+%%     lifted" IN THE HEADERS BELOW IS A READING OF THE OLD SPELLING.  It is correct about
+%%     LilyPond and no longer describes what these books measure.
+%%
 %%     WHY THESE EXIST.  ROWA/ROWAC were built to carry the fifth report and they came out
 %%     EXACT on both sides -- LilyPond 12.000000 four times, Lily# 12.000000 four times.
 %%     The falsifier ROWA's header wrote ("12.000000 would mean the book does not reproduce
@@ -3286,9 +3294,9 @@ probeTag =
       \new ChordNames { \chordmode {
         \repeat unfold 4 { c1 } \repeat unfold 4 { s1 } \repeat unfold 4 { c1 } } }
       \new Staff \with { instrumentName = "Melody" } { \new Voice = "mel" {
-        \mark \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
-        \mark \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break
-        \mark \markup \box "C" \repeat unfold 4 { g'4 a' g' a' } } }
+        \sectionLabel \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
+        \sectionLabel \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break
+        \sectionLabel \markup \box "C" \repeat unfold 4 { g'4 a' g' a' } } }
       \new Lyrics \lyricsto "mel" { \repeat unfold 48 { no } }
       \new Staff \with { instrumentName = "Lower" } {
         \repeat unfold 12 { g'4 a' g' a' } }
@@ -3304,9 +3312,9 @@ probeTag =
   \score {
     <<
       \new Staff \with { instrumentName = "Melody" } { \new Voice = "mel" {
-        \mark \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
-        \mark \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break
-        \mark \markup \box "C" \repeat unfold 4 { g'4 a' g' a' } } }
+        \sectionLabel \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
+        \sectionLabel \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break
+        \sectionLabel \markup \box "C" \repeat unfold 4 { g'4 a' g' a' } } }
       \new Lyrics \lyricsto "mel" { \repeat unfold 48 { no } }
       \new Staff \with { instrumentName = "Lower" } {
         \repeat unfold 12 { g'4 a' g' a' } }
@@ -3325,9 +3333,9 @@ probeTag =
     <<
       \new ChordNames { \chordmode { \repeat unfold 12 { c1 } } }
       \new Staff \with { instrumentName = "Melody" } { \new Voice = "mel" {
-        \mark \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
-        \mark \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break
-        \mark \markup \box "C" \repeat unfold 4 { g'4 a' g' a' } } }
+        \sectionLabel \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
+        \sectionLabel \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break
+        \sectionLabel \markup \box "C" \repeat unfold 4 { g'4 a' g' a' } } }
       \new Lyrics \lyricsto "mel" { \repeat unfold 48 { no } }
       \new Staff \with { instrumentName = "Lower" } {
         \repeat unfold 12 { g'4 a' g' a' } }
@@ -3336,8 +3344,71 @@ probeTag =
   }
 }
 
+%% ⚠️⚠️ ★★★ READ THIS BEFORE THE REST OF THE FAMILY: THE PAIR IS MISMATCHED IN THE GROB
+%%     (2026-08-25, session 253).  Every book below writes its A/B/C as `\mark \markup \box',
+%%     which is a REHEARSAL MARK.  The Lily# twin writes them as `form main { A B C }', which
+%%     is a SECTION LABEL, and Lily# means it -- MusicMarkEngraver gives them
+%%     outside-staff-priority 1450 and cites SectionLabel's own grob definition.
+%%     LilyPond gives the two grobs DIFFERENT break-align-symbols:
+%%       RehearsalMark  (staff-bar key-signature clef)   scm/define-grobs.scm RehearsalMark
+%%       SectionLabel   (left-edge staff-bar)            scm/define-grobs.scm SectionLabel
+%%     At a line start the first anchors on the CLEF and the second on the LEFT EDGE, so only
+%%     the rehearsal mark ever stands over the first chord -- and standing over the chord is
+%%     the whole of the mechanism this header goes on to name.
+%%
+%%     ⇒ FIXED THE SAME DAY: THESE SIX BOOKS NOW WRITE \sectionLabel, and every LilyPond
+%%     number in this family was re-taken on the canonical 2.26.0
+%%     (C:\bin\lilypond-2.26.0, the path Measure-LilyPondPageGeometry.ps1 defaults to).
+%%
+%%     MEASURED 2.26.0, system-to-system (last staff -> next first), the same reading the
+%%     ledger's gap-first / gap-second take -- BOTH SPELLINGS, one variable moved:
+%%       book     \mark (was)              \sectionLabel (is)
+%%       ROWMN    12.000000                12.000000
+%%       ROWM     12.000000, 12.563793     12.000000   (flat: no second number at all)
+%%       ROWMA    12.000000, 12.563793     12.000000
+%%       ROWMX    12.000000                12.000000
+%%       ROWMZ    12.000000                12.000000
+%%     Systems per page is 3 in every book under both spellings, so the count entries do not
+%%     move.  => WITH THE GROB THE TWIN ACTUALLY ENGRAVES, LILYPOND CHARGES THE CHORD ROW
+%%     NOTHING, ANYWHERE.  The 0.563793 was the REHEARSAL MARK's, and only its.
+%%
+%%     AND THE GROB DUMP SAYS WHY, TO SIX DIGITS.  Under \mark the RehearsalMark's X span is
+%%     [11.900827, 14.619250] on system 1 and [3.365000, 6.083424] on system 3, while the
+%%     Clef's is [9.335827, 11.900827] and [0.800000, 3.365000] -- the mark's LEFT EDGE IS
+%%     THE CLEF'S RIGHT EDGE, exactly, in both.  That is (staff-bar key-signature clef)
+%%     resolving to the clef at a line start, and it is what carries the mark across to the
+%%     first chord at x 5.800000 on system 3.  A SectionLabel anchors on `left-edge' and
+%%     never gets there.  Lily#'s own label stands at x [0.300000, 2.407165] on system 3 and
+%%     [8.835827, 10.908849] on system 1 -- 3.065000 left of the rehearsal mark in BOTH, i.e.
+%%     at the left edge, which is where LilyPond puts a SectionLabel too.
+%%
+%%     ⚠️ WHAT THE PARAGRAPHS BELOW STILL SAY CORRECTLY, and it is worth keeping: LilyPond
+%%     DOES lift a mark over a chord that stands under it in X, by the mark's own
+%%     outside-staff-padding (0.460000, lily/axis-group-interface.cc:44), and it does it by
+%%     RE-PARENTING the grob into the extremal line's VerticalAxisGroup
+%%     (Side_position_interface::move_to_extremal_staff, side-position-interface.cc:510-563;
+%%     the line is chosen by Staff_grouper_interface::get_extremal_staff,
+%%     staff-grouper-interface.cc:31-56, which intersects the grob's X extent widened by 1.0
+%%     with each line's own and tests neither is_spaceable nor for a StaffSymbol).  Lily#
+%%     has none of that.  ⚠️ BUT NOTHING IN THIS FAMILY MEASURES IT ANY MORE: a book that
+%%     does needs a REHEARSAL MARK on the Lily# side too, and Lily#'s Rehearsal X is wrong
+%%     for a different reason (MusicMarkEngraver.CalculateXPosition anchors Rehearsal and
+%%     SectionLabel BOTH on Indent + 0.3; LilyPond anchors only the second one there).
+%%     ⇒ THE ORDER, if that island is ever opened: fix Lily#'s Rehearsal X first, then open
+%%     a @mark-spelled pair, THEN port the lift.  Porting the lift first has nothing to
+%%     observe it.
+%%
 %% ROWMX / ROWMY -- THE TWO CONTROLS THAT SAY WHAT LILYPOND IS ACTUALLY CHARGING FOR, and
 %%     the reading that turns ROWM's 0.563793 from a number into a mechanism.
+%%
+%%     ⚠️⚠️ EVERYTHING FROM HERE TO THE END OF THIS HEADER WAS MEASURED ON THE \mark SPELLING
+%%     THESE BOOKS NO LONGER USE.  It is kept because it is a correct and hard-won reading of
+%%     what LilyPond does with a REHEARSAL MARK, and because it is the evidence that the
+%%     0.563793 was never the row's.  As written now (\sectionLabel) every book below reads a
+%%     flat 12.000000 and the two controls have nothing left to separate -- they are kept as
+%%     controls for the row itself, which is what they always were on the Lily# side.
+%%     See the block above for the re-measurement and for what would be needed to measure the
+%%     lift again.
 %%
 %%     ROWM's gap 2 is 12.563793 and ROWMN's is 12.000000, so the chord row costs 0.563793 on
 %%     a marked pair.  ⚠️ THAT SENTENCE IS STILL AMBIGUOUS: "the row" can mean the row
@@ -3397,9 +3468,9 @@ probeTag =
       \new ChordNames { \chordmode {
         \repeat unfold 4 { c1 } \repeat unfold 5 { s1 } \repeat unfold 3 { c1 } } }
       \new Staff \with { instrumentName = "Melody" } { \new Voice = "mel" {
-        \mark \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
-        \mark \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break
-        \mark \markup \box "C" \repeat unfold 4 { g'4 a' g' a' } } }
+        \sectionLabel \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
+        \sectionLabel \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break
+        \sectionLabel \markup \box "C" \repeat unfold 4 { g'4 a' g' a' } } }
       \new Lyrics \lyricsto "mel" { \repeat unfold 48 { no } }
       \new Staff \with { instrumentName = "Lower" } {
         \repeat unfold 12 { g'4 a' g' a' } }
@@ -3417,9 +3488,9 @@ probeTag =
       \new ChordNames \with { \override ChordName.X-offset = #40 } { \chordmode {
         \repeat unfold 4 { c1 } \repeat unfold 4 { s1 } \repeat unfold 4 { c1 } } }
       \new Staff \with { instrumentName = "Melody" } { \new Voice = "mel" {
-        \mark \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
-        \mark \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break
-        \mark \markup \box "C" \repeat unfold 4 { g'4 a' g' a' } } }
+        \sectionLabel \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
+        \sectionLabel \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break
+        \sectionLabel \markup \box "C" \repeat unfold 4 { g'4 a' g' a' } } }
       \new Lyrics \lyricsto "mel" { \repeat unfold 48 { no } }
       \new Staff \with { instrumentName = "Lower" } {
         \repeat unfold 12 { g'4 a' g' a' } }
@@ -3467,9 +3538,9 @@ probeTag =
       \new ChordNames { \chordmode {
         \repeat unfold 4 { c1 } \repeat unfold 8 { s1 } } }
       \new Staff \with { instrumentName = "Melody" } { \new Voice = "mel" {
-        \mark \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
-        \mark \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break
-        \mark \markup \box "C" \repeat unfold 4 { g'4 a' g' a' } } }
+        \sectionLabel \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
+        \sectionLabel \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break
+        \sectionLabel \markup \box "C" \repeat unfold 4 { g'4 a' g' a' } } }
       \new Lyrics \lyricsto "mel" { \repeat unfold 48 { no } }
       \new Staff \with { instrumentName = "Lower" } {
         \repeat unfold 12 { g'4 a' g' a' } }

@@ -16,6 +16,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using LilySharp.Core.Music;
 using LilySharp.Core.Rendering;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
@@ -154,5 +155,128 @@ public class LpFidelityFaceGuardTests
             TextFontPlan.BundledName(TextFontFamily.Serif));
         Assert.Equal(TextFontMetrics.SansFamily,
             TextFontPlan.BundledName(TextFontFamily.Sans));
+    }
+
+    /// <summary>
+    /// The characters a chord symbol can print that the face measuring them HAS NO GLYPH
+    /// FOR — a named list, which may shrink and may never grow.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A LIST AND NOT A COUNT, for the reason the citation ratchet is one
+    /// (HANDOFF §5.2.1⑦): a count lets an old member stay open while a new one arrives.
+    /// <para>
+    /// ★ THE TWO MEMBERS ARE ONE DEFECT, measured 2026-08-25 (session 254).
+    /// <c>ChordStructure.SpellPitch</c> spells an altered root with U+266F / U+266D, and
+    /// TeX Gyre Heros — the face <see cref="TextRole.ChordName"/> resolves to, and the one
+    /// the test above requires it to resolve to — carries neither. So for every altered
+    /// chord symbol in the language:
+    /// </para>
+    /// <list type="bullet">
+    /// <item>the metrics read the .notdef box: ink <c>(0,0)</c> and advance 1.297445669,
+    /// which is what <c>U+FFFD</c> reads too — asserted below, because a ZERO-INK reading
+    /// alone cannot tell "absent" from "blank" and only the first is a defect;</item>
+    /// <item>so a chord accidental is in NO skyline. <c>ChordNameEngraver.RowSkylines</c>
+    /// merges the symbol's real ink, and that ink is the letter's alone — measured, `A♯m'
+    /// and `Am' report the same box to nine digits;</item>
+    /// <item>while the DRAWN glyph comes from whatever the platform's fallback supplies
+    /// (verified: <c>lysc png</c> prints a full-size baseline ♯). That is the pollution
+    /// <c>b69c73e6</c> removed from the probe path, arriving through the draw path
+    /// instead — the picture is a function of the machine.</item>
+    /// </list>
+    /// <para>
+    /// ⇒ THE FIX IS A PORT AND IT HAS AN ADDRESS, so this list is expected to empty rather
+    /// than to be lived with: LilyPond does not put an accidental CHARACTER in a chord name
+    /// at all. <c>scm/chord-name.scm:80-95 accidental-&gt;text-markup</c> /
+    /// <c>accidental-&gt;markup</c> builds it as the Emmentaler ACCIDENTAL GLYPH, one step
+    /// <c>smaller</c>, <c>translate-scaled</c> up by 0.6 (0.3 for the flat family), with a
+    /// 0.094725 kern before the narrow glyphs. Measured in 2.26.0: ChordName `Am' is
+    /// (0.0 . 1.907290480437992) and `A♯m' is (-0.9535167849233657 . 2.22487249815452) —
+    /// the raised glyph adds 0.317582 on top and 0.953517 below, 1.271099 of ink height in
+    /// all, which is the number ledger <c>mark.over-chord.*</c> reads as the pair's whole
+    /// difference. Lily# has the glyphs and their outlines already
+    /// (<c>EmmentalerGlyphs</c> / <c>GlyphMetrics</c>) and the run machinery to mix them
+    /// with text (<c>FetaTextRun</c>, three consumers); what it has not got is a fourth
+    /// consumer for the chord name.
+    /// </para>
+    /// </remarks>
+    private static readonly char[] ChordCharactersTheFaceCannotDraw = ['♭', '♯'];
+
+    /// <summary>
+    /// Every character the chord namer can print is a character the face that MEASURES it
+    /// can actually draw — except the named list above.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE VOCABULARY IS ENUMERATED FROM THE NAMER, NOT SPELLED HERE. A hand-written
+    /// alphabet is a second spelling of the language (HANDOFF §5.2.1②) and would keep
+    /// reading green on the day a quality suffix grows a character the face has not got —
+    /// which is exactly the shape this test exists for. The sweep runs
+    /// <see cref="ChordStructure.DisplayName"/> and
+    /// <see cref="ChordStructure.ToRomanNumeral"/> over every root, alteration, quality and
+    /// both bass forms, and adds the one literal the collector prints without a structure
+    /// (<c>ly/engraver-init.ly:952 noChordSymbol</c> = "N.C.").
+    /// <para>
+    /// ⚠️ Whitespace is excluded rather than filtered by ink: a space HAS no ink and is
+    /// not a missing glyph (<c>m maj7</c> contains one), so including it would put a
+    /// non-defect in the list and hide the population it is supposed to name.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void EveryCharacterAChordSymbolCanPrint_HasInkInTheFaceThatMeasuresIt()
+    {
+        var fonts = ScoreTextMetrics.Bundled;
+        double em = EngravingDefaults.ChordNameFontSize;
+
+        (double Bottom, double Top) Ink(string s) =>
+            fonts.Ink(s, em, TextRole.ChordName, EngravingDefaults.ChordNameFontStyle);
+        double Advance(string s) =>
+            fonts.Advance(s, em, TextRole.ChordName, EngravingDefaults.ChordNameFontStyle);
+
+        var vocabulary = new SortedSet<char>();
+        void Take(string printed)
+        {
+            foreach (char c in printed)
+                if (!char.IsWhiteSpace(c))
+                    vocabulary.Add(c);
+        }
+
+        foreach (ChordQuality quality in System.Enum.GetValues<ChordQuality>())
+            for (int rootStep = 0; rootStep < 7; rootStep++)
+                for (int rootAlter = -2; rootAlter <= 2; rootAlter++)
+                {
+                    Take(new ChordStructure(rootStep, rootAlter, quality).DisplayName);
+                    Take(new ChordStructure(rootStep, rootAlter, quality,
+                        BassStep: (rootStep + 4) % 7, BassAlter: rootAlter).DisplayName);
+                    // Every key, so a root's degree is reached both diatonic and chromatic
+                    // — the ♯/♭ prefix of a roman degree is written by the SAME sweep.
+                    for (int tonicStep = 0; tonicStep < 7; tonicStep++)
+                        for (int keySharps = -7; keySharps <= 7; keySharps++)
+                            Take(new ChordStructure(rootStep, rootAlter, quality)
+                                .ToRomanNumeral(tonicStep, keySharps));
+                }
+        Take("N.C.");
+
+        // The population, asserted before the emptiness is (HANDOFF RULES §5.4): a sweep
+        // that enumerated nothing would report an empty defect list and read as green.
+        Assert.True(vocabulary.Count >= 25,
+            $"the chord namer's alphabet came out at only {vocabulary.Count} characters — "
+            + "the sweep stopped reaching the namer, so this guard is covering less than it "
+            + "reads as covering.");
+
+        // What "the face has no glyph for this" READS AS, taken from a character no text
+        // face carries. Without this the test below could not tell an absent glyph from a
+        // blank one, and would name the wrong defect.
+        double notdefAdvance = Advance("�");
+        Assert.Equal(0.0, Ink("�").Top - Ink("�").Bottom, 9);
+
+        var missing = new List<char>();
+        foreach (char c in vocabulary)
+        {
+            var (bottom, top) = Ink(c.ToString());
+            if (top - bottom > 0) continue;
+            missing.Add(c);
+            Assert.Equal(notdefAdvance, Advance(c.ToString()), 9);
+        }
+
+        Assert.Equal(ChordCharactersTheFaceCannotDraw, missing.ToArray());
     }
 }

@@ -353,6 +353,25 @@ internal static class MusicMarkEngraver
     /// clearing the chord had to clear the UPPER line. `both` was retired 2026-08-23 —
     /// a track shown both ways is placed twice, and each ROW is its own band with its own
     /// one line — so every chord symbol is one line again and the ascent is the text's.
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN: A NOMINAL BOX WHERE LILYPOND READS THE STENCIL (HANDOFF §7.7's most
+    /// repeated shape). LilyPond places the mark against the accumulated skyline of what is
+    /// already there, which for a chord row IS the ChordName stencils
+    /// (lily/axis-group-interface.cc:865-984 skyline_spacing); this returns one constant for
+    /// every symbol. Ledger <c>mark.over-chord.*</c> is the pair that measured it.
+    /// </para>
+    /// <para>
+    /// ⚠️ AND IT IS THE SMALLER HALF OF THAT PAIR'S RESIDUAL — measured 2026-08-25, session
+    /// 254, so that the next reader does not start here. Reading the real ink instead of the
+    /// 1.9 moves the mark by 0.007250371 (`Am' measures (0.0 . 1.907250371)) and CANNOT move
+    /// the pair's difference at all, because in Lily# `A♯m' measures the same box to nine
+    /// digits: the accidental is spelled U+266F, the ChordName face has no such glyph, and
+    /// the metrics return the .notdef (0,0). LilyPond's 1.271099 between those two books is
+    /// the Emmentaler accidental GLYPH LilyPond draws instead
+    /// (scm/chord-name.scm:80-95 accidental-&gt;text-markup), three quarters of it BELOW the
+    /// baseline. The chord row's markup is the island; this constant is a separate, smaller
+    /// one that can be closed independently and is watched by the same two entries.
+    /// </para>
     /// </remarks>
     private static double ChordAscent(ChordNameLayout cn) => ChordTextAscent;
 

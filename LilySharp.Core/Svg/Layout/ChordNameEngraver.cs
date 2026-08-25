@@ -369,6 +369,32 @@ internal static class ChordNameEngraver
     /// ("Am" 3.926480 against this face's advance sum 3.924383). Until 2026-07-29 six call
     /// sites measured SansBold at a stale literal 2.6; the
     /// <c>chord.symbol-width.minor-pair-gap</c> point caught the +0.262120 on "Am".
+    /// <para>
+    /// ⚠️⚠️ AN ALTERED SYMBOL IS PRICED AT THE .notdef BOX, measured 2026-08-25 (session
+    /// 254). <see cref="Music.ChordStructure.SpellPitch"/> spells the alteration with the
+    /// CHARACTERS U+266F / U+266D, and the bundled sans face carries neither: both report
+    /// advance 1.297445669 and ink (0,0) — the same pair U+FFFD reports. So this "one home"
+    /// hands out the missing-glyph advance for every sharp and flat in the language, and
+    /// <see cref="RowSkylines"/> reserves NO vertical ink for them, while the glyph that
+    /// appears in the picture comes from the platform's own font fallback (so the picture is
+    /// a function of the machine — the pollution <c>LpFidelityFaceGuardTests</c> keeps out of
+    /// the measuring path, arriving through the drawing path instead).
+    /// </para>
+    /// <para>
+    /// ⇒ LilyPond puts no accidental CHARACTER in a chord name at all.
+    /// LILYPOND-REF: scm/chord-name.scm:80-95 accidental->text-markup = make-accidental-markup
+    ///   wrapped in make-smaller-markup and make-translate-scaled-markup — the alteration is the
+    /// Emmentaler accidental GLYPH, one step smaller, translated up by 0.6
+    /// (0.3 for the flat family); <c>accidental-&gt;markup</c> adds a 0.094725 kern before the
+    /// narrow glyphs. MEASURED in 2.26.0: ChordName `Am' is (0.0 . 1.907290480437992) wide
+    /// 3.9264803149606298 and `A♯m' is (-0.9535167849233657 . 2.22487249815452) wide
+    /// 5.091889718755855. ⇒ The port is a fourth <see cref="FetaTextRun"/> consumer — the
+    /// glyphs and outlines are already in <c>EmmentalerGlyphs</c> / <c>GlyphMetrics</c> — and
+    /// it moves the picture of every altered chord symbol, so it is an owner decision plus a
+    /// snapshot rebase. Observed by ledger <c>mark.over-chord.*</c> (whose whole 1.271099
+    /// difference is this ink) and watched by
+    /// <c>LpFidelityFaceGuardTests.EveryCharacterAChordSymbolCanPrint_HasInkInTheFaceThatMeasuresIt</c>.
+    /// </para>
     /// </remarks>
     internal static double SymbolInkWidth(Rendering.ScoreTextMetrics fonts, string text) =>
         fonts.Advance(

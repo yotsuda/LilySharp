@@ -196,6 +196,105 @@ probeM =
   }
 }
 
+%% MKW / MKX -- THE SHAPE NOTHING IN THE LEDGER WATCHED: a section label that stands OVER a
+%% chord symbol ON A STAFFED SHEET.  Opened 2026-08-25 (session 253) to decide one question
+%% the owner asked outright: should Lily# port LilyPond's lift (move_to_extremal_staff +
+%% get_extremal_staff + the row's own inside_staff_skylines)?
+%%
+%% WHY IT WAS MISSING.  Every existing entry puts the label at a LINE START, where a
+%% SectionLabel anchors on `left-edge' and the chords begin after the clef -- so the two never
+%% overlap in X and no lift can fire.  MKR/MKN measure exactly that (and their +0.542971 is a
+%% label-alone difference with no row in it); MKT/MKS/MKV measure the overlap on a sheet with
+%% NO STAFF, where LilyPond reads the row's ink top + 0.460000 and Lily# reads 0.900000 --
+%% and that gap is deliberately open by the owner's decision of 2026-08-24.  Between them the
+%% STAFFED overlap was never asked.  MEASURED IN LILY# 2026-08-25, a section label's baseline
+%% above the staff top with one variable moved (the chord standing under it):
+%%     no chord row               2.40
+%%     row, short chord under it  4.69
+%%     row, TALL chord under it   5.72
+%% -- so Lily# already lifts, X-aware and by the ink (a label clear of every chord in X reads
+%% 2.66 in all three of those books).  The arm is MusicMarkEngraver's own, not a port.
+%% => THE PORT IS THEREFORE A REPLACEMENT, NOT AN ADDITION, and nothing can say which of the
+%% two answers is LilyPond's until this pair exists.
+%%
+%% THE BOOKS.  ONE system, four bars, chords on every bar, and exactly ONE label -- at bar 3,
+%% MID-LINE, where a SectionLabel anchors on `staff-bar' and that bar's chord sits at the same
+%% barline.  One label so the ledger's existing FirstMusicMarkBaselineAboveStaff measures the
+%% one that overlaps; mid-line so that it overlaps at all.
+%% MKX is MKW with `cis' chords: every symbol's ink top rises and nothing else moves.
+%%
+%% WHY A PAIR AND NOT AN ABSOLUTE (the same reason MKT/MKV are a pair -- see MKV below).
+%% Lily# BOXES its label where LilyPond draws bare text, so an absolute baseline carries a box
+%% term that is not part of this question; MKR's own entry says as much.  The IDENTITY has no
+%% box term in it: LilyPond places the label against the ChordNames axis group's accumulated
+%% skyline, which IS the symbols, so raising the ink raises the label by exactly the ink and
+%% the GAP is unchanged.  LilyPond's difference between MKW and MKX is the ink growth exactly;
+%% whatever difference Lily# shows is its own.
+%%
+%% ★ PREDICTION, written before running (HANDOFF 5.0-2): LilyPond's MKX baseline = MKW's plus
+%% the chords' ink growth, gap held at outside-staff-padding 0.460000.  Lily#'s arm clears
+%% "the highest chord top its own ink overlaps", which is also ink-based, so it should track
+%% the growth too and THE TWO DIFFERENCES SHOULD MATCH -- i.e. both books carry the SAME
+%% residual, and that residual is the older label-alone term and not a lift error.
+%% ⚠️ FALSIFIER, and it IS the decision: if the two differences do NOT match, Lily#'s arm is
+%% not placing against the ink the way LilyPond does, the size of the mismatch is the size of
+%% the defect, and the port finally has an observer and a target.  If they DO match, the arm
+%% is already doing LilyPond's job and porting move_to_extremal_staff would buy nothing while
+%% moving output the owner has approved -- which is the answer to the question that opened
+%% these books.
+%%
+%% *** RESULT (session 253): FALSIFIED.  Lily# reads 8.145000 on BOTH books -- difference
+%% 0.000000 against LilyPond's 1.271099 -- so the arm does not track the chord's ink.
+%% *** AND THE CAUSE IS NOT WHERE SESSION 253 PUT IT (session 254, measured 2026-08-25).
+%% That session read the flat difference as `the arm uses a nominal ascent where LilyPond
+%% reads the outline' and prescribed: seed a text row's inside_staff_skylines, then make the
+%% arm measure against that profile.  THE ARM IS INDEED NOMINAL -- MusicMarkEngraver's
+%% ChordTextAscent = 1.9 against a real 1.907250371 -- BUT THAT IS WORTH 0.007, NOT 1.271099,
+%% AND FIXING IT CANNOT MOVE THIS PAIR AT ALL: in Lily# `A#m' and `Am' have THE SAME INK BOX,
+%% (0.0 . 1.907250371) both, so there is no ink difference to read.
+%% => THE DEFECT IS THE CHORD SYMBOL'S OWN MARKUP, upstream of every mark.  Lily# spells an
+%% altered root with the CHARACTERS U+266F / U+266D, and TeX Gyre Heros -- the face that
+%% measures a ChordName -- has neither glyph: both read ink (0,0) and the .notdef advance
+%% 1.297445669 (U+FFFD reads the same).  So a chord accidental is in no skyline, and the
+%% glyph that appears in the picture comes from the platform's font fallback.
+%% LilyPond puts no accidental CHARACTER in a chord name at all -- scm/chord-name.scm:80-95
+%% accidental->text-markup / accidental->markup draws the Emmentaler accidental GLYPH one
+%% step \smaller, translate-scaled up by 0.6 (0.3 for the flat family), kerned 0.094725
+%% before the narrow glyphs.  MEASURED HERE IN 2.26.0 (ChordName stencil extents):
+%%     Am    Y (0.0                 . 1.907290480437992)   X (0.0 . 3.9264803149606298)
+%%     A#m   Y (-0.9535167849233657 . 2.22487249815452)    X (0.0 . 5.091889718755855)
+%% -- +0.317582 above the baseline and +0.953517 below it = 1.271098802639894 of INK HEIGHT,
+%% which is this pair's whole difference to fifteen digits.
+%% ⚠️ IT IS THE HEIGHT, NOT THE TOP: three quarters of it is ink BELOW the baseline and
+%% reaches the mark by pushing the ChordNames ROW up off the staff, not by raising the
+%% symbol's top.  An ink-based arm alone would collect 0.317582 of the 1.271099 at most.
+\book {
+  \probeM "MKW"
+  \score {
+    <<
+      \new ChordNames \chordmode { c1 g a:m f }
+      \new Staff \relative c'' {
+        \time 4/4
+        c4 d e f | g a b c | \sectionLabel "B" c4 b a g | f e d c |
+      }
+    >>
+  }
+}
+
+%% MKX -- MKW with TALLER chord symbols and nothing else changed.  See MKW's header.
+\book {
+  \probeM "MKX"
+  \score {
+    <<
+      \new ChordNames \chordmode { cis1 gis ais:m fis }
+      \new Staff \relative c'' {
+        \time 4/4
+        c4 d e f | g a b c | \sectionLabel "B" c4 b a g | f e d c |
+      }
+    >>
+  }
+}
+
 %% MKV -- MKT WITH ONE VARIABLE CHANGED: the chord symbols are TALLER. `cis' prints a raised
 %% accidental, so every symbol's ink top rises while nothing else about the book moves --
 %% same lyrics, same labels, same paper, same break, same columns.

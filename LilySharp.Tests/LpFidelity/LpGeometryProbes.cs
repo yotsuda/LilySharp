@@ -2123,6 +2123,57 @@ internal static class LpGeometryProbes
     /// LilyPond is charging for the row's EXISTENCE or for its INK UNDER THE MARK.
     /// </summary>
     /// <remarks>
+    /// <para>
+    /// ⚠️⚠️ ★★★ READ THIS FIRST: THE PAIR IS MISMATCHED IN THE GROB (2026-08-25). These twins
+    /// write their A/B/C as <c>form main { A B C }</c>, which Lily# engraves as a SECTION
+    /// LABEL and means as one (<see cref="MusicMarkEngraver"/> gives it outside-staff-priority
+    /// 1450 and cites SectionLabel's grob definition). The probe writes them as
+    /// <c>\mark \markup \box</c>, which is a REHEARSAL MARK. LilyPond gives the two DIFFERENT
+    /// <c>break-align-symbols</c> — RehearsalMark <c>(staff-bar key-signature clef)</c>,
+    /// SectionLabel <c>(left-edge staff-bar)</c> — so at a line start the first anchors on the
+    /// CLEF and the second on the LEFT EDGE, and only the rehearsal mark ever stands over the
+    /// first chord. Standing over the chord is the whole of the mechanism this remark then
+    /// names.
+    /// </para>
+    /// <para>
+    /// AND THE GROB DUMP SHOWS IT TO SIX DIGITS: under <c>\mark</c> the RehearsalMark spans
+    /// x [11.900827, 14.619250] on system 1 and [3.365000, 6.083424] on system 3, while the
+    /// Clef spans [9.335827, 11.900827] and [0.800000, 3.365000] — the mark's LEFT EDGE IS THE
+    /// CLEF'S RIGHT EDGE, exactly, in both. Lily#'s label stands at x [0.300000, 2.407165] and
+    /// [8.835827, 10.908849], i.e. 3.065000 left of it in BOTH systems, which is the left edge
+    /// — where LilyPond puts a SectionLabel too.
+    /// </para>
+    /// <para>
+    /// ⇒ RESOLVED THE SAME DAY: the probe now writes <c>\sectionLabel</c> and the family was
+    /// RE-MEASURED ON THE CANONICAL 2.26.0. System-to-system reads a FLAT 12.000000 in ROWMN /
+    /// ROWM / ROWMA / ROWMX / ROWMZ, with 3 systems on page 1 in every one (so the count
+    /// entries do not move). ROWM's and ROWMA's gap 2 went 12.563793 → 12.000000 and their
+    /// residuals −0.322719737 → +0.241073263 — which is
+    /// <c>lyrics.chord-row.marked.no-row.gap-second</c>'s own residual to nine digits. ⇒ THE
+    /// CHORD ROW COSTS LILYPOND NOTHING ANYWHERE, Lily# has charged it nothing since session
+    /// 252, and all five gap-second entries in this family now carry ONE residual: the mark's
+    /// own +0.241073, which has nothing to do with rows.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHAT WAS LOST WITH THE OLD SPELLING, stated plainly rather than smoothed over:
+    /// LilyPond really does lift a mark over a chord standing under it in X, by the mark's own
+    /// outside-staff-padding 0.460000, by RE-PARENTING it into the extremal line's
+    /// VerticalAxisGroup.
+    /// LILYPOND-REF: lily/side-position-interface.cc:510-563 <c>move_to_extremal_staff</c>
+    /// LILYPOND-REF: lily/staff-grouper-interface.cc:31-56 <c>get_extremal_staff</c>
+    ///   — the walk that picks the line,
+    ///   intersecting the grob's X extent widened by 1.0 with each line's own, testing neither
+    ///   <c>is_spaceable</c> nor for a StaffSymbol. Lily# has none of it, and NOTHING IN THE
+    /// LEDGER OBSERVES IT ANY MORE. Measuring it again needs a REHEARSAL MARK on both sides,
+    /// and Lily#'s Rehearsal X is wrong first (<c>MusicMarkEngraver.CalculateXPosition</c>
+    /// anchors Rehearsal and SectionLabel BOTH on <c>Indent + 0.3</c>). ORDER: fix that X, open
+    /// a <c>@mark</c>-spelled pair, then port the lift.
+    /// </para>
+    /// <para>
+    /// ⚠️ EVERYTHING FROM HERE DOWN WAS MEASURED ON THE <c>\mark</c> SPELLING THESE BOOKS NO
+    /// LONGER USE. It is kept because it is a correct reading of what LilyPond does with a
+    /// rehearsal mark, and because it is the evidence that the 0.563793 was never the row's.
+    /// </para>
     /// ROWM's gap 2 is 12.563793 and ROWMN's is 12.000000, so on a marked pair LilyPond pays
     /// the chord row 0.563793. ⚠️ THAT SENTENCE IS AMBIGUOUS and ROWM cannot disambiguate it:
     /// its mark spans x [3.365000, 6.083424] and its first chord x [5.800000, 7.677882], so
@@ -2752,6 +2803,98 @@ internal static class LpGeometryProbes
 
     /// <summary>The same book with NO chord row — the control, mirror of book MKP.</summary>
     private static readonly string MKN = MarkScore("MKN", withChords: false);
+
+    /// <summary>
+    /// A section label standing OVER a chord symbol on a STAFFED sheet — the mirror of book
+    /// MKW, and the first point in the tree to measure that arrangement at all.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// WHAT IT IS FOR. <c>MusicMarkEngraver.ChordClearancePadding = 0.8</c> is declared
+    /// <c>LILYSHARP-OWN</c> and its own remark says why: "LilyPond was asked directly … and in
+    /// EVERY cell the mark and the nearest chord symbol are X-DISJOINT … LilyPond never
+    /// produced the arrangement this constant is for, so it gives it no number, and the value
+    /// is chosen as the mark family's own padding rather than measured." MKW/MKX produce that
+    /// arrangement. ⚠️ <see cref="MarkScore"/>'s own remark predicted these books in the
+    /// negative — "THE BREAK IS LOAD-BEARING … without it … section B's label lands ON its
+    /// bar's chord symbol" — and avoided them so MKR/MKN would keep reading the disjoint case.
+    /// </para>
+    /// <para>
+    /// THE BOOK. ONE system, four bars, chords on every bar, and exactly ONE label: <c>~A</c>
+    /// suppresses section A's so the only one left is section B's, at bar 3, mid-line, where a
+    /// SectionLabel anchors on <c>staff-bar</c> and that bar's chord sits at the same barline.
+    /// One label so <see cref="RenderedGeometry.FirstMusicMarkBaselineAboveStaff"/> measures
+    /// the one that overlaps; mid-line so that it overlaps at all. MKX is MKW with every chord
+    /// sharped — the symbols' ink tops rise and nothing else moves.
+    /// </para>
+    /// <para>
+    /// ★★ WHY A PAIR AND NOT AN ABSOLUTE, which is the same reason MKT/MKV are a pair: Lily#
+    /// BOXES its label where LilyPond draws bare text, so an absolute baseline carries a box
+    /// term that is not part of this question (MKR's entry says as much about its own
+    /// +0.542971). The IDENTITY has no box term in it — LilyPond places the label against the
+    /// ChordNames axis group's accumulated skyline, which IS the symbols, so raising the ink
+    /// raises the label by exactly the ink. MEASURED 2.26.0: MKW 7.381627, MKX 8.652725, and
+    /// the difference 1.271099 IS the chords' ink growth (6.952290 → 8.223389) to fifteen
+    /// digits. ⇒ LilyPond's difference is the ink, exactly; whatever difference Lily# shows
+    /// between the two books is its own.
+    /// </para>
+    /// <para>
+    /// ⚠️ AND THE PREDICTION IN THE PROBE HEADER WAS HALF WRONG, WHICH IS THE USEFUL HALF: it
+    /// said the gap would hold at <c>outside-staff-padding</c> 0.460000. THE GAP HOLDS — label
+    /// ink bottom over chord ink top is 0.429336 in BOTH books, to fifteen digits — but the
+    /// VALUE is 0.429336, not 0.460000, because the two overlap only partially in X and
+    /// <c>Skyline::padded</c>'s flat+45° horizon padding (0.2) puts the label's foot on the
+    /// chord's SLOPE rather than its plateau. ⇒ 0.429336 is a MEASUREMENT, not a constant to
+    /// copy (HANDOFF 5.2): the thing to port is the padded skyline distance, and this number
+    /// is what checks it.
+    /// </para>
+    /// ⚠️ Lily# <c>c'</c> is LilyPond <c>c''</c> (HANDOFF 5.5).
+    /// </remarks>
+    private static readonly string MKW = MarkOverChordScore("MKW", sharp: false);
+
+    /// <summary>The same book with every chord sharped — the mirror of book MKX.</summary>
+    /// <inheritdoc cref="MKW"/>
+    private static readonly string MKX = MarkOverChordScore("MKX", sharp: true);
+
+    /// <summary>
+    /// The overlap pair's book: one system, one label, standing on a chord. See
+    /// <see cref="MKW"/> for what the pair decides.
+    /// </summary>
+    private static string MarkOverChordScore(string name, bool sharp)
+    {
+        // ⚠️ NO `break', WHICH IS THE WHOLE POINT — the two sections share a system, so the
+        // second one's label lands mid-line on its bar's chord. MarkScore is the same book
+        // WITH the break, and reads the X-disjoint case instead.
+        // ⚠️ `~A' SUPPRESSES SECTION A's LABEL so the only mark in the book is the one that
+        // overlaps: the ledger's measure takes the FIRST mark, and a line-start label (which
+        // stands at the left edge, clear of every chord) would otherwise be it.
+        string chords = sharp ? "C# | G#" : "C | G";
+        string chords2 = sharp ? "A#m | F#" : "Am | F";
+        return $$"""
+            octave absolute
+            time 4/4
+            key c major
+
+            part melody { clef treble }
+
+            section A {
+              melody { c'4 d' e' f' | g' a' b' c'' }
+              chords harm { {{chords}} }
+            }
+
+            section B {
+              melody { c''4 b' a' g' | f' e' d' c' }
+              chords harm { {{chords2}} }
+            }
+
+            form main { ~A B }
+
+            score main "{{name}}" {
+              chords harm
+              staff melody
+            }
+            """;
+    }
 
     /// <summary>
     /// The mark pair's book: two labelled sections so every system opens with one, and a
@@ -11152,6 +11295,19 @@ internal static class LpGeometryProbes
         new("mark.chord-row.staff-to-baseline", MKR,
             g => g.FirstMusicMarkBaselineAboveStaff(), RaggedBottomPaper),
         new("mark.plain.staff-to-baseline", MKN,
+            g => g.FirstMusicMarkBaselineAboveStaff(), RaggedBottomPaper),
+
+        // ...and the arrangement BOTH of those deliberately avoid: the label standing ON a
+        // chord symbol, mid-line, with a staff under it (books MKW/MKX). Opened 2026-08-25 to
+        // decide whether Lily# should port LilyPond's lift at all, and it is the first point
+        // in the tree to put a LilyPond number on MusicMarkEngraver.ChordClearancePadding —
+        // a LILYSHARP-OWN 0.8 whose own remark says "LilyPond never produced the arrangement
+        // this constant is for". THE PAIR IS THE POINT and the absolute is not: Lily# boxes
+        // its label where LilyPond draws bare text, so only the DIFFERENCE between the two
+        // books is free of that term. See MKW's remarks.
+        new("mark.over-chord.staff-to-baseline", MKW,
+            g => g.FirstMusicMarkBaselineAboveStaff(), RaggedBottomPaper),
+        new("mark.over-chord.tall.staff-to-baseline", MKX,
             g => g.FirstMusicMarkBaselineAboveStaff(), RaggedBottomPaper),
 
         // ...and the shape BOTH of those were blind to: NO STAFF AT ALL (book BNS, mirroring
