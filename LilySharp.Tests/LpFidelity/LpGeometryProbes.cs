@@ -1978,6 +1978,21 @@ internal static class LpGeometryProbes
         /// <summary>Systems 1 and 3, the user's arrangement.</summary>
         Alternating,
 
+        /// <summary>
+        /// Systems 1 and 3, but system 3's row opens on a SPACER, so its first chord stands
+        /// one bar further right and no chord ink is under the section mark. The control
+        /// that separates "the row exists" from "row ink stands under the mark".
+        /// </summary>
+        AlternatingLate,
+
+        /// <summary>
+        /// Systems 1 and 3, but system 3's row is FOUR SPACERS: the context is still there,
+        /// still prints on system 1, and has NO INK AT ALL where the section mark stands.
+        /// The control that separates the row's INK from Lily#'s nominal band — see
+        /// <see cref="ROWMZ"/>.
+        /// </summary>
+        AlternatingEmpty,
+
         /// <summary>All three — the control that isolates the alternation.</summary>
         Every,
     }
@@ -1989,6 +2004,23 @@ internal static class LpGeometryProbes
         string chords = string.Concat(Enumerable.Repeat("C | ", 4)).Trim();
         string outer = rows == Rows.None ? "" : $"\n  chords prog {{ {chords} }}";
         string middle = rows == Rows.Every ? outer : "";
+        // ⚠️ THE LAST SECTION IS ITS OWN STRING, and only Rows.AlternatingLate uses it. `s` in
+        // a chord row is a SPACER -- it takes one slot of the bar's grid and prints nothing
+        // (Parser.Sections' chord-row entry arm) -- so this row fills the same four bars with
+        // one fewer chord, its first standing one bar further right. That is the whole
+        // variable ROWMX exists to move; see ROWM's remark for what it decides.
+        string late = string.Concat(Enumerable.Repeat("C | ", 3)).Trim();
+        // ...and Rows.AlternatingEmpty takes the same slot to the other extreme: FOUR spacers,
+        // so the row occupies the same four bars with no symbol anywhere in them. The two
+        // together bracket the ink — AlternatingLate moves it, AlternatingEmpty removes it —
+        // which is what makes "charged for the ink" and "charged for the line" separable.
+        string empty = string.Concat(Enumerable.Repeat("s | ", 4)).Trim();
+        string last = rows switch
+        {
+            Rows.AlternatingLate => $"\n  chords prog {{ s | {late} }}",
+            Rows.AlternatingEmpty => $"\n  chords prog {{ {empty} }}",
+            _ => outer,
+        };
         return $$"""
             octave absolute
             time 4/4
@@ -2012,7 +2044,7 @@ internal static class LpGeometryProbes
             section C {
               melody { {{bars}} }
               lower { {{bars}} }
-              lyrics one sings melody { {{syllables}} }{{outer}}
+              lyrics one sings melody { {{syllables}} }{{last}}
             }
 
             form main { {{(marks ? "A B C" : "~A ~B ~C")}} }
@@ -2085,6 +2117,97 @@ internal static class LpGeometryProbes
     /// <inheritdoc cref="ROWM"/>
     private static readonly string ROWMA =
         ChordRowAlternatingScore("ROWMA", Rows.Every, marks: true);
+
+    /// <summary>
+    /// ROWM WITH SYSTEM 3's FIRST CHORD MOVED ONE BAR RIGHT — the control that says whether
+    /// LilyPond is charging for the row's EXISTENCE or for its INK UNDER THE MARK.
+    /// </summary>
+    /// <remarks>
+    /// ROWM's gap 2 is 12.563793 and ROWMN's is 12.000000, so on a marked pair LilyPond pays
+    /// the chord row 0.563793. ⚠️ THAT SENTENCE IS AMBIGUOUS and ROWM cannot disambiguate it:
+    /// its mark spans x [3.365000, 6.083424] and its first chord x [5.800000, 7.677882], so
+    /// they OVERLAP, and "the row exists" and "row ink stands under the mark" predict the
+    /// same number. ROWMX moves that one variable — same four bars, same mark, one fewer
+    /// chord standing one bar further right.
+    /// <para>
+    /// ★★★ MEASURED ON 2.26.0, 2026-08-26, gap 2 = system 2 → 3, staff refpoint to staff
+    /// refpoint (probes ROWMN / ROWM / ROWMX / ROWMY):
+    /// <code>
+    ///   ROWMN   no row at all                      12.000000
+    ///   ROWM    row, first chord under the mark     12.563793
+    ///   ROWMX   row, first chord one bar later      12.000000
+    ///   ROWMY   row, all four chords shoved right   12.000000   (every gap in the book)
+    /// </code>
+    /// ⇒ THE ROW'S EXISTENCE COSTS LILYPOND NOTHING. ROWMY holds the chord COUNT at four
+    /// while moving them, so "three chords instead of four" cannot account for ROWMX either.
+    /// ⚠️ ROWMY is in page-vertical.ly and has NO ledger entry: it needs a per-grob X-offset
+    /// override that Lily#'s language cannot spell, so it has no mirror here.
+    /// </para>
+    /// <para>
+    /// ★★★ AND THE MECHANISM IS IN THE GROB DUMP TO SIX DIGITS. Ink above the third system's
+    /// top staff refpoint: ROWMN's mark [2.850000, 5.638444]; ROWMX's mark [2.850000,
+    /// 5.638444] with its chord [3.000000, 4.998884] out at x 30.357916; ROWM's mark LIFTED
+    /// to [5.458884, 8.247328] with its chord [3.000000, 4.998884] at x 5.800000. The chord's
+    /// own band never moves. ⇒ THE MARK IS LIFTED ONLY WHERE THE TWO OVERLAP IN X, and its
+    /// bottom then sits at the chord's ink top + 0.460000 EXACTLY. ⇒ SO WHAT LILYPOND CHARGES
+    /// THE PAGE IS THE MARK'S NEW HEIGHT, NOT THE ROW. That is also why gap 1 is exact in
+    /// every book of the family: the first system is indented, so its mark stands at
+    /// x [11.900827, 14.619250], clear of a first chord at x 17.120827.
+    /// </para>
+    /// <para>
+    /// ⇒ WHAT THIS ASKS OF THE PORT, and it is narrower than "give the row an ink profile":
+    /// the row's ink must reach the MARK's placement — the walk that decides how far the mark
+    /// is pushed up — X-AWARE, so that a row whose chords stand elsewhere pushes nothing.
+    /// Charging a nominal band (<c>MultiStaffLayouter.TextRowHeight</c>) cannot express
+    /// "elsewhere", which is why Lily# reads the same number for ROWM and ROWMA and — the
+    /// falsifier this entry exists to arm — must be expected to read it for ROWMX too until
+    /// the walk is X-aware.
+    /// </para>
+    /// </remarks>
+    private static readonly string ROWMX =
+        ChordRowAlternatingScore("ROWMX", Rows.AlternatingLate, marks: true);
+
+    /// <summary>
+    /// ROWM WITH SYSTEM 3's ROW EMPTIED — four spacers where its four chords were, and the
+    /// reading that separates the row's INK from Lily#'s nominal band.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// WHY IT IS NEEDED ON TOP OF ROWMX. ROWMX moves the row's ink sideways and ROWMY moves
+    /// it further; both say "ink away from the mark costs LilyPond nothing". Neither REMOVES
+    /// it, so neither can tell "charged only for ink under the mark" apart from "charged for
+    /// the row's presence, and ROWMX simply moved most of it away". ROWMZ removes it while
+    /// holding the context, the paper, the break, the three marks and the 48 syllables.
+    /// </para>
+    /// <para>
+    /// ★★★ AND IT IS THE ONLY BOOK IN THE TREE THAT CAN SEE
+    /// <c>MultiStaffLayouter.TextRowHeight</c>. MEASURED IN LILY# 2026-08-25 — gap 2 by the
+    /// spelling of system 3's row, everything else held:
+    /// <code>
+    ///   row absent from the score entirely   12.241073   (= ROWMN: the mark's own 0.241073)
+    ///   row present, four spacers            14.741073   (+2.500000 EXACTLY)
+    ///   row present, four chords             16.188166   (+3.947093 = its step 3.047093 + 0.9)
+    ///   row present, four TALLER chords      17.211417   (+4.970344 = its step 4.070344 + 0.9)
+    /// </code>
+    /// ⇒ Lily# charges an EMPTY row exactly 2.500000, which is that LILYSHARP-OWN constant,
+    /// and had no observer anywhere in the corpus until this entry (its sibling
+    /// <c>TextRowVerseSpacing</c> still says so in its own remark). The three inked readings
+    /// differ by exactly the ink, so the charge is max(nominal band, the row's own step) —
+    /// and it is X-BLIND, which is what ROWMX proves on the Lily# side by reading the same
+    /// 16.188166 as ROWM.
+    /// </para>
+    /// <para>
+    /// ⚠️ AND THE CHARGE IS NOT THE MARK'S: the drawn mark stands 4.701073 above its own
+    /// staff in ALL of those books, unmoved to the sixth digit, including the taller-symbol
+    /// one whose row ink grew by 1.023251. What moves is the SYSTEM. Two more readings from
+    /// the same sweep, and both are load-bearing: with no mark anywhere every one of those
+    /// four books reads a flat 12.000000, so the row alone costs Lily# nothing EITHER — the
+    /// two ingredients are non-additive; and gap 1 reads 12.000000 in every book of the
+    /// family while gaps 2..n are all charged, in a four- and a five-system book as well.
+    /// </para>
+    /// </remarks>
+    private static readonly string ROWMZ =
+        ChordRowAlternatingScore("ROWMZ", Rows.AlternatingEmpty, marks: true);
 
     /// <summary>
     /// LYRB WITH A CHORD ROW ADDED — the mirror of book LYRCH, and the control for the last
@@ -10823,6 +10946,33 @@ internal static class LpGeometryProbes
         new("lyrics.chord-row.marked.staves-on-first-page", ROWM,
             g => g.StavesOnPage(0), FourSystemsPerPageRagged),
         new("lyrics.chord-row.marked.every-system.staves-on-first-page", ROWMA,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+
+        // ★★★ THE CONTROL THAT NAMES THE MECHANISM — ROWM with system 3's first chord one bar
+        // to the right, so the row is still there and no chord ink is under the mark.
+        // LilyPond drops straight back to 12.000000, i.e. it never charged for the ROW; it
+        // charged for a MARK it had to lift. See ROWMX's remark for the four-book table and
+        // for what it asks of the port.
+        // ⚠️ GAP 1 IS CARRIED FOR THE SAME REASON AS THE REST OF THE FAMILY: it is exact in
+        // both engines because the first system is indented, and an entry that is exact for a
+        // reason both engines share is what keeps a fix from being read as a per-score one.
+        new("lyrics.chord-row.marked.late-chord.gap-first", ROWMX,
+            g => g.StaffGapAt(1), FourSystemsPerPageRagged),
+        new("lyrics.chord-row.marked.late-chord.gap-second", ROWMX,
+            g => g.StaffGapAt(3), FourSystemsPerPageRagged),
+        new("lyrics.chord-row.marked.late-chord.staves-on-first-page", ROWMX,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+
+        // THE SAME BOOK WITH SYSTEM 3's ROW EMPTIED (ROWMZ) — the third jaw. ROWMX moved the
+        // row's ink; this one removes it, so between them they say whether LilyPond charges
+        // for the ink or for the line. On the Lily# side it is the ONLY reading that can see
+        // MultiStaffLayouter.TextRowHeight: an empty row costs exactly 2.500000 here and that
+        // constant had no observer in the corpus before. See ROWMZ's remark for the sweep.
+        new("lyrics.chord-row.marked.empty-row.gap-first", ROWMZ,
+            g => g.StaffGapAt(1), FourSystemsPerPageRagged),
+        new("lyrics.chord-row.marked.empty-row.gap-second", ROWMZ,
+            g => g.StaffGapAt(3), FourSystemsPerPageRagged),
+        new("lyrics.chord-row.marked.empty-row.staves-on-first-page", ROWMZ,
             g => g.StavesOnPage(0), FourSystemsPerPageRagged),
 
         // THE OSSIA HALF, chain reading only — the inside distance is not like-for-like

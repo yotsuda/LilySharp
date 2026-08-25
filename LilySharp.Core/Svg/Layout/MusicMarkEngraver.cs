@@ -653,17 +653,25 @@ internal static class MusicMarkEngraver
             // 0.900000 over the chord row's ink where LilyPond puts it at 0.460000 (probe
             // mark-chord-row.ly book MKT), the last 0.440000 of a gap that was 1.960000
             // before the phantom clef went (OutsideStaffStacker.SeedClefInk).
-            // ⚠️ ⚠️ NOT CLOSED HERE, AND THE OBVIOUS CLOSE OVERSHOOTS. Dropping the base to
-            // the row's band top and letting the pass place it reads 0.160000 -- 0.300000
-            // too CLOSE -- because the pass's own idea of where the row's ink is, is low by
-            // about that much: OutsideStaffStacker.AboveTrackers raises a staff's profile by
-            // `topUp - StaffBottom / 2.0', the NOMINAL half staff, while a TEXT ROW's profile
-            // is about its TEXT BASELINE (MultiStaffLayouter merges RowSkylines saying so).
-            // The same fold this session took out of the grid meter, one layer down.
-            // => It needs the row's own refpoint at that seam, and StaffLayout does not carry
-            // it (no IsTextRow, no baseline) -- a model change, not a constant. Left measured
-            // rather than half-closed: 0.440000 too far never overprints, 0.300000 too close
-            // can.
+            // ⚠️ ⚠️ NOT CLOSED HERE -- BUT THE REASON IT GIVES FOR NOT CLOSING IT EXPIRED 35
+            // MINUTES AFTER IT WAS WRITTEN, and the sentence stood for a session and a half.
+            // It said the obvious close overshoots by 0.300000 because
+            // OutsideStaffStacker.AboveTrackers folds `topUp - StaffBottom / 2.0', the NOMINAL
+            // half staff, and that "StaffLayout does not carry the row's refpoint (no
+            // IsTextRow, no baseline) -- a model change, not a constant". BOTH HALVES ARE NOW
+            // FALSE: 8d6b7978 made that exact model change (a placed StaffLayout carries
+            // RefpointBelowTop and AboveTrackers folds it) in the commit right after 8ba98bfa,
+            // which is this comment's. HANDOFF 5.1: a note whose reason lives in ANOTHER
+            // island turns into a lie the day that island is fixed, and the fixing commit is
+            // where it must be re-read.
+            // ⇒ WHAT IS ACTUALLY IN THE WAY, measured 2026-08-25 (session 251): the tracker is
+            // keyed per (system, STAFF) and an independent chord row is its OWN staff index,
+            // so the mark -- anchored to a staff -- never meets the row's profile whatever
+            // frame that profile is folded into. On the ROWM family this shows as a mark that
+            // is drawn 4.701073 above its staff in EVERY book of the sweep, unmoved to the
+            // sixth digit even when the row's ink grows by 1.023251 under it. Ledger
+            // lyrics.chord-row.marked.empty-row.* carries the sweep and the LilyPond side.
+            // The 0.440000 measured above stands; only the diagnosis under it was wrong.
             if (hasVoltaOverlap)
             {
                 // Place marks above the volta bracket with outside-staff padding.

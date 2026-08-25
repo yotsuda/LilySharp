@@ -128,7 +128,18 @@
                                     ;; horizontal room, so "before the clef" does not by itself
                                     ;; say they are disjoint. X is printed as the grob's own
                                     ;; span about the SYSTEM, ready to intersect.
-                                    (if (or (eq? nm 'BarNumber) (eq? nm 'Clef))
+                                    ;;
+                                    ;; RehearsalMark and ChordName ride along for the SAME
+                                    ;; reason and it is not decoration: books ROWM / ROWMX /
+                                    ;; ROWMY turn on whether a mark and a chord overlap in X,
+                                    ;; and until these two names were here NO run of this file
+                                    ;; printed either of them -- the mark is not a
+                                    ;; VerticalAxisGroup, so the VAG lines cannot show it, and
+                                    ;; the SYS line only carries the system's total ink. A
+                                    ;; session read the difference off the system ORIGIN
+                                    ;; instead and got two terms that are not quantities (see
+                                    ;; ROWMX's header). Print the grobs.
+                                    (if (memq nm '(BarNumber Clef RehearsalMark ChordName))
                                         (format #t "PROBEV GROB ~a ~a name=~a rel=~a ext=(~a . ~a) x=(~a . ~a)\n"
                                                 n i nm
                                                 (ly:grob-relative-coordinate g sg Y)
@@ -3313,6 +3324,148 @@ probeTag =
   \score {
     <<
       \new ChordNames { \chordmode { \repeat unfold 12 { c1 } } }
+      \new Staff \with { instrumentName = "Melody" } { \new Voice = "mel" {
+        \mark \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
+        \mark \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break
+        \mark \markup \box "C" \repeat unfold 4 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 48 { no } }
+      \new Staff \with { instrumentName = "Lower" } {
+        \repeat unfold 12 { g'4 a' g' a' } }
+    >>
+    \layout { indent = 15\mm }
+  }
+}
+
+%% ROWMX / ROWMY -- THE TWO CONTROLS THAT SAY WHAT LILYPOND IS ACTUALLY CHARGING FOR, and
+%%     the reading that turns ROWM's 0.563793 from a number into a mechanism.
+%%
+%%     ROWM's gap 2 is 12.563793 and ROWMN's is 12.000000, so the chord row costs 0.563793 on
+%%     a marked pair.  ⚠️ THAT SENTENCE IS STILL AMBIGUOUS: "the row" can mean the row
+%%     EXISTS, or it can mean ink OF THE ROW STANDS UNDER THE MARK.  ROWM cannot tell the two
+%%     apart -- its mark spans x [3.365000, 6.083424] and its first chord spans
+%%     x [5.800000, 7.677882], so they overlap and BOTH readings predict the same number.
+%%
+%%     ROWMX keeps the row and moves its first chord one bar later: the third system's row is
+%%     `s c c c`, and nothing else changes.  ROWMY keeps all four chords and shoves them 40 ss
+%%     to the right.  Between them they vary x with the row held, and x with the CHORD COUNT
+%%     held as well.
+%%
+%%     MEASURED 2.26.0 on 2026-08-26 -- gap 2 = system 2 -> 3, staff refpoint to staff refpoint:
+%%       ROWMN   no row at all                        12.000000
+%%       ROWM    row, first chord under the mark      12.563793
+%%       ROWMX   row, first chord one bar later       12.000000
+%%       ROWMY   row, all four chords shoved right    12.000000   (every gap in the book)
+%%     => THE ROW'S EXISTENCE COSTS NOTHING.  Only ink standing under the mark costs anything,
+%%     and ROWMY holds the count at four while moving it, so "three chords instead of four"
+%%     cannot account for ROWMX either.
+%%
+%%     AND THE MECHANISM IS IN THE GROB DUMP, to six digits.  Ink above the THIRD system's top
+%%     staff refpoint:
+%%       ROWMN   mark [2.850000, 5.638444]                                    -- nothing above it
+%%       ROWMX   mark [2.850000, 5.638444]   chord [3.000000, 4.998884] at x 30.357916
+%%       ROWM    mark [5.458884, 8.247328]   chord [3.000000, 4.998884] at x  5.800000
+%%     => THE MARK IS LIFTED ONLY WHEN THE TWO OVERLAP IN X, and its bottom then sits at the
+%%     chord's ink top + 0.460000 EXACTLY (5.458884 - 4.998884).  The chord's own band never
+%%     moves -- [3.000000, 4.998884] in every book that has one, ROWM included.
+%%     => SO LILYPOND IS CHARGING THE PAGE FOR THE MARK'S NEW HEIGHT, NOT FOR THE ROW.  The
+%%     first system is exempt for the same reason in every book here: it is indented, so the
+%%     mark stands at x [11.900827, 14.619250], clear of a first chord at x 17.120827.
+%%
+%%     ⚠️ AND THIS IS WHY A TERM-BY-TERM COMPARISON AGAINST THE SYSTEM ORIGIN CANNOT CLOSE.
+%%     The origin is not a geometric feature of the printed system: it is the
+%%     VerticalAlignment's own zero, i.e. where the alignment's FIRST element sat BEFORE
+%%     Page_layout_problem re-spaced the staves and distribute_loose_lines re-placed the loose
+%%     ones.  PROOF, from this file's own dump: across ROWMN's three systems, which are the
+%%     same shape, the origin stands 5.594098 / 5.555286 / 5.638444 above the top staff --
+%%     three numbers for one shape -- and it reads EXACTLY 0.000000 on the one element the
+%%     spacer cannot move, ROWM's system 2, whose first alignment element is an EMPTY
+%%     ChordNames VerticalAxisGroup.  => NOTHING MAY BE PORTED TO IT.  Every gap in this file
+%%     is staff refpoint to staff refpoint, which is origin-free, and those close exactly.
+%%
+%%     ⚠️ ROWMY CARRIES NO LEDGER ENTRY and ROWMX carries three.  ROWMY needs a per-grob
+%%     X-offset override, for which Lily#'s language has no spelling, so there is no mirror to
+%%     measure it against; and the override widens the score enough that LilyPond breaks it
+%%     into FOUR systems rather than three, so its gaps are not index-comparable with the rest
+%%     of the family.  It is carried because it is the reading that holds the chord COUNT
+%%     fixed, which ROWMX alone cannot do, and because deleting it would leave only prose
+%%     saying so (HANDOFF 5.2.1 (4)).
+\book {
+  \probeTag "ROWMX"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new ChordNames { \chordmode {
+        \repeat unfold 4 { c1 } \repeat unfold 5 { s1 } \repeat unfold 3 { c1 } } }
+      \new Staff \with { instrumentName = "Melody" } { \new Voice = "mel" {
+        \mark \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
+        \mark \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break
+        \mark \markup \box "C" \repeat unfold 4 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 48 { no } }
+      \new Staff \with { instrumentName = "Lower" } {
+        \repeat unfold 12 { g'4 a' g' a' } }
+    >>
+    \layout { indent = 15\mm }
+  }
+}
+
+%% ROWMY -- the same book with all four chords shoved right instead.  See ROWMX above.
+\book {
+  \probeTag "ROWMY"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new ChordNames \with { \override ChordName.X-offset = #40 } { \chordmode {
+        \repeat unfold 4 { c1 } \repeat unfold 4 { s1 } \repeat unfold 4 { c1 } } }
+      \new Staff \with { instrumentName = "Melody" } { \new Voice = "mel" {
+        \mark \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
+        \mark \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break
+        \mark \markup \box "C" \repeat unfold 4 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 48 { no } }
+      \new Staff \with { instrumentName = "Lower" } {
+        \repeat unfold 12 { g'4 a' g' a' } }
+    >>
+    \layout { indent = 15\mm }
+  }
+}
+
+%% ROWMZ -- THE ROW WITH NOTHING IN IT ON THE MARKED SYSTEM, and the reading that separates
+%%     Lily#'s NOMINAL BAND from the row's ink.  ROWM with one variable moved: the third
+%%     system's four chords are replaced by four spacers, so the ChordNames context still
+%%     exists, still prints on system 1, and has NO INK AT ALL where the mark stands.
+%%
+%%     WHY IT IS NEEDED.  ROWMX moved the row's ink sideways and ROWMY moved it further; both
+%%     say "ink away from the mark costs nothing".  Neither of them removes the ink, so
+%%     neither can tell "LilyPond charges only for ink under the mark" apart from "LilyPond
+%%     charges for the row's WIDTH-weighted presence and ROWMX simply moved most of it away".
+%%     ROWMZ removes it, holding the context, the paper, the break, the marks and the lyrics.
+%%
+%%     ⚠️ AND IT IS THE ONLY BOOK IN THE TREE THAT CAN SEE Lily#'s TextRowHeight.  Measured in
+%%     Lily# 2026-08-25 (this session), gap 2 by spelling of the third system's row:
+%%       row absent from the score entirely     12.241073   (= ROWMN, the mark's own 0.241073)
+%%       row present, four spacers               14.741073   (+2.500000 exactly)
+%%       row present, four chords                16.188166   (+3.947093)
+%%       row present, four TALLER chords         17.211417   (+4.970344)
+%%     => Lily# charges an EMPTY row exactly 2.500000, which is
+%%     MultiStaffLayouter.TextRowHeight, a LILYSHARP-OWN constant that until now had no
+%%     observer anywhere in the corpus (its sibling TextRowVerseSpacing says as much in its
+%%     own remark).  The three inked readings differ by exactly the ink, so the charge is
+%%     max(nominal band, the row's own step) -- and it is X-BLIND, which is what ROWMX proves
+%%     on the Lily# side by reading the same 16.188166 as ROWM.
+%%
+%%     ★ PREDICTION FOR LILYPOND, written before running (HANDOFF 5.0): 12.000000 on gap 2,
+%%     the same as ROWMX and ROWMY and ROWMN.  The reasoning is the mechanism ROWMX's header
+%%     established -- LilyPond charges the page for the MARK'S lifted height and lifts the
+%%     mark only where the two overlap in X -- and an empty row has no ink to lift it with.
+%%     ⚠️ FALSIFIER, and it is a real one: if LilyPond reads MORE than 12.000000 here, then a
+%%     declared-but-empty ChordNames line does cost the page something, "the row's existence
+%%     costs nothing" is wrong, and ROWMX's 12.000000 stops being readable as an X statement.
+\book {
+  \probeTag "ROWMZ"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new ChordNames { \chordmode {
+        \repeat unfold 4 { c1 } \repeat unfold 8 { s1 } } }
       \new Staff \with { instrumentName = "Melody" } { \new Voice = "mel" {
         \mark \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
         \mark \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break

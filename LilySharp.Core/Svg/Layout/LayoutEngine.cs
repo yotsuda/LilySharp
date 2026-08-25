@@ -2520,11 +2520,31 @@ internal sealed class LayoutEngine
                 return;
             BuilderAt(s).AddMarkBox(x0, x1, bottom, top);
         }
+        // Y-up from the system's ORIGIN down to the top line of the staff a score-context
+        // grob resolves to — the step between the frame such a grob's YUp is stored in and
+        // the frame this skyline is in. Zero for every system whose first element is a
+        // staff, which is why the two frames read alike everywhere else.
+        // ⚠️ THE SAME RESOLUTION THE DRAW MAKES, and for the same reason: the `-1` sentinel
+        // on a score-context layout means THE TOP STAFF, and left unresolved it falls
+        // through StaffOffsetInSystemUp's `staffIndex >= 0` guard to 0 — the system top,
+        // which is a staff's top line only while the system opens on a staff. See
+        // SharedRenderer.DrawMusicMarks, which closed the drawing half of this in session
+        // 243 after a user report: with a chords row leading, the mark was DRAWN a whole
+        // row band above the line its room had been reserved on.
+        double ScoreGrobStaffTopUp(int s, int staffIndex)
+            => LayoutUtilities.StaffOffsetInSystemUp(
+                systems[s], LayoutUtilities.ResolveScoreGrobStaff(systems[s], staffIndex));
         if (!musicMarks.IsDefaultOrEmpty)
         {
             foreach (var m in musicMarks)
             {
                 if (MusicMarkItem.IsSpannerHandled(m.MarkType))
+                    continue;
+                // The system this mark's box will be merged into — resolved HERE rather than
+                // only inside AddMarkBox because the box's own vertical frame is that
+                // system's. A mark on another page has none, and AddMarkBox would drop it.
+                if (!measureToSystem.TryGetValue(m.MeasureIndex, out int ms)
+                    || ms >= systems.Length)
                     continue;
                 // Same vertical envelope Enrich uses; the WIDTH is the mark's own extent,
                 // read from the one home — MusicMarkEngraver.MarkXExtent, which answers per
@@ -2553,8 +2573,20 @@ internal sealed class LayoutEngine
                 // The margin is the SILHOUETTE's, not the ink's, so it is added here and not
                 // in the one home — and symbols keep going without it, exactly as before.
                 double margin = m.IsSymbol ? 0.0 : MarkSilhouetteMargin;
-                // YUp is Y-up; the skyline is Y-up too. Translate to the top staff's frame.
-                double mY = m.YUp - 2.0;
+                // YUp is Y-up above the RESOLVED STAFF'S MIDDLE; the skyline is Y-up from
+                // the SYSTEM ORIGIN. Two steps, not one: down to that staff's top line
+                // (ScoreGrobStaffTopUp) and the half staff from the top line to the middle.
+                // ⚠️ THE SECOND STEP ALONE WAS THE WHOLE TRANSLATION UNTIL 2026-08-25, and
+                // it is right exactly when the first step is 0 — i.e. when the system opens
+                // on a staff. A chords or lyrics row leading the system moves the origin
+                // above the staff, and the mark's box floated up with it: MEASURED on
+                // audit/lp-geometry's ROWM family, where m.YUp is 5.601073 in all four
+                // books and the box's top read 5.701073 in all four while the origin sat
+                // 2.000000 / 4.500000 / 5.947093 above the staff's reference point. The
+                // inter-system gap is then max(basic, … + upMax + originToFirstStaff + …),
+                // so the row's whole band was charged to the mark on EVERY x — 12.241073
+                // with no row against 16.188166 with one (lyrics.chord-row.marked.*).
+                double mY = ScoreGrobStaffTopUp(ms, m.StaffIndex) + m.YUp - 2.0;
                 AddMarkBox(m.MeasureIndex, mx0 - margin, mx1 + margin, mY + 2.1, mY - 0.7);
             }
         }
