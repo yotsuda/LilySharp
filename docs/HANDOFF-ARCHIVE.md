@@ -18,6 +18,52 @@
 
 ---
 
+## 以下は第255セッションの経緯
+最終更新 第255セッション＝**ユーザーが画面で見ていた「タイトルと和音行の重なり」は、第1システムのばねの床が*枠の違う 4 つの量*を混ぜていたこと。移植は LP の `build_system_skyline` の締めの 2 行。** ⚠️ ★★★ **LP は全要素のインクを自分の dy で merge したあと `up->raise (-first_spaceable_dy)` で「最初の spaceable な五線」基準に置き直す**（page-layout-problem.cc:1093-1122）。**Lily# はこの raise を 1 度もしていなかった**——`PageLayouter` は原点基準の extent に**五線の半幅**を足しており、その札には「lead sheet の chord row はもう extent の中に在る」と書いてあった。**偽**。⚠️ **台帳 628／exact 517 不動・1 点も動かず／snapshot 222→222（再ベース 2 枚）／追跡コーパス**絵が動いた本 2 / 81**／6166→6169（＋3 は新しい網）。suite 6165 合格・0 失敗・4 skip（Windows Release 実測）。Core 0 警告。**
+
+**① ★★★ 混ざっていた 4 つの枠。**「原点（＝最上段要素の帯の上端）基準」と「五線基準」が 1 つの `Math.Max` で出会っていた:
+```
+PageLayouter:405 / LayoutEngine x2   原点基準の extent に HalfFirst（五線の半幅）を加算
+AugmentExtentsWithLooseLines         EstimateAboveStaffExtents の定数（section label 3.5・
+                                     rehearsal 3.0・volta 2.0）は*五線*基準なのに原点基準の max へ
+EnrichExtentsWithAnnotationProtrusions  「五線の中央線は device 2.0」と直書き
+SkylineBuilder.BuildSystemSkylines   テキスト行のインクを silhouette に 1 つも入れていない
+                                     ＋ CalculateUpExtent が Math.Max(0, ...) で切り上げ
+```
+⇒ **報告された本では、五線の上に 27.782041 積まれているのに 2.000000 しか予約していなかった。**
+
+**② ★★ 「帯」と「インク」は別物で、値段は 0.992749629。** 和音行は `RefpointBelowTop = 2.900000` の帯に置かれるが、インクは baseline の上 1.907250371 までしか届かない。**枠だけ直すとこの空いた上端を page に請求する**（実測）。⇒ ★★★ **枠の修正とインクの移植は*同時に入れないと両方外れる*** ——片方だけだと過剰予約、もう片方だけだと過少予約。1 commit にした理由。
+
+**③ ★★★ LP 2.26.0 実測が判定した**（回帰コーパスの LP 原本を直接レンダリング。五線の**上端線**の紙上端からの距離）:
+```
+                             LP 2.26.0    旧          新
+chord-names-rests             9.6906      9.69        9.69     （0.000 → 0.000）
+chord-names-bass             12.0719      9.69       12.05     （-2.381 → -0.022）
+chord-names-in-grand-staff   10.0927      9.69       10.10     （-0.403 → +0.007）
+```
+⚠️ **旧の 9.69 は「たまたま exact」だった**——`chord-names-rests` は LP 側で床が binding しない（basic-distance 6 が勝つ）ので、床がいくら間違っていても正しい絵が出る。**床が binding する本（bass）だけが -2.381 を見せた。**
+
+**④ ★★ 再ベースした snapshot 2 枚はどちらも*修正*。** `test/chords-attached` の和音行のインクは**上マージンに 2.31 食い込んで**いた。修正後は上マージンの `padding 1` ちょうど下＝LP の `up_skyline.distance(bottom_skyline_) + padding` に一致。
+
+**⑤ ★★ 網は `LeadSheetHeaderClearanceTests`。毒（Core だけ revert）で `ChordRowAboveTheStaff_IsSpacedBelowTheHeader` が赤**になることを確認済み。⚠️ **歌詞側の腕は master でも緑**——報告本ではタイトルに届いていたのは*和音行だけ*だったので、これは再現ではなく guard。**網自身にそう書いてある。**
+
+**⑥ ★★★ 同じ便で台帳点を起票した（628→632・Core は 1 バイトも触っていない）。** 対は **CHR1 / CHR2＝一語だけ違う本**（chords が `c1` 対 `cis1:m`）で、**床が binding する／しない境界をまたぐ**ように置いた（§5.0 の「regime で切り替わる量は切り替わりの両側に点を置け」）。
+```
+                                        LilyPond      Lily#            residual
+page.chord-row.first-staff-refpoint     11.690551     11.691986575     +0.001435575
+page.chord-row.sharp....-refpoint       13.368940     13.368940283     +0.000000283
+両方の staves-on-first-page                     4     4                 0
+```
+⇒ ★★★ **床が binding する側は 9 桁一致＝top spring の*算術*は閉じた。** 残る +0.0014 は**インク**の側で、**Lily# の和音記号の予約インクが 0.002552 高い**（LP 4.998884 対 Lily# 5.001436）。**この 0.0026 は他のどの本でも見えない**——**この本が境界から 0.001116 しか離れていないから読める**。**対を境界の*横*ではなく*上*に置いた設計が、そのまま測定分解能になっている。**
+
+⇒ ★★ **予測は片方当たり、片方外れた（§5.0 の収穫）。** 「CHR2 は binding する」は当たり、**値 12.007017 は 1.361923 外した**。理由: **変化記号はインクの*両端*を動かす**（LP dump: CHR1 `[3.000000, 4.998884]` 対 CHR2 `[3.500000, 6.678389]`）。**loose line は自分の*下端*から spacing されるので、行そのものが 1.393333 押し上がる**（ChordName baseline 3.060184 → 4.453517）**あとで**上端の伸びが top spring に届く。⇒ **stencil の片端だけ読んだ予測は、動かない grob についての予測。**
+
+⇒ ★★★ **次の一手＝その 0.002552。** 和音記号 1 個の予約インクの高さで、**行の baseline 置き（`nonstaff-relatedstaff-spacing`）と ascent のどちらに乗っているかはまだ分けていない**。分けるには **CHR1 の ChordName baseline（LP 3.060184）を読む点**をもう 1 つ開くのが安い（`staff refpoint -> ChordName baseline` は同じ dump に既に出ている）。
+
+⇒ **意図的に触っていない残債 2 つ**: ⑴ `EstimateAboveStaffExtents` の定数（3.5 / 3.0 / 2.0）は**枠は直したが値は未移植**——その関数自身の remark が「観測者が居ないから立っている」と書いており、**その観測者が ⑥ で立った**（`page.chord-row.*`）。⑵ **page BREAKER は nominal refpoint extent のまま**（台帳 `page.tab-only.first-staff-refpoint` の (b)）。
+
+---
+
 ## 以下は第254セッションの経緯
 最終更新 第254セッション＝**名指された「次の一手」は前提を測ったら半分崩れ、真因はもっと上流だった——そして同じ便で移植まで届いた。** ⚠️ ★★★ **1.271099 は標の腕のものではなく、和音記号*自身のインク***。**Lily# は変化記号を*文字* U+266F / U+266D で綴り、`TextRole.ChordName` が解決する TeX Gyre Heros はどちらのグリフも持たない**——**両方とも ink (0,0)・advance 1.297445669＝`U+FFFD` と同じ .notdef 箱。どの skyline にも入らず、絵に出ていたグリフは*プラットフォームのフォールバック*が描いていた。** ⚠️ ★★★ **LP は和音名に変化記号の*文字*を 1 つも置かない**（`scm/chord-name.scm:80-95`）——**Emmentaler のグリフを 1 段小さく `magstep×0.6`（フラット族は 0.3）持ち上げ、narrow の前に 0.094725 のカーン**。**`ChordNameGlyphRun` として移植し、2.26.0 と全分岐 15 桁一致。** ⚠️ **台帳 628／exact 517／count 124・非ゼロ 2／snapshot 222／追跡コーパス 572 不動。総和 20.898284626→21.16847428／非ゼロ 138 不動。6161→6162（＋1 は網）。絵が動いた本 1 / 81・snapshot 再ベース 3 枚。**
 

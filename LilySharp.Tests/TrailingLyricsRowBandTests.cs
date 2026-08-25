@@ -36,13 +36,21 @@ namespace LilySharp.Tests;
 /// system whose bottom element is one seeds neither its ink nor a staff symbol into the down
 /// silhouette — the profile stops at the TOP staff. The row's own band stood in for that
 /// through <c>LayoutEngine.LyricReservationBelowSystem</c> → <c>AddLyricBand</c> (2026-08-20)
-/// — but that reservation returns null exactly when <c>SystemAlignment.UnmodelledRow</c> is
-/// set, and a CHORDS row standing between the staff and the lyrics row sets it. Nothing
+/// — but that reservation returned null exactly when <c>SystemAlignment.UnmodelledRow</c> was
+/// set, and a CHORDS row standing between the staff and the lyrics row set it. Nothing
 /// seeded the edge and nothing stood in for it, so the whole lower body of the system was
 /// invisible to the page: on the reported book a body of 16.699 was priced at
 /// <c>Distance()</c> 11.0 or less, the 12.000 basic distance won, and the second verse was
 /// drawn 0.400 INSIDE the next system's top staff line (user report, session 243,
 /// <c>scratch/ベースタブLy/Untitled-6.lys</c>).
+/// </para>
+/// <para>
+/// ★ THE FLAG IS GONE (2026-08-26) AND SO IS THE BAND THAT STOOD IN FOR IT: a chords row is
+/// an element of its run like any other non-spaceable line, so what the page reserves is the
+/// run's walked INK — <c>LayoutEngine.RunBelowAnchor</c>, the same list the chain solves.
+/// What this class guards is therefore no longer "the band is reserved for" but the property
+/// underneath it, which outlives either model: the row's ink never reaches the next system,
+/// and it is priced rather than free.
 /// </para>
 /// <para>
 /// ⚠️ THE ROW ORDER IS THE WHOLE QUESTION, and that is not arbitrary: a bound lyrics row
@@ -67,11 +75,10 @@ public class TrailingLyricsRowBandTests
     private static string Book(int verses, string rows)
     {
         string b = verses == 1
-            ? "twelve thir- teen | four- teen fif- teen |"
-            : """
-              [~1. twelve thir- teen | four- teen fif- teen |]
-                  [~2. six- teen sev- en | teen eight- een |]
-              """;
+            ? VerseTexts[0]
+            : string.Join(
+                "\n    ",
+                Enumerable.Range(0, verses).Select(i => $"[~{i + 1}. {VerseTexts[i]}]"));
         return $$"""
             time 4/4
             part melody {
@@ -93,6 +100,18 @@ public class TrailingLyricsRowBandTests
             }
             """;
     }
+
+    /// <summary>Section B's verses, one line each — enough of them that a book can be asked
+    /// for a run DEEPER than the page spring's own ideal, which is the only regime in which
+    /// the room is allowed to move.</summary>
+    private static readonly string[] VerseTexts =
+    {
+        "twelve thir- teen | four- teen fif- teen |",
+        "six- teen sev- en | teen eight- een |",
+        "nine- teen twen- ty | twen- ty one |",
+        "twen- ty two three | twen- ty four |",
+        "twen- ty five six | twen- ty sev- en |",
+    };
 
     // The score-block orders. CB is the reported one; LC is the control that folds.
     private const string ChordsBetween =
@@ -179,31 +198,66 @@ public class TrailingLyricsRowBandTests
     }
 
     /// <summary>
-    /// …and the room actually RESPONDS to the row: a second verse in the trailing row must
-    /// push the next system down.
+    /// …and the room actually RESPONDS to the row — the way LilyPond's does: flat while the
+    /// page spring's own ideal covers the run, then growing by the verse step once the run
+    /// outgrows it.
     /// </summary>
     /// <remarks>
-    /// ⚠️ THIS IS THE SHARPEST RED. Before the fix the two books put their second system's
-    /// top staff line at the IDENTICAL Y — the whole row band, verses and all, priced at
-    /// zero — so the failure is not "a bit too tight" but "not measured at all". A test that
-    /// only asserted clearance would go green again the day a font grew a shorter descender.
+    /// ⚠️ THIS IS THE SHARPEST RED, and it is the SECOND assertion that makes it sharp.
+    /// Before the row was reserved for at all, every verse count put the next system's top
+    /// staff line at the IDENTICAL Y — the whole row, verses and all, priced at zero — so
+    /// the failure was not "a bit too tight" but "not measured at all". A test that only
+    /// asserted clearance would go green again the day a font grew a shorter descender.
+    /// <para>
+    /// ★ IT USED TO ASSERT THE SECOND VERSE SPECIFICALLY (2026-08-26): "a second verse must
+    /// push the next system down". That is a property of a BAND — Lily#'s own model, whose
+    /// height grows by <c>MultiStaffLayouter.TextRowVerseSpacing</c> per verse whether
+    /// anything needs the room or not — and it is not a property of a solved run. A loose
+    /// line is absent from the page's spring chain, so what separates two systems is the
+    /// SPRING, floored by whatever is deepest above it; a verse moves the gap only once the
+    /// RUN is what is deepest. On the ChordsBetween book it is not, at one verse or at two:
+    /// MEASURED, the deepest ink above system 2 is system 2's OWN bar number, and the gap
+    /// reads 16.000 both times. Asserting on the second verse was asserting about that bar
+    /// number.
+    /// </para>
+    /// <para>
+    /// MEASURED, gap between the two systems' top staff lines at one to five verses —
+    /// ChordsBetween 16.000 / 16.000 / 17.530 / 20.330 / 23.130, LyricsThenChords
+    /// 13.620 / 15.870 / 18.310 / 24.180 / 26.980. The middle steps differ because line
+    /// breaking does; the LAST step is 2.800000000 in BOTH, which is the regime where the run
+    /// itself binds and the added verse's spring is rigid at
+    /// <c>max(2.8, the two lines' ink + 0.2)</c>. That is the number pinned here.
+    /// </para>
     /// </remarks>
     [Theory]
     [InlineData(ChordsBetween)]
     [InlineData(LyricsThenChords)]
-    public void ASecondVerseInTheTrailingRow_PushesTheNextSystemDown(string rows)
+    public void TheTrailingRowBuysRoom_OnceItIsWhatBindsTheGap(string rows)
     {
-        double TopOfSecondSystem(int verses)
+        double SystemGap(int verses)
         {
             var spans = StaffSpans(Render(Book(verses, rows)));
-            Assert.True(spans.Count >= 2);
-            return spans[1].Top;
+            Assert.True(spans.Count >= 2, $"expected two systems' staves, found {spans.Count}");
+            return spans[1].Top - spans[0].Top;
         }
 
-        double one = TopOfSecondSystem(1);
-        double two = TopOfSecondSystem(2);
-        Assert.True(two > one + 0.5,
-            $"the second verse bought no room: system 2 starts at {one:F3} with one verse "
-            + $"and {two:F3} with two");
+        double one = SystemGap(1);
+        double four = SystemGap(4);
+        double five = SystemGap(5);
+
+        // The run is PRICED: a row deep enough to be what floors the gap moves it. A run
+        // priced at zero — the defect this class was opened for — cannot do this at any
+        // verse count.
+        Assert.True(five > one + 2 * VerseStep,
+            $"a five-verse row bought no room: {one:F3} against {five:F3}");
+
+        // …and it is priced by the SPRING rather than by a band: in the regime where the run
+        // binds, one more verse is worth exactly its own spring's floor and nothing else.
+        Assert.Equal(VerseStep, five - four, 6);
     }
+
+    /// <summary>The <c>nonstaff-nonstaff-spacing</c> minimum-distance a verse step blocks at
+    /// (ly/engraver-init.ly:653-656) — what the room grows by once the run's own minimum is
+    /// what binds.</summary>
+    private const double VerseStep = 2.8;
 }

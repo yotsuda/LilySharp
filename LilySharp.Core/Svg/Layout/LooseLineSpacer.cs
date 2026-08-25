@@ -60,94 +60,62 @@ namespace LilySharp.Core.Svg.Layout;
 internal static class LooseLineSpacer
 {
     /// <summary>
-    /// The spring from a spaceable staff down to the loose line that belongs to it —
-    /// a <c>staff-affinity = UP</c> line's <c>nonstaff-relatedstaff-spacing</c>.
+    /// The three <c>nonstaff-*</c> specs a run's springs are built from, for ONE line —
+    /// <c>get_spacing_spec</c> reads them off the GROB, so which set applies is a question
+    /// about the line and not about the score.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: ly/engraver-init.ly:649-652 (the Lyrics context's override) reached
-    /// through lily/page-layout-problem.cc:1284-1294 <c>get_spacing_spec</c> — before is
-    /// spaceable, after is not, and the affinity is UP.
+    /// ★ THIS REPLACES THREE SCORE-WIDE STATICS (2026-08-26), and the reason is the defect
+    /// they hid rather than tidiness. <c>LooseLineSpacer</c> held the Lyrics context's
+    /// <c>nonstaff-relatedstaff</c> / <c>nonstaff-nonstaff</c> / <c>nonstaff-unrelatedstaff</c>
+    /// specs as constants and the chain read THOSE for every line whatever context it came
+    /// from, while <see cref="StaffSpacingParameters"/> held the same three for the staff
+    /// layout — two homes for one quantity (HANDOFF 5.2.1②), pinned to agree by
+    /// <c>SystemSpacingTests.TheTwoHomesOfTheLyricSpacingSpecs_Agree</c>. ⚠️ THE PIN ASSERTED
+    /// TWO OF THE THREE: the pair it left out, <c>nonstaff-unrelatedstaff-spacing</c>, is
+    /// the pair that DISAGREED (ideal 1.0 here against 0 there), and the disagreement was
+    /// invisible because only this copy was reachable. One home now
+    /// (<see cref="StaffSpacingParameters.Lyrics"/> / <see cref="StaffSpacingParameters.ChordNames"/>),
+    /// selected per gap by <see cref="StaffAffinity.GetSpacingSpec"/>.
     /// <para>
-    /// ⚠️ NO <c>minimum-distance</c> MEMBER, and that is load-bearing rather than an
-    /// omission: <c>set_default_strength</c> reads the compress strength off the spec as
-    /// <c>ideal - minimum-distance</c> (lily/spring.cc:205-210), so it is 5.5 - 0 = 5.5,
-    /// and the <c>ensure_min_distance</c> that raises the floor to the ink afterwards does
-    /// NOT restrengthen the spring (spring.cc:155-159). The spring therefore leaves its
-    /// floor at <c>f = (floor - 5.5) / 5.5</c>, not at f = -1 — which is the whole of the
-    /// 0.158444 that stood in this island's way for a session (see the LYRV probe header).
+    /// The reasoning that lived on the three constants belongs to the numbers and has moved
+    /// with them; what is worth keeping HERE is why the chain cannot use one set. A run may
+    /// hold a Lyrics line and a ChordNames line at once — the reported book
+    /// (scratch/ベースタブLy/Untitled-6.lys) is exactly that — and the two contexts declare
+    /// different numbers under the same property names: Lyrics'
+    /// <c>nonstaff-relatedstaff-spacing</c> has <c>(basic-distance . 5.5)</c> and ChordNames'
+    /// has no members at all past a padding, which leaves the caller's
+    /// <c>Spring spring (1.0, 0.0)</c> standing (page-layout-problem.cc:1035).
     /// </para>
     /// </remarks>
-    public static readonly VerticalSpacingSpec NonStaffRelatedStaff = new()
-    {
-        BasicDistance = 5.5,
-        MinimumDistance = 0,
-        Padding = SkylineDrop.RelatedStaffPadding,
-        Stretchability = 1,
-    };
+    internal readonly record struct RunLine(
+        int? Affinity, StaffSpacingParameters.NonStaffSpacing Specs);
 
     /// <summary>
-    /// The spring between two loose lines that share an affinity — verse to verse.
+    /// The SPACEABLE staff a run hangs from, as <c>get_spacing_spec</c> sees it: no
+    /// <c>staff-affinity</c>, which is the whole of what makes a line spaceable
+    /// (page-layout-problem.cc:1173-1177), and no <c>nonstaff-*</c> set that any branch of
+    /// the selection will read.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: ly/engraver-init.ly:653-657 reached through
-    /// lily/page-layout-problem.cc:1315-1332 — neither neighbour is spaceable, the upper
-    /// one's affinity is UP and the lower one's is not DOWN, so the spec is the UPPER
-    /// line's <c>nonstaff-nonstaff-spacing</c>.
-    /// <para>
-    /// This spring is RIGID in both directions, and the two halves come from different
-    /// places: the stretch 0 is DECLARED by the spec (<c>(stretchability . 0)</c>,
-    /// ly/engraver-init.ly:657) and the compress 0 is DERIVED, <c>max(0, 0 - 2.8)</c>
-    /// (spring.cc:205-210). So it sits at <c>max(2.8, ink + 0.2)</c> at every force.
-    /// ⚠️ CORRECTED 2026-07-26: this said <c>set_default_strength</c> produced the stretch 0.
-    /// It does run (page-layout-problem.cc:1354) but the declaration overrides it right
-    /// after (:1356-1357); the two agree only because this spec's ideal is 0 as well. That is why <c>lyrics.verse-step</c> reads 2.800000 even on a page whose
-    /// loose chain is compressed hard enough to pull the line above it off its ideal.
-    /// </para>
+    /// It exists so the walk over a run can be written as one loop with the anchor as its
+    /// zeroth line, rather than as "the first gap, then the rest" — the shape that made the
+    /// first gap's spec a constant and hid that it belonged to a particular context.
     /// </remarks>
-    public static readonly VerticalSpacingSpec NonStaffNonStaff = new()
-    {
-        BasicDistance = 0,
-        MinimumDistance = SkylineDrop.NonStaffNonStaffMinimum,
-        Padding = SkylineDrop.NonStaffNonStaffPadding,
-        Stretchability = 0,
-    };
+    public static readonly RunLine SpaceableStaffLine = new(null, default);
 
     /// <summary>
-    /// The spring from the LAST line of a block to the staff on the far side of it — the
-    /// side the line's <c>staff-affinity</c> does not point at. This is what closes a block
-    /// that sits BETWEEN two staves of one system, where there is no system boundary and so
-    /// no null line.
+    /// A NOTE-BOUND lyric line — a <c>\lyricsto</c> verse hanging under its own staff.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/page-layout-problem.cc:1299-1312 — <c>before</c> is the loose
-    /// line, its affinity is UP and <c>after</c> is spaceable, so <c>get_spacing_spec</c>
-    /// returns the LINE's <c>nonstaff-unrelatedstaff-spacing</c> with
-    /// <c>add_stretchability (…, LARGE_STRETCH)</c> on top.
-    /// <para>
-    /// ⚠️ ONLY THE PADDING IS THE SPEC'S. ly/engraver-init.ly:658 overrides
-    /// <c>nonstaff-unrelatedstaff-spacing.padding</c> and declares nothing else, and
-    /// <c>read_spacing_spec</c> writes only the members that are there — so the ideal 1.0
-    /// and the compress strength 1.0 are the caller's own <c>Spring spring (1.0, 0.0)</c>
-    /// (:1035, <c>set_default_strength</c> making the inverse strengths
-    /// <c>distance - min_distance</c>), exactly as for <see cref="NullNeighbour"/>. Writing
-    /// a basic-distance of 0 here would be a DIFFERENT spring, not a tidier spelling of
-    /// this one.
-    /// </para>
-    /// <para>
-    /// ⚠️ THE STRETCH IS LARGE, NOT HUGE — 10e5 against the null neighbour's 10e7
-    /// (:1262-1263). Both exist so that a block keeps close to the staff it belongs to
-    /// while the page opens around it; the two orders of magnitude are LilyPond's own and
-    /// are never interchangeable, since the two springs can meet in one chain.
-    /// </para>
+    /// LILYPOND-REF: ly/engraver-init.ly:648 — a Lyrics context declares
+    /// <c>staff-affinity = UP</c> whether or not its syllables are associated with a voice.
+    /// Association decides which COLUMN a syllable stands on, not what holds the line
+    /// (the LYRC/LYRR and LYRV/LYRRV pairs measure that: LilyPond reads them line for line
+    /// the same).
     /// </remarks>
-    public static readonly VerticalSpacingSpec NonStaffUnrelatedStaff = new()
-    {
-        BasicDistance = 1.0,
-        MinimumDistance = 0,
-        Padding = SkylineDrop.UnrelatedStaffPadding,
-        // LILYPOND-REF: lily/page-layout-problem.cc:1262 LARGE_STRETCH = 10e5.
-        Stretchability = 10e5,
-    };
+    public static RunLine NoteBoundLyricLine(StaffSpacingParameters sp)
+        => new(StaffAffinityDirection.Up, sp.Lyrics);
 
     /// <summary>
     /// The spring from a loose line to a NULL neighbour — the page edge, or the null line

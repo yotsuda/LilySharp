@@ -74,11 +74,20 @@ internal sealed class LyricChainMemo
     /// order, the trailing-row bookkeeping, the pre-closing gap minima (the FIRST gap
     /// raw — the live side subtracts the frame step), and the walk at its post-prefix
     /// position.</summary>
+    /// <param name="LastLine">
+    /// The run's LAST element as <c>get_spacing_spec</c> sees it — what the CLOSING spring is
+    /// read off when the block sits between two staves of one system
+    /// (page-layout-problem.cc:1299-1312 takes the <c>before</c> line's own property). It
+    /// travels in the prefix rather than being recomputed live because the caller holds
+    /// element indices and no lines, and a second answer to "which context is this line"
+    /// is the shape HANDOFF 5.2.1② names.
+    /// </param>
     internal sealed record ChainPrefix(
         ImmutableArray<(int Line, int Verse)> Elements,
         ImmutableArray<(int RowStaff, int Index)> RowFirstElement,
         ImmutableArray<LooseLineSpacer.Gap> RawGaps,
-        AlignmentWalk Walk);
+        AlignmentWalk Walk,
+        LooseLineSpacer.RunLine LastLine);
 
     private sealed record Entry(
         ImmutableArray<MeasureLayout> Measures, ChainPrefix? Value);

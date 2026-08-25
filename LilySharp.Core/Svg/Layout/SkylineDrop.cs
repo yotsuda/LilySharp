@@ -107,8 +107,8 @@ internal static class SkylineDrop
     /// ⚠️ THE PADDING IS ALL THE SPEC DECLARES. No basic-distance, no minimum-distance and
     /// no stretchability, so every other member of the resulting spring comes from the
     /// caller's own <c>Spring spring (1.0, 0.0)</c> (:1035) and from the LARGE_STRETCH the
-    /// branch adds — see <see cref="LooseLineSpacer.NonStaffUnrelatedStaff"/>, which is
-    /// where that spring is spelled.
+    /// branch adds — see <see cref="StaffSpacingParameters.NonStaffUnrelatedStaff"/>,
+    /// which is where that spring is spelled.
     /// </para>
     /// </remarks>
     public const double UnrelatedStaffPadding = 1.5;

@@ -420,11 +420,34 @@ internal sealed class MultiStaffLayouter
     /// ⚠️ LILYSHARP-OWN, AND IT IS NOW THE LAST FLAT VERSE STEP LEFT. Where the row is an
     /// element of the loose chain (2026-07-28) the step between its verses is SOLVED at
     /// <c>max(2.8, ink + 0.2)</c> and the band's top follows verse 1, so this only over-states
-    /// the band's HEIGHT — which reaches nothing below the system. It is live in exactly one
-    /// regime, a row placed ABOVE a staff, where it moves the gap with coefficient 1
-    /// (perturbation, 2026-07-27); no fixture and no corpus book has that shape. ⚠️ DO NOT
-    /// DELETE IT ON THE STRENGTH OF THE CHAIN: that is the misdiagnosis HANDOFF 5.3 records.
-    /// The port is to take the band's height from the same walk, which wants the pair first.
+    /// the band's HEIGHT. ⚠️ DO NOT DELETE IT ON THE STRENGTH OF THAT: reasoning from the
+    /// chain that the band is redundant is the misdiagnosis HANDOFF 5.3 records. The port is
+    /// to take the band's height from the same walk, which wants the pair first.
+    /// <para>
+    /// ★ THE REGIME IT IS LIVE IN IS REACHED, AND BY A REAL BOOK (2026-08-26). This used to
+    /// say the over-statement "reaches nothing below the system", live "in exactly one
+    /// regime, a row placed ABOVE a staff … no fixture and no corpus book has that shape".
+    /// The reported book is that shape — <c>staff / chords / lyrics / staff</c>, where the
+    /// lyric row IS above a staff — and the height reaches that staff with coefficient 1,
+    /// because <c>LayoutStaffGroups</c> advances its running Y by each element's own
+    /// height. MEASURED on scratch/ベースタブLy/Untitled-6.lys, refpoint to refpoint:
+    /// <c>staff 4.000 + 2.352 + chords 2.500 + 0.600 + lyrics 7.200 + 0.000</c> = 16.652,
+    /// against LilyPond's 13.024768 for the same arrangement
+    /// (audit/lp-geometry lyrics.chord-lyric-run.staff-to-staff, book CHL1).
+    /// </para>
+    /// <para>
+    /// ⚠️ AND 3.200000 OF THE 3.627 GAP IS ONE VERSE THE SYSTEM DOES NOT DRAW.
+    /// <see cref="Model.Staff.TextRowVerses"/> is a SCORE-WIDE maximum
+    /// (<c>MeasureCollector</c> takes <c>Math.Max</c> over every <c>VerseNumber</c> in the
+    /// score), so a system whose section carries ONE verse still reserves the band for the
+    /// score's deepest section: the book above draws one verse on its section-A systems and
+    /// reserves 4.0 + 3.2. LilyPond has no such carry — a Lyrics context with nothing on this
+    /// system is removed (<c>remove-empty</c>) and reserves nothing.
+    /// ⚠️ NOT FIXED HERE, and the reason is the order: shrinking the band shrinks the ROOM
+    /// the loose chain is solved into, and a room below the chain's own floors puts the rows
+    /// through the staff below. The two are one port, and it wants the LP pair for a row
+    /// ABOVE a staff that this remark has always said it wants.
+    /// </para>
     /// </remarks>
     private const double TextRowVerseSpacing = 3.2;
 
@@ -2343,22 +2366,30 @@ internal sealed class MultiStaffLayouter
             (Staff Staff, StaffLayout Layout, StaffGroup Group, int GroupIndex) low,
             List<(Staff Staff, StaffLayout Layout)> lines)
         {
-            // The lines between have to be ones the walk below can price. It reads its three
-            // steps off a line whose affinity is UP — a Lyrics context
-            // (ly/engraver-init.ly:648-658) — and a CHORDS row hangs the other way, so its
-            // steps are `get_spacing_spec`'s other branches (page-layout-problem.cc:1280-1332).
-            // ⚠️ LILYSHARP-OWN: DECLINING HAS NO COUNTERPART — LilyPond springs the pair
-            // whatever stands between it and solves that run afterwards (:660-672, :919-925),
-            // so "the lines between are ones this port cannot price" is a Lily# state and not
-            // a LilyPond one. It is the SAME decline the rest of this island makes and shares
-            // its account: LayoutEngine.SystemAlignment.UnmodelledRow names a chords row below
-            // a staff as the arrangement no corpus point measures. It goes when that one does
-            // — with a point that measures the affinity-DOWN steps, not with a branch that
-            // guesses them.
-            foreach (var line in lines)
-                if (!line.Staff.IsLyricsTextRow)
-                    return;
-
+            // ★ THE PAIR IS SPRUNG WHATEVER STANDS BETWEEN IT (2026-08-26), which is
+            // page-layout-problem.cc:660-672 unchanged: the loop springs between consecutive
+            // `is_spaceable` elements and pushes everything else onto `loose_lines`, and it
+            // never asks what KIND of line it pushed.
+            // ⚠️ THIS WAS THE LAST READER OF A DECLINE WHOSE OTHER TWO WENT THE SAME DAY.
+            // It used to return here when any line between the pair was not a LYRICS row, on
+            // the account that the walk "reads its three steps off a line whose affinity is
+            // UP" and that closing it needed "a point that measures the affinity-DOWN steps".
+            // Both halves are answered: StaffAffinity.GetSpacingSpec is :1266-1342 entire and
+            // the chain calls it per line now, and the points exist
+            // (audit/lp-geometry lyrics.chord-lyric-run.*, book CHL1).
+            // ⚠️ WHAT THE DECLINE COST WAS NOT THIS SPRING, IT WAS A FRAME. A system with no
+            // spring at all tells LayoutEngine.CreatePages that its chain ends at its FIRST
+            // staff (OriginToChainEnd), so the inter-system floor was written between the two
+            // systems' FIRST refpoints — and on a two-staff system the second staff and
+            // everything under it fell outside the quantity. MEASURED on the reported book
+            // (scratch/ベースタブLy/Untitled-6.lys, `staff / chords / lyrics / staff`, user
+            // report 2026-08-26): system 0's last staff and system 1's first were placed
+            // 6.860000 apart where the pair's own numbers put them 12.000000 apart, and the
+            // next system's section label and bar number printed through the instrument name.
+            // The same book one row shorter reads 12.000000, which is why nothing saw it: a
+            // row that FOLDS into its neighbouring staff (RenderSpecParser.FoldAdjacentRows)
+            // leaves nothing between the pair, so the decline needs TWO rows to fire and no
+            // book in the corpus had two.
             // ⚠️ NO OSSIA SKIP. An ossia pair is sprung like any other spaceable pair, and
             // the two lines that used to skip it here were worth +0.212184 on a page that
             // squeezes (audit/lp-geometry staff.ossia-pair.compressed.staff-staff-inside,

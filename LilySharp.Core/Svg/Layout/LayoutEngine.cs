@@ -121,21 +121,20 @@ internal sealed class LayoutEngine
 
         // Chord symbols on a TEXT ROW (lead sheets) live in their own band and must not
         // inflate a music staff's up-extent; inline chord symbols (nameless `chords { }`) sit
-        // above their staff and must. ...and the LYRICS rows among them, which are the ones
-        // the loose chain places (a chords row below a staff carries the ChordNames nonstaff-*
-        // set and no corpus point measures that arrangement — see SystemAlignment.UnmodelledRow).
-        // ⚠️ NEITHER SET IS "THE NON-SPACEABLE LINES" any more: that question is asked of the
-        // staff itself, through the `staff-affinity` a StaffLayout now carries (ClassifySystem).
-        // ⚠️ BUILT HERE rather than beside its first reader: PageAnchorOffsets needs the lyrics
-        // set, and the first system's Y is decided before the paging pass runs.
+        // above their staff and must.
+        // ⚠️ THIS SET IS NOT "THE NON-SPACEABLE LINES": that question is asked of the staff
+        // itself, through the `staff-affinity` a StaffLayout carries (ClassifySystem). What it
+        // is, for the loose-chain tables below, is the CHEAP TEST FOR "is there any run at
+        // all" — a score with no text row has no run for the chain to build.
+        // ★ IT USED TO BE TWO SETS, and the lyrics-only one was the defect's carrier: the run
+        // tables were gated on it, so a score whose only rows were CHORDS rows built no table
+        // and a score with both built one that silently omitted the chords row. Every
+        // non-spaceable line is an element of its run now (ClassifySystem), so the gate is
+        // "any text row" and the membership question has one home.
         var textRowStaves = new HashSet<int>();
-        var lyricsRowStaves = new HashSet<int>();
         foreach (var (_, st, gi) in score.EnumerateStaves())
             if (st.IsTextRow)
-            {
                 textRowStaves.Add(gi);
-                if (st.IsLyricsTextRow) lyricsRowStaves.Add(gi);
-            }
 
         // LILYPOND-REF: lily/align-interface.cc:217-268
         // Compute first system measure layouts first, then use skyline-based staff spacing
@@ -207,7 +206,7 @@ internal sealed class LayoutEngine
             score, firstSystemMeasureLayouts, systemHeight, indent,
             firstEdgeBeams.first, firstEdgeBeams.last, firstStaffGroupLayouts,
             firstStaffSkylines.Skylines);
-        var firstAnchor = PageAnchorOffsets(firstStaffGroupLayouts, lyricsRowStaves);
+        var firstAnchor = PageAnchorOffsets(firstStaffGroupLayouts);
         double currentY = LayoutUtilities.CalculateFirstSystemY(
             _options.MarginTop, headerHeight, LayoutUtilities.CalculateUpExtent(firstUpSkyline),
             firstAnchor.ToFirst, _options.VerticalSpacing.TopSystem);
@@ -247,7 +246,7 @@ internal sealed class LayoutEngine
         // The raise that brings this pass's STAFF-framed estimates into the ORIGIN frame the
         // extents are kept in — LilyPond's -first_spaceable_dy, per system.
         var rowsAboveFirstStaff = systems
-            .Select(s => RowsAboveFirstStaff(s.StaffGroups, lyricsRowStaves))
+            .Select(s => RowsAboveFirstStaff(s.StaffGroups))
             .ToList();
         AugmentExtentsWithLooseLines(score.TextMetrics, perSystemExtents,
             score.MusicMarks, score.VoltaBrackets, multiMeasureRanges,
@@ -270,13 +269,13 @@ internal sealed class LayoutEngine
 
         var (pages, systemsArray) = CreatePages(
             systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,
-            lyricsRowStaves, prelim.PagingSkylines, perSystemHeights, perSystemBandUps);
+            prelim.PagingSkylines, perSystemHeights, perSystemBandUps);
 
         var looseChainEnd = BuildLooseChainEnds(
-            score, pages, systemsArray, perSystemExtents, lyricsRowStaves,
+            score, pages, systemsArray, perSystemExtents,
             multiStaffLayouter.RestCollisionsOf, placed.StaffSpanners, placed.StaffInside);
-        var trailingRowStaves = BuildTrailingRowStaves(systemsArray, lyricsRowStaves);
-        var betweenRowStaves = BuildBetweenRowStaves(systemsArray, lyricsRowStaves);
+        var trailingRowStaves = BuildTrailingRowStaves(systemsArray, textRowStaves);
+        var betweenRowStaves = BuildBetweenRowStaves(systemsArray, textRowStaves);
 
         // Calculate beams/ties/slurs/glissandos per staff
         var (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts, restShifts) =
@@ -1511,7 +1510,6 @@ internal sealed class LayoutEngine
     private (ImmutableArray<PageLayout> pages, ImmutableArray<SystemLayout> systems) CreatePages(
         ImmutableArray<SystemLayout> systems, double headerHeight,
         List<(double upExtent, double downExtent)> perSystemExtents, double systemHeight,
-        IReadOnlySet<int> lyricsRowStaves,
         List<(VerticalSkyline up, VerticalSkyline down)>? perSystemSkylines = null,
         List<double>? perSystemHeights = null,
         List<double>? perSystemBandUps = null)
@@ -1539,18 +1537,30 @@ internal sealed class LayoutEngine
             perSystemHeights != null && i >= 0 && i < perSystemHeights.Count
                 ? perSystemHeights[i]
                 : systemHeight;
-        // Origin to the staff the spring LEAVES this system from — the far end of its
-        // chain, which is its last spaceable staff whenever it has staff springs at all.
-        // ⚠️ THE SAME RULE AS PageLayouter's `originToLast`, AND THE SAME REASON: a system
-        // contributes one chain node per staff SPRING, so one with no springs left never
-        // reached its last staff and the spring leaves from its FIRST refpoint. Reading
-        // ToLast anyway subtracts a span the chain never added — measured on book LYRHKG,
-        // whose hara-kiri'd system has no pair left to spring.
-        double OriginToChainEnd(int i)
-        {
-            var a = PageAnchorOffsets(systems[i].StaffGroups, lyricsRowStaves);
-            return systems[i].StaffSprings.IsDefaultOrEmpty ? a.ToFirst : a.ToLast;
-        }
+        // Origin to the staff the spring LEAVES this system from — its LAST spaceable staff.
+        // LILYPOND-REF: lily/page-layout-problem.cc:936-939 distribute_loose_lines — its two
+        // positions are `last_spaceable_line_translation` and `-solution_[spring_idx]`, so the
+        // inter-system distance runs from `last_spaceable_line` to the next system's first,
+        // and that line is a fact about the system's ALIGNMENT (:943-944 records it as the
+        // walk passes each spaceable staff). Nothing there consults a spring.
+        // ★ IT USED TO FORK ON THE SPRING LIST (2026-08-26): `StaffSprings.IsDefaultOrEmpty
+        // ? ToFirst : ToLast`, on the account that "a system contributes one chain node per
+        // staff SPRING, so one with no springs left never reached its last staff" — measured,
+        // it said, on hara-kiri'd book LYRHKG.
+        // ⚠️ THAT ACCOUNT NEVER DESCRIBED THE FORK IT GUARDED. Hara-kiri leaves ONE surviving
+        // staff, and there the first spaceable staff IS the last, so ToFirst and ToLast are
+        // the same number and the branch changes nothing. The branch could only ever differ
+        // where a system had TWO spaceable staves and no spring — which is not a hara-kiri
+        // state at all, but the state MultiStaffLayouter.StaffSprings' own decline used to
+        // produce for `staff / chords / lyrics / staff`. So the fork silently answered in the
+        // ORIGIN frame for exactly the books the decline broke, and its remark pointed at a
+        // book that never exercised it.
+        // ⇒ Now that every consecutive spaceable pair is sprung, `StaffSprings` is empty
+        // exactly when the system has at most one spaceable staff, where the two are equal.
+        // The fork is gone rather than corrected: a conditional that can only fire on a state
+        // the port no longer produces is a trap, not a guard. The invariant it rested on is
+        // ASSERTED — InterSystemFloorTests.EverySystemWithTwoSpaceableStaves_CarriesAStaffSpring.
+        double OriginToChainEnd(int i) => PageAnchorOffsets(systems[i].StaffGroups).ToLast;
         // An empty score (no systems) has nothing to page; return empty rather than
         // indexing perSystemExtents[0] below.
         if (systems.IsDefaultOrEmpty || perSystemExtents.Count == 0)
@@ -1568,7 +1578,7 @@ internal sealed class LayoutEngine
             // ClassifySystem's, which needs to know which rows this port solves; the page
             // layouter is handed the answer for the same reason it is handed the body heights.
             var anchors = systems
-                .Select(s => PageAnchorOffsets(s.StaffGroups, lyricsRowStaves))
+                .Select(s => PageAnchorOffsets(s.StaffGroups))
                 .ToImmutableArray();
             var pages = _pageLayouter.CreatePagesWithOptimalBreaking(
                 systems, headerHeight, perSystemExtents.ToImmutableArray(), skylines,
@@ -1581,7 +1591,7 @@ internal sealed class LayoutEngine
             return OptimalPages();
 
         // Recalculate Y positions using skyline extents to avoid overlaps
-        var pageAnchor = PageAnchorOffsets(systems[0].StaffGroups, lyricsRowStaves);
+        var pageAnchor = PageAnchorOffsets(systems[0].StaffGroups);
         double skylineY = LayoutUtilities.CalculateFirstSystemY(
             _options.MarginTop, headerHeight, perSystemExtents[0].upExtent,
             pageAnchor.ToFirst, _options.VerticalSpacing.TopSystem);
@@ -1660,7 +1670,7 @@ internal sealed class LayoutEngine
                         double bandUpNext = BandUp(i + 1);
                         if (bandUpNext > 0)
                         {
-                            var aNext = PageAnchorOffsets(systems[i + 1].StaffGroups, lyricsRowStaves);
+                            var aNext = PageAnchorOffsets(systems[i + 1].StaffGroups);
                             dist = Math.Max(dist, SysHeight(i)
                                 + perSystemExtents[i].downExtent + bandUpNext
                                 - (aNext.ToFirst - aNext.HalfFirst));
@@ -1685,7 +1695,7 @@ internal sealed class LayoutEngine
                         // PageAnchorOffsets' own fallback condition, whose remark already says
                         // the nominal anchor stands there only until a corpus point measures
                         // it. This is that point, for the silhouette half of the same hole.
-                        if (ClassifySystem(systems[i].StaffGroups, lyricsRowStaves)
+                        if (ClassifySystem(systems[i].StaffGroups)
                                 .FirstSpaceable is null)
                             dist = Math.Max(dist, skylineDistance);
                         skylineDistance = dist;
@@ -1719,7 +1729,7 @@ internal sealed class LayoutEngine
                 // at one, two and three staves alike (probes/system-indent-floor.ly).
                 double originToLastHere = OriginToChainEnd(i);
                 double originToFirstNext = PageAnchorOffsets(
-                    systems[i + 1].StaffGroups, lyricsRowStaves).ToFirst;
+                    systems[i + 1].StaffGroups).ToFirst;
                 double toStaffFrame = originToFirstNext - originToLastHere;
 
                 // LILYPOND-REF: lily/page-layout-problem.cc:625-632 + spring.cc:219-237 —
@@ -2801,43 +2811,43 @@ internal sealed class LayoutEngine
     /// what a line belongs to.
     /// </remarks>
     /// <param name="Trailing">
-    /// The independent LYRICS rows standing below <paramref name="LastSpaceable"/>, in
-    /// alignment order — elements of this system's own block, which is the run the chain
-    /// below it is solved from.
+    /// The independent text ROWS standing below <paramref name="LastSpaceable"/> — lyrics
+    /// and chords alike — in alignment order, the elements of this system's own block, which
+    /// is the run the chain below it is solved from.
     /// </param>
-    /// <param name="UnmodelledRow">
-    /// A text row this port does not place in a chain stands below a spaceable staff: a row
-    /// BETWEEN two of them (that is <see cref="ComputeBetweenStavesEnd"/>'s span, which still
-    /// declines), or a CHORDS row below one (its <c>nonstaff-*</c> specs are the ChordNames
-    /// set and no corpus point measures that arrangement).
+    /// <remarks>
+    /// ★ THERE IS NO LONGER AN `UnmodelledRow` FLAG (2026-08-26), and its removal is the
+    /// finding rather than a tidy-up. It said "a text row this port does not place in a
+    /// chain stands below a spaceable staff", and its own remark said it would go "when the
+    /// last un-modelled arrangement does: a row between two staves and a chords row below
+    /// one". Both are modelled now: a row between two staves became a run element on
+    /// 2026-08-25, and a CHORDS row became one here, because
+    /// <see cref="StaffAffinity.GetSpacingSpec"/> — a complete port of
+    /// page-layout-problem.cc:1266-1342 that this chain simply was not calling — already
+    /// knew every branch a DOWN-affinity line takes.
     /// <para>
-    /// ⚠️ LILYSHARP-OWN: DECLINING HAS NO COUNTERPART — LilyPond always solves. Its chain
-    /// runs from one spaceable line to the next whatever is between them
-    /// (page-layout-problem.cc:919-925), so "the room belongs to something this port does not
-    /// model" is a Lily# state and not a LilyPond one. It is an EXTENSION of the bail-out
-    /// <see cref="BuildLooseChainEnds"/> has carried since the chain existed, not a new kind
-    /// of thing, and it goes when the last un-modelled arrangement does: a row between two
-    /// staves and a chords row below one. ⚠️ Until then the flag is what keeps the
-    /// reservation and the chain agreeing — <c>LyricReservationBelowSystem</c> reads it too,
-    /// because reserving for a line the chain will not place is worse than either.
+    /// ⚠️ THE FLAG WAS NOT WHAT KEPT THE TWO SIDES AGREEING, which is what it claimed. Two
+    /// of its three readers honoured it and <see cref="BuildBetweenRowStaves"/> did not, so
+    /// on a book with a chords row AND a lyrics row between two staves the chain solved a
+    /// run it had been told not to model — the lyric row landed where a run of one puts it
+    /// and the two rows were drawn on one line. A flag that half the readers consult is
+    /// worse than no flag: it reads like a guarantee while being an option.
     /// </para>
     /// <para>
     /// ★ AN OSSIA USED TO BE A THIRD REASON TO DECLINE and is not one since 2026-07-28: it is
     /// a spaceable staff, so it BRACKETS runs instead of being one. The flag that carried it
-    /// (<c>HasOssia</c>) is gone with its three readers.
+    /// (<c>HasOssia</c>) went the same way, with its three readers.
     /// </para>
-    /// </param>
+    /// </remarks>
     private readonly record struct SystemAlignment(
         StaffLayout? FirstSpaceable,
         StaffLayout? LastSpaceable,
         ImmutableArray<StaffLayout> Leading,
         ImmutableArray<int> Trailing,
-        ImmutableArray<(int Anchor, int Row)> Between,
-        bool UnmodelledRow);
+        ImmutableArray<(int Anchor, int Row)> Between);
 
     /// <summary>Cuts one system's placed staves into that classification.</summary>
-    private static SystemAlignment ClassifySystem(
-        ImmutableArray<StaffGroupLayout> groups, IReadOnlySet<int> lyricsRowStaves)
+    private static SystemAlignment ClassifySystem(ImmutableArray<StaffGroupLayout> groups)
     {
         StaffLayout? first = null, last = null;
         var leading = ImmutableArray.CreateBuilder<StaffLayout>();
@@ -2849,7 +2859,6 @@ internal sealed class LayoutEngine
         // cuts its runs in one pass (page-layout-problem.cc:919-925).
         var between = ImmutableArray.CreateBuilder<(int Anchor, int Row)>();
         int anchor = -1;
-        bool unmodelled = false;
 
         foreach (var group in groups)
         {
@@ -2873,8 +2882,22 @@ internal sealed class LayoutEngine
                 if (!StaffAffinity.IsSpaceable(st.StaffAffinity))
                 {
                     if (first is null) { leading.Add(st); continue; }
-                    if (lyricsRowStaves.Contains(st.StaffIndex)) trailing.Add(st.StaffIndex);
-                    else unmodelled = true;
+                    // ★ EVERY NON-SPACEABLE LINE IS AN ELEMENT OF ITS RUN (2026-08-26), which
+                    // is what page-layout-problem.cc:919-925 and :948-990 collect: the walk
+                    // pushes a line onto `loose_lines` because it is not spaceable, and asks
+                    // nothing else about it. It USED TO ASK — a line that was not a LYRICS row
+                    // set `unmodelled` and was dropped from the run — and dropping it did not
+                    // stop the run being solved, because BuildBetweenRowStaves never read the
+                    // flag. So a book written `staff / chords / lyrics / staff` had its lyric
+                    // row solved as the ONLY occupant of a run that had two, and the two rows
+                    // were engraved on one line (user report 2026-08-26; the same book the
+                    // remarks on ComputeBetweenStavesEnd and BuildBetweenRowStaves name).
+                    // ⚠️ WHAT MAKES THIS SAFE IS NOT THIS LINE, it is that the gap SPECS are
+                    // now per-line — LyricEngraver.BuildChainPrefix asks
+                    // StaffAffinity.GetSpacingSpec for each pair — so a DOWN-affinity line in
+                    // the run takes its own branches (:1284-1294 and :1313-1337) instead of
+                    // the Lyrics numbers a score-wide spec would have handed it.
+                    trailing.Add(st.StaffIndex);
                     continue;
                 }
                 // A spaceable staff below a row means that row stood BETWEEN two of them.
@@ -2898,7 +2921,7 @@ internal sealed class LayoutEngine
 
         return new SystemAlignment(
             first, last, leading.ToImmutable(), trailing.ToImmutable(),
-            between.ToImmutable(), unmodelled);
+            between.ToImmutable());
     }
 
     /// <summary>
@@ -2980,20 +3003,19 @@ internal sealed class LayoutEngine
     /// <c>PageAnchorOffsets</c>' own remark measured at 1.883400 over LilyPond.
     /// </para>
     /// </remarks>
-    private double RowsAboveFirstStaff(
-        ImmutableArray<StaffGroupLayout> groups, IReadOnlySet<int> lyricsRowStaves)
+    private double RowsAboveFirstStaff(ImmutableArray<StaffGroupLayout> groups)
     {
-        var a = PageAnchorOffsets(groups, lyricsRowStaves);
+        var a = PageAnchorOffsets(groups);
         return a.ToFirst - a.HalfFirst;
     }
 
     private (double ToFirst, double ToLast, double HalfFirst, double HalfLast) PageAnchorOffsets(
-        ImmutableArray<StaffGroupLayout> groups, IReadOnlySet<int> lyricsRowStaves)
+        ImmutableArray<StaffGroupLayout> groups)
     {
         double nominal = _options.StaffHeight / 2.0;
         if (groups.IsDefaultOrEmpty)
             return (nominal, nominal, nominal, nominal);
-        var alignment = ClassifySystem(groups, lyricsRowStaves);
+        var alignment = ClassifySystem(groups);
         return alignment.FirstSpaceable is { } first && alignment.LastSpaceable is { } last
             ? (-MultiStaffLayouter.StaffRefpoint(first), -MultiStaffLayouter.StaffRefpoint(last),
                first.Height / 2.0, last.Height / 2.0)
@@ -3028,7 +3050,7 @@ internal sealed class LayoutEngine
     /// (<see cref="ClassifySystem"/>) answers both, because which run a row is in is decided
     /// by where the next spaceable staff falls and nothing else.
     /// <para>
-    /// ★ THE RUN USED TO BE ABANDONED. <see cref="SystemAlignment.UnmodelledRow"/> was set
+    /// ★ THE RUN USED TO BE ABANDONED. <c>SystemAlignment.UnmodelledRow</c> was set
     /// the moment a spaceable staff appeared below a row, and every reader of that flag —
     /// this table's twin, the chain ends, the reservation — declined for the whole system.
     /// The row then kept the flat band <c>MultiStaffLayouter.GetStaffHeight</c> laid it out
@@ -3040,9 +3062,9 @@ internal sealed class LayoutEngine
     /// </para>
     /// </remarks>
     private static Func<int, int, IReadOnlyList<int>>? BuildBetweenRowStaves(
-        ImmutableArray<SystemLayout> systemsArray, IReadOnlySet<int> lyricsRowStaves)
+        ImmutableArray<SystemLayout> systemsArray, IReadOnlySet<int> textRowStaves)
     {
-        if (lyricsRowStaves.Count == 0 || systemsArray.IsDefaultOrEmpty)
+        if (textRowStaves.Count == 0 || systemsArray.IsDefaultOrEmpty)
             return null;
 
         var perSystem = new List<ILookup<int, int>>(systemsArray.Length);
@@ -3053,7 +3075,7 @@ internal sealed class LayoutEngine
                 perSystem.Add(Array.Empty<(int, int)>().ToLookup(p => p.Item1, p => p.Item2));
                 continue;
             }
-            var alignment = ClassifySystem(system.StaffGroups, lyricsRowStaves);
+            var alignment = ClassifySystem(system.StaffGroups);
             perSystem.Add(alignment.Between.ToLookup(p => p.Anchor, p => p.Row));
         }
         return (s, anchor) => s >= 0 && s < perSystem.Count
@@ -3062,9 +3084,9 @@ internal sealed class LayoutEngine
     }
 
     private static Func<int, IReadOnlyList<int>>? BuildTrailingRowStaves(
-        ImmutableArray<SystemLayout> systemsArray, IReadOnlySet<int> lyricsRowStaves)
+        ImmutableArray<SystemLayout> systemsArray, IReadOnlySet<int> textRowStaves)
     {
-        if (lyricsRowStaves.Count == 0 || systemsArray.IsDefaultOrEmpty)
+        if (textRowStaves.Count == 0 || systemsArray.IsDefaultOrEmpty)
             return null;
 
         var perSystem = new List<IReadOnlyList<int>>(systemsArray.Length);
@@ -3075,11 +3097,9 @@ internal sealed class LayoutEngine
                 perSystem.Add(Array.Empty<int>());
                 continue;
             }
-            var alignment = ClassifySystem(system.StaffGroups, lyricsRowStaves);
+            var alignment = ClassifySystem(system.StaffGroups);
             perSystem.Add(
-                alignment.UnmodelledRow || alignment.LastSpaceable is null
-                    ? Array.Empty<int>()
-                    : alignment.Trailing);
+                alignment.LastSpaceable is null ? Array.Empty<int>() : alignment.Trailing);
         }
         return s => s >= 0 && s < perSystem.Count ? perSystem[s] : Array.Empty<int>();
     }
@@ -3120,12 +3140,12 @@ internal sealed class LayoutEngine
     /// MEASURED on book LYRMV (audit/lp-geometry, <c>lyrics.two-staff.two-verse.*</c>).
     /// </para>
     /// <para>
-    /// ★ A LYRICS ROW BELOW THE LAST SPACEABLE STAFF NO LONGER BAILS (2026-07-28). It is a
-    /// non-spaceable line of THIS system's own run (:919-925), so it is an element of the
-    /// chain this end closes rather than a reason to abandon it — see
-    /// <see cref="BuildTrailingRowStaves"/> and <see cref="SystemAlignment"/>. What still
-    /// bails is a row this port does not place: one BETWEEN two spaceable staves, or a CHORDS
-    /// row below one. Both are <see cref="SystemAlignment.UnmodelledRow"/>.
+    /// ★ A LYRICS ROW BELOW THE LAST SPACEABLE STAFF NO LONGER BAILS (2026-07-28), AND SINCE
+    /// 2026-08-26 NEITHER DOES A CHORDS ROW. Either is a non-spaceable line of THIS system's
+    /// own run (:919-925), so it is an element of the chain this end closes rather than a
+    /// reason to abandon it — see <see cref="BuildTrailingRowStaves"/> and
+    /// <see cref="SystemAlignment"/>, whose <c>UnmodelledRow</c> flag went with the last
+    /// arrangement it named.
     /// </para>
     /// <para>
     /// ⚠️ STILL NULL WHEN THE ROOM HOLDS SOMETHING THIS CHAIN DOES NOT MODEL, and that is
@@ -3158,7 +3178,6 @@ internal sealed class LayoutEngine
         MultiStaffScore score, ImmutableArray<PageLayout> pages,
         ImmutableArray<SystemLayout> systemsArray,
         List<(double upExtent, double downExtent)> perSystemExtents,
-        IReadOnlySet<int> lyricsRowStaves,
         Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf,
         IReadOnlyList<List<MultiStaffLayouter.StaffInsideSpanners>>? staffSpanners,
         IReadOnlyList<List<(VerticalSkyline Up, VerticalSkyline Down)>>? staffInside)
@@ -3191,31 +3210,29 @@ internal sealed class LayoutEngine
         // The non-spaceable lines each system OPENS with, in placement order — the run
         // LilyPond hands to the previous block's chain (:948-990).
         var leading = new List<StaffLayout>[systemsArray.Length];
-        // Whether THIS system's alignment is one the chain can be written against.
+        // Whether THIS system's alignment has the two ends a chain is written between.
         // LILYPOND-REF: lily/page-layout-problem.cc:936-939 distribute_loose_lines — the call
         // that solves ONE run, handed `last_spaceable_line_translation` and
         // `-solution_[spring_idx]` and nothing else. There is one such call per run, so what
         // one run holds says nothing about the next run down the page.
-        // ⚠️ LILYSHARP-OWN IS THE DECLINE ITSELF, not this: LilyPond always solves, and the
-        // bail-out is a Lily# state whose whole account is on SystemAlignment.UnmodelledRow.
-        // What is ported here is its GRAIN — the per-run fork above — and that is why this
-        // is an array rather than a `return`. It goes when the flag does.
-        // MEASURED on book ROWH: page 1 reads 4.027851 where the row still stands between two
-        // staves and 5.500000 two staves further down where it does not — one score, one
-        // page, two answers (audit/lp-geometry lyrics.row.between-staves.hara-kiri.*).
+        // ★ THE ONLY REMAINING REASON TO DECLINE IS "no spaceable staff" (2026-08-26). It used
+        // to be that plus SystemAlignment.UnmodelledRow — a chords row anywhere below a staff
+        // — and the per-run GRAIN of this array was carried for that flag's sake. The grain
+        // stays because hara-kiri still makes one page answer two ways: MEASURED on book ROWH,
+        // page 1 reads 4.027851 where the row still stands between two staves and 5.500000 two
+        // staves further down where it does not (audit/lp-geometry
+        // lyrics.row.between-staves.hara-kiri.*).
+        // ⚠️ AN OSSIA USED TO BAIL OUT HERE TOO, on the reading that it "is a loose line to
+        // LilyPond and goes INTO the chain while Lily# lays it out as a band of its own". BOTH
+        // HALVES OF THAT WERE WRONG: an ossia has no `staff-affinity`, so LilyPond makes it
+        // SPACEABLE and it brackets runs rather than filling them
+        // (page-layout-problem.cc:1173-1177 is_spaceable), and since 2026-07-28 Lily# does the
+        // same. It is a chain END here like any other staff.
         var usable = new bool[systemsArray.Length];
         for (int s = 0; s < systemsArray.Length; s++)
         {
             if (systemsArray[s].StaffGroups.IsDefaultOrEmpty) continue;
-            var alignment = ClassifySystem(systemsArray[s].StaffGroups, lyricsRowStaves);
-            // A row this port does not model leaves its room to somebody else, so the room is
-            // UNKNOWN — the remarks' bail-out. ⚠️ AN OSSIA USED TO BAIL OUT HERE TOO, on the
-            // reading that it "is a loose line to LilyPond and goes INTO the chain while Lily#
-            // lays it out as a band of its own". BOTH HALVES OF THAT WERE WRONG: an ossia has
-            // no `staff-affinity`, so LilyPond makes it SPACEABLE and it brackets runs rather
-            // than filling them (page-layout-problem.cc:1173-1177 is_spaceable), and since 2026-07-28 Lily#
-            // does the same. It is a chain END here like any other staff.
-            if (alignment.UnmodelledRow) continue;
+            var alignment = ClassifySystem(systemsArray[s].StaffGroups);
             if (alignment.FirstSpaceable is not { } firstStaff
                 || alignment.LastSpaceable is not { } lastStaff) continue;
 
@@ -3580,6 +3597,11 @@ internal sealed class LayoutEngine
     private static StaffSpacingParameters.NonStaffSpacing NonStaffSpecsOf(
         Staff staff, StaffSpacingParameters sp)
         => staff.IsTextRow && !staff.IsLyricsTextRow ? sp.ChordNames : sp.Lyrics;
+
+    /// <summary>A text ROW as a run element: its own affinity and its own context's specs —
+    /// the two things <c>get_spacing_spec</c> reads off a grob.</summary>
+    private static LooseLineSpacer.RunLine RunLineOf(Staff staff, StaffSpacingParameters sp)
+        => new(staff.StaffAffinity, NonStaffSpecsOf(staff, sp));
 
     /// <summary>
     /// Inputs to <see cref="CalculateAnnotationLayouts"/>. Collapses the former
@@ -4783,6 +4805,36 @@ internal sealed class LayoutEngine
             };
         }
 
+        // WHICH LINE EACH ROW IS, and — for the ones that are not made of syllables — its ink.
+        // The chain's springs are get_spacing_spec's (page-layout-problem.cc:1266-1342), which
+        // reads both off the GROB, so both have to travel per row rather than per score.
+        // ⚠️ ONE DELEGATE FOR "IS IT A CHORDS ROW" AND "WHAT IS ITS INK", because they have
+        // one answer: null means the row's ink is its syllables and the engraver already has
+        // them. A second predicate would be free to disagree with this one (HANDOFF 5.2.1②).
+        var sp = _options.StaffSpacing;
+        Func<int, LooseLineSpacer.RunLine>? runLineOf = null;
+        Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? chordRowInk = null;
+        if (staffByIndex != null)
+        {
+            runLineOf = idx => staffByIndex.TryGetValue(idx, out var st)
+                ? RunLineOf(st, sp) : LooseLineSpacer.NoteBoundLyricLine(sp);
+            var inkCache = new Dictionary<(int, int), (VerticalSkyline, VerticalSkyline)?>();
+            chordRowInk = (sysIdx, idx) =>
+            {
+                var key = (sysIdx, idx);
+                if (inkCache.TryGetValue(key, out var hit)) return hit;
+                (VerticalSkyline, VerticalSkyline)? built = null;
+                if (staffByIndex.TryGetValue(idx, out var row)
+                    && row.IsTextRow && !row.IsLyricsTextRow
+                    && sysIdx >= 0 && sysIdx < systems.Length)
+                    built = ChordNameEngraver.RowSkylines(
+                        ctx.Fonts, ctx.ChordNames ?? ImmutableArray<ChordNameItem>.Empty,
+                        systems[sysIdx].Measures, idx, row.PrimaryVoice.Measures);
+                inkCache[key] = built;
+                return built;
+            };
+        }
+
         var engraver = new LyricEngraver(
             parentAlignmentEdge: LyricEngraver.ParentAlignmentEdge(
                 measuresByStaff, measures, ctx.VoicesByStaff),
@@ -4792,7 +4844,8 @@ internal sealed class LayoutEngine
             lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, ctx.StaffYByIndex,
             ctx.NoteBoundAnchorY, anchorStaffDownSkyline, ctx.LooseChainEnd,
             betweenStavesEnd, ctx.LastSpaceableStaffY, ctx.TrailingRowStaves,
-            ctx.BetweenRowStaves, ctx.VerseSkylines, ctx.LyricChains);
+            ctx.BetweenRowStaves, ctx.VerseSkylines, ctx.LyricChains,
+            sp, runLineOf, chordRowInk);
 
         // The rows the chain solved travel back out through the context — see
         // AnnotationLayoutContext.SolvedRowBaselines for why they are applied afterwards
@@ -4870,14 +4923,9 @@ internal sealed class LayoutEngine
         if (score.Lyrics.IsDefaultOrEmpty || groups.IsDefaultOrEmpty)
             return null;
 
-        var lyricsRows = new HashSet<int>();
-        foreach (var (_, st, idx) in score.EnumerateStaves())
-            if (st.IsLyricsTextRow)
-                lyricsRows.Add(idx);
-
         // The staff a staff-affinity-UP line below the system is spaced from, and what stands
         // under it. LILYPOND-REF: lily/page-layout-problem.cc:943-944 last_spaceable_line.
-        var alignment = ClassifySystem(groups, lyricsRows);
+        var alignment = ClassifySystem(groups);
         if (alignment.LastSpaceable is not { } anchorStaff
             || anchorStaff.StaffIndex >= staffSkylines.Count)
             return null;
@@ -4894,33 +4942,18 @@ internal sealed class LayoutEngine
         var engraver = BuildBlockEngraver(score);
 
         // THE RUN, in alignment order: the note-bound verses hanging under the anchor staff,
-        // and then every independent lyrics ROW standing under them, verse by verse. ★ ONE
-        // LIST BECAUSE LILYPOND HAS ONE RUN — every non-spaceable line between two spaceable
-        // ones goes into the same vector (page-layout-problem.cc:919-925), and a row is
-        // non-spaceable wherever it stands. Until 2026-07-28 the row was a separate branch
-        // that reserved WHERE IT WAS DRAWN, because it was placed as a staff-like band and
-        // never solved; it is an element of the chain now, so what it reserves is its
-        // ALIGNMENT MINIMUM like every other line (:593-599).
-        var lines = engraver.NoteBoundBlockSkylines(
-            score.Lyrics, measureLayouts, startMeasure, endMeasure,
-            anchorStaff.StaffIndex, anchorStaff.StaffIndex + 1);
-        if (!alignment.UnmodelledRow)
-            foreach (int rowStaff in alignment.Trailing)
-                lines.AddRange(engraver.RowBlockSkylines(
-                    score.Lyrics, measureLayouts, startMeasure, endMeasure, rowStaff));
-
-        // ...and when the chain DECLINES, those same trailing rows still get DRAWN — in the
-        // BAND the alignment stacked them in, because that is what a row the chain does not
-        // reach keeps (LyricEngraver.CalculateLayouts' `isRow` arm: "THE PRE-CHAIN PLACEMENT
-        // ONLY"). So the room they need is the BAND, and it is reserved here rather than
-        // nowhere.
-        var unmodelledBand = alignment.UnmodelledRow
-            ? TrailingRowBandBelowSystem(
-                alignment.Trailing, groups, measureLayouts, startMeasure, endMeasure)
-            : null;
-
+        // and then every independent ROW standing under them. ★ ONE LIST BECAUSE LILYPOND HAS
+        // ONE RUN — every non-spaceable line between two spaceable ones goes into the same
+        // vector (page-layout-problem.cc:919-925), and a row is non-spaceable wherever it
+        // stands. Until 2026-07-28 the row was a separate branch that reserved WHERE IT WAS
+        // DRAWN, because it was placed as a staff-like band and never solved; it is an element
+        // of the chain now, so what it reserves is its ALIGNMENT MINIMUM like every other
+        // line (:593-599).
+        var lines = RunBelowAnchor(
+            score, engraver, measureLayouts, startMeasure, endMeasure,
+            anchorStaff.StaffIndex, alignment.Trailing);
         if (lines.Count == 0)
-            return unmodelledBand;
+            return null;
 
         var walk = new AlignmentWalk();
         walk.Seed(staffSkylines[anchorStaff.StaffIndex].Down);
@@ -4930,20 +4963,27 @@ internal sealed class LayoutEngine
         // TRANSLATION), so a line with a deeper descender than the one under it still owns
         // its stretch of the band — and a stretch of X no syllable reaches holds NOTHING,
         // which is the whole difference from the scalar this used to flatten to.
+        // ⚠️ THE STEP IS THE PAIR'S OWN SPEC, not "related for the first and nonstaff for the
+        // rest". Those two constants ARE what get_spacing_spec returns for an all-Lyrics run,
+        // which is why the reading is unchanged on every book that has one; they are the
+        // WRONG two the moment a ChordNames line is in the run, and this reservation has to
+        // agree with the chain term for term or the page reserves one room and the solve uses
+        // another (HANDOFF 5.2.1②, and the walk is shared for exactly that reason).
+        var sp = _options.StaffSpacing;
         var profile = new VerticalSkyline(VerticalDirection.Down);
+        var previous = LooseLineSpacer.SpaceableStaffLine;
         for (int k = 0; k < lines.Count; k++)
         {
-            walk.Advance(
-                lines[k].Up, lines[k].Down,
-                k == 0 ? SkylineDrop.RelatedStaffPadding : SkylineDrop.NonStaffNonStaffPadding,
-                k == 0
-                    ? LooseLineSpacer.NonStaffRelatedStaff.MinimumDistance
-                    : LooseLineSpacer.NonStaffNonStaff.MinimumDistance);
+            var spec = StaffAffinity.GetSpacingSpec(
+                previous.Affinity, previous.Specs,
+                lines[k].Line.Affinity, lines[k].Line.Specs, sp.StaffStaff);
+            walk.Advance(lines[k].Up, lines[k].Down, spec.Padding, spec.MinimumDistance);
             if (lines[k].Down is { IsEmpty: false } lineDown)
                 profile.Merge(lineDown.Buildings, 0, -walk.Where);
+            previous = lines[k].Line;
         }
         if (profile.IsEmpty)
-            return unmodelledBand;
+            return null;
 
         // ⚠️ THE ANCHOR STAFF'S OWN INK IS DELIBERATELY NOT IN THIS — it stays the system
         // skyline's business (SkylineBuilder.AddEdgeStaffInk seeds the edge staff for the
@@ -4960,12 +5000,78 @@ internal sealed class LayoutEngine
         // the SYSTEM-ORIGIN frame. One shift, stated once — the same conversion
         // PageAnchorOffsets' ToLast carries for the springs.
         profile.Raise(MultiStaffLayouter.StaffRefpoint(anchorStaff));
-        // ⚠️ MERGED AFTER THE SHIFT, not before: the band is built in the SYSTEM-ORIGIN frame
-        // (a band top IS the system origin's business — it is a stacked staff's Y), while
-        // everything above this line is still in the anchor staff's refpoint frame.
-        if (unmodelledBand is { IsEmpty: false })
-            profile.Merge(unmodelledBand);
         return profile;
+    }
+
+    /// <summary>
+    /// One run's elements below an anchor staff, in alignment order: each line's own ink and
+    /// the two things <c>get_spacing_spec</c> asks of it — which way it leans and which
+    /// context's <c>nonstaff-*</c> specs it carries.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:919-925 — the non-spaceable lines between
+    /// two spaceable ones, collected in alignment order. The note-bound verses hanging under
+    /// the anchor staff come first because that is where the alignment walks them; then every
+    /// independent ROW, a lyrics row verse by verse (its verses are separate Lyrics contexts
+    /// to LilyPond) and a chords row as the single line it is.
+    /// <para>
+    /// ⚠️ ONE READING OF THE INK, THREE READERS. The reservation
+    /// (<see cref="LyricReservationBelowSystem"/>) and the solve
+    /// (<c>LyricEngraver.DistributeLooseLines</c>) have to walk the SAME list with the SAME
+    /// specs, or the page leaves a room the chain does not use — the shape HANDOFF 5.2.1②
+    /// names, and the one this island has paid for twice.
+    /// </para>
+    /// </remarks>
+    private List<(VerticalSkyline Up, VerticalSkyline Down, LooseLineSpacer.RunLine Line)>
+        RunBelowAnchor(
+            MultiStaffScore score, LyricEngraver engraver,
+            ImmutableArray<MeasureLayout> measureLayouts, int startMeasure, int endMeasure,
+            int anchorStaffIndex, ImmutableArray<int> rows)
+    {
+        var sp = _options.StaffSpacing;
+        var run = new List<(VerticalSkyline, VerticalSkyline, LooseLineSpacer.RunLine)>();
+
+        foreach (var (u, d) in engraver.NoteBoundBlockSkylines(
+                     score.Lyrics, measureLayouts, startMeasure, endMeasure,
+                     anchorStaffIndex, anchorStaffIndex + 1))
+            run.Add((u, d, LooseLineSpacer.NoteBoundLyricLine(sp)));
+
+        if (rows.IsDefaultOrEmpty)
+            return run;
+
+        var staffByIndex = new Dictionary<int, Staff>();
+        foreach (var (_, st, idx) in score.EnumerateStaves())
+            staffByIndex[idx] = st;
+
+        foreach (int rowStaff in rows)
+        {
+            if (!staffByIndex.TryGetValue(rowStaff, out var row)) continue;
+            var line = RunLineOf(row, sp);
+            if (row.IsLyricsTextRow)
+            {
+                foreach (var (u, d) in engraver.RowBlockSkylines(
+                             score.Lyrics, measureLayouts, startMeasure, endMeasure, rowStaff))
+                    run.Add((u, d, line));
+            }
+            else
+            {
+                // ⚠️ THIS SYSTEM'S LAYOUTS, SELECTED BY MeasureIndex. RowSkylines reads a
+                // layout's X and takes every chord it can pair with one; the list handed in
+                // is the WHOLE SCORE's, whose positions restart at 0 on each system, so
+                // giving it the lot builds a row out of several systems' columns at once.
+                // The lyrics arm carries its range as two arguments, which is why only this
+                // one has to say it.
+                var systemLayouts = measureLayouts
+                    .Where(ml => ml.MeasureIndex >= startMeasure && ml.MeasureIndex < endMeasure)
+                    .ToImmutableArray();
+                var (u, d) = ChordNameEngraver.RowSkylines(
+                    score.TextMetrics, score.ChordNames, systemLayouts, rowStaff,
+                    row.PrimaryVoice.Measures);
+                if (!u.IsEmpty || !d.IsEmpty)
+                    run.Add((u, d, line));
+            }
+        }
+        return run;
     }
 
     /// <summary>
@@ -4976,7 +5082,7 @@ internal sealed class LayoutEngine
     /// ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
     /// <c>Page_layout_problem::append_system</c>, which collects EVERY non-spaceable line
     /// between two spaceable ones and always solves it. GOES when the last un-modelled
-    /// arrangement does — see <see cref="SystemAlignment.UnmodelledRow"/>, whose list this
+    /// arrangement does — see <c>SystemAlignment.UnmodelledRow</c>, whose list this
     /// is the reservation side of. OBSERVED BY <c>TrailingLyricsRowBandTests</c>, which is
     /// what keeps the band and the drawn position from drifting apart: it renders the book
     /// and asserts no syllable lands inside a staff's line span, so the cross-file invariant
@@ -5174,7 +5280,6 @@ internal sealed class LayoutEngine
         // at its own staff.
         double? anchorDown = null;
         var below = new List<(double Down, int StaffIndex)>();
-        var looseBands = new List<(double Down, int StaffIndex)>();
         foreach (var group in groups)
         {
             if (group.Staves.IsDefaultOrEmpty) continue;
@@ -5182,11 +5287,9 @@ internal sealed class LayoutEngine
             {
                 if (st.IsHidden) continue;
                 double down = -st.Y;
-                if (!StaffAffinity.IsSpaceable(st.StaffAffinity))
-                {
-                    looseBands.Add((down, st.StaffIndex));
-                    continue;
-                }
+                // A non-spaceable line neither bounds this span nor makes it unknown: it is
+                // an OCCUPANT, and the chain solved into the span is what places it.
+                if (!StaffAffinity.IsSpaceable(st.StaffAffinity)) continue;
                 if (st.StaffIndex == anchorStaffIndex)
                     anchorDown = down;
                 below.Add((down, st.StaffIndex));
@@ -5216,22 +5319,19 @@ internal sealed class LayoutEngine
         // said why it was left coarse: nothing measured it, and narrowing an exclusion
         // nothing measures is how a port acquires an untested branch. The corpus measures it
         // now — lyrics.chord-row.* on book LYRCH, where LilyPond is the identity with LYRB.
-        // ★ A LYRICS ROW IN THIS SPAN NO LONGER MAKES THE ROOM UNKNOWN (2026-08-25). It is
-        // an ELEMENT of the very chain this end closes now — LayoutEngine.BuildBetweenRowStaves
-        // hands it to LyricEngraver.BuildChainPrefix, which is what
-        // page-layout-problem.cc:919-925 does with it — so declining here would be declining
-        // because the run has an occupant.
-        // ⚠️ A CHORDS ROW STILL DOES, and the difference is not the kind of context but the
-        // walk: the chain reads its three steps off an affinity-UP line
-        // (ly/engraver-init.ly:648-658) and a chords row hangs the other way, so its steps are
-        // get_spacing_spec's other branches (:1280-1332). Same LILYSHARP-OWN decline as
-        // MultiStaffLayouter.StaffSprings makes for the same run, and it goes with the same
-        // point — one that measures the affinity-DOWN steps.
-        foreach (var (band, bandIndex) in looseBands)
-            if (band > anchor && band < next
-                && !(staffByIndex.TryGetValue(bandIndex, out var bandStaff)
-                     && bandStaff.IsLyricsTextRow))
-                return null;
+        // ★ NO ROW IN THIS SPAN MAKES THE ROOM UNKNOWN ANY MORE. A LYRICS row stopped doing
+        // so on 2026-08-25 and a CHORDS row on 2026-08-26: either is an ELEMENT of the very
+        // chain this end closes — LayoutEngine.BuildBetweenRowStaves hands it to
+        // LyricEngraver.BuildChainPrefix, which is what page-layout-problem.cc:919-925 does
+        // with it — so declining here would be declining because the run has an occupant.
+        // ⚠️ WHAT THE CHORDS ARM WAITED FOR WAS NOT A MEASUREMENT, AND THAT IS THE FINDING.
+        // The remark this replaces said its steps "are get_spacing_spec's other branches
+        // (:1280-1332)" and that closing it needed a corpus point measuring the affinity-DOWN
+        // walk. Both branches were already ported — StaffAffinity.GetSpacingSpec is
+        // :1266-1342 entire — and the only thing missing was that the chain called neither,
+        // because it built its springs from two score-wide constants. The point exists now
+        // (lyrics.chord-lyric-run.*, book CHL1) and it was written to CHECK the port rather
+        // than to unlock it.
 
         // ⚠️ THE ROOM'S OWN LIST, NOT A SECOND BUILD — the same rule the anchor's DOWN
         // profile follows (see StaffDownSkyline's remark in LayoutLyrics). This up-skyline is

@@ -400,7 +400,10 @@ internal sealed class LyricEngraver
         Func<int, IReadOnlyList<int>>? trailingRowStaves = null,
         Func<int, int, IReadOnlyList<int>>? betweenRowStaves = null,
         VerseSkylineMemo? verseSkylineMemo = null,
-        LyricChainMemo? chainMemo = null)
+        LyricChainMemo? chainMemo = null,
+        StaffSpacingParameters? staffSpacing = null,
+        Func<int, LooseLineSpacer.RunLine>? runLineOf = null,
+        Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? chordRowInk = null)
     {
         if (lyrics.Count == 0)
             return ImmutableArray<LyricLayout>.Empty;
@@ -495,7 +498,8 @@ internal sealed class LyricEngraver
             layouts = DistributeLooseLines(layouts, systems, systemSkylines, staffBottom,
                 noteBoundAnchorY, anchorStaffDownSkyline, looseChainEnd, betweenStavesEnd,
                 lastSpaceableStaffY, trailingRowStaves, betweenRowStaves,
-                verseSkylineMemo, chainMemo);
+                verseSkylineMemo, chainMemo,
+                staffSpacing ?? StaffSpacingParameters.Default, runLineOf, chordRowInk);
 
         return layouts.ToImmutableArray();
     }
@@ -613,7 +617,10 @@ internal sealed class LyricEngraver
         Func<int, IReadOnlyList<int>>? trailingRowStaves,
         Func<int, int, IReadOnlyList<int>>? betweenRowStaves,
         VerseSkylineMemo? verseSkylineMemo,
-        LyricChainMemo? chainMemo)
+        LyricChainMemo? chainMemo,
+        StaffSpacingParameters staffSpacing,
+        Func<int, LooseLineSpacer.RunLine>? runLineOf,
+        Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? chordRowInk)
     {
         var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
 
@@ -852,30 +859,62 @@ internal sealed class LyricEngraver
             {
                 // THIS block's lines, in the order the alignment walks them: the note-bound
                 // verses that hang under the anchor staff, and then — below the sysIdx —
-                // every independent row standing under it, verse by verse. A row's verses are
-                // separate Lyrics contexts to LilyPond (the LYRV/LYRRV pair is exactly that
-                // spelling difference), so they are separate elements here.
+                // every independent row standing under it. A LYRICS row's verses are separate
+                // Lyrics contexts to LilyPond (the LYRV/LYRRV pair is exactly that spelling
+                // difference), so they are separate elements here; a CHORDS row is one
+                // context and so one element.
+                // ★ EACH ELEMENT CARRIES ITS OWN LINE (2026-08-26) — the affinity and the
+                // nonstaff-* set get_spacing_spec reads off a grob (page-layout-problem.cc
+                // :1266-1342). It used to carry neither, and the two Lyrics specs were
+                // applied to every element whatever context it came from; that is why a
+                // chords row could not be IN a run and had to be dropped from it.
                 var elements = new List<(int Line, int Verse)>();
+                var elementLines = new List<LooseLineSpacer.RunLine>();
                 var rowFirstElement = new List<(int RowStaff, int Index)>();
+                var noteBoundLine = LooseLineSpacer.NoteBoundLyricLine(staffSpacing);
                 foreach (int v in family.Lines
                              .Where(l => measureToSystem.TryGetValue(l.Item.MeasureIndex, out int s)
                                          && s == sysIdx)
                              .Select(l => l.Item.VerseNumber).Distinct().OrderBy(v => v))
+                {
                     elements.Add((familyKey, v));
+                    elementLines.Add(noteBoundLine);
+                }
                 foreach (int rowStaff in isUpperFamily
                              ? BetweenRows(sysIdx, familyKey) : TrailingRows(sysIdx))
                 {
+                    int before = elements.Count;
+                    var rowLine = runLineOf?.Invoke(rowStaff) ?? noteBoundLine;
+                    // ONE DELEGATE ANSWERS BOTH QUESTIONS — "is this a chords row" and "what
+                    // is its ink" — because they have one answer. A lyrics row returns null
+                    // here and its verses are read off the layouts below, which is where its
+                    // ink already lives.
+                    if (chordRowInk?.Invoke(sysIdx, rowStaff) is { } ink)
                     {
-                        int before = elements.Count;
+                        if (!ink.Up.IsEmpty || !ink.Down.IsEmpty)
+                        {
+                            // Verse 0: a chords row has no verses, and a lyrics row's number
+                            // from 1, so the key cannot collide with one.
+                            up[(sysIdx, rowStaff, 0)] = ink.Up;
+                            down[(sysIdx, rowStaff, 0)] = ink.Down;
+                            elements.Add((rowStaff, 0));
+                            elementLines.Add(rowLine);
+                        }
+                    }
+                    else
+                    {
                         foreach (int v in layouts
                                      .Where(l => l.Item.IsLyricsRow && l.Item.StaffIndex == rowStaff
                                                  && measureToSystem.TryGetValue(l.Item.MeasureIndex, out int s)
                                                  && s == sysIdx)
                                      .Select(l => l.Item.VerseNumber).Distinct().OrderBy(v => v))
+                        {
                             elements.Add((rowStaff, v));
-                        if (elements.Count > before)
-                            rowFirstElement.Add((rowStaff, before));
+                            elementLines.Add(rowLine);
+                        }
                     }
+                    if (elements.Count > before)
+                        rowFirstElement.Add((rowStaff, before));
                 }
                 if (elements.Count == 0) return null;
 
@@ -920,32 +959,35 @@ internal sealed class LyricEngraver
                     return walk.Advance(lineUp, lineDown, padding, minimumDistance);
                 }
 
-                // Staff to the first loose line, in the chain's frame — the anchor staff's
-                // REFERENCE POINT, which is what skylineToAnchor converts to.
-                // nonstaff-relatedstaff-spacing declares no minimum-distance, which
-                // read_spacing_spec leaves as no raise.
-                // RAW: the frame step (skylineToAnchor) is subtracted LIVE by the caller —
-                // it is an anchor-table scalar and must not be baked into a cached value.
-                gaps.Add(new LooseLineSpacer.Gap(
-                    LooseLineSpacer.NonStaffRelatedStaff,
-                    Advance(elements[0], SkylineDrop.RelatedStaffPadding,
-                            LooseLineSpacer.NonStaffRelatedStaff.MinimumDistance)));
-
-                // Line to line, whose spec DOES declare one (2.8). ⚠️ THE SAME SPEC WHETHER
-                // THE STEP IS VERSE-TO-VERSE OR BLOCK-TO-ROW: get_spacing_spec's loose-loose
-                // branch reads the UPPER line's nonstaff-nonstaff-spacing and never asks what
-                // kind of Lyrics context it is (page-layout-problem.cc:1315-1332).
-                for (int i = 1; i < elements.Count; i++)
+                // ONE LOOP OVER THE RUN, with the anchor staff as its zeroth line. Each gap's
+                // spec is get_spacing_spec of the PAIR it joins — the anchor is spaceable, so
+                // gap 0 takes the :1284-1294 branch (the lower line's own affinity chooses
+                // between its relatedstaff and its unrelatedstaff spec), and every later gap
+                // takes :1313-1337 off the UPPER line.
+                // ★ IT USED TO BE TWO CONSTANTS: the Lyrics context's
+                // nonstaff-relatedstaff-spacing for gap 0 and its nonstaff-nonstaff-spacing
+                // for the rest. THOSE ARE WHAT THE SELECTION RETURNS FOR AN ALL-LYRICS RUN,
+                // which is why no book with one moves; they are the wrong two the moment the
+                // run holds a ChordNames line, whose affinity is DOWN and whose specs declare
+                // nothing but a padding.
+                // RAW: the frame step (skylineToAnchor) is subtracted LIVE by the caller from
+                // gap 0 — it is an anchor-table scalar and must not be baked into a cached
+                // value.
+                var previousLine = LooseLineSpacer.SpaceableStaffLine;
+                for (int i = 0; i < elements.Count; i++)
                 {
+                    var spec = StaffAffinity.GetSpacingSpec(
+                        previousLine.Affinity, previousLine.Specs,
+                        elementLines[i].Affinity, elementLines[i].Specs,
+                        staffSpacing.StaffStaff);
                     gaps.Add(new LooseLineSpacer.Gap(
-                        LooseLineSpacer.NonStaffNonStaff,
-                        Advance(elements[i], SkylineDrop.NonStaffNonStaffPadding,
-                                LooseLineSpacer.NonStaffNonStaff.MinimumDistance)));
+                        spec, Advance(elements[i], spec.Padding, spec.MinimumDistance)));
+                    previousLine = elementLines[i];
                 }
 
                 return new LyricChainMemo.ChainPrefix(
                     elements.ToImmutableArray(), rowFirstElement.ToImmutableArray(),
-                    gaps.MoveToImmutable(), walk);
+                    gaps.MoveToImmutable(), walk, previousLine);
             }
             foreach (int system in chainSystems)
             {
@@ -999,10 +1041,17 @@ internal sealed class LyricEngraver
                         // skylines were then built about the TOP line; the adapter is GONE
                         // WITH THE FRAME rather than moved elsewhere
                         // (SkylineBuilder.BuildStaffSkylines).
-                        double closing = walk.Distance(
-                            b.NextStaffUp, SkylineDrop.UnrelatedStaffPadding);
-                        gaps.Add(new LooseLineSpacer.Gap(
-                            LooseLineSpacer.NonStaffUnrelatedStaff, closing));
+                        // ⚠️ THE SPEC IS THE LAST LINE'S OWN, and which of its two it is
+                        // depends on which way that line leans: an affinity-UP line takes
+                        // nonstaff-unrelatedstaff-spacing + LARGE_STRETCH here (:1301-1305)
+                        // and an affinity-DOWN one takes nonstaff-relatedstaff-spacing
+                        // (:1306-1312), because the staff BELOW is the one it belongs to.
+                        // Written as a constant it was the former for both.
+                        var closingSpec = StaffAffinity.GetSpacingSpec(
+                            prefix.LastLine.Affinity, prefix.LastLine.Specs,
+                            null, default, staffSpacing.StaffStaff);
+                        double closing = walk.Distance(b.NextStaffUp, closingSpec.Padding);
+                        gaps.Add(new LooseLineSpacer.Gap(closingSpec, closing));
                     }
                 }
                 var end = isUpperFamily ? null : looseChainEnd?.Invoke(system);
@@ -1275,9 +1324,13 @@ internal sealed class LyricEngraver
         walk.Seed(verses[0].Down);
         for (int v = 1; v < verses.Count; v++)
         {
+            // VERSE TO VERSE INSIDE ONE ROW, so both lines are the same Lyrics context and
+            // the loose-loose branch reads its nonstaff-nonstaff-spacing — the two members
+            // taken straight from where they live rather than through a spec this static
+            // method has no parameters to reach.
             walk.Advance(verses[v].Up, verses[v].Down,
                 SkylineDrop.NonStaffNonStaffPadding,
-                LooseLineSpacer.NonStaffNonStaff.MinimumDistance);
+                SkylineDrop.NonStaffNonStaffMinimum);
             drops[v] = walk.Where;
         }
 

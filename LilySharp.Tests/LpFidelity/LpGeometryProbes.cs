@@ -2379,6 +2379,95 @@ internal static class LpGeometryProbes
             """;
     }
 
+    /// <summary>
+    /// A CHORDS ROW AND A LYRICS ROW IN ONE RUN, between two staves of one system — the
+    /// arrangement this corpus had no book for, and the one the user reported.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:919-925 — every non-spaceable line between
+    /// two spaceable ones is an element of the same run. THE THREE STEPS ARE THREE DIFFERENT
+    /// BRANCHES of <c>get_spacing_spec</c> (:1266-1342), which is why one book buys three
+    /// entries rather than one:
+    /// <list type="number">
+    /// <item>staff → chords: <c>before</c> spaceable, <c>after</c>'s affinity DOWN →
+    /// the ChordNames line's own <c>nonstaff-unrelatedstaff-spacing</c> + LARGE_STRETCH
+    /// (:1284-1294);</item>
+    /// <item>chords → lyrics: neither spaceable, <c>before_affinity != UP</c> → the
+    /// ChordNames line's <c>nonstaff-nonstaff-spacing</c> (:1313-1331);</item>
+    /// <item>lyrics → staff: <c>before</c>'s affinity UP, <c>after</c> spaceable → the Lyrics
+    /// line's <c>nonstaff-unrelatedstaff-spacing</c> + LARGE_STRETCH (:1299-1305).</item>
+    /// </list>
+    /// <para>
+    /// ⚠️ LILYPOND WARNS ON THIS BOOK — "staff-affinities should only decrease" (:1322-1325),
+    /// since the run goes DOWN then UP — AND LAYS IT OUT ANYWAY. The warning is about the
+    /// spelling being unusual, not about the spacing being undefined, so the numbers below
+    /// are ordinary measurements. Whether Lily# should emit the same diagnostic is a language
+    /// decision and is not settled here.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE MELODY STAYS ABOVE THE MIDDLE LINE, for <see cref="FirstStaffToLyricBaseline"/>'s
+    /// documented reason: a syllable's baseline is comparable between the two engines only
+    /// while the SPRING binds. Here the run's own ink is what floors two of the three steps,
+    /// which is the point — so the book is kept short and the paper ragged, and the residuals
+    /// are read as what they are rather than as face differences.
+    /// </para>
+    /// </remarks>
+    private const string CHL1 = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section A {
+          melody { c'4 c' g'' g'' | a'' a'' g''2 | }
+          chords prog { Dmaj7 | Em7 }
+          lyrics verse { Twin- kle twin- kle | lit- tle star | }
+        }
+
+        form main { ~A }
+
+        score main "CHL1" {
+          staff melody
+          chords prog as names
+          lyrics verse sings melody
+          staff melody
+        }
+        """;
+
+    /// <summary>
+    /// CHL1 WITH THE LYRICS ROW TAKEN OUT — the control that isolates the affinity-DOWN
+    /// step, and the run whose room holds ONE line instead of two.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONE WORD APART FROM CHL1 (§5.0: seed a pair across the thing that switches), and
+    /// LilyPond answers the first step IDENTICALLY on the two — 5.659653422 on both. That is
+    /// the invariant worth holding: the spring from the staff to the chords row is that
+    /// LINE's own, so what stands BELOW the chords row cannot move it. A port that priced a
+    /// run as a whole rather than line by line would fail exactly here, and nothing else in
+    /// this corpus asks the question.
+    /// </remarks>
+    private const string CHL2 = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section A {
+          melody { c'4 c' g'' g'' | a'' a'' g''2 | }
+          chords prog { Dmaj7 | Em7 }
+        }
+
+        form main { ~A }
+
+        score main "CHL2" {
+          staff melody
+          chords prog as names
+          staff melody
+        }
+        """;
+
     /// <summary>The plain-name half — the floor LOSES to basic-distance 6.</summary>
     private static readonly string CHR1 = ChordRowFloorPageScore("CHR1", sharp: false);
 
@@ -10611,6 +10700,44 @@ internal static class LpGeometryProbes
         // CHR1 alone, which is where the reading belongs.
         new("page.chord-row.staff-to-chord-baseline", CHR1,
             g => g.ChordBaselineAboveStaff(), FourSystemsPerPageRagged),
+
+        // --- A CHORDS ROW AND A LYRICS ROW IN ONE RUN (books CHL1/CHL2) ---
+        // The user-reported arrangement, and the first book in this corpus to have it: two
+        // non-spaceable lines of DIFFERENT contexts between the same two spaceable staves.
+        // Until 2026-08-26 Lily# dropped the chords row out of the run and solved the lyrics
+        // row as its only occupant, so the two were engraved on ONE LINE
+        // (scratch/ベースタブLy/Untitled-6.lys). Nothing here could see it: the corpus had
+        // no book whose run held two kinds of line, so the chain's two score-wide constants
+        // were indistinguishable from get_spacing_spec's per-line selection.
+        //
+        // FOUR READINGS ON ONE BOOK BECAUSE THE RUN HAS FOUR TERMS, and a residual on the
+        // sum could not say which of them carries it — the split
+        // page.chord-row.staff-to-chord-baseline makes for the page's floor, made here for
+        // the run. The three steps are three DIFFERENT branches of get_spacing_spec
+        // (:1284-1294, :1313-1331, :1299-1305 — see the CHL1 header), and the fourth is the
+        // ROOM they are solved into, which is not the chain's at all: it is
+        // MultiStaffLayouter's staff-to-staff distance, and on a book with rows between the
+        // staves that is still Lily#'s BAND stack rather than LilyPond's alignment minimum.
+        // ⚠️ EXPECT THE ROOM TO CARRY MOST OF THE RESIDUAL, and the steps to inherit it
+        // through the solve — the closing spring has LARGE_STRETCH, so slack lands there.
+        // The room entry is what makes that legible instead of three unexplained numbers.
+        new("lyrics.chord-lyric-run.staff-to-chord", CHL1,
+            g => g.ChordBaselineBelowStaff(0), RaggedBottomPaper),
+        new("lyrics.chord-lyric-run.chord-to-lyric", CHL1,
+            g => g.LyricBaselineBelowStaff(0) - g.ChordBaselineBelowStaff(0), RaggedBottomPaper),
+        new("lyrics.chord-lyric-run.lyric-to-staff", CHL1,
+            g => g.LyricBaselineAboveStaff(1), RaggedBottomPaper),
+        new("lyrics.chord-lyric-run.staff-to-staff", CHL1,
+            g => g.StaffGap(), RaggedBottomPaper),
+
+        // ...and the CONTROL, one word apart: the same book without the lyrics row. LilyPond
+        // reads the FIRST step identically on the two (5.659653422), which is the invariant a
+        // per-line selection has and a per-run one does not — what stands below the chords row
+        // cannot move the spring that holds the chords row.
+        new("lyrics.chord-run.staff-to-chord", CHL2,
+            g => g.ChordBaselineBelowStaff(0), RaggedBottomPaper),
+        new("lyrics.chord-run.staff-to-staff", CHL2,
+            g => g.StaffGap(), RaggedBottomPaper),
 
         // THE BOTTOM OF THE CHAIN, in both regimes. Every entry above reads a GAP — a
         // spring's length at the page's force — and a force is the page's slack over the

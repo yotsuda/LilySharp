@@ -2688,6 +2688,41 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The lyric baseline nearest ABOVE staff <paramref name="staffIndex"/>'s reference
+    /// point — the step that CLOSES a run standing between two staves.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1299-1312 — <c>before</c> is the loose line
+    /// and <c>after</c> is spaceable, so a staff-affinity-UP line is held off the staff BELOW
+    /// it by its own <c>nonstaff-unrelatedstaff-spacing</c> plus LARGE_STRETCH. That is a
+    /// different spring from the one <see cref="LyricBaselineBelowStaff"/> reads, which is
+    /// the step from the staff the line BELONGS to; a run between two staves has both, and a
+    /// ledger entry that named only one of them would leave the other unwatched.
+    /// <para>
+    /// ⚠️ Y GROWS DOWNWARD, so "nearest above" is the LARGEST Y among those above — the
+    /// mirror of <see cref="ChordBaselineAboveStaff"/>, and for its reason: taking
+    /// <c>LyricSyllables[0]</c> would name whichever system happened to start furthest left.
+    /// </para>
+    /// </remarks>
+    public double LyricBaselineAboveStaff(int staffIndex, int page = 0)
+    {
+        var refpoints = StaffRefpoints(page);
+        if (staffIndex < 0 || staffIndex >= refpoints.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for staff {staffIndex} but only {refpoints.Count} "
+                + "staff/staves are on it.");
+        }
+        double staff = refpoints[staffIndex];
+        var above = LyricSyllables.Where(t => t.Y < staff).ToList();
+        if (above.Count == 0)
+            throw new InvalidOperationException(
+                $"page {page}: no lyric syllable was drawn above staff {staffIndex}'s refpoint "
+                + $"({staff:F6}).\nDrawn geometry:\n" + Describe());
+        return staff - above.Max(t => t.Y);
+    }
+
+    /// <summary>
     /// Baseline to baseline between the first system's verse 1 and verse 2.
     /// </summary>
     /// <remarks>
@@ -2939,6 +2974,39 @@ internal sealed class RenderedGeometry
                 $"page {page}: no chord symbol was drawn above staff {staffIndex}'s refpoint "
                 + $"({staff:F6}).\nDrawn geometry:\n" + Describe());
         return staff - above.Max(t => t.Y);
+    }
+
+    /// <summary>
+    /// The chord baseline nearest BELOW staff <paramref name="staffIndex"/>'s reference
+    /// point — the OPENING step of a run that stands between two staves.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1284-1294 — <c>before</c> is spaceable and
+    /// <c>after</c> is not, so the spring is chosen by the LOWER line's affinity, and a
+    /// ChordNames line's is DOWN: it takes its own <c>nonstaff-unrelatedstaff-spacing</c>
+    /// plus LARGE_STRETCH, the branch <see cref="ChordBaselineAboveStaff"/> never reaches
+    /// (that one reads the staff a chord row belongs to, whose spec is the relatedstaff one).
+    /// <para>
+    /// ⚠️ Y GROWS DOWNWARD, so "nearest below" is the SMALLEST Y among those below — the
+    /// mirror of <see cref="ChordBaselineAboveStaff"/> in both senses.
+    /// </para>
+    /// </remarks>
+    public double ChordBaselineBelowStaff(int staffIndex, int page = 0)
+    {
+        var refpoints = StaffRefpoints(page);
+        if (staffIndex < 0 || staffIndex >= refpoints.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for staff {staffIndex} but only {refpoints.Count} "
+                + "staff/staves are on it.");
+        }
+        double staff = refpoints[staffIndex];
+        var below = ChordSymbols.Where(t => t.Y > staff).ToList();
+        if (below.Count == 0)
+            throw new InvalidOperationException(
+                $"page {page}: no chord symbol was drawn below staff {staffIndex}'s refpoint "
+                + $"({staff:F6}).\nDrawn geometry:\n" + Describe());
+        return below.Min(t => t.Y) - staff;
     }
 
     /// <summary>Thin bar lines, left to right.</summary>

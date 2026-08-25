@@ -117,7 +117,7 @@ internal sealed record StaffSpacingParameters
     {
         BasicDistance = 5.5,
         MinimumDistance = 0,
-        Padding = 0.5,
+        Padding = SkylineDrop.RelatedStaffPadding,
         Stretchability = 1
     };
 
@@ -132,21 +132,30 @@ internal sealed record StaffSpacingParameters
     /// LILYPOND-REF: ly/engraver-init.ly:658 Lyrics override padding=1.5
     /// <para>
     /// ⚠️ LILYPOND DECLARES ONLY A PADDING HERE — no basic-distance, no minimum-distance and
-    /// no stretchability. The stretchability is now spelled as the absence; the other two
-    /// are still written as 0, which is NOT the same thing (<c>read_spacing_spec</c> leaves
-    /// an absent member at whatever the caller's spring already held —
-    /// <c>Spring spring (1.0, 0.0)</c> at page-layout-problem.cc:1035 for a loose-line
-    /// chain), and closing that needs the same nullable treatment for the other three
-    /// members. Latent today: this spec is only reachable through
-    /// <c>StaffAffinity.Select</c>, which the ported chain does not use — the
-    /// loose-to-unrelated-staff branch is the one still at force 0 (HANDOFF 1).
+    /// no stretchability. The stretchability is spelled as the absence; the other two are
+    /// written out, and <c>read_spacing_spec</c> leaves an absent member at whatever the
+    /// caller's spring already held — <c>Spring spring (1.0, 0.0)</c> at
+    /// page-layout-problem.cc:1035 for a loose-line chain. So the IDEAL IS 1.0, not 0.
+    /// <para>
+    /// ★ IT WAS 0 UNTIL 2026-08-26, AND THE REMARK IT REPLACES CALLED ITSELF LATENT: "this
+    /// spec is only reachable through <c>StaffAffinity.Select</c>, which the ported chain
+    /// does not use". <c>LooseLineSpacer</c> carried the SAME spec with the 1.0 in it, and
+    /// the live chain read THAT one — so the two homes disagreed on a number and the
+    /// disagreement was invisible because only one of them was reachable. The duplicate is
+    /// gone (the chain reads these specs now, per line, through
+    /// <see cref="StaffAffinity.GetSpacingSpec"/>) and the 1.0 is what came over with it.
+    /// ⚠️ Closing the last of it needs <c>BasicDistance</c> and <c>MinimumDistance</c>
+    /// NULLABLE the way <see cref="VerticalSpacingSpec.Stretchability"/> is; written as 0
+    /// they are a claim, not an absence, and they read the same only because this chain's
+    /// caller starts every spring at <c>(1.0, 0.0)</c>.
+    /// </para>
     /// </para>
     /// </remarks>
     public VerticalSpacingSpec NonStaffUnrelatedStaff { get; init; } = new()
     {
-        BasicDistance = 0,
+        BasicDistance = 1.0,
         MinimumDistance = 0,
-        Padding = 1.5,
+        Padding = SkylineDrop.UnrelatedStaffPadding,
         Stretchability = null,
     };
 
@@ -161,8 +170,8 @@ internal sealed record StaffSpacingParameters
     public VerticalSpacingSpec NonStaffNonStaff { get; init; } = new()
     {
         BasicDistance = 0,
-        MinimumDistance = 2.8,
-        Padding = 0.2,
+        MinimumDistance = SkylineDrop.NonStaffNonStaffMinimum,
+        Padding = SkylineDrop.NonStaffNonStaffPadding,
         Stretchability = 0
     };
 
@@ -201,7 +210,7 @@ internal sealed record StaffSpacingParameters
     /// ⚠️ THE 1.0 IS THE CALLER'S SPRING, NOT A BASIC-DISTANCE — <c>Spring spring (1.0, 0.0)</c>
     /// at page-layout-problem.cc:1035, which <c>read_spacing_spec</c> then leaves alone
     /// because the member is absent. Written the same way, and for the same reason, as
-    /// <see cref="LooseLineSpacer.NonStaffUnrelatedStaff"/>: a 0 here would be a DIFFERENT
+    /// <see cref="NonStaffUnrelatedStaff"/>: a 0 here would be a DIFFERENT
     /// spring rather than a tidier spelling. Closing the fold properly needs
     /// <c>BasicDistance</c> nullable the way <c>Stretchability</c> now is (HANDOFF 1).
     /// </para>

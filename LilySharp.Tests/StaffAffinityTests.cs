@@ -188,7 +188,16 @@ public class StaffAffinityTests
         // LILYPOND-REF: scm/define-grobs.scm:4239 (padding . 0.5)
         // LILYPOND-REF: ly/engraver-init.ly:658 Lyrics override → 1.5
         // We default to the Lyrics override since most non-staff use cases match.
-        Assert.Equal(0, Sp.NonStaffUnrelatedStaff.BasicDistance);
         Assert.Equal(1.5, Sp.NonStaffUnrelatedStaff.Padding);
+
+        // ★ THE IDEAL IS 1.0, NOT 0 (2026-08-26). The padding is ALL this spec declares — no
+        // basic-distance — so read_spacing_spec leaves the caller's own
+        // `Spring spring (1.0, 0.0)` standing (page-layout-problem.cc:1035). This asserted 0
+        // while the SECOND copy of the same spec, the one the loose chain actually read, held
+        // 1.0; the two were never compared, because SystemSpacingTests' two-homes pin
+        // enumerated the other two specs and not this one. The copy is gone — see
+        // StaffSpacingParameters.NonStaffUnrelatedStaff — and this is the surviving number.
+        Assert.Equal(1.0, Sp.NonStaffUnrelatedStaff.BasicDistance);
+        Assert.Null(Sp.NonStaffUnrelatedStaff.Stretchability);
     }
 }

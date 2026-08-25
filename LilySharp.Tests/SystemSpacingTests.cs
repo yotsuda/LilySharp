@@ -101,29 +101,55 @@ public class SystemSpacingTests
     }
 
     /// <summary>
-    /// <c>nonstaff-relatedstaff-spacing</c> and <c>nonstaff-nonstaff-spacing</c> each have
-    /// TWO homes in Lily#, and they have to agree.
+    /// The three <c>nonstaff-*</c> specs have ONE home, and the loose-line chain reaches
+    /// them through the same selection the staff layout does.
     /// </summary>
     /// <remarks>
-    /// One LilyPond property, two transcriptions: <see cref="StaffSpacingParameters"/> holds
-    /// the pair the STAFF layout reaches through <c>StaffAffinity.Select</c>, and
-    /// <c>LooseLineSpacer</c> holds the pair the loose-line chain builds its springs from.
-    /// HANDOFF 5.2.1 (2) is about exactly this: a duplicated quantity is where a port lands
-    /// on one copy and not the other, and the padding-times-four defect lived in the copy.
-    /// Unifying them is the real fix and is not free (the loose chain does not take
-    /// <c>\override</c> plumbing today), so until then the invariant is asserted.
+    /// ★ THIS PIN USED TO ASSERT THAT TWO HOMES AGREED, and it is the reason to keep a pin
+    /// here at all. <c>LooseLineSpacer</c> carried its own copy of the Lyrics context's three
+    /// specs and the chain built every spring from those; <see cref="StaffSpacingParameters"/>
+    /// carried the same three for the staff layout. The pin compared TWO of the three —
+    /// <c>nonstaff-relatedstaff</c> and <c>nonstaff-nonstaff</c> — and the pair it left out,
+    /// <c>nonstaff-unrelatedstaff</c>, was the pair that DISAGREED: ideal 1.0 in the copy the
+    /// chain read against 0 in the one nothing reached. A pin over a duplicate can only be as
+    /// good as its own enumeration, which is why the duplicate went instead (2026-08-26).
     /// <para>
-    /// LILYPOND-REF: ly/engraver-init.ly:649-652 and :653-657 — the Lyrics context's two
-    /// overrides, which is what BOTH copies transcribe.
+    /// What is asserted now is the property that replaced it: <c>get_spacing_spec</c>'s
+    /// branches, given a Lyrics line, return exactly the three specs the score's parameters
+    /// hold — so the chain reading them per line is the same chain as before on every book
+    /// whose run is all Lyrics.
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1266-1342 Page_layout_problem::get_spacing_spec
+    /// — and ly/engraver-init.ly:648-658, the
+    /// <c>\context { \name Lyrics }</c> block's <c>VerticalAxisGroup</c> overrides
+    /// (<c>staff-affinity</c>, <c>nonstaff-relatedstaff-spacing</c>,
+    /// <c>nonstaff-nonstaff-spacing</c>, <c>nonstaff-unrelatedstaff-spacing.padding</c>).
     /// </para>
     /// </remarks>
     [Fact]
-    public void TheTwoHomesOfTheLyricSpacingSpecs_Agree()
+    public void TheLyricSpacingSpecs_HaveOneHome_AndTheChainSelectsThemByAffinity()
     {
         var sp = StaffSpacingParameters.Default;
+        var lyrics = LooseLineSpacer.NoteBoundLyricLine(sp);
+        var staff = LooseLineSpacer.SpaceableStaffLine;
 
-        Assert.Equal(sp.NonStaffRelatedStaff, LooseLineSpacer.NonStaffRelatedStaff);
-        Assert.Equal(sp.NonStaffNonStaff, LooseLineSpacer.NonStaffNonStaff);
+        // Staff above, affinity-UP line below → the line's nonstaff-relatedstaff-spacing.
+        Assert.Equal(
+            sp.NonStaffRelatedStaff,
+            StaffAffinity.GetSpacingSpec(
+                staff.Affinity, staff.Specs, lyrics.Affinity, lyrics.Specs, sp.StaffStaff));
+
+        // Two affinity-UP lines → the UPPER one's nonstaff-nonstaff-spacing.
+        Assert.Equal(
+            sp.NonStaffNonStaff,
+            StaffAffinity.GetSpacingSpec(
+                lyrics.Affinity, lyrics.Specs, lyrics.Affinity, lyrics.Specs, sp.StaffStaff));
+
+        // Affinity-UP line, spaceable staff below → its nonstaff-unrelatedstaff-spacing with
+        // LARGE_STRETCH added, since the spec declares no stretchability of its own.
+        Assert.Equal(
+            sp.NonStaffUnrelatedStaff with { Stretchability = StaffAffinity.LargeStretch },
+            StaffAffinity.GetSpacingSpec(
+                lyrics.Affinity, lyrics.Specs, staff.Affinity, staff.Specs, sp.StaffStaff));
     }
 
     /// <summary>
