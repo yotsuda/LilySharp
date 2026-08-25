@@ -342,38 +342,32 @@ internal static class MusicMarkEngraver
     public static double BelowMarkBaseline(double systemBottom)
         => systemBottom + 1.5 + Padding;
 
-    // Cap-height ascent of the chord-name text above its baseline
-    // (chord font = 4.0 * 0.65 = 2.6 ss; cap height ≈ 0.72 em).
-    private const double ChordTextAscent = 1.9;
-
-    /// <summary>Cap-height ascent of a chord symbol above its baseline Y.</summary>
+    /// <summary>How far a chord symbol's ink reaches above its baseline Y.</summary>
     /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:865-984 skyline_spacing — a mark is placed
+    /// against the accumulated skyline of what is already there, and for a chord row that IS
+    /// the ChordName stencils. So the quantity is the SYMBOL'S OWN INK
+    /// (<see cref="ChordNameEngraver.SymbolInk"/>), asked per symbol.
+    /// <para>
     /// It used to add a stacked Roman-degree row's height when the chord was drawn
     /// `as both`, because that row was drawn 2.2 ss higher than this baseline and a mark
     /// clearing the chord had to clear the UPPER line. `both` was retired 2026-08-23 —
     /// a track shown both ways is placed twice, and each ROW is its own band with its own
-    /// one line — so every chord symbol is one line again and the ascent is the text's.
-    /// <para>
-    /// ⚠️ LILYSHARP-OWN: A NOMINAL BOX WHERE LILYPOND READS THE STENCIL (HANDOFF §7.7's most
-    /// repeated shape). LilyPond places the mark against the accumulated skyline of what is
-    /// already there, which for a chord row IS the ChordName stencils
-    /// (lily/axis-group-interface.cc:865-984 skyline_spacing); this returns one constant for
-    /// every symbol. Ledger <c>mark.over-chord.*</c> is the pair that measured it.
+    /// one line — so every chord symbol is one line again.
     /// </para>
     /// <para>
-    /// ⚠️ AND IT IS THE SMALLER HALF OF THAT PAIR'S RESIDUAL — measured 2026-08-25, session
-    /// 254, so that the next reader does not start here. Reading the real ink instead of the
-    /// 1.9 moves the mark by 0.007250371 (`Am' measures (0.0 . 1.907250371)) and CANNOT move
-    /// the pair's difference at all, because in Lily# `A♯m' measures the same box to nine
-    /// digits: the accidental is spelled U+266F, the ChordName face has no such glyph, and
-    /// the metrics return the .notdef (0,0). LilyPond's 1.271099 between those two books is
-    /// the Emmentaler accidental GLYPH LilyPond draws instead
-    /// (scm/chord-name.scm:80-95 accidental-&gt;text-markup), three quarters of it BELOW the
-    /// baseline. The chord row's markup is the island; this constant is a separate, smaller
-    /// one that can be closed independently and is watched by the same two entries.
+    /// ⚠️ IT WAS A NOMINAL 1.9 UNTIL 2026-08-25 (session 254) — "cap height ≈ 0.72 em" over a
+    /// chord font written as 4.0 * 0.65, i.e. a flat box standing in for ink, HANDOFF §7.7's
+    /// most repeated shape. Ledger <c>mark.over-chord.*</c> is the pair that measured it, and
+    /// the pair also showed that the constant was the SMALLER half: reading `Am''s real ink
+    /// top (1.907250371) instead of 1.9 moves the mark by 0.007250371, while the 1.271099
+    /// LilyPond puts between those two books is the accidental GLYPH — which the same session
+    /// ported (<see cref="ChordNameGlyphRun"/>), and which reaches this arm through
+    /// <c>SymbolInk</c> rather than through a term of its own.
     /// </para>
     /// </remarks>
-    private static double ChordAscent(ChordNameLayout cn) => ChordTextAscent;
+    private static double ChordAscent(ScoreTextMetrics fonts, ChordNameLayout cn) =>
+        ChordNameEngraver.SymbolInk(fonts, cn.ChordText).Top;
 
     // LILYPOND-REF: define-grobs.scm RehearsalMark padding=0.8
     private const double AboveStaffOffset = -2.0;
@@ -388,12 +382,30 @@ internal static class MusicMarkEngraver
     /// LILYPOND-REF: scm/define-grobs.scm RehearsalMark padding=0.8 — the mark family's OWN
     /// declared padding, not <see cref="OutsideStaffPadding"/>, which is the generic
     /// <c>default_outside_staff_padding_</c> for a grob that declares none. This one does.
-    /// ⚠️ LILYSHARP-OWN: THAT THE MARK CLEARS A CHORD AT ALL. LilyPond was asked directly
-    /// (audit/lp-geometry/probes/mark-chord-row.ly — a 2x2 over {chords row, none} x {high
-    /// notes, low}) and in EVERY cell the mark and the nearest chord symbol are X-DISJOINT:
-    /// the mark occupies x 3.365..5.379 and the nearest chord starts at 5.800. LilyPond
-    /// never produced the arrangement this constant is for, so it gives it no number, and
-    /// the value is chosen as the mark family's own padding rather than measured.
+    /// ⚠️ LILYSHARP-OWN: THAT THE MARK CLEARS A CHORD AT ALL. The 2x2 this remark was written
+    /// from (audit/lp-geometry/probes/mark-chord-row.ly — a chords row or none, crossed with
+    /// high notes or low) put the label at a LINE START in every cell, where a SectionLabel
+    /// anchors on `left-edge' and the chords begin after the clef: the mark occupies
+    /// x 3.365..5.379 and the nearest chord starts at 5.800, X-DISJOINT throughout.
+    /// <para>
+    /// ⚠️⚠️ AND THE SENTENCE THAT USED TO FOLLOW — "LilyPond never produced the arrangement
+    /// this constant is for, so it gives it no number" — IS NO LONGER TRUE. It was a property
+    /// of those four books, not of LilyPond, and books MKW/MKX produce the arrangement
+    /// (mid-line, one label, a chord under it). LILYPOND ANSWERS 0.429336: its label's ink
+    /// bottom over the chord's ink top, held to fifteen digits across BOTH books. Corrected
+    /// 2026-08-25 (session 254) in the commit that made this constant the LIVE term of ledger
+    /// <c>mark.over-chord.*</c> — HANDOFF §5.1 puts the re-reading of a note in the commit that
+    /// falsifies it, and this is that commit.
+    /// </para>
+    /// <para>
+    /// ⚠️ 0.429336 IS A MEASUREMENT, NOT A CONSTANT TO COPY (HANDOFF §5.2). The label and the
+    /// chord overlap only PARTIALLY in X, and <c>Skyline::padded</c>'s flat plus 45-degree
+    /// horizon (<c>outside-staff-horizontal-padding</c> 0.2) stands the label's foot on the
+    /// chord's SLOPE rather than on its plateau — so what gets ported is the padded skyline
+    /// DISTANCE and 0.429336 is what checks that port. Until then this stays a scalar, and the
+    /// 0.370664 it costs is one of the two terms both <c>mark.over-chord.*</c> entries now
+    /// carry; the other is the 0.400000 box Lily# draws where LilyPond draws bare text.
+    /// </para>
     /// ⚠️⚠️ AND THE PROBE REFUTED THE READING THIS FILE FIRST SHIPPED WITH (2026-08-24,
     /// corrected the same day): "system 2 reads 5.845000 = the chords' 5.045 + padding 0.8,
     /// so LP lifts the mark over the chord". IT DOES NOT. 5.845 is 1.138700 BELOW that same
@@ -766,7 +778,7 @@ internal static class MusicMarkEngraver
                         + chordInkPadding;
                     if (mx1 < chLeft || mx0 > chRight)
                         continue; // no horizontal ink overlap
-                    double chordTopUp = chordUp + ChordAscent(cn);
+                    double chordTopUp = chordUp + ChordAscent(fonts, cn);
                     ceiling = Math.Max(ceiling, chordTopUp + ChordClearancePadding);
                 }
                 return ceiling;

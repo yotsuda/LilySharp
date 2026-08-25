@@ -49,7 +49,9 @@ internal static partial class SharedRenderer
     /// so it stays on this ChordName path; porting GridChordName is separate work.
     /// </para>
     /// </remarks>
-    private static void DrawChordNames(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
+    private static void DrawChordNames(
+        ScoreTextMetrics fonts, ScoreLayout layout,
+        Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.ChordNameLayouts.IsDefaultOrEmpty) return;
         // The one home for the chord em, shared with ChordNameEngraver so the reserved ink
@@ -60,6 +62,19 @@ internal static partial class SharedRenderer
         // (scm/define-grobs.scm:837-855), so the symbol renders regular, in the style the
         // engraver reserved for.
         const FontStyle style = LilySharp.Core.Svg.EngravingDefaults.ChordNameFontStyle;
+        // ...and the ACCIDENTALS are not text at all: LilyPond draws each one as an Emmentaler
+        // glyph, one font step smaller and lifted off the baseline
+        // (scm/chord-name.scm:80-95 — the addresses and the 2.26.0 measurements are on
+        // ChordNameGlyphRun). This loop therefore walks the run's pieces instead of handing
+        // the whole string to the text face. Until 2026-08-25 it handed over the string, and
+        // since the bundled face has no U+266F the glyph in the picture came from whatever the
+        // PLATFORM supplied — a picture that was a function of the machine.
+        // ⚠️ ONE HOME WITH THE RESERVATION: the pieces here are the pieces
+        // ChordNameEngraver.SymbolInkWidth and SymbolInk price, so the drawn symbol and the
+        // reserved one cannot drift (the failure this file already carries a note about).
+        double glyphEm = FontSize
+            * LilySharp.Core.Svg.Layout.EmmentalerDesignSize.Magstep(
+                LilySharp.Core.Svg.Layout.ChordNameGlyphRun.AccidentalFontSizeStep);
         // ONE line per symbol. `as both` used to draw a second one 2.2 ss above this
         // baseline — a distance that lived here while the ink was reserved for in
         // ChordNameEngraver, so the row under-reserved by exactly it. Retired 2026-08-23:
@@ -70,8 +85,17 @@ internal static partial class SharedRenderer
             // Page Y-up: this measure's system top plus the stored offset.
             double cy = syUp + c.YUp;
             using (gc.Source(c.SourcePosition))
-                gc.DrawText(c.ChordText, c.X, cy, size, TextRole.ChordName,
-                    style, TextAnchor.Start, Color.Black);
+            {
+                foreach (var piece in
+                         LilySharp.Core.Svg.Layout.ChordNameGlyphRun.Pieces(fonts, c.ChordText))
+                {
+                    if (piece.IsGlyph)
+                        gc.DrawGlyph(piece.Glyph, c.X + piece.DrawX, cy + piece.Raise, glyphEm);
+                    else
+                        gc.DrawText(piece.Text, c.X + piece.X, cy, size, TextRole.ChordName,
+                            style, TextAnchor.Start, Color.Black);
+                }
+            }
         }
     }
 

@@ -174,7 +174,7 @@ internal static partial class SharedRenderer
                 DrawGlissandos(layout, measureToSystemTopYUp, os, gc);
                 DrawArpeggios(layout, measureToSystemTopYUp, os, gc);
                 DrawGraceNotes(layout, measureToSystemTopYUp, os, gc, page.Height);
-                DrawChordNames(layout, measureToSystemTopYUp, gc);
+                DrawChordNames(score.TextMetrics, layout, measureToSystemTopYUp, gc);
                 DrawFiguredBass(layout, measureToSystemTopYUp, os, gc);
                 DrawPercentRepeats(layout, measureToSystemTopYUp, os, gc);
                 DrawBarNumbers(layout, measureToSystemTopYUp, gc);

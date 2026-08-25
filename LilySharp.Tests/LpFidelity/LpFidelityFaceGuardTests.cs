@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Linq;
 using LilySharp.Core.Music;
 using LilySharp.Core.Rendering;
+using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Syntax;
@@ -165,45 +166,32 @@ public class LpFidelityFaceGuardTests
     /// ⚠️ A LIST AND NOT A COUNT, for the reason the citation ratchet is one
     /// (HANDOFF §5.2.1⑦): a count lets an old member stay open while a new one arrives.
     /// <para>
-    /// ★ THE TWO MEMBERS ARE ONE DEFECT, measured 2026-08-25 (session 254).
-    /// <c>ChordStructure.SpellPitch</c> spells an altered root with U+266F / U+266D, and
-    /// TeX Gyre Heros — the face <see cref="TextRole.ChordName"/> resolves to, and the one
-    /// the test above requires it to resolve to — carries neither. So for every altered
-    /// chord symbol in the language:
+    /// ★ THE TWO MEMBERS ARE A FACT ABOUT THE FACE, NOT AN OPEN DEFECT — and the distinction
+    /// is the whole point of the test below. TeX Gyre Heros, which
+    /// <see cref="TextRole.ChordName"/> resolves to and which the test above REQUIRES it to
+    /// resolve to, carries neither U+266F nor U+266D: both read ink <c>(0,0)</c> and advance
+    /// 1.297445669, which is what <c>U+FFFD</c> reads too. That is not going to change, so
+    /// the invariant worth holding is not "the face can draw everything" but "nothing is
+    /// MEASURED as text in a face that cannot draw it".
     /// </para>
-    /// <list type="bullet">
-    /// <item>the metrics read the .notdef box: ink <c>(0,0)</c> and advance 1.297445669,
-    /// which is what <c>U+FFFD</c> reads too — asserted below, because a ZERO-INK reading
-    /// alone cannot tell "absent" from "blank" and only the first is a defect;</item>
-    /// <item>so a chord accidental is in NO skyline. <c>ChordNameEngraver.RowSkylines</c>
-    /// merges the symbol's real ink, and that ink is the letter's alone — measured, `A♯m'
-    /// and `Am' report the same box to nine digits;</item>
-    /// <item>while the DRAWN glyph comes from whatever the platform's fallback supplies
-    /// (verified: <c>lysc png</c> prints a full-size baseline ♯). That is the pollution
-    /// <c>b69c73e6</c> removed from the probe path, arriving through the draw path
-    /// instead — the picture is a function of the machine.</item>
-    /// </list>
     /// <para>
-    /// ⇒ THE FIX IS A PORT AND IT HAS AN ADDRESS, so this list is expected to empty rather
-    /// than to be lived with: LilyPond does not put an accidental CHARACTER in a chord name
-    /// at all. <c>scm/chord-name.scm:80-95 accidental-&gt;text-markup</c> /
-    /// <c>accidental-&gt;markup</c> builds it as the Emmentaler ACCIDENTAL GLYPH, one step
-    /// <c>smaller</c>, <c>translate-scaled</c> up by 0.6 (0.3 for the flat family), with a
-    /// 0.094725 kern before the narrow glyphs. Measured in 2.26.0: ChordName `Am' is
-    /// (0.0 . 1.907290480437992) and `A♯m' is (-0.9535167849233657 . 2.22487249815452) —
-    /// the raised glyph adds 0.317582 on top and 0.953517 below, 1.271099 of ink height in
-    /// all, which is the number ledger <c>mark.over-chord.*</c> reads as the pair's whole
-    /// difference. Lily# has the glyphs and their outlines already
-    /// (<c>EmmentalerGlyphs</c> / <c>GlyphMetrics</c>) and the run machinery to mix them
-    /// with text (<c>FetaTextRun</c>, three consumers); what it has not got is a fourth
-    /// consumer for the chord name.
+    /// ⚠️ IT WAS AN OPEN DEFECT FOR ONE COMMIT, 2026-08-25 (session 254), and the shape is
+    /// worth keeping: <c>ChordStructure.SpellPitch</c> spelled an altered root with those two
+    /// characters and the whole string went to the text face, so a chord accidental was
+    /// priced at the .notdef box and stood in NO skyline (`A♯m' and `Am' reported the same
+    /// ink to nine digits) while the DRAWN glyph came from whatever the platform's fallback
+    /// supplied — the pollution <c>b69c73e6</c> removed from the probe path, arriving through
+    /// the draw path instead. <see cref="ChordNameGlyphRun"/> closed it by drawing and
+    /// measuring LilyPond's own Emmentaler accidental, which is why the assertion below is
+    /// about ROUTING rather than about coverage.
     /// </para>
     /// </remarks>
     private static readonly char[] ChordCharactersTheFaceCannotDraw = ['♭', '♯'];
 
     /// <summary>
-    /// Every character the chord namer can print is a character the face that MEASURES it
-    /// can actually draw — except the named list above.
+    /// No character the chord namer can print is MEASURED as text in a face that cannot
+    /// draw it: every one either has ink in that face, or the chord run turns it into a
+    /// music glyph.
     /// </summary>
     /// <remarks>
     /// ⚠️ THE VOCABULARY IS ENUMERATED FROM THE NAMER, NOT SPELLED HERE. A hand-written
@@ -219,9 +207,19 @@ public class LpFidelityFaceGuardTests
     /// not a missing glyph (<c>m maj7</c> contains one), so including it would put a
     /// non-defect in the list and hide the population it is supposed to name.
     /// </para>
+    /// <para>
+    /// ⚠️ THE TWO HALVES ARE ASSERTED SEPARATELY on purpose. The first says WHICH characters
+    /// the face cannot draw, against the recorded list, and pins the mechanism by requiring
+    /// each of them to read the .notdef advance — a zero-ink reading alone cannot tell
+    /// "absent" from "blank", and only the first is a defect. The second says every one of
+    /// them reaches <see cref="ChordNameGlyphRun"/> as a GLYPH piece. Either half alone
+    /// passes for the wrong reason: the routing check would be green on a day the face grew
+    /// a bad glyph, and the coverage check would be green on a day the run stopped
+    /// recognising a spelling.
+    /// </para>
     /// </remarks>
     [Fact]
-    public void EveryCharacterAChordSymbolCanPrint_HasInkInTheFaceThatMeasuresIt()
+    public void NoCharacterAChordSymbolCanPrint_IsMeasuredAsTextInAFaceThatCannotDrawIt()
     {
         var fonts = ScoreTextMetrics.Bundled;
         double em = EngravingDefaults.ChordNameFontSize;
@@ -278,5 +276,20 @@ public class LpFidelityFaceGuardTests
         }
 
         Assert.Equal(ChordCharactersTheFaceCannotDraw, missing.ToArray());
+
+        // ...and none of them is ever handed to that face: the chord run has to turn each
+        // one into a music glyph. Asked of the run rather than of a spelling, so a character
+        // the run stops recognising fails here even though the face has not changed.
+        foreach (char c in missing)
+        {
+            var pieces = ChordNameGlyphRun.Pieces(fonts, $"C{c}");
+            Assert.True(
+                pieces.Any(p => p.IsGlyph),
+                $"U+{(int)c:X4} is a character the ChordName face cannot draw, and "
+                + $"ChordNameGlyphRun measures `C{c}' entirely as TEXT. Whatever appears in "
+                + "the picture then comes from the platform's own font fallback, and the "
+                + "reservation is the .notdef box — see that type's remarks and ledger "
+                + "mark.over-chord.*.");
+        }
     }
 }

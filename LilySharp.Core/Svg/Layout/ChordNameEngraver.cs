@@ -370,36 +370,34 @@ internal static class ChordNameEngraver
     /// sites measured SansBold at a stale literal 2.6; the
     /// <c>chord.symbol-width.minor-pair-gap</c> point caught the +0.262120 on "Am".
     /// <para>
-    /// ⚠️⚠️ AN ALTERED SYMBOL IS PRICED AT THE .notdef BOX, measured 2026-08-25 (session
-    /// 254). <see cref="Music.ChordStructure.SpellPitch"/> spells the alteration with the
-    /// CHARACTERS U+266F / U+266D, and the bundled sans face carries neither: both report
-    /// advance 1.297445669 and ink (0,0) — the same pair U+FFFD reports. So this "one home"
-    /// hands out the missing-glyph advance for every sharp and flat in the language, and
-    /// <see cref="RowSkylines"/> reserves NO vertical ink for them, while the glyph that
-    /// appears in the picture comes from the platform's own font fallback (so the picture is
-    /// a function of the machine — the pollution <c>LpFidelityFaceGuardTests</c> keeps out of
-    /// the measuring path, arriving through the drawing path instead).
-    /// </para>
-    /// <para>
-    /// ⇒ LilyPond puts no accidental CHARACTER in a chord name at all.
-    /// LILYPOND-REF: scm/chord-name.scm:80-95 accidental->text-markup = make-accidental-markup
-    ///   wrapped in make-smaller-markup and make-translate-scaled-markup — the alteration is the
-    /// Emmentaler accidental GLYPH, one step smaller, translated up by 0.6
-    /// (0.3 for the flat family); <c>accidental-&gt;markup</c> adds a 0.094725 kern before the
-    /// narrow glyphs. MEASURED in 2.26.0: ChordName `Am' is (0.0 . 1.907290480437992) wide
-    /// 3.9264803149606298 and `A♯m' is (-0.9535167849233657 . 2.22487249815452) wide
-    /// 5.091889718755855. ⇒ The port is a fourth <see cref="FetaTextRun"/> consumer — the
-    /// glyphs and outlines are already in <c>EmmentalerGlyphs</c> / <c>GlyphMetrics</c> — and
-    /// it moves the picture of every altered chord symbol, so it is an owner decision plus a
-    /// snapshot rebase. Observed by ledger <c>mark.over-chord.*</c> (whose whole 1.271099
-    /// difference is this ink) and watched by
-    /// <c>LpFidelityFaceGuardTests.EveryCharacterAChordSymbolCanPrint_HasInkInTheFaceThatMeasuresIt</c>.
+    /// ⚠️ AN ACCIDENTAL IN THE NAME IS NOT TEXT, so the advance is no longer taken over the
+    /// whole string: <see cref="ChordNameGlyphRun"/> splits the symbol into sans runs and
+    /// Emmentaler accidental glyphs and adds their extents, which is what LilyPond's markup
+    /// line does. Until 2026-08-25 (session 254) this measured `A♯m' as three characters in a
+    /// face that has no glyph for U+266F, so the sharp was priced at the .notdef advance
+    /// 1.297445669 with ink (0,0) — the same box U+FFFD reports — while the picture drew the
+    /// glyph from the platform's font fallback. The pollution <c>LpFidelityFaceGuardTests</c>
+    /// keeps out of the measuring path had arrived through the drawing path.
     /// </para>
     /// </remarks>
     internal static double SymbolInkWidth(Rendering.ScoreTextMetrics fonts, string text) =>
-        fonts.Advance(
-            text, EngravingDefaults.ChordNameFontSize,
-            Rendering.TextRole.ChordName, EngravingDefaults.ChordNameFontStyle);
+        ChordNameGlyphRun.Width(fonts, text);
+
+    /// <summary>
+    /// A chord symbol's ink about its baseline — the union of its text runs' and its
+    /// accidental glyphs'. The one home for the symbol's HEIGHT, as
+    /// <see cref="SymbolInkWidth"/> is for its width.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:837-855 — the ChordName block, which declares chord-name-interface
+    ///   and takes its Y-extent from grob::always-Y-extent-from-stencil.
+    /// The stencil is the markup line, so this is the union its
+    /// <c>\line</c> takes. See <see cref="ChordNameGlyphRun"/> for the accidental's own
+    /// address and for the 2.26.0 measurements this reproduces.
+    /// </remarks>
+    internal static (double Bottom, double Top) SymbolInk(
+        Rendering.ScoreTextMetrics fonts, string text) =>
+        ChordNameGlyphRun.Ink(fonts, text);
 
     /// <summary>
     /// The reserved width of a chord symbol — its ink (<see cref="SymbolInkWidth"/>) under
@@ -501,9 +499,12 @@ internal static class ChordNameEngraver
 
         foreach (var (x, chord) in placed)
         {
-            var (bottom, top) = fonts.Ink(
-                DisplayText(chord), ChordFontSize,
-                Rendering.TextRole.ChordName, EngravingDefaults.ChordNameFontStyle);
+            // ⚠️ THE SYMBOL'S ink, not the STRING's: an accidental is an Emmentaler glyph and
+            // reaches far outside the letters' band (a sharp runs from -0.953517 to 2.224872
+            // where `Am' is (0 . 1.907250)). Asking the text face for the whole string used to
+            // return the letters' box alone, because the face has no accidental glyph — see
+            // SymbolInk and ChordNameGlyphRun.
+            var (bottom, top) = SymbolInk(fonts, DisplayText(chord));
             double right = x + SymbolWidth(fonts, chord);
             up.Merge(VerticalSkyline.FromBox(x, right, bottom, top, VerticalDirection.Up));
             down.Merge(VerticalSkyline.FromBox(x, right, bottom, top, VerticalDirection.Down));

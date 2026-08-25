@@ -2811,11 +2811,13 @@ internal static class LpGeometryProbes
     /// <remarks>
     /// <para>
     /// WHAT IT IS FOR. <c>MusicMarkEngraver.ChordClearancePadding = 0.8</c> is declared
-    /// <c>LILYSHARP-OWN</c> and its own remark says why: "LilyPond was asked directly … and in
-    /// EVERY cell the mark and the nearest chord symbol are X-DISJOINT … LilyPond never
+    /// <c>LILYSHARP-OWN</c> and its remark USED TO say why: "LilyPond was asked directly … and
+    /// in EVERY cell the mark and the nearest chord symbol are X-DISJOINT … LilyPond never
     /// produced the arrangement this constant is for, so it gives it no number, and the value
     /// is chosen as the mark family's own padding rather than measured." MKW/MKX produce that
-    /// arrangement. ⚠️ <see cref="MarkScore"/>'s own remark predicted these books in the
+    /// arrangement, so the second half of that sentence stopped being true the day they were
+    /// measured — LilyPond answers 0.429336, and the remark now says so. The quotation is kept
+    /// in the past tense because it is WHY these books exist. ⚠️ <see cref="MarkScore"/>'s own remark predicted these books in the
     /// negative — "THE BREAK IS LOAD-BEARING … without it … section B's label lands ON its
     /// bar's chord symbol" — and avoided them so MKR/MKN would keep reading the disjoint case.
     /// </para>
@@ -11301,8 +11303,10 @@ internal static class LpGeometryProbes
         // chord symbol, mid-line, with a staff under it (books MKW/MKX). Opened 2026-08-25 to
         // decide whether Lily# should port LilyPond's lift at all, and it is the first point
         // in the tree to put a LilyPond number on MusicMarkEngraver.ChordClearancePadding —
-        // a LILYSHARP-OWN 0.8 whose own remark says "LilyPond never produced the arrangement
-        // this constant is for". THE PAIR IS THE POINT and the absolute is not: Lily# boxes
+        // a LILYSHARP-OWN 0.8 whose remark USED TO say "LilyPond never produced the
+        // arrangement this constant is for". It does here, and it answers 0.429336; the
+        // remark was corrected in the commit that made the constant the live term.
+        // THE PAIR IS THE POINT and the absolute is not: Lily# boxes
         // its label where LilyPond draws bare text, so only the DIFFERENCE between the two
         // books is free of that term. See MKW's remarks.
         new("mark.over-chord.staff-to-baseline", MKW,
