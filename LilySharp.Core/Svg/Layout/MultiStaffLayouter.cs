@@ -34,7 +34,11 @@ namespace LilySharp.Core.Svg.Layout;
 /// Skyline-based staff spacing (align-interface.cc:217-268):
 ///   when measure layouts are provided, uses skyline distance between staves for collision avoidance;
 ///   falls back to fixed formula (BasicDistance - staffHeight) when skylines are unavailable
-/// IMPLEMENTED — pure height estimation (axis-group-interface.cc:138-173) via CalculatePureSystemHeight
+/// NOT IMPLEMENTED — pure height estimation (axis-group-interface.cc:138-173 pure_height):
+///   LilyPond's pure path runs the same walk with PURE skylines, which Lily# does not have.
+///   A stub (CalculatePureSystemHeight = base + handed-in extents) advertised this line as
+///   IMPLEMENTED with no product caller; deleted 2026-08-27 (user GO). The page breaker
+///   prices lines from the measured extents instead (PageLayouter's remarks).
 /// IMPLEMENTED — staff-affinity for non-spaceable staves (align-interface.cc:240-252) via StaffAffinity.Select
 /// IMPLEMENTED — hara-kiri auto-hide empty staves (hara-kiri-group-spanner.cc)
 /// IMPLEMENTED — alignment-distances manual override (StaffSpacingParameters.ApplyOverrides)
@@ -236,25 +240,6 @@ internal sealed class MultiStaffLayouter
     private static VerticalSpacingSpec InterGroupSpec(
         StaffGroup upper, StaffGroup lower, StaffSpacingParameters sp)
         => SelectInterGroupSpec(upper, lower, sp);
-
-    /// <summary>
-    /// Estimates pure system height including content-dependent loose line extents.
-    /// Used for page breaking optimization before full layout.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/axis-group-interface.cc:138-173 pure_height
-    ///
-    /// Pure height = base staff spacing + the extents the caller hands in.
-    /// This allows the page breaker to account for variable system heights without
-    /// requiring full layout. The base height comes from CalculateSystemHeight; the extents
-    /// come from LayoutEngine (the placed annotations' own protrusions, the lyric block's
-    /// measured reservation, and — above the staff only — LayoutEngine.EstimateAboveStaffExtents).
-    /// </remarks>
-    public double CalculatePureSystemHeight(MultiStaffScore score, double looseDownExtent, double looseUpExtent)
-    {
-        double baseHeight = CalculateSystemHeight(score);
-        return baseHeight + looseDownExtent + looseUpExtent;
-    }
 
     /// <summary>
     /// Scale factor for ossia staves: magstep(-3) = 2^(-3/6) ≈ 0.707.

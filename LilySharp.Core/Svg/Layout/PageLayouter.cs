@@ -56,11 +56,11 @@ namespace LilySharp.Core.Svg.Layout;
 /// IMPLEMENTED — in-note-system-padding (page-layout-problem.cc:483)
 /// IMPLEMENTED — hara-kiri auto-hide empty staves (MultiStaffLayouter + LayoutEngine)
 /// IMPLEMENTED — alignment-distances manual override (StaffSpacingParameters.ApplyOverrides)
-/// ⚠️ NOT WIRED — MultiStaffLayouter.CalculatePureSystemHeight has no product caller. It is
-///   reached only from SkylineStaffSpacingTests, and LilyPond's own pure path
-///   (get_pure_minimum_translations, align-interface.cc:136-143) runs the SAME walk with
-///   pure skylines, which Lily# does not have. The line above used to claim this was
-///   implemented via AugmentExtentsWithLooseLines; it was not.
+/// NOT IMPLEMENTED — pure heights. LilyPond's pure path (get_pure_minimum_translations,
+///   align-interface.cc:136-143) runs the placement walk with pure skylines, which Lily#
+///   does not have; the breaker prices lines from measured extents and LineShape instead.
+///   (A never-wired stub, MultiStaffLayouter.CalculatePureSystemHeight, stood here as
+///   "NOT WIRED" until 2026-08-27 — deleted with its two tautological tests, user GO.)
 /// </remarks>
 internal sealed class PageLayouter
 {

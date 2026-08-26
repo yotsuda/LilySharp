@@ -17,6 +17,7 @@
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Svg.Renderer;
 using LilySharp.Core.Syntax;
@@ -35,6 +36,47 @@ public class KeySignatureChangeTests
     private readonly ITestOutputHelper _output;
 
     public KeySignatureChangeTests(ITestOutputHelper output) => _output = output;
+
+    /// <summary>
+    /// A key change AFTER the first note of a measure is engraved mid-measure, not in
+    /// the system-head prefix — so a system STARTING at that measure still reserves the
+    /// old key's ink. The head picks a change up only when it OPENS the measure (the
+    /// opening-change branch in <see cref="SpacingRules.ActiveKeyInkForStaff"/>).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Pins the per-voice active-key table's PREFIX boundary (finding 4-1's memo,
+    /// 2026-08-27): <c>tbl[k]</c> must exclude measure k's own changes. Measured hole:
+    /// moving the table's record point below the measure's item scan (the off-by-one a
+    /// rewrite naturally reaches for) left the whole suite green — only a MID-measure
+    /// change in a system-start measure distinguishes the two, and nothing covered it.
+    /// </remarks>
+    [Fact]
+    public void ActiveKeyInk_MidMeasureChangeInTheStartMeasure_IsNotYetActive()
+    {
+        var source = """
+            time 4/4
+            key g major
+            part melody { clef treble }
+            phrase mel { c'4 d' e' f' | g'4 a' key d major b' c'' | d''4 c'' b' a' | }
+            section Main { melody { mel } }
+            form main { Main }
+            score main "x" { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(source);
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var staff = score.PrimaryContentStaff;
+
+        double atOpening = SpacingRules.ActiveKeyInkForStaff(score, staff, 0);
+        double atMidChangeMeasure = SpacingRules.ActiveKeyInkForStaff(score, staff, 1);
+        double afterChange = SpacingRules.ActiveKeyInkForStaff(score, staff, 2);
+
+        // Measure 1's change sits after its second note: a system starting there still
+        // opens on G major (1 sharp), bit-identical to the first system's head.
+        Assert.Equal(atOpening, atMidChangeMeasure);
+        // From measure 2 the change is active: D major (2 sharps) reserves wider ink.
+        Assert.True(afterChange > atMidChangeMeasure,
+            $"expected D major ({afterChange}) wider than G major ({atMidChangeMeasure})");
+    }
 
     [Fact]
     public void KeySignatureChangeItem_ZeroDuration()

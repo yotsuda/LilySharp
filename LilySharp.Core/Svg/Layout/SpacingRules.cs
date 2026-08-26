@@ -515,6 +515,13 @@ internal static partial class SpacingRules
     /// <c>Staff_spacing::get_spacing</c> reads as <c>last_ext</c>
     /// (<see cref="LineStartColumn.LineStartSpring"/>): the break-align COLUMN is shared, the
     /// grob in it is the staff's own.
+    /// <para>
+    /// The prefix scan reads <see cref="ActiveKeyTableOf"/> — one O(measures) build per
+    /// collected <see cref="Voice"/> instead of an O(startMeasureIndex) rescan per
+    /// (staff, system) call, which summed to O(systems × measures) per keystroke
+    /// (2026-08-26 review, finding 4-1; LayoutEngine's per-system prefix widths,
+    /// LineStartColumn and the draw all land here). Same walk, one home.
+    /// </para>
     /// </remarks>
     public static double ActiveKeyInkForStaff(
         MultiStaffScore score, Staff staff, int startMeasureIndex)
@@ -524,10 +531,9 @@ internal static partial class SpacingRules
 
         var key = staff.PerStaffKeySignature ?? score.KeySignature;
         var pv = staff.PrimaryVoice;
-        for (int m = 0; m < startMeasureIndex && m < pv.Measures.Length; m++)
-            foreach (var item in pv.Measures[m].Items)
-                if (item is KeySignatureChangeItem kc)
-                    key = kc.NewKey;
+        if (ActiveKeyTableOf(pv)[Math.Min(startMeasureIndex, pv.Measures.Length)]
+            is { } changedKey)
+            key = changedKey;
 
         // A change that OPENS this system's first measure is engraved in the PREFIX as the
         // NEW signature (SharedRenderer.GetSystemStartKeyChange; the cancellation goes to the
@@ -545,6 +551,41 @@ internal static partial class SpacingRules
 
         return EngravedKeyInkWidth(staff, key);
     }
+
+    /// <summary>
+    /// Per-voice active-key table: <c>tbl[i]</c> is the LAST key-signature change among
+    /// measures <c>[0, i)</c> in walk order (measure order, item order within a measure),
+    /// or null when none — the caller falls back to its own seed
+    /// (<c>PerStaffKeySignature ?? score.KeySignature</c>), so one table serves every
+    /// seed. Length <c>Measures.Length + 1</c>: the last slot answers a start index at or
+    /// past the end, matching the rescan's <c>m &lt; Measures.Length</c> clamp.
+    /// </summary>
+    /// <remarks>
+    /// Keyed by INSTANCE identity on the collected <see cref="Voice"/> (the same
+    /// static-CWT shape as <see cref="VoiceCollisionShiftsOf(Staff)"/> and
+    /// PageLayouter's pair-distance memo): a re-collect builds fresh Voice records, so
+    /// an edited book misses and rebuilds while an unchanged one replays. This is the
+    /// ONE spelling of the prefix walk — <see cref="ActiveKeyInkForStaff"/> only looks
+    /// up (2026-08-26 review, finding 4-1: 関数は 1 実装のまま).
+    /// </remarks>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<
+        Voice, KeySignature?[]> ActiveKeyTables = new();
+
+    private static KeySignature?[] ActiveKeyTableOf(Voice voice)
+        => ActiveKeyTables.GetValue(voice, static v =>
+        {
+            var tbl = new KeySignature?[v.Measures.Length + 1];
+            KeySignature? last = null;
+            for (int m = 0; m < v.Measures.Length; m++)
+            {
+                tbl[m] = last;
+                foreach (var item in v.Measures[m].Items)
+                    if (item is KeySignatureChangeItem kc)
+                        last = kc.NewKey;
+            }
+            tbl[v.Measures.Length] = last;
+            return tbl;
+        });
 
     /// <summary>
     /// Width reserved at the END of a line for the courtesy cancellation + new key signature

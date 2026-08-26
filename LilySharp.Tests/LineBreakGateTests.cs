@@ -16,6 +16,7 @@
 
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -25,7 +26,7 @@ namespace LilySharp.Tests;
 /// F3 engine slice 1 (S4a): the line-break GATE.
 ///
 /// The global Knuth-Plass line-break solution is a pure function of the
-/// per-measure natural-width vector (<see cref="KnuthPlassBreaker.ComputeMeasureSpringData"/>
+/// per-measure natural-width vector (<see cref="SystemBreaker.ComputeMultiStaffSpringData"/>
 /// -> <c>FindOptimalBreaks</c>) plus the paper width. These tests prove the
 /// design's central early-cutoff (the F3 incremental design notes §4): an edit that
 /// does not change any measure's natural width CANNOT change where the lines
@@ -39,7 +40,11 @@ public class LineBreakGateTests
 {
     // Collect the renderer's way (resolve the render spec, pass the voice name)
     // so the score is faithful, then compute the gate vector exactly as the
-    // breaker does: ComputeMeasureSpringData over the common shortest duration.
+    // production driver does: SystemBreaker.ComputeMultiStaffSpringData over the
+    // common shortest duration. (Until 2026-08-27 this read the single-staff
+    // KnuthPlassBreaker.ComputeMeasureSpringData — the gate's second spelling,
+    // review §4a ⑦ — which was deleted with no product caller, user GO; the pin
+    // now sits on the one gate the incremental driver actually compares.)
     private static MeasureSpringData[] Gate(string source)
     {
         var tree = SyntaxTree.Parse(source);
@@ -50,7 +55,8 @@ public class LineBreakGateTests
         var score = new MeasureCollector { ScoreTranspose = spec?.ScoreTranspose }
             .Collect(tree, voiceName, spec?.Form);
         double shortest = SpacingRules.CalculateCommonShortestDuration(score);
-        return KnuthPlassBreaker.ComputeMeasureSpringData(score.Voice.Measures, shortest);
+        return SystemBreaker.ComputeMultiStaffSpringData(
+            MultiStaffScore.FromScore(score), shortest);
     }
 
     private static string Score(string phraseBody) => $$"""

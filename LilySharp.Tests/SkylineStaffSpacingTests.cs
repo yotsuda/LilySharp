@@ -263,45 +263,6 @@ public class SkylineStaffSpacingTests
         Assert.Equal(fixedHeight, skylineHeight, 2);
     }
 
-    // --- Pure height estimation ---
-    // LILYPOND-REF: lily/axis-group-interface.cc:138-173
-
-    [Fact]
-    public void PureSystemHeight_IncludesLooseLineExtents()
-    {
-        var trebleItems = ImmutableArray.Create<MusicItem>(
-            new NoteItem(0, Fraction.Quarter, 0, null, false, 0));
-        var bassItems = ImmutableArray.Create<MusicItem>(
-            new NoteItem(0, Fraction.Quarter, 0, null, false, 0));
-
-        var score = CreateGrandStaffScore(trebleItems, bassItems);
-        var layouter = new MultiStaffLayouter(DefaultOptions, MeasureLayouter);
-
-        double baseHeight = layouter.CalculateSystemHeight(score);
-
-        // With loose line extents (e.g., lyrics below, tempo above)
-        double pureHeight = layouter.CalculatePureSystemHeight(score, looseDownExtent: 3.0, looseUpExtent: 2.5);
-
-        Assert.Equal(baseHeight + 5.5, pureHeight, 3);
-    }
-
-    [Fact]
-    public void PureSystemHeight_ZeroExtents_EqualsBaseHeight()
-    {
-        var trebleItems = ImmutableArray.Create<MusicItem>(
-            new NoteItem(0, Fraction.Quarter, 0, null, false, 0));
-        var bassItems = ImmutableArray.Create<MusicItem>(
-            new NoteItem(0, Fraction.Quarter, 0, null, false, 0));
-
-        var score = CreateGrandStaffScore(trebleItems, bassItems);
-        var layouter = new MultiStaffLayouter(DefaultOptions, MeasureLayouter);
-
-        double baseHeight = layouter.CalculateSystemHeight(score);
-        double pureHeight = layouter.CalculatePureSystemHeight(score, 0, 0);
-
-        Assert.Equal(baseHeight, pureHeight, 3);
-    }
-
     /// <summary>
     /// Each system is spaced against ITS OWN staves' skylines, so a system whose ink
     /// reaches between the staves gets the room it needs and its neighbours do not.

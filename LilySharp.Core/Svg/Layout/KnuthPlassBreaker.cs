@@ -48,7 +48,8 @@ internal readonly record struct MeasureSpringData(
     double Spring0Compress = 0,
     // The prefix→first-note spring this measure gets WHEN it opens a line (built by
     // MultiStaffLayouter.LineStartSpringForLine — the same one the layout uses), or null
-    // when unknown (the single-staff gate path). ApplyLineStartSpring swaps it for the
+    // when unknown (a hand-built test vector; the single-staff gate that also left it
+    // null was deleted 2026-08-27, user GO). ApplyLineStartSpring swaps it for the
     // Spring0* mid-line spring above when this measure is a line's first.
     Spring? LineStartSpring = null,
     // The cross-bar lyric rod's two gate faces (LyricSpacing, HANDOFF 2H, 2026-08-20) —
@@ -128,29 +129,6 @@ internal sealed class KnuthPlassBreaker
     }
 
     /// <summary>
-    /// Finds optimal line breaks for measures.
-    /// </summary>
-    /// <param name="measures">Measures to break into lines.</param>
-    /// <param name="baseShortestDuration">Optional spacing base-shortest-duration override
-    /// (staff-space scaling of note spacing); null uses the score default.</param>
-    /// <returns>List of measure groups, each representing one line.</returns>
-    public List<List<Measure>> BreakIntoLines(IReadOnlyList<Measure> measures,
-                                               double? baseShortestDuration = null)
-    {
-        if (measures.Count == 0)
-            return new List<List<Measure>>();
-
-        // Calculate spring data for each measure (includes break permission/penalty)
-        var springData = ComputeMeasureSpringData(measures, baseShortestDuration);
-
-        // Find optimal number of lines and break points
-        var breakPoints = FindOptimalBreaks(springData);
-
-        // Convert break points to measure groups
-        return CreateMeasureGroups(measures, breakPoints);
-    }
-
-    /// <summary>
     /// Breaks with PRECOMPUTED per-measure spring data. Multi-staff scores
     /// must price each measure by the COMBINED springs of all staves —
     /// pricing by the primary staff alone packs lines wherever that staff
@@ -165,68 +143,6 @@ internal sealed class KnuthPlassBreaker
             return new List<List<Measure>>();
         var breakPoints = FindOptimalBreaks(springData);
         return CreateMeasureGroups(measures, breakPoints);
-    }
-
-    /// <summary>
-    /// Computes spring data for each measure from its internal springs — the F3
-    /// design's <c>measure_natural_width</c> vector, i.e. the SOLE input (with
-    /// paper width) to the global line-break DP <see cref="FindOptimalBreaks"/>.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/simple-spacer.cc — spring parameters for force calculation
-    /// Each measure's springs are summed to produce aggregate spring data.
-    ///
-    /// internal (not private) so it can be exercised as the line-break gate:
-    /// because <c>FindOptimalBreaks</c> depends only on this vector, an edit that
-    /// leaves every measure's <see cref="MeasureSpringData"/> unchanged cannot
-    /// change the break solution, so line-breaking can be skipped on that edit
-    /// (the F3 incremental design notes §4 — measure_natural_width is the cutoff).
-    /// </remarks>
-    internal static MeasureSpringData[] ComputeMeasureSpringData(IReadOnlyList<Measure> measures,
-                                                                double? baseShortestDuration = null)
-    {
-        var data = new MeasureSpringData[measures.Count];
-        for (int i = 0; i < measures.Count; i++)
-        {
-            var m = measures[i];
-
-            // Build the measure's springs ONCE and derive all three sums from them.
-            // (Previously CalculateMeasureIdealWidth built the springs internally and
-            // then CreateSpringsForMeasure built them again — the same work twice.)
-            double startBar = SpacingRules.GetBarlineWidth(m.StartBarline);
-            double endBar = SpacingRules.GetBarlineWidth(m.EndBarline);
-            var springs = SpacingRules.CreateSpringsForMeasure(m, baseShortestDuration);
-
-            double idealWidth = startBar + endBar;  // matches CalculateMeasureIdealWidth
-            double inverseStretch = 0;
-            double inverseCompress = 0;
-            double minWidth = startBar + endBar;
-            foreach (var spring in springs)
-            {
-                idealWidth += spring.IdealDistance;
-                inverseStretch += spring.InverseStretchStrength;
-                inverseCompress += spring.InverseCompressStrength;
-                minWidth += spring.MinDistance;
-            }
-            // An empty placeholder has no springs; give it its full-bar space (a
-            // LilyPond MMR-style ROD, so it holds under compression too) — matching
-            // CalculateMeasureIdealWidth. Absent-voice filler measures stay at zero:
-            // they inherit their width from the sibling staves' same measure.
-            if (m.Items.Length == 0 && m.IsEmptyPlaceholder)
-            {
-                double slot = SpacingRules.EmptyPlaceholderContentWidth();
-                idealWidth += slot;
-                minWidth += slot;
-            }
-
-            // LILYPOND-REF: lily/constrained-breaking.cc:112-113 — break_penalty_ propagation
-            var s0 = springs.Length > 0 ? springs[0] : null;
-            data[i] = new MeasureSpringData(idealWidth, minWidth, inverseStretch,
-                m.BreakPenalty, m.LineBreakPermission, inverseCompress,
-                s0?.IdealDistance ?? 0, s0?.MinDistance ?? 0,
-                s0?.InverseStretchStrength ?? 0, s0?.InverseCompressStrength ?? 0);
-        }
-        return data;
     }
 
     /// <summary>
