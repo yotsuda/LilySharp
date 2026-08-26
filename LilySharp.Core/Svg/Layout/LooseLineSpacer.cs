@@ -176,23 +176,36 @@ internal static class LooseLineSpacer
     /// because they run WHILE the layouts are being made and <c>ClassifySystem</c> reads
     /// placed staves). The attached chord line is <c>AttachedChordLineInRun</c>, one
     /// predicate, and it is absent from the below-system run because that run has no
-    /// closing staff inside the system. Two seams remain:
-    /// ⑴ GRANULARITY OF A LYRICS ROW — the pair walk takes it as ONE element whose ink is
-    /// <c>RowSkylinesAboutBaseline</c>'s composed band; the other two take its verses as
-    /// separate elements stepped live by <c>GetSpacingSpec</c>. The two agree only while
-    /// the composed step and the walked step are the same expression (nonstaff-nonstaff —
-    /// <c>RowSkylinesAboutBaseline</c>'s own remark), which is a regime, not an
-    /// invariant; folding the pair walk onto verse granularity CHANGES BEHAVIOUR and
+    /// closing staff inside the system. One seam is closed and one remains:
+    /// ⑴ GRANULARITY OF A LYRICS ROW — CLOSED 2026-08-26. The pair walk TOOK a
+    /// multi-verse row as ONE element whose ink was <c>RowSkylinesAboutBaseline</c>'s
+    /// composed band while the other two walked its verses as separate elements stepped
+    /// live by <c>GetSpacingSpec</c>; the two agreed only while the composed step and
+    /// the walked step were the same expression, which was a regime, not an invariant.
+    /// Folding the pair walk onto verse granularity changed behaviour and so
     /// needed a ledger point first. THE POINT EXISTS SINCE 2026-08-26
-    /// (<c>lyrics.row.between-staves.verse-hole.*</c>, books RVH1/RVH2 — verses with
-    /// X-holes, the regime's edge), and it MEASURED the seam's reach: the drawn page is
-    /// at VERSE granularity already — the room reads the family's font term where an
-    /// enforced band floor would read ~+0.7, and the verse step walks the anchor
-    /// staff's ink through the hole (+7.75 against the rigid 2.8) — so the fold must
-    /// move NOTHING on that arrangement, and those eight entries are the instrument
-    /// that says so. What still consumes the composed band (this walk's element ink,
-    /// the row's seeded staff skyline, the trailing band reservations) is the fold's
-    /// remaining question.
+    /// (<c>lyrics.row.between-staves.verse-hole.*</c> — verses with X-holes, the
+    /// regime's edge), AND IT PRICED THE SEAM AS ONE NUMBER. The seam's carrier is the
+    /// SPELLING: two differently-named adjacent lyrics tracks stay two one-verse row
+    /// STAVES, each its own alignment element, so the pair walk steps them per verse
+    /// from the start and the band never forms (books RVH1/RVH2 — the room reads the
+    /// family's font term, the verse step walks the anchor staff's ink through the
+    /// hole, +7.75 against the rigid 2.8). The same name written TWICE stacks the
+    /// verses into one row staff (<c>Staff.TextRowVerses</c> = 2), the composed band
+    /// formed, and this walk consumed it: book RVH3 — the SAME music, LilyPond the
+    /// identity side — read the room one staff space over
+    /// (<c>…verse-hole.one-staff.staff-staff-inside</c>, +1.018425122 = the band placed
+    /// at verse 2's bar-2 clearance dragging verse 1's descenders onto the tall
+    /// column), with the chain then relaxing verse 1 into the over-reservation
+    /// (+0.889 on its first spring). THE FOLD LANDED THE SAME DAY: a multi-verse row's
+    /// verses enter the pair walk as separate elements
+    /// (<c>MultiStaffLayouter.PairBlocks</c>' verse arm, supplied by
+    /// <c>LayoutEngine.BuildRowVerseInk</c> — the reservation's and the solve's own
+    /// <c>RowBlockSkylines</c>), and both one-staff readings dropped to their two-staff
+    /// twins' numbers to the ninth digit while nothing else in the ledger moved. The
+    /// SEAM IS CLOSED for the pair walk; the composed band remains only where its
+    /// element IS one verse and in <c>LyricRowInk</c>'s seeded skyline for the
+    /// silhouette readers.
     /// ⑵ VERSE IDENTITY — the solve keys a verse by its NUMBER (its ink lives in the
     /// (system, line, verse) dictionaries), the other two by POSITION in the built list,
     /// which never holds a verse whose ink came out empty (<c>BlockSkylines</c> skips

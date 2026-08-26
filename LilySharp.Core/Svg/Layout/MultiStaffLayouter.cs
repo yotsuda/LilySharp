@@ -2554,10 +2554,12 @@ internal sealed class MultiStaffLayouter
     /// spec set a row carries is a fact about its context, not about the score.
     /// <para>
     /// ★ THE ORDER IS <see cref="LooseLineSpacer.RunSlots"/>'S SINCE 2026-08-26 — the one
-    /// spelling all three walks of a run read. This walk's granularity for a lyrics row is
-    /// the BAND (one element, the row's own seeded skylines), which is that remark's seam
-    /// ⑴; the note-bound and trailing elements arrive as built <see cref="PairLooseLine"/>
-    /// values, so their slots carry no ink and their <c>Line</c> travels in the value.
+    /// spelling all three walks of a run read. A multi-verse lyrics row contributes its
+    /// VERSES as separate elements since the same day (seam ⑴'s fold — the inline remark
+    /// in the body carries the measured price the band paid); a one-verse row and a
+    /// chords row stay single elements read off their seeded skylines. The note-bound
+    /// and trailing elements arrive as built <see cref="PairLooseLine"/> values, so
+    /// their slots carry no ink and their <c>Line</c> travels in the value.
     /// </para>
     /// </remarks>
     private static IReadOnlyList<PairLooseLine>? PairBlocks(
@@ -2565,17 +2567,40 @@ internal sealed class MultiStaffLayouter
         IReadOnlyList<(Staff Staff, StaffLayout Layout)> rows,
         List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines,
         StaffSpacingParameters sp,
+        Func<int, IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>?>? rowVersesOf,
         PairLooseLine? trailing = null)
     {
         if (rows.Count == 0 && trailing is null)
             return walked;
 
+        // ★ A MULTI-VERSE LYRICS ROW IS ITS VERSES, NOT A BAND (2026-08-26, seam ⑴'s
+        // fold). The verses go into the run as separate elements with their own ink —
+        // exactly how the reservation and the solve already walk them — and the walk's
+        // loose-loose step between them replaces the composed band's rigid 2.8 drop.
+        // MEASURED before the fold (ledger, verse-hole.one-staff.*): the band placed
+        // the pair's floor one staff space over LilyPond (+1.018425122) by dragging
+        // verse 1's descenders wherever verse 2's constraint pushed the band. A row
+        // with ONE built verse keeps the seeded-skyline path below — its element IS its
+        // verse, and the entry may carry merges the verse list does not.
+        var rowVerses = new Dictionary<int,
+            IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>>();
         var rowsIn = new List<(int RowStaff, IReadOnlyList<int> Verses,
             LooseLineSpacer.RunLine Line)>(rows.Count);
         foreach (var row in rows)
-            rowsIn.Add((row.Layout.StaffIndex, LooseLineSpacer.SingleElementLine,
-                new LooseLineSpacer.RunLine(
-                    row.Staff.StaffAffinity, NonStaffSpecsOf(row.Staff, sp))));
+        {
+            var line = new LooseLineSpacer.RunLine(
+                row.Staff.StaffAffinity, NonStaffSpecsOf(row.Staff, sp));
+            var verses = rowVersesOf?.Invoke(row.Layout.StaffIndex);
+            if (verses is { Count: >= 2 })
+            {
+                rowVerses[row.Layout.StaffIndex] = verses;
+                rowsIn.Add((row.Layout.StaffIndex,
+                    LooseLineSpacer.ByPosition(verses.Count), line));
+            }
+            else
+                rowsIn.Add((row.Layout.StaffIndex,
+                    LooseLineSpacer.SingleElementLine, line));
+        }
         // The trailing line travels as a built value, so its slot needs no key and no
         // spec set of its own: -1 and default are never read back.
         var (slots, _) = LooseLineSpacer.RunSlots(
@@ -2594,6 +2619,13 @@ internal sealed class MultiStaffLayouter
                     all.Add(walked![slot.Verse]);
                     break;
                 case LooseLineSpacer.RunSource.Row:
+                    if (rowVerses.TryGetValue(slot.LineKey, out var verses))
+                    {
+                        var v = verses[slot.Verse];
+                        all.Add(new PairLooseLine(
+                            v.Up, v.Down, slot.Line.Affinity, slot.Line.Specs));
+                        break;
+                    }
                     var sky = staffSkylines != null && slot.LineKey < staffSkylines.Count
                         ? staffSkylines[slot.LineKey]
                         : default;
@@ -2614,21 +2646,24 @@ internal sealed class MultiStaffLayouter
         Array.Empty<(Staff, StaffLayout)>();
 
     /// <summary>
-    /// The two SUPPLIERS of a spaceable pair's loose lines, as one value: the upper staff's
-    /// note-bound block (<see cref="LooseLinesBetween"/>) and the lower staff's attached
-    /// chord line (<see cref="AttachedChordLine"/>, by staff index). <c>default</c> means
-    /// the score supplies neither.
+    /// The SUPPLIERS of a spaceable pair's loose lines, as one value: the upper staff's
+    /// note-bound block (<see cref="LooseLinesBetween"/>), a lyrics row's per-verse ink
+    /// (<see cref="RowVersesOf"/>, by row staff index — the seam-⑴ fold's supplier), and
+    /// the lower staff's attached chord line (<see cref="AttachedChordLine"/>, by staff
+    /// index). <c>default</c> means the score supplies none of them.
     /// </summary>
     /// <remarks>
-    /// ★ ONE VALUE, NOT TWO PARAMETERS (2026-08-26): the two travelled as parallel optional
-    /// arguments through eight signatures, so a caller could thread one and forget the
-    /// other — and the assembly order (note-bound, then rows, then the trailing chord line)
-    /// was repeated at every call site. <see cref="Blocks"/> is now the only spelling of
-    /// that order; the sites hand it their rows and nothing else.
+    /// ★ ONE VALUE, NOT PARALLEL PARAMETERS (2026-08-26): the suppliers travelled as
+    /// parallel optional arguments through eight signatures, so a caller could thread one
+    /// and forget another — and the assembly order (note-bound, then rows, then the
+    /// trailing chord line) was repeated at every call site. <see cref="Blocks"/> is now
+    /// the only spelling of that order; the sites hand it their rows and nothing else.
     /// </remarks>
     internal readonly record struct PairRunSources(
         LooseLinesBetween? NoteBound,
-        Func<int, PairLooseLine?>? AttachedLineOf)
+        Func<int, PairLooseLine?>? AttachedLineOf,
+        Func<int, IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>?>? RowVersesOf =
+            null)
     {
         /// <summary>The assembled run for the pair (<paramref name="upperStaffIndex"/>,
         /// <paramref name="lowerStaffIndex"/>) — see <see cref="PairBlocks"/> for the order
@@ -2640,7 +2675,7 @@ internal sealed class MultiStaffLayouter
             StaffSpacingParameters sp)
             => PairBlocks(
                 NoteBound?.Invoke(upperStaffIndex, lowerStaffIndex),
-                rows, staffSkylines, sp,
+                rows, staffSkylines, sp, RowVersesOf,
                 AttachedLineOf?.Invoke(lowerStaffIndex));
     }
 

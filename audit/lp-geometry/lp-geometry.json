@@ -2678,7 +2678,7 @@
       "score": "RVH1",
       "lilypond": 4.315782477,
       "residual": -0.135967583,
-      "why": "PREDICTION, written before Lily# is measured: the family's first-spring font term and NOT a large drag. Verse 1 has no ink at the deep bar, so LilyPond leaves it at its own floor -- 4.315782477 is bars 1/3/4's constraint alone -- and Lily#'s chain draws verse 1 by the live walk (BuildChainPrefix), so this must read the lyric-face difference its family carries. A reading of order +3 here would mean the drawn position, not just the pair's room, is on the band's grain -- a different and worse mechanism than seam (1) names. ---- MEASURED: -0.135967583, AND THE STRUCTURE OF THE PREDICTION HELD (verse 1 at its own floor, no drag) while the term is BIGGER than the family's -0.000100: this book's verse 1 binds through its gjy ascenders (LP dump: up-extent 1.765782 against no's 1.187880), not through an x-height, and the -0.136 is the lyric FACE at the ascender/dot -- by elimination: the CONTROL's first spring (c,'s notehead against no) reads -0.000101, and the ROWB family (the same stems against no) reads the same, so the staff side and the x-height side are both accounted and the only new glyph set is gjy. ⚠️ A FACE QUANTITY -- do not drive it to zero (HANDOFF 5.2); the sum check below says it is ONE term: this residual + the verse-step's +0.135866813 = -0.000101, the family font term, i.e. verse 2's ABSOLUTE position agrees to 1.0e-4 and both readings carry verse 1's one number."
+      "why": "PREDICTION, written before Lily# is measured: the family's first-spring font term and NOT a large drag. Verse 1 has no ink at the deep bar, so LilyPond leaves it at its own floor -- 4.315782477 is bars 1/3/4's constraint alone -- and Lily#'s chain draws verse 1 by the live walk (BuildChainPrefix), so this must read the lyric-face difference its family carries. A reading of order +3 here would mean the drawn position, not just the pair's room, is on the band's grain -- a different and worse mechanism than seam (1) names. ---- MEASURED: -0.135967583, AND THE STRUCTURE OF THE PREDICTION HELD (verse 1 at its own floor, no drag) while the term is BIGGER than the family's -0.000100: this book's verse 1 binds through its gjy ascenders (LP dump: up-extent 1.765782 against no's 1.187880), not through an x-height, and the -0.136 is the lyric FACE at the ascender/dot -- by elimination: the CONTROL's first spring (c,'s notehead against no) reads -0.000101, and the ROWB family (the same stems against no) reads the same, so the staff side and the x-height side are both accounted and the only new glyph set is gjy. ⚠️ A FACE QUANTITY -- do not drive it to zero (HANDOFF 5.2); the sum check below says it is ONE term: this residual + the verse-step's +0.135866813 = -0.000101, the family font term, i.e. verse 2's ABSOLUTE position agrees to 1.0e-4 and both readings carry verse 1's one number. The walk trace (session 262) then made the elimination direct: the binding is the bare staff LINE 2.050000 + padding 0.5 + verse 1's own up-extent, and that extent is 1.629815 in Lily# against 1.765782 in LilyPond's dump -- the difference is this residual to the sixth digit."
     },
     "lyrics.row.between-staves.verse-hole.verse-step": {
       "probe": "row-verse-hole.ly",
@@ -2692,7 +2692,7 @@
       "score": "RVH1",
       "lilypond": 16.468064018,
       "residual": -0.006568759,
-      "why": "PREDICTION, written before Lily# is measured: POSITIVE, of order +1, and THE seam-(1) number -- the room between the staves is the one quantity the pair walk still sizes with the row composed as ONE band (RunSlots seam (1)), and the band drags verse 1 rigidly 2.8 above wherever the deep bar pushes verse 2, so its gjy descenders stand lower than LilyPond draws them at the tall f''' column's X and the closing binds there. The CONTROL entry must stay at the font term for this reading to mean the seam: if both books read the same residual, the difference is not granularity. ---- MEASURED: -0.006568759 -- the two-verse family's font term to the eighth digit -- AND THE PREDICTION MISSED IN THE INFORMATIVE DIRECTION: THE COMPOSED BAND DOES NOT REACH THIS ARRANGEMENT'S DRAWN PAGE. An enforced band minimum cannot read this number: with verse 1 dragged to 2.8 above verse 2's clearance its descenders against the tall column put the walk's floor at ~17.2+, and a solve cannot land under a spring's floor, so the 16.461495 on the page proves the pair's floor came from verse granularity (the chain's own minima), not from the band. The book was tuned so this would bind if it could -- the tall column was raised d''' -> f''' precisely so the band-dragged descenders would overtop verse 2's closing by ~0.7 -- and it still reads the font term. ⇒ WHAT THE ENTRY NOW PINS: the granularity fold (unification stage 2, seam (1)) must leave this book's page EXACTLY where it is; and whichever reader still consumes RowSkylinesAboutBaseline's composed band, it is not the one that places a between-staves pair. The seam's remaining reach is the unification's question -- this entry is its instrument either way."
+      "why": "PREDICTION, written before Lily# is measured: POSITIVE, of order +1, and THE seam-(1) number -- the room between the staves is the one quantity the pair walk still sizes with the row composed as ONE band (RunSlots seam (1)), and the band drags verse 1 rigidly 2.8 above wherever the deep bar pushes verse 2, so its gjy descenders stand lower than LilyPond draws them at the tall f''' column's X and the closing binds there. The CONTROL entry must stay at the font term for this reading to mean the seam: if both books read the same residual, the difference is not granularity. ---- MEASURED: -0.006568759, the two-verse family's font term -- AND THE PREDICTION MISSED BECAUSE THIS BOOK IS NOT THE SEAM'S CARRIER. The walk trace (session 262) shows why: two DIFFERENTLY-NAMED adjacent lyrics tracks stay two one-verse row STAVES, each its own alignment element, so the pair walk steps them per verse from the start -- k=0 related 0.5 to 4.179815, k=1 loose-loose 0.2/2.8 to 11.932789 (through the hole, off the accumulated profile), closing 1.5 at 4.528706 = 16.461495 exactly -- and the composed band never forms here at all. The closing decomposes as verse 2's descender 0.037 + 1.5 + the lower staff's stem tips 2.9917 (LilyPond 2.998; the -0.0066 IS that stem-tip term). The poison run (rowInk.Up +5 -> this room +5.000000 exact) proves the row skylines are what the walk consumes. ⇒ THE SEAM'S CARRIER IS THE ONE-STAFF SPELLING -- the same name written twice stacks the verses into a single row staff and the band forms: see the one-staff.* entries (+1.018425122), whose pair with this entry isolates Lily#'s own granularity as the only variable. This entry pins the two-staff spelling: the fold must leave it at the font term."
     },
     "lyrics.row.between-staves.verse-hole.staves-on-first-page": {
       "probe": "row-verse-hole.ly",
@@ -2730,6 +2730,128 @@
       "unit": "count",
       "residual": 0.0,
       "why": "PREDICTION: EXACT, one system of two staves, as the hole book. ---- MEASURED: EXACT."
+    },
+    "lyrics.row.between-staves.verse-hole.one-staff.staff-to-lyric": {
+      "probe": "row-verse-hole.ly",
+      "score": "RVH3",
+      "lilypond": 4.315782477,
+      "residual": -0.135967583,
+      "why": "PREDICTION, written before Lily# is measured: ABOVE RVH1's -0.135968 and BELOW the fully-relaxed 5.5 ideal. The chain still places the verses live, but it solves them into the room the band over-reserved (+1.018 -- the staff-staff entry below), so the first spring relaxes off its floor by whatever share of that slack its stretchability wins. ---- MEASURED: +0.889026298 (5.204809), inside the predicted bracket -- the whole seam landed in the first spring's slack, with every other spring on its floor. ---- CLOSED TO ITS TWO-STAFF TWIN 2026-08-26 BY SEAM (1)'s FOLD: PairBlocks hands a multi-verse row's verses to the pair walk as separate elements, supplied by the same RowBlockSkylines the reservation and the solve read (LayoutEngine.BuildRowVerseInk), so the room is the live walk's, the chain compresses verse 1 back to its floor, and this reads RVH1's -0.135967583 to the ninth digit -- the two spellings land on one number, which is the acceptance the entry was written with. What remains is verse 1's gjy ascender face term (the RVH1 entry's account; do not drive it to zero, HANDOFF 5.2)."
+    },
+    "lyrics.row.between-staves.verse-hole.one-staff.verse-step": {
+      "probe": "row-verse-hole.ly",
+      "score": "RVH3",
+      "lilypond": 7.617107632,
+      "residual": 0.135866813,
+      "why": "PREDICTION, written before Lily# is measured: RVH1's +0.135867 UNCHANGED, or nearly -- the step's floor is the walked minimum through the hole and its spring is rigid against stretch on the verse side, so slack in the room must not open it. A larger reading here would mean the solved chain distributes slack into a spring the spec declares rigid. ---- MEASURED: +0.135866813, RVH1's number to the ninth digit. The rigid spring held against a full staff space of slack, and the residual is still verse 1's one face term (the RVH1 entries' account) read from the other side. ---- AND THE FOLD (same day) LEFT IT IN PLACE, as the rigid spec requires -- the room changed by a staff space around it and the step did not move."
+    },
+    "lyrics.row.between-staves.verse-hole.one-staff.staff-staff-inside": {
+      "probe": "row-verse-hole.ly",
+      "score": "RVH3",
+      "lilypond": 16.468064018,
+      "residual": -0.006568759,
+      "why": "PREDICTION, written before Lily# is measured: +1.018425, THE SEAM AS ONE NUMBER. The walk trace on this book reads step 9.432789 (the composed band placed where the deep bar clears verse 2's dropped part) + closing 8.053700 (the DRAGGED verse-1 descenders against the tall f''' column) = 17.486489, against LilyPond's 16.468064 -- and LilyPond cannot see the spelling at all (RVH1 and RVH3 are the same music; its numbers are carried verbatim). RVH1's two-staff spelling reads the font term on the same quantity, so the pair RVH1/RVH3 isolates Lily#'s OWN granularity as the one variable. ⇒ THIS IS THE ENTRY THE GRANULARITY FOLD (unification stage 2, seam (1)) CLOSES: fold the pair walk's row element onto verse granularity and this residual goes to the font term while RVH1's stays put. ---- MEASURED: +1.018425122, the trace's number to the ninth digit -- the prediction was arithmetic, not hope, and it landed as written. ---- CLOSED 2026-08-26, THE SAME SESSION, BY THAT FOLD: a multi-verse row's verses enter the pair walk as separate elements (MultiStaffLayouter.PairBlocks' verse arm, supplied by LayoutEngine.BuildRowVerseInk = the same RowBlockSkylines the reservation and the solve read), the band's +1.018425122 is gone whole, and the reading is RVH1's -0.006568759 to the ninth digit (the closing's stem-tip font term). Both spellings of the same music now land on one number; RVH1's twelve entries and the whole rest of the ledger did not move (0 of 650 pre-existing points)."
+    },
+    "lyrics.row.between-staves.verse-hole.one-staff.staves-on-first-page": {
+      "probe": "row-verse-hole.ly",
+      "score": "RVH3",
+      "lilypond": 2,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "PREDICTION: EXACT, one system of two staves, as RVH1 -- the spelling changes Lily#'s alignment elements, not the page census of staves. ---- MEASURED: EXACT."
+    },
+    "lyrics.chord-verse-row.staff-to-chord": {
+      "probe": "chord-verse-row.ly",
+      "score": "RVC1",
+      "lilypond": 4.488699656,
+      "residual": 0.015643317,
+      "why": "PREDICTION, written before Lily# is measured: a chords-row term of the CHL family's kind, magnitude unknown -- this is the first ledger reading of an as-names chord line standing MID-RUN (above a lyrics row) rather than closing on a staff, so no existing entry's number carries over. What is known in advance: the control's reading must equal this one (LilyPond identity, measured), so whatever Lily# reads here, the PAIR isolates the undrawn verse from it. ---- MEASURED: +0.015643317, chord-face order (the Nimbus Sans island: LP casts C/G in Nimbus Sans, Lily# in TeX Gyre Heros -- page.chord-row.staff-to-chord-baseline's family), and the CONTROL READS THE SAME NUMBER TO THE NINTH DIGIT, so none of it is the undrawn verse."
+    },
+    "lyrics.chord-verse-row.chord-to-lyric": {
+      "probe": "chord-verse-row.ly",
+      "score": "RVC1",
+      "lilypond": 1.748074457,
+      "residual": -0.013192516,
+      "why": "PREDICTION, written before Lily# is measured: the chord-to-lyric step of a mid-run pair, walked loose-loose (ChordNames against Lyrics). LilyPond's 1.748074457 is under the Lyrics minimum-distance 2.8 because that spec belongs to a Lyrics-to-Lyrics step, not to this one -- the walk selects per LINE (StaffAffinity.GetSpacingSpec, the CHL1 lesson: the chords-then-lyrics middle step reads the ChordNames padding over the ink, 2.320115015 was the price of hard-coding it). A 2.8 floor here would mean the spec selection regressed to the by-position constants. ---- MEASURED: -0.013192516, face order and NOT a 2.8 floor -- the per-line selection holds. Mostly the same chord-face island as the step above read from below (the chord's down ink against the lyric): the two steps sum to +0.002451, so the chord LINE's own position carries nearly all of both."
+    },
+    "lyrics.chord-verse-row.staff-staff-inside": {
+      "probe": "chord-verse-row.ly",
+      "score": "RVC1",
+      "lilypond": 10.771948021,
+      "residual": -0.004017188,
+      "why": "PREDICTION, written before Lily# is measured: the run's sum, binding on its floors -- 4.4887 + 1.7481 + 4.5352 = LilyPond's 10.771948021 exactly (the closing 4.535174 is the LYRBV closing to the sixth digit). Lily#'s reading is the sum of whatever its three steps read; the entry pins the room so the steps cannot trade against each other invisibly. ---- MEASURED: -0.004017188 = the two steps' +0.002451 plus a closing at about -0.006468, the two-verse family's closing font term to a fifth digit. The room is the sum of named face terms and nothing else -- and the CONTROL reads the same number to the ninth digit."
+    },
+    "lyrics.chord-verse-row.two-verse-system.staff-to-lyric": {
+      "probe": "chord-verse-row.ly",
+      "score": "RVC1",
+      "lilypond": 3.73789021,
+      "residual": -0.00010087,
+      "why": "PREDICTION, written before Lily# is measured: the LYRBV family font term, about -0.0001 -- LilyPond's 3.737890210 IS the LYRBV number (critically compressed first spring on its ink floor), the fold walks this system's two built verses live, and the chain compresses verse 1 to the same floor. ⚠️ THIS SYSTEM IS THE DISTILLED FORM OF THE +2.36 THE FOLD MOVED on the user book -- the reading that finally referees it. ---- MEASURED: -0.000100870, the family font term as predicted. THE REFEREE HAS RULED: the two-verse system the fold re-priced sits where LilyPond puts it, to the no-syllable face term."
+    },
+    "lyrics.chord-verse-row.two-verse-system.verse-step": {
+      "probe": "chord-verse-row.ly",
+      "score": "RVC1",
+      "lilypond": 2.8,
+      "residual": 0.0,
+      "why": "PREDICTION: EXACT. Identical no-verses, the rigid nonstaff-nonstaff spec (engraver-init.ly:653-657, spring.cc:205-210), and the chain has stepped row verses at the spec since 2026-08-25. The probe's own prediction (a), already held on the LilyPond side. ---- MEASURED: EXACT in both engines."
+    },
+    "lyrics.chord-verse-row.two-verse-system.staff-staff-inside": {
+      "probe": "chord-verse-row.ly",
+      "score": "RVC1",
+      "lilypond": 11.073064119,
+      "residual": -0.00656886,
+      "why": "PREDICTION, written before Lily# is measured: the LYRBV family font term, about -0.0066 -- LilyPond's 11.073064119 is LYRBV's critically-compressed room to the sixth digit (3.737890 + 2.800000 + 4.535174), and after the seam-(1) fold the pair walk sizes this room from the same live verse elements the chain solves. A reading of order +2 or +3 here would mean the fold missed this arrangement -- e.g. the chords row's presence elsewhere in the score re-routes the pair -- and the fold's own A/B (the user book's +2.36) was measuring something else. ---- MEASURED: -0.006568860, the family font term as predicted. The fold reaches this arrangement; the user book's +2.36 was this room being repaired."
+    },
+    "lyrics.chord-verse-row.staves-on-first-page": {
+      "probe": "chord-verse-row.ly",
+      "score": "RVC1",
+      "lilypond": 4,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "PREDICTION: EXACT, two systems of two staves. HANDOFF 5.0 trap 8, holding the indices the readings above are taken by. ---- MEASURED: EXACT."
+    },
+    "lyrics.chord-verse-row.control.staff-to-chord": {
+      "probe": "chord-verse-row.ly",
+      "score": "RVC2",
+      "lilypond": 4.488699656,
+      "residual": 0.015643317,
+      "why": "PREDICTION, written before Lily# is measured: EQUAL TO RVC1's reading -- LilyPond measured the two books identical on system 1 to every printed digit (it has no score-wide verse count), so the RECORDED residuals of this control row and RVC1's must match term for term, or the difference IS the undrawn verse's charge (TextRowVerseSpacing's 3.2, session 257 (13)) with its surviving reader named. Written before knowing which way Lily# answers: the fold walks per-system built verses, so the charge should be gone from the pair's room -- but the row's band HEIGHT still reads Staff.TextRowVerses (MultiStaffLayouter:289), and whether any drawn quantity still consumes that height is exactly what this pair asks. ---- MEASURED: +0.015643317, RVC1's number TO THE NINTH DIGIT. ★★★ THE UNDRAWN VERSE CHARGES NOTHING: a verse that sings only on another system moves no reading of this pair, in either engine. Session 257 (13)'s port question is answered -- there is nothing to port for the pair's geometry; TextRowVerseSpacing's surviving reader is the row's band HEIGHT alone (extents/silhouettes), whose own observer, if one is ever wanted, is the inter-SYSTEM gap this pair deliberately does not read."
+    },
+    "lyrics.chord-verse-row.control.chord-to-lyric": {
+      "probe": "chord-verse-row.ly",
+      "score": "RVC2",
+      "lilypond": 1.748074457,
+      "residual": -0.013192516,
+      "why": "PREDICTION: as the control's staff-to-chord -- equal to RVC1's reading, or the difference is the undrawn verse's charge. ---- MEASURED: RVC1's number to the ninth digit. No charge."
+    },
+    "lyrics.chord-verse-row.control.staff-staff-inside": {
+      "probe": "chord-verse-row.ly",
+      "score": "RVC2",
+      "lilypond": 10.771948021,
+      "residual": -0.004017188,
+      "why": "PREDICTION: as the control's staff-to-chord -- equal to RVC1's reading, or the difference is the undrawn verse's charge. This is the room, so a charge that survives anywhere in the pair shows here even if the steps above split it. ---- MEASURED: RVC1's number to the ninth digit. No charge anywhere in the pair."
+    },
+    "lyrics.chord-verse-row.control.one-verse-system.staff-to-lyric": {
+      "probe": "chord-verse-row.ly",
+      "score": "RVC2",
+      "lilypond": 4.027851484,
+      "residual": -0.000100805,
+      "why": "PREDICTION, written before Lily# is measured: the ROWB family font term, about -0.0001 -- LilyPond's 4.027851484 is the LYRB/ROWB number (one loose line relaxing to its solved position in a 9.000000 room), an arrangement the ledger has read exact-to-font since the row joined the chain. ---- MEASURED: -0.000100805, the family font term as predicted."
+    },
+    "lyrics.chord-verse-row.control.one-verse-system.staff-staff-inside": {
+      "probe": "chord-verse-row.ly",
+      "score": "RVC2",
+      "lilypond": 9.0,
+      "residual": 0.0,
+      "why": "PREDICTION: EXACT -- staff-staff-spacing's basic-distance, the ROWB reading; one verse and no chords leave the spring at its ideal. ---- MEASURED: EXACT in both engines."
+    },
+    "lyrics.chord-verse-row.control.staves-on-first-page": {
+      "probe": "chord-verse-row.ly",
+      "score": "RVC2",
+      "lilypond": 4,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "PREDICTION: EXACT, two systems of two staves, as RVC1. ---- MEASURED: EXACT."
     },
     "lyrics.between-staves.two-verse.staff-to-lyric": {
       "probe": "page-vertical.ly",

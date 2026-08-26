@@ -5611,7 +5611,50 @@ internal sealed class LayoutEngine
         int startMeasure, int endMeasure)
         => new(
             BuildLooseLinesBetween(score, measureLayouts, startMeasure, endMeasure),
-            BuildAttachedChordLines(score, measureLayouts));
+            BuildAttachedChordLines(score, measureLayouts),
+            BuildRowVerseInk(score, measureLayouts, startMeasure, endMeasure));
+
+    /// <summary>
+    /// A lyrics ROW's per-verse ink, by row staff index — the pair walk's supplier for
+    /// the multi-verse element split (<c>MultiStaffLayouter.PairBlocks</c>, seam ⑴'s
+    /// fold). Null when the score has no lyrics row at all, so every other score pays
+    /// one predicate and nothing else.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE SAME SUPPLIER THE BAND COMPOSED FROM: <c>RowBlockSkylines</c> through the
+    /// geometry engraver, per verse about each verse's own baseline — the reservation's
+    /// and the solve's reading of the same ink (<c>RunBelowAnchor</c>,
+    /// <c>BuildVerseSkylines</c>' agreement net). Handing the walk anything else would
+    /// be a second spelling of the quantity (HANDOFF 5.2.1②).
+    /// </remarks>
+    private Func<int, IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>?>?
+        BuildRowVerseInk(
+            MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts,
+            int startMeasure, int endMeasure)
+    {
+        if (score.Lyrics.IsDefaultOrEmpty || !score.Lyrics.Any(l => l.IsLyricsRow))
+            return null;
+
+        var staffByIndex = new Dictionary<int, Staff>();
+        foreach (var (_, st, idx) in score.EnumerateStaves())
+            staffByIndex[idx] = st;
+
+        var engraver = BuildBlockEngraver(score);
+        var cache = new Dictionary<int,
+            IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>?>();
+        return rowStaff =>
+        {
+            if (cache.TryGetValue(rowStaff, out var hit))
+                return hit;
+            IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>? verses =
+                staffByIndex.TryGetValue(rowStaff, out var staff) && staff.IsLyricsTextRow
+                    ? engraver.RowBlockSkylines(
+                        score.Lyrics, measureLayouts, startMeasure, endMeasure, rowStaff)
+                    : null;
+            cache[rowStaff] = verses;
+            return verses;
+        };
+    }
 
     private Func<int, MultiStaffLayouter.PairLooseLine?>? BuildAttachedChordLines(
         MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts)

@@ -1945,16 +1945,21 @@ internal static class LpGeometryProbes
     /// verse 1 pushed) all held.
     /// </para>
     /// <para>
-    /// ★★★ AND LILY# READS THE PAGE AT VERSE GRANULARITY ALREADY: the room comes out
-    /// at the family's font term (−0.006569), which an enforced band minimum cannot
-    /// produce — dragged descenders against the tall column would floor the walk at
-    /// ~17.2, and the column was raised d''' → f''' precisely so that floor would
-    /// overtop verse 2's closing if the band were consulted. The verse step reads
-    /// 7.752974 (+0.135867), so the chain's walk accumulates the anchor staff's
-    /// skyline through the hole; the ±0.1359 pair on verse 1's two readings is ONE
-    /// face term (the gjy ascender — the ledger entries carry the elimination), with
-    /// verse 2's absolute position agreeing to 1.0e-4. What the book pins for the
-    /// granularity fold (unification stage 2): this page must not move.
+    /// ★★★ AND THIS SPELLING IS WALKED PER VERSE FROM THE START — the walk trace
+    /// (session 262) settled why the room reads the family's font term (−0.006569)
+    /// rather than a band floor: two differently-named adjacent tracks stay two
+    /// one-verse row STAVES, each its own element, so no composed band ever forms
+    /// here. The trace decomposes every reading: k=0 related 0.5 → 4.179815 (the bare
+    /// staff line 2.05 + 0.5 + verse 1's up-extent 1.629815, against LilyPond's
+    /// 1.765782 — the −0.1360 face term), k=1 loose-loose 0.2/2.8 → 11.932789 (the
+    /// accumulated walk carries the anchor staff's deep ink through the hole; verse
+    /// 2's absolute position agrees with LilyPond to 1.0e-4), closing 1.5 → 4.528706
+    /// (verse 2's descender + 1.5 + the lower staff's stem tips 2.9917, LilyPond
+    /// 2.998 — the −0.0066). The poison run (rowInk.Up +5 → room +5.000000 exact)
+    /// proves these row skylines are what the walk consumes. The seam's CARRIER is
+    /// <see cref="RVH3"/>'s one-staff spelling, where the band does form and costs
+    /// +1.018425122. What the RVH1 book pins for the granularity fold (unification
+    /// stage 2): this page must not move.
     /// </para>
     /// <para>
     /// ⚠️ THE CONTROL <see cref="RVH2"/> DIFFERS BY ONE BAR: verse 1 sings the deep
@@ -1965,9 +1970,14 @@ internal static class LpGeometryProbes
     /// −0.000150). ⚠️ Lily# <c>g</c> is LilyPond <c>g'</c> (HANDOFF 5.5).
     /// </para>
     /// </remarks>
-    private static string RowVerseHoleScore(string name, bool holeInVerse1)
+    private static string RowVerseHoleScore(
+        string name, bool holeInVerse1, bool oneTrack = false)
     {
         string verse1bar2 = holeInVerse1 ? "|" : "no no no no |";
+        // The one-track spelling writes the SAME name twice, which stacks the two verses
+        // into a single row staff (TextRowVerses = 2) instead of two adjacent one-verse
+        // staves — the spelling that makes the composed band form (seam ⑴'s carrier).
+        string verse2name = oneTrack ? "one" : "two";
         return $$"""
             octave absolute
             time 4/4
@@ -1980,25 +1990,123 @@ internal static class LpGeometryProbes
               melody { g4 a g a | c,,4 c,, c,, c,, | g4 a g a | g4 a g a | }
               lower { g4 a g a | g4 a g a | f''4 f'' f'' f'' | g4 a g a | }
               lyrics one { no no no no | {{verse1bar2}} gjy gjy gjy gjy | no no no no | }
-              lyrics two { no no no no | no no no no | | no no no no | }
+              lyrics {{verse2name}} { no no no no | no no no no | | no no no no | }
             }
 
             form main { ~Main }
 
             score main "{{name}}" {
               staff melody
-              lyrics one
-              lyrics two
+              lyrics one{{(oneTrack ? "" : "\n  lyrics two")}}
               staff lower
             }
             """;
     }
+
+    /// <summary>
+    /// A CHORDS ROW AND A MULTI-VERSE LYRICS ROW BETWEEN TWO STAVES — the mirrors of
+    /// books RVC1/RVC2 (probe chord-verse-row.ly), the user-report arrangement of
+    /// 2026-08-25 distilled, and session 257 ⑬'s missing pair built at last.
+    /// </summary>
+    /// <remarks>
+    /// The reported book (scratch/ベースタブLy/Untitled-6.lys) is the one picture the
+    /// seam-⑴ fold moved: its two-verse system's lower staff had been drawn THROUGH
+    /// verse 2's text (the band under-reserved) and the fold opened the pair +2.36.
+    /// That number had no LilyPond referee, and neither did the cost Lily# charges a
+    /// system for a verse that sings only elsewhere —
+    /// <c>MultiStaffLayouter.TextRowVerseSpacing</c>'s 3.2 per score-wide verse
+    /// (session 257 ⑬: "+3.627 のうち 3.200 は描かない詩 1 本"). This pair supplies both:
+    /// system 1 carries chords + verse 1 (verse 2 silent), system 2 carries verses
+    /// 1 + 2 (chords silent), and the control RVC2 deletes verse 2 outright — one
+    /// variable, a verse that never sings on the systems being read.
+    /// <para>
+    /// MEASURED (2026-08-26, 2.26.0, fonts pinned; PROBERV dump): RVC1 system 1 —
+    /// staff→chord 4.488699656, chord→lyric 1.748074457, staff-staff 10.771948021;
+    /// system 2 — staff→verse1 3.737890210 (the LYRBV family number), verse step
+    /// 2.800000 exact, staff-staff 11.073064119 (LYRBV's room to the sixth digit).
+    /// RVC2 system 1 is IDENTICAL to RVC1's to every printed digit — LilyPond has no
+    /// score-wide verse count — and its one-verse system reads 4.027851484 (the
+    /// LYRB/ROWB number) over a 9.000000 room. All three probe-header predictions
+    /// held. ⚠️ The .lys twins carry stanza numbers ([~1.]/[~2.]) that LilyPond does
+    /// not — Lily#-side furniture, measured non-binding on the VRS pair (3e-6).
+    /// </para>
+    /// </remarks>
+    private static string ChordVerseRowScore(string name, bool secondVerse)
+    {
+        string verseB = secondVerse
+            ? "[~1. no no no no | no no no no | no no no no | no no no no |]\n"
+              + "    [~2. no no no no | no no no no | no no no no | no no no no |]"
+            : "no no no no | no no no no | no no no no | no no no no |";
+        return $$"""
+            octave absolute
+            time 4/4
+            key c major
+
+            part melody {
+              clef treble
+              section A { g4 a g a | g a g a | g a g a | g a g a | break }
+              section B { g4 a g a | g a g a | g a g a | g a g a | }
+            }
+            part lower {
+              clef treble
+              section A { g4 a g a | g a g a | g a g a | g a g a | }
+              section B { g4 a g a | g a g a | g a g a | g a g a | }
+            }
+            chords prog {
+              section A { C | G | C | G }
+            }
+            lyrics verse {
+              section A { no no no no | no no no no | no no no no | no no no no | }
+              section B { {{verseB}} }
+            }
+
+            form main { ~A ~B }
+
+            score main "{{name}}" {
+              staff melody
+              chords prog as names
+              lyrics verse sings melody
+              staff lower
+            }
+            """;
+    }
+
+    /// <summary>The pair's book — chords on system 1, two verses on system 2.</summary>
+    private static readonly string RVC1 = ChordVerseRowScore("RVC1", secondVerse: true);
+
+    /// <summary>The control — verse 2 deleted; one variable against RVC1.</summary>
+    private static readonly string RVC2 = ChordVerseRowScore("RVC2", secondVerse: false);
 
     /// <summary>The hole book — the mirror of book RVH1.</summary>
     private static readonly string RVH1 = RowVerseHoleScore("RVH1", holeInVerse1: true);
 
     /// <summary>The control — verse 1 sings the deep bar too, the mirror of book RVH2.</summary>
     private static readonly string RVH2 = RowVerseHoleScore("RVH2", holeInVerse1: false);
+
+    /// <summary>
+    /// RVH1's MUSIC IN THE ONE-STAFF SPELLING — the same two verses written as ONE track
+    /// twice, which stacks them into a single row staff (<c>Staff.TextRowVerses</c> = 2).
+    /// THIS is seam ⑴'s carrier, and <see cref="RVH1"/> measured that it itself is not:
+    /// two differently-named adjacent tracks stay two one-verse row STAVES, each its own
+    /// alignment element, so the pair walk steps them per verse from the start (walk
+    /// trace, session 262: k=0 related 0.5 → 4.179815, k=1 loose-loose 0.2/2.8 →
+    /// 11.932789 through the hole, close 1.5 → 16.461495) and the composed band never
+    /// forms. Here it formed: the walk took the row as ONE element and the trace read
+    /// step 9.432789 (the band placed where the deep bar clears verse 2's dropped part),
+    /// close 8.053700 (the DRAGGED verse-1 descenders against the tall column), total
+    /// 17.486489 — one staff space over LilyPond's 16.468064, which does not read the
+    /// spelling at all (one model; the probe's dump is byte-identical music). The fold
+    /// (PairBlocks' verse arm, the same session) closed the seam: both spellings now
+    /// read one number, pinned by these entries from both sides.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ NO NEW LILYPOND RUN: the entries carry RVH1's measured numbers verbatim,
+    /// because the music is the same and LilyPond has one spelling of it. The pair of
+    /// books RVH1/RVH3 is therefore the cleanest statement of the seam there is — the
+    /// one variable is Lily#'s OWN granularity, and LilyPond is the identity side.
+    /// </remarks>
+    private static readonly string RVH3 =
+        RowVerseHoleScore("RVH3", holeInVerse1: true, oneTrack: true);
 
     /// <summary>
     /// A CHORD ROW THAT IS NOT ON EVERY SYSTEM — the mirrors of books ROWA and ROWAC, and the
@@ -11589,10 +11697,10 @@ internal static class LpGeometryProbes
         // 2.800000000000001: the control that says any pair difference IS the seam.
         // These entries stand BEFORE the granularity unification on purpose — folding the
         // pair walk onto verse granularity is a behaviour change, and this is the ledger
-        // point HANDOFF §1 requires first. MEASURED: Lily#'s page is at verse granularity
-        // ALREADY on this arrangement (room at the font term where a band floor would
-        // read ~+0.7; step 7.75 = the walk accumulates through the hole), so the fold
-        // must move NOTHING here — these eight entries are the instrument that says so.
+        // point HANDOFF §1 requires first. MEASURED: this two-staff spelling is walked
+        // per verse from the start (two named tracks stay two one-verse staves; the band
+        // never forms — see the RVH1 remark's trace decomposition), so the fold must
+        // move NOTHING here; the band's own cost is the one-staff entries below.
         new("lyrics.row.between-staves.verse-hole.staff-to-lyric", RVH1,
             g => g.LyricBaselineBelowStaff(0), RaggedBottomPaper),
         new("lyrics.row.between-staves.verse-hole.verse-step", RVH1,
@@ -11608,6 +11716,61 @@ internal static class LpGeometryProbes
         new("lyrics.row.between-staves.verse-hole.control.staff-staff-inside", RVH2,
             g => g.StaffGapAt(0), RaggedBottomPaper),
         new("lyrics.row.between-staves.verse-hole.control.staves-on-first-page", RVH2,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+
+        // ★★★ THE SAME MUSIC IN THE ONE-STAFF SPELLING — book RVH3, seam ⑴'s actual
+        // carrier (see the RVH3 remark). RVH1 measured that two adjacent one-verse row
+        // staves are walked per verse from the start; RVH3's same-name spelling stacks
+        // the verses into ONE row staff, where the composed band formed and cost
+        // +1.018425122 against LilyPond's 16.468064 — the seam as one staff space, with
+        // LilyPond the identity side (its numbers are RVH1's verbatim; the music is
+        // byte-identical). THE FOLD CLOSED IT the same session: PairBlocks' verse arm
+        // now walks the verses as separate elements and both moving entries dropped to
+        // their two-staff twins' numbers to the ninth digit.
+        new("lyrics.row.between-staves.verse-hole.one-staff.staff-to-lyric", RVH3,
+            g => g.LyricBaselineBelowStaff(0), RaggedBottomPaper),
+        new("lyrics.row.between-staves.verse-hole.one-staff.verse-step", RVH3,
+            g => g.LyricVerseStep(), RaggedBottomPaper),
+        new("lyrics.row.between-staves.verse-hole.one-staff.staff-staff-inside", RVH3,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("lyrics.row.between-staves.verse-hole.one-staff.staves-on-first-page", RVH3,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+
+        // ★★★ THE CHORDS+VERSES PAIR — books RVC1/RVC2 (see the ChordVerseRowScore
+        // remark): the user-report arrangement the seam-⑴ fold moved (+2.36 = the
+        // under-reserved lower staff pulled out of verse 2's text), and session 257 ⑬'s
+        // question priced at last — what does a verse that sings only ELSEWHERE cost a
+        // system (TextRowVerseSpacing's 3.2 per score-wide verse)? LilyPond's answer:
+        // NOTHING — RVC2's system 1 equals RVC1's to every digit. The control rows are
+        // the falsifier pair: any Lily# difference between them on system 1 is the
+        // undrawn verse's charge, named.
+        new("lyrics.chord-verse-row.staff-to-chord", RVC1,
+            g => g.ChordBaselineBelowStaff(0), RaggedBottomPaper),
+        new("lyrics.chord-verse-row.chord-to-lyric", RVC1,
+            g => g.LyricBaselineBelowStaff(0) - g.ChordBaselineBelowStaff(0),
+            RaggedBottomPaper),
+        new("lyrics.chord-verse-row.staff-staff-inside", RVC1,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("lyrics.chord-verse-row.two-verse-system.staff-to-lyric", RVC1,
+            g => g.LyricBaselineBelowStaff(2), RaggedBottomPaper),
+        new("lyrics.chord-verse-row.two-verse-system.verse-step", RVC1,
+            g => g.LyricVerseStep(2), RaggedBottomPaper),
+        new("lyrics.chord-verse-row.two-verse-system.staff-staff-inside", RVC1,
+            g => g.StaffGapAt(2), RaggedBottomPaper),
+        new("lyrics.chord-verse-row.staves-on-first-page", RVC1,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+        new("lyrics.chord-verse-row.control.staff-to-chord", RVC2,
+            g => g.ChordBaselineBelowStaff(0), RaggedBottomPaper),
+        new("lyrics.chord-verse-row.control.chord-to-lyric", RVC2,
+            g => g.LyricBaselineBelowStaff(0) - g.ChordBaselineBelowStaff(0),
+            RaggedBottomPaper),
+        new("lyrics.chord-verse-row.control.staff-staff-inside", RVC2,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("lyrics.chord-verse-row.control.one-verse-system.staff-to-lyric", RVC2,
+            g => g.LyricBaselineBelowStaff(2), RaggedBottomPaper),
+        new("lyrics.chord-verse-row.control.one-verse-system.staff-staff-inside", RVC2,
+            g => g.StaffGapAt(2), RaggedBottomPaper),
+        new("lyrics.chord-verse-row.control.staves-on-first-page", RVC2,
             g => g.StavesOnPage(0), RaggedBottomPaper),
 
         // THE SAME BOOK WITH A CHORD ROW ADDED, which is the branch that still runs at force

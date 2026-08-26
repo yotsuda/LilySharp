@@ -53,6 +53,13 @@
 %%
 %% ⚠️ THE PITCHES: Lily# absolute is LilyPond minus one apostrophe (probe trap 5).
 %% The .lys twin spells g a / c,, / f'' for LilyPond's g' a' / c, / f'''.
+%%
+%% ★ A THIRD LEDGER BOOK RIDES ON RVH1's NUMBERS WITHOUT A NEW RUN: RVH3
+%% (lyrics.row.between-staves.verse-hole.one-staff.*) is the SAME music with the
+%% verses spelled as one Lily# track written twice, which stacks them into a single
+%% row staff. LilyPond has one model of the music and cannot see that spelling, so
+%% RVH1's dump is RVH3's LilyPond side verbatim -- and whatever Lily# reads
+%% differently between the two books is its own granularity, isolated.
 
 #(define (dump tag layout pages)
    (for-each
