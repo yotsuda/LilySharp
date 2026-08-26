@@ -248,28 +248,42 @@ internal sealed class SpringSolver
     }
 
     /// <summary>
-    /// Calculates the force penalty for line-breaking optimization.
-    /// Compression (negative force) is penalized more heavily than stretching.
+    /// The force-penalty FORMULA on an already-solved force — the ONE spelling of
+    /// LilyPond's <c>force_penalty</c> (the breaker's DP and the instance overload
+    /// below both read this; 2026-08-26, §5.2.1②).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/simple-spacer.cc:309-321 Simple_spacer::force_penalty()
-    /// For justified text: penalty = force - (force^4 * 2) if force &lt; 0
-    /// For ragged right: penalty = max(0, idealLength - solvedLength)
+    /// LILYPOND-REF: lily/simple-spacer.cc:307-319 Simple_spacer::force_penalty() —
+    /// ragged: <c>max (0.0, line_len - configuration_length (0.0))</c>, the whitespace
+    /// left after the line's natural end; justified: <c>f - (f &lt; 0 ? f^4 * 2 : 0)</c>,
+    /// the convex compression penalty.
+    /// </remarks>
+    public static double ForcePenaltyOf(
+        double lineLength, double force, double naturalLength, bool ragged)
+    {
+        if (ragged)
+            return Math.Max(0.0, lineLength - naturalLength);
+
+        double f = force;
+        return f - (f < 0 ? f * f * f * f * 2 : 0);
+    }
+
+    /// <summary>
+    /// Solves for <paramref name="targetWidth"/> and applies
+    /// <see cref="ForcePenaltyOf"/> to the result.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The RAGGED arm used to be spelled REVERSED here —
+    /// <c>max(0, natural − target)</c> — against both LilyPond and the breaker's live
+    /// copy, and its own test pinned the reversal while being NAMED
+    /// "PenalizesUnusedSpace" (unused space is target − natural). Test-only readers,
+    /// so no rendered output ever went through the wrong arm; corrected 2026-08-26
+    /// when the two spellings were folded into <see cref="ForcePenaltyOf"/>.
     /// </remarks>
     public double ForcePenalty(double targetWidth, bool ragged = false)
     {
         var (force, _) = Solve(targetWidth, ragged);
-
-        if (ragged)
-        {
-            // Ragged: penalize unused space
-            return Math.Max(0, TotalLength(0) - targetWidth);
-        }
-
-        // Justified: convex compression penalty
-        // LILYPOND-REF: simple-spacer.cc:316-320
-        double f = force;
-        return f - (f < 0 ? f * f * f * f * 2 : 0);
+        return ForcePenaltyOf(targetWidth, force, TotalLength(0), ragged);
     }
 
     /// <summary>

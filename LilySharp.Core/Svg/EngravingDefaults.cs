@@ -39,6 +39,18 @@ internal static class EngravingDefaults
     /// <remarks>LILYPOND-REF: scm/paper.scm:52-66 calc-line-thickness.</remarks>
     public const double LineThickness = 0.1;
 
+    /// <summary>Whether a rounded staff position sits ON a real line of the five-line
+    /// staff: even, and within the outer lines (|pos| ≤ 4).</summary>
+    /// <remarks>ONE HOME on purpose (2026-08-26): this predicate was spelled inline in
+    /// SlurScoringProblem (×2), TieFormattingProblem (×2) and EmmentalerGlyphs — five
+    /// spellings of one fact. ⚠️ Only the PREDICATE is shared: the ROUNDING that
+    /// produces <paramref name="roundedPosition"/> stays at each call site, because the
+    /// sites deliberately differ (round_halfway_up / rint-ToEven / Math.Round), each
+    /// citing its own LilyPond line — folding the roundings would change measured
+    /// behavior.</remarks>
+    public static bool OnStaffLine(int roundedPosition)
+        => roundedPosition % 2 == 0 && System.Math.Abs(roundedPosition) <= 4;
+
     /// <summary>Staff line thickness: 1.0 × line-thickness.</summary>
     /// <remarks>
     /// LILYPOND-REF: lily/staff-symbol.cc — StaffSymbol thickness default 1.0

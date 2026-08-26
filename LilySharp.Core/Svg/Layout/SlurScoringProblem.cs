@@ -302,7 +302,7 @@ internal sealed class SlurScoringProblem
         double pos = (yUp + staffMiddleDown) * 2.0;
         double roundedUp = Math.Floor(pos + 0.5);
         int rint = (int)Math.Round(pos, MidpointRounding.ToEven);
-        bool onLine = rint % 2 == 0 && Math.Abs(rint) <= 4;
+        bool onLine = EngravingDefaults.OnStaffLine(rint);
         if (Math.Abs(pos - roundedUp) < 0.2 && onLine)
             yUp += 1.5 * dir / 10.0;
         return yUp;
@@ -436,7 +436,7 @@ internal sealed class SlurScoringProblem
         // Y-up frame: the staff middle line sits at -staffMiddleDown.
         double p = 2 * (y + _staffMiddleDown);
         int roundP = (int)Math.Floor(p + 0.5);
-        bool OnLine(int pos) => pos % 2 == 0 && Math.Abs(pos) <= 4;
+        static bool OnLine(int pos) => EngravingDefaults.OnStaffLine(pos);
         if (!OnLine(roundP))
             roundP += (p > roundP) ? 1 : -1;
         if (!OnLine(roundP))

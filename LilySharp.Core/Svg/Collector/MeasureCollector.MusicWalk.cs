@@ -293,7 +293,7 @@ public sealed partial class MeasureCollector
                 continue;
             }
 
-            char? letter = FirstPitchLetter(member);
+            char? letter = RelativeOctave.FirstPitchLetter(member);
             // The group octave shift applies to the ROOT member only; the stacked members
             // pick it up via the anchor octave (which the shifted root sets).
             bool isRoot = !rootSet && letter is not null;
@@ -434,15 +434,6 @@ public sealed partial class MeasureCollector
         builder.AddItemWithoutDuration(noteItem with { TimeScale = scale });
     }
 
-    /// <summary>The letter of a member's root pitch — a bare pitch's letter, or a chord's
-    /// root (first pitch) — used to stack the arpeggio's members above the first. Degrees
-    /// and rests return null (they do not anchor the frame).</summary>
-    private static char? FirstPitchLetter(SyntaxNode member) => member switch
-    {
-        PitchSyntax p => p.PitchName.ToLowerInvariant()[0],
-        ChordSyntax c => c.Root?.PitchName.ToLowerInvariant()[0],
-        _ => null,
-    };
 
     // A slur mark written on an empty chord, waiting for the item that occupies the empty
     // chord's moment. See TakeEmptyChordSlurs.

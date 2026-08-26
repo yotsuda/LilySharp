@@ -364,6 +364,43 @@ public static class RenderSpecParser
         return specs;
     }
 
+    /// <summary>The single part the score being played engraves, or null when it names
+    /// none or several (two parts means the page draws the same music in two registers,
+    /// and a single stream cannot be both).</summary>
+    /// <remarks>
+    /// The spec is <paramref name="score"/> when the caller named one; otherwise the one
+    /// whose form is <paramref name="form"/> — the form being played, so
+    /// <c>lysc midi --score movement2</c> attributes by movement 2's staves — else the
+    /// first. ⚠️ Not <c>?? default</c> on the parts: a DEFAULT ImmutableArray throws on
+    /// Length, and a file with no <c>score</c> block at all is the ordinary case that
+    /// reaches here (4 books of the 566 crashed on it before the null return below).
+    /// ONE HOME on purpose (2026-08-26): this lived as two private near-copies in
+    /// MidiExporter and MusicXmlExporter, already one comment-drift apart.
+    /// </remarks>
+    public static string? SingleEngravedPart(
+        SyntaxTree tree, RenderSpec? score, FormDeclarationSyntax? form)
+    {
+        var spec = score;
+        if (spec == null)
+        {
+            var played = form ?? Semantics.ScoreForms.Primary(tree.GetRoot());
+            RenderSpec? first = null;
+            foreach (var s in FindAll(tree))
+            {
+                first ??= s;
+                if (played != null && ReferenceEquals(s.Form, played))
+                {
+                    spec = s;
+                    break;
+                }
+            }
+            spec ??= first;
+        }
+        if (spec == null) return null;
+        var parts = spec.EngravedPartNames;
+        return parts.Length == 1 ? parts[0] : null;
+    }
+
     /// <summary>
     /// Finds a render declaration by name, output filename, or filename without extension.
     /// </summary>

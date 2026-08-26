@@ -728,7 +728,7 @@ internal sealed class TieFormattingProblem
                     int roundPos = (int)Math.Floor(topPos + 0.5); // round_halfway_up
                     // Clearance compared in half-space units (LP raw value).
                     double clearanceHs = _details.CenterStaffLineClearance * 2;
-                    bool onRealStaffLine = roundPos % 2 == 0 && Math.Abs(roundPos) <= 4;
+                    bool onRealStaffLine = EngravingDefaults.OnStaffLine(roundPos);
                     if (Math.Abs(topPos - roundPos) < clearanceHs && onRealStaffLine)
                     {
                         double newY = (roundPos + clearanceHs * dir) * 0.5;
@@ -998,7 +998,7 @@ internal sealed class TieFormattingProblem
         // Curve top vs a REAL staff line, only when the top is below the
         // staff's top line (:762-774).
         int roundTopPos = (int)Math.Round(topPos);
-        if (roundTopPos % 2 == 0 && Math.Abs(roundTopPos) <= 4
+        if (EngravingDefaults.OnStaffLine(roundTopPos)
             && topPos * 0.5 < 2.0)
         {
             double clearanceHs = _details.CenterStaffLineClearance * 2;

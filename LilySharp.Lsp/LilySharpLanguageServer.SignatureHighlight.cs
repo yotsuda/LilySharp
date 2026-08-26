@@ -83,10 +83,6 @@ public sealed partial class LilySharpLanguageServer
     // line wins). Adding a keyword's help is a one-line table entry.
     private static readonly SignatureEntry[] SignatureTable =
     {
-        new("relative", "relative pitch { music }",
-            "Sets relative pitch mode. Notes are interpreted relative to the previous note.",
-            new[] { ("pitch", "Base pitch with optional octave marks (e.g., c', c'')"),
-                    ("{ music }", "Music block containing notes") }),
         new("repeat", "repeat (unfold|percent|tremolo) count { music }",
             "Repeats the music block. For volta repeats use the symbolic form "
                 + "'|: … :|' (count '|: … :|*N') with inline endings '[1. …] [2. …]'.",

@@ -72,6 +72,23 @@ namespace LilySharp.Core.Semantics;
 /// </remarks>
 public static class ResolvedPitches
 {
+    /// <summary>Reads the bare pitch token (letters plus <c>'</c>/<c>,</c> octave marks)
+    /// at <paramref name="pos"/> of <paramref name="source"/> — the WRITTEN spelling a
+    /// resolved-pitch fact is displayed beside.</summary>
+    /// <remarks>ONE HOME on purpose (2026-08-26): <c>lysc check --pitches</c> and the
+    /// LSP's factsForRange display the same contract, and each had its own copy of this
+    /// scanner — a drift would have made the two surfaces spell the same fact
+    /// differently.</remarks>
+    public static string ReadPitchToken(string source, int pos)
+    {
+        if (pos < 0 || pos >= source.Length) return "";
+        int end = pos;
+        while (end < source.Length &&
+               (char.IsLetter(source[end]) || source[end] == '\'' || source[end] == ','))
+            end++;
+        return source[pos..end];
+    }
+
     /// <summary>
     /// The trace in written order, or null when not one score collected (a file broken
     /// enough that the caller should report its errors instead).

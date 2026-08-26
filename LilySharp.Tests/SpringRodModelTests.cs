@@ -394,16 +394,21 @@ public class SpringRodModelTests
         );
         var solver = new SpringSolver(springs);
 
-        // Target > ideal → some unused space
+        // LILYPOND-REF: simple-spacer.cc:307-313 — ragged penalty is the whitespace
+        // AFTER the line's natural end: max(0, line_len - configuration_length(0)).
+        // ⚠️ This test used to pin the REVERSED arm (max(0, natural - target)) while
+        // being NAMED PenalizesUnusedSpace — unused space is target - natural. The
+        // breaker's live copy always had LP's order; only this test-facing overload
+        // was backwards (corrected 2026-08-26, when the two spellings were folded
+        // into SpringSolver.ForcePenaltyOf).
+
+        // Target 25 > natural 20 → 5 of unused whitespace → penalty 5.
         double penalty = solver.ForcePenalty(25, ragged: true);
+        Assert.Equal(5, penalty, 3);
 
-        // Ragged: penalty = max(0, idealLength - targetWidth)
-        // IdealLength at force 0 = 20, target = 25 → penalty = max(0, 20-25) = 0
-        Assert.Equal(0, penalty, 3);
-
-        // Target < ideal → penalty = idealLength - targetWidth
+        // Target 15 < natural 20 → the line overfills; no whitespace to price → 0.
         double penalty2 = solver.ForcePenalty(15, ragged: true);
-        Assert.True(penalty2 > 0, "Ragged should penalize when compressing");
+        Assert.Equal(0, penalty2, 3);
     }
 
     // --- SpringSolver.ApplyRods ---

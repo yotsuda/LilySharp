@@ -33,6 +33,19 @@ namespace LilySharp.Core.Semantics;
 /// </remarks>
 public static class RelativeOctave
 {
+    /// <summary>The letter of a member's root pitch — a bare pitch's letter, or a chord's
+    /// root (first pitch) — the letter a relative frame anchors on. Degrees and rests
+    /// return null (they do not anchor the frame).</summary>
+    /// <remarks>ONE HOME on purpose: this exact switch lived as three private copies
+    /// (MeasureCollector's walk, MidiExporter, MusicXmlExporter — found 2026-08-26,
+    /// §5.2.1②'s shape), and a fourth walker would have grown a fourth.</remarks>
+    public static char? FirstPitchLetter(Syntax.SyntaxNode member) => member switch
+    {
+        Syntax.PitchSyntax p => p.PitchName.ToLowerInvariant()[0],
+        Syntax.ChordSyntax c => c.Root?.PitchName.ToLowerInvariant()[0],
+        _ => null,
+    };
+
     /// <summary>Diatonic step index: c=0, d=1, … b=6.</summary>
     public static int StepIndex(char baseName)
     {

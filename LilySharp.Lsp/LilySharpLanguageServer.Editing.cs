@@ -472,37 +472,6 @@ public sealed partial class LilySharpLanguageServer
             });
         }
 
-        // Refactor: Wrap in relative
-        if (node is NoteSyntax note)
-        {
-            var noteText = note.ToFullString().Trim();
-            var (line, character) = GetLineAndCharacter(doc.Text, note.Position);
-            var (endLine, endChar) = GetLineAndCharacter(doc.Text, note.Position + note.FullWidth);
-
-            actions.Add(new CodeAction
-            {
-                Title = "Wrap in relative block",
-                Kind = CodeActionKind.Refactor,
-                Edit = new WorkspaceEdit
-                {
-                    Changes = new Dictionary<string, TextEdit[]>
-                    {
-                        [uri.ToString()] = new[]
-                        {
-                            new TextEdit
-                            {
-                                Range = new LspRange
-                                {
-                                    Start = new Position { Line = line, Character = character },
-                                    End = new Position { Line = endLine, Character = endChar }
-                                },
-                                NewText = $"relative c' {{ {noteText} }}"
-                            }
-                        }
-                    }
-                }
-            });
-        }
 
         return actions;
     }

@@ -210,25 +210,6 @@ public sealed class MusicXmlExporter
     /// </remarks>
     private string? _bareSectionOwner;
 
-    /// <summary>The single part the score being written engraves, or null when it names
-    /// none or several.</summary>
-    private string? ResolveBareSectionOwner(SyntaxTree tree)
-    {
-        var spec = Score;
-        if (spec == null)
-        {
-            var all = RenderSpecParser.FindAll(tree);
-            var played = Form ?? LilySharp.Core.Semantics.ScoreForms.Primary(tree.GetRoot());
-            spec = all.FirstOrDefault(s => played != null && ReferenceEquals(s.Form, played))
-                   ?? all.FirstOrDefault();
-        }
-        // ⚠️ Not `?? default`: a default ImmutableArray throws on Length, and a file with no
-        // `score` block at all is the ordinary case that reaches here.
-        if (spec == null) return null;
-        var parts = spec.EngravedPartNames;
-        return parts.Length == 1 ? parts[0] : null;
-    }
-
     /// <summary>Exports the tree to a MusicXML file at <paramref name="path"/> and
     /// returns a summary (part / measure counts). The intermediate document model is
     /// an implementation detail.</summary>
@@ -245,7 +226,7 @@ public sealed class MusicXmlExporter
 
         var root = tree.GetRoot();
         _root = root;
-        _bareSectionOwner = ResolveBareSectionOwner(tree);
+        _bareSectionOwner = RenderSpecParser.SingleEngravedPart(tree, Score, Form);
         _homeTonic = ScoreHomeKey.Read(root);
         _ambientTonic = _homeTonic;
 
@@ -1926,7 +1907,7 @@ public sealed class MusicXmlExporter
                 continue;
             }
 
-            char? letter = FirstPitchLetter(member);
+            char? letter = RelativeOctave.FirstPitchLetter(member);
             // The group octave shift applies to the ROOT member only; the stacked members
             // inherit it via the anchor octave the shifted root sets.
             bool isRoot = !rootSet && letter is not null;
@@ -2071,12 +2052,6 @@ public sealed class MusicXmlExporter
         MaybeClosePickup(duration);
     }
 
-    private static char? FirstPitchLetter(SyntaxNode member) => member switch
-    {
-        PitchSyntax p => p.PitchName.ToLowerInvariant()[0],
-        ChordSyntax c => c.Root?.PitchName.ToLowerInvariant()[0],
-        _ => null,
-    };
 
     /// <summary>The written notes of every chord this walk has emitted, keyed by
     /// node — what a following <c>q</c> copies (post-transpose spelling; LP

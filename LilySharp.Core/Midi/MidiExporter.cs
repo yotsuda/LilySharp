@@ -329,7 +329,7 @@ public sealed class MidiExporter
         _keySharps = _homeKeySharps;
         _formDriven = _root.DescendantNodes().OfType<FormDeclarationSyntax>().Any();
         _formPlayed = false;
-        _bareSectionOwner = ResolveBareSectionOwner(tree);
+        _bareSectionOwner = RenderSpecParser.SingleEngravedPart(tree, Score, Form);
         _partPitchLanes.Clear();
         _sourceOrdinals = new Dictionary<int, int>();
         ProcessNode(_root, mainTrack, conductorTrack);
@@ -629,34 +629,6 @@ public sealed class MidiExporter
     /// when the caller named one, else the primary (<see cref="ScoreForms.Primary"/>).</summary>
     private bool IsPrimaryForm(FormDeclarationSyntax form)
         => ReferenceEquals(form, Form ?? ScoreForms.Primary(_root!));
-
-    /// <summary>
-    /// The single part the score being written engraves, or null when it names none or
-    /// several — see <see cref="_bareSectionOwner"/> for what it is for.
-    /// </summary>
-    /// <remarks>
-    /// The score is <see cref="Score"/> when the caller named one; otherwise the one whose
-    /// form is the form being played (so <c>lysc midi --score movement2</c> attributes by
-    /// movement 2's staves), else the first. A file with no <c>score</c> block yields null
-    /// and nothing changes.
-    /// </remarks>
-    private string? ResolveBareSectionOwner(SyntaxTree tree)
-    {
-        var spec = Score;
-        if (spec == null)
-        {
-            var all = RenderSpecParser.FindAll(tree);
-            var played = Form ?? ScoreForms.Primary(_root!);
-            spec = all.FirstOrDefault(s => played != null && ReferenceEquals(s.Form, played))
-                   ?? all.FirstOrDefault();
-        }
-        // ⚠️ `?? default` would be a DEFAULT ImmutableArray, whose Length throws — and a
-        // file with no `score` block at all is the ordinary case that hits it (4 books of
-        // the 566 crashed here before this line read the way it does now).
-        if (spec == null) return null;
-        var parts = spec.EngravedPartNames;
-        return parts.Length == 1 ? parts[0] : null;
-    }
 
     /// <summary>
     /// Plays <paramref name="body"/> as the music of <paramref name="partName"/>: its
@@ -1399,7 +1371,7 @@ public sealed class MidiExporter
                 continue;
             }
 
-            char? letter = FirstPitchLetter(member);
+            char? letter = RelativeOctave.FirstPitchLetter(member);
             // The group octave shift applies to the ROOT member only; the stacked members
             // inherit it via the anchor octave the shifted root sets.
             bool isRoot = !rootSet && letter is not null;
@@ -1485,15 +1457,6 @@ public sealed class MidiExporter
         _currentTick += ticks;
     }
 
-    /// <summary>The letter of a member's root pitch — a bare pitch's letter, or a chord's
-    /// root (first pitch) — used to stack the arpeggio's members above the first. Degrees
-    /// and rests return null (they do not anchor the frame).</summary>
-    private static char? FirstPitchLetter(SyntaxNode member) => member switch
-    {
-        PitchSyntax p => p.PitchName.ToLowerInvariant()[0],
-        ChordSyntax c => c.Root?.PitchName.ToLowerInvariant()[0],
-        _ => null,
-    };
 
     private void ProcessNote(NoteSyntax note, MidiTrack track)
     {

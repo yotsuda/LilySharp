@@ -542,13 +542,10 @@ internal sealed class KnuthPlassBreaker
     /// <param name="naturalLength">The line's length at force 0
     /// (<c>configuration_length (0.0)</c>).</param>
     private double ForcePenalty(double lineLength, double force, double naturalLength)
-    {
-        if (_raggedRight)
-            return Math.Max(0.0, lineLength - naturalLength);
-
-        double f = force;
-        return f - (f < 0 ? f * f * f * f * 2 : 0);
-    }
+        // The formula's one home is SpringSolver.ForcePenaltyOf (2026-08-26; this body
+        // was the second spelling, and the pair had already drifted — the solver-side
+        // copy had its ragged arm reversed).
+        => SpringSolver.ForcePenaltyOf(lineLength, force, naturalLength, _raggedRight);
 
     /// <summary>
     /// Swaps a line's first measure from its mid-line spring 0 to the line-start spring the

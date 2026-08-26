@@ -926,20 +926,10 @@ static void PrintResolvedPitches(string source, SyntaxTree tree)
         int p = e.Position;
         while (p < source.Length && char.IsWhiteSpace(source[p])) p++;
         var (line, col) = LineColOf(source, p);
-        string written = ReadPitchToken(source, p);
+        string written = LilySharp.Core.Semantics.ResolvedPitches.ReadPitchToken(source, p);
         Console.WriteLine($"  {line,4}:{col,-3} {written,-7} -> {e.Pitch}");
     }
     Console.WriteLine();
-}
-
-static string ReadPitchToken(string source, int pos)
-{
-    if (pos < 0 || pos >= source.Length) return "";
-    int end = pos;
-    while (end < source.Length &&
-           (char.IsLetter(source[end]) || source[end] == '\'' || source[end] == ','))
-        end++;
-    return source[pos..end];
 }
 
 /// <summary>

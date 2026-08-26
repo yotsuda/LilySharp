@@ -123,7 +123,7 @@ internal static partial class EmmentalerGlyphs
     /// <summary>Whether a staff position is one of the five staff lines.</summary>
     /// <remarks>LILYPOND-REF: lily/staff-symbol.cc:372-382 Staff_symbol::on_line —
     /// the position equals one of <c>line-positions</c>.</remarks>
-    private static bool OnStaffLine(int pos) => pos % 2 == 0 && pos >= -4 && pos <= 4;
+    private static bool OnStaffLine(int pos) => EngravingDefaults.OnStaffLine(pos);
 
     /// <summary>Notehead glyph for a style + note value; whole-note variants
     /// serve breve too (styled breves are not in the font).</summary>

@@ -682,7 +682,7 @@ public sealed partial class LilySharpLanguageServer
                 facts.Add(new ResolvedPitchFact
                 {
                     Offset = p,
-                    Written = ReadPitchTokenAt(text, p),
+                    Written = LilySharp.Core.Semantics.ResolvedPitches.ReadPitchToken(text, p),
                     Resolved = e.Pitch,
                 });
             }
@@ -692,18 +692,6 @@ public sealed partial class LilySharpLanguageServer
         {
             return new FactsForRangeResponse { Error = ex.Message };
         }
-    }
-
-    /// <summary>Reads a bare pitch token (letters plus <c>'</c>/<c>,</c> octave
-    /// marks) at <paramref name="pos"/>, for the resolved-pitch facts display.</summary>
-    private static string ReadPitchTokenAt(string source, int pos)
-    {
-        if (pos < 0 || pos >= source.Length) return "";
-        int end = pos;
-        while (end < source.Length &&
-               (char.IsLetter(source[end]) || source[end] == '\'' || source[end] == ','))
-            end++;
-        return source.Substring(pos, end - pos);
     }
 
     /// <summary>
