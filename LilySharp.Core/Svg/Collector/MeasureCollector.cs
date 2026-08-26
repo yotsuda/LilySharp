@@ -978,6 +978,26 @@ public sealed partial class MeasureCollector
     private readonly Dictionary<string, (int Index, List<Measure> Measures)> _voiceMeasuresByName = new();
     // Music marks (segno, coda, fine, D.S., D.C., etc.)
     private readonly List<MusicMarkItem> _musicMarks = new();
+    // O(1) probe over _musicMarks' SourcePositions for the per-mark duplicate check
+    // (the statement-node walk asks it once per MusicMarkSyntax, and _musicMarks
+    // accumulates ACROSS parts — the linear Any made a mark-heavy multi-part book
+    // quadratic; 2026-08-26 review, finding 1-4). Synced lazily in MusicMarkExistsAt
+    // rather than beside every Add: _musicMarks is APPEND-ONLY (no Clear/Remove/
+    // indexer-write anywhere, Reset() included), and the resume machinery bulk-
+    // appends adopted prefix/tail slices through the side-table lists — a lazy
+    // catch-up from the last synced count sees those without hooking that path.
+    private readonly HashSet<int> _musicMarkPositions = new();
+    private int _musicMarkPositionsSynced;
+
+    /// <summary>Whether any collected music mark stands at <paramref name="sourcePosition"/>
+    /// — the O(1) spelling of <c>_musicMarks.Any(m =&gt; m.SourcePosition == p)</c>
+    /// (see <see cref="_musicMarkPositions"/>).</summary>
+    private bool MusicMarkExistsAt(int sourcePosition)
+    {
+        while (_musicMarkPositionsSynced < _musicMarks.Count)
+            _musicMarkPositions.Add(_musicMarks[_musicMarkPositionsSynced++].SourcePosition);
+        return _musicMarkPositions.Contains(sourcePosition);
+    }
     // Custom text annotations
     private readonly List<CustomTextItem> _customTexts = new();
     // Volta brackets (first/second ending)

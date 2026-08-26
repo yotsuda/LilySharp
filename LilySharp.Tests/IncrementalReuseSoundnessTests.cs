@@ -305,11 +305,18 @@ public class IncrementalReuseSoundnessTests
         """;
 
     [Fact]
-    public void GrobOverride_ContentUnchangedEdit_DoesNotReuse_ButMatchesFull()
+    public void GrobOverride_ContentUnchangedEdit_ReusesWholeLayout_AndMatchesFull()
     {
         // Overrides spread spacing globally and are not localized by the per-measure
-        // key, so an override-bearing score is gated out of every reuse path. A
-        // content-unchanged edit must decline reuse yet stay byte-identical.
+        // key, so an override-bearing score stays gated out of the PER-SYSTEM reuse
+        // paths. WHOLE-layout reuse is different (2026-08-26, finding 3-2 first
+        // stage): it localizes nothing, so totality carries the override — every
+        // per-measure key equal AND the override/revert collections value-equal ⇒
+        // all inputs unchanged ⇒ the same layout. A content-unchanged edit under a
+        // standing override therefore now REUSES, byte-identical to a full
+        // recompile. (This test used to pin the opposite — DoesNotReuse — under the
+        // old wholesale gate; OverrideEditIncrementalTests pins the decline sides:
+        // an override VALUE edit and a content edit.)
         var tree = SyntaxTree.Parse(Overridden);
         var session = new IncrementalCompiler(tree, Opt);
         session.Render();
@@ -317,7 +324,8 @@ public class IncrementalReuseSoundnessTests
         var change = new TextChange(new TextSpan(0, 0), "\n");
         var inc = Norm(session.Edit(change));
 
-        Assert.False(session.LastEditReusedLayout);
+        Assert.True(session.LastEditReusedLayout,
+            "a content-unchanged edit under a standing override no longer reuses the layout");
         Assert.Equal(Full(tree.WithChange(change).Text), inc);
     }
 

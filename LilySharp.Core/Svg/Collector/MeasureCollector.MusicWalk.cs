@@ -1058,7 +1058,7 @@ public sealed partial class MeasureCollector
                     // created it anchored to its host note. Skip this un-anchored
                     // duplicate so the mark stays at its note rather than snapping to
                     // the bar.
-                    if (_musicMarks.Any(m => m.SourcePosition == mark.Position))
+                    if (MusicMarkExistsAt(mark.Position))
                         break;
                     // The rehearsal LABEL comes from the argument (@mark("A")), the other
                     // marks from their NAME (@segno, @ottava.bassa) — two questions, and

@@ -68,6 +68,8 @@ internal sealed class SystemLayoutCache
     private readonly TypedCache<(VerticalSkyline up, VerticalSkyline down)> _skylines = new();
     private readonly TypedCache<MultiStaffLayouter.StaffSkylineSet> _staffSkylines = new();
     private readonly TypedCache<ImmutableArray<BeamLayout>> _staffSystemBeams = new();
+    private readonly TypedCache<ImmutableArray<TieLayout>> _staffSystemTies = new();
+    private readonly TypedCache<ImmutableArray<SlurLayout>> _staffSystemSlurs = new();
     private readonly TypedCache<VerticalSkyline?> _lyricBands = new();
 
     /// <summary>Refreshes the per-measure content keys for the current edit. Must be
@@ -81,6 +83,8 @@ internal sealed class SystemLayoutCache
         _skylines.NextGeneration();
         _staffSkylines.NextGeneration();
         _staffSystemBeams.NextGeneration();
+        _staffSystemTies.NextGeneration();
+        _staffSystemSlurs.NextGeneration();
         _lyricBands.NextGeneration();
     }
 
@@ -297,6 +301,57 @@ internal sealed class SystemLayoutCache
             isLastSystem, indent, commonShortestDuration, extra: systemIndex,
             compute, out _, extra2: staffIndex);
 
+    /// <summary>Reuses or computes ONE staff's laid-out TIES for ONE system — keyed like
+    /// <see cref="GetOrComputeStaffSystemBeams"/> and standing on the same claim, extended
+    /// one step: a tie's Ys carry the staff's WITHIN-system offset, and that offset is a
+    /// function of the same key (the staff skylines it is placed from are the value under
+    /// <see cref="GetOrComputeStaffSkylines"/>, the lyric band under
+    /// <see cref="GetOrComputeLyricBand"/>, and the rows/side-tables are folded per
+    /// measure). A tie COLUMN whose chords straddle a system boundary must never be
+    /// memoized here (the caller falls back for the whole staff — same posture as the
+    /// beams' cross-system group). Held by the bowed chained-edit net in
+    /// IncrementalCompilerTests.</summary>
+    /// <summary>Hits and misses of the two bow memos below over this cache's lifetime
+    /// (diagnostics / tests) — the liveness counter that lets the bowed chained-edit net
+    /// assert the memo actually served, rather than silently falling back forever
+    /// (a fixture whose bows all straddle systems would pass byte-equality without
+    /// exercising the memo at all).</summary>
+    public (int Hits, int Misses) BowMemoStats { get; private set; }
+
+    public ImmutableArray<TieLayout> GetOrComputeStaffSystemTies(
+        int staffIndex, int systemIndex,
+        int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,
+        double indent, double commonShortestDuration,
+        Func<ImmutableArray<TieLayout>> compute)
+    {
+        var result = _staffSystemTies.GetOrCompute(_keys, firstMeasureIndex, measureCount,
+            isFirstSystem, isLastSystem, indent, commonShortestDuration, extra: systemIndex,
+            compute, out bool hit, extra2: staffIndex);
+        BowMemoStats = hit
+            ? (BowMemoStats.Hits + 1, BowMemoStats.Misses)
+            : (BowMemoStats.Hits, BowMemoStats.Misses + 1);
+        return result;
+    }
+
+    /// <summary>Reuses or computes ONE staff's laid-out SLURS for ONE system — see
+    /// <see cref="GetOrComputeStaffSystemTies"/>; the slur's extra inputs (its beams, the
+    /// 'inside scripts, the grace notes) are the per-system beam value under this same key
+    /// family plus side-tables folded per measure.</summary>
+    public ImmutableArray<SlurLayout> GetOrComputeStaffSystemSlurs(
+        int staffIndex, int systemIndex,
+        int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,
+        double indent, double commonShortestDuration,
+        Func<ImmutableArray<SlurLayout>> compute)
+    {
+        var result = _staffSystemSlurs.GetOrCompute(_keys, firstMeasureIndex, measureCount,
+            isFirstSystem, isLastSystem, indent, commonShortestDuration, extra: systemIndex,
+            compute, out bool hit, extra2: staffIndex);
+        BowMemoStats = hit
+            ? (BowMemoStats.Hits + 1, BowMemoStats.Misses)
+            : (BowMemoStats.Hits, BowMemoStats.Misses + 1);
+        return result;
+    }
+
     /// <summary>Reuses or computes ONE system's augmented PAGING skyline — its base
     /// skyline pair with the annotation ink merged in (scripts, tuplet brackets, bows,
     /// figured bass, voltas, marks, texts, chord names, bar numbers).</summary>
@@ -413,9 +468,11 @@ internal sealed class SystemLayoutCache
                 return compute();
             }
 
-            var slice = new MeasureContentKey[count];
-            for (int i = 0; i < count; i++)
-                slice[i] = keys[first + i];
+            // Hash and match straight off the caller's keys — a HIT allocates nothing.
+            // This used to materialize a fresh slice array per lookup per store per
+            // keystroke, hit or miss (2026-08-26 review, finding 1-6); only a MISS
+            // needs an owned copy now (the stored Entry.Content, one copy below).
+            var slice = keys.AsSpan().Slice(first, count);
 
             var hc = new HashCode();
             hc.Add(first);
@@ -450,7 +507,7 @@ internal sealed class SystemLayoutCache
 
             var fresh = compute();
             var entry = new Entry(first, count, isFirst, isLast, indent, shortest, extra, extra2,
-                slice.ToImmutableArray(), fresh, _generation);
+                ImmutableArray.Create(keys, first, count), fresh, _generation);
             list.Add(entry);
             _insertionOrder.Enqueue((bucketKey, entry));
             _count++;

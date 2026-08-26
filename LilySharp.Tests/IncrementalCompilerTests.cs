@@ -708,6 +708,66 @@ public class IncrementalCompilerTests
     }
 
     /// <summary>
+    /// The per-system TIE and SLUR memos' incremental==full gate (2026-08-26 review,
+    /// finding 4-2) — the bow twin of the beamed net above. The beams beside the prelim
+    /// bows hit <c>GetOrComputeStaffSystemBeams</c> since ⒟⁶, but the ties and slurs of
+    /// EVERY system were re-solved on every keystroke; now an intra-system bow comes back
+    /// from <c>GetOrComputeStaffSystemTies/Slurs</c> and rides into the final pass through
+    /// the carry. Byte-equality against a cache-free full render on every step says a hit
+    /// is the same bows, in the same order (the reassembly is cursor-matched by column /
+    /// slur identity, and any drift falls back to the whole-staff solve rather than
+    /// guessing). BowMemoStats is the liveness half: a fixture whose bows all straddled
+    /// systems would pass byte-equality while never exercising the memo.
+    /// </summary>
+    [Fact]
+    public void ChainedEditsOnABowedMultiSystemScore_AlwaysMatchFull()
+    {
+        // 18 bars, each carrying an intra-bar slur and an intra-bar tie (a bow that
+        // CROSSES a system break falls back by design, so the fixture keeps its bows
+        // inside bars — the break can then never split one). Bar 10's a2~ is the
+        // unique toggle anchor.
+        var bar = "c4( d e) f | g2~ g4 a4 |";
+        var bars = string.Join(" ", Enumerable.Repeat(bar, 7))
+            + " c4( d e) f | a2~ a4 g4 | "
+            + string.Join(" ", Enumerable.Repeat(bar, 7));
+        string source = "time 4/4\nkey c major\npart melody { clef treble }\n"
+            + "section Main { melody { " + bars + " } }\n";
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        Assert.Equal(Full(source), Norm(session.Render()));
+
+        var steps = new (string Find, string Replace)[]
+        {
+            ("a2~ a4 g4", "b2~ b4 g4"),   // pitch toggle in the unique bar
+            ("b2~ b4 g4", "a2~ a4 g4"),   // its inverse
+            ("melody { c4(", "melody { r1 | c4("), // head insertion shifts system indices
+        };
+        foreach (var (find, replace) in steps)
+        {
+            string current = session.Tree.Text;
+            var change = Replace(current, find, replace);
+            int at = current.IndexOf(find, System.StringComparison.Ordinal);
+            string editedText = current[..at] + replace + current[(at + find.Length)..];
+
+            var incremental = Norm(session.Edit(change));
+            Assert.Equal(Full(editedText), incremental);
+        }
+
+        // Liveness: the bow memos actually served (misses alone would mean the
+        // fallback ran every time and the memo is dead machinery).
+        var stats = session.SystemCache?.BowMemoStats ?? (0, 0);
+        Assert.True(stats.Hits > 0,
+            $"no bow memo hit across three keystrokes (hits {stats.Hits}, misses {stats.Misses}) "
+            + "— every staff fell back or the memo was never consulted");
+
+        // The fixture's premise: several systems, so the memo has cross-system reuse
+        // to serve at all.
+        var lastLayout = new LayoutEngine().Layout(
+            SvgGenerator.CollectScore(session.Tree, RenderSpecParser.FindFirst(session.Tree)));
+        Assert.True(lastLayout.AllSystems.Length >= 3,
+            $"fixture shrank to {lastLayout.AllSystems.Length} system(s); the memo has nothing to reuse");
+    }
+
+    /// <summary>
     /// The per-system PAGING-AUGMENT memo's incremental==full gate (HANDOFF §1 ⒪′). The
     /// beamed fixture above never returns a cached AUGMENTED skyline into a rendered
     /// picture — its books carry no bows and few scripts, so the paging programs are

@@ -217,7 +217,10 @@ public sealed partial class LilySharpLanguageServer
         var version = @params.TextDocument.Version;
 
         var doc = _documentManager.OpenOrUpdate(uri, text, version);
-        PublishDiagnostics(doc);
+        // Off the dispatch thread (debounce 0): the semantic validation pass costs
+        // 148-218 ms on a 1000-measure book, and a synchronous publish here blocked
+        // every queued request behind the open (2026-08-26 review, finding 1-2).
+        ScheduleDiagnostics(doc, debounceMs: 0);
     }
 
     [JsonRpcMethod(Methods.TextDocumentDidChangeName, UseSingleObjectParameterDeserialization = true)]
@@ -274,7 +277,10 @@ public sealed partial class LilySharpLanguageServer
             var uri = @params.TextDocument.Uri;
             var version = _documentManager.GetDocument(uri)?.Version ?? 0;
             var doc = _documentManager.OpenOrUpdate(uri, @params.Text, version);
-            PublishDiagnostics(doc);
+            // Off the dispatch thread, like DidOpen above: a synchronous publish
+            // stalled the save's svg refresh (and any queued didChange) for the
+            // full validation pass.
+            ScheduleDiagnostics(doc, debounceMs: 0);
         }
     }
 
@@ -284,8 +290,10 @@ public sealed partial class LilySharpLanguageServer
     /// Schedules a debounced diagnostics run for the document. A newer change
     /// to the same document cancels the pending run; the run also re-checks
     /// that its document is still the latest version before publishing.
+    /// <paramref name="debounceMs"/> 0 = publish as soon as possible but still
+    /// OFF the RPC dispatch thread and still supersedable (didOpen / didSave).
     /// </summary>
-    private void ScheduleDiagnostics(Document doc)
+    private void ScheduleDiagnostics(Document doc, int debounceMs = DiagnosticsDebounceMs)
     {
         CancellationToken token;
         lock (_diagnosticsGate)
@@ -304,7 +312,7 @@ public sealed partial class LilySharpLanguageServer
         {
             try
             {
-                await Task.Delay(DiagnosticsDebounceMs, token);
+                await Task.Delay(debounceMs, token);
 
                 // Drop if the document moved on (or was closed) while we slept.
                 var current = _documentManager.GetDocument(doc.Uri);

@@ -155,21 +155,15 @@ public sealed class DocumentManager
     /// </summary>
     internal static int GetOffset(string text, Position position)
     {
-        int offset = 0;
-        int line = 0;
-
-        while (line < position.Line && offset < text.Length)
-        {
-            if (text[offset] == '\n')
-                line++;
-            else if (text[offset] == '\r')
-            {
-                line++;
-                if (offset + 1 < text.Length && text[offset + 1] == '\n')
-                    offset++;
-            }
-            offset++;
-        }
+        // The shared per-text-instance line index (LilySharpLanguageServer.LineStartsOf)
+        // instead of a scan from offset 0 per edit — this runs once per change per
+        // didChange, and the index is the one semantic tokens / diagnostics already
+        // build for the same text instance. A line past the last one lands at the end
+        // of the text, exactly where the old scan's `offset < text.Length` bound left it.
+        var lineStarts = LilySharpLanguageServer.LineStartsOf(text);
+        int offset = position.Line <= 0 ? 0
+            : position.Line < lineStarts.Length ? lineStarts[position.Line]
+            : text.Length;
 
         // Clamp the character offset to the end of this line (and the text).
         int lineEnd = offset;

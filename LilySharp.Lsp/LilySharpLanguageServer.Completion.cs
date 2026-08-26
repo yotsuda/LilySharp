@@ -232,10 +232,7 @@ public sealed partial class LilySharpLanguageServer
     /// or null at the top level. Used to scope completions to the block kind.
     /// </summary>
     internal static string? InnermostOpenBlock(string text, int offset)
-    {
-        var frames = ScanOpenBlocks(text, offset, ReadFrame);
-        return frames.Count > 0 ? frames[^1].Name : null;
-    }
+        => InnermostOpenBlock(new BlockContextScan(text, offset).Stack);
 
     /// <summary>
     /// True when <paramref name="offset"/> sits inside a <c>fonts { … }</c> block.
@@ -246,14 +243,10 @@ public sealed partial class LilySharpLanguageServer
     /// block never nests, so the innermost frame is the whole test.
     /// </remarks>
     internal static bool IsInsideFontBlock(string text, int offset)
-    {
         // Unnamed: the word before `{` is `fonts` (the frame's Name). NAMED —
         // `fonts house {` — the word before `{` is the NAME and `fonts` is one
         // word further back (the frame's Prefix), the same shape as a part block.
-        var frames = ScanOpenBlocks(text, offset, ReadFrame);
-        return frames.Count > 0
-            && (frames[^1].Name == "fonts" || frames[^1].Prefix == "fonts");
-    }
+        => IsInsideFontBlock(new BlockContextScan(text, offset).Stack);
 
     /// <summary>
     /// True when <paramref name="offset"/> sits inside a <c>paper { … }</c> block;
@@ -262,24 +255,9 @@ public sealed partial class LilySharpLanguageServer
     /// then the spacing key and <c>paper</c> is the frame outside it.
     /// </summary>
     internal static bool IsInsidePaperBlock(string text, int offset, out bool inSpacingBlock)
-    {
         // A frame is a paper block when `paper` is the word before its `{` (unnamed)
         // or one word further back (named — `paper wide {`, the part-block shape).
-        static bool IsPaperFrame(BlockFrame f) => f.Name == "paper" || f.Prefix == "paper";
-
-        inSpacingBlock = false;
-        var frames = ScanOpenBlocks(text, offset, ReadFrame);
-        if (frames.Count == 0)
-            return false;
-        if (IsPaperFrame(frames[^1]))
-            return true;
-        if (frames.Count >= 2 && IsPaperFrame(frames[^2]))
-        {
-            inSpacingBlock = true;
-            return true;
-        }
-        return false;
-    }
+        => IsInsidePaperBlock(new BlockContextScan(text, offset).Stack, out inSpacingBlock);
 
     /// <summary>
     /// True when <paramref name="offset"/> sits inside a <c>part &lt;name&gt; { … }</c>
@@ -289,10 +267,7 @@ public sealed partial class LilySharpLanguageServer
     /// apart from a section-body part reference (<c>rh {</c>).
     /// </summary>
     internal static bool IsInsidePartBlock(string text, int offset)
-    {
-        var frames = ScanOpenBlocks(text, offset, ReadFrame);
-        return frames.Count > 0 && frames[^1].Prefix == "part";
-    }
+        => IsInsidePartBlock(new BlockContextScan(text, offset).Stack);
 
     /// <summary>
     /// True when <paramref name="offset"/> sits directly inside a container that holds
@@ -302,17 +277,10 @@ public sealed partial class LilySharpLanguageServer
     /// <c>section</c>.
     /// </summary>
     internal static bool IsInsideSectionContainer(string text, int offset)
-    {
-        var frames = ScanOpenBlocks(text, offset, ReadFrame);
-        if (frames.Count == 0)
-            return false;
-        var f = frames[^1];
         // The introducing keyword is the Prefix for a NAMED block (`lyrics words {`) but
-        // the Name for an UNNAMED one (`lyrics {`, whose name is optional): pick whichever
-        // holds the keyword, as IsInsideChordsBlock does.
-        string keyword = f.Prefix is "part" or "lyrics" or "chords" or "section" ? f.Prefix : f.Name;
-        return keyword is "part" or "lyrics";
-    }
+        // the Name for an UNNAMED one (`lyrics {`, whose name is optional): FrameKeyword
+        // picks whichever holds the keyword, as IsInsideChordsBlock does.
+        => IsInsideSectionContainer(new BlockContextScan(text, offset).Stack);
 
     /// <summary>The keyword introducing a block frame: the <see cref="BlockFrame.Prefix"/> for
     /// a NAMED block (<c>lyrics words {</c> → "lyrics"), else the <see cref="BlockFrame.Name"/>
@@ -328,10 +296,7 @@ public sealed partial class LilySharpLanguageServer
     /// A top-level track has no enclosing block, so the lyrics frame is the ONLY open one.
     /// </summary>
     internal static bool IsInsideTopLevelLyricsBlock(string text, int offset)
-    {
-        var frames = ScanOpenBlocks(text, offset, ReadFrame);
-        return frames.Count == 1 && FrameKeyword(frames[0]) == "lyrics";
-    }
+        => IsInsideTopLevelLyricsBlock(new BlockContextScan(text, offset).Stack);
 
     /// <summary>
     /// True when <paramref name="offset"/> sits DIRECTLY inside a top-level
@@ -340,10 +305,7 @@ public sealed partial class LilySharpLanguageServer
     /// not part blocks), so it is excluded.
     /// </summary>
     internal static bool IsInsideTopLevelSectionBody(string text, int offset)
-    {
-        var frames = ScanOpenBlocks(text, offset, ReadFrame);
-        return frames.Count == 1 && FrameKeyword(frames[0]) == "section";
-    }
+        => IsInsideTopLevelSectionBody(new BlockContextScan(text, offset).Stack);
 
     /// <summary>True when the document declares at least one <c>part NAME { … }</c>.</summary>
     private static bool HasDeclaredParts(string text)
@@ -496,6 +458,111 @@ public sealed partial class LilySharpLanguageServer
         string prefix = text.Substring(k + 1, end2 - (k + 1));  // and the one before it
         return new BlockFrame(prefix, name);
     }
+
+    /// <summary>One still-open block for <see cref="BlockContextScan"/>: the two-word
+    /// <see cref="BlockFrame"/> AND the score-opener judgement, both read at the same
+    /// <c>{</c> so one pass serves every consumer.</summary>
+    private readonly record struct OpenBlock(BlockFrame Frame, bool IsScoreOpener);
+
+    /// <summary>
+    /// The one block-context scan of a completion request. <see cref="GetCompletionContext"/>
+    /// used to call the <c>IsInside*</c> helpers independently, and each ran its own
+    /// <see cref="ScanOpenBlocks"/> pass over <c>[0, offset)</c> — 10-15 full-document
+    /// scans per keystroke on the completion hot path (completion triggers on the space
+    /// that ends every note, so this IS a keystroke cost; 2026-08-26 review, finding 2-2).
+    /// This scans ONCE, lazily — the early returns (an <c>@</c> or <c>\</c> trigger, a
+    /// value keyword) still pay nothing — and every context predicate reads the shared
+    /// stack. <see cref="RawBraceDepth"/> preserves the final fallthrough's exact
+    /// arithmetic: a depth that went negative on a stray <c>}</c> is NOT the same as an
+    /// empty stack, and the fallthrough's answer must not change shape on such input.
+    /// </summary>
+    private sealed class BlockContextScan
+    {
+        private readonly string _text;
+        private readonly int _offset;
+        private List<OpenBlock>? _stack;
+        private int _rawBraceDepth;
+
+        public BlockContextScan(string text, int offset)
+        {
+            _text = text;
+            _offset = offset;
+        }
+
+        public List<OpenBlock> Stack
+        {
+            get { EnsureScanned(); return _stack!; }
+        }
+
+        public int RawBraceDepth
+        {
+            get { EnsureScanned(); return _rawBraceDepth; }
+        }
+
+        private void EnsureScanned()
+        {
+            if (_stack != null)
+                return;
+            var stack = new List<OpenBlock>();
+            int depth = 0;
+            bool inStr = false, inLine = false, inBlock = false;
+            int limit = Math.Min(_offset, _text.Length);
+            for (int i = 0; i < limit; i++)
+            {
+                if (!IsCodeChar(_text, i, ref inStr, ref inLine, ref inBlock)) continue;
+                if (_text[i] == '{')
+                {
+                    depth++;
+                    stack.Add(new OpenBlock(ReadFrame(_text, i), IsScoreBlockOpener(_text, i)));
+                }
+                else if (_text[i] == '}')
+                {
+                    depth--;
+                    if (stack.Count > 0) stack.RemoveAt(stack.Count - 1);
+                }
+            }
+            _stack = stack;
+            _rawBraceDepth = depth;
+        }
+    }
+
+    private static string? InnermostOpenBlock(List<OpenBlock> stack)
+        => stack.Count > 0 ? stack[^1].Frame.Name : null;
+
+    private static bool IsInsideFontBlock(List<OpenBlock> stack)
+        => stack.Count > 0
+            && (stack[^1].Frame.Name == "fonts" || stack[^1].Frame.Prefix == "fonts");
+
+    private static bool IsInsidePaperBlock(List<OpenBlock> stack, out bool inSpacingBlock)
+    {
+        static bool IsPaperFrame(BlockFrame f) => f.Name == "paper" || f.Prefix == "paper";
+        inSpacingBlock = false;
+        if (stack.Count == 0)
+            return false;
+        if (IsPaperFrame(stack[^1].Frame))
+            return true;
+        if (stack.Count >= 2 && IsPaperFrame(stack[^2].Frame))
+        {
+            inSpacingBlock = true;
+            return true;
+        }
+        return false;
+    }
+
+    private static bool IsInsidePartBlock(List<OpenBlock> stack)
+        => stack.Count > 0 && stack[^1].Frame.Prefix == "part";
+
+    private static bool IsInsideSectionContainer(List<OpenBlock> stack)
+        => stack.Count > 0 && FrameKeyword(stack[^1].Frame) is "part" or "lyrics";
+
+    private static bool IsInsideTopLevelLyricsBlock(List<OpenBlock> stack)
+        => stack.Count == 1 && FrameKeyword(stack[0].Frame) == "lyrics";
+
+    private static bool IsInsideTopLevelSectionBody(List<OpenBlock> stack)
+        => stack.Count == 1 && FrameKeyword(stack[0].Frame) == "section";
+
+    private static bool IsInsideScoreBlock(List<OpenBlock> stack)
+        => stack.Count > 0 && stack[^1].IsScoreOpener;
 
     // (GetChordQualityCompletions retired with the ':' entry format, 2026-08-23:
     // a chord is written as it prints, so there is no ':' to complete after.)
@@ -672,6 +739,11 @@ public sealed partial class LilySharpLanguageServer
         if (offset == 0)
             return CompletionContext.TopLevel;
 
+        // The ONE block-context scan of this request (lazy — see BlockContextScan).
+        // Every IsInside* judgement below reads this shared stack instead of
+        // re-scanning [0, offset) on its own.
+        var scan = new BlockContextScan(text, offset);
+
         // Right after a complete articulation name or its '.', offer the .up/.down
         // placement qualifier — '@fermata|', '@fermata.|', '@fermata.d|'. Checked
         // against the char immediately before the cursor (no whitespace skip) so a
@@ -725,7 +797,7 @@ public sealed partial class LilySharpLanguageServer
         // position — so offering them there is offering an error. They were legal-looking for
         // a long time because GRAMMAR.md listed them as part-property alternatives; a part
         // header ignored them outright (measured, MIDI byte-identical to no octave at all).
-        if (prevWord == "octave" && !IsInsidePartBlock(text, offset))
+        if (prevWord == "octave" && !IsInsidePartBlock(scan.Stack))
             return CompletionContext.AfterOctave;
 
         // Value positions after the metadata/meter keywords: only their own
@@ -742,12 +814,12 @@ public sealed partial class LilySharpLanguageServer
                 // `fonts |` with no block yet: offer the block forms — except inside a
                 // score, where the item is a REFERENCE and the declared names fit.
                 case "fonts":
-                    return IsInsideScoreBlock(text, offset)
+                    return IsInsideScoreBlock(scan.Stack)
                         ? CompletionContext.AfterFontsBlockRef
                         : CompletionContext.AfterFontKeyword;
                 // `paper |` with no block yet: same motion.
                 case "paper":
-                    return IsInsideScoreBlock(text, offset)
+                    return IsInsideScoreBlock(scan.Stack)
                         ? CompletionContext.AfterPaperBlockRef
                         : CompletionContext.AfterPaperKeyword;
                 // `override |` (and `once override |`, whose previous word is also
@@ -774,7 +846,7 @@ public sealed partial class LilySharpLanguageServer
         // 2026-08-18, all twelve carets from `fonts {` to `fonts { serif "Georgia"  sans "|`.
         // The one-liner had two dedicated contexts and the block had none, which is most of
         // why the block read as the harder form to write.
-        if (IsInsideFontBlock(text, offset))
+        if (IsInsideFontBlock(scan.Stack))
         {
             // A quoted value: the same 188-face list the one-liner's string offers. The
             // owning keyword here is the ROLE KEY (`serif`), not `font`, so the switch
@@ -794,7 +866,7 @@ public sealed partial class LilySharpLanguageServer
         // one quoted value — `size "…"` — the paper-size names. Intercepted before the
         // fallthroughs for the reason the fonts block is: without this the popup offers
         // pitches and articulations at every caret inside the block.
-        if (IsInsidePaperBlock(text, offset, out bool inSpacingBlock))
+        if (IsInsidePaperBlock(scan.Stack, out bool inSpacingBlock))
         {
             // `size |` — the size names, bare (the canonical spelling); and inside
             // `size "…"` — the same names, for the quoted escape that carries a space.
@@ -834,14 +906,14 @@ public sealed partial class LilySharpLanguageServer
         // actually valid — inside a part { } body and not inside a string — or lyrics
         // like `play my instrument` and titles would have their completion hijacked.
         if (prevWord == "instrument"
-            && IsInsidePartBlock(text, offset)
+            && IsInsidePartBlock(scan.Stack)
             && !IsInsideStringLiteral(text, offset))
             return CompletionContext.AfterInstrument;
 
         // Right after the `removeEmpty` part property only its values are valid
         // (true / all / false — LP RemoveEmptyStaves / RemoveAllEmptyStaves).
         if (string.Equals(prevWord, "removeEmpty", StringComparison.OrdinalIgnoreCase)
-            && IsInsidePartBlock(text, offset)
+            && IsInsidePartBlock(scan.Stack)
             && !IsInsideStringLiteral(text, offset))
             return CompletionContext.AfterRemoveEmpty;
 
@@ -852,25 +924,24 @@ public sealed partial class LilySharpLanguageServer
         // `section` inside a music body is not a declaration site, so it is skipped.
         if (prevWord == "section"
             && !IsInsideStringLiteral(text, offset)
-            && (IsInsideSectionContainer(text, offset) || InnermostOpenBlock(text, offset) == null))
+            && (IsInsideSectionContainer(scan.Stack) || InnermostOpenBlock(scan.Stack) == null))
             return CompletionContext.AfterSection;
 
         // Directly inside a part { } header (and not after one of the
         // value-taking keywords above): offer the part property names — a part
         // body holds properties (and inner sections), never notes.
-        if (IsInsidePartBlock(text, offset) && !IsInsideStringLiteral(text, offset))
+        if (IsInsidePartBlock(scan.Stack) && !IsInsideStringLiteral(text, offset))
             return CompletionContext.PartBlock;
 
         // Inside form <name> { … } the body is a playback order (section names and
         // navigation marks), not music — so it gets its own completions, never note
         // names. A form is always named, so the `form` keyword is the frame Prefix.
-        var formFrames = ScanOpenBlocks(text, offset, ReadFrame);
-        if (formFrames.Count > 0 && formFrames[^1].Prefix == "form")
+        if (scan.Stack.Count > 0 && scan.Stack[^1].Frame.Prefix == "form")
             return CompletionContext.FormBlock;
 
         // Inside score "name" { } / grandStaff { }: the body is a render spec.
         // After its reference keywords only the declared part names fit.
-        if (IsInsideScoreBlock(text, offset))
+        if (IsInsideScoreBlock(scan.Stack))
         {
             // `… as |` → a display selector, but which one depends on what the `as`
             // governs: `tab … as` takes numbers|full, `chords … as` takes
@@ -908,10 +979,9 @@ public sealed partial class LilySharpLanguageServer
             // wider list inside one:
             //   condensedStaff { combinedStaff … } → LYS6004 "cannot contain"
             //   grandStaff     { combinedStaff … } → LYS6011 "cannot contain"
-            var openBlocks = ScanOpenBlocks(text, offset, ReadFrame);
-            if (openBlocks.Count > 0)
+            if (scan.Stack.Count > 0)
             {
-                string block = openBlocks[^1].Name;
+                string block = scan.Stack[^1].Frame.Name;
                 // condensedStaff / combinedStaff take BARE PART NAMES only.
                 if (IsBarePartNameGroup(block))
                     return CompletionContext.AfterStaffRef;
@@ -979,31 +1049,24 @@ public sealed partial class LilySharpLanguageServer
         // cell like `section A { melody {} lyrics {} }`, and NOT an inner section's syllable
         // body): the body holds `section NAME { syllables }`, so offer the document's section
         // names as `section NAME { }` scaffolds instead of note names.
-        if (IsInsideTopLevelLyricsBlock(text, offset) && !IsInsideStringLiteral(text, offset))
+        if (IsInsideTopLevelLyricsBlock(scan.Stack) && !IsInsideStringLiteral(text, offset))
             return CompletionContext.LyricsBlock;
 
         // Directly inside a top-level `section { }` in a doc WITH parts: the body holds PART
         // BLOCKS (`melody { … }`), not notes — so offer the declared parts as cell scaffolds,
         // not the pitch letters. (A section in a NO-parts doc is a single voice and keeps its
         // note completions; a section nested in a part is a part-major cell, likewise music.)
-        if (IsInsideTopLevelSectionBody(text, offset) && HasDeclaredParts(text)
+        if (IsInsideTopLevelSectionBody(scan.Stack) && HasDeclaredParts(text)
             && !IsInsideStringLiteral(text, offset))
             return CompletionContext.SectionBlock;
 
         if (i >= 0 && text[i] == '{')
             return CompletionContext.MusicBlock;
 
-        // Check if inside braces (ignoring braces in strings/comments)
-        int braceDepth = 0;
-        bool inStr = false, inLine = false, inBlock = false;
-        for (int j = 0; j < offset && j < text.Length; j++)
-        {
-            if (!IsCodeChar(text, j, ref inStr, ref inLine, ref inBlock)) continue;
-            if (text[j] == '{') braceDepth++;
-            else if (text[j] == '}') braceDepth--;
-        }
-
-        return braceDepth > 0 ? CompletionContext.MusicBlock : CompletionContext.TopLevel;
+        // Check if inside braces (ignoring braces in strings/comments). RawBraceDepth
+        // keeps this exact arithmetic — a depth driven negative by a stray `}` is not
+        // the same as an empty open-block stack.
+        return scan.RawBraceDepth > 0 ? CompletionContext.MusicBlock : CompletionContext.TopLevel;
     }
 
     // Most-reached-for first, which is not alphabetical; SortText preserves it. A property the
@@ -1223,10 +1286,7 @@ public sealed partial class LilySharpLanguageServer
     /// name before reading the keyword.
     /// </summary>
     internal static bool IsInsideScoreBlock(string text, int offset)
-    {
-        var stack = ScanOpenBlocks(text, offset, IsScoreBlockOpener);
-        return stack.Count > 0 && stack[^1];
-    }
+        => IsInsideScoreBlock(new BlockContextScan(text, offset).Stack);
 
     /// <summary>The staff-group keywords whose <c>{ }</c> body is part of the render
     /// spec: they open a block directly inside a score.</summary>

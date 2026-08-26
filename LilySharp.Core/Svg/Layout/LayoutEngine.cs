@@ -40,7 +40,7 @@ internal sealed class LayoutEngine
     /// reserves text ink (dynamic labels, tuplet numbers) and so has to know the faces,
     /// which the CONSTRUCTOR cannot — it is handed options and no score. It is therefore
     /// re-seated at the top of <see cref="Layout(MultiStaffScore, IReadOnlyList{int},
-    /// SystemLayoutCache, MeasureSpringData[])"/>.
+    /// SystemLayoutCache, MeasureSpringData[], System.Nullable{double})"/>.
     /// <para>
     /// SAFE because an engine lays out ONE score: every production construction is
     /// <c>new LayoutEngine(score.Paper).Layout(score)</c> — SvgGenerator, PngGenerator
@@ -78,8 +78,14 @@ internal sealed class LayoutEngine
     }
 
     /// <summary>Calculates the complete layout for a multi-staff score.</summary>
+    /// <param name="precomputedShortest">The score-global common shortest duration, when the
+    /// caller (the incremental driver) has already computed it for the break gate — the same
+    /// value this method would derive from the same score, handed over instead of derived
+    /// twice per keystroke (SystemBreaker's "one quantity, two places" remark names this
+    /// pair). Null ⇒ compute here (the full-render path).</param>
     public ScoreLayout Layout(MultiStaffScore score, IReadOnlyList<int>? precomputedLineSizes = null,
-        SystemLayoutCache? systemCache = null, MeasureSpringData[]? precomputedSprings = null)
+        SystemLayoutCache? systemCache = null, MeasureSpringData[]? precomputedSprings = null,
+        double? precomputedShortest = null)
     {
         // The faces this score reserves against — see the field's remark for why the
         // builder cannot be given them in the constructor.
@@ -103,7 +109,9 @@ internal sealed class LayoutEngine
 
         // LILYPOND-REF: lily/spacing-spanner.cc
         // Calculate the common shortest duration across all voices for Gourlay spacing
-        double commonShortestDuration = SpacingRules.CalculateCommonShortestDuration(score);
+        // (or take the driver's, computed for the break gate from this same score).
+        double commonShortestDuration =
+            precomputedShortest ?? SpacingRules.CalculateCommonShortestDuration(score);
 
         // LILYPOND-REF: ly/paper-defaults-init.ly — indent / short-indent
         // LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset
@@ -782,7 +790,9 @@ internal sealed class LayoutEngine
                 prelimSystems, staffIndex, systemCache, commonShortestDuration);
             prelimBeamsByStaff[staffIndex] = staffPrelimBeams;
             prelimBeams.AddRange(staffPrelimBeams);
-            var staffPrelimTies = _elementCoordinator.LayoutTies(staffSpannerScore, prelimSystems, staffIndex, staff);
+            var staffPrelimTies = LayoutPreliminaryStaffTies(
+                staffSpannerScore, prelimSystems, staffIndex, staff,
+                systemCache, commonShortestDuration);
             prelimTiesByStaff[staffIndex] = staffPrelimTies;
             prelimTies.AddRange(staffPrelimTies);
             // The same 'inside script boxes the FINAL pass scores its bows against
@@ -790,18 +800,10 @@ internal sealed class LayoutEngine
             // spacing extents for a curve the final pass then moves.
             var prelimStaffScripts = ArticulationEngraver.SidePositionedScriptsOf(
                 score.Articulations, staffIndex);
-            var staffPrelimSlurs = _elementCoordinator.LayoutSlurs(
-                staffSpannerScore, prelimSystems, staffIndex, staff, score.GraceNotes, staffPrelimBeams,
-                insideScripts: prelimStaffScripts.IsEmpty ? null : () =>
-                    ArticulationEngraver.InsideSlurScriptLayouts(
-                        staffSpannerScore, prelimStaffScripts,
-                        prelimSystems.SelectMany(s => s.Measures).ToImmutableArray(),
-                        measuresByStaff: new Dictionary<int, ImmutableArray<Measure>>
-                            { [staffIndex] = staff.PrimaryVoice.Measures },
-                        staffYAt: null,
-                        staffByIndex: new Dictionary<int, Staff> { [staffIndex] = staff },
-                        beamLayouts: staffPrelimBeams,
-                        tieLayouts: staffPrelimTies));
+            var staffPrelimSlurs = LayoutPreliminaryStaffSlurs(
+                staffSpannerScore, prelimSystems, staffIndex, staff, score.GraceNotes,
+                staffPrelimBeams, staffPrelimTies, prelimStaffScripts,
+                systemCache, commonShortestDuration);
             prelimSlursByStaff[staffIndex] = staffPrelimSlurs;
             prelimSlurs.AddRange(staffPrelimSlurs);
         }
@@ -1060,6 +1062,241 @@ internal sealed class LayoutEngine
            && a.Members[0].ResolveMeasureIndex(a.MeasureIndex)
               == b.Members[0].ResolveMeasureIndex(b.MeasureIndex)
            && a.Members[0].ItemIndex == b.Members[0].ItemIndex;
+
+    /// <summary>The measure→system map of the preliminary systems — the home test both
+    /// bow memos and the beam memo ask before memoizing per system.</summary>
+    private static Dictionary<int, int> MeasureToSystemOf(ImmutableArray<SystemLayout> systems)
+    {
+        var map = new Dictionary<int, int>();
+        for (int k = 0; k < systems.Length; k++)
+            foreach (var ml in systems[k].Measures)
+                map[ml.MeasureIndex] = k;
+        return map;
+    }
+
+    /// <summary>
+    /// The preliminary pass's per-(staff, system) TIE memo — the tie twin of
+    /// <see cref="LayoutPreliminaryStaffBeams"/> (2026-08-26 review, finding 4-2: the
+    /// prelim bows were the one per-system quantity still recomputed for EVERY system
+    /// on every keystroke while the beams beside them hit their memo). Detection runs
+    /// once (it is a whole-score walk either way); the SOLVE — the per-column
+    /// TieFormattingProblem — is memoized per system through
+    /// <see cref="SystemLayoutCache.GetOrComputeStaffSystemTies"/>.
+    /// </summary>
+    /// <remarks>
+    /// Fallback (whole staff, unmemoized — the beams' posture) when any tie COLUMN is
+    /// not wholly inside one system: a straddling column is laid out per SEGMENT with
+    /// its neighbour system in the inputs, which this key does not cover. The
+    /// reassembly is column-major in detection order — exactly the order the plain
+    /// call emits (its own remark: "emitted tie-major") — and cursor-verified against
+    /// the column's identity, so a drift reorders nothing silently: an unmatched
+    /// column falls back to the plain call for the whole staff.
+    /// </remarks>
+    private ImmutableArray<TieLayout> LayoutPreliminaryStaffTies(
+        Score staffSpannerScore, ImmutableArray<SystemLayout> prelimSystems, int staffIndex,
+        Staff staff, SystemLayoutCache? systemCache, double commonShortestDuration)
+    {
+        if (systemCache is null || prelimSystems.Length == 0)
+            return _elementCoordinator.LayoutTies(
+                staffSpannerScore, prelimSystems, staffIndex, staff);
+        var ties = _elementCoordinator.DetectTies(staffSpannerScore);
+        if (ties.IsEmpty)
+            return ImmutableArray<TieLayout>.Empty;
+
+        ImmutableArray<TieLayout> Fallback() => _elementCoordinator.LayoutTies(
+            ties, staffSpannerScore, prelimSystems, staffIndex, staff);
+
+        var measureToSystem = MeasureToSystemOf(prelimSystems);
+
+        // Columns in detection first-appearance order — the same bucketing the plain
+        // call performs ((voice, start measure, start item) names ONE chord's ties).
+        var columnKeys = new List<(int Voice, int Measure, int Item)>();
+        var columnTies = new Dictionary<(int, int, int), List<TieItem>>();
+        foreach (var tie in ties)
+        {
+            var key = (tie.VoiceIndex, tie.StartMeasureIndex, tie.StartItemIndex);
+            if (!columnTies.TryGetValue(key, out var list))
+            {
+                columnTies[key] = list = new List<TieItem>();
+                columnKeys.Add(key);
+            }
+            list.Add(tie);
+        }
+
+        // Home system per column; any straddler (or unmapped measure) → fallback.
+        var columnSystem = new Dictionary<(int, int, int), int>();
+        foreach (var key in columnKeys)
+        {
+            int home = -2;
+            foreach (var tie in columnTies[key])
+            {
+                if (!measureToSystem.TryGetValue(tie.StartMeasureIndex, out int ks)
+                    || !measureToSystem.TryGetValue(tie.EndMeasureIndex, out int ke)
+                    || ks != ke || (home != -2 && home != ks))
+                    return Fallback();
+                home = ks;
+            }
+            columnSystem[key] = home;
+        }
+
+        // One memoized solve per system, over that system's ties in original order.
+        var tiesBySystem = new Dictionary<int, List<TieItem>>();
+        foreach (var tie in ties)
+        {
+            int k = columnSystem[(tie.VoiceIndex, tie.StartMeasureIndex, tie.StartItemIndex)];
+            if (!tiesBySystem.TryGetValue(k, out var list))
+                tiesBySystem[k] = list = new List<TieItem>();
+            list.Add(tie);
+        }
+        var perSystem = new Dictionary<int, ImmutableArray<TieLayout>>();
+        foreach (var (k, sysTies) in tiesBySystem)
+        {
+            var sys = prelimSystems[k];
+            perSystem[k] = systemCache.GetOrComputeStaffSystemTies(
+                staffIndex, sys.SystemIndex,
+                sys.Measures[0].MeasureIndex, sys.Measures.Length,
+                isFirstSystem: k == 0, isLastSystem: k == prelimSystems.Length - 1,
+                sys.Indent, commonShortestDuration,
+                () => _elementCoordinator.LayoutTies(
+                    sysTies.ToImmutableArray(), staffSpannerScore,
+                    ImmutableArray.Create(sys), staffIndex, staff));
+        }
+
+        // Column-major reassembly in detection order, one layout per tie (an
+        // intra-system column has exactly one segment).
+        var cursors = new Dictionary<int, int>();
+        var result = ImmutableArray.CreateBuilder<TieLayout>(ties.Length);
+        foreach (var key in columnKeys)
+        {
+            int k = columnSystem[key];
+            var laid = perSystem[k];
+            int c = cursors.GetValueOrDefault(k);
+            int count = columnTies[key].Count;
+            if (c + count > laid.Length
+                || laid[c].Tie.VoiceIndex != key.Voice
+                || laid[c].Tie.StartMeasureIndex != key.Measure
+                || laid[c].Tie.StartItemIndex != key.Item)
+                return Fallback(); // structural drift — never guess, recompute whole
+            for (int i = 0; i < count; i++)
+                result.Add(laid[c + i]);
+            cursors[k] = c + count;
+        }
+        return result.ToImmutable();
+    }
+
+    /// <summary>
+    /// The preliminary pass's per-(staff, system) SLUR memo — see
+    /// <see cref="LayoutPreliminaryStaffTies"/>; same posture, slur-shaped inputs. The
+    /// per-system compute hands the solve only ITS system's beams and ties (both stamp
+    /// their system) and an inside-script factory over ITS measures, so the memo key's
+    /// coverage claim covers what the value read.
+    /// </summary>
+    private ImmutableArray<SlurLayout> LayoutPreliminaryStaffSlurs(
+        Score staffSpannerScore, ImmutableArray<SystemLayout> prelimSystems, int staffIndex,
+        Staff staff, ImmutableArray<GraceNoteItem> graceNotes,
+        ImmutableArray<BeamLayout> staffBeams, ImmutableArray<TieLayout> staffTies,
+        ImmutableArray<ArticulationItem> staffScripts,
+        SystemLayoutCache? systemCache, double commonShortestDuration)
+    {
+        Func<ImmutableArray<InsideSlurScript>>? FactoryOver(
+            ImmutableArray<SystemLayout> systems,
+            ImmutableArray<BeamLayout> beams, ImmutableArray<TieLayout> tieLayouts)
+            => staffScripts.IsEmpty ? null : () =>
+                ArticulationEngraver.InsideSlurScriptLayouts(
+                    staffSpannerScore, staffScripts,
+                    systems.SelectMany(s => s.Measures).ToImmutableArray(),
+                    measuresByStaff: new Dictionary<int, ImmutableArray<Measure>>
+                        { [staffIndex] = staff.PrimaryVoice.Measures },
+                    staffYAt: null,
+                    staffByIndex: new Dictionary<int, Staff> { [staffIndex] = staff },
+                    beamLayouts: beams,
+                    tieLayouts: tieLayouts);
+
+        if (systemCache is null || prelimSystems.Length == 0)
+            return _elementCoordinator.LayoutSlurs(
+                staffSpannerScore, prelimSystems, staffIndex, staff, graceNotes,
+                staffBeams, FactoryOver(prelimSystems, staffBeams, staffTies));
+        var slurs = _elementCoordinator.DetectSlurs(staffSpannerScore);
+        if (slurs.IsEmpty)
+            return ImmutableArray<SlurLayout>.Empty;
+
+        ImmutableArray<SlurLayout> Fallback() => _elementCoordinator.LayoutSlurs(
+            slurs, staffSpannerScore, prelimSystems, staffIndex, staff, graceNotes,
+            staffBeams, FactoryOver(prelimSystems, staffBeams, staffTies));
+
+        var measureToSystem = MeasureToSystemOf(prelimSystems);
+        var slurSystem = new int[slurs.Length];
+        for (int i = 0; i < slurs.Length; i++)
+        {
+            if (!measureToSystem.TryGetValue(slurs[i].StartMeasureIndex, out int ks)
+                || !measureToSystem.TryGetValue(slurs[i].EndMeasureIndex, out int ke)
+                || ks != ke)
+                return Fallback();
+            slurSystem[i] = ks;
+        }
+
+        var slursBySystem = new Dictionary<int, List<SlurItem>>();
+        for (int i = 0; i < slurs.Length; i++)
+        {
+            if (!slursBySystem.TryGetValue(slurSystem[i], out var list))
+                slursBySystem[slurSystem[i]] = list = new List<SlurItem>();
+            list.Add(slurs[i]);
+        }
+        var perSystem = new Dictionary<int, ImmutableArray<SlurLayout>>();
+        foreach (var (k, sysSlurs) in slursBySystem)
+        {
+            var sys = prelimSystems[k];
+            var single = ImmutableArray.Create(sys);
+            var sysBeams = staffBeams.IsDefaultOrEmpty
+                ? staffBeams
+                : staffBeams.Where(b => b.SystemIndex == sys.SystemIndex).ToImmutableArray();
+            var sysTies = staffTies.IsDefaultOrEmpty
+                ? staffTies
+                : staffTies.Where(t =>
+                        measureToSystem.TryGetValue(t.Tie.StartMeasureIndex, out int tk)
+                        && tk == k)
+                    .ToImmutableArray();
+            perSystem[k] = systemCache.GetOrComputeStaffSystemSlurs(
+                staffIndex, sys.SystemIndex,
+                sys.Measures[0].MeasureIndex, sys.Measures.Length,
+                isFirstSystem: k == 0, isLastSystem: k == prelimSystems.Length - 1,
+                sys.Indent, commonShortestDuration,
+                () => _elementCoordinator.LayoutSlurs(
+                    sysSlurs.ToImmutableArray(), staffSpannerScore, single, staffIndex,
+                    staff, graceNotes, sysBeams, FactoryOver(single, sysBeams, sysTies)));
+        }
+
+        // Reassembly in detection order. A slur emits AT MOST one layout for its one
+        // segment (a tab slur can emit none), so the cursor advances by identity match
+        // and a mismatch means this slur emitted nothing.
+        var cursors = new Dictionary<int, int>();
+        var result = ImmutableArray.CreateBuilder<SlurLayout>(slurs.Length);
+        for (int i = 0; i < slurs.Length; i++)
+        {
+            int k = slurSystem[i];
+            var laid = perSystem[k];
+            int c = cursors.GetValueOrDefault(k);
+            if (c < laid.Length && ReferenceOrIdentityMatch(laid[c].Slur, slurs[i]))
+            {
+                result.Add(laid[c]);
+                cursors[k] = c + 1;
+            }
+        }
+        // Every produced layout must have been claimed — an unclaimed one means the
+        // identity match drifted; never guess.
+        foreach (var (k, laid) in perSystem)
+            if (cursors.GetValueOrDefault(k) != laid.Length)
+                return Fallback();
+        return result.ToImmutable();
+
+        static bool ReferenceOrIdentityMatch(SlurItem a, SlurItem b)
+            => ReferenceEquals(a, b)
+               || (a.VoiceIndex == b.VoiceIndex
+                   && a.StartMeasureIndex == b.StartMeasureIndex
+                   && a.StartItemIndex == b.StartItemIndex
+                   && a.EndMeasureIndex == b.EndMeasureIndex
+                   && a.EndItemIndex == b.EndItemIndex);
+    }
 
     /// <summary>
     /// The per-staff lookups and the anchor Ys the annotation engravers position against.
@@ -2938,7 +3175,8 @@ internal sealed class LayoutEngine
     /// element's top line). This is that conversion, and it is one function because it was
     /// three: <c>_options.StaffHeight / 2.0</c> stood in for it in
     /// <see cref="Layout(LilySharp.Core.Svg.Model.MultiStaffScore,
-    /// System.Collections.Generic.IReadOnlyList{int}, SystemLayoutCache, MeasureSpringData[])"/>,
+    /// System.Collections.Generic.IReadOnlyList{int}, SystemLayoutCache, MeasureSpringData[],
+    /// System.Nullable{double})"/>,
     /// in <see cref="CreatePages"/> and in <c>PageLayouter</c>, and which
     /// of the three was live depended on the paper regime (HANDOFF 5.2.1 (2)).
     /// <para>

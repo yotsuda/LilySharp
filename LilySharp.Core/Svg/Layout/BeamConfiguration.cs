@@ -31,8 +31,12 @@ internal sealed class BeamConfiguration : IScorableConfig
     /// <summary>Total demerit score (lower is better).</summary>
     public double Demerits { get; set; }
 
-    /// <summary>Score breakdown for debugging.</summary>
-    public string ScoreCard { get; set; } = string.Empty;
+    // (LP's score_card_ string is compiled out except under DEBUG_BEAM_SCORING
+    // — beam-scoring-problem.hh. The port accumulated it unconditionally, one
+    // string allocation per demerit per candidate on the quanting hot path,
+    // with zero readers anywhere in the repo. Removed 2026-08-26; AddDemerit
+    // keeps its reason parameter so the call sites still name their demerits
+    // and a debug build can trivially re-grow the card.)
 
     /// <summary>Next scorer to evaluate.</summary>
     internal int NextScorerTodo { get; set; }
@@ -49,13 +53,11 @@ internal sealed class BeamConfiguration : IScorableConfig
     /// <summary>Checks if all scorers have been applied.</summary>
     public bool IsDone => NextScorerTodo >= (int)BeamScorer.NumScorers;
 
-    /// <summary>Adds a demerit with reason for debugging.</summary>
+    /// <summary>Adds a demerit; <paramref name="reason"/> names it at the call site
+    /// (see the score-card note above).</summary>
     public void AddDemerit(double demerit, string reason)
     {
         Demerits += demerit;
-        if (!string.IsNullOrEmpty(ScoreCard))
-            ScoreCard += "; ";
-        ScoreCard += $"{reason}: {demerit:F2}";
     }
 
     /// <summary>Gets the slope of this beam configuration.</summary>

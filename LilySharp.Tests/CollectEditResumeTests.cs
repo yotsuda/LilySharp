@@ -419,6 +419,90 @@ section S {
         }
     }
 
+    [Fact]
+    public void StaleBaseline_LowAdoptionSchedulesRerecord_AndAdoptionRecovers()
+    {
+        // The 2026-08-26 review's finding 3-3, held: the dirty window is the
+        // UNION of every edit since the last full collect, so editing late and
+        // then jumping early degrades every later keystroke to a near-full walk
+        // while the resume still "succeeds" — nothing used to refresh the
+        // baseline. The heuristic must (a) not fire while adoption is healthy,
+        // (b) schedule ONE full re-record when adoption collapses, and
+        // (c) recover: with the fresh baseline the same editing spot adopts
+        // well again (which also re-arms the trigger). Byte-identity with a
+        // full recompile is asserted at every step — the heuristic only moves
+        // WHEN the full path runs, never what is computed.
+        var bars = string.Join(" |\n    ",
+            Enumerable.Repeat("c'4 d'4 e'4 f'4", 60));
+        var baseText = "octave absolute\npart m { clef treble }\nsection S {\n  m {\n    "
+            + bars + " |\n  }\n}\nform main { S }\nscore main \"rerecord-probe\" { staff m }\n";
+
+        var options = new SvgRenderOptions { EmbedFont = false };
+        var compiler = new IncrementalCompiler(SyntaxTree.Parse(baseText), options);
+        compiler.Render();
+
+        string Step(string text, string label)
+        {
+            var incremental = compiler.RenderIncremental(SyntaxTree.Parse(text));
+            var full = SvgGenerator.Generate(SyntaxTree.Parse(text), options);
+            Assert.True(full == incremental, $"{label}: incremental != full recompile");
+            return text;
+        }
+
+        // The edits are duplicated SPACES (the net's Δ=+1 shape): trivia-only,
+        // so parse kinds are untouched and adoption is limited only by the
+        // window. A pitch-LETTER edit would confound the measurement — the
+        // letter lives in the token KIND (PitchC vs PitchB), so the straddling
+        // token fails the parse-prefix agreement and declines every
+        // non-identity splice regardless of the baseline's freshness.
+        string LateInsert(string t)
+        {
+            int at = t.LastIndexOf("e'4 f'4", StringComparison.Ordinal);
+            Assert.True(at > 0, "late anchor not found");
+            return t.Insert(at, " ");
+        }
+
+        // (a) Late edit: the prefix adopts nearly the whole book; healthy, no
+        // re-record scheduled.
+        var lateEdited = Step(LateInsert(baseText), "late edit");
+        var afterLate = compiler.LastCollectResume;
+        Assert.False(compiler.RerecordScheduled,
+            $"late edit scheduled a re-record (adopted {afterLate.AdoptedMeasures}, "
+            + $"spliced {afterLate.SplicedMeasures}) — the floor is miscalibrated");
+        Assert.True(afterLate.AdoptedMeasures > 40,
+            $"late edit adopted only {afterLate.AdoptedMeasures} measures — "
+            + "the fixture no longer exercises a healthy resume");
+
+        // (b) Jump early: the window now spans bar 1..59 against the STALE
+        // baseline; adoption collapses and the re-record is scheduled.
+        int early = lateEdited.IndexOf("c'4 d'4", StringComparison.Ordinal);
+        Assert.True(early > 0, "early anchor not found");
+        var earlyEdited = Step(lateEdited.Insert(early + 3, " "), "early edit");
+        var afterEarly = compiler.LastCollectResume;
+        Assert.True(afterEarly.AdoptedMeasures + afterEarly.SplicedMeasures < 30,
+            $"early edit still adopted {afterEarly.AdoptedMeasures}+"
+            + $"{afterEarly.SplicedMeasures} — the degradation this test guards is gone?");
+        Assert.True(compiler.RerecordScheduled,
+            "adoption collapsed but no re-record was scheduled");
+
+        // The scheduled keystroke collects fully (and re-records). Without the
+        // heuristic this LATE edit would have adopted almost nothing too — its
+        // window against the stale baseline still spans bar 1..59.
+        var probed = Step(LateInsert(earlyEdited), "re-record keystroke");
+        Assert.Equal((0, 0, 0, 0), compiler.LastCollectResume);
+        Assert.False(compiler.RerecordScheduled, "the re-record did not clear its own schedule");
+
+        // (c) Late edit against the FRESH baseline: the prefix adopts the book
+        // again — the reuse the stale baseline had lost — and the healthy
+        // adoption re-arms the trigger without scheduling anything.
+        Step(LateInsert(probed), "post-re-record edit");
+        var recovered = compiler.LastCollectResume;
+        Assert.True(recovered.AdoptedMeasures > 40,
+            $"after the re-record a late edit adopted only "
+            + $"{recovered.AdoptedMeasures} measures — re-recording did not recover reuse");
+        Assert.False(compiler.RerecordScheduled);
+    }
+
     /// <summary>Deterministic mechanical edits: a duplicated space (pure position
     /// shift, Δ=+1) late and mid-file, a deleted space late (Δ=-1), a pitch
     /// letter swap late (Δ=0 content change), and a deleted MID-FILE barline

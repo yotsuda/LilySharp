@@ -64,6 +64,11 @@ public sealed class IncrementalCompiler
     // lot (see the guard in Compile). Null until the first compile.
     private Rendering.TextFontPlan? _fontPlan;
 
+    // The paper (page dimensions) the cached geometry was laid out on — the SECOND
+    // score-global input outside every reuse key, guarded the same way (see Compile).
+    // Null until the first compile.
+    private Layout.LayoutOptions? _paper;
+
     // Cached line-break gate and its solution. _lineSizes != null marks a warm
     // cache. _springs is internal MeasureSpringData (this type lives in Core).
     private MeasureSpringData[]? _springs;
@@ -98,6 +103,18 @@ public sealed class IncrementalCompiler
     private (string? Title, string? Composer, int? Tempo, int SwingSubdivision,
         string? TempoText, int TempoBeatUnit, int TempoDots) _globalKey;
 
+    // The override/revert collections the cached geometry was laid out with, compared
+    // BY VALUE (GrobOverride/GrobRevert are records over scalars and the typed LysValue).
+    // The per-measure content key buckets the overrides that carry a measure, but an
+    // override does not have to (BucketSingle drops mi < 0), and its effect is global
+    // anyway — so whole-vector work (the spring reuse, whole-layout reuse) additionally
+    // requires these collections unchanged. Per-SYSTEM reuse stays override-free-only:
+    // a per-measure key cannot LOCALIZE a global spacing change, but totality can carry
+    // it — when every input is unchanged, the whole answer is (2026-08-26 review,
+    // finding 3-2, first stage).
+    private ImmutableArray<GrobOverride> _overrides;
+    private ImmutableArray<GrobRevert> _reverts;
+
     // F3/S5-4 (⒭ ⑵, second slice — prefix side): the collect walk's checkpoint
     // recording from the last FULL collect, kept as the resume baseline. An edit
     // resumes each walk from its last checkpoint that reads only the old/new
@@ -105,10 +122,34 @@ public sealed class IncrementalCompiler
     // before the edit instead of re-collecting the whole book per keystroke.
     // Resumed collects do NOT re-record: the baseline stays pinned to
     // _collectBaselineTree's text until a full collect refreshes it (first
-    // compile, an unplannable edit, or a mid-collect bail).
+    // compile, an unplannable edit, a mid-collect bail — or a re-record this
+    // session SCHEDULES itself, below).
     private MeasureCollector? _collectSource;
     private CollectWalkProbe? _collectRecording;
     private SyntaxTree? _collectBaselineTree;
+
+    // Baseline re-record heuristic (2026-08-26 review, finding 3-3). The dirty
+    // window is computed against the LAST FULL COLLECT's text, so it is the UNION
+    // of every edit since then: edit measure 10, then measure 900, and every later
+    // keystroke's window spans 10..900 — the prefix checkpoint stops at 10, the
+    // splice declines (tail overlaps the window), and the walk runs essentially
+    // full per keystroke, forever, while every resume still "succeeds" — so
+    // nothing ever refreshes the baseline. The fix: when a resume's ADOPTION
+    // (prefix-adopted + suffix-spliced measures, over the measures the baseline
+    // could offer) falls below the floor, schedule a full collect for the next
+    // compile — a full collect always re-records, which resets the window to the
+    // current text. Hysteresis (_rerecordArmed) bounds the cost on books whose
+    // adoption is INTRINSICALLY low (e.g. a whole-book parallel span edited in
+    // the primary voice adopts 0 with a fresh baseline too): one re-record is
+    // spent probing; the trigger re-arms only after a resume that adopted well,
+    // i.e. only when re-recording demonstrably helps this document's shape.
+    // Correctness is not in play — the full collect is the reference path; this
+    // trades one keystroke's record overhead against unbounded window growth.
+    // The floor/threshold are latency heuristics, not measurements of anything.
+    private const double RerecordAdoptionFloor = 0.5;
+    private const int RerecordMinResumableMeasures = 24;
+    private bool _rerecordNext;
+    private bool _rerecordArmed = true;
 
     // ⑶ beamdirs: the per-measure beam-detection memo of the collect-phase probe
     // (ResolveBeamStemDirections), persisted across edits so a keystroke re-detects only
@@ -133,6 +174,12 @@ public sealed class IncrementalCompiler
     /// For diagnostics / tests.</summary>
     internal (int Walks, int AdoptedMeasures, int SplicedWalks, int SplicedMeasures)
         LastCollectResume { get; private set; }
+
+    /// <summary>Whether the most recent compile scheduled a baseline re-record
+    /// (its resume adopted too little of what the baseline could offer — see the
+    /// re-record heuristic's remarks), so the NEXT compile will collect fully and
+    /// re-record. For diagnostics / tests.</summary>
+    internal bool RerecordScheduled => _rerecordNext;
 
     /// <summary>How the most recent spring-vector build was paid for (⒟⁗): how many
     /// measures' springs were reused from the previous edit's vector via the per-measure
@@ -219,15 +266,29 @@ public sealed class IncrementalCompiler
         // stale geometry served as a hit, exactly the shape the content key cannot see.
         // The plan is compared by value (TextFontPlan.Equals folds the signature), so a
         // trivia edit near the block does not shed the caches.
-        if (_fontPlan is null || !_fontPlan.Equals(score.Fonts))
+        // A `paper { }` edit is the same shape with the same answer: the page dimensions
+        // are an input to line breaking, justification and paging, and they live in NONE
+        // of the reuse keys (not the per-measure content key, not the global tuple, not
+        // the break gate — the gate caches prefix widths and springs, neither of which
+        // reads the page width). MEASURED before this guard existed (2026-08-26, temp
+        // probe → PaperEditIncrementalTests): a paperWidth edit on a warm session fired
+        // BOTH the gate skip and whole-layout reuse and rendered 2,376,499 bytes against
+        // the full recompile's 2,372,674 — the old width's layout served as a hit.
+        // LayoutOptions is a record of scalars and nested records, so the value
+        // comparison is sound and two collects of the SAME paper block compare equal.
+        if (_fontPlan is null || !_fontPlan.Equals(score.Fonts)
+            || _paper is null || !_paper.Equals(score.Paper))
         {
             _fontPlan = score.Fonts;
+            _paper = score.Paper;
             _springs = null;
             _lineSizes = null;
             _shortest = null;
             _systemCache = null;
             _cachedLayout = null;
             _contentKeys = default;
+            _overrides = default;
+            _reverts = default;
             _fragments = null;
         }
 
@@ -251,9 +312,16 @@ public sealed class IncrementalCompiler
         // this was gated off wholesale with !score.HasSecondaryVoices, which cost the
         // fast path on essentially all real repertoire (piano, choral, any `voice {}`).
         bool reuseEligible = overrideFree;
-        var contentKeys = reuseEligible
-            ? MeasureContentKey.Compute(score)
-            : default;
+        // Content keys are computed for override books too (finding 3-2 first stage):
+        // they fold every per-measure input, and the override/revert collections
+        // themselves are compared by value below — which is what lets the WHOLE-vector
+        // reuses (springs, whole-layout) serve a book whose one override did not move,
+        // instead of that book paying the cold pipeline on every keystroke. Only the
+        // per-system machinery (cacheForEdit / fragments) stays override-free-gated.
+        var contentKeys = MeasureContentKey.Compute(score);
+        bool overridesUnchanged = !_overrides.IsDefault && !_reverts.IsDefault
+            && score.GrobOverrides.AsSpan().SequenceEqual(_overrides.AsSpan())
+            && score.GrobReverts.AsSpan().SequenceEqual(_reverts.AsSpan());
         // The cache's entries are content-addressed and re-verified on lookup, so they
         // stay valid across a transient INELIGIBLE edit (e.g. an override typed then
         // deleted) — a later eligible edit can still reuse the unchanged systems. So we
@@ -287,6 +355,7 @@ public sealed class IncrementalCompiler
         // the memo==full deep-compare nets beside it.
         bool sameContentAsLastEdit = allowSkip
             && !contentKeys.IsDefault && !_contentKeys.IsDefault
+            && overridesUnchanged
             && contentKeys.AsSpan().SequenceEqual(_contentKeys.AsSpan());
         MeasureSpringData[] springs;
         if (sameContentAsLastEdit && _springs != null)
@@ -310,7 +379,11 @@ public sealed class IncrementalCompiler
             double shortest = SpacingRules.CalculateCommonShortestDuration(score);
             int reusedCount = 0, recomputedCount = 0;
             Func<int, MeasureSpringData?>? memo = null;
+            // overridesUnchanged joins the memo's eligibility: an override's reach is
+            // global, so springs[i] may read it without key i knowing — an unchanged
+            // neighbourhood is only sufficient while the override collections stand.
             if (allowSkip && _springs != null && _shortest == shortest
+                && overridesUnchanged
                 && !contentKeys.IsDefault && !_contentKeys.IsDefault)
             {
                 var prevSprings = _springs;
@@ -363,8 +436,13 @@ public sealed class IncrementalCompiler
         // key buckets, so a swing toggle at an unchanged BPM must be caught here.
         var globalKey = (score.Title, score.Composer, score.Tempo, score.SwingSubdivision,
             score.TempoText, score.TempoBeatUnit, score.TempoDots);
+        // Whole-layout reuse no longer requires override-freedom (finding 3-2, first
+        // stage): it localizes nothing, so the per-measure key's inability to localize
+        // an override is irrelevant — what it needs is TOTALITY, and that is exactly
+        // sameContentAsLastEdit (every per-measure key equal AND the override/revert
+        // collections value-equal) plus the gate, the global tuple, and the font/paper
+        // session guard above. All inputs unchanged ⇒ the same layout.
         bool reuse = skip
-            && reuseEligible
             && _cachedLayout != null
             && sameContentAsLastEdit
             && globalKey == _globalKey
@@ -380,8 +458,12 @@ public sealed class IncrementalCompiler
             // ...and the spring vector this method just built for the gate goes WITH it: when
             // the gate moved there is no cached line-size answer, so the breaker runs its DP
             // and used to rebuild the identical vector to feed it. One quantity, two places
-            // (HANDOFF §2 A) — in its perf clothing.
-            layout = new LayoutEngine(score.Paper).Layout(score, skip ? _lineSizes : null, cacheForEdit, springs);
+            // (HANDOFF §2 A) — in its perf clothing. The shortest duration rides along for
+            // the same reason (_shortest is the value `springs` was built with: set beside
+            // it in the else branch, and carried when the whole vector was reused — keys
+            // equal ⇒ shortest equal, the ⒟⁗ implication above).
+            layout = new LayoutEngine(score.Paper).Layout(
+                score, skip ? _lineSizes : null, cacheForEdit, springs, _shortest);
             // Reuse the prior line sizes on a gate-skip (still the correct solution);
             // otherwise capture the fresh ones.
             if (!skip)
@@ -398,6 +480,8 @@ public sealed class IncrementalCompiler
         _firstPrefix = firstPrefix;
         _contPrefix = contPrefix;
         _contentKeys = contentKeys;
+        _overrides = score.GrobOverrides;
+        _reverts = score.GrobReverts;
         _globalKey = globalKey;
         _cachedLayout = layout;
         _tree = tree;
@@ -511,8 +595,8 @@ public sealed class IncrementalCompiler
     /// </summary>
     private MultiStaffScore CollectWithResume(SyntaxTree tree, RenderSpec? spec, bool allowResume)
     {
-        if (allowResume && _collectRecording != null && _collectSource != null
-            && _collectBaselineTree != null)
+        if (allowResume && !_rerecordNext && _collectRecording != null
+            && _collectSource != null && _collectBaselineTree != null)
         {
             var resumer = CollectResumePlanner.Plan(
                 _collectBaselineTree, tree, _collectRecording, _collectSource);
@@ -542,6 +626,33 @@ public sealed class IncrementalCompiler
                         }
                     }
                     LastCollectResume = (walks, adopted, splicedWalks, spliced);
+
+                    // Re-record heuristic (remarks at the fields): judge this
+                    // resume's adoption against what the baseline COULD offer —
+                    // the eligible recordings' measure counts, planned or not (an
+                    // unplanned-but-eligible walk is reuse the stale baseline
+                    // lost too). Ineligible walks (q / bare duration / form
+                    // repeat) are excluded from the denominator: no re-record
+                    // brings them back, so counting them would schedule
+                    // re-records that cannot help.
+                    int resumable = 0;
+                    foreach (var rec in _collectRecording.Recordings.Values)
+                    {
+                        if (rec.IneligibleReason == null && rec.Checkpoints.Count > 0)
+                            resumable += rec.PreFinalizeMeasures?.Count ?? 0;
+                    }
+                    if (resumable >= RerecordMinResumableMeasures)
+                    {
+                        bool adoptedWell =
+                            adopted + spliced >= resumable * RerecordAdoptionFloor;
+                        if (adoptedWell)
+                            _rerecordArmed = true;
+                        else if (_rerecordArmed)
+                        {
+                            _rerecordArmed = false;
+                            _rerecordNext = true;
+                        }
+                    }
                     return resumed;
                 }
                 catch (CollectResumeAbortException)
@@ -554,6 +665,7 @@ public sealed class IncrementalCompiler
         }
 
         LastCollectResume = (0, 0, 0, 0);
+        _rerecordNext = false; // this IS the re-record every schedule asks for
         var recorder = CollectWalkProbe.Recorder();
         var source = new MeasureCollector
         {

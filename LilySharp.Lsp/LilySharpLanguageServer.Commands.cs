@@ -712,7 +712,10 @@ public sealed partial class LilySharpLanguageServer
     private RenderInfo[] ExtractRenderInfo(SyntaxTree tree)
     {
         var renders = new List<RenderInfo>();
-        foreach (var node in tree.GetRoot().DescendantNodes())
+        // Render declarations only parse at the top level (Parser.ParseTopLevelItem's
+        // ScoreKeyword arm), and this runs per preview request — ChildNodes, not a
+        // whole-tree DescendantNodes materialization (RenderSpecParser.FindAll's shape).
+        foreach (var node in tree.GetRoot().ChildNodes())
         {
             if (node is RenderDeclarationSyntax render)
             {

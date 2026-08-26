@@ -445,6 +445,12 @@ public readonly record struct MeasureContentKey(long Hash)
         {
             int start = GetInt(item, "StartMeasureIndex");
             int end = GetInt(item, "EndMeasureIndex");
+            // One fold per ITEM, not per covered measure: the item's content hash is
+            // the same at every mi (only the role varies), and a whole-book spanner
+            // (trill/pedal/volta over M measures) was re-folding it M times per
+            // keystroke (2026-08-26 review, finding 1-3). The composed value per
+            // measure is unchanged — role and content enter the Hash64 as before.
+            long content = HashContent(item, SideExclusions);
             for (int mi = start; mi <= end; mi++)
             {
                 if (mi < 0 || mi >= buckets.Length)
@@ -453,7 +459,7 @@ public readonly record struct MeasureContentKey(long Hash)
                 int role = start == end ? 0 : mi == start ? 1 : mi == end ? 3 : 2;
                 var hc = new Hash64();
                 hc.Add(role);
-                hc.Add(HashContent(item, SideExclusions));
+                hc.Add(content);
                 buckets[mi].Add(hc.ToHashCode());
             }
         }

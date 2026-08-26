@@ -394,7 +394,7 @@ public sealed partial class LilySharpLanguageServer
     /// </remarks>
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<string, int[]> LineStartsCache = new();
 
-    private static int[] LineStartsOf(string text) =>
+    internal static int[] LineStartsOf(string text) =>
         LineStartsCache.GetValue(text, static t =>
         {
             var starts = new List<int> { 0 };
