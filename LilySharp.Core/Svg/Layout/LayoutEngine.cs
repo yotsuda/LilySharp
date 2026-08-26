@@ -1877,82 +1877,13 @@ internal sealed class LayoutEngine
                 // and surfaced the moment the clef joined them.
                 var pairSpec = _options.VerticalSpacing.SystemSystem;
 
-                // Reference-to-reference distance to the next system. Prefer the
-                // X-dependent skyline distance (the same measure the optimal page
-                // path uses); the scalar sum below adds this system's deepest
-                // downward protrusion to the next system's tallest upward one on
-                // ANY X, so it spaces systems too far apart when those protrusions
-                // do not actually overlap horizontally. Distance() is the true
-                // per-X minimum clearance, so flooring it by systemHeight +
-                // SystemSpacing (staff bodies never touch) and adding padding can
-                // never introduce an overlap — only close a false gap.
-                // Distance() returns -inf for an empty skyline; the scalar sum is
-                // then kept, which is byte-identical to the previous behaviour.
-                // LILYPOND-REF: lily/page-layout-problem.cc:1070-1127 build_system_skyline;
-                //   lily/skyline.cc Skyline::distance.
-                double skylineDistance = SysHeight(i)
-                    + perSystemExtents[i].downExtent + perSystemExtents[i + 1].upExtent;
-                if (perSystemSkylines != null && i + 1 < perSystemSkylines.Count)
-                {
-                    // LILYPOND-REF: lily/page-layout-problem.cc:618-629 — measured
-                    // with the System grob's skyline-horizontal-padding (1.0).
-                    double dist = perSystemSkylines[i + 1].up.Distance(
-                        perSystemSkylines[i].down,
-                        EngravingDefaults.SystemSkylineHorizontalPadding);
-                    if (!double.IsNegativeInfinity(dist))
-                    {
-                        // The chord-row band above the NEXT system clears against this
-                        // system's full extent (the band spans every X, so the X-disjoint
-                        // argument for preferring Distance() does not apply to it).
-                        // ⚠️ A BAND IS MEASURED FROM THE STAFF IT HANGS OFF (see
-                        // PageAnchorOffsets' remark). The lyric band's mirror-image floor
-                        // stood here until 2026-08-20; it is in the skylines now, so
-                        // Distance() above already priced it — see BandUp's remark.
-                        double bandUpNext = BandUp(i + 1);
-                        if (bandUpNext > 0)
-                        {
-                            var aNext = PageAnchorOffsets(systems[i + 1].StaffGroups);
-                            dist = Math.Max(dist, SysHeight(i)
-                                + perSystemExtents[i].downExtent + bandUpNext
-                                - (aNext.ToFirst - aNext.HalfFirst));
-                        }
-                        // ⚠️ A SYSTEM WITH NO SPACEABLE STAFF HAS NO DOWN SILHOUETTE TO REFINE.
-                        // BuildSystemSkylines seeds the down side from the BOTTOM STAFF'S INK,
-                        // and a rows-only lead sheet (chords row + lyrics row, no staff) has
-                        // none — its content is text the lyric and chord engravers draw. The
-                        // lyric reservation does not cover it either: that profile is the rows
-                        // hanging BELOW the last spaceable staff, and here there is no such
-                        // staff for them to hang below. MEASURED on the reported book
-                        // (scratch/ベースタブLy/Untitled-6.lys, user report session 240): the
-                        // down skyline reached 1.900 under a body of 10.300, so Distance()
-                        // answered 6.395 where the true origin-to-origin need was 14.900, the
-                        // 12.000 basic distance won the max below, and the next system's
-                        // section label and bar number printed 1.8 into the system above.
-                        // ⇒ Keep the SCALAR sum for such a system. It is the same quantity the
-                        // line above computes and needs no silhouette: body + this system's
-                        // downward protrusion + the next system's upward one. Distance() is a
-                        // refinement of that sum and cannot refine what it cannot see.
-                        // ⚠️ This CANNOT reach a book with a staff: the test is exactly
-                        // PageAnchorOffsets' own fallback condition, whose remark already says
-                        // the nominal anchor stands there only until a corpus point measures
-                        // it. This is that point, for the silhouette half of the same hole.
-                        if (ClassifySystem(systems[i].StaffGroups)
-                                .FirstSpaceable is null)
-                            dist = Math.Max(dist, skylineDistance);
-                        skylineDistance = dist;
-                    }
-                }
-
-                // FRAME. Everything above is ORIGIN-TO-ORIGIN — Distance() measures two
-                // skylines both built about their system's origin, and the scalar sum opens
-                // with SysHeight(i) for the same reason. The pair's numbers are not in that
-                // frame: system-system-spacing runs from the PREVIOUS system's LAST spaceable
-                // staff to the next system's FIRST, so the system's own body is not inside
-                // the quantity they floor. PageLayouter's chain already says this, in the
-                // same words and with the same reference —
-                // LILYPOND-REF: lily/page-layout-problem.cc:1120-1126 build_system_skyline —
-                //   first_spaceable_dy / last_spaceable_dy leave the up skyline relative to
-                //   the top spaceable staff and the down skyline relative to the bottom one.
+                // Reference-to-reference distance to the next system, through the ONE
+                // home for the pair minimum — LayoutUtilities.InterSystemPairMinimum
+                // (the spring chain's refpoint-frame composition; this path's old
+                // origin-frame association was collapsed onto it after the 2026-08-27
+                // corpus A/B measured the difference at zero everywhere). Its remarks
+                // carry the shared frame prose and the divergence inventory; what
+                // stays here is this path's own history and the arguments' whys.
                 // ⚠️ UNTIL 2026-08-25 THIS PATH FLOORED IN THE ORIGIN FRAME, and the floor
                 // therefore stopped flooring as soon as a system was taller than the numbers
                 // themselves: with two staves SysHeight is 13.000000 and BasicDistance is
@@ -1968,16 +1899,64 @@ internal sealed class LayoutEngine
                 // box through the instrument name. The same A→B pair later in the same score
                 // read 8.200000. LilyPond 2.26.0 answers 8.000000 for that pair and does so
                 // at one, two and three staves alike (probes/system-indent-floor.ly).
+                bool hasSkylines = perSystemSkylines != null
+                    && i + 1 < perSystemSkylines.Count;
+                // LILYPOND-REF: lily/page-layout-problem.cc:618-629 — measured
+                // with the System grob's skyline-horizontal-padding (1.0).
+                double dist = hasSkylines
+                    ? perSystemSkylines![i + 1].up.Distance(
+                        perSystemSkylines[i].down,
+                        EngravingDefaults.SystemSkylineHorizontalPadding)
+                    : double.NegativeInfinity;
+                var aNext = PageAnchorOffsets(systems[i + 1].StaffGroups);
                 double originToLastHere = OriginToChainEnd(i);
-                double originToFirstNext = PageAnchorOffsets(
-                    systems[i + 1].StaffGroups).ToFirst;
-                double toStaffFrame = originToFirstNext - originToLastHere;
+                double toStaffFrame = aNext.ToFirst - originToLastHere;
+                double staffToStaff = LayoutUtilities.InterSystemPairMinimum(
+                    hasSkylines, dist,
+                    prevBodyHeight: SysHeight(i),
+                    prevDownExtent: perSystemExtents[i].downExtent,
+                    nextUpExtent: perSystemExtents[i + 1].upExtent,
+                    prevOriginToLast: originToLastHere,
+                    nextToFirst: aNext.ToFirst,
+                    nextHalfFirst: aNext.HalfFirst,
+                    // The chord-row band above the NEXT system clears against this
+                    // system's full extent (the band spans every X, so the X-disjoint
+                    // argument for preferring Distance() does not apply to it).
+                    // ⚠️ A BAND IS MEASURED FROM THE STAFF IT HANGS OFF (see
+                    // PageAnchorOffsets' remark). The lyric band's mirror-image floor
+                    // stood here until 2026-08-20; it is in the skylines now, so
+                    // Distance() already prices it — see BandUp's remark.
+                    bandUpNext: BandUp(i + 1),
+                    // ⚠️ A SYSTEM WITH NO SPACEABLE STAFF HAS NO DOWN SILHOUETTE TO REFINE.
+                    // BuildSystemSkylines seeds the down side from the BOTTOM STAFF'S INK,
+                    // and a rows-only lead sheet (chords row + lyrics row, no staff) has
+                    // none — its content is text the lyric and chord engravers draw. The
+                    // lyric reservation does not cover it either: that profile is the rows
+                    // hanging BELOW the last spaceable staff, and here there is no such
+                    // staff for them to hang below. MEASURED on the reported book
+                    // (scratch/ベースタブLy/Untitled-6.lys, user report session 240): the
+                    // down skyline reached 1.900 under a body of 10.300, so Distance()
+                    // answered 6.395 where the true origin-to-origin need was 14.900, the
+                    // 12.000 basic distance won the max below, and the next system's
+                    // section label and bar number printed 1.8 into the system above.
+                    // ⇒ The SCALAR sum floors the answer for such a system: Distance() is
+                    // a refinement of that sum and cannot refine what it cannot see.
+                    // ⚠️ This CANNOT reach a book with a staff: the test is exactly
+                    // PageAnchorOffsets' own fallback condition, whose remark already says
+                    // the nominal anchor stands there only until a corpus point measures
+                    // it. This is that point, for the silhouette half of the same hole.
+                    scalarFloorForSpaceablelessPrev:
+                        ClassifySystem(systems[i].StaffGroups).FirstSpaceable is null,
+                    // Divergence ⑴: this path's empty-silhouette fallback converts
+                    // with ToFirst (the extents are origin-measured); the chain's
+                    // converts with HalfFirst — a different number for a row-led
+                    // next system, unmeasured, so each keeps its own.
+                    emptySilhouetteHalfFirstFallback: false);
 
                 // LILYPOND-REF: lily/page-layout-problem.cc:625-632 + spring.cc:219-237 —
                 // the ink is a FLOOR under the spring, and at force 0 (which is what an
                 // unjustified single page runs at) the spring is
                 // max(min_distance, ideal_distance). Same shape as PageLayouter's chain.
-                double staffToStaff = skylineDistance + toStaffFrame;
                 double minDistance = Math.Max(
                     pairSpec.MinimumDistance, staffToStaff + pairSpec.Padding);
                 skylineY += Math.Max(pairSpec.BasicDistance, minDistance) - toStaffFrame;
@@ -2090,7 +2069,7 @@ internal sealed class LayoutEngine
                         mark.TempoBeatUnit, mark.TempoDots, mark.SwingSubdivision);
                     upExtent = Math.Max(upExtent,
                         MetronomeMarkGeometry.QuietBaselineAboveMiddle(tInk.Bottom)
-                        - 2.0 + tInk.Top);
+                        - EngravingDefaults.StaffMiddle + tInk.Top);
                 }
 
                 // LILYPOND-REF: scm/define-grobs.scm RehearsalMark.outside-staff-priority = 1500
@@ -2490,7 +2469,7 @@ internal sealed class LayoutEngine
             if (!measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
                 continue;
             var sys = systems[sysIdx];
-            double staffMidUp = LayoutUtilities.StaffOffsetInSystemUp(sys, a.StaffIndex) - 2.0;
+            double staffMidUp = LayoutUtilities.StaffMiddleUpInSystem(sys, a.StaffIndex);
             builderAt(sysIdx).AddScript(a, a.YUp + staffMidUp);
         }
     }
@@ -2754,10 +2733,10 @@ internal sealed class LayoutEngine
             double half = FiguredBassEngraver.MinFigureBoxWidth;
             // YUp is Y-up; this inter-system skyline is Y-up too (system-top origin), so
             // take the figure's own staff offset in that frame as well and the line adds.
-            // The staff middle is half a staff below the staff top, hence the -2.0; the
-            // figure column then extends downward (smaller Y-up).
+            // The staff middle is half a staff below the staff top, hence the StaffMiddle
+            // subtraction; the figure column then extends downward (smaller Y-up).
             double fbStaffOffsetUp = LayoutUtilities.StaffOffsetInSystemUp(systems[s], fb.StaffIndex);
-            double fbY = fb.YUp - 2.0 + fbStaffOffsetUp;
+            double fbY = fb.YUp - EngravingDefaults.StaffMiddle + fbStaffOffsetUp;
             double top = fbY + FiguredBassEngraver.FigureInkTop(
                 fb.FigureTexts.Length > 0 ? fb.FigureTexts[0] : string.Empty);
             double bottom = fbY - BassFigureAlignment.ColumnDepth(fb.RowOffsets, fb.FigureTexts);
@@ -2869,7 +2848,8 @@ internal sealed class LayoutEngine
                 // inter-system gap is then max(basic, … + upMax + originToFirstStaff + …),
                 // so the row's whole band was charged to the mark on EVERY x — 12.241073
                 // with no row against 16.188166 with one (lyrics.chord-row.marked.*).
-                double mY = ScoreGrobStaffTopUp(ms, m.StaffIndex) + m.YUp - 2.0;
+                double mY = ScoreGrobStaffTopUp(ms, m.StaffIndex) + m.YUp
+                    - EngravingDefaults.StaffMiddle;
                 AddMarkBox(m.MeasureIndex, mx0 - margin, mx1 + margin, mY + 2.1, mY - 0.7);
             }
         }
@@ -2886,7 +2866,10 @@ internal sealed class LayoutEngine
                     fonts.Advance(ct.Text, EngravingDefaults.TextScriptFontSize, TextRole.Text,
                         Rendering.FontStyle.Italic) / 2 + 0.2;
                 // YUp is Y-up; the skyline is Y-up too. Translate to the top staff's frame.
-                double ctY = ct.YUp - 2.0;
+                // ⚠️ ONE STEP ONLY — right exactly when the system opens on a staff (the
+                // mark arm above took ScoreGrobStaffTopUp as its first step on 2026-08-25;
+                // this arm and the dynamics arm still assume the staff is the origin).
+                double ctY = ct.YUp - EngravingDefaults.StaffMiddle;
                 AddMarkBox(ct.MeasureIndex, ct.X - halfW, ct.X + halfW, ctY + 1.8, ctY - 0.6);
             }
         }
@@ -2930,8 +2913,9 @@ internal sealed class LayoutEngine
                 double halfW = DynamicEngraver.LabelHalfWidth(fonts, d.Text, d.IsExpressiveText);
                 var (dAscent, dDescent) = DynamicEngraver.InkOf(d.Text, d.IsExpressiveText);
                 // d.YUp is Y-up above the staff middle; the skyline frame is the system top,
-                // i.e. 2.0 higher — the same translation the mark and custom-text arms make.
-                double dY = d.YUp - 2.0;
+                // i.e. StaffMiddle higher — the same one-step translation the custom-text
+                // arm makes (and the same top-staff-at-origin assumption; see its ⚠️).
+                double dY = d.YUp - EngravingDefaults.StaffMiddle;
                 AddMarkBox(d.MeasureIndex, d.X - halfW, d.X + halfW, dY + dAscent, dY - dDescent);
             }
         }

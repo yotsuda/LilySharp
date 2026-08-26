@@ -659,6 +659,30 @@ internal static class LayoutUtilities
         => -StaffOffsetInSystemUp(system, staffIndex);
 
     /// <summary>
+    /// A staff's WITHIN-SYSTEM middle line as a Y-up offset from the system top —
+    /// <see cref="StaffOffsetInSystemUp"/> (the staff's top line) less the nominal
+    /// half staff (<see cref="EngravingDefaults.StaffMiddle"/>). This is the frame
+    /// the outside-staff stacker and the paging skylines price grobs in: a grob
+    /// whose stored <c>YUp</c> is Y-up about its staff's middle enters the system
+    /// frame at <c>YUp + StaffMiddleUpInSystem(…)</c>.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ NOMINAL, LIKE EVERY <c>- 2.0</c> IT REPLACED: 2.0 is half of a five-line
+    /// staff's four spaces. A six-string tab staff's middle sits 3.75 below its top
+    /// (five gaps of <see cref="EngravingDefaults.TabStringSpace(int)"/> 1.5,
+    /// halved) and an ossia's shrinks with it — every caller prices those with the
+    /// nominal number today, and this helper is the one home so the day one of them
+    /// grows staff-aware geometry they all do (HANDOFF §5.2.1②, review 2026-08-26 ④).
+    /// ⚠️ Does NOT resolve the <c>-1</c> sentinel: the raw sentinel falls through
+    /// <see cref="StaffOffsetInSystemUp"/>'s <c>staffIndex &gt;= 0</c> guard to 0 —
+    /// the SYSTEM TOP. A caller whose <c>-1</c> means "the top staff" resolves it
+    /// first via <see cref="ResolveScoreGrobStaff"/> (the mark arm's session-243
+    /// lesson at its call site).
+    /// </remarks>
+    public static double StaffMiddleUpInSystem(SystemLayout system, int staffIndex)
+        => StaffOffsetInSystemUp(system, staffIndex) - EngravingDefaults.StaffMiddle;
+
+    /// <summary>
     /// Finds the absolute page-Y-up position of a staff's TOP line within a
     /// specific system (staff-spaces UP from the page bottom). Returns system.Y —
     /// the system top's Y-up — if no matching staff is found (single-staff
@@ -699,6 +723,128 @@ internal static class LayoutUtilities
     /// </summary>
     public static double StaffTopYUp(SystemLayout system, int staffIndex)
         => FindStaffYInSystem(system, staffIndex);
+
+    /// <summary>
+    /// THE inter-system pair minimum — the staff-frame (refpoint-to-refpoint)
+    /// distance LilyPond floors the system-system spring with, for the pair
+    /// (prev, next): the X-aware skyline distance converted out of the origin
+    /// frame, floored by the whole-line chord-row band, with the scalar sum as
+    /// the fallback where a silhouette cannot answer. One home for what
+    /// LayoutEngine.CreatePages (single-page stack) and
+    /// PageLayouter.PositionSystemsOnPage (spring chain) each spelled locally.
+    /// LILYPOND-REF: lily/page-layout-problem.cc:625-632 append_system — the
+    ///   skyline distance plus padding reaches the spring as a floor (padding is
+    ///   added by the callers, not here).
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1120-1126 build_system_skyline —
+    ///   first_spaceable_dy / last_spaceable_dy are the frame conversion this
+    ///   function performs at the spring instead of by raising the skylines.
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1070-1127 build_system_skyline —
+    ///   the per-system silhouettes whose Distance() the callers hand in.
+    /// LILYPOND-REF: lily/skyline.cc:529-535 Skyline::distance — the X-aware
+    ///   minimum clearance itself (VerticalSkyline.Distance is its port).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ NOT A LITERAL PORT, and the deviation is here rather than hidden:
+    /// LilyPond performs the origin-to-refpoint conversion by RAISING THE SKYLINES
+    /// THEMSELVES inside build_system_skyline, so what leaves that function is
+    /// already relative to the top/bottom spaceable staff. Lily# adds the span at
+    /// the spring instead, which keeps SkylineBuilder in ONE frame for its other
+    /// readers (LayoutEngine's up/down extents, the paging pass). Same number,
+    /// different place; moving it into the builder is a frame migration across
+    /// those readers, not an edit to this function — HANDOFF 2D. (A leading loose
+    /// line — a lead sheet's chord row — sits between the anchor and the first
+    /// sprung staff, which is why the conversion is measured from the anchor and
+    /// not from the first spring; and the band arm takes HalfFirst because a band
+    /// is measured from the STAFF it hangs off — ToFirst on both sides would count
+    /// a leading chord row twice.)
+    /// ⚠️ ONE COMPOSITION, MEASURED INTO PLACE. The two callers used to ASSOCIATE
+    /// this algebra differently (the single-page stack floored in the origin frame
+    /// and converted once at the end; the chain wrote refpoint-frame terms as
+    /// built — algebraically equal, expanded by the 2026-08-26 review §4-②), and
+    /// doubles round per operation, so unifying them could have moved numbers.
+    /// MEASURED 2026-08-27 before shipping (HANDOFF §1 第264): recomposing the
+    /// single-page caller onto this chain-frame composition moved 0 of 1386
+    /// full-tree books (ink / data-pos / midi hashes), 0 of 675 ledger points and
+    /// 0 of 222 snapshots, suite fully green — the collapse's price was zero at
+    /// every instrument, so this function carries the chain's composition and the
+    /// origin-frame association is gone.
+    /// ⚠️ THE OBSERVERS: the LP-regression corpus (rerender-ls, 81 books) is BLIND
+    /// here — every book is single-system, so no pair exists (measured 2026-08-27:
+    /// +0.01 on every return moved 0/81). What sees this function is the ledger's
+    /// multi-system points (23 went red under the same poison, Release build) and
+    /// the full-tree sweep's multi-system books.
+    /// The inventory of REAL divergences (not just association):
+    /// ⑴ THE EMPTY-SILHOUETTE FALLBACK CONVERTS DIFFERENTLY PER CALLER
+    /// (<paramref name="emptySilhouetteHalfFirstFallback"/>): the single-page path
+    /// converts the origin-measured extents with ToFirst, the spring chain with
+    /// HalfFirst — for a system led by a loose row (chords/lyrics) the two differ
+    /// by the row band, so this is a different NUMBER, not a different rounding.
+    /// Unmeasured; changing either side needs an observer. (The no-skyline case
+    /// uses ToFirst on both paths — the extents are origin-measured, and the
+    /// anchors' own remark says origin-measured terms take ToFirst.)
+    /// ⑵ THE ROWS-ONLY SCALAR FLOOR EXISTS ONLY ON THE SINGLE-PAGE PATH
+    /// (<paramref name="scalarFloorForSpaceablelessPrev"/>): a system with no
+    /// spaceable staff has no down silhouette to refine, so Distance() under-answers
+    /// and the scalar stands (measured session 240, scratch/ベースタブLy/Untitled-6.lys
+    /// — 6.395 against a true 14.900). The spring chain never grew the arm; its
+    /// caller passes false, and extending the fix there is its own measured change.
+    /// ⑶ WHAT "prev's last refpoint" MEANS differs at the callers:
+    /// the spring chain answers ToFirst when the system carries no staff springs
+    /// (the chain's last node — see its LILYSHARP-OWN remark), the single-page path
+    /// always answers ToLast; equal today because springs are empty exactly when the
+    /// system has at most one spaceable staff, where ToFirst == ToLast
+    /// (InterSystemFloorTests.EverySystemWithTwoSpaceableStaves_CarriesAStaffSpring).
+    /// </remarks>
+    /// <param name="hasSkylines">False when the caller has no per-system skylines at
+    /// all (preliminary pass) — distinct from an EMPTY silhouette, which arrives as
+    /// a negative-infinity <paramref name="skylineDistance"/> and falls back
+    /// differently on the spring chain (divergence ⑴).</param>
+    /// <param name="skylineDistance">VerticalSkyline.Distance(next.up, prev.down,
+    /// SystemSkylineHorizontalPadding) — origin-to-origin; negative infinity when a
+    /// silhouette is empty. Ignored when <paramref name="hasSkylines"/> is false.</param>
+    /// <param name="prevBodyHeight">prev's body height (origin to bottom staff line).</param>
+    /// <param name="prevDownExtent">prev's scalar downward protrusion below its body.</param>
+    /// <param name="nextUpExtent">next's scalar upward protrusion above its origin.</param>
+    /// <param name="prevOriginToLast">prev's origin-to-last-refpoint span — the
+    /// caller's own answer (divergence ⑶).</param>
+    /// <param name="nextToFirst">next's origin-to-first-refpoint span (converts
+    /// origin-measured terms).</param>
+    /// <param name="nextHalfFirst">next's first staff's own half span (converts
+    /// staff-measured terms — the band).</param>
+    /// <param name="bandUpNext">the whole-line chord-row band above next (0 = none).</param>
+    /// <param name="scalarFloorForSpaceablelessPrev">single-page only (divergence ⑵):
+    /// true when prev has no spaceable staff, so the scalar sum floors the answer.</param>
+    /// <param name="emptySilhouetteHalfFirstFallback">divergence ⑴: the spring chain
+    /// converts the empty-silhouette fallback with HalfFirst (true), the single-page
+    /// path with ToFirst (false).</param>
+    public static double InterSystemPairMinimum(
+        bool hasSkylines,
+        double skylineDistance,
+        double prevBodyHeight,
+        double prevDownExtent,
+        double nextUpExtent,
+        double prevOriginToLast,
+        double nextToFirst,
+        double nextHalfFirst,
+        double bandUpNext,
+        bool scalarFloorForSpaceablelessPrev,
+        bool emptySilhouetteHalfFirstFallback)
+    {
+        // How far prev's ink reaches below the staff its spring attaches to — the
+        // term the scalar fallbacks and the band floor are written from.
+        double inkBelowLastRefpoint = prevBodyHeight - prevOriginToLast + prevDownExtent;
+        if (!hasSkylines)
+            return inkBelowLastRefpoint + nextUpExtent + nextToFirst;
+        if (double.IsNegativeInfinity(skylineDistance))
+            return inkBelowLastRefpoint + nextUpExtent
+                + (emptySilhouetteHalfFirstFallback ? nextHalfFirst : nextToFirst);
+        double dist = skylineDistance + (nextToFirst - prevOriginToLast);
+        if (bandUpNext > 0)
+            dist = Math.Max(dist, inkBelowLastRefpoint + nextHalfFirst + bandUpNext);
+        if (scalarFloorForSpaceablelessPrev)
+            dist = Math.Max(dist, inkBelowLastRefpoint + nextUpExtent + nextToFirst);
+        return dist;
+    }
 
     /// <summary>
     /// Resolves an item's X offset within a measure layout. Single-staff

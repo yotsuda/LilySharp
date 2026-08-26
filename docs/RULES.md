@@ -3100,6 +3100,10 @@ dotnet test LilySharp.Tests\LilySharp.Tests.csproj --no-build -v q 2>&1 `
 
 # 出力同一の証明 ⑴（RULES §5.1）: LP 回帰コーパス 80 冊の SVG ハッシュ
 # ⚠️ scratch/ は git 管理外。無ければ作り直す（§5.5）。毒を入れて赤を見てから使うこと
+# ⚠️ ★★ このコーパスは全冊*単一システム*＝**システム間の量（対最小距離・改ページ側）には盲目**
+#    （2026-08-27・第264 実測: InterSystemPairMinimum の全 return に +0.01 でも 0/81）。
+#    その量の計器は**台帳の複数システム点**（同じ毒で 23 点赤・Release を建て直して測ること
+#    ——`--no-build` は §5.5 の偽緑）と **p188 全木 sweep**。毒はこの盲点も込みで当てる
 .\scratch\lpreport\rerender-ls.ps1              # 変更前に baseline を取る
 .\scratch\lpreport\rerender-ls.ps1 -Compare     # 変更後（「絵が動いた本 0 / 80」を期待）
 

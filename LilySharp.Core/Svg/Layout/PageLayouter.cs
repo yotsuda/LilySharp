@@ -485,91 +485,51 @@ internal sealed class PageLayouter
 
                 var d = systemDetails[sysIdx];
 
-                // LILYPOND-REF: lily/page-layout-problem.cc:1070-1127 build_system_skyline
-                // Use full skyline Distance() when available for X-dependent collision detection;
-                // fall back to scalar extents when skylines are not provided.
-                double skylineDistance;
-                if (systemSkylines.HasValue
+                // The pair minimum, through the ONE home —
+                // LayoutUtilities.InterSystemPairMinimum (this chain's refpoint-frame
+                // composition, which the 2026-08-27 corpus A/B made the only one).
+                // The shared frame prose — the origin-to-refpoint conversion, why it
+                // happens at the spring and not by raising the skylines (HANDOFF 2D),
+                // the band's HalfFirst, the fallback divergences — lives in its remarks.
+                // LILYPOND-REF: lily/page-layout-problem.cc:618-629 — the
+                // inter-system distance is measured with the System grob's
+                // skyline-horizontal-padding, so nearly-X-adjacent facing
+                // ink still interacts through the 45° shoulders.
+                // ⚠️ THE LYRIC BAND BELOW IS NOT IN THE BAND ARGUMENT (2026-08-20):
+                // its minimum profile is IN systemSkylines' down side
+                // (LayoutEngine.LyricReservationBelowSystem → AddLyricBand), so
+                // Distance() prices it per X, the way LilyPond's floor does
+                // (page-layout-problem.cc:593-599 build_system_skyline's minimum
+                // translations, :625-632 append_system's distance floor). The scalar
+                // mirror that stood here spread it under every X — audit/lp-geometry
+                // lyrics.band-floor.* has the fork it could not see.
+                bool hasSkylines = systemSkylines.HasValue
                     && sysIdx < systemSkylines.Value.Length
-                    && sysIdx + 1 < systemSkylines.Value.Length)
-                {
-                    var prevDown = systemSkylines.Value[sysIdx].down;
-                    var nextUp = systemSkylines.Value[sysIdx + 1].up;
-                    // LILYPOND-REF: lily/page-layout-problem.cc:618-629 — the
-                    // inter-system distance is measured with the System grob's
-                    // skyline-horizontal-padding, so nearly-X-adjacent facing
-                    // ink still interacts through the 45° shoulders.
-                    double dist = InterSystemSkylineDistance(nextUp, prevDown);
-                    // Distance() returns negative infinity for empty skylines;
-                    // fall back to scalar calculation in that case
-                    if (double.IsNegativeInfinity(dist))
-                    {
-                        skylineDistance = InkBelowLastRefpoint(d, sysIdx)
-                            + systemExtents[sysIdx + 1].upExtent + anchor(sysIdx + 1).HalfFirst;
-                    }
-                    else
-                    {
-                        // FRAME. Both skylines are built about their system's ORIGIN (its
-                        // first staff's top line), so Distance() is origin-to-origin, while
-                        // the spring being built runs from the PREVIOUS system's LAST
-                        // spaceable staff to the next system's FIRST. LilyPond states the
-                        // same conversion as a shift of the skylines themselves —
-                        // LILYPOND-REF: lily/page-layout-problem.cc:1120-1126 leaves the up
-                        // skyline relative to the top spaceable staff and the down skyline
-                        // relative to the BOTTOM one, by first_spaceable_dy /
-                        // last_spaceable_dy out of the same minimum translations this span
-                        // is the sum of.
-                        // ⚠️ NOT A LITERAL PORT, and the deviation is here rather than
-                        // hidden: LilyPond performs the conversion by RAISING THE SKYLINES
-                        // THEMSELVES inside build_system_skyline, so what leaves that
-                        // function is already relative to the top/bottom spaceable staff.
-                        // Lily# subtracts at the spring instead, which keeps
-                        // SkylineBuilder in ONE frame for its other readers (LayoutEngine's
-                        // up/down extents, the paging pass). Same number, different place.
-                        // Moving it into the builder is a frame migration across those
-                        // readers, not an edit to this line — HANDOFF 2D.
-                        // (A leading loose line — a lead sheet's chord row — sits between
-                        // the anchor and the first sprung staff, which is why the offset is
-                        // measured from the anchor and not from the first spring.)
-                        // ⚠️ It is also what makes the two branches agree: the scalar
-                        // fallbacks are written in the SAME frame (InkBelowLastRefpoint plus
-                        // the next system's own origin-to-refpoint), so a system whose outer
-                        // staves are not four staff spaces tall cannot price its skyline gap
-                        // and its fallback gap differently.
-                        dist += anchor(sysIdx + 1).ToFirst - originToLast[local];
-
-                        // The whole-line CHORD-SYMBOL row band above the next system lays
-                        // out after the page Y is fixed and is absent from the skylines;
-                        // it floors the distance (a band spans every X, so the X-disjoint
-                        // argument for preferring Distance() does not apply to it).
-                        // ⚠️ THE LYRIC BAND BELOW IS NOT HERE ANY MORE (2026-08-20): its
-                        // minimum profile is IN systemSkylines' down side
-                        // (LayoutEngine.LyricReservationBelowSystem → AddLyricBand), so
-                        // Distance() above prices it per X, the way LilyPond's floor does
-                        // (page-layout-problem.cc:593-599 build_system_skyline's minimum
-                        // translations, :625-632 append_system's distance floor). The scalar mirror
-                        // that stood here spread it under every X — audit/lp-geometry
-                        // lyrics.band-floor.* has the fork it could not see.
-                        if (systemBandUps is { } bands && sysIdx + 1 < bands.Length)
-                        {
-                            double bandUpNext = bands[sysIdx + 1];
-                            // A BAND IS MEASURED FROM THE STAFF IT HANGS OFF, so the term that
-                            // reaches its refpoint is that staff's own half span; the OTHER
-                            // side of the max is an extent measured from the origin and takes
-                            // the origin distance. Reaching for ToFirst/ToLast on both sides
-                            // counts a leading chord row twice.
-                            if (bandUpNext > 0)
-                                dist = Math.Max(dist, InkBelowLastRefpoint(d, sysIdx)
-                                    + anchor(sysIdx + 1).HalfFirst + bandUpNext);
-                        }
-                        skylineDistance = dist;
-                    }
-                }
-                else
-                {
-                    skylineDistance = InkBelowLastRefpoint(d, sysIdx)
-                        + systemExtents[sysIdx + 1].upExtent + anchor(sysIdx + 1).ToFirst;
-                }
+                    && sysIdx + 1 < systemSkylines.Value.Length;
+                double rawDist = hasSkylines
+                    ? InterSystemSkylineDistance(
+                        systemSkylines!.Value[sysIdx + 1].up,
+                        systemSkylines.Value[sysIdx].down)
+                    : double.NegativeInfinity;
+                var aNext = anchor(sysIdx + 1);
+                double skylineDistance = LayoutUtilities.InterSystemPairMinimum(
+                    hasSkylines, rawDist,
+                    prevBodyHeight: d.StaffHeight,
+                    prevDownExtent: d.BottomExtent,
+                    nextUpExtent: systemExtents[sysIdx + 1].upExtent,
+                    prevOriginToLast: originToLast[local],
+                    nextToFirst: aNext.ToFirst,
+                    nextHalfFirst: aNext.HalfFirst,
+                    bandUpNext: systemBandUps is { } bands && sysIdx + 1 < bands.Length
+                        ? bands[sysIdx + 1]
+                        : 0,
+                    // The rows-only scalar floor is the single-page path's arm
+                    // (divergence ⑵ in the helper's remarks): unmeasured on this
+                    // chain, so deliberately not extended here.
+                    scalarFloorForSpaceablelessPrev: false,
+                    // Divergence ⑴: this chain's empty-silhouette fallback converts
+                    // with HalfFirst; the single-page path's with ToFirst.
+                    emptySilhouetteHalfFirstFallback: true);
 
                 // LILYPOND-REF: lily/include/constrained-breaking.hh tight_spacing_
                 // In tight spacing mode, compress basic distance and padding

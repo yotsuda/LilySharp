@@ -326,7 +326,7 @@ internal static class OutsideStaffStacker
                 // grob's system-relative Y-up is a.YUp - off - 2.
                 double off = applyStaffOffsets && sysIdx >= 0 && sysIdx < staffYBySystem.Count
                     && staffYBySystem[sysIdx].TryGetValue(a.StaffIndex, out var sso) ? sso : 0;
-                double aYup = a.YUp - off - 2.0;
+                double aYup = a.YUp - off - EngravingDefaults.StaffMiddle;
                 // The Script grob's profile, from its one house (the padded outline) — the
                 // same object the staff skyline seeds and the movers of this grob are placed
                 // with. Only the DOWN side carries information for a below-staff stack (the
@@ -387,7 +387,7 @@ internal static class OutsideStaffStacker
                     continue;
                 double off = applyStaffOffsets && sysIdx >= 0 && sysIdx < staffYBySystem.Count
                     && staffYBySystem[sysIdx].TryGetValue(a.StaffIndex, out var so2) ? so2 : 0;
-                double aYup = a.YUp - off - 2.0;
+                double aYup = a.YUp - off - EngravingDefaults.StaffMiddle;
                 var (myUp, myDown) = ArticulationEngraver.ScriptSkylines(a, aYup);
                 double move = Track(sysIdx, a.StaffIndex).Place(myUp, myDown, OutsideStaffPadding);
                 if (move != 0)
@@ -461,7 +461,8 @@ internal static class OutsideStaffStacker
                 {
                     var dyn = dynB![di];
                     Fold(DynamicEngraver.LabelSkylines(
-                        fonts, dyn.Text, dyn.IsExpressiveText, dyn.X, dyn.YUp - off - 2.0));
+                        fonts, dyn.Text, dyn.IsExpressiveText, dyn.X,
+                        dyn.YUp - off - EngravingDefaults.StaffMiddle));
                 }
                 foreach (int hi in g.HairpinIndices)
                 {
@@ -516,7 +517,7 @@ internal static class OutsideStaffStacker
                 // any push reflects back to the staff-middle frame the grob stores (+ off + 2).
                 double off = applyStaffOffsets && sysIdx >= 0 && sysIdx < staffYBySystem.Count
                     && staffYBySystem[sysIdx].TryGetValue(dyn.StaffIndex, out var so) ? so : 0;
-                double dynYup = dyn.YUp - off - 2.0;
+                double dynYup = dyn.YUp - off - EngravingDefaults.StaffMiddle;
                 // LilyPond's outside-staff collision pass: the label's own OUTLINE
                 // (my_dim) against the staff's real ink, outside-staff padding — a beam
                 // face pushes the dynamic here while a thin stem tucks beside the f's
@@ -527,7 +528,8 @@ internal static class OutsideStaffStacker
                     fonts, dyn.Text, dyn.IsExpressiveText, dyn.X, dynYup);
                 double move = tracker.Place(myUp, myDown, OutsideStaffPadding);
                 if (move != 0)
-                    dynBuilder[i] = dyn with { YUp = dynYup + move + off + 2.0 };
+                    dynBuilder[i] = dyn with
+                    { YUp = dynYup + move + off + EngravingDefaults.StaffMiddle };
             }
             adjDynamics = dynBuilder.ToImmutable();
         }
@@ -1298,10 +1300,9 @@ internal static class OutsideStaffStacker
                     || !measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
                     continue;
                 // a.YUp is Y-up above the staff middle; reflect to system-relative
-                // Y-up against this staff's WITHIN-SYSTEM middle, which in that frame
-                // is the staff's own Y-up offset less half a staff.
+                // Y-up against this staff's WITHIN-SYSTEM middle.
                 double staffTopUp = LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], a.StaffIndex);
-                double relY = a.YUp + (staffTopUp - 2.0);
+                double relY = a.YUp + LayoutUtilities.StaffMiddleUpInSystem(systems[sysIdx], a.StaffIndex);
                 double inkTop = relY + a.Ink.Top;     // BBox Top is up-positive
                 if (inkTop <= staffTopUp)
                     continue; // entirely inside the staff — its own profile covers it
@@ -1483,7 +1484,7 @@ internal static class OutsideStaffStacker
                 continue;
             // Stack in system-relative Y-up: a.YUp is above this staff's WITHIN-SYSTEM
             // middle, so it enters at a.YUp + midUp and the move reflects straight back.
-            double midUp = LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], a.StaffIndex) - 2.0;
+            double midUp = LayoutUtilities.StaffMiddleUpInSystem(systems[sysIdx], a.StaffIndex);
             var (myUp, myDown) = ArticulationEngraver.ScriptSkylines(a, a.YUp + midUp);
             // Script declares no outside-staff-horizontal-padding, so the horizon padding
             // is the 0.0 default (its horizon-padding 0.1 is aligned_side's, spent by the
@@ -1581,7 +1582,7 @@ internal static class OutsideStaffStacker
             // label's own OUTLINE pair (my_dim, from-stencil), not a nominal box — the
             // same profile the below pass and the side-position support read.
             // LILYPOND-REF: scm/define-grobs.scm:1446 DynamicText Grob::vertical_skylines_from_stencil.
-            double midUp = LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], dyn.StaffIndex) - 2.0;
+            double midUp = LayoutUtilities.StaffMiddleUpInSystem(systems[sysIdx], dyn.StaffIndex);
             var (myUp, myDown) = DynamicEngraver.LabelSkylines(
                 fonts, dyn.Text, dyn.IsExpressiveText, dyn.X, dyn.YUp + midUp);
             double move = trackers(sysIdx, dyn.StaffIndex).Place(myUp, myDown, OutsideStaffPadding);
@@ -1714,7 +1715,7 @@ internal static class OutsideStaffStacker
             double ctFs = EngravingDefaults.TextScriptFontSize;
             // Stack in system-relative Y-up: ct.YUp relative to this staff's WITHIN-
             // SYSTEM middle is ct.YUp + midUp; place, then shift back.
-            double midUp = LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], ct.StaffIndex) - 2.0;
+            double midUp = LayoutUtilities.StaffMiddleUpInSystem(systems[sysIdx], ct.StaffIndex);
             // The staff-padding refpoint floor, applied to the anchor BEFORE the
             // collision pass — aligned_side runs before the outside-staff pass, so the
             // 0.46 raise starts FROM the floored baseline and the entries register the
@@ -1889,9 +1890,9 @@ internal static class OutsideStaffStacker
             // returns 0 — the SYSTEM TOP — so the mark was priced against the staff the
             // tracker resolved and shifted against a different line. The draw resolves it
             // the same way (SharedRenderer.DrawMusicMarks); both go through this one home.
-            double midUp = LayoutUtilities.StaffOffsetInSystemUp(
+            double midUp = LayoutUtilities.StaffMiddleUpInSystem(
                 systems[sysIdx],
-                LayoutUtilities.ResolveScoreGrobStaff(systems[sysIdx], m.StaffIndex)) - 2.0;
+                LayoutUtilities.ResolveScoreGrobStaff(systems[sysIdx], m.StaffIndex));
             if (MusicMarkItem.IsSpannerHandled(m.MarkType) || m.YUp < 2.0)
                 continue;
             // The metronome mark's pair is its STENCIL's, piecewise like the draw:

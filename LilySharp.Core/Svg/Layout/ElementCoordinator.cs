@@ -1640,7 +1640,7 @@ internal sealed class ElementCoordinator
         int durLog = StemCalculator.GetDurationLog(noteValue);
         const double mid = 10.0;                      // arbitrary device middle
         double deviceNoteY = mid - root / 2.0;
-        double deviceStaffTop = mid - 2.0;            // staff top = +4 positions
+        double deviceStaffTop = mid - EngravingDefaults.StaffMiddle;  // staff top = +4 positions
         double deviceTipY = StemCalculator.CalculateStemEndY(
             deviceNoteY, stemUp, deviceStaffTop, durLog, (int)Math.Round(root));
         return (mid - deviceTipY) * 2.0;
@@ -2981,7 +2981,7 @@ internal sealed class ElementCoordinator
                     Rendering.TextRole.Tuplet, TupletBracketEngraver.NumberFontStyle) / 2.0;
                 // NumberYUp is staff-spaces above this staff's TOP line (the
                 // layout ran with no staff offset); page device Y down.
-                double cy = staffMiddleDown - 2.0 - t.NumberYUp;
+                double cy = staffMiddleDown - EngravingDefaults.StaffMiddle - t.NumberYUp;
                 extras.Add(new SlurExtraObject(
                     t.NumberX - halfW - slurThickness,
                     t.NumberX + halfW + slurThickness,
