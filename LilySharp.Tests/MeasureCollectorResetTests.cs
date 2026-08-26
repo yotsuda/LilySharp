@@ -14,7 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
@@ -90,4 +95,162 @@ public class MeasureCollectorResetTests
             notes[1].BaseDuration);   // a group member
         Assert.Equal(1, notes[4].Dots); // the bare c AFTER the group keeps the dotted default
     }
+
+    // ===== The Reset drift net =====
+    //
+    // The collector's output lists used to be enumerated BY HAND in three places
+    // (Reset / CumulativeSideTables / CaptureScoreContent), and the Reset copy had
+    // drifted: _musicMarks, _customTexts, _voltaBrackets, _tupletBrackets and
+    // _navPlacementWarnings were missing, so a reused instance carried the previous
+    // collect's marks and warnings (2026-08-26 review, §4a-⑪). Reset now clears the
+    // cumulative set FROM the CumulativeSideTables registry; this net holds the
+    // other direction: every collection-typed field of the collector (and of its
+    // output-sink collaborators LyricsCollector / ChordNameCollector) must be empty
+    // after Reset, whatever list it lives in. A new field forgotten by both the
+    // registry and Reset's explicit tail fails here the moment it exists.
+
+    /// <summary>
+    /// Fills EVERY collection field with one dummy element via reflection (no
+    /// single walk could reach them all), calls the private <c>Reset()</c>, and
+    /// requires every one of them empty. The populated-count floor proves the
+    /// injector actually injected — a filter bug that matched zero fields would
+    /// otherwise report success (§0's "right number for the wrong reason").
+    /// </summary>
+    [Fact]
+    public void Reset_EmptiesEveryCollectionField()
+    {
+        var collector = new MeasureCollector();
+        var fields = CollectionFields(collector).ToList();
+
+        int populated = 0;
+        var unfillable = new List<string>();
+        foreach (var (label, value) in fields)
+        {
+            if (TryAddDummy(value))
+                populated++;
+            else
+                unfillable.Add(label);
+        }
+
+        // Every collection field must accept the dummy — an unfillable one is a
+        // hole in the net, not a pass (list it so the fix is a conscious change
+        // here, not a silent skip).
+        Assert.True(unfillable.Count == 0,
+            "these collection fields could not be populated by the net's injector "
+            + "(extend TryAddDummy or exempt them explicitly): "
+            + string.Join(", ", unfillable));
+
+        // 2026-08-26: 40 fields (the collector's own plus LyricsCollector's 3 and
+        // ChordNameCollector's 2). A shrink means the reflection filter broke, not
+        // that the class lost fields — investigate before touching the floor.
+        Assert.True(populated >= 40,
+            $"the injector only populated {populated} collection fields — "
+            + "the reflection filter is no longer seeing the class's fields");
+
+        typeof(MeasureCollector)
+            .GetMethod("Reset", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .Invoke(collector, null);
+
+        // Re-read the fields AFTER Reset: a field is also legitimately emptied by
+        // being replaced with a fresh instance (_lyricsRowNames does), so the
+        // pre-Reset references cannot be the thing judged.
+        var stale = CollectionFields(collector)
+            .Where(f => CountOf(f.Value) > 0)
+            .Select(f => f.Label)
+            .ToList();
+
+        Assert.True(stale.Count == 0,
+            "MeasureCollector.Reset left these collection fields non-empty "
+            + "(add them to CumulativeSideTables or to Reset's explicit tail): "
+            + string.Join(", ", stale));
+    }
+
+    /// <summary>
+    /// The collector's own collection-typed instance fields, plus one level into
+    /// the two output-sink collaborators whose contents Reset owns via their
+    /// <c>Clear()</c> (LyricsCollector, ChordNameCollector). The state collaborators
+    /// with their own Reset contracts (MetadataState, SectionState, OctaveContext)
+    /// are deliberately outside this net's charter.
+    /// </summary>
+    private static IEnumerable<(string Label, object Value)> CollectionFields(object owner)
+    {
+        foreach (var field in owner.GetType()
+                     .GetFields(BindingFlags.NonPublic | BindingFlags.Instance))
+        {
+            var value = field.GetValue(owner);
+            if (value == null)
+                continue; // a nullable table not yet built has nothing to leak
+            if (IsCollection(value.GetType()))
+                yield return ($"{owner.GetType().Name}.{field.Name}", value);
+            else if (value is LyricsCollector or ChordNameCollector)
+                foreach (var nested in CollectionFields(value))
+                    yield return nested;
+        }
+    }
+
+    private static bool IsCollection(Type type)
+    {
+        if (!type.IsGenericType)
+            return false;
+        var def = type.GetGenericTypeDefinition();
+        return def == typeof(List<>) || def == typeof(Dictionary<,>)
+            || def == typeof(HashSet<>) || def == typeof(SortedDictionary<,>)
+            || def == typeof(Stack<>) || def == typeof(Queue<>);
+    }
+
+    /// <summary>Puts one dummy element into the collection (Reset never reads
+    /// elements, so an uninitialized instance is enough). Returns false for a
+    /// shape the injector does not know how to fill.</summary>
+    private static bool TryAddDummy(object collection)
+    {
+        var type = collection.GetType();
+        var args = type.GetGenericArguments();
+        var def = type.GetGenericTypeDefinition();
+
+        if (def == typeof(List<>))
+        {
+            ((IList)collection).Add(Dummy(args[0]));
+            return true;
+        }
+        if (def == typeof(Dictionary<,>) || def == typeof(SortedDictionary<,>))
+        {
+            ((IDictionary)collection).Add(Dummy(args[0])!, Dummy(args[1]));
+            return true;
+        }
+        if (def == typeof(HashSet<>))
+        {
+            type.GetMethod("Add")!.Invoke(collection, new[] { Dummy(args[0]) });
+            return true;
+        }
+        if (def == typeof(Stack<>))
+        {
+            type.GetMethod("Push")!.Invoke(collection, new[] { Dummy(args[0]) });
+            return true;
+        }
+        if (def == typeof(Queue<>))
+        {
+            type.GetMethod("Enqueue")!.Invoke(collection, new[] { Dummy(args[0]) });
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>A value assignable to <paramref name="type"/> without running any
+    /// constructor: dictionary keys only ever need hashing (strings and value
+    /// tuples hash fine; syntax-node keys hash by reference), and no element is
+    /// ever read back.</summary>
+    private static object? Dummy(Type type)
+    {
+        if (type == typeof(string))
+            return "reset-net-dummy";
+        if (type.IsValueType)
+            return Activator.CreateInstance(type); // Nullable<T> yields null: fine to add
+        if (type.IsAbstract) // an abstract element type: any concrete subtype will do
+            type = type.Assembly.GetTypes().First(t =>
+                !t.IsAbstract && !t.ContainsGenericParameters && type.IsAssignableFrom(t));
+        return RuntimeHelpers.GetUninitializedObject(type);
+    }
+
+    private static int CountOf(object collection)
+        => ((IEnumerable)collection).Cast<object?>().Count();
 }

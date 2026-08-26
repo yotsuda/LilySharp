@@ -361,54 +361,36 @@ internal sealed class SystemBreaker
         double continuationPrefixWidth,
         double? baseShortestDuration = null)
     {
-        var result = new List<List<Measure>>();
-        var currentSystem = new List<Measure>();
+        if (measures.Length == 0)
+            return new List<List<Measure>>();
 
-        double availableWidth = _options.ContentWidth;
-        double currentWidth = firstPrefixWidth;
-
-        foreach (var measure in measures)
+        // The WALK is KnuthPlassBreaker.GreedyBreak — the one implementation of the
+        // permission rules, shared with the DP-failure fallback (before the fold this
+        // was a second first-fit loop, and the pair had already drifted once: the
+        // GreedyBreakPermissionTests remarks record both ignoring Forbid). What stays
+        // this mode's own is the WIDTH MODEL: per-measure IDEAL widths, exactly what
+        // the replaced loop priced with. Equivalence of the two walks under that model
+        // is not just read off the code — the carried-tail edge agrees BECAUSE a
+        // carried tail is always an all-Forbid suffix, so the re-checked new line
+        // extends past it as one chain to the same boundary the old loop reached —
+        // and the four Greedy_* pins below hold it.
+        // ⚠️ Known, pre-existing, and deliberately preserved: this mode prices a
+        // multi-measure-rest run at its full per-measure widths (no MMR compression,
+        // no run-interior Forbid) — HANDOFF names the limitation; the springs built
+        // here reproduce it, they do not fix it silently.
+        int n = measures.Length;
+        var springData = new MeasureSpringData[n];
+        var cumIdeal = new double[n + 1];
+        for (int i = 0; i < n; i++)
         {
-            double measureWidth = SpacingRules.CalculateMeasureIdealWidth(measure, baseShortestDuration);
-
-            // Check if measure fits in current system
-            if (currentSystem.Count > 0 && currentWidth + measureWidth > availableWidth)
-            {
-                // The break may not land after a noBreak measure: carry the
-                // whole Forbid-joined tail over to the new system. keep == 0
-                // means the entire system is one chain — no legal break exists,
-                // so keep filling (overfull).
-                int keep = currentSystem.Count;
-                while (keep > 0 && currentSystem[keep - 1].LineBreakPermission == BreakPermission.Forbid)
-                    keep--;
-                if (keep > 0)
-                {
-                    var carried = currentSystem.GetRange(keep, currentSystem.Count - keep);
-                    currentSystem.RemoveRange(keep, currentSystem.Count - keep);
-                    result.Add(currentSystem);
-                    currentSystem = new List<Measure>(carried);
-                    currentWidth = continuationPrefixWidth;
-                    foreach (var carriedMeasure in carried)
-                        currentWidth += SpacingRules.CalculateMeasureIdealWidth(carriedMeasure, baseShortestDuration);
-                }
-            }
-
-            currentSystem.Add(measure);
-            currentWidth += measureWidth;
-
-            // Force line break if measure has break keyword
-            if (measure.HasBreakAfter && currentSystem.Count > 0)
-            {
-                result.Add(currentSystem);
-                currentSystem = new List<Measure>();
-                currentWidth = continuationPrefixWidth;
-            }
+            double w = SpacingRules.CalculateMeasureIdealWidth(measures[i], baseShortestDuration);
+            springData[i] = new MeasureSpringData(w, w, 0, 0, measures[i].LineBreakPermission);
+            cumIdeal[i + 1] = cumIdeal[i] + w;
         }
 
-        // Add final system
-        if (currentSystem.Count > 0)
-            result.Add(currentSystem);
-
-        return result;
+        var breaker = new KnuthPlassBreaker(
+            _options.ContentWidth, firstPrefixWidth, continuationPrefixWidth);
+        var breakPoints = breaker.GreedyBreak(springData, cumIdeal);
+        return KnuthPlassBreaker.CreateMeasureGroups(measures, breakPoints);
     }
 }

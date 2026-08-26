@@ -51,7 +51,7 @@ public sealed partial class LilySharpLanguageServer
         var lineText = doc.Text[lineStart..offset];
 
         // First keyword on the line (in priority order) that has a signature wins.
-        foreach (var entry in SignatureTable)
+        foreach (var entry in LanguageReference.Signatures)
         {
             int kw = lineText.IndexOf(entry.Keyword, StringComparison.Ordinal);
             if (kw < 0) continue;
@@ -76,48 +76,8 @@ public sealed partial class LilySharpLanguageServer
         return null;
     }
 
-    private readonly record struct SignatureEntry(
-        string Keyword, string Label, string Documentation, (string Label, string Documentation)[] Parameters);
-
-    // Keyword → signature, in match-priority order (the first keyword found on the
-    // line wins). Adding a keyword's help is a one-line table entry.
-    private static readonly SignatureEntry[] SignatureTable =
-    {
-        new("repeat", "repeat (unfold|percent|tremolo) count { music }",
-            "Repeats the music block. For volta repeats use the symbolic form "
-                + "'|: … :|' (count '|: … :|*N') with inline endings '[1. …] [2. …]'.",
-            new[] { ("unfold|percent|tremolo", "Repeat kind (volta is the symbolic |: :| form, not this keyword)"),
-                    ("count", "Number of repetitions (integer)"),
-                    ("{ music }", "Music block to repeat") }),
-        new("tempo", "tempo \"marking\" duration = bpm",
-            "Sets the tempo for playback.",
-            new[] { ("\"marking\"", "Optional tempo marking (e.g., \"Allegro\")"),
-                    ("duration", "Note duration (e.g., 4 for quarter note)"),
-                    ("bpm", "Beats per minute") }),
-        new("time", "time numerator/denominator",
-            "Sets the time signature.",
-            new[] { ("numerator/denominator", "Time signature (e.g., 4/4, 3/4, 6/8)") }),
-        new("key", "key pitch major|minor",
-            "Sets the key signature.",
-            new[] { ("pitch", "Key pitch (e.g., c, g, fis, bes)"),
-                    ("major|minor", "Mode: major or minor") }),
-        new("tuplet", "tuplet ratio { music }",
-            "Creates a tuplet (e.g., triplet).",
-            new[] { ("ratio", "Ratio (e.g., 3/2 for triplet)"),
-                    ("{ music }", "Notes in the tuplet") }),
-        new("override", "override Grob.property = value",
-            "Overrides a grob (graphical object) property.",
-            new[] { ("Grob.property", "Grob name and property (e.g., NoteHead.color, Stem.transparent)"),
-                    ("value", "New value (number, string, or identifier)") }),
-        new("phrase", "phrase name { music }",
-            "Declares a reusable musical phrase. Reference with name.",
-            new[] { ("name", "Phrase name (identifier)"),
-                    ("{ music }", "Music content") }),
-        new("section", "section Name { parts... }",
-            "Declares a section grouping multiple parts.",
-            new[] { ("Name", "Section name (identifier)"),
-                    ("{ parts... }", "Part blocks with music") }),
-    };
+    // The signature table lives in LanguageReference (ONE HOME with the hover
+    // text, each row carrying a compilable Sample of the grammar it advertises).
 
     private static int CountSpaces(string text)
     {

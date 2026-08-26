@@ -675,9 +675,11 @@ internal sealed class KnuthPlassBreaker
     }
 
     /// <summary>
-    /// Converts break points to measure groups.
+    /// Converts break points to measure groups. Internal static so
+    /// <see cref="SystemBreaker.BreakIntoSystemsGreedy"/>, which delegates its walk
+    /// to <see cref="GreedyBreak"/>, regroups with the same one implementation.
     /// </summary>
-    private List<List<Measure>> CreateMeasureGroups(IReadOnlyList<Measure> measures, List<int> breakPoints)
+    internal static List<List<Measure>> CreateMeasureGroups(IReadOnlyList<Measure> measures, List<int> breakPoints)
     {
         var result = new List<List<Measure>>();
         int start = 0;

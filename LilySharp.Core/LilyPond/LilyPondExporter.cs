@@ -898,7 +898,7 @@ public sealed class LilyPondExporter
         var result = new List<SyntaxNode>();
         if (form != null)
         {
-            AppendFormItems(EnumerateChildren(form), byName, result);
+            AppendFormItems(FormWalk.Read(form), byName, result);
         }
         else
         {
@@ -1067,64 +1067,65 @@ public sealed class LilyPondExporter
     /// </para>
     /// </remarks>
     private void AppendFormItems(
-        IEnumerable<SyntaxNode> items,
+        IReadOnlyList<FormWalk.Item> items,
         Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName,
         List<SyntaxNode> result)
     {
-        foreach (var child in items)
+        foreach (var item in items)
+            AppendFormItem(item, byName, result);
+    }
+
+    private void AppendFormItem(
+        FormWalk.Item item,
+        Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName,
+        List<SyntaxNode> result)
+    {
+        switch (item)
         {
-            switch (child)
-            {
-                case SectionReferenceSyntax r:
-                    // The occurrence's display label, the collector's rule verbatim
-                    // (MeasureCollector.ResolveSectionLabel): the quoted label wins
-                    // over the section name, and an EMPTY label suppresses the mark.
-                    AppendSection(r.SectionName, byName, result,
-                        markLabel: (r.DisplayLabel ?? r.SectionName) is { Length: > 0 } lbl
-                            ? lbl : null);
-                    break;
+            // The occurrence's display label, the collector's rule verbatim
+            // (MeasureCollector.ResolveSectionLabel): the quoted label wins over the
+            // section name, and an EMPTY label suppresses the mark. A silent `~`
+            // reference hides the LABEL, not the music, so the twin carries the same
+            // notes as a plain reference.
+            case FormWalk.SectionRef s:
+                AppendSection(s.Name, byName, result,
+                    markLabel: s.Silent ? null
+                        : (s.DisplayLabel ?? s.Name) is { Length: > 0 } lbl ? lbl : null);
+                break;
 
-                // `~Section` (silent reference) has no red node of its own — it is a generic
-                // node whose slot 1 is the section-name token. The `~` hides the LABEL, not the
-                // music, so the twin carries the same notes as a plain reference.
-                case { Kind: SyntaxKind.SilentSectionReference }
-                        when child.GetChild(1) is SyntaxTokenNode silent:
-                    AppendSection(silent.Text, byName, result, markLabel: null);
-                    break;
+            case FormWalk.Repeat repeat:
+                AppendRepeatBlock(repeat, byName, result);
+                break;
 
-                case FormRepeatBlockSyntax repeat:
-                    AppendRepeatBlock(repeat, byName, result);
-                    break;
+            // A volta ending OUTSIDE a repeat block is just its section: there is no
+            // \repeat for an \alternative to hang on. Its label rule mirrors
+            // MeasureCollector.Form.cs (alt.DisplayLabel ?? name), and `~` hides it: the
+            // tilde binds to the SECTION NAME in the grammar, so it hides what a plain
+            // `~Name` hides.
+            // ⚠️ THE MIRROR WAS TAKEN OF A BROKEN ARM (2026-08-25). This line and
+            // CreateEnding's both stated that they mirrored MeasureCollector.Form.cs,
+            // and that arm was the one page reader of four that had never been taught
+            // IsSilent — so the citation carried the defect into the twin, twice.
+            // ⇒ A "mirrors X" comment is a claim about X AT THE TIME IT WAS WRITTEN.
+            case FormWalk.Ending { Node: var alt }:
+                AppendSection(alt.SectionName.Text, byName, result,
+                    markLabel: alt.IsSilent ? null : alt.DisplayLabel ?? alt.SectionName.Text);
+                break;
 
-                // A volta ending OUTSIDE a repeat block is just its section: there is no
-                // \repeat for an \alternative to hang on. Its label rule mirrors
-                // MeasureCollector.Form.cs (alt.DisplayLabel ?? name), and `~` hides it: the
-                // tilde binds to the SECTION NAME in the grammar, so it hides what a plain
-                // `~Name` hides.
-                // ⚠️ THE MIRROR WAS TAKEN OF A BROKEN ARM (2026-08-25). This line and
-                // CreateEnding's both stated that they mirrored MeasureCollector.Form.cs,
-                // and that arm was the one page reader of four that had never been taught
-                // IsSilent — so the citation carried the defect into the twin, twice.
-                // ⇒ A "mirrors X" comment is a claim about X AT THE TIME IT WAS WRITTEN.
-                case FormAlternativeSyntax alt:
-                    AppendSection(alt.SectionName.Text, byName, result,
-                        markLabel: alt.IsSilent ? null : alt.DisplayLabel ?? alt.SectionName.Text);
-                    break;
+            // The one-sided form-level ':|' flows through as the barline it is:
+            // EmitInlineRepeat groups it exactly like an inline ':|'.
+            case FormWalk.LoneRepeatEnd l:
+                result.Add(l.Node);
+                break;
 
-                // `break` / `nobreak`, navigation marks and `@` marks are music where they
-                // stand, and EmitItem already writes all three.
-                case BreakSyntax or NavigationMarkSyntax or MusicMarkSyntax:
-                    result.Add(child);
-                    break;
-
-                default:
-                    // Anything left (today only `_text`) goes through so that EmitItem's Skip
-                    // WARNS about it. Filtering it here would put the drop back below the
-                    // waterline, which is the whole defect this method was rewritten for.
-                    if (child is not SyntaxTokenNode)
-                        result.Add(child);
-                    break;
-            }
+            // `break` / `nobreak`, navigation marks and `@` marks are music where they
+            // stand, and EmitItem already writes all three. Anything else a form can
+            // hold (today only `_text`) goes through TOO, so that EmitItem's Skip
+            // WARNS about it — filtering it here would put the drop back below the
+            // waterline, which is the whole defect this method was rewritten for.
+            case FormWalk.Other o:
+                result.Add(o.Node);
+                break;
         }
     }
 
@@ -1178,56 +1179,39 @@ public sealed class LilyPondExporter
     /// </para>
     /// </remarks>
     private void AppendRepeatBlock(
-        FormRepeatBlockSyntax repeat,
+        FormWalk.Repeat repeat,
         Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName,
         List<SyntaxNode> result)
     {
-        int playCount = RepeatBlockPlayCount(repeat);
+        // The :|*N play count is read once, by FormWalk.PlayCount (default 2).
+        int playCount = repeat.PlayCount;
 
-        foreach (var child in EnumerateChildren(repeat))
+        foreach (var child in repeat.Children)
         {
             switch (child)
             {
-                case SyntaxTokenNode { Kind: SyntaxKind.RepeatStartBar } open:
+                case FormWalk.RepeatStart { Token: var open }:
                     result.Add(CreateBarline(SyntaxKind.RepeatStartBar, "|:", open.Position, 0));
                     break;
 
-                case SyntaxTokenNode { Kind: SyntaxKind.RepeatEndBar } close:
+                case FormWalk.RepeatEnd { Token: var close }:
                     result.Add(CreateBarline(SyntaxKind.RepeatEndBar, ":|", close.Position, playCount));
                     break;
 
-                case SyntaxTokenNode { Kind: SyntaxKind.RepeatBothBar } both:
+                case FormWalk.BothBar { Token: var both }:
                     result.Add(CreateBarline(SyntaxKind.RepeatEndBar, ":|", both.Position, playCount));
                     result.Add(CreateBarline(SyntaxKind.RepeatStartBar, "|:", both.Position, 0));
                     break;
 
-                case FormAlternativeSyntax ending when byName.ContainsKey(ending.SectionName.Text):
+                case FormWalk.Ending { Node: var ending } when byName.ContainsKey(ending.SectionName.Text):
                     result.Add(CreateEnding(ending, byName));
                     break;
 
                 default:
-                    AppendFormItems([child], byName, result);
+                    AppendFormItem(child, byName, result);
                     break;
             }
         }
-    }
-
-    /// <summary>
-    /// The <c>:|*3</c> play count on a form repeat block, or 2 when it is absent.
-    /// </summary>
-    /// <remarks>
-    /// The parser keeps it as the <c>*</c> + integer token pair sitting on the block's end bar
-    /// line (Parser.Form.cs ParseFormRepeatBlock), not as a node — the same spelling and the
-    /// same place an inline <c>:|*3</c> carries it.
-    /// </remarks>
-    private static int RepeatBlockPlayCount(FormRepeatBlockSyntax repeat)
-    {
-        for (int i = 0; i + 1 < repeat.SlotCount; i++)
-            if (repeat.GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Asterisk }
-                && repeat.GetChild(i + 1) is SyntaxTokenNode count
-                && int.TryParse(count.Text, out int n) && n >= 1)
-                return n;
-        return 2;
     }
 
     /// <summary>

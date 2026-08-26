@@ -177,7 +177,9 @@ internal static class MeasureModel
             // re-parsed on every added bar. This walk is on the diagnostics path, which the
             // editor runs on every keystroke.
             if (node is RestSyntax rest && rest.MeasureCount is var written && written > 1)
-                for (int extra = 1; extra < written; extra++)
+                // Same cut-off as Flatten's: `R1*2000000000` parses, and this loop
+                // would faithfully model that many bars on the diagnostics path.
+                for (int extra = 1; extra < written && bars.Count < ExpansionCap; extra++)
                     bars.Add(new Bar(itemDuration, node.Span));
         }
         FlushMusic(); // a trailing partial bar (music after the last barline) counts
@@ -215,9 +217,21 @@ internal static class MeasureModel
         private RepeatFlowMarker(int delta) => Delta = delta;
     }
 
+    /// <summary>This walk's expansion cut-off: the same phrase DAG the collector
+    /// truncates at its budget doubles HERE too (a sibling reference re-flattens
+    /// after <c>activeRefs.Remove</c>), and this walk runs on the diagnostics
+    /// path per keystroke — it OOM'd on the 2^29 book before this cap did. One
+    /// number, one home (<see cref="Svg.Collector.MeasureCollector.DefaultExpansionBudgetCap"/>);
+    /// a truncated model can misreport cross-part bar counts for the pathological
+    /// book, which already carries LYS1033 naming the real problem.</summary>
+    private const int ExpansionCap = Svg.Collector.MeasureCollector.DefaultExpansionBudgetCap;
+
     private static void Flatten(SyntaxNode scope, List<object> output, HashSet<string> activeRefs,
         IReadOnlyDictionary<string, SyntaxNode> phraseBodies)
     {
+        if (output.Count >= ExpansionCap)
+            return; // truncated — see ExpansionCap's remarks
+
         // A variable bound to a single music node has no relevant DESCENDANTS —
         // the node itself is the content.
         if (scope is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax
@@ -287,7 +301,8 @@ internal static class MeasureModel
                         // the flow, so a body that is no whole number of bars auto-completes
                         // across it exactly where the rendered barline falls.
                         output.Add(RepeatFlowMarker.Enter);
-                        for (int r = 0; r < Math.Max(1, repCount); r++)
+                        for (int r = 0; r < Math.Max(1, repCount)
+                            && output.Count < ExpansionCap; r++)
                             Flatten(rep.Body, output, activeRefs, phraseBodies);
                         output.Add(RepeatFlowMarker.Exit);
                     }

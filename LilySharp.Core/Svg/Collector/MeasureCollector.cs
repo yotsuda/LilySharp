@@ -2780,46 +2780,142 @@ public sealed partial class MeasureCollector
         return builder.FinalizeMeasures();
     }
 
+    // ===== expansion budget (the liveness guard on phrase/repeat expansion) =====
+
+    /// <summary>
+    /// Total expansion budget for ONE collect: the number of sites the score's
+    /// phrase-reference DAG, <c>repeat unfold/percent</c> passes and <c>R1*N</c>
+    /// interiors may emit before expansion is cut off. Without it this walk held
+    /// the repository's only unbounded blowup: <c>ExpandVariable</c> re-expands
+    /// sibling references, so <c>phrase p2 { p1 p1 } … p30 { p29 p29 }</c> is
+    /// 2^29 sites from 30 written lines — and collect runs per keystroke, so the
+    /// preview hung. Cutting off is a TRUNCATION, reported once per collect via
+    /// <see cref="ExpansionBudgetExceededAt"/> (LYS1033).
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+    /// equivalent book (unbounded \repeat unfold / variable nesting). This is a
+    /// liveness guard, not a semantic limit; it never goes away. Its value is
+    /// bracketed from both sides, measured 2026-08-26: ABOVE every real book —
+    /// the corpus's largest page-side book is 8,000 written positions (24,000
+    /// only as MIDI replays, which no page site pays; audit/LilySharp.Probe
+    /// pitches over all 567) — and at the size past which the line-break DP's
+    /// dense (n+1)² arrays die TODAY regardless of any budget (a 10^5-site
+    /// survivor = ~25k measures took 81 s and then failed allocation when this
+    /// cap was tried at 10^5), so nothing the cap truncates could have rendered
+    /// without it. The truncation is still reported (LYS1033) even when the
+    /// survivor's layout fails: the diagnostic pass collects without layout.
+    /// Observed by ExpansionBudgetTests (small-cap truncation + default-cap
+    /// pass-through) and ExpansionBudgetValidator (the diagnostic).
+    /// The const is THE number's one home — <see cref="Semantics.MeasureModel"/>'s
+    /// flattening walk (the diagnostics-path second expander of the same DAG)
+    /// caps at the same value.
+    /// </remarks>
+    internal const int DefaultExpansionBudgetCap = 50_000;
+
+    /// <inheritdoc cref="DefaultExpansionBudgetCap"/>
+    internal int ExpansionBudgetCap { get; init; } = DefaultExpansionBudgetCap;
+
+    /// <summary>Remaining budget; replenished by <see cref="Reset"/>.</summary>
+    private int _expansionBudget;
+
+    /// <summary>Source position of the first construct that ran out of budget,
+    /// or −1. At most one report per collect — every later charge fails silently
+    /// (the score is already truncated; more arrows at it help nobody).</summary>
+    private int _expansionBudgetExceededAtField = -1;
+
+    /// <summary>Where expansion was cut off, or null when the whole score fit
+    /// (the overwhelmingly normal case). Read by ExpansionBudgetValidator.</summary>
+    public int? ExpansionBudgetExceededAt
+        => _expansionBudgetExceededAtField >= 0 ? _expansionBudgetExceededAtField : null;
+
+    /// <summary>
+    /// Takes <paramref name="sites"/> out of the budget; false = the budget is
+    /// spent and the caller must stop expanding (emit nothing more, break its
+    /// loop). Truncation must be DETERMINISTIC per source, which a resumed
+    /// collect cannot guarantee (its adopted prefix charged nothing), so a trip
+    /// in resume mode aborts to the full collect instead, and a trip while
+    /// recording marks the walk ineligible so no later edit resumes from a
+    /// truncated recording. Residual window, named on purpose: an edit that
+    /// pushes a book ACROSS the cap can complete via a resume planned from a
+    /// pre-trip recording where a from-scratch collect would truncate — it
+    /// self-heals at the next full collect, and only books within one edit of
+    /// 10^6 sites can see it.
+    /// </summary>
+    private bool ChargeExpansion(int sites, int sourcePosition)
+    {
+        if (_expansionBudget >= sites)
+        {
+            _expansionBudget -= sites;
+            return true;
+        }
+        _expansionBudget = 0;
+        if (WalkProbe is { IsRecording: false })
+            throw new CollectResumeAbortException(
+                "expansion budget exceeded mid-resume; replaying the collect in full");
+        _probeRecording?.MarkIneligible("expansion-budget");
+        if (_expansionBudgetExceededAtField < 0)
+            _expansionBudgetExceededAtField = sourcePosition;
+        return false;
+    }
+
     private void Reset()
     {
+        _expansionBudget = ExpansionBudgetCap;
+        _expansionBudgetExceededAtField = -1;
+
+        // The cumulative output tables clear FROM THE REGISTRY that names them
+        // (CumulativeSideTables) — a table added there is reset here by construction,
+        // instead of joining a second hand-written enumeration that historically
+        // drifted (before this fold, _musicMarks/_customTexts/_voltaBrackets/
+        // _tupletBrackets/_navPlacementWarnings were absent from Reset).
+        // MeasureCollectorResetTests holds the reverse direction: no collection
+        // field of this class escapes Reset entirely.
+        foreach (var table in CumulativeSideTables())
+            table.Clear();
+
         _sectionState.Reset();
         _variables.Clear();
         _rowsOnlyFormBars.Clear();
         _rowsOnlyFormGridBars = 0;
-        _dynamics.Clear();
         _currentStaffIndex = 0;
         _currentVoiceIndex = 0;
         _currentVoiceScope = null;
-        _articulations.Clear();
-        _graceNotes.Clear();
-        _arpeggios.Clear();
-        _figuredBasses.Clear();
-        _chordNameCollector.Clear();
-        _percentRepeats.Clear();
-        _crossStaffItems.Clear();
-        _grobOverrides.Clear();
-        _grobReverts.Clear();
+        _chordNameCollector.Clear(); // grid warnings; its item list is registry-cleared
+        _lyricsCollector.Clear();
         _sectionResetOverrides.Clear();
         _sectionActiveGrobProps.Clear();
         _keyByMeasure.Clear();
         _voiceMeasuresByName.Clear();
         _canonicalSectionBars.Clear();
-        _trillSpannerEvents.Clear();
         _courtesySourcePositions.Clear();
         _measureAccidentals.Clear();
         _fingeringByPosition.Clear();
         _markHostMeasure.Clear();
-        _tieTargetWarnings.Clear();
-        _unpairedSlurWarnings.Clear();
-        _unpairedBeamWarnings.Clear();
+        // Deliberately OUTSIDE CumulativeSideTables (its remark says why): still an
+        // output list, so it still resets.
         _unpairedRepeatWarnings.Clear();
-        _cueSpanBoundaryWarnings.Clear();
+        // The mark-position probe cache mirrors _musicMarks (registry-cleared above),
+        // so it resets with it or IsCollectedMusicMark would answer from a stale set.
+        _musicMarkPositions.Clear();
+        _musicMarkPositionsSynced = 0;
+        // First-one-wins section-header tables: stale entries would WIN over the new
+        // tree's headers on reuse, so these clear even though every walk repopulates.
+        _sectionHeaderKeys.Clear();
+        _sectionHeaderTimes.Clear();
+        _sectionHeaderTempos.Clear();
+        _sectionHeaderPartials.Clear();
+        // Per-node resolution memos keyed by syntax node identity — a reused
+        // collector on a NEW tree would never hit them, but a re-collect of the
+        // SAME tree would replay stale octave context. Clear both.
+        _resolvedNotes.Clear();
+        _resolvedChordMembers.Clear();
+        _drumOverrides = null;
         _openingKeyOverride = null;
         // Reused-instance hygiene: without these, a second Collect/CollectMultiStaff
         // on the same collector would carry a stale part-major cell map and lyric-row
         // names, and PitchTrace would grow without bound. (All current callers use a
         // fresh instance, so this only matters for reuse via the public API.)
-        _pitchTrace.Clear();
         _lyricsRowNames = new();
         _form = null;
         _filePartial = null;
@@ -2828,6 +2924,15 @@ public sealed partial class MeasureCollector
         _defaultDuration = Fraction.Quarter;
         _defaultDots = 0;
         _meta.Reset();
+        // Per-walk state that every walk clears/balances on its own; cleared here
+        // too so an aborted collect (exception mid-walk) cannot leak into a reuse.
+        _pendingInlineVoltas.Clear();
+        _parallelSpans.Clear();
+        _walkHeaderReads.Clear();
+        _phraseTransposeSaves.Clear();
+        _phraseDiatonicSaves.Clear();
+        _phraseAnchorSaves.Clear();
+        _phraseAbsoluteBaseSaves.Clear();
         // Probe bookkeeping restarts per collect; WalkProbe itself is the caller's
         // (set before Collect, read after).
         _walkOrdinal = 0;
@@ -2835,6 +2940,7 @@ public sealed partial class MeasureCollector
         _resumePending = null;
         _resumeRestoredSectionStart = null;
         _walkMaxSourceRead = 0;
+        _suffixTargets = null;
     }
 
     /// <summary>
@@ -5499,6 +5605,14 @@ public sealed partial class MeasureCollector
         // here previously dropped them — e.g. `repeat volta 2 { c4( d e f) }`).
         void ProcessBodyOnce() => ProcessMusicNodeSequence(bodyNodes, builder);
 
+        // Every pass beyond the first re-emits the whole body, and passes nest
+        // (an unfold inside an unfold multiplies) — the expansion budget charges
+        // each EXTRA pass by the body's size so `repeat unfold 2000000 { c4 }`
+        // truncates instead of hanging the per-keystroke collect. The first pass
+        // is the written music and stays free (a budget already spent by an
+        // enclosing construct still plays the body once, like a plain block).
+        int passCost = Math.Max(1, bodyNodes.Count);
+
         if (type == "percent")
         {
             // First iteration: process body normally
@@ -5509,6 +5623,8 @@ public sealed partial class MeasureCollector
             // Additional iterations: process body again but mark as percent repeat
             for (int iter = 1; iter < count; iter++)
             {
+                if (!ChargeExpansion(passCost, repeat.Position))
+                    break;
                 int iterStart = builder.CurrentMeasureIndex;
                 ProcessBodyOnce();
 
@@ -5569,6 +5685,8 @@ public sealed partial class MeasureCollector
             {
                 if (i > 0)
                 {
+                    if (!ChargeExpansion(passCost, repeat.Position))
+                        break;
                     _octave.CurrentOctave = frame.Octave;
                     _octave.LastPitchName = frame.PitchName;
                     (_defaultDuration, _defaultDots) = (frameDuration, frameDots);

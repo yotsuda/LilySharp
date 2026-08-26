@@ -49,6 +49,16 @@ internal sealed class LyricsCollector
     /// (they never render). Populated as a side effect of collection.</summary>
     public IReadOnlyList<ShadowedPlainLyricWarning> ShadowedPlainWarnings => _shadowedPlain;
 
+    /// <summary>Reused-instance hygiene (<c>MeasureCollector.Reset</c>): drops every
+    /// collected item and warning, so a second collect on the same owner does not
+    /// carry the first one's lyrics.</summary>
+    public void Clear()
+    {
+        _lyrics.Clear();
+        _warnings.Clear();
+        _shadowedPlain.Clear();
+    }
+
     /// <summary>
     /// Collects the note-bound lyrics attached to ONE staff via
     /// <c>staff X with lyrics L [with lyrics L2 …]</c>: the named block(s) align to

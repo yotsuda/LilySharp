@@ -846,44 +846,55 @@ public sealed class MidiExporter
         var pieceDuration = _defaultDuration;
         int pieceVelocity = _velocity;
 
-        for (int i = 0; i < structure.SlotCount; i++)
+        // The item spellings are read ONCE, by FormWalk (a silent `~Name` is a
+        // SectionRef like any other — the bite this method's remark records).
+        var items = FormWalk.Read(structure);
+        for (int i = 0; i < items.Count; i++)
         {
-            var child = structure.GetChild(i);
-            switch (child)
-            {
-                case SectionReferenceSyntax reference:
-                    PlaySectionByName(reference.SectionName, track, conductorTrack);
-                    break;
-                case { Kind: SyntaxKind.SilentSectionReference }
-                    when SilentSectionName(child) is { } silentName:
-                    PlaySectionByName(silentName, track, conductorTrack);
-                    break;
-                case FormRepeatBlockSyntax repeatBlock:
-                    PlayRepeatBlock(repeatBlock, track, conductorTrack);
-                    break;
-                // A volta ending no repeat block opened — `form main { A [1. B] }`. There is
-                // nothing for it to be an alternative TO, so it sounds as its plain section,
-                // once.
-                // LILYPOND-REF: lily/alternative-sequence-iterator.cc:83-84 — Alternative_sequence_iterator::analyze defaults repeat-count to 1
-                // with no enclosing repeat, which is exactly "played once". Confirmed on
-                // 2.26.0 (a `\volta 1` alternative with no `\repeat` in front renders
-                // byte-identically to the bare music), and both
-                // MusicXmlExporter and LilyPondExporter already read it this way; MIDI and
-                // the page were the two walks that dropped it. Saying so to the author is
-                // the other half of the repair and lives in FormDeclarationValidator.
-                case FormAlternativeSyntax alt when !alt.IsInside<FormRepeatBlockSyntax>():
-                    PlaySectionByName(alt.SectionName.Text, track, conductorTrack);
-                    break;
-                // A ':|' written in the form outside any '|: … :|' block: it has no '|:' to
-                // pair with, so it repeats FROM THE BEGINNING OF THE PIECE (user decision,
-                // 2026-08-15) — the ordinary reading of a one-sided end-repeat, and the one
-                // MusicXML already spells (a backward repeat with no forward one). Replay
-                // everything before it, once.
-                case BarlineSyntax { BarToken.Kind: SyntaxKind.RepeatEndBar }:
-                    RepeatFromTheBeginning(structure, i, track, conductorTrack,
-                        pieceOrdinals, piecePitchLanes, pieceDuration, pieceVelocity);
-                    break;
-            }
+            // A ':|' written in the form outside any '|: … :|' block: it has no '|:' to
+            // pair with, so it repeats FROM THE BEGINNING OF THE PIECE (user decision,
+            // 2026-08-15) — the ordinary reading of a one-sided end-repeat, and the one
+            // MusicXML already spells (a backward repeat with no forward one). Replay
+            // everything before it, once.
+            if (items[i] is FormWalk.LoneRepeatEnd)
+                RepeatFromTheBeginning(items, i, track, conductorTrack,
+                    pieceOrdinals, piecePitchLanes, pieceDuration, pieceVelocity);
+            else
+                PlayFormItem(items[i], track, conductorTrack);
+        }
+    }
+
+    /// <summary>Plays one form item. The one switch both the first pass and a
+    /// from-the-beginning replay run — they used to be two hand-synced switches,
+    /// and a shape handled in one and not the other would make <c>A [1. B] :|</c>
+    /// play B once and then not at all.</summary>
+    private void PlayFormItem(FormWalk.Item item, MidiTrack track, MidiTrack conductorTrack)
+    {
+        switch (item)
+        {
+            case FormWalk.SectionRef s:
+                PlaySectionByName(s.Name, track, conductorTrack);
+                break;
+            case FormWalk.Repeat r:
+                PlayRepeatBlock(r, track, conductorTrack);
+                break;
+            // A volta ending no repeat block opened — `form main { A [1. B] }`. There is
+            // nothing for it to be an alternative TO, so it sounds as its plain section,
+            // once.
+            // LILYPOND-REF: lily/alternative-sequence-iterator.cc:83-84 — Alternative_sequence_iterator::analyze defaults repeat-count to 1
+            // with no enclosing repeat, which is exactly "played once". Confirmed on
+            // 2.26.0 (a `\volta 1` alternative with no `\repeat` in front renders
+            // byte-identically to the bare music), and both
+            // MusicXmlExporter and LilyPondExporter already read it this way; MIDI and
+            // the page were the two walks that dropped it. Saying so to the author is
+            // the other half of the repair and lives in FormDeclarationValidator.
+            case FormWalk.Ending e:
+                PlaySectionByName(e.Node.SectionName.Text, track, conductorTrack);
+                break;
+            // A one-sided ':|' only rewinds on the FIRST pass (PlayForm's loop); inside
+            // a replayed stretch it does NOT rewind again — that would not terminate.
+            // One rewind per written ':|' is what the sign says. Display relabels,
+            // navigation text and anything else are visual and skipped.
         }
     }
 
@@ -892,7 +903,7 @@ public sealed class MidiExporter
     /// one-sided <c>:|</c> — restoring the state the piece started from so the second pass
     /// sounds like the first.
     /// </summary>
-    private void RepeatFromTheBeginning(FormDeclarationSyntax structure, int upTo,
+    private void RepeatFromTheBeginning(IReadOnlyList<FormWalk.Item> items, int upTo,
         MidiTrack track, MidiTrack conductorTrack,
         Dictionary<int, int> pieceOrdinals,
         Dictionary<string, (int, int, Fraction)> piecePitchLanes,
@@ -909,60 +920,23 @@ public sealed class MidiExporter
         _velocity = pieceVelocity;
 
         for (int j = 0; j < upTo; j++)
-        {
-            switch (structure.GetChild(j))
-            {
-                case SectionReferenceSyntax r:
-                    PlaySectionByName(r.SectionName, track, conductorTrack);
-                    break;
-                case { Kind: SyntaxKind.SilentSectionReference } s
-                    when SilentSectionName(s) is { } name:
-                    PlaySectionByName(name, track, conductorTrack);
-                    break;
-                case FormRepeatBlockSyntax rb:
-                    PlayRepeatBlock(rb, track, conductorTrack);
-                    break;
-                // Same reading as PlayForm's arm: a repeat-less ending is its plain section.
-                // The replayed stretch has to sound like the first pass, so the two switches
-                // must carry the SAME set of arms — a shape handled in one and not the other
-                // would make `A [1. B] :|` play B once and then not at all.
-                case FormAlternativeSyntax alt when !alt.IsInside<FormRepeatBlockSyntax>():
-                    PlaySectionByName(alt.SectionName.Text, track, conductorTrack);
-                    break;
-                // A second one-sided ':|' inside the replayed stretch does NOT rewind again:
-                // that would not terminate. One rewind per written ':|' is what the sign says.
-                case BarlineSyntax { BarToken.Kind: SyntaxKind.RepeatEndBar }:
-                    break;
-            }
-        }
+            PlayFormItem(items[j], track, conductorTrack);
     }
 
-    /// <summary>
-    /// The section name inside a <c>~Name</c> reference. It has no red-node class of its own,
-    /// so the name is read off slot 1 — the same way every other consumer reads it
-    /// (MeasureCollector.Form.cs, MusicXmlExporter, SectionReferenceFinder).
-    /// </summary>
-    private static string? SilentSectionName(SyntaxNode? node)
-        => node?.GetChild(1) is SyntaxTokenNode name ? name.Text : null;
-
-    private void PlayRepeatBlock(FormRepeatBlockSyntax repeatBlock, MidiTrack track, MidiTrack conductorTrack)
+    private void PlayRepeatBlock(FormWalk.Repeat repeatBlock, MidiTrack track, MidiTrack conductorTrack)
     {
         var body = new List<string>();
         var alternatives = new List<string>();
-        for (int i = 0; i < repeatBlock.SlotCount; i++)
+        foreach (var child in repeatBlock.Children)
         {
-            switch (repeatBlock.GetChild(i))
+            switch (child)
             {
-                case SectionReferenceSyntax reference:
-                    body.Add(reference.SectionName);
+                // …a silent reference counts inside a repeat body too. See PlayForm's remark.
+                case FormWalk.SectionRef s:
+                    body.Add(s.Name);
                     break;
-                // …and inside a repeat body too. See the remark on PlayForm.
-                case { Kind: SyntaxKind.SilentSectionReference } silent
-                    when SilentSectionName(silent) is { } silentName:
-                    body.Add(silentName);
-                    break;
-                case FormAlternativeSyntax alt:
-                    alternatives.Add(alt.SectionName.Text);
+                case FormWalk.Ending e:
+                    alternatives.Add(e.Node.SectionName.Text);
                     break;
             }
         }

@@ -685,6 +685,16 @@ public static class DiagnosticCodes
     /// re-fretted the music and said nothing.</summary>
     public const string UnknownTabRenderWord = "LYS1032";
 
+    /// <summary>Semantic warning: the score's expansion — nested phrase references,
+    /// <c>repeat unfold/percent</c> passes, <c>R1*N</c> — ran past the collector's
+    /// per-collect site budget (<c>MeasureCollector.ExpansionBudgetCap</c>) and was
+    /// cut off there, so the picture is TRUNCATED. The blowup is real, not a limit
+    /// being fussy: <c>phrase p2 { p1 p1 } … p30 { p29 p29 }</c> is 2^29 sites from
+    /// 30 written lines, and without the cut-off the per-keystroke collect hung the
+    /// preview outright. Reported once per collect, at the first construct that ran
+    /// out.</summary>
+    public const string ExpansionBudgetExceeded = "LYS1033";
+
     /// <summary>Syntax error: a metadata value (title/composer) must be a quoted string.</summary>
     public const string MetadataValueMustBeQuoted = "LYS1013";
 

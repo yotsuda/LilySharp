@@ -411,27 +411,25 @@ public sealed class MusicXmlExporter
     private void WalkForm(SyntaxNode container, Dictionary<string, List<SectionDeclarationSyntax>> byName)
     {
         _pendingTargetDirections.Clear();
-        for (int i = 0; i < container.SlotCount; i++)
+        foreach (var item in FormWalk.Read(container))
         {
-            switch (container.GetChild(i))
+            switch (item)
             {
-                case SectionReferenceSyntax r:
-                    EmitWithPendingTargets(() => EmitSectionByName(byName, r.SectionName));
+                // A plain and a silent (~) reference are the same emission — this
+                // exporter writes no section label, so the tilde has nothing to hide.
+                case FormWalk.SectionRef s:
+                    EmitWithPendingTargets(() => EmitSectionByName(byName, s.Name));
                     break;
-                case FormRepeatBlockSyntax rb:
+                case FormWalk.Repeat rb:
                     EmitWithPendingTargets(() => EmitRepeatBlock(rb, byName));
                     break;
-                case FormAlternativeSyntax alt:
-                    EmitWithPendingTargets(() => EmitSectionByName(byName, alt.SectionName.Text));
+                case FormWalk.Ending alt:
+                    EmitWithPendingTargets(() => EmitSectionByName(byName, alt.Node.SectionName.Text));
                     break;
-                case { Kind: SyntaxKind.SilentSectionReference } silent
-                        when silent.GetChild(1) is SyntaxTokenNode nm:
-                    EmitWithPendingTargets(() => EmitSectionByName(byName, nm.Text));
-                    break;
-                case NavigationMarkSyntax nav:
+                case FormWalk.Other { Node: NavigationMarkSyntax nav }:
                     ApplyNavMark(nav.MarkType);
                     break;
-                case CustomTextSyntax custom:
+                case FormWalk.Other { Node: CustomTextSyntax custom }:
                     ApplyCustomText(custom.Text);
                     break;
                 // A ':|' written in the form itself, outside any '|: … :|' block. It caps
@@ -440,7 +438,7 @@ public sealed class MusicXmlExporter
                 // A backward repeat with no matching forward one is MusicXML's own spelling
                 // for "repeat from the beginning", which is the reading this grammar gives
                 // a one-sided ':|', so nothing extra has to be written to say it.
-                case BarlineSyntax { BarToken.Kind: SyntaxKind.RepeatEndBar }:
+                case FormWalk.LoneRepeatEnd:
                     foreach (var p in Document.Parts)
                         if (p.Measures.Count > 0)
                             p.Measures[^1].RepeatBackward = true;
@@ -569,31 +567,26 @@ public sealed class MusicXmlExporter
     /// back-to-back repeat spans (each <c>:| |:</c>); every span is bracketed with a
     /// forward repeat on its first measure and a backward repeat on its last, per
     /// part — mirroring the inline-barline handling.</summary>
-    private void EmitRepeatBlock(FormRepeatBlockSyntax rb, Dictionary<string, List<SectionDeclarationSyntax>> byName)
+    private void EmitRepeatBlock(FormWalk.Repeat rb, Dictionary<string, List<SectionDeclarationSyntax>> byName)
     {
-        bool hasEndings = false;
-        for (int i = 0; i < rb.SlotCount; i++)
-            if (rb.GetChild(i) is FormAlternativeSyntax) { hasEndings = true; break; }
-
-        if (hasEndings)
+        if (rb.Children.Any(c => c is FormWalk.Ending))
             EmitVoltaRepeatBlock(rb, byName);
         else
             EmitPlainRepeatBlock(rb, byName);
     }
 
-    private void EmitPlainRepeatBlock(FormRepeatBlockSyntax rb, Dictionary<string, List<SectionDeclarationSyntax>> byName)
+    private void EmitPlainRepeatBlock(FormWalk.Repeat rb, Dictionary<string, List<SectionDeclarationSyntax>> byName)
     {
-        var runs = new List<List<SyntaxNode>>();
-        var cur = new List<SyntaxNode>();
-        for (int i = 0; i < rb.SlotCount; i++)
+        var runs = new List<List<FormWalk.SectionRef>>();
+        var cur = new List<FormWalk.SectionRef>();
+        foreach (var child in rb.Children)
         {
-            var child = rb.GetChild(i);
-            if (child is SectionReferenceSyntax or { Kind: SyntaxKind.SilentSectionReference })
-                cur.Add(child);
-            else if (child is SyntaxTokenNode { Kind: SyntaxKind.RepeatBothBar })
+            if (child is FormWalk.SectionRef s)
+                cur.Add(s);
+            else if (child is FormWalk.BothBar)
             {
                 runs.Add(cur);
-                cur = new List<SyntaxNode>();
+                cur = new List<FormWalk.SectionRef>();
             }
         }
         runs.Add(cur);
@@ -604,7 +597,7 @@ public sealed class MusicXmlExporter
                 continue;
             var startIdx = Document.Parts.ToDictionary(p => p, p => p.Measures.Count);
             foreach (var item in run)
-                EmitFormItem(item, byName);
+                EmitSectionByName(byName, item.Name);
             foreach (var p in Document.Parts)
             {
                 if (p.Measures.Count > startIdx.GetValueOrDefault(p))
@@ -630,15 +623,14 @@ public sealed class MusicXmlExporter
     /// engraving was wrong. The citation is what carried the defect across the output
     /// boundary; the quantity has three outputs and only one of them was ever right.
     /// </para></summary>
-    private void EmitVoltaRepeatBlock(FormRepeatBlockSyntax rb, Dictionary<string, List<SectionDeclarationSyntax>> byName)
+    private void EmitVoltaRepeatBlock(FormWalk.Repeat rb, Dictionary<string, List<SectionDeclarationSyntax>> byName)
     {
         bool forwardPending = true;
         bool afterEndBar = false;
 
-        for (int i = 0; i < rb.SlotCount; i++)
+        foreach (var child in rb.Children)
         {
-            var child = rb.GetChild(i);
-            if (child is FormAlternativeSyntax alt)
+            if (child is FormWalk.Ending { Node: var alt })
             {
                 var startIdx = Document.Parts.ToDictionary(p => p, p => p.Measures.Count);
                 EmitSectionByName(byName, alt.SectionName.Text);
@@ -654,10 +646,10 @@ public sealed class MusicXmlExporter
                 }
                 forwardPending = false;
             }
-            else if (child is SectionReferenceSyntax or { Kind: SyntaxKind.SilentSectionReference })
+            else if (child is FormWalk.SectionRef s)
             {
                 var startIdx = Document.Parts.ToDictionary(p => p, p => p.Measures.Count);
-                EmitFormItem(child, byName);
+                EmitSectionByName(byName, s.Name);
                 if (forwardPending)
                 {
                     foreach (var p in Document.Parts)
@@ -666,7 +658,7 @@ public sealed class MusicXmlExporter
                     forwardPending = false;
                 }
             }
-            else if (child is SyntaxTokenNode { Kind: SyntaxKind.RepeatEndBar })
+            else if (child is FormWalk.RepeatEnd)
             {
                 // The :| repeats back to the |:; it caps the ending just played.
                 afterEndBar = true;
@@ -674,19 +666,6 @@ public sealed class MusicXmlExporter
                     if (p.Measures.Count > 0)
                         p.Measures[^1].RepeatBackward = true;
             }
-        }
-    }
-
-    private void EmitFormItem(SyntaxNode item, Dictionary<string, List<SectionDeclarationSyntax>> byName)
-    {
-        switch (item)
-        {
-            case SectionReferenceSyntax r: EmitSectionByName(byName, r.SectionName); break;
-            case FormAlternativeSyntax alt: EmitSectionByName(byName, alt.SectionName.Text); break;
-            case { Kind: SyntaxKind.SilentSectionReference } silent
-                    when silent.GetChild(1) is SyntaxTokenNode nm:
-                EmitSectionByName(byName, nm.Text);
-                break;
         }
     }
 

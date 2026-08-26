@@ -71,38 +71,10 @@ public sealed partial class LilySharpLanguageServer
         };
     }
 
+    // The hover text lives in LanguageReference (ONE HOME with the signature
+    // table, so the two features cannot drift apart on the same construct).
     private static string? GetHoverContent(SyntaxNode node)
-    {
-        return node switch
-        {
-            NoteSyntax note => $"**Note**: {note.Pitch.PitchName}\n\nOctave offset: {note.Pitch.OctaveOffset}\n\nDuration: {note.Duration?.Value.ToString() ?? "inherited"}",
-            RestSyntax rest => $"**Rest**\n\nDuration: {rest.Duration?.Value.ToString() ?? "inherited"}",
-            ChordSyntax => "**Chord**",
-            BarlineSyntax => "**Barline**",
-            TieSyntax => "**Tie**: Connects two notes of the same pitch",
-            SlurSyntax slur => slur.IsOpen ? "**Slur start**: `(`" : "**Slur end**: `)`",
-            RepeatExpressionSyntax => "**Repeat**: Repeats the enclosed music",
-            ParallelExpressionSyntax => "**Parallel**: Multiple voices played simultaneously",
-            TimeSignatureSyntax ts => $"**Time Signature**: {ts.Beats}/{ts.BeatType}",
-            TempoDeclarationSyntax tempo => $"**Tempo**: {tempo.Marking ?? ""} {(tempo.BeatUnit != null ? $"{tempo.BeatUnit} = " : "")}{tempo.Bpm ?? 120} BPM".Trim(),
-            KeySignatureSyntax key => $"**Key Signature**: {key.Pitch?.PitchName} {(key.IsMajor ? "major" : "minor")}",
-            ClefDeclarationSyntax clef => $"**Clef**: {clef.ClefName.Text}",
-            GraceExpressionSyntax grace => $"**Grace notes**: {(grace.IsAcciaccatura ? "Acciaccatura (slashed)" : grace.IsAppoggiatura ? "Appoggiatura" : "Grace")}",
-            TupletExpressionSyntax tuplet => $"**Tuplet**: {tuplet.TupletRatio} in the time of {tuplet.BaseDivision}",
-            OverrideDeclarationSyntax ovr => $"**Override**: `{ovr.GrobName.Text}.{ovr.PropertyName.Text}` = `{ovr.ValueToken.Text}`",
-            RevertDeclarationSyntax rev => $"**Revert**: `{rev.GrobName.Text}.{rev.PropertyName.Text}`",
-            OnceModifierSyntax => "**Once**: Applies override/revert for one note only",
-            PhraseDeclarationSyntax phrase => $"**Phrase**: `{phrase.Name.Text}` — Reusable music block",
-            SectionDeclarationSyntax section => $"**Section**: `{section.SectionName}` — Groups parts for a musical section",
-            FormDeclarationSyntax => "**Structure**: Defines playback order of sections",
-            RenderDeclarationSyntax => "**Score**: A printable score — visual layout (staff assignment). Output format is a CLI choice.",
-            VariableDeclarationSyntax varDecl => $"**Variable**: `{varDecl.Name.Text}`",
-            VariableReferenceSyntax varRef => $"**Variable reference**: `${varRef.Name.Text}`",
-            LyricsBlockSyntax => "**Lyrics**: Text aligned to notes",
-            ArticulationSyntax art => $"**Articulation**: @{art.NameToken.Text}",
-            _ => null
-        };
-    }
+        => LanguageReference.Hover(node);
 
     // Delegate to the single, correct line/character -> offset conversion in
     // DocumentManager: it handles \n, \r\n AND lone \r line breaks and clamps the

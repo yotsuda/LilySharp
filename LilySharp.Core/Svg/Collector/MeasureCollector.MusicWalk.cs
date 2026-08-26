@@ -703,8 +703,15 @@ public sealed partial class MeasureCollector
                         // rest (99 of them for `R1*100`) to no purpose.
                         var interior = restItem with { OpensWrittenRun = false };
                         builder.AddItem(restItem);
+                        // Each interior copy is a site like any other: `R1*2000000000`
+                        // parses (int.TryParse, no clamp) and used to emit that many
+                        // records — the expansion budget truncates it instead.
                         for (int i = 1; i < count; i++)
+                        {
+                            if (!ChargeExpansion(1, rest.Position))
+                                break;
                             builder.AddItem(interior);
+                        }
                     }
                 }
                 break;

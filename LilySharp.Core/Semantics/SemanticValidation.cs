@@ -82,6 +82,7 @@ public static class SemanticValidation
         new ChordDisplayModeValidator(),    // `chords X as WORD` where WORD is not a display
         new TabRenderVocabularyValidator(), // `tab [TUNING] X as WORD` — the same clause's other half
         new RepeatPairingValidator(),       // a '|:' that no ':|' closes (score-expanded)
+        new ExpansionBudgetValidator(),     // expansion truncated at the collector's site budget
         new TabRangeValidator(),            // notes clamped outside the tab range
         new DuplicateScoreNameValidator(),  // two score blocks with the same name
         new EmptyScoreValidator(),          // a score block with no staff to engrave

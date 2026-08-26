@@ -818,6 +818,18 @@ public sealed partial class MeasureCollector
         if (!activeRefs.Add(name))
             return;
 
+        // The DAG guard the cycle guard cannot be: activeRefs.Remove below means a
+        // SIBLING reference re-expands, so an acyclic chain doubles per level (2^29
+        // sites from 30 written lines). Charging one unit per phrase ENTRY — not
+        // just per music site — matters: a DAG of EMPTY phrases emits only marker
+        // pairs, which are sites all the same. On a spent budget the phrase emits
+        // nothing (no reset marker, no end marker — balanced by omission).
+        if (!ChargeExpansion(1, expression.Position))
+        {
+            activeRefs.Remove(name);
+            return;
+        }
+
         // Each phrase reference evaluates its body in a FRESH relative frame
         // (default octave / pitch / duration): a phrase's pitches must not
         // depend on what happened to be played before the reference, or the
@@ -846,7 +858,8 @@ public sealed partial class MeasureCollector
                 ExpandVariable(nestedRef.Name.Text, nestedRef.OctaveOffset, musicNodes,
                     nestedRef.DiatonicShiftSteps, activeRefs);
             }
-            else if (IsCollectableMusicKind(s.Kind))
+            else if (IsCollectableMusicKind(s.Kind)
+                && ChargeExpansion(1, expression.Position))
                 musicNodes.Add(s);
         }
 
