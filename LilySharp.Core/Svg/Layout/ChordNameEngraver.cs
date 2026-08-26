@@ -139,7 +139,8 @@ internal static class ChordNameEngraver
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
         bool chordGridSheet = false,
         Func<int, int, VerticalSkyline?>? lowerStaffUpSkyline = null,
-        IReadOnlyList<(int MeasureIndex, double X0, double X1)>? labelWindows = null)
+        IReadOnlyList<(int MeasureIndex, double X0, double X1)>? labelWindows = null,
+        Func<int, int, double?>? attachedBaselineAboveTop = null)
     {
         if (chordNames.IsDefaultOrEmpty || systems.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
             return ImmutableArray<ChordNameLayout>.Empty;
@@ -298,8 +299,16 @@ internal static class ChordNameEngraver
             // accidentals (SkylineBuilder) and — for the top staff — above-staff
             // scripts (LayoutEngine.AugmentSkylinesWithScripts), so the sampled peak
             // needs no allowances — it IS the content under the symbol.
+            // ★ A LINE THAT IS A RUN ELEMENT IS PLACED AT THE RUN'S ANSWER instead
+            // (2026-08-26): attachedBaselineAboveTop is the alignment walk's closing step
+            // re-framed to "above the staff's top line" — where LilyPond's solve puts a
+            // ChordNames line under a spaceable pair (see
+            // MultiStaffLayouter.AttachedChordClosingStep for why the closing floor IS the
+            // solved position). The 0.6+protrusion arm remains the placement for every line
+            // no pair walks: the system's top staff, and @chord-only staves.
+            double? solvedAboveTop = attachedBaselineAboveTop?.Invoke(p.sysIdx, p.chord.StaffIndex);
             double protrusion = linePeak.TryGetValue((p.sysIdx, p.chord.StaffIndex), out var pk) ? pk : 0;
-            double y = -(StaffPadding + protrusion) + p.staffOffset;
+            double y = -(solvedAboveTop ?? (StaffPadding + protrusion)) + p.staffOffset;
 
             string text = DisplayText(p.chord);
             // Store Y-up from the system top (= -y); no staff offset is baked.
@@ -462,13 +471,24 @@ internal static class ChordNameEngraver
     /// whose positions restart at 0 while a <see cref="ChordNameItem.MeasureIndex"/> is
     /// score-wide. Same trap <c>LyricEngraver.NoteBoundBlockSkylines</c> carries.
     /// </para>
+    /// <para>
+    /// ★ <paramref name="attachedLine"/> SELECTS THE OTHER KIND OF LINE (2026-08-26): the
+    /// ATTACHED symbols a staff carries (<c>staff … with chords</c>, or an interior
+    /// <c>chords … as names</c> row folded into the staff below —
+    /// <c>RenderSpecParser.FoldAdjacentRows</c>). To LilyPond that is a ChordNames context
+    /// like any other, one non-spaceable line of the alignment, and this is its ink about
+    /// its own baseline — the element the pair's run walks
+    /// (<c>MultiStaffLayouter.AttachedChordLine</c>). Same X model, same clearance, same
+    /// frame as the independent row; only the selection differs.
+    /// </para>
     /// </remarks>
     internal static (VerticalSkyline Up, VerticalSkyline Down) RowSkylines(
         Rendering.ScoreTextMetrics fonts,
         ImmutableArray<ChordNameItem> chordNames,
         ImmutableArray<MeasureLayout> measureLayouts,
         int staffIndex,
-        ImmutableArray<Measure> staffMeasures)
+        ImmutableArray<Measure> staffMeasures,
+        bool attachedLine = false)
     {
         var up = new VerticalSkyline(VerticalDirection.Up);
         var down = new VerticalSkyline(VerticalDirection.Down);
@@ -482,7 +502,7 @@ internal static class ChordNameEngraver
         var placed = new List<(double X, ChordNameItem Chord)>();
         foreach (var chord in chordNames)
         {
-            if (!chord.IsChordRow || chord.StaffIndex != staffIndex)
+            if (chord.IsChordRow == attachedLine || chord.StaffIndex != staffIndex)
                 continue;
             if (!byMeasure.TryGetValue(chord.MeasureIndex, out var ml))
                 continue;

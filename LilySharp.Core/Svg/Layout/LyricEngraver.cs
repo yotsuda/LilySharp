@@ -403,7 +403,9 @@ internal sealed class LyricEngraver
         LyricChainMemo? chainMemo = null,
         StaffSpacingParameters? staffSpacing = null,
         Func<int, LooseLineSpacer.RunLine>? runLineOf = null,
-        Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? chordRowInk = null)
+        Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? chordRowInk = null,
+        Func<int, int, (int StaffIndex, VerticalSkyline Up, VerticalSkyline Down)?>?
+            attachedChordBelow = null)
     {
         if (lyrics.Count == 0)
             return ImmutableArray<LyricLayout>.Empty;
@@ -499,7 +501,8 @@ internal sealed class LyricEngraver
                 noteBoundAnchorY, anchorStaffDownSkyline, looseChainEnd, betweenStavesEnd,
                 lastSpaceableStaffY, trailingRowStaves, betweenRowStaves,
                 verseSkylineMemo, chainMemo,
-                staffSpacing ?? StaffSpacingParameters.Default, runLineOf, chordRowInk);
+                staffSpacing ?? StaffSpacingParameters.Default, runLineOf, chordRowInk,
+                attachedChordBelow);
 
         return layouts.ToImmutableArray();
     }
@@ -620,7 +623,9 @@ internal sealed class LyricEngraver
         LyricChainMemo? chainMemo,
         StaffSpacingParameters staffSpacing,
         Func<int, LooseLineSpacer.RunLine>? runLineOf,
-        Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? chordRowInk)
+        Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? chordRowInk,
+        Func<int, int, (int StaffIndex, VerticalSkyline Up, VerticalSkyline Down)?>?
+            attachedChordBelow)
     {
         var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
 
@@ -915,6 +920,25 @@ internal sealed class LyricEngraver
                     }
                     if (elements.Count > before)
                         rowFirstElement.Add((rowStaff, before));
+                }
+                // ...and the CLOSING staff's own attached chord line, the run's LAST
+                // element: the ChordNames context above the next spaceable staff is one of
+                // the lines this pair walks (page-layout-problem.cc:919-925 loose_lines), and
+                // until it was, the verse's spring closed on the staff straight through
+                // the symbols — the chord row was engraved where the chain had put the
+                // verse (ledger lyrics.lyric-chord-run.lyric-to-chord, book CHL4).
+                // Verse 0 for the same reason the chords ROW uses it above; the LINE is
+                // the ChordNames set with affinity DOWN (ly/engraver-init.ly:719-723).
+                // Its DRAWN baseline is not read from this solve — the walk's closing step
+                // is (MultiStaffLayouter.AttachedChordBaselineAboveTop), which is the same
+                // number to within the LARGE_STRETCH asymptotics both engines share.
+                if (isUpperFamily
+                    && attachedChordBelow?.Invoke(sysIdx, familyKey) is { } chordLine)
+                {
+                    up[(sysIdx, chordLine.StaffIndex, 0)] = chordLine.Up;
+                    down[(sysIdx, chordLine.StaffIndex, 0)] = chordLine.Down;
+                    elements.Add((chordLine.StaffIndex, 0));
+                    elementLines.Add(LooseLineSpacer.ChordNamesLine(staffSpacing));
                 }
                 if (elements.Count == 0) return null;
 

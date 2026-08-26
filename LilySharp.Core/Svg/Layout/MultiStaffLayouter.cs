@@ -193,8 +193,11 @@ internal sealed class MultiStaffLayouter
     /// LILYPOND-REF: ly/engraver-init.ly:648-658 Lyrics, :719-723 ChordNames. A spaceable
     /// staff never has one of these read off it, so it takes the Lyrics set only as a value
     /// the branches cannot reach.
+    /// ★ ONE HOME SINCE 2026-08-26: <c>LayoutEngine</c> carried a private copy (its own
+    /// doc already pointed here as "whose rule this is") and <c>PairBlocks</c> an inline
+    /// third spelling — review 4a-3's run-element island, paid down where it is mechanical.
     /// </remarks>
-    private static StaffSpacingParameters.NonStaffSpacing NonStaffSpecsOf(
+    internal static StaffSpacingParameters.NonStaffSpacing NonStaffSpecsOf(
         Staff staff, StaffSpacingParameters sp)
         => staff.IsTextRow && !staff.IsLyricsTextRow ? sp.ChordNames : sp.Lyrics;
 
@@ -579,7 +582,7 @@ internal sealed class MultiStaffLayouter
         // and StackStaves called StaffGap without it. Leaving it out now places the staves
         // at a gap the block does not fit in, and the syllables are drawn over the staff
         // below (MEASURED on がくふ: four rows placed, none given room).
-        LooseLinesBetween? looseLines = null)
+        PairRunSources runSources = default)
     {
         var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
         currentY = y;
@@ -637,7 +640,8 @@ internal sealed class MultiStaffLayouter
                 double span = GapSpan(score, lastVisibleStaff!, staff);
                 double gap = StaffGap(
                     staffSpec, span, staffSkylines, lastVisibleIndex, globalIndex,
-                    looseLines?.Invoke(lastVisibleIndex, globalIndex));
+                    runSources.Blocks(lastVisibleIndex, globalIndex, NoRows,
+                        staffSkylines, _options.StaffSpacing));
                 currentY -= lastVisibleHeight + gap;
             }
 
@@ -702,11 +706,11 @@ internal sealed class MultiStaffLayouter
         MultiStaffScore score,
         StaffGroup group, double y, VerticalSpacingSpec staffSpec, int startIndex,
         List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines, Func<Staff, bool> isDead,
-        LooseLinesBetween? looseLines = null)
+        PairRunSources runSources = default)
     {
         var staffLayouts = StackStaves(
             score, group, y, staffSpec, startIndex, staffSkylines, isDead,
-            out double currentY, out bool anyVisible, looseLines);
+            out double currentY, out bool anyVisible, runSources);
 
         if (!anyVisible)
         {
@@ -737,11 +741,11 @@ internal sealed class MultiStaffLayouter
         MultiStaffScore score,
         StaffGroup group, double y, VerticalSpacingSpec staffSpec, int startIndex,
         List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines, Func<Staff, bool> isDead,
-        LooseLinesBetween? looseLines = null)
+        PairRunSources runSources = default)
     {
         var staffLayouts = StackStaves(
             score, group, y, staffSpec, startIndex, staffSkylines, isDead,
-            out double currentY, out bool anyVisible, looseLines);
+            out double currentY, out bool anyVisible, runSources);
 
         if (!anyVisible)
             return StaffGroupLayout.CreateSingle(staffLayouts[0], y, 0);
@@ -761,11 +765,11 @@ internal sealed class MultiStaffLayouter
         MultiStaffScore score,
         StaffGroup group, double y, VerticalSpacingSpec staffSpec, int startIndex,
         List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines, Func<Staff, bool> isDead,
-        LooseLinesBetween? looseLines = null)
+        PairRunSources runSources = default)
     {
         var staffLayouts = StackStaves(
             score, group, y, staffSpec, startIndex, staffSkylines, isDead,
-            out double currentY, out bool anyVisible, looseLines);
+            out double currentY, out bool anyVisible, runSources);
 
         if (!anyVisible)
         {
@@ -2032,7 +2036,8 @@ internal sealed class MultiStaffLayouter
     /// <remarks>
     /// One system's staff skylines are the input to both its placement and its page springs
     /// (<see cref="StaffSprings(MultiStaffScore, ImmutableArray{StaffGroupLayout},
-    /// List{ValueTuple{VerticalSkyline, VerticalSkyline}}, LooseLinesBetween?)"/>), and building them is the
+    /// List{ValueTuple{VerticalSkyline, VerticalSkyline}}, PairRunSources)"/>), and
+    /// building them is the
     /// expensive part of laying a system out — measured 2026-07-27 at roughly 5.6 ms per
     /// build on a fifty-system score, which is most of that system's layout cost. Letting
     /// the caller build once and hand the same list to both is worth an explicit overload:
@@ -2043,11 +2048,11 @@ internal sealed class MultiStaffLayouter
         MultiStaffScore score,
         List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
         int startMeasure, int endMeasure, bool isFirstSystem,
-        LooseLinesBetween? looseLines = null)
+        PairRunSources runSources = default)
         => LayoutStaffGroups(
             score, staffSkylines,
             staff => HaraKiri.ShouldHideStaff(staff, startMeasure, endMeasure, isFirstSystem),
-            looseLines);
+            runSources);
 
     /// <summary>Builds the per-staff skylines one system is placed and sprung against,
     /// with the inside-staff spanners they were built from — see
@@ -2078,7 +2083,7 @@ internal sealed class MultiStaffLayouter
         MultiStaffScore score,
         List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines,
         Func<Staff, bool> isDead,
-        LooseLinesBetween? looseLines = null)
+        PairRunSources runSources = default)
     {
         var builder = ImmutableArray.CreateBuilder<StaffGroupLayout>();
         double currentY = 0;
@@ -2133,14 +2138,14 @@ internal sealed class MultiStaffLayouter
             var layout = group.IsGrandStaff
                 ? LayoutGrandStaffGroupWithSkylines(
                     score, group, currentY, sp.StaffStaff, globalStaffIndex, staffSkylines, isDead,
-                    looseLines)
+                    runSources)
                 : group.HasDelimiter
                     ? LayoutBracketGroupWithSkylines(
                         score, group, currentY, sp.StaffStaff, globalStaffIndex, staffSkylines, isDead,
-                        looseLines)
+                        runSources)
                     : LayoutSingleStaffGroupWithSkylines(
                         score, group, currentY, sp.StaffStaff, globalStaffIndex, staffSkylines, isDead,
-                        looseLines);
+                        runSources);
             builder.Add(layout);
 
             // A group with no survivor takes no room and no gap: it is not in the alignment.
@@ -2221,7 +2226,8 @@ internal sealed class MultiStaffLayouter
                     double interGroupGap = textRowPair
                         ? TextRowPairGap
                         : StaffGap(spec, span, staffSkylines, upperLive, lowerLive,
-                            looseLines?.Invoke(upperLive, lowerLive));
+                            runSources.Blocks(upperLive, lowerLive, NoRows,
+                                staffSkylines, sp));
 
                     // ★ A SPACEABLE PAIR WITH ROWS BETWEEN IS PLACED AT THE ALIGNMENT'S OWN
                     // ANSWER (2026-08-26). The incremental stack above prices this boundary
@@ -2256,13 +2262,12 @@ internal sealed class MultiStaffLayouter
                         if (lowStaff is not null
                             && StaffAffinity.IsSpaceable(lowStaff.StaffAffinity))
                         {
-                            var pairSpec = InterGroupSpec(upper.Group, nextGroup, sp);
-                            var blocks = PairBlocks(
-                                looseLines?.Invoke(upper.Layout.StaffIndex, lowIdx),
-                                rowsSinceSpaceable, staffSkylines, sp);
-                            double pairMin = AlignmentMinimumWithSkylines(
-                                pairSpec, staffSkylines, upper.Layout.StaffIndex, lowIdx,
-                                blocks);
+                            var blocks = runSources.Blocks(
+                                upper.Layout.StaffIndex, lowIdx, rowsSinceSpaceable,
+                                staffSkylines, sp);
+                            var (pairSpec, pairMin) = PairMinimum(
+                                upper.Group, nextGroup, upper.Layout.StaffIndex, lowIdx,
+                                staffSkylines, blocks, sp);
                             double pairDist = Math.Max(pairSpec.BasicDistance, pairMin);
                             double targetTop = StaffRefpoint(upper.Layout) - pairDist
                                 + PlacedRefpointBelowTop(score, lowStaff);
@@ -2371,7 +2376,7 @@ internal sealed class MultiStaffLayouter
     internal ImmutableArray<StaffSpring> StaffSprings(
         MultiStaffScore score, ImmutableArray<StaffGroupLayout> groups,
         List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
-        LooseLinesBetween? looseLines = null)
+        PairRunSources runSources = default)
     {
         if (groups.IsDefaultOrEmpty)
             return ImmutableArray<StaffSpring>.Empty;
@@ -2475,10 +2480,6 @@ internal sealed class MultiStaffLayouter
             // book OSSK: a rigid spring prints its ideal 9.000000 whatever force the page
             // solves, where LilyPond compresses to 8.787816). An ossia is a `\new Staff` and
             // declares no `staff-affinity`, so :1173-1177 makes it spaceable.
-            var spec = up.GroupIndex == low.GroupIndex
-                ? sp.StaffStaff
-                : InterGroupSpec(up.Group, low.Group, sp);
-
             // Refpoint to refpoint, the frame every vertical spring in LilyPond works in, and
             // asked for DIRECTLY: this is the number LilyPond indexes out of
             // Align_interface's vector.
@@ -2497,15 +2498,45 @@ internal sealed class MultiStaffLayouter
             // note-bound block hangs off the upper staff and so comes first, then the rows
             // standing between the two staves in alignment order, each with the skylines
             // BuildAllStaffSkylines already seeded for it.
-            var blocks = PairBlocks(
-                looseLines?.Invoke(up.Layout.StaffIndex, low.Layout.StaffIndex),
-                lines, staffSkylines, sp);
+            var blocks = runSources.Blocks(
+                up.Layout.StaffIndex, low.Layout.StaffIndex, lines, staffSkylines, sp);
 
-            double minimum = AlignmentMinimumWithSkylines(
-                spec, staffSkylines, up.Layout.StaffIndex, low.Layout.StaffIndex, blocks);
+            var (spec, minimum) = PairMinimum(
+                up.Group, low.Group, up.Layout.StaffIndex, low.Layout.StaffIndex,
+                staffSkylines, blocks, sp);
             builder.Add(new StaffSpring(
                 up.Layout.StaffIndex, low.Layout.StaffIndex, spec, minimum));
         }
+    }
+
+    /// <summary>
+    /// A spaceable pair's spec and its alignment-minimum floor, in ONE place: a same-group
+    /// pair takes the grouper's <c>staff-staff-spacing</c>, a cross-group pair
+    /// <see cref="InterGroupSpec"/>, and the floor is the walk over the pair's run.
+    /// </summary>
+    /// <remarks>
+    /// ★ EXTRACTED 2026-08-26 from its two spellings — <c>StaffSprings.AddSpring</c>
+    /// (which asked <c>GroupIndex == GroupIndex</c>) and the placement's pair branch (which
+    /// always took <see cref="InterGroupSpec"/>). The two could part company exactly on a
+    /// same-group spaceable pair with rows between it — unreachable today only because
+    /// RenderSpecParser gives every chords/lyrics track a Single group of its own, an
+    /// invariant of ANOTHER FILE this code must not lean on (its own :632-636 warning).
+    /// One function, so the spring's floor and the drawn distance cannot describe
+    /// different alignments (HANDOFF 5.2.1②).
+    /// </remarks>
+    private static (VerticalSpacingSpec Spec, double Minimum) PairMinimum(
+        StaffGroup upperGroup, StaffGroup lowerGroup,
+        int upperStaffIndex, int lowerStaffIndex,
+        List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
+        IReadOnlyList<PairLooseLine>? blocks,
+        StaffSpacingParameters sp)
+    {
+        var spec = ReferenceEquals(upperGroup, lowerGroup)
+            ? sp.StaffStaff
+            : InterGroupSpec(upperGroup, lowerGroup, sp);
+        double minimum = AlignmentMinimumWithSkylines(
+            spec, staffSkylines, upperStaffIndex, lowerStaffIndex, blocks, out _);
+        return (spec, minimum);
     }
 
     /// <summary>
@@ -2525,25 +2556,80 @@ internal sealed class MultiStaffLayouter
     private static IReadOnlyList<PairLooseLine>? PairBlocks(
         IReadOnlyList<PairLooseLine>? walked,
         IReadOnlyList<(Staff Staff, StaffLayout Layout)> rows,
-        List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
-        StaffSpacingParameters sp)
+        List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines,
+        StaffSpacingParameters sp,
+        PairLooseLine? trailing = null)
     {
         if (rows.Count == 0)
-            return walked;
-        var all = new List<PairLooseLine>((walked?.Count ?? 0) + rows.Count);
+            return WithTrailing(walked, trailing);
+        var all = new List<PairLooseLine>((walked?.Count ?? 0) + rows.Count + 1);
         if (walked != null)
             all.AddRange(walked);
         foreach (var row in rows)
         {
-            var sky = row.Layout.StaffIndex < staffSkylines.Count
+            var sky = staffSkylines != null && row.Layout.StaffIndex < staffSkylines.Count
                 ? staffSkylines[row.Layout.StaffIndex]
                 : default;
             all.Add(new PairLooseLine(
                 sky.Up, sky.Down,
                 row.Staff.StaffAffinity,
-                row.Staff.IsLyricsTextRow ? sp.Lyrics : sp.ChordNames));
+                NonStaffSpecsOf(row.Staff, sp)));
         }
+        // The LOWER staff's own attached chord line stands directly above that staff, so it
+        // is the run's LAST element whatever else the run holds.
+        if (trailing is { } t)
+            all.Add(t);
         return all;
+    }
+
+    /// <summary>The run with the lower staff's attached chord line appended — the no-rows
+    /// arm of <see cref="PairBlocks"/>.</summary>
+    private static IReadOnlyList<PairLooseLine>? WithTrailing(
+        IReadOnlyList<PairLooseLine>? walked, PairLooseLine? trailing)
+    {
+        if (trailing is not { } t)
+            return walked;
+        var all = new List<PairLooseLine>((walked?.Count ?? 0) + 1);
+        if (walked != null)
+            all.AddRange(walked);
+        all.Add(t);
+        return all;
+    }
+
+    /// <summary>A pair with nothing standing between it — the adjacent-pair arm of the
+    /// <see cref="PairRunSources.Blocks"/> call sites.</summary>
+    private static readonly (Staff Staff, StaffLayout Layout)[] NoRows =
+        Array.Empty<(Staff, StaffLayout)>();
+
+    /// <summary>
+    /// The two SUPPLIERS of a spaceable pair's loose lines, as one value: the upper staff's
+    /// note-bound block (<see cref="LooseLinesBetween"/>) and the lower staff's attached
+    /// chord line (<see cref="AttachedChordLine"/>, by staff index). <c>default</c> means
+    /// the score supplies neither.
+    /// </summary>
+    /// <remarks>
+    /// ★ ONE VALUE, NOT TWO PARAMETERS (2026-08-26): the two travelled as parallel optional
+    /// arguments through eight signatures, so a caller could thread one and forget the
+    /// other — and the assembly order (note-bound, then rows, then the trailing chord line)
+    /// was repeated at every call site. <see cref="Blocks"/> is now the only spelling of
+    /// that order; the sites hand it their rows and nothing else.
+    /// </remarks>
+    internal readonly record struct PairRunSources(
+        LooseLinesBetween? NoteBound,
+        Func<int, PairLooseLine?>? AttachedLineOf)
+    {
+        /// <summary>The assembled run for the pair (<paramref name="upperStaffIndex"/>,
+        /// <paramref name="lowerStaffIndex"/>) — see <see cref="PairBlocks"/> for the order
+        /// and the LilyPond address.</summary>
+        public IReadOnlyList<PairLooseLine>? Blocks(
+            int upperStaffIndex, int lowerStaffIndex,
+            IReadOnlyList<(Staff Staff, StaffLayout Layout)> rows,
+            List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines,
+            StaffSpacingParameters sp)
+            => PairBlocks(
+                NoteBound?.Invoke(upperStaffIndex, lowerStaffIndex),
+                rows, staffSkylines, sp,
+                AttachedLineOf?.Invoke(lowerStaffIndex));
     }
 
     /// <summary>
@@ -2683,8 +2769,15 @@ internal sealed class MultiStaffLayouter
                 // rise well above the top line — reserve it in the UP skyline or a low
                 // note in the staff ABOVE overprints the chord symbols. (An independent
                 // chord GRID row, IsChordRow, is its own staff and reserves its own band.)
+                // ★ UNLESS THE LINE IS A RUN ELEMENT (2026-08-26, AttachedChordLineInRun):
+                // the pair above then WALKS the line — its own ink, its own specs
+                // (AttachedChordLine) — and a band here would be the same room a second
+                // time, priced Lily#-shaped (the double-count HANDOFF names as 帯と walk).
+                // The band survives only where no pair walks the line: the system's top
+                // staff, and a staff whose only symbols are note-attached @chord.
                 if (!score.ChordNames.IsDefaultOrEmpty
-                    && score.ChordNames.Any(c => c.StaffIndex == thisStaff && !c.IsChordRow))
+                    && score.ChordNames.Any(c => c.StaffIndex == thisStaff && !c.IsChordRow)
+                    && !AttachedChordLineInRun(score, thisStaff))
                     ReserveChordRowBand(sky.Up, measureLayouts, _options.StaffHeight / 2.0);
 
                 // An independent chord ROW is a line of the alignment in its own right, and
@@ -3530,6 +3623,171 @@ internal sealed class MultiStaffLayouter
     }
 
     /// <summary>
+    /// Whether the attached chord line of <paramref name="staffIndex"/> is an ELEMENT of a
+    /// pair's run — the LilyPond model — rather than a reserved band
+    /// (<see cref="ReserveChordRowBand"/>) plus a fixed offset
+    /// (<c>ChordNameEngraver.StaffPadding</c>) — the Lily# model it replaces.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:919-925 loose_lines — a ChordNames context
+    /// between two spaceable staves is one of the lines their pair walks over; there is no band.
+    /// <para>
+    /// ⚠️ ONE PREDICATE, FOUR READERS: the band gate (<c>BuildAllStaffSkylines</c>), the
+    /// run assembly (<see cref="AttachedChordLine"/> through its callers), the chain's
+    /// element (<c>LyricEngraver.DistributeLooseLines</c>) and the drawn baseline
+    /// (<c>LayoutEngine.LayoutChordNames</c>). A second spelling is how the page reserves
+    /// one geometry and the symbols are drawn at another (HANDOFF 5.2.1②).
+    /// </para>
+    /// <para>
+    /// The two conditions, and why each:
+    /// <list type="bullet">
+    /// <item>A CHORDS TRACK (<c>UseTiming</c>), not a note-attached <c>@chord</c>: only the
+    /// track is LilyPond's ChordNames context (a folded <c>chords … as names</c> row or
+    /// <c>staff … with chords</c>). An <c>@chord</c> annotation is Lily#'s own surface with
+    /// no LilyPond line to model, so a staff carrying only those keeps the band.</item>
+    /// <item>A SPACEABLE STAFF ABOVE IT in score order: with nothing above, the line leads
+    /// the system and its spacing is the previous system's / the page top's business —
+    /// that regime keeps the measured 0.6+protrusion placement
+    /// (<c>ChordNameEngraver.StaffPadding</c>, LilyPond-measured for top-of-system rows).
+    /// ⚠️ SCORE ORDER, NOT THE SYSTEM'S SURVIVORS: hara-kiri hiding every staff above
+    /// would leave this true while no pair exists to walk the line — named divergence, no
+    /// corpus book reaches it (attached chords + removeEmpty above).</item>
+    /// </list>
+    /// </para>
+    /// </remarks>
+    internal static bool AttachedChordLineInRun(MultiStaffScore score, int staffIndex)
+    {
+        if (score.ChordNames.IsDefaultOrEmpty)
+            return false;
+        bool hostsTrack = false;
+        foreach (var c in score.ChordNames)
+            if (!c.IsChordRow && c.UseTiming && c.StaffIndex == staffIndex)
+            {
+                hostsTrack = true;
+                break;
+            }
+        if (!hostsTrack)
+            return false;
+        foreach (var (_, staff, idx) in score.EnumerateStaves())
+        {
+            if (idx >= staffIndex)
+                break;
+            if (StaffAffinity.IsSpaceable(staff.StaffAffinity))
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// The attached chord line of <paramref name="staffIndex"/> as a run element: its
+    /// symbols' ink about the line's own baseline, the ChordNames context's
+    /// <c>staff-affinity</c> (DOWN) and its <c>nonstaff-*</c> spec set. Null when the line
+    /// is not a run element (<see cref="AttachedChordLineInRun"/>) or draws nothing on this
+    /// system.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:719-723 nonstaff-relatedstaff-spacing — the
+    /// whole of what the ChordNames context declares.
+    /// The ink goes through <c>ChordNameEngraver.RowSkylines</c> — the same X model and the
+    /// same overlap clearance the symbols are DRAWN with — so the walk and the picture
+    /// describe one line.
+    /// </remarks>
+    internal static PairLooseLine? AttachedChordLine(
+        MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts,
+        int staffIndex, Staff staff, StaffSpacingParameters sp)
+    {
+        if (!AttachedChordLineInRun(score, staffIndex))
+            return null;
+        var (up, down) = ChordNameEngraver.RowSkylines(
+            score.TextMetrics, score.ChordNames, measureLayouts, staffIndex,
+            staff.PrimaryVoice.Measures, attachedLine: true);
+        if (up.IsEmpty && down.IsEmpty)
+            return null;
+        var line = LooseLineSpacer.ChordNamesLine(sp);
+        return new PairLooseLine(up, down, line.Affinity, line.Specs);
+    }
+
+    /// <summary>
+    /// The walk's CLOSING step for a run that ends with an attached chord line — the
+    /// refpoint distance from that line down to its own staff at the alignment minimum,
+    /// which is where the line is DRAWN: every spring above it in the run carries
+    /// LARGE_STRETCH (<c>get_spacing_spec</c>'s spaceable→DOWN and UP→DOWN branches), so
+    /// the room's slack is absorbed above the line and its own closing spring stays at its
+    /// floor to within ~1e-6 of the slack — the same asymptotics LilyPond's
+    /// <c>distribute_loose_lines</c> has.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:936-939 distribute_loose_lines (the call),
+    /// :1025-1054 distribute_loose_lines (the solve) — the limit this step is.
+    /// THE SAME WALK THE RESERVATION RUNS (<see cref="AlignmentMinimumWithSkylines"/>,
+    /// one body), so the room and the drawn baseline cannot disagree about the geometry.
+    /// Null when either staff has no skyline to measure — the caller keeps the
+    /// 0.6+protrusion placement there.
+    /// </remarks>
+    internal static double? AttachedChordClosingStep(
+        List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
+        int upperStaffIndex, int lowerStaffIndex,
+        IReadOnlyList<PairLooseLine> looseLines,
+        StaffSpacingParameters sp)
+    {
+        AlignmentMinimumWithSkylines(
+            sp.StaffStaff, staffSkylines, upperStaffIndex, lowerStaffIndex, looseLines,
+            out double closingStep);
+        return double.IsNaN(closingStep) ? null : closingStep;
+    }
+
+    /// <summary>
+    /// Where an attached chord line's BASELINE is drawn, as "staff spaces above its own
+    /// staff's TOP LINE" — the frame <c>ChordNameEngraver.Calculate</c> places symbols in.
+    /// Null when the line is not a run element here (no live spaceable staff above it in
+    /// this system, or no chords track, or nothing to measure) — the engraver then keeps
+    /// its 0.6+protrusion placement.
+    /// </summary>
+    /// <remarks>
+    /// THE SAME RUN THE PAIR WAS PLACED OVER — the caller hands the pair's
+    /// <see cref="PairRunSources"/> and the independent rows between, and this method asks
+    /// the ONE walk for the closing step (<see cref="AttachedChordClosingStep"/>). The
+    /// reservation, the springs and the drawn baseline read one geometry or they are
+    /// HANDOFF 5.2.1②.
+    /// </remarks>
+    internal static double? AttachedChordBaselineAboveTop(
+        SystemLayout system,
+        List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
+        int staffIndex,
+        PairRunSources runSources,
+        Func<int, IReadOnlyList<(Staff Staff, StaffLayout Layout)>> rowsBelow,
+        StaffSpacingParameters sp, double halfStaff)
+    {
+        if (runSources.AttachedLineOf?.Invoke(staffIndex) is null)
+            return null;
+
+        // The nearest LIVE spaceable staff above the line's own — alignment order is
+        // global staff order, so "above" is the largest smaller index.
+        int upper = -1;
+        foreach (var group in system.StaffGroups)
+        {
+            if (group.Staves.IsDefaultOrEmpty) continue;
+            foreach (var st in group.Staves)
+            {
+                if (st.IsHidden || !StaffAffinity.IsSpaceable(st.StaffAffinity))
+                    continue;
+                if (st.StaffIndex < staffIndex && st.StaffIndex > upper)
+                    upper = st.StaffIndex;
+            }
+        }
+        if (upper < 0)
+            return null;
+
+        var blocks = runSources.Blocks(
+            upper, staffIndex, rowsBelow(upper), staffSkylines, sp);
+        var closing = AttachedChordClosingStep(
+            staffSkylines, upper, staffIndex, blocks!, sp);
+        // Closing is refpoint-to-refpoint; the engraver's frame is the staff's TOP line,
+        // half a staff above its reference point.
+        return closing is { } c ? c - halfStaff : null;
+    }
+
+    /// <summary>
     /// Calculates the gap between two adjacent staves using skyline distances.
     /// </summary>
     /// <remarks>
@@ -3577,7 +3835,7 @@ internal sealed class MultiStaffLayouter
         double centerToCenter = Math.Max(
             spec.BasicDistance,
             AlignmentMinimumWithSkylines(
-                spec, staffSkylines, upperStaffIndex, lowerStaffIndex, looseLines));
+                spec, staffSkylines, upperStaffIndex, lowerStaffIndex, looseLines, out _));
 
         return Math.Max(0, centerToCenter - refpointSpan);
     }
@@ -3604,8 +3862,10 @@ internal sealed class MultiStaffLayouter
         VerticalSpacingSpec spec,
         List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
         int upperStaffIndex, int lowerStaffIndex,
-        IReadOnlyList<PairLooseLine>? looseLines = null)
+        IReadOnlyList<PairLooseLine>? looseLines,
+        out double closingStep)
     {
+        closingStep = double.NaN;
         if (upperStaffIndex >= staffSkylines.Count || lowerStaffIndex >= staffSkylines.Count)
             return spec.MinimumDistance;
 
@@ -3659,7 +3919,8 @@ internal sealed class MultiStaffLayouter
         double closingPadding = hasLooseLines
             ? StaffAffinity.GetSpacingSpec(prevAffinity, prevSpecs, null, default, spec).Padding
             : spec.Padding;
-        double total = walk.Where + walk.Distance(lowerUp, closingPadding);
+        closingStep = walk.Distance(lowerUp, closingPadding);
+        double total = walk.Where + closingStep;
 
         // The two STAVES' own minimum-distance applies across the whole span — over the loose
         // lines when there are any.

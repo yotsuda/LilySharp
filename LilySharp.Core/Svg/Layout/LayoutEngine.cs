@@ -168,14 +168,14 @@ internal sealed class LayoutEngine
             systemMeasures.Count <= 1, indent, commonShortestDuration,
             () => multiStaffLayouter.BuildStaffSkylines(
                 score, _skylineBuilder, firstSystemMeasureLayouts, systemIndex: 0));
-        var firstLooseLines = systemMeasures.Count > 0
-            ? BuildLooseLinesBetween(
+        var firstRunSources = systemMeasures.Count > 0
+            ? BuildPairRunSources(
                 score, firstSystemMeasureLayouts, 0, systemMeasures[0].Count)
-            : null;
+            : default;
         var firstStaffGroupLayouts = systemMeasures.Count > 0
             ? multiStaffLayouter.LayoutStaffGroups(
                 score, firstStaffSkylines.Skylines, 0, systemMeasures[0].Count,
-                isFirstSystem: true, firstLooseLines)
+                isFirstSystem: true, firstRunSources)
             : multiStaffLayouter.LayoutStaffGroups(
                 score, _skylineBuilder, firstSystemMeasureLayouts, systemIndex: 0);
         // The system's height is the extent of the groups AS PLACED — see
@@ -231,7 +231,7 @@ internal sealed class LayoutEngine
             FirstSystemMeasureLayouts = firstSystemMeasureLayouts,
             FirstStaffGroupLayouts = firstStaffGroupLayouts,
             FirstStaffSkylines = firstStaffSkylines,
-            FirstLooseLines = firstLooseLines,
+            FirstRunSources = firstRunSources,
             EdgeStaffBeams = EdgeStaffBeams,
             FirstSystemY = currentY,
         });
@@ -331,6 +331,7 @@ internal sealed class LayoutEngine
         var annotationContext = new AnnotationLayoutContext
         {
             Score = primaryScore,
+            MultiScore = score,
             IsLeadSheet = score.IsLeadSheet,
             GridBarlineRowIndex = score.GridBarlineRowIndex,
             Fonts = score.TextMetrics,
@@ -446,7 +447,9 @@ internal sealed class LayoutEngine
         public required MultiStaffLayouter.StaffSkylineSet FirstStaffSkylines { get; init; }
         /// <summary>System 0's loose-line lookup, built by the caller alongside its placement
         /// so the springs below are floored against the SAME alignment that drew it.</summary>
-        public MultiStaffLayouter.LooseLinesBetween? FirstLooseLines { get; init; }
+        /// <summary>System 0's pair-run suppliers (note-bound block + attached chord
+        /// line), built once and shared by the placement and the springs.</summary>
+        public MultiStaffLayouter.PairRunSources FirstRunSources { get; init; }
         /// <summary>This system's edge-staff beams — the measure layouts AND the system they
         /// belong to, because the beams are stamped with it (BeamLayout.SystemIndex).</summary>
         public required Func<ImmutableArray<MeasureLayout>, int,
@@ -573,9 +576,9 @@ internal sealed class LayoutEngine
             // The alignment's loose lines between THIS system's staves — the block whose ink
             // the room between two staves is walked from. Built once and handed to both the
             // placement and the springs, for the same reason the staff skylines are.
-            var sysLooseLines = isFirstSystem
-                ? ctx.FirstLooseLines
-                : BuildLooseLinesBetween(
+            var sysRunSources = isFirstSystem
+                ? ctx.FirstRunSources
+                : BuildPairRunSources(
                     score, measureLayouts, firstMeasureIndex, firstMeasureIndex + measureCount);
 
             var sysStaffGroups = isFirstSystem
@@ -583,7 +586,7 @@ internal sealed class LayoutEngine
                 : multiStaffLayouter.LayoutStaffGroups(
                     score, sysStaffSkylines.Skylines,
                     firstMeasureIndex, firstMeasureIndex + measureCount, isFirstSystem,
-                    sysLooseLines);
+                    sysRunSources);
 
             // The height of THIS system: the extent of the groups it actually placed. A
             // hidden staff was placed at zero height, so it leaves the union by itself,
@@ -661,7 +664,7 @@ internal sealed class LayoutEngine
                 // (LilyPond's own value: audit/lp-geometry page.compressed.staff-staff-inside).
                 // It is gone; the argument is not nullable.
                 StaffSprings: multiStaffLayouter.StaffSprings(
-                    score, sysStaffGroups, sysStaffSkylines.Skylines, sysLooseLines)));
+                    score, sysStaffGroups, sysStaffSkylines.Skylines, sysRunSources)));
             perSystemStaffSkylines.Add(sysStaffSkylines.Skylines);
             perSystemStaffSpanners.Add(sysStaffSkylines.Spanners);
             perSystemStaffInside.Add(sysStaffSkylines.Inside);
@@ -857,6 +860,7 @@ internal sealed class LayoutEngine
         var prelimAnn = CalculateAnnotationLayouts(new AnnotationLayoutContext
         {
             Score = prelimScore,
+            MultiScore = score,
             IsLeadSheet = score.IsLeadSheet,
             GridBarlineRowIndex = score.GridBarlineRowIndex,
             Fonts = score.TextMetrics,
@@ -3657,8 +3661,9 @@ internal sealed class LayoutEngine
                 // empty and only the caller's HUGE_STRETCH survives (:1274-1275).
                 ? LooseLineSpacer.NullNeighbour
                 : StaffAffinity.GetSpacingSpec(
-                    previous.StaffAffinity, NonStaffSpecsOf(previous, sp),
-                    row.StaffAffinity, NonStaffSpecsOf(row, sp),
+                    previous.StaffAffinity,
+                    MultiStaffLayouter.NonStaffSpecsOf(previous, sp),
+                    row.StaffAffinity, MultiStaffLayouter.NonStaffSpecsOf(row, sp),
                     sp.StaffStaff);
 
             // One step of THIS system's own alignment. For the first line the walk is empty
@@ -3675,7 +3680,7 @@ internal sealed class LayoutEngine
         // ...and the step from the last line to the system's first spaceable staff, which is
         // that line's OWN nonstaff-relatedstaff-spacing (its affinity is not UP).
         var closingSpec = StaffAffinity.GetSpacingSpec(
-            previous!.StaffAffinity, NonStaffSpecsOf(previous, sp),
+            previous!.StaffAffinity, MultiStaffLayouter.NonStaffSpecsOf(previous, sp),
             null, sp.Lyrics, sp.StaffStaff);
         // ...and the closing staff's own silhouette: THE room's inside-staff skyline, not a
         // subset rebuilt here. Everything that is inside-staff ink in LilyPond — the notes
@@ -3830,16 +3835,12 @@ internal sealed class LayoutEngine
                 score.TextMetrics, score.ChordNames, measures, staffIndex,
                 row.PrimaryVoice.Measures);
 
-    /// <summary>Which context's <c>nonstaff-*</c> specs a line carries — see
-    /// <c>MultiStaffLayouter.NonStaffSpecsOf</c>, whose rule this is.</summary>
-    private static StaffSpacingParameters.NonStaffSpacing NonStaffSpecsOf(
-        Staff staff, StaffSpacingParameters sp)
-        => staff.IsTextRow && !staff.IsLyricsTextRow ? sp.ChordNames : sp.Lyrics;
-
     /// <summary>A text ROW as a run element: its own affinity and its own context's specs —
-    /// the two things <c>get_spacing_spec</c> reads off a grob.</summary>
+    /// the two things <c>get_spacing_spec</c> reads off a grob. The spec rule is
+    /// <c>MultiStaffLayouter.NonStaffSpecsOf</c>, the one home (this file carried a private
+    /// copy of it until 2026-08-26).</summary>
     private static LooseLineSpacer.RunLine RunLineOf(Staff staff, StaffSpacingParameters sp)
-        => new(staff.StaffAffinity, NonStaffSpecsOf(staff, sp));
+        => new(staff.StaffAffinity, MultiStaffLayouter.NonStaffSpecsOf(staff, sp));
 
     /// <summary>
     /// Inputs to <see cref="CalculateAnnotationLayouts"/>. Collapses the former
@@ -3849,6 +3850,12 @@ internal sealed class LayoutEngine
     private sealed class AnnotationLayoutContext
     {
         public required Score? Score { get; init; }
+
+        /// <summary>The whole multi-staff score — what the attached chord line's run walk
+        /// reads (<c>MultiStaffLayouter.AttachedChordLineInRun</c> asks it which staves are
+        /// spaceable and which symbols are a chords track). Null only in constructions that
+        /// predate it; the two passes both set it.</summary>
+        public MultiStaffScore? MultiScore { get; init; }
         /// <summary>Whether the laid-out score is a staff-less lead sheet — carried
         /// here because <see cref="Score"/> is the FLAT model and cannot answer it;
         /// both builders read <c>MultiStaffScore.IsLeadSheet</c>. The stanza-number
@@ -4891,11 +4898,73 @@ internal sealed class LayoutEngine
             prefixTimeSignatureX: ctx.PrefixTimeSignatureX,
             lineStartBarlineX: ctx.LineStartBarlineX);
 
+        // An attached chord line that is a RUN ELEMENT is drawn at the run's own answer —
+        // the walk's closing step over the pair that brackets it — instead of the
+        // 0.6+protrusion offset (which stays the placement for the top staff and for
+        // @chord-only staves). The walk is the SAME one that reserved the pair's room
+        // (MultiStaffLayouter.AttachedChordBaselineAboveTop), fed the same skylines
+        // (ctx.StaffSkylines are the room's lists) and the same run parts.
+        // Null in the preliminary pass, which runs before the per-staff skylines exist;
+        // that pass estimates with the 0.6+protrusion arm, exactly as it did for the band.
+        Func<int, int, double?>? attachedBaselineAboveTop = null;
+        if (ctx.MultiScore is { } multiScore
+            && ctx.StaffSkylines is { } roomSkylines
+            && staffByIndex != null
+            && !cn.IsDefaultOrEmpty && cn.Any(c => !c.IsChordRow && c.UseTiming))
+        {
+            var baseCache = new Dictionary<(int, int), double?>();
+            var sourceCache = new Dictionary<int, MultiStaffLayouter.PairRunSources>();
+            attachedBaselineAboveTop = (sysIdx, staffIndex) =>
+            {
+                var key = (sysIdx, staffIndex);
+                if (baseCache.TryGetValue(key, out var hit))
+                    return hit;
+                double? result = null;
+                if (sysIdx >= 0 && sysIdx < systems.Length && sysIdx < roomSkylines.Count)
+                {
+                    var system = systems[sysIdx];
+                    if (!sourceCache.TryGetValue(sysIdx, out var runSources))
+                    {
+                        int start = int.MaxValue, end = int.MinValue;
+                        foreach (var m in system.Measures)
+                        {
+                            start = Math.Min(start, m.MeasureIndex);
+                            end = Math.Max(end, m.MeasureIndex + 1);
+                        }
+                        runSources = end > start
+                            ? BuildPairRunSources(multiScore, system.Measures, start, end)
+                            : default;
+                        sourceCache[sysIdx] = runSources;
+                    }
+                    IReadOnlyList<(Staff Staff, StaffLayout Layout)> RowsBelow(int upper)
+                    {
+                        var rowIdxs = ctx.BetweenRowStaves?.Invoke(sysIdx, upper);
+                        if (rowIdxs is not { Count: > 0 })
+                            return Array.Empty<(Staff, StaffLayout)>();
+                        var rows = new List<(Staff, StaffLayout)>(rowIdxs.Count);
+                        foreach (int idx in rowIdxs)
+                            if (staffByIndex.TryGetValue(idx, out var rowStaff))
+                                foreach (var g in system.StaffGroups)
+                                    foreach (var st in g.Staves)
+                                        if (st.StaffIndex == idx)
+                                            rows.Add((rowStaff, st));
+                        return rows;
+                    }
+                    result = MultiStaffLayouter.AttachedChordBaselineAboveTop(
+                        system, roomSkylines[sysIdx], staffIndex, runSources, RowsBelow,
+                        _options.StaffSpacing, _options.StaffHeight / 2.0);
+                }
+                baseCache[key] = result;
+                return result;
+            };
+        }
+
         return ChordNameEngraver.Calculate(ctx.Fonts,
             cn, systems, ml, ctx.Measures,
             ctx.MeasuresByStaff, staffYAt, minStaffYAt, scriptedSkylines,
             chordGridSheet: chordGridSheet, lowerStaffUpSkyline: lowerStaffUpSkyline,
-            labelWindows: labelWindows);
+            labelWindows: labelWindows,
+            attachedBaselineAboveTop: attachedBaselineAboveTop);
     }
 
     /// <summary>
@@ -5073,6 +5142,56 @@ internal sealed class LayoutEngine
             };
         }
 
+        // The closing staff's attached chord line, as the chain's last element — see the
+        // append in LyricEngraver.BuildChainPrefix. One construction with the walk's
+        // (MultiStaffLayouter.AttachedChordLine), asked per (system, anchor staff).
+        Func<int, int, (int StaffIndex, VerticalSkyline Up, VerticalSkyline Down)?>?
+            attachedChordBelow = null;
+        if (ctx.MultiScore is { } multiScore && staffByIndex != null
+            && ctx.ChordNames is { IsDefaultOrEmpty: false } chordItems
+            && chordItems.Any(c => !c.IsChordRow && c.UseTiming))
+        {
+            var attCache =
+                new Dictionary<(int, int), (int, VerticalSkyline, VerticalSkyline)?>();
+            var attLinesOf =
+                new Dictionary<int, Func<int, MultiStaffLayouter.PairLooseLine?>?>();
+            attachedChordBelow = (sysIdx, anchorStaffIndex) =>
+            {
+                var key = (sysIdx, anchorStaffIndex);
+                if (attCache.TryGetValue(key, out var hit))
+                    return hit;
+                (int, VerticalSkyline, VerticalSkyline)? result = null;
+                if (sysIdx >= 0 && sysIdx < systems.Length)
+                {
+                    // The next LIVE spaceable staff below the anchor — the staff that
+                    // closes this chain (ComputeBetweenStavesEnd picks the same one).
+                    int lower = int.MaxValue;
+                    foreach (var g in systems[sysIdx].StaffGroups)
+                    {
+                        if (g.Staves.IsDefaultOrEmpty) continue;
+                        foreach (var st in g.Staves)
+                            if (!st.IsHidden
+                                && StaffAffinity.IsSpaceable(st.StaffAffinity)
+                                && st.StaffIndex > anchorStaffIndex
+                                && st.StaffIndex < lower)
+                                lower = st.StaffIndex;
+                    }
+                    if (lower != int.MaxValue)
+                    {
+                        // The one construction (BuildAttachedChordLines), per system —
+                        // the same supplier the placement's PairRunSources carries.
+                        if (!attLinesOf.TryGetValue(sysIdx, out var linesOf))
+                            attLinesOf[sysIdx] = linesOf =
+                                BuildAttachedChordLines(multiScore, systems[sysIdx].Measures);
+                        if (linesOf?.Invoke(lower) is { } line)
+                            result = (lower, line.Up, line.Down);
+                    }
+                }
+                attCache[key] = result;
+                return result;
+            };
+        }
+
         var engraver = new LyricEngraver(
             parentAlignmentEdge: LyricEngraver.ParentAlignmentEdge(
                 measuresByStaff, measures, ctx.VoicesByStaff),
@@ -5083,7 +5202,7 @@ internal sealed class LayoutEngine
             ctx.NoteBoundAnchorY, anchorStaffDownSkyline, ctx.LooseChainEnd,
             betweenStavesEnd, ctx.LastSpaceableStaffY, ctx.TrailingRowStaves,
             ctx.BetweenRowStaves, ctx.VerseSkylines, ctx.LyricChains,
-            sp, runLineOf, chordRowInk);
+            sp, runLineOf, chordRowInk, attachedChordBelow);
 
         // The rows the chain solved travel back out through the context — see
         // AnnotationLayoutContext.SolvedRowBaselines for why they are applied afterwards
@@ -5439,6 +5558,55 @@ internal sealed class LayoutEngine
                     .ToList();
             cache[key] = lines;
             return lines;
+        };
+    }
+
+    /// <summary>
+    /// ONE SYSTEM's attached chord lines, by the staff that hosts them — the run's TRAILING
+    /// element for the pair whose lower staff that is. Null when no staff of the score
+    /// qualifies (<c>MultiStaffLayouter.AttachedChordLineInRun</c>), so every other score
+    /// pays two O(chordNames) scans and nothing else.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:919-925 loose_lines — the ChordNames
+    /// context above a lower staff is one of the pair's run, not a band on the staff's skyline.
+    /// Built per system because the line's ink is this system's symbols at this system's
+    /// columns, cached per staff for the three walk consumers (placement, gap, springs).
+    /// </remarks>
+    /// <summary>
+    /// ONE SYSTEM's pair-run suppliers, as the one value the placement, the springs and
+    /// the drawn-baseline walk all take (<c>MultiStaffLayouter.PairRunSources</c>).
+    /// </summary>
+    private MultiStaffLayouter.PairRunSources BuildPairRunSources(
+        MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts,
+        int startMeasure, int endMeasure)
+        => new(
+            BuildLooseLinesBetween(score, measureLayouts, startMeasure, endMeasure),
+            BuildAttachedChordLines(score, measureLayouts));
+
+    private Func<int, MultiStaffLayouter.PairLooseLine?>? BuildAttachedChordLines(
+        MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        if (score.ChordNames.IsDefaultOrEmpty
+            || !score.ChordNames.Any(c => !c.IsChordRow && c.UseTiming))
+            return null;
+
+        var staffByIndex = new Dictionary<int, Staff>();
+        foreach (var (_, st, idx) in score.EnumerateStaves())
+            staffByIndex[idx] = st;
+
+        var sp = _options.StaffSpacing;
+        var cache = new Dictionary<int, MultiStaffLayouter.PairLooseLine?>();
+        return staffIndex =>
+        {
+            if (cache.TryGetValue(staffIndex, out var hit))
+                return hit;
+            var line = staffByIndex.TryGetValue(staffIndex, out var staff)
+                ? MultiStaffLayouter.AttachedChordLine(
+                    score, measureLayouts, staffIndex, staff, sp)
+                : null;
+            cache[staffIndex] = line;
+            return line;
         };
     }
 

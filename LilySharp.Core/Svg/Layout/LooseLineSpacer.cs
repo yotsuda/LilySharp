@@ -118,6 +118,20 @@ internal static class LooseLineSpacer
         => new(StaffAffinityDirection.Up, sp.Lyrics);
 
     /// <summary>
+    /// A ChordNames line — an independent chords row or a staff's attached chord line;
+    /// LilyPond makes no distinction, both are the ChordNames context.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:719-723 nonstaff-relatedstaff-spacing —
+    /// <c>staff-affinity = DOWN</c> and the ChordNames <c>nonstaff-*</c> set are the whole
+    /// of what the context declares.
+    /// One constructor, two readers (the pair walk's trailing element and the chain's),
+    /// because a second spelling of "which line is this" is HANDOFF 5.2.1②.
+    /// </remarks>
+    public static RunLine ChordNamesLine(StaffSpacingParameters sp)
+        => new(StaffAffinityDirection.Down, sp.ChordNames);
+
+    /// <summary>
     /// The spring from a loose line to a NULL neighbour — the page edge, or the null line
     /// LilyPond inserts at a system boundary to break the affinity to the previous system.
     /// </summary>
