@@ -5378,6 +5378,12 @@ internal sealed class LayoutEngine
     /// specs, or the page leaves a room the chain does not use — the shape HANDOFF 5.2.1②
     /// names, and the one this island has paid for twice.
     /// </para>
+    /// <para>
+    /// ★ THE ORDER IS <see cref="LooseLineSpacer.RunSlots"/>'S SINCE 2026-08-26 — the one
+    /// spelling all three walks of a run read. This reader keys its ink by POSITION in
+    /// each supplier's built list (that remark's seam ⑵); the below-system run has no
+    /// attached chord line because it has no closing staff inside the system.
+    /// </para>
     /// </remarks>
     private List<(VerticalSkyline Up, VerticalSkyline Down, LooseLineSpacer.RunLine Line)>
         RunBelowAnchor(
@@ -5386,47 +5392,70 @@ internal sealed class LayoutEngine
             int anchorStaffIndex, ImmutableArray<int> rows)
     {
         var sp = _options.StaffSpacing;
-        var run = new List<(VerticalSkyline, VerticalSkyline, LooseLineSpacer.RunLine)>();
+        var ink = new Dictionary<(int Line, int Verse),
+            (VerticalSkyline Up, VerticalSkyline Down)>();
 
-        foreach (var (u, d) in engraver.NoteBoundBlockSkylines(
-                     score.Lyrics, measureLayouts, startMeasure, endMeasure,
-                     anchorStaffIndex, anchorStaffIndex + 1))
-            run.Add((u, d, LooseLineSpacer.NoteBoundLyricLine(sp)));
+        var noteBound = engraver.NoteBoundBlockSkylines(
+            score.Lyrics, measureLayouts, startMeasure, endMeasure,
+            anchorStaffIndex, anchorStaffIndex + 1);
+        for (int k = 0; k < noteBound.Count; k++)
+            ink[(anchorStaffIndex, k)] = noteBound[k];
 
-        if (rows.IsDefaultOrEmpty)
-            return run;
-
-        var staffByIndex = new Dictionary<int, Staff>();
-        foreach (var (_, st, idx) in score.EnumerateStaves())
-            staffByIndex[idx] = st;
-
-        foreach (int rowStaff in rows)
+        var rowsIn = new List<(int RowStaff, IReadOnlyList<int> Verses,
+            LooseLineSpacer.RunLine Line)>();
+        if (!rows.IsDefaultOrEmpty)
         {
-            if (!staffByIndex.TryGetValue(rowStaff, out var row)) continue;
-            var line = RunLineOf(row, sp);
-            if (row.IsLyricsTextRow)
+            var staffByIndex = new Dictionary<int, Staff>();
+            foreach (var (_, st, idx) in score.EnumerateStaves())
+                staffByIndex[idx] = st;
+
+            foreach (int rowStaff in rows)
             {
-                foreach (var (u, d) in engraver.RowBlockSkylines(
-                             score.Lyrics, measureLayouts, startMeasure, endMeasure, rowStaff))
-                    run.Add((u, d, line));
+                if (!staffByIndex.TryGetValue(rowStaff, out var row)) continue;
+                var line = RunLineOf(row, sp);
+                if (row.IsLyricsTextRow)
+                {
+                    var verses = engraver.RowBlockSkylines(
+                        score.Lyrics, measureLayouts, startMeasure, endMeasure, rowStaff);
+                    for (int k = 0; k < verses.Count; k++)
+                        ink[(rowStaff, k)] = verses[k];
+                    rowsIn.Add((rowStaff, LooseLineSpacer.ByPosition(verses.Count), line));
+                }
+                else
+                {
+                    // ⚠️ THIS SYSTEM'S LAYOUTS, SELECTED BY MeasureIndex. RowSkylines reads a
+                    // layout's X and takes every chord it can pair with one; the list handed in
+                    // is the WHOLE SCORE's, whose positions restart at 0 on each system, so
+                    // giving it the lot builds a row out of several systems' columns at once.
+                    // The lyrics arm carries its range as two arguments, which is why only this
+                    // one has to say it.
+                    var systemLayouts = measureLayouts
+                        .Where(ml => ml.MeasureIndex >= startMeasure && ml.MeasureIndex < endMeasure)
+                        .ToImmutableArray();
+                    var (u, d) = ChordNameEngraver.RowSkylines(
+                        score.TextMetrics, score.ChordNames, systemLayouts, rowStaff,
+                        row.PrimaryVoice.Measures);
+                    if (!u.IsEmpty || !d.IsEmpty)
+                    {
+                        ink[(rowStaff, 0)] = (u, d);
+                        rowsIn.Add((rowStaff, LooseLineSpacer.SingleElementLine, line));
+                    }
+                    else
+                        rowsIn.Add((rowStaff, LooseLineSpacer.NoElements, line));
+                }
             }
-            else
-            {
-                // ⚠️ THIS SYSTEM'S LAYOUTS, SELECTED BY MeasureIndex. RowSkylines reads a
-                // layout's X and takes every chord it can pair with one; the list handed in
-                // is the WHOLE SCORE's, whose positions restart at 0 on each system, so
-                // giving it the lot builds a row out of several systems' columns at once.
-                // The lyrics arm carries its range as two arguments, which is why only this
-                // one has to say it.
-                var systemLayouts = measureLayouts
-                    .Where(ml => ml.MeasureIndex >= startMeasure && ml.MeasureIndex < endMeasure)
-                    .ToImmutableArray();
-                var (u, d) = ChordNameEngraver.RowSkylines(
-                    score.TextMetrics, score.ChordNames, systemLayouts, rowStaff,
-                    row.PrimaryVoice.Measures);
-                if (!u.IsEmpty || !d.IsEmpty)
-                    run.Add((u, d, line));
-            }
+        }
+
+        var (slots, _) = LooseLineSpacer.RunSlots(
+            anchorStaffIndex, LooseLineSpacer.ByPosition(noteBound.Count),
+            LooseLineSpacer.NoteBoundLyricLine(sp), rowsIn, attachedChord: null);
+
+        var run = new List<(VerticalSkyline, VerticalSkyline, LooseLineSpacer.RunLine)>(
+            slots.Count);
+        foreach (var slot in slots)
+        {
+            var (u, d) = ink[(slot.LineKey, slot.Verse)];
+            run.Add((u, d, slot.Line));
         }
         return run;
     }

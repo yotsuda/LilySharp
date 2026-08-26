@@ -2552,6 +2552,13 @@ internal sealed class MultiStaffLayouter
     /// drawn placement come to describe different alignments.
     /// LILYPOND-REF: ly/engraver-init.ly:648-658 Lyrics and :719-723 ChordNames — which
     /// spec set a row carries is a fact about its context, not about the score.
+    /// <para>
+    /// ★ THE ORDER IS <see cref="LooseLineSpacer.RunSlots"/>'S SINCE 2026-08-26 — the one
+    /// spelling all three walks of a run read. This walk's granularity for a lyrics row is
+    /// the BAND (one element, the row's own seeded skylines), which is that remark's seam
+    /// ⑴; the note-bound and trailing elements arrive as built <see cref="PairLooseLine"/>
+    /// values, so their slots carry no ink and their <c>Line</c> travels in the value.
+    /// </para>
     /// </remarks>
     private static IReadOnlyList<PairLooseLine>? PairBlocks(
         IReadOnlyList<PairLooseLine>? walked,
@@ -2560,39 +2567,44 @@ internal sealed class MultiStaffLayouter
         StaffSpacingParameters sp,
         PairLooseLine? trailing = null)
     {
-        if (rows.Count == 0)
-            return WithTrailing(walked, trailing);
-        var all = new List<PairLooseLine>((walked?.Count ?? 0) + rows.Count + 1);
-        if (walked != null)
-            all.AddRange(walked);
-        foreach (var row in rows)
-        {
-            var sky = staffSkylines != null && row.Layout.StaffIndex < staffSkylines.Count
-                ? staffSkylines[row.Layout.StaffIndex]
-                : default;
-            all.Add(new PairLooseLine(
-                sky.Up, sky.Down,
-                row.Staff.StaffAffinity,
-                NonStaffSpecsOf(row.Staff, sp)));
-        }
-        // The LOWER staff's own attached chord line stands directly above that staff, so it
-        // is the run's LAST element whatever else the run holds.
-        if (trailing is { } t)
-            all.Add(t);
-        return all;
-    }
-
-    /// <summary>The run with the lower staff's attached chord line appended — the no-rows
-    /// arm of <see cref="PairBlocks"/>.</summary>
-    private static IReadOnlyList<PairLooseLine>? WithTrailing(
-        IReadOnlyList<PairLooseLine>? walked, PairLooseLine? trailing)
-    {
-        if (trailing is not { } t)
+        if (rows.Count == 0 && trailing is null)
             return walked;
-        var all = new List<PairLooseLine>((walked?.Count ?? 0) + 1);
-        if (walked != null)
-            all.AddRange(walked);
-        all.Add(t);
+
+        var rowsIn = new List<(int RowStaff, IReadOnlyList<int> Verses,
+            LooseLineSpacer.RunLine Line)>(rows.Count);
+        foreach (var row in rows)
+            rowsIn.Add((row.Layout.StaffIndex, LooseLineSpacer.SingleElementLine,
+                new LooseLineSpacer.RunLine(
+                    row.Staff.StaffAffinity, NonStaffSpecsOf(row.Staff, sp))));
+        // The trailing line travels as a built value, so its slot needs no key and no
+        // spec set of its own: -1 and default are never read back.
+        var (slots, _) = LooseLineSpacer.RunSlots(
+            noteBoundLineKey: -1,
+            LooseLineSpacer.ByPosition(walked?.Count ?? 0),
+            noteBoundLine: default,
+            rowsIn,
+            trailing is null ? null : (-1, default(LooseLineSpacer.RunLine)));
+
+        var all = new List<PairLooseLine>(slots.Count);
+        foreach (var slot in slots)
+        {
+            switch (slot.Source)
+            {
+                case LooseLineSpacer.RunSource.NoteBound:
+                    all.Add(walked![slot.Verse]);
+                    break;
+                case LooseLineSpacer.RunSource.Row:
+                    var sky = staffSkylines != null && slot.LineKey < staffSkylines.Count
+                        ? staffSkylines[slot.LineKey]
+                        : default;
+                    all.Add(new PairLooseLine(
+                        sky.Up, sky.Down, slot.Line.Affinity, slot.Line.Specs));
+                    break;
+                default:
+                    all.Add(trailing!.Value);
+                    break;
+            }
+        }
         return all;
     }
 

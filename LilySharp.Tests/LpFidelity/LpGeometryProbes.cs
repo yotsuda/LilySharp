@@ -1919,6 +1919,88 @@ internal static class LpGeometryProbes
         LyricRowBetweenStavesScore("ROWVH", haraKiri: true, secondVerse: true);
 
     /// <summary>
+    /// THE TWO-VERSE ROW WHOSE VERSES HAVE HOLES — the mirror of book RVH1
+    /// (probes/row-verse-hole.ly), and the first book on which "the row is one band
+    /// element" and "the row's verses are separate elements of the walk" stop agreeing.
+    /// </summary>
+    /// <remarks>
+    /// Every earlier row book's verses cover every bar, so whatever pushes verse 2
+    /// pushes verse 1's X too and the composed band step equals the walked step —
+    /// <c>LooseLineSpacer.RunSlots</c>' seam ⑴ names that agreement a REGIME. This book
+    /// stands at the regime's edge: verse 1 is silent for the bar where the upper
+    /// staff's ink is deep (<c>c,,</c>, LilyPond <c>c,</c>), so the deep ink faces
+    /// verse 2 THROUGH verse 1's hole; and verse 2 is silent for the bar where verse 1
+    /// carries descenders (<c>gjy</c>) against the lower staff's tall <c>f''</c>
+    /// (LilyPond <c>f'''</c>) column, so verse 1's own position is what the closing
+    /// reads at that X. A live walk pushes verse 2 past the deep bar and leaves
+    /// verse 1 at its own floor; a band drags verse 1 down with verse 2, rigidly 2.8
+    /// above it, and the dragged descenders would bind the room at the tall column.
+    /// <para>
+    /// MEASURED (2026-08-26, 2.26.0, fonts pinned; PROBERH dump, refpoint to
+    /// refpoint): staff1 → verse 1 = 4.315782477239179 (verse 1's own floor),
+    /// verse step = 7.617107632164299 (the hole binds — LilyPond's own answer is
+    /// nearly five staff spaces off the rigid 2.800000), staff1 → staff2 =
+    /// 16.468064018267906, 2 staves on the page. The four predictions in the probe's
+    /// header (step above 2.8, verse 1 unmoved, control step exactly 2.8, control
+    /// verse 1 pushed) all held.
+    /// </para>
+    /// <para>
+    /// ★★★ AND LILY# READS THE PAGE AT VERSE GRANULARITY ALREADY: the room comes out
+    /// at the family's font term (−0.006569), which an enforced band minimum cannot
+    /// produce — dragged descenders against the tall column would floor the walk at
+    /// ~17.2, and the column was raised d''' → f''' precisely so that floor would
+    /// overtop verse 2's closing if the band were consulted. The verse step reads
+    /// 7.752974 (+0.135867), so the chain's walk accumulates the anchor staff's
+    /// skyline through the hole; the ±0.1359 pair on verse 1's two readings is ONE
+    /// face term (the gjy ascender — the ledger entries carry the elimination), with
+    /// verse 2's absolute position agreeing to 1.0e-4. What the book pins for the
+    /// granularity fold (unification stage 2): this page must not move.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE CONTROL <see cref="RVH2"/> DIFFERS BY ONE BAR: verse 1 sings the deep
+    /// bar too, faces the ink itself, and the composed drop equals the walked drop
+    /// again — any pair difference between the two books is the granularity seam and
+    /// nothing else. Its room binds at the tall column term for term:
+    /// 12.232890 + 0.508749 + 1.5 + 6.045 = 20.286639 in BOTH engines (Lily#
+    /// −0.000150). ⚠️ Lily# <c>g</c> is LilyPond <c>g'</c> (HANDOFF 5.5).
+    /// </para>
+    /// </remarks>
+    private static string RowVerseHoleScore(string name, bool holeInVerse1)
+    {
+        string verse1bar2 = holeInVerse1 ? "|" : "no no no no |";
+        return $$"""
+            octave absolute
+            time 4/4
+            key c major
+
+            part melody { clef treble }
+            part lower { clef treble }
+
+            section Main {
+              melody { g4 a g a | c,,4 c,, c,, c,, | g4 a g a | g4 a g a | }
+              lower { g4 a g a | g4 a g a | f''4 f'' f'' f'' | g4 a g a | }
+              lyrics one { no no no no | {{verse1bar2}} gjy gjy gjy gjy | no no no no | }
+              lyrics two { no no no no | no no no no | | no no no no | }
+            }
+
+            form main { ~Main }
+
+            score main "{{name}}" {
+              staff melody
+              lyrics one
+              lyrics two
+              staff lower
+            }
+            """;
+    }
+
+    /// <summary>The hole book — the mirror of book RVH1.</summary>
+    private static readonly string RVH1 = RowVerseHoleScore("RVH1", holeInVerse1: true);
+
+    /// <summary>The control — verse 1 sings the deep bar too, the mirror of book RVH2.</summary>
+    private static readonly string RVH2 = RowVerseHoleScore("RVH2", holeInVerse1: false);
+
+    /// <summary>
     /// A CHORD ROW THAT IS NOT ON EVERY SYSTEM — the mirrors of books ROWA and ROWAC, and the
     /// arrangement the user's fifth report is about.
     /// </summary>
@@ -11493,6 +11575,40 @@ internal static class LpGeometryProbes
         // revert was run (HANDOFF 5.4: show the net go red before believing it went green).
         new("lyrics.row.between-staves.two-verse.hara-kiri.verse-step.mid-system", ROWVH,
             g => g.LyricVerseStep(2), FourSystemsPerPageRagged),
+
+        // ★★★ THE VERSES WITH HOLES — books RVH1 / RVH2 (probe row-verse-hole.ly), and
+        // the edge of the regime every row book above stands inside. Their verses all
+        // cover every bar, so the composed band step equals the walked step and the pair
+        // walk's ONE-band-element spelling (RunSlots seam ⑴) agrees with the live walk by
+        // regime, not by invariant. RVH1's verse 1 is silent for the deep bar (c,, faces
+        // verse 2 through the hole) and verse 2 is silent for the descender bar (gjy
+        // against the tall f'' column), so LilyPond's live walk answers what no band can:
+        // verse 1 stays at its own floor 4.315782477239179 while the step opens to
+        // 7.617107632164299 — nearly five staff spaces off the rigid 2.800000 a band
+        // keeps. RVH2 differs by ONE bar (verse 1 sings the deep bar too) and its step is
+        // 2.800000000000001: the control that says any pair difference IS the seam.
+        // These entries stand BEFORE the granularity unification on purpose — folding the
+        // pair walk onto verse granularity is a behaviour change, and this is the ledger
+        // point HANDOFF §1 requires first. MEASURED: Lily#'s page is at verse granularity
+        // ALREADY on this arrangement (room at the font term where a band floor would
+        // read ~+0.7; step 7.75 = the walk accumulates through the hole), so the fold
+        // must move NOTHING here — these eight entries are the instrument that says so.
+        new("lyrics.row.between-staves.verse-hole.staff-to-lyric", RVH1,
+            g => g.LyricBaselineBelowStaff(0), RaggedBottomPaper),
+        new("lyrics.row.between-staves.verse-hole.verse-step", RVH1,
+            g => g.LyricVerseStep(), RaggedBottomPaper),
+        new("lyrics.row.between-staves.verse-hole.staff-staff-inside", RVH1,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("lyrics.row.between-staves.verse-hole.staves-on-first-page", RVH1,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+        new("lyrics.row.between-staves.verse-hole.control.staff-to-lyric", RVH2,
+            g => g.LyricBaselineBelowStaff(0), RaggedBottomPaper),
+        new("lyrics.row.between-staves.verse-hole.control.verse-step", RVH2,
+            g => g.LyricVerseStep(), RaggedBottomPaper),
+        new("lyrics.row.between-staves.verse-hole.control.staff-staff-inside", RVH2,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("lyrics.row.between-staves.verse-hole.control.staves-on-first-page", RVH2,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
 
         // THE SAME BOOK WITH A CHORD ROW ADDED, which is the branch that still runs at force
         // 0 — BuildLooseChainEnds and ComputeBetweenStavesEnd both decline a system carrying

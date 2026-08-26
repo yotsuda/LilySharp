@@ -23,6 +23,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Generic;
 using System.Collections.Immutable;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -130,6 +131,147 @@ internal static class LooseLineSpacer
     /// </remarks>
     public static RunLine ChordNamesLine(StaffSpacingParameters sp)
         => new(StaffAffinityDirection.Down, sp.ChordNames);
+
+    /// <summary>
+    /// Which of the run's SUPPLIERS one element came from. The reader resolves the
+    /// element's ink with this and the (<c>LineKey</c>, <c>Verse</c>) pair — ink is the
+    /// one thing <see cref="RunSlots"/> does not carry.
+    /// </summary>
+    internal enum RunSource { NoteBound, Row, AttachedChord }
+
+    /// <summary>
+    /// One element of a run, as the one spelling of the run's order
+    /// (<see cref="RunSlots"/>) emits it: which supplier it came from, which line and
+    /// which verse of that line it is, and the <see cref="RunLine"/> the walk's specs are
+    /// read off.
+    /// </summary>
+    internal readonly record struct RunSlot(
+        RunSource Source, int LineKey, int Verse, RunLine Line);
+
+    /// <summary>
+    /// A run's ELEMENTS — membership handed in, ORDER stated here, once: the anchor
+    /// staff's note-bound verses first, in ascending order; then the independent rows
+    /// standing under it, in alignment order, each contributing its verses in ascending
+    /// order (a chords row contributes the single line it is); and the closing staff's
+    /// attached chord line last, because it stands directly above that staff whatever
+    /// else the run holds. Also returned: where each row's elements begin, the
+    /// bookkeeping the solve's <c>RowFirstElement</c> keeps.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:919-925 loose_lines — the non-spaceable
+    /// lines between two spaceable ones are collected by ONE walk in alignment order, and
+    /// the same vector serves the springs, the reservation and the solve. Lily# walks a
+    /// run three times — the pair walk (<c>MultiStaffLayouter.PairBlocks</c>), the page
+    /// reservation (<c>LayoutEngine.RunBelowAnchor</c>) and the solve
+    /// (<c>LyricEngraver.BuildChainPrefix</c>) — and until 2026-08-26 each spelled this
+    /// order for itself, which is the drift HANDOFF 5.2.1② names and the one the
+    /// reservation's own remark says this island has paid for twice.
+    /// <para>
+    /// ⚠️ WHAT THE THREE READERS AGREE ON, AND WHERE THEY STILL PART (the session-261
+    /// run-unification design; the parts are NAMED here rather than papered over).
+    /// MEMBERSHIP at line level is one predicate lineage: the rows are
+    /// <c>ClassifySystem</c>'s Between/Trailing (the reservation reads it directly, the
+    /// solve through <c>BuildBetweenRowStaves</c>/<c>BuildTrailingRowStaves</c>; the pair
+    /// walk's callers accumulate inline with the same IsHidden + IsSpaceable filter,
+    /// because they run WHILE the layouts are being made and <c>ClassifySystem</c> reads
+    /// placed staves). The attached chord line is <c>AttachedChordLineInRun</c>, one
+    /// predicate, and it is absent from the below-system run because that run has no
+    /// closing staff inside the system. Two seams remain:
+    /// ⑴ GRANULARITY OF A LYRICS ROW — the pair walk takes it as ONE element whose ink is
+    /// <c>RowSkylinesAboutBaseline</c>'s composed band; the other two take its verses as
+    /// separate elements stepped live by <c>GetSpacingSpec</c>. The two agree only while
+    /// the composed step and the walked step are the same expression (nonstaff-nonstaff —
+    /// <c>RowSkylinesAboutBaseline</c>'s own remark), which is a regime, not an
+    /// invariant; folding the pair walk onto verse granularity CHANGES BEHAVIOUR and
+    /// needed a ledger point first. THE POINT EXISTS SINCE 2026-08-26
+    /// (<c>lyrics.row.between-staves.verse-hole.*</c>, books RVH1/RVH2 — verses with
+    /// X-holes, the regime's edge), and it MEASURED the seam's reach: the drawn page is
+    /// at VERSE granularity already — the room reads the family's font term where an
+    /// enforced band floor would read ~+0.7, and the verse step walks the anchor
+    /// staff's ink through the hole (+7.75 against the rigid 2.8) — so the fold must
+    /// move NOTHING on that arrangement, and those eight entries are the instrument
+    /// that says so. What still consumes the composed band (this walk's element ink,
+    /// the row's seeded staff skyline, the trailing band reservations) is the fold's
+    /// remaining question.
+    /// ⑵ VERSE IDENTITY — the solve keys a verse by its NUMBER (its ink lives in the
+    /// (system, line, verse) dictionaries), the other two by POSITION in the built list,
+    /// which never holds a verse whose ink came out empty (<c>BlockSkylines</c> skips
+    /// them). The difference is the degenerate verse with no laid syllable: the solve
+    /// walks it with empty ink, the other two do not walk it at all.
+    /// </para>
+    /// <para>
+    /// ⚠️ INK IS DELIBERATELY NOT HERE, AND STAYS WITH ITS NAMED READERS. The
+    /// unification's second stage asked "one supplier, or a named reader per source"
+    /// (HANDOFF 5.2.1② either way), and the 2026-08-26 measurement ANSWERED it: the
+    /// duplicate a fold would retire — the geometry side rebuilding syllable layouts
+    /// the solve's memo already holds — costs ~0.1 ms / ~0.3 MB per keystroke on
+    /// perf-lyrplain1k, because the lyric-band and system-layout caches already
+    /// confine the rebuild to the systems the edit changed; only a from-scratch
+    /// render pays it in full (~8% of the time and 53 MB on that all-lyrics 1k-bar
+    /// stress book, ~2% on real books). Numbers and harness:
+    /// scratch/p262-verseink.txt and scratch/p190-incbench's verseink mode (sealed
+    /// behind VERSEINK_METERS). That does not buy moving a supplier across pipeline
+    /// stages; revisit only if batch lyrics render time becomes a target. Today: the
+    /// attached chord line is ONE supplier for the pair walk and the solve
+    /// (<c>MultiStaffLayouter.AttachedChordLine</c>); a chords row is ONE function
+    /// (<c>ChordNameEngraver.RowSkylines</c>) at three call sites differing only in
+    /// which layouts they select; note-bound and lyric-row verse ink has TWO builders
+    /// — the geometry engraver's lists (pair walk, reservation) and
+    /// <c>BuildVerseSkylines</c>' dictionaries (the solve) — both through the one X
+    /// model (<c>CalculateSyllableLayout</c> + <c>ResolveOverlaps</c>), and "the two
+    /// builders answer alike" is BOUND by <c>VerseInkBuilderAgreementTests</c> (exact
+    /// functional equality per (system, line, verse); it fires on a 0.01 X drift) —
+    /// the net that keeps the named readers honest.
+    /// </para>
+    /// <para>
+    /// ⚠️ MEMO-SAFE BY CONSTRUCTION: this is a pure function of inputs the chain prefix
+    /// already read, so no new input crosses <c>LyricChainMemo</c>'s content-key clause.
+    /// </para>
+    /// </remarks>
+    internal static (List<RunSlot> Slots, List<(int RowStaff, int Index)> RowFirst)
+        RunSlots(
+            int noteBoundLineKey, IReadOnlyList<int> noteBoundVerses,
+            RunLine noteBoundLine,
+            IReadOnlyList<(int RowStaff, IReadOnlyList<int> Verses, RunLine Line)> rows,
+            (int StaffIndex, RunLine Line)? attachedChord)
+    {
+        var slots = new List<RunSlot>(noteBoundVerses.Count + rows.Count + 1);
+        foreach (int v in noteBoundVerses)
+            slots.Add(new RunSlot(RunSource.NoteBound, noteBoundLineKey, v, noteBoundLine));
+        var rowFirst = new List<(int RowStaff, int Index)>(rows.Count);
+        foreach (var row in rows)
+        {
+            if (row.Verses.Count == 0)
+                continue;
+            rowFirst.Add((row.RowStaff, slots.Count));
+            foreach (int v in row.Verses)
+                slots.Add(new RunSlot(RunSource.Row, row.RowStaff, v, row.Line));
+        }
+        if (attachedChord is { } a)
+            slots.Add(new RunSlot(RunSource.AttachedChord, a.StaffIndex, 0, a.Line));
+        return (slots, rowFirst);
+    }
+
+    /// <summary>The one-element verse list of a line that IS its only element — a chords
+    /// row, or a lyrics row at the pair walk's band granularity (seam ⑴ above).</summary>
+    internal static readonly IReadOnlyList<int> SingleElementLine = new[] { 0 };
+
+    /// <summary>A row contributing nothing — a chords row whose ink came out empty. It
+    /// stays in the argument list so the caller's loop stays positional; <see
+    /// cref="RunSlots"/> emits no slot for it.</summary>
+    internal static readonly IReadOnlyList<int> NoElements = System.Array.Empty<int>();
+
+    /// <summary>Verse keys for a reader that identifies elements by POSITION in its
+    /// supplier's built list (seam ⑵ above): 0..count-1.</summary>
+    internal static IReadOnlyList<int> ByPosition(int count)
+    {
+        if (count == 0)
+            return NoElements;
+        var keys = new int[count];
+        for (int i = 0; i < count; i++)
+            keys[i] = i;
+        return keys;
+    }
 
     /// <summary>
     /// The spring from a loose line to a NULL neighbour — the page edge, or the null line

@@ -873,27 +873,27 @@ internal sealed class LyricEngraver
                 // :1266-1342). It used to carry neither, and the two Lyrics specs were
                 // applied to every element whatever context it came from; that is why a
                 // chords row could not be IN a run and had to be dropped from it.
-                var elements = new List<(int Line, int Verse)>();
-                var elementLines = new List<LooseLineSpacer.RunLine>();
-                var rowFirstElement = new List<(int RowStaff, int Index)>();
+                // ★ THE ORDER IS LooseLineSpacer.RunSlots'S SINCE 2026-08-26 — the one
+                // spelling all three walks of a run read. This reader keys a verse by its
+                // NUMBER (that remark's seam ⑵), because its ink lives in the
+                // (system, line, verse) dictionaries.
                 var noteBoundLine = LooseLineSpacer.NoteBoundLyricLine(staffSpacing);
-                foreach (int v in family.Lines
-                             .Where(l => measureToSystem.TryGetValue(l.Item.MeasureIndex, out int s)
-                                         && s == sysIdx)
-                             .Select(l => l.Item.VerseNumber).Distinct().OrderBy(v => v))
-                {
-                    elements.Add((familyKey, v));
-                    elementLines.Add(noteBoundLine);
-                }
+                var noteBoundVerses = family.Lines
+                    .Where(l => measureToSystem.TryGetValue(l.Item.MeasureIndex, out int s)
+                                && s == sysIdx)
+                    .Select(l => l.Item.VerseNumber).Distinct().OrderBy(v => v)
+                    .ToList();
+                var rowsIn = new List<(int RowStaff, IReadOnlyList<int> Verses,
+                    LooseLineSpacer.RunLine Line)>();
                 foreach (int rowStaff in isUpperFamily
                              ? BetweenRows(sysIdx, familyKey) : TrailingRows(sysIdx))
                 {
-                    int before = elements.Count;
                     var rowLine = runLineOf?.Invoke(rowStaff) ?? noteBoundLine;
                     // ONE DELEGATE ANSWERS BOTH QUESTIONS — "is this a chords row" and "what
                     // is its ink" — because they have one answer. A lyrics row returns null
                     // here and its verses are read off the layouts below, which is where its
                     // ink already lives.
+                    IReadOnlyList<int> verses;
                     if (chordRowInk?.Invoke(sysIdx, rowStaff) is { } ink)
                     {
                         if (!ink.Up.IsEmpty || !ink.Down.IsEmpty)
@@ -902,24 +902,21 @@ internal sealed class LyricEngraver
                             // from 1, so the key cannot collide with one.
                             up[(sysIdx, rowStaff, 0)] = ink.Up;
                             down[(sysIdx, rowStaff, 0)] = ink.Down;
-                            elements.Add((rowStaff, 0));
-                            elementLines.Add(rowLine);
+                            verses = LooseLineSpacer.SingleElementLine;
                         }
+                        else
+                            verses = LooseLineSpacer.NoElements;
                     }
                     else
                     {
-                        foreach (int v in layouts
-                                     .Where(l => l.Item.IsLyricsRow && l.Item.StaffIndex == rowStaff
-                                                 && measureToSystem.TryGetValue(l.Item.MeasureIndex, out int s)
-                                                 && s == sysIdx)
-                                     .Select(l => l.Item.VerseNumber).Distinct().OrderBy(v => v))
-                        {
-                            elements.Add((rowStaff, v));
-                            elementLines.Add(rowLine);
-                        }
+                        verses = layouts
+                            .Where(l => l.Item.IsLyricsRow && l.Item.StaffIndex == rowStaff
+                                        && measureToSystem.TryGetValue(l.Item.MeasureIndex, out int s)
+                                        && s == sysIdx)
+                            .Select(l => l.Item.VerseNumber).Distinct().OrderBy(v => v)
+                            .ToList();
                     }
-                    if (elements.Count > before)
-                        rowFirstElement.Add((rowStaff, before));
+                    rowsIn.Add((rowStaff, verses, rowLine));
                 }
                 // ...and the CLOSING staff's own attached chord line, the run's LAST
                 // element: the ChordNames context above the next spaceable staff is one of
@@ -932,19 +929,22 @@ internal sealed class LyricEngraver
                 // Its DRAWN baseline is not read from this solve — the walk's closing step
                 // is (MultiStaffLayouter.AttachedChordBaselineAboveTop), which is the same
                 // number to within the LARGE_STRETCH asymptotics both engines share.
+                (int StaffIndex, LooseLineSpacer.RunLine Line)? attached = null;
                 if (isUpperFamily
                     && attachedChordBelow?.Invoke(sysIdx, familyKey) is { } chordLine)
                 {
                     up[(sysIdx, chordLine.StaffIndex, 0)] = chordLine.Up;
                     down[(sysIdx, chordLine.StaffIndex, 0)] = chordLine.Down;
-                    elements.Add((chordLine.StaffIndex, 0));
-                    elementLines.Add(LooseLineSpacer.ChordNamesLine(staffSpacing));
+                    attached = (chordLine.StaffIndex,
+                        LooseLineSpacer.ChordNamesLine(staffSpacing));
                 }
-                if (elements.Count == 0) return null;
+                var (slots, rowFirstElement) = LooseLineSpacer.RunSlots(
+                    familyKey, noteBoundVerses, noteBoundLine, rowsIn, attached);
+                if (slots.Count == 0) return null;
 
 
                 var (anchorDown, _, _) = ResolveAnchor(sysIdx);
-                var gaps = ImmutableArray.CreateBuilder<LooseLineSpacer.Gap>(elements.Count);
+                var gaps = ImmutableArray.CreateBuilder<LooseLineSpacer.Gap>(slots.Count);
 
                 // ⚠️ ONE RUNNING DOWN-SKYLINE, NOT A PAIR PER GAP, because that is what the
                 // alignment is: it walks the group once, and after fixing each distance it
@@ -998,19 +998,22 @@ internal sealed class LyricEngraver
                 // gap 0 — it is an anchor-table scalar and must not be baked into a cached
                 // value.
                 var previousLine = LooseLineSpacer.SpaceableStaffLine;
-                for (int i = 0; i < elements.Count; i++)
+                var elements = ImmutableArray.CreateBuilder<(int Line, int Verse)>(slots.Count);
+                foreach (var slot in slots)
                 {
                     var spec = StaffAffinity.GetSpacingSpec(
                         previousLine.Affinity, previousLine.Specs,
-                        elementLines[i].Affinity, elementLines[i].Specs,
+                        slot.Line.Affinity, slot.Line.Specs,
                         staffSpacing.StaffStaff);
                     gaps.Add(new LooseLineSpacer.Gap(
-                        spec, Advance(elements[i], spec.Padding, spec.MinimumDistance)));
-                    previousLine = elementLines[i];
+                        spec, Advance((slot.LineKey, slot.Verse),
+                            spec.Padding, spec.MinimumDistance)));
+                    previousLine = slot.Line;
+                    elements.Add((slot.LineKey, slot.Verse));
                 }
 
                 return new LyricChainMemo.ChainPrefix(
-                    elements.ToImmutableArray(), rowFirstElement.ToImmutableArray(),
+                    elements.MoveToImmutable(), rowFirstElement.ToImmutableArray(),
                     gaps.MoveToImmutable(), walk, previousLine);
             }
             foreach (int system in chainSystems)
