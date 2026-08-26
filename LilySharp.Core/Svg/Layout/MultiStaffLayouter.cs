@@ -676,7 +676,7 @@ internal sealed class MultiStaffLayouter
         VerticalSpacingSpec spec, double refpointSpan,
         List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines,
         int upperStaffIndex, int lowerStaffIndex,
-        IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>? looseLines = null)
+        IReadOnlyList<PairLooseLine>? looseLines = null)
         => staffSkylines is null
             ? Math.Max(0, spec.BasicDistance - refpointSpan)
             : CalculateStaffGapWithSkylines(
@@ -2110,6 +2110,21 @@ internal sealed class MultiStaffLayouter
                     return at + k;
             return -1;
         }
+        Staff? StaffAt(int groupIndex, int globalIdx)
+        {
+            int at = 0;
+            for (int g = 0; g < groupIndex; g++)
+                at += score.StaffGroups[g].StaffCount;
+            int k = globalIdx - at;
+            var staves = score.StaffGroups[groupIndex].Staves;
+            return k >= 0 && k < staves.Length ? staves[k] : null;
+        }
+
+        // The last SPACEABLE staff placed so far and the text rows placed since — the state
+        // that lets a spaceable pair with rows between it be placed at the alignment's own
+        // answer (see the pair branch below) instead of at the rows' stacked bands.
+        (Staff Staff, StaffLayout Layout, StaffGroup Group)? lastSpaceable = null;
+        var rowsSinceSpaceable = new List<(Staff Staff, StaffLayout Layout)>();
 
         for (int i = 0; i < score.StaffGroups.Length; i++)
         {
@@ -2133,6 +2148,23 @@ internal sealed class MultiStaffLayouter
             if (!groupIsDead)
             {
                 currentY -= layout.Height;
+
+                // Track the alignment state the pair branch below reads: the last placed
+                // SPACEABLE staff, and the non-spaceable rows placed since it.
+                for (int k = 0; k < group.Staves.Length && k < layout.Staves.Length; k++)
+                {
+                    if (layout.Staves[k].IsHidden)
+                        continue;
+                    if (StaffAffinity.IsSpaceable(group.Staves[k].StaffAffinity))
+                    {
+                        lastSpaceable = (group.Staves[k], layout.Staves[k], group);
+                        rowsSinceSpaceable.Clear();
+                    }
+                    else if (lastSpaceable is not null)
+                    {
+                        rowsSinceSpaceable.Add((group.Staves[k], layout.Staves[k]));
+                    }
+                }
 
                 // The next group that still has a staff — NOT simply the next group, which
                 // may have died. LilyPond's element list has already dropped the dead ones,
@@ -2190,6 +2222,53 @@ internal sealed class MultiStaffLayouter
                         ? TextRowPairGap
                         : StaffGap(spec, span, staffSkylines, upperLive, lowerLive,
                             looseLines?.Invoke(upperLive, lowerLive));
+
+                    // ★ A SPACEABLE PAIR WITH ROWS BETWEEN IS PLACED AT THE ALIGNMENT'S OWN
+                    // ANSWER (2026-08-26). The incremental stack above prices this boundary
+                    // as row-to-staff and has already priced staff-to-row and row-to-row —
+                    // three Lily#-shaped steps whose sum is the rows' BAND stack, a quantity
+                    // LilyPond never computes. LilyPond's pair is one spring whose length at
+                    // rest is max(the spec's basic-distance, the alignment minimum walked
+                    // over the rows) — the same expression CalculateStaffGapWithSkylines is
+                    // for a pair with note-bound lines between — and the rows are then
+                    // distributed INTO that span (distribute_loose_lines; Lily#'s
+                    // LyricEngraver solves them and ApplySolvedRowPositions moves them), so
+                    // the bands the rows were provisionally stacked in claim no room of
+                    // their own.
+                    // LILYPOND-REF: lily/page-layout-problem.cc:936-939 distribute_loose_lines
+                    // — the two positions handed in are consecutive SPACEABLE staves'.
+                    // LILYPOND-REF: lily/align-interface.cc:201-285 internal_get_minimum_translations
+                    // — the walk the minimum comes from, rows included (:919-925 collects them).
+                    // ⚠️ MEASURED before this branch existed (book CHL1, session 258): the
+                    // stacked bands left the pair 14.552250371 apart where the walk reads
+                    // 13ish and LilyPond 13.024768437, and the chain then spread the +1.5 of
+                    // slack over its three springs — no step exact, every step inherited it.
+                    // ⚠️ THE SAME SPEC AND THE SAME BLOCKS AS StaffSprings.AddSpring, or the
+                    // spring's floor and the drawn distance describe different alignments
+                    // and RespaceStaves moves what the single-page path left alone — the two
+                    // page paths must read one geometry.
+                    if (staffSkylines is not null
+                        && rowsSinceSpaceable.Count > 0
+                        && lastSpaceable is { } upper)
+                    {
+                        int lowIdx = FirstLiveIndex(next);
+                        var lowStaff = lowIdx >= 0 ? StaffAt(next, lowIdx) : null;
+                        if (lowStaff is not null
+                            && StaffAffinity.IsSpaceable(lowStaff.StaffAffinity))
+                        {
+                            var pairSpec = InterGroupSpec(upper.Group, nextGroup, sp);
+                            var blocks = PairBlocks(
+                                looseLines?.Invoke(upper.Layout.StaffIndex, lowIdx),
+                                rowsSinceSpaceable, staffSkylines, sp);
+                            double pairMin = AlignmentMinimumWithSkylines(
+                                pairSpec, staffSkylines, upper.Layout.StaffIndex, lowIdx,
+                                blocks);
+                            double pairDist = Math.Max(pairSpec.BasicDistance, pairMin);
+                            double targetTop = StaffRefpoint(upper.Layout) - pairDist
+                                + PlacedRefpointBelowTop(score, lowStaff);
+                            interGroupGap = currentY - targetTop;
+                        }
+                    }
                     currentY -= interGroupGap;
                 }
             }
@@ -2418,26 +2497,53 @@ internal sealed class MultiStaffLayouter
             // note-bound block hangs off the upper staff and so comes first, then the rows
             // standing between the two staves in alignment order, each with the skylines
             // BuildAllStaffSkylines already seeded for it.
-            var walked = looseLines?.Invoke(up.Layout.StaffIndex, low.Layout.StaffIndex);
-            IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>? blocks = walked;
-            if (lines.Count > 0)
-            {
-                var all = new List<(VerticalSkyline Up, VerticalSkyline Down)>(
-                    (walked?.Count ?? 0) + lines.Count);
-                if (walked != null)
-                    all.AddRange(walked);
-                foreach (var line in lines)
-                    all.Add(line.Layout.StaffIndex < staffSkylines.Count
-                        ? staffSkylines[line.Layout.StaffIndex]
-                        : default);
-                blocks = all;
-            }
+            var blocks = PairBlocks(
+                looseLines?.Invoke(up.Layout.StaffIndex, low.Layout.StaffIndex),
+                lines, staffSkylines, sp);
 
             double minimum = AlignmentMinimumWithSkylines(
                 spec, staffSkylines, up.Layout.StaffIndex, low.Layout.StaffIndex, blocks);
             builder.Add(new StaffSpring(
                 up.Layout.StaffIndex, low.Layout.StaffIndex, spec, minimum));
         }
+    }
+
+    /// <summary>
+    /// A spaceable pair's run, assembled for the alignment walk: the upper staff's own
+    /// note-bound block first, then the independent rows standing between the two staves in
+    /// alignment order — each with the skylines <see cref="BuildAllStaffSkylines"/> already
+    /// seeded for it and the <c>staff-affinity</c> / <c>nonstaff-*</c> set
+    /// <c>get_spacing_spec</c> reads off that KIND of line.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:919-925 loose_lines — the run is collected
+    /// in one order for one walk; a second assembly of it is how the spring's floor and the
+    /// drawn placement come to describe different alignments.
+    /// LILYPOND-REF: ly/engraver-init.ly:648-658 Lyrics and :719-723 ChordNames — which
+    /// spec set a row carries is a fact about its context, not about the score.
+    /// </remarks>
+    private static IReadOnlyList<PairLooseLine>? PairBlocks(
+        IReadOnlyList<PairLooseLine>? walked,
+        IReadOnlyList<(Staff Staff, StaffLayout Layout)> rows,
+        List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
+        StaffSpacingParameters sp)
+    {
+        if (rows.Count == 0)
+            return walked;
+        var all = new List<PairLooseLine>((walked?.Count ?? 0) + rows.Count);
+        if (walked != null)
+            all.AddRange(walked);
+        foreach (var row in rows)
+        {
+            var sky = row.Layout.StaffIndex < staffSkylines.Count
+                ? staffSkylines[row.Layout.StaffIndex]
+                : default;
+            all.Add(new PairLooseLine(
+                sky.Up, sky.Down,
+                row.Staff.StaffAffinity,
+                row.Staff.IsLyricsTextRow ? sp.Lyrics : sp.ChordNames));
+        }
+        return all;
     }
 
     /// <summary>
@@ -3441,7 +3547,7 @@ internal sealed class MultiStaffLayouter
         VerticalSpacingSpec spec, double refpointSpan,
         List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
         int upperStaffIndex, int lowerStaffIndex,
-        IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>? looseLines = null)
+        IReadOnlyList<PairLooseLine>? looseLines = null)
     {
         if (upperStaffIndex >= staffSkylines.Count || lowerStaffIndex >= staffSkylines.Count)
             return Math.Max(0, spec.BasicDistance - refpointSpan);
@@ -3498,7 +3604,7 @@ internal sealed class MultiStaffLayouter
         VerticalSpacingSpec spec,
         List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
         int upperStaffIndex, int lowerStaffIndex,
-        IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>? looseLines = null)
+        IReadOnlyList<PairLooseLine>? looseLines = null)
     {
         if (upperStaffIndex >= staffSkylines.Count || lowerStaffIndex >= staffSkylines.Count)
             return spec.MinimumDistance;
@@ -3516,35 +3622,44 @@ internal sealed class MultiStaffLayouter
         // neighbour. One expression for both, because LilyPond has one loop for both.
         // LILYPOND-REF: lily/align-interface.cc:201-285, run over
         // upper staff, line 1 .. line n, lower staff.
+        //
+        // The spec each step takes is get_spacing_spec's per-LINE selection, asked of the
+        // ported selector rather than re-enumerated here — the walk hard-coded the Lyrics
+        // constants by step position (first = related, rest = nonstaff, closing =
+        // unrelated) until 2026-08-26, which is the right answer exactly while every line
+        // in the run is a Lyrics line and silently the wrong one for a ChordNames line
+        // (measured: the chords-then-lyrics run's middle step read the Lyrics
+        // minimum-distance 2.8 where LilyPond reads the ChordNames padding 0.5 over the
+        // ink, 2.320115015 on book CHL1).
+        // LILYPOND-REF: lily/page-layout-problem.cc:1266-1342 get_spacing_spec — see
+        // StaffAffinity.GetSpacingSpec, the one home of the selection.
         bool hasLooseLines = looseLines is { Count: > 0 };
         var walk = new AlignmentWalk();
         walk.Seed(upperDown);
+        int? prevAffinity = null;
+        StaffSpacingParameters.NonStaffSpacing prevSpecs = default;
         for (int k = 0; k < (looseLines?.Count ?? 0); k++)
         {
-            // The spec each step takes.
-            // LILYPOND-REF: lily/page-layout-problem.cc:1284-1294 get_spacing_spec — before
-            // is spaceable, after is not and its affinity is UP, so the staff-to-first-line
-            // step is the line's nonstaff-relatedstaff-spacing.
-            // LILYPOND-REF: lily/page-layout-problem.cc:1315-1332 — neither neighbour
-            // spaceable, so line to line is the UPPER line's nonstaff-nonstaff-spacing,
-            // whose minimum-distance 2.8 (ly/engraver-init.ly:653-657) belongs in the WALK:
-            // align-interface.cc:231-233 raises dy by it BEFORE the raise and merge, so it
-            // changes the accumulation every later line is measured against. ⚠️ THE CHAIN
-            // PASSES THE SAME TWO ARGUMENTS (LyricEngraver.DistributeLooseLines) — it did not
-            // until 2026-07-27, and while it did not, "one walk" was a claim about the code
-            // and not about the numbers.
-            walk.Advance(
-                looseLines![k].Up, looseLines[k].Down,
-                k == 0 ? SkylineDrop.RelatedStaffPadding : SkylineDrop.NonStaffNonStaffPadding,
-                k == 0 ? 0 : SkylineDrop.NonStaffNonStaffMinimum);
+            var line = looseLines![k];
+            // ⚠️ THE MINIMUM-DISTANCE BELONGS IN THE WALK: align-interface.cc:231-233
+            // raises dy by it BEFORE the raise and merge, so it changes the accumulation
+            // every later line is measured against. The chain passes the same two
+            // arguments (LyricEngraver.DistributeLooseLines).
+            var stepSpec = StaffAffinity.GetSpacingSpec(
+                prevAffinity, prevSpecs, line.Affinity, line.Specs, spec);
+            walk.Advance(line.Up, line.Down, stepSpec.Padding, stepSpec.MinimumDistance);
+            prevAffinity = line.Affinity;
+            prevSpecs = line.Specs;
         }
-        // ...and the last element to the staff below.
-        // LILYPOND-REF: lily/page-layout-problem.cc:1299-1312 — before is the loose line,
-        // its affinity is UP and after is spaceable, so get_spacing_spec returns the LINE's
-        // nonstaff-unrelatedstaff-spacing. Same closing step LyricEngraver's chain takes, so
-        // the block fits the room. With no loose lines it is the staff pair's own spec.
-        double total = walk.Where + walk.Distance(
-            lowerUp, hasLooseLines ? SkylineDrop.UnrelatedStaffPadding : spec.Padding);
+        // ...and the last element to the staff below — the LINE's own spec again
+        // (get_spacing_spec :1299-1312: an affinity-UP line closes on its
+        // nonstaff-unrelatedstaff-spacing, any other on its nonstaff-relatedstaff-spacing).
+        // Same closing step LyricEngraver's chain takes, so the block fits the room. With
+        // no loose lines it is the staff pair's own spec.
+        double closingPadding = hasLooseLines
+            ? StaffAffinity.GetSpacingSpec(prevAffinity, prevSpecs, null, default, spec).Padding
+            : spec.Padding;
+        double total = walk.Where + walk.Distance(lowerUp, closingPadding);
 
         // The two STAVES' own minimum-distance applies across the whole span — over the loose
         // lines when there are any.
@@ -3559,6 +3674,27 @@ internal sealed class MultiStaffLayouter
     }
 
     /// <summary>
+    /// One non-spaceable line of a pair's run, as the alignment walk needs it: its own
+    /// up/down skylines about its reference point, and the two things
+    /// <c>get_spacing_spec</c> reads off the grob — its <c>staff-affinity</c> and its own
+    /// <c>nonstaff-*</c> spec set.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1266-1342 get_spacing_spec — the selection
+    /// is per LINE, off the line's own properties, which is why the walk cannot carry one
+    /// score-wide spec set: a run may hold a Lyrics line and a ChordNames line at once and
+    /// the two declare different numbers under the same property names
+    /// (<see cref="StaffSpacingParameters.Lyrics"/> /
+    /// <see cref="StaffSpacingParameters.ChordNames"/>). The walk carried exactly that
+    /// score-wide set — the Lyrics constants, hard-coded by step position — until
+    /// 2026-08-26; the chain's springs stopped doing so the same day the run port landed
+    /// (<c>LooseLineSpacer.RunLine</c>), and this is the walk catching up.
+    /// </remarks>
+    internal readonly record struct PairLooseLine(
+        VerticalSkyline Up, VerticalSkyline Down,
+        int? Affinity, StaffSpacingParameters.NonStaffSpacing Specs);
+
+    /// <summary>
     /// The alignment's non-spaceable elements between two spaceable staves of one system —
     /// the <c>with lyrics</c> block, one self-relative skyline pair per verse, in order.
     /// Null or empty means the two staves are adjacent in the alignment.
@@ -3569,6 +3705,6 @@ internal sealed class MultiStaffLayouter
     /// system's measure range and can build the syllable geometry
     /// (<c>LyricEngraver.NoteBoundBlockSkylines</c>).
     /// </remarks>
-    internal delegate IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>? LooseLinesBetween(
+    internal delegate IReadOnlyList<PairLooseLine>? LooseLinesBetween(
         int upperStaffIndex, int lowerStaffIndex);
 }

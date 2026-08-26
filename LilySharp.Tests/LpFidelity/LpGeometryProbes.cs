@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -2420,7 +2420,7 @@ internal static class LpGeometryProbes
         part melody { clef treble }
 
         section A {
-          melody { c'4 c' g'' g'' | a'' a'' g''2 | }
+          melody { c'4 c' g' g' | a' a' g'2 | }
           chords prog { Dmaj7 | Em7 }
           lyrics verse { Twin- kle twin- kle | lit- tle star | }
         }
@@ -2428,10 +2428,10 @@ internal static class LpGeometryProbes
         form main { ~A }
 
         score main "CHL1" {
-          staff melody
+          staff ~melody
           chords prog as names
           lyrics verse sings melody
-          staff melody
+          staff ~melody
         }
         """;
 
@@ -2455,18 +2455,209 @@ internal static class LpGeometryProbes
         part melody { clef treble }
 
         section A {
-          melody { c'4 c' g'' g'' | a'' a'' g''2 | }
+          melody { c'4 c' g' g' | a' a' g'2 | }
           chords prog { Dmaj7 | Em7 }
         }
 
         form main { ~A }
 
         score main "CHL2" {
-          staff melody
+          staff ~melody
           chords prog as names
-          staff melody
+          staff ~melody
         }
         """;
+
+    /// <summary>
+    /// CHL1 WITH THE TWO ROWS SWAPPED — <c>staff / lyrics / chords / staff</c>, the order
+    /// whose affinities DECREASE, i.e. the spelling LilyPond does NOT warn about.
+    /// </summary>
+    /// <remarks>
+    /// The control on the other side of the diagnostic: CHL1 carries the same two rows in the
+    /// order that draws "staff-affinities should only decrease", and whether Lily# should say
+    /// the same is an open language decision. These readings are what make that decision a
+    /// spacing-neutral one — both spellings are ordinary runs to LilyPond.
+    /// <para>
+    /// ★★★ ITS MEASUREMENTS RESTATE BOTH PER-LINE INVARIANTS AT ONCE (probe header,
+    /// 2026-08-26): its first step is CHL3's 4.650841258 — what stands BELOW the lyric row
+    /// cannot move the spring that hangs it under the staff — and its last is CHL2's
+    /// 4.045000000 — what stands ABOVE the chords row cannot move the spring that holds it
+    /// off the staff below. A run priced per run rather than per line has no way to satisfy
+    /// all four books at once.
+    /// </para>
+    /// </remarks>
+    private const string CHL4 = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section A {
+          melody { c'4 c' g' g' | a' a' g'2 | }
+          chords prog { Dmaj7 | Em7 }
+          lyrics verse { Twin- kle twin- kle | lit- tle star | }
+        }
+
+        form main { ~A }
+
+        score main "CHL4" {
+          staff ~melody
+          lyrics verse sings melody
+          chords prog as names
+          staff ~melody
+        }
+        """;
+
+    /// <summary>
+    /// ONE VERSE BETWEEN TWO STAVES — CHL3's shape, restated as the verse family's control
+    /// (LilyPond reads the two books identically; see probes/verse-carry.ly).
+    /// </summary>
+    private const string VRS1 = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section A {
+          melody { c'4 c' g' g' | a' a' g'2 | }
+          lyrics v1 { Twin- kle twin- kle | lit- tle star | }
+        }
+
+        form main { ~A }
+
+        score main "VRS1" {
+          staff ~melody
+          lyrics v1 sings melody
+          staff ~melody
+        }
+        """;
+
+    /// <summary>
+    /// TWO VERSES BETWEEN TWO STAVES — the verse step as a RUN step. In LilyPond every verse
+    /// is a Lyrics line of its own, so the step between them is get_spacing_spec's
+    /// loose/loose branch (the upper line's nonstaff-nonstaff-spacing, minimum-distance 2.8
+    /// binding on this ink).
+    /// </summary>
+    /// <remarks>
+    /// ★ MEASURED 2026-08-26: the DRAWN step is 2.800000000 exactly (residual 0) — the run
+    /// solves the verses, the band's flat <c>TextRowVerseSpacing</c> 3.2 does NOT reach
+    /// this book's drawn pair, and the ROOM agrees with LilyPond to face bits (−1e-4).
+    /// The +3.4999 this family first recorded on every room was the TWIN's octave error
+    /// (see verse-run.one's why), not the engine.
+    /// <para>
+    /// ⚠️ ONE FURNITURE MISMATCH, measured benign: this twin draws stanza labels
+    /// (<c>1.</c>/<c>2.</c>) the LilyPond book does not. VRS1 carries none and the two
+    /// rooms' residuals agree to 3e-6, so the labels bind nothing here — but re-twin before
+    /// opening any reading whose binding X can reach the row's left edge. (There is no .lys
+    /// spelling that hides a plain verse's number: <c>[~N. …]</c> is the per-OCCURRENCE
+    /// selector and would ask for a repeat pass this book does not have.)
+    /// </para>
+    /// </remarks>
+    private const string VRS2 = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section A {
+          melody { c'4 c' g' g' | a' a' g'2 | }
+          lyrics v1 { Twin- kle twin- kle | lit- tle star | }
+          lyrics v2 { How I won- der | what you are | }
+        }
+
+        form main { ~A }
+
+        score main "VRS2" {
+          staff ~melody
+          lyrics v1 sings melody
+          lyrics v2 sings melody
+          staff ~melody
+        }
+        """;
+
+    /// <summary>
+    /// THE CARRY BOOK: two systems, and verse 2 sings only on the second. LilyPond's first
+    /// system reads DIGIT FOR DIGIT like VRS1's and its second like VRS2's — a verse with
+    /// nothing on a system is removed (remove-empty) and reserves nothing.
+    /// </summary>
+    /// <remarks>
+    /// ★ MEASURED 2026-08-26, and the seeding prediction MISSED the good way: Lily# ALSO
+    /// reads system 1 digit for digit like VRS1 — <c>Staff.TextRowVerses</c> is a score-wide
+    /// maximum (MeasureCollector), but its +3.2 band does NOT reach this book's drawn staff
+    /// pair. Where the carry WAS measured landing (HANDOFF 257 ⑬: the user's book, 16.652,
+    /// with a CHORDS row in the run) is a different shape, so the carry's reach is narrower
+    /// than the <c>TextRowVerseSpacing</c> remark says.
+    /// <para>
+    /// ⚠️ <c>~A break ~B</c>, NOT <c>A break B</c> — the LilyPond book has no section marks
+    /// (the trap the band-floor books already carry).
+    /// </para>
+    /// </remarks>
+    private const string VRC1 = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section A {
+          melody { c'4 c' g' g' | a' a' g'2 | }
+          lyrics v1 { Twin- kle twin- kle | lit- tle star | }
+        }
+
+        section B {
+          melody { c'4 c' g' g' | a' a' g'2 | }
+          lyrics v1 { Twin- kle twin- kle | lit- tle star | }
+          lyrics v2 { How I won- der | what you are | }
+        }
+
+        form main { ~A break ~B }
+
+        score main "VRC1" {
+          staff ~melody
+          lyrics v1 sings melody
+          lyrics v2 sings melody
+          staff ~melody
+        }
+        """;
+
+    /// <summary>
+    /// AN INDEPENDENT LYRIC ROW UNFOLDED BETWEEN TWO STAVES — the one corpus shape the
+    /// session-258 pair-placement port moves, and the corpus book it moves
+    /// (audit/lp-regression/lys/input-order-alignment.lys, whose row's track name matches
+    /// no part and so never folds).
+    /// </summary>
+    /// <remarks>
+    /// The LilyPond side (probes/row-between-staves.ly) reads the pair at 9.240492503 —
+    /// the walk's floors EXACTLY, no slack, barely over basic-distance 9 — and its
+    /// closing step's binding is not the lyric's ink: the walk faces staff1's raised down
+    /// ink against staff2's ^"Text" (4.138464013 above its refpoint there). Lily#'s Text
+    /// stands ~0.35 higher, which the pair now reads because the walk is one walk; the
+    /// OLD pairwise spelling (row against staff2 alone) was structurally blind to that
+    /// collision and matched LilyPond here by accident.
+    /// </remarks>
+    private const string IOA = """
+        octave absolute
+        time 4/4
+
+        part one { }
+        part two { }
+
+        lyrics wa { section Main { blah | | | | } }
+        lyrics wb { section Main { blah | | | | } }
+
+        section Main {
+          one { <b c'>2 s2 | <b c'>2@f s2 | <b c'>2@text("Text").up s2 | <b c'>2@staccatissimo s2 | }
+          two { <c' b>2 s2 | <c' b>2@f s2 | <c' b>2@text("Text").up s2 | <c' b>2@staccatissimo s2 | }
+        }
+
+        form main { ~Main }
+
+        score main "IOA" { staff ~one  lyrics wa staff ~two  lyrics wb }
+        """;
+
 
     /// <summary>The plain-name half — the floor LOSES to basic-distance 6.</summary>
     private static readonly string CHR1 = ChordRowFloorPageScore("CHR1", sharp: false);
@@ -10715,12 +10906,14 @@ internal static class LpGeometryProbes
         // page.chord-row.staff-to-chord-baseline makes for the page's floor, made here for
         // the run. The three steps are three DIFFERENT branches of get_spacing_spec
         // (:1284-1294, :1313-1331, :1299-1305 — see the CHL1 header), and the fourth is the
-        // ROOM they are solved into, which is not the chain's at all: it is
-        // MultiStaffLayouter's staff-to-staff distance, and on a book with rows between the
-        // staves that is still Lily#'s BAND stack rather than LilyPond's alignment minimum.
-        // ⚠️ EXPECT THE ROOM TO CARRY MOST OF THE RESIDUAL, and the steps to inherit it
-        // through the solve — the closing spring has LARGE_STRETCH, so slack lands there.
-        // The room entry is what makes that legible instead of three unexplained numbers.
+        // ROOM they are solved into. ⚠️ THE SEEDING SESSION READ THE ROOM AS A BAND STACK
+        // CARRYING +5.027 AND THAT WAS THE TWIN: this book first shipped with five of its
+        // seven notes an octave (3.500000000) high (LilyPond's \relative transcribed
+        // literally — RULES 5.0 probe trap 5), so every reading against the staff's up ink
+        // carried the octave. Corrected, the drawn room IS the alignment walk and carries
+        // +1.527481934 — the sum of the three steps' own residuals exactly — and the open
+        // defects are per step: the first step's broken invariant (see the whys), the
+        // middle-step spec, and the closing's solve.
         new("lyrics.chord-lyric-run.staff-to-chord", CHL1,
             g => g.ChordBaselineBelowStaff(0), RaggedBottomPaper),
         new("lyrics.chord-lyric-run.chord-to-lyric", CHL1,
@@ -10738,6 +10931,68 @@ internal static class LpGeometryProbes
             g => g.ChordBaselineBelowStaff(0), RaggedBottomPaper),
         new("lyrics.chord-run.staff-to-staff", CHL2,
             g => g.StaffGap(), RaggedBottomPaper),
+
+        // ...and the SWAPPED order — staff / lyrics / chords / staff, the spelling whose
+        // affinities decrease and LilyPond does not warn about. Its first step restates
+        // CHL3's invariant (4.650841258 — what stands below the lyric row cannot move its
+        // spring) and its last CHL2's (4.045000000 — what stands above the chords row
+        // cannot move its spring), so the two entries here watch the middle step and the
+        // room those invariants leave.
+        new("lyrics.lyric-chord-run.lyric-to-chord", CHL4,
+            g => g.ChordBaselineBelowStaff(0) - g.LyricBaselineBelowStaff(0), RaggedBottomPaper),
+        new("lyrics.lyric-chord-run.staff-to-staff", CHL4,
+            g => g.StaffGap(), RaggedBottomPaper),
+
+        // --- VERSES AS RUN STEPS, AND WHAT AN ABSENT VERSE RESERVES (books VRS1/VRS2/VRC1,
+        // probe verse-carry.ly, measured 2026-08-26) ---
+        // In LilyPond a "row with N verses" is N Lyrics lines in the run, so the verse step
+        // is a get_spacing_spec branch like any other and an extra verse adds EXACTLY its
+        // solved step (2.800000000 on this ink — the Lyrics nonstaff-nonstaff
+        // minimum-distance binding). MEASURED on the Lily# side: the drawn pair AGREES to
+        // face bits (−1e-4) on every book of this family — the drawn verse step is
+        // 2.800000000 too, the closing follows the last verse's own ink, and no band term
+        // reaches the drawn pair. ⚠️ THE FIRST RECORDING SAID +3.4999 ON EVERY ROOM AND
+        // THAT WAS THE TWIN, NOT THE ENGINE: this family (and the whole CHL family) first
+        // shipped with five of seven notes an octave (3.500000000) high — LilyPond's
+        // \relative transcribed literally, RULES 5.0 probe trap 5 — so every closing was
+        // measured against a staff whose ink stood an octave tall. See the entries' whys.
+        new("lyrics.verse-run.one.staff-to-staff", VRS1,
+            g => g.StaffGap(), RaggedBottomPaper),
+        new("lyrics.verse-run.two.verse-step", VRS2,
+            g => g.LyricVerseStep(), RaggedBottomPaper),
+        new("lyrics.verse-run.two.staff-to-staff", VRS2,
+            g => g.StaffGap(), RaggedBottomPaper),
+
+        // ...and the CARRY pair: verse 2 sings only on system 2, so LilyPond's system 1
+        // reads DIGIT FOR DIGIT like VRS1's (remove-empty reserves nothing) and its
+        // system 2 like VRS2's. MEASURED: Lily# does too — TextRowVerses' score-wide
+        // maximum does NOT reach this book's drawn pair (both readings match their
+        // one-system books digit for digit), so these two now pin the ABSENCE of a carry
+        // where HANDOFF 257 ⑬ measured one on the chords+verses shape.
+        // ⚠️ Read by INDEX off page 1 (gap 0 = system 1's pair, gap 2 = system 2's), so the
+        // count entry is the regime guard, not decoration (HANDOFF 5.0, trap 8).
+        new("lyrics.verse-carry.first-system.staff-to-staff", VRC1,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("lyrics.verse-carry.second-system.staff-to-staff", VRC1,
+            g => g.StaffGapAt(2), RaggedBottomPaper),
+        new("lyrics.verse-carry.staves-on-first-page", VRC1,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+
+        // --- AN UNFOLDED ROW BETWEEN TWO STAVES (book IOA, probe row-between-staves.ly,
+        // seeded 2026-08-26 WITH the pair-placement port it prices) ---
+        // The one corpus shape that port moves: the pair is placed at max(basic-distance,
+        // the per-line-spec walk over the row) instead of at the row's stacked band. The
+        // walk's first step is exact to face bits; the closing carries +0.083 because the
+        // one walk now faces staff1's raised ink against staff2's ^"Text", which Lily#
+        // stands ~0.35 higher than LilyPond (the textscript island) — the OLD pairwise
+        // spelling could not see that collision and matched LilyPond here by blindness.
+        new("lyrics.row-between.staff-to-lyric", IOA,
+            g => g.LyricBaselineBelowStaff(0), RaggedBottomPaper),
+        new("lyrics.row-between.lyric-to-staff", IOA,
+            g => g.LyricBaselineAboveStaff(1), RaggedBottomPaper),
+        new("lyrics.row-between.staff-to-staff", IOA,
+            g => g.StaffGap(), RaggedBottomPaper),
+
 
         // THE BOTTOM OF THE CHAIN, in both regimes. Every entry above reads a GAP — a
         // spring's length at the page's force — and a force is the page's slack over the

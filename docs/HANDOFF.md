@@ -170,6 +170,128 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第258セッション＝**第257 の「部屋」は欠陥ではなく、*計器の欠陥 2 つ*を測っていた。** ⑴ **新プローブ chord-lyric-run.ly が serif を pin しておらず**（この罠は probes の 12 冊が警告文つきで pin 済みの既知のもの）、**機械の総称 serif の解決が数時間で変わって、同じバイナリ・同じファイルが台帳を再現しなくなっていた**。⑵ **CHL 双子が LP の `\relative` の字面をそのまま写していて 7 音中 5 音が 1 オクターブ高く**（Lily# の絶対オクターブは LP から apostrophe を 1 つ引く・RULES §5.0 プローブの罠 5）、**第257 が「部屋の帯」と読んだ「閉じの歩 +3.500000000 ちょうど」は 1 オクターブ＝3.5 staff spaces そのものだった**。両方直すと**詩の run の部屋は面のビット（−9.3e-5）まで LP と一致**——**帯も TextRowVerses の持ち越しも、描かれた五線対には居ない**。**そのうえで部屋の port 本体も着地した**（⑨⑩）: **walk の spec を per-line 化し、行が挟まる対を単一ページ経路でも walk の答えで置く**。CHL1 の部屋 +1.527→**+0.318**・閉じ **exact 0**。台帳 639→650（＋8 詩・CHL4／＋3 IOA）／exact 520→524／総和 35.318658559→24.172188455／非ゼロ 147→153／count 126→127・非ゼロ 2／snapshot 222 不動（再ベース 0）／追跡コーパス 572 不動。**絵が動いた本 1 / 81**＝`input-order-alignment.lys`（⑩ で正当化・台帳 3 点つき）。suite 6194 合格・0 失敗・4 skip（Windows Release 実測）。Core 0 警告。
+
+**① ★★★ serif の pin 抜け＝台帳が同じバイナリで再現しなくなっていた。** svg backend の LP は `fonts.serif` を機械の fontconfig 解決に落とす。第257 の測定時は総称 serif がたまたま同梱 C059（＝"LilyPond Serif"）に解決されており、本便の開始時には別の面（ascender 1.7147 対 C059 の 1.8201）に変わっていて、**歌詞が絡む歩が全部動いた**（chord-to-lyric 2.320115015→2.214749269 等）。**pin を足すと台帳の全数字が桁まで再現**（CHL1: 5.659653422 / 2.320115015 / 5.045000000）。⇒ **台帳は無傷・プローブ側の修理**。⚠️ **serif 未 pin で Lyrics を含むプローブが他に 5 冊在る**（下の残債）。
+
+**② ★★★ 新プローブ verse-carry.ly（詩は run の要素・居ない詩は何も予約しない）。** LP 実測（pin 済み・refpoint 対 refpoint）:
+```
+VRS1  staff/v1/staff        4.650841258  5.045000000              =  9.695841258
+VRS2  staff/v1/v2/staff     4.650841258  2.800000000  5.082044154 = 12.532885412
+VRS3  +v3                   … 2.800000000 がもう 1 つ増えるだけ    = 15.332885412
+VRC1  sys1（詩 1 本しか歌わない）= VRS1 と桁一致／sys2 = VRS2 と桁一致
+```
+**詩の歩幅は 2.800000000 ちょうど**（Lyrics の nonstaff-nonstaff minimum-distance が binding。このインクは 2.529 で minimum に負ける）。**閉じの歩は最後の行の*自分の*インクを読む**（5.045000000 対 5.082044154）。**歌わない詩は remove-empty で消えて何も予約しない**（VRC1 sys1 ＝ VRS1）。
+
+**③ ★★★ オクターブ＝「+3.500000000 ちょうど」の正体。** 双子の `g''`/`a''` は LP の `g'''`/`a'''`（Lily# は LP−1 apostrophe。ファイル冒頭の既存双子と `lysc ly` の `\fixed c'` 出力で二重に裏取り）。**下の五線の上向きインクが 1 オクターブ＝3.5 高く立ち、閉じの歩がそれを測っていた**。修正後の双子を `lysc ly` で吐くと **LP プローブと同じ c'' c'' g'' g'' | a'' a'' g''2**。⚠️ **きれいすぎる定数残差は artefact の顔**——+3.500000000 は骨 2 に汎化。
+
+**④ ★★★ 直した対が出した本物の地図（全 residual 再記録・why 全文書き換え済み）:**
+```
+詩の家族（VRS1/VRS2/VRC1 両システム）   −9.3e-5〜−9.6e-5（面のビットのみ・閉じ 5.045000000 exact・歩幅 2.8 exact・持ち越し 0）
+CHL1  +0.171319915 / +0.570188682 / +0.785973337 ＝ 部屋 +1.527481934（歩の和＝部屋の恒等式は健在）
+CHL2  +0.957293251（不動）／部屋 +0.340346578（閉じ側は −0.616946673＝逆符号の 2 誤りが和で隠れる形）
+CHL4  −0.000093166 / −0.600826497 / +0.100000000 ＝ 部屋 −0.500919662（Lily# が LP より狭い側）
+```
+**⑤ ★★★ 第 1 歩の不変条件が Lily# 側で破れているのが今回はじめて見えた。** LP は CHL1 と CHL2 の第 1 歩を*同じ* 5.659653422 と読む（五線の下に行を吊るすばねはその行自身の property）。**Lily# は 5.830973337 と 6.616946673 に分かれる**——**行の下に何が立つかで、行を吊るすばねが動いている**。第257 ⑥ が「部屋を直したときの反証子」と書いた対がそのまま番人。
+
+**⑥ ★★★ 機構の分解（trace 6 行と skyline dump で実測）。** 描かれた五線対は `AlignmentMinimumWithSkylines` の walk で、**walk が要素として見るのは note-bound の歌詞行だけ**——しかも **spec が定数直書き**（k==0 → RelatedStaffPadding、以降 NonStaffNonStaff、閉じ UnrelatedStaff＝**全部 Lyrics の数**）。**`as names` の和音行は run の要素ではなく、隣の五線の UP skyline に平らな帯として merge される**（`ReserveChordRowBand`・実測: 幅いっぱい flat 9.545）。**行の描かれた Y は鎖の解（DistributeLooseLines）から、五線の位置は walk から来る**ので、**中間歩は 2 つの機構の偶然の出会い**——CHL4 の −0.600826497 は数値的に 2.8 + 0.6 +自分の descender（LP は Lyrics の unrelated padding 1.5 over the ink・:1333-1336）、CHL1 の +0.570188682 は ChordNames の nonstaff-nonstaff（padding 0.5・:1313-1331）を Lily# が持たない分。
+
+**⑦ ★ SAC に 1 度塞がれた**（`lysc.dll` 0x800711C7・CliParser 14＋CliBestEffort 7 の既知パターン）。**`-p:Deterministic=false` は Tests プロジェクト自体に付けないと空振り**——Cli だけ建て直しても、直後の Tests ビルドが参照を決定論で建て直してハッシュが元に戻る（memory へ追記済み）。⚠️ そのビルドは測定に使わない。
+
+**⑨ ★★★ 部屋の port 本体（同便・後半）＝ walk の per-line spec 化と、単一ページ経路の対の配置。** 機構の発見: **ページ経路は 2 本あり、単一ページ経路は対のばね（＝walk の床）を一度も適用していなかった**——`RespaceStaves` は Optimal 経路だけ。**帯の積み上げがそのまま描かれていた**のはそのため。直しは 2 つで 1 つ: ⑴ `AlignmentMinimumWithSkylines` の spec 直書き（k==0 Related／以降 NonStaff 2.8／閉じ Unrelated＝**全部 Lyrics の数**）を **`PairLooseLine`（行の affinity＋自分の nonstaff-* 一式）越しに `StaffAffinity.GetSpacingSpec` の per-line 選択へ**（全歌詞 run は構成的に不変・実測 0 点移動）、⑵ **行が挟まる対を `LayoutStaffGroups` でも `max(basic, walk)` で置く**（`StaffSprings.AddSpring` と同じ spec・同じ blocks——2 経路が 1 つの幾何を読む）。**結果**: CHL1 部屋 14.552250371→13.342554069（LP 13.024768437）・**閉じ 5.045000000 exact**・残る 2 項は名前つき（第 1 歩 −0.252403051＝binding X の五線側インク／中間歩 +0.570188682＝**Dmaj7 の j の descender 0.218 em×2.616**——LP は maj7 を上付きで組み down ink 0＝**和音語彙の島がばね越しに見えただけ**）。
+
+**⑩ ★★★ 絵が動いた本 1 / 81 ＝ `input-order-alignment.lys`、そして +0.083 は「LP へ向かう動き」。** コーパス唯一の「fold されない独立行が五線間に立つ」本（track 名が part と不一致）。旧経路はこの本で **9.240334546＝ほぼ exact だったが、それは構造的盲目の exact**——旧の閉じは「行 対 staff2」の pairwise で、**LP の walk が解いている staff1 のインク対 staff2 の `^"Text"` の衝突を見られない**。新 walk はそれを読み（LP 9.240492503＝床の和ちょうど）、+0.083 は **Lily# の Text が LP より約 0.35 高い**（textscript の箱の島）ぶん。**新プローブ row-between-staves.ly＋台帳 3 点（`lyrics.row-between.*`）が正当化**。stash A/B で新旧を実測してから判定した。
+
+⇒ ★★★ **次の一手＝`as names` の和音行（CHL2/CHL4 の形）を run の要素にする**。付随和音行は今も **`ReserveChordRowBand` の帯**（staff2 の UP skyline）と **`ChordNameEngraver.Calculate` の「staff2 の上 0.6+protrusion」**の 2 機構で置かれ、LP は 1 つの run。**番人**: CHL2 の +0.957293251／部屋 +0.340346578・CHL4 の閉じ +0.100000000、**反証子＝CHL1/CHL2 の第 1 歩が 1 つの数（LP 5.659653422）に潰れること**（現状 5.407250371 対 6.616946673）。⚠️ **帯と walk の二重取りに注意**（帯を消す・行の描かれた Y を解から取る・`FoldAdjacentRows` の interior 判定はそのまま）。
+⇒ ★★ **安い一手は済み**（第258 後半）: serif 未 pin 5 冊の監査完了——mark.* 4 点だけが fallback 鋳造・face 依存（上の残債）。**今日の機械が「壊れた解決」側だったから検出できた**（解決が戻ると bare==記録値で何も見えない）。
+⇒ ★ **保留を 1 つ名指す**: 第257 ⑬ の「+3.627 のうち 3.200 は描かない詩 1 本」は **user の本の Lily# 分解を CHL1 の LP 値と比べた cross-book 比較**で、まだ再監査していない。`TextRowVerseSpacing` の remark（MultiStaffLayouter）はその測定を根拠に書かれている——**chords+verses の形の LP 対を 1 冊作ってから port の順序を決める**。
+
+⚠️ **見つけて直していないもの**:
+- **★★★ `as names` の和音行が run の要素でない**（⑨⑩ の次の一手）＝CHL2/CHL4 の形。帯（`ReserveChordRowBand`）＋「staff2 の上 0.6+protrusion」の 2 機構。番人: +0.957293251／+0.340346578／+0.100000000、反証子は第 1 歩の対（5.407250371 対 6.616946673 → LP は 5.659653422 の 1 つ）。
+- **★★ CHL1 に残る 2 項**: 第 1 歩 −0.252403051（binding X の五線側インク——LP の同 X の down が 0.25 深い。stem/binding の内容差、未分解）と、中間歩 +0.570188682＝**j の descender＝和音語彙の島**（`Cm⁷` 対 `Cm7` の決定が落ちれば消える側）。
+- **★★ TextScript（`^"Text"`）の高さが LP より約 0.35 高い**——**観測者が立った**（`lyrics.row-between.lyric-to-staff` +0.082995881、対を通した下からの読み）。標の箱の項 0.400000 と同族の可能性。
+- **★★★ mark.* の台帳 4 点は fallback serif で鋳られている**（第258 後半で監査済み・pin との差: chord-row/plain +0.080520・over-chord ×2 +0.030664）。**台帳は 2 つの serif 面を混在**（chord-lyric-run 家族は C059 鋳造）。⚠️ **+0.7706 の島（ChordClearancePadding）に触る便が、pin→再鋳造→残差再記録→port を 1 commit で**（probe ヘッダに手順と数字を書いた）。他の 4 冊は安全と判定: staffless-system は差・恒等の量で face 不変（0.675 を両面で実測）、barnumber-staffless の点は padding 契約 1.0、chord-symbol-width は sans pin 済み、multi-voice は符頭のみ。
+- **★★ `Staff.TextRowVerses` のスコア全体最大は事実として残る**（MultiStaffLayouter:286・SharedRenderer:426・MeasureContentKey:319 の 3 軒）が、**VRC1 の描かれた対に持ち越しは出ない**。**効く regime は未特定**（純粋高さ＝改ページ側か、chords+verses の形か）。⑬ の cross-book 比較を再監査してから。
+- **★★ CHL2 の部屋 +0.340346578**——**0.340000 は lyhygrace の「閉じる最小 +0.340000」（第248 ⑨）と数字が近い**。合流は未確認（0.000346578 ずれる）。
+- **★★ VRS2 双子の stanza 番号（1. 2.）は LP 側に無い家具**——実測で binding せず（VRS1 との residual 差 3e-6）。**行の左端に binding X が届く読みを開く前に re-twin**。`[~N.]` は per-occurrence 選択子なので流用不可。
+- **★★ `staff / chords / chords / staff` で*行が空*のシステムの五線内が 6.50**（第257・**再現は `scratch/p257/v-2rowsA.lys`**）。行が無い同じ本は 9.00。
+- **★★★ 和音名の面が LP と別物**（第256）＝**LP は Nimbus Sans、Lily# は TeX Gyre Heros**。**閉じる道は Nimbus Sans の同梱＝ライセンスの決定。** ⚠️ **要ユーザー判断。** **番人は `page.chord-row.staff-to-chord-baseline`（−0.013091398）。**
+- **★★★ 面の差の*射程*は選別済み（第256）**：`CGabcdeijostu`＋全数字＋`+` が分かれ、advance は全一致。**`mark.over-chord.*` は清潔**。**MKR・BNC は触るとき 1 度測ること。**
+- **★ 面では説明できない ~1e-5**（第256 ⑦）＝FreeType 26.6 グリッドが第一容疑。**安い確かめは丸字を `O`/`G`/`S` に替えた本を LP で 1 冊。**
+- **★★★ `ChordClearancePadding = 0.8` に LP の数 0.429336 が付いた**（第256）。**移植先は `Skyline::padded` の距離**。**番人は `mark.over-chord.*` の 2 点（+0.7706）。残り 0.400000 は箱の項。**
+- **★★ gap-second 5 点が揃って持つ `+0.241073`**（閉じれば 5 点同時に exact）。
+- **★★ `EstimateAboveStaffExtents` の定数（3.5 / 3.0 / 2.0）は値が未移植**（第255）——観測者は `page.chord-row.*`。
+- **★★ page BREAKER は nominal refpoint extent のまま**（第255・`page.tab-only.first-staff-refpoint` の (b)）。
+- **★★ 標の箱の項 0.400000**（`mark.chord-row.staff-to-baseline` / `mark.plain.staff-to-baseline` の +0.542971 と同じ島）。
+- **★★ テキスト行の INSIDE profile が空**（`MultiStaffLayouter.BuildAllStaffSkylines`）。単独で入れると `greensleeves` が動き、観測者が無い。
+- **★★ LP の和音*語彙*は Lily# と別物**（`Cm⁷`/`Cø`/`C+`/`C°` 対 `Cm7`/`Cm7♭5`/`Caug`/`Cdim`）。⚠️ **要ユーザー判断。**
+- **★★ `get_extremal_staff` の X-aware 歩きが `-1` sentinel 族に未移植**。`TopScoreGrobStaff` の「A TEXT ROW IS NOT A STAFF」は触るときに直す。
+- **★★ テキスト行の tracker が staff symbol の平らな床を敷く**（`OutsideStaffStacker.AboveTrackers` の `FlatBase`）。観測者ゼロ。
+- **★★ `MusicMarkEngraver.CalculateXPosition` が Rehearsal と SectionLabel を同じ左端に立てる**。⚠️ **SectionLabel 側は直さない**（`mark.chord-row.staff-to-baseline` の why）。⚠️ **要ユーザー判断**（第257 でユーザーの絵に見えた——観測者ゼロではない）。
+- **★★ 標*単独*の +0.241073**（ROWMN/ROWMX/ROWMZ の 3 点が揃っている）。
+- **★★ 同じ sentinel の残り＝`CustomTextLayout`**（3 site とも未解決・互いに揃っているので今日は食い違わない）。
+- **★★ `SkylineBuilder.OuterStaff` の two-edge model**（第252 ⑦）。番人は LYRHKG の 4 点。
+- **★ gap 1 免除の最後の一枚**＝`Distance()` の中で 1 段目のどのインクが浅いのか。番人は `…empty-row.gap-first`。
+- **★★ `lyhygrace` の 2 つの残差**（第248 ⑨）＝部屋 +0.121431 と閉じる最小 +0.340000。
+- **★★ 第244 の乖離の在処＝`MusicMarkEngraver` の rows-only の腕**。ユーザー決定なので閉じない。
+- **★★ 再現できていない報告＝1 小節に和音 4 つで和音名が横に重なる**。実物が来たら `ClearOfPrevious` の抜け道と第244 の押し出しを両方・**第254 の新しい幅で**。
+- **★★ 第245 第2便の残り＝`IsSilent` は 6 site が各々読んでいる**。独立した便にしない（§5.1）。
+- **★★ `staff / chords / lyrics` に Lily# は無言。LP は警告して組む**（第257 実測）。**要ユーザー判断。**
+- **★★ `make-colon-bar-line` の `dist` 探索が未移植**（第240 ⑤）。
+- **★ `RepeatDotRadius = 0.2` は LP の 0.225 に対して小さい**（`LILYSHARP-OWN` 起票済み）。
+- **★★ 旋法の語彙 4 綴りが `LanguageVocabulary` に無い**／**★ `RenderSpecParser` と `PartReferenceFinder` は `as` を自分で切る**。⚠️ どちらも独立した便にしない（§5.1）。
+- **★ 診断パスは 1000 小節で 148〜218 ms**（打鍵ごとではない）。
+- **★ 双子 exporter は和音行と歌詞行を出さない**（和音行・歌詞行の LP 照合は手書きプローブのみ。verse-carry.ly も手書き）。
+- 音楽を持つが行のセルを持たない section は rows-only グリッドで 0 小節／`audit/magic_constants.csv` の `RepeatDotPosition1/2` の行番号ずれ／`@chord(…)` と chords ブロックの語彙違い。
+- **★★ CHANGELOG はリリース着手**（版番号はユーザー決定）。第254 の和音記号・第257 の縦位置は changelog に載る変更。
+
+★ **開始時裏取り**: HEAD `7aa1406f`・**未 push 0**（第257 の 63 は push 済み・`origin/master` と一致）・未追跡 0/木 0・台帳 639／exact 520／総和 35.318658559／非ゼロ 147／count 126・非ゼロ 2／snapshot 222／追跡コーパス 572・Windows Release 6183 合格 / 0 失敗 / 4 skip——**引き継いだ数は全部当たった**。CI は直前 push の run が in_progress で始まり、**完走して全脚緑**（その前の 8/24 push は `DeadCitationsDoNotGrow`＝死んだ引用 497＞上限 469 で赤・`7aa1406f` が修正）。
+終了時: **本便は 8 commit**（`60e2f37c` serif pin／`e700af49` verse-carry＋8 点／`2f7c9f3c` オクターブ修正＋再記録／`296613ca` handoff／`053ddd14` **部屋の port＋IOA 3 点**／`436bbbb1` handoff／`544327dd` **serif 監査（mark.* 4 点は fallback 鋳造）**／この行）・未 push 8・未追跡 0/木 0・**Windows Release 6194 合格 / 0 失敗 / 4 skip / 合計 6198**・Core 0 エラー / 0 警告（`--no-incremental`）・台帳 **650／exact 524／総和 24.172188455／非ゼロ 153／count 127・非ゼロ 2／snapshot 222（再ベース 0）／追跡コーパス 572**。**絵が動いた本 1 / 81**（`input-order-alignment.lys`・⑩ で正当化・§5.1 の A/B は port の前に baseline を取り、stash A/B で旧値も採取）。
+
+> ## ★★★ 骨 1＝**pin していない面は、台帳を「その機械のその日」に縛る**
+> chord-lyric-run.ly は sans だけ pin して serif を落とした。測った日は総称 serif が
+> たまたま C059 に解決され、数時間後には別の面になっていて、**同じバイナリ・同じ
+> ファイル・同じ台帳が再現しなくなった**。
+> ⇒ ★★★ **判定法**: **引き継いだ数字とプローブが食い違ったら、まず同じプローブを
+> その場で 2 回流す**——2 回一致して引き継ぎと違うなら、**エンジンではなく計器
+> （フォント解決・環境）が動いた**。pin の抜けは「隣のプローブは何を pin しているか」の
+> grep 1 本で出る（12 冊が警告文つきで持っていた）。
+> ⇒ ★★ **そして pin を足して台帳が桁まで再現したら、台帳は無傷でプローブだけ直す**
+> ——数字を「取り直す」のは、再現しない原因を名指せてからでよい。（RULES §5.5 へ汎化すること。）
+
+> ## ★★★ 骨 2＝**きれいすぎる定数残差は、機構ではなく壊れた対の顔で出る**
+> 4 冊の部屋が揃って +3.4999、CHL1 の閉じがちょうど +3.500000000——第一印象は
+> 「帯の定数 3.5 が居る」。実体は **1 オクターブ＝7 staff position＝3.5 staff spaces**。
+> 双子が `\relative` の字面写しで 5 音高かった（プローブの罠 5 の再演）。
+> ⇒ ★★★ **判定法**: **残差が譜法の量子（オクターブ 3.5・staff position 0.5・
+> staff space 1.0）にちょうど一致したら、機構仮説より先に対の音楽を突き合わせる**。
+> 検算は 1 コマンド——`lysc ly` の `\fixed` 出力と LP プローブの字面比較。
+> ⇒ ★★ **予測が同じ向きに続けて外れたときも同じ**——本便は帯系の予測が 3 連続で外れ、
+> 原因は 2 つとも計器だった。**モデルを直す前に計器を疑う。**（§5.0 プローブの罠へ追記すること。）
+
+> ## ★★ 骨 3＝**壊れた計器で書いた why は、継ぎ足しでなく全文を書き直す**
+> 最初の記録の why に「MEASURED: …」の尾を足していく方式は、**壊れた計器で測った本文が
+> 生き残る**。本便は 14 entry の why を全文書き換えた——incident を 1 か所（staff-to-chord）に
+> 書き、他は参照で指す。
+> ⇒ ★ **判定法**: 記録済みの residual を書き換える便では、**その entry の why を頭から
+> 読み直して「この文は今も真か」を 1 文ずつ問う**。継ぎ足しは測定の追記にだけ使う。
+
+> ## ★★★ 骨 4＝**旧経路の exact は「構造的盲目の exact」でありうる——port が数を悪化させた本こそ、機構で判定する**
+> 部屋の port は CHL1 を +1.53→+0.32 に直し、同時にコーパス唯一の該当書
+> `input-order-alignment.lys` を **−1.6e-4（ほぼ exact）→ +0.083 に「悪化」させた**。
+> stash A/B と LP 実測で分解すると、**旧経路の exact は「行 対 staff2」の pairwise が
+> LP の walk の解く衝突（staff1 のインク対 staff2 の Text）を*構造的に見られなかった*
+> ことによる偶然**で、新 +0.083 はその衝突を Lily# の（0.35 高い）Text で正しく値付けした数だった。
+> ⇒ ★★★ **判定法**: **port で数が悪化した点は、⑴ 旧経路がその項を*読めた*か、⑵ 新残差に
+> *名前が付く*か、の 2 つで判定する**。⑴ が No で ⑵ が Yes なら前進——**exact は「合っている」
+> ではなく「その regime を測れていない」ことがある**（§5.2.1④）の*経路*版。
+> ⇒ ★★ **そして動いた本には即日、その形の LP 対を開く**（row-between-staves.ly の 3 点）——
+> **「動いた」を commit message の散文でなく台帳の数で正当化する。**
+
+---
+
+## 以下は第257セッションの経緯
+
 最終更新 第257セッション＝**ユーザーが見ていた「歌詞と和音名が同じ行に重なる」は、和音行が run から*落とされていた*こと。そして落とすしかなかった理由は「測っていないから」ではなく——`get_spacing_spec` の完全な移植が既に在って、鎖がそれを 1 度も呼んでいなかったから。** ⚠️ ★★★ **鎖は全部のばねを*スコア共通の定数 2 つ*から作っていた**（Lyrics の `nonstaff-relatedstaff-spacing` を最初の隙間に、`nonstaff-nonstaff-spacing` を残り全部に）。**`StaffAffinity.GetSpacingSpec` は :1266-1342 を丸ごと移植済みで、`LeadingLinesOfSystem` だけが使っていた。** ⚠️ ★★★ **第2 便でユーザーが「まだ近すぎる」と言った箇所は、*同じ decline の 3 軒目*だった**（`MultiStaffLayouter.StaffSprings` の `AddSpring`）——**そしてその代償はばねではなく*枠*で、ばね 0 本のシステムは「鎖は最初の五線で終わる」と答え、システム間の床が 6.860000 に潰れていた**（basic-distance は 12.000000）。台帳 633→639／exact 520 不動／総和 21.183001536→35.318658559／非ゼロ 141→147／count 126・非ゼロ 2 不動／snapshot 222 不動（再ベース 0）／追跡コーパス 572 不動。**絵が動いた本 0 / 81**（両便それぞれ）。6171→6183（＋6 台帳点・＋6 網）。suite 6183 合格・0 失敗・4 skip（Windows Release 実測）。Core 0 警告。
 
 **① ★★★ 落ちていたのは和音行、壊れて見えていたのは歌詞行。** `staff / chords / lyrics / staff` は 1 つの run。`ClassifySystem` は LYRICS 行しか run に入れず、それ以外を見ると `UnmodelledRow` を立てて捨てていた。⇒ **歌詞行は「run の唯一の住人」として解かれ、五線直下に着いた。** 実測（縮小した本）: **和音 baseline 21.070000 対 歌詞 baseline 20.980000**。
@@ -326,103 +448,6 @@ staff 4.000 → gap 2.352 → 和音行 2.500 → gap 0.600 → 歌詞行 7.200 
 > ⇒ ★★ **なぜ見えなかったか＝呼び出し側が定数を持っていたから。** **定数は「まだ移植して
 > いない」の顔をしない**——**そこに数が在るので、動いているように見える。**
 > （§5.2.1① の「REF が別の式の隣に座る」の*関数*版。RULES §5.2 へ汎化すること。）
-
----
-
-## 以下は第256セッションの経緯
-
-最終更新 第256セッション＝**名指された「0.002552 を割る」は割れた。ただし割れ方が予測と逆で、行の*配置*は 9 桁 exact、動いていたのは*面*だった。** ⚠️ ★★★ **LP は和音名を Nimbus Sans で組み、Lily# は TeX Gyre Heros で組む**——**同じ URW の設計で、advance は全グリフ一致**（`A` 0.667 / `C` 0.722 / `m` 0.833。だから `chord.symbol-width.*` は全点 exact）**・平らな字は ink も一致**（`A` 0.729・`m` 0.539）。**分かれるのは丸い文字のオーバーシュートだけ**: **`C` は Nimbus `[-0.023, 0.741]` 対 Heros `[-0.018, 0.747]` em**——**両エンジンの dump はその 2 つの OTF の数そのもの。** ⚠️ **Core は 1 バイトも触っていない**（`git status -- LilySharp.Core` が 0 ファイル）**ので絵も snapshot も動きようが無い**。台帳 632→633／exact 520 不動／総和 21.169910138→21.183001536／非ゼロ 140→141／count 126・非ゼロ 2 不動／snapshot 222 不動／追跡コーパス 572 不動。6169→6171（＋1 台帳点・＋1 網）。suite 6171 合格・0 失敗・4 skip（Windows Release 実測）。Core 0 警告。
-
-**① ★★★ 予測は符号ごと外した。そして外れ方が答えだった。** 走らせる前に `scratch/p256/PREDICTION.md` に「**+0.0026＝ほぼ全部が baseline 置き**」と書いた（根拠は第254 の「面は 0.000040109 まで一致」）。**実測は −0.013091398。** ⇒ **割れ方は「配置 対 ascent」ではなかった。**
-
-**② ★★★ 配置は exact。** LP は行のインク下端を staff refpoint の上 **3.000000** に置き、**Lily# は baseline 3.047092602 − 自分の `C` の下げ 0.047092602 ＝ 3.000000000**。**3.000000 は上向き符尾の先端**（`a'` が −0.5・stem 3.5）——**両エンジンとも行を五線の skyline に、padding 0 で立てている。**
-
-**③ ★★★ 残ったのは面で、それは別のフォントだった。** Lily# の `C` の実測インクは `(-0.047092602 . 1.954342973)`＝**`[-0.018, 0.747] × ChordNameFontSize 2.61625565300599` ちょうど**（TeX Gyre Heros）。LP の dump は `[-0.060184, 1.938700]`＝**Nimbus Sans**。⚠️ **`fontTools` で 2 つの OTF を直接読んで確定した**（LP 同梱 `share/lilypond/2.26.0/fonts/otf/NimbusSans-Regular.otf`）——**engine を介さない第三の計器。**
-
-**④ ★★ なぜ 255 便見えなかったか＝コーパスが丸い大文字を 1 度も印字していなかった。** **第254 は `Am` と `A♯m` で測って「面は一致」と読んだ**が、**`A` も `m` も平らな字**なので、**その測定は面が違うことを 1 度も否定していない**。**CHR1 がこのコーパス最初の丸い大文字。**
-
-**⑤ ★★ 網は「数」ではなく「対」にした**（`ChordRowStandsOnItsInk_NotOnItsBaseline`）＝**一語だけ違う 2 冊（丸い `C` 対 平らな `A`）で、インク下端は一致し baseline は一致してはならない**。⚠️ **数を書くと旋律を固定し、baseline を書くとフォント選択をレイアウト不変条件に変えてしまう。差なら両方から自由。** ⚠️ **毒で赤を見た**: 行の down skyline をインクではなく baseline で merge すると **2.550000 対 2.502907＝ちょうど `C` のオーバーシュート**で赤。
-
-**⑥ ★★ そして網の嘘を 1 つ見つけて直した。** `LeadSheetHeaderClearanceTests` は clearance を**リテラル 1.907250371**（＝cap height）で測っていた——**その本が綴る `D`/`E` には正しいが、丸い大文字は 0.047092602 高い**。**その remark 自身が「小さい clearance を訊くと重なったまま通る」と警告していた形。** 今は `SymbolInk` に訊く。
-
-**⑦ ★ 面では説明できない残り ~1e-5 が在る。** LP の「`C` の高さ ÷ `A` の高さ」は **1.04802176**、Nimbus のアウトラインは **1.04801097**（Heros なら 1.04938272＝130 倍外れるので同定は揺るがない）。**FreeType の 26.6 グリッドが第一容疑**で、**em が既に持っている 0.000040109 と同じ桁**。**台帳の `why` に書いてあり、丸めていない。**
-
-⇒ ★★★ **次の一手＝第254 が名指したまま 2 便触られていない `ChordClearancePadding = 0.8`。** **LP の実測は 0.429336**（MKW/MKX 両方で 15 桁一定）だが、⚠️ **移植すべきは定数ではなく `Skyline::padded` の距離**（平面＋45° horizon・`outside-staff-horizontal-padding` 0.2）で、0.429336 はその検算値。**番人は `mark.over-chord.*` の 2 点（両方 +0.7706）。残り 0.400000 は箱の項**で `mark.chord-row` / `mark.plain` の +0.542971 と同じ島。
-⇒ ★★ **その次**: **gap-second 5 点が揃って持つ `+0.241073`**（閉じれば 5 点同時に exact。**反証子**: 1 点でも動かなければその点は別の項を持つ）。
-⇒ ★ **安い一手**: ⑦ の ~1e-5。**丸い大文字を 1 つ足した本を LP で流し、`C` 以外の丸字（`O`/`G`/`S`）でも同じ比率になるかを見る**のが最短——**同じ比率なら面の量、字ごとに違うならグリッド。**
-
-⚠️ **見つけて直していないもの**:
-- **★★★ 和音名の面が LP と別物**（第256）＝**LP は Nimbus Sans、Lily# は TeX Gyre Heros**（同じ URW の設計）。**閉じる道は Nimbus Sans を同梱することだけ＝ライセンスの決定であって幾何の決定ではない。** ⚠️ **要ユーザー判断。** **番人は `page.chord-row.staff-to-chord-baseline`（−0.013091398）。** ⚠️ **`chord.symbol-width.*` が全点 exact なのは *advance* が一致しているからで、面が一致しているからではない。**
-- **★★★ 面の差の*射程*は選別済み（第256。測定したのは字の箱だけで、点はまだ測っていない）**。
-  **2 つの OTF を全文字照合した結果、`ABDEFfghklmnpqrvwxyz-#/().` は ink が完全一致し、
-  **`CGabcdeijostu` と*全ての数字*と `+` が分かれる**（advance は全部一致）。
-  ⇒ ★★★ **規則は 2 行**: **インク*上端*が分かれる ⇔ 根音が `C` か `G`**
-  （他の cap 0.729 は両面同一で、数字も小文字もその下。**変化記号が乗る本は Emmentaler が上端を取るので清潔**）。
-  **インク*下端*が分かれる ⇔ 最下グリフが丸い字**（`j` の下ばね −0.218 と平らな字は両面同一）。
-  ⇒ ★★★ **次の一手の番人は*清潔***: **`mark.over-chord.*` のマークが乗るのは
-  section B の `Am | F`（sharp 側は `A♯m | F♯`）**で、**`A`/`F`/`m` は両面同一・変化記号は
-  Emmentaler**。**だから +0.7706 に面の項は入っていない**（同じ本の `C | G` の行は
-  マークが乗らない section A 側）。**`ChordClearancePadding` をこの番人で判じてよい。**
-  ⚠️ **一方、汚染している可能性があるのは `C`/`G` を綴る行を持つ本**——
-  **`mark.chord-row.staff-to-baseline`（MKR）・`barnumber.chord-row.staff-to-ink-bottom`（BNC）は
-  どちらも `C | G | Am | F`**。⚠️ **ただし両点とも今の残差は他の点と*揃っている*（+0.542971）
-  ので、面の項が binding していない可能性が高い**——**触るときに 1 度測ること。**
-  ⚠️ **`staffless.chord-symbol-over-notehead` と `chord.symbol-width.*` は清潔**（X の anchor 差＝
-  advance しか読まない）。
-- **★ 面では説明できない ~1e-5**（第256 ⑦）＝LP の `C`÷`A` 高さ比 **1.04802176** 対 Nimbus のアウトライン **1.04801097**。**FreeType の 26.6 グリッドが第一容疑**で、**em が既に持つ 0.000040109 と同じ桁**。**安い確かめ方は丸字を `O`/`G`/`S` に替えた本を 1 冊 LP で流すこと。**
-- **★★ `EstimateAboveStaffExtents` の定数（3.5 / 3.0 / 2.0）は枠は直したが値が未移植**（第255）——**その関数自身の remark が「観測者が居ないから立っている」と書いており、その観測者は `page.chord-row.*` で立った。**
-- **★★ page BREAKER は nominal refpoint extent のまま**（第255。台帳 `page.tab-only.first-staff-refpoint` の (b)）。
-- **★★★ `ChordClearancePadding = 0.8` に LP の数が付いた**（⑥・0.429336）。⚠️ **移植先は padded skyline 距離**であって定数ではない。**番人は `mark.over-chord.*` の 2 点**（両方 +0.7706）。
-- **★★ 標の箱の項 0.400000**（⑤）。**`mark.chord-row.staff-to-baseline` / `mark.plain.staff-to-baseline` の +0.542971 と同じ島**——**Lily# は標を箱で描き、LP は素のテキストを描く。**
-- **★★ テキスト行の INSIDE profile が空**（`MultiStaffLayouter.BuildAllStaffSkylines`）。**行のインクは `sky`（部屋の view）にだけ merge され、`insideSky`（`LayoutEngine.InsideAt` が配る profile）には入らない。** LP では `ChordName` も `LyricText` も `outside-staff-priority` を宣言しないので **その VerticalAxisGroup の `inside_staff_skylines` に入る**（`lily/axis-group-interface.cc:914-935`）。**実測**: `samples/greensleeves.lys` で行の up profile は 4 段とも `empty=True`、五線は `up.max=3.776000`。⚠️ ★★★ **本物の穴だが `mark.over-chord.*` の一手ではない**（第254 が反証・①）。⚠️ **単独で入れると `greensleeves` が動き、観測者が無い。**
-- **★★ LP の和音*語彙*は Lily# と別物**（④）。**`Cm⁷` / `Cø` / `C+` / `C°` 対 `Cm7` / `Cm7♭5` / `Caug` / `Cdim`。** ⚠️ **要ユーザー判断**（言語の決定であって幾何の欠陥ではない）。
-- **★★ `get_extremal_staff` の X-aware 歩きが `-1` sentinel 族に未移植**。**`BarNumberEngraver.AnchorRow` だけが「どの行が x≈0 に届くか」で*構造的に*同じ問いに答えている。** ⚠️ **`TopScoreGrobStaff` の「A TEXT ROW IS NOT A STAFF」は LP のコードと食い違う。触るときに直すこと。**
-- **★★ テキスト行の tracker が staff symbol の平らな床を敷く**（`OutsideStaffStacker.AboveTrackers` の `FlatBase`）。**行に StaffSymbol は無い**ので、敷くと occupancy が X-blind になる。**今は誰も行に tracker を張らないので観測者ゼロ。**
-- **★★ `MusicMarkEngraver.CalculateXPosition` が Rehearsal と SectionLabel を同じ左端に立てる。** **LP は前者を clef に break-align する**（実測 x 3.365、key signature が付くと 6.385＝本 MKK）。⚠️ ★★★ **SectionLabel の側は直さないこと**——`mark.chord-row.staff-to-baseline` の `why` が「**`break-alignable-interface` を移植していたら section label は LP から*遠ざかって*いた**」と書いている。⚠️ **要ユーザー判断。**
-- **★★ 標*単独*の +0.241073**（`lyrics.chord-row.marked.no-row.gap-second`）。**ROWMN/ROWMX/ROWMZ の 3 点が今そこに揃っている**ので、**閉じれば 3 点が同時に exact になる。**
-- **★★ 同じ sentinel の残り＝`CustomTextLayout`**（描画 `SharedRenderer.Marks:747`／stacker `OutsideStaffStacker:1717`／予約 `LayoutEngine:2595` の 3 site とも*未*解決）。**3 軒が互いに揃っているので今日は食い違わない**——**片側だけ直すとずれる。** ⚠️ **和音行が先頭に立つ system の `@text` が LP と同じ高さかは*未測定*。**
-- **★★ `SkylineBuilder.OuterStaff` の two-edge model**（第252 ⑦ で実物を測った）。**番人は LYRHKG の 4 点。**
-- **★ gap 1 免除の*最後の一枚*＝`Distance()` の中で 1 段目のどのインクが浅いのか**。**番人は `…empty-row.gap-first`（12.000000）。**
-- **★★ `StaffSprings` と `ComputeBetweenStavesEnd` は「あいだの行が全部 lyrics 行」でないと今も降りる**（第248・`LILYSHARP-OWN`）。**閉じるには `staff / chords 行 / staff` の affinity DOWN の歩幅を LP で測る点が要る。その配置は追跡コーパス 572 冊に 1 冊も無い。**
-- **★★ `lyhygrace` の 2 つの残差**（第248 ⑨）＝**部屋 +0.121431 と閉じる最小 +0.340000**。**LP の実測は取ってある**（`page-vertical.ly` の `PROBEV` を `-dinclude-settings` で流す）。
-- **★★ 第244 の乖離の在処＝`MusicMarkEngraver` の rows-only の腕**（⒜ を落とせば `base + Padding` に戻る）。**LP は 0.460000 上に置く**（実測・`8d6b7978`）。**ユーザー決定なので閉じない。**
-- **★★ 再現できていない報告＝1 小節に和音 4 つで和音名が横に重なる。** **第243 が 9 通り試して全部隙間は正**（最も狭くて 0.15）。⚠️ **`ChordNameEngraver.ClearOfPrevious` の抜け道**＝`if (!cur.UseTiming || !prev.UseTiming) return curX;`。⚠️ **第244 がその隣に第 2 の押し出しを足した**ので**実物が来たら両方見ること。** ⚠️ ★★ **第254 で変化記号の幅が変わった**（`A♯m` は 5.394642520→5.091889718755855）ので、**この報告は必ず新しい幅で当たり直すこと。**
-- **★★ 第245 第2便の残り＝`IsSilent` は今も 6 site が各々読んでいる**（ページ 4・双子 2）。**独立した便にはしないこと（§5.1）。次に volta か section label に触る便に括り付ける。**
-- **★★ `staff / chords / lyrics` に Lily# は無言。LP は警告する。** **診断を出すかは言語の決定＝要ユーザー判断。**
-- **★★ `make-colon-bar-line` の `dist` 探索が未移植**（第240 ⑤）。**「LP に合わせる」の意味を先に決めること。**
-- **★ `RepeatDotRadius = 0.2` は LP の 0.225 に対して小さい**（`LILYSHARP-OWN` 起票済み）。⚠️ **閉じると `RepeatDotsOffset` 経由で横の予約も動く。**
-- **★★ 旋法の語彙は 4 綴りあり `LanguageVocabulary` に載っていない**／**★ `RenderSpecParser` と `PartReferenceFinder` は今も `as` を自分で切ってパートを探す**。⚠️⚠️ **どちらも「独立した便」にしないこと**（§5.1）。
-- **★ 診断パスは 1000 小節の本で 148〜218 ms**（44 validator・上位 10 は全部 `DescendantNodes()` の全木走査）。⚠️ **打鍵ごとではない**（debounce ＋ cancel）。
-- **★ 双子 exporter は和音行を出さない**（`lysc ly` が `chord row 'prog' is not exported` と警告する）。⇒ **和音行の LP 照合は手書きプローブでしかできない**（第254 は `chordink*.ly` を手で書いた）。
-- **音楽を持つが行のセルを持たない section は rows-only グリッドで今も 0 小節**／**`audit/magic_constants.csv` の `RepeatDotPosition1/2` の行番号が約 700 行ずれたまま**／**`@chord(…)` と chords ブロックが違う和音語彙を読む**。
-- **★★ CHANGELOG は「独立した残債」ではなくリリース着手**。`docs/RELEASING.md` が**版番号の決定と changelog を「自動化しない＝人間の判断」**と明記。⇒ **0.4.0 はタグ済み・第242 が言語を 3 つ狭めている**ので**次は breaking**。**着手はユーザーの版番号決定から。** ⚠️ ★ **第254 で和音記号の見た目が変わった**ので、**changelog に載る変更**である。
-
-★ **開始時裏取り**: HEAD `c47a4b29`・**未 push 52**・未追跡 0/木 0・台帳 632／exact 520／総和 21.169910138／非ゼロ 140／count 126・非ゼロ 2／snapshot 222／追跡コーパス 572——**引き継いだ数のうち 7 つは当たった。外れたのは 1 つ＝テスト数**。第255 §1 は「6165 合格・合計 6169」と書いていたが**実測は 6169 合格・合計 6173**。⚠️ ★★ **理由は「数え違い」ではなく「測った時点」**——**最終 commit `c47a4b29`（台帳 4 点）の*前*に測った数**で、**台帳は 1 点 1 テスト**なので +4 がそのまま差。⇒ ★★★ **終了時の数は「最後の commit の*後*」に測ること**（§0 の「開始時と終了時の両方を書く」の*順序*版）。**間で push は起きていない**（`origin/master` は `b537606e`＝自分の commit ではない）。solution build（Debug・0 エラー / Core 0 警告・`--no-incremental`）。
-⚠️ ★★ **SAC に 2 度塞がれた**——**Windows Release の初回が `lysc.dll` の `FileLoadException 0x800711C7` で 21 本赤**（`CliParserTests` 14 ＋ `CliBestEffortOutputTests` 7。**全部 CLI で、engine ではない**）。`testhost` を落として `-p:Deterministic=false` で建て直し、**ハッシュが `A8E679C1…`→`A678315D…` と動いたのを見てから**緑（RULES §5.5 の判定法どおり）。⚠️ **測定に使うビルドをこれで建てないこと。本便は Core 無変更なので測定は無い。**
-⚠️ ★★★ **2 度目は「ソースが 1 バイトも変わっていないバイナリ」だった**——**docs しか触っていない commit のあとで `LilySharp.Core.dll` が塩がれ、合否行が*空*になった**（20 分前の同じ DLL は 6171 本を緑で通している）。**`-t:Rebuild` で `77BD29D8…`→`FCD6A7D5…` と動かして緑。** ⇒ **「さっき緑だった」は理由にならない**（RULES §5.5 へ汎化済み）。
-⚠️ ★ **snapshot の数え方が §0 に無かった**ので足した（`git ls-files 'LilySharp.Tests/Snapshots/*'`＝222。**最初 `*.snap` で数えて 0 を出した**）。
-終了時: **本便は 6 commit**（`c47a4b29` 台帳点＋網＋計器の訂正／`c47a4b29` handoff＋RULES＋254 をアーカイブへ／`c47a4b29` この行の hash／`c47a4b29` 2 度目の SAC／`c47a4b29` 面の差の射程／この行）・**未 push 58**・未追跡 0/木 0・**Windows Release 6171 合格 / 0 失敗 / 4 skip / 合計 6175**・Core 0 エラー / 0 警告（`--no-incremental`）・台帳 **633／exact 520／総和 21.183001536／非ゼロ 141／count 126・非ゼロ 2／snapshot 222（再ベース 0）／追跡コーパス 572**。⚠️ **§5.1 の証明 ⑴ は不要**——**`LilySharp.Core` の変更 0 ファイル**なので**絵は 1 冊も動きようが無い**（`git status --porcelain -- LilySharp.Core` が空であることで示した。**コーパス比較を回すより強い**）。⚠️ **§7.5/§7.9**: Core は無変更なので該当なし。
-
-> ## ★★★ 骨 1＝**「メトリクス互換」は *advance* の互換であって *ink* の互換ではない**
-> LP は Nimbus Sans、Lily# は TeX Gyre Heros。**advance は全グリフ一致、平らな字は ink も一致**
-> ——**分かれるのは丸い文字のオーバーシュートだけ**。第254 は `Am`/`A♯m` で 0.000040109 の
-> 一致を見て「面は一致」と読んだが、**`A` も `m` も平らな字なので、その測定は面が違うことを
-> 1 度も否定していない。**
-> ⇒ ★★★ **判定法**: **面の一致を主張する前に、*分かれると分かっている字*を 1 つ測る**
-> （丸い大文字 `O`/`C`/`G`/`S`、または descender）。**`A` で一致したことは証拠ではない。**
-> ⇒ ★★ **第254 の骨 3（「同じ量に表が 2 つある」）の*面*版**——あちらは 1 つの面の中の 2 つの表、
-> こちらは 2 つの面。**判定法は同じ＝2 つが違う値を返す本を 1 冊足してから決める。**
-> （RULES §5.3 へ汎化済み。）
-
-> ## ★★★ 骨 2＝**箱の*高さ*だけを読む点は、両端が同じ向きにずれていると何も見えない**
-> `C` は Heros 0.765 対 Nimbus 0.764 em＝**高さでは 0.001 em**。**しかし両端は 0.005〜0.006 em ずつ
-> ずれている**（下端 −0.018 対 −0.023・上端 0.747 対 0.741）——**同じ向きなので高さでは
-> 5〜6 分の 1 に潰れる。** 床は*高さ*しか読まないので +0.002552、**下端を読む点を 1 つ開いたら
-> −0.013091398** が出た。
-> ⇒ ★★★ **判定法**: **残差が「妙に小さい」点を割るときは、和ではなく*片端*を読む点を開く。**
-> **和が小さいことは、項が小さいことの証拠ではない**（§5.2 の「打ち消し合い」の*箱*版——
-> あちらは 2 つの誤りが逆符号、**こちらは 2 つの縁が*同符号*にずれて差が消える**）。
-> （RULES §5.3 へ汎化済み。）
 
 ---
 

@@ -4,6 +4,25 @@
 %%
 %% Run with ../Measure-LilyPondProbe.ps1 -Probe mark-chord-row.ly -Prefix PROBEM
 %%
+%% ⚠️⚠️ THE SERIF FACE IS NOT PINNED HERE, AND THE LEDGER'S FOUR mark.* VALUES ARE
+%% MINTED UNDER THE MACHINE'S FALLBACK RESOLUTION, NOT UNDER "LilyPond Serif"
+%% (audited 2026-08-26, session 258, by diffing a pinned run against a bare one on the
+%% same binary). The staff-to-baseline differences of the two-system books (MKC/MKP/
+%% MKL/MKQ: 2.850000/5.845000/3.860184...) are face-INVARIANT - mark and staff shift
+%% together - but the four the ledger records are not:
+%%   mark.chord-row.staff-to-baseline  4.117029  = MKB bare (pinned reads 4.197549, +0.080520)
+%%   mark.plain.staff-to-baseline      4.117029  = same family, same shift
+%%   mark.over-chord.staff-to-baseline 7.381627  = MKW bare (pinned 7.412291, +0.030664)
+%%   mark.over-chord.tall...           8.652725  = MKX bare (pinned 8.683389, +0.030664)
+%% ⚠️ chord-lyric-run.ly's values are minted under the OTHER face (the canonical pin) -
+%% the ledger currently mixes two serif faces across probes, stamped by whichever face
+%% the machine resolved on each probe's measuring day.
+%% ⇒ WHOEVER NEXT TOUCHES THE +0.7706 ISLAND (ChordClearancePadding, guarded by the two
+%% over-chord points): PIN fonts.serif HERE FIRST, re-measure, re-record the four values
+%% and their Lily#-side residuals (they shift by the deltas above), and only then port.
+%% Re-minting was deliberately NOT done in session 258 so the guard and the port move in
+%% one commit rather than the guard moving alone.
+%%
 %% THE DEFECT THIS MEASURES (user report, session 243): on a lead sheet written
 %% `chords / staff / lyrics`, Lily#'s section marks ride ABOVE the whole chord band —
 %% 7.060 over the staff's top line, where every other row order puts them at 2.660.

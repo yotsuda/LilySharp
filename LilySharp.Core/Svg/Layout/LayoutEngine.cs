@@ -5172,8 +5172,14 @@ internal sealed class LayoutEngine
             return null;
 
         var engraver = BuildBlockEngraver(score);
+        // A note-bound verse is a Lyrics line wherever it hangs, so it carries the Lyrics
+        // context's affinity and spec set into the walk.
+        // LILYPOND-REF: ly/engraver-init.ly:648-658 Lyrics — staff-affinity = UP and the
+        // three nonstaff-* declarations, association notwithstanding (the LYRC/LYRR and
+        // LYRV/LYRRV dumps measure that identity).
+        var lyricSpecs = _options.StaffSpacing.Lyrics;
 
-        var cache = new Dictionary<(int, int), IReadOnlyList<(VerticalSkyline, VerticalSkyline)>?>();
+        var cache = new Dictionary<(int, int), IReadOnlyList<MultiStaffLayouter.PairLooseLine>?>();
         return (upperStaffIndex, lowerStaffIndex) =>
         {
             var key = (upperStaffIndex, lowerStaffIndex);
@@ -5184,12 +5190,15 @@ internal sealed class LayoutEngine
             // [upper, upper+1) — which is the same selection BuildStaffAnchorTables gives
             // that staff an anchor for. The two must agree or the block is drawn at one
             // staff's baseline and the room measured from another's.
-            IReadOnlyList<(VerticalSkyline, VerticalSkyline)>? lines = null;
+            IReadOnlyList<MultiStaffLayouter.PairLooseLine>? lines = null;
             var built = engraver.NoteBoundBlockSkylines(
                 score.Lyrics, measureLayouts, startMeasure, endMeasure,
                 upperStaffIndex, upperStaffIndex + 1);
             if (built.Count > 0)
-                lines = built;
+                lines = built
+                    .Select(b => new MultiStaffLayouter.PairLooseLine(
+                        b.Up, b.Down, StaffAffinityDirection.Up, lyricSpecs))
+                    .ToList();
             cache[key] = lines;
             return lines;
         };

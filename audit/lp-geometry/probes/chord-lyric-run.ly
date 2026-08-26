@@ -60,6 +60,18 @@
 %% Lyrics context stays empty, remove-empty kills it, and the book silently measures the
 %% chords-only arrangement instead. The first run of this probe did exactly that — CHL1
 %% and CHL2 came back byte-identical, which is what gave it away.
+%%
+%% ⚠️ THE SERIF FONT IS PINNED (2026-08-26, the session AFTER the numbers above were
+%% taken): under the svg backend LilyPond's fonts.serif falls back to whatever fontconfig
+%% resolves on this machine — the trap a dozen probes in this directory already document —
+%% and this file pinned only fonts.sans (the chord names) when it was written. The ledger
+%% numbers above were measured while the machine happened to resolve generic serif to the
+%% shipped C059, i.e. to "LilyPond Serif"; hours later the same probe on the same binary
+%% read the lyric ink as a DIFFERENT face (up 1.714734232 / down -0.033776533 against
+%% C059's 1.820098344 / -0.037044154) and every lyric-adjacent step moved
+%% (chord-to-lyric 2.320115015 -> 2.214749269, lyric-to-staff 5.045000000 -> 5.078776533).
+%% With the pin the ledger numbers reproduce exactly. Nothing was re-measured; the pin
+%% makes the file say what its numbers always meant.
 
 #(define (dump tag layout pages)
    (for-each
@@ -86,6 +98,7 @@
 probeCL =
 #(define-scheme-function (tag) (string?)
    #{ \paper { indent = 0 ragged-right = ##t ragged-bottom = ##t
+               property-defaults.fonts.serif = "LilyPond Serif"
                property-defaults.fonts.sans = "LilyPond Sans Serif"
                page-post-process = #(lambda (layout pages)
                                       (format #t "\nPROBECL BOOK ~a\n" tag)
