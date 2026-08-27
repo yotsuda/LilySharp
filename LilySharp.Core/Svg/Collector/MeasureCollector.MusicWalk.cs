@@ -339,7 +339,7 @@ public sealed partial class MeasureCollector
             if (endNoteIndex >= startNoteIndex)
                 _tupletBrackets.Add(new TupletBracketItem(sub.TupletNum, sub.TupletBase,
                     startNoteIndex, endNoteIndex, measureIndex, arpeggio.Position, 0,
-                    _currentStaffIndex, _currentVoiceIndex));
+                    _cursor.StaffIndex, _cursor.VoiceIndex));
         }
         // The group consumes exactly `total`; record it once (AddDuration may roll the bar,
         // which is why the bracket indices were captured above).
@@ -540,9 +540,9 @@ public sealed partial class MeasureCollector
                     if (voiceBlocks.Count > 0)
                     {
                         // Voice 0 is render voice 1: an override in its block scopes to it.
-                        _currentVoiceScope = 1;
+                        _cursor.VoiceScope = 1;
                         ProcessMusicNodeSequence(GatherVoiceMusicNodes(voiceBlocks[0]), builder);
-                        _currentVoiceScope = null;
+                        _cursor.VoiceScope = null;
                         _octave.Restore(spanFrame);
                     }
                 }
@@ -550,7 +550,7 @@ public sealed partial class MeasureCollector
 
             case NoteSyntax note:
                 {
-                    int measureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
+                    int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
                     int itemIndex = builder.CurrentItemCount;
                     // Onset timing of this note (elapsed duration before it is added)
                     // — anchors note-attached marks to the right column.
@@ -574,7 +574,7 @@ public sealed partial class MeasureCollector
                     // reader for it at all — they emitted a sounding note here.
                     if (Semantics.PitchedRest.Is(note))
                     {
-                        int prMeasureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
+                        int prMeasureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
                         int prItemIndex = builder.CurrentItemCount;
                         Fraction prAnchorTiming = builder.CurrentDuration;
                         var pitchedRest = CreatePitchedRestItem(note);
@@ -631,7 +631,7 @@ public sealed partial class MeasureCollector
 
             case DrumNoteSyntax drumNote:
                 {
-                    int drumMeasureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
+                    int drumMeasureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
                     int drumItemIndex = builder.CurrentItemCount;
                     Fraction drumAnchorTiming = builder.CurrentDuration;
                     var drumItem = CreateDrumNoteItem(drumNote);
@@ -644,8 +644,8 @@ public sealed partial class MeasureCollector
                                 ? ArticulationType.Stopped
                                 : ArticulationType.Flageolet,
                             drumMeasureIndex, drumItemIndex, true,
-                            drumNote.Position, _currentStaffIndex)
-                        { VoiceIndex = _currentVoiceIndex });
+                            drumNote.Position, _cursor.StaffIndex)
+                        { VoiceIndex = _cursor.VoiceIndex });
                     CollectDynamics(drumNote, drumMeasureIndex, drumItemIndex);
                     CollectArticulations(drumNote, drumMeasureIndex, drumItemIndex, drumItem.StemUp,
                         null, drumAnchorTiming);
@@ -660,7 +660,7 @@ public sealed partial class MeasureCollector
                     // to be dropped on the floor here, which silently swallowed a
                     // rest-bound slur with no warning.
                     var restItem = CreateRestItem(rest);
-                    int restMeasureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
+                    int restMeasureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
                     int restItemIndex = builder.CurrentItemCount;
                     Fraction restAnchorTiming = builder.CurrentDuration;
                     int count = rest.MeasureCount;
@@ -718,7 +718,7 @@ public sealed partial class MeasureCollector
 
             case ChordSyntax chord:
                 {
-                    int measureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
+                    int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
                     int itemIndex = builder.CurrentItemCount;
                     Fraction chordAnchorTiming = builder.CurrentDuration;
                     // The EMPTY chord <> is a zero-time carrier: it adds NO item,
@@ -817,7 +817,7 @@ public sealed partial class MeasureCollector
                     {
                         int minPos = chordItem.Notes.Min(n => n.StaffPosition);
                         int maxPos = chordItem.Notes.Max(n => n.StaffPosition);
-                        _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, chord.Position, _currentStaffIndex,
+                        _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, chord.Position, _cursor.StaffIndex,
                             Bracket: arpBracket));
                     }
                 }
@@ -828,7 +828,7 @@ public sealed partial class MeasureCollector
             // expands q after \relative, so a q is transparent to the frame).
             case ChordRepetitionSyntax rep:
                 {
-                    int measureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
+                    int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
                     int itemIndex = builder.CurrentItemCount;
                     Fraction repAnchorTiming = builder.CurrentDuration;
                     if (_pendingGrace != null)
@@ -887,7 +887,7 @@ public sealed partial class MeasureCollector
                     {
                         int minPos = chordCopy.Notes.Min(n => n.StaffPosition);
                         int maxPos = chordCopy.Notes.Max(n => n.StaffPosition);
-                        _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, rep.Position, _currentStaffIndex,
+                        _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, rep.Position, _cursor.StaffIndex,
                             Bracket: arpBracket));
                     }
                 }
@@ -899,7 +899,7 @@ public sealed partial class MeasureCollector
             // note.
             case SlashNoteSyntax slash:
                 {
-                    int measureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
+                    int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
                     int itemIndex = builder.CurrentItemCount;
                     Fraction slashAnchorTiming = builder.CurrentDuration;
                     if (_pendingGrace != null)
@@ -942,7 +942,7 @@ public sealed partial class MeasureCollector
             // copy carries the original's absolute spelling).
             case BareDurationSyntax bare:
                 {
-                    int measureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
+                    int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
                     int itemIndex = builder.CurrentItemCount;
                     Fraction bareAnchorTiming = builder.CurrentDuration;
                     if (_pendingGrace != null)
@@ -1251,21 +1251,21 @@ public sealed partial class MeasureCollector
                 break;
 
             case OverrideDeclarationSyntax overrideDecl:
-                CollectOverride(overrideDecl, builder.CurrentMeasureIndex, builder.CurrentItemCount, isOnce: false, staffIndex: _currentStaffIndex);
+                CollectOverride(overrideDecl, builder.CurrentMeasureIndex, builder.CurrentItemCount, isOnce: false, staffIndex: _cursor.StaffIndex);
                 // Track it so the next section boundary reverts it to the part default.
                 _sectionActiveGrobProps.Add((overrideDecl.GrobName.Text, overrideDecl.PropertyName.Text));
                 break;
 
             case RevertDeclarationSyntax revertDecl:
-                CollectRevert(revertDecl, builder.CurrentMeasureIndex, builder.CurrentItemCount, staffIndex: _currentStaffIndex);
+                CollectRevert(revertDecl, builder.CurrentMeasureIndex, builder.CurrentItemCount, staffIndex: _cursor.StaffIndex);
                 _sectionActiveGrobProps.Remove((revertDecl.GrobName.Text, revertDecl.PropertyName.Text));
                 break;
 
             case OnceModifierSyntax onceModifier:
                 if (onceModifier.Command is OverrideDeclarationSyntax innerOverride)
-                    CollectOverride(innerOverride, builder.CurrentMeasureIndex, builder.CurrentItemCount, isOnce: true, staffIndex: _currentStaffIndex);
+                    CollectOverride(innerOverride, builder.CurrentMeasureIndex, builder.CurrentItemCount, isOnce: true, staffIndex: _cursor.StaffIndex);
                 else if (onceModifier.Command is RevertDeclarationSyntax innerRevert)
-                    CollectRevert(innerRevert, builder.CurrentMeasureIndex, builder.CurrentItemCount, staffIndex: _currentStaffIndex);
+                    CollectRevert(innerRevert, builder.CurrentMeasureIndex, builder.CurrentItemCount, staffIndex: _cursor.StaffIndex);
                 break;
         }
     }
@@ -1413,8 +1413,8 @@ public sealed partial class MeasureCollector
                 measureIndex,
                 tuplet.Position,
                 nestingDepth,
-                _currentStaffIndex,
-                _currentVoiceIndex
+                _cursor.StaffIndex,
+                _cursor.VoiceIndex
             ));
         }
 
@@ -1442,7 +1442,7 @@ public sealed partial class MeasureCollector
         if ((_pendingEmptyChordSlurStart || _pendingEmptyChordSlurEnd) && BindsASlur(item))
             TakeEmptyChordSlurs(ref hasSlurStartAfter, ref hasSlurEndAfter);
 
-        int annMeasureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
+        int annMeasureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
         int annItemIndex = builder.CurrentItemCount;
         Fraction annAnchor = builder.CurrentDuration;
         switch (item)

@@ -208,7 +208,7 @@ public sealed partial class MeasureCollector
     /// </summary>
     /// <remarks>
     /// ⚠️ ONE COLLECTOR COLLECTS EVERY STAFF (the voice-binding loop bumps
-    /// <c>_currentStaffIndex</c>), and <c>_tupletBrackets</c> is never cleared, so by the time
+    /// <c>_cursor.StaffIndex</c>), and <c>_tupletBrackets</c> is never cleared, so by the time
     /// staff N is probed the list also holds staves 0..N−1's brackets — and, inside a
     /// <c>&lt;&lt; \\ &gt;&gt;</c> span, the sibling voices'. Handed unfiltered, the detector reads
     /// every one of them as an index into THIS stream's items:
@@ -221,7 +221,7 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private ImmutableArray<TupletBracketItem> ProbeTupletBrackets()
         => TupletBracketItem.AddressedTo(
-            _tupletBrackets, _currentStaffIndex, _currentVoiceIndex);
+            _tupletBrackets, _cursor.StaffIndex, _cursor.VoiceIndex);
 
     private void ResolveBeamStemDirections(List<Measure> measures)
     {

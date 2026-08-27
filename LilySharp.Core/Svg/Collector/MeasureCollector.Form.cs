@@ -293,10 +293,10 @@ public sealed partial class MeasureCollector
             {
                 if (_sectionResetOverrides.TryGetValue((grob, prop), out var defaultValue))
                     _grobOverrides.Add(new GrobOverride(grob, prop, defaultValue,
-                        builder.CurrentMeasureIndex, builder.CurrentItemCount, false, _currentStaffIndex));
+                        builder.CurrentMeasureIndex, builder.CurrentItemCount, false, _cursor.StaffIndex));
                 else
                     _grobReverts.Add(new GrobRevert(grob, prop,
-                        builder.CurrentMeasureIndex, builder.CurrentItemCount, _currentStaffIndex));
+                        builder.CurrentMeasureIndex, builder.CurrentItemCount, _cursor.StaffIndex));
             }
             _sectionActiveGrobProps.Clear();
         }
@@ -317,7 +317,7 @@ public sealed partial class MeasureCollector
                 if (child is OverrideDeclarationSyntax secOv)
                 {
                     CollectOverride(secOv, builder.CurrentMeasureIndex, builder.CurrentItemCount,
-                        isOnce: false, staffIndex: _currentStaffIndex);
+                        isOnce: false, staffIndex: _cursor.StaffIndex);
                     _sectionActiveGrobProps.Add((secOv.GrobName.Text, secOv.PropertyName.Text));
                 }
             }

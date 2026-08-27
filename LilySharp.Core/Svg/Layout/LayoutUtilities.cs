@@ -779,15 +779,34 @@ internal static class LayoutUtilities
     /// converts the origin-measured extents with ToFirst, the spring chain with
     /// HalfFirst — for a system led by a loose row (chords/lyrics) the two differ
     /// by the row band, so this is a different NUMBER, not a different rounding.
-    /// Unmeasured; changing either side needs an observer. (The no-skyline case
-    /// uses ToFirst on both paths — the extents are origin-measured, and the
-    /// anchors' own remark says origin-measured terms take ToFirst.)
+    /// (The no-skyline case uses ToFirst on both paths — the extents are
+    /// origin-measured, and the anchors' own remark says origin-measured terms take
+    /// ToFirst.) ★ REACHABILITY MEASURED 2026-08-27 (session 266): the branch fired
+    /// on NONE of 612 books (the 82-book corpus, the user's lead sheets, the p257
+    /// variants) nor on any adversarial construction (rows-only scores, hara-kiri'd
+    /// rows-only systems, single- and multi-page, titles) — a staffed edge seeds
+    /// staff-symbol ink, and even an all-rows system's silhouette is fed by the
+    /// paging augment families. Unreachable today, so no observer CAN be built; the
+    /// first book that reaches it brings its observer with it
+    /// (audit/lp-geometry/probes/rows-only-page.ly is where that pair would be
+    /// refereed, and its header carries this audit).
     /// ⑵ THE ROWS-ONLY SCALAR FLOOR EXISTS ONLY ON THE SINGLE-PAGE PATH
     /// (<paramref name="scalarFloorForSpaceablelessPrev"/>): a system with no
     /// spaceable staff has no down silhouette to refine, so Distance() under-answers
     /// and the scalar stands (measured session 240, scratch/ベースタブLy/Untitled-6.lys
     /// — 6.395 against a true 14.900). The spring chain never grew the arm; its
     /// caller passes false, and extending the fix there is its own measured change.
+    /// ★ MEASURED 2026-08-27 (session 266): on every constructible rows-only book
+    /// the un-floored chain and the floored single-page path answer the SAME number
+    /// — the rows-only silhouette degrades to exactly the scalar extents
+    /// (skylineDistance == inkBelowLastRefpoint + nextUpExtent + prevOriginToLast,
+    /// one- and two-row shapes alike) — so the missing arm is value-inert today.
+    /// An LP referee for the pair was built and its ledgering DECLINED: LilyPond's
+    /// own default output for the shape is dominated by its loose-line
+    /// redistribution (the next system's chord rows laid onto that system's staff,
+    /// page-layout-problem.cc:860-880), the subsystem Lily# does not have (HANDOFF
+    /// 2D) — a residual would price that absence, not this floor. The committed,
+    /// re-runnable evidence is audit/lp-geometry/probes/rows-only-page.ly.
     /// ⑶ WHAT "prev's last refpoint" MEANS differs at the callers:
     /// the spring chain answers ToFirst when the system carries no staff springs
     /// (the chain's last node — see its LILYSHARP-OWN remark), the single-page path

@@ -3586,7 +3586,7 @@ internal sealed class MultiStaffLayouter
     /// (BeamDetector :335/:595) and <c>GetDefaultStemUpAt</c> of a one-voice staff is null
     /// at every measure (<c>IsPolyphonicAt</c> finds no second track), so the lambda IS the
     /// null; ⑵ a one-voice staff's tuplets all carry VoiceIndex 0 — a nonzero index is
-    /// assigned only inside a <c>voice { }</c> block (<c>MeasureCollector._currentVoiceIndex</c>),
+    /// assigned only inside a <c>voice { }</c> block (<c>MeasureCollector._cursor.VoiceIndex</c>),
     /// which builds extra voice tracks, so the voice filter drops nothing. The multi-voice
     /// fan is the Score entry's own fan, line for line.
     /// </para>

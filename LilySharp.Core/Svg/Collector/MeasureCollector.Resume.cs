@@ -60,7 +60,7 @@ public sealed partial class MeasureCollector
         => _pendingGrace == null && _pendingLeadingGrace.IsDefaultOrEmpty
             && !_pendingEmptyChordSlurStart && !_pendingEmptyChordSlurEnd
             && _tremoloPairShape == null
-            && _cueDepth == 0 && _currentVoiceScope == null && _metadataMeasureOffset == 0
+            && _cueDepth == 0 && _cursor.VoiceScope == null && _cursor.MetadataMeasureOffset == 0
             && _phraseTransposeSaves.Count == 0
             && _measureAccidentals.Count == 0;
 

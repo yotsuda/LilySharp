@@ -76,20 +76,57 @@ public sealed partial class MeasureCollector
 
     // Dynamic markings
     private readonly List<DynamicItem> _dynamics = new();
-    // Global staff index currently being collected (multi-staff). Stamped onto
-    // each dynamic so layout positions it under its own staff. 0 for the single-
-    // staff/single-Score paths.
-    private int _currentStaffIndex = 0;
-    // Voice index (within the current staff) being collected. Stamped onto each
-    // tuplet bracket so auto-beaming applies a tuplet's boundary only to its OWN
-    // voice (a lower voice's eighths must not break at an upper voice's triplet).
-    // 0 = primary voice; the parallel sub-voices set it in BuildExtraVoiceTracks.
-    private int _currentVoiceIndex = 0;
-    // The render voice number (1-based) when the walk is INSIDE a `voice {}` block, so an
-    // override there scopes to that voice; null in the main stream (staff-scoped). Set
-    // around each parallel sub-voice's processing (voice 0 in ProcessMusicNode, the extras
-    // in BuildExtraVoiceTracks).
-    private int? _currentVoiceScope;
+
+    // The walk's POSITION — where the collect currently stands. One struct, so a
+    // scope that must save and restore the whole position (a parallel span's
+    // sub-voice walk) cannot forget a coordinate when one is added: the
+    // 2026-08-26 review named these four a hidden coupling spread over
+    // CollectMultiStaff, BuildExtraVoiceTracks' manual save/restore and
+    // ProcessMusicNode, and this is that bundling — mechanical on purpose (every
+    // reader keeps its meaning; only the spelling moved from four fields to one).
+    private struct CollectionCursor
+    {
+        // Global staff index currently being collected (multi-staff). Stamped onto
+        // each dynamic so layout positions it under its own staff. 0 for the single-
+        // staff/single-Score paths.
+        public int StaffIndex;
+        // Voice index (within the current staff) being collected. Stamped onto each
+        // tuplet bracket so auto-beaming applies a tuplet's boundary only to its OWN
+        // voice (a lower voice's eighths must not break at an upper voice's triplet).
+        // 0 = primary voice; the parallel sub-voices set it in BuildExtraVoiceTracks.
+        public int VoiceIndex;
+        // The render voice number (1-based) when the walk is INSIDE a `voice {}` block, so an
+        // override there scopes to that voice; null in the main stream (staff-scoped). Set
+        // around each parallel sub-voice's processing (voice 0 in ProcessMusicNode, the extras
+        // in BuildExtraVoiceTracks).
+        public int? VoiceScope;
+        // Added to the local measure index when collecting a parallel span's EXTRA
+        // voices (they're collected with a fresh 0-based builder), so their
+        // per-note metadata — dynamics, articulations, etc. — lands at the span's
+        // real measure index instead of measure 0. Zero for the primary stream.
+        public int MetadataMeasureOffset;
+    }
+
+    private CollectionCursor _cursor;
+
+    // Saves the whole cursor on entry, installs the given one, and restores the
+    // saved cursor on Dispose — the using-scope BuildExtraVoiceTracks' manual
+    // save/restore became, so a new cursor coordinate is restored by
+    // construction instead of by whoever remembers to write the reset lines.
+    private readonly struct CursorScope : IDisposable
+    {
+        private readonly MeasureCollector _owner;
+        private readonly CollectionCursor _saved;
+
+        public CursorScope(MeasureCollector owner, CollectionCursor next)
+        {
+            _owner = owner;
+            _saved = owner._cursor;
+            owner._cursor = next;
+        }
+
+        public void Dispose() => _owner._cursor = _saved;
+    }
     // Articulation marks
     private readonly List<ArticulationItem> _articulations = new();
     // Grace notes
@@ -159,11 +196,6 @@ public sealed partial class MeasureCollector
     // 2026-08-01 on the user's call; before that voices 2..N restarted at the PART's
     // default octave and voice 0 leaked its last pitch into the music after the span.
     private readonly List<(ParallelExpressionSyntax Parallel, int StartMeasure, Fraction StartOffset, OctaveSnapshot Frame)> _parallelSpans = new();
-    // Added to the local measure index when collecting a parallel span's EXTRA
-    // voices (they're collected with a fresh 0-based builder), so their
-    // per-note metadata — dynamics, articulations, etc. — lands at the span's
-    // real measure index instead of measure 0. Zero for the primary stream.
-    private int _metadataMeasureOffset = 0;
     // Next beam identity handed out by ResolveBeamStemDirections. Runs across every call on
     // this collector so two voices of the same staff cannot be handed the same number.
     private int _nextBeamId;
@@ -276,7 +308,7 @@ public sealed partial class MeasureCollector
     /// "where is the builder now", not "where was the mark written" — and a note that
     /// fills its bar has already carried the builder across the barline. This records the
     /// answer to the second question while the host note is still in hand.
-    /// It also carries <c>_metadataMeasureOffset</c>, which the statement node does not
+    /// It also carries <c>_cursor.MetadataMeasureOffset</c>, which the statement node does not
     /// apply — inside a <c>voice { … }</c> span the mark was shifted by that too.
     /// </remarks>
     private readonly Dictionary<int, int> _markHostMeasure = new();
@@ -533,7 +565,7 @@ public sealed partial class MeasureCollector
         if (voiceName != null)
         {
             // Part-body grob defaults (`part <voice> { override … }`) — staff 0 here.
-            CollectPartBodyOverrides(tree.GetRoot(), voiceName, _currentStaffIndex);
+            CollectPartBodyOverrides(tree.GetRoot(), voiceName, _cursor.StaffIndex);
             var (partClef, partOctave, partExplicitOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(tree.GetRoot(), voiceName);
             // The POSITION follows the clef it describes. A part without its own
             // `clef` keeps the top-level one, so overwriting the offset regardless
@@ -620,7 +652,7 @@ public sealed partial class MeasureCollector
         // renders only where a score places its row.)
         if (attachedChordPart != null)
             _chordNameCollector.CollectAttached(
-                tree.GetRoot(), attachedChordPart, _sectionState.StartMeasure, _currentStaffIndex,
+                tree.GetRoot(), attachedChordPart, _sectionState.StartMeasure, _cursor.StaffIndex,
                 _meta.TimeBeats, _meta.TimeBeatType, attachedChordDisplay);
 
         return ScoreAssembler.BuildScore(voice, CaptureScoreContent(voice.Measures.Length));
@@ -790,24 +822,24 @@ public sealed partial class MeasureCollector
             // parts take the staff index already handed out instead of opening a new one
             // (see GetVoiceBindings) — otherwise every staff below would be tagged one
             // index too high.
-            _currentStaffIndex = sharesStaff ? collectStaffIndex - 1 : collectStaffIndex++;
+            _cursor.StaffIndex = sharesStaff ? collectStaffIndex - 1 : collectStaffIndex++;
             _octave.LastPitchName = 'c';
             _defaultDuration = Fraction.Quarter;
             _defaultDots = 0;
 
             // Part-body grob defaults (`part <voice> { override … }`) scope to this staff.
-            CollectPartBodyOverrides(tree.GetRoot(), voiceName, _currentStaffIndex);
+            CollectPartBodyOverrides(tree.GetRoot(), voiceName, _cursor.StaffIndex);
 
             // `staff NAME with chords CHORDPART [as roman]`: remember the
             // attachment (and its display); the chord symbols are collected AFTER
             // the voice loop, once every section's start measure is registered.
             if (withChords != null)
-                attachedChords.Add((withChords, _currentStaffIndex, chordDisplay));
+                attachedChords.Add((withChords, _cursor.StaffIndex, chordDisplay));
 
             // `staff NAME with lyrics L`: remember each named lyrics part to align
             // under THIS staff (post-loop, once section starts are registered).
             foreach (var lyName in withLyrics)
-                attachedLyrics.Add((lyName, _currentStaffIndex, voiceName));
+                attachedLyrics.Add((lyName, _cursor.StaffIndex, voiceName));
 
             // An independent chord row (`chords name [as roman]` in the score).
             // Defer its collection until AFTER the music voices: the section start
@@ -816,7 +848,7 @@ public sealed partial class MeasureCollector
             // 0, overprinting them.
             if (renderSpec.Items.OfType<ChordRowSpec>().Any(c => c.PartName == voiceName))
             {
-                pendingChordRows.Add((voiceName, _currentStaffIndex, chordDisplay));
+                pendingChordRows.Add((voiceName, _cursor.StaffIndex, chordDisplay));
                 staffVoices[voiceName] = ImmutableArray.Create(
                     new Voice(voiceName, ImmutableArray<Measure>.Empty));
                 continue;
@@ -827,7 +859,7 @@ public sealed partial class MeasureCollector
             // known, so one block of flat verses can auto-wrap to that bar count.
             if (renderSpec.Items.OfType<LyricsRowSpec>().Any(c => c.PartName == voiceName))
             {
-                pendingLyricsRows.Add((voiceName, _currentStaffIndex));
+                pendingLyricsRows.Add((voiceName, _cursor.StaffIndex));
                 staffVoices[voiceName] = ImmutableArray.Create(
                     new Voice(voiceName, ImmutableArray<Measure>.Empty));
                 continue;
@@ -1358,7 +1390,7 @@ public sealed partial class MeasureCollector
         // Collect's own CollectAttached is skipped by the multi-voice early return.
         if (attachedChordPart != null)
             _chordNameCollector.CollectAttached(
-                root, attachedChordPart, _sectionState.StartMeasure, _currentStaffIndex,
+                root, attachedChordPart, _sectionState.StartMeasure, _cursor.StaffIndex,
                 _meta.TimeBeats, _meta.TimeBeatType, attachedChordDisplay);
 
         // A single-staff score surfaces the same annotations whether it has one
@@ -1421,21 +1453,32 @@ public sealed partial class MeasureCollector
                 _defaultDuration = Fraction.Quarter;
                 _defaultDots = 0;
 
-                // Per-note metadata in this sub-voice is keyed by its local 0-based
-                // measure index; shift it to the span's real start so dynamics etc.
-                // land in the right measure.
-                _metadataMeasureOffset = start;
-                // Tag this sub-voice's tuplets with its voice index so their
-                // beam-breaking boundaries never leak into a sibling voice.
-                _currentVoiceIndex = t;
-                // Render voice number is t+1 — an override in this sub-voice scopes to it.
-                _currentVoiceScope = t + 1;
-                var sub = CollectMeasuresFromNode(blocks[t], applyFilePartial: start == 0,
-                    leadingOffset: startOffset);
-                ResolveBeamStemDirections(sub);
-                _currentVoiceScope = null;
-                _currentVoiceIndex = 0;
-                _metadataMeasureOffset = 0;
+                // The sub-voice's cursor, installed for exactly the walk below:
+                //   * MetadataMeasureOffset — per-note metadata in this sub-voice is
+                //     keyed by its local 0-based measure index; shift it to the span's
+                //     real start so dynamics etc. land in the right measure.
+                //   * VoiceIndex — tag this sub-voice's tuplets so their beam-breaking
+                //     boundaries never leak into a sibling voice.
+                //   * VoiceScope — render voice number is t+1; an override in this
+                //     sub-voice scopes to it.
+                // The scope RESTORES THE SAVED CURSOR where the manual lines it
+                // replaced reset to zeros — the same values, because this loop only
+                // ever runs on the primary stream's cursor (StaffIndex is carried
+                // through unchanged by the `with`, and the walk that fills
+                // _parallelSpans restores its own VoiceScope toggle before returning),
+                // and iteration t+1 saves what iteration t's Dispose just restored.
+                List<Measure> sub;
+                using (new CursorScope(this, _cursor with
+                {
+                    MetadataMeasureOffset = start,
+                    VoiceIndex = t,
+                    VoiceScope = t + 1,
+                }))
+                {
+                    sub = CollectMeasuresFromNode(blocks[t], applyFilePartial: start == 0,
+                        leadingOffset: startOffset);
+                    ResolveBeamStemDirections(sub);
+                }
 
                 _octave.Restore(savedOctave);
                 _defaultDuration = savedDuration;
@@ -1691,9 +1734,13 @@ public sealed partial class MeasureCollector
         _variables.Clear();
         _rowsOnlyFormBars.Clear();
         _rowsOnlyFormGridBars = 0;
-        _currentStaffIndex = 0;
-        _currentVoiceIndex = 0;
-        _currentVoiceScope = null;
+        // ⚠️ MetadataMeasureOffset is deliberately NOT written here, preserving the
+        // manual reset verbatim (the bundling changed spellings, not behavior): it is
+        // nonzero only inside BuildExtraVoiceTracks' span scope, which restores it
+        // before anything can call Reset.
+        _cursor.StaffIndex = 0;
+        _cursor.VoiceIndex = 0;
+        _cursor.VoiceScope = null;
         _chordNameCollector.Clear(); // grid warnings; its item list is registry-cleared
         _lyricsCollector.Clear();
         _sectionResetOverrides.Clear();
@@ -1901,7 +1948,7 @@ public sealed partial class MeasureCollector
         // already collected at (0,0)) — the state each section boundary reverts to.
         _sectionResetOverrides.Clear();
         foreach (var ov in _grobOverrides)
-            if (ov.StaffIndex is null || ov.StaffIndex == _currentStaffIndex)
+            if (ov.StaffIndex is null || ov.StaffIndex == _cursor.StaffIndex)
                 _sectionResetOverrides[(ov.GrobType, ov.PropertyName)] = ov.Value;
         _sectionActiveGrobProps.Clear();
 
@@ -2743,10 +2790,10 @@ public sealed partial class MeasureCollector
                 var level = dynamicSyntax.Level;
                 if (level != DynamicLevel.None)
                 {
-                    _dynamics.Add(new DynamicItem(level, measureIndex, itemIndex, dynamicSyntax.Position, _currentStaffIndex)
+                    _dynamics.Add(new DynamicItem(level, measureIndex, itemIndex, dynamicSyntax.Position, _cursor.StaffIndex)
                     {
                         IsAbove = dynamicSyntax.ForcedAbove == true,
-                        VoiceIndex = _currentVoiceIndex,
+                        VoiceIndex = _cursor.VoiceIndex,
                     });
                 }
                 else
@@ -2764,7 +2811,7 @@ public sealed partial class MeasureCollector
                     if (markType != null)
                     {
                         _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex,
-                            dynamicSyntax.Position, itemIndex) { StaffIndex = _currentStaffIndex });
+                            dynamicSyntax.Position, itemIndex) { StaffIndex = _cursor.StaffIndex });
                     }
                 }
             }
@@ -3073,7 +3120,7 @@ public sealed partial class MeasureCollector
                     _percentRepeats.Add(new PercentRepeatItem(
                         iterStart + m,
                         repeat.Position,
-                        _currentStaffIndex));
+                        _cursor.StaffIndex));
                 }
             }
         }
@@ -3260,7 +3307,7 @@ public sealed partial class MeasureCollector
                 measureIndex,
                 mainNoteItemIndex,
                 grace.Position,
-                _currentStaffIndex));
+                _cursor.StaffIndex));
             // Hand the infos to the next main note/chord so it can reserve front space.
             _pendingLeadingGrace = infos;
         }

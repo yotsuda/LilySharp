@@ -1076,7 +1076,7 @@ internal sealed class BeamDetector
                 // ⚠️⚠️ AND THOSE 2 NAME THE AXIS (StaffIndex, VoiceIndex) CANNOT CUT. A
                 // condensedStaff yields ONE BINDING PER PART sharing ONE staff index
                 // (RenderSpec.GetVoiceBindings' SharesStaffWithPrevious, consumed by
-                // MeasureCollector's `_currentStaffIndex = sharesStaff ? … - 1 : …++`) and
+                // MeasureCollector's `_cursor.StaffIndex = sharesStaff ? … - 1 : …++`) and
                 // collects each part with VoiceIndex 0 — so two condensed parts are
                 // INDISTINGUISHABLE to the scoping rule, and each is probed with the other's
                 // brackets. In this book they are caught only because the second part's bar
