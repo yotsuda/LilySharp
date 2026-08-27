@@ -320,6 +320,12 @@ internal sealed partial class LayoutEngine
         /// <see cref="BuildPrefixTimeSignatureX"/>.</summary>
         public Func<int, double>? PrefixTimeSignatureX { get; init; }
 
+        /// <summary>Per system, the ABSOLUTE X of the line-start break-align anchor a
+        /// (staff-bar key-signature clef)-aligned mark lands on — key right, else clef
+        /// right — or NaN without a clef column. See
+        /// <see cref="BuildPrefixMarkAnchorX"/>.</summary>
+        public Func<int, double>? PrefixMarkAnchorX { get; init; }
+
         /// <summary>
         /// By MEASURE index: the absolute X of the bar line DRAWN at a system start, or NaN
         /// when that measure does not open a system or opens one with no bar line. See
@@ -416,6 +422,46 @@ internal sealed partial class LayoutEngine
             return prefix.HasTime
                 ? systems[sysIdx].Indent + prefix.Columns.TimeX
                 : double.NaN;
+        };
+
+    /// <summary>
+    /// Per system, the ABSOLUTE X a (staff-bar key-signature clef)-aligned mark's
+    /// refpoint lands on at that system's line start: the KEY ink's right edge when a
+    /// key signature stands in the prefix, the CLEF ink's right edge otherwise, NaN
+    /// when no row engraves a clef (rows-only sheets keep the line-start edge).
+    /// The drawn opening bar (staff-bar first in the list) is the caller's
+    /// <c>lineStartBarlineX</c>; this covers the invisible-bar fallback chain.
+    /// </summary>
+    /// <remarks>
+    /// One derivation with the spring model and the draw
+    /// (<see cref="MultiStaffLayouter.SolveLineStartPrefix"/>), like the metronome
+    /// mark's meter anchor above — a hand-rolled copy is how the reserved and drawn
+    /// prefixes would drift apart.
+    /// LILYPOND-REF: lily/break-alignment-interface.cc:299-353 find_parent / self_align_callback.
+    /// LILYPOND-REF: scm/define-grobs.scm:905-907 Clef break-align-anchor-alignment, :1975-1977 KeySignature break-align-anchor-alignment —
+    ///   break-align-anchor-alignment RIGHT, so the anchor is the ink's right edge.
+    /// ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's mark aligns to the BreakAlignGroup,
+    /// whose anchor is calc-average-anchor over the member grobs' own anchors; Lily#'s
+    /// prefix model carries ONE group column (the widest clef / the key union), so the
+    /// group's right edge stands in for the average — equal whenever the system's
+    /// staves engrave the same clef and key, which is every book the pair measures.
+    /// </remarks>
+    private static Func<int, double> BuildPrefixMarkAnchorX(
+        MultiStaffScore score, ImmutableArray<SystemLayout> systems)
+        => sysIdx =>
+        {
+            if (sysIdx < 0 || sysIdx >= systems.Length
+                || systems[sysIdx].Measures.IsDefaultOrEmpty)
+                return double.NaN;
+            double clefWidth = SpacingRules.MaxClefWidth(score);
+            if (clefWidth <= 0)
+                return double.NaN;
+            int m0 = systems[sysIdx].Measures[0].MeasureIndex;
+            var prefix = MultiStaffLayouter.SolveLineStartPrefix(score, m0, sysIdx == 0);
+            return systems[sysIdx].Indent
+                + (prefix.Columns.HasKey
+                    ? prefix.Columns.KeyX + SpacingRules.WidestActiveKeyInk(score, m0)
+                    : prefix.Columns.ClefX + clefWidth);
         };
 
     private AnnotationLayouts CalculateAnnotationLayouts(AnnotationLayoutContext ctx)
@@ -913,6 +959,7 @@ internal sealed partial class LayoutEngine
             chordNames: chordNameLayouts, lyrics: lyricLayouts, keepMarkText: keepMarkText,
             prefixTimeSignatureX: ctx.PrefixTimeSignatureX,
             lineStartBarlineX: ctx.LineStartBarlineX,
+            prefixMarkAnchorX: ctx.PrefixMarkAnchorX,
             solvedPedalRowUp: solvedPedalRowUp);
         var customTextLayouts = CustomTextEngraver.Calculate(customTexts, ml);
         // A leading \partial pickup is bar 0: shift displayed numbers down by one
@@ -1094,7 +1141,8 @@ internal sealed partial class LayoutEngine
         var labelWindows = MusicMarkEngraver.BoxedLabelXWindows(
             ctx.Fonts, ctx.MusicMarks, ctx.Measures, cn, systems, ml,
             prefixTimeSignatureX: ctx.PrefixTimeSignatureX,
-            lineStartBarlineX: ctx.LineStartBarlineX);
+            lineStartBarlineX: ctx.LineStartBarlineX,
+            prefixMarkAnchorX: ctx.PrefixMarkAnchorX);
 
         // An attached chord line that is a RUN ELEMENT is drawn at the run's own answer —
         // the walk's closing step over the pair that brackets it — instead of the

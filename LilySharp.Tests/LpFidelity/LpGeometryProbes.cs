@@ -2187,8 +2187,16 @@ internal static class LpGeometryProbes
         Every,
     }
 
-    private static string ChordRowAlternatingScore(string name, Rows rows, bool marks)
+    private static string ChordRowAlternatingScore(string name, Rows rows, bool marks,
+        bool rehearsalMarks = false)
     {
+        // rehearsalMarks: the \mark spelling of the same books (RWM/RWMN) — an @mark on
+        // each system's first melody note engraves a REHEARSAL mark (which break-aligns
+        // after the clef and so stands over the row's first chord), with the sections
+        // unlabeled (~A ~B ~C) so no SectionLabel joins it. See RWM's remark.
+        string BarsFor(string label) =>
+            (rehearsalMarks ? $"g4@mark(\"{label}\") a g a | " : "g4 a g a | ")
+            + string.Concat(Enumerable.Repeat("g4 a g a | ", 3)).Trim();
         string bars = string.Concat(Enumerable.Repeat("g4 a g a | ", 4)).Trim();
         string syllables = string.Concat(Enumerable.Repeat("no no no no | ", 4)).Trim();
         string chords = string.Concat(Enumerable.Repeat("C | ", 4)).Trim();
@@ -2220,19 +2228,19 @@ internal static class LpGeometryProbes
             part lower { clef treble }
 
             section A {
-              melody { {{bars}} break }
+              melody { {{BarsFor("A")}} break }
               lower { {{bars}} }
               lyrics one sings melody { {{syllables}} }{{outer}}
             }
 
             section B {
-              melody { {{bars}} break }
+              melody { {{BarsFor("B")}} break }
               lower { {{bars}} }
               lyrics one sings melody { {{syllables}} }{{middle}}
             }
 
             section C {
-              melody { {{bars}} }
+              melody { {{BarsFor("C")}} }
               lower { {{bars}} }
               lyrics one sings melody { {{syllables}} }{{last}}
             }
@@ -3299,6 +3307,25 @@ internal static class LpGeometryProbes
         }
         """;
 
+    /// <summary>
+    /// THE \mark SPELLING OF ROWM — the mirror of book RWM (page-vertical.ly), the pair
+    /// session 253's re-spelling lost and session 270's X fix made spellable again. An
+    /// <c>@mark</c> on each system's first melody note engraves a REHEARSAL mark, which at
+    /// a line start anchors after the clef and so stands over the chord row's first
+    /// symbol; the sections are unlabeled so no SectionLabel joins it. LilyPond LIFTS the
+    /// mark over the chord under it (side-position-interface.cc:510-563
+    /// move_to_extremal_staff, outside-staff-padding 0.46) and charges the pair gap the
+    /// mark's new height; Lily# lifts a mark over a row never — the stacker's tracker is
+    /// keyed per (system, staff) and the row is a different staff index. See RWM's probe
+    /// remark for the mechanism's addresses.
+    /// </summary>
+    private static readonly string RWM =
+        ChordRowAlternatingScore("RWM", Rows.Alternating, marks: false, rehearsalMarks: true);
+
+    /// <summary>The control — RWM with no chord row, the mark alone at the clef anchor.</summary>
+    private static readonly string RWMN =
+        ChordRowAlternatingScore("RWMN", Rows.None, marks: false, rehearsalMarks: true);
+
     /// <summary>The melody inside the staff — the mirror of book BNL.</summary>
     private static readonly string BNL = BarNumberScore("BNL", "");
 
@@ -3344,6 +3371,80 @@ internal static class LpGeometryProbes
 
     /// <summary>The same book with NO chord row — the control, mirror of book MKP.</summary>
     private static readonly string MKN = MarkScore("MKN", withChords: false);
+
+    /// <summary>
+    /// THE REHEARSAL MARK'S X AT A LINE START — the mirror of book MKQ
+    /// (mark-chord-row.ly): a plain staff, <c>@mark("A")</c> on bar 1 and
+    /// <c>@mark("B")</c> on the second system's first bar. LilyPond break-aligns a
+    /// RehearsalMark on <c>(staff-bar key-signature clef)</c> and at a line start the
+    /// staff-bar is invisible, so the mark's refpoint — its box's LEFT edge — lands on
+    /// the CLEF's <c>break-align-anchor</c>, the clef ink's RIGHT edge
+    /// (scm/define-grobs.scm:905-907 Clef break-align-anchor-alignment RIGHT;
+    /// lily/break-alignment-interface.cc:337-353 self_align_callback). MEASURED
+    /// 2026-08-27 on 2.26.0: Clef x 0.8 + ink right 2.565 = 3.365, RehearsalMark
+    /// X 3.365000 with stencil starting at 0 — on BOTH systems, six digits.
+    /// ⚠️ Lily# <c>c</c> is LilyPond <c>c'</c> (HANDOFF 5.5).
+    /// </summary>
+    private static readonly string RXQ = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section A { melody { c4@mark("A") d e f | g a b c' | c'4 b a g | f e d c | break } }
+        section B { melody { c4@mark("B") d e f | g a b c' | c'4 b a g | f e d c | } }
+
+        form main { ~A ~B }
+
+        score main "RXQ" { staff melody }
+        """;
+
+    /// <summary>
+    /// THE SAME QUESTION WITH A KEY SIGNATURE — the mirror of book MKK: D major puts a
+    /// key-signature column between the clef and the meter, and key-signature stands
+    /// BEFORE clef in the mark's break-align list, so the box left moves to the KEY
+    /// ink's right edge. MEASURED 2026-08-27 on 2.26.0: KeySignature x 4.185 + ink
+    /// right 2.200 = 6.385, RehearsalMark X 6.385000. The pair with RXQ is one
+    /// variable apart and says the anchor is the break-align list, not the clef.
+    /// ⚠️ Lily# <c>c'</c> is LilyPond <c>c''</c> (HANDOFF 5.5).
+    /// </summary>
+    private static readonly string RXK = """
+        octave absolute
+        time 4/4
+        key d major
+
+        part melody { clef treble }
+
+        section A { melody { c'4@mark("A") d' e' f' | g' a' b' c'' | c''4 b' a' g' | f' e' d' c' | } }
+
+        form main { ~A }
+
+        score main "RXK" { staff melody }
+        """;
+
+    /// <summary>
+    /// THE SECTION LABEL CONTROL — the mirror of book MKB: the SAME music with `form
+    /// main { A B }` engraving SectionLabels instead of rehearsal marks. LilyPond
+    /// declares SectionLabel's break-align list <c>(left-edge staff-bar)</c>, so at a
+    /// line start it stays at the LEFT EDGE — MEASURED 2026-08-27 on 2.26.0:
+    /// SectionLabel X 0.000000 on both systems. The control pins that a Rehearsal-only
+    /// X fix does not leak onto the label.
+    /// </summary>
+    private static readonly string RXB = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section A { melody { c4 d e f | g a b c' | c'4 b a g | f e d c | break } }
+        section B { melody { c4 d e f | g a b c' | c'4 b a g | f e d c | } }
+
+        form main { A B }
+
+        score main "RXB" { staff melody }
+        """;
 
     /// <summary>
     /// A section label standing OVER a chord symbol on a STAFFED sheet — the mirror of book
@@ -11906,6 +12007,24 @@ internal static class LpGeometryProbes
         new("lyrics.chord-row.marked.empty-row.staves-on-first-page", ROWMZ,
             g => g.StavesOnPage(0), FourSystemsPerPageRagged),
 
+        // THE LIFT'S OBSERVER (session 270, books RWM/RWMN) — the \mark spelling of the
+        // ROWM arrangement, reopened once act 4 put the Rehearsal X on the clef so the
+        // mark stands over the row's first chord in both engines. LilyPond lifts the mark
+        // over that chord by its padding 0.46 and charges the pair gap 12.563793; Lily#
+        // clears it by its own ChordClearancePadding 0.8 arm and charges 13.123375 —
+        // residual +0.559582, UNDECOMPOSED (it is not 0.8 − 0.46; see the why). The
+        // control reads a flat 12.000000 in both engines.
+        new("mark.rehearsal.lift.gap-first", RWM,
+            g => g.StaffGapAt(1), FourSystemsPerPageRagged),
+        new("mark.rehearsal.lift.gap-second", RWM,
+            g => g.StaffGapAt(3), FourSystemsPerPageRagged),
+        new("mark.rehearsal.lift.control.gap-second", RWMN,
+            g => g.StaffGapAt(3), FourSystemsPerPageRagged),
+        new("mark.rehearsal.lift.staves-on-first-page", RWM,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+        new("mark.rehearsal.lift.control.staves-on-first-page", RWMN,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+
         // THE TOP SPRING'S HALF OF THE MARK STORY (session 270) — what each engine charges
         // the section label against the top of the page. The control (ROWNN, no marks) is
         // EXACT, so the marked reading's whole residual is the mark's own top charge; the
@@ -12099,6 +12218,18 @@ internal static class LpGeometryProbes
             g => g.FirstMusicMarkBaselineAboveStaff(), RaggedBottomPaper),
         new("mark.plain.staff-to-baseline", MKN,
             g => g.FirstMusicMarkBaselineAboveStaff(), RaggedBottomPaper),
+
+        // THE MARK'S X AT A LINE START (session 270, books RXQ/RXK/RXB in
+        // mark-chord-row.ly as MKQ/MKK/MKB). A RehearsalMark break-aligns on
+        // (staff-bar key-signature clef): its box left lands on the clef ink's right
+        // edge, or the key's when one stands. The section-label control pins that the
+        // label keeps the LEFT edge — and that a Rehearsal fix does not leak onto it.
+        new("mark.rehearsal.line-start.box-left-from-clef-left", RXQ,
+            g => g.MusicMarkBoxLeftFromClefLeft("A"), RaggedBottomPaper),
+        new("mark.rehearsal.line-start.keyed.box-left-from-clef-left", RXK,
+            g => g.MusicMarkBoxLeftFromClefLeft("A"), RaggedBottomPaper),
+        new("mark.section-label.line-start.box-left-from-clef-left", RXB,
+            g => g.MusicMarkBoxLeftFromClefLeft("A"), RaggedBottomPaper),
 
         // ...and the arrangement BOTH of those deliberately avoid: the label standing ON a
         // chord symbol, mid-line, with a staff under it (books MKW/MKX). Opened 2026-08-25 to

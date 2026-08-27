@@ -255,6 +255,7 @@ internal sealed partial class LayoutEngine
             StaffSpanners = staffSpanners,
             StaffInside = staffInside,
             PrefixTimeSignatureX = BuildPrefixTimeSignatureX(score, prelimSystems),
+            PrefixMarkAnchorX = BuildPrefixMarkAnchorX(score, prelimSystems),
             LineStartBarlineX = BuildLineStartBarlineX(score, prelimSystems),
             // The PRELIMINARY pass's own above-stack memo (see the final pass's site).
             AboveStackMemo = systemCache?.PreliminaryAboveStack,

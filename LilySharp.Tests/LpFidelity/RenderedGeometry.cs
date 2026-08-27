@@ -707,6 +707,64 @@ internal sealed class RenderedGeometry
         Texts.Where(t => t.Role == TextRole.Mark).OrderBy(t => t.Y).ToList();
 
     /// <summary>
+    /// The drawn BOX's left edge of the boxed mark reading <paramref name="label"/>,
+    /// measured FROM ITS OWN SYSTEM'S CLEF LEFT — the quantity LilyPond's
+    /// break-alignable-interface places: the mark's refpoint (its stencil's X origin,
+    /// which for a boxed markup is the box's left edge) lands on the aligned grob's
+    /// <c>break-align-anchor</c> (lily/break-alignment-interface.cc:337-353
+    /// self_align_callback). Relational on purpose: LilyPond's probe X is
+    /// system-relative and Lily#'s device X carries the first line's indent, and the
+    /// clef's left ink is the one column both frames share (the prefix opens
+    /// LeftEdge→Clef with extra-space 0.8 in both engines), so the pair compares the
+    /// same distance without an indent conversion on either side.
+    /// </summary>
+    /// <remarks>
+    /// The box is read from the drawn RECT, not reconstructed from the centred text
+    /// plus a width formula — a reading that reused the engraver's own box arithmetic
+    /// would be an identity, and this entry's job is to price the drawn frame against
+    /// LilyPond's. The rect is found by containment of the label's anchor point; the
+    /// clef is the leftmost clef glyph within the mark's own system (the staff below
+    /// the label). Exactly one box must contain the text or the reading refuses.
+    /// </remarks>
+    public double MusicMarkBoxLeftFromClefLeft(string label, int page = 0)
+    {
+        var texts = _pages[page].Texts
+            .Where(t => t.Role == TextRole.Mark && t.Text == label).ToList();
+        if (texts.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected ONE boxed mark reading \"{label}\", found "
+                + $"{texts.Count}.\nDrawn geometry:\n" + Describe());
+        }
+        var t = texts[0];
+        var boxes = _pages[page].Rects
+            .Where(r => r.X <= t.X && t.X <= r.X + r.Width
+                        && r.Y <= t.Y && t.Y <= r.Y + r.Height).ToList();
+        if (boxes.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: the mark \"{label}\" at ({t.X:F3},{t.Y:F3}) sits in "
+                + $"{boxes.Count} rect(s) — the reading cannot name its box.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        // The mark's system's clef: the leftmost clef glyph whose Y sits below the
+        // label within one system's height (the label rides over its own top staff).
+        var clefs = _pages[page].Glyphs
+            .Where(g => g.Glyph is LilySharp.Core.Svg.EmmentalerGlyphs.GClef
+                            or LilySharp.Core.Svg.EmmentalerGlyphs.FClef
+                            or LilySharp.Core.Svg.EmmentalerGlyphs.CClef
+                        && g.Y > t.Y && g.Y < t.Y + 12.0)
+            .OrderBy(g => g.X).ToList();
+        if (clefs.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: no clef glyph under the mark \"{label}\" — the reading "
+                + "has no anchor column to relate to.\nDrawn geometry:\n" + Describe());
+        }
+        return boxes[0].X - clefs[0].X;
+    }
+
+    /// <summary>
     /// The FIRST boxed mark's BASELINE above the staff reference point it rides over.
     /// </summary>
     /// <remarks>

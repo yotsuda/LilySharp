@@ -393,6 +393,7 @@ internal sealed partial class LayoutEngine
             BetweenRowStaves = betweenRowStaves,
             LastSpaceableStaffY = anchors.LastSpaceableStaffY,
             PrefixTimeSignatureX = BuildPrefixTimeSignatureX(score, systemsArray),
+            PrefixMarkAnchorX = BuildPrefixMarkAnchorX(score, systemsArray),
             LineStartBarlineX = BuildLineStartBarlineX(score, systemsArray),
             // The FINAL pass's above-stack memo — its own instance, because the
             // preliminary pass stacks different systems every keystroke and one shared

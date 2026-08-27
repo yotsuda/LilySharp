@@ -69,7 +69,13 @@
                      (for-each
                       (lambda (g)
                         (let ((nm (assq-ref (ly:grob-property g 'meta) 'name)))
-                          (if (memq nm '(RehearsalMark SectionLabel StaffSymbol ChordName))
+                          ;; Clef and KeySignature joined 2026-08-27 (session 270): the X
+                          ;; half of the rehearsal-mark story break-aligns on them
+                          ;; (break-align-symbols (staff-bar key-signature clef), anchor =
+                          ;; the grob's ink RIGHT edge), so the pair "mark box left =
+                          ;; anchor right" needs both edges in the same dump.
+                          (if (memq nm '(RehearsalMark SectionLabel StaffSymbol ChordName
+                                         Clef KeySignature))
                               (format #t "PROBEM ~a ~a rel=~a ext=(~a . ~a) X=~a xext=(~a . ~a)\n"
                                       tag nm
                                       (ly:grob-relative-coordinate g sg Y)

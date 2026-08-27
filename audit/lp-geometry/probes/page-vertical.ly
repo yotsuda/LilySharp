@@ -3638,3 +3638,60 @@ probeTag =
     \layout { indent = 15\mm }
   }
 }
+
+%% RWM / RWMN — THE REHEARSAL-MARK (\mark) SPELLING OF ROWM / ROWMN, reopened 2026-08-27
+%%     (session 270) as the observer session 253's re-spelling lost.  When the family moved
+%%     to \sectionLabel, the header above ROWM recorded plainly: "LilyPond really does lift
+%%     a mark over a chord standing under it in X ... and NOTHING IN THE LEDGER OBSERVES IT
+%%     ANY MORE.  Measuring it again needs a REHEARSAL MARK on both sides, and Lily#'s
+%%     Rehearsal X is wrong first."  The X was fixed earlier this session (the mark's box
+%%     left now lands on the clef/key ink's right edge, both engines, six digits), so the
+%%     pair can finally be spelled: RWM is ROWM with `\mark \markup \box' back in place of
+%%     `\sectionLabel \markup \box' — a REHEARSAL mark, which at a line start anchors after
+%%     the clef and therefore stands OVER the row's first chord — and RWMN is the same book
+%%     with no chord row, the mark's own control.
+%%
+%%     WHAT THE OLD SPELLING MEASURED (2.26.0, sessions 252-253, re-derived from the ROWM
+%%     header): gap 2 = 12.563793 with the row, 12.000000 without — the mark is lifted over
+%%     the chord under it by outside-staff-padding 0.460000, by RE-PARENTING into the
+%%     extremal line's VerticalAxisGroup (side-position-interface.cc:510-563
+%%     move_to_extremal_staff; the line is picked by staff-grouper-interface.cc:31-56
+%%     get_extremal_staff).  Lily# lifts a mark over a row never — OutsideStaffStacker's
+%%     tracker is keyed per (system, staff) and the row is a different staff index — so the
+%%     pair's marked reading carries the whole absence of that mechanism.
+\book {
+  \probeTag "RWM"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new ChordNames { \chordmode {
+        \repeat unfold 4 { c1 } \repeat unfold 4 { s1 } \repeat unfold 4 { c1 } } }
+      \new Staff \with { instrumentName = "Melody" } { \new Voice = "mel" {
+        \mark \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
+        \mark \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break
+        \mark \markup \box "C" \repeat unfold 4 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 48 { no } }
+      \new Staff \with { instrumentName = "Lower" } {
+        \repeat unfold 12 { g'4 a' g' a' } }
+    >>
+    \layout { indent = 15\mm }
+  }
+}
+
+%% RWMN — THE CONTROL: RWM with the chord row taken out and nothing else changed.
+\book {
+  \probeTag "RWMN"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new Staff \with { instrumentName = "Melody" } { \new Voice = "mel" {
+        \mark \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
+        \mark \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break
+        \mark \markup \box "C" \repeat unfold 4 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 48 { no } }
+      \new Staff \with { instrumentName = "Lower" } {
+        \repeat unfold 12 { g'4 a' g' a' } }
+    >>
+    \layout { indent = 15\mm }
+  }
+}

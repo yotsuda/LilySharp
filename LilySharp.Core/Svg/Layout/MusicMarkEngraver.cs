@@ -488,6 +488,13 @@ internal static class MusicMarkEngraver
         //   X-offset self-alignment-interface::self-aligned-on-breakable.
         Func<int, double>? prefixTimeSignatureX = null,
         Func<int, double>? lineStartBarlineX = null,
+        // Per system, the ABSOLUTE X of the line-start break-align anchor a
+        // (staff-bar key-signature clef)-aligned mark lands on — the key ink's right
+        // edge, or the clef's when no key stands; NaN when the prefix has no clef
+        // column. Null (single-staff callers without the prefix model) keeps the
+        // line-start edge. See CalculateXPosition's Rehearsal arm for the mechanism
+        // and the LILYPOND-REFs.
+        Func<int, double>? prefixMarkAnchorX = null,
         // TEXT-style pedal words solved at skyline-build time: (staff, system, the
         // mark's SOURCE POSITION) -> the word's baseline, Y-up about that STAFF's middle
         // line. Null (or a null answer) keeps the legacy below-the-system stack — the
@@ -516,7 +523,8 @@ internal static class MusicMarkEngraver
 
             var measureLayout = measureLayouts[mark.MeasureIndex];
             double x = CalculateXPosition(
-                fonts, mark, measureLayout, systems, prefixTimeSignatureX, lineStartBarlineX);
+                fonts, mark, measureLayout, systems, prefixTimeSignatureX, lineStartBarlineX,
+                prefixMarkAnchorX);
             markEntries.Add((mark, x, si));
         }
 
@@ -1505,7 +1513,8 @@ internal static class MusicMarkEngraver
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
         Func<int, double>? prefixTimeSignatureX = null,
-        Func<int, double>? lineStartBarlineX = null)
+        Func<int, double>? lineStartBarlineX = null,
+        Func<int, double>? prefixMarkAnchorX = null)
     {
         var windows = new List<(int, double, double)>();
         if (measureLayouts.IsDefaultOrEmpty)
@@ -1547,7 +1556,7 @@ internal static class MusicMarkEngraver
                 continue;
             double x = CalculateXPosition(
                 fonts, mark, measureLayouts[mark.MeasureIndex], systems,
-                prefixTimeSignatureX, lineStartBarlineX);
+                prefixTimeSignatureX, lineStartBarlineX, prefixMarkAnchorX);
             var (x0, x1) = MarkXExtent(fonts, mark, x);
             windows.Add((mark.MeasureIndex, x0, x1));
         }
@@ -1619,7 +1628,8 @@ internal static class MusicMarkEngraver
         MusicMarkItem mark, MeasureLayout measureLayout,
         ImmutableArray<SystemLayout> systems,
         Func<int, double>? prefixTimeSignatureX = null,
-        Func<int, double>? lineStartBarlineX = null)
+        Func<int, double>? lineStartBarlineX = null,
+        Func<int, double>? prefixMarkAnchorX = null)
     {
         if (mark.Position == MusicMarkPosition.End)
             return measureLayout.X + measureLayout.Width - 0.5; // Before end barline
@@ -1704,18 +1714,50 @@ internal static class MusicMarkEngraver
         // Break-align anchor: at a line start the barline is invisible, so
         // the anchor falls back to the start of the prefix (clef/key).
         double anchor = measureLayout.X;
-        foreach (var system in systems)
+        int lineStartSystem = -1;
+        for (int i = 0; i < systems.Length; i++)
         {
+            var system = systems[i];
             if (!system.Measures.IsDefaultOrEmpty
                 && system.Measures[0].MeasureIndex == measureLayout.MeasureIndex)
             {
                 anchor = system.Indent + 0.3;
+                lineStartSystem = i;
                 break;
             }
         }
 
         if (mark.Type is MusicMarkType.Rehearsal or MusicMarkType.SectionLabel)
         {
+            // The two grobs break-align differently and the difference is the whole
+            // arm: a SectionLabel declares (left-edge staff-bar) and so keeps the
+            // line-start edge above, while a RehearsalMark declares
+            // (staff-bar key-signature clef) — at a line start the staff-bar is
+            // invisible, so its refpoint (= the box's LEFT edge, the markup stencil's
+            // X origin) lands on the KEY ink's right edge, or the CLEF's when no key
+            // stands. A drawn opening bar (|:) is the staff-bar made visible and wins
+            // the list. MEASURED on 2.26.0 (mark-chord-row.ly MKQ/MKK): box left =
+            // clef right 3.365000, = key right 6.385000, six digits on every system.
+            // LILYPOND-REF: lily/break-alignment-interface.cc:299-334 find_parent —
+            //   the first break-align-symbols entry with a break-visible, non-empty
+            //   extent, invisible ones only as fallback.
+            // LILYPOND-REF: lily/break-alignment-interface.cc:337-353 self_align_callback —
+            //   the mark's refpoint lands on the parent's break-align-anchor.
+            // LILYPOND-REF: scm/define-grobs.scm:905-907 Clef break-align-anchor-alignment, :1975-1977 KeySignature break-align-anchor-alignment —
+            //   break-align-anchor calc-extent-aligned-anchor, anchor-alignment RIGHT.
+            // ⚠️ Mid-line marks keep the measure-start anchor: LilyPond hangs them on
+            //   the staff-bar's calc-anchor (the bar stencil's centre), a placement no
+            //   probe has measured yet — mark.rehearsal.line-start.* referee only the
+            //   line start, and this arm moves only what they referee.
+            if (mark.Type == MusicMarkType.Rehearsal && lineStartSystem >= 0)
+            {
+                if (lineStartBarlineX?.Invoke(measureLayout.MeasureIndex) is { } barX
+                    && !double.IsNaN(barX))
+                    anchor = barX;
+                else if (prefixMarkAnchorX?.Invoke(lineStartSystem) is { } prefX
+                         && !double.IsNaN(prefX))
+                    anchor = prefX;
+            }
             // LEFT edge on the anchor: returned X is the box center.
             double fs = mark.Type == MusicMarkType.Rehearsal ? 4.0 * 0.6 : 4.0 * 0.55;
             double boxWidth =
