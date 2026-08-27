@@ -38,19 +38,58 @@ public sealed partial class LilySharpLanguageServer
     // Custom: SVG Preview
     // ============================================================
 
-    // Per-(document, render name) incremental SVG-compile sessions. Each session
-    // reuses the systems whose content is unchanged across edits, so refreshing a large
-    // score's preview does not re-lay-out every bar — the dominant cost. A NAMED render
-    // is a session of its own (2026-08-26 review, finding 3-1 — it used to bypass the
-    // session machinery and pay a cold compile per keystroke): IncrementalCompiler
-    // renders ONE spec per session, so the selection is part of the key ("" = default).
-    // All of a document's sessions are dropped on close. _svgSessionLock serializes
-    // access: GetSvg can be invoked concurrently and IncrementalCompiler is stateful.
-    private readonly System.Collections.Generic.Dictionary<(System.Uri Uri, string RenderName), IncrementalCompiler> _svgSessions = new();
+    /// <summary>
+    /// One (document, render name) selection's incremental SVG-compile state. The session
+    /// reuses the systems whose content is unchanged across edits, so refreshing a large
+    /// score's preview does not re-lay-out every bar — the dominant cost. A NAMED render
+    /// is a session of its own (2026-08-26 review, finding 3-1 — it used to bypass the
+    /// session machinery and pay a cold compile per keystroke): IncrementalCompiler
+    /// renders ONE spec per session, so the selection is part of the key ("" = default).
+    /// </summary>
+    internal sealed class SvgSessionSlot
+    {
+        /// <summary>Serializes this selection's renders: <see cref="IncrementalCompiler"/>
+        /// is stateful, so two renders of the same selection may not interleave. Held for
+        /// the duration of one render and nothing else — different selections (other
+        /// documents, other named renders) render in parallel. The old design held ONE
+        /// cross-document lock around every render (2026-08-26 review, appendix F).</summary>
+        public readonly object Gate = new();
+
+        /// <summary>The selection's incremental session — null until the first render,
+        /// reset to null when a render fails (the next request starts fresh).
+        /// Guarded by <see cref="Gate"/>.</summary>
+        public IncrementalCompiler? Session;
+
+        /// <summary>The newest ticket issued for this selection (via Interlocked, ON the
+        /// dispatch thread, so arrival order alone decides which request is newest). A
+        /// render whose ticket is stale answers <see cref="SvgResponse.Superseded"/>
+        /// without rendering, so a typing burst's queued previews collapse to the newest
+        /// instead of running serially to thrown-away answers.</summary>
+        public int LatestTicket;
+    }
+
+    // All of a document's slots are dropped on close. _svgSessionLock guards the MAP
+    // only — never a render (that is each slot's Gate).
+    private readonly System.Collections.Generic.Dictionary<(System.Uri Uri, string RenderName), SvgSessionSlot> _svgSessions = new();
     private readonly object _svgSessionLock = new();
 
+    /// <summary>This selection's slot (created on first use).</summary>
+    internal SvgSessionSlot SvgSlotFor(System.Uri uri, string? renderName)
+    {
+        var key = (uri, renderName ?? string.Empty);
+        lock (_svgSessionLock)
+        {
+            if (!_svgSessions.TryGetValue(key, out var slot))
+                _svgSessions[key] = slot = new SvgSessionSlot();
+            return slot;
+        }
+    }
+
     /// <summary>
-    /// Returns the server version for debugging deployment issues.
+    /// Returns the server version for debugging deployment issues. Deliberately NOT
+    /// through OffDispatch: it reads one static field, and staying on the dispatch
+    /// loop makes its round-trip a fence — when it answers, everything sent before
+    /// it has been dispatched (the async-dispatch tests lean on this).
     /// </summary>
     [JsonRpcMethod("lilysharp/version")]
     public string GetVersion()
@@ -66,6 +105,9 @@ public sealed partial class LilySharpLanguageServer
     /// staff in the score. Powers the "Lily#: Add Chord Track" editor command.
     /// </summary>
     [JsonRpcMethod("lilysharp/addChordTrack", UseSingleObjectParameterDeserialization = true)]
+    public Task<AddChordTrackResponse> AddChordTrackAsync(SvgParams @params, CancellationToken token)
+        => OffDispatch(() => AddChordTrack(@params), token);
+
     public AddChordTrackResponse AddChordTrack(SvgParams @params)
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
@@ -104,6 +146,9 @@ public sealed partial class LilySharpLanguageServer
     /// Powers the "Lily#: Import MusicXML…" editor command.
     /// </summary>
     [JsonRpcMethod("lilysharp/importMusicXml", UseSingleObjectParameterDeserialization = true)]
+    public Task<ImportMusicXmlResponse> ImportMusicXmlAsync(ImportMusicXmlParams @params, CancellationToken token)
+        => OffDispatch(() => ImportMusicXml(@params), token);
+
     public ImportMusicXmlResponse ImportMusicXml(ImportMusicXmlParams @params)
     {
         try
@@ -162,9 +207,70 @@ public sealed partial class LilySharpLanguageServer
         if (!LilySharp.Core.Parser.UsingExpander.HasUsings(unexpanded))
             return (unexpanded, []);
 
-        var expanded = LilySharp.Core.Parser.UsingExpander.Expand(text, basePath, readFile,
+        // A book WITH usings used to pay the full expansion on every arrival — and two
+        // arrive per keystroke (the preview, then the debounced Problems panel), each one
+        // re-parsing the main text, every include and the combined result (2026-08-26
+        // review, appendix F finding 4). The expansion is a pure function of (main text,
+        // base path, what readFile answered for the paths the expander asked), so the
+        // snapshot records those reads and a later call REPLAYS them: same answers ⇒ the
+        // expander would walk identically ⇒ reuse the parsed tree. Replay re-reads the
+        // include files on purpose — the deliberate spec is that an include edited on
+        // disk (an unsaved sibling saved, a generator rerun) invalidates by CONTENT, so
+        // the price of a hit is one read + string compare per include, not a re-parse of
+        // anything. Keyed on the text INSTANCE (DocumentManager hands out one string per
+        // version), so entries die with the edit; the volatile snapshot makes concurrent
+        // requests race benignly (both compute, one wins, both answers correct).
+        var holder = UsingExpansionCache.GetValue(text, static _ => new UsingExpansionHolder());
+        var cached = System.Threading.Volatile.Read(ref holder.Snapshot);
+        if (cached != null && cached.BasePath == basePath && ReadsReplayUnchanged(cached.Reads, readFile))
+            return (cached.Tree, cached.Diagnostics);
+
+        var reads = new List<(string Path, string? Content)>();
+        var expanded = LilySharp.Core.Parser.UsingExpander.Expand(text, basePath,
+            p => { var content = readFile(p); reads.Add((p, content)); return content; },
             out var usingDiagnostics);
-        return (SyntaxTree.Parse(expanded), usingDiagnostics);
+        var tree = SyntaxTree.Parse(expanded);
+        System.Threading.Volatile.Write(ref holder.Snapshot, new UsingExpansionSnapshot
+        {
+            BasePath = basePath,
+            Reads = reads.ToArray(),
+            Tree = tree,
+            Diagnostics = usingDiagnostics,
+        });
+        return (tree, usingDiagnostics);
+    }
+
+    /// <summary>One expansion of one document text: what was read to build it (every
+    /// readFile question the expander asked, in order, answers included — nested
+    /// includes and unreadable files land here too, as (path, null)), and what came
+    /// out. Immutable once published.</summary>
+    private sealed class UsingExpansionSnapshot
+    {
+        public string BasePath = "";
+        public (string Path, string? Content)[] Reads = [];
+        public SyntaxTree Tree = null!;
+        public IReadOnlyList<CoreDiagnostic> Diagnostics = [];
+    }
+
+    /// <summary>The mutable cell a text's cache entry lives in (the snapshot swaps
+    /// whole, under Volatile, so readers see a complete expansion or none).</summary>
+    private sealed class UsingExpansionHolder
+    {
+        public UsingExpansionSnapshot? Snapshot;
+    }
+
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<string, UsingExpansionHolder>
+        UsingExpansionCache = new();
+
+    /// <summary>True when every recorded read still gets the same answer — the expander
+    /// would walk the same files to the same result, so the snapshot may be reused.</summary>
+    private static bool ReadsReplayUnchanged(
+        (string Path, string? Content)[] reads, Func<string, string?> readFile)
+    {
+        foreach (var (path, content) in reads)
+            if (!string.Equals(readFile(path), content, StringComparison.Ordinal))
+                return false;
+        return true;
     }
 
     private static (SyntaxTree Tree, IReadOnlyList<CoreDiagnostic> UsingDiagnostics) ExpandUsings(
@@ -198,7 +304,35 @@ public sealed partial class LilySharpLanguageServer
     }
 
     [JsonRpcMethod("lilysharp/svg", UseSingleObjectParameterDeserialization = true)]
+    public Task<SvgResponse> GetSvgAsync(SvgParams @params, CancellationToken token)
+    {
+        // The ticket is taken here, ON the dispatch thread, before the work races onto
+        // the thread pool: arrival order alone decides which request is newest.
+        var slot = SvgSlotFor(@params.TextDocument.Uri, @params.RenderName);
+        int ticket = System.Threading.Interlocked.Increment(ref slot.LatestTicket);
+        return Task.Run(() => GetSvg(@params, slot, ticket, token), token);
+    }
+
+    /// <summary>Direct entry (tests, in-process callers): a fresh newest ticket, no
+    /// cancellation — behaves exactly like a lone RPC request.</summary>
     public SvgResponse GetSvg(SvgParams @params)
+    {
+        var slot = SvgSlotFor(@params.TextDocument.Uri, @params.RenderName);
+        return GetSvg(@params, slot,
+            System.Threading.Interlocked.Increment(ref slot.LatestTicket), CancellationToken.None);
+    }
+
+    /// <summary>True when a newer request for the same selection has taken a ticket —
+    /// this request's answer is already unwanted.</summary>
+    private static bool IsStale(SvgSessionSlot slot, int ticket)
+        => System.Threading.Volatile.Read(ref slot.LatestTicket) != ticket;
+
+    // No Svg and no Error: an extension without the flag logs-and-ignores this shape,
+    // one with it drops the response. The picture the preview wants is on the NEWER
+    // request's answer, which is either rendering or queued behind this return.
+    private static SvgResponse SupersededResponse() => new() { Superseded = true };
+
+    internal SvgResponse GetSvg(SvgParams @params, SvgSessionSlot slot, int ticket, CancellationToken token)
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
@@ -209,6 +343,11 @@ public sealed partial class LilySharpLanguageServer
                 Error = "Document not found"
             };
         }
+
+        // Superseded already? A typing burst queues several previews; only the newest
+        // is worth even the expansion below, let alone the render.
+        if (IsStale(slot, ticket))
+            return SupersededResponse();
 
         // Resolve `using "..."` directives so the preview shows the whole piece.
         // The main file is the prefix of the combined source, so its positions
@@ -241,13 +380,20 @@ public sealed partial class LilySharpLanguageServer
             // Preview mode: @font-face is defined in HTML, not in SVG
             var renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Preview();
 
-            // Every render — default or named — goes through a per-(document, render name)
-            // incremental session so an edit reuses unchanged systems. IncrementalCompiler
-            // renders one spec per session with SvgGenerator.Generate's own selection
-            // policy, so switching the preview to another score simply warms that
-            // score's own session (2026-08-26 review, finding 3-1).
-            var svg = RenderSvgIncremental(
-                @params.TextDocument.Uri, @params.RenderName, tree, renderOptions);
+            string svg;
+            lock (slot.Gate)
+            {
+                // The queue-collapse point: while this request waited for the running
+                // render, newer ones may have arrived — every stale request answers
+                // here without rendering, and only the newest pays for a render.
+                if (IsStale(slot, ticket))
+                    return SupersededResponse();
+                // The client no longer wants this answer ($/cancelRequest while
+                // queued): answer with the cancel error, not a render.
+                token.ThrowIfCancellationRequested();
+
+                svg = RenderSvgIncremental(slot, @params.RenderName, tree, renderOptions);
+            }
 
             return new SvgResponse
             {
@@ -255,6 +401,13 @@ public sealed partial class LilySharpLanguageServer
                 Error = errorText,
                 Renders = renders
             };
+        }
+        catch (OperationCanceledException)
+        {
+            // StreamJsonRpc answers a cancelled request with the protocol's cancel
+            // error; folding it into the error banner below would paint a scary
+            // "Failed to generate preview" for a picture nobody asked to keep.
+            throw;
         }
         catch (Exception ex)
         {
@@ -269,37 +422,31 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>
     /// Renders the score <paramref name="renderName"/> selects (null/empty = default)
-    /// through that selection's persistent <see cref="IncrementalCompiler"/> session
+    /// through the selection's persistent <see cref="IncrementalCompiler"/> session
     /// (created on first use), reusing unchanged systems. The output is byte-identical
     /// to <see cref="SvgGenerator.Generate"/> with the same name. Any failure in the
     /// session path drops the (possibly corrupted) session and falls back to a full
-    /// compile, so the optimization can never break the preview.
+    /// compile, so the optimization can never break the preview. The caller holds
+    /// <paramref name="slot"/>'s Gate.
     /// </summary>
-    private string RenderSvgIncremental(Uri uri, string? renderName, SyntaxTree tree,
-        LilySharp.Core.Svg.Renderer.SvgRenderOptions options)
+    private static string RenderSvgIncremental(SvgSessionSlot slot, string? renderName,
+        SyntaxTree tree, LilySharp.Core.Svg.Renderer.SvgRenderOptions options)
     {
-        var key = (uri, renderName ?? string.Empty);
-        lock (_svgSessionLock)
+        try
         {
-            try
-            {
-                if (!_svgSessions.TryGetValue(key, out var session))
-                {
-                    session = new IncrementalCompiler(tree, options, renderName);
-                    _svgSessions[key] = session;
-                }
-                return session.RenderIncremental(tree);
-            }
-            catch
-            {
-                _svgSessions.Remove(key);
-                return LilySharp.Core.Svg.SvgGenerator.Generate(tree, options, renderName);
-            }
+            slot.Session ??= new IncrementalCompiler(tree, options, renderName);
+            return slot.Session.RenderIncremental(tree);
+        }
+        catch
+        {
+            slot.Session = null;
+            return LilySharp.Core.Svg.SvgGenerator.Generate(tree, options, renderName);
         }
     }
 
     /// <summary>Drops every incremental SVG session of a closed document (one per
-    /// render selection previewed in it).</summary>
+    /// render selection previewed in it). An in-flight render on a dropped slot
+    /// finishes harmlessly on its own reference; a reopened document starts fresh.</summary>
     private void DropSvgSession(Uri uri)
     {
         lock (_svgSessionLock)
@@ -320,6 +467,9 @@ public sealed partial class LilySharpLanguageServer
     /// selected score (RenderName); MIDI and MusicXML export the whole piece.
     /// </summary>
     [JsonRpcMethod("lilysharp/export", UseSingleObjectParameterDeserialization = true)]
+    public Task<ExportResponse> ExportAsync(ExportParams @params, CancellationToken token)
+        => OffDispatch(() => Export(@params), token);
+
     public ExportResponse Export(ExportParams @params)
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
@@ -420,6 +570,9 @@ public sealed partial class LilySharpLanguageServer
     /// applied server-side so the webview only schedules oscillators.
     /// </summary>
     [JsonRpcMethod("lilysharp/playback", UseSingleObjectParameterDeserialization = true)]
+    public Task<PlaybackResponse> GetPlaybackAsync(PlaybackParams @params, CancellationToken token)
+        => OffDispatch(() => GetPlayback(@params), token);
+
     public PlaybackResponse GetPlayback(PlaybackParams @params)
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
@@ -491,6 +644,9 @@ public sealed partial class LilySharpLanguageServer
     /// <see cref="LilySharp.Core.Editing.PhraseExtractor"/>.
     /// </summary>
     [JsonRpcMethod("lilysharp/extractPhrase", UseSingleObjectParameterDeserialization = true)]
+    public Task<ExtractPhraseResponse> ExtractPhraseAsync(ExtractPhraseParams @params, CancellationToken token)
+        => OffDispatch(() => ExtractPhrase(@params), token);
+
     public ExtractPhraseResponse ExtractPhrase(ExtractPhraseParams @params)
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
@@ -505,6 +661,9 @@ public sealed partial class LilySharpLanguageServer
     }
 
     [JsonRpcMethod("lilysharp/convertLayout", UseSingleObjectParameterDeserialization = true)]
+    public Task<ConvertLayoutResponse> ConvertLayoutAsync(ConvertLayoutParams @params, CancellationToken token)
+        => OffDispatch(() => ConvertLayout(@params), token);
+
     public ConvertLayoutResponse ConvertLayout(ConvertLayoutParams @params)
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
@@ -575,6 +734,9 @@ public sealed partial class LilySharpLanguageServer
     /// diagnostics fed back to the model) before it is ever shown to the user.
     /// </summary>
     [JsonRpcMethod("lilysharp/checkCandidate", UseSingleObjectParameterDeserialization = true)]
+    public Task<CheckCandidateResponse> CheckCandidateAsync(CheckCandidateParams @params, CancellationToken token)
+        => OffDispatch(() => CheckCandidate(@params), token);
+
     public CheckCandidateResponse CheckCandidate(CheckCandidateParams @params)
     {
         var text = @params.Text ?? "";
@@ -631,6 +793,9 @@ public sealed partial class LilySharpLanguageServer
     /// document state.
     /// </summary>
     [JsonRpcMethod("lilysharp/renderText", UseSingleObjectParameterDeserialization = true)]
+    public Task<SvgResponse> RenderTextAsync(RenderTextParams @params, CancellationToken token)
+        => OffDispatch(() => RenderText(@params), token);
+
     public SvgResponse RenderText(RenderTextParams @params)
     {
         var tree = SyntaxTree.Parse(@params.Text ?? "");
@@ -669,6 +834,9 @@ public sealed partial class LilySharpLanguageServer
     /// inside the requested range. Read-only.
     /// </summary>
     [JsonRpcMethod("lilysharp/factsForRange", UseSingleObjectParameterDeserialization = true)]
+    public Task<FactsForRangeResponse> FactsForRangeAsync(FactsForRangeParams @params, CancellationToken token)
+        => OffDispatch(() => FactsForRange(@params), token);
+
     public FactsForRangeResponse FactsForRange(FactsForRangeParams @params)
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);

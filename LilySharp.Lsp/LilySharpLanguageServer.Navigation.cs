@@ -37,6 +37,9 @@ public sealed partial class LilySharpLanguageServer
     // ========== Go to Definition ==========
 
     [JsonRpcMethod(Methods.TextDocumentDefinitionName, UseSingleObjectParameterDeserialization = true)]
+    public Task<Location?> DefinitionAsync(TextDocumentPositionParams @params, CancellationToken token)
+        => OffDispatch(() => Definition(@params), token);
+
     public Location? Definition(TextDocumentPositionParams @params)
     {
         var uri = @params.TextDocument.Uri;
@@ -324,6 +327,9 @@ public sealed partial class LilySharpLanguageServer
     // ========== Find References ==========
 
     [JsonRpcMethod(Methods.TextDocumentReferencesName, UseSingleObjectParameterDeserialization = true)]
+    public Task<Location[]?> ReferencesAsync(ReferenceParams @params, CancellationToken token)
+        => OffDispatch(() => References(@params), token);
+
     public Location[]? References(ReferenceParams @params)
     {
         var uri = @params.TextDocument.Uri;

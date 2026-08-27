@@ -37,6 +37,9 @@ public sealed partial class LilySharpLanguageServer
     // ========== Signature Help ==========
 
     [JsonRpcMethod(Methods.TextDocumentSignatureHelpName, UseSingleObjectParameterDeserialization = true)]
+    public Task<SignatureHelp?> GetSignatureHelpAsync(SignatureHelpParams @params, CancellationToken token)
+        => OffDispatch(() => GetSignatureHelp(@params), token);
+
     public SignatureHelp? GetSignatureHelp(SignatureHelpParams @params)
     {
         var uri = @params.TextDocument.Uri;
@@ -50,13 +53,29 @@ public sealed partial class LilySharpLanguageServer
         var lineStart = doc.Text.LastIndexOf('\n', Math.Max(0, offset - 1)) + 1;
         var lineText = doc.Text[lineStart..offset];
 
+        // Match against a CODE-ONLY view of the line: string contents and comments
+        // blanked (StripStringsAndComments is length-preserving up to a // comment,
+        // so an index into the code view is an index into the line). The trigger
+        // character is ' ', so the old raw-substring match actually fired — typing
+        // the space after `title "Ragtime"` summoned `time`'s signature from inside
+        // the string, and `stem`/`system`-like words would summon `tempo`'s never
+        // (2026-08-26 review, appendix F finding 7). Line-local approximation on
+        // purpose: a line starting inside a /* block comment is treated as code,
+        // exactly as the formatter's per-line callers do.
+        bool inBlockComment = false;
+        var codeText = StripStringsAndComments(lineText, ref inBlockComment);
+
         // First keyword on the line (in priority order) that has a signature wins.
         foreach (var entry in LanguageReference.Signatures)
         {
-            int kw = lineText.IndexOf(entry.Keyword, StringComparison.Ordinal);
+            int kw = IndexOfKeywordToken(codeText, entry.Keyword);
             if (kw < 0) continue;
 
-            int activeParameter = CountSpaces(lineText[(kw + entry.Keyword.Length)..]);
+            // Counted over the ORIGINAL text (not the code view): the blanking turns
+            // a quoted marking into a run of spaces, which would merge the separators
+            // around it and lose the argument; the walk below keeps a string literal
+            // one token instead.
+            int activeParameter = ActiveParameterOf(lineText[(kw + entry.Keyword.Length)..]);
             var sig = new SignatureInformation
             {
                 Label = entry.Label,
@@ -79,19 +98,70 @@ public sealed partial class LilySharpLanguageServer
     // The signature table lives in LanguageReference (ONE HOME with the hover
     // text, each row carrying a compilable Sample of the grammar it advertises).
 
-    private static int CountSpaces(string text)
+    /// <summary>First occurrence of <paramref name="keyword"/> in the code view that
+    /// stands as its own word — `title "Ragtime"` blanks to spaces so `time` cannot
+    /// match inside it, and this guard keeps it from matching inside an identifier
+    /// (`timeline`) either. −1 if the line has no such token.</summary>
+    private static int IndexOfKeywordToken(string code, string keyword)
     {
-        int count = 0;
-        foreach (var c in text)
+        for (int at = code.IndexOf(keyword, StringComparison.Ordinal); at >= 0;
+             at = code.IndexOf(keyword, at + 1, StringComparison.Ordinal))
         {
-            if (c == ' ' && count < 10) count++;
+            bool startsWord = at == 0 || !IsWordChar(code[at - 1]);
+            int end = at + keyword.Length;
+            bool endsWord = end >= code.Length || !IsWordChar(code[end]);
+            if (startsWord && endsWord) return at;
         }
-        return Math.Max(0, count - 1);
+        return -1;
+    }
+
+    private static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
+
+    /// <summary>The parameter index the caret sits on, for the text between the
+    /// keyword and the caret: arguments are separated by whitespace RUNS outside
+    /// string literals — a quoted marking with spaces inside is one argument, where
+    /// the old per-character space count pushed activeParameter past the end on
+    /// `tempo "Allegro con brio" …` (2026-08-26 review, appendix F finding 7). The
+    /// first run (between the keyword and its first argument) starts the count at
+    /// parameter 0; the caller clamps to the signature's parameter count.</summary>
+    private static int ActiveParameterOf(string afterKeyword)
+    {
+        int separators = 0;
+        bool inString = false;
+        bool inSeparator = false;
+        foreach (var c in afterKeyword)
+        {
+            if (inString)
+            {
+                if (c == '"') inString = false;
+                continue;
+            }
+            if (c == '"')
+            {
+                inString = true;
+                inSeparator = false;
+                continue;
+            }
+            if (c == ' ' || c == '\t')
+            {
+                if (!inSeparator)
+                {
+                    separators++;
+                    inSeparator = true;
+                }
+                continue;
+            }
+            inSeparator = false;
+        }
+        return Math.Max(0, separators - 1);
     }
 
     // ========== Document Highlight ==========
 
     [JsonRpcMethod(Methods.TextDocumentDocumentHighlightName, UseSingleObjectParameterDeserialization = true)]
+    public Task<DocumentHighlight[]?> GetDocumentHighlightAsync(DocumentHighlightParams @params, CancellationToken token)
+        => OffDispatch(() => GetDocumentHighlight(@params), token);
+
     public DocumentHighlight[]? GetDocumentHighlight(DocumentHighlightParams @params)
     {
         var uri = @params.TextDocument.Uri;

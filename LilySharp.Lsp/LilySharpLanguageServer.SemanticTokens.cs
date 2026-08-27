@@ -37,6 +37,9 @@ public sealed partial class LilySharpLanguageServer
     // ========== Semantic Tokens ==========
 
     [JsonRpcMethod(Methods.TextDocumentSemanticTokensFullName, UseSingleObjectParameterDeserialization = true)]
+    public Task<SemanticTokens?> GetSemanticTokensFullAsync(SemanticTokensParams @params, CancellationToken token)
+        => OffDispatch(() => GetSemanticTokensFull(@params), token);
+
     public SemanticTokens? GetSemanticTokensFull(SemanticTokensParams @params)
     {
         var uri = @params.TextDocument.Uri;
@@ -487,6 +490,9 @@ public sealed partial class LilySharpLanguageServer
     // ========== Folding Ranges ==========
 
     [JsonRpcMethod(Methods.TextDocumentFoldingRangeName, UseSingleObjectParameterDeserialization = true)]
+    public Task<FoldingRange[]?> GetFoldingRangesAsync(FoldingRangeParams @params, CancellationToken token)
+        => OffDispatch(() => GetFoldingRanges(@params), token);
+
     public FoldingRange[]? GetFoldingRanges(FoldingRangeParams @params)
     {
         var uri = @params.TextDocument.Uri;

@@ -77,6 +77,9 @@ public sealed partial class LilySharpLanguageServer
     // ========== Completion ==========
 
     [JsonRpcMethod(Methods.TextDocumentCompletionName, UseSingleObjectParameterDeserialization = true)]
+    public Task<CompletionList?> CompletionAsync(CompletionParams @params, CancellationToken token)
+        => OffDispatch(() => Completion(@params), token);
+
     public CompletionList? Completion(CompletionParams @params)
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);

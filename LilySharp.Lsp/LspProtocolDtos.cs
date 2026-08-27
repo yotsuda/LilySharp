@@ -45,6 +45,13 @@ public class SvgResponse
     /// List of available render definitions in the document.
     /// </summary>
     public RenderInfo[]? Renders { get; set; }
+    /// <summary>
+    /// True when a newer lilysharp/svg request for the same (document, render name)
+    /// arrived while this one was queued: no render was performed, Svg and Error are
+    /// both null, and the newer request's response carries the picture. The client
+    /// drops this response instead of painting it.
+    /// </summary>
+    public bool Superseded { get; set; }
 }
 
 /// <summary>

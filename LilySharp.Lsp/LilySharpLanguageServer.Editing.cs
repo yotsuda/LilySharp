@@ -37,6 +37,9 @@ public sealed partial class LilySharpLanguageServer
     // ========== Rename ==========
 
     [JsonRpcMethod(Methods.TextDocumentRenameName, UseSingleObjectParameterDeserialization = true)]
+    public Task<WorkspaceEdit?> RenameAsync(RenameParams @params, CancellationToken token)
+        => OffDispatch(() => Rename(@params), token);
+
     public WorkspaceEdit? Rename(RenameParams @params)
     {
         var uri = @params.TextDocument.Uri;
@@ -142,6 +145,9 @@ public sealed partial class LilySharpLanguageServer
     // ========== Document Formatting ==========
 
     [JsonRpcMethod(Methods.TextDocumentFormattingName, UseSingleObjectParameterDeserialization = true)]
+    public Task<TextEdit[]?> FormatAsync(DocumentFormattingParams @params, CancellationToken token)
+        => OffDispatch(() => Format(@params), token);
+
     public TextEdit[]? Format(DocumentFormattingParams @params)
     {
         var uri = @params.TextDocument.Uri;
@@ -264,6 +270,9 @@ public sealed partial class LilySharpLanguageServer
     // ========== Code Actions ==========
 
     [JsonRpcMethod(Methods.TextDocumentCodeActionName, UseSingleObjectParameterDeserialization = true)]
+    public Task<CodeAction[]?> GetCodeActionsAsync(CodeActionParams @params, CancellationToken token)
+        => OffDispatch(() => GetCodeActions(@params), token);
+
     public CodeAction[]? GetCodeActions(CodeActionParams @params)
     {
         var uri = @params.TextDocument.Uri;

@@ -85,6 +85,10 @@ function migratePreviewKey(oldUri: string, newUri: string) {
     // the saved file schedules a fresh one under the new key.
     const timer = debounceTimers.get(oldUri);
     if (timer !== undefined) { clearTimeout(timer); debounceTimers.delete(oldUri); }
+    // An in-flight svg request under the old URI can only answer about the closed
+    // document — cancel it; the migrated panel's refresh starts fresh under the new key.
+    cancelSvgRequest(oldUri);
+    svgRequestGeneration.delete(oldUri);
 }
 
 // Content for the "Lily#: New Score" command (File ▸ New File… ▸ Lily# Score).
@@ -133,6 +137,21 @@ const selectedRenders = new Map<string, string>();
 // hundreds-of-KB) string across the extension→webview channel again. Invalidated when the
 // webview reloads (webviewReady) and when a panel is disposed / re-keyed.
 const lastPostedSvg = new Map<string, string>();
+
+// One live lilysharp/svg request per URI. The generation stamps each request as it is
+// sent; a response arriving after a newer request has been issued is DROPPED instead of
+// painting an older picture over a newer one (responses can interleave now that the
+// server dispatches requests off its read loop). The token source actively cancels the
+// superseded request ($/cancelRequest), so the server abandons it at the render gate
+// instead of spending a render on a thrown-away answer.
+const svgRequestGeneration = new Map<string, number>();
+const svgRequestCancellation = new Map<string, vscode.CancellationTokenSource>();
+
+// Cancels (and disposes) the URI's in-flight svg request source, if any.
+function cancelSvgRequest(uri: string) {
+    const cts = svgRequestCancellation.get(uri);
+    if (cts) { cts.cancel(); cts.dispose(); svgRequestCancellation.delete(uri); }
+}
 
 // Constants
 const DEBOUNCE_DELAY_DEFAULT = 60;
@@ -638,6 +657,8 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
             panelReady.delete(key);
             selectedRenders.delete(key);
             lastPostedSvg.delete(key);
+            cancelSvgRequest(key);
+            svgRequestGeneration.delete(key);
             const timer = debounceTimers.get(key);
             if (timer) {
                 clearTimeout(timer);
@@ -810,13 +831,34 @@ async function updatePreviewContent(
     }
 
     outputChannel.appendLine('Sending lilysharp/svg request...');
+    // Stamp this request and cancel the previous one still in flight: the server
+    // collapses a queued burst to the newest ticket by itself, but only a client-side
+    // generation can order the RESPONSES — without it, a slow old answer arriving
+    // after a fast new one would paint the older picture last.
+    const generation = (svgRequestGeneration.get(uri) ?? 0) + 1;
+    svgRequestGeneration.set(uri, generation);
+    cancelSvgRequest(uri);
+    const requestCancellation = new vscode.CancellationTokenSource();
+    svgRequestCancellation.set(uri, requestCancellation);
     try {
         const response = await client.sendRequest<SvgResponse>('lilysharp/svg', {
             textDocument: { uri: uri },
             renderName: selectedRender || null
-        });
+        }, requestCancellation.token);
 
         outputChannel.appendLine(`Got response: error=${response.Error}, hasSvg=${!!response.Svg}`);
+
+        // A newer request owns the preview now — its response paints, this one drops.
+        if (svgRequestGeneration.get(uri) !== generation) {
+            outputChannel.appendLine('Dropping svg response: a newer request was issued');
+            return;
+        }
+        // The server latest-wins machinery skipped this render (a newer request had
+        // arrived server-side); the newer response carries the picture.
+        if (response.Superseded) {
+            outputChannel.appendLine('Dropping svg response: superseded server-side');
+            return;
+        }
 
         // Panel may have been disposed during async request
         if (!previewPanels.has(uri)) {
@@ -875,6 +917,13 @@ async function updatePreviewContent(
             outputChannel.appendLine('Response has neither error nor SVG');
         }
     } catch (error) {
+        // Our own cancellation (a newer request took over, or the panel/URI went
+        // away): expected, and the newer request repaints — no error banner.
+        if (svgRequestGeneration.get(uri) !== generation
+            || requestCancellation.token.isCancellationRequested) {
+            outputChannel.appendLine(`Svg request cancelled by a newer one: ${error}`);
+            return;
+        }
         outputChannel.appendLine(`Request failed: ${error}`);
         if (previewPanels.has(uri)) {
             // Same reason as the error branch above: an error replaces the SVG on screen, so
@@ -1472,6 +1521,11 @@ interface SvgResponse {
     Svg: string | null;
     Error: string | null;
     Renders: RenderInfo[] | null;
+    // True when the server's latest-wins machinery skipped this render because a
+    // newer request for the same (document, render name) had already arrived —
+    // no Svg, no Error; the newer response carries the picture. Absent on servers
+    // older than 2026-08-27.
+    Superseded?: boolean;
 }
 
 // Webview scripts must be nonce-allowed: newer VS Code builds reject

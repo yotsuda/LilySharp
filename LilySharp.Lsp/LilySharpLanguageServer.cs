@@ -50,6 +50,14 @@ public sealed partial class LilySharpLanguageServer
             ? info.InformationalVersion : "unknown";
 
     private readonly JsonRpc _rpc;
+
+    /// <summary>Test hook (InternalsVisibleTo): the underlying connection. The
+    /// async-dispatch nets wrap its CancellationStrategy to observe inbound
+    /// cancellation deterministically — StreamJsonRpc applies $/cancelRequest to a
+    /// request's CancellationTokenSource in the background, so nothing ON the
+    /// protocol can fence "the cancel has taken effect".</summary>
+    internal JsonRpc Rpc => _rpc;
+
     private readonly DocumentManager _documentManager = new();
 
     // Debounced diagnostics: typing bursts cancel the pending validation run
@@ -91,6 +99,34 @@ public sealed partial class LilySharpLanguageServer
         _rpc.StartListening();
         await _rpc.Completion;
     }
+
+    // ========== Request dispatch ==========
+
+    /// <summary>
+    /// Runs a request handler on the thread pool so the RPC dispatch loop is free to
+    /// read the next message. StreamJsonRpc dispatches incoming messages IN ORDER and
+    /// does not process the next until the current handler returns or yields — with
+    /// every handler synchronous, one slow preview render held every queued didChange,
+    /// completion and diagnostics schedule behind it (2026-08-26 review, appendix F
+    /// finding 1: the largest structural risk to keystroke latency). Every request
+    /// that reads a document or computes goes through here; the NOTIFICATIONS
+    /// (didOpen/didChange/didClose/didSave) deliberately stay synchronous — they
+    /// mutate document state and their relative order is the protocol's consistency
+    /// model. Requests only read immutable <see cref="Document"/> snapshots (each
+    /// handler takes its snapshot once, at entry), so running them concurrently with
+    /// the notification stream and each other is safe.
+    /// </summary>
+    /// <remarks>
+    /// <paramref name="token"/> is StreamJsonRpc's own wiring of the client's
+    /// $/cancelRequest (sent automatically by VS Code when e.g. a completion is
+    /// superseded by more typing), so a request the editor no longer wants is dropped
+    /// before its work starts instead of running to a thrown-away answer. The token is
+    /// checked before the handler runs (<see cref="Task.Run{TResult}(Func{TResult}, CancellationToken)"/>),
+    /// not during it — the handlers are short scans except the svg render, which has
+    /// its own mid-flight check at the render gate (see <c>GetSvg</c>).
+    /// </remarks>
+    private static Task<T> OffDispatch<T>(Func<T> handler, CancellationToken token)
+        => Task.Run(handler, token);
 
     [JsonRpcMethod(Methods.InitializeName, UseSingleObjectParameterDeserialization = true)]
     public InitializeResult Initialize(InitializeParams @params)

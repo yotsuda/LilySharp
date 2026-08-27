@@ -37,6 +37,9 @@ public sealed partial class LilySharpLanguageServer
     // ========== Hover ==========
 
     [JsonRpcMethod(Methods.TextDocumentHoverName, UseSingleObjectParameterDeserialization = true)]
+    public Task<Hover?> HoverAsync(TextDocumentPositionParams @params, CancellationToken token)
+        => OffDispatch(() => Hover(@params), token);
+
     public Hover? Hover(TextDocumentPositionParams @params)
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
@@ -86,6 +89,9 @@ public sealed partial class LilySharpLanguageServer
     // ========== Document Symbols ==========
 
     [JsonRpcMethod(Methods.TextDocumentDocumentSymbolName, UseSingleObjectParameterDeserialization = true)]
+    public Task<DocumentSymbol[]?> DocumentSymbolAsync(DocumentSymbolParams @params, CancellationToken token)
+        => OffDispatch(() => DocumentSymbol(@params), token);
+
     public DocumentSymbol[]? DocumentSymbol(DocumentSymbolParams @params)
     {
         var uri = @params.TextDocument.Uri;
