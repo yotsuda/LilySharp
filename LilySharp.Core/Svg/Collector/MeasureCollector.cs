@@ -559,7 +559,8 @@ public sealed partial class MeasureCollector
         FormDeclarationSyntax? localForm = null,
         string? attachedChordPart = null,
         ChordDisplayMode attachedChordDisplay = ChordDisplayMode.Names,
-        IReadOnlyList<string>? attachedLyricParts = null)
+        IReadOnlyList<string>? attachedLyricParts = null,
+        RenderSpec? renderSpec = null)
     {
         _voiceName = voiceName;
         Reset();
@@ -618,6 +619,41 @@ public sealed partial class MeasureCollector
         _openingKeyOverride = null;
         var measures = CollectMeasures();
         ResolveBeamStemDirections(measures);
+
+        // Score-level structure from the parts this score OMITS (|: :|, navigation
+        // marks, inline voltas) — the SAME harvest CollectMultiStaff runs, on the same
+        // resume channel. The single-staff road never called it, so `score main
+        // { staff sax }` dropped the band's repeats that the multi-staff spelling of
+        // the same book drew (measured 2026-08-27: with/without the omitted part's
+        // |: :| the single-staff page was byte-identical). Placed BEFORE the
+        // multi-voice branch so both single-staff roads get it: the mark/volta merge
+        // is a side effect on this collector's state (CaptureScoreContent reads it on
+        // both roads), and the barline sync lands on `measures`, which is track 0 of
+        // the multi-voice road and THE voice of the single road. Gated on a real
+        // RenderSpec: the spec names what is rendered (the omitted set is its
+        // complement) and the nested harvest spec is built from it — the legacy
+        // no-spec callers (tests, ChordHarmonizer's isolated melody reads) keep the
+        // historical harvest-free shape.
+        if (renderSpec != null)
+        {
+            var harvestVoices = HarvestOmittedStructure(tree, renderSpec);
+            if (harvestVoices.Count > 0)
+            {
+                // "" cannot be a part name, so the self key never collides with an
+                // "omit:<part>" key; the omit voices are sync inputs only, never drawn
+                // (the same sentinel contract as CollectMultiStaff's flatVoices).
+                var flat = new Dictionary<string, Voice>
+                {
+                    [""] = new Voice(_voiceName ?? "default", measures.ToImmutableArray()),
+                };
+                foreach (var v in harvestVoices)
+                    flat["omit:" + v.Name] = v;
+                SynchronizeBarlines(flat);
+                var synced = flat[""].Measures;
+                for (int i = 0; i < measures.Count; i++)
+                    measures[i] = synced[i];
+            }
+        }
 
         // A section that OPENS with its own key folds into this single staff's opening
         // signature (Score.KeySignature reads _meta.InitialKey*). See ApplyKeySignatureChange.
@@ -1293,20 +1329,89 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>True when <paramref name="partName"/> writes score-level structure (a navigation
-    /// mark or a repeat barline) in its music — the cheap gate that skips the isolated harvest
-    /// pass when there is nothing to harvest.</summary>
+    /// mark, an inline volta or a repeat barline) in its music — the cheap gate that skips the
+    /// isolated harvest pass when there is nothing to harvest. A part's music has TWO spellings
+    /// (GRAMMAR §7: part-major cells inside <c>part X { section A { … } }</c>, section-major
+    /// cells inside <c>section A { X { … } }</c>), and the gate must read BOTH: it used to scan
+    /// only the part DECLARATION's subtree, so a repeat barline written in the section-major
+    /// spelling — the fixture idiom — never opened the harvest and the omitted part's repeats
+    /// silently vanished from the drawn score (measured 2026-08-27: the two spellings of one
+    /// book rendered different pages; UnrenderedPartStructureMarkTests' section-major twins pin
+    /// the repair). The harvest itself always handled both — ProcessSectionBody walks
+    /// section-major cells first and falls back to part-major cells — only this gate was blind.
+    /// Structure the part reaches only through a PHRASE REFERENCE (<c>hook</c> where
+    /// <c>phrase hook { |: … :| }</c>) counts too: the harvest's nested collect expands
+    /// references (ExpandVariable) and carries the structure correctly — measured
+    /// 2026-08-27 by forcing the gate open with a direct mark — so a gate blind to them
+    /// silently dropped exactly that book's repeats. The gate walks the referenced
+    /// phrase bodies transitively (visited set: phrase DAGs share and cycle-guard
+    /// elsewhere; first declaration of a duplicate name wins, as in CollectDefinitions).
+    /// A reference that resolves to no phrase declaration contributes nothing.</summary>
     private static bool PartHasStructure(SyntaxNode root, string partName)
     {
-        var part = root.ChildNodes().OfType<PartDeclarationSyntax>()
-            .FirstOrDefault(p => p.Name.Text == partName);
         // Green finder (kind pre-filter, red type test stays the authority):
         // this gate runs per part per collect, and the red DescendantNodes walk
-        // materialized the part's whole subtree just to type-test it.
-        return part != null && part.GreenSites(static g => (
-                g.Kind is SyntaxKind.NavigationMark or SyntaxKind.InlineVolta or SyntaxKind.Barline,
-                Descend: true))
-            .Any(n => n is NavigationMarkSyntax or InlineVoltaSyntax
-                || (n is BarlineSyntax bl && bl.BarToken.Text.Contains(':')));
+        // materialized the part's whole subtree just to type-test it. One walk
+        // answers both questions — written structure, and which phrases are
+        // referenced (scanned after, so a direct hit never pays the phrase walk).
+        static bool ScanScope(SyntaxNode scope, List<string> refs)
+        {
+            foreach (var n in scope.GreenSites(static g => (
+                    g.Kind is SyntaxKind.NavigationMark or SyntaxKind.InlineVolta
+                        or SyntaxKind.Barline or SyntaxKind.VariableReference,
+                    Descend: true)))
+            {
+                switch (n)
+                {
+                    case NavigationMarkSyntax or InlineVoltaSyntax:
+                        return true;
+                    case BarlineSyntax bl when bl.BarToken.Text.Contains(':'):
+                        return true;
+                    case VariableReferenceSyntax vr:
+                        refs.Add(vr.Name.Text);
+                        break;
+                }
+            }
+            return false;
+        }
+
+        var refs = new List<string>();
+        var part = root.ChildNodes().OfType<PartDeclarationSyntax>()
+            .FirstOrDefault(p => p.Name.Text == partName);
+        if (part != null && ScanScope(part, refs))
+            return true;
+        // The section-major cells: direct children of each section declaration, the
+        // same discovery ProcessSectionBody's own loop uses (grammar guarantee there).
+        foreach (var section in root.ChildNodes().OfType<SectionDeclarationSyntax>())
+            foreach (var child in section.ChildNodes())
+                if (child is PartBlockSyntax pb && pb.Name == partName && ScanScope(pb, refs))
+                    return true;
+        if (refs.Count == 0)
+            return false;
+
+        // Referenced phrase bodies, transitively. Each body is scanned at most once
+        // per call (visited), and the declaration map is built only when a reference
+        // actually occurred.
+        Dictionary<string, PhraseDeclarationSyntax>? phrases = null;
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+        var queue = new Queue<string>(refs);
+        while (queue.Count > 0)
+        {
+            var name = queue.Dequeue();
+            if (!visited.Add(name))
+                continue;
+            phrases ??= root.ChildNodes().OfType<PhraseDeclarationSyntax>()
+                .GroupBy(p => p.Name.Text, StringComparer.Ordinal)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+            if (!phrases.TryGetValue(name, out var decl))
+                continue;
+            var inner = new List<string>();
+            if (ScanScope(decl.Body, inner))
+                return true;
+            foreach (var n in inner)
+                queue.Enqueue(n);
+        }
+        return false;
     }
 
     /// <summary>The score-level mark types worth harvesting from an unrendered part: navigation

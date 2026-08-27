@@ -596,7 +596,20 @@ public sealed partial class MeasureCollector
     /// chord / lyric blocks. An inline-music section walks its own <c>key</c> as music;
     /// a section-major or directives-only header does not.
     /// </summary>
-    private static bool SectionHasInlineMusic(SectionDeclarationSyntax section)
+    /// <remarks>
+    /// THE ONE SPELLING — the MIDI exporter, the LilyPond exporter and
+    /// MeasureValidator all read this predicate (2026-08-28, review ⑫). They used to
+    /// carry their own copies, and the MIDI copy drifted: it did not exclude
+    /// override/revert/once, so a header carrying a page directive beside its
+    /// <c>key</c> (<c>section A { key g major  override … }</c>) was classed as
+    /// inline music there, the key registration was skipped, and the .mid played the
+    /// phrase in the home key while the page engraved it in the section's
+    /// (MidiTests.SectionHeaderWithGrobOverride_StillRegistersItsKey). A
+    /// section-level override IS a directive: this collector arms it as a section
+    /// default at the section start and resets it at the next boundary (see the
+    /// section-start collection above) — it never makes the section inline music.
+    /// </remarks>
+    internal static bool SectionHasInlineMusic(SectionDeclarationSyntax section)
     {
         for (int i = 0; i < section.SlotCount; i++)
         {

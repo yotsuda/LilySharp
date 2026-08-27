@@ -1002,26 +1002,14 @@ public sealed class LilyPondExporter
 
     /// <summary>
     /// True when the section has a direct-child MUSIC node, as opposed to only directives and
-    /// part / chord / lyric blocks — MeasureCollector.Form.cs SectionHasInlineMusic.
+    /// part / chord / lyric blocks — delegated to THE one spelling
+    /// (MeasureCollector.SectionHasInlineMusic; this file's copy already agreed, the MIDI
+    /// exporter's had drifted). ⚠️ The keyword and the braces are children too — the shared
+    /// spelling skips tokens; dropping that once made every section look like it had inline
+    /// music, so the header was never emitted.
     /// </summary>
     private static bool SectionHasInlineMusic(SectionDeclarationSyntax section)
-    {
-        foreach (var child in EnumerateChildren(section))
-        {
-            // ⚠️ The keyword and the braces are children too. Dropping this line made every
-            // section look like it had inline music, so the header was never emitted.
-            if (child is SyntaxTokenNode)
-                continue;
-            if (child is PartBlockSyntax or ChordPartBlockSyntax or LyricsBlockSyntax)
-                continue;
-            if (child is KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax
-                or PartialDeclarationSyntax or ClefDeclarationSyntax or OctaveDirectiveSyntax
-                or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax)
-                continue;
-            return true;
-        }
-        return false;
-    }
+        => Svg.Collector.MeasureCollector.SectionHasInlineMusic(section);
 
     /// <summary>
     /// The node holding a part block's music items — its LAST slot.

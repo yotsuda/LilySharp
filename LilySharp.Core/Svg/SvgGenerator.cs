@@ -173,8 +173,10 @@ public static class SvgGenerator
         IReadOnlyList<string>? attachedLyrics = singleStaff is { WithLyrics.IsDefaultOrEmpty: false }
             ? singleStaff.WithLyrics
             : null;
+        // The spec rides along so the single-staff road can harvest the omitted
+        // parts' score-level structure exactly as CollectMultiStaff does.
         var score = collector.Collect(tree, voiceName, renderSpec?.Form, attachedChords,
-            singleStaff?.ChordDisplay ?? ChordDisplayMode.Names, attachedLyrics);
+            singleStaff?.ChordDisplay ?? ChordDisplayMode.Names, attachedLyrics, renderSpec);
 
         // The single-staff wrap used to drop the spec's instrument name — it
         // lives on the Staff (first-line label + indent), so

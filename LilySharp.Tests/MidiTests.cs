@@ -230,6 +230,32 @@ public class MidiTests
     }
 
     [Fact]
+    public void SectionHeaderWithGrobOverride_StillRegistersItsKey()
+    {
+        // A header may state a PAGE directive beside its key — `section A { key g major
+        // override NoteHead.color = red }` — and stay a header: the collector arms such
+        // an override as a section default (Form.cs's section-start collection) and the
+        // LilyPond exporter and the validator agree. The MIDI exporter's copy of
+        // SectionHasInlineMusic was the one spelling that did NOT exclude
+        // override/revert/once, so this very book classed the header as inline music,
+        // skipped the key registration, and played the phrase in C while the page
+        // engraved it in G — the drift ⑫ names (review 2026-08-26 §3).
+        static int[] Pitches(string src) =>
+            new MidiExporter().Export(SyntaxTree.Parse(src)).Tracks[1].Notes
+                .Select(n => n.Pitch).ToArray();
+
+        var pitches = Pitches("""
+            key c major
+            phrase Lick { c d e c }
+            part melody { section A { Lick } }
+            section A { key g major  override NoteHead.color = red }
+            form main { A }
+            score main { staff melody }
+            """);
+        Assert.Equal(new[] { 55, 57, 59, 55 }, pitches);
+    }
+
+    [Fact]
     public void StandalonePartMajorSectionHeaderTempo_ChangesTheConductorTempo()
     {
         // A standalone part-major header can state a section's tempo parallel to the

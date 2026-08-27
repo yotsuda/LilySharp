@@ -634,28 +634,13 @@ internal sealed class MeasureValidator : ISemanticValidator
 
     /// <summary>True for a PART-MAJOR section with actual inline music (note/bar children),
     /// false for a SECTION-MAJOR section (part blocks), a directives-only header
-    /// (<c>section A { partial 2 }</c>), or an empty one. Mirrors the collector's
-    /// <c>SectionHasInlineMusic</c> — the two must not drift, or a directives-only header's
-    /// <c>partial</c>/<c>time</c> is classed as in-music here and dropped as a section-wide
-    /// pickup (a real bug: the pickup rendered fine but the bar was flagged short).</summary>
+    /// (<c>section A { partial 2 }</c>), or an empty one. Delegated to the collector's
+    /// <c>SectionHasInlineMusic</c> — the drift this remark used to warn about
+    /// ("a directives-only header's <c>partial</c>/<c>time</c> classed as in-music here and
+    /// dropped as a section-wide pickup" — a real bug once) is now impossible by
+    /// construction, the same fold as <c>IsInsidePartMajorTrack</c>.</summary>
     private static bool SectionHasInlineMusic(SectionDeclarationSyntax section)
-    {
-        for (int i = 0; i < section.SlotCount; i++)
-        {
-            var child = section.GetChild(i);
-            if (child is null or SyntaxTokenNode) continue;
-            // Part / chord / lyric blocks are section-major or track cells, not inline music.
-            if (child is PartBlockSyntax or ChordPartBlockSyntax or LyricsBlockSyntax) continue;
-            // A section-level directive (`partial`/`time`/`key`/`clef`/octave/grob) arms the
-            // whole section; it does NOT make the section inline music.
-            if (child is KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax
-                or PartialDeclarationSyntax or ClefDeclarationSyntax or OctaveDirectiveSyntax
-                or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax)
-                continue;
-            return true; // a music node
-        }
-        return false;
-    }
+        => Svg.Collector.MeasureCollector.SectionHasInlineMusic(section);
 
     /// <summary>The `partial` clause matching a pickup of <paramref name="length"/>:
     /// exact for plain (1/N) and dotted (3/2N) lengths, a generic hint otherwise.</summary>

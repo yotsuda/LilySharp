@@ -693,24 +693,14 @@ public sealed class MidiExporter
     }
 
     /// <summary>True when the section has a direct-child MUSIC node (note / phrase / …),
-    /// as opposed to only directives (<c>key</c> / <c>time</c> / …) and part / chord /
-    /// lyric blocks — i.e. its own <c>key</c> is walked as music, not a header.</summary>
+    /// as opposed to only directives and part / chord / lyric blocks — i.e. its own
+    /// <c>key</c> is walked as music, not a header. THE one spelling lives with the
+    /// collector (MeasureCollector.SectionHasInlineMusic): this file's own copy was the
+    /// drifted one — it did not exclude override/revert/once, so a header carrying a
+    /// page directive beside its key lost the key here and the .mid played the phrase
+    /// in the home key while the page engraved the section's.</summary>
     private static bool SectionHasInlineMusic(SectionDeclarationSyntax section)
-    {
-        for (int i = 0; i < section.SlotCount; i++)
-        {
-            var child = section.GetChild(i);
-            if (child is null or SyntaxTokenNode)
-                continue;
-            if (child is PartBlockSyntax or ChordPartBlockSyntax or LyricsBlockSyntax)
-                continue;
-            if (child is KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax
-                or PartialDeclarationSyntax or ClefDeclarationSyntax or OctaveDirectiveSyntax)
-                continue;
-            return true; // a music node
-        }
-        return false;
-    }
+        => Svg.Collector.MeasureCollector.SectionHasInlineMusic(section);
 
     /// <summary>
     /// Plays one section: its part blocks run SIMULTANEOUSLY (each from the
