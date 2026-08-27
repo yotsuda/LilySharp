@@ -216,7 +216,7 @@ public readonly record struct MeasureContentKey(long Hash)
         // the intrinsic hash and has to be folded in explicitly — otherwise incremental
         // reuse could hand a rested bar a width computed for a different run.
         // LILYPOND-REF: lily/multi-measure-rest.cc:341-391 calculate_spacing_rods.
-        var runMap = Layout.MmrRunMap.Build(Layout.MultiMeasureRestEngraver.FindRuns(score));
+        var runMap = Layout.MmrRunMap.ForScore(score);
         for (int i = 0; i < n; i++)
         {
             acc[i].Add(runMap.IsInterior(i));

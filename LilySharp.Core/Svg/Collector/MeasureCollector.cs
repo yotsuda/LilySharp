@@ -428,6 +428,16 @@ public sealed partial class MeasureCollector
     // measure -> (tonic step, sharps) at each key change, so a chord's Roman degree
     // follows the key in force at its bar (a mid-piece modulation re-bases the degrees).
     private readonly SortedDictionary<int, (int TonicStep, int Sharps)> _keyByMeasure = new();
+    // WALK-ORDER JOURNAL of every _keyByMeasure write (RecordKeyAtMeasure is the one
+    // write site) — append-only across the collect, so a WalkCheckpoint stores a
+    // WATERMARK into it instead of copying the map per boundary, and a restore/splice
+    // rebuilds the map by replaying the source's journal prefix. Replay is last-wins,
+    // exactly the indexer's semantics (a later voice's transposed re-record wins).
+    private readonly List<(int Measure, int TonicStep, int Sharps)> _keyByMeasureLog = new();
+    // Same journal for RecordSectionStart events (first-wins StartMeasure + deduped
+    // AllStarts are reproduced by replaying the events through RecordSectionStart
+    // itself — one spelling of the bookkeeping, never a second).
+    private readonly List<(string Name, int StartMeasure)> _sectionStartLog = new();
     // The opening key a section states for the voice CURRENTLY being collected (bar 0,
     // before any note). Recorded per voice — the collect entry points fold it into that
     // voice's own signature (score key for a single staff, the staff's own key for a
@@ -1746,6 +1756,8 @@ public sealed partial class MeasureCollector
         _sectionResetOverrides.Clear();
         _sectionActiveGrobProps.Clear();
         _keyByMeasure.Clear();
+        _keyByMeasureLog.Clear();
+        _sectionStartLog.Clear();
         _voiceMeasuresByName.Clear();
         _canonicalSectionBars.Clear();
         _courtesySourcePositions.Clear();
@@ -2187,8 +2199,8 @@ public sealed partial class MeasureCollector
             foreach (var section in _sectionState.Sections.Values.OrderBy(s => s.Name.Span.Start))
             {
                 // Resume: the bookkeeping of a skipped/partially-resumed section is in
-                // the adopted prefix (RecordSectionStart via the checkpoint's section
-                // maps, the label via the builder state) — re-running it here would
+                // the adopted prefix (RecordSectionStart via the checkpoint's journal
+                // replay, the label via the builder state) — re-running it here would
                 // read a pre-restore builder. ProcessSection's own gate does the skip.
                 // A SPLICED walk's remaining sections are in the adopted tail the same
                 // way (the end checkpoint carries the section maps; the measure index
@@ -2290,6 +2302,10 @@ public sealed partial class MeasureCollector
 
     private void RecordSectionStart(string name, int startMeasure)
     {
+        // Journaled BEFORE the dedup (a no-op re-record is still an event): the
+        // checkpoint watermarks index this log, and replaying its prefix through
+        // this very method reproduces the two maps below exactly.
+        _sectionStartLog.Add((name, startMeasure));
         if (!_sectionState.StartMeasure.ContainsKey(name))
             _sectionState.StartMeasure[name] = startMeasure;
         if (!_sectionState.AllStarts.TryGetValue(name, out var list))
@@ -2299,6 +2315,45 @@ public sealed partial class MeasureCollector
         // dedup by value keeps one entry each (and never duplicates the chords/lyrics).
         if (!list.Contains(startMeasure))
             list.Add(startMeasure);
+    }
+
+    /// <summary>The one write site of <c>_keyByMeasure</c> — the map write and its
+    /// journal entry stay together so the checkpoint watermarks can stand in for a
+    /// per-boundary copy of the map (see the journal fields' remarks).</summary>
+    private void RecordKeyAtMeasure(int measure, int tonicStep, int sharps)
+    {
+        _keyByMeasure[measure] = (tonicStep, sharps);
+        _keyByMeasureLog.Add((measure, tonicStep, sharps));
+    }
+
+    /// <summary>Rebuilds <c>_keyByMeasure</c> (and this collect's journal) as the
+    /// materialization of <paramref name="source"/>'s journal prefix [0..count) —
+    /// the checkpoint state the old per-boundary map copy used to carry.</summary>
+    private void RestoreKeyLog(MeasureCollector source, int count)
+    {
+        _keyByMeasure.Clear();
+        _keyByMeasureLog.Clear();
+        for (int i = 0; i < count; i++)
+        {
+            var (m, step, sharps) = source._keyByMeasureLog[i];
+            RecordKeyAtMeasure(m, step, sharps);
+        }
+    }
+
+    /// <summary>Rebuilds the section-start maps (and this collect's journal) by
+    /// replaying <paramref name="source"/>'s journal prefix [0..count) through
+    /// <see cref="RecordSectionStart"/> — first-wins and dedup reproduced by the
+    /// one spelling of the bookkeeping.</summary>
+    private void RestoreSectionStartLog(MeasureCollector source, int count)
+    {
+        _sectionState.StartMeasure.Clear();
+        _sectionState.AllStarts.Clear();
+        _sectionStartLog.Clear();
+        for (int i = 0; i < count; i++)
+        {
+            var (name, start) = source._sectionStartLog[i];
+            RecordSectionStart(name, start);
+        }
     }
 
     private void ProcessForm(Action<List<GreenSite>> processNodes, MeasureBuilder builder)

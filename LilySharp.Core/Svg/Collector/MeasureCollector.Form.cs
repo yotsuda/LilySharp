@@ -556,8 +556,8 @@ public sealed partial class MeasureCollector
             _ambientTonicValid = true;
             // Record the modulation for Roman-numeral chord degrees at this bar onward
             // (per-voice walk, so the SortedDictionary dedups by measure).
-            _keyByMeasure[builder.CurrentMeasureIndex] =
-                (Math.Max(0, LilySharp.Core.Music.KeySpelling.StepOf(keySig.Pitch.PitchName[0])), newSharps);
+            RecordKeyAtMeasure(builder.CurrentMeasureIndex,
+                Math.Max(0, LilySharp.Core.Music.KeySpelling.StepOf(keySig.Pitch.PitchName[0])), newSharps);
         }
 
         // A key change at the very opening (bar 0, before any note sounds) IS the piece's

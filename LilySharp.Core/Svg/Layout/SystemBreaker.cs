@@ -178,7 +178,7 @@ internal sealed class SystemBreaker
         // the run rod. A run must also not be split by a line break — LilyPond's
         // compressed MMR is a single spanner between two bar-line columns and cannot
         // span systems — so the interior forbids breaking.
-        var runMap = MmrRunMap.Build(MultiMeasureRestEngraver.FindRuns(score));
+        var runMap = MmrRunMap.ForScore(score);
 
         bool sung = !score.Lyrics.IsDefaultOrEmpty;
 
@@ -232,7 +232,7 @@ internal sealed class SystemBreaker
             if (sung)
             {
                 edges = LyricSpacing.MeasureLineEdges(
-                    score.TextMetrics, springs, allTimings, i, score.Lyrics,
+                    score.TextMetrics, springs, allTimings, i, ScoreSideTables.Lyrics(score),
                     score.IsLeadSheet,
                     SpacingRules.ParentAlignmentEdgesPerColumn(allMeasures, allTimings),
                     // The same per-voice edges the layout reads (one list, section 5.4).

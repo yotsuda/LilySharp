@@ -64,8 +64,8 @@ public class LeadSheetLyricSpacingTests
         var what = Ly("what", new Fraction(2, 3));
 
         var centres = PlaceholderCentres(columns.Length);
-        var result = LyricSpacing.ApplyLeadSheetLyricSpacing(ScoreTextMetrics.Bundled, 
-            springs, columns, 0, new[] { won, der, what }, centres);
+        var result = LyricSpacing.ApplyLeadSheetLyricSpacing(ScoreTextMetrics.Bundled,
+            springs, columns, 0, ScoreSideTables.BucketLyrics(new[] { won, der, what }), centres);
 
         // won → der (adjacent columns 0→1): that single spring reserves their combined ink.
         double wonDer = LyricSpacing.CalculateLyricDistance(ScoreTextMetrics.Bundled, 
@@ -103,8 +103,9 @@ public class LeadSheetLyricSpacingTests
     {
         var columns = new[] { Fraction.Zero, new Fraction(1, 2) };
         var springs = Enumerable.Repeat(new Spring(0.5, 0.5, 1.0), columns.Length + 1).ToImmutableArray();
-        var result = LyricSpacing.ApplyLeadSheetLyricSpacing(ScoreTextMetrics.Bundled, 
-            springs, columns, 0, new[] { Ly("x", Fraction.Zero) with { MeasureIndex = 9 } },
+        var result = LyricSpacing.ApplyLeadSheetLyricSpacing(ScoreTextMetrics.Bundled,
+            springs, columns, 0,
+            ScoreSideTables.BucketLyrics(new[] { Ly("x", Fraction.Zero) with { MeasureIndex = 9 } }),
             PlaceholderCentres(columns.Length));
         Assert.Equal(springs, result);
     }

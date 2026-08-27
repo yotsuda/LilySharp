@@ -367,9 +367,14 @@ internal sealed class WalkCheckpoint
     public required (int, int, int, int)? TremoloPairShape { get; init; }
     public required bool TremoloPairFirst { get; init; }
     public required HashSet<(string, string)> SectionActiveGrobProps { get; init; }
-    public required SortedDictionary<int, (int TonicStep, int Sharps)> KeyByMeasure { get; init; }
-    public required Dictionary<string, int> SectionStartMeasures { get; init; }
-    public required Dictionary<string, List<int>> SectionAllStarts { get; init; }
+    /// <summary>Watermarks into the collector's key-modulation / section-start
+    /// journals (<c>_keyByMeasureLog</c> / <c>_sectionStartLog</c>): the maps they
+    /// materialize used to be COPIED per boundary — O(boundaries × (sections +
+    /// modulations)) per full collect — where the journals are append-only across
+    /// the collect, so a count pins the same state and a restore replays the
+    /// source's journal prefix (2026-08-26 review Tier 5-3).</summary>
+    public required int KeyLogCount { get; init; }
+    public required int SectionStartLogCount { get; init; }
 
     // --- append-only output watermarks ---
     /// <summary>Counts of the cumulative side tables, index-aligned with

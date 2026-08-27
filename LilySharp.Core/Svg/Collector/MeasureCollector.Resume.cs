@@ -97,10 +97,8 @@ public sealed partial class MeasureCollector
             TremoloPairShape = _tremoloPairShape,
             TremoloPairFirst = _tremoloPairFirst,
             SectionActiveGrobProps = new(_sectionActiveGrobProps),
-            KeyByMeasure = new(_keyByMeasure),
-            SectionStartMeasures = new(_sectionState.StartMeasure),
-            SectionAllStarts = _sectionState.AllStarts
-                .ToDictionary(kv => kv.Key, kv => new List<int>(kv.Value)),
+            KeyLogCount = _keyByMeasureLog.Count,
+            SectionStartLogCount = _sectionStartLog.Count,
             TableCounts = counts,
             PendingInlineVoltaCount = _pendingInlineVoltas.Count,
             ParallelSpanCount = _parallelSpans.Count,
@@ -138,15 +136,11 @@ public sealed partial class MeasureCollector
         _sectionActiveGrobProps.Clear();
         foreach (var prop in ck.SectionActiveGrobProps)
             _sectionActiveGrobProps.Add(prop);
-        _keyByMeasure.Clear();
-        foreach (var kv in ck.KeyByMeasure)
-            _keyByMeasure[kv.Key] = kv.Value;
-        _sectionState.StartMeasure.Clear();
-        foreach (var kv in ck.SectionStartMeasures)
-            _sectionState.StartMeasure[kv.Key] = kv.Value;
-        _sectionState.AllStarts.Clear();
-        foreach (var kv in ck.SectionAllStarts)
-            _sectionState.AllStarts[kv.Key] = new List<int>(kv.Value);
+        // The two journaled maps: rebuilt from the SOURCE's journal prefixes (the
+        // journals are append-only across the collect, so entries [0..count) are
+        // the checkpoint's state — the same argument the side tables make below).
+        RestoreKeyLog(plan.Source, ck.KeyLogCount);
+        RestoreSectionStartLog(plan.Source, ck.SectionStartLogCount);
         _measureAccidentals.Clear();
         _pendingGrace = null;
         _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
@@ -456,15 +450,10 @@ public sealed partial class MeasureCollector
         _sectionActiveGrobProps.Clear();
         foreach (var prop in endCk.SectionActiveGrobProps)
             _sectionActiveGrobProps.Add(prop);
-        _keyByMeasure.Clear();
-        foreach (var kv in endCk.KeyByMeasure)
-            _keyByMeasure[kv.Key] = kv.Value;
-        _sectionState.StartMeasure.Clear();
-        foreach (var kv in endCk.SectionStartMeasures)
-            _sectionState.StartMeasure[kv.Key] = kv.Value;
-        _sectionState.AllStarts.Clear();
-        foreach (var kv in endCk.SectionAllStarts)
-            _sectionState.AllStarts[kv.Key] = new List<int>(kv.Value);
+        // Jump the journaled maps to the recorded end of the walk (names and
+        // measure indices carry no source positions — nothing to shift).
+        RestoreKeyLog(plan.Source, endCk.KeyLogCount);
+        RestoreSectionStartLog(plan.Source, endCk.SectionStartLogCount);
         _measureAccidentals.Clear();
 
         for (int t = 0; t < dst.Length; t++)
@@ -547,23 +536,26 @@ public sealed partial class MeasureCollector
             || !_sectionActiveGrobProps.SetEquals(ck.SectionActiveGrobProps))
             return false;
 
-        if (_keyByMeasure.Count != ck.KeyByMeasure.Count)
+        // The journaled maps compare as JOURNAL PREFIXES against the source's logs
+        // (the checkpoint holds watermarks, not copies). Same-event-sequence implies
+        // same map state; the very rare converse (equal maps from a different event
+        // order) declines, which costs reuse, never correctness.
+        var srcCollector = _suffixPlan!.Source;
+        if (_keyByMeasureLog.Count != ck.KeyLogCount)
             return false;
-        foreach (var kv in ck.KeyByMeasure)
-            if (!_keyByMeasure.TryGetValue(kv.Key, out var key) || key != kv.Value)
+        for (int i = 0; i < ck.KeyLogCount; i++)
+            if (_keyByMeasureLog[i] != srcCollector._keyByMeasureLog[i])
                 return false;
-
-        if (_sectionState.StartMeasure.Count != ck.SectionStartMeasures.Count)
+        if (_sectionStartLog.Count != ck.SectionStartLogCount)
             return false;
-        foreach (var kv in ck.SectionStartMeasures)
-            if (!_sectionState.StartMeasure.TryGetValue(kv.Key, out int start) || start != kv.Value)
+        for (int i = 0; i < ck.SectionStartLogCount; i++)
+        {
+            var (liveName, liveStart) = _sectionStartLog[i];
+            var (recName, recStart) = srcCollector._sectionStartLog[i];
+            if (liveStart != recStart
+                || !string.Equals(liveName, recName, StringComparison.Ordinal))
                 return false;
-        if (_sectionState.AllStarts.Count != ck.SectionAllStarts.Count)
-            return false;
-        foreach (var kv in ck.SectionAllStarts)
-            if (!_sectionState.AllStarts.TryGetValue(kv.Key, out var starts)
-                || !starts.SequenceEqual(kv.Value))
-                return false;
+        }
 
         // Watermark equality = "the window produced exactly the recorded item
         // counts", which is what makes the adopted tail slices land at the same

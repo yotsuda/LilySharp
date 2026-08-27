@@ -170,6 +170,66 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第268セッション＝**帳簿どおりの一手＝第259 レビュー Tier 5（フルレンダ経路の二次）を 3 幕とも完済**（code 4 commit: `59a23828` 5-1 サイドテーブル×全小節の index 化・`e9a89293` 5-2 staff 別安定バケット・`6a0ad6b7` 5-3 checkpoint の watermark 化・`abb9448b` 網 fixture の nullable 警告 1 行）。**第 1 幕＝5-1**: GroupByLine（歌ものは 1 小節あたり×3・gate と layout の両方）／InkReachPerColumn／ChordInkRightReachPerColumn／ApplyChordRowSpacing／CollectAllTimingsForMeasure が毎小節 `score.Lyrics`・`score.ChordNames` 全件を舐め、LayoutSystem が毎システム MmrRunMap を建て直していた（歌もの 1000 小節で ~10⁷ 反復）のを、**新設 `ScoreSideTables`（generic `IndexBuckets<T>`・ConditionalWeakTable でスコア単位 1 回・`OwnVoiceEdgeProvider` が前例）と `MmrRunMap.ForScore`** に。**gate と layout は同一インスタンス**（§5.4 の one-list をメモの構造で保証）・バケットは document order 温存（list append・ownEdge の ls[0]・Math.Max fold の順序＝旧全走査の制限そのもの）・範囲外（小節 −1・末尾+1）は空＝旧フィルタと同値・負 index も落とさない（min..max offset）。**第 2 幕＝5-2**: BuildAllStaffSkylines 系 3 site（Dynamics／TupletBrackets／Articulations）の per-(system,staff) スコア全域 `.Where` を staff 鍵バケットに（articulation の小節/型フィルタは system 依存なので per call のまま・母集合だけ staff slice に）。`StaffBeamScoreOf` も同じ slice を共有——beam-input memo（`SameTuplets`）は内容比較のままなのでヒット不変（slice は安定インスタンスになっただけ・remark 更新済み）。**第 3 幕＝5-3**: BuildWalkCheckpoint が境界ごとに深コピーしていた `_keyByMeasure`／`SectionState.StartMeasure`／`AllStarts`（O(境界×(セクション＋転調))）を **walk-order journal ×2 の watermark** に——書き手は各 1 軒（`RecordKeyAtMeasure`＝map 書き＋journal 追記／`RecordSectionStart`＝journal 追記後に自分の first-wins・dedup）・restore／splice commit は **SOURCE の journal prefix を同じ綴りで replay**（journal は collect 通して append-only＝side table と同じ論法）・SuffixStateMatches は journal prefix の逐項比較（同列⇒同 map・稀な逆は decline＝失うのは reuse だけ）。`SectionActiveGrobProps` はコピー温存（小さく Remove がある＝count で pin できない）。perf: どの幕も走査を**減らす**側で、足したのは CWT lookup・スコア単位 1 回のバケット構築・write ごとの O(1) journal 追記のみ（打鍵経路に新走査ゼロ）。
+
+検証: **rerender 0/81 を commit ごと 3 回**（＋毒で 3 冊 MOVED を 1 回実測＝計器がこの島に有効なことも確認）・**Windows Debug 6293/0/4**（+8 網）・**WSL ubuntu Release を commit ごと 3 回実測**（`git fetch win && reset --hard <SHA>`＝committed 後なので patch 不要・6290／6291／6293）・Core 0 エラー 0 警告・台帳／snapshot 不触（suite 内で毎回）。**毒 9 種→復旧緑**: 5-1＝At() 常時空（44 網赤＋コーパス 3 冊 MOVED）／隣接小節キー落とし（cross-bar 網 15 赤）／runMap 空（MMR 網 9 赤）＋新網への 3 毒（バケット順反転・負 index clamp・memo 素通し＝各自の網が名指しで赤）。5-2＝staff バケット逆順→ **snapshot `test/voice-dynamics-multistaff` 赤＝絵が本当に merge 順で動く**＋新 order 網赤。5-3＝section event 落とし→既存 4 網赤／**key entry 落としは全緑＝restore 経路の転調に観測者ゼロと判明**→ `PrefixResume_RestoresTheKeyTimeline_AcrossAModulation`（転調を跨ぐ prefix resume・Roman 度数が審判）を新設して毒赤→復旧緑を実測。
+
+★★ **機構の実測＝5-3 の journal 比較素通し毒は*それでも*全緑**——guard ごとに probe を置いて追うと、**構成できた「journal だけが違う」本（2 転調・片方だけ編集・running key は再収束）でも state 比較は通り、そのあとの canonical-bars／parse-agreement 対が decline する**＝**journal 比較（と、それが置き換えた旧 dict 比較）はこのシナリオでは defense-in-depth**。decline の*結果*を pin する網（`SuffixSplice_DeclinesWhenOnlyTheKeyJournalDiffers`——全候補 decline＋resumed==full＋度数は編集後の鍵に従う）を追加し、この実測は網の remark に MEASURED として記録した（将来 guard の順序や強さが動いたらこの網が審判）。
+
+⇒ ★★★ **次の一手（自律で回せる側）**: ⑫ SectionHasInlineMusic の**挙動判定**（「override だけの section」を 3 綴りがどう扱うべきかを実測で決める＝統合の前提・下の独立項）／3-5 の green 走査化そのもの（やるなら別便・バー格子の第 2 綴り 3 つ＋合意網が値段）。⚠️ **`CompletionContextScanner` 型出しは便にしない**（第266 判定のまま・Completion を触る便に括り付ける）。⚠️ F【8】3（"Extract to phrase" の固定名 `melody`——検証つき `lilysharp/extractPhrase` コマンドという上位互換が既在＝統合か削除）は**機能の取捨＝要ユーザー判断側に置く**。**要ユーザー判断で開いているもの**: 和音語彙（CHL 3 点）・Nimbus Sans 同梱・CHANGELOG 版番号・SectionLabel の X（第257）・F【8】3。
+⇒ ★ **語彙の島（`Cm⁷` 対 `Cm7`）は台帳 3 点＝要ユーザー判断のまま**（CHL1 中間・CHL4 中間・CHL2 閉じ——決定が落ちれば 3 点まとめて動く）。
+
+── 前便（第267・F【1】F【4】F【7】完済）の経緯は**この下の「以下は第267セッションの経緯」に逐語で残し**、第266 の分を ARCHIVE 冒頭へ移した。
+
+⚠️ **見つけて直していないもの**:
+- **★★★【ユーザー決定 2026-08-26・優先度高】リファクタ在庫**——**⑨⑪⑬⑭ は第263・④②＋ファイル分割＋死物件は第264・§4a 小物の ①⑧⑩⑮ の返済確認と LSP Completion.cs 分割・CollectionCursor 束ねは第266 で完済**。**残り**: **⑫ SectionHasInlineMusic**（挙動判定が先・下の独立項）だけ——`CompletionContextScanner` 型出しは**便にしない**と判定済み（第266・次の一手の ⚠️ 参照）。
+- **★ ② で名指し温存した乖離 ⑴⑵ は第266 で実測・両方 inert**（台帳は `InterSystemPairMinimum` remark ⑴⑵ と `probes/rows-only-page.ly`）——**コード上の二腕は残っている**（⑴ は到達する本が無く・⑵ は値が等しいので、どちらも「直す」対象ではなく「触る便が remark を読む」対象）。**連鎖側の loose-line 再配分そのものは未移植のまま**（§2 D ⑵⑶——移植の便が来たら rows-only-page.ly がその審判）。
+- **★ customText／dynamics の skyline 箱は 1 段変換のまま**（第264 で名指し・LayoutEngine の両腕に ⚠️ 明記——行が先頭の system では mark 腕の 2026-08-25 前と同じ機構で箱が浮く・観測者ゼロ・直すと出力が動く側）。
+- **★★ `SectionHasInlineMusic` は 3 綴りで*除外リストが食い違う***（第259 後半で発見・⑫ の統合中）——**LilyPond exporter 版は override/revert/once を除外し、MIDI 版は除外しない**（collector Form.cs に第 3 の綴り）。統合は「override だけの section」の挙動判定が先＝機械的移動ではない。
+- **★★ 第259 レビューの残件の束**（全文 `scratch/review-2026-08-26/code-review.md`・git 管理外）: **打鍵経路（Tier 3〜4）と F【1】・F【4】・F【7】は第267、Tier 5（5-1 サイドテーブル index 化・5-2 staff 安定バケット・5-3 checkpoint watermark 化）は第268 で完済**（F【7】⑵ relative と F【8】1 は既返済を実コード確認）。**残り＝F【8】3 だけ**（要ユーザー判断・次の一手参照）。**named render（3-1）・active-key（4-1）・下側 stacker（4-3）・loose lines（4-4）・単一ページ Distance（4-6）・q/裸 duration/form repeat の resume（3-4）・ネスト collect の resume 接続（3-5）・改行 DP 行 prefix 再開（4-5）・3-2 第 1 段・3-3・4-2・2-2 走査一本化は返済済み**（第263〜265）。**副産物の修理**: 空窓 Δ≠0 挿入の stale splice（純シフト pin・`842b0b31`）。
+- **★★ CHL1/CHL2 の第 1 歩 −0.252403051（第260 から両書*同値*）**＝binding X の五線側インク——LP の同 X の down が 0.25 深い。stem/binding の内容差、未分解。
+- **★★ TextScript（`^"Text"`）の高さが LP より約 0.35 高い**——**観測者が立った**（`lyrics.row-between.lyric-to-staff` +0.082995881、対を通した下からの読み）。標の箱の項 0.400000 と同族の可能性。
+- **★★★ mark.* の台帳 4 点は fallback serif で鋳られている**（第258 後半で監査済み・pin との差: chord-row/plain +0.080520・over-chord ×2 +0.030664）。**台帳は 2 つの serif 面を混在**（chord-lyric-run 家族は C059 鋳造）。⚠️ **+0.7706 の島（ChordClearancePadding）に触る便が、pin→再鋳造→残差再記録→port を 1 commit で**（probe ヘッダに手順と数字を書いた）。他の 4 冊は安全と判定: staffless-system は差・恒等の量で face 不変（0.675 を両面で実測）、barnumber-staffless の点は padding 契約 1.0、chord-symbol-width は sans pin 済み、multi-voice は符頭のみ。
+- **★ `Staff.TextRowVerses` のスコア全体最大は事実として残る**（MultiStaffLayouter:286・SharedRenderer:426・MeasureContentKey:319 の 3 軒）が、**第262 の RVC 対で「対の geometry には効かない」ことを実測**（対照＝詩 2 全削除が系 1 の 3 読みと 9 桁一致）。**残る読者は帯の高さ（extents/silhouette）だけ**＝効くとすれば純粋高さ・改ページ側。観測者が要るなら inter-system gap（台帳 why に名指し済み）。
+- **★★ VRS2 双子の stanza 番号（1. 2.）は LP 側に無い家具**——実測で binding せず（VRS1 との residual 差 3e-6）。**行の左端に binding X が届く読みを開く前に re-twin**。`[~N.]` は per-occurrence 選択子なので流用不可。
+- **★★ `staff / chords / chords / staff` で*行が空*のシステムの五線内が 6.50**（第257・**再現は `scratch/p257/v-2rowsA.lys`**）。行が無い同じ本は 9.00。
+- **★★★ 和音名の面が LP と別物**（第256）＝**LP は Nimbus Sans、Lily# は TeX Gyre Heros**。**閉じる道は Nimbus Sans の同梱＝ライセンスの決定。** ⚠️ **要ユーザー判断。** **番人は `page.chord-row.staff-to-chord-baseline`（−0.013091398）。**
+- **★★★ 面の差の*射程*は選別済み（第256）**：`CGabcdeijostu`＋全数字＋`+` が分かれ、advance は全一致。**`mark.over-chord.*` は清潔**。**MKR・BNC は触るとき 1 度測ること。**
+- **★ 面では説明できない ~1e-5**（第256 ⑦）＝FreeType 26.6 グリッドが第一容疑。**安い確かめは丸字を `O`/`G`/`S` に替えた本を LP で 1 冊。**
+- **★★★ `ChordClearancePadding = 0.8` に LP の数 0.429336 が付いた**（第256）。**移植先は `Skyline::padded` の距離**。**番人は `mark.over-chord.*` の 2 点（+0.7706）。残り 0.400000 は箱の項。**
+- **★★ gap-second 5 点が揃って持つ `+0.241073`**（閉じれば 5 点同時に exact）。
+- **★★ `EstimateAboveStaffExtents` の定数（3.5 / 3.0 / 2.0）は値が未移植**（第255）——観測者は `page.chord-row.*`。
+- **★★ page BREAKER は nominal refpoint extent のまま**（第255・`page.tab-only.first-staff-refpoint` の (b)）。
+- **★★ 標の箱の項 0.400000**（`mark.chord-row.staff-to-baseline` / `mark.plain.staff-to-baseline` の +0.542971 と同じ島）。
+- **★★ テキスト行の INSIDE profile が空**（`MultiStaffLayouter.BuildAllStaffSkylines`）。単独で入れると `greensleeves` が動き、観測者が無い。
+- **★★ LP の和音*語彙*は Lily# と別物**（`Cm⁷`/`Cø`/`C+`/`C°` 対 `Cm7`/`Cm7♭5`/`Caug`/`Cdim`）。⚠️ **要ユーザー判断。** **第260 でこの島の台帳上の射程が確定**: LP は maj7 を上付きで組むので stencil は down ink 0・top 2.5008、Lily# の平文は j の descender 0.570・top 1.907——**CHL1 中間 +0.570188682／CHL4 中間 −0.593576126／CHL2 閉じ +0.070343732 は全部この島**（決定が落ちれば 3 点まとめて動く側）。
+- **★★ `get_extremal_staff` の X-aware 歩きが `-1` sentinel 族に未移植**。`TopScoreGrobStaff` の「A TEXT ROW IS NOT A STAFF」は触るときに直す。
+- **★★ テキスト行の tracker が staff symbol の平らな床を敷く**（`OutsideStaffStacker.AboveTrackers` の `FlatBase`）。観測者ゼロ。
+- **★★ `MusicMarkEngraver.CalculateXPosition` が Rehearsal と SectionLabel を同じ左端に立てる**。⚠️ **SectionLabel 側は直さない**（`mark.chord-row.staff-to-baseline` の why）。⚠️ **要ユーザー判断**（第257 でユーザーの絵に見えた——観測者ゼロではない）。
+- **★★ 標*単独*の +0.241073**（ROWMN/ROWMX/ROWMZ の 3 点が揃っている）。
+- **★★ 同じ sentinel の残り＝`CustomTextLayout`**（3 site とも未解決・互いに揃っているので今日は食い違わない）。
+- **★★ `SkylineBuilder.OuterStaff` の two-edge model**（第252 ⑦）。番人は LYRHKG の 4 点。
+- **★ gap 1 免除の最後の一枚**＝`Distance()` の中で 1 段目のどのインクが浅いのか。番人は `…empty-row.gap-first`。
+- **★★ `lyhygrace` の 2 つの残差**（第248 ⑨）＝部屋 +0.121431 と閉じる最小 +0.340000。
+- **★★ 第244 の乖離の在処＝`MusicMarkEngraver` の rows-only の腕**。ユーザー決定なので閉じない。
+- **★★ 再現できていない報告＝1 小節に和音 4 つで和音名が横に重なる**。実物が来たら `ClearOfPrevious` の抜け道と第244 の押し出しを両方・**第254 の新しい幅で**。
+- **★★ 第245 第2便の残り＝`IsSilent` は 6 site が各々読んでいる**。独立した便にしない（§5.1）。
+- **★★ `staff / chords / lyrics` に Lily# は無言。LP は警告して組む**（第257 実測）。**要ユーザー判断。**
+- **★★ `make-colon-bar-line` の `dist` 探索が未移植**（第240 ⑤）。
+- **★ `RepeatDotRadius = 0.2` は LP の 0.225 に対して小さい**（`LILYSHARP-OWN` 起票済み）。
+- **★★ 旋法の語彙 4 綴りが `LanguageVocabulary` に無い**／**★ `RenderSpecParser` と `PartReferenceFinder` は `as` を自分で切る**。⚠️ どちらも独立した便にしない（§5.1）。
+- **★ 診断パスは 1000 小節で 148〜218 ms**（打鍵ごとではない）。
+- **★ 双子 exporter は和音行と歌詞行を出さない**（和音行・歌詞行の LP 照合は手書きプローブのみ。verse-carry.ly も手書き）。
+- 音楽を持つが行のセルを持たない section は rows-only グリッドで 0 小節／`audit/magic_constants.csv` の `RepeatDotPosition1/2` の行番号ずれ／`@chord(…)` と chords ブロックの語彙違い。
+- **★★ CHANGELOG はリリース着手**（版番号はユーザー決定）。第254 の和音記号・第257 の縦位置は changelog に載る変更。
+
+★ **開始時裏取り**: HEAD `72ce2b36`・未 push 26（第267 の code 4＋docs 系＝帳簿どおり・origin `9e3c06a9` 不動）・木 0・Core 0 エラー 0 警告（`--no-incremental` 実測）・**Windows Debug 6285/0/4**（第267 終了時と同値）・CI は push 済み HEAD の run 緑（33025894215 success）——**引き継いだ数は全部当たった**（台帳系の数は忠実度不触につき本便は §0 の式を消費せず）。
+終了時: **本便のコード commit は 4**（`59a23828` 5-1＝ScoreSideTables 新設＋Lyric/Chord/MmrRunMap 配線・Core 6 ファイル＋網 2 ファイル／`e9a89293` 5-2＝MultiStaffLayouter の staff slice 化＋IndexBuckets 改名／`6a0ad6b7` 5-3＝MeasureCollector 系 journal 化＋CollectEditResumeTests 網 2／`abb9448b` 網 fixture の警告 1 行）＋ handoff 系（総数は `git rev-list --count origin/master..master` − 開始時 26 で引くこと）・origin 不動・木 0。**Windows Debug 6293 合格 / 0 失敗 / 4 skip / 合計 6297**（+8＝ScoreSideTablesTests 6＋CollectEditResumeTests 2・各 commit 前に実測）・**WSL ubuntu Release も commit ごとに 3 回実測**（committed 後なので patch でなく `git fetch win && reset --hard <SHA>`・6290／6291／6293、各 0 失敗・最終 HEAD に reset 済み）・Core 0 エラー / 0 警告・**rerender 0/81 を commit ごと 3 回**（baseline は本便冒頭に取り直し・毒で 3 冊 MOVED を 1 回実測）・台帳／snapshot 不触（suite 内で毎回）・毒 9 種全部確認（8 つ赤→復旧緑・journal 比較素通しだけ全緑＝上の機構の実測に経緯・probe 計装は commit 前に除去）・一時変更 0（`git diff` 清）。⚠️ SAC には当たらなかった（Windows は Debug で回した・Release は WSL 側のみ）。忠実度計器の消費: Core レイアウト／collector を触ったが全 commit 出力同一（rerender＋suite の台帳・snapshot が審判）＝台帳の数字は 1 点も動いていない。
+
+---
+
+## 以下は第267セッションの経緯
+
 最終更新 第267セッション＝**帳簿どおりの一手＝第259 レビュー付録 F【1】（LSP 全ハンドラ同期＋キャンセル不能＝打鍵最大の構造リスク）を完済**（code 2 commit: `fc0a1202` サーバ・`68686bd7` 拡張）。レビューの改善案 (a)(b)(c) を全部: **(a) 全要求ハンドラが `OffDispatch`（Task.Run）で dispatch ループの外へ**——StreamJsonRpc は現行ハンドラが返る/yield するまで次メッセージを読まないので、同期ハンドラ 1 本の遅いレンダが後続の didChange・補完・診断予約を全部塞いでいた。**通知（didOpen/didChange/didClose/didSave）は意図的に同期のまま**（文書状態を書く側＝順序がプロトコルの一貫性モデル。要求は入口で 1 度取る不変 Document snapshot しか読まない）。同期本体は名前ごと不変＝テストの直呼び先も不変・**GetVersion も同期温存**（静的 1 読み＋往復が dispatch fence になる＝網が使う）。**(b) 各ラッパーが CancellationToken を取る**＝StreamJsonRpc が `$/cancelRequest` を自動配線（Task.Run 前と svg は gate 内でもう 1 度検査）。**(c) lilysharp/svg は per-(文書, render 名) latest-wins**: チケットは dispatch スレッドで採番（到着順だけが最新を決める）・stale 要求はレンダせず **`Superseded` 応答**（DTO 新フィールド・Svg も Error も null＝旧クライアントは log-and-ignore する形を実測で確認）・レンダの gate は selection ごと（`SvgSessionSlot`）＝**旧の文書横断 `_svgSessionLock` 内全レンダを解消**（lock は map 番だけに）。**拡張側（`68686bd7`）**: per-URI 世代ガード（応答の逆順 paint を防ぐ——サーバが並行応答する今、これが無いと遅い旧答が速い新答の上に乗る）＋新要求が前要求を CancellationTokenSource で能動キャンセル＋Superseded drop＋自分のキャンセルをエラーバナーにしない。検証: **Windows Debug 6273/0/4（+6＝`AsyncDispatchTests`: in-process チケット網 3＋実 FullDuplexStream 接続の E2E 網 3〈dispatch liveness＋queue collapse・$/cancelRequest・通知順序〉）・WSL ubuntu Release 6273/0/4**・Core 0 エラー 0 警告・**忠実度計器は不消費**（LSP は lysc render 経路外・Core 1 ファイルも不触）・毒 3 つ赤→復旧緑（svg 同期化→liveness 網 30s タイムアウト赤／gate 内 stale check 落とし→collapse 網赤〈入口側 check は in-process 網が別途 pin〉／token check 落とし→cancel 網 2 本赤）。perf: 打鍵経路に新しい走査ゼロ（要求ごとの thread hop のみ・latest-wins はレンダを**減らす**側）。**レンダ中へのキャンセル貫通は未実装**（gate を過ぎた 1 本は完走＝止めるには Core にトークンを通す話・やるなら別便）。
 
 ★★ **機構の実測＝StreamJsonRpc は inbound `$/cancelRequest` を*背景で* CTS に適用する——プロトコル上の fence が存在しない**（version 往復の fence を挟んでも gate 解放がキャンセルに勝ってレンダが走るのを実測・単発は緑でクラス実行で赤＝pool 負荷依存）。cancel 網はサーバ接続の CancellationStrategy をラップ（`internal Rpc` テストフック新設）し**「サーバ側トークンが実際に取り消された」を待ってから gate を放す**——待つ相手は伝聞（wire に書いた）でなく実効（CTS が canceled）。E2E 網の接続は Nerdbank.Streams の FullDuplexStream（StreamJsonRpc の推移依存＝新規パッケージなし）。**ついでに踏んだ罠**: `git diff > file` の PowerShell リダイレクトは patch を再エンコード＋CRLF 化で壊す（52,026 対 42,257 bytes を実測・apply は文句を言わずに通ることがある）——**`git diff --output=<file>` で git に直書きさせる**（memory に追記済み）。
@@ -225,70 +285,6 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 
 ★ **開始時裏取り**: HEAD `32f44c15`・未 push 20（第266 の code 4＋docs 系＝帳簿どおり・origin `9e3c06a9` 不動）・木 0・Core 0 エラー 0 警告（`--no-incremental` 実測）・**Windows Debug 6267/0/4**（第266 終了時と同値）・CI は push 済み HEAD の run 緑（33025894215 success）——**引き継いだ数は全部当たった**（台帳系の数は忠実度不触につき本便は §0 の式を消費せず）。
 終了時: **本便のコード commit は 4**（`fc0a1202` LSP async dispatch＋svg latest-wins＝Lsp 9 ファイル＋網 1 ファイル・Core 不触／`68686bd7` 拡張の世代ガード＋要求キャンセル＝extension.ts のみ／`8d3f821e` F【4】using 展開キャッシュ＝Commands.cs＋網 1 ファイル／`214b114f` F【7】SignatureHelp＝SignatureHighlight.cs＋網 1 ファイル）＋ handoff 系（総数は `git rev-list --count origin/master..master` − 開始時 20 で引くこと）・origin 不動・木 0。**Windows Debug 6285 合格 / 0 失敗 / 4 skip / 合計 6289**（+18＝AsyncDispatchTests 6＋UsingExpansionCacheTests 6＋SignatureHelpTests 6・各 commit 前に実測）・**WSL ubuntu Release も 6285 / 0 / 4 実測**（commit ごとに patch 適用＝`git diff --output=` の patch・「0 Error(s)」確認後 `--no-build`・各実行後 win/master へ reset 済み）・Core 0 エラー / 0 警告・拡張は `tsc --noEmit` 清＋esbuild 緑（拡張に自動テスト harness は無い＝サーバ側半分を AsyncDispatchTests が pin）・台帳／snapshot 不触（suite 内で毎回）・毒 6 つ全部赤→復旧緑（dispatch 3＋replay 省略 1＋signature 2・上の経緯）・一時変更 0（`git diff` 清・使い捨てプローブ `C:\tmp\CancelProbe` は削除済み・計装は commit 前に除去）。⚠️ SAC には当たらなかった（全部 Debug で回した・Release は WSL 側のみ）。**Tier 5 と ⑫ に着手しなかったのは判断**（ユーザーの「有利なら着手」委任に対し、Core 側で本便の温まった文脈に優位が無い＝新便が §1 を読むのと同条件と判定）。
-
----
-
-## 以下は第266セッションの経緯
-
-最終更新 第266セッション＝**RULES §5.6 の「桁でしか落ちない門」を実装**（`4ad4a609`・`KeystrokeFloorGateTests`）——忠実度は 1e-9 で merge 不能・速度は 10 倍でも黙って通る非対称の、速度側にはじめて「思い出さなくても止まる」形を建てた。**PreviewUpdateBench 棚 9 冊の無変更打鍵床（2 warmup 後 5 round の最小）に 1500 ms の片側上限**——改善では落ちず、「落ちた」＝全 round がその遅さ。Debug は素通り（値付けしていない母集団・CI の Release 2 脚が門を通す）・missing 本は skip でなく赤（黙って門を止めない）。**上限が §5.6 の言う「素の実測の 5〜10 倍」でないのは、母集団を先に値付けしたから**（§5.5「門は何の母集団か」）: 2026-08-27 実測＝**素の worst 床 19.2 ms（perf-fingbeam1k・棚全体 0.4〜19.2 ms）**、**CI の test 工程が実際に走らせる coverage 計装付きは 151.4 ms＝計装だけで ×7.9**——素の 5〜10 倍では CI で常時赤＝§5.6 自身が「無いより悪い」と言う「無視される赤」になっていた。1500 ms＝計装済み実測の約 10 倍は、計装 CI 脚では今日の床の約 4〜8 倍（設計窓どおり）で落ち、素の機械では ×75——それでもこの棚が実際に見た回帰（4189／6051 ms・第133〜135）は全部届く。**§5.6 の台帳の数は動いていた**: 第263〜265 の打鍵便で fingslur300 の床 **258.4 → 1.4 ms**・worst の持ち主は fingbeam1k に交代（今日の全棚と計装係数は RULES §5.6 に記録）。毒＝`RenderIncremental` に `Sleep(1600)` → 門 9 冊赤（床 1613.9 ms・「全 round 遅い」の文言どおり）→復旧 9/9 緑を実測。
-
-**ついでに §1 のリファクタ在庫リストが stale と判明・実コードで棚卸し**: §4a 小物の **①（`PairMinimum` は MultiStaffLayouter:2512 に実在・両腕が読者）・⑧（`ForcePenaltyOf` へ 2026-08-26 一本化済み・remark が経緯ごと語る）・⑩（`CalculateCommonShortestDuration` 1 綴り＋driver の precomputedShortest 貫通）・⑮（`ResolvedPitches.ReadPitchToken` を CLI:929／LSP:698 が読む）は全部返済済み**——stale な TODO 行は次便の一手を盗む（§5.1）ので下のリストから落とした。2-2 の `BlockContextScan` も Completion.cs 内に実在＝**LSP Completion 分割は unblock 済み**。
-
-**第 3 幕＝②の乖離 ⑴⑵ を「観測者を建てる前に」実測し、両方 inert と判定**（`08052b0e`・コードは remark のみ・出力不変）: ⑴ **空 silhouette fallback は 612 冊（コーパス 82＋ユーザーのリードシート＋p257 変種）＋敵対的構成（rows-only score・hara-kiri で行だけの system・単/多ページ・title）で 1 度も発火しない**——譜が端に居れば staff symbol のインクが種になり、全行 system でも paging augment 系が silhouette を埋める＝**到達する本が無い以上、観測者は建てられない**。⑵ **rows-only 床の連鎖側不在は値として inert**——作れる全ての rows-only 本で「床なしの連鎖」と「床ありの単ページ」が同じ数を返す（rows-only の silhouette はちょうど scalar extents に退化: dist == inkBelow + upExt + originToLast・1 行/2 行の両形で実測）。**LP 審判は建てて→台帳化を辞退**: `audit/lp-geometry/probes/rows-only-page.ly`（committed・再実行可能。RPH＝R1 hara-kiri で和音 2 行だけの system・**⚠️ R1 であって r1 でない**——LP は通常休符で譜を生かし Lily# はどちらも消す＝両者が一致する綴りが R）を LP 2.26.0 に通して絵まで検証したところ、**LP の既定出力自体が loose-line 再配分（page-layout-problem.cc:860-880）に支配され、次 system の和音行を*その system 自身の譜の上*に置く**（rel +2.127467/−0.371417 対 通常 +3.588959/+1.121485）——残差は Lily# に丸ごと無い再配分サブシステム（§2 D の未移植 ⑵⑶）を測ることになり pair minimum の審判にならない。**再配分を移植する便が来たらこのプローブがその審判**（数字と経緯は probe ヘッダと `InterSystemPairMinimum` remark ⑴⑵ に台帳）。副産物の LP 実測: 行先導の staffed 対の spring は origin-to-origin の basic 12 では*ない*（Y-offset 差 10.516359——分解は未着手・probe に記録）。
-
-**第 4 幕＝CollectionCursor 束ねも完済**（`0cdf7774`・付録 E【9】のリスク中）: `_currentStaffIndex/_currentVoiceIndex/_currentVoiceScope/_metadataMeasureOffset` の 4 フィールドを **`CollectionCursor` 構造体 1 つ**に束ね、BuildExtraVoiceTracks の手動 save/restore を **`CursorScope` の using スコープ**へ（座標が増えても復元は構造が保証）。レビューの指示どおり**機械的変換に留めた**（81 参照×8 ファイルをスクリプト置換・remark はメンバーへ随伴）。**逐語温存 2 つを札つきで**: Reset() は今も MetadataMeasureOffset を書かない（span スコープ外では常に 0）／スコープは「0 リセット」でなく「保存値復元」（span ループは常に主ストリームの cursor で走る＝サイトの remark に明記）。**証明**: rerender **0/81**（stash A/B・Release・両側煙試験）＋台帳残差不動＋suite 全緑 snapshot 0（Windows/WSL とも 6267/0/4）。**毒〈Dispose 無効化＝sub-voice cursor 漏れ〉の実測が 2 つ教えた**: ⑴ **rerender コーパスはこの島に盲目**（毒でも 0/81——単一システム盲目に続く第 2 の盲点として記録）⑵ **suite はちょうど 1 網で捕まえる**＝`SvgSnapshotTests test/tuplet-bracket-whole-notes`（並行声部×tuplet 本＝VoiceIndex 漏れの形そのもの）→復旧緑。EOL は CRLF 格納 blob 5 本を `-c core.autocrlf=false` で stage＝diff は編集行ちょうど。
-
-**同便の後半でその Completion.cs（4378 行）の分割も完済**（`ee518314`）——**位置切りでなく関心で 2 partial へ**（第264 の判定どおり）: **`CompletionContext.cs`（1249 行）＝「カーソルはどこか」**（`BlockContextScan`＋frame 型・ブロック述語・`GetCompletionContext`・word-before-cursor 族・打楽器/placement/和音@ の位置プローブ）／**`CompletionVocabulary.cs`（3006 行）＝「何を出すか」**（全 `Get*Completions`＋キャッシュ・文書由来の名前補完は私用プローブごと＝唯一の読者の隣へ・テンプレート・`MatchAnywhere`）／**元ファイル（205 行）は入口だけ**（JsonRpc の `Completion()` dispatch＋両側が読む source-generated regex 群）。**逐語の行範囲移送のみ**（各 9 run・スクリプトが帳尻印字: 4378＝204＋1208＋2965＋1・`IsPitchName` 上の迷子 clef doc も見つけたまま移送＝直すのは本 commit の仕事でない）。⚠️ **Completion.cs は CRLF 格納 blob**（memory の混在 EOL の罠）——CRLF のまま書いて `-c core.autocrlf=false` で stage＝**縮んだ側の diff は +0/−4173 ちょうど**・新 2 ファイルも家族どおり CRLF 格納。検証: build 0 エラー・新規警告 0・suite Windows/WSL 両方 6267/0/4（WSL は「0 Error(s)」を確かめてから `--no-build`・新規ファイルは `git add -N` 経由の patch）。**LSP は lysc の render 経路外＋partial class はどのファイルに居ても同一コンパイル＝忠実度計器は不消費**。**名指して残す**: `BlockContextScan` を独立型 `CompletionContextScanner` に出すのは移送でなくコード変更＝CollectionCursor と同じ棚（やるなら別便）。
-
-⇒ ★★★ **次の一手（自律で回せる側）**: 第259 残の LSP 全ハンドラ同期＋キャンセル不能（打鍵最大の構造リスク・改善案 3 つはレビュー付録 F【1】）／3-5 の green 走査化そのもの（やるなら別便・バー格子の第 2 綴り 3 つ＋合意網が値段）／⑫ SectionHasInlineMusic は挙動判定が先。⚠️ **`CompletionContextScanner` 型出しは便にしない**（第266 末尾で実コード確認: レビュー【2】(a) の本丸＝1 要求 1 走査は **2-2 の `BlockContextScan` が既に実装済み**——:867/:911 の重複も死んでいる。残りは入口の chords-block 判定が作る第 2 の scan・打楽器判定の CodeMask×2・key 正規表現＝**サブミリ秒級の端数**と、private 入れ子機構の型への昇格＝組織化のみ。Completion を触る便に括り付ける・§5.1）。**リファクタ在庫は ⑫ と型出しを残して完済**（CollectionCursor は第 4 幕）・**②の乖離 ⑴⑵ の観測者は「建てられない／建てるべきでない」で閉じた**（第 3 幕）。**要ユーザー判断で開いているもの**: 和音語彙（CHL 3 点）・Nimbus Sans 同梱・CHANGELOG 版番号・SectionLabel の X（第257）。
-⇒ ★ **語彙の島（`Cm⁷` 対 `Cm7`）は台帳 3 点＝要ユーザー判断のまま**（CHL1 中間・CHL4 中間・CHL2 閉じ——決定が落ちれば 3 点まとめて動く）。
-
-── 前便（第265・レビュー打鍵残 7 本完済）の経緯は**この下の「以下は第265セッションの経緯」に逐語で残し**、第264 の分を ARCHIVE 冒頭へ移した。
-
-⚠️ **見つけて直していないもの**:
-- **★★★【ユーザー決定 2026-08-26・優先度高】リファクタ在庫**——**⑨⑪⑬⑭ は第263・④②＋ファイル分割（SpacingRules／MeasureCollector／LayoutEngine）＋死物件（GO 済み・第 5 脚）は第264 で完済**（⑬ は stage 1＝FormWalk 読者化まで。stage 2〈ページ walk の消費者化＋pass 展開サービス〉はやるなら別便・engraving が観測者）。**§4a 小物の ①⑧⑩⑮ は返済済みを第266 が実コードで確認**（このリストが stale だった・経緯は上）。**LSP Completion.cs の分割（`ee518314`）と CollectionCursor 束ね（`0cdf7774`）も第266 で完済**（上の経緯）。**残り**: **⑫ SectionHasInlineMusic**（挙動判定が先・下の独立項）だけ——`CompletionContextScanner` 型出しは**便にしない**と判定済み（次の一手の ⚠️ 参照＝2-2 が本丸を返済済み・残りは端数と組織化・Completion を触る便に括り付ける）。
-- **★ ② で名指し温存した乖離 ⑴⑵ は第266 で実測・両方 inert**（経緯は上の第 3 幕・台帳は `InterSystemPairMinimum` remark ⑴⑵ と `probes/rows-only-page.ly`）——**コード上の二腕は残っている**（⑴ は到達する本が無く・⑵ は値が等しいので、どちらも「直す」対象ではなく「触る便が remark を読む」対象）。**連鎖側の loose-line 再配分そのものは未移植のまま**（§2 D ⑵⑶——移植の便が来たら rows-only-page.ly がその審判）。
-- **★ customText／dynamics の skyline 箱は 1 段変換のまま**（第264 で名指し・LayoutEngine の両腕に ⚠️ 明記——行が先頭の system では mark 腕の 2026-08-25 前と同じ機構で箱が浮く・観測者ゼロ・直すと出力が動く側）。
-- **★★ `SectionHasInlineMusic` は 3 綴りで*除外リストが食い違う***（第259 後半で発見・⑫ の統合中）——**LilyPond exporter 版は override/revert/once を除外し、MIDI 版は除外しない**（collector Form.cs に第 3 の綴り）。統合は「override だけの section」の挙動判定が先＝機械的移動ではない。
-- **★★ 第259 レビューの残件の束**（全文 `scratch/review-2026-08-26/code-review.md`・git 管理外）: **打鍵経路（Tier 3〜4）は完済**。残り＝LSP 全ハンドラ同期＋キャンセル不能（打鍵最大の構造リスク）／`using` 本の毎打鍵フル再パース＋二重展開／SignatureHelp の部分文字列一致・activeParameter ずれ／Tier 5（フルレンダ二次: 5-1 サイドテーブル×全小節・5-2 安定バケット化・5-3 checkpoint watermark 化）。**named render（3-1）・active-key（4-1）・下側 stacker（4-3）・loose lines（4-4）・単一ページ Distance（4-6）・q/裸 duration/form repeat の resume（3-4）・ネスト collect の resume 接続（3-5）・改行 DP 行 prefix 再開（4-5）・3-2 第 1 段・3-3・4-2・2-2 走査一本化は返済済み**（第263〜265）。**副産物の修理**: 空窓 Δ≠0 挿入の stale splice（純シフト pin・`842b0b31`）。
-- **★★ CHL1/CHL2 の第 1 歩 −0.252403051（第260 から両書*同値*）**＝binding X の五線側インク——LP の同 X の down が 0.25 深い。stem/binding の内容差、未分解。
-- **★★ TextScript（`^"Text"`）の高さが LP より約 0.35 高い**——**観測者が立った**（`lyrics.row-between.lyric-to-staff` +0.082995881、対を通した下からの読み）。標の箱の項 0.400000 と同族の可能性。
-- **★★★ mark.* の台帳 4 点は fallback serif で鋳られている**（第258 後半で監査済み・pin との差: chord-row/plain +0.080520・over-chord ×2 +0.030664）。**台帳は 2 つの serif 面を混在**（chord-lyric-run 家族は C059 鋳造）。⚠️ **+0.7706 の島（ChordClearancePadding）に触る便が、pin→再鋳造→残差再記録→port を 1 commit で**（probe ヘッダに手順と数字を書いた）。他の 4 冊は安全と判定: staffless-system は差・恒等の量で face 不変（0.675 を両面で実測）、barnumber-staffless の点は padding 契約 1.0、chord-symbol-width は sans pin 済み、multi-voice は符頭のみ。
-- **★ `Staff.TextRowVerses` のスコア全体最大は事実として残る**（MultiStaffLayouter:286・SharedRenderer:426・MeasureContentKey:319 の 3 軒）が、**第262 の RVC 対で「対の geometry には効かない」ことを実測**（対照＝詩 2 全削除が系 1 の 3 読みと 9 桁一致）。**残る読者は帯の高さ（extents/silhouette）だけ**＝効くとすれば純粋高さ・改ページ側。観測者が要るなら inter-system gap（台帳 why に名指し済み）。
-- **★★ VRS2 双子の stanza 番号（1. 2.）は LP 側に無い家具**——実測で binding せず（VRS1 との residual 差 3e-6）。**行の左端に binding X が届く読みを開く前に re-twin**。`[~N.]` は per-occurrence 選択子なので流用不可。
-- **★★ `staff / chords / chords / staff` で*行が空*のシステムの五線内が 6.50**（第257・**再現は `scratch/p257/v-2rowsA.lys`**）。行が無い同じ本は 9.00。
-- **★★★ 和音名の面が LP と別物**（第256）＝**LP は Nimbus Sans、Lily# は TeX Gyre Heros**。**閉じる道は Nimbus Sans の同梱＝ライセンスの決定。** ⚠️ **要ユーザー判断。** **番人は `page.chord-row.staff-to-chord-baseline`（−0.013091398）。**
-- **★★★ 面の差の*射程*は選別済み（第256）**：`CGabcdeijostu`＋全数字＋`+` が分かれ、advance は全一致。**`mark.over-chord.*` は清潔**。**MKR・BNC は触るとき 1 度測ること。**
-- **★ 面では説明できない ~1e-5**（第256 ⑦）＝FreeType 26.6 グリッドが第一容疑。**安い確かめは丸字を `O`/`G`/`S` に替えた本を LP で 1 冊。**
-- **★★★ `ChordClearancePadding = 0.8` に LP の数 0.429336 が付いた**（第256）。**移植先は `Skyline::padded` の距離**。**番人は `mark.over-chord.*` の 2 点（+0.7706）。残り 0.400000 は箱の項。**
-- **★★ gap-second 5 点が揃って持つ `+0.241073`**（閉じれば 5 点同時に exact）。
-- **★★ `EstimateAboveStaffExtents` の定数（3.5 / 3.0 / 2.0）は値が未移植**（第255）——観測者は `page.chord-row.*`。
-- **★★ page BREAKER は nominal refpoint extent のまま**（第255・`page.tab-only.first-staff-refpoint` の (b)）。
-- **★★ 標の箱の項 0.400000**（`mark.chord-row.staff-to-baseline` / `mark.plain.staff-to-baseline` の +0.542971 と同じ島）。
-- **★★ テキスト行の INSIDE profile が空**（`MultiStaffLayouter.BuildAllStaffSkylines`）。単独で入れると `greensleeves` が動き、観測者が無い。
-- **★★ LP の和音*語彙*は Lily# と別物**（`Cm⁷`/`Cø`/`C+`/`C°` 対 `Cm7`/`Cm7♭5`/`Caug`/`Cdim`）。⚠️ **要ユーザー判断。** **第260 でこの島の台帳上の射程が確定**: LP は maj7 を上付きで組むので stencil は down ink 0・top 2.5008、Lily# の平文は j の descender 0.570・top 1.907——**CHL1 中間 +0.570188682／CHL4 中間 −0.593576126／CHL2 閉じ +0.070343732 は全部この島**（決定が落ちれば 3 点まとめて動く側）。
-- **★★ `get_extremal_staff` の X-aware 歩きが `-1` sentinel 族に未移植**。`TopScoreGrobStaff` の「A TEXT ROW IS NOT A STAFF」は触るときに直す。
-- **★★ テキスト行の tracker が staff symbol の平らな床を敷く**（`OutsideStaffStacker.AboveTrackers` の `FlatBase`）。観測者ゼロ。
-- **★★ `MusicMarkEngraver.CalculateXPosition` が Rehearsal と SectionLabel を同じ左端に立てる**。⚠️ **SectionLabel 側は直さない**（`mark.chord-row.staff-to-baseline` の why）。⚠️ **要ユーザー判断**（第257 でユーザーの絵に見えた——観測者ゼロではない）。
-- **★★ 標*単独*の +0.241073**（ROWMN/ROWMX/ROWMZ の 3 点が揃っている）。
-- **★★ 同じ sentinel の残り＝`CustomTextLayout`**（3 site とも未解決・互いに揃っているので今日は食い違わない）。
-- **★★ `SkylineBuilder.OuterStaff` の two-edge model**（第252 ⑦）。番人は LYRHKG の 4 点。
-- **★ gap 1 免除の最後の一枚**＝`Distance()` の中で 1 段目のどのインクが浅いのか。番人は `…empty-row.gap-first`。
-- **★★ `lyhygrace` の 2 つの残差**（第248 ⑨）＝部屋 +0.121431 と閉じる最小 +0.340000。
-- **★★ 第244 の乖離の在処＝`MusicMarkEngraver` の rows-only の腕**。ユーザー決定なので閉じない。
-- **★★ 再現できていない報告＝1 小節に和音 4 つで和音名が横に重なる**。実物が来たら `ClearOfPrevious` の抜け道と第244 の押し出しを両方・**第254 の新しい幅で**。
-- **★★ 第245 第2便の残り＝`IsSilent` は 6 site が各々読んでいる**。独立した便にしない（§5.1）。
-- **★★ `staff / chords / lyrics` に Lily# は無言。LP は警告して組む**（第257 実測）。**要ユーザー判断。**
-- **★★ `make-colon-bar-line` の `dist` 探索が未移植**（第240 ⑤）。
-- **★ `RepeatDotRadius = 0.2` は LP の 0.225 に対して小さい**（`LILYSHARP-OWN` 起票済み）。
-- **★★ 旋法の語彙 4 綴りが `LanguageVocabulary` に無い**／**★ `RenderSpecParser` と `PartReferenceFinder` は `as` を自分で切る**。⚠️ どちらも独立した便にしない（§5.1）。
-- **★ 診断パスは 1000 小節で 148〜218 ms**（打鍵ごとではない）。
-- **★ 双子 exporter は和音行と歌詞行を出さない**（和音行・歌詞行の LP 照合は手書きプローブのみ。verse-carry.ly も手書き）。
-- 音楽を持つが行のセルを持たない section は rows-only グリッドで 0 小節／`audit/magic_constants.csv` の `RepeatDotPosition1/2` の行番号ずれ／`@chord(…)` と chords ブロックの語彙違い。
-- **★★ CHANGELOG はリリース着手**（版番号はユーザー決定）。第254 の和音記号・第257 の縦位置は changelog に載る変更。
-
-★ **開始時裏取り**: HEAD `d3c93dd7`・未 push 11（第265 の code 7＋docs 4＝帳簿どおり・origin `9e3c06a9` 不動）・木 0・Core 0 エラー 0 警告（`--no-incremental` 実測）——**引き継いだ数は全部当たった**（台帳系の数は忠実度不触につき本便は §0 の式を消費せず・suite は下の実測）。
-終了時: **本便のコード commit は 4**（`4ad4a609` §5.6 門＝`KeystrokeFloorGateTests`・Tests 1 ファイル追加のみ／`ee518314` Completion.cs 分割＝逐語移送のみ／`08052b0e` 乖離 ⑴⑵ の inert 実測＝remark とプローブのみ・出力不変／`0cdf7774` CollectionCursor＝§5.1 の証明つき出力同一）＋ handoff 系（総数は `git rev-list --count origin/master..master` − 開始時 11 で引くこと）。**Windows Release 6267 合格 / 0 失敗 / 4 skip / 合計 6271**（+9＝門の Theory 9 冊。各 commit 後に実測）・**WSL ubuntu Release も 6267 / 0 / 4 を 5 回実測**（各 patch 適用・新規ファイルは `git add -N` してから diff＝第265 の手順どおり）・Core 0 エラー / 0 警告（`--no-incremental`）・**rerender 0/81 を第 4 幕で 2 回実測**（stash A/B・Release・毒 1 回＝コーパスはこの島に盲目・baseline は scratch/lpreport に残置）・台帳／snapshot 不動（suite 内で毎回）・毒 2 つ赤→復旧緑（門の Sleep／cursor の Dispose 無効化→snapshot 1 本赤）・一時変更 0（`git diff` 清・PAIRMIN の一時計装は commit 前に除去・testhost の DLL ロック残骸は Stop-Process で掃除・`$env:TEMP` と job tmp の作業物は使い捨て）。**SAC の第 3 の出方を同便で 2 度踏んだ**: Release の `lilysharp-lsp.dll`（509 赤）と `lysc.dll`（Cli 系 21 赤）が塞がれ、どちらも 0x800711C7 の一様赤——「大量の赤＝自分の変更」と読む前にエラー文言を 1 本見ること。解は `-t:Rebuild -p:Deterministic=false -c Release` **＋ `dotnet test --no-build`**（`--no-build` 無しでは決定論ビルドが塞がれたハッシュに戻し赤が再現＝実測。memory に追記済み）。⚠️ **Debug 脚では門は素通り**（値付けしていない母集団）——Debug の速度回帰は引き続き誰も見ていない。
 
 ---
 

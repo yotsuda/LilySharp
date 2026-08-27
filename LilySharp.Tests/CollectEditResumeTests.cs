@@ -317,6 +317,122 @@ section S {
         Assert.All(resumer.ResumePlans.Values, p => Assert.Equal(0, p.SplicedMeasures));
     }
 
+    [Fact]
+    public void PrefixResume_RestoresTheKeyTimeline_AcrossAModulation()
+    {
+        // The key journal's own book (nothing in the net corpus puts a mid-piece
+        // modulation inside an ADOPTED prefix that anything then reads): the
+        // Roman chord track resolves its degrees against BuildKeyTimeline AFTER
+        // the walks, so a prefix restore that loses or mis-replays the journal
+        // respells every degree past the modulation. Measured need: the Tier 5-3
+        // poison "drop the last replayed key entry" ran the whole suite green
+        // until this test existed.
+        const string oldText = """
+            time 4/4
+            key c major
+            part m { clef treble
+              section A { c'4 c' c' c' | key g major d'4 d' d' d' | e'4 e' e' e' | f'4 f' f' f' | g'4 g' g' g' | a'4 a' a' a' | }
+            }
+            chords prog { section A { I | I | I | I | I | I | } }
+            form main { A }
+            score main { staff m  chords prog }
+            """;
+        // Late edit: a same-length pitch swap in the LAST bar, so checkpoints
+        // past the bar-1 modulation qualify as prefix targets.
+        const string lastBar = "a'4 a' a' a'";
+        int idx = oldText.LastIndexOf(lastBar, StringComparison.Ordinal);
+        Assert.True(idx > 0);
+        var newText = oldText.Remove(idx, lastBar.Length).Insert(idx, "b'4 b' b' b'");
+
+        var recorder = CollectWalkProbe.Recorder();
+        var source = new MeasureCollector { WalkProbe = recorder };
+        var oldTree = SyntaxTree.Parse(oldText);
+        Assert.False(oldTree.HasErrors,
+            string.Join(" | ", oldTree.Diagnostics.Select(d => d.Message)));
+        SvgGenerator.CollectScore(source, oldTree, RenderSpecParser.FindFirst(oldTree));
+
+        var newTree = SyntaxTree.Parse(newText);
+        var newSpec = RenderSpecParser.FindFirst(newTree);
+        var fullNew = SvgGenerator.CollectScore(newTree, newSpec);
+
+        var resumer = CollectResumePlanner.Plan(oldTree, newTree, recorder, source);
+        Assert.True(resumer != null, "the late pitch edit produced no plan at all");
+        // Liveness: the plan's prefix checkpoint must stand PAST the modulation
+        // with the journal entry in its watermark, or the replay under test never
+        // runs and this test pins nothing.
+        Assert.Contains(resumer!.ResumePlans.Values,
+            p => p.Checkpoint is { MeasureCount: > 1, KeyLogCount: > 0 });
+
+        var collector = new MeasureCollector { WalkProbe = resumer };
+        var resumed = SvgGenerator.CollectScore(collector, newTree, newSpec);
+        var diff = ModelDeepDiff.FirstDifference(fullNew, resumed, "score");
+        Assert.True(diff == null, $"resumed differs from full: {diff}");
+        Assert.Contains(resumer.ResumePlans.Values, p => p.Consumed);
+
+        // The quantity by name: degree I is C before the modulation and G after
+        // it — in the RESUMED collect, whose bar-1 key entry came from the replay.
+        Assert.Equal(new[] { "C", "G", "G", "G", "G", "G" },
+            resumed.ChordNames.OrderBy(c => c.MeasureIndex).Select(c => c.ChordText).ToArray());
+    }
+
+    [Fact]
+    public void SuffixSplice_DeclinesWhenOnlyTheKeyJournalDiffers()
+    {
+        // The decline outcome for an edited MODULATION: two modulations, the edit
+        // swaps the FIRST one's key, the SECOND returns to C before the splice
+        // candidates — so at a candidate boundary past bar 3 the running key,
+        // ambient tonic, measure count and every table count all match, and the
+        // key journal is the only STATE witness that bars 1-2 were sung in
+        // another key. ⚠️ MEASURED (Tier 5-3 poisons, probes at each guard): the
+        // state comparison passes with the journal compare skipped, and what
+        // declines this book is the canonical-bars / parse-agreement pair AFTER
+        // it — the journal compare is defense-in-depth here (as the dictionary
+        // compare it replaced was), not the deciding guard. This net pins the
+        // OUTCOME: every candidate declines, the resumed collect equals the full
+        // one, and the degrees follow the EDITED text's keys.
+        const string oldText = """
+            time 4/4
+            key c major
+            part m { clef treble
+              section A { c'4 c' c' c' | key g major d'4 d' d' d' | e'4 e' e' e' | key c major f'4 f' f' f' | g'4 g' g' g' | a'4 a' a' a' | }
+            }
+            chords prog { section A { I | I | I | I | I | I | } }
+            form main { A }
+            score main { staff m  chords prog }
+            """;
+        // Same-length swap: only the first modulation's letter changes.
+        int idx = oldText.IndexOf("key g major", StringComparison.Ordinal);
+        Assert.True(idx > 0);
+        var newText = oldText.Remove(idx, "key g major".Length).Insert(idx, "key a major");
+
+        var recorder = CollectWalkProbe.Recorder();
+        var source = new MeasureCollector { WalkProbe = recorder };
+        var oldTree = SyntaxTree.Parse(oldText);
+        Assert.False(oldTree.HasErrors,
+            string.Join(" | ", oldTree.Diagnostics.Select(d => d.Message)));
+        SvgGenerator.CollectScore(source, oldTree, RenderSpecParser.FindFirst(oldTree));
+
+        var newTree = SyntaxTree.Parse(newText);
+        var newSpec = RenderSpecParser.FindFirst(newTree);
+        var fullNew = SvgGenerator.CollectScore(newTree, newSpec);
+
+        var resumer = CollectResumePlanner.Plan(oldTree, newTree, recorder, source);
+        Assert.True(resumer != null, "the modulation swap produced no plan at all");
+        Assert.True(resumer!.ResumePlans.Values.Any(p => p.SuffixCandidates is { Count: > 0 }),
+            "no walk kept suffix candidates — the guard under test is not even reachable");
+
+        var collector = new MeasureCollector { WalkProbe = resumer };
+        var resumed = SvgGenerator.CollectScore(collector, newTree, newSpec);
+        var diff = ModelDeepDiff.FirstDifference(fullNew, resumed, "score");
+        Assert.True(diff == null, $"resumed differs from full: {diff}");
+        // The equality must have come from DECLINING (the live walk re-sings the
+        // bars), not from a splice that happened to agree.
+        Assert.All(resumer.ResumePlans.Values, p => Assert.Equal(0, p.SplicedMeasures));
+        // Degree I follows the EDITED text's keys: C, then A, then C to the end.
+        Assert.Equal(new[] { "C", "A", "A", "C", "C", "C" },
+            resumed.ChordNames.OrderBy(c => c.MeasureIndex).Select(c => c.ChordText).ToArray());
+    }
+
     // ---------- runner ----------
 
     private readonly record struct BookOutcome(

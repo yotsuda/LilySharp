@@ -1157,7 +1157,13 @@ internal sealed class MultiStaffLayouter
         // A compressed multi-measure rest is ONE bar between two bar-line columns,
         // so the measures a run swallows contribute neither springs nor bar lines;
         // the run-opening measure carries the whole bar and takes the run rod below.
-        var runMap = MmrRunMap.Build(MultiMeasureRestEngraver.FindRuns(score));
+        // Memoized per score: this method runs per SYSTEM, and the run grouping is a
+        // property of the music alone.
+        var runMap = MmrRunMap.ForScore(score);
+        // The side tables bucketed by measure — the same instance the break gate
+        // reads (ScoreSideTables' score-keyed memo, RULES §5.4's one-list rule).
+        var lyricsByMeasure = ScoreSideTables.Lyrics(score);
+        var chordsByMeasure = ScoreSideTables.ChordNames(score);
 
         for (int i = startMeasureIndex; i < endMeasureIndex; i++)
         {
@@ -1240,7 +1246,7 @@ internal sealed class MultiStaffLayouter
             var ownEdge = score.Lyrics.IsDefaultOrEmpty
                 ? null : LyricSpacing.OwnVoiceEdgeProvider(score);
             var (lyricLeft, lyricRight) = LyricSpacing.InkReachPerColumn(
-                score.TextMetrics, springs, allTimings, i, score.Lyrics, score.IsLeadSheet,
+                score.TextMetrics, springs, allTimings, i, lyricsByMeasure, score.IsLeadSheet,
                 alignmentEdges, ownEdge);
             // The measure's lyric line edges, for the cross-bar rods below and the
             // line-start lyric floor — read off the FINAL reserved springs, the same
@@ -1248,10 +1254,10 @@ internal sealed class MultiStaffLayouter
             measureLineEdges.Add(score.Lyrics.IsDefaultOrEmpty
                 ? ImmutableArray<LyricSpacing.LyricLineEdge>.Empty
                 : LyricSpacing.MeasureLineEdges(
-                    score.TextMetrics, springs, allTimings, i, score.Lyrics,
+                    score.TextMetrics, springs, allTimings, i, lyricsByMeasure,
                     score.IsLeadSheet, alignmentEdges, ownEdge));
-            var chordWidth = SpacingRules.ChordInkRightReachPerColumn(score.TextMetrics, 
-                allTimings, i, score.ChordNames, includeAttached: !score.IsLeadSheet);
+            var chordWidth = SpacingRules.ChordInkRightReachPerColumn(score.TextMetrics,
+                allTimings, i, chordsByMeasure.At(i), includeAttached: !score.IsLeadSheet);
             var leftOverhangs = new double[allTimings.Count];
             var rightOverhangs = new double[allTimings.Count];
             for (int c = 0; c < leftOverhangs.Length; c++)
@@ -1672,10 +1678,12 @@ internal sealed class MultiStaffLayouter
             // differently), a staff-backed score reserves every verse.
             springs = score.IsLeadSheet
                 ? LyricSpacing.ApplyLeadSheetLyricSpacing(
-                    score.TextMetrics, springs, allTimings, measureIndex, score.Lyrics,
+                    score.TextMetrics, springs, allTimings, measureIndex,
+                    ScoreSideTables.Lyrics(score),
                     SpacingRules.ParentAlignmentEdgesPerColumn(allMeasures, allTimings))
                 : LyricSpacing.ApplyLyricSpacing(
-                    score.TextMetrics, springs, allTimings, measureIndex, score.Lyrics,
+                    score.TextMetrics, springs, allTimings, measureIndex,
+                    ScoreSideTables.Lyrics(score),
                     SpacingRules.ParentAlignmentEdgesPerColumn(allMeasures, allTimings),
                     // Per-voice edges — the same provider the ink reaches, the line
                     // edges and the drawn X read (a row has no voice, so the lead-sheet
@@ -1692,7 +1700,8 @@ internal sealed class MultiStaffLayouter
             // Chord symbols reserve their widths on the row columns, and a
             // grid bar never collapses below a readable cell (else a long
             // chords-only chart packs onto one line and never wraps).
-            springs = SpacingRules.ApplyChordRowSpacing(score.TextMetrics, springs, allTimings, measureIndex, score.ChordNames);
+            springs = SpacingRules.ApplyChordRowSpacing(score.TextMetrics, springs, allTimings,
+                measureIndex, ScoreSideTables.ChordNames(score).At(measureIndex));
             springs = SpacingRules.EnsureLeadSheetBarWidth(springs);
         }
         else if (!score.ChordNames.IsDefaultOrEmpty)
@@ -1705,7 +1714,8 @@ internal sealed class MultiStaffLayouter
             // symbols. LILYPOND-REF: scm/define-grobs.scm ChordName
             // extra-spacing-width.
             springs = SpacingRules.ApplyChordRowSpacing(
-                score.TextMetrics, springs, allTimings, measureIndex, score.ChordNames, includeAttached: true);
+                score.TextMetrics, springs, allTimings, measureIndex,
+                ScoreSideTables.ChordNames(score).At(measureIndex), includeAttached: true);
         }
 
         // Tab fret digits (a Lily# enlargement of LilyPond's tiny numbers) are
@@ -1797,8 +1807,8 @@ internal sealed class MultiStaffLayouter
         // column so the spacing reserves the symbol's width there and the measure
         // widens to fit — otherwise the symbol has no column and overhangs the barline.
         if (!score.ChordNames.IsDefaultOrEmpty)
-            foreach (var cn in score.ChordNames)
-                if (cn.MeasureIndex == measureIndex && cn.UseTiming)
+            foreach (var cn in ScoreSideTables.ChordNames(score).At(measureIndex))
+                if (cn.UseTiming)
                     timings.Add(cn.Timing);
 
         var sortedTimings = sawNotationSpacer
@@ -1850,8 +1860,8 @@ internal sealed class MultiStaffLayouter
         }
 
         if (!score.ChordNames.IsDefaultOrEmpty)
-            foreach (var cn in score.ChordNames)
-                if (cn.MeasureIndex == measureIndex && cn.UseTiming)
+            foreach (var cn in ScoreSideTables.ChordNames(score).At(measureIndex))
+                if (cn.UseTiming)
                     anchoredOnsets.Add(cn.Timing);
 
         var pruned = timings
@@ -2732,9 +2742,10 @@ internal sealed class MultiStaffLayouter
             foreach (var staff in group.Staves)
             {
                 int thisStaff = staffIndex;
-                var dynamics = score.Dynamics.IsDefaultOrEmpty
-                    ? ImmutableArray<DynamicItem>.Empty
-                    : score.Dynamics.Where(d => d.StaffIndex == thisStaff).ToImmutableArray();
+                // The staff's slice of the score-wide table, cut once per score
+                // (ScoreSideTables): this method runs per SYSTEM, and the .Where
+                // it replaces walked the whole table per (system, staff).
+                var dynamics = ScoreSideTables.DynamicsByStaff(score).At(thisStaff);
                 var beams = StaffBeamLayouts(score, staff, thisStaff, measureLayouts, systemIndex);
                 // Ties and slurs before scripts: a script on a tie's bound note
                 // clears the bow (its tie SUPPORT), and one under a slur rides off
@@ -2964,9 +2975,9 @@ internal sealed class MultiStaffLayouter
     {
         if (score.TupletBrackets.IsDefaultOrEmpty)
             return ImmutableArray<TupletBracketLayout>.Empty;
-        var staffTuplets = score.TupletBrackets
-            .Where(t => t.StaffIndex == staffIndex)
-            .ToImmutableArray();
+        // The staff's slice, cut once per score (ScoreSideTables) — this runs per
+        // (system, staff) and used to re-filter the whole table each time.
+        var staffTuplets = ScoreSideTables.TupletBracketsByStaff(score).At(staffIndex);
         if (staffTuplets.IsEmpty)
             return ImmutableArray<TupletBracketLayout>.Empty;
 
@@ -3116,9 +3127,11 @@ internal sealed class MultiStaffLayouter
         var systemMeasures = new HashSet<int>();
         foreach (var ml in measureLayouts)
             systemMeasures.Add(ml.MeasureIndex);
-        var staffArticulations = score.Articulations
-            .Where(a => a.StaffIndex == staffIndex
-                        && systemMeasures.Contains(a.MeasureIndex)
+        // The staff filter reads the per-score bucket (ScoreSideTables) — cut once —
+        // while the measure/type filters stay per call: they depend on THIS system's
+        // layouts, and they now scan only the staff's own items.
+        var staffArticulations = ScoreSideTables.ArticulationsByStaff(score).At(staffIndex)
+            .Where(a => systemMeasures.Contains(a.MeasureIndex)
                         && ArticulationEngraver.IsSidePositionedScript(a.Type))
             .ToImmutableArray();
         if (staffArticulations.IsEmpty)
@@ -3418,7 +3431,7 @@ internal sealed class MultiStaffLayouter
     {
         var staffTuplets = score.TupletBrackets.IsDefaultOrEmpty
             ? ImmutableArray<TupletBracketItem>.Empty
-            : score.TupletBrackets.Where(t => t.StaffIndex == staffIndex).ToImmutableArray();
+            : ScoreSideTables.TupletBracketsByStaff(score).At(staffIndex);
         return staff.Voices.Length > 1
             ? new Score(
                 staff.Voices, score.TimeSignature, score.KeySignature,
@@ -3527,9 +3540,10 @@ internal sealed class MultiStaffLayouter
         return true;
     }
 
-    /// <summary>Tuplet lists compared by CONTENT, in order: the staff quantity builds its
-    /// list by filtering the score's on every call, so identity would never match even when
-    /// the two lists hold the same brackets.</summary>
+    /// <summary>Tuplet lists compared by CONTENT, in order: the staff quantity's list is a
+    /// per-staff slice (a stable bucket since ScoreSideTables, a fresh filter before it)
+    /// while the annotation quantity passes the score's whole list, so identity cannot be
+    /// relied on even when the two lists hold the same brackets.</summary>
     private static bool SameTuplets(
         ImmutableArray<TupletBracketItem> a, ImmutableArray<TupletBracketItem> b)
     {

@@ -58,7 +58,7 @@ internal static class LyricSpacing
         ImmutableArray<Spring> springs,
         IReadOnlyList<Fraction> columnTimings,
         int measureIndex,
-        IReadOnlyList<LyricItem> lyrics,
+        IndexBuckets<LyricItem> lyrics,
         IReadOnlyList<(double Left, double Centre)> parentAlignmentEdges,
         System.Func<LyricItem, (double Left, double Centre)?>? ownEdge = null)
         => ReserveLyricWidthByColumn(
@@ -80,7 +80,7 @@ internal static class LyricSpacing
     /// <param name="prevKeys">Line keys that have a syllable in measure
     /// <paramref name="measureIndex"/> − 1 (same <paramref name="include"/> filter), or null
     /// when none — the "does this line CONTINUE across the opening bar" side of the
-    /// cross-bar model, collected in the same pass so it costs no second walk.</param>
+    /// cross-bar model, read off the neighbour's own bucket.</param>
     /// <param name="nextKeys">Same for measure <paramref name="measureIndex"/> + 1 — the
     /// closing-bar side. ⚠️ Presence is by CONTENT (the neighbour has a syllable of this
     /// line), not by column-mapping success: a neighbour syllable the reservation there
@@ -88,32 +88,18 @@ internal static class LyricSpacing
     /// half without gaining a rod — the regime where syllables already crowd today.</param>
     private static SortedDictionary<(int Voice, int Verse, int Staff, bool Row),
         SortedDictionary<int, List<LyricItem>>> GroupByLine(
-        IReadOnlyList<LyricItem> lyrics, int measureIndex,
+        IndexBuckets<LyricItem> lyrics, int measureIndex,
         System.Func<LyricItem, int> columnOf, System.Func<LyricItem, bool> include,
         out HashSet<(int Voice, int Verse, int Staff, bool Row)>? prevKeys,
         out HashSet<(int Voice, int Verse, int Staff, bool Row)>? nextKeys)
     {
         var lines = new SortedDictionary<(int, int, int, bool),
             SortedDictionary<int, List<LyricItem>>>();
-        prevKeys = null;
-        nextKeys = null;
-        foreach (var lyric in lyrics)
+        prevKeys = CollectLineKeys(lyrics.At(measureIndex - 1), include);
+        nextKeys = CollectLineKeys(lyrics.At(measureIndex + 1), include);
+        foreach (var lyric in lyrics.At(measureIndex))
         {
             if (!include(lyric))
-                continue;
-            if (lyric.MeasureIndex == measureIndex - 1)
-            {
-                (prevKeys ??= new HashSet<(int, int, int, bool)>())
-                    .Add((lyric.VoiceId, lyric.VerseNumber, lyric.StaffIndex, lyric.IsLyricsRow));
-                continue;
-            }
-            if (lyric.MeasureIndex == measureIndex + 1)
-            {
-                (nextKeys ??= new HashSet<(int, int, int, bool)>())
-                    .Add((lyric.VoiceId, lyric.VerseNumber, lyric.StaffIndex, lyric.IsLyricsRow));
-                continue;
-            }
-            if (lyric.MeasureIndex != measureIndex)
                 continue;
             int col = columnOf(lyric);
             if (col < 0)
@@ -126,6 +112,20 @@ internal static class LyricSpacing
             list.Add(lyric);
         }
         return lines;
+    }
+
+    /// <summary>The line keys present in one measure's bucket (same include filter as the
+    /// grouping), or null when none — the null-when-empty shape GroupByLine's out
+    /// parameters always had.</summary>
+    private static HashSet<(int Voice, int Verse, int Staff, bool Row)>? CollectLineKeys(
+        ImmutableArray<LyricItem> lyrics, System.Func<LyricItem, bool> include)
+    {
+        HashSet<(int, int, int, bool)>? keys = null;
+        foreach (var lyric in lyrics)
+            if (include(lyric))
+                (keys ??= new HashSet<(int, int, int, bool)>())
+                    .Add((lyric.VoiceId, lyric.VerseNumber, lyric.StaffIndex, lyric.IsLyricsRow));
+        return keys;
     }
 
     /// <summary>
@@ -246,7 +246,7 @@ internal static class LyricSpacing
         ImmutableArray<Spring> springs,
         IReadOnlyList<Fraction> columnTimings,
         int measureIndex,
-        IReadOnlyList<LyricItem> lyrics,
+        IndexBuckets<LyricItem> lyrics,
         IReadOnlyList<(double Left, double Centre)> parentAlignmentEdges)
         => ReserveLyricWidthByColumn(
             fonts, springs, columnTimings, measureIndex, lyrics, ly => ly.IsLyricsRow,
@@ -333,7 +333,7 @@ internal static class LyricSpacing
         ImmutableArray<Spring> springs,
         IReadOnlyList<Fraction> columnTimings,
         int measureIndex,
-        IReadOnlyList<LyricItem> lyrics,
+        IndexBuckets<LyricItem> lyrics,
         System.Func<LyricItem, bool> include,
         IReadOnlyList<(double Left, double Centre)> parentAlignmentEdges,
         bool keepEdgeHalves = false,
@@ -449,14 +449,15 @@ internal static class LyricSpacing
         ImmutableArray<Spring> springs,
         IReadOnlyList<Fraction> columnTimings,
         int measureIndex,
-        IReadOnlyList<LyricItem> lyrics,
+        IndexBuckets<LyricItem> lyrics,
         bool isLeadSheet,
         IReadOnlyList<(double Left, double Centre)> parentAlignmentEdges,
         System.Func<LyricItem, (double Left, double Centre)?>? ownEdge = null)
     {
         var leftReach = new double[columnTimings.Count];
         var rightReach = new double[columnTimings.Count];
-        if (lyrics.Count == 0 || columnTimings.Count == 0)
+        var measureLyrics = lyrics.At(measureIndex);
+        if (measureLyrics.IsEmpty || columnTimings.Count == 0)
             return (leftReach, rightReach);
 
         // Every syllable sits on its TIMING COLUMN — the one map the reservations, the
@@ -465,10 +466,8 @@ internal static class LyricSpacing
         // the reservations' by-item alias here; see ApplyLyricSpacing's remark for the
         // multi-voice defect that retired both.
         var perColumn = new List<LyricItem>[columnTimings.Count];
-        foreach (var ly in lyrics)
+        foreach (var ly in measureLyrics)
         {
-            if (ly.MeasureIndex != measureIndex)
-                continue;
             if (isLeadSheet && !ly.IsLyricsRow)
                 continue;
             int col = -1;
@@ -535,12 +534,12 @@ internal static class LyricSpacing
         ImmutableArray<Spring> springs,
         IReadOnlyList<Fraction> columnTimings,
         int measureIndex,
-        IReadOnlyList<LyricItem> lyrics,
+        IndexBuckets<LyricItem> lyrics,
         bool isLeadSheet,
         IReadOnlyList<(double Left, double Centre)> parentAlignmentEdges,
         System.Func<LyricItem, (double Left, double Centre)?>? ownEdge = null)
     {
-        if (lyrics.Count == 0 || columnTimings.Count == 0
+        if (lyrics.At(measureIndex).IsEmpty || columnTimings.Count == 0
             || springs.Length != columnTimings.Count + 1)
             return ImmutableArray<LyricLineEdge>.Empty;
 

@@ -91,6 +91,19 @@ internal sealed class MmrRunMap
         return map;
     }
 
+    private static readonly System.Runtime.CompilerServices
+        .ConditionalWeakTable<MultiStaffScore, MmrRunMap> _byScore = new();
+
+    /// <summary>
+    /// The score's run map, memoized per score — the run grouping is a property of the
+    /// music alone (<see cref="MultiMeasureRestEngraver.FindRuns(MultiStaffScore)"/>
+    /// consults no system assignment), so ONE construction serves the break gate, the
+    /// per-system layout loop and the content keys, where the layout used to rebuild
+    /// the full-score walk for every system.
+    /// </summary>
+    public static MmrRunMap ForScore(MultiStaffScore score)
+        => _byScore.GetValue(score, s => Build(MultiMeasureRestEngraver.FindRuns(s)));
+
     /// <summary>True when this measure is swallowed by a run that opened earlier.</summary>
     public bool IsInterior(int measureIndex) => _interior.Contains(measureIndex);
 
