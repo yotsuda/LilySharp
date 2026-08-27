@@ -254,8 +254,13 @@ internal sealed partial class LayoutEngine
             multiMeasureRanges.Add((multiMeasStart, sysMeasures.Count));
             multiMeasStart += sysMeasures.Count;
         }
-        var inlineChordNames = score.ChordNames
-            .Where(c => !textRowStaves.Contains(c.StaffIndex)).ToImmutableArray();
+        // ⚠️ THE INLINE CHORD NAMES USED TO BE SELECTED HERE and handed to the estimate
+        // (`score.ChordNames` minus every text-row staff, so a chord ROW never reached it).
+        // The estimate's chord branch went on 2026-08-28 — measured worthless in both its
+        // terms, audit/lp-geometry page.inline-chord.* — so the selection went with it. The
+        // symbol's real ink still reaches the page twice, through the per-measure annotation
+        // extents and through the X-aware silhouette, which is what made the estimate a THIRD
+        // charge. See EstimateAboveStaffExtents' remarks.
         // The raise that brings this pass's STAFF-framed estimates into the ORIGIN frame the
         // extents are kept in — LilyPond's -first_spaceable_dy, per system.
         var rowsAboveFirstStaff = systems
@@ -263,7 +268,7 @@ internal sealed partial class LayoutEngine
             .ToList();
         AugmentExtentsWithLooseLines(score.TextMetrics, perSystemExtents,
             score.MusicMarks, score.VoltaBrackets, multiMeasureRanges,
-            inlineChordNames, perSystemBandUps, rowsAboveFirstStaff);
+            perSystemBandUps, rowsAboveFirstStaff);
 
         // Preliminary annotation pass (see the single-staff path): real
         // protrusions of brackets/marks/voltas/dynamics/ties/slurs join the

@@ -4989,6 +4989,36 @@
       "lilypond": 2,
       "why": "HANDOFF 5.0 trap 8: the gap readings are indexed, so the count is carried. Two one-staff systems on page 1.",
       "residual": 0.0
+    },
+    "page.inline-chord.gap-first": {
+      "probe": "inline-chord-page.ly",
+      "score": "CIB",
+      "lilypond": 12.593884,
+      "why": "SEEDED 2026-08-28 session 273 at +0.451116000, PORTED THE SAME DAY to +0.001116000. WHAT AN INLINE CHORD SYMBOL CHARGES AN INTER-SYSTEM GAP, and the first observer EstimateAboveStaffExtents' chord constant ever had. ⚠️ THE CONSTANT WAS NOT THE CHORD ROW'S, though scratch/p272/sweep-map.txt named it 'chord row 3.0': the branch was handed inlineChordNames (score.ChordNames minus every text-row staff), so it fired ONLY for a bare @chord and a ROW was filtered out before it arrived -- which is why CHR1/CHR2 and GCF/GCS, every chord-row book in this corpus, were blind to it, and why the single book of 572 that bound it (chords-funky-ignatzek.lys) was watched by an SVG hash and nothing else. THE READING IS A GAP AND NOT A PAGE ANCHOR, because the anchor arm was BLIND BY CONSTRUCTION: on a single staff the anchor is margin + max(6, header + upExtent + 2.0 + 1), so 3.0 made the floor candidate EXACTLY 6.000000, a tie with basic-distance 6 that a poison could only ever move upward. The bandUp arm (InterSystemPairMinimum's inkBelowLastRefpoint + nextHalfFirst + bandUpNext) moves both ways and is what this entry watches. ★★★ THE SEEDING PREDICTION MISSED AND THE MISS WAS THE HARVEST: it said LilyPond would widen to about 13.6 and Lily# would UNDER-reserve by about -0.6. LilyPond widens by only 0.593884 (12.593884 against the control's 12.000000) and Lily# read 13.045000000 -- the sign was the other way, Lily# OVER-charging by +0.451116000. The magnitude was wrong because the arithmetic priced the row like ink in a skyline (inkBelow 8.045 + ink 4.548884 + padding 1 = 13.598884, the number predicted); LilyPond instead DISTRIBUTES the row as a loose line and pushes the systems apart only by the overflow -- the subsystem Lily# does not have (HANDOFF section 2 D(2)(3)). ★★★ POISON SPLIT THE RESIDUAL INTO TWO NAMED TERMS IN THE SAME RUN: +0.451116000 = 0.450000000 + 0.001116000, and the port took the first. THE 0.450000000 WAS THE BAND, a THIRD charge on a symbol two other arms already price: it floored the distance under EVERY x for ink that exists at a FEW x, where the X-aware silhouette (AddMarkBox) reserves it where it actually is and the per-measure annotation extents price its real ink besides (HANDOFF 5.2.1(2), a second spelling shadowing ink the engine already places). Retired 2026-08-28 with its up-extent half, which no reading could ever have watched -- the lyric band's story exactly (2026-08-20) and the one CreatePages' own remark had named the trigger for: 'the chord row keeps this shape until a point measures it the same way'. Both arms swept SEPARATELY over 572 tracked books: 0 moved either time, rerender 0/81, and this point moved in the same run -- which is what says the change reached the engine at all (HANDOFF 5.0 (5)). ⚠️ THE REMAINING +0.001116000 IS OPEN AND NAMED, NOT A BASELINE: it is the silhouette arm's own flat scalar, PagingSkylines.cs's AddMarkBox(.., cnY + 1.9, cnY - 0.3), where the annotation-extents arm beside it went ink-true on 2026-08-28 (session 272) -- poisoning that 1.9 to 1.95 moves this reading 12.595000000 -> 12.645000000, one for one. That 0.001116 MIXES the scalar's error with the FACE difference (LilyPond sets chord names in Nimbus Sans and Lily# in TeX Gyre Heros -- page.chord-row.staff-to-chord-baseline) and this entry cannot split them; the split is that arm's port. The ...884 tail it shares with LilyPond's own ChordName figures here (ink height 1.998884, ink top 4.548883902866634 over the staff refpoint) says it is the same ink quantity. THE COUNTERPART WAS MEASURED, NOT ASSUMED (HANDOFF 5.0, the session-179 trap): LilyPond has no inline chord symbol, so the probe measured the same music BOTH ways -- \\chords (a ChordNames loose line, book CIB) and ^\\markup (a TextScript on the note, book CIBM) -- and they do NOT agree (12.593884 against 12.183464). ChordNames is the counterpart: its ink is 1.9989/1.9073 against the TextScript's 1.6544/1.5885, and Lily# draws the symbol at font-size 2.62 for an ink near 1.95, the ChordNames size. The corpus's own mapping (chords-funky-ignatzek.lys's header) is therefore right, and it is now measured rather than asserted.",
+      "residual": 0.001116
+    },
+    "page.inline-chord.staves-on-first-page": {
+      "probe": "inline-chord-page.ly",
+      "score": "CIB",
+      "unit": "count",
+      "lilypond": 2,
+      "why": "HANDOFF 5.0 trap 8: the gap reading is indexed, so the count travels with it -- a gap read off a page holding a different number of systems is a plausible number about another page. Two one-staff systems on page 1, on both engines.",
+      "residual": 0.0
+    },
+    "page.inline-chord.no-chord.gap-first": {
+      "probe": "inline-chord-page.ly",
+      "score": "CIBN",
+      "lilypond": 12.0,
+      "why": "SEEDED 2026-08-28 session 273. THE CONTROL, and the half that makes its twin legible: CIB with @chord deleted and NOTHING else changed. ★ IT IS AN IDENTITY ON BOTH ENGINES -- 12.000000000 EXACT, system-system-spacing's basic-distance 12 winning on each: the deep c, column leaves system 1's ink 8.045 below its refpoint (Lily#'s own band arithmetic, 13.045000000 = 8.045 + nextHalfFirst 2.0 + bandUp 3.0), and 8.045 + 2.0 + padding 1 = 11.045 loses to 12 -- which is what both engines landing on 12.000000 confirms. PREDICTION: 12.000000 exact. HELD. ⚠️ WITHOUT THIS ENTRY the twin's +0.451116000 could be read as a wrong note-note term rather than as the chord symbol's own charge; with it, every other term in the gap is known ink-true on both engines and the WHOLE residual belongs to the symbol. ⚠️ IT ALSO PINS THE REGIME: the twin says something only while the symbol's charge clears this floor. A port that drops that charge under 12.000000 makes the twin go quiet, and the book must be re-cut deeper before that port ships.",
+      "residual": 0.0
+    },
+    "page.inline-chord.no-chord.staves-on-first-page": {
+      "probe": "inline-chord-page.ly",
+      "score": "CIBN",
+      "unit": "count",
+      "lilypond": 2,
+      "why": "HANDOFF 5.0 trap 8: the gap reading is indexed, so the count travels with it -- a gap read off a page holding a different number of systems is a plausible number about another page. Two one-staff systems on page 1, on both engines.",
+      "residual": 0.0
     }
   }
 }

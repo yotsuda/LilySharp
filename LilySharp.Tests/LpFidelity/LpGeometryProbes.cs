@@ -2929,6 +2929,80 @@ internal static class LpGeometryProbes
     private static readonly string GCS = GrandChordsScore("GCS", sharp: true);
 
     /// <summary>
+    /// AN INLINE CHORD SYMBOL UNDER AN INTER-SYSTEM GAP — books CIB/CIBN
+    /// (inline-chord-page.ly), and the first observer <c>EstimateAboveStaffExtents</c>' chord
+    /// constant ever had.
+    /// </summary>
+    /// <remarks>
+    /// WHY THE PAIR EXISTS (session 273, step (1) of scratch/p272/sweep-map.txt's act-6
+    /// addendum). ⚠️ THE MAP NAMES THE CONSTANT WRONG AND THE NAME IS THE WHOLE REASON
+    /// NOTHING WATCHED IT: it calls this "chord row 3.0", but the branch is handed
+    /// <c>inlineChordNames</c> (LayoutEngine.cs:257 — <c>score.ChordNames</c> minus every
+    /// text-row staff), so it fires ONLY for INLINE symbols (<c>@chord</c>) and a chord ROW
+    /// is filtered out before it arrives. That is why CHR1/CHR2 and GCF/GCS — every
+    /// chord-row book this corpus has — are blind to it, and why the one book of 572 that
+    /// binds it (chords-funky-ignatzek.lys) is the one written with <c>@chord</c>.
+    /// <para>
+    /// THE CONSTANT HAS TWO ARMS AND ONLY ONE CAN BE WATCHED. Poisoned separately
+    /// (scratch/p273/predictions.txt): <c>upExtent</c> feeds the page anchor, where a single
+    /// staff makes the floor candidate <c>3.0 + 2.0 + 1</c> = EXACTLY 6.000000, a tie with
+    /// top-system-spacing's basic-distance — raising the constant moves the page one for one,
+    /// LOWERING IT MOVES NOTHING, so a point there could only ever see half a poison.
+    /// <c>bandUp</c> feeds the inter-system floor (<c>InterSystemPairMinimum</c>'s
+    /// <c>inkBelowLastRefpoint + nextHalfFirst + bandUpNext</c>) and moves BOTH ways. These
+    /// entries go on that arm.
+    /// </para>
+    /// <para>
+    /// ⚠️ SYSTEM 1 IS DEEPER THAN THE ct FAMILY'S ON PURPOSE. <c>c,</c> puts 8.045 of ink
+    /// below its refpoint; CustomTextGapScore's <c>g,</c> puts 5.045, which leaves the band
+    /// term under system-system-spacing's 12 floor and binds nothing at all.
+    /// </para>
+    /// <para>
+    /// ★ THE PAIR SHIPPED ITS PORT THE SAME DAY it was seeded, which is the whole point of
+    /// cutting it: seeded at +0.451116000, and once the estimate's chord branch was retired
+    /// (both arms — see EstimateAboveStaffExtents' remarks) it landed on +0.001116000,
+    /// exactly the figure the seeding poison had predicted by forcing <c>bandUp</c> to 0.
+    /// ⚠️ THESE BOOKS ARE NOW THE GUARDS FOR THAT RETIREMENT AND FOR THE ARM UNDER IT: the
+    /// remaining +0.001116000 is the SILHOUETTE arm's flat <c>cnY + 1.9</c>, still unported,
+    /// and CIB is what will read its landing. Do not re-fit it here.
+    /// ⚠️ CIB STAYS LIVE AFTER THE PORT ON PURPOSE: 12.595000000 still clears the control's
+    /// 12.000000000 floor by 0.595, so the entry keeps watching. A later change that drops
+    /// the symbol's charge under that floor makes it go QUIET rather than red, and the book
+    /// must then be re-cut deeper — which is what the control entry is carried to say.
+    /// </para>
+    /// ⚠️ Lily# <c>c,</c> / <c>&lt;c e g&gt;</c> (octave absolute, treble) is LilyPond
+    /// <c>\fixed c' { c, }</c> / <c>&lt;c' e' g'&gt;</c> (HANDOFF 5.5) — and the probe keeps
+    /// the exporter's own <c>\fixed c'</c> wrapper rather than converting by hand.
+    /// </remarks>
+    private static string InlineChordGapScore(string name, bool chords) => $$"""
+        octave absolute
+        time 4/4
+
+        part melody { clef treble }
+
+        section A {
+          melody { c,4 c, c, c, | c,4 c, c, c, | break }
+        }
+
+        section B {
+          melody { <c e g>1{{(chords ? "@chord" : "")}} | <f a c'>1{{(chords ? "@chord" : "")}} | }
+        }
+
+        form main { ~A ~B }
+
+        score main "{{name}}" { staff melody }
+        """;
+
+    /// <inheritdoc cref="InlineChordGapScore"/>
+    private static readonly string CIB = InlineChordGapScore("CIB", chords: true);
+
+    /// <summary>
+    /// The no-chord control — one word apart, and the half that is an IDENTITY on LilyPond's
+    /// side (12.000000000 exact, the basic-distance floor).
+    /// </summary>
+    private static readonly string CIBN = InlineChordGapScore("CIBN", chords: false);
+
+    /// <summary>
     /// A CUSTOM TEXT AS THE PAGE'S TOP INK — the mirror of book CTP (custom-text-page.ly),
     /// and the first observer either paging arm of the custom text ever had.
     /// </summary>
@@ -11517,6 +11591,26 @@ internal static class LpGeometryProbes
         new("page.grand-chords.sharp.first-staff-refpoint", GCS,
             g => g.FirstStaffRefpoint(), RaggedBottomPaper),
         new("page.grand-chords.sharp.staves-on-first-page", GCS,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+
+        // ...and the THIRD chord path, the one neither pair above can reach (books CIB/CIBN
+        // — inline-chord-page.ly): EstimateAboveStaffExtents' own chord constant, which is
+        // handed `inlineChordNames` and so fires for a bare `@chord` and never for a row.
+        // Both pairs above spell their chords as ROWS, which is exactly why 3.0 sat unwatched
+        // by every entry here while one rerender book (chords-funky-ignatzek.lys) held it on
+        // an SVG hash alone. The reading is the INTER-SYSTEM gap rather than a page anchor
+        // because the anchor arm is blind by construction — see InlineChordGapScore.
+        // ⚠️ THE PAIR IS AN IDENTITY ON LILYPOND'S SIDE, which is what makes Lily#'s
+        // difference the defect's own size (HANDOFF 5.0-1): CIBN is CIB with `@chord` deleted
+        // and nothing else changed, and it lands 12.000000000 EXACT on both engines.
+        // Counts travel per HANDOFF 5.0 trap 8.
+        new("page.inline-chord.gap-first", CIB,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("page.inline-chord.staves-on-first-page", CIB,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+        new("page.inline-chord.no-chord.gap-first", CIBN,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("page.inline-chord.no-chord.staves-on-first-page", CIBN,
             g => g.StavesOnPage(0), RaggedBottomPaper),
 
         // ...and the TERM INSIDE the floor those two read. The refpoint entry above is one

@@ -47,41 +47,82 @@ internal sealed partial class LayoutEngine
     /// reservation, which it holds itself.
     /// </para>
     /// <para>
-    /// ⚠️ WHAT IS LEFT HERE IS THE SAME SPECIES, unported: every constant below is
-    /// hand-assembled and its LILYPOND-REF names the grob's outside-staff-priority rather than
-    /// the number. They stand because no reading watches them yet — the page counterpart for
-    /// an ABOVE-staff annotation is the other end of the chain (the top spring, i.e.
-    /// page.*.first-staff-refpoint), which the below-staff trio's book shape does not measure.
+    /// ⚠️ AND THE CHORD SYMBOL WENT THE SAME WAY ON 2026-08-28 (session 273), which is why
+    /// there is no chord branch below and no <c>chordNames</c> parameter. It set BOTH terms
+    /// to a hand-picked 3.0 for any system carrying an INLINE symbol — the argument was
+    /// <c>inlineChordNames</c>, so a chord ROW never reached it, which is why every
+    /// chord-row book in audit/lp-geometry (CHR1/CHR2, GCF/GCS) was blind to it and one
+    /// rerender book held it on an SVG hash alone. Both terms were measured before it went
+    /// (audit/lp-geometry <c>page.inline-chord.*</c>, probe inline-chord-page.ly):
+    /// </para>
+    /// <para>
+    /// THE BAND WAS A THIRD CHARGE. It floored the inter-system distance under EVERY x for
+    /// ink that exists at a FEW x — the X-aware silhouette already reserves the symbol where
+    /// it actually is (<c>AddMarkBox</c> below), and the per-measure annotation extents price
+    /// its real ink besides. Book CIB read 13.045000000 against LilyPond's 12.593884 with the
+    /// band and 12.595000000 without it, so the band was worth +0.450000000 of pure
+    /// over-reservation and nothing else. This is the lyric band's story exactly (2026-08-20,
+    /// the scalar retired for the X-aware profile), and <c>CreatePages</c>' own remark named
+    /// the trigger — "the chord row keeps this shape until a point measures it the same way".
+    /// </para>
+    /// <para>
+    /// THE UP EXTENT COULD NOT BE OBSERVED DOWNWARD AT ALL, and that is why it went with no
+    /// entry of its own rather than waiting for one. On a single staff the page anchor is
+    /// <c>margin + max(6, header + upExtent + 2.0 + 1)</c>, so 3.0 made the floor candidate
+    /// EXACTLY 6.000000 — a dead tie with top-system-spacing's basic-distance. Raising it
+    /// moved the page one for one; LOWERING IT COULD NOT MOVE ANYTHING, so no reading could
+    /// ever have watched it and the real chord ink already joins the same extents through
+    /// <see cref="EnrichExtentsWithAnnotationProtrusions"/>' chord arm (ink-true since
+    /// 2026-08-28). MEASURED rather than argued: the two arms were retired and swept
+    /// SEPARATELY over all 572 tracked books, 0 moved either time, and rerender is 0/81 —
+    /// with the ledger point moving +0.451116000 → +0.001116000 in the same run, which is
+    /// what says the change reached the engine at all (HANDOFF 5.0 ⑸: a 0 read before a
+    /// live poison is shown says nothing).
+    /// </para>
+    /// <para>
+    /// ⇒ WHAT REMAINS BELOW IS THE MARK FAMILY AND THE VOLTA, still the unported species:
+    /// hand-assembled constants whose LILYPOND-REF names the grob's outside-staff-priority
+    /// rather than the number. They stand because no reading watches them yet.
+    /// </para>
+    /// <para>
+    /// ★★★ AND THEY ARE ALL FOUR DOMINATED, MEASURED 2026-08-28 (session 273) — which
+    /// CORRECTS scratch/p272/sweep-map.txt's reading of them. That survey found +0.5 moving
+    /// nothing and +3.0 reaching three books and a snapshot, and concluded they are "ALIVE
+    /// and merely dominated at realistic sizes, so a port must MEASURE, not delete". The
+    /// asymmetry it was reading is the same tie this method's chord branch turned out to
+    /// have: an estimate that is <c>Math.Max</c>'d against real ink can always be raised
+    /// into visibility, and raising it says nothing about whether it is doing any work.
+    /// ⇒ THE TEST THAT ANSWERS IT IS LOWERING. All four set to 0.0 at once: 0 of 572 tracked
+    /// books moved, rerender 0/81, suite green, EVERY ledger point unmoved. The poison is
+    /// live in the same file on the same day (rehearsal 3.0 → 6.0 moves both a titled and an
+    /// untitled mark book), so this 0 is domination and not a missed poison (HANDOFF 5.0 ⑸).
+    /// ⇒ THEY ARE THE BELOW-STAFF FOUR'S SPECIES after all (lyrics/dynamics/hairpin/figbass,
+    /// retired 2026-07-30), not a port's. ⚠️ WHAT IS STILL MISSING BEFORE THEY CAN GO is what
+    /// that retirement had and this measurement does not: a FLOOR ARGUMENT per constant —
+    /// "no texture can bring the real ink under this number" — or an observer. "Dominated on
+    /// today's corpus" is not "cannot bind". ⚠️ AND DELETION NEEDS USER APPROVAL (RULES §5.1),
+    /// so it is not this session's to take.
     /// </para>
     /// </remarks>
     private static (double upExtent, double bandUp) EstimateAboveStaffExtents(
         ScoreTextMetrics fonts,
         ImmutableArray<MusicMarkItem> musicMarks,
         ImmutableArray<VoltaBracketItem> voltaBrackets,
-        int startMeasure, int endMeasure,
-        ImmutableArray<ChordNameItem> chordNames = default)
+        int startMeasure, int endMeasure)
     {
         double upExtent = 0;
-        // A whole-line band: an annotation class that spans the system's full width (a
-        // chord-symbol row). It floors the inter-system skyline distance — see FloorDistance
-        // in CreatePages. The lyric row is the band on the other side and the caller owns it.
+        // ⚠️ ALWAYS 0 SINCE 2026-08-28 — the chord symbol was its only writer (see the
+        // remarks), so the whole-line band a system can floor the inter-system skyline
+        // distance with is now a channel nothing feeds, all the way down through
+        // AugmentExtentsWithLooseLines → CreatePages' BandUp → PageLayouter → the
+        // `bandUpNext > 0` arm of LayoutUtilities.InterSystemPairMinimum.
+        // ⚠️ IT IS NOT RETIRED IN A COMMIT OF ITS OWN, and that is RULES §5.1 rather than
+        // an oversight: an independent refactor commit trades the one-island-one-concern
+        // rhythm for speculative tidying, and the shape §5.1 prescribes is to hang the
+        // removal on the next act that touches this island. It also needs USER APPROVAL,
+        // which §5.1 does NOT waive for an output-identity change — only the ledger POINT is
+        // waived, and only against the three-part proof. ⇒ The next act here carries it.
         double bandUp = 0;
-
-        // LILYPOND-REF: scm/define-grobs.scm ChordName (a TextScript-class grob
-        // above the staff). Inline chord symbols (nameless `chords { }`) sit
-        // above the staff: staffPadding(~1.4) + text height(~1.6).
-        if (!chordNames.IsDefaultOrEmpty)
-        {
-            foreach (var cn in chordNames)
-            {
-                if (cn.MeasureIndex >= startMeasure && cn.MeasureIndex < endMeasure)
-                {
-                    upExtent = Math.Max(upExtent, 3.0);
-                    bandUp = Math.Max(bandUp, 3.0);
-                    break;
-                }
-            }
-        }
 
         // ⚠️ THERE IS NO BELOW-STAFF SIDE HERE ANY MORE — see the remarks. The four constants
         // that used to live here (lyrics, dynamics, hairpins, figured bass) were each a second
@@ -999,6 +1040,25 @@ internal sealed partial class LayoutEngine
         // (natural-gap) page a below-staff jump text ("D.S. al Coda") printed
         // straight onto the next system's chord letters. Same envelope the
         // scalar extents use (cap ascent 1.9, descent 0.3).
+        // ⚠️ THE LAST FLAT BOX ON A CHORD NAME, and the arm beside it (the per-measure
+        // annotation extents, :338-344) reads real ink through ChordNameEngraver.SymbolInk.
+        // Second spelling of one quantity, HANDOFF §5.2.1② — it has an observer since
+        // 2026-08-28 (audit/lp-geometry page.inline-chord.gap-first, whose whole residual
+        // +0.001116000 is this box plus the face term; poison 1.9 → 1.95 moves that reading
+        // one for one and reddens it alone out of 6359 tests).
+        // ★★★ ⚠️ BUT THE PORT MAKES THE NUMBER WORSE, AND THAT IS MEASURED, NOT FEARED
+        // (session 273, before any port was attempted — §5.0's "measure before building").
+        // Swapping this box for SymbolInk lands the entry on +0.008366371, i.e. 0.00725
+        // FURTHER FROM LilyPond than the flat 1.9 sits today: Lily#'s TeX Gyre Heros inks
+        // a capital taller than LilyPond's Nimbus Sans, so the scalar is nearer only by
+        // accident of the face. ⇒ THE WHOLE OF THAT +0.008366371 WOULD BE THE FACE TERM,
+        // the same island as page.chord-row.staff-to-chord-baseline and the same decision
+        // (shipping Nimbus Sans). So this is NOT a free structural repair to hang on the
+        // next act: it trades a headline fidelity number for one spelling, and RULES §5.2's
+        // "do not fit a constant to the output" argues for taking that trade — but it is
+        // the USER'S trade to take. Do not port this arm silently. Blast radius, measured
+        // the same day: a +0.05 poison moves 1 of 572 tracked books (samples/greensleeves,
+        // guarded by neither a snapshot nor the 81-book rerender corpus).
         if (!chordNames.IsDefaultOrEmpty)
         {
             foreach (var cn in chordNames)
@@ -1125,7 +1185,6 @@ internal sealed partial class LayoutEngine
         ImmutableArray<MusicMarkItem> musicMarks,
         ImmutableArray<VoltaBracketItem> voltaBrackets,
         List<(int startMeasure, int measureCount)> systemMeasureRanges,
-        ImmutableArray<ChordNameItem> chordNames,
         List<double>? perSystemBandUps,
         IReadOnlyList<double> rowsAboveFirstStaff)
     {
@@ -1140,7 +1199,7 @@ internal sealed partial class LayoutEngine
         {
             var (start, count) = systemMeasureRanges[i];
             var (looseUp, bandUp) = EstimateAboveStaffExtents(
-                fonts, musicMarks, voltaBrackets, start, start + count, chordNames);
+                fonts, musicMarks, voltaBrackets, start, start + count);
             perSystemBandUps?.Add(bandUp);
 
             // ⚠️ TWO FRAMES MET IN THIS Math.Max UNTIL 2026-08-25. Every constant
