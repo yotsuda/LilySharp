@@ -272,15 +272,23 @@ internal sealed partial class LayoutEngine
         }
         // Chord names ride above the staff and rise (ChordNameEngraver skyline) to
         // clear high notes; their REAL text top must join the system up-extent or a
-        // lifted chord line pokes into the header/title. Chord font = FontSize*0.65
-        // (≈2.6 ss), Middle-anchored, so the glyph top is cap-height/2 ≈ 0.9 above
-        // the anchor and the descent ≈ 0.3 below.
+        // lifted chord line pokes into the header/title.
+        // THE EXTENT IS THE SYMBOL'S OWN INK BOX — the same SymbolInk the reservation
+        // and the draw read (one house), which is also LilyPond's model of the grob:
+        // a ChordName declares no vertical-skylines, so its skyline IS its extent box
+        // (lily/grob.cc:81-85 fills the default with
+        // Grob::simple_vertical_skylines_from_extents_proc), and the page's pure
+        // height reads those extents. It was a scalar pair [cnY − 1.9, cnY + 0.3]
+        // until 2026-08-28 — HANDOFF §7.7's flat box beside real ink, measured
+        // DOMINATED wherever a chord row reserves (ledger page.grand-chords.*, the
+        // guards this arm now answers to).
         foreach (var cn in ann.ChordNames)
         {
             // cn.YUp is Y-up from the system top; the system-relative device Y (old
             // cn.Y) is its negation.
             double cnY = -cn.YUp;
-            Add(cn.MeasureIndex, cnY - 1.9, cnY + 0.3);
+            var (cnBottom, cnTop) = ChordNameEngraver.SymbolInk(fonts, cn.ChordText);
+            Add(cn.MeasureIndex, cnY - cnTop, cnY - cnBottom);
         }
         // Lyric text (staff-bound AND row): the ascender rises ~2.11 ss above
         // the baseline at the 3.2 ss lyric font — without it, a first system

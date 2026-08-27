@@ -3659,9 +3659,25 @@ probeTag =
 %%     get_extremal_staff).  Lily# lifts a mark over a row never — OutsideStaffStacker's
 %%     tracker is keyed per (system, staff) and the row is a different staff index — so the
 %%     pair's marked reading carries the whole absence of that mechanism.
+%%
+%%     ⚠️ HALF-SUPERSEDED 2026-08-27.  Session 270 re-measured and found the CURRENT
+%%     engine's own clearance arm (MusicMarkEngraver.MarkCeilingUp) over-lifting by a
+%%     ChordClearancePadding = 0.8 scalar (Lily# 13.123375322, residual +0.559582322);
+%%     session 271 ported the arm to LilyPond's mechanism — the mark's padded foot against
+%%     the symbols' ink-box skylines + 0.46 (a ChordName's vertical-skyline IS its extent
+%%     box: lily/grob.cc:81-85, see mark-chord-row.ly's header) — and the residual landed
+%%     on the predicted 12.783375322, +0.219582322 = the DRAW-side sum, still OPEN.  The
+%%     control's 12.000000 held exact through the port, as this pair exists to prove.
 \book {
   \probeTag "RWM"
-  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  %% The serif is pinned in THIS book (and its control): the rehearsal mark's box
+  %% height is serif ink, so the lift's 12.563793 depends on the face -- pinned to
+  %% the canonical "LilyPond Serif" like mark-chord-row.ly, per the +0.7706 island
+  %% one-commit rule.  The rest of this probe stays unpinned on purpose: the ROWM
+  %% family's readings are flat floors (face-invariant), and re-minting them would
+  %% move lyric-ink-dependent values recorded under the fallback face.
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t
+           property-defaults.fonts.serif = "LilyPond Serif" }
   \score {
     <<
       \new ChordNames { \chordmode {
@@ -3681,7 +3697,8 @@ probeTag =
 %% RWMN — THE CONTROL: RWM with the chord row taken out and nothing else changed.
 \book {
   \probeTag "RWMN"
-  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t
+           property-defaults.fonts.serif = "LilyPond Serif" }
   \score {
     <<
       \new Staff \with { instrumentName = "Melody" } { \new Voice = "mel" {

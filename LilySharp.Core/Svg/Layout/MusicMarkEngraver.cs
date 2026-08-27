@@ -342,79 +342,11 @@ internal static class MusicMarkEngraver
     public static double BelowMarkBaseline(double systemBottom)
         => systemBottom + 1.5 + Padding;
 
-    /// <summary>How far a chord symbol's ink reaches above its baseline Y.</summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/axis-group-interface.cc:865-984 skyline_spacing — a mark is placed
-    /// against the accumulated skyline of what is already there, and for a chord row that IS
-    /// the ChordName stencils. So the quantity is the SYMBOL'S OWN INK
-    /// (<see cref="ChordNameEngraver.SymbolInk"/>), asked per symbol.
-    /// <para>
-    /// It used to add a stacked Roman-degree row's height when the chord was drawn
-    /// `as both`, because that row was drawn 2.2 ss higher than this baseline and a mark
-    /// clearing the chord had to clear the UPPER line. `both` was retired 2026-08-23 —
-    /// a track shown both ways is placed twice, and each ROW is its own band with its own
-    /// one line — so every chord symbol is one line again.
-    /// </para>
-    /// <para>
-    /// ⚠️ IT WAS A NOMINAL 1.9 UNTIL 2026-08-25 (session 254) — "cap height ≈ 0.72 em" over a
-    /// chord font written as 4.0 * 0.65, i.e. a flat box standing in for ink, HANDOFF §7.7's
-    /// most repeated shape. Ledger <c>mark.over-chord.*</c> is the pair that measured it, and
-    /// the pair also showed that the constant was the SMALLER half: reading `Am''s real ink
-    /// top (1.907250371) instead of 1.9 moves the mark by 0.007250371, while the 1.271099
-    /// LilyPond puts between those two books is the accidental GLYPH — which the same session
-    /// ported (<see cref="ChordNameGlyphRun"/>), and which reaches this arm through
-    /// <c>SymbolInk</c> rather than through a term of its own.
-    /// </para>
-    /// </remarks>
-    private static double ChordAscent(ScoreTextMetrics fonts, ChordNameLayout cn) =>
-        ChordNameEngraver.SymbolInk(fonts, cn.ChordText).Top;
-
     // LILYPOND-REF: define-grobs.scm RehearsalMark padding=0.8
     private const double AboveStaffOffset = -2.0;
 
     // LILYPOND-REF: axis-group-interface.cc:45 default_outside_staff_padding_ = 0.46
     private const double OutsideStaffPadding = 0.46;
-
-    /// <summary>
-    /// What a mark leaves between its own ink and a CHORD SYMBOL whose column it shares.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm RehearsalMark padding=0.8 — the mark family's OWN
-    /// declared padding, not <see cref="OutsideStaffPadding"/>, which is the generic
-    /// <c>default_outside_staff_padding_</c> for a grob that declares none. This one does.
-    /// ⚠️ LILYSHARP-OWN: THAT THE MARK CLEARS A CHORD AT ALL. The 2x2 this remark was written
-    /// from (audit/lp-geometry/probes/mark-chord-row.ly — a chords row or none, crossed with
-    /// high notes or low) put the label at a LINE START in every cell, where a SectionLabel
-    /// anchors on `left-edge' and the chords begin after the clef: the mark occupies
-    /// x 3.365..5.379 and the nearest chord starts at 5.800, X-DISJOINT throughout.
-    /// <para>
-    /// ⚠️⚠️ AND THE SENTENCE THAT USED TO FOLLOW — "LilyPond never produced the arrangement
-    /// this constant is for, so it gives it no number" — IS NO LONGER TRUE. It was a property
-    /// of those four books, not of LilyPond, and books MKW/MKX produce the arrangement
-    /// (mid-line, one label, a chord under it). LILYPOND ANSWERS 0.429336: its label's ink
-    /// bottom over the chord's ink top, held to fifteen digits across BOTH books. Corrected
-    /// 2026-08-25 (session 254) in the commit that made this constant the LIVE term of ledger
-    /// <c>mark.over-chord.*</c> — HANDOFF §5.1 puts the re-reading of a note in the commit that
-    /// falsifies it, and this is that commit.
-    /// </para>
-    /// <para>
-    /// ⚠️ 0.429336 IS A MEASUREMENT, NOT A CONSTANT TO COPY (HANDOFF §5.2). The label and the
-    /// chord overlap only PARTIALLY in X, and <c>Skyline::padded</c>'s flat plus 45-degree
-    /// horizon (<c>outside-staff-horizontal-padding</c> 0.2) stands the label's foot on the
-    /// chord's SLOPE rather than on its plateau — so what gets ported is the padded skyline
-    /// DISTANCE and 0.429336 is what checks that port. Until then this stays a scalar, and the
-    /// 0.370664 it costs is one of the two terms both <c>mark.over-chord.*</c> entries now
-    /// carry; the other is the 0.400000 box Lily# draws where LilyPond draws bare text.
-    /// </para>
-    /// ⚠️⚠️ AND THE PROBE REFUTED THE READING THIS FILE FIRST SHIPPED WITH (2026-08-24,
-    /// corrected the same day): "system 2 reads 5.845000 = the chords' 5.045 + padding 0.8,
-    /// so LP lifts the mark over the chord". IT DOES NOT. 5.845 is 1.138700 BELOW that same
-    /// chord's ink TOP (6.983700) — the +0.8 matched the chord's BASELINE, and matching a
-    /// baseline is not clearing an ink. What moves the mark between the two systems is still
-    /// OPEN: the pair is X-disjoint in both, and the only measured difference is that their
-    /// X gap narrows from 3.206 to 0.591. ⇒ Do not cite that reading as a mechanism.
-    /// </remarks>
-    private const double ChordClearancePadding = 0.8;
 
     // Extra drop for D.S./D.C. jump instructions so they sit clear of low notes.
     private const double JumpInstructionDrop = 1.5;
@@ -432,6 +364,20 @@ internal static class MusicMarkEngraver
     // Gap between stacked marks
     // LILYPOND-REF: axis-group-interface.cc:45 default_outside_staff_padding_ = 0.46
     private const double StackGap = 0.46;
+
+    /// <summary>
+    /// The mark family's horizon padding — how far its skyline foot reaches sideways
+    /// (flat by this much, then a 45° flank of the same width) when it is measured
+    /// against a neighbour's profile.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:2887,3055,2345 — outside-staff-horizontal-padding 0.2,
+    /// declared alike on RehearsalMark, SectionLabel and MetronomeMark; CodaMark and its
+    /// siblings carry the same number. The default for a grob that declares none
+    /// is 0.0 (lily/axis-group-interface.cc:750-751), which is why the CHORD side of the
+    /// distance is unpadded: max(0.2, 0.0) picks the mark's (:661).
+    /// </remarks>
+    private const double OutsideStaffHorizontalPadding = 0.2;
 
     /// <summary>
     /// Calculates layout for all music marks in a score, including section labels.
@@ -718,16 +664,50 @@ internal static class MusicMarkEngraver
             }
 
             // Chord symbols are the line CLOSEST to the staff (LP: the marks'
-            // outside-staff priority 1500 beats ChordNames), so a mark whose
-            // INK overlaps a chord symbol starts above that symbol's text —
-            // otherwise a section label box (or a wide tempo marking like
-            // "Brightly (♩ = 108)") prints straight over the chord. The old
-            // centre-distance window missed wide texts whose ink reaches a
-            // chord several spaces away; LilyPond's outside-staff stacking is
-            // extent-based, so compare real horizontal spans.
-            // LILYPOND-REF: lily/axis-group-interface.cc:865-984 skyline_spacing.
-            // Constraint on THIS mark's box BOTTOM in Y-up: it must clear the highest
-            // chord top its own ink overlaps. Negative infinity when it overlaps none.
+            // outside-staff priority 1500 beats ChordNames), so a mark standing over a
+            // chord symbol clears it — otherwise a section label box (or a wide tempo
+            // marking like "Brightly (♩ = 108)") prints straight over the chord.
+            //
+            // THE PROFILE A MARK CLEARS IS THE SYMBOLS' EXTENT BOXES, NOT THEIR GLYPH
+            // OUTLINES. A ChordName declares no `vertical-skylines' of its own
+            // (scm/define-grobs.scm's ChordName entry has no such line), so it gets the
+            // grob default — and the default is the box:
+            // LILYPOND-REF: lily/grob.cc:81-85 — an unset vertical-skylines is filled with
+            //   Grob::simple_vertical_skylines_from_extents_proc.
+            // LILYPOND-REF: lily/stencil-integral.cc:769-792 maybe_pure_internal_simple_skylines_from_extents
+            //   — one Box(X-extent,
+            //   Y-extent), so the UP side is one flat roof at the symbol's ink top across
+            //   its ink width. MEASURED (scratch/p271, 2.26.0, pinned faces): `A♯m' reads
+            //   2.224872 FLAT across its whole span — the sharp's height over the `A' and
+            //   the `m' too — where a glyph-outline profile would drop to 1.907290 over
+            //   the letters. The flat roof is what makes both mark.over-chord.* books
+            //   land at ink top + 0.460000 exactly under the pinned serif.
+            //
+            // The mark is then placed against that skyline the way the outside-staff pass
+            // places every grob:
+            // LILYPOND-REF: lily/axis-group-interface.cc:914-935 skyline_spacing — a
+            //   ChordName declares no outside-staff-priority, so its skyline lands in
+            //   inside_staff_skylines, which every outside-staff grob is measured against;
+            // LILYPOND-REF: lily/axis-group-interface.cc:648-676 avoid_outside_staff_collisions
+            //   (:663-664) — the push is
+            //   `elt's DOWN skyline .distance(other's UP, horizon_padding) + padding',
+            //   with Skyline::distance padding only the elt side (lily/skyline.cc:545-555)
+            //   and Skyline::padded's flat + 45° flanks (:557-615 —
+            //   VerticalSkyline.Padded is the line-for-line port).
+            // The paddings are the mark family's own: outside-staff-padding is undeclared
+            // on RehearsalMark/SectionLabel/MetronomeMark, so the default 0.46 applies
+            // (OutsideStaffPadding); outside-staff-horizontal-padding is declared 0.2 on
+            // each (OutsideStaffHorizontalPadding). ⚠️ CodaMark alone declares
+            // outside-staff-padding 0.4 (scm/define-grobs.scm:1013); this arm deliberately
+            // does not spell a per-type padding — no point observes a segno/coda over a
+            // chord, and the split waits for one (HANDOFF §5.1's scope discipline).
+            //
+            // The MARK side of the distance is a flat foot at its own bottom over
+            // MarkXExtent — the drawn mirror: Lily# BOXES its labels, and a box's DOWN
+            // skyline is its flat bottom edge. (LilyPond's bare-text marks carry their
+            // glyph outlines instead; the ledger's mark.over-chord.* residual is exactly
+            // that drawn difference, the 0.400000 box term, and stays OPEN there.)
+            //
             // ⚠️ PER MARK, AND IT WAS ONE SCALAR FOR THE WHOLE SCORE until session 243.
             // That could not show while only INLINE chords reached the loop -- an inline
             // chord sits over its own note, so the marks that overlapped one were the
@@ -736,17 +716,20 @@ internal static class MusicMarkEngraver
             // other mark in the book with it (MEASURED on book MKR: the section label
             // "B" really does overlap its bar's chord, and "A" four bars earlier rose
             // with it -- 7.805000 against LilyPond's 2.850000).
-            // LILYPOND-REF: lily/axis-group-interface.cc:865-984 skyline_spacing -- each
-            //   grob is placed against the skyline of what is already there, so an
-            //   X-disjoint neighbour cannot move it. The rule is per grob, not per book.
-            double MarkCeilingUp(MusicMarkItem mark, double markX)
+            //
+            // The per-system band skyline; null when the system has no chord ink above
+            // the anchor staff's top line. Cached — MarkCeilingUp is asked per mark.
+            var chordBandUpBySystem = new Dictionary<int, VerticalSkyline?>();
+            VerticalSkyline? ChordBandUp(int measureIndex)
             {
-                double ceiling = double.NegativeInfinity;
-                if (chordNames.IsDefaultOrEmpty) return ceiling;
-                var (mx0, mx1) = MarkXExtent(fonts, mark, markX);
+                if (!measureToSystemIdx.TryGetValue(measureIndex, out int sysIdx))
+                    return null;
+                if (chordBandUpBySystem.TryGetValue(sysIdx, out var cached))
+                    return cached;
+                VerticalSkyline? sky = null;
                 foreach (var cn in chordNames)
                 {
-                    if (!SameSystem(cn.MeasureIndex, mark.MeasureIndex))
+                    if (!SameSystem(cn.MeasureIndex, measureIndex))
                         continue;
                     // The chord's baseline IN THE MARK'S FRAME, whose 2.0 is the mark's
                     // ANCHOR STAFF's top line. ⚠️ ChordNameLayout.YUp is measured above
@@ -758,38 +741,43 @@ internal static class MusicMarkEngraver
                     // same thing ONLY for a leading staff and otherwise discards a
                     // leading chord ROW wholesale — harmless while the mark floated
                     // above the whole band, and a collision the moment it stopped:
-                // samples/greensleeves.lys printed its tempo THROUGH the first
-                // chord symbol (session 243).
-                // ⚠️ WHAT LILYPOND DOES HERE IS NOT WHAT AN EARLIER DRAFT OF THIS
-                // COMMENT CLAIMED. It said LP lifts a mark over a chord whose X it
-                // overlaps; the probe (mark-chord-row.ly) shows LP never puts the two
-                // at overlapping X at all, so it answers nothing about this branch.
-                // See ChordClearancePadding for the measurement and the correction.
-                // The clearing itself is Lily#'s own: its marks DO land on a chord's
-                // column, so something has to move.
-                if (chordUp <= 2.0)
+                    // samples/greensleeves.lys printed its tempo THROUGH the first
+                    // chord symbol (session 243).
+                    if (chordUp <= 2.0)
                         continue;
                     // ⚠️ cn.X IS THE SYMBOL'S LEFT EDGE, NOT ITS CENTRE — a chord name is
-                    // drawn with TextAnchor.Start (SharedRenderer.DrawChordNames). This
-                    // window was `cn.X ± (width/2 + 0.3)`, which reaches half a symbol
-                    // too far LEFT and stops half a symbol too early on the right. It
-                    // could not matter while only inline chords arrived here (the error
-                    // is a shift, and an inline chord sits over its own note far from
-                    // any line-start mark); with a leading chord ROW in the loop it
-                    // does — the first symbol of a system starts near x=0 and the shifted
-                    // window swallowed the mark that stands to its left, lifting it over
-                    // a chord it does not touch.
-                    const double chordInkPadding = 0.3;
-                    double chLeft = cn.X - chordInkPadding;
-                    double chRight = cn.X
-                        + ChordNameEngraver.SymbolInkWidth(fonts, cn.ChordText)
-                        + chordInkPadding;
-                    if (mx1 < chLeft || mx0 > chRight)
-                        continue; // no horizontal ink overlap
-                    double chordTopUp = chordUp + ChordAscent(fonts, cn);
-                    ceiling = Math.Max(ceiling, chordTopUp + ChordClearancePadding);
+                    // drawn with TextAnchor.Start (SharedRenderer.DrawChordNames) — and
+                    // the box is the symbol's INK, the same SymbolInkWidth/SymbolInk pair
+                    // the reservation and the draw read (one house).
+                    sky ??= new VerticalSkyline(VerticalDirection.Up);
+                    var ink = ChordNameEngraver.SymbolInk(fonts, cn.ChordText);
+                    sky.Merge(VerticalSkyline.FromBox(
+                        cn.X, cn.X + ChordNameEngraver.SymbolInkWidth(fonts, cn.ChordText),
+                        chordUp + ink.Bottom, chordUp + ink.Top,
+                        VerticalDirection.Up));
                 }
-                return ceiling;
+                chordBandUpBySystem[sysIdx] = sky;
+                return sky;
+            }
+
+            // The Y-up floor for THIS mark's bottom (box bottom, or ink bottom for the
+            // baseline-anchored tempo) — asked with its own X, not once for the whole
+            // book. Negative infinity when nothing constrains it.
+            double MarkCeilingUp(MusicMarkItem mark, double markX)
+            {
+                if (chordNames.IsDefaultOrEmpty) return double.NegativeInfinity;
+                if (ChordBandUp(mark.MeasureIndex) is not { } bandUp || bandUp.IsEmpty)
+                    return double.NegativeInfinity;
+                var (mx0, mx1) = MarkXExtent(fonts, mark, markX);
+                var foot = VerticalSkyline.FromBox(
+                    mx0, mx1, 0.0, 0.0, VerticalDirection.Down);
+                // LILYPOND-REF: lily/axis-group-interface.cc:663-664 avoid_outside_staff_collisions
+                //   — distance of the mark's padded DOWN skyline to the chords' UP, plus
+                //   outside-staff-padding.
+                double dist = foot.Distance(bandUp, OutsideStaffHorizontalPadding);
+                return double.IsNegativeInfinity(dist)
+                    ? double.NegativeInfinity
+                    : dist + OutsideStaffPadding;
             }
 
             // Above-staff estimate BEFORE the outside-staff pass: every mark rests at
@@ -828,12 +816,14 @@ internal static class MusicMarkEngraver
                 double halfExtent = GetMarkHalfExtent(mark.Type);
                 var (chainX0, chainX1) = MarkXExtent(fonts, mark, x);
                 // The highest already-placed neighbour whose ink meets this one's, or the
-                // base when there is none. The 0.2 is the mark family's own
-                // outside-staff-horizontal-padding (scm/define-grobs.scm CodaMark and its
-                // siblings), the same gap the pointwise pass keeps.
+                // base when there is none. The reach is the mark family's own
+                // outside-staff-horizontal-padding (see the constant), the same gap the
+                // pointwise pass keeps.
                 double restUnderUp = double.NegativeInfinity;
                 foreach (var p in placedAbove)
-                    if (chainX0 <= p.X1 + 0.2 && chainX1 >= p.X0 - 0.2 && p.TopYUp > restUnderUp)
+                    if (chainX0 <= p.X1 + OutsideStaffHorizontalPadding
+                        && chainX1 >= p.X0 - OutsideStaffHorizontalPadding
+                        && p.TopYUp > restUnderUp)
                         restUnderUp = p.TopYUp;
                 bool overlapsPlaced = !double.IsNegativeInfinity(restUnderUp);
                 if (chainStarted && overlapsPlaced)

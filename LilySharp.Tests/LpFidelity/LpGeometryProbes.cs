@@ -2877,6 +2877,58 @@ internal static class LpGeometryProbes
     private static readonly string CHR2 = ChordRowFloorPageScore("CHR2", sharp: true);
 
     /// <summary>
+    /// CHORD NAMES IN A GRAND STAFF — the mirror of book GCF (chords-grand-page.ly), and
+    /// the Lily# twin of LilyPond's own regression
+    /// <c>input/regression/chord-names-in-grand-staff.ly</c>
+    /// (audit/lp-regression/lys/chord-names-in-grand-staff.lys is the corpus copy).
+    /// </summary>
+    /// <remarks>
+    /// WHY THE PAIR EXISTS (session 271). The CHR1/CHR2 pair above pins the top spring
+    /// under a chord row over a PLAIN staff, and that path (the row band machinery)
+    /// reserves the symbols' real ink. The grand-staff spelling takes Lily#'s OTHER chord
+    /// path — the per-measure annotation extents, whose UP term is the scalar pair
+    /// <c>[cnY − 1.9, cnY + 0.3]</c> (EnrichExtentsWithAnnotationProtrusions' chord arm) —
+    /// and a ±0.03 poison sweep (scratch/p271/sweep-map.txt) showed that scalar observed
+    /// by exactly ONE of 572 tracked books and ZERO ledger entries. These two entries are
+    /// the missing page anchor for the regime.
+    /// <para>
+    /// THE HARVEST IS A NEGATIVE, measured before any port was attempted: the scalar
+    /// NEVER BINDS today — every chord letter is a capital and inks above 1.9 (margin
+    /// 0.007 on `F', 0.054 on `C'), so the real machinery underneath is already ink-true,
+    /// and LilyPond agrees to the face term (GCF) / to 3e-7 (GCS). The scalar's remaining
+    /// defect is STRUCTURAL (HANDOFF 5.2.1②, a second spelling shadowing real ink): its
+    /// retirement is an output-identity refactor under RULES §5.1's proof, not a port —
+    /// and these entries are the guards that go red if that refactor (or the one-step
+    /// frame translation beside it) moves the page instead.
+    /// </para>
+    /// ⚠️ Lily# <c>a</c>/<c>a,,</c> (octave absolute, treble/bass) is LilyPond
+    /// <c>a'</c>/<c>a,</c> (HANDOFF 5.5).
+    /// </remarks>
+    private static string GrandChordsScore(string name, bool sharp) => $$"""
+        octave absolute
+        time 4/4
+
+        part rh { clef treble }
+        part lh { clef bass }
+
+        section Main {
+          rh { a4 a a a | }
+          lh { a,,4 a,, a,, a,, | }
+          chords prog { {{(sharp ? "F#" : "F")}} | }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" { chords prog  grandStaff { staff rh staff lh } }
+        """;
+
+    /// <inheritdoc cref="GrandChordsScore"/>
+    private static readonly string GCF = GrandChordsScore("GCF", sharp: false);
+
+    /// <summary>The sharped half — every symbol's ink grows and nothing else moves.</summary>
+    private static readonly string GCS = GrandChordsScore("GCS", sharp: true);
+
+    /// <summary>
     /// LYRB WITH AN OSSIA ADDED — the mirror of book LYROS, and the other half of the
     /// force-0 branch: <c>ComputeBetweenStavesEnd</c> declined an ossia for the same reason
     /// it declined a text row.
@@ -3315,9 +3367,10 @@ internal static class LpGeometryProbes
     /// symbol; the sections are unlabeled so no SectionLabel joins it. LilyPond LIFTS the
     /// mark over the chord under it (side-position-interface.cc:510-563
     /// move_to_extremal_staff, outside-staff-padding 0.46) and charges the pair gap the
-    /// mark's new height; Lily# lifts a mark over a row never — the stacker's tracker is
-    /// keyed per (system, staff) and the row is a different staff index. See RWM's probe
-    /// remark for the mechanism's addresses.
+    /// mark's new height; Lily#'s clearance arm (<c>MusicMarkEngraver.MarkCeilingUp</c>)
+    /// does the same since 2026-08-27 — the mark's padded foot against the symbols'
+    /// ink-box skylines + 0.46, replacing the ChordClearancePadding 0.8 scalar this pair
+    /// caught over-lifting. See RWM's probe remark for the mechanism's addresses.
     /// </summary>
     private static readonly string RWM =
         ChordRowAlternatingScore("RWM", Rows.Alternating, marks: false, rehearsalMarks: true);
@@ -3452,13 +3505,16 @@ internal static class LpGeometryProbes
     /// </summary>
     /// <remarks>
     /// <para>
-    /// WHAT IT IS FOR. <c>MusicMarkEngraver.ChordClearancePadding = 0.8</c> is declared
+    /// WHAT IT WAS FOR. <c>MusicMarkEngraver.ChordClearancePadding = 0.8</c> was declared
     /// <c>LILYSHARP-OWN</c> and its remark USED TO say why: "LilyPond was asked directly … and
     /// in EVERY cell the mark and the nearest chord symbol are X-DISJOINT … LilyPond never
     /// produced the arrangement this constant is for, so it gives it no number, and the value
     /// is chosen as the mark family's own padding rather than measured." MKW/MKX produce that
     /// arrangement, so the second half of that sentence stopped being true the day they were
-    /// measured — LilyPond answers 0.429336, and the remark now says so. The quotation is kept
+    /// measured — and on 2026-08-27 (session 271) the scalar was RETIRED for LilyPond's own
+    /// mechanism: <c>MarkCeilingUp</c> is now the mark's padded-foot skyline distance against
+    /// the symbols' ink boxes + 0.46 (a ChordName's vertical-skyline IS its extent box,
+    /// lily/grob.cc:81-85). The quotation is kept
     /// in the past tense because it is WHY these books exist. ⚠️ <see cref="MarkScore"/>'s own remark predicted these books in the
     /// negative — "THE BREAK IS LOAD-BEARING … without it … section B's label lands ON its
     /// bar's chord symbol" — and avoided them so MKR/MKN would keep reading the disjoint case.
@@ -3484,13 +3540,14 @@ internal static class LpGeometryProbes
     /// </para>
     /// <para>
     /// ⚠️ AND THE PREDICTION IN THE PROBE HEADER WAS HALF WRONG, WHICH IS THE USEFUL HALF: it
-    /// said the gap would hold at <c>outside-staff-padding</c> 0.460000. THE GAP HOLDS — label
-    /// ink bottom over chord ink top is 0.429336 in BOTH books, to fifteen digits — but the
-    /// VALUE is 0.429336, not 0.460000, because the two overlap only partially in X and
-    /// <c>Skyline::padded</c>'s flat+45° horizon padding (0.2) puts the label's foot on the
-    /// chord's SLOPE rather than its plateau. ⇒ 0.429336 is a MEASUREMENT, not a constant to
-    /// copy (HANDOFF 5.2): the thing to port is the padded skyline distance, and this number
-    /// is what checks it.
+    /// said the gap would hold at <c>outside-staff-padding</c> 0.460000. Under the BARE serif
+    /// both books read 0.429336 instead — the narrower bare label's foot ending on the
+    /// padded box's 45° flank — and under the canonical pin (fonts.serif, 2026-08-27) the
+    /// wider label reaches the plateau and BOTH books read exactly 0.460000. The flank
+    /// arithmetic is <c>Skyline::padded</c>'s (flat + 45°, horizon padding 0.2), and the
+    /// profile it stands on is the symbol's extent BOX — a ChordName declares no
+    /// vertical-skylines, so lily/grob.cc:81-85 gives it the box default; measured live in
+    /// scratch/p271/vsky.ly, where `A♯m' reads a flat 2.224872 across its whole span.
     /// </para>
     /// ⚠️ Lily# <c>c'</c> is LilyPond <c>c''</c> (HANDOFF 5.5).
     /// </remarks>
@@ -11167,6 +11224,23 @@ internal static class LpGeometryProbes
         new("page.chord-row.sharp.staves-on-first-page", CHR2,
             g => g.StavesOnPage(0), FourSystemsPerPageRagged),
 
+        // ...and the GRAND-STAFF spelling of the same arrangement (books GCF/GCS —
+        // chords-grand-page.ly), which takes Lily#'s OTHER chord path: the per-measure
+        // annotation extents' scalar arm instead of the row band. Opened in session 271
+        // after a poison sweep showed that arm guarded by one SVG hash and no entry; the
+        // measurement's harvest is a negative — the scalar never binds, the machinery
+        // underneath is ink-true, and both engines read the pair's difference as the
+        // symbol's whole ink-height growth (1.271099, the mark.over-chord numbers). See
+        // GrandChordsScore's remarks. Counts travel per HANDOFF 5.0 trap 8.
+        new("page.grand-chords.first-staff-refpoint", GCF,
+            g => g.FirstStaffRefpoint(), RaggedBottomPaper),
+        new("page.grand-chords.staves-on-first-page", GCF,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+        new("page.grand-chords.sharp.first-staff-refpoint", GCS,
+            g => g.FirstStaffRefpoint(), RaggedBottomPaper),
+        new("page.grand-chords.sharp.staves-on-first-page", GCS,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+
         // ...and the TERM INSIDE the floor those two read. The refpoint entry above is one
         // number holding two: on the side where the floor binds it is
         // `header + (where the row's baseline is put + how far the symbol's ink reaches
@@ -12010,9 +12084,9 @@ internal static class LpGeometryProbes
         // THE LIFT'S OBSERVER (session 270, books RWM/RWMN) — the \mark spelling of the
         // ROWM arrangement, reopened once act 4 put the Rehearsal X on the clef so the
         // mark stands over the row's first chord in both engines. LilyPond lifts the mark
-        // over that chord by its padding 0.46 and charges the pair gap 12.563793; Lily#
-        // clears it by its own ChordClearancePadding 0.8 arm and charges 13.123375 —
-        // residual +0.559582, UNDECOMPOSED (it is not 0.8 − 0.46; see the why). The
+        // over that chord by its padding 0.46 and charges the pair gap 12.563793; Lily#'s
+        // arm has been that same mechanism since session 271 retired the 0.8 scalar, and
+        // charges 12.783375 — residual +0.219582, the DRAW-side sum (see the why). The
         // control reads a flat 12.000000 in both engines.
         new("mark.rehearsal.lift.gap-first", RWM,
             g => g.StaffGapAt(1), FourSystemsPerPageRagged),
@@ -12233,11 +12307,11 @@ internal static class LpGeometryProbes
 
         // ...and the arrangement BOTH of those deliberately avoid: the label standing ON a
         // chord symbol, mid-line, with a staff under it (books MKW/MKX). Opened 2026-08-25 to
-        // decide whether Lily# should port LilyPond's lift at all, and it is the first point
-        // in the tree to put a LilyPond number on MusicMarkEngraver.ChordClearancePadding —
-        // a LILYSHARP-OWN 0.8 whose remark USED TO say "LilyPond never produced the
-        // arrangement this constant is for". It does here, and it answers 0.429336; the
-        // remark was corrected in the commit that made the constant the live term.
+        // decide whether Lily# should port LilyPond's lift at all, and it put the first
+        // LilyPond number on what was then MusicMarkEngraver.ChordClearancePadding — a
+        // LILYSHARP-OWN 0.8 that session 271 retired for LilyPond's own clearance (the
+        // padded-foot distance against the symbols' ink-box skylines + 0.46), landing both
+        // residuals on the 0.400000 box term.
         // THE PAIR IS THE POINT and the absolute is not: Lily# boxes
         // its label where LilyPond draws bare text, so only the DIFFERENCE between the two
         // books is free of that term. See MKW's remarks.

@@ -4,24 +4,22 @@
 %%
 %% Run with ../Measure-LilyPondProbe.ps1 -Probe mark-chord-row.ly -Prefix PROBEM
 %%
-%% ⚠️⚠️ THE SERIF FACE IS NOT PINNED HERE, AND THE LEDGER'S FOUR mark.* VALUES ARE
-%% MINTED UNDER THE MACHINE'S FALLBACK RESOLUTION, NOT UNDER "LilyPond Serif"
-%% (audited 2026-08-26, session 258, by diffing a pinned run against a bare one on the
-%% same binary). The staff-to-baseline differences of the two-system books (MKC/MKP/
-%% MKL/MKQ: 2.850000/5.845000/3.860184...) are face-INVARIANT - mark and staff shift
-%% together - but the four the ledger records are not:
-%%   mark.chord-row.staff-to-baseline  4.117029  = MKB bare (pinned reads 4.197549, +0.080520)
-%%   mark.plain.staff-to-baseline      4.117029  = same family, same shift
-%%   mark.over-chord.staff-to-baseline 7.381627  = MKW bare (pinned 7.412291, +0.030664)
-%%   mark.over-chord.tall...           8.652725  = MKX bare (pinned 8.683389, +0.030664)
-%% ⚠️ chord-lyric-run.ly's values are minted under the OTHER face (the canonical pin) -
-%% the ledger currently mixes two serif faces across probes, stamped by whichever face
-%% the machine resolved on each probe's measuring day.
-%% ⇒ WHOEVER NEXT TOUCHES THE +0.7706 ISLAND (ChordClearancePadding, guarded by the two
-%% over-chord points): PIN fonts.serif HERE FIRST, re-measure, re-record the four values
-%% and their Lily#-side residuals (they shift by the deltas above), and only then port.
-%% Re-minting was deliberately NOT done in session 258 so the guard and the port move in
-%% one commit rather than the guard moving alone.
+%% THE SERIF FACE IS PINNED HERE ("LilyPond Serif", probeM's \paper) SINCE 2026-08-27
+%% (session 271) — added in the SAME COMMIT that ported the +0.7706 island, exactly as
+%% session 258's audit ordered, so the guard and the port moved together. The four
+%% ledger values this probe mints are re-minted under the pin:
+%%   mark.chord-row.staff-to-baseline  4.160915  = MKB pinned (bare read 4.117029)
+%%   mark.plain.staff-to-baseline      4.160915  = same family, same shift
+%%   mark.over-chord.staff-to-baseline 7.412291  = MKW pinned (bare 7.381627, +0.030664)
+%%   mark.over-chord.tall...           8.683389  = MKX pinned (bare 8.652725, +0.030664)
+%% The two-system books' differences (MKC/MKP/MKL/MKQ) are face-INVARIANT — mark and
+%% staff shift together — and chord-lyric-run.ly is under the same canonical pin, so
+%% these entries no longer mix serif faces.
+%% ⚠️ SESSION 258'S PINNED PREDICTION FOR MKB WAS WRONG and is corrected here: its audit
+%% note said the pin moves MKB by +0.080520 to 4.197549. TWO independent pinned runs
+%% (session 270's held dump and session 271's fresh one, 110 PROBEM lines byte-identical)
+%% read 4.160914955319 = +0.043886 over bare. The over-chord deltas (+0.030664) were
+%% right. 258's number came from a diff run, not a full pinned mint — trust the mint.
 %%
 %% THE DEFECT THIS MEASURES (user report, session 243): on a lead sheet written
 %% `chords / staff / lyrics`, Lily#'s section marks ride ABOVE the whole chord band —
@@ -91,6 +89,7 @@ probeM =
 #(define-scheme-function (tag) (string?)
    #{ \paper { indent = 0 ragged-right = ##t ragged-bottom = ##t
                property-defaults.fonts.sans = "LilyPond Sans Serif"
+               property-defaults.fonts.serif = "LilyPond Serif"
                page-post-process = #(lambda (layout pages)
                                       (format #t "\nPROBEM BOOK ~a\n" tag)
                                       (dump tag layout pages)) } #})
@@ -293,6 +292,20 @@ probeM =
 %% ⚠️ IT IS THE HEIGHT, NOT THE TOP: three quarters of it is ink BELOW the baseline and
 %% reaches the mark by pushing the ChordNames ROW up off the staff, not by raising the
 %% symbol's top.  An ink-based arm alone would collect 0.317582 of the 1.271099 at most.
+%%
+%% *** THE CLEARANCE ITSELF WAS PORTED 2026-08-27 (session 271), and the mechanism is
+%% SIMPLER than every prescription written above it.  A ChordName declares no
+%% vertical-skylines, so it carries the grob DEFAULT -- lily/grob.cc:81-85,
+%% Grob::simple_vertical_skylines_from_extents = one Box(X-extent, Y-extent)
+%% (stencil-integral.cc:769-792).  MEASURED LIVE (scratch/p271/vsky.ly): `A#m' reads a
+%% FLAT 2.224872 across its whole span -- the sharp's height over the letters too.  Under
+%% the pinned serif the label's wider foot reaches that plateau and BOTH books read ink
+%% top + 0.460000 exactly; the bare 0.429336 the entries used to cite was the narrower
+%% bare label's foot ending on the padded box's 45-degree flank, not an outline reading.
+%% MusicMarkEngraver.MarkCeilingUp is now that distance (padded foot,
+%% outside-staff-horizontal-padding 0.2, against the symbols' ink boxes, + 0.46) and the
+%% ChordClearancePadding = 0.8 scalar is gone; both entries' residuals landed on the
+%% predicted -0.340000000 drift, at the 0.400000 box term.  See the entries' whys.
 \book {
   \probeM "MKW"
   \score {
