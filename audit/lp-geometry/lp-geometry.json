@@ -4764,6 +4764,231 @@
       "unit": "count",
       "residual": 0.0,
       "why": "CLOSED 2026-08-24 (session 242), same session. SEEDED at -7.0; SharpsFor now computes the tonic's position on the circle of fifths instead of looking it up, so `gis` has a signature like every other tonic LilyPond can spell. ⚠️ THE PREDICTION MISSED ONCE AND THE MISS WAS THE INSTRUMENT: the first reading after the port said EIGHT against LilyPond's seven, a plausible off-by-one that reads as a defect in the port. Eight sharps make every letter sharp, so the written `c` that follows needs a NATURAL to cancel the key, and RenderedGeometry.KeySignatureAccidentals was cutting at the first NOTEHEAD and counting it. Cutting at the TIME SIGNATURE instead -- which always stands between the signature and the music -- gives 7. HANDOFF 5.0: the first disagreement a new instrument reports is the instrument's. ORIGINAL NOTE FOLLOWS. HOW MANY accidentals the line-start signature draws at all -- a DIFFERENT reading from its three siblings, on purpose. `key gis major` is the SAME eight-fifth signature as KSIG8 reached by the other route: naming a tonic Lily#'s table LACKS rather than moving off one it has. LilyPond prints the same seven symbols (measured: identical alist to KSIG8). Lily# prints NOTHING: KeySpelling.SharpsFor returns null for a tonic outside its fifteen entries, and all EIGHT of its callers coerce that to 0 with `?? 0` (MeasureCollector, ScoreHomeKey, MidiExporter x2, LilyPondExporter, MusicXmlExporter, ChordHarmonizer, the LSP completion), so the page is C major and no diagnostic is raised. ⚠️ THE TWO ROUTES NEED TWO POINTS: a port that only widened the table closes THIS and leaves KSIG8 open; one that only fixed the drawing closes KSIG8 and leaves this open. PREDICTION: closes to 0 when SharpsFor computes the tonic's position on the circle of fifths (letter fifths + 7 x alteration) instead of looking it up -- the rule LilyPond's transposition IS. ⚠️ A tonic that is not a note name at all (`key ef major`) is NOT this point: it has no right answer, LilyPond refuses it (measured: 'wrong type for argument 1. Expecting pitch, found \"ef\"'), and it is closed by a diagnostic rather than by a number."
+    },
+    "page.custom-text.first-staff-refpoint": {
+      "probe": "custom-text-page.ly",
+      "score": "CTP",
+      "lilypond": 15.262596,
+      "why": "OPENED 2026-08-28 (session 272) AS THE FIRST OBSERVER OF THE CUSTOM TEXT'S PAGING ARMS -- map step (3) of scratch/p271/sweep-map.txt: session 271's +-0.03 poison sweep found ZERO of 572 tracked books observing either arm, and session 272's poisons split the family: +-0.03 on the Enrich scalar (EnrichExtentsWithAnnotationProtrusions' custom-text arm, Add(ctY - 1.8, ctY + 0.6)) moves ONLY this book and its capital twin; +-0.03 on the silhouette box (AugmentSkylinesForPaging's arm, AddMarkBox(.., ctY + 1.8, ctY - 0.6)) moves ONLY the gap.* and leading-row books. THE SCALAR PAIR IS A FOSSIL: 1.8 / 0.6 = 0.75 / 0.25 x em 2.4 -- the letter-class trio (TextAscentEm / TextDescentEm, 'no single LP grob source') the outside-staff stacker retired for real outlines, at an em the draw no longer uses (TextScriptFontSize is 2.2); the paging arms are the last two readers of the dead constants' values. MEASURED 2.26.0 (prediction written first in the probe header): 15.262596214 = top-margin 5.690551 + stacked baseline 7.538010 above the refpoint + ink top 1.0340353900098425 of italic 'meno mosso' + padding 1 -- the page's top spring charges the TextScript's REAL stencil top (lily/axis-group-interface.cc:359-474). Lily# reads 16.028551000 = the same margin + baseline 7.538000 + FLAT 1.8 + 1. The baselines agree to 9.6e-6 (LP's o-overshoot descent 0.03300964259350393 against Lily#'s 0.033000 -- a face/outline sliver), so the residual +0.765955 IS the envelope term 1.8 - 1.034035 - 0.0000096: the mark's 0.8-envelope story (page.section-label.first-staff-refpoint) told on the text arm. The port is the mark arm's same move -- stop having an envelope and let the one drawn description price the page (the stacker's outline pair is already that home); these entries are the guards. *** LANDED 2026-08-28, SAME SESSION: the envelope was retired -- both arms now read the string's own ink about its baseline (fonts.Ink at TextScriptFontSize italic, the quantity LilyPond dumps as the TextScript stencil's extent), and this entry moved to -0.000045 -- the FACE term alone (baseline 0.0000096 + ink top 0.0000354), predicted to the digit in scratch/p272/predictions.txt act 4 before the code changed. The pair's residual DIFFERENCE collapsed from 0.554429 to 0.000029: there is no flatness left for it to measure. Proof of output identity (RULES 5.1): rerender 0/81 and full-tree sweep 0/572 -- not one tracked book moved, the arm having been dominated everywhere the corpus reaches.",
+      "residual": -4.5e-05
+    },
+    "page.custom-text.staves-on-first-page": {
+      "probe": "custom-text-page.ly",
+      "score": "CTP",
+      "lilypond": 1,
+      "unit": "count",
+      "why": "HANDOFF 5.0 trap 8: the refpoint readings are page anchors, so the count is carried. One one-staff system on page 1.",
+      "residual": 0.0
+    },
+    "page.custom-text.capital.first-staff-refpoint": {
+      "probe": "custom-text-page.ly",
+      "score": "CTC",
+      "lilypond": 15.817025,
+      "why": "THE CAPITAL HALF: 'Meno mosso' for 'meno mosso' and nothing else -- neither string has a descender, so the stacked baseline is common and only the ink top grows. PREDICTED in the probe header before running: LilyPond's pair difference is the M's ink growth; Lily#'s is ZERO (measured before the probe ran, scratch/p272/predictions.txt -- both halves 16.028551000, the scalar pricing every string at a flat 1.8 over the baseline). LANDED: 15.817024837 - 15.262596214 = 0.554428623277563 = 1.5884640132874015 - 1.0340353900098425, the growth to fifteen digits. residual +0.211526 = the same envelope term with taller ink under it (1.8 - 1.588464); the pair's DIFFERENCE of residuals, 0.554429, is the scalar's flatness stated with no font quantity in it. *** LANDED 2026-08-28, SAME SESSION: the envelope was retired -- both arms now read the string's own ink about its baseline (fonts.Ink at TextScriptFontSize italic, the quantity LilyPond dumps as the TextScript stencil's extent), and this entry moved to -0.000074 -- the FACE term alone (baseline 0.0000096 + ink top 0.0000640), predicted to the digit in scratch/p272/predictions.txt act 4 before the code changed. The pair's residual DIFFERENCE collapsed from 0.554429 to 0.000029: there is no flatness left for it to measure. Proof of output identity (RULES 5.1): rerender 0/81 and full-tree sweep 0/572 -- not one tracked book moved, the arm having been dominated everywhere the corpus reaches.",
+      "residual": -7.4e-05
+    },
+    "page.custom-text.capital.staves-on-first-page": {
+      "probe": "custom-text-page.ly",
+      "score": "CTC",
+      "lilypond": 1,
+      "unit": "count",
+      "why": "HANDOFF 5.0 trap 8: the refpoint readings are page anchors, so the count is carried. One one-staff system on page 1.",
+      "residual": 0.0
+    },
+    "page.custom-text.gap.gap-first": {
+      "probe": "custom-text-page.ly",
+      "score": "CTG",
+      "lilypond": 14.617045,
+      "why": "THE SILHOUETTE ARM'S OWN OBSERVER (the Enrich poison does not move it; the silhouette poison moves only the gap books -- see page.custom-text.first-staff-refpoint): system 1 a deep g-column line, system 2 the a''-line with the text on bar 4's first note, ragged -- the X-aware inter-system Distance binds system 1's notehead bottoms against the text's box top where LilyPond binds them against the text's INK top. MEASURED 2.26.0: 14.617045033 = g-bottom 5.045000 + (baseline 7.538010 + ink 1.034035) above system 2's refpoint + padding 1. Lily# 15.383000000 = 5.045000 + (7.538000 + 1.8) + 1. residual +0.765955 -- the SAME envelope term as the page anchor, priced by the OTHER arm: the two entries go red separately (the poisons proved it), which is what makes the two arms auditable one at a time. *** LANDED 2026-08-28, SAME SESSION: the envelope was retired -- both arms now read the string's own ink about its baseline (fonts.Ink at TextScriptFontSize italic, the quantity LilyPond dumps as the TextScript stencil's extent), and this entry moved to -0.000045 -- the FACE term alone (baseline 0.0000096 + ink top 0.0000354), predicted to the digit in scratch/p272/predictions.txt act 4 before the code changed. The pair's residual DIFFERENCE collapsed from 0.554429 to 0.000029: there is no flatness left for it to measure. Proof of output identity (RULES 5.1): rerender 0/81 and full-tree sweep 0/572 -- not one tracked book moved, the arm having been dominated everywhere the corpus reaches.",
+      "residual": -4.5e-05
+    },
+    "page.custom-text.gap.staves-on-first-page": {
+      "probe": "custom-text-page.ly",
+      "score": "CTG",
+      "lilypond": 2,
+      "unit": "count",
+      "why": "HANDOFF 5.0 trap 8: the gap readings are indexed, so the count is carried. Two one-staff systems on page 1.",
+      "residual": 0.0
+    },
+    "page.custom-text.gap.capital.gap-first": {
+      "probe": "custom-text-page.ly",
+      "score": "CTGC",
+      "lilypond": 15.171474,
+      "why": "The capital half of the gap pair: 15.171473656 - 14.617045033 = 0.554428623 -- the identical fifteen-digit ink growth the page-anchor pair read, on the other arm. Lily# reads 15.383000000 for BOTH halves (its difference is zero, the scalar's flatness). residual +0.211526. *** LANDED 2026-08-28, SAME SESSION: the envelope was retired -- both arms now read the string's own ink about its baseline (fonts.Ink at TextScriptFontSize italic, the quantity LilyPond dumps as the TextScript stencil's extent), and this entry moved to -0.000074 -- the FACE term alone (baseline 0.0000096 + ink top 0.0000640), predicted to the digit in scratch/p272/predictions.txt act 4 before the code changed. The pair's residual DIFFERENCE collapsed from 0.554429 to 0.000029: there is no flatness left for it to measure. Proof of output identity (RULES 5.1): rerender 0/81 and full-tree sweep 0/572 -- not one tracked book moved, the arm having been dominated everywhere the corpus reaches.",
+      "residual": -7.4e-05
+    },
+    "page.custom-text.gap.capital.staves-on-first-page": {
+      "probe": "custom-text-page.ly",
+      "score": "CTGC",
+      "lilypond": 2,
+      "unit": "count",
+      "why": "HANDOFF 5.0 trap 8: the gap readings are indexed, so the count is carried. Two one-staff systems on page 1.",
+      "residual": 0.0
+    },
+    "page.custom-text.gap.no-text.gap-first": {
+      "probe": "custom-text-page.ly",
+      "score": "CTGN",
+      "lilypond": 13.09,
+      "why": "THE NO-TEXT CONTROL, and it is EXACT: 13.090000000 on both engines = g-bottom 5.045000 + a'' ink top 7.045000 + padding 1.000000 -- the gap's note-note terms are ink-true on both sides, so the text books' residuals sit in the text term alone. Also the liveness half of the design: taking the text OUT moves LilyPond's gap by 1.527045 and Lily#'s by 2.293000, so 'the text binds' is measured, not assumed (HANDOFF 5.0 (5): a control that does not move proves nothing).",
+      "residual": 0.0
+    },
+    "page.custom-text.gap.no-text.staves-on-first-page": {
+      "probe": "custom-text-page.ly",
+      "score": "CTGN",
+      "lilypond": 2,
+      "unit": "count",
+      "why": "HANDOFF 5.0 trap 8: the gap readings are indexed, so the count is carried. Two one-staff systems on page 1.",
+      "residual": 0.0
+    },
+    "page.custom-text.leading-row.gap-first": {
+      "probe": "custom-text-page.ly",
+      "score": "CTW",
+      "lilypond": 12.570929,
+      "why": "THE ROW-LEADING FRAME BOOK (session 271's census: ZERO tracked books put a custom text or dynamic on a system a chords/lyrics row leads; this one is built to reach it). Lily#'s silhouette arm translates the text's Y in ONE STEP (ctY = YUp - StaffMiddle), right exactly when the system opens on a staff; the chord row leading system 2 moves the system origin above the staff and the box floats up with it -- the float the MARK arm fixed on 2026-08-25 with the two-step ScoreGrobStaffTopUp translation. THE ROWM SHAPE, measured in Lily# before the probe ran: text alone (no-row twin) 12.000000000, row alone (no-text twin) 12.000000000, both together 14.342092602 -- NEITHER ingredient does it alone -- and a TEMPORARY two-step frame at the ct arm dropped this book to 12.000000000 exactly while moving nothing else (scratch/p272/predictions.txt, poison III): the whole +2.342093 excess is the frame float. *** THE LILYPOND-SIDE PREDICTION MISSED, AND THE MISS IS THE MAP: LP does NOT sit at the 12 floor -- it reads 12.570928935, because the text's ink pushes the loose chord line up (ChordName rel 1.121485 in the no-text twin -> 2.648530 here) and LilyPond REDISTRIBUTES loose lines across the pair gap (lily/page-layout-problem.cc:860-880), the subsystem Lily# deliberately does not have (LayoutUtilities.InterSystemPairMinimum remark (2), HANDOFF 2D). So this residual is TWO NAMED TERMS, not one: +1.771164 = frame float +2.342093 (Lily#-own; dies with a two-step frame) - absent redistribution -0.570929 (prices the missing subsystem). THE FIX'S LANDING IS PREDICTED: when the ct arm's frame goes two-step this entry must land at -0.570929 (= 12.000000 - 12.570929), NOT at 0 -- chasing it to 0 would mean accidentally re-inventing loose-line redistribution or moving the drawn output, and the two exact twins are the controls that catch either. *** LANDED 2026-08-28, SAME SESSION: the frame went two-step (code, this entry's fix commit) and the residual moved to -0.570929000 -- the predicted landing to the digit. What remains is the absent loose-line redistribution priced above, deliberately OPEN: closing it means building the subsystem, not touching this frame. Both controls stood still.",
+      "residual": -0.570929
+    },
+    "page.custom-text.leading-row.staves-on-first-page": {
+      "probe": "custom-text-page.ly",
+      "score": "CTW",
+      "lilypond": 2,
+      "unit": "count",
+      "why": "HANDOFF 5.0 trap 8: the gap readings are indexed, so the count is carried. Two systems (the second with its chord row) on page 1.",
+      "residual": 0.0
+    },
+    "page.custom-text.leading-row.no-row.gap-first": {
+      "probe": "custom-text-page.ly",
+      "score": "CTWN",
+      "lilypond": 12.0,
+      "why": "The row taken out of the leading-row book and nothing else changed -- one control half of the ROWM shape: 12.000000 EXACT on both engines (the system-system basic-distance floor; the text's box top 4.35 is far under it on a quiet staff). With the no-text twin it states 'neither ingredient does it alone', and it must STAY exact when the frame float is fixed.",
+      "residual": 0.0
+    },
+    "page.custom-text.leading-row.no-row.staves-on-first-page": {
+      "probe": "custom-text-page.ly",
+      "score": "CTWN",
+      "lilypond": 2,
+      "unit": "count",
+      "why": "HANDOFF 5.0 trap 8: the gap readings are indexed, so the count is carried. Two one-staff systems on page 1.",
+      "residual": 0.0
+    },
+    "page.custom-text.leading-row.no-text.gap-first": {
+      "probe": "custom-text-page.ly",
+      "score": "CTWO",
+      "lilypond": 12.0,
+      "why": "The text taken out of the leading-row book and nothing else changed -- the other control half: 12.000000 EXACT on both engines. The row alone costs the pair gap nothing in either engine (the ROWA finding, re-read here on a one-staff arrangement), which is what isolates the float to the text's box.",
+      "residual": 0.0
+    },
+    "page.custom-text.leading-row.no-text.staves-on-first-page": {
+      "probe": "custom-text-page.ly",
+      "score": "CTWO",
+      "lilypond": 2,
+      "unit": "count",
+      "why": "HANDOFF 5.0 trap 8: the gap readings are indexed, so the count is carried. Two systems (the second with its chord row) on page 1.",
+      "residual": 0.0
+    },
+    "page.dynamics.leading-row.gap-first": {
+      "probe": "dynamics-row-page.ly",
+      "score": "DYW",
+      "lilypond": 15.442035,
+      "why": "THE DYNAMICS HALF OF THE ROW-LEADING FRAME FAMILY (opened 2026-08-28, session 272, right after the custom-text half -- see page.custom-text.leading-row.gap-first), and the float's MIRROR: the silhouette arm translates a dynamic's Y in ONE step (dY = YUp - StaffMiddle), so when a chord row LEADS the system the below-staff \\pp's box floats UP out of the down silhouette and the pair gap under it is UNDER-charged -- the COLLISION direction, not the too-much-air direction. MEASURED IN LILY# BEFORE THE PROBE RAN (scratch/p272/predictions.txt act 2): this book reads 13.090000000, EXACTLY the no-dynamic twin's number -- the dynamic has VANISHED from the gap and the note-note term (g-bottom 5.045 + a'' top 7.045 + padding 1) binds instead; the no-row twin reads 15.442000000, the same dynamic properly deep charging 2.352 over that term. LILYPOND LANDED THE PREDICTED IDENTITY: DYW = DYWN = 15.442035060 to 3e-15 -- the below-staff DynamicText and the above-staff row live on opposite sides of system 1 and do not interact (the row's top ~5.94 is even under the top spring's basic-distance 6), so unlike CTW there is NO redistribution term here and the whole residual -2.352035 is the frame float alone. Decomposition closes: 15.442035 = pp ink bottom 7.397035 below the refpoint (DynamicText rel -8.751731 + ink bottom -0.584004 against staff rel -1.938700) + a''' ink top 7.045 + padding 1. THE FIX'S LANDING IS PREDICTED: when the dynamics arm's frame goes two-step (the mark arm's 2026-08-25 shape), this entry must land on the no-row twin's own residual -0.000035 (the pp face term), and the two controls must not move. *** LANDED 2026-08-28, SAME SESSION: the two-step frame moved this entry to -0.000035000 exactly -- the dynamic is back in the down silhouette and only the pp bbox face term remains, shared with the no-row twin. Both controls stood still.",
+      "residual": -3.5e-05
+    },
+    "page.dynamics.leading-row.staves-on-first-page": {
+      "probe": "dynamics-row-page.ly",
+      "score": "DYW",
+      "lilypond": 2,
+      "unit": "count",
+      "why": "HANDOFF 5.0 trap 8: the gap readings are indexed, so the count is carried. Two systems (the first with its chord row) on page 1.",
+      "residual": 0.0
+    },
+    "page.dynamics.leading-row.no-row.gap-first": {
+      "probe": "dynamics-row-page.ly",
+      "score": "DYWN",
+      "lilypond": 15.442035,
+      "why": "The row taken out and nothing else changed -- the dynamic's TRUE charge, and the reading Lily#'s DYW must land on when the frame goes two-step. Lily# reads 15.442000000: its own pp ink bottom is 7.397000 below the refpoint against LilyPond's 7.397035 -- residual -0.000035, a face term on the dynamic glyph's ink (the pp bbox), the same order as the ledger's other measured-glyph slivers.",
+      "residual": -3.5e-05
+    },
+    "page.dynamics.leading-row.no-row.staves-on-first-page": {
+      "probe": "dynamics-row-page.ly",
+      "score": "DYWN",
+      "lilypond": 2,
+      "unit": "count",
+      "why": "HANDOFF 5.0 trap 8: the gap readings are indexed, so the count is carried. Two one-staff systems on page 1.",
+      "residual": 0.0
+    },
+    "page.dynamics.leading-row.no-dynamic.gap-first": {
+      "probe": "dynamics-row-page.ly",
+      "score": "DYWO",
+      "lilypond": 13.09,
+      "why": "The dynamic taken out and nothing else changed -- the note-note control, EXACT on both engines (g-bottom 5.045000 + a'' ink top 7.045000 + padding 1.000000; the CTGN geometry re-read with the row present). With the no-row twin it isolates the float to the dynamic's box, and it must STAY exact when the frame is fixed.",
+      "residual": 0.0
+    },
+    "page.dynamics.leading-row.no-dynamic.staves-on-first-page": {
+      "probe": "dynamics-row-page.ly",
+      "score": "DYWO",
+      "lilypond": 2,
+      "unit": "count",
+      "why": "HANDOFF 5.0 trap 8: the gap readings are indexed, so the count is carried. Two systems (the first with its chord row) on page 1.",
+      "residual": 0.0
+    },
+    "page.custom-text.x.left-of-ink.gap-first": {
+      "probe": "custom-text-x.ly",
+      "score": "CTXL",
+      "lilypond": 14.545,
+      "why": "OPENED 2026-08-28 (session 272 act 5) AS THE OBSERVER ACT 4 LACKED. Lily#'s X-aware silhouette gives the custom text a box CENTRED on its pen origin -- [ct.X - advance/2 - 0.2, ct.X + advance/2 + 0.2] -- while the draw is START-anchored at that same origin (DrawCustomTexts, TextAnchor.Start; the ledger's textscript.x.pen-to-notehead-left pins the pen origin ON the anchor column to fifteen digits). The box therefore sits HALF AN ADVANCE left of the ink: 6.04 staff spaces in this book (pen origin 30.36, advance 12.087 -> ink 30.36..42.45, box 24.12..36.60). This book puts system 1's low c, where ONLY THE BOX IS (ledger lines 24.51..26.47, four staff spaces left of the first letter). LILYPOND READS IT IDENTICAL TO ITS NO-TEXT CONTROL -- 14.545000 both, to the digit -- because nothing of the text is there and outside-staff padding 0.46 cannot reach four staff spaces. Lily# reads 16.039000000. THE RESIDUAL IS THE WHOLE PHANTOM CHARGE, +1.494000, and it carries no font quantity, no envelope and no frame: after act 4 the box's HEIGHT is the string's own ink, so what is left in this arm is purely positional. *** THE PAIR SAYS IT TWICE: at the other slot (page.custom-text.x.under-ink.gap-first) the signs swap, and LilyPond's full charge there, 16.039043639, equals THIS book's Lily# reading 16.039000000 to the 0.000044 face term the act-4 entries carry -- Lily# charges the right amount at the wrong x. THE PORT: start the box at the pen origin (the mark arm's X made this move in session 204, MusicMarkEngraver.MarkXExtent). Its landing is predicted -- this entry to 0.000000 and its twin to -0.000044, with both controls unmoved. *** LANDED 2026-08-28, SAME SESSION: the box now starts at the pen origin ([ct.X - 0.2, ct.X + advance + 0.2]) and this entry moved to 0.000000000, the predicted landing to the digit (scratch/p272/predictions.txt act 5, written before the code changed). Both controls stood still, and output is identical everywhere the corpus reaches: rerender 0/81, full-tree sweep 0/572.",
+      "residual": 0.0
+    },
+    "page.custom-text.x.left-of-ink.staves-on-first-page": {
+      "probe": "custom-text-x.ly",
+      "score": "CTXL",
+      "unit": "count",
+      "lilypond": 2,
+      "why": "HANDOFF 5.0 trap 8: the gap readings are indexed, so the count is carried. Two one-staff systems on page 1.",
+      "residual": 0.0
+    },
+    "page.custom-text.x.left-of-ink.no-text.gap-first": {
+      "probe": "custom-text-x.ly",
+      "score": "CTXLN",
+      "lilypond": 14.545,
+      "why": "The text taken out and nothing else changed -- EXACT on both engines (14.545000), and the reading its text-carrying twin must land on when the box starts at the pen origin. Its job is to make the twin's +1.494000 a MEASUREMENT of the phantom rather than an assertion: the same book without the text is what says the deep note's own gap is 14.545, so the whole difference belongs to the text's box.",
+      "residual": 0.0
+    },
+    "page.custom-text.x.left-of-ink.no-text.staves-on-first-page": {
+      "probe": "custom-text-x.ly",
+      "score": "CTXLN",
+      "unit": "count",
+      "lilypond": 2,
+      "why": "HANDOFF 5.0 trap 8: the gap readings are indexed, so the count is carried. Two one-staff systems on page 1.",
+      "residual": 0.0
+    },
+    "page.custom-text.x.under-ink.gap-first": {
+      "probe": "custom-text-x.ly",
+      "score": "CTXR",
+      "lilypond": 16.039044,
+      "why": "THE OTHER SIGN OF THE SAME SHIFT, one variable from CTXL (the low c, moves from bar 1's fourth note to bar 2's second, ledger lines 37.34..39.30). Now the deep note stands UNDER THE TEXT'S REAL INK and PAST the shifted box's right edge 36.60, so LilyPond charges the text's full height -- 16.039043639 against its no-text control's 14.545000 -- while Lily# charges only what is left of the box's 45-degree padded flank there: 15.970199011, an UNDER-charge of -0.068845. The collision direction, and the reason the defect is not merely cosmetic. *** AND THE IDENTITY THAT NAMES IT: LilyPond's full charge here equals Lily#'s full charge in CTXL (16.039000000) to 0.000044, the face term -- one shift, over-charging on the left and under-charging on the right, with the height already ink-true from act 4. When the box starts at the pen origin this entry must land at -0.000044 and CTXL at 0.000000. *** LANDED 2026-08-28, SAME SESSION: the box now starts at the pen origin ([ct.X - 0.2, ct.X + advance + 0.2]) and this entry moved to -0.000044000, the predicted landing to the digit (scratch/p272/predictions.txt act 5, written before the code changed). Both controls stood still, and output is identical everywhere the corpus reaches: rerender 0/81, full-tree sweep 0/572.",
+      "residual": -4.4e-05
+    },
+    "page.custom-text.x.under-ink.staves-on-first-page": {
+      "probe": "custom-text-x.ly",
+      "score": "CTXR",
+      "unit": "count",
+      "lilypond": 2,
+      "why": "HANDOFF 5.0 trap 8: the gap readings are indexed, so the count is carried. Two one-staff systems on page 1.",
+      "residual": 0.0
+    },
+    "page.custom-text.x.under-ink.no-text.gap-first": {
+      "probe": "custom-text-x.ly",
+      "score": "CTXRN",
+      "lilypond": 14.545,
+      "why": "The right half's control -- EXACT on both engines (14.545000), and identical to the left half's control, which is the check that the two books differ in WHERE the deep note is and in nothing else (HANDOFF 5.0: verify the pair is a pair before believing what it says).",
+      "residual": 0.0
+    },
+    "page.custom-text.x.under-ink.no-text.staves-on-first-page": {
+      "probe": "custom-text-x.ly",
+      "score": "CTXRN",
+      "unit": "count",
+      "lilypond": 2,
+      "why": "HANDOFF 5.0 trap 8: the gap readings are indexed, so the count is carried. Two one-staff systems on page 1.",
+      "residual": 0.0
     }
   }
 }

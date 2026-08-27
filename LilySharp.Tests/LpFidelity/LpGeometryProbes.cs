@@ -2929,6 +2929,284 @@ internal static class LpGeometryProbes
     private static readonly string GCS = GrandChordsScore("GCS", sharp: true);
 
     /// <summary>
+    /// A CUSTOM TEXT AS THE PAGE'S TOP INK — the mirror of book CTP (custom-text-page.ly),
+    /// and the first observer either paging arm of the custom text ever had.
+    /// </summary>
+    /// <remarks>
+    /// WHY THE FAMILY EXISTS (session 272, map step ③ of scratch/p271/sweep-map.txt). Lily#'s
+    /// <c>_"text"</c> reaches the page through two arms that both carry the scalar pair
+    /// <c>[1.8 up, 0.6 down]</c> about the placed baseline — the per-measure annotation
+    /// extents (<c>EnrichExtentsWithAnnotationProtrusions</c>) and the X-aware inter-system
+    /// silhouette (<c>AugmentSkylinesForPaging</c>) — and a ±0.03 poison sweep (session 271)
+    /// found ZERO of 572 tracked books observing either arm. 1.8 / 0.6 = 0.75 / 0.25 × em
+    /// 2.4: the letter-class trio (TextAscentEm / TextDescentEm, "no single LP grob
+    /// source") that the outside-staff stacker retired for real outlines, at an em the draw
+    /// no longer uses (TextScriptFontSize is 2.2). The paging arms are the last two readers
+    /// of the dead constants' values, and LilyPond has no envelope to port: what joins its
+    /// skylines is the TextScript grob's own stencil (lily/axis-group-interface.cc:359-474)
+    /// — the mark's 0.8-envelope story (page.section-label.first-staff-refpoint) and the
+    /// chord estimate's 1.9 scalar (page.grand-chords.*), told a third time.
+    /// <para>
+    /// THE PAIR (HANDOFF 5.0①): CTP and CTC are ONE VARIABLE apart — italic "meno mosso"
+    /// against "Meno mosso" on the first note of one bar of a'' (LilyPond a'''), so the
+    /// stacked baseline is common (neither string has a descender) and only the ink top
+    /// grows. MEASURED IN LILY# BEFORE THE PROBE RAN (scratch/p272/predictions.txt): both
+    /// halves 16.028551000 — difference EXACTLY 0, the scalar's flatness — and the poisons
+    /// separated the arms: ±0.03 on the Enrich scalar moves ONLY these two page anchors,
+    /// ±0.03 on the silhouette box moves ONLY the gap books below. LilyPond landed the
+    /// identity: CTC − CTP = 0.554428623277563 = the M's ink growth
+    /// (1.5884640132874015 − 1.0340353900098425) to fifteen digits, and the placed baseline
+    /// agrees across engines to 9.6e-6 — so each half's residual is the ENVELOPE TERM
+    /// (1.8 − the string's real ink top) almost alone.
+    /// </para>
+    /// ⚠️ Lily# <c>a''</c> (octave absolute) is LilyPond <c>a'''</c> (HANDOFF 5.5).
+    /// </remarks>
+    private static string CustomTextPageScore(string name, string text) => $$"""
+        octave absolute
+        time 4/4
+
+        part melody { clef treble }
+
+        section A {
+          melody { a''4 a'' a'' a'' | }
+        }
+
+        form main { ~A _"{{text}}" }
+
+        score main "{{name}}" { staff melody }
+        """;
+
+    /// <inheritdoc cref="CustomTextPageScore"/>
+    private static readonly string CTP = CustomTextPageScore("CTP", "meno mosso");
+
+    /// <summary>The capital half — the text's ink grows and nothing else changes.</summary>
+    private static readonly string CTC = CustomTextPageScore("CTC", "Meno mosso");
+
+    /// <summary>
+    /// THE SAME TEXT UNDER AN INTER-SYSTEM GAP — books CTG/CTGC/CTGN (custom-text-page.ly):
+    /// system 1 is a deep g,-column line, system 2 the a'' line with the text on bar 4's
+    /// first note, so the X-aware distance binds system 1's notehead bottoms against the
+    /// text's ink top. The SILHOUETTE arm's own observer (the Enrich poison moves it not).
+    /// </summary>
+    /// <remarks>
+    /// Same one-variable capital pair as <see cref="CustomTextPageScore"/>; CTGN (no text)
+    /// is the control that pins the note-note term, and it landed EXACT on both engines
+    /// (13.090000 = g-bottom 5.045 + a''-top 7.045 + padding 1) — the gap's other terms
+    /// are ink-true, so the two text books' residuals are the envelope term alone.
+    /// ⚠️ Lily# <c>g,</c> / <c>a''</c> is LilyPond <c>g</c> / <c>a'''</c> (HANDOFF 5.5).
+    /// </remarks>
+    private static string CustomTextGapScore(string name, string text) => $$"""
+        octave absolute
+        time 4/4
+
+        part melody { clef treble }
+
+        section A {
+          melody { g,4 g, g, g, | g,4 g, g, g, | break }
+        }
+
+        section B {
+          melody { a''4 a'' a'' a'' | a''4 a'' a'' a'' | }
+        }
+
+        form main { ~A ~B{{(text.Length > 0 ? $" _\"{text}\"" : "")}} }
+
+        score main "{{name}}" { staff melody }
+        """;
+
+    /// <inheritdoc cref="CustomTextGapScore"/>
+    private static readonly string CTG = CustomTextGapScore("CTG", "meno mosso");
+
+    /// <summary>The capital half of the gap pair.</summary>
+    private static readonly string CTGC = CustomTextGapScore("CTGC", "Meno mosso");
+
+    /// <summary>The no-text control — the gap's note-note term, exact on both engines.</summary>
+    private static readonly string CTGN = CustomTextGapScore("CTGN", "");
+
+    /// <summary>
+    /// A CUSTOM TEXT ON A SYSTEM A CHORD ROW LEADS — books CTW/CTWN/CTWO
+    /// (custom-text-page.ly), the row-leading FRAME family: the float the mark arm fixed on
+    /// 2026-08-25 (two-step ScoreGrobStaffTopUp), still in the ct and dynamics arms' one-step
+    /// <c>YUp − StaffMiddle</c>. The session-271 census (scratch/p271/census_leading.py)
+    /// found ZERO tracked books reaching it; CTW is the book built to reach it.
+    /// </summary>
+    /// <remarks>
+    /// THE ROWM SHAPE (neither ingredient does it alone): Lily# reads gap-first 12.000000000
+    /// with the text alone (CTWN) and with the row alone (CTWO), and 14.342092602 with both —
+    /// and a temporary two-step frame at the ct silhouette arm dropped CTW to 12.000000000
+    /// EXACTLY while moving nothing else (scratch/p272/predictions.txt, poison III): the
+    /// whole 2.342093 excess is the frame float.
+    /// <para>
+    /// ⚠️⚠️ THE PREDICTION MISSED ON THE LILYPOND SIDE, AND THE MISS IS THE MAP: LilyPond
+    /// does NOT sit at the 12.0 floor on CTW — it reads 12.570929, because the text's ink
+    /// pushes the loose chord line up (ChordName rel 1.121485 → 2.648530 in the dump) and
+    /// LilyPond REDISTRIBUTES loose lines across the pair gap
+    /// (lily/page-layout-problem.cc:860-880) — the subsystem Lily# deliberately does not
+    /// have (LayoutUtilities.InterSystemPairMinimum remark ②, HANDOFF 2D). So CTW's
+    /// residual is TWO NAMED TERMS, not one: +1.771164 = frame float 2.342093 − absent
+    /// redistribution 0.570929. THE FIX'S LANDING IS PREDICTED: a two-step frame moves the
+    /// residual to −0.570929, NOT to 0 — the session that fixes the frame must not chase
+    /// the rest.
+    /// </para>
+    /// ⚠️ Lily# <c>g,</c> / <c>g</c>/<c>a</c> is LilyPond <c>g</c> / <c>g'</c>/<c>a'</c>;
+    /// the row's <c>C | C |</c> is LilyPond <c>s1 s1 c1 c1</c> (chords on bars 3-4 only).
+    /// </remarks>
+    private static string CustomTextLeadingRowScore(string name, bool row, bool text = true)
+    {
+        string chords = row ? "\n  chords prog { C | C | }" : "";
+        string scoreRow = row ? "chords prog\n  " : "";
+        string ct = text ? " _\"meno mosso\"" : "";
+        return $$"""
+            octave absolute
+            time 4/4
+
+            part melody { clef treble }
+
+            section A {
+              melody { g,4 g, g, g, | g,4 g, g, g, | break }
+            }
+
+            section B {
+              melody { g4 a g a | g4 a g a | }{{chords}}
+            }
+
+            form main { ~A ~B{{ct}} }
+
+            score main "{{name}}" { {{scoreRow}}staff melody }
+            """;
+    }
+
+    /// <inheritdoc cref="CustomTextLeadingRowScore"/>
+    private static readonly string CTW = CustomTextLeadingRowScore("CTW", row: true);
+
+    /// <summary>The row taken out and nothing else changed — exact on both engines.</summary>
+    private static readonly string CTWN = CustomTextLeadingRowScore("CTWN", row: false);
+
+    /// <summary>The text taken out and nothing else changed — exact on both engines.</summary>
+    private static readonly string CTWO = CustomTextLeadingRowScore("CTWO", row: true, text: false);
+
+    /// <summary>
+    /// A BELOW-STAFF DYNAMIC ON A SYSTEM A CHORD ROW LEADS — books DYW/DYWN/DYWO
+    /// (dynamics-row-page.ly), the dynamics half of the row-leading FRAME family the
+    /// CTW books opened for the custom text. The float's MIRROR: a below-staff
+    /// dynamic's box rises OUT of the down silhouette, so the pair gap under it is
+    /// UNDER-charged — the collision direction.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED IN LILY# BEFORE THE PROBE RAN (scratch/p272/predictions.txt act 2):
+    /// DYW reads gap-first 13.090000000 — EXACTLY its no-dynamic twin DYWO, i.e. the
+    /// dynamic has VANISHED from the gap (the note-note term binds instead), while
+    /// DYWN (no row) reads 15.442000000 — the same dynamic properly deep charges
+    /// 2.352. LilyPond landed the predicted identity: DYW = DYWN = 15.442035 to
+    /// 3e-15 (the below-staff DynamicText and the above-staff row do not interact —
+    /// unlike CTW, where the text pushed the row into the pair gap), and DYWO landed
+    /// 13.090000 exact. The fix's landing: a two-step frame moves Lily#'s DYW onto
+    /// its own DYWN reading, i.e. the residual goes from −2.352035 to the −0.000035
+    /// face term, and DYWO must not move.
+    /// ⚠️ Lily# <c>g,</c> / <c>a''</c> is LilyPond <c>g</c> / <c>a'''</c>; the row's
+    /// <c>C | C |</c> is LilyPond <c>c1 c1 s1 s1</c> (chords on bars 1-2 only).
+    /// </remarks>
+    private static string DynamicsLeadingRowScore(string name, bool row, bool dyn = true)
+    {
+        string chords = row ? "\n  chords prog { C | C | }" : "";
+        string scoreRow = row ? "chords prog\n  " : "";
+        string mark = dyn ? "@pp" : "";
+        return $$"""
+            octave absolute
+            time 4/4
+
+            part melody { clef treble }
+
+            section A {
+              melody { g,4{{mark}} g, g, g, | g,4 g, g, g, | break }{{chords}}
+            }
+
+            section B {
+              melody { a''4 a'' a'' a'' | a''4 a'' a'' a'' | }
+            }
+
+            form main { ~A ~B }
+
+            score main "{{name}}" { {{scoreRow}}staff melody }
+            """;
+    }
+
+    /// <summary>
+    /// WHERE A CUSTOM TEXT'S SILHOUETTE STANDS ALONG X — books CTXL/CTXLN/CTXR/CTXRN
+    /// (custom-text-x.ly), the last piece of the custom-text family and the one act 4
+    /// named in place rather than moved, for want of exactly these books.
+    /// </summary>
+    /// <remarks>
+    /// The X-aware silhouette gives the text a box CENTRED on its pen origin while the
+    /// draw is START-anchored (DrawCustomTexts, TextAnchor.Start; ledger
+    /// textscript.x.pen-to-notehead-left pins that origin on the anchor column to fifteen
+    /// digits), so the reserved box sits HALF AN ADVANCE — 6.04 staff spaces here — left
+    /// of the ink. Measured geometry (page x, staff spaces): pen origin 30.36, advance
+    /// 12.087, so the ink runs 30.36–42.45 and the box 24.12–36.60. One variable between
+    /// the two halves: WHICH SLOT of system 1 carries the low <c>c,,</c> — bar 1's fourth
+    /// note (ledgers 24.51–26.47, inside the box and LEFT of all the ink) against bar 2's
+    /// second (37.34–39.30, inside the ink and past the box's right edge, where only the
+    /// box's 45° padded flank survives). Each half has a no-text control, so "the text
+    /// bound" is measured rather than claimed.
+    /// <para>
+    /// ★★★ THE PAIR'S HARVEST IS A SIGN FLIP AND AN IDENTITY. LilyPond read
+    /// CTXL = CTXLN = 14.545000 EXACTLY — nothing of the text reaches four staff spaces
+    /// left of its ink — so Lily#'s 16.039000 there is a charge for ink that is not
+    /// present (+1.494000), while at CTXR LilyPond charges the full text (16.039044) and
+    /// Lily# only the decayed flank (15.970199, −0.068845). AND THE TWO FULL CHARGES
+    /// MATCH: LilyPond's CTXR 16.039043639 against Lily#'s CTXL 16.039000000 is the same
+    /// 0.000044 face term the act-4 entries carry — after the envelope port the HEIGHT is
+    /// ink-true, so what is left in this arm is purely positional. Lily# charges the right
+    /// amount at the wrong x.
+    /// </para>
+    /// ⚠️ Lily# <c>g</c>/<c>a</c>/<c>c,,</c> (octave absolute) is LilyPond
+    /// <c>g'</c>/<c>a'</c>/<c>c,</c> — verified by exporting the twin with <c>lysc ly</c>
+    /// rather than by hand (HANDOFF §5.0 probe trap 5).
+    /// </remarks>
+    private static string CustomTextXScore(string name, bool deepLeft, bool text = true)
+    {
+        string bar1 = deepLeft ? "g4 a g c,," : "g4 a g a";
+        string bar2 = deepLeft ? "g4 a g a" : "g4 c,, g a";
+        string ct = text ? " _\"meno mosso\"" : "";
+        return $$"""
+            octave absolute
+            time 4/4
+
+            part melody { clef treble }
+
+            section A { melody { {{bar1}} | {{bar2}} | g4 a g a | g4 a g a | break } }
+            section B { melody { g4 a g a | g4 a g a | } }
+            section C { melody { g4 a g a | g4 a g a | } }
+
+            form main { ~A ~B{{ct}} ~C }
+
+            score main "{{name}}" { staff melody }
+            """;
+    }
+
+    /// <inheritdoc cref="CustomTextXScore"/>
+    private static readonly string CTXL = CustomTextXScore("CTXL", deepLeft: true);
+
+    /// <summary>The left half's control — the text taken out, nothing else changed.</summary>
+    private static readonly string CTXLN = CustomTextXScore("CTXLN", deepLeft: true, text: false);
+
+    /// <summary>The deep note moved under the text's real ink — the other sign.</summary>
+    private static readonly string CTXR = CustomTextXScore("CTXR", deepLeft: false);
+
+    /// <summary>The right half's control.</summary>
+    private static readonly string CTXRN = CustomTextXScore("CTXRN", deepLeft: false, text: false);
+
+    /// <inheritdoc cref="DynamicsLeadingRowScore"/>
+    private static readonly string DYW = DynamicsLeadingRowScore("DYW", row: true);
+
+    /// <summary>The row taken out and nothing else changed — the dynamic's true charge.</summary>
+    private static readonly string DYWN = DynamicsLeadingRowScore("DYWN", row: false);
+
+    /// <summary>The dynamic taken out and nothing else changed — the note-note control.</summary>
+    private static readonly string DYWO = DynamicsLeadingRowScore("DYWO", row: true, dyn: false);
+
+
+    /// <summary>
     /// LYRB WITH AN OSSIA ADDED — the mirror of book LYROS, and the other half of the
     /// force-0 branch: <c>ComputeBetweenStavesEnd</c> declined an ossia for the same reason
     /// it declined a text row.
@@ -13731,6 +14009,93 @@ internal static class LpGeometryProbes
         // only fixed the drawing would close KSIG8 and leave this one open.
         new("key.signature.glyphs.tonic-past-the-table", KSIGT,
             g => g.KeySignatureGlyphCount),
+
+        // --- WHAT A CUSTOM TEXT CHARGES THE PAGE (books CTP/CTC, CTG/CTGC/CTGN,
+        // CTW/CTWN/CTWO - custom-text-page.ly) ---
+        // The first observers of the custom text's two paging arms (session 272): the
+        // Enrich scalar owns the two page anchors, the silhouette box owns the six gap
+        // readings - separated by poison, each arm moving ONLY its own books (see
+        // CustomTextPageScore's remarks). The capital pairs are one variable apart and
+        // LilyPond read their difference as the M's ink growth to fifteen digits while
+        // Lily# read 0.000000000 - the scalar's flatness, stated as a pair. CTGN landed
+        // exact (the gap's note-note term is ink-true on both engines); CTW carries the
+        // row-leading frame float, a residual of TWO named terms (see
+        // CustomTextLeadingRowScore's remarks). Counts travel per HANDOFF 5.0 trap 8.
+        new("page.custom-text.first-staff-refpoint", CTP,
+            g => g.FirstStaffRefpoint(), RaggedBottomPaper),
+        new("page.custom-text.staves-on-first-page", CTP,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+        new("page.custom-text.capital.first-staff-refpoint", CTC,
+            g => g.FirstStaffRefpoint(), RaggedBottomPaper),
+        new("page.custom-text.capital.staves-on-first-page", CTC,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+        new("page.custom-text.gap.gap-first", CTG,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("page.custom-text.gap.staves-on-first-page", CTG,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+        new("page.custom-text.gap.capital.gap-first", CTGC,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("page.custom-text.gap.capital.staves-on-first-page", CTGC,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+        new("page.custom-text.gap.no-text.gap-first", CTGN,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("page.custom-text.gap.no-text.staves-on-first-page", CTGN,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+        new("page.custom-text.leading-row.gap-first", CTW,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("page.custom-text.leading-row.staves-on-first-page", CTW,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+        new("page.custom-text.leading-row.no-row.gap-first", CTWN,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("page.custom-text.leading-row.no-row.staves-on-first-page", CTWN,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+        new("page.custom-text.leading-row.no-text.gap-first", CTWO,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("page.custom-text.leading-row.no-text.staves-on-first-page", CTWO,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+
+        // ...and the DYNAMICS half of the same frame family (books DYW/DYWN/DYWO -
+        // dynamics-row-page.ly): the float's mirror. A below-staff dynamic on a
+        // row-led system rises OUT of the down silhouette and the pair gap under it
+        // is UNDER-charged - Lily# reads the no-dynamic control's number exactly,
+        // the collision direction. LilyPond landed the predicted identity DYW = DYWN
+        // to 3e-15 (the row does not reach the pair gap here, unlike CTW where the
+        // text pushed the row into it). See DynamicsLeadingRowScore's remarks.
+        // ...and WHERE that box stands along X (books CTXL/CTXLN/CTXR/CTXRN -
+        // custom-text-x.ly). The box is centred on the pen origin, the draw starts
+        // there: half an advance of shift, which over-charges left of the ink and
+        // under-charges under it. The two full charges match across the pair to the
+        // face term - Lily# charges the right amount at the wrong x. See
+        // CustomTextXScore's remarks. Counts travel per HANDOFF 5.0 trap 8.
+        new("page.custom-text.x.left-of-ink.gap-first", CTXL,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("page.custom-text.x.left-of-ink.staves-on-first-page", CTXL,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+        new("page.custom-text.x.left-of-ink.no-text.gap-first", CTXLN,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("page.custom-text.x.left-of-ink.no-text.staves-on-first-page", CTXLN,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+        new("page.custom-text.x.under-ink.gap-first", CTXR,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("page.custom-text.x.under-ink.staves-on-first-page", CTXR,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+        new("page.custom-text.x.under-ink.no-text.gap-first", CTXRN,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("page.custom-text.x.under-ink.no-text.staves-on-first-page", CTXRN,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+
+        new("page.dynamics.leading-row.gap-first", DYW,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("page.dynamics.leading-row.staves-on-first-page", DYW,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+        new("page.dynamics.leading-row.no-row.gap-first", DYWN,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("page.dynamics.leading-row.no-row.staves-on-first-page", DYWN,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+        new("page.dynamics.leading-row.no-dynamic.gap-first", DYWO,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("page.dynamics.leading-row.no-dynamic.staves-on-first-page", DYWO,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
     };
 
     /// <summary>Bar line <paramref name="barIndex"/>'s ink right → the next fret digit in a

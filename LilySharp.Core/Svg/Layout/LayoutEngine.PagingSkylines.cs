@@ -268,7 +268,19 @@ internal sealed partial class LayoutEngine
             if (!measureToSystem.TryGetValue(ct.MeasureIndex, out int cs))
                 continue;
             double ctY = MiddleAt(cs) - ct.YUp;
-            Add(ct.MeasureIndex, ctY - 1.8, ctY + 0.6);
+            // THE EXTENT IS THE STRING'S OWN INK ABOUT ITS BASELINE, at the size and style
+            // the draw draws with and the stacker reserved with (one house) — which is also
+            // LilyPond's model of the grob: a TextScript's Y-extent comes from its stencil
+            // (scm/define-grobs.scm:3818 vertical-skylines from the stencil), and the page's
+            // top spring charges that stencil's top. It was a scalar pair [ctY − 1.8,
+            // ctY + 0.6] until 2026-08-28 — 0.75/0.25 of the em 2.4 the outside-staff
+            // stacker's retired letter-class trio used, at an em the draw no longer has —
+            // and that flat 1.8 stood 0.765955 over the drawn ink of a lower-case string
+            // (ledger page.custom-text.first-staff-refpoint, measured against 2.26.0 before
+            // this arm was changed; the capital half was 0.211526 over).
+            var (ctBottom, ctTop) = fonts.Ink(ct.Text, EngravingDefaults.TextScriptFontSize,
+                TextRole.Text, Rendering.FontStyle.Italic);
+            Add(ct.MeasureIndex, ctY - ctTop, ctY - ctBottom);
         }
         // Chord names ride above the staff and rise (ChordNameEngraver skyline) to
         // clear high notes; their REAL text top must join the system up-extent or a
@@ -934,15 +946,52 @@ internal sealed partial class LayoutEngine
                 // This site said 2.0 Bold, which over-reserved a short "rit." by 0.102429921
                 // and a "molto espressivo" by 1.024299213 staff spaces — the harmless
                 // direction, but still a box around a string nobody draws.
-                double halfW =
+                // THE BOX STARTS AT THE PEN ORIGIN, because that is where the draw
+                // starts: DrawCustomTexts writes START-anchored at ct.X, and the ledger's
+                // textscript.x.pen-to-notehead-left reads that origin ON the anchor
+                // column to fifteen digits. ⚠️ IT WAS CENTRED on the origin until
+                // 2026-08-28 — [ct.X − advance/2, ct.X + advance/2] — i.e. half an
+                // advance (6.04 staff spaces in the observer book) left of the ink, which
+                // charged a previous system for text that was not over it and let real
+                // text through where it was: MEASURED as a SIGN FLIP on one shift
+                // (ledger page.custom-text.x.left-of-ink.gap-first +1.494000 against
+                // LilyPond's exact no-text control, and page.custom-text.x.under-ink
+                // −0.068845 where only the box's 45° flank survived). The same move the
+                // mark arm's X made in session 204 (MusicMarkEngraver.MarkXExtent).
+                double advance =
                     fonts.Advance(ct.Text, EngravingDefaults.TextScriptFontSize, TextRole.Text,
-                        Rendering.FontStyle.Italic) / 2 + 0.2;
-                // YUp is Y-up; the skyline is Y-up too. Translate to the top staff's frame.
-                // ⚠️ ONE STEP ONLY — right exactly when the system opens on a staff (the
-                // mark arm above took ScoreGrobStaffTopUp as its first step on 2026-08-25;
-                // this arm and the dynamics arm still assume the staff is the origin).
-                double ctY = ct.YUp - EngravingDefaults.StaffMiddle;
-                AddMarkBox(ct.MeasureIndex, ct.X - halfW, ct.X + halfW, ctY + 1.8, ctY - 0.6);
+                        Rendering.FontStyle.Italic);
+                // The system this text's box belongs to — resolved HERE, not only inside
+                // AddMarkBox, because the box's own vertical frame is that system's (the
+                // mark arm above makes the same move).
+                if (!measureToSystem.TryGetValue(ct.MeasureIndex, out int cs))
+                    continue;
+                // YUp is Y-up above the RESOLVED STAFF'S MIDDLE; the skyline is Y-up from
+                // the SYSTEM ORIGIN. Two steps, not one — down to that staff's top line
+                // (ScoreGrobStaffTopUp) and the half staff from the top line to the middle
+                // — the mark arm's 2026-08-25 shape.
+                // ⚠️ THE SECOND STEP ALONE WAS THE WHOLE TRANSLATION UNTIL 2026-08-28, and
+                // it is right exactly when the system opens on a staff. A chord row leading
+                // the system moves the origin above the staff and the text's box floated up
+                // with it: MEASURED on book CTW (ledger
+                // page.custom-text.leading-row.gap-first), whose pair gap read 14.342093
+                // against LilyPond's 12.570929 — and the whole Lily#-side excess 2.342093
+                // died when this translation went two-step, every other custom-text book
+                // standing still. The remaining −0.570929 on that entry is LilyPond's
+                // loose-line redistribution (the subsystem Lily# deliberately lacks — see
+                // LayoutUtilities.InterSystemPairMinimum remark ②), not this frame.
+                double ctY = ScoreGrobStaffTopUp(cs, ct.StaffIndex) + ct.YUp
+                    - EngravingDefaults.StaffMiddle;
+                // The VERTICAL pair is the string's own ink about its baseline — the same
+                // one house the Enrich arm above now reads and the draw draws (see its
+                // remark for what the scalar [1.8/0.6] was and what it cost). The ledger
+                // holds the two arms apart: the page anchors answer to Enrich, these gaps
+                // to this box (page.custom-text.gap.*, +0.765955 / +0.211526 before this
+                // change, each separated from the other arm by a ±0.03 poison).
+                var (ctBottom, ctTop) = fonts.Ink(ct.Text, EngravingDefaults.TextScriptFontSize,
+                    TextRole.Text, Rendering.FontStyle.Italic);
+                AddMarkBox(ct.MeasureIndex, ct.X - 0.2, ct.X + advance + 0.2,
+                    ctY + ctTop, ctY + ctBottom);
             }
         }
         // Inline chord symbols: their scalar height joins the up-extents, but
@@ -984,10 +1033,25 @@ internal sealed partial class LayoutEngine
             {
                 double halfW = DynamicEngraver.LabelHalfWidth(fonts, d.Text, d.IsExpressiveText);
                 var (dAscent, dDescent) = DynamicEngraver.InkOf(d.Text, d.IsExpressiveText);
-                // d.YUp is Y-up above the staff middle; the skyline frame is the system top,
-                // i.e. StaffMiddle higher — the same one-step translation the custom-text
-                // arm makes (and the same top-staff-at-origin assumption; see its ⚠️).
-                double dY = d.YUp - EngravingDefaults.StaffMiddle;
+                // The system this dynamic's box belongs to — same resolution as the mark
+                // and custom-text arms above.
+                if (!measureToSystem.TryGetValue(d.MeasureIndex, out int ds))
+                    continue;
+                // d.YUp is Y-up above ITS OWN staff's middle; the skyline is Y-up from the
+                // SYSTEM ORIGIN. Two steps — down to that staff's top line
+                // (ScoreGrobStaffTopUp, which also carries a LOWER staff's offset) and the
+                // half staff from the top line to the middle — the mark arm's 2026-08-25
+                // shape.
+                // ⚠️ THE SECOND STEP ALONE STOOD HERE UNTIL 2026-08-28, which was wrong in
+                // two regimes at once: a chord row leading the system floated the box up
+                // with the origin — MEASURED on book DYW (ledger
+                // page.dynamics.leading-row.gap-first), where the below-staff \pp rose OUT
+                // of the down silhouette and the pair gap under it read 13.090000 for
+                // LilyPond's 15.442035, the COLLISION direction — and a lower staff's
+                // dynamic was priced in the TOP staff's frame (no book bound on that half
+                // before this fix; the sweep is its record).
+                double dY = ScoreGrobStaffTopUp(ds, d.StaffIndex) + d.YUp
+                    - EngravingDefaults.StaffMiddle;
                 AddMarkBox(d.MeasureIndex, d.X - halfW, d.X + halfW, dY + dAscent, dY - dDescent);
             }
         }
