@@ -3048,7 +3048,7 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
 
 #### ⚠️ 自動で止まるものは 1 つだけ（2026-08-21 読解 → **2026-08-27・第266 が門を建てた**）
 
-★ **`LilySharp.Tests/KeystrokeFloorGateTests.cs`（`4ad4a609`）＝下の「設計」の門が実装済み**——
+★ **`LilySharp.Tests/KeystrokeFloorGateTests.cs`（`015be415`）＝下の「設計」の門が実装済み**——
 PreviewUpdateBench 棚 9 冊の**無変更打鍵床（2 warmup 後 5 round の最小）に 1500 ms の片側上限**。
 **母集団**（§5.5「門は何の母集団か」）: **Release のみ**（Debug は値付けしていない母集団＝素通り。
 CI の Release 2 脚が門を通す）・上限は **coverage 計装込みの実測**に対して置いた（下の数字）。
@@ -3101,7 +3101,7 @@ fingslur300 の keystroke 床  258.4 ms   ← 当時の最悪ケース
 置いていたら CI で常時赤＝「無視される赤」（無いより悪い）になっていた。**門の上限は、
 その門が実際に走る母集団の実測に対して置く**（§5.5）。
 
-#### 設計（**第266・`4ad4a609` `KeystrokeFloorGateTests` で実装済み**）
+#### 設計（**第266・`015be415` `KeystrokeFloorGateTests` で実装済み**）
 
 **細かい A/B は今のまま手動でよい。** 足したのは**桁でしか落ちない門**ひとつ:
 
