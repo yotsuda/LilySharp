@@ -105,62 +105,54 @@ public class SystemGapStaffFrameTests
     }
 
     /// <summary>
-    /// …and the floor is a FLOOR. Where the systems' silhouettes really do face each other —
-    /// the later pairs, whose upper system has no indent — the skyline still decides, above it.
+    /// …and the later pairs — whose upper system has no indent, so the silhouettes really do
+    /// face each other — read the SAME floor, because the label's drawn box fits under it.
+    /// That is LilyPond's own answer for this shape: the SIFO probes read a flat 12.000000
+    /// refpoint-to-refpoint on every pair, and only the tall-mark books (SIF1–SIF3, no Lily#
+    /// spelling) read anything else (21.434270).
     /// </summary>
     /// <remarks>
-    /// ⚠️ THIS ARM IS THE ONE THAT GOES RED FOR THE OPPOSITE MISTAKE. Flooring hard enough to
-    /// fix the report is easy; flooring so hard that every pair becomes the constant 8.000000
-    /// is a different bug with the same green. The two later pairs are 8.570000 and 8.200000
-    /// and they differ from EACH OTHER, which no constant can produce.
+    /// ⚠️ UNTIL 2026-08-27 THIS ARM ASSERTED THE OPPOSITE — "above the floor and unequal
+    /// (8.570000 / 8.200000)" — and those numbers were not a silhouette deciding: they were
+    /// the paging reservation's flat mark envelope carrying 0.800000 of air over the drawn
+    /// box (the ledger's lyrics.chord-row.marked.*.gap-second +0.241073 island, and
+    /// system.indent-floor.one-staff's +0.200000). The arm had pinned Lily#'s divergence
+    /// from LilyPond as if it were the mechanism. The opposite mistake — flooring so hard
+    /// the skyline stops deciding — is watched by the ledger's above-floor pairs
+    /// (system.tuplet-bracket-*/slur-*/tie-*/beam-* at 13.1–13.8), which a clamp-to-basic
+    /// poison turns red while every arm here stays green.
     /// </remarks>
     [Fact]
-    public void TheLaterPairs_AreStillDecidedByTheirSkylines()
+    public void TheLaterPairs_ReadTheSameFloor_TheDrawnBoxFitsUnderIt()
     {
         var gaps = StaffLineGeometry.Gaps(Render(2));
-        double second = gaps[3], third = gaps[5];
-        Assert.True(second > LilyPondFloor,
-            $"the second system pair fell to the floor ({second:F3})");
-        Assert.True(third > LilyPondFloor,
-            $"the third system pair fell to the floor ({third:F3})");
-        Assert.True(System.Math.Abs(second - third) > 1e-3,
-            $"both later pairs read {second:F3} — a constant, not a silhouette");
+        Assert.Equal(LilyPondFloor, gaps[3], 6);
+        Assert.Equal(LilyPondFloor, gaps[5], 6);
     }
 
     /// <summary>
-    /// CONTROL: a one-staff score is untouched. Its body is four staff spaces, so the origin
-    /// frame and the staff frame coincide and the conversion is the identity — which is
-    /// exactly why the corpus never caught the defect, and why this arm pins it.
+    /// CONTROL: a one-staff score. Its body is four staff spaces, so the origin frame and
+    /// the staff frame coincide and the conversion is the identity — which is exactly why
+    /// the corpus never caught the frame defect, and why this arm pins the frame's identity
+    /// case. Every pair reads the floor: LilyPond's ledgered answer for this book is a flat
+    /// 12.000000 (system.indent-floor.one-staff, exact since 2026-08-27).
     /// </summary>
     /// <remarks>
-    /// ⚠️ IT CAN GO RED, AND NOT ON THE POISON YOU WOULD REACH FOR FIRST (HANDOFF bone 2 — an
-    /// arm that cannot go red is not a control). MEASURED, all three poisons:
-    /// <list type="bullet">
-    /// <item>revert the conversion → arms 1 and 2 red, this one GREEN;</item>
-    /// <item>shift the conversion by 0.5 → arms 1 and 2 red, this one GREEN;</item>
-    /// <item>clamp every pair to basic-distance → this one and
-    ///   <see cref="TheLaterPairs_AreStillDecidedByTheirSkylines"/> red, arms 1 and 2 GREEN.</item>
-    /// </list>
-    /// The first two cannot reach it and that is a FACT ABOUT THE FIX, not a weakness: with one
-    /// staff <c>ToLast</c> and <c>ToFirst</c> are the same offset, so the conversion is
-    /// identically zero and no edit to it can move this book by any amount. What this arm
-    /// watches is the opposite mistake — flooring hard enough to fix the report is easy, and
-    /// flooring so hard that the skyline stops deciding is a different bug with the same green.
-    /// ⚠️ The two poisons' red sets are DISJOINT, which is what says the two claims are
-    /// independent rather than one claim written twice.
-    /// It asserts the SHAPE — both pairs above the floor and unequal — rather than two
-    /// literals, because the numbers come from the mark and bar-number metrics and a text
-    /// metric is not a constant across platforms.
+    /// ⚠️ UNTIL 2026-08-27 THIS ARM ASSERTED "above the floor and unequal", and what stood
+    /// above the floor was not a silhouette: it was the paging reservation's flat mark
+    /// envelope carrying 0.800000 of air over the label's drawn box, i.e. the divergence
+    /// the ledger recorded as system.indent-floor.one-staff +0.200000 ("it closes when
+    /// that excess does" — it did). The frame poisons (revert / shift the conversion)
+    /// still cannot reach this book — with one staff <c>ToLast</c> and <c>ToFirst</c> are
+    /// the same offset — and the clamp-to-basic poison is watched by the ledger's
+    /// above-floor pairs (system.tuplet-bracket-*/slur-*/tie-*/beam-*), not here.
     /// </remarks>
     [Fact]
-    public void ASingleStaffScore_IsDecidedByItsSkylineAtEveryPair()
+    public void ASingleStaffScore_ReadsTheFloorAtEveryPair()
     {
         var gaps = StaffLineGeometry.Gaps(Render(1));
         Assert.Equal(3, gaps.Count);
         foreach (var g in gaps)
-            Assert.True(g > LilyPondFloor,
-                $"a one-staff pair fell to the floor ({g:F3}); this score never reached it");
-        Assert.True(gaps.Distinct().Count() > 1,
-            "every one-staff pair reads the same number — the skyline stopped deciding");
+            Assert.Equal(LilyPondFloor, g, 6);
     }
 }

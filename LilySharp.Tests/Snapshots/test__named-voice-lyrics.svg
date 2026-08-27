@@ -1,58 +1,58 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="341.1" viewBox="0 0 119.50 34.11" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="333.1" viewBox="0 0 119.50 33.31" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="34.11" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="33.31" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="491">Named Voices</text>
   <text x="110.97" y="9.18" font-size="2.20" font-style="italic" text-anchor="end" data-pos="515">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="16.32" x2="36.79" y2="16.32" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.32" x2="36.79" y2="17.32" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="18.32" x2="36.79" y2="18.32" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="19.32" x2="36.79" y2="19.32" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="20.32" x2="36.79" y2="20.32" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="0.80" y="19.32" font-size="4.00" data-pos="560"></text>
-  <text class="music" x="4.88" y="18.32" font-size="4.00" data-pos="529"></text>
-  <text class="music" x="8.93" y="17.82" font-size="4.00" data-pos="607"></text>
-  <line x1="10.17" y1="17.67" x2="10.17" y2="14.66" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="12.66" y="17.32" font-size="4.00" data-pos="611"></text>
-  <line x1="13.89" y1="17.17" x2="13.89" y2="14.32" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="16.02" y="16.82" font-size="4.00" data-pos="614"></text>
-  <line x1="17.26" y1="16.67" x2="17.26" y2="13.99" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="21.60" y="16.32" font-size="4.00" data-pos="617"></text>
-  <line x1="22.84" y1="16.17" x2="22.84" y2="13.66" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="27.17" y="15.82" font-size="4.00" data-pos="622"></text>
-  <line x1="28.48" y1="15.82" x2="28.48" y2="13.32" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="32.40" y="16.82" font-size="4.00" data-pos="626"></text>
-  <line x1="33.71" y1="16.82" x2="33.71" y2="13.99" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="8.93" y="20.32" font-size="4.00" data-pos="643"></text>
-  <line x1="8.99" y1="20.32" x2="8.99" y2="22.99" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="16.02" y="19.82" font-size="4.00" data-pos="647"></text>
-  <line x1="16.09" y1="19.97" x2="16.09" y2="22.66" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="21.60" y="19.32" font-size="4.00" data-pos="650"></text>
-  <line x1="21.66" y1="19.47" x2="21.66" y2="22.32" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="27.17" y="17.82" font-size="4.00" data-pos="658"></text>
-  <line x1="27.23" y1="17.82" x2="27.23" y2="21.32" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="32.40" y="17.82" font-size="4.00" data-pos="662"></text>
-  <line x1="32.46" y1="17.82" x2="32.46" y2="21.32" stroke="#000000" stroke-width="0.130"/>
-  <rect x="25.66" y="16.32" width="0.19" height="4.00" data-pos="620"/>
-  <rect x="36.60" y="16.32" width="0.19" height="4.00" data-pos="629"/>
-  <text x="9.58" y="25.12" font-size="2.47" text-anchor="middle" data-pos="689">Sing</text>
-  <text x="13.31" y="25.12" font-size="2.47" text-anchor="middle" data-pos="694">a</text>
-  <text x="16.68" y="25.12" font-size="2.47" text-anchor="middle" data-pos="696">love</text>
-  <text x="22.25" y="25.12" font-size="2.47" text-anchor="middle" data-pos="701">song</text>
-  <text x="27.85" y="25.12" font-size="2.47" text-anchor="middle" data-pos="708">soft</text>
-  <text x="33.08" y="25.12" font-size="2.47" text-anchor="middle" data-pos="713">now</text>
-  <text x="9.62" y="27.92" font-size="2.47" text-anchor="middle" data-pos="736">Low</text>
-  <text x="16.68" y="27.92" font-size="2.47" text-anchor="middle" data-pos="740">part</text>
-  <text x="22.25" y="27.92" font-size="2.47" text-anchor="middle" data-pos="745">deep</text>
-  <text x="27.85" y="27.92" font-size="2.47" text-anchor="middle" data-pos="754">slow</text>
-  <text x="33.08" y="27.92" font-size="2.47" text-anchor="middle" data-pos="759">now</text>
-  <text x="2.58" y="25.12" font-size="2.40" font-weight="bold">1.</text>
-  <text x="2.58" y="27.92" font-size="2.40" font-weight="bold">2.</text>
-  <rect x="0.30" y="11.46" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="570"/>
-  <text x="3.40" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="570">Main</text>
+  <line x1="0.00" y1="15.52" x2="36.79" y2="15.52" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.52" x2="36.79" y2="16.52" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.52" x2="36.79" y2="17.52" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="18.52" x2="36.79" y2="18.52" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="19.52" x2="36.79" y2="19.52" stroke="#000000" stroke-width="0.100"/>
+  <text class="music" x="0.80" y="18.52" font-size="4.00" data-pos="560"></text>
+  <text class="music" x="4.88" y="17.52" font-size="4.00" data-pos="529"></text>
+  <text class="music" x="8.93" y="17.02" font-size="4.00" data-pos="607"></text>
+  <line x1="10.17" y1="16.87" x2="10.17" y2="13.86" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="12.66" y="16.52" font-size="4.00" data-pos="611"></text>
+  <line x1="13.89" y1="16.37" x2="13.89" y2="13.52" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="16.02" y="16.02" font-size="4.00" data-pos="614"></text>
+  <line x1="17.26" y1="15.87" x2="17.26" y2="13.19" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="21.60" y="15.52" font-size="4.00" data-pos="617"></text>
+  <line x1="22.84" y1="15.37" x2="22.84" y2="12.86" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="27.17" y="15.02" font-size="4.00" data-pos="622"></text>
+  <line x1="28.48" y1="15.02" x2="28.48" y2="12.52" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="32.40" y="16.02" font-size="4.00" data-pos="626"></text>
+  <line x1="33.71" y1="16.02" x2="33.71" y2="13.19" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="8.93" y="19.52" font-size="4.00" data-pos="643"></text>
+  <line x1="8.99" y1="19.52" x2="8.99" y2="22.19" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="16.02" y="19.02" font-size="4.00" data-pos="647"></text>
+  <line x1="16.09" y1="19.17" x2="16.09" y2="21.86" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="21.60" y="18.52" font-size="4.00" data-pos="650"></text>
+  <line x1="21.66" y1="18.67" x2="21.66" y2="21.52" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="27.17" y="17.02" font-size="4.00" data-pos="658"></text>
+  <line x1="27.23" y1="17.02" x2="27.23" y2="20.52" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="32.40" y="17.02" font-size="4.00" data-pos="662"></text>
+  <line x1="32.46" y1="17.02" x2="32.46" y2="20.52" stroke="#000000" stroke-width="0.130"/>
+  <rect x="25.66" y="15.52" width="0.19" height="4.00" data-pos="620"/>
+  <rect x="36.60" y="15.52" width="0.19" height="4.00" data-pos="629"/>
+  <text x="9.58" y="24.32" font-size="2.47" text-anchor="middle" data-pos="689">Sing</text>
+  <text x="13.31" y="24.32" font-size="2.47" text-anchor="middle" data-pos="694">a</text>
+  <text x="16.68" y="24.32" font-size="2.47" text-anchor="middle" data-pos="696">love</text>
+  <text x="22.25" y="24.32" font-size="2.47" text-anchor="middle" data-pos="701">song</text>
+  <text x="27.85" y="24.32" font-size="2.47" text-anchor="middle" data-pos="708">soft</text>
+  <text x="33.08" y="24.32" font-size="2.47" text-anchor="middle" data-pos="713">now</text>
+  <text x="9.62" y="27.12" font-size="2.47" text-anchor="middle" data-pos="736">Low</text>
+  <text x="16.68" y="27.12" font-size="2.47" text-anchor="middle" data-pos="740">part</text>
+  <text x="22.25" y="27.12" font-size="2.47" text-anchor="middle" data-pos="745">deep</text>
+  <text x="27.85" y="27.12" font-size="2.47" text-anchor="middle" data-pos="754">slow</text>
+  <text x="33.08" y="27.12" font-size="2.47" text-anchor="middle" data-pos="759">now</text>
+  <text x="2.58" y="24.32" font-size="2.40" font-weight="bold">1.</text>
+  <text x="2.58" y="27.12" font-size="2.40" font-weight="bold">2.</text>
+  <rect x="0.30" y="10.66" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="570"/>
+  <text x="3.40" y="12.86" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="570">Main</text>
   </g>
 </svg>

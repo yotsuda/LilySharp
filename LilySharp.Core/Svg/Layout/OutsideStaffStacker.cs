@@ -2411,7 +2411,16 @@ internal static class OutsideStaffStacker
     /// feel-equation drawn to its right (otherwise a beam/fermata sitting under
     /// the swing symbol is invisible to the stacker and the mark prints on it).
     /// </summary>
-    private static (double X0, double X1, double Top, double Bottom) MusicMarkExtents(
+    /// <remarks>
+    /// ⚠️ internal because <c>LayoutEngine.AugmentSkylinesForPaging</c> reserves the
+    /// SAME mark in the system silhouette the page spaces by, and until 2026-08-27 it
+    /// priced every type with a flat <c>[mY − 0.7, mY + 2.1]</c> envelope instead —
+    /// 0.8 of air over a boxed label's drawn top, which is exactly the ledger's
+    /// <c>lyrics.chord-row.marked.*.gap-second</c> +0.241073 (the amount the padded
+    /// term then pokes over the basic-distance floor). One description, two pricers:
+    /// the stacker and the page must read the same box or they drift apart again.
+    /// </remarks>
+    internal static (double X0, double X1, double Top, double Bottom) MusicMarkExtents(
         ScoreTextMetrics fonts, MusicMarkLayout m)
     {
         const double fontSize = 4.0; // renderer FontSize

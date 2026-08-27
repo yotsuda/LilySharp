@@ -249,7 +249,18 @@ internal sealed partial class LayoutEngine
             if (!measureToSystem.TryGetValue(m.MeasureIndex, out int ms))
                 continue;
             double mY = MiddleAt(ms) - m.YUp;
-            Add(m.MeasureIndex, mY - 2.1, mY + 0.7);
+            // The drawn ink's own envelope, from the one description the stacker and the
+            // paging silhouette price the same mark by (mirroring DrawSingleMusicMark) —
+            // NOT a flat [mY − 2.1, mY + 0.7]. That envelope stood here until 2026-08-27,
+            // 0.8 of air over a boxed label's drawn top, and this scalar prices the FIRST
+            // system's Y (CalculateFirstSystemY) and the page breaker's line heights, so
+            // a marked first system opened 0.8 too low. The referee that measured it —
+            // and this arm's falsifier — is page.section-label.first-staff-refpoint
+            // (+0.822688 under the envelope, +0.022688 with the drawn box; the remaining
+            // 0.022688 is the DRAW's own top against LilyPond's stencil, a different
+            // island).
+            var (_, _, emTop, emBottom) = OutsideStaffStacker.MusicMarkExtents(fonts, m);
+            Add(m.MeasureIndex, mY - emTop, mY + emBottom);
         }
         foreach (var ct in ann.CustomTexts)
         {
@@ -850,7 +861,7 @@ internal sealed partial class LayoutEngine
                 if (!measureToSystem.TryGetValue(m.MeasureIndex, out int ms)
                     || ms >= systems.Length)
                     continue;
-                // Same vertical envelope Enrich uses; the WIDTH is the mark's own extent,
+                // The WIDTH is the mark's own extent,
                 // read from the one home — MusicMarkEngraver.MarkXExtent, which answers per
                 // TYPE: the metronome mark's laid-out ink (left-anchored), a boxed label's
                 // string at its own boxed size and weight plus LilyPond's markup box
@@ -892,7 +903,18 @@ internal sealed partial class LayoutEngine
                 // with no row against 16.188166 with one (lyrics.chord-row.marked.*).
                 double mY = ScoreGrobStaffTopUp(ms, m.StaffIndex) + m.YUp
                     - EngravingDefaults.StaffMiddle;
-                AddMarkBox(m.MeasureIndex, mx0 - margin, mx1 + margin, mY + 2.1, mY - 0.7);
+                // The VERTICAL envelope is the drawn ink's, from the one description the
+                // stacker prices the same mark by (mirroring DrawSingleMusicMark) — NOT a
+                // flat [mY − 0.7, mY + 2.1]. That envelope stood here until 2026-08-27 and
+                // put 0.8 of air over a boxed label's drawn top; the padded skyline term
+                // then poked 0.241073 over the basic-distance floor on every marked
+                // interior pair (ledger lyrics.chord-row.marked.*.gap-second, all five).
+                // LilyPond has no envelope to port: what joins its system skyline is the
+                // grob's own stencil skyline (lily/axis-group-interface.cc:359-474), so the
+                // port is to stop having one. The X half made this same move in session 204
+                // (MarkXExtent); this is the Y half.
+                var (_, _, mTop, mBottom) = OutsideStaffStacker.MusicMarkExtents(fonts, m);
+                AddMarkBox(m.MeasureIndex, mx0 - margin, mx1 + margin, mY + mTop, mY - mBottom);
             }
         }
         if (!customTexts.IsDefaultOrEmpty)

@@ -2451,6 +2451,19 @@ internal static class LpGeometryProbes
         ChordRowAlternatingScore("ROWMZ", Rows.AlternatingEmpty, marks: true);
 
     /// <summary>
+    /// ROWMN WITH THE MARKS TAKEN OUT — the TOP-SPRING control (session 270). Same two
+    /// staves, syllables, indent and paper; the pair it forms with ROWMN reads what each
+    /// engine charges the SECTION LABEL against the top of the page, a quantity the
+    /// gap-second family cannot see (a gap is a pair quantity, the top spring is not).
+    /// It is the observer the scalar mark estimate — EnrichExtentsWithAnnotationProtrusions'
+    /// flat [mY − 0.7, mY + 2.1] envelope, left in place when the silhouette side took the
+    /// drawn-box read — was waiting for. See page.section-label.first-staff-refpoint's why
+    /// for the measured decomposition.
+    /// </summary>
+    private static readonly string ROWNN =
+        ChordRowAlternatingScore("ROWNN", Rows.None, marks: false);
+
+    /// <summary>
     /// LYRB WITH A CHORD ROW ADDED — the mirror of book LYRCH, and the control for the last
     /// branch of the loose chain Lily# still lays out at force 0.
     /// </summary>
@@ -11891,6 +11904,21 @@ internal static class LpGeometryProbes
         new("lyrics.chord-row.marked.empty-row.gap-second", ROWMZ,
             g => g.StaffGapAt(3), FourSystemsPerPageRagged),
         new("lyrics.chord-row.marked.empty-row.staves-on-first-page", ROWMZ,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+
+        // THE TOP SPRING'S HALF OF THE MARK STORY (session 270) — what each engine charges
+        // the section label against the top of the page. The control (ROWNN, no marks) is
+        // EXACT, so the marked reading's whole residual is the mark's own top charge; the
+        // entry's why carries the decomposition (0.800000 scalar-envelope air + 0.022688
+        // drawn-box-vs-stencil). The pair is the referee the Enrich mark arm's fold waits
+        // for — see EnrichExtentsWithAnnotationProtrusions' mark-arm remark.
+        new("page.section-label.first-staff-refpoint", ROWMN,
+            g => g.FirstStaffRefpoint(), FourSystemsPerPageRagged),
+        new("page.section-label.control.first-staff-refpoint", ROWNN,
+            g => g.FirstStaffRefpoint(), FourSystemsPerPageRagged),
+        // ...and the count, because a refpoint reading on the wrong pagination would
+        // compare different pages (HANDOFF 5.0 trap 8).
+        new("page.section-label.control.staves-on-first-page", ROWNN,
             g => g.StavesOnPage(0), FourSystemsPerPageRagged),
 
         // THE OSSIA HALF, chain reading only — the inside distance is not like-for-like

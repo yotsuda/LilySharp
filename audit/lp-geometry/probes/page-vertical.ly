@@ -3383,6 +3383,36 @@ probeTag =
   }
 }
 
+%% ROWNN — THE TOP-SPRING CONTROL (2026-08-27, session 270).  ROWMN with the marks taken
+%%     out and NOTHING else changed: same two staves, same 48 syllables, same indent,
+%%     instrument names and paper.  It exists for the FIRST-STAFF-REFPOINT pair, not for
+%%     the gaps: ROWMN's first system's tallest element above its top staff is the boxed
+%%     label, so first-staff-refpoint(ROWMN) - first-staff-refpoint(ROWNN) is what the
+%%     engine charges the MARK against the top of the page — the reading the gap-second
+%%     family cannot take, because a gap is a PAIR quantity and the top spring is not.
+%%     WHY IT IS NEEDED: on the Lily# side the silhouette's mark reservation reads the
+%%     drawn box since session 270, but the FIRST system's Y is priced by a separate
+%%     SCALAR estimate (EnrichExtentsWithAnnotationProtrusions' mark arm, still the flat
+%%     [mY - 0.7, mY + 2.1] envelope, 0.800000 over a boxed label's drawn top) — that arm
+%%     was left unchanged precisely because no LP point refereed it.  This pair is that
+%%     referee.
+\book {
+  \probeTag "ROWNN"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new Staff \with { instrumentName = "Melody" } { \new Voice = "mel" {
+        \repeat unfold 4 { g'4 a' g' a' } \break
+        \repeat unfold 4 { g'4 a' g' a' } \break
+        \repeat unfold 4 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 48 { no } }
+      \new Staff \with { instrumentName = "Lower" } {
+        \repeat unfold 12 { g'4 a' g' a' } }
+    >>
+    \layout { indent = 15\mm }
+  }
+}
+
 %% ROWMA — THE THIRD READING: the mark with the chord row on EVERY system.  Lily# gives this
 %%     the SAME 16.188166 as ROWM, which is the reading that refutes "no row -> row".  It is
 %%     carried so that LilyPond's answer to the alternation question is in the tree too.
