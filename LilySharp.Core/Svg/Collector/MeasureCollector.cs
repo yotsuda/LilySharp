@@ -433,9 +433,17 @@ public sealed partial class MeasureCollector
     /// so BeamId numbering (and with it the resolved model) is byte-identical to a
     /// memo-free collect — see <see cref="BeamDetector"/>'s memo remarks.</summary>
     internal BeamDetectionMemo? BeamMemo { get; set; }
+
+    /// <summary>The session's resume channels for this collector's NESTED collects
+    /// (finding 3-5: the omitted-structure harvest and the sung-melody collect used
+    /// to run a complete fresh collect per keystroke, outside the resume machinery).
+    /// Null outside the incremental session — the nested sites then construct the
+    /// historical fresh collector, so the CLI path is untouched.</summary>
+    internal NestedCollectResume? NestedResume { get; set; }
     private int _walkOrdinal;                        // Nth CollectMeasures call of this collect
     private int _invocationInSection;                // ProcessNodes calls within the current section (or the walk, pre-section)
     private int _sectionVisit;                       // ProcessSection entries within the current walk
+    private int _formRepeatDepth;                    // > 0 inside a `|: … :|` form repeat block — no checkpoint/splice there (finding 3-4)
     private VoiceWalkRecording? _probeRecording;     // record mode: the current walk's recording
     private VoiceResumePlan? _resumePending;         // resume mode: set until the target checkpoint is restored
     private int _sectionStartMeasureForResume;       // mirror of ProcessSection's startMeasure local, for capture
@@ -1172,12 +1180,14 @@ public sealed partial class MeasureCollector
 
         // Isolated pass: draw ONLY the omitted parts against the SAME form, so their structure
         // lands on the same bar indices this score uses. A fresh collector keeps its state
-        // separate, and the inner call skips the harvest so it can't recurse.
+        // separate, and the inner call skips the harvest so it can't recurse. In the
+        // incremental session the pass rides the "harvest" resume channel (finding 3-5)
+        // instead of walking the omitted parts' whole book per keystroke.
         var items = omitted
             .Select(n => (RenderItemSpec)new SingleStaffSpec(new StaffSpec(ClefType.Treble, n)))
             .ToImmutableArray();
         MultiStaffScore harvested;
-        try { harvested = new MeasureCollector().CollectMultiStaff(tree, renderSpec with { Items = items }, harvestStructureMarks: false); }
+        try { harvested = CollectNested("harvest", tree, renderSpec with { Items = items }, harvestStructureMarks: false); }
         catch { return System.Array.Empty<Voice>(); } // a harvest failure must never break the render
 
         foreach (var mark in harvested.MusicMarks)
@@ -1201,6 +1211,43 @@ public sealed partial class MeasureCollector
         }
 
         return harvested.StaffGroups.SelectMany(g => g.Staves).SelectMany(s => s.Voices).ToList();
+    }
+
+    /// <summary>Runs one NESTED collect (finding 3-5): in the incremental session it
+    /// rides the named resume channel — a planned resume adopts the channel baseline's
+    /// unchanged prefix, a full run re-records the channel — and without a session it
+    /// is exactly the historical fresh-collector call. THE ABORT CONTRACT: a resumed
+    /// nested collect that bails on structural drift falls back to a FULL nested
+    /// collect here, before any caller's catch-all can turn the bail into an empty
+    /// result (an empty harvest would silently drop the score's repeat barlines).</summary>
+    private MultiStaffScore CollectNested(string channelKey, SyntaxTree tree, RenderSpec spec,
+        bool harvestStructureMarks, bool blankMeter = false)
+    {
+        MultiStaffScore Finish(MultiStaffScore s) => blankMeter ? MeterStencil.Blank(s) : s;
+
+        if (NestedResume?.Begin(channelKey) is not { } begun)
+            return Finish(new MeasureCollector { BeamMemo = BeamMemo }
+                .CollectMultiStaff(tree, spec, harvestStructureMarks));
+
+        if (begun.IsResume)
+        {
+            try
+            {
+                return Finish(new MeasureCollector { WalkProbe = begun.Probe, BeamMemo = BeamMemo }
+                    .CollectMultiStaff(tree, spec, harvestStructureMarks));
+            }
+            catch (CollectResumeAbortException)
+            {
+                // Structural drift the plan-time guards could not see: run full below
+                // (which also re-records the channel's baseline).
+            }
+            begun = (CollectWalkProbe.Recorder(), false);
+        }
+
+        var sub = new MeasureCollector { WalkProbe = begun.Probe, BeamMemo = BeamMemo };
+        var result = sub.CollectMultiStaff(tree, spec, harvestStructureMarks);
+        NestedResume!.Complete(channelKey, begun.Probe, sub);
+        return Finish(result);
     }
 
     /// <summary>True when <paramref name="partName"/> writes score-level structure (a navigation
@@ -1433,8 +1480,9 @@ public sealed partial class MeasureCollector
     /// way a staff of it would be - a fresh sub-collector over a one-staff spec of
     /// the SAME form, so bar indexing and section starts line up and none of this
     /// collector's side collections (dynamics, articulations, marks) pick up the
-    /// melody's. Used by a melody-bound lyrics row.</summary>
-    private static ImmutableArray<Measure> CollectMelodyFor(SyntaxTree tree, RenderSpec renderSpec, string partName)
+    /// melody's. Used by a melody-bound lyrics row. In the incremental session the
+    /// sub-collect rides its own per-part resume channel (finding 3-5).</summary>
+    private ImmutableArray<Measure> CollectMelodyFor(SyntaxTree tree, RenderSpec renderSpec, string partName)
     {
         var (partClef, _, _, _, _, _) = GetPartDefaults(tree.GetRoot(), partName);
         var spec = renderSpec with
@@ -1444,7 +1492,10 @@ public sealed partial class MeasureCollector
         };
         try
         {
-            var sub = new MeasureCollector().CollectMultiStaff(tree, spec);
+            // The public CollectMultiStaff's exact behavior (harvest on, meter blanked),
+            // through the channel.
+            var sub = CollectNested("melody:" + partName, tree, spec,
+                harvestStructureMarks: true, blankMeter: true);
             foreach (var group in sub.StaffGroups)
                 foreach (var st in group.Staves)
                     if (st.Voices.Length > 0)
@@ -1691,6 +1742,9 @@ public sealed partial class MeasureCollector
         _pendingInlineVoltas.Clear();
         _parallelSpans.Clear();
         _walkHeaderReads.Clear();
+        _resolvedSpellingLog.Clear();
+        _repetitionOriginalReads.Clear();
+        _formRepeatDepth = 0;
         _phraseTransposeSaves.Clear();
         _phraseDiatonicSaves.Clear();
         _phraseAnchorSaves.Clear();
@@ -1884,6 +1938,9 @@ public sealed partial class MeasureCollector
         _suffixSpliced = false;
         _walkMaxSourceRead = 0;
         _walkHeaderReads.Clear();
+        _resolvedSpellingLog.Clear();
+        _repetitionOriginalReads.Clear();
+        _formRepeatDepth = 0;
         if (WalkProbe is { } probe)
         {
             if (probe.IsRecording)
@@ -2023,6 +2080,7 @@ public sealed partial class MeasureCollector
                 // (state mismatch, window position, unresolvable node) just keeps
                 // the walk live — reuse lost, correctness untouched.
                 if (_suffixTargets is { } targets && builder.AtCleanBoundary
+                    && _formRepeatDepth == 0
                     && targets.TryGetValue(
                         (_sectionVisit - 1, invocation, site.Position), out var spliceTarget)
                     && TrySpliceSuffix(spliceTarget, builder))
@@ -2133,6 +2191,8 @@ public sealed partial class MeasureCollector
             recording.PendingInlineVoltas = new(_pendingInlineVoltas);
             recording.ParallelSpans = new(_parallelSpans);
             recording.HeaderReads = new(_walkHeaderReads);
+            recording.ResolvedSpellings = new(_resolvedSpellingLog);
+            recording.RepetitionOriginalReads = new(_repetitionOriginalReads);
             _probeRecording = null;
         }
 

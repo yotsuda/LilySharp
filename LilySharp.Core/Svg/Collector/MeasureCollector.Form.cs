@@ -30,12 +30,28 @@ public sealed partial class MeasureCollector
 {
     private void ProcessRepeatBlock(FormRepeatBlockSyntax repeat, Action<List<GreenSite>> processNodes, MeasureBuilder builder)
     {
-        // Checkpoint/resume: a repeat block's bookkeeping (volta start/end measure
-        // indices, the synthesized barline invocations between sections) reads
-        // builder state a mid-block skip would corrupt, so a walk that crosses one
-        // is not resumable yet. A missed recording only costs reuse.
-        _probeRecording?.MarkIneligible("form-repeat-block");
+        // Checkpoint/resume (finding 3-4): a repeat block's bookkeeping (the volta
+        // start/end pairing below, the synthesized barlines between sections) lives
+        // in locals no checkpoint captures, so no boundary INSIDE the block is a
+        // resume point — the depth counter suppresses capture and splice there
+        // (TryCaptureWalkCheckpoint / the splice-attempt gate). Boundaries before
+        // and after the block resume normally: everything the block emitted is in
+        // the watermarked tables and measures. This replaces the old wholesale
+        // "form-repeat-block" walk ineligibility, which zeroed reuse for every
+        // band book with a `|: … :|` in its form.
+        _formRepeatDepth++;
+        try
+        {
+            ProcessRepeatBlockCore(repeat, processNodes, builder);
+        }
+        finally
+        {
+            _formRepeatDepth--;
+        }
+    }
 
+    private void ProcessRepeatBlockCore(FormRepeatBlockSyntax repeat, Action<List<GreenSite>> processNodes, MeasureBuilder builder)
+    {
         bool afterRepeatStart = false;
         var pendingVoltaBrackets = new List<(int startMeasure, int endMeasure, string voltaText, bool isClosed, int sourcePosition)>();
 
@@ -67,19 +83,34 @@ public sealed partial class MeasureCollector
             }
             else if (afterRepeatStart)
             {
+                // Resume gates (finding 3-4), mirroring ProcessForm's top-level arms:
+                // during the pre-restore skip (and after a splice) the block's
+                // bookkeeping must not run — RecordSectionStart / the labels would
+                // read a pre-restore (or post-splice) builder, and the volta pairing
+                // below would flush garbage indices into the cumulative table on top
+                // of the adopted entries. ProcessSection is still entered: its own
+                // visit gate does the skipping.
+                bool live = _resumePending == null && !_suffixSpliced;
                 if (child is BreakSyntax brk)
                 {
                     // `break` / `nobreak` inside the repeat flags the section just played.
-                    if (brk.IsNoBreak) builder.SetNoBreak();
-                    else builder.SetBreak();
+                    // Resume: the flag is baked into the adopted measures (both sides).
+                    if (live)
+                    {
+                        if (brk.IsNoBreak) builder.SetNoBreak();
+                        else builder.SetBreak();
+                    }
                 }
                 else if (child is SectionReferenceSyntax reference)
                 {
                     if (_sectionState.Sections.TryGetValue(reference.SectionName, out var section))
                     {
-                        RecordSectionStart(reference.SectionName, builder.CurrentMeasureIndex);
-                        builder.SectionLabel = ResolveSectionLabel(reference);
-                        builder.SectionLabelPosition = SectionDeclPos(reference.SectionName);
+                        if (live)
+                        {
+                            RecordSectionStart(reference.SectionName, builder.CurrentMeasureIndex);
+                            builder.SectionLabel = ResolveSectionLabel(reference);
+                            builder.SectionLabelPosition = SectionDeclPos(reference.SectionName);
+                        }
                         ProcessSection(section, processNodes, builder);
                     }
                 }
@@ -91,9 +122,12 @@ public sealed partial class MeasureCollector
                     // label. The top-level silent-reference case skips in-repeat nodes
                     // (IsInsideRepeatBlock), so without this the section's measures
                     // were dropped entirely, not just its label.
-                    RecordSectionStart(silentName.Text, builder.CurrentMeasureIndex);
-                    builder.SectionLabel = null;
-                    builder.SectionLabelPosition = SectionDeclPos(silentName.Text);
+                    if (live)
+                    {
+                        RecordSectionStart(silentName.Text, builder.CurrentMeasureIndex);
+                        builder.SectionLabel = null;
+                        builder.SectionLabelPosition = SectionDeclPos(silentName.Text);
+                    }
                     ProcessSection(silentSection, processNodes, builder);
                 }
                 else if (child is FormAlternativeSyntax alt)
@@ -103,7 +137,8 @@ public sealed partial class MeasureCollector
                     {
                         // Track measure index before processing this alternative
                         int startMeasureIndex = builder.CurrentMeasureIndex;
-                        RecordSectionStart(altSectionName, startMeasureIndex);
+                        if (live)
+                            RecordSectionStart(altSectionName, startMeasureIndex);
 
                         // `~` BINDS TO THE SECTION NAME, NOT TO THE ENDING — the grammar
                         // spells the ending `'[' Integer '.' ['~'] Identifier [']']`, so the
@@ -120,9 +155,12 @@ public sealed partial class MeasureCollector
                         // always read it this way and FormVoltaWithoutRepeatTests pins it;
                         // so do the two resume arms. This was the ONE page reader of four
                         // that had not been taught.
-                        builder.SectionLabel = alt.IsSilent
-                            ? null : alt.DisplayLabel ?? altSectionName;
-                        builder.SectionLabelPosition = SectionDeclPos(altSectionName);
+                        if (live)
+                        {
+                            builder.SectionLabel = alt.IsSilent
+                                ? null : alt.DisplayLabel ?? altSectionName;
+                            builder.SectionLabelPosition = SectionDeclPos(altSectionName);
+                        }
                         ProcessSection(section, processNodes, builder);
 
                         // Track measure index after processing
@@ -137,7 +175,10 @@ public sealed partial class MeasureCollector
                         // ⚠️ NOT gated on IsSilent — see the label above. Writing an ending
                         // with no bracket already has a spelling, and it is the one without
                         // the `[`: `|: A :|` engraves the repeat and no volta.
-                        if (alt.HasBracket)
+                        // Resume: gated like every emission above — a skipped block's
+                        // brackets are in the adopted table slice, and the frozen
+                        // builder would pair (0, 0) here.
+                        if (live && alt.HasBracket)
                         {
                             int lastMeasure = Math.Max(startMeasureIndex, endMeasureIndex - 1);
                             pendingVoltaBrackets.Add((startMeasureIndex, lastMeasure, alt.VoltaText, alt.IsClosed, alt.Position));

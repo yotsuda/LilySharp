@@ -64,7 +64,8 @@ internal sealed class SystemBreaker
     public List<List<Measure>> BreakIntoSystems(MultiStaffScore score,
                                                 double? baseShortestDuration = null,
                                                 IReadOnlyList<int>? precomputedLineSizes = null,
-                                                MeasureSpringData[]? precomputedSprings = null)
+                                                MeasureSpringData[]? precomputedSprings = null,
+                                                LineBreakDpSession? dpSession = null)
     {
         var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
 
@@ -127,7 +128,7 @@ internal sealed class SystemBreaker
             // MEASURED: 385-780 ms per edit on a 1000-bar book, paid twice.
             var springData = precomputedSprings
                 ?? ComputeMultiStaffSpringData(score, baseShortestDuration);
-            return breaker.BreakIntoLines(measures, springData);
+            return breaker.BreakIntoLines(measures, springData, dpSession);
         }
 
         return BreakIntoSystemsGreedy(measures, firstPrefixWidth, continuationPrefixWidth, baseShortestDuration);

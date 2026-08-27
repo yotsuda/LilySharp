@@ -185,6 +185,13 @@ public sealed class IncrementalCompiler
     // byte-identical to a memo-free collect (BeamDetector's memo remarks).
     private readonly BeamDetectionMemo _beamMemo = new();
 
+    // Finding 3-5: the resume channels for the collector's NESTED collects (the
+    // omitted-structure harvest, the sung-melody collect) — armed per compile and
+    // handed to the collectors below, so a lead-sheet keystroke no longer pays a
+    // complete fresh collect of every undrawn part. Shed on spec-resolution drift
+    // with everything else (a channel baseline was recorded under the old spec).
+    private readonly NestedCollectResume _nestedResume = new();
+
     /// <summary>Whether the most recent <see cref="Edit"/> reused the cached
     /// break solution (true) or recomputed it (false). For diagnostics / tests.</summary>
     public bool LastEditSkippedLineBreak { get; private set; }
@@ -221,6 +228,11 @@ public sealed class IncrementalCompiler
     /// within-collect duplicate measures (a book of identical bars detects one and
     /// replays the rest even on a full compile). For diagnostics / tests.</summary>
     internal (int Reused, int Recomputed) LastBeamMemo => (_beamMemo.Hits, _beamMemo.Misses);
+
+    /// <summary>How this session's NESTED collects (finding 3-5) were paid for over
+    /// its lifetime: channel resumes vs full runs. For diagnostics / tests — the
+    /// liveness half of the nested-resume nets.</summary>
+    internal (int Resumed, int Full) NestedResumeStats => _nestedResume.Stats;
 
     /// <summary>How the most recent render's per-system SVG text was paid for (⒭):
     /// how many systems replayed their recorded fragment and how many drew live
@@ -298,6 +310,7 @@ public sealed class IncrementalCompiler
             _collectBaselineTree = null;
             _rerecordNext = false;
             _rerecordArmed = true;
+            _nestedResume.Reset();
             _fontPlan = null;
         }
         _specIdentity = specIdentity;
@@ -305,6 +318,8 @@ public sealed class IncrementalCompiler
         // ⑶ beamdirs: one generation per compile — the previous compile's per-measure
         // detections serve this one; anything older ages out.
         _beamMemo.BeginCollect();
+        // Finding 3-5: arm the nested-collect resume channels for this compile.
+        _nestedResume.BeginCompile(tree, allowResume: allowSkip);
         var score = CollectWithResume(tree, spec, allowResume: allowSkip);
 
         // A `fonts { }` edit changes the TEXT METRICS every layout stage measures with —
@@ -679,6 +694,7 @@ public sealed class IncrementalCompiler
                         ScoreTranspose = spec?.ScoreTranspose,
                         WalkProbe = resumer,
                         BeamMemo = _beamMemo,
+                        NestedResume = _nestedResume,
                     };
                     var resumed = SvgGenerator.CollectScore(collector, tree, spec);
                     int walks = 0, adopted = 0, splicedWalks = 0, spliced = 0;
@@ -742,6 +758,7 @@ public sealed class IncrementalCompiler
             ScoreTranspose = spec?.ScoreTranspose,
             WalkProbe = recorder,
             BeamMemo = _beamMemo,
+            NestedResume = _nestedResume,
         };
         var score = SvgGenerator.CollectScore(source, tree, spec);
         _collectSource = source;

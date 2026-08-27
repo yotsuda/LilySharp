@@ -105,6 +105,15 @@ internal sealed class SystemLayoutCache
     /// (see <see cref="PreliminaryAboveStack"/>).</summary>
     public AboveStackMemo FinalAboveStack { get; } = new();
 
+    /// <summary>The line-break DP's row-prefix resume (finding 4-5): the previous
+    /// keystroke's whole table, so a gate-changing edit refills only the rows at
+    /// and after the first changed spring. Lives here so it is shed with the rest
+    /// of the session's geometry on a font/paper change, and so the full path
+    /// (and override books, which run without a consulted cache) never sees it.
+    /// See <see cref="LineBreakDpSession"/> for the recurrence inventory and the
+    /// session-191 orthogonality note.</summary>
+    public LineBreakDpSession LineBreakDp { get; } = new();
+
     /// <summary>The PRELIMINARY annotation pass's below-staff stacking memo — one
     /// instance per pass, for the reason <see cref="PreliminaryAboveStack"/> gives
     /// (finding 4-3: the below pass used to run every system live per keystroke).</summary>

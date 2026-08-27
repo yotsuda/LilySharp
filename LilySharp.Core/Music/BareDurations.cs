@@ -58,6 +58,29 @@ public static class BareDurations
     public static SyntaxNode? OriginalOf(BareDurationSyntax bare)
         => MapFor(bare).TryGetValue(bare, out var r) ? r.Original : null;
 
+    // The map's original set, for O(1) IsOriginal membership — derived from the
+    // same build, one per tree, dropped with it.
+    private static readonly ConditionalWeakTable<SyntaxNode, HashSet<SyntaxNode>> Originals = new();
+
+    /// <summary>Whether <paramref name="node"/> is the original some bare duration
+    /// in its tree copies — the collect-resume recorder's filter for which resolved
+    /// spellings are worth logging (finding 3-4; a book without bare durations logs
+    /// nothing). The reverse set is the map's originals, built once per tree.</summary>
+    public static bool IsOriginal(SyntaxNode node)
+    {
+        var top = node;
+        while (top.Parent != null)
+            top = top.Parent;
+        var set = Originals.GetValue(top, root =>
+        {
+            var s = new HashSet<SyntaxNode>();
+            foreach (var r in Maps.GetValue(root, BuildMap).Values)
+                s.Add(r.Original);
+            return s;
+        });
+        return set.Contains(node);
+    }
+
     /// <summary>True when a barline stands between this bare duration and the
     /// nearest WRITTEN repeatable spelling before it — the shape a dropped
     /// pitch letter takes (<c>4 g f e</c> meant as <c>a4 g f e</c>), which the

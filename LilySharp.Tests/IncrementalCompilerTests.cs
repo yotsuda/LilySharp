@@ -1658,6 +1658,51 @@ public class IncrementalCompilerTests
     }
 
     // ============================================================
+    // Line-break DP row-prefix resume (2026-08-26 review, finding 4-5)
+    // ============================================================
+
+    /// <summary>Finding 4-5 liveness + value: a GATE-CHANGING edit (an accidental
+    /// widens its measure's springs) runs the line-break DP, and in a session the
+    /// DP must reuse the table rows before the first changed spring
+    /// (LineBreakDpSession) while staying byte-identical to a full recompile —
+    /// across a late edit, an early edit against the updated baseline, and an
+    /// n-changing edit (a whole bar inserted, the re-stride path). A poison that
+    /// treats every row as reusable serves the previous keystroke's break solution
+    /// and turns the equality red (verified while building this test).</summary>
+    [Fact]
+    public void LineBreakDp_GateChangingEdits_ReuseTheRowPrefix()
+    {
+        string source = "time 4/4\nkey c major\npart m { clef treble }\n"
+            + "section S { m { " + string.Join(" | ", Enumerable.Repeat("c4 d e f", 40)) + " } }\n"
+            + "form main { S }\nscore main { staff m }\n";
+
+        var tree = SyntaxTree.Parse(source);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        // Late gate-changing edit: a bar near the end densifies to sixteenths — its
+        // springs widen enough to overflow its line and MOVE the break solution, so
+        // a table serving stale rows cannot hide behind an unchanged partition.
+        int at = tree.Text.LastIndexOf("c4 d e f | c4 d e f", System.StringComparison.Ordinal);
+        tree = tree.WithChange(new TextChange(new TextSpan(at, 8), "c16 d e f g a b c d e f g a b c d"));
+        Assert.Equal(Full(tree.Text), Norm(session.RenderIncremental(tree)));
+        var stats = session.SystemCache!.LineBreakDp.Stats;
+        Assert.True(stats.Reused > 30 && stats.Recomputed > 0,
+            $"late gate edit: expected a large reused row prefix, got reused {stats.Reused} / "
+            + $"recomputed {stats.Recomputed}");
+
+        // Early edit against the updated baseline: small prefix, the tail refills.
+        int early = tree.Text.IndexOf("c4 d e f", System.StringComparison.Ordinal);
+        tree = tree.WithChange(new TextChange(new TextSpan(early + 3, 1), "dis"));
+        Assert.Equal(Full(tree.Text), Norm(session.RenderIncremental(tree)));
+
+        // n-changing edit: a whole bar inserted mid-book (the re-stride path).
+        int mid = tree.Text.IndexOf("c4 d e f", tree.Text.Length / 2, System.StringComparison.Ordinal);
+        tree = tree.WithChange(new TextChange(new TextSpan(mid, 0), "g4 a b c | "));
+        Assert.Equal(Full(tree.Text), Norm(session.RenderIncremental(tree)));
+    }
+
+    // ============================================================
     // Named render sessions (2026-08-26 review, finding 3-1)
     // ============================================================
 

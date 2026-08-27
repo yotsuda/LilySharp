@@ -503,6 +503,276 @@ section S {
         Assert.False(compiler.RerecordScheduled);
     }
 
+    // ---------- finding 3-4: q / bare duration / form repeat are resumable ----------
+
+    private static string Bars(string cell, int n) => string.Join(" | ", Enumerable.Repeat(cell, n));
+
+    /// <summary>Finding 3-4 liveness: a book with a <c>q</c>, a bare duration, or a
+    /// <c>|: … :|</c> form repeat used to be resume-INELIGIBLE wholesale — every
+    /// keystroke walked from the top. Each shape must now ADOPT a real prefix on a
+    /// late edit. Byte-identity rides along, but the ADOPTION is the pin: a silent
+    /// decline renders identically and proves nothing.</summary>
+    [Theory]
+    [InlineData("chord-repetition")]
+    [InlineData("bare-duration")]
+    [InlineData("form-repeat")]
+    public void RepetitionShapes_AdoptOnALateEdit(string shape)
+    {
+        string source = shape switch
+        {
+            "chord-repetition" =>
+                "octave absolute\npart m { clef treble }\nsection S { m { <c' e' g'>4 q q q | "
+                + Bars("q4 q q q", 30) + " | e'4 f' g' a' } }\n"
+                + "form main { S }\nscore main { staff m }\n",
+            "bare-duration" =>
+                "octave absolute\npart m { clef treble }\nsection S { m { c'4 4 4 4 | "
+                + Bars("d'4 4 4 4", 30) + " | e'4 f' g' a' } }\n"
+                + "form main { S }\nscore main { staff m }\n",
+            // The block sits AFTER a plain section: post-block checkpoints fold the
+            // form line's repeat-token positions (burned into the synthesized
+            // barlines' data-pos) into MaxSourceRead, so with the form at the file's
+            // bottom the adoptable prefix for an edit in C is section A — the
+            // pre-block refinement this shape pins (the suffix splice covers the
+            // rest, and the completeness net exercises it over the volta fixtures).
+            _ =>
+                "octave absolute\npart m { clef treble }\n"
+                + "section A { m { " + Bars("c'4 d' e' f'", 16) + " } }\n"
+                + "section B { m { " + Bars("g'4 a' b' c''", 16) + " } }\n"
+                + "section C { m { " + Bars("e'4 d' c' d'", 16) + " } }\n"
+                + "form main { A |: B :| C }\nscore main { staff m }\n",
+        };
+
+        var options = new SvgRenderOptions { EmbedFont = false };
+        var compiler = new IncrementalCompiler(SyntaxTree.Parse(source), options);
+        compiler.Render();
+
+        // A same-length pitch edit near the END, so the whole repetition-bearing
+        // prefix is adoptable text.
+        int at = source.LastIndexOf(shape == "form-repeat" ? "b' c''" : "f' g'", StringComparison.Ordinal);
+        Assert.True(at > 0, "edit anchor not found");
+        string edited = source.Remove(at, 1).Insert(at, "a");
+        var incremental = compiler.RenderIncremental(SyntaxTree.Parse(edited));
+
+        Assert.Equal(SvgGenerator.Generate(SyntaxTree.Parse(edited), options), incremental);
+        var resume = compiler.LastCollectResume;
+        Assert.True(resume.Walks > 0 && resume.AdoptedMeasures > 0,
+            $"{shape}: expected a prefix adoption, got walks {resume.Walks} / "
+            + $"adopted {resume.AdoptedMeasures} — the shape is still resume-ineligible");
+    }
+
+    /// <summary>The restore mechanism itself: a <c>q</c> in the EDITED measure is
+    /// walked live and must read its original chord from the ADOPTED prefix — the
+    /// re-keyed spelling entries the checkpoint restore replays (a resume used to
+    /// find no entry and silently degrade the q to a spacer, which is why the shape
+    /// was ineligible). A poison that skips the restore replay turns this red
+    /// (verified while building this test).</summary>
+    [Fact]
+    public void ChordRepetition_InTheEditedMeasure_ReadsThePrefixAdoptedOriginal()
+    {
+        string source =
+            "octave absolute\npart m { clef treble }\nsection S { m { <c' e' g'>4 q q q | "
+            + Bars("d'4 e' f' g'", 24) + " | e'4 f' q q | " + Bars("a'4 b' c'' d''", 8) + " } }\n"
+            + "form main { S }\nscore main { staff m }\n";
+
+        var options = new SvgRenderOptions { EmbedFont = false };
+        var compiler = new IncrementalCompiler(SyntaxTree.Parse(source), options);
+        compiler.Render();
+
+        int at = source.IndexOf("e'4 f' q q", StringComparison.Ordinal);
+        Assert.True(at > 0, "edit anchor not found");
+        string edited = source.Remove(at, 1).Insert(at, "f");
+        var incremental = compiler.RenderIncremental(SyntaxTree.Parse(edited));
+
+        Assert.Equal(SvgGenerator.Generate(SyntaxTree.Parse(edited), options), incremental);
+        var resume = compiler.LastCollectResume;
+        Assert.True(resume.Walks > 0 && resume.AdoptedMeasures > 0,
+            $"expected a prefix adoption, got walks {resume.Walks} / adopted {resume.AdoptedMeasures}");
+    }
+
+    /// <summary>THE PURE-SHIFT CONTENT HOLE (2026-08-27, found by the finding-4-5
+    /// net): typing an accidental (`d` → `dis`) is an INSERTION whose old text's
+    /// prefix and suffix both survive — an EMPTY dirty window with Δ=+2 — and the
+    /// pitch letter keeps its token kind, so neither the old splice overlap guard
+    /// (which only ran for non-empty windows) nor the parse agreement (which a
+    /// LETTER swap fails on kind) objected: the suffix splice adopted the straddled
+    /// measure with the OLD note, the content keys then compared equal, and the
+    /// whole-layout reuse served the previous keystroke's picture. The straddled
+    /// measure must decline and walk live. A poison that restores the old
+    /// empty-window fast path turns this red (verified: it was the failing shape
+    /// this pin was distilled from).</summary>
+    [Fact]
+    public void PureShiftContentInsertion_DoesNotSpliceTheStraddledMeasure()
+    {
+        string source = "time 4/4\nkey c major\npart m { clef treble }\n"
+            + "section S { m { " + Bars("c4 d e f", 40) + " } }\n"
+            + "form main { S }\nscore main { staff m }\n";
+        var options = new SvgRenderOptions { EmbedFont = false };
+        var compiler = new IncrementalCompiler(SyntaxTree.Parse(source), options);
+        compiler.Render();
+
+        // Mid-book, so splice candidates exist on BOTH sides of the edit.
+        int mid = source.IndexOf("c4 d e f", source.Length / 2, StringComparison.Ordinal);
+        string edited = source.Insert(mid + 4, "is");   // that bar's d becomes dis
+        var incremental = compiler.RenderIncremental(SyntaxTree.Parse(edited));
+
+        Assert.Equal(SvgGenerator.Generate(SyntaxTree.Parse(edited), options), incremental);
+    }
+
+    // ---------- finding 3-5: the nested collects ride resume channels ----------
+
+    /// <summary>A lead-sheet shape: the score draws two staves while the undrawn
+    /// band part carries score-level structure (in-music <c>|: … :|</c>), so every
+    /// collect runs the omitted-structure harvest (the harvest lives on the
+    /// multi-staff path — a single-staff score never runs it).</summary>
+    private static string HarvestBook() =>
+        "octave absolute\n"
+        + "part melody { section S { " + Bars("c'4 d' e' f'", 24) + " } }\n"
+        + "part alto { section S { " + Bars("e'4 f' g' a'", 24) + " } }\n"
+        + "part band { section S { |: " + Bars("g'4 a' b' c''", 24) + " :| } }\n"
+        + "form main { S }\nscore main { staff melody  staff alto }\n";
+
+    /// <summary>Finding 3-5 liveness: the omitted-structure harvest used to run a
+    /// COMPLETE fresh collect of the undrawn part on every keystroke, outside the
+    /// resume machinery. On an edit in the DRAWN part (a Δ=+1 trivia insert — the
+    /// nets' shape; a letter swap would decline the splice on parse grounds) the
+    /// harvest channel must RESUME, and the picture must stay byte-identical.</summary>
+    [Fact]
+    public void NestedHarvest_EditInTheDrawnPart_ResumesTheChannel()
+    {
+        string source = HarvestBook();
+        var options = new SvgRenderOptions { EmbedFont = false };
+        var compiler = new IncrementalCompiler(SyntaxTree.Parse(source), options);
+        compiler.Render();
+        Assert.True(compiler.NestedResumeStats.Full > 0,
+            "the fixture must run the harvest at all");
+
+        int at = source.IndexOf("e' f' } }", StringComparison.Ordinal);
+        Assert.True(at > 0, "edit anchor not found");
+        string edited = source.Insert(at, " ");
+        var incremental = compiler.RenderIncremental(SyntaxTree.Parse(edited));
+
+        Assert.Equal(SvgGenerator.Generate(SyntaxTree.Parse(edited), options), incremental);
+        Assert.True(compiler.NestedResumeStats.Resumed > 0,
+            $"the harvest channel never resumed (resumed {compiler.NestedResumeStats.Resumed} / "
+            + $"full {compiler.NestedResumeStats.Full})");
+    }
+
+    /// <summary>The value side: an edit INSIDE the omitted part that moves its
+    /// structure (a whole bar inserted into the repeat, so the canonical section
+    /// length and the synced <c>:|</c> both move) must still render byte-identical
+    /// to a full recompile — a poison that plans the channel against its own stale
+    /// baseline (adopting everything) turns this red (verified while building).</summary>
+    [Fact]
+    public void NestedHarvest_EditInTheOmittedPart_StaysIdentical()
+    {
+        string source = HarvestBook();
+        var options = new SvgRenderOptions { EmbedFont = false };
+        var compiler = new IncrementalCompiler(SyntaxTree.Parse(source), options);
+        compiler.Render();
+
+        int at = source.IndexOf(" :|", StringComparison.Ordinal);
+        Assert.True(at > 0, "edit anchor not found");
+        string edited = source.Insert(at, " | g'4 a' b' c''");
+        var incremental = compiler.RenderIncremental(SyntaxTree.Parse(edited));
+
+        Assert.Equal(SvgGenerator.Generate(SyntaxTree.Parse(edited), options), incremental);
+    }
+
+    /// <summary>THE ABORT CONTRACT: when the structured omitted set SHRINKS (the
+    /// first omitted part loses its repeat), the channel's recorded walk#0 no longer
+    /// matches the live voice — the resumed nested collect bails, and the fallback
+    /// must run a FULL nested collect rather than let the harvest's catch-all turn
+    /// the bail into an EMPTY harvest (which silently drops the remaining part's
+    /// repeat barlines from the whole score). A poison that rethrows the abort
+    /// turns this red (verified while building this test).</summary>
+    [Fact]
+    public void NestedHarvest_OmittedSetShrinks_FallsBackToAFullNestedCollect()
+    {
+        string source =
+            "octave absolute\n"
+            + "part melody { section S { " + Bars("c'4 d' e' f'", 24) + " } }\n"
+            + "part alto { section S { " + Bars("e'4 f' g' a'", 24) + " } }\n"
+            + "part band1 { section S { |: " + Bars("g'4 a' b' c''", 24) + " :| } }\n"
+            + "part band2 { section S { |: " + Bars("d'4 e' f' g'", 24) + " :| } }\n"
+            + "form main { S }\nscore main { staff melody  staff alto }\n";
+        var options = new SvgRenderOptions { EmbedFont = false };
+        var compiler = new IncrementalCompiler(SyntaxTree.Parse(source), options);
+        compiler.Render();
+
+        // band1 loses its repeat: the structured omitted set becomes [band2], so the
+        // channel's recorded walk#0 (band1) meets a live band2 and must bail + rerun.
+        int open = source.IndexOf("|: g'4", StringComparison.Ordinal);
+        Assert.True(open > 0, "band1 open anchor not found");
+        string edited = source.Remove(open, 2).Insert(open, "| ");
+        // The FIRST ":|" in document order is band1's (band2's comes later).
+        int close = edited.IndexOf(":|", StringComparison.Ordinal);
+        Assert.True(close > 0, "band1 close anchor not found");
+        edited = edited.Remove(close, 2).Insert(close, " |");
+        var incremental = compiler.RenderIncremental(SyntaxTree.Parse(edited));
+
+        Assert.Equal(SvgGenerator.Generate(SyntaxTree.Parse(edited), options), incremental);
+    }
+
+    /// <summary>Finding 3-5 liveness, melody side: a lyrics row that sings a part
+    /// the score does not engrave collects that melody through its own channel.</summary>
+    [Fact]
+    public void NestedMelody_EditInTheDrawnPart_ResumesTheChannel()
+    {
+        string source =
+            "octave absolute\n"
+            + "part melody { section A { " + Bars("c'4 d' e' f'", 24) + " } }\n"
+            + "part back { section A { " + Bars("e'4 f' g' a'", 24) + " } }\n"
+            + "lyrics ly sings melody { section A { " + Bars("la le li lo", 24) + " } }\n"
+            + "form main { A }\nscore main { staff back  lyrics ly }\n";
+        var options = new SvgRenderOptions { EmbedFont = false };
+        var compiler = new IncrementalCompiler(SyntaxTree.Parse(source), options);
+        compiler.Render();
+        Assert.True(compiler.NestedResumeStats.Full > 0,
+            "the fixture must collect the sung melody at all");
+
+        int at = source.IndexOf("g' a' } }", StringComparison.Ordinal);
+        Assert.True(at > 0, "edit anchor not found");
+        string edited = source.Insert(at, " ");
+        var incremental = compiler.RenderIncremental(SyntaxTree.Parse(edited));
+
+        Assert.Equal(SvgGenerator.Generate(SyntaxTree.Parse(edited), options), incremental);
+        Assert.True(compiler.NestedResumeStats.Resumed > 0,
+            $"the melody channel never resumed (resumed {compiler.NestedResumeStats.Resumed} / "
+            + $"full {compiler.NestedResumeStats.Full})");
+    }
+
+    /// <summary>The splice certification guard: the ORIGINAL chord is edited (its
+    /// root keeps the relative-frame state, so the boundary states past it still
+    /// match) and a <c>q</c> stands far downstream. A suffix splice would adopt the
+    /// q's RECORDED members — the old chord's — so the guard must decline any tail
+    /// whose repetition copies from the re-walked live region; the tail then walks
+    /// live and resolves the q from the freshly walked original. A poison that
+    /// drops the guard turns this red (verified while building this test).</summary>
+    [Fact]
+    public void ChordRepetition_WhoseOriginalWasEdited_DoesNotSpliceStaleMembers()
+    {
+        string source =
+            "octave absolute\npart m { clef treble }\nsection S { m { "
+            + Bars("c'4 d' e' f'", 10) + " | <c' e' g'>4 f' g' a' | "
+            + Bars("d'4 e' f' g'", 18) + " | q4 q q q | " + Bars("a'4 b' c'' d''", 8) + " } }\n"
+            + "form main { S }\nscore main { staff m }\n";
+
+        var options = new SvgRenderOptions { EmbedFont = false };
+        var compiler = new IncrementalCompiler(SyntaxTree.Parse(source), options);
+        compiler.Render();
+
+        // Edit a MIDDLE member of the chord (the root anchors the frame, so the
+        // states past the window still compare equal and a splice would engage
+        // without the guard).
+        int at = source.IndexOf("<c' e' g'>", StringComparison.Ordinal);
+        Assert.True(at > 0, "chord anchor not found");
+        string edited = source.Remove(at + 4, 1).Insert(at + 4, "f");
+        Assert.Contains("<c' f' g'>", edited);
+        var incremental = compiler.RenderIncremental(SyntaxTree.Parse(edited));
+
+        Assert.Equal(SvgGenerator.Generate(SyntaxTree.Parse(edited), options), incremental);
+    }
+
     /// <summary>Deterministic mechanical edits: a duplicated space (pure position
     /// shift, Δ=+1) late and mid-file, a deleted space late (Δ=-1), a pitch
     /// letter swap late (Δ=0 content change), and a deleted MID-FILE barline

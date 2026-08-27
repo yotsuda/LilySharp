@@ -44,6 +44,10 @@ public static class ChordRepetitions
     // stable keys within a tree.
     private static readonly ConditionalWeakTable<SyntaxNode, Dictionary<ChordRepetitionSyntax, ChordSyntax>> Maps = new();
 
+    // The map's value set, for O(1) IsOriginal membership — derived from the same
+    // build, one per tree, dropped with it.
+    private static readonly ConditionalWeakTable<SyntaxNode, HashSet<ChordSyntax>> Originals = new();
+
     /// <summary>The chord a <c>q</c> repeats, or null when no chord precedes it
     /// in its top-level body (LP: warning "Bad chord repetition").</summary>
     public static ChordSyntax? OriginalOf(ChordRepetitionSyntax repetition)
@@ -53,6 +57,20 @@ public static class ChordRepetitions
             top = top.Parent;
         var map = Maps.GetValue(top, BuildMap);
         return map.TryGetValue(repetition, out var chord) ? chord : null;
+    }
+
+    /// <summary>Whether <paramref name="chord"/> is the original some <c>q</c> in its
+    /// tree copies — the collect-resume recorder's filter for which resolved
+    /// spellings are worth logging (finding 3-4; a book without <c>q</c> logs
+    /// nothing). The reverse set is the map's values, built once per tree.</summary>
+    public static bool IsOriginal(ChordSyntax chord)
+    {
+        var top = (SyntaxNode)chord;
+        while (top.Parent != null)
+            top = top.Parent;
+        var set = Originals.GetValue(top,
+            root => new HashSet<ChordSyntax>(Maps.GetValue(root, BuildMap).Values));
+        return set.Contains(chord);
     }
 
     private static Dictionary<ChordRepetitionSyntax, ChordSyntax> BuildMap(SyntaxNode root)

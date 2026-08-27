@@ -124,8 +124,11 @@ internal sealed partial class LayoutEngine
         // F3 incremental cutoff: when the line-break gate is unchanged the driver
         // passes the cached per-line measure counts so SystemBreaker regroups the
         // new measures and skips the DP. Null => normal (byte-identical) breaking.
+        // When the DP does run in a session, the cache's row-prefix resume
+        // (finding 4-5) refills only the rows after the first changed spring.
         var systemMeasures = _systemBreaker.BreakIntoSystems(
-            score, commonShortestDuration, precomputedLineSizes, precomputedSprings);
+            score, commonShortestDuration, precomputedLineSizes, precomputedSprings,
+            systemCache?.LineBreakDp);
 
         // Chord symbols on a TEXT ROW (lead sheets) live in their own band and must not
         // inflate a music staff's up-extent; inline chord symbols (nameless `chords { }`) sit

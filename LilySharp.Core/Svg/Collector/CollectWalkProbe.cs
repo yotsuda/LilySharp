@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 
@@ -78,12 +79,17 @@ namespace LilySharp.Core.Svg.Collector;
 /// <para>
 /// ELIGIBILITY over cleverness: a boundary is checkpointed only when every
 /// cross-measure carry is quiescent (no pending grace/tremolo/empty-chord-slur,
-/// phrase stacks empty, top-level stream). A whole walk is marked ineligible
-/// when it crosses a regime the resume does not support yet: a form repeat
-/// block (its bookkeeping reads builder state the skip would corrupt) or a
-/// chord repetition <c>q</c> (its <c>_resolvedChordMembers</c> entry would be
-/// missing when the original chord sits in the adopted prefix). A missed
-/// checkpoint only costs reuse; a wrong one costs correctness.
+/// phrase stacks empty, top-level stream). Two regimes that used to mark a whole
+/// walk ineligible were refined per finding 3-4 (2026-08-26 review): a form
+/// repeat block now merely suppresses the checkpoints INSIDE it (its bookkeeping
+/// lives in locals no checkpoint captures; boundaries before and after resume
+/// normally), and a chord repetition <c>q</c> / bare duration is served by the
+/// recording's <see cref="VoiceWalkRecording.ResolvedSpellings"/> log, replayed
+/// re-keyed at restore and splice (with
+/// <see cref="VoiceWalkRecording.RepetitionOriginalReads"/> guarding the splice
+/// against a stale copy). A whole walk is still marked ineligible when the
+/// expansion budget trips. A missed checkpoint only costs reuse; a wrong one
+/// costs correctness.
 /// </para>
 /// </remarks>
 internal sealed class CollectWalkProbe
@@ -205,6 +211,30 @@ internal sealed class VoiceWalkRecording
     /// prefix (by checkpoint count) is what a resume adopts.</summary>
     public List<(int, int, string, bool, int)>? PendingInlineVoltas;
     public List<(Syntax.ParallelExpressionSyntax, int, Fraction, OctaveSnapshot)>? ParallelSpans;
+
+    /// <summary>The walk's resolved-spelling log, in insertion order: every note or
+    /// chord this walk resolved that IS the original of some <c>q</c> / bare duration
+    /// in the tree (the reverse sets of <c>Music.ChordRepetitions</c> /
+    /// <c>Music.BareDurations</c> filter the writes, so a book without repetition
+    /// spellings logs nothing). A resume replays the checkpoint's prefix of this
+    /// list into <c>_resolvedNotes</c> / <c>_resolvedChordMembers</c>, RE-KEYED onto
+    /// the new tree's nodes (the readers look originals up by the new tree's
+    /// <c>OriginalOf</c> answers, and red nodes are not shared between trees) —
+    /// what used to make any such book resume-ineligible wholesale
+    /// (2026-08-26 review, finding 3-4). Replayed in order so a form replay's
+    /// overwrite lands last, exactly as the recorded walk left the dictionaries.</summary>
+    public List<(Syntax.SyntaxNode Node, ImmutableArray<MeasureCollector.ResolvedChordMember> Members)>?
+        ResolvedSpellings;
+
+    /// <summary>Per <c>q</c> / bare duration this walk built, in walk order: the
+    /// FULL SPAN of the ORIGINAL it copied, or (-1, -1) when none resolved. The
+    /// suffix splice reads its checkpoint range of this list to decline a tail
+    /// whose repetition copies state from the re-walked live region — certified
+    /// only when the original lies ENTIRELY in the unchanged common prefix or
+    /// entirely in the adopted tail (the whole span matters: an edit INSIDE the
+    /// original node leaves its start before the window) — see
+    /// <c>TrySpliceSuffix</c>'s guard.</summary>
+    public List<(int Start, int End)>? RepetitionOriginalReads;
 
     /// <summary>Non-null when the walk crossed a regime the resume does not
     /// support; its checkpoints must not be resumed from.</summary>
@@ -348,6 +378,10 @@ internal sealed class WalkCheckpoint
     /// <summary>Counts of the walk-local lists (adopted from the recording).</summary>
     public required int PendingInlineVoltaCount { get; init; }
     public required int ParallelSpanCount { get; init; }
+    /// <summary>Watermarks into <see cref="VoiceWalkRecording.ResolvedSpellings"/> /
+    /// <see cref="VoiceWalkRecording.RepetitionOriginalReads"/> (finding 3-4).</summary>
+    public required int ResolvedSpellingCount { get; init; }
+    public required int RepetitionReadCount { get; init; }
     /// <summary>Measures emitted so far (= prefix length to adopt).</summary>
     public required int MeasureCount { get; init; }
 }

@@ -38,9 +38,16 @@ public sealed partial class MeasureCollector
         // _resolvedChordMembers): the ABSOLUTE spelling, resolved by THIS walk —
         // a repetition must not re-run the written pitch through the relative
         // frame, whose anchor has moved on to this very note.
-        _resolvedNotes[note] = new ResolvedChordMember(
+        var resolvedSpelling = new ResolvedChordMember(
             staffPosition, rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave,
             NoteheadStyle.Default, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave));
+        _resolvedNotes[note] = resolvedSpelling;
+        // Record mode (finding 3-4): log the write iff some bare duration copies this
+        // note, so a resume can restore the adopted prefix's entries. Order matters
+        // (a form replay's overwrite must land last); the filter keeps repetition-free
+        // books at zero log.
+        if (_probeRecording != null && Music.BareDurations.IsOriginal(note))
+            _resolvedSpellingLog.Add((note, ImmutableArray.Create(resolvedSpelling)));
 
         int noteValue = note.Duration?.Value ?? (int)_defaultDuration.Denominator;
         // An undurated note takes the whole default — dots included (`c8. c` is two
@@ -269,21 +276,39 @@ public sealed partial class MeasureCollector
     /// through the normal stateful path, so the repeated chord shows exactly what
     /// its own measure requires (and the original's cautionary/forced marks are
     /// naturally absent — LP clears them, copy-repeat-chord :892-895).</summary>
-    private readonly record struct ResolvedChordMember(
+    // Internal (was private) since finding 3-4: VoiceWalkRecording.ResolvedSpellings
+    // carries these values across keystrokes for the resume's re-keyed replay.
+    internal readonly record struct ResolvedChordMember(
         int StaffPosition, int? Step, int? Alter, int? Octave, NoteheadStyle Notehead, int Midi);
 
     /// <summary>The resolved members of every chord this walk has built, keyed by
     /// node — what a following <c>q</c> copies. Refilled on every re-walk (form
     /// replays re-enter with a reset frame and resolve to the same values), so the
-    /// entry a <c>q</c> reads is always the one its own walk just wrote.</summary>
+    /// entry a <c>q</c> reads is always the one its own walk just wrote.
+    /// A RESUMED walk restores the adopted prefix's entries from the recording,
+    /// re-keyed onto this tree's nodes (finding 3-4 — see
+    /// <see cref="VoiceWalkRecording.ResolvedSpellings"/>).</summary>
     private readonly Dictionary<ChordSyntax, ImmutableArray<ResolvedChordMember>> _resolvedChordMembers = new();
 
     /// <summary>The resolved spelling of every pitched note this walk has built,
     /// keyed by node — what a following bare duration copies. Same refill-per-walk
-    /// contract as <see cref="_resolvedChordMembers"/>. (Chords and drum notes need
-    /// no twin: chords are in <see cref="_resolvedChordMembers"/>, and a drum or
-    /// slash resolves statelessly from its own syntax.)</summary>
+    /// contract (and same resume restore) as <see cref="_resolvedChordMembers"/>.
+    /// (Chords and drum notes need no twin: chords are in
+    /// <see cref="_resolvedChordMembers"/>, and a drum or slash resolves statelessly
+    /// from its own syntax.)</summary>
     private readonly Dictionary<NoteSyntax, ResolvedChordMember> _resolvedNotes = new();
+
+    /// <summary>Record-mode walk log of the two dictionaries above, in insertion
+    /// order, filtered to nodes that ARE the original of some <c>q</c> / bare
+    /// duration in the tree — see <see cref="VoiceWalkRecording.ResolvedSpellings"/>.
+    /// Cleared per walk; harvested into the recording at walk end.</summary>
+    private readonly List<(SyntaxNode Node, ImmutableArray<ResolvedChordMember> Members)>
+        _resolvedSpellingLog = new();
+
+    /// <summary>Record-mode walk log of every <c>q</c> / bare duration built: the
+    /// source position of the original it copied (-1 = none) — see
+    /// <see cref="VoiceWalkRecording.RepetitionOriginalReads"/>. Cleared per walk.</summary>
+    private readonly List<(int Start, int End)> _repetitionOriginalReads = new();
 
     private ChordItem CreateChordItem(ChordSyntax chord, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false, bool isCue = false, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, (int Value, int Dots)? forcedDuration = null, int extraOctave = 0)
     {
@@ -509,7 +534,13 @@ public sealed partial class MeasureCollector
             members.Add(new ResolvedChordMember(dinfo.StaffPosition, null, null, null,
                 dinfo.Notehead, dinfo.GmKey));
         }
-        _resolvedChordMembers[chord] = members.ToImmutableArray();
+        var memberArray = members.ToImmutableArray();
+        _resolvedChordMembers[chord] = memberArray;
+        // Record mode (finding 3-4): same log as CreateNoteItem's, for a chord some
+        // `q` or bare duration copies.
+        if (_probeRecording != null
+            && (Music.ChordRepetitions.IsOriginal(chord) || Music.BareDurations.IsOriginal(chord)))
+            _resolvedSpellingLog.Add((chord, memberArray));
 
         // The next chord/note is relative to the chord's ANCHOR — the root's bare
         // letter plus any whole-chord '>' marks; the members' own marks stay local.
@@ -574,12 +605,18 @@ public sealed partial class MeasureCollector
     /// <remarks>LILYPOND-REF: scm/music-functions.scm:854-920 copy-repeat-chord.</remarks>
     private MusicItem CreateChordRepetitionItem(ChordRepetitionSyntax rep, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false, bool isCue = false, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, (int Value, int Dots)? forcedDuration = null)
     {
-        // Checkpoint/resume: a `q` reads _resolvedChordMembers, whose entry is
-        // written when the ORIGINAL chord is walked — a resume whose adopted prefix
-        // holds that chord would find no entry and silently degrade the q to a
-        // spacer. Until the resume resolves originals on demand, a walk that saw a
-        // q is not resumable. A missed recording only costs reuse.
-        _probeRecording?.MarkIneligible("chord-repetition");
+        // Checkpoint/resume (finding 3-4): a `q` reads _resolvedChordMembers, whose
+        // entry is written when the ORIGINAL chord is walked. A resumed walk restores
+        // the adopted prefix's entries from the recording's spelling log (re-keyed
+        // onto the new tree), so this no longer makes the walk ineligible wholesale.
+        // What the recorder logs HERE is the read: the original's position, which
+        // the suffix splice checks against the re-walked live region (a recorded
+        // resolution copying state from there is not certified — TrySpliceSuffix).
+        if (_probeRecording != null)
+            _repetitionOriginalReads.Add(
+                Music.ChordRepetitions.OriginalOf(rep) is { } chordOriginal
+                    ? (chordOriginal.FullSpan.Start, chordOriginal.FullSpan.End)
+                    : (-1, -1));
 
         // The duration carry applies whether or not the q resolves — a bad
         // repetition still occupies its written time (LP keeps the empty chord).
@@ -707,9 +744,14 @@ public sealed partial class MeasureCollector
     /// </summary>
     private MusicItem CreateBareDurationItem(BareDurationSyntax bare, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool isCue = false, (int Value, int Dots)? forcedDuration = null)
     {
-        // Same checkpoint/resume rule as `q`: the copy reads state recorded when
-        // the original was walked, which an adopted resume prefix would not have.
-        _probeRecording?.MarkIneligible("bare-duration");
+        // Same checkpoint/resume handling as `q` (finding 3-4): the prefix restore
+        // supplies the original's entry; the recorder logs the read for the suffix
+        // splice's certification guard.
+        if (_probeRecording != null)
+            _repetitionOriginalReads.Add(
+                Music.BareDurations.OriginalOf(bare) is { } bareOriginal
+                    ? (bareOriginal.FullSpan.Start, bareOriginal.FullSpan.End)
+                    : (-1, -1));
 
         int noteValue = forcedDuration?.Value ?? bare.Duration.Value;
         int dots = forcedDuration?.Dots ?? bare.Duration.DotCount;

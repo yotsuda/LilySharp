@@ -93,7 +93,10 @@ internal sealed class KnuthPlassBreaker
     /// <summary>
     /// Penalty for infinite badness (line cannot be set).
     /// </summary>
-    private const double Infinity = 1e18;
+    // Internal since finding 4-5: LineBreakDpSession resets recomputed rows to the
+    // SAME sentinel the fresh fill uses (a different value would break the exact
+    // bit-identity the row-prefix resume stands on).
+    internal const double Infinity = 1e18;
 
     /// <summary>
     /// Creates a new Knuth-Plass line breaker.
@@ -137,11 +140,12 @@ internal sealed class KnuthPlassBreaker
     /// so constrained breaking sees the combined springs.
     /// </summary>
     internal List<List<Measure>> BreakIntoLines(IReadOnlyList<Measure> measures,
-                                                MeasureSpringData[] springData)
+                                                MeasureSpringData[] springData,
+                                                LineBreakDpSession? dpSession = null)
     {
         if (measures.Count == 0)
             return new List<List<Measure>>();
-        var breakPoints = FindOptimalBreaks(springData);
+        var breakPoints = FindOptimalBreaks(springData, dpSession);
         return CreateMeasureGroups(measures, breakPoints);
     }
 
@@ -196,7 +200,8 @@ internal sealed class KnuthPlassBreaker
     /// 1-3: looseness selects solution with line_count closest to optimal+looseness
     /// 1-4: break permission forbid/force (lily/include/constrained-breaking.hh:74)
     /// </remarks>
-    private List<int> FindOptimalBreaks(MeasureSpringData[] springData)
+    private List<int> FindOptimalBreaks(MeasureSpringData[] springData,
+        LineBreakDpSession? dpSession = null)
     {
         int n = springData.Length;
 
@@ -240,31 +245,56 @@ internal sealed class KnuthPlassBreaker
         // LILYPOND-REF: lily/constrained-breaking.cc:80-124 calc_subproblem — st.at (j, sys)
         //   carries demerits_, details_ (the line, force included) and prev_.
         int cols = n + 1;
-        var dp = new double[(n + 1) * cols];
-        var prev = new int[(n + 1) * cols];
-        var lineForce = new double[(n + 1) * cols];
-        Array.Fill(dp, Infinity);
-        Array.Fill(prev, -1);
-        dp[0] = 0;          // no measures in no lines
-        lineForce[0] = 0;   // no previous line
+        // Row-prefix resume (finding 4-5, LineBreakDpSession): row j is a pure
+        // function of springs[0..j-1], the rows before it and this breaker's
+        // constants, so the session hands back its previous table with rows up to
+        // the first changed spring intact and this run fills only the rows after
+        // — same operations, same order, bit-identical to a fresh fill (the
+        // session's remarks carry the recurrence inventory and the session-191
+        // orthogonality note). No session (the full path, override books) takes
+        // the historical fresh fill below.
+        double[] dp;
+        int[] prev;
+        double[] lineForce;
+        int[] minLines;
+        int[] maxLines;
+        int startRow;
+        if (dpSession != null)
+        {
+            startRow = dpSession.Begin(springData, n,
+                _lineWidth, _firstPrefixWidth, _continuationPrefixWidth,
+                _looseness, _raggedRight,
+                out dp, out prev, out lineForce, out minLines, out maxLines);
+        }
+        else
+        {
+            dp = new double[(n + 1) * cols];
+            prev = new int[(n + 1) * cols];
+            lineForce = new double[(n + 1) * cols];
+            Array.Fill(dp, Infinity);
+            Array.Fill(prev, -1);
+            dp[0] = 0;          // no measures in no lines
+            lineForce[0] = 0;   // no previous line
 
-        // The REACHABLE line-count band per break index: minLines[i]..maxLines[i] brackets
-        // every k with dp[i, k] < Infinity (holes inside the band keep the guard below).
-        // A break's states are all written while the outer loop stands at j == that break,
-        // and only read at j > it, so the band is stable by the time it is read. Iterating
-        // k outside the band skips only iterations whose sole act was the dp[from] >=
-        // Infinity `continue` — the k loop has no other effect for an unreachable state —
-        // which is what makes this bounded walk output-identical by construction rather
-        // than by measurement. MEASURED (session 135, before this): 6,979,000 k-iterations
-        // per 1000-bar break, 3,995,965 of them (57%) that empty `continue`.
-        var minLines = new int[n + 1];
-        var maxLines = new int[n + 1];
-        Array.Fill(minLines, int.MaxValue);
-        Array.Fill(maxLines, int.MinValue);
-        minLines[0] = 0;
-        maxLines[0] = 0;
+            // The REACHABLE line-count band per break index: minLines[i]..maxLines[i] brackets
+            // every k with dp[i, k] < Infinity (holes inside the band keep the guard below).
+            // A break's states are all written while the outer loop stands at j == that break,
+            // and only read at j > it, so the band is stable by the time it is read. Iterating
+            // k outside the band skips only iterations whose sole act was the dp[from] >=
+            // Infinity `continue` — the k loop has no other effect for an unreachable state —
+            // which is what makes this bounded walk output-identical by construction rather
+            // than by measurement. MEASURED (session 135, before this): 6,979,000 k-iterations
+            // per 1000-bar break, 3,995,965 of them (57%) that empty `continue`.
+            minLines = new int[n + 1];
+            maxLines = new int[n + 1];
+            Array.Fill(minLines, int.MaxValue);
+            Array.Fill(maxLines, int.MinValue);
+            minLines[0] = 0;
+            maxLines[0] = 0;
+            startRow = 1;
+        }
 
-        for (int j = 1; j <= n; j++)
+        for (int j = startRow; j <= n; j++)
         {
             for (int i = 0; i < j; i++)
             {
@@ -398,6 +428,13 @@ internal sealed class KnuthPlassBreaker
                 }
             }
         }
+
+        // The finished table becomes the next keystroke's baseline (the selection
+        // below only reads it).
+        dpSession?.Store(springData,
+            _lineWidth, _firstPrefixWidth, _continuationPrefixWidth,
+            _looseness, _raggedRight,
+            dp, prev, lineForce, minLines, maxLines);
 
         // LilyPond's best_solution: walk the line count UPWARD and stop as soon as another
         // line fails to improve AND nothing in that solution is compressed.

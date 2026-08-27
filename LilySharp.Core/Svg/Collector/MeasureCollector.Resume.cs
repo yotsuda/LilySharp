@@ -37,6 +37,17 @@ public sealed partial class MeasureCollector
     {
         if (!WalkCarriesNothing())
             return;
+        // Inside a `|: … :|` form repeat block no boundary is a resume point:
+        // ProcessRepeatBlock's own bookkeeping (volta start/end pairing, the
+        // synthesized barlines between sections) lives in locals no checkpoint
+        // captures, so restoring mid-block would re-enter with it lost. The
+        // suppression is the finding-3-4 refinement of the old wholesale
+        // "form-repeat-block" ineligibility: boundaries BEFORE and AFTER the
+        // block stay resume points, and a suffix splice from a pre-block
+        // boundary adopts the whole block's recorded output (its side effects
+        // are all in the watermarked tables and measures).
+        if (_formRepeatDepth > 0)
+            return;
         rec.Checkpoints.Add(BuildWalkCheckpoint(
             builder, _sectionVisit - 1, invocation, nodeIndex, nodeStart));
     }
@@ -93,6 +104,8 @@ public sealed partial class MeasureCollector
             TableCounts = counts,
             PendingInlineVoltaCount = _pendingInlineVoltas.Count,
             ParallelSpanCount = _parallelSpans.Count,
+            ResolvedSpellingCount = _resolvedSpellingLog.Count,
+            RepetitionReadCount = _repetitionOriginalReads.Count,
             MeasureCount = builder.CurrentMeasureIndex,
         };
     }
@@ -148,6 +161,32 @@ public sealed partial class MeasureCollector
         _parallelSpans.Clear();
         for (int i = 0; i < ck.ParallelSpanCount; i++)
             _parallelSpans.Add(rec.ParallelSpans![i]);
+
+        // Resolved spellings (finding 3-4): the prefix's dictionary entries, RE-KEYED
+        // onto this tree's nodes — the readers (a q / bare duration past the restore
+        // point) look originals up by the NEW tree's OriginalOf answers, and red
+        // nodes are not shared between trees. Positions are unshifted here (every
+        // adopted read is ≤ the common prefix — MaxSourceRead's guarantee), so the
+        // identity window resolves each node at its recorded position; replay order
+        // preserves a form replay's last-write-wins. The recorded VALUES are what a
+        // live walk of the identical prefix would compute (the same determinism the
+        // adopted measures stand on). Any resolution failure is structural drift.
+        var idWindow = new CollectTailShifter.Window(int.MaxValue, int.MaxValue, 0);
+        for (int i = 0; i < ck.ResolvedSpellingCount; i++)
+        {
+            var (oldNode, resolvedMembers) = rec.ResolvedSpellings![i];
+            if (_root == null
+                || CollectTailShifter.ResolveShifted(_root, oldNode, idWindow) is not { } rekeyed)
+                throw new CollectResumeAbortException(
+                    "collect resume could not re-key an adopted resolved spelling");
+            if (rekeyed is NoteSyntax n)
+                _resolvedNotes[n] = resolvedMembers[0];
+            else if (rekeyed is ChordSyntax c)
+                _resolvedChordMembers[c] = resolvedMembers;
+            else
+                throw new CollectResumeAbortException(
+                    "collect resume re-keyed a resolved spelling onto an unexpected node kind");
+        }
 
         // Cumulative side tables: extend to the checkpoint's watermark from the
         // source's FINAL lists (append-only across the collect, so entries
@@ -216,14 +255,48 @@ public sealed partial class MeasureCollector
         // its text), and finding out inside the copy loop below would first
         // COPY every measure before it — for a candidate standing before the
         // window (the m=0 case) that is half the book, paid on every keystroke
-        // just to decline. An EMPTY window (a pure position shift — prefix ==
-        // suffixStart) overlaps nothing: a measure straddling the insertion
-        // point shifts per-position and is fine.
-        if (w.Prefix < w.SuffixStart)
+        // just to decline.
+        // ⚠️ AN EMPTY WINDOW WITH Δ≠0 IS NOT "NOTHING CHANGED" (2026-08-27,
+        // found by the finding-4-5 net): the inserted/deleted text lands AT one
+        // point, and a measure STRADDLING that point has different text even
+        // though the old text's prefix and suffix both survive. This comment
+        // used to claim the straddler "shifts per-position and is fine" — true
+        // for trivia (a duplicated space), and served the OLD note for content
+        // (`d` → `dis`: same pitch-letter TOKEN KIND, so the parse agreement
+        // does not object the way a letter swap makes it, and the whole chain —
+        // stale item, equal content keys, whole-layout reuse — handed back the
+        // previous keystroke's picture). The splice cannot tell trivia from
+        // content here, so a straddled measure always declines and is walked
+        // live; candidates PAST the point keep splicing. Only the identity
+        // window (Δ=0, empty) adopts a straddler — the texts are equal.
+        if (w.Prefix < w.SuffixStart || w.Delta != 0)
         {
             for (int i = ck.MeasureCount; i < pre.Count; i++)
             {
                 if (pre[i].SourceStart < w.SuffixStart && pre[i].SourceEnd > w.Prefix)
+                    return false;
+            }
+        }
+
+        // Repetition certification (finding 3-4): a q / bare duration in the tail
+        // copies state recorded at its ORIGINAL's walk. That copy is certified for
+        // an original in the unchanged common prefix (identical text, deterministic
+        // walk) and for one in the tail itself (the boundary state equality below
+        // certifies the recorded walk of the tail wholesale) — but NOT for an
+        // original in [prefix, boundary): that region was re-walked LIVE this
+        // collect and can resolve differently even when the boundary state
+        // reconverges (a relative frame moved by the window and reset before the
+        // boundary). An EMPTY window makes the live region's text identical and
+        // the whole range certified by determinism, like the overlap check above.
+        if (w.Prefix < w.SuffixStart)
+        {
+            for (int i = ck.RepetitionReadCount; i < endCk.RepetitionReadCount; i++)
+            {
+                var (originalStart, originalEnd) = rec.RepetitionOriginalReads![i];
+                // Certified iff the WHOLE original lies before the window or at/after
+                // the boundary — the whole span, because an edit INSIDE the original
+                // node leaves its start before the window while its value changed.
+                if (!(originalEnd <= w.Prefix || originalStart >= ck.NodeStart))
                     return false;
             }
         }
@@ -324,6 +397,25 @@ public sealed partial class MeasureCollector
             spanTail.Add((resolved, startMeasure, startOffset, frame));
         }
 
+        // Resolved spellings of the adopted tail (finding 3-4), re-keyed onto this
+        // tree — the identity path included: even with identical text the NEW tree's
+        // OriginalOf answers new red nodes, so old-node keys would never be hit.
+        // Values are certified by the boundary state equality plus the repetition
+        // guard above. Read by whatever runs live after the splice (a parallel
+        // span's extra voices).
+        var spellTail = new List<(SyntaxNode Node, ImmutableArray<ResolvedChordMember> Members)>(
+            endCk.ResolvedSpellingCount - ck.ResolvedSpellingCount);
+        for (int i = ck.ResolvedSpellingCount; i < endCk.ResolvedSpellingCount; i++)
+        {
+            var (oldNode, resolvedMembers) = rec.ResolvedSpellings![i];
+            if (_root == null
+                || CollectTailShifter.ResolveShifted(_root, oldNode, w)
+                    is not { } rekeyed
+                || rekeyed is not (NoteSyntax or ChordSyntax))
+                return false;
+            spellTail.Add((rekeyed, resolvedMembers));
+        }
+
         var endMeta = endCk.Meta.Clone();
         if (!identity && !ShiftMetaPositions(endMeta, w))
             return false;
@@ -380,6 +472,13 @@ public sealed partial class MeasureCollector
                 dst[t].Add(entry);
         _pendingInlineVoltas.AddRange(voltaTail);
         _parallelSpans.AddRange(spanTail);
+        foreach (var (node, resolvedMembers) in spellTail)
+        {
+            if (node is NoteSyntax n)
+                _resolvedNotes[n] = resolvedMembers[0];
+            else
+                _resolvedChordMembers[(ChordSyntax)node] = resolvedMembers;
+        }
 
         var measures = builder.MeasuresSnapshot();
         measures.AddRange(tailMeasures);
