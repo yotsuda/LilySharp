@@ -38,12 +38,15 @@ public sealed partial class LilySharpLanguageServer
     // Custom: SVG Preview
     // ============================================================
 
-    // Per-document incremental SVG-compile sessions (default render only). Each session
+    // Per-(document, render name) incremental SVG-compile sessions. Each session
     // reuses the systems whose content is unchanged across edits, so refreshing a large
-    // score's preview does not re-lay-out every bar — the dominant cost. Keyed by URI,
-    // dropped on close. _svgSessionLock serializes access: GetSvg can be invoked
-    // concurrently and IncrementalCompiler is stateful.
-    private readonly System.Collections.Generic.Dictionary<System.Uri, IncrementalCompiler> _svgSessions = new();
+    // score's preview does not re-lay-out every bar — the dominant cost. A NAMED render
+    // is a session of its own (2026-08-26 review, finding 3-1 — it used to bypass the
+    // session machinery and pay a cold compile per keystroke): IncrementalCompiler
+    // renders ONE spec per session, so the selection is part of the key ("" = default).
+    // All of a document's sessions are dropped on close. _svgSessionLock serializes
+    // access: GetSvg can be invoked concurrently and IncrementalCompiler is stateful.
+    private readonly System.Collections.Generic.Dictionary<(System.Uri Uri, string RenderName), IncrementalCompiler> _svgSessions = new();
     private readonly object _svgSessionLock = new();
 
     /// <summary>
@@ -238,13 +241,13 @@ public sealed partial class LilySharpLanguageServer
             // Preview mode: @font-face is defined in HTML, not in SVG
             var renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Preview();
 
-            // The default render (no explicit selection) goes through the per-document
-            // incremental session so an edit reuses unchanged systems. A NAMED render is
-            // outside the session's scope — IncrementalCompiler always renders the first
-            // score — so fall back to a full compile for those.
-            var svg = string.IsNullOrEmpty(@params.RenderName)
-                ? RenderSvgIncremental(@params.TextDocument.Uri, tree, renderOptions)
-                : LilySharp.Core.Svg.SvgGenerator.Generate(tree, renderOptions, @params.RenderName);
+            // Every render — default or named — goes through a per-(document, render name)
+            // incremental session so an edit reuses unchanged systems. IncrementalCompiler
+            // renders one spec per session with SvgGenerator.Generate's own selection
+            // policy, so switching the preview to another score simply warms that
+            // score's own session (2026-08-26 review, finding 3-1).
+            var svg = RenderSvgIncremental(
+                @params.TextDocument.Uri, @params.RenderName, tree, renderOptions);
 
             return new SvgResponse
             {
@@ -265,39 +268,49 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// Renders the default score of <paramref name="tree"/> through the URI's persistent
-    /// <see cref="IncrementalCompiler"/> session (created on first use), reusing unchanged
-    /// systems. The output is byte-identical to <see cref="SvgGenerator.Generate"/>. Any
-    /// failure in the session path drops the (possibly corrupted) session and falls back
-    /// to a full compile, so the optimization can never break the preview.
+    /// Renders the score <paramref name="renderName"/> selects (null/empty = default)
+    /// through that selection's persistent <see cref="IncrementalCompiler"/> session
+    /// (created on first use), reusing unchanged systems. The output is byte-identical
+    /// to <see cref="SvgGenerator.Generate"/> with the same name. Any failure in the
+    /// session path drops the (possibly corrupted) session and falls back to a full
+    /// compile, so the optimization can never break the preview.
     /// </summary>
-    private string RenderSvgIncremental(Uri uri, SyntaxTree tree,
+    private string RenderSvgIncremental(Uri uri, string? renderName, SyntaxTree tree,
         LilySharp.Core.Svg.Renderer.SvgRenderOptions options)
     {
+        var key = (uri, renderName ?? string.Empty);
         lock (_svgSessionLock)
         {
             try
             {
-                if (!_svgSessions.TryGetValue(uri, out var session))
+                if (!_svgSessions.TryGetValue(key, out var session))
                 {
-                    session = new IncrementalCompiler(tree, options);
-                    _svgSessions[uri] = session;
+                    session = new IncrementalCompiler(tree, options, renderName);
+                    _svgSessions[key] = session;
                 }
                 return session.RenderIncremental(tree);
             }
             catch
             {
-                _svgSessions.Remove(uri);
-                return LilySharp.Core.Svg.SvgGenerator.Generate(tree, options, null);
+                _svgSessions.Remove(key);
+                return LilySharp.Core.Svg.SvgGenerator.Generate(tree, options, renderName);
             }
         }
     }
 
-    /// <summary>Drops the incremental SVG session for a closed document.</summary>
+    /// <summary>Drops every incremental SVG session of a closed document (one per
+    /// render selection previewed in it).</summary>
     private void DropSvgSession(Uri uri)
     {
         lock (_svgSessionLock)
-            _svgSessions.Remove(uri);
+        {
+            var stale = new System.Collections.Generic.List<(Uri, string)>();
+            foreach (var key in _svgSessions.Keys)
+                if (key.Uri == uri)
+                    stale.Add(key);
+            foreach (var key in stale)
+                _svgSessions.Remove(key);
+        }
     }
 
     /// <summary>

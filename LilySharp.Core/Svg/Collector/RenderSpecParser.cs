@@ -411,23 +411,41 @@ public static class RenderSpecParser
             if (node is RenderDeclarationSyntax render)
             {
                 var spec = Parse(render);
-                if (spec == null) continue;
-
-                // Match by Name (e.g., "score")
-                if (spec.Name == name)
-                    return spec;
-
-                // Match by full output filename (e.g., "fur-elise.svg")
-                if (spec.OutputFile == name)
-                    return spec;
-
-                // Match by filename without extension (e.g., "fur-elise")
-                var filenameWithoutExt = System.IO.Path.GetFileNameWithoutExtension(spec.OutputFile);
-                if (filenameWithoutExt == name)
+                if (spec != null && MatchesName(spec, name))
                     return spec;
             }
         }
         return null;
+    }
+
+    /// <summary>Whether <paramref name="name"/> selects <paramref name="spec"/> — by its
+    /// Name (e.g. "sub"), its full output filename (e.g. "fur-elise.svg"), or that
+    /// filename without its extension. The name-match policy has ONE home: both
+    /// <see cref="FindByName"/> and <see cref="Choose"/> read it, so the CLI's
+    /// <c>--score</c> and the preview's render session cannot drift apart.</summary>
+    private static bool MatchesName(RenderSpec spec, string name)
+        => spec.Name == name
+            || spec.OutputFile == name
+            || System.IO.Path.GetFileNameWithoutExtension(spec.OutputFile) == name;
+
+    /// <summary>
+    /// The render-selection policy of <see cref="SvgGenerator.Generate(SyntaxTree, Renderer.SvgRenderOptions, string)"/>,
+    /// over an already-parsed spec list: no name (null/empty) takes the first spec;
+    /// a name takes the first spec it matches (<see cref="MatchesName"/>), falling
+    /// back to the first spec when nothing matches — a stale preview selection still
+    /// shows the default score rather than nothing. Shared by that full path and by
+    /// <see cref="IncrementalCompiler"/> so a named session resolves the SAME spec
+    /// the full compile it must byte-match would.
+    /// </summary>
+    internal static RenderSpec? Choose(IReadOnlyList<RenderSpec> specs, string? renderName)
+    {
+        if (!string.IsNullOrEmpty(renderName))
+        {
+            foreach (var spec in specs)
+                if (MatchesName(spec, renderName!))
+                    return spec;
+        }
+        return specs.Count > 0 ? specs[0] : null;
     }
 
     /// <summary>

@@ -108,7 +108,12 @@ internal sealed class PageLayouter
         public double Value;
     }
 
-    private static double InterSystemSkylineDistance(VerticalSkyline nextUp, VerticalSkyline prevDown)
+    // Internal for the SECOND reader (2026-08-26 review, finding 4-6): the single-page
+    // stack in LayoutEngine.CreatePages measures the same facing pairs of the same
+    // instances, and used to walk Distance() unmemoized every keystroke on any book
+    // that fits one page. Both paths sharing one memo also cannot disagree on the
+    // number — the identity-verified slot serves whichever path asks first.
+    internal static double InterSystemSkylineDistance(VerticalSkyline nextUp, VerticalSkyline prevDown)
     {
         var e = PairDistances.GetOrCreateValue(nextUp);
         if (!ReferenceEquals(e.Down, prevDown))

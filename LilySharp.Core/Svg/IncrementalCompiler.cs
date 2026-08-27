@@ -49,15 +49,42 @@ namespace LilySharp.Core.Svg;
 /// slices (S5) memoize per-measure semantics/layout to skip more.
 /// </para>
 /// <para>
-/// Handles the first/default render block (like
-/// <see cref="SvgGenerator.Generate(SyntaxTree, SvgRenderOptions, string)"/> with
-/// no name). Multi-render-name selection is out of scope for this slice.
+/// ONE SPEC PER SESSION: a session renders the score its construction-time
+/// <c>renderName</c> selects — the same resolution as
+/// <see cref="SvgGenerator.Generate(SyntaxTree, SvgRenderOptions, string)"/>
+/// (<see cref="RenderSpecParser.Choose"/>: by name / output file / stem, falling
+/// back to the first block), or the first/default score when no name was given.
+/// The LSP keys its sessions by (document, render name) accordingly (2026-08-26
+/// review, finding 3-1 — a named preview used to bypass the session entirely).
+/// Every reuse key below is computed from the COLLECTED score, so it is spec-correct
+/// by construction as long as resolution keeps picking the same block; the one thing
+/// no key can see — resolution itself drifting to a DIFFERENT block (one inserted
+/// above, renamed into or out of the match) — is caught by the spec-identity guard
+/// in <see cref="Compile"/>, which then sheds the whole session cold.
 /// </para>
 /// </remarks>
 public sealed class IncrementalCompiler
 {
     private readonly SvgRenderOptions _options;
+    // Which score this session renders (null/empty = the first/default block) —
+    // fixed at construction; a different selection is a different session.
+    private readonly string? _renderName;
     private SyntaxTree _tree;
+
+    // The (Name, OutputFile) sequence of the tree's parseable render blocks at the
+    // last compile — the complete input of WHICH block Choose resolves, for a fixed
+    // _renderName. While it is unchanged, resolution picks the same ordinal block,
+    // and every cache below is keyed on that block's collected score. When it moves
+    // (a render block inserted, deleted, renamed, its output file changed), the
+    // resolved block may be a DIFFERENT one whose score could even collect to the
+    // same content keys (identical music in another part — the keys are blind to
+    // source offsets by design, so fragment data-pos would replay the other part's
+    // offsets; and the collect baseline was recorded under the other spec's
+    // transpose, which no walk-entry validation checks). No per-measure or global
+    // key can catch that, so the guard in Compile sheds the session cold instead.
+    // Over-approximate on purpose: a rename that does NOT move resolution also
+    // sheds — one cold compile, never a wrong one. Null until the first compile.
+    private string? _specIdentity;
 
     // The font plan the cached geometry below was measured with. Metrics are an input
     // to every layout stage but to none of the reuse keys, so a plan change sheds the
@@ -222,11 +249,17 @@ public sealed class IncrementalCompiler
     /// Lets tests assert that unchanged systems are reused rather than recomputed.</summary>
     internal SystemLayoutCache? SystemCache => _systemCache;
 
-    /// <summary>Creates an incremental compiler seeded with an initial tree.</summary>
-    public IncrementalCompiler(SyntaxTree tree, SvgRenderOptions? options = null)
+    /// <summary>Creates an incremental compiler seeded with an initial tree.
+    /// <paramref name="renderName"/> fixes which score every compile of this session
+    /// renders (null/empty = the first/default block), resolved per compile with
+    /// <see cref="SvgGenerator.Generate(SyntaxTree, SvgRenderOptions, string)"/>'s
+    /// own policy (<see cref="RenderSpecParser.Choose"/>).</summary>
+    public IncrementalCompiler(SyntaxTree tree, SvgRenderOptions? options = null,
+        string? renderName = null)
     {
         _tree = tree;
         _options = options ?? SvgRenderOptions.Default;
+        _renderName = renderName;
     }
 
     /// <summary>Fully compiles the current tree and (re)establishes the cache.</summary>
@@ -246,7 +279,29 @@ public sealed class IncrementalCompiler
 
     private string Compile(SyntaxTree tree, bool allowSkip)
     {
-        var spec = RenderSpecParser.FindFirst(tree);
+        var specs = RenderSpecParser.FindAll(tree);
+        var spec = RenderSpecParser.Choose(specs, _renderName);
+
+        // Spec-identity guard (_specIdentity's remarks): while the render-block
+        // sequence is unchanged, Choose picks the same block it picked last compile
+        // and every cache below is keyed on that block's collected score. When it
+        // moved, the session may now be rendering a DIFFERENT block — shed the
+        // collect baseline here and let the font/paper guard below shed every
+        // geometry cache (its `_fontPlan is null` arm; one shed list, not two).
+        // The beam memo needs no shed: it is addressed by the measure's RESOLVED
+        // content (transpose included) and its bake always runs live.
+        string specIdentity = SpecIdentity(specs);
+        if (_specIdentity != null && _specIdentity != specIdentity)
+        {
+            _collectSource = null;
+            _collectRecording = null;
+            _collectBaselineTree = null;
+            _rerecordNext = false;
+            _rerecordArmed = true;
+            _fontPlan = null;
+        }
+        _specIdentity = specIdentity;
+
         // ⑶ beamdirs: one generation per compile — the previous compile's per-measure
         // detections serve this one; anything older ages out.
         _beamMemo.BeginCollect();
@@ -583,6 +638,21 @@ public sealed class IncrementalCompiler
         if (hasRight != hadRight)
             return false;
         return !hasRight || newKeys[i + 1] == prevKeys[i + 1];
+    }
+
+    /// <summary>The tree's render-block sequence folded to what <see cref="RenderSpecParser.Choose"/>
+    /// resolves from: each parseable block's Name and OutputFile, in document order
+    /// (a parse-failed block is invisible to Choose and to this fold alike). Each
+    /// field is length-prefixed, so the fold is injective - no field content can
+    /// make two different sequences fold equal.</summary>
+    private static string SpecIdentity(
+        System.Collections.Generic.IReadOnlyList<RenderSpec> specs)
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (var s in specs)
+            sb.Append(s.Name.Length).Append(':').Append(s.Name)
+              .Append(s.OutputFile.Length).Append(':').Append(s.OutputFile);
+        return sb.ToString();
     }
 
     /// <summary>

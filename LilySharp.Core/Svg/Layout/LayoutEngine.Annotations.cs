@@ -127,6 +127,13 @@ internal sealed partial class LayoutEngine
         /// </remarks>
         public IReadOnlyList<List<(VerticalSkyline Up, VerticalSkyline Down)>>? StaffSkylines { get; init; }
 
+        /// <summary>Per system, the pair-run suppliers that system was placed and sprung
+        /// with — carried from the per-system pass (finding 4-4) so the drawn-baseline
+        /// walk consumes the SAME suppliers (and their within-pass caches) instead of
+        /// rebuilding them per keystroke. Null in the preliminary pass, which never asks
+        /// (its <see cref="StaffSkylines"/> is null too, and the lookup is gated on it).</summary>
+        public IReadOnlyList<MultiStaffLayouter.PairRunSources>? RunSources { get; init; }
+
         /// <summary>Per system, per staff: the pedal bracket lines the DOWN profiles in
         /// <see cref="StaffSkylines"/> were solved with (Y-up about each staff's middle
         /// line). The pedal draw reads these so the drawn line is the reserved line --
@@ -237,6 +244,11 @@ internal sealed partial class LayoutEngine
         /// <summary>This pass's above-staff stacking memo, or null outside the
         /// incremental session (batch renders, tests). See <see cref="AboveStackMemo"/>.</summary>
         public AboveStackMemo? AboveStackMemo { get; init; }
+
+        /// <summary>This pass's below-staff stacking memo, or null outside the
+        /// incremental session — the below-side mirror (finding 4-3).
+        /// See <see cref="BelowStackMemo"/>.</summary>
+        public BelowStackMemo? BelowStackMemo { get; init; }
 
         /// <summary>This pass's per-(staff, system) fingering memo, or null outside the
         /// incremental session — where null means the pass runs the whole-score island
@@ -829,6 +841,14 @@ internal sealed partial class LayoutEngine
                         VerticalSkyline.FromResolvedBuildings(VerticalDirection.Down, p.Down.Buildings));
             };
         }
+        // The passes' keystroke-crossing memos: reference identity of each staff's
+        // profile is the STORED table pair, not the copy staffProfile wraps per call
+        // (ctx.InsideIdentityOf). staffProfile's OWN fallback arm (the InsideOf-null
+        // rebuild) has no stable identity, and InsideIdentityOf answers null exactly
+        // there, which makes both memos stack that system live — never a false match.
+        Func<int, int, (object Up, object Down)?>? profileIdentity =
+            staffProfile == null ? null : ctx.InsideIdentityOf;
+
         // The scripts come BACK out: the fermata family declares outside-staff-priority 75
         // (scm/script.scm), so it is a MOVER of this pass — below here, above in
         // StackAboveStaff, which is handed the below pass's result so one array carries
@@ -837,7 +857,8 @@ internal sealed partial class LayoutEngine
             OutsideStaffStacker.StackBelowStaff(ctx.Fonts, systems, dynamicLayouts, hairpinLayouts,
                 articulationLayouts, applyStaffOffsets: staffYAt != null,
                 staffProfile: staffProfile, lineGroups: dynamicLineGroups,
-                trills: trillSpannerLayouts);
+                trills: trillSpannerLayouts,
+                memo: ctx.BelowStackMemo, profileIdentity: profileIdentity);
 
         // ABOVE-staff: one unified priority pass (trill 50, bar number 100,
         // tuplet brackets 200 as immovable seeds, ottava 400, text 450,
@@ -906,13 +927,6 @@ internal sealed partial class LayoutEngine
         // Forced-above dynamics (@f.up) join the above-staff pass so they clear, and are
         // cleared by, the other above-staff grobs. Below dynamics were already placed by
         // StackBelowStaff and pass through untouched.
-        // The pass's keystroke-crossing memo: reference identity of each staff's
-        // profile is the STORED table pair, not the copy staffProfile wraps per call
-        // (ctx.InsideIdentityOf). staffProfile's OWN fallback arm (the InsideOf-null
-        // rebuild) has no stable identity, and InsideIdentityOf answers null exactly
-        // there, which makes the memo stack that system live — never a false match.
-        Func<int, int, (object Up, object Down)?>? profileIdentity =
-            staffProfile == null ? null : ctx.InsideIdentityOf;
         var (stackedTrills, stackedBarNumbers, stackedOttavas, stackedCustomTexts,
              stackedVoltas, stackedMarks, stackedDynamicsAbove, stackedTextSpanners,
              stackedArticulationsAbove) = OutsideStaffStacker.StackAboveStaff(
@@ -1109,15 +1123,26 @@ internal sealed partial class LayoutEngine
                     var system = systems[sysIdx];
                     if (!sourceCache.TryGetValue(sysIdx, out var runSources))
                     {
-                        int start = int.MaxValue, end = int.MinValue;
-                        foreach (var m in system.Measures)
+                        // The per-system pass carried its own suppliers out (finding
+                        // 4-4) — same score, same measure layouts, same range, so the
+                        // rebuild below is the identical value paid a second time.
+                        // The rebuild stays as the arm for a context that carried none.
+                        if (ctx.RunSources != null && sysIdx < ctx.RunSources.Count)
                         {
-                            start = Math.Min(start, m.MeasureIndex);
-                            end = Math.Max(end, m.MeasureIndex + 1);
+                            runSources = ctx.RunSources[sysIdx];
                         }
-                        runSources = end > start
-                            ? BuildPairRunSources(multiScore, system.Measures, start, end)
-                            : default;
+                        else
+                        {
+                            int start = int.MaxValue, end = int.MinValue;
+                            foreach (var m in system.Measures)
+                            {
+                                start = Math.Min(start, m.MeasureIndex);
+                                end = Math.Max(end, m.MeasureIndex + 1);
+                            }
+                            runSources = end > start
+                                ? BuildPairRunSources(multiScore, system.Measures, start, end)
+                                : default;
+                        }
                         sourceCache[sysIdx] = runSources;
                     }
                     IReadOnlyList<(Staff Staff, StaffLayout Layout)> RowsBelow(int upper)
@@ -1724,9 +1749,16 @@ internal sealed partial class LayoutEngine
     private static LyricEngraver BuildBlockEngraver(MultiStaffScore score)
         => LyricEngraver.ForGeometry(score);
 
+    /// <param name="cache">The session's per-system cache, or null (full compile). With a
+    /// cache, each upper staff's block is served across keystrokes by
+    /// <see cref="SystemLayoutCache.GetOrComputeLooseLines"/> (finding 4-4) — the slice
+    /// arguments that follow are its key and must be the same values the system's other
+    /// memos were keyed with.</param>
     private MultiStaffLayouter.LooseLinesBetween? BuildLooseLinesBetween(
         MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts,
-        int startMeasure, int endMeasure)
+        int startMeasure, int endMeasure,
+        SystemLayoutCache? cache, bool isFirstSystem, bool isLastSystem,
+        double indent, double commonShortestDuration)
     {
         // ⚠️ STAVES, NOT GROUPS — and the bail-out used to be `StaffGroups.Length < 2`,
         // which is the same defect stated at the door: a grand staff is ONE group, so a
@@ -1749,27 +1781,35 @@ internal sealed partial class LayoutEngine
         // LYRV/LYRRV dumps measure that identity).
         var lyricSpecs = _options.StaffSpacing.Lyrics;
 
-        var cache = new Dictionary<(int, int), IReadOnlyList<MultiStaffLayouter.PairLooseLine>?>();
+        var perPair = new Dictionary<(int, int), IReadOnlyList<MultiStaffLayouter.PairLooseLine>?>();
         return (upperStaffIndex, lowerStaffIndex) =>
         {
             var key = (upperStaffIndex, lowerStaffIndex);
-            if (cache.TryGetValue(key, out var hit))
+            if (perPair.TryGetValue(key, out var hit))
                 return hit;
 
             // The block is the upper staff's OWN note-bound lines — the half-open range
             // [upper, upper+1) — which is the same selection BuildStaffAnchorTables gives
             // that staff an anchor for. The two must agree or the block is drawn at one
             // staff's baseline and the room measured from another's.
-            IReadOnlyList<MultiStaffLayouter.PairLooseLine>? lines = null;
-            var built = engraver.NoteBoundBlockSkylines(
-                score.Lyrics, measureLayouts, startMeasure, endMeasure,
-                upperStaffIndex, upperStaffIndex + 1);
-            if (built.Count > 0)
-                lines = built
-                    .Select(b => new MultiStaffLayouter.PairLooseLine(
-                        b.Up, b.Down, StaffAffinityDirection.Up, lyricSpecs))
-                    .ToList();
-            cache[key] = lines;
+            IReadOnlyList<MultiStaffLayouter.PairLooseLine>? Compute()
+            {
+                var built = engraver.NoteBoundBlockSkylines(
+                    score.Lyrics, measureLayouts, startMeasure, endMeasure,
+                    upperStaffIndex, upperStaffIndex + 1);
+                return built.Count > 0
+                    ? built
+                        .Select(b => new MultiStaffLayouter.PairLooseLine(
+                            b.Up, b.Down, StaffAffinityDirection.Up, lyricSpecs))
+                        .ToList()
+                    : null;
+            }
+            var lines = cache == null
+                ? Compute()
+                : cache.GetOrComputeLooseLines(upperStaffIndex,
+                    startMeasure, endMeasure - startMeasure, isFirstSystem, isLastSystem,
+                    indent, commonShortestDuration, Compute);
+            perPair[key] = lines;
             return lines;
         };
     }
@@ -1792,9 +1832,12 @@ internal sealed partial class LayoutEngine
     /// </summary>
     private MultiStaffLayouter.PairRunSources BuildPairRunSources(
         MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts,
-        int startMeasure, int endMeasure)
+        int startMeasure, int endMeasure,
+        SystemLayoutCache? cache = null, bool isFirstSystem = false,
+        bool isLastSystem = false, double indent = 0, double commonShortestDuration = 0)
         => new(
-            BuildLooseLinesBetween(score, measureLayouts, startMeasure, endMeasure),
+            BuildLooseLinesBetween(score, measureLayouts, startMeasure, endMeasure,
+                cache, isFirstSystem, isLastSystem, indent, commonShortestDuration),
             BuildAttachedChordLines(score, measureLayouts),
             BuildRowVerseInk(score, measureLayouts, startMeasure, endMeasure));
 

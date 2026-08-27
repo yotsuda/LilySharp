@@ -46,10 +46,10 @@ public static class SvgGenerator
         // Find render specification - by name if specified, otherwise first. If a
         // name is given but matches no score (e.g. a stale preview selection left
         // over after the score was renamed), fall back to the first score rather
-        // than laying out an empty score, which would crash.
-        var renderSpec = string.IsNullOrEmpty(renderName)
-            ? RenderSpecParser.FindFirst(tree)
-            : RenderSpecParser.FindByName(tree, renderName) ?? RenderSpecParser.FindFirst(tree);
+        // than laying out an empty score, which would crash. The policy lives in
+        // Choose, shared with IncrementalCompiler's session path, which must
+        // resolve the same spec this full compile would to stay byte-identical.
+        var renderSpec = RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), renderName);
 
         var (multiScore, layout) = BuildLayout(tree, renderSpec);
         return RenderToSvg(multiScore, layout, options);

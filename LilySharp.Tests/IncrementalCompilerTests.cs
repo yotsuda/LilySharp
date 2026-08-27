@@ -1656,4 +1656,192 @@ public class IncrementalCompilerTests
         Assert.True(prelim.Hits == 0 && final.Hits == 0,
             $"a scripted unit must never be memoized (prelim {prelim.Hits}, final {final.Hits})");
     }
+
+    // ============================================================
+    // Named render sessions (2026-08-26 review, finding 3-1)
+    // ============================================================
+
+    /// <summary>Two scores over two different parts, music ABOVE the render blocks —
+    /// the shape in which an edit near the blocks leaves the whole book as a common
+    /// prefix for the collect resume to adopt, which is exactly where a stale spec
+    /// could serve stale measures.</summary>
+    private const string TwoScores = """
+        time 4/4
+        key c major
+        part melody { clef treble }
+        part alto { clef treble }
+        phrase mel { c4 d e f | g4 a b c | d4 e f g | a4 b c d | }
+        phrase alt { e4 f g a | b4 c d e | f4 g a b | c4 d e f | }
+        section Main { melody { mel } alto { alt } }
+        form main { Main }
+        form sub { Main }
+        score main "x" { staff melody }
+        score sub "y" { staff alto }
+        """;
+
+    private static string FullNamed(string text, string name) =>
+        Norm(SvgGenerator.Generate(SyntaxTree.Parse(text), Opt, name));
+
+    /// <summary>A named session must resolve its score the way the full path does —
+    /// by name, by output file, or (no match, e.g. a stale preview selection) the
+    /// first score — and stay byte-identical to it across edits in EITHER score's
+    /// music. Before finding 3-1 a named preview bypassed the session entirely, so
+    /// this incremental==full net simply did not exist for names.</summary>
+    [Theory]
+    [InlineData("sub")]   // matches score sub by name
+    [InlineData("y")]     // matches score sub by its output file
+    [InlineData("nope")]  // matches nothing -> first score, like SvgGenerator.Generate
+    public void NamedSession_ChainedEdits_EqualFullGenerate(string name)
+    {
+        var tree = SyntaxTree.Parse(TwoScores);
+        var session = new IncrementalCompiler(tree, Opt, name);
+        Assert.Equal(FullNamed(tree.Text, name), Norm(session.Render()));
+
+        // An edit inside alto's music (the named score's own systems move)...
+        tree = tree.WithChange(Replace(tree.Text, "b4 c d e", "b4 c d f"));
+        Assert.Equal(FullNamed(tree.Text, name), Norm(session.RenderIncremental(tree)));
+
+        // ...then one inside melody's music (the other score's).
+        tree = tree.WithChange(Replace(tree.Text, "g4 a b c", "g4 a b d"));
+        Assert.Equal(FullNamed(tree.Text, name), Norm(session.RenderIncremental(tree)));
+    }
+
+    /// <summary>The payoff a named preview used to be denied: an edit confined to the
+    /// OTHER score's music leaves the named score's collected content unchanged, so the
+    /// session must take the whole-layout reuse path — and still equal the full path.</summary>
+    [Fact]
+    public void NamedSession_EditConfinedToTheOtherScore_ReusesWholeLayout()
+    {
+        var tree = SyntaxTree.Parse(TwoScores);
+        var session = new IncrementalCompiler(tree, Opt, "sub");
+        session.Render();
+
+        // "g4 a b c" lives in phrase mel, drawn only by score main; same length,
+        // so alto's offsets do not move either.
+        tree = tree.WithChange(Replace(tree.Text, "g4 a b c", "g4 a b d"));
+        var svg = Norm(session.RenderIncremental(tree));
+
+        Assert.True(session.LastEditReusedLayout,
+            "an edit that leaves the named score's content unchanged must reuse the whole layout");
+        Assert.Equal(FullNamed(tree.Text, "sub"), svg);
+    }
+
+    /// <summary>THE SPEC-IDENTITY GUARD, on the named side. Inserting ANOTHER block
+    /// named sub — with a transpose — above the one the session has been rendering
+    /// drifts resolution (first match wins) to the inserted block, while every guard
+    /// keyed on content stays green: the music above is an untouched common prefix,
+    /// the baseline's own render blocks are value-stable, and no walk-entry check
+    /// reads the transpose. Without the guard the resume adopts every measure at
+    /// concert pitch under the new name (verified red while building this test);
+    /// the guard sheds the session cold instead.</summary>
+    /// <summary>A book whose music is written directly in the section cell — the
+    /// shape whose measure boundaries the collect resume actually checkpoints and
+    /// adopts (a phrase-reference cell is one item and adopts nothing), which is
+    /// what makes the spec drift below DANGEROUS rather than merely cold.</summary>
+    private static string DriftBook() =>
+        "octave absolute\npart m { clef treble }\nsection S {\n  m {\n    "
+        + string.Join(" |\n    ", Enumerable.Repeat("c'4 d'4 e'4 f'4", 60))
+        + " |\n  }\n}\nform main { S }\nform sub { S }\n"
+        + "score main \"x\" { staff m }\nscore sub \"y\" { staff m }\n";
+
+    [Fact]
+    public void NamedSession_SameNamedBlockInsertedAbove_StaysEqualToFull()
+    {
+        var tree = SyntaxTree.Parse(DriftBook());
+        var session = new IncrementalCompiler(tree, Opt, "sub");
+        session.Render();
+
+        // Inserted BEFORE `form main`, where the old text continues with an `f`:
+        // the common prefix stops right there instead of running into a baseline
+        // render block's header, the dirty window is empty, and every baseline
+        // block sits value-stable in the shifted suffix — so the resume planner
+        // PROCEEDS and the adopted measures are the stale spec's.
+        int at = tree.Text.IndexOf("form main", System.StringComparison.Ordinal);
+        tree = tree.WithChange(new TextChange(new TextSpan(at, 0),
+            "score sub transpose d { staff m }\n"));
+        Assert.Equal(FullNamed(tree.Text, "sub"), Norm(session.RenderIncremental(tree)));
+    }
+
+    /// <summary>Finding 4-4 liveness + value: the note-bound loose-line block between two
+    /// staves is memoized per (system, upper staff) across keystrokes
+    /// (SystemLayoutCache.GetOrComputeLooseLines). An edit confined to a LATER system
+    /// leaves the first system's slice key unchanged, so its block must be SERVED — and
+    /// the served value must render byte-identical to a full recompile (a poison that
+    /// drops the served value to null turns the equality red; verified while building
+    /// this test).</summary>
+    [Fact]
+    public void LooseLinesMemo_LaterSystemEdit_ServesTheEarlierBlock()
+    {
+        string bars(string cell) => string.Join(" | ", Enumerable.Repeat(cell, 12));
+        string source =
+            "part melody { section A { " + bars("c4 d e f") + " } }\n"
+            + "part back { section A { " + bars("e4 f g a") + " } }\n"
+            + "lyrics ly sings melody { section A { " + bars("la le li lo") + " } }\n"
+            + "form main { A }\n"
+            + "score main {\n  staff melody  lyrics ly\n  staff back\n}\n";
+
+        var tree = SyntaxTree.Parse(source);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+        Assert.True(session.SystemCache!.LooseLinesStats.Misses > 0,
+            "the fixture must exercise the loose-line block at all");
+
+        // A same-duration pitch edit in the LAST bar: the tail system's content moves,
+        // the first system's slice does not, and no spring width changes so the break
+        // solution holds and the memo is asked with the same key.
+        int at = source.LastIndexOf("c4 d e f", System.StringComparison.Ordinal);
+        var change = new TextChange(new TextSpan(at, 1), "d");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.True(session.SystemCache!.LooseLinesStats.Hits > 0,
+            "the earlier system's loose-line block was recomputed rather than served");
+        Assert.Equal(Full(source.Remove(at, 1).Insert(at, "d")), incremental);
+    }
+
+    /// <summary>Finding 4-3 liveness + value: the below-staff stacking pass (dynamics at
+    /// 250, the fermata family at 75, down trills at 50) replays unchanged systems from
+    /// BelowStackMemo — the below-side mirror of the above pass's memo. An edit confined
+    /// to a later system must SERVE the earlier system's below stack, byte-identical to a
+    /// full recompile (a poison that replays a nudged output turns the equality red;
+    /// verified while building this test).</summary>
+    [Fact]
+    public void BelowStackMemo_LaterSystemEdit_ServesTheEarlierSystem()
+    {
+        string bars(string cell) => string.Join(" | ", Enumerable.Repeat(cell, 12));
+        string source =
+            "part m { clef treble }\n"
+            + "section S { m { " + bars("c''4@mf d''4 e''4@fermata f''4") + " } }\n"
+            + "form main { S }\n"
+            + "score main { staff m }\n";
+
+        var tree = SyntaxTree.Parse(source);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+        Assert.True(session.SystemCache!.FinalBelowStack.Misses > 0,
+            "the fixture must exercise the below stack at all");
+
+        int at = source.LastIndexOf("c''4@mf", System.StringComparison.Ordinal);
+        var change = new TextChange(new TextSpan(at, 1), "d");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.True(session.SystemCache!.FinalBelowStack.Hits > 0,
+            "the earlier system's below stack was rebuilt rather than served");
+        Assert.Equal(Full(source.Remove(at, 1).Insert(at, "d")), incremental);
+    }
+
+    /// <summary>The same drift on the DEFAULT side, which existed before named
+    /// sessions did: a new first block inserted between the music and the old first
+    /// block moves FindFirst's answer without touching any baseline render block.</summary>
+    [Fact]
+    public void DefaultSession_RenderBlockInsertedAboveTheFirst_StaysEqualToFull()
+    {
+        var tree = SyntaxTree.Parse(DriftBook());
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        int at = tree.Text.IndexOf("form main", System.StringComparison.Ordinal);
+        tree = tree.WithChange(new TextChange(new TextSpan(at, 0),
+            "score main transpose d { staff m }\n"));
+        Assert.Equal(Full(tree.Text), Norm(session.RenderIncremental(tree)));
+    }
 }

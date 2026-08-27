@@ -71,6 +71,7 @@ internal sealed class SystemLayoutCache
     private readonly TypedCache<ImmutableArray<TieLayout>> _staffSystemTies = new();
     private readonly TypedCache<ImmutableArray<SlurLayout>> _staffSystemSlurs = new();
     private readonly TypedCache<VerticalSkyline?> _lyricBands = new();
+    private readonly TypedCache<IReadOnlyList<MultiStaffLayouter.PairLooseLine>?> _looseLines = new();
 
     /// <summary>Refreshes the per-measure content keys for the current edit. Must be
     /// called before the layout consults the cache. Also marks the edit boundary for
@@ -86,6 +87,7 @@ internal sealed class SystemLayoutCache
         _staffSystemTies.NextGeneration();
         _staffSystemSlurs.NextGeneration();
         _lyricBands.NextGeneration();
+        _looseLines.NextGeneration();
     }
 
     /// <summary>Number of currently cached system measure-layout entries (diagnostics / tests).</summary>
@@ -102,6 +104,15 @@ internal sealed class SystemLayoutCache
     /// <summary>The FINAL annotation pass's above-staff stacking memo
     /// (see <see cref="PreliminaryAboveStack"/>).</summary>
     public AboveStackMemo FinalAboveStack { get; } = new();
+
+    /// <summary>The PRELIMINARY annotation pass's below-staff stacking memo — one
+    /// instance per pass, for the reason <see cref="PreliminaryAboveStack"/> gives
+    /// (finding 4-3: the below pass used to run every system live per keystroke).</summary>
+    public BelowStackMemo PreliminaryBelowStack { get; } = new();
+
+    /// <summary>The FINAL annotation pass's below-staff stacking memo
+    /// (see <see cref="PreliminaryBelowStack"/>).</summary>
+    public BelowStackMemo FinalBelowStack { get; } = new();
 
     /// <summary>The PRELIMINARY annotation pass's per-(staff, system) fingering memo —
     /// one instance per pass for the reason <see cref="PreliminaryAboveStack"/> gives.
@@ -257,6 +268,47 @@ internal sealed class SystemLayoutCache
         LyricBandStats = hit
             ? (LyricBandStats.Hits + 1, LyricBandStats.Misses)
             : (LyricBandStats.Hits, LyricBandStats.Misses + 1);
+        return result;
+    }
+
+    /// <summary>Hits and misses of <see cref="GetOrComputeLooseLines"/> over this cache's
+    /// lifetime (diagnostics / tests) — the liveness counter, same purpose as
+    /// <see cref="LyricBandStats"/>.</summary>
+    public (int Hits, int Misses) LooseLinesStats { get; private set; }
+
+    /// <summary>Reuses or computes ONE upper staff's note-bound loose-line block for ONE
+    /// system — the alignment elements between that staff and the next
+    /// (<c>LayoutEngine.BuildLooseLinesBetween</c>'s per-pair unit, 2026-08-26 review,
+    /// finding 4-4: the third reader of the lyric-band inputs, and the only one that
+    /// recomputed per keystroke).</summary>
+    /// <remarks>
+    /// Keyed like <see cref="GetOrComputeLyricBand"/> — the same coverage claim covers the
+    /// same inputs (the syllables are in the content key per measure, the measure layouts
+    /// are the value under this key, staff identity is folded, text metrics are shed by the
+    /// session's font guard, the lyric spacing specs by its paper guard) — plus
+    /// <paramref name="upperStaffIndex"/>, because the value is ONE staff's block
+    /// (<c>LyricEngraver.NoteBoundBlockSkylines</c> filters by it). Unlike the
+    /// verse-skyline memo, this value reads NO pass-dependent state: every input arrives
+    /// as an argument, so the placement pass and the final annotation pass share entries
+    /// soundly (they hand the same arguments).
+    /// ⚠️ THE CACHED LIST AND ITS SKYLINES ARE SHARED — consumers may only read. Verified
+    /// at the walk (<c>AlignmentWalk.Advance</c>/<c>Seed</c> read Distance/extents) and at
+    /// the springs (same walk); nothing mutates a <c>PairLooseLine</c>.
+    /// ⚠️ NULL IS A VALUE, exactly as for the lyric band: a pair with no note-bound block
+    /// caches its null and a hit serves it.
+    /// </remarks>
+    public IReadOnlyList<MultiStaffLayouter.PairLooseLine>? GetOrComputeLooseLines(
+        int upperStaffIndex,
+        int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,
+        double indent, double commonShortestDuration,
+        Func<IReadOnlyList<MultiStaffLayouter.PairLooseLine>?> compute)
+    {
+        var result = _looseLines.GetOrCompute(_keys, firstMeasureIndex, measureCount,
+            isFirstSystem, isLastSystem, indent, commonShortestDuration, extra: 0,
+            compute, out bool hit, extra2: upperStaffIndex);
+        LooseLinesStats = hit
+            ? (LooseLinesStats.Hits + 1, LooseLinesStats.Misses)
+            : (LooseLinesStats.Hits, LooseLinesStats.Misses + 1);
         return result;
     }
 

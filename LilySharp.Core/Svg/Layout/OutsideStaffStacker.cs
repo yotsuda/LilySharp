@@ -185,7 +185,31 @@ internal static class OutsideStaffStacker
             bool applyStaffOffsets = false,
             Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile = null,
             ImmutableArray<DynamicAlignEngraver.AlignedLineGroup> lineGroups = default,
-            ImmutableArray<TrillSpannerLayout> trills = default)
+            ImmutableArray<TrillSpannerLayout> trills = default,
+            BelowStackMemo? memo = null,
+            Func<int, int, (object Up, object Down)?>? profileIdentity = null)
+    {
+        if (memo is null || profileIdentity is null || systems.IsDefaultOrEmpty)
+            return StackBelowStaffCore(fonts, systems, dynamics, hairpins, articulations,
+                applyStaffOffsets, staffProfile, lineGroups, trills);
+        return StackBelowStaffMemoized(fonts, systems, dynamics, hairpins, articulations,
+            applyStaffOffsets, staffProfile, lineGroups, trills, memo, profileIdentity);
+    }
+
+    private static (ImmutableArray<DynamicLayout> Dynamics,
+                    ImmutableArray<HairpinLayout> Hairpins,
+                    ImmutableArray<ArticulationLayout> Articulations,
+                    ImmutableArray<TrillSpannerLayout> Trills)
+        StackBelowStaffCore(
+            ScoreTextMetrics fonts,
+            ImmutableArray<SystemLayout> systems,
+            ImmutableArray<DynamicLayout> dynamics,
+            ImmutableArray<HairpinLayout> hairpins,
+            ImmutableArray<ArticulationLayout> articulations,
+            bool applyStaffOffsets,
+            Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile,
+            ImmutableArray<DynamicAlignEngraver.AlignedLineGroup> lineGroups,
+            ImmutableArray<TrillSpannerLayout> trills)
     {
         // A below-staff script that DECLARES a priority (the fermata family's 75) is a mover
         // of this pass in its own right, so the pass has to run for it even on a page with
@@ -567,6 +591,320 @@ internal static class OutsideStaffStacker
         // TextSpanner (priority 350) is now stacked ABOVE the staff (LilyPond
         // TextSpanner direction=UP) by StackAboveStaff, not here.
         return (adjDynamics, adjHairpins, adjArticulations, adjTrills);
+    }
+
+    /// <summary>Per-system index lists into the below pass's four input arrays, plus
+    /// the line groups anchored in that system.</summary>
+    private sealed class BelowPart
+    {
+        public readonly List<int> Dynamics = new(), Hairpins = new(), Articulations = new(),
+            Trills = new(), Groups = new();
+    }
+
+    /// <summary>
+    /// The memoized front of <see cref="StackBelowStaffCore"/> — the below-side mirror
+    /// of <see cref="StackAboveStaffMemoized"/> (finding 4-3): partition every input by
+    /// system, replay the systems whose program matches the memo, and run the core only
+    /// on the rest. Sound because the pass holds no cross-system state (every placement
+    /// and seed goes through a per-(system, staff) tracker) — with one below-only wrinkle:
+    /// a LINE GROUP couples its members into one placement, so a group whose members do
+    /// not all map into one system forces every system it touches onto the live path
+    /// (never memoized), and the live core receives the groups of live systems with
+    /// their indices REMAPPED into the filtered arrays.
+    /// </summary>
+    private static (ImmutableArray<DynamicLayout> Dynamics,
+                    ImmutableArray<HairpinLayout> Hairpins,
+                    ImmutableArray<ArticulationLayout> Articulations,
+                    ImmutableArray<TrillSpannerLayout> Trills)
+        StackBelowStaffMemoized(
+            ScoreTextMetrics fonts,
+            ImmutableArray<SystemLayout> systems,
+            ImmutableArray<DynamicLayout> dynamics,
+            ImmutableArray<HairpinLayout> hairpins,
+            ImmutableArray<ArticulationLayout> articulations,
+            bool applyStaffOffsets,
+            Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile,
+            ImmutableArray<DynamicAlignEngraver.AlignedLineGroup> lineGroups,
+            ImmutableArray<TrillSpannerLayout> trills,
+            BelowStackMemo memo,
+            Func<int, int, (object Up, object Down)?> profileIdentity)
+    {
+        var measureToSystem = new Dictionary<int, int>();
+        for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
+            foreach (var m in systems[sysIdx].Measures)
+                measureToSystem[m.MeasureIndex] = sysIdx;
+
+        // 1. Partition every family by system (a grob whose measure maps to none is the
+        // core's untouched passthrough and stays on the live path).
+        var parts = new Dictionary<int, BelowPart>();
+        BelowPart PartOf(int s)
+        {
+            if (!parts.TryGetValue(s, out var p))
+                parts[s] = p = new BelowPart();
+            return p;
+        }
+        void Collect<T>(ImmutableArray<T> arr, Func<T, int> measureOf, Func<BelowPart, List<int>> sel)
+        {
+            if (arr.IsDefaultOrEmpty)
+                return;
+            for (int i = 0; i < arr.Length; i++)
+                if (measureToSystem.TryGetValue(measureOf(arr[i]), out int s))
+                    sel(PartOf(s)).Add(i);
+        }
+        Collect(dynamics, d => d.MeasureIndex, p => p.Dynamics);
+        Collect(hairpins, h => h.StartMeasureIndex, p => p.Hairpins);
+        Collect(articulations, a => a.MeasureIndex, p => p.Articulations);
+        Collect(trills, t => t.StartMeasureIndex, p => p.Trills);
+
+        // 1b. Assign each line group to its members' one system; a group whose members
+        // straddle systems — or mix mapped and unmapped members — forces every mapped
+        // system it touches live.
+        var forcedLive = new HashSet<int>();
+        if (!lineGroups.IsDefaultOrEmpty)
+        {
+            for (int gi = 0; gi < lineGroups.Length; gi++)
+            {
+                var g = lineGroups[gi];
+                var touched = new List<int>();
+                bool unmapped = false;
+                foreach (int di in g.DynamicIndices)
+                {
+                    if (measureToSystem.TryGetValue(dynamics[di].MeasureIndex, out int ds))
+                        touched.Add(ds);
+                    else
+                        unmapped = true;
+                }
+                foreach (int hi in g.HairpinIndices)
+                {
+                    if (measureToSystem.TryGetValue(hairpins[hi].StartMeasureIndex, out int hs))
+                        touched.Add(hs);
+                    else
+                        unmapped = true;
+                }
+                if (touched.Count == 0)
+                    continue;   // fully unmapped: its members are passthroughs on the live path
+                bool oneSystem = !unmapped && touched.TrueForAll(s => s == touched[0]);
+                if (oneSystem)
+                    PartOf(touched[0]).Groups.Add(gi);
+                else
+                    foreach (int s in touched)
+                        forcedLive.Add(s);
+            }
+        }
+
+        // 2. Build each occupied system's program and consult the memo.
+        var hits = new HashSet<int>();
+        var toStore = new List<(int Sys, BelowStackMemo.SystemEntry Entry)>();
+        foreach (var (s, part) in parts)
+        {
+            if (forcedLive.Contains(s))
+                continue;
+            var entry = BuildBelowProgram(systems, s, part, applyStaffOffsets,
+                profileIdentity, dynamics, hairpins, articulations, trills, lineGroups);
+            if (entry == null)
+                continue; // a profile with no stable identity: never memoized
+            if (memo.TryMatch(s, entry))
+                hits.Add(s);
+            else
+                toStore.Add((s, entry));
+        }
+
+        // 3. The live subset: everything not in a hit system, original order preserved,
+        // with an old→live index map per remappable family (the groups need it).
+        (ImmutableArray<T> Live, int[] Map, Dictionary<int, int> Remap) Filter<T>(
+            ImmutableArray<T> arr, Func<T, int> measureOf)
+        {
+            if (arr.IsDefaultOrEmpty || hits.Count == 0)
+                return (arr, Array.Empty<int>(), new Dictionary<int, int>());
+            var live = ImmutableArray.CreateBuilder<T>(arr.Length);
+            var map = new List<int>(arr.Length);
+            var remap = new Dictionary<int, int>(arr.Length);
+            for (int i = 0; i < arr.Length; i++)
+            {
+                if (measureToSystem.TryGetValue(measureOf(arr[i]), out int s) && hits.Contains(s))
+                    continue;
+                remap[i] = live.Count;
+                live.Add(arr[i]);
+                map.Add(i);
+            }
+            return (live.ToImmutable(), map.ToArray(), remap);
+        }
+        var (liveDynamics, mapDynamics, remapDyn) = Filter(dynamics, d => d.MeasureIndex);
+        var (liveHairpins, mapHairpins, remapHp) = Filter(hairpins, h => h.StartMeasureIndex);
+        var (liveArtics, mapArtics, _) = Filter(articulations, a => a.MeasureIndex);
+        var (liveTrills, mapTrills, _) = Filter(trills, t => t.StartMeasureIndex);
+
+        // 3b. The live groups: every group not anchored in a hit system, its indices
+        // remapped into the filtered arrays. The forced-live guard above is what makes
+        // "anchored in a live system" imply "every member is in the live arrays".
+        var liveGroups = lineGroups;
+        if (!lineGroups.IsDefaultOrEmpty && hits.Count > 0)
+        {
+            int RemapIdx(Dictionary<int, int> remap, int i) => remap.TryGetValue(i, out int v) ? v : i;
+            var gb = ImmutableArray.CreateBuilder<DynamicAlignEngraver.AlignedLineGroup>(
+                lineGroups.Length);
+            for (int gi = 0; gi < lineGroups.Length; gi++)
+            {
+                var g = lineGroups[gi];
+                bool inHit = false;
+                foreach (int di in g.DynamicIndices)
+                    if (measureToSystem.TryGetValue(dynamics[di].MeasureIndex, out int ds)
+                        && hits.Contains(ds))
+                        inHit = true;
+                foreach (int hi in g.HairpinIndices)
+                    if (measureToSystem.TryGetValue(hairpins[hi].StartMeasureIndex, out int hs)
+                        && hits.Contains(hs))
+                        inHit = true;
+                if (inHit)
+                    continue;   // replayed with its system
+                gb.Add(g with
+                {
+                    DynamicIndices = ImmutableArray.CreateRange(
+                        g.DynamicIndices, i => RemapIdx(remapDyn, i)),
+                    HairpinIndices = ImmutableArray.CreateRange(
+                        g.HairpinIndices, i => RemapIdx(remapHp, i)),
+                });
+            }
+            liveGroups = gb.ToImmutable();
+        }
+
+        // 4. Stack the live systems (byte-identical to stacking them in the full call:
+        // a system's grobs are all-in or all-out, and only same-system grobs interact).
+        var core = StackBelowStaffCore(fonts, systems, liveDynamics, liveHairpins,
+            liveArtics, applyStaffOffsets, staffProfile, liveGroups, liveTrills);
+
+        // 5. Reassemble: live results scatter back by index; hit systems replay their
+        // stored outputs, positionally parallel to the (equal) stored inputs.
+        ImmutableArray<T> Rebuild<T>(ImmutableArray<T> original, ImmutableArray<T> coreOut,
+            int[] map, Func<BelowPart, List<int>> sel, Func<BelowStackMemo.SystemEntry, T[]> outsOf)
+        {
+            if (original.IsDefaultOrEmpty || hits.Count == 0)
+                return coreOut;
+            var b = original.ToBuilder();
+            for (int k = 0; k < map.Length; k++)
+                b[map[k]] = coreOut[k];
+            foreach (int s in hits)
+            {
+                if (!parts.TryGetValue(s, out var part))
+                    continue;
+                var idxs = sel(part);
+                var vals = outsOf(memo.Get(s)!);
+                for (int k = 0; k < idxs.Count; k++)
+                    b[idxs[k]] = vals[k];
+            }
+            return b.ToImmutable();
+        }
+        var resDynamics = Rebuild(dynamics, core.Dynamics, mapDynamics,
+            p => p.Dynamics, e => e.OutDynamics);
+        var resHairpins = Rebuild(hairpins, core.Hairpins, mapHairpins,
+            p => p.Hairpins, e => e.OutHairpins);
+        var resArtics = Rebuild(articulations, core.Articulations, mapArtics,
+            p => p.Articulations, e => e.OutArticulations);
+        var resTrills = Rebuild(trills, core.Trills, mapTrills, p => p.Trills, e => e.OutTrills);
+
+        // 6. Store the missed systems' outputs for the next keystroke.
+        foreach (var (s, entry) in toStore)
+        {
+            var part = parts[s];
+            entry.OutDynamics = Gather(resDynamics, part.Dynamics);
+            entry.OutHairpins = Gather(resHairpins, part.Hairpins);
+            entry.OutArticulations = Gather(resArtics, part.Articulations);
+            entry.OutTrills = Gather(resTrills, part.Trills);
+            memo.Store(s, entry);
+        }
+
+        return (resDynamics, resHairpins, resArtics, resTrills);
+    }
+
+    /// <summary>
+    /// One system's below program: every input the pass reads for it (the inventory is
+    /// <see cref="BelowStackMemo"/>'s remarks). Null when any profile this system's
+    /// stacking would consume has no stable identity, or a group ordinal cannot be
+    /// resolved — that system stacks live rather than risking a false match.
+    /// </summary>
+    private static BelowStackMemo.SystemEntry? BuildBelowProgram(
+        ImmutableArray<SystemLayout> systems, int s, BelowPart part, bool applyStaffOffsets,
+        Func<int, int, (object Up, object Down)?> profileIdentity,
+        ImmutableArray<DynamicLayout> dynamics,
+        ImmutableArray<HairpinLayout> hairpins,
+        ImmutableArray<ArticulationLayout> articulations,
+        ImmutableArray<TrillSpannerLayout> trills,
+        ImmutableArray<DynamicAlignEngraver.AlignedLineGroup> lineGroups)
+    {
+        var sys = systems[s];
+
+        // Geometry: the read set of the tracker seeds — staffYBySystem's Y per staff and
+        // RefpointBelowTop's per-staff answer (the fallback halves are constants).
+        var staves = new List<(int StaffIndex, double Y, double? RefpointBelowTop)>();
+        if (!sys.StaffGroups.IsDefaultOrEmpty)
+            foreach (var group in sys.StaffGroups)
+                if (!group.Staves.IsDefaultOrEmpty)
+                    foreach (var st in group.Staves)
+                        staves.Add((st.StaffIndex, st.Y, st.RefpointBelowTop));
+
+        // The staves this system's below stacking PLACES on — the same predicate the
+        // core's placedStaves uses, over this system's slice.
+        var used = new SortedSet<int>();
+        foreach (int i in part.Dynamics)
+            if (!dynamics[i].IsAbove)
+                used.Add(dynamics[i].StaffIndex);
+        foreach (int i in part.Hairpins)
+            used.Add(hairpins[i].StaffIndex);
+        foreach (int i in part.Articulations)
+            if (!articulations[i].IsAbove && articulations[i].OutsideStaffPriority is not null)
+                used.Add(articulations[i].StaffIndex);
+        foreach (int i in part.Trills)
+            if (trills[i].Direction < 0)
+                used.Add(trills[i].StaffIndex);
+
+        var profUps = new List<object>(used.Count);
+        var profDowns = new List<object>(used.Count);
+        foreach (int staff in used)
+        {
+            if (profileIdentity(s, staff) is not { } id)
+                return null; // unstable identity: this system stacks live
+            profUps.Add(id.Up);
+            profDowns.Add(id.Down);
+        }
+
+        // Group structure as per-system ordinals: which of THIS system's dynamics /
+        // hairpins each anchored group couples, immune to global index shifts.
+        var groupDyn = new int[part.Groups.Count][];
+        var groupHp = new int[part.Groups.Count][];
+        for (int k = 0; k < part.Groups.Count; k++)
+        {
+            var g = lineGroups[part.Groups[k]];
+            var dyn = new int[g.DynamicIndices.Length];
+            for (int j = 0; j < g.DynamicIndices.Length; j++)
+            {
+                dyn[j] = part.Dynamics.IndexOf(g.DynamicIndices[j]);
+                if (dyn[j] < 0)
+                    return null; // a member outside this system's slice: stack live
+            }
+            var hp = new int[g.HairpinIndices.Length];
+            for (int j = 0; j < g.HairpinIndices.Length; j++)
+            {
+                hp[j] = part.Hairpins.IndexOf(g.HairpinIndices[j]);
+                if (hp[j] < 0)
+                    return null;
+            }
+            groupDyn[k] = dyn;
+            groupHp[k] = hp;
+        }
+
+        return new BelowStackMemo.SystemEntry
+        {
+            ApplyStaffOffsets = applyStaffOffsets,
+            Staves = staves.ToArray(),
+            ProfileUps = profUps.ToArray(),
+            ProfileDowns = profDowns.ToArray(),
+            Dynamics = Gather(dynamics, part.Dynamics),
+            Hairpins = Gather(hairpins, part.Hairpins),
+            Articulations = Gather(articulations, part.Articulations),
+            Trills = Gather(trills, part.Trills),
+            GroupDynamics = groupDyn,
+            GroupHairpins = groupHp,
+        };
     }
 
     /// <summary>

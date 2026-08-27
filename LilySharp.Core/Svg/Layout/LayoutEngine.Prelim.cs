@@ -258,6 +258,8 @@ internal sealed partial class LayoutEngine
             LineStartBarlineX = BuildLineStartBarlineX(score, prelimSystems),
             // The PRELIMINARY pass's own above-stack memo (see the final pass's site).
             AboveStackMemo = systemCache?.PreliminaryAboveStack,
+            // ...and its below-side mirror (finding 4-3).
+            BelowStackMemo = systemCache?.PreliminaryBelowStack,
             // ...and its own fingering memo, one store per pass for the same reason: the
             // two passes memoize DIFFERENT systems every keystroke, so a shared store
             // would be overwritten twice per keystroke and never hit.

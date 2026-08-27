@@ -170,7 +170,9 @@ internal sealed partial class LayoutEngine
                 score, _skylineBuilder, firstSystemMeasureLayouts, systemIndex: 0));
         var firstRunSources = systemMeasures.Count > 0
             ? BuildPairRunSources(
-                score, firstSystemMeasureLayouts, 0, systemMeasures[0].Count)
+                score, firstSystemMeasureLayouts, 0, systemMeasures[0].Count,
+                systemCache, isFirstSystem: true, isLastSystem: systemMeasures.Count == 1,
+                indent, commonShortestDuration)
             : default;
         var firstStaffGroupLayouts = systemMeasures.Count > 0
             ? multiStaffLayouter.LayoutStaffGroups(
@@ -369,6 +371,7 @@ internal sealed partial class LayoutEngine
             SlurLayouts = allSlurLayouts.ToImmutableArray(),
             SystemSkylines = perSystemSkylines,
             StaffSkylines = placed.StaffSkylines,
+            RunSources = placed.RunSources,
             StaffSpanners = placed.StaffSpanners,
             StaffInside = placed.StaffInside,
             PedalLines = placed.PedalLines,
@@ -392,6 +395,8 @@ internal sealed partial class LayoutEngine
             // preliminary pass stacks different systems every keystroke and one shared
             // store would overwrite itself twice per keystroke and never hit.
             AboveStackMemo = systemCache?.FinalAboveStack,
+            // Its below-side mirror (finding 4-3), likewise this pass's own instance.
+            BelowStackMemo = systemCache?.FinalBelowStack,
             // Likewise its own fingering memo (see the preliminary pass's site).
             FingScriptMemo = systemCache?.FinalFingScripts,
             // The verse-skyline memo is the SAME instance the preliminary pass used —
@@ -490,6 +495,10 @@ internal sealed partial class LayoutEngine
     /// builds once per VerticalAxisGroup and every consumer of a staff's silhouette reads. Every
     /// site that used to rebuild its own subset takes this instead; see
     /// <see cref="SkylineBuilder.BuildInsideStaffSkylines"/>.</param>
+    /// <param name="RunSources">Per system, the pair-run suppliers its placement and springs
+    /// consumed — carried so the final annotation pass's drawn-baseline walk reads the SAME
+    /// suppliers instead of rebuilding them (finding 4-4); see
+    /// <see cref="AnnotationLayoutContext.RunSources"/>.</param>
     private readonly record struct SystemPlacements(
         List<SystemLayout> Systems,
         List<(double upExtent, double downExtent)> Extents,
@@ -500,7 +509,8 @@ internal sealed partial class LayoutEngine
         List<List<MultiStaffLayouter.StaffInsideSpanners>> StaffSpanners,
         List<List<(VerticalSkyline Up, VerticalSkyline Down)>> StaffInside,
         List<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>> PedalLines,
-        List<List<ImmutableArray<PedalEngraver.SolvedPedalRow>>> PedalRows);
+        List<List<ImmutableArray<PedalEngraver.SolvedPedalRow>>> PedalRows,
+        List<MultiStaffLayouter.PairRunSources> RunSources);
 
     /// <summary>
     /// Lays out every system: its measures, its staves, its height and its skyline.
@@ -542,6 +552,11 @@ internal sealed partial class LayoutEngine
         var perSystemStaffInside = new List<List<(VerticalSkyline Up, VerticalSkyline Down)>>();
         var perSystemPedalLines = new List<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>>();
         var perSystemPedalRows = new List<List<ImmutableArray<PedalEngraver.SolvedPedalRow>>>();
+        // Per-system pair-run suppliers, carried out for the FINAL annotation pass's
+        // drawn-baseline walk (finding 4-4): it used to rebuild them per system per
+        // keystroke; the carried instance is the same value — built from the same
+        // measure layouts and range — with its within-pass caches along for the ride.
+        var perSystemRunSources = new List<MultiStaffLayouter.PairRunSources>();
         int firstMeasureIndex = 0;
         for (int sysIdx = 0; sysIdx < systemMeasures.Count; sysIdx++)
         {
@@ -579,7 +594,10 @@ internal sealed partial class LayoutEngine
             var sysRunSources = isFirstSystem
                 ? ctx.FirstRunSources
                 : BuildPairRunSources(
-                    score, measureLayouts, firstMeasureIndex, firstMeasureIndex + measureCount);
+                    score, measureLayouts, firstMeasureIndex, firstMeasureIndex + measureCount,
+                    systemCache, isFirstSystem: false,
+                    isLastSystem: sysIdx == systemMeasures.Count - 1,
+                    sysIndent, commonShortestDuration);
 
             var sysStaffGroups = isFirstSystem
                 ? firstStaffGroupLayouts
@@ -665,6 +683,7 @@ internal sealed partial class LayoutEngine
                 // It is gone; the argument is not nullable.
                 StaffSprings: multiStaffLayouter.StaffSprings(
                     score, sysStaffGroups, sysStaffSkylines.Skylines, sysRunSources)));
+            perSystemRunSources.Add(sysRunSources);
             perSystemStaffSkylines.Add(sysStaffSkylines.Skylines);
             perSystemStaffSpanners.Add(sysStaffSkylines.Spanners);
             perSystemStaffInside.Add(sysStaffSkylines.Inside);
@@ -677,7 +696,8 @@ internal sealed partial class LayoutEngine
         return new SystemPlacements(
             systems, perSystemExtents, perSystemSkylines, perSystemHeights,
             perSystemLyricBands, perSystemStaffSkylines, perSystemStaffSpanners,
-            perSystemStaffInside, perSystemPedalLines, perSystemPedalRows);
+            perSystemStaffInside, perSystemPedalLines, perSystemPedalRows,
+            perSystemRunSources);
     }
 
 

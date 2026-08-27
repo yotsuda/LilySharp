@@ -347,11 +347,13 @@ internal sealed partial class LayoutEngine
                 bool hasSkylines = perSystemSkylines != null
                     && i + 1 < perSystemSkylines.Count;
                 // LILYPOND-REF: lily/page-layout-problem.cc:618-629 — measured
-                // with the System grob's skyline-horizontal-padding (1.0).
+                // with the System grob's skyline-horizontal-padding (1.0), through
+                // the pair memo the spring-chain path already stands on (finding
+                // 4-6): the skyline instances are the cache's own, so an unchanged
+                // pair replays its number instead of re-walking the buildings.
                 double dist = hasSkylines
-                    ? perSystemSkylines![i + 1].up.Distance(
-                        perSystemSkylines[i].down,
-                        EngravingDefaults.SystemSkylineHorizontalPadding)
+                    ? PageLayouter.InterSystemSkylineDistance(
+                        perSystemSkylines![i + 1].up, perSystemSkylines[i].down)
                     : double.NegativeInfinity;
                 var aNext = PageAnchorOffsets(systems[i + 1].StaffGroups);
                 double originToLastHere = OriginToChainEnd(i);
