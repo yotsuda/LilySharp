@@ -28,9 +28,10 @@ namespace LilySharp.Core.Semantics;
 /// </summary>
 /// <remarks>
 /// The rule (mirrors <c>MeasureBuilder.HandleBarline</c>, which owns it for the RENDER
-/// path): a bar of music is closed by the barline after it; a lone leading <c>|</c> on
-/// an empty span merely ANCHORS the scope start and creates nothing; the SECOND of a
-/// <c>| |</c> pair opens an empty placeholder measure; a TYPED barline (<c>||</c>,
+/// path): a bar of music is closed by the barline after it; a <c>|</c> on an empty span
+/// closes an EMPTY measure — including one opening the scope, so <c>{ | | | | }</c> is
+/// four bars (owner's decision, 2026-08-28); a bare <c>|</c> that lands on a boundary an
+/// auto-fill or a phrase exit just closed merely CONFIRMS it; a TYPED barline (<c>||</c>,
 /// <c>:|</c>, <c>|.</c>) on an empty span is a decoration. Directives (key/time/clef/…)
 /// carry no duration and are not content, so <c>| key |</c> is an empty placeholder —
 /// exactly as the collector treats it. Phrase references expand in a fresh
@@ -70,8 +71,13 @@ internal static class MeasureModel
         var current = new List<SyntaxNode>();
         var defaultDuration = Fraction.Quarter;
         var total = Fraction.Zero;
-        // The scope-start boundary absorbs one bare `|`.
-        bool confirmable = true;
+        // The scope-start boundary is CONSUMED: a `|` opening the scope closes an empty
+        // measure like any other written barline (owner's decision, 2026-08-28 — the rule
+        // is stated on MeasureBuilder._confirmableBoundary, which owns it).
+        bool confirmable = false;
+        // …but `|:` closes nothing, so at a scope start it leaves no unowned span behind
+        // it: `{ |: c'4 d e f :| }` is one bar (MeasureBuilder._atScopeStart is the twin).
+        bool atScopeStart = true;
         int prevBarEnd = -1; // ink end of the last barline, for an empty bar's span
         var meter = initialMeter ?? DurationCalculator.ParseTimeSignature(4, 4);
         bool senzaMisura = false; // time none: no auto-complete boundary exists
@@ -85,6 +91,7 @@ internal static class MeasureModel
             current = new List<SyntaxNode>();
             total = Fraction.Zero;
             confirmable = false;
+            atScopeStart = false;
         }
 
         foreach (var entry in stream)
@@ -94,12 +101,19 @@ internal static class MeasureModel
                 defaultDuration = Fraction.Quarter;
                 continue;
             }
-            if (entry is BoundaryMarker)
+            if (entry is BoundaryMarker boundary)
             {
-                // A phrase reference is ONE item; its boundary re-arms the confirmable
-                // boundary (like a section start), so a barline at the edge of the phrase
-                // body does not pair with an adjacent outer barline into an empty measure.
-                confirmable = true;
+                // A phrase reference is ONE item, and its two edges answer differently —
+                // mirroring the collector. ENTER changes NOTHING: a `|` at the body's head
+                // closes an empty measure exactly as one opening a section does, so that
+                // extracting a section into a phrase cannot silently lose a bar. EXIT
+                // re-arms the boundary only when the phrase left a CLOSED bar to attach to,
+                // so an outer `|` right after `~x` confirms that close instead of a gap.
+                if (!boundary.IsEnter)
+                {
+                    confirmable = current.Count == 0 && bars.Count > 0;
+                    atScopeStart = false;
+                }
                 continue;
             }
             if (entry is RepeatFlowMarker flow)
@@ -128,17 +142,21 @@ internal static class MeasureModel
                 // Mirrors MeasureBuilder.HandleBarline's RepeatStart branch, which owns
                 // this rule for the render path (owner's decision, 2026-08-28).
                 bool pairsLikeBare = bar.BarToken.Text is "|" or "|:";
+                // A `|:` that OPENS the scope leaves no unowned span behind it (see
+                // `atScopeStart` above); every other written barline ends that span.
+                bool openerAtScopeStart = atScopeStart && bar.BarToken.Text == "|:";
+                atScopeStart = false;
                 if (current.Count > 0)
                     FlushMusic(); // the barline closes the bar of music before it
-                else if (!pairsLikeBare)
+                else if (!pairsLikeBare || openerAtScopeStart)
                     confirmable = false; // a typed bar decorates the boundary
                 else if (confirmable)
-                    confirmable = false; // a lone `|` anchors the boundary — no measure
+                    confirmable = false; // it CONFIRMS an auto-fill / phrase-exit close
                 else
                 {
-                    // The second of a `| |` pair: a placeholder spanning the gap between
-                    // the two written barlines (falls back to the barline itself for a
-                    // leading pair, whose opener anchored the scope start).
+                    // An empty span between two boundaries: a placeholder spanning the gap
+                    // (falls back to the barline itself for a `|` that OPENS the scope,
+                    // where there is no earlier barline to span from).
                     // ⚠️ IT IS WORTH A FULL MEASURE, because that is what the collector
                     // builds — MeasureBuilder.EmitEmptyMeasure fills the bar with one
                     // spacer of the meter in force. This model exists to give the
@@ -211,12 +229,16 @@ internal static class MeasureModel
         public static readonly DurationResetMarker Instance = new();
     }
 
-    /// <summary>Marks a phrase-reference boundary (enter / exit) — re-arms the confirmable
-    /// boundary so an edge barline of the phrase body does not pair with an adjacent outer
-    /// barline. Mirrors the collector's <c>ResetMeasureBoundary</c> at those markers.</summary>
-    private sealed class BoundaryMarker
+    /// <summary>Marks a phrase-reference boundary. The two edges are NOT the same: ENTER
+    /// consumes the boundary (the phrase body's own leading <c>|</c> closes an empty
+    /// measure), EXIT re-arms it when the phrase left a closed bar (an outer <c>|</c>
+    /// confirms that close). Mirrors the collector's <c>ResetMeasureBoundary</c>, whose
+    /// <c>retargetableClose</c> parameter draws the same distinction.</summary>
+    private sealed class BoundaryMarker(bool isEnter)
     {
-        public static readonly BoundaryMarker Instance = new();
+        public bool IsEnter { get; } = isEnter;
+        public static readonly BoundaryMarker Enter = new(true);
+        public static readonly BoundaryMarker Exit = new(false);
     }
 
     /// <summary>Brackets a percent/unfold expansion in the stream: while the depth is
@@ -327,9 +349,9 @@ internal static class MeasureModel
                     if (phraseBodies.TryGetValue(name, out var body) && activeRefs.Add(name))
                     {
                         output.Add(DurationResetMarker.Instance);
-                        output.Add(BoundaryMarker.Instance); // enter
+                        output.Add(BoundaryMarker.Enter);
                         Flatten(body, output, activeRefs, phraseBodies);
-                        output.Add(BoundaryMarker.Instance); // exit
+                        output.Add(BoundaryMarker.Exit);
                         activeRefs.Remove(name);
                     }
                     break;

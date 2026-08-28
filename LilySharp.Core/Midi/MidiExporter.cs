@@ -1094,11 +1094,20 @@ public sealed class MidiExporter
         // EmptyMeasureValidatorTests' identity pair — `| |` against the `s1` an author
         // would type by hand — which fails the moment any one of them answers differently.
         // The rule in this walk's terms: a bare `|` CLOSES the bar before it when time has
-        // passed since the last boundary; otherwise it ANCHORS a boundary still unclaimed;
-        // otherwise it is the second of a `| |` PAIR and opens an empty measure. A typed
-        // barline (`||`, `:|`, `|.`) decorates a boundary and never opens one.
+        // passed since the last boundary; otherwise it opens an EMPTY measure worth one
+        // bar of silence. A typed barline (`||`, `:|`, `|.`) decorates a boundary and
+        // never opens one.
+        // ⚠️ THE SCOPE START COUNTS AS CLAIMED (owner's decision, 2026-08-28). It did not
+        // until that day — a `|` opening the sequence found the boundary unclaimed and was
+        // absorbed, so `section A { | | | | }` sounded three bars of silence where the page
+        // now draws four. The engraving half is MeasureBuilder._confirmableBoundary; the
+        // two halves are kept honest by EmptyMeasureValidatorTests' identity pair, which
+        // plays `| |` against the `s1` an author would type by hand.
         int boundaryTick = _currentTick;
-        bool boundaryClaimed = false;
+        bool boundaryClaimed = true;
+        // A `|:` OPENING the scope closes nothing, so it leaves no silent bar behind it —
+        // the one place `|` and `|:` part company (MeasureBuilder._atScopeStart is twin).
+        bool atScopeStart = true;
         for (int i = 0; i < items.Count; i++)
         {
             if (items[i] is BarlineSyntax bar)
@@ -1106,8 +1115,10 @@ public sealed class MidiExporter
                 // `|:` pairs like a bare `|` (it OPENS the next bar rather than
                 // decorating the one behind it), so `… | |: …` is a gap here too —
                 // MeasureBuilder.HandleBarline owns the rule.
-                if (bar.BarToken.Kind is SyntaxKind.Bar or SyntaxKind.RepeatStartBar
-                    && _currentTick <= boundaryTick && boundaryClaimed)
+                bool pairsHere = bar.BarToken.Kind is SyntaxKind.Bar
+                    || (bar.BarToken.Kind is SyntaxKind.RepeatStartBar && !atScopeStart);
+                atScopeStart = false;
+                if (pairsHere && _currentTick <= boundaryTick && boundaryClaimed)
                 {
                     _currentTick += MeasureTicks();  // the second of a `| |` pair
                 }

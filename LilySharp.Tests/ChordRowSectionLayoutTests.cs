@@ -77,11 +77,14 @@ public class ChordRowSectionLayoutTests
             """));
 
     [Fact]
-    public void LeadingBareBarline_AnchorsOnly_NoEmptyBar()
+    public void LeadingBareBarline_MakesAnEmptyBar()
     {
-        // A lone leading '|' merely anchors the run's start (the music rule),
-        // so a chord row is exactly its unfenced spelling — two bars, not three.
-        Assert.Equal(2, MeasureCount("""
+        // A leading '|' CLOSES an empty chord bar (the music rule, owner's decision
+        // 2026-08-28), so the two spellings differ by exactly that bar: three against two.
+        // ⚠️ THIS IS THE amazing-grace DEFECT. That book writes the leading '|' for its
+        // `partial 4` pickup, which carries no chord; the row began at bar 1 regardless,
+        // so every chord printed one bar early and the last bar got none.
+        Assert.Equal(3, MeasureCount("""
             time 4/4
             chords prog { | C | F | }
             form main { }
@@ -96,10 +99,10 @@ public class ChordRowSectionLayoutTests
     }
 
     [Fact]
-    public void ExplicitEmptyLeadingPair_KeepsTheBar()
-        // An empty leading bar is the explicit '| |' pair: the second bar
-        // survives, so the run is three bars (empty, C, F).
-        => Assert.Equal(3, MeasureCount("""
+    public void TwoLeadingBarlines_MakeTwoEmptyBars()
+        // …and the pair that USED to be the only way to spell one empty leading bar now
+        // spells two, for the same reason: four bars (empty, empty, C, F).
+        => Assert.Equal(4, MeasureCount("""
             time 4/4
             chords prog { | | C | F | }
             form main { }

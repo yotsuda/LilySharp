@@ -225,22 +225,16 @@ internal sealed class LyricCollector
         // Barlines are KEPT (not stripped) so Collect can use them to skip to the
         // next measure's notes — a written bar is a real measure boundary.
         var allTokens = new List<(string Text, int Position)>();
-        bool atRunStart = true;
         foreach (var measureNode in measureNodes)
         {
             // A part-major inner section is not a lyric measure — skip it (the
             // sectioned form is collected via its sections, not this flat path).
             if (measureNode is SectionDeclarationSyntax)
                 continue;
-            // A lone bare '|' OPENING the run anchors its start (the music
-            // rule) and creates no measure — drop exactly that one; an empty
-            // leading bar is the explicit '| |' pair whose second bar survives.
-            if (atRunStart)
-            {
-                atRunStart = false;
-                if (LyricSyllableReader.IsLeadingAnchor(measureNode))
-                    continue;
-            }
+            // ⚠️ A lone '|' OPENING the run is a BAR like any other (owner's decision,
+            // 2026-08-28). It used to be dropped here as an "anchor", so a lyric row
+            // could only line up against a rest-first melody by spelling the gap `| |`.
+            // The music path's rule lives on MeasureBuilder._confirmableBoundary.
             // Each child of lyrics block is a LyricMeasure (Kind = LyricMeasure)
             // LyricMeasure contains LyricSyllable nodes and a trailing barline token.
             for (int i = 0; i < measureNode.SlotCount; i++)

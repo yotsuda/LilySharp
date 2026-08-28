@@ -1,7 +1,8 @@
-// The melody opens with a whole-rest bar; the lyrics skip it with an EXPLICIT
-// empty bar - the leading "| |" pair (a lone leading "|" only anchors the run,
-// the bare-barline rule). The verse must line up one bar in - "Twin- kle" on the
-// first NOTE bar - with NO stray hyphen/extender line drawn over the rest bar.
+// The melody opens with a whole-rest bar; the lyrics skip it with ONE leading "|",
+// which closes an empty lyric bar (the bare-barline rule: every written "|" closes
+// exactly one measure - owner's decision 2026-08-28, which took the pair "| |" before
+// that). The verse must line up one bar in - "Twin- kle" on the first NOTE bar - with
+// NO stray hyphen/extender line drawn over the rest bar.
 title "Lyrics after a rest bar"
 tempo 100
 time 4/4
@@ -11,7 +12,7 @@ octave absolute
 part melody { clef treble }
 
 section A { r1 | c'4 c' g' g' | a' a' g'2 | f'4 f' e' e' | d' d' c'2 | }
-lyrics words sings melody { | | Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }
+lyrics words sings melody { | Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }
 
 form main { A }
 

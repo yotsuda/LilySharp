@@ -43,7 +43,6 @@ $targets = @(
     'Svg/Layout/OutsideStaffStacker.cs',
     'Svg/Layout/HaraKiri.cs',
     'Svg/Layout/MeasureLayouter.cs',
-    'Svg/Layout/SystemLayouter.cs',
     'Svg/Layout/LayoutEngine.cs',
     'Svg/Layout/ScoreLayout.cs',
     'Svg/Layout/SpringSolver.cs',
@@ -61,14 +60,18 @@ $targets = @(
     'Svg/Layout/OttavaBracketEngraver.cs',
     'Svg/Layout/PedalEngraver.cs',
     'Svg/Layout/GraceNoteEngraver.cs',
-    'Svg/Layout/OrnamentEngraver.cs',
     'Svg/EngravingDefaults.cs',
-    'Svg/EngravingRules.cs',
     'Svg/PaperSettings.cs',
-    'Svg/SpacingSettings.cs',
     'Svg/Layout/GlyphMetrics.cs',
     'Svg/EmmentalerGlyphs.cs'
 )
+
+# ⚠️ Four entries left this list on 2026-08-28: Svg/Layout/SystemLayouter.cs,
+# Svg/Layout/OrnamentEngraver.cs, Svg/EngravingRules.cs and Svg/SpacingSettings.cs.
+# All four were DELETED as dead code between 2026-06-23 and 2026-07-19 (66c6f6b3,
+# cea7ae9d, 2734964f, de61ac23) — not renamed — so the audit lost no coverage and the
+# script had been printing four warnings on every run. A name that disappears from
+# here should be checked the same way: `git log --diff-filter=D` on the path.
 
 $rows = New-Object System.Collections.Generic.List[object]
 $context = 5

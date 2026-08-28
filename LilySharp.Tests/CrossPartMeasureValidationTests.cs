@@ -210,13 +210,14 @@ public class CrossPartMeasureValidationTests
     [Fact]
     public void EmptyPlaceholderBars_CountLikeRealBars_NoFalseMismatch()
     {
-        // `| | | |` is three explicit empty measures (the bare-barline rule),
-        // matching melody2's three bars — so the cross-part pass must be silent:
-        // no bar-count mismatch, and an empty placeholder must not read as
-        // "0 beats, misaligned" (the collector's own underfull LYS2001 owns that).
+        // `| | |` is three explicit empty measures — every written `|` closes one, the
+        // one opening the block included (the bare-barline rule) — matching melody2's
+        // three bars, so the cross-part pass must be silent: no bar-count mismatch, and
+        // an empty placeholder must not read as "0 beats, misaligned" (the collector's
+        // own underfull LYS2001 owns that).
         var diags = Validate("""
             section B {
-              melody {| | | |}
+              melody {| | |}
               melody2 { c1 | c1 | c1 | }
             }
             form main { B }
@@ -228,12 +229,12 @@ public class CrossPartMeasureValidationTests
     [Fact]
     public void EmptyPlaceholderBars_ShorterThanSibling_StillWarnsCount()
     {
-        // Two empty measures (`| | |`) against melody2's three: a genuine count
+        // Two empty measures (`| |`) against melody2's three: a genuine count
         // mismatch survives the empty-measure fix — proving the empties are being
         // counted (2 != 3), not silently swallowed to 0.
         var diags = Validate("""
             section B {
-              melody {| | |}
+              melody {| |}
               melody2 { c1 | c1 | c1 | }
             }
             form main { B }

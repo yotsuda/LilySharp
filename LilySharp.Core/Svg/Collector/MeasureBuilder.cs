@@ -33,15 +33,29 @@ internal sealed class MeasureBuilder
     private readonly List<MusicItem> _currentItems = new();
 
     // True when the current measure boundary can absorb ONE confirming bare barline
-    // silently: the piece/section START (a leading `|` merely anchors the boundary) and
-    // an AUTO-FILL close (duration reached the meter; the following `|` confirms it).
+    // silently: an AUTO-FILL close (duration reached the meter; the following `|` merely
+    // confirms what the meter already closed), a phrase EXIT that left a closed bar, and
+    // a barline the FORM synthesised (ArmBoundaryForStructuralBarline).
     // False after any WRITTEN barline consumed the boundary — a written close, a typed
     // decoration, an absorbed confirmation, a placeholder — so a bare `|` there is the
     // second of a `| |` PAIR and opens an empty placeholder measure (which the engine
-    // then FILLS with a full-measure spacer — EmitEmptyMeasure). An empty measure is
-    // always a visible `| |` pair; a single bare `|` never creates one. See
-    // HandleBarline.
-    private bool _confirmableBoundary = true;
+    // then FILLS with a full-measure spacer — EmitEmptyMeasure).
+    // ⚠️ A SCOPE START IS *NOT* CONFIRMABLE (owner's decision, 2026-08-28). It was until
+    // that day: a leading `|` "anchored" the start and created nothing, so `| c1` was
+    // `c1` and `section A { | | | | }` was THREE bars, not four. The author's own books
+    // read the other way — `君の恋人になったら` is written four bars to the line
+    // throughout and only the two blocks that OPEN with `|` came out a bar short — and
+    // amazing-grace's chord row, which writes a leading `|` for the pickup bar that
+    // carries no chord, printed every chord one bar early. The rule is now the one
+    // sentence the language can state: A WRITTEN `|` CLOSES EXACTLY ONE MEASURE, and a
+    // measure with nothing in it is an empty one. The block END still closes nothing —
+    // that is what keeps a trailing `c1 |` one bar (497 tracked books spell it).
+    private bool _confirmableBoundary;
+    // True at a SCOPE START — the piece, a section, a phrase body — until the first
+    // barline or emitted measure. Only the `|:` arm of HandleBarline reads it, and only
+    // to keep `|:` from inventing a bar there: a `|` CLOSES the span a scope opens (so
+    // `{ | | | | }` is four bars), but `|:` closes nothing, so `{ |: c1 :| }` is one.
+    private bool _atScopeStart = true;
     // True when the confirmable boundary sits right after a bar this stream JUST closed
     // (an auto-fill, or a phrase whose last bar was closed by its own trailing `|`), so a
     // written `|`/`:|`/… that confirms it is recorded as a SOURCE of that measure's end
@@ -153,20 +167,21 @@ internal sealed class MeasureBuilder
     /// (used when a leading meter change collapses into the initial time signature).</summary>
     public void SetMeasureLength(Fraction length) => _timeSignature = length;
 
-    /// <summary>Re-arms the confirmable boundary at a section start: a section that
-    /// OPENS with a bare <c>|</c> anchors its own start boundary (no empty measure),
-    /// regardless of how the previous section's last bar was closed. See
-    /// <see cref="_confirmableBoundary"/>.</summary>
-    /// <summary>Re-arms the confirmable boundary at a section/phrase edge. A section or
-    /// phrase START passes <paramref name="retargetableClose"/> false (a leading `|` there
-    /// is an anchor). A phrase EXIT passes true: if the phrase ended with a CLOSED bar
-    /// (its own trailing `|`, or an auto-fill), an outer `|` that confirms it owns that
-    /// barline and retargets the phrase's last measure onto the written `|`.</summary>
+    /// <summary>Settles the measure boundary at a section/phrase edge. A section or phrase
+    /// START passes <paramref name="retargetableClose"/> false: the boundary is CONSUMED,
+    /// so a <c>|</c> opening that scope closes an empty measure like any other written
+    /// barline (owner's decision, 2026-08-28 — see <see cref="_confirmableBoundary"/>).
+    /// A phrase EXIT passes true: if the phrase ended with a CLOSED bar (its own trailing
+    /// <c>|</c>, or an auto-fill), an outer <c>|</c> confirms it, owns that barline, and
+    /// retargets the phrase's last measure onto the written <c>|</c>.</summary>
     public void ResetMeasureBoundary(bool retargetableClose = false)
     {
-        _confirmableBoundary = true;
         _boundaryRetargetable = retargetableClose
             && _currentItems.Count == 0 && _measures.Count > 0;
+        // The exit's confirmation and its retarget are THE SAME FACT — there is a bar
+        // just closed here to attach to — so they are read off one condition.
+        _confirmableBoundary = _boundaryRetargetable;
+        _atScopeStart = !retargetableClose; // a START opens a scope; an EXIT closes one
     }
 
     /// <summary>
@@ -385,6 +400,7 @@ internal sealed class MeasureBuilder
     private void ResetPerMeasureState(int sourceEnd, bool confirmableBoundary)
     {
         _confirmableBoundary = confirmableBoundary;
+        _atScopeStart = false; // a measure was emitted: the scope's opening span is over
         // Only EmitMeasure(auto) re-arms these immediately after; every other reset
         // (explicit close, empty placeholder) leaves a settled, non-attachable boundary.
         _boundaryRetargetable = false;
@@ -441,6 +457,8 @@ internal sealed class MeasureBuilder
     /// </remarks>
     public void HandleBarline(BarlineType barType, int position)
     {
+        bool atScopeStart = _atScopeStart;
+        _atScopeStart = false; // any written barline ends the scope's opening span
         if (barType == BarlineType.RepeatStart)
         {
             // |: opens the NEXT measure; close anything pending first. A directive-only
@@ -449,7 +467,7 @@ internal sealed class MeasureBuilder
             {
                 CompleteMeasure(position, BarlineType.Single);
             }
-            else if (!_confirmableBoundary)
+            else if (!_confirmableBoundary && !atScopeStart)
             {
                 // THE SECOND OF A PAIR: `… | |: …`. Two written barlines with nothing
                 // between them is an empty measure, and `|:` is no exception — owner's
@@ -465,8 +483,15 @@ internal sealed class MeasureBuilder
                 // the language to explain why.
                 EmitEmptyMeasure(position, BarlineType.Single);
             }
-            // …and a CONFIRMABLE boundary — the section start, or a bar this stream just
-            // closed — is merely ANCHORED by this `|:`, exactly as a bare `|` anchors it.
+            // …and a boundary with no span for `|:` to leave unowned — a bar this stream
+            // just closed (CONFIRMABLE), or THE SCOPE START — is merely ANCHORED by it.
+            // ⚠️ THE SCOPE-START ARM IS WHY `_atScopeStart` EXISTS, and it is the one place
+            // `|` and `|:` must answer differently now that a scope start is not
+            // confirmable: `|` CLOSES the empty span the scope opened (that is the whole
+            // point of the 2026-08-28 decision), while `|:` closes nothing — it opens the
+            // bar in front of it — so `|: c'4 d e f :|` is one bar, not an empty one and
+            // then the repeat. Written out: a span becomes an empty measure when a written
+            // `|` CLOSES it, or when a `|:` leaves it unowned AFTER a written bar opened it.
             _pendingStartBarline = BarlineType.RepeatStart;
             // The `|:` IS the next measure's start boundary — record its offset so the
             // drawn start barline's click/highlight lands on the written `|:`, not on
@@ -500,11 +525,13 @@ internal sealed class MeasureBuilder
         }
         else if (_confirmableBoundary)
         {
-            // A bare `|` merely CONFIRMS the boundary it sits on — a section start (leading
-            // `|`, nothing to attach) or a bar this stream just closed. In the latter case
-            // record the `|` as an end source (retargeting the click to it and keeping the
-            // bar's own close, if written, as a highlight alias). A FURTHER bare `|` with no
-            // closed bar to attach to is the second of a `| |` pair (the else branch).
+            // A bare `|` merely CONFIRMS the boundary it sits on — a bar this stream just
+            // closed by AUTO-FILL, a phrase exit that left one closed, or a barline the
+            // form synthesised. Record the `|` as an end source (retargeting the click to
+            // it and keeping the bar's own close, if written, as a highlight alias). A
+            // FURTHER bare `|` with no closed bar to attach to is the second of a `| |`
+            // pair (the else branch). ⚠️ A SCOPE START NO LONGER LANDS HERE: it is not
+            // confirmable, so a leading `|` closes an empty measure (see the field).
             if (_boundaryRetargetable && _measures.Count > 0)
                 AddEndBarlineSource(position);
             _confirmableBoundary = false;
@@ -548,9 +575,17 @@ internal sealed class MeasureBuilder
         // upper part's third bar started at tick 1920 where the lower part's started at
         // 3840. A spacer is invisible and never collapses into a multi-measure rest
         // (MusicItem.IsSpacer), so nothing is drawn that was not drawn before.
+        // ⚠️ THE DIRECTIVES IN THE SPAN COME WITH IT. A span with no DURATION can still
+        // hold zero-duration items — a `time`/`key` change written just before the bar —
+        // and this measure is where the author put them. Dropping them was a real defect,
+        // reachable before 2026-08-28 as `c1 | time 3/4 | | c2.` (measured: the 3/4 was
+        // never drawn and never took effect) and reachable far more easily after it,
+        // since a scope may now open `time 3/4 | …`.
+        var spacer = new RestItem(_timeSignature, 0, _measureSourceStart) { IsSpacer = true };
         _measures.Add(new Measure(
-            ImmutableArray.Create<MusicItem>(
-                new RestItem(_timeSignature, 0, _measureSourceStart) { IsSpacer = true }),
+            _currentItems.Count == 0
+                ? ImmutableArray.Create<MusicItem>(spacer)
+                : _currentItems.Append(spacer).ToImmutableArray(),
             _pendingStartBarline,
             _pendingEndBarline != BarlineType.None ? _pendingEndBarline : endType,
             _sectionLabel,

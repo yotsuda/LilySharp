@@ -299,6 +299,14 @@ below the staff — the parser rejects it). Placement applies only to dynamic le
 ## Bar handling
 
 - Barlines: `|` single, `||` double, `|.` final, `|:` repeat start, `:|` repeat end.
+- **A written `|` closes exactly one measure, and a measure with nothing in it is an
+  empty one** — so `{ | | | | }` is four empty bars and `{ | c1 }` is an empty bar then
+  `c1`. An empty bar is filled with a full-measure spacer (`| |` == `| s1 |`, on the page
+  and in playback), so it is never diagnosed. Three barlines close nothing: `||`/`|.`/`:|`
+  on an empty span DECORATE the bar behind them; `|:` OPENS the bar in front of it (so
+  `{ |: c1 :| }` is one bar, while `{ | |: c1 :| }` is two); and a `|` landing where the
+  meter just auto-filled a bar merely confirms it — which is why a trailing `c1 |` is one
+  bar, not two.
 - Volta repeats are symbolic; endings are inline `[1. ... ]` `[2. ... ]`. Play count
   defaults to the highest ending number; set it with `*N`. The opening `[` is required
   (a bare `1. ...` ending is rejected); the closing `]` is optional — write it to draw
@@ -363,9 +371,9 @@ staff group a row must sing the staff directly above it (LYS6012).
 A `lyrics NAME { … }` track sits in a section next to the part it sings; the score
 places it with a `lyrics NAME` row under the staff. Syllables are separated by
 spaces; `-` joins syllables of one word; `|` mirrors the music's barlines. Barlines
-follow the music rule: a lone leading `|` only anchors the start (`| きら | ひかる |`
-== `きら | ひかる`), a bar with no syllables is the explicit `| |` pair (e.g. a
-leading `| |` skips the melody's opening rest bar).
+follow the music rule: every written `|` closes one bar, the one that OPENS the run
+included, so `| きら | ひかる |` is one bar longer than `きら | ひかる` — that leading
+`|` is how a verse skips the rest bar the melody opens with.
 
 ```
 part melody
@@ -391,8 +399,8 @@ beat grid (one entry = the bar, two in 4/4 = halves, four = beats), and `.` hold
 the previous chord one more beat (`| C . . G7 |`; a `.` never crosses a barline).
 `r`/`R` print "N.C." in their slot, `s` prints nothing. Barlines in the source
 (`|` `|:` `:|` `||` `|.`) are drawn, and follow the same bare-barline rule as music
-and lyrics: a lone leading `|` only anchors the start (`| C | F |` == `C | F |`),
-an empty bar is the explicit `| |` pair.
+and lyrics: every written `|` closes exactly one bar, the one that OPENS the run
+included, so `| C | F |` is an empty bar and then two.
 
 ```
 section Main {

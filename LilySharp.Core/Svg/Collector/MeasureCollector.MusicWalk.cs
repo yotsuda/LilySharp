@@ -73,11 +73,13 @@ public sealed partial class MeasureCollector
                 {
                     EnterDefaultFrame(reset.OctaveOffset);
                     EnterPhraseTranspose(reset.AnchorStep, reset.OctaveOffset);
-                    // A phrase reference is ONE item; its boundary re-arms the confirmable
-                    // boundary like a section start, so a barline at the edge of the phrase
-                    // body does not pair with an adjacent outer barline into an empty measure
-                    // (phrase x { … | } then `x | x` is two bars, not two bars + a gap).
-                    builder.ResetMeasureBoundary();
+                    // ⚠️ ENTERING A PHRASE BODY TOUCHES THE BOUNDARY NOT AT ALL (owner's
+                    // decision, 2026-08-28). It used to re-arm it, so a `|` at the body's
+                    // head was absorbed — which would now mean that extracting a section
+                    // into a phrase SILENTLY LOSES A BAR, since `section A { | c1 }` is two
+                    // bars. The pairing that re-arm was written for is on the other edge and
+                    // the EXIT below still handles it (`phrase x { … | }` used as `x | x`
+                    // stays two bars).
                     continue;
                 }
 

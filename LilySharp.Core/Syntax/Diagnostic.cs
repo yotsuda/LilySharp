@@ -734,6 +734,24 @@ public static class DiagnosticCodes
     // reports the ordinary underfull warning (LYS2001, MeasureIncomplete) over the
     // region between the barlines — zero duration is just the extreme underfull case.
 
+    /// <summary>Measure warning: a rendered score holds NO BARS AT ALL — every part it
+    /// draws is empty, so the file compiles to a blank page.
+    /// <para>
+    /// It is a warning rather than an error because the page is a legitimate thing to
+    /// ask for (a template being filled in). What is not legitimate is saying nothing:
+    /// <c>lysc check</c> answered "No errors found." for a book whose every staff was
+    /// blank, which is the same silence that let a mis-spelled <c>staff bass</c> print
+    /// fifteen empty systems (2026-08-28). LilyPond does not keep quiet either — a
+    /// zero-duration score warns "skipping zero-duration score / consider adding a
+    /// spacer rest" and prints no page at all (MEASURED, 2.27.3).
+    /// </para>
+    /// <para>
+    /// A score with SOME music is never reported, however lopsided; a part that is empty
+    /// beside a part that is not is the cross-part pass's business
+    /// (<see cref="SectionBarCountMismatch"/>), not this one.
+    /// </para></summary>
+    public const string ScoreHasNoMusic = "LYS2013";
+
     /// <summary>Measure warning: a chord-row bar's slot count does not fit the
     /// meter's beat grid. Entries and <c>.</c> extensions are measure-relative
     /// (GRAMMAR_AUDIT 8.1): one slot takes the whole bar, a beat-count multiple

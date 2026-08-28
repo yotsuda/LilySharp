@@ -341,25 +341,17 @@ internal sealed class ChordNameCollector
     {
         int bars = 0;
         bool pendingEntries = false;
-        bool atRunStart = true;
         foreach (var item in items)
         {
-            if (item is BarlineSyntax bar)
+            if (item is BarlineSyntax)
             {
-                // Mirror ProcessRun: the leading anchor bar counts nothing.
-                // Any drift here pads the row grid with a phantom bar.
-                if (atRunStart && bar.BarToken.Text == "|")
-                {
-                    atRunStart = false;
-                    continue;
-                }
-                atRunStart = false;
+                // Mirror ProcessRun: EVERY written barline closes a bar, the one that
+                // opens the run included. Any drift here mis-sizes the row grid.
                 bars++;
                 pendingEntries = false;
             }
             else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
             {
-                atRunStart = false;
                 pendingEntries = true;
             }
         }
@@ -418,21 +410,17 @@ internal sealed class ChordNameCollector
                 pending.Clear();
             }
 
-            bool atRunStart = true;
             foreach (var item in items)
             {
                 if (item is BarlineSyntax bar)
                 {
-                    // A lone bare '|' OPENING the run anchors its start (the
-                    // bare-barline rule; same as music and lyrics) and creates
-                    // no bar — '| c1 | f1 |' == 'c1 | f1 |'; an empty leading
-                    // bar is the explicit '| |' pair, whose second bar commits.
-                    if (atRunStart && bar.BarToken.Text == "|")
-                    {
-                        atRunStart = false;
-                        continue;
-                    }
-                    atRunStart = false;
+                    // A '|' OPENING the run closes an EMPTY chord bar, like any other
+                    // written barline (the bare-barline rule; same as music and lyrics).
+                    // ⚠️ IT USED TO ANCHOR THE START and create nothing. That is what put
+                    // amazing-grace's chords a bar early: the book writes a leading '|' for
+                    // the `partial 4` pickup, which carries no chord, and the row began at
+                    // bar 1 anyway — G landed on the pickup note and the last bar got
+                    // nothing (measured: the SVG was byte-identical with the '|' deleted).
                     var t = MeasureCollector.ParseBarlineType(bar.BarToken.Text);
                     if (t == BarlineType.RepeatStart)
                     {
@@ -454,7 +442,6 @@ internal sealed class ChordNameCollector
                 }
                 else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
                 {
-                    atRunStart = false;
                     pending.Add(item);
                 }
             }

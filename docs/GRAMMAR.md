@@ -944,8 +944,8 @@ DisplayName    = String ;
    'chords NAME' / 'lyrics NAME' (instead of 'staff NAME') renders WITHOUT a staff:
    a grid of measure barlines, chord symbols between the bars (at their timing), and
    lyrics below. Source barlines ( | |: :| || |. ) are drawn, and follow the
-   bare-barline rule (below): a lone leading '|' only anchors the run's start
-   ('| c1 | f1 |' == 'c1 | f1 |'), an empty bar is the explicit '| |' pair. *)
+   bare-barline rule (below): every written '|' closes one bar, the one that OPENS
+   the run included, so '| C | F |' is an empty bar and then two. *)
 
 (* Example:
    section Main {
@@ -1174,33 +1174,44 @@ RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N ti
    that way, so that form is warned about (LYS4009): Lily# has no forced-accidental
    shorthand — use '@courtesy' (parenthesized) or '@editorial' (small, above the head). *)
 
-(* BARE-BARLINE SEMANTICS (music): a bare '|' after music closes that bar. On an empty
-   span a SINGLE bare '|' merely anchors the boundary it sits on — the section start
-   (a leading '|'), the section end (a trailing '|'), or a just-auto-filled bar — and
-   creates nothing, so `{ | c1 | c1 | }` == `{ c1 | c1 }`. An EMPTY MEASURE is always
-   an explicit `| |` PAIR: two written barlines with nothing between (leading, mid, or
-   trailing; `| | |` is two). It holds a slot to keep parts aligned and renders as an
-   empty full-width bar. IT IS NOT DIAGNOSED: the engine fills it with one full-measure
-   SPACER of the meter in force — the `s1` (or `s2.`, …) the author would otherwise have
-   had to type — so `| |` and `| s1 |` are the same music, on the page and in playback
-   alike. (Owner's decision, 2026-08-28. Before it the bar was built with no contents and
-   a duration of ZERO, and carried the underfull warning LYS2001; the zero was audible —
-   a gap written in one part pulled everything after it a whole bar early against the
-   others, because the engraver walks BARS and the MIDI exporter walks DURATIONS.)
-   '|:' PAIRS THE SAME WAY, and the other typed barlines do not. '||', '|.' and ':|' on an
-   empty span DECORATE the bar behind them — they retro-type its end and create nothing —
-   but '|:' decorates nothing: it OPENS the bar in front of it, so the span before it has no
-   owner and is a gap exactly as '| |' is. `c1 | |: d1 :|` is therefore three bars and
-   `c1 |: d1 :|` (one barline doing both jobs) is two; a LEADING '|:' still anchors a
-   section start, and a form's own '|:' / ':|' never pair with the barline a section wrote
-   before them (owner's decision, 2026-08-28 — the two spellings used to answer differently
-   with nothing here to explain why). A PHRASE REFERENCE is one item whose boundary re-arms this rule like a section
-   start: a barline at the edge of the phrase body does not pair with an adjacent outer
-   barline, so 'phrase x { c d e f | }' used as 'x | x' is two content bars, not two + a gap
-   (an EXPLICIT '| |' after the reference still makes an empty bar). LYRICS follow the SAME rule: a lone leading '|' merely anchors the
-   run's start ('| きら | ひかる |' == 'きら | ひかる'), so the fenced style aligns
-   with the melody above instead of shifting the verse; "bar 1 has no syllables"
-   is the explicit leading '| |' pair, and a mid-run '| |' is an empty bar. *)
+(* BARE-BARLINE SEMANTICS (music). ONE SENTENCE: a written '|' CLOSES EXACTLY ONE
+   MEASURE, and a measure with nothing in it is an empty one. So '|' after music closes
+   that bar; a '|' on an empty span closes an EMPTY bar — the one that OPENS a block
+   included, which is what makes `{ | | | | }` four bars and `{ | c1 }` two. An empty bar
+   holds a slot to keep parts aligned and renders as an empty full-width bar; IT IS NOT
+   DIAGNOSED, because the engine fills it with one full-measure SPACER of the meter in
+   force — the `s1` (or `s2.`, …) the author would otherwise have had to type — so `| |`
+   and `| s1 |` are the same music, on the page and in playback alike. Any zero-duration
+   DIRECTIVE written in that span (a 'time' or 'key' change) belongs to the bar and goes
+   with it.
+   (Owner's decision, 2026-08-28, in two parts. First: the empty bar stopped being built
+   with no contents and a duration of ZERO carrying the underfull warning LYS2001 — the
+   zero was audible, since a gap written in one part pulled everything after it a whole
+   bar early against the others, the engraver walking BARS and the MIDI exporter
+   DURATIONS. Then: a leading '|' stopped being an ANCHOR that created nothing. Under
+   that older reading `{ | c1 | c1 | }` == `{ c1 | c1 }` and an empty bar had to be
+   spelled as the PAIR `| |`; it cost a bar wherever an author fenced a block, measured
+   on the author's own books — a lead sheet written four bars to the line came out three
+   in the two blocks that opened with '|', and a chord row that fenced its pickup bar
+   printed every chord one bar early with none on the last.)
+   THREE BARLINES CLOSE NOTHING, and each for its own reason. A TYPED barline ('||',
+   '|.', ':|') on an empty span DECORATES the bar behind it — it retro-types that bar's
+   end and creates nothing (with no bar behind it there is nothing to decorate, so it
+   closes its own span like any other written bar: `{ || }` is one empty bar). A '|:'
+   decorates nothing either — it OPENS the bar in front of it — so it makes an empty bar
+   only when a written bar OPENED the span it leaves behind: `c1 | |: d1 :|` is three
+   bars, `c1 |: d1 :|` (one barline doing both jobs) is two, and a '|:' at a block's head
+   is just the opener, so `{ |: d1 :| }` is one. THIS IS THE ONE PLACE '|' AND '|:' PART
+   COMPANY, and `{ | |: d1 :| }` is accordingly two bars. And a '|' landing on a boundary
+   something else JUST CLOSED merely confirms it: the auto-fill that closes a full bar at
+   the meter (which is what keeps a trailing 'c1 |' one bar, not two), a form's own
+   '|:' / ':|', and the EXIT of a phrase reference — so 'phrase x { c d e f | }' used as
+   'x | x' is two content bars, not two + a gap. ENTERING a phrase body changes nothing,
+   so a '|' at the body's head closes an empty bar exactly as one at a section's head
+   does; otherwise extracting a section into a phrase would silently lose a bar.
+   LYRICS AND CHORD ROWS FOLLOW THE SAME RULE, counting every written bar: '| きら |
+   ひかる |' is "bar 1 has no syllables" followed by two sung bars, one bar longer than
+   'きら | ひかる'. That is how a verse skips a rest bar the melody opens with. *)
 
 (* First/second-time endings inside a |: … :| repeat. '[' followed by an integer is a
    volta; otherwise '[' … ']' is a manual beam group. The '[' is REQUIRED; the closing

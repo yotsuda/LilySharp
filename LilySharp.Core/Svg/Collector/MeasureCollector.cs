@@ -2236,9 +2236,10 @@ public sealed partial class MeasureCollector
                     return;
 
                 // Phrase-reference boundary: evaluate the body in the default
-                // frame (same handling as ProcessMusicNodeSequence). The boundary
-                // re-arms the confirmable boundary so an edge barline of the phrase
-                // body does not pair with an adjacent outer barline into an empty bar.
+                // frame (same handling as ProcessMusicNodeSequence). ENTER leaves the
+                // measure boundary alone (a `|` at the body's head is a bar of its own —
+                // see the remark there); EXIT re-arms it so an outer `|` confirms the close
+                // the phrase's trailing `|` already made.
                 // Kind None belongs to the synthetic markers alone (their reds are
                 // preset — no gather kind is None), so real sites skip both type
                 // tests on the kind read.
@@ -2248,7 +2249,6 @@ public sealed partial class MeasureCollector
                     {
                         EnterDefaultFrame(reset.OctaveOffset);
                         EnterPhraseTranspose(reset.AnchorStep, reset.OctaveOffset);
-                        builder.ResetMeasureBoundary();
                         continue;
                     }
 

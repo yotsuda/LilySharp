@@ -209,17 +209,17 @@ score main ""x"" { staff melody  lyrics verse }
     }
 
     [Fact]
-    public void RestBarBeforeLyrics_ExplicitEmptyPairSkipsTheRestBar()
+    public void RestBarBeforeLyrics_OneLeadingBarSkipsTheRestBar()
     {
-        // The melody opens with a whole-rest bar (r1); the lyrics skip it with an
-        // EXPLICIT empty bar — the leading "| |" pair (the bare-barline rule: an
-        // empty measure is always a visible pair). "Twin" lands on the first NOTE
-        // bar (index 1); nothing lands on the rest bar.
+        // The melody opens with a whole-rest bar (r1); the lyrics skip it with ONE
+        // leading '|', which closes an empty lyric bar (the bare-barline rule, owner's
+        // decision 2026-08-28 — it took the pair "| |" before that). "Twin" lands on the
+        // first NOTE bar (index 1); nothing lands on the rest bar.
         var score = Collect(@"
 time 4/4
 section Main {
-  melody { r1 | c'4 d' e' f' | g'4 a' b' c'' | }
-  lyrics melody { | | Twin- kle twin- kle | lit- tle star | }
+  melody { c'4 d' e' f' | g'4 a' b' c'' | c'4 d' e' f' | }
+  lyrics melody { | Twin- kle twin- kle | lit- tle star | }
 }
 form main { Main }
 score main ""x"" { staff melody  lyrics melody }
@@ -231,35 +231,45 @@ score main ""x"" { staff melody  lyrics melody }
     }
 
     [Fact]
-    public void LeadingBareBarline_AnchorsOnly_NoEmptyBar()
+    public void LeadingBareBarline_ShiftsTheVerseOneBar()
     {
-        // A lone leading '|' merely anchors the run's start — the music rule now
-        // holds in lyrics too, so the fenced style `| きら | ひかる |` aligns with
-        // the melody above instead of silently shifting the verse one bar over.
+        // A leading '|' CLOSES an empty lyric bar — the music rule holds in lyrics too
+        // (owner's decision, 2026-08-28), so the fenced style is NOT a synonym for the
+        // unfenced one: it says "the first bar has no words". The row starts at bar 1
+        // rather than bar 0.
+        // ⚠️ THE MELODY IS THREE BARS OF FOUR NOTES ON PURPOSE, so that ONE variable
+        // separates the two books below. Three ways it stops being one, all measured
+        // while writing this net: against a TWO-bar melody the fenced row runs three bars
+        // and wraps into a second verse ("lit" reports bar 0 of verse 1); with a REST in
+        // the first bar the unfenced row has nothing to sing on and its syllables vanish;
+        // with a WHOLE NOTE there they vanish all but the first. Each of those changes
+        // what is being compared, not where the verse starts.
         var fenced = Collect(@"
 time 4/4
 section Main {
-  melody { c'4 d' e' f' | g'4 a' b' c'' | }
+  melody { c'4 d' e' f' | g'4 a' b' c'' | c'4 d' e' f' | }
   lyrics melody { | Twin- kle twin- kle | lit- tle star | }
 }
 form main { Main }
 score main ""x"" { staff melody  lyrics melody }
 ");
-        Assert.Equal(0, fenced.Lyrics.Single(l => l.Text == "Twin").MeasureIndex);
-        Assert.Equal(1, fenced.Lyrics.Single(l => l.Text == "lit").MeasureIndex);
+        Assert.Equal(1, fenced.Lyrics.Single(l => l.Text == "Twin").MeasureIndex);
+        Assert.Equal(2, fenced.Lyrics.Single(l => l.Text == "lit").MeasureIndex);
 
-        // …and it is exactly equivalent to the unfenced spelling.
+        // …and the unfenced spelling is the one that starts at bar 0. The two differ by
+        // exactly one bar — which is the whole content of the rule.
         var plain = Collect(@"
 time 4/4
 section Main {
-  melody { c'4 d' e' f' | g'4 a' b' c'' | }
+  melody { c'4 d' e' f' | g'4 a' b' c'' | c'4 d' e' f' | }
   lyrics melody { Twin- kle twin- kle | lit- tle star | }
 }
 form main { Main }
 score main ""x"" { staff melody  lyrics melody }
 ");
+        Assert.Equal(0, plain.Lyrics.Single(l => l.Text == "Twin").MeasureIndex);
         Assert.Equal(
-            plain.Lyrics.Select(l => (l.Text, l.MeasureIndex, l.ItemIndex)),
+            plain.Lyrics.Select(l => (l.Text, l.MeasureIndex + 1, l.ItemIndex)),
             fenced.Lyrics.Select(l => (l.Text, l.MeasureIndex, l.ItemIndex)));
     }
 

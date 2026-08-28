@@ -270,9 +270,9 @@ public sealed partial class MeasureCollector
         _defaultDuration = Fraction.Quarter;
         _defaultDots = 0;
 
-        // A section is self-contained: re-arm the confirmable boundary so a section that
-        // OPENS with a bare `|` anchors its OWN start (no empty measure, no leak into the
-        // previous section) — an empty measure is always an explicit `| |` pair.
+        // A section is self-contained: settle the boundary so a section that OPENS with a
+        // `|` closes an EMPTY measure of its own (owner's decision, 2026-08-28) rather than
+        // pairing with — or anchoring against — whatever the previous section wrote.
         builder.ResetMeasureBoundary();
 
         // The phrase auto-transpose baseline reverts with the key: a mid-section
@@ -676,11 +676,10 @@ public sealed partial class MeasureCollector
     /// <summary>
     /// Bar count of a music scope (a part block or a part-major section cell),
     /// mirroring <see cref="MeasureBuilder.HandleBarline"/>'s bare-barline rules: a
-    /// barline after music closes a bar; a single bare <c>|</c> on an empty span
-    /// anchors the boundary it sits on (the scope start) and counts NOTHING; only the
-    /// second of a <c>| |</c> pair is an empty measure; a TYPED barline on an empty
-    /// span is a decoration. A trailing partial bar (music after the last barline)
-    /// counts. (Chords/lyrics tracks keep their own slot-style counting — see
+    /// barline after music closes a bar; a <c>|</c> on an empty span closes an EMPTY
+    /// measure — the one that OPENS the scope included, so <c>{ | | | | }</c> is four
+    /// bars (owner's decision, 2026-08-28); a TYPED barline on an empty span is a
+    /// decoration. A trailing partial bar (music after the last barline) counts. (Chords/lyrics tracks keep their own slot-style counting — see
     /// <see cref="ChordNameCollector.CountBars(LilySharp.Core.Syntax.ChordPartBlockSyntax)"/>
     /// — their barlines ARE the structure.)
     /// A <c>&lt;&lt; \\ &gt;&gt;</c> polyphonic span counts as ONLY its first voice's
@@ -691,7 +690,7 @@ public sealed partial class MeasureCollector
     {
         int bars = 0;
         bool pendingMusic = false;
-        bool confirmable = true; // the scope-start boundary absorbs one bare `|`
+        bool confirmable = false; // the scope-start boundary is CONSUMED: a `|` there is a bar
         WalkBars(scope.Green, ref bars, ref pendingMusic, ref confirmable);
         return bars + (pendingMusic ? 1 : 0);
     }
@@ -731,11 +730,11 @@ public sealed partial class MeasureCollector
                     }
                     else if (confirmable)
                     {
-                        confirmable = false; // a lone `|` anchors the boundary
+                        confirmable = false; // it CONFIRMS a close this walk just made
                     }
                     else
                     {
-                        bars++; // the second of a `| |` pair: an empty measure
+                        bars++; // an empty span between two boundaries: an empty measure
                     }
                     break;
                 case SyntaxKind.Note:
@@ -779,7 +778,7 @@ public sealed partial class MeasureCollector
     {
         int bars = 0;
         bool pendingMusic = false;
-        bool confirmable = true;
+        bool confirmable = false;
         WalkBarsRed(scope, ref bars, ref pendingMusic, ref confirmable);
         return bars + (pendingMusic ? 1 : 0);
     }

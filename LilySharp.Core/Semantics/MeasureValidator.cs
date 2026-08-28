@@ -76,6 +76,52 @@ internal sealed class MeasureValidator : ISemanticValidator
         // Cross-part alignment runs AFTER per-block fullness and shares its
         // warned spans, so a fullness warning suppresses a mismatch report.
         new CrossPartMeasureValidator(_diagnostics, _warnedSpans).Validate(root);
+        ReportBlankScore(root);
+    }
+
+    /// <summary>
+    /// Warns (LYS2013) when a file that asks for a printed score holds NO BARS AT ALL —
+    /// every staff would come out blank.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE DEFECT THIS CLOSES IS THE SILENCE, NOT THE PAGE. <c>lysc check</c> answered
+    /// "No errors found." for <c>part m { section A { } }</c> and printed a blank sheet —
+    /// the same silence that let a mis-spelled <c>staff bass</c> print fifteen empty
+    /// systems (2026-08-28). LilyPond does not keep quiet: a zero-duration score warns
+    /// "skipping zero-duration score / consider adding a spacer rest" and prints no page
+    /// at all (MEASURED, 2.27.3). A warning, not an error, because a template waiting to
+    /// be filled in is a legitimate thing to compile.
+    /// <para>
+    /// The music bar count comes from <see cref="Svg.Collector.MeasureCollector.CountBarsInScope"/>
+    /// — the collector's OWN answer, so this cannot drift from what gets drawn — and it is
+    /// taken over the whole tree at once rather than per score block: a <c>score</c> names
+    /// a form and a layout, and working out which parts each one reaches is the collector's
+    /// job, not a validator's. That keeps the claim narrow and true: nothing in this file
+    /// has a bar. A book with SOME music, however lopsided, belongs to the cross-part pass.
+    /// </para>
+    /// <para>
+    /// ⚠️ A LYRICS ROW IS A BAR THIS WALK CANNOT SEE, and a LYRICS-ONLY score is a real
+    /// page (the measure grid is drawn on the top text row). Its bars parse as
+    /// <see cref="SyntaxKind.LyricMeasure"/> holding barline TOKENS, where the music walk
+    /// counts <see cref="SyntaxKind.Barline"/> NODES — so it answers zero for
+    /// <c>test/lead-sheet-lyrics</c> and <c>audit/lpreg/lytie</c>, both of which print.
+    /// MEASURED: the first cut of this check warned on exactly those two books out of 899
+    /// and nothing else. A chord row needs no such clause — its entries and barlines ARE
+    /// nodes the walk counts.
+    /// </para>
+    /// </remarks>
+    private void ReportBlankScore(SyntaxNode root)
+    {
+        // Only for a file that asks to PRINT something: a fragment with no `score` block
+        // (a parser fixture, an include) is making no claim about a page.
+        var score = root.DescendantNodes().OfType<RenderDeclarationSyntax>().FirstOrDefault();
+        if (score is null
+            || Svg.Collector.MeasureCollector.CountBarsInScope(root) > 0
+            || root.DescendantNodes().Any(n => n.Kind == SyntaxKind.LyricMeasure))
+            return;
+        _diagnostics.Warning(score.RenderKeyword.Span, DiagnosticCodes.ScoreHasNoMusic,
+            "This score has no bars — every staff would print empty. Write some music, or "
+            + "a bar of silence (`|`, or an explicit `s1`), in a section the form plays.");
     }
 
     private Dictionary<string, SyntaxNode> _phraseBodies = new();
