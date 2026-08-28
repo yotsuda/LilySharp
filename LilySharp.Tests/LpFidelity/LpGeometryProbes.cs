@@ -2869,6 +2869,85 @@ internal static class LpGeometryProbes
         score main "IOA" { staff ~one  lyrics wa staff ~two  lyrics wb }
         """;
 
+    /// <summary>
+    /// A LYRIC ROW BETWEEN THE TWO STAVES OF A GRAND STAFF — the shape HANDOFF §2 D has
+    /// carried as an unmeasured divergence since 2026-08-14, given a probe here
+    /// (probes/grandstaff-lyric-row.ly, book GSL) so that it has an observer at last.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// WHY IT IS NOT ALREADY PINNED. Three families read a row near two staves and none of
+    /// them reads this one: <c>lyrics.between-staves.*</c> (LYRB) is <c>&lt;&lt; Staff Lyrics
+    /// Staff &gt;&gt;</c> with no group at all (first step 4.027851), <c>lyrics.row-between.*</c>
+    /// (IOA above) is an UNFOLDED row whose track name matches no part (5.653448), and
+    /// <c>lyrics.two-staff.*</c> (LYRM) puts the row under the LAST staff rather than between.
+    /// A grand staff puts the pair under <c>StaffGrouper.staff-staff-spacing</c> instead of
+    /// <c>VerticalAxisGroup.default-staff-staff-spacing</c>, and Lily# reaches it through the
+    /// group's own run — so whether the answer is the same was open, not assumed.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE ITEM'S OWN RECIPE NO LONGER PARSES. It spells
+    /// <c>grandStaff { staff upper with lyrics words … }</c>, which is LYS6011 today; a row
+    /// inside a group is now a <c>lyrics NAME sings PART</c> item BETWEEN the staff items
+    /// (GRAMMAR <c>StaffGroupBody</c>). That is why the 2026-08-14 numbers could not be
+    /// re-read by anyone and are recorded here as unreproducible rather than as refuted.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE TWIN IS HAND-WRITTEN ON THE EXPORTER'S FRAME, because it has to be: `lysc ly`
+    /// drops lyric rows ("warning: lyrics row 'words' is not exported"), so the .ly took the
+    /// exporter's <c>\fixed c'</c> frame and note spellings verbatim and only the
+    /// <c>\new Lyrics</c> is hand-added. Probe trap 5 (Lily# absolute is LilyPond minus one
+    /// apostrophe) is therefore paid by the exporter, not by hand.
+    /// </para>
+    /// </remarks>
+    private const string GSL = """
+        octave absolute
+        time 4/4
+
+        part upper { clef treble }
+        part lower { clef bass }
+
+        section Main {
+          upper { d'4 d' e' d' | b4 a b2 | }
+          lower { g,4 b, c a, | d4 d d2 | }
+          lyrics words sings upper { Praise God from whom | all bless- ings | }
+        }
+
+        form main { ~Main }
+
+        score main "GSL" { grandStaff { staff ~upper
+                                        lyrics words sings upper
+                                        staff ~lower } }
+        """;
+
+    /// <summary>
+    /// GSL WITH THE ROW REMOVED and nothing else changed — the positive control. Both
+    /// engines must read the spring's ideal 9.000000 here, so a residual on GSL is the
+    /// row's and only the row's.
+    /// </summary>
+    /// <remarks>Removing a line is not an identity (HANDOFF 5.0 prefers those), and this
+    /// control does not pretend to be one: its job is to prove the READING — that the brace
+    /// and the through-bar-lines a grand staff draws are not in the pair — not to price the
+    /// term.</remarks>
+    private const string GSN = """
+        octave absolute
+        time 4/4
+
+        part upper { clef treble }
+        part lower { clef bass }
+
+        section Main {
+          upper { d'4 d' e' d' | b4 a b2 | }
+          lower { g,4 b, c a, | d4 d d2 | }
+          lyrics words sings upper { Praise God from whom | all bless- ings | }
+        }
+
+        form main { ~Main }
+
+        score main "GSN" { grandStaff { staff ~upper
+                                        staff ~lower } }
+        """;
+
 
     /// <summary>The plain-name half — the floor LOSES to basic-distance 6.</summary>
     private static readonly string CHR1 = ChordRowFloorPageScore("CHR1", sharp: false);
@@ -3001,6 +3080,102 @@ internal static class LpGeometryProbes
     /// side (12.000000000 exact, the basic-distance floor).
     /// </summary>
     private static readonly string CIBN = InlineChordGapScore("CIBN", chords: false);
+
+    /// <summary>
+    /// A VOLTA BRACKET OVER AN INLINE CHORD SYMBOL — books VOC/VOCV (volta-over-chord.ly),
+    /// and the first observer the pair of them ever had.
+    /// </summary>
+    /// <remarks>
+    /// WHY THE PAIR EXISTS (session 275, reported by the owner against a lead sheet whose
+    /// <c>@chord(Fm)</c> inside a first ending is drawn WITH THE BRACKET'S LINE THROUGH IT).
+    /// Lily# places the two independently and neither reads the other:
+    /// <c>ChordNameEngraver.Calculate</c> puts the symbol at <c>StaffPadding</c> plus the note
+    /// protrusion sampled off the system up-skyline, and <c>OutsideStaffStacker.PlaceVoltas</c>
+    /// places the bracket against trackers the symbol was never seeded into. On a system whose
+    /// notes push both to the same height they land on top of each other.
+    /// <para>
+    /// LilyPond cannot produce the arrangement: a ChordName declares no outside-staff-priority
+    /// so its skyline is part of <c>inside_staff_skylines</c>, the support EVERY outside-staff
+    /// grob is placed against, while VoltaBracketSpanner declares 600 and is a mover
+    /// (axis-group-interface.cc:914-935 and :952-972). The bracket steps over it by
+    /// outside-staff-padding, and the probe reads that back as 0.460000 EXACTLY.
+    /// </para>
+    /// <para>
+    /// THE PAIR IS ONE VARIABLE APART: VOCV is VOC with <c>@chord(Fm)</c> deleted and nothing
+    /// else changed. The clearance entry is the defect; the control entry says the bracket's
+    /// OWN height over the notes is right, so a residual on the clearance cannot be blamed on
+    /// the placement itself — and it does NOT say that, which is this pair's second finding.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE TWIN VERIFIED THE PAIR, not a hand conversion (HANDOFF 5.0 — session 60's
+    /// broken-pair trap, and this book fell into it once already: written WITHOUT
+    /// <c>octave absolute</c> the apostrophes are RELATIVE marks and the same letters render
+    /// C5 D6 E5 G6 A7 B♭8, i.e. a different piece of music that still looks plausible).
+    /// <c>lysc ly</c> emits this book as
+    /// <c>\fixed c' { \time 4/4 \key f \major \repeat volta 2 { c'1 | d'1 } \alternative { {
+    /// e'1 | g'2 a'4 bes'4 } { g'1 | a'1 } } }</c>, which is the probe's music character for
+    /// character. ⚠️ The exporter DROPS the <c>@chord</c> ("warning: @chord dropped (out of
+    /// scope)"), so the symbol itself is the one thing the twin cannot check — that is why
+    /// volta-over-chord.ly spells it as a TextScript and says so in its header.
+    /// </para>
+    /// <para>
+    /// ⚠️ EVERY SECTION IS REFERENCED WITH <c>~</c> so no label box is drawn: a section label
+    /// is a mover of priority 1500 and would be a second occupant of the band this pair is
+    /// about.
+    /// </para>
+    /// </remarks>
+    private static string VoltaOverChordScore(string name, bool chord) => $$"""
+        octave absolute
+        time 4/4
+        key f major
+
+        part mel { clef treble }
+
+        section A { mel { c'1 | d'1 } }
+        section B { mel { e'1 | g'2 a'4 bes'4{{(chord ? "@chord(Fm)" : "")}} } }
+        section C { mel { g'1 | a'1 } }
+
+        form main { |: ~A [1. ~B] :| [2. ~C }
+
+        score main "{{name}}" { staff mel }
+        """;
+
+    /// <inheritdoc cref="VoltaOverChordScore"/>
+    private static readonly string VOC = VoltaOverChordScore("VOC", chord: true);
+
+    /// <summary>The no-symbol control — one word apart, and the reading of the bracket's
+    /// height over ink it has to clear.</summary>
+    private static readonly string VOCV = VoltaOverChordScore("VOCV", chord: false);
+
+    /// <summary>
+    /// THE FLOOR — book VOCF (volta-over-chord.ly). Nothing pokes above the staff at all, so
+    /// the outside-staff pass has nothing to clear and the reading is where the placement's
+    /// own floor puts the bracket, and nothing else.
+    /// </summary>
+    /// <remarks>
+    /// WHY THE FAMILY NEEDED A THIRD BOOK (session 275). VOC and VOCV both stand the bracket
+    /// on INK — in both of them the clearance binds and the floor is slack by half a space —
+    /// so neither can see the floor at all, and a residual on either could be the floor or
+    /// the clearance with no way to tell. This book makes the floor the only term in the
+    /// reading: it moves one for one with the placement's own offset and does not move when
+    /// the clearance does. All whole notes, all below the top line, so not even a stem
+    /// reaches the band.
+    /// </remarks>
+    private static readonly string VOCF = """
+        octave absolute
+        time 4/4
+        key f major
+
+        part mel { clef treble }
+
+        section A { mel { c1 | d1 } }
+        section B { mel { e1 | g1 } }
+        section C { mel { g1 | a1 } }
+
+        form main { |: ~A [1. ~B] :| [2. ~C }
+
+        score main "VOCF" { staff mel }
+        """;
 
     /// <summary>
     /// A CUSTOM TEXT AS THE PAGE'S TOP INK — the mirror of book CTP (custom-text-page.ly),
@@ -11613,6 +11788,21 @@ internal static class LpGeometryProbes
         new("page.inline-chord.no-chord.staves-on-first-page", CIBN,
             g => g.StavesOnPage(0), RaggedBottomPaper),
 
+        // ...and what those two never look at: the symbol's neighbours ACROSS the staff, not
+        // the systems under it (books VOC/VOCV — volta-over-chord.ly). A volta bracket is a
+        // mover of outside-staff-priority 600 and an inline chord symbol is support (a
+        // ChordName declares no priority), so LilyPond's bracket steps over the symbol by
+        // outside-staff-padding and Lily#'s walks through it — nobody had told the outside-
+        // staff pass the symbol exists. The pair is one variable apart (VOCV deletes the
+        // `@chord' and nothing else) so the control says whether the bracket's OWN height is
+        // right, which keeps the clearance entry from having to carry both questions.
+        new("page.volta.over-inline-chord.symbol-to-line", VOC,
+            g => g.VoltaLineBottomAboveChordInk()),
+        new("page.volta.plain.staff-to-line", VOCV,
+            g => g.VoltaLineBottomAboveStaffMiddle()),
+        new("page.volta.no-ink.staff-to-line", VOCF,
+            g => g.VoltaLineBottomAboveStaffMiddle()),
+
         // ...and the TERM INSIDE the floor those two read. The refpoint entry above is one
         // number holding two: on the side where the floor binds it is
         // `header + (where the row's baseline is put + how far the symbol's ink reaches
@@ -11742,6 +11932,31 @@ internal static class LpGeometryProbes
             g => g.LyricBaselineAboveStaff(1), RaggedBottomPaper),
         new("lyrics.row-between.staff-to-staff", IOA,
             g => g.StaffGap(), RaggedBottomPaper),
+
+        // --- A ROW BETWEEN THE TWO STAVES OF A GRAND STAFF (book GSL, probe
+        // grandstaff-lyric-row.ly, seeded 2026-08-28 for HANDOFF §2 D) ---
+        // The three families above read a row NEAR two staves; none of them reads a row
+        // INSIDE a group, where the pair is StaffGrouper.staff-staff-spacing rather than
+        // VerticalAxisGroup.default-staff-staff-spacing and Lily# arrives by the group's own
+        // run. §2 D has carried a table since 2026-08-14 saying the two engines part by
+        // −1.089 on the first step and +1.550 on the closing one; nothing observed it, and
+        // its .lys recipe is LYS6011 under today's grammar, so it could not be re-run.
+        // ⚠️ THE CONTROL IS THE READING'S PROOF, not the term's price: GSN is GSL with the
+        // row deleted, and both engines must put 9.000000 there. Counts travel with the
+        // rooms (HANDOFF 5.0, trap 8) — a pair read by index says nothing if the page
+        // stopped holding the systems the index assumes.
+        new("lyrics.grand-staff.staff-to-lyric", GSL,
+            g => g.LyricBaselineBelowStaff(0), RaggedBottomPaper),
+        new("lyrics.grand-staff.lyric-to-staff", GSL,
+            g => g.LyricBaselineAboveStaff(1), RaggedBottomPaper),
+        new("lyrics.grand-staff.staff-staff-inside", GSL,
+            g => g.StaffGap(), RaggedBottomPaper),
+        new("lyrics.grand-staff.staves-on-first-page", GSL,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+        new("lyrics.grand-staff.control.staff-staff-inside", GSN,
+            g => g.StaffGap(), RaggedBottomPaper),
+        new("lyrics.grand-staff.control.staves-on-first-page", GSN,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
 
 
         // THE BOTTOM OF THE CHAIN, in both regimes. Every entry above reads a GAP — a

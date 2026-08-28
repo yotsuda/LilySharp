@@ -83,6 +83,11 @@ internal sealed class AboveStackMemo
         public TextSpannerLayout[] TextSpanners = Array.Empty<TextSpannerLayout>();
         // Seed-only family: read by the pass (occupancy), never moved, so no outputs.
         public TupletBracketLayout[] TupletBrackets = Array.Empty<TupletBracketLayout>();
+        // The other seed-only family: the chord symbols already placed above the staff.
+        // ⚠️ THE LAYOUTS ALONE ARE THE PROGRAM even though the seed also reads each item's
+        // StaffIndex and IsChordRow: a symbol that changed staff or became a row changes the
+        // staff offset baked into its YUp, so no such edit can leave a layout byte-identical.
+        public ChordNameLayout[] ChordNames = Array.Empty<ChordNameLayout>();
 
         // --- value: the pass's outputs for this system's grobs ---
         public TrillSpannerLayout[] OutTrills = Array.Empty<TrillSpannerLayout>();
@@ -140,7 +145,8 @@ internal sealed class AboveStackMemo
             && a.Articulations.AsSpan().SequenceEqual(b.Articulations)
             && a.Dynamics.AsSpan().SequenceEqual(b.Dynamics)
             && a.TextSpanners.AsSpan().SequenceEqual(b.TextSpanners)
-            && a.TupletBrackets.AsSpan().SequenceEqual(b.TupletBrackets);
+            && a.TupletBrackets.AsSpan().SequenceEqual(b.TupletBrackets)
+            && a.ChordNames.AsSpan().SequenceEqual(b.ChordNames);
 
     private static bool RefSequenceEqual(object[] a, object[] b)
     {

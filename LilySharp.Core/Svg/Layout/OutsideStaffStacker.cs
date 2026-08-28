@@ -1021,6 +1021,8 @@ internal static class OutsideStaffStacker
             ImmutableArray<ArticulationLayout> articulations = default,
             ImmutableArray<DynamicLayout> aboveDynamics = default,
             ImmutableArray<TextSpannerLayout> textSpanners = default,
+            ImmutableArray<ChordNameLayout> chordNames = default,
+            ImmutableArray<ChordNameItem> chordItems = default,
             Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile = null,
             AboveStackMemo? memo = null,
             Func<int, int, (object Up, object Down)?>? profileIdentity = null)
@@ -1028,10 +1030,11 @@ internal static class OutsideStaffStacker
         if (memo is null || profileIdentity is null || systems.IsDefaultOrEmpty)
             return StackAboveStaffCore(fonts, systems, systemSkylines, tupletBrackets, trills,
                 barNumbers, ottavas, customTexts, voltas, musicMarks, articulations,
-                aboveDynamics, textSpanners, staffProfile);
+                aboveDynamics, textSpanners, chordNames, chordItems, staffProfile);
         return StackAboveStaffMemoized(fonts, systems, systemSkylines, tupletBrackets, trills,
             barNumbers, ottavas, customTexts, voltas, musicMarks, articulations,
-            aboveDynamics, textSpanners, staffProfile, memo, profileIdentity);
+            aboveDynamics, textSpanners, chordNames, chordItems, staffProfile, memo,
+            profileIdentity);
     }
 
     /// <summary>Per-system index lists into the pass's ten input arrays — one system's
@@ -1040,7 +1043,7 @@ internal static class OutsideStaffStacker
     {
         public readonly List<int> Trills = new(), BarNumbers = new(), Ottavas = new(),
             CustomTexts = new(), Voltas = new(), MusicMarks = new(), Articulations = new(),
-            Dynamics = new(), TextSpanners = new(), TupletBrackets = new();
+            Dynamics = new(), TextSpanners = new(), TupletBrackets = new(), ChordNames = new();
     }
 
     /// <summary>
@@ -1074,6 +1077,8 @@ internal static class OutsideStaffStacker
             ImmutableArray<ArticulationLayout> articulations,
             ImmutableArray<DynamicLayout> aboveDynamics,
             ImmutableArray<TextSpannerLayout> textSpanners,
+            ImmutableArray<ChordNameLayout> chordNames,
+            ImmutableArray<ChordNameItem> chordItems,
             Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile,
             AboveStackMemo memo,
             Func<int, int, (object Up, object Down)?> profileIdentity)
@@ -1113,6 +1118,7 @@ internal static class OutsideStaffStacker
         Collect(aboveDynamics, d => d.MeasureIndex, p => p.Dynamics);
         Collect(textSpanners, ts => ts.StartMeasureIndex, p => p.TextSpanners);
         Collect(tupletBrackets, tb => tb.MeasureIndex, p => p.TupletBrackets);
+        Collect(chordNames, cn => cn.MeasureIndex, p => p.ChordNames);
 
         // 2. Build each occupied system's program and consult the memo.
         var hits = new HashSet<int>();
@@ -1121,7 +1127,8 @@ internal static class OutsideStaffStacker
         {
             var entry = BuildProgram(systems, systemSkylines, s, part, topStaff,
                 profileIdentity, tupletBrackets, trills, barNumbers, ottavas, customTexts,
-                voltas, musicMarks, articulations, aboveDynamics, textSpanners);
+                voltas, musicMarks, articulations, aboveDynamics, textSpanners,
+                chordNames, chordItems);
             if (entry == null)
                 continue; // a profile with no stable identity: never memoized
             if (memo.TryMatch(s, entry))
@@ -1156,12 +1163,17 @@ internal static class OutsideStaffStacker
         var (liveArtics, mapArtics) = Filter(articulations, a => a.MeasureIndex);
         var (liveDynamics, mapDynamics) = Filter(aboveDynamics, d => d.MeasureIndex);
         var (liveTextSpanners, mapTextSpanners) = Filter(textSpanners, ts => ts.StartMeasureIndex);
+        // A seed-only family filters like the rest and is never scattered back: a hit
+        // system's trackers are not consulted at all, so its symbols have nothing to seed.
+        // ⚠️ The INDICES stay the originals', because the seed reads chordItems through
+        // ChordNameLayout.SourceIndex — filtering the items alongside would renumber them.
+        var (liveChordNames, _) = Filter(chordNames, cn => cn.MeasureIndex);
 
         // 4. Stack the live systems (byte-identical to stacking them in the full call:
         // a system's grobs are all-in or all-out, and only same-system grobs interact).
         var core = StackAboveStaffCore(fonts, systems, systemSkylines, liveTuplets, liveTrills,
             liveBarNumbers, liveOttavas, liveCustomTexts, liveVoltas, liveMarks, liveArtics,
-            liveDynamics, liveTextSpanners, staffProfile);
+            liveDynamics, liveTextSpanners, liveChordNames, chordItems, staffProfile);
 
         // 5. Reassemble: live results scatter back by index; hit systems replay their
         // stored outputs, positionally parallel to the (equal) stored inputs.
@@ -1250,7 +1262,9 @@ internal static class OutsideStaffStacker
         ImmutableArray<MusicMarkLayout> musicMarks,
         ImmutableArray<ArticulationLayout> articulations,
         ImmutableArray<DynamicLayout> aboveDynamics,
-        ImmutableArray<TextSpannerLayout> textSpanners)
+        ImmutableArray<TextSpannerLayout> textSpanners,
+        ImmutableArray<ChordNameLayout> chordNames,
+        ImmutableArray<ChordNameItem> chordItems)
     {
         var sys = systems[s];
 
@@ -1275,6 +1289,15 @@ internal static class OutsideStaffStacker
         foreach (int i in part.Dynamics) used.Add(Resolve(aboveDynamics[i].StaffIndex));
         foreach (int i in part.TextSpanners) used.Add(Resolve(textSpanners[i].StaffIndex));
         foreach (int i in part.TupletBrackets) used.Add(Resolve(tupletBrackets[i].StaffIndex));
+        // A seeded chord symbol asks for its OWN staff's tracker, so that staff's profile is
+        // part of this system's program too — otherwise a book whose only above-staff ink is
+        // a chord symbol could replay a stack built against a profile that has since changed.
+        foreach (int i in part.ChordNames)
+        {
+            int src = chordNames[i].SourceIndex;
+            if (src >= 0 && src < chordItems.Length && !chordItems[src].IsChordRow)
+                used.Add(Resolve(chordItems[src].StaffIndex));
+        }
 
         var profUps = new List<object>(used.Count);
         var profDowns = new List<object>(used.Count);
@@ -1312,6 +1335,7 @@ internal static class OutsideStaffStacker
             Dynamics = Gather(aboveDynamics, part.Dynamics),
             TextSpanners = Gather(textSpanners, part.TextSpanners),
             TupletBrackets = Gather(tupletBrackets, part.TupletBrackets),
+            ChordNames = Gather(chordNames, part.ChordNames),
         };
     }
 
@@ -1338,6 +1362,8 @@ internal static class OutsideStaffStacker
             ImmutableArray<ArticulationLayout> articulations,
             ImmutableArray<DynamicLayout> aboveDynamics,
             ImmutableArray<TextSpannerLayout> textSpanners,
+            ImmutableArray<ChordNameLayout> chordNames,
+            ImmutableArray<ChordNameItem> chordItems,
             Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile)
     {
         if (systems.IsDefaultOrEmpty)
@@ -1351,7 +1377,8 @@ internal static class OutsideStaffStacker
 
         var topStaff = TopStaffBySystem(systems);
         var trackers = AboveTrackers(systems, systemSkylines, staffProfile, topStaff);
-        SeedAboveTrackers(fonts, systems, trackers, articulations, tupletBrackets, measureToSystem);
+        SeedAboveTrackers(fonts, systems, trackers, articulations, tupletBrackets,
+            chordNames, chordItems, measureToSystem);
 
         // Movable outside-staff grobs, placed in ascending outside-staff-priority
         // order; each pass clears the occupancy seeded/accumulated by the earlier ones.
@@ -1618,6 +1645,8 @@ internal static class OutsideStaffStacker
         Func<int, int, OutsideStaffSkylines> trackers,
         ImmutableArray<ArticulationLayout> articulations,
         ImmutableArray<TupletBracketLayout> tupletBrackets,
+        ImmutableArray<ChordNameLayout> chordNames,
+        ImmutableArray<ChordNameItem> chordItems,
         Dictionary<int, int> measureToSystem)
     {
         // Above-staff scripts that declare NO outside-staff-priority (accents, staccato,
@@ -1697,6 +1726,69 @@ internal static class OutsideStaffStacker
                         tb.NumberX - halfW, tb.NumberX + halfW,
                         tb.NumberYUp + halfH, tb.NumberYUp + halfH, VerticalDirection.Up));
                 }
+            }
+        }
+
+        // The chord symbols already standing above the staff. A ChordName declares NO
+        // outside-staff-priority, so on LilyPond's side it is not a mover at all — its
+        // skyline is collected into the support every mover is placed against, which is
+        // exactly what this method builds.
+        // LILYPOND-REF: lily/axis-group-interface.cc:914-935 skyline_spacing — grobs with an
+        //   unset (infinite) priority go into inside_staff_skylines; :952-972
+        //   add_grobs_of_one_priority places the rest against it in ascending priority order.
+        // LILYPOND-REF: scm/define-grobs.scm ChordName — its entry declares neither
+        //   outside-staff-priority nor vertical-skylines.
+        // WITHOUT THIS SEED the movers walk straight through the symbols. Measured on the
+        // book the owner reported (ledger page.volta.over-inline-chord.symbol-to-line): the
+        // volta bracket's line stood 1.077050371 BELOW the symbol's ink top where LilyPond
+        // leaves 0.460000 above it — the bracket was drawn through the letters. Every mover
+        // of the pass gains the clearance, not just the volta, because that is the one rule
+        // LilyPond has here; the marks (priority 1500) reach the same answer twice, since
+        // MusicMarkEngraver already computes this clearance for its own base estimate and
+        // the two agree by construction (same ink, same OutsideStaffPadding, and the pass
+        // only ever raises).
+        // ⚠️ THE PROFILE IS THE SYMBOL'S EXTENT BOX, NOT ITS GLYPH OUTLINE, for the reason
+        // MusicMarkEngraver's ChordBandUp arm gives at length: an unset vertical-skylines is
+        // filled with Grob::simple_vertical_skylines_from_extents_proc, one Box per grob, so
+        // the up side is one flat roof at the ink top across the ink width.
+        // LILYPOND-REF: lily/grob.cc:81-85 Grob::simple_vertical_skylines_from_extents_proc —
+        //   what an unset vertical-skylines is filled with;
+        // LILYPOND-REF: lily/stencil-integral.cc:769-792 maybe_pure_internal_simple_skylines_from_extents
+        //   — the one Box it becomes.
+        // ⚠️ NOT A LITERAL TRANSCRIPTION, and it cannot be (HANDOFF 7.6 ⒝): LilyPond COLLECTS
+        // the priority-less grobs inside skyline_spacing itself, where a ChordName is already
+        // a member of the axis group being spaced. Lily# places its chord symbols in a pass of
+        // their own, BEFORE this one, so the same set is assembled by handing them over as
+        // occupancy instead. What a literal port needs is one grob list per axis group — the
+        // same thing the articulation and tuplet seeds above are standing in for, which is why
+        // all three are spelled out here rather than gathered by one walk.
+        // ⚠️ A CHORD ROW IS NOT ABOVE-STAFF INK. A row's symbols live in their own band, and
+        // their YUp carries that band's offset rather than a height above some staff; seeding
+        // them here would put a text row's contents into a staff's support. They are excluded
+        // by the item's own IsChordRow, and the ink-above-the-top-line test below is the
+        // second gate — an INLINE symbol on a lower staff must not raise the top staff's
+        // movers either, which is why the seed is keyed by the symbol's own staff.
+        if (!chordNames.IsDefaultOrEmpty && !chordItems.IsDefaultOrEmpty)
+        {
+            foreach (var cn in chordNames)
+            {
+                if (cn.SourceIndex < 0 || cn.SourceIndex >= chordItems.Length)
+                    continue;   // no item to ask for the staff: not seedable
+                var item = chordItems[cn.SourceIndex];
+                if (item.IsChordRow
+                    || !measureToSystem.TryGetValue(cn.MeasureIndex, out int sysIdx))
+                    continue;
+                double staffTopUp = LayoutUtilities.StaffOffsetInSystemUp(
+                    systems[sysIdx], item.StaffIndex);
+                var ink = ChordNameEngraver.SymbolInk(fonts, cn.ChordText);
+                if (cn.YUp + ink.Top <= staffTopUp)
+                    continue;   // not above this staff's top line — nothing to clear
+                // cn.X IS THE SYMBOL'S LEFT EDGE, not its centre: a chord name is drawn with
+                // TextAnchor.Start (SharedRenderer.DrawChordNames), and the width is the same
+                // SymbolInkWidth the draw and the reservation read — one house.
+                trackers(sysIdx, item.StaffIndex).MergeSupport(up: VerticalSkyline.FromBox(
+                    cn.X, cn.X + ChordNameEngraver.SymbolInkWidth(fonts, cn.ChordText),
+                    cn.YUp + ink.Bottom, cn.YUp + ink.Top, VerticalDirection.Up));
             }
         }
     }
@@ -2145,9 +2237,15 @@ internal static class OutsideStaffStacker
                     // chain ~2 ss above LP (volta-bracket-vertical-skylines.ly:
                     // LP's line clears a d'''' head by padding alone, 0.56, its
                     // hook dropping harmlessly beside it).
-                    // Geometry mirrored from SharedRenderer.DrawVoltaBrackets:
-                    // line thickness 0.13, start hook iff text, end hook iff
-                    // closed, number ink 0.3 below the line at StartX + 0.5.
+                    // Geometry mirrored from SharedRenderer.DrawVoltaBrackets, through the
+                    // SAME constants it draws with (VoltaBracketEngraver): the line's own
+                    // thickness, the hooks hanging edge-height below the line's BOTTOM edge,
+                    // and the number's ink NumberOffsetY below the line's centre at
+                    // NumberOffsetX inside the bracket. ⚠️ THE NUMBER'S BOX IS THE ONE THAT
+                    // MATTERS: an ending's first note collides with it and not with the line,
+                    // on both engines (ledger page.volta.plain.staff-to-line's why).
+                    double half = VoltaBracketEngraver.LineThickness / 2.0;
+                    double hookTip = anchor0 - half - VoltaBracketEngraver.GetEdgeHeight();
                     void AddBox(double x0, double x1, double bottom)
                     {
                         spanUp.Merge(VerticalSkyline.FromBox(
@@ -2156,20 +2254,20 @@ internal static class OutsideStaffStacker
                             x0, x1, bottom, anchor0 + 0.1, VerticalDirection.Down));
                     }
                     bool hasText = !string.IsNullOrEmpty(v.VoltaText);
-                    AddBox(v.StartX, v.EndX, anchor0 - 0.065);          // the line
+                    AddBox(v.StartX, v.EndX, anchor0 - half);           // the line
                     if (hasText)
-                        AddBox(v.StartX - 0.065, v.StartX + 0.065,      // start hook
-                            anchor0 - VoltaBracketEngraver.GetEdgeHeight());
+                        AddBox(v.StartX - half, v.StartX + half, hookTip);   // start hook
                     if (v.IsClosed)
-                        AddBox(v.EndX - 0.065, v.EndX + 0.065,          // end hook
-                            anchor0 - VoltaBracketEngraver.GetEdgeHeight());
+                        AddBox(v.EndX - half, v.EndX + half, hookTip);       // end hook
                     if (hasText)
                     {
+                        double size = VoltaBracketEngraver.NumberFontSize;
                         double w = fonts.Advance(
-                            v.VoltaText, 0.6 * 4.0, TextRole.Volta, FontStyle.Bold);
-                        AddBox(v.StartX + 0.5, v.StartX + 0.5 + w,      // the number
-                            anchor0 - 0.3 - fonts.InkHeight(
-                                v.VoltaText, 0.6 * 4.0, TextRole.Volta, FontStyle.Bold));
+                            v.VoltaText, size, TextRole.Volta, FontStyle.Bold);
+                        double nx = v.StartX + VoltaBracketEngraver.NumberOffsetX;
+                        AddBox(nx, nx + w,                                   // the number
+                            anchor0 - VoltaBracketEngraver.NumberOffsetY - fonts.InkHeight(
+                                v.VoltaText, size, TextRole.Volta, FontStyle.Bold));
                     }
                 }
 

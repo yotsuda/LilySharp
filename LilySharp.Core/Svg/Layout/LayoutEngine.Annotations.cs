@@ -982,6 +982,15 @@ internal sealed partial class LayoutEngine
             belowStackedTrills, barNumberLayouts, ottavaLayouts,
             customTextLayouts, voltaBracketLayouts, musicMarkLayouts,
             stackedArticulations, aboveDynamics: stackedDynamics, textSpanners: textSpannerLayouts,
+            // The chord symbols go in as SUPPORT, not as movers: a ChordName declares no
+            // outside-staff-priority, so LilyPond collects it into the inside-staff skylines
+            // every outside-staff grob is placed against — the seeding site's remarks carry
+            // the addresses (OutsideStaffStacker.SeedAboveTrackers).
+            // They are already placed by this point — LayoutChordNames ran above — which is
+            // what lets them be handed over as occupancy. The ITEMS travel with them because
+            // a ChordNameLayout carries no StaffIndex and the seed is keyed per staff.
+            chordNames: chordNameLayouts,
+            chordItems: ctx.ChordNames ?? ImmutableArray<ChordNameItem>.Empty,
             staffProfile: staffProfile,
             memo: ctx.AboveStackMemo, profileIdentity: profileIdentity);
         stackedDynamics = stackedDynamicsAbove;

@@ -1215,6 +1215,120 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The volta bracket's horizontal LINE and the staff's top line, both device-down: the
+    /// rule's own BOTTOM EDGE, which is what a skyline distance is measured from.
+    /// </summary>
+    /// <remarks>
+    /// The half thickness comes from the RECORDED line's own stroke width rather than from a
+    /// constant, so the reading follows <c>SharedRenderer.DrawVoltaBrackets</c> if its 0.13
+    /// ever becomes LilyPond's 1.6 x line-thickness. That matters here: the LilyPond side of
+    /// <c>page.volta.*</c> is measured to ITS line's bottom edge (half of 0.16 below the
+    /// grob's reference), so a residual carrying half a thickness would be a difference in
+    /// the rule's WEIGHT wearing the clearance's clothes.
+    /// <para>
+    /// SELECTED BY REACH, not by weight: a ledger line is horizontal too and is the only
+    /// other rule these books draw above the staff, and it spans a notehead (about 2 ss)
+    /// where a volta bracket spans its endings. Both brackets of a repeat share one placed Y
+    /// (the spanner is one axis group — <c>OutsideStaffStacker.PlaceVoltas</c> places the
+    /// chain once), so the guard asks for exactly ONE distinct Y and says so loudly when a
+    /// book grows a second chain or an ottava line.
+    /// </para>
+    /// </remarks>
+    private (double StaffMiddleLine, double LineBottom) VoltaLineRaw(int page)
+    {
+        var staffLines = StaffLineYs(page);
+        if (staffLines.Count != 5)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE 5-line staff, found {staffLines.Count} "
+                + "staff line(s) — the probe is not measuring what it claims."
+                + "\nDrawn geometry:\n" + Describe());
+        }
+        // ⚠️ THE MIDDLE LINE, and it was the TOP one for one commit. The LilyPond side reads
+        // the StaffSymbol's own reference point (the middle line, no extent and so no
+        // thickness); reading the drawn TOP line here put the two sides half a staff-line
+        // apart (0.05) and the entries carried that as if it were engine divergence.
+        double staffMiddle = staffLines[2];
+        var rules = _pages[page].Lines
+            .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
+                        && l.Y1 < staffLines[0] - 1e-6
+                        && Math.Abs(l.X2 - l.X1) >= 5.0)
+            .ToList();
+        var ys = rules.Select(l => Math.Round(l.Y1, 9)).Distinct().ToList();
+        if (ys.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE horizontal rule reaching 5 ss or more "
+                + $"above the staff (the volta bracket's line), found {ys.Count} — the probe "
+                + "is not measuring what it claims.\nDrawn geometry:\n" + Describe());
+        }
+        var half = rules.Select(l => l.StrokeWidth / 2.0).Distinct().ToList();
+        if (half.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: the volta bracket's line is drawn at {half.Count} different "
+                + "weights — the reading of its bottom edge is not well defined."
+                + "\nDrawn geometry:\n" + Describe());
+        }
+        return (staffMiddle, ys[0] + half[0]);
+    }
+
+    /// <summary>
+    /// How far the volta bracket line's bottom edge stands above the staff's MIDDLE line.
+    /// </summary>
+    /// <remarks>
+    /// Two entries of <c>page.volta.*</c> read this (probe volta-over-chord.ly): book VOCV,
+    /// where notes poke above the staff and the outside-staff pass has something to clear,
+    /// and book VOCF, where nothing does and the reading is the placement's FLOOR alone.
+    /// Carrying both is what lets a change to the floor be told from a change to the
+    /// clearance — neither reading can say which moved on its own.
+    /// </remarks>
+    public double VoltaLineBottomAboveStaffMiddle(int page = 0)
+    {
+        var (staffMiddle, lineBottom) = VoltaLineRaw(page);
+        return staffMiddle - lineBottom;
+    }
+
+    /// <summary>
+    /// How far the volta bracket line's bottom edge stands above the sole chord symbol's ink
+    /// TOP — the clearance the outside-staff pass is supposed to leave, signed so that a
+    /// bracket drawn THROUGH the symbol reads negative.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:648-676 avoid_outside_staff_collisions —
+    /// the mover is pushed by its own DOWN skyline's distance to the support's UP plus
+    /// outside-staff-padding, and a VoltaBracketSpanner (priority 600) is a mover over a
+    /// ChordName, which declares no priority and so belongs to the support
+    /// (:914-935 inside_staff_skylines). LilyPond answers 0.460000 (volta-over-chord.ly VOC).
+    /// <para>
+    /// FACE-FREE ON PURPOSE: both sides are read from the SYMBOL'S OWN INK TOP, so the chord
+    /// face divergence (LilyPond's Nimbus Sans against Lily#'s TeX Gyre Heros — ledger
+    /// <c>page.chord-row.staff-to-chord-baseline</c>) cancels, and so does the LilyPond
+    /// book's spelling its symbol as a TextScript (the probe's header says why it does).
+    /// </para>
+    /// <para>
+    /// The ink comes from <see cref="ChordNameEngraver.SymbolInk"/> — the ONE house the
+    /// reservation, the mark family's clearance and the draw all read — so this reading
+    /// cannot drift from the ink the engine actually reserved.
+    /// </para>
+    /// </remarks>
+    public double VoltaLineBottomAboveChordInk(int page = 0)
+    {
+        var (_, lineBottom) = VoltaLineRaw(page);
+        var chords = ChordSymbols;
+        if (chords.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE chord symbol, found {chords.Count} — the "
+                + "probe is not measuring what it claims.\nDrawn geometry:\n" + Describe());
+        }
+        var ink = ChordNameEngraver.SymbolInk(
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, chords[0].Text);
+        // Device-down: the ink top is Ink.Top ABOVE the drawn baseline.
+        return (chords[0].Y - ink.Top) - lineBottom;
+    }
+
+    /// <summary>
     /// The sole fermata's staff-FACING ink edge above the first staff's refpoint (middle
     /// line), signed up-positive: the ink BOTTOM of an above fermata, the ink TOP of a below
     /// one (so a below reading is negative). The comparable LilyPond quantity is the Script

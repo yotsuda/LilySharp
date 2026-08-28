@@ -55,15 +55,117 @@ public readonly record struct VoltaBracketLayout(
 /// </remarks>
 internal static class VoltaBracketEngraver
 {
-    // LILYPOND-REF: scm/define-grobs.scm:4296 edge-height = (2.0 . 2.0) (VoltaBracket grob)
+    // LILYPOND-REF: scm/define-grobs.scm:4297 edge-height = (2.0 . 2.0) (VoltaBracket grob)
     private const double EdgeHeight = 2.0;
 
-    // VoltaBracket Y placement is governed by side-position-interface +
-    // outside-staff-priority in LP (no single literal — see VoltaBracket grob
-    // properties at scm/define-grobs.scm:4292-4317). LilySharp uses a fixed
-    // hand-tuned offset above the staff that matches typical LP output.
-    private const double YOffsetYUp = 3.0; // Y-up: 3 above the system top
-    
+    /// <summary>The space LilyPond's side-position step leaves between the staff's ink and
+    /// the bracket's lowest ink.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:4320-4346 side-position-interface is among
+    /// VoltaBracketSpanner's own interfaces there, and its
+    /// <c>(padding . 1)</c> — with <c>Y-offset = side-position-interface::y-aligned-side</c>
+    /// and no staff-padding of its own.</remarks>
+    private const double StaffPadding = 1.0;
+
+    /// <summary>The bracket's drawn line thickness, in staff spaces.</summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond's VoltaBracket declares <c>(thickness . 1.6)</c> in
+    /// line-thickness units (scm/define-grobs.scm — VoltaBracket's own thickness), 0.16 —
+    /// the same shadowing
+    /// <c>EngravingDefaults.TupletBracketThickness</c> was repaired for. It stays 0.13 here
+    /// because closing it is a drawing change with no observer: all three
+    /// <c>page.volta.*</c> entries read this line's OWN bottom edge on each engine, so the
+    /// weight falls out of every one of them.
+    /// <para>
+    /// ONE HOME, and it has to be: the DRAW (<c>SharedRenderer.DrawVoltaBrackets</c>), the
+    /// RESERVATION (<c>OutsideStaffStacker.PlaceVoltas</c>) and the placement below all
+    /// measure from this line's EDGES, and a second spelling would put the bracket's ink
+    /// where nothing reserved room for it.
+    /// </para>
+    /// </remarks>
+    internal const double LineThickness = 0.13;
+
+    /// <summary>Where the bracket sits when nothing above the staff pushes it: its lowest ink
+    /// one <c>padding</c> above the staff's own, expressed as the LINE's centre.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/side-position-interface.cc:88-135 axis_aligned_side_helper, which
+    ///   <c>Side_position_interface::y_aligned_side</c> calls — the padding is added to the SUPPORT'S
+    ///   EXTENT edge, which for a staff symbol is the top line's outer edge, not its centre.
+    /// <para>
+    /// Each of the four terms is somebody's declaration, which is why the number is written
+    /// as the sum: half a staff line (the staff's ink reaches that far above the line this
+    /// engine draws at 0), LilyPond's padding, LilyPond's edge-height, and half of the line
+    /// this engine draws — the anchor stored here is the line's CENTRE while the padding
+    /// chain is about its edges.
+    /// </para>
+    /// <para>
+    /// ⚠️ IT WAS A FLAT 3.0, declared LILYSHARP-OWN as "a fixed hand-tuned offset above the
+    /// staff that matches typical LP output". That was 0.115 low, and the two halves of the
+    /// miss are exactly the two edges this sum now spells: 0.05 for standing on the top
+    /// line's CENTRE where LilyPond stands on the staff's INK, and 0.065 for hanging the
+    /// edge-height from the line's centre where LilyPond hangs it from the line's BOTTOM.
+    /// Ledger <c>page.volta.no-ink.staff-to-line</c> is the observer, and it is the only one
+    /// of the three that can see this number at all — the other two stand the bracket on ink,
+    /// where the clearance binds and this floor is slack.
+    /// </para>
+    /// </remarks>
+    private const double YOffsetYUp =
+        EngravingDefaults.StaffLineThickness / 2.0   // the staff's ink above its top line
+        + StaffPadding                               // VoltaBracketSpanner (padding . 1)
+        + EdgeHeight                                 // VoltaBracket edge-height
+        + LineThickness / 2.0;                       // the stored anchor is the line's centre
+
+    /// <summary>Where the volta number sits inside the bracket: its left edge this far right
+    /// of the bracket's left end, and its ink TOP this far below the line's centre.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:4305 volta-number-offset = (1.0 . -0.5), on the
+    ///   VoltaBracket grob;
+    /// LILYPOND-REF: lily/volta-bracket.cc:100-109 Volta_bracket_interface::print — the
+    ///   number is aligned UP, translated by the offset's Y, and added at the bracket's LEFT
+    ///   edge with padding <c>-(its width) - offset X</c>, which lands its left edge exactly
+    ///   <c>offset X</c> inside the bracket.
+    /// <para>
+    /// ⚠️ THEY WERE 0.5 AND 0.3, unsourced. The Y is the load-bearing one: an ending's first
+    /// note collides with the NUMBER's box rather than with the bracket's line, on both
+    /// engines — LilyPond drops the bracket to its floor when the number is suppressed, and
+    /// raises it by exactly 2.5 when the number is pushed 2.5 down.
+    /// </para>
+    /// </remarks>
+    internal const double NumberOffsetX = 1.0;
+
+    /// <inheritdoc cref="NumberOffsetX"/>
+    internal const double NumberOffsetY = 0.5;
+
+    /// <summary>The volta number's font size, in staff spaces, from LilyPond's own scale.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: <c>scm/define-grobs.scm</c> VoltaBracket <c>(font-size . -2)</c> —
+    /// magnification steps of 2^(1/6) — applied to scm/paper.scm:78's <c>text-font-size</c>
+    /// of 11 pt, with one staff space = 5 pt at the default 20 pt staff. It is the same
+    /// derivation <see cref="BarNumberEngraver.FontSize"/> and
+    /// <c>TupletBracketEngraver.NumberFontSize</c> carry for the same declaration; this grob
+    /// was the last member of the Numbers family still drawing at
+    /// <c>SharedRenderer.FontSize * 0.6</c> = 2.4, an unsourced 37% larger.
+    /// <para>
+    /// ⚠️ LILYPOND APPLIES A SECOND -2 AND THIS DELIBERATELY DOES NOT. Its number goes
+    /// through the <c>volta-number</c> markup command (scm/define-markup-commands.scm), which adds
+    /// <c>fontsize -2</c> — but it does so while switching to <c>font-encoding fetaText</c>,
+    /// whose digits are proportionally far taller than a text face's. Lily#'s Numbers family
+    /// is set in the TEXT face (<c>TextRole.Volta</c> in <c>TextRoleGroup.Numbers</c>), a
+    /// standing divergence of its own, and taking the second magstep without the taller face
+    /// would draw the number about a fifth SHORTER than LilyPond's ink instead of matching
+    /// it. MEASURED: LilyPond's "2." inks 1.2598 tall (read off the volta-number-offset
+    /// poison, which drags the grob's extent with it); at this size Lily#'s face gives
+    /// 1.2624. ⇒ the remaining 0.0026 is the FACE, and it belongs with the other face
+    /// islands rather than to this number.
+    /// </para>
+    /// <para>
+    /// A PROPERTY, not a <c>static readonly</c>, for the reason
+    /// <c>TupletBracketEngraver.NumberFontSize</c> gives: static initialisation order between
+    /// partial classes is undefined, and reading a not-yet-initialised default is how a whole
+    /// family of widths was once silently zeroed.
+    /// </para>
+    /// </remarks>
+    internal static double NumberFontSize => 11.0 * System.Math.Pow(2.0, -2.0 / 6.0) / 5.0;
+
     // Padding from barline
     private const double StartPadding = 0.3;
     private const double EndPadding = 0.3;

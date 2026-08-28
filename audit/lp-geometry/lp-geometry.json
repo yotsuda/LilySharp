@@ -1011,6 +1011,54 @@
       "why": "SEEDED 2026-08-26 (session 258). THE ROOM OF THE UNFOLDED-ROW PAIR, which LilyPond reads at the walk's floors EXACTLY (5.653448349 + 3.587044154 - no slack, barely over basic-distance 9). Lily#'s pair-placement port reads it the same way - max(basic-distance, the per-line-spec walk) - and the residual is the sum of the steps' own (-0.000155051 + 0.082995881), all of it the Text height (see lyric-to-staff). Before the port the pair happened to read 9.240334546 (near-exact) through the band stack's pairwise steps, which could not see the collision the walk prices; the corpus book this is (input-order-alignment.lys) moved by +0.083 when the port landed, and this entry is what says that move is the walk becoming LilyPond's rather than a regression.",
       "unit": "ss"
     },
+    "lyrics.grand-staff.staff-to-lyric": {
+      "probe": "grandstaff-lyric-row.ly",
+      "score": "GSL",
+      "lilypond": 5.021223442736809,
+      "residual": -0.000100770,
+      "why": "SEEDED 2026-08-28 (session 274) to put an observer on HANDOFF §2 D, which had carried a table since 2026-08-14 saying a lyric row inside a grandStaff stands -1.089 too CLOSE to the staff above it. PREDICTION written before Lily# was read (scratch/p274/predictions.txt): |residual| < 1e-3, i.e. the item is a font term and not the mechanism error it was written up as. ---- MEASURED: -0.000100770, which is the FAMILY FONT TERM to nine digits -- lyrics.row.between-staves.verse-hole.control.staff-to-lyric reads -0.000100769 and the whole staff-to-lyric family sits at -0.0001006 +-3e-7 (LYRB, LYRMV, the hara-kiri set). The first step here is priced by the lyric's own ink against the staff's in BOTH engines, and what is left is the face reading that ink. ⚠️ DO NOT DRIVE IT TO ZERO: 5.021223 is a skyline walk, not a spec number (padding 0.5 over staff1's full 3.55 down-extent would be 5.870, so LilyPond is reading its deepest ink AT THE LYRIC'S X, not its extent), and a zero here would mean a face quantity had been fitted.",
+      "unit": "ss"
+    },
+    "lyrics.grand-staff.lyric-to-staff": {
+      "probe": "grandstaff-lyric-row.ly",
+      "score": "GSL",
+      "lilypond": 6.046346450541339,
+      "residual": -0.000054899,
+      "why": "SEEDED 2026-08-28 (session 274). The closing step of the same run; §2 D said Lily# stood +1.550 too FAR here. MEASURED: -0.000054899, a second and SMALLER face term, and the smallness is the finding. ★ THE DIRECTION PREDICTION MISSED AND THE MISS NAMES SOMETHING: it said that if either step diverged it would be THIS one, because the only other reading of a row between two staves (lyrics.row-between.lyric-to-staff, book IOA) carries its whole +0.082995881 on the closing step. That reasoning transplanted IOA's BINDING onto a book that has none of it -- IOA's closing is bound by staff2's ^\"Text\" textscript, which Lily# stands ~0.35 too high, and staff2 here carries a bass clef and nothing else. ⇒ A residual belongs to the ink that BINDS the step, not to the step's position in the run; two closings are not the same quantity because they close the same shape.",
+      "unit": "ss"
+    },
+    "lyrics.grand-staff.staff-staff-inside": {
+      "probe": "grandstaff-lyric-row.ly",
+      "score": "GSL",
+      "lilypond": 11.067569893278148,
+      "residual": -0.000155669,
+      "why": "SEEDED 2026-08-28 (session 274). THE ROOM the two steps above are solved into, and it is EXACTLY their sum (-0.000100770 + -0.000054899 = -0.000155669, every digit). ⇒ NO MECHANISM TERM IS IN THIS READING AT ALL: the grand staff's pair is the loose line's chain and nothing else, the brace and the through-bar-lines are not in it, and the whole distance from LilyPond is the two faces. That is what closes §2 D's item: the table there (-1.089 / +1.550 / +0.461 net) is not a description of this engine. ⚠️ IT IS NOT A REFUTATION OF THE 2026-08-14 READING, because that reading cannot be re-run -- its .lys recipe is LYS6011 under today's grammar and no probe was kept -- and LilyPond's column there (6.739 / 4.500 / 11.239) is not produced by ANY of four spellings of this book (default paper; the house pin plus the exporter's \\mark; \\addlyrics; staff2 outside the group -- all four give these three numbers to every digit, scratch/p274/gs-variants.ly). The 2026-08-14 numbers are recorded as unreproducible.",
+      "unit": "ss"
+    },
+    "lyrics.grand-staff.staves-on-first-page": {
+      "probe": "grandstaff-lyric-row.ly",
+      "score": "GSL",
+      "lilypond": 2,
+      "residual": 0.0,
+      "why": "SEEDED 2026-08-28 (session 274). The regime guard for the three rooms above (HANDOFF 5.0, trap 8): they are read off page 1 by staff index, so a book that re-broke would move which pair they name and hand back a plausible number about another page. Two staves, one system, one page. MEASURED: 2, residual 0.",
+      "unit": "count"
+    },
+    "lyrics.grand-staff.control.staff-staff-inside": {
+      "probe": "grandstaff-lyric-row.ly",
+      "score": "GSN",
+      "lilypond": 9.0,
+      "residual": 0.0,
+      "why": "SEEDED 2026-08-28 (session 274). GSL WITH THE ROW DELETED and nothing else changed: both engines put the spring's ideal 9.000000 here, EXACT on both sides. ⇒ IT IS WHAT MAKES THE THREE READINGS ABOVE READINGS: the brace, the through-bar-lines and the grouper's own spec are all present here too and none of them shows, so GSL's 11.067570 is the row's and only the row's. ⚠️ Removing a line is NOT an identity (HANDOFF 5.0 prefers those) -- this control proves the reading, it does not price the term.",
+      "unit": "ss"
+    },
+    "lyrics.grand-staff.control.staves-on-first-page": {
+      "probe": "grandstaff-lyric-row.ly",
+      "score": "GSN",
+      "lilypond": 2,
+      "residual": 0.0,
+      "why": "SEEDED 2026-08-28 (session 274). The control's own regime guard, for the same reason as GSL's. MEASURED: 2, residual 0.",
+      "unit": "count"
+    },
     "page.chord-row.staves-on-first-page": {
       "probe": "page-vertical.ly",
       "score": "CHR1",
@@ -5018,6 +5066,27 @@
       "unit": "count",
       "lilypond": 2,
       "why": "HANDOFF 5.0 trap 8: the gap reading is indexed, so the count travels with it -- a gap read off a page holding a different number of systems is a plausible number about another page. Two one-staff systems on page 1, on both engines.",
+      "residual": 0.0
+    },
+    "page.volta.over-inline-chord.symbol-to-line": {
+      "probe": "volta-over-chord.ly",
+      "score": "VOC",
+      "lilypond": 0.46,
+      "why": "SEEDED 2026-08-28 session 275, ON A DEFECT THE OWNER SAW: a lead sheet's @chord(Fm) inside a first ending is drawn WITH THE VOLTA BRACKET'S LINE THROUGH IT. THE QUANTITY is the clearance the outside-staff pass is supposed to leave -- the bracket line's own BOTTOM EDGE above the symbol's INK TOP -- signed so that a bracket drawn THROUGH the symbol reads negative. WHY LILYPOND CANNOT PRODUCE THE ARRANGEMENT: a ChordName declares no outside-staff-priority, so its skyline is collected into inside_staff_skylines (axis-group-interface.cc:914-935), the support EVERY outside-staff grob is placed against, while VoltaBracketSpanner declares 600 and is a mover (:952-972). The bracket steps over whatever stands under it by outside-staff-padding, and the probe reads that back as 0.460000 EXACTLY -- the same 0.46 MusicMarkEngraver's ChordBandUp arm already ports for the mark family. The volta is the member of that family that was left out. WHY THE READING IS FACE-FREE: both sides are measured from the SYMBOL'S OWN INK TOP and to each engine's OWN line bottom edge, so neither the chord face divergence (Nimbus Sans against TeX Gyre Heros -- page.chord-row.staff-to-chord-baseline's island) nor the bracket line's weight (LilyPond 1.6 x line-thickness = 0.16, Lily# a hard 0.13 in SharedRenderer.DrawVoltaBrackets, still shadowing EngravingDefaults) enters it. PREDICTION, written before the entry was cut and read coarsely off the F2 SVG: NEGATIVE, about -1.065, i.e. residual about -1.525. THE SIGN IS THE FALSIFIER AND IT NAMES THE REPAIR: a merely under-padded engine would read a small POSITIVE number and the fix would be a padding constant; a negative reading says the two grobs are placed by machinery that never meets -- ChordNameEngraver.Calculate reads the system up-skyline and OutsideStaffStacker's trackers were never told the symbol exists -- and the repair is to seed it, not to tune anything. HELD: Lily# -1.077050371, residual -1.537050371. ★ PORTED THE SAME DAY, and the entry is EXACT: the symbols are seeded into OutsideStaffStacker's above-staff support (SeedAboveTrackers, beside the priority-less scripts already there), which is the one place LilyPond's inside_staff_skylines corresponds to, and the reading closed -1.537050371 -> 0.460000000 in one step with no constant introduced. ⚠️ THE CONTROL DID NOT MOVE (page.volta.plain.staff-to-line stayed 3.475200000 to nine digits), which is what says the seed reached only books that have a symbol. ⚠️ THIS ENTRY IS THE GUARD FOR THE SEED: it goes red both ways, so a later change that stops seeding, or that starts seeding chord ROWS (whose symbols live in a band of their own and are excluded by IsChordRow), lands here.",
+      "residual": 0.0
+    },
+    "page.volta.plain.staff-to-line": {
+      "probe": "volta-over-chord.ly",
+      "score": "VOCV",
+      "lilypond": 5.184835,
+      "why": "SEEDED 2026-08-28 session 275, RE-ANCHORED THE SAME DAY -- see the CORRECTION below, which moved the LilyPond number from 3.134835 to 5.184835 and the residual from +0.340365 to +0.290365 with neither engine changing a line. THE CONTROL, one variable apart from its twin: VOC with the @chord deleted and NOTHING else changed. It reads the bracket's height over ink it has to clear -- its line's bottom edge above the staff's MIDDLE line. *** CORRECTION (same session, before any repair was built on it): the probe printed its staff reading against `StaffSymbol rel + (cdr Y-extent)', the top line's OUTER EDGE, while the Lily# side read the drawn TOP line's CENTRE. The two sides were half a staff-line thickness (0.05) apart and the entry carried that as engine divergence. Both sides now anchor on the MIDDLE line -- the StaffSymbol's own reference point, which no thickness enters on either engine, and the anchor every other page entry here uses. HANDOFF 5.0: a pair has to be checked for being a pair, and this one was checked one session late; what found it was poisoning the engine to decompose the residual, not reading the entry again. *** WHAT THE +0.290365 IS MADE OF (measured, scratch/p275/volta-sweep.ly, twelve LilyPond books): BOTH engines place this bracket the same way -- a floor, then an outside-staff clearance of 0.46 -- and in THIS book the binding is the VOLTA NUMBER against the first notehead of its own ending. LilyPond proves it twice: with VoltaBracket.text = ##f the bracket drops to the floor, and moving that note off the number's column (a rest first) drops it too, while lowering the number by 2.5 (volta-number-offset) raises the bracket by exactly 2.5. Lily#'s own instrument says the same: its number box hangs to 0.9648 above the top line and the notehead reaches 1.045, so the pass lifts the chain 0.5402 where LilyPond lifts 0.134835. *** THE TERM IS THE NUMBER'S SIZE AND OFFSET, not the placement: LilyPond's number ink is 1.2598 tall (measured by the 2.5 poison, which moves the grob's extent with it) and Lily# draws the same string 1.7352 tall -- VoltaBracket declares font-size = -2 (scm/define-grobs.scm:4298), which in this repo's own convention is 2.2 * 2^(-2/6) = 1.746, and Lily# was using a hand-picked 2.4. The offsets are declared too: volta-number-offset = (1.0 . -0.5) (scm/define-grobs.scm:4305) against Lily#'s 0.5 and 0.3. PREDICTION for the port: the number's box bottom rises from 0.9648 to about 1.2402, the lift falls by the same, and this entry lands near +0.0176. HELD: +0.017625057, the miss being the face's share of the number's ink (LilyPond 1.2598 against Lily# 1.2624 for the same string). *** WHAT IS LEFT is the notehead's profile: LilyPond's support carries the head's OUTLINE, so its number only grazes the head's low left edge and needs 0.139835 where a box needs the full 0.46; Lily#'s support is a flat box across the head. That is a different island (SkylineBuilder) and it is what any residual after the port belongs to.",
+      "residual": 0.017625
+    },
+    "page.volta.no-ink.staff-to-line": {
+      "probe": "volta-over-chord.ly",
+      "score": "VOCF",
+      "lilypond": 5.05,
+      "why": "SEEDED 2026-08-28 session 275. THE FLOOR, and the third book this family needed. VOC and VOCV both stand the bracket on INK -- in both of them the outside-staff clearance binds and the floor is slack by half a space -- so neither can see the floor at all, and a residual on either could be the floor or the clearance with no way to tell which. This book removes the ink (all whole notes, all below the top line, so not even a stem reaches the band) and the reading becomes the placement's own floor and nothing else. LILYPOND'S FLOOR IS DECLARED: VoltaBracketSpanner has (padding . 1) with Y-offset = side-position-interface::y-aligned-side and no staff-padding of its own (scm/define-grobs.scm:4320-4333), so the bracket's lowest ink sits one space above the staff's own -- 2.05 + 1.0 = 3.05 above the middle line for the grob's bottom, and 5.050000 for the line's bottom edge, which is what the probe reads back. MEASURED that this IS the floor and not a clearance in disguise: forcing outside-staff-padding to 0 on a book where the clearance DOES bind drops it to exactly this number (scratch/p275/volta-sweep.ly VSA), and raising the notes under the bracket does not move it until they reach the band (VS9 against VS7). ⚠️ THIS ENTRY IS THE GUARD FOR VoltaBracketEngraver'S OWN OFFSET, the last declared LILYSHARP-OWN left in this island (\"a fixed hand-tuned offset above the staff that matches typical LP output\"). It moves one for one with that number and does not move when the clearance changes -- which is the whole reason for cutting it beside the other two. HELD: Lily# 4.935000000, residual -0.115000000, and it DECOMPOSES EXACTLY into two half-thickness bookkeeping differences, neither of which is a tuning question: (a) 0.050000 because LilyPond's floor stands on the staff's INK (StaffSymbol extent top 2.05) while Lily#'s stands on the top line's CENTRE (2.0), and (b) 0.065000 because LilyPond's edge-height 2.0 hangs from the line's BOTTOM EDGE (its grob extent is -2.08 about a line centre with half-thickness 0.08) while Lily# hangs it from the line's CENTRE. 0.05 + 0.065 = 0.115 to every digit. PREDICTION for the port: EXACT, because both halves are LilyPond's own arithmetic and neither involves a constant Lily# would have to choose. ★ HELD, 5.050000000, residual 0.000000000. ⚠️ THIS ENTRY IS NOW THE GUARD FOR THE SUM that replaced the 3.0: it goes red both ways, so a later change to any of its four declared terms -- the staff's own line thickness, VoltaBracketSpanner's padding, VoltaBracket's edge-height, or the weight this engine draws the bracket's line at -- lands here.",
       "residual": 0.0
     }
   }

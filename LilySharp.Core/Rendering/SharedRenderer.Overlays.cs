@@ -467,40 +467,47 @@ internal static partial class SharedRenderer
         Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.VoltaBracketLayouts.IsDefaultOrEmpty) return;
-        const double thickness = 0.13;
+        const double thickness = VoltaBracketEngraver.LineThickness;
         double edgeHeight = VoltaBracketEngraver.GetEdgeHeight();
+        double numberSize = VoltaBracketEngraver.NumberFontSize;
 
         foreach (var v in layout.VoltaBracketLayouts)
         {
             if (!sysTopYUp.TryGetValue(v.StartMeasureIndex, out var syUp)) continue; // other page
             // Page Y-up: lift this segment's own system top and add the stored offset.
             double absY = syUp + v.YUp;
+            // The hooks hang edge-height below the LINE'S BOTTOM EDGE, not below its centre.
+            // LILYPOND-REF: lily/bracket.cc:40-96 Bracket::make_bracket — the edge is drawn
+            //   from the line's own thickness outward, which is why LilyPond's grob extent
+            //   reads (-2.08 . 0.08) about a centre with half-thickness 0.08: 2.0 below the
+            //   BOTTOM. Hanging it from the centre instead cost 0.065 of the bracket's height
+            //   (ledger page.volta.no-ink.staff-to-line).
+            double hookTip = absY - thickness / 2.0 - edgeHeight;
             bool hasText = !string.IsNullOrEmpty(v.VoltaText);
             using (gc.Source(v.SourcePosition))
             {
                 if (hasText)
-                    gc.DrawLine(v.StartX, absY, v.StartX, absY - edgeHeight,
-                        Color.Black, thickness);
+                    gc.DrawLine(v.StartX, absY, v.StartX, hookTip, Color.Black, thickness);
                 gc.DrawLine(v.StartX, absY, v.EndX, absY,
                     Color.Black, thickness);
                 if (v.IsClosed)
-                    gc.DrawLine(v.EndX, absY, v.EndX, absY - edgeHeight,
-                        Color.Black, thickness);
+                    gc.DrawLine(v.EndX, absY, v.EndX, hookTip, Color.Black, thickness);
                 if (hasText)
                 {
-                    // The number's INK TOP sits exactly 0.3 below the horizontal line, so
-                    // it hangs inside the bracket without overlapping it. Anchored at the
-                    // BASELINE — the only anchor every backend places identically — a
-                    // further Ink.Top down; the former VerticalAnchor.Hanging was realised
-                    // as a TYPOGRAPHIC-ascent drop on every backend, which left an extra
-                    // quarter staff-space of air over a digit's cap and drew the number
-                    // deeper than OutsideStaffStacker.VoltaBottom reserves (0.3 + the
-                    // string's own InkHeight, which THIS geometry makes exact).
+                    // The number's INK TOP sits NumberOffsetY below the line's centre and its
+                    // ink LEFT NumberOffsetX inside the bracket — LilyPond's
+                    // volta-number-offset, addresses on the constants. Anchored at the
+                    // BASELINE — the only anchor every backend places identically — a further
+                    // Ink.Top down; the former VerticalAnchor.Hanging was realised as a
+                    // TYPOGRAPHIC-ascent drop on every backend, which left an extra quarter
+                    // staff-space of air over a digit's cap and drew the number deeper than
+                    // OutsideStaffStacker reserves (the offset plus the string's own
+                    // InkHeight, which THIS geometry makes exact).
                     var vInk = fonts.Ink(
-                        v.VoltaText, FontSize * 0.6, TextRole.Volta, FontStyle.Bold);
-                    double textY = absY - 0.3 - vInk.Top;
-                    gc.DrawText(v.VoltaText, v.StartX + 0.5, textY,
-                        FontSize * 0.6, TextRole.Volta, FontStyle.Bold, TextAnchor.Start, Color.Black);
+                        v.VoltaText, numberSize, TextRole.Volta, FontStyle.Bold);
+                    double textY = absY - VoltaBracketEngraver.NumberOffsetY - vInk.Top;
+                    gc.DrawText(v.VoltaText, v.StartX + VoltaBracketEngraver.NumberOffsetX, textY,
+                        numberSize, TextRole.Volta, FontStyle.Bold, TextAnchor.Start, Color.Black);
                 }
             }
         }
