@@ -170,7 +170,7 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第277セッション＝**引き継がれた「次の一手」を最後まで実行して点を切ったら、その点が*引き継ぎの見立てそのもの*を反証した——欠陥は定数の値ではなく箱の形で、しかもその移植は追跡 573 冊のどれも動かさない（3 幕）**——commit は points `b95f08b2`（probe に書 2 冊＋台帳 2 点＋計器 1 本・**Core 変更ゼロ**）／audit `76d20c4c`（塞いでいた札の書き換えと `APPROXIMATIONS.md` の再生成・**Core はコメントのみ・全木 sweep 0/573**）＋ docs。
+最終更新 第277セッション＝**引き継がれた「次の一手」を最後まで実行して点を切ったら、その点が*引き継ぎの見立てそのもの*を反証し（欠陥は定数の値ではなく箱の形）、ユーザーの承認を得てその移植まで同じ便で着地し、族のもう一方を切ったらそれが exact で残差の在処まで絞れた（5 幕）**——commit は points `b95f08b2`（probe に書 2 冊＋台帳 2 点＋計器 1 本・**Core 変更ゼロ**）／audit `76d20c4c`（塞いでいた札の書き換えと `APPROXIMATIONS.md` の再生成・**Core はコメントのみ・全木 sweep 0/573**）／code `5827fa22`（平箱を消して単独 wedge も輪郭で置く・**Core +3 −12 行**・**全木 sweep 0/573・snapshot 0**）／points `d8bfa8ca`（族のもう一方 HPT・**exact**・**Core 変更ゼロ**）＋ docs。
 
 **⑴ 第 1 幕＝開始時裏取りは全部当たり、`lysc` は前便が書いたとおり塞がれたままだった**。HEAD・未 push 39・木 0・台帳・コーパス・suite 6393/0/4——**引き継いだ数は全部当たった**（前便が `HistoryCitationTests` で捕まった形は再発していない＝§1 に HEAD を書かなかったのが効いている）。**`lysc.exe` は Release も Debug も `FileLoadException (0x800711C7)`**。⇒ **§6 が要求する `lysc ly` の双子検算が打てない**ので、**その検算が守っていた当のもの——オクターブ——を別の手で固定した**（下の ⑵ ⒜）。⚠️ **`-p:Deterministic=false` は使っていない**（RULES §5.5・点を切る便は測定そのもの）。
 
@@ -194,17 +194,42 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 | `0.7166`（LP の Hairpin Y-extent） | 5.214600000 | **+0.124621814**（**overshoot**） |
 | 平箱 → `HairpinEngraver.WedgeSkylines` | 5.094427358 | **+0.004449172**（**98.3% 閉じる**） |
 
-**平箱が*最大幅*で立っているのが誤り**——decrescendo は fermata の X ではもう狭まっている。⇒ ★★★ **これは定数の再調整ではなく §5.2.1② の 1 量 2 綴り**: **同じメソッドの 20 行下で、`DynamicLineSpanner` を text と共有する wedge は既に本物の輪郭で置かれている**。**移植は綴りを 1 つ消す**（`HairpinHalfHeight` はそこで死ぬ）。⚠️ **残る +0.004449172 は切り分けていない**——Lily# の fermata の **LILC インク下端は 4.036000000 で LP の Script Y-extent と同値**なので、実際に避けている 4.038 との 0.002 は fermata 側の**輪郭対箱**の項だが、**LP も輪郭で binding する**ので extent 同士の比較では答えが出ない。**「閉じた」と書かないこと。**
+**平箱が*最大幅*で立っているのが誤り**——decrescendo は fermata の X ではもう狭まっている。⇒ ★★★ **これは定数の再調整ではなく §5.2.1② の 1 量 2 綴り**: **同じメソッドの 20 行下で、`DynamicLineSpanner` を text と共有する wedge は既に本物の輪郭で置かれている**。**移植は綴りを 1 つ消す**（`HairpinHalfHeight` はそこで死ぬ）。**⇒ ⑹ で承認を得て着地した。**⚠️ **残る +0.004449172 は切り分けていない**——Lily# の fermata の **LILC インク下端は 4.036000000 で LP の Script Y-extent と同値**なので、実際に避けている 4.038 との 0.002 は fermata 側の**輪郭対箱**の項だが、**LP も輪郭で binding する**ので extent 同士の比較では答えが出ない。**「閉じた」と書かないこと。**
 
-**⑷ 第 4 幕＝その移植は*追跡コーパスに見えない*、と実測で言えた**。移植を当てて全木 sweep：**0/573**。⚠️ **その 0 が読めるのは、同じビルド状態で suite が*ちょうど 1 本*赤くなり、それが `hairpin.under-fermata.staff-to-wedge` だったから**（§5.0 ⑸ の順番。`LilySharp.Probe cmp` は 0 冊のとき自分から「NOTHING MOVED — the poison missed」と警告する＝道具は「射程外」と「届いていない」を区別できない）。⇒ **移植に snapshot の再ベースは要らず、レビューする絵も無い**。**それでも読者の絵は変わる**（fermata／下向き trill の下の単独 wedge）ので**承認の要る別の幕のまま**だが、**盲ではない**。⇒ ★★★ **この対は、リポジトリ全体でこの行の唯一の観測者**——「移植の前に点を切る」の主張そのものが、その実例で書けた。
+**⑷ 第 4 幕＝その移植は*追跡コーパスに見えない*、と実測で言えた**。移植を当てて全木 sweep：**0/573**。⚠️ **その 0 が読めるのは、同じビルド状態で suite が*ちょうど 1 本*赤くなり、それが `hairpin.under-fermata.staff-to-wedge` だったから**（§5.0 ⑸ の順番。`LilySharp.Probe cmp` は 0 冊のとき自分から「NOTHING MOVED — the poison missed」と警告する＝道具は「射程外」と「届いていない」を区別できない）。⇒ **移植に snapshot の再ベースは要らず、レビューする絵も無い**。**それでも読者の絵は変わる**（fermata／下向き trill の下の単独 wedge）ので**承認の要る別の幕**だが、**盲ではない**（**⇒ その承認は同じ便で出て、⑹ が着地した**）。⇒ ★★★ **この対は、リポジトリ全体でこの行の唯一の観測者**——「移植の前に点を切る」の主張そのものが、その実例で書けた。
 
 **⑸ 副産物＝札を 2 文直したら棚卸しが 2 件減った**（`76d20c4c`）。塞いでいた 2 文（「no point observes it」「no ledger point reads it」）は**点が立った瞬間に偽**になり、どちらも `docs/APPROXIMATIONS.md` に *UNWATCHED* として数えられていた。**50 → 48・計 219 → 217**。⇒ **数が減った理由が「乖離が観測者を得た」であること**が、この棚卸しが単独で動いてよい唯一の形。**第276 の経緯（毒 0.3333→3.0 の結果、page 書がこの箱を見られない理由）は消していない**——現在形が偽になった箇所だけ書き直した。
 
-⇒ ★★★ **次の一手（自律側）は 2 つあり、片方は要承認**:
-- **⒜ 要ユーザー承認**＝**平箱を `WedgeSkylines` に置き換えて `HairpinHalfHeight` を消す**。**両方の数はもう測ってある**ので値付けは不要。**追跡 573 冊は 1 冊も動かない**・snapshot 不要・**着地予測は残差 −0.258678186 → +0.004449172**（**0 ではない**）。
-- **⒝ 自律側**＝**下向き trill(50) の下の hairpin で 3 冊目を切る**。**fermata(75) と同じ族の*もう一方*で、今日の対は片方しか押さえていない**——`StackBelowStaffCore` は trill を fermata より*先*に置くので、**2 つが同時に居る配置は順序も観測する**。LP 側は `probes/hairpin-neighbour.ly` に 1 冊足すだけ（HN5 の綴りを `\startTrillSpan` に替える）。
+**⑹ 第 6 幕＝ユーザーが承認したので移植まで同じ便で着地した**（code `5827fa22`）。**平箱を消し、単独 wedge も `HairpinEngraver.WedgeSkylines` を通る**——**同じメソッドの grouped 腕が最初から渡していたもの**。`HairpinHalfHeight` は死んだ。
 
-⚠️ **要ユーザー判断で開いているものに、本便が 1 つ足した**＝**⑶ の hairpin 平箱の置き換え**（上の「次の一手 ⒜」。**追跡 573 冊は動かないので snapshot も再ベースも無い**が、読者が書いた配置の絵は変わる）。**残りは前便どおり**（標·volta の 4 定数の削除・silhouette chordNames scalar・和音語彙 CHL 3 点・Nimbus Sans 同梱・CHANGELOG 版番号・SectionLabel の X・F【8】3・混在綴りの同名 section・標の箱そのもの・`@text` の縦・`bandUp` の死んだ配線の撤去）。
+| | 前 | 後 |
+|---|---|---|
+| `hairpin.under-fermata.staff-to-wedge` | −0.258678186 | **+0.004449172** |
+| `hairpin.plain.staff-to-wedge`（対照・床） | exact | **不動** |
+
+**⒜ 対照が動かないことが「clearance を触って床を触っていない」の証拠**——片方の読みだけでは言えない。**⒝ 削除を許可した観測者は §7.6 ⒟ のとおり名指しできる**: **この便が数時間前に切った当の点**（`b95f08b2`）。**Core を戻すと赤くなるのは幾何ではその 1 点だけ**（もう 1 本は `TheInventoryIsNotStale`＝コメントを見る網で、絵ではない）。**⒞ 全木 sweep 0/573・snapshot 再ベース 0・他の点も不動**——**この対が無ければ「観測者ゼロの出力変更」＝§5.1 が禁じている当のもの**だった。**⒟ `LILYPOND-REF` は増やしていない**（住所は `WedgeSkylines` が持っている＝§7.6 ⒟ の「指し直し」）。**Core は +3 行 −12 行**。**棚卸しは OWN 115 → 114・計 217 → 216**（定数と一緒に `LILYSHARP-OWN` の宣言が 1 つ死んだ）。
+
+⚠️ **+0.004449172 は残っており、切り分けていない**。**しかも符号が変わった**——**前は 0.2587 *浅すぎ*（衝突を印刷する向き）、いまは 0.0044 *深すぎ***。**0.002 は fermata の輪郭対箱**（Lily# の LILC インク下端 4.036000000 は LP の Script Y-extent 下端と同値なのに、実際に避けている obstacle は 4.038000）で、**LP もそこは輪郭で binding する**ので**いま台帳に在る数だけでは決着しない**。**「閉じた」と書かないこと・0 にするための調整をしないこと。**
+
+**⑺ 第 7 幕＝族のもう一方も切ったら exact で、それが ⑹ の残りを*絞った***（points `d8bfa8ca`・**Core 変更ゼロ**）。書 **HPT**＝同じ単独 decrescendo の下に **fermata の代わりに下向き trill spanner(50)**、対照は同じ HPC。
+
+| 点 | LP | Lily# | residual |
+|---|---|---|---|
+| `hairpin.under-trill.staff-to-wedge` | 5.826600 | 5.826600000 | **exact** |
+
+**⒜ exact であること自体が収穫**——**LP は trill を extent 対 extent でちょうど 0.460000 空ける**（trill の波は span 全体で*平ら*なので、**binding は wedge が全開の所に落ちる**）。⇒ **この 1 読みが 3 つを同時に検算している**: **outside-staff-padding 0.46**・**wedge の輪郭の全開幅**（0.6666 ＋ 0.1 の半分）・**trill 自身の profile**。**3 つとも LP と一致。**
+
+**⒝ ⇒ ⑹ の +0.004449172 の在処が絞れた**。**2 冊は同じ単独 wedge の経路・同じ padding・同じ wedge 輪郭を通る**のに、**こちらは exact でむこうは残る**。⇒ **残差は wedge にも padding にも配置にも無く、fermata 自身の profile に在る**——**trill の波は*端*で当たり、fermata の弧は*斜面の途中*で当たる**、それが 2 冊の唯一の違い。**絞っただけで閉じていない**（両方の `why` にそう書いた）。
+
+**⒞ 毒で liveness を示した**（§5.4「見せていない 0 は証拠ではない」）。**今朝消した平箱を戻すとこの読みは 5.443300000・残差 −0.383300000**＝**ちょうど 0.716600 − 0.333300**。⇒ **点が配置を観測していること**と、**trill が wedge の全開幅で binding していること**が同時に出た。
+
+**⒟ 1 冊 1 mover にした**——**trill と fermata を同居させた本は pass の*順序*も読む**（`StackBelowStaffCore` は 50 → 75）ので、**2 つの理由で動ける読みはどちらが動かしたか言えない**。**その本は ⑹ が exact になってから。**
+
+⚠️ **`@startTrillSpan.down` は LP の `_\startTrillSpan`**。**2026-08-09 まで suffix は受理されて黙って捨てられていた**ので、**それ以前に書いていたら上向き trill を描いて対照と同じ数を返していた**。
+
+⇒ ★★★ **次の一手（自律側）＝⑹ の残り +0.004449172 を fermata の profile 側で測る**（⑺ ⒝ が在処を名指した）。**Lily# の LILC インク下端 4.036000000 は LP の Script Y-extent 下端と同値**なのに、**実際に避けている obstacle は 4.038000**——**両engine とも輪郭で binding するので、extent 同士の比較では答えが出ない**。**要るのは LP 側で fermata の*輪郭*を x で振って読む probe**（`glyph-skyline.ly` のサンプラが第276 で同じ形をやっている）。⚠️ **足す書は必ずスパンを検算すること**——**平箱はスパンに盲だったが輪郭は盲ではない**ので、この族の検算は本便から load-bearing（⑵ ⒜）。
+
+⚠️ **要ユーザー判断で開いているものは前便どおり**（標·volta の 4 定数の削除・silhouette chordNames scalar・和音語彙 CHL 3 点・Nimbus Sans 同梱・CHANGELOG 版番号・SectionLabel の X・F【8】3・混在綴りの同名 section・標の箱そのもの・`@text` の縦・`bandUp` の死んだ配線の撤去）。
 
 ⚠️ **見つけて直していないもの**:
 - **★ 空小節の規則（bare-barline rule）が 3 綴りある**（第275・`MeasureBuilder.HandleBarline`／`MeasureModel.Split`／`MidiExporter.ProcessSequence`）。**MIDI の walk は兄弟リストしか見えず**、collector の measure stream に届かないので3 つ目を綴った。**見張っているのは恒等テストだけ**（`| |` 対 手書き `s1`）＝**§5.2.1② の 1 量 2 綴りを、承知のうえで 3 にした**。**次にこの島へ触る便は、1 軒に寄せられないかを先に見ること。**
@@ -257,7 +282,7 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 
 ★ **開始時裏取り**: HEAD `8fdd57be`・**未 push 39**・木 0・未追跡 0・Core 0 エラー 0 警告（`--no-incremental` 実測）・**Windows Release 6393/0/4 合計 6397**・**CI 緑**（`gh run list`・最後に push した木の run が成功）・台帳 **580/737 exact・|残差|総和 24.709892・575 距離・count 162 中 160**（**計器の印字をそのまま写した**）・追跡コーパス **573 冊**・snapshot **223 枚**——**引き継いだ数は全部当たった**。⚠️ **ただし `lysc.exe` は Release も Debug も SAC に塞がれたまま**（前便の §1 が予告したとおり。⇒ ⑴）。
 
-終了時: **本便の commit は 3 本**（この段落を足す docs commit を含む。⚠️ **その 1 本の SHA はここに書かない**——第276 ⑴ の理由）——points `b95f08b2`（`probes/hairpin-neighbour.ly` に書 HPC/HPF・台帳 2 点・`LpGeometryProbes.HairpinWedgeScore`・`RenderedGeometry.HairpinWedgeCentreBelowStaff`・**Core 変更ゼロ**）＋ audit `76d20c4c`（`OutsideStaffStacker` の札を書き換え・`docs/APPROXIMATIONS.md` 再生成・**Core はコメントのみ**）＋ docs＝**points 1 本・audit 1 本・docs 1 本・code 0 本**・**origin 不動（未 push 42・⚠️ ユーザー指示「プッシュはしないで」）**・木 0。**suite 6395 合格 / 0 失敗 / 4 skip / 合計 6399**（**+2**＝台帳 2 点だけ）。⚠️⚠️ **数はすべて WSL ubuntu 24.04 Release で取った——Windows は本便の最初のビルドで塞がれた**（下）。Core 0 エラー / 0 警告。**台帳 全点 739（+2）・exact 581/739（+1）・|残差|総和 24.709892 → 24.968570**（**+0.258678186＝新しい点が持ち込んだ 1 つ**。README のとおり**悪化ではなく可視化**）・距離 577（+2）・count 162 中 160（不動）。**全木 sweep は 0/573**（本便の Core 変更はコメントのみ＝出力同一の証明）**と、移植を当てたときの 0/573**（⚠️ **こちらの 0 が読めるのは、同じビルド状態で suite が*ちょうど 1 本*赤くなり、それが当の点だったから**）。**rerender は走らせていない**——81 冊は 573 に丸ごと含まれるので上の 0/573 が包む。**snapshot 再ベース 0・新規 0**（223 枚のまま）・**追跡コーパス 573 冊（不動）**・一時変更 0（毒は WSL 側の木で `git checkout` 往復・Windows の木は毒に触れていない）。**perf（§7-9）**: **Core に走る計算は 1 行も足していない**（コメントのみ）。
+終了時: **本便の commit は 7 本**（この段落を足す docs commit を含む。⚠️ **その 1 本の SHA はここに書かない**——第276 ⑴ の理由）——points `b95f08b2`（`probes/hairpin-neighbour.ly` に書 HPC/HPF・台帳 2 点・`LpGeometryProbes.HairpinWedgeScore`・`RenderedGeometry.HairpinWedgeCentreBelowStaff`・**Core 変更ゼロ**）＋ audit `76d20c4c`（`OutsideStaffStacker` の札を書き換え・`docs/APPROXIMATIONS.md` 再生成・**Core はコメントのみ**）＋ docs `33e6d235`（本 §1／§7-3.5 で第275 の経緯を ARCHIVE 冒頭へ）＋ code `5827fa22`（**平箱を消して単独 wedge も `WedgeSkylines` で置く・`HairpinHalfHeight` 削除・Core 1 ファイル +3 −12 行**）＋ docs `0964186a`＋ points `d8bfa8ca`（書 HPT・台帳 1 点 exact・**Core 変更ゼロ**）＋ docs＝**points 2 本・audit 1 本・code 1 本・docs 3 本**・**origin 不動（未 push 46・⚠️ ユーザー指示「プッシュはしないで」）**・木 0。**suite 6396 合格 / 0 失敗 / 4 skip / 合計 6400**（**+3**＝台帳 3 点だけ。**移植は網を 1 本も足していない**——**観測者は先に切った点**）。⚠️⚠️ **数はすべて WSL ubuntu 24.04 Release で取った——Windows は本便の最初のビルドで塞がれた**（下）。Core 0 エラー / 0 警告（`--no-incremental`）。**台帳 全点 740（+3）・exact 582/740（+2）・|残差|総和 24.709892 → 24.968570 → 24.714341**（**+0.258678186 は新点の可視化、−0.254229014 が移植の稼ぎ、第 7 幕の点は exact なので総和に何も足していない**）・距離 578（+3）・count 162 中 160（不動）。**全木 sweep は 3 回とも 0/573**（札の書き換え＝出力同一の証明／移植を毒として当てたとき／移植後の pre 対 post）。⚠️ **その 0 が「射程外」であって「届いていない」ではないことは、*別に*示した**——**Core だけ戻すと赤くなるのは幾何ではその 1 点だけ**（もう 1 本は `TheInventoryIsNotStale`）。**rerender は走らせていない**——81 冊は 573 に丸ごと含まれるので上の 0/573 が包む。**snapshot 再ベース 0・新規 0**（223 枚のまま）・**追跡コーパス 573 冊（不動）**・一時変更 0（毒は WSL 側の木で `git checkout`／`git stash` 往復・Windows の木は毒に触れていない）。**perf（§7-9）**: **単独 wedge 1 つあたり、平箱 2 本の代わりに 2 本の傾いた輪郭を作るだけ**（`WedgeSkylines` は grouped 腕が既に同数だけ払っていたもの）。**Core の他の計算は不変。**
 
 ⚠️⚠️ **本便は最初のビルドで Windows が SAC に塞がれた**（§5.5・memory の**第 8 の出方**）——**開始時の 6393/0/4 は素の `LilySharp.Tests.dll` で取れた**のに、**本便が Tests を 1 度ビルドして新しい DLL を作った瞬間**に `dotnet test` が**合否行を 1 行も出さずに終了コード 0** で返るようになった（memory の「一番危ないのは失敗の出方」そのもの・`Get-WinEvent … CodeIntegrity` の 3077 が `LilySharp.Tests.dll` を名指し）。⇒ **本便の測定・毒・sweep は全部 WSL**（手順は memory `smart-app-control-blocks-lilysharp-dlls`：Bash ツールで `git diff --output=` → WSL で `git reset --hard win/master && git apply`）。⚠️ **両側の diff の sha256 が一致することを確かめてから commit した**——WSL で緑を見た木と Windows で commit した木が同じであることは、主張ではなく実測にする。⚠️ **`lysc` は依然として動かない**ので、**双子検算を要求する次の便は、LP 側に `\absolute` の書を足す手（⑵ ⒜）が使える**ことを覚えておくこと。
 

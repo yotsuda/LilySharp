@@ -51,7 +51,8 @@
                         (lambda (g)
                           (let ((nm (assq-ref (ly:grob-property g 'meta) 'name)))
                             (if (memq nm '(StaffSymbol Hairpin DynamicText
-                                           DynamicLineSpanner TextScript Script))
+                                           DynamicLineSpanner TextScript Script
+                                           TrillSpanner))
                                 (let ((ry (ly:grob-relative-coordinate g sg Y))
                                       (rx (ly:grob-relative-coordinate g sg X))
                                       (ye (ly:grob-extent g g Y))
@@ -132,3 +133,16 @@ probeHN =
 %% and nothing else. That difference, not either reading alone, is what the pair is for.
 \book { \probeHN "HPC" \score { \new Staff { \absolute { \time 4/4 c''1\> c''1\! } } } }
 \book { \probeHN "HPF" \score { \new Staff { \absolute { \time 4/4 c''1\>_\fermata c''1\! } } } }
+
+%% HPT — THE FAMILY'S OTHER MEMBER (session 277). Below the staff exactly two grobs rank under
+%% DynamicLineSpanner's 250 and can therefore push a wedge: the fermata family at 75, which HPF
+%% covers, and TrillSpanner at 50. HPT is the second, against the SAME control HPC.
+%%   LILYPOND-REF: scm/define-grobs.scm:4078 TrillSpanner outside-staff-priority 50.
+%%
+%% ⚠️ IT IS NOT MERELY A SECOND INSTANCE OF HPF. A fermata is a glyph; a trill spanner is a
+%% glyph PLUS a wave that runs the length of the span, so its profile under the wedge is a
+%% different shape and reaches a different X. And because 50 < 75, a book carrying both would
+%% also read the pass ORDER — StackBelowStaffCore places the trill first, then the fermata,
+%% then the dynamics. This book carries only the trill; the order stays untested on purpose,
+%% because a reading that moves for two reasons cannot say which one moved it.
+\book { \probeHN "HPT" \score { \new Staff { \absolute { \time 4/4 c''1\>_\startTrillSpan c''1\!\stopTrillSpan } } } }

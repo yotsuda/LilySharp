@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 54 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 48 | 観測者がゼロだと自認しているもの |
-| `OWN` | 115 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **217** | |
+| `OWN` | 114 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **216** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -186,7 +186,7 @@
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
 - **:129** staff_extent[DOWN], which is the ink edge too. ⚠️ No ledger point measures
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
-- **:1655** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
+- **:1594** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
 - **:56** the distance is taken at — and NO ledger point moves with it. An output change no point
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
@@ -208,7 +208,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（115 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（114 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:1653** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -344,8 +344,7 @@
 ### `LilySharp.Core/Svg/Layout/NoteSpacingParameters.cs`
 - **:82** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
-- **:128** ⚠️ LILYSHARP-OWN, AND IT IS THE THIRD SPELLING OF ONE QUANTITY — named 2026-07-31 by
-- **:2794** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
+- **:2733** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
 ### `LilySharp.Core/Svg/Layout/PageBreaker.cs`
 - **:84** ⚠️ LILYSHARP-OWN: THE NULLABILITY. LilyPond's Line_details ALWAYS carries a shape —
 ### `LilySharp.Core/Svg/Layout/PageLayouter.cs`

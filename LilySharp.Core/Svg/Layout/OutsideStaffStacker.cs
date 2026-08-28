@@ -125,88 +125,26 @@ internal static class OutsideStaffStacker
     // define-grobs.scm:1450 — which is the Y-offset (-0.6) inside the line spanner, not an
     // ascent. A LILYPOND-REF beside a number is not evidence that the number came from it.
 
-    // ⚠️ LILYSHARP-OWN, AND IT IS THE THIRD SPELLING OF ONE QUANTITY — named 2026-07-31 by
-    // the §7.7 pass over the placement port. IT IS WATCHED NOW (2026-08-28, session 277):
-    // ledger hairpin.under-fermata.staff-to-wedge, residual -0.258678186, against the control
-    // hairpin.plain.staff-to-wedge which is exact and stays exact when this line is poisoned.
-    // Read that entry's `why` before touching this: it says the defect is this box's SHAPE
-    // and not its value, and it prices both candidate ports.
-    // The wedge's real ink half-height is its OWN opening plus half the rule's thickness,
-    // and the drawn opening's cap IS 0.6666 (HairpinEngraver.Height carries that citation),
-    // so this is about HALF the ink LilyPond's Hairpin skyline has. The other two spellings
-    // are already right and already differ in shape on purpose: HairpinEngraver.WedgeSkylines
-    // is the pointwise outline (side-position, the wedge narrows to its apex) and
-    // LayoutEngine's annotation-protrusion pass is the max fold over the piece. This one is
-    // neither — it UNDER-reserves, which is the direction that prints a collision.
-    // ⚠️ WHY IT STAYED UNFIXED UNTIL SESSION 277: for exactly one day the corpus held nothing
-    // that read it — MEASURED 2026-08-28 (session 276), not argued. Poisoned 0.3333 → 3.0: NOT
-    // ONE LEDGER ENTRY MOVED, two unit tests went red (so the poison was live, which is the half
-    // of the check that makes the zero mean anything) and TWO BOOKS of 573 moved. (⚠️ That
-    // sentence is worded to REPORT rather than to DECLARE: the census in docs/APPROXIMATIONS.md
-    // counts a comment that declares a divergence with nothing watching it, and spelling the
-    // result the obvious way counted this one site twice.) The reasoning still stands as
-    // written: hairpin.page.quiet reads the DEEPEST ink under the last staff, which the
-    // protrusion pass supplies either way, and this box only decides how far the collision pass
-    // pushes a wedge sitting under something tall — which is precisely the arrangement HPF
-    // draws and the page books cannot.
-    // ⚠️⚠️ BUT THE SENTENCE THAT USED TO FOLLOW WAS FALSE, and it was the one doing the
-    // blocking: it called the observing arrangement — "a hairpin under a below-staff script or
-    // a second dynamic" — THE SAME MISSING PAIR THE SCRIPT SEED BOX WAITS ON. It is not
-    // missing. The two books the poison moved are exactly that arrangement and both are
-    // tracked: audit/lp-regression/lys/empty-chord.lys and audit/lpreg/ec-probe2.lys, each
-    // spelling `@decresc <>@pp` — a hairpin ending into a second dynamic.
-    // ⚠️⚠️⚠️ AND "POINT FIRST" IS NOT MERELY UNBLOCKED — IT IS MISDIRECTED. Measured the same
-    // day (scratch/s276/hairpin-neighbour.ly, LilyPond 2.26.0): NEITHER arrangement the remark
-    // named can produce the reading, because on the LilyPond side there is no quantity to pair
-    // with.
-    //   ⑴ "a hairpin under a below-staff script" — DynamicLineSpanner declares
-    //      outside-staff-priority 250 and TextScript declares 450, so the dynamic line is
-    //      placed FIRST and the script is placed OUTSIDE it. A TextScript can never push a
-    //      hairpin. MEASURED as a one-variable pair: with a tall \markup column hanging below
-    //      (HN3) and without it (HN4), the Hairpin sits at ry -7.1426 in BOTH, and the script
-    //      lands at -9.865 — below the wedge, not against it.
-    //      LILYPOND-REF: scm/define-grobs.scm:1401-1440 DynamicLineSpanner (outside-staff-priority . 250)
-    //      LILYPOND-REF: scm/define-grobs.scm:3800-3833 TextScript (outside-staff-priority . 450)
-    //   ⑵ "a second dynamic" — the Hairpin and the DynamicText share ONE DynamicLineSpanner
-    //      and are placed ONCE by its UNION extent; there is no collision pass between them.
-    //      MEASURED (HN1 with the wedge against HN2 without): the line goes 0.148569 deeper
-    //      while the spanner's top extent grows 0.568008 -> 0.716600, i.e. by 0.148592 — the
-    //      same quantity to four digits, which is union placement showing itself. (The 2.3e-5
-    //      is not chased here.)
-    // ⇒ So the question is not "cut the pair from those" but "what CAN push a hairpin" — on
-    // either side, only an outside-staff grob of priority BELOW DynamicLineSpanner's 250.
-    // ⇒⇒ ANSWERED THE SAME DAY, AND THE PAIR EXISTS. Below the staff there are exactly two
-    // such movers, and THIS FILE ALREADY PLACES BOTH IN THAT ORDER (StackBelowStaffCore: the
-    // DOWN trill spanner at 50, then the fermata family at 75, then the dynamics and hairpins
-    // at 250) — so the pass order was never the defect. MEASURED (HN5 against its control
-    // HN4, one variable apart): a fermata forced below moves LilyPond's Hairpin from
-    // ry -7.1426 to -8.86597818620712, i.e. 1.723378186 DEEPER.
-    // ⇒ THE POINT TO CUT IS A HAIRPIN UNDER A FERMATA (or under a down trill), and the
-    // LilyPond side of it is already measured in the probe. What the remark had wrong was
-    // never that no pair existed — it was which arrangement makes one.
-    // ⚠️ AND IF A PAIR IS EVER CUT HERE, WRITE IT FRESH: empty-chord.lys records a SUBSTITUTION
-    // in its own header (LilyPond's bare `\enddecr` has no spelling here, so both sides became
-    // \pp/@pp), and a translated book with a substitution is not the LilyPond book (HANDOFF
-    // 5.0, the session-179 trap).
-    // ⇒⇒⇒ CUT 2026-08-28 (session 277), written fresh: books HPC/HPF of
-    // audit/lp-geometry/probes/hairpin-neighbour.ly and LpGeometryProbes.HairpinWedgeScore.
-    // AND THE ANSWER IS NOT THE NUMBER ON THE NEXT LINE. Poisoning it to LilyPond's own
-    // Y-extent 0.716600 does not close the entry, it OVERSHOOTS it (+0.124621814): a flat box
-    // at the wedge's WIDEST is too tall over the fermata, where a decrescendo has already
-    // begun to narrow. Handing the same placement HairpinEngraver.WedgeSkylines — the sloped
-    // outline the line-group arm of StackBelowStaffCore already uses, twenty lines below —
-    // closes 98.3% of it (+0.004449172 left, NOT isolated; see the entry's `why`).
-    // ⇒ So this is not a wrong constant to retune. It is one quantity spelled twice inside
-    // one method, and the port is to delete this spelling rather than to correct it. It is
-    // still its own act and wants approval — it changes what a reader gets for a lone wedge
-    // under a fermata or a down trill — but it is NOT a blind one and needs no rebase:
-    // MEASURED with that port applied, 0 OF 573 BOOKS MOVED, and the poison was live in that
-    // same build state because exactly one test in the suite went red and it was
-    // hairpin.under-fermata.staff-to-wedge. That pair is this line's only observer anywhere
-    // in the repository. Both candidate numbers above are measured, so nothing needs
-    // re-pricing when the act comes.
-    // LILYPOND-REF: scm/define-grobs.scm:1785 Hairpin (height . 0.6666)
-    private const double HairpinHalfHeight = 0.6666 / 2.0;
+    // (HairpinHalfHeight 0.6666/2 — a flat box for a wedge that is not flat, and the third
+    // spelling of one quantity — died on 2026-08-28, session 277: a LONE wedge is now placed
+    // through HairpinEngraver.WedgeSkylines, the same real outline the grouped arm of
+    // StackBelowStaffCore always used. IT WAS DELETED WITH AN OBSERVER STANDING, and the
+    // observer is the point that had to be cut first: ledger
+    // hairpin.under-fermata.staff-to-wedge (books HPC/HPF of
+    // audit/lp-geometry/probes/hairpin-neighbour.ly), whose control hairpin.plain.staff-to-wedge
+    // is exact and blind to this box. The deletion moved that entry -0.258678186 -> +0.004449172
+    // and moved NOTHING ELSE: 0 of 573 books, no snapshot, no other entry.
+    // ⚠️ RAISING IT WOULD NOT HAVE WORKED, which is why this is a deletion and not a retune:
+    // set to LilyPond's own Hairpin Y-extent 0.716600 the same entry reads +0.124621814 — a box
+    // at the wedge's WIDEST is too tall over an obstacle that stands where the wedge has
+    // already narrowed. Shape, not value.
+    // ⚠️ +0.004449172 REMAINS AND IS NOT ISOLATED. Do not read this site as closed; the entry's
+    // `why` says what is and is not known about that remainder.
+    // The mechanism that decides which obstacles can reach a wedge at all — only an
+    // outside-staff grob ranking under DynamicLineSpanner's 250, i.e. below the staff exactly
+    // TrillSpanner 50 and the fermata family 75 — is cited at the two placements themselves in
+    // StackBelowStaffCore, and the LilyPond measurements that established it (books HN1..HN5,
+    // including the two arrangements that CANNOT push a wedge) are in that probe's header.
 
     // (DynamicHalfWidth 0.75 — the last nominal box of the dynamic pipeline — died on
     // 2026-07-29: every pass now reads the label's own outline pair,
@@ -638,16 +576,17 @@ internal static class OutsideStaffStacker
 
                 var tracker = Track(sysIdx, hp.StaffIndex);
                 // hp.YUp (the CENTRE) is already Y-up from the system top — the tracker
-                // frame — so it enters directly; the box spans half a height each way
-                // (the hairpin's stencil IS its wedge box), at outside-staff padding.
-                double move = tracker.Place(
-                    VerticalSkyline.FromBox(hp.StartX, hp.EndX,
-                        hp.YUp - HairpinHalfHeight, hp.YUp + HairpinHalfHeight,
-                        VerticalDirection.Up),
-                    VerticalSkyline.FromBox(hp.StartX, hp.EndX,
-                        hp.YUp - HairpinHalfHeight, hp.YUp + HairpinHalfHeight,
-                        VerticalDirection.Down),
-                    OutsideStaffPadding);
+                // frame — so it enters directly, and what is placed is the wedge's REAL
+                // SLOPED OUTLINE: a decrescendo has already begun to narrow where its
+                // obstacle usually stands, so a flat box over its extremes clears the wrong
+                // height. The grouped arm above has always passed this same outline; a lone
+                // wedge got a box until 2026-08-28 (session 277), and the two spellings
+                // differed by 0.258678186 on the one arrangement that can see them apart.
+                // The LilyPond address is the one WedgeSkylines already carries — this is a
+                // re-pointing at that house, not a second citation of it (HANDOFF §7.6 ⒟).
+                var (wedgeUp, wedgeDown) = HairpinEngraver.WedgeSkylines(
+                    hp.StartX, hp.EndX, hp.StartOpening, hp.EndOpening, hp.YUp);
+                double move = tracker.Place(wedgeUp, wedgeDown, OutsideStaffPadding);
                 if (move != 0)
                     builder[i] = hp with { YUp = hp.YUp + move };
             }
