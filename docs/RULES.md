@@ -24,7 +24,7 @@
 | **座標系の現状と残作業** | `docs/COORDINATE_AUDIT.md` | §4.5 の対処状況表 |
 | **アーキテクチャの意図** | `docs/*.md`（既存の該当ファイル） | `SKYLINE_ARCHITECTURE.md` |
 | **不変条件** | **テスト**（`SpacingInvariantTests` 等） | 両 spring 系の一致 |
-| **未移植・近似・無観測の総数** | `docs/APPROXIMATIONS.md`（**自動生成**・元はコード内コメント） | 「LP は pointwise・こちらはスカラー」 |
+| **未移植・近似・無観測の総数** | `docs/APPROXIMATIONS.md`（**自動生成**・元はコード内コメント・**生成器は `LilySharp.Tests/ApproximationInventoryTests.cs`**＝古くなると赤くなる） | 「LP は pointwise・こちらはスカラー」 |
 | **現在地・次の一手・開いている作業** | **このファイル §1–§3** | |
 | **過去のセッション記録** | `docs/HANDOFF-ARCHIVE.md`（§8） | 閉じた欠陥をどう測ったか |
 | **ユーザーの好み・作業規律** | user memory | 「done は push 済みで」 |
@@ -151,6 +151,23 @@
   **⑴ 被覆**（その枝に届く本が無い）＝**毒＋掃き**で確かめる・
   **⑵ 算術**（その量は読みから相殺される）＝**毒＋台帳**で確かめる。
   **⑵ は式で書けてしまうぶん、測らずに書かれやすい。**
+  ⇒ ★★ **実測した分布**（2026-08-28・第276 が `docs/APPROXIMATIONS.md` の `UNWATCHED` 50 件を
+  この基準で仕分けた）: **相殺の主張は 3 件だけで、残り 47 は全部*被覆***。しかも
+  **被覆側はおおむね正直**——何件かは*自前の毒の結果*を書いている（`SkylineDrop.HorizonPadding`
+  は「0.0 にすると `test/figbass-below-script` が動き、どの点も一緒に動かない」を実測で持ち、
+  `EngravingDefaults.MinStemLength` は「最初の消費者を消しても test・snapshot・点のどれも
+  動かなかった」を持つ）。⇒ **鉱脈は狭い。探すなら「*特定の点を名指して*『その点は
+  either way で通る』と論じている」文だけを見ればよい。**
+  ⚠️⚠️ **そして第276 の当たり（volta の線の太さ）は、この一覧に載っていなかった**
+  ——**載る前に直したから**。⇒ ★★★ **一覧を掃くより、規則を持って*読む*ほうが当たる。
+  一覧は「どこに固まっているか」しか答えない**（`APPROXIMATIONS.md` 自身がそう書いている）。
+  ⇒ ★★★ ⚠️ **相殺の主張には「安い弁別子が書けないもの」がある**（第276・
+  `ArticulationEngraver` の平らな script 床 2.25＝「fermata がこの床に binding する本も点も
+  無い／`script.*` はどれも either way で通る」）。**平らな定数を毒すと全 script が動く**ので、
+  **その毒の緑も赤も fermata について何も言わない**——**弁別する唯一の検査は
+  `2.05 + PaddingFor(type)`＝移植そのもの**。⇒ **そういう項は「未検証」と書いて残す。**
+  ⚠️ **弁別できない毒で緑を見て「確かめた」と書くのが、この規則の一番危ない誤用**
+  ——§5.0 ⑸ の「毒が生きていることを見せる」を通ってしまううえ、**札が*測った*顔になる**。
 - ★★ ⚠️ **残差が名前の付いた 2 項でできているとき、片方を消すともう片方も一緒に消えることがある
   ——丸めは*量*ではなく*項*に乗っている**（2026-08-15・第178セッション。**予測を外して学んだ**）。
   `cue.column.region-edge` は **−0.384653432 ＝ −(欠けていた精錬 0.384651092) + (−0.000002340)**
@@ -3245,6 +3262,20 @@ dotnet test LilySharp.Tests\LilySharp.Tests.csproj --no-build -v q
 Remove-Item Env:\LILYSHARP_UPDATE_SNAPSHOTS
 "ENV NOW = [$($env:LILYSHARP_UPDATE_SNAPSHOTS)]"    # ← 空であることを必ず目視
 # → env を消して再実行し全緑を確認 ＋ git status で「動いたのは意図した snapshot だけ」を確認
+# 未移植・近似・無観測の棚卸し（docs/APPROXIMATIONS.md）の再生成
+# ⚠️ **手で編集しない。** 生成器は 2026-08-28（第276）に Python から
+#    `LilySharp.Tests/ApproximationInventoryTests.cs` へ移り、**script は消えた**
+#    ——表を書くものと表を検査するものが同じ 1 綴りでないと、両者が黙って離れる
+#    （それが 538 commit ぶん実際に起きた）。**普段は何もしなくてよい**: 数が古ければ
+#    `TheInventoryIsNotStale` が全 run で赤くなる。**赤くなったら、まず diff を読む**
+#    ——動いた数は誰かが足した／退役させたコメントで、どちらかを知る値打ちがある。
+# ⚠️ snapshot とは**別の env 変数**（`LILYSHARP_UPDATE_SNAPSHOTS` では書き換わらない）。
+#    絵の再ベースの片手間にこの棚卸しが書き換わると、誰も見ていない差分になる
+$env:LILYSHARP_UPDATE_DOCS = "1"
+dotnet test LilySharp.Tests\LilySharp.Tests.csproj --no-build `
+  --filter 'FullyQualifiedName~ApproximationInventoryTests'
+Remove-Item Env:\LILYSHARP_UPDATE_DOCS
+"ENV NOW = [$($env:LILYSHARP_UPDATE_DOCS)]"          # ← 空であることを必ず目視
 
 # 目視用 PNG / SVG
 dotnet run --project LilySharp.Cli -- png --crop --scale 4.0 "NAME.lys" "out.png"

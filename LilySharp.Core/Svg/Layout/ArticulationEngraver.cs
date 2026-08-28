@@ -2133,6 +2133,16 @@ internal static class ArticulationEngraver
         //    2.45; no ledger point or book observes a fermata where this floor
         //    BINDS (the script.* ledger points all pass either way), so the flat
         //    constant stays until a measurement decides it.
+        //    ⚠️ AUDITED 2026-08-28 (session 276) AND DELIBERATELY LEFT UNVERIFIED. The
+        //    parenthesis is a CANCELLATION claim — it names points and says they pass
+        //    either way — and those are the ones that turn out false (the volta line's
+        //    thickness was one, worth 85% of its point's residual). This one admits no
+        //    CHEAP discriminator: poisoning the flat 2.25 moves every script, not only
+        //    the fermata the claim is about, so the only check that isolates it is
+        //    2.05 + PaddingFor(type) — which IS the port. Per HANDOFF 5.0, a cancellation
+        //    claim whose discriminating check cannot be written is not verified; this one
+        //    is recorded as unverified rather than blessed by an audit that could not
+        //    reach it.
         // LILYPOND-REF: lily/side-position-interface.cc:217-223 include_staff —
         //   staff-padding present && !quantize_position puts staff_symbol in common.
         // ② the staff-padding floor proper, on the REFPOINT (total_off): refpoint ≥

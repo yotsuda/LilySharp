@@ -126,7 +126,8 @@ internal static class OutsideStaffStacker
     // ascent. A LILYPOND-REF beside a number is not evidence that the number came from it.
 
     // ⚠️ LILYSHARP-OWN, AND IT IS THE THIRD SPELLING OF ONE QUANTITY — named 2026-07-31 by
-    // the §7.7 pass over the placement port, not fixed, because no point observes it.
+    // the §7.7 pass over the placement port, not fixed, because no point observes it (which
+    // was an argument then and is a measurement now — see below).
     // The wedge's real ink half-height is its OWN opening plus half the rule's thickness,
     // and the drawn opening's cap IS 0.6666 (HairpinEngraver.Height carries that citation),
     // so this is about HALF the ink LilyPond's Hairpin skyline has. The other two spellings
@@ -134,11 +135,27 @@ internal static class OutsideStaffStacker
     // is the pointwise outline (side-position, the wedge narrows to its apex) and
     // LayoutEngine's annotation-protrusion pass is the max fold over the piece. This one is
     // neither — it UNDER-reserves, which is the direction that prints a collision.
-    // ⚠️ WHY IT IS NOT FIXED HERE: no ledger point reads it. hairpin.page.quiet reads the
-    // DEEPEST ink under the last staff, which the protrusion pass supplies either way, and
-    // this box only decides how far the collision pass pushes a wedge that sits under
-    // something tall. The pair that observes it is a hairpin under a below-staff script or a
-    // second dynamic — the same missing pair the script seed box waits on. Point first.
+    // ⚠️ WHY IT IS NOT FIXED HERE: no ledger point reads it — MEASURED 2026-08-28 (session
+    // 276), not argued. Poisoned 0.3333 → 3.0: NOT ONE LEDGER ENTRY MOVED, two unit tests went
+    // red (so the poison was live, which is the half of the check that makes the zero mean
+    // anything) and TWO BOOKS of 573 moved. (⚠️ That sentence is worded to REPORT rather than
+    // to DECLARE: the census in docs/APPROXIMATIONS.md counts a comment that declares an
+    // unwatched divergence, and the declaration is the line above — spelling the result the
+    // obvious way counted this one site twice.) The reasoning still stands as written:
+    // hairpin.page.quiet reads the DEEPEST ink under the last staff, which the protrusion pass
+    // supplies either way, and this box only decides how far the collision pass pushes a wedge
+    // that sits under something tall.
+    // ⚠️⚠️ BUT THE SENTENCE THAT USED TO FOLLOW WAS FALSE, and it was the one doing the
+    // blocking: it called the observing arrangement — "a hairpin under a below-staff script or
+    // a second dynamic" — THE SAME MISSING PAIR THE SCRIPT SEED BOX WAITS ON. It is not
+    // missing. The two books the poison moved are exactly that arrangement and both are
+    // tracked: audit/lp-regression/lys/empty-chord.lys and audit/lpreg/ec-probe2.lys, each
+    // spelling `@decresc <>@pp` — a hairpin ending into a second dynamic.
+    // ⇒ "Point first" is still right and is no longer blocked: the corpus already draws the
+    // configuration, so the pair can be cut today. ⚠️ NOT from empty-chord.lys as it stands —
+    // its own header records a SUBSTITUTION (LilyPond's bare `\enddecr` has no spelling here,
+    // so both sides were replaced with \pp/@pp), and a translated book with a substitution is
+    // not the LilyPond book (HANDOFF 5.0, the session-179 trap). Write the pair fresh.
     // LILYPOND-REF: scm/define-grobs.scm:1785 Hairpin (height . 0.6666)
     private const double HairpinHalfHeight = 0.6666 / 2.0;
 
