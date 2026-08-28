@@ -189,9 +189,48 @@ undefined2
         Assert.Contains("melody2", undef[0].Message);
     }
 
+    /// <summary>
+    /// A clef WORD alone after <c>staff</c> is the part name, not a clef with the name left
+    /// off — the reading RenderSpecParser has always had, and the one the reference scan
+    /// lacked: it selected slot 1 of a one-token list, found nothing, and collected no
+    /// reference at all. So <c>score main { staff bass }</c> over a part named
+    /// <c>bassline</c> engraved a blank staff and <c>lysc check</c> said "No errors found"
+    /// (reported by the user on scratch/ベースタブLy/Viva La Vida.lys, whose fifteen systems
+    /// of music came out as empty bars). Four words reach here — the clef keywords
+    /// SyntaxFacts.IsPartNameKind also accepts as names.
+    /// </summary>
+    [Theory]
+    [InlineData("staff bass", "bass")]
+    [InlineData("staff treble", "treble")]
+    [InlineData("staff alto", "alto")]
+    [InlineData("staff tenor", "tenor")]
+    // The display-name string is cut before the slot is read, so it cannot restore the
+    // second slot the clef reading wants.
+    [InlineData("staff bass \"Bass\"", "bass")]
+    // `staff ~bass` suppresses the label; the tilde is not a part name either.
+    [InlineData("staff ~bass", "bass")]
+    // The `as lines N` selector is cut FIRST (as RenderSpecParser cuts it). Uncut, it
+    // supplied the second slot and this reported "Undefined part: 'as'" — the right
+    // error on the wrong word.
+    [InlineData("staff bass as lines 1", "bass")]
+    public void Validate_StaffNamesClefWordAsPart_ReportsUndefinedPart(string item, string name)
+    {
+        var undef = Refs("part bassline { clef bass section A { c d e f } }\n"
+                       + "form main { A }\nscore main { " + item + " }")
+            .Where(d => d.Code == DiagnosticCodes.UndefinedPart).ToList();
+        Assert.Single(undef);
+        Assert.Contains($"'{name}'", undef[0].Message);
+    }
+
     [Theory]
     // A section-body part block DEFINES the part.
     [InlineData("section A { melody { c d e f } }\nform main { A }\nscore main { staff melody }")]
+    // A part may BE named for a clef, and then `staff bass` resolves — the committed
+    // fixture test/rhythm-slashes.lys writes exactly this. Before the slot fix no
+    // reference was collected here at all, so this passed for the wrong reason.
+    [InlineData("part bass { clef bass section A { c d e f } }\nform main { A }\nscore main { staff bass }")]
+    [InlineData("part bass { clef bass section A { c d e f } }\nform main { A }\n"
+              + "score main { staff bass as lines 1 }")]
     // …as does a part header.
     [InlineData("part melody { clef treble section A { c d e f } }\nform main { A }\nscore main { staff melody }")]
     // A clef modifier before the part name is not the part.
@@ -208,6 +247,40 @@ undefined2
               + "score main { chords h as both  tab bass melody as numbers }")]
     public void Validate_StaffNamesDefinedPart_NoUndefinedPartError(string source)
         => Assert.DoesNotContain(Refs(source), d => d.Code == DiagnosticCodes.UndefinedPart);
+
+    /// <summary>
+    /// A ZERO-WIDTH TOKEN IS NOT A REFERENCE. When the name slot fails to parse — a reserved
+    /// word where a part name goes — <c>ExpectPartName</c> leaves a missing token whose text
+    /// is empty, and reporting it puts "Undefined part: ''" UNDER a syntax error that already
+    /// says what is wrong.
+    /// </summary>
+    /// <remarks>
+    /// The row family (<c>chords</c> / <c>lyrics</c>) had guarded this since the selector was
+    /// written, with a remark saying it must not happen; <c>staff</c>, <c>ossia</c> and
+    /// <c>tab</c> had not. Measured 2026-08-28 across every render spelling: those three
+    /// emitted THREE diagnostics where the rows emitted two, the third always the empty name.
+    /// The guard is one predicate at one address now (PartReferenceFinder.Referenceable), so
+    /// a seventh spelling gets it by construction rather than by remembering.
+    /// </remarks>
+    [Theory]
+    [InlineData("staff treble_8")]
+    [InlineData("staff percussion")]
+    [InlineData("ossia treble_8")]
+    [InlineData("tab treble_8")]
+    [InlineData("chords treble_8")]
+    [InlineData("lyrics treble_8")]
+    [InlineData("condensedStaff { treble_8 melody }")]
+    [InlineData("combinedStaff { treble_8 melody }")]
+    public void Validate_ReservedWordInTheNameSlot_DoesNotAlsoReportTheEmptyName(string item)
+    {
+        string source = "section A { melody { c d e f } }\nform main { A }\n"
+                      + "score main { staff melody\n " + item + " }";
+        Assert.DoesNotContain(Refs(source), d =>
+            d.Code == DiagnosticCodes.UndefinedPart && d.Message.Contains("''"));
+        // …and the syntax error that DOES belong to it is still there, so this is a
+        // narrower report rather than a quieter one.
+        Assert.NotEmpty(SyntaxTree.Parse(source).Diagnostics);
+    }
 
     [Fact]
     public void Validate_GrandStaffUndefinedInnerPart_ReportsError()

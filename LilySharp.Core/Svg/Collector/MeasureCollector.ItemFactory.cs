@@ -915,9 +915,9 @@ public sealed partial class MeasureCollector
     /// resolves: a shift applied afterwards moved the drawn note and left the report
     /// naming the unshifted one. Relative mode never had the bug because it adds the same
     /// shift into the chord's ANCHOR, before resolving. The fold is exact — the diatonic
-    /// shift and the part transpose are both octave-equivariant (adding 7 to
-    /// <c>DiatonicShift</c>'s index leaves its step and alteration alone; adding 12
-    /// semitones to <c>PitchTransposer</c>'s target leaves its spelling alone).
+    /// shift and the part transpose were both octave-equivariant (adding 12 semitones to
+    /// <c>PitchTransposer</c>'s target leaves its spelling alone; the phrase's diatonic
+    /// shift, removed 2026-08-28, was equivariant in sevenths the same way).
     /// </param>
     private ResolvedPitch CalculateStaffPosition(PitchSyntax pitch, int groupOctaves = 0)
     {
@@ -942,18 +942,13 @@ public sealed partial class MeasureCollector
     /// </summary>
     private ResolvedPitch ResolveAbsolutePitch(int step, int accidentalOffset, int actualOctave, int position)
     {
-        // A phrase reference's interval argument (Melody'(3)) shifts the body by
-        // scale steps in the WRITTEN key — modal transposition, applied before the
-        // chromatic part transpose. The relative chain (RelativeOctave below)
-        // keeps running on the written pitch, like the transpose.
-        int dispStep = step, dispAlt = accidentalOffset, dispOct = actualOctave;
-        if (_octave.DiatonicShiftSteps != 0)
-            (dispStep, dispAlt, dispOct) = Music.DiatonicShift.Apply(
-                dispStep, dispAlt, dispOct, _octave.DiatonicShiftSteps,
-                _meta.KeySharps - _octave.TransposeKeySharps(0));
+        // (A phrase reference's interval argument shifted the body by scale steps in the
+        // WRITTEN key HERE — modal transposition, applied before the chromatic part
+        // transpose below. The spelling was removed 2026-08-28 and nothing else ever
+        // armed the shift, so the written pitch reaches the transpose untouched.)
 
         // Display pitch = written pitch, transposed if the part has transpose:.
-        var (dStep, dAlt, dOctave) = _octave.TransposePitch(dispStep, dispAlt, dispOct);
+        var (dStep, dAlt, dOctave) = _octave.TransposePitch(step, accidentalOffset, actualOctave);
 
         // Staff position 0 = middle line of the staff.
         //   Treble: B4   Bass: D3   Alto: C4 (middle line)   Tenor: A3

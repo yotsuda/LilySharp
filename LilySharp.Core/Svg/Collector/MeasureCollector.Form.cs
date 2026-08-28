@@ -489,7 +489,7 @@ public sealed partial class MeasureCollector
             {
                 var child = section.GetChild(i);
                 if (child is VariableReferenceSyntax varRef)
-                    ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, inline, varRef.DiatonicShiftSteps);
+                    ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, inline);
                 else if (child != null && IsCollectableMusicNode(child))
                     inline.Add(new GreenSite(child));
             }
@@ -856,7 +856,7 @@ public sealed partial class MeasureCollector
             if (site.Kind == SyntaxKind.VariableReference)
             {
                 var varRef = (VariableReferenceSyntax)site.Node;
-                ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, musicNodes, varRef.DiatonicShiftSteps);
+                ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, musicNodes);
             }
             else if (IsCollectableMusicKind(site.Kind))
                 musicNodes.Add(site);
@@ -865,12 +865,11 @@ public sealed partial class MeasureCollector
         processNodes(musicNodes);
     }
 
-    private void ExpandVariable(string name, int octaveOffset, List<GreenSite> musicNodes,
-        int diatonicSteps = 0)
-        => ExpandVariable(name, octaveOffset, musicNodes, diatonicSteps, new HashSet<string>());
+    private void ExpandVariable(string name, int octaveOffset, List<GreenSite> musicNodes)
+        => ExpandVariable(name, octaveOffset, musicNodes, new HashSet<string>());
 
     private void ExpandVariable(string name, int octaveOffset, List<GreenSite> musicNodes,
-        int diatonicSteps, HashSet<string> activeRefs)
+        HashSet<string> activeRefs)
     {
         if (!_variables.TryGetValue(name, out var expression))
             return;
@@ -903,9 +902,8 @@ public sealed partial class MeasureCollector
         // note's bare letter, the `<c e g>` chord rule — never its interior,
         // so a note after the reference does not depend on how the body ends.
         // Trailing marks on the reference (Chorus' / Chorus,) shift that fresh
-        // frame; a glued interval argument (Chorus'(3)) shifts the body by
-        // scale steps. Both shift the outgoing anchor with them.
-        musicNodes.Add(new GreenSite(RelativeResetMarker.For(octaveOffset, diatonicSteps,
+        // frame, and shift the outgoing anchor with them.
+        musicNodes.Add(new GreenSite(RelativeResetMarker.For(octaveOffset,
             Music.PhraseAnchor.AnchorStep(expression,
                 n => _variables.TryGetValue(n, out var nested) ? nested : null))));
 
@@ -920,7 +918,7 @@ public sealed partial class MeasureCollector
             {
                 var nestedRef = (VariableReferenceSyntax)s.Node;
                 ExpandVariable(nestedRef.Name.Text, nestedRef.OctaveOffset, musicNodes,
-                    nestedRef.DiatonicShiftSteps, activeRefs);
+                    activeRefs);
             }
             else if (IsCollectableMusicKind(s.Kind)
                 && ChargeExpansion(1, expression.Position))

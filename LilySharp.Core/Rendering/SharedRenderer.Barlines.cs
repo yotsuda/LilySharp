@@ -35,6 +35,11 @@ internal static partial class SharedRenderer
         // A lead-sheet text row has no staff, so its barlines are short ticks the
         // chord/lyric row hangs on; a real staff uses its full height.
         double height = barHeight ?? StaffHeight;
+        // …and it has no staff LINES either, which is what LilyPond's repeat-dot search
+        // reads. Zero selects its no-staff-symbol default; a real staff hands over its own
+        // count, so a one-line rhythm staff gets the search's answer rather than a five-line
+        // staff's (EngravingDefaults.RepeatDotHalfSpan).
+        int staffLines = staff.IsTextRow ? 0 : staff.Lines;
         var voice = staff.PrimaryVoice;
         bool lineStart = true;
         foreach (var ml in system.Measures)
@@ -64,7 +69,7 @@ internal static partial class SharedRenderer
                 // comfortable click target.
                 using (gc.Source(measure.SourceStart))
                 {
-                    DrawBarline(startType, sx, staffY, height, gc);
+                    DrawBarline(startType, sx, staffY, height, gc, staffLines: staffLines);
                     gc.DrawHitRect(sx - BarlineHitPad, staffY,
                         GetVisualBarlineWidth(startType) + 2 * BarlineHitPad, height);
                 }
@@ -105,7 +110,7 @@ internal static partial class SharedRenderer
                 ? gc.Source(measure.SourceEnd)
                 : gc.Source(measure.SourceEnd, measure.EndHighlightAliases))
             {
-                DrawBarline(endType, endX - width, staffY, height, gc);
+                DrawBarline(endType, endX - width, staffY, height, gc, staffLines: staffLines);
                 gc.DrawHitRect(endX - width - BarlineHitPad, staffY,
                     width + 2 * BarlineHitPad, height);
             }
@@ -211,7 +216,8 @@ internal static partial class SharedRenderer
     /// </summary>
     /// <remarks>LILYPOND-REF: scm/bar-line.scm — bar-line glyph composition.</remarks>
     private static void DrawBarline(BarlineType type, double x, double staffY, double height,
-        IDrawingContext gc, bool withDots = true, (double Y1, double Y2)? tabDots = null)
+        IDrawingContext gc, bool withDots = true, (double Y1, double Y2)? tabDots = null,
+        int staffLines = 5)
     {
         if (type == BarlineType.None) return;
 
@@ -252,23 +258,23 @@ internal static partial class SharedRenderer
             case BarlineType.RepeatStart:
                 gc.DrawRectangle(x, staffY, thick, height, fill: Color.Black);
                 gc.DrawRectangle(x + thick + sep, staffY, thin, height, fill: Color.Black);
-                if (withDots) DrawRepeatDots(x + thick + sep + thin + dotSep, staffY, height, gc, tabDots);
+                if (withDots) DrawRepeatDots(x + thick + sep + thin + dotSep, staffY, height, gc, tabDots, staffLines);
                 break;
 
             case BarlineType.RepeatEnd:
-                if (withDots) DrawRepeatDots(x, staffY, height, gc, tabDots);
+                if (withDots) DrawRepeatDots(x, staffY, height, gc, tabDots, staffLines);
                 double afterDots = x + dotsOffset;
                 gc.DrawRectangle(afterDots, staffY, thin, height, fill: Color.Black);
                 gc.DrawRectangle(afterDots + thin + sep, staffY, thick, height, fill: Color.Black);
                 break;
 
             case BarlineType.RepeatBoth:
-                if (withDots) DrawRepeatDots(x, staffY, height, gc, tabDots);
+                if (withDots) DrawRepeatDots(x, staffY, height, gc, tabDots, staffLines);
                 double pos = x + dotsOffset;
                 gc.DrawRectangle(pos, staffY, thin, height, fill: Color.Black);
                 gc.DrawRectangle(pos + thin + sep, staffY, thick, height, fill: Color.Black);
                 gc.DrawRectangle(pos + thin + sep + thick + sep, staffY, thin, height, fill: Color.Black);
-                if (withDots) DrawRepeatDots(pos + thin + sep + thick + sep + thin + dotSep, staffY, height, gc, tabDots);
+                if (withDots) DrawRepeatDots(pos + thin + sep + thick + sep + thin + dotSep, staffY, height, gc, tabDots, staffLines);
                 break;
         }
     }
@@ -282,10 +288,13 @@ internal static partial class SharedRenderer
     // per extra verse, so on a two-verse row the dots sat 1.6 ss above the row's centre
     // while the barline around them had already grown past them (user report, session 240).
     private static void DrawRepeatDots(double x, double staffY, double height,
-        IDrawingContext gc, (double Y1, double Y2)? tabDots = null)
+        IDrawingContext gc, (double Y1, double Y2)? tabDots = null, int staffLines = 5)
     {
         double r = EngravingDefaults.RepeatDotRadius;
-        double half = EngravingDefaults.RepeatDotHalfSpan;
+        // How far each dot sits from the band's centre is LilyPond's search over the
+        // staff's own line positions, not one number: a one-line rhythm staff wants 0.45
+        // and a four-line one 1.0 where five lines want 0.5 (EngravingDefaults).
+        double half = EngravingDefaults.RepeatDotHalfSpan(staffLines);
         // On a tab staff the dots straddle the centre, each centred in a string
         // space (passed in, already in this frame); otherwise they straddle the band's own
         // centre — which for a five-line staff is 2.0 below its top line, giving back the

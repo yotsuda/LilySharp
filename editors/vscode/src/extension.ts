@@ -1276,7 +1276,7 @@ async function extractPhrase() {
     }
 
     const name = await vscode.window.showInputBox({
-        prompt: 'Name for the extracted phrase (referenced as NAME, NAME\'(3), …)',
+        prompt: 'Name for the extracted phrase (referenced as NAME, NAME\', …)',
         value: 'theme',
         validateInput: v => /^[\p{L}_][\p{L}\p{N}_]*$/u.test(v)
             ? null : 'A phrase name is an identifier (letters, digits, _)',
@@ -1299,7 +1299,7 @@ async function extractPhrase() {
             edit.replace(doc.uri, fullRange, response.NewText);
             await vscode.workspace.applyEdit(edit);
             vscode.window.showInformationMessage(
-                `Lily#: extracted phrase '${name}' — reference it from other parts (${name}, ${name}'(3), …).`);
+                `Lily#: extracted phrase '${name}' — reference it from other parts (${name}, ${name}', …).`);
         } else {
             vscode.window.showErrorMessage(`Lily#: ${response.Error}`);
         }

@@ -879,6 +879,18 @@ StaffRender    = 'staff' , [ ClefName ] , PartRef , [ DisplayName ] ,
                     LYS0031 retired with it; DiagnosticCodes records the number).
                     The same chord part can also feed a lead-sheet row, so a
                     progression is written once. *)
+                 (* ⚠️ THE CLEF IS OPTIONAL, THE PART IS NOT — so a LONE clef word is
+                    the PART NAME, not a clef with the name left off: 'staff bass'
+                    renders a part literally named 'bass' (whose clef then comes from
+                    its own definition), and reports LYS1007 when no such part is
+                    declared. The four words this can happen to are treble, bass, alto
+                    and tenor, which are also legal part names (SyntaxFacts.
+                    IsPartNameKind); the other seven part-header clefs are not, so
+                    'staff percussion' is a syntax error instead. The reading is
+                    RenderSpecParser.ParseStaff's and ParseOssia's; until 2026-08-28 the
+                    REFERENCE scan disagreed with both and collected nothing, so
+                    'score main { staff bass }' over a part named 'bassline' engraved a
+                    blank staff and 'lysc check' said "No errors found". *)
 PartRef        = Identifier ;
 DisplayName    = String ;
                  (* 'staff flute "津田さん"': overrides the instrument label for THIS
@@ -1195,7 +1207,7 @@ RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N ti
    ']' is OPTIONAL — present draws the right cap (closed ending), absent leaves it open. *)
 InlineVolta    = '[' , Integer , [ ( '-' | ',' ) , Integer ] , '.' , { MusicItem } , [ ']' ] ;
 Beam           = '[' | ']' ;
-PhraseRef      = Identifier , { "'" | ',' } , [ '(' , Integer , ')' ] ;
+PhraseRef      = Identifier , { "'" | ',' } ;
                  (* ⚠️ The '$' sigil was REMOVED 2026-08-22. The two spellings had been
                     measured identical 2026-08-16 (eight forms, both octave modes), so the
                     sigil distinguished nothing — except three name families, each now
@@ -1223,20 +1235,25 @@ PhraseRef      = Identifier , { "'" | ',' } , [ '(' , Integer , ')' ] ;
                     implementation and one code comment (MeasureCollector.EnterDefaultFrame,
                     which declared the absence deliberate) disagreed with them, and no book
                     in the tree writes the spelling, so nothing ever brought the two
-                    together. A
-                    GLUED '(N)' after at least one mark is a DIATONIC interval:
-                    Melody'(3) plays the phrase a third UP in the ambient key (the
-                    third's quality follows the scale), Motif,(2) a second down —
-                    sequences and parallel-third harmonies in one token. 1-based
-                    like a degree, so '(8) == ' and '(1) is a unison; extra marks
-                    add octaves (''(3) = an octave plus a third). The adjacency is
-                    what separates it from a slur: a SPACED ' (' still opens one.
+                    together.
+                    ⚠️ A GLUED '(N)' after the marks WAS a diatonic interval —
+                    Melody'(3) a third up in the ambient key — and was REMOVED
+                    2026-08-28 (user decision). It asked a reader to hold two
+                    non-obvious rules to read one token: the mark stopped meaning
+                    'an octave' and started meaning 'upwards' as soon as (N) was
+                    attached, and the degree was 1-based on top of that ('(8) == ').
+                    And a single SPACE turned the whole construct into a reference
+                    followed by a slur. No book in the tree wrote it. There is now no
+                    per-reference transposition at all: 'transpose' is a part property
+                    and chromatic, so a motif quoted a third higher is written out.
+                    The spelling needs no migration diagnostic — '3' is not a valid
+                    duration, so Melody'(3) stops at two hard errors on the number.
                     A reference is ONE item to the relative chain — the chord rule:
                     the note that follows is relative to the phrase's ANCHOR (its
-                    first note's bare letter, shifted with the reference's marks
-                    and '(N)'), never to its interior, so how the body ends — or is
-                    later edited — cannot move the music after a reference, and
-                    '(8) == ' holds after the phrase too. A body evaluates in the
+                    first note's bare letter, shifted with the reference's marks),
+                    never to its interior, so how the body ends — or is
+                    later edited — cannot move the music after a reference. A body
+                    evaluates in the
                     default frame; a pitchless body (rests only) hands nothing off. *)
 
 ### 8.3 Ties, Slurs, Beams
@@ -1299,6 +1316,15 @@ Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' ) , MusicBlock ;
 Repeat         = 'repeat' , ( 'percent' | 'unfold' | 'tremolo' ) , [ Integer ] , MusicBlock ;
                  (* repeat percent 2 { … } = percent-repeat the measure; volta repeats
                     use the symbolic |: … :| form, NOT a 'repeat' keyword *)
+                 (* WHICH SIGN a percent repeat prints is the BODY'S LENGTH, not the
+                    repeat count: a ONE-measure body prints the single % in each repeated
+                    measure, and a TWO-measure body prints ONE double-% on the bar line
+                    between the pair — so 'repeat percent 4 { r1 | r1 }' is three double
+                    signs, not six single ones. LilyPond decides the same way and once,
+                    on the second iteration (percent-repeat-iterator.cc's next_element).
+                    ⚠️ LilyPond's third case — a body that is neither one nor two measures
+                    — prints BEAT SLASHES, and that is NOT implemented: such a body still
+                    gets a single % per measure here. *)
 Cue            = 'cue' , [ ClefName ] , MusicBlock ;
                  (* Small cue notes. A cue is a REGION, not a note annotation — it maps
                     onto LilyPond's CueVoice context, whose size is a context property,

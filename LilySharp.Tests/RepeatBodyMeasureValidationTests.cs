@@ -96,4 +96,50 @@ public sealed class RepeatBodyMeasureValidationTests
             "c8 c c c c c c c | repeat percent 2 { a a a a a a a a | d d d d | e e e e e e e e } |");
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.MeasureIncomplete);
     }
+
+    /// <summary>
+    /// The lead-in's ADDRESS travels with it. A bar left open in front of the repeat is
+    /// part of the body's first bar, so when that bar comes out overfull the diagnostic has
+    /// to reach back over the enclosing music — which is where the mistake usually is.
+    /// </summary>
+    /// <remarks>
+    /// Reported by the user on scratch/ベースタブLy/Viva La Vida.lys: a line reading
+    /// <c>des,1 | r1 r1 r1 break</c> — three whole rests with the bar lines left out — drew
+    /// its warning on the NEXT line, inside the <c>repeat percent</c> that followed, because
+    /// that is where the body's first bar begins. The bar the warning is about is genuinely
+    /// made of both (three whole rests plus the body's first, hence a duration of four), but
+    /// the reader was sent to a line they had not made the mistake on. The ENCLOSING bar
+    /// cannot report it for itself: a repeat is an opaque zero-duration item out there, so
+    /// the open chunk in front of it measures 3 and is exempt as an unclosed tail. Only the
+    /// body's pass ever sees the full four.
+    /// </remarks>
+    [Fact]
+    public void AnOverfullLeadInIsReportedWhereItWasWritten()
+    {
+        const string music = "c1 | r1 r1 r1 repeat percent 4 { r1 | r1 }";
+        var over = Assert.Single(Diagnose(music), d => d.Code == DiagnosticCodes.MeasureOverflow);
+
+        // The span STARTS at the first of the three whole rests — the enclosing music —
+        // rather than inside the repeat's body.
+        string source = $"part mel {{\n  section A {{ {music} }}\n}}\n";
+        Assert.Equal(source.IndexOf("r1", System.StringComparison.Ordinal), over.Span.Start);
+        // …and it still reaches the body, because the bar really is made of both.
+        Assert.True(over.Span.Start + over.Span.Length
+            > source.IndexOf("repeat percent", System.StringComparison.Ordinal));
+        Assert.Contains("duration 4", over.Message);
+    }
+
+    /// <summary>
+    /// The control: with ordinary music after the open bar instead of a repeat, the address
+    /// was already right and stays right. The enclosing bar counts the following note
+    /// itself there, so nothing is scoped and no lead-in span is in play.
+    /// </summary>
+    [Fact]
+    public void TheSameOverflowWithoutARepeatKeepsItsAddress()
+    {
+        const string music = "c1 | r1 r1 r1 c1 | c1 |";
+        var over = Assert.Single(Diagnose(music), d => d.Code == DiagnosticCodes.MeasureOverflow);
+        string source = $"part mel {{\n  section A {{ {music} }}\n}}\n";
+        Assert.Equal(source.IndexOf("r1", System.StringComparison.Ordinal), over.Span.Start);
+    }
 }

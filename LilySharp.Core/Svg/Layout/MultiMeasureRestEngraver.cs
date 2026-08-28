@@ -158,7 +158,8 @@ internal static class MultiMeasureRestEngraver
         // LILYPOND-REF: lily/percent-repeat-engraver.cc.
         HashSet<(int Staff, int Measure)>? percentCovered = null;
         foreach (var pr in score.PercentRepeats)
-            (percentCovered ??= new()).Add((pr.StaffIndex, pr.MeasureIndex));
+            for (int m = pr.FirstCoveredMeasure; m <= pr.MeasureIndex; m++)
+                (percentCovered ??= new()).Add((pr.StaffIndex, m));
 
         foreach (var run in FindRuns(score, allStaffMeasures))
         {

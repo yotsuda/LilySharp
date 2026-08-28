@@ -493,9 +493,10 @@ public sealed class LilyPondExporter
     /// MeasureCollector.Form.cs). The two agree on the body and disagree only on what a
     /// note AFTER the reference is relative to, so a body that is all references (how the
     /// corpus is written) transpiles exactly, and a mixed one gets a warning naming the
-    /// spot. The interval argument (<c>Melody'(3)</c>) and a movable phrase's
-    /// auto-transpose are likewise reported, not guessed: both would need the pitches
-    /// re-derived, and this exporter is a transpiler that copies pitch tokens verbatim.
+    /// spot. A movable phrase's auto-transpose is likewise reported, not guessed: it
+    /// would need the pitches re-derived, and this exporter is a transpiler that copies
+    /// pitch tokens verbatim. (A reference's glued interval argument was the other such
+    /// case and was reported the same way, until the spelling was removed 2026-08-28.)
     /// </para>
     /// </remarks>
     private string EmitPhraseReference(VariableReferenceSyntax v)
@@ -513,11 +514,10 @@ public sealed class LilyPondExporter
         }
         try
         {
-            if (v.DiatonicShiftSteps != 0)
-                _warnings.Add(
-                    $"phrase reference '{name}' carries an interval argument, which needs the "
-                    + "pitches re-derived — the body is exported UNSHIFTED");
-
+            // (A reference used to be able to carry an interval argument — Melody'(3) —
+            // which this exporter could not re-derive, so it warned that the body went out
+            // UNSHIFTED. The spelling was removed 2026-08-28, so there is nothing left to
+            // warn about: the marks below are whole octaves, which the twin CAN express.)
             var buf = new LilyPondExporter
             { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
             CarryFrameInto(buf);

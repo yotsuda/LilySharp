@@ -169,15 +169,10 @@ public sealed class MidiExporter
     private SyntaxNode? _root;
     private int _currentTransposeSemitones;
 
-    // Phrase-scoped diatonic shift (± scale steps) from a reference's interval
-    // argument (Melody'(3) = +2), applied to every written pitch in the WRITTEN
-    // key before the chromatic transpose — see WrittenToMidi. Nested references
-    // compose additively; saved/restored around each phrase body.
-    private int _diatonicShiftSteps;
-
-    /// <summary>Written pitch → MIDI key: the phrase-scoped diatonic shift (modal,
-    /// in the written key), then the chromatic transpose. The ONE funnel every pitched
-    /// emission uses, so the shift cannot miss a path.</summary>
+    /// <summary>Written pitch → MIDI key: the chromatic transpose. The ONE funnel every
+    /// pitched emission uses, so the transpose cannot miss a path. (A phrase-scoped
+    /// DIATONIC shift was applied here first, in the written key, until the reference
+    /// interval argument that armed it was removed 2026-08-28.)</summary>
     /// <remarks>
     /// ⚠️ THE RESULT IS NOT CLAMPED — <see cref="SoundKey"/> does that, once, where the note
     /// is emitted. It used to clamp here, and three callers then added a chord or arpeggio
@@ -188,9 +183,6 @@ public sealed class MidiExporter
     /// </remarks>
     private int WrittenToMidi(int step, int alter, int octave)
     {
-        if (_diatonicShiftSteps != 0)
-            (step, alter, octave) = LilySharp.Core.Music.DiatonicShift.Apply(
-                step, alter, octave, _diatonicShiftSteps, _keySharps);
         return RelativeOctave.StepToMidi(step, alter, octave) + _currentTransposeSemitones;
     }
 
@@ -573,13 +565,9 @@ public sealed class MidiExporter
                     _defaultDuration = Fraction.Quarter;
                     // Auto-transpose the movable phrase from the home key to the
                     // ambient key here (sounds an octave/interval up or down), on
-                    // top of any part transpose; restored after the body. The
-                    // reference's interval argument (Melody'(3)) adds a diatonic
-                    // scale-step shift on top (nested references compose).
+                    // top of any part transpose; restored after the body.
                     int savedTranspose = _currentTransposeSemitones;
-                    int savedDiatonic = _diatonicShiftSteps;
                     _currentTransposeSemitones += PhraseTransposeSemitones();
-                    _diatonicShiftSteps += varRef.DiatonicShiftSteps;
                     // The same marks in ABSOLUTE mode: there is no running frame to
                     // move, so the shift lands on the absolute anchor instead — the
                     // collector's OctaveBase, this walker's _partAbsoluteBase.
@@ -595,21 +583,17 @@ public sealed class MidiExporter
                         anchorStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
                     ProcessNode(phraseBody, track, conductorTrack);
                     _currentTransposeSemitones = savedTranspose;
-                    _diatonicShiftSteps = savedDiatonic;
                     _partAbsoluteBase = savedAbsBase;
                     // Frame hand-off at the phrase's ANCHOR (matches the
                     // collector's ExitPhraseTranspose): the reference is ONE
                     // item, the chord rule — its interior never leaks, and its
-                    // own marks ('(N) included) shift what propagates, so a
-                    // note after Melody'(3) is relative to the shifted anchor
-                    // and '(8) == '. A pitchless body hands nothing off.
+                    // own marks shift what propagates, so a note after Melody'
+                    // is relative to the shifted anchor. A pitchless body hands
+                    // nothing off.
                     if (anchorStep is { } astep)
                     {
                         int oct = RelativeOctave.Resolve(
                             0, _partOctaveAnchor + varRef.OctaveOffset, astep, 0);
-                        if (varRef.DiatonicShiftSteps != 0)
-                            (astep, _, oct) = LilySharp.Core.Music.DiatonicShift.Apply(
-                                astep, 0, oct, varRef.DiatonicShiftSteps, _keySharps);
                         _currentNoteName = astep;
                         _currentOctave = oct;
                     }
@@ -670,7 +654,6 @@ public sealed class MidiExporter
         (_partOctaveAnchor, _partAbsoluteBase) = (4, 4);
         _currentTimbre = 0;
         _currentTransposeSemitones = 0;
-        _diatonicShiftSteps = 0;
     }
 
     /// <summary>True when the section declares at least one <c>partName { }</c> block —

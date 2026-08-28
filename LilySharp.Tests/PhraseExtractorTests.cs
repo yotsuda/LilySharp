@@ -112,16 +112,18 @@ public class PhraseExtractorTests
     }
 
     [Fact]
-    public void ExtractedPhrase_CanBeReferencedShifted()
+    public void ExtractedPhrase_CanBeReferencedByAnotherPart()
     {
         // The point of the refactoring: after extraction, another part can sing
-        // the same music a third up.
+        // the same music — here an octave up. (It used to say "a third up", written
+        // the glued-interval spelling; it was removed 2026-08-28, and the octave
+        // marks are what a second part reaches for now.)
         var src = "part m { section A { c'4 d e f } }\nform main { A }\nscore main { staff m }";
         int caret = src.IndexOf("d e");
         var newText = PhraseExtractor.Extract(src, caret, caret, "theme").NewText!;
         var harmonized = newText.Replace(
             "score main { staff m }",
-            "part h { clef treble section A { theme'(3) } }\nscore main { staff m staff h }");
+            "part h { clef treble section A { theme' } }\nscore main { staff m staff h }");
         Assert.False(SyntaxTree.Parse(harmonized).HasErrors);
     }
 

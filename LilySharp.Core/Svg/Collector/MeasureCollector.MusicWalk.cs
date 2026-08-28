@@ -38,7 +38,7 @@ public sealed partial class MeasureCollector
         if (site.Kind == SyntaxKind.VariableReference)
         {
             var varRef = (VariableReferenceSyntax)site.Node;
-            ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, musicNodes, varRef.DiatonicShiftSteps);
+            ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, musicNodes);
         }
         // NOTE: unlike the other walks, the per-voice path does NOT treat a
         // << \\ >> span as one wrapper. Its caller does not skip parallel
@@ -72,7 +72,7 @@ public sealed partial class MeasureCollector
                 if (site.Node is RelativeResetMarker reset)
                 {
                     EnterDefaultFrame(reset.OctaveOffset);
-                    EnterPhraseTranspose(reset.DiatonicSteps, reset.AnchorStep, reset.OctaveOffset);
+                    EnterPhraseTranspose(reset.AnchorStep, reset.OctaveOffset);
                     // A phrase reference is ONE item; its boundary re-arms the confirmable
                     // boundary like a section start, so a barline at the edge of the phrase
                     // body does not pair with an adjacent outer barline into an empty measure

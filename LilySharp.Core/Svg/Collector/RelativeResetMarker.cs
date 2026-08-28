@@ -30,15 +30,10 @@ namespace LilySharp.Core.Svg.Collector;
 internal sealed class RelativeResetMarker : SyntaxNode
 {
     /// <summary>The anchorless offset-free reset (a parallel span's fresh frame).</summary>
-    public static readonly RelativeResetMarker Instance = new(0, 0, null);
+    public static readonly RelativeResetMarker Instance = new(0, null);
 
     /// <summary>Net octave shift applied to the reset frame (' = +1, , = -1).</summary>
     public int OctaveOffset { get; }
-
-    /// <summary>Diatonic scale-step shift from the reference's interval argument
-    /// (<c>Melody'(3)</c> = +2 steps), applied to the phrase body's pitches after
-    /// relative resolution (see <see cref="OctaveContext.DiatonicShiftSteps"/>).</summary>
-    public int DiatonicSteps { get; }
 
     /// <summary>The phrase's anchor step (see <see cref="Music.PhraseAnchor"/>):
     /// the written step the paired <see cref="PhraseEndMarker"/> hands back to
@@ -49,17 +44,15 @@ internal sealed class RelativeResetMarker : SyntaxNode
     public int? AnchorStep { get; }
 
     /// <summary>Reuses <see cref="Instance"/> for the (common) bare anchorless case.</summary>
-    public static RelativeResetMarker For(int octaveOffset, int diatonicSteps = 0,
-        int? anchorStep = null)
-        => octaveOffset == 0 && diatonicSteps == 0 && anchorStep == null
+    public static RelativeResetMarker For(int octaveOffset, int? anchorStep = null)
+        => octaveOffset == 0 && anchorStep == null
             ? Instance
-            : new RelativeResetMarker(octaveOffset, diatonicSteps, anchorStep);
+            : new RelativeResetMarker(octaveOffset, anchorStep);
 
-    private RelativeResetMarker(int octaveOffset, int diatonicSteps, int? anchorStep)
+    private RelativeResetMarker(int octaveOffset, int? anchorStep)
         : base(MarkerGreen.Shared, parent: null, position: 0)
     {
         OctaveOffset = octaveOffset;
-        DiatonicSteps = diatonicSteps;
         AnchorStep = anchorStep;
     }
 

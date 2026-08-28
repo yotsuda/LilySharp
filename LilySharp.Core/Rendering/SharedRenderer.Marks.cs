@@ -202,7 +202,24 @@ internal static partial class SharedRenderer
         if (layout.PercentRepeatLayouts.IsDefaultOrEmpty) return;
         const double slope = 1.0;
         const double thickness = 0.48;
-        const double dotRadius = 0.25;
+        // The `dots.dot` glyph is a CIRCLE, and it does not scale with the staff: the same
+        // path with the same scale appears on the notation staff and on the 1.5-spaced
+        // TabStaff of one book (measured 2026-08-28, the two-bar percent twin). Only its
+        // OFFSETS scale. The radius is the glyph's own half extent, which the repeat
+        // barline's dots read from the same place.
+        // ⚠️ NOT 0.224, WHICH IS WHAT LILYPOND'S SVG SEEMS TO SAY. That file prints the
+        // glyph at `scale(0.0040)` over a 56-unit radius, but the 0.0040 is ROUNDED to four
+        // decimals: the true scale is 0.225/56 = 0.00401786. Reading the size back out of a
+        // rendered SVG is one decimal short of the font, and this constant was 0.224 for a
+        // few hours on 2026-08-28 because of it.
+        const double dotRadius = EngravingDefaults.RepeatDotRadius;
+        // dot-negative-kern and slash-negative-kern: the paddings x_percent and brew_slash
+        // hand to add_at_edge, both scaled by the staff space.
+        // LILYPOND-REF: scm/define-grobs.scm — the PercentRepeat and DoublePercentRepeat
+        //   entries: dot-negative-kern 0.75, slash-negative-kern 1.6, slope 1.0,
+        //   thickness 0.48. Range-less: the grob names are one word each.
+        const double dotKern = 0.75;
+        const double slashKern = 1.6;
 
         foreach (var pr in layout.PercentRepeatLayouts)
         {
@@ -211,8 +228,7 @@ internal static partial class SharedRenderer
             // "Scale everything by staff-space": wid = 2.0/slope·ss and
             // thick = thickness·ss; :69-77 x_percent translates each dot ±0.5·ss.
             // A TabStaff sets StaffSymbol.staff-space = 1.5, so its sign is
-            // one-and-a-half-sized; the dot GLYPH itself comes from the font and
-            // keeps its size (only its offsets scale).
+            // one-and-a-half-sized.
             var staff = os.StaffLayoutOf(pr.StaffIndex, pr.MeasureIndex);
             double ss = staff?.Tuning is { } tuning
                 ? EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuning))
@@ -220,36 +236,63 @@ internal static partial class SharedRenderer
             double slashWidth = 2.0 / slope * ss;
             double slashHeight = slashWidth * slope;
             double thick = thickness * ss;
-            // Each dot: ±0.5·ss vertically (that half is the letter, :76-77).
-            // ⚠️ The HORIZONTAL term is NOT PORTED: an approximation of
-            // :79-80 add_at_edge(-0.75·ss) — LP has the quantity, so the term
-            // is LP-derived-but-divergent, not Lily#'s own (§5.2 audit,
-            // session 158). There the dot's edge overlaps the
-            // slash's INK edge — a parallelogram reaching (wid + thick·√2)/2 =
-            // 1.34·ss from centre — and the dot is the font's dots.dot glyph
-            // (w ≈ 0.45), not this r=0.25 circle. Measured against 2.26 SVG
-            // (harakiri-percent twin): LP's dot centres sit 0.81·(ss=1) /
-            // 1.11·(ss=1.5) off the slash centre vs this 0.5 / 0.625 — the
-            // 0.19–0.3 gap is the parallelogram half-thickness this stroked
-            // line does not have. Ticketed with the slash-form deviation.
-            // The upper dot sits upper-LEFT, the lower lower-RIGHT — the "%".
-            double dotDx = (1.0 - 0.75) * ss + dotRadius;
-            double dotDy = 0.5 * ss;
+            // THE SLASH IS A PARALLELOGRAM, NOT A STROKED LINE, and the difference is the
+            // ENDS: LilyPond cuts them HORIZONTALLY, so the shape's height is exactly
+            // `wid·slope` and its width `wid + x_width`. A stroked line of the same
+            // perpendicular thickness cuts them square to the slope instead, which on a
+            // 45° slash pushes each corner out by thick/(2√2) in BOTH axes — the ink comes
+            // out 0.509 too tall and 0.51 too narrow on a TabStaff (ss 1.5), and a user
+            // reported the tab sign as looking too thick. It is not: the perpendicular
+            // thickness was right all along (0.720 = LP's, measured), the outline was not.
+            // LILYPOND-REF: lily/lookup.cc:519-539 repeat_slash — the four points are
+            //   (0,0) (x_width,0) (x_width+w,height) (w,height) with
+            //   x_width = hypot (t, t/s) and height = w·s, and the box is (0, w + x_width).
+            double xWidth = System.Math.Sqrt(thick * thick + thick / slope * (thick / slope));
+            double slashInk = slashWidth + xWidth;
+            // A DOUBLE sign is the same picture with a second slash: brew_slash's loop adds
+            // one more copy at the group's right edge with a NEGATIVE padding, so the two
+            // overlap and their origins end up (slash ink width − 1.6·ss) apart. ZERO for a
+            // single sign, which then draws exactly one slash.
+            // LILYPOND-REF: lily/percent-repeat-interface.cc:37-60 brew_slash — the
+            //   add_at_edge (X_AXIS, RIGHT, slash, -slash_neg_kern) loop, count 2 for double.
+            double pairGap = pr.IsDouble ? slashInk - slashKern * ss : 0.0;
+            double groupWidth = slashInk + pairGap;
             double cx = pr.X;
+            double left = cx - groupWidth / 2;
             // Page Y-up against this sign's own staff middle — the staff's REAL
             // height (a six-string tab's lines span 7.5, not the nominal 4.0; the
             // grob has no Y-offset and its stencil is align_to'd CENTER on it).
             double cy = os.StaffMiddleYUp(pr.StaffIndex, pr.MeasureIndex,
                 staff?.Height ?? StaffHeight) + pr.YUp;
+            // The dots sit at the EDGES OF THE WHOLE SLASH GROUP, overlapping it by
+            // dot-negative-kern: the upper one's RIGHT edge lands 0.75·ss inside the group's
+            // left, the lower one's LEFT edge 0.75·ss inside its right. That is the term the
+            // old code approximated as a constant 0.25·ss + r from the centre and got 0.19–0.3
+            // wrong; the edge form reproduces LP's measured 0.81·(ss=1) / 1.11·(ss=1.5) for a
+            // single sign, and 1.354 / 1.919 for a double, to three decimals.
+            // LILYPOND-REF: lily/percent-repeat-interface.cc:63-81 x_percent — the two
+            //   add_at_edge (X_AXIS, LEFT/RIGHT, d, -dot_neg_kern) calls, and the ±0.5·ss
+            //   translate_axis that puts the upper dot LEFT and the lower one RIGHT.
+            double upperDotCx = left + dotKern * ss - dotRadius;
+            double lowerDotCx = left + groupWidth - dotKern * ss + dotRadius;
+            double dotDy = 0.5 * ss;
             using (gc.Source(pr.SourcePosition))
             {
-                // Slash from bottom-left to top-right, with a dot in each pocket it
-                // leaves — upper-LEFT and lower-RIGHT, like the "%" glyph.
-                gc.DrawLine(cx - slashWidth / 2, cy - slashHeight / 2,
-                    cx + slashWidth / 2, cy + slashHeight / 2,
-                    Color.Black, thick);
-                gc.DrawCircle(cx - dotDx, cy + dotDy, dotRadius, Color.Black);
-                gc.DrawCircle(cx + dotDx, cy - dotDy, dotRadius, Color.Black);
+                // Bottom-left to top-right, with a dot in each pocket the slash leaves —
+                // upper-LEFT and lower-RIGHT, like the "%" glyph. The double sign draws the
+                // parallelogram twice, the pair centred on the bar line.
+                for (int k = 0; k <= (pr.IsDouble ? 1 : 0); k++)
+                {
+                    double x0 = left + k * pairGap;
+                    double bottom = cy - slashHeight / 2;
+                    double top = cy + slashHeight / 2;
+                    gc.DrawFilledQuad(
+                        (x0, bottom), (x0 + xWidth, bottom),
+                        (x0 + xWidth + slashWidth, top), (x0 + slashWidth, top),
+                        Color.Black);
+                }
+                gc.DrawCircle(upperDotCx, cy + dotDy, dotRadius, Color.Black);
+                gc.DrawCircle(lowerDotCx, cy - dotDy, dotRadius, Color.Black);
             }
         }
     }

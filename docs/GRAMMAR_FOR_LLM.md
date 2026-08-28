@@ -472,10 +472,10 @@ quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LY
   A reference is ONE item to the relative chain (the chord rule): the next note is
   relative to the phrase's ANCHOR — its first note's bare letter, shifted with the
   reference's marks — never to how the body ends.
-- A reference's trailing marks shift octaves (`Chorus'` / `Chorus,`); a GLUED `'(N)`
-  is a DIATONIC interval — `Melody'(3)` plays the phrase a third up in the ambient key
-  (the quality follows the scale), `Motif,(2)` a second down; `'(8)` == `'`. Spaced,
-  ` (` still opens a slur. Great for sequences and parallel-third harmonies.
+- A reference's trailing marks shift octaves (`Chorus'` / `Chorus,`). There is no
+  per-reference transposition: a glued `'(N)` diatonic interval was removed 2026-08-28,
+  and `transpose` is a part property (chromatic), so a motif quoted at another interval
+  is written out.
 - Part header attributes (`clef`/`key`/`time`/`tempo`) are written **bare, no `=`**, like
   the top-level commands. Override/revert use `=`.
 - `removeEmpty true|all` in a part header hides that part's staff in systems where it only

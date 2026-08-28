@@ -771,31 +771,21 @@ internal sealed partial class Parser
     // Phrase references carry the SAME trailing octave marks as a pitch — Chorus'
     // lands the movable phrase an octave higher, Chorus, an octave lower — so we
     // reuse the note grammar's ' / , collection (ParsePitch, Parser.Music.cs).
-    // A GLUED '(N)' after the marks is the diatonic interval argument: Melody'(3)
-    // shifts the phrase a THIRD up in the ambient key (1-based like a degree, so
-    // '(8) is exactly '). The adjacency is what separates it from a slur — a
-    // spaced ' (' still opens a slur — and the marks give the direction, so a
-    // bare 'Melody(3)' stays a reference followed by a (broken) slur.
+    //
+    // ⚠️ A GLUED '(N)' USED TO BE A DIATONIC INTERVAL HERE — `Melody'(3)` a third up in
+    // the ambient key — and was REMOVED 2026-08-28 (user decision) as unreadable: the mark
+    // stopped meaning "an octave" and started meaning "upwards" the moment `(N)` was
+    // attached, the degree was 1-based on top of that ('(8) == '), and a single SPACE
+    // turned the construct into a reference followed by a slur. Nothing in the repository
+    // wrote it. The spelling gets no migration diagnostic of its own and needs none:
+    // `3` is not a valid duration, so `Melody'(3)` now stops at two hard errors on the
+    // number ("Invalid duration '3'" and the bare-duration one) — measured, so it can
+    // never be read as something else in silence.
     private GreenNode?[] ParsePhraseOctaveMarks()
     {
         var marks = new List<GreenNode?>();
         while (Check(SyntaxKind.Apostrophe) || Check(SyntaxKind.Comma))
             marks.Add(Advance());
-        if (marks.Count > 0
-            && Check(SyntaxKind.OpenParen) && CurrentGluedToPrevious
-            && Peek(1).Kind == SyntaxKind.IntegerLiteral
-            && Peek(2).Kind == SyntaxKind.CloseParen)
-        {
-            marks.Add(Advance()); // '('
-            var number = Advance();
-            marks.Add(number);
-            marks.Add(Advance()); // ')'
-            if (int.TryParse(number.Text, out int n) && n < 1)
-                _diagnostics.Error(new TextSpan(_textPosition, Math.Max(1, number.Width)),
-                    DiagnosticCodes.InvalidScaleDegree,
-                    "A phrase-shift interval is 1-based - '(1) is a unison (no shift), "
-                    + "'(3) a third, '(8) an octave.");
-        }
         return [.. marks];
     }
 

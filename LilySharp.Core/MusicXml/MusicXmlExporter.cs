@@ -130,20 +130,12 @@ public sealed class MusicXmlExporter
     private SyntaxNode? _root;
     private (int step, int alt, int oct)? _currentTranspose;
 
-    // Phrase-scoped diatonic shift (± scale steps) from a reference's interval
-    // argument (Melody'(3) = +2), applied to every written pitch in the WRITTEN
-    // key before the chromatic transpose (see ApplyWrittenTransforms). Nested
-    // references compose additively; saved/restored around each phrase body.
-    private int _diatonicShiftSteps;
-
-    /// <summary>Applies the phrase diatonic shift (modal, in the written key) and
-    /// the chromatic transpose to an already-absolute written pitch — the ONE
-    /// funnel for notes and degree members alike.</summary>
+    /// <summary>Applies the chromatic transpose to an already-absolute written pitch —
+    /// the ONE funnel for notes and degree members alike. (A phrase-scoped DIATONIC
+    /// shift was applied here first, in the written key, until the reference interval
+    /// argument that armed it was removed 2026-08-28.)</summary>
     private (int step, int alter, int octave) ApplyWrittenTransforms(int step, int alter, int octave)
     {
-        if (_diatonicShiftSteps != 0)
-            (step, alter, octave) = LilySharp.Core.Music.DiatonicShift.Apply(
-                step, alter, octave, _diatonicShiftSteps, _keyFifths);
         if (_currentTranspose is { } tr)
             (step, alter, octave) = PitchTransposer.Transpose(step, alter, octave, tr.step, tr.alt, tr.oct);
         return (step, alter, octave);
@@ -1275,13 +1267,9 @@ public sealed class MusicXmlExporter
                     _defaultDuration = Fraction.Quarter;
                     // Auto-transpose the movable phrase from the home key to the
                     // ambient key here (respelled), composed under any part
-                    // transpose; restored after the body. The reference's interval
-                    // argument (Melody'(3)) adds a diatonic scale-step shift on
-                    // top (nested references compose).
+                    // transpose; restored after the body.
                     var savedTranspose = _currentTranspose;
-                    int savedDiatonic = _diatonicShiftSteps;
                     _currentTranspose = PitchTransposer.Compose(PhraseTransposeTarget(), savedTranspose);
-                    _diatonicShiftSteps += varRef.DiatonicShiftSteps;
                     // The same marks in ABSOLUTE mode: there is no running frame to
                     // move, so the shift lands on the absolute anchor instead — the
                     // collector's OctaveBase, this walker's _octaveAnchor.
@@ -1297,21 +1285,17 @@ public sealed class MusicXmlExporter
                         anchorStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
                     ProcessNode(varBody);
                     _currentTranspose = savedTranspose;
-                    _diatonicShiftSteps = savedDiatonic;
                     _octaveAnchor = savedAnchor;
                     // Frame hand-off at the phrase's ANCHOR (matches the
                     // collector's ExitPhraseTranspose): the reference is ONE
                     // item, the chord rule — its interior never leaks, and its
-                    // own marks ('(N) included) shift what propagates, so a
-                    // note after Melody'(3) is relative to the shifted anchor
-                    // and '(8) == '. A pitchless body hands nothing off.
+                    // own marks shift what propagates, so a note after Melody'
+                    // is relative to the shifted anchor. A pitchless body hands
+                    // nothing off.
                     if (anchorStep is { } astep)
                     {
                         int oct = RelativeOctave.Resolve(
                             0, _partAnchorOctave + varRef.OctaveOffset, astep, 0);
-                        if (varRef.DiatonicShiftSteps != 0)
-                            (astep, _, oct) = LilySharp.Core.Music.DiatonicShift.Apply(
-                                astep, 0, oct, varRef.DiatonicShiftSteps, _keyFifths);
                         _currentStep = astep;
                         _currentOctave = oct;
                     }
@@ -1650,7 +1634,7 @@ public sealed class MusicXmlExporter
     private (string step, int alter, int octave) ApplyTranspose(
         PitchSyntax pitch, string step, int alter, int octave)
     {
-        if (_currentTranspose is null && _diatonicShiftSteps == 0)
+        if (_currentTranspose is null)
             return (step, alter, octave);
         var (ns, na, no) = ApplyWrittenTransforms(
             RelativeOctave.StepIndex(pitch.BaseName), pitch.AccidentalOffset, octave);

@@ -307,23 +307,45 @@ public static class PartReferenceFinder
     // ── reference-token selection (mirrors RenderSpecParser) ──
 
     /// <summary>
-    /// The part token in a <c>staff</c> render item: skip a leading <c>~</c>
-    /// (label suppression) and the per-score display string, then take the
-    /// first token that is not a clef keyword (a trailing <c>as lines N</c>
-    /// selector sits after the part, so it cannot shadow it). LILYPOND-REF is
-    /// n/a — this mirrors RenderSpecParser.ParseStaff.
+    /// The part token in a <c>staff</c> render item: cut the trailing
+    /// <c>as lines N</c> selector, skip a leading <c>~</c> (label suppression)
+    /// and the per-score display string, then take the first token that is not a
+    /// clef keyword — unless that clef word is ALL that is left, in which case it
+    /// IS the part name. LILYPOND-REF is n/a — this mirrors
+    /// <see cref="Svg.Collector.RenderSpecParser.ParseStaffSpec"/>.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ THE TWO CUTS ARE THE MIRROR, AND BOTH WERE MISSING (2026-08-28). RenderSpecParser
+    /// cuts <c>as lines N</c> before it reads a slot, and falls back to slot 0 when the clef
+    /// word is the only token left — "<c>staff bass</c> references a part literally named
+    /// bass (its clef then comes from the part definition), not a bass-clef staff with no
+    /// part". This function did neither, and read the SAME node two ways in two places:
+    /// <list type="bullet">
+    /// <item><c>staff bass</c> selected slot 1 of a one-token list and returned null, so no
+    /// reference was collected and LYS1007 never fired. A score naming a part that does not
+    /// exist then engraved as a BLANK STAFF in silence — measured on a user's book
+    /// (<c>staff bass</c> against a part named <c>bassline</c>): five systems of empty bars,
+    /// treble clef, and <c>lysc check</c> answering "No errors found".</item>
+    /// <item><c>staff bass as lines 1</c> selected the uncut selector's <c>as</c> and
+    /// reported "Undefined part: 'as'" — the right error on the wrong word.</item>
+    /// </list>
+    /// Four words reach this at all: treble, bass, alto and tenor, the clef keywords
+    /// <see cref="Syntax.SyntaxFacts.IsPartNameKind"/> also accepts as names.
+    /// <c>treble_8</c> and the other six part-header clefs are not part-name kinds, so
+    /// <c>ExpectPartName</c> refuses them and the author already has a syntax error.
+    /// </remarks>
     private static SyntaxTokenNode? StaffPartToken(StaffRenderSyntax staff)
     {
         var toks = TargetTokens(staff);
+        Svg.Collector.RenderSpecParser.CutLinesSelector(toks);
         toks.RemoveAll(t => t.Kind == SyntaxKind.Tilde);
         int si = toks.FindIndex(t => t.Kind == SyntaxKind.StringLiteral);
         if (si >= 0)
             toks.RemoveAt(si);
         if (toks.Count == 0)
             return null;
-        int partIdx = IsClefKeyword(toks[0].Kind) ? 1 : 0;
-        return partIdx < toks.Count ? toks[partIdx] : null;
+        int partIdx = toks.Count > 1 && IsClefKeyword(toks[0].Kind) ? 1 : 0;
+        return Referenceable(toks[partIdx]);
     }
 
     /// <summary>The part token for <c>ossia</c>: cut the trailing <c>as lines N</c>
@@ -334,7 +356,7 @@ public static class PartReferenceFinder
     {
         var toks = TargetTokens(node);
         Svg.Collector.RenderSpecParser.CutLinesSelector(toks);
-        return toks.Count > 0 ? toks[^1] : null;
+        return toks.Count > 0 ? Referenceable(toks[^1]) : null;
     }
 
     /// <summary>
@@ -357,7 +379,7 @@ public static class PartReferenceFinder
         int asIdx = toks.FindIndex(t => string.Equals(t.Text, "as", System.StringComparison.Ordinal));
         if (asIdx >= 0 && asIdx + 1 < toks.Count)
             toks = toks.GetRange(0, asIdx);
-        return toks.Count > 0 ? toks[^1] : null;
+        return toks.Count > 0 ? Referenceable(toks[^1]) : null;
     }
 
     /// <summary>
@@ -379,7 +401,25 @@ public static class PartReferenceFinder
     /// </para>
     /// </remarks>
     private static SyntaxTokenNode? RowTargetToken(SyntaxNode node)
-        => node.GetChild(1) is SyntaxTokenNode t && t.Text.Length > 0 ? t : null;
+        => Referenceable(node.GetChild(1) as SyntaxTokenNode);
+
+    /// <summary>
+    /// The token, or null when it is the ZERO-WIDTH stand-in a failed
+    /// <c>ExpectPartName</c> leaves in the slot. See <see cref="RowTargetToken"/>'s remark
+    /// for why: the syntax error already says what is wrong, and reporting the empty name
+    /// on top of it puts "Undefined part: ''" under it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE ROW FAMILY HAD THIS GUARD AND THE OTHERS DID NOT — measured 2026-08-28 over
+    /// every render spelling with a reserved word in the name slot: <c>staff</c>,
+    /// <c>ossia</c> and <c>tab</c> each emitted THREE diagnostics where <c>chords</c> and
+    /// <c>lyrics</c> emitted two, and the third was always the empty name.
+    /// <c>condensedStaff</c> / <c>combinedStaff</c> were clean too. So this is one rule at
+    /// one address rather than the same sentence written four times — the shape §5.2.1②
+    /// asks for, and the reason the row family's copy was not simply duplicated.
+    /// </remarks>
+    private static SyntaxTokenNode? Referenceable(SyntaxTokenNode? token)
+        => token is { } t && t.Text.Length > 0 ? t : null;
 
 
     /// <summary>The render item's tokens, skipping the leading keyword and braces

@@ -212,8 +212,14 @@ internal sealed class MeasureValidator : ISemanticValidator
     /// its last barline, or the whole body when it has none) is not CLOSED where the body
     /// ends — turns 2..N and the enclosing stream flow on from it — so that chunk is
     /// exempt from the underfull check (the enclosing pass owns the bars it flows through).</param>
+    /// <param name="leadInSpan">Where those elapsed beats were WRITTEN, when they were
+    /// written OUTSIDE this stream. A repeat body's first bar is partly the enclosing bar's
+    /// music, and if that bar comes out overfull the mistake is usually in the enclosing
+    /// music rather than in the body — so the diagnostic has to be able to reach back to
+    /// it. Null when the lead-in has no written home to point at.</param>
     private void ValidateItemsScoped(IEnumerable<SyntaxNode> items, int startPos,
-        Fraction? leadIn = null, Fraction? initialDefault = null, bool openTail = false)
+        Fraction? leadIn = null, Fraction? initialDefault = null, bool openTail = false,
+        TextSpan? leadInSpan = null)
     {
         // A mid-music `time` re-arms the meter for the rest of THIS block/section
         // only — the state must not leak into the next part's block (each part
@@ -226,7 +232,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         var savedSenza = _senzaMisura;
         try
         {
-            ValidateMeasures(items, startPos, leadIn, initialDefault, openTail);
+            ValidateMeasures(items, startPos, leadIn, initialDefault, openTail, leadInSpan);
         }
         finally
         {
@@ -237,7 +243,8 @@ internal sealed class MeasureValidator : ISemanticValidator
     }
 
     private void ValidateMeasures(IEnumerable<SyntaxNode> items, int startPos,
-        Fraction? leadIn = null, Fraction? initialDefault = null, bool openTail = false)
+        Fraction? leadIn = null, Fraction? initialDefault = null, bool openTail = false,
+        TextSpan? leadInSpan = null)
     {
         var measures = SplitIntoMeasures(items, startPos, out var voiceSpans, out var repeatSpans,
             out bool tailUnclosed);
@@ -327,8 +334,20 @@ internal sealed class MeasureValidator : ISemanticValidator
                 // exempts the body's trailing chunk from the underfull check, because
                 // turns 2..N and the enclosing stream flow on from it and the flow
                 // accounting below owns the bars they cross.
+                // ⚠️ AND THE LEAD-IN'S ADDRESS TRAVELS WITH IT. Those beats were written in
+                // the ENCLOSING bar, in front of this repeat, and the body's first bar is
+                // made of both. When that bar comes out overfull the mistake is almost
+                // always in the enclosing music — `r1 r1 r1` with the bar lines left out,
+                // reported by the user on a real book — and pointing at the body sent the
+                // reader to the wrong line, or to no line they had written at all. The
+                // widened span reaches back over the items in front. When this stream is
+                // ITSELF a body, its own lead-in span comes along for the same reason.
+                var frontSpan = itemIndex > 0
+                    ? MeasureDurations.GetSpan(barItems.GetRange(0, itemIndex))
+                    : (TextSpan?)null;
                 ValidateItemsScoped(rep!.Body.Items, rep.Body.Position,
-                    total == Fraction.Zero ? null : total, defaultDuration, openTail: true);
+                    total == Fraction.Zero ? null : total, defaultDuration, openTail: true,
+                    leadInSpan: UnionSpans(i == 0 ? leadInSpan : null, frontSpan));
 
                 if (!_senzaMisura && FlowsThroughBarAccounting(rep, out int playCount))
                 {
@@ -451,11 +470,12 @@ internal sealed class MeasureValidator : ISemanticValidator
                     // meter can never fit any rendered bar, so the overfull arm below
                     // still applies to it.
                     if (!(openTail && tailUnclosed && isLast))
-                        EmitUnderfull(measure, duration, expected, partialLength, completesOpeningPickup, isBarePickup);
+                        EmitUnderfull(measure, duration, expected, partialLength, completesOpeningPickup,
+                            isBarePickup, i == 0 ? leadInSpan : null);
                 }
                 else if (duration > expected)
                 {
-                    EmitOverfull(measure, duration, expected, partialLength);
+                    EmitOverfull(measure, duration, expected, partialLength, i == 0 ? leadInSpan : null);
                 }
             }
         }
@@ -516,12 +536,12 @@ internal sealed class MeasureValidator : ISemanticValidator
     /// fill: a hard incomplete-measure warning, a soft pickup-without-partial nudge
     /// for a bare first bar, or nothing when the bar completes the opening pickup.</summary>
     private void EmitUnderfull(MeasureContent measure, Fraction duration, Fraction expected,
-        Fraction? partialLength, bool completesOpeningPickup, bool isBarePickup)
+        Fraction? partialLength, bool completesOpeningPickup, bool isBarePickup,
+        TextSpan? leadInSpan = null)
     {
         if (partialLength != null || (!completesOpeningPickup && !isBarePickup))
         {
-            var span = MeasureDurations.GetSpan(measure.Items);
-            _warnedSpans.Add((span.Start, span.Length));
+            var span = Reported(measure, leadInSpan);
             _diagnostics.Warning(span, DiagnosticCodes.MeasureIncomplete,
                 partialLength != null
                     ? $"Pickup measure duration {duration} is less than the declared partial {expected}"
@@ -548,11 +568,38 @@ internal sealed class MeasureValidator : ISemanticValidator
         // else: completesOpeningPickup — exempt, no diagnostic.
     }
 
-    /// <summary>Emits the overfull-measure warning (a bar longer than its expected fill).</summary>
-    private void EmitOverfull(MeasureContent measure, Fraction duration, Fraction expected, Fraction? partialLength)
+    /// <summary>
+    /// The span a bar's diagnostic points at: the bar's own items, widened to reach the
+    /// music that elapsed in front of it OUTSIDE this stream, when there was any.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The bar's OWN span is what goes into <see cref="_warnedSpans"/>, not the widened
+    /// one. That set is a dedup key shared with <c>CrossPartMeasureValidator</c> — "this bar
+    /// already has a diagnostic" — and widening the key would silence a different bar.
+    /// The reader gets the wider address; the bookkeeping keeps the narrow identity.
+    /// </remarks>
+    private TextSpan Reported(MeasureContent measure, TextSpan? leadInSpan)
     {
-        var span = MeasureDurations.GetSpan(measure.Items);
-        _warnedSpans.Add((span.Start, span.Length));
+        var own = MeasureDurations.GetSpan(measure.Items);
+        _warnedSpans.Add((own.Start, own.Length));
+        return UnionSpans(leadInSpan, own) ?? own;
+    }
+
+    /// <summary>The smallest span covering both, or whichever one exists.</summary>
+    private static TextSpan? UnionSpans(TextSpan? a, TextSpan? b)
+    {
+        if (a is not { } x) return b;
+        if (b is not { } y) return a;
+        int start = System.Math.Min(x.Start, y.Start);
+        int end = System.Math.Max(x.Start + x.Length, y.Start + y.Length);
+        return new TextSpan(start, end - start);
+    }
+
+    /// <summary>Emits the overfull-measure warning (a bar longer than its expected fill).</summary>
+    private void EmitOverfull(MeasureContent measure, Fraction duration, Fraction expected,
+        Fraction? partialLength, TextSpan? leadInSpan = null)
+    {
+        var span = Reported(measure, leadInSpan);
         _diagnostics.Warning(span, DiagnosticCodes.MeasureOverflow,
             partialLength != null
                 ? $"Pickup measure duration {duration} exceeds the declared partial {expected}"

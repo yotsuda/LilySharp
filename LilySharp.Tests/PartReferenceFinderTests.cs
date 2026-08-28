@@ -77,6 +77,57 @@ public class PartReferenceFinderTests
         Assert.Equal("lh", PartReferenceFinder.PartNameTokenAt(root, lhInRender)?.Text);
     }
 
+    /// <summary>
+    /// The other side of the same slot: a clef word that is ALL the render item holds is
+    /// the PART name, not a clef with the name left off — the reading
+    /// RenderSpecParser.ParseStaff has always had ("<c>staff bass</c> references a part
+    /// literally named bass") and ParseOssia states outright ("a clef word alone is a name").
+    /// </summary>
+    /// <remarks>
+    /// The selection took slot 1 of a one-token list and returned null, so <c>staff bass</c>
+    /// reached NEITHER reader of this class: <c>SymbolReferenceValidator</c> never saw a
+    /// reference, so LYS1007 could not fire and a score naming a part that does not exist
+    /// engraved as a blank staff while <c>lysc check</c> answered "No errors found"; and a
+    /// rename of a part that IS named <c>bass</c> rewrote the declaration and the section
+    /// block while leaving this staff pointing at the old name. Both are the one omission.
+    /// </remarks>
+    [Fact]
+    public void ALoneClefWordAfterStaffIsThePartToken()
+    {
+        var src = """
+            part bass { clef bass }
+            section A { bass { c2 } }
+            score main "s" { staff bass }
+            """;
+        var root = Root(src);
+
+        // decl + section block + staff render — the same three the sibling test counts
+        // for `lh`, now for a part whose NAME is a clef word.
+        Assert.Equal(3, PartReferenceFinder.Occurrences(root, "bass").Count);
+        Assert.Equal("bass", PartReferenceFinder.PartNameTokenAt(root, src.LastIndexOf("bass"))?.Text);
+    }
+
+    /// <summary>
+    /// …and the <c>as lines N</c> selector is cut before the slot is read, the same cut
+    /// RenderSpecParser makes. Uncut it supplied the second slot, so the clef reading won
+    /// and the selector's own <c>as</c> was collected as the part — LYS1007 then said
+    /// "Undefined part: 'as'", and a rename would have rewritten the selector.
+    /// </summary>
+    [Fact]
+    public void LinesSelectorIsNotTheStaffPartToken()
+    {
+        var src = """
+            part bass { clef bass }
+            section A { bass { c2 } }
+            score main "s" { staff bass as lines 1 }
+            """;
+        var root = Root(src);
+
+        Assert.Equal(3, PartReferenceFinder.Occurrences(root, "bass").Count);
+        Assert.Empty(PartReferenceFinder.Occurrences(root, "as"));
+        Assert.Null(PartReferenceFinder.PartNameTokenAt(root, src.LastIndexOf("as lines")));
+    }
+
     [Fact]
     public void WithChordsTailIsNotRenamedAsAPart()
     {

@@ -86,32 +86,6 @@ public class MidiTests
     }
 
     [Fact]
-    public void PhraseReference_IntervalArgument_ShiftsDiatonically()
-    {
-        // A GLUED '(N)' after the reference's marks is a diatonic interval:
-        // M'(3) plays the phrase a THIRD up in the key — c e g becomes e g b
-        // (the third's quality follows the scale), M,(2) a second down. '(8)
-        // is exactly ', and '(1) a unison no-op.
-        static int[] P(string src) => new MidiExporter().Export(SyntaxTree.Parse(src))
-            .Tracks[1].Notes.Select(n => n.Pitch).ToArray();
-
-        Assert.Equal(new[] { 64, 67, 71 }, P("phrase M { c e g }\n{ M'(3) }"));  // e g b
-        Assert.Equal(new[] { 59, 62, 65 }, P("phrase M { c e g }\n{ M,(2) }"));  // b, d f
-        Assert.Equal(P("phrase M { c e g }\n{ M' }"), P("phrase M { c e g }\n{ M'(8) }"));
-        Assert.Equal(P("phrase M { c e g }\n{ M }"), P("phrase M { c e g }\n{ M'(1) }"));
-        // Extra marks add whole octaves: ''(3) = an octave plus a third.
-        Assert.Equal(new[] { 76, 79, 83 }, P("phrase M { c e g }\n{ M''(3) }"));
-
-        // The identity holds AFTER the phrase too: the reference hands its
-        // ANCHOR to the relative chain (the chord rule — the first note's bare
-        // letter, shifted with the reference; the interior never leaks), so a
-        // note after Melody'(8) continues where Melody' would, and only the
-        // anchoring moves — the following note still sounds as written.
-        Assert.Equal(P("phrase M { c e g }\n{ M' c }"), P("phrase M { c e g }\n{ M'(8) c }"));
-        Assert.Equal(new[] { 64, 67, 71, 60 }, P("phrase M { c e g }\n{ M'(3) c }")); // c nearest the shifted anchor e
-    }
-
-    [Fact]
     public void PhraseReference_HandsOffItsAnchor_NotItsLastNote()
     {
         // A reference is ONE item, the `<c e g>` chord rule: what flows to the
@@ -132,31 +106,17 @@ public class MidiTests
     }
 
     [Fact]
-    public void PhraseIntervalShift_QualityFollowsTheKey()
+    public void PhraseReference_ParenAfterTheMarksIsASlur()
     {
-        // Diatonic, not chromatic: shifting g-a up a third in G major gives
-        // b (a MAJOR third above g) then c (a MINOR third above a) — the scale
-        // decides each quality. LILYPOND-REF: \modalTranspose semantics.
-        var pitches = new MidiExporter().Export(SyntaxTree.Parse("""
-            key g major
-            phrase M { g4 a }
-            part m { section A { M'(3) } }
-            form main { A }
-            score main { staff m }
-            """)).Tracks[1].Notes.Select(n => n.Pitch).ToArray();
-        Assert.Equal(new[] { 59, 60 }, pitches); // B3 (g+4st), C4 (a+3st)
-    }
-
-    [Fact]
-    public void PhraseReference_SpacedParenIsStillASlur()
-    {
-        // The interval argument must be GLUED: `M' (c d)` keeps the plain
-        // octave-marked reference followed by a slurred pair.
+        // `M' (c d)` is an octave-marked reference followed by a slurred pair, and stays
+        // one now that nothing can glue to the marks. Until 2026-08-28 a GLUED `(N)` was
+        // a diatonic interval instead, so this test's whole point was that the SPACE
+        // decided which of the two you got — the adjacency rule that got the spelling
+        // removed. What it pins now is the ordinary reading, whitespace or not.
         var tree = MusicSource.Parse("M' (c4 d4)", "phrase M { e4 }");
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var varRef = tree.GetRoot().DescendantNodes<VariableReferenceSyntax>().Single();
         Assert.Equal(1, varRef.OctaveOffset);
-        Assert.Equal(0, varRef.DiatonicShiftSteps);
     }
 
     [Fact]

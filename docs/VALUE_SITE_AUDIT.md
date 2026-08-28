@@ -100,7 +100,7 @@ tuplet の 2（`Directives:409,411`）／form の 4（`Form:176,184,282,306`）�
 override 値の回復腕（`Music:591`＝**位置としては A3**）／volta の 2（`Music:731,739`）／
 lyrics・chords 行番号の 2（`Sections:350,354`）。
 走査 7: 音価の数（`Music:226`）・付点（`:231`）／`R1*N` の小節数（`:345`）／度数（`:526`）／
-`partial` の数（`Declarations:351`）・付点（`:363`）／フレーズ音程 `'(3)`（`:400`）。
+`partial` の数（`Declarations:351`）・付点（`:363`）。
 
 #### A2（12）— 文字列だけ
 `Expect` 2: `using "f.lys"`（`Directives:475`）／`_"text"`（`Form:166`）。
@@ -201,7 +201,6 @@ lyrics・chords 行番号の 2（`Sections:350,354`）。
 | `partial` の音価 | `Parser.Declarations.cs:351,363` | — |
 | 弦番号 `\4` | `Parser.Music.cs:921` | `SyntaxNodes.Attachments.cs:124` |
 | 度数和音の度数 | `Parser.Music.cs:526` | `SyntaxNodes.cs:452` |
-| フレーズ参照の音程 `Melody'(3)` | `Parser.Declarations.cs:400` | `SyntaxNodes.Declarations.cs:574` |
 | part property `octave` ／ `staff … as lines N` | `Parser.Declarations.cs` の `OctaveKeyword` 判定（:236）・`Parser.Form.cs` の `ConsumeLinesSelector`（:662・呼び出しは :620 と :888） | `MeasureCollector.MusicWalk.cs` の `OctaveBase`・`RenderSpecParser.cs` の `CutLinesSelector`（:512） |
 | `override` の数値 | `Parser.Music.cs:587-589,638` | `GrobProperty.cs:218,233`・**`StaffSpacingParameters.cs:284`** |
 | メタデータの整数 | `Parser.Declarations.cs:227`（回復 run） | `SyntaxNodes.Declarations.cs:402` |

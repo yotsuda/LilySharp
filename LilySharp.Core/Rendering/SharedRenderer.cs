@@ -536,7 +536,8 @@ internal static partial class SharedRenderer
                     var tabPercentCovered = new HashSet<int>();
                     foreach (var prItem in score.PercentRepeats)
                         if (prItem.StaffIndex == globalIdx)
-                            tabPercentCovered.Add(prItem.MeasureIndex);
+                            for (int m = prItem.FirstCoveredMeasure; m <= prItem.MeasureIndex; m++)
+                                tabPercentCovered.Add(m);
                     DrawTabStaff(score, staff, layout, system, globalIdx, localStaffY,
                         staffRight, tabStaffRight, systemStartX, sharedTimeX, isFirstSystem,
                         clefGroupInkLeft, beamedItems, tabPercentCovered, sgc, pageHeight);
@@ -650,7 +651,8 @@ internal static partial class SharedRenderer
                 var percentCovered = new HashSet<int>();
                 foreach (var prItem in score.PercentRepeats)
                     if (prItem.StaffIndex == globalIdx)
-                        percentCovered.Add(prItem.MeasureIndex);
+                        for (int m = prItem.FirstCoveredMeasure; m <= prItem.MeasureIndex; m++)
+                            percentCovered.Add(m);
 
                 // Notes per measure — render every voice (voice 1 = stems up,
                 // voice 2 = stems down, with collision offsets / head wipes).

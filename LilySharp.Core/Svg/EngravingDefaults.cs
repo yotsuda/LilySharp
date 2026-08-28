@@ -822,27 +822,91 @@ internal static class EngravingDefaults
     /// Radius of the drawn repeat-barline dot (staff spaces).
     /// </summary>
     /// <remarks>
-    /// ⚠️ LILYSHARP-OWN: LILYPOND HAS NO RADIUS. It draws a GLYPH — scm/bar-line.scm:298-301
-    /// <c>ly:font-get-glyph</c> fetches <c>dots.dot</c>, the same one an augmentation dot uses
-    /// — so what corresponds to a radius is that glyph's own half extent — 0.225,
-    /// measured on 2.26.0 and independently in our own extraction
-    /// (<c>GlyphMetrics.AugmentationDot</c> = (0, -0.225)..(0.45, 0.225)). Lily# draws a
-    /// circle instead, and this 0.2 makes it 0.025 short in radius, 0.45 → 0.40 across.
-    /// ⚠️ MEASURED AND NOT FIXED: closing it would redraw every repeat barline and also widen
-    /// <see cref="RepeatDotsOffset"/>, which reserves horizontal room from this same number,
-    /// so it moves spacing as well as ink. It is a snapshot island of its own, not a
-    /// provenance fix.
+    /// LILYPOND HAS NO RADIUS. It draws a GLYPH — scm/bar-line.scm:298-301
+    /// <c>ly:font-get-glyph</c> fetches <c>dots.dot</c>, the same one an augmentation dot
+    /// uses — so what corresponds to a radius is that glyph's own half extent. This IS that
+    /// half extent: <c>GlyphMetricsGenerated.AugmentationDot</c> = (0, -0.225)..(0.45, 0.225),
+    /// read out of Emmentaler itself, and the same 0.225 measured on 2.26.0's output.
+    /// <para>
+    /// ⚠️ IT WAS 0.2 UNTIL 2026-08-28 — 0.025 short in radius, 0.45 → 0.40 across, carried as
+    /// a LILYSHARP-OWN divergence that had been measured and left because closing it redraws
+    /// every repeat barline and widens <see cref="RepeatDotsOffset"/>, which reserves
+    /// horizontal room from this same number. It is closed now (user decision); the spacing
+    /// moves with the ink, which is the point — the reservation was reserving for a dot
+    /// LilyPond does not draw.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE REMAINING DIVERGENCE IS THE SHAPE, NOT THE SIZE, and it is not this constant's:
+    /// Lily# strokes a CIRCLE of this radius where LilyPond stamps the font glyph, so a
+    /// magnified staff scales LilyPond's dot and not this one. <c>dots.dot</c> is a circle,
+    /// so at the default staff size the two agree; <c>magnifyStaff</c> is where they would
+    /// not, and no book in the corpus writes it.
+    /// </para>
     /// </remarks>
-    public const double RepeatDotRadius = 0.2;
+    public const double RepeatDotRadius = 0.225;
 
-    /// <summary>Half the span between the two repeat dots (staff spaces), measured from the
-    /// CENTRE of the band the barline spans — one dot falls into each space adjacent to a
-    /// five-line staff's middle line.</summary>
-    /// <remarks>LILYPOND-REF: scm/bar-line.scm:360-368 make-colon-bar-line — the stencil is
-    /// translated to <c>center ± dist/2</c> line positions, measured at ±0.5 staff spaces from
-    /// the staff centre on 2.26.0; see the section remark above for the measurement and for
-    /// why this is stored from the centre rather than from the top line.</remarks>
-    public const double RepeatDotHalfSpan = 0.5;
+    /// <summary>
+    /// Half the span between the two repeat dots (staff spaces), measured from the CENTRE of
+    /// the band the barline spans: LilyPond's own search for the first space wide enough to
+    /// hold a dot and a staff line, run over a staff of <paramref name="lineCount"/> lines.
+    /// Pass 0 for a band with no staff lines at all (a lead-sheet text row), which is
+    /// LilyPond's no-staff-symbol default.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// LILYPOND-REF: scm/bar-line.scm:296-368 make-colon-bar-line — <c>dist</c> starts at
+    /// <c>4·dot-y-length/staff-space</c> LINE POSITIONS (half staff spaces), then, when there
+    /// is a staff symbol, becomes the first adjacent pair of the FOLDED staff (each line's
+    /// distance from the centre, sorted) whose gap exceeds
+    /// <c>(dot-y-length + line-thickness)/(staff-space/2)</c>, summed; failing that either the
+    /// innermost folded position (a central space big enough for both dots) or, if even that
+    /// is too tight, <c>2·outermost + 4·dot-y-length/staff-space</c> — dots outside the staff.
+    /// The two dots then sit at <c>center ∓ dist/2</c> line positions, so this returns
+    /// <c>dist·staff-space/4</c>.
+    /// LILYPOND-REF: lily/staff-symbol.cc:105-119 calc_line_positions — a staff of N lines
+    /// has positions <c>(N-1) - 2i</c>, symmetric about 0, which is what gets folded.
+    /// </para>
+    /// <para>
+    /// ⚠️ THIS WAS THE CONSTANT 0.5 UNTIL 2026-08-28, which is the search's answer for FIVE
+    /// lines and for THREE, and wrong for the rest. Measured on 2.26.0 (a five-staff probe,
+    /// one per line count, dots read out of the SVG against each staff's own centre):
+    /// 1 line → 0.45, 2 → 0.95, 3 → 0.5, 4 → 1.0, 5 → 0.5. A one-line rhythm staff
+    /// (<c>staff comp as lines 1</c>) is the case the corpus actually writes, and 0.5 put its
+    /// dots half a space out — nearly on the single line the search exists to avoid.
+    /// </para>
+    /// </remarks>
+    public static double RepeatDotHalfSpan(int lineCount, double staffSpace = 1.0)
+    {
+        // The glyph's own height is what the search measures against — the same `dots.dot`
+        // whose half extent is RepeatDotRadius.
+        const double dotYLength = 2 * RepeatDotRadius;
+        double dist = 4 * dotYLength / staffSpace;
+
+        if (lineCount > 0)
+        {
+            // The folded staff: each line's distance from the centre, sorted. Positions are
+            // (N-1) - 2i and symmetric, so folding is |position| and the centre is 0.
+            var folded = new double[lineCount];
+            for (int i = 0; i < lineCount; i++)
+                folded[i] = System.Math.Abs((lineCount - 1) - 2.0 * i);
+            System.Array.Sort(folded);
+
+            double gapToFind = (dotYLength + LineThickness) / (staffSpace / 2);
+            double? found = null;
+            for (int i = 0; i + 1 < folded.Length; i++)
+                if (folded[i + 1] - folded[i] > gapToFind)
+                {
+                    found = folded[i] + folded[i + 1];
+                    break;
+                }
+            dist = found
+                ?? (gapToFind < folded[0]
+                    ? folded[0]                                     // a central space holds both
+                    : 2 * folded[^1] + 4 * dotYLength / staffSpace); // dots go outside
+        }
+
+        return dist * staffSpace / 4;
+    }
 
     // === Spacing (Lilypond-compatible) ===
     // See: lily/spacing-options.cc, lily/spacing-spanner.cc

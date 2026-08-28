@@ -102,7 +102,7 @@ public sealed class SharedRendererBarlineTests
         part m { clef treble section A { c4 d e f | } section B { g4 a b c' | } }
         form main { A |: B :| }
         score main { staff m }
-        """)]
+        """, 5)]
     // A staffless lyrics row with TWO verses: the band is taller than a staff, which is the
     // only shape that can tell "centred" apart from "1.5 below the top".
     [InlineData("""
@@ -114,8 +114,11 @@ public sealed class SharedRendererBarlineTests
         }
         form main { A |: B :| }
         score main { lyrics v }
-        """)]
-    public void RepeatDots_StraddleTheCentreOfTheBandTheirBarlineSpans(string source)
+        """, 0)]
+    // …and the span between them is the SEARCH's answer for that band: five lines put a dot
+    // in each space beside the middle line, a band with no lines at all takes LilyPond's
+    // no-staff-symbol default. One constant used to serve both (EngravingDefaults).
+    public void RepeatDots_StraddleTheCentreOfTheBandTheirBarlineSpans(string source, int staffLines)
     {
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
@@ -141,8 +144,34 @@ public sealed class SharedRendererBarlineTests
         Assert.True(band.H > 0, "no barline band contains the dot pair");
 
         Assert.Equal(band.Y + band.H / 2, (d1.Y + d2.Y) / 2, 3);
-        Assert.Equal(2 * EngravingDefaults.RepeatDotHalfSpan, d2.Y - d1.Y, 3);
+        Assert.Equal(2 * EngravingDefaults.RepeatDotHalfSpan(staffLines), d2.Y - d1.Y, 3);
     }
+
+    /// <summary>
+    /// LilyPond's repeat dots do not sit at one fixed distance: it searches the staff's own
+    /// line positions for the first space wide enough to hold a dot and a line, and the
+    /// answer depends on how many lines there are. These five numbers are read out of
+    /// LilyPond 2.26.0's SVG for a five-staff probe, one staff per line count, each dot
+    /// measured against its own staff's centre.
+    /// </summary>
+    /// <remarks>
+    /// The constant this replaced was 0.5 — right for five lines and for three, wrong for the
+    /// other three counts. A one-line rhythm staff (<c>staff comp as lines 1</c>) is the case
+    /// the corpus writes, and 0.5 put its dots half a space out, nearly on the single line the
+    /// search exists to keep them off.
+    /// LILYPOND-REF: scm/bar-line.scm:296-368 make-colon-bar-line — the folded-staff search.
+    /// </remarks>
+    [Theory]
+    [InlineData(1, 0.45)]
+    [InlineData(2, 0.95)]
+    [InlineData(3, 0.50)]
+    [InlineData(4, 1.00)]
+    [InlineData(5, 0.50)]
+    // A band with no staff lines at all (a lead-sheet text row) takes LilyPond's
+    // no-staff-symbol default, which is the same answer a single line gets.
+    [InlineData(0, 0.45)]
+    public void RepeatDotHalfSpan_IsLilyPondsSearchOverTheStaffsLines(int lineCount, double expected)
+        => Assert.Equal(expected, EngravingDefaults.RepeatDotHalfSpan(lineCount), 6);
 
     private static int CountOccurrences(string haystack, string needle)
     {

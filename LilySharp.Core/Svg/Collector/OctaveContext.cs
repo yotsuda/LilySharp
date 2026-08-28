@@ -56,12 +56,11 @@ internal sealed class OctaveContext
     // File-level default mode, restored per voice and per section.
     public bool InitialOctaveAbsolute;
 
-    // Phrase-scoped diatonic shift (± scale steps), armed by a reference's glued
-    // interval argument (Melody'(3) = +2). Applied AFTER relative resolution —
-    // the chain runs on the written letters, like the part transpose below —
-    // and BEFORE that chromatic transpose. Nested references compose additively;
-    // the phrase markers save/restore it (see MeasureCollector.EnterPhraseTranspose).
-    public int DiatonicShiftSteps;
+    // (A phrase-scoped DIATONIC shift lived here until 2026-08-28: ± scale steps armed by
+    // a reference's glued interval argument — Melody'(3) = +2 — applied after relative
+    // resolution and before the chromatic transpose below. The spelling was removed as
+    // unreadable (user decision); nothing else ever set the field, so it went with the
+    // save/restore stack, the reset marker's carrier and the DiatonicShift table.)
 
     // Part-option transpose: when set, every pitch is shifted by the interval
     // from c to (TransposeStep, TransposeAlt) AFTER relative-octave resolution.
@@ -137,7 +136,6 @@ internal sealed class OctaveContext
         OctaveAbsolute = false;
         InitialOctaveAbsolute = false;
         LastPitchName = 'c';
-        DiatonicShiftSteps = 0;
     }
 
     // --- Part transpose: composes on top of relative-octave resolution ---

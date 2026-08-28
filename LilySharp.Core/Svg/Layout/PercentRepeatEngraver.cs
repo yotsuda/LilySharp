@@ -32,7 +32,8 @@ public readonly record struct PercentRepeatLayout(
     double Width,            // Measure width for proportional sizing
     int SourcePosition,
     int SourceIndex = -1,    // F3/B: index into score.PercentRepeats (data-pos resolved at render)
-    int StaffIndex = -1       // owning staff, so the draw can resolve its staff middle
+    int StaffIndex = -1,      // owning staff, so the draw can resolve its staff middle
+    bool IsDouble = false     // two slashes on the bar line: a TWO-measure body's sign
 );
 
 /// <summary>
@@ -72,15 +73,21 @@ internal static class PercentRepeatEngraver
 
             var ml = measureLayouts[item.MeasureIndex];
 
-            // Center of the measure
-            double x = ml.X + ml.Width / 2;
+            // Center of the measure — or, for the DOUBLE sign, the BAR LINE this measure
+            // opens on, because that bar is the one between the two measures the sign
+            // stands for and LilyPond break-aligns the item to it.
+            // LILYPOND-REF: scm/define-grobs.scm — the DoublePercentRepeat entry (:1290-1292):
+            //   break-align-symbol = staff-bar. Range-less on purpose: one-word grob name.
+            // LILYPOND-REF: lily/percent-repeat-interface.cc:96-101 double_percent — the
+            //   stencil is align_to'd CENTER on X, so the bar line is its middle.
+            double x = item.IsDouble ? ml.X : ml.X + ml.Width / 2;
 
             // Y-up (frame B): the percent sign is centred on the OWN staff's middle
             // line = 0 staff-spaces above the middle. The staff (and thus its device
             // middle) is resolved at draw time from StaffIndex.
             results.Add(new PercentRepeatLayout(
                 item.MeasureIndex, x, 0.0, ml.Width, item.SourcePosition, i,
-                StaffIndex: item.StaffIndex));
+                StaffIndex: item.StaffIndex, IsDouble: item.IsDouble));
         }
 
         return results.ToImmutable();

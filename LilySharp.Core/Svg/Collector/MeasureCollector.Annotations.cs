@@ -147,15 +147,10 @@ public sealed partial class MeasureCollector
     {
         structure = null;
         int keySharps = _meta.KeySharps - _octave.TransposeKeySharps(0); // written key
-        // Inside a shifted phrase reference (Melody'(3)) the chord SOUNDS a
-        // diatonic interval away from what is written — name what sounds.
-        int diatonic = _octave.DiatonicShiftSteps;
-        (int Step, int Alter) Sounding(int s, int a)
-        {
-            if (diatonic == 0) return (s, a);
-            var (ss, sa, _) = Music.DiatonicShift.Apply(s, a, 4, diatonic, keySharps);
-            return (ss, sa);
-        }
+        // (Until 2026-08-28 a shifted phrase reference — Melody'(3) — made the chord
+        // SOUND a diatonic interval away from what is written, and this named what
+        // sounded. That spelling is gone, so written and sounding are the same again.)
+        static (int Step, int Alter) Sounding(int s, int a) => (s, a);
         var pcs = new List<int>();
         int rootStep, rootAlter;
 
@@ -233,13 +228,10 @@ public sealed partial class MeasureCollector
 
         var pcs = new List<int>();
         int recogStep = -1, recogAlter = 0;
-        // Inside a shifted phrase reference (Melody'(3)) the group SOUNDS a
-        // diatonic interval away from what is written — name what sounds.
-        int diatonic = _octave.DiatonicShiftSteps;
+        // (Same as TryNameChord: the removed phrase interval argument was the only
+        // thing that made a group sound away from what it is written as.)
         void Add(int step, int alter)
         {
-            if (diatonic != 0)
-                (step, alter, _) = Music.DiatonicShift.Apply(step, alter, 4, diatonic, keySharps);
             if (recogStep < 0) { recogStep = step; recogAlter = alter; }
             pcs.Add(RelativeOctave.StepSemitoneOf(step) + alter);
         }

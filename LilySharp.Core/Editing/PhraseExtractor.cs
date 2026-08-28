@@ -27,7 +27,7 @@ namespace LilySharp.Core.Editing;
 /// the WHOLE MEASURES a selection touches) into a top-level
 /// <c>phrase NAME { … }</c> and replaces it with the reference — so a melody
 /// written directly in sections can be reused by other parts
-/// (<c>harmony { section A { NAME'(3) } }</c>) without hand-refactoring.
+/// (<c>harmony { section A { NAME' } }</c>) without hand-refactoring.
 /// </summary>
 /// <remarks>
 /// Extraction is SEMANTICS-PRESERVING or refused: a phrase body evaluates in a

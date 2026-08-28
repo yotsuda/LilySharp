@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -401,8 +401,6 @@ public sealed partial class MeasureCollector
     // phrase referenced inside another restores cleanly). Pushed at the reset
     // marker, popped at the paired phrase-end marker.
     private readonly Stack<(int step, int alt, int oct)?> _phraseTransposeSaves = new();
-    // Saved diatonic-shift values, pushed/popped alongside _phraseTransposeSaves.
-    private readonly Stack<int> _phraseDiatonicSaves = new();
     // Each open reference's outgoing anchor (bare letter + octave, resolved in
     // the phrase's own frame at entry), handed to the relative chain at exit —
     // the chord rule; null = pitchless body. Pushed/popped alongside the above.
@@ -1910,7 +1908,6 @@ public sealed partial class MeasureCollector
         _repetitionOriginalReads.Clear();
         _formRepeatDepth = 0;
         _phraseTransposeSaves.Clear();
-        _phraseDiatonicSaves.Clear();
         _phraseAnchorSaves.Clear();
         _phraseAbsoluteBaseSaves.Clear();
         // Probe bookkeeping restarts per collect; WalkProbe itself is the caller's
@@ -1976,8 +1973,7 @@ public sealed partial class MeasureCollector
     /// it. The phrase shift composes UNDER any part/score transpose (the written
     /// pitch moves home→ambient first, then the instrument transpose applies).
     /// </summary>
-    private void EnterPhraseTranspose(int diatonicSteps = 0, int? anchorStep = null,
-        int octaveOffset = 0)
+    private void EnterPhraseTranspose(int? anchorStep = null, int octaveOffset = 0)
     {
         var saved = _octave.GetTranspose();
         _phraseTransposeSaves.Push(saved);
@@ -1991,10 +1987,6 @@ public sealed partial class MeasureCollector
         // additively because each pushes the base it found.
         _phraseAbsoluteBaseSaves.Push(_octave.OctaveBase);
         _octave.OctaveBase += octaveOffset;
-        // The reference's interval argument (Melody'(3)) shifts the body's pitches
-        // by scale steps; nested references compose additively.
-        _phraseDiatonicSaves.Push(_octave.DiatonicShiftSteps);
-        _octave.DiatonicShiftSteps += diatonicSteps;
         // Resolve the phrase's outgoing ANCHOR now, in the just-reset frame
         // (EnterDefaultFrame ran first at every call site): the bare-letter
         // resolution of the body's first pitched element — or the AMBIENT tonic
@@ -2017,33 +2009,28 @@ public sealed partial class MeasureCollector
     /// Restores the transpose saved by <see cref="EnterPhraseTranspose"/> and
     /// hands the relative frame off at the phrase's ANCHOR — the chord rule: a
     /// reference is ONE item whose interior never leaks, so the note after
-    /// <c>Melody'(3)</c> is relative to the phrase's shifted anchor ('(8) == ',
-    /// after the phrase included) and editing the tail of a phrase body never
-    /// moves the music that follows a reference. A pitchless body (rests only)
-    /// hands nothing off. Only the anchoring moves; following notes still sound
-    /// as written.
+    /// <c>Melody'</c> is relative to the phrase's shifted anchor and editing the
+    /// tail of a phrase body never moves the music that follows a reference. A
+    /// pitchless body (rests only) hands nothing off. Only the anchoring moves;
+    /// following notes still sound as written.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ THE ANCHOR HAND-OFF USED TO BE NESTED INSIDE THE DIATONIC GUARD, because the
+    /// removed interval argument (<c>Melody'(3)</c>) had to shift the anchor by the same
+    /// scale steps before handing it back. It is unconditional now — the guard went with
+    /// the spelling (2026-08-28), and leaving the hand-off inside it would have silently
+    /// stopped <c>Chorus'</c> / <c>Chorus,</c> from moving the frame at all.
+    /// </remarks>
     private void ExitPhraseTranspose()
     {
         if (_phraseTransposeSaves.Count > 0)
             _octave.SetTranspose(_phraseTransposeSaves.Pop());
         if (_phraseAbsoluteBaseSaves.Count > 0)
             _octave.OctaveBase = _phraseAbsoluteBaseSaves.Pop();
-        if (_phraseDiatonicSaves.Count > 0)
+        if (_phraseAnchorSaves.Count > 0 && _phraseAnchorSaves.Pop() is { } anchor)
         {
-            int restored = _phraseDiatonicSaves.Pop();
-            int delta = _octave.DiatonicShiftSteps - restored;
-            _octave.DiatonicShiftSteps = restored;
-            if (_phraseAnchorSaves.Count > 0 && _phraseAnchorSaves.Pop() is { } anchor)
-            {
-                int s = GetPitchIndex(anchor.Name);
-                int o = anchor.Octave;
-                if (delta != 0)
-                    (s, _, o) = Music.DiatonicShift.Apply(s, 0, o,
-                        delta, _meta.KeySharps - _octave.TransposeKeySharps(0));
-                _octave.LastPitchName = "cdefgab"[s];
-                _octave.CurrentOctave = o;
-            }
+            _octave.LastPitchName = anchor.Name;
+            _octave.CurrentOctave = anchor.Octave;
         }
     }
 
@@ -2073,10 +2060,8 @@ public sealed partial class MeasureCollector
         // (phrase auto-transpose baseline).
         ResetAmbientTonicToHome();
         _phraseTransposeSaves.Clear();
-        _phraseDiatonicSaves.Clear();
         _phraseAnchorSaves.Clear();
         _phraseAbsoluteBaseSaves.Clear();
-        _octave.DiatonicShiftSteps = 0;
 
         var builder = new MeasureBuilder(TimeSignatureFraction);
         if (_filePartial is { } filePickup)
@@ -2262,7 +2247,7 @@ public sealed partial class MeasureCollector
                     if (site.Node is RelativeResetMarker reset)
                     {
                         EnterDefaultFrame(reset.OctaveOffset);
-                        EnterPhraseTranspose(reset.DiatonicSteps, reset.AnchorStep, reset.OctaveOffset);
+                        EnterPhraseTranspose(reset.AnchorStep, reset.OctaveOffset);
                         builder.ResetMeasureBoundary();
                         continue;
                     }
@@ -3241,7 +3226,7 @@ public sealed partial class MeasureCollector
         foreach (var item in repeat.Body.Items)
         {
             if (item is VariableReferenceSyntax varRef)
-                ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, bodyNodes, varRef.DiatonicShiftSteps);
+                ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, bodyNodes);
             else
                 bodyNodes.Add(new GreenSite(item));
         }
@@ -3263,8 +3248,27 @@ public sealed partial class MeasureCollector
         {
             // First iteration: process body normally
             int startMeasure = builder.CurrentMeasureIndex;
+            // …and measure the body's LENGTH while doing it, because that — not the number
+            // of measure objects it happened to produce — is what chooses the sign.
+            // LILYPOND-REF: lily/percent-repeat-iterator.cc:75-92 next_element — the test is
+            //   `body_length_.main_part_ == mlen` / `== mlen * 2`, against the CONTEXT's
+            //   measure_length; the iterator never counts bars.
+            // ⚠️ COUNTING BARS INSTEAD IS WRONG AND WAS MEASURED WRONG (2026-08-28): the
+            // builder's completed-measure count depends on where the body's barlines fall,
+            // so a one-measure body can leave the count at 1 or at 2 depending on whether
+            // it ends on a `|`. The length does not care.
+            var meterAtBody = builder.CurrentMeasureLength;
+            var openAtStart = builder.CurrentDuration;
             ProcessBodyOnce();
             int bodyMeasureCount = builder.CurrentMeasureIndex - startMeasure;
+            var bodyLength = builder.CurrentDuration - openAtStart;
+            for (int m = 0; m < bodyMeasureCount; m++)
+                bodyLength += meterAtBody;
+            // A two-measure body takes the DOUBLE sign; one measure takes the single one.
+            // Anything else falls through to the old per-measure marking — LilyPond's third
+            // branch (RepeatSlashEvent, beat slashes) is not ported.
+            bool isDoubleBody = meterAtBody > Fraction.Zero
+                && bodyLength == meterAtBody + meterAtBody;
 
             // Additional iterations: process body again but mark as percent repeat
             for (int iter = 1; iter < count; iter++)
@@ -3274,13 +3278,34 @@ public sealed partial class MeasureCollector
                 int iterStart = builder.CurrentMeasureIndex;
                 ProcessBodyOnce();
 
-                // Mark all measures in this iteration as percent repeats
-                for (int m = 0; m < bodyMeasureCount; m++)
+                // A TWO-MEASURE body gets ONE double-percent sign for the whole repetition,
+                // on the bar line between its two measures — not a single sign in each.
+                // LILYPOND-REF: lily/double-percent-repeat-engraver.cc:56-64 process_music —
+                //   the item is made when now_mom() reaches start_mom_ = the event's moment
+                //   plus one measure_length, i.e. at the SECOND measure's downbeat.
+                // ⚠️ THE THIRD BRANCH IS NOT PORTED. LilyPond's `else` is RepeatSlashEvent
+                // (beat slashes); a body of three measures or of a non-whole number of them
+                // still gets a percent per measure here. That is where this code was for
+                // every body length until 2026-08-28, so the untouched branch is the OLD
+                // behaviour rather than a new guess.
+                if (isDoubleBody)
                 {
                     _percentRepeats.Add(new PercentRepeatItem(
-                        iterStart + m,
+                        iterStart + 1,
                         repeat.Position,
-                        _cursor.StaffIndex));
+                        _cursor.StaffIndex,
+                        IsDouble: true));
+                }
+                else
+                {
+                    // Mark all measures in this iteration as percent repeats
+                    for (int m = 0; m < bodyMeasureCount; m++)
+                    {
+                        _percentRepeats.Add(new PercentRepeatItem(
+                            iterStart + m,
+                            repeat.Position,
+                            _cursor.StaffIndex));
+                    }
                 }
             }
         }

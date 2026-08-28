@@ -4,6 +4,75 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
+## 0.5.0
+
+Unreleased. Defects a reader of real scores found, and the two language spellings that
+turned out to be hiding them.
+
+### Breaking changes
+
+- **A phrase reference's interval argument is removed.** `Melody'(3)` no longer plays the
+  phrase a third up; the octave marks `Melody'` and `Melody,` stay exactly as they were.
+  The glued form asked a reader to hold two non-obvious rules to read one token — `'`
+  stopped meaning "an octave" and started meaning "upwards" as soon as `(N)` was attached,
+  and the degree was 1-based on top of that (`'(8)` == `'`) — while a single space turned
+  the whole thing into a reference followed by a slur. No book in the repository wrote it.
+  There is no per-reference transposition any more: `transpose` is a part property and
+  chromatic, so a motif quoted a third higher is now written out.
+- **A two-measure percent repeat prints ONE double sign**, on the bar line between the
+  pair, where it used to print a single `%` in each measure — so
+  `repeat percent 4 { r1 | r1 }` is three double signs rather than six single ones, and
+  both measures under each sign print no music. Which sign a repeat gets is the body's
+  LENGTH, exactly as LilyPond decides it. A one-measure body is unchanged. LilyPond's
+  third case — a body that is neither one nor two measures — prints beat slashes and is
+  still not implemented.
+- **`staff <clef word>` alone names a part** — `staff bass` renders a part named
+  `bass`, and says so (`LYS1007`) when none is declared. The reference scan read that
+  lone word as a clef with the name left off and collected nothing, so a score whose
+  staff named no part at all engraved a page of empty bars while `lysc check` answered
+  "No errors found"; `staff bass as lines 1` reported the selector's `as` instead of
+  the name. Four words could reach this — `treble`, `bass`, `alto`, `tenor`. The
+  corpus's one occurrence names a part that exists, so `lysc check` is byte-identical
+  across all 573 books.
+
+### Diagnostics
+
+- An overfull bar that runs into a `repeat` is reported where it was WRITTEN. A bar left
+  open in front of a repeat is part of the repeat body's first bar, and the warning used
+  to land inside the body — so `r1 r1 r1` with the bar lines left out drew its complaint
+  on the next line, in music the writer had not made a mistake in. The span now reaches
+  back over the enclosing music and still covers the body, because the bar really is made
+  of both. Across 898 books no warning appeared or disappeared and no exit code changed;
+  30 of them (all outside the repository) point somewhere earlier.
+
+### Engraving fidelity
+
+- The percent-repeat sign is LilyPond's own shape: the slash is the parallelogram
+  `Lookup::repeat_slash` builds, cut horizontally at its ends, rather than a stroked line
+  cut square to the slope — which made the ink 0.51 too tall and 0.51 too narrow on a tab
+  staff, where everything is 1.5-sized and a user noticed the sign looking too heavy. Its
+  two dots now hang off the edges of the whole slash group with LilyPond's negative kern
+  instead of a constant offset (0.81 and 1.11 staff spaces from the centre, matching the
+  measurement, against 0.5 and 0.625), and each is the font's own 0.225 rather than a 0.25
+  stand-in. The perpendicular thickness was already right; the outline was not.
+- **A repeat barline's dots are the size LilyPond draws them.** LilyPond has no radius
+  there at all — it stamps the `dots.dot` glyph, the same one an augmentation dot uses —
+  and that glyph's half extent is 0.225, which Lily#'s own font extraction has said all
+  along. The drawn circle was 0.2: a fifth of a staff space short across, on every repeat
+  sign in every score. Closing it also widens the horizontal room a repeat barline
+  reserves, because that reservation is computed from the same number, so bar lines and
+  everything after them shift by 0.05 per repeat — the reservation had been reserving for
+  a dot LilyPond does not draw. Eleven snapshots re-based; 132 of 685 books move, all of
+  them by that shift and the radius.
+- **And they sit where LilyPond's search puts them, which depends on how many staff lines
+  there are.** LilyPond looks for the first space wide enough to hold a dot and a staff
+  line, folding the staff about its centre; Lily# used one number, 0.5, which is that
+  search's answer for five lines and for three and wrong for the rest. Measured on 2.26.0,
+  one staff per line count: 1 line → 0.45, 2 → 0.95, 3 → 0.5, 4 → 1.0, 5 → 0.5, and a band
+  with no staff lines at all (a lead-sheet row) → 0.45. A one-line rhythm staff
+  (`staff comp as lines 1`) is the case that gets written, and 0.5 put its dots nearly on
+  the single line the search exists to keep them off.
+
 ## 0.4.0
 
 The first release installable from the VS Code Marketplace (`yotsuda.lilysharp`);

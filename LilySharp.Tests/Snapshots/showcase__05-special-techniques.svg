@@ -195,9 +195,9 @@
   <line x1="54.49" y1="18.81" x2="56.97" y2="18.81" stroke="#000000" stroke-width="0.160" data-pos="550"/>
   <line x1="56.97" y1="18.81" x2="56.97" y2="19.51" stroke="#000000" stroke-width="0.160" data-pos="550"/>
   <text x="53.49" y="18.81" font-size="1.75" font-style="italic" text-anchor="middle" dominant-baseline="central" data-pos="550">3</text>
-  <line x1="73.36" y1="23.21" x2="75.36" y2="21.21" stroke="#000000" stroke-width="0.480" data-pos="627"/>
-  <circle cx="73.86" cy="21.71" r="0.25" data-pos="627"/>
-  <circle cx="74.86" cy="22.71" r="0.25" data-pos="627"/>
+  <polygon points="73.02,23.21 73.70,23.21 75.70,21.21 75.02,21.21" data-pos="627"/>
+  <circle cx="73.54" cy="21.71" r="0.23" data-pos="627"/>
+  <circle cx="75.17" cy="22.71" r="0.23" data-pos="627"/>
   <text class="music" x="4.88" y="18.84" font-size="3.56" data-pos="159"></text>
   <line x1="5.99" y1="18.68" x2="5.99" y2="16.17" stroke="#000000" stroke-width="0.116" data-pos="159"/>
   <text x="6.66" y="19.33" font-size="2.20" data-pos="159">= 120</text>

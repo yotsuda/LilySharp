@@ -227,9 +227,8 @@ let applyingFix = false;
  * the innermost `{ … }` block, so an auto-placed ')' never leaves the part (or
  * voice) the '(' was typed in, let alone its section. Unlike chords, a slur DOES
  * cross barlines, so measure bounds are not used. A '(' glued to a name is an
- * annotation's argument list (`@finger(3)`) or a phrase reference's interval
- * (`Melody'(3)`), never a slur, and is left alone — as is one inside a string or
- * a comment.
+ * annotation's argument list (`@finger(3)`), never a slur, and is left alone — as is
+ * one inside a string or a comment.
  *
  * Deleting a lone '<' or '>' deliberately does NOT delete its partner: an
  * orphaned end is how a chord's RANGE is changed (delete the '>', retype it
@@ -818,21 +817,21 @@ function inStringOrComment(text: string, offset: number): boolean {
 }
 
 /** True when a '(' typed at `offset` opens a SLUR. A '(' GLUED to a name is an
- * annotation's argument list (`@finger(3)`) or a phrase reference's diatonic
- * interval (`Melody'(3)`); one after whitespace, a barline, a note or a chord's
- * '>' is a slur — the same adjacency rule the parser uses. */
+ * annotation's argument list (`@finger(3)`); everything else is a slur — the same
+ * adjacency rule the parser uses.
+ *
+ * ⚠️ A GLUED '(' AFTER A PHRASE REFERENCE IS A SLUR NOW. It used to be that reference's
+ * diatonic interval argument (`Melody'(3)`), so this returned false for a name that was
+ * not a note event in full — which suppressed the auto-close after `Melody'(`. The
+ * spelling was removed 2026-08-28 and the parser reads that '(' as a slur, so the editor
+ * has to as well or it silently stops closing a slur the compiler is expecting. */
 function isSlurOpen(text: string, offset: number): boolean {
     const prev = text[offset - 1];
     if (prev === undefined || /\s/.test(prev) || prev === '|' || prev === '>') { return true; }
     let j = offset - 1;
     while (j >= 0 && /[A-Za-z0-9'.,_-]/.test(text[j])) { j--; }
     if (text[j] === '@') { return false; }  // @annotation(args)
-    if (text[j] === '>') { return true; }   // a chord's duration: <c e>4(
-    // The glued token must be a note in FULL — `c4`, `ees'2.`, `r8` — so a
-    // phrase name that merely opens like one (`bass'`) is not mistaken for one.
-    const token = text.slice(j + 1, offset);
-    const m = NOTE_EVENT.exec(token);
-    return m !== null && m[0].length === token.length;
+    return true;                            // a note (`c4(`), a chord's `>4(`, a phrase ref
 }
 
 /** The note a typed '(' attaches to: the one the caret is ON, wherever in it the
