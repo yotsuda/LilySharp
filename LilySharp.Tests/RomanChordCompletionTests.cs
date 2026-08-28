@@ -91,6 +91,50 @@ public class RomanChordCompletionTests
         Assert.DoesNotContain("IIm", labels);
     }
 
+    /// <summary>
+    /// The two vocabularies are offered as two BLOCKS — every absolute name, then every
+    /// degree — not interleaved degree by degree.
+    /// </summary>
+    /// <remarks>
+    /// Owner's decision, 2026-08-28. The list used to be grouped by harmonic function, so
+    /// it read "C, Cmaj7, Csus4, Csus2, I, Imaj7, Dm, Dm7, …" and neither vocabulary could
+    /// be scanned on its own. ⚠️ BOTH ORDERS ARE ASSERTED because a client may use either:
+    /// VS Code sorts by <c>sortText</c>, and a client that ignores it takes the list as
+    /// emitted — this pins that the two agree, which is the only reason the builder makes
+    /// two passes instead of one.
+    /// </remarks>
+    [Fact]
+    public void TheNamesComeFirst_ThenTheDegrees()
+    {
+        string text = DocIn("c major", "");
+        var items = LilySharpLanguageServer
+            .GetDiatonicChordCompletions(text, text.Length, degreesToo: true).Items;
+
+        var emitted = items.Select(i => i.Label!).ToArray();
+        var sorted = items.OrderBy(i => i.SortText, System.StringComparer.Ordinal)
+            .Select(i => i.Label!).ToArray();
+        Assert.Equal(emitted, sorted);
+
+        // In C major every name starts on a letter (C, Dm, Bdim, Cmaj7 …) and every degree
+        // on a numeral (I, IIm, VIIdim …), so the split needs no vocabulary lookup.
+        static bool IsDegree(string label) => label[0] is 'I' or 'V';
+        int lastName = System.Array.FindLastIndex(sorted, l => !IsDegree(l));
+        int firstDegree = System.Array.FindIndex(sorted, IsDegree);
+        Assert.True(firstDegree > lastName,
+            "names and degrees interleave: " + string.Join(" ", sorted));
+
+        // …and inside each block the roots still run in scale order.
+        Assert.Equal(new[] { "C", "Dm", "Em", "F", "G", "Am", "Bdim" },
+            sorted.Where(DiatonicTriads.Contains).ToArray());
+        Assert.Equal(new[] { "I", "IIm", "IIIm", "IV", "V", "VIm", "VIIdim" },
+            sorted.Where(DegreeTriads.Contains).ToArray());
+    }
+
+    private static readonly string[] DiatonicTriads =
+        { "C", "Dm", "Em", "F", "G", "Am", "Bdim" };
+
+    private static readonly string[] DegreeTriads =
+        { "I", "IIm", "IIIm", "IV", "V", "VIm", "VIIdim" };
     [Fact]
     public void TheAbsoluteSymbolsAreStillOffered()
     {

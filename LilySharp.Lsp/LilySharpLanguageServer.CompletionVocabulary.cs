@@ -2307,47 +2307,56 @@ public sealed partial class LilySharpLanguageServer
             sharps = KeySpelling.SharpsFor(last.Groups[1].Value, last.Groups[2].Value) ?? 0;
         }
 
-        // Each diatonic degree offers its triad, seventh, and suspended chords —
-        // sorted in scale order (degree), then triad < 7th < sus4 < sus2 per root.
-        // The SYMBOL is both the label and the insert (GRAMMAR_AUDIT 8.1: the
-        // entry is the printed form — "Dm7" — for @chord and chords{} alike).
-        static CompletionItem Item(string symbol, string detail, int degree, int rank) => new()
+        // Each diatonic degree offers its triad, seventh, and suspended chords — the NAMES
+        // first, all seven degrees of them, and then the DEGREES, all seven of those: within
+        // each of the two blocks the order is scale order (degree), then
+        // triad < 7th < sus4 < sus2 per root. The SYMBOL is both the label and the insert
+        // (GRAMMAR_AUDIT 8.1: the entry is the printed form — "Dm7" — for @chord and
+        // chords{} alike).
+        // ⚠️ IT WAS GROUPED BY DEGREE UNTIL 2026-08-28, with each degree's four name forms
+        // and its two degree forms sitting together under it — the reasoning being that the
+        // writer chooses a harmonic function first and a spelling second. The owner asked
+        // for the two spellings to be separated instead: the list read "C, Cmaj7, Csus4,
+        // Csus2, I, Imaj7, Dm, …", so the two vocabularies interleaved all the way down and
+        // neither could be scanned on its own. It now reads C D E F G A B … then I II III …
+        // ⚠️ THE GROUP IS THE SORT KEY'S FIRST DIGIT AND THE EMIT ORDER MATCHES IT. A client
+        // that honours sortText (VS Code does) needs only the key; one that falls back to
+        // list order gets the same answer, which is why the two passes below are not one.
+        const int NameGroup = 0;
+        const int DegreeGroup = 1;
+        static CompletionItem Item(string symbol, string detail, int group, int degree, int rank) => new()
         {
             Label = symbol,
             InsertText = symbol,
             Kind = CompletionItemKind.Value,
             Detail = detail,
-            SortText = $"{degree:D2}{rank}",
+            SortText = $"{group}{degree:D2}{rank}",
         };
 
-        // Grouped by DEGREE, not by spelling: the writer is choosing a harmonic function
-        // first and how to spell it second, so a degree's four name forms and its two
-        // degree forms sit together under it.
-        var items = DiatonicChords.ForKey(tonic, sharps)
-            .SelectMany(c =>
+        var chords = DiatonicChords.ForKey(tonic, sharps).ToArray();
+        var items = new List<CompletionItem>();
+        foreach (var c in chords)
+        {
+            items.Add(Item(c.Symbol, $"Diatonic triad ({c.Roman})", NameGroup, c.Degree, 0));
+            items.Add(Item(c.SeventhSymbol, "Diatonic 7th", NameGroup, c.Degree, 1));
+            items.Add(Item(c.SusFourthSymbol, "Suspended 4th", NameGroup, c.Degree, 2));
+            items.Add(Item(c.SusSecondSymbol, "Suspended 2nd", NameGroup, c.Degree, 3));
+        }
+        if (degreesToo)
+        {
+            foreach (var c in chords)
             {
-                var forDegree = new List<CompletionItem>
-                {
-                    Item(c.Symbol, $"Diatonic triad ({c.Roman})", c.Degree, 0),
-                    Item(c.SeventhSymbol, "Diatonic 7th", c.Degree, 1),
-                    Item(c.SusFourthSymbol, "Suspended 4th", c.Degree, 2),
-                    Item(c.SusSecondSymbol, "Suspended 2nd", c.Degree, 3),
-                };
-                if (degreesToo)
-                {
-                    // Only the SCALE's chords are offered as degrees, so no entry here ever
-                    // needs an accidental prefix and every one of them resolves to the
-                    // absolute symbol printed beside it. A chromatic degree (bVII, #IVm7-5)
-                    // is writable but is not a completion: it is not in this key.
-                    forDegree.Add(Item(c.RomanSymbol,
-                        $"Degree of the key — {c.Symbol}", c.Degree, 4));
-                    forDegree.Add(Item(c.RomanSeventhSymbol,
-                        $"Degree 7th — {c.SeventhSymbol}", c.Degree, 5));
-                }
-                return forDegree;
-            })
-            .ToArray();
-        return new CompletionList { Items = items };
+                // Only the SCALE's chords are offered as degrees, so no entry here ever
+                // needs an accidental prefix and every one of them resolves to the absolute
+                // symbol printed beside it. A chromatic degree (bVII, #IVm7-5) is writable
+                // but is not a completion: it is not in this key.
+                items.Add(Item(c.RomanSymbol,
+                    $"Degree of the key — {c.Symbol}", DegreeGroup, c.Degree, 0));
+                items.Add(Item(c.RomanSeventhSymbol,
+                    $"Degree 7th — {c.SeventhSymbol}", DegreeGroup, c.Degree, 1));
+            }
+        }
+        return new CompletionList { Items = items.ToArray() };
     }
 
     /// <summary>

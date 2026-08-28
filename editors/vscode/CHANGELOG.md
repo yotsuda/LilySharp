@@ -6,6 +6,15 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Fixed
 
+- **Clicking the clef or the key signature in the preview jumps to its source line from any staff line, not just the top one.** The prefix repeats at the head of every system, but only the first system's copy was clickable; the rest were inert. Each repeat now carries the position of whatever put it in force there — the declaration, or the last mid-piece `clef`/`key` change before that system, so a line showing a change jumps to the change.
+
+- **The chord completion inside `chords { }` lists the names first and the degrees after,**
+  instead of interleaving them degree by degree. It used to read
+  `C, Cmaj7, Csus4, Csus2, I, Imaj7, Dm, …` — grouped by harmonic function — so neither
+  vocabulary could be scanned on its own. It now reads all seven names (`C Dm Em F G Am
+  Bdim`, each with its 7th and suspensions) and then all seven degrees (`I IIm IIIm IV V
+  VIm VIIdim`, each with its 7th).
+
 - **"Reveal in Explorer" after an export opens the file's own folder again when the path
   contains a space.** It used to land on the user's Documents folder instead — the
   "sometimes" in the report was exactly "when the path has a space in it".

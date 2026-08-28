@@ -553,7 +553,7 @@ internal static partial class SharedRenderer
                 // LILYPOND-REF: lily/break-align-engraver.cc — Clef + KeySignature
                 // are break-aligned at every line start; TimeSignature is not.
                 double prefixEndX = systemStartX;
-                var clef = ResolveClef(staff, system);
+                var clef = ResolveClef(staff, system, out int clefPos);
                 // Ossia prefix, per the LP ossia conventions (NR "Ossia staves"):
                 // no time signature at all (\remove Time_signature_engraver), no
                 // clef on the ossia's FIRST appearance (firstClef = ##f —
@@ -567,16 +567,20 @@ internal static partial class SharedRenderer
                     || (ossiaAtSystemStart && OssiaAppearedBefore(layout, staff, system, globalIdx));
                 if (drawClef)
                 {
-                    // Tag the clef with its declaration for click-to-jump, on the first
-                    // line: there it IS the declared clef (later lines may show a
-                    // mid-piece change, which owns its own position).
+                    // Tag the clef with the declaration that put it in force HERE, on every
+                    // line — ResolveClef answers that: the staff's own `clef`, or the last
+                    // mid-piece change before this system.
                     // Read from the STAFF, which carries the offset of the `clef` that set
                     // it. It used to be the score-level Header.Clef, and a multi-staff
                     // score had to be excluded outright — one offset cannot stand for
                     // several staves' own declarations — so every clef but a solo score's
                     // went untagged. A staff that inherited a default carries 0 and is
                     // still drawn untagged.
-                    int clefPos = isFirstSystem ? staff.ClefPosition : 0;
+                    // ⚠️ IT USED TO BE `isFirstSystem ? … : 0`, which left the clef and key
+                    // of every later system unclickable (reported 2026-08-28 against a
+                    // three-system preview: only the top line jumped). The worry behind that
+                    // guard — that a later line shows a CHANGE, not the declaration — is
+                    // answered by resolving rather than by dropping the tag.
                     using (SourceScope(sgc, clefPos))
                         prefixEndX = DrawClef(clef, systemStartX, localStaffY, maxClefWidth,
                             clefGroupInkLeft, sgc);
@@ -588,11 +592,11 @@ internal static partial class SharedRenderer
                 bool keyDrawn = false;
                 if (ossiaAtSystemStart)
                 {
-                    var activeKey = ResolveKeySignature(staff, system, score);
-                    // Tag the key sig with its declaration on the first line only — there
-                    // it IS the declared key; later lines may show a mid-piece change,
-                    // which carries its own position via its measure item.
-                    int keySigPos = isFirstSystem ? score.Header.Key : 0;
+                    // Tag the key sig with the declaration that put it in force HERE, on
+                    // every line — the score's `key`, or the last mid-piece change before
+                    // this system, whichever this line is actually printing. See the clef's
+                    // remark above for the guard this replaces.
+                    var activeKey = ResolveKeySignature(staff, system, score, out int keySigPos);
                     if (GetSystemStartKeyChange(staff, system) is { } startKeyChange)
                     {
                         // A key change at the line break: the new line opens

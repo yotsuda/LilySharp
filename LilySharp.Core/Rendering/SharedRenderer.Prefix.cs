@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -43,24 +43,54 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/clef-engraver.cc — clef at system start reflects last clef change.
     /// </remarks>
     private static ClefType ResolveClef(Staff staff, SystemLayout system)
+        => ResolveClef(staff, system, out _);
+
+    /// <inheritdoc cref="ResolveClef(Staff, SystemLayout)"/>
+    /// <param name="sourcePosition">Where the clef this system prints was WRITTEN: the staff's
+    /// own <c>clef</c> declaration, or the last mid-piece change before this system if there
+    /// is one. 0 when the staff inherited a default and nothing declared it.</param>
+    /// <remarks>
+    /// ⚠️ THE POSITION IS NOT "THE DECLARATION, ON LINE ONE". The clef repeats at the head of
+    /// EVERY system, and until 2026-08-28 only the first system's carried a source offset — so
+    /// clicking the clef, or the key signature beside it, on the second and third systems of a
+    /// preview did nothing at all (reported against a three-system lead sheet). The stated
+    /// reason for tagging only line one was that a later line may be showing a mid-piece
+    /// CHANGE rather than the declaration; that is true, and it is exactly what this walk
+    /// answers — whatever put this clef in force HERE is what the click should reach.
+    /// </remarks>
+    private static ClefType ResolveClef(Staff staff, SystemLayout system, out int sourcePosition)
     {
         if (system.Measures.IsDefaultOrEmpty || system.Measures.Length == 0)
+        {
+            sourcePosition = staff.ClefPosition;
             return staff.Clef;
-        return ResolveClefAt(staff, system.Measures[0].MeasureIndex);
+        }
+        return ResolveClefAt(staff, system.Measures[0].MeasureIndex, out sourcePosition);
     }
 
     /// <summary>
     /// The clef in effect at the head of a system whose first measure is
-    /// <paramref name="firstMeasureIndex"/> — the index form of <see cref="ResolveClef"/>, for
+    /// <paramref name="firstMeasureIndex"/> — the index form of
+    /// <see cref="ResolveClef(Staff, SystemLayout)"/>, for
     /// the layouter, which has no <c>SystemLayout</c> yet while it is computing one. ONE walk:
     /// the end-of-line courtesy key reservation (SpacingRules.KeyCourtesySuffixWidthForStaff)
     /// must read the SAME clef the draw passes to KeyChangeGeometry, or the reserved and drawn
     /// cancellation kerns diverge by clef.
     /// </summary>
     internal static ClefType ResolveClefAt(Staff staff, int firstMeasureIndex)
+        => ResolveClefAt(staff, firstMeasureIndex, out _);
+
+    /// <inheritdoc cref="ResolveClefAt(Staff, int)"/>
+    /// <param name="sourcePosition">Where the resolved clef was WRITTEN — see
+    /// <see cref="ResolveClef(Staff, SystemLayout, out int)"/> for why every system gets one
+    /// and not just the first.</param>
+    internal static ClefType ResolveClefAt(Staff staff, int firstMeasureIndex, out int sourcePosition)
     {
         var voice = staff.PrimaryVoice;
         var activeClef = staff.Clef;
+        // The staff's own `clef` declaration until a change overrides it; 0 when the staff
+        // inherited a default, which leaves the drawn clef untagged exactly as before.
+        sourcePosition = staff.ClefPosition;
 
         // Apply clef changes accumulated in earlier measures.
         for (int m = 0; m < firstMeasureIndex && m < voice.Measures.Length; m++)
@@ -68,7 +98,10 @@ internal static partial class SharedRenderer
             foreach (var item in voice.Measures[m].Items)
             {
                 if (item is ClefChangeItem cc)
+                {
                     activeClef = cc.NewClef;
+                    sourcePosition = cc.SourcePosition;
+                }
             }
         }
 
@@ -79,7 +112,10 @@ internal static partial class SharedRenderer
             foreach (var item in voice.Measures[firstMeasureIndex].Items)
             {
                 if (item is ClefChangeItem cc)
+                {
                     activeClef = cc.NewClef;
+                    sourcePosition = cc.SourcePosition;
+                }
                 else if (item.Duration > Fraction.Zero)
                     break;
             }
@@ -99,10 +135,24 @@ internal static partial class SharedRenderer
     /// every line start, showing the meter in force at that point.
     /// </remarks>
     private static KeySignature ResolveKeySignature(Staff staff, SystemLayout system, MultiStaffScore score)
+        => ResolveKeySignature(staff, system, score, out _);
+
+    /// <inheritdoc cref="ResolveKeySignature(Staff, SystemLayout, MultiStaffScore)"/>
+    /// <param name="sourcePosition">Where the key this system prints was WRITTEN: the score's
+    /// <c>key</c> declaration, or the last mid-piece change before this system if there is one
+    /// — the same question <see cref="ResolveClef(Staff, SystemLayout, out int)"/> answers for
+    /// the clef, and for the same reason.</param>
+    private static KeySignature ResolveKeySignature(
+        Staff staff, SystemLayout system, MultiStaffScore score, out int sourcePosition)
     {
         // A transposed part in a multi-staff score carries its own key; concert
         // staves fall back to the score key.
         var initialKey = staff.PerStaffKeySignature ?? score.KeySignature;
+        // ⚠️ The SCORE-LEVEL declaration even for a per-staff key: a transposed part's own key
+        // carries no offset of its own (Staff has no counterpart to ClefPosition), so a click
+        // there reaches the `key` the score wrote. That is the offset the first system has
+        // always used, and using it on every system does not make it worse.
+        sourcePosition = score.Header.Key;
 
         if (system.Measures.IsDefaultOrEmpty || system.Measures.Length == 0)
             return initialKey;
@@ -119,7 +169,10 @@ internal static partial class SharedRenderer
             foreach (var item in voice.Measures[m].Items)
             {
                 if (item is KeySignatureChangeItem kc)
+                {
                     activeKey = kc.NewKey;
+                    sourcePosition = kc.SourcePosition;
+                }
             }
         }
 
@@ -266,7 +319,7 @@ internal static partial class SharedRenderer
     }
 
     /// <summary>True when a clef change is a LEADING change (before the first sounding
-    /// item) in a system's first measure. <see cref="ResolveClef"/> folds such a change
+    /// item) in a system's first measure. <c>ResolveClef</c> folds such a change
     /// into the system-start clef, so drawing it again as a mid-measure change would
     /// double-print it. Unlike the key-signature analog this also applies to the first
     /// system, because a moment-0 clef IS the opening clef there.</summary>
