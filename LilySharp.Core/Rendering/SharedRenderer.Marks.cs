@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -796,7 +796,7 @@ internal static partial class SharedRenderer
         in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.TextSpannerLayouts.IsDefaultOrEmpty) return;
-        double textSize = FontSize * 0.5;
+        double textSize = LilySharp.Core.Svg.Layout.TextSpannerEngraver.TextFontSize;
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var s in layout.TextSpannerLayouts)
         {

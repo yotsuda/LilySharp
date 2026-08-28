@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Rendering;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -128,6 +129,15 @@ internal static class TextSpannerEngraver
     /// Text ascent above baseline for text spanner text (italic serif, font-size 2.0).
     /// </summary>
     private const double TextAscent = 1.0;
+
+    /// <summary>
+    /// The size the spanner's "rit."/"accel." is SET IN — one home for a number that had
+    /// three spellings (the draw's <c>FontSize * 0.5</c>, and a bare <c>4.0 * 0.5</c> in
+    /// both the collision pass and the paging silhouette). It has to be the drawn size
+    /// wherever it is read: every consumer measures this text's INK, and an ink measured at
+    /// another size reserves a band the page does not draw.
+    /// </summary>
+    internal const double TextFontSize = 4.0 * 0.5;
 
     /// <summary>
     /// Vertical padding between outside-staff layers.
@@ -393,5 +403,120 @@ internal static class TextSpannerEngraver
         }
 
         return spanners.ToImmutable();
+    }
+
+    /// <summary>
+    /// THIS STAFF'S accel./rit. SPANNERS AS INK ABOVE THE STAFF, in the staff-local frame
+    /// the per-staff skyline is built in (origin = the staff's TOP LINE, up-positive) — so
+    /// that a LINE STANDING ABOVE the staff makes room for them.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:860-985 skyline_spacing — an outside-staff
+    /// grob is placed and then LEFT IN its VerticalAxisGroup's skyline, which is the profile
+    /// lily/align-interface.cc:217-268 walks and lily/page-layout-problem.cc:948-990
+    /// distributes the loose lines (ChordNames, Lyrics) against. Lily# placed the spanner in
+    /// the collision pass (<c>OutsideStaffStacker.PlaceTextSpanners</c>) and then spaced the
+    /// row above against a staff silhouette the spanner was not in, so the two never met:
+    /// `@rit` printed THROUGH the chord row and through the lyric row above its staff
+    /// (reported 2026-08-28 against Untitled-6.lys). Books TSU/TSY in
+    /// probes/textspanner-under-row.ly measure LilyPond's answer: the row above rises by
+    /// 2.370858871 = the spanner's ink top over the staff's own, exactly.
+    /// <para>
+    /// ⚠️ THE TWO TERMS ARE THE ONES <c>OutsideStaffStacker.PlaceTextSpanners</c> USES, spelt here
+    /// because this pass runs BEFORE the systems exist and the stacker's answer is not
+    /// available yet — the same reason <c>StaffTupletBracketLayouts</c> re-runs its engraver
+    /// staff-locally. They are: aligned_side's staff-padding FLOOR
+    /// (<c>StaffLineThickness/2 + 0.8</c> over the top line), and the collision pass's
+    /// outside-staff-padding 0.46 over whatever this staff's profile already holds.
+    /// ⚠️ WHAT THIS DOES NOT SEE, named rather than hidden: a mover the STACKER adds after
+    /// the dynamics — an inline `@chord` seed, a volta — can lift the DRAWN spanner above
+    /// the band reserved here, and the row would then be spaced for the lower one. The
+    /// observers are the ledger's textspanner.chord-row.* / textspanner.lyric-row.* pairs;
+    /// a book that puts a rit. under a row AND an inline chord symbol on the same staff is
+    /// the one to cut when that configuration acquires a reader.
+    /// </para>
+    /// </remarks>
+    internal static VerticalSkyline InkAboveStaff(
+        ScoreTextMetrics fonts,
+        ImmutableArray<TextSpannerItem> spanners,
+        ImmutableArray<MeasureLayout> measureLayouts,
+        VerticalSkyline accumulatedUp)
+    {
+        var ink = new VerticalSkyline(VerticalDirection.Up);
+        if (spanners.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
+            return ink;
+
+        // The measures of THIS system — the array the caller hands down is one system's,
+        // and a spanner reaching past either end is a broken piece whose visible part is
+        // clamped to it (the same shape SpannerBreakSubstitution.BrokenPieces gives the
+        // drawn pass, decided here by measure INDEX because this array is not indexed by it).
+        int firstMeasure = measureLayouts[0].MeasureIndex;
+        int lastMeasure = measureLayouts[^1].MeasureIndex;
+        double lineHalf = EngravingDefaults.StaffLineThickness / 2.0;
+
+        foreach (var spanner in spanners)
+        {
+            if (spanner.EndMeasureIndex < firstMeasure || spanner.StartMeasureIndex > lastMeasure)
+                continue;
+
+            bool startsHere = spanner.StartMeasureIndex >= firstMeasure;
+            bool endsHere = spanner.EndMeasureIndex <= lastMeasure;
+            var startLayout = startsHere
+                ? FindMeasure(measureLayouts, spanner.StartMeasureIndex)
+                : measureLayouts[0];
+            var endLayout = endsHere
+                ? FindMeasure(measureLayouts, spanner.EndMeasureIndex)
+                : measureLayouts[^1];
+            if (startLayout is null || endLayout is null)
+                continue;
+
+            double startX = startsHere && spanner.StartItemIndex < startLayout.Items.Length
+                ? startLayout.X + startLayout.Items[spanner.StartItemIndex].X
+                : startLayout.X + BoundPadding;
+            double endX = endsHere && spanner.EndItemIndex < endLayout.Items.Length
+                ? endLayout.X + endLayout.Items[spanner.EndItemIndex].X - BoundPadding
+                : endLayout.X + endLayout.Width - BoundPadding;
+            if (endX <= startX)
+                continue;
+
+            // Only the FIRST piece carries the text; a continuation draws the rule alone
+            // (PlaceTextSpanners reads the same rule off segment.IsFirst).
+            string text = startsHere ? spanner.Text : "";
+            double top = lineHalf, bottom = lineHalf;
+            if (!string.IsNullOrEmpty(text))
+            {
+                var textInk = fonts.Ink(text, TextFontSize, TextRole.Text, FontStyle.Italic);
+                top = Math.Max(top, textInk.Top);
+                bottom = Math.Max(bottom, -textInk.Bottom);
+            }
+
+            double y = Math.Max(
+                lineHalf + StaffPadding,
+                accumulatedUp.MaxProtrusionInRange(startX, endX)
+                    + OutsideStaffStacker.OutsideStaffPadding + bottom);
+
+            // The DRAWN shape, not a flat band over the span: the rule is lineHalf thick
+            // everywhere and the text stands only where the text is, which is what a row
+            // whose symbols sit past the label has to clear (LilyPond reads the stencil's
+            // own outline).
+            ink.Merge(VerticalSkyline.FromBox(
+                startX, endX, y - lineHalf, y + lineHalf, VerticalDirection.Up));
+            if (!string.IsNullOrEmpty(text))
+                ink.Merge(VerticalSkyline.FromBox(
+                    startX, Math.Min(startX + text.Length * CharWidth + TextLinePadding, endX),
+                    y - bottom, y + top, VerticalDirection.Up));
+        }
+
+        return ink;
+    }
+
+    /// <summary>The layout of one measure of this system, by its score-wide index.</summary>
+    private static MeasureLayout? FindMeasure(
+        ImmutableArray<MeasureLayout> measureLayouts, int measureIndex)
+    {
+        foreach (var m in measureLayouts)
+            if (m.MeasureIndex == measureIndex)
+                return m;
+        return null;
     }
 }

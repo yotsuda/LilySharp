@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -126,12 +126,22 @@ internal static partial class SharedRenderer
                     DrawGuitarBend(a.X, y, semis, gc);
                 continue;
             }
-            // TAB technique letters (H / P / T): small italic serif text.
+            // TAB technique letters (H / P / T, and the pluck letters): small italic
+            // serif text, drawn with its BASELINE on the layout's anchor.
+            // ⚠️ THE SIZE AND STYLE COME FROM THE LAYOUT'S OWN HOME, not from literals
+            // here. They used to be a bare `1.5` and `FontStyle.Italic` on this line while
+            // ArticulationEngraver reserved a symmetric half-space box that knew nothing
+            // about either — so the reservation was not the ink, and a letter placed BELOW
+            // a note was drawn 0.383 ss into the notehead (2026-08-28). One home means the
+            // box the layout reserved IS what this line draws.
             if (a.Glyph.StartsWith("tabtech:", StringComparison.Ordinal))
             {
                 using (gc.Source(a.SourcePosition))
-                    gc.DrawText(a.Glyph[8..], a.X, y, 1.5, TextRole.TabTechnique,
-                        FontStyle.Italic, TextAnchor.Middle, Color.Black);
+                    gc.DrawText(a.Glyph[8..], a.X, y,
+                        LilySharp.Core.Svg.Layout.ArticulationEngraver.TabTechniqueFontSize,
+                        TextRole.TabTechnique,
+                        LilySharp.Core.Svg.Layout.ArticulationEngraver.TabTechniqueFontStyle,
+                        TextAnchor.Middle, Color.Black);
                 continue;
             }
             // Chord diagram sentinel ("frame:x32010").

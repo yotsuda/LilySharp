@@ -1,0 +1,23 @@
+// TAB technique letters on a notation staff and on a tab staff: @tap (T),
+// @hammeron (H), @pulloff (P) and @pluck's finger letter. THE FIRST BOOK IN THE
+// TREE THAT DRAWS ANY OF THEM — on 2026-08-28 not one of the 572 tracked .lys
+// wrote one, which is why a letter drawn 0.383 ss INTO its notehead survived
+// (reported that day). The low notes are the point: they take the letter BELOW,
+// which is the side where the ink grows toward the head.
+// See TabTechniqueLetterTests for the identity these letters are held to.
+octave absolute
+title "TAB technique letters"
+time 4/4
+part gtr { clef treble }
+section S {
+  gtr {
+    c4@tap e@tap g@tap b@hammeron |
+    c'4@tap e'@pulloff g'@tap b'@hammeron |
+    e4@pluck(p) a@pluck(i) b@pluck(m) e'@pluck(a) |
+  }
+}
+form main { ~S }
+score main "tab-technique-letters" {
+  staff gtr
+  tab gtr
+}

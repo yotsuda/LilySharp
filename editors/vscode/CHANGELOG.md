@@ -6,6 +6,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Fixed
 
+- **A TAB technique letter no longer prints on top of its own notehead.** `@tap` (T), `@hammeron` (H), `@pulloff` (P) and `@pluck`'s finger letter reserved a symmetric box around their anchor while the letter was actually drawn with its baseline there, so wherever one landed BELOW its note its ink grew upward into the head — 0.383 staff spaces of overlap. The room reserved is now the letter's own ink, measured the way it is drawn, which also gets `@pluck`'s descender (`p`) right.
+
+- **An `@rit` / `@accel` no longer prints on top of the chord row or the lyric row above its staff.** The spanner was placed so that it cleared its own staff, but the row standing above the staff was spaced against a silhouette the spanner was not in, so on a lead sheet the two landed on the same line. The staff now reserves the room the spanner occupies — measured against LilyPond, which opens the gap by exactly the spanner's ink (probe `textspanner-under-row.ly`, books TSCR/TSLR).
+
 - **Clicking the clef or the key signature in the preview jumps to its source line from any staff line, not just the top one.** The prefix repeats at the head of every system, but only the first system's copy was clickable; the rest were inert. Each repeat now carries the position of whatever put it in force there — the declaration, or the last mid-piece `clef`/`key` change before that system, so a line showing a change jumps to the change.
 
 - **The chord completion inside `chords { }` lists the names first and the degrees after,**

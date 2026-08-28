@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -80,7 +80,7 @@ internal static class OutsideStaffStacker
 
     // LILYPOND-REF: scm/define-grobs.scm outside-staff-padding = 0.46 — governs stacking a
     // grob against OTHER outside-staff grobs.
-    private const double OutsideStaffPadding = 0.46;
+    internal const double OutsideStaffPadding = 0.46;
 
     // LILYPOND-REF: scm/define-grobs.scm:3806 TextScript outside-staff-horizontal-padding
     // = 0.2 — the same 0.2 is declared by the mark family (RehearsalMark:2887,
@@ -2067,7 +2067,8 @@ internal static class OutsideStaffStacker
             double top = lineHalf, bottom = lineHalf;
             if (!string.IsNullOrEmpty(ts.Text))
             {
-                var ink = fonts.Ink(ts.Text, 4.0 * 0.5, TextRole.Text, FontStyle.Italic);
+                var ink = fonts.Ink(
+                    ts.Text, TextSpannerEngraver.TextFontSize, TextRole.Text, FontStyle.Italic);
                 top = Math.Max(top, ink.Top);
                 bottom = Math.Max(bottom, -ink.Bottom);
             }

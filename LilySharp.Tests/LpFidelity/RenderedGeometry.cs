@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -191,9 +191,17 @@ internal sealed class RenderedGeometry
     /// the 5 + 6 this reading is about". Grouping by Y first and measuring the union's reach
     /// asks the question the guard means: how far does this line get across the system.
     /// </remarks>
+    /// <remarks>
+    /// ⚠️ AND A DASHED RULE IS NEVER A STAFF LINE (2026-08-28). An accel./rit. spanner's
+    /// rule is drawn at exactly <see cref="StaffLineThickness"/> and reaches across the
+    /// system, so thickness and span BOTH admit it: books TSCR/TSLR put one over a staff and
+    /// every reading on the page threw "found 6 staff lines". The dash is the only thing
+    /// that tells them apart, which is why <see cref="DrawnLine"/> now carries it.
+    /// </remarks>
     private List<double> StaffLineYs(int page) =>
         _pages[page].Lines
             .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
+                        && !l.IsDashed
                         && Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9)
             .GroupBy(l => Math.Round(l.Y1, 9))
             .Where(g => g.Max(l => Math.Max(l.X1, l.X2)) - g.Min(l => Math.Min(l.X1, l.X2))
@@ -321,6 +329,7 @@ internal sealed class RenderedGeometry
         double upperThickness = StaffLineThickness * upperScale;
         var ys = _pages[page].Lines
             .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
+                        && !l.IsDashed
                         && (Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9
                             || Math.Abs(l.StrokeWidth - upperThickness) < 1e-9)
                         && Math.Abs(l.X2 - l.X1) >= MinStaffLineSpan)
@@ -385,6 +394,7 @@ internal sealed class RenderedGeometry
         double upperThickness = StaffLineThickness * upperScale;
         var ys = _pages[page].Lines
             .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
+                        && !l.IsDashed
                         && (Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9
                             || Math.Abs(l.StrokeWidth - upperThickness) < 1e-9)
                         && Math.Abs(l.X2 - l.X1) >= MinStaffLineSpan)

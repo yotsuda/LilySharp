@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -484,7 +484,8 @@ internal sealed partial class LayoutEngine
             if (!string.IsNullOrEmpty(sp.Text))
             {
                 var ink = fonts.Ink(
-                    sp.Text, 4.0 * 0.5, TextRole.Text, Rendering.FontStyle.Italic);
+                    sp.Text, TextSpannerEngraver.TextFontSize, TextRole.Text,
+                    Rendering.FontStyle.Italic);
                 spTop = Math.Max(spTop, ink.Top);
                 spBottom = Math.Max(spBottom, -ink.Bottom);
             }

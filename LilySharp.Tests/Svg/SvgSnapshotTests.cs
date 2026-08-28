@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -696,6 +696,13 @@ public class SvgSnapshotTests
         // change to the page constants moves every gap on every page and every other
         // snapshot stays green. See the header of the .lys for why three and not two.
         yield return new object[] { "test/multi-page-vertical" };
+        // The TAB technique letters — @tap (T), @hammeron (H), @pulloff (P) and
+        // @pluck's finger letter — on both a notation staff and a tab staff, with the
+        // LOW notes that take the letter BELOW its note. ⚠️ ON 2026-08-28 NOT ONE OF THE
+        // 572 TRACKED BOOKS DREW ANY OF THEM, which is why a letter drawn 0.383 ss into
+        // its own notehead survived until the owner reported it — the sweep, the
+        // snapshots and the ledger were all blind at once. See TabTechniqueLetterTests.
+        yield return new object[] { "test/tab-technique-letters" };
     }
 
     /// <summary>

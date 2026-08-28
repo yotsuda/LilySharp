@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -136,6 +136,8 @@ internal static class ScoreSideTables
         .ConditionalWeakTable<MultiStaffScore, IndexBuckets<TupletBracketItem>> _tupletsByScore = new();
     private static readonly System.Runtime.CompilerServices
         .ConditionalWeakTable<MultiStaffScore, IndexBuckets<ArticulationItem>> _articulationsByScore = new();
+    private static readonly System.Runtime.CompilerServices
+        .ConditionalWeakTable<MultiStaffScore, IndexBuckets<TextSpannerItem>> _textSpannersByScore = new();
 
     /// <summary>The score's dynamics bucketed by global staff index (memoized per score).</summary>
     internal static IndexBuckets<DynamicItem> DynamicsByStaff(MultiStaffScore score)
@@ -157,4 +159,23 @@ internal static class ScoreSideTables
             ? IndexBuckets<ArticulationItem>.Empty
             : _articulationsByScore.GetValue(score,
                 s => IndexBuckets<ArticulationItem>.Build(s.Articulations, a => a.StaffIndex));
+
+    /// <summary>
+    /// The score's accel./rit. SPANNERS — derived from the marks, not stored on the score —
+    /// bucketed by global staff index (memoized per score).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ DERIVED, WHICH IS WHY IT IS MEMOISED HERE RATHER THAN CALLED. The staff-skyline
+    /// pass runs once per (system, staff) and needs one staff's spanners on every one of
+    /// them; <c>TextSpannerEngraver.DetectTextSpanners</c> walks the WHOLE mark table and
+    /// allocates, and `MusicMarks` is not a rare property — a score with a hundred `@text`
+    /// annotations and no rit. at all would have paid that walk S×systems times on every
+    /// keystroke. Cut once per score, an empty answer costs one dictionary hit.
+    /// </remarks>
+    internal static IndexBuckets<TextSpannerItem> TextSpannersByStaff(MultiStaffScore score)
+        => score.MusicMarks.IsDefaultOrEmpty
+            ? IndexBuckets<TextSpannerItem>.Empty
+            : _textSpannersByScore.GetValue(score,
+                s => IndexBuckets<TextSpannerItem>.Build(
+                    TextSpannerEngraver.DetectTextSpanners(s.MusicMarks), t => t.StaffIndex));
 }

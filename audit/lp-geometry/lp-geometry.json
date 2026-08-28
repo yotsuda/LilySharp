@@ -3931,6 +3931,34 @@
       "residual": 0.0,
       "why": "OPENED 2026-07-29 (session 32), the control of the text-spanner pair: two octaves up (drawn c'''' on ledgers), the column decides. MEASURED (LilyPond): 8.555000 = head box top 8.045 + outside-staff-padding 0.46 + dash half-thickness 0.05 -- the avoid_outside_staff_collisions pass, which outbids aligned_side's padding-0 support hug (8.045 + 0 + 0.05); the 0.46 is paid pointwise against the note ink like every outside-staff grob pays it. Its job in the pair: the floor port must not move it (the floor loses here), and its residual prices Lily#'s remaining box terms by name. PREDICTION for Lily# (before its run, sign certain POSITIVE): the stacker already does box-top + 0.46 + descent, but its descent is the invented TextSpannerDescent 0.3 against LilyPond's 0.05 -- residual near +0.25. MEASURED (Lily#, before the port): 8.805000000 = +0.250000, the predicted single term to the digit (the support box tops and the 0.46 agree; the whole residual is the 0.3-vs-0.05 facing reach). PORTED (same session): the spanner's facing extents are the DRAWN ink -- the dashed rule's half thickness both ways, widened by the text's own face ink on the piece that carries it (the invented TextSpannerAscent/Descent 1.2/0.3 box is deleted; HANDOFF's letter-debt (3) loses its TextSpanner member). Landed 0.000000000, exact: 'rit.' has no descender, so the line's half thickness is the facing reach on both sides."
     },
+    "textspanner.chord-row.row-to-staff": {
+      "probe": "textspanner-under-row.ly",
+      "score": "TSCR",
+      "lilypond": 4.920858803,
+      "residual": -0.542858803,
+      "why": "OPENED 2026-08-28 (session 275, act 7) -- the first point that asks whether the LINE STANDING ABOVE a staff is spaced against that staff's own outside-staff ink. Reported by the owner: `@rit` prints straight THROUGH the chord row above its staff (Untitled-6.lys; the two baselines are 0.01 apart). MEASURED: -2.370858803 -- Lily# reads its CONTROL's 2.55 unchanged, i.e. the row does not move at all. LilyPond opens by 2.370859 = the spanner's ink top over the staff's own (floor 2.85 + ink 1.570859 - staff ink 2.05), because an outside-staff grob is LEFT IN its VerticalAxisGroup's skyline once placed (axis-group-interface.cc:860-985) and that profile is what page-layout-problem.cc:948-990 distributes the loose lines against. Lily# places the spanner in the collision pass (OutsideStaffStacker.PlaceTextSpanners) and spaces the row against a silhouette (MultiStaffLayouter.BuildAllStaffSkylines) the spanner is not in -- two passes that never meet, the same shape the volta-over-chord repair closed on the other side of the staff. THE PREDICTION IN THE PROBE NAMED 2.370859 BEFORE THE RUN and its falsifier (TSCR == TSCN, i.e. LilyPond not letting the spanner push the line above it, which would make Lily# faithful) was live. READING THIS AT ALL NEEDED THE INSTRUMENT FIXED: the spanner's dashed rule is StaffLineThickness thick and reaches across the system, so RenderedGeometry.StaffLineYs counted it as a sixth staff line and threw. PORTED THE SAME DAY: TextSpannerEngraver.InkAboveStaff seeds the staff's UP skyline with the spanner's drawn shape, and the residual falls to -0.542858803. WHAT IS LEFT IS NOT SPACING -- it is the \"rit.\" INK ITSELF: Lily# reads 4.378000000 = 2.05 + 0.8 (floor, exact) + 1.028 (its own ink top) + 0.5, against LilyPond's 1.570859. THE TWIN ENTRY textspanner.lyric-row.row-to-staff LANDS ON THE SAME TERM TO SEVEN DIGITS once its control is subtracted, which is what says the remainder is ONE quantity and not two. ** NEXT (named, not done): 1.028 is 0.514 em at a drawn size of 2.0, where LilyPond sets the text at em 2.2 -- the fifth instance of the em mislabel the ottava / TextScript / lyrics / chords ports each closed, and it now has ONE HOME, TextSpannerEngraver.TextFontSize. Moving it to 2.2 predicts 1.1308 and a residual near -0.44, i.e. it does NOT close on its own: the rest is the face island (LilyPond Serif against TeX Gyre Termes). Both are visible changes to every drawn rit., so they are their own act."
+    },
+    "textspanner.chord-row.control.row-to-staff": {
+      "probe": "textspanner-under-row.ly",
+      "score": "TSCN",
+      "lilypond": 2.549999997,
+      "residual": 0.0,
+      "why": "OPENED 2026-08-28 (session 275, act 7) as THE CONTROL of the pair above it: TSCN is TSCR with the rit. spanner deleted and nothing else changed. 2.549999997 = staff ink 2.05 + the loose line's padding 0.5, and Lily# reads it EXACT to nine digits -- which is what makes TSCR's residual the spanner's and only the spanner's. The chords are bare triads on purpose: a maj7 puts +0.570 of LilyPond's raised composition (the CHL vocabulary island) into the reading, and the first cut of this book had exactly that. FALSIFIER, live: if a future change moved this entry too, the spanner ink would be reaching a book that has no spanner."
+    },
+    "textspanner.lyric-row.row-to-staff": {
+      "probe": "textspanner-under-row.ly",
+      "score": "TSLR",
+      "lilypond": 5.957903025,
+      "residual": -0.542861777,
+      "why": "OPENED 2026-08-28 (session 275, act 7) -- the lyric half of the pair, and the report's own shape: the row above staff 2 belongs to staff 1, so it is spaced by the UNRELATED spec, and the question is whether staff 2's rit. still reaches it. It does, in LilyPond, by the SAME 2.370858871 the chord half opens by -- one rule (the skyline), two specs. MEASURED: -2.370861777, and subtracting its own control (-0.000002906) leaves -2.370858871: the chord half's number to NINE digits. Two specs, two routes through Lily#, one missing term. PORTED THE SAME DAY: -0.542861777, which minus this pair's own control (-0.000002906) is -0.542858871 -- the chord half's remainder to SEVEN DIGITS. That agreement is the finding: what survives the port is a single quantity, the \"rit.\" ink height, and it belongs to neither spec. See the chord entry for its decomposition and for why closing it is its own act."
+    },
+    "textspanner.lyric-row.control.row-to-staff": {
+      "probe": "textspanner-under-row.ly",
+      "score": "TSLN",
+      "lilypond": 3.587044154,
+      "residual": -0.000002906,
+      "why": "OPENED 2026-08-28 (session 275, act 7) as THE CONTROL of the lyric half: TSLN is TSLR with the rit. spanner deleted. 3.587044154 = staff ink 2.05 + the lyric row's descender 0.037044 + nonstaff-UNRELATEDstaff padding 1.5 (the row belongs to the staff ABOVE it and is unrelated to the one below, which is exactly the report's `staff melody / lyrics verse sings melody / staff melody`). Lily# reads -0.000002906 -- a face term of the same size and kind as lyrics.grand-staff.lyric-to-staff's -0.000054899, and NOT the spanner's: it is what TSLR's residual has to be subtracted against."
+    },
     "tempo.quiet.staff-to-baseline": {
       "probe": "tempo-mark.ly",
       "score": "TMQ",

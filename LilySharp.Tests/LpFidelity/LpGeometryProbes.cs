@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -4645,6 +4645,90 @@ internal static class LpGeometryProbes
     /// <summary>Support regime: two octaves up, the ledger column decides.</summary>
     private static readonly string TSC = SpannerFloorScore("TSC",
         "c'''4@rit c''' c''' c''' | c'''4 c''' c''' c''' |");
+
+    /// <summary>
+    /// A ROW STANDING ABOVE A STAFF THAT CARRIES A rit. SPANNER — the four books of
+    /// probes/textspanner-under-row.ly, opened 2026-08-28 against a report that `@rit`
+    /// prints THROUGH the chord row and the lyric row above its staff
+    /// (scratch/ベースタブLy/Untitled-6.lys).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// WHAT WAS AND WAS NOT ALREADY MEASURED. Where the spanner sits over its OWN staff is
+    /// exact in both regimes (TSF/TSC above). NOTHING measured whether the line ABOVE the
+    /// staff is spaced against it — that is a question about the loose-line chain, not
+    /// about the spanner, and the corpus had no book that asked it.
+    /// </para>
+    /// <para>
+    /// MEASURED (LilyPond 2.26.0, fonts pinned), refpoint to refpoint:
+    /// TSCN 2.549999997 → TSCR 4.920858803 and TSLN 3.587044154 → TSLR 5.957903025 —
+    /// BOTH pairs open by 2.370859, which is the spanner's ink top over the staff's own
+    /// (2.85 + 1.570859 − 2.05). The prediction written in the probe named that number
+    /// before the run and its falsifier (TSCR == TSCN) was live: a text spanner that was
+    /// outside-staff for its own collision pass but absent from the skyline the page
+    /// distributes loose lines against would have read it.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE CHORDS ARE BARE TRIADS so the reading stays out of the chord-VOCABULARY
+    /// island: a `maj7` puts +0.570 of LilyPond's raised composition into the pair, which
+    /// this measurement is not about (the first cut of these books had it, and the control
+    /// read +0.570 instead of 0).
+    /// </para>
+    /// </remarks>
+    private static string TextSpannerRowScore(string name, string rit) => $$"""
+        octave absolute
+        time 4/4
+
+        part melody { clef treble }
+
+        section Main {
+          melody { c'4{{rit}} c' c' c' | c'4 c' c' c' | }
+        }
+
+        chords prog { section Main { D | E } }
+
+        form main { ~Main }
+
+        score main "{{name}}" { chords prog as names
+                                staff ~melody }
+        """;
+
+    /// <summary>A chord row above a staff whose music carries the rit. spanner.</summary>
+    private static readonly string TSCR = TextSpannerRowScore("TSCR", "@rit");
+
+    /// <summary>THE CONTROL: TSCR with the spanner removed and nothing else changed.</summary>
+    private static readonly string TSCN = TextSpannerRowScore("TSCN", "");
+
+    /// <summary>
+    /// The lyric half: staff / lyrics(sings the staff above) / staff, with the spanner on
+    /// the LOWER staff — so the row it has to make room in belongs to the OTHER staff and
+    /// is UNRELATED to this one. This is the report's own shape.
+    /// </summary>
+    private static string TextSpannerLyricRowScore(string name, string rit) => $$"""
+        octave absolute
+        time 4/4
+
+        part upper { clef treble }
+        part lower { clef treble }
+
+        section Main {
+          upper { c'4 c' c' c' | c'4 c' c' c' | }
+          lower { c'4{{rit}} c' c' c' | c'4 c' c' c' | }
+          lyrics words sings upper { Twin- kle twin- kle | lit- tle star | }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" { staff ~upper
+                                lyrics words sings upper
+                                staff ~lower }
+        """;
+
+    /// <summary>A lyric row above a staff whose music carries the rit. spanner.</summary>
+    private static readonly string TSLR = TextSpannerLyricRowScore("TSLR", "@rit");
+
+    /// <summary>THE CONTROL: TSLR with the spanner removed and nothing else changed.</summary>
+    private static readonly string TSLN = TextSpannerLyricRowScore("TSLN", "");
 
     /// <summary>
     /// THE TRILL LINE over a REAL stemmed column — the mirrors of
@@ -13240,6 +13324,27 @@ internal static class LpGeometryProbes
             g => g.TextSpannerLineAboveStaff(), RaggedBottomPaper),
         new("textspanner.support.staff-to-line", TSC,
             g => g.TextSpannerLineAboveStaff(), RaggedBottomPaper),
+
+        // --- a ROW ABOVE a staff that carries the rit. SPANNER (books TSU/TSN/TSY/TSZ) ---
+        // The first points that ask whether the line standing above a staff is spaced
+        // against that staff's outside-staff ink. LilyPond leaves an outside-staff grob IN
+        // its VerticalAxisGroup's skyline once placed (axis-group-interface.cc:860-985), and
+        // that profile is what page-layout-problem.cc:948-990 distributes the loose lines
+        // against — so BOTH pairs open by 2.370859, the spanner's ink top over the staff's
+        // own. Lily# placed the spanner in the collision pass and then spaced the row
+        // against a silhouette it was not in, so the two never met and `@rit` printed
+        // through the row (reported 2026-08-28).
+        // ⚠️ THE CONTROLS ARE THE READING'S PROOF: TSN and TSZ are their pairs with the
+        // spanner deleted and nothing else changed, so a residual on TSU/TSY that its
+        // control does not carry belongs to the spanner and to nothing else.
+        new("textspanner.chord-row.row-to-staff", TSCR,
+            g => g.ChordBaselineAboveStaff(0), RaggedBottomPaper),
+        new("textspanner.chord-row.control.row-to-staff", TSCN,
+            g => g.ChordBaselineAboveStaff(0), RaggedBottomPaper),
+        new("textspanner.lyric-row.row-to-staff", TSLR,
+            g => g.LyricBaselineAboveStaff(1), RaggedBottomPaper),
+        new("textspanner.lyric-row.control.row-to-staff", TSLN,
+            g => g.LyricBaselineAboveStaff(1), RaggedBottomPaper),
 
         // --- the TRILL LINE over a REAL stemmed column (books TLS/TLB/TLW) ---
         // The points that gated the LAST raw-3.5 read out (now

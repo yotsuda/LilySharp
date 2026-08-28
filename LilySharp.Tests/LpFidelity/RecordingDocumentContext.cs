@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -25,7 +25,14 @@ internal readonly record struct DrawnGlyph(char Glyph, double X, double Y, doubl
 internal readonly record struct DrawnRect(double X, double Y, double Width, double Height);
 
 /// <summary>A straight line — staff lines, stems, ledger lines.</summary>
-internal readonly record struct DrawnLine(double X1, double Y1, double X2, double Y2, double StrokeWidth);
+internal readonly record struct DrawnLine(
+    double X1, double Y1, double X2, double Y2, double StrokeWidth,
+    // Whether the rule was drawn DASHED. Kept because thickness and span alone do not tell
+    // a staff line from an accel./rit. spanner's rule: the rule is StaffLineThickness thick
+    // and reaches across the system, so RenderedGeometry.StaffLineYs counted it as a sixth
+    // staff line and every reading on such a page threw "found 6 staff lines" (2026-08-28,
+    // books TSCR/TSLR). A dashed rule is never a staff line.
+    bool IsDashed = false);
 
 /// <summary>
 /// A filled quadrilateral — a BEAM segment, drawn corner by corner because it is sloped.
@@ -161,7 +168,8 @@ internal sealed class RecordingDrawingContext : IDrawingContext
     public void DrawLine(double x1, double y1, double x2, double y2,
                          Color? stroke = null, double strokeWidth = 0.1,
                          (double On, double Off)? dash = null, LineCap cap = LineCap.Butt)
-        => _lines.Add(new DrawnLine(Tx(x1), Ty(y1), Tx(x2), Ty(y2), Sx(strokeWidth)));
+        => _lines.Add(new DrawnLine(
+            Tx(x1), Ty(y1), Tx(x2), Ty(y2), Sx(strokeWidth), dash.HasValue));
 
     public void DrawRectangle(double x, double y, double width, double height,
                               Color? fill = null, Color? stroke = null, double strokeWidth = 0)

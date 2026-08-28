@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -2805,6 +2805,30 @@ internal sealed class MultiStaffLayouter
                 var sky = skylineBuilder.PlaceDynamicsOn(
                     insideSky, staff, dynamics, measureLayouts, beams,
                     articulationLayouts: articulations);
+
+                // The staff's own accel./rit. spanner is OUTSIDE-STAFF INK ABOVE IT, and a
+                // row standing above the staff has to clear it exactly as the staff below a
+                // figure row has to clear that. LilyPond leaves an outside-staff grob IN its
+                // VerticalAxisGroup's skyline once it is placed, and that profile is what the
+                // alignment walks and what the page distributes the loose lines against; Lily#
+                // placed the spanner in the collision pass and then spaced the row against a
+                // silhouette it was not in, so `@rit` printed straight through the chord row
+                // and the lyric row above its staff (reported 2026-08-28, Untitled-6.lys).
+                // ⚠️ AFTER the dynamics and BEFORE the bands below, which is the order the
+                // priorities run in: the spanner (350) stands clear of this staff's dynamics
+                // (250), and the rows are then spaced against the pair of them.
+                // LILYPOND-REF: lily/axis-group-interface.cc:860-985 skyline_spacing;
+                //   lily/page-layout-problem.cc:948-990 loose-line distribution.
+                // The staff's slice, cut once per score (ScoreSideTables) — this runs per
+                // (system, staff) and the derivation walks the whole mark table.
+                var staffSpanners = ScoreSideTables.TextSpannersByStaff(score).At(thisStaff);
+                if (!staffSpanners.IsEmpty)
+                {
+                    var spannerInk = TextSpannerEngraver.InkAboveStaff(
+                        score.TextMetrics, staffSpanners, measureLayouts, sky.Up);
+                    if (!spannerInk.IsEmpty)
+                        sky.Up.Merge(spannerInk);
+                }
 
                 // A staff carrying associated chord names (`staff X with chords ...`)
                 // shows a chord-symbol row just above it. The row shares one baseline

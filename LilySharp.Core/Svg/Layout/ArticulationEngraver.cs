@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -951,9 +951,9 @@ internal static class ArticulationEngraver
             // the renderer/skyline resolve the staff middle at their own boundary.
             // LILYPOND-REF: side-position-interface.cc:229-264 skyline calculation
             double yUp = CalculateYPosition(effArt, staffPosition, stemUp, item,
-                NoteColumnLayout.Of(item, stemUp, memberBeam, memberStemX));
+                NoteColumnLayout.Of(item, stemUp, memberBeam, memberStemX), score.TextMetrics);
 
-            var seedBBox = GetSeedBBoxFor(effArt);
+            var seedBBox = GetSeedBBoxFor(effArt, score.TextMetrics);
             var layout = new ArticulationLayout(
                 effArt.MeasureIndex,
                 effArt.ItemIndex,
@@ -1465,6 +1465,64 @@ internal static class ArticulationEngraver
         _ => staffPosition < 0 // Default: stem up for notes below middle line
     };
 
+
+    // ---- TAB technique letters (H / P / T, and the pluck letters) --------------------
+    //
+    // ⚠️ THESE ARE TEXT, AND A TEXT BASELINE IS NOT A BOX CENTRE. Until 2026-08-28 the
+    // letters fell to the generic half-space fallback below — a symmetric
+    // (-0.5, -0.5, 0.5, 0.5) box around the anchor — while SharedRenderer.DrawOverlays
+    // anchors the letter's BASELINE at that same anchor and its ink rises 1.083 ss above
+    // it (TeX Gyre Schola's cap height 0.7220 em at the drawn size 1.5). A symmetric box
+    // mirrors to itself, so the mistake was invisible for the ABOVE side, where the ink
+    // grows AWAY from the note; on the BELOW side it grew straight INTO the notehead —
+    // reported 2026-08-28 as "the T of @tap overlaps the note". Measured on `c4@tap`:
+    // the letter's baseline sat 0.70 under the head's ink bottom, so its top landed
+    // 1.083 - 0.70 = 0.383 ss INSIDE the head, and the reserved band was half a space
+    // BELOW where anything was drawn.
+    //
+    // ⚠️ AND THE BOX MUST NOT BE MIRRORED BY DIRECTION. Every other script in this file
+    // has an above form and a below form because the GLYPH is mirrored; a letter is
+    // drawn the same way up on both sides, so its ink is 0 .. +cap in both. That is why
+    // GetGlyphBBox's (type, isAbove) shape cannot express it and this is asked per item.
+    //
+    // ⚠️ NO LILYPOND-REF, ON PURPOSE. LilyPond has no grob for these — a player writes
+    // them as markup — so there is no LP geometry to port and no ledger point can observe
+    // them. What replaces the ledger here is an IDENTITY: the box the layout reserves IS
+    // the ink the renderer draws, because both come from this one home. The nets in
+    // TabTechniqueLetterTests assert exactly that, and would have caught the defect.
+
+    /// <summary>The size the TAB technique letters are SET IN — one home for the layout
+    /// and the draw, which must measure and draw at the same size or the reservation is
+    /// not the ink.</summary>
+    internal const double TabTechniqueFontSize = 1.5;
+
+    /// <summary>…and the style, for the same reason.</summary>
+    internal const FontStyle TabTechniqueFontStyle = FontStyle.Italic;
+
+    /// <summary>The letter this script prints, or null when it is not one of the TAB
+    /// technique marks.</summary>
+    internal static string? TabTechniqueLetterOf(ArticulationItem a) => a.Type switch
+    {
+        ArticulationType.HammerOn => "H",
+        ArticulationType.PullOff => "P",
+        ArticulationType.Tap => "T",
+        ArticulationType.Pluck => a.PluckLetter,
+        _ => null
+    };
+
+    /// <summary>
+    /// The drawn letter's own ink box about its BASELINE, Y-up — the anchor the renderer
+    /// uses. Centred in X because the draw anchors the text at its middle.
+    /// </summary>
+    internal static GlyphMetrics.BBox TabTechniqueInkBox(ScoreTextMetrics fonts, string letter)
+    {
+        var ink = fonts.Ink(letter, TabTechniqueFontSize, TextRole.TabTechnique,
+                            TabTechniqueFontStyle);
+        double halfWidth = fonts.Advance(letter, TabTechniqueFontSize, TextRole.TabTechnique,
+                                         TabTechniqueFontStyle) / 2.0;
+        return new GlyphMetrics.BBox(-halfWidth, ink.Bottom, halfWidth, ink.Top);
+    }
+
     /// <summary>
     /// Gets the glyph bounding box for an articulation type.
     /// </summary>
@@ -1773,10 +1831,13 @@ internal static class ArticulationEngraver
 
     /// <summary>Seed box for THIS articulation instance — frame boxes depend
     /// on the spec, everything else on the type alone.</summary>
-    private static GlyphMetrics.BBox GetSeedBBoxFor(ArticulationItem articulation) =>
+    private static GlyphMetrics.BBox GetSeedBBoxFor(
+        ArticulationItem articulation, ScoreTextMetrics fonts) =>
         articulation.Type == ArticulationType.FretFrame
             ? FrameBox(articulation.FrameSpec)
-            : GetSeedBBox(articulation.Type, articulation.IsAbove);
+            : TabTechniqueLetterOf(articulation) is { } letter
+                ? TabTechniqueInkBox(fonts, letter)
+                : GetSeedBBox(articulation.Type, articulation.IsAbove);
 
     private static GlyphMetrics.BBox GetSeedBBox(ArticulationType type, bool isAbove = true) => type switch
     {
@@ -1816,6 +1877,26 @@ internal static class ArticulationEngraver
         || a.Type is ArticulationType.UpBow or ArticulationType.DownBow
             or ArticulationType.Flageolet or ArticulationType.Stopped
             or ArticulationType.Heel or ArticulationType.Toe or ArticulationType.SnapPizz;
+
+    /// <summary>
+    /// <see cref="GetNearExtent"/> for one script, which is where the TAB technique
+    /// letters differ: their reach toward the note is their own INK about the baseline,
+    /// and it is not mirrored by side (see the block above GetGlyphBBox).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ <paramref name="fonts"/> IS NULL FROM EXACTLY ONE CALLER — <see cref="SpacingInkBox"/>,
+    /// which has already returned for every type that is not a fermata or an ornament, so a
+    /// tab letter cannot arrive here without them. Anywhere else the metrics are the score's.
+    /// </remarks>
+    private static double NearExtentOf(ArticulationItem a, bool isAbove, ScoreTextMetrics? fonts)
+    {
+        if (fonts is { } f && TabTechniqueLetterOf(a) is { } letter)
+        {
+            var ink = TabTechniqueInkBox(f, letter);
+            return isAbove ? -ink.Bottom : ink.Top;
+        }
+        return GetNearExtent(a.Type, isAbove);
+    }
 
     private static double GetNearExtent(ArticulationType type, bool isAbove)
     {
@@ -1975,7 +2056,7 @@ internal static class ArticulationEngraver
     }
 
     private static double CalculateYPosition(ArticulationItem articulation, int staffPosition, bool stemUp,
-        MusicItem? item = null, NoteColumnLayout? column = null)
+        MusicItem? item = null, NoteColumnLayout? column = null, ScoreTextMetrics? fonts = null)
     {
         // LILYPOND-REF: define-grobs.scm:1365 fermata: direction = UP
         // LILYPOND-REF: define-grobs.scm:4075 TrillSpanner: direction = UP
@@ -2027,7 +2108,7 @@ internal static class ArticulationEngraver
 
         // StaffHalf = the outer staff line, staff-spaces above/below the middle (Y-up).
         const double StaffHalf = 2.0;
-        double glyphNearExtent = GetNearExtent(articulation.Type, isAbove);
+        double glyphNearExtent = NearExtentOf(articulation, isAbove, fonts);
         double supportExtent = isAbove
             ? (stemUp ? StemSupportExtent(item, column) : HeadSupportExtent(column))
             : (!stemUp ? StemSupportExtent(item, column) : HeadSupportExtent(column));
