@@ -55,6 +55,16 @@ public sealed partial class MeasureCollector
         bool afterRepeatStart = false;
         var pendingVoltaBrackets = new List<(int startMeasure, int endMeasure, string voltaText, bool isClosed, int sourcePosition)>();
 
+        // A form barline CONFIRMS the boundary it lands on; it is never the second of a
+        // written pair, because the author did not write two barlines next to each other —
+        // one is the section's own close and this one is the structure's. See
+        // MeasureBuilder.ArmBoundaryForStructuralBarline for what it cost to learn that.
+        void PushFormBarline(string barText, int position)
+        {
+            builder.ArmBoundaryForStructuralBarline();
+            processNodes([new GreenSite(CreateBarlineSyntax(barText, position))]);
+        }
+
         for (int i = 0; i < repeat.SlotCount; i++)
         {
             var child = repeat.GetChild(i);
@@ -63,12 +73,12 @@ public sealed partial class MeasureCollector
             {
                 if (token.Text == "|:")
                 {
-                    processNodes([new GreenSite(CreateBarlineSyntax(token.Text, token.Position))]);
+                    PushFormBarline(token.Text, token.Position);
                     afterRepeatStart = true;
                 }
                 else if (token.Text == ":|")
                 {
-                    processNodes([new GreenSite(CreateBarlineSyntax(token.Text, token.Position))]);
+                    PushFormBarline(token.Text, token.Position);
                 }
                 else if (token.Text == ":|:")
                 {
@@ -76,8 +86,8 @@ public sealed partial class MeasureCollector
                     // the next. The adjacent ':|' + '|:' fuse into the RepeatBoth
                     // glyph at render time, and the following section is still marked
                     // as a repeat (StartBarline = RepeatStart) — exactly ':| |:'.
-                    processNodes([new GreenSite(CreateBarlineSyntax(":|", token.Position))]);
-                    processNodes([new GreenSite(CreateBarlineSyntax("|:", token.Position))]);
+                    PushFormBarline(":|", token.Position);
+                    PushFormBarline("|:", token.Position);
                     afterRepeatStart = true;
                 }
             }

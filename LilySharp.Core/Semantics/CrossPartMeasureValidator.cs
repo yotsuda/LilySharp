@@ -181,11 +181,13 @@ internal sealed class CrossPartMeasureValidator
         int maxLen = parts.Max(p => p.Measures.Count);
         for (int i = 0; i < maxLen; i++)
         {
-            // An explicit empty placeholder (`| |`) is the author padding a
-            // tacet bar themselves — it holds a slot but owns no duration, so it
-            // must not be read as "0 beats, misaligned". The per-block fullness
-            // pass already flags it underfull (LYS2001); skip it here so the
-            // cross-part duration check doesn't pile a second, wronger message on.
+            // An explicit empty placeholder (`| |`) is the author padding a tacet bar
+            // themselves. It is worth a full measure since 2026-08-28 (MeasureModel
+            // hands it the meter, mirroring the spacer MeasureBuilder fills it with), so
+            // it would conform here anyway; the skip stays because a GAP is not a claim
+            // about how long the other parts' bars are, and reading it as one would put
+            // this pass's message on the wrong bar under `time none`, where it is still
+            // worth zero.
             var present = parts.Where(p => i < p.Measures.Count && !p.Measures[i].IsEmpty).ToList();
             if (present.Count < 2)
                 continue;

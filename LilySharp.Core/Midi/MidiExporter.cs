@@ -1096,8 +1096,43 @@ public sealed class MidiExporter
     /// <remarks>LILYPOND-REF: scm/music-functions.scm (unfold-repeats); lily/volta-repeat-iterator.cc — repeated music is performed N times.</remarks>
     private void ProcessSequence(List<SyntaxNode> items, MidiTrack track, MidiTrack conductorTrack)
     {
+        // An empty `| |` bar has to COST TIME here, or a gap written in one part pulls
+        // everything after it a whole bar early against the others. The engraver never had
+        // that problem — it walks BARS, so an item-less placeholder still held its slot —
+        // and this walk counts DURATIONS, which is why the defect was audible only.
+        // MEASURED before the repair (two staves, `c'1 | | e'1` against `c1 | g1 | c1`):
+        // the upper part's third bar sounded at tick 1920 where the lower part's did at
+        // 3840. Owner's decision 2026-08-28; the engraving half is
+        // MeasureBuilder.EmitEmptyMeasure, which fills the same bar with a spacer.
+        // ⚠️ THIS IS A SECOND SPELLING OF THE BARE-BARLINE RULE and it is admitted as one:
+        // the collector's copy is MeasureBuilder.HandleBarline and the validators' is
+        // MeasureModel.Split, and neither is reachable from here (this walk sees a SIBLING
+        // LIST, not a measure stream). What keeps the three from drifting is not hope but
+        // EmptyMeasureValidatorTests' identity pair — `| |` against the `s1` an author
+        // would type by hand — which fails the moment any one of them answers differently.
+        // The rule in this walk's terms: a bare `|` CLOSES the bar before it when time has
+        // passed since the last boundary; otherwise it ANCHORS a boundary still unclaimed;
+        // otherwise it is the second of a `| |` PAIR and opens an empty measure. A typed
+        // barline (`||`, `:|`, `|.`) decorates a boundary and never opens one.
+        int boundaryTick = _currentTick;
+        bool boundaryClaimed = false;
         for (int i = 0; i < items.Count; i++)
         {
+            if (items[i] is BarlineSyntax bar)
+            {
+                // `|:` pairs like a bare `|` (it OPENS the next bar rather than
+                // decorating the one behind it), so `… | |: …` is a gap here too —
+                // MeasureBuilder.HandleBarline owns the rule.
+                if (bar.BarToken.Kind is SyntaxKind.Bar or SyntaxKind.RepeatStartBar
+                    && _currentTick <= boundaryTick && boundaryClaimed)
+                {
+                    _currentTick += MeasureTicks();  // the second of a `| |` pair
+                }
+                boundaryTick = _currentTick;
+                boundaryClaimed = true;
+                // …and fall through: the repeat spans below key on the repeat barlines,
+                // and every other node type still takes its ordinary path.
+            }
             if (IsRepeatBar(items[i], SyntaxKind.RepeatStartBar))
             {
                 int end = FindMatchingRepeatEnd(items, i);
@@ -1209,6 +1244,12 @@ public sealed class MidiExporter
 
     private static bool IsRepeatBar(SyntaxNode node, SyntaxKind kind)
         => node is BarlineSyntax b && b.BarToken.Kind == kind;
+
+    /// <summary>One measure of the meter in force, in ticks — what an empty <c>| |</c> bar
+    /// costs. The same length <c>MeasureBuilder.EmitEmptyMeasure</c> gives that bar's
+    /// spacer, so the two walks agree on what the gap is worth.</summary>
+    private int MeasureTicks()
+        => FractionToTicks(new Fraction(_timeNumerator, _timeDenominator));
 
     private static int FindMatchingRepeatEnd(List<SyntaxNode> items, int start)
     {

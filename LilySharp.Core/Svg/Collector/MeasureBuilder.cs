@@ -37,8 +37,9 @@ internal sealed class MeasureBuilder
     // an AUTO-FILL close (duration reached the meter; the following `|` confirms it).
     // False after any WRITTEN barline consumed the boundary — a written close, a typed
     // decoration, an absorbed confirmation, a placeholder — so a bare `|` there is the
-    // second of a `| |` PAIR and opens an empty placeholder measure. An empty measure
-    // is always a visible `| |` pair; a single bare `|` never creates one. See
+    // second of a `| |` PAIR and opens an empty placeholder measure (which the engine
+    // then FILLS with a full-measure spacer — EmitEmptyMeasure). An empty measure is
+    // always a visible `| |` pair; a single bare `|` never creates one. See
     // HandleBarline.
     private bool _confirmableBoundary = true;
     // True when the confirmable boundary sits right after a bar this stream JUST closed
@@ -133,6 +134,21 @@ internal sealed class MeasureBuilder
         set => _sectionLabelPosition = value;
     }
 
+    /// <summary>Re-arms the confirmable boundary for a barline the FORM emits, so it
+    /// CONFIRMS the boundary instead of pairing with the barline the previous section
+    /// wrote.</summary>
+    /// <remarks>
+    /// A form repeat synthesises its barlines into the music stream
+    /// (<c>MeasureCollector.Form.cs</c> ProcessRepeatBlockCore), so by the time they reach
+    /// <see cref="HandleBarline"/> they are indistinguishable from ones the author typed —
+    /// and the section before them has usually closed its last bar with a written <c>|</c>,
+    /// which leaves the boundary consumed. Without this, <c>form main { A |: D :| }</c> read
+    /// as a written <c>| |:</c> PAIR and opened an empty bar between every section and every
+    /// form-level repeat sign (measured: 3 bars became 5). The pair rule is about two
+    /// barlines written NEXT TO EACH OTHER in one music stream; a structural barline is not
+    /// the second of any such pair, whatever the state of the section that preceded it.
+    /// </remarks>
+    public void ArmBoundaryForStructuralBarline() => _confirmableBoundary = true;
     /// <summary>Re-arms the auto-complete measure length without printing a grob
     /// (used when a leading meter change collapses into the initial time signature).</summary>
     public void SetMeasureLength(Fraction length) => _timeSignature = length;
@@ -430,12 +446,36 @@ internal sealed class MeasureBuilder
             // |: opens the NEXT measure; close anything pending first. A directive-only
             // span (a leading clef) is NOT closed — it carries into the first repeat bar.
             if (HasMeasureContent)
+            {
                 CompleteMeasure(position, BarlineType.Single);
+            }
+            else if (!_confirmableBoundary)
+            {
+                // THE SECOND OF A PAIR: `… | |: …`. Two written barlines with nothing
+                // between them is an empty measure, and `|:` is no exception — owner's
+                // decision, 2026-08-28, reported against a `partial` pickup written
+                // `c8 | |: c'4 d e f :|` whose middle bar was not drawn.
+                // ⚠️ THIS IS WHY `|:` IS NOT ONE OF THE "TYPED" BARLINES BELOW. `||`,
+                // `|.` and `:|` on an empty span DECORATE the bar behind them — they
+                // retro-type its end and create nothing. `|:` decorates nothing: it
+                // OPENS the bar in front of it, so the span before it has no owner and
+                // is exactly the gap `| |` describes. Sorting it with the decorations
+                // was the category error, and the two spellings answered differently
+                // (`c8 | | …` drew the gap, `c8 | |: …` swallowed it) with nothing in
+                // the language to explain why.
+                EmitEmptyMeasure(position, BarlineType.Single);
+            }
+            // …and a CONFIRMABLE boundary — the section start, or a bar this stream just
+            // closed — is merely ANCHORED by this `|:`, exactly as a bare `|` anchors it.
             _pendingStartBarline = BarlineType.RepeatStart;
             // The `|:` IS the next measure's start boundary — record its offset so the
             // drawn start barline's click/highlight lands on the written `|:`, not on
             // the previous close (SourceStart otherwise carries the last SourceEnd).
             _measureSourceStart = position;
+            // A WRITTEN barline consumed the boundary, so a further bare `|` after this
+            // one is the second of a pair (`|: |` opens a gap, exactly as `| |` does).
+            _confirmableBoundary = false;
+            _boundaryRetargetable = false;
             return;
         }
 
@@ -473,18 +513,18 @@ internal sealed class MeasureBuilder
         else
         {
             // The second barline of a `| |` PAIR (nothing between two written bars) —
-            // mid-piece or trailing — opens a real placeholder measure: it holds a slot
-            // so other parts stay aligned, renders as an empty bar, and is flagged
-            // shorter-than-the-meter until the author fills it (MeasureValidator, over the
-            // shared MeasureModel). An empty measure is thus always VISIBLE in the source
-            // as `| |`.
+            // mid-piece or trailing — opens a real placeholder measure: it holds a slot so
+            // other parts stay aligned and renders as an empty bar. The engine then FILLS
+            // it (EmitEmptyMeasure) with a full-measure spacer, so it is not reported: an
+            // empty measure is still always VISIBLE in the source as `| |`, but the author
+            // no longer has to answer for it.
             EmitEmptyMeasure(position, endType);
         }
     }
 
     /// <summary>
-    /// Emits an empty placeholder measure (0 items, 0 duration) for a bare barline gap.
-    /// See <see cref="Measure.IsEmptyPlaceholder"/>.
+    /// Emits a placeholder measure for a bare barline gap — one full measure of SPACER,
+    /// drawing nothing. See <see cref="Measure.IsEmptyPlaceholder"/>.
     /// </summary>
     private void EmitEmptyMeasure(int sourceEnd, BarlineType endType)
     {
@@ -495,8 +535,22 @@ internal sealed class MeasureBuilder
         _pendingBreak = false;
         _pendingNoBreak = false;
 
+        // THE BAR IS FILLED, not left empty: one full-measure SPACER, which is the `s1`
+        // (or `s2.`, or whatever the meter's own length spells) the author would otherwise
+        // have had to type. Owner's decision, 2026-08-28.
+        // ⚠️ IT IS THE METER IN FORCE, not a whole note — `_timeSignature` is the running
+        // measure length, so a 3/4 gap is worth a dotted half and a `partial` pickup's gap
+        // is worth the shortened bar it opens.
+        // ⚠️ WHY A SPACER RATHER THAN NOTHING, and it is not the page: the layouter walks
+        // BARS, so an item-less placeholder already aligned across parts correctly. The MIDI
+        // exporter walks DURATIONS, so a zero-length bar let every later note in that part
+        // sound a whole bar EARLY against the others — measured on a two-staff book, the
+        // upper part's third bar started at tick 1920 where the lower part's started at
+        // 3840. A spacer is invisible and never collapses into a multi-measure rest
+        // (MusicItem.IsSpacer), so nothing is drawn that was not drawn before.
         _measures.Add(new Measure(
-            ImmutableArray<MusicItem>.Empty,
+            ImmutableArray.Create<MusicItem>(
+                new RestItem(_timeSignature, 0, _measureSourceStart) { IsSpacer = true }),
             _pendingStartBarline,
             _pendingEndBarline != BarlineType.None ? _pendingEndBarline : endType,
             _sectionLabel,

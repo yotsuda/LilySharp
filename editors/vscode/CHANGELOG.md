@@ -2,6 +2,21 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
+## Unreleased
+
+### Fixed
+
+- **"Reveal in Explorer" after an export opens the file's own folder again when the path
+  contains a space.** It used to land on the user's Documents folder instead — the
+  "sometimes" in the report was exactly "when the path has a space in it".
+  `explorer.exe` reads the raw command line rather than a parsed argv, and Node quotes
+  any argument containing a space, so `C:\My Scores\a.pdf` went out as
+  `explorer.exe "/select,C:\My Scores\a.pdf"` with the switch *inside* the quotes;
+  Explorer does not recognise that as `/select` and falls back to Documents. The command
+  line is now written by hand — `/select,"…"`, switch bare — and the non-ASCII half of
+  the same code path is unchanged (a verbatim command line is still UTF-16 all the way
+  to `CreateProcessW`; verified on `日本語 フォルダ\楽譜 テスト.txt`).
+
 ## 0.4.0
 
 First Marketplace release — 0.3.0 was tagged and shipped as GitHub binaries only, so

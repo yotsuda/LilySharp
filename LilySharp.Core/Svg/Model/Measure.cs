@@ -165,10 +165,14 @@ public sealed record Measure
     /// <summary>
     /// True when this measure is an empty placeholder written as a bare barline gap —
     /// a leading <c>|</c>, a <c>| |</c> gap, or a trailing <c>| |</c> — with no music.
-    /// It occupies a measure slot (so parts stay aligned), renders as an empty bar, and
-    /// is flagged by <c>MeasureValidator</c> as shorter-than-the-meter so the author
-    /// fills it later. Distinct from an intentionally empty track-fill measure (chords/
-    /// lyrics alignment), which carries no flag and is silent.
+    /// It occupies a measure slot (so parts stay aligned) and renders as an empty bar.
+    /// ⚠️ IT IS NOT ITEM-LESS: <c>MeasureBuilder.EmitEmptyMeasure</c> fills it with one
+    /// full-measure SPACER of the meter in force, which is what makes it the same music
+    /// as the <c>s1</c> an author would write (owner's decision 2026-08-28; it used to
+    /// hold nothing, be worth zero, and be reported underfull). The flag survives the
+    /// fill so a consumer can still tell an authored GAP from a bar of rests. Distinct
+    /// from an intentionally empty track-fill measure (chords/lyrics alignment), which
+    /// carries no flag and is silent.
     /// </summary>
     public bool IsEmptyPlaceholder { get; init; }
 

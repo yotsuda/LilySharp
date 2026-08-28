@@ -954,9 +954,15 @@ interface ExportResponse {
 // (microsoft/vscode#105666). Spawning the platform's opener passes the path as an
 // argv entry, which no encoding step can touch. Note `cmd /c start` is NOT an
 // option here — cmd's OEM code page mangles non-ASCII names by itself.
-function spawnOpener(cmd: string, args: string[]) {
+// `verbatim` hands Windows the command line EXACTLY as written instead of letting
+// Node quote each argument. Needed by one caller only — see revealInFileManager.
+function spawnOpener(cmd: string, args: string[], verbatim = false) {
     try {
-        const child = cp.spawn(cmd, args, { detached: true, stdio: 'ignore' });
+        const child = cp.spawn(cmd, args, {
+            detached: true,
+            stdio: 'ignore',
+            windowsVerbatimArguments: verbatim,
+        });
         // explorer.exe exits 1 even when it succeeded, so only a spawn failure
         // (missing binary) is worth reporting.
         child.on('error', err => outputChannel.appendLine(
@@ -986,7 +992,33 @@ function revealInFileManager(file: string) {
     if (process.platform === 'win32') {
         // `/select,` and the path are ONE argument — a space between them makes
         // Explorer ignore the path and open the user's Documents folder.
-        spawnOpener('explorer.exe', exists ? [`/select,${file}`] : [dir]);
+        // ⚠️ AND SO DOES NODE'S ARGUMENT QUOTING, which is the bug this spelling
+        // exists to avoid. explorer.exe does not use the C runtime's argv parser: it
+        // reads the raw command line. Node quotes any argument containing a space, so
+        // a path like `C:\My Scores\a.pdf` was handed over as
+        //     explorer.exe "/select,C:\My Scores\a.pdf"
+        // with the switch INSIDE the quotes — Explorer does not recognise that as
+        // /select at all and falls back to the user's Documents folder, which is
+        // exactly the "sometimes" in the report: paths without a space worked, paths
+        // with one did not. The form Explorer wants keeps the switch bare and quotes
+        // only the path, so the command line has to be written by hand:
+        //     explorer.exe /select,"C:\My Scores\a.pdf"
+        // MEASURED both ways on 2026-08-28 by reading back what opened, through
+        // Shell.Application's window list rather than by eye: the quoted-whole form
+        // landed on Documents, this one on the file's own folder, and a Japanese path
+        // with a space (`日本語 フォルダ\楽譜 テスト.txt`) also arrives intact — the
+        // non-ASCII half of this function's contract still holds, since a verbatim
+        // command line is still UTF-16 all the way to CreateProcessW.
+        // ⚠️ A Windows filename cannot contain `"`, so wrapping the path in quotes
+        // here cannot be broken by the path itself, and nothing goes through a shell.
+        // ⚠️ THE FALLBACK BRANCH STAYS ORDINARY: a bare folder path is a normal
+        // argument to Explorer and Node's quoting is exactly right for it (measured
+        // too — `explorer.exe "C:\with space"` opens that folder).
+        if (exists) {
+            spawnOpener('explorer.exe', [`/select,"${file}"`], true);
+        } else {
+            spawnOpener('explorer.exe', [dir]);
+        }
     } else if (process.platform === 'darwin') {
         spawnOpener('open', exists ? ['-R', file] : [dir]);
     } else {

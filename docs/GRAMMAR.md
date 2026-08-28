@@ -1167,11 +1167,22 @@ RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N ti
    (a leading '|'), the section end (a trailing '|'), or a just-auto-filled bar — and
    creates nothing, so `{ | c1 | c1 | }` == `{ c1 | c1 }`. An EMPTY MEASURE is always
    an explicit `| |` PAIR: two written barlines with nothing between (leading, mid, or
-   trailing; `| | |` is two). It holds a slot to keep parts aligned, renders as an
-   empty full-width bar, and carries the ordinary underfull warning (LYS2001,
-   "duration 0", squiggled between the barlines) until filled — an empty measure is
-   thus always visible in the source. A TYPED barline on an empty span decorates the previous
-   bar's end. A PHRASE REFERENCE is one item whose boundary re-arms this rule like a section
+   trailing; `| | |` is two). It holds a slot to keep parts aligned and renders as an
+   empty full-width bar. IT IS NOT DIAGNOSED: the engine fills it with one full-measure
+   SPACER of the meter in force — the `s1` (or `s2.`, …) the author would otherwise have
+   had to type — so `| |` and `| s1 |` are the same music, on the page and in playback
+   alike. (Owner's decision, 2026-08-28. Before it the bar was built with no contents and
+   a duration of ZERO, and carried the underfull warning LYS2001; the zero was audible —
+   a gap written in one part pulled everything after it a whole bar early against the
+   others, because the engraver walks BARS and the MIDI exporter walks DURATIONS.)
+   '|:' PAIRS THE SAME WAY, and the other typed barlines do not. '||', '|.' and ':|' on an
+   empty span DECORATE the bar behind them — they retro-type its end and create nothing —
+   but '|:' decorates nothing: it OPENS the bar in front of it, so the span before it has no
+   owner and is a gap exactly as '| |' is. `c1 | |: d1 :|` is therefore three bars and
+   `c1 |: d1 :|` (one barline doing both jobs) is two; a LEADING '|:' still anchors a
+   section start, and a form's own '|:' / ':|' never pair with the barline a section wrote
+   before them (owner's decision, 2026-08-28 — the two spellings used to answer differently
+   with nothing here to explain why). A PHRASE REFERENCE is one item whose boundary re-arms this rule like a section
    start: a barline at the edge of the phrase body does not pair with an adjacent outer
    barline, so 'phrase x { c d e f | }' used as 'x | x' is two content bars, not two + a gap
    (an EXPLICIT '| |' after the reference still makes an empty bar). LYRICS follow the SAME rule: a lone leading '|' merely anchors the

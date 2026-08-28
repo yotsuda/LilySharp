@@ -121,19 +121,33 @@ internal static class MeasureModel
             {
                 int barStart = bar.Span.Start;
                 int barEnd = bar.Span.Start + bar.Span.Length;
+                // ⚠️ `|:` PAIRS LIKE A BARE `|`, and the other typed barlines do not.
+                // `||`, `|.` and `:|` on an empty span DECORATE the bar behind them;
+                // `|:` decorates nothing and OPENS the bar in front of it, so the span
+                // before it is an unowned gap — an empty measure, exactly as `| |` is.
+                // Mirrors MeasureBuilder.HandleBarline's RepeatStart branch, which owns
+                // this rule for the render path (owner's decision, 2026-08-28).
+                bool pairsLikeBare = bar.BarToken.Text is "|" or "|:";
                 if (current.Count > 0)
                     FlushMusic(); // the barline closes the bar of music before it
-                else if (bar.BarToken.Text != "|")
+                else if (!pairsLikeBare)
                     confirmable = false; // a typed bar decorates the boundary
                 else if (confirmable)
                     confirmable = false; // a lone `|` anchors the boundary — no measure
                 else
                 {
-                    // The second of a `| |` pair: an empty placeholder spanning the gap
-                    // between the two written barlines (falls back to the barline itself
-                    // for a leading pair, whose opener anchored the scope start).
+                    // The second of a `| |` pair: a placeholder spanning the gap between
+                    // the two written barlines (falls back to the barline itself for a
+                    // leading pair, whose opener anchored the scope start).
+                    // ⚠️ IT IS WORTH A FULL MEASURE, because that is what the collector
+                    // builds — MeasureBuilder.EmitEmptyMeasure fills the bar with one
+                    // spacer of the meter in force. This model exists to give the
+                    // validators the collector's own answer, so a zero here would make
+                    // every `| |` read underfull to a pass that only sees durations.
+                    // Under `time none` there is no measure length to fill, so the bar
+                    // stays at zero exactly as an auto-fill would never close there.
                     int start = prevBarEnd >= 0 ? prevBarEnd : barStart;
-                    bars.Add(new Bar(Fraction.Zero,
+                    bars.Add(new Bar(senzaMisura ? Fraction.Zero : meter,
                         new TextSpan(start, Math.Max(1, barEnd - start)), IsEmpty: true));
                 }
                 prevBarEnd = barEnd;
