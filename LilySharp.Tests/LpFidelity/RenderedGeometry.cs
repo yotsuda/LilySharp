@@ -1114,6 +1114,71 @@ internal sealed class RenderedGeometry
         return rules[0] - above.Max();
     }
 
+    /// <summary>
+    /// The sole hairpin's WEDGE CENTRE below the staff's middle line — the drawn mirror of
+    /// the Hairpin grob's own reference point.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// CENTRE AGAINST CENTRE, deliberately. LilyPond's <c>lily/hairpin.cc</c> builds the
+    /// stencil symmetrically about its own Y=0 (its grob Y-extent prints as ±0.7166 = the
+    /// declared <c>height</c> 0.6666 plus half the 0.1 line), and
+    /// <c>SharedRenderer.DrawHairpins</c> draws its two arms symmetrically about
+    /// <c>HairpinLayout.YUp</c>. Reading either engine's arms would put half a line weight
+    /// into the residual wearing the placement's clothes — the same slip
+    /// <see cref="VoltaLineRaw"/> records having made once.
+    /// </para>
+    /// <para>
+    /// SELECTED BY POSITION, not by weight: the wedge's two arms are the only rules these
+    /// books draw below the bottom staff line (whole notes, so no stems and no ledgers; the
+    /// fermata is a glyph). The count guard fails loudly if a book grows a second wedge, a
+    /// pedal bracket or a lyric extender down there, and the symmetry guard fails if the two
+    /// rules found are not in fact one wedge's mirrored arms.
+    /// </para>
+    /// </remarks>
+    public double HairpinWedgeCentreBelowStaff(int page = 0)
+    {
+        var staffLines = StaffLineYs(page);
+        if (staffLines.Count != 5)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE 5-line staff, found {staffLines.Count} "
+                + "staff line(s) — the probe is not measuring what it claims."
+                + "\nDrawn geometry:\n" + Describe());
+        }
+        double staffMiddle = staffLines[2];
+        double staffBottom = staffLines[4];
+        var arms = _pages[page].Lines
+            .Where(l => !l.IsDashed
+                && Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9
+                && Math.Abs(l.X2 - l.X1) >= 1.0
+                && l.Y1 > staffBottom + 1e-6 && l.Y2 > staffBottom + 1e-6)
+            .ToList();
+        if (arms.Count != 2)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly TWO rules below the staff (one hairpin's two "
+                + $"arms), found {arms.Count} — the probe is not measuring what it claims."
+                + "\nDrawn geometry:\n" + Describe());
+        }
+        if (Math.Abs(arms[0].X1 - arms[1].X1) > 1e-9 || Math.Abs(arms[0].X2 - arms[1].X2) > 1e-9)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: the two rules below the staff do not span the same X — they "
+                + "are not one wedge's arms.\nDrawn geometry:\n" + Describe());
+        }
+        double atLeft = (arms[0].Y1 + arms[1].Y1) / 2.0;
+        double atRight = (arms[0].Y2 + arms[1].Y2) / 2.0;
+        if (Math.Abs(atLeft - atRight) > 1e-9)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: the wedge's arms are not mirrored about one centre "
+                + $"({atLeft:F9} at its left end, {atRight:F9} at its right) — the reading of "
+                + "its centre is not well defined.\nDrawn geometry:\n" + Describe());
+        }
+        return atLeft - staffMiddle;
+    }
+
     /// <summary>The sole drawn pedal glyph run spelling <paramref name="word"/> — the
     /// run-splitting half shared by the width and baseline readings.</summary>
     private List<DrawnGlyph> SoleSustainPedalRun(string? word)

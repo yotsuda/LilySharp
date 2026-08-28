@@ -4990,6 +4990,70 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// WHERE A HAIRPIN'S WEDGE SITS, AND WHAT A FERMATA DOES TO IT — the mirrors of
+    /// hairpin-neighbour.ly's books HPC / HPF, and the first observers
+    /// <c>OutsideStaffStacker.HairpinHalfHeight</c> has ever had.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// THE ARRANGEMENT WAS DEDUCED, NOT GUESSED AT (session 276, three corrections deep). A
+    /// hairpin can only be pushed by an outside-staff grob whose priority is BELOW
+    /// <c>DynamicLineSpanner</c>'s 250, and below the staff LilyPond declares exactly two:
+    /// <c>TrillSpanner</c> 50 and the fermata family 75. Everything else the constant's own
+    /// remark had named — a <c>TextScript</c> at 450, a second dynamic on the same
+    /// <c>DynamicLineSpanner</c> — cannot move a wedge at all, and was measured not to
+    /// (probe books HN1..HN4).
+    /// </para>
+    /// <para>
+    /// ⚠️ NO DYNAMIC TEXT, ON PURPOSE. A line carrying a text is placed by
+    /// <c>DynamicAlignEngraver</c> as ONE grob through the wedge's real sloped outline
+    /// (<c>HairpinEngraver.WedgeSkylines</c>); it is the LONE wedge that
+    /// <c>StackBelowStaffCore</c> places through the flat ±<c>HairpinHalfHeight</c> box
+    /// (<c>DynamicAlignEngraver.Align</c>: "a line with one wedge and no text is the answer
+    /// HairpinEngraver already computed — leave it untouched"). Put a dynamic in these books
+    /// and the constant stops being observed.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE SPANS AGREE, AND THAT WAS CHECKED RATHER THAN ASSUMED. The two sides spell the
+    /// hairpin's end differently — LilyPond closes one with <c>\!</c> on the second note,
+    /// Lily#'s grammar has no terminator at all and <c>HairpinEngraver</c> runs an unclosed
+    /// one to "the mark's measure + 1, item 0" — and DYPH's remark records a book where that
+    /// difference is real, so it would have been fair to expect it here. It is not:
+    /// MEASURED (session 277) both wedges are 5.250045 long, and LilyPond's grob X-extent of
+    /// 5.350045 is that plus 0.05 of round line cap at each end. Two spellings, one span.
+    /// This matters beyond tidiness — the flat box these books currently observe is
+    /// span-blind, but the sloped outline that would replace it is NOT, so a pair whose
+    /// spans merely looked close would stop being readable the moment the port landed.
+    /// </para>
+    /// </remarks>
+    private static string HairpinWedgeScore(string name, string fermata) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part mel { clef treble }
+
+        section Main {
+          mel { c'1@decresc{{fermata}} | c'1 | }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff mel
+        }
+        """;
+
+    /// <summary>The control: a lone wedge with nothing under it, so the reading is the
+    /// placement's FLOOR against the staff's own ink alone.</summary>
+    private static readonly string HPC = HairpinWedgeScore("HPC", "");
+
+    /// <summary>The same book with a fermata forced below the note — the one variable that
+    /// separates it from <see cref="HPC"/>, and the only cheap grob in LilyPond that can
+    /// push a wedge at all.</summary>
+    private static readonly string HPF = HairpinWedgeScore("HPF", "@fermata.down");
+
+    /// <summary>
     /// The figured-bass arrangements — the mirrors of figured-bass-placement.ly's books
     /// FBLA / FBLB / FBLC, the corpus's FIRST figured-bass points.
     /// </summary>
@@ -13408,6 +13472,26 @@ internal static class LpGeometryProbes
         // closes when the above pass gets per-(system, staff) trackers.
         new("script.lower-staff.staff-to-ink-bottom", SPL,
             g => g.FermataInkEdgeAboveStaff(staff: 1), RaggedBottomPaper),
+
+        // --- where a lone HAIRPIN's wedge sits, and what a FERMATA does to it (HPC/HPF) ---
+        // The first observers OutsideStaffStacker.HairpinHalfHeight has ever had. It was
+        // blocked for sessions behind a remark claiming the arrangement that would show it is
+        // missing from the corpus; the arrangement it NAMED is impossible in LilyPond (a
+        // TextScript at 450 and a second dynamic on the same DynamicLineSpanner can neither of
+        // them push a wedge at 250 — measured, books HN1..HN4), and the arrangement that
+        // works was deduced from the priorities instead: below the staff only TrillSpanner
+        // (50) and the fermata family (75) rank under 250.
+        //
+        // THE PAIR IS THE POINT. HPC reads the placement's floor against the staff's own ink;
+        // HPF adds ONE variable. Either reading alone confounds the floor with the clearance,
+        // and the pair's DIFFERENCE is the fermata's push and nothing else — LilyPond's is
+        // 1.723378 (5.089978 - 3.366600). See HairpinWedgeScore for why neither book carries a
+        // dynamic text (a text would route the line through the wedge's real outline instead
+        // of the flat box, and the constant would stop being observed).
+        new("hairpin.plain.staff-to-wedge", HPC,
+            g => g.HairpinWedgeCentreBelowStaff(), RaggedBottomPaper),
+        new("hairpin.under-fermata.staff-to-wedge", HPF,
+            g => g.HairpinWedgeCentreBelowStaff(), RaggedBottomPaper),
 
         // --- where FIGURED BASS lands, and WHICH STAFF decides (books FBLA/FBLB/FBLC) ---
         // The corpus's first figured-bass points. The same music and the same figures in

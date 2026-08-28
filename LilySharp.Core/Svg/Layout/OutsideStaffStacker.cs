@@ -126,8 +126,11 @@ internal static class OutsideStaffStacker
     // ascent. A LILYPOND-REF beside a number is not evidence that the number came from it.
 
     // ⚠️ LILYSHARP-OWN, AND IT IS THE THIRD SPELLING OF ONE QUANTITY — named 2026-07-31 by
-    // the §7.7 pass over the placement port, not fixed, because no point observes it (which
-    // was an argument then and is a measurement now — see below).
+    // the §7.7 pass over the placement port. IT IS WATCHED NOW (2026-08-28, session 277):
+    // ledger hairpin.under-fermata.staff-to-wedge, residual -0.258678186, against the control
+    // hairpin.plain.staff-to-wedge which is exact and stays exact when this line is poisoned.
+    // Read that entry's `why` before touching this: it says the defect is this box's SHAPE
+    // and not its value, and it prices both candidate ports.
     // The wedge's real ink half-height is its OWN opening plus half the rule's thickness,
     // and the drawn opening's cap IS 0.6666 (HairpinEngraver.Height carries that citation),
     // so this is about HALF the ink LilyPond's Hairpin skyline has. The other two spellings
@@ -135,27 +138,73 @@ internal static class OutsideStaffStacker
     // is the pointwise outline (side-position, the wedge narrows to its apex) and
     // LayoutEngine's annotation-protrusion pass is the max fold over the piece. This one is
     // neither — it UNDER-reserves, which is the direction that prints a collision.
-    // ⚠️ WHY IT IS NOT FIXED HERE: no ledger point reads it — MEASURED 2026-08-28 (session
-    // 276), not argued. Poisoned 0.3333 → 3.0: NOT ONE LEDGER ENTRY MOVED, two unit tests went
-    // red (so the poison was live, which is the half of the check that makes the zero mean
-    // anything) and TWO BOOKS of 573 moved. (⚠️ That sentence is worded to REPORT rather than
-    // to DECLARE: the census in docs/APPROXIMATIONS.md counts a comment that declares an
-    // unwatched divergence, and the declaration is the line above — spelling the result the
-    // obvious way counted this one site twice.) The reasoning still stands as written:
-    // hairpin.page.quiet reads the DEEPEST ink under the last staff, which the protrusion pass
-    // supplies either way, and this box only decides how far the collision pass pushes a wedge
-    // that sits under something tall.
+    // ⚠️ WHY IT STAYED UNFIXED UNTIL SESSION 277: for exactly one day the corpus held nothing
+    // that read it — MEASURED 2026-08-28 (session 276), not argued. Poisoned 0.3333 → 3.0: NOT
+    // ONE LEDGER ENTRY MOVED, two unit tests went red (so the poison was live, which is the half
+    // of the check that makes the zero mean anything) and TWO BOOKS of 573 moved. (⚠️ That
+    // sentence is worded to REPORT rather than to DECLARE: the census in docs/APPROXIMATIONS.md
+    // counts a comment that declares a divergence with nothing watching it, and spelling the
+    // result the obvious way counted this one site twice.) The reasoning still stands as
+    // written: hairpin.page.quiet reads the DEEPEST ink under the last staff, which the
+    // protrusion pass supplies either way, and this box only decides how far the collision pass
+    // pushes a wedge sitting under something tall — which is precisely the arrangement HPF
+    // draws and the page books cannot.
     // ⚠️⚠️ BUT THE SENTENCE THAT USED TO FOLLOW WAS FALSE, and it was the one doing the
     // blocking: it called the observing arrangement — "a hairpin under a below-staff script or
     // a second dynamic" — THE SAME MISSING PAIR THE SCRIPT SEED BOX WAITS ON. It is not
     // missing. The two books the poison moved are exactly that arrangement and both are
     // tracked: audit/lp-regression/lys/empty-chord.lys and audit/lpreg/ec-probe2.lys, each
     // spelling `@decresc <>@pp` — a hairpin ending into a second dynamic.
-    // ⇒ "Point first" is still right and is no longer blocked: the corpus already draws the
-    // configuration, so the pair can be cut today. ⚠️ NOT from empty-chord.lys as it stands —
-    // its own header records a SUBSTITUTION (LilyPond's bare `\enddecr` has no spelling here,
-    // so both sides were replaced with \pp/@pp), and a translated book with a substitution is
-    // not the LilyPond book (HANDOFF 5.0, the session-179 trap). Write the pair fresh.
+    // ⚠️⚠️⚠️ AND "POINT FIRST" IS NOT MERELY UNBLOCKED — IT IS MISDIRECTED. Measured the same
+    // day (scratch/s276/hairpin-neighbour.ly, LilyPond 2.26.0): NEITHER arrangement the remark
+    // named can produce the reading, because on the LilyPond side there is no quantity to pair
+    // with.
+    //   ⑴ "a hairpin under a below-staff script" — DynamicLineSpanner declares
+    //      outside-staff-priority 250 and TextScript declares 450, so the dynamic line is
+    //      placed FIRST and the script is placed OUTSIDE it. A TextScript can never push a
+    //      hairpin. MEASURED as a one-variable pair: with a tall \markup column hanging below
+    //      (HN3) and without it (HN4), the Hairpin sits at ry -7.1426 in BOTH, and the script
+    //      lands at -9.865 — below the wedge, not against it.
+    //      LILYPOND-REF: scm/define-grobs.scm:1401-1440 DynamicLineSpanner (outside-staff-priority . 250)
+    //      LILYPOND-REF: scm/define-grobs.scm:3800-3833 TextScript (outside-staff-priority . 450)
+    //   ⑵ "a second dynamic" — the Hairpin and the DynamicText share ONE DynamicLineSpanner
+    //      and are placed ONCE by its UNION extent; there is no collision pass between them.
+    //      MEASURED (HN1 with the wedge against HN2 without): the line goes 0.148569 deeper
+    //      while the spanner's top extent grows 0.568008 -> 0.716600, i.e. by 0.148592 — the
+    //      same quantity to four digits, which is union placement showing itself. (The 2.3e-5
+    //      is not chased here.)
+    // ⇒ So the question is not "cut the pair from those" but "what CAN push a hairpin" — on
+    // either side, only an outside-staff grob of priority BELOW DynamicLineSpanner's 250.
+    // ⇒⇒ ANSWERED THE SAME DAY, AND THE PAIR EXISTS. Below the staff there are exactly two
+    // such movers, and THIS FILE ALREADY PLACES BOTH IN THAT ORDER (StackBelowStaffCore: the
+    // DOWN trill spanner at 50, then the fermata family at 75, then the dynamics and hairpins
+    // at 250) — so the pass order was never the defect. MEASURED (HN5 against its control
+    // HN4, one variable apart): a fermata forced below moves LilyPond's Hairpin from
+    // ry -7.1426 to -8.86597818620712, i.e. 1.723378186 DEEPER.
+    // ⇒ THE POINT TO CUT IS A HAIRPIN UNDER A FERMATA (or under a down trill), and the
+    // LilyPond side of it is already measured in the probe. What the remark had wrong was
+    // never that no pair existed — it was which arrangement makes one.
+    // ⚠️ AND IF A PAIR IS EVER CUT HERE, WRITE IT FRESH: empty-chord.lys records a SUBSTITUTION
+    // in its own header (LilyPond's bare `\enddecr` has no spelling here, so both sides became
+    // \pp/@pp), and a translated book with a substitution is not the LilyPond book (HANDOFF
+    // 5.0, the session-179 trap).
+    // ⇒⇒⇒ CUT 2026-08-28 (session 277), written fresh: books HPC/HPF of
+    // audit/lp-geometry/probes/hairpin-neighbour.ly and LpGeometryProbes.HairpinWedgeScore.
+    // AND THE ANSWER IS NOT THE NUMBER ON THE NEXT LINE. Poisoning it to LilyPond's own
+    // Y-extent 0.716600 does not close the entry, it OVERSHOOTS it (+0.124621814): a flat box
+    // at the wedge's WIDEST is too tall over the fermata, where a decrescendo has already
+    // begun to narrow. Handing the same placement HairpinEngraver.WedgeSkylines — the sloped
+    // outline the line-group arm of StackBelowStaffCore already uses, twenty lines below —
+    // closes 98.3% of it (+0.004449172 left, NOT isolated; see the entry's `why`).
+    // ⇒ So this is not a wrong constant to retune. It is one quantity spelled twice inside
+    // one method, and the port is to delete this spelling rather than to correct it. It is
+    // still its own act and wants approval — it changes what a reader gets for a lone wedge
+    // under a fermata or a down trill — but it is NOT a blind one and needs no rebase:
+    // MEASURED with that port applied, 0 OF 573 BOOKS MOVED, and the poison was live in that
+    // same build state because exactly one test in the suite went red and it was
+    // hairpin.under-fermata.staff-to-wedge. That pair is this line's only observer anywhere
+    // in the repository. Both candidate numbers above are measured, so nothing needs
+    // re-pricing when the act comes.
     // LILYPOND-REF: scm/define-grobs.scm:1785 Hairpin (height . 0.6666)
     private const double HairpinHalfHeight = 0.6666 / 2.0;
 

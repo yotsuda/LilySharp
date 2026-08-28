@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 54 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 50 | 観測者がゼロだと自認しているもの |
+| `UNWATCHED` | 48 | 観測者がゼロだと自認しているもの |
 | `OWN` | 115 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **219** | |
+| **計** | **217** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -32,7 +32,7 @@
 | `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs` | 5 |
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 5 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 5 |
-| `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs` | 5 |
+| `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 5 |
 
 ## APPROX — LP に対応物はあるが、形が違うと自認しているもの（54 件）
 
@@ -124,7 +124,7 @@
 ### `LilySharp.Core/Svg/Model/LyricItem.cs`
 - **:100** ⚠️ NOT PORTED — the voice's melismaBusy state: the trigger here is the
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（50 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（48 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:1658** container, and the value stops being unobserved with the line above.
@@ -186,9 +186,7 @@
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
 - **:129** staff_extent[DOWN], which is the ink edge too. ⚠️ No ledger point measures
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
-- **:129** the §7.7 pass over the placement port, not fixed, because no point observes it (which
-- **:138** ⚠️ WHY IT IS NOT FIXED HERE: no ledger point reads it — MEASURED 2026-08-28 (session
-- **:1606** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
+- **:1655** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
 - **:56** the distance is taken at — and NO ledger point moves with it. An output change no point
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
@@ -347,7 +345,7 @@
 - **:82** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
 - **:128** ⚠️ LILYSHARP-OWN, AND IT IS THE THIRD SPELLING OF ONE QUANTITY — named 2026-07-31 by
-- **:2745** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
+- **:2794** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
 ### `LilySharp.Core/Svg/Layout/PageBreaker.cs`
 - **:84** ⚠️ LILYSHARP-OWN: THE NULLABILITY. LilyPond's Line_details ALWAYS carries a shape —
 ### `LilySharp.Core/Svg/Layout/PageLayouter.cs`
