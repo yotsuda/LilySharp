@@ -230,6 +230,18 @@ public sealed partial class MeasureCollector
     /// <summary>Tied note pairs with conflicting explicit tab string numbers.
     /// Populated as a side effect of Collect.</summary>
     public IReadOnlyList<TabTieStringWarning> TabTieWarnings => _tabResolver.TieWarnings;
+    // Voice names whose per-voice sanity scan has already run on THIS collector.
+    // A part engraved on more than one staff (`score { staff bass  tab bass }`) is
+    // collected once per staff, and the sanity scanners below append to collector-wide
+    // cumulative lists — so without this guard every complaint they make about that part
+    // is emitted once per staff, at the same source position, for the same slip.
+    // ONE ROOT CAUSE, ONE DIAGNOSTIC: the same doctrine _warnedSpans states for the
+    // measure passes. The scans are display-independent by construction (they run
+    // BEFORE the ottava transposition and before any staff-local transform), so the
+    // second staff's scan could only ever reproduce the first staff's answer.
+    // ⚠️ The key is the VOICE name, not the staff: extra voices from a `<< \\ >>` span
+    // are named after their part, so they are covered by the same guard.
+    private readonly HashSet<string> _sanityScannedVoices = new();
     // Ties whose next timed item repeats none of the tied pitches (or is a rest).
     // Scanned per finished voice by TieTargetScanner; surfaced by TieTargetValidator.
     private readonly List<TieTargetWarning> _tieTargetWarnings = new();
@@ -672,9 +684,7 @@ public sealed partial class MeasureCollector
         var voice = _tabResolver.ResolveVoiceTabTies(new Voice(_voiceName ?? "default", measures.ToImmutableArray()));
         // Tie sanity scan runs BEFORE the ottava display transposition (it compares
         // written staff positions; an 8va span must not fake a pitch change).
-        TieTargetScanner.Scan(voice, _tieTargetWarnings, _cueSpanBoundaryWarnings);
-        SlurPairingScanner.Scan(voice, _unpairedSlurWarnings, _cueSpanBoundaryWarnings);
-        BeamPairingScanner.Scan(voice, _unpairedBeamWarnings);
+        ScanVoiceSanity(voice);
         // One voice IS the score here, so this voice already carries the score-level
         // barlines. (The multi-staff path scans after SynchronizeBarlines instead.)
         RepeatPairingScanner.Scan(voice, _unpairedRepeatWarnings);
@@ -1461,11 +1471,7 @@ public sealed partial class MeasureCollector
 
         // Tie sanity scan per voice, BEFORE the ottava display transposition.
         foreach (var v in voices)
-        {
-            TieTargetScanner.Scan(v, _tieTargetWarnings, _cueSpanBoundaryWarnings);
-            SlurPairingScanner.Scan(v, _unpairedSlurWarnings, _cueSpanBoundaryWarnings);
-            BeamPairingScanner.Scan(v, _unpairedBeamWarnings);
-        }
+            ScanVoiceSanity(v);
 
         // Ottava DISPLAY transposition (single staff → staff 0). See OttavaTransposer.
         var multiVoiceOttava = DetectOttavaSpans(0);
@@ -1624,12 +1630,38 @@ public sealed partial class MeasureCollector
             voices.Add(new Voice($"{voiceName}.{i + 2}", extras[i]));
         // Tie sanity scan per staff voice, BEFORE any display-only transform.
         foreach (var v in voices)
-        {
-            TieTargetScanner.Scan(v, _tieTargetWarnings, _cueSpanBoundaryWarnings);
-            SlurPairingScanner.Scan(v, _unpairedSlurWarnings, _cueSpanBoundaryWarnings);
-            BeamPairingScanner.Scan(v, _unpairedBeamWarnings);
-        }
+            ScanVoiceSanity(v);
         return ResolveStaffColumns(voices.ToImmutable());
+    }
+
+    /// <summary>
+    /// Runs the per-voice sanity scanners over a finished voice — ONCE per voice name,
+    /// however many staves engrave it. THREE scanners, FOUR sinks: the cue-boundary list is
+    /// filled by the tie scanner AND the slur scanner, so counting scanners undercounts what
+    /// this guard protects (the first test written for it stopped at three and left the cue
+    /// crossing — an error, not a warning — unpinned).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE GUARD IS THE POINT, not the bundling. A part engraved on two staves
+    /// (<c>score { staff bass  tab bass }</c> — 260 of the 899-book corpus) is collected
+    /// once per staff, and these scanners append to collector-wide cumulative lists
+    /// (see <see cref="CumulativeSideTables"/>). Before the guard, every tie, slur and beam
+    /// complaint in such a part was printed once per staff, at the SAME source position,
+    /// for the SAME slip — measured 2026-08-29 in 4 corpus books, and reproduced for all
+    /// three scanners by <c>MultiStaffPartScansOnce</c>.
+    /// <para>
+    /// Deduping the DIAGNOSTICS instead would have been wrong: the measure passes also emit
+    /// byte-identical lines, and there they name genuinely DIFFERENT bars that the widened
+    /// lead-in address happens to collapse onto one position (<see cref="Semantics.MeasureValidator"/>,
+    /// <c>Reported</c>). Only the repeated SCAN is a duplicate; repeated text is not.
+    /// </para></remarks>
+    private void ScanVoiceSanity(Voice voice)
+    {
+        if (!_sanityScannedVoices.Add(voice.Name))
+            return;
+        TieTargetScanner.Scan(voice, _tieTargetWarnings, _cueSpanBoundaryWarnings);
+        SlurPairingScanner.Scan(voice, _unpairedSlurWarnings, _cueSpanBoundaryWarnings);
+        BeamPairingScanner.Scan(voice, _unpairedBeamWarnings);
     }
 
     /// <summary>The measures of a part this score does NOT engrave, collected the
@@ -1870,6 +1902,12 @@ public sealed partial class MeasureCollector
         // Deliberately OUTSIDE CumulativeSideTables (its remark says why): still an
         // output list, so it still resets.
         _unpairedRepeatWarnings.Clear();
+        // Also outside the registry, for the opposite reason: this one is not an output
+        // at all but the guard that keeps ScanVoiceSanity to one pass per voice, so it
+        // is neither adopted nor shifted on resume. It MUST clear here all the same —
+        // a reused collector meeting a new tree has to scan that tree's voices, and a
+        // stale name would silence every such complaint in the part sharing that name.
+        _sanityScannedVoices.Clear();
         // The mark-position probe cache mirrors _musicMarks (registry-cleared above),
         // so it resets with it or IsCollectedMusicMark would answer from a stale set.
         _musicMarkPositions.Clear();

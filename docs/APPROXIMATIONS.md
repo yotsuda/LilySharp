@@ -51,7 +51,7 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:297** ⚠️ subdivide_beams (:186-188) is not ported: it is gated on
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:3275** for a body of three or more WHOLE measures LilyPond's behaviour is NOT PORTED
+- **:3313** for a body of three or more WHOLE measures LilyPond's behaviour is NOT PORTED
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
 - **:148** ⚠️ WHAT IS NOT PORTED, and why it cannot be reached rather than was skipped:
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
@@ -252,8 +252,8 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:1765** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:3567** LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
+- **:1797** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:3605** LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
 - **:67** LILYSHARP-OWN: the DEFAULT five is LilyPond's (scm/define-grobs.scm:3396,
 ### `LilySharp.Core/Svg/Collector/StaffAccidentalColumns.cs`

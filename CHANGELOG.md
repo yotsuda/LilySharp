@@ -37,6 +37,17 @@ turned out to be hiding them.
 
 ### Diagnostics
 
+- **A part engraved on two staves no longer complains twice.** A score that puts one part
+  on both a standard staff and a tab staff (`score { staff bass  tab bass }`) collects that
+  part once per staff, and the per-voice sanity scans — the tie target, the unclosed slur,
+  the unopened manual beam, and the slur or tie that crosses a cue boundary — appended to
+  lists that live on the whole collect. So one slip in the source printed one complaint per
+  staff, at the same position, naming the same character (an error, in the cue case, rather
+  than a warning). The scans now run once per voice, however many staves engrave it. 260 of the
+  899 books put a part on two staves; four of them also carry one of these slips, and those
+  four printed five lines twice over. Each is now printed once. No warning disappeared, no
+  exit code changed, and no page moved — these scans have no say in what is drawn.
+
 - An overfull bar that runs into a `repeat` is reported where it was WRITTEN. A bar left
   open in front of a repeat is part of the repeat body's first bar, and the warning used
   to land inside the body — so `r1 r1 r1` with the bar lines left out drew its complaint

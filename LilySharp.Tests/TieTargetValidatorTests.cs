@@ -106,6 +106,39 @@ public class TieTargetValidatorTests
     public void EachMismatchWarnsOnce() =>
         Assert.Equal(2, WarningCount("c4~ d4 e4~ f4"));
 
+    /// <summary>
+    /// A part engraved on more than one staff is COLLECTED once per staff, and the
+    /// per-voice sanity scanners append to collector-wide cumulative lists — so before
+    /// <c>MeasureCollector.ScanVoiceSanity</c> took a guard, every complaint they make
+    /// about such a part was emitted once per staff: same code, same source position,
+    /// same slip. Measured 2026-08-29 across the 899-book corpus — 260 books engrave a
+    /// part twice, and the 4 that also carry one of these slips printed it twice
+    /// (`Disco Inferno`, `Don't Stop Believin'`, `himawari`, `Let's Stay Together`).
+    /// ⚠️ EVERY SINK IS PINNED, not just the tie. TWO scanners fill FOUR lists — the cue
+    /// boundary is fed by both of them — and the corpus happened to hold an observer for
+    /// the tie alone, which is exactly why the other three need a written one. Counting
+    /// the scanners rather than their sinks is how the first version of this test stopped
+    /// at three and left the cue crossing, an ERROR rather than a warning, unpinned.
+    /// </summary>
+    [Theory]
+    [InlineData(DiagnosticCodes.TieTargetMismatch, "c1 ~ | d1")]
+    [InlineData(DiagnosticCodes.UnpairedSlur, "c1 ( | d1")]
+    [InlineData(DiagnosticCodes.UnpairedBeam, "c8 c c c] c c c c")]
+    [InlineData(DiagnosticCodes.SpanCrossesCueBoundary, "c1 ( | cue { d1 ) }")]
+    public void MultiStaffPartScansOnce(string code, string music)
+    {
+        static int Count(string body, string staves, string code) =>
+            SemanticValidation.Run(SyntaxTree.Parse(
+                $"octave absolute time 4/4 part m {{ tuning bass section A {{ {body} }} }} "
+                + $"form main {{ ~A }} score main {{ {staves} }}"))
+                .Count(d => d.Code == code);
+
+        // The control: one staff, one complaint. Then the same music on two staves —
+        // the reader made ONE slip, so the answer must not move.
+        Assert.Equal(1, Count(music, "staff m", code));
+        Assert.Equal(1, Count(music, "staff m  tab m", code));
+    }
+
     [Fact]
     public void RunsViaSemanticValidation() =>
         // Registered in SemanticValidation.CreateAll so the CLI's check and the
