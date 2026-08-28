@@ -200,7 +200,6 @@ internal static partial class SharedRenderer
         in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.PercentRepeatLayouts.IsDefaultOrEmpty) return;
-        const double slope = 1.0;
         const double thickness = 0.48;
         // The `dots.dot` glyph is a CIRCLE, and it does not scale with the staff: the same
         // path with the same scale appears on the notation staff and on the 1.5-spaced
@@ -219,7 +218,6 @@ internal static partial class SharedRenderer
         //   entries: dot-negative-kern 0.75, slash-negative-kern 1.6, slope 1.0,
         //   thickness 0.48. Range-less: the grob names are one word each.
         const double dotKern = 0.75;
-        const double slashKern = 1.6;
 
         foreach (var pr in layout.PercentRepeatLayouts)
         {
@@ -233,6 +231,24 @@ internal static partial class SharedRenderer
             double ss = staff?.Tuning is { } tuning
                 ? EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuning))
                 : 1.0;
+            // FOUR GROBS SHARE THIS DRAWING and they differ in three numbers: how many
+            // slashes, how steep, and how hard the copies overlap. The plain beat slash is
+            // the odd one — steeper (1.7) and more tightly kerned (0.85) than the percent
+            // family, and it carries NO dots.
+            // LILYPOND-REF: scm/define-grobs.scm — the RepeatSlash entry (slope 1.7,
+            //   slash-negative-kern 0.85) against the DoubleRepeatSlash entry (slope 1.0,
+            //   slash-negative-kern 1.6, dot-negative-kern 0.75), which is the picture the
+            //   PercentRepeat / DoublePercentRepeat pair already draws. Range-less like the
+            //   neighbouring citation: the grob names are one word each (HANDOFF §5.2.1⑦).
+            // LILYPOND-REF: lily/percent-repeat-interface.cc:107-121 beat_slash — count 0
+            //   draws x_percent (me, 2), i.e. WITH dots, and any other count brew_slash
+            //   (me, count), i.e. without.
+            bool plainSlash = pr.IsBeatSlash && pr.SlashCount >= 1;
+            double slope = plainSlash ? 1.7 : 1.0;
+            double slashKern = plainSlash ? 0.85 : 1.6;
+            int slashes = pr.IsBeatSlash
+                ? (pr.SlashCount >= 1 ? pr.SlashCount : 2)
+                : (pr.IsDouble ? 2 : 1);
             double slashWidth = 2.0 / slope * ss;
             double slashHeight = slashWidth * slope;
             double thick = thickness * ss;
@@ -249,16 +265,21 @@ internal static partial class SharedRenderer
             //   x_width = hypot (t, t/s) and height = w·s, and the box is (0, w + x_width).
             double xWidth = System.Math.Sqrt(thick * thick + thick / slope * (thick / slope));
             double slashInk = slashWidth + xWidth;
-            // A DOUBLE sign is the same picture with a second slash: brew_slash's loop adds
-            // one more copy at the group's right edge with a NEGATIVE padding, so the two
-            // overlap and their origins end up (slash ink width − 1.6·ss) apart. ZERO for a
-            // single sign, which then draws exactly one slash.
+            // EVERY COPY BEYOND THE FIRST is added at the group's right edge with a NEGATIVE
+            // padding, so consecutive origins end up (slash ink width − kern·ss) apart. ZERO
+            // for a single slash, which then draws exactly one.
             // LILYPOND-REF: lily/percent-repeat-interface.cc:37-60 brew_slash — the
-            //   add_at_edge (X_AXIS, RIGHT, slash, -slash_neg_kern) loop, count 2 for double.
-            double pairGap = pr.IsDouble ? slashInk - slashKern * ss : 0.0;
-            double groupWidth = slashInk + pairGap;
-            double cx = pr.X;
-            double left = cx - groupWidth / 2;
+            //   `for (int i = count - 1; i--;) add_at_edge (X_AXIS, RIGHT, slash,
+            //   -slash_neg_kern)` loop. It is a LOOP, not a pair: a sixteenth-note beat slash
+            //   asks for two and nothing stops a thirty-second asking for three.
+            double pairGap = slashes > 1 ? slashInk - slashKern * ss : 0.0;
+            double groupWidth = slashInk + (slashes - 1) * pairGap;
+            // ⚠️ A BEAT SLASH IS NOT CENTRED ON ITS X: beat_slash returns brew_slash's
+            // stencil as it stands, where double_percent re-aligns to CENTRE. So the layout's
+            // X is this group's LEFT EDGE, and the percent family's is its middle.
+            // LILYPOND-REF: lily/percent-repeat-interface.cc:96-101 double_percent — the
+            //   align_to (X_AXIS, CENTER) that :107-121 beat_slash does not do.
+            double left = pr.IsBeatSlash ? pr.X : pr.X - groupWidth / 2;
             // Page Y-up against this sign's own staff middle — the staff's REAL
             // height (a six-string tab's lines span 7.5, not the nominal 4.0; the
             // grob has no Y-offset and its stencil is align_to'd CENTER on it).
@@ -281,7 +302,7 @@ internal static partial class SharedRenderer
                 // Bottom-left to top-right, with a dot in each pocket the slash leaves —
                 // upper-LEFT and lower-RIGHT, like the "%" glyph. The double sign draws the
                 // parallelogram twice, the pair centred on the bar line.
-                for (int k = 0; k <= (pr.IsDouble ? 1 : 0); k++)
+                for (int k = 0; k < slashes; k++)
                 {
                     double x0 = left + k * pairGap;
                     double bottom = cy - slashHeight / 2;
@@ -291,8 +312,14 @@ internal static partial class SharedRenderer
                         (x0 + xWidth + slashWidth, top), (x0 + slashWidth, top),
                         Color.Black);
                 }
-                gc.DrawCircle(upperDotCx, cy + dotDy, dotRadius, Color.Black);
-                gc.DrawCircle(lowerDotCx, cy - dotDy, dotRadius, Color.Black);
+                // ⚠️ THE PLAIN BEAT SLASH HAS NO DOTS. Its stencil is brew_slash's, and the
+                // dots are added by x_percent, which only the count-0 (mixed durations) beat
+                // slash and the two percent signs go through.
+                if (!plainSlash)
+                {
+                    gc.DrawCircle(upperDotCx, cy + dotDy, dotRadius, Color.Black);
+                    gc.DrawCircle(lowerDotCx, cy - dotDy, dotRadius, Color.Black);
+                }
             }
         }
     }

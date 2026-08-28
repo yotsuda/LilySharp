@@ -33,7 +33,19 @@ public readonly record struct PercentRepeatLayout(
     int SourcePosition,
     int SourceIndex = -1,    // F3/B: index into score.PercentRepeats (data-pos resolved at render)
     int StaffIndex = -1,      // owning staff, so the draw can resolve its staff middle
-    bool IsDouble = false     // two slashes on the bar line: a TWO-measure body's sign
+    bool IsDouble = false,    // two slashes on the bar line: a TWO-measure body's sign
+    // A beat slash — a body shorter than a measure. ⚠️ ITS X IS THE LEFT EDGE of the group,
+    // not the centre, because LilyPond's beat_slash callback (unlike double_percent) never
+    // calls align_to (X_AXIS, CENTER): the stencil hangs off the rhythmic column it belongs
+    // to. Measured on 2.26.0 (scratch/p282/slashprobe-lpsvg.svg): the two-slash group of
+    // `\repeat percent 2 { c16 d e f }` has its leftmost slash origin at 27.1376, and the
+    // beat's column — the four sixteenths sit 2.5042 apart from 17.1208 — is 27.1376.
+    // LILYPOND-REF: lily/percent-repeat-interface.cc:107-121 beat_slash vs :96-101
+    //   double_percent — only the latter re-aligns.
+    bool IsBeatSlash = false,
+    // LilyPond's slash-count, carried through: 0 draws the dotted DoubleRepeatSlash, N ≥ 1
+    // draws N plain slashes. Meaningless unless IsBeatSlash.
+    int SlashCount = 0
 );
 
 /// <summary>
@@ -80,14 +92,32 @@ internal static class PercentRepeatEngraver
             //   break-align-symbol = staff-bar. Range-less on purpose: one-word grob name.
             // LILYPOND-REF: lily/percent-repeat-interface.cc:96-101 double_percent — the
             //   stencil is align_to'd CENTER on X, so the bar line is its middle.
-            double x = item.IsDouble ? ml.X : ml.X + ml.Width / 2;
+            // A BEAT slash stands at its own moment inside the measure, so it reads the same
+            // X the notehead pass reads: the timing columns when a multi-staff score has
+            // filled them, and the per-item slots otherwise. Matching that pass exactly is
+            // what keeps the slash on the beat rather than near it — the two grids do not
+            // agree, which is why SharedRenderer.Noteheads picks between them the same way.
+            double x;
+            if (item.IsBeatSlash)
+            {
+                x = !ml.Columns.IsDefaultOrEmpty && ml.Columns.Length > 0
+                    ? ml.X + ml.GetXForTiming(item.BeatTiming!.Value)
+                    : item.BeatItemIndex >= 0 && item.BeatItemIndex < ml.Items.Length
+                        ? ml.X + ml.Items[item.BeatItemIndex].X
+                        : ml.X;
+            }
+            else
+            {
+                x = item.IsDouble ? ml.X : ml.X + ml.Width / 2;
+            }
 
             // Y-up (frame B): the percent sign is centred on the OWN staff's middle
             // line = 0 staff-spaces above the middle. The staff (and thus its device
             // middle) is resolved at draw time from StaffIndex.
             results.Add(new PercentRepeatLayout(
                 item.MeasureIndex, x, 0.0, ml.Width, item.SourcePosition, i,
-                StaffIndex: item.StaffIndex, IsDouble: item.IsDouble));
+                StaffIndex: item.StaffIndex, IsDouble: item.IsDouble,
+                IsBeatSlash: item.IsBeatSlash, SlashCount: item.SlashCount));
         }
 
         return results.ToImmutable();

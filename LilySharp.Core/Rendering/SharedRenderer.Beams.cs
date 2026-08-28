@@ -32,10 +32,20 @@ internal static partial class SharedRenderer
         double pageHeight)
     {
         var staffByIndex = score.EnumerateStaves().ToDictionary(s => s.GlobalStaffIndex, s => s.Staff);
-        // Beams whose notes are hidden under a percent sign are hidden too.
+        // Beams whose notes are hidden under a percent sign are hidden too — and the set of
+        // measures a sign hides is <see cref="PercentRepeatItem.FirstCoveredMeasure"/>'s
+        // answer, not its MeasureIndex.
+        // ⚠️ THIS WAS THE FOURTH READER OF THAT QUESTION AND IT DID NOT ASK. Taking the
+        // anchor measure alone is wrong at BOTH ends of the family: a DOUBLE percent anchors
+        // on the SECOND measure of its pair, so the first one kept its beams and stems while
+        // its noteheads were hidden — measured 2026-08-29 on scratch/p282/dbl.lys, where bar
+        // 3 of `repeat percent 2 { … | … | }` printed two beams and eight stems standing over
+        // nothing. A BEAT slash hides no measure at all, so reading its anchor here blanked
+        // every beam in the bar it stands in, including the written beat it repeats.
         var percentByStaff = new HashSet<(int Staff, int Measure)>();
         foreach (var prItem in score.PercentRepeats)
-            percentByStaff.Add((prItem.StaffIndex, prItem.MeasureIndex));
+            for (int m = prItem.FirstCoveredMeasure; m <= prItem.MeasureIndex; m++)
+                percentByStaff.Add((prItem.StaffIndex, m));
         foreach (var beam in layout.BeamLayouts)
         {
             // Only draw beams whose first measure is in this system

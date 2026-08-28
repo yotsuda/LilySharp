@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 56 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 55 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 48 | 観測者がゼロだと自認しているもの |
-| `OWN` | 114 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **218** | |
+| `OWN` | 117 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **220** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -34,25 +34,24 @@
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 5 |
 | `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 5 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（56 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（55 件）
 
 ### `LilySharp.Core/Rendering/Pdf/PdfDrawingContext.cs`
 - **:310** ⚠️ NOT PORTED — backend-blocked: CHARACTERS AT THE CLUSTERS' POSITIONS, not glyphs at
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
-- **:483** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
+- **:493** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:332** ⚠️ NOT PORTED — the per-duration grace head: the head shape is BLACK for every
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1135** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
-- **:1140** whiteout −1) is not ported.
-- **:1253** NOT ported; this takes the note's own stem direction. No book and
+- **:1162** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
+- **:1167** whiteout −1) is not ported.
+- **:1280** NOT ported; this takes the note's own stem direction. No book and
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
 - **:729** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:297** ⚠️ subdivide_beams (:186-188) is not ported: it is gated on
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:3269** branch (RepeatSlashEvent, beat slashes) is not ported.
-- **:3286** ⚠️ THE THIRD BRANCH IS NOT PORTED. LilyPond's `else` is RepeatSlashEvent
+- **:3275** for a body of three or more WHOLE measures LilyPond's behaviour is NOT PORTED
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
 - **:148** ⚠️ WHAT IS NOT PORTED, and why it cannot be reached rather than was skipped:
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
@@ -126,17 +125,17 @@
 ### `LilySharp.Core/Svg/Model/LyricItem.cs`
 - **:100** ⚠️ NOT PORTED — the voice's melismaBusy state: the trigger here is the
 ### `LilySharp.Core/Svg/Model/PercentRepeatItem.cs`
-- **:41** ⚠️ The third branch (a body that is neither one nor two measures) is NOT PORTED: Lily#
+- **:45** NOT PORTED HERE, and they keep the per-measure percent. That split is LilyPond's own:
 
 ## UNWATCHED — 観測者がゼロだと自認しているもの（48 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:1658** container, and the value stops being unobserved with the line above.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
-- **:486** no observer; add the paren widths when a book brings one. The unpacked
-- **:488** bare glyph width, which is exact for one and unobserved for many.
+- **:496** no observer; add the paren widths when a book brings one. The unpacked
+- **:498** bare glyph width, which is exact for one and unobserved for many.
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1254** no observer reaches that branch yet.
+- **:1281** no observer reaches that branch yet.
 ### `LilySharp.Core/Semantics/DrummapValidator.cs`
 - **:30** ★ This validator exists because the block had NO observer of any kind. Measured
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
@@ -212,7 +211,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（114 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（117 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:1653** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -226,15 +225,15 @@
 ### `LilySharp.Core/Rendering/Pdf/PdfDrawingContext.cs`
 - **:227** LILYSHARP-OWN: the stand-in case has no LilyPond counterpart, and cannot have one.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
-- **:314** LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
+- **:324** LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
 ### `LilySharp.Core/Rendering/SharedRenderer.cs`
 - **:70** LILYSHARP-OWN: the swing feel-equation's small note size. The equation is Lily#'s
 - **:437** prefix — LILYSHARP-OWN, a decided divergence (user decision
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:209** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:574** LILYSHARP-OWN sizes: the feel equation keeps the small chart-style note (1.6)
-- **:1247** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
+- **:601** LILYSHARP-OWN sizes: the feel equation keeps the small chart-style note (1.6)
+- **:1274** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
 ### `LilySharp.Core/Rendering/SharedRenderer.Prefix.cs`
 - **:497** LILYSHARP-OWN: the '+' of a compound meter's numerator, which LilyPond
 ### `LilySharp.Core/Rendering/SharedRenderer.Tab.cs`
@@ -243,6 +242,9 @@
 - **:476** LILYSHARP-OWN: LilyPond has no equivalent refusal, and cannot — it resolves through
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
 - **:337** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
+### `LilySharp.Core/Semantics/PercentRepeatShape.cs`
+- **:45** LILYSHARP-OWN: a subdivision of LilyPond's else, which does not name it.
+- **:55** LILYSHARP-OWN, and the other half of the same subdivision.
 ### `LilySharp.Core/Svg/Collector/BeamDetector.cs`
 - **:950** LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
 - **:980** LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's
@@ -251,7 +253,7 @@
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
 - **:1765** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:3452** LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
+- **:3567** LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
 - **:67** LILYSHARP-OWN: the DEFAULT five is LilyPond's (scm/define-grobs.scm:3396,
 ### `LilySharp.Core/Svg/Collector/StaffAccidentalColumns.cs`
@@ -388,6 +390,8 @@
 - **:152** LILYSHARP-OWN: the @fig(…) SPELLING is Lily#'s, not a port — LilyPond writes
 ### `LilySharp.Core/Svg/Model/Measure.cs`
 - **:189** ⚠️ LILYSHARP-OWN: THE FLAGGED ZERO-WIDTH MEASURE IS A TRANSLATION DEVICE. LilyPond
+### `LilySharp.Core/Syntax/Diagnostic.cs`
+- **:755** LILYSHARP-OWN: LilyPond has no counterpart to this warning and could not have
 ### `LilySharp.Core/Tablature/Tunings.cs`
 - **:196** LILYSHARP-OWN. Four is the guitarist's one-finger-per-fret span and also the number
 - **:208** LILYSHARP-OWN. Without it the hand never comes down on its own — "do not move" beats

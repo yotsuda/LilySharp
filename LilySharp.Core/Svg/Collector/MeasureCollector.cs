@@ -3259,22 +3259,82 @@ public sealed partial class MeasureCollector
             // it ends on a `|`. The length does not care.
             var meterAtBody = builder.CurrentMeasureLength;
             var openAtStart = builder.CurrentDuration;
+            // The running note value AS THE BODY OPENS, kept because the slash count is read
+            // from the body's written durations and the first of them may inherit it
+            // (`repeat percent 2 { c16 d e f }` writes the value once). Captured BEFORE the
+            // first pass, which advances it.
+            var defaultAtBody = _defaultDuration.Dotted(_defaultDots);
             ProcessBodyOnce();
             int bodyMeasureCount = builder.CurrentMeasureIndex - startMeasure;
             var bodyLength = builder.CurrentDuration - openAtStart;
             for (int m = 0; m < bodyMeasureCount; m++)
                 bodyLength += meterAtBody;
-            // A two-measure body takes the DOUBLE sign; one measure takes the single one.
-            // Anything else falls through to the old per-measure marking — LilyPond's third
-            // branch (RepeatSlashEvent, beat slashes) is not ported.
-            bool isDoubleBody = meterAtBody > Fraction.Zero
-                && bodyLength == meterAtBody + meterAtBody;
+            // A two-measure body takes the DOUBLE sign; one measure takes the single one; a
+            // body SHORTER than a measure takes a beat slash, LilyPond's third branch.
+            // ⚠️ THE THIRD BRANCH IS TAKEN ONLY BELOW ONE MEASURE, and the cut is deliberate:
+            // for a body of three or more WHOLE measures LilyPond's behaviour is NOT PORTED
+            // HERE, and the per-measure percent stands instead.
+            // LilyPond's own grob descriptions scope both slash grobs to "repeating patterns
+            // shorter than a single measure" (scm/define-grobs.scm, the RepeatSlash and
+            // DoubleRepeatSlash description fields), and what 2.26.0 in fact engraves for a
+            // four-measure body is one bare slash followed by three EMPTY measures — measured
+            // 2026-08-29, scratch/p282/wholebody.ly. 30 books of the corpus write that shape;
+            // copying LilyPond there would blank them. See PercentRepeatItem.
+            // ⚠️ THE CHOICE IS NOT SPELLED HERE, because a second reader has to make the same
+            // one: MeasureValidator warns (LYS2014) about exactly the shape this arm signs
+            // per measure, and a warning that fired on a body signed some other way would be
+            // worse than none. The rule lives in PercentRepeatShape; the two measure the
+            // length separately and are checked against each other by corpus sweep.
+            var bodyShape = PercentRepeatShape.Classify(bodyLength, meterAtBody);
+            bool isDoubleBody = bodyShape == PercentBodyShape.Double;
+            bool isBeatSlashBody = bodyShape == PercentBodyShape.BeatSlash;
+            // LilyPond decides the count ONCE, from the body's written durations, and the
+            // count then chooses the grob as well as the number of slashes.
+            // LILYPOND-REF: scm/music-functions.scm:378-390 calc-repeat-slash-count.
+            int slashCount = isBeatSlashBody
+                ? CalcRepeatSlashCount(bodyNodes, defaultAtBody)
+                : 0;
 
             // Additional iterations: process body again but mark as percent repeat
             for (int iter = 1; iter < count; iter++)
             {
                 if (!ChargeExpansion(passCost, repeat.Position))
                     break;
+
+                if (isBeatSlashBody)
+                {
+                    // LilyPond does not re-engrave the body here AT ALL: the iterator hands
+                    // the context a RepeatSlashEvent in place of the music, so the repetition
+                    // occupies its own duration with one grob and no notes. Lily# has to say
+                    // that in the collector, because everywhere else its unfold KEEPS the
+                    // repeated music and lets the visual passes hide it by measure — and a
+                    // beat slash covers no measure, so there is no measure to hide.
+                    // ⚠️ HIDING WOULD ALSO SPACE IT WRONG: the notes' springs would still be
+                    // there, so `{ c16 d e f }` would leave four sixteenths' worth of room
+                    // with two slashes floating in it. The spacer below carries the body's
+                    // duration and nothing else, which is the spring LilyPond prices.
+                    // ⚠️ The spacer's duration is written straight onto the RestItem rather
+                    // than as a note value plus dots, because a body's length need not BE a
+                    // note value (five sixteenths is not). RestItem.Duration is BaseDuration
+                    // when Dots is 0, so an arbitrary fraction rides through unchanged.
+                    // ⚠️ PLAYBACK IS UNAFFECTED: MidiExporter walks the SYNTAX tree
+                    // (ProcessRepeat, MidiExporter.cs:1895) and never reads these items, and
+                    // so do the MusicXML and .ly exporters. Only the engraved page changes.
+                    int slashMeasure = builder.CurrentMeasureIndex;
+                    var slashTiming = builder.CurrentDuration;
+                    int slashItemIndex = builder.CurrentItemCount;
+                    builder.AddItem(
+                        new RestItem(bodyLength, 0, repeat.Position) { IsSpacer = true });
+                    _percentRepeats.Add(new PercentRepeatItem(
+                        slashMeasure,
+                        repeat.Position,
+                        _cursor.StaffIndex,
+                        BeatTiming: slashTiming,
+                        BeatItemIndex: slashItemIndex,
+                        SlashCount: slashCount));
+                    continue;
+                }
+
                 int iterStart = builder.CurrentMeasureIndex;
                 ProcessBodyOnce();
 
@@ -3283,11 +3343,10 @@ public sealed partial class MeasureCollector
                 // LILYPOND-REF: lily/double-percent-repeat-engraver.cc:56-64 process_music —
                 //   the item is made when now_mom() reaches start_mom_ = the event's moment
                 //   plus one measure_length, i.e. at the SECOND measure's downbeat.
-                // ⚠️ THE THIRD BRANCH IS NOT PORTED. LilyPond's `else` is RepeatSlashEvent
-                // (beat slashes); a body of three measures or of a non-whole number of them
-                // still gets a percent per measure here. That is where this code was for
-                // every body length until 2026-08-28, so the untouched branch is the OLD
-                // behaviour rather than a new guess.
+                // ⚠️ A body of THREE OR MORE WHOLE MEASURES still reaches the per-measure
+                // percent below, and that is a DECIDED divergence rather than an unported
+                // branch — see the isBeatSlashBody remark above for what LilyPond draws there
+                // and why it is not worth copying.
                 if (isDoubleBody)
                 {
                     _percentRepeats.Add(new PercentRepeatItem(
@@ -3365,6 +3424,62 @@ public sealed partial class MeasureCollector
                 ProcessBodyOnce();
             }
         }
+    }
+
+    /// <summary>
+    /// LilyPond's <c>slash-count</c> for a percent body shorter than a measure: the number of
+    /// slashes to draw when every written duration in the body is the same, and 0 — meaning
+    /// "mixed", which selects the dotted <c>DoubleRepeatSlash</c> instead — when they are not.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/music-functions.scm:378-390 calc-repeat-slash-count — the durations
+    ///   of the body's note/rest/skip events, <c>max (- (ly:duration-log first-dur) 2) 1</c>
+    ///   if they are all <c>equal?</c>, else 0.
+    /// <para>
+    /// ⚠️ THE COMPARISON IS ON THE RESULTING LENGTH, not on LilyPond's duration object, and
+    /// the two part company in exactly one place: a body holding both <c>c4.</c> and a
+    /// tuplet-scaled <c>c8*3</c> writes two DIFFERENT durations of the same length, which
+    /// LilyPond calls mixed (count 0) and this calls equal. Lily# has no duration object to
+    /// compare — the collector's running default is a length and a dot count, and the written
+    /// value is recovered from the length below — so the fact is stated rather than hidden.
+    /// A body of that shape is not in the corpus (0 of 899 books, 2026-08-29).
+    /// </para>
+    /// <para>
+    /// Zero-length nodes are skipped rather than counted as a disagreement: the empty chord
+    /// <c>&lt;&gt;</c> is a post-event carrier and occupies no time, so it is not one of the
+    /// events LilyPond's <c>extract-named-music</c> collects either.
+    /// </para>
+    /// </remarks>
+    private static int CalcRepeatSlashCount(List<GreenSite> bodyNodes, Fraction defaultDuration)
+    {
+        Fraction? first = null;
+        var running = defaultDuration;
+        foreach (var site in bodyNodes)
+        {
+            var d = MeasureDurations.ItemDuration(site.Node, ref running);
+            if (d <= Fraction.Zero)
+                continue;
+            if (first is null)
+                first = d;
+            else if (d != first.Value)
+                return 0;
+        }
+        return first is null ? 0 : System.Math.Max(WrittenDurationLog(first.Value) - 2, 1);
+    }
+
+    /// <summary>
+    /// LilyPond's <c>ly:duration-log</c> recovered from a length: 2 for a quarter, 4 for a
+    /// sixteenth, −1 for a breve. Dots do not change it, because a dotted note is longer than
+    /// its base and shorter than the next value up — <c>8.</c> is 3/16, which lies in
+    /// [1/8, 1/4), so the answer is the 8th's 3.
+    /// </summary>
+    private static int WrittenDurationLog(Fraction length)
+    {
+        double v = length.ToDouble();
+        int log = 0;
+        while (v < 1.0) { v *= 2.0; log++; }
+        while (v >= 2.0) { v /= 2.0; log--; }
+        return log;
     }
 
     /// <summary>The written duration value of a note or chord (0 when it declares none, or

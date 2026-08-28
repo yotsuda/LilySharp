@@ -395,6 +395,21 @@ internal sealed class MeasureValidator : ISemanticValidator
                     total == Fraction.Zero ? null : total, defaultDuration, openTail: true,
                     leadInSpan: UnionSpans(i == 0 ? leadInSpan : null, frontSpan));
 
+                // A `repeat percent` body of three or more WHOLE measures earns a sign that
+                // cannot say what it repeats, and only the writer can decide what to do about
+                // it (LYS2014). ⚠️ ITS GATE IS THE LOOSER ONE, and the corpus is why: this
+                // warning only needs ONE turn's LENGTH, not the flow across turns, and a
+                // zero-duration mark in the body changes the length by nothing while making
+                // the strict gate refuse. Measured 2026-08-29 — of 472 percent bodies in the
+                // 899 books, 114 fail the strict gate and EVERY ONE of them fails on `break`
+                // or a tie and nothing else, which is how the first draft of this warning
+                // reached 6 books where the collector's own census says 30.
+                if (!_senzaMisura && rep.RepeatType.Text == "percent"
+                    && FlowsThroughBarAccounting(rep, out _, ignoringZeroDurationMarks: true))
+                {
+                    WarnIfPercentBodyIsAWholeMeasureRun(rep, total, defaultDuration);
+                }
+
                 if (!_senzaMisura && FlowsThroughBarAccounting(rep, out int playCount))
                 {
                     // The played content flows ACROSS the written bar: mirror
@@ -549,8 +564,18 @@ internal sealed class MeasureValidator : ISemanticValidator
     /// rest) reports false and stays an opaque zero-duration item instead.
     /// <paramref name="playCount"/> mirrors the collector's ProcessRepeatExpression:
     /// every non-tremolo type plays the body count times, defaulting to 2 when the
-    /// count does not parse.</summary>
-    private static bool FlowsThroughBarAccounting(RepeatExpressionSyntax rep, out int playCount)
+    /// count does not parse.
+    /// <para>
+    /// <paramref name="ignoringZeroDurationMarks"/> admits the items that occupy no time and
+    /// steer no bar — a tie, a <c>break</c> — for the ONE caller that asks a weaker question:
+    /// <see cref="WarnIfPercentBodyIsAWholeMeasureRun"/> needs a body's LENGTH, where the flow
+    /// accounting needs to replay the body's bar-closing across every turn. ⚠️ IT IS OPT-IN
+    /// BECAUSE THE FLOW MUST NOT TAKE IT: admitting them there would move 114 of the corpus's
+    /// 472 percent bodies from the opaque-item branch to the flow branch and change the bar
+    /// diagnostics they draw, which is a different change with its own evidence to gather.
+    /// </para></summary>
+    private static bool FlowsThroughBarAccounting(RepeatExpressionSyntax rep, out int playCount,
+        bool ignoringZeroDurationMarks = false)
     {
         playCount = System.Math.Max(1, int.TryParse(rep.Count.Text, out int c) ? c : 2);
         foreach (var item in rep.Body.Items)
@@ -562,6 +587,8 @@ internal sealed class MeasureValidator : ISemanticValidator
                     or TupletExpressionSyntax or ArpeggioSyntax or GraceExpressionSyntax
                     or CueExpressionSyntax or BarlineSyntax:
                     continue;
+                case TieSyntax or BreakSyntax when ignoringZeroDurationMarks:
+                    continue;
                 case RestSyntax rest when rest.MeasureCount <= 1:
                     continue;
                 case RepeatExpressionSyntax trem when trem.RepeatType.Text == "tremolo"
@@ -572,6 +599,82 @@ internal sealed class MeasureValidator : ISemanticValidator
             }
         }
         return true;
+    }
+
+    /// <summary>
+    /// Warns (LYS2014) when a <c>repeat percent</c> body is three or more WHOLE measures —
+    /// the one body shape whose repeat sign says something other than what the music does.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE RULE IS NOT SPELLED HERE. <see cref="PercentRepeatShape"/> owns it, because the
+    /// collector makes the same choice in order to EMIT the sign, and a warning that fired on
+    /// a body the collector signs differently would be worse than no warning. What is spelled
+    /// here is only the LENGTH, and it is measured the way the flow accounting below measures
+    /// it — mirroring <c>MeasureBuilder.AddDuration</c>, because there is no builder at this
+    /// layer to read it off. The two measurements are checked against each other by corpus
+    /// sweep: the collector's census found 30 books with a whole-measure run, and this warning
+    /// must land on exactly those 30 — which, after the two corrections named below, it does.
+    /// <para>
+    /// ⚠️ THE RUNNING NOTE VALUE IS COPIED, not threaded. This walk exists only to measure;
+    /// letting it advance the caller's frame would move every duration written after the
+    /// repeat. (The flow accounting below DOES thread it, on purpose — it is replaying the
+    /// turns the collector will play.)
+    /// </para>
+    /// </remarks>
+    private void WarnIfPercentBodyIsAWholeMeasureRun(
+        RepeatExpressionSyntax rep, Fraction leadIn, Fraction defaultDuration)
+    {
+        // ⚠️ THE LEAD-IN HAS TO BE REDUCED INTO ITS BAR FIRST. This layer's tally is a running
+        // sum over a WRITTEN bar, which can be many rendered bars long when the music leaves
+        // the bar lines out (`r1 r1 r1 r1 break repeat percent 2 { … }` — a real book), so it
+        // arrives here as 4 whole notes in 4/4. The collector's equivalent is
+        // MeasureBuilder.CurrentDuration, which auto-completes and is therefore always the
+        // position INSIDE the open bar. Without this the first body item closed a bar
+        // immediately and the length came out nonsense: the two books whose repeats open that
+        // way were the exact pair the corpus cross-check found missing (28 of 30).
+        var run = defaultDuration;
+        var tally = leadIn;
+        while (tally >= _timeSignature)
+            tally -= _timeSignature;
+        var barStart = tally;
+        int barsClosed = 0;
+        foreach (var item in rep.Body.Items)
+        {
+            if (item is BarlineSyntax)
+            {
+                if (tally != Fraction.Zero)
+                    barsClosed++;
+                tally = Fraction.Zero;
+                continue;
+            }
+            tally += MeasureDurations.ItemDuration(item, ref run);
+            if (tally >= _timeSignature)
+            {
+                barsClosed++;
+                tally = Fraction.Zero;
+            }
+        }
+        // The collector's arithmetic: the beats still open, less the ones that were already
+        // open when the body started, plus a whole measure for each bar the body closed.
+        var bodyLength = tally - barStart;
+        for (int b = 0; b < barsClosed; b++)
+            bodyLength += _timeSignature;
+
+        if (PercentRepeatShape.Classify(bodyLength, _timeSignature)
+            != PercentBodyShape.WholeMeasureRun)
+        {
+            return;
+        }
+
+        int bars = PercentRepeatShape.WholeMeasures(bodyLength, _timeSignature);
+        _diagnostics.Warning(rep.Span, DiagnosticCodes.PercentBodyTooLong,
+            $"`repeat percent` body is {bars} measures long, and no repeat sign says that: "
+            + $"each repetition prints {bars} percent signs, and a percent sign means "
+            + $"\"repeat the previous measure\" — so the page reads as the body's LAST measure "
+            + $"{bars} times where the music is the whole body. Playback is unaffected. Write "
+            + "the repetition out, or keep the signs knowing a reader takes them in context. "
+            + "(One and two measures have exact signs; shorter than a measure prints beat "
+            + "slashes.)");
     }
 
     /// <summary>The music items of one voice block of a span.</summary>

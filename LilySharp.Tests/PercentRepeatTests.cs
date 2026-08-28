@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
@@ -261,7 +262,7 @@ public class PercentRepeatTests
                 .Select(p => (X: double.Parse(p[0], System.Globalization.CultureInfo.InvariantCulture),
                               Y: double.Parse(p[1], System.Globalization.CultureInfo.InvariantCulture)))
                 .ToList();
-            if (pts.Count != 4 || pts[0].Y != pts[1].Y || pts[2].Y != pts[3].Y)
+            if (pts.Count != 4 || pts[0].Y != pts[1].Y || pts[2].Y != pts[3].Y || IsBeamRibbon(pts))
                 continue;
             double xWidth = pts[1].X - pts[0].X;
             double w = pts[3].X - pts[0].X;
@@ -271,6 +272,19 @@ public class PercentRepeatTests
         }
         return found;
     }
+
+    /// <summary>
+    /// A beam ribbon rather than a repeat slash. ⚠️ SLANT IS NOT THE TEST: a beam over notes
+    /// at one pitch is FLAT, and a flat ribbon has the repeat slash's own signature of two
+    /// horizontal edges — the control of
+    /// <see cref="Renderer_DoubleSign_HidesTheFirstMeasuresBeamsAndStemsToo"/> counted two of
+    /// its beams as slashes before this existed. What separates them is which pairs of
+    /// corners share a coordinate: a ribbon is bounded by two VERTICAL cuts (its left corners
+    /// share an X and so do its right ones), a slash by two HORIZONTAL ones, so the slash's
+    /// corners step across in X where the ribbon's do not.
+    /// </summary>
+    private static bool IsBeamRibbon(List<(double X, double Y)> pts) =>
+        pts[0].X == pts[3].X && pts[1].X == pts[2].X;
 
     private static double Attr(string attrs, string name) => double.Parse(
         System.Text.RegularExpressions.Regex.Match(attrs, name + "=\"([^\"]+)\"").Groups[1].Value,
@@ -464,4 +478,260 @@ public class PercentRepeatTests
             System.Text.RegularExpressions.Regex.Matches(control, "<text class=\"music\"").Count,
             System.Text.RegularExpressions.Regex.Matches(svg, "<text class=\"music\"").Count);
     }
+
+    /// <summary>
+    /// The FIRST measure of a double percent's pair prints no beams and no stems either. It
+    /// is the same <see cref="PercentRepeatItem.FirstCoveredMeasure"/> walk as the noteheads',
+    /// and until 2026-08-29 <c>DrawBeams</c> was not doing it: it built its own hidden set
+    /// from the anchor measure alone, so bar 3 of a beamed two-bar body printed its beams and
+    /// stems standing over nothing. Visible in 15 of the corpus's 39 double-percent books.
+    /// </summary>
+    [Fact]
+    public void Renderer_DoubleSign_HidesTheFirstMeasuresBeamsAndStemsToo()
+    {
+        var svg = LiveRender.SvgFromRenderSpec("""
+            part mel { }
+            section A { mel { repeat percent 2 { c8 d e f g a b c' | d'8 c' b a g f e d | } } }
+            form main { ~A }
+            score main { staff mel }
+            """);
+        var control = LiveRender.SvgFromRenderSpec("""
+            part mel { }
+            section A { mel { c8 d e f g a b c' | d'8 c' b a g f e d | } }
+            form main { ~A }
+            score main { staff mel }
+            """);
+
+        // The repeated pair adds the sign — two slashes and two dots — and NOTHING else:
+        // same beams, same stems, same noteheads as the written pair alone.
+        Assert.Equal(Beams(control).Count, Beams(svg).Count);
+        Assert.Equal(Stems(control).Count, Stems(svg).Count);
+        Assert.Equal(
+            System.Text.RegularExpressions.Regex.Matches(control, "<text class=\"music\"").Count,
+            System.Text.RegularExpressions.Regex.Matches(svg, "<text class=\"music\"").Count);
+        Assert.Equal(2, Slashes(svg).Count);
+    }
+
+    // --- the BEAT slash: a body SHORTER than a measure (LilyPond's third branch) ---
+
+    /// <summary>
+    /// A body shorter than a measure is a BEAT slash, and LilyPond does not re-engrave the
+    /// body for it: the iterator hands the context a RepeatSlashEvent instead of the music.
+    /// So the repetition contributes one sign and NO notes — which is why the item count in
+    /// the measure is the written beat plus one spacer per repetition, not the beat again.
+    /// LILYPOND-REF: lily/percent-repeat-iterator.cc:75-92 next_element — the `else` arm.
+    /// </summary>
+    [Fact]
+    public void Collector_SubMeasureBody_IsOneBeatSlashPerRepetitionAndNoRepeatedNotes()
+    {
+        var score = new MeasureCollector().Collect(
+            SyntaxTree.Parse("repeat percent 4 { c16 d e f }"));
+
+        var measure = Assert.Single(score.Voice.Measures);
+        // Four written sixteenths, then one spacer for each of the three repetitions.
+        Assert.Equal(7, measure.Items.Length);
+        Assert.Equal(4, measure.Items.Count(i => i is NoteItem));
+        Assert.Equal(3, measure.Items.Count(i => i is RestItem { IsSpacer: true }));
+
+        Assert.Equal(3, score.PercentRepeats.Length);
+        Assert.All(score.PercentRepeats, pr => Assert.True(pr.IsBeatSlash));
+        Assert.All(score.PercentRepeats, pr => Assert.False(pr.IsDouble));
+        // Each stands at its own beat, all inside the one measure.
+        Assert.All(score.PercentRepeats, pr => Assert.Equal(0, pr.MeasureIndex));
+        Assert.Equal(
+            new[] { new Fraction(1, 4), new Fraction(1, 2), new Fraction(3, 4) },
+            score.PercentRepeats.Select(pr => pr.BeatTiming!.Value).ToArray());
+    }
+
+    /// <summary>
+    /// A beat slash covers NO measure — the one place where Lily# does what LilyPond does and
+    /// never emits the repeated body, so there is nothing underneath to hide. Reporting the
+    /// anchor here would blank the whole bar, the written beat the slash repeats included.
+    /// </summary>
+    [Fact]
+    public void Collector_BeatSlash_CoversNoMeasure()
+    {
+        var score = new MeasureCollector().Collect(
+            SyntaxTree.Parse("repeat percent 2 { c16 d e f }"));
+
+        var pr = Assert.Single(score.PercentRepeats);
+        Assert.True(pr.FirstCoveredMeasure > pr.MeasureIndex);
+    }
+
+    /// <summary>
+    /// The slash COUNT comes from the body's written durations: all equal gives
+    /// <c>max (duration-log − 2) 1</c>, and anything mixed gives 0, which is not "no slashes"
+    /// but the OTHER grob — the dotted <c>DoubleRepeatSlash</c>.
+    /// LILYPOND-REF: scm/music-functions.scm:378-390 calc-repeat-slash-count;
+    /// LILYPOND-REF: lily/slash-repeat-engraver.cc:56-66 process_music.
+    /// ★ The three shapes were measured on 2.26.0 (scratch/p282/slashprobe-lp.png and the
+    /// session-278 probe): sixteenths draw two slashes, eighths one, and `g8. c16` the dotted
+    /// double.
+    /// </summary>
+    [Theory]
+    [InlineData("repeat percent 2 { c16 d e f }", 2)]   // duration-log 4 → max(2,1)
+    [InlineData("repeat percent 2 { c8 d }", 1)]        // duration-log 3 → max(1,1)
+    [InlineData("repeat percent 2 { c4 }", 1)]          // duration-log 2 → max(0,1) = 1
+    [InlineData("repeat percent 2 { c32 d e f g a b c }", 3)] // duration-log 5 → max(3,1)
+    [InlineData("repeat percent 2 { g8. c16 }", 0)]     // mixed → DoubleRepeatSlash
+    [InlineData("repeat percent 2 { c8 d16 e }", 0)]    // mixed → DoubleRepeatSlash
+    public void Collector_BeatSlashCount_FollowsTheWrittenDurations(string source, int expected)
+    {
+        var score = new MeasureCollector().Collect(SyntaxTree.Parse(source));
+
+        var pr = Assert.Single(score.PercentRepeats);
+        Assert.True(pr.IsBeatSlash);
+        Assert.Equal(expected, pr.SlashCount);
+    }
+
+    /// <summary>
+    /// A body of THREE OR MORE WHOLE measures is a decided divergence and keeps the
+    /// per-measure percent — it does NOT become a beat slash. What LilyPond engraves there is
+    /// one bare slash and then EMPTY measures for the rest of the repetition (measured
+    /// 2026-08-29 on 2.26.0, scratch/p282/wholebody.ly), which is out of the shape both slash
+    /// grobs describe themselves as being for; the corpus writes it 200 times in 32 books.
+    /// </summary>
+    [Fact]
+    public void Collector_ThreeMeasureBody_KeepsThePerMeasurePercent()
+    {
+        var score = new MeasureCollector().Collect(
+            SyntaxTree.Parse("repeat percent 2 { c1 | d1 | e1 | }"));
+
+        Assert.Equal(3, score.PercentRepeats.Length);
+        Assert.All(score.PercentRepeats, pr => Assert.False(pr.IsBeatSlash));
+        Assert.All(score.PercentRepeats, pr => Assert.False(pr.IsDouble));
+        Assert.Equal(new[] { 3, 4, 5 },
+            score.PercentRepeats.Select(pr => pr.MeasureIndex).ToArray());
+    }
+
+    /// <summary>
+    /// Drawn, an equal-duration beat slash is STEEPER and MORE TIGHTLY OVERLAPPED than the
+    /// percent family, and carries no dots: slope 1.7 and slash-negative-kern 0.85 against
+    /// the percent signs' 1.0 and 1.6.
+    /// LILYPOND-REF: scm/define-grobs.scm — the RepeatSlash entry (range-less: one-word grob
+    /// name, HANDOFF §5.2.1⑦).
+    /// ★ Every number here is read off LilyPond 2.26.0's own SVG for the twin
+    /// (scratch/p282/slashprobe-lpsvg.svg): the two slashes of `\repeat percent 2
+    /// { c16 d e f }` are `M0 0 l0.5569 0 l1.1765 -2.0000 l-0.5569 0 z` at x = 27.1376 and
+    /// 28.0210 — so x_width 0.5569, run 1.1765, height 2.0000, origins 0.8834 apart.
+    /// </summary>
+    [Fact]
+    public void Renderer_EqualDurationBeatSlash_IsSteeperUnkernedAndUndotted()
+    {
+        var svg = LiveRender.SvgFromRenderSpec("""
+            part mel { }
+            section A { mel { repeat percent 2 { c16 d e f } g2 } }
+            form main { ~A }
+            score main { staff mel }
+            """);
+
+        var slashes = Slashes(svg);
+        Assert.Equal(2, slashes.Count);
+        slashes.Sort((p, q) => p.X0.CompareTo(q.X0));
+        // wid = 2.0/1.7 = 1.17647, height = wid·1.7 = 2.0,
+        // x_width = hypot (0.48, 0.48/1.7) = 0.556887.
+        Assert.Equal(1.1765, slashes[0].W, 2);
+        Assert.Equal(2.0, slashes[0].Height, 2);
+        // ONE decimal on the terms built from two rounded coordinates — the SVG prints X to
+        // two, so a difference carries up to 0.01. It still separates what matters: the
+        // percent family's x_width is 0.6788 and its overlap 1.0788.
+        Assert.Equal(0.5569, slashes[0].XWidth, 1);
+        // (wid + x_width) − 0.85 = 0.883358, where the percent family's overlap is 1.0788.
+        Assert.Equal(0.8834, slashes[1].X0 - slashes[0].X0, 1);
+        // NO DOTS: brew_slash's stencil, not x_percent's.
+        Assert.Empty(System.Text.RegularExpressions.Regex.Matches(svg, "<circle "));
+    }
+
+    /// <summary>
+    /// A MIXED-duration beat slash is the other grob, and its picture is the double percent's
+    /// — two slashes at slope 1.0, overlapped by 1.6, WITH the two dots — standing at a beat
+    /// instead of on a bar line. That is what makes `slash-count = 0` worth carrying: it is
+    /// not a count of zero slashes.
+    /// LILYPOND-REF: scm/define-grobs.scm — the DoubleRepeatSlash entry (range-less: one-word
+    ///   grob name);
+    /// LILYPOND-REF: lily/percent-repeat-interface.cc:107-121 beat_slash — <c>x_percent
+    ///   (me, 2)</c> when the count is 0.
+    /// ★ Measured on 2.26.0 (scratch/p282/slashprobe-lpsvg.svg): `M0 0 l0.6788 0 l2.0000
+    /// -2.0000 l-0.6788 0 z` at x = 37.3980 and 38.4768 — origins 1.0788 apart.
+    /// </summary>
+    [Fact]
+    public void Renderer_MixedDurationBeatSlash_IsTheDottedDoubleAtABeat()
+    {
+        var svg = LiveRender.SvgFromRenderSpec("""
+            part mel { }
+            section A { mel { repeat percent 2 { g8. c16 } g2 } }
+            form main { ~A }
+            score main { staff mel }
+            """);
+
+        var slashes = Slashes(svg);
+        Assert.Equal(2, slashes.Count);
+        slashes.Sort((p, q) => p.X0.CompareTo(q.X0));
+        Assert.Equal(2.0, slashes[0].W, 2);
+        // ONE decimal for the same rounding reason as the plain slash's, and it still
+        // separates the two grobs: the plain slash's x_width is 0.5569 and its overlap 0.8834.
+        Assert.Equal(0.48 * System.Math.Sqrt(2), slashes[0].XWidth, 1);
+        Assert.Equal(2.0 + 0.48 * System.Math.Sqrt(2) - 1.6, slashes[1].X0 - slashes[0].X0, 1);
+        // …and it DOES carry the dots.
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(svg, "<circle ").Count);
+    }
+
+    /// <summary>
+    /// The measure a beat slash stands in keeps its own beams and stems: the written beat the
+    /// slash repeats is still music, and hiding by measure would erase it. This is the arm of
+    /// <see cref="PercentRepeatItem.FirstCoveredMeasure"/>'s empty range that the four hiding
+    /// passes read, and the first draft of the port blanked the bar because <c>DrawBeams</c>
+    /// was not reading it.
+    /// </summary>
+    [Fact]
+    public void Renderer_BeatSlash_LeavesTheWrittenBeatBeamed()
+    {
+        var svg = LiveRender.SvgFromRenderSpec("""
+            part mel { }
+            section A { mel { repeat percent 2 { c16 d e f } g2 } }
+            form main { ~A }
+            score main { staff mel }
+            """);
+
+        // The sixteenths are beamed (two beam levels) and stemmed, exactly as when written
+        // out on their own.
+        var control = LiveRender.SvgFromRenderSpec("""
+            part mel { }
+            section A { mel { c16 d e f g2. } }
+            form main { ~A }
+            score main { staff mel }
+            """);
+        Assert.Equal(Beams(control).Count, Beams(svg).Count);
+        Assert.Equal(Stems(control).Count, Stems(svg).Count);
+        Assert.NotEmpty(Beams(svg));
+    }
+
+    /// <summary>Beam ribbons — the same discriminator <see cref="Slashes"/> excludes by, read
+    /// from the one home (<see cref="IsBeamRibbon"/>) so the two can never disagree about a
+    /// polygon.</summary>
+    private static List<string> Beams(string svg)
+    {
+        var found = new List<string>();
+        foreach (System.Text.RegularExpressions.Match m in
+            System.Text.RegularExpressions.Regex.Matches(svg, "<polygon points=\"([^\"]+)\""))
+        {
+            var pts = m.Groups[1].Value.Split(' ')
+                .Select(p => p.Split(','))
+                .Select(p => (X: double.Parse(p[0], System.Globalization.CultureInfo.InvariantCulture),
+                              Y: double.Parse(p[1], System.Globalization.CultureInfo.InvariantCulture)))
+                .ToList();
+            if (pts.Count == 4 && IsBeamRibbon(pts))
+                found.Add(m.Groups[1].Value);
+        }
+        return found;
+    }
+
+    /// <summary>Stems: the vertical hairlines, told from staff lines by running down the page
+    /// rather than across it.</summary>
+    private static List<string> Stems(string svg) =>
+        System.Text.RegularExpressions.Regex.Matches(svg, "<line ([^>]*)/>")
+            .Select(m => m.Groups[1].Value)
+            .Where(a => System.Math.Abs(Attr(a, "x1") - Attr(a, "x2")) < 1e-9
+                     && System.Math.Abs(Attr(a, "y1") - Attr(a, "y2")) > 1e-9)
+            .ToList();
 }

@@ -752,6 +752,36 @@ public static class DiagnosticCodes
     /// </para></summary>
     public const string ScoreHasNoMusic = "LYS2013";
 
+    /// <summary>LILYSHARP-OWN: LilyPond has no counterpart to this warning and could not have
+    /// one, because it never reaches the picture that misstates the music — it does not draw
+    /// this shape at all (see below). The SHAPE is LilyPond's, cited where it is measured
+    /// (<c>PercentRepeatShape</c>); reporting it is Lily#'s decision.
+    /// <para>
+    /// Measure warning: a <c>repeat percent</c> body is THREE OR MORE WHOLE
+    /// MEASURES, which no repeat sign can say.
+    /// </para>
+    /// <para>
+    /// <c>%</c> means "repeat the PREVIOUS measure", so the four signs a four-bar body earns
+    /// tell a reader D D D D where the writer meant A B C D. The playback is right — the
+    /// MIDI, MusicXML and .ly exporters walk the syntax tree and repeat the body — so the
+    /// disagreement is between the page and the music, and nothing on the page shows it.
+    /// </para>
+    /// <para>
+    /// ⚠️ THERE IS NO CORRECT PICTURE TO FALL BACK ON, which is why this is a warning and not
+    /// a repair. LilyPond does not draw this shape either: it engraves one bare slash and
+    /// leaves the repetition's remaining bars EMPTY (measured on 2.26.0, 2026-08-29,
+    /// scratch/p282/wholebody.ly), and its own grob descriptions scope both slash grobs to
+    /// patterns "shorter than a single measure". So the writer is told, and chooses —
+    /// spelling the repetition out, or accepting a sign a reader will take in context.
+    /// </para>
+    /// <para>
+    /// A body of one or two measures has an exact sign and is never reported. A body SHORTER
+    /// than a measure is a beat slash and is never reported. A body that is longer but not a
+    /// whole number of measures is not reported either: its bars are already drawing
+    /// underfull or overfull warnings, and those name the real mistake first.
+    /// </para></summary>
+    public const string PercentBodyTooLong = "LYS2014";
+
     /// <summary>Measure warning: a chord-row bar's slot count does not fit the
     /// meter's beat grid. Entries and <c>.</c> extensions are measure-relative
     /// (GRAMMAR_AUDIT 8.1): one slot takes the whole bar, a beat-count multiple
