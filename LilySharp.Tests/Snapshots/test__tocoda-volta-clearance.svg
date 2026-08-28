@@ -77,30 +77,30 @@
   <rect x="60.92" y="15.78" width="0.19" height="4.00" data-pos="927"/>
   <rect x="69.07" y="15.78" width="0.19" height="4.00" data-pos="954"/>
   <rect x="82.41" y="15.78" width="0.19" height="4.00" data-pos="830"/>
-  <line x1="36.47" y1="12.66" x2="36.47" y2="14.73" stroke="#000000" stroke-width="0.130" data-pos="986"/>
-  <line x1="36.47" y1="12.66" x2="50.79" y2="12.66" stroke="#000000" stroke-width="0.130" data-pos="986"/>
-  <line x1="50.79" y1="12.66" x2="50.79" y2="14.73" stroke="#000000" stroke-width="0.130" data-pos="986"/>
-  <text x="37.47" y="14.40" font-size="1.75" font-weight="bold" data-pos="986">1.</text>
-  <line x1="51.39" y1="12.66" x2="51.39" y2="14.73" stroke="#000000" stroke-width="0.130" data-pos="997"/>
-  <line x1="51.39" y1="12.66" x2="60.81" y2="12.66" stroke="#000000" stroke-width="0.130" data-pos="997"/>
-  <line x1="60.81" y1="12.66" x2="60.81" y2="14.73" stroke="#000000" stroke-width="0.130" data-pos="997"/>
-  <text x="52.39" y="14.40" font-size="1.75" font-weight="bold" data-pos="997">2.</text>
+  <line x1="36.47" y1="12.65" x2="36.47" y2="14.73" stroke="#000000" stroke-width="0.160" data-pos="986"/>
+  <line x1="36.47" y1="12.65" x2="50.79" y2="12.65" stroke="#000000" stroke-width="0.160" data-pos="986"/>
+  <line x1="50.79" y1="12.65" x2="50.79" y2="14.73" stroke="#000000" stroke-width="0.160" data-pos="986"/>
+  <text x="37.47" y="14.38" font-size="1.75" font-weight="bold" data-pos="986">1.</text>
+  <line x1="51.39" y1="12.65" x2="51.39" y2="14.73" stroke="#000000" stroke-width="0.160" data-pos="997"/>
+  <line x1="51.39" y1="12.65" x2="60.81" y2="12.65" stroke="#000000" stroke-width="0.160" data-pos="997"/>
+  <line x1="60.81" y1="12.65" x2="60.81" y2="14.73" stroke="#000000" stroke-width="0.160" data-pos="997"/>
+  <text x="52.39" y="14.38" font-size="1.75" font-weight="bold" data-pos="997">2.</text>
   <text class="music" x="0.30" y="12.02" font-size="4.00" data-pos="973"></text>
   <rect x="0.30" y="7.46" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="803"/>
   <text x="1.34" y="9.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="803">A</text>
-  <text x="55.90" y="12.10" font-size="2.20" font-style="italic" data-pos="1005">To </text>
-  <text class="music" x="59.05" y="11.14" font-size="3.20" data-pos="1005"></text>
+  <text x="55.90" y="12.09" font-size="2.20" font-style="italic" data-pos="1005">To </text>
+  <text class="music" x="59.05" y="11.13" font-size="3.20" data-pos="1005"></text>
   <text x="68.76" y="23.28" font-size="2.20" font-style="italic" text-anchor="middle" data-pos="1018">D.S. al Coda</text>
   <text class="music" x="69.26" y="13.28" font-size="4.00" data-pos="1029"></text>
   <rect x="69.26" y="8.22" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="803"/>
   <text x="70.30" y="10.42" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="803">A</text>
   <rect x="21.02" y="11.98" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="836"/>
   <text x="22.07" y="14.18" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="836">B</text>
-  <rect x="36.17" y="9.50" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="870"/>
-  <text x="37.23" y="11.70" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="870">C</text>
-  <rect x="51.09" y="9.50" width="2.24" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="903"/>
-  <text x="52.21" y="11.70" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="903">D</text>
-  <rect x="61.11" y="9.50" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="933"/>
-  <text x="62.15" y="11.70" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="933">E</text>
+  <rect x="36.17" y="9.49" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="870"/>
+  <text x="37.23" y="11.69" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="870">C</text>
+  <rect x="51.09" y="9.49" width="2.24" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="903"/>
+  <text x="52.21" y="11.69" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="903">D</text>
+  <rect x="61.11" y="9.49" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="933"/>
+  <text x="62.15" y="11.69" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="933">E</text>
   </g>
 </svg>

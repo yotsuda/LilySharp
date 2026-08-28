@@ -99,13 +99,13 @@
   <rect x="77.20" y="17.77" width="0.60" height="4.00" data-pos="310"/>
   <rect x="93.20" y="17.77" width="0.19" height="4.00" data-pos="135"/>
   <rect x="102.24" y="17.77" width="0.19" height="4.00" data-pos="142"/>
-  <line x1="51.48" y1="14.04" x2="51.48" y2="16.11" stroke="#000000" stroke-width="0.130" data-pos="348"/>
-  <line x1="51.48" y1="14.04" x2="77.50" y2="14.04" stroke="#000000" stroke-width="0.130" data-pos="348"/>
-  <line x1="77.50" y1="14.04" x2="77.50" y2="16.11" stroke="#000000" stroke-width="0.130" data-pos="348"/>
+  <line x1="51.48" y1="14.04" x2="51.48" y2="16.12" stroke="#000000" stroke-width="0.160" data-pos="348"/>
+  <line x1="51.48" y1="14.04" x2="77.50" y2="14.04" stroke="#000000" stroke-width="0.160" data-pos="348"/>
+  <line x1="77.50" y1="14.04" x2="77.50" y2="16.12" stroke="#000000" stroke-width="0.160" data-pos="348"/>
   <text x="52.48" y="15.78" font-size="1.75" font-weight="bold" data-pos="348">1.</text>
-  <line x1="78.10" y1="14.04" x2="78.10" y2="16.11" stroke="#000000" stroke-width="0.130" data-pos="363"/>
-  <line x1="78.10" y1="14.04" x2="102.13" y2="14.04" stroke="#000000" stroke-width="0.130" data-pos="363"/>
-  <line x1="102.13" y1="14.04" x2="102.13" y2="16.11" stroke="#000000" stroke-width="0.130" data-pos="363"/>
+  <line x1="78.10" y1="14.04" x2="78.10" y2="16.12" stroke="#000000" stroke-width="0.160" data-pos="363"/>
+  <line x1="78.10" y1="14.04" x2="102.13" y2="14.04" stroke="#000000" stroke-width="0.160" data-pos="363"/>
+  <line x1="102.13" y1="14.04" x2="102.13" y2="16.12" stroke="#000000" stroke-width="0.160" data-pos="363"/>
   <text x="79.10" y="15.78" font-size="1.75" font-weight="bold" data-pos="363">2.</text>
   <text class="music" x="4.88" y="16.40" font-size="3.56" data-pos="56"></text>
   <line x1="5.99" y1="16.23" x2="5.99" y2="13.72" stroke="#000000" stroke-width="0.116" data-pos="56"/>

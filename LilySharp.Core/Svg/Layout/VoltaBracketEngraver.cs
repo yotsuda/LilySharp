@@ -66,15 +66,28 @@ internal static class VoltaBracketEngraver
     /// and no staff-padding of its own.</remarks>
     private const double StaffPadding = 1.0;
 
-    /// <summary>The bracket's drawn line thickness, in staff spaces.</summary>
+    /// <summary>The bracket's drawn line thickness, in staff spaces: LilyPond's own
+    /// <c>1.6 × line-thickness</c>.</summary>
     /// <remarks>
-    /// LILYSHARP-OWN: LilyPond's VoltaBracket declares <c>(thickness . 1.6)</c> in
-    /// line-thickness units (scm/define-grobs.scm — VoltaBracket's own thickness), 0.16 —
-    /// the same shadowing
-    /// <c>EngravingDefaults.TupletBracketThickness</c> was repaired for. It stays 0.13 here
-    /// because closing it is a drawing change with no observer: all three
-    /// <c>page.volta.*</c> entries read this line's OWN bottom edge on each engine, so the
-    /// weight falls out of every one of them.
+    /// LILYPOND-REF: scm/define-grobs.scm:4293-4318 VoltaBracket, beside volta-number-offset:
+    ///   <c>(thickness . 1.6)</c>, in line-thickness units.
+    /// <para>
+    /// ⚠️ IT WAS A BARE 0.13, the same shadowing <c>EngravingDefaults.TupletBracketThickness</c>
+    /// was repaired for, and it was left there on the belief that no entry could see it: "all
+    /// three <c>page.volta.*</c> entries read this line's OWN bottom edge on each engine, so
+    /// the weight falls out of every one of them". THAT IS TRUE OF TWO OF THEM AND FALSE OF
+    /// THE THIRD. Where the bracket stands on ink, the grob that meets the support is the
+    /// NUMBER, and the number hangs <c>volta-number-offset</c> below the line's CENTRE while
+    /// the reading is taken at the line's BOTTOM EDGE — so exactly half the thickness
+    /// difference survives into <c>page.volta.plain.staff-to-line</c>. MEASURED by poisoning
+    /// 0.13 → 0.16 with nothing else changed: that entry moved −0.014999943 (its residual
+    /// +0.017625057 → +0.002625057) and the other two did not move at all.
+    /// </para>
+    /// <para>
+    /// The 0.002625057 left over is the FACE, and it is a different island: LilyPond's "2."
+    /// inks 1.2598 tall against this face's 1.2624 at the same declared size (see
+    /// <see cref="NumberFontSize"/>).
+    /// </para>
     /// <para>
     /// ONE HOME, and it has to be: the DRAW (<c>SharedRenderer.DrawVoltaBrackets</c>), the
     /// RESERVATION (<c>OutsideStaffStacker.PlaceVoltas</c>) and the placement below all
@@ -82,7 +95,7 @@ internal static class VoltaBracketEngraver
     /// where nothing reserved room for it.
     /// </para>
     /// </remarks>
-    internal const double LineThickness = 0.13;
+    internal const double LineThickness = 1.6 * EngravingDefaults.LineThickness;
 
     /// <summary>Where the bracket sits when nothing above the staff pushes it: its lowest ink
     /// one <c>padding</c> above the staff's own, expressed as the LINE's centre.</summary>

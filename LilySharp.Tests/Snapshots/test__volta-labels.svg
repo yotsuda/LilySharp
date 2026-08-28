@@ -139,13 +139,13 @@
   <rect x="49.57" y="17.39" width="0.60" height="4.00" data-pos="616"/>
   <rect x="63.05" y="17.39" width="0.19" height="4.00" data-pos="523"/>
   <rect x="76.12" y="17.39" width="0.19" height="4.00" data-pos="492"/>
-  <line x1="35.80" y1="10.62" x2="35.80" y2="12.68" stroke="#000000" stroke-width="0.130" data-pos="601"/>
-  <line x1="35.80" y1="10.62" x2="49.87" y2="10.62" stroke="#000000" stroke-width="0.130" data-pos="601"/>
-  <line x1="49.87" y1="10.62" x2="49.87" y2="12.68" stroke="#000000" stroke-width="0.130" data-pos="601"/>
+  <line x1="35.80" y1="10.62" x2="35.80" y2="12.70" stroke="#000000" stroke-width="0.160" data-pos="601"/>
+  <line x1="35.80" y1="10.62" x2="49.87" y2="10.62" stroke="#000000" stroke-width="0.160" data-pos="601"/>
+  <line x1="49.87" y1="10.62" x2="49.87" y2="12.70" stroke="#000000" stroke-width="0.160" data-pos="601"/>
   <text x="36.80" y="12.35" font-size="1.75" font-weight="bold" data-pos="601">1.</text>
-  <line x1="50.47" y1="10.62" x2="50.47" y2="12.68" stroke="#000000" stroke-width="0.130" data-pos="619"/>
-  <line x1="50.47" y1="10.62" x2="62.94" y2="10.62" stroke="#000000" stroke-width="0.130" data-pos="619"/>
-  <line x1="62.94" y1="10.62" x2="62.94" y2="12.68" stroke="#000000" stroke-width="0.130" data-pos="619"/>
+  <line x1="50.47" y1="10.62" x2="50.47" y2="12.70" stroke="#000000" stroke-width="0.160" data-pos="619"/>
+  <line x1="50.47" y1="10.62" x2="62.94" y2="10.62" stroke="#000000" stroke-width="0.160" data-pos="619"/>
+  <line x1="62.94" y1="10.62" x2="62.94" y2="12.70" stroke="#000000" stroke-width="0.160" data-pos="619"/>
   <text x="51.47" y="12.35" font-size="1.75" font-weight="bold" data-pos="619">2.</text>
   <rect x="0.30" y="12.53" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="529"/>
   <text x="1.34" y="14.73" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="529">A</text>
@@ -155,7 +155,7 @@
   <text x="38.04" y="9.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="554">first</text>
   <rect x="50.17" y="7.46" width="8.29" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="554"/>
   <text x="54.32" y="9.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="554">second</text>
-  <rect x="63.24" y="7.49" width="3.34" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="529"/>
-  <text x="64.91" y="9.69" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="529">A2</text>
+  <rect x="63.24" y="7.48" width="3.34" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="529"/>
+  <text x="64.91" y="9.68" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="529">A2</text>
   </g>
 </svg>

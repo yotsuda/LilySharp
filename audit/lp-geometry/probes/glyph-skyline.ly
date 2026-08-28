@@ -30,6 +30,33 @@
 %% ly_FT_get_glyph_outline_bbox loads FT_LOAD_NO_SCALE and calls FT_Outline_Get_BBox, so
 %% LilyPond reads the same units), and 635 x 0.004 = 2.540 with 1194 x 0.004 = 4.776 — the
 %% dump above to six digits.
+%% ⚠️⚠️ THE THREE NUMBERS ABOVE CANNOT TELL A BOX FROM AN OUTLINE, and one session read
+%% them as if they could. ly:skyline-max-height is a MAXIMUM: a flat box across the glyph's
+%% width and a curved profile that touches the same ceiling at one x report the SAME number.
+%% Session 275 handed over "LilyPond's support carries the notehead's OUTLINE, so a volta
+%% number only grazes the head's low left shoulder", a sentence inferred from the size of a
+%% residual and never measured; the NOTEHEAD line above was the evidence it looked like it
+%% had. THE SECOND BOOK BELOW ASKS THE SKYLINE FOR ITS HEIGHT AT A SEQUENCE OF X, which a
+%% box and an outline do not share, and the answer is that the head is a BOX:
+%%
+%%   NOTEHEAD  0.545 at every one of 20 samples across (0 . 1.962)
+%%   CLEF      1.024 1.275 1.472 1.643 1.800 1.949 4.127 4.381 ... 4.773 ... 0.148
+%%
+%% The clef is the positive control and it is not decorative: without a grob that DOES curve
+%% in the same run, twenty identical numbers are equally well "it is a box" and "the sampler
+%% is broken". LilyPond's own source says which grobs are which, and the split is not per
+%% glyph but per DECLARATION:
+%%   LILYPOND-REF: lily/grob.cc:44-91 Grob::Grob (SCM basicprops) — its :81-85 give a grob
+%%     that declares no vertical-skylines the simple_vertical_skylines_from_extents_proc.
+%%   LILYPOND-REF: lily/stencil-integral.cc:769-791
+%%     Grob::maybe_pure_internal_simple_skylines_from_extents — that callback pushes ONE
+%%     Box (xex, yex) and builds the Skyline_pair from it. One box: a rectangle.
+%%   LILYPOND-REF: scm/define-grobs.scm:2595-2631 NoteHead — no vertical-skylines entry, so
+%%     the default above applies. Clef and Accidental ask for skylines from their STENCIL and
+%%     that is why theirs follow the outline.
+%% ⇒ Lily#'s SkylineBuilder seeds the head as a flat box from the same LILC extents, which is
+%% the SAME choice, not a divergence. Anything left over in page.volta.plain.staff-to-line
+%% belongs somewhere else — and it did: half the volta line's thickness plus the face.
 %%
 %% ⚠️ THE 0.27% HANDOFF 2C CARRIED FOR SESSIONS AS "unexplained, needs instrumenting" WAS A
 %% UNIT MIX-UP: 2.565 / 643 divides a STAFF-SPACE width by a FONT-UNIT one. The scale is
@@ -107,5 +134,41 @@
       \override NoteHead.after-line-breaking = #(probe-glyph "NOTEHEAD-A")
     }
     << { \voiceOne b'1 } \\ { \voiceTwo a1\f } >>
+  }
+}
+
+%% THE SAMPLER (2026-08-28, session 276). Same music as the first book; the question is not
+%% how tall the skyline is but whether its height DEPENDS ON X. A box answers the same number
+%% everywhere across its width; an outline does not. Both grobs are asked in one run so that
+%% "twenty identical numbers" cannot mean "the sampler is broken" — the clef curves in the
+%% same output.
+%%
+%% ⚠️ THE FIRST SAMPLE IS AT THE EXTENT'S LEFT EDGE AND READS -inf/+inf ON BOTH GROBS. That
+%% is the skyline's own convention outside its buildings, not a hole in the glyph: the box
+%% starts AT that x, so the point itself is still open air. Read the samples after it.
+#(define (sample-sky name)
+   (lambda (grob)
+     (let* ((sky (ly:grob-property grob 'vertical-skylines))
+            (xe  (ly:grob-extent grob grob X))
+            (ye  (ly:grob-extent grob grob Y)))
+       (format #t "\nPROBEG ~a-SAMPLED X=(~a . ~a) Y=(~a . ~a)\n"
+               name (car xe) (cdr xe) (car ye) (cdr ye))
+       (if (pair? sky)
+           (let loop ((i 0))
+             (if (<= i 20)
+                 (let ((x (+ (car xe) (* (/ i 20.0) (- (cdr xe) (car xe))))))
+                   (format #t "PROBEG ~a-SAMPLED AT ~a up ~a down ~a\n"
+                           name x
+                           (ly:skyline-height (cdr sky) x)
+                           (ly:skyline-height (car sky) x))
+                   (loop (+ i 1)))))))))
+
+\book {
+  \score {
+    \new Staff \with {
+      \override NoteHead.after-line-breaking = #(sample-sky "NOTEHEAD")
+      \override Clef.after-line-breaking = #(sample-sky "CLEF")
+    }
+    { c'1 }
   }
 }
