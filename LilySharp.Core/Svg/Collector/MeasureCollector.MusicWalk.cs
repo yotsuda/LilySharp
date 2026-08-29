@@ -137,8 +137,18 @@ public sealed partial class MeasureCollector
     /// <summary>True for the marker nodes that annotate the preceding note and
     /// are otherwise skipped by the walk ("already processed"), i.e. exactly the
     /// nodes <see cref="FoldMarker"/> reads.</summary>
-    private static bool IsMarkerNode(SyntaxNode node)
-        => node is TieSyntax or SlurSyntax or BeamMarkerSyntax;
+    private static bool IsMarkerNode(SyntaxNode node) => IsMarkerKind(node.Kind);
+
+    /// <summary>
+    /// Kind-level spelling of <see cref="IsMarkerNode"/>, for the places that must ask
+    /// WITHOUT materializing a red node. Kinds are 1:1 with red types (each Green class
+    /// hard-codes its kind and <c>SyntaxNode.CreateRed</c> maps it back), so the two admit
+    /// the same nodes — and <see cref="IsMarkerNode"/> is written in terms of this one so
+    /// there is only ever one list. Same shape as
+    /// <c>IsCollectableMusicNode</c>/<c>IsCollectableMusicKind</c>, for the same reason.
+    /// </summary>
+    private static bool IsMarkerKind(SyntaxKind kind)
+        => kind is SyntaxKind.Tie or SyntaxKind.Slur or SyntaxKind.BeamMarker;
 
     /// <summary>Adds one marker node to the flags.</summary>
     private static MarkerFlags FoldMarker(MarkerFlags m, SyntaxNode node) => node switch
@@ -175,8 +185,45 @@ public sealed partial class MeasureCollector
     /// This is session 293's rehearsal-mark finding in mirror image: the same containers,
     /// the same direct-children walk, a different thing falling through it.
     /// </para>
+    /// <para>
+    /// ⚠️ AND <see cref="PeekMarkers"/> IS ITSELF ONE OF THOSE CONTAINER WALKS. It serves
+    /// the descending flat gather AND the cue and repeat bodies, which reach it through
+    /// <c>ProcessMusicNodeSequence</c> over sites built from <c>Body.Items</c> — direct
+    /// children again. The first poison run said otherwise: dropping the seed from
+    /// <c>PeekMarkers</c> reddened only the tuplet pair, which reads as "the flat walk does
+    /// not need it" and is HALF the truth — cue and repeat had no case yet, so their green
+    /// meant untested, not unaffected (RULES §5.4: read a poison by WHICH case reddens,
+    /// and a case that cannot redden is not evidence). With those two pairs added the same
+    /// poison reddens cue and repeat and leaves the flat pairs green, which is the claim
+    /// above actually measured.
+    /// </para>
     /// </remarks>
     private static MarkerFlags FoldOwnMarkers(MarkerFlags m, SyntaxNode host)
+    {
+        // ⚠️ THE GREEN PRE-CHECK IS NOT DECORATION: this runs once per music node on the
+        // KEYSTROKE path, and ArticulationsOf is an iterator method, so asking every note
+        // for a post-event list it almost never has costs an allocation per note. Reading
+        // the green slots' KINDS costs none and materializes nothing — the same reason
+        // MusicSitesLazy exists. MEASURED 2026-08-30 with audit/LilySharp.Probe alloc,
+        // floor of three runs, full render in MB (base f2746535 / without this line / with):
+        //   perf-plain1k       471.0 / 471.4 / 471.0     ← back on base exactly
+        //   perf-fingbeam1k    961.5 / 961.8 / 961.5     ← back on base exactly
+        //   perf-slurscript1k 1253.1 / 1253.4 / 1253.3   ← +0.2 MB, 0.016%
+        // The last one is a book made of slurs, so the slow half below genuinely runs there
+        // and the residue is the work itself, not the asking. Keystroke floors: plain1k 26.1
+        // unmoved; slurscript1k 51.3→51.5, inside that book's own run-to-run spread.
+        // ⚠️ THERE IS NO CONTROL BOOK FOR THIS CHANGE — it touches every music node — so
+        // "the control did not move" is not a claim available here (RULES §5.3); the six
+        // numbers above are the whole of the evidence.
+        for (int slot = 0; slot < host.Green.SlotCount; slot++)
+            if (host.Green.GetSlot(slot) is { } child && IsMarkerKind(child.Kind))
+                return FoldEveryOwnMarker(m, host);
+        return m;
+    }
+
+    /// <summary>The slow half of <see cref="FoldOwnMarkers"/>, reached only when the green
+    /// slots say there is something to fold.</summary>
+    private static MarkerFlags FoldEveryOwnMarker(MarkerFlags m, SyntaxNode host)
     {
         foreach (var postEvent in ArticulationsOf(host))
             if (IsMarkerNode(postEvent))

@@ -17,6 +17,7 @@
 using System.Text.RegularExpressions;
 using LilySharp.Core.Midi;
 using LilySharp.Core.MusicXml;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
@@ -93,6 +94,35 @@ public class PostEventOrderTests
                 + $"/{n.QuarterBend}"));
 
     /// <summary>
+    /// What <c>lysc check</c> says, by code and message. ⚠️ SPANS ARE LEFT OUT ON PURPOSE:
+    /// the two spellings put their characters in different places, so a span difference is
+    /// the change working, not failing. The codes and the words are the claim.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS ASSERT EXISTS BECAUSE THE OUTPUT COMPARISONS MISSED A REAL DIFFERENCE, and
+    /// so did a 1630-book sweep — no book on disk writes the shape. A repeat body decides
+    /// whether it FLOWS THROUGH bar accounting from its item KINDS
+    /// (<c>MeasureValidator.FlowsThroughBarAccounting</c>), and a marker that moved inside a
+    /// note left that body looking like plain notes:
+    /// <c>repeat unfold 2 { c8(@accent d e f } g4 |</c> drew LYS2001 where the identical
+    /// music spelled <c>c8@accent(</c> drew LYS2006. The page, the MusicXML and the MIDI
+    /// were byte-identical, so nothing above could see it.
+    /// </remarks>
+    /// <remarks>
+    /// ⚠️ AND IT HAD TO BE <c>SemanticValidation.Run</c>, NOT <c>tree.Diagnostics</c>. The
+    /// first draft asked the tree, which carries only the PARSER's diagnostics — LYS2001
+    /// and LYS2006 come from MeasureValidator — so it compared two empty strings and the
+    /// poison came back green. That is the second vacuous comparison this one test
+    /// produced in a day; both were found the same way, by making the checker fail first.
+    /// </remarks>
+    private static string Diags(string music)
+    {
+        var tree = SyntaxTree.Parse(Book(music));
+        return string.Join("\n", tree.Diagnostics.Concat(SemanticValidation.Run(tree))
+            .Select(d => $"{d.Code}: {d.Message}"));
+    }
+
+    /// <summary>
     /// Whether ANY tie/slur/beam marker in the book stands INSIDE its host's post-event
     /// list rather than beside it — the difference the two spellings make.
     /// </summary>
@@ -142,6 +172,13 @@ public class PostEventOrderTests
     [InlineData("c8[@accent d e f] g4 |", "c8@accent[ d e f] g4 |")]
     [InlineData("tuplet 3/2 { e8(@accent e8 e8) } r4 r2 |",
                 "tuplet 3/2 { e8@accent( e8 e8) } r4 r2 |")]
+    // The other two containers that walk their DIRECT children. A repeat body additionally
+    // decides whether the repeat FLOWS THROUGH bar accounting by looking at its item kinds,
+    // and that gate answered differently for the two spellings until it was told to look
+    // inside a note as well — LYS2001 against LYS2006 on the same four notes.
+    [InlineData("repeat unfold 2 { c8(@accent d e f } g4 |",
+                "repeat unfold 2 { c8@accent( d e f } g4 |")]
+    [InlineData("cue { c8(@accent d e f) } g4 r4 r2 |", "cue { c8@accent( d e f) } g4 r4 r2 |")]
     [InlineData("r4 e8( g <>)@f c8 c c |", "r4 e8( g <>@f) c8 c c |")]
     public void TheTwoOrdersOfOnePostEventRun_AreTheSameMusic(string markerFirst, string markerLast)
     {
@@ -152,6 +189,7 @@ public class PostEventOrderTests
         Assert.False(AnyMarkerIsInsideItsHost(markerLast),
             $"[{markerLast}] was expected to leave every marker beside its host");
 
+        Assert.Equal(Diags(markerLast), Diags(markerFirst));
         Assert.Equal(Page(markerLast), Page(markerFirst));
         Assert.Equal(Xml(markerLast), Xml(markerFirst));
         Assert.Equal(Midi(markerLast), Midi(markerFirst));

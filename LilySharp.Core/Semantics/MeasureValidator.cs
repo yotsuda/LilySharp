@@ -578,6 +578,19 @@ internal sealed class MeasureValidator : ISemanticValidator
         playCount = System.Math.Max(1, int.TryParse(rep.Count.Text, out int c) ? c : 2);
         foreach (var item in rep.Body.Items)
         {
+            // ⚠️ A MARKER WRITTEN ON A NOTE IS STILL A MARKER IN THIS BODY. Since 2026-08-30
+            // the tree stands in the order the characters were typed (HANDOFF §2F ⑺), so a
+            // tie/slur/beam marker written BEFORE another post-event — `c8(@accent d e f` —
+            // is a CHILD of its note instead of an item beside it. Asking only the item
+            // kinds would let such a body through the strict gate while the identical music
+            // spelled `c8@accent( d e f` still failed it, and the two would draw DIFFERENT
+            // bar diagnostics (measured: LYS2001 against LYS2006 on the same four notes).
+            // Loosening the gate for markers is a real option — see the ★ paragraph above,
+            // 114 of the corpus's 472 percent bodies fail on exactly a tie or a break — but
+            // it is a DIFFERENT change with its own evidence to gather, and it is not one to
+            // make by accident through a spelling.
+            if (CarriesAMarker(item))
+                return false;
             switch (item)
             {
                 case NoteSyntax or DrumNoteSyntax or ChordSyntax or ChordRepetitionSyntax
@@ -595,6 +608,19 @@ internal sealed class MeasureValidator : ISemanticValidator
             }
         }
         return true;
+    }
+
+    /// <summary>
+    /// This item carries a tie/slur/beam marker in its own post-event list — DIRECT
+    /// children only, because a marker inside a nested tuplet or cue belongs to that
+    /// container, which the gate above admits on its own terms.
+    /// </summary>
+    private static bool CarriesAMarker(SyntaxNode item)
+    {
+        for (int i = 0; i < item.SlotCount; i++)
+            if (item.GetChild(i) is TieSyntax or SlurSyntax or BeamMarkerSyntax)
+                return true;
+        return false;
     }
 
     /// <summary>The music items of one voice block of a span.</summary>
