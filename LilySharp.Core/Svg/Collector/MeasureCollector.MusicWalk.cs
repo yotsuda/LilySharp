@@ -340,12 +340,12 @@ public sealed partial class MeasureCollector
             int endNoteIndex = builder.CurrentItemCount - 1;
             if (endNoteIndex >= startNoteIndex)
                 _tupletBrackets.Add(new TupletBracketItem(sub.TupletNum, sub.TupletBase,
-                    startNoteIndex, endNoteIndex, measureIndex, arpeggio.Position, 0,
+                    startNoteIndex, endNoteIndex, measureIndex, arpeggio.SourceStart, 0,
                     _cursor.StaffIndex, _cursor.VoiceIndex));
         }
         // The group consumes exactly `total`; record it once (AddDuration may roll the bar,
         // which is why the bracket indices were captured above).
-        builder.AddDuration(total, arpeggio.Position + 1);
+        builder.AddDuration(total, arpeggio.SourceStart + 1);
 
         // Acts like one note: a trailing `>>N` carries N as the running duration
         // (dots included, like any written duration).
@@ -400,7 +400,7 @@ public sealed partial class MeasureCollector
             int step = GetPitchIndex(name);
             int anchor = _octave.Resolve(step, 0, name) + octaveShift;
             rp = ResolveAbsolutePitch(step, pitch.AccidentalOffset,
-                anchor + pitch.OctaveOffset, pitch.Position);
+                anchor + pitch.OctaveOffset, pitch.SourceStart);
             _octave.CurrentOctave = anchor;
         }
         int staffPosition = rp.StaffPosition;
@@ -409,7 +409,7 @@ public sealed partial class MeasureCollector
             accidental = QuarterToneAccidental(pitch, accidental);
         bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
         return new NoteItem(staffPosition, Fraction.FromNoteValue(forced.Value), forced.Dots,
-            accidental, needsLedger, pitch.Position, 0, isCourtesy: false)
+            accidental, needsLedger, pitch.SourceStart, 0, isCourtesy: false)
         {
             Midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
         };
@@ -425,11 +425,11 @@ public sealed partial class MeasureCollector
         int writtenKeySharps = _meta.KeySharps - _octave.TransposeKeySharps(0);
         var (step, alteration, octave) = ChordDegrees.Resolve(
             rootStep, anchorOctave, degree.Number, degree.Alteration, degree.OctaveOffset, writtenKeySharps);
-        var rp = ResolveAbsolutePitch(step, alteration, octave, degree.Position);
+        var rp = ResolveAbsolutePitch(step, alteration, octave, degree.SourceStart);
         var accidental = GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
         bool needsLedger = rp.StaffPosition is <= -6 or >= 6;
         var noteItem = new NoteItem(rp.StaffPosition, Fraction.FromNoteValue(forced.Value), forced.Dots,
-            accidental, needsLedger, degree.Position, 0, isCourtesy: false)
+            accidental, needsLedger, degree.SourceStart, 0, isCourtesy: false)
         {
             Midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
         };
@@ -596,7 +596,7 @@ public sealed partial class MeasureCollector
                     bool isCue = _cueDepth > 0;
                     // Pre-scan for @courtesy annotation before creating note
                     if (HasCourtesyAnnotation(note))
-                        _courtesySourcePositions.Add(note.Position);
+                        _courtesySourcePositions.Add(note.SourceStart);
                     var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, hasGliss, featherDir, isCue);
                     if (isCue && TakeCueRegionStart())
                         noteItem = noteItem with { BeginsCueRegion = true };
@@ -646,7 +646,7 @@ public sealed partial class MeasureCollector
                                 ? ArticulationType.Stopped
                                 : ArticulationType.Flageolet,
                             drumMeasureIndex, drumItemIndex, true,
-                            drumNote.Position, _cursor.StaffIndex)
+                            drumNote.SourceStart, _cursor.StaffIndex)
                         { VoiceIndex = _cursor.VoiceIndex });
                     CollectDynamics(drumNote, drumMeasureIndex, drumItemIndex);
                     CollectArticulations(drumNote, drumMeasureIndex, drumItemIndex, drumItem.StemUp,
@@ -710,7 +710,7 @@ public sealed partial class MeasureCollector
                         // records — the expansion budget truncates it instead.
                         for (int i = 1; i < count; i++)
                         {
-                            if (!ChargeExpansion(1, rest.Position))
+                            if (!ChargeExpansion(1, rest.SourceStart))
                                 break;
                             builder.AddItem(interior);
                         }
@@ -819,7 +819,7 @@ public sealed partial class MeasureCollector
                     {
                         int minPos = chordItem.Notes.Min(n => n.StaffPosition);
                         int maxPos = chordItem.Notes.Max(n => n.StaffPosition);
-                        _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, chord.Position, _cursor.StaffIndex,
+                        _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, chord.SourceStart, _cursor.StaffIndex,
                             Bracket: arpBracket));
                     }
                 }
@@ -889,7 +889,7 @@ public sealed partial class MeasureCollector
                     {
                         int minPos = chordCopy.Notes.Min(n => n.StaffPosition);
                         int maxPos = chordCopy.Notes.Max(n => n.StaffPosition);
-                        _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, rep.Position, _cursor.StaffIndex,
+                        _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, rep.SourceStart, _cursor.StaffIndex,
                             Bracket: arpBracket));
                     }
                 }
@@ -1017,7 +1017,7 @@ public sealed partial class MeasureCollector
 
             case BarlineSyntax barline:
                 var barType = ParseBarlineType(barline.BarToken.Text);
-                // Pass the '|' token's INK offset (not barline.Position, which includes
+                // Pass the '|' token's INK offset (not barline.SourceStart, which includes
                 // leading trivia) so the barline's click/highlight data-pos lands on the
                 // written bar, not the whitespace before it.
                 builder.HandleBarline(barType, barline.BarToken.Span.Start);
@@ -1039,7 +1039,7 @@ public sealed partial class MeasureCollector
                     if (builder.CurrentItemCount > 0)
                         endMeasureIndex++; // include the in-progress measure
                     int lastMeasure = Math.Max(startMeasureIndex, endMeasureIndex - 1);
-                    _pendingInlineVoltas.Add((startMeasureIndex, lastMeasure, volta.VoltaText, volta.IsClosed, volta.Position));
+                    _pendingInlineVoltas.Add((startMeasureIndex, lastMeasure, volta.VoltaText, volta.IsClosed, volta.SourceStart));
                 }
                 break;
 
@@ -1058,7 +1058,7 @@ public sealed partial class MeasureCollector
                     // created it anchored to its host note. Skip this un-anchored
                     // duplicate so the mark stays at its note rather than snapping to
                     // the bar.
-                    if (MusicMarkExistsAt(mark.Position))
+                    if (MusicMarkExistsAt(mark.SourceStart))
                         break;
                     // The rehearsal LABEL comes from the argument (@mark("A")), the other
                     // marks from their NAME (@segno, @ottava.bassa) — two questions, and
@@ -1076,16 +1076,16 @@ public sealed partial class MeasureCollector
                     // the whitespace. The fallback is for a mark that never rode a note's
                     // articulation list at all, where the builder's position is the only
                     // answer there is.
-                    int markMeasure = _markHostMeasure.TryGetValue(mark.Position, out int hostMeasure)
+                    int markMeasure = _markHostMeasure.TryGetValue(mark.SourceStart, out int hostMeasure)
                         ? hostMeasure
                         : builder.CurrentMeasureIndex;
                     if (Semantics.AnnotationValues.Rehearsal(mark, out _) is { } label)
                     {
-                        _musicMarks.Add(new MusicMarkItem(MusicMarkType.Rehearsal, label, markMeasure, mark.Position));
+                        _musicMarks.Add(new MusicMarkItem(MusicMarkType.Rehearsal, label, markMeasure, mark.SourceStart));
                     }
                     else if (MusicMarkItem.ParseMarkName(mark.MarkName) is { } markType)
                     {
-                        _musicMarks.Add(new MusicMarkItem(markType, markMeasure, mark.Position));
+                        _musicMarks.Add(new MusicMarkItem(markType, markMeasure, mark.SourceStart));
                     }
                 }
                 break;
@@ -1114,9 +1114,9 @@ public sealed partial class MeasureCollector
                             NavigationMarkType.DalSegnoAlCoda => "D.S. al Coda",
                             _ => nav.MarkType.ToString()
                         };
-                        _navPlacementWarnings.Add(new NavigationMarkPlacementWarning(nav.Position, term));
+                        _navPlacementWarnings.Add(new NavigationMarkPlacementWarning(nav.SourceStart, term));
                     }
-                    _musicMarks.Add(new MusicMarkItem(navType, builder.CurrentMeasureIndex, nav.Position));
+                    _musicMarks.Add(new MusicMarkItem(navType, builder.CurrentMeasureIndex, nav.SourceStart));
                 }
                 break;
 
@@ -1137,7 +1137,7 @@ public sealed partial class MeasureCollector
                         break;
                     _meta.Clef = newClef;
                     _octave.CurrentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
-                    // The clef NAME's token span — `clef |bass`. Not clefDecl.Position,
+                    // The clef NAME's token span — `clef |bass`. Not clefDecl.SourceStart,
                     // which is the declaration's FULL span and so starts at the trivia
                     // in front of it (see TimeDataPos for what that costs).
                     var clefChange = new ClefChangeItem(
@@ -1320,7 +1320,7 @@ public sealed partial class MeasureCollector
             _meta.Clef = outerClef;
             _octave.CurrentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
             builder.AddItem(new ClefChangeItem(
-                ParseClefType(outerClef), cue.Body.Position + cue.Body.FullWidth, isCue: true));
+                ParseClefType(outerClef), cue.Body.SourceStart + cue.Body.FullWidth, isCue: true));
         }
     }
 
@@ -1355,7 +1355,7 @@ public sealed partial class MeasureCollector
 
         // Track written duration of all items in the tuplet
         Fraction writtenDuration = Fraction.Zero;
-        int lastSourcePosition = tuplet.Position;
+        int lastSourcePosition = tuplet.SourceStart;
 
         // Process all notes inside the tuplet body using Items property
         // (not DescendantNodes which includes all nested nodes)
@@ -1386,7 +1386,7 @@ public sealed partial class MeasureCollector
                 writtenDuration += EmitScaledItem(item, builder, scale,
                     hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter);
             }
-            lastSourcePosition = item.Position;
+            lastSourcePosition = item.SourceStart;
         }
 
         // Calculate actual duration: written × base / ratio
@@ -1413,7 +1413,7 @@ public sealed partial class MeasureCollector
                 startNoteIndex,
                 endNoteIndex,
                 measureIndex,
-                tuplet.Position,
+                tuplet.SourceStart,
                 nestingDepth,
                 _cursor.StaffIndex,
                 _cursor.VoiceIndex

@@ -31,7 +31,7 @@
   <line x1="36.97" y1="15.77" x2="38.92" y2="15.77" stroke="#000000" stroke-width="0.200"/>
   <line x1="39.97" y1="16.77" x2="41.93" y2="16.77" stroke="#000000" stroke-width="0.200"/>
   <line x1="44.04" y1="16.77" x2="46.11" y2="16.77" stroke="#000000" stroke-width="0.200"/>
-  <text class="music" x="8.59" y="19.27" font-size="4.00" data-pos="350"></text>
+  <text class="music" x="8.59" y="19.27" font-size="4.00" data-pos="354"></text>
   <line x1="8.65" y1="19.42" x2="8.65" y2="22.77" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="11.59" y="18.77" font-size="4.00" data-pos="358"></text>
   <line x1="11.65" y1="18.92" x2="11.65" y2="22.27" stroke="#000000" stroke-width="0.130"/>
@@ -43,7 +43,7 @@
   <line x1="22.94" y1="13.77" x2="22.94" y2="11.27" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="25.91" y="14.27" font-size="4.00" data-pos="382"></text>
   <line x1="27.22" y1="14.27" x2="27.22" y2="11.77" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="31.29" y="14.77" font-size="4.00" data-pos="398"></text>
+  <text class="music" x="31.29" y="14.77" font-size="4.00" data-pos="402"></text>
   <line x1="31.35" y1="14.92" x2="31.35" y2="19.77" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="34.29" y="15.27" font-size="4.00" data-pos="406"></text>
   <line x1="34.36" y1="15.42" x2="34.36" y2="19.77" stroke="#000000" stroke-width="0.130"/>
@@ -51,7 +51,7 @@
   <line x1="37.36" y1="15.92" x2="37.36" y2="19.77" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="40.30" y="16.27" font-size="4.00" data-pos="410"></text>
   <line x1="40.36" y1="16.42" x2="40.36" y2="19.77" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="44.39" y="16.77" font-size="4.00" data-pos="414"></text>
+  <text class="music" x="44.39" y="16.77" font-size="4.00" data-pos="418"></text>
   <line x1="44.45" y1="16.77" x2="44.45" y2="20.27" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="48.66" y="17.27" font-size="4.00" data-pos="421"></text>
   <line x1="48.73" y1="17.27" x2="48.73" y2="20.77" stroke="#000000" stroke-width="0.130"/>

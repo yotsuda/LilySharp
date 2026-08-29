@@ -1793,7 +1793,7 @@ public sealed partial class MeasureCollector
     private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode,
         bool applyFilePartial = true, Fraction? leadingOffset = null)
     {
-        var builder = new MeasureBuilder(TimeSignatureFraction, voiceNode.Position);
+        var builder = new MeasureBuilder(TimeSignatureFraction, voiceNode.SourceStart);
         // The file-level pickup arms a sub-collection only when it really sits
         // at the piece's start (a mid-piece voice{} span must not shorten its
         // own first bar).
@@ -1804,7 +1804,7 @@ public sealed partial class MeasureCollector
         // (walked inline in the primary stream) already elapsed to. Same device
         // PartCombiner uses to pad a part up to an onset.
         if (leadingOffset is { } offset && offset != Fraction.Zero)
-            builder.AddItem(new RestItem(offset, 0, voiceNode.Position) { IsSpacer = true });
+            builder.AddItem(new RestItem(offset, 0, voiceNode.SourceStart) { IsSpacer = true });
         _measureAccidentals.Clear();
         builder.MeasureCompleted = _measureAccidentals.Clear;
 
@@ -2289,7 +2289,7 @@ public sealed partial class MeasureCollector
                 // Cross-edit address revalidation: the prefix text is unchanged, so
                 // an unchanged walk-order address holds a node with an unchanged
                 // start. Anything else is structural drift — bail to a full collect.
-                // (Site.Position == Node.FullSpan.Start, no red materialized.)
+                // (Site.SourceStart == Node.FullSpan.Start, no red materialized.)
                 if (target.NodeIndex >= nodeList.Count
                     || nodeList[target.NodeIndex].Position != target.NodeStart)
                     throw new CollectResumeAbortException(
@@ -2615,8 +2615,8 @@ public sealed partial class MeasureCollector
                     // staff printed "Fine" / "D.C. al Fine" twice, stacked.
                     if (!_musicMarks.Any(m => m.Type == navMark
                             && m.MeasureIndex == navMeasure
-                            && m.SourcePosition == nav.Position))
-                        _musicMarks.Add(new MusicMarkItem(navMark, navMeasure, nav.Position));
+                            && m.SourcePosition == nav.SourceStart))
+                        _musicMarks.Add(new MusicMarkItem(navMark, navMeasure, nav.SourceStart));
                     break;
 
                 // _"text" — a free text directive between sections, engraved like
@@ -2633,9 +2633,9 @@ public sealed partial class MeasureCollector
                     int textMeasure = Math.Max(0, builder.CurrentMeasureIndex - 1);
                     if (!_customTexts.Any(t => t.Text == custom.Text
                             && t.MeasureIndex == textMeasure
-                            && t.SourcePosition == custom.Position))
+                            && t.SourcePosition == custom.SourceStart))
                         _customTexts.Add(new CustomTextItem(
-                            custom.Text, textMeasure, custom.Position));
+                            custom.Text, textMeasure, custom.SourceStart));
                     break;
 
                 // ~Name — render the section's music but show NO label (the dedicated
@@ -3018,7 +3018,7 @@ public sealed partial class MeasureCollector
                 var level = dynamicSyntax.Level;
                 if (level != DynamicLevel.None)
                 {
-                    _dynamics.Add(new DynamicItem(level, measureIndex, itemIndex, dynamicSyntax.Position, _cursor.StaffIndex)
+                    _dynamics.Add(new DynamicItem(level, measureIndex, itemIndex, dynamicSyntax.SourceStart, _cursor.StaffIndex)
                     {
                         IsAbove = dynamicSyntax.ForcedAbove == true,
                         VoiceIndex = _cursor.VoiceIndex,
@@ -3039,7 +3039,7 @@ public sealed partial class MeasureCollector
                     if (markType != null)
                     {
                         _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex,
-                            dynamicSyntax.Position, itemIndex) { StaffIndex = _cursor.StaffIndex });
+                            dynamicSyntax.SourceStart, itemIndex) { StaffIndex = _cursor.StaffIndex });
                     }
                 }
             }
@@ -3377,7 +3377,7 @@ public sealed partial class MeasureCollector
             // Additional iterations: process body again but mark as percent repeat
             for (int iter = 1; iter < count; iter++)
             {
-                if (!ChargeExpansion(passCost, repeat.Position))
+                if (!ChargeExpansion(passCost, repeat.SourceStart))
                     break;
 
                 if (isBeatSlashBody)
@@ -3426,12 +3426,12 @@ public sealed partial class MeasureCollector
                             room = bar;
                         var piece = remaining < room ? remaining : room;
                         builder.AddItem(
-                            new RestItem(piece, 0, repeat.Position) { IsSpacer = true });
+                            new RestItem(piece, 0, repeat.SourceStart) { IsSpacer = true });
                         remaining -= piece;
                     }
                     _percentRepeats.Add(new PercentRepeatItem(
                         slashMeasure,
-                        repeat.Position,
+                        repeat.SourceStart,
                         _cursor.StaffIndex,
                         BeatTiming: slashTiming,
                         BeatItemIndex: slashItemIndex,
@@ -3455,7 +3455,7 @@ public sealed partial class MeasureCollector
                 {
                     _percentRepeats.Add(new PercentRepeatItem(
                         iterStart + 1,
-                        repeat.Position,
+                        repeat.SourceStart,
                         _cursor.StaffIndex,
                         IsDouble: true));
                 }
@@ -3466,7 +3466,7 @@ public sealed partial class MeasureCollector
                     {
                         _percentRepeats.Add(new PercentRepeatItem(
                             iterStart + m,
-                            repeat.Position,
+                            repeat.SourceStart,
                             _cursor.StaffIndex));
                     }
                 }
@@ -3519,7 +3519,7 @@ public sealed partial class MeasureCollector
             {
                 if (i > 0)
                 {
-                    if (!ChargeExpansion(passCost, repeat.Position))
+                    if (!ChargeExpansion(passCost, repeat.SourceStart))
                         break;
                     _octave.CurrentOctave = frame.Octave;
                     _octave.LastPitchName = frame.PitchName;
@@ -3710,7 +3710,7 @@ public sealed partial class MeasureCollector
                 infos,
                 measureIndex,
                 mainNoteItemIndex,
-                grace.Position,
+                grace.SourceStart,
                 _cursor.StaffIndex));
             // Hand the infos to the next main note/chord so it can reserve front space.
             _pendingLeadingGrace = infos;

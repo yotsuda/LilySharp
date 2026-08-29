@@ -18,22 +18,22 @@
   <line x1="12.73" y1="16.55" x2="14.69" y2="16.55" stroke="#000000" stroke-width="0.200"/>
   <line x1="50.20" y1="10.55" x2="52.16" y2="10.55" stroke="#000000" stroke-width="0.200"/>
   <line x1="54.91" y1="10.55" x2="56.86" y2="10.55" stroke="#000000" stroke-width="0.200"/>
-  <text class="music" x="8.35" y="16.55" font-size="4.00" data-pos="667"></text>
+  <text class="music" x="8.35" y="16.55" font-size="4.00" data-pos="671"></text>
   <text class="music" x="10.86" y="15.55" font-size="4.00" data-pos="675"></text>
   <text class="music" x="13.06" y="16.55" font-size="4.00" data-pos="678"></text>
-  <text class="music" x="16.83" y="15.55" font-size="4.00" data-pos="685"></text>
+  <text class="music" x="16.83" y="15.55" font-size="4.00" data-pos="689"></text>
   <text class="music" x="19.33" y="14.55" font-size="4.00" data-pos="693"></text>
   <text class="music" x="21.53" y="15.55" font-size="4.00" data-pos="696"></text>
-  <text class="music" x="25.37" y="14.55" font-size="4.00" data-pos="703"></text>
+  <text class="music" x="25.37" y="14.55" font-size="4.00" data-pos="707"></text>
   <text class="music" x="27.87" y="13.55" font-size="4.00" data-pos="711"></text>
   <text class="music" x="30.07" y="14.55" font-size="4.00" data-pos="714"></text>
-  <text class="music" x="34.00" y="13.05" font-size="4.00" data-pos="721"></text>
+  <text class="music" x="34.00" y="13.05" font-size="4.00" data-pos="725"></text>
   <text class="music" x="36.50" y="13.55" font-size="4.00" data-pos="730"></text>
   <text class="music" x="38.70" y="13.05" font-size="4.00" data-pos="733"></text>
-  <text class="music" x="42.30" y="11.05" font-size="4.00" data-pos="741"></text>
+  <text class="music" x="42.30" y="11.05" font-size="4.00" data-pos="745"></text>
   <text class="music" x="44.81" y="12.55" font-size="4.00" data-pos="750"></text>
   <text class="music" x="47.01" y="11.05" font-size="4.00" data-pos="753"></text>
-  <text class="music" x="50.53" y="10.55" font-size="4.00" data-pos="761"></text>
+  <text class="music" x="50.53" y="10.55" font-size="4.00" data-pos="765"></text>
   <text class="music" x="53.03" y="11.55" font-size="4.00" data-pos="770"></text>
   <text class="music" x="55.23" y="10.55" font-size="4.00" data-pos="773"></text>
   <rect x="15.74" y="11.55" width="0.19" height="4.00" data-pos="683"/>

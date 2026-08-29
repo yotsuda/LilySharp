@@ -19,15 +19,15 @@
   <line x1="27.99" y1="24.80" x2="29.94" y2="24.80" stroke="#000000" stroke-width="0.200"/>
   <line x1="41.30" y1="24.80" x2="43.37" y2="24.80" stroke="#000000" stroke-width="0.200"/>
   <line x1="61.03" y1="24.80" x2="63.10" y2="24.80" stroke="#000000" stroke-width="0.200"/>
-  <text class="music" x="8.59" y="24.80" font-size="4.00" data-pos="198"></text>
+  <text class="music" x="8.59" y="24.80" font-size="4.00" data-pos="200"></text>
   <line x1="9.90" y1="24.80" x2="9.90" y2="21.30" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="12.86" y="24.30" font-size="4.00" data-pos="209"></text>
   <line x1="14.17" y1="24.30" x2="14.17" y2="20.80" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="18.44" y="23.80" font-size="4.00" data-pos="220"></text>
+  <text class="music" x="18.44" y="23.80" font-size="4.00" data-pos="222"></text>
   <line x1="19.75" y1="23.80" x2="19.75" y2="20.30" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="22.72" y="23.30" font-size="4.00" data-pos="231"></text>
   <line x1="24.03" y1="23.30" x2="24.03" y2="19.80" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="28.31" y="24.80" font-size="4.00" data-pos="261"></text>
+  <text class="music" x="28.31" y="24.80" font-size="4.00" data-pos="263"></text>
   <line x1="29.55" y1="24.65" x2="29.55" y2="21.30" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="31.31" y="24.30" font-size="4.00" data-pos="274"></text>
   <line x1="32.55" y1="24.15" x2="32.55" y2="20.80" stroke="#000000" stroke-width="0.130"/>
@@ -35,15 +35,15 @@
   <line x1="35.56" y1="23.65" x2="35.56" y2="20.30" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="37.32" y="23.30" font-size="4.00" data-pos="292"></text>
   <line x1="38.56" y1="23.15" x2="38.56" y2="19.80" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="41.65" y="24.80" font-size="4.00" data-pos="320"></text>
+  <text class="music" x="41.65" y="24.80" font-size="4.00" data-pos="322"></text>
   <line x1="42.96" y1="24.80" x2="42.96" y2="21.30" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="45.92" y="24.30" font-size="4.00" data-pos="330"></text>
   <line x1="47.24" y1="24.30" x2="47.24" y2="20.80" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="51.50" y="23.80" font-size="4.00" data-pos="348"></text>
+  <text class="music" x="51.50" y="23.80" font-size="4.00" data-pos="350"></text>
   <line x1="52.82" y1="23.80" x2="52.82" y2="20.30" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="55.78" y="23.30" font-size="4.00" data-pos="366"></text>
   <line x1="57.09" y1="23.30" x2="57.09" y2="19.80" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="61.38" y="24.80" font-size="4.00" data-pos="395"></text>
+  <text class="music" x="61.38" y="24.80" font-size="4.00" data-pos="397"></text>
   <line x1="62.69" y1="24.80" x2="62.69" y2="21.30" stroke="#000000" stroke-width="0.130"/>
   <line x1="61.94" y1="22.30" x2="63.44" y2="21.93" stroke="#000000" stroke-width="0.480"/>
   <text class="music" x="65.65" y="24.30" font-size="4.00" data-pos="402"></text>

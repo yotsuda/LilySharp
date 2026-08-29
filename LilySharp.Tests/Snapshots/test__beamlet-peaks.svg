@@ -14,7 +14,7 @@
   <line x1="0.00" y1="16.32" x2="102.43" y2="16.32" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="15.32" font-size="4.00" data-pos="616"></text>
   <text class="music" x="4.88" y="14.32" font-size="4.00"></text>
-  <text class="music" x="8.36" y="13.82" font-size="4.00" data-pos="646"></text>
+  <text class="music" x="8.36" y="13.82" font-size="4.00" data-pos="650"></text>
   <text class="music" x="12.48" y="12.82" font-size="4.00" data-pos="655"></text>
   <text class="music" x="15.74" y="11.82" font-size="4.00" data-pos="660"></text>
   <text class="music" x="19.61" y="14.32" font-size="4.00" data-pos="665"></text>
@@ -25,7 +25,7 @@
   <text class="music" x="34.09" y="14.32" font-size="4.00" data-pos="684"></text>
   <text class="music" x="37.65" y="14.32" font-size="4.00" data-pos="687"></text>
   <text class="music" x="39.30" y="13.82" font-size="4.00" data-pos="687"></text>
-  <text class="music" x="42.10" y="14.82" font-size="4.00" data-pos="694"></text>
+  <text class="music" x="42.10" y="14.82" font-size="4.00" data-pos="698"></text>
   <text class="music" x="46.22" y="13.82" font-size="4.00" data-pos="702"></text>
   <text class="music" x="49.49" y="12.82" font-size="4.00" data-pos="707"></text>
   <text class="music" x="53.36" y="14.32" font-size="4.00" data-pos="712"></text>
@@ -36,7 +36,7 @@
   <text class="music" x="67.83" y="14.32" font-size="4.00" data-pos="730"></text>
   <text class="music" x="71.40" y="14.32" font-size="4.00" data-pos="733"></text>
   <text class="music" x="73.05" y="13.82" font-size="4.00" data-pos="733"></text>
-  <text class="music" x="75.90" y="13.82" font-size="4.00" data-pos="740"></text>
+  <text class="music" x="75.90" y="13.82" font-size="4.00" data-pos="744"></text>
   <text class="music" x="79.17" y="12.82" font-size="4.00" data-pos="750"></text>
   <text class="music" x="82.44" y="11.82" font-size="4.00" data-pos="755"></text>
   <text class="music" x="86.06" y="14.82" font-size="4.00" data-pos="760"></text>

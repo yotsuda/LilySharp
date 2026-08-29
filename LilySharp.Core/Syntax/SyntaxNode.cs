@@ -74,9 +74,30 @@ public abstract class SyntaxNode
     public TextSpan FullSpan => new(_position, Green.FullWidth);
 
     /// <summary>
-    /// The span without leading/trailing trivia.
+    /// The span without leading/trailing trivia — the node's own text, which is also the
+    /// address a READER of the source means when it points here.
     /// </summary>
-    public TextSpan Span => new(_position + Green.LeadingTriviaWidth, Green.Width);
+    /// <remarks>
+    /// ⚠️ THE TRIVIA IS THE FIRST AND LAST TERMINAL'S, NOT THIS NODE'S, and until 2026-08-29
+    /// this read <c>Green.LeadingTriviaWidth</c> — a property only a TOKEN overrides, so a
+    /// composite node (a note, a chord, a repeat) answered 0 however much whitespace stood in
+    /// front of its first token. Same-line whitespace is the PREVIOUS token's trailing trivia,
+    /// so the two agreed everywhere except at a line break: a node that OPENS a line reported
+    /// the newline and the indent as part of itself. A diagnostic on an overfull measure whose
+    /// first note stood at column 5 said column 1, and the SVG's <c>data-pos</c> for that note
+    /// carried the offset of the whitespace, so clicking the note in the preview lit nothing
+    /// up (reported 2026-08-29, scratch/ベースタブLy/Walk.lys line 15, `ees,1`).
+    /// </remarks>
+    public TextSpan Span => new(
+        _position + Green.GetLeadingTriviaWidth(),
+        Green.FullWidth - Green.GetLeadingTriviaWidth() - Green.GetTrailingTriviaWidth());
+
+    /// <summary>
+    /// The address a reader of the source means when it points at this node — the first
+    /// character of the node's own text. Identical to <see cref="Span"/>'s start; the name
+    /// exists so a call site says which of <see cref="Position"/> and this one it means.
+    /// </summary>
+    public int SourceStart => Span.Start;
 
     /// <summary>
     /// The number of child slots.

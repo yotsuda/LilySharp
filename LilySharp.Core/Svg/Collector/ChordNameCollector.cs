@@ -214,14 +214,14 @@ internal sealed class ChordNameCollector
                 {
                     if (rest.RestToken.Text != "s")
                         _items.Add(new ChordNameItem(
-                            "N.C.", mi, itemIndex: -1, rest.RestToken.Position, staffIndex,
+                            "N.C.", mi, itemIndex: -1, rest.RestToken.SourceStart, staffIndex,
                             useTiming: true, timing: timing));
                 }
                 else if (node is ChordEntrySyntax entry)
                 {
                     var (text, structure) = ResolveChordEntry(entry, mi);
                     _items.Add(new ChordNameItem(
-                        text, mi, itemIndex: -1, entry.Position, staffIndex,
+                        text, mi, itemIndex: -1, entry.SourceStart, staffIndex,
                         useTiming: true, timing: timing, structure: structure)
                     {
                         RomanText = Roman(structure, mi),
@@ -287,7 +287,7 @@ internal sealed class ChordNameCollector
                 // Nothing before it in THIS bar to extend ('.' never crosses a
                 // barline). The group stays silent but keeps its time.
                 _gridWarnings.Add(new ChordRowGridWarning(
-                    head.DotToken.Position, HeadDot: true, slotCount, timeBeats, timeBeatType));
+                    head.DotToken.SourceStart, HeadDot: true, slotCount, timeBeats, timeBeatType));
             emit(node, timing, dur);
             timing += dur;
             at = next;
@@ -296,9 +296,9 @@ internal sealed class ChordNameCollector
 
     private static int PositionOf(SyntaxNode node) => node switch
     {
-        RestSyntax rest => rest.RestToken.Position,
-        ChordExtendSyntax dot => dot.DotToken.Position,
-        _ => node.Position,
+        RestSyntax rest => rest.RestToken.SourceStart,
+        ChordExtendSyntax dot => dot.DotToken.SourceStart,
+        _ => node.SourceStart,
     };
 
     /// <summary>The chord entries and barlines of a chord-track inner section (the

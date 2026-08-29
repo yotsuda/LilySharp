@@ -20,7 +20,7 @@
   <line x1="42.63" y1="9.49" x2="44.59" y2="9.49" stroke="#000000" stroke-width="0.200"/>
   <line x1="45.14" y1="9.49" x2="47.09" y2="9.49" stroke="#000000" stroke-width="0.200"/>
   <line x1="47.64" y1="9.49" x2="49.60" y2="9.49" stroke="#000000" stroke-width="0.200"/>
-  <text class="music" x="8.82" y="13.99" font-size="4.00" data-pos="1685"></text>
+  <text class="music" x="8.82" y="13.99" font-size="4.00" data-pos="1689"></text>
   <text class="music" x="11.57" y="12.49" font-size="4.00" data-pos="1696"></text>
   <text class="music" x="14.33" y="10.99" font-size="4.00" data-pos="1701"></text>
   <text class="music" x="17.08" y="9.49" font-size="4.00" data-pos="1706"></text>
@@ -28,7 +28,7 @@
   <text class="music" x="21.89" y="10.99" font-size="4.00" data-pos="1714"></text>
   <text class="music" x="24.20" y="12.49" font-size="4.00" data-pos="1719"></text>
   <text class="music" x="26.51" y="13.99" font-size="4.00" data-pos="1724"></text>
-  <text class="music" x="30.08" y="13.99" font-size="4.00" data-pos="1732"></text>
+  <text class="music" x="30.08" y="13.99" font-size="4.00" data-pos="1736"></text>
   <text class="music" x="32.58" y="13.99" font-size="4.00" data-pos="1743"></text>
   <text class="music" x="35.09" y="13.99" font-size="4.00" data-pos="1749"></text>
   <text class="music" x="37.59" y="13.99" font-size="4.00" data-pos="1755"></text>
@@ -42,7 +42,7 @@
   <text class="music" x="5.12" y="21.49" font-size="4.00"></text>
   <rect x="28.99" y="19.24" width="0.19" height="4.50" data-pos="1730"/>
   <rect x="50.29" y="19.24" width="0.19" height="4.50" data-pos="1777"/>
-  <text x="9.47" y="24.78" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1685">5</text>
+  <text x="9.47" y="24.78" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1689">5</text>
   <text x="12.23" y="23.28" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1696">5</text>
   <text x="14.98" y="21.78" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1701">5</text>
   <text x="17.73" y="20.28" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1706">5</text>
@@ -50,7 +50,7 @@
   <text x="22.55" y="21.78" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1714">5</text>
   <text x="24.85" y="23.28" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1719">5</text>
   <text x="27.16" y="24.78" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1724">5</text>
-  <text x="30.73" y="24.78" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1732">5</text>
+  <text x="30.73" y="24.78" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1736">5</text>
   <text x="33.24" y="24.78" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1743">5</text>
   <text x="35.74" y="24.78" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1749">5</text>
   <text x="38.24" y="24.78" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1755">5</text>

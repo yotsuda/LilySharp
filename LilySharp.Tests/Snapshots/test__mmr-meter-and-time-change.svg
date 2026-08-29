@@ -17,13 +17,13 @@
   <text class="music" x="5.02" y="19.77" font-size="4.00" data-pos="1168">3</text>
   <text class="music" x="4.88" y="21.77" font-size="4.00" data-pos="1168">4</text>
   <line x1="8.16" y1="22.77" x2="10.12" y2="22.77" stroke="#000000" stroke-width="0.200"/>
-  <text class="music" x="8.49" y="22.77" font-size="4.00" data-pos="1224"></text>
+  <text class="music" x="8.49" y="22.77" font-size="4.00" data-pos="1228"></text>
   <line x1="9.73" y1="22.62" x2="9.73" y2="19.27" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="11.49" y="22.27" font-size="4.00" data-pos="1231"></text>
   <line x1="12.73" y1="22.12" x2="12.73" y2="18.77" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="14.49" y="21.77" font-size="4.00" data-pos="1233"></text>
   <line x1="15.73" y1="21.62" x2="15.73" y2="18.27" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="31.07" y="21.27" font-size="4.00" data-pos="1249"></text>
+  <text class="music" x="31.07" y="21.27" font-size="4.00" data-pos="1253"></text>
   <line x1="32.31" y1="21.12" x2="32.31" y2="17.77" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="34.07" y="20.77" font-size="4.00" data-pos="1256"></text>
   <line x1="35.31" y1="20.62" x2="35.31" y2="17.27" stroke="#000000" stroke-width="0.130"/>
@@ -31,7 +31,7 @@
   <line x1="38.31" y1="20.12" x2="38.31" y2="16.77" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="41.25" y="19.77" font-size="4.00" data-pos="1271">2</text>
   <text class="music" x="41.18" y="21.77" font-size="4.00" data-pos="1271">4</text>
-  <text class="music" x="56.04" y="20.77" font-size="4.00" data-pos="1282"></text>
+  <text class="music" x="56.04" y="20.77" font-size="4.00" data-pos="1286"></text>
   <line x1="57.28" y1="20.62" x2="57.28" y2="17.27" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="59.05" y="20.27" font-size="4.00" data-pos="1289"></text>
   <line x1="60.29" y1="20.12" x2="60.29" y2="16.77" stroke="#000000" stroke-width="0.130"/>

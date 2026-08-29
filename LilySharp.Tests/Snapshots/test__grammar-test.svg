@@ -86,10 +86,10 @@
   <text class="music" x="98.15" y="20.77" font-size="4.00" data-pos="140"></text>
   <line x1="99.46" y1="20.77" x2="99.46" y2="17.27" stroke="#000000" stroke-width="0.130"/>
   <rect x="19.84" y="17.77" width="0.19" height="4.00" data-pos="135"/>
-  <rect x="29.06" y="17.77" width="0.60" height="4.00" data-pos="337"/>
-  <rect x="29.96" y="17.77" width="0.19" height="4.00" data-pos="337"/>
-  <circle cx="30.68" cy="19.27" r="0.23" data-pos="337"/>
-  <circle cx="30.68" cy="20.27" r="0.23" data-pos="337"/>
+  <rect x="29.06" y="17.77" width="0.60" height="4.00" data-pos="339"/>
+  <rect x="29.96" y="17.77" width="0.19" height="4.00" data-pos="339"/>
+  <circle cx="30.68" cy="19.27" r="0.23" data-pos="339"/>
+  <circle cx="30.68" cy="20.27" r="0.23" data-pos="339"/>
   <rect x="43.02" y="17.77" width="0.19" height="4.00" data-pos="170"/>
   <rect x="50.99" y="17.77" width="0.19" height="4.00" data-pos="179"/>
   <rect x="66.94" y="17.77" width="0.19" height="4.00" data-pos="303"/>

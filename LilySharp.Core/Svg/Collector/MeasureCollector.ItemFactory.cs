@@ -90,7 +90,7 @@ public sealed partial class MeasureCollector
             accidental = QuarterToneAccidental(note.Pitch, accidental);
 
         // Explicit @courtesy annotation: print the pitch's accidental in parentheses.
-        if (_courtesySourcePositions.Contains(note.Position))
+        if (_courtesySourcePositions.Contains(note.SourceStart))
         {
             isCourtesy = true;
             // If no accidental shown, force the key-signature-matching accidental
@@ -131,7 +131,7 @@ public sealed partial class MeasureCollector
             dots,
             accidental,
             needsLedger,
-            note.Position,
+            note.SourceStart,
             tremoloBeams,
             hasTieStart: hasTieAfter,
             hasSlurStart: hasSlurStartAfter,
@@ -183,7 +183,7 @@ public sealed partial class MeasureCollector
             dots,
             accidental: null,
             needsLedger,
-            drum.Position,
+            drum.SourceStart,
             tremoloBeams)
         {
             Notehead = info.Notehead,
@@ -222,7 +222,7 @@ public sealed partial class MeasureCollector
             _defaultDots = dots;
         }
 
-        return new RestItem(Fraction.FromNoteValue(noteValue), dots, note.Position)
+        return new RestItem(Fraction.FromNoteValue(noteValue), dots, note.SourceStart)
         {
             StaffPosition = rp.StaffPosition,
         };
@@ -241,7 +241,7 @@ public sealed partial class MeasureCollector
         }
 
         // 's' is a spacer rest: it occupies time/width but is never drawn (unlike 'r').
-        return new RestItem(Fraction.FromNoteValue(noteValue), dots, rest.Position)
+        return new RestItem(Fraction.FromNoteValue(noteValue), dots, rest.SourceStart)
         {
             IsSpacer = rest.RestToken.Text == "s",
             // Capital R = explicit multi-measure rest (centred). Lowercase r = plain
@@ -366,7 +366,7 @@ public sealed partial class MeasureCollector
                 {
                     int anchor = _octave.Resolve(rootStepForStack, 0, firstPitchName) + chordOctave;
                     rp = ResolveAbsolutePitch(rootStepForStack, pitch.AccidentalOffset,
-                        anchor + pitch.OctaveOffset, pitch.Position);
+                        anchor + pitch.OctaveOffset, pitch.SourceStart);
                     firstOctave = anchor;
                 }
             }
@@ -385,7 +385,7 @@ public sealed partial class MeasureCollector
                 // from LilyPond's per-member relative chain.)
                 int step = GetPitchIndex(pitch.PitchName.ToLowerInvariant()[0]);
                 int octave = firstOctave + (step >= rootStepForStack ? 0 : 1) + pitch.OctaveOffset;
-                rp = ResolveAbsolutePitch(step, pitch.AccidentalOffset, octave, pitch.Position);
+                rp = ResolveAbsolutePitch(step, pitch.AccidentalOffset, octave, pitch.SourceStart);
             }
             int staffPosition = rp.StaffPosition;
 
@@ -436,7 +436,7 @@ public sealed partial class MeasureCollector
                 Fingering: pitchFingering,
                 StringNumber: pitch.Articulations.OfType<StringNumberAnnotationSyntax>().FirstOrDefault()?.StringNumber,
                 Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
-                SourcePosition: pitch.Position,
+                SourcePosition: pitch.SourceStart,
                 HasLaissezVibrer: chordLv || memberLv != null,
                 LaissezVibrerUp: chordLv ? chordLvUp : memberLv?.ForcedAbove,
                 HasRepeatTie: chordRt || memberRt != null,
@@ -500,14 +500,14 @@ public sealed partial class MeasureCollector
             var (step, alteration, octave) = ChordDegrees.Resolve(
                 rootStep, firstOctave, degree.Number, degree.Alteration,
                 degree.OctaveOffset, writtenKeySharps);
-            var rp = ResolveAbsolutePitch(step, alteration, octave, degree.Position);
+            var rp = ResolveAbsolutePitch(step, alteration, octave, degree.SourceStart);
             var accidental = GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
             notes.Add(new ChordNoteInfo(
                 rp.StaffPosition, accidental,
                 rp.StaffPosition is <= -6 or >= 6,
                 IsCourtesy: false,
                 Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
-                SourcePosition: degree.Position,
+                SourcePosition: degree.SourceStart,
                 HasLaissezVibrer: chordLv,
                 LaissezVibrerUp: chordLvUp,
                 HasRepeatTie: chordRt,
@@ -526,7 +526,7 @@ public sealed partial class MeasureCollector
                 dinfo.StaffPosition is <= -6 or >= 6,
                 Notehead: dinfo.Notehead,
                 Midi: dinfo.GmKey,
-                SourcePosition: drum.Position,
+                SourcePosition: drum.SourceStart,
                 HasLaissezVibrer: chordLv,
                 LaissezVibrerUp: chordLvUp,
                 HasRepeatTie: chordRt,
@@ -576,7 +576,7 @@ public sealed partial class MeasureCollector
             dots = pairDisp.Dots;
         }
 
-        return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, chord.Position, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieStart: hasTieAfter, hasSlurStart: hasSlurStartAfter, hasSlurEnd: hasSlurEndAfter)
+        return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, chord.SourceStart, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieStart: hasTieAfter, hasSlurStart: hasSlurStartAfter, hasSlurEnd: hasSlurEndAfter)
         {
             // A chord has ONE stem, so @stemUp / @stemDown on it is the same wish a note's is.
             ForcedStemUp = GetStemDirectionOverride(chord),
@@ -650,7 +650,7 @@ public sealed partial class MeasureCollector
 
         if (Music.ChordRepetitions.OriginalOf(rep) is not { } original
             || !_resolvedChordMembers.TryGetValue(original, out var members))
-            return new RestItem(Fraction.FromNoteValue(noteValue), dots, rep.Position) { IsSpacer = true };
+            return new RestItem(Fraction.FromNoteValue(noteValue), dots, rep.SourceStart) { IsSpacer = true };
 
         var notes = new List<ChordNoteInfo>(members.Length);
         foreach (var m in members)
@@ -664,10 +664,10 @@ public sealed partial class MeasureCollector
                 IsCourtesy: false,
                 Notehead: m.Notehead,
                 Midi: m.Midi,
-                SourcePosition: rep.Position));
+                SourcePosition: rep.SourceStart));
         }
 
-        return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, rep.Position, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieStart: hasTieAfter, hasSlurStart: hasSlurStartAfter, hasSlurEnd: hasSlurEndAfter)
+        return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, rep.SourceStart, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieStart: hasTieAfter, hasSlurStart: hasSlurStartAfter, hasSlurEnd: hasSlurEndAfter)
         {
             // The repetition's OWN post-events only — the original's are not copied.
             ForcedStemUp = GetStemDirectionOverride(rep),
@@ -713,7 +713,7 @@ public sealed partial class MeasureCollector
             dots,
             accidental: null,
             needsLedgerLines: false,
-            slash.Position,
+            slash.SourceStart,
             tremoloBeams,
             hasTieStart: hasTieAfter,
             hasSlurStart: hasSlurStartAfter,
@@ -795,9 +795,9 @@ public sealed partial class MeasureCollector
                         IsCourtesy: false,
                         Notehead: m.Notehead,
                         Midi: m.Midi,
-                        SourcePosition: bare.Position));
+                        SourcePosition: bare.SourceStart));
                 }
-                return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, bare.Position, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio: false, isCue, hasTieStart: hasTieAfter, hasSlurStart: hasSlurStartAfter, hasSlurEnd: hasSlurEndAfter)
+                return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, bare.SourceStart, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio: false, isCue, hasTieStart: hasTieAfter, hasSlurStart: hasSlurStartAfter, hasSlurEnd: hasSlurEndAfter)
                 {
                     ForcedStemUp = GetStemDirectionOverride(bare),
                     HasGlissando = HasGlissandoArticulation(bare),
@@ -811,7 +811,7 @@ public sealed partial class MeasureCollector
                     dots,
                     m.Step is { } noteStep ? GetDisplayAccidental(noteStep, m.Alter!.Value, m.Octave!.Value) : null,
                     needsLedgerLines: m.StaffPosition is <= -6 or >= 6,
-                    bare.Position,
+                    bare.SourceStart,
                     tremoloBeams,
                     hasTieStart: hasTieAfter,
                     hasSlurStart: hasSlurStartAfter,
@@ -836,7 +836,7 @@ public sealed partial class MeasureCollector
                     dots,
                     accidental: null,
                     needsLedgerLines: info.StaffPosition is <= -6 or >= 6,
-                    bare.Position,
+                    bare.SourceStart,
                     tremoloBeams,
                     hasTieStart: hasTieAfter,
                     hasSlurStart: hasSlurStartAfter,
@@ -858,7 +858,7 @@ public sealed partial class MeasureCollector
                     dots,
                     accidental: null,
                     needsLedgerLines: false,
-                    bare.Position,
+                    bare.SourceStart,
                     tremoloBeams,
                     hasTieStart: hasTieAfter,
                     hasSlurStart: hasSlurStartAfter,
@@ -875,7 +875,7 @@ public sealed partial class MeasureCollector
             default:
                 // Nothing to repeat: a spacer keeps the time; the validator
                 // reports it (LYS0016 — nothing is silent).
-                return new RestItem(Fraction.FromNoteValue(noteValue), dots, bare.Position) { IsSpacer = true };
+                return new RestItem(Fraction.FromNoteValue(noteValue), dots, bare.SourceStart) { IsSpacer = true };
         }
     }
 
@@ -931,7 +931,7 @@ public sealed partial class MeasureCollector
         // afterwards, so a transposed part still resolves octaves from what the
         // user wrote.
         int actualOctave = _octave.Resolve(step, pitch.OctaveOffset, pitchName) + groupOctaves;
-        return ResolveAbsolutePitch(step, pitch.AccidentalOffset, actualOctave, pitch.Position);
+        return ResolveAbsolutePitch(step, pitch.AccidentalOffset, actualOctave, pitch.SourceStart);
     }
 
     /// <summary>

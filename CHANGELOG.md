@@ -44,6 +44,19 @@ turned out to be hiding them.
 
 ### Diagnostics
 
+- **A note that opens an indented line is clickable, and a diagnostic on one names its
+  column.** The address every source-pointing feature hands out — the SVG's `data-pos` that
+  click-to-source resolves, the `(line, column)` `lysc check` prints — came from the node's
+  position INCLUDING the whitespace in front of it. Same-line spacing belongs to the
+  previous token, so only a line break showed it: the first note of every indented line
+  carried the offset of the newline and the indent, the editor resolved a click there and
+  lit nothing up, and an overfull measure whose first note stood at column 5 reported column
+  1. `GreenNode.LeadingTrivia` is virtual and only a token overrides it, so a composite node
+  — a note, a chord, a repeat — answered "no leading trivia" whatever its first token
+  carried. 597 of the 1519 books on disk change, and every one of them differs ONLY in
+  `data-pos`: no glyph and no page moves. 466 diagnostic lines move, and every one of them
+  differs only in its address — no message, no count and no exit code changes.
+
 - **A part engraved on two staves no longer complains twice.** A score that puts one part
   on both a standard staff and a tab staff (`score { staff bass  tab bass }`) collects that
   part once per staff, and the per-voice sanity scans — the tie target, the unclosed slur,

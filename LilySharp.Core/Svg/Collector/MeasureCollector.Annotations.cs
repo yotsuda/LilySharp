@@ -64,7 +64,7 @@ public sealed partial class MeasureCollector
                         figures.Value,
                         measureIndex,
                         itemIndex,
-                        markSyntax.Position,
+                        markSyntax.SourceStart,
                         _cursor.StaffIndex));
                 }
             }
@@ -133,7 +133,7 @@ public sealed partial class MeasureCollector
             }
 
             _chordNameCollector.AddInline(
-                chordText, measureIndex, itemIndex, markSyntax.Position, _cursor.StaffIndex, structure);
+                chordText, measureIndex, itemIndex, markSyntax.SourceStart, _cursor.StaffIndex, structure);
         }
     }
 
@@ -291,7 +291,7 @@ public sealed partial class MeasureCollector
                     measureIndex,
                     itemIndex,
                     0,
-                    artSyntax.Position));
+                    artSyntax.SourceStart));
                 return;
             }
         }
@@ -419,7 +419,7 @@ public sealed partial class MeasureCollector
                     }
 
                     _articulations.Add(new ArticulationItem(type, measureIndex, itemIndex, isAbove,
-                        articulationSyntax.Position, _cursor.StaffIndex)
+                        articulationSyntax.SourceStart, _cursor.StaffIndex)
                     {
                         DirectionForced = directionForced,
                         VoiceIndex = _cursor.VoiceIndex,
@@ -443,17 +443,17 @@ public sealed partial class MeasureCollector
                         {
                             true => 1, false => -1, null => 0,
                         };
-                        _trillSpannerEvents.Add((true, measureIndex, itemIndex, articulationSyntax.Position, _cursor.StaffIndex, _cursor.VoiceIndex, forcedDir));
+                        _trillSpannerEvents.Add((true, measureIndex, itemIndex, articulationSyntax.SourceStart, _cursor.StaffIndex, _cursor.VoiceIndex, forcedDir));
                     }
                     else if (nameLower == "stoptrillspan")
                     {
-                        _trillSpannerEvents.Add((false, measureIndex, itemIndex, articulationSyntax.Position, _cursor.StaffIndex, _cursor.VoiceIndex, 0));
+                        _trillSpannerEvents.Add((false, measureIndex, itemIndex, articulationSyntax.SourceStart, _cursor.StaffIndex, _cursor.VoiceIndex, 0));
                     }
                     else if (nameLower == "courtesy")
                     {
                         // LILYPOND-REF: lily/accidental.cc:147-148 — parenthesized property
                         // Explicit @courtesy annotation forces courtesy (parenthesized) accidental
-                        _courtesySourcePositions.Add(node.Position);
+                        _courtesySourcePositions.Add(node.SourceStart);
                     }
                     else if (nameLower == "editorial" && editorialAccidental != null)
                     {
@@ -463,7 +463,7 @@ public sealed partial class MeasureCollector
                         _articulations.Add(new ArticulationItem(
                             ArticulationItem.EditorialTypeFor(editorialAccidental),
                             measureIndex, itemIndex, isAbove: true,
-                            articulationSyntax.Position, _cursor.StaffIndex)
+                            articulationSyntax.SourceStart, _cursor.StaffIndex)
                         { VoiceIndex = _cursor.VoiceIndex, IsChordMember = isChordMember });
                     }
                     else
@@ -482,7 +482,7 @@ public sealed partial class MeasureCollector
                             // Anchor to the host note's column so note-attached
                             // marks (e.g. pedal "Ped.") sit at the note, not the
                             // measure start.
-                            _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex, articulationSyntax.Position, itemIndex, anchorTiming) { StaffIndex = _cursor.StaffIndex });
+                            _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex, articulationSyntax.SourceStart, itemIndex, anchorTiming) { StaffIndex = _cursor.StaffIndex });
                         }
                     }
                 }
@@ -498,7 +498,7 @@ public sealed partial class MeasureCollector
                     // p-i-m-a right-hand fingering, printed BELOW the note.
                     _articulations.Add(new ArticulationItem(
                         ArticulationType.Pluck, measureIndex, itemIndex, false,
-                        markSyntax.Position, _cursor.StaffIndex)
+                        markSyntax.SourceStart, _cursor.StaffIndex)
                     { PluckLetter = pluckLetter, VoiceIndex = _cursor.VoiceIndex });
                 }
                 else if (Semantics.AnnotationValues.Frame(markSyntax) is { } spec)
@@ -506,7 +506,7 @@ public sealed partial class MeasureCollector
                     // @frame(x32010) — chord diagram above the note.
                     _articulations.Add(new ArticulationItem(
                         ArticulationType.FretFrame, measureIndex, itemIndex, true,
-                        markSyntax.Position, _cursor.StaffIndex)
+                        markSyntax.SourceStart, _cursor.StaffIndex)
                     { FrameSpec = spec, VoiceIndex = _cursor.VoiceIndex });
                 }
                 else if (Semantics.AnnotationValues.Bend(markSyntax) is { } semitones)
@@ -514,7 +514,7 @@ public sealed partial class MeasureCollector
                     // @bend(full|half|N) — guitar bend-up, N in semitones.
                     _articulations.Add(new ArticulationItem(
                         ArticulationType.Bend, measureIndex, itemIndex, true,
-                        markSyntax.Position, _cursor.StaffIndex)
+                        markSyntax.SourceStart, _cursor.StaffIndex)
                     { BendSemitones = semitones, VoiceIndex = _cursor.VoiceIndex });
                 }
                 else if (markSyntax.Name.Equals("notehead", StringComparison.OrdinalIgnoreCase)
@@ -529,7 +529,7 @@ public sealed partial class MeasureCollector
                 {
                     // LILYPOND-REF: lily/fingering-engraver.cc — finger event attaches to
                     // the host note. Keyed by the note's source position.
-                    _fingeringByPosition[node.Position] = finger;
+                    _fingeringByPosition[node.SourceStart] = finger;
                 }
                 else if (markSyntax.Name.Equals("text", StringComparison.OrdinalIgnoreCase))
                 {
@@ -540,7 +540,7 @@ public sealed partial class MeasureCollector
                     // direction DOWN by default.
                     if (Semantics.AnnotationValues.Text(markSyntax) is { } freeText)
                         _dynamics.Add(new DynamicItem(
-                            freeText, measureIndex, itemIndex, markSyntax.Position, _cursor.StaffIndex)
+                            freeText, measureIndex, itemIndex, markSyntax.SourceStart, _cursor.StaffIndex)
                         {
                             IsAbove = markSyntax.ForcedAbove == true,
                             VoiceIndex = _cursor.VoiceIndex,
@@ -564,7 +564,7 @@ public sealed partial class MeasureCollector
                     // @mark.A rehearsal) are left to that handler, which extracts text.
                     // LILYPOND-REF: piano-pedal-engraver.cc / ottava-engraver.cc.
                     _musicMarks.Add(new MusicMarkItem(
-                        compoundMark, measureIndex, markSyntax.Position, itemIndex, anchorTiming) { StaffIndex = _cursor.StaffIndex });
+                        compoundMark, measureIndex, markSyntax.SourceStart, itemIndex, anchorTiming) { StaffIndex = _cursor.StaffIndex });
                 }
                 else
                 {
@@ -574,7 +574,7 @@ public sealed partial class MeasureCollector
                     // which measure the mark was written in; record it while the host note
                     // still says so. The mark is still made in exactly one place: only the
                     // measure travels. See _markHostMeasure.
-                    _markHostMeasure[markSyntax.Position] = measureIndex;
+                    _markHostMeasure[markSyntax.SourceStart] = measureIndex;
                 }
             }
         }

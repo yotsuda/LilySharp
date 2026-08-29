@@ -78,10 +78,10 @@
   <line x1="88.31" y1="20.30" x2="88.31" y2="16.95" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="92.40" y="21.95" font-size="4.00" data-pos="317"></text>
   <rect x="20.83" y="16.95" width="0.19" height="4.00" data-pos="199"/>
-  <rect x="29.74" y="16.95" width="0.60" height="4.00" data-pos="530"/>
-  <rect x="30.64" y="16.95" width="0.19" height="4.00" data-pos="530"/>
-  <circle cx="31.35" cy="18.45" r="0.23" data-pos="530"/>
-  <circle cx="31.35" cy="19.45" r="0.23" data-pos="530"/>
+  <rect x="29.74" y="16.95" width="0.60" height="4.00" data-pos="532"/>
+  <rect x="30.64" y="16.95" width="0.19" height="4.00" data-pos="532"/>
+  <circle cx="31.35" cy="18.45" r="0.23" data-pos="532"/>
+  <circle cx="31.35" cy="19.45" r="0.23" data-pos="532"/>
   <rect x="44.63" y="16.95" width="0.19" height="4.00" data-pos="237"/>
   <rect x="53.34" y="16.95" width="0.19" height="4.00" data-pos="246"/>
   <rect x="66.61" y="16.95" width="0.19" height="4.00" data-pos="276"/>

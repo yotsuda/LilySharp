@@ -104,7 +104,74 @@ internal abstract class GreenNode
     public int Width => FullWidth - LeadingTriviaWidth - TrailingTriviaWidth;
 
     public int LeadingTriviaWidth => LeadingTrivia?.FullWidth ?? 0;
+
+    /// <summary>
+    /// The leading trivia width of the first TERMINAL under this node — the whitespace a
+    /// reader would have to skip to reach the node's first real character.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ <see cref="LeadingTriviaWidth"/> IS NOT THAT, AND FOR A COMPOSITE NODE IT IS ALWAYS
+    /// ZERO. <see cref="LeadingTrivia"/> is virtual and only a TOKEN overrides it, so a node
+    /// built out of tokens — a note, a chord, a repeat — reports no leading trivia even when
+    /// its first token carries a newline and an indent. Everything computed from the node's
+    /// own width was therefore right (Width subtracts the node's own trivia, which is none)
+    /// and everything computed as an ADDRESS was one indent early.
+    /// ★ This is why the first note of every indented line was un-clickable: the note node's
+    /// leading trivia read 0, so its address came out at the line break in front of it
+    /// (reported 2026-08-29, scratch/ベースタブLy/Walk.lys line 15, `ees,1`).
+    /// </remarks>
+    public int GetLeadingTriviaWidth()
+    {
+        if (FullWidth == 0)
+            return 0;
+        var node = this;
+        while (node.LeadingTrivia is null)
+        {
+            GreenNode? first = null;
+            for (int i = 0; i < node.SlotCount; i++)
+            {
+                var slot = node.GetSlot(i);
+                if (slot is { FullWidth: > 0 })
+                {
+                    first = slot;
+                    break;
+                }
+            }
+            if (first is null)
+                return 0;
+            node = first;
+        }
+        return node.LeadingTriviaWidth;
+    }
     public int TrailingTriviaWidth => TrailingTrivia?.FullWidth ?? 0;
+
+    /// <summary>
+    /// The trailing trivia width of the LAST terminal under this node — the mirror of
+    /// <see cref="GetLeadingTriviaWidth"/>, and zero on a composite for the same reason.
+    /// </summary>
+    public int GetTrailingTriviaWidth()
+    {
+        if (FullWidth == 0)
+            return 0;
+        var node = this;
+        while (node.TrailingTrivia is null)
+        {
+            GreenNode? last = null;
+            for (int i = node.SlotCount - 1; i >= 0; i--)
+            {
+                var slot = node.GetSlot(i);
+                if (slot is { FullWidth: > 0 })
+                {
+                    last = slot;
+                    break;
+                }
+            }
+            if (last is null)
+                return 0;
+            node = last;
+        }
+        return node.TrailingTriviaWidth;
+    }
 
     private string GetDebuggerDisplay()
     {

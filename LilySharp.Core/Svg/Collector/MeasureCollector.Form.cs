@@ -73,12 +73,12 @@ public sealed partial class MeasureCollector
             {
                 if (token.Text == "|:")
                 {
-                    PushFormBarline(token.Text, token.Position);
+                    PushFormBarline(token.Text, token.SourceStart);
                     afterRepeatStart = true;
                 }
                 else if (token.Text == ":|")
                 {
-                    PushFormBarline(token.Text, token.Position);
+                    PushFormBarline(token.Text, token.SourceStart);
                 }
                 else if (token.Text == ":|:")
                 {
@@ -86,8 +86,8 @@ public sealed partial class MeasureCollector
                     // the next. The adjacent ':|' + '|:' fuse into the RepeatBoth
                     // glyph at render time, and the following section is still marked
                     // as a repeat (StartBarline = RepeatStart) — exactly ':| |:'.
-                    PushFormBarline(":|", token.Position);
-                    PushFormBarline("|:", token.Position);
+                    PushFormBarline(":|", token.SourceStart);
+                    PushFormBarline("|:", token.SourceStart);
                     afterRepeatStart = true;
                 }
             }
@@ -191,7 +191,7 @@ public sealed partial class MeasureCollector
                         if (live && alt.HasBracket)
                         {
                             int lastMeasure = Math.Max(startMeasureIndex, endMeasureIndex - 1);
-                            pendingVoltaBrackets.Add((startMeasureIndex, lastMeasure, alt.VoltaText, alt.IsClosed, alt.Position));
+                            pendingVoltaBrackets.Add((startMeasureIndex, lastMeasure, alt.VoltaText, alt.IsClosed, alt.SourceStart));
                         }
                     }
                 }
@@ -530,7 +530,7 @@ public sealed partial class MeasureCollector
             int produced = builder.CurrentMeasureIndex - startMeasure;
             int canonical = GetCanonicalSectionBars(section);
             for (int i = produced; i < canonical; i++)
-                builder.AddItem(new RestItem(TimeSignatureFraction, 0, section.Position) { IsSpacer = true });
+                builder.AddItem(new RestItem(TimeSignatureFraction, 0, section.SourceStart) { IsSpacer = true });
         }
     }
 
@@ -886,7 +886,7 @@ public sealed partial class MeasureCollector
         // just per music site — matters: a DAG of EMPTY phrases emits only marker
         // pairs, which are sites all the same. On a spent budget the phrase emits
         // nothing (no reset marker, no end marker — balanced by omission).
-        if (!ChargeExpansion(1, expression.Position))
+        if (!ChargeExpansion(1, expression.SourceStart))
         {
             activeRefs.Remove(name);
             return;
@@ -920,7 +920,7 @@ public sealed partial class MeasureCollector
                     activeRefs);
             }
             else if (IsCollectableMusicKind(s.Kind)
-                && ChargeExpansion(1, expression.Position))
+                && ChargeExpansion(1, expression.SourceStart))
                 musicNodes.Add(s);
         }
 
@@ -1085,7 +1085,7 @@ public sealed partial class MeasureCollector
                             SectionDeclPos(alt.SectionName.Text));
                         if (alt.HasBracket && !alt.IsSilent && cur > altStart)
                             _voltaBrackets.Add(new VoltaBracketItem(
-                                altStart, cur - 1, alt.VoltaText, alt.IsClosed, alt.Position));
+                                altStart, cur - 1, alt.VoltaText, alt.IsClosed, alt.SourceStart));
                         break;
                     case { Kind: SyntaxKind.SilentSectionReference } silent
                             when silent.GetChild(1) is SyntaxTokenNode silentName:
@@ -1132,11 +1132,11 @@ public sealed partial class MeasureCollector
                         var navMark = NavigationToMusicMark(nav.MarkType);
                         bool target = navMark is MusicMarkType.Segno or MusicMarkType.Coda;
                         int navMeasure = target ? cur : Math.Max(0, cur - 1);
-                        _musicMarks.Add(new MusicMarkItem(navMark, navMeasure, nav.Position));
+                        _musicMarks.Add(new MusicMarkItem(navMark, navMeasure, nav.SourceStart));
                         break;
                     case CustomTextSyntax custom when !IsInsideRepeatBlock(custom):
                         _customTexts.Add(new CustomTextItem(
-                            custom.Text, Math.Max(0, cur - 1), custom.Position));
+                            custom.Text, Math.Max(0, cur - 1), custom.SourceStart));
                         break;
                 }
             }
