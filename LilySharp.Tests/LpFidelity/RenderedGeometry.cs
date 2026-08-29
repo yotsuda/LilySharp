@@ -2933,6 +2933,38 @@ internal sealed class RenderedGeometry
                 + $"({staff:F6}).\nDrawn geometry:\n" + Describe());
         return below.Min(t => t.Y) - staff;
     }
+    /// <summary>
+    /// <see cref="LyricBaselineBelowStaff"/>'s reading on a page whose staves have
+    /// <paramref name="linesPerStaff"/> lines rather than five — a tab staff, whose reference
+    /// point is the midpoint of ITS OWN span.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE COUNT IS PASSED, NOT INFERRED, exactly as
+    /// <see cref="StaffRefpointsOfLineCount"/> requires and for its reason: a reader that
+    /// guesses how many lines a staff has keeps returning a plausible number after the defect
+    /// it exists to measure has changed the spacing. A six-string tab's refpoint is 3.750000
+    /// below its top line where an ordinary staff's is 2.000000, and reading a lyric line's
+    /// distance in the nominal frame is precisely what <c>lyrics.tab.staff-to-lyric</c>
+    /// exists to catch.
+    /// </remarks>
+    public double LyricBaselineBelowStaffOfLineCount(
+        int linesPerStaff, int staffIndex = 0, int page = 0)
+    {
+        var refpoints = StaffRefpointsOfLineCount(linesPerStaff, page);
+        if (staffIndex < 0 || staffIndex >= refpoints.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for staff {staffIndex} but only {refpoints.Count} "
+                + $"{linesPerStaff}-line staff/staves are on it.");
+        }
+        double staff = refpoints[staffIndex];
+        var below = LyricSyllables.Where(t => t.Y > staff).ToList();
+        if (below.Count == 0)
+            throw new InvalidOperationException(
+                $"page {page}: no lyric syllable was drawn below staff {staffIndex}'s refpoint "
+                + $"({staff:F6}).\nDrawn geometry:\n" + Describe());
+        return below.Min(t => t.Y) - staff;
+    }
 
     /// <summary>
     /// The lyric baseline nearest ABOVE staff <paramref name="staffIndex"/>'s reference

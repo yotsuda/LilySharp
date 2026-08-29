@@ -924,11 +924,23 @@ internal sealed class SkylineBuilder
         // the top, and carried into the seeds — LilyPond's own shape, where the size lives on
         // the context's font rather than being applied to a finished skyline (see StaffSize).
         var size = StaffSize.Of(staff);
+        // ...and HOW TALL THIS STAFF IS, which is not the score's nominal height: a six-string
+        // tab spans 7.500000 and a four-string one 4.500000, because LilyPond's TabStaff sets
+        // StaffSymbol.staff-space = 1.5 whatever the string count. Asked of the one home
+        // (MultiStaffLayouter.StaffHeightOf) rather than derived here, because the system
+        // silhouette a few hundred lines up already reads the placed StaffLayout.Height and a
+        // second answer is what let the two disagree.
+        // ⚠️ ALREADY MAGNIFIED. An ossia's height carries OssiaScaleFactor, which is the same
+        // number StaffSize.Magnification is, so this must NOT go through size.Span as the
+        // nominal half did — the two spellings agree to the last digit for every ossia
+        // (4.000000 / 2 * 0.707107 either way) and differ only for a tab, which is the staff
+        // the nominal answer was wrong about.
+        double staffHeight = MultiStaffLayouter.StaffHeightOf(staff, _staffHeight);
         // ...and the step to the OTHER staff-local frame, for the seeds whose engravers were
         // run with no staff offset and so measure from the staff's TOP line. Derived from the
         // origin rather than written as a half-staff, so the two cannot drift apart: it was 0
         // while the origin was the top line and is the half-staff now that it is the middle.
-        double staffTopUp = staffMiddleUp + size.Span(_staffHeight / 2.0);
+        double staffTopUp = staffMiddleUp + staffHeight / 2.0;
 
         // A beamed stem is DRAWN to whatever length the quanter gives its beat, which is not
         // what Stem::calc_length gives an unbeamed one — the "draws right, reserves stale"
@@ -962,7 +974,8 @@ internal sealed class SkylineBuilder
         // the reason a text row's skyline looked populated while the row's OWN ink was in no
         // skyline at all (MultiStaffLayouter.BuildAllStaffSkylines seeds that).
         if (!staff.IsTextRow)
-            SeedStaffSymbol(measureLayouts, staffMiddleUp, size, upSkyline, downSkyline);
+            SeedStaffSymbol(measureLayouts, staffMiddleUp, size, staffHeight,
+                upSkyline, downSkyline);
 
         // ...and the clef, which on a plain staff is the extreme ink in BOTH directions —
         // further out than any note that stays inside the staff. The same seed the system
@@ -1548,15 +1561,26 @@ internal sealed class SkylineBuilder
     }
 
     /// <summary>
-    /// Seeds both skylines with the staff symbol's own vertical extent (the five
-    /// lines span ±StaffHeight/2 about the middle). LilyPond's per-staff spacing
+    /// Seeds both skylines with the staff symbol's own vertical extent (its lines span
+    /// ±<paramref name="staffHeight"/>/2 about the middle). LilyPond's per-staff spacing
     /// skyline includes the StaffSymbol, so a neighbour's high/low notes must
     /// clear these lines, not merely the notes at the same X.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/axis-group-interface.cc:914-940.</remarks>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914-940.
+    /// <para>
+    /// ⚠️ THE HEIGHT IS THIS STAFF'S, NOT THE SCORE'S. It was the score's until 2026-08-29,
+    /// which put a six-string tab staff's own bottom line 1.750000 inside its profile — and a
+    /// lyrics row under a tab read exactly that floor, so a system whose frets all sat inside
+    /// the strings had nothing else to clear and its syllables were engraved ON the strings
+    /// (user report, <c>scratch/ベースタブLy/Untitled-6.lys</c>; minimal book
+    /// <c>test/tab-lyrics-inside-strings.lys</c>). A system with a fret hanging below the
+    /// staff hid it, which is why the same book was right on its other systems.
+    /// </para>
+    /// </remarks>
     private void SeedStaffSymbol(
         ImmutableArray<MeasureLayout> measureLayouts, double staffMiddleUp, StaffSize size,
-        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+        double staffHeight, VerticalSkyline upSkyline, VerticalSkyline downSkyline)
     {
         if (measureLayouts.IsDefaultOrEmpty)
             return;
@@ -1575,11 +1599,14 @@ internal sealed class SkylineBuilder
         // vertical-skylines and gets (-2.05 . 2.05) for both, where the outermost line
         // CENTRES are at 2.0. Written as the derivation rather than as 2.05 so that a
         // staff of a different size or line weight still gets its own ink.
-        // ⚠️ AT THIS STAFF'S SIZE. Both terms are staff-space quantities of the staff being
-        // seeded, and a magnified staff's lines are closer together AND thinner, exactly as
-        // magnifyStaff makes them (it sets staff-space and fontSize together).
-        double half = size.Span(
-            _staffHeight / 2.0 + EngravingDefaults.StaffLineThickness / 2.0);
+        // ⚠️ AT THIS STAFF'S SIZE, and the two terms carry it differently: the height
+        // already holds an ossia's magnification (MultiStaffLayouter.StaffHeightOf) while the
+        // line's own weight still has to be scaled, exactly as magnifyStaff makes it (it sets
+        // staff-space and fontSize together). Written as one Span over both, an ossia's
+        // magnification landed on its height twice.
+        double half = staffHeight / 2.0
+            + size.Span(EngravingDefaults.StaffLineThickness / 2.0);
+
         // Translate the device-frame staff lines to this skyline's Y-up frame (negate):
         // the top line sits above the origin, the bottom line below.
         double staffTop = half + staffMiddleUp;      // Y-up of the top line's ink

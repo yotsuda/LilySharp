@@ -1,0 +1,29 @@
+// A lyrics row under a LONE tab staff, with every fret inside the strings. The
+// distance from the tab's reference point to the syllable baseline is measured
+// against its own line span — a six-string tab's outermost string is 3.750000
+// below that point, not the 2.000000 a five-line staff would be — so the row has
+// to clear the BOTTOM STRING and not the line where a notation staff would end.
+// Seeded from a user report (2026-08-29): the syllables of a system whose frets
+// all sat inside the strings were engraved ON the strings, while the same book's
+// other systems, which had a fret hanging below the staff, looked right — that
+// ink was hiding a floor that was 1.750000 too high.
+// MEASURED on LilyPond 2.26.0 (probe tab-lyric-row.ly, book TBL1): reference point
+// to syllable baseline 6.120115 = the staff symbol's own ink 3.800000 + the
+// syllable's ascender 1.820098 + padding 0.500000. Lily# reads 6.120000, and read
+// 4.370000 before — a nominal five-line staff's 2.050000 in the same expression.
+
+title "Tab with lyrics inside the strings"
+key g major
+
+part m { clef treble }
+
+section A { m { g'4 g f f | } }
+
+lyrics v { section A { Twin- kle twin- kle | } }
+
+form main { A }
+
+score main {
+  tab m
+  lyrics v sings m
+}

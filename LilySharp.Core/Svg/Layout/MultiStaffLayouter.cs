@@ -257,6 +257,22 @@ internal sealed class MultiStaffLayouter
     /// Ossia staves are scaled down.
     /// </summary>
     private double GetStaffHeight(Staff staff)
+        => StaffHeightOf(staff, _options.StaffHeight);
+
+    /// <summary>
+    /// The same height, for a caller that carries the score's nominal staff height but not
+    /// this layouter — <see cref="SkylineBuilder"/>, which seeds each staff's own profile.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONE HOME FOR "HOW TALL IS THIS STAFF". <c>SkylineBuilder</c> used to answer it with
+    /// the score's nominal height for every staff, and its own remark said so ("this builder
+    /// has ONE staff height, not one per staff"); the system silhouette beside it already
+    /// read the placed <c>StaffLayout.Height</c> and so already knew a six-string tab spans
+    /// 7.500000. The two disagreed by 1.750000 under a tab staff, and a lyrics row read the
+    /// smaller one — HANDOFF §5.2.1②. The per-staff path has no <c>StaffLayout</c> to read,
+    /// so it asks the model the same question this layouter does.
+    /// </remarks>
+    internal static double StaffHeightOf(Staff staff, double nominalStaffHeight)
     {
         if (staff.IsTab && staff.Tuning.HasValue)
         {
@@ -271,11 +287,11 @@ internal sealed class MultiStaffLayouter
             // real staff. A chord row keeps the compact band its symbols
             // hang on.
             return staff.IsLyricsTextRow
-                ? _options.StaffHeight + (staff.TextRowVerses - 1) * TextRowVerseSpacing
+                ? nominalStaffHeight + (staff.TextRowVerses - 1) * TextRowVerseSpacing
                 : TextRowHeight;
         if (staff.IsOssia)
-            return _options.StaffHeight * OssiaScaleFactor;
-        return _options.StaffHeight;
+            return nominalStaffHeight * OssiaScaleFactor;
+        return nominalStaffHeight;
     }
 
     /// <summary>

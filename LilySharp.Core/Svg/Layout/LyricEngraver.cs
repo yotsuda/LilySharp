@@ -587,12 +587,19 @@ internal sealed class LyricEngraver
     /// lyrics.hara-kiri.shown-system.staff-to-lyric regressed by exactly one system gap).
     /// ⚠️ ONE SPELLING: LayoutEngine.BuildStaffAnchorTables routes its system-0 anchor
     /// through this same method — the predicate must not fork (HANDOFF 5.2.1②).
+    /// <para>
+    /// ⚠️ <c>DeviceDown</c> IS TO THE STAFF'S TOP, not to its reference point, and
+    /// <c>RefpointBelowTop</c> is the rest of that step — carried out of here BECAUSE the two
+    /// belong to the same staff. The chain used to finish the step with the score's nominal
+    /// half-staff, which is right for a five-line staff and 1.750000 short for a six-string
+    /// tab; see <c>SkylineBuilder.SeedStaffSymbol</c> for the other half of that defect.
+    /// </para>
     /// </remarks>
-    internal static (int StaffIndex, double DeviceDown)? LastSpaceableStaffOf(
-        SystemLayout system)
+    internal static (int StaffIndex, double DeviceDown, double? RefpointBelowTop)?
+        LastSpaceableStaffOf(SystemLayout system)
     {
         if (system.StaffGroups.IsDefaultOrEmpty) return null;
-        (int StaffIndex, double DeviceDown)? best = null;
+        (int StaffIndex, double DeviceDown, double? RefpointBelowTop)? best = null;
         foreach (var group in system.StaffGroups)
         {
             if (group.Staves.IsDefaultOrEmpty) continue;
@@ -602,7 +609,7 @@ internal sealed class LyricEngraver
                     continue;
                 double down = -st.Y;
                 if (best == null || down > best.Value.DeviceDown)
-                    best = (st.StaffIndex, down);
+                    best = (st.StaffIndex, down, st.RefpointBelowTop);
             }
         }
         return best;
@@ -644,6 +651,14 @@ internal sealed class LyricEngraver
         // From a family's anchor BASE down to the anchor staff's reference point — the
         // frame the chain is solved in. Derived from the two distances that already
         // exist rather than restating the half-staff, so it cannot drift from them.
+        // ⚠️ THIS IS THE SCORE'S NOMINAL STAFF, AND IT IS ONLY THE FALLBACK. A placed staff
+        // carries its own answer (StaffLayout.RefpointBelowTop, decided once in
+        // MultiStaffLayouter.RefpointBelowTop) and ResolveAnchor prefers it, because a
+        // six-string tab's reference point is 3.750000 below its top line and not 2.000000:
+        // stepping to it with this number put every syllable under a tab staff 1.750000 too
+        // high, and on the system where nothing hung below the strings that was ON them
+        // (user report 2026-08-29). What is left here is the case with no staff to ask —
+        // a staffless sheet, where the chain reads the system silhouette instead.
         double anchorOffset =
             staffBottom + BasicDistanceBelowBottomLine - _params.RelatedStaffBasicDistance;
 
@@ -768,7 +783,8 @@ internal sealed class LyricEngraver
             // accumulated profile) is per-system local and cached across keystrokes
             // (LyricChainMemo); the anchor-table scalars are deliberately NOT in it and
             // are resolved live by ResolveAnchor — the one spelling both sides read.
-            (VerticalSkyline? AnchorDown, double SysAnchorBase, double SkylineToAnchor)
+            (VerticalSkyline? AnchorDown, double SysAnchorBase, double SkylineToAnchor,
+                double AnchorOffset)
                 ResolveAnchor(int sysIdx)
             {
                 // The staff this block hangs from — ITS OWN down-skyline, whichever block it
@@ -815,10 +831,22 @@ internal sealed class LyricEngraver
                 // lower than every one of those, because system 1 carries no chords row and
                 // system 0 does. The last verse landed 0.160000 above the next staff's top
                 // line, its descenders through the staff.
+                var upper = isUpperFamily ? UpperAnchorStaff(sysIdx) : null;
                 double sysAnchorBase = isUpperFamily
-                    ? UpperAnchorBase(sysIdx) ?? anchorBase
+                    ? upper?.DeviceDown ?? anchorBase
                     : perStaffAnchorDown != null && sysAnchor is { } sa
                         ? sa.DeviceDown : anchorBase;
+
+                // ...and the REST of that step, which belongs to the same staff: its own
+                // reference point sits RefpointBelowTop under the top line the base reached.
+                // Only a staff that was not found leaves the nominal half-staff standing, and
+                // then the base is the score-level table too — the two halves of one step
+                // always come from one place.
+                double anchorRefpointBelowTop =
+                    (isUpperFamily ? upper?.RefpointBelowTop
+                     : perStaffAnchorDown != null && sysAnchor is { } sb
+                         ? sb.RefpointBelowTop : null)
+                    ?? anchorOffset;
 
                 // ⚠️ THE TWO SKYLINES ARE IN DIFFERENT FRAMES, and this is the conversion to
                 // the anchor's — the chain is solved between REFERENCE POINTS, so whatever
@@ -838,14 +866,16 @@ internal sealed class LyricEngraver
                 // (SkylineBuilder.SeedSystemStaffSymbol) — and the interim repair that merged
                 // the anchor's skyline in HERE is gone with it. One silhouette, one reader.
                 double skylineToAnchor = perStaffAnchorDown != null || isUpperFamily
-                    ? 0 : sysAnchorBase + anchorOffset;
-                return (anchorDown, sysAnchorBase, skylineToAnchor);
+                    ? 0 : sysAnchorBase + anchorRefpointBelowTop;
+                return (anchorDown, sysAnchorBase, skylineToAnchor, anchorRefpointBelowTop);
             }
 
-            // Device-DOWN from THIS system's origin to the anchor staff's reference point.
-            // Null when the staff is not in that system at all (hara-kiri), which leaves the
-            // caller on the score-level table it used before.
-            double? UpperAnchorBase(int sysIdx)
+            // Device-DOWN from THIS system's origin to the anchor staff's TOP LINE, and the
+            // step from there to its reference point — one staff, asked once, so a caller
+            // cannot take the base from the system and the rest from the score's nominal
+            // staff. Null when the staff is not in that system at all (hara-kiri), which
+            // leaves the caller on the score-level table it used before.
+            (double DeviceDown, double? RefpointBelowTop)? UpperAnchorStaff(int sysIdx)
             {
                 if (sysIdx < 0 || sysIdx >= systems.Length) return null;
                 var groups = systems[sysIdx].StaffGroups;
@@ -855,7 +885,7 @@ internal sealed class LyricEngraver
                     if (group.Staves.IsDefaultOrEmpty) continue;
                     foreach (var st in group.Staves)
                         if (st.StaffIndex == familyKey && !st.IsHidden)
-                            return -st.Y;
+                            return (-st.Y, st.RefpointBelowTop);
                 }
                 return null;
             }
@@ -943,7 +973,7 @@ internal sealed class LyricEngraver
                 if (slots.Count == 0) return null;
 
 
-                var (anchorDown, _, _) = ResolveAnchor(sysIdx);
+                var (anchorDown, _, _, _) = ResolveAnchor(sysIdx);
                 var gaps = ImmutableArray.CreateBuilder<LooseLineSpacer.Gap>(slots.Count);
 
                 // ⚠️ ONE RUNNING DOWN-SKYLINE, NOT A PAIR PER GAP, because that is what the
@@ -1030,7 +1060,7 @@ internal sealed class LyricEngraver
                 var elements = prefix.Elements;
                 var rowFirstElement = prefix.RowFirstElement;
                 var walk = prefix.Walk;
-                var (_, sysAnchorBase, skylineToAnchor) = ResolveAnchor(system);
+                var (_, sysAnchorBase, skylineToAnchor, anchorRefpoint) = ResolveAnchor(system);
 
                 // The closing gaps go onto a COPY — the cached list stays pristine — and
                 // the first gap gets its live frame step here.
@@ -1174,7 +1204,7 @@ internal sealed class LyricEngraver
                 {
                     // Y-up: a line below the anchor is negative.
                     newY[(familyKey, system, elements[i].Line, elements[i].Verse)] =
-                        -(sysAnchorBase + anchorOffset + positions[i + 1]);
+                        -(sysAnchorBase + anchorRefpoint + positions[i + 1]);
                 }
 
                 // ...and THIS system's own rows travel with the solve: a row draws its own bar
@@ -1185,7 +1215,7 @@ internal sealed class LyricEngraver
                 // ends by translating every loose line to its solved position.
                 if (rowFirstElement.Length > 0 && system < systems.Length && !systems.IsDefaultOrEmpty)
                 {
-                    double rowAnchorPageY = systems[system].Y - (sysAnchorBase + anchorOffset);
+                    double rowAnchorPageY = systems[system].Y - (sysAnchorBase + anchorRefpoint);
                     foreach (var (rowStaff, index) in rowFirstElement)
                         SolvedRowBaselines[(system, rowStaff)] =
                             rowAnchorPageY - positions[index + 1];
@@ -1201,7 +1231,7 @@ internal sealed class LyricEngraver
                     // The anchor staff's reference point in PAGE Y-up — the frame the
                     // published baselines are in, because the row belongs to a DIFFERENT
                     // system from the block that solved it and the two only meet on the page.
-                    double anchorPageY = systems[system].Y - (sysAnchorBase + anchorOffset);
+                    double anchorPageY = systems[system].Y - (sysAnchorBase + anchorRefpoint);
                     for (int k = 0; k < solved.Lines.Length; k++)
                         SolvedRowBaselines[(system + 1, solved.Lines[k].StaffIndex)] =
                             anchorPageY - positions[firstLeadingPosition + k];

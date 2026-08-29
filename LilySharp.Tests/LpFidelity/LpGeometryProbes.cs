@@ -6018,6 +6018,59 @@ internal static class LpGeometryProbes
         {
             PageBreaking = LayoutOptions.Default.PageBreaking with { RaggedBottom = true },
         };
+    /// <summary>
+    /// THE LYRICS ROW UNDER A TAB STAFF — books TBL1/TBL2 (probe tab-lyric-row.ly), the
+    /// user report of 2026-08-29 distilled: a lone six-string tab with a lyrics row under
+    /// it and every fret INSIDE the strings.
+    /// </summary>
+    /// <remarks>
+    /// WHY THE PAIR EXISTS. No other entry in this corpus measures a lyric line under a
+    /// staff that is not four staff spaces tall, and a tab staff is 7.500000 — LilyPond's
+    /// TabStaff sets <c>StaffSymbol.staff-space = 1.5</c> for every string count — so its
+    /// outermost string sits 3.750000 below the reference point every spacing distance is
+    /// written against. <paramref name="tab"/> false is the CONTROL, the same music and
+    /// the same words on an ordinary staff: one variable, how tall the staff above the row
+    /// is.
+    /// <para>
+    /// MEASURED (2026-08-29, 2.26.0, fonts pinned; PROBETL dump): TBL1 6.120115, TBL2
+    /// 5.500001. TBL1 decomposes exactly as staff-symbol ink 3.800000 + the syllable's own
+    /// ascender 1.820098 + padding 0.500000; TBL2 is <c>nonstaff-relatedstaff-spacing</c>'s
+    /// basic-distance to the digit, and its own stems (3.550000 below the refpoint) do NOT
+    /// bind because <c>Skyline::distance</c> is pointwise and no stem stands under a
+    /// syllable's ascender. ⇒ THE PAIR'S DIFFERENCE IS NOT THE HALF-STAFF DIFFERENCE, and
+    /// the reason is the one that made the defect invisible for so long: a tab's lines run
+    /// the whole system width and bind at EVERY x, where an ordinary staff's deepest ink is
+    /// a few stems and binds nowhere.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE TAB SIDE NAMES NO <c>as</c> CLAUSE, and must not: a LONE tab defaults to
+    /// full since 2026-08-29 (U4), which is what <c>\tabFullNotation</c> is on the LilyPond
+    /// side. Writing the clause here would make the book say something the twin does not.
+    /// </para>
+    /// </remarks>
+    private static string TabLyricRowScore(string name, bool tab) => $$"""
+        octave absolute
+        key c major
+
+        part melody { clef treble }
+
+        section A { melody { g'4 a' g' a' | } }
+
+        lyrics verse { section A { Twin- kle twin- kle | } }
+
+        form main { ~A }
+
+        score main "{{name}}" {
+          {{(tab ? "tab melody" : "staff melody")}}
+          lyrics verse sings melody
+        }
+        """;
+
+    /// <summary>The pair's book — a lyrics row under a lone six-string tab staff.</summary>
+    private static readonly string TBL1 = TabLyricRowScore("TBL1", tab: true);
+
+    /// <summary>The control — the same music on an ordinary staff.</summary>
+    private static readonly string TBL2 = TabLyricRowScore("TBL2", tab: false);
 
     /// <summary>
     /// TIGHT PAPER — the mirror of book T in page-vertical.ly. The page BREAKER's own
@@ -14548,6 +14601,22 @@ internal static class LpGeometryProbes
         // only fixed the drawing would close KSIG8 and leave this one open.
         new("key.signature.glyphs.tonic-past-the-table", KSIGT,
             g => g.KeySignatureGlyphCount),
+
+        // --- A LYRICS ROW UNDER A TAB STAFF (books TBL1/TBL2 - tab-lyric-row.ly) ---
+        // The first observer of a lyric line under a staff that is not four staff spaces
+        // tall. Seeded 2026-08-29 from a user report and closed by the port it was opened
+        // for: the per-staff profile SkylineBuilder builds seeded every staff symbol at the
+        // score's NOMINAL half (2.050000 of ink), so a six-string tab's own bottom string
+        // -- 3.800000 down -- was 1.750000 inside its own profile, and the chain that hangs
+        // the row read exactly that floor. The control is the whole argument: it does not
+        // move, because an ordinary staff IS the nominal one.
+        // ⚠️ BOTH SIDES READ THROUGH THE LINE-COUNT READER, 6 and 5, because the nominal
+        // one asserts five lines a staff space apart and throws on a tab outright — the
+        // measuring harness carried the very assumption the defect was.
+        new("lyrics.tab.staff-to-lyric", TBL1,
+            g => g.LyricBaselineBelowStaffOfLineCount(6), RaggedBottomPaper),
+        new("lyrics.tab.control.staff-to-lyric", TBL2,
+            g => g.LyricBaselineBelowStaffOfLineCount(5), RaggedBottomPaper),
 
         // --- WHAT A CUSTOM TEXT CHARGES THE PAGE (books CTP/CTC, CTG/CTGC/CTGN,
         // CTW/CTWN/CTWO - custom-text-page.ly) ---

@@ -308,6 +308,12 @@ public class SvgSnapshotTests
         // A note below the tab's lowest string is hidden (no fret/stem/beam) rather
         // than clamped to a wrong open string; the notation staff still shows it.
         yield return new object[] { "test/tab-below-range" };
+        // A lyrics row under a LONE tab staff, every fret inside the strings: the row
+        // clears the BOTTOM STRING, which is 3.75 below the tab's reference point and not
+        // the 2.0 a five-line staff would put there. Pinned against LilyPond by
+        // audit/lp-geometry lyrics.tab.staff-to-lyric.
+        yield return new object[] { "test/tab-lyrics-inside-strings" };
+
         // A forced-above script on a BEAMED note clears the beam on both the
         // notation staff and the tab (whose beam floats above the fret digits).
         yield return new object[] { "test/tab-beam-script" };

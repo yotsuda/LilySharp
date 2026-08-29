@@ -431,30 +431,46 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
   **ユーザーは「符尾・連桁も含めて全部」と決めているので、連桁は残債＝別便。**
 
 
-- **U5. ★★★ 未解決＝タブ譜と歌詞行が重なる**（**ユーザー報告 2026-08-29**・
-  `scratch\ベースタブLy\Untitled-6.lys`。**その本のスコアは今 `chords / tab / lyrics` で、
-  タブが melody の唯一の譜**）。⚠️ **着手して外し、木は元に戻した。以下は*測ったことだけ*。**
-  ★ **再現は最小の本にある**: **`scratch/p287/c7.lys`**（タブ＋歌詞＋3 段）——
-  **真ん中の段の歌詞だけがタブの中に入る**（バンド 28.57–36.07 に対し歌詞 34.94）。
-  **`c5`（2 段）と `c3`（1 段）は正常**。**実物は 3 段とも入る**（22.97 / 37.45 / 56.90）。
-  ★ **数の形**: **正常＝タブ下端 ＋1.65／異常＝タブ下端 −1.13**（＝2.78 高い）。
-  **通常譜の対照 `c6` は 3 段とも +2.65 で正常**——**タブでだけ起きる。**
-  ⚠️ **引き金ではないもの**（全部つぶした）: **節の数**（`c7` は 1 節で再現）・**和音行**・
-  **`@rit`**・**volta**・**節の再生**。**残っているのは「タブ」と「段の位置」の 2 つ。**
-  ★★ **行は loose-line の鎖が*解いている***（計器で確認: `ApplySolvedRowPositions` の `solved` に
-  `(sys, staff)` が入り、歌詞行 staff=2 も和音行 staff=0 も絶対位置を得ている）。
-  ⚠️⚠️ ★★★ **私の第一仮説は外れた。記録する価値があるので残す**——
-  **`LayoutEngine.Rows.cs:250` の `double halfStaff = _options.StaffHeight / 2.0;` は
-  鎖の両端で使われていて、`StaffLayout.RefpointBelowTop` が既に正しい値を持っている**
-  （**計器で確認: 6 弦タブで 3.750・公称は 2.000**）。**綴り直しなのは事実**。
-  **しかし差し替えても出力は 1 冊も動かない**——**`anchor` と `room` の引く項が*同じ向きに同じ量*
-  動くので `room` が不変**。⇒ ★★ **「restatement を見つけた」は「欠陥を見つけた」ではない。
-  差し替える前に、それが答えを動かすかを測ること。**
-  ⇒ **次の一手は `LyricEngraver.ResolveAnchor`（`LyricEngraver.cs:770-845`）と、
-  最初の隙間の最小値**（`skylineToAnchor` を引く側）。**そこの remark は
-  *この同じ本*の 2026-08-25 の報告を実測として引用している**——
-  **`Untitled-6.lys` は歌詞の配置で報告されるのが 3 度目**。**同じ島に 3 度目の読み手が来た。**
-  ★ **未確認**: **`as numbers` でも起きるか**（実物は lone tab ＝ full 既定）。**先に測ること。**
+- **U5. ✅ 閉じた（第288）＝タブ譜と歌詞行が重なるのは「タブの下の弦が profile の外に居た」から**
+  （**ユーザー報告 2026-08-29**・`scratch\ベースタブLy\Untitled-6.lys`。**その本のスコアは
+  `chords / tab / lyrics` で、タブが melody の唯一の譜**）。
+  ★★★ **原因は 1 つの量が 3 か所で綴られていたこと**（§5.2.1②）——**「この譜は何ユニット高いか」**。
+  **⒜ `SkylineBuilder.SeedStaffSymbol` は*どの譜も*スコアの公称の半分（±2.050000 のインク）で
+  五線を撒いていた**——**その remark 自身が "this builder has ONE staff height, not one per staff"
+  と書いていた**。**6 弦タブの下端の弦は refpoint の 3.800000 下**なので、**タブは自分の一番下の弦を
+  1.750000 だけ自分の profile の*内側*に持っていた**。**⒝ `LyricEngraver.ResolveAnchor` は
+  アンカー譜の*上端*から refpoint へ降りる段を同じ公称 2.000000 で踏んでいた**
+  （`anchorOffset`＝`staffBottom + BasicDistanceBelowBottomLine - RelatedStaffBasicDistance`）。
+  ⚠️ **⒞ 同じ量の 3 つ目の綴りは*既に正しかった***——**system の silhouette は
+  `StaffSpan` が置かれた `StaffLayout.Height` を読んでいて 7.500000 を知っている**
+  （`page.tab-only.first-staff-refpoint` がそれで閉じた）。**その entry が
+  「DO NOT CLOSE IT BY SPECIAL-CASING TAB — 同じ公称 4.000000 を SkylineBuilder も仮定している」と
+  名指ししていた棚が、これ**。<!-- ledger: page.tab-only.first-staff-refpoint = 0 -->
+  ★★★ **なぜ「真ん中の段だけ」だったか＝インクが床を隠していたから。** **段 1 と段 3 は
+  範囲外の音でフレット番号が五線の*下*にぶら下がり**、**その番号が profile の底を弦より下へ押し下げる**
+  ので、**間違った床は一度も binding にならなかった**。**段 2 はフレットが全部弦の内側**なので、
+  **床がそのまま出た**。⇒ ★★ **「一部の段だけ壊れる」は「その段だけ、間違った既定値が露出している」
+  の顔をしていることがある。**
+  ★ **LP の実測**（新しい対 `audit/lp-geometry/probes/tab-lyric-row.ly`・**grob の dump**）:
+  **TBL1（タブ＋歌詞）6.120115 ＝ 五線のインク 3.800000 ＋ 音節の ascender 1.820098 ＋ padding 0.500000**、
+  **TBL2（対照＝通常譜）5.500001 ＝ `nonstaff-relatedstaff-spacing` の basic-distance そのもの**。
+  **Lily# は 4.370000（＝2.050000 ＋ 1.820000 ＋ 0.500000）で、今 6.120000。**
+  ⚠️⚠️ ★★★ **SVG から測ってはいけない**（`audit/lp-geometry/README.md`）——**私は最初 LP の SVG から
+  6.0147 を読み**、**それは LP の*描いた baseline* であって VerticalAxisGroup の refpoint ではなかった**。
+  **正しい 6.120115 は grob の dump から。0.105 ずれる。**
+  ★★ **第287 の第一仮説（`LayoutEngine.Rows.cs:250` の `halfStaff`）は今も外れたまま**で、
+  **その便が書いた「次の一手は `LyricEngraver.ResolveAnchor`」は当たっていた**——**⒝ がまさにそこ。**
+  ★ **毒は 2 本とも生きていて、効き方が違う**: **⒜ を戻すと 3 枚が赤**
+  （`test/tab-lyrics-inside-strings`・`test/tab-below-range`・台帳 `lyrics.tab.staff-to-lyric`）／
+  **⒝ を戻すと 2 枚**（歌詞のある本と台帳だけ。`tab-below-range` は歌詞が無いので動かない）。
+  ⚠️ ★★★ **対照が*別の欠陥*を 1 つ釣った**——**TBL2（通常譜）は LP 5.500001 に対し Lily# 4.369960**
+  （**残差 −1.130041486**）。**base の exe でも head の exe でもバイト同一**なので**本便の代償ではない**。
+  **LP の spec は floor ではなく*バネ***（`(basic-distance . 5.5) (padding . 0.5) (stretchability . 1)`・
+  `ly/engraver-init.ly:649-652`・**`minimum-distance` は無い**）で、**Lily# はそのバネを*最小*に置いている**。
+  ⚠️ **`...last-system` の 2 点は両engine 5.500001 で exact** なので**「最後の段」一般の話ではない**——
+  **違う変数は「1 段しか無いページ」**。**台帳に `OPEN:` で起票済み**（`lyrics.tab.control.staff-to-lyric`）。
+  ⚠️ **`5.5` を minimum-distance として入れて閉じてはいけない**——**LP に無く、`lyrics.band-floor` が
+  「5.5 は縮む」ことを実測で持っている。**<!-- ledger: lyrics.tab.staff-to-lyric = -0.000155000061 --><!-- ledger: lyrics.tab.control.staff-to-lyric = -1.13004149 -->
 
 
 
