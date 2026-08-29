@@ -1659,6 +1659,82 @@ internal static class LpGeometryProbes
     private static readonly string LYRMC = LyricTwoStaffChordRowScore("LYRMC");
 
     /// <summary>
+    /// A ROW LEADING SYSTEM 2 OVER THAT SYSTEM'S OUTSIDE-STAFF INK — books DUR/DUN (probe
+    /// dynamic-under-row.ly), the BETWEEN-SYSTEMS half of the question
+    /// textspanner-under-row.ly opened.
+    /// </summary>
+    /// <remarks>
+    /// <paramref name="loud"/> puts <c>@f.up</c> on the first note of SYSTEM 2 — under the
+    /// row that leads system 2, at the same x as that row's first symbol. The control is the
+    /// same book with the dynamic removed: one variable, and it is the only outside-staff ink
+    /// either book has above that staff.
+    /// <para>
+    /// WHY IT IS A DIFFERENT BRANCH FROM TSCR/TSCN. A row standing above a staff INSIDE ONE
+    /// SYSTEM is placed by the room, which merges the staff's outside-staff ink into its UP
+    /// profile (<c>MultiStaffLayouter.BuildAllStaffSkylines</c>) — session 286 closed that on
+    /// the text spanner. A row that LEADS A LATER SYSTEM is an occupant of the PREVIOUS
+    /// block's loose-line chain, and that chain closes through
+    /// <c>LayoutEngine.LeadingLinesOfSystem</c>, which reads the staff's INSIDE-staff
+    /// silhouette. So the two ends of one chain read two different profiles
+    /// (HANDOFF 5.2.1 (2)): the between-staves end
+    /// (<c>LayoutEngine.ComputeBetweenStavesEnd</c>) takes the room's per-staff skyline,
+    /// dynamics and all.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE LYRICS LINE IS LOAD-BEARING AND IS NOT WHAT IS READ.
+    /// <c>BuildLooseChainEnds</c> declines a score with no lyric line at all, so a book
+    /// without one would never reach the branch under test and would measure the
+    /// already-named force-0 defect instead.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE INK IS AN EMMENTALER GLYPH ON PURPOSE, where the session-286 pair's was the
+    /// word "rit.": both engines take a dynamic's glyph from the same font file, so the
+    /// pair's difference cannot be a text metric.
+    /// </para>
+    /// <para>
+    /// MEASURED (2026-08-29, 2.26.0, fonts pinned; PROBEDU dump): DUR 5.738075804,
+    /// DUN 2.549999975, difference +3.188075829. It DECOMPOSES: the row clears the placed
+    /// glyph's ink top (5.238022665, which is the Staff VerticalAxisGroup's whole up extent
+    /// in that book) by ChordNames' <c>nonstaff-relatedstaff-spacing</c> padding 0.500000,
+    /// exactly as the control clears the staff symbol's 2.050000 by the same 0.500000 —
+    /// 5.238022665 - 2.050000 = 3.188022665 against 3.188075829 read. ⇒ THE FALSIFIER IS
+    /// DEAD: LilyPond does let a placed outside-staff grob push the loose line above it.
+    /// </para>
+    /// </remarks>
+    private static string DynamicUnderRowScore(string name, bool loud) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section A {
+          melody { c'4 c' c' c' | c'4 c' c' c' | }
+          chords prog { D | E | }
+          lyrics one sings melody { no no no no | no no no no | }
+        }
+
+        section B {
+          melody { c'4{{(loud ? "@f.up" : "")}} c' c' c' | c'4 c' c' c' | }
+          chords prog { D | E | }
+          lyrics one sings melody { no no no no | no no no no | }
+        }
+
+        form main { ~A break ~B }
+
+        score main "{{name}}" {
+          chords prog
+          staff melody  lyrics one
+        }
+        """;
+
+    /// <summary>The pair's book — the dynamic is above system 2's staff, under its row.</summary>
+    private static readonly string DUR = DynamicUnderRowScore("DUR", loud: true);
+
+    /// <summary>The control — the same book with no dynamic at all.</summary>
+    private static readonly string DUN = DynamicUnderRowScore("DUN", loud: false);
+
+    /// <summary>
     /// The same two-staff system with a SECOND verse — the mirror of book LYRMV.
     /// </summary>
     /// <remarks>
@@ -12859,6 +12935,28 @@ internal static class LpGeometryProbes
         // ...and the count, because both readings above are BY INDEX (HANDOFF 5.0 trap 8).
         new("lyrics.chord-row.between-systems.staves-on-first-page", LYRMC,
             g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+
+        // --- THE ROW LEADING SYSTEM 2 OVER THAT SYSTEM'S OUTSIDE-STAFF INK
+        //     (books DUR/DUN - dynamic-under-row.ly) ---
+        // THE FIRST OBSERVER OF THE PROFILE THE BETWEEN-SYSTEMS END OF A LOOSE CHAIN READS.
+        // Session 286 closed the same question on the OTHER end (a row above a staff inside
+        // one system, books TSCR/TSCN) and left this one written down as NOT MEASURED. The
+        // two ends read two different profiles: ComputeBetweenStavesEnd takes the room's
+        // per-staff skyline — dynamics and all — and LeadingLinesOfSystem takes the
+        // INSIDE-staff silhouette plus one hand-merged special case for the text spanner.
+        // ⚠️ THE CONTROL IS THE WHOLE ARGUMENT, as in every pair here: it is the arrangement
+        // Lily# already gets right, so its residual says whether a repair moved only the arm
+        // it should. See DynamicUnderRowScore for the LilyPond decomposition.
+        // ⚠️ INDEX 1, system 2's staff (HANDOFF 5.0 trap 8) — the count entry below is what
+        // makes that index mean the staff it is named for.
+        new("lyrics.chord-row.between-systems.dynamic.staff-to-chord", DUR,
+            g => g.ChordBaselineAboveStaff(1), RaggedBottomPaper),
+        new("lyrics.chord-row.between-systems.dynamic.control.staff-to-chord", DUN,
+            g => g.ChordBaselineAboveStaff(1), RaggedBottomPaper),
+        new("lyrics.chord-row.between-systems.dynamic.staves-on-first-page", DUR,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+        new("lyrics.chord-row.between-systems.dynamic.control.staves-on-first-page", DUN,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
 
         // THE ROW THAT IS NOT ON EVERY SYSTEM — the user's fifth report, and the arrangement
         // the entry above cannot speak for BECAUSE it is exact: LYRMC's row is on every
