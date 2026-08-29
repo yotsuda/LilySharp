@@ -1,0 +1,30 @@
+// A tie on a staff+tab pair with NO `as` clause. Two rules meet here:
+//   * the tab defaults to `as numbers`, because the same part is on a notation staff and
+//     that staff already carries the meter, the rests, the dots, the stems and the ties;
+//   * a numbers tab draws NO tie, which is what LilyPond's tab context does
+//     (Tie.stencil = ##f) and what a reader of published tab expects.
+// So the bow appears ONCE, on the notation staff, and the tab says "keep holding" the only
+// way it can: the tie's target prints no fret digit. Written before 2026-08-29 this book
+// drew the bow twice, and a reader reported the second one.
+title "Tie on a default staff+tab pair"
+octave absolute
+time 4/4
+part bl { clef bass tuning bass }
+
+section A { bl { a,2 a,2~ | a,1 | } }
+
+form main { A }
+
+score main "tab-tie-default-numbers" {
+  staff bl
+  tab bl
+}
+
+// ---------------------------------------------------------------------------
+// ⚠️ THIS NOTE IS AT THE FILE END ON PURPOSE. A comment ABOVE the music shifts every
+// source offset after it, so the whole book's data-pos moves and its snapshot has to be
+// re-based -- a diff that proves nothing and hides the next real one.
+// ✔ VERIFIED TO GUARD, not assumed to (session 286): the book has to keep BOTH halves.
+// Making the default `full` again puts a second bow on the tab; dropping the numbers-only
+// return in ElementCoordinator.LayoutTies does the same. `tab-chord-tie` guards the other
+// direction -- it asks for `as full` and its ties must stay.

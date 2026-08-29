@@ -55,10 +55,14 @@ public sealed class TabScriptStemClearanceTests
     /// string-based stem direction is UP — the case where the stem travels toward a
     /// forced-above script instead of away from it.
     /// </summary>
+    /// ⚠️ THE TAB ASKS FOR `as full` EXPLICITLY, and it has to: since 2026-08-29 a tab
+    /// beside a notation staff of the same part defaults to `as numbers`, which draws no
+    /// stems at all — and a test about clearing the tab STEM would then be measuring a
+    /// staff that has none. The book states the style it is about.
     private const string Book =
         "time 4/4\nkey c major\n"
         + "part m { instrument bass section A { a4@fermata a4 a4 a4 | } }\n"
-        + "form main { A }\nscore main { staff m  tab m }";
+        + "form main { A }\nscore main { staff m  tab m as full }";
 
     private static RecordingDrawingContext RenderFirstPage(string source)
     {

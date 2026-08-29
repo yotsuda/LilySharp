@@ -10,4 +10,8 @@ section A {
   m { <f'\3 a' c''>4. <f'\3 g' d''>4. <f'\3 a' d''>4 | }
 }
 form main { A }
-score main { staff m tab m }
+score main { staff m tab m as full }
+
+// ⚠ `as full` は明示する（2026-08-29）。双子 tabdot-lp.ly が `	abFullNotation` を書いているので
+// こちらも full でなければ対にならない。staff と対の tab は既定が numbers になったので、
+// 黙っていると付点が消えて CLAIM を測らなくなる。

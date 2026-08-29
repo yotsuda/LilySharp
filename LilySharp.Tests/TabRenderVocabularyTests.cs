@@ -103,30 +103,43 @@ public class TabRenderVocabularyTests
             d => d.Code == DiagnosticCodes.UnknownTabRenderWord);
 
     /// <summary>
-    /// The style word actually reaches the ENGRAVER with the case rule the validator
-    /// enforces — <c>as NUMBERS</c> must not draw a numbers-only tab now that it is refused.
+    /// With no `as` clause the SCORE chooses: a tab beside a notation staff of the same part
+    /// is `as numbers`, a tab standing alone is `as full` (user decision, 2026-08-29).
     /// </summary>
     /// <remarks>
-    /// ⚠️ WITHOUT THIS THE TWO COULD DISAGREE and nothing would say so: the validator reads
-    /// the token Ordinal while <c>RenderSpecParser.ParseTab</c> read it OrdinalIgnoreCase, so
-    /// the compiler would have reported an error and then engraved the thing it refused.
-    /// A diagnostic is not a behaviour (HANDOFF §5.0: reporting and KEEPING are two repairs).
+    /// The rule is about what the reader already has. A paired tab needs fret digits only,
+    /// because the staff above carries the meter, the rests, the dots, the stems and the
+    /// ties; a lone tab has to carry all of it. Asserting it as an EQUALITY with the explicit
+    /// spelling is what makes it a statement about the default rather than about any one
+    /// glyph -- a later change to what `numbers` draws cannot make this pass vacuously.
     /// </remarks>
     [Fact]
-    public void TheEngraverReadsTheStyleWithTheSameCaseRule()
+    public void WithNoClause_TheScoreChoosesTheStyle()
     {
         static string Draw(string book) => LilySharp.Core.Svg.SvgGenerator.Generate(
             SyntaxTree.Parse(book),
             new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
 
-        string plain = Draw(Book("tab m"));
-        string numbers = Draw(Book("tab m as numbers"));
-        string shouty = Draw(Book("tab m as NUMBERS"));
+        static string Score(string items) => $$"""
+            octave absolute
+            time 4/4
+            part m { instrument bass }
+            section A { m { c8 e g8. e16 g4~ g4 | } }
+            form main { A }
+            score main {
+              {{items}}
+            }
+            """;
 
-        // The positive control: the two styles really do draw different pictures, so
-        // "shouty equals plain" below is a statement about the case rule and not about a
-        // book that cannot tell them apart.
-        Assert.NotEqual(plain, numbers);
-        Assert.Equal(plain, shouty);
+        const string pair = "staff m\n  tab m";
+        const string pairNumbers = "staff m\n  tab m as numbers";
+
+        // Paired with its own notation staff -> numbers.
+        Assert.Equal(Draw(Score(pairNumbers)), Draw(Score(pair)));
+        // Standing alone -> full.
+        Assert.Equal(Draw(Score("tab m as full")), Draw(Score("tab m")));
+        // ...and the two answers really are different pictures, so neither line above can
+        // pass by both sides drawing the same thing.
+        Assert.NotEqual(Draw(Score("tab m as numbers")), Draw(Score("tab m as full")));
     }
 }

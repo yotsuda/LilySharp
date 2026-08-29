@@ -768,9 +768,16 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                | 'choirStaff' , StaffGroupBody      (* a BRACKET, bar lines NOT drawn through *)
                | CondensedStaff                     (* several parts on ONE staff *)
                | CombinedStaff                      (* two parts on one staff, MERGED *)
-               | 'tab' , [ TuningName ] , PartRef    (* tablature: tab partName, or
+               | 'tab' , [ TuningName ] , PartRef , [ 'as' , TabStyle ]
+                                                     (* tablature: tab partName, or
                                                         tab bass5 partName to override the
-                                                        part header's own `tuning` *)
+                                                        part header's own `tuning`.
+                                                        The style word is TabStyle, below.
+                                                        With no clause the SCORE answers.
+                                                        ⚠️ NO SEMICOLONS IN HERE — the doc
+                                                        tests cut the block at the first
+                                                        one, and this comment cost three
+                                                        red tests on 2026-08-29 *)
                | 'ossia' , [ ClefName ] , PartRef , [ 'as' , 'lines' , Integer ]
                                                      (* ossia partName — BARE, like staff,
                                                         with the same line-count selector.
@@ -794,6 +801,27 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                | 'paper' , Identifier , [ PaperBlock ] (* THIS score's page, same shape *)
                | PartRef                            (* a bare part name: MIDI only — see below *)
                ;
+
+TabStyle       = 'numbers' | 'full' ;
+                 (* How much of the rhythm a tab staff draws.
+                    'numbers' is LilyPond's plain TabStaff: fret DIGITS only, with no time
+                    signature, stems, flags, beams, dots, rests, tuplet brackets or ties.
+                    The tie's TARGET still drops its fret number, which is how a numbers tab
+                    says "keep holding" -- the absent number, not a bow.
+                    'full' is LilyPond's \tabFullNotation, less the key signature: a tab has
+                    no note letters for a key signature to alter, and LilyPond removes the
+                    Key_engraver from the context outright rather than hiding its stencil,
+                    so no LilyPond mode prints one either. Slurs print in BOTH styles, which
+                    is also LilyPond's answer -- the same block that hides the tie keeps the
+                    slur.
+                    WITH NO CLAUSE THE SCORE ANSWERS (user decision, 2026-08-29): a tab
+                    beside a notation staff of the same part is 'numbers', because that staff
+                    already carries the rhythm; a tab standing alone is 'full', because it
+                    has to carry the rhythm itself. A condensed, combined or grand staff
+                    counts as a notation staff; an ossia does not.
+                    NOT YET DRAWN in 'full': beams. Stems, flags, dots, rests, the time
+                    signature and ties are all there. *)
+
 
 StaffGroupBody = '{' , { StaffRender | 'lyrics' PartRef [ 'sings' PartRef ] } , '}' ;
                  (* Several staves engraved as ONE GROUP. All three take `staff` items

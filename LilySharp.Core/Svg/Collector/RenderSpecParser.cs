@@ -52,6 +52,13 @@ public static class RenderSpecParser
         // when the header is malformed (no form name).
         var name = string.IsNullOrEmpty(formName) ? "score" : formName;
 
+        // The parts this score ALSO puts on a notation staff — the tab default reads it.
+        // ⚠️ IT IS BUILT BEFORE THE LOOP ON PURPOSE: the rule is about the SCORE, and a
+        // `tab` written above the `staff` it pairs with has to answer the same as one
+        // written below it. Walking the items twice is how a per-item parse asks a
+        // whole-score question without depending on order.
+        var staffParts = StaffRenderedParts(render);
+
         // Parse render items
         foreach (var child in render.DescendantNodes())
         {
@@ -78,7 +85,7 @@ public static class RenderSpecParser
                     break;
 
                 case TabRenderSyntax tab:
-                    var tabSpec = ParseTab(tab);
+                    var tabSpec = ParseTab(tab, staffParts);
                     if (tabSpec != null)
                         items.Add(tabSpec);
                     break;
@@ -677,7 +684,7 @@ public static class RenderSpecParser
         _ => ChordDisplayMode.Names,
     };
 
-    private static TabStaffSpec? ParseTab(TabRenderSyntax tab)
+    private static TabStaffSpec? ParseTab(TabRenderSyntax tab, HashSet<string> staffParts)
     {
         // [tuning?] part [as numbers|full]; braces (if any) are skipped.
         var toks = RenderTargetTokens(tab);
@@ -685,17 +692,16 @@ public static class RenderSpecParser
 
         // Trailing `as numbers | full` — the tab STYLE selector (parallel to the
         // chord `as roman|names`). Strip it before reading the part/tuning so
-        // the part stays the last token. `numbers` = fret digits only; `full` (or
-        // absent) = this renderer's default rhythm-drawing tab.
+        // the part stays the last token. `numbers` = fret digits only.
         // ⚠️ ORDINAL. It was OrdinalIgnoreCase, so `as NUMBERS` engraved a numbers-only tab
         // while every other symbol in the language is case-sensitive — the split `removeEmpty`
         // had until 2026-08-19. TabRenderVocabularyValidator refuses the wrong case now, and
         // a reader that still lowercased it would accept what the compiler had just rejected.
-        bool numbersOnly = false;
+        bool? explicitStyle = null;
         int asIdx = toks.FindIndex(t => string.Equals(t.Text, "as", System.StringComparison.Ordinal));
         if (asIdx >= 0 && asIdx + 1 < toks.Count)
         {
-            numbersOnly = string.Equals(toks[asIdx + 1].Text, "numbers", System.StringComparison.Ordinal);
+            explicitStyle = string.Equals(toks[asIdx + 1].Text, "numbers", System.StringComparison.Ordinal);
             toks = toks.GetRange(0, asIdx);
         }
         if (toks.Count == 0) return null;
@@ -723,6 +729,12 @@ public static class RenderSpecParser
         var sourceClef = GetPartClef(tab, voiceName) ?? ClefType.Treble;
         var transposition = ResolvePartTransposition(tab, voiceName, tuning);
         var staffSpec = new StaffSpec(sourceClef, voiceName);
+        // The STYLE: an explicit `as` wins; otherwise the score answers. A tab beside a
+        // notation staff of the same part is fret digits only, because that staff already
+        // carries the meter, the rests, the dots, the stems and the ties; a tab standing
+        // alone has to carry them itself (user decision, 2026-08-29 — see
+        // StaffRenderedParts for what counts as "on a notation staff").
+        bool numbersOnly = explicitStyle ?? staffParts.Contains(voiceName);
         return new TabStaffSpec(staffSpec, tuning, transposition, numbersOnly);
     }
 
@@ -937,6 +949,47 @@ public static class RenderSpecParser
         return new OssiaStaffSpec(new StaffSpec(clef, voiceName,
             Lines: ossiaLines ?? StaffSpec.MaxLines));
     }
+
+    /// <summary>
+    /// The part names this score renders on a NOTATION staff — what <c>tab NAME</c> with no
+    /// <c>as</c> clause consults to choose its style (user decision, 2026-08-29).
+    /// </summary>
+    /// <remarks>
+    /// The rule is about what the READER already has in front of them: a tab paired with a
+    /// notation staff needs fret digits only, because the staff above carries the meter, the
+    /// rests, the dots, the stems and the ties; a tab standing alone has to carry all of it
+    /// itself. So <c>tab m</c> beside <c>staff m</c> is <c>as numbers</c> and <c>tab m</c> on
+    /// its own is <c>as full</c>, and an explicit clause always wins over both.
+    /// <para>
+    /// ⚠️ A CONDENSED OR COMBINED STAFF COUNTS, and a grand staff's members count: each of
+    /// them puts the part on a notation staff, which is the whole reason the rule exists. An
+    /// OSSIA does not — it is an alternative reading of a passage, not the part's own staff,
+    /// so a score whose only notation of a part is an ossia leaves the tab full.
+    /// </para>
+    /// </remarks>
+    private static HashSet<string> StaffRenderedParts(RenderDeclarationSyntax render)
+    {
+        var parts = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var child in render.DescendantNodes())
+        {
+            switch (child)
+            {
+                case StaffRenderSyntax staff when ParseStaff(staff) is { } spec:
+                    parts.Add(spec.VoiceName);
+                    break;
+                case CondensedStaffRenderSyntax condensed:
+                    foreach (var p in condensed.PartNames)
+                        parts.Add(p);
+                    break;
+                case CombinedStaffRenderSyntax combined:
+                    foreach (var p in combined.PartNames)
+                        parts.Add(p);
+                    break;
+            }
+        }
+        return parts;
+    }
+
 
     private static bool IsInsideGrandStaff(SyntaxNode staff)
     {

@@ -71,9 +71,17 @@ internal sealed class TabRenderVocabularyValidator : ISemanticValidator
     /// states of that switch, so the WORDS are Lily#'s and the thing each selects is
     /// LilyPond's: <c>numbers</c> is a plain TabStaff (fret digits, no stems or rests) and
     /// <c>full</c> is <c>\tabFullNotation</c>, which is what LilyPondExporter emits.
-    /// ⚠️ The DEFAULTS are opposite: LilyPond's TabStaff is numbers unless the switch is set,
-    /// and a Lily# <c>tab NAME</c> with no clause is full. That is a deliberate divergence
-    /// older than this file (test/tab-as-numbers.lys states it), not something introduced here.
+    /// ⚠️ THE DEFAULT IS THE SCORE'S ANSWER, not a fixed word (user decision, 2026-08-29). A
+    /// tab beside a notation staff of the same part defaults to <c>numbers</c>, because that
+    /// staff already carries the meter, the rests, the dots, the stems and the ties; a tab
+    /// standing alone defaults to <c>full</c>, because it has to carry them itself. An
+    /// explicit clause always wins. <c>RenderSpecParser.StaffRenderedParts</c> is where the
+    /// question is asked and says what counts as "on a notation staff".
+    /// ★ Until that decision Lily# defaulted to <c>full</c> everywhere, which is the opposite
+    /// of LilyPond's own default and was written up here as a deliberate divergence. The
+    /// paired case is now LilyPond's; only the lone tab still differs, and it differs where
+    /// LilyPond has nothing to say — a TabStaff with no notation staff above it is not a
+    /// shape LilyPond's default was chosen for.
     /// </para>
     /// <para>
     /// ⚠️ ONE HOME, and it is this one: <c>RenderSpecParser.ParseTab</c> and

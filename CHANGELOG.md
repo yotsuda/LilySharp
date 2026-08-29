@@ -33,6 +33,17 @@ turned out to be hiding them.
   it reserved the slash for sub-measure patterns came from the grob descriptions rather
   than from the iterator, and the warning that admitted the invented picture (`LYS2014`) is
   retired with it. A reader reported the warning as wrong and was right.
+- **A tab staff's style now follows the score, and a numbers tab draws no tie.** `tab NAME`
+  with no `as` clause is `as numbers` when the same part is also on a notation staff — that
+  staff already carries the meter, the rests, the dots, the stems and the ties, so the tab
+  needs fret digits only — and `as full` when the tab stands alone and has to carry them
+  itself. An explicit clause always wins, and a condensed, combined or grand staff counts as
+  a notation staff while an ossia does not. Separately, `as numbers` no longer draws ties:
+  LilyPond's tab context sets `Tie.stencil` to `##f` and says a held note is held by dropping
+  the tied-to fret number, which Lily# already did — it was drawing the bow as well, on both
+  styles, and a reader reported it. `as full` keeps its ties. Slurs are unaffected in both,
+  which is also LilyPond's answer: the same block that hides the tie keeps the slur.
+
 - **`staff <clef word>` alone names a part** — `staff bass` renders a part named
   `bass`, and says so (`LYS1007`) when none is declared. The reference scan read that
   lone word as a clef with the name left off and collected nothing, so a score whose

@@ -1,6 +1,8 @@
 // `tab part as numbers` = LilyPond's default TabStaff: fret DIGITS only, no
-// stems, flags, beams, dots, rests or tuplet brackets — the rhythm is read from
-// the paired notation staff above. (`tab part` alone stays full-notation.)
+// stems, flags, beams, dots, rests, tuplet brackets or ties — the rhythm is read
+// from the paired notation staff above. Since 2026-08-29 a tab beside a staff of
+// the same part defaults to this, so the clause here is a STATEMENT rather than a
+// switch: the book says which style it is about. (A LONE tab defaults to full.)
 // Covers a beamed run, a dotted value, a rest and a triplet on the tab: none of
 // their rhythm glyphs may appear on the numbers-only staff.
 time 4/4

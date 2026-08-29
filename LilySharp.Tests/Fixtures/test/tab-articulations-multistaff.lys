@@ -14,5 +14,10 @@ form main { A }
 
 score main {
   staff m
-  tab m
+  tab m as full
 }
+
+// ⚠ THE TAB ASKS FOR `as full` EXPLICITLY (2026-08-29). A tab beside a notation staff
+// of the same part now defaults to `as numbers`, which draws no stems, beams, dots,
+// tuplet numbers or ties -- and this book is ABOUT one of those, so without the clause
+// it would keep passing while testing nothing it claims to.

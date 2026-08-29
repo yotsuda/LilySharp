@@ -232,6 +232,10 @@ public class SvgSnapshotTests
         // `tab … as numbers`: fret digits only — no stems, beams, dots, rests or
         // tuplet brackets (the paired notation staff above carries the rhythm).
         yield return new object[] { "test/tab-as-numbers" };
+        // A tie on a staff+tab pair with no `as` clause: the tab defaults to numbers because
+        // the part is also on a notation staff, and a numbers tab draws no tie — so the bow
+        // appears once, on the staff (session 286; a reader reported the second one).
+        yield return new object[] { "test/tab-tie-default-numbers" };
         // `tab … with chords …`: a chord part's symbols align above the tab staff.
         yield return new object[] { "test/tab-with-chords" };
         // Per-occurrence lyric verses `[1. …] [2. …]`: A sings verse 1, the A2 reprise verse 2.

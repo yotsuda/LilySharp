@@ -388,6 +388,49 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
   ⚠️ **番人は `LineLeadingSourcePositionTests`**（行頭 2 音＋行内 2 音＋診断の桁）。
   **毒（`Span` を旧式に戻す）で 5 本中 3 本が赤、行内の 2 本は緑**＝**対照が効いている。**
 
+- **U4. ✅ 閉じた（第286・ユーザー決定）＝タブの `as numbers` はタイも描かず、`as` 省略時は*スコアが答える***。
+  **決定**: 「`as numbers` は数字だけ、タイ先の数字も描かない。`as full` は拍子記号もタイも休符も全部描く。
+  ただしタイ先の数字だけは描かない。」＋「`as` を書かない場合は、**同じ part を staff で描画していれば
+  numbers**、していなければ **full**」。
+  ⚠️⚠️ ★★★ **起票の前に私が事実を 2 つ間違え、ユーザーはその誤った説明の上で決定した**——
+  **⒜「`as numbers` / `as full` という文法は無い」**（**両方とも既にあった**。`TabRenderVocabularyValidator`
+  の語彙が `{numbers, full}`）／**⒝「`as full` は符尾・連桁の新規実装が要る」**（**符尾は既にあった**。
+  連桁だけが無い）。**GRAMMAR.md の生成規則だけを読み、fixture もパーサも語彙も grep しなかった。**
+  ⇒ ★★★ **「その綴りは無い」は*生成規則を読んだだけ*では言えない。** **言う前に、語彙・パーサ・
+  fixture の 3 つを grep すること**（`test/tab-as-numbers.lys` は**ファイル名で**在ることを叫んでいた）。
+  ★ **誤りに気づいた時点で前提を訂正してユーザーに再提示し、そのうえで「そのまま進めて」を得た。**
+  ★ **実際に足りなかったのは 2 点だけ**: **⒜ タイが両モードで描かれていた**（`SharedRenderer.Tab` の
+  注記が「Ties still print」と*書いていた*——**LP に訊いていない乖離**）／**⒝ 既定が文脈を見ていない。**
+  **「タイ先の数字を full でも描かない」は既に両モードでそうなっていた**（LP の full は*出す*ので、
+  ここは既に意図的な乖離＝`tab-note-head::handle-ties` の片翼だけ移植した形）。
+  ★★ **LP の実測**（`scratch/p286/lp/`）: **既定 TabStaff＝数字だけ**（拍子も調号も無し）／
+  **`\tabFullNotation`＝拍子は出るが調号は出ない**——**`ly/engraver-init.ly:1214` が
+  `\remove Key_engraver` を、隣で `Accidental_engraver` も外している**（**stencil ではなく engraver ごと**
+  なので `\tabFullNotation` では戻らない＝**タブに調号という概念が無い**）。**タイは
+  `:1271-1276` で `Tie/RepeatTie/LaissezVibrerTie.stencil = ##f`、その 2 行下で
+  **スラーは stencil を保って動くだけ**（`slur::move-closer-to-tab-note-heads`）
+  ——**だからタイだけを止め、スラーは触っていない**（`tab-grace-slur` の曲線 4 本が不動で裏取り）。
+  ★ **抑止は `ElementCoordinator.LayoutTies` の 1 か所**（描画側ではなく**レイアウト側**——
+  **刷らない弓がスカイラインに部屋を予約してはいけない**）。**既定は `RenderSpecParser.StaffRenderedParts`**
+  （ループの*前*に 1 度作る＝`tab` を `staff` より上に書いても同じ答えになる）。
+  ★ **射程**: **SVG 全数掃き 1519 冊（同時刻 2 パス）＝SAME 1266 / MOVED 253**
+  （**ユーザー実コーパス 232 ＋ 追跡 11 ＋ scratch 10**）。**`lysc check` はバイト同一。台帳不動。**
+  ⚠️ ★★ **fixture の 7 冊には `as full` を*明示*した**——**その本の主題（連桁・付点・tuplet 番号・
+  タブのタイ・スクリプトが符尾を避けること）が numbers では消える**ので、黙っていると
+  **通り続けながら何も測らなくなる**。**残り 10 冊は再生成し、主題が生き残っていることを 1 冊ずつ機械で確認**
+  （bend の曲線 40 本・% 記号の点 4 組・× 6 個・技法文字 16 個などが不動）。
+  ⚠️⚠️ ★★★ **`audit/lpreg` の LP 照合プローブが 2 冊巻き込まれた**——**`tabdot.lys` は双子が
+  `\tabFullNotation` なのに Lily# 側が numbers に落ちる**ので `as full` を明示（**黙っていたら
+  付点が消えて CLAIM を測らなくなる**）。**逆に `tabtie-probe.lys` は双子が*素の* `\new TabStaff`**
+  なので、**今回の変更で初めて双子と絵が一致した**（**それまで Lily# だけが弓を引いていた**）。
+  ⇒ ★★ **LP 照合プローブは「双子がどのモードか」を本文に書くこと。**
+  ★ **番人 2 つ**: `test/tab-tie-default-numbers`（素の staff+tab＋タイ＝弓は 1 本・タブは 0 本）と
+  `TabRenderVocabularyTests.WithNoClause_TheScoreChoosesTheStyle`（既定を明示綴りとの*等値*で述べる）。
+  **毒の効き方が違う**: **タイ抑止を止めると 1 枚だけ赤／既定を full 固定に戻すと 11 枚＋規則テストが赤。**
+  ⚠️ **`as full` の連桁はタブ側に未実装のまま**（符尾・付点・拍子・休符・タイは在る）。
+  **ユーザーは「符尾・連桁も含めて全部」と決めているので、連桁は残債＝別便。**
+
+
 
 
 > # ▶ **打鍵のアロケーション＝「置いて捨てる」「同じ物を 2 度作る」の返済。地図は全部埋まった**

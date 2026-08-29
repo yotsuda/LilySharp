@@ -1923,6 +1923,26 @@ internal sealed class ElementCoordinator
         if (ties.Length == 0)
             return ImmutableArray<TieLayout>.Empty;
 
+        // A NUMBERS-ONLY TAB DRAWS NO TIE, and the suppression is here rather than at the
+        // draw site so the tie is not in the skylines either — a bow nothing prints must not
+        // reserve room above the staff.
+        // LILYPOND-REF: ly/engraver-init.ly:1271-1276 slur::move-closer-to-tab-note-heads —
+        //   the tab context's tie/slur block, which that override ends. Tie.stencil,
+        //   RepeatTie.stencil and LaissezVibrerTie.stencil all go to ##f while the SLUR two
+        //   lines later keeps its stencil and only moves: a tab suppresses ties and NOT slurs,
+        //   which is why this guard names the tie alone. \tabFullNotation (ly/property-init.ly)
+        //   puts the ties back, and that is exactly Lily#'s `as numbers` / `as full`.
+        // ⚠️ THE HELD NOTE IS STILL SHOWN, by the half of LilyPond's rule that was already
+        // ported: the tie's TARGET prints no fret digit (SharedRenderer.Tab,
+        // scm/tablature.scm:186-224 tab-note-head::handle-ties). A numbers-only tab says
+        // "keep holding" by the absent number, which is what a reader of published tab
+        // expects; the bow is what the notation staff above carries.
+        // ★ Reported by a reader on 2026-08-29 (scratch/ベースタブLy/Walk.lys): the bow was
+        //   printing on the tab in BOTH styles, and the comment at the draw site said so
+        //   ("Ties still print") — a divergence nobody had asked LilyPond about.
+        if (staff is { IsTab: true, TabNumbersOnly: true })
+            return ImmutableArray<TieLayout>.Empty;
+
         var measureMap = LayoutUtilities.BuildMeasureMap(systems);
         var measureToSystemIdx = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
         var tieLayouts = new List<TieLayout>();

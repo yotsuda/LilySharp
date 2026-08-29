@@ -309,7 +309,8 @@ internal static partial class SharedRenderer
         var dirGeom = new TabStaffGeometry(
             staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef, staff.Transposition);
         // `tab … as numbers`: fret digits only — no stems, dots or rests (beams and
-        // tuplet brackets are suppressed at their own draw sites). Ties still print.
+        // tuplet brackets are suppressed at their own draw sites). Ties are suppressed in
+        // ElementCoordinator.LayoutTies, so they are out of the skylines too.
         bool numbersOnly = staff.TabNumbersOnly;
 
         for (int i = 0; i < measure.Items.Length; i++)
