@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 55 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 57 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 49 | 観測者がゼロだと自認しているもの |
 | `OWN` | 114 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **218** | |
+| **計** | **220** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -34,7 +34,7 @@
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 5 |
 | `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 5 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（55 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（57 件）
 
 ### `LilySharp.Core/Rendering/Pdf/PdfDrawingContext.cs`
 - **:310** ⚠️ NOT PORTED — backend-blocked: CHARACTERS AT THE CLUSTERS' POSITIONS, not glyphs at
@@ -116,6 +116,9 @@
 - **:124** order, so the warning has nothing to fire on and is not ported.
 ### `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs`
 - **:87** ⚠️⚠️ AND THIS IS WHY LILYPOND'S TabNoteHead (whiteout . #t) IS NOT PORTED, which
+### `LilySharp.Core/Svg/Layout/TextSpannerEngraver.cs`
+- **:206** bound-details) and that branch is NOT PORTED HERE. No ledger point reads a
+- **:219** ⚠️ THE RIGHT BOUND'S ARITHMETIC IS NOT PORTED HERE, and the left repair is
 ### `LilySharp.Core/Svg/Layout/TieFormattingProblem.cs`
 - **:1047** ⚠️ NOT PORTED — THE ARITHMETIC; THE CITATION IS THE RULE'S SHAPE ONLY. LP has the
 ### `LilySharp.Core/Svg/Layout/TieVariantEngraver.cs`

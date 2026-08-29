@@ -123,11 +123,11 @@
   <text x="3.40" y="16.12" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="778">Main</text>
   <rect x="6.38" y="10.66" width="2.21" height="2.80" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="275"/>
   <text x="7.49" y="13.06" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="275">A</text>
-  <rect x="58.47" y="13.20" width="2.28" height="2.80" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="625"/>
-  <text x="59.61" y="15.60" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="625">B</text>
-  <text x="59.31" y="17.77" font-size="2.00" font-style="italic" data-pos="642">rit.</text>
-  <line x1="62.01" y1="17.77" x2="71.23" y2="17.77" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="642"/>
-  <text x="79.30" y="17.77" font-size="2.00" font-style="italic" data-pos="728">accel.</text>
-  <line x1="83.10" y1="17.77" x2="91.23" y2="17.77" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="728"/>
+  <rect x="58.47" y="14.88" width="2.28" height="2.80" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="625"/>
+  <text x="59.61" y="17.28" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="625">B</text>
+  <text x="62.29" y="17.77" font-size="2.00" font-style="italic" data-pos="642">rit.</text>
+  <line x1="64.99" y1="17.77" x2="71.23" y2="17.77" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="642"/>
+  <text x="79.55" y="17.77" font-size="2.00" font-style="italic" data-pos="728">accel.</text>
+  <line x1="83.35" y1="17.77" x2="91.23" y2="17.77" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="728"/>
   </g>
 </svg>

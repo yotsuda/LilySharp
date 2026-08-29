@@ -95,6 +95,42 @@ public class TextSpannerTests
     }
 
     [Fact]
+    public void DetectTextSpanners_BothBoundsAreTheNoteTheMarkStandsOn()
+    {
+        // LILYPOND-REF: lily/text-spanner-engraver.cc:108-115 Text_spanner_engraver::stop_translation_timestep —
+        // the LEFT bound is the START timestep's currentMusicalColumn, i.e. THE NOTE THE
+        // MARK WAS WRITTEN ON. This used to be the constant 0, so a `@rit` on the third
+        // note drew from the measure's head while `@!rit` took its own note — the two ends
+        // of one span spelled differently, inside the engine that draws both. Ledger
+        // textspanner.x.label-to-notehead and its control read the drawn X against LilyPond;
+        // this reads the bound the pairing hands them, which no geometry point can name.
+        var musicMarks = ImmutableArray.Create(
+            new MusicMarkItem(MusicMarkType.TextSpanStart, "rit.", 0, 10, anchorItemIndex: 2),
+            new MusicMarkItem(MusicMarkType.TextSpanStop, 1, 20, anchorItemIndex: 3));
+
+        var span = Assert.Single(TextSpannerEngraver.DetectTextSpanners(musicMarks));
+
+        Assert.Equal(2, span.StartItemIndex);
+        Assert.Equal(3, span.EndItemIndex);
+    }
+
+    [Fact]
+    public void DetectTextSpanners_AMeasureStartMarkClampsToTheMeasuresFirstItem()
+    {
+        // A mark written before any note carries AnchorItemIndex −1 (MeasureCollector), and
+        // the measure's first item IS where it stands — the same clamp the terminator has
+        // used since session 289, now spelled once for both ends.
+        var musicMarks = ImmutableArray.Create(
+            new MusicMarkItem(MusicMarkType.TextSpanStart, "rit.", 0, 10),
+            new MusicMarkItem(MusicMarkType.TextSpanStop, 2, 20));
+
+        var span = Assert.Single(TextSpannerEngraver.DetectTextSpanners(musicMarks));
+
+        Assert.Equal(0, span.StartItemIndex);
+        Assert.Equal(0, span.EndItemIndex);
+    }
+
+    [Fact]
     public void DetectTextSpanners_AStartNobodyClosed_DrawsNothingAndIsReported()
     {
         // LILYPOND-REF: lily/text-spanner-engraver.cc:117-127 Text_spanner_engraver::finalize — "unterminated text
@@ -287,8 +323,10 @@ public class TextSpannerTests
         Assert.Equal("rit.", layout.Text);
         Assert.Equal(TextSpannerStyle.DashedLine, layout.Style);
         Assert.Equal(42, layout.SourcePosition);
-        // StartX should be at measure[0] item[0] X
-        Assert.Equal(1.0, layout.StartX, 2);
+        // StartX is the BOUND ITEM's X plus the bound padding — measure[0] item[0] at 1.0
+        // plus TextSpanner's bound-details.left.padding 0.25 (ledger
+        // textspanner.x.control.label-to-notehead reads that 0.25 against LilyPond).
+        Assert.Equal(1.25, layout.StartX, 2);
         // EndX should be before measure[2] item[0]
         Assert.True(layout.EndX > layout.StartX);
         // LineStartX should be after the text

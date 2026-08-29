@@ -74,9 +74,9 @@
   <text x="34.74" y="11.09" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1675">B</text>
   <rect x="59.80" y="7.46" width="3.34" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1617"/>
   <text x="61.47" y="9.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1617">A2</text>
-  <text x="8.59" y="11.84" font-size="2.00" font-style="italic" data-pos="1636">rit.</text>
-  <line x1="11.29" y1="11.84" x2="21.40" y2="11.84" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="1636"/>
-  <text x="60.83" y="11.84" font-size="2.00" font-style="italic" data-pos="1636">rit.</text>
-  <line x1="63.53" y1="11.84" x2="73.65" y2="11.84" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="1636"/>
+  <text x="8.84" y="11.84" font-size="2.00" font-style="italic" data-pos="1636">rit.</text>
+  <line x1="11.54" y1="11.84" x2="21.40" y2="11.84" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="1636"/>
+  <text x="61.08" y="11.84" font-size="2.00" font-style="italic" data-pos="1636">rit.</text>
+  <line x1="63.78" y1="11.84" x2="73.65" y2="11.84" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="1636"/>
   </g>
 </svg>

@@ -193,17 +193,36 @@ internal static class TextSpannerEngraver
                 if (system.Measures.IsDefaultOrEmpty)
                     continue;
 
+                // LILYPOND-REF: lily/line-spanner.cc:149-176 Line_spanner::calc_bound_info —
+                //   the bound COLUMN's extent read at bound-details.left's attach-dir (LEFT),
+                //   which for these columns is the note-head anchor.
+                // LILYPOND-REF: lily/line-spanner.cc:596-600 Line_spanner::print —
+                //   span_points[d] += -d * gaps[d] * magstep * dz.direction (), i.e. the
+                //   bound's own `padding` is spent BEFORE the left text stencil is
+                //   translated there. MEASURED: ledger textspanner.x.control.label-to-notehead
+                //   is that 0.25 alone (LilyPond +0.250000000, TXH).
+                // ⚠️ A CONTINUATION piece keeps the measure's origin: LilyPond's `left-broken`
+                //   details flip attach-dir to RIGHT (scm/define-grobs.scm, TextSpanner
+                //   bound-details) and that branch is NOT PORTED HERE. No ledger point reads a
+                //   broken piece's left edge, so it is named rather than guessed at.
                 double startX;
                 if (segment.IsFirst && spanner.StartItemIndex < measureLayouts[segment.StartMeasureIndex].Items.Length)
                 {
                     var startItem = measureLayouts[segment.StartMeasureIndex].Items[spanner.StartItemIndex];
-                    startX = measureLayouts[segment.StartMeasureIndex].X + startItem.X;
+                    startX = measureLayouts[segment.StartMeasureIndex].X + startItem.X + BoundPadding;
                 }
                 else
                 {
                     startX = measureLayouts[segment.StartMeasureIndex].X + BoundPadding;
                 }
 
+                // ⚠️ THE RIGHT BOUND'S ARITHMETIC IS NOT PORTED HERE, and the left repair is
+                //   what made that legible: bound-details.right declares NO attach-dir, so
+                //   LilyPond's calc_bound_info takes the bound column's CENTRE
+                //   (linear_combination at CENTER) where this takes its LEFT edge — MEASURED
+                //   in probes/textspanner-left-bound.ly's own dump, rightX 31.309760708228
+                //   against that column's head anchor 30.657660708228, about 0.65 apart. No
+                //   ledger point reads the right end, so closing it starts with a point.
                 double endX;
                 if (segment.IsLast)
                 {
@@ -417,7 +436,14 @@ internal static class TextSpannerEngraver
                 spanners.Add(new TextSpannerItem(
                     Text: start.Mark.Text,
                     StartMeasureIndex: start.Mark.MeasureIndex,
-                    StartItemIndex: 0,
+                    // BOTH ENDS ARE THE WRITER'S. The note the mark stands on IS the
+                    // bound, on the left exactly as on the right — a measure-start mark
+                    // carries AnchorItemIndex −1 and clamps to the measure's first item,
+                    // which is where it stands. This used to be the constant 0, and the
+                    // asymmetry that left (a `@rit` on the third note drawn from the
+                    // measure's head, while `@!rit` took its own note) is what ledger
+                    // textspanner.x.label-to-notehead was opened to see.
+                    StartItemIndex: Math.Max(start.Mark.AnchorItemIndex, 0),
                     EndMeasureIndex: mark.MeasureIndex,
                     EndItemIndex: Math.Max(mark.AnchorItemIndex, 0),
                     Style: TextSpannerStyle.DashedLine,
