@@ -502,6 +502,50 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
   **見分けるには item が持っていない「何回目の演奏か」の番号が要る。**
 
 
+> # ▶ **`@!X` を実装する＝テキストスパナの終端必須化**
+> （2026-08-29・第288 起票・**★★★ ユーザー決定で優先度高。設計は §3 で確定済み・実装だけが残っている**）
+>
+> ★★★ **決定は §3 の行を読むこと**（`@!X` は `@X` が開いたものを閉じる／`@textSpan("…")` と
+> 糖衣 `@rit`・`@accel`・`@rall`／閉じなければ診断して描かない）。**ここは実装メモだけ。**
+>
+> **⚠️ 第288 は着手して*意図的に戻した*。** **19,000 秒走ったターンの末尾で言語仕様を
+> 着地させるのは、その日ずっと直していた種類の欠陥を作る道**なので、**証明できたことだけ
+> 残して木を戻した**。**以下は実測済みで、次の便はここから始めてよい。**
+>
+> **⑴ ★★★ `@!name` は字句解析を 1 文字も変えずに通る**（**実証済み**——
+> `scratch/p289/bang.lys` が `No errors found`）。**`@` は `SyntaxKind.At`・`!` は
+> `SyntaxKind.DashedBar`**（`Lexer.cs:193,196`）で、**`@` の直後は名前の位置＝小節線が
+> 来られない**ので衝突しない。**parser の 1 分岐で足りる**（`Parser.Music.cs` の
+> `var at = Advance();` の直後に `if (Check(SyntaxKind.DashedBar))` を置き、
+> `new MusicMarkGreen([at, bang, ExpectMarkName()])`）。
+>
+> **⑵ `MusicMarkSyntax` に `IsSpanEnd` を足し、`Name` と `MarkName` が `DashedBar` を飛ばす**
+> ——**そうすると `@!rit` と `@rit` が*同じ名前*を報告する**ので、**語彙も「もしかして」の
+> 候補リストも 1 本のまま**。**終端が自分の名前を持つと 2 本目のリストが要る。**
+>
+> **⑶ ⚠️ 中間状態は無害ではない**——**parser だけ入れると `@!rit` は「2 本目の rit」として
+> 描かれる**（実測）。**だから parser・モデル・コレクタ・engraver・fixture 移行は
+> 1 つの便で一緒に着地させること。小さく刻めない。**
+>
+> **⑷ ⚠️ `LILYPOND-REF` の番人に引っかかる**——`LpReferenceCitationTests` の
+> `LooksLikeLilyPondSymbol` は**下線か 3 節以上のハイフンを要求する**ので、
+> **`CrescendoEvent` は「シンボルを名指していない」と数えられる**。
+> **`ly/declarations-init.ly:86` を引くなら `make-span-event` を名指すこと**（同じ行に在る）。
+>
+> **⑸ 触る所の地図**（第288 が読んだ範囲）: `MusicMarkType` に `TextSpanStart`／`TextSpanStop`
+> を足し `Rit`／`Accel` を退役（**production の使用箇所は `MusicMarkItem.cs` と
+> `TextSpannerEngraver.cs` の 2 ファイルだけ**）／糖衣の語→印字文字列の表を 1 本
+> （`rit`→"rit." 等・**語を足すのはこの 1 行**）／`AnnotationNameValidator` に `rall`・`textSpan`／
+> `SyntaxFacts.AnnotationReadsAParenthesisedArgument` に `textSpan`／
+> **`MusicMarkItem` に `VoiceIndex` が無い**ので足す（**コレクタは `StaffIndex` を書くその場で
+> `_cursor.VoiceIndex` を持っている**）／`DetectTextSpanners` を「(譜,声部) ごとに START↔STOP を
+> 対にする」へ書き直し（**1 小節フォールバック・次マーク探索・自己再演奏ガードの 3 つが退役**）／
+> **診断は `SlurPairingValidator` の型をなぞる**（コレクタが `UnpairedSlurWarnings` のように
+> 記録し、validator が読み戻す＝**描かれるものと警告が食い違わない**ための形）。
+>
+> **⑹ 移行が要る本**: `01-expressions`・`chordrow-rit-second-system`・`multi-staff-text-spanners`・
+> `rit-span-in-a-repeated-section`（追跡）＋ **ユーザー実コーパスは `Untitled-6.lys` の 2 箇所だけ**。
+> ⚠️ **ユーザーの本には手を触れないこと**——**rit をどこで終えるかはその人の音楽**。**診断が位置を指す。**
 > # ▶ **閉じられなかった span の答えを 1 つにする＝ペダルとオッターヴァを寄せる**
 > （2026-08-29・第288 起票・**★★★ ユーザー決定で優先度高**）
 >
@@ -2631,7 +2675,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 | 決定 | 根拠（要点） |
 |---|---|
-| ★★★ **テキストスパナは終端を必須にする＝`@startTextSpan("…")` / `@stopTextSpan` を primitive にし、`@rit`／`@accel`／`@rall` は START だけの糖衣**（2026-08-29・第288・**ユーザー決定＝案 B**） | **3 択を出した**: ⒜ `@rall` を足すだけ／⒝ LP 忠実（終端必須・閉じなければ診断して描かない）／⒞ 折衷（汎用ペアを足しつつ裸の `@rit` は 1 小節の既定を保つ）。**ユーザーは移行コストを外して ⒝ を選んだ。** ⚠️ **決め手は LP 忠実性ではなく*言語の一貫性***——**「閉じられなかった span」に Lily# は今 3 つの違う答えを持っている**（第288 実測、3 つとも `lysc check` は `No errors found`）: **`@sustainOn` は無言で何も描かず／`@ottava` は 12.01→33.64 という独自長を描き／`@rit` は 1 小節**。**⒞ は 4 つ目を足す**が、**⒝ はこの族の答えを 1 つにし、ペダルとオッターヴァを寄せる先を作る**（→ §2 の ▶「閉じられなかった span の答えを 1 つにする」・**同じくユーザー決定で優先度高**）。⚠️ **糖衣と既定長は独立**なので、**`@rit` は短いまま終端必須にできる**——⒞ はその 2 つを混ぜていた。★ **LP の裏取り**: `\rit` という命令は 2.26.0 に**存在しない**（`ly/spanners-init.ly` の原始命令は `\startTextSpan`／`\stopTextSpan` の 2 つだけ）。**長さは `\stopTextSpan` の位置そのもの**（実測: 1 小節 10.8／4 小節 46.36）で、**閉じなければ `unterminated text spanner` を出して `suicide()`＝文字ごと消える**（`lily/text-spanner-engraver.cc:121-130`）。**LP に「既定の長さ」という概念は無い。** ⚠️ **語彙を enum で持たない理由も LP に在る**——`ly/articulate.ly:565-589` は `"rall"`／`"rit."`／`"accel."`／`"poco rall."` を**文字列比較**しており、同ファイルの TODO が「Add more synonyms for accel and rall: rit ritard stringendo」と言っている＝**語彙は原理的に閉じない**。⚠️ **`@cresc` 族はこの決定の外**——**LP でも `\cresc` は Dynamic_engraver が次の強弱で自動的に閉じる**ので、**自動終端が LP 由来である唯一の族**。 |
+| ★★★ **終端の綴りは `@!X` に統一する＝`@!X` は `@X` が開いたものを閉じる。テキストスパナは `@textSpan("…")` / `@!textSpan`、`@rit`／`@accel`／`@rall` は START だけの糖衣で `@!rit` が閉じる**（2026-08-29・第288・**ユーザー決定＝案 B**） | **3 択を出した**: ⒜ `@rall` を足すだけ／⒝ LP 忠実（終端必須・閉じなければ診断して描かない）／⒞ 折衷（汎用ペアを足しつつ裸の `@rit` は 1 小節の既定を保つ）。**ユーザーは移行コストを外して ⒝ を選んだ。** ⚠️ **決め手は LP 忠実性ではなく*言語の一貫性***——**「閉じられなかった span」に Lily# は今 3 つの違う答えを持っている**（第288 実測、3 つとも `lysc check` は `No errors found`）: **`@sustainOn` は無言で何も描かず／`@ottava` は 12.01→33.64 という独自長を描き／`@rit` は 1 小節**。**⒞ は 4 つ目を足す**が、**⒝ はこの族の答えを 1 つにし、ペダルとオッターヴァを寄せる先を作る**（→ §2 の ▶「閉じられなかった span の答えを 1 つにする」・**同じくユーザー決定で優先度高**）。⚠️ **糖衣と既定長は独立**なので、**`@rit` は短いまま終端必須にできる**——⒞ はその 2 つを混ぜていた。★ **LP の裏取り**: `\rit` という命令は 2.26.0 に**存在しない**（`ly/spanners-init.ly` の原始命令は `\startTextSpan`／`\stopTextSpan` の 2 つだけ）。**長さは `\stopTextSpan` の位置そのもの**（実測: 1 小節 10.8／4 小節 46.36）で、**閉じなければ `unterminated text spanner` を出して `suicide()`＝文字ごと消える**（`lily/text-spanner-engraver.cc:121-130`）。**LP に「既定の長さ」という概念は無い。** ⚠️ **語彙を enum で持たない理由も LP に在る**——`ly/articulate.ly:565-589` は `"rall"`／`"rit."`／`"accel."`／`"poco rall."` を**文字列比較**しており、同ファイルの TODO が「Add more synonyms for accel and rall: rit ritard stringendo」と言っている＝**語彙は原理的に閉じない**。⚠️ **`@cresc` 族はこの決定の外**——**LP でも `\cresc` は Dynamic_engraver が次の強弱で自動的に閉じる**ので、**自動終端が LP 由来である唯一の族**。 |
 | ★★ **`repeat percent` の body が 3 小節以上の*整数*小節のとき、LP の描き方は写さない**（2026-08-29・第282・**測って決めた**） | **LP は 2.26.0 で「裸のスラッシュ 1 本 ＋ 完全に空の小節 N−1 個」**を出す（`scratch/p282/wholebody.ly`。slash の grob は小節ぶんの広がりを持たない）。**LP 自身が範囲外だと言っている**——`RepeatSlash`／`DoubleRepeatSlash` の `description` は両方「repeating patterns *shorter than a single measure*」（`scm/define-grobs.scm`）。**写すと 32 冊 200 site が空小節になる**。⇒ **Lily# は小節ごとの `%` を保つ**（**宣言された乖離**＝`docs/APPROXIMATIONS.md` の APPROX、`PercentRepeatItem` の remark）。⚠️ **`%` が記譜として正しいかは別の問い**で、そちらは同じ日に **⒥（診断を出す）**で閉じた（次行）。 |
 | ★★ **その `%` には診断を出す（LYS2014）。記譜そのものは変えない**（2026-08-29・第282・**ユーザー決定**・✅ `85406c45` で実装済み） | **`%` は「直前の 1 小節を繰り返す」記号**なので、3 小節以上の body に描く `%` は**読み手に body の*最後の*小節を N 回**と伝える（音は正しい）。**⒤ 今のまま／⒥ 診断／⒦ 別の記譜**の 3 択を出してユーザーが **⒥** を選んだ。⇒ **書き手に告げて、選ばせる**。**⒦（`repeat unfold` 相当に書き下す等）は採らない**——**今日それを求めている本が 1 冊も無く**、移行費用が要る。⚠️ **警告はコレクタが小節ごとに署名するのと同じ場所でしか鳴ってはいけない**（規則は `PercentRepeatShape` の一軒・突き合わせは全数掃き）。 |
 | ★★★ **書かれた `\|` はちょうど 1 小節を閉じる＝ブロックの先頭の `\|` も空小節を 1 つ作る**（2026-08-29・第279・**ユーザー決定**・✅ 同便実装） | 旧規則（先頭の `\|` は境界を*アンカー*するだけ）は作者の本を 1 小節ずつ削っていた: `君の恋人になったら` は 4 小節 1 行で書かれているのに先頭が `\|` のブロック 2 つだけ 3 小節、`amazing-grace` の和音行は弱起用の先頭 `\|` が捨てられて全和音が 1 小節早く最後の小節が空。**ブロックの終端は今までどおり何も閉じない**（末尾 `c1 \|` を 1 小節に保つ＝追跡 497 冊・作者 98 冊がその綴り）。閉じない綴りは 3 つ: 型つきは装飾／`\|:` は前の小節を開くので scope 先頭では何も作らない／auto-fill・phrase 出口が閉じた境界に乗った `\|` は確認するだけ。**掃き 899 冊で動いた本は 5＝先頭 `\|` を書く本ちょうど 5 冊。** |
