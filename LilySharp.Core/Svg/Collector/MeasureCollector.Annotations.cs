@@ -595,8 +595,9 @@ public sealed partial class MeasureCollector
                     // statement-level handler created it with no staff (defaulting to
                     // staff 0), so on a grand staff a lower-staff 8vb was attributed to
                     // the top staff. The statement-level handler then de-dupes this by
-                    // source position. Non-pedal, non-ottava compound marks (e.g.
-                    // @mark.A rehearsal) are left to that handler, which extracts text.
+                    // source position. Non-pedal, non-ottava compound marks are left to
+                    // that handler — except the rehearsal mark, which is built by the arm
+                    // right below for the reason written there.
                     // LILYPOND-REF: piano-pedal-engraver.cc / ottava-engraver.cc.
                     _musicMarks.Add(new MusicMarkItem(
                         compoundMark, measureIndex, markSyntax.SourceStart, itemIndex, anchorTiming)
@@ -605,10 +606,49 @@ public sealed partial class MeasureCollector
                         VoiceIndex = _cursor.VoiceIndex,
                     });
                 }
+                else if (Semantics.AnnotationValues.Rehearsal(markSyntax, out _) is { } rehearsalLabel)
+                {
+                    // @mark("A") — BUILT HERE, at the host note, and no longer deferred to
+                    // the statement-level handler.
+                    // ⚠️⚠️ THE DEFERRAL WAS THE DEFECT (user report, 2026-08-30). That handler
+                    // only ever sees a mark the walk hands out as a SIBLING of its host note,
+                    // and only the top-level walk does that: MusicSitesLazy descends INTO the
+                    // note, so its @mark child follows it in the flat list. Every container
+                    // that owns its own walk gathers its body's DIRECT children instead
+                    // (`volta.Items`, `repeat.Body.Items`, `cue.Body.Items`,
+                    // `tuplet.Body.Items`), so the child never became a site and the handler
+                    // never ran — a rehearsal mark inside an inline ending, a tuplet, a
+                    // repeat or a cue drew NOTHING, silently. MEASURED on the 2026-08-30
+                    // corpus: 45 of the reader's own books, 120 restored letters, 0 texts
+                    // lost. This is the ONLY mark family that was blind, because every other
+                    // one (@rit, @text, @sustain, the compound ottava above) is already built
+                    // on this path. Do not move it back up.
+                    // ⚠️ The measure/position/label are the ones the statement handler wrote,
+                    // and the anchoring is deliberately NOT the one the arm above uses: a
+                    // rehearsal mark belongs to the BAR, so it takes no itemIndex and no
+                    // anchorTiming. Handing it the note's column moves every mark already on
+                    // the page. The LilyPond address for the label is on
+                    // <see cref="Semantics.AnnotationValues.Rehearsal"/> — one home, not two.
+                    // ⚠️⚠️ THE POSITION DE-DUPE MOVES WITH THE BUILD. The statement handler
+                    // opened with MusicMarkExistsAt and that guard was doing REAL work, not
+                    // guarding against itself: one written part collected onto TWO rendered
+                    // staves (`staff bassline` + `tab bassline`, which is how most of the
+                    // reader's books are scored) walks its notes once per staff, so this arm
+                    // is reached twice for the same written mark. MEASURED without the
+                    // guard: 秋桜 and Take On Me printed every letter TWICE, while a
+                    // one-staff score (ポリリズム) was correct — the shape that makes a
+                    // missing guard look like a working change. One written @mark is one
+                    // printed mark, however many times it is walked or played.
+                    // The statement handler keeps its own copy of this guard, so a mark
+                    // that reaches BOTH paths is still built once, and its fallback stays
+                    // for a mark that rode no note at all.
+                    if (!MusicMarkExistsAt(markSyntax.SourceStart))
+                        _musicMarks.Add(new MusicMarkItem(
+                            MusicMarkType.Rehearsal, rehearsalLabel, measureIndex, markSyntax.SourceStart));
+                }
                 else
                 {
-                    // Everything still here is BUILT by the statement-level handler, which
-                    // reads the label — @mark("A") is the spelling a book can reach. That
+                    // Everything still here is BUILT by the statement-level handler. That
                     // handler runs after this note has been added, so it can no longer see
                     // which measure the mark was written in; record it while the host note
                     // still says so. The mark is still made in exactly one place: only the

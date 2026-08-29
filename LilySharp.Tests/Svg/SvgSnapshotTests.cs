@@ -140,6 +140,13 @@ public class SvgSnapshotTests
         // A volta-bracket alternative with a display label: [1. B "label"] shows
         // the label above the bracket (FormAlternative displayLabel slot).
         yield return new object[] { "test/volta-labels" };
+        // Rehearsal letters written INSIDE a tuplet and inside both inline endings, on a
+        // part scored onto a staff AND a tab. Three of its four letters drew nothing at
+        // all until 2026-08-30 — the containers hand out their body's direct children, so
+        // the mark's node never reached the handler that builds it — and the two-staff
+        // score is what keeps the fix from printing every letter twice. The book's own
+        // footer carries the two poisons.
+        yield return new object[] { "test/rehearsal-marks-inside-containers" };
         yield return new object[] { "test/dynamics" };
         yield return new object[] { "test/beaming" };
         yield return new object[] { "test/grace-notes" };

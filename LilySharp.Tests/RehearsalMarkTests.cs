@@ -377,5 +377,66 @@ public class RehearsalMarkTests
         Assert.True(markX < firstBarlineX,
             $"the mark ({markX:F2}) is drawn past the first barline ({firstBarlineX:F2}) — it is written on the note in bar 1");
     }
+
+    // --- WHERE a mark may be written (the collector again, and the corpus was blind
+    //     to all of it: the 2026-08-30 fix moved 45 of the reader's books and not one
+    //     snapshot in the repository) ---
+
+    /// <summary>
+    /// ⚠️ A mark written inside a container that owns its own walk — an inline ending, a
+    /// tuplet, a repeat, a cue — is one collected mark and is printed. It was NEITHER.
+    /// The statement-level handler is the only path that builds a rehearsal mark, and it
+    /// only ever sees a mark the walk hands out as a SIBLING of its host note; only the
+    /// top-level walk descends INTO the note to do that, while every container gathers
+    /// its body's DIRECT children (<c>volta.Items</c>, <c>repeat.Body.Items</c>,
+    /// <c>cue.Body.Items</c>, <c>tuplet.Body.Items</c>). So the mark's node never became
+    /// a site, the handler never ran, and nothing was drawn — with no diagnostic.
+    /// Reported 2026-08-30 (scratch/ベースタブLy/ポリリズム.lys: three of its four letters
+    /// sit inside <c>[2. … ]</c> and only the fourth printed). The fix builds the mark at
+    /// the host note instead, where every other mark family is already built.
+    /// </summary>
+    [Theory]
+    [InlineData("c4 d e f |: g1 | [1. a1@mark(\"B\") ] :| [2. b1 ]")]   // inline ending
+    [InlineData("tuplet 3/2 { g4@mark(\"B\") a b } c'4 |")]             // tuplet
+    [InlineData("repeat unfold 2 { d2@mark(\"B\") e }")]                // unfolded repeat
+    [InlineData("repeat percent 2 { d2@mark(\"B\") e }")]               // percent repeat
+    [InlineData("cue { f1@mark(\"B\") } | g1 |")]                       // cue region
+    public void AMarkInsideAContainerThatOwnsItsWalk_IsCollectedOnceAndPrinted(string music)
+    {
+        Assert.Equal("B", Assert.Single(CollectedMarks(music)).Text);
+        Assert.Contains(">B</text>", LiveRender.Svg(music));
+    }
+
+    /// <summary>
+    /// ⚠️ ONE written mark is ONE printed mark, however many times the part is walked.
+    /// This is the OTHER half of the fix above and it needs its own book, because a
+    /// one-staff score cannot see it: a part scored onto a staff AND a tab is collected
+    /// once per rendered staff, so building the mark at the host note reaches it twice.
+    /// The de-dupe that had been carrying this claim lives at the top of the
+    /// statement-level handler (<c>MusicMarkExistsAt</c>) and moved with the build.
+    /// MEASURED without it: 秋桜.lys and Take On Me.lys printed every letter twice while
+    /// the single-staff ポリリズム.lys was correct — which is exactly the shape that lets
+    /// a missing guard look like a working change.
+    /// </summary>
+    [Fact]
+    public void AMarkIsPrintedOnce_WhenOnePartIsScoredOntoAStaffAndATab()
+    {
+        const string source = """
+            title "one part on two staves"
+            part melody {
+              clef bass
+              section A { c4@mark("A") d e f |: g1 | [1. a1@mark("B") ] :| [2. b1 ] }
+            }
+            form main { ~A }
+            score main {
+              staff melody
+              tab melody
+            }
+            """;
+        string svg = LiveRender.SvgFromRenderSpec(source);
+
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(svg, ">A</text>"));
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(svg, ">B</text>"));
+    }
 }
 
