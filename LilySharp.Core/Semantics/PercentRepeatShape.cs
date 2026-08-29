@@ -37,51 +37,51 @@ internal enum PercentBodyShape
     Double,
 
     /// <summary>
-    /// Shorter than a measure — a beat slash, LilyPond's third branch, ported 2026-08-29.
+    /// Everything else — LilyPond's <c>else</c>, which is ONE branch and not three.
+    /// The repetition is a single RepeatSlashEvent carrying the WHOLE body's length, so the
+    /// page gets one slash group where the repetition starts and empty measures for the rest
+    /// of it, whether the body is a beat, three measures or eight.
     /// </summary>
-    BeatSlash,
-
-    /// <summary>
-    /// LILYSHARP-OWN: a subdivision of LilyPond's <c>else</c>, which does not name it.
-    /// Three or more WHOLE measures, which is where Lily# and LilyPond deliberately part.
-    /// LilyPond engraves one bare slash and then leaves the repetition's remaining measures
-    /// completely empty (measured on 2.26.0, scratch/p282/wholebody.ly); Lily# marks each
-    /// repeated measure with a single percent instead. Neither picture says what the music
-    /// is, which is what <c>Diagnostic.PercentBodyTooLong</c> exists to tell the writer.
-    /// </summary>
-    WholeMeasureRun,
-
-    /// <summary>
-    /// LILYSHARP-OWN, and the other half of the same subdivision.
-    /// Longer than a measure but not a whole number of them — a malformed body, in practice
-    /// one whose measures are already reported short or long. Marked per measure like
-    /// <see cref="WholeMeasureRun"/>, and NOT warned about, because the bar diagnostics that
-    /// fire on the same body say the useful thing first.
-    /// </summary>
-    Ragged,
+    /// <remarks>
+    /// LILYPOND-REF: lily/percent-repeat-iterator.cc:86-99 next_element — the two tests are
+    ///   <c>== mlen</c> and <c>== mlen * 2</c>, and the else emits RepeatSlashEvent with
+    ///   <c>slash-count</c> from calc-repeat-slash-count and <c>length</c> = the body's.
+    /// LILYPOND-REF: scm/music-functions.scm:377-389 calc-repeat-slash-count — equal written
+    ///   durations give <c>max(log - 2, 1)</c>, so a body of whole notes gives 1; unequal
+    ///   durations give 0, which lily/slash-repeat-engraver.cc:57-65 turns into the
+    ///   DoubleRepeatSlash grob instead of RepeatSlash.
+    /// ⚠️ THIS USED TO BE THREE MEMBERS. Sessions 282-285 read the else as three cases and
+    /// ported only the sub-measure one, calling the rest a declared approximation and warning
+    /// about it (LYS2014). Reading the iterator settles it: there is no third test, the whole
+    /// else is one event, and the "3 or more whole measures" case was never LilyPond's — it
+    /// was a subdivision Lily# invented and then documented as a deviation. Measured on
+    /// 2.26.0 (scratch/p282/wholebody3.ly, wholebody8.ly): bodies of 3 and of 8 whole measures
+    /// both draw ONE slash in the repetition's first measure and leave every later measure of
+    /// it blank, which is what this branch now produces.
+    /// </remarks>
+    RepeatSlash,
 }
 
 /// <summary>
-/// The one home for "which sign does this body earn". Two callers ask, and they must not
-/// disagree: <c>MeasureCollector</c> asks in order to emit the sign, and
-/// <c>MeasureValidator</c> asks in order to warn about the one shape whose sign cannot say
-/// what the music does. A warning that fired on a body the collector signs differently would
-/// be worse than no warning at all.
+/// The one home for "which sign does this body earn". The collector asks in order to emit the
+/// sign; nobody else needs to, now that the shape no longer decides whether to warn.
 /// </summary>
 /// <remarks>
-/// ⚠️ THE TWO CALLERS MEASURE THE LENGTH SEPARATELY, and that is deliberate: the collector
-/// reads it off <c>MeasureBuilder</c>, which is doing the real bar-closing, while the
-/// validator walks the body itself because no builder exists at that layer. What is shared
-/// is the RULE, which is the part that would drift. The two measurements are checked against
-/// each other by sweep rather than by construction — a corpus census counted 30 books with a
-/// whole-measure run through the collector, and the validator's warning must land on exactly
-/// those 30. It does (2026-08-29: 30 books, 94 warnings, no book missed and none spurious),
-/// and getting there took two corrections on the validator's side, both of which the census
-/// is what caught.
+/// ⚠️ THIS USED TO HAVE A SECOND CALLER. MeasureValidator asked the same question in order to
+/// warn (LYS2014) about the "three or more whole measures" shape, and the two measured the
+/// body's length separately — the collector off MeasureBuilder, the validator by walking the
+/// body — with a corpus census as the only thing holding them together. Both the shape and the
+/// warning are gone: LilyPond has one else, not three cases, so there is nothing left for a
+/// second reader to disagree about.
 /// </remarks>
 internal static class PercentRepeatShape
 {
     /// <summary>Classifies a body by its played length against the measure length.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/percent-repeat-iterator.cc:86-99 Percent_repeat_iterator::next_element
+    ///   — <c>body_length_.main_part_ == mlen</c>, then <c>== mlen * 2</c>, then the else. The
+    ///   two equalities are the whole rule; a body's length is never compared any other way.
+    /// </remarks>
     public static PercentBodyShape Classify(Fraction bodyLength, Fraction measureLength)
     {
         if (measureLength <= Fraction.Zero || bodyLength <= Fraction.Zero)
@@ -90,26 +90,6 @@ internal static class PercentRepeatShape
             return PercentBodyShape.Single;
         if (bodyLength == measureLength + measureLength)
             return PercentBodyShape.Double;
-        if (bodyLength < measureLength)
-            return PercentBodyShape.BeatSlash;
-        return WholeMeasures(bodyLength, measureLength) is > 0
-            ? PercentBodyShape.WholeMeasureRun
-            : PercentBodyShape.Ragged;
-    }
-
-    /// <summary>
-    /// How many whole measures the body is, or 0 when it is not a whole number of them.
-    /// Only meaningful for <see cref="PercentBodyShape.WholeMeasureRun"/>, whose message
-    /// names the count.
-    /// </summary>
-    public static int WholeMeasures(Fraction bodyLength, Fraction measureLength)
-    {
-        if (measureLength <= Fraction.Zero || bodyLength <= Fraction.Zero)
-            return 0;
-        // Fraction is exact, so this is an exact divisibility question and not a tolerance
-        // one: (a/b) / (c/d) = (a·d) / (b·c), whole iff the numerator divides evenly.
-        long num = (long)bodyLength.Numerator * measureLength.Denominator;
-        long den = (long)bodyLength.Denominator * measureLength.Numerator;
-        return den != 0 && num % den == 0 ? (int)(num / den) : 0;
+        return PercentBodyShape.RepeatSlash;
     }
 }

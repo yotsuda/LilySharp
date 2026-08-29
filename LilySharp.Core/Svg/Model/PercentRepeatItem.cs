@@ -40,19 +40,19 @@ namespace LilySharp.Core.Svg.Model;
 ///   body == one measure → PercentEvent, body == two measures → DoublePercentEvent, anything
 ///   else → RepeatSlashEvent. One event per repetition, so `\repeat percent 4` of a two-bar
 ///   body reports THREE DoublePercentEvents, not six percents.
-/// ★ The third branch is ported FOR BODIES SHORTER THAN A MEASURE only — the beat slash,
-/// <see cref="BeatTiming"/>. For bodies of three or more whole measures it is deliberately
-/// NOT PORTED HERE, and they keep the per-measure percent. That split is LilyPond's own:
-/// both slash
-/// grobs describe themselves as being "for repeating patterns shorter than a single measure"
-/// (scm/define-grobs.scm, the RepeatSlash and DoubleRepeatSlash <c>description</c> fields),
-/// and a whole-measure body walks out of the shape they were designed for.
-/// ⚠️ WHAT LILYPOND ACTUALLY DRAWS THERE WAS MEASURED (2026-08-29, 2.26.0,
-/// scratch/p282/wholebody*.ly): <c>\repeat percent 2 { c'1 d'1 e'1 f'1 }</c> engraves the
-/// four written measures, then ONE bare slash in the fifth and THREE COMPLETELY EMPTY
-/// MEASURES after it — the slash event has no measure-wise extent, so the repetition's
-/// remaining bars receive nothing at all. Copying that would replace four percent signs with
-/// three blank bars in 24 books of the corpus; the count is in HANDOFF §1.
+/// ★ ALL THREE BRANCHES ARE PORTED. The third is the beat slash, <see cref="BeatTiming"/>,
+/// and it is not only for bodies shorter than a measure: LilyPond's else has no length test
+/// in it, so a body of three or of eight whole measures reaches the same RepeatSlashEvent,
+/// which carries the WHOLE body's length. Measured (2026-08-29, 2.26.0,
+/// scratch/p282/wholebody3.ly and wholebody8.ly): the repetition draws ONE slash in its first
+/// measure and leaves every later measure of it completely empty.
+/// ⚠️ THE GROB DESCRIPTIONS ARE NOT THE RULE. RepeatSlash and DoubleRepeatSlash both call
+/// themselves grobs "for repeating patterns shorter than a single measure"
+/// (scm/define-grobs.scm), and sessions 282-285 read that as a fourth case and kept a
+/// per-measure percent for whole-measure bodies, with LYS2014 warning that the picture could
+/// not say what the music was. The iterator has no such case; the description is a summary of
+/// the common use, not of the branch. The invented picture and the warning are both retired
+/// (session 286) — a reader reported the warning as wrong and was right.
 /// </remarks>
 public sealed record PercentRepeatItem(
     // Measure index where the percent sign appears. For a DOUBLE sign this is the SECOND

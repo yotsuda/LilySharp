@@ -3352,25 +3352,21 @@ public sealed partial class MeasureCollector
             var bodyLength = builder.CurrentDuration - openAtStart;
             for (int m = 0; m < bodyMeasureCount; m++)
                 bodyLength += meterAtBody;
-            // A two-measure body takes the DOUBLE sign; one measure takes the single one; a
-            // body SHORTER than a measure takes a beat slash, LilyPond's third branch.
-            // ⚠️ THE THIRD BRANCH IS TAKEN ONLY BELOW ONE MEASURE, and the cut is deliberate:
-            // for a body of three or more WHOLE measures LilyPond's behaviour is NOT PORTED
-            // HERE, and the per-measure percent stands instead.
-            // LilyPond's own grob descriptions scope both slash grobs to "repeating patterns
-            // shorter than a single measure" (scm/define-grobs.scm, the RepeatSlash and
-            // DoubleRepeatSlash description fields), and what 2.26.0 in fact engraves for a
-            // four-measure body is one bare slash followed by three EMPTY measures — measured
-            // 2026-08-29, scratch/p282/wholebody.ly. 30 books of the corpus write that shape;
-            // copying LilyPond there would blank them. See PercentRepeatItem.
-            // ⚠️ THE CHOICE IS NOT SPELLED HERE, because a second reader has to make the same
-            // one: MeasureValidator warns (LYS2014) about exactly the shape this arm signs
-            // per measure, and a warning that fired on a body signed some other way would be
-            // worse than none. The rule lives in PercentRepeatShape; the two measure the
-            // length separately and are checked against each other by corpus sweep.
+            // A two-measure body takes the DOUBLE sign; one measure takes the single one;
+            // EVERYTHING ELSE takes a repeat slash carrying the body's whole length.
+            // ⚠️ THAT LAST BRANCH USED TO BE CUT IN THREE. Below one measure it emitted the
+            // slash; at three or more whole measures it marked each repeated measure with a
+            // percent and MeasureValidator warned (LYS2014) that the picture could not say
+            // what the music was. LilyPond's iterator has no such cut — two equality tests
+            // and one else — and what it engraves for a body of three or of eight whole
+            // measures is ONE slash in the repetition's first measure with every later
+            // measure blank (measured on 2.26.0: scratch/p282/wholebody3.ly, wholebody8.ly).
+            // The per-measure percent was Lily#'s invention, the warning was the confession
+            // of it, and both are gone.
+            // LILYPOND-REF: lily/percent-repeat-iterator.cc:86-99 next_element.
             var bodyShape = PercentRepeatShape.Classify(bodyLength, meterAtBody);
             bool isDoubleBody = bodyShape == PercentBodyShape.Double;
-            bool isBeatSlashBody = bodyShape == PercentBodyShape.BeatSlash;
+            bool isBeatSlashBody = bodyShape == PercentBodyShape.RepeatSlash;
             // LilyPond decides the count ONCE, from the body's written durations, and the
             // count then chooses the grob as well as the number of slashes.
             // LILYPOND-REF: scm/music-functions.scm:378-390 calc-repeat-slash-count.
@@ -3403,11 +3399,36 @@ public sealed partial class MeasureCollector
                     // ⚠️ PLAYBACK IS UNAFFECTED: MidiExporter walks the SYNTAX tree
                     // (ProcessRepeat, MidiExporter.cs:1895) and never reads these items, and
                     // so do the MusicXML and .ly exporters. Only the engraved page changes.
+                    // ⚠️ THE SPACER IS WRITTEN IN BAR-SIZED PIECES, because the builder
+                    // auto-completes AT MOST ONE measure per item: a single item carrying
+                    // three whole notes closes one bar and swallows the other two, which is
+                    // what a three-measure body looked like on the first attempt — one slash
+                    // and one measure where LilyPond draws one slash and three measures.
+                    // LilyPond has no such item: the RepeatSlashEvent carries the body's
+                    // whole length and the CONTEXT's bar machinery keeps closing measures
+                    // underneath it, so the repetition occupies exactly as many bars as the
+                    // body did. Splitting at the bar lines is how that reads here. The pieces
+                    // are all spacers and only the FIRST carries the sign, so a body shorter
+                    // than the room left in the open bar is one piece and unchanged.
                     int slashMeasure = builder.CurrentMeasureIndex;
                     var slashTiming = builder.CurrentDuration;
                     int slashItemIndex = builder.CurrentItemCount;
-                    builder.AddItem(
-                        new RestItem(bodyLength, 0, repeat.Position) { IsSpacer = true });
+                    var remaining = bodyLength;
+                    while (remaining > Fraction.Zero)
+                    {
+                        // The room left in the bar that is open right now — the builder's
+                        // CurrentDuration is always the position INSIDE it. Read the meter
+                        // each turn so a body that outlives a mid-piece `time` still lands on
+                        // the bar lines the reader sees.
+                        var bar = builder.CurrentMeasureLength;
+                        var room = bar - builder.CurrentDuration;
+                        if (room <= Fraction.Zero)
+                            room = bar;
+                        var piece = remaining < room ? remaining : room;
+                        builder.AddItem(
+                            new RestItem(piece, 0, repeat.Position) { IsSpacer = true });
+                        remaining -= piece;
+                    }
                     _percentRepeats.Add(new PercentRepeatItem(
                         slashMeasure,
                         repeat.Position,

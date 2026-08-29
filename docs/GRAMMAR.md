@@ -1328,14 +1328,20 @@ Repeat         = 'repeat' , ( 'percent' | 'unfold' | 'tremolo' ) , [ Integer ] ,
                  (* repeat percent 2 { … } = percent-repeat the measure; volta repeats
                     use the symbolic |: … :| form, NOT a 'repeat' keyword *)
                  (* WHICH SIGN a percent repeat prints is the BODY'S LENGTH, not the
-                    repeat count: a ONE-measure body prints the single % in each repeated
-                    measure, and a TWO-measure body prints ONE double-% on the bar line
-                    between the pair — so 'repeat percent 4 { r1 | r1 }' is three double
-                    signs, not six single ones. LilyPond decides the same way and once,
-                    on the second iteration (percent-repeat-iterator.cc's next_element).
-                    ⚠️ LilyPond's third case — a body that is neither one nor two measures
-                    — prints BEAT SLASHES, and that is NOT implemented: such a body still
-                    gets a single % per measure here. *)
+                    repeat count, and LilyPond decides it once, on the second iteration
+                    (percent-repeat-iterator.cc's next_element). There are TWO tests and
+                    one else — no more:
+                      one measure   -> the single % in each repeated measure
+                      two measures  -> ONE double-% on the bar line between the pair,
+                                       so 'repeat percent 4 { r1 | r1 }' is three double
+                                       signs, not six single ones
+                      anything else -> ONE repeat slash where the repetition starts, and
+                                       the rest of that repetition's measures are BLANK.
+                                       'repeat percent 2 { c1 | c1 | c1 }' is three written
+                                       measures, one slash, and two empty bars.
+                    How many slashes that last sign carries comes from the body's WRITTEN
+                    durations (calc-repeat-slash-count): all equal gives a plain slash,
+                    unequal gives the double slash. *)
 Cue            = 'cue' , [ ClefName ] , MusicBlock ;
                  (* Small cue notes. A cue is a REGION, not a note annotation — it maps
                     onto LilyPond's CueVoice context, whose size is a context property,

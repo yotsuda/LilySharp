@@ -354,23 +354,34 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 > ★ **⑵⑶ の本はユーザーの実コーパス** `scratch\ベースタブLy\`（未追跡・300 冊級）。
 > **追跡 573 冊には無い**ので、閉じるときは**射程を実コーパス側でも数えること**。
 
-- **U1. ★★★ 3 小節以上の `repeat percent` で LYS2014 が出るのは不正**（**ユーザー報告**）。
-  **報告の内容**: 「LP は 3 小節以上を repeat percent で繰り返した場合、**後続の最初の小節のみに
-  スラッシュを書いて、次の二つの小節は空欄で残していた**と思う。**LP の双子をよく見て。**」
-  ⚠️ **今日の Lily# は「1 反復につき N 個の `%`」を刷り、LYS2014 でそれを*自白*している**
-  （`repeat percent 2 { c1 | c1 | c1 }` で「body is 3 measures long, and no repeat sign says
-  that」）。**報告が当たっているなら、警告の文面ではなく*刷り方*が誤り**——
-  **LP は 1 反復に 1 個だけ置いて残りを空白にする**ので、**Lily# の N 個は LP の絵ではない。**
-  ★ **これは §1 の「宣言された乖離」（`docs/APPROXIMATIONS.md` の APPROX・`PercentRepeatItem`
-  の remark）を*正面から否定する*報告**なので、**閉じるなら APPROX とその remark も同時に落とす。**
-  ⚠️ **裏取りの順序**: **⒜ LP v2.26.0（正典）で 3 小節 body を実際に組む**——
-  **`lily/percent-repeat-engraver.cc` と `scm/define-music-display-methods.scm` を読む前に、
-  まず絵を出すこと**（§5.0）。**⒝ その絵が「1 個＋空白 2」なら、LYS2014 は消えるのではなく
-  *存在理由を失う***（**警告は「読み手が誤読する絵を出している」ことの自白だったので、
-  絵が直れば言うことが無くなる**）。**⒞ 射程は `repeat percent` を 3 小節以上の body で書いた本を
-  実コーパス込みで数えるところから。**
-  ⚠️ **`repeat percent { … }` は回数省略＝構文エラー**（`Expected 'IntegerLiteral'`）。
-  **報告の綴りそのままでは LYS2014 の前に構文エラーが出る**ので、**再現は `repeat percent 2 { … }`。**
+- **U1. ✅ 閉じた（第286・報告は当たっていた）＝3 小節以上の `repeat percent` は LP のスラッシュ 1 本になり、LYS2014 は退役**。
+  **報告**: 「LP は 3 小節以上を repeat percent で繰り返した場合、後続の最初の小節のみにスラッシュを
+  書いて、次の二つの小節は空欄で残していた**と思う**。LP の双子をよく見て。」⇒ **そのとおりだった。**
+  ★★★ **裏取りは LP のソースで割れた**——**`lily/percent-repeat-iterator.cc:86-99` の分岐は
+  `== mlen` と `== mlen*2` の 2 つだけで、`else` は 1 本**。**その else は body の*全長*を持つ
+  `RepeatSlashEvent` を 1 個出すだけ**なので、**反復は「先頭にスラッシュ 1 本＋残りは空小節」**になる。
+  **`scm/music-functions.scm:377-389 calc-repeat-slash-count`** が本数を決め（**音価が揃っていれば
+  `max(log-2,1)`＝全音符なら 1 本／揃っていなければ 0**）、**`lily/slash-repeat-engraver.cc:57-65`** が
+  **0 なら `DoubleRepeatSlash`・それ以外なら `RepeatSlash`**。**絵でも確かめた**（2.26.0）:
+  `scratch/p282/wholebody3.png`（3 小節 body＝スラッシュ 1 本＋空 2）・`wholebody8.png`（8 小節 body＝
+  スラッシュ 1 本＋空 7）・`scratch/p286/lp/ragged.png`（3/4 で `e4. e8 e4. e8`＝**2 本スラッシュ**）。
+  ⚠️⚠️ ★★★ **第282〜285 が「LP 自身の分岐」と書いていた根拠は grob の *description* だった**
+  （`RepeatSlash`／`DoubleRepeatSlash` が自分を "repeating patterns shorter than a single measure" と
+  説明している）。**description は用法の要約であって分岐ではない**——**iterator にその条件は無い。**
+  ⇒ ★★ **「LP はこうしている」を書くときは、*description* ではなく*分岐の在るファイル*を読むこと。**
+  **`WholeMeasureRun` と `Ragged` は Lily# が発明した細分**で、**LYS2014 はその発明の自白だった。**
+  ★ **射程は実測**: **SVG 全数掃き 1519 冊（base/head 同時刻の 2 パス）＝SAME 1484 / MOVED 35**
+  （**ユーザー実コーパス 32 ＋ scratch 3・追跡 573 冊は 0 冊＝snapshot 不動**）。
+  **`lysc check` は LYS2014 の 96 行が消えただけ・終了コードの変化 0。**
+  ⚠️ **ユーザーの実譜面は本当に動く**（例: `Walk.lys` は percent 記号 364 → 298・ページ高 8450 → 6760）。
+  ⚠️ ★★ **掃きの 2 パスの間にユーザーが `Walk.lys` を編集した**（mtime 11:45:31）ので、
+  **1 回目の対では Walk.lys に「LYS2002 が 4 行消えて 5 行増えた」という*偽の*差が出た**。
+  **同じ exe で同じファイルを続けて叩いたら base ≡ u1**。⇒ ★★★ **ユーザーの生きたコーパスを母集団に
+  使うときは、base と head を*続けて*取ること**（§0 の「A/B の before はその場で写す」の掃き版）。
+  ★ **残った小物 1 つ＝スラッシュの小節内 X が LP と少し違う**（3 小節 body で LP は小節線から 2.09、
+  Lily# は 1.09）。**構造ではなく spacing の話**で、**第282 が移植した拍スラッシュと同じ配置規則**を
+  共有している。**触るなら拍スラッシュ側の番人と一緒に。**
+
 
 - **U2. ★★ `@rit` が和音記号 `Dmaj7` と重なる**（**ユーザー報告**・
   `scratch\ベースタブLy\Untitled-6.lys` の**五線 3 行目**）。

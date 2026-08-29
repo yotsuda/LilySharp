@@ -19,13 +19,20 @@ turned out to be hiding them.
   the whole thing into a reference followed by a slur. No book in the repository wrote it.
   There is no per-reference transposition any more: `transpose` is a part property and
   chromatic, so a motif quoted a third higher is now written out.
-- **A two-measure percent repeat prints ONE double sign**, on the bar line between the
-  pair, where it used to print a single `%` in each measure — so
+- **A percent repeat prints the sign its body's LENGTH earns, exactly as LilyPond decides
+  it.** A one-measure body is unchanged. A TWO-measure body prints ONE double sign on the
+  bar line between the pair, where it used to print a single `%` in each measure — so
   `repeat percent 4 { r1 | r1 }` is three double signs rather than six single ones, and
-  both measures under each sign print no music. Which sign a repeat gets is the body's
-  LENGTH, exactly as LilyPond decides it. A one-measure body is unchanged. LilyPond's
-  third case — a body that is neither one nor two measures — prints beat slashes and is
-  still not implemented.
+  both measures under each sign print no music. **Anything else** — a body shorter than a
+  measure, longer than one, or a whole run of three or more — prints ONE repeat slash where
+  the repetition starts and leaves the rest of the repetition's measures blank, where Lily#
+  used to stamp a percent in every repeated measure. `repeat percent 2 { c1 | c1 | c1 }` is
+  three written measures, one slash, and two empty bars. The slash count comes from the
+  body's written durations: equal durations give a plain slash, unequal ones give the
+  double slash. LilyPond has two length tests and one else, not four cases; the belief that
+  it reserved the slash for sub-measure patterns came from the grob descriptions rather
+  than from the iterator, and the warning that admitted the invented picture (`LYS2014`) is
+  retired with it. A reader reported the warning as wrong and was right.
 - **`staff <clef word>` alone names a part** — `staff bass` renders a part named
   `bass`, and says so (`LYS1007`) when none is declared. The reference scan read that
   lone word as a clef with the name left off and collected nothing, so a score whose

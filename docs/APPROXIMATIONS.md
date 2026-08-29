@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 55 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 53 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 48 | 観測者がゼロだと自認しているもの |
-| `OWN` | 117 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **220** | |
+| `OWN` | 114 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **215** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -34,7 +34,7 @@
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 5 |
 | `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 5 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（55 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（53 件）
 
 ### `LilySharp.Core/Rendering/Pdf/PdfDrawingContext.cs`
 - **:310** ⚠️ NOT PORTED — backend-blocked: CHARACTERS AT THE CLUSTERS' POSITIONS, not glyphs at
@@ -50,8 +50,6 @@
 - **:729** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:297** ⚠️ subdivide_beams (:186-188) is not ported: it is gated on
-### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:3358** for a body of three or more WHOLE measures LilyPond's behaviour is NOT PORTED
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
 - **:172** ⚠️ WHAT IS NOT PORTED, and why it cannot be reached rather than was skipped:
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
@@ -124,8 +122,6 @@
 - **:147** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 ### `LilySharp.Core/Svg/Model/LyricItem.cs`
 - **:100** ⚠️ NOT PORTED — the voice's melismaBusy state: the trigger here is the
-### `LilySharp.Core/Svg/Model/PercentRepeatItem.cs`
-- **:45** NOT PORTED HERE, and they keep the per-measure percent. That split is LilyPond's own:
 
 ## UNWATCHED — 観測者がゼロだと自認しているもの（48 件）
 
@@ -211,7 +207,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（117 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（114 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:1653** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -242,9 +238,6 @@
 - **:476** LILYSHARP-OWN: LilyPond has no equivalent refusal, and cannot — it resolves through
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
 - **:337** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
-### `LilySharp.Core/Semantics/PercentRepeatShape.cs`
-- **:45** LILYSHARP-OWN: a subdivision of LilyPond's else, which does not name it.
-- **:55** LILYSHARP-OWN, and the other half of the same subdivision.
 ### `LilySharp.Core/Svg/Collector/BeamDetector.cs`
 - **:950** LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
 - **:980** LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's
@@ -253,7 +246,7 @@
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
 - **:1842** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:3650** LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
+- **:3671** LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
 - **:67** LILYSHARP-OWN: the DEFAULT five is LilyPond's (scm/define-grobs.scm:3396,
 ### `LilySharp.Core/Svg/Collector/StaffAccidentalColumns.cs`
@@ -390,8 +383,6 @@
 - **:152** LILYSHARP-OWN: the @fig(…) SPELLING is Lily#'s, not a port — LilyPond writes
 ### `LilySharp.Core/Svg/Model/Measure.cs`
 - **:189** ⚠️ LILYSHARP-OWN: THE FLAGGED ZERO-WIDTH MEASURE IS A TRANSLATION DEVICE. LilyPond
-### `LilySharp.Core/Syntax/Diagnostic.cs`
-- **:755** LILYSHARP-OWN: LilyPond has no counterpart to this warning and could not have
 ### `LilySharp.Core/Tablature/Tunings.cs`
 - **:196** LILYSHARP-OWN. Four is the guitarist's one-finger-per-fret span and also the number
 - **:208** LILYSHARP-OWN. Without it the hand never comes down on its own — "do not move" beats

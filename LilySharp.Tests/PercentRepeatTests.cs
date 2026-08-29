@@ -194,12 +194,20 @@ public class PercentRepeatTests
         // `x_width = hypot (t, t/s)` of lookup.cc's repeat_slash, which on a 45° slash is
         // the perpendicular thickness times √2. That the two are related by exactly √2 is
         // what this test now reads back.
+        // ⚠️ THE PART IS NAMED `mel`, NOT `g` (session 286). Written `part g { }` this book
+        // does not parse — `g` is a note name, LYS0002 — and lysc renders "from the part of
+        // the file that parsed", which left a body measuring 5/4 instead of one measure. The
+        // test still passed, because a 5/4 body took the same per-measure percent an
+        // in-range body did. It stopped passing the moment that branch became LilyPond's
+        // repeat slash, which is how the broken book came to light: the assertions below are
+        // pinned to LilyPond 2.26 output for a ONE-MEASURE body, and that is what they now
+        // actually measure.
         var svg = LiveRender.SvgFromRenderSpec("""
             octave absolute
-            part g { }
-            section A { g { repeat percent 2 { c4 c c c | } } }
+            part mel { }
+            section A { mel { repeat percent 2 { c4 c c c | } } }
             form main { ~A }
-            score main { staff g tab g }
+            score main { staff mel tab mel }
             """);
 
         // Horizontal staff lines: 5 notation lines (1.0 apart) above 6 tab
@@ -585,23 +593,32 @@ public class PercentRepeatTests
     }
 
     /// <summary>
-    /// A body of THREE OR MORE WHOLE measures is a decided divergence and keeps the
-    /// per-measure percent — it does NOT become a beat slash. What LilyPond engraves there is
-    /// one bare slash and then EMPTY measures for the rest of the repetition (measured
-    /// 2026-08-29 on 2.26.0, scratch/p282/wholebody.ly), which is out of the shape both slash
-    /// grobs describe themselves as being for; the corpus writes it 200 times in 32 books.
+    /// A body of THREE OR MORE WHOLE measures takes the SAME branch a sub-measure body does —
+    /// LilyPond's else is one branch, not three. The repetition is ONE slash carrying the
+    /// body's whole length, so the sign appears once, in the repetition's first measure, and
+    /// the measures after it in that repetition are blank.
+    /// ★ Measured on 2.26.0: scratch/p282/wholebody3.ly (3 whole notes) and wholebody8.ly
+    /// (8) both draw exactly one slash per repetition with every later measure empty.
+    /// ⚠️ THIS TEST USED TO ASSERT THE OPPOSITE — three per-measure percents, called a decided
+    /// divergence. It was decided against LilyPond's grob DESCRIPTIONS ("repeating patterns
+    /// shorter than a single measure") rather than against its iterator, which has no such
+    /// test. Session 286.
     /// </summary>
     [Fact]
-    public void Collector_ThreeMeasureBody_KeepsThePerMeasurePercent()
+    public void Collector_ThreeMeasureBody_IsOneSlashCoveringThreeMeasures()
     {
         var score = new MeasureCollector().Collect(
             SyntaxTree.Parse("repeat percent 2 { c1 | d1 | e1 | }"));
 
-        Assert.Equal(3, score.PercentRepeats.Length);
-        Assert.All(score.PercentRepeats, pr => Assert.False(pr.IsBeatSlash));
-        Assert.All(score.PercentRepeats, pr => Assert.False(pr.IsDouble));
-        Assert.Equal(new[] { 3, 4, 5 },
-            score.PercentRepeats.Select(pr => pr.MeasureIndex).ToArray());
+        var pr = Assert.Single(score.PercentRepeats);
+        Assert.True(pr.IsBeatSlash);
+        Assert.False(pr.IsDouble);
+        // Equal written durations: calc-repeat-slash-count gives max(log - 2, 1) = 1.
+        Assert.Equal(1, pr.SlashCount);
+        // The repetition starts at the fourth measure and the sign is on that one alone.
+        Assert.Equal(3, pr.MeasureIndex);
+        // …and it still OCCUPIES three, so the two after it exist and are empty.
+        Assert.Equal(6, score.Voice.Measures.Length);
     }
 
     /// <summary>
