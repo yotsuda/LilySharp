@@ -178,6 +178,89 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第285セッション＝**前便の「次の一手」（`combinedStaff` が動かしたアイテムの住所付け直し）に着手して閉じた（1 便）**——commit は `d8914414`。**snapshot 0 枚・台帳不動**。⚠️ **掃きは 0 冊ではなく 3 冊動いた**——**起票が「コーパスは盲」と書いていたのが外れ、しかも 3 冊とも LP の実測が本の冒頭に書いてある双子で、動いた先がその実測値**（⑵）。
+
+**⑴ 引き継ぎの数は全部当たった**。**HEAD `6012e92f`・未 push 2・木 0・未追跡 0・Core 0 エラー 0 警告・suite 6478/0/4/6482・台帳 740／exact 582／ss 非ゼロ 188／総和 24.714341137／count 156 中 2・追跡 573 冊・snapshot 223 枚**が 1 つも違わない。**CI は最後に push した木（`eeeb5f70`）で緑。**
+
+**⑵ ★★★ 「今日その綴りで声部持ちのアイテムを 2 番目のパートに置いている本は 0 冊」が外れた——3 冊在り、しかもその 3 冊は LP の答えを*本文に書いて*持っていた**。**動いたのは `audit/lpreg/pcsm-probe.lys`／`pcsm-frame.lys`／`pcsm-frame2.lys`**——全部 `part-combine-silence-mixed.ly` の双子で、**`@text("R")`／`@text("r")` を 2 つのパートに書いている**。⚠️ **第284 が数えたのは「tuplet・dynamics・articulation を置いた本」で、`@text` は `DynamicItem` に乗る**——**数えた集合が島の集合より狭かった**（§0 の「N 件はどの集合に訊いたかまで書く」のコード側の 3 例目）。★★★ **そして 3 冊とも*LP の実測へ*寄った**: **`pcsm-probe.lys` の冒頭が「bar 1 → ONE rest, label "r" ONLY（"R" goes with its event）」と書いてある**のに、**Lily# は "R" と "r" の両方を刷っていた**——**"R" は routing が NullVoice へ送った全休符のもの**で、**その注釈がどこへ行ったかを誰も routing に訊いていなかった**。⇒ ★★ **「掃きが 0 冊だから盲だ」を書く前に、島の*全*綴りで grep すること。**
+
+**⑶ 直しは 2 段で、両方に生きた毒がある**。**⒜ コレクタが combined の後続パートを condensed と*同じ*連結空間で住所付ける**（`staffVoiceSlots` を reset しない）——**2 つのパートが「別の住所を持てる」唯一の空間がそれだから**。**⒝ `CombinedStaffAddressing` がそれを譜の実 slot へ翻訳する**（`ToStaffGroups` が譜を建てた直後・`ScoreContent` に対して 1 か所で）。★ **⒝ の地図は新しく作っていない**——**`Route` が a2/Solo ラベルのために既に持っていた `landed`/`placed` を、パートごとに報告し直しただけ**（`PartCombineResult.ItemAddresses`）。⚠️ **毒の効き方が違う**: **⒜ を戻すと 6 本中 5 本が赤・⒝ を止めると 2 本が赤**（spacer が入る本と NullVoice の本）——**falsifier 1 冊では ⒝ は恒等**で、**⒝ が要るのは「詰め物が入る／消える」本のほう。**
+
+**⑷ span は「開いた声部」に留めて内側で clip する——これは LP と同じ理由**。**両端を別々に翻訳すると、途中でストリームが替わった span の終端が*自分が居ない声部*の位置を名指す**。**LP の `Tuplet_engraver` は 1 つの Voice context に住み、bracket は*その context が見た*音符列で囲まれる**（`acknowledge_note_column`）ので、**移った先の音符は別の engraver が見ている**。⚠️ **残った近似は 1 つ**＝**歩きが終端の小節の中で止まる**ので、**小節をまたぐ trill spanner が途中で替わると開始音符まで clip される**（tuplet bracket は 2 つの添字が同じ小節なので影響なし）。**書いてある・読む本が 1 冊も無いので推測で埋めていない。**
+
+**⑸ ★★ `BuildTupletSpans` の範囲外 guard は、コーパスに客が 1 人も居なくなった**——**同じ計器を両側で回して 899 冊: 前 10763 通し/4 落とし、後 10763 通し/0 落とし**。**その 4 本は `pctend-probe.lys` の*1 番目*のパートの bracket 2 本を 2 度ずつ**で、**2 番目のパートを collect している最中に slot 0 で拾われていた**（相方の小節が `R1` 1 個だから*範囲外*になっただけ＝§2 A が起票していた形そのもの）。⚠️ **guard は残す**——**今日客が居ないのはコーパスの事実であってモデルの事実ではない。**
+
+⚠️⚠️ ★★★ **⑹ 見つけた別の欠陥＝dynamic の X *列*が自分の声部を読まない**（本便で実測・**直していない**）。**`DynamicEngraver` は anchor を `AnchorItem(dynVoices, VoiceIndex, …)` で*声部から*引くのに、列 X は `GetItemXOffset(dynMeasures, …)`＝*譜の* measures から引く**——**同じ 1 つの量の 2 つ目の綴り**（§5.2.1②）。**射程は共有譜ではない**: **`scratch/p285/dynx-probe.lys` は 1 パートの `voice { } { }` で、下声の `e2@f` が x 18.60 に在るのに `f` は x 11.78＝上声の 2 番目の音符の中心に彫られる**。★ **兄弟の articulation は正しい列を読む**（同じ本の `@staccato` は自分の音符に乗る）。⚠️ **出力が変わる＝独立した便**（下の「見つけて直していないもの」の先頭）。
+
+⚠️⚠️ **⑺ ビルドの罠を 1 つ踏んだ＝`Copy-Item` は `LastWriteTime` を保存する**。毒を戻すのに `.bak` から `Copy-Item` で書き戻したら、**復元したファイルのタイムスタンプが毒ビルドの `obj/` より*古く*なり、MSBuild が「変更なし」と判断してコンパイルを飛ばした**——**毒が入ったままのバイナリで緑を測るところだった**（実際には*赤*が出て、しかも「もっともらしい赤」だった）。⇒ **`Copy-Item` で戻したら `(Get-Item …).LastWriteTime = Get-Date` を打つ**（RULES §5.5 に足した）。
+
+⚠️ **要ユーザー判断で開いているものは前便どおり**（標·volta の 4 定数の削除・silhouette chordNames scalar・和音語彙 CHL 3 点・Nimbus Sans 同梱・CHANGELOG 版番号・SectionLabel の X・F【8】3・混在綴りの同名 section・標の箱そのもの・`@text` の縦・`bandUp` の死んだ配線の撤去）。★ **本便は 1 つも増やしていない**——**⑹ は「読み手が選ぶ顔」が 1 つしか無い**（dynamic は自分の音符の上に乗る）ので、**要ユーザー判断ではなく自律の便。**
+
+⚠️ **見つけて直していないもの**:
+- **★★ dynamic の X *列*が声部を読まない**（第285 実測・⑹）。**`DynamicEngraver.cs:190` の `GetItemXOffset(dynMeasures, …)` は `LayoutUtilities.ResolveStaffMeasures` が返す*譜の* measures を引く**ので、**`VoiceIndex` が正しくても列は上声のものになる**。**再現は `scratch/p285/dynx-probe.lys`**（1 パート・`voice { } { }`・**下声の `@f` が上声の 2 番目の音符の中心に彫られる**）。⚠️ **兄弟の articulation は正しい**——**`ArticulationEngraver` は同じ本で自分の音符に乗る**ので、**これは「1 量 2 綴り」で、直すのは dynamics 側を articulation 側の読みへ寄せること**。⚠️ **出力が変わる**（`voice { } { }` でリズムの違う本・共有譜の本が動く）ので**掃きが要る**＝**独立した便**。★ **射程は数えていない**——**触る便は「下声に dynamic を書いた本」を 899 冊で数えるところから。**
+- **★★ `lysc check` は同じ行を今も 15 本、10 冊で 2 度出す**（第283 実測・**残りは*直さないほうが正しい*可能性がある**）。**分類は §1 ⑷**: **⒜ CROSS 7 行**（囲む流れと repeat body が 1 つの小節を二重報告）・**⒝ SAME-ORIGIN 8 行**（**別々の小節**が、広げた lead-in の住所で 1 点に潰れている）。⚠️⚠️ ★★★ **⒝ を「重複」として畳んではいけない**——**実在する別の小節が黙る**。**住所を広げるのは `MeasureValidator.Reported` の意図的な決定**（remark に「読み手は広い住所を得るが、帳簿は狭い同一性を保つ」と書いてある）で、**⒝ はその決定の*代償*が読み手側に出た顔**。⇒ **もし直すなら「畳む」ではなく「読み手が 2 つの小節を区別できる住所にする」**（例: 広い住所に加えて bar 自身の位置も出す）＝**出力が変わるので要ユーザー判断**。★ **⒜ は gate の設計問題と同じ島**（下の項）——**gate を緩めると ⒜ の一部が消える**が、**それは「二重報告が直った」のではなく「囲む側が黙った」**。**2 つを別々に決めること。**
+- **★★ `FlowsThroughBarAccounting` の厳しい gate が、percent body 472 件のうち 114 件を「値段の付かない項目」として opaque 枝へ落としている**（第282 実測・**第283 が再現・未解決**）。**落ちる 114 件の理由は全部 `break` か tie**——**どちらも時間を占めないので長さを変えない**。★ **緩めたらどうなるかは毒で測ってある**: **899 冊のうち 5 冊 7 行で `lysc check` が変わる**（`Can't Take My Eyes Off You` 2 種・`Dream Come True`・`Holiday`・`I Love You`）。⚠️⚠️ ★★ **内訳は第283 が数え直した＝「重複 6 ＋ *完全に消える* 1」**（第282 の引き継ぎ「重複 5 ＋ 相異なる 2」は当たらない・§1 ⑶）。**完全に消えるのは `Holiday(13,1) Measure duration 8` の 1 行だけ**で、**`duration 9` のほうは重複＝もう 1 本残る**。⚠️ **その 1 行を「偽陽性が消えた」と読んではいけない**——**消える理由は、リピートの flow accounting が積算器をリセットするから**で、**同じ 8 は「小節線を書かずに `r1` を 7 つ並べた」書き方そのもの**（`Holiday.lys` の 13 行目冒頭が `r1 r1 r1 r1 r1 r1 r1 r2. b,,4`）。**リピートが無い同じ書き方は今も警告される**（`scratch/p282/gate-ctl.lys` で対照済み）。⇒ **gate を緩めるのは「直す」ではなく「隠す」かもしれない。****本当の問いは「小節線を省いた走りは警告すべきか、そこにリピートが続いたらリセットしてよいか」**で、これは measure validator の設計の問い＝**独立した便と、それ自身の証拠が要る**。★ **今日 opt-in（`ignoringZeroDurationMarks`）で逃がしてあるのは LYS2014 の 1 呼び出しだけ**で、**flow 側は厳しいまま**。**触る便は上の 5 冊 7 行を再現してから始めること**（毒は `FlowsThroughBarAccounting` の `when` を 1 つ緩めるだけ・掃きは `scratch/p283/checksweep.ps1` を base と head で 2 回）。⚠️ **`$env:` を `-Parallel` の中で立て消しすると答えが揺れる**（プロセス共有）——**exe を 2 本作って 2 パスで取ること**（第283 の `checksweep.ps1` はその形に固定してある）。
+- **★ 空小節の規則は 3 綴りではなく 7 綴りだった**（第275・第278 の申し送りは過少申告）。**本便で 7 軒すべてを同時に動かした**: `MeasureBuilder.HandleBarline`（collector）／`MeasureModel.Split`（validator）／`MidiExporter.ProcessSequence`（再生）／`ChordNameCollector`（和音行・`ProcessRun` と `CountBars` の 2 か所）／`LyricCollector`・`LyricsCollector`（歌詞行 2 軒）／`MeasureCollector.Form.WalkBars`＋`WalkBarsRed`（小節数え・green と red oracle）。⚠️ **1 軒に寄せてはいない**——**collector と validator と MIDI walk は見ているデータ構造が違う**（measure stream / flattened scope / sibling list）ので寄せるには機構が要る。★ **ただし `LyricSyllableReader.IsLeadingAnchor` は退役した**（新規則では「解析された `LyricMeasure` はすべて小節」なので判定そのものが要らない）＝**7 → 6 に減った**。**次にこの島へ触る便は、残り 6 のうち歌詞 2 軒がもう 1 軒に畳めないかを先に見ること。**
+- **★ `lysc svg` は小節ゼロの本に 0 バイトの SVG を書いて exit 0 を返す**（第187 が名前を付けた `SvgDocumentContext.Assemble` の裸の `return ""`）。**LYS2013 が隣に立ったので黙ってはいない**が、**ファイルは出る**。**LP は 1 枚も出さない。** ⇒ **揃えるなら「0 バイトを書かない」の決定が要る**（要ユーザー判断・出力が変わる）。
+- **★★ `rit.`／`accel.` の文字のインクが LP と別物**（第275 第 7 幕で番人が 2 つ立った・`textspanner.chord-row.row-to-staff` −0.542858803 と `textspanner.lyric-row.row-to-staff` の対照を引いた −0.542858871＝**7 桁で同じ 1 つの量**）。**Lily# は 1.028**（描画サイズ 2.0 での 0.514 em）、**LP は 1.570859**（em 2.2）。⇒ **⒜ em 取り違えの 5 例目**（ottava 1.8→2.2・TextScript・歌詞 3.2・和音 2.6 と同族）。**一軒にまとまっている**（`TextSpannerEngraver.TextFontSize`——第275 が 3 綴りを畳んだ）ので**移植は 1 行**だが、**2.2 にしても 1.1308 で閉じない**（残りは face の島＝LP の LilyPond Serif 対 Lily# のTeX Gyre Termes）。**⒝ 全部の `rit.` の絵が変わる**ので**独立した幕**にすること。
+  <!-- ledger: textspanner.chord-row.row-to-staff = -0.542858803 -->
+- **★ spanner の*予約*は stacker の答えではなく同じ 2 項を綴り直したもの**（第275 第 7 幕・`TextSpannerEngraver.InkAboveStaff`）——**この pass は system が出来る前に走る**ので、`StaffTupletBracketLayouts` と同じ理由で engraver を譜ローカルに走らせている。⇒ **dynamics より後に stacker が足す mover**（inline `@chord` の種・volta）**が描画側の spanner を予約帯より上へ持ち上げ得る**。**今日その配置の本は 1 冊も無い**（sweep 1/572 はその 1 冊ではない）ので観測者ゼロ。**その配置に読み手が付いた便が、対を切って一軒に寄せること。**
+- **★★★ 「LP に対応するグリフが無い家具」は台帳では守れない**（第275 第 8 幕で名前が付いた）。TAB のテクニック文字はその第 1 例で、**LP 幾何が無い＝点が原理的に作れない**まま **572 冊のどれもその綴りを書いていなかった**ので、**掃きも snapshot も台帳も同時に盲**だった。⇒ **この species には*恒等*を立てる**（予約した箱＝描くインク）**と、その一族を描く本を 1 冊コーパスに置く**。⚠️ **同じ空白がまだ在り得る家具**: `frame:`（コードダイアグラム・箱は `FrameBox` の手計算）・`bendUp:` / `bendFall` / `bendDoit` / `bendScoop` / `bendPlop`（描画は primitive で、箱はフォールバック）。**触る便は、まずその綴りを書いた本が木に在るかを数えること。**
+- **★ volta 番号の*面*が LP と別物**（第276 の着地——`page.volta.plain.staff-to-line` の残り **+0.002625057** が丸ごとこれ）: LP の「2.」インク **1.2598** 対 Lily# **1.2624**、同じ文字列・同じ宣言サイズで。**理由は `VoltaBracketEngraver.NumberFontSize` の remark に書いてある**（LP は `\volta-number` でもう 1 段 −2 するが、それは同時に `fetaText` へ切り替えるからで、Lily# の Numbers 一族は*テキスト面*）。⇒ **面の島の一員で、単独では閉じない。**<!-- ledger: page.volta.plain.staff-to-line = 0.002625 -->
+- **★ `page.section-label.first-staff-refpoint` は +0.022688 で意図的に OPEN**（第270 第 3 幕の着地）——**標の envelope は silhouette・scalar とも一つの家（描画鏡像）に畳み済み**。残りは**描画の箱天辺 6.860000 対 LP stencil 天辺 6.837312**＝mark.* baseline 島（fallback serif の注意書きつき）の量。0 に「直した」らそれは描画を動かしたということ（why が反証子）。
+- **★★ 混在綴りの同名 section は、代表でない側の宣言に書かれた part セルが黙って絵から消える**（第269 実測・診断ゼロ）。同名 section が top-level（セル持ち）と `part X { section … }` の両方に宣言されると、**代表 node は先勝ち**（Definitions.cs「First declaration of a name wins」）で、**ProcessSectionBody は代表 node の直接子セルしか読まない**——part が先に書かれた本では top-level 側の sax セルが丸ごと落ちた（ソース順依存）。再現は `scratch/p269/bench` の Dup.cs（sm/pm-mini.svg）。**エラーにするか合併するかは要ユーザー判断。**
+- **★★★【ユーザー決定 2026-08-26・優先度高】リファクタ在庫は全部完済**——**⑨⑪⑬⑭ は第263・④②＋ファイル分割＋死物件は第264・§4a 小物の ①⑧⑩⑮ の返済確認と LSP Completion.cs 分割・CollectionCursor 束ねは第266・⑫ SectionHasInlineMusic は第268 で完済**（挙動判定と MIDI の可聴 drift の修理込み）。`CompletionContextScanner` 型出しは**便にしない**と判定済み（第266）。
+- **★ ② で名指し温存した乖離 ⑴⑵ は第266 で実測・両方 inert**（台帳は `InterSystemPairMinimum` remark ⑴⑵ と `probes/rows-only-page.ly`）——**コード上の二腕は残っている**（⑴ は到達する本が無く・⑵ は値が等しいので、どちらも「直す」対象ではなく「触る便が remark を読む」対象）。**連鎖側の loose-line 再配分そのものは未移植のまま**（§2 D ⑵⑶——移植の便が来たら rows-only-page.ly がその審判）。
+- **★ customText／dynamics の paging 箱は完済（envelope・frame・X）**（第272 第 3〜5 幕・番人 30 点）——`page.custom-text.leading-row.gap-first` −0.570929000 だけは**LP の loose-line 再配分の欠落**を名指しで OPEN（0 を追わない＝閉じるには subsystem を建てる話）。他は全部 face 項（−0.000035／−0.000044／−0.000045／−0.000074）か exact。⚠️ **残る小物 2 つ**: **silhouette 箱の 0.2 pad は観測者ゼロ**（第 5 幕の毒が届かなかったことでそう分かった）・**`@text` の縦は InkOf の保守的 fallback のまま**（実測インクは dynamic glyph だけ）。chord name の envelope は第271 第 4 幕で完済・silhouette chordNames scalar は第273 が番人を立てたので**自律側へ戻った**（下の項）。
+- **★★ 和音記号の silhouette 腕は平坦 scalar `[cnY + 1.9, cnY − 0.3]` のまま**（`AddMarkBox`・`LayoutEngine.PagingSkylines.cs`）——**番人は立っていて armed**: `page.inline-chord.gap-first` の残差 **+0.001116000** が丸ごとこの腕と Nimbus/Heros の面項で、**1.9→1.95 の毒で 6359 本中この 1 点だけが 1:1 に動く**（第273 第 2 幕）。**同じ話の 4 回目**（標の 0.8＝第270・和音推定の 1.9＝第271・custom text の 1.8/0.6＝第272）で、移植先は `ChordNameEngraver` の `SymbolInk` 一つの家。⚠️ **着地は 0 ではない**——面項は `page.chord-row.staff-to-chord-baseline`（−0.013091398）と同じ Nimbus Sans の島。
+- **★★ `bandUp` の配線が死んでいる**（第273 第 2 幕が作った）——書き手だった chord 腕が消えたので、`AugmentExtentsWithLooseLines` → `CreatePages` の `BandUp` → `PageLayouter` → `InterSystemPairMinimum` の `bandUpNext > 0` 腕まで**誰も供給しない経路**。**独立したリファクタ便は立てない**（§5.1）＝**次にこの島へ触る幕に括り付ける**・**削除は要ユーザー承認**（出力同一でも承認は免除されない）。
+- **★★ 第259 レビューの残件の束**（全文 `scratch/review-2026-08-26/code-review.md`・git 管理外）: **残り＝F【8】3 だけ**（要ユーザー判断）。
+- **★★ CHL1/CHL2 の第 1 歩 −0.252403051（第260 から両書*同値*）**＝binding X の五線側インク——LP の同 X の down が 0.25 深い。stem/binding の内容差、未分解。
+- **★★ TextScript（`^"Text"`）の高さが LP より約 0.35 高い**——**観測者が立った**（`lyrics.row-between.lyric-to-staff` +0.082995881、対を通した下からの読み）。標の箱の項 0.400000 と同族の可能性。
+  ★ **第274 で*清潔な対照*が付いた**: **同じ「2 譜のあいだの行」の閉じの歩きなのに、Text を持たない `lyrics.grand-staff.lyric-to-staff` は −0.000054899**（面項だけ）。⇒ **IOA の +0.083 は歩きの欠陥ではなく Text の高さ**、と対照つきで言える。**次にこの島へ触るなら、Text の高さだけを毒して IOA が動き GSL が動かないことを見せるところから**（毒 1 つで 2 点が別々に答える形が、はじめて書ける）。
+  <!-- ledger: lyrics.grand-staff.lyric-to-staff = -0.000054899 -->
+- **★ `Staff.TextRowVerses` のスコア全体最大は事実として残る**（MultiStaffLayouter:286・SharedRenderer:426・MeasureContentKey:319 の 3 軒）が、**第262 の RVC 対で「対の geometry には効かない」ことを実測**（対照＝詩 2 全削除が系 1 の 3 読みと 9 桁一致）。**残る読者は帯の高さ（extents/silhouette）だけ**＝効くとすれば純粋高さ・改ページ側。観測者が要るなら inter-system gap（台帳 why に名指し済み）。
+- **★★ VRS2 双子の stanza 番号（1. 2.）は LP 側に無い家具**——実測で binding せず（VRS1 との residual 差 3e-6）。**行の左端に binding X が届く読みを開く前に re-twin**。`[~N.]` は per-occurrence 選択子なので流用不可。
+- **★★ `staff / chords / chords / staff` で*行が空*のシステムの五線内が 6.50**（第257・**再現は `scratch/p257/v-2rowsA.lys`**）。行が無い同じ本は 9.00。
+- **★★★ 和音名の面が LP と別物**（第256）＝**LP は Nimbus Sans、Lily# は TeX Gyre Heros**。**閉じる道は Nimbus Sans の同梱＝ライセンスの決定。** ⚠️ **要ユーザー判断。** **番人は `page.chord-row.staff-to-chord-baseline`（−0.013091398）。**
+- **★★★ 面の差の*射程*は選別済み（第256）**：`CGabcdeijostu`＋全数字＋`+` が分かれ、advance は全一致。**`mark.over-chord.*` は清潔**。**MKR・BNC は触るとき 1 度測ること。**
+- **★ 面では説明できない ~1e-5**（第256 ⑦）＝FreeType 26.6 グリッドが第一容疑。**安い確かめは丸字を `O`/`G`/`S` に替えた本を LP で 1 冊。**
+- **★★ `EstimateAboveStaffExtents` の残り 4 定数（rehearsal 3.0／section label 3.5／segno·coda 2.5／volta 2.0）は*下向きに dominated* と実測**（第273 ⑶: 4 つ同時に 0.0 で **0/572・rerender 0/81・suite 全緑・台帳全点不動**。毒の liveness は rehearsal 3.0→6.0 で別途提示＝§5.0 ⑸ の順番）。⇒ **2026-07-30 に退治した下側 4 定数と同じ*削除側*の species で、移植側ではない**——第272 の地図が「+3.0 で 3 冊動くから移植」と読んだのは、`Math.Max` される推定値は上げれば必ず可視化できるという tie の顔を見ていた。⚠️ **床の議論（どんな texture でも実インクがこの数を下回らない＝hairpin の 3.540000 に当たるもの）が無いので「今日のコーパスで dominated」止まり**・**削除は要ユーザー承認**（§5.1）。**chord 腕だけは第273 第 2 幕で retire 済み**（番人 `page.inline-chord.*` 4 点）。
+- **★★ page BREAKER は nominal refpoint extent のまま**（第255・`page.tab-only.first-staff-refpoint` の (b)）。
+- **★★ 標の箱の項 0.400000＝描画そのものの LP との差**（第271 が clearance の 0.8→0.46 を閉じ、`mark.over-chord.*` の残差がこの箱項に裸で着地: 0.399959371／0.400000283。`mark.chord-row`/`mark.plain` +0.499085・`mark.rehearsal.lift.gap-second` +0.219582322 も同じ draw 側の島）。**Lily# は label を箱で描き LP は素のテキスト**＝設計差。閉じるなら箱をやめる決定＝**要ユーザー判断**。
+- **★★ テキスト行の INSIDE profile が空**（`MultiStaffLayouter.BuildAllStaffSkylines`）。単独で入れると `greensleeves` が動き、観測者が無い。
+- **★★ LP の和音*語彙*は Lily# と別物**（`Cm⁷`/`Cø`/`C+`/`C°` 対 `Cm7`/`Cm7♭5`/`Caug`/`Cdim`）。⚠️ **要ユーザー判断。** **第260 でこの島の台帳上の射程が確定**: LP は maj7 を上付きで組むので stencil は down ink 0・top 2.5008、Lily# の平文は j の descender 0.570・top 1.907——**CHL1 中間 +0.570188682／CHL4 中間 −0.593576126／CHL2 閉じ +0.070343732 は全部この島**（決定が落ちれば 3 点まとめて動く側）。
+- **★★ `get_extremal_staff` の X-aware 歩きが `-1` sentinel 族に未移植**。`TopScoreGrobStaff` の「A TEXT ROW IS NOT A STAFF」は触るときに直す。（第270 の ORDER〈Rehearsal X→@mark 対→lift 移植〉は第271 で完走。この歩き自体はまだ Lily# に無い——今日は tracker の per-staff キーが同じ答えを出しているだけ。）
+- **★★ テキスト行の tracker が staff symbol の平らな床を敷く**（`OutsideStaffStacker.AboveTrackers` の `FlatBase`）。観測者ゼロ。
+- **★★ `MusicMarkEngraver.CalculateXPosition` が Rehearsal と SectionLabel を同じ左端に立てる**。⚠️ **SectionLabel 側は直さない**（`mark.chord-row.staff-to-baseline` の why）。⚠️ **要ユーザー判断**（第257 でユーザーの絵に見えた——観測者ゼロではない）。
+- **★★ 同じ sentinel の残り＝`CustomTextLayout`**（3 site とも未解決・互いに揃っているので今日は食い違わない）。
+- **★★ `SkylineBuilder.OuterStaff` の two-edge model**（第252 ⑦）。番人は LYRHKG の 4 点。
+- **★ gap 1 免除の最後の一枚**＝`Distance()` の中で 1 段目のどのインクが浅いのか。番人は `…empty-row.gap-first`。
+- **★★ `lyhygrace` の 2 つの残差**（第248 ⑨）＝部屋 +0.121431 と閉じる最小 +0.340000。
+- **★★ 第244 の乖離の在処＝`MusicMarkEngraver` の rows-only の腕**。ユーザー決定なので閉じない。
+- **★★ 再現できていない報告＝1 小節に和音 4 つで和音名が横に重なる**。実物が来たら `ClearOfPrevious` の抜け道と第244 の押し出しを両方・**第254 の新しい幅で**。
+- **★★ 第245 第2便の残り＝`IsSilent` は 6 site が各々読んでいる**。独立した便にしない（§5.1）。
+- **★★ `staff / chords / lyrics` に Lily# は無言。LP は警告して組む**（第257 実測）。**要ユーザー判断。**
+- **★★ 旋法の語彙 4 綴りが `LanguageVocabulary` に無い**／**★ `RenderSpecParser` と `PartReferenceFinder` は `as` を自分で切る**。⚠️ どちらも独立した便にしない（§5.1）。
+- **★ 診断パスは 1000 小節で 148〜218 ms**（打鍵ごとではない）。
+- **★ 双子 exporter は和音行と歌詞行を出さない**（和音行・歌詞行の LP 照合は手書きプローブのみ。verse-carry.ly も手書き）。⚠️ **inline `@chord` も落とす**——`lysc ly` が **"warning: @chord dropped (out of scope)"** と言う（第273 実測）ので、**inline 和音の LP 照合も手書きプローブだけ**（`inline-chord-page.ly` は octave を自分で決めず、exporter が出した `ixed c'` の枠をそのまま使っている）。⚠️ **だからこそ第275 の対は `octave absolute` で書いて `lysc ly` で*音楽だけ*を検算した**——**無しで書くと `'` が相対印になり、同じ字面が C5 D6 E5 G6 A7 B♭8 に化けて、しかも絵は plausible に見える**（§5.0・第60 の壊れた対の罠を一度踏んだ）。
+- 音楽を持つが行のセルを持たない section は rows-only グリッドで 0 小節／`@chord(…)` と chords ブロックの語彙違い。
+- **★★ CHANGELOG は 0.5.0 が開いている**（第278・版番号はユーザー決定）。**v0.4.0 は 2026-08-23 にタグ済みで、そこへ追記され続けていた**のを第278 が見つけて4 件を 0.5.0 へ移した——冒頭が「最上段の節をリリースにそのまま貼る」と言っているので、**タグ済みの節に足すのはリリースノートの改竄**。**書く前に `git tag` を見る。**
+- **✅ LP の第 3 分岐（拍スラッシュ）は第282 で移植した**（`85406c45`）——**ただし 1 小節未満の body だけ**。**整数小節の body は Lily# の小節ごと `%` のまま**で、これは*宣言された乖離*（`docs/APPROXIMATIONS.md` の APPROX・`PercentRepeatItem` の remark）。**理由は §1 ⑶**（LP は裸のスラッシュ 1 本と空小節で、両 slash grob の description が「1 小節未満のための記号」と自称している）。⚠️ **残っているのは記譜の問い 1 つ**＝上の「次の一手 ⒜」。**`audit/lpreg/slashprobe.lys` が今も審判**で、今は LP と同じ絵を出す。
+- **★ `audit/magic_constants.csv` は第278 で再生成した**（`a7b776ac`・ユーザー承認）。**662 → 917 行、Red 121 → 42**。⚠️ **人手の判定は 1 行も失われていない**——生成器の `Decision` は「±5 行に `LILYPOND-REF` があるか」の純関数で**書き戻しの段が無く**、**committed の 662 行が全部その規則どおり**だった（＝生成後に手で書き換えた行も無い）。**⚠️⚠️ ★★ 残った本当の欠陥は Yellow の意味**——**561 行すべてが「(file-level)」**で、これは**そのファイルの冒頭 60 行にある最初の REF を、出所の無い定数全部に貼っただけ**（`RepeatDotRadius` が spacing-options の引用の下に居る）。⇒ **出所が無い定数は Red 42 ではなくRed+Yellow = 917 中 603**。**帰属を鋭くするのは監査の作り直し**なので手を付けていない。**★ そしてラチェットが無いのが腐った理由**——`ApproximationInventoryTests` のように固定するには**PowerShell のヒューリスティックを C# へ移す**必要がある（**1 行ではなく 1 便**）。
+
+
+⇒ ★★★ **次の一手＝dynamic の X 列を自分の声部から引く**（上の「見つけて直していないもの」の先頭項＝**本便が起票した唯一のもの**）。**自律・要ユーザー判断のどちらでもない**（読み手が選べる顔は 1 つ＝dynamic は自分の音符に乗る）。⚠️ **ただし出力が変わる型**——**falsifier は在る**（`scratch/p285/dynx-probe.lys`）が、**射程が未計測**なので、**まず「下声に dynamic を書いた本」を 899 冊で数え、掃きを base と head の 2 パスで取ること**（`scratch/p285/svgsweep.ps1`・`checksweep.ps1` がそのまま使える）。★ **据え置きの 2 つ**（gate の設計・`check` の残り 15 行の重複）は**第283 から動いていない**。★ **§2 A の先頭項は本便で閉じた**（**§2 から消してある**）。
+
+★ **開始時裏取り**: HEAD `6012e92f`・**未 push 2**・木 0・未追跡 0・Core 0 エラー 0 警告（`--no-incremental`）・**Windows Debug 6478 合格 / 0 失敗 / 4 skip / 合計 6482**・台帳 **740 点／exact 582／総和 24.714341137／ss 非ゼロ 188／count 156 中 2 が非ゼロ**・追跡コーパス **573 冊**・snapshot **223 枚**——**全部当たった**（⑴）。**CI は `eeeb5f70` で緑**（未 push 2 本はまだ回っていない）。
+終了時: **commit 2 本**（`d8914414` combined の住所付け直し ＋ **ハンドオフ 1 本＝この段落を書くもの**）＝**未 push は 開始 2 ＋ 本便 2**・木 0・未追跡 0。**suite 6484 合格 / 0 失敗 / 4 skip / 合計 6488**（開始 6482 から **+6**＝`SharedStaffVoiceSlotTests` の 6 ケースだけ）。Core 0 エラー 0 警告。**台帳全点不動・snapshot 不動・新規 0**（**残差は 1 つも触っていない**）。**SVG 全数掃きは 4 回**（899 冊・base と head を**続けて 2 対**）: **SAME 896 / MOVED 3 / レンダー失敗 0 / BOTH-NONE 0**、**base 同士・head 同士は 899/899 バイト同一**（⚠️ 第284 ⑼ の「生きた scratch 本」は本便では出なかった）。**`lysc check` の全数掃きは 3 回**: **899 冊すべて同一・終了コードの変化 0**（⚠️ **行数は 2440 で、第284 が書いた 2444 ではない**——**掃きの母集団に未追跡の `scratch\` が入っている**ので、**この数は便をまたいで比べられない。比べるのは base と head だけ**）。**tuplet guard の計数は base と head の両方で取り直した**（⑸）。**7.5 の数え上げ**: Core の `+` 行 **453** に対し **`LILYPOND-REF` 1 本・`LILYSHARP-OWN` 0 本・数値定数 0 個**——**REF 1 本は clip の規則**（`tuplet-engraver.cc:187-197` を v2.26.0 の実ソースで確かめて書いた）、**NullVoice へ落ちた注釈を落とす規則は新しい住所を足さず `PartCombineVoiceId.Null` の家を指している**（§7.6 ⒟）。**APPROXIMATIONS は行番号 6 つが動いただけ**（生成器で再生成・APPROX / UNWATCHED / OWN の数は不動）。★★ **WSL ubuntu Release も同じ 6484 / 0 / 4 / 6488**（`scratch/linux-repro` の手順・**§0 の「この機械の Windows での緑でしかない」に両脚で答えた**）。**perf は計器が分解できないことを対照で示した**（⑹ ではなく本体: 最大の combined 本 773.2 → 783.0 ms に対し、**新しい行を 1 行も通らない `perf-fingbeam1k` が 2826.2 → 2940.4 ms と*同じ向きにもっと大きく*動く**）。
+⚠️ ★★ **「終了時」を書く commit を最後の 1 本にした**——**だから「開始 2 ＋ 本便 2」と書いてある**。**足し算は読み手がする。**
+★★ **緑は*最後の commit のあと*に取った**（第282 ⑴ の再発防止を踏襲）。
+
+---
+
+## 以下は第284セッションの経緯
+
 最終更新 第284セッション＝**§2 A の先頭項（`condensedStaff` の 2 パートがモデル上見分けられない）に着手し、起票が「tuplet bracket の罠」と書いていたものが *7 島にまたがる見える欠陥*だったので直した（1 便）**——commit は `4922af1f`。**snapshot 0 枚・台帳不動・掃き 0 冊**。⚠️ **ユーザーが第283 の 79 本を push 済み**（履歴は 12 本に畳まれ、`eeeb5f70` がその引用を貼り直している）ので、**開始時の未 push は 79 ではなく 0**。
 
 **⑴ 引き継ぎの数は全部当たった**（HEAD と未 push を除く＝**上の push が間に入った**）。**suite 6473/0/4/6477・台帳 740／exact 582／ss 非ゼロ 188／総和 24.714341137／count 156 中 2・追跡 573 冊・snapshot 223 枚**が 1 つも違わない。★ **`-le` に直った §0 の exact レシピは、今度は §1 の 582 を再現した**（第283 の申し送りどおり）。
@@ -260,36 +343,6 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ⚠️ ★★ **第283 の申し送りどおり「終了時」を書く commit を最後の 1 本にした**——**だから「開始 0 ＋ 本便 2」と書いてある**。**足し算は読み手がする。**
 ★★ **緑は*最後の commit のあと*に取った**（第282 ⑴ の再発防止を踏襲）。
 
----
-
-## 以下は第283セッションの経緯
-
-最終更新 第283セッション＝**前便が残した gate の lead を測り直したら、その内訳が引き継ぎと違い、そこで見つけた*別の*欠陥を直した（1 便）**——commit は `1b89c4a9`（**1 パートを 2 譜に彫る本で、tie・slur・beam の警告が譜ごとに 1 本ずつ出ていた**）。**snapshot 0 枚・台帳不動・origin 不動。**
-
-**⑴ 引き継ぎの数は 1 つを除いて全部当たった**。外れた 1 つは **exact**——**§0 のレシピ（`-lt 1e-6`）は 581 を返すのに、§1 は 582 を引き継いでいた**。**差の 1 点は残差ちょうど `-1e-6`**（`lyrics.row.between-staves.two-verse.hara-kiri.last-system`）で、**台帳が宣言する許容の境界に乗っている**。⇒ **§0 を `-le` に直した**（残差は 1 つも動いていない＝**これは台帳の話ではなく数え方の話**）。★★ **§0 はこの罠を 9 例ぶん書いているのに、書いてあったレシピ自身が §1 の数を再現しなかった**——**レシピを置いたら 1 度走らせて突き合わせること。**
-
-**⑵ gate の lead は前便の記述どおり再現した**。`FlowsThroughBarAccounting` の `when` を 1 つ緩めて 899 冊を掃くと **2459 → 2452 行＝5 冊 7 行が消える**（終了コード変化 0）。**冊も行も引き継ぎと 1 つも違わない。**
-
-**⑶ ただし内訳は「重複 5 ＋ 相異なる 2」ではなく「重複 6 ＋ 相異なる 1」**。**機械で数え直した**（消えた行が head 側に 1 本も残らないかを 1 行ずつ訊いた）: **6 行は同じ行がもう 1 本残る＝重複が 1 本削れただけ**、**完全に消えるのは `Holiday(13,1) Measure duration 8` の 1 行だけ**。⚠️ **前便が「*相異なる* 2 行」と書いた片方（`duration 9`）は重複**で、もう 1 本残る。⇒ **「偽陽性が消えたと読むな」という前便の戒めは*正しい*が、掛かる先は 2 行ではなく 1 行**。★ **gate の設計問題そのものには手を付けていない**（下の「見つけて直していないもの」に据え置き・**独立した便のまま**）。
-
-**⑷ そして base 自身が同じ警告を 2 度出していた——20 行・15 冊**（gate とは無関係に）。**毒で出所にタグを付けて全部分類したら 3 族**で、**同じ欠陥ではない**:
-  **⒜ CROSS（囲む流れ＋repeat body）7 行 6 冊**——1 つの小節を 2 つの流れが報告する。**gate を緩めると消えるのはこの族**（囲む側の積算器が replay でリセットされるため）。
-  **⒝ SAME-ORIGIN（body だけ）8 行 6 冊**——⚠️⚠️ ★★★ **これは*相異なる小節*で、別々の repeat が持つ別々の bar が、*意図的に広げた* lead-in の住所で 1 点に潰れているだけ**（`MeasureValidator.Reported` の remark「読み手は広い住所を得るが、帳簿は狭い同一性を保つ」）。**畳んだら実在する小節が黙る。**
-  **⒞ scanner（tie・slur・beam）5 行 4 冊**——**本物の重複。これだけを直した。**
-⇒ ★★★ **「同じ行が 2 本出ている」を 1 つの欠陥として扱わなかったことが、この便の骨**。**素朴な「重複行を潰す」修理は ⒝ の 8 行を道連れにしていた。**
-
-**⑸ ⒞ の根本原因＝1 パートを 2 譜に彫る score**（`score { staff bass  tab bass }`）。**パートは譜ごとに collect され**、per-voice の sanity scanner は **collector 全体の累積リストに append する**ので、**2 枚目の譜が 1 枚目の答えをもう一度積む**。⇒ **`ScanVoiceSanity` に voice 名の guard を入れ、3 綴りを 1 軒に畳んだ**（§5.2.1② の形＝**同じ 3 行が 3 か所に複製されていた**）。★ **教義は欠陥の 1 つ上のフィールドに既に書いてあった**——`_warnedSpans` の「one root cause, one diagnostic」。**scanner にだけ番人が無かった。**
-
-**⑹ 計器が 2 度嘘をついてから答えた**（露出の数）。**プロセス全体で声部名を数えると 340 冊**——**2 つ目の `score` ブロックの collector を「同じパートの 2 度目」と数えていた**。**collector 単位にして 312 冊**。**さらに「`check` が実際に検証する score」に絞って 260 冊**（追跡 24・作者 236）。⇒ **不変条件で確かめた**: **「重複が出る ⟺ `check` が検証する score が 1 パートを 2 譜に置く」は scanner 系の警告を持つ 8 冊すべてで成立・反例 0**（340 と 312 では反例 3）。★★ **最初の 2 つの数でも「だいたい合っている」ように見えた**——**反例を 3 冊名指しできたのは、数ではなく*不変条件*を書いたから。**
-
-**⑺ 射程は 260 冊だが、今日それを出しているのは 4 冊**（`Disco Inferno`／`Don't Stop Believin'`／`himawari`／`Let's Stay Together`）。**残り 255 冊はこの綴りを書いていないだけ**。⇒ ⚠️ **だから網は sink をすべて縛った**（`MultiStaffPartScansOnce`）——**コーパスに観測者が居たのは tie だけ**で、**残りは毒でしか確かめられない**（4 本とも guard を外すと赤になることを実測）。★ **第275 の「観測者ゼロの家具は台帳では守れない」の、診断側の顔。**
-⚠️⚠️ ★★★ **その網は最初 3 本で、1 本足りなかった**（同便で気づいて足した・`1b89c4a9`）。**scanner は 3 本だが sink は 4 本**——**cue 境界の list は tie 走査と slur 走査の*両方*が埋める**ので、**「scanner を数える」と 1 つ落ちる**。**落ちていたのは `SpanCrossesCueBoundary`＝この一族で唯一の *error***（warning ではない）。⇒ ★★ **数えるのは「呼ぶ側」ではなく「書かれる側」**。**同じ便で「観測者が居たのは tie だけだから 3 本とも縛る」と書きながら、その 3 が既に間違った母集団だった**（§0 ★「N 件はどの集合に訊いたかまで書く」のコード側の再来）。
-★ **そこで母集団のほうを数えた＝collector 由来の診断 sink は 9 本**（`ISharedCollectValidator` の読み先を列挙）。**残る 5 本は二重にならない**: **`TabTieWarnings` は実測で確認**（`staff m` ＋ `tab m` で 1 本のまま・`scratch/p283/tt2.lys` 対 `tt1.lys`）、**`UnpairedRepeatWarnings` は走査前に sink を clear する**（`CumulativeSideTables` の remark が明記）、**`LyricWarnings`・`ChordRowGridWarnings` は行コレクタ由来で*譜*ではなく*行*ごとに 1 度**、**`ExpansionBudgetExceededAt` はスカラ**。⇒ **「1 パート 2 譜」で二重化するのは `ScanVoiceSanity` の 4 本ちょうど**で、**それが今 guard の下に在る。**
-
-★ **開始時裏取り**: HEAD `85406c45`・**未 push 72**・木 0・未追跡 0・Core 0 エラー 0 警告（`--no-incremental`）・**Windows Debug 6469 合格 / 0 失敗 / 4 skip / 合計 6473**・台帳 **740 点／exact 582／総和 24.714341137／ss 非ゼロ 188／count 156 中 2 が非ゼロ**・追跡コーパス **573 冊**・snapshot **223 枚**——**exact 以外は全部当たった**（⑴。**外れたのは台帳ではなく §0 のレシピ**）。
-終了時: **commit 7 本**（`1b89c4a9` scanner の二重走査・`1b89c4a9` 4 本目の sink を縛る・**ハンドオフ 5 本**）・**origin 不動（未 push 79＝開始 72 ＋ 本便 7・⚠️ ユーザー指示「プッシュはしないで」は生きている）**・木 0・未追跡 0。**suite 6473 合格 / 0 失敗 / 4 skip / 合計 6477**（開始 6469 から **+4**＝`MultiStaffPartScansOnce` の 4 ケースだけ）。Core 0 エラー 0 警告。**台帳全点不動・snapshot 不動・新規 0**（**残差は 1 つも触っていない**——⑴ で動いたのは数え方の綴りだけ）。**SVG 全数掃きは 1 回**（899 冊）: **SAME 899 / MOVED 0 / レンダー失敗 0 / BOTH-NONE 0**＝**scanner は絵に一言も持っていない**。**`lysc check` の全数掃きは 5 回**（base・gate 毒・出所タグ毒・fix・4 本目 sink の fix）: **2459 → 2454 行**（**最後の 2 回は 899 冊すべてバイト同一**＝4 本目の網は挙動を動かしていない）、**消えたのは 4 冊 5 行きっかり**、**完全に消えた警告 0**（残った双子を 1 行ずつ確認）、**終了コードの変化 0**。**7.5 の数え上げ**: Core の `+` 行 **47** に対し **`LILYPOND-REF` 0 本・`LILYSHARP-OWN` 0 本**——**移植も定数の発明も無い**（**LP にはこの 4 種の診断に対応するものが 1 つも無く**——**cue 境界に至っては LP は黙って捨てる**——**変えたのは既存の Lily# 独自診断が繰り返さないようにしたことだけ**）。**APPROXIMATIONS は APPROX 55 / UNWATCHED 48 / OWN 117 で不動**（行番号 3 つが動いただけ・生成器で再生成）。
-⚠️ ★★ **この 2 つの数は自己言及で、追いかけると 1 便で 3 本ムダな commit が出る**（第283 が実際に出した）。**「終了時」を書く commit は、それ自身を勘定に入れる**——だから**書いたら次はもう commit しない**（本便はこの段落を書く 1 本で終い）。★ **第282 も同じ形で外している**（`commit 5 本・未 push 70` と書いたあと更にハンドオフを 2 本積んだので、実際の引き継ぎは 72 だった）。⇒ **数を合わせたければ、ハンドオフ commit を最後の 1 本にすること。合わせないなら「開始 N ＋ 本便 M」と書いて、読み手に足させること。**
-★★ **緑は*最後の commit のあと*に取った**（第282 ⑴ の再発防止を踏襲）。
 
 ---
 
@@ -438,43 +491,6 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 
 LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量を計算する場所が 2 つ以上ある**なら
 それが次の欠陥の住所（§5.2.1②）。現在わかっている残り:
-
-- ★★ **`combinedStaff` の 2 パートは、今もモデルの上で見分けられない**（2026-08-17・第193 起票／
-  **`condensedStaff` の側は 2026-08-29・第284 で閉じた**・`4922af1f`・**着手前にユーザー判断は不要だが専用の便**）。
-  - **閉じた半分**: **binding が `bool SharesStaffWithPrevious` しか運べなかったのが原因**だった
-    ——**「共有しているか」は 2 値だが、「譜のどの slot か」の答えは 3 つある**。
-    `RenderSpec.VoiceSlotting`（`OwnStaff` / `AppendedToStaff` / `CombinedIntoStaff`）にして、
-    **condensed の後続パートは `_cursor.VoiceIndex = staffVoiceSlots` で自分の slot から数える**。
-    ⇒ **不変条件は 1 行**: **`VoiceIndex` はその譜の `Voices` 配列内の位置**
-    （`score.Voices[x.VoiceIndex]`・`AnchorItem`・`t.VoiceIndex == v` が全部そう読む）。
-    **網は `SharedStaffVoiceSlotTests`**（毒 2 種に生きた反応がある）。
-  - **残っている半分＝combined**: **`PartCombiner.Combine` は音楽を書き換える**ので、
-    **同じ直し方が当たらない**——**アイテムをストリーム*間で動かし***（`slot0`/`slot1` の再配分）、
-    **パートが一度も離れない本では voice を 1 本しか返す**（`BuildVoices` の
-    `if (!anySecond) return [first];`）。⇒ **パート単独から slot は導けず、素朴に 1 を入れると
-    `score.Voices[1]` が範囲外**。**必要なのは「combiner が動かしたアイテムの住所を付け直す」**
-    ＝**voice 番号とアイテム添字の両方**。
-  - **実測**（第284・899 冊・guard の計数）: **通した 10763 本・落とした 4 本**で、
-    **4 本とも `audit/lpreg/pctend-probe.lys`＝combined の本**（**base と head で 1 本も違わない**）。
-    ⚠️ **捕まえたのは `BuildTupletSpans` の範囲外 guard であって scoping ではない**——
-    **相方の小節が `R1` 1 個だったから範囲外になっただけ。**
-    **小節が長い combined パートなら*範囲内*で黙って衝突する。**
-    ⚠️ **第193 の「566 冊で 2882 通し・2 落とし」は母集団も数え場所も違う数**（コメントは書き換えた）。
-  - **射程**: ⚠️ **今のコーパスで観測できる本は 0 冊**（`pctend-probe` は guard に救われている）。
-    **だから掃きは計器にならない**——**着手するなら「範囲内で衝突する combined 本」を
-    1 冊書くところから**（**condensed 版の雛形は `scratch/p284/cond-ann.lys`**。
-    第284 はそれで **3 連符の数字が隣のパートの上に彫られ・`@f` が隣の音符に付き・ページが
-    2.70 高い**ところまで出した）。
-  - ⚠️⚠️ **同じ軸を踏んでいる量は tuplet だけではない**（第284 が数えた）——**コレクタが声部で
-    住所を付ける島は 7 つ**: **tuplet bracket・dynamics・articulation・trill spanner・
-    fingering・frame・bend**。**condensed ではその 7 つが同時に直り、combined では 7 つとも残っている。**
-    ★ **tie と slur はこの軸に乗っていない**——**`SlurDetector`／`TieDetector` はレイアウト時に
-    譜の `Voices` を歩いて `v` を*自分で*振る**（`VoiceScan.WalkVoiceItems`）。
-    ⇒ ★★ **境目は「量の種類」ではなく「誰が番号を振るか」。コレクタが押した番号だけが嘘をつき得る。**
-    ★ **軸そのものは痩せていない**: **`condensedStaff`／`combinedStaff` を書く本は 899 冊中 29 冊**
-    （**うち condensed 7・combined 22**。ほぼ `audit/lpreg` の part-combine 群）。
-    ⇒ ★★ **だから「combined は珍しいから後回し」は成り立たない**——
-    **珍しいのは*その譜に声部持ちのアイテムを書いた本*で、他の per-staff の量は 22 冊ぜんぶを通っている。**
 
 - ★★★ **この族の親玉: skyline の参加者列挙が手動**（2026-08-07・第107セッション・
   ユーザー指示で起票・**未着手＝workstream**）。

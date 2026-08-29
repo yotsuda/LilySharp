@@ -83,6 +83,18 @@ turned out to be hiding them.
   with no staff lines at all (a lead-sheet row) → 0.45. A one-line rhythm staff
   (`staff comp as lines 1`) is the case that gets written, and 0.5 put its dots nearly on
   the single line the search exists to keep them off.
+- **What a part writes on a `combinedStaff` is drawn on that part's own notes.** Combining
+  two parts onto one staff does not put their voices on it: the combiner rewrites both
+  streams, moving notes between the two it draws, merging a shared moment into one column,
+  and leaving unengraved whatever the other part is covering. Everything a part hangs off a
+  note — a dynamic, a piece of text, an articulation, a fingering, a chord frame, a bend, a
+  trill, a tuplet bracket — was still addressed by where it stood in the part, so on the
+  second part all of it landed on the FIRST part's notes: a `@f` under a note nobody wrote
+  it on, a triplet number engraved above the staff over the other part's beam. It is now
+  addressed where the combiner actually put the note, and a passage the combiner engraves
+  with nobody takes its markings with it, which is what LilyPond does. Three books in the
+  repository move, all three onto the measurement LilyPond gave them: a bar where one part
+  writes `R1` and the other `r1` prints one rest and ONE label, not two.
 
 ## 0.4.0
 
