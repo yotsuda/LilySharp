@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 57 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 49 | 観測者がゼロだと自認しているもの |
-| `OWN` | 114 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **220** | |
+| `OWN` | 115 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **221** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -216,7 +216,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（114 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（115 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:1653** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -311,8 +311,9 @@
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
 - **:624** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
-- **:594** ⚠️ LILYSHARP-OWN: THE FALLBACK. A system with no spaceable staff at all — a chords-only
-- **:606** ⚠️ LILYSHARP-OWN: THE SECOND PAIR HAS NO LILYPOND COUNTERPART, and it exists because a
+- **:413** LILYSHARP-OWN, DECLARED: the CROP. LilyPond always engraves onto the paper; a
+- **:614** ⚠️ LILYSHARP-OWN: THE FALLBACK. A system with no spaceable staff at all — a chords-only
+- **:626** ⚠️ LILYSHARP-OWN: THE SECOND PAIR HAS NO LILYPOND COUNTERPART, and it exists because a
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
 - **:365** ⚠️ A LYRICS ROW KEEPS ITS DRAWN EXTENT, AND THAT IS LILYSHARP-OWN, not a second
 - **:459** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries

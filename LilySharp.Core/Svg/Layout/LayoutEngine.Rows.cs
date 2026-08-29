@@ -308,8 +308,43 @@ internal sealed partial class LayoutEngine
                     // closes this chain on the page edge (:1004-1013) and starts the next
                     // page's with its own call, so a row at the top of the next PAGE is in
                     // that chain and not this one.
+                    //
+                    // LILYPOND-REF: lily/page-layout-problem.cc:1004-1013 find_system_offsets
+                    // — the far end handed to
+                    // `distribute_loose_lines` is `-page_height_`, and `page_height_` is the
+                    // PAPER minus its two margins (:405-476), never the ink. So the room is
+                    // the printable height less how far below the printable TOP the anchor
+                    // sits, and on an ordinary page that is a hundred staff spaces of slack:
+                    // the chain runs at force >= 0 and every spring rests at
+                    // max(minimum, ideal).
+                    // ⚠️ IT IS NOT `anchor - MarginBottom`, WHICH IS THIS PAGE'S CROP, and
+                    // that spelling made the chain solve into its own reservation. Lily#
+                    // sizes a single page to its CONTENT (LayoutEngine.Pages, a deliberate
+                    // divergence — see the page.height note in LpGeometryProbes), and the
+                    // content it is sized from is this very block at its ALIGNMENT MINIMUM
+                    // (LyricReservationBelowSystem). Reading the crop back as the room closed
+                    // the loop: the room equalled the sum of the chain's own minimums to nine
+                    // digits, so the solve could never leave the floor and the reservation
+                    // made itself true. MEASURED on book TBL2 (session 291): room 4.407001213
+                    // against the minimums' 4.369959965 + 0.037041248, syllable at 4.369960
+                    // where LilyPond reads 5.500001451.
+                    // ⚠️ AND LILYPOND'S OWN NUMBER CARRIES ITS ROOM, which is how this was
+                    // checked before it was written: the null spring's stretchability is
+                    // HUGE_STRETCH 10e7 (LooseLineSpacer.NullNeighbour) and the lyric
+                    // spring's is 1, so LilyPond's 5.500001451282664 gives a force of
+                    // 1.451282664e-6 and a room of 6.5 + f * (1 + 1e8) = 151.628268. This
+                    // expression, on Lily#'s own geometry, returns 151.628268 — and the
+                    // difference from the printable height is 6.000000, the basic-distance of
+                    // ly/paper-defaults-init.ly:78 top-system-spacing.
+                    // ⚠️ THE PAPER TERM IS ZERO ON A PAGINATED PAGE, where Height IS the
+                    // paper, so this changes nothing there — including the tight pages where
+                    // the chain genuinely IS compressed and must stay so.
+                    double printable = _options.PageHeight > 0
+                        ? _options.PageHeight - _options.MarginTop - _options.MarginBottom
+                        : page.Height - _options.MarginTop - _options.MarginBottom;
+                    double anchorBelowPrintableTop = page.Height - _options.MarginTop - anchor;
                     ends[index] = new LooseLineSpacer.ChainEnd(
-                        anchor - _options.MarginBottom, double.NaN,
+                        printable - anchorBelowPrintableTop, double.NaN,
                         ImmutableArray<LooseLineSpacer.LeadingLine>.Empty, null, 0);
                 }
             }

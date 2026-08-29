@@ -653,6 +653,61 @@ public class LpGeometryLedgerTests
     }
 
     /// <summary>
+    /// The last loose-line block on a page is solved into the PAPER's printable bottom, not
+    /// into the height Lily# crops that page to.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1004-1013 find_system_offsets — the far end
+    /// handed to <c>distribute_loose_lines</c> is <c>-page_height_</c>, the paper less its two
+    /// margins (:405-476), and nothing about the ink.
+    /// <para>
+    /// ⚠️ WHY THIS EXISTS BESIDE <c>lyrics.tab.control.staff-to-lyric</c>, which is the point
+    /// that found it: the residual there is one number and a number can go to zero for the
+    /// wrong reason. The wrong reason available here is HANDING THE CHAIN AN UNBOUNDED ROOM —
+    /// that also puts the syllable at the ideal on any roomy page, and it would be wrong,
+    /// because a genuinely short page must still compress. So this asserts both ends: the
+    /// default paper reads the SPRING'S IDEAL and a paper trimmed to just over the content
+    /// reads strictly between the block's floor and that ideal.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE FLOOR IS THE OLD ANSWER. Until 2026-08-29 the room was <c>anchor -
+    /// MarginBottom</c>, and on a single-page score that is the CROP — which Lily# sizes from
+    /// this very block at its alignment minimum. Room and minimum then agreed to nine digits
+    /// (4.407001213), so the chain could not leave its floor and this book read 4.369960
+    /// against LilyPond's 5.500001451. Reverting the room fails the first assertion here and
+    /// leaves the second one passing, which is the point of carrying two.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void TheLastBlockOnAPage_IsSolvedIntoThePaper_NotIntoThePagesOwnCrop()
+    {
+        var control = LpGeometryProbes.All
+            .Single(p => p.Id == "lyrics.tab.control.staff-to-lyric");
+
+        // nonstaff-relatedstaff-spacing's basic-distance, and the block's own alignment
+        // minimum on this book — the two answers the room decides between.
+        const double ideal = 5.5;
+        const double floorOfTheBlock = 4.369959965;
+
+        double onThePaper = RenderedGeometry.Render(control.Source, control.Options)
+            .LyricBaselineBelowStaffOfLineCount(5);
+        Assert.True(onThePaper > ideal - 1e-6,
+            $"the syllable sits at {onThePaper:F9}, short of the spring's ideal {ideal:F6}: "
+            + "the chain is being solved into this page's crop rather than into the paper.");
+
+        // ...and a paper trimmed to just over the content — 23.0 staff spaces against a crop
+        // of 21.788103 — leaves the chain 5.618898 of room, between the two answers.
+        double onATrimmedPaper = RenderedGeometry
+            .Render(control.Source, control.Options with { PageHeight = 23.0 })
+            .LyricBaselineBelowStaffOfLineCount(5);
+        Assert.True(onATrimmedPaper > floorOfTheBlock + 1e-6
+                    && onATrimmedPaper < ideal - 1e-6,
+            $"on a paper of 23.0 the syllable sits at {onATrimmedPaper:F9}, which is not "
+            + $"between the block's floor {floorOfTheBlock:F6} and the ideal {ideal:F6}: a "
+            + "short page must still compress the chain, so the room cannot be unbounded.");
+    }
+
+    /// <summary>
     /// The distance between two staves of a system is decided by the PAGE's spring chain,
     /// not fixed at the alignment minimum — asserted as a mechanism, on the two probes the
     /// ledger measures it with.

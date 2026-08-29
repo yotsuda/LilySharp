@@ -410,6 +410,26 @@ internal sealed partial class LayoutEngine
             }
         }
         double lastDownExtent = perSystemExtents[systems.Length - 1].downExtent;
+        // LILYSHARP-OWN, DECLARED: the CROP. LilyPond always engraves onto the paper; a
+        // single Lily# page is sized to its content and only switches to the paper when the
+        // content overflows (a deliberate choice — see the page.height note in
+        // LpGeometryProbes, where it is a recorded -109.468268 that is not going to close).
+        // ⚠️ IT IS STALE BY THE LOOSE-LINE STRETCH SINCE 2026-08-29, and the amount is
+        // measured. `lastDownExtent` reserves a below-system lyric block at its ALIGNMENT
+        // MINIMUM (LyricReservationBelowSystem, which is what LilyPond reserves too), while
+        // the chain that draws it is solved into the PAPER and rests at the spring's IDEAL
+        // (BuildLooseChainEnds' page-edge branch, ported the same day). So the syllables can
+        // sit up to (ideal - floor) below the height computed here and the page's bottom
+        // white shrinks by that much: 1.130041 on the ledger's book TBL2, 0.139 on
+        // test/lyrics, and 0.85 is the largest step in the five snapshots that moved.
+        // ⚠️ IT CANNOT CLIP: the growth is bounded by the first spring's ideal 5.5 less its
+        // own floor, and every later spring in such a chain has basic-distance 0, so its
+        // ideal IS its minimum and it does not grow at all.
+        // ⚠️ AND IT CANNOT BE CLOSED BY RESERVING THE IDEAL HERE: this same extent is the
+        // system's DOWN skyline for system-system spacing, where LilyPond's reservation
+        // really is the minimum (page-layout-problem.cc:593-599 hands the skyline builder
+        // the minimum translations). Closing it means splitting the two consumers, which is
+        // its own trip.
         double totalHeight = skylineY + SysHeight(systems.Length - 1) + lastDownExtent + _options.MarginBottom;
 
         // Auto-pagination: a score that FITS one page keeps this simple layout
