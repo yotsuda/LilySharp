@@ -4652,6 +4652,43 @@ internal static class LpGeometryProbes
         "c'''4@rit c''' c''' c''' | c'''4 c''' c''' c'''@!rit |");
 
     /// <summary>
+    /// WHERE A TEXT SPANNER'S LEFT BOUND SITS when the START is not on the measure's first
+    /// note — the twins of probes/textspanner-left-bound.ly's books TXO / TXH, and the FIRST
+    /// points in this corpus that read a text spanner's X at all.
+    /// </summary>
+    /// <remarks>
+    /// The four <c>textspanner.*</c> entries that stood here before are all HEIGHTS, so
+    /// nothing could see that <c>TextSpannerEngraver.PairTextSpanners</c> passed
+    /// <c>StartItemIndex: 0</c> AS A CONSTANT — the line and its "rit." starting at the
+    /// MEASURE's first item however late in the measure the mark was written. Session 289
+    /// gave the span a terminator and took the terminator's own item index
+    /// (<c>EndItemIndex</c>), so the two ends of one span were spelled differently; the
+    /// ottava, the other span with a left bound, already reads the mark's column
+    /// (<c>OttavaBracketEngraver.BracketFrom</c>). ⇒ One quantity, two spellings, inside
+    /// one engine.
+    /// <para>
+    /// TXO opens on the THIRD note, TXH on the FIRST, and NOTHING ELSE DIFFERS — so the
+    /// pair is its own falsifier: LilyPond returns the same number for both iff it binds
+    /// the span to the note it was written on. MEASURED (2026-08-29,
+    /// textspanner-left-bound.ly): +0.250000000 in BOTH books, and the dumped
+    /// <c>left-bound-info</c> shows why — <c>X</c> is the start column's left edge (which
+    /// is the head anchor to fifteen digits) and <c>padding</c> is 0.25.
+    /// </para>
+    /// The pitch is drawn third-space (Lily# <c>c'</c> = LilyPond <c>c''</c>), and the music
+    /// carries no accidental and no dot on purpose: both are terms
+    /// <c>Line_spanner::calc_bound_info</c> can move the bound onto
+    /// (<c>end-on-accidental</c>, <c>start-at-dot</c>), and this pair is about WHICH COLUMN,
+    /// not about what stands in it.
+    /// </remarks>
+    private static readonly string TXO = SpannerFloorScore("TXO",
+        "c'4 c' c'@rit c' | c'4 c' c' c'@!rit |");
+
+    /// <summary>THE CONTROL: <see cref="TXO"/> opening on the FIRST note instead of the
+    /// third, nothing else changed.</summary>
+    private static readonly string TXH = SpannerFloorScore("TXH",
+        "c'4@rit c' c' c' | c'4 c' c' c'@!rit |");
+
+    /// <summary>
     /// A ROW STANDING ABOVE A STAFF THAT CARRIES A rit. SPANNER — the four books of
     /// probes/textspanner-under-row.ly, opened 2026-08-28 against a report that `@rit`
     /// prints THROUGH the chord row and the lyric row above its staff
@@ -13485,6 +13522,19 @@ internal static class LpGeometryProbes
             g => g.TextSpannerLineAboveStaff(), RaggedBottomPaper),
         new("textspanner.support.staff-to-line", TSC,
             g => g.TextSpannerLineAboveStaff(), RaggedBottomPaper),
+
+        // --- the text spanner's LEFT BOUND (books TXO/TXH) ---
+        // The first points that read a text spanner's X. The four entries above are all
+        // HEIGHTS, which is exactly why nothing could see that PairTextSpanners pinned the
+        // left end to the MEASURE (`StartItemIndex: 0`, a constant) while session 289's
+        // terminator took the mark's own column on the right. THE PAIR IS ITS OWN
+        // FALSIFIER: LilyPond answers the same number in both books iff it binds the span
+        // to the note the mark was written on, and the notehead each is read against is the
+        // one THAT book opened on (#2 in TXO, #0 in the control).
+        new("textspanner.x.label-to-notehead", TXO,
+            g => g.TextSpannerLabelPenToNotehead(2), RaggedBottomPaper),
+        new("textspanner.x.control.label-to-notehead", TXH,
+            g => g.TextSpannerLabelPenToNotehead(0), RaggedBottomPaper),
 
         // --- a ROW ABOVE a staff that carries the rit. SPANNER (books TSU/TSN/TSY/TSZ) ---
         // The first points that ask whether the line standing above a staff is spaced

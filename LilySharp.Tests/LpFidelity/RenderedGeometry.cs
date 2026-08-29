@@ -1254,6 +1254,51 @@ internal sealed class RenderedGeometry
         => SoleRuleAboveStaff("the text spanner line", page);
 
     /// <summary>
+    /// The text spanner's LABEL PEN, relative to notehead <paramref name="noteheadIndex"/>
+    /// — the spanner's LEFT BOUND plus its bound padding, and nothing else.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/text-spanner-engraver.cc:108-115 <c>Text_spanner_engraver::stop_translation_timestep</c> —
+    ///   the LEFT bound is the <c>currentMusicalColumn</c> of the timestep the START was
+    ///   seen in, i.e. THE NOTE IT WAS WRITTEN ON, not its measure.
+    /// LILYPOND-REF: lily/line-spanner.cc:149-176 <c>Line_spanner::calc_bound_info</c> —
+    ///   that column's <c>generic_bound_extent</c> read at <c>attach-dir</c> (LEFT for
+    ///   TextSpanner), and :596-600 <c>span_points[d] += -d * gaps[d] * magstep *
+    ///   dz.direction ()</c> — the <c>bound-details.left.padding</c> 0.25 spent before the
+    ///   left text stencil is translated to that point.
+    /// <para>
+    /// PEN AGAINST PEN, so no font metric enters on either side: a LilyPond text stencil
+    /// takes its X box from Pango's LOGICAL rectangle (lily/pango-font.cc:351-362
+    /// <c>Pango_font::pango_item_string_stencil</c>), so the
+    /// grob's X-extent LEFT is the pen; Lily# draws the label with
+    /// <c>TextAnchor.Start</c> (<c>SharedRenderer.DrawTextSpanners</c>), so its recorded X
+    /// is the pen too. ⚠️ THAT is why this reads the LABEL and not the dashed line: the
+    /// ottava's line-start twin is defined 0.05 apart on the two sides (LilyPond's number
+    /// is a stencil edge, Lily#'s an SVG rule endpoint — ledger
+    /// <c>ottava.x.line-start-to-notehead</c> names it), and that harness term has no
+    /// business inside a reading about WHICH COLUMN a span starts on.
+    /// </para>
+    /// </remarks>
+    public double TextSpannerLabelPenToNotehead(int noteheadIndex = 0)
+    {
+        var labels = Texts.Where(t => t.Role == TextRole.Text).ToList();
+        if (labels.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"expected exactly ONE text-spanner label, found {labels.Count} — the probe "
+                + "is not measuring what it claims.\nDrawn geometry:\n" + Describe());
+        }
+        if (labels[0].Anchor != TextAnchor.Start)
+        {
+            throw new InvalidOperationException(
+                $"the text-spanner label is drawn with anchor {labels[0].Anchor}, so its X is "
+                + "not the pen and this reading would not be pen-against-pen.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        return labels[0].X - NoteheadAnchor(noteheadIndex);
+    }
+
+    /// <summary>
     /// The trill spanner's LINE above the first staff, measured from that staff's
     /// refpoint (middle line). The LINE is the grob's refpoint on both sides; the "tr"
     /// glyph hangs <c>stencil-offset (0 . -1)</c> below it (scm/define-grobs.scm:4068,
