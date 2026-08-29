@@ -857,6 +857,24 @@ public static class DiagnosticCodes
     /// Books in the wild are spelled that way.
     /// </para></summary>
     public const string UnpairedRepeat = "LYS4017";
+    /// <summary>Warning: a text-spanner mark that pairs with nothing, so no spanner is
+    /// drawn — a START (<c>@rit</c>, <c>@textSpan("…")</c>) that no <c>@!</c> closes, a
+    /// <c>@!rit</c> with no span open in its voice, or a second START written while one is
+    /// open.
+    /// <para>
+    /// ⚠️ The WORD goes with the line. LilyPond's <c>Text_spanner_engraver</c> ends an
+    /// unterminated span with <c>suicide()</c> (lily/text-spanner-engraver.cc:117-127), not
+    /// by shortening it, so an unclosed <c>@rit</c> prints nothing at all — which is why
+    /// this warning exists rather than a silent default length. Lily# had one until session
+    /// 289: a bare <c>@rit</c> covered one measure, and nothing said that the length was the
+    /// engine's guess rather than the writer's instruction.
+    /// </para>
+    /// <para>
+    /// ⚠️ The pairing is per (staff, VOICE), because LilyPond keeps that engraver in the
+    /// Voice context (ly/engraver-init.ly:375) — a terminator in another voice reaches
+    /// nothing and is reported here as having no start.
+    /// </para></summary>
+    public const string UnpairedTextSpan = "LYS4018";
     /// <summary>Warning: a span that opens exactly ONE unnamed <c>voice { … }</c>. The
     /// block is then entirely transparent — stem forcing needs a second voice, so the
     /// music engraves as if the braces were not there. Someone who wrote it meaning

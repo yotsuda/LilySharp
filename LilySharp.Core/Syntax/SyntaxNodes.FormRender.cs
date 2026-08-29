@@ -399,7 +399,10 @@ public sealed partial class MusicMarkSyntax : SyntaxNode
                 var child = GetChild(i);
                 if (child is SyntaxTokenNode token && token.Kind is not (
                         SyntaxKind.At or SyntaxKind.Dot or SyntaxKind.OpenParen
-                        or SyntaxKind.CloseParen or SyntaxKind.Comma))
+                        or SyntaxKind.CloseParen or SyntaxKind.Comma
+                        // The '!' of '@!X' is punctuation, exactly like the '@' beside it.
+                        // See IsSpanEnd for why it must not reach the name.
+                        or SyntaxKind.DashedBar))
                 {
                     parts.Add(token.Text);
                 }
@@ -409,17 +412,41 @@ public sealed partial class MusicMarkSyntax : SyntaxNode
     }
 
     /// <summary>
-    /// The annotation's NAME on its own — the word after the '@', with no arguments,
-    /// no dotted name parts and no placement qualifier ("fig", "chord", "ds").
+    /// The annotation's NAME on its own — the word after the '@' (and after the '!' of a
+    /// terminator), with no arguments, no dotted name parts and no placement qualifier
+    /// ("fig", "chord", "ds").
     /// </summary>
     public string Name
     {
         get
         {
             for (int i = 0; i < SlotCount; i++)
-                if (GetChild(i) is SyntaxTokenNode token && token.Kind != SyntaxKind.At)
+                if (GetChild(i) is SyntaxTokenNode token
+                    && token.Kind is not (SyntaxKind.At or SyntaxKind.DashedBar))
                     return token.Text;
             return "";
+        }
+    }
+
+    /// <summary>
+    /// Whether this was written as a TERMINATOR — <c>@!rit</c> rather than <c>@rit</c>. The
+    /// '!' ends what the same name opened.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE NAME IS THE SAME EITHER WAY, deliberately: <see cref="Name"/> and
+    /// <see cref="MarkName"/> step over the '!', so <c>@!rit</c> and <c>@rit</c> both report
+    /// "rit". That keeps ONE vocabulary and ONE "did you mean" list — a terminator with a
+    /// name of its own would need a second of each, and every word added would have to be
+    /// added to both. What the mark MEANS is this flag, read beside the name.
+    /// </remarks>
+    public bool IsSpanEnd
+    {
+        get
+        {
+            for (int i = 0; i < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.DashedBar })
+                    return true;
+            return false;
         }
     }
 

@@ -4637,14 +4637,19 @@ internal static class LpGeometryProbes
     private static readonly string TRC = SpannerFloorScore("TRC",
         "c'''4@startTrillSpan c''' c''' c'''@stopTrillSpan | c''4 c'' c'' c'' |");
 
-    /// <summary>Quiet-support regime for the rit. text spanner (Lily#'s @rit spans to
-    /// the end of the following measure, like the .ly twin's \stopTextSpan).</summary>
+    /// <summary>Quiet-support regime for the rit. text spanner. The <c>@!rit</c> stands on
+    /// the note the twin's <c>\stopTextSpan</c> stands on (spanner-floors.ly:158), so the
+    /// two spanners cover the same music.
+    /// ⚠️ THIS DOC USED TO CLAIM THAT AND IT WAS FALSE: there was no terminator to write
+    /// until session 289, and <c>@rit</c>'s one-measure default ended the Lily# spanner a
+    /// bar early. The quantities read here are VERTICAL, which is why nothing caught it —
+    /// a claim about length that no measurement could reach.</summary>
     private static readonly string TSF = SpannerFloorScore("TSF",
-        "c'4@rit c' c' c' | c'4 c' c' c' |");
+        "c'4@rit c' c' c' | c'4 c' c' c'@!rit |");
 
     /// <summary>Support regime: two octaves up, the ledger column decides.</summary>
     private static readonly string TSC = SpannerFloorScore("TSC",
-        "c'''4@rit c''' c''' c''' | c'''4 c''' c''' c''' |");
+        "c'''4@rit c''' c''' c''' | c'''4 c''' c''' c'''@!rit |");
 
     /// <summary>
     /// A ROW STANDING ABOVE A STAFF THAT CARRIES A rit. SPANNER — the four books of
@@ -4675,6 +4680,13 @@ internal static class LpGeometryProbes
     /// read +0.570 instead of 0).
     /// </para>
     /// </remarks>
+    /// <remarks>
+    /// ⚠️ The terminator is DERIVED from <paramref name="rit"/>, not passed: the control is
+    /// "this book with the spanner removed and NOTHING else changed", and a control that
+    /// carried a stray '@!rit' would be a book with an unpaired terminator in it (which,
+    /// since session 289, draws a diagnostic and would put the control in a different
+    /// regime from the book it controls).
+    /// </remarks>
     private static string TextSpannerRowScore(string name, string rit) => $$"""
         octave absolute
         time 4/4
@@ -4682,7 +4694,7 @@ internal static class LpGeometryProbes
         part melody { clef treble }
 
         section Main {
-          melody { c'4{{rit}} c' c' c' | c'4 c' c' c' | }
+          melody { c'4{{rit}} c' c' c' | c'4 c' c' c'{{(rit.Length > 0 ? "@!rit" : "")}} | }
         }
 
         chords prog { section Main { D | E } }
@@ -4713,7 +4725,7 @@ internal static class LpGeometryProbes
 
         section Main {
           upper { c'4 c' c' c' | c'4 c' c' c' | }
-          lower { c'4{{rit}} c' c' c' | c'4 c' c' c' | }
+          lower { c'4{{rit}} c' c' c' | c'4 c' c' c'{{(rit.Length > 0 ? "@!rit" : "")}} | }
           lyrics words sings upper { Twin- kle twin- kle | lit- tle star | }
         }
 

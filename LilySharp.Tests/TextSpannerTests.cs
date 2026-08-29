@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using Xunit;
@@ -59,98 +60,180 @@ public class TextSpannerTests
     }
 
     [Fact]
-    public void DetectTextSpanners_Rit_CreatesSpanner()
+    public void DetectTextSpanners_AStartAndItsStop_MakeOneSpan()
     {
         var musicMarks = ImmutableArray.Create(
-            new MusicMarkItem(MusicMarkType.Rit, 2, 42));
+            new MusicMarkItem(MusicMarkType.TextSpanStart, "rit.", 2, 42),
+            new MusicMarkItem(MusicMarkType.TextSpanStop, 5, 60));
 
         var result = TextSpannerEngraver.DetectTextSpanners(musicMarks);
 
-        Assert.Single(result);
-        Assert.Equal("rit.", result[0].Text);
-        Assert.Equal(2, result[0].StartMeasureIndex);
-        Assert.Equal(3, result[0].EndMeasureIndex); // extends to next measure
-        Assert.Equal(TextSpannerStyle.DashedLine, result[0].Style);
-        Assert.Equal(42, result[0].SourcePosition);
+        var span = Assert.Single(result);
+        Assert.Equal("rit.", span.Text);
+        Assert.Equal(2, span.StartMeasureIndex);
+        // The length is where the terminator STANDS. There is no default: this number is
+        // the writer's, which is the whole reason the terminator exists.
+        Assert.Equal(5, span.EndMeasureIndex);
+        Assert.Equal(TextSpannerStyle.DashedLine, span.Style);
+        // The span is the START's, so click-to-source lands on the word that is printed.
+        Assert.Equal(42, span.SourcePosition);
     }
 
     [Fact]
-    public void DetectTextSpanners_Accel_CreatesSpanner()
+    public void DetectTextSpanners_TheWordIsTheStarts_NotTheTypes()
     {
+        // @accel, @rall and @textSpan("poco rit.") make the SAME mark and differ only in the
+        // text they carry — MusicMarkType.TextSpanStart holds no word (see its remark), so a
+        // span that printed "rit." for all of them would be reading a default, not the book.
         var musicMarks = ImmutableArray.Create(
-            new MusicMarkItem(MusicMarkType.Accel, 1, 0));
+            new MusicMarkItem(MusicMarkType.TextSpanStart, "poco rit.", 0, 10),
+            new MusicMarkItem(MusicMarkType.TextSpanStop, 2, 20));
 
-        var result = TextSpannerEngraver.DetectTextSpanners(musicMarks);
+        var span = Assert.Single(TextSpannerEngraver.DetectTextSpanners(musicMarks));
 
-        Assert.Single(result);
-        Assert.Equal("accel.", result[0].Text);
-        Assert.Equal(1, result[0].StartMeasureIndex);
-        Assert.Equal(2, result[0].EndMeasureIndex);
+        Assert.Equal("poco rit.", span.Text);
     }
 
     [Fact]
-    public void DetectTextSpanners_RitFollowedByAccel_TwoSpanners()
+    public void DetectTextSpanners_AStartNobodyClosed_DrawsNothingAndIsReported()
     {
-        // ⚠️ THE TWO SOURCE POSITIONS ARE DISTINCT, and that is not decoration: they are two
-        // marks WRITTEN in two places, and a parsed book cannot give them the same offset.
-        // Both were 0 until 2026-08-29, which made this pair indistinguishable from the one
-        // thing DetectTextSpanners must NOT treat as a terminator — the same written mark
-        // played twice by a repeating form.
+        // LILYPOND-REF: lily/text-spanner-engraver.cc:117-127 Text_spanner_engraver::finalize — "unterminated text
+        // spanner", then suicide(). The WORD goes with the line: an unclosed spanner is not
+        // a shorter spanner, and until session 289 Lily# gave it a one-measure default that
+        // nothing told the reader about.
         var musicMarks = ImmutableArray.Create(
-            new MusicMarkItem(MusicMarkType.Rit, 0, 42),
-            new MusicMarkItem(MusicMarkType.Accel, 3, 77));
+            new MusicMarkItem(MusicMarkType.TextSpanStart, "rit.", 2, 42));
 
-        var result = TextSpannerEngraver.DetectTextSpanners(musicMarks);
+        var (spanners, unpaired) = TextSpannerEngraver.PairTextSpanners(musicMarks);
 
-        Assert.Equal(2, result.Length);
-        Assert.Equal("rit.", result[0].Text);
-        Assert.Equal(0, result[0].StartMeasureIndex);
-        Assert.Equal(3, result[0].EndMeasureIndex); // ends at the next rit/accel
-        Assert.Equal("accel.", result[1].Text);
-        Assert.Equal(3, result[1].StartMeasureIndex);
-        Assert.Equal(4, result[1].EndMeasureIndex); // extends to next measure
+        Assert.True(spanners.IsEmpty);
+        var warning = Assert.Single(unpaired);
+        Assert.Equal(TextSpanPairingFault.Unterminated, warning.Fault);
+        Assert.Equal(42, warning.SourcePosition);
     }
 
     [Fact]
-    public void DetectTextSpanners_TheSameWrittenMarkPlayedTwice_DoesNotEndItself()
+    public void DetectTextSpanners_AStopWithNothingOpen_DrawsNothingAndIsReported()
+    {
+        // LILYPOND-REF: lily/text-spanner-engraver.cc:61-63 Text_spanner_engraver::process_music — "cannot find start of text
+        // spanner".
+        var musicMarks = ImmutableArray.Create(
+            new MusicMarkItem(MusicMarkType.TextSpanStop, 1, 77));
+
+        var (spanners, unpaired) = TextSpannerEngraver.PairTextSpanners(musicMarks);
+
+        Assert.True(spanners.IsEmpty);
+        Assert.Equal(TextSpanPairingFault.StopWithNoStart, Assert.Single(unpaired).Fault);
+    }
+
+    [Fact]
+    public void DetectTextSpanners_ASecondStartInsideAnOpenSpan_IsIgnoredAndReported()
+    {
+        // LILYPOND-REF: lily/text-spanner-engraver.cc:73-77 Text_spanner_engraver::process_music — "already have a text spanner".
+        // The OPEN one keeps the span; spanners do not nest, so the second start is dropped
+        // rather than replacing the first or opening a span inside it.
+        var musicMarks = ImmutableArray.Create(
+            new MusicMarkItem(MusicMarkType.TextSpanStart, "rit.", 0, 10),
+            new MusicMarkItem(MusicMarkType.TextSpanStart, "accel.", 1, 20),
+            new MusicMarkItem(MusicMarkType.TextSpanStop, 3, 30));
+
+        var (spanners, unpaired) = TextSpannerEngraver.PairTextSpanners(musicMarks);
+
+        var span = Assert.Single(spanners);
+        Assert.Equal("rit.", span.Text);          // the FIRST one keeps the span
+        Assert.Equal(0, span.StartMeasureIndex);
+        Assert.Equal(3, span.EndMeasureIndex);
+        var warning = Assert.Single(unpaired);
+        Assert.Equal(TextSpanPairingFault.StartWhileOpen, warning.Fault);
+        Assert.Equal(20, warning.SourcePosition);  // the dropped mark, not the open one
+    }
+
+    [Fact]
+    public void DetectTextSpanners_TheSamePairPlayedTwice_MakesTwoSpansOfTheSameLength()
     {
         // A form that repeats a section contributes ONE MusicMarkItem PER PLAYING of the
-        // same written @rit — same SourcePosition, different measures. Neither instance may
-        // be read as the other's terminating event, or the first spanner runs across every
-        // bar the repeat puts in between while the second gets the one-measure fallback:
-        // one source, two lengths (user report 2026-08-29, Untitled-6.lys, six bars against
-        // one). The picture is pinned by test/rit-span-in-a-repeated-section.
+        // same written mark — same SourcePosition, different measures. The defect this
+        // answers (user report 2026-08-29, Untitled-6.lys) had the first spanner run to the
+        // SECOND playing of itself, six bars against one: one source, two lengths.
+        // Pairing in played order needs no rule against that — playing 1's stop is reached
+        // before playing 2's start — which is why the guard that used to stand here is gone.
         var musicMarks = ImmutableArray.Create(
-            new MusicMarkItem(MusicMarkType.Rit, 0, 42),
-            new MusicMarkItem(MusicMarkType.Rit, 4, 42));
+            new MusicMarkItem(MusicMarkType.TextSpanStart, "rit.", 0, 42),
+            new MusicMarkItem(MusicMarkType.TextSpanStop, 1, 60),
+            new MusicMarkItem(MusicMarkType.TextSpanStart, "rit.", 4, 42),
+            new MusicMarkItem(MusicMarkType.TextSpanStop, 5, 60));
 
-        var result = TextSpannerEngraver.DetectTextSpanners(musicMarks);
+        var (spanners, unpaired) = TextSpannerEngraver.PairTextSpanners(musicMarks);
 
-        Assert.Equal(2, result.Length);
-        Assert.Equal(0, result[0].StartMeasureIndex);
-        Assert.Equal(1, result[0].EndMeasureIndex);
-        Assert.Equal(4, result[1].StartMeasureIndex);
-        Assert.Equal(5, result[1].EndMeasureIndex);
-        // ...and the two are the SAME LENGTH, which is the whole report.
+        Assert.Equal(2, spanners.Length);
+        Assert.True(unpaired.IsEmpty);
+        Assert.Equal(0, spanners[0].StartMeasureIndex);
+        Assert.Equal(1, spanners[0].EndMeasureIndex);
+        Assert.Equal(4, spanners[1].StartMeasureIndex);
+        Assert.Equal(5, spanners[1].EndMeasureIndex);
         Assert.Equal(
-            result[0].EndMeasureIndex - result[0].StartMeasureIndex,
-            result[1].EndMeasureIndex - result[1].StartMeasureIndex);
+            spanners[0].EndMeasureIndex - spanners[0].StartMeasureIndex,
+            spanners[1].EndMeasureIndex - spanners[1].StartMeasureIndex);
     }
 
     [Fact]
-    public void DetectTextSpanners_TwoRitsWrittenSeparately_StillEndEachOther()
+    public void DetectTextSpanners_AnUnclosedMarkPlayedTwice_IsReportedOncePerFault()
     {
-        // The control for the rule above: two rits the reader WROTE in two places are two
-        // marks, so the first still ends at the second. Only a replay of one mark is exempt.
+        // ONE ROOT CAUSE, ONE DIAGNOSTIC: the reader forgot one terminator, not two, however
+        // many times the form plays the bar it stands in. The two entries below are two
+        // different faults at that one position — the second playing finds a span already
+        // open, and the first is what is left unterminated at the end — not one fault twice.
         var musicMarks = ImmutableArray.Create(
-            new MusicMarkItem(MusicMarkType.Rit, 0, 42),
-            new MusicMarkItem(MusicMarkType.Rit, 4, 77));
+            new MusicMarkItem(MusicMarkType.TextSpanStart, "rit.", 0, 42),
+            new MusicMarkItem(MusicMarkType.TextSpanStart, "rit.", 4, 42));
 
-        var result = TextSpannerEngraver.DetectTextSpanners(musicMarks);
+        var (_, unpaired) = TextSpannerEngraver.PairTextSpanners(musicMarks);
 
-        Assert.Equal(2, result.Length);
-        Assert.Equal(4, result[0].EndMeasureIndex);
-        Assert.Equal(5, result[1].EndMeasureIndex);
+        Assert.Equal(2, unpaired.Length);
+        Assert.All(unpaired, w => Assert.Equal(42, w.SourcePosition));
+        Assert.Single(unpaired, w => w.Fault == TextSpanPairingFault.Unterminated);
+        Assert.Single(unpaired, w => w.Fault == TextSpanPairingFault.StartWhileOpen);
+    }
+
+    [Fact]
+    public void DetectTextSpanners_AStopInAnotherVoice_ClosesNothing()
+    {
+        // LILYPOND-REF: ly/engraver-init.ly:375 — Text_spanner_engraver stands in the Voice
+        // context, so each voice holds its own open spanner. A terminator written in the
+        // other voice reaches nothing, and BOTH marks are then unpaired.
+        var musicMarks = ImmutableArray.Create(
+            new MusicMarkItem(MusicMarkType.TextSpanStart, "rit.", 0, 10) { VoiceIndex = 0 },
+            new MusicMarkItem(MusicMarkType.TextSpanStop, 3, 20) { VoiceIndex = 1 });
+
+        var (spanners, unpaired) = TextSpannerEngraver.PairTextSpanners(musicMarks);
+
+        Assert.True(spanners.IsEmpty);
+        Assert.Equal(2, unpaired.Length);
+        Assert.Single(unpaired, w => w.Fault == TextSpanPairingFault.StopWithNoStart);
+        Assert.Single(unpaired, w => w.Fault == TextSpanPairingFault.Unterminated);
+    }
+
+    [Fact]
+    public void DetectTextSpanners_TwoStavesPairIndependently()
+    {
+        // The staff filter that stood here before the terminator existed, kept: the staves
+        // share score.MusicMarks, so a span opened on staff 1 must not be closed on staff 0.
+        var musicMarks = ImmutableArray.Create(
+            new MusicMarkItem(MusicMarkType.TextSpanStart, "rit.", 0, 10) { StaffIndex = 0 },
+            new MusicMarkItem(MusicMarkType.TextSpanStart, "accel.", 1, 20) { StaffIndex = 1 },
+            new MusicMarkItem(MusicMarkType.TextSpanStop, 2, 30) { StaffIndex = 1 },
+            new MusicMarkItem(MusicMarkType.TextSpanStop, 4, 40) { StaffIndex = 0 });
+
+        var (spanners, unpaired) = TextSpannerEngraver.PairTextSpanners(musicMarks);
+
+        Assert.True(unpaired.IsEmpty);
+        Assert.Equal(2, spanners.Length);
+        var onStaff0 = Assert.Single(spanners, s => s.StaffIndex == 0);
+        Assert.Equal(0, onStaff0.StartMeasureIndex);
+        Assert.Equal(4, onStaff0.EndMeasureIndex);
+        var onStaff1 = Assert.Single(spanners, s => s.StaffIndex == 1);
+        Assert.Equal(1, onStaff1.StartMeasureIndex);
+        Assert.Equal(2, onStaff1.EndMeasureIndex);
     }
 
     [Fact]

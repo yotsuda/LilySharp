@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 53 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 48 | 観測者がゼロだと自認しているもの |
-| `OWN` | 115 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **216** | |
+| `OWN` | 114 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **215** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -207,11 +207,11 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（115 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（114 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:1653** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:3220** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:3222** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:1983** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Rendering/HarfBuzzOutline.cs`
@@ -237,7 +237,7 @@
 ### `LilySharp.Core/Rendering/TextFontMetrics.cs`
 - **:476** LILYSHARP-OWN: LilyPond has no equivalent refusal, and cannot — it resolves through
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
-- **:337** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
+- **:356** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Svg/Collector/BeamDetector.cs`
 - **:950** LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
 - **:980** LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's
@@ -245,8 +245,8 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:1842** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:3671** LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
+- **:1854** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:3683** LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
 - **:67** LILYSHARP-OWN: the DEFAULT five is LilyPond's (scm/define-grobs.scm:3396,
 ### `LilySharp.Core/Svg/Collector/StaffAccidentalColumns.cs`
@@ -368,8 +368,6 @@
 - **:200** LILYSHARP-OWN, and it has to be: LilyPond's TabStaff draws no stems at all by default,
 ### `LilySharp.Core/Svg/Layout/TextOutlineSkylines.cs`
 - **:54** ⚠️ LILYSHARP-OWN, two declared substitutions inside the walk, neither of which changes
-### `LilySharp.Core/Svg/Layout/TextSpannerEngraver.cs`
-- **:346** ⚠️ LILYSHARP-OWN, ALL OF IT. LilyPond's spanner runs from \startTextSpan to an
 ### `LilySharp.Core/Svg/Layout/TieFormattingProblem.cs`
 - **:341** ⚠️ LILYSHARP-OWN: the MINIMUM-LENGTH FLOOR. LilyPond puts none here — min-length
 - **:388** ⚠️ LILYSHARP-OWN, AND ONLY ON A TAB. LilyPond has one staff_symbol_referencer_

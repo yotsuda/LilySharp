@@ -144,6 +144,35 @@ public static class AnnotationValues
         => Named(mark, "text") && mark.Arguments.Length > 0;
 
     /// <summary>
+    /// The printed word of <c>@textSpan("poco rit.")</c> — the string's CONTENT, without
+    /// its quotes — or null when the annotation is not one, is the TERMINATOR
+    /// (<c>@!textSpan</c>, which prints nothing), or carries no quoted string.
+    /// </summary>
+    /// <remarks>
+    /// The sugar spellings are NOT read here: <c>@rit</c> is one word with no argument, so
+    /// it arrives as an ordinary articulation and its text comes from
+    /// <see cref="Svg.Model.MusicMarkItem.TextSpanSugarText"/>. Both tables answer the same
+    /// question — what does this spanner PRINT — and both reach
+    /// <see cref="Svg.Model.MusicMarkItem"/>'s TEXT constructor, so the word on the page is
+    /// always one the reader wrote.
+    /// LILYPOND-REF: ly/spanners-init.ly — <c>\startTextSpan</c> carries no name either: what
+    /// it prints is <c>TextSpanner.bound-details.left.text</c>, set by the writer.
+    /// </remarks>
+    public static string? TextSpan(MusicMarkSyntax mark)
+        => IsTextSpanAnnotation(mark) && !mark.IsSpanEnd
+            ? mark.Arguments.Select(a => a.Value).OfType<LysValue.Str>().FirstOrDefault()?.V
+            : null;
+
+    /// <summary>
+    /// Whether this is a <c>@textSpan…</c> annotation at all — the START with a word, the
+    /// START with none, or the terminator. This is what "is it consumed?" means for the
+    /// family, and unlike <see cref="IsTextAnnotation"/> it does NOT require an argument:
+    /// a wordless <c>@textSpan</c> opens a bare dashed rule, which is what LilyPond's own
+    /// <c>\startTextSpan</c> draws until the writer sets the bound text.
+    /// </summary>
+    public static bool IsTextSpanAnnotation(MusicMarkSyntax mark) => Named(mark, "textSpan");
+
+    /// <summary>
     /// The printed label of a rehearsal mark — <c>@mark("A")</c> → <c>A</c> — or null
     /// when the annotation is not one. <paramref name="quoted"/> reports whether the
     /// label was written as a quoted string, which is the only spelling the language

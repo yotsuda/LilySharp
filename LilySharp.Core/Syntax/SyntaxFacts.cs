@@ -208,6 +208,10 @@ internal static class SyntaxFacts
         {
             "fig", "chord", "finger", "bend", "notehead", "frame", "text",
             "mark", "feather", "pluck", "arpeggio",
+            // @textSpan("poco rit.") — the general text spanner; the argument is the text it
+            // prints. The sugar spellings (@rit, @accel, @rall) take no argument and are
+            // NOT here: each is this annotation with the argument already filled in.
+            "textSpan",
             // Also plain marks on their own (@ottava, @ds): they are in the list so
             // the argument form keeps parsing, since the rule below would otherwise
             // hand their '(' to the slur.

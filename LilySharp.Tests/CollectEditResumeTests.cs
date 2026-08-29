@@ -234,7 +234,7 @@ public class CollectEditResumeTests
         var baseText = File.ReadAllText(path);
         // Late edit: swap a pitch letter inside the LAST phrase body so a real
         // prefix exists before the window.
-        int idx = baseText.IndexOf("a4 b cis d@fermata", StringComparison.Ordinal);
+        int idx = baseText.IndexOf("a4@!accel b cis d@fermata", StringComparison.Ordinal);
         Assert.True(idx >= 0, "fixture texture changed — pick another late token");
         var edited = baseText.Remove(idx, 2).Insert(idx, "g4");
 

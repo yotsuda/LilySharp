@@ -118,6 +118,46 @@ public record UnpairedSlurWarning(
     bool IsOpen       // true = an unclosed '('; false = a ')' with nothing open
 );
 
+/// <summary>Why a text-spanner mark drew nothing — LilyPond's three answers, one per
+/// warning its <c>Text_spanner_engraver</c> can emit.</summary>
+public enum TextSpanPairingFault
+{
+    /// <summary>A START (<c>@rit</c>, <c>@textSpan("…")</c>) that no <c>@!</c> ever closed.
+    /// LILYPOND-REF: lily/text-spanner-engraver.cc:117-127 Text_spanner_engraver::finalize — "unterminated text
+    /// spanner", then <c>suicide()</c>: the WORD goes with the line, because a spanner with
+    /// no right bound is not a shorter spanner.</summary>
+    Unterminated,
+    /// <summary>A terminator (<c>@!rit</c>) with no span open in its voice.
+    /// LILYPOND-REF: lily/text-spanner-engraver.cc:61-63 Text_spanner_engraver::process_music — "cannot find start of text
+    /// spanner".</summary>
+    StopWithNoStart,
+    /// <summary>A START written while one is already open in the same voice. The OPEN one
+    /// keeps the span; spans do not nest.
+    /// LILYPOND-REF: lily/text-spanner-engraver.cc:73-77 Text_spanner_engraver::process_music — "already have a text spanner",
+    /// beside a second warning pointing at where the open one started.</summary>
+    StartWhileOpen,
+}
+
+/// <summary>
+/// A text-spanner mark that pairs with nothing, so no spanner is drawn for it.
+/// <see cref="SourcePosition"/> points at the mark itself.
+/// </summary>
+/// <remarks>
+/// Recorded by <c>TextSpannerEngraver.PairTextSpanners</c> — the SAME call that decides
+/// which spans are drawn — and surfaced by <c>TextSpanPairingValidator</c>, for the reason
+/// <see cref="UnpairedSlurWarning"/> gives: a warning that re-derives the pairing can
+/// disagree with the page.
+/// <para>
+/// ⚠️ ONE PER SOURCE POSITION AND FAULT. The marks being paired are the PLAYED piece's, so
+/// a mark written inside a repeated section arrives once per playing; it is unterminated
+/// once.
+/// </para>
+/// </remarks>
+public record UnpairedTextSpanWarning(
+    int SourcePosition,
+    TextSpanPairingFault Fault
+);
+
 /// <summary>Which kind of span crossed a cue boundary — the two whose engravers LilyPond
 /// keeps in the Voice context, so a cue region (a Voice of its own) cuts both.</summary>
 public enum CueSpanKind

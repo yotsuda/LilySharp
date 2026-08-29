@@ -1310,10 +1310,15 @@ Beam           = '[' | ']' ;      (* manual; beaming is automatic otherwise *)
 
 ### 8.4 Annotations (@name, attached to a note or chord)
 
-Annotation     = '@' , AnnotationName , [ '(' , Arg , { ( ' ' | ',' ) , Arg } , ')' ] , [ Placement ] ;
+Annotation     = '@' , [ '!' ] , AnnotationName , [ '(' , Arg , { ( ' ' | ',' ) , Arg } , ')' ] , [ Placement ] ;
 Placement      = '.up' | '.down' ;   (* force above / below; default is automatic *)
 (* A value-bearing annotation puts its argument(s) in parentheses (space- or
    comma-separated); '.' is reserved for the .up / .down placement suffix. *)
+(* '@!X' is the TERMINATOR: it ends what '@X' opened, and it reports the SAME name, so the
+   vocabulary and the "did you mean" list stay ONE list. Only families that HAVE an end
+   accept it — today the text spanner (@!rit, @!accel, @!rall, @!textSpan); any other name
+   written with '!' is reported rather than dropped. A span nobody ends draws NOTHING
+   (LYS4018) — LilyPond's own answer, not a shortening. *)
 
 (* The '@' prefix is the ONLY annotation prefix; '\name' is rejected (backslash is
    tablature-only). AnnotationName is resolved from text — it is NOT a reserved keyword,
@@ -1341,7 +1346,8 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
                     @fall @doit (jazz bends) , @breath @caesura
                     (* a CUE is not an annotation — it is a region, 'cue { … }', below *)
    - Feathered beam: c16@feather(right) … (accel) / @feather(left) (rit)
-   - Spanners:       @rit @accel
+   - Spanners:       @textSpan("poco rit.") … @!textSpan   [sugar: @rit @accel @rall,
+                     each ended by @!rit / @!accel / @!rall — an end is REQUIRED]
                      @ottava(…) @quindicesima(…) … @loco ,   [labels: 8va/15ma; @…(bassa) = down]
                      @startTrillSpan … @stopTrillSpan ,
                      @sustainOn … @sustainOff , @sostenutoOn … @sostenutoOff , @unaCorda … @treCorde *)

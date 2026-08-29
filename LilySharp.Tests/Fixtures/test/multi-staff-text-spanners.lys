@@ -1,14 +1,15 @@
-// Text spanners (rit./accel.) on BOTH staves of a grand staff. Each rit pairs
-// with the next rit/accel on ITS OWN staff and the dashed line sits below that
-// staff — the two staves no longer share one score.MusicMarks column.
+// Text spanners (rit./accel.) on BOTH staves of a grand staff. Each spanner pairs with
+// a terminator on ITS OWN staff and the dashed line sits below that staff — the two
+// staves no longer share one score.MusicMarks column, so the '@!rit' on the lower staff
+// cannot close the upper staff's rit.
 // LILYPOND-REF: lily/text-spanner-engraver.cc + per-staff outside-staff stacking.
 octave absolute
 title "Multi-staff text spanners"
 part top { clef treble }
 part low { clef bass }
 section S {
-  top { c'4@rit c'4 c'4 c'4 | c'4@accel c'4 c'4 c'4 | }
-  low { c4@rit c4 c4 c4 | c4@accel c4 c4 c4 | }
+  top { c'4@rit c'4 c'4 c'4 | c'4@!rit c'4@accel c'4 c'4@!accel | }
+  low { c4@rit c4 c4 c4 | c4@!rit c4@accel c4 c4@!accel | }
 }
 form main { S }
 score main "multi-staff-text-spanners" { staff top staff low }

@@ -13,8 +13,8 @@ title "Chord row over rit., second system"
 key g major
 
 part melody {
-  section A { c4@rit c g' g | a a g2 | f4 f e e | d d c2 | break }
-  section C { c4@rit c g' g | a a g2 | f4 f e e | d d c2 | break }
+  section A { c4@rit c g' g | a@!rit a g2 | f4 f e e | d d c2 | break }
+  section C { c4@rit c g' g | a@!rit a g2 | f4 f e e | d d c2 | break }
 }
 
 chords prog {

@@ -2736,6 +2736,13 @@ public sealed class MusicXmlExporter
             return;
         }
 
+        // '@!X' is a TERMINATOR, and its NAME is the name of what it ends — so handing it to
+        // the table below would emit that thing's START: '@!ottava' would open an octave
+        // shift. Nothing here has a stop spelling yet, so the terminator family is dropped,
+        // which is the same silence '@rit' already meets.
+        if (mark.IsSpanEnd)
+            return;
+
         ProcessDirectionName(mark.MarkName);
     }
 

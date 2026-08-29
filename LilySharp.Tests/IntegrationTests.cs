@@ -126,12 +126,12 @@ phrase intro {
 
 phrase bridge {
   d4@mf e@p@rit fis g |
-  a2. r4 |
+  a2.@!rit r4 |
 }
 
 phrase finale {
   d4@accel e fis g |
-  a4 b cis d@fermata |
+  a4@!accel b cis d@fermata |
 }
 
 section Main {

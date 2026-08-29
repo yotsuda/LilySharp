@@ -1083,9 +1083,24 @@ public sealed partial class MeasureCollector
                     {
                         _musicMarks.Add(new MusicMarkItem(MusicMarkType.Rehearsal, label, markMeasure, mark.SourceStart));
                     }
-                    else if (MusicMarkItem.ParseMarkName(mark.MarkName) is { } markType)
+                    else if (mark.IsSpanEnd)
                     {
-                        _musicMarks.Add(new MusicMarkItem(markType, markMeasure, mark.SourceStart));
+                        // '@!X' — the terminator, asked BEFORE the name is read, because the
+                        // '!' changes what the name means: the arm below would read '@!rit'
+                        // as the rit it ends and OPEN a second spanner with it. Reaching
+                        // here means the mark rode no note's articulation list at all (see
+                        // the remark above on why that barely happens), so this is the
+                        // recovery path rather than the ordinary one.
+                        if (MusicMarkItem.ParseSpanEndName(mark.Name) is { } endType)
+                            _musicMarks.Add(new MusicMarkItem(endType, markMeasure, mark.SourceStart));
+                    }
+                    else if (MusicMarkItem.BuildPlain(mark.MarkName, isSpanEnd: false,
+                                 markMeasure, mark.SourceStart) is { } plainMark)
+                    {
+                        // BuildPlain rather than the bare constructor: a text-span START's
+                        // printed word is not recoverable from its TYPE, and the constructor
+                        // would put an empty label on the page.
+                        _musicMarks.Add(plainMark);
                     }
                 }
                 break;

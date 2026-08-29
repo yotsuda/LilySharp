@@ -169,6 +169,12 @@ internal sealed partial class Parser
     private MusicMarkGreen ParseMusicMark()
     {
         var at = Expect(SyntaxKind.At);
+        // '@!X' — the terminator form, read here for the same reason the music stream reads
+        // it (Parser.Music ParseArticulations): kept on the node, stepped over by Name /
+        // MarkName. A form body is not where a text spanner is written, but refusing the
+        // spelling HERE would report a lexical surprise ("expected a mark name") for what is
+        // really a placement mistake — the annotation validator names that one properly.
+        var bang = Check(SyntaxKind.DashedBar) ? Advance() : null;
         int nameStart = _textPosition; // the mark name starts here, before we consume it
         var name = ExpectMarkName();
 
@@ -186,7 +192,9 @@ internal sealed partial class Parser
         }
 
         // Handle compound marks like @ds.al.fine
-        var parts = new List<SyntaxToken> { at, name };
+        var parts = bang is null
+            ? new List<SyntaxToken> { at, name }
+            : new List<SyntaxToken> { at, bang, name };
         while (Check(SyntaxKind.Dot))
         {
             parts.Add(Advance()); // .

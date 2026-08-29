@@ -85,7 +85,11 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         // now falls through to the ordinary unknown-annotation diagnostic, which is the
         // intended message. See docs/cue-context-design.md §5.
         "cross", "arpeggio", "laissezvibrer", "repeattie",
-        "rit", "accel", "cresc", "decresc", "dim",
+        // The text spanner: the three sugar words and the general spelling. Their
+        // TERMINATOR is not a separate candidate — '@!rit' reports the name "rit"
+        // (MusicMarkSyntax.Name steps over the '!'), so one entry serves both ends.
+        "rit", "accel", "rall", "textSpan",
+        "cresc", "decresc", "dim",
         // Spelled as they should be READ: the matcher lowercases both sides, so
         // camelCase here only affects what the "did you mean" hint shows.
         "ottava", "ottava.bassa", "loco",
@@ -162,7 +166,21 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             case MusicMarkSyntax mark:
             {
                 var name = mark.MarkName;
-                if (!IsKnownCompoundName(mark))
+                // '@!X' is a TERMINATOR, and only the families that have one may be written
+                // with it. Asking IsKnownCompoundName here would answer about '@X' — so
+                // '@!sustainOn' would read as "known" and then be dropped by the collector
+                // in silence, which is the one failure this validator exists to prevent.
+                if (mark.IsSpanEnd)
+                {
+                    if (MusicMarkItem.ParseSpanEndName(name) is null)
+                        _diagnostics.Warning(
+                            mark.Span,
+                            DiagnosticCodes.UnknownAnnotation,
+                            $"'@!{name}' is ignored: nothing of that name can be ended. "
+                            + "Today only a text spanner has a terminator — '@!rit', "
+                            + "'@!accel', '@!rall', '@!textSpan'.");
+                }
+                else if (!IsKnownCompoundName(mark))
                     WarnUnknown(mark, name);
                 else if (AnnotationValues.Rehearsal(mark, out var labelIsQuoted) is not null
                          && !labelIsQuoted)
@@ -229,6 +247,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             || AnnotationValues.Bend(mark) is not null
             || AnnotationValues.Notehead(mark) is not null
             || AnnotationValues.IsTextAnnotation(mark)
+            || AnnotationValues.IsTextSpanAnnotation(mark)
             || AnnotationValues.Feather(mark) != 0
             || AnnotationValues.IsArpeggioBracket(mark)
             || AnnotationValues.Frame(mark) is not null

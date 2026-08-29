@@ -81,7 +81,7 @@ public class OttavaBracketTests
     {
         var musicMarks = ImmutableArray.Create(
             new MusicMarkItem(MusicMarkType.Segno, 0, 0),
-            new MusicMarkItem(MusicMarkType.Rit, 2, 0));
+            new MusicMarkItem(MusicMarkType.TextSpanStart, "rit.", 2, 0));
 
         var result = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks);
 

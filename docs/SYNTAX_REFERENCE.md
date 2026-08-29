@@ -1034,10 +1034,25 @@ coda coda D }`.
 
 ### Text Spanners
 
+A text spanner runs from its start to the `@!` that ends it, and **the end is required**:
+a spanner nobody closes draws nothing at all — not its dashed line and not its word — and
+says so (LYS4018). That is LilyPond's own answer (a `\startTextSpan` with no
+`\stopTextSpan` is dropped, never shortened), and it is what makes the length on the page
+always a length you wrote.
+
 ```
-c4@rit d e f |        // Ritardando
-c4@accel d e f |      // Accelerando
+c4@rit d e f@!rit |                 // Ritardando over four notes
+c4@accel d e f | g@!accel a b c |   // Accelerando over five
+c4@rall d e f@!rall |               // Rallentando
+
+c4@textSpan("poco rit.") d e f@!textSpan |   // any word you like
+c4@textSpan d e f@!textSpan |                // no word: a bare dashed line
 ```
+
+`@rit`, `@accel` and `@rall` are shorthand for `@textSpan("rit.")` and its siblings —
+nothing else about them differs, so `@!rit` and `@!textSpan` are the same mark and either
+closes either start. One spanner is open at a time in a voice, and a spanner does not
+carry from one voice into another.
 
 ### Ottava Brackets
 

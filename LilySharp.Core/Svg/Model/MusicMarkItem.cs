@@ -48,10 +48,19 @@ public enum MusicMarkType
     DaCapoAlCoda,
     /// <summary>To Coda</summary>
     ToCoda,
-    /// <summary>rit. (ritardando)</summary>
-    Rit,
-    /// <summary>accel. (accelerando)</summary>
-    Accel,
+    /// <summary>The START of a text spanner — the printed word plus the dashed rule that
+    /// runs from it to its <see cref="TextSpanStop"/>. The word is NOT in the type:
+    /// <c>@textSpan("poco rit.")</c> carries it as an argument, and the sugar spellings
+    /// (<c>@rit</c>, <c>@accel</c>, <c>@rall</c>) carry it in the one table
+    /// <see cref="MusicMarkItem.TextSpanSugarText"/> — because LilyPond's own vocabulary is
+    /// open (<c>ly/articulate.ly:565-589</c> compares STRINGS, and its TODO asks for more
+    /// synonyms), so an enum arm per word would be a closed list of an open set.</summary>
+    TextSpanStart,
+    /// <summary>The END of a text spanner (<c>@!rit</c>, <c>@!textSpan</c>). It prints
+    /// nothing of its own: it is the place the rule stops.</summary>
+    /// <remarks>LILYPOND-REF: lily/text-spanner-engraver.cc:60-68 Text_spanner_engraver::process_music — the stop event ends the
+    /// open spanner and makes no grob.</remarks>
+    TextSpanStop,
     /// <summary>cresc. (crescendo)</summary>
     Cresc,
     /// <summary>decresc. (decrescendo)</summary>
@@ -167,6 +176,18 @@ public sealed record MusicMarkItem
     /// </summary>
     public int StaffIndex { get; init; }
 
+    /// <summary>
+    /// The voice this mark was authored in (0 = the first/only voice). The text spanner
+    /// pairs its START with its STOP within the SAME voice, which is where LilyPond keeps
+    /// the engraver that pairs them.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:375 — <c>\consists Text_spanner_engraver</c> stands
+    /// in the <c>Voice</c> context, so each voice holds its own open spanner and a
+    /// <c>\stopTextSpan</c> in another voice cannot reach it.
+    /// </remarks>
+    public int VoiceIndex { get; init; }
+
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; init; }
 
@@ -231,10 +252,39 @@ public sealed record MusicMarkItem
     /// </summary>
     public static bool IsSpannerHandled(MusicMarkType type) =>
         type is MusicMarkType.Cresc or MusicMarkType.Decresc or MusicMarkType.Dim
-             or MusicMarkType.Rit or MusicMarkType.Accel
+             or MusicMarkType.TextSpanStart or MusicMarkType.TextSpanStop
              or MusicMarkType.OttavaUp or MusicMarkType.OttavaDown
              or MusicMarkType.QuindicesUp or MusicMarkType.QuindicesDown
              or MusicMarkType.Loco;
+
+    /// <summary>
+    /// The words that open a text spanner as SUGAR, mapped to the text each one prints —
+    /// or null when <paramref name="name"/> is not one of them. The one place a word is
+    /// turned into a printed string; adding a synonym is adding a line here.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/articulate.ly (ac:getactions, its TextScriptEvent branch at lines
+    /// 565-589 — cited WITHOUT a range on purpose: nothing there carries a name the citation
+    /// ratchet can check, and a range with no name is what that ratchet counts)
+    /// — LilyPond compares the spanner's text
+    /// against the STRINGS "rall", "rit.", "accel.", "poco rall.", and the TODO on the same
+    /// lines asks for more synonyms. The vocabulary is open by construction, which is why
+    /// these are a table of words and not arms of <see cref="MusicMarkType"/>: every one of
+    /// them makes the same grob, differing only in what is printed.
+    /// <para>
+    /// ⚠️ The GENERAL spelling is <c>@textSpan("…")</c>, which takes any text at all. These
+    /// three are shorthand for the three a reader writes constantly, and each is exactly
+    /// <c>@textSpan("…")</c> with the argument filled in — nothing else about them differs,
+    /// the terminator <c>@!rit</c> included.
+    /// </para>
+    /// </remarks>
+    public static string? TextSpanSugarText(string name) => name.ToLowerInvariant() switch
+    {
+        "rit" => "rit.",
+        "accel" => "accel.",
+        "rall" => "rall.",
+        _ => null
+    };
 
     /// <summary>Parses a mark NAME (e.g. <c>segno</c>, <c>ds.al.fine</c>,
     /// <c>ottava.bassa</c>) into a <see cref="MusicMarkType"/>, or null if
@@ -261,8 +311,10 @@ public sealed record MusicMarkItem
             "dc.al.fine" => MusicMarkType.DaCapoAlFine,
             "dc.al.coda" => MusicMarkType.DaCapoAlCoda,
             "to.coda" or "tocoda" => MusicMarkType.ToCoda,
-            "rit" => MusicMarkType.Rit,
-            "accel" => MusicMarkType.Accel,
+            // The text spanner: the general spelling plus the three sugar words. All four
+            // open the SAME spanner and differ only in the text they print, which
+            // TextSpanSugarText / the @textSpan argument supplies — see BuildPlain.
+            "textspan" or "rit" or "accel" or "rall" => MusicMarkType.TextSpanStart,
             "cresc" => MusicMarkType.Cresc,
             "decresc" => MusicMarkType.Decresc,
             "dim" => MusicMarkType.Dim,
@@ -289,6 +341,55 @@ public sealed record MusicMarkItem
         };
     }
 
+    /// <summary>
+    /// Parses the name of a TERMINATOR annotation — the <c>X</c> of <c>@!X</c> — into the
+    /// mark it ends, or null when nothing of that name can be ended.
+    /// </summary>
+    /// <remarks>
+    /// <c>@!X</c> closes what <c>@X</c> opened, so this takes the SAME names
+    /// <see cref="ParseMarkName"/> does and answers with the STOP of the family each one
+    /// starts. Today only the text spanner has a terminator; the pedals and the ottava are
+    /// the next family to move here, and until they do <c>@!sustainOn</c> is refused by
+    /// name rather than accepted and dropped.
+    /// <para>
+    /// ⚠️ ONE STOP FOR THE WHOLE FAMILY, exactly as in LilyPond: <c>\stopTextSpan</c> ends
+    /// whatever <c>\startTextSpan</c> is open, whatever word it printed. So <c>@!rit</c>
+    /// and <c>@!textSpan</c> are the same mark, and a reader who opened with <c>@accel</c>
+    /// may close with <c>@!accel</c> because that reads best — not because the engine can
+    /// tell the two apart.
+    /// </para>
+    /// </remarks>
+    public static MusicMarkType? ParseSpanEndName(string name) =>
+        ParseMarkName(name) switch
+        {
+            MusicMarkType.TextSpanStart => MusicMarkType.TextSpanStop,
+            _ => null
+        };
+
+    /// <summary>
+    /// The mark a plain one-word annotation denotes — <c>@name</c>, or <c>@!name</c> when
+    /// <paramref name="isSpanEnd"/> — with the text it prints already resolved, or null
+    /// when the name denotes no mark.
+    /// </summary>
+    /// <remarks>
+    /// The one door the collector's two mark sites go through, so the sugar table is read
+    /// in one place. A text-span START built any other way has no text to print: the word
+    /// is not recoverable from <see cref="MusicMarkType.TextSpanStart"/>, which is the
+    /// point of it (see the enum's remark).
+    /// </remarks>
+    public static MusicMarkItem? BuildPlain(string name, bool isSpanEnd, int measureIndex,
+        int sourcePosition, int anchorItemIndex = -1, Fraction anchorTiming = default)
+    {
+        var type = isSpanEnd ? ParseSpanEndName(name) : ParseMarkName(name);
+        if (type is null)
+            return null;
+        if (type == MusicMarkType.TextSpanStart)
+            return new MusicMarkItem(type.Value, TextSpanSugarText(name) ?? "",
+                measureIndex, sourcePosition, anchorItemIndex, anchorTiming);
+        return new MusicMarkItem(type.Value, measureIndex, sourcePosition,
+            anchorItemIndex, anchorTiming);
+    }
+
     private static string GetMarkText(MusicMarkType type) => type switch
     {
         MusicMarkType.Segno => "𝄋",        // SMuFL will use glyph
@@ -301,8 +402,13 @@ public sealed record MusicMarkItem
         MusicMarkType.DaCapoAlFine => "D.C. al Fine",
         MusicMarkType.DaCapoAlCoda => "D.C. al Coda",
         MusicMarkType.ToCoda => "To Coda",
-        MusicMarkType.Rit => "rit.",
-        MusicMarkType.Accel => "accel.",
+        // A text spanner's word is written by the reader, not implied by the type: the
+        // sugar words go through TextSpanSugarText and @textSpan("…") carries its own, both
+        // via BuildPlain / the collector's argument reading, which use the TEXT constructor.
+        // Reaching here means one was built without a word, and printing a guess ("rit.")
+        // would put a word on the page that no one wrote.
+        MusicMarkType.TextSpanStart => "",
+        MusicMarkType.TextSpanStop => "",
         MusicMarkType.Cresc => "cresc.",
         MusicMarkType.Decresc => "decresc.",
         MusicMarkType.Dim => "dim.",
@@ -356,8 +462,8 @@ public sealed record MusicMarkItem
             or MusicMarkType.DalSegnoAlFine or MusicMarkType.DalSegnoAlCoda
             or MusicMarkType.DaCapoAlFine or MusicMarkType.DaCapoAlCoda
             => MusicMarkVertical.Below,
-        MusicMarkType.Rit => MusicMarkVertical.Below,
-        MusicMarkType.Accel => MusicMarkVertical.Below,
+        MusicMarkType.TextSpanStart => MusicMarkVertical.Below,
+        MusicMarkType.TextSpanStop => MusicMarkVertical.Below,
         MusicMarkType.Cresc => MusicMarkVertical.Below,
         MusicMarkType.Decresc => MusicMarkVertical.Below,
         MusicMarkType.Dim => MusicMarkVertical.Below,

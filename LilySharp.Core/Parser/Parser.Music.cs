@@ -990,6 +990,22 @@ private GreenNode?[] ParseArticulations()
                 // @staccato, @accent, @p, @f, etc.
                 var at = Advance();
 
+                // @!name — the TERMINATOR form: '@!X' ends what '@X' opened.
+                //
+                // ⚠️ NO LEXER CHANGE, and none can be needed: the '!' already lexes as
+                // SyntaxKind.DashedBar (Lexer.cs:196), and after an '@' the stream stands at
+                // a mark NAME, where a barline cannot — so the two readings of '!' never
+                // compete for the same position. The token is KEPT on the node so the source
+                // span is exact, and MusicMarkSyntax.Name / .MarkName step over it: that is
+                // what makes '@!rit' and '@rit' report the SAME name, so there is one
+                // vocabulary, one "did you mean" list, and one place a word is added.
+                if (Check(SyntaxKind.DashedBar))
+                {
+                    var bang = Advance();
+                    articulations.Add(new MusicMarkGreen([at, bang, ExpectMarkName()]));
+                    continue;
+                }
+
                 // A navigation mark (segno/coda/fine/D.S./D.C./to coda) is a standalone
                 // BARE landmark, not a note modifier, so `note@segno` is rejected too
                 // (recover by consuming the whole compound mark).

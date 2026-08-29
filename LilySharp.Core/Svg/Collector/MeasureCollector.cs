@@ -254,6 +254,18 @@ public sealed partial class MeasureCollector
     /// <summary>Slur marks — a <c>(</c> never closed or a <c>)</c> with none open — that
     /// draw no slur. Populated as a side effect of Collect.</summary>
     public IReadOnlyList<UnpairedSlurWarning> UnpairedSlurWarnings => _unpairedSlurWarnings.ToList();
+    /// <summary>Text-spanner marks — a START never closed, a <c>@!</c> with none open, or a
+    /// second START inside an open span — that draw no spanner. Surfaced by
+    /// <c>TextSpanPairingValidator</c>.</summary>
+    /// <remarks>
+    /// ⚠️ NOT a side effect of Collect, unlike its neighbours here, and it must not become
+    /// one: the pairing is done by the SAME call the layout draws from
+    /// (<c>TextSpannerEngraver.PairTextSpanners</c>) over the collected marks, so what is
+    /// warned about and what is drawn are two halves of one answer rather than two answers.
+    /// Recording it during the walk would put the decision in a second place.
+    /// </remarks>
+    public IReadOnlyList<UnpairedTextSpanWarning> UnpairedTextSpanWarnings =>
+        Layout.TextSpannerEngraver.PairTextSpanners(_musicMarks.ToImmutableArray()).Unpaired;
     // Slurs and ties with one end inside a cue region and the other outside it — a span
     // LilyPond cannot make. Recorded by the SAME two scanners that pair them (one IsCue
     // comparison on the pair each already holds); surfaced by CueSpanBoundaryValidator.

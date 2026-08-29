@@ -2115,7 +2115,9 @@ public sealed class LilyPondExporter
             return na;
         if (Fingering(mk) is { } fg)
             return fg;
-        _warnings.Add($"@{name} dropped (out of scope)");
+        // Spelt as WRITTEN: MarkName steps over the '!' of a terminator, so a bare
+        // "@rit dropped" for a '@!rit' would name a mark the reader did not write.
+        _warnings.Add($"@{(mk.IsSpanEnd ? "!" : "")}{name} dropped (out of scope)");
         return "";
     }
 

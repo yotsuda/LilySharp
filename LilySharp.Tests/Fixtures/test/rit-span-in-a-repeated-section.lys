@@ -1,11 +1,16 @@
-// ONE written @rit, in a section the form plays TWICE. Both playings must draw the same
-// spanner: the mark's own one-measure default, because nothing else in the book ends it.
+// ONE written @rit and ONE written @!rit, in a section the form plays TWICE. Both
+// playings must draw the same spanner, because it is one written pair.
 // A form that repeats a section contributes one MusicMarkItem per playing, all carrying
 // the SAME source position, and until 2026-08-29 the "next rit/accel ends this one" search
 // found the second playing and ran the first spanner across every bar in between — six bars
 // against one on the reported book (user report 2026-08-29, scratch/ベースタブLy/Untitled-6.lys,
 // form A |: B :| A "A2"). Section B is here for the same reason it is there: it is the
 // music the first spanner used to run straight through.
+// ⚠️ THE TERMINATOR RETIRED THE RULE, NOT THE BOOK (session 289). Pairing in PLAYED order
+// cannot make that mistake — playing 1's '@!rit' is reached before playing 2's '@rit' —
+// so this book no longer guards a special case; it guards that the ordinary pairing walk
+// is not confused by a mark arriving twice. The old spelling had no terminator at all and
+// leaned on a one-measure default that has since been retired with it.
 // ⚠️ THE TWO DASHED LINES ARE THE ASSERTION, and in THIS book they come out the same
 // length to the hundredth (11.29→21.40 and 63.53→73.65): one system, equal bars, so the
 // two playings are directly comparable. The reported book's two differ slightly because
@@ -16,7 +21,7 @@ title "rit. in a repeated section"
 
 part m { clef treble }
 
-section A { m { c'4@rit c' c' c' | c' c' c' c' | } }
+section A { m { c'4@rit c' c' c' | c'@!rit c' c' c' | } }
 section B { m { d'4 d' d' d' | d' d' d' d' | } }
 
 form main { A B A "A2" }

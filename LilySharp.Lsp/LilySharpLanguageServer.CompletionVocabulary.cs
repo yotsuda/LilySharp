@@ -2786,8 +2786,13 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "mark", Kind = CompletionItemKind.Value, InsertText = "mark(\"$0\")", InsertTextFormat = InsertTextFormat.Snippet, Detail = "Rehearsal mark (boxed label)", SortText = "3mark" },
 
                 // Spanners and brackets
-                new CompletionItem { Label = "rit", Kind = CompletionItemKind.Value, Detail = "Ritardando text spanner", SortText = "4rit" },
-                new CompletionItem { Label = "accel", Kind = CompletionItemKind.Value, Detail = "Accelerando text spanner", SortText = "4accel" },
+                // The text spanner: three sugar words plus the general spelling. A spanner
+                // nobody ends draws NOTHING (LYS4018, LilyPond's own answer), so the
+                // terminator is named in every Detail rather than left to be discovered.
+                new CompletionItem { Label = "rit", Kind = CompletionItemKind.Value, Detail = "Ritardando text spanner (ends at @!rit)", SortText = "4rit" },
+                new CompletionItem { Label = "accel", Kind = CompletionItemKind.Value, Detail = "Accelerando text spanner (ends at @!accel)", SortText = "4accel" },
+                new CompletionItem { Label = "rall", Kind = CompletionItemKind.Value, Detail = "Rallentando text spanner (ends at @!rall)", SortText = "4rall" },
+                new CompletionItem { Label = "textSpan", Kind = CompletionItemKind.Value, InsertText = "textSpan(\"$0\")", InsertTextFormat = InsertTextFormat.Snippet, Detail = "Text spanner with your own word (ends at @!textSpan)", SortText = "4textSpan" },
                 new CompletionItem { Label = "ottava", Kind = CompletionItemKind.Value, Detail = "Ottava bracket up (8va)", SortText = "4ottava" },
                 new CompletionItem { Label = "ottava(bassa)", Kind = CompletionItemKind.Value, Detail = "Ottava bracket down (8vb)", SortText = "4ottava.bassa" },
                 new CompletionItem { Label = "quindicesima", Kind = CompletionItemKind.Value, Detail = "Quindicesima bracket up (15ma)", SortText = "4quindicesima" },

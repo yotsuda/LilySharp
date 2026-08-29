@@ -430,7 +430,10 @@ The same bare words are also written in a section's music, at a barline boundary
 modifiers, so `c4@segno` is an error (LYS1022) and mid-measure warns (LYS4003).
 
 In-note marks: `c4@mark("A")` (rehearsal mark),
-text spanners `@rit` / `@accel`, ottava `@ottava` / `@ottava(bassa)` ... `@loco`,
+text spanners `@textSpan("poco rit.")` ... `@!textSpan` (sugar: `@rit` / `@accel` / `@rall`,
+closed by `@!rit` / `@!accel` / `@!rall` — **the end is REQUIRED**: a spanner nobody closes
+draws nothing at all, its word included, and says so with LYS4018),
+ottava `@ottava` / `@ottava(bassa)` ... `@loco`,
 trill spanner `@startTrillSpan` ... `@stopTrillSpan`, 15ma `@quindicesima` / `@quindicesima(bassa)`,
 pedals `@sustainOn`/`@sustainOff`, `@sostenutoOn`/`@sostenutoOff`, `@unaCorda`/`@treCorde` — one word each,
 LilyPond's own names, taking NO argument (`@ped`, `@ped(off)`, `@sost(off)`, `@una(corda)` do not exist).

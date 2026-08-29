@@ -476,13 +476,18 @@ public sealed partial class MeasureCollector
                         // one of them contains a '.'.) Until the label moved to its
                         // argument this arm carried a copy of the rehearsal reading that
                         // no book could reach.
-                        var markType = MusicMarkItem.ParseMarkName(nameText);
-                        if (markType != null)
+                        // Anchor to the host note's column so note-attached
+                        // marks (e.g. pedal "Ped.") sit at the note, not the
+                        // measure start. BuildPlain resolves the text a text-span
+                        // START prints (@rit → "rit."), which the type does not carry.
+                        if (MusicMarkItem.BuildPlain(nameText, isSpanEnd: false, measureIndex,
+                                articulationSyntax.SourceStart, itemIndex, anchorTiming) is { } mark)
                         {
-                            // Anchor to the host note's column so note-attached
-                            // marks (e.g. pedal "Ped.") sit at the note, not the
-                            // measure start.
-                            _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex, articulationSyntax.SourceStart, itemIndex, anchorTiming) { StaffIndex = _cursor.StaffIndex });
+                            _musicMarks.Add(mark with
+                            {
+                                StaffIndex = _cursor.StaffIndex,
+                                VoiceIndex = _cursor.VoiceIndex,
+                            });
                         }
                     }
                 }
@@ -493,7 +498,22 @@ public sealed partial class MeasureCollector
                 // @startTrillSpan / @stopTrillSpan, one word each, exactly as in
                 // LilyPond — the '@trillSpan(start)' spelling was a second way to
                 // say the same thing and was dropped.
-                if (Semantics.AnnotationValues.Pluck(markSyntax) is { } pluckLetter)
+                if (markSyntax.IsSpanEnd)
+                {
+                    // '@!X' — the TERMINATOR, read first because the '!' changes what the
+                    // name means and every arm below reads names. Only the text spanner has
+                    // a terminator today; any other name written this way was already
+                    // reported by AnnotationNameValidator, and is dropped here rather than
+                    // quietly turned into the mark '@X' would have made.
+                    if (MusicMarkItem.ParseSpanEndName(markSyntax.Name) is { } endType)
+                        _musicMarks.Add(new MusicMarkItem(
+                            endType, measureIndex, markSyntax.SourceStart, itemIndex, anchorTiming)
+                        {
+                            StaffIndex = _cursor.StaffIndex,
+                            VoiceIndex = _cursor.VoiceIndex,
+                        });
+                }
+                else if (Semantics.AnnotationValues.Pluck(markSyntax) is { } pluckLetter)
                 {
                     // p-i-m-a right-hand fingering, printed BELOW the note.
                     _articulations.Add(new ArticulationItem(
@@ -516,6 +536,21 @@ public sealed partial class MeasureCollector
                         ArticulationType.Bend, measureIndex, itemIndex, true,
                         markSyntax.SourceStart, _cursor.StaffIndex)
                     { BendSemitones = semitones, VoiceIndex = _cursor.VoiceIndex });
+                }
+                else if (Semantics.AnnotationValues.IsTextSpanAnnotation(markSyntax))
+                {
+                    // '@textSpan("poco rit.")' — the general text spanner START. An empty
+                    // '@textSpan' opens one with NO word, which is a bare dashed rule and is
+                    // what LilyPond's own \startTextSpan draws until the writer sets
+                    // TextSpanner.bound-details.left.text — so it is not a mistake and gets
+                    // no diagnostic.
+                    _musicMarks.Add(new MusicMarkItem(
+                        MusicMarkType.TextSpanStart, Semantics.AnnotationValues.TextSpan(markSyntax) ?? "",
+                        measureIndex, markSyntax.SourceStart, itemIndex, anchorTiming)
+                    {
+                        StaffIndex = _cursor.StaffIndex,
+                        VoiceIndex = _cursor.VoiceIndex,
+                    });
                 }
                 else if (markSyntax.Name.Equals("notehead", StringComparison.OrdinalIgnoreCase)
                          && markSyntax.HasArgumentList)

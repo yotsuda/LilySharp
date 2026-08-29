@@ -16,6 +16,7 @@
 
 using System.Collections.Immutable;
 using LilySharp.Core.Rendering;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -332,118 +333,125 @@ internal static class TextSpannerEngraver
     }
 
     /// <summary>
-    /// Detects text spanner spans from music marks.
-    /// Expression marks (rit., accel.) that should span a duration
-    /// are converted to TextSpannerItems.
+    /// Pairs the text-spanner marks of a played score into spans, and reports the marks
+    /// that pair with nothing.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/text-spanner-engraver.cc start/end event handling
-    ///
-    /// A text spanner starts at a rit/accel mark and extends to:
-    /// 1. The next rit/accel mark on the same staff
-    /// 2. The end of the next measure (if no terminating event found)
+    /// LILYPOND-REF: lily/text-spanner-engraver.cc:59-88 Text_spanner_engraver::process_music, :117-127 Text_spanner_engraver::finalize —
+    /// this is that engraver, with its three answers:
+    /// a STOP with nothing open is "cannot find start of text spanner" and makes no grob;
+    /// a START while one is open is "already have a text spanner" and the OPEN one keeps
+    /// the span (the new mark is dropped, not nested); and a span still open at the end is
+    /// "unterminated text spanner" followed by <c>suicide()</c> — the text vanishes with the
+    /// line, because a spanner with no right bound is not a shorter spanner.
     /// <para>
-    /// ⚠️ LILYSHARP-OWN, ALL OF IT. LilyPond's spanner runs from <c>\startTextSpan</c> to an
-    /// explicit <c>\stopTextSpan</c> and there is no terminator spelling here at all — no
-    /// stop form in the annotation vocabulary and no length argument on the mark — so both
-    /// arms above are this engine's own convention rather than a port, and a bare
-    /// <c>@rit</c> can only ever mean "one measure" unless another mark cuts it short.
+    /// ⚠️ ONE OPEN SPAN PER (STAFF, VOICE), because that is where LilyPond keeps the
+    /// engraver (<c>ly/engraver-init.ly:375</c>, the <c>Voice</c> context). A
+    /// <c>@!rit</c> written in another voice reaches nothing, which is the same answer
+    /// LilyPond gives and the reason <see cref="MusicMarkItem.VoiceIndex"/> had to exist.
     /// </para>
     /// <para>
-    /// ⚠️ A TEMPO CHANGE DOES NOT END ONE, whatever arm 1 used to say. It read "the next
-    /// tempo-related mark (another rit/accel, or a tempo change)" and the search list is
-    /// <c>ritAccelMarks</c>: a Tempo mark has never been in it. MEASURED 2026-08-29 with a
-    /// rit in bar 1 and a <c>tempo 160</c> section starting at bar 5 — the spanner came out
-    /// one bar, the fallback, not four. Whether it SHOULD end there is a real question and
-    /// an open one; what is not open is that the comment described a branch that does not
-    /// exist.
+    /// ⚠️ THE MARKS ARE THE PLAYED PIECE'S, so a section the form repeats contributes one
+    /// instance of each mark PER PLAYING — the same written <c>@rit</c>, at the same
+    /// <c>SourcePosition</c>, in two different measures. Pairing in played order handles
+    /// that without knowing it: playing 1's START meets playing 1's STOP before playing 2's
+    /// START is reached. The three devices that stood here before this — a one-measure
+    /// fallback, a "next rit/accel" search, and a guard against a mark ending its own second
+    /// playing — were all consequences of there being no terminator to pair with, and all
+    /// three are retired with it (session 288's remark carries what each got wrong).
     /// </para>
     /// <para>
-    /// ⚠️ A MARK CANNOT BE ENDED BY ANOTHER PLAYING OF ITSELF, and until 2026-08-29 it was.
-    /// <c>musicMarks</c> holds the marks of the PLAYED piece, so a section the form repeats
-    /// contributes one instance per playing — the same written <c>@rit</c>, at the same
-    /// <c>SourcePosition</c>, in two different measures. The "next rit/accel" search then
-    /// found the second instance and ran the first spanner all the way to it, across every
-    /// bar in between. MEASURED on the reported book (user report 2026-08-29,
-    /// <c>scratch/ベースタブLy/Untitled-6.lys</c>, form <c>A |: B :| A "A2"</c>): the first
-    /// rit. covered six bars and ran through the whole of section B, while the second — with
-    /// no later instance to find — covered the one bar the fallback gives. Same source, two
-    /// lengths. The minimal pair is <c>test/rit-span-in-a-repeated-section.lys</c> against
-    /// its once-played control.
-    /// </para>
-    /// <para>
-    /// ⚠️ THE IDENTITY IS THE SOURCE POSITION, not the object: two playings are two
-    /// <c>MusicMarkItem</c>s, so <c>!=</c> does not see it. Every mark is built with its
-    /// syntax node's <c>SourceStart</c> (MeasureCollector), so two instances share a position
-    /// exactly when they are one written mark, and two separately written marks never do —
-    /// including two <c>@rit</c>s written in the same bar.
+    /// ⚠️ ONE ROOT CAUSE, ONE DIAGNOSTIC: an unterminated mark inside a repeated section is
+    /// unterminated once, however many times it is played, so the warnings are reported per
+    /// <c>SourcePosition</c> — the same identity <see cref="MusicMarkItem.SourcePosition"/>
+    /// carries everywhere, and the same doctrine the measure passes state.
     /// </para>
     /// </remarks>
-    public static ImmutableArray<TextSpannerItem> DetectTextSpanners(
-        ImmutableArray<MusicMarkItem> musicMarks)
+    internal static (ImmutableArray<TextSpannerItem> Spanners,
+                     ImmutableArray<UnpairedTextSpanWarning> Unpaired)
+        PairTextSpanners(ImmutableArray<MusicMarkItem> musicMarks)
     {
-        var spanners = ImmutableArray.CreateBuilder<TextSpannerItem>();
+        if (musicMarks.IsDefaultOrEmpty)
+            return ([], []);
 
         // F3/B: keep each mark's ORIGINAL index in musicMarks (== score.MusicMarks) so the
         // spanner can re-derive its data-pos from the live score on reuse.
-        var ritAccelMarks = musicMarks
+        var spanMarks = musicMarks
             .Select((m, i) => (Mark: m, Index: i))
-            .Where(x => x.Mark.Type == MusicMarkType.Rit || x.Mark.Type == MusicMarkType.Accel)
+            .Where(x => x.Mark.Type is MusicMarkType.TextSpanStart or MusicMarkType.TextSpanStop)
+            // Played order: by measure, then by the moment within it. A measure-start mark
+            // carries AnchorItemIndex −1 and so sorts before the notes, which is where it
+            // stands. The original index breaks the remaining ties, keeping the order the
+            // collector wrote — two marks on the SAME note are read left to right.
             .OrderBy(x => x.Mark.MeasureIndex)
+            .ThenBy(x => x.Mark.AnchorItemIndex)
+            .ThenBy(x => x.Index)
             .ToList();
 
-        if (ritAccelMarks.Count == 0)
-            return ImmutableArray<TextSpannerItem>.Empty;
+        if (spanMarks.Count == 0)
+            return ([], []);
 
-        foreach (var (mark, srcIndex) in ritAccelMarks)
+        var spanners = ImmutableArray.CreateBuilder<TextSpannerItem>();
+        var unpaired = ImmutableArray.CreateBuilder<UnpairedTextSpanWarning>();
+        var reported = new HashSet<(int Position, TextSpanPairingFault Fault)>();
+        var open = new Dictionary<(int Staff, int Voice), (MusicMarkItem Mark, int Index)>();
+
+        void Report(int sourcePosition, TextSpanPairingFault fault)
         {
-            // Find the next rit/accel mark ON THE SAME STAFF (terminates this
-            // spanner). Without the staff filter a rit on staff 2 would end at a rit
-            // in a later measure on staff 1 (they share score.MusicMarks).
-            // ...and NOT ANOTHER PLAYING OF THIS SAME WRITTEN MARK, which is what a form
-            // that repeats a section produces — see this method's remark for the reported
-            // book and why the object identity `!=` cannot see it.
-            var nextMark = ritAccelMarks
-                .Select(x => x.Mark)
-                .FirstOrDefault(m =>
-                    m != mark && m.SourcePosition != mark.SourcePosition &&
-                    m.StaffIndex == mark.StaffIndex &&
-                    m.MeasureIndex > mark.MeasureIndex);
-
-            int endMeasure;
-            int endItem;
-
-            if (nextMark != null)
-            {
-                endMeasure = nextMark.MeasureIndex;
-                endItem = 0;
-            }
-            else
-            {
-                // No end found — extend to end of the mark's measure + 1
-                endMeasure = mark.MeasureIndex + 1;
-                endItem = 0;
-            }
-
-            // Only add if there's actually a span
-            if (endMeasure > mark.MeasureIndex)
-            {
-                spanners.Add(new TextSpannerItem(
-                    Text: mark.Text,
-                    StartMeasureIndex: mark.MeasureIndex,
-                    StartItemIndex: 0,
-                    EndMeasureIndex: endMeasure,
-                    EndItemIndex: endItem,
-                    Style: TextSpannerStyle.DashedLine,
-                    SourcePosition: mark.SourcePosition,
-                    SourceIndex: srcIndex,
-                    StaffIndex: mark.StaffIndex
-                ));
-            }
+            if (reported.Add((sourcePosition, fault)))
+                unpaired.Add(new UnpairedTextSpanWarning(sourcePosition, fault));
         }
 
-        return spanners.ToImmutable();
+        foreach (var (mark, srcIndex) in spanMarks)
+        {
+            var key = (mark.StaffIndex, mark.VoiceIndex);
+
+            if (mark.Type == MusicMarkType.TextSpanStop)
+            {
+                if (!open.TryGetValue(key, out var start))
+                {
+                    Report(mark.SourcePosition, TextSpanPairingFault.StopWithNoStart);
+                    continue;
+                }
+                open.Remove(key);
+                spanners.Add(new TextSpannerItem(
+                    Text: start.Mark.Text,
+                    StartMeasureIndex: start.Mark.MeasureIndex,
+                    StartItemIndex: 0,
+                    EndMeasureIndex: mark.MeasureIndex,
+                    EndItemIndex: Math.Max(mark.AnchorItemIndex, 0),
+                    Style: TextSpannerStyle.DashedLine,
+                    SourcePosition: start.Mark.SourcePosition,
+                    SourceIndex: start.Index,
+                    StaffIndex: start.Mark.StaffIndex));
+                continue;
+            }
+
+            if (open.ContainsKey(key))
+            {
+                // LilyPond warns on the NEW mark and keeps the open one; a second span does
+                // not nest and does not replace.
+                Report(mark.SourcePosition, TextSpanPairingFault.StartWhileOpen);
+                continue;
+            }
+            open[key] = (mark, srcIndex);
+        }
+
+        foreach (var (mark, _) in open.Values)
+            Report(mark.SourcePosition, TextSpanPairingFault.Unterminated);
+
+        return (spanners.ToImmutable(), unpaired.ToImmutable());
     }
+
+    /// <summary>
+    /// The text spanners a played score draws — the paired half of
+    /// <see cref="PairTextSpanners"/>. The unpaired half is reported by
+    /// <c>TextSpanPairingValidator</c>, which reads the SAME call, so a mark can never be
+    /// warned about and drawn (or drawn and not warned about) at once.
+    /// </summary>
+    public static ImmutableArray<TextSpannerItem> DetectTextSpanners(
+        ImmutableArray<MusicMarkItem> musicMarks)
+        => PairTextSpanners(musicMarks).Spanners;
 
     /// <summary>
     /// THIS STAFF'S accel./rit. SPANNERS AS INK ABOVE THE STAFF, in the staff-local frame
