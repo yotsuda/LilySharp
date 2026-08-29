@@ -1,0 +1,19 @@
+// The hairpin twin of test/rit-span-in-a-repeated-section: ONE written @cresc, in a section
+// the form plays TWICE, with no dynamic to close it. Both playings must draw the same wedge.
+// A form that lists a section twice draws it twice, so the mark becomes one MusicMarkItem per
+// playing — same source position, different measures — and "the next cresc/decresc ends this
+// one" found the second copy of itself. MEASURED 2026-08-29: played once the wedge is 7.58
+// wide (scratch/p289/c7), played twice the first was 17.18 against the second's 7.58.
+// ⚠️ NO DYNAMIC ANYWHERE, and that is the point: a dynamic in the same playing would close
+// the wedge before the repeat could, which is exactly why the corpus never showed this.
+octave absolute
+title "hairpin in a repeated section"
+
+part m { clef treble }
+
+section A { m { c'2@cresc c'2 | c'2 c'2 | } }
+section B { m { d'2 d'2 | d'2 d'2 | } }
+
+form main { A B A "A2" }
+
+score main { staff m }

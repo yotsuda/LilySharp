@@ -609,10 +609,21 @@ internal static class HairpinEngraver
             // Find the next cresc/decresc mark on this staff (another hairpin starts
             // there). A same-measure mark only counts if it is at a LATER item, so a
             // second cresc on the same beat can't be mistaken for this one's end.
+            // ...and NOT ANOTHER PLAYING OF THIS SAME WRITTEN MARK. A form that lists a
+            // section twice draws it twice, so one written @cresc becomes one MusicMarkItem
+            // per playing — same SourcePosition, different measures — and the object test
+            // `!=` cannot tell them apart. MEASURED 2026-08-29 on scratch/p289/c7 against
+            // c8, the same section played once and twice: the wedge is 7.58 wide when the
+            // section is played once and 17.18 when it is played twice, because the first
+            // copy's wedge ran to the second copy of itself. This is the twin of the rit.
+            // defect the same day (TextSpannerEngraver.DetectTextSpanners' remark has the
+            // report and the reasoning); the two searches are one shape and now carry one
+            // guard.
             var nextMark = crescMarks
                 .Select(x => x.Mark)
                 .FirstOrDefault(m =>
-                    m != mark && m.StaffIndex == mark.StaffIndex &&
+                    m != mark && m.SourcePosition != mark.SourcePosition &&
+                    m.StaffIndex == mark.StaffIndex &&
                     (m.MeasureIndex > mark.MeasureIndex ||
                      (m.MeasureIndex == mark.MeasureIndex &&
                       m.AnchorItemIndex > mark.AnchorItemIndex)));
