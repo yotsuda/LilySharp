@@ -587,7 +587,7 @@ public sealed partial class MeasureCollector
                     // A compound OTTAVA mark (the down forms @ottava(bassa) /
                     // @quindicesima(bassa)) written ON a note. The pedals reach this
                     // predicate too, but they are plain one-word names now
-                    // (@sustainOff), so they arrive through the articulation path
+                    // (@!sustain), so they arrive through the articulation path
                     // above. Like the plain @ottava, anchor it to the
                     // host note's column via itemIndex/anchorTiming and — crucially —
                     // carry _cursor.StaffIndex so the bracket and its octave
@@ -621,7 +621,7 @@ public sealed partial class MeasureCollector
 
     /// <summary>
     /// True for the pedal music marks that anchor to the host note's column
-    /// (the engage/release marks, @sustainOn … @treCorde). They are plain
+    /// (the engage/release marks, @sustain … @treCorde). They are plain
     /// one-word names, so they arrive as ordinary note articulations and need this
     /// anchoring; compound marks (rehearsal, etc.) are handled at the statement
     /// level instead.

@@ -2591,7 +2591,7 @@ public sealed class MusicXmlExporter
         {
             if (artic is ArticulationSyntax articulation)
             {
-                // Single-word direction marks (@sustainOn, @sostenutoOn, @ottava, @loco)
+                // Single-word direction marks (@sustain, @sostenuto, @ottava, @loco)
                 // parse as name-only articulations, not compound marks.
                 if (articulation.Type == ArticulationType.None)
                     ProcessDirectionName(articulation.NameToken.Text.ToLowerInvariant());
@@ -2698,7 +2698,7 @@ public sealed class MusicXmlExporter
     }
 
     /// <summary>Direction-family compound marks attached to a note:
-    /// pedal (@sustainOn / @sustainOff / @sostenutoOn / @sostenutoOff), ottava lines
+    /// pedal (@sustain / @!sustain / @sostenuto / @!sostenuto), ottava lines
     /// (@ottava / @ottava.bassa / @loco) and chord symbols (@chord(...)).
     /// Everything else stays with its specialized consumer.</summary>
     private void ProcessDirectionMark(MusicMarkSyntax mark)
@@ -2741,14 +2741,26 @@ public sealed class MusicXmlExporter
         // shift. The families are told apart here instead.
         if (mark.IsSpanEnd)
         {
-            // The ottava's stop is the one terminator MusicXML has a spelling for. It used to
-            // arrive as the mark '@loco', which the table below answered; '@loco' is retired
-            // and this is where its <octave-shift type="stop"> moved to.
-            if (_currentMeasure != null
-                && Svg.Model.MusicMarkItem.ParseSpanEndName(mark.Name)
-                    == Svg.Model.MusicMarkType.OttavaStop)
-                _currentMeasure.Directions.Add(new MusicXmlDirection { OctaveShiftType = "stop" });
-            // The text spanner has no stop spelling here — the same silence '@rit' meets.
+            // ⚠️ EVERY TERMINATOR MUSICXML HAS A SPELLING FOR MUST BE ANSWERED HERE, because
+            // the moment a family gains '@!' its stop stops arriving at the table below. Both
+            // of these used to be ordinary marks the table answered — '@loco' and
+            // '@!sustain' — and both would have been dropped in silence by an early return.
+            if (_currentMeasure != null)
+                switch (Svg.Model.MusicMarkItem.ParseSpanEndName(mark.Name))
+                {
+                    case Svg.Model.MusicMarkType.OttavaStop:
+                        _currentMeasure.Directions.Add(
+                            new MusicXmlDirection { OctaveShiftType = "stop" });
+                        break;
+                    // MusicXML has ONE pedal stop for all three pedals.
+                    case Svg.Model.MusicMarkType.SustainOff:
+                    case Svg.Model.MusicMarkType.SostenutoOff:
+                    case Svg.Model.MusicMarkType.UnaCordaOff:
+                        _currentMeasure.Directions.Add(
+                            new MusicXmlDirection { PedalType = "stop", Placement = "below" });
+                        break;
+                    // The text spanner has no stop spelling here — the silence '@rit' meets.
+                }
             return;
         }
 
@@ -2761,14 +2773,15 @@ public sealed class MusicXmlExporter
         var name = rawName.ToLowerInvariant();
         switch (name)
         {
-            case "sustainon":
+            case "sustain":
                 _currentMeasure.Directions.Add(new MusicXmlDirection { PedalType = "start", Placement = "below" });
                 break;
-            case "sustainoff":
-            case "sostenutooff":
+            // '@treCorde' is the una corda's release written as a word rather than as '@!';
+            // it is the same mark, so it is the same <pedal type="stop">.
+            case "trecorde":
                 _currentMeasure.Directions.Add(new MusicXmlDirection { PedalType = "stop", Placement = "below" });
                 break;
-            case "sostenutoon":
+            case "sostenuto":
                 _currentMeasure.Directions.Add(new MusicXmlDirection { PedalType = "sostenuto", Placement = "below" });
                 break;
             case "ottava":

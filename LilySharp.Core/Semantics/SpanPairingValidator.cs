@@ -100,7 +100,7 @@ internal sealed class SpanPairingValidator : ISharedCollectValidator
                 "this '@!' closes nothing, so nothing is drawn; no " + noun.Split(' ', 2)[1]
                 + " is open in this voice - note that a span does not carry into another voice",
             // ⚠️ ONLY THE TEXT SPANNER CAN REACH THIS. An ottava start while one is open is a
-            // CHANGE of octavation and a second '@sustainOn' is RE-PEDALLING: both close the
+            // CHANGE of octavation and a second '@sustain' is RE-PEDALLING: both close the
             // open span and open a new one, which is what LilyPond does and what the notation
             // means. The article is spelt per family rather than glued on, because "a ottava"
             // is what gluing gives.

@@ -431,13 +431,13 @@ internal static class PedalEngraver
     /// ⚠️ THIS ADDS NO RULE AND MOVES NO INK. The pairing is the one that was already here;
     /// what is new is that the two ways it can fail are now SAID. MEASURED 2026-08-29
     /// (scratch/p289/ped.lys against pedopen.lys): a closed pedal draws its bracket — a rule
-    /// with an upward hook at each end — and one whose <c>@sustainOff</c> is missing draws
+    /// with an upward hook at each end — and one whose <c>@!sustain</c> is missing draws
     /// NOTHING AT ALL, in silence. Losing the whole bracket without a word is the defect;
     /// the drawing is not changed here.
     /// </para>
     /// <para>
     /// ⚠️ ONLY TWO OF THE THREE FAULTS, and the missing one is the point: a second
-    /// <c>@sustainOn</c> while the pedal is down is RE-PEDALLING, which is what a pianist
+    /// <c>@sustain</c> while the pedal is down is RE-PEDALLING, which is what a pianist
     /// actually does and what "Ped. … Ped." means on the page. It closes the open bracket and
     /// opens a new one — it is not the "already open" refusal a nested text spanner gets.
     /// </para>
@@ -450,7 +450,7 @@ internal static class PedalEngraver
     /// </para>
     /// <para>
     /// ⚠️ WHAT IS STILL NOT ASKED HERE, named rather than hidden: the walk has NO staff or
-    /// voice filter, so a <c>@sustainOff</c> on one staff would close a <c>@sustainOn</c> on
+    /// voice filter, so a <c>@!sustain</c> on one staff would close a <c>@sustain</c> on
     /// another — the defect the text spanner's staff filter exists for. Fixing it MOVES INK,
     /// so it is not done in a trip that promised to move none.
     /// MEASURED 2026-08-29 over every .lys on disk: 15 books write a pedal mark, ONE of them

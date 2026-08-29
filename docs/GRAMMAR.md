@@ -1352,7 +1352,8 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
                      (* an end is REQUIRED here too; '@loco' is retired — it named a
                         mark nothing printed, and LilyPond has no such command either *)
                      @startTrillSpan … @stopTrillSpan ,
-                     @sustainOn … @sustainOff , @sostenutoOn … @sostenutoOff , @unaCorda … @treCorde *)
+                     @sustain … @!sustain , @sostenuto … @!sostenuto ,
+                     @unaCorda … @!unaCorda   [@treCorde = @!unaCorda, the printed word] *)
 
 (* Example: c4@staccato.up d4@accent@p <e g>4@arpeggio | *)
 

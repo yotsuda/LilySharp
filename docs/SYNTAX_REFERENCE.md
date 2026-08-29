@@ -1072,10 +1072,17 @@ its glossary and nowhere else). Write `@!ottava`.
 
 ### Pedal Markings
 
+Each pedal is **one span**, opened by its name and closed by `@!` — the same rule as a text
+spanner and an ottava. A pedal nobody releases draws nothing at all, and says so (LYS4018).
+
+⚠️ A second `@sustain` while the pedal is down is **re-pedalling**, not a mistake: it
+releases and re-engages, which is what "Ped. … Ped." means on the page.
+
 ```
-c4@sustainOn d e f@sustainOff |       // Sustain pedal
-c4@sostenutoOn d@sostenutoOff |       // Sostenuto pedal
-c4@unaCorda d@treCorde |              // Una corda pedal (tre corde IS the release)
+c4@sustain d e f@!sustain |           // Sustain pedal
+c4@sostenuto d@!sostenuto |           // Sostenuto pedal
+c4@unaCorda d@!unaCorda |             // Una corda pedal
+c4@unaCorda d@treCorde |              // the same release, written as the word it prints
 ```
 
 ### Trill Spanners

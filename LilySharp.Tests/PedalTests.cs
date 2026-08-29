@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -37,16 +37,15 @@ public class PedalTests
 
     // --- MusicMarkType pedal entries ---
 
-    // LilyPond's own names (ly/spanners-init.ly), one word each — case-insensitive
-    // like every other annotation name.
+    // One name per pedal, opened by the name and closed by '@!' — case-insensitive like
+    // every other annotation name. '@treCorde' is the one release with a name of its own,
+    // kept because it is a WORD the Text style prints (session 289, user decision).
     [Theory]
-    [InlineData("sustainOn", MusicMarkType.SustainOn)]
-    [InlineData("sustainOff", MusicMarkType.SustainOff)]
-    [InlineData("sostenutoOn", MusicMarkType.SostenutoOn)]
-    [InlineData("sostenutoOff", MusicMarkType.SostenutoOff)]
+    [InlineData("sustain", MusicMarkType.SustainOn)]
+    [InlineData("sostenuto", MusicMarkType.SostenutoOn)]
     [InlineData("unaCorda", MusicMarkType.UnaCordaOn)]
     [InlineData("treCorde", MusicMarkType.UnaCordaOff)]
-    [InlineData("sustainon", MusicMarkType.SustainOn)]
+    [InlineData("SUSTAIN", MusicMarkType.SustainOn)]
     [InlineData("UNACORDA", MusicMarkType.UnaCordaOn)]
     public void ParseMarkName_PedalMarks(string name, MusicMarkType expected)
     {
@@ -55,11 +54,43 @@ public class PedalTests
         Assert.Equal(expected, result.Value);
     }
 
-    // ONE spelling per pedal (grammar audit B-5), and it is LilyPond's. The
-    // short forms and the argument spellings are rejected, not silently mapped:
-    // a pedal event carries only START/STOP, so there was never an argument to
-    // put a state in ('@ped(off)'), and the noun-continuation spellings
-    // ('@una(corda)') used the same parentheses for something else entirely.
+    /// <summary>
+    /// Every pedal ends with '@!' and its OWN name — a una corda does not release a sustain.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS LILYPOND'S MODEL SAID ONCE. ly/spanners-init.ly:94-101 spells six commands,
+    /// but each is <c>make-span-event</c> of ONE event with a direction:
+    /// <c>sustainOn = #(make-span-event 'SustainEvent START)</c>. The 'On'/'Off' suffix was
+    /// how the surface spelt that direction, and this language already spells it — the '!'.
+    /// </remarks>
+    [Theory]
+    [InlineData("sustain", MusicMarkType.SustainOff)]
+    [InlineData("sostenuto", MusicMarkType.SostenutoOff)]
+    [InlineData("unaCorda", MusicMarkType.UnaCordaOff)]
+    public void ParseSpanEndName_PedalMarks(string name, MusicMarkType expected)
+        => Assert.Equal(expected, MusicMarkItem.ParseSpanEndName(name));
+
+    /// <summary>
+    /// '@treCorde' and '@!unaCorda' are the SAME mark — two spellings, one answer, exactly as
+    /// '@!rit' and '@!textSpan' are. The word is kept because the Text style prints it.
+    /// </summary>
+    [Fact]
+    public void TreCorde_IsSugarForTheUnaCordaTerminator()
+        => Assert.Equal(
+            MusicMarkItem.ParseSpanEndName("unaCorda"),
+            MusicMarkItem.ParseMarkName("treCorde"));
+
+    // ONE spelling per pedal (grammar audit B-5). The short forms and the argument
+    // spellings are rejected, not silently mapped: a pedal event carries only START/STOP,
+    // so there was never an argument to put a state in ('@ped(off)'), and the
+    // noun-continuation spellings ('@una(corda)') used the same parentheses for something
+    // else entirely.
+    // ⚠️ 'sustainOn' / 'sustainOff' / 'sostenutoOn' / 'sostenutoOff' JOINED THIS LIST in
+    // session 289: the direction moved out of the name and into the '!', so they are two
+    // names for one span and the second is gone. '@ped' was weighed again at the same time
+    // and refused again — LilyPond has no \ped, all three of these are pedals so 'ped'
+    // names a category where its siblings name mechanisms, and "Ped." is not printed at all
+    // in the default Bracket style.
     [Theory]
     [InlineData("ped")]
     [InlineData("ped.off")]
@@ -67,9 +98,11 @@ public class PedalTests
     [InlineData("sost.off")]
     [InlineData("una.corda")]
     [InlineData("tre.corde")]
-    [InlineData("sustain")]
+    [InlineData("sustainOn")]
+    [InlineData("sustainOff")]
+    [InlineData("sostenutoOn")]
+    [InlineData("sostenutoOff")]
     [InlineData("sustain.off")]
-    [InlineData("sostenuto")]
     [InlineData("sostenuto.off")]
     [InlineData("trillspan.start")]
     [InlineData("trillspan.stop")]
@@ -376,7 +409,7 @@ public class PedalTests
         part pf {
           clef bass
           pedal text
-          section A { c1@sustainOn@sostenutoOn@unaCorda | c1@sustainOff@sostenutoOff@treCorde }
+          section A { c1@sustain@sostenuto@unaCorda | c1@!sustain@!sostenuto@treCorde }
         }
 
         form main { A }

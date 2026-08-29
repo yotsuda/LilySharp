@@ -436,7 +436,8 @@ draws nothing at all, its word included, and says so with LYS4018),
 ottava `@ottava` / `@ottava(bassa)` / `@quindicesima` ... `@!ottava` (**the end is REQUIRED**;
 one `@!ottava` closes any of them, and `@loco` is retired),
 trill spanner `@startTrillSpan` ... `@stopTrillSpan`, 15ma `@quindicesima` / `@quindicesima(bassa)`,
-pedals `@sustainOn`/`@sustainOff`, `@sostenutoOn`/`@sostenutoOff`, `@unaCorda`/`@treCorde` — one word each,
+pedals `@sustain` ... `@!sustain`, `@sostenuto` ... `@!sostenuto`, `@unaCorda` ... `@!unaCorda`
+(`@treCorde` is the same release written as the word the Text style prints) — one word each,
 LilyPond's own names, taking NO argument (`@ped`, `@ped(off)`, `@sost(off)`, `@una(corda)` do not exist).
 An annotation's argument always goes in PARENTHESES — a dot after the name is the placement qualifier
 instead (`@fermata.up`), so `@notehead.x` does not work either.

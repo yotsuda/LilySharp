@@ -125,6 +125,9 @@ public class SpanTerminatorSyntaxTests
     [InlineData("ottava.bassa", MusicMarkType.OttavaStop)]
     [InlineData("quindicesima", MusicMarkType.OttavaStop)]
     [InlineData("15mb", MusicMarkType.OttavaStop)]
+    [InlineData("sustain", MusicMarkType.SustainOff)]
+    [InlineData("sostenuto", MusicMarkType.SostenutoOff)]
+    [InlineData("unaCorda", MusicMarkType.UnaCordaOff)]
     public void AFamilyWithATerminator_AnswersWithItsStop(string name, MusicMarkType stop)
         => Assert.Equal(stop, MusicMarkItem.ParseSpanEndName(name));
 
@@ -132,10 +135,10 @@ public class SpanTerminatorSyntaxTests
     /// name, '@!X' is reported rather than quietly turned into the mark '@X' would make —
     /// which is the silent drop the annotation validator exists to prevent.</summary>
     [Theory]
-    [InlineData("sustainOn")]
-    [InlineData("sostenutoOn")]
     [InlineData("segno")]
     [InlineData("staccato")]
+    [InlineData("cresc")]      // the ONE family LilyPond ends automatically - see section 3
+    [InlineData("mark")]
     public void AFamilyWithNoTerminator_RefusesTheSpelling(string name)
         => Assert.Null(MusicMarkItem.ParseSpanEndName(name));
 

@@ -341,18 +341,30 @@ public sealed record MusicMarkItem
             "ottava.bassa" or "8vb" => MusicMarkType.OttavaDown,
             "quindicesima" or "15ma" => MusicMarkType.QuindicesUp,
             "quindicesima.bassa" or "15mb" => MusicMarkType.QuindicesDown,
-            // The pedals carry LilyPond's own names (ly/spanners-init.ly:
-            // sustainOn/sustainOff, sostenutoOn/sostenutoOff, unaCorda/treCorde).
-            // Each is ONE word: the event has no argument in LilyPond either —
-            // it is a span event carrying only START/STOP, and how the pedal is
-            // PRINTED is a context property (pedalSustainStyle), not an argument.
-            // The earlier '@ped' / '@ped(off)' spellings put a state in an
-            // argument slot that does not exist, so they are gone (audit B-5 kept
-            // one spelling per pedal; this keeps LilyPond's).
-            "sustainon" => MusicMarkType.SustainOn,
-            "sustainoff" => MusicMarkType.SustainOff,
-            "sostenutoon" => MusicMarkType.SostenutoOn,
-            "sostenutooff" => MusicMarkType.SostenutoOff,
+            // The pedals: each is ONE span, opened by its name and closed by '@!' —
+            // '@sustain' … '@!sustain', '@sostenuto' … '@!sostenuto',
+            // '@unaCorda' … '@!unaCorda'.
+            //
+            // ⚠️ THIS IS LILYPOND'S OWN MODEL, SAID ONCE (user decision 2026-08-29,
+            // session 289). ly/spanners-init.ly:94-101 spells SIX commands, but every
+            // one of them is one line of the same shape:
+            //     sustainOn = #(make-span-event 'SustainEvent START)
+            //     sustainOff = #(make-span-event 'SustainEvent STOP)
+            // — ONE span event named Sustain, with the direction as an argument. The
+            // 'On'/'Off' suffix is how the SURFACE command spells that direction, and
+            // this language already spells a direction: the '!'. So '@sustain' /
+            // '@!sustain' were two names for one span, and are retired.
+            // ⚠️ '@ped' was weighed and refused: LilyPond has no \ped at all (searched
+            // ly/ and scm/), all THREE of these are pedals so 'ped' names a category
+            // where its siblings name mechanisms, and "Ped." is not even printed in the
+            // default style — MEASURED, the Bracket style (Lily#'s default) prints no
+            // pedal word at all, only the bracket and its hooks.
+            // ⚠️ '@treCorde' STAYS, as sugar for '@!unaCorda' (user decision): unlike
+            // 'Off', it is a real word that the Text style prints, so retiring it would
+            // take a word off the page out of the vocabulary. Both spellings make the
+            // same mark, exactly as '@!rit' and '@!textSpan' do.
+            "sustain" => MusicMarkType.SustainOn,
+            "sostenuto" => MusicMarkType.SostenutoOn,
             "unacorda" => MusicMarkType.UnaCordaOn,
             "trecorde" => MusicMarkType.UnaCordaOff,
             _ => null
@@ -387,6 +399,10 @@ public sealed record MusicMarkItem
             MusicMarkType.OttavaUp or MusicMarkType.OttavaDown
                 or MusicMarkType.QuindicesUp or MusicMarkType.QuindicesDown
                 => MusicMarkType.OttavaStop,
+            // Each pedal closes only itself: a una corda does not release a sustain.
+            MusicMarkType.SustainOn => MusicMarkType.SustainOff,
+            MusicMarkType.SostenutoOn => MusicMarkType.SostenutoOff,
+            MusicMarkType.UnaCordaOn => MusicMarkType.UnaCordaOff,
             _ => null
         };
 

@@ -202,20 +202,20 @@ public class SpanPairingValidatorTests
     {
         // MEASURED (scratch/p289/pedopen.lys): the bracket vanishes entirely. Nothing about
         // the drawing changed here — what changed is that the loss is now said.
-        var warning = Assert.Single(Warnings("c'4@sustainOn c' c' c' |"));
+        var warning = Assert.Single(Warnings("c'4@sustain c' c' c' |"));
         Assert.Contains("never closed", warning.Message);
     }
 
     [Fact]
     public void APedalReleaseWithNothingDown_IsReported()
     {
-        var warning = Assert.Single(Warnings("c'4@sustainOff c' c' c' |"));
+        var warning = Assert.Single(Warnings("c'4@!sustain c' c' c' |"));
         Assert.Contains("closes nothing", warning.Message);
     }
 
     /// <summary>
     /// ⚠️ RE-PEDALLING IS NOT A FAULT, and this is the one place the families differ. A
-    /// second <c>@sustainOn</c> while the pedal is down is what a pianist does and what
+    /// second <c>@sustain</c> while the pedal is down is what a pianist does and what
     /// "Ped. … Ped." means; it closes the open bracket and opens a new one. A second text
     /// spanner inside an open one is refused instead.
     /// </summary>
@@ -223,9 +223,9 @@ public class SpanPairingValidatorTests
     public void RePedalling_IsNotAFault()
     {
         Assert.Equal(0, WarningCount(
-            "c'4@sustainOn c'@sustainOff@sustainOn c' c'@sustainOff |"));
+            "c'4@sustain c'@!sustain@sustain c' c'@!sustain |"));
         // ...and the bare re-pedal (no explicit release between) is not one either.
-        Assert.Equal(0, WarningCount("c'4@sustainOn c'@sustainOn c' c'@sustainOff |"));
+        Assert.Equal(0, WarningCount("c'4@sustain c'@sustain c' c'@!sustain |"));
     }
 
     [Fact]
@@ -233,8 +233,8 @@ public class SpanPairingValidatorTests
     {
         // A una corda does not release a sustain: three pedals, three spans.
         Assert.Equal(0, WarningCount(
-            "c'4@sustainOn@unaCorda c' c'@treCorde c'@sustainOff |"));
+            "c'4@sustain@unaCorda c' c'@treCorde c'@!sustain |"));
         // ...so a sustain closed by the WRONG release leaves both unpaired.
-        Assert.Equal(2, WarningCount("c'4@sustainOn c' c' c'@treCorde |"));
+        Assert.Equal(2, WarningCount("c'4@sustain c' c' c'@treCorde |"));
     }
 }

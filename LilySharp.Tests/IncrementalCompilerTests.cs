@@ -146,9 +146,9 @@ public class IncrementalCompilerTests
     public void DeletingAPedalRelease_RedrawsTheSystemsTheBracketSpanned()
     {
         string bars =
-            "c4 d e f | g4 a@sustainOn b c' | d4 e f g | a4 b c' d' | "
+            "c4 d e f | g4 a@sustain b c' | d4 e f g | a4 b c' d' | "
             + "c'4 b a g | f4 e d c | c4 d e f | g4 a b c' | "
-            + "d4 e f g | a4 b c' d' | c'4 b@sustainOff a g | f4 e d c |";
+            + "d4 e f g | a4 b c' d' | c'4 b@!sustain a g | f4 e d c |";
         string sylls = string.Concat(System.Linq.Enumerable.Repeat("la la la la | ", 12)).TrimEnd();
         string text = $$"""
             time 4/4
@@ -165,9 +165,9 @@ public class IncrementalCompilerTests
         var session = new IncrementalCompiler(tree, Opt);
         Assert.Equal(Full(text), Norm(session.RenderIncremental(tree)));
 
-        var change = Replace(text, "@sustainOff", "");
+        var change = Replace(text, "@!sustain", "");
         tree = tree.WithChange(change);
-        text = ApplyFirst(text, "@sustainOff", "");
+        text = ApplyFirst(text, "@!sustain", "");
         Assert.Equal(Full(text), Norm(session.RenderIncremental(tree)));
     }
 
@@ -392,7 +392,7 @@ public class IncrementalCompilerTests
         // A pedal bracket used to DISQUALIFY whole-layout reuse outright: ReuseSafe declined
         // any layout carrying one, under a comment asserting the array was "always empty
         // today (pedals render as text marks, never a bracket layout)". Staff.PedalStyle
-        // defaults to Bracket, so that was false for every `@sustainOn` in the corpus — including
+        // defaults to Bracket, so that was false for every `@sustain` in the corpus — including
         // showcase/03-piano, the multi-staff fixture LilySharp.Benchmarks' warm-session
         // benchmark uses, which had been throwing "expected whole-layout reuse to fire".
         //
@@ -407,7 +407,7 @@ public class IncrementalCompilerTests
             time 4/4
             key c major
             part lh { clef bass }
-            section Main { lh { <c e>2@sustainOn <c g> | <f a>2@sustainOff@sustainOn <d f> | } }
+            section Main { lh { <c e>2@sustain <c g> | <f a>2@!sustain@sustain <d f> | } }
             form main { Main }
             score main "x" { staff lh }
             """;

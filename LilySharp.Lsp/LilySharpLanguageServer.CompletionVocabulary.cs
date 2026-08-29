@@ -2583,10 +2583,8 @@ public sealed partial class LilySharpLanguageServer
     {
         // The pedals are named after the EVENT (LilyPond's names); a user reaches
         // for the printed marking or the instrument's word for it.
-        ["sustainOn"] = "pedal ped",
-        ["sustainOff"] = "pedal ped",
-        ["sostenutoOn"] = "pedal sost",
-        ["sostenutoOff"] = "pedal sost",
+        ["sustain"] = "pedal ped",
+        ["sostenuto"] = "pedal sost",
         ["unaCorda"] = "pedal soft",
         ["treCorde"] = "pedal soft release",
         // All-lowercase names cannot be split into words, so the part a user is
@@ -2805,12 +2803,12 @@ public sealed partial class LilySharpLanguageServer
                 // Pedal markings
                 // LilyPond's own names (ly/spanners-init.ly). One word each: the
                 // pedal event carries only START/STOP, so there is no argument.
-                new CompletionItem { Label = "sustainOn", Kind = CompletionItemKind.Value, Detail = "Sustain pedal down (Ped.)", SortText = "5sustainOn" },
-                new CompletionItem { Label = "sustainOff", Kind = CompletionItemKind.Value, Detail = "Sustain pedal up (*)", SortText = "5sustainOff" },
-                new CompletionItem { Label = "sostenutoOn", Kind = CompletionItemKind.Value, Detail = "Sostenuto pedal down (Sost. Ped.)", SortText = "5sostenutoOn" },
-                new CompletionItem { Label = "sostenutoOff", Kind = CompletionItemKind.Value, Detail = "Sostenuto pedal up", SortText = "5sostenutoOff" },
-                new CompletionItem { Label = "unaCorda", Kind = CompletionItemKind.Value, Detail = "Una corda (soft pedal down)", SortText = "5unaCorda" },
-                new CompletionItem { Label = "treCorde", Kind = CompletionItemKind.Value, Detail = "Tre corde — the una corda release", SortText = "5treCorde" },
+                // Each pedal is ONE span, closed by '@!' — the Detail names the end so a
+                // reader meets it here rather than in LYS4018.
+                new CompletionItem { Label = "sustain", Kind = CompletionItemKind.Value, Detail = "Sustain pedal down (Ped.) - ends at @!sustain", SortText = "5sustain" },
+                new CompletionItem { Label = "sostenuto", Kind = CompletionItemKind.Value, Detail = "Sostenuto pedal down (Sost. Ped.) - ends at @!sostenuto", SortText = "5sostenuto" },
+                new CompletionItem { Label = "unaCorda", Kind = CompletionItemKind.Value, Detail = "Una corda (soft pedal down) - ends at @!unaCorda", SortText = "5unaCorda" },
+                new CompletionItem { Label = "treCorde", Kind = CompletionItemKind.Value, Detail = "Tre corde - the una corda release, same mark as @!unaCorda", SortText = "5treCorde" },
 
                 // Notation marks
                 new CompletionItem { Label = "glissando", Kind = CompletionItemKind.Value, Detail = "Glissando to next note", SortText = "6glissando" },

@@ -128,8 +128,8 @@ public enum SpanKind
     TextSpanner,
     /// <summary>An ottava bracket (<c>@ottava</c>, <c>@quindicesima</c> … <c>@!</c>).</summary>
     Ottava,
-    /// <summary>A piano pedal (<c>@sustainOn</c> … <c>@sustainOff</c>, and its two
-    /// siblings). ⚠️ ONLY TWO OF THE THREE FAULTS APPLY: a second <c>@sustainOn</c> while
+    /// <summary>A piano pedal (<c>@sustain</c> … <c>@!sustain</c>, and its two
+    /// siblings). ⚠️ ONLY TWO OF THE THREE FAULTS APPLY: a second <c>@sustain</c> while
     /// one is down is RE-PEDALLING, which is real notation ("Ped. … Ped."), so it opens a
     /// new bracket rather than being refused the way a nested span is.</summary>
     Pedal,

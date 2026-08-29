@@ -243,7 +243,7 @@
 ### `LilySharp.Core/Rendering/TextFontMetrics.cs`
 - **:476** LILYSHARP-OWN: LilyPond has no equivalent refusal, and cannot — it resolves through
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
-- **:359** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
+- **:361** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Svg/Collector/BeamDetector.cs`
 - **:950** LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
 - **:980** LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's

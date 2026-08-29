@@ -176,7 +176,7 @@ public class MarkReserveVersusDrawTests
     [Fact]
     public void SustainPedalWord_IsDrawnAsMusicGlyphs()
     {
-        string svg = Svg(PedalTextBook.Replace("%BODY%", "c4@sustainOn c4@sustainOff |"));
+        string svg = Svg(PedalTextBook.Replace("%BODY%", "c4@sustain c4@!sustain |"));
 
         Assert.DoesNotContain(">Ped.<", svg);
         // The renderer writes the private-use code point LITERALLY into the element body,
@@ -216,7 +216,7 @@ public class MarkReserveVersusDrawTests
     public void PedalChange_ClearsTheWordThatFollowsIt()
     {
         string svg = Svg(PedalTextBook.Replace(
-            "%BODY%", "c4@sostenutoOn c4@sostenutoOff@sostenutoOn c4@sostenutoOff |"));
+            "%BODY%", "c4@sostenuto c4@!sostenuto@sostenuto c4@!sostenuto |"));
 
         double CentreOf(string content) => double.Parse(
             Regex.Match(svg, $@"<text x=""([\d.]+)""[^>]*>{Regex.Escape(content)}</text>")
@@ -263,7 +263,7 @@ public class MarkReserveVersusDrawTests
     [InlineData("fine g1 |", "Fine", MusicMarkType.Fine)]
     [InlineData("ds al coda g1 |", "D.S. al Coda", MusicMarkType.DalSegnoAlCoda)]
     [InlineData("dc al fine g1 |", "D.C. al Fine", MusicMarkType.DaCapoAlFine)]
-    [InlineData("PEDAL:c4@sostenutoOn c4@sostenutoOff |", "Sost. Ped.", MusicMarkType.SostenutoOn)]
+    [InlineData("PEDAL:c4@sostenuto c4@!sostenuto |", "Sost. Ped.", MusicMarkType.SostenutoOn)]
     [InlineData("PEDAL:c4@unaCorda c4@treCorde |", "una corda", MusicMarkType.UnaCordaOn)]
     public void DrawnMark_CarriesTheOneHomesSizeAndStyle(
         string source, string content, MusicMarkType type)

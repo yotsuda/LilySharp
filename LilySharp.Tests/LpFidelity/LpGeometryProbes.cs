@@ -1244,11 +1244,11 @@ internal static class LpGeometryProbes
 
     /// <summary>Bracket-style sustain (Lily#'s default) — the mirror of book PLB.</summary>
     private static readonly string PLYB =
-        PedalLyricScore("PLYB", "c4 d@sustainOn e f@sustainOff | g2 g |");
+        PedalLyricScore("PLYB", "c4 d@sustain e f@!sustain | g2 g |");
 
     /// <summary>Text-style sustain ("Ped." / "*") — the mirror of book PLT.</summary>
     private static readonly string PLYT =
-        PedalLyricScore("PLYT", "c4 d@sustainOn e f@sustainOff | g2 g |", "pedal text");
+        PedalLyricScore("PLYT", "c4 d@sustain e f@!sustain | g2 g |", "pedal text");
 
     /// <summary>Mixed-style sustain ("Ped." then a line) — the mirror of book PMBL
     /// (pedal-mixed.ly). LilyPond keeps the word, the bracket and their LineSpanner on
@@ -1256,7 +1256,7 @@ internal static class LpGeometryProbes
     /// lyrics), because a mixed stretch is one group — the word and the line must move
     /// together or the classic "Ped.____" tears apart.</summary>
     private static readonly string PLYM =
-        PedalLyricScore("PLYM", "c4 d@sustainOn e f@sustainOff | g2 g |", "pedal mixed");
+        PedalLyricScore("PLYM", "c4 d@sustain e f@!sustain | g2 g |", "pedal mixed");
 
     /// <summary>A forte on the sung staff — the mirror of book PLD.</summary>
     private static readonly string PLYD =
@@ -1280,7 +1280,7 @@ internal static class LpGeometryProbes
         part melody { clef bass pedal text }
 
         section Main {
-          melody { c,1@sustainOn@sostenutoOn@unaCorda | c,1 | c,1@sustainOff@sostenutoOff@treCorde | }
+          melody { c,1@sustain@sostenuto@unaCorda | c,1 | c,1@!sustain@!sostenuto@treCorde | }
         }
 
         form main { ~Main }
@@ -4443,13 +4443,13 @@ internal static class LpGeometryProbes
     /// <summary>"Sost. Ped." — the pedal that IS text on both sides (book PSO), at
     /// LilyPond's own sostenuto default <c>'mixed</c> (leading string, then a bracket).</summary>
     private static readonly string MKO =
-        MarkWidthScore("MKO", "c'4@sostenutoOn c' c' c'@sostenutoOff |", "pedal mixed");
+        MarkWidthScore("MKO", "c'4@sostenuto c' c' c'@!sostenuto |", "pedal mixed");
 
     /// <summary>"Ped." — the pedal that is a GLYPH STRING in LilyPond and a bold serif word
     /// in Lily# (book PSU), at LilyPond's own sustain default <c>'text</c>. The entry that
     /// names a mechanism gap, not a size.</summary>
     private static readonly string MKP =
-        MarkWidthScore("MKP", "c'4@sustainOn c' c' c'@sustainOff |", "pedal text");
+        MarkWidthScore("MKP", "c'4@sustain c' c' c'@!sustain |", "pedal text");
 
     /// <summary>
     /// THE NUMBER OF A FULLY BEAMED TUPLET as staff-to-staff binding ink — the mirrors of

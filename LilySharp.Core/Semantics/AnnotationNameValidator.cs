@@ -96,8 +96,10 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         // retired with MusicMarkType.Loco (session 289) and no longer compiles, and
         // every candidate in this list must (EverySuggestionCandidate_CompilesAsWritten).
         "ottava", "ottava.bassa",
-        "sustainOn", "sustainOff", "sostenutoOn", "sostenutoOff",
-        "unaCorda", "treCorde",
+        // The pedals, each closed by '@!' (session 289). 'sustainOn' / 'sustainOff' /
+        // 'sostenutoOn' / 'sostenutoOff' are RETIRED and cannot be candidates: every entry
+        // in this list must compile (EverySuggestionCandidate_CompilesAsWritten).
+        "sustain", "sostenuto", "unaCorda", "treCorde",
         "mark.A", "finger.1", "feather.right", "feather.left",
         "notehead.x", "notehead.diamond", "notehead.slash",
         "fig.6", "chord.C",

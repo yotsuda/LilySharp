@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -249,10 +249,10 @@ public class AtCompletionParsesTests
     /// laissez vibrer.
     /// </summary>
     [Theory]
-    [InlineData("pedal", "sustainOn")]
-    [InlineData("pedal", "sostenutoOff")]
+    [InlineData("pedal", "sustain")]
+    [InlineData("pedal", "sostenuto")]
     [InlineData("pedal", "unaCorda")]
-    [InlineData("ped", "sustainOn")]             // the spelling this replaced
+    [InlineData("ped", "sustain")]               // '@ped' is not a spelling; it is a search term
     [InlineData("lv", "laissezVibrer")]
     [InlineData("bartok", "snapPizz")]
     [InlineData("figured", "fig")]
