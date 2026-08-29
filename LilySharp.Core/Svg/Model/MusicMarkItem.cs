@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -75,8 +75,27 @@ public enum MusicMarkType
     QuindicesUp,
     /// <summary>15mb (quindicesima bassa - down two octaves)</summary>
     QuindicesDown,
-    /// <summary>loco (return to normal pitch)</summary>
-    Loco,
+    /// <summary>The END of an ottava bracket (<c>@!ottava</c>, <c>@!quindicesima</c>). Like
+    /// <see cref="TextSpanStop"/> it prints nothing: it is where the dashed bracket stops and
+    /// its closing hook is drawn.</summary>
+    /// <remarks>
+    /// ⚠️ THIS WAS <c>Loco</c>, AND THE NAME WAS A STRING NOBODY PRINTED. <c>GetMarkText</c>
+    /// answered "loco" for it while <see cref="MusicMarkItem.IsSpannerHandled"/> listed it, so
+    /// <c>DrawMusicMarks</c> never drew it — MEASURED 2026-08-29: no SVG of a book writing
+    /// <c>@loco</c> contains a "loco" text element; the mark changes only where the bracket
+    /// stops (12.01→20.36 against 12.01→33.64 unclosed) and the only word on the page is the
+    /// "8va" at the left.
+    /// <para>
+    /// ⚠️ LilyPond has no <c>loco</c> either — not as a command and not as ink. Searched the
+    /// whole 2.26.0 tree: <c>ly/</c>, <c>scm/</c> and <c>lily/</c> contain the word once, in a
+    /// C++ comment ("a SCM in loco"), and the only other hits are the drum name
+    /// <c>loconga</c>. It is in the music glossary as a TERM ("the octave change is canceled
+    /// with the word loco") and nowhere else. OttavaBracket's text is the left-hand
+    /// <c>ottavation</c> (scm/translation-functions.scm:1145) and its right end is the
+    /// <c>edge-height</c> hook (lily/ottava-bracket.cc:140).
+    /// </para>
+    /// </remarks>
+    OttavaStop,
     /// <summary>Rehearsal mark (boxed letter/number above staff)</summary>
     Rehearsal,
     /// <summary>Section label (boxed section name above staff)</summary>
@@ -255,7 +274,7 @@ public sealed record MusicMarkItem
              or MusicMarkType.TextSpanStart or MusicMarkType.TextSpanStop
              or MusicMarkType.OttavaUp or MusicMarkType.OttavaDown
              or MusicMarkType.QuindicesUp or MusicMarkType.QuindicesDown
-             or MusicMarkType.Loco;
+             or MusicMarkType.OttavaStop;
 
     /// <summary>
     /// The words that open a text spanner as SUGAR, mapped to the text each one prints —
@@ -322,7 +341,6 @@ public sealed record MusicMarkItem
             "ottava.bassa" or "8vb" => MusicMarkType.OttavaDown,
             "quindicesima" or "15ma" => MusicMarkType.QuindicesUp,
             "quindicesima.bassa" or "15mb" => MusicMarkType.QuindicesDown,
-            "loco" => MusicMarkType.Loco,
             // The pedals carry LilyPond's own names (ly/spanners-init.ly:
             // sustainOn/sustainOff, sostenutoOn/sostenutoOff, unaCorda/treCorde).
             // Each is ONE word: the event has no argument in LilyPond either —
@@ -363,6 +381,12 @@ public sealed record MusicMarkItem
         ParseMarkName(name) switch
         {
             MusicMarkType.TextSpanStart => MusicMarkType.TextSpanStop,
+            // ONE STOP FOR THE WHOLE OTTAVA FAMILY, as in LilyPond: `\ottava #0` cancels
+            // whatever octavation is running, so `@!ottava` and `@!quindicesima` are the same
+            // mark and either closes either start. The reader writes whichever reads best.
+            MusicMarkType.OttavaUp or MusicMarkType.OttavaDown
+                or MusicMarkType.QuindicesUp or MusicMarkType.QuindicesDown
+                => MusicMarkType.OttavaStop,
             _ => null
         };
 
@@ -416,7 +440,9 @@ public sealed record MusicMarkItem
         MusicMarkType.OttavaDown => "8vb",
         MusicMarkType.QuindicesUp => "15ma",
         MusicMarkType.QuindicesDown => "15mb",
-        MusicMarkType.Loco => "loco",
+        // An ottava STOP prints no word either: the bracket simply stops and its
+        // edge-height hook is drawn. See the enum arm for what LilyPond does (nothing).
+        MusicMarkType.OttavaStop => "",
         MusicMarkType.Rehearsal => "?",  // Rehearsal text set via constructor overload
         MusicMarkType.SectionLabel => "?",  // Section label text set via constructor overload
         MusicMarkType.Tempo => "?",  // Tempo text set via constructor overload
@@ -470,7 +496,7 @@ public sealed record MusicMarkItem
         // 8va/15ma are above staff; 8vb/15mb are below staff
         MusicMarkType.OttavaUp or MusicMarkType.QuindicesUp => MusicMarkVertical.Above,
         MusicMarkType.OttavaDown or MusicMarkType.QuindicesDown => MusicMarkVertical.Below,
-        MusicMarkType.Loco => MusicMarkVertical.Above,
+        MusicMarkType.OttavaStop => MusicMarkVertical.Above,
         // LILYPOND-REF: define-grobs.scm:3275-3296 SustainPedalLineSpanner direction = DOWN
         MusicMarkType.SustainOn or MusicMarkType.SustainOff => MusicMarkVertical.Below,
         MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff => MusicMarkVertical.Below,

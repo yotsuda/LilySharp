@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -111,23 +111,33 @@ public class SpanTerminatorSyntaxTests
         Assert.NotEmpty(tree.GetRoot().DescendantNodes().OfType<BarlineSyntax>());
     }
 
-    /// <summary>Only families that HAVE a terminator may be written with one: '@!sustainOn'
-    /// names a mark, but not one anything can end, and being dropped in silence is the
-    /// failure the annotation validator exists to prevent.</summary>
+    /// <summary>
+    /// ONE STOP PER FAMILY, whichever of the family's words was written: '@!quindicesima'
+    /// and '@!ottava' are the same mark, as '\ottava #0' cancels whatever octavation runs,
+    /// and '@!rit' and '@!textSpan' are the same mark for the same reason on their side.
+    /// </summary>
     [Theory]
-    [InlineData("rit", true)]
-    [InlineData("accel", true)]
-    [InlineData("rall", true)]
-    [InlineData("textSpan", true)]
-    [InlineData("sustainOn", false)]
-    [InlineData("ottava", false)]
-    [InlineData("segno", false)]
-    public void OnlyTheTextSpanner_HasATerminatorToday(string name, bool terminable)
-    {
-        Assert.Equal(terminable, MusicMarkItem.ParseSpanEndName(name) is not null);
-        if (terminable)
-            Assert.Equal(MusicMarkType.TextSpanStop, MusicMarkItem.ParseSpanEndName(name));
-    }
+    [InlineData("rit", MusicMarkType.TextSpanStop)]
+    [InlineData("accel", MusicMarkType.TextSpanStop)]
+    [InlineData("rall", MusicMarkType.TextSpanStop)]
+    [InlineData("textSpan", MusicMarkType.TextSpanStop)]
+    [InlineData("ottava", MusicMarkType.OttavaStop)]
+    [InlineData("ottava.bassa", MusicMarkType.OttavaStop)]
+    [InlineData("quindicesima", MusicMarkType.OttavaStop)]
+    [InlineData("15mb", MusicMarkType.OttavaStop)]
+    public void AFamilyWithATerminator_AnswersWithItsStop(string name, MusicMarkType stop)
+        => Assert.Equal(stop, MusicMarkItem.ParseSpanEndName(name));
+
+    /// <summary>Only families that HAVE an end accept the spelling. Written on any other
+    /// name, '@!X' is reported rather than quietly turned into the mark '@X' would make —
+    /// which is the silent drop the annotation validator exists to prevent.</summary>
+    [Theory]
+    [InlineData("sustainOn")]
+    [InlineData("sostenutoOn")]
+    [InlineData("segno")]
+    [InlineData("staccato")]
+    public void AFamilyWithNoTerminator_RefusesTheSpelling(string name)
+        => Assert.Null(MusicMarkItem.ParseSpanEndName(name));
 
     /// <summary>
     /// The sugar table is the ONE place a word becomes a printed string, and

@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -118,44 +118,68 @@ public record UnpairedSlurWarning(
     bool IsOpen       // true = an unclosed '('; false = a ')' with nothing open
 );
 
-/// <summary>Why a text-spanner mark drew nothing — LilyPond's three answers, one per
-/// warning its <c>Text_spanner_engraver</c> can emit.</summary>
-public enum TextSpanPairingFault
+/// <summary>Which span family a pairing complaint is about. One enum rather than one per
+/// family, because the LANGUAGE now has one answer for all of them: a span must be closed,
+/// and one nobody closed draws nothing. What differs is only the words the diagnostic
+/// uses.</summary>
+public enum SpanKind
 {
-    /// <summary>A START (<c>@rit</c>, <c>@textSpan("…")</c>) that no <c>@!</c> ever closed.
-    /// LILYPOND-REF: lily/text-spanner-engraver.cc:117-127 Text_spanner_engraver::finalize — "unterminated text
-    /// spanner", then <c>suicide()</c>: the WORD goes with the line, because a spanner with
-    /// no right bound is not a shorter spanner.</summary>
+    /// <summary>A text spanner (<c>@rit</c>, <c>@textSpan("…")</c> … <c>@!</c>).</summary>
+    TextSpanner,
+    /// <summary>An ottava bracket (<c>@ottava</c>, <c>@quindicesima</c> … <c>@!</c>).</summary>
+    Ottava,
+    /// <summary>A piano pedal (<c>@sustainOn</c> … <c>@sustainOff</c>, and its two
+    /// siblings). ⚠️ ONLY TWO OF THE THREE FAULTS APPLY: a second <c>@sustainOn</c> while
+    /// one is down is RE-PEDALLING, which is real notation ("Ped. … Ped."), so it opens a
+    /// new bracket rather than being refused the way a nested span is.</summary>
+    Pedal,
+}
+
+/// <summary>Why a span mark drew nothing — the three situations a start/stop pairing can
+/// fail in, which are also the three an engraver holding ONE open span can meet.</summary>
+/// <remarks>
+/// ⚠️ THE THREE ARE LILYPOND'S, COUNTED FROM ITS TEXT SPANNER ENGRAVER rather than invented:
+/// they are the three places <c>Text_spanner_engraver</c> can complain. Reading a family's
+/// engraver for how many warnings it can emit gives the classification for free.
+/// LILYPOND-REF: lily/text-spanner-engraver.cc:59-88 Text_spanner_engraver::process_music,
+/// :117-127 Text_spanner_engraver::finalize.
+/// </remarks>
+public enum SpanPairingFault
+{
+    /// <summary>A START that no <c>@!</c> ever closed.</summary>
     Unterminated,
-    /// <summary>A terminator (<c>@!rit</c>) with no span open in its voice.
-    /// LILYPOND-REF: lily/text-spanner-engraver.cc:61-63 Text_spanner_engraver::process_music — "cannot find start of text
-    /// spanner".</summary>
+    /// <summary>A terminator with no span open in its voice.</summary>
     StopWithNoStart,
     /// <summary>A START written while one is already open in the same voice. The OPEN one
     /// keeps the span; spans do not nest.
-    /// LILYPOND-REF: lily/text-spanner-engraver.cc:73-77 Text_spanner_engraver::process_music — "already have a text spanner",
-    /// beside a second warning pointing at where the open one started.</summary>
+    /// ⚠️ ONLY THE TEXT SPANNER REACHES THIS. Its engraver refuses the second start
+    /// ("already have a text spanner"), but the other two families read the same writing as
+    /// a CHANGE and close-then-open: an ottava because any ottava event finishes the open
+    /// span first (lily/ottava-engraver.cc:122-136), a pedal because that is re-pedalling.
+    /// Session 289 gave the ottava this fault by analogy and audit/lpreg/ottcons.lys — the
+    /// twin of LilyPond's ottava-consecutive.ly — refused it.</summary>
     StartWhileOpen,
 }
 
 /// <summary>
-/// A text-spanner mark that pairs with nothing, so no spanner is drawn for it.
+/// A span mark that pairs with nothing, so nothing is drawn for it.
 /// <see cref="SourcePosition"/> points at the mark itself.
 /// </summary>
 /// <remarks>
-/// Recorded by <c>TextSpannerEngraver.PairTextSpanners</c> — the SAME call that decides
-/// which spans are drawn — and surfaced by <c>TextSpanPairingValidator</c>, for the reason
+/// Recorded by the SAME call that decides which spans are drawn (each family's pairing
+/// walk) and surfaced by <c>SpanPairingValidator</c>, for the reason
 /// <see cref="UnpairedSlurWarning"/> gives: a warning that re-derives the pairing can
 /// disagree with the page.
 /// <para>
-/// ⚠️ ONE PER SOURCE POSITION AND FAULT. The marks being paired are the PLAYED piece's, so
-/// a mark written inside a repeated section arrives once per playing; it is unterminated
+/// ⚠️ ONE PER (SOURCE POSITION, KIND, FAULT). The marks being paired are the PLAYED piece's,
+/// so a mark written inside a repeated section arrives once per playing; it is unterminated
 /// once.
 /// </para>
 /// </remarks>
-public record UnpairedTextSpanWarning(
+public record UnpairedSpanWarning(
     int SourcePosition,
-    TextSpanPairingFault Fault
+    SpanKind Kind,
+    SpanPairingFault Fault
 );
 
 /// <summary>Which kind of span crossed a cue boundary — the two whose engravers LilyPond

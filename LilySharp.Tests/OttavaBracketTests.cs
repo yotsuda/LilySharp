@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -16,6 +16,7 @@
 
 using System.Collections.Immutable;
 using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
 using Xunit;
 using LilySharp.Core.Rendering;
@@ -45,7 +46,11 @@ public class OttavaBracketTests
         Assert.Equal(MusicMarkType.OttavaDown, MusicMarkItem.ParseMarkName("ottava.bassa"));
         Assert.Equal(MusicMarkType.QuindicesUp, MusicMarkItem.ParseMarkName("quindicesima"));
         Assert.Equal(MusicMarkType.QuindicesDown, MusicMarkItem.ParseMarkName("quindicesima.bassa"));
-        Assert.Equal(MusicMarkType.Loco, MusicMarkItem.ParseMarkName("loco"));
+        // 'loco' is retired: it named a mark nothing printed, and LilyPond has no such
+        // command either (session 289). The ottava now ends with '@!ottava'.
+        Assert.Null(MusicMarkItem.ParseMarkName("loco"));
+        Assert.Equal(MusicMarkType.OttavaStop, MusicMarkItem.ParseSpanEndName("ottava"));
+        Assert.Equal(MusicMarkType.OttavaStop, MusicMarkItem.ParseSpanEndName("quindicesima"));
     }
 
     [Fact]
@@ -93,7 +98,7 @@ public class OttavaBracketTests
     {
         var musicMarks = ImmutableArray.Create(
             new MusicMarkItem(MusicMarkType.OttavaUp, 1, 42),
-            new MusicMarkItem(MusicMarkType.Loco, 4, 0));
+            new MusicMarkItem(MusicMarkType.OttavaStop, 4, 0));
 
         var result = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks);
 
@@ -105,16 +110,77 @@ public class OttavaBracketTests
     }
 
     [Fact]
-    public void DetectOttavaBrackets_OttavaWithNoEnd_ExtendsOneMore()
+    public void DetectOttavaBrackets_OttavaWithNoEnd_DrawsNothingAndIsReported()
+    {
+        // The one-measure fallback is retired with the terminator (session 289): a bracket
+        // with no end has no length to draw, and drawing a guessed one told the reader the
+        // engine's number as if it were theirs.
+        // ⚠️ THIS IS A DECLARED DIVERGENCE from LilyPond, whose
+        // Ottava_spanner_engraver::finalize (lily/ottava-engraver.cc:220-226) neither warns
+        // nor suicides — it draws the open bracket to the end of the music, silently. The
+        // language takes ONE answer for every span instead (user decision).
+        var musicMarks = ImmutableArray.Create(
+            new MusicMarkItem(MusicMarkType.OttavaUp, 3, 42));
+
+        var (brackets, unpaired) = OttavaBracketEngraver.PairOttavaBrackets(musicMarks);
+
+        Assert.True(brackets.IsEmpty);
+        var warning = Assert.Single(unpaired);
+        Assert.Equal(SpanKind.Ottava, warning.Kind);
+        Assert.Equal(SpanPairingFault.Unterminated, warning.Fault);
+        Assert.Equal(42, warning.SourcePosition);
+    }
+
+    [Fact]
+    public void DetectOttavaBrackets_TheSameWrittenMarkPlayedTwice_DoesNotEndItself()
+    {
+        // The defect sessions 288 fixed in the text spanner and in the hairpin, which nobody
+        // looked for HERE: the old walk took "the next ottava mark on the same staff" with no
+        // test for a shared SourcePosition, so a form that repeats a section had the second
+        // PLAYING of one written @ottava terminate its first. Pairing in played order cannot
+        // make that mistake — playing 1's @! is reached before playing 2's start — so the
+        // defect is closed without a rule against it.
+        var musicMarks = ImmutableArray.Create(
+            new MusicMarkItem(MusicMarkType.OttavaUp, 0, 42),
+            new MusicMarkItem(MusicMarkType.OttavaStop, 2, 60),
+            new MusicMarkItem(MusicMarkType.OttavaUp, 4, 42),
+            new MusicMarkItem(MusicMarkType.OttavaStop, 6, 60));
+
+        var (brackets, unpaired) = OttavaBracketEngraver.PairOttavaBrackets(musicMarks);
+
+        Assert.True(unpaired.IsEmpty);
+        Assert.Equal(2, brackets.Length);
+        Assert.Equal(
+            brackets[0].EndMeasureIndex - brackets[0].StartMeasureIndex,
+            brackets[1].EndMeasureIndex - brackets[1].StartMeasureIndex);
+    }
+
+    [Fact]
+    public void DetectOttavaBrackets_ATerminatorWithNothingOpen_IsReported()
     {
         var musicMarks = ImmutableArray.Create(
-            new MusicMarkItem(MusicMarkType.OttavaUp, 3, 0));
+            new MusicMarkItem(MusicMarkType.OttavaStop, 5, 77));
 
-        var result = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks);
+        var (brackets, unpaired) = OttavaBracketEngraver.PairOttavaBrackets(musicMarks);
 
-        Assert.Single(result);
-        Assert.Equal(3, result[0].StartMeasureIndex);
-        Assert.Equal(4, result[0].EndMeasureIndex);
+        Assert.True(brackets.IsEmpty);
+        Assert.Equal(SpanPairingFault.StopWithNoStart, Assert.Single(unpaired).Fault);
+    }
+
+    [Fact]
+    public void DetectOttavaBrackets_OneStopClosesEitherStart()
+    {
+        // ONE STOP FOR THE FAMILY, as in LilyPond: `\ottava #0` cancels whatever octavation
+        // runs, so '@!ottava' closes a quindicesima too. The bracket's TYPE comes from its
+        // start, which is the only place it is written.
+        var musicMarks = ImmutableArray.Create(
+            new MusicMarkItem(MusicMarkType.QuindicesDown, 0, 0),
+            new MusicMarkItem(MusicMarkType.OttavaStop, 3, 0));
+
+        var bracket = Assert.Single(OttavaBracketEngraver.DetectOttavaBrackets(musicMarks));
+
+        Assert.Equal(OttavaType.Quindicesima15mb, bracket.Type);
+        Assert.Equal(2, bracket.EndMeasureIndex);
     }
 
     [Fact]
@@ -122,7 +188,7 @@ public class OttavaBracketTests
     {
         var musicMarks = ImmutableArray.Create(
             new MusicMarkItem(MusicMarkType.OttavaDown, 0, 0),
-            new MusicMarkItem(MusicMarkType.Loco, 2, 0));
+            new MusicMarkItem(MusicMarkType.OttavaStop, 2, 0));
 
         var result = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks);
 
@@ -135,7 +201,7 @@ public class OttavaBracketTests
     {
         var musicMarks = ImmutableArray.Create(
             new MusicMarkItem(MusicMarkType.QuindicesUp, 0, 0),
-            new MusicMarkItem(MusicMarkType.Loco, 3, 0));
+            new MusicMarkItem(MusicMarkType.OttavaStop, 3, 0));
 
         var result = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks);
 
@@ -148,7 +214,7 @@ public class OttavaBracketTests
     {
         // Loco by itself doesn't create a bracket
         var musicMarks = ImmutableArray.Create(
-            new MusicMarkItem(MusicMarkType.Loco, 5, 0));
+            new MusicMarkItem(MusicMarkType.OttavaStop, 5, 0));
 
         var result = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks);
 
@@ -158,20 +224,53 @@ public class OttavaBracketTests
     [Fact]
     public void DetectOttavaBrackets_TwoOttavas_TwoBrackets()
     {
+        // ⚠️ EACH ONE IS CLOSED. The old walk let the SECOND start terminate the first, which
+        // is how a book got two brackets out of one written terminator; a start inside an
+        // open span is now the "already open" complaint instead (the next test).
         var musicMarks = ImmutableArray.Create(
-            new MusicMarkItem(MusicMarkType.OttavaUp, 0, 0),
-            new MusicMarkItem(MusicMarkType.OttavaDown, 3, 0),
-            new MusicMarkItem(MusicMarkType.Loco, 5, 0));
+            new MusicMarkItem(MusicMarkType.OttavaUp, 0, 10),
+            new MusicMarkItem(MusicMarkType.OttavaStop, 3, 20),
+            new MusicMarkItem(MusicMarkType.OttavaDown, 3, 30),
+            new MusicMarkItem(MusicMarkType.OttavaStop, 5, 40));
 
-        var result = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks);
+        var (result, unpaired) = OttavaBracketEngraver.PairOttavaBrackets(musicMarks);
 
+        Assert.True(unpaired.IsEmpty);
         Assert.Equal(2, result.Length);
         Assert.Equal(OttavaType.Ottava8va, result[0].Type);
         Assert.Equal(0, result[0].StartMeasureIndex);
-        Assert.Equal(2, result[0].EndMeasureIndex); // ends at measure before next ottava
+        Assert.Equal(2, result[0].EndMeasureIndex); // the measure before its own terminator
         Assert.Equal(OttavaType.Ottava8vb, result[1].Type);
         Assert.Equal(3, result[1].StartMeasureIndex);
-        Assert.Equal(4, result[1].EndMeasureIndex); // ends at measure before loco
+        Assert.Equal(4, result[1].EndMeasureIndex);
+    }
+
+    [Fact]
+    public void DetectOttavaBrackets_ASecondStartIsAChange_NotARefusal()
+    {
+        // ⚠️ WHERE THE OTTAVA PARTS COMPANY WITH THE TEXT SPANNER. An 8va running straight
+        // into an 8vb is a CHANGE of octavation, not a nested span: LilyPond's
+        // Ottava_spanner_engraver::process_music (lily/ottava-engraver.cc:122-136) finishes
+        // the open span on ANY ottava event and then starts a new one unless it is
+        // `\ottava #0`. Session 289 wrote the text spanner's "already open" refusal here by
+        // analogy, and audit/lpreg/ottcons.lys — the twin of LilyPond's own
+        // ottava-consecutive.ly, which exists to say consecutive ottavas are not merged —
+        // caught it in the corpus sweep.
+        var musicMarks = ImmutableArray.Create(
+            new MusicMarkItem(MusicMarkType.OttavaUp, 0, 10),
+            new MusicMarkItem(MusicMarkType.OttavaDown, 1, 20),
+            new MusicMarkItem(MusicMarkType.OttavaStop, 3, 30));
+
+        var (result, unpaired) = OttavaBracketEngraver.PairOttavaBrackets(musicMarks);
+
+        Assert.True(unpaired.IsEmpty);
+        Assert.Equal(2, result.Length);
+        Assert.Equal(OttavaType.Ottava8va, result[0].Type);
+        Assert.Equal(0, result[0].StartMeasureIndex);
+        Assert.Equal(0, result[0].EndMeasureIndex);   // closed at the measure before the change
+        Assert.Equal(OttavaType.Ottava8vb, result[1].Type);
+        Assert.Equal(1, result[1].StartMeasureIndex);
+        Assert.Equal(2, result[1].EndMeasureIndex);
     }
 
     // --- OttavaBracketEngraver.Calculate ---
@@ -277,17 +376,17 @@ public class OttavaBracketTests
         // termination is per staff. Staff 0's bracket has no same-staff terminator,
         // so it extends one measure past its start.
         var musicMarks = ImmutableArray.Create(
-            new MusicMarkItem(MusicMarkType.OttavaUp, 0, 0) { StaffIndex = 0 },
-            new MusicMarkItem(MusicMarkType.Loco, 2, 0) { StaffIndex = 1 });
+            new MusicMarkItem(MusicMarkType.OttavaUp, 0, 10) { StaffIndex = 0 },
+            new MusicMarkItem(MusicMarkType.OttavaStop, 2, 20) { StaffIndex = 1 });
 
-        var result = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks);
+        var (result, unpaired) = OttavaBracketEngraver.PairOttavaBrackets(musicMarks);
 
-        Assert.Single(result);
-        Assert.Equal(0, result[0].StaffIndex);
-        Assert.Equal(0, result[0].StartMeasureIndex);
-        // No same-staff terminator -> extends one measure past the start,
-        // rather than ending at the other staff's loco (measure 1).
-        Assert.Equal(1, result[0].EndMeasureIndex);
+        // Neither pairs: the upper staff's 8va is unterminated and the lower staff's '@!'
+        // closes nothing. Two complaints, rather than a silent bracket of a guessed length.
+        Assert.True(result.IsEmpty);
+        Assert.Equal(2, unpaired.Length);
+        Assert.Single(unpaired, w => w.Fault == SpanPairingFault.Unterminated);
+        Assert.Single(unpaired, w => w.Fault == SpanPairingFault.StopWithNoStart);
     }
 
     [Fact]
@@ -297,8 +396,8 @@ public class OttavaBracketTests
         var musicMarks = ImmutableArray.Create(
             new MusicMarkItem(MusicMarkType.OttavaUp, 0, 0) { StaffIndex = 0 },
             new MusicMarkItem(MusicMarkType.OttavaUp, 0, 0) { StaffIndex = 1 },
-            new MusicMarkItem(MusicMarkType.Loco, 3, 0) { StaffIndex = 0 },
-            new MusicMarkItem(MusicMarkType.Loco, 3, 0) { StaffIndex = 1 });
+            new MusicMarkItem(MusicMarkType.OttavaStop, 3, 0) { StaffIndex = 0 },
+            new MusicMarkItem(MusicMarkType.OttavaStop, 3, 0) { StaffIndex = 1 });
 
         var result = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks);
 

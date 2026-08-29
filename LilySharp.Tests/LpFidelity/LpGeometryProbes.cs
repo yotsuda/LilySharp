@@ -4543,11 +4543,11 @@ internal static class LpGeometryProbes
 
     /// <summary>Floor regime: drawn third-space heads, every support term far below 4.05.</summary>
     private static readonly string OTF = OttavaScore("OTF",
-        "c''4@ottava c'' c'' c'' | c'4@loco c' c' c' |");
+        "c''4@ottava c'' c'' c'' | c'4@!ottava c' c' c' |");
 
     /// <summary>Support regime: the same music two octaves up, the column decides.</summary>
     private static readonly string OTC = OttavaScore("OTC",
-        "c'''4@ottava c''' c''' c''' | c''4@loco c'' c'' c'' |");
+        "c'''4@ottava c''' c''' c''' | c''4@!ottava c'' c'' c'' |");
 
     /// <summary>
     /// OTC moved to the LOWER staff of a two-staff system — the ottava's face of the guard
@@ -4568,7 +4568,7 @@ internal static class LpGeometryProbes
 
         section Main {
           upper { b4 b b b | b b b b | }
-          lower { c'''4@ottava c''' c''' c''' | c''4@loco c'' c'' c'' | }
+          lower { c'''4@ottava c''' c''' c''' | c''4@!ottava c'' c'' c'' | }
         }
 
         form main { ~Main }

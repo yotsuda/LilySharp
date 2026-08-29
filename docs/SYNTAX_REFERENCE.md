@@ -1056,10 +1056,19 @@ carry from one voice into another.
 
 ### Ottava Brackets
 
+Like a text spanner, an ottava **must be closed** — an unclosed one draws no bracket at
+all, and the notes under it are not transposed, and it says so (LYS4018). One
+`@!ottava` closes whichever of the family was opened.
+
 ```
-c4@ottava d e f |     // 8va bracket
-c4@loco d e f |       // End ottava
+c4@ottava d e f@!ottava |            // 8va bracket
+c4@ottava(bassa) d e f@!ottava |     // 8vb
+c4@quindicesima d e f@!ottava |      // 15ma - the same terminator
 ```
+
+⚠️ `@loco` is **retired**. It named a mark that printed nothing — writing it only moved
+where the bracket stopped — and LilyPond has no `loco` command either (the word is in
+its glossary and nowhere else). Write `@!ottava`.
 
 ### Pedal Markings
 

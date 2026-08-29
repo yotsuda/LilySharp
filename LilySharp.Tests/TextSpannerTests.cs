@@ -108,7 +108,7 @@ public class TextSpannerTests
 
         Assert.True(spanners.IsEmpty);
         var warning = Assert.Single(unpaired);
-        Assert.Equal(TextSpanPairingFault.Unterminated, warning.Fault);
+        Assert.Equal(SpanPairingFault.Unterminated, warning.Fault);
         Assert.Equal(42, warning.SourcePosition);
     }
 
@@ -123,7 +123,7 @@ public class TextSpannerTests
         var (spanners, unpaired) = TextSpannerEngraver.PairTextSpanners(musicMarks);
 
         Assert.True(spanners.IsEmpty);
-        Assert.Equal(TextSpanPairingFault.StopWithNoStart, Assert.Single(unpaired).Fault);
+        Assert.Equal(SpanPairingFault.StopWithNoStart, Assert.Single(unpaired).Fault);
     }
 
     [Fact]
@@ -144,7 +144,7 @@ public class TextSpannerTests
         Assert.Equal(0, span.StartMeasureIndex);
         Assert.Equal(3, span.EndMeasureIndex);
         var warning = Assert.Single(unpaired);
-        Assert.Equal(TextSpanPairingFault.StartWhileOpen, warning.Fault);
+        Assert.Equal(SpanPairingFault.StartWhileOpen, warning.Fault);
         Assert.Equal(20, warning.SourcePosition);  // the dropped mark, not the open one
     }
 
@@ -191,8 +191,8 @@ public class TextSpannerTests
 
         Assert.Equal(2, unpaired.Length);
         Assert.All(unpaired, w => Assert.Equal(42, w.SourcePosition));
-        Assert.Single(unpaired, w => w.Fault == TextSpanPairingFault.Unterminated);
-        Assert.Single(unpaired, w => w.Fault == TextSpanPairingFault.StartWhileOpen);
+        Assert.Single(unpaired, w => w.Fault == SpanPairingFault.Unterminated);
+        Assert.Single(unpaired, w => w.Fault == SpanPairingFault.StartWhileOpen);
     }
 
     [Fact]
@@ -209,8 +209,8 @@ public class TextSpannerTests
 
         Assert.True(spanners.IsEmpty);
         Assert.Equal(2, unpaired.Length);
-        Assert.Single(unpaired, w => w.Fault == TextSpanPairingFault.StopWithNoStart);
-        Assert.Single(unpaired, w => w.Fault == TextSpanPairingFault.Unterminated);
+        Assert.Single(unpaired, w => w.Fault == SpanPairingFault.StopWithNoStart);
+        Assert.Single(unpaired, w => w.Fault == SpanPairingFault.Unterminated);
     }
 
     [Fact]

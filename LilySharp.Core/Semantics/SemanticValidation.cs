@@ -78,7 +78,7 @@ public static class SemanticValidation
         new BareDurationValidator(),        // a bare duration with nothing before it to repeat
         new SlurPairingValidator(),         // a slur mark that pairs with nothing
         new BeamPairingValidator(),         // a manual beam bracket that pairs with nothing
-        new TextSpanPairingValidator(),     // a '@rit' / '@!rit' that pairs with nothing
+        new SpanPairingValidator(),         // a span mark ('@rit', '@ottava', '@!') that pairs with nothing
         new ChordRowGridValidator(),        // a chord-row bar off the beat grid / a bar-head '.'
         new ChordDisplayModeValidator(),    // `chords X as WORD` where WORD is not a display
         new TabRenderVocabularyValidator(), // `tab [TUNING] X as WORD` — the same clause's other half

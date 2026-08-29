@@ -368,7 +368,7 @@ internal static class TextSpannerEngraver
     /// </para>
     /// </remarks>
     internal static (ImmutableArray<TextSpannerItem> Spanners,
-                     ImmutableArray<UnpairedTextSpanWarning> Unpaired)
+                     ImmutableArray<UnpairedSpanWarning> Unpaired)
         PairTextSpanners(ImmutableArray<MusicMarkItem> musicMarks)
     {
         if (musicMarks.IsDefaultOrEmpty)
@@ -392,14 +392,14 @@ internal static class TextSpannerEngraver
             return ([], []);
 
         var spanners = ImmutableArray.CreateBuilder<TextSpannerItem>();
-        var unpaired = ImmutableArray.CreateBuilder<UnpairedTextSpanWarning>();
-        var reported = new HashSet<(int Position, TextSpanPairingFault Fault)>();
+        var unpaired = ImmutableArray.CreateBuilder<UnpairedSpanWarning>();
+        var reported = new HashSet<(int Position, SpanPairingFault Fault)>();
         var open = new Dictionary<(int Staff, int Voice), (MusicMarkItem Mark, int Index)>();
 
-        void Report(int sourcePosition, TextSpanPairingFault fault)
+        void Report(int sourcePosition, SpanPairingFault fault)
         {
             if (reported.Add((sourcePosition, fault)))
-                unpaired.Add(new UnpairedTextSpanWarning(sourcePosition, fault));
+                unpaired.Add(new UnpairedSpanWarning(sourcePosition, SpanKind.TextSpanner, fault));
         }
 
         foreach (var (mark, srcIndex) in spanMarks)
@@ -410,7 +410,7 @@ internal static class TextSpannerEngraver
             {
                 if (!open.TryGetValue(key, out var start))
                 {
-                    Report(mark.SourcePosition, TextSpanPairingFault.StopWithNoStart);
+                    Report(mark.SourcePosition, SpanPairingFault.StopWithNoStart);
                     continue;
                 }
                 open.Remove(key);
@@ -431,14 +431,14 @@ internal static class TextSpannerEngraver
             {
                 // LilyPond warns on the NEW mark and keeps the open one; a second span does
                 // not nest and does not replace.
-                Report(mark.SourcePosition, TextSpanPairingFault.StartWhileOpen);
+                Report(mark.SourcePosition, SpanPairingFault.StartWhileOpen);
                 continue;
             }
             open[key] = (mark, srcIndex);
         }
 
         foreach (var (mark, _) in open.Values)
-            Report(mark.SourcePosition, TextSpanPairingFault.Unterminated);
+            Report(mark.SourcePosition, SpanPairingFault.Unterminated);
 
         return (spanners.ToImmutable(), unpaired.ToImmutable());
     }
@@ -446,7 +446,7 @@ internal static class TextSpannerEngraver
     /// <summary>
     /// The text spanners a played score draws — the paired half of
     /// <see cref="PairTextSpanners"/>. The unpaired half is reported by
-    /// <c>TextSpanPairingValidator</c>, which reads the SAME call, so a mark can never be
+    /// <c>SpanPairingValidator</c>, which reads the SAME call, so a mark can never be
     /// warned about and drawn (or drawn and not warned about) at once.
     /// </summary>
     public static ImmutableArray<TextSpannerItem> DetectTextSpanners(

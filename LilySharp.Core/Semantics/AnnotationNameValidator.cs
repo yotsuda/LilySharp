@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -92,7 +92,10 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         "cresc", "decresc", "dim",
         // Spelled as they should be READ: the matcher lowercases both sides, so
         // camelCase here only affects what the "did you mean" hint shows.
-        "ottava", "ottava.bassa", "loco",
+        // The ottava family, each ended by '@!ottava'. 'loco' is NOT here: it was
+        // retired with MusicMarkType.Loco (session 289) and no longer compiles, and
+        // every candidate in this list must (EverySuggestionCandidate_CompilesAsWritten).
+        "ottava", "ottava.bassa",
         "sustainOn", "sustainOff", "sostenutoOn", "sostenutoOff",
         "unaCorda", "treCorde",
         "mark.A", "finger.1", "feather.right", "feather.left",

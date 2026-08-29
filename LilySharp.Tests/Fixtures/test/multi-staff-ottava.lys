@@ -12,8 +12,8 @@ title "Multi-staff ottava"
 part top { clef treble }
 part low { clef bass }
 section S {
-  top { c'''4@ottava c'''4 c'''4 c'''4 | c'''4@loco c'''4 c'''4 c'''4 | }
-  low { c,4@ottava(bassa) c,4 c,4 c,4 | c,4@loco c,4 c,4 c,4 | }
+  top { c'''4@ottava c'''4 c'''4 c'''4 | c'''4@!ottava c'''4 c'''4 c'''4 | }
+  low { c,4@ottava(bassa) c,4 c,4 c,4 | c,4@!ottava c,4 c,4 c,4 | }
 }
 form main { S }
 score main "multi-staff-ottava" { staff top staff low }

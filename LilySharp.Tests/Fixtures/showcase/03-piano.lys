@@ -25,7 +25,7 @@ phrase rhTheme {
 phrase rhOttava {
   c''4@ottava e g c |
   d4 f a d |
-  c2@loco g |
+  c2@!ottava g |
   e2. r4 |
 }
 

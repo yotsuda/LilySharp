@@ -599,7 +599,11 @@ public sealed partial class MeasureCollector
                     // @mark.A rehearsal) are left to that handler, which extracts text.
                     // LILYPOND-REF: piano-pedal-engraver.cc / ottava-engraver.cc.
                     _musicMarks.Add(new MusicMarkItem(
-                        compoundMark, measureIndex, markSyntax.SourceStart, itemIndex, anchorTiming) { StaffIndex = _cursor.StaffIndex });
+                        compoundMark, measureIndex, markSyntax.SourceStart, itemIndex, anchorTiming)
+                    {
+                        StaffIndex = _cursor.StaffIndex,
+                        VoiceIndex = _cursor.VoiceIndex,
+                    });
                 }
                 else
                 {

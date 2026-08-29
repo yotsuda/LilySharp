@@ -874,7 +874,7 @@ public static class DiagnosticCodes
     /// Voice context (ly/engraver-init.ly:375) — a terminator in another voice reaches
     /// nothing and is reported here as having no start.
     /// </para></summary>
-    public const string UnpairedTextSpan = "LYS4018";
+    public const string UnpairedSpan = "LYS4018";
     /// <summary>Warning: a span that opens exactly ONE unnamed <c>voice { … }</c>. The
     /// block is then entirely transparent — stem forcing needs a second voice, so the
     /// music engraves as if the braces were not there. Someone who wrote it meaning

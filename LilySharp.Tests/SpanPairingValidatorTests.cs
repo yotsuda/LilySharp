@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -28,16 +28,16 @@ namespace LilySharp.Tests;
 /// and the reader was never told the length was the engine's guess.
 /// </summary>
 [Trait("Category", "Unit")]
-public class TextSpanPairingValidatorTests
+public class SpanPairingValidatorTests
 {
     private static IReadOnlyList<Diagnostic> Warnings(string music)
     {
         var source = $"octave absolute part m {{ clef treble }} "
                      + $"section A {{ m {{ {music} }} }} form main {{ A }} score main {{ staff m }}";
-        var validator = new TextSpanPairingValidator();
+        var validator = new SpanPairingValidator();
         validator.Validate(SyntaxTree.Parse(source));
         return validator.Diagnostics
-            .Where(d => d.Code == DiagnosticCodes.UnpairedTextSpan
+            .Where(d => d.Code == DiagnosticCodes.UnpairedSpan
                         && d.Severity == DiagnosticSeverity.Warning)
             .ToList();
     }
@@ -128,11 +128,11 @@ public class TextSpanPairingValidatorTests
                      + "section A { m { c'4@rit c' c' c' | } } "
                      + "section B { m { d'4 d' d' d' | } } "
                      + "form main { A B A } score main { staff m }";
-        var validator = new TextSpanPairingValidator();
+        var validator = new SpanPairingValidator();
         validator.Validate(SyntaxTree.Parse(source));
 
         var warnings = validator.Diagnostics
-            .Where(d => d.Code == DiagnosticCodes.UnpairedTextSpan)
+            .Where(d => d.Code == DiagnosticCodes.UnpairedSpan)
             .ToList();
 
         // Two faults at ONE position, not one fault twice: playing 2 finds a span already
@@ -155,5 +155,86 @@ public class TextSpanPairingValidatorTests
         Assert.Equal(2, warnings.Count);
         Assert.Single(warnings, w => w.Message.Contains("never closed"));
         Assert.Single(warnings, w => w.Message.Contains("closes nothing"));
+    }
+
+    // ---- the ottava, on the same rule ----
+
+    [Theory]
+    [InlineData("c'4@ottava c' c' c'@!ottava |")]
+    [InlineData("c'4@quindicesima c' c' c'@!ottava |")]   // one stop for the family
+    [InlineData("c'4@ottava(bassa) c' c' c'@!ottava |")]
+    public void APairedOttava_NoWarning(string music) =>
+        Assert.Equal(0, WarningCount(music));
+
+    [Fact]
+    public void AnUnterminatedOttava_IsReported()
+    {
+        var warning = Assert.Single(Warnings("c'4@ottava c' c' c' |"));
+        Assert.Contains("never closed", warning.Message);
+        // The ottava loses the TRANSPOSITION with its bracket, and the message says so —
+        // that is the half a reader cannot see by looking at the page.
+        Assert.Contains("not transposed", warning.Message);
+    }
+
+    [Fact]
+    public void AnOttavaTerminatorWithNothingOpen_IsReported()
+    {
+        var warning = Assert.Single(Warnings("c'4@!ottava c' c' c' |"));
+        Assert.Contains("closes nothing", warning.Message);
+        // ...and it reads as English: the article belongs to the family's noun, not glued on.
+        Assert.Contains("no ottava bracket is open", warning.Message);
+    }
+
+    /// <summary>
+    /// ⚠️ CONSECUTIVE OTTAVAS ARE A CHANGE, NOT A NESTING, so no complaint: LilyPond finishes
+    /// the open span on any ottava event and starts the new one. Only the TEXT spanner
+    /// refuses a second start.
+    /// </summary>
+    [Fact]
+    public void ConsecutiveOttavas_AreNotAFault() =>
+        Assert.Equal(0, WarningCount(
+            "c'4@ottava c' | c'@ottava(bassa) c' | c'@!ottava c' |"));
+
+    // ---- the pedal: the two faults it has, and the one it does NOT ----
+
+    [Fact]
+    public void AnUnreleasedPedal_IsReported()
+    {
+        // MEASURED (scratch/p289/pedopen.lys): the bracket vanishes entirely. Nothing about
+        // the drawing changed here — what changed is that the loss is now said.
+        var warning = Assert.Single(Warnings("c'4@sustainOn c' c' c' |"));
+        Assert.Contains("never closed", warning.Message);
+    }
+
+    [Fact]
+    public void APedalReleaseWithNothingDown_IsReported()
+    {
+        var warning = Assert.Single(Warnings("c'4@sustainOff c' c' c' |"));
+        Assert.Contains("closes nothing", warning.Message);
+    }
+
+    /// <summary>
+    /// ⚠️ RE-PEDALLING IS NOT A FAULT, and this is the one place the families differ. A
+    /// second <c>@sustainOn</c> while the pedal is down is what a pianist does and what
+    /// "Ped. … Ped." means; it closes the open bracket and opens a new one. A second text
+    /// spanner inside an open one is refused instead.
+    /// </summary>
+    [Fact]
+    public void RePedalling_IsNotAFault()
+    {
+        Assert.Equal(0, WarningCount(
+            "c'4@sustainOn c'@sustainOff@sustainOn c' c'@sustainOff |"));
+        // ...and the bare re-pedal (no explicit release between) is not one either.
+        Assert.Equal(0, WarningCount("c'4@sustainOn c'@sustainOn c' c'@sustainOff |"));
+    }
+
+    [Fact]
+    public void EachPedalIsItsOwnSpan()
+    {
+        // A una corda does not release a sustain: three pedals, three spans.
+        Assert.Equal(0, WarningCount(
+            "c'4@sustainOn@unaCorda c' c'@treCorde c'@sustainOff |"));
+        // ...so a sustain closed by the WRONG release leaves both unpaired.
+        Assert.Equal(2, WarningCount("c'4@sustainOn c' c' c'@treCorde |"));
     }
 }

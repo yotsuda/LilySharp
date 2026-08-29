@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 53 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 48 | 観測者がゼロだと自認しているもの |
+| `APPROX` | 55 | LP に対応物はあるが、形が違うと自認しているもの |
+| `UNWATCHED` | 49 | 観測者がゼロだと自認しているもの |
 | `OWN` | 114 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **215** | |
+| **計** | **218** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -34,7 +34,7 @@
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 5 |
 | `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 5 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（53 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（55 件）
 
 ### `LilySharp.Core/Rendering/Pdf/PdfDrawingContext.cs`
 - **:310** ⚠️ NOT PORTED — backend-blocked: CHARACTERS AT THE CLUSTERS' POSITIONS, not glyphs at
@@ -99,8 +99,12 @@
 - **:980** ⚠️ NOT PORTED: stem/flag boxes and rest supports (see DotColumnSupportMinX);
 - **:1078** ⚠️ NOT PORTED: the FLAG boxes of the support heads' stems (dot-column.cc:135-141
 - **:1172** whole note reads [0, 0.375] — is not ported: Lily# has no producer for a
+### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
+- **:481** ⚠️⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED OTTAVA IS **NOT PORTED HERE**, deliberately.
 ### `LilySharp.Core/Svg/Layout/PartCombineAnalyzer.cs`
 - **:71** ⚠️ NOT PORTED — the outside-staff placement: a flat 1.5 staff-spaces above the
+### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
+- **:445** ⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED PEDAL IS **NOT PORTED HERE** either:
 ### `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs`
 - **:418** case of broken slur") — not ported; every slur this scorer sees lives on
 - **:593** column allows only 0.3 of movement) is not ported: every edge here
@@ -123,7 +127,7 @@
 ### `LilySharp.Core/Svg/Model/LyricItem.cs`
 - **:100** ⚠️ NOT PORTED — the voice's melismaBusy state: the trigger here is the
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（48 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（49 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:1658** container, and the value stops being unobserved with the line above.
@@ -183,9 +187,11 @@
 ### `LilySharp.Core/Svg/Layout/NoteColumnLayout.cs`
 - **:106** and no point measures it yet. Scaling it here would be the half of a port that looks
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
-- **:129** staff_extent[DOWN], which is the ink edge too. ⚠️ No ledger point measures
+- **:130** staff_extent[DOWN], which is the ink edge too. ⚠️ No ledger point measures
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
 - **:1594** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
+### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
+- **:458** same part (leftHand). No book reaches the configuration, so no ledger point and
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
 - **:56** the distance is taken at — and NO ledger point moves with it. An output change no point
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
@@ -237,7 +243,7 @@
 ### `LilySharp.Core/Rendering/TextFontMetrics.cs`
 - **:476** LILYSHARP-OWN: LilyPond has no equivalent refusal, and cannot — it resolves through
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
-- **:356** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
+- **:359** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Svg/Collector/BeamDetector.cs`
 - **:950** LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
 - **:980** LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's
@@ -245,8 +251,8 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:1854** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:3683** LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
+- **:1867** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:3696** LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
 - **:67** LILYSHARP-OWN: the DEFAULT five is LilyPond's (scm/define-grobs.scm:3396,
 ### `LilySharp.Core/Svg/Collector/StaffAccidentalColumns.cs`

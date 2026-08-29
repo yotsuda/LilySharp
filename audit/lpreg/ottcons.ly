@@ -7,4 +7,6 @@
   c1
   \ottava -1
   c1
+  \ottava 0
+  c1
 }

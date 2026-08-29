@@ -16,6 +16,7 @@
 
 using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -421,36 +422,88 @@ internal static class PedalEngraver
     }
 
     /// <summary>
-    /// Detects pedal bracket spans from music marks.
-    /// Pairs pedal-on marks with their corresponding pedal-off marks.
+    /// Pairs the pedal marks of a played score into brackets, and reports the marks that
+    /// pair with nothing.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: piano-pedal-engraver.cc:293-339 Event pairing logic
+    /// LILYPOND-REF: piano-pedal-engraver.cc:293-339 Piano_pedal_engraver — event pairing.
+    /// <para>
+    /// ⚠️ THIS ADDS NO RULE AND MOVES NO INK. The pairing is the one that was already here;
+    /// what is new is that the two ways it can fail are now SAID. MEASURED 2026-08-29
+    /// (scratch/p289/ped.lys against pedopen.lys): a closed pedal draws its bracket — a rule
+    /// with an upward hook at each end — and one whose <c>@sustainOff</c> is missing draws
+    /// NOTHING AT ALL, in silence. Losing the whole bracket without a word is the defect;
+    /// the drawing is not changed here.
+    /// </para>
+    /// <para>
+    /// ⚠️ ONLY TWO OF THE THREE FAULTS, and the missing one is the point: a second
+    /// <c>@sustainOn</c> while the pedal is down is RE-PEDALLING, which is what a pianist
+    /// actually does and what "Ped. … Ped." means on the page. It closes the open bracket and
+    /// opens a new one — it is not the "already open" refusal a nested text spanner gets.
+    /// </para>
+    /// <para>
+    /// ⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED PEDAL IS **NOT PORTED HERE** either:
+    /// <c>Piano_pedal_engraver::finalize</c> (lily/piano-pedal-engraver.cc:425-443) does not
+    /// warn — it sets the bracket's RIGHT bound to <c>currentCommandColumn</c> and typesets,
+    /// so LilyPond draws the pedal to the end of the music. Lily# already drew nothing; what
+    /// changes is that it now says so. Declared in docs/APPROXIMATIONS.md.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHAT IS STILL NOT ASKED HERE, named rather than hidden: the walk has NO staff or
+    /// voice filter, so a <c>@sustainOff</c> on one staff would close a <c>@sustainOn</c> on
+    /// another — the defect the text spanner's staff filter exists for. Fixing it MOVES INK,
+    /// so it is not done in a trip that promised to move none.
+    /// MEASURED 2026-08-29 over every .lys on disk: 15 books write a pedal mark, ONE of them
+    /// (showcase/03-piano) scores more than one staff, and there every pedal mark is in the
+    /// same part (<c>leftHand</c>). No book reaches the configuration, so no ledger point and
+    /// no fixture observes it — which is also why the repair needs a book written for it.
+    /// </para>
     /// </remarks>
-    public static ImmutableArray<PedalBracketItem> DetectPedalBrackets(
-        ImmutableArray<MusicMarkItem> musicMarks)
+    internal static (ImmutableArray<PedalBracketItem> Brackets,
+                     ImmutableArray<UnpairedSpanWarning> Unpaired)
+        PairPedalBrackets(ImmutableArray<MusicMarkItem> musicMarks)
     {
         if (musicMarks.IsDefaultOrEmpty)
-            return ImmutableArray<PedalBracketItem>.Empty;
+            return ([], []);
 
         var brackets = ImmutableArray.CreateBuilder<PedalBracketItem>();
+        var unpaired = ImmutableArray.CreateBuilder<UnpairedSpanWarning>();
+        var reported = new HashSet<(int Position, SpanPairingFault Fault)>();
 
-        // Process each pedal type independently
+        void Report(int sourcePosition, SpanPairingFault fault)
+        {
+            // ONE ROOT CAUSE, ONE DIAGNOSTIC: a mark inside a repeated section arrives once
+            // per playing, and the reader forgot one terminator however often it is played.
+            if (reported.Add((sourcePosition, fault)))
+                unpaired.Add(new UnpairedSpanWarning(sourcePosition, SpanKind.Pedal, fault));
+        }
+
+        // Each pedal is its own span: a sustain is not closed by a una corda.
         DetectBracketsForType(musicMarks, MusicMarkType.SustainOn, MusicMarkType.SustainOff,
-            PedalType.Sustain, brackets);
+            PedalType.Sustain, brackets, Report);
         DetectBracketsForType(musicMarks, MusicMarkType.SostenutoOn, MusicMarkType.SostenutoOff,
-            PedalType.Sostenuto, brackets);
+            PedalType.Sostenuto, brackets, Report);
         DetectBracketsForType(musicMarks, MusicMarkType.UnaCordaOn, MusicMarkType.UnaCordaOff,
-            PedalType.UnaCorda, brackets);
+            PedalType.UnaCorda, brackets, Report);
 
-        return brackets.ToImmutable();
+        return (brackets.ToImmutable(), unpaired.ToImmutable());
     }
+
+    /// <summary>
+    /// The pedal brackets a played score draws — the paired half of
+    /// <see cref="PairPedalBrackets"/>. The unpaired half is reported by
+    /// <c>SpanPairingValidator</c>, which reads the SAME call.
+    /// </summary>
+    public static ImmutableArray<PedalBracketItem> DetectPedalBrackets(
+        ImmutableArray<MusicMarkItem> musicMarks)
+        => PairPedalBrackets(musicMarks).Brackets;
 
     private static void DetectBracketsForType(
         ImmutableArray<MusicMarkItem> musicMarks,
         MusicMarkType onType, MusicMarkType offType,
         PedalType pedalType,
-        ImmutableArray<PedalBracketItem>.Builder brackets)
+        ImmutableArray<PedalBracketItem>.Builder brackets,
+        Action<int, SpanPairingFault> report)
     {
         // Collect all on/off marks for this pedal type, ordered by position
         var marks = musicMarks
@@ -478,8 +531,15 @@ internal static class PedalEngraver
                 }
                 activeOn = mark;
             }
-            else if (mark.Type == offType && activeOn != null)
+            else if (mark.Type == offType)
             {
+                if (activeOn == null)
+                {
+                    // A release with no pedal down: nothing was drawn for it before this
+                    // and nothing is now — the only change is that it is said.
+                    report(mark.SourcePosition, SpanPairingFault.StopWithNoStart);
+                    continue;
+                }
                 brackets.Add(new PedalBracketItem(
                     pedalType,
                     activeOn.MeasureIndex,
@@ -490,6 +550,10 @@ internal static class PedalEngraver
                 activeOn = null;
             }
         }
+
+        // A pedal still down when the music ends drew no bracket at all, silently.
+        if (activeOn != null)
+            report(activeOn.SourcePosition, SpanPairingFault.Unterminated);
     }
 
     /// <summary>

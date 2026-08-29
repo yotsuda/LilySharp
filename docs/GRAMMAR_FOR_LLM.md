@@ -433,7 +433,8 @@ In-note marks: `c4@mark("A")` (rehearsal mark),
 text spanners `@textSpan("poco rit.")` ... `@!textSpan` (sugar: `@rit` / `@accel` / `@rall`,
 closed by `@!rit` / `@!accel` / `@!rall` — **the end is REQUIRED**: a spanner nobody closes
 draws nothing at all, its word included, and says so with LYS4018),
-ottava `@ottava` / `@ottava(bassa)` ... `@loco`,
+ottava `@ottava` / `@ottava(bassa)` / `@quindicesima` ... `@!ottava` (**the end is REQUIRED**;
+one `@!ottava` closes any of them, and `@loco` is retired),
 trill spanner `@startTrillSpan` ... `@stopTrillSpan`, 15ma `@quindicesima` / `@quindicesima(bassa)`,
 pedals `@sustainOn`/`@sustainOff`, `@sostenutoOn`/`@sostenutoOff`, `@unaCorda`/`@treCorde` — one word each,
 LilyPond's own names, taking NO argument (`@ped`, `@ped(off)`, `@sost(off)`, `@una(corda)` do not exist).

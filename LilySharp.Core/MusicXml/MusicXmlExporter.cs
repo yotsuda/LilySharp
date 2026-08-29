@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -2736,12 +2736,21 @@ public sealed class MusicXmlExporter
             return;
         }
 
-        // '@!X' is a TERMINATOR, and its NAME is the name of what it ends — so handing it to
-        // the table below would emit that thing's START: '@!ottava' would open an octave
-        // shift. Nothing here has a stop spelling yet, so the terminator family is dropped,
-        // which is the same silence '@rit' already meets.
+        // '@!X' is a TERMINATOR, and its NAME is the name of what it ENDS — so handing it to
+        // the table below would emit that thing's START: '@!ottava' would OPEN an octave
+        // shift. The families are told apart here instead.
         if (mark.IsSpanEnd)
+        {
+            // The ottava's stop is the one terminator MusicXML has a spelling for. It used to
+            // arrive as the mark '@loco', which the table below answered; '@loco' is retired
+            // and this is where its <octave-shift type="stop"> moved to.
+            if (_currentMeasure != null
+                && Svg.Model.MusicMarkItem.ParseSpanEndName(mark.Name)
+                    == Svg.Model.MusicMarkType.OttavaStop)
+                _currentMeasure.Directions.Add(new MusicXmlDirection { OctaveShiftType = "stop" });
+            // The text spanner has no stop spelling here — the same silence '@rit' meets.
             return;
+        }
 
         ProcessDirectionName(mark.MarkName);
     }
@@ -2769,9 +2778,6 @@ public sealed class MusicXmlExporter
                 break;
             case "ottava.bassa":
                 _currentMeasure.Directions.Add(new MusicXmlDirection { OctaveShiftType = "up", Placement = "below" });
-                break;
-            case "loco":
-                _currentMeasure.Directions.Add(new MusicXmlDirection { OctaveShiftType = "stop" });
                 break;
         }
     }

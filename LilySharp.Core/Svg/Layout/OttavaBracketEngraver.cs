@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -16,6 +16,7 @@
 
 using System.Collections.Immutable;
 using LilySharp.Core.Rendering;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -468,97 +469,154 @@ internal static class OttavaBracketEngraver
     }
 
     /// <summary>
-    /// Detects ottava bracket spans from music marks.
-    /// An ottava starts at an 8va/8vb/15ma/15mb mark and ends at
-    /// loco or the next ottava mark.
+    /// Pairs the ottava marks of a played score into brackets, and reports the marks that
+    /// pair with nothing.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/ottava-engraver.cc process_music() and stop_translation_timestep()
+    /// The text spanner's walk, on this family: START opens, <c>@!</c> closes, one open span
+    /// per (staff, voice), and a mark nobody closed draws NOTHING. See
+    /// <c>TextSpannerEngraver.PairTextSpanners</c> for the shape and for why played order
+    /// removes the need for a self-replay guard.
+    /// <para>
+    /// ⚠️⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED OTTAVA IS **NOT PORTED HERE**, deliberately.
+    /// <c>Ottava_spanner_engraver::finalize</c> (lily/ottava-engraver.cc:220-226) does NOT
+    /// warn and does NOT <c>suicide()</c>: it hands the open span to <c>typeset_all</c>, so
+    /// LilyPond DRAWS an unterminated ottava to the end of the music, in silence. Only the
+    /// TEXT spanner's engraver kills its unterminated span — the claim that LilyPond holds
+    /// ONE answer for every unclosed span was written from that one engraver and is false
+    /// here (read both <c>finalize</c>s: the pedal's does not warn either, it sets the RIGHT
+    /// bound to <c>currentCommandColumn</c> and typesets). The language takes one answer for
+    /// every family instead (user decision, §3), so an unclosed ottava is reported and drawn
+    /// nowhere. Declared in docs/APPROXIMATIONS.md.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHAT THIS RETIRES, and it is the same three the text spanner retired: the
+    /// one-measure fallback (<c>endMeasure = mark.MeasureIndex + 1</c>), the "the next ottava
+    /// mark ends this one" search, and — never added here — the guard against a mark ending
+    /// its own second playing. That last one matters: sessions 288 fixed the self-replay
+    /// defect in the text spanner and in the hairpin and did not look at the ottava, which
+    /// had it too (the search took "the next ottava mark on the same staff" with no test for
+    /// a shared SourcePosition, so a repeated section's second playing of one written
+    /// <c>@ottava</c> terminated its first). Pairing in played order cannot make that
+    /// mistake, so the defect is closed here without a rule against it.
+    /// </para>
+    /// <para>
+    /// ⚠️ ONE STOP FOR THE FAMILY: <c>@!ottava</c> and <c>@!quindicesima</c> are the same
+    /// mark, as <c>\ottava #0</c> cancels whatever octavation runs. The bracket's TYPE comes
+    /// from its start, which is the only place it is written.
+    /// </para>
     /// </remarks>
-    public static ImmutableArray<OttavaBracketItem> DetectOttavaBrackets(
-        ImmutableArray<MusicMarkItem> musicMarks)
+    internal static (ImmutableArray<OttavaBracketItem> Brackets,
+                     ImmutableArray<UnpairedSpanWarning> Unpaired)
+        PairOttavaBrackets(ImmutableArray<MusicMarkItem> musicMarks)
     {
-        var brackets = ImmutableArray.CreateBuilder<OttavaBracketItem>();
+        if (musicMarks.IsDefaultOrEmpty)
+            return ([], []);
 
         // F3/B: keep each mark's ORIGINAL index in musicMarks (== score.MusicMarks) so the
         // bracket can re-derive its data-pos from the live score on reuse.
         var ottavaMarks = musicMarks
             .Select((m, i) => (Mark: m, Index: i))
-            .Where(x => x.Mark.Type == MusicMarkType.OttavaUp ||
-                        x.Mark.Type == MusicMarkType.OttavaDown ||
-                        x.Mark.Type == MusicMarkType.QuindicesUp ||
-                        x.Mark.Type == MusicMarkType.QuindicesDown ||
-                        x.Mark.Type == MusicMarkType.Loco)
+            .Where(x => x.Mark.Type is MusicMarkType.OttavaUp or MusicMarkType.OttavaDown
+                        or MusicMarkType.QuindicesUp or MusicMarkType.QuindicesDown
+                        or MusicMarkType.OttavaStop)
+            // Played order: by measure, then by the moment within it, then by the order the
+            // collector wrote — the same ordering the text spanner pairs in.
             .OrderBy(x => x.Mark.MeasureIndex)
+            .ThenBy(x => x.Mark.AnchorItemIndex)
+            .ThenBy(x => x.Index)
             .ToList();
 
         if (ottavaMarks.Count == 0)
-            return ImmutableArray<OttavaBracketItem>.Empty;
+            return ([], []);
 
-        // Walk through marks: each non-loco mark starts a bracket,
-        // terminated by the next ottava/loco mark
-        for (int i = 0; i < ottavaMarks.Count; i++)
+        var brackets = ImmutableArray.CreateBuilder<OttavaBracketItem>();
+        var unpaired = ImmutableArray.CreateBuilder<UnpairedSpanWarning>();
+        var reported = new HashSet<(int Position, SpanPairingFault Fault)>();
+        var open = new Dictionary<(int Staff, int Voice), (MusicMarkItem Mark, int Index)>();
+
+        void Report(int sourcePosition, SpanPairingFault fault)
         {
-            var (mark, srcIndex) = ottavaMarks[i];
-
-            // Skip loco marks (they only terminate, don't start)
-            if (mark.Type == MusicMarkType.Loco)
-                continue;
-
-            OttavaType type = mark.Type switch
-            {
-                MusicMarkType.OttavaUp => OttavaType.Ottava8va,
-                MusicMarkType.OttavaDown => OttavaType.Ottava8vb,
-                MusicMarkType.QuindicesUp => OttavaType.Quindicesima15ma,
-                MusicMarkType.QuindicesDown => OttavaType.Quindicesima15mb,
-                _ => OttavaType.Ottava8va
-            };
-
-            // Find the end: next ottava/loco mark ON THE SAME STAFF. On a grand
-            // staff each staff runs its own ottava, so a loco under the lower
-            // staff must not terminate an 8va over the upper staff.
-            // LILYPOND-REF: lily/ottava-engraver.cc — per-staff Ottava_spanner_engraver;
-            //   bracket ends just before the terminating mark, so use measure - 1.
-            MusicMarkItem? terminator = null;
-            for (int j = i + 1; j < ottavaMarks.Count; j++)
-                if (ottavaMarks[j].Mark.StaffIndex == mark.StaffIndex)
-                {
-                    terminator = ottavaMarks[j].Mark;
-                    break;
-                }
-
-            int endMeasure;
-            if (terminator != null)
-            {
-                // Bracket covers up to the measure before the terminator
-                endMeasure = terminator.MeasureIndex - 1;
-                if (endMeasure < mark.MeasureIndex)
-                    endMeasure = mark.MeasureIndex; // at minimum, cover the start measure
-            }
-            else
-            {
-                // No end found — extend to one measure after the start
-                endMeasure = mark.MeasureIndex + 1;
-            }
-
-            if (endMeasure >= mark.MeasureIndex)
-            {
-                brackets.Add(new OttavaBracketItem(
-                    Type: type,
-                    StartMeasureIndex: mark.MeasureIndex,
-                    EndMeasureIndex: endMeasure,
-                    SourcePosition: mark.SourcePosition,
-                    SourceIndex: srcIndex,
-                    StaffIndex: mark.StaffIndex,
-                    // The note the mark was written on IS the spanner's left bound. The
-                    // collector already anchors ottava marks to their host column
-                    // (MeasureCollector.Annotations, the compound-mark path), so this is a
-                    // hand-over, not a new resolution.
-                    StartItemIndex: mark.AnchorItemIndex
-                ));
-            }
+            if (reported.Add((sourcePosition, fault)))
+                unpaired.Add(new UnpairedSpanWarning(sourcePosition, SpanKind.Ottava, fault));
         }
 
-        return brackets.ToImmutable();
+        foreach (var (mark, srcIndex) in ottavaMarks)
+        {
+            var key = (mark.StaffIndex, mark.VoiceIndex);
+
+            if (mark.Type == MusicMarkType.OttavaStop)
+            {
+                if (!open.TryGetValue(key, out var start))
+                {
+                    Report(mark.SourcePosition, SpanPairingFault.StopWithNoStart);
+                    continue;
+                }
+                open.Remove(key);
+                brackets.Add(BracketFrom(start, endMeasure: mark.MeasureIndex - 1));
+                continue;
+            }
+
+            // ⚠️ A START WHILE ONE IS OPEN IS A CHANGE OF OCTAVATION, NOT A NESTED SPAN, and
+            // this is where the ottava parts company with the text spanner. LilyPond's
+            // Ottava_spanner_engraver::process_music (lily/ottava-engraver.cc:122-136) finishes
+            // the open span on ANY ottava event and then starts a new one unless the event is
+            // `\ottava #0` — so `8va` running straight into `8vb` is two brackets, not a
+            // refusal. Session 289 first wrote the text spanner's rule here and
+            // audit/lpreg/ottcons.lys, the twin of LilyPond's own ottava-consecutive.ly,
+            // caught it: that book exists to say consecutive ottavas are not merged.
+            if (open.TryGetValue(key, out var previous))
+                brackets.Add(BracketFrom(previous, endMeasure: mark.MeasureIndex - 1));
+            open[key] = (mark, srcIndex);
+        }
+
+        foreach (var (mark, _) in open.Values)
+            Report(mark.SourcePosition, SpanPairingFault.Unterminated);
+
+        return (brackets.ToImmutable(), unpaired.ToImmutable());
     }
+
+    /// <summary>
+    /// The bracket one open START makes, closed at <paramref name="endMeasure"/>.
+    /// </summary>
+    /// <remarks>
+    /// The bracket covers up to the measure BEFORE the mark that closes it: `@!ottava` marks
+    /// the first note back at written pitch, so the bracket must not reach it. A closer in
+    /// the start's own measure keeps the bracket on that measure rather than inverting it.
+    /// ⚠️ ONE HOME because there are TWO closing sites — the terminator and the next START —
+    /// and a bracket built differently by each is the "one quantity, two spellings" shape.
+    /// </remarks>
+    private static OttavaBracketItem BracketFrom(
+        (MusicMarkItem Mark, int Index) start, int endMeasure)
+        => new(
+            Type: TypeOf(start.Mark.Type),
+            StartMeasureIndex: start.Mark.MeasureIndex,
+            EndMeasureIndex: Math.Max(endMeasure, start.Mark.MeasureIndex),
+            SourcePosition: start.Mark.SourcePosition,
+            SourceIndex: start.Index,
+            StaffIndex: start.Mark.StaffIndex,
+            // The note the mark was written on IS the spanner's left bound. The collector
+            // already anchors ottava marks to their host column (MeasureCollector.Annotations,
+            // the compound-mark path), so this is a hand-over, not a new resolution.
+            StartItemIndex: start.Mark.AnchorItemIndex);
+
+    /// <summary>The bracket an ottava START mark denotes.</summary>
+    private static OttavaType TypeOf(MusicMarkType type) => type switch
+    {
+        MusicMarkType.OttavaUp => OttavaType.Ottava8va,
+        MusicMarkType.OttavaDown => OttavaType.Ottava8vb,
+        MusicMarkType.QuindicesUp => OttavaType.Quindicesima15ma,
+        MusicMarkType.QuindicesDown => OttavaType.Quindicesima15mb,
+        _ => OttavaType.Ottava8va
+    };
+
+    /// <summary>
+    /// The ottava brackets a played score draws — the paired half of
+    /// <see cref="PairOttavaBrackets"/>. The unpaired half is reported by
+    /// <c>SpanPairingValidator</c>, which reads the SAME call, so a mark can never be warned
+    /// about and drawn at once.
+    /// </summary>
+    public static ImmutableArray<OttavaBracketItem> DetectOttavaBrackets(
+        ImmutableArray<MusicMarkItem> musicMarks)
+        => PairOttavaBrackets(musicMarks).Brackets;
 }

@@ -196,7 +196,7 @@ public class AnnotationNameValidatorTests
     [InlineData("c4@segno d@coda e@fine f |")]
     [InlineData("c4@mark(\"A\") d@mark(\"12\") e f |")]
     [InlineData("c4@rit d@accel e@cresc f@dim |")]
-    [InlineData("c4@ottava d@ottava(bassa) e@loco f |")]
+    [InlineData("c4@ottava d@ottava(bassa) e@!ottava f |")]
     [InlineData("c4@sustainOn d@sustainOff e@sostenutoOn f@treCorde |")]
     [InlineData("c4@sostenutoOff d@unaCorda e f |")]
     [InlineData("c4@ds(al fine) d e f |")]

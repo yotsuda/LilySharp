@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -2611,7 +2611,6 @@ public sealed partial class LilySharpLanguageServer
         ["text"] = "dolce expressive",
         ["ottava"] = "8va octave",
         ["quindicesima"] = "15ma octave",
-        ["loco"] = "octave end",
     };
 
     /// <summary>
@@ -2793,11 +2792,10 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "accel", Kind = CompletionItemKind.Value, Detail = "Accelerando text spanner (ends at @!accel)", SortText = "4accel" },
                 new CompletionItem { Label = "rall", Kind = CompletionItemKind.Value, Detail = "Rallentando text spanner (ends at @!rall)", SortText = "4rall" },
                 new CompletionItem { Label = "textSpan", Kind = CompletionItemKind.Value, InsertText = "textSpan(\"$0\")", InsertTextFormat = InsertTextFormat.Snippet, Detail = "Text spanner with your own word (ends at @!textSpan)", SortText = "4textSpan" },
-                new CompletionItem { Label = "ottava", Kind = CompletionItemKind.Value, Detail = "Ottava bracket up (8va)", SortText = "4ottava" },
-                new CompletionItem { Label = "ottava(bassa)", Kind = CompletionItemKind.Value, Detail = "Ottava bracket down (8vb)", SortText = "4ottava.bassa" },
-                new CompletionItem { Label = "quindicesima", Kind = CompletionItemKind.Value, Detail = "Quindicesima bracket up (15ma)", SortText = "4quindicesima" },
-                new CompletionItem { Label = "quindicesima(bassa)", Kind = CompletionItemKind.Value, Detail = "Quindicesima bracket down (15mb)", SortText = "4quindicesima.bassa" },
-                new CompletionItem { Label = "loco", Kind = CompletionItemKind.Value, Detail = "End octave bracket", SortText = "4loco" },
+                new CompletionItem { Label = "ottava", Kind = CompletionItemKind.Value, Detail = "Ottava bracket up (8va) - ends at @!ottava", SortText = "4ottava" },
+                new CompletionItem { Label = "ottava(bassa)", Kind = CompletionItemKind.Value, Detail = "Ottava bracket down (8vb) - ends at @!ottava", SortText = "4ottava.bassa" },
+                new CompletionItem { Label = "quindicesima", Kind = CompletionItemKind.Value, Detail = "Quindicesima bracket up (15ma) - ends at @!ottava", SortText = "4quindicesima" },
+                new CompletionItem { Label = "quindicesima(bassa)", Kind = CompletionItemKind.Value, Detail = "Quindicesima bracket down (15mb) - ends at @!ottava", SortText = "4quindicesima.bassa" },
                 // One word per end, as in LilyPond. (The '@trillSpan(start)'
                 // spelling was a second way to say the same thing; it is gone.)
                 new CompletionItem { Label = "startTrillSpan", Kind = CompletionItemKind.Value, Detail = "Start trill spanner", SortText = "4startTrillSpan" },

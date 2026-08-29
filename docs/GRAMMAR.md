@@ -1348,7 +1348,9 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
    - Feathered beam: c16@feather(right) … (accel) / @feather(left) (rit)
    - Spanners:       @textSpan("poco rit.") … @!textSpan   [sugar: @rit @accel @rall,
                      each ended by @!rit / @!accel / @!rall — an end is REQUIRED]
-                     @ottava(…) @quindicesima(…) … @loco ,   [labels: 8va/15ma; @…(bassa) = down]
+                     @ottava(…) @quindicesima(…) … @!ottava ,  [labels: 8va/15ma; @…(bassa) = down]
+                     (* an end is REQUIRED here too; '@loco' is retired — it named a
+                        mark nothing printed, and LilyPond has no such command either *)
                      @startTrillSpan … @stopTrillSpan ,
                      @sustainOn … @sustainOff , @sostenutoOn … @sostenutoOff , @unaCorda … @treCorde *)
 
