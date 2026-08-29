@@ -287,7 +287,7 @@ internal sealed partial class LayoutEngine
 
         var (pages, systemsArray) = CreatePages(
             systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,
-            prelim.PagingSkylines, perSystemHeights, perSystemBandUps);
+            prelim.PagingSkylines, perSystemHeights, perSystemBandUps, placed.CropDown);
 
         var looseChainEnd = BuildLooseChainEnds(
             score, pages, systemsArray, perSystemExtents,
@@ -508,12 +508,18 @@ internal sealed partial class LayoutEngine
     /// consumed — carried so the final annotation pass's drawn-baseline walk reads the SAME
     /// suppliers instead of rebuilding them (finding 4-4); see
     /// <see cref="AnnotationLayoutContext.RunSources"/>.</param>
+    /// <param name="CropDown">Per system, what <paramref name="Extents"/>'s down half would
+    /// be if its loose block stood at REST rather than at its alignment minimum — the one
+    /// figure the single page's CROP is allowed to read, and read by nothing else. See
+    /// <see cref="LooseBlockProfiles"/> for why the two numbers differ and why exactly one
+    /// consumer wants each.</param>
     private readonly record struct SystemPlacements(
         List<SystemLayout> Systems,
         List<(double upExtent, double downExtent)> Extents,
         List<(VerticalSkyline up, VerticalSkyline down)> Skylines,
         List<double> Heights,
         List<VerticalSkyline?> LyricBands,
+        List<double> CropDown,
         List<List<(VerticalSkyline Up, VerticalSkyline Down)>> StaffSkylines,
         List<List<MultiStaffLayouter.StaffInsideSpanners>> StaffSpanners,
         List<List<(VerticalSkyline Up, VerticalSkyline Down)>> StaffInside,
@@ -556,6 +562,7 @@ internal sealed partial class LayoutEngine
         // hara-kiri'd system's gap is not over-reserved at the full height.
         var perSystemHeights = new List<double>();
         var perSystemLyricBands = new List<VerticalSkyline?>();
+        var perSystemCropDown = new List<double>();
         var perSystemStaffSkylines = new List<List<(VerticalSkyline Up, VerticalSkyline Down)>>();
         var perSystemStaffSpanners = new List<List<MultiStaffLayouter.StaffInsideSpanners>>();
         var perSystemStaffInside = new List<List<(VerticalSkyline Up, VerticalSkyline Down)>>();
@@ -635,25 +642,38 @@ internal sealed partial class LayoutEngine
                         sysStaffSkylines.Skylines);
                 });
             perSystemSkylines.Add((upSky, downSky));
-            // The loose block's minimum profile, in the system-origin frame. Its deepest
-            // point joins the down EXTENT here (the page-fill and fallback arithmetic are
-            // scalars); the profile itself joins the paging silhouette as a program step
-            // (AugmentSkylinesForPaging), so the inter-system floor reads it WITH X —
-            // audit/lp-geometry lyrics.band-floor.*.
+            // The loose block's two profiles, in the system-origin frame. The MINIMUM's
+            // deepest point joins the down EXTENT here (the page-fill and fallback
+            // arithmetic are scalars); the profile itself joins the paging silhouette as a
+            // program step (AugmentSkylinesForPaging), so the inter-system floor reads it
+            // WITH X — audit/lp-geometry lyrics.band-floor.*.
             var lyricBand = ComputeLyricBand(systemCache, firstMeasureIndex, measureCount,
                 isFirstSystem, sysIdx == systemMeasures.Count - 1, sysIndent,
                 commonShortestDuration,
                 () => LyricReservationBelowSystem(
                     score, measureLayouts, sysStaffSkylines.Skylines, sysStaffGroups,
                     firstMeasureIndex, firstMeasureIndex + measureCount));
-            perSystemLyricBands.Add(lyricBand);
+            perSystemLyricBands.Add(lyricBand.Minimum);
+            double staffDown = LayoutUtilities.CalculateDownExtent(downSky, sysHeight);
+            double BandDown(VerticalSkyline? band) =>
+                band is null ? 0 : LayoutUtilities.CalculateDownExtent(band, sysHeight);
             perSystemExtents.Add((
                 LayoutUtilities.CalculateUpExtent(upSky),
-                Math.Max(
-                    LayoutUtilities.CalculateDownExtent(downSky, sysHeight),
-                    lyricBand is null
-                        ? 0
-                        : LayoutUtilities.CalculateDownExtent(lyricBand, sysHeight))));
+                Math.Max(staffDown, BandDown(lyricBand.Minimum))));
+            // ...and the AT-REST block's own depth, alone. It is the one term the CROP may
+            // add to the extent above — see LooseBlockProfiles. Kept beside the extents
+            // rather than inside them so no other consumer can pick it up by accident:
+            // reserving the ideal in the down extent would put it into the inter-system
+            // floor too, where LilyPond really does reserve the minimum
+            // (page-layout-problem.cc:593-599).
+            // ⚠️ THE BLOCK'S DEPTH ALONE, NOT max(staffDown, block): the extent this is read
+            // beside GROWS AFTER THIS PASS — the preliminary annotation pass raises its down
+            // half with the real ink of slurs, ties, dynamics and scripts
+            // (AugmentPagingSkylines' tail). Freezing the max here instead made the crop
+            // read a down extent from before that raise, and 40 snapshots with a dynamic or
+            // a script under the staff lost the room it had bought them (MEASURED while
+            // getting it wrong, session 292).
+            perSystemCropDown.Add(BandDown(lyricBand.AtRest));
             perSystemHeights.Add(sysHeight);
 
             systems.Add(new SystemLayout(
@@ -704,9 +724,9 @@ internal sealed partial class LayoutEngine
 
         return new SystemPlacements(
             systems, perSystemExtents, perSystemSkylines, perSystemHeights,
-            perSystemLyricBands, perSystemStaffSkylines, perSystemStaffSpanners,
-            perSystemStaffInside, perSystemPedalLines, perSystemPedalRows,
-            perSystemRunSources);
+            perSystemLyricBands, perSystemCropDown, perSystemStaffSkylines,
+            perSystemStaffSpanners, perSystemStaffInside, perSystemPedalLines,
+            perSystemPedalRows, perSystemRunSources);
     }
 
 

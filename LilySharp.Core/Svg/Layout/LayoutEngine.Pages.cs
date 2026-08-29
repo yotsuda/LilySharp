@@ -26,13 +26,27 @@ namespace LilySharp.Core.Svg.Layout;
 
 internal sealed partial class LayoutEngine
 {
+    /// <summary>
+    /// One system's below-system loose block in the two readings its two consumers need —
+    /// see <see cref="LyricReservationBelowSystem"/>, which is the only producer.
+    /// </summary>
+    /// <param name="Minimum">Every line at its ALIGNMENT MINIMUM: what the page reserves,
+    /// what the inter-system floor reads, and what LilyPond puts in its system skyline.</param>
+    /// <param name="AtRest">Every line at its spring's FORCE-0 REST LENGTH
+    /// <c>max(minimum, ideal)</c>: where the chain that draws the block comes to rest, and
+    /// therefore what the CROP has to be sized from. The SAME INSTANCE as
+    /// <paramref name="Minimum"/> wherever no spring's ideal rises above its floor, which
+    /// is the common sung book.</param>
+    internal readonly record struct LooseBlockProfiles(
+        VerticalSkyline? Minimum, VerticalSkyline? AtRest);
+
     /// <summary>The below-system lyric band, through the per-system cache when the session
     /// has one — see <see cref="SystemLayoutCache.GetOrComputeLyricBand"/> for the key's
     /// coverage claim. Null cache (the full-render path) computes live, as everywhere.</summary>
-    private static VerticalSkyline? ComputeLyricBand(
+    private static LooseBlockProfiles ComputeLyricBand(
         SystemLayoutCache? cache, int firstMeasureIndex, int measureCount, bool isFirstSystem,
         bool isLastSystem, double indent, double commonShortestDuration,
-        Func<VerticalSkyline?> compute)
+        Func<LooseBlockProfiles> compute)
         => cache == null
             ? compute()
             : cache.GetOrComputeLyricBand(firstMeasureIndex, measureCount, isFirstSystem,
@@ -222,8 +236,22 @@ internal sealed partial class LayoutEngine
         List<(double upExtent, double downExtent)> perSystemExtents, double systemHeight,
         List<(VerticalSkyline up, VerticalSkyline down)>? perSystemSkylines = null,
         List<double>? perSystemHeights = null,
-        List<double>? perSystemBandUps = null)
+        List<double>? perSystemBandUps = null,
+        List<double>? perSystemCropDown = null)
     {
+        // The down extent the CROP reads: the system's own, raised to clear its loose block
+        // standing at REST rather than at its alignment minimum
+        // (SystemPlacements.CropDown / LooseBlockProfiles). ⚠️ A MAX AGAINST THE LIVE
+        // EXTENT, not a stored answer — the extent grows after the pass that produced the
+        // block (the preliminary annotation pass folds in slurs, ties, dynamics and
+        // scripts), so anything read from a snapshot of it would be that pass's own ink
+        // silently thrown away. Without the list (the single-staff path, and every caller
+        // that has no lyric block) this IS the extent, and by construction: no block, no
+        // difference between what is reserved and what is drawn.
+        double CropDown(int i) =>
+            perSystemCropDown != null && i >= 0 && i < perSystemCropDown.Count
+                ? Math.Max(perSystemExtents[i].downExtent, perSystemCropDown[i])
+                : perSystemExtents[i].downExtent;
         // Whole-line CHORD-SYMBOL row band above a system. It lays out only after the page
         // Y is fixed, so it is absent from the skylines — the skyline distance must be
         // floored by it or adjacent systems overprint it (found by the Greensleeves
@@ -326,7 +354,7 @@ internal sealed partial class LayoutEngine
             double floorGap = Math.Max(floorSpec.BasicDistance, floorSpec.MinimumDistance);
             double floorHeight = skylineY + (systems.Length - 1) * floorGap
                 + SysHeight(systems.Length - 1)
-                + perSystemExtents[systems.Length - 1].downExtent + _options.MarginBottom;
+                + CropDown(systems.Length - 1) + _options.MarginBottom;
             if (floorHeight > _options.PageHeight)
                 return OptimalPages();
         }
@@ -433,28 +461,29 @@ internal sealed partial class LayoutEngine
                 skylineY += Math.Max(pairSpec.BasicDistance, minDistance) - toStaffFrame;
             }
         }
-        double lastDownExtent = perSystemExtents[systems.Length - 1].downExtent;
         // LILYSHARP-OWN, DECLARED: the CROP. LilyPond always engraves onto the paper; a
         // single Lily# page is sized to its content and only switches to the paper when the
         // content overflows (a deliberate choice — see the page.height note in
         // LpGeometryProbes, where it is a recorded -109.468268 that is not going to close).
-        // ⚠️ IT IS STALE BY THE LOOSE-LINE STRETCH SINCE 2026-08-29, and the amount is
-        // measured. `lastDownExtent` reserves a below-system lyric block at its ALIGNMENT
-        // MINIMUM (LyricReservationBelowSystem, which is what LilyPond reserves too), while
-        // the chain that draws it is solved into the PAPER and rests at the spring's IDEAL
-        // (BuildLooseChainEnds' page-edge branch, ported the same day). So the syllables can
-        // sit up to (ideal - floor) below the height computed here and the page's bottom
-        // white shrinks by that much: 1.130041 on the ledger's book TBL2, 0.139 on
-        // test/lyrics, and 0.85 is the largest step in the five snapshots that moved.
-        // ⚠️ IT CANNOT CLIP: the growth is bounded by the first spring's ideal 5.5 less its
-        // own floor, and every later spring in such a chain has basic-distance 0, so its
-        // ideal IS its minimum and it does not grow at all.
-        // ⚠️ AND IT CANNOT BE CLOSED BY RESERVING THE IDEAL HERE: this same extent is the
-        // system's DOWN skyline for system-system spacing, where LilyPond's reservation
-        // really is the minimum (page-layout-problem.cc:593-599 hands the skyline builder
-        // the minimum translations). Closing it means splitting the two consumers, which is
-        // its own trip.
-        double totalHeight = skylineY + SysHeight(systems.Length - 1) + lastDownExtent + _options.MarginBottom;
+        // ⚠️ IT READS `CropDown`, NOT THE DOWN EXTENT, and the difference is the whole of
+        // this line's history. The extent reserves a below-system lyric block at its
+        // ALIGNMENT MINIMUM (LyricReservationBelowSystem, which is what LilyPond reserves
+        // too), while the chain that DRAWS it has been solved into the PAPER since session
+        // 291 and comes to rest at the spring's ideal (BuildLooseChainEnds' page-edge
+        // branch). Between 2026-08-29 and this line's fix the syllables sat up to
+        // (ideal - floor) below the height computed here and the page's bottom white shrank
+        // by exactly that: 1.130041 on the ledger's book TBL2, 0.139 on test/lyrics.
+        // ⚠️ IT COULD NEVER CLIP, WHICH IS WHY IT WAS A CROP BUG AND NOT A LAYOUT ONE: the
+        // growth is bounded by the first spring's ideal 5.5 less its own floor, and every
+        // later spring in such a chain has basic-distance 0, so its ideal IS its minimum.
+        // ⚠️ AND IT COULD NOT BE CLOSED BY RESERVING THE IDEAL IN THE EXTENT: that same
+        // extent is the system's DOWN skyline for system-system spacing, where LilyPond's
+        // reservation really is the minimum (page-layout-problem.cc:593-599 hands the
+        // skyline builder the minimum translations). One quantity, two consumers that want
+        // different numbers — so the producer answers both (LooseBlockProfiles) and only
+        // this line reads the second.
+        double totalHeight = skylineY + SysHeight(systems.Length - 1)
+            + CropDown(systems.Length - 1) + _options.MarginBottom;
 
         // Auto-pagination: a score that FITS one page keeps this simple layout
         // (byte-identical to the historical single-page output); one that

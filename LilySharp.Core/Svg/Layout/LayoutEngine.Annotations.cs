@@ -1504,10 +1504,11 @@ internal sealed partial class LayoutEngine
     /// </remarks>
     /// <summary>
     /// The system's LOOSE BLOCK — the note-bound verses and the independent lyrics ROWS
-    /// standing under them, in alignment order — as a DOWN profile in the SYSTEM-ORIGIN
-    /// frame, every line at its ALIGNMENT MINIMUM: what the page reserves for it, as
-    /// opposed to the distance it is eventually drawn at. Null when the system has no
-    /// such block.
+    /// standing under them, in alignment order — as DOWN profiles in the SYSTEM-ORIGIN
+    /// frame, in the two readings its two consumers need: every line at its ALIGNMENT
+    /// MINIMUM (what the page RESERVES for it) and every line at its spring's FORCE-0 REST
+    /// LENGTH (where the chain that draws it comes to rest). Both null when the system has
+    /// no such block.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/page-layout-problem.cc:593-599 — <c>build_system_skyline</c> is
@@ -1537,21 +1538,42 @@ internal sealed partial class LayoutEngine
     /// is the staff pair's (<see cref="BuildLooseLinesBetween"/>); reserving it here as well
     /// would count it twice, which the extent sum did.
     /// </para>
+    /// <para>
+    /// ★ TWO PROFILES SINCE 2026-08-29 (session 292), because ONE QUANTITY HAD TWO
+    /// CONSUMERS THAT WANT DIFFERENT NUMBERS — HANDOFF 5.2.1② read the other way round, and
+    /// the split is the fix rather than the defect. The MINIMUM is what LilyPond reserves
+    /// and what the inter-system floor must keep reading (the reference above). The
+    /// AT-REST profile exists for the CROP alone: Lily# sizes a single page to its content
+    /// (<c>LayoutEngine.CreatePages</c>, a declared divergence) and the chain that draws
+    /// this block has been solved into the PAPER since session 291, so it rests at the
+    /// spring's ideal and the page's bottom white shrank by the difference.
+    /// ⚠️ AT-REST IS EXACT ON EVERY PAGE THAT KEEPS THE CROP PATH, and that is an identity
+    /// rather than an estimate: the crop is <c>anchor + depth + margin</c> and the chain's
+    /// room is <c>paper − margin − anchor</c>, so a page whose AT-REST crop fits the paper
+    /// has <c>room ≥ depth</c> — the chain solves at force ≥ 0 and every spring really does
+    /// sit at <c>max(min, ideal)</c>. A page where it does not fit leaves for
+    /// <c>OptimalPages</c>, where the height IS the paper and this profile is never read.
+    /// ⚠️ THE ONE THING IT DOES NOT CARRY is the page-edge chain's own STRETCH TAIL: the
+    /// null spring's HUGE_STRETCH absorbs the slack but not quite all of it, so the drawn
+    /// distance exceeds the ideal by <c>force × stretchability</c> — MEASURED 1.451282664e-6
+    /// on book TBL2, which is the same tail LilyPond publishes (5.500001451282664 against a
+    /// 5.5 basic-distance). The crop is under by that, ~2.5 nm of paper.
+    /// </para>
     /// </remarks>
-    private VerticalSkyline? LyricReservationBelowSystem(
+    private LooseBlockProfiles LyricReservationBelowSystem(
         MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts,
         List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
         ImmutableArray<StaffGroupLayout> groups, int startMeasure, int endMeasure)
     {
         if (score.Lyrics.IsDefaultOrEmpty || groups.IsDefaultOrEmpty)
-            return null;
+            return default;
 
         // The staff a staff-affinity-UP line below the system is spaced from, and what stands
         // under it. LILYPOND-REF: lily/page-layout-problem.cc:943-944 last_spaceable_line.
         var alignment = ClassifySystem(groups);
         if (alignment.LastSpaceable is not { } anchorStaff
             || anchorStaff.StaffIndex >= staffSkylines.Count)
-            return null;
+            return default;
 
         // ⚠️ THE ANCHOR STAFF'S OWN LINES, and this is the THIRD spelling of the split — the
         // other two are BuildStaffAnchorTables' anchor table and BuildLooseLinesBetween's
@@ -1576,10 +1598,7 @@ internal sealed partial class LayoutEngine
             score, engraver, measureLayouts, startMeasure, endMeasure,
             anchorStaff.StaffIndex, alignment.Trailing);
         if (lines.Count == 0)
-            return null;
-
-        var walk = new AlignmentWalk();
-        walk.Seed(staffSkylines[anchorStaff.StaffIndex].Down);
+            return default;
 
         // EVERY LINE AT ITS OWN TRANSLATION, exactly LilyPond's build_system_skyline
         // (page-layout-problem.cc:1093-1108 merges each element's skyline RAISED BY ITS OWN
@@ -1593,37 +1612,75 @@ internal sealed partial class LayoutEngine
         // agree with the chain term for term or the page reserves one room and the solve uses
         // another (HANDOFF 5.2.1②, and the walk is shared for exactly that reason).
         var sp = _options.StaffSpacing;
-        var profile = new VerticalSkyline(VerticalDirection.Down);
-        var previous = LooseLineSpacer.SpaceableStaffLine;
-        for (int k = 0; k < lines.Count; k++)
+
+        // ONE LOOP, TWO FLOORS. `restLength` is the only thing the two profiles disagree
+        // about: the RESERVATION floors each step at the spec's minimum-distance (LilyPond's
+        // minimum translations, the reference above), and the CROP floors it at the spring's
+        // force-0 rest length max(minimum, ideal) — which is where the chain that draws this
+        // block actually comes to rest. Written as one body rather than two so the run, the
+        // specs and the merge cannot drift apart; HANDOFF 5.2.1② is what two spellings of
+        // this walk have cost twice already.
+        VerticalSkyline? Walk(bool atRest, out double idealOverFloor)
         {
-            var spec = StaffAffinity.GetSpacingSpec(
-                previous.Affinity, previous.Specs,
-                lines[k].Line.Affinity, lines[k].Line.Specs, sp.StaffStaff);
-            walk.Advance(lines[k].Up, lines[k].Down, spec.Padding, spec.MinimumDistance);
-            if (lines[k].Down is { IsEmpty: false } lineDown)
-                profile.Merge(lineDown.Buildings, 0, -walk.Where);
-            previous = lines[k].Line;
+            var walk = new AlignmentWalk();
+            walk.Seed(staffSkylines[anchorStaff.StaffIndex].Down);
+            var built = new VerticalSkyline(VerticalDirection.Down);
+            var previous = LooseLineSpacer.SpaceableStaffLine;
+            idealOverFloor = 0;
+            for (int k = 0; k < lines.Count; k++)
+            {
+                var spec = StaffAffinity.GetSpacingSpec(
+                    previous.Affinity, previous.Specs,
+                    lines[k].Line.Affinity, lines[k].Line.Specs, sp.StaffStaff);
+                // LILYPOND-REF: lily/page-layout-problem.cc:1345-1358 alter_spring_from_spacing_spec
+                // — basic-distance IS the ideal; and
+                // lily/spring.cc:219-237 Spring::length, whose last line is
+                // `max (min_distance_, ideal_distance_ + force * inv_k)`, so at force 0 the
+                // spring sits at max(min_distance, ideal). Passing the ideal as the walk's
+                // minimum IS that max, because Advance already takes max(ink, minimum) —
+                // see CreateSpring, whose `ensure_min_distance` argument is this walk's dy.
+                double floor = atRest
+                    ? Math.Max(spec.MinimumDistance, spec.BasicDistance)
+                    : spec.MinimumDistance;
+                double dy = walk.Advance(lines[k].Up, lines[k].Down, spec.Padding, floor);
+                if (!atRest && spec.BasicDistance - dy > idealOverFloor)
+                    idealOverFloor = spec.BasicDistance - dy;
+                if (lines[k].Down is { IsEmpty: false } lineDown)
+                    built.Merge(lineDown.Buildings, 0, -walk.Where);
+                previous = lines[k].Line;
+            }
+            if (built.IsEmpty)
+                return null;
+
+            // ⚠️ THE ANCHOR STAFF'S OWN INK IS DELIBERATELY NOT IN THIS — it stays the system
+            // skyline's business (SkylineBuilder.AddEdgeStaffInk seeds the edge staff for the
+            // row and verse spellings alike, since a one-staff-plus-row system's first staff IS
+            // the staff). A first draft merged staffSkylines[anchor].Down here for the row-outer
+            // case, and the PER-STAFF profile is a richer silhouette than the edge model, so the
+            // two spellings priced the same gap 0.915000 apart and the
+            // SystemGap_ReadsARowsBandOnce pin went red — one quantity, two representations,
+            // HANDOFF 5.2.1②. What OuterStaff still leaves unseeded (the LAST spaceable staff
+            // of a multi-staff system whose outer element is a row) is that remark's own ▶
+            // item, unchanged by this island.
+
+            // The walk ran in the anchor staff's REFPOINT frame; the paging silhouette lives in
+            // the SYSTEM-ORIGIN frame. One shift, stated once — the same conversion
+            // PageAnchorOffsets' ToLast carries for the springs.
+            built.Raise(MultiStaffLayouter.StaffRefpoint(anchorStaff));
+            return built;
         }
-        if (profile.IsEmpty)
-            return null;
 
-        // ⚠️ THE ANCHOR STAFF'S OWN INK IS DELIBERATELY NOT IN THIS — it stays the system
-        // skyline's business (SkylineBuilder.AddEdgeStaffInk seeds the edge staff for the
-        // row and verse spellings alike, since a one-staff-plus-row system's first staff IS
-        // the staff). A first draft merged staffSkylines[anchor].Down here for the row-outer
-        // case, and the PER-STAFF profile is a richer silhouette than the edge model, so the
-        // two spellings priced the same gap 0.915000 apart and the
-        // SystemGap_ReadsARowsBandOnce pin went red — one quantity, two representations,
-        // HANDOFF 5.2.1②. What OuterStaff still leaves unseeded (the LAST spaceable staff
-        // of a multi-staff system whose outer element is a row) is that remark's own ▶
-        // item, unchanged by this island.
-
-        // The walk ran in the anchor staff's REFPOINT frame; the paging silhouette lives in
-        // the SYSTEM-ORIGIN frame. One shift, stated once — the same conversion
-        // PageAnchorOffsets' ToLast carries for the springs.
-        profile.Raise(MultiStaffLayouter.StaffRefpoint(anchorStaff));
-        return profile;
+        var minimum = Walk(atRest: false, out double slack);
+        // ⚠️ THE SECOND WALK IS TAKEN ONLY WHEN IT CAN DIFFER, and `slack` is the whole of
+        // that question: if no spring's ideal rose above the floor the minimum walk took,
+        // then the at-rest floor equals the minimum floor at step 0, so the two walks hold
+        // the same accumulation there and — by induction on that — at every step after it.
+        // The common sung book takes this branch (MEASURED on the reader's corpus, session
+        // 291: all three lyric books' first spring floors above the 5.5 ideal), which is why
+        // this memo's cost is not doubled — SystemLayoutCache.GetOrComputeLyricBand's own
+        // remark measures what that would have been worth.
+        return new LooseBlockProfiles(
+            minimum, slack > 0 ? Walk(atRest: true, out _) : minimum);
     }
 
     /// <summary>

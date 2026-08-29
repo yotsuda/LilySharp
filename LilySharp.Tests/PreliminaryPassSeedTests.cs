@@ -39,7 +39,10 @@ namespace LilySharp.Tests;
 /// <para>
 /// ★ THE OBSERVABLE IS THE PAGE HEIGHT of a content-sized single-system book, which reads
 /// the preliminary down extent DIRECTLY (<c>LayoutEngine.CreatePages</c>:
-/// <c>totalHeight = … + lastDownExtent + MarginBottom</c>) — no system-system
+/// <c>totalHeight = … + CropDown(last) + MarginBottom</c>, and <c>CropDown</c> is a MAX
+/// against that same extent, so this pass's ink still reaches it — see
+/// <c>LooseBlockCropTests</c>, whose first attempt froze the extent here instead and lost
+/// this test and 40 snapshots at once) — no system-system
 /// basic-distance to mask the under-reservation, which is what kept the whole suite green
 /// while the divergence existed. The extent registers the mover's own ink about the same
 /// YUp the drawn layout carries (<c>EnrichExtentsWithAnnotationProtrusions</c>, same

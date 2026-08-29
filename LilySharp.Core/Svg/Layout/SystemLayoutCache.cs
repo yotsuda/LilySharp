@@ -70,7 +70,7 @@ internal sealed class SystemLayoutCache
     private readonly TypedCache<ImmutableArray<BeamLayout>> _staffSystemBeams = new();
     private readonly TypedCache<ImmutableArray<TieLayout>> _staffSystemTies = new();
     private readonly TypedCache<ImmutableArray<SlurLayout>> _staffSystemSlurs = new();
-    private readonly TypedCache<VerticalSkyline?> _lyricBands = new();
+    private readonly TypedCache<LayoutEngine.LooseBlockProfiles> _lyricBands = new();
     private readonly TypedCache<IReadOnlyList<MultiStaffLayouter.PairLooseLine>?> _looseLines = new();
 
     /// <summary>Refreshes the per-measure content keys for the current edit. Must be
@@ -256,20 +256,25 @@ internal sealed class SystemLayoutCache
     /// (<c>IncrementalCompiler.Compile</c>'s guard, pinned by FontEditIncrementalTests).</item>
     /// </list>
     /// ⚠️ THE CACHED VALUE IS SHARED AND MUTABLE (<see cref="VerticalSkyline"/>), so
-    /// nothing downstream may mutate it. Verified at the two consumers: the extent read
-    /// (<c>LayoutUtilities.CalculateDownExtent</c>) only walks buildings, and
+    /// nothing downstream may mutate it. Verified at the three consumers: the two extent
+    /// reads (<c>LayoutUtilities.CalculateDownExtent</c>, on the minimum profile for the
+    /// spacing extent and on the at-rest one for the crop) only walk buildings, and
     /// <c>PagingAugmentProgram.Builder.AddLyricBand</c> copies the profile into the
     /// program's numeric argument stream and keeps the reference for read-only replay.
     /// A stable instance is strictly BETTER for the paging-augment memo above: its
     /// baseline comparison is by reference, so a served band keeps the program equal.
-    /// ⚠️ NULL IS A VALUE HERE, not an absence: an unsung system's band is null and the
-    /// memo serves that null on a hit (TypedCache stores it like any other value), so
-    /// the unsung case costs one lookup, never a recompute.
+    /// ⚠️ NULL IS A VALUE HERE, not an absence: an unsung system's band is null (a
+    /// <c>default</c> pair) and the memo serves that null on a hit (TypedCache stores it
+    /// like any other value), so the unsung case costs one lookup, never a recompute.
+    /// ⚠️ IT IS A PAIR SINCE 2026-08-29 and the memo did not grow: the second profile is
+    /// the SAME INSTANCE wherever the block's springs are already at rest, and where it is
+    /// not, the second walk is the arithmetic this memo exists to avoid repeating — see
+    /// <see cref="LayoutEngine.LooseBlockProfiles"/> for which consumer wants which.
     /// </remarks>
-    public VerticalSkyline? GetOrComputeLyricBand(
+    public LayoutEngine.LooseBlockProfiles GetOrComputeLyricBand(
         int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,
         double indent, double commonShortestDuration,
-        Func<VerticalSkyline?> compute)
+        Func<LayoutEngine.LooseBlockProfiles> compute)
     {
         var result = _lyricBands.GetOrCompute(_keys, firstMeasureIndex, measureCount,
             isFirstSystem, isLastSystem, indent, commonShortestDuration, extra: 0,
