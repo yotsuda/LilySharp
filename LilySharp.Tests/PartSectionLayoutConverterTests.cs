@@ -69,34 +69,41 @@ public class PartSectionLayoutConverterTests
     }
 
     /// <summary>
-    /// The converter overwrites the user's document in place, so a music cell has to
-    /// come back as the characters that were TYPED — not as the tree's re-spelling of
-    /// them. Those differ: a post-event written after a slur/tie/beam mark is hoisted
-    /// onto the note and the mark replayed behind it, so <c>c,,1~@mark("A") c,,</c>
-    /// spells itself back out of its own tree as <c>c,,1@mark("A") ~c,,</c> — the tie
-    /// moved across the mark and now reads as belonging to the NEXT note. Measured
-    /// 2026-08-16: the converter did exactly that to ~40 real files. The engraving is
-    /// unaffected (both spellings render byte-identically), which is why only a text
-    /// test can see it. §2F ⑺ tracks making the tree itself faithful; this pins the
-    /// writer meanwhile.
+    /// The converter overwrites the user's document in place, so a music cell has to come
+    /// back as the characters that were TYPED. It reads them as a source slice
+    /// (<c>Verbatim(source, node)</c>), never as the tree's re-spelling.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ THE PREMISE THIS TEST WAS BUILT ON IS GONE, AND THAT IS THE REPAIR, NOT A LOSS.
+    /// Until 2026-08-30 a post-event written after a slur/tie/beam marker was hoisted onto
+    /// the note and the marker replayed behind it, so <c>c,,1~@mark("A") c,,</c> spelled
+    /// itself back out of its own tree as <c>c,,1@mark("A") ~c,,</c> — the tie across the
+    /// mark, now reading as the NEXT note's. Measured 2026-08-16: the converter did exactly
+    /// that to ~40 of the author's files, and <c>343d755d</c> stopped it by changing what
+    /// the writer READS. HANDOFF §2F ⑺ has now closed the island itself, so the tree is
+    /// faithful and the two readings agree on every book in the corpus.
+    /// <para>
+    /// ⚠️ SO THIS CAN NO LONGER TELL <c>Verbatim</c> FROM <c>ToFullString</c> — the assert
+    /// that used to say the tree re-spells these is inverted below into the invariant that
+    /// replaced it. The cases are still worth keeping: they are the exact shapes that were
+    /// wrong, so a re-hoist would show up here first. But do not read a pass here as
+    /// evidence about the writer's choice of accessor; the corpus-wide observer for the
+    /// tree is <c>AnnotationRoundTripTests</c>.
+    /// </para>
+    /// </remarks>
     [Theory]
     [InlineData("c,,1~@mark(\"A\") c,, |")]   // tie then mark — the author's own idiom
     [InlineData("g4(@cresc a b c |")]         // slur open then hairpin
     [InlineData("g4( a b c)@f |")]            // slur close then dynamic
     [InlineData("c8[@accent d e f] g4 |")]    // beam open then articulation
-    [InlineData("c4 d e f |")]                // control: nothing to reorder
+    [InlineData("c4 d e f |")]                // control: never reordered even before
     public void AMusicCell_ComesBackAsTheCharactersThatWereTyped(string music)
     {
         var sm = $"part bass\nsection A {{ bass {{ {music} }} }}\nform main {{ ~A }}\n"
                  + "score main { staff bass }\n";
 
-        // The premise, stated so a failure says which half broke: the tree really does
-        // re-spell these (except the control), so passing cannot be an accident of the
-        // fixture being uninteresting.
-        var respelled = SyntaxTree.Parse(sm).GetRoot().ToFullString();
-        if (music != "c4 d e f |")
-            Assert.NotEqual(sm, respelled);
+        // What the premise became: the tree spells these back EXACTLY, control included.
+        Assert.Equal(sm, SyntaxTree.Parse(sm).GetRoot().ToFullString());
 
         var pm = PartSectionLayoutConverter.Convert(sm);
         Assert.NotNull(pm);

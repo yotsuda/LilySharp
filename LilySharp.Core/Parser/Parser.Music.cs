@@ -476,7 +476,7 @@ internal sealed partial class Parser
         var combined = new List<GreenNode?>(articulations);
         while (PendingMarkerRunHasArticulation())
         {
-            _pendingPostEventMarkers.Enqueue(ParsePostEventMarker());
+            combined.Add(ParsePostEventMarker());
             combined.AddRange(ParseArticulations());
         }
         return [.. combined];

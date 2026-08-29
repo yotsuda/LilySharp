@@ -152,8 +152,42 @@ public sealed partial class MeasureCollector
     };
 
     /// <summary>
+    /// The tie/slur/beam markers written on this item ITSELF — the ones the parser put
+    /// in its post-event list rather than beside it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THERE ARE TWO PLACES A MARKER CAN STAND, AND IT IS THE SOURCE THAT DECIDES.
+    /// <c>ParsePostEvents</c> keeps the tree in the order the characters were typed
+    /// (HANDOFF §2F ⑺), so a marker written BEFORE another post-event —
+    /// <c>c4~@mark("A")</c>, <c>g4(@cresc</c>, <c>f,)\3</c> — is a child of the note it
+    /// follows, while one written last — <c>c4@mark("A")~</c> — is the next item. The two
+    /// spellings mean the same thing to LilyPond (lily/parser.yy post_events is an
+    /// unordered list), so every reader of markers has to answer for both.
+    /// <para>
+    /// ⚠️ WHY EVERY WALK NEEDS THIS AND NOT JUST THE FLAT ONE: the top-level gather
+    /// descends into the note (<c>MusicSitesLazy</c>), so a marker child of a note lands
+    /// in the flat list right where a sibling would — the run scan below finds it either
+    /// way, and this seed is a no-op there (folding is idempotent). A CONTAINER body is
+    /// different: a tuplet, cue, repeat or inline ending walks <c>Body.Items</c>, its
+    /// DIRECT children, so a marker inside a note is not in the list at all. MEASURED
+    /// 2026-08-30 on audit/lpreg/tupnumss.lys — <c>tuplet 3/2 { e8(@accent e8 e8) }</c>
+    /// lost its slur open and the file started warning "a slur ')' has no '(' open".
+    /// This is session 293's rehearsal-mark finding in mirror image: the same containers,
+    /// the same direct-children walk, a different thing falling through it.
+    /// </para>
+    /// </remarks>
+    private static MarkerFlags FoldOwnMarkers(MarkerFlags m, SyntaxNode host)
+    {
+        foreach (var postEvent in ArticulationsOf(host))
+            if (IsMarkerNode(postEvent))
+                m = FoldMarker(m, postEvent);
+        return m;
+    }
+
+    /// <summary>
     /// Computes the tie/slur/beam lookahead for the note at <paramref name="i"/>
-    /// from the run of marker nodes that follows it, skipping note-attached
+    /// from the markers written on the note itself (<see cref="FoldOwnMarkers"/>) and
+    /// the run of marker nodes that follows it, skipping note-attached
     /// marks the same way (<see cref="IsAttachedMark"/>). Centralized
     /// so the top-level stream, tuplet bodies, and the structure walk can't
     /// drift — a drifted copy previously silently dropped markers inside
@@ -177,7 +211,7 @@ public sealed partial class MeasureCollector
     private static MarkerFlags PeekMarkers(
         List<GreenSite> nodes, int i, out SyntaxNode? furthestRead)
     {
-        var flags = default(MarkerFlags);
+        var flags = FoldOwnMarkers(default, nodes[i].Node);
         furthestRead = null;
         for (int j = i + 1; j < nodes.Count; j++)
         {
@@ -1384,7 +1418,7 @@ public sealed partial class MeasureCollector
             // preceding note — the same rule ProcessMusicNodeSequence applies to
             // the top-level stream. Without this, a tie/slur/beam written inside
             // a tuplet body was silently dropped.
-            var flags = default(MarkerFlags);
+            var flags = FoldOwnMarkers(default, item);
             for (int k = j + 1; k < tupletItems.Count && IsMarkerNode(tupletItems[k]); k++)
                 flags = FoldMarker(flags, tupletItems[k]);
             var (hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter) = flags;

@@ -1121,24 +1121,8 @@ public sealed class MusicXmlExporter
                 break;
 
             case TieSyntax:
-                // Tie follows a note or chord — mark EVERY note just emitted as a
-                // tie start (a chord ties all its members), and flag the next
-                // note/chord so it emits the matching tie-stop.
-                if (_lastEmittedNotes.Count > 0)
-                    OpenTies(_lastEmittedNotes);
-                else if (_currentMeasure != null && _currentMeasure.Notes.Count > 0)
-                    OpenTies([_currentMeasure.Notes[^1]]);
-                break;
-
-            case SlurSyntax slur:
-                // Slur follows a note — mark start/stop on the last note
-                if (_currentMeasure != null && _currentMeasure.Notes.Count > 0)
-                {
-                    if (slur.IsOpen)
-                        _currentMeasure.Notes[^1].SlurStart = true;
-                    else
-                        _currentMeasure.Notes[^1].SlurStop = true;
-                }
+            case SlurSyntax:
+                ApplyMarkerToLastEmitted(node);
                 break;
 
             case GraceExpressionSyntax grace:
@@ -2194,13 +2178,63 @@ public sealed class MusicXmlExporter
         }
     }
 
+    /// <summary>
+    /// Applies one tie/slur marker to the notes already emitted — the reading that says a
+    /// post-event belongs to the music BEFORE it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONE HOME, BECAUSE THE MARKER CAN ARRIVE FROM TWO PLACES. The parser keeps the
+    /// tree in the order the characters were typed (HANDOFF §2F ⑺), so a marker written
+    /// before another post-event — <c>&lt;&gt;)@text("sul D")</c> — is a child of its host
+    /// and reaches this through the host's own walk, while one written last is the next
+    /// item and reaches it through the sequence switch. Spelling the rule twice is how the
+    /// empty chord lost its slur stop: MEASURED 2026-08-30 on
+    /// audit/lp-regression/lys/empty-chord.lys, whose MusicXML dropped
+    /// <c>&lt;slur type="stop"/&gt;</c> because <see cref="ProcessChord"/> returns before
+    /// reading post-events and the sequence arm no longer saw the <c>)</c>.
+    /// </remarks>
+    private void ApplyMarkerToLastEmitted(SyntaxNode marker)
+    {
+        switch (marker)
+        {
+            case TieSyntax:
+                // Tie follows a note or chord — mark EVERY note just emitted as a
+                // tie start (a chord ties all its members), and flag the next
+                // note/chord so it emits the matching tie-stop.
+                if (_lastEmittedNotes.Count > 0)
+                    OpenTies(_lastEmittedNotes);
+                else if (_currentMeasure != null && _currentMeasure.Notes.Count > 0)
+                    OpenTies([_currentMeasure.Notes[^1]]);
+                break;
+
+            case SlurSyntax slur:
+                // Slur follows a note — mark start/stop on the last note
+                if (_currentMeasure != null && _currentMeasure.Notes.Count > 0)
+                {
+                    if (slur.IsOpen)
+                        _currentMeasure.Notes[^1].SlurStart = true;
+                    else
+                        _currentMeasure.Notes[^1].SlurStop = true;
+                }
+                break;
+        }
+    }
+
     private void ProcessChord(ChordSyntax chord, int extraOctave = 0)
     {
         if (_currentMeasure == null) return;
         _justAutoClosedPickup = false;
 
         var pitches = chord.Pitches.ToList();
-        if (pitches.Count == 0 && !chord.Degrees.Any()) return;
+        if (pitches.Count == 0 && !chord.Degrees.Any())
+        {
+            // An EMPTY chord emits no note of its own, so nothing downstream will read
+            // its post-events — but a marker written on it still belongs to the music
+            // before it (<>) closes the slur that opened two notes back).
+            foreach (var postEvent in chord.Articulations)
+                ApplyMarkerToLastEmitted(postEvent);
+            return;
+        }
         var resolved = new List<(string Step, int Alter, int Octave)>();
 
         var duration = GetDuration(chord.Duration);

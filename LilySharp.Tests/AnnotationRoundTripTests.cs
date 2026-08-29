@@ -125,38 +125,23 @@ public class AnnotationRoundTripTests
     [Fact]
     public void EveryBook_SpellsItselfBackOutOfItsTree()
     {
-        // Known-broken. ALL of these are ONE island: a post-event written AFTER a
-        // slur/tie/beam mark ('g4(@cresc', 'g1)~@startTrillSpan', "f,)\3") is hoisted
-        // onto the note, and ParsePostEvents replays the mark behind it — so the tree
-        // spells the mark and the post-event in the opposite order. No width is lost
-        // (628→628 on all four of the books that used to be listed here), but the two
-        // reordered nodes DO stand in the wrong place: measured 2026-08-16, a hairpin
-        // written 'g4(@cresc' reports data-pos 36 for a '@' standing at 37, and the two
-        // spellings 'g4(@cresc'/'g4@cresc(' engrave to a BYTE-IDENTICAL SVG. So the
-        // engraving is right and only the source map is wrong.
-        // ⚠️ volta-labels came OFF this list on 2026-08-16: "the '|' before a '[1. …]'
-        // label is not stored" was the last island where a token no form rule claimed was
-        // consumed by a bare Advance(). ParseFormItem now parses every barline as the
-        // BarlineSyntax it is, and the three containers around it report and keep
-        // what they cannot place (LYS0030).
-        // ⚠️ Closing that island is NOT a one-liner, and it needs a decision before
-        // any code: a census of every consumer (2026-08-16) found 17 production
-        // sites, of which 12 are live and EVERY live one reads the marker as a
-        // SEQUENCE item, with the order load-bearing (MusicWalk.PeekMarkers scans
-        // the run AFTER the note; TieTargetScanner binds the immediately-following
-        // item; SlurPairingScanner is a stack in item order). Six further sites that
-        // read markers out of note.Articulations are DEAD — 0 books of 1021 put one
-        // there — and would wake up. editors/vscode/src/smartTyping.ts encodes the
-        // same ordering contract a second time. §2F ⑺ carries the address.
-        // ⚠️ The seven audit\lpreg books below joined this list on 2026-08-16 with
-        // the widened reach. NOTHING regressed: they were already broken, by the one
-        // island above, and no test had ever read that directory.
+        // ⚠️ EMPTY SINCE 2026-08-30, AND KEPT RATHER THAN DELETED. Every name that used to
+        // stand here was ONE island — HANDOFF §2F ⑺: a post-event written AFTER a
+        // slur/tie/beam marker ('g4(@cresc', 'c,,1~@mark("A")', "f,)\3") was hoisted onto
+        // the note and ParsePostEvents replayed the marker behind it, so the tree spelled
+        // the two in the opposite order. ParsePostEvents now keeps them in the order they
+        // were typed, and this went from eleven names to none.
+        // ⚠️ volta-labels came OFF this list on 2026-08-16, for a different island: "the
+        // '|' before a '[1. …]' label is not stored" was the last place a token no form
+        // rule claimed was consumed by a bare Advance(). ParseFormItem now parses every
+        // barline as the BarlineSyntax it is, and the three containers around it report
+        // and keep what they cannot place (LYS0030).
+        // ⚠️ A NAME APPEARING HERE IS A NEW DEFECT, not a return to a known state. Round
+        // trip is now an UNCONDITIONAL invariant of the parser, which is the whole reason
+        // the list is worth keeping empty rather than removing: an empty ratchet still
+        // ratchets.
         var known = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "empty-chord.lys", "script-stack-order1.lys", "slur-vertical-skylines.lys",
-            "feature-tour.lys",
-            "obs-probe.lys", "perf-slurinside1k.lys", "perf-slurscript1k.lys",
-            "scriptstack1.lys", "slurscript-obs.lys", "slurvsky.lys", "tupnumss.lys",
         };
 
         var broken = new List<string>();
@@ -220,26 +205,22 @@ public class AnnotationRoundTripTests
     /// a trivia-free span neither opens nor closes on whitespace or a comment.
     /// </para>
     /// <para>
-    /// ⚠️ The FullSpan list goes green by itself the day HANDOFF §2F ⑺ is decided and
-    /// closed — the island is one parser behaviour (<c>ParsePostEvents</c> hoists a
-    /// post-event written after a slur/tie/beam marker onto the note and replays the
-    /// marker behind it), not N book defects. Until then the named list is what the
-    /// decision costs, counted.
+    /// ✅ BOTH LISTS ARE EMPTY SINCE 2026-08-30. They held eleven names between them and
+    /// the eleven were one parser behaviour, not eleven book defects: <c>ParsePostEvents</c>
+    /// hoisted a post-event written after a slur/tie/beam marker onto the note and replayed
+    /// the marker behind it. It now keeps both where they were typed, so every node in
+    /// every book stands where it says it stands and the two ratchets guard an
+    /// unconditional invariant rather than a known shortfall.
     /// </para>
     /// </remarks>
     [Fact]
     public void EveryNodeInEveryBook_StandsWhereItSaysItStands()
     {
-        // Known-broken: the ONE island of HANDOFF §2F ⑺ — see the remarks above and the
-        // longer note on EveryBook_SpellsItselfBackOutOfItsTree. Every name here writes a
-        // post-event (an '@' annotation or a '\N' string number) AFTER a slur/tie/beam
-        // marker, which is the only shape that reorders. Nothing else in the corpus does.
+        // ⚠️ EMPTY SINCE 2026-08-30, for the reason spelled out on
+        // EveryBook_SpellsItselfBackOutOfItsTree: the one island these eleven names shared
+        // (HANDOFF §2F ⑺) is closed, so a name appearing here is a NEW defect.
         var known = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "empty-chord.lys", "script-stack-order1.lys", "slur-vertical-skylines.lys",
-            "feature-tour.lys",
-            "obs-probe.lys", "perf-slurinside1k.lys", "perf-slurscript1k.lys",
-            "scriptstack1.lys", "slurscript-obs.lys", "slurvsky.lys", "tupnumss.lys",
         };
 
         var fullSpanOffenders = new List<string>();

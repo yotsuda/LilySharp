@@ -427,7 +427,16 @@ public sealed class RestSyntax : SyntaxNode
     /// <c>r4@fermata</c> — a fermata over a rest is standard notation).
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/parser.yy — post-events attach to rests too
-    /// (<c>r4\fermata</c>).</remarks>
+    /// (<c>r4\fermata</c>).
+    /// <para>
+    /// ⚠️ A TYPE FILTER IS A PLACE THINGS FALL THROUGH — the same warning
+    /// <see cref="PitchSyntax.Articulations"/> carries, where it swallowed a member's
+    /// string number for months. Ties, slurs and beam markers are named here because the
+    /// tree is in the order the characters were typed (HANDOFF §2F ⑺): a marker written
+    /// before another post-event stands HERE rather than beside the rest, and a filter
+    /// that did not name it would leave the green tree holding a node no accessor hands
+    /// out — a silent drop with no diagnostic anywhere.
+    /// </para></remarks>
     public IEnumerable<SyntaxNode> Articulations
     {
         get
@@ -435,7 +444,8 @@ public sealed class RestSyntax : SyntaxNode
             for (int i = 4; i < SlotCount; i++)
             {
                 var child = GetChild(i);
-                if (child is ArticulationSyntax or DynamicSyntax or MusicMarkSyntax)
+                if (child is ArticulationSyntax or DynamicSyntax or MusicMarkSyntax
+                    or TieSyntax or SlurSyntax or BeamMarkerSyntax)
                     yield return child;
             }
         }
@@ -564,8 +574,11 @@ public sealed class ArpeggioSyntax : SyntaxNode
         }
     }
 
-    /// <summary>The articulations, dynamics, and music marks attached after the
-    /// closing <c>&gt;&gt;</c> (<c>&lt;&lt; c e g &gt;&gt;@chord</c>), like a chord's.</summary>
+    /// <summary>The articulations, dynamics, music marks and tie/slur/beam markers
+    /// attached after the closing <c>&gt;&gt;</c> (<c>&lt;&lt; c e g &gt;&gt;@chord</c>),
+    /// like a chord's. ⚠️ The markers are on the list for the reason spelled out on
+    /// <see cref="RestSyntax.Articulations"/>: a type filter that does not name them
+    /// leaves the tree holding a node no accessor hands out.</summary>
     public IEnumerable<SyntaxNode> Articulations
     {
         get
@@ -573,7 +586,8 @@ public sealed class ArpeggioSyntax : SyntaxNode
             for (int i = 0; i < SlotCount; i++)
             {
                 var child = GetChild(i);
-                if (child is ArticulationSyntax or DynamicSyntax or MusicMarkSyntax)
+                if (child is ArticulationSyntax or DynamicSyntax or MusicMarkSyntax
+                    or TieSyntax or SlurSyntax or BeamMarkerSyntax)
                     yield return child;
             }
         }
@@ -725,10 +739,18 @@ public sealed class ChordSyntax : SyntaxNode
     }
 
     /// <summary>
-    /// Gets the articulations, dynamics, music marks and string numbers attached
-    /// to this chord (after the closing <c>&gt;</c> — string numbers there pair
-    /// with the members in order, <c>&lt;e dis'&gt;\5\4</c>).
+    /// Gets the articulations, dynamics, music marks, string numbers and tie/slur/beam
+    /// markers attached to this chord (after the closing <c>&gt;</c> — string numbers
+    /// there pair with the members in order, <c>&lt;e dis'&gt;\5\4</c>).
     /// </summary>
+    /// <remarks>
+    /// ⚠️ The markers are on the list for the reason spelled out on
+    /// <see cref="RestSyntax.Articulations"/>. MEASURED 2026-08-30, and it is the whole
+    /// reason that warning exists: without them
+    /// <c>audit/lp-regression/lys/empty-chord.lys</c> — <c>&lt;&gt;)@text("sul D")</c> —
+    /// lost its slur close from BOTH the MusicXML and the LilyPond twin, silently, while
+    /// the engraved page was unaffected.
+    /// </remarks>
     public IEnumerable<SyntaxNode> Articulations
     {
         get
@@ -737,7 +759,8 @@ public sealed class ChordSyntax : SyntaxNode
             {
                 var child = GetChild(i);
                 if (child is ArticulationSyntax or DynamicSyntax or MusicMarkSyntax
-                    or StringNumberAnnotationSyntax)
+                    or StringNumberAnnotationSyntax
+                    or TieSyntax or SlurSyntax or BeamMarkerSyntax)
                     yield return child;
             }
         }
