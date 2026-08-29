@@ -708,6 +708,54 @@ public class LpGeometryLedgerTests
     }
 
     /// <summary>
+    /// A row leading a system is spaced against the closing staff's OUTSIDE profile — all of
+    /// its outside-staff ink, not the one kind the ledger happens to measure.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:860-985 skyline_spacing — the
+    /// VerticalAxisGroup publishes ONE skyline with every placed outside-staff grob in it, and
+    /// lily/align-interface.cc:207 get_skylines is what the loose line's minimum is walked
+    /// over.
+    /// <para>
+    /// ⚠️ WHY THIS EXISTS BESIDE THE DUR/DUN PAIR, which pins the dynamic to LilyPond's own
+    /// digit: THE DEFECT THAT PAIR CLOSED EXISTED BECAUSE THE PREVIOUS REPAIR WAS A SPECIAL
+    /// CASE. Session 286 answered the same question for the text spanner by merging that one
+    /// grob's ink at this call site, and the family — dynamics, the fermata movers, an
+    /// attached chord line's band — stayed outside. A repair that special-cases the DYNAMIC
+    /// the same way passes every ledger point and fails here.
+    /// </para>
+    /// <para>
+    /// So the ink here is a TEXT ANNOTATION, which is a different supplier from the pair's
+    /// glyph, and the assertion is a SIGN rather than a number: LilyPond has not been asked
+    /// about this arrangement, and a magnitude nobody measured would be a snapshot wearing a
+    /// ledger's clothes. The control arm is asserted against the ledger's OWN control value,
+    /// so the test cannot pass by moving both books.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ALeadingRowClearsTheClosingStaffsOutsideInk_WhateverKindItIs()
+    {
+        var control = LpGeometryProbes.All
+            .Single(p => p.Id == "lyrics.chord-row.between-systems.dynamic.control.staff-to-chord");
+
+        double withoutInk = RenderedGeometry.Render(control.Source, control.Options)
+            .ChordBaselineAboveStaff(1);
+        double withText = RenderedGeometry
+            .Render(LpGeometryProbes.RowOverStaffInkScore("DUT", "@text(\"Solo\").up"),
+                    control.Options)
+            .ChordBaselineAboveStaff(1);
+
+        // The ledger's own control reading, so this cannot pass by moving both books.
+        Assert.Equal(2.55, withoutInk, 6);
+        Assert.True(withText > withoutInk + 0.5,
+            $"the row leading system 2 sits {withText:F6} above that system's staff with a "
+            + $"text annotation under it and {withoutInk:F6} without — it is not being spaced "
+            + "against the staff's outside-staff ink. The DUR/DUN pair pins the DYNAMIC; this "
+            + "is the same question asked of a different supplier, and a repair that reaches "
+            + "only the grob a ledger point names is the defect this one closed.");
+    }
+
+    /// <summary>
     /// The distance between two staves of a system is decided by the PAGE's spring chain,
     /// not fixed at the alignment minimum — asserted as a mechanism, on the two probes the
     /// ledger measures it with.

@@ -291,7 +291,7 @@ internal sealed partial class LayoutEngine
 
         var looseChainEnd = BuildLooseChainEnds(
             score, pages, systemsArray, perSystemExtents,
-            multiStaffLayouter.RestCollisionsOf, placed.StaffSpanners, placed.StaffInside);
+            multiStaffLayouter.RestCollisionsOf, placed.StaffSpanners, placed.StaffSkylines);
         var trailingRowStaves = BuildTrailingRowStaves(systemsArray, textRowStaves);
         var betweenRowStaves = BuildBetweenRowStaves(systemsArray, textRowStaves);
 

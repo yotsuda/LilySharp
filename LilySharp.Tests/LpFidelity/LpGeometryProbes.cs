@@ -1701,7 +1701,14 @@ internal static class LpGeometryProbes
     /// DEAD: LilyPond does let a placed outside-staff grob push the loose line above it.
     /// </para>
     /// </remarks>
-    private static string DynamicUnderRowScore(string name, bool loud) => $$"""
+    /// <param name="ink">
+    /// What system 2's first note carries — the ONE variable. Empty is the control.
+    /// ⚠️ It is a parameter and not a bool because the FAMILY is the question: a repair that
+    /// reaches only the grob a ledger point names is the defect this pair closed, and
+    /// <c>LpGeometryLedgerTests.ALeadingRowClearsTheClosingStaffsOutsideInk_WhateverKindItIs</c>
+    /// asks the same book with a different supplier through this very parameter.
+    /// </param>
+    internal static string RowOverStaffInkScore(string name, string ink) => $$"""
         octave absolute
         time 4/4
         key c major
@@ -1715,7 +1722,7 @@ internal static class LpGeometryProbes
         }
 
         section B {
-          melody { c'4{{(loud ? "@f.up" : "")}} c' c' c' | c'4 c' c' c' | }
+          melody { c'4{{ink}} c' c' c' | c'4 c' c' c' | }
           chords prog { D | E | }
           lyrics one sings melody { no no no no | no no no no | }
         }
@@ -1727,6 +1734,10 @@ internal static class LpGeometryProbes
           staff melody  lyrics one
         }
         """;
+
+    /// <inheritdoc cref="RowOverStaffInkScore"/>
+    private static string DynamicUnderRowScore(string name, bool loud)
+        => RowOverStaffInkScore(name, loud ? "@f.up" : "");
 
     /// <summary>The pair's book — the dynamic is above system 2's staff, under its row.</summary>
     private static readonly string DUR = DynamicUnderRowScore("DUR", loud: true);

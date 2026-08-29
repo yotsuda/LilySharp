@@ -98,6 +98,30 @@ internal sealed partial class LayoutEngine
         return (SkylineBuilder.Copy(up), SkylineBuilder.Copy(down));
     }
 
+    /// <summary>
+    /// One staff's UP half of the room's OWN per-staff skyline — the inside profile with this
+    /// staff's placed outside-staff grobs merged onto it, which is what LilyPond's
+    /// VerticalAxisGroup publishes as <c>vertical-skylines</c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:860-985 skyline_spacing.
+    /// <para>
+    /// The same shape and the same two absent cases as <see cref="InsideAt"/>; only the UP
+    /// half, because its readers are the ones spacing something ABOVE the staff, and copying
+    /// the DOWN half for them would be a copy nobody looks at.
+    /// </para>
+    /// </remarks>
+    private static VerticalSkyline? OutsideAt(
+        IReadOnlyList<List<(VerticalSkyline Up, VerticalSkyline Down)>>? bySystem,
+        int systemIndex, int staffIndex)
+    {
+        if (bySystem == null
+            || systemIndex < 0 || systemIndex >= bySystem.Count
+            || staffIndex < 0 || staffIndex >= bySystem[systemIndex].Count)
+            return null;
+        return SkylineBuilder.Copy(bySystem[systemIndex][staffIndex].Up);
+    }
+
     // Route a system's PER-STAFF skylines through the session cache. They became a
     // per-system cost when the placement did (see the loop above); before that one list
     // served the whole score, so there was nothing worth memoising. On a fifty-system

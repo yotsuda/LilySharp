@@ -184,7 +184,7 @@ internal sealed partial class LayoutEngine
         List<(double upExtent, double downExtent)> perSystemExtents,
         Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf,
         IReadOnlyList<List<MultiStaffLayouter.StaffInsideSpanners>>? staffSpanners,
-        IReadOnlyList<List<(VerticalSkyline Up, VerticalSkyline Down)>>? staffInside)
+        IReadOnlyList<List<(VerticalSkyline Up, VerticalSkyline Down)>>? staffOutside)
     {
         if (score.Lyrics.IsDefaultOrEmpty || systemsArray.IsDefaultOrEmpty || pages.IsDefaultOrEmpty)
             return null;
@@ -295,7 +295,7 @@ internal sealed partial class LayoutEngine
                     var (lines, closingSpec, closingMin) = LeadingLinesOfSystem(
                         score, systemsArray, staffByIndex, index + 1,
                         leading[index + 1], firstSpaceableIndex[index + 1], restCollisionsOf,
-                        staffSpanners, staffInside);
+                        staffSpanners, staffOutside);
 
                     ends[index] = new LooseLineSpacer.ChainEnd(
                         room, systemPadding + nextUpExtent + nextFirst + halfStaff,
@@ -379,16 +379,29 @@ internal sealed partial class LayoutEngine
     /// room does not agree with.
     /// </para>
     /// <para>
-    /// ⚠️ AND IT IS STILL A SECOND BUILD, WHICH IS WHAT THIS ONE HAS THAT
-    /// <see cref="ComputeBetweenStavesEnd"/> NO LONGER DOES. That one used to rebuild too, and
-    /// now reads the per-staff list <c>MultiStaffLayouter.BuildAllStaffSkylines</c> produced
-    /// (see the remark there). This call site cannot read that list: it is reached from the
-    /// PAGE pass, which runs before <c>AnnotationLayoutContext.StaffSkylines</c> exists. So
-    /// the closing staff here is still measured WITHOUT its dynamics, scripts or beams, and a
-    /// mark on the first staff of the next system is not in the distance a trailing row is
-    /// closed by. NOT MEASURED — the sentence that stood here claimed the corpus has no such
-    /// book and had not asked it, which is the shape HANDOFF 1 named three times in one
-    /// session.
+    /// ★ IT IS NO LONGER A SECOND BUILD (2026-08-29, session 291), and the paragraph that
+    /// stood here was stale in two different ways at once — worth keeping as a shape rather
+    /// than as history. It said this call site "cannot read the per-staff list
+    /// <c>MultiStaffLayouter.BuildAllStaffSkylines</c> produced, because it is reached from
+    /// the PAGE pass, which runs before <c>AnnotationLayoutContext.StaffSkylines</c> exists",
+    /// and concluded "the closing staff here is still measured WITHOUT its dynamics, scripts
+    /// or beams".
+    /// ⚠️ THE PREMISE WAS ABOUT THE WRONG LIST: what the page pass cannot reach is the
+    /// ANNOTATION context's copy, and <c>LayoutSystems</c> hands its own out beside the
+    /// spanners (<c>SystemPlacements.StaffSkylines</c> / <c>.StaffInside</c>), which
+    /// <c>BuildLooseChainEnds</c> is called with. The inside half started being read here on
+    /// 2026-08-26 — so SCRIPTS AND BEAMS WERE IN THE PROFILE FROM THAT DAY and the sentence
+    /// naming three absentees had been down to one ever since, uncorrected.
+    /// ⚠️ AND THE ONE THAT WAS REAL — the OUTSIDE layer: the dynamics at priority 250, the
+    /// fermata movers at 75, an attached chord line's band — was answered a fourth time by
+    /// hand rather than by reading the list (session 286 merged the text spanner's ink here
+    /// when a reader reported a chord row printed through <c>rit.</c>). One quantity, four
+    /// spellings, HANDOFF 5.2.1 (2).
+    /// ⇒ ★★ A REMARK THAT NAMES WHAT IS MISSING GOES STALE FROM THE SIDE NOBODY REREADS:
+    /// each repair closed one name and left the list at three. Both are closed now — this
+    /// call site reads <c>SystemPlacements.StaffSkylines</c>, the same object
+    /// <see cref="ComputeBetweenStavesEnd"/> reads — and the pair that measures it is
+    /// audit/lp-geometry <c>lyrics.chord-row.between-systems.dynamic.*</c>.
     /// </para>
     /// <para>
     /// ★ THE REST SHIFT IS HERE SINCE 2026-08-04, and it is the one side table that costs
@@ -418,9 +431,11 @@ internal sealed partial class LayoutEngine
     /// 9.947093 above its closing staff with a tuplet bracket over that staff and 9.947093
     /// without it, against 11.127093 once the bracket was in the profile — the same 1.180000
     /// the figured-bass drop gained from the same grob.
-    /// ⚠️ THE REMAINING THREE ARE STILL OUT and still unmeasured: dynamics, scripts and
-    /// beams are not in the room's carried tables, so nothing here can reach them without
-    /// the recomputation this paragraph rules out.
+    /// ★ AND SINCE 2026-08-29 THE QUESTION IS MOOT for the closing staff, which is the only
+    /// staff this method builds a profile FOR: it reads the room's finished per-staff
+    /// skyline, so the six are in it because the room put them there, and so is the outside
+    /// layer the six never covered. What this list still describes is the PRELIMINARY pass's
+    /// fallback, <see cref="ClosingProfileWithoutTheRoom"/> — see its remarks.
     /// </para>
     /// </remarks>
     private (ImmutableArray<LooseLineSpacer.LeadingLine> Lines,
@@ -430,7 +445,7 @@ internal sealed partial class LayoutEngine
         List<StaffLayout> leading, int firstSpaceableIndex,
         Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf,
         IReadOnlyList<List<MultiStaffLayouter.StaffInsideSpanners>>? staffSpanners,
-        IReadOnlyList<List<(VerticalSkyline Up, VerticalSkyline Down)>>? staffInside)
+        IReadOnlyList<List<(VerticalSkyline Up, VerticalSkyline Down)>>? staffOutside)
     {
         if (leading.Count == 0
             || !staffByIndex.TryGetValue(firstSpaceableIndex, out var closingStaff))
@@ -479,51 +494,93 @@ internal sealed partial class LayoutEngine
         var closingSpec = StaffAffinity.GetSpacingSpec(
             previous!.StaffAffinity, MultiStaffLayouter.NonStaffSpecsOf(previous, sp),
             null, sp.Lyrics, sp.StaffStaff);
-        // ...and the closing staff's own silhouette: THE room's inside-staff skyline, not a
-        // subset rebuilt here. Everything that is inside-staff ink in LilyPond — the notes
-        // (with their rest shifts), the scripts, the spanners and the beams — is in it
-        // because the room put it there once.
-        // LILYPOND-REF: lily/axis-group-interface.cc:914-935 inside_staff_skylines.
-        var closingInside = InsideAt(staffInside, sysIdx, firstSpaceableIndex)
-            // The preliminary pass has no room to quote; build the one profile from the same
-            // ingredients it would have carried.
-            ?? _skylineBuilder.BuildInsideStaffSkylines(
-                closingStaff, measures, systemLeft: systemsArray[sysIdx].Indent,
-                tupletBrackets: SpannersAt(staffSpanners, sysIdx, firstSpaceableIndex).TupletBrackets,
-                slurs: SpannersAt(staffSpanners, sysIdx, firstSpaceableIndex).Slurs,
-                ties: SpannersAt(staffSpanners, sysIdx, firstSpaceableIndex).Ties,
-                restShifts: restCollisionsOf(closingStaff));
-        // ...and the staff's own accel./rit. spanner ON TOP of that silhouette, because the
-        // row above has to clear the printed words exactly as it clears the notes.
-        // ⚠️ THIS IS THE SECOND HALF OF A FIX THAT ONLY LANDED ON THE FIRST PATH. A row above
-        // the FIRST system is placed by the room, which merges this ink into the staff's UP
-        // profile (MultiStaffLayouter.BuildAllStaffSkylines, "reported 2026-08-28,
-        // Untitled-6.lys"); a row above any LATER system comes down this chain instead, and
-        // this chain measured the INSIDE silhouette, which an outside-staff grob is not in.
-        // So the same book printed its chord row clear of `rit.` on system 1 and straight
-        // through it on system 3 — the reader saw exactly that and reported it again.
-        // LILYPOND-REF: lily/axis-group-interface.cc:860-985 skyline_spacing — a loose line is
-        //   spaced against the VerticalAxisGroup's skyline, and a placed outside-staff grob is
-        //   IN that skyline; lily/page-layout-problem.cc:948-990 distributes by it.
-        var closingUp = closingInside.Up;
-        var closingSpanners = ScoreSideTables.TextSpannersByStaff(score).At(firstSpaceableIndex);
-        if (!closingSpanners.IsEmpty)
-        {
-            var spannerInk = TextSpannerEngraver.InkAboveStaff(
-                score.TextMetrics, closingSpanners, measures, closingUp);
-            if (!spannerInk.IsEmpty)
-            {
-                // Merge onto a COPY: closingInside is the room's shared object and every other
-                // reader of it wants the inside profile it has always been. Padded(0) is the
-                // cheapest copy VerticalSkyline offers — it returns a new skyline and 0 moves
-                // nothing.
-                closingUp = closingUp.Padded(0);
-                closingUp.Merge(spannerInk);
-            }
-        }
+        // ...and the closing staff's own silhouette: THE ROOM'S OWN PER-STAFF SKYLINE, which
+        // is the OUTSIDE profile — the inside-staff ink (notes with their rest shifts,
+        // scripts, spanners, beams, fingerings) with this staff's PLACED outside-staff grobs
+        // merged on top of it: the fermata movers at priority 75, the dynamics at 250, the
+        // accel./rit. spanner at 350 and an attached chord line's band
+        // (MultiStaffLayouter.BuildAllStaffSkylines).
+        // LILYPOND-REF: lily/align-interface.cc:207 get_skylines reads each element's
+        //   `vertical-skylines`, and a VerticalAxisGroup's is
+        //   lily/axis-group-interface.cc:860-985 skyline_spacing — the inside-staff skylines
+        //   merged with every placed outside-staff grob. That is the profile
+        //   `min_offsets` is walked over, and the loose line's minimum against the closing
+        //   staff IS a difference of two min_offsets (lily/page-layout-problem.cc:961-962,
+        //   :923-925).
+        // ⚠️ IT USED TO BE THE INSIDE PROFILE, AND THE TWO ENDS OF ONE CHAIN DISAGREED.
+        // ComputeBetweenStavesEnd — the end that closes a block on the next staff of the SAME
+        // system — has read the room's skyline since the dynamic was found engraved over the
+        // syllable it should have pushed down (audit/lp-geometry lyrics.dynamic.staff-to-lyric);
+        // this end read the inside one plus ONE hand-merged special case for the text spanner,
+        // added in session 286 when a reader reported a chord row printed through `rit.` on a
+        // later system. One quantity, two spellings (HANDOFF 5.2.1 (2)), and the special case
+        // was the first of a family being answered one member at a time. Reading the room's
+        // own profile answers the family and retires the special case with it.
+        // ⚠️ MEASURED, and the corpus could not see it: books DUR/DUN
+        // (audit/lp-geometry/probes/dynamic-under-row.ly) read 5.738075804 against 2.549999975
+        // on LilyPond and 2.550000000 against 2.550000000 here — Lily# gave ONE answer where
+        // LilyPond gives two. A full-disk A/B of this very change moved 0 of 1588 books and 0
+        // of 6552 tests before those points existed.
+        var closingUp = OutsideAt(staffOutside, sysIdx, firstSpaceableIndex)
+            // The preliminary pass has no room to quote; build the inside profile from the
+            // same ingredients it would have carried, and add the one piece of outside-staff
+            // ink this pass can reach. It is a THINNER profile — the dynamics and the movers
+            // are not in it — and it is the honest one for a pass whose whole job is to guess
+            // the page before the room exists.
+            ?? ClosingProfileWithoutTheRoom(
+                score, closingStaff, firstSpaceableIndex, measures,
+                systemsArray[sysIdx].Indent, sysIdx, restCollisionsOf, staffSpanners);
         double closingMin = walk.Distance(closingUp, closingSpec.Padding);
 
         return (built.ToImmutable(), closingSpec, closingMin);
+    }
+
+    /// <summary>
+    /// The closing staff's UP profile as the PRELIMINARY pass can know it: the inside-staff
+    /// silhouette built from the tables that pass carries, plus the staff's own accel./rit.
+    /// spanner.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS THINNER THAN WHAT THE REAL PASS READS and says so rather than pretending
+    /// otherwise. The room's per-staff skyline does not exist yet at the preliminary pass
+    /// (<see cref="AnnotationLayoutContext.StaffSkylines"/> is built by the placement this
+    /// pass runs BEFORE), so the dynamics, the fermata movers and an attached chord line's
+    /// band are not in this profile. The spanner is here because it is the one piece of
+    /// outside-staff ink this pass can reach without re-running the placement — it is a
+    /// function of the marks and the measure layouts alone.
+    /// <para>
+    /// The preliminary pass's job is to size the page before the room exists, and the real
+    /// pass corrects it; a profile that is short here makes the page a little small, where
+    /// re-running the placement to fill it in would make every keystroke pay for the room
+    /// twice (the objection <see cref="LeadingLinesOfSystem"/>'s remarks name).
+    /// </para>
+    /// </remarks>
+    private VerticalSkyline ClosingProfileWithoutTheRoom(
+        MultiStaffScore score, Staff closingStaff, int firstSpaceableIndex,
+        ImmutableArray<MeasureLayout> measures, double indent, int sysIdx,
+        Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf,
+        IReadOnlyList<List<MultiStaffLayouter.StaffInsideSpanners>>? staffSpanners)
+    {
+        var spanners = SpannersAt(staffSpanners, sysIdx, firstSpaceableIndex);
+        // LILYPOND-REF: lily/axis-group-interface.cc:914-935 inside_staff_skylines.
+        var up = _skylineBuilder.BuildInsideStaffSkylines(
+            closingStaff, measures, systemLeft: indent,
+            tupletBrackets: spanners.TupletBrackets,
+            slurs: spanners.Slurs,
+            ties: spanners.Ties,
+            restShifts: restCollisionsOf(closingStaff)).Up;
+
+        var closingSpanners = ScoreSideTables.TextSpannersByStaff(score).At(firstSpaceableIndex);
+        if (closingSpanners.IsEmpty)
+            return up;
+        var spannerInk = TextSpannerEngraver.InkAboveStaff(
+            score.TextMetrics, closingSpanners, measures, up);
+        if (spannerInk.IsEmpty)
+            return up;
+        // This profile is built here and read here, so it can be merged into directly —
+        // unlike the room's, which is shared.
+        up.Merge(spannerInk);
+        return up;
     }
 
     /// <summary>
