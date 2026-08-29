@@ -91,9 +91,14 @@ public class TextSpannerTests
     [Fact]
     public void DetectTextSpanners_RitFollowedByAccel_TwoSpanners()
     {
+        // ⚠️ THE TWO SOURCE POSITIONS ARE DISTINCT, and that is not decoration: they are two
+        // marks WRITTEN in two places, and a parsed book cannot give them the same offset.
+        // Both were 0 until 2026-08-29, which made this pair indistinguishable from the one
+        // thing DetectTextSpanners must NOT treat as a terminator — the same written mark
+        // played twice by a repeating form.
         var musicMarks = ImmutableArray.Create(
-            new MusicMarkItem(MusicMarkType.Rit, 0, 0),
-            new MusicMarkItem(MusicMarkType.Accel, 3, 0));
+            new MusicMarkItem(MusicMarkType.Rit, 0, 42),
+            new MusicMarkItem(MusicMarkType.Accel, 3, 77));
 
         var result = TextSpannerEngraver.DetectTextSpanners(musicMarks);
 
@@ -104,6 +109,48 @@ public class TextSpannerTests
         Assert.Equal("accel.", result[1].Text);
         Assert.Equal(3, result[1].StartMeasureIndex);
         Assert.Equal(4, result[1].EndMeasureIndex); // extends to next measure
+    }
+
+    [Fact]
+    public void DetectTextSpanners_TheSameWrittenMarkPlayedTwice_DoesNotEndItself()
+    {
+        // A form that repeats a section contributes ONE MusicMarkItem PER PLAYING of the
+        // same written @rit — same SourcePosition, different measures. Neither instance may
+        // be read as the other's terminating event, or the first spanner runs across every
+        // bar the repeat puts in between while the second gets the one-measure fallback:
+        // one source, two lengths (user report 2026-08-29, Untitled-6.lys, six bars against
+        // one). The picture is pinned by test/rit-span-in-a-repeated-section.
+        var musicMarks = ImmutableArray.Create(
+            new MusicMarkItem(MusicMarkType.Rit, 0, 42),
+            new MusicMarkItem(MusicMarkType.Rit, 4, 42));
+
+        var result = TextSpannerEngraver.DetectTextSpanners(musicMarks);
+
+        Assert.Equal(2, result.Length);
+        Assert.Equal(0, result[0].StartMeasureIndex);
+        Assert.Equal(1, result[0].EndMeasureIndex);
+        Assert.Equal(4, result[1].StartMeasureIndex);
+        Assert.Equal(5, result[1].EndMeasureIndex);
+        // ...and the two are the SAME LENGTH, which is the whole report.
+        Assert.Equal(
+            result[0].EndMeasureIndex - result[0].StartMeasureIndex,
+            result[1].EndMeasureIndex - result[1].StartMeasureIndex);
+    }
+
+    [Fact]
+    public void DetectTextSpanners_TwoRitsWrittenSeparately_StillEndEachOther()
+    {
+        // The control for the rule above: two rits the reader WROTE in two places are two
+        // marks, so the first still ends at the second. Only a replay of one mark is exempt.
+        var musicMarks = ImmutableArray.Create(
+            new MusicMarkItem(MusicMarkType.Rit, 0, 42),
+            new MusicMarkItem(MusicMarkType.Rit, 4, 77));
+
+        var result = TextSpannerEngraver.DetectTextSpanners(musicMarks);
+
+        Assert.Equal(2, result.Length);
+        Assert.Equal(4, result[0].EndMeasureIndex);
+        Assert.Equal(5, result[1].EndMeasureIndex);
     }
 
     [Fact]

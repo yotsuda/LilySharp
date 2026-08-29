@@ -705,7 +705,7 @@
 "Svg/Layout/TextSpannerEngraver.cs","148","0.46","private const double BetweenLayerPadding = 0.46;","LILYPOND-REF: axis-group-interface.cc default_outside_staff_padding_ = 0.46","Green"
 "Svg/Layout/TextSpannerEngraver.cs","153","1.5","private const double HorizontalOverlapTolerance = 1.5;","(file-level) LILYPOND-REF: scm/define-grobs.scm:3835-3864 TextSpanner grob","Yellow"
 "Svg/Layout/TextSpannerEngraver.cs","314","2.0","double dynY = staffOffset + (2.0 - dyn.YUp);","(file-level) LILYPOND-REF: scm/define-grobs.scm:3835-3864 TextSpanner grob","Yellow"
-"Svg/Layout/TextSpannerEngraver.cs","455","2.0","double lineHalf = EngravingDefaults.StaffLineThickness / 2.0;","(file-level) LILYPOND-REF: scm/define-grobs.scm:3835-3864 TextSpanner grob","Yellow"
+"Svg/Layout/TextSpannerEngraver.cs","495","2.0","double lineHalf = EngravingDefaults.StaffLineThickness / 2.0;","(file-level) LILYPOND-REF: scm/define-grobs.scm:3835-3864 TextSpanner grob","Yellow"
 "Svg/Layout/TupletBracketEngraver.cs","76","2.0","public double NumberX => (StartX + EndX) / 2.0;","(file-level) LILYPOND-REF: lily/tuplet-bracket.cc:288-443 print method","Yellow"
 "Svg/Layout/TupletBracketEngraver.cs","114","0.2","internal const double BracketOutwardReach = 0.2;","(file-level) LILYPOND-REF: lily/tuplet-bracket.cc:288-443 print method","Yellow"
 "Svg/Layout/TupletBracketEngraver.cs","119","2.0","public double NumberYUp => (StartYUp + EndYUp) / 2.0;","(file-level) LILYPOND-REF: lily/tuplet-bracket.cc:288-443 print method","Yellow"

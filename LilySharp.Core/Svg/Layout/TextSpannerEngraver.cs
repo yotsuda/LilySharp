@@ -340,8 +340,44 @@ internal static class TextSpannerEngraver
     /// LILYPOND-REF: lily/text-spanner-engraver.cc start/end event handling
     ///
     /// A text spanner starts at a rit/accel mark and extends to:
-    /// 1. The next tempo-related mark (another rit/accel, or a tempo change)
+    /// 1. The next rit/accel mark on the same staff
     /// 2. The end of the next measure (if no terminating event found)
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN, ALL OF IT. LilyPond's spanner runs from <c>\startTextSpan</c> to an
+    /// explicit <c>\stopTextSpan</c> and there is no terminator spelling here at all — no
+    /// stop form in the annotation vocabulary and no length argument on the mark — so both
+    /// arms above are this engine's own convention rather than a port, and a bare
+    /// <c>@rit</c> can only ever mean "one measure" unless another mark cuts it short.
+    /// </para>
+    /// <para>
+    /// ⚠️ A TEMPO CHANGE DOES NOT END ONE, whatever arm 1 used to say. It read "the next
+    /// tempo-related mark (another rit/accel, or a tempo change)" and the search list is
+    /// <c>ritAccelMarks</c>: a Tempo mark has never been in it. MEASURED 2026-08-29 with a
+    /// rit in bar 1 and a <c>tempo 160</c> section starting at bar 5 — the spanner came out
+    /// one bar, the fallback, not four. Whether it SHOULD end there is a real question and
+    /// an open one; what is not open is that the comment described a branch that does not
+    /// exist.
+    /// </para>
+    /// <para>
+    /// ⚠️ A MARK CANNOT BE ENDED BY ANOTHER PLAYING OF ITSELF, and until 2026-08-29 it was.
+    /// <c>musicMarks</c> holds the marks of the PLAYED piece, so a section the form repeats
+    /// contributes one instance per playing — the same written <c>@rit</c>, at the same
+    /// <c>SourcePosition</c>, in two different measures. The "next rit/accel" search then
+    /// found the second instance and ran the first spanner all the way to it, across every
+    /// bar in between. MEASURED on the reported book (user report 2026-08-29,
+    /// <c>scratch/ベースタブLy/Untitled-6.lys</c>, form <c>A |: B :| A "A2"</c>): the first
+    /// rit. covered six bars and ran through the whole of section B, while the second — with
+    /// no later instance to find — covered the one bar the fallback gives. Same source, two
+    /// lengths. The minimal pair is <c>test/rit-span-in-a-repeated-section.lys</c> against
+    /// its once-played control.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE IDENTITY IS THE SOURCE POSITION, not the object: two playings are two
+    /// <c>MusicMarkItem</c>s, so <c>!=</c> does not see it. Every mark is built with its
+    /// syntax node's <c>SourceStart</c> (MeasureCollector), so two instances share a position
+    /// exactly when they are one written mark, and two separately written marks never do —
+    /// including two <c>@rit</c>s written in the same bar.
+    /// </para>
     /// </remarks>
     public static ImmutableArray<TextSpannerItem> DetectTextSpanners(
         ImmutableArray<MusicMarkItem> musicMarks)
@@ -364,10 +400,14 @@ internal static class TextSpannerEngraver
             // Find the next rit/accel mark ON THE SAME STAFF (terminates this
             // spanner). Without the staff filter a rit on staff 2 would end at a rit
             // in a later measure on staff 1 (they share score.MusicMarks).
+            // ...and NOT ANOTHER PLAYING OF THIS SAME WRITTEN MARK, which is what a form
+            // that repeats a section produces — see this method's remark for the reported
+            // book and why the object identity `!=` cannot see it.
             var nextMark = ritAccelMarks
                 .Select(x => x.Mark)
                 .FirstOrDefault(m =>
-                    m != mark && m.StaffIndex == mark.StaffIndex &&
+                    m != mark && m.SourcePosition != mark.SourcePosition &&
+                    m.StaffIndex == mark.StaffIndex &&
                     m.MeasureIndex > mark.MeasureIndex);
 
             int endMeasure;

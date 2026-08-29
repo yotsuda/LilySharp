@@ -161,6 +161,10 @@ public class SvgSnapshotTests
         yield return new object[] { "test/multi-staff-hairpins" };
         // Text spanners (rit./accel.) per staff on a grand staff.
         yield return new object[] { "test/multi-staff-text-spanners" };
+        // ONE written @rit in a section the form plays twice: both playings draw the same
+        // one-measure spanner. The first used to run to the second playing of ITSELF, across
+        // every bar the repeat put in between.
+        yield return new object[] { "test/rit-span-in-a-repeated-section" };
         // Ottava brackets per staff on a grand staff: the lower staff's 8va sits
         // above ITS staff, not piled above the top staff.
         yield return new object[] { "test/multi-staff-ottava" };

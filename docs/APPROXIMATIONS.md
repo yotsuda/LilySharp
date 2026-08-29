@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 53 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 48 | 観測者がゼロだと自認しているもの |
-| `OWN` | 114 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **215** | |
+| `OWN` | 115 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **216** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -207,7 +207,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（114 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（115 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:1653** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -368,6 +368,8 @@
 - **:200** LILYSHARP-OWN, and it has to be: LilyPond's TabStaff draws no stems at all by default,
 ### `LilySharp.Core/Svg/Layout/TextOutlineSkylines.cs`
 - **:54** ⚠️ LILYSHARP-OWN, two declared substitutions inside the walk, neither of which changes
+### `LilySharp.Core/Svg/Layout/TextSpannerEngraver.cs`
+- **:346** ⚠️ LILYSHARP-OWN, ALL OF IT. LilyPond's spanner runs from \startTextSpan to an
 ### `LilySharp.Core/Svg/Layout/TieFormattingProblem.cs`
 - **:341** ⚠️ LILYSHARP-OWN: the MINIMUM-LENGTH FLOOR. LilyPond puts none here — min-length
 - **:388** ⚠️ LILYSHARP-OWN, AND ONLY ON A TAB. LilyPond has one staff_symbol_referencer_
