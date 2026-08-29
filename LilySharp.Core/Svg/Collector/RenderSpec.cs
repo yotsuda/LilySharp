@@ -135,6 +135,43 @@ public sealed record CombinedStaffSpec(
     string? InstrumentName = null) : RenderItemSpec;
 
 /// <summary>
+/// Where on its staff a binding's voices land — the numbering every item the collector
+/// addresses by voice is written in (<c>ArticulationItem.VoiceIndex</c> and its island,
+/// <see cref="Model.TupletBracketItem.VoiceIndex"/>), because every consumer of that number
+/// reads it as an index into the STAFF's <c>Voices</c> array.
+/// </summary>
+/// <remarks>
+/// ⚠️ THE THREE CASES ARE NOT A STYLE CHOICE — they are the three answers the question
+/// "which slot of this staff does this part's voice 0 occupy?" actually has, and a
+/// <c>bool</c> could only carry two of them. Before this existed the binding said only
+/// whether it SHARED a staff, so every part on a shared staff was collected at slot 0 and
+/// the second one's items addressed the FIRST one's notes (measured, session 284).
+/// </remarks>
+public enum VoiceSlotting
+{
+    /// <summary>This binding opens a staff of its own: its voices ARE that staff's voices,
+    /// starting at slot 0.</summary>
+    OwnStaff,
+
+    /// <summary>This binding shares the previous binding's staff, and the staff's voices are
+    /// its parts' voices CONCATENATED in binding order (<see cref="CondensedStaffSpec"/> —
+    /// see <c>ToStaffGroups</c>, which builds it with <c>PartNames.SelectMany(getVoices)</c>).
+    /// So this part's slots start after everything already placed on the staff.</summary>
+    AppendedToStaff,
+
+    /// <summary>This binding shares the previous binding's staff, but the staff's voices are
+    /// NOT its parts' voices: the part combiner rewrites both streams into one or two of its
+    /// own (<see cref="CombinedStaffSpec"/>, <see cref="PartCombiner.Combine"/>). No slot can
+    /// be derived from the part alone — the combiner MOVES items between the streams and
+    /// emits a SINGLE voice when the parts are never apart, so neither the voice number nor
+    /// the item index a part was collected with survives it.
+    /// ⚠️ THIS CASE IS NAMED, NOT FIXED. It keeps slot 0, which is what it had before the
+    /// slotting existed; closing it means re-addressing the per-part items the combiner
+    /// moves, which is its own trip (HANDOFF §2 A).</summary>
+    CombinedIntoStaff,
+}
+
+/// <summary>
 /// Tablature staff render item.
 /// </summary>
 public sealed record TabStaffSpec(StaffSpec Staff, TuningType Tuning, int Transposition = 0,
@@ -295,12 +332,20 @@ public sealed record RenderSpec(
     /// (<c>staff NAME with chords CHORDPART</c>).
     /// </summary>
     /// <remarks>
-    /// ⚠️ <c>SharesStaffWithPrevious</c> breaks the one-binding-one-staff assumption on
-    /// purpose: a <c>condensedStaff</c> yields ONE binding per part but builds ONE staff, so
-    /// a caller that increments blindly would shift every later staff index by N-1. Those
-    /// parts genuinely are on the same staff, so they take the same index.
+    /// ⚠️ <see cref="VoiceSlotting"/> breaks the one-binding-one-staff assumption on purpose:
+    /// a <c>condensedStaff</c> yields ONE binding per part but builds ONE staff, so a caller
+    /// that increments blindly would shift every later staff index by N-1. Those parts
+    /// genuinely are on the same staff, so they take the same index.
+    /// <para>
+    /// ⚠️ AND THE SAME ANSWER CARRIES THE VOICE SLOT, because a shared staff needs BOTH.
+    /// The staff index alone was what this yielded until session 284, and with it every part
+    /// of a shared staff was collected at voice slot 0 — so the second part's tuplet
+    /// brackets, dynamics, articulations, trill spanners, fingerings, frames and bends all
+    /// addressed the FIRST part's stream. See <see cref="VoiceSlotting"/> for why the three
+    /// cases cannot be a bool.
+    /// </para>
     /// </remarks>
-    public IEnumerable<(string VoiceName, string? WithChords, ChordDisplayMode ChordDisplay, ImmutableArray<string> WithLyrics, bool SharesStaffWithPrevious)> GetVoiceBindings()
+    public IEnumerable<(string VoiceName, string? WithChords, ChordDisplayMode ChordDisplay, ImmutableArray<string> WithLyrics, VoiceSlotting Slotting)> GetVoiceBindings()
     {
         static ImmutableArray<string> Ly(ImmutableArray<string> a) => a.IsDefault ? ImmutableArray<string>.Empty : a;
         foreach (var item in OrderedItems())
@@ -308,39 +353,44 @@ public sealed record RenderSpec(
             switch (item)
             {
                 case SingleStaffSpec single:
-                    yield return (single.Staff.VoiceName, single.Staff.WithChords, single.Staff.ChordDisplay, Ly(single.Staff.WithLyrics), false);
+                    yield return (single.Staff.VoiceName, single.Staff.WithChords, single.Staff.ChordDisplay, Ly(single.Staff.WithLyrics), VoiceSlotting.OwnStaff);
                     break;
                 case GrandStaffRenderSpec grand:
                     foreach (var staff in grand.GrandStaff.Staves)
-                        yield return (staff.VoiceName, staff.WithChords, staff.ChordDisplay, Ly(staff.WithLyrics), false);
+                        yield return (staff.VoiceName, staff.WithChords, staff.ChordDisplay, Ly(staff.WithLyrics), VoiceSlotting.OwnStaff);
                     break;
                 // Every condensed part is COLLECTED even though they share one staff — the
                 // binding list is what tells the collector whose music to gather — but only
-                // the first opens a new staff index.
+                // the first opens a new staff index. The later ones are APPENDED: the staff's
+                // voices are these parts' voices in this order (ToStaffGroups builds it with
+                // SelectMany), so each part's slots start after the ones before it.
                 case CondensedStaffSpec condensed:
                     for (int i = 0; i < condensed.PartNames.Length; i++)
                         yield return (condensed.PartNames[i], null, ChordDisplayMode.Names,
-                            ImmutableArray<string>.Empty, i > 0);
+                            ImmutableArray<string>.Empty,
+                            i == 0 ? VoiceSlotting.OwnStaff : VoiceSlotting.AppendedToStaff);
                     break;
-                // Same bookkeeping as a condensed staff: both parts are collected, one
-                // staff index is opened. Whether the two end up as one voice or two is
-                // decided later, by the music.
+                // Same STAFF bookkeeping as a condensed staff: both parts are collected, one
+                // staff index is opened. The VOICE bookkeeping is where the two part ways —
+                // whether these end up as one voice or two is decided later, by the music,
+                // and by the combiner rewriting both streams (see VoiceSlotting).
                 case CombinedStaffSpec combined:
                     for (int i = 0; i < combined.PartNames.Length; i++)
                         yield return (combined.PartNames[i], null, ChordDisplayMode.Names,
-                            ImmutableArray<string>.Empty, i > 0);
+                            ImmutableArray<string>.Empty,
+                            i == 0 ? VoiceSlotting.OwnStaff : VoiceSlotting.CombinedIntoStaff);
                     break;
                 case TabStaffSpec tab:
-                    yield return (tab.Staff.VoiceName, tab.WithChords, tab.ChordDisplay, Ly(tab.Staff.WithLyrics), false);
+                    yield return (tab.Staff.VoiceName, tab.WithChords, tab.ChordDisplay, Ly(tab.Staff.WithLyrics), VoiceSlotting.OwnStaff);
                     break;
                 case OssiaStaffSpec ossia:
-                    yield return (ossia.Staff.VoiceName, null, ChordDisplayMode.Names, ImmutableArray<string>.Empty, false);
+                    yield return (ossia.Staff.VoiceName, null, ChordDisplayMode.Names, ImmutableArray<string>.Empty, VoiceSlotting.OwnStaff);
                     break;
                 case ChordRowSpec chordRow:
-                    yield return (chordRow.PartName, null, chordRow.DisplayMode, ImmutableArray<string>.Empty, false);
+                    yield return (chordRow.PartName, null, chordRow.DisplayMode, ImmutableArray<string>.Empty, VoiceSlotting.OwnStaff);
                     break;
                 case LyricsRowSpec lyricsRow:
-                    yield return (lyricsRow.PartName, null, ChordDisplayMode.Names, ImmutableArray<string>.Empty, false);
+                    yield return (lyricsRow.PartName, null, ChordDisplayMode.Names, ImmutableArray<string>.Empty, VoiceSlotting.OwnStaff);
                     break;
             }
         }

@@ -858,6 +858,13 @@ public sealed partial class MeasureCollector
         // staves, so this counter equals the global staff index (see
         // EnumerateStaves) and tags each staff's dynamics correctly.
         int collectStaffIndex = 0;
+        // …and this one is the same counter for the OTHER axis: how many voices the
+        // bindings already on the staff being filled have used up, so an APPENDED binding
+        // (a condensed staff's second part) is collected at the slot its voices really take
+        // in Staff.Voices, not at 0. Advanced from the PREVIOUS binding's collected voices
+        // at the top of each turn, which is the one place every branch below passes through.
+        int staffVoiceSlots = 0;
+        string? previousBinding = null;
         // Lyrics rows are collected AFTER the music, so the per-section bar count
         // (used to auto-wrap one block's verses) is known from the real content.
         var pendingLyricsRows = new List<(string Name, int StaffIndex)>();
@@ -869,14 +876,29 @@ public sealed partial class MeasureCollector
         var attachedLyrics = new List<(string PartName, int StaffIndex, string StaffVoice)>();
         // Chord rows are also deferred (see the ChordRowSpec branch below).
         var pendingChordRows = new List<(string Name, int StaffIndex, ChordDisplayMode Mode)>();
-        foreach (var (voiceName, withChords, chordDisplay, withLyrics, sharesStaff) in renderSpec.GetVoiceBindings())
+        foreach (var (voiceName, withChords, chordDisplay, withLyrics, slotting) in renderSpec.GetVoiceBindings())
         {
             _voiceName = voiceName;
+            // What the binding before this one placed on the staff. Read here rather than
+            // at each assignment site because two branches below `continue` out of the turn.
+            if (previousBinding is { } prev && staffVoices.TryGetValue(prev, out var prevVoices))
+                staffVoiceSlots += prevVoices.Length;
+            previousBinding = voiceName;
             // A condensed staff yields one binding per part but ONE staff, so its later
             // parts take the staff index already handed out instead of opening a new one
             // (see GetVoiceBindings) — otherwise every staff below would be tagged one
             // index too high.
-            _cursor.StaffIndex = sharesStaff ? collectStaffIndex - 1 : collectStaffIndex++;
+            _cursor.StaffIndex = slotting == VoiceSlotting.OwnStaff
+                ? collectStaffIndex++
+                : collectStaffIndex - 1;
+            // …and the voice slot those items are addressed by. A staff of its own starts
+            // at 0; an APPENDED part starts after the parts already on the staff, because
+            // Staff.Voices is their concatenation. The combiner's second part keeps 0 — not
+            // because 0 is right, but because no slot is derivable from the part alone once
+            // the combiner has rewritten both streams (see VoiceSlotting.CombinedIntoStaff).
+            if (slotting != VoiceSlotting.AppendedToStaff)
+                staffVoiceSlots = 0;
+            _cursor.VoiceIndex = staffVoiceSlots;
             _octave.LastPitchName = 'c';
             _defaultDuration = Fraction.Quarter;
             _defaultDots = 0;
@@ -1577,9 +1599,15 @@ public sealed partial class MeasureCollector
                 //     keyed by its local 0-based measure index; shift it to the span's
                 //     real start so dynamics etc. land in the right measure.
                 //   * VoiceIndex — tag this sub-voice's tuplets so their beam-breaking
-                //     boundaries never leak into a sibling voice.
+                //     boundaries never leak into a sibling voice. Counted FROM THE PART'S
+                //     OWN SLOT, not from zero: on a shared staff the part's voices sit at
+                //     `_cursor.VoiceIndex + t` of Staff.Voices (the binding loop hands the
+                //     part its base; see VoiceSlotting), and on every staff of its own that
+                //     base is 0, which is the arithmetic this replaced.
                 //   * VoiceScope — render voice number is t+1; an override in this
-                //     sub-voice scopes to it.
+                //     sub-voice scopes to it. NOT slotted: it is the voice's number WITHIN
+                //     ITS PART (what `voice { } { }` wrote), which is what a part-scoped
+                //     override and the voice-1-up/voice-2-down default both mean.
                 // The scope RESTORES THE SAVED CURSOR where the manual lines it
                 // replaced reset to zeros — the same values, because this loop only
                 // ever runs on the primary stream's cursor (StaffIndex is carried
@@ -1590,7 +1618,7 @@ public sealed partial class MeasureCollector
                 using (new CursorScope(this, _cursor with
                 {
                     MetadataMeasureOffset = start,
-                    VoiceIndex = t,
+                    VoiceIndex = _cursor.VoiceIndex + t,
                     VoiceScope = t + 1,
                 }))
                 {

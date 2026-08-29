@@ -49,6 +49,13 @@ public sealed record TupletBracketItem(
     // 0 = primary. Auto-beaming breaks at a tuplet boundary only within the
     // SAME voice, so the beam detector must not apply one voice's tuplet
     // indices to another voice's note stream.
+    // ⚠️ IT IS THE SLOT IN Staff.Voices, NOT THE VOICE'S NUMBER WITHIN ITS PART.
+    // On a staff several parts share (condensedStaff) those differ: the staff's voices
+    // are the parts' voices concatenated, so the second part's primary stream is slot N,
+    // not slot 0. The collector counts it that way (RenderSpec.VoiceSlotting); this is
+    // the same reading every consumer of a VoiceIndex uses, because they all index the
+    // staff's array with it (score.Voices[tie.VoiceIndex], AnchorItem, and the filter in
+    // AddressedTo below).
     int VoiceIndex = 0
 )
 {
@@ -78,6 +85,18 @@ public sealed record TupletBracketItem(
     /// books, while blanking the DRAWN path's list (which was already scoped) moved 2, so the
     /// sweep sees the mechanism and simply has no book that writes the shape.
     /// <c>ForeignTupletBracketTests</c> is the instrument instead.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE FILTER IS ONLY AS GOOD AS THE NUMBERS IT READS, and until session 284 one of
+    /// them lied. A <c>condensedStaff</c>'s parts share a staff index AND were all collected
+    /// at voice slot 0, so this rule could not tell them apart and each part was scoped with
+    /// the other's brackets — in range and silently, whenever the other part's bars were
+    /// longer than one item. MEASURED (session 284): the second part's triplet number was
+    /// engraved above the staff over the FIRST part's notes, and the first part's beamlet
+    /// turned round exactly as the two-staff case above does. The repair is upstream, in what
+    /// the collector stamps (<c>RenderSpec.VoiceSlotting</c>); this rule did not change.
+    /// The corpus is blind to that one too — 0 of 899 books moved — so
+    /// <c>SharedStaffVoiceSlotTests</c> is its instrument.
     /// </para>
     /// </remarks>
     internal static ImmutableArray<TupletBracketItem> AddressedTo(

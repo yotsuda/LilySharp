@@ -1070,20 +1070,27 @@ internal sealed class BeamDetector
                 // every caller that hands over a single stream the same scoping rule
                 // (TupletBracketItem.AddressedTo, by staff AND voice), which closed the case
                 // this remark used to describe — the stem-direction probe handing over the
-                // whole collector's list. MEASURED over the 566-book tree WITH that scoping
-                // in place: 2882 brackets kept, 2 dropped, both in audit/lpreg/pctend-probe.lys.
+                // whole collector's list. MEASURED over the 899-book corpus with the axis
+                // as it stands: 10763 brackets kept, 4 dropped, all four in
+                // audit/lpreg/pctend-probe.lys (unchanged by session 284 — the same numbers
+                // came back from the same poison run against the tree before the fix).
                 //
-                // ⚠️⚠️ AND THOSE 2 NAME THE AXIS (StaffIndex, VoiceIndex) CANNOT CUT. A
-                // condensedStaff yields ONE BINDING PER PART sharing ONE staff index
-                // (RenderSpec.GetVoiceBindings' SharesStaffWithPrevious, consumed by
-                // MeasureCollector's `_cursor.StaffIndex = sharesStaff ? … - 1 : …++`) and
-                // collects each part with VoiceIndex 0 — so two condensed parts are
-                // INDISTINGUISHABLE to the scoping rule, and each is probed with the other's
-                // brackets. In this book they are caught only because the second part's bar
-                // is a lone R1, one item long; a condensed part with longer bars would take
-                // the other's bracket IN RANGE and silently, which is the same defect one
-                // axis further out. Closing it needs a per-stream discriminator the model
-                // does not have, so it is written up in HANDOFF §2 rather than patched here.
+                // ⚠️⚠️ AND THOSE 4 NAME WHAT THE AXIS STILL CANNOT CUT — but the reason has
+                // narrowed. A condensedStaff yields ONE BINDING PER PART sharing ONE staff
+                // index, and until session 284 each part was ALSO collected at voice slot 0,
+                // so two condensed parts were indistinguishable here and each was probed
+                // with the other's brackets. That half is closed: the binding now carries
+                // the part's slot in Staff.Voices (RenderSpec.VoiceSlotting, consumed by
+                // MeasureCollector's `_cursor.VoiceIndex = staffVoiceSlots`), so a condensed
+                // part's brackets name its own stream — SharedStaffVoiceSlotTests holds it,
+                // and this book is not condensed but COMBINED. There the combiner rewrites
+                // both streams (PartCombiner.Combine moves items between them and emits a
+                // single voice when the parts are never apart), so no slot is derivable from
+                // the part alone; these four are caught only because the second part's bar
+                // is a lone R1, one item long, and a combined part with longer bars would
+                // take the other's bracket IN RANGE and silently. Closing THAT needs the
+                // combiner to re-address the items it moves — written up in HANDOFF §2 A
+                // rather than patched here.
                 if (b.StartNoteIndex < 0 || b.EndNoteIndex < b.StartNoteIndex
                     || b.EndNoteIndex >= measure.Items.Length)
                     continue;
