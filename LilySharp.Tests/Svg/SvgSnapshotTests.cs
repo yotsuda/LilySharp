@@ -398,6 +398,11 @@ public class SvgSnapshotTests
         // widen the inter-staff gap so it clears the staff below instead of
         // overlapping its lines (dynamics join the outside-staff skyline).
         yield return new object[] { "test/voice-dynamics-multistaff" };
+        // The two voices carry DIFFERENT rhythms and the lower one carries the
+        // dynamic: it must sit at its own note's column. The three books above all
+        // share a rhythm between the voices, which made item index and timing agree
+        // and hid the defect from the whole corpus (session 286).
+        yield return new object[] { "test/voice-dynamics-offbeat" };
         // Multi-staff: dynamics that belong to the SECOND (bass) staff render
         // under THAT staff, not collapsed under the first (DynamicItem.StaffIndex).
         yield return new object[] { "test/dynamics-lower-staff" };

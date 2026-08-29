@@ -1,0 +1,36 @@
+// A dynamic written on a lower voice whose rhythm DIFFERS from the upper voice's:
+// the @f must be engraved at its OWN note's column, not at whatever the first voice
+// happens to have at the same ordinal. The three older voice-dynamics books all give
+// the two voices the SAME rhythm, so item index and timing agree there and the whole
+// species was invisible to the corpus — this book is the one that can see it.
+//
+// The lower voice's second note (e2) is at timing 1/2; the upper voice's second note
+// (d''8) is at timing 1/8. Reading the dynamic's item index off the STAFF's stream
+// put the @f on the d''. The @staccato on the same note is the control: the script
+// side already resolved the voice's own measures, so the two must agree.
+title "Off-beat voice dynamics"
+octave absolute
+time 4/4
+key c major
+
+part rh { clef treble }
+
+section Main {
+  rh { voice { c''8 d'' e'' f'' g'' a'' b'' c''' | } { c2 e2@f@staccato | } }
+}
+
+form main { Main }
+
+score main "voice-dynamics-offbeat" {
+  staff rh
+}
+
+// ---------------------------------------------------------------------------
+// ⚠️ THIS NOTE IS AT THE FILE END ON PURPOSE. A comment ABOVE the music shifts every
+// source offset after it, so the whole book's data-pos moves and its snapshot has to be
+// re-based -- a diff that proves nothing and hides the next real one. Below the music,
+// nothing moves.
+// ✔ VERIFIED TO GUARD, not assumed to (session 286): reverting DynamicEngraver's
+// dynMeasures to ResolveStaffMeasures -- the defect this book was written for -- moves
+// this snapshot (the @f goes from x 19.29 back to x 11.78) and moves NO other snapshot
+// of the 223, which is exactly why it had to be written.

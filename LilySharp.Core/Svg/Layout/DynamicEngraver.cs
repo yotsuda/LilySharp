@@ -160,13 +160,25 @@ internal static class DynamicEngraver
             if (measureLayout.Columns.IsDefaultOrEmpty
                 && dynamic.ItemIndex >= measureLayout.Items.Length)
                 continue;
-
-            // Resolve this dynamic's OWN staff: its voices (to clear the right
-            // stems), its measures (for timing), and the staff's vertical offset
-            // within the system (so it sits under its own staff, not the first).
+            // Resolve this dynamic's OWN staff AND its OWN voice: the staff's voices
+            // (to clear the right stems), the VOICE's measures (for timing), and the
+            // staff's vertical offset within the system (so it sits under its own
+            // staff, not the first).
+            // ⚠️ The measures must be the voice's, not the staff's. The multi-voice
+            // path in GetItemXOffset turns ItemIndex into a TIMING by summing the
+            // durations ahead of it, and an item index only means anything inside
+            // the stream it was recorded against — a lower voice's index read off
+            // the staff's stream names whatever the FIRST voice happens to have at
+            // that ordinal. With a shared rhythm the two spellings agree, which is
+            // why the corpus never showed it; with different rhythms the label lands
+            // on a note in the other voice. This is the same two-step the sibling
+            // script side already does (ArticulationEngraver: ResolveStaffMeasures
+            // then ResolveVoiceMeasures) — one quantity, one spelling.
             var dynVoices = voicesByStaff != null
                 && voicesByStaff.TryGetValue(dynamic.StaffIndex, out var vv) ? vv : fallbackVoices;
-            var dynMeasures = LayoutUtilities.ResolveStaffMeasures(measuresByStaff, dynamic.StaffIndex, score.Voice.Measures);
+            var dynMeasures = LayoutUtilities.ResolveVoiceMeasures(
+                dynVoices, dynamic.VoiceIndex,
+                LayoutUtilities.ResolveStaffMeasures(measuresByStaff, dynamic.StaffIndex, score.Voice.Measures));
 
             // The COLUMN's X (the drawn head starts here), and the label's own anchor:
             // LilyPond X-aligns the DynamicText's extent CENTRE on its X-parent — the

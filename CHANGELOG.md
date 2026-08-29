@@ -58,6 +58,17 @@ turned out to be hiding them.
 
 ### Engraving fidelity
 
+- **A dynamic on a lower voice is engraved at its own note.** The label's column was
+  resolved against the STAFF's stream of items, so the voice's item index named whatever
+  the first voice happened to have at that ordinal — with `voice { c''8 d'' e'' f'' … } { c2 e2@f }`
+  the `f` was drawn under the upper voice's `d''`, three notes early. An item index only
+  means anything inside the stream it was recorded against, and the sibling script side
+  (`@staccato` on the same note) had always resolved the voice's own measures, so one note
+  could carry two marks that disagreed about where it was. Both `voice { } { }` and
+  `condensedStaff` reach it. The three existing two-voice dynamics books all give their
+  voices the same rhythm, which makes index and timing agree, so no book in the corpus
+  could see it: `lysc check` is byte-identical and no stored page moves.
+
 - The percent-repeat sign is LilyPond's own shape: the slash is the parallelogram
   `Lookup::repeat_slash` builds, cut horizontally at its ends, rather than a stroked line
   cut square to the slope — which made the ink 0.51 too tall and 0.51 too narrow on a tab
