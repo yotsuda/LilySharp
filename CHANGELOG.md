@@ -65,6 +65,16 @@ turned out to be hiding them.
 
 ### Engraving fidelity
 
+- **A chord row over a `rit.` clears it on every system, not only the first.** The row is
+  spaced against the staff below it, and the staff's own `rit.`/`accel.` text is
+  outside-staff ink standing between the two — which the first system's placement knew
+  about and no later system's did, because a row above a later system is placed by the
+  loose-line chain and that chain measured the staff's INSIDE silhouette. So one book
+  printed its chord symbols clear of the word on system 1 and straight through it on
+  system 3. LilyPond spaces a loose line against the axis group's skyline, which a placed
+  outside-staff grob is part of. One book of 1519 on disk moves, which is the book that was
+  reported; nothing else does, and `lysc check` is byte-identical.
+
 - **A dynamic on a lower voice is engraved at its own note.** The label's column was
   resolved against the STAFF's stream of items, so the voice's item index named whatever
   the first voice happened to have at that ordinal — with `voice { c''8 d'' e'' f'' … } { c2 e2@f }`

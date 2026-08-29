@@ -403,6 +403,11 @@ public class SvgSnapshotTests
         // share a rhythm between the voices, which made item index and timing agree
         // and hid the defect from the whole corpus (session 286).
         yield return new object[] { "test/voice-dynamics-offbeat" };
+        // A chord ROW above a LATER system, over a staff carrying `@rit`: the loose-line
+        // chain that places it measured the staff's INSIDE silhouette, which an
+        // outside-staff spanner is not in, so the row printed through the word on every
+        // system but the first (session 286; the room's own path was fixed on 2026-08-28).
+        yield return new object[] { "test/chordrow-rit-second-system" };
         // Multi-staff: dynamics that belong to the SECOND (bass) staff render
         // under THAT staff, not collapsed under the first (DynamicItem.StaffIndex).
         yield return new object[] { "test/dynamics-lower-staff" };

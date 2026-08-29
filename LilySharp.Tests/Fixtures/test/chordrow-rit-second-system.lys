@@ -1,0 +1,47 @@
+// A chord ROW above the SECOND system of a staff that carries a `@rit` text spanner.
+// The row has to clear the printed word, and on system 1 it did: the room merges the
+// spanner into the staff's UP profile. A row above a LATER system is placed by the
+// loose-line chain instead, which measured the INSIDE silhouette -- and an outside-staff
+// grob is not in that -- so the same book printed the row clear of `rit.` on the first
+// system and straight through it on the second (reported twice by a reader: 2026-08-28
+// and 2026-08-29, scratch/ベースタブLy/Untitled-6.lys).
+//
+// The lyrics row is load-bearing, not decoration: without it both systems' rows come out
+// of the room and the defect does not appear. Two sections rather than one played twice,
+// so that nothing here depends on a section being replayed -- it never did.
+title "Chord row over rit., second system"
+key g major
+
+part melody {
+  section A { c4@rit c g' g | a a g2 | f4 f e e | d d c2 | break }
+  section C { c4@rit c g' g | a a g2 | f4 f e e | d d c2 | break }
+}
+
+chords prog {
+  section A { Dmaj7 | Em7 | Gmaj7 | A7 }
+  section C { Dmaj7 | Em7 | Gmaj7 | A7 }
+}
+
+lyrics verse {
+  section A { Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }
+  section C { Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }
+}
+
+form main { A C }
+
+score main "chordrow-rit-second-system" {
+  chords prog as names
+  staff melody
+  lyrics verse sings melody
+}
+
+// ---------------------------------------------------------------------------
+// ⚠️ THIS NOTE IS AT THE FILE END ON PURPOSE. A comment ABOVE the music shifts every
+// source offset after it, so the whole book's data-pos moves and its snapshot has to be
+// re-based -- a diff that proves nothing and hides the next real one.
+// ✔ VERIFIED TO GUARD, not assumed to (session 286): dropping the spanner merge from
+// LayoutEngine.Rows.LeadingLinesOfSystem -- the defect this book was written for -- moves
+// this snapshot (system 2's chord row falls from 3.40 staff spaces above the staff to
+// 1.50, which is 0.49 above the `rit.` baseline) and moves NO other snapshot, which is
+// why it had to be written: the whole 1519-book sweep moved ONE book, and that book is
+// the reader's, not the repository's.

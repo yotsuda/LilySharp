@@ -458,7 +458,35 @@ internal sealed partial class LayoutEngine
                 slurs: SpannersAt(staffSpanners, sysIdx, firstSpaceableIndex).Slurs,
                 ties: SpannersAt(staffSpanners, sysIdx, firstSpaceableIndex).Ties,
                 restShifts: restCollisionsOf(closingStaff));
-        double closingMin = walk.Distance(closingInside.Up, closingSpec.Padding);
+        // ...and the staff's own accel./rit. spanner ON TOP of that silhouette, because the
+        // row above has to clear the printed words exactly as it clears the notes.
+        // ⚠️ THIS IS THE SECOND HALF OF A FIX THAT ONLY LANDED ON THE FIRST PATH. A row above
+        // the FIRST system is placed by the room, which merges this ink into the staff's UP
+        // profile (MultiStaffLayouter.BuildAllStaffSkylines, "reported 2026-08-28,
+        // Untitled-6.lys"); a row above any LATER system comes down this chain instead, and
+        // this chain measured the INSIDE silhouette, which an outside-staff grob is not in.
+        // So the same book printed its chord row clear of `rit.` on system 1 and straight
+        // through it on system 3 — the reader saw exactly that and reported it again.
+        // LILYPOND-REF: lily/axis-group-interface.cc:860-985 skyline_spacing — a loose line is
+        //   spaced against the VerticalAxisGroup's skyline, and a placed outside-staff grob is
+        //   IN that skyline; lily/page-layout-problem.cc:948-990 distributes by it.
+        var closingUp = closingInside.Up;
+        var closingSpanners = ScoreSideTables.TextSpannersByStaff(score).At(firstSpaceableIndex);
+        if (!closingSpanners.IsEmpty)
+        {
+            var spannerInk = TextSpannerEngraver.InkAboveStaff(
+                score.TextMetrics, closingSpanners, measures, closingUp);
+            if (!spannerInk.IsEmpty)
+            {
+                // Merge onto a COPY: closingInside is the room's shared object and every other
+                // reader of it wants the inside profile it has always been. Padded(0) is the
+                // cheapest copy VerticalSkyline offers — it returns a new skyline and 0 moves
+                // nothing.
+                closingUp = closingUp.Padded(0);
+                closingUp.Merge(spannerInk);
+            }
+        }
+        double closingMin = walk.Distance(closingUp, closingSpec.Padding);
 
         return (built.ToImmutable(), closingSpec, closingMin);
     }
