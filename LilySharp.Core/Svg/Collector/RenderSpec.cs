@@ -161,13 +161,15 @@ public enum VoiceSlotting
 
     /// <summary>This binding shares the previous binding's staff, but the staff's voices are
     /// NOT its parts' voices: the part combiner rewrites both streams into one or two of its
-    /// own (<see cref="CombinedStaffSpec"/>, <see cref="PartCombiner.Combine"/>). No slot can
-    /// be derived from the part alone — the combiner MOVES items between the streams and
-    /// emits a SINGLE voice when the parts are never apart, so neither the voice number nor
-    /// the item index a part was collected with survives it.
-    /// ⚠️ THIS CASE IS NAMED, NOT FIXED. It keeps slot 0, which is what it had before the
-    /// slotting existed; closing it means re-addressing the per-part items the combiner
-    /// moves, which is its own trip (HANDOFF §2 A).</summary>
+    /// own (<see cref="CombinedStaffSpec"/>, <see cref="PartCombiner.Combine"/>). It MOVES
+    /// items between the streams, merges two parts' notes into one column, drops what it
+    /// engraves with nobody and writes spacers into the gaps, so neither the voice number
+    /// nor the item index a part was collected with survives it.
+    /// ⚠️ SO THIS SLOT IS PROVISIONAL, and it is the SAME arithmetic as
+    /// <see cref="AppendedToStaff"/> on purpose: the part is collected in concatenation
+    /// space, which is the one space where two parts on one staff have different addresses
+    /// at all, and <see cref="CombinedStaffAddressing"/> translates that into the staff's
+    /// real slots once the combiner has said where everything went.</summary>
     CombinedIntoStaff,
 }
 
@@ -428,7 +430,40 @@ public sealed record RenderSpec(
     }
 
     /// <summary>Gets all staff groups for layout.</summary>
-    public IEnumerable<StaffGroup> ToStaffGroups(Func<string, ImmutableArray<Voice>> getVoices)
+    /// <param name="getVoices">The collected voices of a part, by name.</param>
+    /// <param name="addressings">Filled, when given, with one entry per
+    /// <see cref="CombinedStaffSpec"/> — how that staff re-addresses what its parts were
+    /// collected with (<see cref="CombinedStaffAddressing"/>). Pass null when the caller
+    /// only wants the staves.</param>
+    /// <remarks>
+    /// The staff index each addressing carries is counted HERE rather than zipped on
+    /// afterwards. A zip would pair the k-th combined staff with the k-th
+    /// <see cref="VoiceSlotting.CombinedIntoStaff"/> binding, and a <c>combinedStaff</c>
+    /// naming ONE part builds a staff without yielding such a binding — so the two lists
+    /// would silently slip by one from that book onward.
+    /// </remarks>
+    public IEnumerable<StaffGroup> ToStaffGroups(
+        Func<string, ImmutableArray<Voice>> getVoices,
+        ICollection<CombinedStaffAddressing>? addressings = null)
+    {
+        var pending = addressings == null ? null : new List<CombinedStaffAddressing>();
+        int staffIndex = 0;
+        foreach (var group in BuildStaffGroups(getVoices, pending))
+        {
+            if (pending is { Count: > 0 })
+            {
+                foreach (var a in pending)
+                    addressings!.Add(a with { StaffIndex = staffIndex });
+                pending.Clear();
+            }
+            staffIndex += group.Staves.Length;
+            yield return group;
+        }
+    }
+
+    private IEnumerable<StaffGroup> BuildStaffGroups(
+        Func<string, ImmutableArray<Voice>> getVoices,
+        ICollection<CombinedStaffAddressing>? addressings)
     {
         // The single-voice rows (tab/ossia/chord/lyrics) take the part's primary
         // voice; a spec naming an undefined/empty part falls back to an empty voice
@@ -510,6 +545,15 @@ public sealed record RenderSpec(
                     var extraVoices = combineParts
                         .SelectMany(vs => vs.Skip(1))
                         .ToImmutableArray();
+                    // …and what the collector stamped on those parts' items has to be
+                    // translated, because none of the three coordinates survives the
+                    // rewrite. The staff index is filled in by the caller, which is the one
+                    // that knows how many staves stand above this one.
+                    addressings?.Add(new CombinedStaffAddressing(
+                        StaffIndex: 0,
+                        FirstPartVoiceCount: combineParts.Length > 0 ? combineParts[0].Length : 0,
+                        CombinedVoiceCount: result.Voices.Length,
+                        PartItems: result.ItemAddresses));
                     yield return StaffGroup.CreateSingle(
                         Staff.Create(combined.Clef,
                             result.Voices.AddRange(extraVoices),

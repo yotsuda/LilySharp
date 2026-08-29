@@ -892,11 +892,14 @@ public sealed partial class MeasureCollector
                 ? collectStaffIndex++
                 : collectStaffIndex - 1;
             // …and the voice slot those items are addressed by. A staff of its own starts
-            // at 0; an APPENDED part starts after the parts already on the staff, because
-            // Staff.Voices is their concatenation. The combiner's second part keeps 0 — not
-            // because 0 is right, but because no slot is derivable from the part alone once
-            // the combiner has rewritten both streams (see VoiceSlotting.CombinedIntoStaff).
-            if (slotting != VoiceSlotting.AppendedToStaff)
+            // at 0; a part that SHARES one starts after the parts already on it. For a
+            // condensed staff that is the final answer, because Staff.Voices is exactly
+            // that concatenation. For a COMBINED staff it is provisional — the combiner
+            // rewrites both streams — but it is the same arithmetic, because collecting
+            // both parts at 0 is what made the second one's items address the first one's
+            // notes, and concatenation space is the one space where they differ at all.
+            // CombinedStaffAddressing translates it once the staff has been built.
+            if (slotting == VoiceSlotting.OwnStaff)
                 staffVoiceSlots = 0;
             _cursor.VoiceIndex = staffVoiceSlots;
             _octave.LastPitchName = 'c';
@@ -1149,9 +1152,13 @@ public sealed partial class MeasureCollector
                 _meta.TimeBeats, _meta.TimeBeatType, attachedMode);
 
         // Phase 3: Build staff groups from render spec
+        // A combinedStaff also reports how it re-addressed its parts, because building it
+        // is where the two streams are rewritten (see CombinedStaffAddressing).
+        var combinedAddressings = new List<CombinedStaffAddressing>();
         var staffGroups = renderSpec.ToStaffGroups(name =>
             staffVoices.TryGetValue(name, out var v) ? v
-                : ImmutableArray.Create(new Voice(name, ImmutableArray<Measure>.Empty)))
+                : ImmutableArray.Create(new Voice(name, ImmutableArray<Measure>.Empty)),
+            combinedAddressings)
             .ToImmutableArray();
 
         // Per-staff facts only the collector knows, stamped onto the staves the render
@@ -1258,9 +1265,19 @@ public sealed partial class MeasureCollector
                 .ToImmutableArray();
         }
 
-        return ScoreAssembler.BuildMultiStaffScore(staffGroups, CaptureScoreContent(
+        var content = CaptureScoreContent(
             staffGroups.SelectMany(sg => sg.Staves).SelectMany(st => st.Voices)
-                .Select(v => v.Measures.Length).DefaultIfEmpty(0).Max()));
+                .Select(v => v.Measures.Length).DefaultIfEmpty(0).Max());
+        // The voice-addressed islands were collected in each part's own terms; on a
+        // combined staff that is not where they ended up. Translated HERE, on the finished
+        // lists, because it is the last moment both things are known — the routing, which
+        // only the staff build has, and the paired trill spanners, which only
+        // CaptureScoreContent has. Everything the collector did with those addresses
+        // BEFORE this point (ProbeTupletBrackets, feeding the beam stem resolution) read
+        // the parts as they were collected, which is the space they are still in there.
+        if (combinedAddressings.Count > 0)
+            content = CombinedStaffReaddress.Apply(content, combinedAddressings);
+        return ScoreAssembler.BuildMultiStaffScore(staffGroups, content);
     }
 
     /// <summary>

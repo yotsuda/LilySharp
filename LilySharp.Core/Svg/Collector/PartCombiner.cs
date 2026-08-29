@@ -120,16 +120,40 @@ public enum PartCombineVoiceId
 /// </remarks>
 public sealed record PartCombineMark(int MeasureIndex, int ItemIndex, string Text);
 
+/// <summary>
+/// Where one item a part was collected with ended up in the voices the combiner emitted.
+/// </summary>
+/// <remarks>
+/// All three coordinates are carried, including the measure — which in practice does not
+/// move, since both slots are filled measure by measure from the part's own measure array
+/// (<c>PlaceItems</c> writes into <c>slot0[m]</c>/<c>slot1[m]</c> for the part's <c>m</c>)
+/// — because a caller that has to reject a SPAN whose ends parted company needs to compare
+/// the whole address, and an invariant spelt in a remark is not one the compiler keeps.
+/// What does move is the stream and the position within it, the latter because
+/// <c>Materialise</c> writes spacer rests into the gaps.
+/// </remarks>
+/// <param name="VoiceIndex">The slot in the combiner's own output — 0 or 1, not the staff's
+/// slot; a caller that has appended other voices to the staff adds its own base.</param>
+/// <param name="MeasureIndex">The measure of that voice the item is in.</param>
+/// <param name="ItemIndex">Position in that measure's item array, spacers counted.</param>
+public readonly record struct CombinedItemAddress(int VoiceIndex, int MeasureIndex, int ItemIndex);
+
 /// <summary>What <see cref="PartCombiner.Combine"/> produced.</summary>
 /// <param name="Voices">One or two voices for the staff: the shared/solo/one stream, and
 /// part two's own stream where the parts are apart. The second is absent when they never are.</param>
 /// <param name="Marks">The labels, in moment order.</param>
 /// <param name="SplitList">The split list itself, so a test can assert the analysis
 /// without going through the engraving.</param>
+/// <param name="ItemAddresses">One entry per part (index 0 = part one, 1 = part two):
+/// where each of that part's SOUNDING items went. An item the routing sent to
+/// <see cref="PartCombineVoiceId.Null"/> is ABSENT — LilyPond engraves that passage with
+/// nobody, so anything a collector addressed to it has no note to hang on either. Command
+/// items (a clef, a key change) are absent as well: nothing addresses them by voice.</param>
 public sealed record PartCombineResult(
     ImmutableArray<Voice> Voices,
     ImmutableArray<PartCombineMark> Marks,
-    ImmutableArray<PartCombineSplit> SplitList);
+    ImmutableArray<PartCombineSplit> SplitList,
+    ImmutableArray<ImmutableDictionary<(int Measure, int Item), CombinedItemAddress>> ItemAddresses);
 
 /// <summary>
 /// The part combiner: two parts in, one staff's worth of voices out, with the passages
@@ -427,10 +451,17 @@ internal static class PartCombiner
     /// <para>
     /// ⚠️ THE SWAP MOVES THE ITEM AND NOT WHAT HANGS OFF IT. A label is a
     /// <c>DynamicItem</c> keyed by (measure, item index, voice) in <c>Score.Dynamics</c>,
-    /// outside the item stream — the same reason a label outlives the event the combiner sends
-    /// to the null voice — so <c>&lt;&lt; R1^"R" s1 &gt;&gt;</c> would print its label over the
-    /// skip's branch. The corpus book puts no labels on the branches it stacks, so this is
-    /// unobserved rather than known-good; it closes when the labels travel with their items.
+    /// outside the item stream, so <c>&lt;&lt; R1^"R" s1 &gt;&gt;</c> would print its label
+    /// over the skip's branch. The corpus book puts no labels on the branches it stacks, so
+    /// this is unobserved rather than known-good; it closes when the labels travel with
+    /// their items across THIS rewrite.
+    /// ⚠️ Session 285 made them travel across the OTHER one — the routing, which
+    /// <see cref="CombinedStaffAddressing"/> asks and which is why a label no longer
+    /// outlives the event the combiner sends to the null voice — but not across this one:
+    /// the swap runs BEFORE <see cref="Combine"/> and exchanges contents between a part's
+    /// own voices at FIXED indices, so the address the routing is later asked about already
+    /// names the swapped item. Closing it means this function reporting its own exchanges,
+    /// in the same shape.
     /// </para>
     /// </remarks>
     public static ImmutableArray<Voice> ChooseSilenceWithinPart(ImmutableArray<Voice> partVoices)
@@ -1322,7 +1353,32 @@ internal static class PartCombiner
 
         var voices = BuildVoices(one, two, items0, items1, measureCount);
         var marks = BuildMarks(result, placed);
-        return new PartCombineResult(voices, marks, splitList);
+        return new PartCombineResult(voices, marks, splitList,
+            [AddressesOf(states1, placed), AddressesOf(states2, placed)]);
+    }
+
+    /// <summary>
+    /// One part's items, keyed by the address the part was COLLECTED with, answering the
+    /// address they now have in the voices this emitted.
+    /// </summary>
+    /// <remarks>
+    /// The key survives the two rewrites that run before the routing does, and it is worth
+    /// saying why rather than trusting it: <see cref="UnionWrittenRestBoundaries"/> replaces
+    /// one rest with a copy of itself IN PLACE, and <see cref="ChooseSilenceWithinPart"/>
+    /// exchanges two silences at fixed indices. Neither adds or removes an item, so a
+    /// <see cref="VoiceState"/>'s measure and item index still name the item the collector
+    /// walked.
+    /// </remarks>
+    private static ImmutableDictionary<(int Measure, int Item), CombinedItemAddress> AddressesOf(
+        VoiceState[] states,
+        Dictionary<VoiceState, (int Slot, int Measure, int Index)> placed)
+    {
+        var map = ImmutableDictionary.CreateBuilder<(int Measure, int Item), CombinedItemAddress>();
+        foreach (var vs in states)
+            if (vs.Item != null && placed.TryGetValue(vs, out var where))
+                map[(vs.MeasureIndex, vs.ItemIndex)] =
+                    new CombinedItemAddress(where.Slot, where.Measure, where.Index);
+        return map.ToImmutable();
     }
 
     /// <summary>One routed item and the moment WITHIN ITS MEASURE that it sounds at.</summary>
@@ -1554,12 +1610,18 @@ internal static class PartCombiner
     /// condition is exactly that — and
     /// a note that opens one of those has it in its span state. So no spanner of part two is
     /// dropped here — there is none.</item>
-    /// <item>CAN, and IS dropped: part two's per-note decoration — cue size, notehead style,
-    /// tremolo, fingering, an editorial accidental. LilyPond keeps both events, so both
-    /// decorations reach the column. Closing it means carrying them on
-    /// <see cref="ChordNoteInfo"/>, which today holds pitch, accidental, ledgers and
-    /// fingering only. ⚠️ No point observes it: the corpus has no combined pair whose two
-    /// parts decorate the same moment differently.</item>
+    /// <item>CAN, and IS dropped: part two's decoration that lives ON THE ITEM — cue size,
+    /// notehead style, tremolo — because everything but the pitches is taken from part one
+    /// here. LilyPond keeps both events, so both decorations reach the column. Closing it
+    /// means carrying them on <see cref="ChordNoteInfo"/>, which today holds pitch,
+    /// accidental, ledgers and fingering only. ⚠️ No point observes it: the corpus has no
+    /// combined pair whose two parts decorate the same moment differently.
+    /// ⚠️ Decoration that lives OUTSIDE the item — a dynamic, a script, an editorial
+    /// accidental's suggestion mark — is NOT on this list since session 285: it is a
+    /// separate annotation addressed by (voice, measure, item), and
+    /// <see cref="CombinedStaffAddressing"/> re-addresses it to the host column this merge
+    /// puts the note in (measured, scratch/p285/merge-probe.lys: a <c>@f</c> written on
+    /// part two's second note is engraved on the merged second column).</item>
     /// </list>
     /// </remarks>
     private static MusicItem MergeIntoChord(MusicItem first, MusicItem second)

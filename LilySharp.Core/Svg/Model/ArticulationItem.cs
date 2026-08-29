@@ -31,11 +31,14 @@ public sealed record ArticulationItem
     /// <summary>The articulation type.</summary>
     public ArticulationType Type { get; }
 
-    /// <summary>The measure index where this articulation appears.</summary>
-    public int MeasureIndex { get; }
+    /// <summary>The measure index where this articulation appears. Init together with
+    /// <see cref="ItemIndex"/> and <see cref="VoiceIndex"/> so a combined staff can
+    /// re-address it — the combiner rewrites the streams the parts were collected in, and
+    /// all three coordinates move (<c>CombinedStaffAddressing</c>).</summary>
+    public int MeasureIndex { get; init; }
 
     /// <summary>The item index within the measure.</summary>
-    public int ItemIndex { get; }
+    public int ItemIndex { get; init; }
 
     /// <summary>Whether this articulation should be placed above the note. Init so
     /// the engraver can flip it to the beam-resolved side (a beamed note's stem, and

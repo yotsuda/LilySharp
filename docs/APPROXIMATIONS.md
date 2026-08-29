@@ -51,9 +51,9 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:297** ⚠️ subdivide_beams (:186-188) is not ported: it is gated on
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:3341** for a body of three or more WHOLE measures LilyPond's behaviour is NOT PORTED
+- **:3358** for a body of three or more WHOLE measures LilyPond's behaviour is NOT PORTED
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
-- **:148** ⚠️ WHAT IS NOT PORTED, and why it cannot be reached rather than was skipped:
+- **:172** ⚠️ WHAT IS NOT PORTED, and why it cannot be reached rather than was skipped:
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
 - **:390** ⚠️ What is NOT ported is the semibreve exception: the beam covered-grob booking
 - **:813** ⚠️ NOT PORTED: the fold-and-search itself. `dist` is a per-staff search over
@@ -139,8 +139,8 @@
 ### `LilySharp.Core/Semantics/DrummapValidator.cs`
 - **:30** ★ This validator exists because the block had NO observer of any kind. Measured
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
-- **:433** unobserved rather than known-good; it closes when the labels travel with their items.
-- **:1561** fingering only. ⚠️ No point observes it: the corpus has no combined pair whose two
+- **:456** this is unobserved rather than known-good; it closes when the labels travel with
+- **:1617** accidental, ledgers and fingering only. ⚠️ No point observes it: the corpus has no
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
 - **:113** snapshot and no ledger point. What remains is the BEAM quanter's use below, which is a
 - **:705** would be fitting inside a formula that is not yet LilyPond's. No point observes it.
@@ -252,8 +252,8 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:1825** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:3633** LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
+- **:1842** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:3650** LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
 - **:67** LILYSHARP-OWN: the DEFAULT five is LilyPond's (scm/define-grobs.scm:3396,
 ### `LilySharp.Core/Svg/Collector/StaffAccidentalColumns.cs`

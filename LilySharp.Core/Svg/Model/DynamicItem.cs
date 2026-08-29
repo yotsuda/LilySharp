@@ -33,11 +33,14 @@ public sealed record DynamicItem
     /// <summary>The text representation of this dynamic.</summary>
     public string Text { get; }
 
-    /// <summary>The measure index where this dynamic appears.</summary>
-    public int MeasureIndex { get; }
+    /// <summary>The measure index where this dynamic appears. Init together with
+    /// <see cref="ItemIndex"/> and <see cref="VoiceIndex"/> so a combined staff can
+    /// re-address it — the combiner rewrites the streams the parts were collected in, and
+    /// all three coordinates move (<c>CombinedStaffAddressing</c>).</summary>
+    public int MeasureIndex { get; init; }
 
     /// <summary>The item index within the measure.</summary>
-    public int ItemIndex { get; }
+    public int ItemIndex { get; init; }
 
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; init; }
