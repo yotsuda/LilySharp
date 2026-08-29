@@ -45,7 +45,14 @@ public interface ISemanticValidator
 internal interface ISharedCollectValidator : ISemanticValidator
 {
     /// <summary>Emit diagnostics from the shared collector (null if it failed).</summary>
-    void ValidateWith(Lazy<MeasureCollector?> sharedCollect);
+    /// <remarks>
+    /// ⚠️ The TREE comes along with the collect, and exactly one implementer needs both:
+    /// <see cref="RehearsalMarkEngravedValidator"/> asks which WRITTEN marks the collect
+    /// never produced, and a mark in music this score does not play is precisely one the
+    /// collector never saw — so the question cannot be asked of the collect alone. Every
+    /// other implementer ignores the parameter.
+    /// </remarks>
+    void ValidateWith(SyntaxTree tree, Lazy<MeasureCollector?> sharedCollect);
 }
 
 /// <summary>
@@ -79,6 +86,7 @@ public static class SemanticValidation
         new SlurPairingValidator(),         // a slur mark that pairs with nothing
         new BeamPairingValidator(),         // a manual beam bracket that pairs with nothing
         new SpanPairingValidator(),         // a span mark ('@rit', '@ottava', '@!') that pairs with nothing
+        new RehearsalMarkEngravedValidator(),// a written '@mark("A")' this score does not print
         new ChordRowGridValidator(),        // a chord-row bar off the beat grid / a bar-head '.'
         new ChordDisplayModeValidator(),    // `chords X as WORD` where WORD is not a display
         new TabRenderVocabularyValidator(), // `tab [TUNING] X as WORD` — the same clause's other half
@@ -120,7 +128,7 @@ public static class SemanticValidation
         foreach (var v in CreateAll())
         {
             if (v is ISharedCollectValidator sc)
-                sc.ValidateWith(sharedCollect);
+                sc.ValidateWith(tree, sharedCollect);
             else
                 v.Validate(tree);
             result.AddRange(v.Diagnostics);

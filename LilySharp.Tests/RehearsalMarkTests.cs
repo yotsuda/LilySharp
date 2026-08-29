@@ -438,5 +438,30 @@ public class RehearsalMarkTests
         Assert.Single(System.Text.RegularExpressions.Regex.Matches(svg, ">A</text>"));
         Assert.Single(System.Text.RegularExpressions.Regex.Matches(svg, ">B</text>"));
     }
+
+    /// <summary>
+    /// ⚠️ A DECLARED DIVERGENCE, decided by the reader on 2026-08-30, and pinned here so it
+    /// cannot drift back by accident. One written <c>@mark</c> is ONE printed mark even when
+    /// the construct around it plays the music several times: <c>repeat unfold 3</c> engraves
+    /// its body three times and the letter appears once, at the first pass.
+    /// <para>
+    /// LilyPond disagrees, and the disagreement is structural rather than a bug on either
+    /// side: <c>\repeat unfold</c> UNFOLDS the music, so the mark is three written marks by
+    /// the time its engraver sees them and LilyPond prints three. Lily# keeps one item per
+    /// SOURCE POSITION — the same rule that stops a part drawn on a staff and a tab from
+    /// doubling every letter — so the count follows what was written, not what is played.
+    /// Scope when it was decided: no book on disk writes a mark inside an unfolded repeat,
+    /// so this chooses between two defensible answers rather than repairing anything.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void AMarkInsideAnUnfoldedRepeat_IsPrintedOnce_NotOncePerUnfolding()
+    {
+        const string music = "repeat unfold 3 { c1@mark(\"A\") | d1 }";
+
+        Assert.Equal("A", Assert.Single(CollectedMarks(music)).Text);
+        Assert.Single(System.Text.RegularExpressions.Regex
+            .Matches(LiveRender.Svg(MusicSource.Wrap(music)), ">A</text>"));
+    }
 }
 

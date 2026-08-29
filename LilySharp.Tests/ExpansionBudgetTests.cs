@@ -145,12 +145,12 @@ public class ExpansionBudgetTests
     public void Validator_ReportsTheTruncation_OncePerCollect()
     {
         var collector = new MeasureCollector { ExpansionBudgetCap = 30 };
-        collector.Collect(
-            SyntaxTree.Parse("part m { }\nsection A { m { repeat unfold 1000 { c4 d e f } } }\n"
-                + "form main { ~A }\nscore main { staff m }"), "m");
+        var tree = SyntaxTree.Parse("part m { }\nsection A { m { repeat unfold 1000 { c4 d e f } } }\n"
+            + "form main { ~A }\nscore main { staff m }");
+        collector.Collect(tree, "m");
 
         var validator = new ExpansionBudgetValidator();
-        validator.ValidateWith(new Lazy<MeasureCollector?>(() => collector));
+        validator.ValidateWith(tree, new Lazy<MeasureCollector?>(() => collector));
 
         var d = Assert.Single(validator.Diagnostics);
         Assert.Equal(DiagnosticCodes.ExpansionBudgetExceeded, d.Code);

@@ -38,10 +38,10 @@ internal sealed class SlurPairingValidator : ISharedCollectValidator
     public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics.ToList();
 
     public void Validate(SyntaxTree tree) =>
-        ValidateWith(new System.Lazy<Svg.Collector.MeasureCollector?>(
+        ValidateWith(tree, new System.Lazy<Svg.Collector.MeasureCollector?>(
             () => SemanticValidation.TryCollect(tree)));
 
-    public void ValidateWith(System.Lazy<Svg.Collector.MeasureCollector?> sharedCollect)
+    public void ValidateWith(SyntaxTree tree, System.Lazy<Svg.Collector.MeasureCollector?> sharedCollect)
     {
         // A malformed score (null collector) surfaces its real error elsewhere.
         var warnings = sharedCollect.Value?.UnpairedSlurWarnings;

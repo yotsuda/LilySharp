@@ -279,6 +279,24 @@ public sealed partial class MeasureCollector
             ];
         }
     }
+    /// <summary>The source position of every REHEARSAL mark this collect produced, so a
+    /// caller holding the tree can name the written marks that are not among them.
+    /// Surfaced by <c>RehearsalMarkEngravedValidator</c>.</summary>
+    /// <remarks>
+    /// ⚠️ POSITIONS, NOT ITEMS, and the difference is the whole use: the question this
+    /// answers is "was the mark WRITTEN THERE engraved", and a written mark is a source
+    /// position — its measure, its label and its staff are all decisions made after the
+    /// point where it can still be lost. A mark that reaches the page twice (a part drawn on
+    /// a staff and a tab) is one position either way, which is also the rule the collector
+    /// itself keeps (<c>MusicMarkExistsAt</c>).
+    /// ⚠️ It cannot be asked of marks the collect never reached — music no form plays, a
+    /// part no score renders — which is exactly why the validator needs the tree as well.
+    /// </remarks>
+    public IReadOnlyCollection<int> EngravedRehearsalMarkPositions
+        => _musicMarks
+            .Where(m => m.Type == MusicMarkType.Rehearsal)
+            .Select(m => m.SourcePosition)
+            .ToHashSet();
     // Slurs and ties with one end inside a cue region and the other outside it — a span
     // LilyPond cannot make. Recorded by the SAME two scanners that pair them (one IsCue
     // comparison on the pair each already holds); surfaced by CueSpanBoundaryValidator.

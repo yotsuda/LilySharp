@@ -875,6 +875,35 @@ public static class DiagnosticCodes
     /// nothing and is reported here as having no start.
     /// </para></summary>
     public const string UnpairedSpan = "LYS4018";
+    /// <summary>Warning: a rehearsal mark (<c>@mark("A")</c>) that is WRITTEN but that this
+    /// score does not print, reported at the mark.
+    /// <para>
+    /// ⚠️ THIS EXISTS BECAUSE THE FAMILY WAS SILENT FOR 200 SESSIONS. A mark written inside a
+    /// container that owns its own walk — an inline ending, a tuplet, a repeat, a cue — was
+    /// dropped by the collector and nothing said so; 45 of one reader's books were missing
+    /// 120 letters before anyone looked (session 293, <c>docs/HANDOFF.md</c> §2 U7). The drop
+    /// is fixed; this is the reader's decision (2026-08-30) that the family should answer the
+    /// question the way <see cref="UnpairedSpan"/> does — <b>if it is not drawn, say where</b>
+    /// — so that the NEXT way to lose one cannot be silent either.
+    /// </para>
+    /// <para>
+    /// What it still catches, measured the day it was written: a mark in a <c>section</c> no
+    /// form plays, a mark in a <c>part</c> no score renders, and a mark on a GRACE note —
+    /// that last one because <c>CollectGraceNotes</c> reads pitch and duration only, so a
+    /// grace note carries no annotation of any kind (<c>@staccato</c> and <c>@text</c> are
+    /// dropped there too). Measured over the 263 books on disk that write <c>@mark</c>:
+    /// 2244 written, 2242 drawn, and the two that are not are books whose <c>@mark</c> does
+    /// not parse at all and already report three errors each. So this warns on nothing that
+    /// is working today.
+    /// </para>
+    /// <para>
+    /// ⚠️ It is asked of ONE score — the first, the one <c>SemanticValidation.TryCollect</c>
+    /// renders. A file whose later <c>score</c> blocks name parts the first one omits would
+    /// be told its marks are not printed, which is true of that score and misleading about
+    /// the file. No book on disk has that shape; if one appears, the fix is to ask the
+    /// question per score rather than to weaken the answer.
+    /// </para></summary>
+    public const string UnengravedRehearsalMark = "LYS4019";
     /// <summary>Warning: a span that opens exactly ONE unnamed <c>voice { … }</c>. The
     /// block is then entirely transparent — stem forcing needs a second voice, so the
     /// music engraves as if the braces were not there. Someone who wrote it meaning

@@ -50,10 +50,10 @@ internal sealed class CueSpanBoundaryValidator : ISharedCollectValidator
     public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics.ToList();
 
     public void Validate(SyntaxTree tree) =>
-        ValidateWith(new System.Lazy<MeasureCollector?>(
+        ValidateWith(tree, new System.Lazy<MeasureCollector?>(
             () => SemanticValidation.TryCollect(tree)));
 
-    public void ValidateWith(System.Lazy<MeasureCollector?> sharedCollect)
+    public void ValidateWith(SyntaxTree tree, System.Lazy<MeasureCollector?> sharedCollect)
     {
         // A malformed score (null collector) surfaces its real error elsewhere.
         var warnings = sharedCollect.Value?.CueSpanBoundaryWarnings;
