@@ -137,6 +137,17 @@ public sealed class LilyPondExporter
     // source (see EmitSectionPlay).
     private KeySignatureSyntax? _homeKeyNode;
 
+    // The running METER and the score meter a section boundary reverts it to — the twin of
+    // the key pair above, and of the collector's per-voice _sectionResetTimeBeats snapshot.
+    // Held as the WRITTEN pair, not a Fraction, so 4/4 and 2/2 stay distinct (they engrave
+    // differently and \time takes the pair). The home node is re-emitted verbatim on a
+    // restore so a `C` written in the source stays `C` (see ScoreHomeMeter).
+    private int _timeBeats = 4;
+    private int _timeBeatType = 4;
+    private int _homeTimeBeats = 4;
+    private int _homeTimeBeatType = 4;
+    private TimeSignatureSyntax? _homeTimeNode;
+
     /// <summary>
     /// The relative-octave frame, TWICE: where Lily# stands, and where the text this exporter
     /// has written puts LilyPond. Both are absolute octave numbers (4 = the octave of middle C).
@@ -252,6 +263,12 @@ public sealed class LilyPondExporter
         _homeTonic = ScoreHomeKey.Read(root);
         _homeKeySharps = ScoreHomeKey.Sharps(root);
         _homeKeyNode = ScoreHomeKey.Declaration(root);
+
+        // …and the meter the same boundary reverts to, read the same way.
+        (_homeTimeBeats, _homeTimeBeatType) = ScoreHomeMeter.Read(root);
+        _homeTimeNode = ScoreHomeMeter.Declaration(root);
+        _timeBeats = _homeTimeBeats;
+        _timeBeatType = _homeTimeBeatType;
 
         CollectPhrases(root);
 
@@ -910,7 +927,8 @@ public sealed class LilyPondExporter
                 var headerMusic = SectionHeaderMusic(entry.Section).ToList();
                 result.Add(new SectionPlayMarker(
                     entry.Section.SectionName,
-                    headerMusic.Any(h => h is KeySignatureSyntax)));
+                    headerMusic.Any(h => h is KeySignatureSyntax),
+                    headerMusic.Any(h => h is TimeSignatureSyntax)));
                 result.AddRange(headerMusic);
                 result.AddRange(ContainerMusic(entry.Container));
             }
@@ -1144,7 +1162,9 @@ public sealed class LilyPondExporter
         // were a named remaining hole: the twin kept ending 1's key through ending 2
         // and carried no ending labels, while the page restores and boxes both).
         result.Add(new SectionPlayMarker(
-            markLabel, headers?.Any(h => h is KeySignatureSyntax) == true));
+            markLabel,
+            headers?.Any(h => h is KeySignatureSyntax) == true,
+            headers?.Any(h => h is TimeSignatureSyntax) == true));
         if (headers != null)
             result.AddRange(headers);
         result.AddRange(ContainerMusic(entry.Container));
@@ -1669,6 +1689,11 @@ public sealed class LilyPondExporter
         buf._tonic = _tonic;
         buf._homeKeySharps = _homeKeySharps;
         buf._homeTonic = _homeTonic;
+        buf._timeBeats = _timeBeats;
+        buf._timeBeatType = _timeBeatType;
+        buf._homeTimeBeats = _homeTimeBeats;
+        buf._homeTimeBeatType = _homeTimeBeatType;
+        buf._homeTimeNode = _homeTimeNode;
     }
 
     /// <summary>
@@ -1688,6 +1713,8 @@ public sealed class LilyPondExporter
         _frameTracked = buf._frameTracked;
         _keySharps = buf._keySharps;
         _tonic = buf._tonic;
+        _timeBeats = buf._timeBeats;
+        _timeBeatType = buf._timeBeatType;
     }
 
     /// <summary>Octave marks for a net shift: <c>'</c> up, <c>,</c> down.</summary>
@@ -2059,7 +2086,28 @@ public sealed class LilyPondExporter
             _lysOctave = _anchorOctave;
         }
 
-        var parts = new List<string>(2);
+        var parts = new List<string>(3);
+        // ⚠️ THE METER REVERTS HERE TOO, and this arm is the twin of the key one below.
+        // A section that states no `time` of its own opens at the SCORE meter, so a
+        // mid-section change in a PRIOR section (or in an earlier play of this one) must
+        // not leak across — MeasureCollector.ProcessSectionPrologue reverts it against the
+        // per-voice snapshot and the page draws the restored signature. Until 2026-08-31
+        // this carrier answered only the key question, so `section A { … time 3/4 … }
+        // section B { c'4 d e f | }` handed LilyPond a 3/4 bar holding four quarters.
+        if (!sp.HasHeaderTime
+            && (_timeBeats != _homeTimeBeats || _timeBeatType != _homeTimeBeatType))
+        {
+            if (_homeTimeNode != null)
+            {
+                parts.Add(EmitTime(_homeTimeNode)); // EmitTime advances the running meter
+            }
+            else
+            {
+                parts.Add("\\time 4/4");
+                _timeBeats = 4;
+                _timeBeatType = 4;
+            }
+        }
         if (!sp.HasHeaderKey && (_keySharps != _homeKeySharps || _tonic != _homeTonic))
         {
             if (_homeKeyNode != null)
@@ -2269,7 +2317,21 @@ public sealed class LilyPondExporter
         return "\\key " + EmitPitch(k.Pitch) + " \\" + mode;
     }
 
-    private static string EmitTime(TimeSignatureSyntax ts)
+    /// <summary>
+    /// A written meter, and the one place the RUNNING meter advances — so a section
+    /// boundary can tell whether the score meter still stands (see EmitSectionPlay).
+    /// </summary>
+    private string EmitTime(TimeSignatureSyntax ts)
+    {
+        if (!ts.IsSenzaMisura)
+        {
+            _timeBeats = ts.Beats;
+            _timeBeatType = ts.BeatType;
+        }
+        return TimeText(ts);
+    }
+
+    private static string TimeText(TimeSignatureSyntax ts)
         => ts.IsSenzaMisura
             ? "\\cadenzaOn"
             : "\\time " + (ts.BeatsText ?? ts.Beats.ToString()) + "/" + ts.BeatType;
@@ -3320,8 +3382,8 @@ public sealed class LilyPondExporter
 /// </summary>
 internal sealed class SectionPlayMarker : SyntaxNode
 {
-    public SectionPlayMarker(string? markLabel, bool hasHeaderKey)
-        : base(new SectionPlayGreen(markLabel, hasHeaderKey), parent: null, position: 0)
+    public SectionPlayMarker(string? markLabel, bool hasHeaderKey, bool hasHeaderTime)
+        : base(new SectionPlayGreen(markLabel, hasHeaderKey, hasHeaderTime), parent: null, position: 0)
     {
     }
 }
@@ -3338,10 +3400,18 @@ internal sealed class SectionPlayGreen : InternalSyntax.GreenNode
     /// then takes THAT key and the score-key restore stays silent.</summary>
     public bool HasHeaderKey { get; }
 
-    public SectionPlayGreen(string? markLabel, bool hasHeaderKey)
+    /// <summary>True when the play's header registry carries a <c>time</c> — the boundary
+    /// then takes THAT meter and the score-meter restore stays silent. The twin of
+    /// <see cref="HasHeaderKey"/>: the collector asks both questions at the same spot
+    /// (MeasureCollector.ProcessSectionPrologue's header-time / header-key arms), and this
+    /// carrier answered only the key until 2026-08-31.</summary>
+    public bool HasHeaderTime { get; }
+
+    public SectionPlayGreen(string? markLabel, bool hasHeaderKey, bool hasHeaderTime)
         : base(SyntaxKind.None, fullWidth: 0)
     {
         MarkLabel = markLabel;
         HasHeaderKey = hasHeaderKey;
+        HasHeaderTime = hasHeaderTime;
     }
 }

@@ -104,6 +104,11 @@ public sealed class MusicXmlExporter
     private (string Sign, int Line, int? OctaveChange)? _writtenClef;
     // The score's own signature, captured after the metadata pass.
     private (int Fifths, string Mode, string? Custom)? _homeKey;
+    // …and its own METER, captured at the same spot and reverted at the same boundary.
+    // See ScoreHomeMeter: the collector reverts both at a section boundary, and this
+    // exporter reverted neither until 2026-08-31 — a mid-section `time 3/4` leaked into
+    // every following section of the exported document.
+    private (int Beats, string? BeatsText, int BeatType, bool Senza)? _homeTime;
     // A change seen after the bar had started. The measure carries ONE attributes slot,
     // rendered at its head, so writing it here would move the change a bar early; it
     // waits for the next measure instead.
@@ -245,6 +250,7 @@ public sealed class MusicXmlExporter
             // A section reverts to it before stating a key of its own, the way its
             // auto-transpose baseline reverts to _homeTonic just above.
             _homeKey = (_keyFifths, _keyMode, _keyCustomXml);
+            _homeTime = (_timeNumerator, _timeNumeratorText, _timeDenominator, _timeSenzaMisura);
             ProcessSections(root);
         }
 
@@ -335,15 +341,39 @@ public sealed class MusicXmlExporter
     // `test/keysig-treble`, whose three sections all came out in one key.
     private KeySignatureSyntax? _sectionKey;
 
+    /// <summary>The section's HEADER meter — the twin of <see cref="_sectionKey"/>, and it
+    /// answers the same boundary question: a section that states its own <c>time</c> opens
+    /// at THAT meter, and one that does not reverts to the score's (see
+    /// <see cref="Semantics.ScoreHomeMeter"/>).</summary>
+    private TimeSignatureSyntax? _sectionTime;
+
     private void EmitSection(SectionDeclarationSyntax section)
     {
         // A section is self-contained: its phrase auto-transpose baseline reverts
         // to the score's home key (a mid-section modulation cannot leak out).
         _ambientTonic = _homeTonic;
         _sectionKey = null;
-        for (int i = 0; i < section.SlotCount; i++)
-            if (section.GetChild(i) is KeySignatureSyntax sk)
-                _sectionKey = sk;
+        _sectionTime = null;
+        // ⚠️ ONLY A SECTION THAT WRAPS ITS MUSIC IN PART BLOCKS HAS A HEADER.
+        // A part-major section holds its music INLINE, so a `key` or `time` written in the
+        // MIDDLE of that music is also a direct child of the section node — and this scan
+        // read it as the section's header, applying it at the section's FIRST bar.
+        // Measured 2026-08-31 on `section A { c'4 d e f | key g major g a b c | }`: the page
+        // turns G major on at bar 2, the export claimed it from bar 1, and the same book
+        // written section-major placed it correctly. The collector's registry draws the
+        // same line in the same words (MeasureCollector.SectionHasInlineMusic, which the
+        // LilyPond exporter's BuildSectionHeaderRegistry already consults: "a declaration
+        // with inline music walks its own directives as music and registers NOTHING").
+        if (!Svg.Collector.MeasureCollector.SectionHasInlineMusic(section))
+        {
+            for (int i = 0; i < section.SlotCount; i++)
+            {
+                if (section.GetChild(i) is KeySignatureSyntax sk)
+                    _sectionKey = sk;
+                else if (section.GetChild(i) is TimeSignatureSyntax st)
+                    _sectionTime = st;
+            }
+        }
 
         // Each section may contain part blocks
         var partBlocks = section.DescendantNodes().OfType<PartBlockSyntax>().ToList();
@@ -735,6 +765,21 @@ public sealed class MusicXmlExporter
         // StartNewMeasure is about to open, not to whatever the previous part left behind.
         _currentMeasure = null;
         if (_homeKey is { } hk) (_keyFifths, _keyMode, _keyCustomXml) = hk;
+        // ⚠️ THE METER REVERTS HERE TOO — the third half of "a section is self-contained".
+        // A section that states no `time` of its own opens at the SCORE meter
+        // (MeasureCollector.ProcessSectionPrologue; ScoreHomeMeter carries the rule), and
+        // this exporter kept the previous section's mid-music change instead: measured
+        // 2026-08-31, `section A { … time 3/4 … } section B { … }` exported every one of
+        // B's bars in 3/4 while the page draws them in 4/4.
+        if (_homeTime is { } ht && _sectionTime is null)
+            (_timeNumerator, _timeNumeratorText, _timeDenominator, _timeSenzaMisura) = ht;
+        // ⚠️ AND A RESTORE HAS TO BE *WRITTEN*, not merely held. Both reverts above only
+        // moved the running state; nothing marked the document dirty, so the next
+        // StartNewMeasure's `else if (_attributesDirty)` arm never ran and the revert was
+        // silent. SyncAttributes compares against _writtenKey/_writtenTime, so arming it
+        // unconditionally emits exactly the boundaries that actually changed something.
+        _attributesDirty = true;
+        if (_sectionTime is { } st) ProcessTimeSignature(st);
         if (_sectionKey is { } sk) ProcessKeySignature(sk);
         _octaveAbsolute = _initialOctaveAbsolute; // restore file-level octave mode
         _tieToNextNote = false;

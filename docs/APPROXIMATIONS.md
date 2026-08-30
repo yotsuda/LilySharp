@@ -135,7 +135,7 @@
 ## UNWATCHED — 観測者がゼロだと自認しているもの（49 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:1658** container, and the value stops being unobserved with the line above.
+- **:1678** container, and the value stops being unobserved with the line above.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:496** no observer; add the paren widths when a book brings one. The unpacked
 - **:498** bare glyph width, which is exact for one and unobserved for many.
@@ -221,10 +221,10 @@
 ## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（115 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:1653** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:3222** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:1673** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
+- **:3284** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/MidiExporter.cs`
-- **:1983** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+- **:2020** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Rendering/HarfBuzzOutline.cs`
 - **:50** LILYSHARP-OWN: LilyPond reads its text ink through FreeType as well (Pango over the
 ### `LilySharp.Core/Rendering/Pdf/EmmentalerFontResolver.cs`

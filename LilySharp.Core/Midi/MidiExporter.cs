@@ -71,6 +71,13 @@ public sealed class MidiExporter
     // Applied up front to every part of the section, since it is not walked with the
     // part cell's music.
     private readonly Dictionary<string, KeySignatureSyntax> _sectionHeaderKeys = new();
+    // …and the same registry for the section's own header METER, read the same way and
+    // applied at the same boundary. See Semantics.ScoreHomeMeter: the page reverts the
+    // meter at every section boundary and this walk did not, so a mid-section `time 3/4`
+    // stayed in the conductor track for the rest of the piece (measured 2026-08-31).
+    private readonly Dictionary<string, TimeSignatureSyntax> _sectionHeaderTimes = new();
+    private int _homeTimeBeats = 4;
+    private int _homeTimeBeatType = 4;
     private bool _formDriven;
     private bool _formPlayed;
 
@@ -310,6 +317,8 @@ public sealed class MidiExporter
                 sameName.Add(sd);
                 if (!SectionHasInlineMusic(sd) && FirstDirectKey(sd) is { } hk)
                     _sectionHeaderKeys.TryAdd(sd.Name.Text, hk);
+                if (!SectionHasInlineMusic(sd) && FirstDirectTime(sd) is { } ht)
+                    _sectionHeaderTimes.TryAdd(sd.Name.Text, ht);
             }
             else if (n is PartDeclarationSyntax pd)
                 _partDecls.TryAdd(pd.Name.Text, pd); // first-wins, matching the old first-match scans
@@ -319,6 +328,7 @@ public sealed class MidiExporter
         _ambientTonic = _homeTonic;
         _homeKeySharps = ScoreHomeKey.Sharps(_root);
         _keySharps = _homeKeySharps;
+        (_homeTimeBeats, _homeTimeBeatType) = ScoreHomeMeter.Read(_root);
         _formDriven = _root.DescendantNodes().OfType<FormDeclarationSyntax>().Any();
         _formPlayed = false;
         _bareSectionOwner = RenderSpecParser.SingleEngravedPart(tree, Score, Form);
@@ -675,6 +685,16 @@ public sealed class MidiExporter
         return null;
     }
 
+    /// <summary>The first <c>time</c> that is a DIRECT child of the section, or null — the
+    /// twin of <see cref="FirstDirectKey"/>, asked of the same declarations.</summary>
+    private static TimeSignatureSyntax? FirstDirectTime(SectionDeclarationSyntax section)
+    {
+        for (int i = 0; i < section.SlotCount; i++)
+            if (section.GetChild(i) is TimeSignatureSyntax t)
+                return t;
+        return null;
+    }
+
     /// <summary>True when the section has a direct-child MUSIC node (note / phrase / …),
     /// as opposed to only directives and part / chord / lyric blocks — i.e. its own
     /// <c>key</c> is walked as music, not a header. THE one spelling lives with the
@@ -712,6 +732,23 @@ public sealed class MidiExporter
             _keySharps = headerKey.IsCustom ? 0 : KeySpelling.SharpsFor(
                 headerKey.Pitch.ToFullString().Trim().ToLowerInvariant(),
                 headerKey.Mode.Text.ToLowerInvariant()) ?? 0;
+        }
+
+        // ⚠️ THE METER IS THE SAME QUESTION, asked of the same registry: the section's own
+        // `time` if it states one, the SCORE meter if it does not. The revert is what this
+        // walk was missing — a mid-section change stayed in the conductor track for every
+        // later section, so the bar grid a DAW draws parted from the page after the first
+        // meter change. Only written when the pair actually moves, so a boundary that
+        // changes nothing adds no event (ProcessTimeSignature is the one writer).
+        var boundaryTime = _sectionHeaderTimes.TryGetValue(section.SectionName, out var headerTime)
+            ? (headerTime.Beats, headerTime.BeatType)
+            : (_homeTimeBeats, _homeTimeBeatType);
+        if (boundaryTime != (_timeNumerator, _timeDenominator))
+        {
+            _timeNumerator = boundaryTime.Item1;
+            _timeDenominator = boundaryTime.Item2;
+            conductorTrack.TimeSignatures.Add(
+                new TimeSignatureChange(_currentTick, _timeNumerator, _timeDenominator));
         }
 
         // Part-major layout: the section lives INSIDE its part — arm that
