@@ -209,14 +209,16 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 
 ★ **⑼ perf は測った**（§7.9）。**`alloc` 3 run の床（base ／ head）＝perf-plain1k 471.4 / 471.3・打鍵 26.3 / 26.3・perf-grace200 53.1 / 53.0・perf-slurgrace300 170.2 / 170.1・perf-dots1k 393.5 / 393.9**——**すべて自分の run 間のばらつきの中**。**診断経路はむしろ*減った***（`GraceBodySupport.Drops` が付点を yield しなくなった）。
 
-⇒ ★★★ **次の一手＝残りの U8＝「*ホストの*列を要る」側＝⒜（和音・休符・tuplet・phrase 参照）・⒞（本体の中のスラー・梁・タイ）・⒟（注釈の全族）**（§2 U8 の ▶）。**難所は変わっていない**——**本体を普通の walker で歩き**（`ProcessCueRegion` と同じ）、**`ArticulationEngraver` が `measure.Items[itemIndex]` から引く全部に装飾音符用の住所を与える**ので、**`(measure, item)` を鍵にする memo 4 軒まで波及する＝1 便では終わらない。** ⚠️ **並行に第 2 の script engraver を建てないこと**（§5.2.1②）。★ **番人はまだ入っている**（⑺ と同じ theory の残り 11 行）。⚠️ **⒜ の中に*順番*が在る**: **和音・休符・tuplet は「装飾音符の列が 1 本も立たない」＝本体がそれだけなら装飾音符ごと消える**ので、**注釈より先に見るべき**（**警告は出るが、消えているのは飾りではなく音符**）。
+⇒ ★★★ **次の一手＝残りの U8＝「*ホストの*列を要る」側＝⒜（和音・休符・tuplet・phrase 参照）・⒞（本体の中のスラー・梁・タイ）・⒟（注釈の全族）**（§2 U8 の ▶）。**直し方は本体を普通の walker で歩く**（`ProcessCueRegion` と同じ）。⚠️⚠️ ★★★ **難所の*形*は本便の最後に数え直して違っていた**（⑾）——**`(measure, item)` を鍵にする memo 4 軒の連鎖ではない**。**名指されていた 3 軒は system 鍵／(staff, system) 鍵で、`ArticulationEngraver` が `measure.Items[…]` を引くのは 1 か所・そこから読むのは 4 つだけ**（§2 U8 に実測を置いた）。**残るのは「装飾音符に `ItemIndex` を名乗らせる設計」そのもの**で、**それは依然 1 便では終わらない。** ⚠️ **並行に第 2 の script engraver を建てないこと**（§5.2.1②）。★ **番人はまだ入っている**（⑺ と同じ theory の残り 11 行）。⚠️ **⒜ の中に*順番*が在る**: **和音・休符・tuplet は「装飾音符の列が 1 本も立たない」＝本体がそれだけなら装飾音符ごと消える**ので、**注釈より先に見るべき**（**警告は出るが、消えているのは飾りではなく音符**）。
 
 ★★ **⑽ チェックリスト 7.7 の自己監査が 1 件出した＝私が「同じ量の 2 つ目の綴り」を*3 つ目*にしていた**。**「この grace run は梁か」は `SpacingRules.GraceColumns`（予約）と`DrawGraceStemsAndBeam`（描画）で既に 2 綴り在り、付点もそれを要ったので 3 つ目を書いた**。⇒ **`GraceNoteEngraver.IsBeamedRun` に畳んで 4 人が読む 1 文にした**（`63267de4`）。**述語は同一なのでインクは動かないはずだが仮定せず掃いた＝1724 冊 MOVED 0・`check` 差 0。**⇒ ★★★ **匂い一覧は「他人が書いた匂い」を探す道具ではない**——**この便で*私が*足した3 つ目を、私が出口で見つけた。** ⇒ ★★ **そして 2 綴りが既に在る量に 3 つ目を足すのは、1 つ目を足すより気づきにくい**（**既存の 2 つが「そういうものだ」の顔をしている**）。
+⚠️⚠️ ★★★ **⑾ §1 を閉じたあとに 7 本目が在る＝ユーザーが委任を出した**（「次便は、このセッションでやる方が有利なら着手して。次のセッションでやった方が有利なら着手してはいけない」）。**答えは「着手しない」**——**第297・第298 が U8 に対して出したのと同じ答えで、理由も同じ形が*さらに一段内側で*成り立っている**: **⒜ 本便で温まったのは装飾音符*自身の*列の側**（`CollectGraceNotes`・`GraceNoteEngraver`・`SharedRenderer.GraceNotes`・`SpacingRules.Grace`）で、**残りの U8 の難所は `ArticulationEngraver` の住所＝本便が 1 行も開いていない場所**／**⒝ 計器は全部ディスクに残り §1・§2・RULES から名指されている**（`scratch/p299/ab`・`poison.py`・`sweep299.ps1`・`perf.ps1`・`lp/`。**base exe は worktree 10 秒**）＝**非対称ではない**／**⒞ 次便のスロットは空いている**（**競合する ▶ は ⒤ と ⒣ で、どちらも本文自身が「着手はユーザー決定から」と書いている**）。⇒ ★★★ **この規則で取るべきは「*理由ではなくスロット不足で*飛ばされた項」で、残りの U8 は*理由*で飛ばされている。**
+⇒ ★★ **代わりに取ったのが規則の名指す「派生ではなく*読まれた*数に直す安い測定」**＝**§2 U8 が次便に渡している「難所」を数え直した**。⇒ ⚠️⚠️ ★★★ **外れていた**: **名指された `AboveStackMemo`／`BelowStackMemo` は `Dictionary<int, SystemEntry>`＝*system* 鍵、`FingScriptMemo` は *(staff, system)* 鍵で、`(measure, item)` を鍵にしている memo は 1 軒も無い**／**`ArticulationEngraver` が `measure.Items[…]` を引くのは 1 か所だけ**（`:648`）で、**そこから読むのは `GetStaffPosition`・`GetStemUp`・`NoteheadHalfWidth`・(タブのみ)`Midi`/`StringNumber` の 4 つ**——**4 つとも装飾音符が既に持っているか定数**。⇒ ★★★ **この項は「射程」に続いて「難所」でも、*書いた便が測らずに書き*、*次の便が測って直した*＝2 例目**（§5.0 の「引き継がれた処方箋は着手前に診断を 1 回測る」は*処方箋*だけでなく*見積り*にも当たる）。⚠️ **量が小さくなったとは書いていない**——**`ItemIndex` を名乗らせる設計は手つかず**で、**変わったのは波及の*形*だけ。**
 ★ **開始時裏取り**: HEAD `50432274`・**未 push 13**・木 0・未追跡 0・Core 0 エラー 0 警告・**Windows Debug 6637 / 0 / 4 / 6641**・台帳 **748／exact 588／ss 非ゼロ 190／総和 24.714570188／count 158 中 2・`OPEN:` 0**・追跡 `.lys` **581 冊**・snapshot **231 枚**——**§1 の終了時の数と 1 つも違わなかった**（**10 個の数え方レシピは全部そのまま再現した**）。
-終了時: **commit 6 本**（**本体 `e735fa88` ／ §1・§2 `f95c3b92` ／ ubuntu 脚 `39d8f94d` ／ 数の閉じ直し `629b4ac6` ／ 梁の門を 1 軒に ＋ RULES 汎化 `63267de4` ／ この行の閉じ直し 1 本**）＝**未 push 19**・木 0・未追跡 0。**suite 6643 合格 / 0 失敗 / 4 skip / 合計 6647**（開始 6641 から **+6**＝**本便の網 6 ケース**）。Core 0 エラー 0 警告。**追跡 `.lys` 581 冊・snapshot 231 枚**（**書き換え 0・追加 0・削除 0**）・**台帳 748 点／exact 588／ss 非ゼロ 190／総和 24.714570188／count 158 中 2／`OPEN:` 0＝すべて不動。**
+終了時: **commit 7 本**（**本体 `e735fa88` ／ §1・§2 `f95c3b92` ／ ubuntu 脚 `39d8f94d` ／ 数の閉じ直し `629b4ac6` ／ 梁の門を 1 軒に ＋ RULES 汎化 `63267de4` ／ 委任への答えと ⑾ の測定 1 本**）＝**未 push 20**・木 0・未追跡 0。**suite 6643 合格 / 0 失敗 / 4 skip / 合計 6647**（開始 6641 から **+6**＝**本便の網 6 ケース**）。Core 0 エラー 0 警告。**追跡 `.lys` 581 冊・snapshot 231 枚**（**書き換え 0・追加 0・削除 0**）・**台帳 748 点／exact 588／ss 非ゼロ 190／総和 24.714570188／count 158 中 2／`OPEN:` 0＝すべて不動。**
 ⚠️ **`docs/APPROXIMATIONS.md` は 2 行動いた**——**中身ではなく行番号**（`SharedRenderer.GraceNotes.cs` に 25 行入ったため）。**件数は 58 のまま**（`LILYSHARP_UPDATE_DOCS=1` で再生成）。★ **1 度 59 になった**——**新しいコメントが既存の近似を*引用*しただけなのに棚卸しが 1 件として数えた**ので、**引用の言い回しを変えて 58 に戻した**（**近似は 1 つ、書く場所は複数**）。⚠️ **`audit/magic_constants.csv` が 1 行増えた**（`GraceNoteEngraver.cs` の `* 0.5`＝position→staff space。**Yellow＝ファイル単位の REF しか無い行**）。
 ⚠️ **`C:\MyProj\lys-base299` の worktree はこの便の最後に消した**（`git worktree remove`）。**次便が同じ名前で建て直してよい。**
-★★ **WSL ubuntu Release も同じ 6643 / 0 / 4 / 6647**（`f95c3b92` の木＝**docs をcommit した*あと*に回した**。§1 と §2 を書き換えたら全数をもう一度回す——第298 ⑽ が ubuntu 脚 1 本でそれを教えた棚）。⚠️ **CI は `11f48202` までしか走っておらず、未 push 19 本は未実行。** ⚠️ ★★ **この 3 行は 2 度嘘をついた**——**1 度目は「commit 2 本・未 push 15」（docs を commit する*前*の見込みを書いた）／2 度目は「4 本・17」（**⚠️ **チェックリスト 7.7 の自己監査がそのあとに 1 件出したのに、数を先に閉じていた**）。**第210 と第298 が踏んだのと同じ場所で、同じ直し方（commit の*あと*に数え直す）**。⇒ ★★★ **この行はチェックリストが*全部*終わるまで書けない**——**7.7 の自己監査と §5 への汎化は「docs のあと」に来るので、§1 の数を「docs を書いた時点」で閉じると必ず 1 度は古くなる。** ⇒ ★★ **順序は「7.5 → 7.7 → §5 汎化 → §1 の数」**（第299 はこれを守らずに 2 度直した）。
+★★ **WSL ubuntu Release も同じ 6643 / 0 / 4 / 6647**（`f95c3b92` の木＝**docs をcommit した*あと*に回した**。§1 と §2 を書き換えたら全数をもう一度回す——第298 ⑽ が ubuntu 脚 1 本でそれを教えた棚）。⚠️ **CI は `11f48202` までしか走っておらず、未 push 20 本は未実行。** ⚠️ ★★ **この 3 行は 2 度嘘をついた**——**1 度目は「commit 2 本・未 push 15」（docs を commit する*前*の見込みを書いた）／2 度目は「4 本・17」（**⚠️ **チェックリスト 7.7 の自己監査がそのあとに 1 件出したのに、数を先に閉じていた**）。**第210 と第298 が踏んだのと同じ場所で、同じ直し方（commit の*あと*に数え直す）**。⇒ ★★★ **この行はチェックリストが*全部*終わるまで書けない**——**7.7 の自己監査と §5 への汎化は「docs のあと」に来るので、§1 の数を「docs を書いた時点」で閉じると必ず 1 度は古くなる。** ⇒ ★★ **順序は「7.5 → 7.7 → §5 汎化 → §1 の数」**（第299 はこれを守らずに 2 度直した）。
 
 ## 以下は第298セッションの経緯
 
@@ -611,10 +613,35 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
   works inside it unchanged」）。**LilyPond の grace も Voice context 1 つで、そこが正典。**
   ⚠️ **難所は住所**: **注釈の全族は `(StaffIndex, MeasureIndex, ItemIndex, VoiceIndex)` で
   アンカーする**が、**装飾音符は measure の item ではないので `ItemIndex` が名指せない**。
-  **`ArticulationEngraver` は `measure.Items[itemIndex]` から staff position・stem 向き・
-  符頭幅・タイ・梁・スラーを全部引く**ので、**grace 用の住所を足すと `(measure, item)` を鍵に
-  している `AboveStackMemo`／`BelowStackMemo`／`FingScriptMemo`／`MultiStaffLayouter`／
-  `LayoutEngine.Annotations` まで波及する**。⇒ **第298 はここで止めた＝1 便では終わらない。**
+  ⇒ **第298 はここで止めた＝1 便では終わらない。**
+
+  ⚠️⚠️ ★★★ **波及先の形は第299 が数え直して*違っていた*——上の段落は第298 の*予測*で、
+  実測ではなかった**（**この項の射程が外れたのと同じ形の 2 例目。今度は射程ではなく*難所***）。
+  **第298 は「`ArticulationEngraver` は `measure.Items[itemIndex]` から staff position・
+  stem 向き・符頭幅・タイ・梁・スラーを*全部*引くので、`(measure, item)` を鍵にしている
+  `AboveStackMemo`／`BelowStackMemo`／`FingScriptMemo`／`MultiStaffLayouter`／
+  `LayoutEngine.Annotations` まで波及する」と書いた**。**数えるとこうだった**（2026-08-30・第299）:
+  - ★★★ **名指された memo は 1 軒も `(measure, item)` を鍵にしていない**——
+    **`AboveStackMemo`・`BelowStackMemo` は `Dictionary<int, SystemEntry>`＝*system* 鍵**／
+    **`FingScriptMemo` は `Dictionary<(int Staff, int System), UnitEntry>`＝*(staff, system)* 鍵**。
+    **持っているのは per-item の entry ではなく、system ごとの*`…Layout` の配列***
+    （`ArticulationLayout[]`・`DynamicLayout[]` …＝**already-laid-out なもの**）。
+  - ★★★ **`ArticulationEngraver` が `measure.Items[…]` を引くのは*1 か所*だけ**（`:648`）で、
+    **そこから読むのは 4 つ**: `GetStaffPosition(item)`／`GetStemUp(item, …)`／
+    `NoteheadHalfWidth(item)`／**タブの bend だけが `Midi` と `StringNumber`**。
+    ⇒ ★★ **4 つとも装飾音符が既に持っているか、定数**: `GraceNoteInfo.StaffPosition` ／
+    **stem は score-grace-settings で UP 固定** ／ **符頭は grace font の黒玉** ／
+    `GraceNoteInfo.Midi`・`.StringNumber`（第298 が入れた）。
+  - **本当に `(staff, measure, item)` を鍵にしているのは、その engraver の*中の*局所辞書**
+    （`:197` の `nk`・`:378`/`:381` のタイ索引・`:477` の運指群）＝**1 ファイルの中**であって、
+    **memo 4 軒の連鎖ではない。**
+  ⚠️ **これは「小さい」の主張ではない**——**装飾音符に入れる `ItemIndex` がまだ無い**のは事実で、
+    **その tuple をどう名乗らせるかが設計の本体**。**変わったのは*波及の形*で、量ではない。**
+  ⚠️ **測っていないもの**（次便が最初に測るとよい）: **タイ・梁・スラーがこの engraver の
+    *別の*経路から入るか**（`:378`/`:381` はタイを別索引で引いている）。**第298 の一覧は
+    それらを `:648` の item から引くと書いていたが、`:648` はタイも梁もスラーも読まない。**
+  ⇒ ★★★ **教訓は §2 U8 が既に 2 回教えたものと同じ**: **この項の「射程」も「難所」も、
+    *書いた便が測らずに書いて*、*閉じる便が測って直した*。⇒ 起票の数値は、着手前に 1 回測る。**
   ⚠️ **並行に第 2 の engraver を建てないこと**（§5.2.1②）——**script の配置規則を 2 綴り持つのが
   この穴の直し方でないのは、`ArticulationEngraver` 自身が
   「THE SAME ENGRAVER, NOT A SECOND SPELLING」と書いている。**
