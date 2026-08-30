@@ -404,4 +404,120 @@ public class GraceNoteMidiTests
             ExportNotes(Marked.Replace("%REF%", "G")).OrderBy(n => n.StartTick).First().Pitch,
             ExportNotes(Marked.Replace("%REF%", "G'")).OrderBy(n => n.StartTick).First().Pitch);
     }
+
+    /// <summary>
+    /// A tuplet written in a grace body SOUNDS, and it sounds at its ratio: the three
+    /// sixteenths of <c>tuplet 3/2</c> take two sixteenths' worth of grace time between them.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE RATIO IS LILYPOND'S ANSWER, MEASURED, not a guess about what a tuplet ought to
+    /// mean. On LilyPond 2.26.0's own <c>\midi</c> at division 384 (2026-08-30, session 302,
+    /// scratch/p302/lp): <c>\grace { d'16 e' f' } c'4</c> sounds its grace notes at ticks
+    /// 0 / 21 / 43 and hands the main note over at 64, while
+    /// <c>\grace { \tuplet 3/2 { … } } c'4</c> sounds them at 0 / 14 / 29 and hands over at
+    /// 43 = round(64 × 2/3).
+    /// <para>
+    /// ⚠️ THE FIRST ASSERT IS THE ONE THAT WOULD HAVE FAILED BEFORE THIS TRIP, and not by a
+    /// tick: MEASURED 2026-08-30 (scratch/p302/ab) the MIDI for this book was BYTE-IDENTICAL
+    /// to the book with no grace in it at all — the page, the sound and the MusicXML each
+    /// dropped the whole body. So the row asks for the notes first and the ratio second.
+    /// </para>
+    /// <para>
+    /// ⚠️ IT IS ASSERTED AS A RATIO AGAINST THE UNTUPLETED CONTROL rather than as a tick
+    /// count, so it survives any later change to the 9/40 grace factor or the division —
+    /// what it pins is that the tuplet is read, not that the answer is 18.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ATupletInAGraceBody_SoundsAtItsRatio()
+    {
+        (int Start, int Dur, int Pitch)[] Grace(string music)
+            => Performance("", music).Where(n => n.Dur < 100).ToArray();
+
+        var plain = Grace("grace { d'16 e' f' } c'4 c'2 c'4 | e'1 |");
+        var triplet = Grace("grace { tuplet 3/2 { d'16 e' f' } } c'4 c'2 c'4 | e'1 |");
+
+        // The notes are there at all, and they are the same three notes.
+        Assert.Equal(3, triplet.Length);
+        Assert.Equal(plain.Select(n => n.Pitch), triplet.Select(n => n.Pitch));
+
+        // …and each of them is two thirds as long, so the group is two thirds as long.
+        Assert.All(triplet.Zip(plain),
+            p => Assert.Equal(p.Second.Dur * 2 / 3, p.First.Dur));
+        Assert.Equal((plain[^1].Start + plain[^1].Dur) * 2 / 3,
+                     triplet[^1].Start + triplet[^1].Dur);
+    }
+
+    /// <summary>
+    /// The time the following note gives up shrinks with the tuplet too — a grace body's
+    /// steal is the length of what it played, so a ratio that reached the notes and not the
+    /// steal would push the downbeat off the grid.
+    /// </summary>
+    [Fact]
+    public void ATupletInAGraceBody_StealsOnlyWhatItPlayed()
+    {
+        (int Start, int Dur, int Pitch)[] Main(string music)
+            => Performance("", music).Where(n => n.Dur > 100).ToArray();
+
+        var plain = Main("grace { d'16 e' f' } c'4 c'2 c'4 | e'1 |");
+        var triplet = Main("grace { tuplet 3/2 { d'16 e' f' } } c'4 c'2 c'4 | e'1 |");
+
+        Assert.Equal(plain[0].Start * 2 / 3, triplet[0].Start);
+        // ⚠️ The control is not decoration: 0 == 0 would satisfy the line above for an
+        // exporter that had gone back to dropping the body, which is exactly the state this
+        // trip found it in.
+        Assert.True(plain[0].Start > 0);
+
+        // ⚠️ AND THE RATIO STOPS AT THE GRACE. _tupletStack is SHARED with the main stream,
+        // so a push this walk forgot to pop would shorten every note after the grace to two
+        // thirds and nothing above would notice — the whole rest of the piece, silently
+        // faster. ⚠️ From the SECOND main note on: the first is the one that pays the steal,
+        // so it is SUPPOSED to differ (480 - 81 against 480 - 54), and asserting it equal was
+        // this test's own first answer.
+        Assert.Equal(plain.Skip(1).Select(n => n.Dur), triplet.Skip(1).Select(n => n.Dur));
+        // …and the note that pays gives up exactly what was played, no more.
+        Assert.Equal(plain[0].Start + plain[0].Dur, triplet[0].Start + triplet[0].Dur);
+    }
+
+    /// <summary>
+    /// The two tuplet expanders answer the same question the same way: a tuplet written in a
+    /// grace body compresses its notes by the ratio a tuplet written in the MAIN STREAM
+    /// compresses its notes by.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS A DIFFERENTIAL NET, and it is here because the pair CANNOT BE FOLDED —
+    /// checklist 7.7's own answer. <c>MeasureCollector</c>'s walk expands a main-stream tuplet
+    /// as a node it recurses through; <c>GraceBodySupport.BodyElements</c> expands one into a
+    /// flat list bracketed by markers, because a grace body's elements are judged one at a
+    /// time by a narrowing that has to be able to NAME what it drops. The same argument the
+    /// phrase pair carries (see APhraseInAGraceBody_OffersTheSameBodyTheMainStreamDoes) —
+    /// and the same answer.
+    /// <para>
+    /// ⚠️ IT WRITES NO EXPECTED VALUE DOWN. The assert is a cross-multiplied equality of two
+    /// RATIOS, so it survives a change to the 9/40 grace factor, to the division, or to the
+    /// grace group's default duration — what it pins is that the two expanders agree, which
+    /// is the thing a second spelling loses.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ATupletInAGraceBody_CompressesTheWayTheMainStreamDoes()
+    {
+        // The first sounded event of each book, by start time then pitch.
+        int First(string music) => Performance("", music)[0].Dur;
+
+        int mainPlain = First("d'16 e' f' c'4 c'2 c'8 | e'1 |");
+        int mainTuplet = First("tuplet 3/2 { d'16 e' f' } c'4 c'2 c'8 | e'1 |");
+        int gracePlain = First("grace { d'16 e' f' } c'4 c'2 c'4 | e'1 |");
+        int graceTuplet = First("grace { tuplet 3/2 { d'16 e' f' } } c'4 c'2 c'4 | e'1 |");
+
+        // mainTuplet / mainPlain == graceTuplet / gracePlain, in integers.
+        Assert.Equal(mainTuplet * gracePlain, graceTuplet * mainPlain);
+
+        // ⚠️ …and the ratio is not 1 on either side, or the line above is 0 == 0 for two
+        // walkers that had both stopped reading the tuplet. This is the pair, not decoration:
+        // MEASURED 2026-08-30 (scratch/p302/ab), before this trip the grace side WAS the
+        // book with no grace in it at all.
+        Assert.True(mainTuplet < mainPlain);
+        Assert.True(graceTuplet < gracePlain);
+    }
 }

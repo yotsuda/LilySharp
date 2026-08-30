@@ -80,7 +80,13 @@ public class GraceBodyValidatorTests
     [InlineData("grace { d'8~ d'8 } c'1 | e'1 |", "grace { d'8 d'8 } c'1 | e'1 |")]
     [InlineData("grace { d'8 r8 } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     [InlineData("grace { <d' f'>8 } c'1 | e'1 |", "c'1 | e'1 |")]
-    [InlineData("grace { tuplet 3/2 { d'8 e'8 f'8 } } c'1 | e'1 |", "c'1 | e'1 |")]
+    // ⚠️ `grace { tuplet 3/2 { … } }` LEFT THIS THEORY ON 2026-08-30 (session 302), and it
+    // left the way a row is meant to: the tuplet is a CONTAINER, its notes are engraved now,
+    // and this row went red on its own and named itself as the line to delete. What is still
+    // reported is the bracket and the number — a GraceDropKind.Bracket, which this theory
+    // cannot hold, because its whole shape is "reported ⇒ page-identical to a control that
+    // does not write it" and a bracket drop is reported off a page that DID change. See
+    // ATupletInAGraceBody_EngravesWhatItHolds for the row that replaced it.
     public void EverythingReported_IsAbsentFromThePage(string written, string control)
     {
         Assert.NotEmpty(Warnings(Book(written)));
@@ -616,5 +622,134 @@ public class GraceBodyValidatorTests
             Assert.Single(Warnings(PhraseBook(phrases, music))).Message);
         // …and the page is the one with no grace on it, which is what the warning says.
         Assert.Equal(PhrasePage("", "c'1 | e'1 |"), PhrasePage(phrases, music));
+    }
+
+    /// <summary>
+    /// <c>grace { tuplet 3/2 { … } }</c> engraves the notes the tuplet holds — the same page,
+    /// to the byte, as writing them in the body without it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE THIRD ASSERT IS THE ONE THAT SAYS SOMETHING. "The page equals the control" is
+    /// also what a body engraving NOTHING would satisfy if the control were wrong, and that is
+    /// not hypothetical here: MEASURED before this trip started (scratch/p302/ab, both sides
+    /// Release, data-pos masked) the page for this book was BYTE-IDENTICAL to the book with no
+    /// grace in it at all, as were its MIDI and its MusicXML. So the row demands the page
+    /// DIFFER from the no-grace one as well.
+    /// <para>
+    /// ⚠️ AND IT STILL WARNS, unlike the phrase-reference row. What is lost is the bracket and
+    /// the number — the two grobs LilyPond adds and a grace column cannot hold — which is why
+    /// this could not stay a row of <see cref="EverythingReported_IsAbsentFromThePage"/>: that
+    /// theory pairs every warning with an unchanged page, and this one changes it.
+    /// </para>
+    /// </remarks>
+    [Theory]
+    // Beamed and unbeamed: on LilyPond 2.26.0 the first adds only the italic `3` and the
+    // second adds the four bracket lines too (session 301, scratch/p301/lp). Lily# draws
+    // neither, and the notes are the same either way — which is what is asserted.
+    [InlineData("grace { tuplet 3/2 { d'16 e' f' } } c'1 | e'1 |",
+                "grace { d'16 e' f' } c'1 | e'1 |")]
+    [InlineData("grace { tuplet 3/2 { d'4 e' f' } } c'1 | e'1 |",
+                "grace { d'4 e' f' } c'1 | e'1 |")]
+    // Mixed with bare notes on both sides, and nested one level down.
+    [InlineData("grace { c'16 tuplet 3/2 { d'16 e' f' } a'16 } c'1 | e'1 |",
+                "grace { c'16 d'16 e' f' a'16 } c'1 | e'1 |")]
+    [InlineData("grace { tuplet 3/2 { tuplet 3/2 { d'16 e' f' } } } c'1 | e'1 |",
+                "grace { d'16 e' f' } c'1 | e'1 |")]
+    public void ATupletInAGraceBody_EngravesWhatItHolds(string written, string control)
+    {
+        Assert.Equal(PhrasePage("", control), PhrasePage("", written));
+        Assert.NotEqual(PhrasePage("", "c'1 | e'1 |"), PhrasePage("", written));
+        Assert.NotEmpty(Warnings(PhraseBook("", written)));
+    }
+
+    /// <summary>
+    /// The warning a tuplet draws names the BRACKET AND THE NUMBER, and says the notes are
+    /// drawn — the difference between "an ornament lost its bracket" and "a whole ornament is
+    /// missing" is the one a reader needs to hear, and it was the second sentence until this
+    /// trip.
+    /// </summary>
+    [Fact]
+    public void ATupletsWarning_NamesTheBracketAndSaysTheNotesAreDrawn()
+    {
+        string message = Assert.Single(
+            Warnings(PhraseBook("", "grace { tuplet 3/2 { d'16 e' f' } } c'1 | e'1 |"))).Message;
+
+        Assert.Contains("bracket", message);
+        Assert.Contains("notes it holds ARE drawn", message);
+        Assert.DoesNotContain("NO grace note is drawn at all", message);
+    }
+
+    /// <summary>
+    /// …but when the tuplet holds nothing engravable either, the promise is withdrawn rather
+    /// than left standing as a lie, and the chords inside it carry the "whole ornament is
+    /// gone" half.
+    /// </summary>
+    [Fact]
+    public void ATupletOfChords_DoesNotPromiseNotes()
+    {
+        var warnings = Warnings(PhraseBook("", "grace { tuplet 3/2 { <c' e'>16 <d' f'>16 } } c'1 | e'1 |"));
+
+        Assert.DoesNotContain(warnings, w => w.Message.Contains("notes it holds ARE drawn"));
+        Assert.Contains(warnings,
+            w => w.Message.Contains("a chord") && w.Message.Contains("NO grace note is drawn at all"));
+    }
+
+    /// <summary>
+    /// A tuplet boundary does NOT reset the grace group's duration memory, and that is the
+    /// half that separates a tuplet from a phrase reference: a phrase opens a fresh frame
+    /// (<see cref="APhraseBoundaryResetsTheGracesDurationMemoryOnly"/>) and a tuplet opens
+    /// none — <c>tuplet 3/2 { d'16 e' f' } c'</c> gives the trailing c a sixteenth in the
+    /// main stream, and a grace body is not an exception.
+    /// </summary>
+    [Fact]
+    public void ATupletBoundaryKeepsTheDurationMemory()
+    {
+        static int[] Durations(string music)
+            => new LilySharp.Core.Svg.Collector.MeasureCollector()
+                .Collect(SyntaxTree.Parse(PhraseBook("", music)))
+                .GraceNotes.Single().Notes
+                .Select(n => (int)n.BaseDuration.Denominator).ToArray();
+
+        // The undurated c' after the tuplet inherits the sixteenth written inside it…
+        Assert.Equal(new[] { 16, 16, 16, 16 },
+            Durations("grace { tuplet 3/2 { d'16 e' f' } c' } c'1 | e'1 |"));
+        // …exactly as it does with no tuplet in the way. ⚠️ The pair is the point: the first
+        // line alone also passes for a walker that reset the memory to the group's default
+        // EIGHTH and then never read it, so the control fixes what "16" means here.
+        Assert.Equal(Durations("grace { d'16 e' f' c' } c'1 | e'1 |"),
+                     Durations("grace { tuplet 3/2 { d'16 e' f' } c' } c'1 | e'1 |"));
+    }
+
+    /// <summary>
+    /// The tuplet markers are balanced at every budget, the same invariant the phrase pair
+    /// carries — a stop between the two would leave a reader's tuplet stack pushed and never
+    /// popped, which is a wrong LENGTH somewhere later in the piece rather than a crash.
+    /// </summary>
+    [Fact]
+    public void ATupletExpansion_ClosesEveryBracketItOpens()
+    {
+        var tree = SyntaxTree.Parse(PhraseBook(
+            "phrase P { tuplet 3/2 { d'16 e' f' } }",
+            "grace { c'16 tuplet 5/4 { P g'16 } a'16 } c'1 | e'1 |"));
+        var bodies = tree.GetRoot().DescendantNodes().OfType<PhraseDeclarationSyntax>()
+            .ToDictionary(p => p.Name.Text, p => (SyntaxNode)p.Body);
+        var grace = tree.GetRoot().DescendantNodes().OfType<GraceExpressionSyntax>().Single();
+
+        List<GraceBodyElement> Expand(int cap)
+        {
+            int left = cap;
+            return GraceBodySupport.BodyElements(
+                grace, name => bodies.GetValueOrDefault(name), () => left-- > 0);
+        }
+
+        for (int cap = 0; cap <= 12; cap++)
+            Assert.Equal(
+                Expand(cap).Count(e => e.Node is LilySharp.Core.Svg.Collector.GraceTupletStartMarker),
+                Expand(cap).Count(e => e.Node is LilySharp.Core.Svg.Collector.GraceTupletEndMarker));
+
+        // …and with budget enough there really were two nested brackets, so the loop above is
+        // not asserting 0 == 0 thirteen times.
+        Assert.Equal(2, Expand(100)
+            .Count(e => e.Node is LilySharp.Core.Svg.Collector.GraceTupletStartMarker));
     }
 }

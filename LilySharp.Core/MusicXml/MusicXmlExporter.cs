@@ -2676,6 +2676,36 @@ public sealed class MusicXmlExporter
                     break;
                 }
 
+                // A TUPLET IN A GRACE BODY IS A CONTAINER, AND THIS READER READS ITS RATIO
+                // AS <time-modification> - the same stack the main stream's tuplet arm
+                // pushes, read by the same CurrentTupletRatio(), so nothing is spelled twice.
+                // MEASURED 2026-08-30 (session 302, scratch/p302/lp) on LilyPond's own \midi:
+                // a grace body's tuplet scales the played length by normal/actual exactly as
+                // one in the main stream does, so the ratio is a fact about the music rather
+                // than about the page.
+                // ⚠️ THE <notations><tuplet> BRACKET IS DELIBERATELY NOT WRITTEN, and this is
+                // the one narrowing decision this arm makes. That element asks the reading
+                // program to DRAW a bracket and a number, and those are exactly the two grobs
+                // a grace column still cannot hold - GraceBodyValidator reports them as a
+                // GraceDropKind.Bracket in the same book. Writing them here would put the two
+                // readers that place grobs into disagreement and make the warning false for
+                // one of them. The time is exported because MIDI exports it too; the ink is
+                // not, because the page does not. ⇒ The day CollectGraceNotes learns the
+                // bracket, this arm stamps StampTupletBracket the way the main stream does,
+                // and the drop kind goes away with it.
+                case Svg.Collector.GraceTupletStartMarker t:
+                    _tupletStack.Push((t.Actual, t.Normal));
+                    break;
+
+                // ⚠️ UNGUARDED ON PURPOSE: the pair is emitted or omitted together
+                // (GraceBodySupport.Expand pays for a whole entry or none of it), and since
+                // _tupletStack is SHARED with the main stream a `Count > 0` guard could not
+                // make an unpaired close safe anyway - it would pop an enclosing tuplet's
+                // entry and report success. Checklist 7.7's "fallback that turns a bug green".
+                case Svg.Collector.GraceTupletEndMarker:
+                    _tupletStack.Pop();
+                    break;
+
                 case NoteSyntax note:
                 {
                     var (step, alter) = ParsePitch(note.Pitch);
@@ -2684,6 +2714,7 @@ public sealed class MusicXmlExporter
                     if (note.Duration != null)
                         graceDuration = note.Duration.ToFraction();
                     var (type, _) = GetNoteType(graceDuration);
+                    var (tupletActual, tupletNormal) = CurrentTupletRatio();
 
                     var xmlNote = new MusicXmlNote
                     {
@@ -2692,7 +2723,9 @@ public sealed class MusicXmlExporter
                         Step = step,
                         Alter = alter,
                         Octave = targetOctave,
-                        Type = type
+                        Type = type,
+                        ActualNotes = tupletActual,
+                        NormalNotes = tupletNormal
                     };
 
                     _currentMeasure.Notes.Add(xmlNote);

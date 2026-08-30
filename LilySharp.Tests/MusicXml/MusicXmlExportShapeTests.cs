@@ -569,4 +569,113 @@ public class MusicXmlExportShapeTests
             RelativePitches("", "grace { d16 d' } c2 c2 | e'1 |")[2],
             RelativePitches(H, "grace { H } c2 c2 | e'1 |")[2]);
     }
+
+    /// <summary>
+    /// A tuplet in a grace body is EXPORTED — the notes, and the ratio as
+    /// <c>&lt;time-modification&gt;</c>.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE FIRST ASSERT IS NOT A FORMALITY. MEASURED 2026-08-30 (session 302,
+    /// scratch/p302/ab) the MusicXML for this book was BYTE-IDENTICAL to the book with no
+    /// grace in it: this exporter, the page and the MIDI each walked past the tuplet and lost
+    /// the whole body. ⚠️ The ratio is LilyPond's, measured on its own <c>\midi</c>
+    /// (scratch/p302/lp): a grace body's tuplet scales the played length by normal/actual
+    /// exactly as one in the main stream does.
+    /// <para>
+    /// ⚠️ THE ABSENT <c>&lt;notations&gt;&lt;tuplet&gt;</c> IS ASSERTED ON PURPOSE, and it is
+    /// the one narrowing this arm makes. That element asks the reading program to DRAW a
+    /// bracket and a number, which are exactly the two grobs a grace column cannot hold and
+    /// which <c>GraceBodyValidator</c> reports as dropped in the same book (LYS4020). Writing
+    /// them here would put the two readers that place grobs into disagreement and make that
+    /// warning false for one of them. ⇒ The day the page learns the bracket, this line is the
+    /// one that goes red and says so.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ATupletInAGraceBody_ExportsItsNotesAndItsRatio()
+    {
+        var doc = Export("octave absolute\npart m { clef treble }\n"
+                         + "section A { m {\ngrace { tuplet 3/2 { d'16 e' f' } } c'4 c'2. |\n} }\n"
+                         + "form main { A }\nscore main { staff m }\n");
+
+        var graces = doc.Descendants("note").Where(n => n.Element("grace") != null).ToArray();
+        Assert.Equal(3, graces.Length);
+
+        Assert.All(graces, g =>
+        {
+            var mod = g.Element("time-modification");
+            Assert.NotNull(mod);
+            Assert.Equal("3", mod!.Element("actual-notes")!.Value);
+            Assert.Equal("2", mod.Element("normal-notes")!.Value);
+            // The DRAWN duration is the written sixteenth: the ratio is a length, and the
+            // page engraves a grace note from what was written (LilyPond 2.26.0, session
+            // 301 — the three notes are byte-identical to the untupleted spelling).
+            Assert.Equal("16th", g.Element("type")!.Value);
+        });
+
+    }
+
+    /// <summary>
+    /// The ratio STOPS at the grace: <c>_tupletStack</c> is shared with the main stream, so a
+    /// push this walk forgot to pop would stamp <c>&lt;time-modification&gt;</c> on every note
+    /// after the grace and shrink its <c>&lt;duration&gt;</c> — the rest of the part, silently
+    /// wrong, with the grace itself still exporting correctly.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ IT IS A ROW OF ITS OWN, not an assert on the one above, for the reason §5.4 asks
+    /// the red sets to differ: the push and the pop are two sentences, and a poison on either
+    /// would have reddened one test name and said they were one.
+    /// </remarks>
+    [Fact]
+    public void ATupletInAGraceBody_DoesNotLeakItsRatioIntoTheMainStream()
+    {
+        var doc = Export("octave absolute\npart m { clef treble }\n"
+                         + "section A { m {\ngrace { tuplet 3/2 { d'16 e' f' } } c'4 c'2. |\n} }\n"
+                         + "form main { A }\nscore main { staff m }\n");
+
+        var plain = doc.Descendants("note").Where(n => n.Element("grace") == null).ToArray();
+        Assert.Equal(2, plain.Length);
+        Assert.All(plain, n => Assert.Null(n.Element("time-modification")));
+        Assert.Equal(new[] { "24", "72" }, plain.Select(n => n.Element("duration")!.Value));
+    }
+
+    /// <summary>
+    /// …and it claims no BRACKET. <c>&lt;notations&gt;&lt;tuplet&gt;</c> asks the reading
+    /// program to draw a bracket and a number, and those are exactly the two grobs a grace
+    /// column cannot hold — <c>GraceBodyValidator</c> reports them as dropped (LYS4020) in
+    /// this very book. Writing them here would put the two readers that place grobs into
+    /// disagreement and make that warning false for one of them.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS ROW IS MEANT TO GO RED THE DAY THE PAGE LEARNS THE BRACKET, and to name itself
+    /// as the line to change — the way <c>GraceBodyValidatorTests</c>'s theory row for the
+    /// tuplet did on 2026-08-30. The main stream's tuplet arm already has the spelling to
+    /// reuse.
+    /// </remarks>
+    [Fact]
+    public void ATupletInAGraceBody_ClaimsNoBracketThePageDoesNotDraw()
+    {
+        var doc = Export("octave absolute\npart m { clef treble }\n"
+                         + "section A { m {\ngrace { tuplet 3/2 { d'16 e' f' } } c'4 c'2. |\n} }\n"
+                         + "form main { A }\nscore main { staff m }\n");
+
+        var graces = doc.Descendants("note").Where(n => n.Element("grace") != null).ToArray();
+        Assert.Equal(3, graces.Length);
+        Assert.Empty(graces.SelectMany(g => g.Descendants("tuplet")));
+    }
+
+    /// <summary>The same body with no tuplet round it carries no
+    /// <c>&lt;time-modification&gt;</c> — the control that fixes what the row above measures.
+    /// </summary>
+    [Fact]
+    public void AGraceBodyWithoutATuplet_CarriesNoTimeModification()
+    {
+        var doc = Export("octave absolute\npart m { clef treble }\n"
+                         + "section A { m {\ngrace { d'16 e' f' } c'4 c'2. |\n} }\n"
+                         + "form main { A }\nscore main { staff m }\n");
+
+        var graces = doc.Descendants("note").Where(n => n.Element("grace") != null).ToArray();
+        Assert.Equal(3, graces.Length);
+        Assert.All(graces, g => Assert.Null(g.Element("time-modification")));
+    }
 }

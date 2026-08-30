@@ -2095,6 +2095,32 @@ public sealed class MidiExporter
                     break;
                 }
 
+                // A TUPLET IN A GRACE BODY IS A CONTAINER, AND THIS READER DOES READ ITS
+                // RATIO. MEASURED 2026-08-30 (session 302, scratch/p302/lp) on LilyPond's own
+                // \midi at division 384: `\grace { d'16 e' f' } c'4` sounds its three grace
+                // notes at ticks 0 / 21 / 43 and hands the main note over at 64, while
+                // `\grace { \tuplet 3/2 { d'16 e' f' } } c'4` sounds them at 0 / 14 / 29 and
+                // hands over at 43 = round(64 * 2/3). LilyPond scales a grace body's tuplet
+                // exactly as it scales one in the main stream.
+                // ⚠️ THE ARITHMETIC IS THE HOUSE THAT WAS ALREADY HERE, not a second
+                // spelling: GraceTicks calls FractionToTicks, which multiplies by every entry
+                // on _tupletStack, so pushing the ratio is the whole change. The page reads
+                // nothing off it (a grace note is DRAWN from its written duration - measured
+                // on LilyPond 2.26.0, session 301) and its bracket and number stay reported.
+                case Svg.Collector.GraceTupletStartMarker t:
+                    _tupletStack.Push((t.Actual, t.Normal));
+                    break;
+
+                // ⚠️ THE POP IS UNGUARDED ON PURPOSE. The pair is emitted or omitted
+                // together (GraceBodySupport.Expand pays for a whole entry or none of it), so
+                // it cannot underflow - and a `Count > 0` guard would not make it safe if it
+                // could: _tupletStack is SHARED with the main stream, so an unpaired close
+                // would pop an enclosing tuplet's own entry and the guard would wave it
+                // through. Checklist 7.7 calls that shape a fallback that turns a bug green.
+                case Svg.Collector.GraceTupletEndMarker:
+                    _tupletStack.Pop();
+                    break;
+
                 case NoteSyntax note:
                 {
                     if (note.Duration != null) written = note.Duration.ToFraction();

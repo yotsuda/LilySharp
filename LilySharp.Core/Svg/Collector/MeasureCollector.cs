@@ -3798,6 +3798,21 @@ public sealed partial class MeasureCollector
                 continue;
             }
 
+            // A TUPLET IS A CONTAINER, AND THE PAGE READS NOTHING OFF ITS RATIO. This arm is
+            // deliberately a no-op rather than an absent case: what the ratio changes is the
+            // SOUNDING length, and a grace note is drawn from its WRITTEN duration.
+            // MEASURED on LilyPond 2.26.0 (session 301, scratch/p301/lp, data-pos masked):
+            // `\grace { \tuplet 3/2 { d'16 e' f' } }` puts its three noteheads, stems, beams
+            // and accidentals at coordinates BYTE-IDENTICAL to `\grace { d'16 e' f' }`, and
+            // the only ink it adds is the italic serif `3` (plus the four bracket lines when
+            // the durations are long enough that no beam stands in for them). Those two grobs
+            // are what a grace column still cannot hold, and GraceBodyValidator reports them
+            // as a GraceDropKind.Bracket. ⚠️ The duration memory is NOT reset here, unlike at
+            // a phrase boundary: a tuplet opens no frame in the main stream either, so
+            // `grace { tuplet 3/2 { d'16 e' f' } c' }` gives the trailing c a sixteenth.
+            if (item is GraceTupletStartMarker or GraceTupletEndMarker)
+                continue;
+
             if (Semantics.GraceBodySupport.CarriedNote(item) is { } note)
             {
                 var rp = CalculateStaffPosition(note.Pitch);

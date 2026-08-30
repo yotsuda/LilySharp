@@ -31,6 +31,12 @@ internal enum GraceDropKind
     Annotation,
     /// <summary>A slur, beam or tie marker written inside the body.</summary>
     Span,
+    /// <summary>The BRACKET AND NUMBER of a tuplet written inside the body. The notes the
+    /// tuplet holds ARE engraved - it is a container, see
+    /// <see cref="Svg.Collector.GraceTupletStartMarker"/> - so this is the one kind that
+    /// names a decoration lost off music that DID reach the page, rather than music that
+    /// did not.</summary>
+    Bracket,
 }
 
 /// <summary>One thing a grace body holds that does not reach the page, at the span it
@@ -87,11 +93,22 @@ internal readonly record struct GraceBodyElement(SyntaxNode Node, string? ViaPhr
 /// chord or a rest or a tuplet as the body's only element removes the whole grace group.
 /// </para>
 /// <para>
-/// ⚠️ A PHRASE REFERENCE IS NO LONGER ON THAT LIST (session 300). It is the one element in
-/// it that names no grob — it names music written elsewhere — so it is expanded in place by
-/// <see cref="BodyElements"/> and whatever the phrase holds goes through this narrowing
-/// instead. The three that stay (a chord, a rest, a tuplet) share only the SYMPTOM, that a
-/// body holding one of them alone engraves no grace at all.
+/// ⚠️ A PHRASE REFERENCE IS NO LONGER ON THAT LIST (session 300), AND NEITHER IS A TUPLET
+/// (session 302). Both are CONTAINERS — they name no grob of their own — so both are
+/// expanded in place by <see cref="BodyElements"/> and whatever they hold goes through this
+/// narrowing instead. Session 298 filed all four together because a body holding one of them
+/// alone engraves no grace at all; that is the SYMPTOM, and sorting by it put two containers
+/// in a box with two grobs. What is left is A CHORD AND A REST, which really do want a grob
+/// a grace column cannot hold yet.
+/// </para>
+/// <para>
+/// ⚠️ A TUPLET STILL DROPS ITS BRACKET AND ITS NUMBER, reported as
+/// <see cref="GraceDropKind.Bracket"/> rather than <see cref="GraceDropKind.Element"/>: the
+/// notes are engraved and the decoration is not, so the sentence the reader gets has to say
+/// which half they lost. MEASURED on LilyPond 2.26.0 (session 301, scratch/p301/lp): what
+/// <c>\tuplet 3/2</c> adds inside a grace body is the italic serif <c>3</c>, plus the four
+/// bracket lines once the durations are long enough that no beam stands in for them — the
+/// three notes are byte-identical to the untupleted spelling, coordinates included.
 /// </para>
 /// <para>
 /// ⚠️ TWO ANNOTATIONS ARE CARRIED, AND THE LINE BETWEEN THEM AND THE REST IS "does it want
@@ -162,26 +179,41 @@ internal static class GraceBodySupport
     }
 
     /// <summary>
-    /// The elements a grace body offers its readers, in source order, with every PHRASE
-    /// REFERENCE replaced in place by the elements of the phrase it names — bracketed by
-    /// the same <see cref="Svg.Collector.RelativeResetMarker"/> /
-    /// <see cref="Svg.Collector.PhraseEndMarker"/> pair the ordinary walk uses, so the
-    /// collector gives a phrase body the fresh relative frame every other call site gives it.
+    /// The elements a grace body offers its readers, in source order, with every CONTAINER
+    /// replaced in place by what it holds: a PHRASE REFERENCE by the elements of the phrase
+    /// it names, bracketed by the same <see cref="Svg.Collector.RelativeResetMarker"/> /
+    /// <see cref="Svg.Collector.PhraseEndMarker"/> pair the ordinary walk uses so the
+    /// collector gives a phrase body the fresh relative frame every other call site gives it;
+    /// a TUPLET by its body, bracketed by
+    /// <see cref="Svg.Collector.GraceTupletStartMarker"/> /
+    /// <see cref="Svg.Collector.GraceTupletEndMarker"/> so each reader can borrow the ratio
+    /// it reads and give it back at the close.
     /// </summary>
     /// <remarks>
-    /// ⚠️ A PHRASE REFERENCE IS A CONTAINER, NOT A GROB, and that is why it is expanded here
+    /// ⚠️ A CONTAINER IS NOT A GROB, and that is why the two of them are expanded here
     /// rather than waiting for the trip that walks a grace body with the ordinary walker.
     /// Session 298 sorted the drops into "wants the host note's column" and "wants none", and
-    /// filed a phrase reference with the chords and the rests because a body holding only one
-    /// engraves NO GRACE AT ALL. That symptom is shared; the repair is not. A chord, a rest
-    /// and a tuplet each need a grob a grace column cannot hold yet, and building one here
-    /// would be the second spelling of chord/rest layout that
+    /// filed a phrase reference and a tuplet with the chords and the rests because a body
+    /// holding only one engraves NO GRACE AT ALL. That symptom is shared; the repair is not.
+    /// A chord and a rest each need a grob a grace column cannot hold yet, and building one
+    /// here would be the second spelling of chord/rest layout that
     /// <c>ArticulationEngraver</c>'s "THE SAME ENGRAVER, NOT A SECOND SPELLING" argues
-    /// against. A reference holds no grob at all: it names music written elsewhere, and every
-    /// other container in this grammar already expands one — <c>tuplet { A }</c>,
+    /// against. A reference holds no grob at all — it names music written elsewhere — and
+    /// every other container in this grammar already expands one: <c>tuplet { A }</c>,
     /// <c>cue { A }</c> and <c>repeat unfold 2 { A }</c> all do (measured on
     /// scratch/p194/four-containers.lys, the book written in session 194 to check exactly
     /// these four; grace was the only one that dropped it, for 106 sessions).
+    /// <para>
+    /// ⚠️ A TUPLET IS THE SECOND CONTAINER (session 302), and it holds a grob the others do
+    /// not: the BRACKET AND THE NUMBER. Expanding it therefore closes three quarters of the
+    /// hole and leaves a quarter reported — the notes are engraved, at their WRITTEN
+    /// durations, and the decoration is still a <see cref="GraceDropKind.Bracket"/> drop.
+    /// MEASURED before the trip started (scratch/p302/ab, both sides Release, data-pos
+    /// masked): <c>grace { tuplet 3/2 { d'16 e' f' } } c'4 c'2.</c> rendered a page, a MIDI
+    /// file and a MusicXML file each BYTE-IDENTICAL to the book with no grace in it at all,
+    /// while the <c>.ly</c> twin (which narrows nothing) wrote the tuplet out correctly. All
+    /// three narrowing readers had it, which is why one expansion fixes all three.
+    /// </para>
     /// <para>
     /// ⚠️ ONE WALK, TWO READERS, which is why the phrase table arrives as
     /// <paramref name="resolvePhrase"/> instead of being read here: the collector resolves
@@ -247,6 +279,25 @@ internal static class GraceBodySupport
             // ONLY thing that expands. An undeclared name (SymbolReferenceValidator's
             // business) and a cycle (PhraseCycleValidator's) both fall through to the drop
             // arm below, so the reference itself is still named as what did not reach the page.
+            // A TUPLET is the other container. It opens no frame — a tuplet in the main
+            // stream does not reset the relative octave and does not reset the running
+            // duration, so `tuplet 3/2 { d'16 e' f' } c'` gives the c a sixteenth — and the
+            // markers carry only the RATIO, which the page ignores and the two exporters
+            // multiply into the arithmetic they already keep for the main stream. There is
+            // no cycle to guard: a tuplet names nothing.
+            if (item is TupletExpressionSyntax tuplet)
+            {
+                if (charge())
+                {
+                    into.Add(new GraceBodyElement(
+                        new Svg.Collector.GraceTupletStartMarker(tuplet), via));
+                    Expand(BodyItemsOf(tuplet.Body), resolvePhrase, charge, active, into, via);
+                    into.Add(new GraceBodyElement(
+                        Svg.Collector.GraceTupletEndMarker.Instance, via));
+                }
+                continue;
+            }
+
             if (item is VariableReferenceSyntax reference
                 && resolvePhrase(reference.Name.Text) is { } body
                 && active.Add(reference.Name.Text))
@@ -282,11 +333,19 @@ internal static class GraceBodySupport
     private static IEnumerable<SyntaxNode> BodyItemsOf(SyntaxNode body)
         => body is MusicBlockSyntax block ? block.Items : new[] { body };
 
-    /// <summary>True for the frame markers <see cref="BodyElements"/> brackets an expanded
-    /// phrase with: they are instructions to the collector, not music, so neither the drop
+    /// <summary>True for the markers <see cref="BodyElements"/> brackets an expanded
+    /// container with: they are instructions to the readers, not music, so neither the drop
     /// list nor the "engraves nothing" question may count them.</summary>
+    /// <remarks>
+    /// ⚠️ <see cref="Svg.Collector.GraceTupletStartMarker"/> IS ONE OF THESE AND STILL
+    /// PRODUCES A DROP. <see cref="Drops"/> takes it before this predicate, because the
+    /// bracket and the number are lost even though the notes around them are not — the two
+    /// questions ("is this music?" and "did the reader lose something here?") have different
+    /// answers for it, which is the whole reason it is a separate kind.
+    /// </remarks>
     private static bool IsFrameMarker(SyntaxNode element)
-        => element is Svg.Collector.RelativeResetMarker or Svg.Collector.PhraseEndMarker;
+        => element is Svg.Collector.RelativeResetMarker or Svg.Collector.PhraseEndMarker
+                   or Svg.Collector.GraceTupletStartMarker or Svg.Collector.GraceTupletEndMarker;
 
     /// <summary>
     /// Everything in <paramref name="elements"/> that the collector will not engrave,
@@ -296,6 +355,17 @@ internal static class GraceBodySupport
     {
         foreach (var (item, via) in elements)
         {
+            // The container was expanded, so its NOTES are gone from this list and its
+            // decoration is what is left to report. The span comes off the tuplet as
+            // WRITTEN: the marker is zero-width and stands at position 0, so on its own it
+            // could underline nothing.
+            if (item is Svg.Collector.GraceTupletStartMarker tuplet)
+            {
+                yield return new GraceDrop(
+                    GraceDropKind.Bracket, tuplet.Written.Span, Describe(tuplet.Written), via);
+                continue;
+            }
+
             if (IsFrameMarker(item))
                 continue;
 
@@ -359,7 +429,9 @@ internal static class GraceBodySupport
     {
         ChordSyntax => "a chord",
         RestSyntax => "a rest",
-        TupletExpressionSyntax => "a tuplet",
+        // Reached only through GraceTupletStartMarker now: the tuplet itself is expanded,
+        // and what is reported is the decoration the expansion cannot carry.
+        TupletExpressionSyntax => "the bracket and number of a tuplet",
         SlurSyntax => "a slur mark",
         BeamMarkerSyntax => "a beam bracket",
         TieSyntax => "a tie",

@@ -28,10 +28,13 @@ namespace LilySharp.Core.Semantics;
 /// thing a grace body said when it dropped something was <see cref="DiagnosticCodes.
 /// UnengravedRehearsalMark"/>, and only for <c>@mark</c>. MEASURED 2026-08-30 (session 298)
 /// by rendering each spelling against a control and comparing the SVG with <c>data-pos</c>
-/// masked: a chord, a rest or a tuplet in the body engraves NO GRACE AT ALL, and dots,
+/// masked: a chord or a rest in the body engraves NO GRACE AT ALL, and dots,
 /// slurs, beams, ties, <c>@staccato</c>, <c>@text</c>, <c>@f</c>, <c>@finger</c>,
 /// <c>@trill</c>, <c>@sustain</c>, <c>@rit</c> and <c>@cresc</c> are each dropped without a
-/// word. LilyPond draws all of them.
+/// word. LilyPond draws all of them. (A TUPLET was on that list until session 302 measured
+/// that it is a container: its notes are engraved now and only its bracket and number are
+/// reported - <see cref="GraceDropKind.Bracket"/>, the one kind whose subject is a
+/// decoration lost off music that DID reach the page.)
 /// <para>
 /// ⚠️ IT DOES NOT RE-DECIDE THE NARROWING. What a grace body carries is stated once, in
 /// <see cref="GraceBodySupport"/>, and the collector reads the same statement — a validator
@@ -111,6 +114,20 @@ internal sealed class GraceBodyValidator : ISemanticValidator
                     GraceDropKind.Span =>
                         $"{drop.Written} inside {body} is not engraved: a grace note "
                         + "carries no slur, beam or tie",
+                    // ⚠️ THE ONLY KIND THAT REPORTS A LOSS OFF MUSIC THAT DID REACH THE
+                    // PAGE. A tuplet is a container (GraceBodySupport.BodyElements expands
+                    // it), so the notes are engraved and the decoration is not, and a
+                    // sentence that did not say so would send the reader looking for missing
+                    // notes. When the body engraves nothing anyway - `grace { tuplet 3/2 {
+                    // <c e> <d f> } }`, whose elements are chords - the promise is dropped
+                    // rather than made false, and the chords' own drops carry the "NO grace
+                    // note is drawn at all" half.
+                    GraceDropKind.Bracket =>
+                        // "are", not "is": this is the one arm whose subject is plural, and
+                        // the sentence is read out loud in a console.
+                        $"{drop.Written} inside {body} are not engraved: a grace column "
+                        + "carries no tuplet bracket and no tuplet number"
+                        + (engravesNothing ? "" : ", although the notes it holds ARE drawn"),
                     _ =>
                         $"{drop.Written} on a grace note is not engraved: a grace note is not "
                         + "a measure item, so there is no column for it to hang off. A "
