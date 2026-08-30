@@ -97,20 +97,27 @@ public class RehearsalMarkEngravedValidatorTests
             + "form main { ~A }\nscore main { staff m }\n"));
 
     /// <summary>
-    /// ⚠️ A mark on a GRACE note, and this one is NOT a mark defect — it is the whole
-    /// annotation family. <c>MeasureCollector.CollectGraceNotes</c> reads pitch and duration
-    /// only, so a grace note carries no <c>@staccato</c> and no <c>@text</c> either; the
-    /// second assertion states that, so that whoever closes the grace hole finds this test
-    /// waiting rather than a warning they cannot explain. Fixing it there turns this case
-    /// green, which is the correct direction and must be done here, not by weakening the
-    /// validator.
+    /// ⚠️ A mark on a GRACE note is PRINTED, and this test used to assert the opposite.
+    /// It was written (session 293) as the marker for whoever closed the grace hole, saying
+    /// that turning it green was the correct direction; session 298 turned it, and the
+    /// reason is that this never was a mark defect. LilyPond consists <c>Mark_engraver</c>
+    /// in the SCORE context (ly/engraver-init.ly:729,764), so a mark's grob was never the
+    /// note's Voice's and a grace being a Voice of its own could not stand between them —
+    /// Lily# says the same by building the mark with no <c>itemIndex</c>. What is left of
+    /// the grace hole is the NOTE-ANCHORED families, which have no column on a grace note
+    /// to hang off; they are still dropped, and they are now reported by
+    /// <c>LYS4020</c> rather than by a sentence in this warning
+    /// (<see cref="GraceBodyValidatorTests"/>). The second assertion keeps that half of the
+    /// statement here, where the first reader of this file will look for it.
     /// </summary>
     [Fact]
-    public void AMarkOnAGraceNote_IsReported()
+    public void AMarkOnAGraceNote_IsPrintedAndNotReported()
     {
-        Assert.Single(Warnings(OneStaff("grace { d'8@mark(\"P\") } c'1 | e'1 |")));
+        string book = OneStaff("grace { d'8@mark(\"P\") } c'1 | e'1 |");
+        Assert.Empty(Warnings(book));
+        Assert.Contains(">P</text>", LiveRender.Svg(book));
 
-        // The company it keeps: neither of these reaches the page from a grace note either.
+        // The company it keeps is still on the floor — and no longer silent about it.
         string svg = LiveRender.Svg(OneStaff("grace { d'8@staccato@text(\"hi\") } c'1 | e'1 |"));
         Assert.DoesNotContain(">hi</text>", svg);
     }

@@ -904,6 +904,32 @@ public static class DiagnosticCodes
     /// question per score rather than to weaken the answer.
     /// </para></summary>
     public const string UnengravedRehearsalMark = "LYS4019";
+    /// <summary>Warning: something written inside a <c>grace { }</c> body that Lily# does
+    /// not engrave, reported at what was written.
+    /// <para>
+    /// ⚠️ THE BODY IS PARSED WHOLE AND READ NARROW. A grace body goes through the ordinary
+    /// <c>ParseMusicBlock</c>, so it accepts everything a music block accepts;
+    /// <c>MeasureCollector.CollectGraceNotes</c> then reads a bare note's PITCH and DURATION
+    /// VALUE and nothing else. MEASURED 2026-08-30 (session 298), each spelling rendered
+    /// against a control and compared with <c>data-pos</c> masked: a chord, a rest or a
+    /// tuplet contributes no grace column at all — a body made only of those draws NO grace
+    /// — and dots, slur/beam/tie markers, <c>@staccato</c>, <c>@text</c>, <c>@f</c>,
+    /// <c>@finger</c>, <c>@trill</c>, <c>@sustain</c>, <c>@rit</c> and <c>@cresc</c> were
+    /// each dropped in silence. LilyPond 2.26.0 draws every one of them.
+    /// </para>
+    /// <para>
+    /// ⚠️ It is a WARNING because each of these is valid LilyPond and each is what Lily#
+    /// should draw once a grace note has an address to hang an annotation off; the report is
+    /// "not drawn yet", not "do not write this". Scope when it was written: 0 of the reader's
+    /// 326 books and 0 of the 581 tracked <c>.lys</c> write anything a grace body drops.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE REHEARSAL MARK IS NOT REPORTED HERE, because it is now drawn: its grob is the
+    /// SCORE's (ly/engraver-init.ly:729,764 Mark_engraver), not the note's, so a grace being
+    /// a Voice of its own never stood between them. See
+    /// <c>MeasureCollector.CollectGraceBarLevelMarks</c>.
+    /// </para></summary>
+    public const string UnengravedGraceContent = "LYS4020";
     /// <summary>Warning: a span that opens exactly ONE unnamed <c>voice { … }</c>. The
     /// block is then entirely transparent — stem forcing needs a second voice, so the
     /// music engraves as if the braces were not there. Someone who wrote it meaning

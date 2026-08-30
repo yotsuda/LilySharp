@@ -41,12 +41,20 @@ namespace LilySharp.Core.Semantics;
 /// </para>
 /// <para>
 /// What this catches, MEASURED the day it was written (2026-08-30, the 263 books on disk
-/// that write <c>@mark</c>, 2244 marks): a mark in an unplayed <c>section</c>, a mark in a
-/// <c>part</c> no score renders, and a mark on a GRACE note. That last one is not a mark
-/// defect and must not be fixed here: <c>MeasureCollector.CollectGraceNotes</c> reads pitch
-/// and duration only, so a grace note carries NO annotation of any kind — <c>@staccato</c>
-/// and <c>@text</c> are dropped there too (docs/HANDOFF.md §2). This warning is what makes
-/// that hole audible; closing it is its own trip.
+/// that write <c>@mark</c>, 2244 marks): a mark in an unplayed <c>section</c> and a mark in
+/// a <c>part</c> no score renders.
+/// <para>
+/// ⚠️ IT USED TO CATCH A MARK ON A GRACE NOTE, and that clause is GONE (session 298): the
+/// mark is now drawn from there. It never was a mark defect — LilyPond consists
+/// Mark_engraver in the SCORE context (ly/engraver-init.ly:729,764), so the mark's grob was
+/// never the note's Voice's and a grace being a Voice of its own could not stand between
+/// them; <c>MeasureCollector.CollectGraceBarLevelMarks</c> says the same by building it
+/// with no <c>itemIndex</c>. The REST of the grace hole is real and still open — a grace
+/// note carries no <c>@staccato</c> and no <c>@text</c>, and a chord or rest in the body
+/// draws no grace at all — and it is now reported by its own diagnostic
+/// (<see cref="DiagnosticCodes.UnengravedGraceContent"/>) instead of by a sentence in this
+/// one. Do not put a second word about graces here.
+/// </para>
 /// </para>
 /// <para>
 /// ⚠️ NO DIAGNOSTIC IN THE OTHER DIRECTION. A mark that prints TWICE is impossible to write:
@@ -87,8 +95,7 @@ internal sealed class RehearsalMarkEngravedValidator : ISharedCollectValidator
             _diagnostics.Warning(new TextSpan(node.SourceStart, 1),
                 DiagnosticCodes.UnengravedRehearsalMark,
                 "this rehearsal mark is not printed by this score - the music it is written "
-                + "in is either not played by the form, not rendered by any staff here, or a "
-                + "grace note (a grace note carries no annotations at all)");
+                + "in is either not played by the form or not rendered by any staff here");
         }
     }
 }

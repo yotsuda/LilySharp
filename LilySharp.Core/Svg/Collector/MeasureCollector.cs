@@ -3748,7 +3748,12 @@ public sealed partial class MeasureCollector
 
         foreach (var item in grace.Body.Items)
         {
-            if (item is NoteSyntax note)
+            // ⚠️ ONE PREDICATE, TWO READERS. What a grace body carries is stated in
+            // Semantics.GraceBodySupport, and GraceBodyValidator reports everything this
+            // loop leaves behind (LYS4020) from that same statement — a validator that
+            // re-decided the narrowing here would be the second spelling HANDOFF §5.2.1②
+            // names, and it would go stale the day this arm learns a second node kind.
+            if (Semantics.GraceBodySupport.CarriedNote(item) is { } note)
             {
                 var rp = CalculateStaffPosition(note.Pitch);
                 _octave.CurrentOctave = rp.RelativeOctave;
@@ -3763,7 +3768,15 @@ public sealed partial class MeasureCollector
                 graceDefaultDuration = baseDuration;
 
                 int graceMidi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
-                graceNoteInfos.Add(new GraceNoteInfo(staffPosition, accidental, needsLedger, baseDuration, graceMidi));
+                // The '\N', read through the same statement the validator reads, so a grace
+                // on a tab picks the string the writer asked for rather than the one the
+                // resolver would have picked — and so the two can never disagree about
+                // whether it is carried (GraceBodySupport.CarriedStringNumber).
+                graceNoteInfos.Add(new GraceNoteInfo(staffPosition, accidental, needsLedger,
+                    baseDuration, graceMidi,
+                    Semantics.GraceBodySupport.CarriedStringNumber(note)));
+
+                CollectGraceColumnlessAnnotations(note, measureIndex);
             }
         }
 
@@ -3782,4 +3795,40 @@ public sealed partial class MeasureCollector
         }
     }
 
+    /// <summary>
+    /// Builds the annotations on a grace note that ask for NO COLUMN of their own — the ones
+    /// a grace note can carry although it is not a measure item. Today: the rehearsal mark.
+    /// (The string number is the other one, and it is not built here because it is not a grob
+    /// at all — it rides <see cref="GraceNoteInfo.StringNumber"/> into the fret resolver.)
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS NOT "one annotation family got lucky". LilyPond consists Mark_engraver in
+    /// the SCORE context (ly/engraver-init.ly:729 <c>\name Score</c>, :764), so a mark's
+    /// grob never belonged to the note's Voice and a grace being a Voice of its own cannot
+    /// reach it; Lily# says the same by building the mark with NO <c>itemIndex</c>
+    /// (<see cref="CollectArticulations"/> — "a rehearsal mark belongs to the BAR").
+    /// A grace note therefore has nothing a mark needs, which is exactly why this one works
+    /// while <c>@staccato</c> and <c>@text</c> — which need the note's column, and a grace
+    /// note has no <c>itemIndex</c> to give them — are still dropped and reported (LYS4020).
+    /// MEASURED on LilyPond 2.26.0, scratch/p298/lpmark.svg: <c>\grace { d'8^\markup{x}
+    /// \mark "P" }</c> prints both, and the P is the half this restores.
+    /// <para>
+    /// ⚠️ The position de-dupe is the one <see cref="CollectArticulations"/> explains and is
+    /// doing the same real work here: one written part collected onto BOTH a staff and a tab
+    /// walks its grace once per staff, and one written mark is one printed mark.
+    /// </para>
+    /// </remarks>
+    private void CollectGraceColumnlessAnnotations(NoteSyntax note, int measureIndex)
+    {
+        foreach (var annotation in note.Articulations)
+        {
+            if (annotation is not MusicMarkSyntax mark
+                || !Semantics.GraceBodySupport.NeedsNoColumn(annotation)
+                || Semantics.AnnotationValues.Rehearsal(mark, out _) is not { } label)
+                continue;
+            if (!MusicMarkExistsAt(mark.SourceStart))
+                _musicMarks.Add(new MusicMarkItem(
+                    MusicMarkType.Rehearsal, label, measureIndex, mark.SourceStart));
+        }
+    }
 }

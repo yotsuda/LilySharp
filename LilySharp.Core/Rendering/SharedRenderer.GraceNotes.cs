@@ -258,7 +258,11 @@ internal static partial class SharedRenderer
             if (!colX.IsDefault && headIndex < colX.Length)
                 currentX = g.X + colX[headIndex];
             headIndex++;
-            var (stringNum, fret) = Tunings.CalculateFret(note.Midi + octaveShift, tuningArray, 0);
+            // The '\N' written on the grace note, when there is one. A string number is not a
+            // grob but the resolver's INPUT, so a grace can honour it although it is not a
+            // measure item (GraceNoteInfo.StringNumber); 0 means "pick a string".
+            var (stringNum, fret) = Tunings.CalculateFret(
+                note.Midi + octaveShift, tuningArray, note.StringNumber ?? 0);
             string fretText = fret.ToString();
             yield return new TabGraceDigit(
                 stringNum, fretText, currentX,

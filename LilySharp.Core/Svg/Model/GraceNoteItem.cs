@@ -44,7 +44,15 @@ public readonly record struct GraceNoteInfo(
     string? Accidental,     // "sharp", "flat", "natural", "doubleSharp", "doubleFlat", or null
     bool NeedsLedger,       // Whether ledger lines are needed
     Fraction BaseDuration,  // Duration of this grace note (for spacing calculation)
-    int Midi = 0            // Absolute MIDI pitch (for tab fret resolution)
+    int Midi = 0,           // Absolute MIDI pitch (for tab fret resolution)
+    // The '\N' written on this grace note, or null for automatic string selection.
+    // ⚠️ THIS IS NOT A GROB, which is why a grace note can carry it while it carries no
+    // @staccato and no @text: a string number draws NOTHING on a notation staff (MEASURED
+    // 2026-08-30 — `c'4\2` and `c'4` render byte-identical) and is only an input to
+    // Tunings.CalculateFret, so it asks for no column of its own. It was silently ignored
+    // until session 298, and that cost the reader's own `Real Gone.lys` two grace notes
+    // drawn on whatever string the resolver picked. See Semantics.GraceBodySupport.
+    int? StringNumber = null
 );
 
 /// <summary>

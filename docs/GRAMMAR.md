@@ -1361,6 +1361,14 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
 
 Tuplet         = 'tuplet' , Integer , '/' , Integer , MusicBlock ;   (* nesting allowed *)
 Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' ) , MusicBlock ;
+                 (* THE BLOCK IS FULL AND THE ENGRAVING IS NARROW. The body parses as any
+                    music block, but only a BARE NOTE is engraved, and of it only the pitch
+                    and the duration VALUE. A chord, a rest, a tuplet, a phrase reference,
+                    a dot, a slur/beam/tie mark and every note-anchored annotation are
+                    dropped and reported (LYS4020) — a body with no bare note in it draws
+                    no grace at all. The two annotations that DO come through are the ones
+                    that want no column: '@mark("A")' (its grob is the Score's) and the
+                    string number '\N' (it is the tab resolver's input, not a grob). *)
 Repeat         = 'repeat' , ( 'percent' | 'unfold' | 'tremolo' ) , [ Integer ] , MusicBlock ;
                  (* repeat percent 2 { … } = percent-repeat the measure; volta repeats
                     use the symbolic |: … :| form, NOT a 'repeat' keyword *)

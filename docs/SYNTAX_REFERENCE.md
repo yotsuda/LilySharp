@@ -592,6 +592,34 @@ acciaccatura { a16 } b4     // Slashed grace (takes no time)
 appoggiatura { c8 } d4      // Unslashed grace
 ```
 
+**A grace body is parsed as a full music block, and engraved much more narrowly than that.**
+The engraver reads a **bare note's pitch and its duration VALUE** out of the body and nothing
+else. Everything else written inside is not drawn, and Lily# says so at what was written
+(LYS4020):
+
+```
+grace { d16@staccato } c4     // the staccato is not drawn      (LYS4020)
+grace { d16. } c4             // the dot is not drawn           (LYS4020)
+grace { d16( e16) } c4        // the slur is not drawn          (LYS4020)
+grace { d16 r16 } c4          // the rest is not drawn          (LYS4020)
+grace { <d f>16 } c4          // no grace at all is drawn       (LYS4020)
+```
+
+**Two annotations ARE carried, and the line between them and the rest is whether they want a
+column of their own on the page:**
+
+* `grace { d16@mark("A") } c4` — the rehearsal mark. It is not the note's mark: its grob
+  belongs to the bar (LilyPond consists `Mark_engraver` in the `Score` context), so a grace
+  note never had to carry it.
+* `grace { a,16\2 } b,8` — the string number. It is not drawn at all; it is what the tab's
+  fret resolver reads, so a grace note on a `tab` staff takes the string you asked for.
+
+A grace body with at least one bare note keeps its grace; only the parts of the body that are
+not bare notes go missing.
+
+LilyPond draws all of the spellings above, so each warning says "not drawn yet", not "do not
+write this".
+
 ## Tuplets
 
 ```
