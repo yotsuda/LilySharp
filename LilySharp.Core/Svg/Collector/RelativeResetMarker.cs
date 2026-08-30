@@ -111,8 +111,9 @@ internal sealed class PhraseEndMarker : SyntaxNode
 /// compression, two answers: the played length shrinks and the drawn note does not. That is
 /// why the page's arm below is a no-op and the two exporters' are not.
 /// <para>
-/// MEASURED 2026-08-30 (session 302, scratch/p302/lp) on LilyPond's own <c>\midi</c>,
-/// division 384: <c>\grace { d'16 e' f' } c'4</c> puts its three grace notes at ticks
+/// MEASURED 2026-08-30 (session 302, scratch/p302/lp) on LilyPond's own <c>\midi</c> at
+/// division 384. ⚠️ ON the WSL LilyPond, v2.27.3 — NOT the canonical 2.26.0: the pinned Windows 2.26.0 binary was asked for the same three books and stalled for 13 minutes without writing a byte (this machine's known illness, docs/RULES.md 5.5). So the TICK NUMBERS below are qualitative. What is canonical is the MECHANISM above, read in the 2.26.0 source.
+/// <c>\grace { d'16 e' f' } c'4</c> puts its three grace notes at ticks
 /// 0 / 21 / 43 and hands the main note over at 64, while
 /// <c>\grace { \tuplet 3/2 { … } } c'4</c> puts them at 0 / 14 / 29 and hands over at 43 —
 /// 64 × 2/3 = 42.67. So <see cref="Midi.MidiExporter"/> and

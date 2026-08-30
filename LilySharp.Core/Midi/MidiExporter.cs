@@ -2097,7 +2097,11 @@ public sealed class MidiExporter
 
                 // A TUPLET IN A GRACE BODY IS A CONTAINER, AND THIS READER DOES READ ITS
                 // RATIO. MEASURED 2026-08-30 (session 302, scratch/p302/lp) on LilyPond's own
-                // \midi at division 384: `\grace { d'16 e' f' } c'4` sounds its three grace
+                // \midi at division 384 - on the WSL LilyPond, v2.27.3, NOT the canonical
+                // 2.26.0 (the pinned Windows binary stalled 13 minutes without writing a byte;
+                // docs/RULES.md 5.5). The ticks are therefore QUALITATIVE; what is canonical is
+                // the mechanism they agree with, cited on GraceTupletStartMarker and read in
+                // the 2.26.0 source. `\grace { d'16 e' f' } c'4` sounds its three grace
                 // notes at ticks 0 / 21 / 43 and hands the main note over at 64, while
                 // `\grace { \tuplet 3/2 { d'16 e' f' } } c'4` sounds them at 0 / 14 / 29 and
                 // hands over at 43 = round(64 * 2/3). LilyPond scales a grace body's tuplet

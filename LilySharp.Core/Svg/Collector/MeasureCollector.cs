@@ -3802,8 +3802,10 @@ public sealed partial class MeasureCollector
             // deliberately a no-op rather than an absent case: what the ratio changes is the
             // SOUNDING length, and a grace note is drawn from its WRITTEN duration.
             // MEASURED on LilyPond 2.26.0 (session 301, scratch/p301/lp, data-pos masked):
-            // `\grace { \tuplet 3/2 { d'16 e' f' } }` puts its three noteheads, stems, beams
-            // and accidentals at coordinates BYTE-IDENTICAL to `\grace { d'16 e' f' }`, and
+            // `\grace { \tuplet 3/2 { d'16 e' f' } }` renders BYTE-IDENTICALLY to
+            // `\grace { d'16 e' f' }` except for the ink named below — the three notes are
+            // the same to the coordinate. ⚠️ That book writes no accidental, so the
+            // measurement says nothing about one; what it pins is the NOTE positions, and
             // the only ink it adds is the italic serif `3` (plus the four bracket lines when
             // the durations are long enough that no beam stands in for them). Those two grobs
             // are what a grace column still cannot hold, and GraceBodyValidator reports them

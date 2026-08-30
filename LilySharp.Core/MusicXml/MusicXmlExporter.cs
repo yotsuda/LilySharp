@@ -2679,10 +2679,12 @@ public sealed class MusicXmlExporter
                 // A TUPLET IN A GRACE BODY IS A CONTAINER, AND THIS READER READS ITS RATIO
                 // AS <time-modification> - the same stack the main stream's tuplet arm
                 // pushes, read by the same CurrentTupletRatio(), so nothing is spelled twice.
-                // MEASURED 2026-08-30 (session 302, scratch/p302/lp) on LilyPond's own \midi:
-                // a grace body's tuplet scales the played length by normal/actual exactly as
-                // one in the main stream does, so the ratio is a fact about the music rather
-                // than about the page.
+                // MEASURED 2026-08-30 (session 302, scratch/p302/lp) on LilyPond's own \midi
+                // (the WSL v2.27.3 binary, not the canonical 2.26.0 - see the note on
+                // GraceTupletStartMarker; the ticks are qualitative and the MECHANISM is what
+                // carries the weight): a grace body's tuplet scales the played length by
+                // normal/actual exactly as one in the main stream does, so the ratio is a fact
+                // about the music rather than about the page.
                 // ⚠️ THE <notations><tuplet> BRACKET IS DELIBERATELY NOT WRITTEN, and this is
                 // the one narrowing decision this arm makes. That element asks the reading
                 // program to DRAW a bracket and a number, and those are exactly the two grobs
@@ -2691,8 +2693,15 @@ public sealed class MusicXmlExporter
                 // readers that place grobs into disagreement and make the warning false for
                 // one of them. The time is exported because MIDI exports it too; the ink is
                 // not, because the page does not. ⇒ The day CollectGraceNotes learns the
-                // bracket, this arm stamps StampTupletBracket the way the main stream does,
-                // and the drop kind goes away with it.
+                // bracket, this arm does what ProcessNode's TupletExpressionSyntax arm does:
+                // remember _currentMeasure.Notes.Count at the open and, at the close, hang
+                // TupletNotation("start") / ("stop") on the first and last note of that range.
+                // (There is no shared helper to call: that arm is written inline, and pulling
+                // it out is part of that trip rather than this one.) The drop kind goes with it.
+                // ⚠️ THE SENTENCE ABOVE NAMED A HELPER THAT DOES NOT EXIST for one commit
+                // (`StampTupletBracket`, session 302). A forward instruction is read by
+                // somebody who cannot yet tell it from a real symbol, and no ratchet checks
+                // C# names in prose the way LpReferenceCitationTests checks LilyPond ones.
                 case Svg.Collector.GraceTupletStartMarker t:
                     _tupletStack.Push((t.Actual, t.Normal));
                     break;

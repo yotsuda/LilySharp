@@ -411,8 +411,12 @@ public class GraceNoteMidiTests
     /// </summary>
     /// <remarks>
     /// ⚠️ THE RATIO IS LILYPOND'S ANSWER, MEASURED, not a guess about what a tuplet ought to
-    /// mean. On LilyPond 2.26.0's own <c>\midi</c> at division 384 (2026-08-30, session 302,
-    /// scratch/p302/lp): <c>\grace { d'16 e' f' } c'4</c> sounds its grace notes at ticks
+    /// mean. On LilyPond's own <c>\midi</c> at division 384 (2026-08-30, session 302,
+    /// scratch/p302/lp). ⚠️ THIS LINE SAID "LilyPond 2.26.0" FOR ONE COMMIT AND THAT WAS
+    /// WRONG: the run was the WSL binary, v2.27.3, and the canonical 2.26.0 exe stalled for
+    /// 13 minutes when asked for the same books. The ticks are QUALITATIVE; the canonical
+    /// half is the mechanism cited on <c>Svg.Collector.GraceTupletStartMarker</c>, which was
+    /// read in the 2.26.0 source. <c>\grace { d'16 e' f' } c'4</c> sounds its grace notes at ticks
     /// 0 / 21 / 43 and hands the main note over at 64, while
     /// <c>\grace { \tuplet 3/2 { … } } c'4</c> sounds them at 0 / 14 / 29 and hands over at
     /// 43 = round(64 × 2/3).
@@ -519,5 +523,58 @@ public class GraceNoteMidiTests
         // book with no grace in it at all.
         Assert.True(mainTuplet < mainPlain);
         Assert.True(graceTuplet < gracePlain);
+    }
+
+    /// <summary>
+    /// A CHORD and a REST inside a grace tuplet scale with it too — the chord's members
+    /// sound two thirds as long, and the rest gives up two thirds as much of the grace's
+    /// time, so the note after it starts where the ratio says.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS THE HALF SESSION 302 WIDENED WITHOUT A NET, found by auditing its own
+    /// claims in the same session. A chord and a rest in a grace body have SOUNDED since
+    /// 2026-07-10 while the page and the MusicXML still drop them (the open half of
+    /// docs/HANDOFF.md §2 U8) — so teaching the expander to walk into a tuplet silently
+    /// widened those two arms as well, and nothing asked whether the ratio reached them.
+    /// MEASURED 2026-08-30 (scratch/p302/ab/e_chordrest_plain.lys and f_chordrest_tuplet.lys,
+    /// division 480): both chord members 27 -> 18 ticks, the bare note after the rest
+    /// 54 -> 36, the group 81 -> 54, and the main note still ends on the beat at 480.
+    /// <para>
+    /// ⚠️ THE REST IS THE ONE THAT COULD HAVE ROTTED QUIETLY: it emits no note, so a ratio
+    /// that missed it would show up only as the LATER grace notes starting late — audible,
+    /// invisible to any assert about pitches.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void AChordAndARestInAGraceTuplet_ScaleWithIt()
+    {
+        const string Plain = "grace { <c' e'>16 r16 g'16 } c'4 c'2 c'4 | e'1 |";
+        const string Triplet = "grace { tuplet 3/2 { <c' e'>16 r16 g'16 } } c'4 c'2 c'4 | e'1 |";
+
+        var plain = Performance("", Plain);
+        var triplet = Performance("", Triplet);
+
+        // Same events, same pitches: the tuplet loses nothing on the way in.
+        Assert.Equal(plain.Select(n => n.Pitch), triplet.Select(n => n.Pitch));
+
+        // Both chord members and the bare note are two thirds as long…
+        var plainGrace = plain.Where(n => n.Dur < 100).ToArray();
+        var tripletGrace = triplet.Where(n => n.Dur < 100).ToArray();
+        Assert.Equal(3, tripletGrace.Length);          // two chord members + the bare note
+        Assert.All(tripletGrace.Zip(plainGrace), p => Assert.Equal(p.Second.Dur * 2 / 3, p.First.Dur));
+
+        // …and the note written AFTER the rest starts two thirds of the way in, which is the
+        // only place the rest's own scaling is visible at all.
+        Assert.Equal(plainGrace[^1].Start * 2 / 3, tripletGrace[^1].Start);
+
+        // The main note still ends on the beat: the steal shrank with what was played.
+        var plainMain = plain.First(n => n.Dur > 100);
+        var tripletMain = triplet.First(n => n.Dur > 100);
+        Assert.Equal(plainMain.Start + plainMain.Dur, tripletMain.Start + tripletMain.Dur);
+
+        // ⚠️ The control: none of the above says anything if the plain book had no grace in
+        // it either. MEASURED before this trip, that was literally the state of the tupleted
+        // book (scratch/p302/ab).
+        Assert.True(plainGrace[^1].Start > 0);
     }
 }
