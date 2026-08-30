@@ -245,17 +245,36 @@ internal static class GraceNoteEngraver
         GraceNoteItem grace, ImmutableArray<double> columnOffsets)
     {
         var notes = grace.Notes;
-        if (notes.Length < 2) return (null, null);
+        // ⚠️ THE GATE IS ASKED, NOT RE-DERIVED. This block used to spell IsBeamedRun out
+        // again - `notes.Length < 2`, then `BeamCountForDuration(...) < 1` for every head -
+        // under a comment that said "the same gate the renderer draws by". Both spellings
+        // computed the same predicate, so nothing was wrong on the page; what was wrong is
+        // that there were two of them, which is the defect checklist 7.7 calls this
+        // repository's most repeated, and which the remarks on IsBeamedRun itself argue
+        // against three lines below ("a run that is beamed for one of them and flagged for
+        // another reserves a box it does not fill").
+        // ⚠️ THE VALUE IS PROSPECTIVE, AND THE MEASUREMENT SAYS SO RATHER THAN THE OTHER
+        // WAY ROUND. This comment first claimed the fold was load-bearing - "poison
+        // IsBeamedRun and the quanter's tests go green before it and red after" - and the
+        // experiment REFUTED that: poisoning IsBeamedRun to answer "not beamed" reddens
+        // exactly 29 tests, the SAME 29, folded or unfolded (session 302, scratch/p302/
+        // foldproof.py). Of course it does: with nothing beamed, the renderer and the
+        // reservation move the page on their own and this method's answer is never read.
+        // ⇒ The two spellings were INDISTINGUISHABLE, which is what makes the fold safe, not
+        // what makes it pointless: no book was ever drawn wrong and none changes now. What it
+        // buys is the FUTURE - the open half of docs/HANDOFF.md §2 U8 (a chord or a rest in a
+        // grace body) has to teach this predicate what a non-head member does to a run, and
+        // with two spellings only one of them would have been taught.
+        // ⚠️ NOTHING GUARDS THE FOLD, and that follows from the same experiment: if someone
+        // re-inlines the gate, no test goes red. There is nothing to guard once there is one
+        // house - the drift this prevents cannot happen while the second spelling is absent.
+        if (!IsBeamedRun(notes)) return (null, null);
         if (columnOffsets.IsDefault || columnOffsets.Length != notes.Length)
             return (null, null);
 
         var counts = new int[notes.Length];
         for (int i = 0; i < notes.Length; i++)
-        {
             counts[i] = BeamCountForDuration(notes[i].BaseDuration.Denominator);
-            // The same gate the renderer draws by: a group is beamed only if EVERY head is.
-            if (counts[i] < 1) return (null, null);
-        }
 
         var members = ImmutableArray.CreateBuilder<BeamMember>(notes.Length);
         var xs = new double[notes.Length];
@@ -298,6 +317,15 @@ internal static class GraceNoteEngraver
     /// <c>SharedRenderer.DrawGraceStemsAndBeam</c> draws by it. A run that is beamed for one
     /// of them and flagged for another reserves a box it does not fill — the exact drift
     /// docs/RULES.md §7.7 lists as "the second spelling of one quantity".
+    /// <para>
+    /// ⚠️⚠️ AND ONE OF THE FOUR WAS NOT ASKING — IT WAS RE-DERIVING (session 302, found by
+    /// counting the readers of a "one sentence, N readers" comment the way session 301's rule
+    /// says to: grep the callers, and count the SPELLINGS as well as the call sites).
+    /// <see cref="QuantGraceBeam"/> spelled this predicate out again inside its own loop, so
+    /// the grep for <c>IsBeamedRun</c> answered TWO where the comment said four. Both
+    /// spellings agreed, so no book was ever drawn wrong; the cost was all in the future,
+    /// because the open half of docs/HANDOFF.md §2 U8 has to change exactly this predicate.
+    /// </para>
     /// </para>
     /// </remarks>
     internal static bool IsBeamedRun(ImmutableArray<GraceNoteInfo> notes)
