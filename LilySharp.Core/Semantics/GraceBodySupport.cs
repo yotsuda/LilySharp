@@ -50,11 +50,31 @@ internal readonly record struct GraceDrop(
 internal readonly record struct GraceBodyElement(SyntaxNode Node, string? ViaPhrase);
 
 /// <summary>
-/// THE statement of what a <c>grace { … }</c> body carries today, written once and read
-/// twice: <see cref="Svg.Collector.MeasureCollector"/> takes from it what it engraves, and
-/// <see cref="GraceBodyValidator"/> reports what is left over.
+/// THE statement of what a <c>grace { … }</c> body carries today, written once and read by
+/// FOUR walks: <see cref="Svg.Collector.MeasureCollector"/> takes from it what it engraves,
+/// <see cref="GraceBodyValidator"/> reports what is left over,
+/// <see cref="Midi.MidiExporter"/> plays it and <see cref="MusicXml.MusicXmlExporter"/>
+/// exports it.
 /// </summary>
 /// <remarks>
+/// ⚠️ IT SAID "READ TWICE" FOR A DAY, AND THE OTHER TWO READERS WERE WALKING
+/// <c>grace.Body.Items</c> THEMSELVES. Session 300 taught the first two that a phrase
+/// reference is a container; session 301 MEASURED (2026-08-30, scratch/p301/ab) that
+/// <c>grace { G } c'4 c'2.</c> then engraved a page byte-identical to the inline spelling —
+/// and to the <c>.ly</c> twin — while its MIDI was byte-identical to the book with NO GRACE
+/// IN IT and its MusicXML held no <c>&lt;grace/&gt;</c> at all: two grace notes on the page
+/// that nobody could hear. ⇒ When a file claims "one statement, N readers", COUNT the N — a
+/// grep for the walks that take a <c>GraceExpressionSyntax</c> answered it in thirty seconds.
+/// (The fifth walk, <c>LilyPond.LilyPondExporter.EmitGrace</c>, is not a reader of this
+/// statement: it re-emits the written source and narrows nothing, so it was right already.)
+/// <para>
+/// ⚠️ THE FOUR STILL DISAGREE BELOW THE CONTAINER, and that is the open half of
+/// docs/HANDOFF.md §2 U8 rather than an oversight: a chord and a rest in a grace body SOUND
+/// (since 2026-07-10) while the page and the XML drop them. Whoever teaches the page to
+/// engrave those has to check all four again — the line this file draws is about which GROBS
+/// a grace column can hold, and only two of the readers put grobs anywhere.
+/// </para>
+/// <para>
 /// ⚠️ THIS IS A NARROWING, NOT A GRAMMAR. A grace body is parsed by the ordinary
 /// <c>ParseMusicBlock</c>, so it holds everything a music block can hold — chords, rests,
 /// tuplets, slur/beam/tie markers, every annotation. The collector then reads a bare
@@ -65,6 +85,7 @@ internal readonly record struct GraceBodyElement(SyntaxNode Node, string? ViaPhr
 /// <c>@text</c>, <c>@f</c>, <c>@finger</c>, <c>@trill</c>, <c>@sustain</c>, <c>@rit</c>,
 /// <c>@cresc</c> — every one of them byte-identical to the control, i.e. dropped, and a
 /// chord or a rest or a tuplet as the body's only element removes the whole grace group.
+/// </para>
 /// <para>
 /// ⚠️ A PHRASE REFERENCE IS NO LONGER ON THAT LIST (session 300). It is the one element in
 /// it that names no grob — it names music written elsewhere — so it is expanded in place by

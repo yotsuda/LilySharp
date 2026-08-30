@@ -2578,33 +2578,122 @@ public sealed class MusicXmlExporter
         MaybeClosePickup(duration);
     }
 
+    /// <summary>
+    /// Writes the grace notes of a <c>grace { … }</c> body.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE BODY IS READ THROUGH THE STATEMENT THE PAGE READS
+    /// (<see cref="Semantics.GraceBodySupport"/>), so a phrase named in a grace body is
+    /// expanded here exactly as <c>MeasureCollector.CollectGraceNotes</c> expands it. This
+    /// walk used to take <c>grace.Body.Items</c> itself: MEASURED 2026-08-30 (session 301,
+    /// scratch/p301/ab) <c>grace { G } c'4 c'2.</c> wrote NO <c>&lt;grace/&gt;</c> element at
+    /// all where the inline spelling wrote two, on a page that engraves the two.
+    /// <para>
+    /// ⚠️ THE GRACE GROUP HAS ITS OWN DURATION MEMORY, opening at an EIGHTH. That is the
+    /// LAYOUT's rule and it is read from there (<c>CollectGraceNotes</c>'
+    /// <c>graceDefaultDuration</c>; LilyPond has no grace-specific default at all). This
+    /// walker used to share <see cref="_defaultDuration"/> with the main stream, which made
+    /// it the FOURTH answer to a question 2026-08-01 declared to have one home — MEASURED:
+    /// <c>grace { c' } d'4</c> wrote <c>&lt;type&gt;quarter&lt;/type&gt;</c> where the page,
+    /// the MIDI and the <c>.ly</c> twin all say an eighth. The main stream's memory is now
+    /// left alone, the way the other three readers leave it alone.
+    /// </para>
+    /// </remarks>
     private void ProcessGraceNotes(GraceExpressionSyntax grace)
     {
         if (_currentMeasure == null) return;
 
         bool isAcciaccatura = grace.IsAcciaccatura;
+        // The grace group's own memory. Written duration threads WITHIN the group and the
+        // main stream's is untouched, so `grace { d16 e } c4` leaves the c a quarter.
+        Fraction graceDuration = Fraction.Eighth;
+        int expansionBudget = Svg.Collector.MeasureCollector.DefaultExpansionBudgetCap;
+        // What a phrase reference borrows and must give back — only what THIS reader reads.
+        // ⚠️ ALLOCATED ONLY IF A REFERENCE IS ACTUALLY WRITTEN: a grace body naming a phrase
+        // is rare (2 books in the whole 1754-book sweep) and this runs once per grace.
+        Stack<((int step, int alt, int oct)? Transpose, int Anchor,
+            int? AnchorStep, int Offset)>? phraseFrames = null;
 
-        foreach (var item in grace.Body.Items)
+        foreach (var (item, _) in Semantics.GraceBodySupport.BodyElements(
+                     grace,
+                     name => _variables.TryGetValue(name, out var body) ? body : null,
+                     () => expansionBudget-- > 0))
         {
-            if (item is NoteSyntax note)
+            switch (item)
             {
-                var (step, alter) = ParsePitch(note.Pitch);
-                int targetOctave = ResolveRelativeOctave(note.Pitch);
-
-                var duration = GetDuration(note.Duration);
-                var (type, _) = GetNoteType(duration);
-
-                var xmlNote = new MusicXmlNote
+                // The same fresh frame the main stream's reference opens (ProcessNode's
+                // VariableReferenceSyntax arm), armed off the MARKER: the expander has
+                // already read the octave marks and the anchor, and reading them a second
+                // time here is how the two walks would drift apart.
+                // ⚠️ IT IS THE SECOND SPELLING OF THAT ARM and cannot be folded into it (that
+                // one takes a reference node and recurses; this one takes a flattened
+                // marker), so per checklist 7.7 the pair carries a DIFFERENTIAL net:
+                // MusicXmlExportShapeTests.APhraseInAGraceBody_HandsTheExportedChainBackAtItsAnchor
+                // asks both spellings for the note after the same phrase and demands one answer.
+                case Svg.Collector.RelativeResetMarker reset:
                 {
-                    IsGrace = true,
-                    IsSlash = isAcciaccatura,
-                    Step = step,
-                    Alter = alter,
-                    Octave = targetOctave,
-                    Type = type
-                };
+                    int? anchorStep = reset.AnchorStep == Music.PhraseAnchor.Tonic
+                        ? (_ambientTonic.Valid ? _ambientTonic.Step : 0)
+                        : reset.AnchorStep;
+                    (phraseFrames ??= new()).Push((_currentTranspose, _octaveAnchor,
+                        anchorStep, reset.OctaveOffset));
+                    _currentOctave = _partAnchorOctave + reset.OctaveOffset;
+                    _currentStep = 0;
+                    _currentTranspose =
+                        PitchTransposer.Compose(PhraseTransposeTarget(), _currentTranspose);
+                    _octaveAnchor += reset.OctaveOffset;
+                    // `grace { c'16 G }` gives G's undurated first note the group's eighth,
+                    // the same note `grace { G }` gives it — the boundary restores what this
+                    // reader reads, and a duration is one of those things.
+                    graceDuration = Fraction.Eighth;
+                    break;
+                }
 
-                _currentMeasure.Notes.Add(xmlNote);
+                case Svg.Collector.PhraseEndMarker:
+                {
+                    // The pair is emitted or omitted together (GraceBodySupport.Expand pays
+                    // for a whole entry or none of it), so this cannot underflow. ⚠️ The
+                    // guard is the PAGE's own shape rather than a fallback invented here —
+                    // MeasureCollector.ExitPhraseTranspose guards all three of its saves with
+                    // the same `Count > 0`.
+                    if (phraseFrames is not { Count: > 0 })
+                        break;
+                    var (savedTranspose, savedAnchor, anchorStep, offset) = phraseFrames.Pop();
+                    _currentTranspose = savedTranspose;
+                    _octaveAnchor = savedAnchor;
+                    // Hand-off at the phrase's ANCHOR — the reference is ONE item, the chord
+                    // rule, so its interior never leaks into what follows.
+                    if (anchorStep is { } astep)
+                    {
+                        _currentStep = astep;
+                        _currentOctave = RelativeOctave.Resolve(
+                            0, _partAnchorOctave + offset, astep, 0);
+                    }
+                    break;
+                }
+
+                case NoteSyntax note:
+                {
+                    var (step, alter) = ParsePitch(note.Pitch);
+                    int targetOctave = ResolveRelativeOctave(note.Pitch);
+
+                    if (note.Duration != null)
+                        graceDuration = note.Duration.ToFraction();
+                    var (type, _) = GetNoteType(graceDuration);
+
+                    var xmlNote = new MusicXmlNote
+                    {
+                        IsGrace = true,
+                        IsSlash = isAcciaccatura,
+                        Step = step,
+                        Alter = alter,
+                        Octave = targetOctave,
+                        Type = type
+                    };
+
+                    _currentMeasure.Notes.Add(xmlNote);
+                    break;
+                }
             }
         }
     }

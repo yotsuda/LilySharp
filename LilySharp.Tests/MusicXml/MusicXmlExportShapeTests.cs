@@ -425,4 +425,148 @@ public class MusicXmlExportShapeTests
             .First(l => l.Elements("elision").Any());
         Assert.Equal(new[] { "ri", "a" }, lyric.Elements("text").Select(t => t.Value));
     }
+
+    private static string PhraseBook(string phrases, string music)
+        => "octave absolute\npart m { clef treble }\n" + phrases
+           + "\nsection A { m {\n" + music + "\n} }\n"
+           + "form main { A }\nscore main { staff m }\n";
+
+    private static string[] GraceNotes(string book)
+        => Export(book).Descendants("note")
+            .Where(n => n.Element("grace") != null)
+            .Select(n => n.Element("pitch")!.Element("step")!.Value
+                         + n.Element("pitch")!.Element("octave")!.Value
+                         + "/" + n.Element("type")!.Value)
+            .ToArray();
+
+    /// <summary>
+    /// A phrase named in a <c>grace { }</c> body is EXPORTED — the same notes, in the same
+    /// order, as writing them in the body.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS WALK WAS THE FOURTH READER OF ONE STATEMENT. What a grace body carries is
+    /// stated once in <c>Semantics.GraceBodySupport</c>, whose remarks said "read twice";
+    /// session 300 taught the page and LYS4020 that a phrase reference is a container, and
+    /// <c>MusicXmlExporter.ProcessGraceNotes</c> was still walking <c>grace.Body.Items</c>
+    /// itself. MEASURED 2026-08-30 (session 301, scratch/p301/ab): the book exported NO
+    /// <c>&lt;grace/&gt;</c> at all where the page engraved two grace notes.
+    /// ⚠️ The first assert is what makes the second one say something: two EMPTY exports are
+    /// also "equal", and empty is exactly what the defect produced.
+    /// </remarks>
+    [Theory]
+    [InlineData("phrase G { d'16 e' }", "grace { G } c'1 |", "grace { d'16 e' } c'1 |")]
+    [InlineData("phrase I { d'16 e' }\nphrase O { I f'16 }",
+                "grace { O } c'1 |", "grace { d'16 e' f'16 } c'1 |")]
+    [InlineData("phrase G { d'16 e' }",
+                "grace { c'16 G a'16 } c'1 |", "grace { c'16 d'16 e' a'16 } c'1 |")]
+    public void APhraseReferenceInAGraceBody_ExportsWhatThePhraseHolds(
+        string phrases, string written, string control)
+    {
+        Assert.NotEmpty(GraceNotes(PhraseBook("", control)));
+        Assert.Equal(GraceNotes(PhraseBook("", control)),
+                     GraceNotes(PhraseBook(phrases, written)));
+    }
+
+    /// <summary>
+    /// A grace group keeps its OWN duration memory, opening at an eighth and threading a
+    /// written value forward, and it never touches the main stream's.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE EIGHTH IS THE LAYOUT'S RULE (<c>MeasureCollector.CollectGraceNotes</c>'
+    /// <c>graceDefaultDuration</c>; LilyPond has no grace-specific default at all), and this
+    /// walker used to be a FOURTH answer to it: it shared the exporter's main-stream default,
+    /// so <c>grace { c' } d'4</c> exported a QUARTER where the page, the MIDI and the
+    /// <c>.ly</c> twin all say an eighth (MEASURED 2026-08-30, session 301). 2026-08-01 found
+    /// the same question answered three ways and made the page its one home; this row is the
+    /// fourth reader arriving there.
+    /// <para>
+    /// ⚠️ THE THIRD ASSERT IS THE ONE THAT MOVED A TRACKED BOOK. Sharing the main stream's
+    /// memory meant a grace also LEAKED its value outward: <c>Fixtures/test/ossia-beams.lys</c>
+    /// writes <c>d4@glissando grace { d8 } c</c> in 4/4, and the exported bar summed to 3.5
+    /// quarters because the <c>c</c> inherited the grace's eighth instead of the <c>d4</c>'s
+    /// quarter (MEASURED on the corpus sweep, scratch/p301/sweep.json — the only tracked book
+    /// this session moved). The page and the MIDI had it right the whole time.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void AGraceGroup_OpensAtAnEighthAndLeavesTheMainStreamAlone()
+    {
+        static string[] Types(string music)
+            => Export(PhraseBook("", music)).Descendants("note")
+                .Select(n => (n.Element("grace") != null ? "grace:" : "main:")
+                             + n.Element("type")!.Value)
+                .ToArray();
+
+        // The undurated grace opens at the group's eighth, not at the main stream's quarter…
+        Assert.Equal(new[] { "grace:eighth", "main:quarter" }, Types("grace { c' } d'4 |"));
+        // …a written value threads to the next grace item…
+        Assert.Equal(new[] { "grace:16th", "grace:16th", "main:quarter" },
+            Types("grace { c'16 d' } e'4 |"));
+        // …and none of it reaches the note after the grace, which is still the quarter it
+        // inherits from the main stream.
+        Assert.Equal(new[] { "main:quarter", "grace:16th", "main:quarter" },
+            Types("c'4 grace { d'16 } e' |"));
+    }
+
+    /// <summary>Every exported pitch as step+octave, in order — RELATIVE mode, where the
+    /// frame a phrase opens and the anchor it hands back are the things being watched.</summary>
+    private static string[] RelativePitches(string phrases, string music)
+        => Export("part m { clef treble }\n" + phrases
+                  + "\nsection A { m {\n" + music + "\n} }\n"
+                  + "form main { A }\nscore main { staff m }\n")
+            .Descendants("pitch")
+            .Select(p => p.Element("step")!.Value + p.Element("octave")!.Value)
+            .ToArray();
+
+    /// <summary>
+    /// A phrase body is EXPORTED in a fresh relative frame inside a grace: the same
+    /// reference writes the same pitches wherever the grace starts from.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS ROW EXISTS BECAUSE A POISON FOUND NOTHING. Session 301 poisoned the fresh
+    /// frame in this walker (<c>h_xmlnoframe</c>, scratch/p301/poison.py) and the whole suite
+    /// stayed green: the grace rows above are all written <c>octave absolute</c>, where there
+    /// is no running frame for the rule to touch. A poison that turns nothing red is the
+    /// report that the net is missing (RULES §5.4). The MIDI twin of this row was red on the
+    /// first run, which is what said the hole was in the NET rather than in the rule.
+    /// ⚠️ The second half is not decoration: "both books agree" is also what a walker that
+    /// had stopped resolving relative octaves would say, so the INLINE spelling of the same
+    /// two notes is asserted to DISAGREE across the same variation.
+    /// </remarks>
+    [Fact]
+    public void APhraseInAGraceBody_IsExportedInAFreshFrame()
+    {
+        const string G = "phrase G { d16 e }";
+        Assert.Equal(
+            RelativePitches(G, "c'2 grace { G } c'2 | e'1 |")[1..3],
+            RelativePitches(G, "c,,2 grace { G } c'2 | e'1 |")[1..3]);
+        Assert.NotEqual(
+            RelativePitches("", "c'2 grace { d16 e } c'2 | e'1 |")[1..3],
+            RelativePitches("", "c,,2 grace { d16 e } c'2 | e'1 |")[1..3]);
+    }
+
+    /// <summary>
+    /// A reference inside a grace hands the exported chain back at the phrase's ANCHOR — the
+    /// chord rule, so the phrase's interior never leaks into the note written after it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS ROW ALSO EXISTS BECAUSE A POISON FOUND NOTHING (<c>i_xmlnoanchor</c>), and it
+    /// is a SEPARATE row from the fresh frame above for the reason §5.4 asks the red sets to
+    /// differ: the two poisons name two sentences, and one test covering both would have said
+    /// they were one. ⚠️ The pair is the point — equality with the main-stream reference
+    /// alone would also hold for a walker that had stopped moving the frame at all, so the
+    /// inline spelling is asserted to leave it somewhere ELSE (<c>grace { d16 d' }</c> ends
+    /// an octave up and hands THAT over).
+    /// </remarks>
+    [Fact]
+    public void APhraseInAGraceBody_HandsTheExportedChainBackAtItsAnchor()
+    {
+        const string H = "phrase H { d16 d' }";
+        Assert.Equal(
+            RelativePitches(H, "H c2 c2 | e'1 |")[2],
+            RelativePitches(H, "grace { H } c2 c2 | e'1 |")[2]);
+        Assert.NotEqual(
+            RelativePitches("", "grace { d16 d' } c2 c2 | e'1 |")[2],
+            RelativePitches(H, "grace { H } c2 c2 | e'1 |")[2]);
+    }
 }

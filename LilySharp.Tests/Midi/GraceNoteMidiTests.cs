@@ -156,4 +156,252 @@ public class GraceNoteMidiTests
         // so d must land on the same octave in both.
         Assert.Equal(DAfter("c'4 g'16 d16"), DAfter("c'4 grace { g'16 } d16"));
     }
+
+    private static string PhraseBook(string phrases, string music)
+        => "octave absolute\npart m { clef treble }\n" + phrases
+           + "\nsection A { m {\n" + music + "\n} }\n"
+           + "form main { A }\nscore main { staff m }\n";
+
+    /// <summary>Every sounded event as (start, length, pitch), in time order — the whole
+    /// performance, so a phrase that sounds at the wrong moment or the wrong length fails
+    /// as loudly as one that sounds the wrong note.</summary>
+    private static (int Start, int Dur, int Pitch)[] Performance(string phrases, string music)
+        => ExportNotes(PhraseBook(phrases, music))
+            .OrderBy(n => n.StartTick).ThenBy(n => n.Pitch)
+            .Select(n => (n.StartTick, n.DurationTicks, n.Pitch)).ToArray();
+
+    /// <summary>
+    /// <c>grace { G }</c> SOUNDS what <c>G</c> holds — the same performance, event for
+    /// event, as writing those notes in the body.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS READER WAS THE ONE LEFT BEHIND. Session 300 taught the page and LYS4020 that
+    /// a phrase reference is a container and expanded it in
+    /// <c>Semantics.GraceBodySupport.BodyElements</c>, whose remarks say "written once and
+    /// read twice" — but <see cref="MidiExporter"/> was walking <c>grace.Body.Items</c>
+    /// itself and took bare notes, chords and rests only. MEASURED 2026-08-30 (session 301,
+    /// scratch/p301/ab): the SVG of <c>grace { G } c'4 c'2.</c> was byte-identical to the
+    /// inline spelling while its MIDI was byte-identical to the book WITH NO GRACE IN IT
+    /// (91 bytes against 107) — the page drew two grace notes nobody could hear.
+    /// <para>
+    /// ⚠️ THE THIRD ASSERT IS THE ONE THAT KEEPS THE FIRST TWO HONEST, the same way it is on
+    /// <c>GraceBodyValidatorTests.APhraseReferenceInAGraceBody_EngravesWhatThePhraseHolds</c>,
+    /// whose rows these are: "equal to the inline control" is also what TWO silences satisfy,
+    /// and two silences is exactly what the defect sounded like.
+    /// </para>
+    /// </remarks>
+    [Theory]
+    // The plain case, and the nested one: a phrase body may reference another phrase.
+    [InlineData("phrase G { d'16 e' }", "grace { G } c'1 | e'1 |", "grace { d'16 e' } c'1 | e'1 |")]
+    [InlineData("phrase I { d'16 e' }\nphrase O { I f'16 }",
+                "grace { O } c'1 | e'1 |", "grace { d'16 e' f'16 } c'1 | e'1 |")]
+    // Mixed with bare notes on both sides of the reference.
+    [InlineData("phrase G { d'16 e' }",
+                "grace { c'16 G a'16 } c'1 | e'1 |", "grace { c'16 d'16 e' a'16 } c'1 | e'1 |")]
+    public void APhraseReferenceInAGraceBody_SoundsWhatThePhraseHolds(
+        string phrases, string written, string control)
+    {
+        Assert.Equal(Performance("", control), Performance(phrases, written));
+        Assert.NotEqual(Performance("", "c'1 | e'1 |"), Performance(phrases, written));
+    }
+
+    /// <summary>
+    /// The page and the sound agree about a grace body: the grace notes engraved for
+    /// <c>grace { G }</c> are the grace notes played for it, pitch for pitch.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS THE NET UNDER A STATEMENT WITH FOUR READERS. What a grace body carries is
+    /// stated once (<c>Semantics.GraceBodySupport</c>) and read by the page
+    /// (<c>MeasureCollector.CollectGraceNotes</c>), the report
+    /// (<c>Semantics.GraceBodyValidator</c>), this exporter and
+    /// <c>MusicXmlExporter.ProcessGraceNotes</c> — four walks that cannot be folded into one
+    /// because each carries its OWN frame out of a phrase (this one a sounding transpose and
+    /// a tick, the page an octave and a column). Checklist 7.7's answer for a pair that
+    /// cannot be folded is a DIFFERENTIAL net, and this is it: it names no expected pitches,
+    /// so it survives every change to what they are and fails the moment two readers part
+    /// company again.
+    /// ⚠️ It compares the GRACE notes only. The narrowings still differ below that line — a
+    /// chord and a rest in a grace body sound here and are dropped by the page (docs/HANDOFF.md
+    /// §2 U8) — and this row is about the container, not about that.
+    /// </remarks>
+    [Theory]
+    [InlineData("phrase G { d'16 e' }", "grace { G } c'1 |")]
+    [InlineData("phrase I { d'16 e' }\nphrase O { I f'16 }", "grace { O } c'1 |")]
+    [InlineData("phrase G { d'16 e' }", "grace { c'16 G a'16 } c'1 |")]
+    public void AGraceBody_SoundsThePitchesItDraws(string phrases, string music)
+    {
+        string book = PhraseBook(phrases, music);
+
+        int[] drawn = new LilySharp.Core.Svg.Collector.MeasureCollector()
+            .Collect(SyntaxTree.Parse(book))
+            .GraceNotes.Single().Notes.Select(n => n.Midi).ToArray();
+
+        // The grace events are the ones before the main note's downbeat: grace time is
+        // STOLEN from it (Grace_StealsTimeFromFollowingNote_KeepingGrid), so the main note
+        // is the last thing to start.
+        var sounded = ExportNotes(book).OrderBy(n => n.StartTick).ToList();
+        int[] played = sounded.Take(sounded.Count - 1).Select(n => n.Pitch).ToArray();
+
+        Assert.NotEmpty(drawn);
+        Assert.Equal(drawn, played);
+    }
+
+    /// <summary>
+    /// A phrase body is played in a FRESH relative frame inside a grace, exactly as it is
+    /// drawn in one: the same reference sounds the same pitches whatever the grace played
+    /// before it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE SECOND HALF IS NOT DECORATION — it is the same pairing
+    /// <c>GraceBodyValidatorTests.APhraseInAGraceBody_ReadsAFreshFrame</c> makes for the
+    /// page. "Both books agree" is also what an exporter that had stopped resolving relative
+    /// octaves would say, so the INLINE spelling of the same two notes is asserted to
+    /// DISAGREE across the same pair: the running frame is live, and the reference is what
+    /// stands outside it.
+    /// </remarks>
+    [Fact]
+    public void APhraseInAGraceBody_IsPlayedInAFreshFrame()
+    {
+        // The two grace pitches only: the note IN FRONT of the grace is the thing being
+        // varied, so comparing the whole performance would compare the variable itself.
+        int[] GracePitches(string phrases, string music)
+            => ExportNotes(
+                "part m { clef treble }\n" + phrases
+                + "\nsection A { m {\n" + music + "\n} }\n"
+                + "form main { A }\nscore main { staff m }\n")
+                .OrderBy(n => n.StartTick).Skip(1).Take(2).Select(n => n.Pitch).ToArray();
+
+        const string G = "phrase G { d16 e }";
+        Assert.Equal(
+            GracePitches(G, "c'2 grace { G } c'2 | e'1 |"),
+            GracePitches(G, "c,,2 grace { G } c'2 | e'1 |"));
+
+        Assert.NotEqual(
+            GracePitches("", "c'2 grace { d16 e } c'2 | e'1 |"),
+            GracePitches("", "c,,2 grace { d16 e } c'2 | e'1 |"));
+    }
+
+    /// <summary>
+    /// A reference inside a grace hands the relative chain back at the phrase's ANCHOR when
+    /// it is PLAYED too — the chord rule, so a phrase's interior never leaks into the note
+    /// sounded after the grace.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE PAIR IS THE POINT (the sounding twin of
+    /// <c>GraceBodyValidatorTests.APhraseInAGraceBody_HandsTheChainBackAtItsAnchor</c>):
+    /// equality with the main-stream reference alone would also hold for an exporter that had
+    /// stopped moving the frame at all, so the INLINE spelling of the same two notes is
+    /// asserted to leave it somewhere ELSE — <c>grace { d16 d' }</c> ends an octave up and
+    /// hands THAT over, while <c>grace { G }</c> hands over the bare d its body opens with.
+    /// </remarks>
+    [Fact]
+    public void APhraseInAGraceBody_HandsThePlayedChainBackAtItsAnchor()
+    {
+        int NoteAfter(string phrases, string music, int index)
+            => ExportNotes(
+                "part m { clef treble }\n" + phrases
+                + "\nsection A { m {\n" + music + "\n} }\n"
+                + "form main { A }\nscore main { staff m }\n")
+                .OrderBy(n => n.StartTick).ElementAt(index).Pitch;
+
+        const string G = "phrase G { d16 d' }";
+        int afterGrace = NoteAfter(G, "grace { G } c2 c2 | e'1 |", 2);
+        int afterReference = NoteAfter(G, "G c2 c2 | e'1 |", 2);
+        int afterInline = NoteAfter("", "grace { d16 d' } c2 c2 | e'1 |", 2);
+
+        Assert.Equal(afterReference, afterGrace);
+        Assert.NotEqual(afterInline, afterGrace);
+    }
+
+    /// <summary>
+    /// A reference resets the grace group's own DURATION memory to the default eighth, the
+    /// same as the page does: <c>grace { c'16 G }</c> gives G's undurated first note an
+    /// eighth, not the sixteenth written in front of it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE RULE IS "the boundary restores what THAT reader reads" (docs/HANDOFF.md §1,
+    /// session 300), and this reader reads a duration. It is asserted against the same
+    /// phrase played after an eighth, not against a hand-written tick count, so it says
+    /// "the sixteenth did not reach through the reference" rather than "the answer is 27".
+    /// </remarks>
+    [Fact]
+    public void APhraseInAGraceBody_OpensAtTheGroupsDefaultDuration()
+    {
+        const string G = "phrase G { d' }";
+        int Nth(string music, int index) => ExportNotes(PhraseBook(G, music))
+            .OrderBy(n => n.StartTick).ElementAt(index).DurationTicks;
+
+        // The note out of G: alone in the body it is the first grace event, after a written
+        // sixteenth it is the second.
+        int alone = Nth("grace { G } c'1 |", 0);
+        int afterASixteenth = Nth("grace { c'16 G } c'1 |", 1);
+        // The same shape with the phrase written out: THAT one does inherit the sixteenth,
+        // which is what makes the equality above a statement about the boundary.
+        int inlineAfterASixteenth = Nth("grace { c'16 d' } c'1 |", 1);
+
+        Assert.Equal(alone, afterASixteenth);
+        Assert.NotEqual(inlineAfterASixteenth, afterASixteenth);
+    }
+
+    /// <summary>
+    /// A reference inside a grace gives back everything it borrowed: the movable phrase's
+    /// sounding transpose and the octave its own marks shifted. The note after the grace is
+    /// the note it would have been with no phrase in front of it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS ROW EXISTS BECAUSE A POISON FOUND NOTHING. Session 301 ran a poison that drops
+    /// both restores at the end marker (<c>e_midinorestore</c>, scratch/p301/poison.py) and
+    /// the whole suite stayed green: the rest of this file's phrase rows write no key change
+    /// and no octave mark on the reference, so neither borrowed quantity was ever non-zero.
+    /// A poison that turns nothing red is the report that the net is missing (RULES §5.4),
+    /// and this is the net.
+    /// ⚠️ Both halves are asserted against the SAME book without the phrase, not against a
+    /// hand-written pitch: what they claim is "the grace put it back", which stays true when
+    /// the transpose interval or the anchor rule changes.
+    /// </remarks>
+    [Fact]
+    public void APhraseInAGraceBody_GivesBackWhatItBorrowed()
+    {
+        static int Last(string source)
+            => ExportNotes(source).OrderBy(n => n.StartTick).Last().Pitch;
+
+        // ⑴ The movable phrase's transpose. Lick is written in the home key and referenced
+        // under an ambient G, so it sounds shifted — and the c'1 after it must not.
+        const string Modulating = """
+            octave absolute
+            key c major
+            part m { clef treble }
+            phrase Lick { c'16 d' e' }
+            section A { m { key g major %BODY% c'1 | } }
+            form main { A }
+            score main { staff m }
+            """;
+        Assert.Equal(
+            Last(Modulating.Replace("%BODY% ", "")),
+            Last(Modulating.Replace("%BODY%", "grace { Lick }")));
+        // …and the grace itself DID move, or the equality above is about a phrase that
+        // borrowed nothing.
+        Assert.NotEqual(
+            ExportNotes(Modulating.Replace("%BODY%", "grace { Lick }"))
+                .OrderBy(n => n.StartTick).First().Pitch,
+            ExportNotes(Modulating.Replace("key g major ", "").Replace("%BODY%", "grace { Lick }"))
+                .OrderBy(n => n.StartTick).First().Pitch);
+
+        // ⑵ The octave mark on the reference, which in ABSOLUTE mode lands on the part's
+        // absolute base rather than on a running frame. `grace { G' }` must leave the c'1
+        // where `grace { G }` leaves it.
+        const string Marked = """
+            octave absolute
+            part m { clef treble }
+            phrase G { d'16 e' }
+            section A { m { grace { %REF% } c'1 | } }
+            form main { A }
+            score main { staff m }
+            """;
+        Assert.Equal(Last(Marked.Replace("%REF%", "G")), Last(Marked.Replace("%REF%", "G'")));
+        // …and the mark DID raise the phrase itself.
+        Assert.NotEqual(
+            ExportNotes(Marked.Replace("%REF%", "G")).OrderBy(n => n.StartTick).First().Pitch,
+            ExportNotes(Marked.Replace("%REF%", "G'")).OrderBy(n => n.StartTick).First().Pitch);
+    }
 }

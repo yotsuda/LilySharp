@@ -1995,10 +1995,97 @@ public sealed class MidiExporter
             return (int)RoundedDiv(notatedTicks * 9, 40);
         }
 
-        foreach (var item in grace.Body.Items)
+        // ⚠️ THE BODY IS READ THROUGH THE STATEMENT THE PAGE READS. A phrase named in a
+        // grace body is a CONTAINER, so it is expanded here exactly as it is in
+        // MeasureCollector.CollectGraceNotes — the two used to disagree, and the page won:
+        // MEASURED 2026-08-30 (session 301, scratch/p301/ab), `grace { G } c'4 c'2.` against
+        // the same music written inline, `octave absolute` so the frames match — the SVG is
+        // byte-identical with data-pos masked, and this walker's MIDI was byte-identical to
+        // the book WITH NO GRACE IN IT (91 bytes against the inline book's 107). Session 300
+        // taught the page and the report to expand a reference and left the sound behind, and
+        // the comment on GraceBodySupport says "written once and read TWICE" while there are
+        // four readers: this one, the page, GraceBodyValidator and MusicXmlExporter.
+        // ⚠️ THE NARROWING BELOW IS STILL WIDER THAN THE PAGE'S, on purpose and separately:
+        // a chord and a rest in a grace body SOUND here (since 2026-07-10) and are still
+        // dropped by the page, which is the half of docs/HANDOFF.md §2 U8 that is open. That
+        // asymmetry is about which GROBS a grace column can hold; a phrase reference names no
+        // grob at all, which is why it is the one that could be closed on its own.
+        int expansionBudget = Svg.Collector.MeasureCollector.DefaultExpansionBudgetCap;
+        // The frame a phrase reference opens, kept per expansion so a nested one restores in
+        // order. ⚠️ Only what THIS reader reads is saved: the sounding transpose, the
+        // absolute-octave base, and the marks/anchor the hand-off needs. The rule is the
+        // page's (docs/HANDOFF.md §1 session 300, "the boundary restores what that reader
+        // reads") — the grace's own duration memory is RESET on entry and deliberately not
+        // restored on exit, because CollectGraceNotes does neither.
+        // ⚠️ ALLOCATED ONLY IF A REFERENCE IS ACTUALLY WRITTEN: a grace body naming a phrase
+        // is rare (2 books in the whole 1754-book sweep), and this method runs once per grace
+        // in the piece.
+        Stack<(int Transpose, int AbsBase, int? Anchor, int Offset)>? phraseFrames = null;
+
+        foreach (var (item, _) in Semantics.GraceBodySupport.BodyElements(
+                     grace,
+                     name => _phraseBodies is { } table
+                             && table.TryGetValue(name, out var body) ? body : null,
+                     () => expansionBudget-- > 0))
         {
             switch (item)
             {
+                case Svg.Collector.RelativeResetMarker reset:
+                {
+                    // The same fresh frame the main stream's $reference opens (ProcessNode's
+                    // VariableReferenceSyntax arm), armed from the MARKER rather than from
+                    // the reference node — the expander has already read the marks and the
+                    // anchor off it, and reading them twice is how the two walks would drift.
+                    // ⚠️ IT IS THE SECOND SPELLING OF THAT ARM, and it cannot be folded into
+                    // it: that one takes a reference node and recurses through ProcessNode,
+                    // this one takes an already-flattened marker. Checklist 7.7's answer for
+                    // a pair that cannot be folded is a DIFFERENTIAL net, and it is
+                    // GraceNoteMidiTests.APhraseInAGraceBody_HandsThePlayedChainBackAtItsAnchor:
+                    // it asks both spellings for the note after the same phrase and demands
+                    // one answer.
+                    int? anchor = reset.AnchorStep == Music.PhraseAnchor.Tonic
+                        ? (_ambientTonic.Valid ? _ambientTonic.Step : 0)
+                        : reset.AnchorStep;
+                    (phraseFrames ??= new()).Push((_currentTransposeSemitones,
+                        _partAbsoluteBase, anchor, reset.OctaveOffset));
+                    _currentNoteName = 0;
+                    _currentOctave = _partOctaveAnchor + reset.OctaveOffset;
+                    _currentTransposeSemitones += PhraseTransposeSemitones();
+                    _partAbsoluteBase += reset.OctaveOffset;
+                    // `grace { c'16 G }` gives G's first undurated note the group's EIGHTH,
+                    // not the sixteenth written before the reference — the same answer
+                    // `grace { G }` gives it, so a reference cannot be told from the music
+                    // it names by what it does to the next note's length.
+                    written = null;
+                    break;
+                }
+
+                case Svg.Collector.PhraseEndMarker:
+                {
+                    // A marker pair is emitted or omitted together (GraceBodySupport.Expand
+                    // pays for the whole entry or none of it), so the stack cannot underflow.
+                    // ⚠️ THE GUARD IS THE PAGE'S OWN SHAPE, not a fallback invented here:
+                    // MeasureCollector.ExitPhraseTranspose guards all three of its saves with
+                    // the same `Count > 0`. Reading the same markers with a stricter rule
+                    // than the walk they were designed for is how two readers start
+                    // disagreeing about a malformed book.
+                    if (phraseFrames is not { Count: > 0 })
+                        break;
+                    var (savedTranspose, savedAbsBase, anchor, offset) = phraseFrames.Pop();
+                    _currentTransposeSemitones = savedTranspose;
+                    _partAbsoluteBase = savedAbsBase;
+                    // The reference hands the chain back at its ANCHOR — one item, the chord
+                    // rule — so a grace note written after it reads the frame it would read
+                    // after one in the main stream. A pitchless body hands nothing off.
+                    if (anchor is { } astep)
+                    {
+                        _currentNoteName = astep;
+                        _currentOctave = RelativeOctave.Resolve(
+                            0, _partOctaveAnchor + offset, astep, 0);
+                    }
+                    break;
+                }
+
                 case NoteSyntax note:
                 {
                     if (note.Duration != null) written = note.Duration.ToFraction();
