@@ -107,14 +107,21 @@ public sealed class RepeatPairingValidatorTests
     /// <summary>
     /// ⚠️ The crossing works in ONE direction only, and the other direction is not this
     /// validator's to report. A form-level <c>|:</c> opens a <c>FormRepeatBlock</c>, and the
-    /// parser requires that block to close at form level (<c>Expect(RepeatEndBar)</c>) — so
-    /// "opened by the form, closed inside a section" cannot be written at all. MEASURED
-    /// 2026-08-15: <c>form main { |: A B }</c> with section B ending <c>:|</c> reports
-    /// "Expected 'RepeatEndBar', found 'EndOfFile'" from the parser, before any of this runs.
+    /// parser requires that block to close at form level — so "opened by the form, closed
+    /// inside a section" cannot be written at all. MEASURED 2026-08-15:
+    /// <c>form main { |: A B }</c> with section B ending <c>:|</c> is rejected by the parser
+    /// before any of this runs.
     /// <para>
     /// The first draft of this file asserted that spelling was ACCEPTED, and the source it
     /// used to assert it contained no <c>|:</c> at all — so it was a green test about
     /// nothing. Kept as the negative it really is.
+    /// </para>
+    /// <para>
+    /// ⚠️ 2026-08-31: the message this asserts USED to be the parser's bare
+    /// "Expected 'RepeatEndBar', found 'EndOfFile'" — and it arrived after five wrong errors,
+    /// because the unclosed block ate the rest of the file. The rejection is unchanged; the
+    /// error is now LYS4017 at the <c>|:</c>, naming the missing half AND the direction that
+    /// does work (FormRepeatUnclosedDiagnosticTests owns that behaviour).
     /// </para>
     /// </summary>
     [Fact]
@@ -123,7 +130,8 @@ public sealed class RepeatPairingValidatorTests
         var diagnostics = SyntaxTree.Parse(
             "part m { clef treble section A { c1 } section B { d1 :| } }\n"
             + "form main { |: A B }\nscore main { staff m }").Diagnostics;
-        Assert.Contains(diagnostics, d => d.Message.Contains("RepeatEndBar"));
+        Assert.Contains(diagnostics, d => d.Code == DiagnosticCodes.UnpairedRepeat
+            && d.Message.Contains("never closed"));
     }
 
     // --- score-level, not part-level ----------------------------------------------

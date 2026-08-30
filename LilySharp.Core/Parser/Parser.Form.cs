@@ -285,6 +285,7 @@ internal sealed partial class Parser
     /// </summary>
     private FormRepeatBlockGreen ParseFormRepeatBlock()
     {
+        int startPosition = _textPosition;
         var startBar = Expect(SyntaxKind.RepeatStartBar);
 
         var items = new List<GreenNode?>();
@@ -293,7 +294,15 @@ internal sealed partial class Parser
         int voltaBracketsBeforeClose = 0;
 
         // Parse items until :| or | (for alternatives)
-        while (!Check(SyntaxKind.RepeatEndBar) && !Check(SyntaxKind.EndOfFile))
+        // ⚠️ AND STOP AT THE FORM'S OWN `}`. Without that stop an unclosed `|:` ate the rest
+        // of the FILE looking for a `:|` that was never coming: `form main { ~Body |: A }`
+        // reported `}`, `score`, `{`, `staff`, `}` as five things "a form cannot hold" and
+        // only then said "Expected RepeatEndBar, found EndOfFile" — five wrong errors before
+        // the true one, and the score block declared garbage. Reported 2026-08-31 on
+        // scratch/ベースタブLy/Venus.lys, where the author had moved the repeat's OPEN into
+        // the form and left its `:|` in the section's music.
+        while (!Check(SyntaxKind.RepeatEndBar) && !Check(SyntaxKind.EndOfFile)
+               && !Check(SyntaxKind.CloseBrace))
         {
             // ':|:' back-to-back repeat: closes this repeat and immediately opens
             // the next, sharing one barline. Keep it as a divider token in the item
@@ -340,7 +349,27 @@ internal sealed partial class Parser
             }
         }
 
-        var endBar = Expect(SyntaxKind.RepeatEndBar);
+        // ⚠️ THE PAIRING CROSSES THE FORM/MUSIC LINE IN ONE DIRECTION ONLY, and saying so is
+        // the whole value of this message. A `|:` written in a SECTION may be closed by a
+        // `:|` the form writes — LYS4017 is raised only after score expansion for exactly
+        // that reason, and books in the wild are spelled that way. The reverse does not hold:
+        // the form's repeat is a BRACKETED construct, so a `:|` sitting in the music cannot
+        // close it, and the author who moves only the `|:` into the form lands here.
+        SyntaxToken endBar;
+        if (Check(SyntaxKind.RepeatEndBar))
+        {
+            endBar = Advance();
+        }
+        else
+        {
+            _diagnostics.Error(new TextSpan(startPosition, Math.Max(1, _textPosition - startPosition)),
+                DiagnosticCodes.UnpairedRepeat,
+                "this form repeat '|:' is never closed — add the matching ':|' before the "
+                + "form's '}'. A ':|' written in a section's music does not close it: a form "
+                + "repeat opens and closes in the form. (The other direction does work — a "
+                + "'|:' written in the music may be closed by a ':|' in the form.)");
+            endBar = new SyntaxToken(SyntaxKind.RepeatEndBar, "", null, null);
+        }
 
         // Explicit play count, written ON the bar line: `:|*3`. The SAME spelling the inline
         // music stream takes (Parser.Music.cs ParseBarline), which is LilyPond's `R1*20`
