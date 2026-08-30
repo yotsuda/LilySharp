@@ -61,6 +61,7 @@
 "Svg/Layout/MultiStaffLayouter.cs","2864","2.0","ReserveChordRowBand(sky.Up, measureLayouts, _options.StaffHeight / 2.0);","(file-level) LILYPOND-REF: lily/system.cc","Yellow"
 "Svg/Layout/MultiStaffLayouter.cs","3669","1.9","private const double ChordSymbolCapHeight = 1.9;","(file-level) LILYPOND-REF: lily/system.cc","Yellow"
 "Svg/Layout/MultiStaffLayouter.cs","3673","0.6","private const double ChordRowStaffPadding = 0.6;","(file-level) LILYPOND-REF: lily/system.cc","Yellow"
+"Svg/Layout/MultiStaffLayouter.cs","3887","2.0","return closing is { } c ? c - ownHeight / 2.0 : null;","(file-level) LILYPOND-REF: lily/system.cc","Yellow"
 "Svg/Layout/PageBreaker.cs","136","1.0","public double InverseHooke { get; init; } = 1.0;","LILYPOND-REF: lily/include/constrained-breaking.hh:71 inverse_hooke_</remarks>","Green"
 "Svg/Layout/PageBreaker.cs","258","0.0","return Math.Max(0.0, SpringLength - refpointDist);","(file-level) LILYPOND-REF: lily/include/constrained-breaking.hh:35-43 Line_shape, whose two","Yellow"
 "Svg/Layout/PageBreaker.cs","327","0.0","=> Math.Max(0.0, Math.Max(_topSystem.Padding, _topSystem.MinimumDistance - line.TopExtent));","LILYPOND-REF: lily/page-layout-problem.cc:511-518, :538-545 (the two","Green"

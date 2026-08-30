@@ -140,11 +140,22 @@ internal static class ScoreSideTables
         .ConditionalWeakTable<MultiStaffScore, IndexBuckets<TextSpannerItem>> _textSpannersByScore = new();
 
     /// <summary>The score's dynamics bucketed by global staff index (memoized per score).</summary>
+    /// <remarks>
+    /// ⚠️ A TAB STAFF'S BUCKET IS EMPTY, and that is this table's job rather than each
+    /// reader's: a tab staff blanks DynamicText and TextScript, so it reserves no room for
+    /// them either (see <see cref="TabStaffStencils"/>). Every reader of this bucket is a
+    /// RESERVATION — <c>MultiStaffLayouter.BuildAllStaffSkylines</c> — so the blanking
+    /// belongs where the slice is cut. The score's own <c>Dynamics</c> table is untouched:
+    /// it still drives MIDI velocity and the exporters, and
+    /// <c>SharedRenderer.ResolveDataPos</c> indexes it BY POSITION.
+    /// </remarks>
     internal static IndexBuckets<DynamicItem> DynamicsByStaff(MultiStaffScore score)
         => score.Dynamics.IsDefaultOrEmpty
             ? IndexBuckets<DynamicItem>.Empty
             : _dynamicsByScore.GetValue(score,
-                s => IndexBuckets<DynamicItem>.Build(s.Dynamics, d => d.StaffIndex));
+                s => IndexBuckets<DynamicItem>.Build(
+                    TabStaffStencils.Blank(s, s.Dynamics, static d => d.StaffIndex),
+                    d => d.StaffIndex));
 
     /// <summary>The score's tuplet brackets bucketed by global staff index (memoized per score).</summary>
     internal static IndexBuckets<TupletBracketItem> TupletBracketsByStaff(MultiStaffScore score)
@@ -171,11 +182,21 @@ internal static class ScoreSideTables
     /// allocates, and `MusicMarks` is not a rare property — a score with a hundred `@text`
     /// annotations and no rit. at all would have paid that walk S×systems times on every
     /// keystroke. Cut once per score, an empty answer costs one dictionary hit.
+    /// <para>
+    /// ⚠️ A TAB STAFF'S BUCKET IS EMPTY, for the reason <see cref="DynamicsByStaff"/>
+    /// gives: a tab staff blanks TextSpanner, so it reserves no band above itself for one
+    /// (<see cref="TabStaffStencils"/>). This is the reservation half of the defect —
+    /// a `staff`+`tab` score's SECOND rit. was reserving a band above the tab line, and
+    /// with a chord row between the two staves that band landed inside the notation staff.
+    /// </para>
     /// </remarks>
     internal static IndexBuckets<TextSpannerItem> TextSpannersByStaff(MultiStaffScore score)
         => score.MusicMarks.IsDefaultOrEmpty
             ? IndexBuckets<TextSpannerItem>.Empty
             : _textSpannersByScore.GetValue(score,
                 s => IndexBuckets<TextSpannerItem>.Build(
-                    TextSpannerEngraver.DetectTextSpanners(s.MusicMarks), t => t.StaffIndex));
+                    TabStaffStencils.Blank(
+                        s, TextSpannerEngraver.DetectTextSpanners(s.MusicMarks),
+                        static t => t.StaffIndex),
+                    t => t.StaffIndex));
 }

@@ -561,9 +561,29 @@ internal sealed partial class LayoutEngine
 
         // Dynamics first (outside-staff-priority: 250)
         var dynamicLayouts = score != null ? DynamicEngraver.Calculate(score, dynamics, ml, staffVoices, voicesByStaff, measuresByStaff, beamLayouts ?? default) : ImmutableArray<DynamicLayout>.Empty;
+        // …minus the ones a tab staff blanks. LILYPOND-REF:
+        // ly/engraver-init.ly:1280-1285 Tab_staff_symbol_engraver — that context's
+        // \override DynamicText.stencil = ##f / \override TextScript.stencil = ##f — one
+        // arm here because @text("…") rides the DynamicItem pipeline as expressive text
+        // (MeasureCollector.Annotations), which is exactly LilyPond's TextScript.
+        // THE LAYOUTS, NOT THE ITEMS: DynamicEngraver keys each layout's SourceIndex off
+        // its input's POSITION, so filtering the input would renumber every data-pos.
+        // See TabStaffStencils.
+        dynamicLayouts = TabStaffStencils.Blank(
+            ctx.MultiScore, dynamicLayouts, static d => d.StaffIndex);
 
         // Detect and layout hairpins from cresc/decresc marks
         var hairpinItems = HairpinEngraver.DetectHairpins(musicMarks, dynamics);
+        // A tab staff blanks the wedge too, and the ITEM carries its own SourceIndex, so
+        // this one is cut before the layout is built rather than after.
+        // LILYPOND-REF: ly/engraver-init.ly:1283 Tab_staff_symbol_engraver — that
+        // context's \override Hairpin.stencil = ##f.
+        // ⚠️ AFTER DetectHairpins, not before: the detector PAIRS a cresc mark with the
+        // dynamic that terminates it, and a tab staff's own dynamics are what terminate
+        // its own hairpins. Cutting either list first would leave the other half of a
+        // pair looking for a partner on the notation staff.
+        hairpinItems = TabStaffStencils.Blank(
+            ctx.MultiScore, hairpinItems, static h => h.StaffIndex);
         // Same supports as the dynamics on the same DynamicLineSpanner: the staff's own
         // voices, its measures, and the beams that quant its stems.
         // Dynamic layouts ride along: a bound that carries a dynamic text starts/ends
@@ -588,7 +608,13 @@ internal sealed partial class LayoutEngine
 
         // Detect and layout text spanners from rit/accel marks (outside-staff-priority: 350)
         // Pass dynamic layouts so text spanners can stack below them
-        var textSpannerItems = TextSpannerEngraver.DetectTextSpanners(musicMarks);
+        // …minus the ones a tab staff blanks — the ink half of the same cut
+        // ScoreSideTables.TextSpannersByStaff makes for the reservation.
+        // LILYPOND-REF: ly/engraver-init.ly:1282 Tab_staff_symbol_engraver — that
+        // context's \override TextSpanner.stencil = ##f.
+        var textSpannerItems = TabStaffStencils.Blank(
+            ctx.MultiScore, TextSpannerEngraver.DetectTextSpanners(musicMarks),
+            static t => t.StaffIndex);
         var textSpannerLayouts = TextSpannerEngraver.Calculate(textSpannerItems, systems, ml, dynamicLayouts, staffYAt);
 
         // Detect and layout ottava brackets from ottava/loco marks
@@ -1218,7 +1244,7 @@ internal sealed partial class LayoutEngine
                     }
                     result = MultiStaffLayouter.AttachedChordBaselineAboveTop(
                         system, roomSkylines[sysIdx], staffIndex, runSources, RowsBelow,
-                        _options.StaffSpacing, _options.StaffHeight / 2.0);
+                        _options.StaffSpacing);
                 }
                 baseCache[key] = result;
                 return result;

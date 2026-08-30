@@ -3842,26 +3842,30 @@ internal sealed class MultiStaffLayouter
         int staffIndex,
         PairRunSources runSources,
         Func<int, IReadOnlyList<(Staff Staff, StaffLayout Layout)>> rowsBelow,
-        StaffSpacingParameters sp, double halfStaff)
+        StaffSpacingParameters sp)
     {
         if (runSources.AttachedLineOf?.Invoke(staffIndex) is null)
             return null;
 
         // The nearest LIVE spaceable staff above the line's own — alignment order is
-        // global staff order, so "above" is the largest smaller index.
+        // global staff order, so "above" is the largest smaller index. The line's OWN
+        // staff is picked up in the same walk, for the frame conversion below.
         int upper = -1;
+        double ownHeight = double.NaN;
         foreach (var group in system.StaffGroups)
         {
             if (group.Staves.IsDefaultOrEmpty) continue;
             foreach (var st in group.Staves)
             {
+                if (st.StaffIndex == staffIndex)
+                    ownHeight = st.Height;
                 if (st.IsHidden || !StaffAffinity.IsSpaceable(st.StaffAffinity))
                     continue;
                 if (st.StaffIndex < staffIndex && st.StaffIndex > upper)
                     upper = st.StaffIndex;
             }
         }
-        if (upper < 0)
+        if (upper < 0 || double.IsNaN(ownHeight))
             return null;
 
         var blocks = runSources.Blocks(
@@ -3870,7 +3874,17 @@ internal sealed class MultiStaffLayouter
             staffSkylines, upper, staffIndex, blocks!, sp);
         // Closing is refpoint-to-refpoint; the engraver's frame is the staff's TOP line,
         // half a staff above its reference point.
-        return closing is { } c ? c - halfStaff : null;
+        // ⚠️⚠️ HALF OF *THIS* STAFF, NOT OF THE NOMINAL ONE. The caller used to hand in
+        // `options.StaffHeight / 2.0` — right for the 5-line staff the line usually hangs
+        // on, and 1.750000 too small under a SIX-STRING TAB (7.500000 tall, not 4.000000).
+        // The walk's own answer was correct throughout; the line was simply re-framed with
+        // the wrong staff's half and drawn 1.750000 too high, straight through the chord
+        // symbols' clearance and into the ledger notes of the staff above
+        // (reported 2026-08-30, Untitled-6.lys — `staff` + `chords … as names` + `tab`).
+        // ⚠️ This is the SAME 1.750000 <see cref="StaffHeightOf"/>'s remark already records
+        // against SkylineBuilder, one call site later: read the PLACED height, which is
+        // already tab- and ossia-aware, instead of re-deriving one from the nominal.
+        return closing is { } c ? c - ownHeight / 2.0 : null;
     }
 
     /// <summary>

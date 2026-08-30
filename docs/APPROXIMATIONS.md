@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 57 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 58 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 49 | 観測者がゼロだと自認しているもの |
 | `OWN` | 115 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **221** | |
+| **計** | **222** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -34,7 +34,7 @@
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 5 |
 | `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 5 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（57 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（58 件）
 
 ### `LilySharp.Core/Rendering/Pdf/PdfDrawingContext.cs`
 - **:310** ⚠️ NOT PORTED — backend-blocked: CHARACTERS AT THE CLUSTERS' POSITIONS, not glyphs at
@@ -116,6 +116,8 @@
 - **:124** order, so the warning has nothing to fire on and is not ported.
 ### `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs`
 - **:87** ⚠️⚠️ AND THIS IS WHY LILYPOND'S TabNoteHead (whiteout . #t) IS NOT PORTED, which
+### `LilySharp.Core/Svg/Layout/TabStaffStencils.cs`
+- **:93** RepeatTie, LaissezVibrerTie, PhrasingSlur) are likewise not ported:
 ### `LilySharp.Core/Svg/Layout/TextSpannerEngraver.cs`
 - **:206** bound-details) and that branch is NOT PORTED HERE. No ledger point reads a
 - **:219** ⚠️ THE RIGHT BOUND'S ARITHMETIC IS NOT PORTED HERE, and the left repair is
@@ -171,8 +173,8 @@
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
 - **:464** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
-- **:2051** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
-- **:2073** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
+- **:2077** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
+- **:2099** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
 - **:466** ⚠️ NO POINT OBSERVES THE FOLD: audit/lp-geometry hairpin.page.quiet reads the
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
@@ -182,7 +184,7 @@
 ### `LilySharp.Core/Svg/Layout/LyricSpacing.cs`
 - **:152** is measured-exact there, and no ledger point prices replacing it.
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:3919** company on a row whose symbols sit closer than its spec's 1.0. No point measures
+- **:3933** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:702** does not spell a per-type padding — no point observes a segno/coda over a
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
@@ -305,9 +307,9 @@
 - **:374** ⚠️ LILYSHARP-OWN, DECLARED: the voice a hairpin supports off. LilyPond's
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
 - **:443** ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's mark aligns to the BreakAlignGroup,
-- **:832** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
-- **:1496** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
-- **:1791** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
+- **:858** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
+- **:1522** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
+- **:1817** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
 - **:631** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
