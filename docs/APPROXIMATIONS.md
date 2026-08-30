@@ -319,7 +319,7 @@
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
 - **:365** ⚠️ A LYRICS ROW KEEPS ITS DRAWN EXTENT, AND THAT IS LILYSHARP-OWN, not a second
 - **:459** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
-- **:879** LILYSHARP-OWN: the SILHOUETTE margin, not ink. It widens a mark's box before the
+- **:880** LILYSHARP-OWN: the SILHOUETTE margin, not ink. It widens a mark's box before the
 ### `LilySharp.Core/Svg/Layout/LayoutOptions.cs`
 - **:122** ⚠️ LILYSHARP-OWN, AND INERT IN EVERY BOOK MEASURED. The distance between two systems
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`

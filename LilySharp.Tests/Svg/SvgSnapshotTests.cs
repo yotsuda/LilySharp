@@ -737,6 +737,19 @@ public class SvgSnapshotTests
         // its own notehead survived until the owner reported it — the sweep, the
         // snapshots and the ledger were all blind at once. See TabTechniqueLetterTests.
         yield return new object[] { "test/tab-technique-letters" };
+
+        // A `rit.` on the TOP staff of an interior system, on a page packed tight enough
+        // that the inter-system spring sits on its floor — the shape the reader reported on
+        // 2026-08-30 (Untitled-6.lys: the A2 system's rit. printed through the previous
+        // system's second verse). The spanner reaches that spring only through the X-AWARE
+        // paging silhouette, so this book is the picture half of
+        // TextSpannerSystemSpacingTests, which states the claim.
+        // ⚠️ IT TESTS NOTHING WHILE THE PAGE HAS SLACK. The page is vertically justified, so
+        // on a roomy page the systems spread and the floor never binds — MEASURED: four
+        // synthetic books of two to seven systems all placed the spanner identically before
+        // and after the fix. The title, the chord row, the tab and BOTH verses are each
+        // holding this page shut; thinning any of them retires the test silently.
+        yield return new object[] { "test/rit-across-systems" };
     }
 
     /// <summary>

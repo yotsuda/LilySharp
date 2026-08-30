@@ -1,0 +1,29 @@
+title "Rit Across Systems"
+
+key g major
+
+part melody {
+  clef treble
+  section A { c4@rit c@!rit g' g | a a g2 | f4 f e e | d d c2 | break}
+  section B { g'4 g f f | e e d2 | break}
+}
+
+chords prog {
+  section A { Dmaj7 | Em7 | Gmaj7 | A7 }
+  section B { Im7 VIImaj7  }
+}
+lyrics verse {
+  section A { one two three four | five six seven | eight nine ten | eleven twelve | }
+  section B { [~1. thir- teen four- teen |]
+    [~2. fif- teen six- teen |]
+  }
+}
+
+form main { A B A "A2" }
+
+score main {
+  staff melody
+  chords prog as names
+  tab melody
+  lyrics verse sings melody
+}

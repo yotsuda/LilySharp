@@ -723,6 +723,7 @@ internal sealed partial class LayoutEngine
         ImmutableArray<TupletBracketLayout> tupletBrackets = default,
         ImmutableArray<SlurLayout> slurs = default,
         ImmutableArray<TieLayout> ties = default,
+        ImmutableArray<TextSpannerLayout> textSpanners = default,
         SystemLayoutCache? systemCache = null,
         IReadOnlyList<VerticalSkyline?>? lyricBands = null)
     {
@@ -1114,6 +1115,55 @@ internal sealed partial class LayoutEngine
                 double dY = ScoreGrobStaffTopUp(ds, d.StaffIndex) + d.YUp
                     - EngravingDefaults.StaffMiddle;
                 AddMarkBox(d.MeasureIndex, d.X - halfW, d.X + halfW, dY + dAscent, dY - dDescent);
+            }
+        }
+
+        // ★ THE rit./accel. SPANNER, X-AWARE (2026-08-30). Its ink was already in the
+        // SCALAR extents (EnrichExtentsWithAnnotationProtrusions' TextSpanners arm), which
+        // prices it for the page BREAKER — and nothing more. The spring BETWEEN two systems
+        // is LayoutUtilities.InterSystemPairMinimum, and with skylines present that reads
+        // the X-aware Distance() ALONE: nextUpExtent is consulted only as the fallback for a
+        // rows-only lead sheet (scalarFloorForSpaceablelessPrev). So a family that lands in
+        // the scalar and NOT here is invisible to that spring however tall it is. A `rit.`
+        // above a system's TOP staff was therefore drawn where nothing had reserved room,
+        // and the system above it was spaced against a silhouette the spanner was not in.
+        // MEASURED on the reported book (2026-08-30, Untitled-6.lys): the A2 system's rit.
+        // sat at 61.030000 with its ink top at 59.6 while the previous system's second verse
+        // "Like" reached 60.3 — printed through. The dynamics arm above is this same pair,
+        // and its own remark records the same shape being fixed on 2026-08-28.
+        // LILYPOND-REF: lily/page-layout-problem.cc:1093-1108 build_system_skyline — a
+        //   VerticalAxisGroup's skyline carries its outside-staff grobs once
+        //   skyline_spacing has placed them, so they reach the page like any other ink.
+        // ⚠️⚠️ TWO BOXES, NOT ONE SPANNING BOX, and that is the whole difference between
+        // this and the version that regressed a ledger point. The LABEL's height exists only
+        // where the label is; the dashed rule after it is a hairline. Charging the label's
+        // height across the spanner's whole span floors the gap under EVERY x for ink that
+        // is at a FEW — which is exactly the retired chord band's mistake (see
+        // page.inline-chord.gap-first's recorded cause). MEASURED: merging the top staff's
+        // WHOLE skyline into the system silhouette instead of this drove that same ledger
+        // point 2.500000 AWAY from LilyPond.
+        if (!textSpanners.IsDefaultOrEmpty)
+        {
+            double spLineHalf = EngravingDefaults.StaffLineThickness / 2.0;
+            foreach (var sp in textSpanners)
+            {
+                double spTop = spLineHalf, spBottom = spLineHalf;
+                if (!string.IsNullOrEmpty(sp.Text))
+                {
+                    // The same ink the scalar arm and OutsideStaffStacker.PlaceTextSpanners
+                    // read — one description of this label's height, not a third.
+                    var ink = fonts.Ink(
+                        sp.Text, TextSpannerEngraver.TextFontSize, TextRole.Text,
+                        Rendering.FontStyle.Italic);
+                    spTop = Math.Max(spTop, ink.Top);
+                    spBottom = Math.Max(spBottom, -ink.Bottom);
+                    if (sp.LineStartX > sp.StartX)
+                        AddMarkBox(sp.StartMeasureIndex, sp.StartX, sp.LineStartX,
+                            sp.YUp + spTop, sp.YUp - spBottom);
+                }
+                if (sp.EndX > sp.LineStartX)
+                    AddMarkBox(sp.StartMeasureIndex, sp.LineStartX, sp.EndX,
+                        sp.YUp + spLineHalf, sp.YUp - spLineHalf);
             }
         }
 
