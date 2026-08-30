@@ -786,6 +786,29 @@ internal sealed class MeasureValidator : ISemanticValidator
                         if (item.GetChild(ci) is MusicBlockSyntax inner)
                             AddItems(inner.Items);
                 }
+                else if (item is InlineVoltaSyntax volta)
+                {
+                    // An inline volta ending is TRANSPARENT to bar accounting: the
+                    // collector walks its music IN PLACE in this same stream — barlines
+                    // and all — and only overlays a bracket across the bars it occupies
+                    // (MeasureCollector.ProcessMusicNode, the InlineVoltaSyntax case).
+                    // MeasureModel.Flatten already says so for the cross-part pass
+                    // ("inline-volta interiors are ordinary written measures and flow
+                    // through as themselves"); this pass was the one that disagreed.
+                    // As an opaque zero-duration item the ending cost TWO things: its own
+                    // bars were never checked at all (`[1. c'1 c'1 c'1 | ]` in 4/4 was
+                    // silent), and the running default note value did not thread through
+                    // it, so bare notes AFTER the `]` were priced with the duration in
+                    // force BEFORE the `[` — `[2. a,8 … ] c c c c c c c c |` reported a
+                    // bar the renderer fills exactly as overfull (reported 2026-08-30 on
+                    // scratch/ベースタブLy/Venus.lys, where two of the three LYS2002
+                    // warnings stood on bars the page draws right — the third is a real
+                    // missing `|`). MEASURED over 1768 books: the ink does not move
+                    // (0/46 changed books, 0/81 LP regression), and the bars this opens
+                    // to the check add 96 warnings in 43 books, all of them previously
+                    // invisible because they were written inside an ending.
+                    AddItems(volta.Items);
+                }
                 else if (item is ParallelExpressionSyntax par)
                 {
                     // A voice span is SIMULTANEOUS music, not a sequence. The collector
