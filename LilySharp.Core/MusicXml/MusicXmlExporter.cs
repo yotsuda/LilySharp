@@ -2607,6 +2607,10 @@ public sealed class MusicXmlExporter
         // The grace group's own memory. Written duration threads WITHIN the group and the
         // main stream's is untouched, so `grace { d16 e } c4` leaves the c a quarter.
         Fraction graceDuration = Fraction.Eighth;
+        // ⚠️ THIS WALKER'S MAIN STREAM HAS NO SUCH BUDGET either — see the same remark on
+        // MidiExporter.ProcessGrace. MEASURED 2026-08-30 (scratch/p301/budget): on a doubling
+        // phrase DAG the page truncates at the budget and says so (LYS1033) while this
+        // exporter writes all 1,048,576 <note> elements, 192 MB, from 26 lines of source.
         int expansionBudget = Svg.Collector.MeasureCollector.DefaultExpansionBudgetCap;
         // What a phrase reference borrows and must give back — only what THIS reader reads.
         // ⚠️ ALLOCATED ONLY IF A REFERENCE IS ACTUALLY WRITTEN: a grace body naming a phrase

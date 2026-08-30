@@ -2010,6 +2010,15 @@ public sealed class MidiExporter
         // dropped by the page, which is the half of docs/HANDOFF.md §2 U8 that is open. That
         // asymmetry is about which GROBS a grace column can hold; a phrase reference names no
         // grob at all, which is why it is the one that could be closed on its own.
+        // ⚠️ THIS WALKER'S MAIN STREAM HAS NO SUCH BUDGET, and the asymmetry is real rather
+        // than theoretical: MEASURED 2026-08-30 (session 301, scratch/p301/budget) on a
+        // doubling phrase DAG (`P(n) = P(n-1) P(n-1)`, 26 source lines), `lysc svg` truncates
+        // at the budget and SAYS SO (LYS1033, "the picture is TRUNCATED from here on") while
+        // `lysc midi` emits all 1,048,576 notes (9.4 MB) and `lysc xml` all of them again
+        // (192 MB), silently. LYS1033's own wording is about the PICTURE and is accurate; the
+        // other three outputs are simply not covered by it. See docs/HANDOFF.md §2 F.
+        // A grace body is budgeted here anyway because the cap has ONE home and this is the
+        // shared expander's own parameter — not because this walker counts anywhere else.
         int expansionBudget = Svg.Collector.MeasureCollector.DefaultExpansionBudgetCap;
         // The frame a phrase reference opens, kept per expansion so a nested one restores in
         // order. ⚠️ Only what THIS reader reads is saved: the sounding transpose, the
