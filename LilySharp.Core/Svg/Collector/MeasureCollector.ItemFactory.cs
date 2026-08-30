@@ -156,6 +156,12 @@ public sealed partial class MeasureCollector
             ForcedStemUp = GetStemDirectionOverride(note),
             LaissezVibrerUp = hasLv ? LaissezVibrerUpOf(note) : null,
             RepeatTieUp = hasRepeatTie ? RepeatTieUpOf(note) : null,
+            // The half-tie names the '@' that wrote it, not this note's own address
+            // (MusicItem.LaissezVibrerSourcePosition).
+            LaissezVibrerSourcePosition = hasLv
+                ? NamedArticulationSourceOf(note, "laissezvibrer") : MusicItem.NoSourcePosition,
+            RepeatTieSourcePosition = hasRepeatTie
+                ? NamedArticulationSourceOf(note, "repeattie") : MusicItem.NoSourcePosition,
         };
     }
 
@@ -328,6 +334,13 @@ public sealed partial class MeasureCollector
         // LILYPOND-REF: lily/repeat-tie-engraver.cc:27-33 Repeat_tie_engraver.
         bool chordRt = HasRepeatTieAnnotation(chord);
         bool? chordRtUp = chordRt ? RepeatTieUpOf(chord) : null;
+        // The '@' each half-tie names. One chord-level annotation writes EVERY member's
+        // tie, so all of them cite this one offset; a member-level annotation carries its
+        // own on the ChordNoteInfo and wins there.
+        int chordLvSrc = chordLv
+            ? NamedArticulationSourceOf(chord, "laissezvibrer") : MusicItem.NoSourcePosition;
+        int chordRtSrc = chordRt
+            ? NamedArticulationSourceOf(chord, "repeattie") : MusicItem.NoSourcePosition;
 
         // Octave marks AFTER the closing '>' (<1 3 5>' / <c e g>,,) shift the WHOLE
         // chord uniformly. Applying it to the root's resolved octave (and, for an
@@ -440,7 +453,14 @@ public sealed partial class MeasureCollector
                 HasLaissezVibrer: chordLv || memberLv != null,
                 LaissezVibrerUp: chordLv ? chordLvUp : memberLv?.ForcedAbove,
                 HasRepeatTie: chordRt || memberRt != null,
-                RepeatTieUp: chordRt ? chordRtUp : memberRt?.ForcedAbove));
+                RepeatTieUp: chordRt ? chordRtUp : memberRt?.ForcedAbove,
+                // THIS member's own '@' only; -1 means "the chord's annotation wrote my
+                // tie", and the chord-level offset lives on the ChordItem. Unlike the
+                // direction above, the fallback is not resolved here — TieVariantEngraver
+                // reads the chord's first, because a chord-level event wins over a
+                // member-level one and its '@' is then the character that wrote every tie.
+                LaissezVibrerSourcePosition: memberLv?.SourceStart ?? MusicItem.NoSourcePosition,
+                RepeatTieSourcePosition: memberRt?.SourceStart ?? MusicItem.NoSourcePosition));
             members.Add(new ResolvedChordMember(staffPosition, rp.DisplayStep, rp.DisplayAlteration,
                 rp.DisplayOctave, NoteheadStyle.Default, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
         }
@@ -585,6 +605,12 @@ public sealed partial class MeasureCollector
             // 2026-08-07 (regression glissando-accidental.ly: the event parsed, no
             // reader existed, eight of the book's ten lines vanished without a word).
             HasGlissando = HasGlissandoArticulation(chord),
+            // The chord-level '@' every member's half-tie names when the chord carries
+            // the annotation (the members' own offsets stay -1 there). Degree and drum
+            // members have no articulation list of their own, so this is the ONLY offset
+            // their ties can name.
+            LaissezVibrerSourcePosition = chordLvSrc,
+            RepeatTieSourcePosition = chordRtSrc,
         };
     }
 

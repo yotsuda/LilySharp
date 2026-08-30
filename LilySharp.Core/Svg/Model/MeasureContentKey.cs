@@ -342,17 +342,21 @@ public readonly record struct MeasureContentKey(long Hash)
 
     // --- side-tables, bucketed onto measures by MeasureIndex ---
 
-    // Excluded from item hashes: the position-dependent source offsets. The bow trio
-    // joins SourcePosition for exactly its reason — they are the offsets of the `~`,
-    // `(` and `)` written on the item, so an edit ABOVE a measure shifts them all while
-    // its music is unchanged. Whether a bow is there at all still enters the key: that
-    // is the HasTieStart/HasSlurStart/HasSlurEnd booleans, which are not excluded.
+    // Excluded from item hashes: the position-dependent source offsets. The bow offsets
+    // join SourcePosition for exactly its reason — they are the offsets of the `~`, `(`
+    // and `)`, and of the `@` of a `@laissezVibrer` / `@repeatTie`, written on the item,
+    // so an edit ABOVE a measure shifts them all while its music is unchanged. Whether a
+    // bow is there at all still enters the key: that is the
+    // HasTieStart/HasSlurStart/HasSlurEnd/HasLaissezVibrer/HasRepeatTie booleans, which
+    // are not excluded.
     private static readonly HashSet<string> ItemExclusions = new(StringComparer.Ordinal)
     {
         nameof(MusicItem.SourcePosition),
         nameof(MusicItem.TieStartSourcePosition),
         nameof(MusicItem.SlurStartSourcePosition),
         nameof(MusicItem.SlurEndSourcePosition),
+        nameof(MusicItem.LaissezVibrerSourcePosition),
+        nameof(MusicItem.RepeatTieSourcePosition),
     };
 
     // Excluded from side-table item hashes: the source offset AND the absolute
@@ -677,10 +681,18 @@ public readonly record struct MeasureContentKey(long Hash)
                 }
                 break;
             case ChordNoteInfo cn:                     // nested chord member: its content
-                // GetHashCode would fold the position-dependent source offset, which the
+                // GetHashCode would fold the position-dependent source offsets, which the
                 // top-level ItemExclusions strips but cannot reach inside ChordItem.Notes.
-                // Normalize it out so the key stays position-independent (matches noteheads).
-                hc.Add(cn with { SourcePosition = -1 });
+                // Normalize them out so the key stays position-independent (matches
+                // noteheads). All THREE: the member's pitch token and the `@` of a
+                // member-level @laissezVibrer / @repeatTie — whether the half-tie is there
+                // still enters the key through the Has… booleans beside them.
+                hc.Add(cn with
+                {
+                    SourcePosition = -1,
+                    LaissezVibrerSourcePosition = -1,
+                    RepeatTieSourcePosition = -1,
+                });
                 break;
             default:                                   // structs/enums/records: content GetHashCode
                 hc.Add(value);

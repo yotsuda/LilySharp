@@ -3170,6 +3170,28 @@ public sealed partial class MeasureCollector
         return null;
     }
 
+    /// <summary>
+    /// The source offset of the <c>@</c> that wrote a named annotation on this node, or
+    /// <see cref="MusicItem.NoSourcePosition"/> when it is not there — the address the
+    /// half-tie that annotation draws names.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The node's own <c>SourceStart</c> is the NOTE, which is what the head cites; the
+    /// two are never equal, and a bow drawn by an annotation has to cite the annotation —
+    /// the rule the reader set for the <c>~</c> of a tie and the <c>( )</c> of a slur.
+    /// Only <c>@laissezVibrer</c> and <c>@repeatTie</c> ask: every other annotation draws
+    /// ink of its own, which already carries its address through the articulation
+    /// side-tables rather than through the note item.
+    /// </remarks>
+    private static int NamedArticulationSourceOf(SyntaxNode node, string name)
+    {
+        foreach (var art in ArticulationsOf(node))
+            if (art is ArticulationSyntax { Type: ArticulationType.None } a
+                && a.NameToken.Text.Equals(name, StringComparison.OrdinalIgnoreCase))
+                return a.SourceStart;
+        return MusicItem.NoSourcePosition;
+    }
+
     /// <summary>The explicit tab string number from a <c>\N</c> annotation on a
     /// note/chord, or null for automatic string selection.</summary>
     private static int? ExtractStringNumber(SyntaxNode node)

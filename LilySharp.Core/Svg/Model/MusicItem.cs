@@ -175,6 +175,27 @@ public abstract record MusicItem
     /// one slur is written at TWO places, and the caret must find it from either.</summary>
     public int SlurEndSourcePosition { get; init; } = NoSourcePosition;
 
+    /// <summary>Source position of the <c>@</c> that wrote the <c>@laissezVibrer</c> on this
+    /// item, or <see cref="NoSourcePosition"/>. See <see cref="TieStartSourcePosition"/>.</summary>
+    /// <remarks>
+    /// ⚠️ THE ANNOTATION'S OFFSET, NOT THE NOTE'S — and not for the same reason as the bow
+    /// trio above. A tie is written <c>~</c> and a slur <c>( )</c>; this bow is the THIRD
+    /// family, written by an ANNOTATION. The rule the reader set for the other two — a bow
+    /// names the characters that wrote it — lands here, so a caret on <c>@laissezVibrer</c>
+    /// lights the tie. <see cref="SourcePosition"/> is the note's own address and citing it
+    /// would light the note head instead, which is the side the slur decision rejected.
+    /// <para>⚠️ A chord's members carry their OWN copy
+    /// (<see cref="ChordNoteInfo.LaissezVibrerSourcePosition"/>): a chord-level
+    /// <c>@laissezVibrer</c> half-ties every head from ONE annotation, a member-level one
+    /// half-ties just its head from its own.</para>
+    /// </remarks>
+    public int LaissezVibrerSourcePosition { get; init; } = NoSourcePosition;
+
+    /// <summary>Source position of the <c>@</c> that wrote the <c>@repeatTie</c> on this
+    /// item, or <see cref="NoSourcePosition"/>. See
+    /// <see cref="LaissezVibrerSourcePosition"/>.</summary>
+    public int RepeatTieSourcePosition { get; init; } = NoSourcePosition;
+
     /// <summary>
     /// Whether this item is a "loose" column that does not participate in spacing.
     /// </summary>
@@ -692,7 +713,15 @@ public readonly record struct ChordNoteInfo(
     // class Repeat_tie_engraver final : public Laissez_vibrer_engraver.
     bool HasRepeatTie = false,
     // Forced curve side from ^/_ on the repeat-tie event; null = automatic.
-    bool? RepeatTieUp = null
+    bool? RepeatTieUp = null,
+    // Source offset of the '@' that wrote THIS member's @laissezVibrer, or -1 when the
+    // chord-level annotation marked it (then the tie cites
+    // MusicItem.LaissezVibrerSourcePosition) or nothing did. The half-tie names the
+    // characters that wrote it, the rule the reader set for ties and slurs; the member's
+    // own SourcePosition above is its PITCH token and would light the head instead.
+    int LaissezVibrerSourcePosition = -1,
+    // Source offset of the '@' that wrote THIS member's @repeatTie; see above.
+    int RepeatTieSourcePosition = -1
 );
 
 /// <summary>

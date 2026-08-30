@@ -43,9 +43,9 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:332** ⚠️ NOT PORTED — the per-duration grace head: the head shape is BLACK for every
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1162** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
-- **:1167** whiteout −1) is not ported.
-- **:1280** NOT ported; this takes the note's own stem direction. No book and
+- **:1172** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
+- **:1177** whiteout −1) is not ported.
+- **:1290** NOT ported; this takes the note's own stem direction. No book and
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
 - **:729** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
@@ -124,7 +124,7 @@
 ### `LilySharp.Core/Svg/Layout/TieFormattingProblem.cs`
 - **:1047** ⚠️ NOT PORTED — THE ARITHMETIC; THE CITATION IS THE RULE'S SHAPE ONLY. LP has the
 ### `LilySharp.Core/Svg/Layout/TieVariantEngraver.cs`
-- **:159** quantizes each tie's Y off staff lines; that scorer is not ported (ticketed) —
+- **:169** quantizes each tie's Y off staff lines; that scorer is not ported (ticketed) —
 ### `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs`
 - **:1143** inner tuplets' boxes, :646-680 — not ported; no pinned point).
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
@@ -140,7 +140,7 @@
 - **:496** no observer; add the paren widths when a book brings one. The unpacked
 - **:498** bare glyph width, which is exact for one and unobserved for many.
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1281** no observer reaches that branch yet.
+- **:1291** no observer reaches that branch yet.
 ### `LilySharp.Core/Semantics/DrummapValidator.cs`
 - **:30** ★ This validator exists because the block had NO observer of any kind. Measured
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
@@ -240,7 +240,7 @@
 - **:209** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:601** LILYSHARP-OWN sizes: the feel equation keeps the small chart-style note (1.6)
-- **:1274** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
+- **:1284** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
 ### `LilySharp.Core/Rendering/SharedRenderer.Prefix.cs`
 - **:497** LILYSHARP-OWN: the '+' of a compound meter's numerator, which LilyPond
 ### `LilySharp.Core/Rendering/SharedRenderer.Tab.cs`
@@ -257,7 +257,7 @@
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
 - **:1885** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:3714** LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
+- **:3736** LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
 - **:67** LILYSHARP-OWN: the DEFAULT five is LilyPond's (scm/define-grobs.scm:3396,
 ### `LilySharp.Core/Svg/Collector/StaffAccidentalColumns.cs`

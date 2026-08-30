@@ -56,6 +56,9 @@ public readonly record struct TieVariantLayout(
     (double X, double Y) Control2,
     // True = curve up, false = curve down.
     bool CurveUp,
+    // Offset of the '@' that wrote this tie's @laissezVibrer / @repeatTie — the address
+    // DrawTieVariants names on the bow. MusicItem.NoSourcePosition = nothing wrote it and
+    // the bow gets no Source scope. See TieVariantEngraver.SemiTie.
     int SourcePosition,
     // Owning staff (ossia shrink); -1 = unknown/test construction.
     int StaffIndex = -1);
@@ -132,6 +135,13 @@ internal static class TieVariantEngraver
     }
 
     /// <summary>One half-tie of an item's column, its curve side resolved.</summary>
+    /// <param name="StaffPosition">The host head's staff position.</param>
+    /// <param name="CurveUp">Resolved curve side.</param>
+    /// <param name="SourcePosition">The offset of the <c>@</c> that wrote this tie's
+    /// <c>@laissezVibrer</c> / <c>@repeatTie</c> — the address the drawn bow names, so a
+    /// caret on the annotation lights the tie. <c>MusicItem.NoSourcePosition</c> when the
+    /// item was built without one (a tab's rebuilt column, a hand-made test item), and the
+    /// drawer then opens no <c>Source</c> scope at all.</param>
     internal readonly record struct SemiTie(int StaffPosition, bool CurveUp, int SourcePosition);
 
     /// <summary>
@@ -169,7 +179,11 @@ internal static class TieVariantEngraver
                 bool? forced = lv ? n.LaissezVibrerUp : n.RepeatTieUp;
                 // Column of one: sign(position), 0 → neutral (DOWN).
                 bool curveUp = forced ?? n.StaffPosition > 0;
-                return ImmutableArray.Create(new SemiTie(n.StaffPosition, curveUp, n.SourcePosition));
+                // The `@` that wrote it, NOT n.SourcePosition — the note's own address
+                // belongs to the head, and citing it would light the head when the caret
+                // sits on the annotation (the side the slur decision rejected).
+                return ImmutableArray.Create(new SemiTie(n.StaffPosition, curveUp,
+                    lv ? n.LaissezVibrerSourcePosition : n.RepeatTieSourcePosition));
             }
 
             case ChordItem c:
@@ -184,11 +198,20 @@ internal static class TieVariantEngraver
                 // Sorted by head position, bottom first (Semi_tie::less).
                 var ties = new (int Pos, bool? Dir, int Src)[count];
                 int k = 0;
+                // The CHORD's annotation is read first, not the member's: a chord-level
+                // @laissezVibrer half-ties every head, so its one `@` is the character
+                // that wrote all of them (the same precedence the direction above uses).
+                // A member-level annotation is the fallback, and cites its own `@`.
+                // ⚠️ Neither is the member's SourcePosition — that is its PITCH token,
+                // which belongs to the head.
+                int chordSrc = lv ? c.LaissezVibrerSourcePosition : c.RepeatTieSourcePosition;
                 foreach (var m in c.Notes)
                     if (lv ? m.HasLaissezVibrer : m.HasRepeatTie)
                         ties[k++] = (m.StaffPosition,
                             lv ? m.LaissezVibrerUp : m.RepeatTieUp,
-                            m.SourcePosition >= 0 ? m.SourcePosition : c.SourcePosition);
+                            chordSrc >= 0
+                                ? chordSrc
+                                : lv ? m.LaissezVibrerSourcePosition : m.RepeatTieSourcePosition);
                 Array.Sort(ties, static (a, b) => a.Pos.CompareTo(b.Pos));
 
                 // set_ties_config_standard_directions, on the sorted column.

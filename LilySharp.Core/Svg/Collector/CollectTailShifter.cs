@@ -123,29 +123,42 @@ internal static class CollectTailShifter
         if (!w.TryShift(item.SourcePosition, out int pos)
             || !w.TryShift(item.TieStartSourcePosition, out int tiePos)
             || !w.TryShift(item.SlurStartSourcePosition, out int slurOpen)
-            || !w.TryShift(item.SlurEndSourcePosition, out int slurClose))
+            || !w.TryShift(item.SlurEndSourcePosition, out int slurClose)
+            || !w.TryShift(item.LaissezVibrerSourcePosition, out int lvPos)
+            || !w.TryShift(item.RepeatTieSourcePosition, out int rtPos))
             return null;
         // The bow offsets ride the same map as the item's own: they are the `~`, `(`
-        // and `)` written ON this item, and the -1 "nothing wrote it" sentinel passes
-        // through TryShift's non-positive branch untouched.
+        // and `)` written ON this item — and, for the half-ties, the `@` of the
+        // `@laissezVibrer` / `@repeatTie` written on it. The -1 "nothing wrote it"
+        // sentinel passes through TryShift's non-positive branch untouched.
         item = item with
         {
             SourcePosition = pos,
             TieStartSourcePosition = tiePos,
             SlurStartSourcePosition = slurOpen,
             SlurEndSourcePosition = slurClose,
+            LaissezVibrerSourcePosition = lvPos,
+            RepeatTieSourcePosition = rtPos,
         };
 
-        // The one nested position: a chord member's own pitch token (the same
-        // field MeasureContentKey.AddValue special-cases for the same reason).
+        // The nested positions: a chord member's own pitch token, and the `@` of a
+        // member-level half-tie annotation (the same fields
+        // MeasureContentKey.AddValue special-cases for the same reason).
         if (item is ChordItem chord && !chord.Notes.IsDefaultOrEmpty)
         {
             var notes = new ChordNoteInfo[chord.Notes.Length];
             for (int i = 0; i < chord.Notes.Length; i++)
             {
-                if (!w.TryShift(chord.Notes[i].SourcePosition, out int np))
+                if (!w.TryShift(chord.Notes[i].SourcePosition, out int np)
+                    || !w.TryShift(chord.Notes[i].LaissezVibrerSourcePosition, out int nlv)
+                    || !w.TryShift(chord.Notes[i].RepeatTieSourcePosition, out int nrt))
                     return null;
-                notes[i] = chord.Notes[i] with { SourcePosition = np };
+                notes[i] = chord.Notes[i] with
+                {
+                    SourcePosition = np,
+                    LaissezVibrerSourcePosition = nlv,
+                    RepeatTieSourcePosition = nrt,
+                };
             }
             item = chord with { Notes = ImmutableArray.Create(notes) };
         }

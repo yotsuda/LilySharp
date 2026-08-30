@@ -483,7 +483,70 @@ internal static partial class SharedRenderer
                 static it => it.SlurEndSourcePosition,
                 static (l, pos) => l with { Slur = l.Slur with { EndSourcePosition = pos } },
                 static l => l.Slur.EndSourcePosition),
+            // The THIRD bow family. It resolves neither by side-table index nor by the
+            // note locator the other two use — see ResolveSemiTies.
+            TieVariantLayouts = ResolveSemiTies(layout.TieVariantLayouts, score),
         };
+    }
+
+    /// <summary>
+    /// Re-derives each half-tie's data-pos from the LIVE score. A laissez-vibrer or
+    /// repeat tie is drawn by an ANNOTATION rather than by a symbol of its own, so its
+    /// address is the <c>@</c> of the <c>@laissezVibrer</c> / <c>@repeatTie</c> on the
+    /// host item — and a CACHED layout carries the <c>@</c> of the edit that computed it,
+    /// because <c>SystemLayoutCache</c> memoizes on measure CONTENT and the content key
+    /// excludes every source offset. Re-asking <c>SemiTiesOf</c> pairs each cached bow
+    /// with the annotation that writes it today.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ PAIRED BY ORDER, not by item, and that is the reason this is not
+    /// <see cref="ResolveBows"/>: ONE chord can carry several half-ties with DIFFERENT
+    /// addresses (a member-level <c>@laissezVibrer</c> per head), so a per-item lookup —
+    /// which is all the note locator can express — would collapse them onto one offset.
+    /// <c>TieVariantEngraver.Calculate</c> emits the fan in <c>SemiTiesOf</c>'s order,
+    /// contiguously per (measure, item, kind), so walking the two lists in step is exact.
+    /// <para>⚠️ The measures are the ONE voice <c>Calculate</c> walked
+    /// (<c>Score.Voice</c> of the annotation pass's score) — the same table
+    /// <c>MusicMarkLayouts</c> re-reads above, for the same reason.</para>
+    /// </remarks>
+    private static ImmutableArray<TieVariantLayout> ResolveSemiTies(
+        ImmutableArray<TieVariantLayout> layouts, MultiStaffScore score)
+    {
+        if (layouts.IsDefaultOrEmpty)
+            return layouts;
+        var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
+        var b = layouts.ToBuilder();
+        int i = 0;
+        while (i < b.Count)
+        {
+            var head = b[i];
+            int run = 1;
+            while (i + run < b.Count
+                   && b[i + run].Kind == head.Kind
+                   && b[i + run].MeasureIndex == head.MeasureIndex
+                   && b[i + run].ItemIndex == head.ItemIndex)
+                run++;
+
+            if ((uint)head.MeasureIndex < (uint)measures.Length)
+            {
+                var items = measures[head.MeasureIndex].Items;
+                if ((uint)head.ItemIndex < (uint)items.Length)
+                {
+                    var live = TieVariantEngraver.SemiTiesOf(items[head.ItemIndex], head.Kind);
+                    // Only when the live fan still has the SAME SHAPE. A different length
+                    // means the item's half-ties themselves changed, so the cached
+                    // geometry is stale for reasons no data-pos rewrite can repair; the
+                    // key would not have matched, and re-homing the offsets onto bows
+                    // that no longer correspond would be the under-sensitive direction.
+                    if (live.Length == run)
+                        for (int k = 0; k < run; k++)
+                            if (live[k].SourcePosition >= 0)
+                                b[i + k] = b[i + k] with { SourcePosition = live[k].SourcePosition };
+                }
+            }
+            i += run;
+        }
+        return b.MoveToImmutable();
     }
 
     // staff index -> that staff's VOICES, the host tables the note-locator annotations

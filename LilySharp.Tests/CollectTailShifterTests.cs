@@ -58,7 +58,13 @@ public class CollectTailShifterTests
         {
             "SourceStart", "SourceEnd", "EndHighlightAliases", "SectionLabelPosition",
         },
-        [typeof(ChordNoteInfo)] = new[] { "SourcePosition" },
+        // A chord member's pitch token, plus the `@` of a MEMBER-level @laissezVibrer /
+        // @repeatTie (<d@laissezVibrer g>) — three offsets into the same text, re-homed
+        // together by the ChordItem.Notes arm of ShiftItem.
+        [typeof(ChordNoteInfo)] = new[]
+        {
+            "SourcePosition", "LaissezVibrerSourcePosition", "RepeatTieSourcePosition",
+        },
         [typeof(GraceNoteInfo)] = Array.Empty<string>(),
         [typeof(DynamicItem)] = new[] { "SourcePosition" },
         [typeof(ArticulationItem)] = new[] { "SourcePosition" },
@@ -142,7 +148,10 @@ public class CollectTailShifterTests
             .Where(t => !t.IsAbstract && typeof(MusicItem).IsAssignableFrom(t));
         // The bow trio joined the base 2026-08-30: the `~`, `(` and `)` written on an
         // item are offsets into the same text as its own, and the shifter re-homes all
-        // four together (HANDOFF §2 U10).
+        // four together (HANDOFF §2 U10). The half-tie pair joined the same day (§2 U11):
+        // the `@` of a `@laissezVibrer` / `@repeatTie` is the character that draws THAT
+        // bow, so it rides the same map — and the chord-member copies of both ride the
+        // ChordItem.Notes nesting the shifter already special-cases.
         foreach (var type in itemTypes)
             Check(type, new[]
             {
@@ -150,6 +159,8 @@ public class CollectTailShifterTests
                 "TieStartSourcePosition",
                 "SlurStartSourcePosition",
                 "SlurEndSourcePosition",
+                "LaissezVibrerSourcePosition",
+                "RepeatTieSourcePosition",
             }, failures);
 
         foreach (var (type, shifted) in Shifted)

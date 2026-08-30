@@ -1137,10 +1137,20 @@ internal static partial class SharedRenderer
             // page Y-up is syUp minus each device offset — byte-identical to the former
             // -(system.Y + offset) reflection DrawBow used to lift by pageHeight. The
             // arc geometry itself stays device-frame (intentional-device island 2).
-            DrawBow(v.StartX, syUp - v.Y, v.EndX, syUp - v.Y,
-                (v.Control1.X, syUp - v.Control1.Y), (v.Control2.X, syUp - v.Control2.Y),
-                EngravingDefaults.TieMidThickness,
-                v.StaffIndex, v.MeasureIndex, os, gc);
+            // The THIRD bow family's address: a tie is written `~` and a slur `( )`, but
+            // this bow is written by an ANNOTATION, so it names that annotation's `@` —
+            // the same rule, applied to the family that has no symbol of its own. Citing
+            // the host note instead would light the head when the caret sits on
+            // `@laissezVibrer` (SharedRenderer.Curves' tie arm, and HANDOFF §2 U11).
+            // ⚠️ NO SCOPE rather than a scope holding -1, for the reason the tie arm
+            // gives: a bow nothing wrote must stay unaddressed.
+            using (v.SourcePosition is var pos and >= 0 ? gc.Source(pos) : null)
+            {
+                DrawBow(v.StartX, syUp - v.Y, v.EndX, syUp - v.Y,
+                    (v.Control1.X, syUp - v.Control1.Y), (v.Control2.X, syUp - v.Control2.Y),
+                    EngravingDefaults.TieMidThickness,
+                    v.StaffIndex, v.MeasureIndex, os, gc);
+            }
         }
     }
 
