@@ -215,7 +215,7 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 終了時: **commit 2 本**（**本体 `e735fa88` ／ docs 1 本**）＝**未 push 15**・木 0・未追跡 0。**suite 6643 合格 / 0 失敗 / 4 skip / 合計 6647**（開始 6641 から **+6**＝**本便の網 6 ケース**）。Core 0 エラー 0 警告。**追跡 `.lys` 581 冊・snapshot 231 枚**（**書き換え 0・追加 0・削除 0**）・**台帳 748 点／exact 588／ss 非ゼロ 190／総和 24.714570188／count 158 中 2／`OPEN:` 0＝すべて不動。**
 ⚠️ **`docs/APPROXIMATIONS.md` は 2 行動いた**——**中身ではなく行番号**（`SharedRenderer.GraceNotes.cs` に 25 行入ったため）。**件数は 58 のまま**（`LILYSHARP_UPDATE_DOCS=1` で再生成）。★ **1 度 59 になった**——**新しいコメントが既存の近似を*引用*しただけなのに棚卸しが 1 件として数えた**ので、**引用の言い回しを変えて 58 に戻した**（**近似は 1 つ、書く場所は複数**）。⚠️ **`audit/magic_constants.csv` が 1 行増えた**（`GraceNoteEngraver.cs` の `* 0.5`＝position→staff space。**Yellow＝ファイル単位の REF しか無い行**）。
 ⚠️ **`C:\MyProj\lys-base299` の worktree はこの便の最後に消した**（`git worktree remove`）。**次便が同じ名前で建て直してよい。**
-⚠️ **CI は `11f48202` までしか走っておらず、未 push 15 本は未実行。** **WSL ubuntu Release は本便では未実行**（§0 の 30 秒手順）。
+★★ **WSL ubuntu Release も同じ 6643 / 0 / 4 / 6647**（`f95c3b92` の木＝**docs をcommit した*あと*に回した**。§1 と §2 を書き換えたら全数をもう一度回す——第298 ⑽ が ubuntu 脚 1 本でそれを教えた棚）。⚠️ **CI は `11f48202` までしか走っておらず、未 push 15 本は未実行。**
 
 ## 以下は第298セッションの経緯
 
