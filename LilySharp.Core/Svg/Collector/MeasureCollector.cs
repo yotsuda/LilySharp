@@ -3755,13 +3755,49 @@ public sealed partial class MeasureCollector
         //   dots are part of what carries forward, not a separate memory.
         int graceDefaultDots = 0;
 
-        foreach (var item in grace.Body.Items)
+        // ⚠️ ONE WALK, TWO READERS — the body is read through the same statement
+        // GraceBodyValidator reports from (Semantics.GraceBodySupport), so a phrase
+        // reference cannot start being engraved here while LYS4020 goes on calling it
+        // dropped. The elements arrive already expanded: a reference is a CONTAINER, and
+        // `tuplet { A }`, `cue { A }` and `repeat unfold 2 { A }` have all expanded one
+        // since long before this did (scratch/p194/four-containers.lys is the book that
+        // checks the four side by side).
+        foreach (var (item, _) in Semantics.GraceBodySupport.BodyElements(
+                     grace,
+                     name => _variables.TryGetValue(name, out var body) ? body : null,
+                     () => ChargeExpansion(1, grace.SourceStart)))
         {
-            // ⚠️ ONE PREDICATE, TWO READERS. What a grace body carries is stated in
-            // Semantics.GraceBodySupport, and GraceBodyValidator reports everything this
-            // loop leaves behind (LYS4020) from that same statement — a validator that
-            // re-decided the narrowing here would be the second spelling HANDOFF §5.2.1②
-            // names, and it would go stale the day this arm learns a second node kind.
+            // A phrase body is evaluated in a FRESH frame, exactly as it is at every other
+            // call site (MeasureCollector.MusicWalk's ProcessMusicNodeSequence) — a phrase's
+            // pitches must not depend on what the grace happened to play before the
+            // reference. ⚠️ ONLY THE OCTAVE HALF OF THE RESET IS TAKEN. EnterDefaultFrame
+            // also clears the VOICE's running duration, and a grace body never reads that
+            // one: an undurated grace falls back to graceDefaultDuration below. Clearing it
+            // here would let `grace { A }` change the duration of the note AFTER the grace,
+            // which `grace { d'16 }` does not do — a side effect on the host stream that the
+            // equivalent inline grace has no way to produce.
+            if (item is RelativeResetMarker reset)
+            {
+                _octave.ResetToInitial();
+                _octave.CurrentOctave += reset.OctaveOffset;
+                EnterPhraseTranspose(reset.AnchorStep, reset.OctaveOffset);
+                // The grace's OWN duration memory does reset, because that one IS what the
+                // body reads: `grace { c'16 A }` must give A's undurated first note the
+                // group's default eighth, the same note `grace { A }` would give it.
+                graceDefaultDuration = Fraction.Eighth;
+                graceDefaultDots = 0;
+                continue;
+            }
+
+            if (item is PhraseEndMarker)
+            {
+                // Hands the relative chain back at the phrase's ANCHOR (the chord rule), so
+                // a grace note written after a reference reads the same frame it would read
+                // after one in the main stream.
+                ExitPhraseTranspose();
+                continue;
+            }
+
             if (Semantics.GraceBodySupport.CarriedNote(item) is { } note)
             {
                 var rp = CalculateStaffPosition(note.Pitch);

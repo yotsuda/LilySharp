@@ -63,28 +63,53 @@ internal sealed class GraceBodyValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        foreach (var grace in tree.GetRoot()
+        var root = tree.GetRoot();
+        Dictionary<string, SyntaxNode>? phrases = null;
+        int budget = Svg.Collector.MeasureCollector.DefaultExpansionBudgetCap;
+
+        foreach (var grace in root
                      .KindSites(SyntaxKind.GraceExpression).OfType<GraceExpressionSyntax>())
         {
+            // The phrase table is built ONCE, and only for a book that writes a grace at
+            // all: the KindSites walk above costs nothing for the books that write none,
+            // and hoisting this DescendantNodes pass out of the loop would undo that.
+            phrases ??= PhraseBodies(root);
+
+            // ⚠️ THE BODY IS EXPANDED THROUGH THE STATEMENT THE COLLECTOR READS. A phrase
+            // reference is a container, so what it NAMES is what has to be judged — a
+            // validator that stopped at the reference would fall silent about a `<c e>`
+            // written one level down and, worse, would call a body that engraves two grace
+            // notes "no grace note at all".
+            var elements = GraceBodySupport.BodyElements(
+                grace, name => phrases.GetValueOrDefault(name), () => budget-- > 0);
+
             // Asked ONCE per body, not once per drop: the sentence it adds is about the
             // group, and repeating it on every element of `grace { <c e> r8 }` would say
             // "no grace note is drawn at all" twice about one silence.
-            bool engravesNothing = GraceBodySupport.EngravesNothing(grace);
+            bool engravesNothing = GraceBodySupport.EngravesNothing(elements);
 
-            foreach (var drop in GraceBodySupport.Drops(grace))
+            foreach (var drop in GraceBodySupport.Drops(elements))
             {
                 // ASCII punctuation only: these strings reach legacy-codepage consoles
                 // through the CLI.
+                //
+                // ⚠️ THE BODY IS SPELLED WITH THE PHRASE IN IT when the drop was reached
+                // through one, because the SPAN then points inside the phrase's declaration
+                // — a line with no `grace` on it. "a chord inside 'grace { C }'" is the one
+                // sentence that lets the reader walk from the underlined chord back to the
+                // grace that silenced it.
+                string body = drop.ViaPhrase is { } phrase
+                    ? $"'grace {{ {phrase} }}'" : "'grace { }'";
                 string message = drop.Kind switch
                 {
                     GraceDropKind.Element =>
-                        $"{drop.Written} inside 'grace {{ }}' is not engraved: a grace body "
+                        $"{drop.Written} inside {body} is not engraved: a grace body "
                         + "carries bare notes only"
                         + (engravesNothing
                             ? ", and this body holds no bare note, so NO grace note is drawn at all"
                             : ""),
                     GraceDropKind.Span =>
-                        $"{drop.Written} inside 'grace {{ }}' is not engraved: a grace note "
+                        $"{drop.Written} inside {body} is not engraved: a grace note "
                         + "carries no slur, beam or tie",
                     _ =>
                         $"{drop.Written} on a grace note is not engraved: a grace note is not "
@@ -95,5 +120,37 @@ internal sealed class GraceBodyValidator : ISemanticValidator
                 _diagnostics.Warning(drop.Span, DiagnosticCodes.UnengravedGraceContent, message);
             }
         }
+    }
+
+    /// <summary>
+    /// Every phrase / variable name in the book, mapped to the body that defines it — the
+    /// table a reference written in a grace body is resolved against.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE COLLECTOR'S TABLE IS BUILT THE SAME WAY (<c>MeasureCollector.Definitions</c>:
+    /// a phrase declaration contributes its <c>Body</c>, a variable declaration its
+    /// <c>Expression</c>), and <see cref="PhraseCycleValidator"/> already builds this exact
+    /// pair on the diagnostics side. The two tables must agree or the collector and this
+    /// validator would disagree about which references are containers.
+    /// <para>
+    /// ⚠️ IT IS A GREEN WALK, not <c>DescendantNodes()</c>, for the reason the grace walk
+    /// above is one: this runs on every keystroke, and materializing a red for every node in
+    /// the book to find the handful of declarations would cost more than everything else
+    /// this validator does put together.
+    /// </para>
+    /// </remarks>
+    private static Dictionary<string, SyntaxNode> PhraseBodies(SyntaxNode root)
+    {
+        var bodies = new Dictionary<string, SyntaxNode>();
+        foreach (var n in root.GreenSites(g => (
+                     g.Kind is SyntaxKind.PhraseDeclaration or SyntaxKind.VariableDeclaration,
+                     true)))
+        {
+            if (n is PhraseDeclarationSyntax phrase)
+                bodies[phrase.Name.Text] = phrase.Body;
+            else if (n is VariableDeclarationSyntax variable)
+                bodies[variable.Name.Text] = variable.Expression;
+        }
+        return bodies;
     }
 }

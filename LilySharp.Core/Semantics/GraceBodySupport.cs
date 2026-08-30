@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System;
 using System.Collections.Generic;
 using LilySharp.Core.Syntax;
 
@@ -34,7 +35,19 @@ internal enum GraceDropKind
 
 /// <summary>One thing a grace body holds that does not reach the page, at the span it
 /// was written at.</summary>
-internal readonly record struct GraceDrop(GraceDropKind Kind, TextSpan Span, string Written);
+/// <param name="ViaPhrase">The phrase named in the grace body this drop was reached
+/// through, or null when it was written in the body itself. ⚠️ IT IS NOT DECORATION: the
+/// span of a drop inside a phrase points at the phrase's DECLARATION, where there is no
+/// <c>grace</c> anywhere in sight, so without the name the warning would name a place the
+/// reader cannot connect to the sentence — the unnameable subject <c>Describe</c>'s remark
+/// argues against, one level up.</param>
+internal readonly record struct GraceDrop(
+    GraceDropKind Kind, TextSpan Span, string Written, string? ViaPhrase = null);
+
+/// <summary>One element of an expanded grace body: a node the readers judge, and the phrase
+/// written in the body that it came out of (null when it was written in the body itself).
+/// </summary>
+internal readonly record struct GraceBodyElement(SyntaxNode Node, string? ViaPhrase);
 
 /// <summary>
 /// THE statement of what a <c>grace { … }</c> body carries today, written once and read
@@ -52,6 +65,13 @@ internal readonly record struct GraceDrop(GraceDropKind Kind, TextSpan Span, str
 /// <c>@text</c>, <c>@f</c>, <c>@finger</c>, <c>@trill</c>, <c>@sustain</c>, <c>@rit</c>,
 /// <c>@cresc</c> — every one of them byte-identical to the control, i.e. dropped, and a
 /// chord or a rest or a tuplet as the body's only element removes the whole grace group.
+/// <para>
+/// ⚠️ A PHRASE REFERENCE IS NO LONGER ON THAT LIST (session 300). It is the one element in
+/// it that names no grob — it names music written elsewhere — so it is expanded in place by
+/// <see cref="BodyElements"/> and whatever the phrase holds goes through this narrowing
+/// instead. The three that stay (a chord, a rest, a tuplet) share only the SYMPTOM, that a
+/// body holding one of them alone engraves no grace at all.
+/// </para>
 /// <para>
 /// ⚠️ TWO ANNOTATIONS ARE CARRIED, AND THE LINE BETWEEN THEM AND THE REST IS "does it want
 /// a COLUMN". The dropped families all want the note's column and a grace note has no
@@ -121,19 +141,124 @@ internal static class GraceBodySupport
     }
 
     /// <summary>
-    /// Everything in <paramref name="grace"/>'s body that the collector will not engrave,
+    /// The elements a grace body offers its readers, in source order, with every PHRASE
+    /// REFERENCE replaced in place by the elements of the phrase it names — bracketed by
+    /// the same <see cref="Svg.Collector.RelativeResetMarker"/> /
+    /// <see cref="Svg.Collector.PhraseEndMarker"/> pair the ordinary walk uses, so the
+    /// collector gives a phrase body the fresh relative frame every other call site gives it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A PHRASE REFERENCE IS A CONTAINER, NOT A GROB, and that is why it is expanded here
+    /// rather than waiting for the trip that walks a grace body with the ordinary walker.
+    /// Session 298 sorted the drops into "wants the host note's column" and "wants none", and
+    /// filed a phrase reference with the chords and the rests because a body holding only one
+    /// engraves NO GRACE AT ALL. That symptom is shared; the repair is not. A chord, a rest
+    /// and a tuplet each need a grob a grace column cannot hold yet, and building one here
+    /// would be the second spelling of chord/rest layout that
+    /// <c>ArticulationEngraver</c>'s "THE SAME ENGRAVER, NOT A SECOND SPELLING" argues
+    /// against. A reference holds no grob at all: it names music written elsewhere, and every
+    /// other container in this grammar already expands one — <c>tuplet { A }</c>,
+    /// <c>cue { A }</c> and <c>repeat unfold 2 { A }</c> all do (measured on
+    /// scratch/p194/four-containers.lys, the book written in session 194 to check exactly
+    /// these four; grace was the only one that dropped it, for 106 sessions).
+    /// <para>
+    /// ⚠️ ONE WALK, TWO READERS, which is why the phrase table arrives as
+    /// <paramref name="resolvePhrase"/> instead of being read here: the collector resolves
+    /// from its own <c>_variables</c> and <see cref="GraceBodyValidator"/> from the tree's
+    /// declarations, and if each expanded the body its own way the validator would go on
+    /// reporting a reference the collector had started engraving.
+    /// </para>
+    /// <para>
+    /// ⚠️ <paramref name="charge"/> IS THE EXPANSION BUDGET, not a nicety: an acyclic phrase
+    /// DAG doubles per level, and this walk runs on the LSP's per-keystroke diagnostics pass.
+    /// A phrase whose entry cannot be paid for emits NOTHING — no reset marker and no end
+    /// marker, balanced by omission — exactly as <c>MeasureCollector.ExpandVariable</c> does,
+    /// so a spent budget can never leave the collector's frame stack half-open.
+    /// </para>
+    /// </remarks>
+    internal static List<GraceBodyElement> BodyElements(
+        GraceExpressionSyntax grace,
+        Func<string, SyntaxNode?> resolvePhrase,
+        Func<bool> charge)
+    {
+        var elements = new List<GraceBodyElement>();
+        Expand(grace.Body.Items, resolvePhrase, charge, new HashSet<string>(), elements,
+            via: null);
+        return elements;
+    }
+
+    private static void Expand(
+        IEnumerable<SyntaxNode> items,
+        Func<string, SyntaxNode?> resolvePhrase,
+        Func<bool> charge,
+        HashSet<string> active,
+        List<GraceBodyElement> into,
+        string? via)
+    {
+        foreach (var item in items)
+        {
+            // A reference that resolves and is not already open on the active chain is the
+            // ONLY thing that expands. An undeclared name (SymbolReferenceValidator's
+            // business) and a cycle (PhraseCycleValidator's) both fall through to the drop
+            // arm below, so the reference itself is still named as what did not reach the page.
+            if (item is VariableReferenceSyntax reference
+                && resolvePhrase(reference.Name.Text) is { } body
+                && active.Add(reference.Name.Text))
+            {
+                if (charge())
+                {
+                    into.Add(new GraceBodyElement(
+                        Svg.Collector.RelativeResetMarker.For(
+                            reference.OctaveOffset,
+                            Music.PhraseAnchor.AnchorStep(body, resolvePhrase)),
+                        via));
+                    // The name that travels down is the OUTERMOST one — the phrase the
+                    // reader wrote in the grace body. A drop three phrases deep is still
+                    // reached through the one word they can see next to `grace`.
+                    Expand(BodyItemsOf(body), resolvePhrase, charge, active, into,
+                        via ?? reference.Name.Text);
+                    into.Add(new GraceBodyElement(Svg.Collector.PhraseEndMarker.Instance, via));
+                }
+                active.Remove(reference.Name.Text);
+                continue;
+            }
+
+            if (charge())
+                into.Add(new GraceBodyElement(item, via));
+        }
+    }
+
+    /// <summary>The elements of a resolved phrase body. A phrase's body and a grace's body
+    /// are the SAME node type, so the two are read the same way; a variable declared to a
+    /// bare expression (<c>MeasureCollector._variables</c> also holds those) stands for
+    /// itself and goes through the narrowing unflattened, the way a written element does.
+    /// </summary>
+    private static IEnumerable<SyntaxNode> BodyItemsOf(SyntaxNode body)
+        => body is MusicBlockSyntax block ? block.Items : new[] { body };
+
+    /// <summary>True for the frame markers <see cref="BodyElements"/> brackets an expanded
+    /// phrase with: they are instructions to the collector, not music, so neither the drop
+    /// list nor the "engraves nothing" question may count them.</summary>
+    private static bool IsFrameMarker(SyntaxNode element)
+        => element is Svg.Collector.RelativeResetMarker or Svg.Collector.PhraseEndMarker;
+
+    /// <summary>
+    /// Everything in <paramref name="elements"/> that the collector will not engrave,
     /// in source order, each at the span it was written at.
     /// </summary>
-    internal static IEnumerable<GraceDrop> Drops(GraceExpressionSyntax grace)
+    internal static IEnumerable<GraceDrop> Drops(IReadOnlyList<GraceBodyElement> elements)
     {
-        foreach (var item in grace.Body.Items)
+        foreach (var (item, via) in elements)
         {
+            if (IsFrameMarker(item))
+                continue;
+
             if (CarriedNote(item) is not { } note)
             {
                 // Not a bare note. The KIND is what the reader needs to hear, so name the
                 // node rather than quoting the source — a tuplet body would otherwise be
                 // quoted whole into a console line.
-                yield return new GraceDrop(KindOf(item), item.Span, Describe(item));
+                yield return new GraceDrop(KindOf(item), item.Span, Describe(item), via);
                 continue;
             }
 
@@ -148,16 +273,16 @@ internal static class GraceBodySupport
                 if (NeedsNoColumn(annotation))
                     continue;
                 yield return new GraceDrop(
-                    GraceDropKind.Annotation, annotation.Span, Describe(annotation));
+                    GraceDropKind.Annotation, annotation.Span, Describe(annotation), via);
             }
         }
     }
 
     /// <summary>True when the body engraves no grace group at all — every element in it is
     /// one the collector does not read, so there is no column left to attach.</summary>
-    internal static bool EngravesNothing(GraceExpressionSyntax grace)
+    internal static bool EngravesNothing(IReadOnlyList<GraceBodyElement> elements)
     {
-        foreach (var item in grace.Body.Items)
+        foreach (var (item, _) in elements)
             if (CarriedNote(item) != null)
                 return false;
         return true;
@@ -193,6 +318,9 @@ internal static class GraceBodySupport
         BeamMarkerSyntax => "a beam bracket",
         TieSyntax => "a tie",
         GraceExpressionSyntax => "a nested grace",
+        // Only an UNDECLARED or CYCLIC name reaches here now — BodyElements expands every
+        // reference it can resolve. The word stays because the two that are left are still
+        // written as one, and a reader who sees it is looking for the name they typed.
         VariableReferenceSyntax => "a phrase reference",
         CueExpressionSyntax => "a cue",
         RepeatExpressionSyntax => "a repeat",

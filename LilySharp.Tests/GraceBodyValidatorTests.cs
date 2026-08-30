@@ -340,4 +340,248 @@ public class GraceBodyValidatorTests
         => Regex.Replace(
             Regex.Replace(page, "<text[^>]*>" + Regex.Escape(DotGlyph) + "</text>", ""),
             @"\s+", " ");
+
+    // ---------------------------------------------------------------------------------
+    // The PHRASE REFERENCE, carried since session 300. It is the one element of the
+    // "engraves no grace at all" family that names no grob — it names music written
+    // elsewhere — so it is expanded rather than engraved, and every other container in the
+    // grammar already expanded one (scratch/p194/four-containers.lys checks the four side
+    // by side and grace was the only one that dropped it).
+    // ---------------------------------------------------------------------------------
+
+    /// <summary>A book in ABSOLUTE octaves, so a phrase's fresh relative frame is not a
+    /// difference between the two sides of an ink comparison; the frame has a pair of its
+    /// own below (<see cref="APhraseInAGraceBody_ReadsAFreshFrame"/>).</summary>
+    private static string PhraseBook(string phrases, string music)
+        => "octave absolute\npart m { clef treble }\n" + phrases
+           + "\nsection A { m {\n" + music + "\n} }\n"
+           + "form main { ~A }\nscore main { staff m }\n";
+
+    private static string PhrasePage(string phrases, string music)
+        => Regex.Replace(
+            LiveRender.Svg(PhraseBook(phrases, music)), "data-pos=\"\\d+\"", "data-pos=\"#\"");
+
+    /// <summary>
+    /// <c>grace { G }</c> engraves what <c>G</c> holds — the same page, to the byte, as
+    /// writing those notes in the body — and says nothing about it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE THIRD ASSERT IS THE ONE THAT KEEPS THE FIRST TWO HONEST. "Equal to the inline
+    /// control" is also what a body that engraves NOTHING would satisfy if the control were
+    /// wrong; demanding that the page differ from the one with no grace at all says the
+    /// reference put ink on the page rather than agreeing with a second silence. That is the
+    /// exact failure this row is written against: before session 300 the page WAS the one
+    /// with no grace at all.
+    /// </remarks>
+    [Theory]
+    // The plain case, and the nested one: a phrase body may reference another phrase.
+    [InlineData("phrase G { d'16 e' }", "grace { G } c'1 | e'1 |", "grace { d'16 e' } c'1 | e'1 |")]
+    [InlineData("phrase I { d'16 e' }\nphrase O { I f'16 }",
+                "grace { O } c'1 | e'1 |", "grace { d'16 e' f'16 } c'1 | e'1 |")]
+    // Mixed with bare notes on both sides of the reference.
+    [InlineData("phrase G { d'16 e' }",
+                "grace { c'16 G a'16 } c'1 | e'1 |", "grace { c'16 d'16 e' a'16 } c'1 | e'1 |")]
+    public void APhraseReferenceInAGraceBody_EngravesWhatThePhraseHolds(
+        string phrases, string written, string control)
+    {
+        Assert.Empty(Warnings(PhraseBook(phrases, written)));
+        Assert.Equal(PhrasePage("", control), PhrasePage(phrases, written));
+        Assert.NotEqual(PhrasePage("", "c'1 | e'1 |"), PhrasePage(phrases, written));
+    }
+
+    /// <summary>
+    /// A phrase body is evaluated in a FRESH relative frame inside a grace, exactly as it is
+    /// everywhere else: the same reference draws the same pitches whatever the grace played
+    /// before it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE SECOND HALF IS NOT DECORATION. "Both books agree" is also what a collector that
+    /// had stopped resolving pitches at all would say, so the INLINE spelling of the same two
+    /// notes is asserted to DISAGREE across the same pair — the running frame is live, and
+    /// the reference is what stands outside it.
+    /// </remarks>
+    [Fact]
+    public void APhraseInAGraceBody_ReadsAFreshFrame()
+    {
+        static int[] Positions(string phrases, string music)
+            => new LilySharp.Core.Svg.Collector.MeasureCollector()
+                .Collect(SyntaxTree.Parse(
+                    "part m { clef treble }\n" + phrases
+                    + "\nsection A { m {\n" + music + "\n} }\n"
+                    + "form main { ~A }\nscore main { staff m }\n"))
+                .GraceNotes.Single().Notes.Select(n => n.StaffPosition).ToArray();
+
+        const string G = "phrase G { d16 e }";
+        Assert.Equal(
+            Positions(G, "c'2 grace { G } c'2 | e'1 |"),
+            Positions(G, "c,,2 grace { G } c'2 | e'1 |"));
+
+        Assert.NotEqual(
+            Positions("", "c'2 grace { d16 e } c'2 | e'1 |"),
+            Positions("", "c,,2 grace { d16 e } c'2 | e'1 |"));
+    }
+
+    /// <summary>
+    /// A reference inside a grace hands the relative chain back at the phrase's ANCHOR, the
+    /// same as one in the main stream — the chord rule, so a phrase's interior never leaks
+    /// into the note written after the grace.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE PAIR IS THE POINT. Equality with the main-stream reference alone would also
+    /// hold for an engine that had stopped moving the frame at all, so the INLINE spelling of
+    /// the same two notes is asserted to leave it somewhere ELSE: <c>grace { d16 d' }</c>
+    /// ends an octave up and hands THAT over, while <c>grace { G }</c> hands over G's anchor,
+    /// the bare d its body opens with — a whole octave between the two answers.
+    /// </remarks>
+    [Fact]
+    public void APhraseInAGraceBody_HandsTheChainBackAtItsAnchor()
+    {
+        static int FirstNote(string phrases, string music, int index)
+        {
+            var score = new LilySharp.Core.Svg.Collector.MeasureCollector()
+                .Collect(SyntaxTree.Parse(
+                    "part m { clef treble }\n" + phrases
+                    + "\nsection A { m {\n" + music + "\n} }\n"
+                    + "form main { ~A }\nscore main { staff m }\n"));
+            return score.Voice.Measures[0].Items
+                .OfType<LilySharp.Core.Svg.Model.NoteItem>().ElementAt(index).StaffPosition;
+        }
+
+        const string G = "phrase G { d16 d' }";
+        int afterGrace = FirstNote(G, "grace { G } c2 c2 | e'1 |", 0);
+        int afterReference = FirstNote(G, "G c2 c2 | e'1 |", 2);
+        int afterInline = FirstNote("", "grace { d16 d' } c2 c2 | e'1 |", 0);
+
+        Assert.Equal(afterReference, afterGrace);
+        Assert.NotEqual(afterInline, afterGrace);
+    }
+
+    /// <summary>
+    /// A phrase boundary resets the GRACE GROUP's duration memory and leaves the VOICE's
+    /// alone — the two are different memories, and a grace body only ever reads the first.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE SECOND HALF IS WHY <c>EnterDefaultFrame</c> IS NOT CALLED HERE. That helper
+    /// resets both, and resetting the voice's would let <c>grace { G }</c> change the
+    /// duration of the note AFTER the grace — an effect on the host stream that the same
+    /// music written inline (<c>grace { d'16 }</c>) has no way to produce. The rule is not
+    /// "a grace changes nothing", it is "a phrase resets what the thing reading it reads".
+    /// </remarks>
+    [Fact]
+    public void APhraseBoundaryResetsTheGracesDurationMemoryOnly()
+    {
+        var score = new LilySharp.Core.Svg.Collector.MeasureCollector()
+            .Collect(SyntaxTree.Parse(
+                PhraseBook("phrase G { d' }", "c'2 grace { c'16 G } c' | e'1 |")));
+
+        // c'16 is a sixteenth; the phrase's undurated d' takes the GROUP's default eighth
+        // rather than inheriting the sixteenth across the boundary.
+        Assert.Equal(new[] { 16, 8 },
+            Assert.Single(score.GraceNotes).Notes
+                .Select(n => (int)n.BaseDuration.Denominator).ToArray());
+
+        // …and the half note before the grace still owns the VOICE's duration memory: the
+        // undurated c' after the grace is a HALF, so the measure closes on the meter.
+        // ⚠️ THE TRAILING NOTE MUST BE UNDURATED, and the first version of this line was not
+        // (`c'4 c'4`): with explicit durations nothing reads the voice's memory, the poison
+        // that clears it turned NOTHING red, and this assert was decoration. A reset to a
+        // QUARTER is also invisible against a book whose notes are quarters — the half is
+        // what makes the two answers differ.
+        Assert.Equal(new Fraction(1, 1),
+            score.Voice.Measures[0].Items.Aggregate(
+                new Fraction(0, 1), (total, item) => total + item.Duration));
+    }
+
+    /// <summary>
+    /// What a referenced phrase holds that a grace body still drops is reported at the span
+    /// it was WRITTEN at — inside the phrase's declaration — and the message names the
+    /// phrase, because that line has no <c>grace</c> anywhere on it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS THE HALF THAT WOULD ROT SILENTLY. Expanding the reference in the collector
+    /// alone would leave the validator stopping at the reference: it would say nothing about
+    /// the chord one level down and, worse, would go on calling a body that engraves two
+    /// grace notes "no grace note at all". Both readers take the same expansion
+    /// (<c>GraceBodySupport.BodyElements</c>) for that reason.
+    /// </remarks>
+    [Fact]
+    public void ADropInsideAReferencedPhrase_IsReportedThereAndNamesThePhrase()
+    {
+        string source = PhraseBook("phrase C { <c' e'>16 }", "grace { C } c'1 | e'1 |");
+        var warning = Assert.Single(Warnings(source));
+
+        Assert.Equal(source.IndexOf("<c' e'>", System.StringComparison.Ordinal),
+            warning.Span.Start);
+        Assert.Contains("a chord inside 'grace { C }'", warning.Message);
+        Assert.Contains("NO grace note is drawn at all", warning.Message);
+
+        // A phrase that holds a bare note as well keeps its grace, so the sentence goes off
+        // — the "engraves nothing" question is asked of the EXPANDED body.
+        Assert.DoesNotContain("NO grace note is drawn at all",
+            Assert.Single(Warnings(
+                PhraseBook("phrase C { d'16 <c' e'>16 }", "grace { C } c'1 | e'1 |"))).Message);
+    }
+
+    /// <summary>
+    /// However little budget the expansion is given, it hands back frames in PAIRS — one
+    /// <c>PhraseEndMarker</c> for every <c>RelativeResetMarker</c>.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS THE NET UNDER THE BUDGET, and it is here because the budget has no other
+    /// observer: an acyclic phrase DAG doubles per level and this walk runs on the LSP's
+    /// per-keystroke pass, so the charge has to be able to stop mid-body — and a stop between
+    /// the two markers would leave <c>MeasureCollector</c>'s phrase-transpose stack pushed
+    /// and never popped, which is a wrong OCTAVE somewhere later in the book rather than a
+    /// crash. The rule that makes it safe is the one <c>ExpandVariable</c> already uses: a
+    /// phrase whose ENTRY cannot be paid for emits nothing at all, balanced by omission.
+    /// </remarks>
+    [Fact]
+    public void AGraceBodyExpansion_ClosesEveryFrameItOpens()
+    {
+        var tree = SyntaxTree.Parse(PhraseBook(
+            "phrase I { d'16 e' }\nphrase O { I f'16 }",
+            "grace { c'16 O g'16 } c'1 | e'1 |"));
+        var bodies = tree.GetRoot().DescendantNodes().OfType<PhraseDeclarationSyntax>()
+            .ToDictionary(p => p.Name.Text, p => (SyntaxNode)p.Body);
+        var grace = tree.GetRoot().DescendantNodes()
+            .OfType<GraceExpressionSyntax>().Single();
+
+        for (int cap = 0; cap <= 10; cap++)
+        {
+            int left = cap;
+            var elements = GraceBodySupport.BodyElements(
+                grace, name => bodies.GetValueOrDefault(name), () => left-- > 0);
+
+            Assert.Equal(
+                elements.Count(e => e.Node is LilySharp.Core.Svg.Collector.RelativeResetMarker),
+                elements.Count(e => e.Node is LilySharp.Core.Svg.Collector.PhraseEndMarker));
+        }
+
+        // …and with budget enough, the nested phrase really did open two frames — otherwise
+        // the loop above is asserting 0 == 0 eleven times.
+        int plenty = 100;
+        Assert.Equal(2, GraceBodySupport
+            .BodyElements(grace, name => bodies.GetValueOrDefault(name), () => plenty-- > 0)
+            .Count(e => e.Node is LilySharp.Core.Svg.Collector.RelativeResetMarker));
+    }
+
+    /// <summary>
+    /// A name that cannot be expanded — undeclared, or a cycle — is still reported as the
+    /// reference itself, and the expansion terminates.
+    /// </summary>
+    /// <remarks>
+    /// The cycle is <see cref="PhraseCycleValidator"/>'s to explain and an undeclared name is
+    /// <c>SymbolReferenceValidator</c>'s; what this test owns is that neither turns the grace
+    /// body's own report off, and that <c>phrase X { X }</c> does not walk forever.
+    /// </remarks>
+    [Theory]
+    [InlineData("", "grace { Nope } c'1 | e'1 |")]
+    [InlineData("phrase X { X }", "grace { X } c'1 | e'1 |")]
+    public void AReferenceThatCannotExpand_IsStillReported(string phrases, string music)
+    {
+        Assert.Contains("a phrase reference",
+            Assert.Single(Warnings(PhraseBook(phrases, music))).Message);
+        // …and the page is the one with no grace on it, which is what the warning says.
+        Assert.Equal(PhrasePage("", "c'1 | e'1 |"), PhrasePage(phrases, music));
+    }
 }
