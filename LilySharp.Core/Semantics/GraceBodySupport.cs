@@ -169,6 +169,31 @@ internal static class GraceBodySupport
     /// reporting a reference the collector had started engraving.
     /// </para>
     /// <para>
+    /// LILYPOND-REF: lily/parser.yy identifier substitution — a LilyPond variable is
+    /// substituted wherever it is named, and a grace body is not an exception. MEASURED on
+    /// 2.26.0 (scratch/p300/lp): with <c>G = { d'16 e' }</c>, <c>\grace { \G }</c> and
+    /// <c>\grace { d'16 e' }</c> render BYTE-IDENTICAL (8379 bytes, SHA 1EC0BE9A4B9E), and
+    /// both differ from the book with no grace at all. ⚠️ The FRESH FRAME below is Lily#'s
+    /// own rule rather than that one: LilyPond has no phrase, its variables carry no relative
+    /// frame of their own, and a Lily# phrase evaluating in a fresh frame is the grammar's
+    /// decision everywhere (MeasureCollector.ExpandVariable). This makes a grace body agree
+    /// with the rest of the grammar, not with LilyPond's substitution rule.
+    /// </para>
+    /// <para>
+    /// ⚠️ IT IS A SECOND SPELLING OF PHRASE EXPANSION, and it is one on purpose — checklist
+    /// 7.7 names "the same quantity's second spelling" as this repository's most repeated
+    /// defect, so the reason it cannot be folded belongs here rather than nowhere.
+    /// <c>MeasureCollector.ExpandVariable</c> cannot serve: it is an instance method reading
+    /// <c>_variables</c> and <c>ChargeExpansion</c>, which the validator has neither of, and
+    /// it flattens with <c>MusicSitesLazy</c>, which DESCENDS into containers — right for the
+    /// main stream, wrong here, where a tuplet inside a grace body has to stay one element so
+    /// the narrowing can name it. ⇒ Per 7.7's own answer for a pair that cannot be folded,
+    /// the two are tied by a DIFFERENTIAL net rather than a shared house:
+    /// <c>GraceBodyValidatorTests.APhraseInAGraceBody_HandsTheChainBackAtItsAnchor</c> and
+    /// <c>APhraseInAGraceBody_OffersTheSameBodyTheMainStreamDoes</c> put the same phrase
+    /// through both expanders and demand the same pitches and the same hand-off.
+    /// </para>
+    /// <para>
     /// ⚠️ <paramref name="charge"/> IS THE EXPANSION BUDGET, not a nicety: an acyclic phrase
     /// DAG doubles per level, and this walk runs on the LSP's per-keystroke diagnostics pass.
     /// A phrase whose entry cannot be paid for emits NOTHING — no reset marker and no end

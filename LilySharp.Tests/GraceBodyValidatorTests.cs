@@ -457,6 +457,39 @@ public class GraceBodyValidatorTests
     }
 
     /// <summary>
+    /// The two expanders offer the SAME body: the notes <c>grace { G }</c> engraves are the
+    /// notes <c>G</c> engraves in the main stream, pitch for pitch.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS THE DIFFERENTIAL NET UNDER A SECOND SPELLING. Phrase expansion is written
+    /// twice — <c>MeasureCollector.ExpandVariable</c> for the main stream and
+    /// <c>GraceBodySupport.BodyElements</c> for a grace body — and the remarks on the latter
+    /// say why they cannot be folded (the collector's is an instance method the validator
+    /// cannot reach, and it flattens containers, which a grace body must not). Checklist 7.7
+    /// says that a pair which cannot be folded gets a net that asks BOTH the same question
+    /// and compares the answers, which is what this is: it needs no hand-written expected
+    /// pitches, so it survives every change to what those pitches are.
+    /// </remarks>
+    [Fact]
+    public void APhraseInAGraceBody_OffersTheSameBodyTheMainStreamDoes()
+    {
+        static LilySharp.Core.Svg.Model.Score Collect(string music)
+            => new LilySharp.Core.Svg.Collector.MeasureCollector()
+                .Collect(SyntaxTree.Parse(PhraseBook("phrase G { d'16 e' f'16 }", music)));
+
+        var asGrace = Assert.Single(Collect("grace { G } c'1 | e'1 |").GraceNotes)
+            .Notes.Select(n => n.StaffPosition).ToArray();
+        var asMusic = Collect("G c'1 | e'1 |").Voice.Measures[0].Items
+            .OfType<LilySharp.Core.Svg.Model.NoteItem>()
+            .Take(asGrace.Length).Select(n => n.StaffPosition).ToArray();
+
+        Assert.Equal(asMusic, asGrace);
+        // …and the phrase really has three notes, so the comparison is not two empty arrays
+        // — the failure that has cost this repository two whole sessions (RULES §5.4).
+        Assert.Equal(3, asGrace.Length);
+    }
+
+    /// <summary>
     /// A phrase boundary resets the GRACE GROUP's duration memory and leaves the VOICE's
     /// alone — the two are different memories, and a grace body only ever reads the first.
     /// </summary>
