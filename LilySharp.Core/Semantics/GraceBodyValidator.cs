@@ -45,6 +45,15 @@ namespace LilySharp.Core.Semantics;
 /// not "do not write this" — the direction <see cref="DiagnosticCodes.SpanCrossesCueBoundary"/>
 /// argues about is the opposite one, and it turns on whether LilyPond can make the ink.
 /// </para>
+/// <para>
+/// ⚠️ IT RUNS ON EVERY KEYSTROKE. <see cref="SemanticValidation.Run"/> is the LSP's
+/// diagnostics pass, so this walk is paid by every book, and the books that write no
+/// <c>grace</c> at all are nearly all of them (1697 on disk, a handful write one). That is
+/// why it goes through <see cref="SyntaxNode.KindSites"/> rather than
+/// <c>DescendantNodes().OfType&lt;T&gt;()</c>: the same pre-order over GREEN nodes, with a
+/// red materialized only per match, so a book with no grace pays the walk and allocates
+/// nothing.
+/// </para>
 /// </remarks>
 internal sealed class GraceBodyValidator : ISemanticValidator
 {
@@ -54,7 +63,8 @@ internal sealed class GraceBodyValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        foreach (var grace in tree.GetRoot().DescendantNodes().OfType<GraceExpressionSyntax>())
+        foreach (var grace in tree.GetRoot()
+                     .KindSites(SyntaxKind.GraceExpression).OfType<GraceExpressionSyntax>())
         {
             // Asked ONCE per body, not once per drop: the sentence it adds is about the
             // group, and repeating it on every element of `grace { <c e> r8 }` would say
