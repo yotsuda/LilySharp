@@ -284,6 +284,33 @@ internal static class GraceNoteEngraver
     }
 
     /// <summary>
+    /// Whether a grace run draws ONE BEAM rather than a flag per head — the one house for
+    /// that gate.
+    /// </summary>
+    /// <remarks>
+    /// A run is beamed only when every head carries at least one beam; a lone grace, a
+    /// quarter-or-longer one, or a mixed group draws flags instead.
+    /// <para>
+    /// ⚠️ FOUR READERS, ONE SENTENCE, and it was three sentences until session 299 wrote a
+    /// fourth and noticed. <c>SpacingRules.GraceColumns</c> reserves by it (a flag is ink in
+    /// its column's right skyline), <see cref="QuantGraceBeam"/> quants by it,
+    /// <see cref="Dots"/> asks it because a flag can stand in the dots' way, and
+    /// <c>SharedRenderer.DrawGraceStemsAndBeam</c> draws by it. A run that is beamed for one
+    /// of them and flagged for another reserves a box it does not fill — the exact drift
+    /// docs/RULES.md §7.7 lists as "the second spelling of one quantity".
+    /// </para>
+    /// </remarks>
+    internal static bool IsBeamedRun(ImmutableArray<GraceNoteInfo> notes)
+    {
+        if (notes.IsDefaultOrEmpty || notes.Length < 2)
+            return false;
+        foreach (var n in notes)
+            if (BeamCountForDuration(n.BaseDuration.Denominator) < 1)
+                return false;
+        return true;
+    }
+
+    /// <summary>
     /// How long a grace stem is, in staff spaces — the ONE house for that length, read by
     /// the renderer that draws it and by <see cref="Dots"/>, which needs to know where the
     /// flag hangs before it can say whether the flag is in the dots' way.

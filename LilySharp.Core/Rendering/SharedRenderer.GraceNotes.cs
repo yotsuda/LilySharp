@@ -94,11 +94,11 @@ internal static partial class SharedRenderer
             var headX = new List<double>(g.Notes.Length);
             var headY = new List<double>(g.Notes.Length);
             var beamCounts = new List<int>(g.Notes.Length);
-            // The run draws ONE beam or a flag per head, and the dots have to know which:
-            // the SAME gate DrawGraceStemsAndBeam decides with below (allBeamable) and the
-            // one SpacingRules.GraceColumns reserved with, so the three cannot disagree.
-            bool graceBeamed = g.Notes.Length > 1
-                && g.Notes.All(n => BeamCountForDuration(n.BaseDuration.Denominator) >= 1);
+            // The run draws ONE beam or a flag per head, and both the dots and the stems
+            // below have to know which. Asked ONCE, of the house that owns the sentence, and
+            // handed down to DrawGraceStemsAndBeam rather than re-decided there — a run
+            // reserved as beamed and drawn as flagged fills a box it was not given.
+            bool graceBeamed = GraceNoteEngraver.IsBeamedRun(g.Notes);
             // Music glyphs from HERE come out of the grace's own design, not the score's:
             // Emmentaler is optically sized, so a grace head is the 14 design's outline at
             // magstep(-3) and not the 20's drawn small (IDrawingContext.MusicFace). The scope
@@ -187,7 +187,7 @@ internal static partial class SharedRenderer
                            os.YUp(staffMiddleY + br / 2.0, g.StaffIndex, g.MeasureIndex))
                         : null;
                 DrawGraceStemsAndBeam(headX, headY, beamCounts, eff, graceFont,
-                    g.Type == GraceNoteType.Acciaccatura, beamEnds, gc);
+                    g.Type == GraceNoteType.Acciaccatura, beamEnds, graceBeamed, gc);
 
                 // Grace slur from the last grace notehead to the main notehead.
                 // LILYPOND-REF: ly/grace-init.ly startGraceSlur/stopGraceSlur —
@@ -334,7 +334,8 @@ internal static partial class SharedRenderer
     private static void DrawGraceStemsAndBeam(
         List<double> xs, List<double> ys, List<int> beamCounts, double scale,
         GlyphMetrics.DesignMetrics headFont,
-        bool acciaccatura, (double Left, double Right)? beamEnds, IDrawingContext gc)
+        bool acciaccatura, (double Left, double Right)? beamEnds, bool allBeamable,
+        IDrawingContext gc)
     {
         int n = xs.Count;
         if (n == 0) return;
@@ -382,7 +383,9 @@ internal static partial class SharedRenderer
 
         int maxBeams = 0;
         foreach (var b in beamCounts) maxBeams = Math.Max(maxBeams, b);
-        bool allBeamable = n > 1 && beamCounts.All(b => b >= 1);
+        // allBeamable ARRIVES rather than being decided here: it is
+        // GraceNoteEngraver.IsBeamedRun, the same sentence the reservation and the
+        // dot column read. It was spelt here a second time until session 299.
 
         if (maxBeams == 0 || !allBeamable)
         {

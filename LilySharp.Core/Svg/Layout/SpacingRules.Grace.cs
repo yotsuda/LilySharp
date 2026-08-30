@@ -154,10 +154,11 @@ internal static partial class SpacingRules
         var gp = graceParams ?? GraceSpacingParameters.Default;
         double dtMin = CalculateGraceGroupShortestDuration(notes);
         // A run draws a beam only when EVERY head carries one; otherwise each head draws a
-        // flag, and the flag is ink in its column's RIGHT skyline. Same gate as
-        // GraceNoteEngraver.QuantGraceBeam and the renderer's DrawGraceStemsAndBeam.
-        bool beamed = notes.Length >= 2
-            && notes.All(n => n.BaseDuration.Denominator >= 8);
+        // flag, and the flag is ink in its column's RIGHT skyline. THE gate — the same
+        // sentence GraceNoteEngraver.QuantGraceBeam, .Dots and the renderer's
+        // DrawGraceStemsAndBeam read, so a run cannot be beamed for one and flagged for
+        // another (it was spelt three ways until session 299 wrote a fourth).
+        bool beamed = GraceNoteEngraver.IsBeamedRun(notes);
 
         var offsets = ImmutableArray.CreateBuilder<double>(notes.Length);
         double x = 0, toMain = 0;

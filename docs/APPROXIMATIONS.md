@@ -41,7 +41,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:493** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
-- **:361** ⚠️ NOT PORTED — the per-duration grace head: the head shape is BLACK for every
+- **:362** ⚠️ NOT PORTED — the per-duration grace head: the head shape is BLACK for every
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:1172** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
 - **:1177** whiteout −1) is not ported.
