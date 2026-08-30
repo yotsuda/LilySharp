@@ -590,6 +590,22 @@ internal static class ArticulationEngraver
         foreach (int arti in order)
         {
             var articulation = articulations[arti];
+
+            // An ordinary Script prints nothing on a NUMBERS-ONLY tab, and so takes no room
+            // on one either. LILYPOND-REF: ly/engraver-init.ly:1284 Tab_staff_symbol_engraver
+            // — that context's \override Script.stencil = ##f. Lily# narrows it to the
+            // numbers-only style and keeps the TAB TECHNIQUE LETTERS: see TabStaffStencils
+            // for the three-way partition and for why the criterion is TabNumbersOnly.
+            // Dropped HERE rather than at either caller because both arrive through this
+            // engraver: the drawn pass (LayoutEngine.ComputeFingeringsAndScripts) and the
+            // staff skyline's reservation of the same boxes
+            // (MultiStaffLayouter.StaffArticulationLayouts). THE SAME ENGRAVER, NOT A SECOND
+            // SPELLING — the argument that method makes.
+            if (staffByIndex != null
+                && staffByIndex.TryGetValue(articulation.StaffIndex, out var artScriptStaff)
+                && TabStaffStencils.BlanksScript(artScriptStaff, articulation))
+                continue;
+
             // Find the measure layout
             if (!layoutAt.TryGetValue(articulation.MeasureIndex, out var measureLayout))
                 continue;

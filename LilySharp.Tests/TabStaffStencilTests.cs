@@ -86,9 +86,13 @@ public sealed class TabStaffStencilTests
     /// One part, carrying one of each blanked family, shown as a notation staff AND a tab.
     /// </summary>
     /// <remarks>
-    /// ⚠️ <c>as full</c> IS NOT DECORATION: since 2026-08-29 a tab beside a notation staff
-    /// of the same part defaults to <c>as numbers</c>. Both styles duplicated the markup, so
-    /// the book states the style it is about rather than inheriting one that may change.
+    /// ⚠️⚠️ <c>as numbers</c> IS THE SUBJECT, NOT DECORATION. The criterion is
+    /// <c>Staff.TabNumbersOnly</c>, not "is a tab" (reader decision, 2026-08-30 — see
+    /// <see cref="TabStaffStencils"/>), and since 2026-08-29 a tab beside a notation staff
+    /// of the same part already defaults to it. The book STATES the style rather than
+    /// inheriting it, so that a later change to the default cannot silently retire these
+    /// tests — and so that the pair with <see cref="AFullTabKeepsTheMarkupItHasToCarry"/>
+    /// reads as the one switch it is.
     /// </remarks>
     private const string Music =
         "part m {\n"
@@ -97,7 +101,7 @@ public sealed class TabStaffStencilTests
         + "}\n"
         + "form main { A }\n";
 
-    private const string Both = Music + "score main { staff m  tab m as full }";
+    private const string Both = Music + "score main { staff m  tab m as numbers }";
 
     /// <summary>The same music with NO tab — the control every count below is read against.</summary>
     private const string StaffOnly = Music + "score main { staff m }";
@@ -198,10 +202,10 @@ public sealed class TabStaffStencilTests
     {
         const string bare =
             "part m {\n  clef treble\n  section A { c4 c g' a | }\n}\n"
-            + "form main { A }\nscore main { staff m  tab m as full }";
+            + "form main { A }\nscore main { staff m  tab m as numbers }";
         const string spanned =
             "part m {\n  clef treble\n  section A { c4@rit c@!rit g' a | }\n}\n"
-            + "form main { A }\nscore main { staff m  tab m as full }";
+            + "form main { A }\nscore main { staff m  tab m as numbers }";
 
         // The gap between the notation staff's bottom line and the tab's top line — the
         // band a tab's own rit. would reserve ABOVE itself.
@@ -292,47 +296,85 @@ public sealed class TabStaffStencilTests
     /// until the tab draws nothing — which would silently delete a feature.
     /// </remarks>
     [Fact]
-    public void AScriptIsStillEngravedOnBothStaves()
+    public void AnOrdinaryScriptIsBlankedOnANumbersOnlyTabAndKeptOnAFullOne()
     {
-        const string book =
-            "part m {\n  clef treble\n  section A { g'4@accent a b c'' | }\n}\n"
-            + "form main { A }\nscore main { staff m  tab m as full }";
+        const string music =
+            "part m {\n  clef treble\n  section A { g'4@accent a b c'' | }\n}\nform main { A }\n";
 
-        var page = RenderFirstPage(book);
-        var accents = page.Glyphs.Where(g => g.Glyph == EmmentalerGlyphs.ArticAccentAbove).ToList();
-        Assert.Equal(2, accents.Count);   // one per staff — the tab keeps its own
+        // A FULL tab carries its own markup: nothing else is carrying it for the reader.
+        int full = RenderFirstPage(music + "score main { staff m  tab m as full }")
+            .Glyphs.Count(g => g.Glyph == EmmentalerGlyphs.ArticAccentAbove);
+        Assert.Equal(2, full);
+
+        // A NUMBERS-ONLY tab does not — the staff above is carrying it. Reader report,
+        // 2026-08-30: "an @accent is showing on an `as numbers` tab; it should not".
+        int numbers = RenderFirstPage(music + "score main { staff m  tab m as numbers }")
+            .Glyphs.Count(g => g.Glyph == EmmentalerGlyphs.ArticAccentAbove);
+        Assert.Equal(1, numbers);
     }
 
     /// <summary>
-    /// THE PRICE, PINNED. LilyPond's blanking is a CONTEXT property, so a score whose only
-    /// line is a tab prints none of this markup either — where before it printed it once.
-    /// This is not the reported defect and it costs the reader something real (a written
-    /// playing instruction disappears), so it is asserted rather than left to be discovered.
+    /// THE NARROWNESS CONTROL, and the one the corpus nearly lost: the TAB TECHNIQUE LETTERS
+    /// stay on a numbers-only tab. They are what a guitarist reads the tab FOR.
     /// </summary>
     /// <remarks>
-    /// MEASURED on the corpus (2026-08-30): <c>scratch/ベースタブLy/奏（かなで）.lys</c> has
-    /// three score blocks and shows both faces — its <c>"both"</c> score drew
-    /// <c>@text("人差し指で")</c> twice and now draws it once (the fix), its <c>"tab"</c>
-    /// score drew it once and now draws it not at all (this test).
-    /// ⇒ If that should change, gate <c>TabStaffStencils.Blanks</c> on the part also being
-    /// shown on a notation staff; this test is then the one that has to be rewritten, which
-    /// is the point of writing it down.
+    /// ⚠️ <c>test/tab-technique-letters</c> is a numbers-only tab (<c>staff gtr</c> +
+    /// <c>tab gtr</c>, no <c>as</c> clause) written for exactly these marks, after a reader
+    /// reported one drawn into its own notehead on 2026-08-28. Blanking Scripts by TYPE
+    /// would have deleted that fixture's whole subject while every assertion about accents
+    /// stayed green — which is why <c>TabStaffStencils.BlanksScript</c> asks per ITEM.
     /// </remarks>
     [Fact]
-    public void ATabOnlyScorePrintsNoBlankedMarkupEither()
+    public void TabTechniqueLettersSurviveOnANumbersOnlyTab()
     {
         const string book =
-            "part m {\n  clef treble\n  section A { c4@f c g'@text(\"dolce\") a | }\n}\n"
-            + "form main { A }\nscore main { tab m as full }";
+            "octave absolute\npart m { clef treble }\n"
+            + "section A { m { c4@tap e@hammeron g@pulloff b@pluck(p) | } }\n"
+            + "form main { ~A }\nscore main { staff m  tab m as numbers }";
 
         var page = RenderFirstPage(book);
+        foreach (string letter in new[] { "T", "H", "P", "p" })
+            Assert.True(page.Texts.Any(t => t.Text == letter),
+                $"the technique letter \"{letter}\" is gone from a numbers-only tab.");
+    }
 
-        // POSITIVE CONTROL: the score really renders — the claim is "no markup", not
-        // "no page". The tab prints its fret digits as text.
-        Assert.NotEmpty(page.Texts);
+    /// <summary>
+    /// THE OTHER HALF OF THE SWITCH: a FULL tab keeps the markup, because nothing else is
+    /// carrying it for the reader. A tab standing alone is the whole engraving.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS TEST USED TO ASSERT THE OPPOSITE, and the flip is the record of a decision
+    /// rather than a bug. LilyPond blanks these on EVERY TabStaff, so the first cut of
+    /// <see cref="TabStaffStencils"/> did too — and a tab-only score lost its markup
+    /// entirely. MEASURED on the corpus (2026-08-30):
+    /// <c>scratch/ベースタブLy/奏（かなで）.lys</c> has three score blocks and showed both
+    /// faces at once — its <c>"both"</c> score drew <c>@text("人差し指で")</c> twice and now
+    /// draws it once (the defect), while its <c>"tab"</c> score drew it once and would have
+    /// drawn it not at all. A fingering instruction addressed to the player reading the tab
+    /// would have disappeared. The reader took the decision the same day (HANDOFF §2 U12):
+    /// keep it, by gating on <c>TabNumbersOnly</c>.
+    /// ⇒ That the flip cost a TEST EDIT and not a silent drift is the whole point of having
+    /// written the losing answer down.
+    /// </remarks>
+    [Fact]
+    public void AFullTabKeepsTheMarkupItHasToCarry()
+    {
+        const string music =
+            "part m {\n  clef treble\n  section A { c4@f c g'@text(\"dolce\") a | }\n}\n"
+            + "form main { A }\n";
 
-        Assert.DoesNotContain(page.Texts, t => t.Text == "dolce");
-        Assert.DoesNotContain(page.Texts, t => t.Text == "f");
+        // Explicitly full, and standing alone — where `tab m` alone would ALSO be full by
+        // default (RenderSpecParser.StaffRenderedParts), stated so the default cannot
+        // silently retire the test.
+        var alone = RenderFirstPage(music + "score main { tab m as full }");
+        Assert.Contains(alone.Texts, t => t.Text == "dolce");
+        Assert.Contains(alone.Texts, t => t.Text == "f");
+
+        // NEGATIVE CONTROL — the same music on a numbers-only tab loses both, so this test
+        // is measuring the STYLE and not merely "a tab draws text".
+        var numbers = RenderFirstPage(music + "score main { staff m  tab m as numbers }");
+        Assert.Single(numbers.Texts.Where(t => t.Text == "dolce"));
+        Assert.Single(numbers.Texts.Where(t => t.Text == "f"));
     }
 
     /// <summary>

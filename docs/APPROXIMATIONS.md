@@ -59,7 +59,7 @@
 - **:140** ⚠️ THE ONE LINE OF THAT BRANCH NOT PORTED is its dy,
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **:554** that does not exist yet. Named, not silently approximated.
-- **:2128** ⚠️ NOT PORTED — the per-type padding: the 2.25 is FLAT, but under the
+- **:2144** ⚠️ NOT PORTED — the per-type padding: the 2.25 is FLAT, but under the
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`
 - **:99** ⚠️ The X test itself is NOT ported HERE: a row's ink X-range is not on StaffLayout.
 ### `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs`
@@ -117,7 +117,7 @@
 ### `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs`
 - **:87** ⚠️⚠️ AND THIS IS WHY LILYPOND'S TabNoteHead (whiteout . #t) IS NOT PORTED, which
 ### `LilySharp.Core/Svg/Layout/TabStaffStencils.cs`
-- **:93** RepeatTie, LaissezVibrerTie, PhrasingSlur) are likewise not ported:
+- **:120** RepeatTie, LaissezVibrerTie, PhrasingSlur) are likewise not ported:
 ### `LilySharp.Core/Svg/Layout/TextSpannerEngraver.cs`
 - **:206** bound-details) and that branch is NOT PORTED HERE. No ledger point reads a
 - **:219** ⚠️ THE RIGHT BOUND'S ARITHMETIC IS NOT PORTED HERE, and the left repair is
@@ -153,10 +153,10 @@
 - **:186** fixture carries one, so there is no ledger point and no twin — it is ported literally
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **:270** hands the scorer the band it would have had without the digit. No book reaches that
-- **:1489** them as markup — so there is no LP geometry to port and no ledger point can observe
-- **:1639** see the difference, and no fixture and no ledger point reaches it.
-- **:2133** 2.45; no ledger point or book observes a fermata where this floor
-- **:2252** box per duration, which Lily# does not read for this purpose. No ledger point observes
+- **:1505** them as markup — so there is no LP geometry to port and no ledger point can observe
+- **:1655** see the difference, and no fixture and no ledger point reaches it.
+- **:2149** 2.45; no ledger point or book observes a fermata where this floor
+- **:2268** box per duration, which Lily# does not read for this purpose. No ledger point observes
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:90** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
 ### `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs`

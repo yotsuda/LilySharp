@@ -23,10 +23,11 @@ using LilySharp.Core.Svg.Model;
 namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
-/// The grob families a tablature staff prints nothing for. A tab line carries the fret
-/// digits and the gestures bound to them; the markup a reader takes from the notation
-/// staff standing above it — the dynamics, the scripts, the rit. — belongs to that staff
-/// alone, and a tab line repeating it prints the same annotation twice.
+/// The grob families a NUMBERS-ONLY tablature staff prints nothing for. A `tab … as
+/// numbers` line carries the fret digits and the gestures bound to them; the markup a
+/// reader takes from the notation staff standing above it — the dynamics, the scripts, the
+/// rit. — belongs to that staff alone, and a tab line repeating it prints the same
+/// annotation twice.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -55,11 +56,30 @@ namespace LilySharp.Core.Svg.Layout;
 /// the ink. Suppressing only the draw would leave the gap the ink used to sit in.
 /// </para>
 /// <para>
+/// ⚠️⚠️ ★ <b>THE CRITERION IS <see cref="Staff.TabNumbersOnly"/>, NOT "IS A TAB"</b>
+/// (reader decision, 2026-08-30). LilyPond blanks these on EVERY <c>TabStaff</c>, which
+/// costs a tab-only score its markup entirely — no <c>@text</c>, no dynamic, no
+/// <c>rit.</c> — where it used to print each once. Lily# already has the distinction
+/// LilyPond lacks, and it already means exactly the right thing:
+/// <c>RenderSpecParser.StaffRenderedParts</c>'s own rule (reader decision, 2026-08-29) is
+/// "a tab paired with a notation staff needs fret digits only, because the staff above
+/// carries the meter, the rests, the dots, the stems and the ties; a tab standing alone has
+/// to carry all of it itself". The markup families are more of that same list, so they
+/// belong to that same switch — and the writer can already override it per tab with
+/// <c>as numbers</c> / <c>as full</c>.
+/// ⇒ <c>staff m</c> + <c>tab m</c> (numbers by default) blanks and the duplicate is gone;
+/// <c>tab m</c> alone (full by default) keeps everything.
+/// ⚠️ <b>THE ONE COMBINATION THAT STILL PRINTS TWICE</b> is an EXPLICIT
+/// <c>tab m as full</c> beside <c>staff m</c> — the writer asked for a complete tab, and a
+/// complete tab carries its own markup. That is the writer's choice showing through, not a
+/// defect; it is the same reading under which the technique letters below stay.
+/// </para>
+/// <para>
 /// ⚠️ <b>AT LAYOUT, NOT AT COLLECTION.</b> LilyPond's engravers still RUN on a
 /// <c>TabStaff</c> — only the stencils are blank — and Lily# must keep the items for the
 /// same reason: a <see cref="DynamicItem"/> drives MIDI velocity, and the <c>.ly</c> and
 /// MusicXML exporters write from the score model. Dropping these at collection would
-/// silence a tab-only score's dynamics in three outputs the reader never sees the staff in.
+/// silence a score's dynamics in three outputs the reader never sees the staff in.
 /// </para>
 /// <para>
 /// ⚠️ <b>WHY IT IS CONSULTED IN SEVERAL PLACES AND NOT FILTERED IN ONE.</b> LilyPond has
@@ -81,49 +101,48 @@ namespace LilySharp.Core.Svg.Layout;
 /// nothing here re-states them.</item>
 /// <item><c>DynamicTextSpanner</c> has no separate Lily# spelling — <c>@cresc</c> becomes a
 /// Hairpin — so the Hairpin arm covers it.</item>
-/// <item><b><c>Script</c> IS NOT BLANKED</b>, though LilyPond blanks it at :1284. Lily#
-/// engraves scripts on a tab line deliberately, with placement of its own (the fret-digit
-/// centring in <c>ArticulationEngraver</c>) and SEVEN tracked fixtures plus a named
-/// clearance test — <c>test/tab-articulations</c>, <c>-multistaff</c>,
-/// <c>test/tab-beam-script</c>, <c>test/tab-staccato-beam-side</c>,
-/// <c>test/tab-forced-script-side</c>, <c>test/tab-beam-slope</c>,
-/// <c>test/tab-technique-letters</c>, <c>TabScriptStemClearanceTests</c>. MEASURED: adding
-/// the <c>Script</c> arm turns all eight red.</item>
+/// <item><b><c>Script</c> IS BLANKED ON A NUMBERS-ONLY TAB ONLY</b> (reader report,
+/// 2026-08-30: "an @accent is showing on an `as numbers` tab; it should not"). LilyPond
+/// blanks it on every TabStaff at :1284; Lily# engraves scripts on a FULL tab deliberately,
+/// with placement of its own (the fret-digit centring in <c>ArticulationEngraver</c>) and
+/// six tracked fixtures plus <c>TabScriptStemClearanceTests</c> — all of them tab-only or
+/// explicitly <c>as full</c>, so all of them keep their scripts.
+/// ⚠️⚠️ <b>EXCEPT THE TAB TECHNIQUE LETTERS</b>, which are the reason this is asked per
+/// ITEM and not per type. <c>@tap</c>, <c>@hammeron</c>, <c>@pulloff</c> and
+/// <c>@pluck</c>'s finger letter are TABLATURE ink — a guitarist reads T/H/P/p-i-m-a off
+/// the tab, not off the staff above — and <c>test/tab-technique-letters</c> is a
+/// NUMBERS-ONLY tab written for exactly them, after a reader reported one drawn into its
+/// own notehead (2026-08-28). Blanking Scripts wholesale would have deleted that fixture's
+/// entire subject. <see cref="ArticulationEngraver.TabTechniqueLetterOf"/> is already the
+/// one home for "is this a technique letter", so this reads it rather than spelling the
+/// four types again.</item>
 /// <item>The four lines ABOVE this block in the same LilyPond context (<c>Tie</c>,
 /// <c>RepeatTie</c>, <c>LaissezVibrerTie</c>, <c>PhrasingSlur</c>) are likewise not ported:
 /// Lily# draws ties on a tab staff, with <c>test/tab-tie</c> and
 /// <c>test/tab-chord-tie</c>.</item>
 /// </list>
-/// ⇒ Blanking either of those last two is a PRODUCT DECISION about what a Lily# tab line
-/// shows, not a defect. It moves ink, and it belongs in a change that says so — not in
-/// this one, which moves none.
+/// ⇒ Blanking the tie families is a PRODUCT DECISION about what a Lily# tab line shows,
+/// not a defect. It moves ink, and it belongs in a change that says so.
 /// </para>
 /// <para>
-/// ⚠️⚠️ ★ <b>THE ONE PLACE THIS COSTS THE READER SOMETHING, NAMED RATHER THAN HIDDEN.</b>
-/// LilyPond's blanking is a CONTEXT property, so it applies whether or not a notation staff
-/// stands beside the tab — and a score whose only line is a tab therefore prints no
-/// <c>@text</c>, no dynamic and no <c>rit.</c> AT ALL, where before it printed them once.
-/// MEASURED (2026-08-30, 1645 books): the whole corpus reach of this file is TWO books,
-/// both the user's own — <c>scratch/ベースタブLy/Untitled-6.lys</c> (the reported one) and
-/// <c>scratch/ベースタブLy/奏（かなで）.lys</c>, whose three score blocks show both faces:
-/// its <c>"both"</c> score drew <c>@text("人差し指で")</c> TWICE and now draws it once (the
-/// defect), while its <c>"tab"</c> score drew it once and now draws it not at all (this
-/// paragraph). The corpus sweep sees only the first book because it renders each file's
-/// DEFAULT score, and the second file's default score has no tab.
-/// ⇒ ★ If a tab-only score should keep its markup, the change is to gate
-/// <see cref="Blanks(MultiStaffScore, int)"/> on the part ALSO being shown on a notation
-/// staff in the same score — one condition, in this one place. That is a LilyPond
-/// DIVERGENCE (LilyPond has no such rule; a LilyPond user reverts the stencil per score),
-/// so it is the writer's decision to take, not this file's to assume.
-/// <c>TabStaffStencilTests.ATabOnlyScorePrintsNoBlankedMarkupEither</c> pins the current
-/// answer either way, so changing it is a test edit and not a silent drift.
+/// ★ <b>WHAT THE NUMBERS-ONLY CRITERION BOUGHT, MEASURED.</b> The first cut of this file
+/// blanked on every tab, and the price was named rather than hidden: a tab-only score lost
+/// its markup entirely. <c>scratch/ベースタブLy/奏（かなで）.lys</c> showed both faces at
+/// once — its <c>"both"</c> score drew <c>@text("人差し指で")</c> TWICE and now draws it
+/// once (the defect), while its <c>"tab"</c> score drew it once and would have drawn it not
+/// at all. The reader took the decision the same day (HANDOFF §2 U12): keep it. Gating on
+/// <see cref="Staff.TabNumbersOnly"/> keeps it AND fixes the duplicate, because that flag
+/// already defaults to precisely "this part is also on a notation staff".
+/// ⇒ Both answers are pinned by <c>TabStaffStencilTests</c>, so either one changing is a
+/// test edit and not a silent drift.
 /// </para>
 /// </remarks>
 internal static class TabStaffStencils
 {
     private static readonly ConditionalWeakTable<MultiStaffScore, TabStaffSet> _byScore = new();
 
-    /// <summary>The global staff indices of a score's tab staves, cut once per score.</summary>
+    /// <summary>The global staff indices of a score's NUMBERS-ONLY tab staves, cut once per
+    /// score.</summary>
     /// <remarks>
     /// Memoised for the same reason <see cref="ScoreSideTables"/>'s staff-keyed buckets
     /// are: the reservation pass asks per (system, staff), so a walk of the staff list on
@@ -139,14 +158,14 @@ internal static class TabStaffStencils
         {
             var set = new TabStaffSet();
             foreach (var (_, staff, index) in s.EnumerateStaves())
-                if (staff.IsTab)
+                if (Blanks(staff))
                     set.Indices.Add(index);
             return set;
         });
 
     /// <summary>
     /// True when the staff at <paramref name="staffIndex"/> blanks the markup families of
-    /// the table above — i.e. it is a tab staff.
+    /// the table above — i.e. it is a NUMBERS-ONLY tab staff.
     /// </summary>
     internal static bool Blanks(MultiStaffScore score, int staffIndex)
     {
@@ -155,7 +174,37 @@ internal static class TabStaffStencils
     }
 
     /// <summary>True when <paramref name="staff"/> blanks those families.</summary>
-    internal static bool Blanks(Staff? staff) => staff is { IsTab: true };
+    /// <remarks>
+    /// ⚠️ <c>TabNumbersOnly</c>, not <c>IsTab</c> — see the class remarks. A FULL tab has to
+    /// carry its own markup because no notation staff is carrying it for the reader.
+    /// </remarks>
+    internal static bool Blanks(Staff? staff) => staff is { IsTab: true, TabNumbersOnly: true };
+
+    /// <summary>
+    /// True when this articulation prints nothing because it is an ordinary
+    /// <c>Script</c> on a numbers-only tab — the <c>\override Script.stencil = ##f</c> arm.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THREE KINDS OF ARTICULATION, AND ONLY THE MIDDLE ONE GOES:
+    /// <list type="bullet">
+    /// <item>The BEND-AFTER gestures (<c>Fall</c>/<c>Doit</c>/<c>Bend</c>/<c>Scoop</c>/
+    /// <c>Plop</c>) and the breath marks are a <c>BendAfter</c> / <c>BreathingSign</c> grob,
+    /// NEITHER of which LilyPond's TabStaff block touches — and a bend is a tablature
+    /// gesture above all. <see cref="ArticulationEngraver.IsSidePositionedScript"/> is
+    /// already exactly that partition, so this reads it.</item>
+    /// <item>The TAB TECHNIQUE LETTERS (T/H/P and <c>@pluck</c>'s finger) are what the tab
+    /// is FOR: <c>test/tab-technique-letters</c> is a numbers-only tab written for them
+    /// after a reader reported one drawn into its own notehead. Asked per ITEM because
+    /// <c>@pluck</c> carries its letter on the item.</item>
+    /// <item>Everything else — accent, staccato, tenuto, marcato, fermata, trill — is the
+    /// markup the staff above already carries, and is what the reader asked to stop seeing
+    /// twice.</item>
+    /// </list>
+    /// </remarks>
+    internal static bool BlanksScript(Staff? staff, ArticulationItem articulation)
+        => Blanks(staff)
+           && ArticulationEngraver.IsSidePositionedScript(articulation.Type)
+           && ArticulationEngraver.TabTechniqueLetterOf(articulation) is null;
 
     /// <summary>
     /// <paramref name="items"/> without the ones a tab staff blanks — the DynamicText /
