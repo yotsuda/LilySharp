@@ -342,10 +342,17 @@ public readonly record struct MeasureContentKey(long Hash)
 
     // --- side-tables, bucketed onto measures by MeasureIndex ---
 
-    // Excluded from item hashes: the position-dependent source offset.
+    // Excluded from item hashes: the position-dependent source offsets. The bow trio
+    // joins SourcePosition for exactly its reason — they are the offsets of the `~`,
+    // `(` and `)` written on the item, so an edit ABOVE a measure shifts them all while
+    // its music is unchanged. Whether a bow is there at all still enters the key: that
+    // is the HasTieStart/HasSlurStart/HasSlurEnd booleans, which are not excluded.
     private static readonly HashSet<string> ItemExclusions = new(StringComparer.Ordinal)
     {
         nameof(MusicItem.SourcePosition),
+        nameof(MusicItem.TieStartSourcePosition),
+        nameof(MusicItem.SlurStartSourcePosition),
+        nameof(MusicItem.SlurEndSourcePosition),
     };
 
     // Excluded from side-table item hashes: the source offset AND the absolute

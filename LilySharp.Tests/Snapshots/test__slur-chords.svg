@@ -30,8 +30,8 @@
   <line x1="24.06" y1="18.52" x2="24.06" y2="14.52" stroke="#000000" stroke-width="0.130"/>
   <rect x="17.39" y="15.52" width="0.19" height="4.00" data-pos="514"/>
   <rect x="27.22" y="15.52" width="0.19" height="4.00" data-pos="534"/>
-  <path d="M 9.33,21.57 C 10.45,22.28 12.68,22.02 13.60,21.07 C 12.69,22.14 10.46,22.40 9.33,21.57 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 19.25,20.57 C 20.44,21.19 22.67,20.75 23.53,19.72 C 22.70,20.87 20.46,21.31 19.25,20.57 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 9.33,21.57 C 10.45,22.28 12.68,22.02 13.60,21.07 C 12.69,22.14 10.46,22.40 9.33,21.57 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="503"/>
+  <path d="M 19.25,20.57 C 20.44,21.19 22.67,20.75 23.53,19.72 C 22.70,20.87 20.46,21.31 19.25,20.57 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="523"/>
   <rect x="0.30" y="10.66" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="481"/>
   <text x="3.40" y="12.86" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="481">Main</text>
   </g>

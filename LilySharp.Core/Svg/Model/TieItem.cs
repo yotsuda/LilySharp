@@ -72,6 +72,23 @@ public sealed record TieItem
     /// and head displacement against THIS voice's measures.</summary>
     public int VoiceIndex { get; }
 
+    /// <summary>Source position of the <c>~</c> that wrote this tie, or
+    /// <see cref="MusicItem.NoSourcePosition"/>. The drawn bow's <c>data-pos</c>.</summary>
+    /// <remarks>
+    /// ⚠️ ONE CHARACTER, SO NO ALIAS — a tie is written once, unlike a slur, whose
+    /// <c>(</c> and <c>)</c> make <see cref="SlurItem.StartSourcePosition"/> a pair.
+    /// A chord's ties all carry the ONE <c>~</c> written after the chord.
+    /// <para>
+    /// ⚠️ <c>init</c>, and re-derived at render time by
+    /// <c>SharedRenderer.ResolveDataPos</c>: <c>SystemLayoutCache</c> serves a cached
+    /// <c>TieLayout</c> whenever the measure CONTENT is unchanged, and content keys exclude
+    /// source offsets by design — so a baked offset here is the offset of the edit that
+    /// COMPUTED the layout, not of the edit being rendered (the session-190 defect, whose
+    /// net is <c>IncrementalCompilerTests.ChainedEditsOnABowedTwoVoiceScore_AlwaysMatchFull</c>).
+    /// </para>
+    /// </remarks>
+    public int SourcePosition { get; init; } = MusicItem.NoSourcePosition;
+
     /// <summary>Creates a tie between two notes of the same pitch.</summary>
     public TieItem(
         NoteItem startNote,

@@ -130,9 +130,17 @@ public sealed partial class MeasureCollector
     /// annotate, so a note's flags come from the RUN of marker nodes that
     /// follows it — every consecutive marker, not just the first one.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ THE THREE OFFSETS ARE ONLY DEFINED WHERE THE MATCHING BOOL IS TRUE, which is why
+    /// they need no sentinel of their own: <c>default(MarkerFlags)</c> has every bool false,
+    /// so a 0 offset is never read. They are the source positions of the <c>~</c>, <c>(</c>
+    /// and <c>)</c> themselves — the bow cites the character that wrote it, not the note it
+    /// hangs from (<c>MusicItem.TieStartSourcePosition</c>).
+    /// </remarks>
     private readonly record struct MarkerFlags(
         bool HasTieAfter, bool HasSlurStartAfter, bool HasSlurEndAfter,
-        bool HasBeamStartAfter, bool HasBeamEndAfter);
+        bool HasBeamStartAfter, bool HasBeamEndAfter,
+        int TieSource = 0, int SlurStartSource = 0, int SlurEndSource = 0);
 
     /// <summary>True for the marker nodes that annotate the preceding note and
     /// are otherwise skipped by the walk ("already processed"), i.e. exactly the
@@ -153,9 +161,11 @@ public sealed partial class MeasureCollector
     /// <summary>Adds one marker node to the flags.</summary>
     private static MarkerFlags FoldMarker(MarkerFlags m, SyntaxNode node) => node switch
     {
-        TieSyntax => m with { HasTieAfter = true },
-        SlurSyntax { IsOpen: true } => m with { HasSlurStartAfter = true },
-        SlurSyntax { IsOpen: false } => m with { HasSlurEndAfter = true },
+        // SourceStart, not Position: the marker's own first character, with the leading
+        // trivia left where it belongs (session 286 U3). It is what the caret sits on.
+        TieSyntax t => m with { HasTieAfter = true, TieSource = t.SourceStart },
+        SlurSyntax { IsOpen: true } so => m with { HasSlurStartAfter = true, SlurStartSource = so.SourceStart },
+        SlurSyntax { IsOpen: false } sc => m with { HasSlurEndAfter = true, SlurEndSource = sc.SourceStart },
         BeamMarkerSyntax { IsStart: true } => m with { HasBeamStartAfter = true },
         BeamMarkerSyntax { IsStart: false } => m with { HasBeamEndAfter = true },
         _ => m,
@@ -295,9 +305,6 @@ public sealed partial class MeasureCollector
         _defaultDots = 0;
     }
 
-    private void ProcessMusicNode(SyntaxNode node, MeasureBuilder builder, MarkerFlags m)
-        => ProcessMusicNode(node, builder, m.HasTieAfter, m.HasSlurStartAfter,
-            m.HasSlurEndAfter, m.HasBeamStartAfter, m.HasBeamEndAfter);
 
     /// <summary>
     /// Converts the inline volta endings collected during this voice walk into
@@ -522,6 +529,10 @@ public sealed partial class MeasureCollector
     // chord's moment. See TakeEmptyChordSlurs.
     private bool _pendingEmptyChordSlurStart;
     private bool _pendingEmptyChordSlurEnd;
+    // ...and where that mark was written, which travels with it: the bow drawn for
+    // `<>( c4 d4)` cites the `(` on the empty chord, not the note that carries it.
+    private int _pendingEmptyChordSlurStartSource;
+    private int _pendingEmptyChordSlurEndSource;
 
     /// <summary>
     /// Merges a slur mark carried by a preceding empty chord <c>&lt;&gt;</c> into the item
@@ -550,15 +561,42 @@ public sealed partial class MeasureCollector
     /// mark to the MAIN note (grace items are collected on their own path). Untested against
     /// LP — no fixture reaches it.
     /// </remarks>
-    private void TakeEmptyChordSlurs(ref bool hasSlurStartAfter, ref bool hasSlurEndAfter)
+    /// <remarks>
+    /// ⚠️ The carrier's OWN paren wins the address when it has one — <c>&lt;&gt;( c4(</c>
+    /// writes two opens onto one bound, and the one written on the item is the one a
+    /// caret sitting on the item finds. The mark still binds either way (the flag is
+    /// the same true), so this only decides which character the bow cites.
+    /// </remarks>
+    private void TakeEmptyChordSlurs(ref MarkerFlags m)
     {
         if (!_pendingEmptyChordSlurStart && !_pendingEmptyChordSlurEnd)
             return;
-        hasSlurStartAfter |= _pendingEmptyChordSlurStart;
-        hasSlurEndAfter |= _pendingEmptyChordSlurEnd;
+        if (_pendingEmptyChordSlurStart && !m.HasSlurStartAfter)
+            m = m with { HasSlurStartAfter = true, SlurStartSource = _pendingEmptyChordSlurStartSource };
+        if (_pendingEmptyChordSlurEnd && !m.HasSlurEndAfter)
+            m = m with { HasSlurEndAfter = true, SlurEndSource = _pendingEmptyChordSlurEndSource };
         _pendingEmptyChordSlurStart = false;
         _pendingEmptyChordSlurEnd = false;
     }
+
+    /// <summary>Stamps the offsets of the <c>~</c>, <c>(</c> and <c>)</c> that a run of
+    /// markers wrote onto the item they bind to, so the BOW can cite the character rather
+    /// than the note it hangs from. Only the fields whose flag is set are written; an item
+    /// with no marker keeps <see cref="MusicItem.NoSourcePosition"/>.</summary>
+    private static MusicItem WithBowSources(MusicItem item, in MarkerFlags m)
+        // ⚠️ THE THREE BOOL READS COME FIRST for the reason FoldOwnMarkers' green pre-check
+        // does: this runs once per EMITTED ITEM on the keystroke path, and `with` on a record
+        // allocates a copy. Most notes carry no bow, and a fresh item already answers
+        // NoSourcePosition to all three, so the early return is value-identical to the clone
+        // it replaces — not an approximation of it.
+        => !m.HasTieAfter && !m.HasSlurStartAfter && !m.HasSlurEndAfter
+            ? item
+            : item with
+            {
+                TieStartSourcePosition = m.HasTieAfter ? m.TieSource : MusicItem.NoSourcePosition,
+                SlurStartSourcePosition = m.HasSlurStartAfter ? m.SlurStartSource : MusicItem.NoSourcePosition,
+                SlurEndSourcePosition = m.HasSlurEndAfter ? m.SlurEndSource : MusicItem.NoSourcePosition,
+            };
 
     /// <summary>Whether this node emits an item a slur can bind to — the carrier an empty
     /// chord's slur mark is waiting for. A wrapper (tuplet, grace, repeat) is not one; its
@@ -571,7 +609,7 @@ public sealed partial class MeasureCollector
         _ => false,
     };
 
-    private void ProcessMusicNode(SyntaxNode node, MeasureBuilder builder, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false)
+    private void ProcessMusicNode(SyntaxNode node, MeasureBuilder builder, MarkerFlags m = default)
     {
         // Record mode (CollectWalkProbe): every processed node at ANY depth funnels
         // through here — including phrase/variable bodies inlined from elsewhere in
@@ -586,7 +624,16 @@ public sealed partial class MeasureCollector
         // every score that never writes `<>`, and that short-circuit keeps the type switch
         // in BindsASlur out of the per-item path this walk runs on every keystroke.
         if ((_pendingEmptyChordSlurStart || _pendingEmptyChordSlurEnd) && BindsASlur(node))
-            TakeEmptyChordSlurs(ref hasSlurStartAfter, ref hasSlurEndAfter);
+            TakeEmptyChordSlurs(ref m);
+
+        // Unpacked AFTER the empty-chord take, which is the only thing that can still
+        // change them; the arms below read the locals exactly as they did when these
+        // were five parameters.
+        bool hasTieAfter = m.HasTieAfter;
+        bool hasSlurStartAfter = m.HasSlurStartAfter;
+        bool hasSlurEndAfter = m.HasSlurEndAfter;
+        bool hasBeamStartAfter = m.HasBeamStartAfter;
+        bool hasBeamEndAfter = m.HasBeamEndAfter;
 
         switch (node)
         {
@@ -661,11 +708,11 @@ public sealed partial class MeasureCollector
                         int prItemIndex = builder.CurrentItemCount;
                         Fraction prAnchorTiming = builder.CurrentDuration;
                         var pitchedRest = CreatePitchedRestItem(note);
-                        builder.AddItem(pitchedRest with
+                        builder.AddItem(WithBowSources(pitchedRest with
                         {
                             HasSlurStart = hasSlurStartAfter,
                             HasSlurEnd = hasSlurEndAfter,
-                        });
+                        }, m));
                         // Post-events ride a pitched rest exactly as they ride `r4`.
                         CollectArticulations(note, prMeasureIndex, prItemIndex,
                             stemUp: false, anchorTiming: prAnchorTiming);
@@ -702,7 +749,7 @@ public sealed partial class MeasureCollector
                         noteItem = noteItem with { LeadingGrace = _pendingLeadingGrace };
                         _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
                     }
-                    builder.AddItem(noteItem);
+                    builder.AddItem(WithBowSources(noteItem, m));
                     CollectDynamics(note, measureIndex, itemIndex);
                     CollectArticulations(note, measureIndex, itemIndex, noteItem.StemUp,
                         noteItem.EditorialAccidental, noteAnchorTiming);
@@ -749,11 +796,11 @@ public sealed partial class MeasureCollector
                     int count = rest.MeasureCount;
                     if (count <= 1)
                     {
-                        builder.AddItem(restItem with
+                        builder.AddItem(WithBowSources(restItem with
                         {
                             HasSlurStart = hasSlurStartAfter,
                             HasSlurEnd = hasSlurEndAfter,
-                        });
+                        }, m));
                         // Post-events on the rest (r4@fermata, r2@coda, ...).
                         // Rests have no stem; stemUp=false makes the default
                         // direction UP, matching scripts over rests.
@@ -839,6 +886,10 @@ public sealed partial class MeasureCollector
                         // and, until the file had to be structured, said nothing either:
                         // the twin of regression empty-chord.ly lost its phrase mark in
                         // silence (LYS0020 work, 2026-08-09).
+                        if (hasSlurStartAfter && !_pendingEmptyChordSlurStart)
+                            _pendingEmptyChordSlurStartSource = m.SlurStartSource;
+                        if (hasSlurEndAfter && !_pendingEmptyChordSlurEnd)
+                            _pendingEmptyChordSlurEndSource = m.SlurEndSource;
                         _pendingEmptyChordSlurStart |= hasSlurStartAfter;
                         _pendingEmptyChordSlurEnd |= hasSlurEndAfter;
                         break;
@@ -888,7 +939,7 @@ public sealed partial class MeasureCollector
                         chordItem = chordItem with { LeadingGrace = _pendingLeadingGrace };
                         _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
                     }
-                    builder.AddItem(chordItem);
+                    builder.AddItem(WithBowSources(chordItem, m));
                     CollectDynamics(chord, measureIndex, itemIndex);
                     // Use chord stem direction for articulation placement
                     CollectArticulations(chord, measureIndex, itemIndex, chordItem.StemUp, anchorTiming: chordAnchorTiming);
@@ -929,7 +980,7 @@ public sealed partial class MeasureCollector
                     {
                         // Bad chord repetition: a spacer keeps the time; the
                         // validator reports it (nothing is silent).
-                        builder.AddItem(repItem);
+                        builder.AddItem(WithBowSources(repItem, m));
                         break;
                     }
                     if (isCue && TakeCueRegionStart())
@@ -960,7 +1011,7 @@ public sealed partial class MeasureCollector
                         chordCopy = chordCopy with { LeadingGrace = _pendingLeadingGrace };
                         _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
                     }
-                    builder.AddItem(chordCopy);
+                    builder.AddItem(WithBowSources(chordCopy, m));
                     CollectDynamics(rep, measureIndex, itemIndex);
                     CollectArticulations(rep, measureIndex, itemIndex, chordCopy.StemUp, anchorTiming: repAnchorTiming);
                     CollectFiguredBass(rep, measureIndex, itemIndex);
@@ -1011,7 +1062,7 @@ public sealed partial class MeasureCollector
                         slashItem = slashItem with { LeadingGrace = _pendingLeadingGrace };
                         _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
                     }
-                    builder.AddItem(slashItem);
+                    builder.AddItem(WithBowSources(slashItem, m));
                     CollectDynamics(slash, measureIndex, itemIndex);
                     CollectArticulations(slash, measureIndex, itemIndex, slashItem.StemUp, anchorTiming: slashAnchorTiming);
                     CollectFiguredBass(slash, measureIndex, itemIndex);
@@ -1077,7 +1128,7 @@ public sealed partial class MeasureCollector
                         bareItem = bc with { LeadingGrace = _pendingLeadingGrace };
                         _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
                     }
-                    builder.AddItem(bareItem);
+                    builder.AddItem(WithBowSources(bareItem, m));
                     bool bareStemUp = bareItem switch
                     {
                         NoteItem n => n.StemUp,
@@ -1468,7 +1519,6 @@ public sealed partial class MeasureCollector
             var flags = FoldOwnMarkers(default, item);
             for (int k = j + 1; k < tupletItems.Count && IsMarkerNode(tupletItems[k]); k++)
                 flags = FoldMarker(flags, tupletItems[k]);
-            var (hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter) = flags;
 
             if (item is TupletExpressionSyntax nestedTuplet)
             {
@@ -1479,8 +1529,7 @@ public sealed partial class MeasureCollector
             }
             else
             {
-                writtenDuration += EmitScaledItem(item, builder, scale,
-                    hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter);
+                writtenDuration += EmitScaledItem(item, builder, scale, flags);
             }
             lastSourcePosition = item.SourceStart;
         }
@@ -1532,13 +1581,19 @@ public sealed partial class MeasureCollector
     /// Shared by <see cref="ProcessTuplet"/> and the arpeggio auto-tuplet.
     /// </summary>
     private Fraction EmitScaledItem(SyntaxNode item, MeasureBuilder builder, Fraction scale,
-        bool hasTieAfter, bool hasSlurStartAfter, bool hasSlurEndAfter, bool hasBeamStartAfter, bool hasBeamEndAfter)
+        MarkerFlags m)
     {
         // The first item inside a tuplet can be the carrier for a slur mark left by an
         // empty chord just before the group (the same hole the glissando note below records).
         // Flags first, as in ProcessMusicNode — this is the tuplet body's per-item path.
         if ((_pendingEmptyChordSlurStart || _pendingEmptyChordSlurEnd) && BindsASlur(item))
-            TakeEmptyChordSlurs(ref hasSlurStartAfter, ref hasSlurEndAfter);
+            TakeEmptyChordSlurs(ref m);
+
+        bool hasTieAfter = m.HasTieAfter;
+        bool hasSlurStartAfter = m.HasSlurStartAfter;
+        bool hasSlurEndAfter = m.HasSlurEndAfter;
+        bool hasBeamStartAfter = m.HasBeamStartAfter;
+        bool hasBeamEndAfter = m.HasBeamEndAfter;
 
         int annMeasureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
         int annItemIndex = builder.CurrentItemCount;
@@ -1551,7 +1606,7 @@ public sealed partial class MeasureCollector
                 // arm didn't, which is the same one-arm-of-two hole the rest dynamics
                 // above already had (a tuplet note's @glissando dropped silently).
                 var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, HasGlissandoArticulation(note));
-                builder.AddItemWithoutDuration(noteItem with { TimeScale = scale });
+                builder.AddItemWithoutDuration(WithBowSources(noteItem with { TimeScale = scale }, m));
                 CollectDynamics(note, annMeasureIndex, annItemIndex);
                 CollectArticulations(note, annMeasureIndex, annItemIndex, noteItem.StemUp,
                     noteItem.EditorialAccidental, annAnchor);
@@ -1569,7 +1624,7 @@ public sealed partial class MeasureCollector
                     HasSlurStart = hasSlurStartAfter,
                     HasSlurEnd = hasSlurEndAfter,
                 };
-                builder.AddItemWithoutDuration(restItem with { TimeScale = scale });
+                builder.AddItemWithoutDuration(WithBowSources(restItem with { TimeScale = scale }, m));
                 CollectArticulations(rest, annMeasureIndex, annItemIndex, stemUp: false, anchorTiming: annAnchor);
                 // Same repair as the main walk's rest case: a rest carries dynamics too.
                 CollectDynamics(rest, annMeasureIndex, annItemIndex);
@@ -1579,7 +1634,7 @@ public sealed partial class MeasureCollector
             {
                 var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter,
                     hasArpeggio: false, isCue: false, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter);
-                builder.AddItemWithoutDuration(chordItem with { TimeScale = scale });
+                builder.AddItemWithoutDuration(WithBowSources(chordItem with { TimeScale = scale }, m));
                 CollectDynamics(chord, annMeasureIndex, annItemIndex);
                 CollectArticulations(chord, annMeasureIndex, annItemIndex, chordItem.StemUp, anchorTiming: annAnchor);
                 CollectFiguredBass(chord, annMeasureIndex, annItemIndex);
@@ -1596,7 +1651,7 @@ public sealed partial class MeasureCollector
                     hasSlurStartAfter: hasSlurStartAfter, hasSlurEndAfter: hasSlurEndAfter);
                 if (repItem is ChordItem chordCopy)
                 {
-                    builder.AddItemWithoutDuration(chordCopy with { TimeScale = scale });
+                    builder.AddItemWithoutDuration(WithBowSources(chordCopy with { TimeScale = scale }, m));
                     CollectDynamics(rep, annMeasureIndex, annItemIndex);
                     CollectArticulations(rep, annMeasureIndex, annItemIndex, chordCopy.StemUp, anchorTiming: annAnchor);
                     CollectFiguredBass(rep, annMeasureIndex, annItemIndex);
@@ -1613,7 +1668,7 @@ public sealed partial class MeasureCollector
             {
                 var slashItem = CreateSlashNoteItem(slash, hasTieAfter, hasSlurStartAfter,
                     hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter);
-                builder.AddItemWithoutDuration(slashItem with { TimeScale = scale });
+                builder.AddItemWithoutDuration(WithBowSources(slashItem with { TimeScale = scale }, m));
                 CollectDynamics(slash, annMeasureIndex, annItemIndex);
                 CollectArticulations(slash, annMeasureIndex, annItemIndex, slashItem.StemUp, anchorTiming: annAnchor);
                 CollectChordNames(slash, annMeasureIndex, annItemIndex);
@@ -1628,13 +1683,13 @@ public sealed partial class MeasureCollector
                 switch (bareItem)
                 {
                     case NoteItem n:
-                        builder.AddItemWithoutDuration(n with { TimeScale = scale });
+                        builder.AddItemWithoutDuration(WithBowSources(n with { TimeScale = scale }, m));
                         CollectDynamics(bare, annMeasureIndex, annItemIndex);
                         CollectArticulations(bare, annMeasureIndex, annItemIndex, n.StemUp, anchorTiming: annAnchor);
                         CollectChordNames(bare, annMeasureIndex, annItemIndex);
                         return n.Duration;
                     case ChordItem c:
-                        builder.AddItemWithoutDuration(c with { TimeScale = scale });
+                        builder.AddItemWithoutDuration(WithBowSources(c with { TimeScale = scale }, m));
                         CollectDynamics(bare, annMeasureIndex, annItemIndex);
                         CollectArticulations(bare, annMeasureIndex, annItemIndex, c.StemUp, anchorTiming: annAnchor);
                         CollectChordNames(bare, annMeasureIndex, annItemIndex);

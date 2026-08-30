@@ -73,7 +73,15 @@ internal sealed class SlurDetector
                     measureIdx,
                     startItemIdx,
                     itemIdx,
-                    voiceIndex: v));
+                    voiceIndex: v)
+                {
+                    // The two characters the reader can point at. They come off the BOUND
+                    // ITEMS, not off this walk: the marker run that wrote them was folded
+                    // onto the note back in the collect (MeasureCollector.MarkerFlags),
+                    // which is the only place that still knows where `(` and `)` stood.
+                    StartSourcePosition = startItem.SlurStartSourcePosition,
+                    EndSourcePosition = item.SlurEndSourcePosition,
+                });
             }
         }
 

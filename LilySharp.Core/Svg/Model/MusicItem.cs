@@ -143,6 +143,38 @@ public abstract record MusicItem
     /// by the engravers (they key on measure/item indices).</summary>
     public int SourcePosition { get; init; }
 
+    /// <summary>The value a bow offset takes when nothing wrote it — a grace slur
+    /// (implied by <c>grace { }</c>) and a tab bow copied from a notation slur have no
+    /// character of their own. Negative, so <c>CollectTailShifter.Window.TryShift</c>
+    /// passes it through as the sentinel it is.</summary>
+    public const int NoSourcePosition = -1;
+
+    /// <summary>Source position of the <c>~</c> that opened a tie on this item, or
+    /// <see cref="NoSourcePosition"/>.</summary>
+    /// <remarks>
+    /// ⚠️ THE MARKER'S OFFSET, NOT THIS ITEM'S — <see cref="SourcePosition"/> is where the
+    /// NOTE stands and the tie mark is written after it, so the two are never equal. The
+    /// bow is what cites this (SharedRenderer.Curves wraps it in a <c>Source</c> scope), so
+    /// a caret on <c>~</c> lights the tie rather than the nearest preceding address.
+    /// <para>
+    /// ⚠️ ON THE BASE for the reason <see cref="SourcePosition"/> is: the suffix splice
+    /// re-homes an adopted item with a single <c>with</c>
+    /// (<c>CollectTailShifter.ShiftItem</c>), and <c>MeasureContentKey</c> must exclude
+    /// every position field from the content key or an edit above the note churns it.
+    /// Both are held to it by <c>CollectResumeTests.ShifterInventory_CoversEveryPositionField</c>.
+    /// </para>
+    /// </remarks>
+    public int TieStartSourcePosition { get; init; } = NoSourcePosition;
+
+    /// <summary>Source position of the <c>(</c> that opened a slur on this item, or
+    /// <see cref="NoSourcePosition"/>. See <see cref="TieStartSourcePosition"/>.</summary>
+    public int SlurStartSourcePosition { get; init; } = NoSourcePosition;
+
+    /// <summary>Source position of the <c>)</c> that closed a slur on this item, or
+    /// <see cref="NoSourcePosition"/>. The bow carries this as its <c>data-alt</c> alias —
+    /// one slur is written at TWO places, and the caret must find it from either.</summary>
+    public int SlurEndSourcePosition { get; init; } = NoSourcePosition;
+
     /// <summary>
     /// Whether this item is a "loose" column that does not participate in spacing.
     /// </summary>

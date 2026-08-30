@@ -28,7 +28,7 @@ namespace LilySharp.Core.Svg.Layout;
 internal sealed record SlurLayout : BowLayout
 {
     /// <summary>The slur model.</summary>
-    public Model.SlurItem Slur { get; }
+    public Model.SlurItem Slur { get; init; }
 
     /// <summary>Direction: true = curve up, false = curve down.</summary>
     public override bool CurveUp => Slur.CurveUp;

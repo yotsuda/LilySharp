@@ -69,7 +69,12 @@ internal sealed class TieDetector
                             forcedCurveUp,
                             measureIdx, endMeasureIdx,
                             itemIdx, endItemIdx,
-                            voiceIndex: v));
+                            voiceIndex: v)
+                        {
+                            // The `~` the reader can point at. It rides the START item,
+                            // folded there by the collect's marker run (MarkerFlags).
+                            SourcePosition = startNote.TieStartSourcePosition,
+                        });
                     }
                 }
             }
@@ -212,7 +217,13 @@ internal sealed class TieDetector
                 forcedCurveUp,
                 startMeasureIdx, endMeasureIdx,
                 startItemIdx, endItemIdx,
-                voiceIndex: voiceIndex));
+                voiceIndex: voiceIndex)
+            {
+                // ONE `~` after `<c e g>~` writes every pitch's tie, so all of this
+                // chord's bows cite the same character — the shape a chord's heads
+                // already have with their shared data-pos.
+                SourcePosition = startChord.TieStartSourcePosition,
+            });
         }
     }
 

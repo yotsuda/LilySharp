@@ -104,10 +104,10 @@
   <text class="music" x="78.26" y="55.27" font-size="4.00" data-pos="631"></text>
   <line x1="78.32" y1="55.42" x2="78.32" y2="58.77" stroke="#000000" stroke-width="0.130"/>
   <rect x="102.24" y="53.77" width="0.19" height="4.00" data-pos="635"/>
-  <path d="M 90.62,34.27 C 91.92,35.10 100.93,35.10 102.23,34.27 C 100.93,35.22 91.92,35.22 90.62,34.27 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 3.57,46.27 C 4.06,46.73 5.11,46.73 5.60,46.27 C 5.11,46.85 4.06,46.85 3.57,46.27 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 10.19,20.57 C 13.62,16.67 98.81,14.50 102.43,18.22 C 98.81,14.62 13.62,16.79 10.19,20.57 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 3.37,29.57 C 6.23,27.91 28.30,29.23 30.95,31.22 C 28.29,29.35 6.22,28.03 3.37,29.57 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 90.62,34.27 C 91.92,35.10 100.93,35.10 102.23,34.27 C 100.93,35.22 91.92,35.22 90.62,34.27 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="495"/>
+  <path d="M 3.57,46.27 C 4.06,46.73 5.11,46.73 5.60,46.27 C 5.11,46.85 4.06,46.85 3.57,46.27 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="495"/>
+  <path d="M 10.19,20.57 C 13.62,16.67 98.81,14.50 102.43,18.22 C 98.81,14.62 13.62,16.79 10.19,20.57 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="371"/>
+  <path d="M 3.37,29.57 C 6.23,27.91 28.30,29.23 30.95,31.22 C 28.29,29.35 6.22,28.03 3.37,29.57 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="371"/>
   <text x="56.32" y="49.08" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="597">p</text>
   <text x="78.91" y="60.88" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="632">f</text>
   <line x1="67.25" y1="47.48" x2="102.43" y2="47.03" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>

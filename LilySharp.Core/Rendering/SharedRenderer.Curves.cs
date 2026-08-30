@@ -44,10 +44,20 @@ internal static partial class SharedRenderer
             // in the system-top Y-up); add this measure's system-top Y-up here to restore
             // the absolute page-Y-up the bow frame expects (byte-identical to the former
             // absolute StartYUp). See ElementCoordinator step 2d.
-            DrawBow(tie.StartX, syUp + tie.StartYUp, tie.EndX, syUp + tie.EndYUp,
-                (tie.Control1.X, syUp + tie.Control1.Y), (tie.Control2.X, syUp + tie.Control2.Y),
-                EngravingDefaults.TieMidThickness,
-                tie.StaffIndex, mi, os, gc);
+            // The bow cites the `~` THAT WROTE IT, so a caret on that character lights
+            // this path instead of the nearest preceding address — which, before this,
+            // was the note, and the reader could not point at a tie at all (HANDOFF §2
+            // U10). A chord's ties all cite the one `~` after the chord.
+            // ⚠️ NO SCOPE rather than a scope holding -1: a bow nothing wrote (none today
+            // for ties; the sentinel is what says so) must stay unaddressed, or the
+            // webview's position index gains a -1 the source has no character for.
+            using (tie.Tie.SourcePosition is var tiePos and >= 0 ? gc.Source(tiePos) : null)
+            {
+                DrawBow(tie.StartX, syUp + tie.StartYUp, tie.EndX, syUp + tie.EndYUp,
+                    (tie.Control1.X, syUp + tie.Control1.Y), (tie.Control2.X, syUp + tie.Control2.Y),
+                    EngravingDefaults.TieMidThickness,
+                    tie.StaffIndex, mi, os, gc);
+            }
         }
     }
 
@@ -67,10 +77,23 @@ internal static partial class SharedRenderer
             // in the system-top Y-up); add this measure's system-top Y-up here to restore
             // the absolute page-Y-up the bow frame expects (byte-identical to the former
             // absolute StartYUp). See ElementCoordinator step 2d.
-            DrawBow(slur.StartX, syUp + slur.StartYUp, slur.EndX, syUp + slur.EndYUp,
-                (slur.Control1.X, syUp + slur.Control1.Y), (slur.Control2.X, syUp + slur.Control2.Y),
-                EngravingDefaults.SlurMidThickness,
-                slur.StaffIndex, mi, os, gc);
+            // ONE BOW, TWO WRITTEN PLACES: the `(` is the click target (data-pos) and the
+            // `)` an alias (data-alt), so a caret on either end lights the slur — the same
+            // pair a barline uses when several written bars collapse onto one drawn line,
+            // and the webview already matches `[data-pos="p"], [data-alt~="p"]`.
+            // ⚠️ A GRACE SLUR HAS NEITHER: `grace { }` implies it, no character wrote it,
+            // so it draws unaddressed (see the tie arm on why not a -1 scope).
+            int open = slur.Slur.StartSourcePosition;
+            int close = slur.Slur.EndSourcePosition;
+            using (open < 0 ? null
+                : close < 0 ? gc.Source(open)
+                : gc.Source(open, ImmutableArray.Create(close)))
+            {
+                DrawBow(slur.StartX, syUp + slur.StartYUp, slur.EndX, syUp + slur.EndYUp,
+                    (slur.Control1.X, syUp + slur.Control1.Y), (slur.Control2.X, syUp + slur.Control2.Y),
+                    EngravingDefaults.SlurMidThickness,
+                    slur.StaffIndex, mi, os, gc);
+            }
         }
     }
 
@@ -366,8 +389,14 @@ internal static partial class SharedRenderer
         // instead of a side-table index; their data-pos is the HOST NOTE's source offset.
         // Build the staff -> measures map once so the resolver can re-derive it. Lazy:
         // only built when such an annotation is present.
+        // ⚠️ THE BOWS JOINED THIS LIST 2026-08-30 and they are the reason the condition
+        // is not just the two note-hosted annotations: a tie's `~` and a slur's `(`/`)`
+        // are written ON their bound items, so they resolve the same way, and a layout
+        // holding only ties would otherwise be served with the map null and skip.
         var noteHosts = (layout.GlissandoLayouts.IsDefaultOrEmpty
-                         && layout.FingeringLayouts.IsDefaultOrEmpty)
+                         && layout.FingeringLayouts.IsDefaultOrEmpty
+                         && layout.TieLayouts.IsDefaultOrEmpty
+                         && layout.SlurLayouts.IsDefaultOrEmpty)
             ? null : BuildStaffVoices(score);
         return layout with
         {
@@ -433,6 +462,27 @@ internal static partial class SharedRenderer
                 static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
             TextSpannerLayouts = ResolveArr(layout.TextSpannerLayouts, score.MusicMarks,
                 static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
+            // A bow's address is written ON its bound items, so it resolves by note
+            // locator like a glissando's — see ResolveBows for why it must.
+            TieLayouts = ResolveBows(layout.TieLayouts, noteHosts,
+                static l => (l.StaffIndex, l.Tie.VoiceIndex,
+                             l.Tie.StartMeasureIndex, l.Tie.StartItemIndex),
+                static it => it.TieStartSourcePosition,
+                static (l, pos) => l with { Tie = l.Tie with { SourcePosition = pos } },
+                static l => l.Tie.SourcePosition),
+            SlurLayouts = ResolveBows(
+                ResolveBows(layout.SlurLayouts, noteHosts,
+                    static l => (l.StaffIndex, l.Slur.VoiceIndex,
+                                 l.Slur.StartMeasureIndex, l.Slur.StartItemIndex),
+                    static it => it.SlurStartSourcePosition,
+                    static (l, pos) => l with { Slur = l.Slur with { StartSourcePosition = pos } },
+                    static l => l.Slur.StartSourcePosition),
+                noteHosts,
+                static l => (l.StaffIndex, l.Slur.VoiceIndex,
+                             l.Slur.EndMeasureIndex, l.Slur.EndItemIndex),
+                static it => it.SlurEndSourcePosition,
+                static (l, pos) => l with { Slur = l.Slur with { EndSourcePosition = pos } },
+                static l => l.Slur.EndSourcePosition),
         };
     }
 
@@ -456,6 +506,55 @@ internal static partial class SharedRenderer
     // range, or staffIndex -1 from the single-staff Layout(Score) path) is left as-is — its
     // baked value is already correct for a normal full render; only whole-layout reuse needs
     // the re-derivation, and that path always carries a real staff index.
+    /// <summary>
+    /// Re-derives a BOW's source offset from the live score by the note locator of the
+    /// item that carries it — the `~` on a tie's start item, the `(` and `)` on a slur's
+    /// two bounds.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ WHY A BOW NEEDS THIS AT ALL, when it looks like plain model data: <c>TieLayout</c>
+    /// and <c>SlurLayout</c> are memoized per system by <c>SystemLayoutCache</c>, whose key
+    /// is the measure CONTENT and therefore blind to where the text sits (it must be, or a
+    /// trivia insertion would move every key and the memo would never hit). A content-
+    /// unchanged edit above a bow serves the cached layout, and the offset baked into it is
+    /// the offset of the edit that COMPUTED it. That is the session-190 defect exactly, one
+    /// grob family later.
+    /// <para>
+    /// ⚠️ A BOW WITH NO ADDRESS KEEPS NONE: <paramref name="current"/> gates the rewrite, so
+    /// a bow nothing wrote (a tab bow whose notation source is off this staff) is never
+    /// handed the address of whatever item happens to sit at its locator. Losing an address
+    /// cannot happen the other way — the flag that creates the bow is IN the content key, so
+    /// deleting the <c>~</c> recomputes the layout rather than serving this one.
+    /// </para>
+    /// </remarks>
+    private static ImmutableArray<T> ResolveBows<T>(
+        ImmutableArray<T> layouts,
+        System.Collections.Generic.Dictionary<int, ImmutableArray<Voice>>? staffVoices,
+        System.Func<T, (int Staff, int Voice, int Measure, int Item)> locator,
+        System.Func<MusicItem, int> field,
+        System.Func<T, int, T> resolve,
+        System.Func<T, int> current)
+    {
+        if (layouts.IsDefaultOrEmpty || staffVoices == null)
+            return layouts;
+        var b = layouts.ToBuilder();
+        for (int i = 0; i < b.Count; i++)
+        {
+            if (current(b[i]) < 0)
+                continue;
+            var (s, v, m, it) = locator(b[i]);
+            if (staffVoices.TryGetValue(s, out var voices)
+                && (uint)v < (uint)voices.Length
+                && (uint)m < (uint)voices[v].Measures.Length)
+            {
+                var items = voices[v].Measures[m].Items;
+                if ((uint)it < (uint)items.Length && field(items[it]) is var pos and >= 0)
+                    b[i] = resolve(b[i], pos);
+            }
+        }
+        return b.MoveToImmutable();
+    }
+
     private static ImmutableArray<T> ResolveNoteArr<T>(
         ImmutableArray<T> layouts,
         System.Collections.Generic.Dictionary<int, ImmutableArray<Voice>>? staffVoices,

@@ -120,9 +120,21 @@ internal static class CollectTailShifter
 
     public static MusicItem? ShiftItem(MusicItem item, in Window w)
     {
-        if (!w.TryShift(item.SourcePosition, out int pos))
+        if (!w.TryShift(item.SourcePosition, out int pos)
+            || !w.TryShift(item.TieStartSourcePosition, out int tiePos)
+            || !w.TryShift(item.SlurStartSourcePosition, out int slurOpen)
+            || !w.TryShift(item.SlurEndSourcePosition, out int slurClose))
             return null;
-        item = item with { SourcePosition = pos };
+        // The bow offsets ride the same map as the item's own: they are the `~`, `(`
+        // and `)` written ON this item, and the -1 "nothing wrote it" sentinel passes
+        // through TryShift's non-positive branch untouched.
+        item = item with
+        {
+            SourcePosition = pos,
+            TieStartSourcePosition = tiePos,
+            SlurStartSourcePosition = slurOpen,
+            SlurEndSourcePosition = slurClose,
+        };
 
         // The one nested position: a chord member's own pitch token (the same
         // field MeasureContentKey.AddValue special-cases for the same reason).

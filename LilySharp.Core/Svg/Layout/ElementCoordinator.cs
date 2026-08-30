@@ -2315,7 +2315,21 @@ internal sealed class ElementCoordinator
             y = digitY + (curveUp ? -clearance : clearance);
             tieForProblem = new TieItem(
                 tie.StartNote, tie.EndNote, tie.StaffPosition, forcedCurveUp: curveUp,
-                tie.StartMeasureIndex, tie.EndMeasureIndex, tie.StartItemIndex, tie.EndItemIndex);
+                tie.StartMeasureIndex, tie.EndMeasureIndex, tie.StartItemIndex, tie.EndItemIndex)
+            {
+                // The written `~` comes along. Without it a tab tie is the one bow family
+                // the reader cannot point at — and on a tab-only book (the shape most of
+                // the real corpus takes) that is EVERY tie in the book.
+                // ⚠️ DISCLOSED: this rebuild drops VoiceIndex to 0, as it did before this
+                // line existed. That is what ResolveDataPos's locator reads, so on a
+                // MULTI-VOICE tab a re-resolved address would be read out of voice 0.
+                // Left alone deliberately: ArticulationEngraver and LayoutEngine.Prelim
+                // also key on this field, so correcting it here is a geometry change and
+                // belongs to its own trip. MEASURED 2026-08-30 over the 1645 .lys on disk:
+                // 341 carry a tab staff and NONE of them writes a `voice { }` block, so no
+                // book reaches the wrong-voice read.
+                SourcePosition = tie.SourcePosition,
+            };
         }
         else
         {
@@ -3559,7 +3573,14 @@ internal sealed class ElementCoordinator
         var tabSlur = new SlurItem(
             slur.StartStaffPosition, slur.EndStaffPosition, curveUp: true,
             slur.StartMeasureIndex, slur.EndMeasureIndex,
-            slur.StartItemIndex, slur.EndItemIndex, slur.VoiceIndex);
+            slur.StartItemIndex, slur.EndItemIndex, slur.VoiceIndex)
+        {
+            // Same written `(`…`)` as the notation bow above it: one part drawn on two
+            // staves is two bows with ONE address, which is what a chord's heads already
+            // are and what the webview's clusterInstances already expects.
+            StartSourcePosition = slur.StartSourcePosition,
+            EndSourcePosition = slur.EndSourcePosition,
+        };
         // The geometry above is device Y; BowLayout stores page Y-up (= -device),
         // so reflect the endpoints and control points on the way in.
         return new SlurLayout(tabSlur, startX, -startY, endX, -endY,

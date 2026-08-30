@@ -140,8 +140,17 @@ public class CollectTailShifterTests
         // per-type nesting the shifter special-cases: ChordItem.Notes).
         var itemTypes = typeof(MusicItem).Assembly.GetTypes()
             .Where(t => !t.IsAbstract && typeof(MusicItem).IsAssignableFrom(t));
+        // The bow trio joined the base 2026-08-30: the `~`, `(` and `)` written on an
+        // item are offsets into the same text as its own, and the shifter re-homes all
+        // four together (HANDOFF §2 U10).
         foreach (var type in itemTypes)
-            Check(type, new[] { "SourcePosition" }, failures);
+            Check(type, new[]
+            {
+                "SourcePosition",
+                "TieStartSourcePosition",
+                "SlurStartSourcePosition",
+                "SlurEndSourcePosition",
+            }, failures);
 
         foreach (var (type, shifted) in Shifted)
             Check(type, shifted, failures);

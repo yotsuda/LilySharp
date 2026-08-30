@@ -28,7 +28,7 @@ namespace LilySharp.Core.Svg.Layout;
 internal sealed record TieLayout : BowLayout
 {
     /// <summary>The tie model.</summary>
-    public Model.TieItem Tie { get; }
+    public Model.TieItem Tie { get; init; }
 
     /// <summary>Direction: true = curve up, false = curve down.</summary>
     /// <remarks>

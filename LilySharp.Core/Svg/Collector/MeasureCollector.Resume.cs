@@ -146,6 +146,8 @@ public sealed partial class MeasureCollector
         _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
         _pendingEmptyChordSlurStart = false;
         _pendingEmptyChordSlurEnd = false;
+        _pendingEmptyChordSlurStartSource = 0;
+        _pendingEmptyChordSlurEndSource = 0;
 
         // Walk-local lists: the recorded prefix (append-only within the walk, so
         // the recording's first N entries are exactly the checkpoint's state).

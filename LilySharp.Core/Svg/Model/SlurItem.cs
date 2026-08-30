@@ -51,6 +51,27 @@ public sealed record SlurItem
     /// head displacement and obstacles against THIS voice's measures.</summary>
     public int VoiceIndex { get; }
 
+    /// <summary>Source position of the <c>(</c> that opened this slur, or
+    /// <see cref="MusicItem.NoSourcePosition"/> when nothing wrote one (a grace slur is
+    /// implied by <c>grace { }</c>). The drawn bow's <c>data-pos</c> — its click target.</summary>
+    /// <remarks>
+    /// ⚠️ TWO POSITIONS, ONE BOW: a slur is written at two places and the reader may put
+    /// the caret on either, so the bow carries the open as its primary and the close as a
+    /// <c>data-alt</c> alias (<c>IDrawingContext.Source(int, IReadOnlyList&lt;int&gt;)</c>).
+    /// A tie needs no such pair — <c>~</c> is one character — so <c>TieItem</c> has no
+    /// field of its own and reads <c>StartNote.TieStartSourcePosition</c> instead.
+    /// <para>
+    /// ⚠️ NOT IN <c>MeasureContentKey</c>: slurs are not one of its bucketed side tables
+    /// (they are detected downstream of the collect), so unlike the offsets on
+    /// <c>MusicItem</c> these two need no exclusion — they never reach a content hash.
+    /// </para>
+    /// </remarks>
+    public int StartSourcePosition { get; init; } = MusicItem.NoSourcePosition;
+
+    /// <summary>Source position of the <c>)</c> that closed this slur, or
+    /// <see cref="MusicItem.NoSourcePosition"/>. See <see cref="StartSourcePosition"/>.</summary>
+    public int EndSourcePosition { get; init; } = MusicItem.NoSourcePosition;
+
     /// <summary>Creates a slur spanning from a start note to an end note.</summary>
     public SlurItem(
         int startStaffPosition,
