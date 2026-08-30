@@ -52,8 +52,31 @@ public readonly record struct GraceNoteInfo(
     // Tunings.CalculateFret, so it asks for no column of its own. It was silently ignored
     // until session 298, and that cost the reader's own `Real Gone.lys` two grace notes
     // drawn on whatever string the resolver picked. See Semantics.GraceBodySupport.
-    int? StringNumber = null
-);
+    int? StringNumber = null,
+    // Augmentation dots on THIS grace's duration. SEPARATE from BaseDuration for the same
+    // reason NoteItem.Dots is separate from NoteItem.BaseDuration: the note VALUE picks the
+    // head, the flag and the beam count, and a dotted eighth is an eighth to all three.
+    // Folding the dot into the fraction would make `grace { d'8. }` a sixteenth and give it
+    // two beams. Read and thrown away until session 299, which is what LYS4020 reported.
+    // LILYPOND-REF: scm/music-functions.scm:635-648 general-grace-settings —
+    //   (Voice Dots font-size -3): a grace's dot comes out of the SAME font as its head
+    //   (GraceNoteItem.Font), unlike its accidental, which states -4.
+    int Dots = 0
+)
+{
+    /// <summary>
+    /// How LONG this grace is — the note value with its dots applied. This is what SPACING
+    /// asks for, while <see cref="BaseDuration"/> is what the head, the flag and the beam
+    /// count ask for.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-basic.cc:163-180 <c>Spacing_spanner::note_spacing</c> —
+    /// the grace branch reads <c>delta_t.grace_part_</c>, a MOMENT, so a dotted grace is
+    /// three sixteenths there and an eighth to its glyphs. Same split as
+    /// <c>MusicItem.Duration</c> against <c>MusicItem.BaseDuration</c>.
+    /// </remarks>
+    public Fraction Length => Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration;
+}
 
 /// <summary>
 /// A group of grace notes attached to a main note.

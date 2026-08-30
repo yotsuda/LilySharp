@@ -3745,6 +3745,15 @@ public sealed partial class MeasureCollector
         // twin's two. ⇒ THIS LINE IS NOW THE ONE ANSWER: the MIDI exporter reads the eighth
         // from the same rule and the twin writes it out explicitly (docs/HANDOFF.md §1).
         Fraction graceDefaultDuration = Fraction.Eighth;
+        // The DOTS ride the default with it. An undurated grace takes the whole previous
+        // duration, dots included, exactly as an undurated note in the main stream does
+        // (MeasureCollector.CreateNoteItem's _defaultDots) — `grace { d'8. e' }` is two
+        // dotted eighths, not a dotted one and a plain one.
+        // LILYPOND-REF: lily/parser.yy:3510-3516 optional_notemode_duration — what an
+        //   undurated note falls back to is `parser->default_duration_`, a whole Duration;
+        //   :3518-3520 steno_duration builds it with `make_duration ($1, dots)`, so the
+        //   dots are part of what carries forward, not a separate memory.
+        int graceDefaultDots = 0;
 
         foreach (var item in grace.Body.Items)
         {
@@ -3766,6 +3775,8 @@ public sealed partial class MeasureCollector
                 int noteValue = note.Duration?.Value ?? (int)graceDefaultDuration.Denominator;
                 var baseDuration = Fraction.FromNoteValue(noteValue);
                 graceDefaultDuration = baseDuration;
+                int dots = note.Duration?.DotCount ?? graceDefaultDots;
+                graceDefaultDots = dots;
 
                 int graceMidi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
                 // The '\N', read through the same statement the validator reads, so a grace
@@ -3774,7 +3785,8 @@ public sealed partial class MeasureCollector
                 // whether it is carried (GraceBodySupport.CarriedStringNumber).
                 graceNoteInfos.Add(new GraceNoteInfo(staffPosition, accidental, needsLedger,
                     baseDuration, graceMidi,
-                    Semantics.GraceBodySupport.CarriedStringNumber(note)));
+                    Semantics.GraceBodySupport.CarriedStringNumber(note),
+                    dots));
 
                 CollectGraceColumnlessAnnotations(note, measureIndex);
             }

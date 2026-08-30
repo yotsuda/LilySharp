@@ -94,6 +94,11 @@ internal static partial class SharedRenderer
             var headX = new List<double>(g.Notes.Length);
             var headY = new List<double>(g.Notes.Length);
             var beamCounts = new List<int>(g.Notes.Length);
+            // The run draws ONE beam or a flag per head, and the dots have to know which:
+            // the SAME gate DrawGraceStemsAndBeam decides with below (allBeamable) and the
+            // one SpacingRules.GraceColumns reserved with, so the three cannot disagree.
+            bool graceBeamed = g.Notes.Length > 1
+                && g.Notes.All(n => BeamCountForDuration(n.BaseDuration.Denominator) >= 1);
             // Music glyphs from HERE come out of the grace's own design, not the score's:
             // Emmentaler is optically sized, so a grace head is the 14 design's outline at
             // magstep(-3) and not the 20's drawn small (IDrawingContext.MusicFace). The scope
@@ -136,6 +141,24 @@ internal static partial class SharedRenderer
                     gc.DrawNotehead(EmmentalerGlyphs.NoteheadBlack, currentX, y, scaledFontSize, null,
                         graceFont.NoteheadBlackAdvance,
                         graceFont.NoteheadBlack.Height);
+                    // Augmentation dots. WHERE they stand is GraceNoteEngraver.Dots — the
+                    // same statement the column's reservation read, so what is drawn is what
+                    // was reserved. The dot is drawn out of the head's own font, not the
+                    // accidental's: general-grace-settings gives Dots font-size −3, the same
+                    // −3 the NoteHead carries (scm/music-functions.scm:635-648).
+                    if (note.Dots > 0)
+                    {
+                        var (dotX, dotPositions) = GraceNoteEngraver.Dots(note, graceBeamed);
+                        foreach (int p in dotPositions)
+                        {
+                            double dotY = os.YUp(staffMiddleY + p / 2.0,
+                                g.StaffIndex, g.MeasureIndex);
+                            for (int d = 0; d < note.Dots; d++)
+                                gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
+                                    currentX + (dotX + d * 2 * GraceNoteItem.Font.AugmentationDot.Width) * unit,
+                                    dotY, scaledFontSize, null);
+                        }
+                    }
                     headX.Add(currentX);
                     headY.Add(y);
                     beamCounts.Add(BeamCountForDuration(note.BaseDuration.Denominator));
@@ -326,7 +349,9 @@ internal static partial class SharedRenderer
         //   control, with the stem standing 0.065 left of its notehead's right edge in both.
         //   Ledger grace.stem.thickness (and its full-size control, exact from the first run).
         double stemThick = EngravingDefaults.StemThickness;
-        double stemLen = EngravingDefaults.DefaultStemLength * scale;
+        // ONE HOUSE for the length: GraceNoteEngraver.Dots reads it too, because where the
+        // flag hangs is what decides whether the flag stands in the dots' way.
+        double stemLen = GraceNoteEngraver.StemLength(scale);
         // THE one house for where a stem stands, and the whole point of using it here: it is
         // the expression the beam was SCORED in (BeamScoringProblem's StemXOf reads the same
         // LayoutUtilities.StemX from the same head font) and the one the collision collector

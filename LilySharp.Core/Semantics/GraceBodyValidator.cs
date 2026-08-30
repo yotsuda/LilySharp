@@ -86,9 +86,6 @@ internal sealed class GraceBodyValidator : ISemanticValidator
                     GraceDropKind.Span =>
                         $"{drop.Written} inside 'grace {{ }}' is not engraved: a grace note "
                         + "carries no slur, beam or tie",
-                    GraceDropKind.Dots =>
-                        "the dot on a grace note's duration is not engraved: only the note "
-                        + "value is read, so this grace is drawn undotted",
                     _ =>
                         $"{drop.Written} on a grace note is not engraved: a grace note is not "
                         + "a measure item, so there is no column for it to hang off. A "

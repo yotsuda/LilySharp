@@ -72,7 +72,9 @@ public class GraceBodyValidatorTests
     [InlineData("grace { d'8@f } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     [InlineData("grace { d'8@finger(3) } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     [InlineData("grace { d'8@trill } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
-    [InlineData("grace { d'8. } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    // ⚠️ `grace { d'8. }` LEFT THIS THEORY ON 2026-08-30 (session 299), which is the way a
+    // row is meant to leave it: the dot is drawn now, so the line asserting it is missing
+    // went red and taking it out was part of closing the hole. See ADottedGrace_IsDrawn.
     [InlineData("grace { d'8( e'8) } c'1 | e'1 |", "grace { d'8 e'8 } c'1 | e'1 |")]
     [InlineData("grace { d'8[ e'8] } c'1 | e'1 |", "grace { d'8 e'8 } c'1 | e'1 |")]
     [InlineData("grace { d'8~ d'8 } c'1 | e'1 |", "grace { d'8 d'8 } c'1 | e'1 |")]
@@ -100,6 +102,10 @@ public class GraceBodyValidatorTests
     // answer the rest of the engine gives it, not a hole.
     [InlineData("grace { d'8@mark(\"P\") } c'1 | e'1 |")]
     [InlineData("grace { d'8\\2 } c'1 | e'1 |")]
+    // The dot, carried since session 299. It never wanted the note's COLUMN — it hangs off
+    // the grace's own head — which is why it could be closed while @staccato still cannot.
+    [InlineData("grace { d'8. } c'1 | e'1 |")]
+    [InlineData("grace { d'8.. e'16 } c'1 | e'1 |")]
     public void AGraceThatDrawsWhatItWrites_IsNotReported(string music)
         => Assert.Empty(Warnings(Book(music)));
 
@@ -196,4 +202,142 @@ public class GraceBodyValidatorTests
         Assert.NotEqual(auto, s3);
         Assert.NotEqual(s2, s3);
     }
+
+    /// <summary>
+    /// A dotted grace is drawn dotted — one dot glyph more than the same grace without the
+    /// dot, and the dot is the ONLY difference on the page.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE SECOND ASSERT IS THE ONE THAT BITES. "One more dot" alone would pass on an
+    /// engine that also moved the head, the flag or the main note; masking the dots out of
+    /// both pages and demanding the rest be identical says the dot is ink ADDED rather than
+    /// a re-engraving. It is also what LilyPond does: on 2.26.0 the dotted book and its
+    /// control differ by exactly the one added glyph and no coordinate anywhere else
+    /// (scratch/p299/lp, dot.svg against nodot.svg).
+    /// </remarks>
+    [Fact]
+    public void ADottedGrace_IsDrawn()
+    {
+        string dotted = Page("grace { d'8. } c'1 | e'1 |");
+        string plain = Page("grace { d'8 } c'1 | e'1 |");
+
+        Assert.Equal(CountDots(plain) + 1, CountDots(dotted));
+        Assert.Equal(StripDots(plain), StripDots(dotted));
+    }
+
+    /// <summary>
+    /// Two dots are two dots, and an undurated grace after a dotted one inherits the DOTS
+    /// with the duration — LilyPond's <c>optional_notemode_duration</c> carries the whole
+    /// duration forward, not just its value (lily/parser.yy:3510-3516).
+    /// </summary>
+    [Fact]
+    public void GraceDots_StackAndCarryForward()
+    {
+        Assert.Equal(CountDots(Page("grace { d'8 } c'1 | e'1 |")) + 2,
+            CountDots(Page("grace { d'8.. } c'1 | e'1 |")));
+        // `e'` writes no duration, so it is a dotted eighth too: two heads, two dots.
+        Assert.Equal(CountDots(Page("grace { d'8 e'8 } c'1 | e'1 |")) + 2,
+            CountDots(Page("grace { d'8. e' } c'1 | e'1 |")));
+    }
+
+    /// <summary>
+    /// WHERE the dot stands turns on whether its row is one the grace's FLAG occupies — the
+    /// pair that measures <see cref="LilySharp.Core.Svg.Layout.DotColumn"/>'s Y gate.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED on LilyPond 2.26.0 (scratch/p299/lp): <c>grace { e'8. }</c> sits in a space,
+    /// keeps its dot on its own row, and puts it 1.226600 right of the head — the head's ink
+    /// right plus one grace dot. <c>grace { d'8. }</c> sits on a line, so the dot is lifted
+    /// one position into the flag, and LilyPond moves it out to 1.747300 — the FLAG's right
+    /// edge plus the same dot. The difference, 0.520688, is flag-right minus head-right.
+    /// ⚠️ Asserting the two are DIFFERENT is the whole test: an engine with a flat
+    /// "head plus a dot" rule draws them at the same offset and is wrong about one of them.
+    /// </remarks>
+    [Fact]
+    public void AGraceDotClearsTheFlagOnlyWhenTheFlagIsOnItsRow()
+    {
+        // The two positions the measured books engrave: `d'` lands on staff position 2 (a
+        // LINE) and `e'` on 3 (a SPACE). Both dots end up on row 3 — one lifted, one not.
+        static (double X, System.Collections.Immutable.ImmutableArray<int> Positions) At(
+            int staffPosition, bool beamed)
+            => LilySharp.Core.Svg.Layout.GraceNoteEngraver.Dots(
+                new LilySharp.Core.Svg.Model.GraceNoteInfo(
+                    staffPosition, null, false, Fraction.Eighth, Dots: 1),
+                beamed);
+
+        var onLine = At(2, beamed: false);
+        var inSpace = At(3, beamed: false);
+
+        Assert.Equal(3, Assert.Single(onLine.Positions));
+        Assert.Equal(3, Assert.Single(inSpace.Positions));
+        // Same row, different offset — because the flag hangs lower over the head that had
+        // to lift its dot to get there.
+        Assert.Equal(1.7473, onLine.X, 4);
+        Assert.Equal(1.2266, inSpace.X, 4);
+
+        // A BEAMED run has no flag at all, so the lifted dot stays at the head's right.
+        Assert.Equal(1.2266, At(2, beamed: true).X, 4);
+    }
+
+    /// <summary>
+    /// The COLLECTOR carries the dot into the model. Asserted on the model rather than the
+    /// page because that is the only thing that tells "the dot was never read" from "the dot
+    /// was read and never drawn" — two poisons that otherwise turn the same two tests red.
+    /// </summary>
+    [Fact]
+    public void TheCollectorCarriesTheDot()
+    {
+        var score = new LilySharp.Core.Svg.Collector.MeasureCollector()
+            .Collect(SyntaxTree.Parse(Book("grace { d'8. e' f'16 } c'1 | e'1 |")));
+        var grace = Assert.Single(score.GraceNotes);
+        Assert.Equal(new[] { 1, 1, 0 }, grace.Notes.Select(n => n.Dots).ToArray());
+        // …and the note VALUE is untouched by it: a dotted eighth is still an eighth, or its
+        // flag and its beam count would change with the dot.
+        Assert.Equal(new[] { 8, 8, 16 },
+            grace.Notes.Select(n => (int)n.BaseDuration.Denominator).ToArray());
+    }
+
+    /// <summary>
+    /// SPACING reads the dotted MOMENT, not the note value — a dotted grace pushes the next
+    /// grace column further than an undotted one of the same value.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED on LilyPond 2.26.0 (scratch/p299/lp, u_mixdot_a against u_mixdot_b):
+    /// <c>grace { d'8. e'16 }</c> puts its second head 2.915900 after its first and
+    /// <c>grace { d'8 e'16 }</c> puts it at 2.448000 — a difference of 0.467900. The spring
+    /// law says the difference is <c>spacing-increment × log2(3/2)</c> = 0.8 × 0.584963 =
+    /// 0.467970, which is LilyPond's own number to the four places it prints.
+    /// ⚠️ THE DELTA, NOT THE ABSOLUTE. Lily# draws this gap 0.246 short of LilyPond in BOTH
+    /// books — an older divergence on the mixed-duration grace run, which the ledger's
+    /// <c>grace.column.*</c> island already owns. Asserting the absolute here would pin that
+    /// residual into this test and hide it when it is repaired.
+    /// </remarks>
+    [Fact]
+    public void GraceSpacingReadsTheDottedMoment()
+    {
+        static double SecondColumn(int dots)
+            => LilySharp.Core.Svg.Layout.SpacingRules.GraceColumns(
+                System.Collections.Immutable.ImmutableArray.Create(
+                    new LilySharp.Core.Svg.Model.GraceNoteInfo(
+                        2, null, false, Fraction.Eighth, Dots: dots),
+                    new LilySharp.Core.Svg.Model.GraceNoteInfo(
+                        3, null, false, Fraction.Sixteenth)),
+                mainItem: null).Offsets[1];
+
+        Assert.Equal(0.46797, SecondColumn(1) - SecondColumn(0), 5);
+    }
+
+    /// <summary>The augmentation dot as it reaches the page — the glyph char itself, so
+    /// this counts ink rather than a spelling of the markup around it.</summary>
+    private static readonly string DotGlyph =
+        LilySharp.Core.Svg.EmmentalerGlyphs.AugmentationDot.ToString();
+
+    private static int CountDots(string page) => page.Split(DotGlyph).Length - 1;
+
+    /// <summary>The page with every dot glyph taken out, and whitespace normalised so that
+    /// the hole a removed element leaves is not itself a difference.</summary>
+    private static string StripDots(string page)
+        => Regex.Replace(
+            Regex.Replace(page, "<text[^>]*>" + Regex.Escape(DotGlyph) + "</text>", ""),
+            @"\s+", " ");
 }

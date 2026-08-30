@@ -41,7 +41,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:493** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
-- **:336** ⚠️ NOT PORTED — the per-duration grace head: the head shape is BLACK for every
+- **:361** ⚠️ NOT PORTED — the per-duration grace head: the head shape is BLACK for every
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:1172** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
 - **:1177** whiteout −1) is not ported.
@@ -237,7 +237,7 @@
 - **:70** LILYSHARP-OWN: the swing feel-equation's small note size. The equation is Lily#'s
 - **:437** prefix — LILYSHARP-OWN, a decided divergence (user decision
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
-- **:209** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
+- **:232** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:601** LILYSHARP-OWN sizes: the feel equation keeps the small chart-style note (1.6)
 - **:1284** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is

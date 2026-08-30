@@ -283,6 +283,99 @@ internal static class GraceNoteEngraver
         return (leftY, rightY);
     }
 
+    /// <summary>
+    /// How long a grace stem is, in staff spaces — the ONE house for that length, read by
+    /// the renderer that draws it and by <see cref="Dots"/>, which needs to know where the
+    /// flag hangs before it can say whether the flag is in the dots' way.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/music-functions.scm:635-648 general-grace-settings —
+    ///   <c>(Voice Stem font-size -3)</c>, so an ordinary
+    ///   <see cref="EngravingDefaults.DefaultStemLength"/> read at the grace's own scale.
+    /// </remarks>
+    internal static double StemLength(double scale)
+        => EngravingDefaults.DefaultStemLength * scale;
+
+    /// <summary>
+    /// Where one grace note's augmentation dots stand: the X of the FIRST dot in the grace
+    /// column's own frame, and the staff positions the dots ended up on. Empty when the
+    /// grace carries no dot.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The X is <see cref="DotColumn.OffsetX"/> — the one statement of LilyPond's dot-column
+    /// rule — asked with the supports a grace column actually has: its stem, and its flag
+    /// when the run draws flags rather than a beam (the same gate
+    /// <see cref="QuantGraceBeam"/> and <c>SpacingRules.GraceColumns</c> use, so a group
+    /// cannot be beamed for one of the three and flagged for another).
+    /// </para>
+    /// <para>
+    /// ⚠️ THE FLAG IS THE REASON THIS IS NOT A CONSTANT. A grace stem is short, so its flag's
+    /// lowest ink can reach a row a dot is on — and then LilyPond puts the dot right of the
+    /// FLAG instead of right of the head. MEASURED on LilyPond 2.26.0 (scratch/p299): the
+    /// same grace one step apart answers differently, 1.226600 for a head in a space and
+    /// 1.747300 for a head on a line (whose dot is lifted into the flag). A full-size note's
+    /// flag never reaches, which is why <c>DrawNote</c>'s answer has always been the plain
+    /// one and still is. See <see cref="DotColumn"/> for the whole pair.
+    /// </para>
+    /// <para>
+    /// Everything here is in the grace's OWN staff spaces (its font, its stem length); an
+    /// ossia multiplies the finished offset, exactly as it does the column offsets.
+    /// </para>
+    /// </remarks>
+    internal static (double X, ImmutableArray<int> Positions) Dots(
+        GraceNoteInfo note, bool beamed)
+    {
+        if (note.Dots <= 0)
+            return (0, ImmutableArray<int>.Empty);
+
+        var font = GraceNoteItem.Font;
+        // The QUARTER's attachment, because that is the head the renderer actually draws for
+        // every grace duration — the standing approximation recorded on graceHeadNoteValue in
+        // SharedRenderer.DrawGraceStemsAndBeam, read from here rather than restated. The dots
+        // have to stand relative to the ink that is on the page, not to the ink a
+        // per-duration head would have made.
+        const int graceHeadNoteValue = 4;
+        // LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings —
+        //   ((Voice Stem direction ,UP)): a grace stem is forced up, so its Dots prefer UP
+        //   too (scm/music-functions.scm:616-631 direction-polyphonic-grobs pairs them).
+        var positions = ImmutableArray.Create(
+            DotConfiguration.Resolve(new[] { note.StaffPosition }, new[] { 1 })[0]);
+
+        var supports = new List<DotColumn.Support>();
+        double stemX = LayoutUtilities.StemAttachX(
+            up: true, graceHeadNoteValue, NoteheadStyle.Default, font);
+        // ⚠️ THE STEM IS FAITHFUL AND INERT, and saying so is the point. LilyPond puts it in
+        // the support list, so it is here; but a grace stem is forced UP, which stands it at
+        // the head's own attachment less half its thickness — always LEFT of the ink right
+        // this skyline is floored on, so the max never picks it. MEASURED as an
+        // indistinguishability (session 299): poisoning the WHOLE skyline off and poisoning
+        // only the FLAG off turn the same assert of
+        // AGraceDotClearsTheFlagOnlyWhenTheFlagIsOnItsRow red, because the flag is the only
+        // support that ever binds. It becomes observable the day a grace head is drawn per
+        // duration (the standing note on graceHeadNoteValue) and a wider head moves the edge.
+        supports.Add(DotColumn.StemSupport(
+            note.StaffPosition, up: true, stemX + EngravingDefaults.StemThickness / 2));
+
+        if (!beamed && note.BaseDuration.Numerator == 1 && note.BaseDuration.Denominator >= 8)
+        {
+            var flag = GlyphMetrics.GetFlagBBox(font, note.BaseDuration.Denominator, stemUp: true);
+            if (flag != default)
+            {
+                // The flag hangs at the stem's end, and the bbox is relative to that anchor.
+                // Position → staff spaces is the house's `* 0.5` (ElementCoordinator does the
+                // same to build a head's own box), then the stem on top of it.
+                double stemEnd = note.StaffPosition * 0.5 + StemLength(GraceNoteItem.ScaleFactor);
+                supports.Add(DotColumn.FlagSupport(
+                    stemEnd + flag.Bottom, stemEnd + flag.Top, stemX + flag.Right));
+            }
+        }
+
+        return (DotColumn.OffsetX(
+                    font.NoteheadBlack.Width, supports, positions, font.AugmentationDot.Width),
+                positions);
+    }
+
     /// <summary>Number of beam lines for a duration denominator (8th = 1, 16th = 2, …);
     /// 0 for a quarter or longer, which carries no beam.</summary>
     private static int BeamCountForDuration(int denominator)

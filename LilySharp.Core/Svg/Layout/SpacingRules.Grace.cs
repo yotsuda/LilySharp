@@ -76,7 +76,9 @@ internal static partial class SpacingRules
 
         foreach (var note in notes)
         {
-            double dur = note.BaseDuration.ToDouble();
+            // The MOMENT, dots included — see GraceNoteInfo.Length. LilyPond compares
+            // grace_part_ moments here, and a dotted eighth is longer than a plain one.
+            double dur = note.Length.ToDouble();
             if (dur > 0 && dur < shortest)
                 shortest = dur;
         }
@@ -176,7 +178,7 @@ internal static partial class SpacingRules
     private static double GraceColumnGap(GraceNoteInfo left, double dtMin,
                                          GraceSpacingParameters gp, double minDistance)
     {
-        var baseSpring = CreateGraceSpring(left.BaseDuration, gp, dtMin);
+        var baseSpring = CreateGraceSpring(left.Length, gp, dtMin);
         // LILYPOND-REF: lily/note-spacing.cc:77 — ideal = base.ideal - increment + left_head_end.
         double ideal = baseSpring.IdealDistance - gp.SpacingIncrement + GraceHeadEnd;
         // LILYPOND-REF: lily/note-spacing.cc:78-83 set_min_distance, then lily/spring.cc:122.
@@ -231,6 +233,25 @@ internal static partial class SpacingRules
                         NoteheadStyle.Default, font)
                     + flag.Width);
         }
+        // ⚠️ THE DOTS ARE NOT ADDED HERE, AND THAT IS MEASURED RATHER THAN ASSUMED
+        // (2026-08-30, session 299). The Dots grob does declare a box in the separation
+        // (scm/define-grobs.scm:1272-1279 Dots, extra-spacing-width (0.0 . 0.2),
+        // extra-spacing-height (-0.5 . 0.5)), so the first thing this session did was widen
+        // the reach by the dot column — and LilyPond disagreed: `grace { d'8. }` and
+        // `grace { d'8 }` engrave with the SAME staff width, differing by the added dot glyph
+        // and no coordinate anywhere else (scratch/p299/lp, dot.svg against nodot.svg).
+        // ⇒ The reason is that LilyPond's separation is a SKYLINE and this reach is a flat
+        // scalar. The dot's box is one staff space tall, at a row the main note's head does
+        // not occupy, so the two columns' facing skylines never meet there; a flat term would
+        // reserve for a collision that only happens when the main head sits at the dot's
+        // height. Adding it makes the common case wrong to buy the rare one.
+        //   departs from: lily/separation-item.cc:120-190 Separation_item::boxes — LilyPond
+        //     puts the Dots box in and lets the skyline decide; this reach cannot ask.
+        //   goes away when: this island's reaches become skylines rather than scalars
+        //     (the same change docs/HANDOFF.md §2 wants for the accidental reach).
+        //   observed by: GraceBodyValidatorTests.ADottedGrace_IsDrawn, which asserts the
+        //     page is byte-identical outside the added dot — the assertion that went red
+        //     when the term was in, and the reason it came out.
         return ink + DefaultExtraSpacingWidth;
     }
 

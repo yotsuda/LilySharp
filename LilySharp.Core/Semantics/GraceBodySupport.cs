@@ -26,8 +26,6 @@ internal enum GraceDropKind
     /// container. It contributes NO grace column, so a body made only of these engraves
     /// no grace at all.</summary>
     Element,
-    /// <summary>Augmentation dots on a grace note's duration.</summary>
-    Dots,
     /// <summary>An annotation written on a grace note.</summary>
     Annotation,
     /// <summary>A slur, beam or tie marker written inside the body.</summary>
@@ -139,11 +137,12 @@ internal static class GraceBodySupport
                 continue;
             }
 
-            // The dots are read off the duration; the VALUE is the only half that survives
-            // (MeasureCollector.CollectGraceNotes -> Fraction.FromNoteValue(noteValue)).
-            if (note.Duration is { DotCount: > 0 } duration)
-                yield return new GraceDrop(GraceDropKind.Dots, duration.Span, "the dot");
-
+            // ⚠️ THE DOTS ARE NOT HERE ANY MORE (session 299). They were the one dropped
+            // family that never wanted the note's COLUMN — a dot hangs off the grace's own
+            // head, in the grace's own font, so nothing about a grace not being a measure
+            // item stood in its way. Session 298 filed it with the annotations because it
+            // sorted the drops by FAMILY; the line that actually divides them is which
+            // column a thing asks for. See GraceNoteInfo.Dots and Svg.Layout.DotColumn.
             foreach (var annotation in note.Articulations)
             {
                 if (NeedsNoColumn(annotation))
