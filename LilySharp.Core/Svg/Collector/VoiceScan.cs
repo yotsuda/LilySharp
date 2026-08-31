@@ -45,7 +45,21 @@ internal static class VoiceScan
             {
                 var items = measures[m].Items;
                 for (int i = 0; i < items.Length; i++)
+                {
+                    // GRACE TIME IS NOT YET IN THE SPAN DETECTORS' STREAM. All three pair an
+                    // opening flag with THE NEXT item, and a grace takes no measure time, so
+                    // it stands between a note and the note that note reaches to — MEASURED,
+                    // `d4@glissando grace { d8 } c` drew its glissando to the GRACE (a
+                    // horizontal line, both heads being d) instead of to the c.
+                    // ⚠️ SCAFFOLDING, and the one whose removal is the PRIZE: this skip is
+                    // the whole of "a grace note cannot carry a slur or a tie" (LYS4020).
+                    // Deleting it is what HANDOFF §2 U8 ⒞ means, and it can only go once ⒝2
+                    // lets the ordinary engravers draw grace time — until then the detectors
+                    // would pair spans that nothing would draw.
+                    if (items[i].GraceTime)
+                        continue;
                     yield return (v, measures, m, i, items[i]);
+                }
             }
         }
     }

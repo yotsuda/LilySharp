@@ -656,8 +656,14 @@ public class GraceBodyValidatorTests
                     "part m { clef treble }\n" + phrases
                     + "\nsection A { m {\n" + music + "\n} }\n"
                     + "form main { ~A }\nscore main { staff m }\n"));
+            // ⚠️ THE MAIN STREAM'S notes, not the grace's. Since session 310 a grace body is
+            // walked by the ordinary walker, so its columns ARE measure items and they stand
+            // BEFORE the note they lead: this index used to reach the first `c2`, and without
+            // the filter it now reaches the grace's own first note — which is the frame this
+            // test asks ABOUT, not the answer it wants.
             return score.Voice.Measures[0].Items
-                .OfType<LilySharp.Core.Svg.Model.NoteItem>().ElementAt(index).StaffPosition;
+                .OfType<LilySharp.Core.Svg.Model.NoteItem>().Where(n => !n.GraceTime)
+                .ElementAt(index).StaffPosition;
         }
 
         const string G = "phrase G { d16 d' }";

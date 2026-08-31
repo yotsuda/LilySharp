@@ -109,9 +109,23 @@ internal static partial class SpacingRules
     /// 1.000000 and the <c>s1</c> bar does not move. Reading "musical" as "has a duration"
     /// would have got the skip wrong.
     /// </para>
+    /// <para>
+    /// ⚠️ GRACE TIME IS NOT A MUSICAL COLUMN HERE, for a reason of the same shape. LilyPond
+    /// gives a grace run its OWN spacing machine — <c>Grace_spacing_engraver</c> builds a
+    /// <c>GraceSpacing</c> grob, and the main <c>Spacing_spanner</c> prices the grace's
+    /// approach out of the moment's grace part rather than as one main-grid column per grace
+    /// note (LILYPOND-REF: lily/grace-spacing-engraver.cc:46 process_music;
+    /// lily/spacing-basic.cc:163-180 <c>Spacing_spanner::note_spacing</c>, whose grace branch
+    /// reads <c>delta_t.grace_part_</c>). Lily# keeps that machine in
+    /// <c>SpacingRules.Grace</c>, so a grace column reaching THIS spring would be priced
+    /// twice — once as the group's reserved approach and once as a column of its own.
+    /// ⚠️ SCAFFOLDING in the same sense as the renderer's skip: HANDOFF §2 U8 ⒝2 keeps the
+    /// grace spring (LilyPond has one) and ends the double count by folding the two readers.
+    /// </para>
     /// </remarks>
     internal static bool IsMusicalColumn(MusicItem? item) =>
-        item is NoteItem or ChordItem or RestItem { IsSpacer: false };
+        item is not { GraceTime: true }
+        && item is NoteItem or ChordItem or RestItem { IsSpacer: false };
 
     /// <summary>
     /// True when a single musical column fills the whole measure (whole note in 4/4,

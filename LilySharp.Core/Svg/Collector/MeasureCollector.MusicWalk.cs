@@ -301,7 +301,13 @@ public sealed partial class MeasureCollector
     {
         _octave.ResetToInitial();
         _octave.CurrentOctave += octaveOffset;
-        _defaultDuration = Fraction.Quarter;
+        // ⚠️ THE FRESH DURATION IS THE ENCLOSING TIME DOMAIN'S OPENING VALUE, not a literal
+        // quarter. In grace time the running memory this resets IS the grace group's, and a
+        // grace group opens at an eighth — `grace { c'16 G }` must give G's first undurated
+        // note the group's eighth, exactly as `grace { G }` would. Before session 310 the
+        // grace body had its own expander and reset that value itself; now the same walker
+        // reaches both, and the one line that told them apart is this one.
+        _defaultDuration = _graceDepth > 0 ? Fraction.Eighth : Fraction.Quarter;
         _defaultDots = 0;
     }
 
@@ -609,6 +615,31 @@ public sealed partial class MeasureCollector
         _ => false,
     };
 
+    /// <summary>
+    /// Whether this node may be walked inside a <c>grace { }</c> body — the kinds the derived
+    /// <see cref="Model.GraceNoteItem"/> can still be drawn from, plus the CONTAINERS that
+    /// hold them.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE LIST MIRRORS <c>Semantics.GraceBodySupport.IsCarried</c> ON PURPOSE and the two
+    /// are held together by the drop set: anything this refuses is something LYS4020 already
+    /// names, so refusing it here changes no page and no message. If the two drift, a grace
+    /// body engraves something the reader was told was dropped, or is told a drop happened
+    /// that did not — which is the shape of defect the "one walk, two readers" rule on
+    /// <c>GraceBodySupport</c> exists to prevent. ⚠️ A tuplet IS allowed through, because
+    /// the walker treats it as the container it is and the bracket it adds is stamped
+    /// <see cref="MusicItem.GraceTime"/> like everything else here — LYS4020 goes on
+    /// reporting the bracket as dropped because nothing draws it yet.
+    /// </remarks>
+    private static bool CanStandInGraceTime(SyntaxNode node) => node switch
+    {
+        NoteSyntax => true,
+        ChordSyntax chord => !chord.IsEmpty,
+        RestSyntax rest => rest.RestToken.Text != "R",
+        TupletExpressionSyntax => true,
+        _ => false,
+    };
+
     private void ProcessMusicNode(SyntaxNode node, MeasureBuilder builder, MarkerFlags m = default)
     {
         // Record mode (CollectWalkProbe): every processed node at ANY depth funnels
@@ -619,6 +650,29 @@ public sealed partial class MeasureCollector
         // when off (production CLI path).
         if (_probeRecording != null)
             _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, node.FullSpan.End);
+
+        // IN GRACE TIME, ONLY WHAT A GRACE GROUP CAN STILL BE DRAWN AS COMES THROUGH.
+        // ⚠️ THIS GATE IS SCAFFOLDING AND IT IS MEANT TO BE DELETED. LilyPond's grace body is
+        // an ordinary stretch of an ordinary Voice and refuses NOTHING; the gate exists only
+        // because the group is still engraved from its derived GraceNoteItem, so a barline
+        // here would close a measure that no grace column would then be drawn inside, and a
+        // nested `grace { }` would recurse into a model that holds one group. Every kind the
+        // gate turns back is ALREADY on LYS4020's drop list, which is what keeps this half
+        // byte-identical (HANDOFF §2 U8 ⒝1). When the ordinary engravers draw grace time
+        // (⒝2), this method loses the gate rather than gaining arms.
+        if (_graceDepth > 0 && !CanStandInGraceTime(node))
+            return;
+
+        // AND THE MARKERS WRITTEN ON WHAT DOES COME THROUGH ARE DROPPED, not carried onto the
+        // item. A tie, a slur or a manual beam inside a grace body is on LYS4020's drop list
+        // today; letting the flag ride the item would make the detectors pair it and DRAW it —
+        // full size, on the main column grid — while the reader is still being told it was
+        // dropped. Zeroing the folded markers here, rather than teaching each detector to skip
+        // grace time, keeps the drop where the reader was told it is, in ONE line.
+        // ⚠️ SCAFFOLDING: ⒝2 deletes this line, and the marks then draw at the grace font
+        // through the same Slur / Tie / Beam engravers LilyPond hands them to.
+        if (_graceDepth > 0)
+            m = default;
 
         // ⚠️ The two bool reads come FIRST on purpose: they are false for every item of
         // every score that never writes `<>`, and that short-circuit keeps the type switch
@@ -686,10 +740,23 @@ public sealed partial class MeasureCollector
                     // — anchors note-attached marks to the right column.
                     Fraction noteAnchorTiming = builder.CurrentDuration;
                     // Process grace notes BEFORE the main note so they get correct octave context
-                    if (_pendingGrace != null)
+                    if (_pendingGrace is { } pendingGrace)
                     {
-                        CollectGraceNotes(_pendingGrace, measureIndex, itemIndex);
+                        // ⚠️ CLEARED BEFORE THE WALK, NOT AFTER. The grace body is walked by
+                        // THIS walker now, so its own first note reaches this same arm; a
+                        // field still holding the grace makes that note open the same grace
+                        // again, for ever. (It was safe to clear afterwards while the body
+                        // had a reader of its own that never re-entered the walk.)
                         _pendingGrace = null;
+                        ProcessGraceRegion(pendingGrace, builder, measureIndex);
+                        // ⚠️ RE-READ, because the grace walk just added items. The index was
+                        // taken before the grace so the ANCHOR TIMING above could be read at
+                        // the same moment; a grace takes no measure time, so that one is
+                        // still right, but this note's column has moved along by however
+                        // many grace columns were engraved. Attaching this note's scripts
+                        // and dynamics to the stale index would hang them on the first
+                        // GRACE column instead.
+                        itemIndex = builder.CurrentItemCount;
                     }
                     // `a4@rest` is a REST written at a pitch — LilyPond's `a4\rest`.
                     // It leaves the walk here rather than further down because it is
@@ -744,7 +811,7 @@ public sealed partial class MeasureCollector
                         };
                         _tremoloPairFirst = false;
                     }
-                    if (!_pendingLeadingGrace.IsDefaultOrEmpty)
+                    if (_graceDepth == 0 && !_pendingLeadingGrace.IsDefaultOrEmpty)
                     {
                         noteItem = noteItem with { LeadingGrace = _pendingLeadingGrace };
                         _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
@@ -895,10 +962,23 @@ public sealed partial class MeasureCollector
                         break;
                     }
                     // Process grace notes BEFORE the main chord so they get correct octave context
-                    if (_pendingGrace != null)
+                    if (_pendingGrace is { } pendingGrace)
                     {
-                        CollectGraceNotes(_pendingGrace, measureIndex, itemIndex);
+                        // ⚠️ CLEARED BEFORE THE WALK, NOT AFTER. The grace body is walked by
+                        // THIS walker now, so its own first note reaches this same arm; a
+                        // field still holding the grace makes that note open the same grace
+                        // again, for ever. (It was safe to clear afterwards while the body
+                        // had a reader of its own that never re-entered the walk.)
                         _pendingGrace = null;
+                        ProcessGraceRegion(pendingGrace, builder, measureIndex);
+                        // ⚠️ RE-READ, because the grace walk just added items. The index was
+                        // taken before the grace so the ANCHOR TIMING above could be read at
+                        // the same moment; a grace takes no measure time, so that one is
+                        // still right, but this note's column has moved along by however
+                        // many grace columns were engraved. Attaching this note's scripts
+                        // and dynamics to the stale index would hang them on the first
+                        // GRACE column instead.
+                        itemIndex = builder.CurrentItemCount;
                     }
                     bool hasArpeggio = HasArpeggioArticulation(chord);
                     // @arpeggio(bracket) = non-arpeggiate (do NOT roll) — LilyPond's
@@ -934,7 +1014,7 @@ public sealed partial class MeasureCollector
                         chordItem = chordItem with { HasArpeggioBracket = true };
                     if (ExtractNoteheadStyle(chord) is var chStyle && chStyle != NoteheadStyle.Default)
                         chordItem = chordItem with { Notehead = chStyle };
-                    if (!_pendingLeadingGrace.IsDefaultOrEmpty)
+                    if (_graceDepth == 0 && !_pendingLeadingGrace.IsDefaultOrEmpty)
                     {
                         chordItem = chordItem with { LeadingGrace = _pendingLeadingGrace };
                         _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
@@ -965,10 +1045,23 @@ public sealed partial class MeasureCollector
                     int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
                     int itemIndex = builder.CurrentItemCount;
                     Fraction repAnchorTiming = builder.CurrentDuration;
-                    if (_pendingGrace != null)
+                    if (_pendingGrace is { } pendingGrace)
                     {
-                        CollectGraceNotes(_pendingGrace, measureIndex, itemIndex);
+                        // ⚠️ CLEARED BEFORE THE WALK, NOT AFTER. The grace body is walked by
+                        // THIS walker now, so its own first note reaches this same arm; a
+                        // field still holding the grace makes that note open the same grace
+                        // again, for ever. (It was safe to clear afterwards while the body
+                        // had a reader of its own that never re-entered the walk.)
                         _pendingGrace = null;
+                        ProcessGraceRegion(pendingGrace, builder, measureIndex);
+                        // ⚠️ RE-READ, because the grace walk just added items. The index was
+                        // taken before the grace so the ANCHOR TIMING above could be read at
+                        // the same moment; a grace takes no measure time, so that one is
+                        // still right, but this note's column has moved along by however
+                        // many grace columns were engraved. Attaching this note's scripts
+                        // and dynamics to the stale index would hang them on the first
+                        // GRACE column instead.
+                        itemIndex = builder.CurrentItemCount;
                     }
                     bool hasArpeggio = HasArpeggioArticulation(rep);
                     bool arpBracket = rep.Articulations.Any(art =>
@@ -1006,7 +1099,7 @@ public sealed partial class MeasureCollector
                         chordCopy = chordCopy with { HasArpeggioBracket = true };
                     if (ExtractNoteheadStyle(rep) is var repStyle && repStyle != NoteheadStyle.Default)
                         chordCopy = chordCopy with { Notehead = repStyle };
-                    if (!_pendingLeadingGrace.IsDefaultOrEmpty)
+                    if (_graceDepth == 0 && !_pendingLeadingGrace.IsDefaultOrEmpty)
                     {
                         chordCopy = chordCopy with { LeadingGrace = _pendingLeadingGrace };
                         _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
@@ -1036,10 +1129,23 @@ public sealed partial class MeasureCollector
                     int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
                     int itemIndex = builder.CurrentItemCount;
                     Fraction slashAnchorTiming = builder.CurrentDuration;
-                    if (_pendingGrace != null)
+                    if (_pendingGrace is { } pendingGrace)
                     {
-                        CollectGraceNotes(_pendingGrace, measureIndex, itemIndex);
+                        // ⚠️ CLEARED BEFORE THE WALK, NOT AFTER. The grace body is walked by
+                        // THIS walker now, so its own first note reaches this same arm; a
+                        // field still holding the grace makes that note open the same grace
+                        // again, for ever. (It was safe to clear afterwards while the body
+                        // had a reader of its own that never re-entered the walk.)
                         _pendingGrace = null;
+                        ProcessGraceRegion(pendingGrace, builder, measureIndex);
+                        // ⚠️ RE-READ, because the grace walk just added items. The index was
+                        // taken before the grace so the ANCHOR TIMING above could be read at
+                        // the same moment; a grace takes no measure time, so that one is
+                        // still right, but this note's column has moved along by however
+                        // many grace columns were engraved. Attaching this note's scripts
+                        // and dynamics to the stale index would hang them on the first
+                        // GRACE column instead.
+                        itemIndex = builder.CurrentItemCount;
                     }
                     bool isCue = _cueDepth > 0;
                     var slashItem = CreateSlashNoteItem(slash, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, isCue);
@@ -1057,7 +1163,7 @@ public sealed partial class MeasureCollector
                         };
                         _tremoloPairFirst = false;
                     }
-                    if (!_pendingLeadingGrace.IsDefaultOrEmpty)
+                    if (_graceDepth == 0 && !_pendingLeadingGrace.IsDefaultOrEmpty)
                     {
                         slashItem = slashItem with { LeadingGrace = _pendingLeadingGrace };
                         _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
@@ -1079,10 +1185,23 @@ public sealed partial class MeasureCollector
                     int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
                     int itemIndex = builder.CurrentItemCount;
                     Fraction bareAnchorTiming = builder.CurrentDuration;
-                    if (_pendingGrace != null)
+                    if (_pendingGrace is { } pendingGrace)
                     {
-                        CollectGraceNotes(_pendingGrace, measureIndex, itemIndex);
+                        // ⚠️ CLEARED BEFORE THE WALK, NOT AFTER. The grace body is walked by
+                        // THIS walker now, so its own first note reaches this same arm; a
+                        // field still holding the grace makes that note open the same grace
+                        // again, for ever. (It was safe to clear afterwards while the body
+                        // had a reader of its own that never re-entered the walk.)
                         _pendingGrace = null;
+                        ProcessGraceRegion(pendingGrace, builder, measureIndex);
+                        // ⚠️ RE-READ, because the grace walk just added items. The index was
+                        // taken before the grace so the ANCHOR TIMING above could be read at
+                        // the same moment; a grace takes no measure time, so that one is
+                        // still right, but this note's column has moved along by however
+                        // many grace columns were engraved. Attaching this note's scripts
+                        // and dynamics to the stale index would hang them on the first
+                        // GRACE column instead.
+                        itemIndex = builder.CurrentItemCount;
                     }
                     bool isCue = _cueDepth > 0;
                     var bareItem = CreateBareDurationItem(bare, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, isCue);
@@ -1118,12 +1237,12 @@ public sealed partial class MeasureCollector
                         if (bareItem is NoteItem or ChordItem)
                             _tremoloPairFirst = false;
                     }
-                    if (!_pendingLeadingGrace.IsDefaultOrEmpty && bareItem is NoteItem bn)
+                    if (_graceDepth == 0 && !_pendingLeadingGrace.IsDefaultOrEmpty && bareItem is NoteItem bn)
                     {
                         bareItem = bn with { LeadingGrace = _pendingLeadingGrace };
                         _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
                     }
-                    else if (!_pendingLeadingGrace.IsDefaultOrEmpty && bareItem is ChordItem bc)
+                    else if (_graceDepth == 0 && !_pendingLeadingGrace.IsDefaultOrEmpty && bareItem is ChordItem bc)
                     {
                         bareItem = bc with { LeadingGrace = _pendingLeadingGrace };
                         _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
@@ -1549,8 +1668,16 @@ public sealed partial class MeasureCollector
         // nested tuplet's outer bracket and mis-indexed its inner one.
         int endNoteIndex = builder.CurrentItemCount - 1;
 
-        // Only add bracket if we have at least 2 notes
-        if (endNoteIndex >= startNoteIndex)
+        // Only add bracket if we have at least 2 notes.
+        // ⚠️ AND NEVER IN GRACE TIME. A tuplet inside a grace body is a CONTAINER there — its
+        // ratio changes the SOUNDING length and a grace is drawn from its WRITTEN duration,
+        // so the notes engrave exactly as the same notes written without it (MEASURED on
+        // LilyPond 2.26.0, session 301, scratch/p301/lp: byte-identical but for the italic
+        // `3` and the bracket lines). Those two grobs are the whole of what a grace column
+        // still cannot hold, and GraceBodyValidator reports them as a Bracket drop; drawing
+        // the bracket here would put a full-size one over columns that are not drawn.
+        // ⚠️ SCAFFOLDING: ⒝2 draws it at the grace font and the drop retires.
+        if (endNoteIndex >= startNoteIndex && _graceDepth == 0)
         {
             _tupletBrackets.Add(new TupletBracketItem(
                 tuplet.TupletRatio,

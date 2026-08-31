@@ -2432,16 +2432,25 @@ internal sealed class ElementCoordinator
             int hi = mi == slur.EndMeasureIndex ? slur.EndItemIndex : items.Length - 1;
             hi = Math.Min(hi, items.Length - 1);
 
+            // ⚠️ GRACE TIME IS NOT AN EDGE COLUMN. A broken slur's synthetic end reattaches
+            // to the first (or last) note column of its own piece, and a grace standing in
+            // front of that note would be found first — the segment then started at the
+            // GRACE's pitch. MEASURED on audit/lpreg/lyhygrace: the continuation of
+            // `g2( … g2)` began 0.35 below where it belongs, at the appoggiatura's f rather
+            // than the g it attaches to. LilyPond's Slur_engraver acknowledges note columns
+            // of its own context and a grace's belong to the grace group.
             if (leftEdge)
             {
                 for (int i = lo; i <= hi; i++)
-                    if (MusicItem.EdgeStaffPosition(items[i], slur.CurveUp) is { } p)
+                    if (!items[i].GraceTime
+                        && MusicItem.EdgeStaffPosition(items[i], slur.CurveUp) is { } p)
                         return p;
             }
             else
             {
                 for (int i = hi; i >= lo; i--)
-                    if (MusicItem.EdgeStaffPosition(items[i], slur.CurveUp) is { } p)
+                    if (!items[i].GraceTime
+                        && MusicItem.EdgeStaffPosition(items[i], slur.CurveUp) is { } p)
                         return p;
             }
         }
@@ -2657,6 +2666,16 @@ internal sealed class ElementCoordinator
 
             for (int i = lo; i <= hi; i++)
             {
+                // ⚠️ NOT THE GRACE COLUMNS — AddGraceObstaclesForMeasure below adds those, at
+                // the GRACE FONT'S ink and on the run's own X offsets. Reading one here would
+                // enter it a SECOND time and as a full-size head with a full-size stem:
+                // MEASURED on audit/lpreg/lyhygrace, the continuation segment of `g2( … g2)`
+                // stopped being flat and dipped 0.35 to clear a stem that is not that tall.
+                // (Invisible before session 310: a grace was not an item, so this loop could
+                // not reach one.)
+                if (items[i].GraceTime)
+                    continue;
+
                 // A REST column participates too: LilyPond's Slur_engraver
                 // acknowledges every NoteColumn engraved while the slur is open,
                 // and get_encompass_info's no-stem branch reads the COLUMN's Y

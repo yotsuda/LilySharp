@@ -590,6 +590,15 @@ internal sealed class SkylineBuilder
                         continue;
 
                     var item = measure.Items[itemIndex];
+                    // Grace time is not in THIS silhouette: GraceNoteEngraver builds the
+                    // group's own boxes at the grace font, and reading a grace column here as
+                    // an ordinary full-size note reserved a head and a stem the page never
+                    // draws — MEASURED, `acciaccatura { a16 } b4 r2 r4` grew 0.500000 taller
+                    // with identical ink, which is the signature of a silhouette that has
+                    // stopped describing the page. See SharedRenderer.EnumerateStaffItems for
+                    // why the skip exists and when it goes (HANDOFF §2 U8 ⒝2).
+                    if (item.GraceTime)
+                        continue;
                     double itemX = measureLayout.X + LayoutUtilities.GetItemXOffset(
                         voice.Measures, measureIndex, itemIndex, measureLayout);
 
@@ -776,6 +785,10 @@ internal sealed class SkylineBuilder
                 for (int itemIndex = 0; itemIndex < measure.Items.Length; itemIndex++)
                 {
                     var item = measure.Items[itemIndex];
+                    // Grace time is drawn as a SMALL fret by GraceNoteEngraver — see the
+                    // notation silhouette's skip above.
+                    if (item.GraceTime)
+                        continue;
                     // The digit sits under the notehead CENTRE, the same offset the renderer
                     // draws it at (SharedRenderer.Tab, TabHeadCenterOffset).
                     double x = measureLayout.X

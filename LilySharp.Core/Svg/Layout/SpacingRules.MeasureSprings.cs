@@ -107,7 +107,13 @@ internal static partial class SpacingRules
         var spacingItems = new List<MusicItem>();
         foreach (var item in measure.Items)
         {
-            if (!item.IsLoose)
+            // A grace column is spaced by the group's own reservation on the spring INTO the
+            // main note (AdjustSpringForGraceNotes below, read off NoteItem.LeadingGrace) and
+            // never as a column of its own on this chain — the same division of labour
+            // IsMusicalColumn states for the timing-column system. Letting one in gave the
+            // group a spring HERE as well as the reservation THERE: measured, a grace opening
+            // a lower voice's bar shoved the whole first column 1.04 to the right.
+            if (!item.IsLoose && !item.GraceTime)
                 spacingItems.Add(item);
         }
 
@@ -669,7 +675,11 @@ internal static partial class SpacingRules
         Fraction onset = Fraction.Zero;
         foreach (var item in tabMeasure.Items)
         {
-            if (item is Model.NoteItem or Model.ChordItem)
+            // A grace's fret digit is drawn small and inside the grace group's own reserved
+            // run (GraceNoteLayout.Tuning), so it asks nothing of the shared note column —
+            // measured, pricing one here widened a bass tab's first spring by 0.66, a whole
+            // digit, and shoved the bar along with it.
+            if (item is (Model.NoteItem or Model.ChordItem) and not { GraceTime: true })
                 for (int t = 0; t < timings.Count; t++)
                     if (timings[t] == onset)
                     {
@@ -912,7 +922,10 @@ internal static partial class SpacingRules
         for (int oi = 0; oi < measure.Items.Length; oi++)
         {
             var item = measure.Items[oi];
-            if (item is Model.NoteItem or Model.ChordItem)
+            // A grace column carries no script of its own (LYS4020 drops them) and is not
+            // the column a script on the MAIN note reaches from — and standing first at the
+            // shared moment, it would be the one `??=` kept.
+            if (item is (Model.NoteItem or Model.ChordItem) and not { GraceTime: true })
                 for (int t = 0; t < timings.Count; t++)
                 {
                     if (timings[t] != onset)

@@ -114,6 +114,16 @@ internal sealed class MeasureBuilder
     /// <summary>Current item count within the current measure.</summary>
     public int CurrentItemCount => _currentItems.Count;
 
+    /// <summary>
+    /// The items of the measure now under construction, oldest first — a READ-ONLY view, so
+    /// a caller can look at what it just added without being able to reorder the measure.
+    /// </summary>
+    /// <remarks>
+    /// The one reader is <c>MeasureCollector.DeriveGraceColumns</c>, which reads back the
+    /// columns the grace walk added rather than parsing the grace body a second time.
+    /// </remarks>
+    public IReadOnlyList<MusicItem> CurrentItems => _currentItems;
+
     /// <summary>True at the very opening of the piece — bar 0 with no music yet (zero-duration
     /// grobs like a clef may already sit there). A directive here (a section's own
     /// key / time / tempo overriding the score default) IS the opening value, not a change
@@ -210,10 +220,116 @@ internal sealed class MeasureBuilder
     }
 
     /// <summary>
+    /// How deep into <c>grace { }</c> bodies this builder currently is. While it is
+    /// non-zero every added item is stamped <see cref="MusicItem.GraceTime"/> and takes no
+    /// measure time.
+    /// </summary>
+    private int _graceDepth;
+
+    /// <summary>Whether the builder is currently inside a <c>grace { }</c> body.</summary>
+    public bool InGraceTime => _graceDepth > 0;
+
+    /// <summary>
+    /// Opens grace time: from here until the matching <see cref="ExitGraceTime"/> every item
+    /// added is stamped <see cref="MusicItem.GraceTime"/> and adds NO measure duration.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE SWITCH IS HERE, NOT AT THE HUNDRED-ODD <c>AddItem</c> CALL SITES. A grace body
+    /// is walked by the ORDINARY walker (<c>MeasureCollector.ProcessGraceRegion</c>), so every
+    /// arm of that walk reaches this method; routing the duration decision at the one place
+    /// that owns the clock is what lets the walk itself stay unchanged, which is the whole
+    /// point of walking it (see <see cref="MusicItem.GraceTime"/> for LilyPond's shape).
+    /// <para>
+    /// ⚠️ A DEPTH, NOT A FLAG: <c>grace { }</c> cannot nest in Lily# today, but the reset in
+    /// <c>MeasureCollector.Resume</c> checkpoints on the counter being zero, and a counter
+    /// says "unbalanced" where a bool would silently forgive it.
+    /// </para>
+    /// </remarks>
+    public void EnterGraceTime() => _graceDepth++;
+
+    /// <summary>Closes the region <see cref="EnterGraceTime"/> opened.</summary>
+    public void ExitGraceTime()
+    {
+        if (_graceDepth > 0)
+            _graceDepth--;
+    }
+
+    /// <summary>
+    /// Reduces an item entering grace time to what a grace column can still be engraved
+    /// from, and stamps it <see cref="MusicItem.GraceTime"/>.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A WHITELIST, NOT A LIST OF THINGS TO STRIP, and that is the whole point. The
+    /// ordinary factories fill a note with everything the ordinary engravers can draw —
+    /// fingering, laissez-vibrer, repeat tie, notehead style, editorial accidental, tremolo,
+    /// courtesy, feather — and a grace group is still drawn from its derived
+    /// <c>GraceNoteItem</c>, which reads exactly SEVEN of those fields. A blacklist would go
+    /// stale the first time somebody adds an eighth kind of ink to a note: the new field
+    /// would ride into grace time, some engraver would draw it full size over columns that
+    /// are not drawn, and the reader would still be told by LYS4020 that it was dropped.
+    /// Naming what SURVIVES cannot go stale that way — a new field is absent by default.
+    /// <para>
+    /// ⚠️ SCAFFOLDING, and the most temporary piece of it: everything this drops is on
+    /// LYS4020's drop list, and HANDOFF §2 U8 ⒝2 retires the whole method by letting the
+    /// ordinary engravers draw grace time at the grace font — at which point a grace note is
+    /// an ordinary note that happens to carry <see cref="MusicItem.GraceTime"/>, and narrowing
+    /// it would be the defect rather than the fix.
+    /// </para>
+    /// <para>
+    /// The seven fields are the ones <c>MeasureCollector.DeriveGraceColumns</c> reads:
+    /// staff position, accidental, ledger, base duration, dots, MIDI and string number — plus
+    /// the source position, which is click-to-source data no engraver reads.
+    /// </para>
+    /// </remarks>
+    private static MusicItem NarrowToGraceTime(MusicItem item) => item switch
+    {
+        NoteItem n => new NoteItem(
+            n.StaffPosition, n.BaseDuration, n.Dots, n.Accidental, n.NeedsLedgerLines,
+            n.SourcePosition)
+        {
+            GraceTime = true,
+            Midi = n.Midi,
+            StringNumber = n.StringNumber,
+        },
+
+        ChordItem c => new ChordItem(
+            // The members keep the same seven answers and nothing else — a member can carry
+            // its own fingering and its own notehead style, and both are drops here too.
+            c.Notes.Select(static m => new ChordNoteInfo(
+                m.StaffPosition, m.Accidental, m.NeedsLedgerLines,
+                StringNumber: m.StringNumber, Midi: m.Midi,
+                SourcePosition: m.SourcePosition)).ToImmutableArray(),
+            c.BaseDuration, c.Dots, c.SourcePosition)
+        {
+            GraceTime = true,
+        },
+
+        RestItem r => new RestItem(r.BaseDuration, r.Dots, r.SourcePosition)
+        {
+            GraceTime = true,
+            IsSpacer = r.IsSpacer,
+        },
+
+        _ => item with { GraceTime = true },
+    };
+
+    /// <summary>
     /// Adds a music item and automatically completes the measure if duration is reached.
     /// </summary>
     public void AddItem(MusicItem item)
     {
+        // GRACE TIME TAKES NO MEASURE TIME. LilyPond's grace notes live in a negative
+        // "grace part" of the moment and the main stream's clock does not see them
+        // (LILYPOND-REF: lily/moment.cc — Moment's grace_part_); Lily# says the same by
+        // routing the whole add through the no-duration door. The stamp rides the item so
+        // the readers downstream can tell a grace column from a main one without asking
+        // where in the item list it stands.
+        if (_graceDepth > 0)
+        {
+            AddItemWithoutDuration(item);
+            return;
+        }
+
         // A mid-piece meter change re-arms the auto-complete length for the
         // measures that follow. It is a zero-duration grob (printed at the
         // change point), so it never advances timing or completes a measure.
@@ -270,9 +386,17 @@ internal sealed class MeasureBuilder
     /// Adds a music item without affecting duration tracking.
     /// Used for tuplet notes where duration is calculated separately.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ THE GRACE STAMP GOES ON HERE, NOT IN <see cref="AddItem"/>, because this is the
+    /// COMMON SINK: a tuplet's members come through here directly (their duration is
+    /// accounted separately), and stamping only in AddItem let a tuplet inside a grace body
+    /// put UNSTAMPED, full-size notes on the main column grid — the group then drew twice and
+    /// the bar grew by half its width. Every item that enters a measure enters through this
+    /// one line.
+    /// </remarks>
     public void AddItemWithoutDuration(MusicItem item)
     {
-        _currentItems.Add(item);
+        _currentItems.Add(_graceDepth > 0 ? NarrowToGraceTime(item) : item);
         _confirmableBoundary = false;
     }
 
@@ -282,6 +406,13 @@ internal sealed class MeasureBuilder
     /// </summary>
     public void AddDuration(Fraction duration, int sourcePosition)
     {
+        // GRACE TIME TAKES NO MEASURE TIME — the same rule AddItem applies, at the other door
+        // into the clock. A tuplet reports its scaled duration here after its members have
+        // been added, and a tuplet inside a grace body would otherwise advance the bar by the
+        // sounding length of music the bar does not contain.
+        if (_graceDepth > 0)
+            return;
+
         _currentDuration += duration;
 
         if (_currentDuration >= _timeSignature)

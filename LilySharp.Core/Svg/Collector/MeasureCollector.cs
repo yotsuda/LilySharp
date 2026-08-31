@@ -378,6 +378,23 @@ public sealed partial class MeasureCollector
     /// See docs/cue-context-design.md.
     /// </summary>
     private int _cueDepth = 0;
+
+    /// <summary>
+    /// How deep into <c>grace { }</c> bodies this walk currently is. Non-zero means the items
+    /// being produced belong to GRACE TIME: they take no measure duration, they carry
+    /// <see cref="MusicItem.GraceTime"/>, and the annotation collectors stand down because the
+    /// grace group is still drawn from its derived <see cref="GraceNoteItem"/> and nothing
+    /// would place them (HANDOFF §2 U8 ⒝1).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE COLLECTOR'S COPY OF <c>MeasureBuilder.InGraceTime</c>, and the two are not
+    /// redundant: the builder's decides the CLOCK, at the one place that owns it; this one
+    /// gates walk-side work the builder never sees. They are entered and left together in
+    /// <c>ProcessGraceRegion</c>, and <see cref="WalkCarriesNothing"/> refuses a checkpoint
+    /// while either is open, exactly as it does for <see cref="_cueDepth"/>.
+    /// </remarks>
+    private int _graceDepth = 0;
+
     /// <summary>
     /// True between entering a <c>cue { … }</c> region and the first note or chord it emits —
     /// the one item that gets <see cref="MusicItem.BeginsCueRegion"/>. Set on entry and cleared
@@ -3088,6 +3105,9 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private void CollectDynamics(SyntaxNode node, int measureIndex, int itemIndex)
     {
+        // Grace time has no column for it to hang off — see CollectArticulations.
+        if (_graceDepth > 0)
+            return;
         var articulations = ArticulationsOf(node);
 
         foreach (var articulation in articulations)
@@ -3754,217 +3774,161 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
-    /// Collects grace notes from a grace expression.
+    /// Walks a <c>grace { }</c> body with the ORDINARY walker, into the ORDINARY builder, so
+    /// its notes become real measure items with real item indices; then derives the grace
+    /// group's own shape (<see cref="GraceNoteItem"/>) from the items that walk produced.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: grace-engraver.cc:36-80 Grace_engraver class
+    /// ⚠️ THIS IS THE SHAPE LILYPOND HAS, AND LILY# HAD THE PAIR BACKWARDS. LilyPond gives
+    /// the CUE its own context (<c>ly/engraver-init.ly:432 \name CueVoice</c>) and gives the
+    /// GRACE no context at all — <c>grep -c "name Grace"</c> over that file is <c>0</c>; what
+    /// a grace has is <c>\consists Grace_engraver</c> inside the ordinary <c>\name Voice</c>
+    /// (:368), and <c>lily/grace-engraver.cc</c> creates no grob whatsoever. Lily# walked the
+    /// cue normally and lifted the grace out into a side model, which is why a grace note had
+    /// no <c>ItemIndex</c> to hang a slur, a tie or a script off, and why LYS4020 could only
+    /// say "a grace note is not a measure item". Measured (session 309, scratch/p309/ab): the
+    /// SAME three marks written inside <c>cue { }</c> all draw, and inside <c>grace { }</c>
+    /// all three render byte-identically to a control that omits them.
+    /// <para>
+    /// ⚠️ WHAT THIS METHOD DOES NOT YET DO IS DRAW THEM. The group is still engraved from the
+    /// derived <see cref="GraceNoteItem"/> by <c>GraceNoteEngraver</c>, so the drop set
+    /// LYS4020 reports is unchanged and the page is BYTE-IDENTICAL — which is the property a
+    /// whole-tree sweep can prove and the reason this half ships on its own (HANDOFF §2 U8
+    /// ⒝1). The half that follows folds the side model away and lets the ordinary engravers
+    /// draw at the grace font (⒝2); until it lands, nothing may carve a grace slur or a grace
+    /// script into the grace house, because that would be the second spelling of a geometry
+    /// the ordinary engravers already own (RULES §5.2.1②).
+    /// </para>
+    /// <para>
+    /// ⚠️ THE DURATION MEMORY IS THE GRACE GROUP'S, NOT THE VOICE'S, and it is swapped rather
+    /// than reset: <c>grace { d'16 } c'</c> must leave the following <c>c</c> whatever the
+    /// voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+    /// LilyPond default (LilyPond carries the previous written duration in), kept because it
+    /// is the one answer all four walks agree on since 2026-08-01.
+    /// </para>
+    /// <para>
+    /// LILYPOND-REF: lily/grace-engraver.cc:36-80 Grace_engraver — sets properties only.
+    /// LILYPOND-REF: scm/music-functions.scm:635-648 general-grace-settings — the font.
+    /// </para>
     /// </remarks>
-    private void CollectGraceNotes(GraceExpressionSyntax grace, int measureIndex, int mainNoteItemIndex)
+    private void ProcessGraceRegion(
+        GraceExpressionSyntax grace, MeasureBuilder builder, int measureIndex)
     {
         var type = grace.IsAcciaccatura ? GraceNoteType.Acciaccatura
                  : grace.IsAppoggiatura ? GraceNoteType.Appoggiatura
                  : GraceNoteType.Grace;
 
-        // Collect notes from the grace body
-        var graceColumns = new List<GraceColumnInfo>();
+        int firstItemIndex = builder.CurrentItemCount;
 
-        // LILYPOND-REF: lily/grace-spacing-engraver.cc — grace notes carry their own durations.
-        // LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
-        // LILYPOND DEFAULT and the comment used to claim it was: LilyPond has no grace-specific
-        // rule at all — a bare note takes the PREVIOUS written duration, which at the start of
-        // a grace group is whatever the main stream last wrote, or 4 if nothing has.
-        // ⚠️ Lily# used to answer this in THREE places and get three answers: here (1/8),
-        // Midi/MidiExporter.ProcessGrace (1/32), and LilyPond/LilyPondExporter, which wrote the
-        // grace out with no duration at all and so handed LilyPond a QUARTER — a silent twin
-        // defect, since that .ly is valid and merely plays something else. Found 2026-08-01,
-        // when two ledger books spelled `grace { c' d' }` were quanting one beam against a
-        // twin's two. ⇒ THIS LINE IS NOW THE ONE ANSWER: the MIDI exporter reads the eighth
-        // from the same rule and the twin writes it out explicitly (docs/HANDOFF.md §1).
-        Fraction graceDefaultDuration = Fraction.Eighth;
-        // The DOTS ride the default with it. An undurated grace takes the whole previous
-        // duration, dots included, exactly as an undurated note in the main stream does
-        // (MeasureCollector.CreateNoteItem's _defaultDots) — `grace { d'8. e' }` is two
-        // dotted eighths, not a dotted one and a plain one.
-        // LILYPOND-REF: lily/parser.yy:3510-3516 optional_notemode_duration — what an
-        //   undurated note falls back to is `parser->default_duration_`, a whole Duration;
-        //   :3518-3520 steno_duration builds it with `make_duration ($1, dots)`, so the
-        //   dots are part of what carries forward, not a separate memory.
-        int graceDefaultDots = 0;
+        // The grace group's own duration memory. ⚠️ SWAPPED, NOT RESET: the voice's memory
+        // must come back untouched, because `grace { d'16 } c` gives the c the duration the
+        // voice last wrote, not a sixteenth — a side effect the equivalent inline grace has
+        // no way to produce.
+        Fraction savedDuration = _defaultDuration;
+        int savedDots = _defaultDots;
+        _defaultDuration = Fraction.Eighth;
+        _defaultDots = 0;
 
-        // ⚠️ ONE WALK, TWO READERS — the body is read through the same statement
-        // GraceBodyValidator reports from (Semantics.GraceBodySupport), so a phrase
-        // reference cannot start being engraved here while LYS4020 goes on calling it
-        // dropped. The elements arrive already expanded: a reference is a CONTAINER, and
-        // `tuplet { A }`, `cue { A }` and `repeat unfold 2 { A }` have all expanded one
-        // since long before this did (scratch/p194/four-containers.lys is the book that
-        // checks the four side by side).
-        foreach (var (item, _) in Semantics.GraceBodySupport.BodyElements(
-                     grace,
-                     name => _variables.TryGetValue(name, out var body) ? body : null,
-                     () => ChargeExpansion(1, grace.SourceStart)))
+        _graceDepth++;
+        builder.EnterGraceTime();
+        // The body items are reds already (a grace body is always live), exactly as
+        // ProcessCueRegion's are.
+        // ⚠️ GatherMusicSite, NOT a bare GreenSite each: a phrase reference is a CONTAINER
+        // and `grace { G }` must engrave byte-identically to `grace { G's body }` — session
+        // 300 measured that and it is the one thing the grace body's own expander was still
+        // there for. Going through the ordinary gatherer is what retires that second
+        // expander from the collector; Semantics.GraceBodySupport keeps its copy because the
+        // VALIDATOR still has to name what did not reach the page.
+        var graceSites = new List<GreenSite>();
+        foreach (var item in grace.Body.Items)
+            GatherMusicSite(new GreenSite(item), graceSites);
+        ProcessMusicNodeSequence(graceSites, builder);
+        builder.ExitGraceTime();
+        _graceDepth--;
+
+        _defaultDuration = savedDuration;
+        _defaultDots = savedDots;
+
+        var graceColumns = DeriveGraceColumns(builder, firstItemIndex);
+        if (graceColumns.Length == 0)
+            return;
+
+        _graceNotes.Add(new GraceNoteItem(
+            type,
+            graceColumns,
+            measureIndex,
+            // The main note stands AFTER the grace items now, so its index is read here
+            // rather than captured before the walk. The walk's own callers re-read theirs
+            // for the same reason.
+            builder.CurrentItemCount,
+            grace.SourceStart,
+            _cursor.StaffIndex,
+            // The voice whose item list MainNoteItemIndex counts — see GraceNoteItem.
+            _cursor.VoiceIndex));
+        // Hand the infos to the next main note/chord so it can reserve front space.
+        _pendingLeadingGrace = graceColumns;
+    }
+
+    /// <summary>
+    /// Reads the grace group's columns back off the items the grace walk just added.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ DERIVED, NEVER PARSED A SECOND TIME. Before this, the grace body was read by a
+    /// reduced reader of its own that answered pitch, accidental, ledger, duration and MIDI
+    /// its own way — a second spelling of <c>CreateNoteItem</c> that had already produced
+    /// four different answers to "what duration does an undurated grace take" (HANDOFF §2 U8,
+    /// 2026-08-01). One producer now answers, and this only changes the SHAPE of its answer.
+    /// <para>
+    /// ⚠️ A COLUMN IS AN ITEM, so a chord is one column with N heads and a rest is a column
+    /// with none — both measured in session 308 and both already true of the items this
+    /// reads. Anything else the walk added in grace time (there is nothing today) would be
+    /// silently skipped here, which is why the arm list mirrors
+    /// <c>Semantics.GraceBodySupport.IsCarried</c> rather than being a default case.
+    /// </para>
+    /// </remarks>
+    private static ImmutableArray<GraceColumnInfo> DeriveGraceColumns(
+        MeasureBuilder builder, int firstItemIndex)
+    {
+        var items = builder.CurrentItems;
+        if (firstItemIndex >= items.Count)
+            return ImmutableArray<GraceColumnInfo>.Empty;
+
+        var columns = ImmutableArray.CreateBuilder<GraceColumnInfo>(items.Count - firstItemIndex);
+        for (int i = firstItemIndex; i < items.Count; i++)
         {
-            // A phrase body is evaluated in a FRESH frame, exactly as it is at every other
-            // call site (MeasureCollector.MusicWalk's ProcessMusicNodeSequence) — a phrase's
-            // pitches must not depend on what the grace happened to play before the
-            // reference. ⚠️ ONLY THE OCTAVE HALF OF THE RESET IS TAKEN. EnterDefaultFrame
-            // also clears the VOICE's running duration, and a grace body never reads that
-            // one: an undurated grace falls back to graceDefaultDuration below. Clearing it
-            // here would let `grace { A }` change the duration of the note AFTER the grace,
-            // which `grace { d'16 }` does not do — a side effect on the host stream that the
-            // equivalent inline grace has no way to produce.
-            if (item is RelativeResetMarker reset)
+            switch (items[i])
             {
-                _octave.ResetToInitial();
-                _octave.CurrentOctave += reset.OctaveOffset;
-                EnterPhraseTranspose(reset.AnchorStep, reset.OctaveOffset);
-                // The grace's OWN duration memory does reset, because that one IS what the
-                // body reads: `grace { c'16 A }` must give A's undurated first note the
-                // group's default eighth, the same note `grace { A }` would give it.
-                graceDefaultDuration = Fraction.Eighth;
-                graceDefaultDots = 0;
-                continue;
-            }
+                case NoteItem note:
+                    columns.Add(new GraceColumnInfo(
+                        note.StaffPosition, note.Accidental, note.NeedsLedgerLines,
+                        note.BaseDuration, note.Midi, note.StringNumber, note.Dots));
+                    break;
 
-            if (item is PhraseEndMarker)
-            {
-                // Hands the relative chain back at the phrase's ANCHOR (the chord rule), so
-                // a grace note written after a reference reads the same frame it would read
-                // after one in the main stream.
-                ExitPhraseTranspose();
-                continue;
-            }
+                case ChordItem chord when chord.Notes.Length > 0:
+                    {
+                        // LOW TO HIGH, because GraceColumnInfo.Lowest / .Highest are index 0
+                        // and index n−1 and the whole layout reads the column's ends through
+                        // them. The written order is the writer's (a degree chord stacks, an
+                        // absolute one does not), so it is not the drawn one.
+                        var heads = ImmutableArray.CreateBuilder<GraceHeadInfo>(chord.Notes.Length);
+                        foreach (var member in chord.Notes)
+                            heads.Add(new GraceHeadInfo(
+                                member.StaffPosition, member.Accidental, member.NeedsLedgerLines,
+                                member.Midi, member.StringNumber));
+                        heads.Sort(static (a, b) => a.StaffPosition.CompareTo(b.StaffPosition));
+                        columns.Add(new GraceColumnInfo(
+                            heads.ToImmutable(), chord.BaseDuration, chord.Dots));
+                    }
+                    break;
 
-            // A TUPLET IS A CONTAINER, AND THE PAGE READS NOTHING OFF ITS RATIO. This arm is
-            // deliberately a no-op rather than an absent case: what the ratio changes is the
-            // SOUNDING length, and a grace note is drawn from its WRITTEN duration.
-            // MEASURED on LilyPond 2.26.0 (session 301, scratch/p301/lp, data-pos masked):
-            // `\grace { \tuplet 3/2 { d'16 e' f' } }` renders BYTE-IDENTICALLY to
-            // `\grace { d'16 e' f' }` except for the ink named below — the three notes are
-            // the same to the coordinate. ⚠️ That book writes no accidental, so the
-            // measurement says nothing about one; what it pins is the NOTE positions, and
-            // the only ink it adds is the italic serif `3` (plus the four bracket lines when
-            // the durations are long enough that no beam stands in for them). Those two grobs
-            // are what a grace column still cannot hold, and GraceBodyValidator reports them
-            // as a GraceDropKind.Bracket. ⚠️ The duration memory is NOT reset here, unlike at
-            // a phrase boundary: a tuplet opens no frame in the main stream either, so
-            // `grace { tuplet 3/2 { d'16 e' f' } c' }` gives the trailing c a sixteenth.
-            if (item is GraceTupletStartMarker or GraceTupletEndMarker)
-                continue;
-
-            if (Semantics.GraceBodySupport.CarriedNote(item) is { } note)
-            {
-                var rp = CalculateStaffPosition(note.Pitch);
-                _octave.CurrentOctave = rp.RelativeOctave;
-                int staffPosition = rp.StaffPosition;
-
-                bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
-                var accidental = GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
-
-                // Resolve grace note duration (inherit previous grace duration if not specified)
-                int noteValue = note.Duration?.Value ?? (int)graceDefaultDuration.Denominator;
-                var baseDuration = Fraction.FromNoteValue(noteValue);
-                graceDefaultDuration = baseDuration;
-                int dots = note.Duration?.DotCount ?? graceDefaultDots;
-                graceDefaultDots = dots;
-
-                int graceMidi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
-                // The '\N', read through the same statement the validator reads, so a grace
-                // on a tab picks the string the writer asked for rather than the one the
-                // resolver would have picked — and so the two can never disagree about
-                // whether it is carried (GraceBodySupport.CarriedStringNumber).
-                graceColumns.Add(new GraceColumnInfo(staffPosition, accidental, needsLedger,
-                    baseDuration, graceMidi,
-                    Semantics.GraceBodySupport.CarriedStringNumber(note),
-                    dots));
-
-                CollectGraceColumnlessAnnotations(note.Articulations, measureIndex);
-                continue;
-            }
-
-            // A CHORD IS ONE COLUMN WITH N HEADS (session 308). Everything about which
-            // pitches it sounds — the root anchor, the stacking, degree members, drum names,
-            // quarter tones, per-member accidentals and string numbers — is CreateChordItem's,
-            // the same factory the main stream goes through. Writing a second pitch resolver
-            // here is the defect checklist 7.7 names as this repository's most repeated, and
-            // the grace body already has one shared statement (GraceBodySupport) precisely so
-            // that the readers cannot each answer a question their own way.
-            // ⚠️ forcedDuration IS WHY THIS IS SAFE. Without it CreateChordItem writes the
-            // VOICE's running duration (_defaultDuration / _defaultDots), and a grace body's
-            // duration memory is its own — `grace { <c e>16 } c'4` must leave the c a quarter.
-            // The factory's own comment says the forced arm "must not disturb the default
-            // carry", which is exactly the property this needs.
-            if (Semantics.GraceBodySupport.CarriedChord(item) is { } chordSyntax)
-            {
-                int chordValue = chordSyntax.Duration?.Value
-                                 ?? (int)graceDefaultDuration.Denominator;
-                int chordDots = chordSyntax.Duration?.DotCount ?? graceDefaultDots;
-                graceDefaultDuration = Fraction.FromNoteValue(chordValue);
-                graceDefaultDots = chordDots;
-
-                var chordItem = CreateChordItem(
-                    chordSyntax, forcedDuration: (chordValue, chordDots));
-                if (chordItem.Notes.Length > 0)
-                {
-                    // LOW TO HIGH, because GraceColumnInfo.Lowest / .Highest are index 0 and
-                    // index n−1 and the whole layout reads the column's ends through them. The
-                    // written order is the writer's (a degree chord stacks, an absolute one
-                    // does not), so it is not the drawn one.
-                    var heads = ImmutableArray.CreateBuilder<GraceHeadInfo>(
-                        chordItem.Notes.Length);
-                    foreach (var member in chordItem.Notes)
-                        heads.Add(new GraceHeadInfo(
-                            member.StaffPosition, member.Accidental, member.NeedsLedgerLines,
-                            member.Midi, member.StringNumber));
-                    heads.Sort(static (a, b) => a.StaffPosition.CompareTo(b.StaffPosition));
-                    graceColumns.Add(new GraceColumnInfo(
-                        heads.ToImmutable(), Fraction.FromNoteValue(chordValue), chordDots));
-                }
-
-                CollectGraceColumnlessAnnotations(
-                    Semantics.GraceBodySupport.CarriedAnnotations(chordSyntax), measureIndex);
-                continue;
-            }
-
-            // A REST IS A COLUMN WITH NO HEAD (session 308). It holds a column open at the
-            // same gap a head's column takes, it draws its own glyph, and it ENDS THE BEAMED
-            // PREFIX — all three MEASURED (scratch/p308/lp2/measurements.md).
-            // ⚠️ IT DOES NOT GO THROUGH CreateRestItem, unlike the chord above going through
-            // CreateChordItem. That factory writes the VOICE's duration memory and builds a
-            // measure item with an ItemIndex; a grace rest is neither. What it would share is
-            // two lines of duration arithmetic, and the arithmetic here is the GRACE group's
-            // (graceDefaultDuration), which is a different quantity with the same shape.
-            if (Semantics.GraceBodySupport.CarriedRest(item) is { } restSyntax)
-            {
-                int restValue = restSyntax.Duration?.Value
-                                ?? (int)graceDefaultDuration.Denominator;
-                int restDots = restSyntax.Duration?.DotCount ?? graceDefaultDots;
-                graceDefaultDuration = Fraction.FromNoteValue(restValue);
-                graceDefaultDots = restDots;
-                graceColumns.Add(new GraceColumnInfo(
-                    ImmutableArray<GraceHeadInfo>.Empty,
-                    Fraction.FromNoteValue(restValue), restDots,
-                    // 's' is a spacer: it holds the column and draws nothing, exactly as
-                    // RestItem.IsSpacer does in the main stream.
-                    IsSpacer: restSyntax.RestToken.Text == "s"));
-
-                CollectGraceColumnlessAnnotations(
-                    Semantics.GraceBodySupport.CarriedAnnotations(restSyntax), measureIndex);
+                case RestItem rest:
+                    columns.Add(new GraceColumnInfo(
+                        ImmutableArray<GraceHeadInfo>.Empty,
+                        rest.BaseDuration, rest.Dots, IsSpacer: rest.IsSpacer));
+                    break;
             }
         }
-
-        if (graceColumns.Count > 0)
-        {
-            var infos = graceColumns.ToImmutableArray();
-            _graceNotes.Add(new GraceNoteItem(
-                type,
-                infos,
-                measureIndex,
-                mainNoteItemIndex,
-                grace.SourceStart,
-                _cursor.StaffIndex));
-            // Hand the infos to the next main note/chord so it can reserve front space.
-            _pendingLeadingGrace = infos;
-        }
+        return columns.ToImmutable();
     }
 
     /// <summary>

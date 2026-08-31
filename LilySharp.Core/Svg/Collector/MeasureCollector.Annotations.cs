@@ -51,6 +51,9 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private void CollectFiguredBass(SyntaxNode node, int measureIndex, int itemIndex)
     {
+        // Grace time has no column for it to hang off — see CollectArticulations.
+        if (_graceDepth > 0)
+            return;
         var articulations = ArticulationsOf(node);
 
         foreach (var child in articulations)
@@ -98,6 +101,9 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private void CollectChordNames(SyntaxNode node, int measureIndex, int itemIndex)
     {
+        // Grace time has no column for it to hang off — see CollectArticulations.
+        if (_graceDepth > 0)
+            return;
         var articulations = ArticulationsOf(node);
 
         foreach (var child in articulations)
@@ -280,6 +286,9 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private void CollectCrossStaff(SyntaxNode node, int measureIndex, int itemIndex)
     {
+        // Grace time has no column for it to hang off — see CollectArticulations.
+        if (_graceDepth > 0)
+            return;
         var articulations = ArticulationsOf(node);
 
         foreach (var child in articulations)
@@ -359,6 +368,16 @@ public sealed partial class MeasureCollector
     private void CollectArticulations(SyntaxNode node, int measureIndex, int itemIndex, bool stemUp,
         string? editorialAccidental = null, Fraction anchorTiming = default)
     {
+        // IN GRACE TIME, ONLY THE ANNOTATIONS THAT ASK FOR NO COLUMN. The grace group is
+        // still engraved from its derived GraceNoteItem, which has no per-column address for
+        // a script to hang off, so collecting one here would file it against an item index
+        // nothing draws at. That is exactly the loss LYS4020 reports, and it stays reported
+        // until the ordinary engravers draw grace time (HANDOFF §2 U8 ⒝2).
+        if (_graceDepth > 0)
+        {
+            CollectGraceColumnlessAnnotations(ArticulationsOf(node), measureIndex);
+            return;
+        }
         // A chord's scripts come from the whole-chord post-events AND from each
         // member (<c@staccato e@accent>), and the two are DIFFERENT GROBS in
         // LilyPond, not one list: a chord/note-level script is Script_engraver's,

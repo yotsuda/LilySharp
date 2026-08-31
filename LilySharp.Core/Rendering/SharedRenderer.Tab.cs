@@ -296,7 +296,7 @@ internal static partial class SharedRenderer
         int firstSoundingIndex = -1;
         if (atLineStart)
             for (int j = 0; j < measure.Items.Length; j++)
-                if (measure.Items[j] is NoteItem or ChordItem)
+                if (measure.Items[j] is (NoteItem or ChordItem) and not { GraceTime: true })
                 {
                     firstSoundingIndex = j;
                     break;
@@ -316,6 +316,11 @@ internal static partial class SharedRenderer
         for (int i = 0; i < measure.Items.Length; i++)
         {
             var item = measure.Items[i];
+            // Grace time is drawn by GraceNoteEngraver, which knows to draw a tab grace as a
+            // SMALL fret number (GraceNoteLayout.Tuning) — see the notation staff's skip in
+            // SharedRenderer.EnumerateStaffItems for why this one exists and when it goes.
+            if (item.GraceTime)
+                continue;
             double columnX = useColumnTiming
                 ? ml.X + ml.GetXForTiming(currentTiming)
                 : (i < ml.Items.Length ? ml.X + ml.Items[i].X : ml.X);

@@ -71,7 +71,9 @@ internal sealed class VoiceCollector
                 var item = measure.Items[itemIndex];
 
                 // Skip rests for voice column generation (they don't collide)
-                if (item is RestItem)
+                // — and grace time, which collides in its OWN group's frame, not on the
+                // main column grid. See CollectMultipleVoices for the measurement.
+                if (item is RestItem || item.GraceTime)
                     continue;
 
                 var entry = new VoiceEntry(
@@ -119,8 +121,21 @@ internal sealed class VoiceCollector
                 {
                     var item = measure.Items[itemIndex];
 
-                    // Add non-rest items to timeline
-                    if (item is not RestItem)
+                    // Add non-rest items to timeline.
+                    // ⚠️ AND NOT GRACE TIME. A grace takes no measure time, so it lands on
+                    // the moment of the note it leads — putting a THIRD head into a column
+                    // that holds one note from each voice, and the collision solver then
+                    // shifts a head that is nowhere near it: MEASURED, in
+                    // `voice { c''4 c''4 c''2 } { g4 grace { d''16 } g4 g2 }` the UPPER
+                    // voice's second c'' moved 1.04 (a notehead) to the right, on account
+                    // of a grace in the lower one.
+                    // ⚠️ This is not a permanent answer, and HANDOFF §2 U8b is the open
+                    // ticket for the real one: LilyPond DOES collide two simultaneous
+                    // graces with each other (session 308 measured its two accidentals
+                    // stacked at 16.2208 / 17.0831), and Lily# still draws them on top of
+                    // each other. What the ticket needs is a column of grace time, beside
+                    // this one — not grace heads inside this one.
+                    if (item is not RestItem && !item.GraceTime)
                     {
                         var key = new TimelineKey(measureIndex, timePosition);
 

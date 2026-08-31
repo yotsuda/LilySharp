@@ -252,6 +252,16 @@ public sealed record GraceNoteItem
     public int MeasureIndex { get; }
 
     /// <summary>The item index of the main note this grace is attached to.</summary>
+    /// <remarks>
+    /// ⚠️ AN INDEX INTO <see cref="VoiceIndex"/>'S OWN ITEM LIST, which is why that field
+    /// had to exist. Every voice numbers its items from zero, so resolving this against the
+    /// staff's PRIMARY voice returns whatever note happens to share the number — the very
+    /// defect <c>LayoutUtilities.VoiceItemAt</c> was written for on the annotation side. It
+    /// was invisible while a grace body was not walked: the index then counted the same
+    /// items in both voices up to the grace, so the two answers coincided by accident.
+    /// Walking the body (session 310) makes a lower voice's grace shift ITS OWN indices and
+    /// not the primary's, and the accident ends.
+    /// </remarks>
     public int MainNoteItemIndex { get; }
 
     /// <summary>Source position for click-to-source mapping.</summary>
@@ -261,6 +271,19 @@ public sealed record GraceNoteItem
     /// routing; see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>
     public int StaffIndex { get; }
 
+    /// <summary>
+    /// Which voice OF THAT STAFF wrote this grace — the list
+    /// <see cref="MainNoteItemIndex"/> counts. 0 for the primary voice, which is every
+    /// score that writes no <c>voice { }</c> span.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:368 — <c>Grace_engraver</c> is consisted by
+    /// <c>\name Voice</c>, so a grace belongs to one voice exactly as a script or a
+    /// dynamic does; Lily# records it for the same reason those do (see
+    /// <c>LayoutUtilities.VoiceItemAt</c>, whose remarks carry the measurement).
+    /// </remarks>
+    public int VoiceIndex { get; }
+
     /// <summary>Creates a grace note group attached to a main note.</summary>
     public GraceNoteItem(
         GraceNoteType type,
@@ -268,7 +291,8 @@ public sealed record GraceNoteItem
         int measureIndex,
         int mainNoteItemIndex,
         int sourcePosition,
-        int staffIndex = 0)
+        int staffIndex = 0,
+        int voiceIndex = 0)
     {
         Type = type;
         Columns = columns;
@@ -276,6 +300,7 @@ public sealed record GraceNoteItem
         MainNoteItemIndex = mainNoteItemIndex;
         SourcePosition = sourcePosition;
         StaffIndex = staffIndex;
+        VoiceIndex = voiceIndex;
     }
 
     /// <summary>

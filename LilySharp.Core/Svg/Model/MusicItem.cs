@@ -95,8 +95,31 @@ public abstract record MusicItem
     /// <inheritdoc/>
     public override int GetHashCode() => ModelIdentity.HashOf(this);
 
-    /// <summary>The duration of this item as a fraction of a whole note.</summary>
-    public abstract Fraction Duration { get; }
+    /// <summary>
+    /// How much MEASURE TIME this item takes, as a fraction of a whole note — zero in grace
+    /// time, whatever <see cref="SoundingDuration"/> says outside it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE GRACE ARM IS HERE AND NOWHERE ELSE, because the clock is read in far too many
+    /// walks to patch one at a time: the item springs, the column grid, the measure-fill
+    /// check, the beam grouper and the bar-completion rule all step by this number, and a
+    /// grace note that reported its WRITTEN sixteenth to them shoved every column after it
+    /// along by a sixteenth's worth of time (measured: that alone moved nine snapshots and
+    /// nineteen ledger points the day the grace body started being walked).
+    /// <para>
+    /// LILYPOND-REF: lily/moment.cc / lily/grace-engraver.cc — LilyPond keeps grace time in a
+    /// SEPARATE part of the Moment (<c>grace_part_</c>) precisely so the main clock does not
+    /// see it. <see cref="GraceTime"/> is the Lily# form of standing in that part.
+    /// </para>
+    /// </remarks>
+    public Fraction Duration => GraceTime ? Fraction.Zero : SoundingDuration;
+
+    /// <summary>
+    /// The item's own written length before grace time is taken into account — the notation's
+    /// answer, which a grace note keeps (its head, flag and beam count are read from
+    /// <c>BaseDuration</c> and its dots, and those are unaffected).
+    /// </summary>
+    protected abstract Fraction SoundingDuration { get; }
 
     /// <summary>
     /// Which engraving voice engraved this item; <see cref="VoiceContextId.Default"/> for
@@ -141,6 +164,33 @@ public abstract record MusicItem
     /// </para>
     /// </remarks>
     public bool BeginsCueRegion { get; init; }
+
+    /// <summary>
+    /// True when this item was engraved in GRACE TIME — inside a <c>grace { }</c> body. It
+    /// takes no measure time (<see cref="Collector.MeasureBuilder.EnterGraceTime"/> adds it
+    /// without duration) and it is drawn at the grace font size.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A TIME DOMAIN, NOT A CONTEXT, and the distinction is LilyPond's own, read in its
+    /// source at v2.26.0 (session 309): <c>ly/engraver-init.ly:432</c> declares
+    /// <c>\name CueVoice</c>, so a cue IS a context and Lily# gives it
+    /// <see cref="VoiceContextId.Cue"/>; <c>grep -c "name Grace"</c> over that same file is
+    /// <c>0</c>. What a grace has instead is <c>\consists Grace_engraver</c> INSIDE
+    /// <c>\name Voice</c> (:368, commented "sets properties"), and
+    /// <c>lily/grace-engraver.cc</c> makes no grob at all — its <c>process_music</c> only
+    /// calls <c>consider_change_grace_settings</c>. A grace note is therefore an ORDINARY
+    /// event of an ordinary Voice, engraved by the same Note_heads / Stem / Beam / Slur /
+    /// Tie / Script engravers as everything else, with the font switched underneath it.
+    /// <para>
+    /// ⚠️ THIS IS WHY THERE IS NO <c>VoiceContextId.Grace</c>: adding one would carve into
+    /// the model a separation LilyPond does not have — an invention, not a port.
+    /// </para>
+    /// <para>
+    /// ⚠️ ON THE BASE for the reason <see cref="BeginsCueRegion"/> is: the readers hold
+    /// <c>MusicItem</c>, and a note, a chord and a rest can all stand in grace time.
+    /// </para>
+    /// </remarks>
+    public bool GraceTime { get; init; }
 
     /// <summary>Source position in the syntax tree for click-to-source mapping.
     /// <c>init</c> (and declared on the base, not per subtype) so the collect
@@ -415,12 +465,13 @@ public sealed record NoteItem : MusicItem
     /// <summary>
     /// Time scale applied by enclosing tuplets (base/ratio, compounded when
     /// nested); 1 outside tuplets. <see cref="BaseDuration"/> stays the
-    /// written notation; <see cref="Duration"/> is actual time.
+    /// written notation; <see cref="SoundingDuration"/> is actual time (and
+    /// <see cref="MusicItem.Duration"/> is that, or zero in grace time).
     /// </summary>
     public Fraction TimeScale { get; init; } = new Fraction(1, 1);
 
     /// <summary>The sounding duration with dots and tuplet <see cref="TimeScale"/> applied, as a fraction of a whole note.</summary>
-    public override Fraction Duration =>
+    protected override Fraction SoundingDuration =>
         (Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration) * TimeScale;
 
     /// <summary>
@@ -662,7 +713,7 @@ public sealed record RestItem : MusicItem
     public bool HasSlurEnd { get; init; }
 
     /// <summary>The sounding duration with dots and tuplet <see cref="TimeScale"/> applied, as a fraction of a whole note.</summary>
-    public override Fraction Duration =>
+    protected override Fraction SoundingDuration =>
         (Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration) * TimeScale;
 
     /// <summary>Initializes a new <see cref="RestItem"/>.</summary>
@@ -824,7 +875,7 @@ public sealed record ChordItem : MusicItem
     public Fraction TimeScale { get; init; } = new Fraction(1, 1);
 
     /// <summary>The sounding duration with dots and tuplet <see cref="TimeScale"/> applied, as a fraction of a whole note.</summary>
-    public override Fraction Duration =>
+    protected override Fraction SoundingDuration =>
         (Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration) * TimeScale;
 
     /// <summary>Beam-resolved stem direction; see <see cref="NoteItem.StemUpOverride"/>.</summary>
@@ -895,7 +946,7 @@ public sealed record ClefChangeItem : MusicItem
     public ClefType NewClef { get; }
 
     /// <summary>Always <c>Fraction.Zero</c> — the clef change occupies horizontal space but no time.</summary>
-    public override Fraction Duration => Fraction.Zero;
+    protected override Fraction SoundingDuration => Fraction.Zero;
 
     /// <summary>
     /// True for the two clefs a <c>cue &lt;clef&gt; { … }</c> region raises — LilyPond's
@@ -939,7 +990,7 @@ public sealed record KeySignatureChangeItem : MusicItem
     public KeySignature PreviousKey { get; }
 
     /// <summary>Always <c>Fraction.Zero</c> — the key change occupies horizontal space but no time.</summary>
-    public override Fraction Duration => Fraction.Zero;
+    protected override Fraction SoundingDuration => Fraction.Zero;
 
     /// <summary>Initializes a new <see cref="KeySignatureChangeItem"/>.</summary>
     public KeySignatureChangeItem(KeySignature newKey, KeySignature previousKey, int sourcePosition)
@@ -996,7 +1047,7 @@ public sealed record TimeSignatureChangeItem : MusicItem
     public bool Blanked { get; init; }
 
     /// <summary>Always <c>Fraction.Zero</c> — the time-signature change occupies horizontal space but no time.</summary>
-    public override Fraction Duration => Fraction.Zero;
+    protected override Fraction SoundingDuration => Fraction.Zero;
 
     /// <summary>Initializes a new <see cref="TimeSignatureChangeItem"/>.</summary>
     public TimeSignatureChangeItem(TimeSignature newTime, int sourcePosition)

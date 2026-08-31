@@ -256,6 +256,14 @@ internal sealed class MeasureLayouter
             var t = Fraction.Zero;
             foreach (var item in m.Items)
             {
+                // Grace time is spaced by its own machine (SpacingRules.Grace), which
+                // reserves the group's approach in front of the MAIN note. Letting a grace
+                // column into this bucket would raise the main column's rod off a grace
+                // notehead — LilyPond's paper column at that moment holds the main note's
+                // grobs, and the grace's live in the grace part of the moment
+                // (LILYPOND-REF: lily/spacing-basic.cc:163-180 Spacing_spanner::note_spacing).
+                if (item.GraceTime)
+                    continue;
                 if (!timingToItems.TryGetValue(t, out var items))
                 {
                     items = new List<MusicItem>();
@@ -287,7 +295,12 @@ internal sealed class MeasureLayouter
         var acc = Fraction.Zero;
         foreach (var item in m.Items)
         {
-            if (acc == t && !SpacingRules.IsMidMeasureChangeColumn(item))
+            // A grace column shares the FOLLOWING note's timing and takes no measure time of
+            // its own, so at the main note's moment it stands FIRST in the item list — and
+            // returning it here measured the separation rod from a grace notehead instead of
+            // the main one. Skipped for the same reason a mid-measure change is: neither is
+            // the musical column being spaced.
+            if (acc == t && !item.GraceTime && !SpacingRules.IsMidMeasureChangeColumn(item))
                 return item;
             if (acc > t) break;
             acc += item.Duration;

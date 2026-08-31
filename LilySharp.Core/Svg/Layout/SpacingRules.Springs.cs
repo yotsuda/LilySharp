@@ -481,7 +481,15 @@ internal static partial class SpacingRules
         var cur = Fraction.Zero;
         foreach (var item in measure.Items)
         {
-            if (cur == t && item is NoteItem or ChordItem)
+            // ⚠️ NOT A GRACE COLUMN. A grace takes no measure time, so it shares the moment of
+            // the note it leads and stands BEFORE that note in the item list — first past the
+            // post for a scan shaped like this one. The wish being refined belongs to the MAIN
+            // note's column (LilyPond's Note_spacing reads the stem of the column the wish was
+            // filed from, and a grace's stem lives in the grace part of the moment), so taking
+            // a grace stem here priced the pair off the wrong stem: MEASURED, it moved
+            // `c4 grace { d16 } f4 g4 a4`'s f→g spring by 0.250000 while the grace's own
+            // approach stayed exact.
+            if (cur == t && !item.GraceTime && item is NoteItem or ChordItem)
                 return item;
             if (cur > t)
                 return null;

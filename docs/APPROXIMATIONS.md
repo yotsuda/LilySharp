@@ -200,7 +200,7 @@
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
 - **:56** the distance is taken at — and NO ledger point moves with it. An output change no point
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
-- **:754** constant with a name, and no ledger point reached it.
+- **:768** constant with a name, and no ledger point reached it.
 ### `LilySharp.Core/Svg/Layout/SpacingRules.Grace.cs`
 - **:240** observed by: NOTHING. No ledger point covers a grace spacer, and the drawn
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
@@ -246,20 +246,20 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Prefix.cs`
 - **:497** LILYSHARP-OWN: the '+' of a compound meter's numerator, which LilyPond
 ### `LilySharp.Core/Rendering/SharedRenderer.Tab.cs`
-- **:790** ⚠️ LILYSHARP-OWN, the other half: which x IS the centre when the digits do not
+- **:795** ⚠️ LILYSHARP-OWN, the other half: which x IS the centre when the digits do not
 ### `LilySharp.Core/Rendering/TextFontMetrics.cs`
 - **:476** LILYSHARP-OWN: LilyPond has no equivalent refusal, and cannot — it resolves through
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
 - **:361** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Svg/Collector/BeamDetector.cs`
-- **:950** LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
-- **:980** LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's
-- **:1063** LILYSHARP-OWN guard: a bracket whose indices do not address this voice's
+- **:968** LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
+- **:998** LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's
+- **:1081** LILYSHARP-OWN guard: a bracket whose indices do not address this voice's
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:1889** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:3772** LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
+- **:1906** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:3805** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
 - **:67** LILYSHARP-OWN: the DEFAULT five is LilyPond's (scm/define-grobs.scm:3396,
 ### `LilySharp.Core/Svg/Collector/StaffAccidentalColumns.cs`
@@ -368,9 +368,9 @@
 - **:266** ⚠️ LILYSHARP-OWN: THE SELECTION IS DELIBERATELY THE OLD ONE, and it is a KNOWN
 - **:329** ⚠️ LILYSHARP-OWN: THE FALLBACK TO THE DERIVED VALUE IS A SECOND ANSWER FOR ONE
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
-- **:440** LILYSHARP-OWN, a DECIDED divergence (user decision 2026-08-20, HANDOFF §3):
+- **:454** LILYSHARP-OWN, a DECIDED divergence (user decision 2026-08-20, HANDOFF §3):
 ### `LilySharp.Core/Svg/Layout/SpacingRules.MeasureSprings.cs`
-- **:612** LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
+- **:618** LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
 ### `LilySharp.Core/Svg/Layout/StaffSize.cs`
 - **:62** ⚠️ LILYSHARP-OWN: THIS LINE IS A TYPE ENUMERATION, and it is the one part of this file
 ### `LilySharp.Core/Svg/Layout/TabChordColumns.cs`

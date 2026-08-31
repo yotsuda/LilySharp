@@ -192,6 +192,18 @@ internal static partial class SharedRenderer
             {
                 var item = measure.Items[itemIdx];
 
+                // GRACE TIME IS NOT DRAWN HERE — it is drawn by GraceNoteEngraver, from the
+                // group's own GraceNoteItem, at the grace font. Since session 310 the grace
+                // body is walked by the ordinary walker, so its columns ARE measure items and
+                // reach this loop; drawing them here too would print every grace note twice,
+                // the second time full size on the main column grid.
+                // ⚠️ THIS SKIP IS SCAFFOLDING AND GOES AWAY WITH THE REST OF IT: when the
+                // ordinary engravers learn the grace font (HANDOFF §2 U8 ⒝2), this loop is
+                // exactly where a grace note SHOULD be drawn, and the side model it is
+                // deferring to is what disappears.
+                if (item.GraceTime)
+                    continue;
+
                 // A meter change opening the first measure of a (non-first)
                 // system is drawn in the system-start prefix (see DrawSystem),
                 // not as a measure item — skip its in-measure copy here.

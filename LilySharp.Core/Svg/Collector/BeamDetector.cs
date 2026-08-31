@@ -506,6 +506,13 @@ internal sealed class BeamDetector
             for (int ii = firstItem; ii <= lastItem; ii++)
             {
                 var item = measure.Items[ii];
+                // Stepped over, as in the per-measure pass — and with no position advance,
+                // a grace taking no measure time.
+                if (item.GraceTime)
+                {
+                    pendingConsumed.Add((mi, ii));
+                    continue;
+                }
                 if (IsBeamable(item))
                 {
                     allEntries.Add((item, ii, positionInMeasure, mi));
@@ -722,6 +729,17 @@ internal sealed class BeamDetector
         {
             var item = measure.Items[i];
             var duration = GetDuration(item);
+
+            // ⚠️ GRACE TIME IS STEPPED OVER, NOT ENDED ON, and the difference is a whole
+            // beam. `IsBeamable` answering false for a grace column would make it act like a
+            // rest — the one thing that CLOSES the run being built — so a grace written in
+            // the middle of a beamed run split the run in two: MEASURED on the reader's
+            // `Something That I Want.lys`, one beam over four notes became two over two.
+            // LilyPond never sees the question: a grace's stem is in the grace part of the
+            // moment and its Beam_engraver is the grace group's, so the main run's
+            // Auto_beam_engraver is not offered it at all. Stepping over is that.
+            if (item.GraceTime)
+                continue;
 
             // A rest, a note too long to be beamed, and a stem that already carries a beam of
             // its own (manual, or a cross-measure pair claimed by the first pass) all end the
@@ -1214,6 +1232,17 @@ internal sealed class BeamDetector
 
     private bool IsBeamable(MusicItem item)
     {
+        // GRACE TIME IS BEAMED BY ITS OWN GROUP, NOT BY THIS ONE. A grace run's beam is
+        // quanted inside GraceNoteEngraver (the BeamedPrefix rule session 308 measured
+        // against LilyPond), and grace columns take no measure time — letting them into the
+        // main voice's grouper would draw a second beam AND let a grace note join the run of
+        // the notes around it, which LilyPond never does: its Beam_engraver sits in the
+        // Voice, but a grace's beam is bounded by the grace group.
+        // ⚠️ SCAFFOLDING, like the renderer's skip: HANDOFF §2 U8 ⒝2 folds the grace beam
+        // INTO this grouper rather than keeping two of them.
+        if (item.GraceTime)
+            return false;
+
         // A two-note tremolo pair beams regardless of its written duration
         // (halves joined by the subdivision's beams).
         if (item is NoteItem { TremoloPairBeams: > 0 } or ChordItem { TremoloPairBeams: > 0 })

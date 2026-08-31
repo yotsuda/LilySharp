@@ -108,7 +108,8 @@ internal static class GraceNoteEngraver
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
         Dictionary<int, double>? staffYByIndex = null,
         Dictionary<int, Staff>? staffByIndex = null,
-        ImmutableArray<ArticulationItem> articulations = default)
+        ImmutableArray<ArticulationItem> articulations = default,
+        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null)
     {
         if (graceNotes.IsDefaultOrEmpty)
             return ImmutableArray<GraceNoteLayout>.Empty;
@@ -133,7 +134,20 @@ internal static class GraceNoteEngraver
             // Resolve this grace's OWN staff (multi-staff): its measures (for the
             // main-note X / accidental) and the staff's vertical offset (carried
             // to the renderer via StaffYOffset, since it recomputes note Y).
-            var graceMeasures = LayoutUtilities.ResolveStaffMeasures(measuresByStaff, grace.StaffIndex, score.Voice.Measures);
+            // ⚠️ TWO STEPS, NOT ONE: the staff, then the VOICE inside it. MainNoteItemIndex
+            // counts the items of the voice that wrote the grace, and every voice numbers
+            // from zero — resolving it against the staff's primary stream names whatever
+            // note happens to share the ordinal. This is the same two-step the dynamics and
+            // the scripts already do (DynamicEngraver / ArticulationEngraver: ResolveStaff
+            // then ResolveVoice); the grace was the third reader with the same shape and it
+            // was still doing one step. Invisible until session 310, because before the
+            // grace body was walked a lower voice's grace shifted NEITHER voice's indices.
+            var graceVoices = voicesByStaff != null
+                && voicesByStaff.TryGetValue(grace.StaffIndex, out var gv) ? gv : score.Voices;
+            var graceMeasures = LayoutUtilities.ResolveVoiceMeasures(
+                graceVoices, grace.VoiceIndex,
+                LayoutUtilities.ResolveStaffMeasures(
+                    measuresByStaff, grace.StaffIndex, score.Voice.Measures));
             double staffOffset = staffYByIndex != null
                 && staffYByIndex.TryGetValue(grace.StaffIndex, out var so) ? so : 0;
             // Tab staves render grace notes as small fret numbers, not noteheads.

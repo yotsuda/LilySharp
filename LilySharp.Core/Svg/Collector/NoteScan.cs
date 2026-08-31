@@ -37,17 +37,29 @@ internal static class NoteScan
         int startItemIdx,
         Func<MusicItem, bool> match)
     {
+        // GRACE TIME IS INVISIBLE TO THIS SCAN, for the same reason VoiceScan.WalkVoiceItems
+        // steps past it: every caller is looking for the note a span REACHES, and a grace
+        // takes no measure time, so it stands between a note and that note's target.
+        // MEASURED: `d4@glissando grace { d8 } c` slid to the GRACE instead of the c, and
+        // being written at the same pitch the line came out horizontal — the same defect a
+        // tie would show as a tie into a note the writer did not tie to.
+        // ⚠️ SCAFFOLDING; it goes with the rest when ⒝2 lets the ordinary engravers draw
+        // grace time (HANDOFF §2 U8), at which point a grace note IS a legal span bound —
+        // which is exactly what LilyPond makes of one.
+        static bool Reachable(MusicItem item, Func<MusicItem, bool> match)
+            => !item.GraceTime && match(item);
+
         // Rest of the start measure, then every following measure from its first item.
         var current = measures[startMeasureIdx];
         for (int i = startItemIdx + 1; i < current.Items.Length; i++)
-            if (match(current.Items[i]))
+            if (Reachable(current.Items[i], match))
                 return (startMeasureIdx, i, current.Items[i]);
 
         for (int m = startMeasureIdx + 1; m < measures.Length; m++)
         {
             var measure = measures[m];
             for (int i = 0; i < measure.Items.Length; i++)
-                if (match(measure.Items[i]))
+                if (Reachable(measure.Items[i], match))
                     return (m, i, measure.Items[i]);
         }
 
