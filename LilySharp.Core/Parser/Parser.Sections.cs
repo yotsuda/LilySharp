@@ -22,18 +22,21 @@ namespace LilySharp.Core.Parser;
 internal sealed partial class Parser
 {
     /// <summary>
-    /// Parse section declaration: section Name { ... }
+    /// Parse section declaration: <c>section Name { ... }</c> — or <c>section ~Name { ... }</c>,
+    /// which flips this section's label default
+    /// (<see cref="SectionDeclarationSyntax.LabelHiddenByDefault"/>).
     /// </summary>
     private SectionDeclarationGreen ParseSectionDeclaration()
     {
         var keyword = Expect(SyntaxKind.SectionKeyword);
+        var tilde = Check(SyntaxKind.Tilde) ? Advance() : null;
         var name = ExpectPartName();
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
         var items = ParseList(SyntaxKind.CloseBrace, ParseSectionItem);
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new SectionDeclarationGreen(keyword, name, openBrace, [.. items], closeBrace);
+        return new SectionDeclarationGreen(keyword, tilde, name, openBrace, [.. items], closeBrace);
     }
 
     private GreenNode? ParseSectionItem()
@@ -192,7 +195,11 @@ internal sealed partial class Parser
                 break; // no syllable/barline consumed → at the section's close
         }
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new SectionDeclarationGreen(keyword, name, openBrace, [.. measures], closeBrace);
+        // No tilde slot content here on purpose: a lyric track's inner section is a CELL of
+        // words, never a structure section, so it has no label to hide or show. Writing
+        // `lyrics ja { section ~A { … } }` still reaches ExpectPartName's error, which is the
+        // answer — the flip is a form-level idea.
+        return new SectionDeclarationGreen(keyword, null, name, openBrace, [.. measures], closeBrace);
     }
 
 
@@ -254,7 +261,9 @@ internal sealed partial class Parser
             items.Add(item ?? SkipStrayChordToken());
         }
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new SectionDeclarationGreen(keyword, name, openBrace, [.. items], closeBrace);
+        // No tilde, for the same reason as the lyric cell above: a chord track's inner
+        // section is a cell of symbols, not a structure section with a label.
+        return new SectionDeclarationGreen(keyword, null, name, openBrace, [.. items], closeBrace);
     }
 
     /// <summary>

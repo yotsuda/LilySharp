@@ -62,8 +62,9 @@ internal static class FormWalk
 {
     internal abstract record Item;
 
-    /// <summary>A plain or silent (<c>~</c>) section reference. For a silent one,
-    /// <see cref="DisplayLabel"/> is null — the grammar gives it no label slot.
+    /// <summary>A plain or silent (<c>~</c>) section reference. Both spellings can park a
+    /// quoted <see cref="DisplayLabel"/>; whether it is PRINTED is the label rule's
+    /// question (Semantics.SectionLabelRule), not this reader's.
     /// <paramref name="OctaveOffset"/> is the net shift from the reference's own trailing
     /// <c>'</c>/<c>,</c> marks, which BOTH spellings carry (the tilde hides the label,
     /// never the music) and which every consumer has to apply to the play's frame.</summary>
@@ -116,10 +117,16 @@ internal static class FormWalk
                 break;
             case { Kind: SyntaxKind.SilentSectionReference }
                     when child.GetChild(1) is SyntaxTokenNode name:
-                // The silent spelling has no red class of its own, so the marks are counted
-                // here off the SAME function the plain one's property calls.
-                items.Add(new SectionRef(name.Text, null, Silent: true, child,
-                    SyntaxFacts.NetOctaveMarks(child)));
+                // The silent spelling has no red class of its own, so the marks and the
+                // parked label are read here off the SAME functions the plain one's
+                // properties call.
+                // ⚠️ THE LABEL USED TO BE DROPPED HERE (`null`), and that was harmless only
+                // while `~` always meant HIDE: a label nobody would print need not travel.
+                // Since 2026-08-31 a `~` reference to a `section ~A` SHOWS, so the label it
+                // parked is the one to print — measured, `form { ~A "shown" }` printed the
+                // section's NAME until this line carried it.
+                items.Add(new SectionRef(name.Text, SyntaxFacts.UnquotedLabel(child),
+                    Silent: true, child, SyntaxFacts.NetOctaveMarks(child)));
                 break;
             case FormRepeatBlockSyntax rb:
                 items.Add(ReadRepeat(rb));

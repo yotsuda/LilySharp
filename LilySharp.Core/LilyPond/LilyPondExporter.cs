@@ -942,7 +942,8 @@ public sealed class LilyPondExporter
                 // SectionName), with the same boundary key-restore a formed play gets.
                 var headerMusic = SectionHeaderMusic(entry.Section).ToList();
                 result.Add(new SectionPlayMarker(
-                    entry.Section.SectionName,
+                    Semantics.SectionLabelRule.LabelFor(entry.Section, referenceIsSilent: false,
+                        displayLabel: null, sectionName: entry.Section.SectionName),
                     headerMusic.Any(h => h is KeySignatureSyntax),
                     headerMusic.Any(h => h is TimeSignatureSyntax)));
                 result.AddRange(headerMusic);
@@ -1111,8 +1112,8 @@ public sealed class LilyPondExporter
             // notes as a plain reference.
             case FormWalk.SectionRef s:
                 AppendSection(s.Name, byName, result,
-                    markLabel: s.Silent ? null
-                        : (s.DisplayLabel ?? s.Name) is { Length: > 0 } lbl ? lbl : null,
+                    markLabel: Semantics.SectionLabelRule.LabelFor(
+                        Declaration(s.Name, byName), s.Silent, s.DisplayLabel, s.Name),
                     octaveOffset: s.OctaveOffset);
                 break;
 
@@ -1132,7 +1133,9 @@ public sealed class LilyPondExporter
             // ⇒ A "mirrors X" comment is a claim about X AT THE TIME IT WAS WRITTEN.
             case FormWalk.Ending { Node: var alt }:
                 AppendSection(alt.SectionName.Text, byName, result,
-                    markLabel: alt.IsSilent ? null : alt.DisplayLabel ?? alt.SectionName.Text,
+                    markLabel: Semantics.SectionLabelRule.LabelFor(
+                        Declaration(alt.SectionName.Text, byName), alt.IsSilent,
+                        alt.DisplayLabel, alt.SectionName.Text),
                     octaveOffset: alt.OctaveOffset);
                 break;
 
@@ -1164,6 +1167,15 @@ public sealed class LilyPondExporter
     /// there every declaration is played, header-only ones included, so the registry
     /// would hand the same directive to each of them.
     /// </remarks>
+    /// <summary>The declaration a form item names, or null when the form names a section
+    /// the file does not declare (AppendSection returns without emitting in that case, so
+    /// the label question is moot — but SectionLabelRule still has to be asked ABOUT
+    /// something, and null is its documented "ordinary default").</summary>
+    private static SectionDeclarationSyntax? Declaration(
+        string name,
+        Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName)
+        => byName.TryGetValue(name, out var entry) ? entry.Section : null;
+
     private void AppendSection(
         string name,
         Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName,
@@ -1265,7 +1277,9 @@ public sealed class LilyPondExporter
         // green built below is emitted whatever IsSilent says, because an ending with no
         // bracket is spelled by leaving the `[` out. See the note on that case.
         AppendSection(ending.SectionName.Text, byName, items,
-            markLabel: ending.IsSilent ? null : ending.DisplayLabel ?? ending.SectionName.Text,
+            markLabel: Semantics.SectionLabelRule.LabelFor(
+                Declaration(ending.SectionName.Text, byName), ending.IsSilent,
+                ending.DisplayLabel, ending.SectionName.Text),
             octaveOffset: ending.OctaveOffset);
 
         var green = new InternalSyntax.InlineVoltaGreen(

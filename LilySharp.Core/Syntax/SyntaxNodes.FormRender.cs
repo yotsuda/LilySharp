@@ -37,8 +37,35 @@ public sealed partial class SectionDeclarationSyntax : SyntaxNode
 
     /// <summary>The <c>section</c> keyword token.</summary>
     public SyntaxTokenNode SectionKeyword => (SyntaxTokenNode)GetChild(0)!;
+
     /// <summary>The section name token.</summary>
-    public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(1)!;
+    /// <remarks>
+    /// Slot 2, not 1: slot 1 is the optional <c>~</c> (see <see cref="LabelHiddenByDefault"/>)
+    /// and an ABSENT tilde still occupies it as a null, the way every optional slot in this
+    /// tree does. ⚠️ Written first as "1 or 2, whichever is not a tilde", which threw on every
+    /// section without one — a null is not a tilde, and it is not the name either.
+    /// </remarks>
+    public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(2)!;
+
+    /// <summary>
+    /// True for <c>section ~A { … }</c>: this section carries STRUCTURE rather than a
+    /// rehearsal letter, so its label default is FLIPPED — a plain reference prints nothing
+    /// and a <c>~</c> reference prints the label.
+    /// </summary>
+    /// <remarks>
+    /// Owner's decision, 2026-08-31. The point is that "this is structure" is a property of
+    /// the SECTION, so it is written once on the declaration instead of being repeated at
+    /// every reference — the author's books hold 2309 bare references against 260 tilde ones,
+    /// and a section cut only to carry a repeat edge wants none of the 2309.
+    /// ⚠️ The consequence, named on purpose: in a book that declares <c>section ~A</c>,
+    /// <c>form { ~A }</c> is the line that SHOWS. The tilde keeps one meaning — "the other
+    /// one than the default" — rather than gaining a second.
+    /// ⚠️ One reading of the rule this does NOT make: <c>~</c> is not "never label". A
+    /// structural section can still be labelled at one occurrence, which is why the flip was
+    /// chosen over an absolute suppression (that would force splitting the section in two).
+    /// </remarks>
+    public bool LabelHiddenByDefault =>
+        GetChild(1) is SyntaxTokenNode { Kind: SyntaxKind.Tilde };
 
     /// <summary>
     /// Gets the section name as a string.
@@ -170,29 +197,7 @@ public sealed partial class SectionReferenceSyntax : SyntaxNode
     /// LILYPOND-REF: LilyPond's analog is a manual <c>\mark "text"</c> per
     /// occurrence — display labels are occurrence-level events there too.
     /// </remarks>
-    public string? DisplayLabel
-    {
-        get
-        {
-            // Found by KIND, not by index: the octave marks sit between the name and the
-            // label (source order is `B' "reprise"`), so on a shifted reference slot 1 is
-            // a mark and the label is wherever the marks stop.
-            SyntaxTokenNode? token = null;
-            for (int i = 1; i < SlotCount; i++)
-                if (GetChild(i) is SyntaxTokenNode t
-                    && t.Kind is not (SyntaxKind.Apostrophe or SyntaxKind.Comma))
-                {
-                    token = t;
-                    break;
-                }
-            if (token == null)
-                return null;
-            var text = token.Text;
-            if (text.StartsWith("\"") && text.EndsWith("\"") && text.Length >= 2)
-                return text.Substring(1, text.Length - 2);
-            return text;
-        }
-    }
+    public string? DisplayLabel => SyntaxFacts.UnquotedLabel(this);
 
     /// <summary>
     /// Net octave shift from the trailing marks (<c>'</c> = +1, <c>,</c> = -1) — the same
@@ -323,27 +328,7 @@ public sealed partial class FormAlternativeSyntax : SyntaxNode
     /// label slot sits right after the section name (slot[7] with a separator,
     /// slot[5] without).
     /// </summary>
-    public string? DisplayLabel
-    {
-        get
-        {
-            if (!HasBracket) return null;
-            // By KIND: the octave marks sit between the name and the label, so the label's
-            // index is no longer fixed. A StringLiteral can only be the label here.
-            SyntaxTokenNode? token = null;
-            for (int i = SectionNameSlot + 1; i < SlotCount; i++)
-                if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } t)
-                {
-                    token = t;
-                    break;
-                }
-            if (token == null) return null;
-            var text = token.Text;
-            if (text.StartsWith("\"") && text.EndsWith("\"") && text.Length >= 2)
-                return text.Substring(1, text.Length - 2);
-            return text;
-        }
-    }
+    public string? DisplayLabel => HasBracket ? SyntaxFacts.UnquotedLabel(this) : null;
 
     /// <summary>
     /// Net octave shift from the trailing marks (<c>[1. B']</c> = +1), the same spelling

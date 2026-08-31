@@ -857,6 +857,21 @@ string suppresses the mark (like `~Name`):
 form main { Intro Main Main "Main (reprise)" Coda }
 ```
 
+**Label defaults.** A section prints its name as a rehearsal label, and a reference's
+`~` hides it. A section that only carries STRUCTURE — one cut to hold a repeat edge, say
+— declares itself with the tilde instead, and its default flips:
+
+```
+section ~Bridge { melody { c4 d e f | } }
+form main { A ~Bridge C }
+```
+
+`Bridge` prints no label wherever it is referenced plainly; the `~` on the reference asks
+for the other default, so the line above is the one that DOES print it. The tilde means
+the same thing at both sites — "the other one than the default" — and an empty quoted
+label (`A ""`) still suppresses the mark under either. A label written on a play that
+prints none is reported (LYS0012).
+
 **Octave marks on a reference.** A section boundary reopens the relative frame at the
 part's anchor (and reverts the octave mode), so a section written for one register plays
 in that register wherever it is quoted. A trailing `'` or `,` on the REFERENCE moves the

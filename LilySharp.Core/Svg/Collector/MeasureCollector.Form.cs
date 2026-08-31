@@ -118,7 +118,7 @@ public sealed partial class MeasureCollector
                         if (live)
                         {
                             RecordSectionStart(reference.SectionName, builder.CurrentMeasureIndex);
-                            builder.SectionLabel = ResolveSectionLabel(reference);
+                            builder.SectionLabel = LabelForReference(reference);
                             builder.SectionLabelPosition = SectionDeclPos(reference.SectionName);
                         }
                         ProcessSection(section, processNodes, builder, reference.OctaveOffset);
@@ -135,7 +135,7 @@ public sealed partial class MeasureCollector
                     if (live)
                     {
                         RecordSectionStart(silentName.Text, builder.CurrentMeasureIndex);
-                        builder.SectionLabel = null;
+                        builder.SectionLabel = LabelForSilentReference(silent, silentName.Text);
                         builder.SectionLabelPosition = SectionDeclPos(silentName.Text);
                     }
                     ProcessSection(silentSection, processNodes, builder,
@@ -168,8 +168,7 @@ public sealed partial class MeasureCollector
                         // that had not been taught.
                         if (live)
                         {
-                            builder.SectionLabel = alt.IsSilent
-                                ? null : alt.DisplayLabel ?? altSectionName;
+                            builder.SectionLabel = LabelForEnding(alt);
                             builder.SectionLabelPosition = SectionDeclPos(altSectionName);
                         }
                         // An ending IS a section reference with a bracket around it, marks
@@ -1087,15 +1086,14 @@ public sealed partial class MeasureCollector
                 switch (child)
                 {
                     case SectionReferenceSyntax r:
-                        AdvanceSection(r.SectionName, ResolveSectionLabel(r), SectionDeclPos(r.SectionName));
+                        AdvanceSection(r.SectionName, LabelForReference(r), SectionDeclPos(r.SectionName));
                         break;
                     case FormAlternativeSyntax alt:
                         // The bracket spans the bars this ending occupies, so it is measured
                         // ACROSS the advance — the same start/end pair ProcessRepeatBlock
                         // reads off the builder (Form.cs:105-125).
                         int altStart = cur;
-                        AdvanceSection(alt.SectionName.Text,
-                            alt.IsSilent ? null : alt.DisplayLabel ?? alt.SectionName.Text,
+                        AdvanceSection(alt.SectionName.Text, LabelForEnding(alt),
                             SectionDeclPos(alt.SectionName.Text));
                         if (alt.HasBracket && !alt.IsSilent && cur > altStart)
                             _voltaBrackets.Add(new VoltaBracketItem(
@@ -1103,7 +1101,7 @@ public sealed partial class MeasureCollector
                         break;
                     case { Kind: SyntaxKind.SilentSectionReference } silent
                             when silent.GetChild(1) is SyntaxTokenNode silentName:
-                        AdvanceSection(silentName.Text, null, SectionDeclPos(silentName.Text));
+                        AdvanceSection(silentName.Text, LabelForSilentReference(silent, silentName.Text), SectionDeclPos(silentName.Text));
                         break;
                 }
             }
@@ -1116,7 +1114,7 @@ public sealed partial class MeasureCollector
                 switch (child)
                 {
                     case SectionReferenceSyntax r when !IsInsideRepeatBlock(r):
-                        AdvanceSection(r.SectionName, ResolveSectionLabel(r), SectionDeclPos(r.SectionName));
+                        AdvanceSection(r.SectionName, LabelForReference(r), SectionDeclPos(r.SectionName));
                         break;
                     // The arm ProcessForm has and this walk did not. Every other arm is
                     // gated on !IsInsideRepeatBlock, so without this one the whole block
@@ -1129,15 +1127,14 @@ public sealed partial class MeasureCollector
                     // It plays exactly once and engraves no bracket; see the same arm in
                     // ProcessForm for the LilyPond reference that settles the play count.
                     case FormAlternativeSyntax alt when !IsInsideRepeatBlock(alt):
-                        AdvanceSection(alt.SectionName.Text,
-                            alt.IsSilent ? null : alt.DisplayLabel ?? alt.SectionName.Text,
+                        AdvanceSection(alt.SectionName.Text, LabelForEnding(alt),
                             SectionDeclPos(alt.SectionName.Text));
                         break;
                     // ~Name — its bars are played, its label is not shown.
                     case { Kind: SyntaxKind.SilentSectionReference } silent
                             when !IsInsideRepeatBlock(silent)
                               && silent.GetChild(1) is SyntaxTokenNode nameTok:
-                        AdvanceSection(nameTok.Text, null, SectionDeclPos(nameTok.Text));
+                        AdvanceSection(nameTok.Text, LabelForSilentReference(silent, nameTok.Text), SectionDeclPos(nameTok.Text));
                         break;
                     case NavigationMarkSyntax nav when !IsInsideRepeatBlock(nav):
                         // Same anchoring as ProcessForm: targets (segno/coda)

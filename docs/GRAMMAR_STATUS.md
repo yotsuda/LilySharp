@@ -34,7 +34,7 @@ All ✅ implemented:
   repeats `|: :|` (`:|*N`), volta endings, navigation marks & spanners (segno/coda/fine/
   D.S./D.C., rit/accel, ottava, trill spanner, pedals), `break`; a section reference and a
   volta ending take the phrase reference's octave marks (`~B'` / `B,` / `[1. B']`), which
-  shift THAT play.
+  shift THAT play. `section ~A { … }` flips that section's label default.
 - **Render targets** — staff, grandStaff, tab, ossia, rows placed by ORDER (score =
   a vertical stack of bands: `chords NAME` directly above a staff aligns the symbols
   over it, a bound `lyrics NAME` row directly below is that staff's verse, a run of

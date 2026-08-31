@@ -127,6 +127,9 @@ internal sealed partial class Parser
     private SectionDeclarationGreen ParsePartInnerSection()
     {
         var keyword = Expect(SyntaxKind.SectionKeyword);
+        // `part m { section ~A { … } }` — the part-major spelling of the same declaration,
+        // so it takes the same label-default flip as the top-level one.
+        var tilde = Check(SyntaxKind.Tilde) ? Advance() : null;
         var name = ExpectPartName();
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
@@ -142,7 +145,7 @@ internal sealed partial class Parser
         }
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new SectionDeclarationGreen(keyword, name, openBrace, [.. items], closeBrace);
+        return new SectionDeclarationGreen(keyword, tilde, name, openBrace, [.. items], closeBrace);
     }
 
     // Legacy part inside score: part Name "display" { staff... }

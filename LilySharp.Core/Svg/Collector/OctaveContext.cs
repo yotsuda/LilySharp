@@ -50,10 +50,15 @@ internal sealed class OctaveContext
 
     // Reset target for section boundaries, the absolute-mode twin of InitialOctave: the
     // base this voice was ARMED with, before anything moved it. Every mutation of
-    // OctaveBase is balanced today (a phrase reference pushes and pops it, a chord anchor
-    // saves and restores it), so restoring it at a boundary is an IDENTITY — until a
+    // OctaveBase is balanced today, so restoring it at a boundary is an IDENTITY — until a
     // section reference carries octave marks, which is when it stops being one: without
     // it `~B'` would leave the base a step high for every section played after B.
+    // ⚠️ "Every mutation" is ENUMERATED, not assumed — the writers are the per-part arming
+    // (MeasureCollector.cs, beside InitialOctave's), the phrase reference's push/pop pair
+    // (EnterPhraseTranspose / ExitPhraseTranspose, against _phraseAbsoluteBaseSaves), the
+    // chord anchor's save/restore pair (MeasureCollector.MusicWalk), the walk checkpoint's
+    // capture/restore pair (CollectWalkProbe), ResetAll, and ResetForSection below. Add an
+    // UNBALANCED seventh and this field stops being the whole answer.
     public int InitialOctaveBase = 4;
 
     // The shift the section REFERENCE that opened the current play wrote (`~B'` = +1), kept

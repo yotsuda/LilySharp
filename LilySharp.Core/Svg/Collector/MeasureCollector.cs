@@ -2428,7 +2428,7 @@ public sealed partial class MeasureCollector
                 if (_resumePending == null && !_suffixSpliced)
                 {
                     RecordSectionStart(section.SectionName, builder.CurrentMeasureIndex);
-                    builder.SectionLabel = section.SectionName;
+                    builder.SectionLabel = LabelForDeclarationOrder(section);
                     builder.SectionLabelPosition = section.Name.Span.Start;
                 }
                 ProcessSection(section, ProcessNodes, builder);
@@ -2595,7 +2595,7 @@ public sealed partial class MeasureCollector
                         if (_resumePending == null && !_suffixSpliced)
                         {
                             RecordSectionStart(reference.SectionName, builder.CurrentMeasureIndex);
-                            builder.SectionLabel = ResolveSectionLabel(reference);
+                            builder.SectionLabel = LabelForReference(reference);
                             builder.SectionLabelPosition = SectionDeclPos(reference.SectionName);
                         }
                         ProcessSection(section, processNodes, builder, reference.OctaveOffset);
@@ -2629,11 +2629,9 @@ public sealed partial class MeasureCollector
                     if (_resumePending == null && !_suffixSpliced)
                     {
                         RecordSectionStart(alt.SectionName.Text, builder.CurrentMeasureIndex);
-                        // `[1. ~B]` hides the label exactly as `~B` does; otherwise the label
-                        // rule is the plain reference's, which is what LilyPondExporter:959
-                        // already writes for this shape (alt.DisplayLabel ?? the name).
-                        builder.SectionLabel = alt.IsSilent
-                            ? null : alt.DisplayLabel ?? alt.SectionName.Text;
+                        // `[1. ~B]` asks the same question `~B` does — the tilde binds to the
+                        // section NAME — and both go through the one rule now.
+                        builder.SectionLabel = LabelForEnding(alt);
                         builder.SectionLabelPosition = SectionDeclPos(alt.SectionName.Text);
                     }
                     ProcessSection(altSection, processNodes, builder, alt.OctaveOffset);
@@ -2696,7 +2694,7 @@ public sealed partial class MeasureCollector
                     if (_resumePending == null)
                     {
                         RecordSectionStart(nameTok.Text, builder.CurrentMeasureIndex);
-                        builder.SectionLabel = null;
+                        builder.SectionLabel = LabelForSilentReference(silent, nameTok.Text);
                         builder.SectionLabelPosition = SectionDeclPos(nameTok.Text);
                     }
                     ProcessSection(silentSection, processNodes, builder,
@@ -2738,11 +2736,43 @@ public sealed partial class MeasureCollector
     private int SectionDeclPos(string sectionName)
         => _sectionState.Sections.TryGetValue(sectionName, out var s) ? s.SectionKeyword.Span.Start : 0;
 
-    private static string? ResolveSectionLabel(SectionReferenceSyntax reference)
-    {
-        var label = reference.DisplayLabel ?? reference.SectionName;
-        return label.Length == 0 ? null : label;
-    }
+    /// <summary>The declaration this name resolves to, or null.</summary>
+    private SectionDeclarationSyntax? SectionDecl(string name)
+        => _sectionState.Sections.TryGetValue(name, out var s) ? s : null;
+
+    // ===== the four shapes a play's label can arrive in, all answered by ONE rule =====
+    //
+    // Semantics.SectionLabelRule holds the sentence; these four only pull its arguments out
+    // of four different node shapes, which genuinely differ (a plain reference, a `~` one, a
+    // volta ending, and the form-less declaration order). Before 2026-08-31 each of them
+    // spelled the RULE too, in seven places here and four in the twin — and on 2026-08-25 one
+    // of them had never been taught `IsSilent` while the twin's comment claimed to mirror it.
+
+    /// <summary>`form { A }` / `form { A "label" }`.</summary>
+    private string? LabelForReference(SectionReferenceSyntax reference)
+        => Semantics.SectionLabelRule.LabelFor(
+            SectionDecl(reference.SectionName), referenceIsSilent: false,
+            reference.DisplayLabel, reference.SectionName);
+
+    /// <summary>`form { ~A }` / `form { ~A "label" }` — the tilde asks for the OTHER
+    /// default, not for "hidden", so the parked label can be the one that prints.</summary>
+    private string? LabelForSilentReference(SyntaxNode silent, string name)
+        => Semantics.SectionLabelRule.LabelFor(
+            SectionDecl(name), referenceIsSilent: true,
+            SyntaxFacts.UnquotedLabel(silent), name);
+
+    /// <summary>`[1. A]` / `[1. ~A]` — the tilde binds to the section NAME, so an ending
+    /// asks the same question a bare reference does.</summary>
+    private string? LabelForEnding(FormAlternativeSyntax alt)
+        => Semantics.SectionLabelRule.LabelFor(
+            SectionDecl(alt.SectionName.Text), alt.IsSilent,
+            alt.DisplayLabel, alt.SectionName.Text);
+
+    /// <summary>No form: sections play in declaration order, each labelled with its own name
+    /// — and a `section ~A` declaration silences its own.</summary>
+    private static string? LabelForDeclarationOrder(SectionDeclarationSyntax section)
+        => Semantics.SectionLabelRule.LabelFor(
+            section, referenceIsSilent: false, displayLabel: null, sectionName: section.SectionName);
 
     /// <summary>
     /// The name of the <c>part</c> a node lives inside, or null if it is not inside

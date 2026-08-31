@@ -42,7 +42,12 @@ internal static class SyntaxFacts
     /// where they started (slot 0 or slot 1), which was a distinction without a difference:
     /// a member pitch's own marks live inside that member's node, so for those six a node's
     /// marks are its only direct <c>'</c>/<c>,</c> TOKEN children and scanning every slot is
-    /// the same answer. ⚠️ THE SEVENTH BROKE THAT: a volta ending's RANGE SEPARATOR
+    /// the same answer. ⚠️ CHECKED, not reasoned — the claim is a claim about five green
+    /// CONSTRUCTORS, and all five put a non-mark token at slot 0
+    /// (<c>PitchGreen</c> pitchToken, <c>ScaleDegreeGreen</c> degree, <c>ChordGreen</c>
+    /// openAngle, <c>ArpeggioGreen</c> openAngles, <c>VariableReferenceGreen</c> name), with
+    /// their members held as NODES rather than tokens. A green whose slot 0 could be a mark
+    /// would break the fold silently, so this is where the six are named. ⚠️ THE SEVENTH BROKE THAT: a volta ending's RANGE SEPARATOR
     /// (<c>[1,3. B]</c>) is a Comma token of its own, standing before the section name — so
     /// that one reader passes a starting slot (<see cref="NetOctaveMarksFrom"/>) and the
     /// exception is written down here rather than discovered by whoever adds the eighth.
@@ -68,6 +73,31 @@ internal static class SyntaxFacts
                 offset--;
         }
         return offset;
+    }
+
+    /// <summary>
+    /// The occurrence label written on a form item — the quoted string, unquoted — or null.
+    /// </summary>
+    /// <remarks>
+    /// ONE SENTENCE, THREE SHAPES: a plain reference (<c>A "reprise"</c>), a silent one
+    /// (<c>~A "reprise"</c>) and a volta ending (<c>[1. A "reprise"]</c>) all park the label
+    /// the same way, and each used to find and unquote it for itself — at three different
+    /// fixed indices, which is what made the silent one's label reachable only by the parser.
+    /// A form item holds no OTHER string, so "the first StringLiteral child" is the whole
+    /// rule and it needs no index to stay correct as slots move.
+    /// </remarks>
+    public static string? UnquotedLabel(SyntaxNode node)
+    {
+        for (int i = 0; i < node.SlotCount; i++)
+        {
+            if (node.GetChild(i) is not SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } t)
+                continue;
+            var text = t.Text;
+            return text.Length >= 2 && text.StartsWith("\"") && text.EndsWith("\"")
+                ? text.Substring(1, text.Length - 2)
+                : text;
+        }
+        return null;
     }
 
     /// <summary>The seven diatonic pitch token kinds (<c>c d e f g a b</c>).</summary>

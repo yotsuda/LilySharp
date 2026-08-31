@@ -745,13 +745,21 @@ internal sealed class StringNumberAnnotationGreen : GreenSyntaxNode
 /// </summary>
 internal sealed class SectionDeclarationGreen : GreenSyntaxNode
 {
+    /// <param name="tilde">
+    /// The <c>~</c> of <c>section ~A { … }</c>, or null. It marks a section that carries
+    /// STRUCTURE rather than a rehearsal letter, and it FLIPS that section's label default
+    /// (owner's decision, 2026-08-31): a reference's own <c>~</c> stops meaning "hide" and
+    /// starts meaning "the other one". The slot is always present so the items keep a fixed
+    /// offset; the NAME is found by kind, because it is no longer at a fixed index.
+    /// </param>
     public SectionDeclarationGreen(
         SyntaxToken sectionKeyword,
+        SyntaxToken? tilde,
         SyntaxToken name,
         SyntaxToken openBrace,
         GreenNode?[] items,
         SyntaxToken closeBrace)
-        : base(SyntaxKind.SectionDeclaration, [sectionKeyword, name, openBrace, .. items, closeBrace])
+        : base(SyntaxKind.SectionDeclaration, [sectionKeyword, tilde, name, openBrace, .. items, closeBrace])
     {
     }
 }

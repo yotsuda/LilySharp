@@ -67,10 +67,84 @@ internal sealed class FormDeclarationValidator : ISemanticValidator
                     + "('~A' plays it without printing a rehearsal label).");
 
             ReportEndingsNoRepeatOpens(form);
+            ReportLabelsThatWillNotPrint(form, tree);
         }
 
         // Every score must reference a form that exists.
         ValidateScoreBindings(tree, declared);
+    }
+
+    /// <summary>
+    /// LYS0012 — a quoted occurrence label on a play that will not print one.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ THIS USED TO BE A PARSE-TIME WARNING, and it said "hidden by '~'". That was true
+    /// while a tilde on a reference always meant HIDE. Since a section can declare its own
+    /// label default (<c>section ~A { … }</c>, owner's decision 2026-08-31) the tilde asks for
+    /// the OTHER default, so <c>form { ~A "shown" }</c> against a <c>section ~A</c> prints
+    /// that label — and the parser, which cannot see declarations, would have gone on calling
+    /// it hidden. An instrument that reports the surface (is there a tilde?) instead of the
+    /// question (does this play show a label?) is the kind this repository keeps having to
+    /// repair, so the check moved to where the declarations are.
+    /// </para>
+    /// <para>
+    /// The condition is the label RULE's, asked once: a label is written, and
+    /// <see cref="SectionLabelRule.IsShown"/> says nothing prints. Both spellings reach it —
+    /// a plain reference against a <c>section ~A</c> is now just as silent as a tilde one
+    /// against an ordinary section, and it was the second case that had no diagnostic at all.
+    /// </para>
+    /// <para>
+    /// ⚠️ PERF: same shape as ReportEndingsNoRepeatOpens above — the FORM's own subtree, a
+    /// handful of items, once per form declaration on the keystroke path. The declaration
+    /// lookup is built once per form rather than per item.
+    /// </para>
+    /// </remarks>
+    private void ReportLabelsThatWillNotPrint(FormDeclarationSyntax form, SyntaxTree tree)
+    {
+        Dictionary<string, SectionDeclarationSyntax>? sections = null;
+
+        foreach (var node in form.DescendantNodes())
+        {
+            var (name, silent, span) = node switch
+            {
+                SectionReferenceSyntax r => (r.SectionName, false, r.Identifier.Span),
+                FormAlternativeSyntax a => (a.SectionName.Text, a.IsSilent, a.SectionName.Span),
+                { Kind: SyntaxKind.SilentSectionReference } s
+                    when s.GetChild(1) is SyntaxTokenNode n => (n.Text, true, n.Span),
+                _ => (null, false, default(TextSpan)),
+            };
+            if (name == null || SyntaxFacts.UnquotedLabel(node) is not { } label)
+                continue;
+
+            sections ??= BuildSectionIndex(tree);
+            sections.TryGetValue(name, out var declaration);
+            if (SectionLabelRule.IsShown(declaration, silent))
+                continue;
+
+            _diagnostics.Warning(span, DiagnosticCodes.HiddenSectionLabel,
+                $"The section label \"{label}\" is not printed: "
+                + (declaration?.LabelHiddenByDefault == true
+                    ? (silent
+                        ? $"'section ~{name}' prints no label by default and this reference asks for the default."
+                        : $"'section ~{name}' prints no label by default; write '~{name}' here to show it.")
+                    : $"the '~' on this reference hides it; drop the '~' to show it (or remove the label)."));
+        }
+    }
+
+    /// <summary>Every section declaration by name — the first wins, matching the collector's
+    /// own one-node-per-name map (MeasureCollector's remark on a second same-named source).</summary>
+    private static Dictionary<string, SectionDeclarationSyntax> BuildSectionIndex(SyntaxTree tree)
+    {
+        var byName = new Dictionary<string, SectionDeclarationSyntax>(StringComparer.Ordinal);
+        foreach (var s in tree.GetNodes<SectionDeclarationSyntax>())
+            // ⚠️ ANY declaration with the tilde wins, not the first: part-major layout declares
+            // one `section A` PER PART, and "this section is structure" is a property of the
+            // section, not of one part's copy of it.
+            if (!byName.TryGetValue(s.SectionName, out var existing) || s.LabelHiddenByDefault)
+                if (existing?.LabelHiddenByDefault != true)
+                    byName[s.SectionName] = s;
+        return byName;
     }
 
     /// <summary>

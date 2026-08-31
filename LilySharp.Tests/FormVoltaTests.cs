@@ -126,27 +126,49 @@ public sealed class FormVoltaTests
         // measure with NO label.
         var tree = SyntaxTree.Parse(Head + "form main { A ~D \"alt\" }" + Tail);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
-        Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.HiddenSectionLabel);
+        Assert.True(WarnsHiddenLabel(tree));
 
         var measures = new MeasureCollector().Collect(tree, "m").Voice.Measures.ToArray();
         Assert.Equal(2, measures.Length);                              // A, ~D
         Assert.DoesNotContain(measures, m => m.SectionLabel == "alt"); // label stays hidden
     }
 
+    /// <summary>The diagnostics LYS0012 lives in since 2026-08-31 — SEMANTIC, not parse-time,
+    /// because whether a parked label prints now depends on the section's DECLARATION
+    /// (<c>section ~A</c>), which a parser cannot see.</summary>
+    private static bool WarnsHiddenLabel(SyntaxTree tree) =>
+        LilySharp.Core.Semantics.SemanticValidation.Run(tree)
+            .Any(d => d.Code == DiagnosticCodes.HiddenSectionLabel);
+
     [Fact]
     public void SilentReference_NoLabel_DoesNotWarn()
     {
         var tree = SyntaxTree.Parse(Head + "form main { A ~D }" + Tail);
-        Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.HiddenSectionLabel);
+        Assert.False(WarnsHiddenLabel(tree));
     }
 
+    /// <summary>
+    /// <c>[2. ~O "alt"]</c> prints NO label, and now says so.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS TEST ASSERTED THE OPPOSITE until 2026-08-31, on the reasoning that "the '~'
+    /// suppresses only the volta bracket, so the label is not hidden". That reasoning was
+    /// retired on 2026-08-25, when the tilde was measured to bind to the section NAME and to
+    /// hide the section LABEL — the engraving the old belief mirrored had itself been wrong.
+    /// The test survived the correction because there was no diagnostic for this shape at
+    /// all: the parser warned only about <c>~Name</c>, so "does not warn" was true of every
+    /// ending ever written. MEASURED 2026-08-31 on
+    /// <c>|: A [1. D] :| [2. ~O "alt"]</c>: the twin engraves the boxes A and D and nothing
+    /// else, so "alt" was a label written and silently dropped.
+    /// </remarks>
     [Fact]
-    public void VoltaSilentAlternative_WithLabel_DoesNotWarn()
+    public void VoltaSilentAlternative_WithLabel_WarnsAndPrintsNothing()
     {
-        // '[2. ~O "alt"]' SHOWS "alt" — there the '~' suppresses only the volta
-        // bracket, so the label is not hidden and must not warn.
         var tree = SyntaxTree.Parse(Head + "form main { |: A [1. D] :| [2. ~O \"alt\"] }" + Tail);
-        Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.HiddenSectionLabel);
+        Assert.True(WarnsHiddenLabel(tree));
+
+        var measures = new MeasureCollector().Collect(tree, "m").Voice.Measures.ToArray();
+        Assert.DoesNotContain(measures, m => m.SectionLabel == "alt");
     }
 
     [Fact]

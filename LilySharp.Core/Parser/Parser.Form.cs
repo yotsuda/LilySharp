@@ -169,17 +169,15 @@ internal sealed partial class Parser
         var name = ExpectPartName();
         var marks = ParsePhraseOctaveMarks();
 
-        // '~B "alt"' — a label written but hidden by '~'. Keep it (do not drop it),
-        // and nudge that it is currently not shown.
-        SyntaxToken? label = null;
-        if (Check(SyntaxKind.StringLiteral))
-        {
-            int labelStart = _textPosition;
-            label = Advance();
-            var span = new TextSpan(labelStart, Math.Max(1, _textPosition - labelStart));
-            _diagnostics.Warning(span, DiagnosticCodes.HiddenSectionLabel,
-                $"The section label {label.Text} is hidden by '~'; drop the '~' to show it (or remove the label).");
-        }
+        // '~B "alt"' — a label parked on a tilde reference. Kept, never dropped.
+        // ⚠️ THE WARNING THAT USED TO LIVE HERE (LYS0012) MOVED OUT on 2026-08-31, and it had
+        // to: it said "hidden by '~'", and since a section can declare its own label default
+        // (`section ~A { … }`) whether THIS label prints depends on the DECLARATION — which a
+        // parser cannot see. Asking the question here would have shipped an instrument that
+        // says "hidden" over a label the page prints. It is FormDeclarationValidator's now,
+        // where the declarations are, and it asks the real question (is this play shown?)
+        // instead of the surface one (is there a tilde?).
+        SyntaxToken? label = Check(SyntaxKind.StringLiteral) ? Advance() : null;
 
         return new SilentSectionReferenceGreen(tilde, name, marks, label);
     }

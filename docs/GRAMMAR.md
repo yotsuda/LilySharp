@@ -573,7 +573,20 @@ PhraseDecl     = 'phrase' , Identifier , MusicBlock ;
 
 (* Musical sections bind music to each part by name. At least one is required. *)
 
-SectionDecl    = 'section' , Identifier , '{' , { SectionItem } , '}' ;
+SectionDecl    = 'section' , [ '~' ] , Identifier , '{' , { SectionItem } , '}' ;
+
+(* THE '~' FLIPS THIS SECTION'S LABEL DEFAULT (2026-08-31). A section carries a
+   rehearsal letter by default and a form reference's '~' hides it; a section declared
+   'section ~A { … }' carries none by default, and there the reference's '~' SHOWS it.
+   The tilde keeps ONE meaning at both sites - "the other one than the default" - and
+   the fact it states ("this section is structure, not a rehearsal letter") is a
+   property of the section, so it is written once on the declaration rather than at
+   every reference. It is what makes a section cut only to carry a repeat edge silent.
+     section ~Bridge { … }                 -- prints no label
+     form main { A ~Bridge C }             -- …unless the reference asks: this one shows it
+   The rule is one equality: shown = (declaration hides by default) == (reference has '~').
+   An empty quoted label still suppresses the mark on either default, and a label
+   written on a play that prints none is LYS0012. *)
 
 SectionItem    = SectionSetting
                | PartBlock                        (* partName MusicBlock *)

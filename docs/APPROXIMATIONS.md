@@ -135,7 +135,7 @@
 ## UNWATCHED — 観測者がゼロだと自認しているもの（49 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:1701** container, and the value stops being unobserved with the line above.
+- **:1715** container, and the value stops being unobserved with the line above.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:496** no observer; add the paren widths when a book brings one. The unpacked
 - **:498** bare glyph width, which is exact for one and unobserved for many.
@@ -221,8 +221,8 @@
 ## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（115 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:1696** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:3350** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:1710** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
+- **:3364** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:2040** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Rendering/HarfBuzzOutline.cs`
@@ -257,7 +257,7 @@
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
 - **:1889** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:3741** LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
+- **:3771** LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
 - **:67** LILYSHARP-OWN: the DEFAULT five is LilyPond's (scm/define-grobs.scm:3396,
 ### `LilySharp.Core/Svg/Collector/StaffAccidentalColumns.cs`

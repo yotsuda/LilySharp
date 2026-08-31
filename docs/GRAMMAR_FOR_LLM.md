@@ -495,6 +495,13 @@ quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LY
   per-reference transposition: a glued `'(N)` diatonic interval was removed 2026-08-28,
   and `transpose` is a part property (chromatic), so a motif quoted at another interval
   is written out.
+- **`section ~A { … }` flips that section's label default.** A section prints a rehearsal
+  letter by default and a reference's `~` hides it; declare it `section ~A` and it prints
+  none by default, so there `~A` is the spelling that SHOWS. One meaning for the tilde at
+  both sites — "the other one than the default" — and the rule is one equality:
+  `shown = (declaration hides) == (reference has ~)`. Write it on a section cut only to
+  carry a repeat edge. An empty label `""` still suppresses either way, and a label on a
+  play that prints none is LYS0012.
 - **A SECTION reference takes the same marks**: `form main { ~A ~B' }` opens B's play an
   octave up, `~B,` an octave down, `~B''` two. They belong to the PLAY, so one section can
   be quoted at two octaves (`~B ~B'`) while the declaration never moves, and the next
