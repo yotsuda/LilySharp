@@ -515,7 +515,7 @@ public sealed partial class MeasureCollector
 
     // --- checkpoint/resume probe (S5 substrate — see CollectWalkProbe.cs) ---
     // Null in production: every guard below is a null check, so the probe costs
-    // the walk nothing until the per-measure collect memo (HANDOFF ▶ ⒭ ⑵) wires
+    // the walk nothing until the per-measure collect memo (HANDOFF's retired ▶ ⒭ (the incremental workstream, NOT §2 F ⒭) ⑵) wires
     // it across keystrokes.
     /// <summary>Record checkpoints (recorder) or resume from them (resumer).</summary>
     internal CollectWalkProbe? WalkProbe { get; set; }
@@ -3060,7 +3060,7 @@ public sealed partial class MeasureCollector
     /// node is created only where a site is CONSUMED — ProcessMusicNode, the
     /// attached-mark peek, variable-reference expansion — so a keystroke walk
     /// that adopts a prefix and splices a tail materializes only the edit
-    /// window's nodes (HANDOFF ▶ ⒭ ⑵′ latter half: the flat list's adopted
+    /// window's nodes (HANDOFF's retired ▶ ⒭ (the incremental workstream, NOT §2 F ⒭) ⑵′ latter half: the flat list's adopted
     /// reds were the keystroke path's last whole-book red creation).
     /// </summary>
     /// <remarks>

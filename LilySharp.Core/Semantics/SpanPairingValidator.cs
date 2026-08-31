@@ -20,11 +20,15 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// Warns when a SPAN mark pairs with nothing — a start (<c>@rit</c>, <c>@textSpan("…")</c>,
+/// Reports a SPAN mark that pairs with nothing — a start (<c>@rit</c>, <c>@textSpan("…")</c>,
 /// <c>@ottava</c>) that no <c>@!</c> ever closes, a <c>@!</c> with no span open in its voice,
 /// or a second start written inside an open one. Every one of them draws nothing, and until
 /// the terminator existed nothing could say so: the length was an engine default the reader
 /// was never told about.
+/// <para>
+/// ⚠️ THE UNTERMINATED FAULT IS AN ERROR; the other two are warnings. One code, two
+/// severities - the reason is on the loop.
+/// </para>
 /// </summary>
 /// <remarks>
 /// Like <see cref="SlurPairingValidator"/>, this reads back what the shared collector
@@ -68,9 +72,29 @@ internal sealed class SpanPairingValidator : ISharedCollectValidator
 
         foreach (var w in warnings)
         {
+            // ⚠️ ONE CODE, TWO SEVERITIES, and the split is GRAMMAR.md's rather than a
+            // judgement call. An end is REQUIRED for BOTH families - the text spanner sugar
+            // says so ("each ended by '@!rit' / '@!accel' / '@!rall' - an end is REQUIRED")
+            // and the ottava says "an end is REQUIRED here too" - so a span nobody ends is a
+            // book that does not say what it means, and it is refused (owner's decision
+            // 2026-08-31). The other two faults are different mistakes the grammar does not
+            // speak to - a '@!' that closes nothing, and a second start inside an open span -
+            // and both stay warnings.
+            //
+            // ⚠️ IT WAS A WARNING, AND THAT WAS THE HOLE. Nothing is drawn either way, so a
+            // book with a dropped '@!rit' passed 'lysc check' and shipped with its rit.
+            // silently absent. The grammar had said REQUIRED since the terminator landed; only
+            // the severity had not caught up. REACH WHEN IT CHANGED: 1975 books on disk, 41
+            // report an unterminated span and all 41 are past sessions' scratch probes - no
+            // tracked book, none of the author's.
+            //
             // ASCII punctuation only: these strings reach legacy-codepage consoles via the CLI.
-            _diagnostics.Warning(new TextSpan(w.SourcePosition, 1),
-                DiagnosticCodes.UnpairedSpan, MessageFor(w.Kind, w.Fault));
+            var span = new TextSpan(w.SourcePosition, 1);
+            string message = MessageFor(w.Kind, w.Fault);
+            if (w.Fault == SpanPairingFault.Unterminated)
+                _diagnostics.Error(span, DiagnosticCodes.UnpairedSpan, message);
+            else
+                _diagnostics.Warning(span, DiagnosticCodes.UnpairedSpan, message);
         }
     }
 

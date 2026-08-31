@@ -23,7 +23,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// The lexer's decimal literal (HANDOFF ▶ ⒯⑸, docs/VALUE_SITE_AUDIT.md §5).
+/// The lexer's decimal literal (HANDOFF's retired ▶ ⒯ (value-site typing, NOT §2 F ⒯)⑸, docs/VALUE_SITE_AUDIT.md §5).
 ///
 /// The point of the feature is one sentence: LilyPond's grob values are routinely
 /// fractional — <c>(padding . 0.5)</c>, <c>(thickness . 0.45)</c>, <c>(padding . -0.15)</c>

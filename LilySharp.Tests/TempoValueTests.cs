@@ -24,7 +24,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// The tempo value run, read once (docs/VALUE_SITE_AUDIT.md §1.1 A3, HANDOFF ▶ ⒯⑴ ⒝).
+/// The tempo value run, read once (docs/VALUE_SITE_AUDIT.md §1.1 A3, HANDOFF's retired ▶ ⒯ (value-site typing, NOT §2 F ⒯)⑴ ⒝).
 ///
 /// Six state machines used to walk this one run — five on the syntax node and a sixth,
 /// with its own regex, inside <c>MeasureCollector.CollectTempo</c>. Collapsing them is

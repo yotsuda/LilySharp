@@ -494,7 +494,7 @@ internal static partial class SharedRenderer
     }
 
     /// <summary>⒭ overlay fragment wiring for the one drawer that measured as the
-    /// overlay term of the keystroke render floor (HANDOFF ▶ ⒭ — DrawFingerings is the
+    /// overlay term of the keystroke render floor (HANDOFF's retired ▶ ⒭ (the incremental workstream, NOT §2 F ⒭) — DrawFingerings is the
     /// largest page-level drawer; the rest measured ≈ 0 and stay live). Replays the
     /// recorded page output when the value fold and anchors match, else draws live
     /// under a capture. Non-SVG backends draw the page's bucket directly.</summary>

@@ -368,7 +368,7 @@ internal sealed class Lexer
         // fixtures (LilySharp.Tests\Fixtures\test, 209): the ONLY digit-dot-digit
         // adjacency in any music body is `g2:m7.5-` in chordnames.lys:21, and it does
         // not reach here — `m7` is taken whole as an identifier, so the `7` never
-        // starts a number. (docs/VALUE_SITE_AUDIT.md §5, HANDOFF ▶ ⒯⑸.)
+        // starts a number. (docs/VALUE_SITE_AUDIT.md §5, HANDOFF's retired ▶ ⒯ (value-site typing, NOT §2 F ⒯)⑸.)
         //
         // ⚠️ This is a 2-character lookahead past the token's end, which is exactly
         // the guard IncrementalLexer already keeps for the trivia scanner — see the

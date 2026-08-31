@@ -30,7 +30,7 @@ namespace LilySharp.Tests;
 
 /// <summary>
 /// The completeness net for the collect walk's checkpoint/resume substrate
-/// (<see cref="CollectWalkProbe"/> — HANDOFF ▶ ⒭ ⑵'s first slice): a collect
+/// (<see cref="CollectWalkProbe"/> — HANDOFF's retired ▶ ⒭ (the incremental workstream, NOT §2 F ⒭) ⑵'s first slice): a collect
 /// RESUMED from any recorded checkpoint must be indistinguishable from a full
 /// collect of the same document. This is what holds the checkpoint's state
 /// inventory to completeness — a collector field that mutates across measures

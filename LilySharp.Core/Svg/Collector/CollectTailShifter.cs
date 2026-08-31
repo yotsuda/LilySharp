@@ -21,7 +21,7 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Svg.Collector;
 
 /// <summary>
-/// The position shifter of the suffix splice (HANDOFF ▶ ⒭ ⑵, second slice —
+/// The position shifter of the suffix splice (HANDOFF's retired ▶ ⒭ (the incremental workstream, NOT §2 F ⒭) ⑵, second slice —
 /// second half): re-homes a recorded collect tail's burned source positions
 /// from OLD-text to NEW-text coordinates across an edit. The map is
 /// PER-POSITION, not per-entry — <c>p ≤ prefix → p; p ≥ suffixStart → p+Δ;

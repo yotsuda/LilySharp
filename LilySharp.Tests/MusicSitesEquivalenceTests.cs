@@ -25,7 +25,7 @@ namespace LilySharp.Tests;
 
 /// <summary>
 /// The drift net for the green-tree music gather
-/// (<see cref="MeasureCollector.MusicSites"/> — HANDOFF ▶ ⒭ ⑵′): on every
+/// (<see cref="MeasureCollector.MusicSites"/> — HANDOFF's retired ▶ ⒭ (the incremental workstream, NOT §2 F ⒭) ⑵′): on every
 /// fixture and sample book, the finder must yield EXACTLY the node instances,
 /// in exactly the order, that the old red spelling produced —
 /// <c>DescendantNodes()</c> filtered by the ancestor guard
@@ -143,7 +143,7 @@ public class MusicSitesEquivalenceTests
 
     /// <summary>
     /// The lazy production gather (<see cref="MeasureCollector.MusicSitesLazy"/>
-    /// — the (green, position) flat list of HANDOFF ▶ ⒭ ⑵′'s latter half) must
+    /// — the (green, position) flat list of HANDOFF's retired ▶ ⒭ (the incremental workstream, NOT §2 F ⒭) ⑵′'s latter half) must
     /// agree with the red-yielding <see cref="MeasureCollector.MusicSites"/>
     /// site for site: same count and order, the SAME red instance on
     /// materialization, a red-free <c>Position</c> equal to the node's real

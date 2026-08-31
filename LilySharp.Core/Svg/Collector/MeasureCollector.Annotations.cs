@@ -45,7 +45,7 @@ public sealed partial class MeasureCollector
     /// @fig.6.4"; that was the INTERNAL name the reader used to be handed, and as a
     /// spelling it does not parse — measured 2026-08-15, <c>c4@fig.6</c> reports LYS0016
     /// and produces no figure. A session read this line, believed it, and wrote a corpus
-    /// claim on top of it (HANDOFF ▶ ⒯⑸). If you write a spelling in a remark, parse it
+    /// claim on top of it (HANDOFF's retired ▶ ⒯ (value-site typing, NOT §2 F ⒯)⑸). If you write a spelling in a remark, parse it
     /// first. The internal name is gone from this path as of §9.5.3 ⑴.
     /// </para>
     /// </remarks>

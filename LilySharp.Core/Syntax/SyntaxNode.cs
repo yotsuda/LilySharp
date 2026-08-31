@@ -343,7 +343,7 @@ public abstract class SyntaxNode
     /// <see cref="GreenSite.Node"/>. Use where most collected sites are never
     /// consumed — the collector's keystroke flat list adopts a prefix and
     /// splices a tail, so only the edit window's sites are ever red
-    /// (HANDOFF ▶ ⒭ ⑵′ latter half).
+    /// (HANDOFF's retired ▶ ⒭ (the incremental workstream, NOT §2 F ⒭) ⑵′ latter half).
     /// </summary>
     /// <remarks>
     /// Positions are accumulated from green full widths exactly as
@@ -522,7 +522,7 @@ internal sealed class GreenSiteSpine
 /// <summary>
 /// A gathered syntax site held WITHOUT its red node: the green node, its
 /// absolute full-span start, and the lazy spine to materialize the red through
-/// — the (green, position) flat-list element of HANDOFF ▶ ⒭ ⑵′. Reading
+/// — the (green, position) flat-list element of HANDOFF's retired ▶ ⒭ (the incremental workstream, NOT §2 F ⒭) ⑵′. Reading
 /// <see cref="Node"/> is the ONLY thing that creates a red; kind and address
 /// reads (checkpoint capture, splice targeting, marker/peek gating) are free.
 /// A site can also wrap an ALREADY materialized node (a synthetic phrase

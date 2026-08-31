@@ -30,7 +30,7 @@ namespace LilySharp.Tests;
 
 /// <summary>
 /// The completeness net for the CROSS-EDIT (Δ≠0) resume — BOTH ends
-/// (<see cref="CollectResumePlanner"/> — HANDOFF ▶ ⒭ ⑵'s second slice: the
+/// (<see cref="CollectResumePlanner"/> — HANDOFF's retired ▶ ⒭ (the incremental workstream, NOT §2 F ⒭) ⑵'s second slice: the
 /// prefix resume and the suffix splice): a collect resumed across a synthetic
 /// edit must be indistinguishable from a full collect of the edited text.
 /// Edits are mechanical (a duplicated space, a deleted space, a swapped pitch
