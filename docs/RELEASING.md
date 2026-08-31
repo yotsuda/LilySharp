@@ -210,9 +210,24 @@ already published and legs that never started both showed "cancelled".
 A release now takes about twelve minutes instead of two. That is nothing against
 finishing a release by hand while the version burns.
 
-⚠️ **This is fixed but not yet proven.** 0.4.0 ran on the parallel version and was
-completed manually; the serialised workflow has never been through a real tag. Watch the
-first one, and verify with step 7 rather than the run's colour.
+✅ **Proven by 0.5.0** (2026-08-31, run `33404095317`). The serialised workflow went
+through a real tag with **all thirteen jobs green** — `test`, four `cli`, eight `vsix` —
+and **all eight targets published**, with nothing needing a hand publish. That is the
+whole difference from 0.4.0, where five of eight landed, three did not, and the release
+was finished by hand. About fourteen minutes end to end.
+
+⚠️ **But step 7 was still the step that mattered, and it disagreed with itself for ten
+minutes.** Immediately after the run went green the `extensionquery` index reported
+**3 of 8** while `vsce show` already listed **7**, and the two converged only gradually:
+3 → 4 → 5 → 6 → 7 → 8 over about ten minutes, with `darwin-arm64` (the last leg to
+publish) missing from the query first and `darwin-x64` last. **Nothing was actually
+missing at any point.** Had the first reading been trusted, five targets would have been
+republished by hand — and the Marketplace refuses a version it already has, so that
+"fix" would have failed loudly and for the wrong reason.
+
+⇒ **Read `vsce show` beside the query, and treat a HEAD request on the package URL as the
+answer.** All eight returned HTTP 200 once indexed. Give it ten minutes before concluding
+anything is missing.
 
 ---
 
