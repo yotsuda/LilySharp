@@ -916,7 +916,24 @@ public sealed class LilyPondExporter
                 // written this way renders; the exporter dropped it SILENTLY — no warning, an
                 // empty part variable, a valid .ly with a blank staff. 35 of the 204 fixtures
                 // are written this way, including every book that reaches a tab staff.
-                if (s.Parent is CompilationUnitSyntax && LooseSectionMusic(s).Any())
+                // ⚠ The guard asks THE canonical question (MeasureCollector's
+                // SectionHasInlineMusic — the same predicate the collector's own
+                // "Single-part shorthand" arm asks), not "does LooseSectionMusic yield
+                // anything", which is what it used to ask: that list counts a DIRECTIVE
+                // as music. A directives-only top-level section is a section HEADER
+                // (`section A { key g major }` beside `part m { section A { … } }`), and
+                // this dictionary is last-declaration-wins — so a header written AFTER
+                // the part overwrote the part's real declaration and the twin played the
+                // HEADER: `\key g \major \key g \major`, the directive twice (once from
+                // the name-keyed registry, once as this "music") and not one note, while
+                // the page engraved the four notes. Written BEFORE the part the same book
+                // was whole, so the two spellings differed by LINE ORDER alone.
+                // The language already says a top-level section in a part-major file holds
+                // only directives and the parts' cells (SectionMusicNeedsPartValidator
+                // refuses music there), so the case this arm exists for — the lone part's
+                // music with no cell around it — is exactly what the canonical predicate
+                // admits, and a header is exactly what it turns away.
+                if (s.Parent is CompilationUnitSyntax && SectionHasInlineMusic(s))
                 {
                     byName[s.SectionName] = (s, s);
                     inOrder.Add((s, s));
