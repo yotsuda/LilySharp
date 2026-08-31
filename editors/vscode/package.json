@@ -1,7 +1,7 @@
 {
   "name": "lilysharp",
   "displayName": "Lily#",
-  "description": "Language support and live score preview for Lily#, a LilyPond-inspired music notation language",
+  "description": "Sheet music from plain text, engraved as you type.",
   "version": "0.5.0",
   "publisher": "yotsuda",
   "license": "GPL-3.0-or-later",

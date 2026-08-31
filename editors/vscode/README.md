@@ -1,9 +1,12 @@
 # Lily# VS Code Extension
 
+Write sheet music as plain text and watch it engrave beside you. A `.lys` file gets a
+live score preview that plays back, and the editor gets completion, diagnostics,
+formatting and navigation over it — the compiler and its language server are bundled, so
+there is nothing else to install.
+
 **Version 0.5.0** — the bundled language server and the `lysc` compiler carry the
 same number. See the [changelog](https://github.com/yotsuda/LilySharp/blob/master/editors/vscode/CHANGELOG.md) for what is in this release.
-
-Language support for Lily# music notation files (`.lys`).
 
 ## Features
 
@@ -31,7 +34,7 @@ The extension provides custom semantic highlighting:
 
 - **Pitches** (c, d, e, f, g, a, b): Teal
 - **Articulations** (@staccato, @accent): Yellow
-- **Dynamics** (\p, \f, \ff): Purple
+- **Dynamics** (@p, @f, @ff): Purple
 
 Colors can be customized in settings.
 
