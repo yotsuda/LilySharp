@@ -55,6 +55,12 @@ undone](#nothing-here-can-be-undone).
 
 Seven places. Missing one is not caught by the build.
 
+⚠️ **`editors/vscode/package.json` is stored CRLF while every file beside it is LF.**
+Editing it with a stream editor (`sed -i`, or anything that reads and rewrites the whole
+file with `\n`) produces a **503-line diff for a one-line change** — which reads like a
+review's worth of work and is none. Edit it in place, and check `git diff --numstat` is
+`1 1` before committing.
+
 | File | What |
 |---|---|
 | `Directory.Build.props` | `<Version>` — the single source for Core/Cli/Lsp assemblies |
@@ -226,6 +232,40 @@ extension is published, or the Marketplace listing's repository link and README 
 are broken for everyone who follows them.
 
 ---
+
+## The listing's tags and categories, and why they are not a release-time edit
+
+What the Marketplace page shows under the extension is **tags**, not categories, and only
+some of them are yours. Measured from the packaged VSIX's `extension.vsixmanifest`
+(2026-08-31, 0.5.0):
+
+| Tag | Where it comes from |
+|---|---|
+| `music` `notation` `sheet music` `lilypond` `score` `engraving` | `keywords` in `package.json` |
+| `keybindings` | derived from `contributes.keybindings` |
+| `lilysharp` `Lily` | derived from `contributes.languages[].aliases` = `["Lily#", "lilysharp"]` |
+| `__ext_lys` | derived from the `.lys` extension; the web page hides the `__ext_` ones |
+
+* **`Lily` is `Lily#` with the `#` stripped by `vsce`.** It is not a keyword, so it cannot
+  be removed by editing `keywords`. Removing it means dropping `"Lily#"` from the language
+  aliases — and the first alias is the language's **display name inside VS Code** (the
+  status bar, the Change Language Mode picker). That trades a visible name in the product
+  for a cosmetic tag on the web page.
+* **`Lily#` CAN be a tag**: a `keywords` entry keeps the `#` verbatim through packaging
+  (measured). But the page would then show `Lily` *and* `Lily#`, which reads as a duplicate
+  rather than a fix. How the web UI renders and links a tag containing `#` — a URL fragment
+  delimiter — is **unverified**, and cannot be verified without publishing.
+* **`Lily#` cannot be a category.** Categories are VS Code's fixed list (Programming
+  Languages, Snippets, Linters, Themes, Debuggers, Formatters, Keymaps, SCM Providers,
+  Other, Extension Packs, Language Packs, Data Science, Machine Learning, Visualization,
+  Notebooks, Education, Testing…).
+
+⚠️⚠️ **AND `vsce package` DOES NOT CHECK THE CATEGORY.** Packaging with
+`"categories": ["Programming Languages", "Lily#"]` succeeded with **no warning at all** and
+wrote `Lily#` straight into the manifest's `Categories`. The rejection is server-side, at
+publish — which is *after* the tag is pushed and the version burned. So a category edit is
+not a thing to try at tag time; it belongs in a release of its own, where the cost of
+guessing wrong is a version number rather than this release.
 
 ## What is deliberately not automated
 
