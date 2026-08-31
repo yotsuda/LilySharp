@@ -48,13 +48,44 @@ public static class ChordHeadPositioning
     public static double[] CalculateOffsets(
         IReadOnlyList<ChordNoteInfo> notes, bool stemUp, int noteValue,
         double headScale = 1.0)
+        // LILYPOND-REF: stem.cc:684 — ell = head right ink extent.
+        => OffsetsForEll(notes, stemUp, noteValue,
+            GlyphMetrics.GetNoteheadBBox(noteValue).Right * headScale);
+
+    /// <summary>
+    /// The same rule with the heads' OWN FONT rather than a scale: Emmentaler is optically
+    /// sized, so a small head is a DIFFERENT design's outline and not the 20's multiplied
+    /// down, and the two answers are not the same number.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE DIFFERENCE IS VISIBLE, AND IT IS MEASURED RATHER THAN ARGUED. A grace second's
+    /// shift is <c>1.298161 × magstep(−3) − 0.065 = 0.852938</c> off the 14 design and
+    /// <c>1.304200 × magstep(−3) − 0.065 = 0.857209</c> off the 20 design scaled; LilyPond
+    /// 2.27.3 prints the FIRST (scratch/p308/lp book y1_gsecond,
+    /// <c>\grace { &lt;c' d'&gt;16 }</c>: heads at 16.1208 and 16.9738). The same books pin
+    /// the full-size rule to the digit — <c>&lt;c' d'&gt;4</c> shifts 1.2392 = 1.304200 −
+    /// 0.065 — so the two readings differ only in which design's box they open.
+    /// <para>
+    /// ⚠️ THE CUE CALLER STILL PASSES A SCALE (<c>SharedRenderer.Noteheads</c> hands
+    /// <c>EngravingDefaults.CueScale</c>), so a cue chord's second carries that same 0.0043.
+    /// That is a live divergence rather than a decision; closing it moves cue snapshots and
+    /// wants its own measurement. See docs/HANDOFF.md §2 U8c, which is where it is filed.
+    /// </para>
+    /// </remarks>
+    internal static double[] CalculateOffsets(
+        IReadOnlyList<ChordNoteInfo> notes, bool stemUp, int noteValue,
+        GlyphMetrics.DesignMetrics headFont)
+        => OffsetsForEll(notes, stemUp, noteValue,
+            GlyphMetrics.GetNoteheadBBox(headFont, noteValue).Right);
+
+    /// <summary>The rule itself, over the head right extent its caller resolved.</summary>
+    private static double[] OffsetsForEll(
+        IReadOnlyList<ChordNoteInfo> notes, bool stemUp, int noteValue, double ell)
     {
         var offsets = new double[notes.Count];
         if (notes.Count < 2)
             return offsets;
 
-        // LILYPOND-REF: stem.cc:684 — ell = head right ink extent.
-        double ell = GlyphMetrics.GetNoteheadBBox(noteValue).Right * headScale;
         double thick = EngravingDefaults.StemThickness;
         int dir = stemUp ? 1 : -1;
 

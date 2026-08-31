@@ -1070,13 +1070,38 @@ internal static partial class SharedRenderer
         IDrawingContext gc, double staffPosition)
     {
         int noteValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
-        char glyph = EmmentalerGlyphs.GetRest(noteValue, staffPosition);
         // staffY is the top-line Y-up; rest origins sit below it (device down =
         // smaller Y-up).
         // LILYPOND-REF: lily/rest.cc Rest::staff_position_internal — the semibreve
         // (whole) rest is raised one staff line (duration_log==0 returns pos+2)
         // relative to half-note and shorter rests.
         double y = noteValue == 1 ? staffY - 1 : staffY - 2;  // whole rests hang from 4th line
+        DrawRestAtOrigin(rest, x, y, dotOffset, gc, staffPosition);
+    }
+
+    /// <summary>The rest glyph and its dots, at the ORIGIN the caller already resolved.</summary>
+    /// <remarks>
+    /// Split out of <see cref="DrawRest"/> in session 308 so a GRACE rest can reach it. A
+    /// grace column's Y goes through the ossia affine before it is drawn
+    /// (<c>OssiaShrink.YUp</c>), so that caller holds the ORIGIN rather than the top line,
+    /// and handing it a top line to subtract an unshrunk 2 from would misplace the rest on an
+    /// ossia staff.
+    /// <para>
+    /// ⚠️ A GRACE REST COMES THROUGH HERE AT <see cref="FontSize"/> — FULL SIZE — and reusing
+    /// this method rather than writing a scaled copy is the point.
+    /// <c>general-grace-settings</c> gives a <c>font-size</c> to Stem, Flag, NoteHead,
+    /// TabNoteHead, Dots, Accidental, Script, Fingering and StringNumber, and NOT to Rest
+    /// (scm/music-functions.scm:636-650, canonical v2.26.0), so a grace rest reads the
+    /// STAFF's size. MEASURED side by side in one book (scratch/p308/lp2/s2_gracerestchord,
+    /// <c>\grace { r16 d'16 }</c>): the rest drawn at 0.0040 and the grace head beside it at
+    /// 0.0028 = magstep(−3), the rest's path data byte-identical to a main-stream rest's.
+    /// </para>
+    /// </remarks>
+    private static void DrawRestAtOrigin(RestItem rest, double x, double y, int? dotOffset,
+        IDrawingContext gc, double staffPosition)
+    {
+        int noteValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
+        char glyph = EmmentalerGlyphs.GetRest(noteValue, staffPosition);
         using (gc.Source(rest.SourcePosition))
             gc.DrawGlyph(glyph, x, y, FontSize);
 

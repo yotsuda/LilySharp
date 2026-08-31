@@ -1661,7 +1661,7 @@ internal sealed class ElementCoordinator
     /// <paramref name="staffPosition"/> inside the item at <paramref name="itemIndex"/>,
     /// or 0 when the item is a single note or the chord has no second/unison that
     /// reverses a head to the far side of the stem. This mirrors the per-head offset
-    /// the renderer applies (<see cref="ChordHeadPositioning.CalculateOffsets"/>) so a
+    /// the renderer applies (<see cref="ChordHeadPositioning.CalculateOffsets(System.Collections.Generic.IReadOnlyList{LilySharp.Core.Svg.Model.ChordNoteInfo},bool,int,double)"/>) so a
     /// tie or slur attaches to the DISPLACED head's edge, not the undisplaced chord
     /// column. Without it, a tie/slur on the reversed head of a seconds chord starts
     /// inside its own head and fails to reach the matching head at the other end.
@@ -2790,7 +2790,7 @@ internal sealed class ElementCoordinator
             if (graceGeomCache[gi] is not { } geom)
             {
                 var mainItem = ItemAt(voice, mi, g.MainNoteItemIndex);
-                var columns = SpacingRules.GraceColumns(g.Notes, mainItem);
+                var columns = SpacingRules.GraceColumns(g.Columns, mainItem);
                 var (bl, br) = GraceNoteEngraver.QuantGraceBeam(g, columns.Offsets);
                 geom = new GraceObstacleGeom(columns.Offsets, columns.Span, bl, br);
                 graceGeomCache[gi] = geom;
@@ -2809,13 +2809,18 @@ internal sealed class ElementCoordinator
                 groupX + (k < geom.Offsets.Length ? geom.Offsets[k] : 0.0),
                 up: true, noteValue: 4, NoteheadStyle.Default, font);
 
-            for (int k = 0; k < g.Notes.Length; k++)
+            for (int k = 0; k < g.Columns.Length; k++)
             {
                 double hx = groupX + (k < geom.Offsets.Length ? geom.Offsets[k] : 0.0);
                 if (hx < segStartX - eps || hx > segEndX + eps)
                     continue;
-                var note = g.Notes[k];
-                double headCenterY = staffMiddleDown - note.StaffPosition / 2.0;
+                var note = g.Columns[k];
+                // A slur under a grace is kept off the column's NEAREST ink, so an UP
+                // slur reads the top head of a chord and a DOWN slur its bottom one.
+                // For a single head the two are one number and the books do not move.
+                int headPos = slur.CurveUp
+                    ? note.Highest.StaffPosition : note.Lowest.StaffPosition;
+                double headCenterY = staffMiddleDown - headPos / 2.0;
 
                 // Grace stems are forced UP whatever the pitch
                 // (scm/music-functions.scm:652-656 score-grace-settings), so the
@@ -2825,13 +2830,13 @@ internal sealed class ElementCoordinator
                 if (slur.CurveUp)
                 {
                     double stemX = StemXAt(k);
-                    if (beamL is { } bl && beamR is { } br && g.Notes.Length > 1)
+                    if (beamL is { } bl && beamR is { } br && g.Columns.Length > 1)
                     {
                         // Beamed run: the quanted line interpolated to this stem's
                         // X, plus a full grace beam thickness — half for the stem
                         // extent's beam_end_corrective, half for LP's encompass
                         // margin (slur-scoring.cc:149-150).
-                        double xL = StemXAt(0), xR = StemXAt(g.Notes.Length - 1);
+                        double xL = StemXAt(0), xR = StemXAt(g.Columns.Length - 1);
                         double t = xR - xL > 0.001 ? (stemX - xL) / (xR - xL) : 0.0;
                         double centerUp = (bl + (br - bl) * t) / 2.0;
                         stemY = staffMiddleDown
@@ -3142,7 +3147,7 @@ internal sealed class ElementCoordinator
             for (int gi = 0; gi < graceNotes.Length; gi++)
             {
                 var g = graceNotes[gi];
-                if (g.StaffIndex != graceStaff || g.Notes.IsDefaultOrEmpty)
+                if (g.StaffIndex != graceStaff || g.Columns.IsDefaultOrEmpty)
                     continue;
                 graceByMeasure ??= new Dictionary<int, List<int>>();
                 if (!graceByMeasure.TryGetValue(g.MeasureIndex, out var list))
@@ -3549,8 +3554,11 @@ internal sealed class ElementCoordinator
             int hi = gr.MeasureIndex == slur.EndMeasureIndex ? slur.EndItemIndex : int.MaxValue;
             if (gr.MainNoteItemIndex < lo || gr.MainNoteItemIndex > hi)
                 continue;
-            foreach (var gn in gr.Notes)
-                topDigitY = Math.Min(topDigitY, geom.DigitY(gn.Midi));
+            // EVERY head of every column: a tab grace chord prints one digit per pitch,
+            // so the topmost of them is what the slur has to clear.
+            foreach (var col in gr.Columns)
+                foreach (var head in col.Heads)
+                    topDigitY = Math.Min(topDigitY, geom.DigitY(head.Midi));
         }
 
         // Hug just above the digit (the visible glyph half-height plus a hair,

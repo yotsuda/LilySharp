@@ -459,7 +459,7 @@ public sealed record NoteItem : MusicItem
     /// prefix-width mechanism (see MeasureLayouter). Empty when there is none.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/grace-spacing-engraver.cc — grace columns precede the main note's column.</remarks>
-    public ImmutableArray<GraceNoteInfo> LeadingGrace { get; init; } = ImmutableArray<GraceNoteInfo>.Empty;
+    public ImmutableArray<GraceColumnInfo> LeadingGrace { get; init; } = ImmutableArray<GraceColumnInfo>.Empty;
 
     /// <summary>
     /// Explicit tab string number (1 = highest-pitch string) from a <c>\N</c>
@@ -835,7 +835,7 @@ public sealed record ChordItem : MusicItem
 
     /// <summary>Leading grace notes hanging left of this chord's column; see
     /// <see cref="NoteItem.LeadingGrace"/>.</summary>
-    public ImmutableArray<GraceNoteInfo> LeadingGrace { get; init; } = ImmutableArray<GraceNoteInfo>.Empty;
+    public ImmutableArray<GraceColumnInfo> LeadingGrace { get; init; } = ImmutableArray<GraceColumnInfo>.Empty;
 
     /// <summary>Stem direction: beam-resolved if beamed, else down unless the
     /// midpoint of the EXTREME heads lies below the middle line. LilyPond weighs

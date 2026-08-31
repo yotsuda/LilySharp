@@ -23,9 +23,15 @@ namespace LilySharp.Core.Semantics;
 /// <summary>What a <c>grace { … }</c> body loses, by kind.</summary>
 internal enum GraceDropKind
 {
-    /// <summary>An element that is not a bare note — a chord, a rest, a tuplet, a nested
-    /// container. It contributes NO grace column, so a body made only of these engraves
-    /// no grace at all.</summary>
+    /// <summary>An element that makes no grace column — a rest, an empty chord, a nested
+    /// container. A body made only of these engraves no grace at all.</summary>
+    /// <remarks>
+    /// ⚠️ A CHORD IS NOT ONE OF THESE ANY MORE (session 308): it is one column with N heads,
+    /// and <see cref="GraceBodySupport.CarriedChord"/> reads it. What is left in this kind is
+    /// the REST, whose repair is not this one — a rest is a column with no head at all, and
+    /// LilyPond's beam then covers only the leading run of heads, which is the same model
+    /// change the beam half of docs/HANDOFF.md §2 U8 ⒞ needs.
+    /// </remarks>
     Element,
     /// <summary>An annotation written on a grace note.</summary>
     Annotation,
@@ -75,10 +81,11 @@ internal readonly record struct GraceBodyElement(SyntaxNode Node, string? ViaPhr
 /// statement: it re-emits the written source and narrows nothing, so it was right already.)
 /// <para>
 /// ⚠️ THE FOUR STILL DISAGREE BELOW THE CONTAINER, and that is the open half of
-/// docs/HANDOFF.md §2 U8 rather than an oversight: a chord and a rest in a grace body SOUND
-/// (since 2026-07-10) while the page and the XML drop them. Whoever teaches the page to
-/// engrave those has to check all four again — the line this file draws is about which GROBS
-/// a grace column can hold, and only two of the readers put grobs anywhere.
+/// docs/HANDOFF.md §2 U8 rather than an oversight. A CHORD no longer does (session 308): all
+/// four carry it. A REST still does — it has SOUNDED since 2026-07-10 while the page and the
+/// XML drop it — because a rest is a column with NO head, and LilyPond then beams only the
+/// LEADING run of heads (measured in session 302's member table), which is the same model
+/// change the beam half of §2 U8 ⒞ needs and not this one.
 /// </para>
 /// <para>
 /// ⚠️ THIS IS A NARROWING, NOT A GRAMMAR. A grace body is parsed by the ordinary
@@ -93,13 +100,23 @@ internal readonly record struct GraceBodyElement(SyntaxNode Node, string? ViaPhr
 /// chord or a rest or a tuplet as the body's only element removes the whole grace group.
 /// </para>
 /// <para>
-/// ⚠️ A PHRASE REFERENCE IS NO LONGER ON THAT LIST (session 300), AND NEITHER IS A TUPLET
-/// (session 302). Both are CONTAINERS — they name no grob of their own — so both are
-/// expanded in place by <see cref="BodyElements"/> and whatever they hold goes through this
-/// narrowing instead. Session 298 filed all four together because a body holding one of them
-/// alone engraves no grace at all; that is the SYMPTOM, and sorting by it put two containers
-/// in a box with two grobs. What is left is A CHORD AND A REST, which really do want a grob
-/// a grace column cannot hold yet.
+/// ⚠️ A PHRASE REFERENCE IS NO LONGER ON THAT LIST (session 300), NOR IS A TUPLET (session
+/// 302), NOR IS A CHORD (session 308). The first two are CONTAINERS — they name no grob of
+/// their own — so both are expanded in place by <see cref="BodyElements"/> and whatever they
+/// hold goes through this narrowing instead. Session 298 filed all four together because a
+/// body holding one of them alone engraves no grace at all; that is the SYMPTOM, and sorting
+/// by it put two containers in a box with two grobs.
+/// <para>
+/// The CHORD was the third mis-sort, and it took a fourth reading to see: session 302 filed it
+/// with the REST under one difficulty ("the model, not the address"), and the two are not one
+/// difficulty either. A chord is N heads on ONE column, which changes nothing about the beam —
+/// MEASURED on LilyPond (session 302's member table: a chord anywhere in a grace run leaves
+/// polygon 2 and adds only its heads) — so it is <see cref="Svg.Model.GraceColumnInfo"/>'s one
+/// word and the ordinary chord engravers at the grace's fonts. A rest is a column with NO
+/// head, and LilyPond then beams only the LEADING run of heads and flags the rest, which is
+/// the partial-beam-group model §2 U8 ⒞ names. Same box, different repairs — for the fourth
+/// time in this one ticket.
+/// </para>
 /// </para>
 /// <para>
 /// ⚠️ A TUPLET STILL DROPS ITS BRACKET AND ITS NUMBER, reported as
@@ -125,7 +142,7 @@ internal readonly record struct GraceBodyElement(SyntaxNode Node, string? ViaPhr
 /// <item>the STRING NUMBER <c>\N</c>, which is not a grob at all: it draws nothing on a
 /// notation staff (MEASURED — <c>c'4\2</c> and <c>c'4</c> render byte-identical) and is only
 /// an input to <c>Tunings.CalculateFret</c>. It rides
-/// <see cref="Svg.Model.GraceNoteInfo.StringNumber"/> rather than being built as an item.</item>
+/// <see cref="Svg.Model.GraceHeadInfo.StringNumber"/> rather than being built as an item.</item>
 /// </list>
 /// ⚠️ The string number was NOT free of consequence while it was dropped: the reader's own
 /// <c>Real Gone.lys</c> writes <c>grace { a,16\2 }</c> twice, and both were drawn on whatever
@@ -141,9 +158,89 @@ internal readonly record struct GraceBodyElement(SyntaxNode Node, string? ViaPhr
 /// </remarks>
 internal static class GraceBodySupport
 {
-    /// <summary>The one element a grace column is built from, or null for everything else.
-    /// <c>MeasureCollector.CollectGraceNotes</c> asks this and nothing else.</summary>
+    /// <summary>A grace column built from ONE pitch, or null for everything else.</summary>
     internal static NoteSyntax? CarriedNote(SyntaxNode item) => item as NoteSyntax;
+
+    /// <summary>
+    /// A grace column built from SEVERAL pitches, or null for everything else — a chord is
+    /// ONE column with N heads, not N columns (session 308).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE EMPTY CHORD <c>&lt;&gt;</c> IS NOT ONE. It has no member of any kind and
+    /// occupies no time — it is a carrier for post-events (see
+    /// <see cref="Syntax.ChordSyntax.IsEmpty"/>, whose remarks record what asking that
+    /// question two different ways once cost) — so it makes no column and stays on the drop
+    /// list, where its post-events are reported like any other body element's.
+    /// </remarks>
+    internal static ChordSyntax? CarriedChord(SyntaxNode item)
+        => item is ChordSyntax { IsEmpty: false } chord ? chord : null;
+
+    /// <summary>
+    /// A grace column that sounds NOTHING, or null for everything else — a rest is a column
+    /// with no head at all (session 308).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A MULTI-MEASURE REST IS NOT ONE. <c>R</c> is a spanner over whole bars, and a grace
+    /// group is not a bar; it stays on the drop list rather than being silently drawn as an
+    /// ordinary rest, which is what reading <see cref="RestSyntax"/> unconditionally would
+    /// have done.
+    /// </remarks>
+    internal static RestSyntax? CarriedRest(SyntaxNode item)
+        => item is RestSyntax rest && rest.RestToken.Text != "R" ? rest : null;
+
+    /// <summary>
+    /// True for a body element that becomes a grace COLUMN. THE question the collector, the
+    /// validator and the "engraves nothing" test all ask, so the three cannot drift apart.
+    /// </summary>
+    internal static bool IsCarried(SyntaxNode item)
+        => CarriedNote(item) != null || CarriedChord(item) != null || CarriedRest(item) != null;
+
+    /// <summary>
+    /// The kinds a grace body engraves, worded as <see cref="GraceBodyValidator"/> says them
+    /// to the reader.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ IT LIVES HERE, TOUCHING <see cref="IsCarried"/>, BECAUSE THE SENTENCE WENT STALE
+    /// TWICE IN ONE SESSION. It read "bare notes only" while a chord had just become a column,
+    /// and then "notes and chords only" while a rest had (session 308, both halves). A list in
+    /// a message is a second spelling of a predicate: nothing goes red when the predicate
+    /// grows, because a message is not an assertion. Keeping the two lines adjacent does not
+    /// make it impossible — it makes it visible to whoever adds the next kind.
+    /// </remarks>
+    internal const string CarriedKinds = "notes, chords and rests";
+
+    /// <summary>
+    /// The annotations written on a carried element: a note's own, and for a chord both the
+    /// chord-level ones and every member's.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A MEMBER'S ANNOTATIONS COUNT. <c>&lt;c@staccato e&gt;</c> loses that script exactly
+    /// as <c>c@staccato</c> does, and reporting only the chord-level list would have made the
+    /// warning silently narrower than the loss the moment a chord became a column.
+    /// </remarks>
+    internal static IEnumerable<SyntaxNode> CarriedAnnotations(SyntaxNode item)
+    {
+        if (CarriedNote(item) is { } note)
+        {
+            foreach (var a in note.Articulations)
+                yield return a;
+            yield break;
+        }
+        if (CarriedChord(item) is { } chord)
+        {
+            foreach (var a in chord.Articulations)
+                yield return a;
+            foreach (var pitch in chord.Pitches)
+                foreach (var a in pitch.Articulations)
+                    yield return a;
+            yield break;
+        }
+        if (CarriedRest(item) is { } rest)
+        {
+            foreach (var a in rest.Articulations)
+                yield return a;
+        }
+    }
 
     /// <summary>
     /// True for an annotation that asks for NO COLUMN — so that writing it on a grace note
@@ -369,9 +466,9 @@ internal static class GraceBodySupport
             if (IsFrameMarker(item))
                 continue;
 
-            if (CarriedNote(item) is not { } note)
+            if (!IsCarried(item))
             {
-                // Not a bare note. The KIND is what the reader needs to hear, so name the
+                // Not a column. The KIND is what the reader needs to hear, so name the
                 // node rather than quoting the source — a tuplet body would otherwise be
                 // quoted whole into a console line.
                 yield return new GraceDrop(KindOf(item), item.Span, Describe(item), via);
@@ -383,8 +480,8 @@ internal static class GraceBodySupport
             // head, in the grace's own font, so nothing about a grace not being a measure
             // item stood in its way. Session 298 filed it with the annotations because it
             // sorted the drops by FAMILY; the line that actually divides them is which
-            // column a thing asks for. See GraceNoteInfo.Dots and Svg.Layout.DotColumn.
-            foreach (var annotation in note.Articulations)
+            // column a thing asks for. See GraceColumnInfo.Dots and Svg.Layout.DotColumn.
+            foreach (var annotation in CarriedAnnotations(item))
             {
                 if (NeedsNoColumn(annotation))
                     continue;
@@ -399,7 +496,7 @@ internal static class GraceBodySupport
     internal static bool EngravesNothing(IReadOnlyList<GraceBodyElement> elements)
     {
         foreach (var (item, _) in elements)
-            if (CarriedNote(item) != null)
+            if (IsCarried(item))
                 return false;
         return true;
     }

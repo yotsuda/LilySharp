@@ -760,7 +760,7 @@ internal static partial class SpacingRules
             {
                 NoteItem n => n.LeadingGrace,
                 ChordItem c => c.LeadingGrace,
-                _ => ImmutableArray<GraceNoteInfo>.Empty
+                _ => ImmutableArray<GraceColumnInfo>.Empty
             };
             if (grace.IsDefaultOrEmpty)
                 continue;

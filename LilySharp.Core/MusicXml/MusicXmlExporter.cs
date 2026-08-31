@@ -2287,6 +2287,66 @@ public sealed class MusicXmlExporter
         }
     }
 
+    /// <summary>
+    /// Where ONE member of a chord sounds, and the frame it leaves behind.
+    /// </summary>
+    /// <remarks>
+    /// THE one spelling of the chord's octave rule for this exporter: <c>ProcessChord</c>
+    /// reads it for the main stream and <c>ProcessGraceNotes</c> for a chord inside a
+    /// <c>grace { }</c> body (session 308). It was inline in the first when the second was
+    /// written, and copying it would have made a fifth answer to a question this repository
+    /// has already had to unify four times (see <c>ProcessGraceNotes</c>' remark on the grace
+    /// group's own duration memory).
+    /// <para>
+    /// The first member is the ROOT: its bare LETTER is the chord's ANCHOR; every other member
+    /// STACKS above the anchor — the same octave placement as a scale degree, so the chord's
+    /// pitches are independent of the written order (<c>&lt;c e g&gt;</c> ==
+    /// <c>&lt;c 3 5&gt;</c> == <c>&lt;c g e&gt;</c>). Each member's own <c>'</c>/<c>,</c> marks
+    /// (the root's included) are LOCAL to that one note; the note after the chord is relative
+    /// to the anchor. A deliberate Lily# divergence from LilyPond, matching
+    /// <c>MidiExporter</c> and <c>MeasureCollector</c>.
+    /// </para>
+    /// </remarks>
+    private (string Step, int Alter, int Octave) ResolveChordMemberPitch(
+        PitchSyntax pitch, bool isFirst, int chordOctave,
+        ref int firstStep, ref int firstOctave)
+    {
+        var (step, alter) = ParsePitch(pitch);
+        int targetOctave;
+        if (isFirst)
+        {
+            if (_octaveAbsolute)
+            {
+                targetOctave = ResolveRelativeOctave(pitch) + chordOctave; // advances state
+                firstOctave = _currentOctave + chordOctave;
+            }
+            else
+            {
+                // The root's LETTER resolved bare = the chord's ANCHOR; its own
+                // '/, marks are LOCAL to its sounding pitch (<c' e g> = C5 E4 G4,
+                // and the next note stays relative to C4).
+                int stepIdx = RelativeOctave.StepIndex(pitch.BaseName);
+                int anchor = RelativeOctave.Resolve(_currentStep, _currentOctave, stepIdx, 0) + chordOctave;
+                targetOctave = anchor + pitch.OctaveOffset;
+                _currentStep = stepIdx;
+                _currentOctave = anchor;
+                firstOctave = anchor;
+            }
+            firstStep = _currentStep;
+        }
+        else if (_octaveAbsolute)
+        {
+            // Absolute mode: each member is a fixed pitch, no stacking.
+            targetOctave = ResolveRelativeOctave(pitch) + chordOctave;
+        }
+        else
+        {
+            int stepIdx = RelativeOctave.StepIndex(pitch.BaseName);
+            targetOctave = firstOctave + (stepIdx >= firstStep ? 0 : 1) + pitch.OctaveOffset;
+        }
+        return ApplyTranspose(pitch, step, alter, targetOctave);
+    }
+
     private void ProcessChord(ChordSyntax chord, int extraOctave = 0)
     {
         if (_currentMeasure == null) return;
@@ -2329,40 +2389,8 @@ public sealed class MusicXmlExporter
         bool isFirst = true;
         foreach (var pitch in pitches)
         {
-            var (step, alter) = ParsePitch(pitch);
-            int targetOctave;
-            if (isFirst)
-            {
-                if (_octaveAbsolute)
-                {
-                    targetOctave = ResolveRelativeOctave(pitch) + chordOctave; // advances state
-                    firstOctave = _currentOctave + chordOctave;
-                }
-                else
-                {
-                    // The root's LETTER resolved bare = the chord's ANCHOR; its own
-                    // '/, marks are LOCAL to its sounding pitch (<c' e g> = C5 E4 G4,
-                    // and the next note stays relative to C4).
-                    int stepIdx = RelativeOctave.StepIndex(pitch.BaseName);
-                    int anchor = RelativeOctave.Resolve(_currentStep, _currentOctave, stepIdx, 0) + chordOctave;
-                    targetOctave = anchor + pitch.OctaveOffset;
-                    _currentStep = stepIdx;
-                    _currentOctave = anchor;
-                    firstOctave = anchor;
-                }
-                firstStep = _currentStep;
-            }
-            else if (_octaveAbsolute)
-            {
-                // Absolute mode: each member is a fixed pitch, no stacking.
-                targetOctave = ResolveRelativeOctave(pitch) + chordOctave;
-            }
-            else
-            {
-                int stepIdx = RelativeOctave.StepIndex(pitch.BaseName);
-                targetOctave = firstOctave + (stepIdx >= firstStep ? 0 : 1) + pitch.OctaveOffset;
-            }
-            (step, alter, targetOctave) = ApplyTranspose(pitch, step, alter, targetOctave);
+            var (step, alter, targetOctave) = ResolveChordMemberPitch(
+                pitch, isFirst, chordOctave, ref firstStep, ref firstOctave);
             resolved.Add((step, alter, targetOctave));
 
             var xmlNote = new MusicXmlNote
@@ -2806,6 +2834,102 @@ public sealed class MusicXmlExporter
                     };
 
                     _currentMeasure.Notes.Add(xmlNote);
+                    break;
+                }
+
+                // A CHORD IN A GRACE BODY IS ONE COLUMN WITH N HEADS (session 308), and this
+                // reader writes it the way it writes any chord: one <note> per member, with
+                // <chord/> on every member but the first. The octave rule is
+                // ResolveChordMemberPitch, the SAME statement ProcessChord reads — a grace
+                // chord's pitches must not depend on which walk found them.
+                // ⚠️ THE DURATION IS THE GRACE GROUP'S, not the main stream's. That is this
+                // walker's own memory (see the remark above and what sharing it once cost),
+                // and a chord threads it exactly as a note does.
+                case ChordSyntax chord when Semantics.GraceBodySupport.CarriedChord(chord) != null:
+                {
+                    if (chord.Duration != null)
+                        graceDuration = chord.Duration.ToFraction();
+                    var (chordType, _) = GetNoteType(graceDuration);
+                    var (chordActual, chordNormal) = CurrentTupletRatio();
+                    int chordOctave = chord.ChordOctaveOffset;
+                    int firstStep = _currentStep, firstOctave = _currentOctave;
+                    bool firstMember = true;
+                    foreach (var pitch in chord.Pitches)
+                    {
+                        var (cstep, calter, coctave) = ResolveChordMemberPitch(
+                            pitch, firstMember, chordOctave, ref firstStep, ref firstOctave);
+                        _currentMeasure.Notes.Add(new MusicXmlNote
+                        {
+                            IsGrace = true,
+                            IsSlash = isAcciaccatura,
+                            IsChord = !firstMember,
+                            Step = cstep,
+                            Alter = calter,
+                            Octave = coctave,
+                            Type = chordType,
+                            ActualNotes = chordActual,
+                            NormalNotes = chordNormal
+                        });
+                        firstMember = false;
+                    }
+                    // Scale-degree members (`grace { <d 3 5>16 }`): the same stacking the main
+                    // stream's chord arm applies, so a degree chord written in a grace body
+                    // sounds what the page draws.
+                    if (chord.Pitches.Any() is false && chord.Degrees.Any())
+                    {
+                        int tonicStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
+                        firstOctave = RelativeOctave.Resolve(
+                            _currentStep, _currentOctave, tonicStep, 0) + chordOctave;
+                        firstStep = tonicStep;
+                        _currentStep = tonicStep;
+                        _currentOctave = firstOctave;
+                    }
+                    foreach (var degree in chord.Degrees)
+                    {
+                        var (dstep, dalter, doctave) = ChordDegrees.Resolve(
+                            firstStep, firstOctave, degree.Number, degree.Alteration,
+                            degree.OctaveOffset, _keyFifths);
+                        (dstep, dalter, doctave) = ApplyWrittenTransforms(dstep, dalter, doctave);
+                        _currentMeasure.Notes.Add(new MusicXmlNote
+                        {
+                            IsGrace = true,
+                            IsSlash = isAcciaccatura,
+                            IsChord = !firstMember,
+                            Step = "CDEFGAB"[dstep].ToString(),
+                            Alter = dalter,
+                            Octave = doctave,
+                            Type = chordType,
+                            ActualNotes = chordActual,
+                            NormalNotes = chordNormal
+                        });
+                        firstMember = false;
+                    }
+                    break;
+                }
+
+                // A REST IN A GRACE BODY IS A COLUMN WITH NO HEAD (session 308), and this
+                // reader writes it as a grace rest. It has SOUNDED since 2026-07-10 (the MIDI
+                // walker gives it grace time and emits no note) and the page draws it now, so
+                // this was the last of the four still dropping it.
+                // ⚠️ A SPACER (`s`) IS STILL WRITTEN, as `<rest/>` with no ink implied: this
+                // format has no separate spacer, and the page's own answer - hold the column,
+                // draw nothing - has no MusicXML spelling either. The alternative is to omit
+                // it, which would make the grace group's written rhythm wrong.
+                case RestSyntax rest when Semantics.GraceBodySupport.CarriedRest(rest) != null:
+                {
+                    if (rest.Duration != null)
+                        graceDuration = rest.Duration.ToFraction();
+                    var (restType, _) = GetNoteType(graceDuration);
+                    var (restActual, restNormal) = CurrentTupletRatio();
+                    _currentMeasure.Notes.Add(new MusicXmlNote
+                    {
+                        IsGrace = true,
+                        IsSlash = isAcciaccatura,
+                        IsRest = true,
+                        Type = restType,
+                        ActualNotes = restActual,
+                        NormalNotes = restNormal
+                    });
                     break;
                 }
             }

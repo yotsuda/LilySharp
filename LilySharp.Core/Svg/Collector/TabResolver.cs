@@ -218,7 +218,7 @@ internal sealed class TabResolver
     private static MusicItem WithoutAccidentals(MusicItem item) => item switch
     {
         NoteItem note when note.Accidental != null || note.EditorialAccidental != null
-                           || note.LeadingGrace.Any(g => g.Accidental != null)
+                           || GraceHasAccidental(note.LeadingGrace)
             => note with
             {
                 Accidental = null,
@@ -226,7 +226,7 @@ internal sealed class TabResolver
                 LeadingGrace = WithoutGraceAccidentals(note.LeadingGrace),
             },
         ChordItem chord when chord.Notes.Any(n => n.Accidental != null)
-                             || chord.LeadingGrace.Any(g => g.Accidental != null)
+                             || GraceHasAccidental(chord.LeadingGrace)
             => chord with
             {
                 Notes = ImmutableArray.CreateRange(chord.Notes, n => n with { Accidental = null }),
@@ -235,10 +235,25 @@ internal sealed class TabResolver
         _ => item,
     };
 
-    private static ImmutableArray<GraceNoteInfo> WithoutGraceAccidentals(
-        ImmutableArray<GraceNoteInfo> grace)
-        => grace.Any(g => g.Accidental != null)
-            ? ImmutableArray.CreateRange(grace, g => g with { Accidental = null })
+    /// <summary>True when any HEAD of any column carries an accidental — a grace chord has
+    /// one per pitch, so the question is asked of the heads and not of the column.</summary>
+    private static bool GraceHasAccidental(ImmutableArray<GraceColumnInfo> grace)
+    {
+        foreach (var column in grace)
+            foreach (var head in column.Heads)
+                if (head.Accidental != null)
+                    return true;
+        return false;
+    }
+
+    private static ImmutableArray<GraceColumnInfo> WithoutGraceAccidentals(
+        ImmutableArray<GraceColumnInfo> grace)
+        => GraceHasAccidental(grace)
+            ? ImmutableArray.CreateRange(grace, g => g with
+                {
+                    Heads = ImmutableArray.CreateRange(
+                        g.Heads, h => h with { Accidental = null }),
+                })
             : grace;
 
     /// <summary>A sounding pitch is playable when some string frets it at 0..24.</summary>

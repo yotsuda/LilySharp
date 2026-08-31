@@ -91,14 +91,18 @@ internal static partial class SharedRenderer
             int lastGraceStaffPos = 0;
             // Per-head geometry, collected so the stems/beam can be drawn once
             // the whole group's positions are known.
-            var headX = new List<double>(g.Notes.Length);
-            var headY = new List<double>(g.Notes.Length);
-            var beamCounts = new List<int>(g.Notes.Length);
-            // The run draws ONE beam or a flag per head, and both the dots and the stems
-            // below have to know which. Asked ONCE, of the house that owns the sentence, and
-            // handed down to DrawGraceStemsAndBeam rather than re-decided there — a run
-            // reserved as beamed and drawn as flagged fills a box it was not given.
-            bool graceBeamed = GraceNoteEngraver.IsBeamedRun(g.Notes);
+            var headX = new List<double>(g.Columns.Length);
+            var headY = new List<double>(g.Columns.Length);
+            // The stem FOOT and the stem TIP anchor are two numbers for a chord and
+            // one for a single head; see the note where they are filled.
+            var headTopY = new List<double>(g.Columns.Length);
+            var beamCounts = new List<int>(g.Columns.Length);
+            // WHICH columns the one beam covers, and both the dots and the stems below have
+            // to know: a column outside the prefix draws a FLAG, and a flag can stand in the
+            // dots' way. Asked ONCE, of the house that owns the sentence, and handed down to
+            // DrawGraceStemsAndBeam rather than re-decided there — a column reserved as
+            // beamed and drawn as flagged fills a box it was not given.
+            int beamedPrefix = GraceNoteEngraver.BeamedPrefix(g.Columns);
             // Music glyphs from HERE come out of the grace's own design, not the score's:
             // Emmentaler is optically sized, so a grace head is the 14 design's outline at
             // magstep(-3) and not the 20's drawn small (IDrawingContext.MusicFace). The scope
@@ -106,49 +110,104 @@ internal static partial class SharedRenderer
             using (gc.Source(g.SourcePosition))
             using (gc.MusicFace(GraceNoteItem.DesignSize))
             {
-                foreach (var note in g.Notes)
+                foreach (var note in g.Columns)
                 {
                     if (!colX.IsDefault && headIndex < colX.Length)
                         currentX = g.X + colX[headIndex] * unit;
-                    double y = os.YUp(staffMiddleY + note.StaffPosition / 2.0,
-                        g.StaffIndex, g.MeasureIndex);
-                    // Ledgers under the head — layer 0 with the staff lines.
-                    // LILYPOND-REF: scm/define-grobs.scm LedgerLineSpanner (layer . 0)
-                    // On an ossia the anchor is the affined middle and the
-                    // per-step offsets shrink via `unit`, matching the heads.
-                    if (note.NeedsLedger)
-                        DrawLedgerLines(note.StaffPosition, currentX,
-                            os.YUp(staffMiddleY, g.StaffIndex, g.MeasureIndex), gc,
-                            graceFont.NoteheadBlackAdvance,
-                            unit: os.Size(1.0, g.StaffIndex));
-                    // Same single-ape skyline path as full notes (draw = reserve): a grace
-                    // natural clears its head by its real right skyline, not the fixed gap.
-                    // ⚠️ NOT THE GRACE'S OWN SIZE: general-grace-settings gives the Accidental
-                    // font-size −4 while the head above is −3, so this glyph comes out of the
-                    // THIRTEEN design (GraceNoteItem.AccidentalFont / .AccidentalDesignSize) —
-                    // measured, see GraceNoteItem.AccidentalFontSizeStep. Metric, outline
-                    // skyline and face all three come from that one font; splitting them is
-                    // what this island exists to remove.
-                    if (note.Accidental is { } acc
-                        && AccidentalColumn.CalculateSinglePosition(
-                            note.StaffPosition, acc, isCourtesy: false,
-                            graceAccFont, graceFont) is { } al)
+                    // A REST HOLDS A COLUMN AND DRAWS NO HEAD, so it takes none of the
+                    // per-head geometry below and contributes NO entry to headX/headY: it has
+                    // no stem, no flag and no beam, and adding one would put a stem on a rest.
+                    // Its column is still counted (headIndex++), because the offsets the
+                    // layout handed down are per COLUMN.
+                    if (note.IsRest)
                     {
-                        using (gc.MusicFace(GraceNoteItem.AccidentalDesignSize))
-                            DrawAccidentalAtInkLeft(acc, isCourtesy: false, currentX + al.XOffset, y,
-                                g.SourcePosition, gc, graceAccFont.Magnification);
+                        if (!note.IsSpacer)
+                        {
+                            var stand = (RestItem)GraceColumnHeads.StandIn(
+                                note, g.SourcePosition, dots: note.Dots);
+                            // The origin LilyPond puts it at, through the house every rest
+                            // asks: a short rest sits on the middle line, a semibreve hangs.
+                            // The grace Voice's forced Stem UP does NOT make this a voiced
+                            // rest — score-grace-settings sets Stem and Slur directions and
+                            // says nothing about Rest — so the direction asked here is the
+                            // neutral 0. MEASURED: a grace rest stands at the middle line,
+                            // where a main-stream one does (scratch/p308/lp2, r1_split
+                            // against s0_mainrest, both y=11.6906).
+                            double restPos = ElementCoordinator.RestStaffPosition(
+                                stand, dir: 0, GlyphMetrics.NoteValueOf(note.BaseDuration));
+                            DrawRestAtOrigin(stand, currentX,
+                                os.YUp(staffMiddleY + restPos / 2.0, g.StaffIndex, g.MeasureIndex),
+                                dotOffset: null, gc, restPos);
+                        }
+                        headIndex++;
+                        continue;
                     }
-                    gc.DrawNotehead(EmmentalerGlyphs.NoteheadBlack, currentX, y, scaledFontSize, null,
-                        graceFont.NoteheadBlackAdvance,
-                        graceFont.NoteheadBlack.Height);
+                    // WHERE the heads and the accidentals of this column stand is
+                    // GraceColumnHeads — the same statement the reservation read
+                    // (SpacingRules.GraceColumnLeftReach / .GraceColumnRightReach), so a
+                    // chord cannot be drawn wider than the box it was given. Both answer
+                    // "nothing to move" for a one-head column, which is why every existing
+                    // grace book comes through byte-identical.
+                    var headOffsets = GraceColumnHeads.HeadOffsets(note);
+                    var accOffsets = GraceColumnHeads.AccidentalOffsets(note);
+                    double lowestY = double.MaxValue, highestY = double.MinValue;
+                    for (int h = 0; h < note.Heads.Length; h++)
+                    {
+                        var head = note.Heads[h];
+                        // The SECONDS shift: a reversed head is drawn on the far side of the
+                        // stem, and it shrinks with the staff on an ossia like every other
+                        // horizontal grace offset.
+                        double hx = currentX
+                            + (headOffsets.IsDefaultOrEmpty ? 0 : headOffsets[h] * unit);
+                        double hy = os.YUp(staffMiddleY + head.StaffPosition / 2.0,
+                            g.StaffIndex, g.MeasureIndex);
+                        lowestY = Math.Min(lowestY, hy);
+                        highestY = Math.Max(highestY, hy);
+                        // Ledgers under the head — layer 0 with the staff lines.
+                        // LILYPOND-REF: scm/define-grobs.scm LedgerLineSpanner (layer . 0)
+                        // On an ossia the anchor is the affined middle and the
+                        // per-step offsets shrink via `unit`, matching the heads.
+                        if (head.NeedsLedger)
+                            DrawLedgerLines(head.StaffPosition, hx,
+                                os.YUp(staffMiddleY, g.StaffIndex, g.MeasureIndex), gc,
+                                graceFont.NoteheadBlackAdvance,
+                                unit: os.Size(1.0, g.StaffIndex));
+                        // The accidental stands in the COLUMN's frame, not the head's: a
+                        // reversed head keeps the accidental its stacking gave it
+                        // (lily/accidental-placement.cc:391-438 position_apes translates
+                        // relative to the placement grob, which is outside the shifted head).
+                        // ⚠️ NOT THE GRACE'S OWN SIZE: general-grace-settings gives the
+                        // Accidental font-size −4 while the head is −3, so this glyph comes
+                        // out of the THIRTEEN design (GraceNoteItem.AccidentalFont /
+                        // .AccidentalDesignSize) — measured, see
+                        // GraceNoteItem.AccidentalFontSizeStep. Metric, outline skyline and
+                        // face all three come from that one font; splitting them is what this
+                        // island exists to remove.
+                        if (head.Accidental is { } acc
+                            && h < accOffsets.Length && accOffsets[h] is { } ax)
+                        {
+                            using (gc.MusicFace(GraceNoteItem.AccidentalDesignSize))
+                                DrawAccidentalAtInkLeft(acc, isCourtesy: false,
+                                    currentX + ax * unit, hy,
+                                    g.SourcePosition, gc, graceAccFont.Magnification);
+                        }
+                        gc.DrawNotehead(EmmentalerGlyphs.NoteheadBlack, hx, hy, scaledFontSize,
+                            null, graceFont.NoteheadBlackAdvance,
+                            graceFont.NoteheadBlack.Height);
+                    }
                     // Augmentation dots. WHERE they stand is GraceNoteEngraver.Dots — the
                     // same statement the column's reservation read, so what is drawn is what
-                    // was reserved. The dot is drawn out of the head's own font, not the
-                    // accidental's: general-grace-settings gives Dots font-size −3, the same
-                    // −3 the NoteHead carries (scm/music-functions.scm:635-648).
+                    // was reserved. A chord gets one row per head, resolved together there.
+                    // The dot is drawn out of the head's own font, not the accidental's:
+                    // general-grace-settings gives Dots font-size −3, the same −3 the
+                    // NoteHead carries (scm/music-functions.scm:635-648).
                     if (note.Dots > 0)
                     {
-                        var (dotX, dotPositions) = GraceNoteEngraver.Dots(note, graceBeamed);
+                        // PER COLUMN, not per run: this column draws a flag unless it is
+                        // inside the beamed prefix, and whether a flag is in the dots' way
+                        // is the whole question Dots asks the gate.
+                        var (dotX, dotPositions) = GraceNoteEngraver.Dots(
+                            note, beamed: headIndex < beamedPrefix);
                         foreach (int p in dotPositions)
                         {
                             double dotY = os.YUp(staffMiddleY + p / 2.0,
@@ -160,11 +219,18 @@ internal static partial class SharedRenderer
                         }
                     }
                     headX.Add(currentX);
-                    headY.Add(y);
+                    // A stem-up stem stands on the BOTTOM of the head column and is measured
+                    // from its TOP — Stem::chord_start_y is head_positions(me)[my_dir], the
+                    // top head for UP (lily/stem.cc:114-122), while the drawn extent starts
+                    // at the other end. For a single head the two are one number.
+                    headY.Add(lowestY);
+                    headTopY.Add(highestY);
                     beamCounts.Add(BeamCountForDuration(note.BaseDuration.Denominator));
                     lastNoteX = currentX;
-                    lastNoteY = y;
-                    lastGraceStaffPos = note.StaffPosition;
+                    // The grace slur bows DOWN (score-grace-settings pairs Slur direction
+                    // DOWN with Stem UP), so it leaves the column's BOTTOM head.
+                    lastNoteY = lowestY;
+                    lastGraceStaffPos = note.Lowest.StaffPosition;
                     headIndex++;
                 }
 
@@ -186,13 +252,13 @@ internal static partial class SharedRenderer
                         ? (os.YUp(staffMiddleY + bl / 2.0, g.StaffIndex, g.MeasureIndex),
                            os.YUp(staffMiddleY + br / 2.0, g.StaffIndex, g.MeasureIndex))
                         : null;
-                DrawGraceStemsAndBeam(headX, headY, beamCounts, eff, graceFont,
-                    g.Type == GraceNoteType.Acciaccatura, beamEnds, graceBeamed, gc);
+                DrawGraceStemsAndBeam(headX, headY, headTopY, beamCounts, eff, graceFont,
+                    g.Type == GraceNoteType.Acciaccatura, beamEnds, beamedPrefix, gc);
 
                 // Grace slur from the last grace notehead to the main notehead.
                 // LILYPOND-REF: ly/grace-init.ly startGraceSlur/stopGraceSlur —
                 // acciaccatura and appoggiatura are auto-slurred to the main note.
-                if (g.Notes.Length > 0 &&
+                if (g.Columns.Length > 0 &&
                     g.Type is GraceNoteType.Acciaccatura or GraceNoteType.Appoggiatura)
                 {
                     double mainY = os.YUp(
@@ -276,20 +342,29 @@ internal static partial class SharedRenderer
         var colX = g.ColumnOffsets;
         double currentX = g.X;
         int headIndex = 0;
-        foreach (var note in g.Notes)
+        foreach (var note in g.Columns)
         {
             if (!colX.IsDefault && headIndex < colX.Length)
                 currentX = g.X + colX[headIndex];
             headIndex++;
-            // The '\N' written on the grace note, when there is one. A string number is not a
-            // grob but the resolver's INPUT, so a grace can honour it although it is not a
-            // measure item (GraceNoteInfo.StringNumber); 0 means "pick a string".
-            var (stringNum, fret) = Tunings.CalculateFret(
-                note.Midi + octaveShift, tuningArray, note.StringNumber ?? 0);
-            string fretText = fret.ToString();
-            yield return new TabGraceDigit(
-                stringNum, fretText, currentX,
-                LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(fretText, fontSize));
+            // ONE DIGIT PER HEAD: a tab chord prints a fret number on every string it sounds,
+            // and a grace chord is no different. The resolver is asked per head so two pitches
+            // of one column can land on two strings.
+            // ⚠️ THE DIGITS ARE NOT SPREAD HORIZONTALLY. A tab chord's members stand on
+            // different STRING LINES, so the seconds shift a notation staff needs has no
+            // counterpart here — which is why this loop asks GraceColumnHeads for nothing.
+            foreach (var head in note.Heads)
+            {
+                // The '\N' written on the grace note, when there is one. A string number is
+                // not a grob but the resolver's INPUT, so a grace can honour it although it
+                // is not a measure item (GraceHeadInfo.StringNumber); 0 means "pick a string".
+                var (stringNum, fret) = Tunings.CalculateFret(
+                    head.Midi + octaveShift, tuningArray, head.StringNumber ?? 0);
+                string fretText = fret.ToString();
+                yield return new TabGraceDigit(
+                    stringNum, fretText, currentX,
+                    LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(fretText, fontSize));
+            }
         }
     }
 
@@ -331,10 +406,16 @@ internal static partial class SharedRenderer
     /// The font the HEADS came out of — an up stem attaches at that font's head advance, so
     /// the stem stands where the drawn head ends and not where a scaled 20 would have.
     /// </param>
+    /// <param name="ys">Each column's stem FOOT — the bottom of its head column.</param>
+    /// <param name="topYs">Each column's stem TIP ANCHOR — the top of its head column,
+    /// which is what a stem's LENGTH is measured from for an up stem
+    /// (Stem::chord_start_y, lily/stem.cc:114-122). Equal to <paramref name="ys"/>
+    /// entry for entry unless a column is a chord.</param>
     private static void DrawGraceStemsAndBeam(
-        List<double> xs, List<double> ys, List<int> beamCounts, double scale,
+        List<double> xs, List<double> ys, List<double> topYs, List<int> beamCounts,
+        double scale,
         GlyphMetrics.DesignMetrics headFont,
-        bool acciaccatura, (double Left, double Right)? beamEnds, bool allBeamable,
+        bool acciaccatura, (double Left, double Right)? beamEnds, int beamedCount,
         IDrawingContext gc)
     {
         int n = xs.Count;
@@ -379,37 +460,64 @@ internal static partial class SharedRenderer
                 NoteheadStyle.Default, headFont);
         // Stem end: the up-stem runs from the head to stemLen above it — up is larger
         // Y-up, so add in the native page Y-up frame.
-        double StemEndY(int i) => ys[i] + stemLen;
+        double StemEndY(int i) => topYs[i] + stemLen;
 
         int maxBeams = 0;
         foreach (var b in beamCounts) maxBeams = Math.Max(maxBeams, b);
-        // allBeamable ARRIVES rather than being decided here: it is
-        // GraceNoteEngraver.IsBeamedRun, the same sentence the reservation and the
-        // dot column read. It was spelt here a second time until session 299.
+        // beamedCount ARRIVES rather than being decided here: it is
+        // GraceNoteEngraver.BeamedPrefix, the same sentence the reservation, the quanter
+        // and the dot column read. It was spelt here a second time until session 299, and
+        // it was a run-wide BOOL until session 308 measured that LilyPond beams the
+        // leading run of head-columns and flags whatever follows it.
 
-        if (maxBeams == 0 || !allBeamable)
+        // ONE BEAM OVER THE PREFIX, FLAGS ON THE REST. beamedCount is
+        // GraceNoteEngraver.BeamedPrefix - the same sentence the reservation, the quanter
+        // and the dot column read - counted over the columns that HAVE HEADS, which is
+        // exactly what reaches this method (a rest contributes no entry, having no stem).
+        // 
+        // The whole group falls through to flags when the prefix is empty; otherwise the
+        // beam is drawn over [0, beamedCount) and every later stem takes a flag, which is
+        // what LilyPond draws (scratch/p308/lp2/measurements.md).
+        // A FLAGGED column: a bare stem of the fixed length, the flag its value asks for,
+        // and the acciaccatura slash. Called for the WHOLE run when nothing is beamed,
+        // and for the columns AFTER the beamed prefix when something is - one loop
+        // served both while a run was beamed or flagged as a whole.
+        void Flagged(int i)
         {
-            // Bare stems (fixed length) plus a flag per beamable head. A lone grace,
-            // a quarter-or-longer grace, or a non-uniform group takes this path.
-            for (int i = 0; i < n; i++)
-                gc.DrawLine(StemX(i), ys[i], StemX(i), StemEndY(i), Color.Black, stemThick);
-            if (maxBeams == 0) return;
+            gc.DrawLine(StemX(i), ys[i], StemX(i), StemEndY(i), Color.Black, stemThick);
+            if (beamCounts[i] == 0) return;
+            int denom = 1 << (beamCounts[i] + 2);   // beams→denominator (1→8, 2→16, …)
+            var flag = EmmentalerGlyphs.GetFlag(denom, stemUp: true);
+            if (flag.HasValue)
+                // The stem's RIGHT EDGE, and the term is UNSCALED because the thickness is
+                // (see LayoutUtilities.FlagDrawX and the stem thickness note above).
+                gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(StemX(i)), StemEndY(i),
+                    FontSize * scale, Color.Black);
+            // Acciaccatura: diagonal slash through the stem just below the flag.
+            if (acciaccatura)
+                DrawGraceSlash(StemX(i), StemEndY(i), scale, gc);
+        }
+
+        if (maxBeams == 0 || beamedCount < 2)
+        {
+            // Nothing is beamed: a lone grace, a quarter-or-longer one, a group whose
+            // leading run is broken by a rest at the front, or a non-uniform one.
             for (int i = 0; i < n; i++)
             {
-                if (beamCounts[i] == 0) continue;
-                int denom = 1 << (beamCounts[i] + 2);   // beams→denominator (1→8, 2→16, …)
-                var flag = EmmentalerGlyphs.GetFlag(denom, stemUp: true);
-                if (flag.HasValue)
-                    // The stem's RIGHT EDGE, and the term is UNSCALED because the thickness is
-                    // (see LayoutUtilities.FlagDrawX and the stem thickness note above).
-                    gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(StemX(i)), StemEndY(i),
-                        FontSize * scale, Color.Black);
-                // Acciaccatura: diagonal slash through the stem just below the flag.
-                if (acciaccatura)
-                    DrawGraceSlash(StemX(i), StemEndY(i), scale, gc);
+                if (maxBeams == 0)
+                    gc.DrawLine(StemX(i), ys[i], StemX(i), StemEndY(i), Color.Black,
+                        stemThick);
+                else
+                    Flagged(i);
             }
             return;
         }
+
+        // EVERY COLUMN PAST THE PREFIX DRAWS A FLAG, and the beam below covers only
+        // [0, beamedCount). MEASURED: `{ d'16 e'16 r16 f'16 }` is a beam over the first two
+        // and a FLAG on the head after the rest (scratch/p308/lp2/measurements.md).
+        for (int i = beamedCount; i < n; i++)
+            Flagged(i);
 
         // Beamed group. The beam is ONE straight line at a fixed stem length above
         // the heads; each stem then runs from its head to that SLOPED line at its own
@@ -426,14 +534,18 @@ internal static partial class SharedRenderer
         // gives that stem its length. Reading these two numbers at the EDGES instead drew the
         // configuration flattened by 0.13 / x_span, which is where +-0.014991541 of the
         // grace beam's residual came from (ledger beam.quant.grace.left).
-        double edgeL = StemX(0), edgeR = StemX(n - 1);
+        // THE PREFIX'S OUTER STEMS, not the run's: the quanter scored this beam over
+        // [0, beamedCount) and answered AT ITS OUTER STEMS, so anchoring it anywhere else
+        // draws a configuration the scorer never chose.
+        int last = beamedCount - 1;
+        double edgeL = StemX(0), edgeR = StemX(last);
         double beamLeftY = beamEnds?.Left ?? StemEndY(0);
-        double beamRightY = beamEnds?.Right ?? StemEndY(n - 1);
+        double beamRightY = beamEnds?.Right ?? StemEndY(last);
         double span = edgeR - edgeL;
         double beamSlope = span > 0.001 ? (beamRightY - beamLeftY) / span : 0.0;
         double BeamY(double x) => beamLeftY + beamSlope * (x - edgeL);
 
-        for (int i = 0; i < n; i++)
+        for (int i = 0; i < beamedCount; i++)
             gc.DrawLine(StemX(i), ys[i], StemX(i), BeamY(StemX(i)), Color.Black, stemThick);
 
         // A grace beam's thickness is DECLARED, not scaled: scm/music-functions.scm:635-648
@@ -479,19 +591,19 @@ internal static partial class SharedRenderer
                 (xR, yR - beamHalf), (xL, yL - beamHalf), Color.Black);
         }
 
-        Beam(0, n - 1, 0);                    // primary across the whole group
+        Beam(0, last, 0);                     // primary across the beamed prefix
         for (int level = 1; level < maxBeams; level++)
         {
             // Secondaries stack toward the heads (below the up-stem beam), which is
             // the negative direction in the page Y-up frame.
             double off = -(level * beamTrans);
             int i = 0;
-            while (i < n - 1)
+            while (i < last)
             {
                 if (beamCounts[i] > level && beamCounts[i + 1] > level)
                 {
                     int j = i;
-                    while (j < n - 1 && beamCounts[j] > level && beamCounts[j + 1] > level) j++;
+                    while (j < last && beamCounts[j] > level && beamCounts[j + 1] > level) j++;
                     Beam(i, j, off);
                     i = j;
                 }

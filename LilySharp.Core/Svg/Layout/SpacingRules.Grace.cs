@@ -70,13 +70,13 @@ internal static partial class SpacingRules
     /// grace notes spaces differently from a group of eighth grace notes.
     /// </remarks>
     public static double CalculateGraceGroupShortestDuration(
-        ImmutableArray<GraceNoteInfo> notes)
+        ImmutableArray<GraceColumnInfo> notes)
     {
         double shortest = double.MaxValue;
 
         foreach (var note in notes)
         {
-            // The MOMENT, dots included — see GraceNoteInfo.Length. LilyPond compares
+            // The MOMENT, dots included — see GraceColumnInfo.Length. LilyPond compares
             // grace_part_ moments here, and a dotted eighth is longer than a plain one.
             double dur = note.Length.ToDouble();
             if (dur > 0 && dur < shortest)
@@ -145,7 +145,7 @@ internal static partial class SpacingRules
     /// </para>
     /// </remarks>
     internal static GraceColumnLayout GraceColumns(
-        ImmutableArray<GraceNoteInfo> notes, MusicItem? mainItem,
+        ImmutableArray<GraceColumnInfo> notes, MusicItem? mainItem,
         GraceSpacingParameters? graceParams = null)
     {
         if (notes.IsDefaultOrEmpty)
@@ -153,19 +153,21 @@ internal static partial class SpacingRules
 
         var gp = graceParams ?? GraceSpacingParameters.Default;
         double dtMin = CalculateGraceGroupShortestDuration(notes);
-        // A run draws a beam only when EVERY head carries one; otherwise each head draws a
-        // flag, and the flag is ink in its column's RIGHT skyline. THE gate — the same
-        // sentence GraceNoteEngraver.QuantGraceBeam, .Dots and the renderer's
-        // DrawGraceStemsAndBeam read, so a run cannot be beamed for one and flagged for
-        // another (it was spelt three ways until session 299 wrote a fourth).
-        bool beamed = GraceNoteEngraver.IsBeamedRun(notes);
+        // The beam covers the run's leading COLUMNS and stops at the first rest, so whether a
+        // column carries a flag — which is ink in its own RIGHT skyline — is a per-column
+        // question. THE gate is GraceNoteEngraver.BeamedPrefix, the same sentence
+        // QuantGraceBeam, .Dots and the renderer's DrawGraceStemsAndBeam read, so a column
+        // cannot be beamed for one of them and flagged for another (it was spelt three ways
+        // until session 299 wrote a fourth, and was run-wide until session 308 measured that
+        // LilyPond beams only the prefix).
+        int beamedPrefix = GraceNoteEngraver.BeamedPrefix(notes);
 
         var offsets = ImmutableArray.CreateBuilder<double>(notes.Length);
         double x = 0, toMain = 0;
         for (int i = 0; i < notes.Length; i++)
         {
             offsets.Add(x);
-            double rightReach = GraceColumnRightReach(notes[i], beamed);
+            double rightReach = GraceColumnRightReach(notes[i], beamed: i < beamedPrefix);
             double leftReach = i + 1 < notes.Length
                 ? GraceColumnLeftReach(notes[i + 1])
                 : MainColumnLeftReach(mainItem);
@@ -176,7 +178,7 @@ internal static partial class SpacingRules
     }
 
     /// <summary>One gap of a grace run — the spring, floored by the skyline distance.</summary>
-    private static double GraceColumnGap(GraceNoteInfo left, double dtMin,
+    private static double GraceColumnGap(GraceColumnInfo left, double dtMin,
                                          GraceSpacingParameters gp, double minDistance)
     {
         var baseSpring = CreateGraceSpring(left.Length, gp, dtMin);
@@ -213,9 +215,48 @@ internal static partial class SpacingRules
     /// (:166-167). MEASURED: a beamed grace column's right skyline is 1.017939 and a flagged
     /// one's is 1.538627 (probes/grace-column-width.ly, books GCW2 and GCW1).
     /// </remarks>
-    private static double GraceColumnRightReach(GraceNoteInfo note, bool beamed)
+    private static double GraceColumnRightReach(GraceColumnInfo note, bool beamed)
     {
+        // A REST'S COLUMN IS AS WIDE AS ITS FULL-SIZE GLYPH, and it carries no flag whatever
+        // its value: a rest has no stem to hang one off.
+        // ⚠️ FULL SIZE, not the grace's — general-grace-settings never names Rest, so the
+        // glyph comes out of the staff's own font (see GraceColumnInfo.IsRest). MEASURED:
+        // the gap after a rest is 1.7000 where the gap after a grace head is 1.4180
+        // (scratch/p308/lp2, r1_split and r3_resthead), and Lily# draws 1.70 against 1.42.
+        //
+        // ⚠️ THE SPACER'S OWN WIDTH IS AN INVENTION, AND IT IS MEASURABLY TOO WIDE.
+        // A spacer has no ink, so this gives it nothing but the default box — and the gap
+        // that comes out is the SPRING's ideal rather than this floor, which LilyPond
+        // undercuts. MEASURED (scratch/p308/lp2/t1_spacermid against ab/e1_spacermid,
+        // `grace { d'16 s16 e'16 }`): LilyPond puts d' and e' 2.5600 apart and Lily# puts
+        // them 3.3400 apart — 0.78 too wide. The same pair with a REST between them agrees
+        // to the printed digit (3.6387 against 3.64), so what is wrong is the spacer's
+        // spring and not the column machinery.
+        //   departs from: lily/spacing-basic.cc — what a spring is worth over a column that
+        //     declares no grob at all is not the same question as over one that declares a
+        //     zero-width one, and this reads the second.
+        //   goes away when: someone measures LilyPond's grace spring over a spacer the way
+        //     grace.column.* measures it over a head, and puts the point in the ledger.
+        //   observed by: NOTHING. No ledger point covers a grace spacer, and the drawn
+        //     STRUCTURE is right (the spacer holds a column and ends the beamed prefix, both
+        //     measured), so the sweep and every net come through green on the 0.78.
+        // ⚠️ Reach measured before this was left standing: 2 books on a disk of 1997, and
+        // both are this session's own probes.
+        if (note.IsRest)
+            return (note.IsSpacer
+                       ? 0
+                       : GlyphMetrics.GetRestBBox(GlyphMetrics.NoteValueOf(note.BaseDuration)).Right)
+                   + DefaultExtraSpacingWidth;
         double ink = GraceHeadEnd;
+        // A CHORD widens the head half of this: a reversed second is drawn on the far side of
+        // the stem, so the column's head ink ends at that head's right edge instead of the
+        // support head's. A column with one head, or with no seconds, answers GraceHeadEnd
+        // again and the single-note books stay byte-identical.
+        // ⚠️ GraceHeadEnd is the head's WIDTH and HeadInkRight is its RIGHT edge; they are the
+        // same number only because an Emmentaler notehead's box starts at 0 (its Left is
+        // 0.000000 in every design). The max below keeps the two readings from disagreeing.
+        if (note.Heads.Length > 1)
+            ink = Math.Max(ink, GraceColumnHeads.HeadInkRight(note));
         if (!beamed && note.BaseDuration.Numerator == 1 && note.BaseDuration.Denominator >= 8)
         {
             // The flag hangs off the STEM, so its reach is the stem's x plus the flag's own
@@ -266,19 +307,16 @@ internal static partial class SpacingRules
     /// accidental on the SECOND grace of a pair pushes that gap from 1.417939 to 2.560895,
     /// which is 1.017939 + (1.042957 + 0.2) + 0.3.
     /// </remarks>
-    private static double GraceColumnLeftReach(GraceNoteInfo note)
+    private static double GraceColumnLeftReach(GraceColumnInfo column)
     {
-        if (note.Accidental is not { } acc)
+        // A rest carries no accidental, so its column reaches left by the default box alone.
+        if (column.IsRest)
             return DefaultExtraSpacingWidth;
-        var placement = new AccidentalPlacement();
-        // Two fonts, because the two grobs carry two font-sizes: the accidental is −4 and the
-        // head it clears is −3 (scm/music-functions.scm:635-648 general-grace-settings).
-        var layout = placement.CalculateSinglePosition(
-            note.StaffPosition, acc, isCourtesy: false,
-            GraceNoteItem.AccidentalFont, GraceNoteItem.Font);
-        return layout is { } al
-            ? Math.Abs(al.XOffset) + AccidentalExtraSpacingWidthLeft
-            : DefaultExtraSpacingWidth;
+        // The LEFTMOST of the column's packed accidentals — for a single head that is its one
+        // accidental, and for a chord it is whichever the stacking pushed out furthest. Both
+        // answers come out of GraceColumnHeads, which is also what the renderer draws from.
+        double ink = GraceColumnHeads.AccidentalInkLeft(column);
+        return ink > 0 ? ink + AccidentalExtraSpacingWidthLeft : DefaultExtraSpacingWidth;
     }
 
     /// <summary>The same reading for the MAIN note's column, which closes the run.</summary>
@@ -310,7 +348,7 @@ internal static partial class SpacingRules
     /// </para>
     /// </remarks>
     public static double CalculateGraceGroupSpringWidth(
-        ImmutableArray<GraceNoteInfo> notes,
+        ImmutableArray<GraceColumnInfo> notes,
         GraceSpacingParameters? graceParams = null)
     {
         if (notes.IsDefaultOrEmpty)
@@ -378,7 +416,7 @@ internal static partial class SpacingRules
     /// </para>
     /// </remarks>
     public static Spring AdjustSpringForGraceNotes(Spring spring,
-        ImmutableArray<GraceNoteInfo> graceNotes,
+        ImmutableArray<GraceColumnInfo> graceNotes,
         GraceSpacingParameters? graceParams = null,
         MusicItem? mainItem = null)
         => graceNotes.IsDefaultOrEmpty
@@ -394,7 +432,7 @@ internal static partial class SpacingRules
     /// <remarks>
     /// ⚠️ ONE HOME for the rule, because Lily# builds springs in two places and they must
     /// agree — the column system (<see cref="AdjustSpringForGraceNotes(Spring,
-    /// ImmutableArray{Model.GraceNoteInfo}, GraceSpacingParameters, Model.MusicItem)"/>) and the drawn
+    /// ImmutableArray{Model.GraceColumnInfo}, GraceSpacingParameters, Model.MusicItem)"/>) and the drawn
     /// timing-column system (MeasureLayouter). The 0.8 was added to the first alone at
     /// first and the ledger did not move a hair, because the drawn output comes from the
     /// second (HANDOFF §2 A's "two places computing one quantity", in its spring form).
@@ -465,21 +503,21 @@ internal static partial class SpacingRules
         if (grace.IsDefaultOrEmpty)
             return item;
 
-        var first = grace[0];
-        return new NoteItem(
-            first.StaffPosition, first.BaseDuration, 0,
-            first.Accidental, first.NeedsLedger, 0)
-        {
-            StemUpOverride = true,
-        };
+        // A CHORD stands in as a CHORD, so the correction reads the whole head RANGE rather
+        // than one of its heads: LilyPond's same_direction_correction takes a
+        // Drul_array<Interval> of head positions (lily/note-spacing.cc:162-197), and
+        // CalculateStemCorrection's StemSpacingInfo already answers that interval for a
+        // ChordItem. Picking one head here would have been a second, narrower spelling of a
+        // rule this repository already owns.
+        return GraceColumnHeads.StandIn(grace[0], sourcePosition: 0, stemUpOverride: true);
     }
 
     /// <summary>The leading grace notes hanging left of an item's column, if any.</summary>
-    private static ImmutableArray<GraceNoteInfo> GraceNotesOf(MusicItem item) => item switch
+    private static ImmutableArray<GraceColumnInfo> GraceNotesOf(MusicItem item) => item switch
     {
         NoteItem n => n.LeadingGrace,
         ChordItem c => c.LeadingGrace,
-        _ => ImmutableArray<GraceNoteInfo>.Empty
+        _ => ImmutableArray<GraceColumnInfo>.Empty
     };
 
     // ========================================

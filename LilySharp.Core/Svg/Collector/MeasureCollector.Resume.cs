@@ -143,7 +143,7 @@ public sealed partial class MeasureCollector
         RestoreSectionStartLog(plan.Source, ck.SectionStartLogCount);
         _measureAccidentals.Clear();
         _pendingGrace = null;
-        _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
+        _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
         _pendingEmptyChordSlurStart = false;
         _pendingEmptyChordSlurEnd = false;
         _pendingEmptyChordSlurStartSource = 0;

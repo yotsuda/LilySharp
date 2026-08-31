@@ -105,11 +105,16 @@ internal sealed class GraceBodyValidator : ISemanticValidator
                     ? $"'grace {{ {phrase} }}'" : "'grace { }'";
                 string message = drop.Kind switch
                 {
+                    // ⚠️ THE LIST IS NOT WRITTEN HERE. It is GraceBodySupport.CarriedKinds,
+                    // which sits against IsCarried — the predicate that decides it — because
+                    // this sentence went stale twice in one session as the two halves of
+                    // HANDOFF §2 U8 ⒜ landed. See that constant's remarks.
                     GraceDropKind.Element =>
                         $"{drop.Written} inside {body} is not engraved: a grace body "
-                        + "carries bare notes only"
+                        + $"engraves {GraceBodySupport.CarriedKinds} only"
                         + (engravesNothing
-                            ? ", and this body holds no bare note, so NO grace note is drawn at all"
+                            ? ", and this body holds none of those, so NO grace note is drawn "
+                              + "at all"
                             : ""),
                     GraceDropKind.Span =>
                         $"{drop.Written} inside {body} is not engraved: a grace note "

@@ -181,7 +181,7 @@ internal sealed class AccidentalPlacement
 
     /// <summary>
     /// The placement of ONE note's accidental (a full <see cref="NoteItem"/> or a grace
-    /// <see cref="GraceNoteInfo"/>, reached through its primitives). LilyPond runs the SAME
+    /// <see cref="GraceColumnInfo"/>, reached through its primitives). LilyPond runs the SAME
     /// position_apes over every accidental, single or chord, so this is
     /// <see cref="CalculatePositions"/> over a ONE-element list — not a separate single-ape
     /// algorithm. Grace / cue notes pass their own fonts; passing none reads the plain 20, so

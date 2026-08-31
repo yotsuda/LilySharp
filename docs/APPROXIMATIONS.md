@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 58 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 49 | 観測者がゼロだと自認しているもの |
+| `UNWATCHED` | 50 | 観測者がゼロだと自認しているもの |
 | `OWN` | 115 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **222** | |
+| **計** | **223** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -41,7 +41,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:493** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
-- **:362** ⚠️ NOT PORTED — the per-duration grace head: the head shape is BLACK for every
+- **:443** ⚠️ NOT PORTED — the per-duration grace head: the head shape is BLACK for every
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:1172** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
 - **:1177** whiteout −1) is not ported.
@@ -132,7 +132,7 @@
 ### `LilySharp.Core/Svg/Model/LyricItem.cs`
 - **:100** ⚠️ NOT PORTED — the voice's melismaBusy state: the trigger here is the
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（49 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（50 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:1732** container, and the value stops being unobserved with the line above.
@@ -201,6 +201,8 @@
 - **:56** the distance is taken at — and NO ledger point moves with it. An output change no point
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
 - **:754** constant with a name, and no ledger point reached it.
+### `LilySharp.Core/Svg/Layout/SpacingRules.Grace.cs`
+- **:240** observed by: NOTHING. No ledger point covers a grace spacer, and the drawn
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
 - **:419** rest. No point observes it — see the branch below.
 ### `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs`
@@ -224,7 +226,7 @@
 - **:1727** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
 - **:3381** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/MidiExporter.cs`
-- **:2050** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+- **:2079** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Rendering/HarfBuzzOutline.cs`
 - **:50** LILYSHARP-OWN: LilyPond reads its text ink through FreeType as well (Pango over the
 ### `LilySharp.Core/Rendering/Pdf/EmmentalerFontResolver.cs`
@@ -237,7 +239,7 @@
 - **:70** LILYSHARP-OWN: the swing feel-equation's small note size. The equation is Lily#'s
 - **:437** prefix — LILYSHARP-OWN, a decided divergence (user decision
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
-- **:232** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
+- **:298** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:601** LILYSHARP-OWN sizes: the feel equation keeps the small chart-style note (1.6)
 - **:1284** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
@@ -263,7 +265,7 @@
 ### `LilySharp.Core/Svg/Collector/StaffAccidentalColumns.cs`
 - **:84** ⚠️ LILYSHARP-OWN GATE, and a DIVERGENCE: LilyPond packs a cue accidental into
 ### `LilySharp.Core/Svg/Collector/TabResolver.cs`
-- **:272** is built on ( — LILYSHARP-OWN and deliberately
+- **:287** is built on ( — LILYSHARP-OWN and deliberately
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
 - **:106** LILYSHARP-OWN: a 5-half-space floor with no single named LP constant behind it.
 - **:411** ⚠️ LILYSHARP-OWN: A NOMINAL BOX, AND LILYPOND HAS NO COUNTERPART TO IT. A Flag's

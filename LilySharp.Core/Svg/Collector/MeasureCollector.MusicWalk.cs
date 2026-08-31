@@ -747,7 +747,7 @@ public sealed partial class MeasureCollector
                     if (!_pendingLeadingGrace.IsDefaultOrEmpty)
                     {
                         noteItem = noteItem with { LeadingGrace = _pendingLeadingGrace };
-                        _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
+                        _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
                     }
                     builder.AddItem(WithBowSources(noteItem, m));
                     CollectDynamics(note, measureIndex, itemIndex);
@@ -937,7 +937,7 @@ public sealed partial class MeasureCollector
                     if (!_pendingLeadingGrace.IsDefaultOrEmpty)
                     {
                         chordItem = chordItem with { LeadingGrace = _pendingLeadingGrace };
-                        _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
+                        _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
                     }
                     builder.AddItem(WithBowSources(chordItem, m));
                     CollectDynamics(chord, measureIndex, itemIndex);
@@ -1009,7 +1009,7 @@ public sealed partial class MeasureCollector
                     if (!_pendingLeadingGrace.IsDefaultOrEmpty)
                     {
                         chordCopy = chordCopy with { LeadingGrace = _pendingLeadingGrace };
-                        _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
+                        _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
                     }
                     builder.AddItem(WithBowSources(chordCopy, m));
                     CollectDynamics(rep, measureIndex, itemIndex);
@@ -1060,7 +1060,7 @@ public sealed partial class MeasureCollector
                     if (!_pendingLeadingGrace.IsDefaultOrEmpty)
                     {
                         slashItem = slashItem with { LeadingGrace = _pendingLeadingGrace };
-                        _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
+                        _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
                     }
                     builder.AddItem(WithBowSources(slashItem, m));
                     CollectDynamics(slash, measureIndex, itemIndex);
@@ -1121,12 +1121,12 @@ public sealed partial class MeasureCollector
                     if (!_pendingLeadingGrace.IsDefaultOrEmpty && bareItem is NoteItem bn)
                     {
                         bareItem = bn with { LeadingGrace = _pendingLeadingGrace };
-                        _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
+                        _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
                     }
                     else if (!_pendingLeadingGrace.IsDefaultOrEmpty && bareItem is ChordItem bc)
                     {
                         bareItem = bc with { LeadingGrace = _pendingLeadingGrace };
-                        _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
+                        _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
                     }
                     builder.AddItem(WithBowSources(bareItem, m));
                     bool bareStemUp = bareItem switch

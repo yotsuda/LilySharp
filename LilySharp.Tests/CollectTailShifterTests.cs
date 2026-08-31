@@ -65,7 +65,7 @@ public class CollectTailShifterTests
         {
             "SourcePosition", "LaissezVibrerSourcePosition", "RepeatTieSourcePosition",
         },
-        [typeof(GraceNoteInfo)] = Array.Empty<string>(),
+        [typeof(GraceColumnInfo)] = Array.Empty<string>(),
         [typeof(DynamicItem)] = new[] { "SourcePosition" },
         [typeof(ArticulationItem)] = new[] { "SourcePosition" },
         [typeof(GraceNoteItem)] = new[] { "SourcePosition" },

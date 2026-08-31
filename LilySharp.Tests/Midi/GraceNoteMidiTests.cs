@@ -234,7 +234,7 @@ public class GraceNoteMidiTests
 
         int[] drawn = new LilySharp.Core.Svg.Collector.MeasureCollector()
             .Collect(SyntaxTree.Parse(book))
-            .GraceNotes.Single().Notes.Select(n => n.Midi).ToArray();
+            .GraceNotes.Single().Columns.Select(n => n.Lowest.Midi).ToArray();
 
         // The grace events are the ones before the main note's downbeat: grace time is
         // STOLEN from it (Grace_StealsTimeFromFollowingNote_KeepingGrid), so the main note

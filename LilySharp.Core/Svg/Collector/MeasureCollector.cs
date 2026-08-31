@@ -398,7 +398,7 @@ public sealed partial class MeasureCollector
     }
     // Grace-note infos of the just-collected leading grace group, stamped onto the
     // main note/chord so the spacing can reserve space in front of its column.
-    private ImmutableArray<GraceNoteInfo> _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
+    private ImmutableArray<GraceColumnInfo> _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
     // Default (sticky) duration: an undurated note/rest/chord takes the WHOLE
     // previous duration — dots included — so the pair travels together.
     // LILYPOND-REF: lily/parser.yy:3505-3514 optional_notemode_duration —
@@ -3766,7 +3766,7 @@ public sealed partial class MeasureCollector
                  : GraceNoteType.Grace;
 
         // Collect notes from the grace body
-        var graceNoteInfos = new List<GraceNoteInfo>();
+        var graceColumns = new List<GraceColumnInfo>();
 
         // LILYPOND-REF: lily/grace-spacing-engraver.cc — grace notes carry their own durations.
         // LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
@@ -3872,18 +3872,89 @@ public sealed partial class MeasureCollector
                 // on a tab picks the string the writer asked for rather than the one the
                 // resolver would have picked — and so the two can never disagree about
                 // whether it is carried (GraceBodySupport.CarriedStringNumber).
-                graceNoteInfos.Add(new GraceNoteInfo(staffPosition, accidental, needsLedger,
+                graceColumns.Add(new GraceColumnInfo(staffPosition, accidental, needsLedger,
                     baseDuration, graceMidi,
                     Semantics.GraceBodySupport.CarriedStringNumber(note),
                     dots));
 
-                CollectGraceColumnlessAnnotations(note, measureIndex);
+                CollectGraceColumnlessAnnotations(note.Articulations, measureIndex);
+                continue;
+            }
+
+            // A CHORD IS ONE COLUMN WITH N HEADS (session 308). Everything about which
+            // pitches it sounds — the root anchor, the stacking, degree members, drum names,
+            // quarter tones, per-member accidentals and string numbers — is CreateChordItem's,
+            // the same factory the main stream goes through. Writing a second pitch resolver
+            // here is the defect checklist 7.7 names as this repository's most repeated, and
+            // the grace body already has one shared statement (GraceBodySupport) precisely so
+            // that the readers cannot each answer a question their own way.
+            // ⚠️ forcedDuration IS WHY THIS IS SAFE. Without it CreateChordItem writes the
+            // VOICE's running duration (_defaultDuration / _defaultDots), and a grace body's
+            // duration memory is its own — `grace { <c e>16 } c'4` must leave the c a quarter.
+            // The factory's own comment says the forced arm "must not disturb the default
+            // carry", which is exactly the property this needs.
+            if (Semantics.GraceBodySupport.CarriedChord(item) is { } chordSyntax)
+            {
+                int chordValue = chordSyntax.Duration?.Value
+                                 ?? (int)graceDefaultDuration.Denominator;
+                int chordDots = chordSyntax.Duration?.DotCount ?? graceDefaultDots;
+                graceDefaultDuration = Fraction.FromNoteValue(chordValue);
+                graceDefaultDots = chordDots;
+
+                var chordItem = CreateChordItem(
+                    chordSyntax, forcedDuration: (chordValue, chordDots));
+                if (chordItem.Notes.Length > 0)
+                {
+                    // LOW TO HIGH, because GraceColumnInfo.Lowest / .Highest are index 0 and
+                    // index n−1 and the whole layout reads the column's ends through them. The
+                    // written order is the writer's (a degree chord stacks, an absolute one
+                    // does not), so it is not the drawn one.
+                    var heads = ImmutableArray.CreateBuilder<GraceHeadInfo>(
+                        chordItem.Notes.Length);
+                    foreach (var member in chordItem.Notes)
+                        heads.Add(new GraceHeadInfo(
+                            member.StaffPosition, member.Accidental, member.NeedsLedgerLines,
+                            member.Midi, member.StringNumber));
+                    heads.Sort(static (a, b) => a.StaffPosition.CompareTo(b.StaffPosition));
+                    graceColumns.Add(new GraceColumnInfo(
+                        heads.ToImmutable(), Fraction.FromNoteValue(chordValue), chordDots));
+                }
+
+                CollectGraceColumnlessAnnotations(
+                    Semantics.GraceBodySupport.CarriedAnnotations(chordSyntax), measureIndex);
+                continue;
+            }
+
+            // A REST IS A COLUMN WITH NO HEAD (session 308). It holds a column open at the
+            // same gap a head's column takes, it draws its own glyph, and it ENDS THE BEAMED
+            // PREFIX — all three MEASURED (scratch/p308/lp2/measurements.md).
+            // ⚠️ IT DOES NOT GO THROUGH CreateRestItem, unlike the chord above going through
+            // CreateChordItem. That factory writes the VOICE's duration memory and builds a
+            // measure item with an ItemIndex; a grace rest is neither. What it would share is
+            // two lines of duration arithmetic, and the arithmetic here is the GRACE group's
+            // (graceDefaultDuration), which is a different quantity with the same shape.
+            if (Semantics.GraceBodySupport.CarriedRest(item) is { } restSyntax)
+            {
+                int restValue = restSyntax.Duration?.Value
+                                ?? (int)graceDefaultDuration.Denominator;
+                int restDots = restSyntax.Duration?.DotCount ?? graceDefaultDots;
+                graceDefaultDuration = Fraction.FromNoteValue(restValue);
+                graceDefaultDots = restDots;
+                graceColumns.Add(new GraceColumnInfo(
+                    ImmutableArray<GraceHeadInfo>.Empty,
+                    Fraction.FromNoteValue(restValue), restDots,
+                    // 's' is a spacer: it holds the column and draws nothing, exactly as
+                    // RestItem.IsSpacer does in the main stream.
+                    IsSpacer: restSyntax.RestToken.Text == "s"));
+
+                CollectGraceColumnlessAnnotations(
+                    Semantics.GraceBodySupport.CarriedAnnotations(restSyntax), measureIndex);
             }
         }
 
-        if (graceNoteInfos.Count > 0)
+        if (graceColumns.Count > 0)
         {
-            var infos = graceNoteInfos.ToImmutableArray();
+            var infos = graceColumns.ToImmutableArray();
             _graceNotes.Add(new GraceNoteItem(
                 type,
                 infos,
@@ -3900,7 +3971,7 @@ public sealed partial class MeasureCollector
     /// Builds the annotations on a grace note that ask for NO COLUMN of their own — the ones
     /// a grace note can carry although it is not a measure item. Today: the rehearsal mark.
     /// (The string number is the other one, and it is not built here because it is not a grob
-    /// at all — it rides <see cref="GraceNoteInfo.StringNumber"/> into the fret resolver.)
+    /// at all — it rides <see cref="GraceHeadInfo.StringNumber"/> into the fret resolver.)
     /// </summary>
     /// <remarks>
     /// ⚠️ THIS IS NOT "one annotation family got lucky". LilyPond consists Mark_engraver in
@@ -3919,9 +3990,10 @@ public sealed partial class MeasureCollector
     /// walks its grace once per staff, and one written mark is one printed mark.
     /// </para>
     /// </remarks>
-    private void CollectGraceColumnlessAnnotations(NoteSyntax note, int measureIndex)
+    private void CollectGraceColumnlessAnnotations(
+        IEnumerable<SyntaxNode> annotations, int measureIndex)
     {
-        foreach (var annotation in note.Articulations)
+        foreach (var annotation in annotations)
         {
             if (annotation is not MusicMarkSyntax mark
                 || !Semantics.GraceBodySupport.NeedsNoColumn(annotation)

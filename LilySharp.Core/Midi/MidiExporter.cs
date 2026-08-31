@@ -1754,6 +1754,66 @@ public sealed class MidiExporter
         _currentTick = startTick + durationTicks;
     }
 
+    /// <summary>
+    /// What ONE member of a chord SOUNDS, and the frame it leaves behind.
+    /// </summary>
+    /// <remarks>
+    /// THE one spelling of the chord's octave rule for this exporter: <see cref="ProcessChord"/>
+    /// reads it for the main stream and <c>ProcessGrace</c> for a chord inside a
+    /// <c>grace { }</c> body.
+    /// <para>
+    /// ⚠️ IT WAS TWO SPELLINGS UNTIL SESSION 308, AND THEY DISAGREED BY AN OCTAVE. The grace
+    /// arm resolved each member RELATIVE TO THE PREVIOUS ONE, under a comment claiming it
+    /// "matches ProcessChord / CreateChordItem" — which it did not. MEASURED
+    /// (scratch/p308/ab/d_chordwide against d_mainwide): <c>grace { &lt;c b&gt;16 }</c> sounded
+    /// 60 and 59 where <c>&lt;c b&gt;4</c> in the same file sounds 60 and 71, and where the
+    /// page and the MusicXML both say B4. It was unobservable while the page drew no grace
+    /// chord at all; teaching the page to draw one is what made the two comparable, which is
+    /// why <c>Semantics.GraceBodySupport</c> tells whoever touches a grace body to count all
+    /// four readers.
+    /// </para>
+    /// <para>
+    /// The first member is the ROOT: its bare LETTER is the chord's ANCHOR; every other member
+    /// STACKS above it, so the chord's pitches do not depend on the written order. A
+    /// deliberate Lily# divergence from LilyPond, matching <c>MusicXmlExporter</c> and
+    /// <c>MeasureCollector</c>.
+    /// </para>
+    /// </remarks>
+    private int ResolveChordMemberPitch(
+        PitchSyntax pitch, bool isFirst, int chordOctave, int chordShift,
+        ref int firstNoteName, ref int firstOctave)
+    {
+        if (isFirst)
+        {
+            int midiPitch;
+            if (_octaveAbsolute)
+            {
+                midiPitch = CalculateRelativeMidiPitch(pitch) + chordShift; // advances state
+                firstOctave = _currentOctave + chordOctave;
+            }
+            else
+            {
+                // The root's LETTER resolved bare = the chord's ANCHOR; its own
+                // '/, marks are LOCAL to its sounding pitch (<c' e g> = C5 E4 G4,
+                // and the next note stays relative to C4).
+                int rootStep = GetNoteName(pitch.BaseName);
+                int anchor = RelativeOctave.Resolve(_currentNoteName, _currentOctave, rootStep, 0) + chordOctave;
+                midiPitch = WrittenToMidi(rootStep, pitch.AccidentalOffset, anchor + pitch.OctaveOffset);
+                _currentNoteName = rootStep;
+                _currentOctave = anchor;
+                firstOctave = anchor;
+            }
+            firstNoteName = _currentNoteName;
+            return midiPitch;
+        }
+        if (_octaveAbsolute)
+            // Absolute mode: each member is a fixed pitch, no stacking.
+            return CalculateRelativeMidiPitch(pitch) + chordShift;
+        int step = GetNoteName(pitch.BaseName);
+        int octave = firstOctave + (step >= firstNoteName ? 0 : 1) + pitch.OctaveOffset;
+        return WrittenToMidi(step, pitch.AccidentalOffset, octave);
+    }
+
     private void ProcessChord(ChordSyntax chord, MidiTrack track, int extraOctave = 0)
     {
         // A chord is ONE onset: a tie arriving here extends every member the previous
@@ -1799,40 +1859,9 @@ public sealed class MidiExporter
 
         foreach (var pitch in pitches)
         {
-            int midiPitch;
-            if (isFirst)
-            {
-                if (_octaveAbsolute)
-                {
-                    midiPitch = CalculateRelativeMidiPitch(pitch) + chordShift; // advances state
-                    firstOctave = _currentOctave + chordOctave;
-                }
-                else
-                {
-                    // The root's LETTER resolved bare = the chord's ANCHOR; its own
-                    // '/, marks are LOCAL to its sounding pitch (<c' e g> = C5 E4 G4,
-                    // and the next note stays relative to C4).
-                    int step = GetNoteName(pitch.BaseName);
-                    int anchor = RelativeOctave.Resolve(_currentNoteName, _currentOctave, step, 0) + chordOctave;
-                    midiPitch = WrittenToMidi(step, pitch.AccidentalOffset, anchor + pitch.OctaveOffset);
-                    _currentNoteName = step;
-                    _currentOctave = anchor;
-                    firstOctave = anchor;
-                }
-                firstNoteName = _currentNoteName;
-                isFirst = false;
-            }
-            else if (_octaveAbsolute)
-            {
-                // Absolute mode: each member is a fixed pitch, no stacking.
-                midiPitch = CalculateRelativeMidiPitch(pitch) + chordShift;
-            }
-            else
-            {
-                int step = GetNoteName(pitch.BaseName);
-                int octave = firstOctave + (step >= firstNoteName ? 0 : 1) + pitch.OctaveOffset;
-                midiPitch = WrittenToMidi(step, pitch.AccidentalOffset, octave);
-            }
+            int midiPitch = ResolveChordMemberPitch(
+                pitch, isFirst, chordOctave, chordShift, ref firstNoteName, ref firstOctave);
+            isFirst = false;
             midiPitch = SoundKey(midiPitch, chord.Position);
             int tiedInto = ExtendTied(track, tieTargets, midiPitch, durationTicks);
             if (tiedInto >= 0)
@@ -2073,8 +2102,11 @@ public sealed class MidiExporter
         // the comment on GraceBodySupport says "written once and read TWICE" while there are
         // four readers: this one, the page, GraceBodyValidator and MusicXmlExporter.
         // ⚠️ THE NARROWING BELOW IS STILL WIDER THAN THE PAGE'S, on purpose and separately:
-        // a chord and a rest in a grace body SOUND here (since 2026-07-10) and are still
-        // dropped by the page, which is the half of docs/HANDOFF.md §2 U8 that is open. That
+        // a REST in a grace body SOUNDS here (since 2026-07-10) and is still dropped by the
+        // page, which is the half of docs/HANDOFF.md §2 U8 that is open. (A CHORD was on that
+        // line until session 308, which taught the page to draw one - and found that this
+        // walker had been sounding it at the WRONG OCTAVE all along; see
+        // ResolveChordMemberPitch.) That
         // asymmetry is about which GROBS a grace column can hold; a phrase reference names no
         // grob at all, which is why it is the one that could be closed on its own.
         // ⚠️ THIS WALKER'S MAIN STREAM HAS NO SUCH BUDGET, and the asymmetry is real rather
@@ -2209,15 +2241,23 @@ public sealed class MidiExporter
                     if (chord.Duration != null) written = chord.Duration.ToFraction();
                     int g = GraceTicks(written);
                     int chordOrdinal = NextOrdinal(chord.Position);
-                    // Within-chord relative octave: each pitch is relative to the
-                    // previous; the item AFTER the chord is relative to the chord's
-                    // FIRST pitch (matches ProcessChord / CreateChordItem).
+                    // Within-chord relative octave: the root's LETTER is the chord's ANCHOR
+                    // and every other member STACKS above it, and the item AFTER the chord is
+                    // relative to that anchor. Asked of ResolveChordMemberPitch, which is what
+                    // ProcessChord asks — this arm SPELLED IT OUT until session 308, claimed
+                    // in a comment to match, and did not: it resolved each member relative to
+                    // the previous one and put `grace { <c b>16 }` an octave under the head
+                    // the page draws.
                     bool isFirst = true;
+                    int chordShift = chord.ChordOctaveOffset * 12;
                     int firstNoteName = _currentNoteName, firstOctave = _currentOctave;
                     foreach (var pitch in chord.Pitches)
                     {
-                        int mp = SoundKey(CalculateRelativeMidiPitch(pitch), chord.Position);
-                        if (isFirst) { firstNoteName = _currentNoteName; firstOctave = _currentOctave; isFirst = false; }
+                        int mp = SoundKey(
+                            ResolveChordMemberPitch(pitch, isFirst, chord.ChordOctaveOffset,
+                                chordShift, ref firstNoteName, ref firstOctave),
+                            chord.Position);
+                        isFirst = false;
                         track.Notes.Add(new MidiNote(track.Channel, mp, _velocity, _currentTick, g,
                             chord.Position, QuarterBend: pitch.QuarterOffset,
                             SourceOrdinal: chordOrdinal, Timbre: _currentTimbre));

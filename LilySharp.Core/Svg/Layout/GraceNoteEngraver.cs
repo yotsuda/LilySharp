@@ -34,7 +34,7 @@ public readonly record struct GraceNoteLayout(
     int MeasureIndex,                    // Measure containing this grace
     int MainNoteItemIndex,               // Item index of the main note
     double X,                            // X position (left edge of grace group)
-    ImmutableArray<GraceNoteInfo> Notes, // Notes in the grace group
+    ImmutableArray<GraceColumnInfo> Columns, // Columns in the grace group (a column is a chord)
     GraceNoteType Type,                  // Grace type (for slash rendering)
     double Scale,                        // GraceNoteItem.ScaleFactor (magstep of fontSize -3)
     int SourcePosition,                  // For click-to-source mapping
@@ -47,7 +47,7 @@ public readonly record struct GraceNoteLayout(
     // travel to it rather than being baked into Y here.
     double StaffYOffset = 0,
     // Non-null when this grace sits on a TAB staff: the renderer then draws each
-    // grace as a small fret number (resolved from GraceNoteInfo.Midi) instead of
+    // grace as a small fret number (resolved from GraceHeadInfo.Midi) instead of
     // a notehead. null for ordinary notation staves.
     TuningType? Tuning = null,
     // The tab staff's clef (treble_8 shifts written→sounding an octave down).
@@ -161,7 +161,7 @@ internal static class GraceNoteEngraver
             var mainItem = grace.MainNoteItemIndex < measure.Items.Length
                 ? measure.Items[grace.MainNoteItemIndex]
                 : null;
-            var columns = SpacingRules.GraceColumns(grace.Notes, mainItem);
+            var columns = SpacingRules.GraceColumns(grace.Columns, mainItem);
             // The main note's own leftward accidental reach is already inside the run's LAST
             // gap (it is that column's left separation skyline), so it is no longer added
             // here — doing both reserved it twice.
@@ -199,7 +199,7 @@ internal static class GraceNoteEngraver
                 grace.MeasureIndex,
                 grace.MainNoteItemIndex,
                 x,
-                grace.Notes,
+                grace.Columns,
                 grace.Type,
                 GraceScale,
                 grace.SourcePosition,
@@ -244,7 +244,7 @@ internal static class GraceNoteEngraver
     internal static (double?, double?) QuantGraceBeam(
         GraceNoteItem grace, ImmutableArray<double> columnOffsets)
     {
-        var notes = grace.Notes;
+        var notes = grace.Columns;
         // ⚠️ THE GATE IS ASKED, NOT RE-DERIVED. This block used to spell IsBeamedRun out
         // again - `notes.Length < 2`, then `BeamCountForDuration(...) < 1` for every head -
         // under a comment that said "the same gate the renderer draws by". Both spellings
@@ -262,35 +262,57 @@ internal static class GraceNoteEngraver
         // reservation move the page on their own and this method's answer is never read.
         // ⇒ The two spellings were INDISTINGUISHABLE, which is what makes the fold safe, not
         // what makes it pointless: no book was ever drawn wrong and none changes now. What it
-        // buys is the FUTURE - the open half of docs/HANDOFF.md §2 U8 (a chord or a rest in a
-        // grace body) has to teach this predicate what a non-head member does to a run, and
-        // with two spellings only one of them would have been taught.
+        // buys is the FUTURE - the open half of docs/HANDOFF.md §2 U8 (a REST in a grace body)
+        // has to teach this predicate what a member with NO HEAD does to a run, and with two
+        // spellings only one of them would have been taught.
+        // ⚠️ THE CHORD LEFT THAT LIST (session 308) WITHOUT TOUCHING THIS PREDICATE, which is
+        // the measurement that split the ticket: LilyPond beams a grace run the same way
+        // whether or not one of its columns is a chord (session 302's member table - polygon 2
+        // wherever the chord stands). A rest is the one that changes the answer.
         // ⚠️ NOTHING GUARDS THE FOLD, and that follows from the same experiment: if someone
         // re-inlines the gate, no test goes red. There is nothing to guard once there is one
         // house - the drift this prevents cannot happen while the second spelling is absent.
-        if (!IsBeamedRun(notes)) return (null, null);
+        // ⚠️ THE PREFIX, NOT THE RUN. The beam covers the leading run of head-columns and
+        // stops at the first rest; MEASURED that what follows does not enter it at all —
+        // `{ d'16 e'16 r16 f'16 }` is quanted to the same four digits as `{ d'16 e'16 }`
+        // (see BeamedPrefix). So the whole of the "partial beam group" is: hand the quanter
+        // the prefix and nothing else.
+        int beamed = BeamedPrefix(notes);
+        if (beamed == 0) return (null, null);
         if (columnOffsets.IsDefault || columnOffsets.Length != notes.Length)
             return (null, null);
 
-        var counts = new int[notes.Length];
-        for (int i = 0; i < notes.Length; i++)
+        var counts = new int[beamed];
+        for (int i = 0; i < beamed; i++)
             counts[i] = BeamCountForDuration(notes[i].BaseDuration.Denominator);
 
-        var members = ImmutableArray.CreateBuilder<BeamMember>(notes.Length);
-        var xs = new double[notes.Length];
-        for (int i = 0; i < notes.Length; i++)
+        var members = ImmutableArray.CreateBuilder<BeamMember>(beamed);
+        var xs = new double[beamed];
+        for (int i = 0; i < beamed; i++)
         {
             xs[i] = columnOffsets[i];
-            // A beam line reaches a neighbour only if BOTH stems carry it.
+            // A beam line reaches a neighbour only if BOTH stems carry it — and the LAST
+            // column of the prefix has no neighbour inside the beam, whatever stands after it.
             int left = i > 0 ? Math.Min(counts[i], counts[i - 1]) : 0;
-            int right = i < notes.Length - 1 ? Math.Min(counts[i], counts[i + 1]) : 0;
+            int right = i < beamed - 1 ? Math.Min(counts[i], counts[i + 1]) : 0;
+            // A CHORD hands the quanter its head RANGE, not one of its heads: the beam's view
+            // of a member is Stem::head_positions(me)[my_dir] (lily/stem.cc:1214), which for a
+            // stem-up chord is the TOP head, and BeamMember says so through
+            // HeadPositionMin/Max. StaffPosition itself is documented as the heads' mean for a
+            // chord — see BeamMember's remarks, which name it as the quanter's NON-input.
+            var heads = notes[i].Heads;
+            int lo = notes[i].Lowest.StaffPosition;
+            int hi = notes[i].Highest.StaffPosition;
+            int sum = 0;
+            foreach (var h in heads) sum += h.StaffPosition;
             members.Add(new BeamMember(
-                new NoteItem(notes[i].StaffPosition, notes[i].BaseDuration, 0,
-                             notes[i].Accidental, notes[i].NeedsLedger, grace.SourcePosition),
-                counts[i], left, right, notes[i].StaffPosition, i,
+                GraceColumnHeads.StandIn(notes[i], grace.SourcePosition),
+                counts[i], left, right, sum / heads.Length, i,
                 // LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings —
                 //   ((Voice Stem direction ,UP)): a grace stem is forced up whatever the pitch.
-                memberStemUp: true));
+                memberStemUp: true,
+                headPositionMin: lo,
+                headPositionMax: hi));
         }
 
         var group = new BeamGroup(members.ToImmutable(), grace.MeasureIndex, 0, stemUp: true);
@@ -328,14 +350,61 @@ internal static class GraceNoteEngraver
     /// </para>
     /// </para>
     /// </remarks>
-    internal static bool IsBeamedRun(ImmutableArray<GraceNoteInfo> notes)
+    internal static bool IsBeamedRun(ImmutableArray<GraceColumnInfo> notes)
+        => BeamedPrefix(notes) > 0;
+
+    /// <summary>
+    /// How many columns of a grace run the ONE beam covers, counted from the FRONT: the
+    /// leading run of head-columns when it holds two or more beamable ones, and 0 when the
+    /// run draws flags instead. Every column at or after this index draws a flag.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED on LilyPond (scratch/p308/lp2, twelve books, read as COORDINATES rather than
+    /// as the polygon counts session 302 read):
+    /// <list type="bullet">
+    /// <item><c>{ d'16 e'16 r16 f'16 }</c> — beam span 1.4679, y 11.0386..11.7006, and
+    /// <c>f'</c> takes a FLAG. Those are the SAME four digits <c>{ d'16 e'16 }</c> gets on
+    /// its own, so this is not "a partial beam" needing its own quanter: it is the ORDINARY
+    /// beam of the prefix, and what follows the prefix does not enter it.</item>
+    /// <item><c>{ d'16 r16 e'16 f'16 }</c> — NO beam at all, although <c>e' f'</c> are two
+    /// adjacent beamable heads. So the rule is not "beam each maximal run"; it is the FIRST
+    /// run or nothing. Session 302 filed this book as an "outlier" and corrected its own rule
+    /// twenty minutes after committing it — the coordinates say what it concluded.</item>
+    /// <item><c>{ d'16 e'16 r8 f'16 }</c> — the same 1.4679: the rest's own DURATION does not
+    /// enter, only the fact that it holds no head.</item>
+    /// <item><c>{ d'16[ e'16] f'16 }</c> — also 1.4679. A manual <c>[ ]</c> prefix and a
+    /// rest-terminated one produce the same geometry, which is why one rule serves the rest
+    /// half of docs/HANDOFF.md §2 U8 ⒜ and the beam half of ⒞.</item>
+    /// </list>
+    /// ⚠️ MEASURED ON WSL's 2.27.3, AND SAID RATHER THAN HIDDEN — but for this quantity the
+    /// version does not matter, and that too is measured rather than hoped: session 300 took
+    /// two of these books on CANONICAL 2.26.0 and got spans of 1.4679 and 2.8859, the same
+    /// four digits (scratch/p308/lp2/measurements.md carries the table).
+    /// <para>
+    /// ⚠️ THIS RETURNS A COUNT, NOT A BOOL, and <see cref="IsBeamedRun"/> is derived from it.
+    /// The four readers that predicate served — the reservation, the quanter, the dot column
+    /// and the renderer — each need to know WHICH columns are beamed, not only whether any
+    /// are: a column outside the prefix reserves a flag and draws one.
+    /// </para>
+    /// </remarks>
+    internal static int BeamedPrefix(ImmutableArray<GraceColumnInfo> notes)
     {
         if (notes.IsDefaultOrEmpty || notes.Length < 2)
-            return false;
-        foreach (var n in notes)
-            if (BeamCountForDuration(n.BaseDuration.Denominator) < 1)
-                return false;
-        return true;
+            return 0;
+        int n = 0;
+        foreach (var note in notes)
+        {
+            // A rest ends the prefix, and so does a column whose value carries no beam.
+            // ⚠️ A SPACER ENDS IT TOO, and that is MEASURED rather than inherited from the
+            // fact that IsRest happens to cover it: `\grace { d'16 s16 e'16 }` draws two
+            // FLAGGED heads and no beam on LilyPond, exactly as the same book with a written
+            // rest does (scratch/p308/lp2/t1_spacermid). An invisible column still breaks the
+            // run — what ends the beam is the absence of a HEAD, not the presence of ink.
+            if (note.IsRest || BeamCountForDuration(note.BaseDuration.Denominator) < 1)
+                break;
+            n++;
+        }
+        return n >= 2 ? n : 0;
     }
 
     /// <summary>
@@ -379,7 +448,7 @@ internal static class GraceNoteEngraver
     /// </para>
     /// </remarks>
     internal static (double X, ImmutableArray<int> Positions) Dots(
-        GraceNoteInfo note, bool beamed)
+        GraceColumnInfo note, bool beamed)
     {
         if (note.Dots <= 0)
             return (0, ImmutableArray<int>.Empty);
@@ -394,8 +463,23 @@ internal static class GraceNoteEngraver
         // LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings —
         //   ((Voice Stem direction ,UP)): a grace stem is forced up, so its Dots prefer UP
         //   too (scm/music-functions.scm:616-631 direction-polyphonic-grobs pairs them).
+        // EVERY head of the column gets a dot, and the whole set is resolved together so two
+        // heads a second apart do not both claim the same row — the same DotConfiguration a
+        // full-size chord goes through.
+        // LILYPOND-REF: lily/dot-column.cc:194-227 Dot_column::calc_positioning_done — one
+        //   Dot_configuration is built per DotColumn and EVERY dot of the column is placed
+        //   into it (`cfg[p] = dp` in the loop over `dots`), so a chord's heads share one
+        //   solve and `remove_collision` is what keeps two of them off the same row.
+        var heads = note.Heads;
+        var headPositions = new int[heads.Length];
+        var dotCounts = new int[heads.Length];
+        for (int i = 0; i < heads.Length; i++)
+        {
+            headPositions[i] = heads[i].StaffPosition;
+            dotCounts[i] = 1;
+        }
         var positions = ImmutableArray.Create(
-            DotConfiguration.Resolve(new[] { note.StaffPosition }, new[] { 1 })[0]);
+            DotConfiguration.Resolve(headPositions, dotCounts));
 
         var supports = new List<DotColumn.Support>();
         double stemX = LayoutUtilities.StemAttachX(
@@ -409,8 +493,10 @@ internal static class GraceNoteEngraver
         // AGraceDotClearsTheFlagOnlyWhenTheFlagIsOnItsRow red, because the flag is the only
         // support that ever binds. It becomes observable the day a grace head is drawn per
         // duration (the standing note on graceHeadNoteValue) and a wider head moves the edge.
+        // ⚠️ THE LOWEST HEAD, because a stem-up stem stands on it. For a single head the two
+        // readings are the same number, so the one-note books stay byte-identical.
         supports.Add(DotColumn.StemSupport(
-            note.StaffPosition, up: true, stemX + EngravingDefaults.StemThickness / 2));
+            note.Lowest.StaffPosition, up: true, stemX + EngravingDefaults.StemThickness / 2));
 
         if (!beamed && note.BaseDuration.Numerator == 1 && note.BaseDuration.Denominator >= 8)
         {
@@ -420,7 +506,10 @@ internal static class GraceNoteEngraver
                 // The flag hangs at the stem's end, and the bbox is relative to that anchor.
                 // Position → staff spaces is the house's `* 0.5` (ElementCoordinator does the
                 // same to build a head's own box), then the stem on top of it.
-                double stemEnd = note.StaffPosition * 0.5 + StemLength(GraceNoteItem.ScaleFactor);
+                // ⚠️ THE HIGHEST HEAD: a stem-up stem is measured from the TOP of the head
+                // column, which is Stem::chord_start_y for this direction (lily/stem.cc:114-122).
+                double stemEnd = note.Highest.StaffPosition * 0.5
+                                 + StemLength(GraceNoteItem.ScaleFactor);
                 supports.Add(DotColumn.FlagSupport(
                     stemEnd + flag.Bottom, stemEnd + flag.Top, stemX + flag.Right));
             }
@@ -452,7 +541,7 @@ internal static class GraceNoteEngraver
         ImmutableArray<ArticulationItem> articulations, GraceNoteItem grace, Measure measure,
         double graceGroupWidth)
     {
-        if (articulations.IsDefaultOrEmpty || grace.Notes.IsDefaultOrEmpty
+        if (articulations.IsDefaultOrEmpty || grace.Columns.IsDefaultOrEmpty
             || grace.MainNoteItemIndex >= measure.Items.Length)
             return 0;
         var mainItem = measure.Items[grace.MainNoteItemIndex];
@@ -465,7 +554,9 @@ internal static class GraceNoteEngraver
         };
         // Y-gate proxy: a grace below the main note keeps its flag out of the
         // above-script's band, so it needs no extra room.
-        if (grace.Notes.Max(n => n.StaffPosition) < mainPos)
+        // The HIGHEST head of the highest column: the gate asks whether any grace ink
+        // rises into the script's band, so a chord answers with its top head.
+        if (grace.Columns.Max(n => n.Highest.StaffPosition) < mainPos)
             return 0;
 
         foreach (var art in articulations)
@@ -502,9 +593,9 @@ internal static class GraceNoteEngraver
     /// reserved spring width, so the junction (width) is used.</summary>
     private static double GraceInkRight(GraceNoteItem grace, double graceGroupWidth)
     {
-        if (grace.Notes.Length == 1)
+        if (grace.Columns.Length == 1)
         {
-            var d = grace.Notes[0].BaseDuration;
+            var d = grace.Columns[0].BaseDuration;
             if (d.Numerator == 1 && d.Denominator >= 8)
             {
                 // Read from the grace's own font, exactly as SpacingRules.GraceColumnRightReach
@@ -535,9 +626,9 @@ internal static class GraceNoteEngraver
     public static double GetGraceGroupWidth(int noteCount)
     {
         if (noteCount <= 0) return 0;
-        var uniform = ImmutableArray.CreateBuilder<GraceNoteInfo>(noteCount);
+        var uniform = ImmutableArray.CreateBuilder<GraceColumnInfo>(noteCount);
         for (int i = 0; i < noteCount; i++)
-            uniform.Add(new GraceNoteInfo(0, null, false, Fraction.Eighth));
+            uniform.Add(new GraceColumnInfo(0, null, false, Fraction.Eighth));
         return SpacingRules.CalculateGraceGroupSpringWidth(uniform.ToImmutable());
     }
 
@@ -548,7 +639,7 @@ internal static class GraceNoteEngraver
     /// LILYPOND-REF: lily/grace-spacing-engraver.cc:46 Grace_spacing_engraver::process_music
     /// Uses per-group common shortest duration for LP-compliant spacing.
     /// </remarks>
-    public static double GetGraceGroupWidth(ImmutableArray<GraceNoteInfo> notes)
+    public static double GetGraceGroupWidth(ImmutableArray<GraceColumnInfo> notes)
     {
         return SpacingRules.CalculateGraceGroupSpringWidth(notes);
     }

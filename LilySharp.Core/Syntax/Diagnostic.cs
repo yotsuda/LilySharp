@@ -1021,13 +1021,22 @@ public static class DiagnosticCodes
     /// <para>
     /// ⚠️ THE BODY IS PARSED WHOLE AND READ NARROW. A grace body goes through the ordinary
     /// <c>ParseMusicBlock</c>, so it accepts everything a music block accepts;
-    /// <c>MeasureCollector.CollectGraceNotes</c> then reads a bare note's PITCH and DURATION
-    /// VALUE and nothing else. MEASURED 2026-08-30 (session 298), each spelling rendered
+    /// <c>MeasureCollector.CollectGraceNotes</c> then reads a COLUMN's pitches and duration
+    /// value and nothing else. MEASURED 2026-08-30 (session 298), each spelling rendered
     /// against a control and compared with <c>data-pos</c> masked: a chord, a rest or a
-    /// tuplet contributes no grace column at all — a body made only of those draws NO grace
+    /// tuplet contributed no grace column at all — a body made only of those drew NO grace
     /// — and dots, slur/beam/tie markers, <c>@staccato</c>, <c>@text</c>, <c>@f</c>,
     /// <c>@finger</c>, <c>@trill</c>, <c>@sustain</c>, <c>@rit</c> and <c>@cresc</c> were
     /// each dropped in silence. LilyPond 2.26.0 draws every one of them.
+    /// </para>
+    /// <para>
+    /// ⚠️ FOUR OF THAT LIST HAVE LEFT IT, so the paragraph above is the state it was WRITTEN
+    /// in rather than the state today: the DOT (session 299), a PHRASE REFERENCE (300), a
+    /// TUPLET's notes (302 — its bracket and number stay, as a separate kind) and a CHORD
+    /// (308, which is one column with N heads: see <c>Svg.Model.GraceColumnInfo</c>). What is
+    /// left is the REST and the annotations. <c>Semantics.GraceBodySupport</c>, not this doc,
+    /// is where that list is kept honest — the collector and the validator both read it, and
+    /// a list only a diagnostic's doc holds is one nothing goes red about.
     /// </para>
     /// <para>
     /// ⚠️ It is a WARNING because each of these is valid LilyPond and each is what Lily#

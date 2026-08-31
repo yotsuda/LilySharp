@@ -26,7 +26,7 @@ namespace LilySharp.Tests;
 public class GraceSpacingTests
 {
     // Helper to create grace note info with duration
-    private static GraceNoteInfo MakeGrace(Fraction duration, int staffPos = 0) =>
+    private static GraceColumnInfo MakeGrace(Fraction duration, int staffPos = 0) =>
         new(staffPos, null, false, duration);
 
     [Fact]
@@ -151,7 +151,7 @@ public class GraceSpacingTests
     [Fact]
     public void CalculateGraceGroupShortestDuration_Empty_ReturnsDefault()
     {
-        var notes = ImmutableArray<GraceNoteInfo>.Empty;
+        var notes = ImmutableArray<GraceColumnInfo>.Empty;
 
         double shortest = SpacingRules.CalculateGraceGroupShortestDuration(notes);
 
@@ -273,7 +273,7 @@ public class GraceSpacingTests
     public void AdjustSpringForGraceNotes_WithGraceInfo_Empty_NoChange()
     {
         var spring = new Spring(3.0, 1.2, 1.8);
-        var empty = ImmutableArray<GraceNoteInfo>.Empty;
+        var empty = ImmutableArray<GraceColumnInfo>.Empty;
 
         var adjusted = SpacingRules.AdjustSpringForGraceNotes(spring, empty);
 

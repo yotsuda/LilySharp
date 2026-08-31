@@ -78,8 +78,13 @@ public class GraceBodyValidatorTests
     [InlineData("grace { d'8( e'8) } c'1 | e'1 |", "grace { d'8 e'8 } c'1 | e'1 |")]
     [InlineData("grace { d'8[ e'8] } c'1 | e'1 |", "grace { d'8 e'8 } c'1 | e'1 |")]
     [InlineData("grace { d'8~ d'8 } c'1 | e'1 |", "grace { d'8 d'8 } c'1 | e'1 |")]
-    [InlineData("grace { d'8 r8 } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
-    [InlineData("grace { <d' f'>8 } c'1 | e'1 |", "c'1 | e'1 |")]
+    // ⚠️ `grace { d'8 r8 }` LEFT THIS THEORY ON 2026-08-31 (session 308), one commit
+    // after the chord row did and for the same reason: a rest is a COLUMN with no head
+    // now, it is drawn, and this row went red on its own. See ARestInAGraceBody_IsDrawn
+    // and TheBeamCoversTheLeadingRunOfHeads for what replaced it.
+    // ⚠️ `grace { <d' f'>8 }` LEFT THIS THEORY ON 2026-08-31 (session 308), the way a row is
+    // meant to leave it: a chord is a grace COLUMN with two heads now, so it is drawn, and
+    // this row went red on its own. See AChordInAGraceBody_IsEngraved for what replaced it.
     // ⚠️ `grace { tuplet 3/2 { … } }` LEFT THIS THEORY ON 2026-08-30 (session 302), and it
     // left the way a row is meant to: the tuplet is a CONTAINER, its notes are engraved now,
     // and this row went red on its own and named itself as the line to delete. What is still
@@ -121,14 +126,25 @@ public class GraceBodyValidatorTests
     /// one a reader needs to hear.
     /// </summary>
     [Fact]
-    public void ABodyWithNoBareNote_SaysTheWholeGraceIsGone()
+    public void ABodyWithNoColumn_SaysTheWholeGraceIsGone()
     {
+        // ⚠️ A CUE, because the two obvious books stopped making this point DURING session
+        // 308: it was `grace { <d' f'>8 }` until a chord became a column, then `grace { r8 }`
+        // until a rest did. The sentence under test never changed, and neither did the thing
+        // it is about — a body whose every element the collector skips draws no grace at all —
+        // so the book moved to a container the body still does not walk.
         Assert.Contains("NO grace note is drawn at all",
-            Assert.Single(Warnings(Book("grace { <d' f'>8 } c'1 | e'1 |"))).Message);
+            Assert.Single(Warnings(Book("grace { cue { d'8 } } c'1 | e'1 |"))).Message);
 
-        // A body that still holds one bare note keeps its grace, so the sentence stays off.
+        // A body that still holds one column keeps its grace, so the sentence stays off.
         Assert.DoesNotContain("NO grace note is drawn at all",
-            Assert.Single(Warnings(Book("grace { d'8 <e' g'>8 } c'1 | e'1 |"))).Message);
+            Assert.Single(Warnings(Book("grace { d'8 cue { e'8 } } c'1 | e'1 |"))).Message);
+
+        // …and the column that keeps it may be a CHORD or a REST, which are the two halves
+        // session 308 added: a body of nothing but either is a body that draws a grace.
+        Assert.Empty(Warnings(Book("grace { <d' f'>8 } c'1 | e'1 |")));
+        Assert.Empty(Warnings(Book("grace { r8 } c'1 | e'1 |")));
+        Assert.Empty(Warnings(Book("grace { d'16 e'16 r16 f'16 } c'1 | e'1 |")));
     }
 
     /// <summary>
@@ -267,8 +283,8 @@ public class GraceBodyValidatorTests
         static (double X, System.Collections.Immutable.ImmutableArray<int> Positions) At(
             int staffPosition, bool beamed)
             => LilySharp.Core.Svg.Layout.GraceNoteEngraver.Dots(
-                new LilySharp.Core.Svg.Model.GraceNoteInfo(
-                    staffPosition, null, false, Fraction.Eighth, Dots: 1),
+                new LilySharp.Core.Svg.Model.GraceColumnInfo(
+                    staffPosition, null, false, Fraction.Eighth, dots: 1),
                 beamed);
 
         var onLine = At(2, beamed: false);
@@ -296,11 +312,11 @@ public class GraceBodyValidatorTests
         var score = new LilySharp.Core.Svg.Collector.MeasureCollector()
             .Collect(SyntaxTree.Parse(Book("grace { d'8. e' f'16 } c'1 | e'1 |")));
         var grace = Assert.Single(score.GraceNotes);
-        Assert.Equal(new[] { 1, 1, 0 }, grace.Notes.Select(n => n.Dots).ToArray());
+        Assert.Equal(new[] { 1, 1, 0 }, grace.Columns.Select(n => n.Dots).ToArray());
         // …and the note VALUE is untouched by it: a dotted eighth is still an eighth, or its
         // flag and its beam count would change with the dot.
         Assert.Equal(new[] { 8, 8, 16 },
-            grace.Notes.Select(n => (int)n.BaseDuration.Denominator).ToArray());
+            grace.Columns.Select(n => (int)n.BaseDuration.Denominator).ToArray());
     }
 
     /// <summary>
@@ -324,14 +340,205 @@ public class GraceBodyValidatorTests
         static double SecondColumn(int dots)
             => LilySharp.Core.Svg.Layout.SpacingRules.GraceColumns(
                 System.Collections.Immutable.ImmutableArray.Create(
-                    new LilySharp.Core.Svg.Model.GraceNoteInfo(
-                        2, null, false, Fraction.Eighth, Dots: dots),
-                    new LilySharp.Core.Svg.Model.GraceNoteInfo(
+                    new LilySharp.Core.Svg.Model.GraceColumnInfo(
+                        2, null, false, Fraction.Eighth, dots: dots),
+                    new LilySharp.Core.Svg.Model.GraceColumnInfo(
                         3, null, false, Fraction.Sixteenth)),
                 mainItem: null).Offsets[1];
 
         Assert.Equal(0.46797, SecondColumn(1) - SecondColumn(0), 5);
     }
+
+    /// <summary>
+    /// A chord in a grace body is ONE COLUMN WITH N HEADS: it draws a head per pitch, at one
+    /// x, and it reports nothing (session 308).
+    /// </summary>
+    /// <remarks>
+    /// The counts are read off the PAGE rather than off the model, because the hole this
+    /// closes was a page that drew nothing while three other readers had opinions. What the
+    /// heads' coordinates should be is
+    /// <see cref="AGraceChordReadsLilyPondsOwnChordRules"/>'s question.
+    /// </remarks>
+    [Fact]
+    public void AChordInAGraceBody_IsEngraved()
+    {
+        // Two heads where the one-note spelling draws one, and one MORE than the book with
+        // no grace at all — a chord adds a head, not a column.
+        Assert.Equal(CountGraceHeads(Page("grace { d'8 } c'1 | e'1 |")) + 1,
+            CountGraceHeads(Page("grace { <d' f'>8 } c'1 | e'1 |")));
+        Assert.Equal(0, CountGraceHeads(Page("c'1 | e'1 |")));
+
+        // …and nothing is reported about it any more.
+        Assert.Empty(Warnings(Book("grace { <d' f'>8 } c'1 | e'1 |")));
+        Assert.Empty(Warnings(Book("grace { d'16 <c' e'>16 f'16 } c'1 | e'1 |")));
+
+        // An annotation on a chord MEMBER is still reported, at the member: the chord became
+        // a column, and a column still has no itemIndex for a script to hang off.
+        var onMember = Assert.Single(Warnings(Book("grace { <d'@staccato f'>8 } c'1 | e'1 |")));
+        Assert.Contains("is not engraved", onMember.Message);
+    }
+
+    /// <summary>
+    /// A grace chord runs LilyPond's ORDINARY chord rules, read out of the GRACE'S OWN FONTS:
+    /// the seconds shift and the accidental stacking, at −3 and −4 rather than at full size.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED on LilyPond 2.27.3 (scratch/p308/lp, books y1_gsecond / y3_gacc / y5_gplainch
+    /// against the full-size controls y2_nsecond / y4_nacc / y6_nplainch). This test asserts
+    /// the SHAPE — which head moves and which does not — because the absolute coordinates
+    /// belong to the ledger and this file has no LilyPond to compare against; what it catches
+    /// is the two ways this could silently go wrong, a chord drawn as one head on top of
+    /// another, and a chord whose accidentals do not clear each other.
+    /// </remarks>
+    [Fact]
+    public void AGraceChordReadsLilyPondsOwnChordRules()
+    {
+        // A THIRD needs no shift: both heads stand at the column's own x.
+        Assert.Single(GraceHeadXs(Page("grace { <d' f'>8 } c'1 | e'1 |")).Distinct());
+
+        // A SECOND does: the upper head is reversed to the far side of the stem.
+        var second = GraceHeadXs(Page("grace { <d' e'>8 } c'1 | e'1 |")).ToArray();
+        Assert.Equal(2, second.Length);
+        Assert.NotEqual(second[0], second[1]);
+
+        // Two accidentals a second apart STACK — two different x, where a third apart the
+        // wide one still stacks (position_apes packs every ape, not just colliding ones) but
+        // both heads stay put.
+        var acc = GraceAccidentalXs(Page("grace { <dis' eis'>8 } c'1 | e'1 |")).ToArray();
+        Assert.Equal(2, acc.Length);
+        Assert.NotEqual(acc[0], acc[1]);
+    }
+
+    /// <summary>
+    /// A rest in a grace body is a COLUMN WITH NO HEAD: it is drawn, it holds a column, and
+    /// it is drawn at FULL SIZE (session 308).
+    /// </summary>
+    /// <remarks>
+    /// The full size is the half nobody would guess and everybody would get wrong:
+    /// <c>general-grace-settings</c> gives a <c>font-size</c> to every other grob a grace owns
+    /// and never mentions Rest (scm/music-functions.scm:636-650, canonical v2.26.0), and
+    /// LilyPond draws the rest at 0.0040 beside a head at 0.0028 in one book
+    /// (scratch/p308/lp2/s2_gracerestchord).
+    /// </remarks>
+    [Fact]
+    public void ARestInAGraceBody_IsDrawn()
+    {
+        // Drawn: the page gains a rest glyph the control does not have…
+        Assert.Equal(0, CountGraceRests(Page("grace { d'16 e'16 } c'1 | e'1 |")));
+        Assert.Equal(1, CountGraceRests(Page("grace { d'16 e'16 r16 } c'1 | e'1 |")));
+        // …and nothing is reported about it any more.
+        Assert.Empty(Warnings(Book("grace { d'16 e'16 r16 } c'1 | e'1 |")));
+        Assert.Empty(Warnings(Book("grace { r16 } c'1 | e'1 |")));
+
+        // FULL SIZE: the rest is drawn at the score's own font size in a book whose grace
+        // head beside it is at magstep(−3). A rest drawn at the grace's size would satisfy
+        // "a rest appears" and still be a quarter too narrow.
+        string page = Page("grace { r16 d'16 } c'1 | e'1 |");
+        Assert.Equal(1, CountGraceRests(page));
+        Assert.Single(GraceHeadXs(page));
+    }
+
+    /// <summary>
+    /// The one beam covers the LEADING run of heads and stops at the first rest; every column
+    /// after it draws a flag, and a run whose leading pair is broken draws no beam at all.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (scratch/p308/lp2/measurements.md): <c>{ d'16 e'16 r16 f'16 }</c> is quanted
+    /// to the SAME four digits as <c>{ d'16 e'16 }</c> — span 1.4679, y 11.0386..11.7006 —
+    /// with a flag on the head after the rest, while <c>{ d'16 r16 e'16 f'16 }</c> gets no
+    /// beam at all although <c>e' f'</c> are two adjacent beamable heads.
+    /// </remarks>
+    [Fact]
+    public void TheBeamCoversTheLeadingRunOfHeads()
+    {
+        // The prefix's beam is the beam that prefix gets ON ITS OWN: what follows it does not
+        // widen it. Read as the beam quads' own spans, which is what the quanter answered.
+        Assert.Equal(BeamSpans(Page("grace { d'16 e'16 } c'1 | e'1 |")),
+                     BeamSpans(Page("grace { d'16 e'16 r16 f'16 } c'1 | e'1 |")));
+        Assert.Equal(BeamSpans(Page("grace { d'16 e'16 } c'1 | e'1 |")),
+                     BeamSpans(Page("grace { d'16 e'16 r16 } c'1 | e'1 |")));
+
+        // A rest before the second head kills the beam entirely — NOT "beam each maximal
+        // run", which would beam e'–f' in the first book here.
+        Assert.Empty(BeamSpans(Page("grace { d'16 r16 e'16 f'16 } c'1 | e'1 |")));
+        Assert.Empty(BeamSpans(Page("grace { r16 d'16 e'16 } c'1 | e'1 |")));
+
+        // …and a run of three still beams as three, so the prefix is not capped at two.
+        Assert.NotEqual(BeamSpans(Page("grace { d'16 e'16 } c'1 | e'1 |")),
+                        BeamSpans(Page("grace { d'16 e'16 f'16 } c'1 | e'1 |")));
+
+        // AN INVISIBLE COLUMN BREAKS IT TOO. A spacer draws nothing, and LilyPond still
+        // flags both heads either side of it (scratch/p308/lp2/t1_spacermid) — what ends the
+        // beam is the absence of a HEAD, not the presence of ink. Without this line the
+        // spacer's behaviour would be an accident of IsRest covering it.
+        Assert.Empty(BeamSpans(Page("grace { d'16 s16 e'16 } c'1 | e'1 |")));
+        Assert.Equal(0, CountGraceRests(Page("grace { d'16 s16 e'16 } c'1 | e'1 |")));
+    }
+
+    /// <summary>Every beam quad's x-span on the page, at the drawn precision.</summary>
+    private static IReadOnlyList<string> BeamSpans(string page)
+    {
+        var spans = new List<string>();
+        foreach (Match m in Regex.Matches(page, "<polygon[^>]*points=\"([^\"]*)\""))
+        {
+            var n = m.Groups[1].Value.Replace(",", " ").Split(
+                (char[]?)null, System.StringSplitOptions.RemoveEmptyEntries);
+            var xs = new List<double>();
+            for (int i = 0; i < n.Length; i += 2)
+                xs.Add(double.Parse(n[i], System.Globalization.CultureInfo.InvariantCulture));
+            if (xs.Count > 0)
+                spans.Add((xs.Max() - xs.Min()).ToString("0.000",
+                    System.Globalization.CultureInfo.InvariantCulture));
+        }
+        return spans;
+    }
+
+    /// <summary>How many REST glyphs the page draws — a grace rest is one of them, at the
+    /// score's own size, which is why this counts the glyph rather than a size.</summary>
+    private static int CountGraceRests(string page)
+        => Regex.Matches(page,
+            "<text class=\"music\"[^>]*>"
+            + Regex.Escape(LilySharp.Core.Svg.EmmentalerGlyphs.Rest16th.ToString())).Count;
+
+    /// <summary>The x of every GRACE notehead on the page, in document order.</summary>
+    /// <remarks>
+    /// ⚠️ THE FONT SIZE IS NOT ENOUGH TO NAME A HEAD. A grace's FLAG and its DOT come out of
+    /// the same −3 face (general-grace-settings gives NoteHead, Stem, Flag and Dots the same
+    /// step), so a size-only filter counts them as heads — which is exactly how the first
+    /// version of this helper read `grace &lt;d' f'&gt;` as two x values with no chord in it.
+    /// The glyph itself is the question being asked, so the glyph is what is matched.
+    /// </remarks>
+    private static IEnumerable<string> GraceHeadXs(string page)
+        => GraceGlyphXs(page, LilySharp.Core.Svg.Model.GraceNoteItem.FontSizeStep,
+            LilySharp.Core.Svg.EmmentalerGlyphs.NoteheadBlack.ToString());
+
+    /// <summary>The x of every grace ACCIDENTAL on the page — the −4 face, not the head's −3.
+    /// Nothing else a grace draws reads that face, so here the size IS the question.</summary>
+    private static IEnumerable<string> GraceAccidentalXs(string page)
+        => GraceGlyphXs(page, LilySharp.Core.Svg.Model.GraceNoteItem.AccidentalFontSizeStep,
+            glyph: null);
+
+    private static IEnumerable<string> GraceGlyphXs(
+        string page, double fontSizeStep, string? glyph)
+    {
+        double size = LilySharp.Core.Rendering.SharedRenderer.FontSize
+            * System.Math.Pow(2.0, fontSizeStep / 6.0);
+        string wanted = size.ToString("0.00",
+            System.Globalization.CultureInfo.InvariantCulture);
+        foreach (Match m in Regex.Matches(
+            page,
+            "<text class=\"music\"[^>]*x=\"([-\\d.]+)\"[^>]*font-size=\"([\\d.]+)\"[^>]*>([^<]*)"))
+        {
+            if (m.Groups[2].Value != wanted)
+                continue;
+            if (glyph != null && m.Groups[3].Value != glyph)
+                continue;
+            yield return m.Groups[1].Value;
+        }
+    }
+
+    private static int CountGraceHeads(string page)
+        => GraceHeadXs(page).Count();
 
     /// <summary>The augmentation dot as it reaches the page — the glyph char itself, so
     /// this counts ink rather than a spelling of the markup around it.</summary>
@@ -415,7 +622,7 @@ public class GraceBodyValidatorTests
                     "part m { clef treble }\n" + phrases
                     + "\nsection A { m {\n" + music + "\n} }\n"
                     + "form main { ~A }\nscore main { staff m }\n"))
-                .GraceNotes.Single().Notes.Select(n => n.StaffPosition).ToArray();
+                .GraceNotes.Single().Columns.Select(n => n.Lowest.StaffPosition).ToArray();
 
         const string G = "phrase G { d16 e }";
         Assert.Equal(
@@ -484,7 +691,7 @@ public class GraceBodyValidatorTests
                 .Collect(SyntaxTree.Parse(PhraseBook("phrase G { d'16 e' f'16 }", music)));
 
         var asGrace = Assert.Single(Collect("grace { G } c'1 | e'1 |").GraceNotes)
-            .Notes.Select(n => n.StaffPosition).ToArray();
+            .Columns.Select(n => n.Lowest.StaffPosition).ToArray();
         var asMusic = Collect("G c'1 | e'1 |").Voice.Measures[0].Items
             .OfType<LilySharp.Core.Svg.Model.NoteItem>()
             .Take(asGrace.Length).Select(n => n.StaffPosition).ToArray();
@@ -516,7 +723,7 @@ public class GraceBodyValidatorTests
         // c'16 is a sixteenth; the phrase's undurated d' takes the GROUP's default eighth
         // rather than inheriting the sixteenth across the boundary.
         Assert.Equal(new[] { 16, 8 },
-            Assert.Single(score.GraceNotes).Notes
+            Assert.Single(score.GraceNotes).Columns
                 .Select(n => (int)n.BaseDuration.Denominator).ToArray());
 
         // …and the half note before the grace still owns the VOICE's duration memory: the
@@ -546,19 +753,27 @@ public class GraceBodyValidatorTests
     [Fact]
     public void ADropInsideAReferencedPhrase_IsReportedThereAndNamesThePhrase()
     {
-        string source = PhraseBook("phrase C { <c' e'>16 }", "grace { C } c'1 | e'1 |");
+        // ⚠️ A CUE. This book said `phrase C { <c' e'>16 }` until session 308 made a
+        // chord a column, then `phrase C { r16 }` until the same session made a rest one.
+        // What the test is ABOUT — a drop reached through a reference is reported inside
+        // the phrase's declaration and names the phrase — never changed; only the element
+        // that is still dropped had to.
+        string source = PhraseBook("phrase C { cue { d'16 } }", "grace { C } c'1 | e'1 |");
         var warning = Assert.Single(Warnings(source));
 
-        Assert.Equal(source.IndexOf("<c' e'>", System.StringComparison.Ordinal),
+        Assert.Equal(source.IndexOf("cue {", System.StringComparison.Ordinal),
             warning.Span.Start);
-        Assert.Contains("a chord inside 'grace { C }'", warning.Message);
+        Assert.Contains("a cue inside 'grace { C }'", warning.Message);
         Assert.Contains("NO grace note is drawn at all", warning.Message);
 
-        // A phrase that holds a bare note as well keeps its grace, so the sentence goes off
-        // — the "engraves nothing" question is asked of the EXPANDED body.
+        // A phrase that holds a column as well keeps its grace, so the sentence goes off
+        // — the "engraves nothing" question is asked of the EXPANDED body. The column here
+        // is a CHORD, which is also the shortest statement that the expansion reaches one
+        // level down into a chord rather than stopping at the reference.
         Assert.DoesNotContain("NO grace note is drawn at all",
             Assert.Single(Warnings(
-                PhraseBook("phrase C { d'16 <c' e'>16 }", "grace { C } c'1 | e'1 |"))).Message);
+                PhraseBook("phrase C { <c' e'>16 cue { d'16 } }",
+                    "grace { C } c'1 | e'1 |"))).Message);
     }
 
     /// <summary>
@@ -681,17 +896,40 @@ public class GraceBodyValidatorTests
 
     /// <summary>
     /// …but when the tuplet holds nothing engravable either, the promise is withdrawn rather
-    /// than left standing as a lie, and the chords inside it carry the "whole ornament is
+    /// than left standing as a lie, and the elements inside it carry the "whole ornament is
     /// gone" half.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ THE BOOK HELD CHORDS, THEN RESTS, AND NOW HOLDS CUES. Session 308 made a
+    /// chord a column and then a rest one, so a tuplet of either promises notes
+    /// truthfully today. The sentence under test is unchanged; only the element that
+    /// still makes a body engrave nothing has moved, twice.
+    /// </remarks>
     [Fact]
-    public void ATupletOfChords_DoesNotPromiseNotes()
+    public void ATupletOfCues_DoesNotPromiseNotes()
     {
-        var warnings = Warnings(PhraseBook("", "grace { tuplet 3/2 { <c' e'>16 <d' f'>16 } } c'1 | e'1 |"));
+        var warnings = Warnings(PhraseBook(
+            "", "grace { tuplet 3/2 { cue { d'16 } cue { e'16 } } } c'1 | e'1 |"));
 
         Assert.DoesNotContain(warnings, w => w.Message.Contains("notes it holds ARE drawn"));
         Assert.Contains(warnings,
-            w => w.Message.Contains("a chord") && w.Message.Contains("NO grace note is drawn at all"));
+            w => w.Message.Contains("a cue") && w.Message.Contains("NO grace note is drawn at all"));
+    }
+
+    /// <summary>
+    /// A tuplet of CHORDS now engraves what it holds, so the bracket's promise stands —
+    /// the other side of the row above, and the shortest statement that the two containers
+    /// and the chord compose.
+    /// </summary>
+    [Fact]
+    public void ATupletOfChords_EngravesWhatItHolds()
+    {
+        var warnings = Warnings(
+            PhraseBook("", "grace { tuplet 3/2 { <c' e'>16 <d' f'>16 } } c'1 | e'1 |"));
+
+        var bracket = Assert.Single(warnings);
+        Assert.Contains("notes it holds ARE drawn", bracket.Message);
+        Assert.DoesNotContain("NO grace note is drawn at all", bracket.Message);
     }
 
     /// <summary>
@@ -707,7 +945,7 @@ public class GraceBodyValidatorTests
         static int[] Durations(string music)
             => new LilySharp.Core.Svg.Collector.MeasureCollector()
                 .Collect(SyntaxTree.Parse(PhraseBook("", music)))
-                .GraceNotes.Single().Notes
+                .GraceNotes.Single().Columns
                 .Select(n => (int)n.BaseDuration.Denominator).ToArray();
 
         // The undurated c' after the tuplet inherits the sixteenth written inside it…

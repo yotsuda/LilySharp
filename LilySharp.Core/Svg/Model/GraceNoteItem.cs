@@ -33,17 +33,18 @@ public enum GraceNoteType
 }
 
 /// <summary>
-/// Information about a single note within a grace note group.
+/// One NOTEHEAD of a grace column — the part of a grace that a pitch owns.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/grace-spacing-engraver.cc — each grace note has its own duration
-/// for spring-based spacing calculation.
+/// Everything here is per-HEAD; everything a whole column shares (the written duration, the
+/// dots, the flag and the beam count) lives on <see cref="GraceColumnInfo"/>. The split is
+/// the same one <see cref="ChordNoteInfo"/> makes against <see cref="ChordItem"/>, and for
+/// the same reason: a chord is one column that sounds N pitches, not N columns.
 /// </remarks>
-public readonly record struct GraceNoteInfo(
+public readonly record struct GraceHeadInfo(
     int StaffPosition,      // Staff position (-6 = middle C in treble clef)
     string? Accidental,     // "sharp", "flat", "natural", "doubleSharp", "doubleFlat", or null
     bool NeedsLedger,       // Whether ledger lines are needed
-    Fraction BaseDuration,  // Duration of this grace note (for spacing calculation)
     int Midi = 0,           // Absolute MIDI pitch (for tab fret resolution)
     // The '\N' written on this grace note, or null for automatic string selection.
     // ⚠️ THIS IS NOT A GROB, which is why a grace note can carry it while it carries no
@@ -53,7 +54,44 @@ public readonly record struct GraceNoteInfo(
     // until session 298, and that cost the reader's own `Real Gone.lys` two grace notes
     // drawn on whatever string the resolver picked. See Semantics.GraceBodySupport.
     int? StringNumber = null,
-    // Augmentation dots on THIS grace's duration. SEPARATE from BaseDuration for the same
+    // This head's accidental ink-left X in staff spaces from the COLUMN's origin, once the
+    // column's accidentals have been packed together — null where the head stands alone on
+    // its column and the per-head solve is the same answer. Same frame and same reason as
+    // ChordNoteInfo.AccidentalX.
+    // MEASURED on LilyPond 2.27.3 (scratch/p308/lp, book y3_gacc `\grace { <cis' dis'>16 }`
+    // against y4_nacc `<cis' dis'>4`): a grace chord's accidentals ARE stacked, at the
+    // grace's own -4 font — 0.8623 apart where a full-size chord's are 1.3000 apart.
+    double? AccidentalX = null,
+    // How far RIGHT of the column's origin this head is drawn, in staff spaces — the SECONDS
+    // shift, which is a property of the head and not of the column.
+    // MEASURED (scratch/p308/lp, y1_gsecond `\grace { <c' d'>16 }` against y2_nsecond):
+    // LilyPond shifts the upper head of a second inside a GRACE chord by 0.8530 where it
+    // shifts a full-size one by 1.2392 — the ordinary chord rule at the grace's scale.
+    double HeadXOffset = 0
+);
+
+/// <summary>
+/// One COLUMN of a grace group: the noteheads that sound together at one written duration.
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/grace-spacing-engraver.cc — each grace COLUMN has its own duration
+/// for spring-based spacing calculation.
+/// <para>
+/// ⚠️ THIS WAS ONE NOTE UNTIL SESSION 308, AND THAT IS WHAT KEPT A CHORD OUT OF A GRACE
+/// BODY. The flat <c>ImmutableArray&lt;GraceNoteInfo&gt;</c> it replaced could not say
+/// "these two sound together", so <c>MeasureCollector.CollectGraceNotes</c> read bare notes
+/// and reported a chord as a <c>Semantics.GraceDropKind.Element</c> drop. The difficulty was
+/// never the ADDRESS a grace note cannot name — HANDOFF §2 U8 ⒜ measured that
+/// <c>ChordHeadPositioning.CalculateOffsets</c> takes none and is already called with a
+/// scale — it was this one word.
+/// </para>
+/// </remarks>
+public readonly record struct GraceColumnInfo(
+    // The heads of this column, LOW TO HIGH. One head is an ordinary grace note; more than
+    // one is a chord.
+    ImmutableArray<GraceHeadInfo> Heads,
+    Fraction BaseDuration,  // Written duration of this column (for spacing calculation)
+    // Augmentation dots on THIS column's duration. SEPARATE from BaseDuration for the same
     // reason NoteItem.Dots is separate from NoteItem.BaseDuration: the note VALUE picks the
     // head, the flag and the beam count, and a dotted eighth is an eighth to all three.
     // Folding the dot into the fraction would make `grace { d'8. }` a sixteenth and give it
@@ -61,9 +99,27 @@ public readonly record struct GraceNoteInfo(
     // LILYPOND-REF: scm/music-functions.scm:635-648 general-grace-settings —
     //   (Voice Dots font-size -3): a grace's dot comes out of the SAME font as its head
     //   (GraceNoteItem.Font), unlike its accidental, which states -4.
-    int Dots = 0
+    int Dots = 0,
+    // An invisible time-filler (`s`), as RestItem.IsSpacer is: it holds a column open and
+    // draws nothing. Only meaningful on a column with no head.
+    bool IsSpacer = false
 )
 {
+    /// <summary>
+    /// The column a single pitch makes — the shape every grace was until session 308, kept
+    /// because a one-head column IS what an ordinary grace note is, and spelling the array
+    /// out at each of those call sites would say nothing extra.
+    /// </summary>
+    public GraceColumnInfo(
+        int staffPosition, string? accidental, bool needsLedger, Fraction baseDuration,
+        int midi = 0, int? stringNumber = null, int dots = 0)
+        : this(
+            ImmutableArray.Create(
+                new GraceHeadInfo(staffPosition, accidental, needsLedger, midi, stringNumber)),
+            baseDuration, dots)
+    {
+    }
+
     /// <summary>
     /// How LONG this grace is — the note value with its dots applied. This is what SPACING
     /// asks for, while <see cref="BaseDuration"/> is what the head, the flag and the beam
@@ -76,6 +132,89 @@ public readonly record struct GraceNoteInfo(
     /// <c>MusicItem.Duration</c> against <c>MusicItem.BaseDuration</c>.
     /// </remarks>
     public Fraction Length => Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration;
+
+    /// <summary>
+    /// Value equality over the HEADS, not over the array they came in.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE SYNTHESIZED PAIR IS WRONG FOR THIS TYPE, and it is wrong SILENTLY.
+    /// <c>ImmutableArray&lt;T&gt;</c> answers <c>Equals</c> and <c>GetHashCode</c> off the
+    /// underlying array's REFERENCE, so a record struct holding one gets a value type whose
+    /// value nobody can compute: two columns built from the same pitches compare unequal and
+    /// hash differently. A grace column is a VALUE by
+    /// <c>LilySharp.Tests.ModelEqualityKindTests</c>' axes — a description, not an occurrence
+    /// — and <c>MeasureContentKey</c> leans on exactly that to decide a system may be reused.
+    /// <para>
+    /// MEASURED rather than argued: with the synthesized pair,
+    /// <c>SystemLayoutCacheTests.MultiStaff_ReusesSystems_AndStaysByteIdentical</c> went red
+    /// on a WIDTH-PRESERVING edit — 10 cache entries where 9 were reused — because one
+    /// system's key moved without its content moving. The page was never wrong; the reuse was
+    /// declined, which is the shape a content key fails in.
+    /// </para>
+    /// ⚠️ <see cref="GraceHeadInfo"/> NEEDS NO SUCH OVERRIDE: every one of its fields is a
+    /// primitive, so the compiler's pair already answers by value.
+    /// </remarks>
+    public bool Equals(GraceColumnInfo other)
+    {
+        if (BaseDuration != other.BaseDuration || Dots != other.Dots)
+            return false;
+        if (Heads.IsDefaultOrEmpty || other.Heads.IsDefaultOrEmpty)
+            return Heads.IsDefaultOrEmpty && other.Heads.IsDefaultOrEmpty;
+        if (Heads.Length != other.Heads.Length)
+            return false;
+        for (int i = 0; i < Heads.Length; i++)
+            if (!Heads[i].Equals(other.Heads[i]))
+                return false;
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public override int GetHashCode()
+    {
+        var hc = new HashCode();
+        hc.Add(BaseDuration);
+        hc.Add(Dots);
+        if (!Heads.IsDefaultOrEmpty)
+            foreach (var head in Heads)
+                hc.Add(head);
+        return hc.ToHashCode();
+    }
+
+    /// <summary>The LOWEST head of this column.</summary>
+    /// <remarks>
+    /// ⚠️ THERE IS NO <c>StaffPosition</c> ON A COLUMN, on purpose. A chord has several, and
+    /// picking one of them behind the caller's back is exactly the shape this type was
+    /// changed to remove: every reader has to say whether it wants the lowest, the highest,
+    /// or all of them.
+    /// </remarks>
+    public GraceHeadInfo Lowest => Heads[0];
+
+    /// <summary>The HIGHEST head of this column.</summary>
+    public GraceHeadInfo Highest => Heads[Heads.Length - 1];
+
+    /// <summary>True when more than one pitch sounds on this column.</summary>
+    public bool IsChord => Heads.Length > 1;
+
+    /// <summary>
+    /// True when this column sounds NOTHING — a rest. A rest is a column with no head, which
+    /// is the whole of what a rest is to a layout.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A REST IS NOT A SMALL REST. Everything else a grace owns carries a
+    /// <c>font-size</c> out of <c>general-grace-settings</c>; that list names Stem, Flag,
+    /// NoteHead, TabNoteHead, Dots, Accidental, Script, Fingering and StringNumber, and it
+    /// does NOT name Rest — so a grace rest reads the STAFF's own size and comes out FULL
+    /// SIZE. MEASURED, in one book, side by side (scratch/p308/lp2/s2_gracerestchord,
+    /// <c>\grace { r16 d'16 }</c>): the rest's glyph is drawn at 0.0040 and the head beside
+    /// it at 0.0028 = magstep(−3), and the rest's path data is byte-identical to a
+    /// main-stream rest's.
+    /// LILYPOND-REF: scm/music-functions.scm:636-650 <c>general-grace-settings</c> (v2.26.0).
+    /// <para>
+    /// ⇒ That is also why the column AFTER a rest is wider than the column after a head
+    /// (1.7000 against 1.4180, same book set): a full-size glyph reaches further right.
+    /// </para>
+    /// </remarks>
+    public bool IsRest => Heads.IsDefaultOrEmpty;
 }
 
 /// <summary>
@@ -100,8 +239,14 @@ public sealed record GraceNoteItem
     /// <summary>The type of grace note.</summary>
     public GraceNoteType Type { get; }
 
-    /// <summary>The notes in this grace group.</summary>
-    public ImmutableArray<GraceNoteInfo> Notes { get; }
+    /// <summary>The columns in this grace group, in written order.</summary>
+    /// <remarks>
+    /// ⚠️ NOT "the notes": a column holds a whole chord (session 308). The name was
+    /// <c>Notes</c> while the two were the same thing, and leaving it would have made every
+    /// <c>Notes.Length</c> in the layout read as a note count, which it no longer is — the
+    /// beam count, the column offsets and the reserved width are all per COLUMN.
+    /// </remarks>
+    public ImmutableArray<GraceColumnInfo> Columns { get; }
 
     /// <summary>The measure index where this grace note appears.</summary>
     public int MeasureIndex { get; }
@@ -119,14 +264,14 @@ public sealed record GraceNoteItem
     /// <summary>Creates a grace note group attached to a main note.</summary>
     public GraceNoteItem(
         GraceNoteType type,
-        ImmutableArray<GraceNoteInfo> notes,
+        ImmutableArray<GraceColumnInfo> columns,
         int measureIndex,
         int mainNoteItemIndex,
         int sourcePosition,
         int staffIndex = 0)
     {
         Type = type;
-        Notes = notes;
+        Columns = columns;
         MeasureIndex = measureIndex;
         MainNoteItemIndex = mainNoteItemIndex;
         SourcePosition = sourcePosition;
