@@ -174,7 +174,18 @@ public sealed partial class SectionReferenceSyntax : SyntaxNode
     {
         get
         {
-            if (GetChild(1) is not SyntaxTokenNode token)
+            // Found by KIND, not by index: the octave marks sit between the name and the
+            // label (source order is `B' "reprise"`), so on a shifted reference slot 1 is
+            // a mark and the label is wherever the marks stop.
+            SyntaxTokenNode? token = null;
+            for (int i = 1; i < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode t
+                    && t.Kind is not (SyntaxKind.Apostrophe or SyntaxKind.Comma))
+                {
+                    token = t;
+                    break;
+                }
+            if (token == null)
                 return null;
             var text = token.Text;
             if (text.StartsWith("\"") && text.EndsWith("\"") && text.Length >= 2)
@@ -182,6 +193,22 @@ public sealed partial class SectionReferenceSyntax : SyntaxNode
             return text;
         }
     }
+
+    /// <summary>
+    /// Net octave shift from the trailing marks (<c>'</c> = +1, <c>,</c> = -1) — the same
+    /// spelling, and the same meaning, a phrase reference's marks carry
+    /// (<see cref="VariableReferenceSyntax.OctaveOffset"/>).
+    /// </summary>
+    /// <remarks>
+    /// A section boundary REOPENS the relative frame at the part's anchor (user decision,
+    /// 2026-08-31: the reset stays and the carry is given by NOTATION), so a section whose
+    /// music belongs an octave away had no way to say so. <c>~B'</c> says it per PLAY: the
+    /// same section referenced twice can open at two different octaves, and the
+    /// DECLARATION is untouched — a shift written on the declaration would move B's
+    /// pitches at every call site, which is the bug the reset was introduced to fix
+    /// (MeasureCollector.ProcessSectionPrologue's remark keeps the example).
+    /// </remarks>
+    public int OctaveOffset => SyntaxFacts.NetOctaveMarks(this);
 }
 
 /// <summary>
@@ -211,11 +238,17 @@ public sealed partial class FormAlternativeSyntax : SyntaxNode
     public bool HasBracket => ((SyntaxTokenNode)GetChild(0)!).Kind == SyntaxKind.OpenBracket;
 
     /// <summary>
-    /// True if this has a range separator (- or ,) like [1-3. A] or [1,3. A]
-    /// Slot layout: Bracket with separator has 9 slots, without has 7 slots
-    /// (the extra slot over the historical 8/6 is the optional display label).
+    /// True if this has a range separator (- or ,) like [1-3. A] or [1,3. A].
     /// </summary>
-    public bool HasSeparator => HasBracket && SlotCount == 9;
+    /// <remarks>
+    /// ⚠️ Asked of SLOT 2, not of <c>SlotCount</c>. It counted slots (9 with a separator,
+    /// 7 without) until 2026-08-31, when the ending gained variable-length octave marks and
+    /// <c>[1. A'']</c> reached 9 slots without a separator — which would have made this read
+    /// the `.` as the separator and the tilde slot as the end number. The separator is the
+    /// only thing that can stand at slot 2, so ask it there.
+    /// </remarks>
+    public bool HasSeparator => HasBracket
+        && GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.Minus or SyntaxKind.Comma };
 
     /// <summary>
     /// True if this is a silent section reference [1. ~A] (no label displayed)
@@ -249,10 +282,7 @@ public sealed partial class FormAlternativeSyntax : SyntaxNode
     /// Bracket without separator (6 slots): slot[4]
     /// Bracket with separator (8 slots): slot[6]
     /// </summary>
-    public SyntaxTokenNode SectionName => (SyntaxTokenNode)GetChild(
-        HasBracket
-            ? (HasSeparator ? 6 : 4)
-            : 2)!;
+    public SyntaxTokenNode SectionName => (SyntaxTokenNode)GetChild(SectionNameSlot)!;
 
     /// <summary>
     /// Gets the alternative number.
@@ -298,14 +328,40 @@ public sealed partial class FormAlternativeSyntax : SyntaxNode
         get
         {
             if (!HasBracket) return null;
-            if (GetChild(HasSeparator ? 7 : 5) is not SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } token)
-                return null;
+            // By KIND: the octave marks sit between the name and the label, so the label's
+            // index is no longer fixed. A StringLiteral can only be the label here.
+            SyntaxTokenNode? token = null;
+            for (int i = SectionNameSlot + 1; i < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } t)
+                {
+                    token = t;
+                    break;
+                }
+            if (token == null) return null;
             var text = token.Text;
             if (text.StartsWith("\"") && text.EndsWith("\"") && text.Length >= 2)
                 return text.Substring(1, text.Length - 2);
             return text;
         }
     }
+
+    /// <summary>
+    /// Net octave shift from the trailing marks (<c>[1. B']</c> = +1), the same spelling
+    /// and the same meaning a plain section reference carries
+    /// (<see cref="SectionReferenceSyntax.OctaveOffset"/>) — an ending IS a reference with
+    /// a bracket around it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Counted FROM the section-name slot, not over the whole node, because this is the
+    /// one reference shape whose <c>,</c> tokens are not all marks: the range separator in
+    /// <c>[1,3. B]</c> is a Comma standing at slot 2. Counting every slot would read that
+    /// ending as "an octave down".
+    /// </remarks>
+    public int OctaveOffset => SyntaxFacts.NetOctaveMarksFrom(this, SectionNameSlot + 1);
+
+    /// <summary>The slot the section name stands at — the last FIXED index in this node,
+    /// and the place the by-kind reads above start from.</summary>
+    private int SectionNameSlot => HasBracket ? (HasSeparator ? 6 : 4) : 2;
 }
 
 /// <summary>

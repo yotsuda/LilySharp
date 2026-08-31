@@ -539,10 +539,23 @@ public sealed class LilyPondExporter
             { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
             CarryFrameInto(buf);
             // Both sides open a FRESH frame for the body — LilyPond the nested \relative
-            // written below, Lily# its EnterDefaultFrame — at the part's anchor moved by the
-            // reference's own marks.
+            // written below, Lily# its EnterDefaultFrame — at the anchor of the SECTION being
+            // played, moved by the reference's own marks.
+            // ⚠️ "of the section", not "of the part" (2026-08-31): a section quoted `~B'` is an
+            // octave up, and a phrase body inside it is part of that play. The collector says
+            // the same in one line (OctaveContext.ResetToInitial reads SectionOctaveOffset),
+            // and _sectionOctaveOffset is 0 for every play written without marks.
+            // ⚠️ THIS ASSIGNMENT IS BOOKKEEPING, NOT THE ANSWER — measured 2026-08-31, not
+            // assumed. The two frames are set to the SAME value and EmitMusicPitch writes the
+            // DIFFERENCE between them, so shifting both by a constant cancels in every mark
+            // the body writes: taking the section shift out of here alone leaves the .ly BYTE
+            // IDENTICAL. What decides the block's octave is its \relative reference pitch at
+            // the bottom of this method; the two are kept in step so the pair cannot drift,
+            // and the observer sits on the reference pitch (SectionReferenceOctaveTests
+            // .APhraseBodyInsideAMarkedSectionMovesWithIt asserts the twin MOVED).
             buf._lysStep = buf._lyStep = 0;
-            buf._lysOctave = buf._lyOctave = _anchorOctave + v.OctaveOffset;
+            buf._lysOctave = buf._lyOctave =
+                _anchorOctave + _sectionOctaveOffset + v.OctaveOffset;
             buf.EmitMusicStream(MusicItems(body).ToList(), "");
             _warnings.AddRange(buf._warnings);
             string inner = buf._sb.ToString().Replace("\n", " ").Trim();
@@ -573,7 +586,10 @@ public sealed class LilyPondExporter
                     ? inner
                     : $"\\fixed {AnchorPitch(_absoluteBaseOctave + v.OctaveOffset)} {{ {inner} }}";
 
-            return $"\\relative {ReferencePitch(v.OctaveOffset)} {{ {inner} }}";
+            // The nested \relative's own reference pitch has to be the SAME anchor the body
+            // was emitted against (buf._lyOctave above), section shift included — otherwise
+            // LilyPond opens the block one octave from where the body's marks were computed.
+            return $"\\relative {ReferencePitch(_sectionOctaveOffset + v.OctaveOffset)} {{ {inner} }}";
         }
         finally
         {
@@ -1096,7 +1112,8 @@ public sealed class LilyPondExporter
             case FormWalk.SectionRef s:
                 AppendSection(s.Name, byName, result,
                     markLabel: s.Silent ? null
-                        : (s.DisplayLabel ?? s.Name) is { Length: > 0 } lbl ? lbl : null);
+                        : (s.DisplayLabel ?? s.Name) is { Length: > 0 } lbl ? lbl : null,
+                    octaveOffset: s.OctaveOffset);
                 break;
 
             case FormWalk.Repeat repeat:
@@ -1115,7 +1132,8 @@ public sealed class LilyPondExporter
             // ⇒ A "mirrors X" comment is a claim about X AT THE TIME IT WAS WRITTEN.
             case FormWalk.Ending { Node: var alt }:
                 AppendSection(alt.SectionName.Text, byName, result,
-                    markLabel: alt.IsSilent ? null : alt.DisplayLabel ?? alt.SectionName.Text);
+                    markLabel: alt.IsSilent ? null : alt.DisplayLabel ?? alt.SectionName.Text,
+                    octaveOffset: alt.OctaveOffset);
                 break;
 
             // The one-sided form-level ':|' flows through as the barline it is:
@@ -1150,7 +1168,8 @@ public sealed class LilyPondExporter
         string name,
         Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName,
         List<SyntaxNode> result,
-        string? markLabel = null)
+        string? markLabel = null,
+        int octaveOffset = 0)
     {
         if (!byName.TryGetValue(name, out var entry))
             return;
@@ -1164,7 +1183,8 @@ public sealed class LilyPondExporter
         result.Add(new SectionPlayMarker(
             markLabel,
             headers?.Any(h => h is KeySignatureSyntax) == true,
-            headers?.Any(h => h is TimeSignatureSyntax) == true));
+            headers?.Any(h => h is TimeSignatureSyntax) == true,
+            octaveOffset));
         if (headers != null)
             result.AddRange(headers);
         result.AddRange(ContainerMusic(entry.Container));
@@ -1245,7 +1265,8 @@ public sealed class LilyPondExporter
         // green built below is emitted whatever IsSilent says, because an ending with no
         // bracket is spelled by leaving the `[` out. See the note on that case.
         AppendSection(ending.SectionName.Text, byName, items,
-            markLabel: ending.IsSilent ? null : ending.DisplayLabel ?? ending.SectionName.Text);
+            markLabel: ending.IsSilent ? null : ending.DisplayLabel ?? ending.SectionName.Text,
+            octaveOffset: ending.OctaveOffset);
 
         var green = new InternalSyntax.InlineVoltaGreen(
             new InternalSyntax.SyntaxToken(SyntaxKind.OpenBracket, "["),
@@ -1627,9 +1648,11 @@ public sealed class LilyPondExporter
     /// </summary>
     private string EmitMusicPitch(PitchSyntax p)
     {
-        // \fixed has no frame: every mark is an absolute offset from the wrapper's c'.
+        // \fixed has no frame: every mark is an absolute offset from the wrapper's c' —
+        // plus whatever octave THIS section's reference asked for (see
+        // _sectionOctaveOffset; zero for every play written without marks).
         if (_octaveAbsolute)
-            return EmitPitch(p);
+            return p.PitchToken.Text + OctaveMarks(p.OctaveOffset + _sectionOctaveOffset);
 
         int step = RelativeOctave.StepIndex(p.PitchName[0]);
         int source = p.OctaveOffset;
@@ -1677,6 +1700,9 @@ public sealed class LilyPondExporter
         // observer is AMarkedReference_MovesTheAnchor_WithANestedFixed reached through a
         // container, and the value stops being unobserved with the line above.
         buf._absoluteBaseOctave = _absoluteBaseOctave;
+        // …and the section reference's absolute shift with it, for the same reason: a nested
+        // body written inside a `~B'` play sounds where the play sounds.
+        buf._sectionOctaveOffset = _sectionOctaveOffset;
         buf._drumMode = _drumMode;
         buf._improvisationOpen = _improvisationOpen;
         buf._lysClef = _lysClef;
@@ -1825,8 +1851,11 @@ public sealed class LilyPondExporter
             }
             else if (_octaveAbsolute)
             {
-                // Absolute: every pitch stands on its own, so every one carries the shift.
-                sb.Append(EmitPitch(p)).Append(marks);
+                // Absolute: every pitch stands on its own, so every one carries the shift —
+                // the chord-level marks, and the section reference's own (_sectionOctaveOffset).
+                sb.Append(p.PitchToken.Text)
+                  .Append(OctaveMarks(p.OctaveOffset + _sectionOctaveOffset))
+                  .Append(marks);
             }
             else
             {
@@ -1901,7 +1930,7 @@ public sealed class LilyPondExporter
                 anchorStep, anchorOctave, degree.Number, degree.Alteration,
                 degree.OctaveOffset, _keySharps);
             int written = _octaveAbsolute
-                ? octave - _absoluteBaseOctave
+                ? octave - _absoluteBaseOctave + _sectionOctaveOffset
                 : octave - RelativeOctave.Resolve(chainStep, chainOctave, step, 0);
             sb.Append(SpellPitch(step, alteration)).Append(OctaveMarks(written));
             if (first) { firstStep = step; firstOctave = octave; }
@@ -1959,13 +1988,37 @@ public sealed class LilyPondExporter
     /// octave, in the one direction nothing was watching.
     /// </para>
     /// <para>
-    /// It has to be ONE value for the whole part: the body's pitches are written VERBATIM
-    /// (see <c>EmitPitch</c>), so the wrapper is the only thing that decides what they
-    /// sound, and the degree spellings below measure their marks from the same anchor. Move
-    /// one without the others and the twin becomes wrong in a way that looks right.
+    /// It has to be ONE value for the whole part: the body's pitches are written with the
+    /// SOURCE's own marks (see <c>EmitMusicPitch</c>'s absolute arm), so the wrapper is the
+    /// only thing that decides what they sound, and the degree spellings below measure their
+    /// marks from the same anchor. Move one without the others and the twin becomes wrong in
+    /// a way that looks right.
+    /// ⚠️ "The source's own marks" gained ONE addend on 2026-08-31 — a marked section
+    /// reference's <see cref="_sectionOctaveOffset"/> — and it is deliberately NOT this
+    /// value: see that field's remarks for why shifting the base instead would cancel.
     /// </para>
     /// </remarks>
     private int _absoluteBaseOctave = 4;
+
+    /// <summary>
+    /// ABSOLUTE mode's half of a marked section reference (<c>~B'</c>): the octaves to add
+    /// to every pitch this play writes, reset at each section boundary by
+    /// <c>EmitSectionPlay</c>.
+    /// </summary>
+    /// <remarks>
+    /// It is a separate running value rather than a shift of <see cref="_absoluteBaseOctave"/>
+    /// because the two are read in opposite directions and would CANCEL: the base is what the
+    /// part's <c>\fixed</c> wrapper is written from and what a degree's marks are measured
+    /// AGAINST (<c>octave − base</c>), so moving it up moves the anchor and the subtraction by
+    /// the same amount and nothing lands anywhere new. What the twin has to say is "one octave
+    /// higher than the source wrote", and that is an addend on the WRITTEN marks.
+    /// ⚠️ A slash note deliberately does not read it: it stands on the clef's middle line in
+    /// both engines and carries no pitch to shift (MeasureCollector does the same). MEASURED
+    /// 2026-08-31, not assumed — <c>section B { /4 4 4 4 | }</c> played as <c>~B</c> and as
+    /// <c>~B'</c> gives the same page and the same <c>b,4</c> here; the observer is
+    /// <c>SectionReferenceOctaveTests.ASlashNoteDoesNotMove_ItStandsOnTheClefsMiddleLine</c>.
+    /// </remarks>
+    private int _sectionOctaveOffset;
 
     // A note's attachments split into those that must precede the note (a
     // rehearsal \mark, a \deadNote prefix, a forced stem direction) and those
@@ -2080,10 +2133,23 @@ public sealed class LilyPondExporter
         // prints G4 to open B, and the twin handed LilyPond a `g'` that reads G6 — the twin
         // was a different piece from the bar the boundary opens, on every book with two
         // sections and a frame-moving first note.
+        // ⚠️ AND THE REFERENCE'S OWN MARKS MOVE THAT REOPENING (`~B'`, 2026-08-31): the
+        // collector re-anchors the play a whole octave up (OctaveContext.ResetForSection),
+        // so the twin has to reopen at the same place or hand LilyPond a different piece.
+        // The two modes need different halves of the same sentence, exactly as a marked
+        // PHRASE reference does: relative moves the frame, absolute has no frame and moves
+        // the marks each pitch writes (EmitVariableReference emits a nested \fixed for its
+        // half; a section's music is INLINED into this stream, so there is no block to nest
+        // and the shift rides on the emitter instead).
+        // ⚠️ The offset is REMEMBERED for the whole play, not applied once: a phrase body
+        // inside the section opens its own fresh frame (EmitVariableReference), and that
+        // frame is the SECTION's anchor. Kept in one field for both modes — the relative arm
+        // reads it below and in EmitVariableReference, the absolute arm at every pitch.
+        _sectionOctaveOffset = sp.OctaveOffset;
         if (!_octaveAbsolute)
         {
             _lysStep = 0;
-            _lysOctave = _anchorOctave;
+            _lysOctave = _anchorOctave + _sectionOctaveOffset;
         }
 
         var parts = new List<string>(3);
@@ -3382,8 +3448,10 @@ public sealed class LilyPondExporter
 /// </summary>
 internal sealed class SectionPlayMarker : SyntaxNode
 {
-    public SectionPlayMarker(string? markLabel, bool hasHeaderKey, bool hasHeaderTime)
-        : base(new SectionPlayGreen(markLabel, hasHeaderKey, hasHeaderTime), parent: null, position: 0)
+    public SectionPlayMarker(string? markLabel, bool hasHeaderKey, bool hasHeaderTime,
+        int octaveOffset = 0)
+        : base(new SectionPlayGreen(markLabel, hasHeaderKey, hasHeaderTime, octaveOffset),
+            parent: null, position: 0)
     {
     }
 }
@@ -3407,11 +3475,20 @@ internal sealed class SectionPlayGreen : InternalSyntax.GreenNode
     /// carrier answered only the key until 2026-08-31.</summary>
     public bool HasHeaderTime { get; }
 
-    public SectionPlayGreen(string? markLabel, bool hasHeaderKey, bool hasHeaderTime)
+    /// <summary>The net octave shift written on the REFERENCE that opened this play
+    /// (<c>~B'</c> = +1). The third thing this carrier had to be told: it was built for the
+    /// key, taught the meter on 2026-08-31, and taught this on the same day — each time
+    /// because the collector decides something at this spot that the twin could not
+    /// re-derive from the flattened node list, which no longer holds the reference.</summary>
+    public int OctaveOffset { get; }
+
+    public SectionPlayGreen(string? markLabel, bool hasHeaderKey, bool hasHeaderTime,
+        int octaveOffset = 0)
         : base(SyntaxKind.None, fullWidth: 0)
     {
         MarkLabel = markLabel;
         HasHeaderKey = hasHeaderKey;
         HasHeaderTime = hasHeaderTime;
+        OctaveOffset = octaveOffset;
     }
 }

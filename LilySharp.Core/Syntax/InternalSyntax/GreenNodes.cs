@@ -801,12 +801,20 @@ internal sealed class FormDeclarationGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// Section reference in structure: SectionName
+/// Section reference in structure: SectionName, SectionName', SectionName, "label"
 /// </summary>
+/// <remarks>
+/// The trailing octave marks sit BETWEEN the name and the label because that is where
+/// the source writes them (<c>B' "reprise"</c>), and a green's slot order IS its text
+/// order — every later offset in the file is computed by walking these slots. The name
+/// stays at slot 0 so the readers that address it by index keep working; the LABEL is
+/// found by KIND (SectionReferenceSyntax.DisplayLabel), since the marks now push it off
+/// any fixed index.
+/// </remarks>
 internal sealed class SectionReferenceGreen : GreenSyntaxNode
 {
-    public SectionReferenceGreen(SyntaxToken identifier, SyntaxToken? displayLabel = null)
-        : base(SyntaxKind.SectionReference, [identifier, displayLabel])
+    public SectionReferenceGreen(SyntaxToken identifier, GreenNode?[] octaveMarks, SyntaxToken? displayLabel = null)
+        : base(SyntaxKind.SectionReference, [identifier, .. octaveMarks, displayLabel])
     {
     }
 }
@@ -814,10 +822,13 @@ internal sealed class SectionReferenceGreen : GreenSyntaxNode
 /// <summary>
 /// Silent section reference in structure: ~SectionName (no label displayed)
 /// </summary>
+/// <remarks>The name stays at slot 1 — the marks follow it, so
+/// <c>SectionReferenceFinder</c>, <c>SectionSymbols</c> and <c>FormWalk</c> keep
+/// reading it there.</remarks>
 internal sealed class SilentSectionReferenceGreen : GreenSyntaxNode
 {
-    public SilentSectionReferenceGreen(SyntaxToken tilde, SyntaxToken identifier, SyntaxToken? displayLabel = null)
-        : base(SyntaxKind.SilentSectionReference, [tilde, identifier, displayLabel])
+    public SilentSectionReferenceGreen(SyntaxToken tilde, SyntaxToken identifier, GreenNode?[] octaveMarks, SyntaxToken? displayLabel = null)
+        : base(SyntaxKind.SilentSectionReference, [tilde, identifier, .. octaveMarks, displayLabel])
     {
     }
 }
@@ -939,7 +950,7 @@ internal sealed class FormAlternativeGreen : GreenSyntaxNode
     {
     }
 
-    // Bracket style: [1. A] or [1-3. A] or [1,3. A] or [1. ~A] or [1. A "label"]
+    // Bracket style: [1. A] or [1-3. A] or [1,3. A] or [1. ~A] or [1. A "label"] or [1. A']
     public FormAlternativeGreen(
         SyntaxToken openBracket,
         SyntaxToken number,
@@ -948,10 +959,11 @@ internal sealed class FormAlternativeGreen : GreenSyntaxNode
         SyntaxToken dot,
         SyntaxToken? tilde,
         SyntaxToken sectionName,
+        GreenNode?[] octaveMarks,
         SyntaxToken? displayLabel,
         SyntaxToken? closeBracket)
         : base(SyntaxKind.FormAlternative,
-            BuildSlots(openBracket, number, separator, endNumber, dot, tilde, sectionName, displayLabel, closeBracket))
+            BuildSlots(openBracket, number, separator, endNumber, dot, tilde, sectionName, octaveMarks, displayLabel, closeBracket))
     {
     }
 
@@ -963,19 +975,24 @@ internal sealed class FormAlternativeGreen : GreenSyntaxNode
         SyntaxToken dot,
         SyntaxToken? tilde,
         SyntaxToken sectionName,
+        GreenNode?[] octaveMarks,
         SyntaxToken? displayLabel,
         SyntaxToken? closeBracket)
     {
         // Slot layout (always include tilde + displayLabel slots for consistent indexing):
-        // With separator: [openBracket, number, separator, endNumber, dot, tilde?, sectionName, displayLabel?, closeBracket]
-        // Without separator: [openBracket, number, dot, tilde?, sectionName, displayLabel?, closeBracket]
+        // With separator: [openBracket, number, separator, endNumber, dot, tilde?, sectionName, marks…, displayLabel?, closeBracket]
+        // Without separator: [openBracket, number, dot, tilde?, sectionName, marks…, displayLabel?, closeBracket]
+        // ⚠️ Everything UP TO the section name keeps a fixed index; the marks are variable
+        // length, so the two slots after it (label, ']') are read by KIND — see
+        // FormAlternativeSyntax.DisplayLabel / IsClosed. HasSeparator likewise stopped
+        // counting slots: `[1,3. A']` and `[1. A]` can now have the same SlotCount.
         if (separator != null)
         {
-            return [openBracket, number, separator, endNumber, dot, tilde, sectionName, displayLabel, closeBracket];
+            return [openBracket, number, separator, endNumber, dot, tilde, sectionName, .. octaveMarks, displayLabel, closeBracket];
         }
         else
         {
-            return [openBracket, number, dot, tilde, sectionName, displayLabel, closeBracket];
+            return [openBracket, number, dot, tilde, sectionName, .. octaveMarks, displayLabel, closeBracket];
         }
     }
 }

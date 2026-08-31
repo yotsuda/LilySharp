@@ -659,6 +659,8 @@ public sealed partial class MeasureCollector
             _octave.CurrentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
         }
         _octave.InitialOctave = _octave.CurrentOctave;
+        _octave.InitialOctaveBase = _octave.OctaveBase; // absolute mode's section-reset target
+        _octave.SectionOctaveOffset = 0;                // …and no play's shift is open yet
         _meta.InitialClef = _meta.Clef; // Preserve initial clef before music processing
         _meta.InitialKeySharps = _meta.KeySharps; // Preserve initial key before music processing
         _meta.InitialKeyCustom = _meta.KeyCustom;
@@ -1001,6 +1003,8 @@ public sealed partial class MeasureCollector
             _octave.InitialOctave = _octave.CurrentOctave;
             // …and the ABSOLUTE base from the part's OWN `octave N` alone (see GetPartDefaults).
             _octave.OctaveBase = InstrumentDefaults.AbsoluteBaseOctave(partExplicitOctave);
+            _octave.InitialOctaveBase = _octave.OctaveBase; // absolute mode's section-reset target
+            _octave.SectionOctaveOffset = 0;                // …and no play's shift is open yet
             _octave.OctaveAbsolute = _octave.InitialOctaveAbsolute; // restore file-level octave mode
             ApplyTranspose(partTranspose);
 
@@ -2594,7 +2598,7 @@ public sealed partial class MeasureCollector
                             builder.SectionLabel = ResolveSectionLabel(reference);
                             builder.SectionLabelPosition = SectionDeclPos(reference.SectionName);
                         }
-                        ProcessSection(section, processNodes, builder);
+                        ProcessSection(section, processNodes, builder, reference.OctaveOffset);
                     }
                     break;
 
@@ -2632,7 +2636,7 @@ public sealed partial class MeasureCollector
                             ? null : alt.DisplayLabel ?? alt.SectionName.Text;
                         builder.SectionLabelPosition = SectionDeclPos(alt.SectionName.Text);
                     }
-                    ProcessSection(altSection, processNodes, builder);
+                    ProcessSection(altSection, processNodes, builder, alt.OctaveOffset);
                     break;
 
                 // Navigation marks in the structure (segno / coda / fine / to coda /
@@ -2695,7 +2699,8 @@ public sealed partial class MeasureCollector
                         builder.SectionLabel = null;
                         builder.SectionLabelPosition = SectionDeclPos(nameTok.Text);
                     }
-                    ProcessSection(silentSection, processNodes, builder);
+                    ProcessSection(silentSection, processNodes, builder,
+                        SyntaxFacts.NetOctaveMarks(silent));
                     break;
 
                 // `break` / `nobreak` between sections force / forbid a system break

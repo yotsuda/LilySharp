@@ -857,6 +857,28 @@ string suppresses the mark (like `~Name`):
 form main { Intro Main Main "Main (reprise)" Coda }
 ```
 
+**Octave marks on a reference.** A section boundary reopens the relative frame at the
+part's anchor (and reverts the octave mode), so a section written for one register plays
+in that register wherever it is quoted. A trailing `'` or `,` on the REFERENCE moves the
+frame that play opens in — one octave per mark, the same spelling a phrase reference
+carries:
+
+```
+form main { Intro Main ~Main' Coda }        // the reprise sounds an octave higher
+```
+
+An ending takes them too:
+
+```
+form main { |: A [1. B' ] :| [2. C ] }
+```
+
+The shift belongs to the occurrence, never to the declaration: `~Main ~Main'` is one
+section played at two octaves, and the reference after it is back at the part's anchor.
+Both spellings take the marks (`Main'` and `~Main'` — the tilde hides the label, not the
+music), and they mean the same thing under `octave absolute`, where they move the base a
+bare letter is measured from.
+
 Identifiers (sections, parts, phrases) may use any Unicode letters:
 
 ```

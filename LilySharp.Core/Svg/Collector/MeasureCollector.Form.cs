@@ -121,7 +121,7 @@ public sealed partial class MeasureCollector
                             builder.SectionLabel = ResolveSectionLabel(reference);
                             builder.SectionLabelPosition = SectionDeclPos(reference.SectionName);
                         }
-                        ProcessSection(section, processNodes, builder);
+                        ProcessSection(section, processNodes, builder, reference.OctaveOffset);
                     }
                 }
                 else if (child is { Kind: SyntaxKind.SilentSectionReference } silent
@@ -138,7 +138,8 @@ public sealed partial class MeasureCollector
                         builder.SectionLabel = null;
                         builder.SectionLabelPosition = SectionDeclPos(silentName.Text);
                     }
-                    ProcessSection(silentSection, processNodes, builder);
+                    ProcessSection(silentSection, processNodes, builder,
+                        SyntaxFacts.NetOctaveMarks(silent));
                 }
                 else if (child is FormAlternativeSyntax alt)
                 {
@@ -171,7 +172,9 @@ public sealed partial class MeasureCollector
                                 ? null : alt.DisplayLabel ?? altSectionName;
                             builder.SectionLabelPosition = SectionDeclPos(altSectionName);
                         }
-                        ProcessSection(section, processNodes, builder);
+                        // An ending IS a section reference with a bracket around it, marks
+                        // included: `[1. B']` opens B an octave up for that ending only.
+                        ProcessSection(section, processNodes, builder, alt.OctaveOffset);
 
                         // Track measure index after processing
                         int endMeasureIndex = builder.CurrentMeasureIndex;
@@ -204,7 +207,11 @@ public sealed partial class MeasureCollector
             _voltaBrackets.Add(new VoltaBracketItem(startMeasure, endMeasure, voltaText, isClosed, sourcePosition));
     }
 
-    private void ProcessSection(SectionDeclarationSyntax section, Action<List<GreenSite>> processNodes, MeasureBuilder builder)
+    /// <param name="octaveOffset">The net octave shift written on the REFERENCE that
+    /// opened this play (<c>~B'</c> = +1, <c>~B,</c> = -1). It belongs to the play, not to
+    /// the declaration, so it is threaded from the form walk rather than read off the
+    /// section — the same section referenced twice can open at two different octaves.</param>
+    private void ProcessSection(SectionDeclarationSyntax section, Action<List<GreenSite>> processNodes, MeasureBuilder builder, int octaveOffset = 0)
     {
         // Checkpoint/resume gate (CollectWalkProbe): a section wholly before the
         // resume target is in the adopted prefix — prologue, music and epilogue —
@@ -246,7 +253,7 @@ public sealed partial class MeasureCollector
         }
         else
         {
-            ProcessSectionPrologue(section, builder);
+            ProcessSectionPrologue(section, builder, octaveOffset);
         }
 
         int startMeasure = builder.CurrentMeasureIndex;
@@ -258,7 +265,7 @@ public sealed partial class MeasureCollector
     /// reverts and the section's own header directives. Extracted verbatim from
     /// <see cref="ProcessSection"/> so the resume gate can skip it as one unit
     /// (it ran inside the adopted prefix when the resume target sits mid-section).</summary>
-    private void ProcessSectionPrologue(SectionDeclarationSyntax section, MeasureBuilder builder)
+    private void ProcessSectionPrologue(SectionDeclarationSyntax section, MeasureBuilder builder, int octaveOffset = 0)
     {
         // Reset the relative frame (and revert the octave mode to the file
         // default) at each section boundary. The default DURATION resets too, so a
@@ -266,7 +273,14 @@ public sealed partial class MeasureCollector
         // regardless of the preceding section's last duration. Without this the
         // reprise `A` after `~B` (`g'1`) inherited B's whole-note and rendered its
         // quarter-note melody as whole notes.
-        _octave.ResetForSection();
+        //
+        // The reset stays and the CARRY is given by notation (user decision,
+        // 2026-08-31): the reference's own trailing marks say which octave this play
+        // opens in, so `~B'` re-anchors a whole octave up without touching B or any
+        // other play of it. That is the whole of what the marks do — the duration and
+        // the meter/key reverts below are unaffected, and a section's first note still
+        // states its own value.
+        _octave.ResetForSection(octaveOffset);
         _defaultDuration = Fraction.Quarter;
         _defaultDots = 0;
 

@@ -347,8 +347,17 @@ public sealed class MusicXmlExporter
     /// <see cref="Semantics.ScoreHomeMeter"/>).</summary>
     private TimeSignatureSyntax? _sectionTime;
 
-    private void EmitSection(SectionDeclarationSyntax section)
+    /// <summary>The octave shift written on the section REFERENCE currently being played
+    /// (<c>~B'</c> = +1), read by <see cref="EmitPartMusic"/> when it arms the frame. It is
+    /// a field rather than a parameter because the two things it moves are armed one level
+    /// down, once per part block; <see cref="EmitSection"/> sets it for every section it
+    /// emits — including the form-less path, which passes 0 — so it can never be left over
+    /// from the previous play.</summary>
+    private int _sectionOctaveOffset;
+
+    private void EmitSection(SectionDeclarationSyntax section, int octaveOffset = 0)
     {
+        _sectionOctaveOffset = octaveOffset;
         // A section is self-contained: its phrase auto-transpose baseline reverts
         // to the score's home key (a mid-section modulation cannot leak out).
         _ambientTonic = _homeTonic;
@@ -412,11 +421,12 @@ public sealed class MusicXmlExporter
         }
     }
 
-    private void EmitSectionByName(Dictionary<string, List<SectionDeclarationSyntax>> byName, string name)
+    private void EmitSectionByName(Dictionary<string, List<SectionDeclarationSyntax>> byName, string name,
+        int octaveOffset = 0)
     {
         if (byName.TryGetValue(name, out var list))
             foreach (var section in list)
-                EmitSection(section);
+                EmitSection(section, octaveOffset);
     }
 
     // Segno / coda jump TARGETS wait here for the next section, whose first
@@ -440,13 +450,14 @@ public sealed class MusicXmlExporter
                 // A plain and a silent (~) reference are the same emission — this
                 // exporter writes no section label, so the tilde has nothing to hide.
                 case FormWalk.SectionRef s:
-                    EmitWithPendingTargets(() => EmitSectionByName(byName, s.Name));
+                    EmitWithPendingTargets(() => EmitSectionByName(byName, s.Name, s.OctaveOffset));
                     break;
                 case FormWalk.Repeat rb:
                     EmitWithPendingTargets(() => EmitRepeatBlock(rb, byName));
                     break;
                 case FormWalk.Ending alt:
-                    EmitWithPendingTargets(() => EmitSectionByName(byName, alt.Node.SectionName.Text));
+                    EmitWithPendingTargets(() => EmitSectionByName(byName, alt.Node.SectionName.Text,
+                        alt.Node.OctaveOffset));
                     break;
                 case FormWalk.Other { Node: NavigationMarkSyntax nav }:
                     ApplyNavMark(nav.MarkType);
@@ -619,7 +630,7 @@ public sealed class MusicXmlExporter
                 continue;
             var startIdx = Document.Parts.ToDictionary(p => p, p => p.Measures.Count);
             foreach (var item in run)
-                EmitSectionByName(byName, item.Name);
+                EmitSectionByName(byName, item.Name, item.OctaveOffset);
             foreach (var p in Document.Parts)
             {
                 if (p.Measures.Count > startIdx.GetValueOrDefault(p))
@@ -655,7 +666,7 @@ public sealed class MusicXmlExporter
             if (child is FormWalk.Ending { Node: var alt })
             {
                 var startIdx = Document.Parts.ToDictionary(p => p, p => p.Measures.Count);
-                EmitSectionByName(byName, alt.SectionName.Text);
+                EmitSectionByName(byName, alt.SectionName.Text, alt.OctaveOffset);
                 string num = EndingNumbers(alt);
                 string stopType = afterEndBar ? "discontinue" : "stop";
                 foreach (var p in Document.Parts)
@@ -671,7 +682,7 @@ public sealed class MusicXmlExporter
             else if (child is FormWalk.SectionRef s)
             {
                 var startIdx = Document.Parts.ToDictionary(p => p, p => p.Measures.Count);
-                EmitSectionByName(byName, s.Name);
+                EmitSectionByName(byName, s.Name, s.OctaveOffset);
                 if (forwardPending)
                 {
                     foreach (var p in Document.Parts)
@@ -755,7 +766,13 @@ public sealed class MusicXmlExporter
 
         // Reset state for this part's continuation. The relative frame starts at the part's
         // own anchor — the octave it PRINTS — not at a fixed middle C.
-        _currentOctave = _partAnchorOctave;
+        // ⚠️ …moved by whatever the section REFERENCE that opened this play asked for
+        // (`~B'` = +1). Both anchors move, because the two octave modes read different ones:
+        // relative resolves nearest to _currentOctave, absolute measures from _octaveAnchor.
+        // ApplyPartHeader re-arms _octaveAnchor on every call, so this adds and never
+        // accumulates (OctaveContext.ResetForSection is the collector's spelling of it).
+        _currentOctave = _partAnchorOctave + _sectionOctaveOffset;
+        _octaveAnchor += _sectionOctaveOffset;
         _currentStep = 0;
         _ambientTonic = _homeTonic; // each voice starts at the score's home key
         // ... and so does its SIGNATURE, before the section states one of its own. Both
@@ -1291,7 +1308,11 @@ public sealed class MusicXmlExporter
                     // C3 E3 C3 G3, this wrote C4 E4 C4 G4. The MIDI walk had it right all
                     // along (_partOctaveAnchor + varRef.OctaveOffset), which is why the
                     // disagreement needed two outputs side by side to see.
-                    _currentOctave = _partAnchorOctave + varRef.OctaveOffset;
+                    // ⚠️ …and the anchor is the SECTION's, not the part's (2026-08-31): a
+                    // section quoted `~B'` is an octave up, phrase bodies inside it included.
+                    // _sectionOctaveOffset is 0 for every play written without marks, and the
+                    // collector says the same in one line (OctaveContext.ResetToInitial).
+                    _currentOctave = _partAnchorOctave + _sectionOctaveOffset + varRef.OctaveOffset;
                     _currentStep = 0;
                     _defaultDuration = Fraction.Quarter;
                     // Auto-transpose the movable phrase from the home key to the
@@ -1324,7 +1345,8 @@ public sealed class MusicXmlExporter
                     if (anchorStep is { } astep)
                     {
                         int oct = RelativeOctave.Resolve(
-                            0, _partAnchorOctave + varRef.OctaveOffset, astep, 0);
+                            0, _partAnchorOctave + _sectionOctaveOffset + varRef.OctaveOffset,
+                            astep, 0);
                         _currentStep = astep;
                         _currentOctave = oct;
                     }
@@ -2686,7 +2708,8 @@ public sealed class MusicXmlExporter
                         : reset.AnchorStep;
                     (phraseFrames ??= new()).Push((_currentTranspose, _octaveAnchor,
                         anchorStep, reset.OctaveOffset));
-                    _currentOctave = _partAnchorOctave + reset.OctaveOffset;
+                    // Section shift included, like the reference arm above.
+                    _currentOctave = _partAnchorOctave + _sectionOctaveOffset + reset.OctaveOffset;
                     _currentStep = 0;
                     _currentTranspose =
                         PitchTransposer.Compose(PhraseTransposeTarget(), _currentTranspose);

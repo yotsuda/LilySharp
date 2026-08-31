@@ -59,9 +59,7 @@ internal sealed partial class Parser
             // matching part/section/phrase declarations.
             SyntaxKind.Identifier or SyntaxKind.BassKeyword or SyntaxKind.TrebleKeyword
                 or SyntaxKind.AltoKeyword or SyntaxKind.TenorKeyword
-                => new SectionReferenceGreen(
-                    Advance(),
-                    Check(SyntaxKind.StringLiteral) ? Advance() : null),
+                => ParseSectionReference(),
             SyntaxKind.Tilde => ParseSilentSectionReference(),
             SyntaxKind.At => ParseMusicMark(),
             SyntaxKind.Underscore => ParseCustomText(),
@@ -98,7 +96,8 @@ internal sealed partial class Parser
             // column 15, ON that keyword, with `B` standing at column 23.
             _ => ReportStrayItem("a form",
                     "A form body holds section references (bare names, '~name' to hide a "
-                    + "label), repeat blocks ('|: … :|'), volta endings ('[1. … ]'), "
+                    + "label, a trailing ' or , to shift the octave), repeat blocks "
+                    + "('|: … :|'), volta endings ('[1. … ]'), "
                     + "navigation marks (segno, fine, ds al coda), '@' marks, '_' texts and "
                     + "break/nobreak.")
         };
@@ -139,14 +138,36 @@ internal sealed partial class Parser
         Current.Text == "|" ? Advance() : ParseBarline();
 
     /// <summary>
+    /// Parse a plain section reference: <c>Chorus</c>, <c>Chorus'</c>, <c>Chorus, "label"</c>.
+    /// </summary>
+    /// <remarks>
+    /// The trailing <c>'</c> / <c>,</c> are the SAME marks a phrase reference carries
+    /// (<see cref="ParsePhraseOctaveMarks"/>) and mean the same thing: they move the frame
+    /// this PLAY of the section resolves in. Written out rather than left inline in
+    /// <see cref="ParseFormItem"/>'s switch because three tokens now have to be taken in
+    /// source order — name, marks, label — and a switch arm's argument list gives no place
+    /// to put the middle one.
+    /// </remarks>
+    private SectionReferenceGreen ParseSectionReference()
+    {
+        var name = Advance();
+        var marks = ParsePhraseOctaveMarks();
+        return new SectionReferenceGreen(
+            name, marks, Check(SyntaxKind.StringLiteral) ? Advance() : null);
+    }
+
+    /// <summary>
     /// Parse silent section reference: ~SectionName or ~SectionName "label".
     /// The optional label is kept on the node but NOT displayed (the '~' hides it);
     /// it lets an author park a label text and reveal it later by dropping the '~'.
+    /// The octave marks ride here too — the tilde hides the LABEL, never the music, and
+    /// the marks are part of the music.
     /// </summary>
     private SilentSectionReferenceGreen ParseSilentSectionReference()
     {
         var tilde = Expect(SyntaxKind.Tilde);
         var name = ExpectPartName();
+        var marks = ParsePhraseOctaveMarks();
 
         // '~B "alt"' — a label written but hidden by '~'. Keep it (do not drop it),
         // and nudge that it is currently not shown.
@@ -160,7 +181,7 @@ internal sealed partial class Parser
                 $"The section label {label.Text} is hidden by '~'; drop the '~' to show it (or remove the label).");
         }
 
-        return new SilentSectionReferenceGreen(tilde, name, label);
+        return new SilentSectionReferenceGreen(tilde, name, marks, label);
     }
 
     /// <summary>
@@ -271,13 +292,20 @@ internal sealed partial class Parser
         }
 
         var section = Expect(SyntaxKind.Identifier);
+        // The same trailing octave marks a plain reference takes: an ending IS a section
+        // reference with a bracket around it, so `[1. B']` opens B an octave up for THAT
+        // play. ⚠️ Collected AFTER the name on purpose — the range separator in `[1,3. B]`
+        // is a Comma token too, and it sits before the dot, so the two can only be told
+        // apart by position (SyntaxFacts.NetOctaveMarksFrom takes a starting slot for
+        // exactly this node).
+        var marks = ParsePhraseOctaveMarks();
         // Optional display label: [1. B "label"] — shown as the section's mark,
         // exactly like a plain reference's  A "A2".
         SyntaxToken? displayLabel = Check(SyntaxKind.StringLiteral) ? Advance() : null;
         // The ']' is optional: present = closed (right cap drawn), absent = open.
         SyntaxToken? closeBracket = Check(SyntaxKind.CloseBracket) ? Advance() : null;
 
-        return new FormAlternativeGreen(openBracket, number, separator, endNumber, dot, tilde, section, displayLabel, closeBracket);
+        return new FormAlternativeGreen(openBracket, number, separator, endNumber, dot, tilde, section, marks, displayLabel, closeBracket);
     }
 
     /// <summary>

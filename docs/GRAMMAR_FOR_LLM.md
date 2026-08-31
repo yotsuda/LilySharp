@@ -417,6 +417,12 @@ score main "sheet" { chords prog lyrics words }     // chords + lyrics rows, no 
 form main { Intro Main Main "Main (reprise)" Coda }   // string = custom section label
 ```
 
+A trailing `'` / `,` on a reference shifts THAT play's octave (one per mark):
+
+```
+form main { Intro Main ~Main' Coda }
+```
+
 Navigation marks sit between section names. Signs `segno` / `coda` engrave at the start
 of the following section; text directives `fine`, `to coda`, `dc`/`ds` (and `dc al fine`,
 `ds al coda`) engrave at the end of the section just played.
@@ -489,6 +495,13 @@ quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LY
   per-reference transposition: a glued `'(N)` diatonic interval was removed 2026-08-28,
   and `transpose` is a part property (chromatic), so a motif quoted at another interval
   is written out.
+- **A SECTION reference takes the same marks**: `form main { ~A ~B' }` opens B's play an
+  octave up, `~B,` an octave down, `~B''` two. They belong to the PLAY, so one section can
+  be quoted at two octaves (`~B ~B'`) while the declaration never moves, and the next
+  reference is back at the part's anchor. Both spellings take them (`B'` and `~B'` — the
+  tilde hides only the label), a volta ending takes them (`[1. B']`), and they work in
+  `octave absolute` too. This is how a section cut only to carry a repeat says its music
+  belongs an octave away: the boundary's frame reset stays, and the carry is written down.
 - Part header attributes (`clef`/`key`/`time`/`tempo`) are written **bare, no `=`**, like
   the top-level commands. Override/revert use `=`.
 - `removeEmpty true|all` in a part header hides that part's staff in systems where it only

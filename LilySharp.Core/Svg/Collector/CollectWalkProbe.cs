@@ -280,11 +280,13 @@ internal sealed class VoiceResumePlan
 /// fields for nested frames; a walk checkpoint needs all of them).</summary>
 internal readonly record struct OctaveCheckpoint(
     int CurrentOctave, char LastPitchName, int InitialOctave, int OctaveBase,
+    int InitialOctaveBase, int SectionOctaveOffset,
     bool OctaveAbsolute, bool InitialOctaveAbsolute,
     bool HasTranspose, int TransposeStep, int TransposeAlt, int TransposeOctave)
 {
     public static OctaveCheckpoint Capture(OctaveContext o) => new(
         o.CurrentOctave, o.LastPitchName, o.InitialOctave, o.OctaveBase,
+        o.InitialOctaveBase, o.SectionOctaveOffset,
         o.OctaveAbsolute, o.InitialOctaveAbsolute,
         o.HasTranspose, o.TransposeStep, o.TransposeAlt, o.TransposeOctave);
 
@@ -294,6 +296,8 @@ internal readonly record struct OctaveCheckpoint(
         o.LastPitchName = LastPitchName;
         o.InitialOctave = InitialOctave;
         o.OctaveBase = OctaveBase;
+        o.InitialOctaveBase = InitialOctaveBase;
+        o.SectionOctaveOffset = SectionOctaveOffset;
         o.OctaveAbsolute = OctaveAbsolute;
         o.InitialOctaveAbsolute = InitialOctaveAbsolute;
         o.HasTranspose = HasTranspose;

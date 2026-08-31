@@ -32,7 +32,9 @@ All ✅ implemented:
   beams.
 - **Structure** — parts, phrases (bare-name refs), sections, named `form`s bound by `score <Name>`,
   repeats `|: :|` (`:|*N`), volta endings, navigation marks & spanners (segno/coda/fine/
-  D.S./D.C., rit/accel, ottava, trill spanner, pedals), `break`.
+  D.S./D.C., rit/accel, ottava, trill spanner, pedals), `break`; a section reference and a
+  volta ending take the phrase reference's octave marks (`~B'` / `B,` / `[1. B']`), which
+  shift THAT play.
 - **Render targets** — staff, grandStaff, tab, ossia, rows placed by ORDER (score =
   a vertical stack of bands: `chords NAME` directly above a staff aligns the symbols
   over it, a bound `lyrics NAME` row directly below is that staff's verse, a run of

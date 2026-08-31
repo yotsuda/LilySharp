@@ -63,9 +63,12 @@ internal static class FormWalk
     internal abstract record Item;
 
     /// <summary>A plain or silent (<c>~</c>) section reference. For a silent one,
-    /// <see cref="DisplayLabel"/> is null — the grammar gives it no label slot.</summary>
+    /// <see cref="DisplayLabel"/> is null — the grammar gives it no label slot.
+    /// <paramref name="OctaveOffset"/> is the net shift from the reference's own trailing
+    /// <c>'</c>/<c>,</c> marks, which BOTH spellings carry (the tilde hides the label,
+    /// never the music) and which every consumer has to apply to the play's frame.</summary>
     internal sealed record SectionRef(
-        string Name, string? DisplayLabel, bool Silent, SyntaxNode Node) : Item;
+        string Name, string? DisplayLabel, bool Silent, SyntaxNode Node, int OctaveOffset) : Item;
 
     /// <summary>A <c>|: … :|</c> block with its children in document order and its
     /// <c>:|*N</c> play count (2 when absent).</summary>
@@ -108,11 +111,15 @@ internal static class FormWalk
         switch (child)
         {
             case SectionReferenceSyntax r:
-                items.Add(new SectionRef(r.SectionName, r.DisplayLabel, Silent: false, r));
+                items.Add(new SectionRef(r.SectionName, r.DisplayLabel, Silent: false, r,
+                    r.OctaveOffset));
                 break;
             case { Kind: SyntaxKind.SilentSectionReference }
                     when child.GetChild(1) is SyntaxTokenNode name:
-                items.Add(new SectionRef(name.Text, null, Silent: true, child));
+                // The silent spelling has no red class of its own, so the marks are counted
+                // here off the SAME function the plain one's property calls.
+                items.Add(new SectionRef(name.Text, null, Silent: true, child,
+                    SyntaxFacts.NetOctaveMarks(child)));
                 break;
             case FormRepeatBlockSyntax rb:
                 items.Add(ReadRepeat(rb));

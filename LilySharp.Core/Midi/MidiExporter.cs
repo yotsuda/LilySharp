@@ -642,9 +642,16 @@ public sealed class MidiExporter
     /// inheriting the previous part's last note.
     /// </para>
     /// </remarks>
-    private void PlayInPart(string partName, Action body)
+    /// <param name="octaveOffset">The shift the section REFERENCE that opened this play
+    /// wrote (<c>~B'</c> = +1). It moves BOTH anchors — the relative one a bare letter
+    /// resolves nearest to, and the absolute base — because the two octave MODES read
+    /// different ones, and a shift that worked in only one would be a silent drop in the
+    /// other (the collector's OctaveContext.ResetForSection moves the same pair).</param>
+    private void PlayInPart(string partName, Action body, int octaveOffset = 0)
     {
         var (anchor, absBase) = PartOctaveAnchors(partName);
+        anchor += octaveOffset;
+        absBase += octaveOffset;
         var pitch = _partPitchLanes.TryGetValue(partName, out var saved)
             ? saved
             : (NoteName: 0, Octave: anchor, Dur: Fraction.Quarter);
@@ -710,7 +717,8 @@ public sealed class MidiExporter
     /// section's start tick; the section ends with the longest part), and each
     /// part reopens the octave frame and the note value the section starts at.
     /// </summary>
-    private void PlaySection(SectionDeclarationSyntax section, MidiTrack track, MidiTrack conductorTrack)
+    private void PlaySection(SectionDeclarationSyntax section, MidiTrack track, MidiTrack conductorTrack,
+        int octaveOffset = 0)
     {
         // A section is self-contained: its phrase auto-transpose baseline and the
         // scale-degree key both revert to the score's home key (a mid-section
@@ -757,7 +765,8 @@ public sealed class MidiExporter
         {
             if (p is PartDeclarationSyntax owner)
             {
-                PlayInPart(owner.Name.Text, () => ProcessChildren(section, track, conductorTrack));
+                PlayInPart(owner.Name.Text, () => ProcessChildren(section, track, conductorTrack),
+                    octaveOffset);
                 return;
             }
         }
@@ -767,7 +776,8 @@ public sealed class MidiExporter
         // part-major section is played inside the part that contains it.
         if (_bareSectionOwner is { } bareOwner && !SectionHasPartBlock(section))
         {
-            PlayInPart(bareOwner, () => ProcessChildren(section, track, conductorTrack));
+            PlayInPart(bareOwner, () => ProcessChildren(section, track, conductorTrack),
+                octaveOffset);
             return;
         }
 
@@ -783,6 +793,11 @@ public sealed class MidiExporter
             {
                 string pname = sectionPart.Name;
                 var (anchor, absBase) = PartOctaveAnchors(pname);
+                // The reference's marks move both anchors here too — the section-major
+                // twin of PlayInPart's line, and the reason it is written twice is that
+                // this loop arms one lane PER PART BLOCK rather than one for the section.
+                anchor += octaveOffset;
+                absBase += octaveOffset;
                 var pitch = _partPitchLanes.TryGetValue(pname, out var saved)
                     ? saved
                     : (NoteName: 0, Octave: anchor, Dur: Fraction.Quarter);
@@ -809,7 +824,8 @@ public sealed class MidiExporter
         _currentTick = sectionEnd;
     }
 
-    private void PlaySectionByName(string name, MidiTrack track, MidiTrack conductorTrack)
+    private void PlaySectionByName(string name, MidiTrack track, MidiTrack conductorTrack,
+        int octaveOffset = 0)
     {
         // A structure reference to a part-major section name plays EVERY part's
         // copy of it concurrently — each from the shared start tick on its own
@@ -823,7 +839,7 @@ public sealed class MidiExporter
         foreach (var section in sections)
         {
             _currentTick = start;
-            PlaySection(section, track, conductorTrack);
+            PlaySection(section, track, conductorTrack, octaveOffset);
             end = Math.Max(end, _currentTick);
         }
         _currentTick = end;
@@ -883,7 +899,7 @@ public sealed class MidiExporter
         switch (item)
         {
             case FormWalk.SectionRef s:
-                PlaySectionByName(s.Name, track, conductorTrack);
+                PlaySectionByName(s.Name, track, conductorTrack, s.OctaveOffset);
                 break;
             case FormWalk.Repeat r:
                 PlayRepeatBlock(r, track, conductorTrack);
@@ -899,7 +915,8 @@ public sealed class MidiExporter
             // the page were the two walks that dropped it. Saying so to the author is
             // the other half of the repair and lives in FormDeclarationValidator.
             case FormWalk.Ending e:
-                PlaySectionByName(e.Node.SectionName.Text, track, conductorTrack);
+                PlaySectionByName(e.Node.SectionName.Text, track, conductorTrack,
+                    e.Node.OctaveOffset);
                 break;
             // A one-sided ':|' only rewinds on the FIRST pass (PlayForm's loop); inside
             // a replayed stretch it does NOT rewind again — that would not terminate.
@@ -935,18 +952,20 @@ public sealed class MidiExporter
 
     private void PlayRepeatBlock(FormWalk.Repeat repeatBlock, MidiTrack track, MidiTrack conductorTrack)
     {
-        var body = new List<string>();
-        var alternatives = new List<string>();
+        // The body carries each reference's OWN octave shift, not just its name: `|: ~A ~A' :|`
+        // is two different plays of one section and the list has to keep them apart.
+        var body = new List<(string Name, int OctaveOffset)>();
+        var alternatives = new List<(string Name, int OctaveOffset)>();
         foreach (var child in repeatBlock.Children)
         {
             switch (child)
             {
                 // …a silent reference counts inside a repeat body too. See PlayForm's remark.
                 case FormWalk.SectionRef s:
-                    body.Add(s.Name);
+                    body.Add((s.Name, s.OctaveOffset));
                     break;
                 case FormWalk.Ending e:
-                    alternatives.Add(e.Node.SectionName.Text);
+                    alternatives.Add((e.Node.SectionName.Text, e.Node.OctaveOffset));
                     break;
             }
         }
@@ -959,8 +978,8 @@ public sealed class MidiExporter
         {
             if (pass > 0)
                 _sourceOrdinals = new Dictionary<int, int>(structOrdSnapshot);
-            foreach (var name in body)
-                PlaySectionByName(name, track, conductorTrack);
+            foreach (var (name, bodyOctave) in body)
+                PlaySectionByName(name, track, conductorTrack, bodyOctave);
             if (pass < alternatives.Count)
             {
                 // Each ENDING, unlike the body, is a distinct printed copy laid out
@@ -980,7 +999,8 @@ public sealed class MidiExporter
                             _sourceOrdinals[key] += pass;
                     }
                 }
-                PlaySectionByName(alternatives[pass], track, conductorTrack);
+                PlaySectionByName(alternatives[pass].Name, track, conductorTrack,
+                    alternatives[pass].OctaveOffset);
             }
         }
     }

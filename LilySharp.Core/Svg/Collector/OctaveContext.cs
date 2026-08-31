@@ -48,6 +48,25 @@ internal sealed class OctaveContext
     // clef default is deliberately NOT used here (absolute stays c=C4 by default).
     public int OctaveBase = 4;
 
+    // Reset target for section boundaries, the absolute-mode twin of InitialOctave: the
+    // base this voice was ARMED with, before anything moved it. Every mutation of
+    // OctaveBase is balanced today (a phrase reference pushes and pops it, a chord anchor
+    // saves and restores it), so restoring it at a boundary is an IDENTITY — until a
+    // section reference carries octave marks, which is when it stops being one: without
+    // it `~B'` would leave the base a step high for every section played after B.
+    public int InitialOctaveBase = 4;
+
+    // The shift the section REFERENCE that opened the current play wrote (`~B'` = +1), kept
+    // for the WHOLE play rather than applied once. A phrase body and a parallel span open a
+    // FRESH frame at this voice's anchor (ResetToInitial), and that anchor is the SECTION's,
+    // not the part's: `section B { P }` played as `~B'` has to move too, or the notation
+    // would mean "an octave up, unless the section happens to be written as a reference".
+    // ⚠️ MEASURED 2026-08-31, and the two modes had already parted: absolute moved it (a
+    // phrase reference pushes OctaveBase on top of the already-shifted base) and relative did
+    // NOT (ResetToInitial went back to InitialOctave and dropped the play's shift). One book,
+    // two answers, decided by `octave absolute`.
+    public int SectionOctaveOffset;
+
     // Octave resolution mode. Default (false) = LilyPond-style relative: each
     // pitch takes the octave nearest the previous one, then '/, adjust. When
     // true (set by `octave absolute`), '/, are absolute offsets from a fixed C4
@@ -107,7 +126,10 @@ internal sealed class OctaveContext
     /// </summary>
     public void ResetToInitial()
     {
-        CurrentOctave = InitialOctave;
+        // …at the anchor of the section being PLAYED, which is the part's plus whatever the
+        // reference that opened this play asked for (see SectionOctaveOffset). Zero for every
+        // play written without marks, so this is the same line it has always been.
+        CurrentOctave = InitialOctave + SectionOctaveOffset;
         LastPitchName = 'c';
     }
 
@@ -115,11 +137,22 @@ internal sealed class OctaveContext
     /// Resets the relative frame at a section boundary, additionally reverting
     /// the octave mode to the file-level default.
     /// </summary>
-    public void ResetForSection()
+    /// <param name="octaveOffset">
+    /// The net shift the REFERENCE that opened this play wrote (<c>~B'</c> = +1). It moves
+    /// BOTH anchors because the two modes read different ones: relative resolves against
+    /// <see cref="CurrentOctave"/>, absolute against <see cref="OctaveBase"/>. Moving only
+    /// one would make the marks work in one mode and vanish in the other — and the books
+    /// this notation exists for are mostly the absolute ones (283 of the author's 326,
+    /// measured 2026-08-31). It is the same pair the phrase reference already moves
+    /// (MeasureCollector.EnterDefaultFrame / EnterPhraseTranspose).
+    /// </param>
+    public void ResetForSection(int octaveOffset = 0)
     {
-        CurrentOctave = InitialOctave;
+        SectionOctaveOffset = octaveOffset;
+        CurrentOctave = InitialOctave + octaveOffset;
         LastPitchName = 'c';
         OctaveAbsolute = InitialOctaveAbsolute;
+        OctaveBase = InitialOctaveBase + octaveOffset;
     }
 
     /// <summary>
@@ -133,6 +166,8 @@ internal sealed class OctaveContext
         CurrentOctave = 4;
         InitialOctave = 4;
         OctaveBase = 4;
+        InitialOctaveBase = 4;
+        SectionOctaveOffset = 0;
         OctaveAbsolute = false;
         InitialOctaveAbsolute = false;
         LastPitchName = 'c';

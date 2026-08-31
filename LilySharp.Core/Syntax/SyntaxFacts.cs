@@ -29,6 +29,47 @@ namespace LilySharp.Core.Syntax;
 /// </summary>
 internal static class SyntaxFacts
 {
+    /// <summary>
+    /// Net octave shift from a node's own trailing marks: <c>'</c> counts +1, <c>,</c>
+    /// counts -1, everything else nothing.
+    /// </summary>
+    /// <remarks>
+    /// ONE SENTENCE, SEVEN READERS. A pitch (<c>c'</c>), a scale degree (<c>3,</c>), a chord
+    /// (<c>&lt;c e g&gt;,</c>), an arpeggio (<c>&lt;&lt; c e g &gt;&gt;'</c>), a phrase
+    /// reference (<c>Chorus'</c>) and — since 2026-08-31 — a SECTION reference (<c>~B'</c>)
+    /// and a volta ending (<c>[1. B']</c>) all spell the same shift the same way, and each
+    /// of them used to count it with its own copy of this loop. The copies differed only in
+    /// where they started (slot 0 or slot 1), which was a distinction without a difference:
+    /// a member pitch's own marks live inside that member's node, so for those six a node's
+    /// marks are its only direct <c>'</c>/<c>,</c> TOKEN children and scanning every slot is
+    /// the same answer. ⚠️ THE SEVENTH BROKE THAT: a volta ending's RANGE SEPARATOR
+    /// (<c>[1,3. B]</c>) is a Comma token of its own, standing before the section name — so
+    /// that one reader passes a starting slot (<see cref="NetOctaveMarksFrom"/>) and the
+    /// exception is written down here rather than discovered by whoever adds the eighth.
+    /// </remarks>
+    public static int NetOctaveMarks(SyntaxNode node) => NetOctaveMarksFrom(node, 0);
+
+    /// <summary>
+    /// <see cref="NetOctaveMarks"/> counted from <paramref name="firstSlot"/> onward, for
+    /// the one node whose <c>,</c> tokens are not all marks: a volta ending's range
+    /// separator (<c>[1,3. B]</c>) is a Comma standing before the section name, so the
+    /// whole-node scan would read it as an octave down.
+    /// </summary>
+    public static int NetOctaveMarksFrom(SyntaxNode node, int firstSlot)
+    {
+        int offset = 0;
+        for (int i = firstSlot; i < node.SlotCount; i++)
+        {
+            if (node.GetChild(i) is not SyntaxTokenNode t)
+                continue;
+            if (t.Kind == SyntaxKind.Apostrophe)
+                offset++;
+            else if (t.Kind == SyntaxKind.Comma)
+                offset--;
+        }
+        return offset;
+    }
+
     /// <summary>The seven diatonic pitch token kinds (<c>c d e f g a b</c>).</summary>
     public static bool IsPitchKind(SyntaxKind kind) => kind is
         SyntaxKind.PitchC or SyntaxKind.PitchD or SyntaxKind.PitchE or

@@ -883,20 +883,5 @@ public sealed class VariableReferenceSyntax : SyntaxNode
     /// Parser.ParsePhraseOctaveMarks), so a mark is a whole octave again, always, and
     /// counting them is the whole of it.
     /// </remarks>
-    public int OctaveOffset
-    {
-        get
-        {
-            int marks = 0;
-            for (int i = 1; i < SlotCount; i++)   // the name is child 0
-            {
-                var child = GetChild(i) as SyntaxTokenNode;
-                if (child?.Kind == SyntaxKind.Apostrophe)
-                    marks++;
-                else if (child?.Kind == SyntaxKind.Comma)
-                    marks--;
-            }
-            return marks;
-        }
-    }
+    public int OctaveOffset => SyntaxFacts.NetOctaveMarks(this);
 }

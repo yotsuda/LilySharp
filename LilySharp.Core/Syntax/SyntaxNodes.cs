@@ -109,22 +109,7 @@ public sealed class PitchSyntax : SyntaxNode
     /// <summary>
     /// Number of octave marks (' positive, , negative).
     /// </summary>
-    public int OctaveOffset
-    {
-        get
-        {
-            int offset = 0;
-            for (int i = 1; i < SlotCount; i++)
-            {
-                var child = GetChild(i) as SyntaxTokenNode;
-                if (child?.Kind == SyntaxKind.Apostrophe)
-                    offset++;
-                else if (child?.Kind == SyntaxKind.Comma)
-                    offset--;
-            }
-            return offset;
-        }
-    }
+    public int OctaveOffset => SyntaxFacts.NetOctaveMarks(this);
 
     /// <summary>
     /// The base pitch letter (c, d, e, f, g, a, b) without accidentals.
@@ -494,22 +479,7 @@ public sealed class ScaleDegreeSyntax : SyntaxNode
     };
 
     /// <summary>Net octave shift from the trailing <c>'</c> / <c>,</c> marks.</summary>
-    public int OctaveOffset
-    {
-        get
-        {
-            int offset = 0;
-            for (int i = 1; i < SlotCount; i++)
-            {
-                var child = GetChild(i) as SyntaxTokenNode;
-                if (child?.Kind == SyntaxKind.Apostrophe)
-                    offset++;
-                else if (child?.Kind == SyntaxKind.Comma)
-                    offset--;
-            }
-            return offset;
-        }
-    }
+    public int OctaveOffset => SyntaxFacts.NetOctaveMarks(this);
 }
 
 /// <summary>
@@ -543,22 +513,7 @@ public sealed class ArpeggioSyntax : SyntaxNode
     /// same rule as a chord's <c>&lt;c e g&gt;,</c>. A member's own marks live inside its
     /// pitch/degree node, so only the group-level marks — direct apostrophe/comma tokens —
     /// count here.</summary>
-    public int OctaveOffset
-    {
-        get
-        {
-            int offset = 0;
-            for (int i = 0; i < SlotCount; i++)
-            {
-                if (GetChild(i) is SyntaxTokenNode t)
-                {
-                    if (t.Kind == SyntaxKind.Apostrophe) offset++;
-                    else if (t.Kind == SyntaxKind.Comma) offset--;
-                }
-            }
-            return offset;
-        }
-    }
+    public int OctaveOffset => SyntaxFacts.NetOctaveMarks(this);
 
     /// <summary>The optional total duration written after <c>&gt;&gt;</c> (the group's
     /// total that the members equally subdivide), or null when the group inherits the
@@ -688,22 +643,7 @@ public sealed class ChordSyntax : SyntaxNode
     /// <c>&gt;</c> (<c>&lt;1 3 5&gt;'</c> = whole chord up an octave). A member's own
     /// marks are inside its pitch/degree node, so only the chord-level marks — direct
     /// apostrophe/comma tokens — count here.</summary>
-    public int ChordOctaveOffset
-    {
-        get
-        {
-            int offset = 0;
-            for (int i = 0; i < SlotCount; i++)
-            {
-                if (GetChild(i) is SyntaxTokenNode t)
-                {
-                    if (t.Kind == SyntaxKind.Apostrophe) offset++;
-                    else if (t.Kind == SyntaxKind.Comma) offset--;
-                }
-            }
-            return offset;
-        }
-    }
+    public int ChordOctaveOffset => SyntaxFacts.NetOctaveMarks(this);
 
     /// <summary>
     /// Gets the duration of the chord (after the closing angle bracket).

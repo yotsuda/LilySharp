@@ -701,9 +701,11 @@ VoicePart      = [ Identifier ] , MusicBlock ;
 
 StructureDecl  = 'form' , Identifier , '{' , { StructureItem } , '}' ;
 
-StructureItem  = SectionRef                        (* Identifier [ String ] — the string is
-                                                      this occurrence's display label *)
-               | '~' , Identifier , [ String ]     (* same section, label hidden (LYS0012) *)
+StructureItem  = SectionRef                        (* Identifier , { OctaveMark } , [ String ]
+                                                      — the string is this occurrence's
+                                                      display label *)
+               | '~' , Identifier , { OctaveMark } , [ String ]
+                                                    (* same section, label hidden (LYS0012) *)
                | NavMark                            (* segno / coda / fine / dc / ds / to coda —
                                                       BARE; the '@' form is rejected (LYS1022) *)
                | '_' , String                       (* custom text — the string is GLUED:
@@ -731,7 +733,21 @@ StructureRepeat = '|:' , { StructureItem } , ':|' , [ '*' , Integer ] ;
    ⚠️ "Opened by a repeat" is about the TREE, not the text: in |: A [1. D] :| [2. O] the
    ending after the ':|' belongs to the repeat block, while in |: A :| B [1. B] the ending
    does not — that second one warns even though the form has a repeat in it. *)
-StructureVolta = '[' , Integer , [ ( '-' | ',' ) , Integer ] , '.' , [ '~' ] , Identifier , [ ']' ] ;
+StructureVolta = '[' , Integer , [ ( '-' | ',' ) , Integer ] , '.' , [ '~' ] , Identifier ,
+                 { OctaveMark } , [ String ] , [ ']' ] ;
+
+(* OCTAVE MARKS ON A SECTION REFERENCE (2026-08-31). A trailing ' or , moves the frame THAT
+   PLAY of the section opens in, one octave per mark — the same spelling, and the same
+   meaning, a phrase reference carries:
+     form main { Intro Main ~Main' Coda }        -- the reprise sounds an octave higher
+     form main { |: A [1. B' ] :| [2. C ] }      -- an ending takes them too
+   The shift is the OCCURRENCE's: `~Main ~Main'` is one section played at two octaves, the
+   declaration never moves, and the reference after it is back at the part's anchor. Both
+   spellings take them (the tilde hides the label, not the music), and they mean the same
+   thing under `octave absolute`.
+   ⚠️ THE RANGE SEPARATOR OF AN ENDING IS ALSO A COMMA — [1,3. B] — and it is not a mark:
+   it stands BEFORE the dot. Only the marks after the section NAME count. *)
+OctaveMark     = "'" | ',' ;
 
 NavMark        = 'segno' | 'coda' | 'fine' | 'to' 'coda'
                | 'dc' [ 'al' ( 'fine' | 'coda' ) ]
