@@ -1,15 +1,24 @@
 // 対照 probe4: grace が冒頭でなく小節境界 (m1 の後) に居る場合。
+// ⚠️ 2026-08-31 に form 側へ切り直した（LYS1034）。⚠️ この対照が測っていた配置
+//    ——「小節線 → grace → 開始リピート線」——は書けなくなった: grace はリピートの
+//    内側にしか置けないので、この本の綴りは probe3 の頭に 1 小節足したものに等しい。
 octave absolute
 time 4/4
 
 part v { }
 
-section Main {
+section Head {
   v {
-    c1 | grace { f8 } |: b1 :|
+    c1 |
   }
 }
 
-form main { ~Main }
+section Main {
+  v {
+    grace { f8 } b1
+  }
+}
+
+form main { ~Head |: ~Main :| }
 
 score main { staff ~v }

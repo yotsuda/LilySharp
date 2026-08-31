@@ -112,11 +112,18 @@ phrase p_chordTies {
   <g b d>2~ <g b e> |               // 共通音(g,b)のみタイ
 }
 
-// 9 反復：インライン・ボルタ ＋ 反復回数
-phrase p_repeat {
-  |: g'4 a g f | [1. e2 d | ] :| [2. e2 c | ]        // 1・2 番括弧
-  |: g'8 a g f g a g f :|*2                           // ":|*N" で N 回反復
-}
+// 9 反復：リピート構造は form に書く（2026-08-31・LYS1034）。
+//    ⚠️ この本は以前ここに `|: … [1. …] :| [2. …]` と音楽の中で書いていた。繰り返しは
+//    「演奏する順序」を変えるので、書く場所は form だけになった。本体・1 番括弧・
+//    2 番括弧・回数つき本体をそれぞれ section に切り、下の form が並べる。
+//    ⚠️ 失われた主張が 1 つある（黙って別のテストに替えない・RULES §5.4）＝
+//    「1 パートにだけ書いた繰り返し」。form の繰り返しはスコア全体を繰り返すので、
+//    その綴り自体が存在しない。
+phrase p_repeatBody { g'4 a g f | }
+phrase p_repeatEnd1 { e2 d | }
+phrase p_repeatEnd2 { e2 c | }
+phrase p_repeatN    { g'8 a g f g a g f | }
+phrase p_bass1      { g2 c | }
 
 // 10 多声部：1 段に上声部(符尾上) / 下声部(符尾下)
 phrase p_voices {
@@ -142,11 +149,17 @@ section C {
   lh { p_bass p_bass p_bass p_bass }
 }
 section D {
-  rh { p_ornaments p_repeat p_voices }
-  lh { p_bass p_bass p_bass }
+  rh { p_ornaments p_voices }
+  lh { p_bass p_bass }
 }
+// 9 の材料：繰り返される本体と 2 つの括弧、そして回数つきの本体。
+section RepBody { rh { p_repeatBody } lh { p_bass1 } }
+section RepEnd1 { rh { p_repeatEnd1 } lh { p_bass1 } }
+section RepEnd2 { rh { p_repeatEnd2 } lh { p_bass1 } }
+section RepN    { rh { p_repeatN }    lh { p_bass1 } }
 
-form main { A B C D }
+// 9 の主張はこの 1 行にある：`|: … [1. …] :| [2. …]` と `:|*N`。
+form main { A B C D |: ~RepBody [1. ~RepEnd1] :| [2. ~RepEnd2] |: ~RepN :|*2 }
 
 score main "grammar-tour" {
   staff rh

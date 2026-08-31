@@ -349,13 +349,18 @@ c4( d) e( f)      // Two separate slurs
 
 ## Barlines
 
-| Syntax | Type |
-|--------|------|
-| `\|` | Single barline |
-| `\|\|` | Double barline |
-| `\|.` | Final barline |
-| `\|:` | Repeat start |
-| `:\|` | Repeat end |
+| Syntax | Type | Where |
+|--------|------|-------|
+| `\|` | Single barline | music, chord row, lyric row, form |
+| `\|\|` | Double barline | music, chord row, lyric row, form |
+| `\|.` | Final barline | music, chord row, lyric row, form |
+| `!` | Dashed barline | music |
+| `\|:` | Repeat start | **`form` only** (LYS1034) |
+| `:\|` | Repeat end | **`form` only** (LYS1034) |
+| `:\|:` | Back-to-back repeat (`:\|` then `\|:`) | **`form` only** (LYS1034) |
+
+The three repeat barlines change the order the music plays in, so they are written where
+the order is — see [Volta Repeats](#volta-repeats).
 
 ## Key Signature
 
@@ -671,27 +676,39 @@ Two other shapes are closed while the feature is young: a `cue` nested in a `cue
 
 ### Volta Repeats
 
-Volta repeats are written symbolically with `|: … :|` repeat barlines and inline
-volta endings `[1. …] [2. …]`. The play count defaults to 2 (or, when endings are
-present, the highest volta number); give it explicitly with `|: … :|*N`.
+Volta repeats are written symbolically with `|: … :|` repeat barlines and volta
+endings `[1. Section] [2. Section]` — **in the `form`, never in the music**
+(**LYS1034**, user decision 2026-08-31). A repeat changes the ORDER the music plays
+in, and a book's order is written in its form; that is the whole line the rule draws.
+The play count defaults to 2 (or, when endings are present, the number of endings);
+give it explicitly with `|: … :|*N`.
 
 ```
-{ |: c4 d e f | [1. g2 g | ] :| [2. a2 a | ] }
+part m { clef treble }
+section A { m { c4 d e f | } }
+section B { m { g2 g | } }
+section C { m { a2 a | } }
+form main { |: A [1. ~B] :| [2. ~C] }
+score main { staff m }
 ```
 
-Endings accept ranges and lists: `[1-2. … ]`, `[1,3. … ]`. Without endings, a bare
-`|: … :|` simply repeats the body (twice by default, or `|: … :|*N` times).
+An ending NAMES a section — the music lives in the section, and the bracket goes round
+the reference. Endings accept ranges and lists: `[1-2. B]`, `[1,3. B]`, and a trailing
+octave mark (`[1. B']`). A third and later ending is written by repeating the same
+shape: `:| [3. D]`. Without endings, a bare `|: A :|` simply repeats the body (twice by
+default, or `|: A :|*N` times).
 
-An ending needs a repeat to be an ending *of*. In a `form`, an ending that no repeat
-opens — `form main { A [1. B] }` — draws no bracket and no number: it engraves as the
-plain reference `B`, played once, and **LYS6008** warns that the `1.` prints nothing.
+An ending needs a repeat to be an ending *of*. An ending that no repeat opens —
+`form main { A [1. B] }` — draws no bracket and no number: it engraves as the plain
+reference `B`, played once, and **LYS6008** warns that the `1.` prints nothing.
 This is LilyPond's behaviour for the same shape. Note that it is the *tree* that
 decides, not the reading order: in `|: A [1. D] :| [2. O]` the ending written after the
 `:|` still belongs to that repeat, while in `|: A :| B [1. B]` it does not.
 
 > Note: `repeat volta` / `alternative` are **not** Lily# constructs — the parser
 > rejects them with a hint to use the symbolic form above. The `repeat` keyword
-> survives only for `unfold` / `percent` / `tremolo` (see below).
+> survives only for `unfold` / `percent` / `tremolo` (see below), which stay in the
+> music because they abbreviate notes rather than reorder them.
 
 #### One-sided repeat barlines
 
@@ -700,29 +717,24 @@ The two halves are **not** symmetric.
 - A `:|` with no `|:` open **repeats from the beginning of the piece** — the
   ordinary reading of a one-sided end-repeat. It is not an error.
 - A `|:` that no `:|` ever closes **is an error** (LYS4017): where the repeat ends
-  is undefined.
+  is undefined. A form's own `|: … :|` block is closed by the parser, so what is left
+  to reach this is a bare `:|:` standing in a form body — one written divider that
+  means `:|` then `|:`.
 
-The pair may be written **across layers**: a `|:` in a section's music can be
-closed by a `:|` the `form` writes, because a section is not a piece of music on
-its own — it becomes one when a `form` lays it out. So the pairing is judged on the
-laid-out score, not on either layer alone:
+> ⚠️ **The cross-layer pair is gone.** Until 2026-08-31 a `|:` written in a section's
+> music could be closed by a `:|` the `form` wrote, and books in the tree were spelled
+> that way; the reverse never worked, because a form repeat is bracketed and closes in
+> the form. That one-sidedness is what made the ban worth doing — an author moving
+> structure into the form always hit the direction that does not work first.
 
-```
-part m { section A { |: c4 d e f | } section B { g4 a b c | } }
-form main { A B :| }          // fine: the ':|' closes section A's '|:'
-```
+A repeat barline belongs to the **score**, not to one part: it is drawn on every staff,
+and since the only place to write one is the form, it is now **played** on every staff
+too. (Written in the music it expanded only the part it stood in — 8 notes over 4 in a
+two-part book, measured — so the picture and the sound could disagree.)
 
-The one direction that will not work is the mirror: a `|:` written in a `form`
-opens a repeat block, and that block must close in the `form`.
-
-A repeat barline belongs to the **score**, not to one part: written in one part it
-is drawn on every staff of the score.
-
-> ⚠️ Two gaps, both narrow, both stated so nothing looks decided that is not: a
-> one-sided `:|` written *inside section music* is drawn and reported correctly but
-> is not yet played back in MIDI, and the LilyPond twin cannot express "repeat from
-> the beginning" at all (`\bar ":|."` only draws the barline) — `lysc ly` warns
-> when it emits one.
+> ⚠️ One gap, stated so nothing looks decided that is not: the LilyPond twin cannot
+> express "repeat from the beginning" at all (`\bar ":|."` only draws the barline) —
+> `lysc ly` warns when it emits one.
 
 ### Percent Repeats
 

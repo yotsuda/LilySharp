@@ -903,8 +903,9 @@ internal sealed class FormRepeatBlockGreen : GreenSyntaxNode
         SyntaxToken repeatEnd,
         GreenNode? finalAlternative,
         SyntaxToken? asterisk,
-        SyntaxToken? repeatCount)
-        : base(SyntaxKind.FormRepeatBlock, BuildChildren(repeatStart, items, barline, alternativesBeforeEnd, repeatEnd, finalAlternative, asterisk, repeatCount))
+        SyntaxToken? repeatCount,
+        GreenNode?[]? furtherAlternatives = null)
+        : base(SyntaxKind.FormRepeatBlock, BuildChildren(repeatStart, items, barline, alternativesBeforeEnd, repeatEnd, finalAlternative, asterisk, repeatCount, furtherAlternatives))
     {
     }
 
@@ -916,7 +917,8 @@ internal sealed class FormRepeatBlockGreen : GreenSyntaxNode
         SyntaxToken repeatEnd,
         GreenNode? finalAlternative,
         SyntaxToken? asterisk,
-        SyntaxToken? repeatCount)
+        SyntaxToken? repeatCount,
+        GreenNode?[]? furtherAlternatives = null)
     {
         var children = new List<GreenNode?> { repeatStart };
         children.AddRange(items);
@@ -937,6 +939,14 @@ internal sealed class FormRepeatBlockGreen : GreenSyntaxNode
         if (finalAlternative != null)
         {
             children.Add(finalAlternative);
+        }
+        // A THIRD, FOURTH … ending, already interleaved with the ':|' that precedes each one
+        // — `|: A [1. B] :| [2. C] :| [3. D]`. Kept as flat children in source order like
+        // everything above, which is what lets FormWalk read the block by walking slots
+        // rather than by fixed indices, and what keeps ToFullString round-tripping.
+        if (furtherAlternatives != null)
+        {
+            children.AddRange(furtherAlternatives);
         }
         return [.. children];
     }

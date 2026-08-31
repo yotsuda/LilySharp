@@ -23,12 +23,19 @@ namespace LilySharp.Core.Semantics;
 /// </summary>
 /// <remarks>
 /// Like <see cref="SlurPairingValidator"/> this runs the shared collector and reads back
-/// what it recorded as a side effect, rather than re-deciding the pairing. Here that is not
-/// only a consistency preference: the pairing is NOT decidable on the written text at all.
-/// A section is not a piece of music on its own — it becomes one when a <c>form</c> lays it
-/// out — so a <c>|:</c> written in a section's music may be closed by a <c>:|</c> the form
-/// writes, and books in the wild are spelled exactly that way. Only the collector's
-/// expanded measure stream has the two layers as siblings.
+/// what it recorded as a side effect, rather than re-deciding the pairing.
+/// <para>
+/// ⚠️ THE REASON IT HAD TO WORK THIS WAY IS GONE, AND THE MECHANISM IS KEPT ANYWAY
+/// (2026-08-31, LYS1034). Until repeat structure became form-only, the pairing was not
+/// decidable on the written text at all: a <c>|:</c> in a section's music could be closed by
+/// a <c>:|</c> the form wrote, and books in the wild were spelled that way, so only the
+/// collector's expanded stream had the two layers as siblings. Now a <c>|:</c> can only be
+/// written in a form, where <c>ParseFormRepeatBlock</c> closes its own block — so what is
+/// left to reach this check is a bare <c>:|:</c> standing in a form body, which is ONE
+/// written divider meaning <c>:|</c> then <c>|:</c>, and whose second half nothing closes.
+/// That is still a question about the laid-out score rather than the text, so the reading is
+/// unchanged; what changed is how narrow the surviving case is.
+/// </para>
 /// <para>
 /// An ERROR, not a warning, and the direction is deliberate: <c>error → warning → works</c>
 /// is a move that breaks nobody, so the strict position is the one to take while the
@@ -59,9 +66,9 @@ internal sealed class RepeatPairingValidator : ISharedCollectValidator
             _diagnostics.Error(new TextSpan(w.SourcePosition, 1),
                 DiagnosticCodes.UnpairedRepeat,
                 "a repeat '|:' is never closed, so where the repeat ends is undefined - add "
-                + "the matching ':|'. It may be written in this section or in the form that "
-                + "lays the sections out, whichever is where the repeat should end. (A ':|' "
-                + "on its own is fine: it repeats from the beginning of the piece.)");
+                + "the matching ':|' in the form. (A ':|' on its own is fine: it repeats "
+                + "from the beginning of the piece. And note that ':|:' is TWO barlines, "
+                + "':|' then '|:', so it opens a repeat that still needs closing.)");
         }
     }
 }

@@ -90,6 +90,7 @@ public static class SemanticValidation
         new ChordRowGridValidator(),        // a chord-row bar off the beat grid / a bar-head '.'
         new ChordDisplayModeValidator(),    // `chords X as WORD` where WORD is not a display
         new TabRenderVocabularyValidator(), // `tab [TUNING] X as WORD` — the same clause's other half
+        new RepeatStructureScopeValidator(),// a repeat barline / volta ending written in music
         new RepeatPairingValidator(),       // a '|:' that no ':|' closes (score-expanded)
         new ExpansionBudgetValidator(),     // expansion truncated at the collector's site budget
         new TabRangeValidator(),            // notes clamped outside the tab range

@@ -1,10 +1,18 @@
 // lilypond-src/input/regression/repeat-volta-initial-grace.ly の Lily# 訳。
 // CLAIM: 冒頭 grace + volta repeat の開始リピート線が期待位置 (grace の後) に出る。
-// 綴り: LP \repeat volta 2 = Lily# 記号形 |: … :|。LP absolute f'8/b'1 = F4/B4。
+// 綴り: LP \repeat volta 2 = Lily# の form リピート |: … :|。LP absolute f'8/b'1 = F4/B4。
 // state=open: LS は開始リピート線が grace の前 + dots が grace ink と重なる
 // (LP は grace→.|: の順・中間位置では |→grace→.|: と bar 群 2 つの間に挟む)。
 // 根 = leading grace が音符列 prefix (小節 frame 内側) = grace column アーキ起票。
-// 副 defect: grace×|:..:| で末尾に幽霊空小節 +1 (対照 ctl1-4 で切り分け済)。
+//
+// ⚠️ 2026-08-31 に切り直した（LYS1034＝リピート構造は form の中だけ。ユーザー決定 ⒝＝
+//    「LP 忠実度の本は切り直して LP に対して測り直す」）。
+//    ⚠️⚠️ **綴りの移動ではなく構造の変化**: LP 原本の `\grace f'8 \repeat volta 2 b'1` は
+//    **grace がリピートの外・その手前**。form は section 参照しか持てないので、Lily# では
+//    grace をリピートの**内側**にしか置けない。⇒ **この訳はもう LP と同じ構造ではなく、
+//    「開始リピート線と grace の前後」という CLAIM はこの綴りでは問えない。**
+//    ⚠️ 旧・副 defect（grace×music 側 `|:..:|` で末尾に幽霊空小節 +1）は、その綴りが
+//    消えたので観測できない——直ったのではなく**問いごと無くなった**。
 octave absolute
 time 4/4
 
@@ -12,10 +20,10 @@ part v { }
 
 section Main {
   v {
-    grace { f8 } |: b1 :|
+    grace { f8 } b1
   }
 }
 
-form main { ~Main }
+form main { |: ~Main :| }
 
 score main { staff ~v }

@@ -1,4 +1,6 @@
 // 対照 probe: grace 無しの |: b1 :| — 末尾空小節が grace と無関係かの切り分け。
+// ⚠️ 2026-08-31 に form 側へ切り直した（LYS1034）。この対照が測っていた「末尾の幽霊空小節」は
+//    music 側の `|:` が作っていたもので、その綴り自体が無くなった＝副 defect ごと消えている。
 octave absolute
 time 4/4
 
@@ -6,10 +8,10 @@ part v { }
 
 section Main {
   v {
-    |: b1 :|
+    b1
   }
 }
 
-form main { ~Main }
+form main { |: ~Main :| }
 
 score main { staff ~v }

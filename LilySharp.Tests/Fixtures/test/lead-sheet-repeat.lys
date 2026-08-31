@@ -1,10 +1,17 @@
 // Lead sheet with a repeat: the chord row now carries its source barline types
 // (|: ... :|, ||, |.) instead of a synthesized plain grid, so a repeated section
 // draws real repeat barlines. (Refactor: the same DrawBarlines path as a staff.)
+// ⚠️ RE-CUT 2026-08-31 for LYS1034 (a repeat changes the playing order, so it is written
+// where the order is — the form). The CLAIM is unchanged and still about the chord row:
+// the repeat barlines a form composes reach the row as real barline types, not as a plain
+// grid. The row is cut where the old `|:` stood, so the ink is the same book.
 title "Repeat"
 time 4/4
 section Main {
-  chords prog { C Am |: F G7 | C :| }
+  chords prog { C Am | }
 }
-form main { Main }
+section Loop {
+  chords prog { F G7 | C | }
+}
+form main { Main |: ~Loop :| }
 score main "lead-sheet-repeat" { chords prog }

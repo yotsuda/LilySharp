@@ -1,4 +1,6 @@
 // 対照 probe3: repeat の後に音楽が続く場合、幽霊小節はどこに出るか。
+// ⚠️ 2026-08-31 に form 側へ切り直した（LYS1034）。grace はリピートの内側に移った
+//    （voltagrace.lys のヘッダに理由）。
 octave absolute
 time 4/4
 
@@ -6,10 +8,16 @@ part v { }
 
 section Main {
   v {
-    grace { f8 } |: b1 :| c1 |
+    grace { f8 } b1
   }
 }
 
-form main { ~Main }
+section Tail {
+  v {
+    c1 |
+  }
+}
+
+form main { |: ~Main :| ~Tail }
 
 score main { staff ~v }

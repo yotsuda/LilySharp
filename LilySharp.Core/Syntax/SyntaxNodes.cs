@@ -903,6 +903,10 @@ public sealed class InlineVoltaSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The opening <c>[</c> token — the one place to point at when the ending
+    /// itself is the subject, since its body can run for bars.</summary>
+    public SyntaxTokenNode OpenBracket => (SyntaxTokenNode)GetChild(0)!;
+
     /// <summary>The (first) volta pass-number token.</summary>
     public SyntaxTokenNode Number => (SyntaxTokenNode)GetChild(1)!;
 

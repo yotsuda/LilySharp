@@ -1,6 +1,12 @@
 // lilypond-src/input/regression/repeat-volta-initial-grace.ly の Lily# 訳。
 // CLAIM: 冒頭 grace 音符 + volta repeat の開始リピート線が期待位置に出る。
-// 綴り: LP \repeat volta 2 = Lily# 記号形 |: … :|。LP absolute f'8/b'1 = F4/B4。
+// 綴り: LP \repeat volta 2 = Lily# の form リピート |: … :|。LP absolute f'8/b'1 = F4/B4。
+// ⚠️ 2026-08-31 に切り直した（LYS1034＝リピート構造は form の中だけ）。
+//    ⚠️⚠️ **これは綴りの移動ではなく構造の変化**: LP 原本は `\grace f'8 \repeat volta 2 b'1`
+//    ＝**grace はリピートの外・その手前**に居る。form は section 参照しか持てないので、
+//    Lily# では grace をリピートの**内側**（section の先頭）にしか置けない。
+//    ⇒ **この twin はもう LP と同じ構造ではない**。「開始リピート線が grace の後に出るか」
+//    という主張は、この綴りでは問えなくなった（status.json に記録）。
 octave absolute
 time 4/4
 
@@ -8,10 +14,10 @@ part v { }
 
 section Main {
   v {
-    grace { f8 } |: b1 :|
+    grace { f8 } b1
   }
 }
 
-form main { ~Main }
+form main { |: ~Main :| }
 
 score main { staff ~v }

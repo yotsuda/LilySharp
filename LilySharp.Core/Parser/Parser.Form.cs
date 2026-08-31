@@ -375,12 +375,13 @@ internal sealed partial class Parser
             }
         }
 
-        // ⚠️ THE PAIRING CROSSES THE FORM/MUSIC LINE IN ONE DIRECTION ONLY, and saying so is
-        // the whole value of this message. A `|:` written in a SECTION may be closed by a
-        // `:|` the form writes — LYS4017 is raised only after score expansion for exactly
-        // that reason, and books in the wild are spelled that way. The reverse does not hold:
-        // the form's repeat is a BRACKETED construct, so a `:|` sitting in the music cannot
-        // close it, and the author who moves only the `|:` into the form lands here.
+        // ⚠️ THE PAIRING USED TO CROSS THE FORM/MUSIC LINE IN ONE DIRECTION ONLY, and saying
+        // so was the whole value of this message: a `|:` written in a SECTION could be closed
+        // by a `:|` the form wrote (which is why LYS4017 is raised only after score
+        // expansion), while the reverse never held, because a form repeat is a BRACKETED
+        // construct. That ONE-SIDEDNESS is the argument that carried LYS1034 — the author
+        // moving structure into the form always hit the direction that does not work first —
+        // and since 2026-08-31 neither direction exists: a repeat can only be written here.
         SyntaxToken endBar;
         if (Check(SyntaxKind.RepeatEndBar))
         {
@@ -391,9 +392,9 @@ internal sealed partial class Parser
             _diagnostics.Error(new TextSpan(startPosition, Math.Max(1, _textPosition - startPosition)),
                 DiagnosticCodes.UnpairedRepeat,
                 "this form repeat '|:' is never closed — add the matching ':|' before the "
-                + "form's '}'. A ':|' written in a section's music does not close it: a form "
-                + "repeat opens and closes in the form. (The other direction does work — a "
-                + "'|:' written in the music may be closed by a ':|' in the form.)");
+                + "form's '}'. A repeat opens and closes in the form; a ':|' written in a "
+                + "section's music does not close it, and is not a spelling the language "
+                + "takes any more.");
             endBar = new SyntaxToken(SyntaxKind.RepeatEndBar, "", null, null);
         }
 
@@ -423,7 +424,28 @@ internal sealed partial class Parser
         else if (Check(SyntaxKind.OpenBracket))
             finalAlternative = ParseVoltaBracket();
 
-        return new FormRepeatBlockGreen(startBar, [.. items], pipeBeforeAlternatives, [.. alternatives], endBar, finalAlternative, asterisk, repeatCount);
+        // A THIRD ENDING, AND A FOURTH: `:| [3. C]` again, as many times as it is written.
+        // ⚠️ This arm exists because of LYS1034 (2026-08-31). The music stream could spell
+        // `|: X | [1. A] :| [2. B] :| [3. C]` and the form could not — it took ONE ending
+        // after its `:|` and dropped the rest, which then warned LYS6008 ("no repeat opens
+        // this ending") and engraved as a plain reference. That was survivable only while
+        // the music spelling existed. MEASURED before writing this: 13 of the author's 326
+        // books and one tracked book (audit/lpreg/voltasky) write a third or later ending,
+        // so banning the music spelling without this arm would have left them NO spelling.
+        // ⚠️ It takes the same two shapes the first final ending takes, so the bare
+        // `:| 3. C` still reaches ParseFormAlternative's "the bracket is required" hint
+        // rather than falling out of the block as a stray `:|`.
+        var furtherAlternatives = new List<GreenNode?>();
+        while (finalAlternative != null && Check(SyntaxKind.RepeatEndBar)
+               && Peek(1).Kind is SyntaxKind.OpenBracket or SyntaxKind.IntegerLiteral)
+        {
+            furtherAlternatives.Add(Advance());   // the ':|' between this ending and the next
+            furtherAlternatives.Add(Check(SyntaxKind.OpenBracket)
+                ? ParseVoltaBracket()
+                : ParseFormAlternative());
+        }
+
+        return new FormRepeatBlockGreen(startBar, [.. items], pipeBeforeAlternatives, [.. alternatives], endBar, finalAlternative, asterisk, repeatCount, [.. furtherAlternatives]);
 
     }
 

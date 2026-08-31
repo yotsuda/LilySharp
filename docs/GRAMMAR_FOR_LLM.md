@@ -298,26 +298,33 @@ below the staff — the parser rejects it). Placement applies only to dynamic le
 
 ## Bar handling
 
-- Barlines: `|` single, `||` double, `|.` final, `|:` repeat start, `:|` repeat end.
+- Barlines in MUSIC: `|` single, `||` double, `|.` final, `!` dashed.
+  **The repeat barlines `|:` `:|` `:|:` are NOT music items — they go in the `form`**
+  (LYS1034, user decision 2026-08-31). The line is "does it change the playing ORDER":
+  a repeat does, so it belongs where the order is written.
 - **A written `|` closes exactly one measure, and a measure with nothing in it is an
   empty one** — so `{ | | | | }` is four empty bars and `{ | c1 }` is an empty bar then
   `c1`. An empty bar is filled with a full-measure spacer (`| |` == `| s1 |`, on the page
-  and in playback), so it is never diagnosed. Three barlines close nothing: `||`/`|.`/`:|`
-  on an empty span DECORATE the bar behind them; `|:` OPENS the bar in front of it (so
-  `{ |: c1 :| }` is one bar, while `{ | |: c1 :| }` is two); and a `|` landing where the
+  and in playback), so it is never diagnosed. Typed barlines close nothing: `||`/`|.`
+  on an empty span DECORATE the bar behind them; and a `|` landing where the
   meter just auto-filled a bar merely confirms it — which is why a trailing `c1 |` is one
   bar, not two.
-- Volta repeats are symbolic; endings are inline `[1. ... ]` `[2. ... ]`. Play count
-  defaults to the highest ending number; set it with `*N`. The opening `[` is required
-  (a bare `1. ...` ending is rejected); the closing `]` is optional — write it to draw
-  the right cap (closed ending), omit it to leave the ending open. Section-level endings
-  in a `form main { }` repeat use the same `[N. Section]` form.
+- Volta repeats are symbolic and live in the form: `form main { |: A [1. B] :| [2. C] }`.
+  An ending NAMES a section. Play count defaults to the number of endings (2 with none);
+  set it explicitly with `:|*N`. The opening `[` is required (a bare `1. A` is rejected);
+  the closing `]` is optional — write it to draw the right cap, omit it to leave the ending
+  open. A third and later ending is written the same way: `:| [3. D]` again.
 - An ending needs a repeat to be an ending OF. Write `form main { [1. A] }` and no bracket
   is drawn: it engraves as the plain reference `A`, and LYS6008 warns that the `1.` prints
   nothing. Put the ending inside the repeat — `form main { |: A [1. B] :| [2. C] }`.
 
 ```
-|: c4 d e f | [1. g2 g | ] :| [2. a2 a | ]
+part melody { clef treble }
+section A { melody { c4 d e f | } }
+section B { melody { g2 g | } }
+section C { melody { a2 a | } }
+form main { |: A [1. ~B] :| [2. ~C] }
+score main { staff melody }
 ```
 
 - Percent repeat (repeat the previous measure): `repeat percent 2 { c4 d e f | }`.
@@ -398,16 +405,22 @@ lyrics below. A chord entry is the SYMBOL as it prints — `C`, `Am`, `G7`, `F#m
 beat grid (one entry = the bar, two in 4/4 = halves, four = beats), and `.` holds
 the previous chord one more beat (`| C . . G7 |`; a `.` never crosses a barline).
 `r`/`R` print "N.C." in their slot, `s` prints nothing. Barlines in the source
-(`|` `|:` `:|` `||` `|.`) are drawn, and follow the same bare-barline rule as music
+(`|` `||` `|.`) are drawn, and follow the same bare-barline rule as music
 and lyrics: every written `|` closes exactly one bar, the one that OPENS the run
-included, so `| C | F |` is an empty bar and then two.
+included, so `| C | F |` is an empty bar and then two. A `|:` in a chord row IS a repeat,
+so it goes in the form like any other (LYS1034); the repeat barlines the form composes
+still reach the row and draw as real repeat barlines.
 
 ```
 section Main {
-  chords prog  { C G7 | Am F | C :| }     // two halves | two halves | whole (repeat)
-  lyrics words { Twin- kle | lit- tle | star | }
+  chords prog  { C G7 | Am F | }          // two halves | two halves
+  lyrics words { Twin- kle | lit- tle | }
 }
-form main { Main }
+section Loop {
+  chords prog  { C | }
+  lyrics words { star | }
+}
+form main { Main |: ~Loop :| }
 score main "sheet" { chords prog lyrics words }     // chords + lyrics rows, no staff
 ```
 

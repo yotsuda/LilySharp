@@ -73,8 +73,18 @@ internal static class FormWalk
 
     /// <summary>A <c>|: … :|</c> block with its children in document order and its
     /// <c>:|*N</c> play count (2 when absent).</summary>
+    /// <remarks>
+    /// ⚠️ <paramref name="ExplicitPlayCount"/> is null when no <c>*N</c> was written, and the
+    /// difference matters to anyone who ALSO counts endings: the music stream's rule is
+    /// "an explicit count, else the highest ending number, else 2" (MidiExporter
+    /// ProcessRepeatSpan), and a reader that only sees <c>PlayCount</c>'s defaulted 2 cannot
+    /// spell that rule. MEASURED 2026-08-31, which is why it is here: MIDI's form-side arm
+    /// read neither and hard-coded <c>Math.Max(2, endings)</c>, so <c>form { |: ~X :|*3 }</c>
+    /// sounded twice while the same music written <c>|: … :|*3</c> sounded three times.
+    /// </remarks>
     internal sealed record Repeat(
-        FormRepeatBlockSyntax Node, int PlayCount, IReadOnlyList<Item> Children) : Item;
+        FormRepeatBlockSyntax Node, int PlayCount, IReadOnlyList<Item> Children,
+        int? ExplicitPlayCount = null) : Item;
 
     /// <summary>A volta ending <c>[1. Name]</c>, inside a repeat block or lone. The
     /// syntax node carries the whole surface (numbers, label, <c>~</c>).</summary>
@@ -164,7 +174,7 @@ internal static class FormWalk
         var children = new List<Item>();
         for (int i = 0; i < block.SlotCount; i++)
             Classify(block.GetChild(i), children, insideRepeat: true);
-        return new Repeat(block, PlayCount(block), children);
+        return new Repeat(block, PlayCount(block), children, ExplicitPlayCount(block));
     }
 
     /// <summary>
@@ -175,13 +185,19 @@ internal static class FormWalk
     /// block's end bar line (Parser.Form.cs ParseFormRepeatBlock), not as a node —
     /// the same spelling and the same place an inline <c>:|*3</c> carries it.
     /// </remarks>
-    internal static int PlayCount(FormRepeatBlockSyntax block)
+    internal static int PlayCount(FormRepeatBlockSyntax block) => ExplicitPlayCount(block) ?? 2;
+
+    /// <summary>
+    /// The written <c>:|*3</c> play count, or null when the block carries none — the
+    /// distinction <see cref="PlayCount"/>'s default hides. See <see cref="Repeat"/>.
+    /// </summary>
+    internal static int? ExplicitPlayCount(FormRepeatBlockSyntax block)
     {
         for (int i = 0; i + 1 < block.SlotCount; i++)
             if (block.GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Asterisk }
                 && block.GetChild(i + 1) is SyntaxTokenNode count
                 && int.TryParse(count.Text, out int n) && n >= 1)
                 return n;
-        return 2;
+        return null;
     }
 }

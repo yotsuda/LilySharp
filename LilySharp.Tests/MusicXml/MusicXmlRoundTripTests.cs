@@ -462,16 +462,19 @@ public class MusicXmlRoundTripTests
     [Fact]
     public void SimpleRepeat_RoundTrips()
     {
-        // A plain |: ... :| repeat (no endings) stays a flat section with inline
-        // repeat barlines. (Wrapped in a section so the fixture collects the same way
-        // the importer's section-major output does.)
+        // A plain |: ... :| repeat with no endings. ⚠️ RE-SPELLED 2026-08-31 (LYS1034): the
+        // repeat is in the form, because that is the only place it can be written — and the
+        // round trip is the reason this test matters more than it did. The importer used to
+        // write repeat barlines back into a flat section (LysWriter.BarlineBetween), which is
+        // now a book Lily# refuses; it factors the repeat into sections and a form instead
+        // (TryFactorPlainRepeats), and this is the test that walks that path.
         AssertRoundTrips("""
             octave absolute
             time 4/4
             key c major
             part melody { clef treble }
-            section A { melody { |: c'4 d' e' f' | g'4 a' b' c'' :| } }
-            form main { A }
+            section A { melody { c'4 d' e' f' | g'4 a' b' c'' | } }
+            form main { |: A :| }
             score main { staff melody }
             """);
     }

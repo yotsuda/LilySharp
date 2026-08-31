@@ -5,11 +5,17 @@ part melody {
   clef bass
   section A {
     c4@mark("A") d e f | tuplet 3/2 { g4@mark("B") a b } c4 d
-    |: d1 | [1. e1@mark("C") ] :| [2. f1@mark("D") ]
   }
+  // ⚠️ The marks: each of these three used to continue the bar above in ONE music stream,
+  // so its octave came from the note before it. A section starts a fresh frame at the
+  // part's anchor, so the three notes carry the ' that the stream used to give them - the
+  // pitches are D4 / E4 / F4 as before, checked with `lysc check --pitches`.
+  section Body { d'1 | }
+  section End1 { e'1@mark("C") }
+  section End2 { f'1@mark("D") }
 }
 
-form main { ~A }
+form main { ~A |: ~Body [1. ~End1] :| [2. ~End2] }
 
 score main "rehearsal-marks-inside-containers" {
   staff melody
@@ -22,10 +28,20 @@ score main "rehearsal-marks-inside-containers" {
 // re-based -- a diff that proves nothing and hides the next real one.
 //
 // Four letters, and only ONE of them (A) is written where the top-level walk can see it.
-// B sits inside a tuplet, C and D inside the two inline endings -- containers that own
-// their own walk and hand out their body's DIRECT children, so a mark attached to a note
-// inside them never became a site and the statement-level handler that BUILDS a rehearsal
-// mark never ran. B, C and D drew NOTHING, silently, until 2026-08-30.
+// B sits inside a tuplet -- a container that owns its own walk and hands out its body's
+// DIRECT children, so a mark attached to a note inside it never became a site and the
+// statement-level handler that BUILDS a rehearsal mark never ran. B drew NOTHING,
+// silently, until 2026-08-30.
+//
+// ⚠️ THE OTHER HALF OF THIS BOOK'S CLAIM IS NO LONGER WRITABLE, and it is named here
+// rather than quietly dropped (RULES §5.4). Until 2026-08-31 the repeat and its two
+// endings were written IN THE MUSIC -- `|: d1 | [1. e1@mark("C") ] :| [2. f1@mark("D") ]`
+// -- so C and D sat inside INLINE VOLTA containers, the second container family the
+// 2026-08-30 fix had to reach. LYS1034 moved repeat structure to the form, so an inline
+// ending cannot be written at all and no book can hold a mark inside one. The letters are
+// kept (they still exercise the de-dupe below, and they still print) but they now stand in
+// ordinary section music: THE CONTAINER HALF OF THE GUARD IS GONE, and the surviving
+// container observer is the tuplet.
 //
 // The `tab melody` line is load-bearing, not decoration: one part scored onto two staves
 // is collected once per staff, so the same fix that makes the letters appear prints each

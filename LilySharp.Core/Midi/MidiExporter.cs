@@ -969,7 +969,17 @@ public sealed class MidiExporter
                     break;
             }
         }
-        int passes = Math.Max(2, alternatives.Count);
+        // The SAME three-way rule the music stream plays by (ProcessRepeatSpan): an explicit
+        // `:|*N` wins, else the number of endings, else 2.
+        // ⚠️ THIS ARM USED TO READ NEITHER — it was `Math.Max(2, alternatives.Count)`, so a
+        // form's `:|*3` was silently dropped and the piece sounded twice while the same music
+        // written inline sounded three times (MEASURED 2026-08-31: 24 note-ons against 16, on
+        // one book spelled both ways). The page draws no count either way, and the LilyPond
+        // twin has always honoured it (LilyPondExporter.AppendRepeatBlock), so MIDI was the
+        // one reader of the four that disagreed — and only about the FORM spelling, which is
+        // why it survived: until LYS1034 an author could write the count in the music, where
+        // it worked. Nineteen books on disk write `:|*N`.
+        int passes = repeatBlock.ExplicitPlayCount ?? Math.Max(2, alternatives.Count);
         // A structure repeat is engraved once (repeat barlines): later passes
         // revisit the same printed BODY copy, so the body's ordinals restart from
         // this snapshot each pass (the highlight re-lights the same printed body).

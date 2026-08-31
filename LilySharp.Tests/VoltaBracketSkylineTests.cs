@@ -44,9 +44,27 @@ public class VoltaBracketSkylineTests
     [Fact]
     public void TwoRepeatChains_FitTheirOwnNotes()
     {
-        var source = "octave absolute\n" +
-            "|: r2 a'''4 r4 | [1. r2 d'''4 r4 | ] :| [2. r2 d'''4 r4 | ] :| [3. r2 d'''4 r4 | ] " +
-            "|: r2 a'''4 r4 | [1. r2 a'''4 r4 | ] :| [2. r2 a'''4 r4 | ] :| [3. r2 a'''4 r4 | ]";
+        // ⚠️ RE-SPELLED 2026-08-31 (LYS1034). This used to be one line of bare top-level
+        // music holding both chains inline; repeat structure is a FORM construct now, so the
+        // same two chains are written as the form writes them — which is also the only
+        // spelling the corpus twin (audit/lpreg/voltasky.lys) can still be written in. The
+        // quantity under test did not move: six brackets, three per chain, the two chains
+        // 2.0 apart. Measured on the twin's page before and after: y = 8.79 and 6.79 both
+        // times.
+        var source = "octave absolute\ntime 4/4\npart v { }\n" +
+            "section Body1 { v { r2 a'''4 r4 | } }\n" +
+            "section D1 { v { r2 d'''4 r4 | } }\n" +
+            "section D2 { v { r2 d'''4 r4 | } }\n" +
+            "section D3 { v { r2 d'''4 r4 | } }\n" +
+            "section Body2 { v { r2 a'''4 r4 | } }\n" +
+            "section A1 { v { r2 a'''4 r4 | } }\n" +
+            "section A2 { v { r2 a'''4 r4 | } }\n" +
+            "section A3 { v { r2 a'''4 r4 | } }\n" +
+            "form main {\n" +
+            "  |: ~Body1 [1. ~D1] :| [2. ~D2] :| [3. ~D3]\n" +
+            "  |: ~Body2 [1. ~A1] :| [2. ~A2] :| [3. ~A3]\n" +
+            "}\n" +
+            "score main { staff ~v }\n";
         var tree = SyntaxTree.Parse(source);
         var score = new MeasureCollector().Collect(tree);
         var layout = new LayoutEngine(new LayoutOptions()).Layout(score);

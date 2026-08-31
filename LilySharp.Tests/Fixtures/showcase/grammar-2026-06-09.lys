@@ -60,23 +60,43 @@ section A {
 
     // G3 — ornaments:
     c4@trill d,@trill e@mordent f@turn |
+  }
+}
 
-    // Task 15 — inline volta repeat: body once, with first/second-time endings.
-    |: c4 d e f | [1. g2 g | ] :| [2. a2 a | ]
+// -----------------------------------------------------------------------------
+// Task 15 — REPEATS. ⚠️ Rewritten again 2026-08-31 (LYS1034): a repeat and its volta
+//    endings change the ORDER the music plays in, so they are written in the `form`
+//    and not in the music. The three claims are unchanged and the notes are the same
+//    notes; what moved is where the structure is spelled. A body that a repeat plays
+//    is a SECTION now, so each one gets a name — which is the whole point of the move:
+//    the form below reads as the shape of the piece.
+// -----------------------------------------------------------------------------
+// ⚠️ Each body starts a fresh octave frame at the part's anchor, so three of the four
+//    carry the ' the one long music stream used to hand them. The sounding pitches are
+//    the same as before the move (checked with `lysc check --pitches`).
+section Rep     { melody { c4 d e f | } }         // the repeated body
+section RepEnd1 { melody { g'2 g | } }            // first-time ending
+section RepEnd2 { melody { a'2 a | } }            // second-time ending
+section RepN    { melody { c'8 d e f g f e c | } }// the body of a ':|*3' repeat
 
-    // Task 15 — explicit repeat count on the closing barline (:|*N):
-    |: c,'8 d e f g f e c :|*3
-
+section Tail {
+  melody {
     // G3 — `repeat tremolo` now parses (the keyword used to be rejected).
     // 16 sixteenths fill the 4/4 bar; the original wrote 4 and filled a quarter
     // of it, which the measure check now says out loud.
-    repeat tremolo 16 { c16 } |
+    repeat tremolo 16 { c'16 } |
 
     // Reference the phrase whose name is a former keyword:
     tr
   }
 }
 
-form main { ~A }
+// The volta repeat, the explicit play count (':|*N') and the plain sequence, all in
+// the one place the piece's order is written.
+// ⚠️ MEASURED before and after the move: same written pitches, same 12 MusicXML measures
+//    and 56 notes; the MusicXML GAINS its `<ending>` markers (the inline spelling never
+//    wrote them) and the MIDI LOSES one bar of silence — the ghost empty measure the old
+//    `… | |: …` opened between the two repeats, which is the defect this move retires.
+form main { ~A |: ~Rep [1. ~RepEnd1] :| [2. ~RepEnd2] |: ~RepN :|*3 ~Tail }
 
 score main { staff melody }

@@ -1,18 +1,35 @@
 // volta-bracket-vertical-skylines.ly twin — volta 括弧は下の物体に垂直フィットする。
 // 綴り: LP a''''=A7 → Lily# a'''・d''''=D7 → d'''。\repeat volta 3+\alternative(3枝)
-// → インライン・ボルタ |: … [1.…] :| [2.…] :| [3.…]。
+// → form のリピート |: … [1.…] :| [2.…] :| [3.…]。
+// ⚠️ 2026-08-31 に切り直した（LYS1034＝リピート構造は form の中だけ）。主張は不変
+//    ——1 行に 2 つのリピート鎖があり、各鎖の 3 つの括弧は自分の下の音符に合わせて
+//    独立に上下する。3 本目の括弧は form 側の綴りが取れるようになって初めて書ける
+//    （同日、Parser.Form.ParseFormRepeatBlock の「3 つめ以降の括弧」の腕）。
+// ⚠️ 切り直しで動いた分を実測して書いておく: **主張の量は不動**（鎖 1 の 3 括弧が y=8.79・
+//    鎖 2 が y=6.79＝2.0 の差、括弧は 6 本）。動いたのは ⑴ X 位置（section の区切りで
+//    間隔が組み直る）と ⑵ **最後の括弧の右端キャップが出るようになった**——旧綴りでは
+//    `]` を書いていたのに右の縦棒が描かれていなかった。LP 側の絵はディスクに無いので
+//    （twin は voltasky-lp.ly だけ）、どちらが LP かはこの便では確かめていない。
 octave absolute
 time 4/4
 
 part v { }
 
-section Main {
-  v {
-    |: r2 a'''4 r4 | [1. r2 d'''4 r4 | ] :| [2. r2 d'''4 r4 | ] :| [3. r2 d'''4 r4 | ]
-    |: r2 a'''4 r4 | [1. r2 a'''4 r4 | ] :| [2. r2 a'''4 r4 | ] :| [3. r2 a'''4 r4 | ]
-  }
-}
+// 鎖 1: 本体は A7、3 つの括弧はどれも D7。
+section Body1 { v { r2 a'''4 r4 | } }
+section D1 { v { r2 d'''4 r4 | } }
+section D2 { v { r2 d'''4 r4 | } }
+section D3 { v { r2 d'''4 r4 | } }
 
-form main { ~Main }
+// 鎖 2: 本体も括弧も A7 ——鎖 1 より 2.0 高いところに座るのが主張。
+section Body2 { v { r2 a'''4 r4 | } }
+section A1 { v { r2 a'''4 r4 | } }
+section A2 { v { r2 a'''4 r4 | } }
+section A3 { v { r2 a'''4 r4 | } }
+
+form main {
+  |: ~Body1 [1. ~D1] :| [2. ~D2] :| [3. ~D3]
+  |: ~Body2 [1. ~A1] :| [2. ~A2] :| [3. ~A3]
+}
 
 score main { staff ~v }

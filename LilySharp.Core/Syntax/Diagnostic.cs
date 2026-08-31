@@ -721,6 +721,45 @@ public static class DiagnosticCodes
     /// <c>&lt;0 …&gt;</c> is invalid.</summary>
     public const string InvalidScaleDegree = "LYS1021";
 
+    /// <summary>Semantic error: a repeat barline (<c>|:</c> <c>:|</c> <c>:|:</c>) or a volta
+    /// ending (<c>[1. … ]</c>) written in MUSIC. These belong in a <c>form { … }</c>, which is
+    /// where a book's playing order lives.</summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ USER DECISION 2026-08-31 (§3, HANDOFF §2 F ⒫), and the line it draws is
+    /// "does it change the playing ORDER". <c>|:</c> <c>:|</c> <c>[N. …]</c> move to the form;
+    /// <c>repeat percent</c>, <c>repeat unfold</c> and <c>tremolo</c> STAY in music, because
+    /// they are abbreviations for notes and the order is unchanged. <c>repeat volta</c> was
+    /// already refused elsewhere (<see cref="RepeatVoltaRemoved"/>).
+    /// </para>
+    /// <para>
+    /// ⚠️ TWO SPELLINGS THIS MUST NOT CATCH, both of which a naive count did catch (three
+    /// separate miscounts, HANDOFF §2 F ⒫): a LYRIC verse header <c>[1. … ]</c> is
+    /// <c>LyricVoltaSyntax</c> — the words for the Nth pass, not a repeat — and a lyric row's
+    /// barline is a raw token inside <c>LyricMeasureGreen</c>, not a
+    /// <see cref="Syntax.BarlineSyntax"/> at all. Both are invisible to this rule by
+    /// construction rather than by an exclusion list, which is why the rule is written on the
+    /// NODE TYPES and not on the source text.
+    /// </para>
+    /// <para>
+    /// ⚠️ AN ERROR WITH NO GRACE PERIOD AND NO REWRITER (user decision, same day), taken with
+    /// the reach on the table: 115 of the author's 326 books and 11 of the tree's tracked
+    /// books stop compiling. The recommendation on offer was a rewriter first; the decision
+    /// was the hard error, applying the author's standing rule that implementation and
+    /// migration cost do not enter how the options are ranked.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE MOVE IS NOT PURELY SYNTACTIC — a <c>|:</c> means something different in the two
+    /// places, and that difference is a CONSEQUENCE of the decision, not an open question.
+    /// MEASURED 2026-08-31 on a two-part book with the repeat written in the upper part only:
+    /// in music it expands THAT PART alone (8 notes over 4), in a form it expands the whole
+    /// score (8 and 8). The page has always treated it as score-level, so the page and the
+    /// MIDI disagreed before this rule existed; after it, the disagreeing spelling cannot be
+    /// written.
+    /// </para>
+    /// </remarks>
+    public const string RepeatStructureOutsideForm = "LYS1034";
+
     // Measure errors (LYS2xxx)
 
     /// <summary>Measure error: a measure has fewer beats than the time signature requires.</summary>

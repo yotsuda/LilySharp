@@ -121,20 +121,29 @@ section Main {
 
 ## Repeats
 
-Volta repeats use the symbolic `|: … :|` barlines. Add inline volta endings with
-`[1. …] [2. …]` for first/second-time bars; the repeat count defaults to 2 (or the
-highest volta number), or state it as `|: … :|*N`.
+Repeats use the symbolic `|: … :|` barlines — **written in the `form`, not in the
+music**. A repeat changes the order the music plays in, and the form is where a piece's
+order lives, so the bars that repeat go in a `section` of their own and the form repeats
+the section. Add volta endings with `[1. Section] [2. Section]` for first/second-time
+bars; the repeat count defaults to 2 (or the number of endings), or state it as
+`|: … :|*N`.
 
 ```
-{
-  |: c4 d e f |
-     g4 a b c' |
-  [1. d'2 d' | ] :|   // First time
-  [2. c'2 c' | ]      // Second time
+part melody { clef treble }
+
+section Body {
+  melody { c4 d e f | g4 a b c' | }
 }
+section First  { melody { d'2 d' | } }   // First time
+section Second { melody { c'2 c' | } }   // Second time
+
+form main { |: Body [1. ~First] :| [2. ~Second] }
+
+score main { staff melody }
 ```
 
-A plain `|: … :|` (no endings) just repeats its body.
+A plain `form main { |: Body :| }` (no endings) just repeats its body. A third and later
+ending is written the same way: `:| [3. Third]`.
 
 ## Grace Notes
 

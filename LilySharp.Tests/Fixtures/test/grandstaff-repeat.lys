@@ -1,7 +1,25 @@
-// Regression: barlines are score-synchronized — a repeat written only in
-// the rh part must appear on BOTH staves (Timing is score-level), the
-// system start must join the staves with a bar, and inside a grand staff
-// every barline spans the inter-staff gap (Span_bar).
+// Regression: barlines are score-synchronized — the repeat and its two endings appear on
+// BOTH staves (Timing is score-level), the system start must join the staves with a bar,
+// and inside a grand staff every barline spans the inter-staff gap (Span_bar).
+//
+// ⚠️ THIS BOOK USED TO CLAIM SOMETHING IT CAN NO LONGER SAY, and that is written down
+// rather than quietly swapped for a different test (RULES §5.4). Until 2026-08-31 the
+// repeat was written IN THE rh PART ALONE — `phrase rhTune { |: g'4 a g f | [1. …] :| … }`
+// — and the claim was that a one-part repeat still draws on both staves. LYS1034 moved
+// repeat structure to the form, so "written in one part" is not a spelling any more: a
+// form's repeat is score-level by construction. What survives, and is what this snapshot
+// still guards, is the DRAWING: both staves take the repeat barlines and the volta
+// brackets, the system opens with a joining bar, and every bar spans the gap.
+//
+// ⚠️ AND THE RE-CUT MOVED BOTH OUTPUTS, on purpose and measured.
+//   SOUND: 18 MIDI notes became 20. The music-side `|:` expanded ONLY the part it was
+//   written in, so lh played its three bars once while rh played four; a form's repeat
+//   expands the score, so lh repeats too. The page always treated the repeat as
+//   score-level, so the picture and the sound used to disagree about this very book —
+//   and the spelling that could disagree no longer exists.
+//   PAGE: eight elements ADDED, none removed (masked diff, data-pos aside) — the two
+//   volta brackets and their bold "1." / "2.", which the inline spelling drew NOWHERE in
+//   this book. Everything else is byte-identical, including every barline.
 time 4/4
 
 part rh {
@@ -12,20 +30,30 @@ part lh {
   clef bass
 }
 
-phrase rhTune {
-  |: g'4 a g f | [1. e2 d | ] :| [2. e2 c | ]
-}
-
-phrase lhBass {
-  c2 g | c g | c g |
-}
+// ⚠️ The phrases are kept, one bar each, because this book is also one of the 58 that
+// LilyPondExporterTests.TheNotDeclaredWarning_NeverNamesAPhraseTheBookDeclares counts —
+// re-cutting the music inline dropped that floor to 57.
+phrase rhHead { g'4 a g f | }
+phrase rhEnd1 { e2 d | }
+phrase rhEnd2 { e2 c | }
+phrase lhBass { c2 g | }
 
 section Main {
-  rh { rhTune }
+  rh { rhHead }
   lh { lhBass }
 }
 
-form main { Main }
+section End1 {
+  rh { rhEnd1 }
+  lh { lhBass }
+}
+
+section End2 {
+  rh { rhEnd2 }
+  lh { lhBass }
+}
+
+form main { |: Main [1. ~End1] :| [2. ~End2] }
 
 score main "grandstaff-repeat" {
   grandStaff {

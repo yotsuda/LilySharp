@@ -36,15 +36,19 @@ internal sealed partial class Parser
             repeatType = Advance();
 
             // 'repeat volta' / 'alternative' were removed in favor of the symbolic
-            // |: … :| form with inline volta endings. Reject with a friendly hint and
-            // recover by parsing the rest so no cascade errors follow.
+            // |: … :| form. Reject with a friendly hint and recover by parsing the rest so
+            // no cascade errors follow.
+            // ⚠️ THE HINT NAMES THE FORM, and it has to (2026-08-31, LYS1034): it used to end
+            // "with inline volta endings '[1. …] [2. …]'", which is a spelling this compiler
+            // now refuses — an error message advertising an error.
             if (repeatType.Kind == SyntaxKind.VoltaKeyword || repeatType.Text == "volta")
             {
                 var voltaSpan = new TextSpan(startPos, Math.Max(1, _textPosition - startPos));
                 _diagnostics.Error(voltaSpan, DiagnosticCodes.RepeatVoltaRemoved,
-                    "'repeat volta' is not a Lily# construct; use the symbolic repeat "
-                    + "'|: … :|' (explicit count '|: … :|*N') with inline volta endings "
-                    + "'[1. …] [2. …]'.");
+                    "'repeat volta' is not a Lily# construct. A repeat is written in the "
+                    + "form: cut the repeated bars into a section and write "
+                    + "'form main { |: A :| }' (explicit count ':|*N', volta endings "
+                    + "'|: A [1. B] :| [2. C]').");
             }
         }
         else

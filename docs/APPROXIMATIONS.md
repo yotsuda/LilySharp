@@ -224,7 +224,7 @@
 - **:1710** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
 - **:3364** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/MidiExporter.cs`
-- **:2040** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+- **:2050** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Rendering/HarfBuzzOutline.cs`
 - **:50** LILYSHARP-OWN: LilyPond reads its text ink through FreeType as well (Pango over the
 ### `LilySharp.Core/Rendering/Pdf/EmmentalerFontResolver.cs`

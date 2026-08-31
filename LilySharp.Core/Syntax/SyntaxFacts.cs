@@ -127,6 +127,17 @@ internal static class SyntaxFacts
         SyntaxKind.RepeatBothBar;
 
     /// <summary>
+    /// The barlines that REPEAT — <c>|:</c>, <c>:|</c> and the fused <c>:|:</c>. The subset of
+    /// <see cref="IsBarlineKind"/> that changes the playing ORDER rather than drawing a
+    /// division, which is the line the language draws: these may be written only inside a
+    /// <c>form { … }</c> (<see cref="DiagnosticCodes.RepeatStructureOutsideForm"/>), while
+    /// <c>|</c> <c>||</c> <c>|.</c> <c>!</c> stay free anywhere a barline is legal.
+    /// </summary>
+    public static bool IsRepeatBarlineKind(SyntaxKind kind) => kind is
+        SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar or
+        SyntaxKind.RepeatBothBar;
+
+    /// <summary>
     /// The five clef-name keywords accepted by a <c>clef</c> declaration
     /// (treble, bass, alto, tenor, treble_8). NOTE: this is deliberately narrower
     /// than <c>PartReferenceFinder.IsClefKeyword</c>, which also accepts

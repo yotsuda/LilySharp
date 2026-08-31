@@ -36,7 +36,12 @@ internal static class LysWriter
 
         // Lily# resets the relative-octave reference at each section, so relative works
         // for the section-major volta layout too — each section is its own stream.
-        var layout = TryFactorVoltas(doc.Parts.Count > 0 ? doc.Parts[0].Measures : new List<ImportMeasure>());
+        var firstMeasures = doc.Parts.Count > 0 ? doc.Parts[0].Measures : new List<ImportMeasure>();
+        // Endings first (the richer shape), then a plain repeat. ⚠️ THE SECOND CALL IS NOT AN
+        // OPTIMISATION: since 2026-08-31 a repeat barline may only be written in a `form`
+        // (LYS1034), so an imported book whose repeat stayed in the music would not compile —
+        // this writer would have been emitting `|:` into a section body.
+        var layout = TryFactorVoltas(firstMeasures) ?? TryFactorPlainRepeats(firstMeasures, report);
         bool useRelative = relativeOctave;
 
         // ---- header ----
@@ -170,8 +175,9 @@ internal static class LysWriter
 
     // ---- sections ---------------------------------------------------------
 
-    // The single-section flat layout (no repeat endings): every part's full music in
-    // section A, with inline repeat barlines, played once by structure { A }.
+    // The single-section flat layout: every part's full music in section A, played once by
+    // `form main { A }`. ⚠️ Reached only when the piece has NO repeat barline at all — a
+    // repeat is cut into sections and spelled in the form (LYS1034, TryFactorPlainRepeats).
     private static void WriteFlatSection(StringBuilder sb, ImportDocument doc, ImportReport report, bool relative)
     {
         sb.Append("section A {\n");
@@ -260,6 +266,95 @@ internal static class LysWriter
             segments.Add(new VoltaSegment("Coda", end2Stop + 1, n));
             structure.Append(" Coda");
         }
+        return new VoltaLayout(segments, structure.ToString());
+    }
+
+    /// <summary>Factors plain repeats — <c>|: … :|</c> with no volta endings, in any number
+    /// and including the back-to-back <c>:|:</c> — into named sections plus a form. Returns
+    /// null when the measures hold no repeat barline at all, which is the one case that can
+    /// still be written as one flat section.</summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ This exists because of LYS1034 (2026-08-31): a repeat barline is legal only inside a
+    /// <c>form</c>, so <see cref="WriteFlatSection"/>'s output — one section holding the whole
+    /// piece with <c>BarlineBetween</c>'s <c>|:</c> / <c>:|</c> / <c>:|:</c> in it — stopped
+    /// being a book Lily# accepts. The endings case already factored (TryFactorVoltas); this
+    /// is the same move for the case that did not.
+    /// </para>
+    /// <para>
+    /// The cut is exactly at the repeat bars: a <c>|:</c> opens BEFORE its measure, a
+    /// <c>:|</c> closes AFTER its measure, and <c>:|:</c> is both on adjacent measures. Every
+    /// stretch between cuts becomes a section, and the form says the order — which is what
+    /// the rule is for. Sections are named <c>Sec1</c>, <c>Sec2</c>, … rather than after
+    /// their musical role: this shape has no Intro/Body/Coda to read off, and a generated
+    /// name that pretends otherwise would be a guess in the output.
+    /// </para>
+    /// <para>
+    /// ⚠️ A <c>|:</c> the source never closes is CLOSED at the end of the piece and reported.
+    /// The alternative was to bail out to the flat layout, and that no longer exists as a
+    /// legal option — silently dropping the repeat would be the other way to make the book
+    /// compile, and it would change the music without saying so.
+    /// </para>
+    /// </remarks>
+    private static VoltaLayout? TryFactorPlainRepeats(List<ImportMeasure> measures, ImportReport report)
+    {
+        int n = measures.Count;
+        if (n == 0 || !measures.Any(m => m.RepeatForward || m.BarlineRight == BarlineKind.RepeatEnd))
+            return null;
+
+        var segments = new List<VoltaSegment>();
+        var structure = new StringBuilder();
+        int segStart = 0;
+        bool openRepeat = false;
+
+        string Cut(int start, int end)
+        {
+            string name = "Sec" + (segments.Count + 1);
+            segments.Add(new VoltaSegment(name, start, end));
+            return name;
+        }
+
+        for (int i = 0; i < n; i++)
+        {
+            if (measures[i].RepeatForward)
+            {
+                // A '|:' with music in front of it closes the stretch before it.
+                if (i > segStart)
+                {
+                    if (structure.Length > 0) structure.Append(' ');
+                    structure.Append(Cut(segStart, i));
+                    segStart = i;
+                }
+                openRepeat = true;
+            }
+            if (measures[i].BarlineRight == BarlineKind.RepeatEnd)
+            {
+                string name = Cut(segStart, i + 1);
+                if (structure.Length > 0) structure.Append(' ');
+                // With no '|:' open this is the one-sided ':|' — repeat from the beginning of
+                // the piece, which the form spells the same way the source did.
+                structure.Append(openRepeat ? $"|: {name} :|" : $"{name} :|");
+                openRepeat = false;
+                segStart = i + 1;
+            }
+        }
+
+        if (segStart < n)
+        {
+            string name = Cut(segStart, n);
+            if (structure.Length > 0) structure.Append(' ');
+            structure.Append(openRepeat ? $"|: {name} :|" : name);
+            if (openRepeat)
+                report.Warn("a repeat that the source opens and never closes is closed at the "
+                    + "end of the piece — a repeat opens and closes in the form.");
+        }
+        else if (openRepeat)
+        {
+            // A '|:' on the very last barline, opening nothing. It has no body to repeat.
+            report.Warn("a repeat opened on the last barline has nothing after it to repeat, "
+                + "so it is dropped.");
+        }
+
         return new VoltaLayout(segments, structure.ToString());
     }
 
@@ -581,6 +676,14 @@ internal static class LysWriter
 
     // ---- barlines ---------------------------------------------------------
 
+    /// <remarks>
+    /// ⚠️ THE THREE REPEAT ARMS ARE NO LONGER REACHABLE, and they are left standing rather
+    /// than deleted while the fact is fresh. Since LYS1034 (2026-08-31) a repeat barline is
+    /// legal only in a <c>form</c>, and <see cref="TryFactorPlainRepeats"/> now cuts a section
+    /// at every one of them — so the flat layout, which is the only caller of this, is only
+    /// chosen for measures that hold none. If a fourth repeat spelling ever arrives, this is
+    /// where the old answer is written down.
+    /// </remarks>
     private static string BarlineBetween(ImportMeasure cur, ImportMeasure next)
     {
         bool endRepeat = cur.BarlineRight == BarlineKind.RepeatEnd;
