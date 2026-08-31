@@ -45,4 +45,11 @@ public sealed record CrossStaffItem(
 
     // Source position for diagnostics.
     int SourcePosition
-);
+)
+{
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(CrossStaffItem? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+}

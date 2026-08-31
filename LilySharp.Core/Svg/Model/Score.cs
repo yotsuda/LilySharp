@@ -90,7 +90,14 @@ public readonly record struct KeySignature(int Sharps, string? Custom = null)
 public sealed record Voice(
     string Name,
     ImmutableArray<Measure> Measures
-);
+)
+{
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(Voice? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+}
 
 /// <summary>
 /// A complete musical score ready for layout.
@@ -101,6 +108,12 @@ public sealed record Voice(
 /// </remarks>
 public sealed record Score
 {
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(Score? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+
     /// <summary>All voices in the score.</summary>
     public ImmutableArray<Voice> Voices { get; }
 

@@ -59,6 +59,12 @@ public sealed record TupletBracketItem(
     int VoiceIndex = 0
 )
 {
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(TupletBracketItem? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+
     /// <summary>
     /// The brackets in <paramref name="all"/> that address ONE note stream — the voice
     /// <paramref name="voiceIndex"/> of staff <paramref name="staffIndex"/>.

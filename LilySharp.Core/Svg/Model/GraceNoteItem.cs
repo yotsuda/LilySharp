@@ -91,6 +91,12 @@ public readonly record struct GraceNoteInfo(
 /// </remarks>
 public sealed record GraceNoteItem
 {
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(GraceNoteItem? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+
     /// <summary>The type of grace note.</summary>
     public GraceNoteType Type { get; }
 

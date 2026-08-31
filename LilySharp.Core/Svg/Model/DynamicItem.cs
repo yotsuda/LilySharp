@@ -27,6 +27,12 @@ namespace LilySharp.Core.Svg.Model;
 /// </remarks>
 public sealed record DynamicItem
 {
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(DynamicItem? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+
     /// <summary>The dynamic level (ppp to fff).</summary>
     public DynamicLevel Level { get; }
 

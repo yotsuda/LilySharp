@@ -99,6 +99,12 @@ public sealed record PercentRepeatItem(
     int SlashCount = 0
 )
 {
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(PercentRepeatItem? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+
     /// <summary>
     /// True iff this sign is a BEAT slash — a body shorter than a measure — rather than one
     /// of the two measure-wide percent signs.

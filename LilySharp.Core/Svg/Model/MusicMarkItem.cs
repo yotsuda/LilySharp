@@ -152,6 +152,12 @@ public enum MusicMarkVertical
 /// </remarks>
 public sealed record MusicMarkItem
 {
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(MusicMarkItem? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+
     /// <summary>The type of music mark.</summary>
     public MusicMarkType Type { get; }
 

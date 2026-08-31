@@ -392,9 +392,9 @@
 - **:184** ⚠️ LILYSHARP-OWN, one deviation, declared rather than hidden: LilyPond flattens each
 - **:684** ⚠️ LILYSHARP-OWN: THIS EXISTS BECAUSE LILY# SCALES AT DRAW TIME. An ossia is drawn
 ### `LilySharp.Core/Svg/Model/FiguredBassItem.cs`
-- **:152** LILYSHARP-OWN: the @fig(…) SPELLING is Lily#'s, not a port — LilyPond writes
+- **:158** LILYSHARP-OWN: the @fig(…) SPELLING is Lily#'s, not a port — LilyPond writes
 ### `LilySharp.Core/Svg/Model/Measure.cs`
-- **:189** ⚠️ LILYSHARP-OWN: THE FLAGGED ZERO-WIDTH MEASURE IS A TRANSLATION DEVICE. LilyPond
+- **:195** ⚠️ LILYSHARP-OWN: THE FLAGGED ZERO-WIDTH MEASURE IS A TRANSLATION DEVICE. LilyPond
 ### `LilySharp.Core/Tablature/Tunings.cs`
 - **:196** LILYSHARP-OWN. Four is the guitarist's one-finger-per-fret span and also the number
 - **:208** LILYSHARP-OWN. Without it the hand never comes down on its own — "do not move" beats

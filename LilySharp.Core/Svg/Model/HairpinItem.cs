@@ -55,4 +55,11 @@ public sealed record HairpinItem(
     int SourceIndex = -1,
     // The staff this hairpin belongs to (0 = first/only staff).
     int StaffIndex = 0
-);
+)
+{
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(HairpinItem? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+}

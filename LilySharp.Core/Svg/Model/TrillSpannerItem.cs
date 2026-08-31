@@ -57,4 +57,11 @@ public sealed record TrillSpannerItem(
     // LILYPOND-REF: scm/music-functions.scm:617-634 direction-polyphonic-grobs —
     //   TrillSpanner is in the list; scm/define-grobs.scm:4076 — (direction . UP).
     int Direction = 0
-);
+)
+{
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(TrillSpannerItem? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+}

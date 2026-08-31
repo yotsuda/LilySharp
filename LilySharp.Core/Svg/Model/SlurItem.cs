@@ -25,6 +25,12 @@ namespace LilySharp.Core.Svg.Model;
 /// </summary>
 public sealed record SlurItem
 {
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(SlurItem? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+
     /// <summary>Staff position at start.</summary>
     public int StartStaffPosition { get; }
 

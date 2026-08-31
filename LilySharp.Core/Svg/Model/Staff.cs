@@ -130,6 +130,12 @@ public sealed record Staff(
     bool IsLyricsTextRow = false
 )
 {
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(Staff? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+
     /// <summary>The primary voice (first voice).</summary>
     public Voice PrimaryVoice => Voices[0];
 

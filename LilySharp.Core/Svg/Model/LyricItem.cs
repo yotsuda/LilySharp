@@ -111,4 +111,11 @@ public sealed record LyricItem(
     //   is raised to the last head's extent RIGHT.
     int MelismaEndMeasureIndex = -1,
     LilySharp.Core.Semantics.Fraction MelismaEndTiming = default
-);
+)
+{
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(LyricItem? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+}

@@ -79,6 +79,12 @@ public readonly record struct FiguredBassFigure(
 /// </remarks>
 public sealed record FiguredBassItem
 {
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(FiguredBassItem? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+
     /// <summary>The figures in this group, ordered top to bottom.</summary>
     public ImmutableArray<FiguredBassFigure> Figures { get; }
 

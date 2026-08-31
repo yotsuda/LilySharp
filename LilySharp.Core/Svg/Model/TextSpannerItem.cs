@@ -67,4 +67,11 @@ public sealed record TextSpannerItem(
     int SourceIndex = -1,
     // The staff this spanner belongs to (0 = first/only staff).
     int StaffIndex = 0
-);
+)
+{
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(TextSpannerItem? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+}

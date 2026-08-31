@@ -23,6 +23,12 @@ namespace LilySharp.Core.Svg.Model;
 /// </summary>
 public sealed record TieItem
 {
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(TieItem? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+
     /// <summary>The starting note of the tie.</summary>
     public NoteItem StartNote { get; }
 

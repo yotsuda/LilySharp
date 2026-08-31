@@ -50,6 +50,12 @@ public readonly record struct HeaderPositions(
 /// </remarks>
 public sealed record MultiStaffScore
 {
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(MultiStaffScore? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+
     /// <summary>Staff groups in this score.</summary>
     /// <remarks>
     /// <c>init</c> rather than get-only so the collect phase's last step can hand back a score

@@ -54,6 +54,12 @@ public enum BarlineType
 /// </remarks>
 public sealed record Measure
 {
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(Measure? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+
     /// <summary>The music items in this measure.</summary>
     public ImmutableArray<MusicItem> Items { get; init; }
 

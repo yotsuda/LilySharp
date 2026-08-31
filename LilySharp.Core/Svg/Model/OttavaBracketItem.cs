@@ -66,4 +66,11 @@ public sealed record OttavaBracketItem(
     //   while this was the measure's origin, and -2.0 is exactly the clef-and-time-signature
     //   gap the first column sits past it.
     int StartItemIndex = -1
-);
+)
+{
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(OttavaBracketItem? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+}

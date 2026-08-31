@@ -57,6 +57,12 @@ public enum ChordDisplayMode
 /// how it should be shown (see <see cref="ChordDisplayMode"/>).</summary>
 public sealed record ChordNameItem
 {
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(ChordNameItem? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+
     /// <summary>The chord symbol text for display (e.g., "Cm7", "B♭maj7").</summary>
     public string ChordText { get; }
 

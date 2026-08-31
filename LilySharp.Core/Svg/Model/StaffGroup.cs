@@ -58,6 +58,12 @@ public sealed record StaffGroup(
     ImmutableArray<Staff> Staves
 )
 {
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(StaffGroup? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+
     /// <summary>Number of staves in this group.</summary>
     public int StaffCount => Staves.Length;
 

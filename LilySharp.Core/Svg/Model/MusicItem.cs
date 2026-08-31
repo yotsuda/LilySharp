@@ -89,6 +89,12 @@ public enum VoiceContextId
 /// </summary>
 public abstract record MusicItem
 {
+    // Identity, not value equality: see ModelIdentity. One declaration here answers for the whole hierarchy.
+    public virtual bool Equals(MusicItem? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+
     /// <summary>The duration of this item as a fraction of a whole note.</summary>
     public abstract Fraction Duration { get; }
 

@@ -35,4 +35,11 @@ public sealed record CustomTextItem(
 
     // Source position for click-to-source mapping.
     int SourcePosition
-);
+)
+{
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(CustomTextItem? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+}

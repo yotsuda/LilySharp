@@ -28,6 +28,12 @@ namespace LilySharp.Core.Svg.Model;
 /// </remarks>
 public sealed record ArticulationItem
 {
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(ArticulationItem? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+
     /// <summary>The articulation type.</summary>
     public ArticulationType Type { get; }
 
