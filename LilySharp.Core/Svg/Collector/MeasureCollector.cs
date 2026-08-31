@@ -2744,9 +2744,10 @@ public sealed partial class MeasureCollector
     //
     // Semantics.SectionLabelRule holds the sentence; these four only pull its arguments out
     // of four different node shapes, which genuinely differ (a plain reference, a `~` one, a
-    // volta ending, and the form-less declaration order). Before 2026-08-31 each of them
-    // spelled the RULE too, in seven places here and four in the twin — and on 2026-08-25 one
-    // of them had never been taught `IsSilent` while the twin's comment claimed to mirror it.
+    // volta ending, and the form-less declaration order). Before 2026-08-31 each CALL SITE
+    // spelled the RULE too — 13 in this reader (4 here, 9 in MeasureCollector.Form.cs, six of
+    // those the bar-counting walk) and 4 in the twin — and on 2026-08-25 one of them had never
+    // been taught `IsSilent` while the twin's comment claimed to mirror it.
 
     /// <summary>`form { A }` / `form { A "label" }`.</summary>
     private string? LabelForReference(SectionReferenceSyntax reference)

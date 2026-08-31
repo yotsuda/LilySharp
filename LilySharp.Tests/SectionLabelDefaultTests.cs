@@ -44,11 +44,17 @@ namespace LilySharp.Tests;
 /// engrave a section label at all (MIDI and MusicXML write none, deliberately).
 /// </para>
 /// <para>
-/// ⚠️ THIS FILE EXISTS BECAUSE THE RULE HAD ELEVEN HOMES. Before the flip, seven arms in the
-/// collector and four in the twin each spelled <c>silent ? null : DisplayLabel ?? name</c>,
+/// ⚠️ THIS FILE EXISTS BECAUSE THE RULE HAD SEVENTEEN CALL SITES — 13 in the collector and 4
+/// in the twin — each spelling <c>silent ? null : DisplayLabel ?? name</c> for itself,
 /// and on 2026-08-25 one of the page's arms had never been taught <c>IsSilent</c> while the
-/// twin's comment claimed to mirror it. A rule with eleven homes cannot gain a term, so the
+/// twin's comment claimed to mirror it. A rule with seventeen homes cannot gain a term, so the
 /// fold came first and this guard covers the folded rule at both readers.
+/// ⚠️ THE COUNT WAS FIRST WRITTEN AS ELEVEN, from a partial grep that read the bar-counting
+/// walk as two arms rather than six, and it reached three other files and a commit message
+/// before it was checked. The counting method, so the next reader need not repeat it: grep the
+/// four argument-shapers plus <c>SectionLabelRule.LabelFor</c> over LilySharp.Core and
+/// subtract the four shaper DEFINITIONS — 4 in the twin, 4 in MeasureCollector.cs, 9 in
+/// MeasureCollector.Form.cs.
 /// </para>
 /// </remarks>
 [Trait("Category", "Unit")]

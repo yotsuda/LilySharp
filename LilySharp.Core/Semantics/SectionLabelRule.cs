@@ -24,10 +24,15 @@ namespace LilySharp.Core.Semantics;
 /// </summary>
 /// <remarks>
 /// <para>
-/// ⚠️ THIS WAS ELEVEN COPIES. Before 2026-08-31 every site spelled the rule for itself —
-/// <c>silent ? null : DisplayLabel ?? name</c> — across the collector's seven arms (the
-/// form-less path, a plain reference, a silent one, a volta ending, each inside and outside a
-/// repeat block, plus the bar-counting walk) and the twin's four. That is the shape the
+/// ⚠️ THIS WAS SEVENTEEN CALL SITES. Before 2026-08-31 every one spelled the rule for
+/// itself — <c>silent ? null : DisplayLabel ?? name</c>. Counted after the fold, by grepping
+/// the four argument-shapers and this class and subtracting the four definitions: the PAGE 13
+/// (MeasureCollector.cs 4 — the form-less path, a plain reference, a volta ending, a silent
+/// one — and MeasureCollector.Form.cs 9, of which the last SIX are the bar-counting
+/// AdvanceSection walk, two switch blocks of three arms each) and the LilyPond twin 4.
+/// ⚠️ The first count written here was ELEVEN, taken from a partial grep that saw the
+/// bar-counting walk as two arms rather than six, and it was repeated into three other files
+/// and a commit message before being checked. That is the shape the
 /// repository has been bitten by before: on 2026-08-25 one of the page's four label arms had
 /// never been taught <c>IsSilent</c>, and the LilyPond exporter's comment said it MIRRORED
 /// that arm — so the citation carried the defect across the output boundary, twice.
