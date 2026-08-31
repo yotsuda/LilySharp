@@ -969,17 +969,42 @@ public static class DiagnosticCodes
     /// Books in the wild are spelled that way.
     /// </para></summary>
     public const string UnpairedRepeat = "LYS4017";
-    /// <summary>Warning: a text-spanner mark that pairs with nothing, so no spanner is
-    /// drawn — a START (<c>@rit</c>, <c>@textSpan("…")</c>) that no <c>@!</c> closes, a
-    /// <c>@!rit</c> with no span open in its voice, or a second START written while one is
-    /// open.
+    /// <summary>A span mark that pairs with nothing, so no span is drawn — a START
+    /// (<c>@rit</c>, <c>@textSpan("…")</c>, <c>@ottava</c>, <c>@sustain</c>) that no
+    /// <c>@!</c> closes, a <c>@!rit</c> with no span open in its voice, or — for the TEXT
+    /// spanner only — a second START written while one is open.
+    /// <para>
+    /// ⚠️ ONE CODE, THREE FAMILIES: the text spanner, the ottava and the pedal. They share
+    /// this code because they share the rule — see <see cref="Semantics.SpanPairingValidator"/>,
+    /// which is the one place that turns a <c>SpanKind</c> and a <c>SpanPairingFault</c> into
+    /// a report. Only the text spanner can raise <c>StartWhileOpen</c>: a second
+    /// <c>@ottava</c> changes the octavation and a second <c>@sustain</c> is re-pedalling,
+    /// so for those two a start inside an open span is the writing, not a mistake.
+    /// </para>
+    /// <para>
+    /// ⚠️ ONE CODE, TWO SEVERITIES, and the split is GRAMMAR.md's rather than a judgement
+    /// call (owner's decision 2026-08-31). An UNTERMINATED span is an ERROR in all three
+    /// families: the grammar says an end is REQUIRED, nothing is drawn either way, and while
+    /// this was a warning a book with a dropped <c>@!rit</c> passed <c>lysc check</c> and
+    /// shipped with its <c>rit.</c> silently absent. The other two faults stay WARNINGS
+    /// because the grammar does not speak to them — a <c>@!</c> that closes nothing, and a
+    /// second start inside an open span, are different mistakes.
+    /// </para>
     /// <para>
     /// ⚠️ The WORD goes with the line. LilyPond's <c>Text_spanner_engraver</c> ends an
     /// unterminated span with <c>suicide()</c> (lily/text-spanner-engraver.cc:117-127), not
-    /// by shortening it, so an unclosed <c>@rit</c> prints nothing at all — which is why
-    /// this warning exists rather than a silent default length. Lily# had one until session
+    /// by shortening it, so an unclosed <c>@rit</c> prints nothing at all — which is why this
+    /// is reported rather than given a silent default length. Lily# had one until session
     /// 289: a bare <c>@rit</c> covered one measure, and nothing said that the length was the
     /// engine's guess rather than the writer's instruction.
+    /// </para>
+    /// <para>
+    /// ⚠️ FOR THE OTHER TWO FAMILIES, REFUSING TO DRAW IS THE LANGUAGE'S ANSWER AND NOT A
+    /// PORT, and it is declared as such: <c>Ottava_spanner_engraver::finalize</c> neither
+    /// warns nor suicides, and <c>Piano_pedal_engraver::finalize</c> sets the right bound to
+    /// the current command column and typesets. Both DRAW to the end of the music, in
+    /// silence (read in the source and then measured on 2.26.0: an unclosed <c>\ottava #1</c>
+    /// over four bars draws 49.98 of dashed bracket and emits no warning).
     /// </para>
     /// <para>
     /// ⚠️ The pairing is per (staff, VOICE), because LilyPond keeps that engraver in the

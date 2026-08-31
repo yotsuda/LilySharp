@@ -6,10 +6,108 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## 0.5.0
 
-Unreleased. Defects a reader of real scores found, and the two language spellings that
-turned out to be hiding them.
+Defects a reader of real scores found, and the language spellings that turned out to be
+hiding them. The largest change is that a book's playing order is now written in one
+place — a `form { … }` — and the second largest is that every span the language can open
+now has to be closed. Both are diagnosed rather than silent, and both will stop existing
+books compiling; read the breaking changes before upgrading.
 
 ### Breaking changes
+
+- **Repeat structure is written in a `form { … }` and nowhere else.** A repeat bar line
+  (`|:`, `:|`, `:|:`) or a volta ending (`[1. … ]`) written in MUSIC is now an error,
+  `LYS1034`. The line drawn is "does it change the playing ORDER": a repeat does, and a
+  book's order lives where its form is, so `repeat percent`, `repeat unfold` and
+  `tremolo` stay in music — they abbreviate notes and the order is unchanged. The
+  spelling still parses, which is what lets the diagnostic point at the character; what
+  is forbidden is a place, not a token. **This is the change most likely to stop a book
+  of yours compiling** — 115 of the author's 326 books and 11 of the repository's tracked
+  books do — and it lands as a hard error with no grace period and no rewriter. The move
+  is not purely syntactic, and that is a consequence rather than an open question: a `|:`
+  means something different in the two places. Measured on a two-part book with the
+  repeat written in the upper part only, in music it expands THAT PART alone (8 notes
+  over 4) and in a form it expands the whole score (8 and 8). The page has always read it
+  as score-level, so before this rule the page and the MIDI disagreed with each other;
+  after it, the disagreeing spelling cannot be written. Two spellings it deliberately
+  does not catch, because they are different node types rather than an exclusion list: a
+  LYRIC verse header `[1. … ]` (the words for the Nth pass, not a repeat) and a lyric
+  row's own bar lines.
+
+- **A span must be closed, and `@!X` is how — the terminator the language never had.**
+  `@textSpan("poco rit.")` is the primitive and `@rit` / `@accel` / `@rall` are
+  START-ONLY sugar for it; each is ended by `@!rit`, `@!accel`, `@!rall` or
+  `@!textSpan`. A span nobody closes now draws NOTHING — not its dashed line and not its
+  word — where Lily# used to cover one measure and say nothing about the length being the
+  engine's guess rather than the writer's instruction. That is LilyPond's own answer:
+  `Text_spanner_engraver`'s `finalize` warns and calls `suicide()`, so the word goes with
+  the line, and there is no default length anywhere in LilyPond. Three inventions are
+  retired with the fallback: the one-measure default, the search that let "the next
+  `rit.`" end the previous one, and the guard against a mark ending its own second
+  playing. Pairing is per (staff, VOICE), which is the context LilyPond keeps the
+  engraver in, so a terminator written in another voice reaches nothing. Of the whole
+  corpus — 1582 books on disk, the author's library included — 28 move, and all 28 are
+  books that write a text spanner; one of the author's now draws no `rit.` until its
+  `@!rit` is written.
+
+- **The ottava and the pedal are spans too, and their direction moved out of the name
+  into the `!`.** `@ottava … @!ottava` (and `@ottava(bassa)`, `@quindicesima` — one
+  terminator for the whole family); `@sustain … @!sustain`, `@sostenuto …
+  @!sostenuto`, `@unaCorda … @!unaCorda`. **`@loco`, `@sustainOn`, `@sustainOff`,
+  `@sostenutoOn` and `@sostenutoOff` are retired.** This is LilyPond's own model said
+  once rather than a departure from it: `ly/spanners-init.ly` spells six pedal commands
+  and every one of them is the same line with a direction argument
+  (`sustainOn = #(make-span-event 'SustainEvent START)`) — one span event, and the
+  On/Off suffix was only how the surface command spelt START and STOP. `@loco` went
+  because it named a mark NOTHING PRINTED and LilyPond has no `\loco` either (the whole
+  2.26.0 tree holds the word once, in a C++ comment). `@treCorde` is kept as sugar for
+  `@!unaCorda` by the same criterion applied the other way: measured in the Text style,
+  the una corda release really does print "tre corde", while "Off" is never printed in
+  any style. `@ped` was weighed and refused — LilyPond has no `\ped`, all three of these
+  are pedals so `ped` would name a category while its siblings name mechanisms, and the
+  default Bracket style prints no pedal word at all.
+  ⚠️ Refusing to draw an unclosed ottava or pedal is the LANGUAGE's answer and not a
+  port, and it is declared as such: LilyPond's `Ottava_spanner_engraver::finalize`
+  neither warns nor suicides and `Piano_pedal_engraver::finalize` typesets to the end of
+  the music — both draw, in silence (measured on 2.26.0: an unclosed `\ottava #1` over
+  four bars draws 49.98 of dashed bracket and emits no warning).
+
+- **An unterminated span is refused, not warned about.** `LYS4018` is one code with two
+  severities now: `Unterminated` is an ERROR in both families, while a `@!` that closes
+  nothing and a second start inside an open span stay warnings. The hole was the
+  severity, not the rule — GRAMMAR.md had said an end is REQUIRED since the terminator
+  landed, and nothing is drawn either way, so a book with a dropped `@!rit` passed
+  `lysc check` and shipped with its `rit.` silently absent. Auto-terminating at the bar
+  line was asked for and refused: a `rit.` normally spans the last two to four bars of a
+  phrase, so ending it at its own bar would draw a plausible and WRONG length, in
+  silence, in the common case — and it would take away the report that names the fix.
+  LilyPond requires `\stopTextSpan` too. Of 1977 books swept, SVG, MIDI, MusicXML and
+  LilyPond output move on none; `check` differs on 24, every one a past session's scratch
+  probe, and every diff is the single word `warning:` becoming `error:`.
+
+- **A part setting written beside a section's part cells is refused.** `clef` and
+  `octave` there are `LYS1035`; `instrument` and `transpose` already reached `LYS0030`,
+  whose message now names where a one-part setting goes. This adds symmetry rather than a
+  rule: all four can be written in that position and only two of them spoke, because
+  `clef` and `octave` are real music items elsewhere, so the parser's music arm took them
+  and they became bare music belonging to no part. `clef` there did nothing at all;
+  `octave` was worse than nothing — the resolved pitches did not move while the LilyPond
+  twin's wrapper for the WHOLE part flipped from `\relative c'` to `\fixed c'`, which is
+  a disagreement between readers rather than a no-op. The POSITION is the whole rule:
+  `part m { section A { clef bass … } }` and `section A { clef bass c'4 … }` both engrave
+  the clef correctly, and only a section that holds CELLS has nowhere to put a loose one.
+  Reach is zero — eleven of 1954 books on disk change their `check` output and all eleven
+  are scratch probes; no page, MIDI or MusicXML moves anywhere.
+
+- **A `form` that plays a section declared only as a header is refused** (`LYS1036`).
+  `section A { key g major }` as A's ONLY declaration, played by `form main { ~A ~B }`,
+  had the two readers disagreeing: the page ARMED the header's key and carried it into
+  B's bar (a header-only section engraves no bar, so the section boundary that would
+  restore the score key never fires) while the LilyPond twin wrote no key at all. Neither
+  reader is wrong so much as the spelling is. It is `LYS1005`'s sibling — a form playing a
+  name no section declares is already `Undefined section` — and the question is asked of
+  the NAME, not of one part, because `part fl { section A { … } }` beside a score that
+  draws only `part m` is a correct book. An EMPTY `section A { }` is deliberately not a
+  header: there is no directive for it to be only.
 
 - **A phrase reference's interval argument is removed.** `Melody'(3)` no longer plays the
   phrase a third up; the octave marks `Melody'` and `Melody,` stay exactly as they were.
@@ -53,6 +151,34 @@ turned out to be hiding them.
   corpus's one occurrence names a part that exists, so `lysc check` is byte-identical
   across all 573 books.
 
+### New
+
+- **A section reference carries octave marks.** `~B'`, `~B,` and `[1. B']` shift the
+  relative frame THAT PLAY opens in, one octave per mark — the same spelling and the same
+  meaning a phrase reference already carried. A section boundary reopens the frame at the
+  part's anchor and that reset stays; this is the notation that lets a book say otherwise.
+  The shift belongs to the occurrence, so `~B ~B'` is one section played at two octaves,
+  the declaration never moves, and the reference after it is back at the anchor. All four
+  readers — the page, the pitch resolver, MIDI and the LilyPond twin — were told
+  separately.
+
+- **`section ~A { … }` declares that the section prints no rehearsal letter.** The tilde
+  keeps ONE meaning at both sites, "the other one than the default": a section carries a
+  letter by default and a form reference's `~` hides it, while a section declared with `~`
+  carries none and there the reference's `~` SHOWS it. The whole rule is one equality —
+  `shown = (declaration hides) == (reference has ~)`. It exists because a section cut
+  solely to carry a repeat edge should not be labelled, and "this is structure" is a
+  property of the SECTION, so it is written once on the declaration instead of at every
+  reference; the author's books hold 2309 bare references against 260 tilde ones. This
+  was the last precondition for making `|:` form-only.
+
+- **A form can spell a third volta ending.** `|: X | [1. A] :| [2. B] :| [3. C]` was
+  writable in music and not in a form: the form's repeat block took ONE ending after its
+  `:|` and stopped, so a third fell out of the block, warned `LYS6008` ("no repeat opens
+  this ending") and engraved as a plain section reference. That was survivable only while
+  the music spelling existed. 13 of the author's 326 books and one tracked book write a
+  third or later ending.
+
 ### Diagnostics
 
 - **A note that opens an indented line is clickable, and a diagnostic on one names its
@@ -86,6 +212,56 @@ turned out to be hiding them.
   back over the enclosing music and still covers the body, because the bar really is made
   of both. Across 898 books no warning appeared or disappeared and no exit code changed;
   30 of them (all outside the repository) point somewhere earlier.
+
+- **A rehearsal letter that is written and not printed says where** (`LYS4019`). This
+  family was silent for 200 sessions: a `@mark("A")` written inside a container that owns
+  its own walk — an inline ending, a tuplet, a repeat, a cue — was dropped by the
+  collector and nothing said so. 45 of one reader's books were missing 120 letters before
+  anyone looked. The drop itself is fixed (see below); this is the decision that the
+  family should answer the question the way an unpaired span does — **if it is not drawn,
+  say where** — so that the next way to lose one cannot be silent either. A `@mark` inside
+  `repeat unfold N` prints once.
+
+- **A grace body says what it drops** (`LYS4020`). A grace body is parsed by the ordinary
+  music-block parser, so it accepts everything a music block accepts, while the collector
+  read a column's pitches and duration value and nothing else — dots, slur, beam and tie
+  markers, `@staccato`, `@text`, `@f`, `@finger`, `@trill`, `@sustain`, `@rit` and
+  `@cresc` were each dropped in silence, and a body made only of a chord, a rest or a
+  tuplet drew NO grace at all. LilyPond 2.26.0 draws every one of them. Most of that list
+  has since left it (below); what remains is reported at what was written, as a warning,
+  because the report is "not drawn yet" rather than "do not write this". Nothing in the
+  reader's 326 books and nothing in the 581 tracked books writes anything a grace body
+  still drops.
+
+- **An unclosed `form` repeat is one error at the `|:`, not five wrong ones and the rest
+  of the file.** `form main { ~Body |: A }` used to report the form's own `}`, then
+  `score`, `{`, `staff` and `}` as five things "a form cannot hold", and only then say
+  `Expected 'RepeatEndBar', found 'EndOfFile'` — the item loop ran to end of file looking
+  for a `:|` that was never coming, so the score block was consumed as stray form items
+  and declared garbage, and four of the five errors were about perfectly good text. The
+  loop stops at the form's own closing brace and the missing half is reported as
+  `LYS4017`. Reported by a reader on a book whose author had moved a repeat's OPEN into
+  the form and left its `:|` in the section's music.
+
+- **An inline volta ending's own bars are counted.** The measure validator held a whole
+  `[1. … ]` ending as ONE opaque zero-duration item, which nobody else does — the
+  collector walks the ending's music in place, bar lines and all, and only overlays a
+  bracket across the bars it occupies. So `[1. c'1 c'1 c'1 | ]` in 4/4 was silent, and
+  the note value did not thread through the ending into the music after it.
+
+- **Clicking a tie or a slur in the preview jumps to the character that wrote it.** No
+  ordinary tie or slur carried a source offset at all: of the 56 bow-shaped `<path>`
+  elements in the tracked snapshots exactly 6 had a `data-pos`, and all 6 were grace slurs
+  that happen to fall inside their note's scope, so a caret on `~` lit the nearest
+  PRECEDING address — the note. A `~` now cites its `~`, a slur cites its `(`, and the
+  third bow family (a laissez-vibrer or repeat tie, which is drawn by an annotation rather
+  than by a symbol of its own) cites the annotation that draws it.
+
+- **The tree keeps post-events in the order they were typed, so every node stands where it
+  says it stands.** A note's trailing post-events were read with LilyPond's order-free
+  semantics but BUILT in the wrong order, so a node's recorded position could disagree
+  with where its text is. The two orders of a post-event run now agree on their
+  diagnostics as well.
 
 ### Engraving fidelity
 
@@ -147,6 +323,103 @@ turned out to be hiding them.
   with nobody takes its markings with it, which is what LilyPond does. Three books in the
   repository move, all three onto the measurement LilyPond gave them: a bar where one part
   writes `R1` and the other `r1` prints one rest and ONE label, not two.
+
+- **A lyrics row clears the bottom string of the tab staff above it.** A reader reported
+  lyrics printing INSIDE a tab staff, on the middle system of three while the other two
+  looked right. The cause is one quantity — how tall is THIS staff — written in three
+  places, two of which answered with the score's nominal four staff spaces however many
+  lines the staff actually has.
+
+- **A `rit.` cannot be ended by the next playing of itself, so a repeated section draws it
+  the same both times.** A reader asked whether the length of their `@rit` was right: in
+  their book the first covered six bars and the second covered one, from ONE written mark.
+  The spanner was ended at "the next `rit.`/`accel.` on the same staff" over the marks of
+  the PLAYED piece, so a section the form repeats contributed one instance that closed the
+  other. The hairpin carried the same shape and is fixed with it — that one took a probe
+  to see, because Lily#'s `@cresc` draws a WEDGE rather than the word, so grepping the SVG
+  for "cresc." found nothing while the hairpin was there all along.
+
+- **Both ends of a text spanner are the writer's.** The left bound was passed as a
+  constant, so `c4 d e@rit f | g@!rit` drew from `c` rather than from `e` — the terminator
+  was honoured and the start was not — and the bound padding is now spent where LilyPond
+  spends it.
+
+- **A tab staff prints none of the markup the notation staff beside it already carries,
+  and the switch is `as numbers` vs `as full` rather than "is it a tab".** Reported by a
+  reader on their own book, as "the staff, the chord names and the rit overlap": a tab
+  drawn beside a notation staff of the same part was repeating markup the notation staff
+  already carried. The same switch answers two more of their requests — a `@text` on a
+  tab that has no notation staff beside it now appears, and an `@accent` on an
+  `as numbers` tab does not.
+
+- **A `rit.` above a system's top staff reserves the room it is drawn in.** The same
+  reader's follow-up on the same book: "the render improved but is still incomplete — near
+  the A2 section mark the rit and the lyric overlap; it looks like the gap between the 2nd
+  and 3rd systems needs to be a little wider." That diagnosis was exactly right.
+
+- **A rehearsal letter is built where its note is, so the containers stop swallowing it.**
+  Reported on a chart whose letters A, B, C and D are all written and only A was printed:
+  A stood in the body, and B, C and D all stood inside a second inline ending, where none
+  of the three drew anything — no box, no letter, and no diagnostic. See `LYS4019` above
+  for the report that now covers the next way to lose one.
+
+- **A row leading the next system is spaced against that system's staff as LilyPond
+  publishes it — outside-staff ink and all.** A leading row's chain closed on the next
+  system's first spaceable staff by reading that staff's INSIDE-staff silhouette plus one
+  hand-merged special case; LilyPond spaces a loose line against the axis group's skyline,
+  which a placed outside-staff grob is part of.
+
+- **The last block on a page is solved into the paper, not into the height the page was
+  cropped to, and the crop is then sized from where the block is drawn.** A spring lands
+  on its minimum exactly when the room it is given is short, and the room this chain was
+  given was not a room at all. With the block solved into the paper its syllables sat up
+  to (ideal − floor) below the height that had been computed for them; the page's bottom
+  white shrank by exactly that much, which could never clip but was not what LilyPond
+  publishes either.
+
+- **A grace body is engraved, heard and exported.** The body is now walked by the
+  ordinary walker rather than read for a bare note's pitch and duration, and everything
+  that walk reaches comes with it: a CHORD is one column with N heads (through the same
+  chord and accidental rules a full-size chord uses, read out of the grace's own fonts), a
+  REST is a column with no head and the beam covers the leading run of heads, a DOT is
+  drawn and clears the flag only where the flag is, a PHRASE reference expands, and a
+  TUPLET's notes are engraved, heard and exported — only its bracket and its number are
+  still dropped. The whole-tree sweep that closed the walk shows all 2007 books on disk
+  producing byte-identical SVG, MIDI, MusicXML, LilyPond and `check` output, so the page
+  does not move; what it exposed on the way were five real defects it then fixed, among
+  them a grace in the second voice displacing the FIRST voice's noteheads and a grace
+  cutting a beamed run it should have been spanned by.
+
+### MIDI, MusicXML and the LilyPond twin
+
+- **A form's `:|*3` plays three times.** The MIDI exporter read neither the written play
+  count nor the form walk's — it was `max(2, endings)` — so `form main { |: ~X :|*3 }`
+  sounded twice while the same body written inline sounded three times (16 note-ons
+  against 24). With repeat structure legal only in a form, the form is now the only place
+  an explicit count can be written, so this is the only behaviour that quantity has.
+
+- **A section boundary restores the score METER in every reader.** A section that states
+  no `time` of its own opens at the SCORE meter, so a mid-section change cannot leak into
+  the next section. The page obeyed that rule and the measure validator agreed with it;
+  three of the five readers did not, and each of the three exporters had to be told
+  separately.
+
+- **A standalone section header is a header wherever it is written.** The same book with
+  its header moved across the part produced two different LilyPond twins — before the
+  part, `\key g \major c'4 c c c |`; after it, `\key g \major \key g \major` and not one
+  note. The page engraved the four notes either way, `--pitches` resolved them either way,
+  and `check` said "No errors found": the two spellings differed by LINE ORDER alone. The
+  exporter was asking its own question about what declares a section instead of the shared
+  one.
+
+- **A plain repeat imported from MusicXML comes back as sections plus a form.** The
+  importer factored first and second endings into named sections and a form and left
+  everything else as one flat section whose measures were joined by bar lines — which
+  writes `|:`, `:|` and `:|:` into the music, and is therefore a book Lily# now refuses
+  (`LYS1034`). An imported score compiles.
+
+- **A phrase named in a grace body is heard and exported**, not only engraved: the one
+  statement had four readers and only two of them were listening.
 
 ## 0.4.0
 

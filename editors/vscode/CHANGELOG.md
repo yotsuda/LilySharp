@@ -2,9 +2,62 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
-## Unreleased
+## 0.5.0
+
+### Breaking language changes
+
+The extension bundles the compiler, so upgrading changes what your files mean. Each of
+these is diagnosed rather than silent, and every one of them will stop some existing books
+compiling. The full reasoning, with the measured reach of each, is in the repository's
+[CHANGELOG](https://github.com/yotsuda/LilySharp/blob/master/CHANGELOG.md).
+
+- **Repeat structure is written in a `form { … }` and nowhere else** (`LYS1034`). A repeat
+  bar line (`|:`, `:|`, `:|:`) or a volta ending (`[1. … ]`) written in music is an error.
+  `repeat percent`, `repeat unfold` and `tremolo` stay in music — they abbreviate notes and
+  do not change the playing order. This is the change most likely to affect you: 115 of the
+  author's own 326 books stop compiling, and there is no rewriter.
+- **Every span has to be closed, and `@!X` is how.** `@rit … @!rit`, `@ottava … @!ottava`,
+  `@sustain … @!sustain`. An unclosed span draws nothing at all — which is LilyPond's own
+  answer for a text spanner — and is now an error (`LYS4018`) rather than a warning.
+- **`@loco`, `@sustainOn`, `@sustainOff`, `@sostenutoOn` and `@sostenutoOff` are retired.**
+  The direction moved out of the name and into the `!`. `@treCorde` is kept, because unlike
+  the others it is a word the page actually prints.
+- **A part setting (`clef`, `octave`, `instrument`, `transpose`) written beside a section's
+  part cells is refused** (`LYS1035`, `LYS0030`) — it belonged to no cell, so nothing read
+  it. **A `form` that plays a section declared only as a header is refused** (`LYS1036`).
+
+### Added
+
+- **A section reference carries octave marks** — `~B'`, `~B,`, `[1. B']` — the same
+  spelling a phrase reference already had.
+- **`section ~A { … }` declares that the section prints no rehearsal letter**, so a section
+  cut solely to carry a repeat edge is silent without saying so at every reference.
+- **A form can spell a third volta ending** (`[3. … ]`), which the music spelling could and
+  it could not.
 
 ### Fixed
+
+- **Clicking a tie or a slur in the preview jumps to the character that wrote it.** Of the
+  56 bow-shaped paths in the tracked snapshots exactly 6 carried a source address, so a
+  caret on `~` used to light up the note in front of it instead. A `~` now cites its `~`, a
+  slur cites its `(`, and a laissez-vibrer or repeat tie cites the annotation that draws it.
+
+- **A rehearsal letter written inside an inline ending, a tuplet, a repeat or a cue is
+  printed.** One reader's chart wrote A, B, C and D and printed only A — the other three
+  stood inside a `[2. … ]` and drew nothing, with no diagnostic. A letter that is written
+  and still not printed now says where (`LYS4019`).
+
+- **A `@rit` in a repeated section draws the same length both times.** From one written
+  mark, the first playing covered six bars and the second covered one; the spanner was
+  being ended by the next playing of ITSELF. The hairpin had the same defect.
+
+- **A lyrics row no longer prints inside the tab staff above it**, and a `rit.` above a
+  system's top staff reserves the room it is drawn in. Both were reported by a reader on
+  their own books, on the middle system of three.
+
+- **A tab staff no longer repeats the markup the notation staff beside it already carries**,
+  and the switch is `as numbers` vs `as full` rather than "is it a tab" — so a `@text` on a
+  standalone tab appears, and an `@accent` on a numbers tab does not.
 
 - **A TAB technique letter no longer prints on top of its own notehead.** `@tap` (T), `@hammeron` (H), `@pulloff` (P) and `@pluck`'s finger letter reserved a symmetric box around their anchor while the letter was actually drawn with its baseline there, so wherever one landed BELOW its note its ink grew upward into the head — 0.383 staff spaces of overlap. The room reserved is now the letter's own ink, measured the way it is drawn, which also gets `@pluck`'s descender (`p`) right.
 

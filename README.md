@@ -61,7 +61,7 @@ time 3/4
 key g major
 
 part melody { clef treble }       // declare each part; clef lives here
-section Main { melody { c4 d e f | g2 g | } }
+section Main { melody { c4 d e | g2. | } }
 form main { Main }                // print/playback order of sections
 score main "out" { staff melody }      // one or more render blocks
 ```
@@ -137,11 +137,14 @@ score main { staff melody  lyrics words }   // the row below the staff is its ve
 A `chords NAME { … }` and/or `lyrics NAME { … }` part, placed in a `score` with
 `chords NAME` / `lyrics NAME` (instead of `staff NAME`), renders without a staff: a
 grid of measure barlines with the chord symbols between them (at their timing) and
-the lyrics below. Chord entries are `root[duration][:quality][/bass]`.
+the lyrics below. A chord entry is written the way it prints — an UPPERCASE root,
+`#`/`b`, a bare quality (`C`, `Am`, `G7`, `F#m`, `Bb7/D`) — and it places itself on the
+bar's beat grid rather than carrying a duration: one entry takes the bar, two in 4/4 are
+halves, and `.` holds the previous chord one more beat.
 
 ```lilysharp
 section Main {
-    chords prog  { c2 g:7 | a:m f | c1 :| }
+    chords prog  { C G7 | Am F | C | }
     lyrics words { Twin- kle | lit- tle | star | }
 }
 form main { Main }
@@ -150,16 +153,30 @@ score main "sheet" { chords prog lyrics words }
 
 ### Repeats and Alternatives
 
-Volta repeats use the symbolic `|: … :|` barlines with inline volta endings
-`[1. …] [2. …]`. The repeat count defaults to 2 (or the highest volta number);
-state it explicitly with `|: … :|*N`.
+Volta repeats use the symbolic `|: … :|` barlines — **written in the `form`, not in the
+music**. A repeat changes the ORDER the music plays in, and the form is where a book's
+order lives, so the bars that repeat go in a `section` of their own and the form repeats
+the section. Volta endings are `[1. Section] [2. Section]`; the repeat count defaults to
+2 (or the number of endings), or state it explicitly with `|: … :|*N`.
 
 ```lilysharp
-{ |: c4 d e f | [1. g2 g | ] :| [2. a2 a | ] }
+part melody { clef treble }
+
+section Body   { melody { c4 d e f | } }
+section First  { melody { g2 g | } }        // first time
+section Second { melody { a2 a | } }        // second time
+
+form main { |: Body [1. ~First] :| [2. ~Second] }
+
+score main { staff melody }
 ```
 
-(The `repeat` keyword remains for `unfold` / `percent` / `tremolo`, which are not
-volta repeats.)
+A plain `form main { |: Body :| }` (no endings) just repeats its body, and a third or
+later ending is written the same way: `:| [3. Third]`. A repeat bar or a volta ending
+written in the music is refused with `LYS1034`.
+
+(The `repeat` keyword remains for `unfold` / `percent` / `tremolo`, which abbreviate
+notes rather than change the playing order, and so stay in the music.)
 
 ### Parallel Voices (one staff)
 
