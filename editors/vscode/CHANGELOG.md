@@ -4,27 +4,31 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## 0.5.0
 
-### Breaking language changes
+### Language
 
-The extension bundles the compiler, so upgrading changes what your files mean. Each of
-these is diagnosed rather than silent, and every one of them will stop some existing books
-compiling. The full reasoning, with the measured reach of each, is in the repository's
-[CHANGELOG](https://github.com/yotsuda/LilySharp/blob/master/CHANGELOG.md).
+The extension bundles the compiler, so these change what a `.lys` file means. Each is
+diagnosed rather than silent, and the repository's
+[CHANGELOG](https://github.com/yotsuda/LilySharp/blob/master/CHANGELOG.md) carries the
+reasoning behind each one.
 
 - **Repeat structure is written in a `form { … }` and nowhere else** (`LYS1034`). A repeat
-  bar line (`|:`, `:|`, `:|:`) or a volta ending (`[1. … ]`) written in music is an error.
-  `repeat percent`, `repeat unfold` and `tremolo` stay in music — they abbreviate notes and
-  do not change the playing order. This is the change most likely to affect you: 115 of the
-  author's own 326 books stop compiling, and there is no rewriter.
-- **Every span has to be closed, and `@!X` is how.** `@rit … @!rit`, `@ottava … @!ottava`,
-  `@sustain … @!sustain`. An unclosed span draws nothing at all — which is LilyPond's own
-  answer for a text spanner — and is now an error (`LYS4018`) rather than a warning.
+  bar (`|:` `:|` `:|:`) or a volta ending (`[1. … ]`) written in music is an error.
+  `repeat percent`, `repeat unfold` and `tremolo` stay in the music — they abbreviate notes
+  rather than change the playing order.
+- **Every span has to be closed, and `@!X` is how** — `@rit … @!rit`, `@ottava … @!ottava`,
+  `@sustain … @!sustain`. An unclosed span draws nothing at all, which is LilyPond's own
+  answer, and is an error (`LYS4018`).
 - **`@loco`, `@sustainOn`, `@sustainOff`, `@sostenutoOn` and `@sostenutoOff` are retired.**
-  The direction moved out of the name and into the `!`. `@treCorde` is kept, because unlike
+  The direction moved out of the name and into the `!`. `@treCorde` stays, because unlike
   the others it is a word the page actually prints.
 - **A part setting (`clef`, `octave`, `instrument`, `transpose`) written beside a section's
   part cells is refused** (`LYS1035`, `LYS0030`) — it belonged to no cell, so nothing read
   it. **A `form` that plays a section declared only as a header is refused** (`LYS1036`).
+- **A phrase reference's interval argument is removed.** `Melody'(3)` no longer plays the
+  phrase a third up; the octave marks `Melody'` and `Melody,` are unchanged.
+- **A percent repeat prints the sign its body's length earns**, and **a tab staff's style
+  follows the score** — `tab NAME` with no `as` clause is `as numbers` beside a notation
+  staff and `as full` when it stands alone.
 
 ### Added
 
@@ -32,56 +36,65 @@ compiling. The full reasoning, with the measured reach of each, is in the reposi
   spelling a phrase reference already had.
 - **`section ~A { … }` declares that the section prints no rehearsal letter**, so a section
   cut solely to carry a repeat edge is silent without saying so at every reference.
-- **A form can spell a third volta ending** (`[3. … ]`), which the music spelling could and
-  it could not.
+- **A form can spell a third volta ending** (`[3. … ]`).
 
 ### Fixed
 
-- **Clicking a tie or a slur in the preview jumps to the character that wrote it.** Of the
-  56 bow-shaped paths in the tracked snapshots exactly 6 carried a source address, so a
-  caret on `~` used to light up the note in front of it instead. A `~` now cites its `~`, a
-  slur cites its `(`, and a laissez-vibrer or repeat tie cites the annotation that draws it.
+- **Clicking a tie or a slur in the preview jumps to the character that wrote it.** Ordinary
+  bows carried no source address, so a caret on `~` used to light up the note in front of it.
+  A `~` now cites its `~`, a slur its `(`, and a laissez-vibrer or repeat tie the annotation
+  that draws it.
+
+- **A note that opens an indented line is clickable, and a diagnostic on one names its
+  column.** Both addresses included the whitespace in front of the note, so a click on the
+  first note of an indented line resolved to nothing.
+
+- **Clicking the clef or the key signature jumps to its source line from any staff line, not
+  just the top one.** The prefix repeats at the head of every system, but only the first
+  system's copy was clickable. Each repeat now carries the position of whatever put it in
+  force there, so a line showing a change jumps to the change.
 
 - **A rehearsal letter written inside an inline ending, a tuplet, a repeat or a cue is
-  printed.** One reader's chart wrote A, B, C and D and printed only A — the other three
-  stood inside a `[2. … ]` and drew nothing, with no diagnostic. A letter that is written
-  and still not printed now says where (`LYS4019`).
+  printed.** One chart wrote A, B, C and D and printed only A — the other three stood inside
+  a `[2. … ]` and drew nothing, with no diagnostic. A letter that is written and still not
+  printed now says where (`LYS4019`).
 
-- **A `@rit` in a repeated section draws the same length both times.** From one written
-  mark, the first playing covered six bars and the second covered one; the spanner was
-  being ended by the next playing of ITSELF. The hairpin had the same defect.
+- **A `@rit` in a repeated section draws the same length both times.** From one written mark
+  the first playing covered six bars and the second one, because the spanner was being ended
+  by the next playing of itself. The hairpin had the same defect.
 
-- **A lyrics row no longer prints inside the tab staff above it**, and a `rit.` above a
-  system's top staff reserves the room it is drawn in. Both were reported by a reader on
-  their own books, on the middle system of three.
+- **An `@rit` / `@accel` no longer prints on top of the chord row or the lyric row above its
+  staff**, and one above a system's top staff reserves the room it is drawn in. The staff now
+  reserves the room the spanner occupies, measured against LilyPond.
+
+- **A lyrics row no longer prints inside the tab staff above it** — one quantity, how tall
+  this staff is, was written in three places and two of them answered with the score's
+  nominal four staff spaces.
 
 - **A tab staff no longer repeats the markup the notation staff beside it already carries**,
   and the switch is `as numbers` vs `as full` rather than "is it a tab" — so a `@text` on a
   standalone tab appears, and an `@accent` on a numbers tab does not.
 
-- **A TAB technique letter no longer prints on top of its own notehead.** `@tap` (T), `@hammeron` (H), `@pulloff` (P) and `@pluck`'s finger letter reserved a symmetric box around their anchor while the letter was actually drawn with its baseline there, so wherever one landed BELOW its note its ink grew upward into the head — 0.383 staff spaces of overlap. The room reserved is now the letter's own ink, measured the way it is drawn, which also gets `@pluck`'s descender (`p`) right.
+- **A TAB technique letter no longer prints on top of its own notehead.** `@tap` (T),
+  `@hammeron` (H), `@pulloff` (P) and `@pluck`'s finger letter reserved a symmetric box
+  around their anchor while the letter is drawn with its baseline there, so one landing
+  below its note grew upward into the head. The room reserved is now the letter's own ink,
+  which also gets `@pluck`'s descender right.
 
-- **An `@rit` / `@accel` no longer prints on top of the chord row or the lyric row above its staff.** The spanner was placed so that it cleared its own staff, but the row standing above the staff was spaced against a silhouette the spanner was not in, so on a lead sheet the two landed on the same line. The staff now reserves the room the spanner occupies — measured against LilyPond, which opens the gap by exactly the spanner's ink (probe `textspanner-under-row.ly`, books TSCR/TSLR).
-
-- **Clicking the clef or the key signature in the preview jumps to its source line from any staff line, not just the top one.** The prefix repeats at the head of every system, but only the first system's copy was clickable; the rest were inert. Each repeat now carries the position of whatever put it in force there — the declaration, or the last mid-piece `clef`/`key` change before that system, so a line showing a change jumps to the change.
+- **Grace notes carry what is written inside them.** A grace body is now walked like ordinary
+  music, so a chord, a rest, a dot, a phrase reference and a tuplet's notes inside one are
+  engraved, heard and exported instead of being dropped in silence. What is still dropped
+  says so (`LYS4020`).
 
 - **The chord completion inside `chords { }` lists the names first and the degrees after,**
-  instead of interleaving them degree by degree. It used to read
-  `C, Cmaj7, Csus4, Csus2, I, Imaj7, Dm, …` — grouped by harmonic function — so neither
-  vocabulary could be scanned on its own. It now reads all seven names (`C Dm Em F G Am
-  Bdim`, each with its 7th and suspensions) and then all seven degrees (`I IIm IIIm IV V
-  VIm VIIdim`, each with its 7th).
+  instead of interleaving them degree by degree. It now reads all seven names (`C Dm Em F G
+  Am Bdim`, each with its 7th and suspensions) and then all seven degrees (`I IIm IIIm IV V
+  VIm VIIdim`).
 
 - **"Reveal in Explorer" after an export opens the file's own folder again when the path
-  contains a space.** It used to land on the user's Documents folder instead — the
-  "sometimes" in the report was exactly "when the path has a space in it".
-  `explorer.exe` reads the raw command line rather than a parsed argv, and Node quotes
-  any argument containing a space, so `C:\My Scores\a.pdf` went out as
-  `explorer.exe "/select,C:\My Scores\a.pdf"` with the switch *inside* the quotes;
-  Explorer does not recognise that as `/select` and falls back to Documents. The command
-  line is now written by hand — `/select,"…"`, switch bare — and the non-ASCII half of
-  the same code path is unchanged (a verbatim command line is still UTF-16 all the way
-  to `CreateProcessW`; verified on `日本語 フォルダ\楽譜 テスト.txt`).
+  contains a space.** `explorer.exe` reads the raw command line rather than a parsed argv,
+  and Node quotes any argument containing a space, so the `/select` switch ended up inside
+  the quotes and Explorer fell back to Documents.
 
 ## 0.4.0
 
