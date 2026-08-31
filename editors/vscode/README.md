@@ -5,6 +5,12 @@ live score preview that plays back, and the editor gets completion, diagnostics,
 formatting and navigation over it — the compiler and its language server are bundled, so
 there is nothing else to install.
 
+The layout engine is in part a **port of LilyPond**, the GNU music typesetter: beam
+quanting, slur and tie scoring, skylines, springs and page breaking are modified
+translations of LilyPond's own algorithms rather than independent approximations. So the
+page is engraved to LilyPond's rules — without LilyPond, or anything else, having to be
+installed. The language, by contrast, is deliberately not LilyPond's.
+
 **Version 0.5.0** — the bundled language server and the `lysc` compiler carry the
 same number. See the [changelog](https://github.com/yotsuda/LilySharp/blob/master/editors/vscode/CHANGELOG.md) for what is in this release.
 
