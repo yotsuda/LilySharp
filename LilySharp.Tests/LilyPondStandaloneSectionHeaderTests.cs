@@ -16,6 +16,7 @@
 
 using System.Text.RegularExpressions;
 using LilySharp.Core.LilyPond;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -45,10 +46,12 @@ namespace LilySharp.Tests;
 /// construction rather than by coincidence.
 /// </para>
 /// <para>
-/// ⚠️ ONE ROW IS A KNOWN HOLE, DELIBERATELY PINNED AS IT STANDS: a name whose ONLY
-/// declaration is a directives-only header. The page arms that key for the music that
-/// follows; the twin writes no key at all. It is asserted as it stands so the day the
-/// question is decided this test names the line to change (HANDOFF §2 F ⒰).
+/// ⚠️ THE ONE HOLE THIS FILE PINNED IS CLOSED, and by refusal rather than by picking a
+/// reader: a name whose ONLY declaration is a directives-only header is now LYS1036
+/// (owner's decision 2026-08-31, HANDOFF §2 F ⒰). The row below still asserts what the
+/// EXPORTER does with such a book — the twin is still written, because a hard semantic
+/// error does not stop the writers — but it is no longer a blessing of the spelling; the
+/// spelling's own guard is SectionPlaysNothingValidatorTests.
 /// </para>
 /// </remarks>
 [Trait("Category", "Unit")]
@@ -116,21 +119,30 @@ public class LilyPondStandaloneSectionHeaderTests
     }
 
     [Fact]
-    public void AHeaderOnlyNameWritesNoKey_AKnownHole()
+    public void AHeaderOnlyNameIsRefused_AndTheTwinNoLongerWritesThreeKeys()
     {
-        // ⚠️ A KNOWN HOLE, NOT A BLESSING. `A` is declared ONLY as a header — no part
-        // declares its music — and the form plays it before B. The page engraves A's key
-        // and carries it into B's bar (MEASURED: scratch/p306/b5 draws a key signature its
-        // header-less control b8 does not). The twin writes no key at all.
-        // Before the fix it wrote three (`\key g \major \key g \major \key c \major`) and
-        // landed on the WRONG one, so this is the same disagreement with less noise — but
-        // it is a disagreement, and closing it is a language question: does a section that
-        // plays zero bars arm its key for the next one? When that is answered, this is the
-        // test to change.
-        var ly = Export(
+        // `A` is declared ONLY as a header — no part gives it music — and the form plays it
+        // before B. That book is now REFUSED (LYS1036), which is how the disagreement was
+        // settled: the page armed A's key and carried it into B's bar, while the twin wrote
+        // none, and neither reader was obviously wrong (§3's boundary rule was written about
+        // sections that HAVE bars).
+        //
+        // ⚠️ The twin is still asserted here because the writers run anyway on a semantic
+        // error ("written anyway, from the part of the file that parsed"), and what they
+        // write must not be the old nonsense: before ⒯ it was
+        // `\key g \major \key g \major \key c \major` — the same directive twice and then a
+        // THIRD key that silently won.
+        const string book =
             "time 4/4\npart m { clef treble\n  section B { f'4 f f f | }\n}\n"
             + "section A { key g major }\n"
-            + "form main { ~A ~B }\nscore main { staff m }\n");
+            + "form main { ~A ~B }\nscore main { staff m }\n";
+
+        var validator = new SymbolReferenceValidator();
+        validator.Validate(SyntaxTree.Parse(book));
+        Assert.Single(validator.Diagnostics.Where(
+            d => d.Code == DiagnosticCodes.SectionPlaysNothing));
+
+        var ly = Export(book);
         Assert.Contains("f'4 f f f |", ly);
         Assert.DoesNotContain("\\key g \\major", ly);
     }

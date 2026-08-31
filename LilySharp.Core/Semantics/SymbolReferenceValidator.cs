@@ -29,6 +29,10 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
     private readonly HashSet<string> _definedVariables = new();
     private readonly HashSet<string> _definedPhrases = new();
     private readonly HashSet<string> _definedSections = new();
+    /// <summary>Sections at least one of whose declarations carries MUSIC — a cell, or
+    /// inline notes — as opposed to being a directives-only header. A subset of
+    /// <see cref="_definedSections"/>; the difference is exactly LYS1036.</summary>
+    private readonly HashSet<string> _sectionsWithMusic = new();
     private readonly HashSet<string> _definedParts = new();
 
     public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics.ToList();
@@ -41,6 +45,7 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
         _definedVariables.Clear();
         _definedPhrases.Clear();
         _definedSections.Clear();
+        _sectionsWithMusic.Clear();
         _definedParts.Clear();
 
         var root = tree.GetRoot();
@@ -115,7 +120,15 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
         // section-body block `NAME { … }`, which carries the music and so lets a staff
         // render the part with no header at all. Both live in PartReferenceFinder.
         if (SectionSymbols.DeclaredName(node) is { } declaredSection)
+        {
             _definedSections.Add(declaredSection.Text);
+            // ⚠️ ANY declaration of the name that is not a bare header counts, which is why
+            // this is a second SET rather than a flag on the first: a name reaches the form
+            // in SPLIT declarations (`section A { key g major }` beside
+            // `part m { section A { … } }`), and it is the OTHER one that carries the music.
+            if (node is SectionDeclarationSyntax section && !SectionSymbols.IsBareHeader(section))
+                _sectionsWithMusic.Add(declaredSection.Text);
+        }
         if (PartReferenceFinder.DeclaredName(node) is { } declaredPart)
             _definedParts.Add(declaredPart.Text);
     }
@@ -161,7 +174,21 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
     private void ValidateSectionName(string name, TextSpan span)
     {
         if (!_definedSections.Contains(name))
+        {
             _diagnostics.Error(span, DiagnosticCodes.UndefinedSection,
                 $"Undefined section: '{name}'");
+            return;
+        }
+
+        // Declared, but every declaration of it is a directives-only header: the name has
+        // no music in ANY part, so the play engraves nothing and the two readers disagree
+        // about whether its key reaches the next section (LYS1036's remark has the
+        // measurement). Reported once per PLAY, like LYS1005 above — a name played twice
+        // is wrong twice, and the author fixes it where it is written.
+        if (!_sectionsWithMusic.Contains(name))
+            _diagnostics.Error(span, DiagnosticCodes.SectionPlaysNothing,
+                $"Section '{name}' is declared only as a header, so it has no music to play. "
+                + $"Give it music in a part (e.g. 'part melody {{ section {name} {{ … }} }}'), "
+                + "or write the directives on the section that does have the bars.");
     }
 }

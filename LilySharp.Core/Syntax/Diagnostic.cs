@@ -804,6 +804,35 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string PartSettingInSectionHeader = "LYS1035";
 
+    /// <summary>Reference error: a <c>form</c> plays a section whose EVERY declaration is
+    /// a directives-only header, so the name is declared but no part gives it music and
+    /// the play engraves nothing.</summary>
+    /// <remarks>
+    /// <para>
+    /// LYS1005's sibling, and the gap between them is the whole point. <c>form main { ~Z }</c>
+    /// with no <c>section Z</c> anywhere is already LYS1005 <c>Undefined section</c>; this is
+    /// the case where the name IS declared — <c>section A { key g major }</c> — but every
+    /// declaration of it is a bare header (<see cref="Editing.SectionSymbols.IsBareHeader"/>).
+    /// </para>
+    /// <para>
+    /// ⚠️ MEASURED 2026-08-31, and the two readers disagreed about it. The page ARMS the
+    /// header's key and carries it into the NEXT section's bar (a header-only section engraves
+    /// no bar, so the section boundary that would restore the score key never fires); the
+    /// LilyPond twin writes no key at all. §3's decision — key and meter return to score level
+    /// at every section boundary — was written about sections that HAVE bars, and neither
+    /// reader is wrong so much as the spelling is (owner's decision 2026-08-31: refuse it,
+    /// rather than pick which silence is right). HANDOFF §2 F ⒰.
+    /// </para>
+    /// <para>
+    /// ⚠️ ASKED OF THE NAME, NOT OF ONE PART — the predicate is "does ANY declaration of
+    /// this name carry music", because a section legitimately belongs to a part this score
+    /// does not draw. <c>part fl { section A { … } }</c> beside a score of <c>part m</c>
+    /// alone is a correct book: m is spacer-filled across A. Asking "does THIS part declare
+    /// it" would refuse that (MEASURED: scratch/p306/u3, two bars, clean).
+    /// </para>
+    /// </remarks>
+    public const string SectionPlaysNothing = "LYS1036";
+
     // Measure errors (LYS2xxx)
 
     /// <summary>Measure error: a measure has fewer beats than the time signature requires.</summary>

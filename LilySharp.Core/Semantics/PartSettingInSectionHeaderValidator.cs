@@ -39,6 +39,26 @@ namespace LilySharp.Core.Semantics;
 /// music belonging to no part. Two of four spoke; this makes it four.
 /// </para>
 /// <para>
+/// ⚠️ TWO POSITIONS, ONE RULE. Beside a section's cells (the header position) and ON one
+/// of those cells as a PART-BLOCK OPTION (<c>section A { m clef bass { … } }</c>). The
+/// parser has a dedicated arm for the second (<c>Parser.Sections.IsPartOption</c> —
+/// transpose / octave / instrument / clef) that <c>GRAMMAR.md</c>'s
+/// <c>PartBlock = Identifier , MusicBlock ;</c> never mentioned, so it was reachable and
+/// unwritten. MEASURED 2026-08-31 (scratch/p305/r4_partblock_options.lys): <c>clef</c>,
+/// <c>octave</c> and <c>instrument</c> are silently ignored there, and <c>transpose</c> is
+/// read at the WRONG SCOPE — written on ONE section's cell it transposes the WHOLE part
+/// (the twin wraps the part variable in <c>\transpose c d</c>).
+/// </para>
+/// <para>
+/// ⚠️ THE SECOND POSITION IS REFUSED RATHER THAN IMPLEMENTED, and that follows a decision
+/// already on the books rather than a new one: HANDOFF §3, 2026-08-31 — <c>transpose</c> /
+/// <c>octave</c> are NOT added as section-scoped features, because the case that wants a
+/// transpose ("the last chorus up a semitone") is a mark on the REFERENCE, not on the
+/// declaration; <c>section D { transpose d }</c> would move EVERY play of D. A cell is a
+/// declaration site, so the same reasoning reaches it unchanged, and scoping the option to
+/// the cell would not deliver what the case wants either (HANDOFF §2 F ⒭).
+/// </para>
+/// <para>
 /// ⚠️ THE PREDICATE IS ABOUT THE SECTION, NOT THE KEYWORD, and the two shapes that work are
 /// why. <c>part m { section A { clef bass … } }</c> and <c>section A { clef bass c'4 … }</c>
 /// both engrave the clef, because in each the section's body IS a music stream — the first is
@@ -55,6 +75,8 @@ internal sealed class PartSettingInSectionHeaderValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
+        ReportPartBlockOptions(tree);
+
         foreach (var section in tree.GetRoot().DescendantNodes().OfType<SectionDeclarationSyntax>())
         {
             if (HasOwnMusic(section))
@@ -87,6 +109,43 @@ internal sealed class PartSettingInSectionHeaderValidator : ISemanticValidator
                             + "level ('octave absolute') or on the part.");
                         break;
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// The PART-BLOCK OPTION position: <c>section A { m clef bass { … } }</c>. A cell is a
+    /// declaration of one part's music for one section, and a part setting written on it is
+    /// the same mistake as one written beside the cells — the language keeps part settings
+    /// on the part.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A <c>PartBlockSyntax</c> is ALWAYS a section cell — <c>ParsePartBlock</c> has one
+    /// caller, <c>ParseSectionItem</c> — so no ancestor test is needed here. The top-level
+    /// <c>part m transpose d { … }</c> is a <c>PartDeclarationSyntax</c> and a different
+    /// node; that one is the CORRECT home and must keep working.
+    /// </remarks>
+    private void ReportPartBlockOptions(SyntaxTree tree)
+    {
+        foreach (var cell in tree.GetRoot().DescendantNodes().OfType<PartBlockSyntax>())
+        {
+            foreach (var option in cell.ChildNodes().OfType<PropertyAssignmentSyntax>())
+            {
+                string word = option.NameToken.Text;
+                // `transpose` earns its own sentence for the reason `octave` does above: it
+                // is not ignored, it is MIS-SCOPED, so the author's book renders — wrongly —
+                // rather than merely failing to change.
+                string detail = word == "transpose"
+                    ? "Written on a cell it does not transpose that cell: the whole PART "
+                      + "moves, every section of it. Put it on the part "
+                      + "('part NAME transpose d { … }') or on the score."
+                    : "Written on a cell nothing reads it at all. Put it on the part "
+                      + $"('part NAME {word} … {{ … }}'), or inside the cell's music for a "
+                      + "change mid-piece.";
+                _diagnostics.Error(option.Span,
+                    DiagnosticCodes.PartSettingInSectionHeader,
+                    $"'{word}' is a property of one PART, and a section's part cell is not "
+                    + "where a part is declared. " + detail);
             }
         }
     }

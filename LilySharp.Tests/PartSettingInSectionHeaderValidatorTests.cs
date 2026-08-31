@@ -32,10 +32,13 @@ namespace LilySharp.Tests;
 /// does not, because a predicate written on the keyword alone would break all three.
 /// </para>
 /// <para>
-/// ⚠️ ONE ROW IS A KNOWN HOLE, DELIBERATELY PINNED AS IT STANDS: the part-block option
-/// <c>section A { m clef bass { … } }</c> is a second spelling of the same mistake and is
-/// still silent. It is asserted silent so the day it closes this test names the line to
-/// change, rather than the hole being forgotten (HANDOFF §2 F ⒭).
+/// ⚠️ THE HOLE THIS FILE PINNED IS CLOSED. The part-block OPTION spelling
+/// (<c>section A { m clef bass { … } }</c>) is the same mistake written on a cell instead
+/// of beside them, and it is now refused too — following HANDOFF §3's standing decision
+/// (2026-08-31: <c>transpose</c> / <c>octave</c> are not added as section-scoped features,
+/// because that case wants a mark on the REFERENCE, not on the declaration) rather than a
+/// new one. Its row moved from the silent theory to the refused one, which is what the pin
+/// was for (HANDOFF §2 F ⒭).
 /// </para>
 /// </remarks>
 [Trait("Category", "Unit")]
@@ -72,15 +75,37 @@ public class PartSettingInSectionHeaderValidatorTests
         => Assert.Single(Reports(book + Score));
 
     [Theory]
+    // THE PART-BLOCK OPTION POSITION - the same four words written ON a cell rather than
+    // beside the cells. GRAMMAR.md's `PartBlock = Identifier , MusicBlock ;` never had it;
+    // the parser did (Parser.Sections.IsPartOption), which is how it stayed reachable and
+    // unwritten.
+    //
+    // ⚠️ THREE OF THE FOUR WERE SILENT NO-OPS AND ONE MOVED OUTPUT, and they are one row
+    // each rather than one row because the asymmetry is the thing that hid this: measured
+    // 2026-08-31, clef / octave / instrument were ignored while `transpose` was READ AT THE
+    // WRONG SCOPE - written on section A's cell it moved the whole part.
+    [InlineData("part m { clef treble }\nsection A { m clef bass { c'4 c c c | } }\n")]
+    [InlineData("part m { clef treble }\nsection A { m octave absolute { c'4 c c c | } }\n")]
+    [InlineData("part m { clef treble }\nsection A { m instrument \"Tuba\" { c'4 c c c | } }\n")]
+    [InlineData("part m { clef treble }\nsection A { m transpose d { c'4 c c c | } }\n")]
+    public void APartSettingOnASectionCell_IsRefused(string book)
+        => Assert.Single(Reports(book + Score));
+
+    [Theory]
     // part-major: the section's body IS that part's music, so the clef is ordinary music
     [InlineData("part m { clef treble\n  section A { clef bass c'4 c c c | }\n}\n")]
     // a single-part piece writing bare music in a section (GRAMMAR.md allows it): same
     [InlineData("part m { clef treble }\nsection A { clef bass c'4 c c c | }\n")]
     // and inside a cell's music, which is where a mid-piece change goes
     [InlineData("part m { clef treble }\nsection A { m { clef bass c'4 c c c | } }\n")]
-    // ⚠️ A KNOWN HOLE, NOT A BLESSING: the part-block OPTION spelling is still silent.
-    // When it closes, this row is the one to move up to the theory above.
-    [InlineData("part m { clef treble }\nsection A { m clef bass { c'4 c c c | } }\n")]
+    // ⚠️ THE MID-PIECE CHANGE, which is the option position's near neighbour and must stay
+    // legal: inside the cell's MUSIC a clef is an ordinary music item and engraves.
+    [InlineData("part m { clef treble }\nsection A { m { c'4 c clef bass c c | } }\n")]
+    // ⚠️ THE CORRECT HOME. A part setting written as a PART PROPERTY is the spelling the
+    // refusals above point at, so it is pinned here: if this row ever goes red the rule
+    // has reached past the cell and into the declaration it recommends.
+    [InlineData("part m { clef treble  transpose d  octave 0 }\n"
+        + "section A { m { c'4 c c c | } }\n")]
     public void AClefThatSomethingReads_IsLeftAlone(string book)
         => Assert.Empty(Reports(book + Score));
 }

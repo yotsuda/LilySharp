@@ -420,26 +420,17 @@ public static class PartSectionLayoutConverter
     private static IEnumerable<T> DirectChildrenOfType<T>(SyntaxNode node) where T : SyntaxNode
         => DirectChildren(node).OfType<T>();
 
-    /// <summary>A section-level directive child — <c>key</c> / <c>time</c> / <c>tempo</c>
-    /// / <c>partial</c> / <c>clef</c> / <c>octave</c> — that a section may carry beside
-    /// its part blocks (section-major) or alone (a standalone part-major header).</summary>
-    private static bool IsSectionDirective(SyntaxNode n)
-        => n is KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax
-            or PartialDeclarationSyntax or ClefDeclarationSyntax or OctaveDirectiveSyntax;
+    /// <summary>A section-level directive child — delegated to THE one spelling
+    /// (<see cref="SectionSymbols.IsSectionDirective"/>), which the LYS1036 validator
+    /// reads too.</summary>
+    private static bool IsSectionDirective(SyntaxNode n) => SectionSymbols.IsSectionDirective(n);
 
-    /// <summary>A directives-only section header (<c>section A { key g major }</c>): no
-    /// part/chord/lyric blocks and no inline music, at least one directive. In part-major
-    /// it stands parallel to the parts; in section-major it folds into the section.</summary>
-    private static bool IsSectionHeader(SectionDeclarationSyntax s)
-    {
-        bool sawDirective = false;
-        foreach (var c in DirectChildren(s))
-        {
-            if (IsSectionDirective(c)) { sawDirective = true; continue; }
-            return false; // a part/chord/lyric block or inline music → not a bare header
-        }
-        return sawDirective;
-    }
+    /// <summary>A directives-only section header (<c>section A { key g major }</c>) —
+    /// delegated to THE one spelling (<see cref="SectionSymbols.IsBareHeader"/>). In
+    /// part-major it stands parallel to the parts; in section-major it folds into the
+    /// section. This file's own copy was the second of three; the remark on the shared
+    /// spelling records what the third one's disagreement cost.</summary>
+    private static bool IsSectionHeader(SectionDeclarationSyntax s) => SectionSymbols.IsBareHeader(s);
 
     /// <summary>The section's directive children joined verbatim (the header text folded
     /// into / split out of a section), empty when it carries none.</summary>

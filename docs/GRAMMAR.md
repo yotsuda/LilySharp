@@ -612,7 +612,23 @@ SectionItem    = SectionSetting
    ⚠️ THE POSITION IS THE RULE, NOT THE KEYWORD. Where a section's body IS a music stream
    the same clef is ordinary music and engraves — 'part m { section A { clef bass c4 … } }'
    (part-major) and 'section A { clef bass c4 … }' (a single-part piece writing bare music)
-   are both correct. Only a section holding CELLS has nowhere to put a loose one. *)
+   are both correct. Only a section holding CELLS has nowhere to put a loose one.
+
+   ⚠️ THE SAME FOUR ARE REFUSED ON A PART CELL, which is the OTHER position they can be
+   written in (user decision, 2026-08-31): 'section A { m clef bass { … } }'. A cell
+   declares one part's music for one section; it is not where a part is declared, so a
+   part setting on it has no home either. This production has never listed options on a
+   PartBlock and now nothing accepts them:
+     section A { m clef bass      { … } }   -- LYS1035
+     section A { m octave absolute{ … } }   -- LYS1035
+     section A { m instrument "…" { … } }   -- LYS1035
+     section A { m transpose d    { … } }   -- LYS1035
+   ⚠️ 'transpose' was the one that MOVED OUTPUT rather than being ignored: written on ONE
+   section's cell it transposed the WHOLE part. Scoping it to the cell was considered and
+   declined for the reason 'transpose' is not a section feature at all — the case that
+   wants it (the last chorus up a semitone) is a mark on the REFERENCE, not on the
+   declaration, and a cell is a declaration. *)
+
 SectionSetting = KeyDecl | TempoDecl | TimeDecl | PartialDecl ;
 
 PartBlock      = Identifier , MusicBlock ;
