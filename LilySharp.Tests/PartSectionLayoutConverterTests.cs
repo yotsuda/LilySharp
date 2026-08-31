@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Linq;
 using LilySharp.Core.Editing;
 using LilySharp.Core.Syntax;
 using Xunit;
@@ -38,6 +39,51 @@ public class PartSectionLayoutConverterTests
         form main { A B }
         score main "x" { staff low  staff high }
         """;
+
+    /// <summary>
+    /// Converting a layout must not hand the author a book the compiler refuses. This is the
+    /// editor's own command (the LSP's convert-layout action), so a conversion that produces
+    /// a diagnostic is a defect of the converter, not of the file.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ WRITTEN BECAUSE THE CONVERTER BROKE IT. When LYS1035 first landed it asked whether
+    /// the section held CELLS, which let a directives-only header through — and
+    /// <c>IsSectionDirective</c> counts <c>clef</c> and <c>octave</c> as section directives,
+    /// so this exact book converted from clean to refused. The rule now asks whether the
+    /// section has a music STREAM the setting can join, which catches the header at its
+    /// source. The general assertion is kept because the specific one was not obvious in
+    /// advance: a validator and a rewriter can disagree without either looking wrong alone.
+    /// </remarks>
+    [Theory]
+    [InlineData("""
+        part m { clef treble
+          section A { clef bass c'4 c c c | }
+        }
+        form main { ~A }
+        score main { staff m }
+        """)]
+    [InlineData("""
+        part low { clef bass }
+        part high { clef treble }
+        section A { low { c4 d } high { e'4 f' } }
+        section A2 { key g major  low { c4 d } high { e'4 f' } }
+        form main { A A2 }
+        score main { staff low  staff high }
+        """)]
+    public void Convert_NeverProducesABookTheCompilerRefuses(string source)
+    {
+        Assert.Empty(LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(source))
+            .Where(d => d.Severity == DiagnosticSeverity.Error));
+
+        var converted = PartSectionLayoutConverter.Convert(source);
+        Assert.NotNull(converted);
+        _output.WriteLine(converted);
+
+        var errors = LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(converted!))
+            .Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        Assert.True(errors.Count == 0,
+            "the conversion produced errors:\n" + string.Join("\n", errors.Select(e => $"[{e.Code}] {e.Message}")));
+    }
 
     [Fact]
     public void Detect_IdentifiesBothLayouts()

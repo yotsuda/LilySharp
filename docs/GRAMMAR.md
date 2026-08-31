@@ -600,7 +600,19 @@ SectionItem    = SectionSetting
    settings (no part blocks) is a standalone header: in part-major layout it states a
    section's key/meter/tempo once, parallel to the 'part' blocks, e.g.
      part melody { section A { c d e f } }
-     section A { key g major }              (* applies to every part playing A *) *)
+     section A { key g major }              (* applies to every part playing A *)
+
+   ⚠️ THE FOUR ARE THE WHOLE LIST, and a setting that belongs to ONE PART is refused here
+   (user decision, 2026-08-31): clef, instrument, transpose and octave go on the part
+   ('part NAME { clef bass }'), and a clef change mid-piece goes in the music. Beside a
+   section's part cells they belong to no cell, so nothing reads them.
+     section A { clef bass  melody { c4 d e f | } }     -- LYS1035
+     section A { octave absolute  melody { … } }        -- LYS1035
+     section A { instrument "Tuba"  melody { … } }      -- LYS0030
+   ⚠️ THE POSITION IS THE RULE, NOT THE KEYWORD. Where a section's body IS a music stream
+   the same clef is ordinary music and engraves — 'part m { section A { clef bass c4 … } }'
+   (part-major) and 'section A { clef bass c4 … }' (a single-part piece writing bare music)
+   are both correct. Only a section holding CELLS has nowhere to put a loose one. *)
 SectionSetting = KeyDecl | TempoDecl | TimeDecl | PartialDecl ;
 
 PartBlock      = Identifier , MusicBlock ;

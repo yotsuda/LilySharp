@@ -91,10 +91,17 @@ internal sealed partial class Parser
             // ParseList's shared `else Advance()` then dropped the token's width — measured
             // 2026-08-16 on `section A { "oops" melody { … } }`: `No errors found.` and an
             // SVG byte-identical to the same book WITHOUT the token, data-pos included.
+            // ⚠️ The message names where a PART setting goes, because two of the four that
+            // land here are exactly that (`instrument`, `transpose`) and the old text left
+            // them with nowhere to be. The other two (`clef`, `octave`) never reach this arm
+            // — they are music items, so the arm above claims them, and LYS1035 is what says
+            // the same thing about them.
             _ => ReportStrayItem("a section",
                     "A section body holds per-part cells ('melody { … }'), its own directives "
                     + "(key, time, tempo, partial, override), a named 'lyrics NAME { … }' or "
-                    + "'chords NAME { … }' track, or bare music for a single-part piece.")
+                    + "'chords NAME { … }' track, or bare music for a single-part piece. A "
+                    + "setting that belongs to ONE part - clef, instrument, transpose, octave "
+                    + "- goes on the part ('part NAME { … }'), not here.")
         };
     }
 

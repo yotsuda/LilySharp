@@ -109,6 +109,7 @@ public static class SemanticValidation
         new GraceBodyValidator(),           // grace { } body content that is not engraved
         new SectionMusicNeedsPartValidator(), // loose music in a part-major top-level section
         new ScoreSettingInPartHeaderValidator(), // tempo/time as a part header property
+        new PartSettingInSectionHeaderValidator(), // clef/octave beside a section's part cells
         new DuplicateGlobalSettingValidator(), // a top-level tempo/time/key/title/… written twice
         new DuplicatePartPropertyValidator(),  // one part header setting the same property twice
         new FontEmbedWarningValidator(),    // an embedded font with a restricted/unverified license

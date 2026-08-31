@@ -855,6 +855,22 @@ section A { key g major }       // applies to every part playing A
 
 The layout converter turns the two forms into each other.
 
+**Those four are the whole list.** A setting that belongs to ONE part — `clef`,
+`instrument`, `transpose`, `octave` — is refused beside a section's part cells
+(**LYS1035** for `clef` / `octave`, **LYS0030** for the other two), because written there it
+belongs to no cell and nothing reads it. Put it on the part, or — for a clef — in the
+music where the change happens:
+
+```
+part melody { clef bass }                       // the part's clef
+section A { melody { clef bass c4 d e f | } }   // a change mid-piece
+```
+
+⚠️ **The position is the rule, not the keyword.** Where a section's body *is* a music
+stream, the same `clef` is ordinary music and engraves: `part m { section A { clef bass c4 … } }`
+(part-major) and `section A { clef bass c4 … }` (a single-part piece writing bare music) are
+both correct. Only a section holding *cells* has nowhere to put a loose one.
+
 ### Structure (Playback Order)
 
 ```

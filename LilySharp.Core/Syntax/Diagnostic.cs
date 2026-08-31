@@ -760,6 +760,50 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string RepeatStructureOutsideForm = "LYS1034";
 
+    /// <summary>Semantic error: a PART setting (<c>clef</c>, <c>octave</c>) written in the
+    /// header position of a section that holds part cells. It belongs to no cell there, so
+    /// nothing reads it.</summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ USER DECISION 2026-08-31 (§3), in the author's words: a clef written there "seems
+    /// like a useless instruction". This code says so instead of dropping it.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHAT THIS FIXES IS AN ASYMMETRY, NOT A MISSING RULE. Four part settings can be
+    /// written in that position and only two of them were refused: <c>instrument</c> and
+    /// <c>transpose</c> reach <c>ReportStrayItem</c> (LYS0030) because nothing claims them,
+    /// while <c>clef</c> and <c>octave</c> are listed in <c>IsMusicItemStart</c> — they are
+    /// real music items elsewhere — so <c>ParseSectionItem</c>'s music arm takes them and
+    /// they become BARE MUSIC BELONGING TO NO PART. That is why they were silent.
+    /// </para>
+    /// <para>
+    /// ⚠️ MEASURED 2026-08-31, and the two are silent in different ways.
+    /// <c>clef</c> does nothing at all: the page draws only the part's clef, the LilyPond
+    /// twin writes only <c>\clef "treble"</c>, and the resolved pitches keep the part's
+    /// anchor. <c>octave</c> is WORSE THAN NOTHING: the resolved pitches do not move (three
+    /// sections all read relative — G4 throughout) while the twin's wrapper for the WHOLE
+    /// part flips from <c>\relative c'</c> to <c>\fixed c'</c>. One reader changes its octave
+    /// model and the others do not, which is a disagreement rather than a no-op.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE POSITION IS THE WHOLE RULE, and the two shapes that DO work are why the
+    /// predicate asks whether the section holds cells: <c>part m { section A { clef bass … } }</c>
+    /// (part-major — the section body IS that part's music) and
+    /// <c>section A { clef bass c'4 … }</c> (a single-part piece writing bare music, which
+    /// GRAMMAR.md allows) both engrave the clef correctly. Only a section that holds part
+    /// cells has nowhere to put a loose one.
+    /// </para>
+    /// <para>
+    /// ⚠️ NOT COVERED, and open: the same four words can also be written as PART-BLOCK
+    /// OPTIONS (<c>section A { m clef bass { … } }</c> — <c>Parser.Sections.IsPartOption</c>,
+    /// which GRAMMAR.md's <c>PartBlock</c> production does not mention at all). There three
+    /// are silently ignored and <c>transpose</c> is read at the WRONG SCOPE — written on one
+    /// section's cell it transposes the whole part. That last one moves output, so it is a
+    /// defect of its own rather than a spelling to refuse. HANDOFF §2 F ⒭.
+    /// </para>
+    /// </remarks>
+    public const string PartSettingInSectionHeader = "LYS1035";
+
     // Measure errors (LYS2xxx)
 
     /// <summary>Measure error: a measure has fewer beats than the time signature requires.</summary>
