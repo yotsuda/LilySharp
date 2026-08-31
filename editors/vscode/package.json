@@ -1,7 +1,7 @@
 {
   "name": "lilysharp",
   "displayName": "Lily#",
-  "description": "Sheet music from plain text — LilyPond-quality engraving, live as you type.",
+  "description": "Sheet music from plain text — LilyPond-derived engraving, live as you type.",
   "version": "0.5.0",
   "publisher": "yotsuda",
   "license": "GPL-3.0-or-later",

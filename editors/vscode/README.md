@@ -8,7 +8,7 @@ there is nothing else to install.
 The layout engine is in part a **port of LilyPond**, the GNU music typesetter: beam
 quanting, slur and tie scoring, skylines, springs and page breaking are modified
 translations of LilyPond's own algorithms rather than independent approximations. So the
-page is engraved to LilyPond's rules — without LilyPond, or anything else, having to be
+engraving is derived from LilyPond's — without LilyPond, or anything else, having to be
 installed. The language, by contrast, is deliberately not LilyPond's.
 
 **Version 0.5.0** — the bundled language server and the `lysc` compiler carry the
