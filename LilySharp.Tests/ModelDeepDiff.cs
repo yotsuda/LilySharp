@@ -33,7 +33,11 @@ namespace LilySharp.Tests;
 /// </summary>
 internal static class ModelDeepDiff
 {
-    private static readonly Dictionary<Type, PropertyInfo[]> Props = new();
+    // ⚠️ CONCURRENT, because the suite runs its collections in parallel since session 315.
+    // A plain Dictionary written from two test threads corrupts its buckets and throws from
+    // an unrelated reader — the shape of flake that costs a whole run to diagnose.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, PropertyInfo[]>
+        Props = new();
 
     public static string? FirstDifference(object? a, object? b, string path)
     {
@@ -90,15 +94,11 @@ internal static class ModelDeepDiff
 
     private static PropertyInfo[] GetProps(Type type)
     {
-        if (Props.TryGetValue(type, out var cached))
-            return cached;
-        var props = type
+        return Props.GetOrAdd(type, static t => t
             .GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(p => p.CanRead && p.GetIndexParameters().Length == 0)
             .OrderBy(p => p.Name, StringComparer.Ordinal)
-            .ToArray();
-        Props[type] = props;
-        return props;
+            .ToArray());
     }
 
     private static string Describe(object? v) => v?.ToString() ?? "null";

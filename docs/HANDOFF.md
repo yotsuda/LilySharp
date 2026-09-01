@@ -195,6 +195,35 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第315セッション＝**入り方は第298〜第314 と同じ**——**ユーザーは `docs/HANDOFF.md` を読んで着手せよとだけ言い、便の後半で 1 件だけ指示した（「テストに時間がかかりすぎている。次回に同様のテストをするときは、必ずテストコードを並列化してから実行して」）**。⇒ ★★★★ **本便の骨は 4 つ**: **⑴ 第314 の次の一手 ⑴ を入れた＝grace の付点が家に帰り `GraceNoteEngraver.Dots` が死んだ／⑵ そこで*生きた欠陥*が出た——付点を旗の右へ押すかどうかを決めているのは「符頭が線か間か」ではなく*描かれた符尾の長さ*で、Lily# は canonical の 6 例中 1 例を 0.5207 外していた／⑶ そして*その 1 例の真因は `DotColumn` の Y 門が切れていたこと*——`Skyline.FromBoxes` は重なる箱を和集合に畳んで X の max を採るので、必ず旗と重なる符尾の箱に旗の X が垂れていた。LP の `Skyline::height` ではない／⑷ ユーザー指示で suite を並列化した。** **commit は 3 本＝付点の帰宅と Y 門 `a7d73faf`／suite の並列化 `6dc1c6a2`／この commit。**
+
+⚠️⚠️⚠️ ★★★★ **⑴ 付点は `DrawNote`/`DrawChord` が描く**（§2 U8 ⒝2 ⒞ に全部書いた）。**入れたのは `!GraceTime` の門を外したことだけ**——**床は符頭自身のフォントのインク、旗の支持は*その場で描いた符尾*から吊る**ので、**grace かどうかを訊く行は 1 つも無い。** **`GraceNoteEngraver.Dots` は退役し、`StemLength` の読み手は `DrawGraceBeam` の quant できなかったときの fallback 1 つだけになった**（**観測者ゼロの近似として `APPROXIMATIONS` に載せた＝`UNWATCHED` 51 → 52・計 224 → 225**）。
+
+⚠️⚠️⚠️ ★★★★ **⑵ canonical 2.26.0 に 6 冊訊いた**（`scratch/p315/gracedot-dump.ly`＝grob dump・**答え＝Dots 左 − NoteHead 左**。**Lily# 絶対 c ＝ LP c'**）:
+**`\grace { g'8. }`（線・付点は持ち上がる・符尾 2.80）1.226585 ／ `f'8.`（間）1.226585 ／
+`d''8.`（線・持ち上げ・符尾は中央線より上なので*短縮されて* 2.50）1.747274 ／
+`e''8.`（間・2.40）1.226585 ／ `d''16.` 1.747274 ／ `g'16.`（短縮無しでも 16 分の旗は 0.354 深い）1.747274。**
+⇒ ★★★★ **第299 の「1.2266 と 1.7473 の対」は当たっていたが、対を分けているのは*線／間ではない*。**
+**旗は符尾端に吊るので、答えは*描かれた符尾の長さ*で決まる**——**`g'8.` は「線・持ち上げ」なのに 1.2266。**
+**Lily# はそこを 1.7473 で刷っていた。**
+
+⚠️⚠️⚠️ ★★★★ **⑶ 真因は計器ではなく `DotColumn` 自身だった。** **`Skyline.MergeSegments` は*重なる 2 箱を和集合 1 本に畳んで X は max を採る***ので、**符尾の箱（符頭の行から 7 つ）と旗の箱が畳まれ、旗の X が符尾の全域に垂れていた**＝**この class が存在する理由である Y 門が事実上効いていない。** ⚠️ **第314 の 4 冊で割れなかったのは偶然**（**問い合わせが両端 strict ＋ 上向き符尾の箱が*符頭の行から*始まるので、持ち上がらない付点は下端でちょうど外れ、持ち上がった 3 冊はどれも旗自身の箱の中に入っていた**）。⇒ **箱ごとに `PositionBottom < p && p < PositionTop` を見て max を採る形に直した**（`lily/dot-configuration.cc:129-137` ＝ `head_skyline().height(position)` そのもの）。**フル サイズの 4 冊は 4 桁で不動、grace の 6 冊は全部 LP。**
+⚠️⚠️ ★★★ **この直しは grace 以外にも射程がある**——**符尾が中央線まで*延長*された音符**（五線の下の低音）**は旗の下端が付点の行よりずっと上なのに押されていた。** ⚠️ **`Svg/Layout/Skyline.cs` は本便で Core の呼び手を失った**（`Skyline.` の grep が `DotColumn` のコメント 1 件しか当たらない）——**LP の `Skyline::height` ではない畳み方をする class が「skyline」の名前で残っている。次に手を伸ばす者への罠。**
+
+⚠️⚠️ ★★★ **⑷ 射程は掃きで数えた**（`scratch/p315/sweep315.ps1`＝第314 の形・**base と head を本ごとに続けて叩く・一時ファイルは `$PID` 分け**）: **追跡 fixture 238 冊＝SAME 237 / MOVED 1**（**動いたのは本便が足した番人だけ**）・**ユーザー実コーパス `scratch\ベースタブLy` 314 冊＝SAME 314 / MOVED 0 / NO-OUTPUT 0**（**読み手の紙は 1 mm も動いていない**）・**`audit/` 341 冊（LP 双子プローブ）＝SAME 341 / MOVED 0 / NO-OUTPUT 0**——**計 893 冊で動いたのは 1 冊だけ**。**snapshot は 1 枚も動いていない**（**追跡コーパスに旗つき付点の grace も、長い符尾の付点音符も 1 冊も無かった**）。
+★ **番人 `test/grace-dot-flag-column`**（**6 冊 ＋ 梁の対照 1 冊。fixture の頭に LP の 6 数。追跡 `.lys` 584 → 585・snapshot 234 → 235**）と、**`AGraceDotClearsTheFlagOnlyWhenTheFlagIsOnItsRow` をページから読む形に書き換えた**（**`GraceNoteEngraver.Dots` の単体呼び出しが消えたので必然。ページの x は 2 桁＝±0.01 だが、答えの差は 0.52**）。
+
+⚠️⚠️ ★★★ **⑸ ユーザー指示で suite を並列化した**——**`LilySharp.Tests/xunit.runner.json` の `maxParallelThreads 1 → 0`（＝論理プロセッサ数）・`parallelizeTestCollections false → true`。** ⚠️ **直列だった理由はどこにも書かれていない**（`docs/` にも csproj にも記述なし）ので、**壊れうる静的状態を先に 1 つ塞いだ**＝**`ModelDeepDiff.Props` は素の `Dictionary` で、2 スレッドから書くと無関係な読み手が落ちる**（`ConcurrentDictionary.GetOrAdd` にした）。**`VisualDiffReport` は最初から lock 済み。** ⚠️ **並列で 1 度も落ちないことは*この機械で 1 回*しか確かめていない**——**flake が出たら「並列化が原因」と決めつける前に、その test が触っている静的状態を名指すこと。**
+⚠️⚠️ ★★★ **効きは*測ってある*——そして期待ほどではない。** **直列 14 分 52 秒 → 並列 12 分 09 秒**（**どちらも掃き 2 本が同時に回っている最中の数なので、絶対値ではなく*同条件の対*として読むこと**）。**xunit は*クラス単位のコレクション*で並列化するので、床は「いちばん長いクラス」**——**実測: `LpFidelity` 2 分 54 秒（806 ケース）／`CollectEditResume` 2 分 08 秒（20 ケース）／`CollectResume` 1 分 39 秒（**3 ケース**）／`AnnotationRoundTrip` 42 秒／`SvgSnapshot` 32 秒（233 ケース）。** ⇒ ★★★ **snapshot 233 枚は犯人ではない。** **これ以上縮めるなら、*長いクラスを割る*しかない**（**`CollectResume` の 3 ケースは全木を歩く 1 本ずつ**）。
+
+⇒ ★★★ **次の一手**: ★★★★ **⑴ §2 U8b**（二声の同時 grace。**⒝2 が「構築により閉じる」と言っていた 3 つの最後の 1 つ**）／★★★ **⑵ §2 U8c**（cue の和音の 0.004270）／★★★ **⑶ 残る `Design20 × magstep` の島＝`ChordHeadPositioning.CalculateOffsets(..., headScale)` と click target の箱**（**和音の反転符頭は縮んだ列で 0.006 ずれる。測ってから触ること**）／★★ **⑷ `Svg/Layout/Skyline.cs` の始末**（**呼び手ゼロ・畳み方が LP と違う。消すか、`HorizontalSkyline` のように「これは LP の skyline ではない」と名前で言うか**）／**⑸ §2 の X/Y 側**（§2 A/B/D/E）／**⑹ §2 C⑴ の多声 walk の moment 順への再設計**（**最大の構造負債・未着手**）。⚠️ **承認待ちは無い。** ⚠️ **§2 F は開いている項目が無い。**
+
+★ **開始時裏取り**: HEAD `8f7644ab`・**未 push 9**（**第312/313/314 の 9 本。`origin/master` は `925cab98`**）・木 0・未追跡 0・Core 0 エラー 0 警告・**Windows Debug 6811 / 0 / 4 / 6815**（**第314 の終了時と一致**）・追跡 `.lys` 584・snapshot 234。
+終了時: **commit 3 本**（**この commit を含む**）＝**`a7d73faf`／`6dc1c6a2`／この commit**・**未 push 12**（**開始時 9 ＋ 本便 3**）⚠️ **数を閉じる commit が数を動かすので、最後の 1 本は*自分を数えて*「この commit」と書く**・作業ツリー 0・未追跡 0（**`scratch/p315` は git 管理外**）・Core 0 エラー 0 警告・**Windows Debug 6812 / 0 / 4 / 6816**（**+1 は本便が足した番人 `test/grace-dot-flag-column`**）・**追跡 `.lys` 585・snapshot 235**。⚠️ **`docs/APPROXIMATIONS.md` は `UNWATCHED` が 1 増えた**（**51 → 52・計 224 → 225。増やしたのは ⑴ の grace 梁 fallback。`audit/magic_constants.csv` は `GraceNoteEngraver.Dots` の 0.5 が 1 つ消えただけ**）。⚠️⚠️ **WSL ubuntu Release は取れない**（**この機械に WSL が無い＝第313 ⑶**）——**本便はインクを動かしているので、ubuntu の緑は push 後に `gh run list` で読むこと。**
+⚠️⚠️ ★★★ **計器は `scratch/p315/`**（**git 管理外**）: **`gracedot-dump.ly`（正典 2.26.0 の 6 冊 dump・雛形は `audit/lp-geometry/probes/dynamic-support.ly` の `page-post-process`）・`gracedot2.lys`（その双子）・`measurements.md`（表と、Y 門が切れていた話）・`sweep315.ps1`（`-Recurse`/`-Tag` つき）・`exe-{base,head}`（A/B・base は `git stash` で作った）。**
+
+## 以下は第314セッションの経緯
+
 最終更新 第314セッション＝**入り方は第298〜第313 と同じ**——**ユーザーは `docs/HANDOFF.md` を読んで着手せよと言い、途中で 1 件報告した（「volta ブレースの線が太すぎるように見える」）**。⇒ ★★★★ **本便の骨は 4 つ**: **⑴ その報告は LP と同一で、ユーザー決定は「そのまま」（§2 U13）／⑵ 第313 の次の一手 ⑴ を入れた＝`DrawNote`/`DrawChord` が `DotColumn` に訊く。これは*無変化ではなかった*——LP は旗つき付点音符の付点を旗の右へ押しており、Lily# は 4 例中 3 例で 0.7632 短かった／⑶ そして*コーパスはその 3 例を 1 冊も見ていなかった*／⑷ 便の後半＝ユーザーが「有利なら続けよ」と言ったので次の一手 ⑵（cue の観測者）を置き、そこで*生きた欠陥*が出た＝縮んだ符頭の付き位置を `Design20 × magstep` で読んでいた（grace は ⒝2 以来インクがずれていた）。** **commit は 3 本＝付点の列 `78fdd680`／§1 と U13 `f684e2ec`／この commit。**
 
 ⚠️⚠️⚠️ ★★★★ **⑴ volta の線は LP と同一だった**（§2 U13 に全部書いた）。**Lily# の SVG は `stroke-width="0.160"`・LP 2.26.0 の双子は `0.1600`**＝**どちらも `VoltaBracket (thickness . 1.6)` × line-thickness 0.1**。**タブの上でも同じ・ラスタでも 1.59〜1.63 倍**（五線 1 本に対する比）。⇒ **報告が出た理由は*4 日前に本当に太くなったから*——`51c32b3b`（2026-08-28）が素の 0.13 を LP の宣言に直した。** ⇒ ★★ **ユーザー決定＝LP どおり 0.16 のまま。**
@@ -217,27 +246,6 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ★ **開始時裏取り**: HEAD `7883d150`・**未 push 6**（**第312 の 3 本＋第313 の 3 本。`origin/master` は `925cab98`**）・木 0・未追跡 0・Core 0 エラー 0 警告・**Windows Debug 6809 / 0 / 4 / 6813**（**第313 の終了時と一致**）・追跡 `.lys` 582・snapshot 232。
 終了時: **commit 3 本**（**この commit を含む**）＝**付点の列 `78fdd680`／§1 と U13 `f684e2ec`／grob 自身のフォント＋この commit**・**未 push 9**（**開始時 6 ＋ 本便 3**）⚠️ **数を閉じる commit が数を動かすので、最後の 1 本は*自分を数えて*「この commit」と書く**・作業ツリー 0・未追跡 0（**`scratch/p314` は git 管理外**）・Core 0 エラー 0 警告・**Windows Debug 6811 / 0 / 4 / 6815**（**+2 は本便が足した番人 `test/dotted-flag-dot-column` と `test/cue-flag-dot`**）・**追跡 `.lys` 584・snapshot 234**。⚠️ **`docs/APPROXIMATIONS.md` は `UNWATCHED` が 1 増えた**（**50 → 51・計 223 → 224。増やしたのは「連桁された列は支持を渡さない」＝LP は渡す。`audit/magic_constants.csv` は行番号のずれだけで定数の増減 0**）。⚠️⚠️ **WSL ubuntu Release は取れない**（**この機械に WSL が無い＝第313 ⑶**）——**本便はインクを動かしているので、ubuntu の緑は push 後に `gh run list` で読むこと。** ★ **base 用 worktree は建てていない**（**A/B は `git stash` で exe を 2 つ作って `scratch/p314/exe-{base,head}` に置いた＝本ごとに*続けて*叩ける**）。
 ⚠️⚠️ ★★★ **計器は `scratch/p314/`**（**git 管理外**）: **`flagdot-dump.ly`（正典 2.26.0 の NoteHead/Dots/Stem/Flag dump）・`flagdot.lys`（その双子）・`sweep314.ps1`（`-Every`/`-Offset` つき・一時ファイルは `$PID` 分け）・`measure.ps1`（PNG の縦インク被覆＝線の太さ）・`volta.lys`/`volta.ly`/`voltatab.*`（U13）・`dots.lys`（連桁で何も測れなかったプローブ）・`gracedot.lys`・**そして ⑸ の 2 本＝`cuedot-dump.ly`/`cuedot.lys`（cue の対）と `gracedot-dump.ly`（grace の符尾 X）・`sweeplist.ps1`（明示リストを掃く版）。** ⚠️ **exe は 2 組ある**（`exe-{base,head}`＝⑵ の A/B・`exe-{base2,head2}`＝⑸ の A/B）。**dump プローブの雛形は `audit/lp-geometry/probes/dynamic-support.ly` の `page-post-process`。**
-
-## 以下は第313セッションの経緯
-
-最終更新 第313セッション＝**入り方は第298〜第312 と同じ**——**ユーザーは `docs/HANDOFF.md` を読んで着手せよとだけ言った**。⇒ ★★★★ **本便の骨は 3 つ**: **⑴ §2 U8 ⒝2 の本体を入れた＝普通の engraver が grace 時間を描く／⑵ 3 便が「壊れている」と書いていた正典 LilyPond は*起動のしかた*の問題で、回避策は 80 日前から memory に在った／⑶ そして*この機械から WSL が消えている*——§0 の脚の片方が回らない。** **commit は 3 本＝休符 `0e27b056`／⒝2 本体 `ccf30003`／この commit。**
-
-⚠️⚠️⚠️ ★★★★ **⑴ ⒝2＝符頭・ledger・臨時記号・休符・符尾・旗・acciaccatura の斜線を普通の engraver が grob ごとのフォントで描く**（§2 U8 に全部書いた）。**住所は層が publish する＝`GraceNoteItem.ColumnItemIndices` と `ScoreLayout.GraceColumnXs`（`(staff, voice, measure, item) → X`）。X は第 2 の計算ではなく `SpacingRules.GraceColumns` の同じ鎖で、新しいのは*鍵*だけ。** ★★ **grace 家に残ったのは LP が grace のためだけに宣言しているもの＝梁（接頭辞・0.384・0.8）とその下の符尾／主音符への slur／付点（下の ⒞）。** ★ **2 段に割った**: **⑴a 休符だけを先に移した**（`0e27b056`）——**`general-grace-settings` が Rest を名指さない＝*唯一 LP が縮めない grob* なので、位置もサイズも動かない**（**A/B で座標 4 桁一致**）——**そして*その 1 冊で欠陥が出た*: 休符は grace group の `MusicFace(Emmentaler-14)` スコープの中でフル サイズに描かれており、五線の休符と*同じ字形ではなかった***（**LP は同一と測ってある・第308**）。⚠️⚠️ ★★★ **ディスク 1420 冊のうち grace 本体に休符を書いた本は 0 だった**——**だから何も見張っていなかった。`LilySharp.Tests/Fixtures/test/grace-rest.lys` を足した**（**追跡 581 → 582・snapshot 231 → 232**）。
-
-⚠️⚠️⚠️ ★★★★ **⑵ 符尾が初めて LP と一致した。そして*正典 exe は 15 秒で回る*。** **`cmd.exe /d /s /c "<lilypond …> < NUL > log 2>&1"`＝デタッチして stdin を NUL から。** ⚠️⚠️ **第302（13 分）・第308（17 分）・第309（「⒝2 を見送る理由の筆頭」）の 3 便が、`memory/reference_lilypond_mcp_console_hang.md` に 80 日前から書いてある同じ署名（CPU 数秒で停止・WS 28 MB）を読みながら memory を引かなかった。** ⇒ ★★★ **汎化＝「この機械のツールが動かない」は*環境の記憶*に当たること。** ★ **測ったもの**（`scratch/p313/lp/measurements.md`・9 冊・全部 4 桁一致）: **grace の符尾＝*音価が選んだ長さ × 0.8*、短縮は積の中、中央線への延長は無し。** **第312 まで全部 2.475**（3.5 × magstep(−3)）——**8 分で −0.325・64 分で −1.525。** ★★ **表の*もう半分*が欠けていた＝`no-stem-extend`**（`StemDetails.NoStemExtend`。**`lily/stem.cc:591-593` と梁側の双子 `:1233-1235` を門番する property。cue は宣言しない**）。**`APPROXIMATIONS` の `UNWATCHED` 51 → 50・計 224 → 223。**
-
-⚠️⚠️⚠️ ★★★★ **⑶ この機械に WSL が無い**（`wsl -l -v` は "no installed distributions"）。**`Ubuntu-24.04` は §0 の ubuntu Release 脚であり、第308・第310 が LilyPond を測った場所でもある。** ⇒ **§0 にその旨を書いた。ubuntu の緑は `gh run list` で*読む*しかない。** ⚠️ **LilyPond のほうは損ではない**——**残った 1 本が*台帳の要求する 2.26.0 そのもの*だから**（第308 以来の「WSL の 2.27.3 で測って 1 度突き合わせる」運用はもう要らない）。
-
-⚠️⚠️ ★★★ **⑷ 移す途中で欠陥が 2 つ出た。どちらも「サイズは合っていて*デザイン*が違う」形**: **`DrawNote`/`DrawChord` の `gc.MusicFace` は符頭と臨時記号しか包んでおらず、旗と付点は*縮んだサイズ*で*五線のデザイン*から出ていた**（**Emmentaler は光学サイズ＝`GrobFontSize` が `DesignOf` と `FontOf` を対にしている理由そのもの**）。**付点の*幅*も同じ形**（**2 つの付点は 1 幅ぶん離すのに、幅をフル サイズの付点で測っていた**）。⚠️⚠️ **cue も同じ欠陥を持っており、コーパスは 1 冊も観測していない**——**旗つき・付点つきの cue を書いた fixture が無いので snapshot は 1 枚も動かなかった。** ⇒ **観測者を足す価値がある**（→ 次の一手 ⑵）。
-
-⚠️⚠️ ★★★★ **⑸ 起票の 4 つのうち*⒞ 付点だけは向きが逆*だった。** **起票は「2 軒が違う規則を持っている」と書いたが、正しい規則を持っているのは*grace 家のほう***——**`DotColumn`（LP の移植）の唯一の呼び手が `GraceNoteEngraver.Dots` で、`DrawNote`/`DrawChord` の「符頭インク右＋付点 1 つ」は移植ではない。** **フル サイズでは一致するが grace では一致しない**（**短い符尾のせいで持ち上がった付点が旗に当たる＝1.226600 対 1.747300**）。**`DrawNote` に渡したら両方 1.2266 になったので、付点は grace 家に残した**（**知って残した・理由はコードに書いた**）。⇒ ★★ **測った規則を*捨てる*移行はしないこと**——**移す前に「どちらの家が LP を持っているか」を訊く。**
-
-⇒ ★★★ **次の一手**: ★★★★ **⑴ `DrawNote`/`DrawChord` も `DotColumn` に訊く**（**`DotColumn` の remarks は既に「ONE HOUSE, THREE CALLERS」と書いているが、呼び手は 1 つしかない。これが閉じると `GraceNoteEngraver.Dots` が死に、⒝2 の付点も家に帰る。フル サイズの答えは変わらないはずで、`AGraceDotClearsTheFlagOnlyWhenTheFlagIsOnItsRow` が 4 桁で見張っている**）／★★★ **⑵ 旗つき・付点つきの *cue* に観測者を足す**（**⑷ の欠陥をコーパスは 1 冊も見ていない。`test/cue-notes` は旗も付点も書かない**）／★★★★ **⑶ §2 U8b**（二声の同時 grace。**⒝2 が「構築により閉じる」と言っていた 3 つのうち U8b だけは*まだ確かめていない*——⒞ スラー・⒟ 注釈は普通の engraver が届くようになったので次便が測れば分かる**）／**⑷ §2 U8c**（cue の和音の 0.004270）／**⑸ §2 の X/Y 側**（§2 A/B/D/E）／**⑹ §2 C⑴ の多声 walk の moment 順への再設計**（**最大の構造負債・未着手**）。⚠️ **承認待ちは無い。** ⚠️ **§2 F は開いている項目が無い。**
-
-★ **開始時裏取り**: HEAD `fc11696b`・**未 push 3**（**第312 の 3 本。`origin/master` は `925cab98`**）・木 0・未追跡 0・Core 0 エラー 0 警告・**Windows Debug 6808 / 0 / 4 / 6812**（**第312 の終了時と一致**）・追跡 `.lys` 581・snapshot 231。
-終了時: **commit 3 本**（**この commit を含む**）＝**休符 `0e27b056`／⒝2 本体 `ccf30003`／この commit**・**未 push 6**⚠️ **数を閉じる commit が数を動かすので、最後の 1 本は*自分を数えて*「この commit」と書く**（第305〜第312 と同じ形）・作業ツリー 0・未追跡 0（**`scratch/p313` は git 管理外**）・Core 0 エラー 0 警告・**Windows Debug 6809 / 0 / 4 / 6813**（**+1 は本便が足した fixture `test/grace-rest`**）・**追跡 `.lys` 582・snapshot 232**。⚠️ **`docs/APPROXIMATIONS.md` は `UNWATCHED` が 1 減った**（**51 → 50・計 224 → 223。閉じたのは第312 が起票した grace stem。`audit/magic_constants.csv` は行番号のずれだけで定数の増減 0**）。⚠️⚠️ **WSL ubuntu Release は取れない**（**⑶＝この機械に WSL が無い**）——**本便はインクを動かしているので、ubuntu の緑は push 後に `gh run list` で読むこと。** ★ **base 用 worktree は建てていない。**
-⚠️⚠️ ★★★ **全木 A/B 掃きは*していない*。** **射程は述語で数えた**——**`grace|acciaccatura|appoggiatura` を書く本、そのうち休符を含むもの 2 冊**（**両方本便が書いた**）——**そして動いた snapshot 10 枚は第309 が名指した 9 枚＋本便の 1 枚と*完全に一致*した。** ⚠️ **次便が掃くなら `scratch/p312/sweep312.ps1` が残っている**（**2 出力・並列 throttle 6 で 32〜34 分/側。共有 PC なので上げる前に一声**）。
-⚠️⚠️ ★★★ **計器は `scratch/p313/`**（**git 管理外**）: **`lp/g1..g3.ly`（正典 2.26.0 の符尾プローブ）・`lp/dump.py`（幅 0.13 の rect＝符尾だけを絶対座標で刷る）・`lp/measurements.md`・`ab/*.lys`（stem・dots・graceRest の対）。**
 
 ## 2. 開いている作業
 
@@ -825,7 +833,7 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
   **X は第 2 の計算ではない**——**`layout.X + ColumnOffsets[i]`＝`SpacingRules.GraceColumns` の
   同じ鎖。新しいのは*鍵*だけ。**
   ★ **grace 家に残したのは LP が grace のためだけに宣言しているもの**: **梁（接頭辞・thickness 0.384・
-  length-fraction 0.8）とその下の符尾／主音符への slur／付点（下の ⒞ を見よ）。**
+  length-fraction 0.8）とその下の符尾／主音符への slur。** ✅ **付点は第315 が帰した（下の ⒞）。**
   **普通の pass に「この列の符尾は他所が描く」と伝えるのは*普通の梁と同じ集合*
   （`BuildBeamedItemsSet`）**なので、2 軒が食い違えない。
   ★★ **acciaccatura の斜線は*項目の属性*になった**（`MusicItem.GraceSlash`）——**LP でもそれは
@@ -853,6 +861,27 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
     書いた fixture が無いので snapshot は 1 枚も動かなかった。** ⇒ **観測者を足す価値がある。**
     **⒝ 休符は grace pass の `MusicFace(Emmentaler-14)` スコープの中で*フル サイズ*に描かれていた**
     （第313 前半・`0e27b056`）。
+  - ✅✅ ★★★★ **【⒞ 付点は第315 が帰した。そして「故意で残した」の理由づけは*両方の家が外れていた*】**
+    **`GraceNoteEngraver.Dots` は退役**（`DrawNote`/`DrawChord` の `!GraceTime` 門を外しただけ）。
+    ★★★ **第313 の見立て「正しい規則を持っているのは grace 家のほう」は半分だけ当たり**——
+    **grace 家は確かに `DotColumn`（移植）を呼んでいたが、その旗の支持を*退役した平らな符尾*
+    （3.5 × magstep(−3) = 2.475）で測っていた**ので、**音高で変わる答えを 1 つに潰していた。**
+    ★★★★ **そして `DotColumn` 自身の Y 門は*切れていた***——**`Skyline.FromBoxes` の
+    `MergeSegments` が*重なる 2 箱を和集合 1 本に畳んで X は max を採る***ので、
+    **必ず旗と重なる符尾の箱に旗の X が垂れていた。** **第314 の 4 冊で割れなかったのは偶然**
+    （**問い合わせが両端 strict ＋ 上向き符尾の箱が符頭の行から始まる**）。
+    ★ **canonical 2.26.0 に 6 冊訊いた**（`scratch/p315/gracedot-dump.ly`・**答え＝Dots 左 − NoteHead 左**）:
+    **`\grace { g'8. }`（線・持ち上げ・符尾 2.80）1.226585 ／ `f'8.`（間）1.226585 ／
+    `d''8.`（線・持ち上げ・符尾は*短縮されて* 2.50）1.747274 ／ `e''8.`（間・2.40）1.226585 ／
+    `d''16.` 1.747274 ／ `g'16.`（短縮無しでも 16 分の旗は 0.354 深い）1.747274。**
+    ⇒ ★★★★ **答えを決めているのは「線か間か」ではなく*描かれた符尾の長さ***。
+    **Lily# は `g'8.` の 1 冊を 1.7473 で刷っていた（＝0.5207 のずれ）。**
+    ★ **番人は `test/grace-dot-flag-column`**（**6 冊 ＋ 梁の対照 1 冊。fixture の頭に LP の 6 数**）と
+    **`GraceBodyValidatorTests.AGraceDotClearsTheFlagOnlyWhenTheFlagIsOnItsRow`**
+    （**ページから読む形に書き換えた＝単体呼び出しは消えた。ページの x は 2 桁なので
+    ±0.01・答えの差は 0.52**）。
+    ⚠️ **以下は第313 が書いた当時の観測。「フル サイズでは一致する」は今も本当だが、
+    その理由づけ（旗が付点の段に届かない）は第314 が反証している。**
   - ⚠️⚠️ ★★★★ **⒞ 付点だけは grace 家に残した。故意で、理由は測ってある。**
     **付点の X は `Svg/Layout/DotColumn`＝LP の移植（support の右スカイラインを符頭のインク右で床張り）で、
     その*唯一の呼び手*が `GraceNoteEngraver.Dots`。`DrawNote`/`DrawChord` は「符頭インク右＋付点 1 つ」の
@@ -865,7 +894,8 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
     **が、`AGraceDotClearsTheFlagOnlyWhenTheFlagIsOnItsRow` が 4 桁で見張っているので、動いたら分かる。**
   - ⚠️⚠️ ★★★ **⒝2 で*まだ*畳んでいないもの**: **`GraceColumnHeads` の `HeadOffsets`/`AccidentalOffsets`
     は*予約*側（`HeadInkRight`/`AccidentalInkLeft` → `SpacingRules.GraceColumns`）が読むので死んでいない。**
-    **`GraceNoteEngraver.Dots` は上の ⒞ が閉じた日に死ぬ。**
+    ✅ **`GraceNoteEngraver.Dots` は第315 で死んだ**（**残った `StemLength` の読み手は
+    `DrawGraceBeam` の quant できなかったときの fallback 1 つだけ＝観測者ゼロの近似**）。
     **`SharedRenderer.GraceNotes` は 744 → 約 460 行、`DrawGraceStemsAndBeam` は `DrawGraceBeam` になった。**
   - ⚠️⚠️ ★★★★ **X について 2 軒が今も食い違いうる唯一の場所＝*ossia の上の梁つき grace*。**
     **符頭は staff の group の中（X は縮まない・共有列の上）、梁は overlay pass のままで
