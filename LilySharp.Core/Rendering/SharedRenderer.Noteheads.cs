@@ -534,10 +534,10 @@ internal static partial class SharedRenderer
     ///   fraction multiplies the length the duration chose, wherever it was declared:
     ///   <c>\name CueVoice</c> in ly/engraver-init.ly spells <c>#(magstep -4)</c>, and
     ///   scm/music-functions.scm:636-650 <c>general-grace-settings</c> states a flat 0.8.
-    /// ⚠️ THE GRACE ARM HAS NO READER YET — the grace stem is drawn by the side model
-    /// (<c>GraceNoteEngraver.StemLength</c>), which multiplies a flat 3.5 by the FONT scale.
-    /// The arm is here because the ordinary stem is what HANDOFF §2 U8 ⒝2 hands the grace to,
-    /// and one house has to answer for both by then. See <see cref="GrobFontSize.GraceStemDetails"/>.
+    /// The GRACE arm is what HANDOFF §2 U8 ⒝2 handed the grace stem to in session 313, and the
+    /// dot column has read the stem it produces since session 315 — so the flag support a grace
+    /// dot is gated on now moves with the shortening, which is what LilyPond does
+    /// (scratch/p315/measurements.md). See <see cref="GrobFontSize.GraceStemDetails"/>.
     /// </remarks>
     private static StemDetails? StemDetailsOf(MusicItem item)
         => item.GraceTime ? GrobFontSize.GraceStemDetails
@@ -647,6 +647,24 @@ internal static partial class SharedRenderer
         // Ledger lines are drawn by the staff-measure ledger pre-pass, BEFORE
         // any noteheads (CollectItemLedgers/DrawPlannedLedgers).
 
+        // WHAT THE DOT COLUMN STANDS BEHIND. LilyPond hands Dot_column its note column's
+        // stem and flag as side-support-elements and builds a rightward skyline over them
+        // (lily/dot-column.cc:100-141), so the two are collected HERE, where they are
+        // computed for drawing, and read by the dot block below — one spelling of each
+        // quantity, not a second one for the dots.
+        // ⚠️ A BEAMED COLUMN HANDS OVER NOTHING, because its stem is drawn by DrawBeams and
+        // this method never computes one. LilyPond's Dot_column would still see that stem —
+        // but a stem's right edge is its head's own attachment point, so it cannot out-reach
+        // the floor the skyline already stands on, and a beamed column has no flag at all.
+        // (The FLAG is the support that binds, and only an unbeamed column has one.)
+        //   departs from: lily/dot-column.cc:100-109 — the stem is a support whether or not a
+        //     beam owns its end.
+        //   goes away when: the beamed stem's geometry is available here (it is DrawBeams'
+        //     today), or the dot column is built where the stem is.
+        //   observed by: no observer, and none is possible while the term is dominated — it
+        //     becomes visible only for a head whose attachment is left of its own ink.
+        var dotSupports = new List<DotColumn.Support>();
+
         // Stem & flag — beamed notes are handled by DrawBeams (which draws the
         // beam-aware stem to the actual beam Y), so skip both here to avoid a
         // duplicated short stem layered under the beam stem.
@@ -660,13 +678,24 @@ internal static partial class SharedRenderer
             // LILYPOND-REF: lily/grob.cc:164-176 get_print_stencil — transparent
             //   replaces the stencil with an empty box of the same extent.
             bool stemTransparent = resolver.GetBool("Stem", "transparent") == true;
-            // Cue heads are drawn at 0.66×, so the up-stem attaches at the
-            // SCALED head's right edge (head width × scale − thick/2), or the
-            // stem floats off the small head. Down-stems attach at the head's
-            // left edge, which doesn't move with the scale.
+            // The up-stem attaches at the head's own right edge (attachment − thick/2), or the
+            // stem floats off a reduced head; a down-stem attaches at the head's left edge.
             // LILYPOND-REF: lily/stem.cc internal_calc_stem_offset_from_head —
-            // the offset comes from the (scaled) head extent.
-            double stemX = x + LayoutUtilities.StemAttachX(stemUp, noteValue, note.Notehead, headScale);
+            // the offset comes from the head's extent, read from the head's OWN font.
+            // ⚠️ THE HEAD'S OWN FONT, not the twenty's box times a magstep. Emmentaler is
+            // optically sized, so a reduced head is a DIFFERENT outline and its attachment is
+            // its own: MEASURED on 2.26.0 (scratch/p314/{cue,grace}dot-dump.ly, the stem's X
+            // centre minus its head's left) — a CUE stem stands 0.750400 = 0.815355 (Design13's
+            // black head at magstep(−4)) − 0.065, and a GRACE stem 0.852950 = 0.917940
+            // (Design14's at magstep(−3)) − 0.065, where the twenty's 1.304200 scaled would
+            // give 0.756500 and 0.857100. The old spelling was 0.006100 / 0.004150 out, and the
+            // grace half went live when HANDOFF §2 U8 ⒝2 handed grace stems to this method —
+            // the grace house, the beam quanter and the spacing chain all read the grace font
+            // (LayoutUtilities.StemX's font overload), so this was also a drift between the
+            // drawn stem and the one they reserve.
+            double stemX = x + LayoutUtilities.StemAttachX(
+                stemUp, noteValue, note.Notehead,
+                GrobFontSize.IsReduced(note) ? GrobFontSize.FontOf(note, SizedGrob.NoteHead) : null);
             // Duration-dependent length + unnatural-direction shortening + the
             // extend-to-center-line rule, faithfully following LilyPond's
             // Stem::internal_calc_stem_end_position (lily/stem.cc:481).
@@ -688,6 +717,14 @@ internal static partial class SharedRenderer
                 gc.DrawLine(stemX, noteY - StemAttachYOffset(note.Notehead, stemUp, noteValue),
                     stemX, stemEndY,
                     stemColor ?? Color.Black, EngravingDefaults.StemThickness);
+
+            // The stem as a dot support — its own X extent's RIGHT edge, over the seven
+            // positions LilyPond walks from the head it stands on. Transparency does not
+            // remove it: a transparent grob keeps its extent (lily/grob.cc:164-176).
+            // LILYPOND-REF: lily/dot-column.cc:103-109, in Dot_column::calc_positioning_done.
+            dotSupports.Add(DotColumn.StemSupport(
+                note.StaffPosition, stemUp,
+                stemX - x + EngravingDefaults.StemThickness / 2));
 
             bool hasFlag = false;
             if (noteValue >= 8)
@@ -714,6 +751,23 @@ internal static partial class SharedRenderer
                             gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX), stemEndY,
                                 flagFontSize, stemColor);
                     hasFlag = true;
+                    // The flag as a dot support — the one support taken at its GLYPH's ink
+                    // rather than at a nominal band, which is why a SHORT stem changes the
+                    // dot's X and a long one does not (DotColumn's remarks carry the measured
+                    // pair). Its transparency does not remove the grob's extent.
+                    // ⚠️ THE STEM'S CENTRE, NOT ITS DRAWN RIGHT EDGE: Flag::width declares the
+                    // stencil's extent MINUS the same half-thickness FlagDrawX adds, so the
+                    // grob EXTENT the dot column reads sits back on the stem's centre
+                    // (LayoutUtilities.FlagDrawX's remarks state the pair).
+                    // LILYPOND-REF: lily/dot-column.cc:130-141 Dot_column::calc_positioning_done —
+                    //   its loop over Stem::flag (stem).
+                    var flagBox = GlyphMetrics.GetFlagBBox(
+                        GrobFontSize.FontOf(note, SizedGrob.Flag), noteValue, stemUp);
+                    if (flagBox != default)
+                        dotSupports.Add(DotColumn.FlagSupport(
+                            stemEndY - staffMiddleY + flagBox.Bottom,
+                            stemEndY - staffMiddleY + flagBox.Top,
+                            stemX - x + flagBox.Right));
                 }
                 // An acciaccatura's stroke, drawn where the flag is because in LilyPond it IS
                 // the flag's — Flag.stroke-style = "grace" (MusicItem.GraceSlash). It follows
@@ -746,9 +800,10 @@ internal static partial class SharedRenderer
             DrawStemlessTremolo(headCenterX, noteY, stemUp, note.TremoloBeams, gc);
         }
 
-        // Augmentation dots: the dot column sits one dot-width right of the
-        // head's right edge (per-duration head width — whole/half heads are
-        // wider), and successive dots are spaced one dot-width apart.
+        // Augmentation dots: the dot column stands one dot-width right of whatever the
+        // column's supports leave — the head's own ink right (per-duration: whole/half heads
+        // are wider) unless a support reaches further at a row a dot is on. Successive dots
+        // are spaced one dot-width apart.
         // LILYPOND-REF: scm/define-grobs.scm DotColumn —
         //   (padding . dot-column-interface::pad-by-one-dot-width)
         // LILYPOND-REF: scm/output-lib.scm ly:dots::print — stack with
@@ -763,20 +818,18 @@ internal static partial class SharedRenderer
         // spaces the pair for a glyph that is not there. general-grace-settings gives Dots
         // −3 and a cue's context-wide fontSize gives it −4 (GrobFontSize).
         double dotWidth = GrobFontSize.FontOf(note, SizedGrob.Dots).AugmentationDot.Width;
-        double dotStartX = x + GlyphMetrics.GetNoteheadBBox(noteValue).Right * headScale + dotWidth;
-        // A collision's dot side supports push the whole dot column right of the
-        // opposite voice's heads; the minimum X is in the staff column's frame
-        // (x − voiceX), settled in NoteCollision.CalculateVoiceOffsets.
-        // LILYPOND-REF: lily/note-collision.cc:352-372 check_meshing_chords — add_support.
-        if (dotAdjust.ColumnMinX is { } dotMinX)
-            dotStartX = Math.Max(dotStartX, x - voiceX + dotMinX);
-        // ⚠️ A GRACE'S DOT IS DRAWN BY THE GRACE HOUSE, and it is the one grob of a grace
-        // column that is: where a dot stands is Svg/Layout/DotColumn, LilyPond's own rightward
-        // skyline over the column's supports, and GraceNoteEngraver.Dots is its only caller —
-        // the answer below is a flat "head ink right plus one dot", which agrees with the
-        // ported rule for a full-size note and not for a grace. See the note at the deferral
-        // (SharedRenderer.DrawGraceNotes) for the measured pair and for when this goes.
-        if (note.Dots > 0 && !note.GraceTime)
+        // ⚠️ A GRACE'S DOT IS DRAWN HERE TOO, since session 315 — the second half of HANDOFF
+        // §2 U8 ⒝2. Nothing below asks whether the note is a grace: the floor is the head's own
+        // font's ink, the flag support hangs off the stem THIS METHOD JUST DREW, and both come
+        // out of GrobFontSize's per-grob table. That is what makes the grace's answer LilyPond's
+        // — the side model measured the flag off a RETIRED flat stem (3.5 × the font scale) and
+        // so could not tell a shortened stem from an unshortened one. MEASURED on canonical
+        // 2.26.0 (scratch/p315/measurements.md, six books): the dot's push is decided by the
+        // DRAWN stem length, not by whether the head sits on a line — `\grace { g'8. }` lifts
+        // its dot and still answers 1.226585 (its unshortened 2.80 stem holds the flag clear),
+        // while `\grace { d''8. }` at the same "on a line, lifted" description answers 1.747274
+        // because its stem is shortened to 2.50 and the flag comes down with it.
+        if (note.Dots > 0)
         {
             // Same Dot_configuration machinery as chords. The dots' preferred
             // direction has two layers, exactly LilyPond's: \voiceOne/\voiceTwo set
@@ -791,6 +844,34 @@ internal static partial class SharedRenderer
                 new[] { note.StaffPosition },
                 dotDir != 0 ? new[] { dotDir } : null)[0];
             double dotY = staffMiddleY + dotPos / 2.0;
+            // WHERE THE COLUMN STANDS IS THE PORTED RULE — a rightward skyline over the
+            // column's supports, floored on the head's own ink right, plus one dot width.
+            // The ROW decides whether a support is in the way at all, which is why
+            // DotConfiguration ran first (DotColumn.OffsetX's parameters say so).
+            // ⚠️ THIS IS NOT A NO-OP AT FULL SIZE, and the belief that it was is what kept the
+            // flat rule here for so long: Emmentaler's eighth flag curls back to 3.0502 BELOW
+            // the stem end, which is 0.45 ABOVE the head of a 3.5 stem, so a dot LIFTED onto
+            // the next row lands in it. RE-MEASURED on LilyPond 2.26.0 with a grob dump
+            // (scratch/p314/flagdot-dump.ly): g'8. 2.517400 (pushed), f'8. 1.754200 (not),
+            // g'16. and f'16. 2.517400 BOTH — the sixteenth's flag reaches even an unlifted
+            // dot. Lily# answered 1.754200 for three of those four. DotColumn's remarks carry
+            // the full table and the correction of the claim that stood there before.
+            // The observer is test/dotted-flag-dot-column; of 63 of the owner's real books two
+            // moved, both onto LilyPond's number.
+            // The floor is the head's ink right OUT OF THE HEAD'S OWN FONT, the pairing the
+            // dot width beside it already uses — MEASURED on 2.26.0 (scratch/p314/cuedot-dump.ly):
+            // a cue head inks 0.815355 where the twenty's box at magstep(−4) is 0.821497, so
+            // the cue's f'8. dot stands at 1.086700 and not 1.092800.
+            double dotStartX = x + DotColumn.OffsetX(
+                GlyphMetrics.GetNoteheadBBox(
+                    GrobFontSize.FontOf(note, SizedGrob.NoteHead), noteValue).Right,
+                dotSupports, new[] { dotPos }, dotWidth);
+            // A collision's dot side supports push the whole dot column right of the
+            // opposite voice's heads; the minimum X is in the staff column's frame
+            // (x − voiceX), settled in NoteCollision.CalculateVoiceOffsets.
+            // LILYPOND-REF: lily/note-collision.cc:352-372 check_meshing_chords — add_support.
+            if (dotAdjust.ColumnMinX is { } dotMinX)
+                dotStartX = Math.Max(dotStartX, x - voiceX + dotMinX);
             // The DOTS' own font-size, out of the DOTS' own design — general-grace-settings
             // gives Dots the head's −3 and not the accidental's −4, which is why it is asked
             // per grob (GrobFontSize) even where the answer happens to match the head's.
@@ -902,25 +983,72 @@ internal static partial class SharedRenderer
         // Ledger lines are drawn by the staff-measure ledger pre-pass, BEFORE
         // any noteheads (CollectItemLedgers/DrawPlannedLedgers).
 
-        // Augmentation dots: one dot ROW per chord note, all in one column a
-        // dot-width right of the heads. Final positions come from the full
+        // THE STEM'S GEOMETRY, COMPUTED ONCE. It is DRAWN below, after the dots, but the dot
+        // column stands behind it (LilyPond hands the stem and the flag to Dot_column as
+        // side-support-elements), so the numbers are settled here and read twice rather than
+        // spelled twice — docs/RULES.md §5.2.1②. Nothing is drawn here, so the ink order is
+        // exactly what it was.
+        bool chordHasStem = noteValue >= 2 && chord.Notes.Length > 0 && !isBeamed;
+        double stemX = 0, stemEndY = 0;
+        var dotSupports = new List<DotColumn.Support>();
+        if (chordHasStem)
+        {
+            // The stem attaches at the head's own right (up) or left (down) edge, read from
+            // the HEAD'S OWN font — see DrawNote for the measured cue and grace numbers.
+            stemX = x + LayoutUtilities.StemAttachX(
+                stemUp, noteValue, chord.Notehead,
+                GrobFontSize.IsReduced(chord) ? GrobFontSize.FontOf(chord, SizedGrob.NoteHead) : null);
+            // The length is reckoned from the stem-tip-side notehead (top note for
+            // stem-up, bottom for stem-down), following LilyPond's
+            // Stem::internal_calc_stem_end_position (stem.cc:481).
+            int stemTipPos = stemUp ? maxPos : minPos;
+            int durLog = StemCalculator.GetDurationLog(noteValue);
+            // StemCalculator is device; convert at its boundary. Derive device inputs
+            // from the Y-up locals — device tip Y = pageHeight − (staff middle + tip
+            // pos/2), device staff top = pageHeight − (staff middle + half staff) — as
+            // in DrawNote, then flip its device result back to page Y-up.
+            double deviceTipY = pageHeight - (staffMiddleY + stemTipPos / 2.0);
+            double deviceStaffTop = pageHeight - (staffMiddleY + StaffHeight / 2.0);
+            // Cue length-fraction, exactly as in DrawNote.
+            stemEndY = pageHeight - StemCalculator.CalculateStemEndY(
+                deviceTipY, stemUp, deviceStaffTop, durLog, stemTipPos,
+                StemDetailsOf(chord));
+            // The stem as a dot support: from the head it STANDS ON (the bottom head for an
+            // up stem — Stem::head_positions[-dir]) seven positions along itself.
+            // LILYPOND-REF: lily/dot-column.cc:103-109, in Dot_column::calc_positioning_done.
+            dotSupports.Add(DotColumn.StemSupport(
+                stemUp ? minPos : maxPos, stemUp,
+                stemX - x + EngravingDefaults.StemThickness / 2));
+            // The flag as a dot support, at its glyph's ink and on the stem's CENTRE — the
+            // pair of reasons is written out in DrawNote.
+            // LILYPOND-REF: lily/dot-column.cc:130-141 Dot_column::calc_positioning_done —
+            //   its loop over Stem::flag (stem).
+            if (noteValue >= 8)
+            {
+                var flagBox = GlyphMetrics.GetFlagBBox(
+                    GrobFontSize.FontOf(chord, SizedGrob.Flag), noteValue, stemUp);
+                if (flagBox != default)
+                    dotSupports.Add(DotColumn.FlagSupport(
+                        stemEndY - staffMiddleY + flagBox.Bottom,
+                        stemEndY - staffMiddleY + flagBox.Top,
+                        stemX - x + flagBox.Right));
+            }
+        }
+
+        // Augmentation dots: one dot ROW per chord note, all in one column one dot-width
+        // right of whatever the column's supports leave. Final positions come from the full
         // Dot_configuration port (badness-scored up/down displacement with
         // cascading; on-line dots forced into spaces).
         // LILYPOND-REF: scm/define-grobs.scm DotColumn padding (one dot width)
         // LILYPOND-REF: lily/dot-configuration.cc; lily/dot-column.cc:194-224.
         // The dot column clears heads reversed to the RIGHT of the stem.
-        // A grace chord's dot is the grace house's too — see the single-note branch.
-        if (chord.Dots > 0 && chord.Notes.Length > 0 && !chord.GraceTime)
+        // A grace chord's dot comes through here as well — see the single-note branch for the
+        // measured reason the drawn stem is what decides it.
+        if (chord.Dots > 0 && chord.Notes.Length > 0)
         {
             // The head's INK right, and the DOT's own font's dot — see the single-note
             // branch for both, and for the LilyPond citation.
             double dotWidth = GrobFontSize.FontOf(chord, SizedGrob.Dots).AugmentationDot.Width;
-            double dotStartX = x + GlyphMetrics.GetNoteheadBBox(noteValue).Right * headScale
-                + Math.Max(0, headOffsets.Max()) + dotWidth;
-            // Collision dot side supports — same push as the single-note branch.
-            // LILYPOND-REF: lily/note-collision.cc:352-372 check_meshing_chords — add_support.
-            if (dotAdjust.ColumnMinX is { } dotMinX)
-                dotStartX = Math.Max(dotStartX, x - voiceX + dotMinX);
             // Two-layer preferred direction, as in the single-note branch: the voice
             // props set Dots.direction voice-wide, a positive-shift collision
             // overrides the down voice's dots to UP.
@@ -931,6 +1059,21 @@ internal static partial class SharedRenderer
             var resolved = DotConfiguration.Resolve(
                 chord.Notes.Select(n => n.StaffPosition).ToArray(),
                 dotDir != 0 ? Enumerable.Repeat(dotDir, chord.Notes.Length).ToArray() : null);
+            // The ported rule, as in DrawNote — a rightward skyline over the supports,
+            // floored on the head ink right. ⚠️ THE FLOOR CARRIES THE REVERSED HEADS: a
+            // second inside the chord puts a head on the far side of the stem, and the dot
+            // column stands right of THAT, which is what headOffsets.Max() adds here and
+            // what LilyPond gets from uniting the heads' own extents.
+            // LILYPOND-REF: lily/dot-column.cc:82-84 — base_x.unite (Stem::first_head (…)).
+            double dotStartX = x + DotColumn.OffsetX(
+                GlyphMetrics.GetNoteheadBBox(
+                        GrobFontSize.FontOf(chord, SizedGrob.NoteHead), noteValue).Right
+                    + Math.Max(0, headOffsets.Max()),
+                dotSupports, resolved, dotWidth);
+            // Collision dot side supports — same push as the single-note branch.
+            // LILYPOND-REF: lily/note-collision.cc:352-372 check_meshing_chords — add_support.
+            if (dotAdjust.ColumnMinX is { } dotMinX)
+                dotStartX = Math.Max(dotStartX, x - voiceX + dotMinX);
             // The DOTS' design, paired with the width above — see DrawNote.
             using (GrobFontSize.IsReduced(chord)
                    ? gc.MusicFace(GrobFontSize.DesignOf(chord, SizedGrob.Dots))
@@ -948,33 +1091,20 @@ internal static partial class SharedRenderer
         }
 
         // Skip chord stem when chord is part of a beam — DrawBeams handles it.
+        // The geometry was settled above (chordHasStem / stemX / stemEndY), where the dot
+        // column had to read it; this is the DRAWING.
         // LILYPOND-REF: lily/stem.cc — beamed stem end determined by beam layout.
-        if (noteValue >= 2 && chord.Notes.Length > 0 && !isBeamed)
+        if (chordHasStem)
         {
             Color? stemColor = ResolveColor(resolver, "Stem");
             // Ink-only, extent kept — see the single-note branch (DrawNote).
             // LILYPOND-REF: lily/grob.cc:164-176 get_print_stencil — transparent
             //   replaces the stencil with an empty box of the same extent.
             bool stemTransparent = resolver.GetBool("Stem", "transparent") == true;
-            // Up-stems attach at the (cue-scaled) head's right edge; see DrawNote.
-            double stemX = x + LayoutUtilities.StemAttachX(stemUp, noteValue, chord.Notehead, headScale);
-            // Stem attaches at the far notehead; its length is reckoned from the
-            // stem-tip-side notehead (top note for stem-up, bottom for stem-down),
-            // following LilyPond's Stem::internal_calc_stem_end_position (stem.cc:481).
+            // The stem attaches at the FAR notehead (the length was reckoned from the
+            // tip-side one above).
             double stemStartY = (stemUp ? bottomY : topY)
                 - StemAttachYOffset(chord.Notehead, stemUp, noteValue);
-            int stemTipPos = stemUp ? maxPos : minPos;
-            int durLog = StemCalculator.GetDurationLog(noteValue);
-            // StemCalculator is device; convert at its boundary. Derive device inputs
-            // from the Y-up locals — device tip Y = pageHeight − (staff middle + tip
-            // pos/2), device staff top = pageHeight − (staff middle + half staff) — as
-            // in DrawNote, then flip its device result back to page Y-up.
-            double deviceTipY = pageHeight - (staffMiddleY + stemTipPos / 2.0);
-            double deviceStaffTop = pageHeight - (staffMiddleY + StaffHeight / 2.0);
-            // Cue length-fraction, exactly as in DrawNote.
-            double stemEndY = pageHeight - StemCalculator.CalculateStemEndY(
-                deviceTipY, stemUp, deviceStaffTop, durLog, stemTipPos,
-                StemDetailsOf(chord));
             if (!stemTransparent)
                 gc.DrawLine(stemX, stemStartY, stemX, stemEndY,
                     stemColor ?? Color.Black, EngravingDefaults.StemThickness);

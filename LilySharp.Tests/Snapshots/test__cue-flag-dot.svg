@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="209.2" viewBox="0 0 119.50 20.92" font-family="TeX Gyre Schola, serif">
+<style>
+  @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
+  @font-face { font-family: 'Emmentaler-13'; src: local('Emmentaler-13'); }
+  .music { font-family: 'Emmentaler', serif; }
+</style>
+  <rect x="0" y="0" width="119.50" height="20.92" fill="#FFFFFF"/>
+  <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
+  <line x1="0.00" y1="9.69" x2="62.32" y2="9.69" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="10.69" x2="62.32" y2="10.69" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="11.69" x2="62.32" y2="11.69" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="12.69" x2="62.32" y2="12.69" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="13.69" x2="62.32" y2="13.69" stroke="#000000" stroke-width="0.100"/>
+  <text class="music" x="0.80" y="12.69" font-size="4.00"></text>
+  <text class="music" x="4.88" y="11.69" font-size="4.00" data-pos="2234"></text>
+  <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="8.59" y="12.69" font-size="2.52" data-pos="2279"></text>
+  <line x1="9.34" y1="12.54" x2="9.34" y2="10.49" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="9.40" y="10.49" font-size="2.52"></text>
+  <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="10.13" y="12.19" font-size="2.52"></text>
+  <text class="music" x="14.09" y="11.69" font-size="4.00" data-pos="2283"></text>
+  <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="17.69" y="13.19" font-size="2.52" data-pos="2287"></text>
+  <line x1="18.44" y1="13.04" x2="18.44" y2="10.99" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="18.50" y="10.99" font-size="2.52"></text>
+  <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="18.77" y="13.19" font-size="2.52"></text>
+  <text class="music" x="23.19" y="11.69" font-size="4.00" data-pos="2291"></text>
+  <text class="music" x="26.79" y="11.69" font-size="4.00" data-pos="2297"></text>
+  <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="35.38" y="12.69" font-size="2.52" data-pos="2312"></text>
+  <line x1="36.13" y1="12.54" x2="36.13" y2="10.49" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="36.19" y="10.49" font-size="2.52"></text>
+  <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="36.92" y="12.19" font-size="2.52"></text>
+  <text class="music" x="39.68" y="11.69" font-size="4.00" data-pos="2317"></text>
+  <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="42.08" y="13.19" font-size="2.52" data-pos="2321"></text>
+  <line x1="42.83" y1="13.04" x2="42.83" y2="10.99" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="42.90" y="10.99" font-size="2.52"></text>
+  <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="43.62" y="13.19" font-size="2.52"></text>
+  <text class="music" x="46.38" y="11.69" font-size="4.00" data-pos="2326"></text>
+  <text class="music" x="48.88" y="11.69" font-size="4.00" data-pos="2332"></text>
+  <text class="music" x="56.38" y="11.69" font-size="4.00" data-pos="2335"></text>
+  <rect x="34.29" y="9.69" width="0.19" height="4.00" data-pos="2300"/>
+  <rect x="62.13" y="9.69" width="0.19" height="4.00" data-pos="2338"/>
+  </g>
+</svg>

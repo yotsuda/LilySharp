@@ -25,7 +25,7 @@
   <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="14.49" y="18.56" font-size="2.52" data-pos="2590"></text>
   <line x1="15.24" y1="18.41" x2="15.24" y2="16.35" stroke="#000000" stroke-width="0.130"/>
   <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="17.00" y="18.06" font-size="2.52" data-pos="2593"></text>
-  <line x1="17.76" y1="17.91" x2="17.76" y2="15.85" stroke="#000000" stroke-width="0.130"/>
+  <line x1="17.75" y1="17.91" x2="17.75" y2="15.85" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="20.75" y="17.56" font-size="4.00" data-pos="2601"></text>
   <line x1="21.99" y1="17.41" x2="21.99" y2="14.06" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="23.76" y="17.06" font-size="4.00" data-pos="2604"></text>

@@ -1,0 +1,52 @@
+// A GRACE'S DOT IS PUSHED BY THE FLAG ON THE STEM THAT IS DRAWN, not by the one a flat
+// side model would have drawn.
+//
+// The augmentation dot of an unbeamed flagged note stands right of the FLAG whenever the flag's
+// ink reaches the row the dot ended up on (lily/dot-column.cc:100-141). For a GRACE the flag
+// hangs off a short stem, so the gate turns — and what turns it is the stem's LENGTH, which
+// LilyPond shortens for a note above the middle line. Until session 315 Lily# measured that
+// flag off a retired flat stem (3.5 x the font scale = 2.475 for every duration and every
+// pitch), which pushed EVERY lifted dot and so got the first line below wrong by 0.5207.
+//
+// MEASURED on canonical LilyPond 2.26.0 (scratch/p315/gracedot-dump.ly dumps the NoteHead /
+// Dots / Stem / Flag extents; each number is the dot's LEFT minus its own head's LEFT, and
+// Lily#'s absolute `c` is LilyPond's `c'`):
+//   g8.   ON A LINE, dot lifted, stem 2.80 (no shortening)   1.226585  <- the flag stays clear
+//   f8.   IN A SPACE, dot not lifted, stem 2.80              1.226585
+//   d'8.  ON A LINE, dot lifted, stem SHORTENED to 2.50      1.747274  <- the flag comes down
+//   e'8.  IN A SPACE, stem 2.40                              1.226585
+//   d'16. ON A LINE, stem 2.50                               1.747274
+//   g16.  ON A LINE, stem 2.80                               1.747274  <- a 16th flag is 0.354
+//                                                                         deeper, so it reaches
+//                                                                         without the shortening
+// where the head's own ink right is 0.917939 and one grace dot is 0.308646, and the flag's own
+// right edge is 1.438627.
+//
+// The last measure is the BEAMED control: a beamed column draws no flag at all, so its lifted
+// dot stays at the head's right whatever the stem does. It is also what keeps this book honest
+// about who withholds the stem (SharedRenderer.BuildBeamedItemsSet).
+octave absolute
+time 4/4
+
+part v { }
+
+section A {
+  v {
+    grace { g8. } c'1 |
+    grace { f8. } c'1 |
+    grace { d'8. } c'1 |
+    grace { e'8. } c'1 |
+  }
+}
+
+section B {
+  v {
+    grace { d'16. } c'1 |
+    grace { g16. } c'1 |
+    grace { g16. g16 } c'1 |
+  }
+}
+
+form main { ~A ~B }
+
+score main { staff ~v }

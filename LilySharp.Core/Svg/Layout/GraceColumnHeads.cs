@@ -172,7 +172,8 @@ internal static class GraceColumnHeads
     /// ⚠️ <paramref name="dots"/> DEFAULTS TO ZERO because both callers passed a literal 0
     /// before this type learned about chords, and a stand-in that started carrying the
     /// column's real dots would move single-note books for a reason unrelated to this trip.
-    /// The dots are drawn from <c>GraceNoteEngraver.Dots</c>, which reads the column itself.
+    /// The dots are drawn by the ordinary engravers, off the grace item itself
+    /// (<c>SharedRenderer.DrawNote</c>), not off this stand-in.
     /// </para>
     /// </remarks>
     internal static MusicItem StandIn(

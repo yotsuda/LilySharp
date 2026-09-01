@@ -1,0 +1,37 @@
+// A FLAG STANDS IN THE DOT COLUMN'S WAY, and a full-size note is not exempt.
+//
+// The augmentation dot of an UNBEAMED flagged note is pushed right of the FLAG whenever the
+// flag's ink reaches the row the dot ended up on — LilyPond's Dot_column builds a rightward
+// skyline over the column's supports (lily/dot-column.cc:100-141) and the flag is one of them.
+// Until session 314 Lily# answered a flat "head ink right + one dot" for every full-size note
+// and only the grace house held the ported rule, so three of these four went out 0.7632 short.
+//
+// MEASURED on LilyPond 2.26.0 (scratch/p314/flagdot-dump.ly dumps the NoteHead / Dots / Stem /
+// Flag extents; each number is the dot's LEFT minus its own head's LEFT):
+//   g8.  head ON A LINE, dot lifted one position   2.5174 = 1.2392 + 0.8282 + 0.4500
+//   f8.  head IN A SPACE, dot not lifted           1.7542 = 1.3042          + 0.4500
+//   g16. head ON A LINE                            2.5174
+//   f16. head IN A SPACE                           2.5174  <- the 16th's flag is deeper
+//                                                            (bottom -3.5502 against -3.0502),
+//                                                            so it reaches even an unlifted dot
+// where 1.2392 is the up stem's centre, 0.8282 the flag's own right edge, 1.3042 the black
+// head's ink right and 0.4500 one dot width.
+//
+// The rests are BEAM BREAKERS, not decoration: Lily# auto-beams `g8. f8.` where LilyPond does
+// not, and a beamed column has no flag at all — the first probe written for this
+// (scratch/p314/dots.lys) measured nothing for exactly that reason and reported "no ink moved".
+octave absolute
+time 4/4
+
+part v { }
+
+section A {
+  v {
+    g8. r16 f8. r16 r2 |
+    g16. r32 f16. r32 r2 r4 |
+  }
+}
+
+form main { ~A }
+
+score main { staff ~v }

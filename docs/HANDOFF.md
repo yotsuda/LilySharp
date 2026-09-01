@@ -195,6 +195,31 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第314セッション＝**入り方は第298〜第313 と同じ**——**ユーザーは `docs/HANDOFF.md` を読んで着手せよと言い、途中で 1 件報告した（「volta ブレースの線が太すぎるように見える」）**。⇒ ★★★★ **本便の骨は 4 つ**: **⑴ その報告は LP と同一で、ユーザー決定は「そのまま」（§2 U13）／⑵ 第313 の次の一手 ⑴ を入れた＝`DrawNote`/`DrawChord` が `DotColumn` に訊く。これは*無変化ではなかった*——LP は旗つき付点音符の付点を旗の右へ押しており、Lily# は 4 例中 3 例で 0.7632 短かった／⑶ そして*コーパスはその 3 例を 1 冊も見ていなかった*／⑷ 便の後半＝ユーザーが「有利なら続けよ」と言ったので次の一手 ⑵（cue の観測者）を置き、そこで*生きた欠陥*が出た＝縮んだ符頭の付き位置を `Design20 × magstep` で読んでいた（grace は ⒝2 以来インクがずれていた）。** **commit は 3 本＝付点の列 `78fdd680`／§1 と U13 `f684e2ec`／この commit。**
+
+⚠️⚠️⚠️ ★★★★ **⑴ volta の線は LP と同一だった**（§2 U13 に全部書いた）。**Lily# の SVG は `stroke-width="0.160"`・LP 2.26.0 の双子は `0.1600`**＝**どちらも `VoltaBracket (thickness . 1.6)` × line-thickness 0.1**。**タブの上でも同じ・ラスタでも 1.59〜1.63 倍**（五線 1 本に対する比）。⇒ **報告が出た理由は*4 日前に本当に太くなったから*——`51c32b3b`（2026-08-28）が素の 0.13 を LP の宣言に直した。** ⇒ ★★ **ユーザー決定＝LP どおり 0.16 のまま。**
+
+⚠️⚠️⚠️ ★★★★ **⑵ `DrawNote`/`DrawChord` が `DotColumn` に訊くようになった＝「ONE HOUSE, THREE CALLERS」が初めて*本当*になった。** ★★★ **そして第313 の起票の見立て（「フル サイズの答えは変わらないはず」）は外れていた**——**Emmentaler の 8 分旗は符尾端の 3.0502 *下*まで巻き戻る**ので、**3.5 の符尾なら旗の下端は符頭の 0.45 上**＝**持ち上がった付点はその中に入る**。★ **正典 2.26.0 を grob dump で測り直した**（`scratch/p314/flagdot-dump.ly`・付点の左 − 符頭の左）: **`g'8.`（線の上・付点が持ち上がる）2.5174 ＝ 1.2392（符尾の中心）＋ 0.8282（旗の右端）＋ 0.45／`f'8.`（間）1.7542／`g'16.` `f'16.` は*両方* 2.5174**（**16 分旗の下端は −3.5502 で、持ち上がらない付点にも届く**）。**Lily# は 4 例中 3 例で 1.7542 を刷っていた。** ⇒ **直った 3 例は 4 桁で LP。**
+
+⚠️⚠️ ★★★ **⑶ 射程と、コーパスの穴。** **追跡 snapshot は 1 枚も動かなかった**——**旗つき・連桁なしの付点音符を書いた本が*1 冊も無かった*から**（**穴。番人 `test/dotted-flag-dot-column` を足した＝追跡 582 → 583・snapshot 232 → 233**）。**ユーザー実コーパスは 5 冊に 1 冊の 63 冊を掃いて SAME 61 / MOVED 2**（`ポリリズム.lys`・`瞳をとじて.lys`。**どちらも付点が +0.76 右へ＝LP の 2.5174 へ**）。⚠️ **全 314 冊は掃いていない**（**この機械で 1 冊 12 秒/側＝2 時間半。共有 PC**）。
+⚠️⚠️ ★★★ **最初のプローブ（`scratch/p314/dots.lys`）は「何も動かない」と答えたが、それは*連桁されていた*から**——**Lily# は `g8. f8.` を連桁し LP はしない（別件の乖離）。連桁された列に旗は無い＝支持も無い。** ⇒ ★★★ **「動かなかった」を所見にする前に、プローブが*その量を出しているか*を見る**（§5.0 のプローブの罠。**番人の本文に休符が入っているのはこのため**）。
+⚠️⚠️ ★★★ **計器が偽の差を作った**: **同じ一時ファイル名の掃きを 2 本並行して回し、互いの出力を消し合って「MOVED 21 / NO-OUTPUT 23」を刷った。**⇒ **`$PID` で分けて回し直したら MOVED 2 / NO-OUTPUT 0。** **食い違いのほうが所見**（RULES §5.3）——**掃きの一時ファイルは実行ごとに名前を分けること。**
+
+⚠️⚠️ ★★★ **⑷ 途中で 1 つ、置き去りが見つかった＝`GraceNoteEngraver.Dots` の旗の支持は*描かれていない符尾*で測っている**（**第313 が grace の符尾を LP に直した＝音価 × 0.8・短縮込み・中央線への延長なし。一方 `Dots` は退役した平らな 3.5 × magstep(−3) ＝ 2.475 のまま**）。**実測（`scratch/p314/gracedot.lys`）: 描かれる符尾は位置 2 で 2.50・位置 3 で 2.40。** **帯の比較なのでどの本も答えは変わっていない**（4 桁の番人 `AGraceDotClearsTheFlagOnlyWhenTheFlagIsOnItsRow` は緑のまま）。**コードに「departs from / goes away when / observed by」で置いた。**
+
+⚠️⚠️⚠️ ★★★★ **⑸ ユーザーが「有利なら続けよ」と言ったので続け、次の一手 ⑵ を置いた——そしてそれが*生きた欠陥*を釣った。** **番人 `test/cue-flag-dot`**（**旗つき・付点つきの cue。追跡 583 → 584・snapshot 233 → 234**）を書くために正典を 2 回叩いたら、**`DrawNote` が符頭の箱と符尾の付き位置を `Design20 × magstep` で読んでいる**ことが数で出た。**Emmentaler は光学サイズなので、縮んだ符頭は*別の輪郭*で、付き位置もそれ自身のもの**:
+> **cue の符尾中心＝0.750400**（`scratch/p314/cuedot-dump.ly` 実測）**＝ 0.815355（Design13 の黒符頭 × magstep(−4)）− 0.065**。**Design20 を縮めると 0.756500**——**+0.006100。**
+> **grace の符尾中心＝0.852950**（`gracedot-dump.ly` 実測）**＝ 0.917940（Design14 × magstep(−3)）− 0.065**。**Design20 なら 0.857100**——**+0.004150。**
+⇒ ★★★ **grace 側は*生きたインク*だった**——**⒝2 が grace の符尾を `DrawNote` に渡した日から、描かれる符尾が grace 家・梁の量子器・spacing の読む位置（`LayoutUtilities.StemX` のフォント版）と 0.004150 ずれていた。** ⇒ **符頭の箱も付き位置も `GrobFontSize.FontOf` に訊くようにした**（**旗と付点の幅は既にそうしていた＝同じ表の残り 2 つを揃えただけ**）。★ **射程は述語で掃いた**: **ディスクの `grace|cue` を書く本 81 冊＝SAME 23 / MOVED 58 / NO-OUTPUT 0**（**ユーザー実コーパス 4 冊を含む**）・**snapshot 11 枚**（**cue 3・grace 7・showcase 1。差は 22 行すべて符尾/旗の X が 0.01 動いただけ**）。⚠️ **SAME 23 の多くは*連桁された* grace**——**梁つきの符尾は `DrawBeams`/grace 家が描き、そちらは最初からフォント版を読んでいる。**
+
+⇒ ★★★ **次の一手**: ★★★★ **⑴ grace の付点を家に帰す＝§2 U8 ⒝2 の後半**（**⑷ がその動機。`GraceNoteEngraver.Dots` が死ぬと符尾端の 2 つ目の綴りも死ぬ。⑸ で*前提だった 2 つの島は閉じた*ので、次便はそのまま着手できる**）。⚠️ **残る島は `ChordHeadPositioning.CalculateOffsets(..., headScale)` と click target の箱**（**どちらも `Design20 × magstep`。和音の反転符頭は縮んだ列で 0.006 ずれる。測ってから触ること**）。／★★★ **⑵ §2 U8b**（二声の同時 grace）／**⑷ §2 U8c**（cue の和音の 0.004270）／**⑸ §2 の X/Y 側**（§2 A/B/D/E）／**⑹ §2 C⑴ の多声 walk の moment 順への再設計**（**最大の構造負債・未着手**）。⚠️ **承認待ちは無い。** ⚠️ **§2 F は開いている項目が無い。**
+
+★ **開始時裏取り**: HEAD `7883d150`・**未 push 6**（**第312 の 3 本＋第313 の 3 本。`origin/master` は `925cab98`**）・木 0・未追跡 0・Core 0 エラー 0 警告・**Windows Debug 6809 / 0 / 4 / 6813**（**第313 の終了時と一致**）・追跡 `.lys` 582・snapshot 232。
+終了時: **commit 3 本**（**この commit を含む**）＝**付点の列 `78fdd680`／§1 と U13 `f684e2ec`／grob 自身のフォント＋この commit**・**未 push 9**（**開始時 6 ＋ 本便 3**）⚠️ **数を閉じる commit が数を動かすので、最後の 1 本は*自分を数えて*「この commit」と書く**・作業ツリー 0・未追跡 0（**`scratch/p314` は git 管理外**）・Core 0 エラー 0 警告・**Windows Debug 6811 / 0 / 4 / 6815**（**+2 は本便が足した番人 `test/dotted-flag-dot-column` と `test/cue-flag-dot`**）・**追跡 `.lys` 584・snapshot 234**。⚠️ **`docs/APPROXIMATIONS.md` は `UNWATCHED` が 1 増えた**（**50 → 51・計 223 → 224。増やしたのは「連桁された列は支持を渡さない」＝LP は渡す。`audit/magic_constants.csv` は行番号のずれだけで定数の増減 0**）。⚠️⚠️ **WSL ubuntu Release は取れない**（**この機械に WSL が無い＝第313 ⑶**）——**本便はインクを動かしているので、ubuntu の緑は push 後に `gh run list` で読むこと。** ★ **base 用 worktree は建てていない**（**A/B は `git stash` で exe を 2 つ作って `scratch/p314/exe-{base,head}` に置いた＝本ごとに*続けて*叩ける**）。
+⚠️⚠️ ★★★ **計器は `scratch/p314/`**（**git 管理外**）: **`flagdot-dump.ly`（正典 2.26.0 の NoteHead/Dots/Stem/Flag dump）・`flagdot.lys`（その双子）・`sweep314.ps1`（`-Every`/`-Offset` つき・一時ファイルは `$PID` 分け）・`measure.ps1`（PNG の縦インク被覆＝線の太さ）・`volta.lys`/`volta.ly`/`voltatab.*`（U13）・`dots.lys`（連桁で何も測れなかったプローブ）・`gracedot.lys`・**そして ⑸ の 2 本＝`cuedot-dump.ly`/`cuedot.lys`（cue の対）と `gracedot-dump.ly`（grace の符尾 X）・`sweeplist.ps1`（明示リストを掃く版）。** ⚠️ **exe は 2 組ある**（`exe-{base,head}`＝⑵ の A/B・`exe-{base2,head2}`＝⑸ の A/B）。**dump プローブの雛形は `audit/lp-geometry/probes/dynamic-support.ly` の `page-post-process`。**
+
+## 以下は第313セッションの経緯
+
 最終更新 第313セッション＝**入り方は第298〜第312 と同じ**——**ユーザーは `docs/HANDOFF.md` を読んで着手せよとだけ言った**。⇒ ★★★★ **本便の骨は 3 つ**: **⑴ §2 U8 ⒝2 の本体を入れた＝普通の engraver が grace 時間を描く／⑵ 3 便が「壊れている」と書いていた正典 LilyPond は*起動のしかた*の問題で、回避策は 80 日前から memory に在った／⑶ そして*この機械から WSL が消えている*——§0 の脚の片方が回らない。** **commit は 3 本＝休符 `0e27b056`／⒝2 本体 `ccf30003`／この commit。**
 
 ⚠️⚠️⚠️ ★★★★ **⑴ ⒝2＝符頭・ledger・臨時記号・休符・符尾・旗・acciaccatura の斜線を普通の engraver が grob ごとのフォントで描く**（§2 U8 に全部書いた）。**住所は層が publish する＝`GraceNoteItem.ColumnItemIndices` と `ScoreLayout.GraceColumnXs`（`(staff, voice, measure, item) → X`）。X は第 2 の計算ではなく `SpacingRules.GraceColumns` の同じ鎖で、新しいのは*鍵*だけ。** ★★ **grace 家に残ったのは LP が grace のためだけに宣言しているもの＝梁（接頭辞・0.384・0.8）とその下の符尾／主音符への slur／付点（下の ⒞）。** ★ **2 段に割った**: **⑴a 休符だけを先に移した**（`0e27b056`）——**`general-grace-settings` が Rest を名指さない＝*唯一 LP が縮めない grob* なので、位置もサイズも動かない**（**A/B で座標 4 桁一致**）——**そして*その 1 冊で欠陥が出た*: 休符は grace group の `MusicFace(Emmentaler-14)` スコープの中でフル サイズに描かれており、五線の休符と*同じ字形ではなかった***（**LP は同一と測ってある・第308**）。⚠️⚠️ ★★★ **ディスク 1420 冊のうち grace 本体に休符を書いた本は 0 だった**——**だから何も見張っていなかった。`LilySharp.Tests/Fixtures/test/grace-rest.lys` を足した**（**追跡 581 → 582・snapshot 231 → 232**）。
@@ -213,24 +238,6 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 終了時: **commit 3 本**（**この commit を含む**）＝**休符 `0e27b056`／⒝2 本体 `ccf30003`／この commit**・**未 push 6**⚠️ **数を閉じる commit が数を動かすので、最後の 1 本は*自分を数えて*「この commit」と書く**（第305〜第312 と同じ形）・作業ツリー 0・未追跡 0（**`scratch/p313` は git 管理外**）・Core 0 エラー 0 警告・**Windows Debug 6809 / 0 / 4 / 6813**（**+1 は本便が足した fixture `test/grace-rest`**）・**追跡 `.lys` 582・snapshot 232**。⚠️ **`docs/APPROXIMATIONS.md` は `UNWATCHED` が 1 減った**（**51 → 50・計 224 → 223。閉じたのは第312 が起票した grace stem。`audit/magic_constants.csv` は行番号のずれだけで定数の増減 0**）。⚠️⚠️ **WSL ubuntu Release は取れない**（**⑶＝この機械に WSL が無い**）——**本便はインクを動かしているので、ubuntu の緑は push 後に `gh run list` で読むこと。** ★ **base 用 worktree は建てていない。**
 ⚠️⚠️ ★★★ **全木 A/B 掃きは*していない*。** **射程は述語で数えた**——**`grace|acciaccatura|appoggiatura` を書く本、そのうち休符を含むもの 2 冊**（**両方本便が書いた**）——**そして動いた snapshot 10 枚は第309 が名指した 9 枚＋本便の 1 枚と*完全に一致*した。** ⚠️ **次便が掃くなら `scratch/p312/sweep312.ps1` が残っている**（**2 出力・並列 throttle 6 で 32〜34 分/側。共有 PC なので上げる前に一声**）。
 ⚠️⚠️ ★★★ **計器は `scratch/p313/`**（**git 管理外**）: **`lp/g1..g3.ly`（正典 2.26.0 の符尾プローブ）・`lp/dump.py`（幅 0.13 の rect＝符尾だけを絶対座標で刷る）・`lp/measurements.md`・`ab/*.lys`（stem・dots・graceRest の対）。**
-
-## 以下は第312セッションの経緯
-
-最終更新 第312セッション＝**入り方は第298〜第310 と同じ**——**ユーザーは `docs/HANDOFF.md` を読んで着手せよとだけ言った**。⇒ ★★★★ **本便の骨は 2 つ**: **⑴ §0 の「全緑」が赤く、赤らせていたのは*計器のほう*だった／⑵ ⒝2 の入口は「誰にフォントを訊くか」で、LP はその答えを*2 つの別々の機構*で持っている。** **commit は 3 本＝計器の修理 `ce72a372`／`GrobFontSize` `3ccc8a8d`／この commit。**
-
-⚠️⚠️⚠️ ★★★★ **⑴ 開始時に `HistoryCitationTests.CitedCommitsAreNotHeldAliveByAnotherRef` が赤で、zombie を 63 個挙げていた。13 個は本物の残骸 ref、残り 50 個は*どの ref も持っていなかった*。** **13 個の持ち主は `refs/original/refs/heads/master`＝第311 の履歴畳みが `filter-branch` で残したバックアップ**（**ユーザー承認のうえ削除**）。**残り 50 個について、報告は自分で答えを刷っていた**——**50 個とも `kept alive by:` の後ろが*空*だった。** ⇒ ★★★ **`git rev-list --all` は refs/ に加えて*各 worktree の HEAD* を数える。detached worktree HEAD は ref ではない**（**refs/ に無い・`for-each-ref` が挙げない・clone が取らない**）——**この test 自身の remarks が「未参照のゴミは*ある 1 台のディスクの事実*」として除外している側の物。** ★★ **持ち主を名指したのは `git worktree list`**: **過去便の A/B base worktree が 21 個残っている**（`LilySharp-base`・`LilySharp-perfbase-*` 20 個・`LilySharp-redbase-11e7`）。**`0a93b7bc`（`HANDOFF-ARCHIVE.md` が引いている）は `C:/MyProj/LilySharp-base` の `cc19cccc` の祖先で、どの ref の祖先でもない。この機械で `--all` は ref の届かない 979 commit に届く。** ⇒ **survey は ref を列挙して `rev-list` に渡すようにした**（**過大報告は一方向＝`--all` は ref の上位集合なので、本物の残骸 ref を*隠したことは一度も無い*。畳みが worktree の抱えている commit を master から落とした日に、偽物を*作った*だけ**）。★★★ **陽性対照**: **`git tag poison-stale-ref-312 0a93b7bc` で再び赤くなり、しかも報告が持ち主を*名指す*（`refs/tags/poison-stale-ref-312`）**——**50 個に無かったのがまさにこれ。** タグは削除済み。⇒ ★★★ **汎化＝計器の 2 つの問い合わせが食い違ったら、食い違いのほうが所見**（RULES §5.3 / [検査監査] の形。**「計器の負債を払う前に計器を監査する」——ここで払わされかけた債務は「worktree を 21 個消す」だった**）。⚠️ **その 21 個は消していない**（**ユーザーの perf base。消すかどうかは別便・別判断**）。⚠️ **GitHub CI は HEAD で緑だった**（run `33407172813`）——**`refs/original/*` も worktree HEAD も clone に付いて行かないので、この赤はこの機械だけ。**
-
-⚠️⚠️ ★★★ **⑵ 母集団が動いている。§2 U8 の数を*そのまま引かないこと*。** **ディスクの `.lys` は 2007 → 1418**、**grace 族（`grace|acciaccatura|appoggiatura`）は 172 → 58**、**cue は 7**。**追跡 `.lys` 581・そのうち grace 族 34 は不変**（**§2 U8 の数え方のレシピはそのまま使える。数だけが古い**）。**第311 までのどこかで `scratch/` が掃除された**（本便は `.lys` を 1 冊も足していない）。
-
-⚠️⚠️⚠️ ★★★★ **⑶ ⒝2 の入口は「フォントを誰に訊くか」で、LP はそれを*2 つの別々の機構*で持っている。** **⒜ cue は*context*——`ly/engraver-init.ly` の `\name CueVoice` が `fontSize = #-4` を置き、`lily/font-size-engraver.cc:47-62 Font_size_engraver::acknowledge_font` が*その context が acknowledge する全 grob*の `font-size` に**加算**する**（`font_size = size + grob の font-size`）。**⒝ grace は context ではない**（`grep -c "name Grace"` は 0）——**普通の `\name Voice` の中の `\consists Grace_engraver` が置くのは*grob ごとの表*`scm/music-functions.scm:636-650 general-grace-settings`**（**NoteHead −3・Accidental −4・TabNoteHead −4・Fingering/StringNumber −8・**Rest の行は無い**）。⇒ ★★★★ **だから「この項目はどれだけ小さいか」という*1 つの数*では ⒝2 は書けない。問いは grob ごと。** ⇒ **`Svg/Layout/GrobFontSize.cs`＝`StepOf(item, grob)` とその上の `FontOf` / `DesignOf` / `ScaleOf`。最初の読み手は普通の音符・和音の描画**（**`note.IsCue ? … : …` が 14 か所あり、grace は*綴りようが無かった*）。**インクは 1 も動かない**（**全木掃き 1418 冊 ×（svg・check）＝SAME 1418 / MOVED 0・NO-OUTPUT 両側 0**）。
-
-⚠️⚠️ ★★★ **⑷ ⑶ を書く途中で正典から出てきたものが 2 つ。どちらも「departs from / goes away when / observed by」で置いた。** **⒜ 2 つのサイズは LP では*加算で合成する*ので、`cue { grace { } }` は LP で −7・Lily# で −3**（**observed by: NOTHING——コーパスに入れ子は 1 冊も無い**）。**⒝ grace stem の `length-fraction` は*宣言された 0.8*で、`magstep(-3)` = 0.707107 ではない——そして*描かれている grace stem はそのどちらでもない*。** **`GraceNoteEngraver.StemLength` は平らな 3.5 に*フォントの縮尺*を掛けるが、`lily/stem.cc:481-557 Stem::internal_calc_stem_end_position` は*音価が選んだ長さ*に `length-fraction` を掛ける**（**しかも grace beam のほうは既に 0.8 を取っている＝梁つき run と旗つき run が別々の規則で測られている**）。⇒ **⒝2 の 4 campaign の 1 つ（符尾）に、初めて*数字の付いた*起票ができた**（`docs/APPROXIMATIONS.md` の `UNWATCHED` 50 → 51）。
-
-⇒ ★★★ **次の一手**: ★★★★ **⑴ §2 U8 ⒝2 の本体＝*普通の engraver に grace を描かせる*。** **道具立てはできた**（`GrobFontSize`）**が、まだ 1 つも grace を描いていない**——**`SharedRenderer.EnumerateStaffItems` の `if (item.GraceTime) continue;` を外すのが次の一歩で、そこから先はインクが動く。** ⚠️⚠️ ★★★★ **本便が読んで分かった*動く理由*は 4 つあり、どれも「同じ量を 2 軒が違う規則で持っている」形**（**⒝2 が閉じるのは、まさにこの 4 つ**）: **⒜ 符頭の字形——脇の模型は*どの音価でも* `NoteheadBlack` を描く**（`graceHeadNoteValue = 4` の自白つき）**が、普通の engraver は音価から選ぶ＝`grace { d'2 }` が動く**／**⒝ ledger——脇の模型はその場で引き、普通の路は*隣の列と短くし合う pre-pass* を通る**／**⒞ 付点——`GraceNoteEngraver.Dots`（flag を support に取る）対 `DrawNote` の素直な dot 列**／**⒟ 臨時記号——`GraceColumnHeads.AccidentalOffsets` 対 `StaffAccidentalColumns` の詰め。** ⇒ ★★ **だから ⒝2 は*バイト同一で通せない*。9 枚の snapshot 再ベース（第309 が名指し済み）と台帳の再測が要る。** ★ **X は脇の模型が持ったままでよい**（**`SpacingRules.GraceColumns` は「残る grace 固有の 4 つ」の 1 つ＝spring。⒝2 は*描く側*の統合であって、列を主 chain に入れる話ではない**）——**ただし普通の engraver は `ml.Items[i].X` / `GetXForTiming` からしか X を取れないので、*grace 項目の X を層に出す*のが最初の設計判断になる**（**`ml.Items` は primary voice のスロットしか無いので、そこは向かない。`ScoreLayout.GraceNoteLayouts` に voice を持たせて `(staff, voice, measure, itemIndex) → X` を引ける器を足すのが素直**）。／★★★ **⑵ §2 U8b**（二声の同時 grace）／**⑶ §2 U8c**（cue の和音の 0.004270）／**⑷ §2 の X/Y 側**（§2 A/B/D/E）／**⑸ §2 C⑴ の多声 walk の moment 順への再設計**（**最大の構造負債・未着手**）。⚠️ **承認待ちは無い**（**snapshot は 1 枚も動いていない**）。⚠️ **§2 F は開いている項目が無い。**
-
-★ **開始時裏取り**: HEAD `925cab98`・**未 push 0**（**第311 の 7 本はユーザーが push 済み。`origin/master` も `925cab98`**）・木 0・未追跡 0・Core 0 エラー 0 警告・**Windows Debug 6807 / 1 / 4 / 6812**（⚠️ **緑ではなかった。⑴ を見よ**。**計器を直したあと 6808 / 0 / 4 / 6812 で、これは第311 の終了時の数と一致**）・追跡 `.lys` 581・snapshot 231。
-終了時: **commit 3 本**（**この commit を含む**）＝**計器 `ce72a372`／`GrobFontSize` `3ccc8a8d`／この commit**・**未 push 3**⚠️ **数を閉じる commit が数を動かすので、最後の 1 本は*自分を数えて*「この commit」と書く**（第305〜第311 と同じ形）・作業ツリー 0・未追跡 0（**`scratch/p312` は git 管理外**）・Core 0 エラー 0 警告・**Windows Debug 6808 / 0 / 4 / 6812**・**追跡 `.lys` 581・snapshot 231 は開始時と同じ**。⚠️ **`docs/APPROXIMATIONS.md` は `UNWATCHED` が 1 増えた**（**50 → 51・計 223 → 224。増やしたのは ⑷⒝ の grace stem。定数・REF/OWN の増減は 0**）。★ **base 用 worktree は建てていない**（**A/B は `git stash` で取った——`git stash push -- <触った .cs>` ＋ 新規ファイルを一時退避 → Release build → 掃き → 戻す**）。⚠️ **WSL ubuntu Release は取っていない**（**本便はコードのインクを 1 も動かしておらず、全木掃きが両側 Release でバイト同一。次にインクを動かす便は §0 の両脚を読むこと**）。
-⚠️⚠️ ★★★ **計器は `scratch/p312/`**（**git 管理外**）: **`sweep312.ps1`（全木 A/B・**svg と check の 2 出力だけ**・並列 throttle 6）と `compare312.ps1`。** ⚠️ **2 出力なのは理由が書いてある**——**本便の diff は `SharedRenderer.Noteheads.cs` と新規 `GrobFontSize.cs` だけで、MIDI / MusicXML / `.ly` の writer はどちらにも届かない。`check` は*計器の陽性対照*として残した。** ⚠️⚠️ **collector か model を触る便は 5 出力に戻すこと。** ★ **実測した掛かり**: **逐次 5 出力は ~4 s/冊＝1418 冊で 100 分/側（470 秒で 100 冊に届かず、途中で捨てた）／並列 throttle 6 の 2 出力で 32〜34 分/側。** ⚠️ **共有 PC なので throttle を上げる前に一声かけること。**
 
 ## 2. 開いている作業
 
@@ -1267,6 +1274,30 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
   固定していた網を*書き換えた*のがこの決定の記録**）＋ `AnOrdinaryScriptIsBlankedOnANumbersOnlyTabAndKeptOnAFullOne`。
   ★ **射程（2026-08-30・ディスク 1645 冊）**: **タブを持つ本 341・タブと五線の両方 320・
   blank される族を書く本は 2 冊**（**どちらもユーザーの `ベースタブLy`**）。
+
+- **U13. ✅ 閉じた（第314・ユーザー報告 2026-09-01「volta ブレースの線が太すぎるように見える」）
+  ＝太さは LP と同一。ユーザー決定で*そのまま*。**
+  ★ **実測**（`scratch/p314/`・git 管理外）: **Lily# の SVG は `stroke-width="0.160"`、LP 2.26.0 の
+  双子は `0.1600`**（`volta.lys` / `volta.ly`＝`\repeat volta 2 { c1 } \alternative { … }`）。
+  **＝どちらも `VoltaBracket (thickness . 1.6)` × line-thickness 0.1。**
+  ★ **タブの上でも同じ**（`voltatab.lys` / `voltatab.ly`）: **両者とも五線 0.100・volta 0.160**——
+  **LP は `TabStaff`（staff-space 1.5）でも線の太さと edge-height 2.0 を*絶対*で持つ**ので、
+  **タブだけの本でも括弧は notation の 1.6 × line-thickness のまま。**
+  ★ **ラスタでも突き合わせた**（目視は比でしか答えられないので、**同じ絵の五線 1 本を対照に取る**）:
+  **LP 331 dpi の頁 PNG で volta 4.00 px 対 五線 2.51 px ＝ 1.59 倍**／
+  **Lily# `png --crop --scale 8.0` で 13 px 対 8 px ＝ 1.63 倍**（**1 ss = 80 px**）。
+  ⚠️ ★★ **crop した絵で測ってはいけない**——**LP の `-dcrop=#t` は volta の線を `y=0` で裁つので
+  被覆が 3.54 px と出る**（**紙の端に立つ物を測るときは crop しない絵で**）。
+  ⚠️ **被覆（1 − 明度）の積分で測ること。暗い画素を*数える*とアンチエイリアスの分だけ太い側に丸まる**
+  （計器は `scratch/p314/measure.ps1`・10 行）。
+  ⇒ ★★★ **なぜ今報告されたか＝4 日前に本当に太くなったから**。**`51c32b3b`（2026-08-28）が
+  「素の 0.13」を LP の宣言 1.6 に直した**（`VoltaBracketEngraver.LineThickness` の remark がその経緯）。
+  **読み手の目は差を正しく見ている。動いたのは Lily# で、動いた先が LP。**
+  ⇒ **ユーザー決定（2026-09-01）＝LP どおり 0.16 のまま。意図的乖離は作らない。**
+  ★ **同じ本で対照になる数**: **リハーサル記号の枠は `0.100`**（LP の `\box` thickness 1）——
+  **volta が枠より 1.6 倍太いのは LP 自身の対比。**
+  ⇒ ★★ **汎化＝「太い/細い」の目視は 2 つの数で答える**: **その線の ss と、*同じ絵の*五線 1 本の ss。**
+  **比が LP の宣言と合っているかは、それだけで決まる**（memory「1x ラスタ」の太さ版）。
 
 
 > # ✅ **`@!X` を実装した＝テキストスパナの終端必須化**（第289 で閉じた・`7b0df578`）

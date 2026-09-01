@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 58 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 50 | 観測者がゼロだと自認しているもの |
+| `UNWATCHED` | 52 | 観測者がゼロだと自認しているもの |
 | `OWN` | 115 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **223** | |
+| **計** | **225** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -41,7 +41,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:493** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
-- **:424** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
+- **:390** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:1172** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
 - **:1177** whiteout −1) is not ported.
@@ -132,7 +132,7 @@
 ### `LilySharp.Core/Svg/Model/LyricItem.cs`
 - **:100** ⚠️ NOT PORTED — the voice's melismaBusy state: the trigger here is the
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（50 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（52 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:1732** container, and the value stops being unobserved with the line above.
@@ -141,6 +141,8 @@
 - **:498** bare glyph width, which is exact for one and unobserved for many.
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:1291** no observer reaches that branch yet.
+### `LilySharp.Core/Rendering/SharedRenderer.Noteheads.cs`
+- **:664** observed by: no observer, and none is possible while the term is dominated — it
 ### `LilySharp.Core/Semantics/DrummapValidator.cs`
 - **:30** ★ This validator exists because the block had NO observer of any kind. Measured
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
@@ -170,6 +172,8 @@
 - **:417** clears it. No point reaches that texture, and it is named here rather than
 - **:513** own widths of one x. No ledger point measures a chord fingering's X, so this stays as
 - **:514** it was rather than being changed unobserved.
+### `LilySharp.Core/Svg/Layout/GraceNoteEngraver.cs`
+- **:495** observed by: NO OBSERVER — every book in the corpus quants, so nothing reaches the
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
 - **:464** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
@@ -239,7 +243,7 @@
 - **:70** LILYSHARP-OWN: the swing feel-equation's small note size. The equation is Lily#'s
 - **:457** prefix — LILYSHARP-OWN, a decided divergence (user decision
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
-- **:270** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
+- **:236** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:601** LILYSHARP-OWN sizes: the feel equation keeps the small chart-style note (1.6)
 - **:1284** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is

@@ -263,43 +263,86 @@ public class GraceBodyValidatorTests
     }
 
     /// <summary>
-    /// WHERE the dot stands turns on whether its row is one the grace's FLAG occupies — the
-    /// pair that measures <see cref="LilySharp.Core.Svg.Layout.DotColumn"/>'s Y gate.
+    /// WHERE a grace's dot stands turns on whether the DRAWN stem's flag reaches the dot's
+    /// row — the gate <see cref="LilySharp.Core.Svg.Layout.DotColumn"/> states, asked of the
+    /// stem the ordinary engraver actually drew.
     /// </summary>
     /// <remarks>
-    /// MEASURED on LilyPond 2.26.0 (scratch/p299/lp): <c>grace { e'8. }</c> sits in a space,
-    /// keeps its dot on its own row, and puts it 1.226600 right of the head — the head's ink
-    /// right plus one grace dot. <c>grace { d'8. }</c> sits on a line, so the dot is lifted
-    /// one position into the flag, and LilyPond moves it out to 1.747300 — the FLAG's right
-    /// edge plus the same dot. The difference, 0.520688, is flag-right minus head-right.
-    /// ⚠️ Asserting the two are DIFFERENT is the whole test: an engine with a flat
-    /// "head plus a dot" rule draws them at the same offset and is wrong about one of them.
+    /// MEASURED on canonical LilyPond 2.26.0 by dumping the grobs — six books, the whole table
+    /// in scratch/p315/measurements.md, answers as Dots-left minus NoteHead-left:
+    /// <list type="bullet">
+    /// <item><c>\grace { g'8. }</c> on a line, dot LIFTED — 1.226585. Its stem stands below the
+    /// middle line, so nothing shortens it (2.80) and the flag's lowest ink stays clear.</item>
+    /// <item><c>\grace { f'8. }</c> in a space — 1.226585.</item>
+    /// <item><c>\grace { d''8. }</c> on a line, dot lifted — 1.747274. The same description as
+    /// the first book, and the OPPOSITE answer: this stem is shortened to 2.50, which brings
+    /// the flag down onto the lifted dot's row.</item>
+    /// <item><c>\grace { e''8. }</c> in a space (stem 2.40) — 1.226585.</item>
+    /// <item><c>\grace { d''16. }</c> — 1.747274, and <c>\grace { g'16. }</c> — 1.747274: a
+    /// sixteenth's flag reaches 0.354 deeper, far enough even without the shortening.</item>
+    /// </list>
+    /// ⚠️ THE FIRST BOOK IS THE POINT. "On a line" was the proxy this pair was written with in
+    /// session 299, and a side model that measured the flag off a FLAT stem (3.5 × the font
+    /// scale) reproduced the proxy while getting that book wrong — Lily# drew 1.75 there until
+    /// session 315 handed the grace's dots to <c>DrawNote</c>, which hangs the flag support off
+    /// the stem it has just drawn.
+    /// ⚠️ The page prints two decimals, so each offset carries ±0.01 of rounding; the two
+    /// answers are 0.52 apart, which is fifty times that. The four-digit statement of the rule
+    /// itself lives on <c>DotColumn</c>.
     /// </remarks>
     [Fact]
     public void AGraceDotClearsTheFlagOnlyWhenTheFlagIsOnItsRow()
     {
-        // The two positions the measured books engrave: `d'` lands on staff position 2 (a
-        // LINE) and `e'` on 3 (a SPACE). Both dots end up on row 3 — one lifted, one not.
-        static (double X, System.Collections.Immutable.ImmutableArray<int> Positions) At(
-            int staffPosition, bool beamed)
-            => LilySharp.Core.Svg.Layout.GraceNoteEngraver.Dots(
-                new LilySharp.Core.Svg.Model.GraceColumnInfo(
-                    staffPosition, null, false, Fraction.Eighth, dots: 1),
-                beamed);
+        // Lily#'s absolute `c` is LilyPond's `c'`, so these six are the six measured books.
+        var off = GraceDotOffsets(
+            "grace { g8. } c'1 | grace { f8. } c'1 | grace { d'8. } c'1 | "
+            + "grace { e'8. } c'1 | grace { d'16. } c'1 | grace { g16. } c'1 |");
+        Assert.Equal(6, off.Length);
 
-        var onLine = At(2, beamed: false);
-        var inSpace = At(3, beamed: false);
+        const double Head = 1.226585;   // head ink right + one grace dot
+        const double Flag = 1.747274;   // flag ink right + the same dot
+        AssertOffset(Head, off[0]);
+        AssertOffset(Head, off[1]);
+        AssertOffset(Flag, off[2]);
+        AssertOffset(Head, off[3]);
+        AssertOffset(Flag, off[4]);
+        AssertOffset(Flag, off[5]);
 
-        Assert.Equal(3, Assert.Single(onLine.Positions));
-        Assert.Equal(3, Assert.Single(inSpace.Positions));
-        // Same row, different offset — because the flag hangs lower over the head that had
-        // to lift its dot to get there.
-        Assert.Equal(1.7473, onLine.X, 4);
-        Assert.Equal(1.2266, inSpace.X, 4);
-
-        // A BEAMED run has no flag at all, so the lifted dot stays at the head's right.
-        Assert.Equal(1.2266, At(2, beamed: true).X, 4);
+        // A BEAMED run has no flag at all, so a lifted dot stays at the head's right — the
+        // gate the ordinary pass reaches by drawing no stem for a beamed column.
+        AssertOffset(Head, Assert.Single(GraceDotOffsets("grace { g16. g16 } c'1 |")));
     }
+
+    /// <summary>Every grace dot's offset from its own head, in document order.</summary>
+    /// <remarks>
+    /// The head and the dot come out of the same −3 face, so both are read by GLYPH; the main
+    /// notes are full size and never enter.
+    /// ⚠️ THE n-TH DOT IS PAIRED WITH THE n-TH HEAD, which is only the same thing while every
+    /// dotted grace is the FIRST head of its group — true of both books here (the beamed
+    /// control writes <c>g16. g16</c>, one dot over two heads) and the reason this helper is
+    /// private rather than general.
+    /// </remarks>
+    private static double[] GraceDotOffsets(string music)
+    {
+        string page = Regex.Replace(
+            LiveRender.Svg("octave absolute\npart m { clef treble }\nsection A { m {\n"
+                           + music + "\n} }\nform main { ~A }\nscore main { staff m }\n"),
+            "data-pos=\"\\d+\"", "data-pos=\"#\"");
+        double[] heads = GraceHeadXs(page).Select(ParseX).ToArray();
+        double[] dots = GraceGlyphXs(
+            page, LilySharp.Core.Svg.Model.GraceNoteItem.FontSizeStep, DotGlyph)
+            .Select(ParseX).ToArray();
+        Assert.True(dots.Length <= heads.Length,
+            $"{dots.Length} grace dots against {heads.Length} grace heads");
+        return dots.Select((d, i) => d - heads[i]).ToArray();
+    }
+
+    private static double ParseX(string x)
+        => double.Parse(x, System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>The page's two decimals put ±0.01 on a difference of two rounded x's.</summary>
+    private static void AssertOffset(double expected, double actual)
+        => Assert.InRange(actual, expected - 0.011, expected + 0.011);
 
     /// <summary>
     /// The COLLECTOR carries the dot into the model. Asserted on the model rather than the

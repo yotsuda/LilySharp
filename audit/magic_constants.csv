@@ -787,7 +787,6 @@
 "Svg/Layout/PedalEngraver.cs","630","2.0","endX = startX + 2.0;","(file-level) LILYPOND-REF: define-grobs.scm:2855-2873 PianoPedalBracket grob","Yellow"
 "Svg/Layout/PedalEngraver.cs","650","0.01","if (Math.Abs(layouts[a].EndX - layouts[b].StartX) < 0.01)","(file-level) LILYPOND-REF: define-grobs.scm:2855-2873 PianoPedalBracket grob","Yellow"
 "Svg/Layout/PedalEngraver.cs","727","2.05, 0.0","-1e9, 1e9, -2.05, 0.0, VerticalDirection.Down);","(file-level) LILYPOND-REF: define-grobs.scm:2855-2873 PianoPedalBracket grob","Yellow"
-"Svg/Layout/GraceNoteEngraver.cs","576","0.5","double stemEnd = note.Highest.StaffPosition * 0.5","(file-level) LILYPOND-REF: define-grobs.scm:1721-1732 GraceSpacing grob","Yellow"
 "Svg/EngravingDefaults.cs","40","0.1","public const double LineThickness = 0.1;","LILYPOND-REF: scm/paper.scm:52-66 calc-line-thickness.</remarks>","Green"
 "Svg/EngravingDefaults.cs","59","1.0","public const double StaffLineThickness = 1.0 * LineThickness;","LILYPOND-REF: lily/staff-symbol.cc — StaffSymbol thickness default 1.0","Green"
 "Svg/EngravingDefaults.cs","74","1.0","public const double SystemSkylineHorizontalPadding = 1.0;","LILYPOND-REF: scm/define-grobs.scm System (skyline-horizontal-padding . 1.0)","Green"

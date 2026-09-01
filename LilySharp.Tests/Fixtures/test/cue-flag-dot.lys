@@ -1,0 +1,46 @@
+// A CUE WITH A FLAG AND A DOT — the texture the corpus had never written.
+//
+// test/cue-notes and test/cue-accidentals write quarters and chords: no cue in the tracked
+// corpus carries a FLAG or a DOT, so when session 313 found that DrawNote drew a reduced
+// flag and a reduced dot out of the STAFF's design instead of the cue's own, and fixed it,
+// not one snapshot moved. This book is the observer for that pair and for the dot column
+// above it (test/dotted-flag-dot-column is its full-size twin).
+//
+// MEASURED on LilyPond 2.26.0 (scratch/p314/cuedot-dump.ly — a CueVoice, whose
+// ly/engraver-init.ly \name CueVoice sets fontSize = #-4; each number is the dot's LEFT
+// minus its own head's LEFT, with the full-size answer from flagdot-dump.ly beside it):
+//   cue g'8.   head ON A LINE, dot lifted   1.5431   (full size 2.5174)
+//   cue f'8.   head IN A SPACE              1.0867   (full size 1.7542)
+//   cue g'16.  head ON A LINE               1.5431   (full size 2.5174)
+//   cue f'16.  head IN A SPACE              1.5431   (full size 2.5174)
+// where 1.5431 = 0.7504 (the up stem's centre) + 0.5213 (the flag's own right) + 0.2714 (one
+// dot width) and 1.0867 = 0.8154 (the head's ink right) + 0.2714. The SHAPE is the full-size
+// one — three of the four stand right of the flag — and every term is the CUE font's own,
+// which is not the staff's shrunk: LilyPond's cue head inks 0.8154 where the twenty's box at
+// magstep(-4) would be 0.8215 (Emmentaler is optically sized; Design13's black head is
+// 1.294282 against the twenty's 1.304200).
+//
+// ⚠️ THAT 0.006142 WAS LILY#'s UNTIL THIS FIXTURE EXISTED. DrawNote read the notehead's ink
+// right and its stem attachment out of Design20 and multiplied by magstep, so the cue's dot
+// column and its stem stood 0.006142 right of LilyPond's — and the GRACE half of the same
+// island (0.004150, Design14) had been live ink since HANDOFF §2 U8 ⒝2 handed grace stems to
+// this method. Both ask GrobFontSize.FontOf now, which is what the flag and the dot width
+// beside them already did.
+//
+// The rests are BEAM BREAKERS: a beamed column has no flag, and then there is nothing to
+// measure (scratch/p314/dots.lys made exactly that mistake).
+octave absolute
+time 4/4
+
+part v { }
+
+section A {
+  v {
+    cue { g8. r16 f8. r16 } r2 |
+    cue { g16. r32 f16. r32 } r2 r4 |
+  }
+}
+
+form main { ~A }
+
+score main { staff ~v }

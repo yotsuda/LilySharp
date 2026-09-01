@@ -134,10 +134,14 @@ internal static partial class SharedRenderer
                     // LilyPond does: grace is not a context, it is `\consists Grace_engraver`
                     // inside the ordinary Voice setting a per-grob table
                     // (scm/music-functions.scm:636-650 general-grace-settings).
-                    // WHAT IS LEFT HERE is the group's own two spanners — the BEAM over its
-                    // prefix, whose thickness, length-fraction and prefix rule are all stated
-                    // for the grace and nowhere else, and the SLUR to the main note — plus the
-                    // DOTS, for the reason below.
+                    // WHAT IS LEFT HERE is the group's own two spanners, and NOTHING ELSE since
+                    // session 315 — the BEAM over its prefix, whose thickness, length-fraction
+                    // and prefix rule are all stated for the grace and nowhere else, and the
+                    // SLUR to the main note. The DOTS went home with the stem they are measured
+                    // against: DrawNote's dot column hangs its flag support off the stem it has
+                    // just drawn, so a grace's dot now moves with the SHORTENING, which is what
+                    // LilyPond does and what a flat side-model stem could not do
+                    // (scratch/p315/measurements.md).
                     // Both spanners need the run's head geometry, which is what this loop gathers.
                     double lowestY = double.MaxValue, highestY = double.MinValue;
                     foreach (var head in note.Heads)
@@ -146,44 +150,6 @@ internal static partial class SharedRenderer
                             g.StaffIndex, g.MeasureIndex);
                         lowestY = Math.Min(lowestY, hy);
                         highestY = Math.Max(highestY, hy);
-                    }
-                    // ⚠️ THE DOTS STAY BECAUSE THE ORDINARY DOT COLUMN IS NOT THE PORTED ONE.
-                    // Where a dot stands is Svg/Layout/DotColumn — LilyPond's rule, a rightward
-                    // skyline over the column's supports floored on the head's ink right — and
-                    // GraceNoteEngraver.Dots is its ONLY caller. DrawNote and DrawChord answer
-                    // with a flat "head ink right plus one dot", which coincides with the ported
-                    // rule for a full-size note (its flag never reaches a dot's row) and does
-                    // NOT for a grace: a grace stem is short, so a lifted dot lands in the flag
-                    // and LilyPond moves it out to the flag's right edge instead of the head's.
-                    // MEASURED on 2.26.0 (scratch/p299): `grace { e'8. }` in a space 1.226600,
-                    // `grace { d'8. }` on a line 1.747300, the difference being exactly
-                    // flag-right minus head-right. Handing the dot to DrawNote would draw both
-                    // at 1.2266 and lose the pair.
-                    //   goes away when: DrawNote and DrawChord ask DotColumn too — which
-                    //     DotColumn's own remarks already claim ("ONE HOUSE, THREE CALLERS")
-                    //     and which is true of the RULE but not yet of the callers.
-                    //   observed by: LilySharp.Tests.GraceBodyValidatorTests
-                    //     .AGraceDotClearsTheFlagOnlyWhenTheFlagIsOnItsRow, which pins both
-                    //     measured offsets to four digits.
-                    if (note.Dots > 0)
-                    {
-                        // PER COLUMN, not per run: this column draws a flag unless it is
-                        // inside the beamed prefix, and whether a flag is in the dots' way
-                        // is the whole question Dots asks the gate.
-                        var (dotX, dotPositions) = GraceNoteEngraver.Dots(
-                            note, beamed: headIndex < beamedPrefix);
-                        // The dot's own design, as the head's is asked for its own — the same
-                        // −3 general-grace-settings gives Dots.
-                        using (gc.MusicFace(GraceNoteItem.DesignSize))
-                            foreach (int p in dotPositions)
-                            {
-                                double dotY = os.YUp(staffMiddleY + p / 2.0,
-                                    g.StaffIndex, g.MeasureIndex);
-                                for (int d = 0; d < note.Dots; d++)
-                                    gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
-                                        currentX + (dotX + d * 2 * GraceNoteItem.Font.AugmentationDot.Width) * unit,
-                                        dotY, FontSize * eff, null);
-                            }
                     }
                     headX.Add(currentX);
                     // A stem-up stem stands on the BOTTOM of the head column and is measured
@@ -412,8 +378,8 @@ internal static partial class SharedRenderer
         //   control, with the stem standing 0.065 left of its notehead's right edge in both.
         //   Ledger grace.stem.thickness (and its full-size control, exact from the first run).
         double stemThick = EngravingDefaults.StemThickness;
-        // ONE HOUSE for the length: GraceNoteEngraver.Dots reads it too, because where the
-        // flag hangs is what decides whether the flag stands in the dots' way.
+        // THE FALLBACK LENGTH, and its only reader since session 315 took the dots home —
+        // see GraceNoteEngraver.StemLength for what it departs from.
         double stemLen = GraceNoteEngraver.StemLength(scale);
         // THE one house for where a stem stands, and the whole point of using it here: it is
         // the expression the beam was SCORED in (BeamScoringProblem's StemXOf reads the same

@@ -76,6 +76,22 @@ public class SvgSnapshotTests
         // Multi-voice collision forces the DOWN voice's on-line augmentation dot
         // BELOW the line (DotConfiguration dir = -1) instead of the default up.
         yield return new object[] { "test/dot-force-down" };
+        // An unbeamed flagged note's dot stands right of the FLAG when the flag's ink
+        // reaches the dot's row — LilyPond's dot column, which no full-size book in the
+        // tracked corpus was watching (session 314; the four LP numbers are in the fixture).
+        yield return new object[] { "test/dotted-flag-dot-column" };
+        // ...and its CUE twin: a cue with a flag and a dot, the texture that let session
+        // 313's "the flag and the dot came out of the staff's design" fix move no snapshot
+        // at all. Carries LilyPond's four cue numbers and the 0.006142 island still open.
+        yield return new object[] { "test/cue-flag-dot" };
+        // ...and its GRACE twin, registered 2026-09-01 (session 315), where the answer stops
+        // being a function of "line or space" and becomes one of the DRAWN stem's length: a
+        // grace below the middle line keeps its full 2.80 stem and its flag stays clear of the
+        // lifted dot, where the same book an octave up is shortened to 2.50 and the flag comes
+        // down onto it. Six LilyPond numbers in the fixture's own header. Nothing in the corpus
+        // watched this: the side model measured the flag off a FLAT 2.475 for every pitch, and
+        // the merged skyline under it had the Y gate switched off entirely.
+        yield return new object[] { "test/grace-dot-flag-column" };
         // Beamed rests are pushed clear of the beam (Beam::rest_collision_callback).
         yield return new object[] { "test/beamed-rest" };
         // Piano pedal styles (part property `pedal`: text and mixed; the default
