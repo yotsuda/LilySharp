@@ -192,6 +192,26 @@ public abstract record MusicItem
     /// </remarks>
     public bool GraceTime { get; init; }
 
+    /// <summary>
+    /// True when this item stands in an <c>acciaccatura { }</c> body, whose stem carries the
+    /// diagonal stroke. Meaningless off <see cref="GraceTime"/>.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A PROPERTY OF THE FLAG, WHICH IS WHY IT RIDES THE ITEM RATHER THAN THE GROUP.
+    /// LilyPond states the slash as a grob property on the note's own Flag —
+    /// LILYPOND-REF: ly/grace-init.ly, <c>acciaccatura</c> sets
+    /// <c>Flag.stroke-style = "grace"</c>, read by lily/flag.cc's stencil, and
+    /// mf/feta-flags.mf:1228-1260 is the "grace dash" that stroke draws. So the stroke is
+    /// drawn where the flag is drawn, by whoever draws the flag, and does not need the group
+    /// to be re-consulted at draw time.
+    /// <para>
+    /// ⚠️ BEAMED ACCIACCATURAS DO NOT READ THIS. LilyPond puts the stroke on the BEAM there
+    /// (<c>Beam.stencil</c> = a slashed stencil), which Lily# has never ported; the flagged
+    /// case is the whole of what is drawn, here as before.
+    /// </para>
+    /// </remarks>
+    public bool GraceSlash { get; init; }
+
     /// <summary>Source position in the syntax tree for click-to-source mapping.
     /// <c>init</c> (and declared on the base, not per subtype) so the collect
     /// resume's suffix splice can re-home an adopted item across an edit with a

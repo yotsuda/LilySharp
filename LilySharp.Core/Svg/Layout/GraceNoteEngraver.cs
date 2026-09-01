@@ -68,7 +68,15 @@ public readonly record struct GraceNoteLayout(
     // reservation and the beam quanter used, so the drawn heads cannot land anywhere else.
     // Before 2026-08-01 the renderer stepped by its own literal (1.2 + 0.3) and the group's
     // reserved width was computed a third way; see SpacingRules.GraceColumns.
-    ImmutableArray<double> ColumnOffsets = default
+    ImmutableArray<double> ColumnOffsets = default,
+    // Which voice of StaffIndex wrote this group — the list MainNoteItemIndex and
+    // ColumnItemIndices both count in. Zero-based, like GraceNoteItem.VoiceIndex.
+    int VoiceIndex = 0,
+    // Where each column stands in that voice's item list, entry for entry with Columns.
+    // Carried so the group's X can be PUBLISHED per item (ScoreLayout.GraceColumnXs) — an
+    // ordinary engraver reaches a grob by its item index, and until session 310 a grace
+    // column had none. Empty for a hand-built layout, which then publishes no addresses.
+    ImmutableArray<int> ColumnItemIndices = default
 );
 
 /// <summary>
@@ -227,11 +235,50 @@ internal static class GraceNoteEngraver
                 StaffIndex: grace.StaffIndex,
                 BeamLeftY: beamLeftY,
                 BeamRightY: beamRightY,
-                ColumnOffsets: columns.Offsets
+                ColumnOffsets: columns.Offsets,
+                VoiceIndex: grace.VoiceIndex,
+                ColumnItemIndices: grace.ColumnItemIndices
             ));
         }
 
         return layouts.ToImmutable();
+    }
+
+    /// <summary>
+    /// Publishes every grace column's X by the address of the item standing there — the index
+    /// <c>ScoreLayout.GraceColumnXs</c> is, built from the layouts this class just produced.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ AN INDEX, NOT A SECOND COMPUTATION: every X here is
+    /// <c>layout.X + layout.ColumnOffsets[i]</c>, the run's own chain
+    /// (<see cref="SpacingRules.GraceColumns"/>) that the reservation and the beam quanter
+    /// already read. What is new is the KEY, and only the key.
+    /// <para>
+    /// A group with no column addresses (a hand-built <see cref="GraceNoteLayout"/>) or no
+    /// offsets contributes nothing, which is what leaves its items undrawn rather than drawn
+    /// at zero. A duplicate address cannot arise from the collector — one item is one column
+    /// of one group — and if one ever did, the LAST group written would win silently, so the
+    /// builder is asked to overwrite explicitly rather than to throw inside a layout pass.
+    /// </para>
+    /// </remarks>
+    internal static ImmutableDictionary<GraceColumnKey, double> IndexColumnXs(
+        ImmutableArray<GraceNoteLayout> layouts)
+    {
+        if (layouts.IsDefaultOrEmpty)
+            return ImmutableDictionary<GraceColumnKey, double>.Empty;
+
+        var map = ImmutableDictionary.CreateBuilder<GraceColumnKey, double>();
+        foreach (var g in layouts)
+        {
+            if (g.ColumnItemIndices.IsDefaultOrEmpty || g.ColumnOffsets.IsDefaultOrEmpty)
+                continue;
+            int n = Math.Min(g.ColumnItemIndices.Length, g.ColumnOffsets.Length);
+            for (int i = 0; i < n; i++)
+                map[new GraceColumnKey(
+                    g.StaffIndex, g.VoiceIndex, g.MeasureIndex, g.ColumnItemIndices[i])]
+                    = g.X + g.ColumnOffsets[i];
+        }
+        return map.ToImmutable();
     }
 
     /// <summary>
@@ -334,7 +381,11 @@ internal static class GraceNoteEngraver
             group, xs,
             lengthFraction: EngravingDefaults.GraceBeamLengthFraction,
             beamThickness: EngravingDefaults.GraceBeamThickness,
-            headFont: GraceNoteItem.Font).Solve();
+            headFont: GraceNoteItem.Font,
+            // The other half of what general-grace-settings states about a grace Stem —
+            // LilyPond guards calc_stem_info's staff-boundary clamps with it, so a grace beam
+            // far from the staff is not dragged back toward it (StemDetails.NoStemExtend).
+            noStemExtend: true).Solve();
         return (leftY, rightY);
     }
 

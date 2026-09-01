@@ -1,0 +1,50 @@
+// A REST inside a grace body — the one grob general-grace-settings never names.
+//
+// LILYPOND-REF: scm/music-functions.scm:636-650 general-grace-settings (v2.26.0) gives a
+// font-size to Stem, Flag, NoteHead, TabNoteHead, Dots, Accidental, Script, Fingering and
+// StringNumber, and NEVER to Rest — so a grace rest reads the STAFF's own size. MEASURED
+// side by side in one book (scratch/p308/lp2/s2_gracerestchord, `\grace { r16 d'16 }`):
+// LilyPond draws the rest at 0.0040 and the head beside it at 0.0028 = magstep(-3), and the
+// rest's path data is BYTE-IDENTICAL to a main-stream rest's.
+//
+// ⚠️ WHY THIS BOOK EXISTS. Session 308 taught the model that a grace column can hold no
+// head, and got the SIZE right — the rest was drawn at the staff's FontSize. What nothing
+// watched was the FACE: the grace pass drew it inside the grace group's
+// MusicFace(Emmentaler-14) scope, so a full-size glyph came out of the FOURTEEN design's
+// outline, which is not the outline a main-stream rest has (Emmentaler is optically sized).
+// Session 313 measured that the whole disk — 1418 .lys, tracked and untracked — held NOT ONE
+// book with a rest in a grace body, so no snapshot and no ledger point could have said so.
+// This is that book. The third bar is the dotted case, whose augmentation dot rides the
+// rest's own origin.
+title "Grace rest"
+
+time 4/4
+key c major
+
+part melody
+
+phrase graceLeadingRest {
+  // A rest at the FRONT of the run: LilyPond beams nothing at all here, because the
+  // beam covers the leading run of HEAD columns and there is none.
+  grace { r16 d16 } c4 c2. |
+}
+
+phrase graceInnerRest {
+  // A rest INSIDE the run: the leading two heads carry the beam, the rest breaks it, and
+  // the head after it takes a flag (scratch/p308/lp2/measurements.md).
+  grace { d16 e16 r16 f16 } c4 c2. |
+}
+
+phrase graceDottedRest {
+  grace { r8. d16 } c4 c2. |
+}
+
+section Main {
+  melody { graceLeadingRest graceInnerRest graceDottedRest }
+}
+
+form main { Main }
+
+score main "grace-rest" {
+  staff melody
+}

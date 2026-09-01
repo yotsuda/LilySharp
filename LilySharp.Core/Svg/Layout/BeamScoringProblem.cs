@@ -213,6 +213,12 @@ internal sealed class BeamScoringProblem
     /// grace heads come out of the 14 design at <c>magstep(-3)</c> while its grace beam's
     /// fraction is 0.8.
     /// </param>
+    /// <param name="noStemExtend">
+    /// Whether these stems refuse to be lengthened toward the middle staff line —
+    /// <c>general-grace-settings</c>' <c>(Voice Stem no-stem-extend #t)</c>, which is a
+    /// SEPARATE property from <paramref name="lengthFraction"/> and which a cue does not
+    /// state. See <see cref="StemDetails.NoStemExtend"/>.
+    /// </param>
     public BeamScoringProblem(
         BeamGroup group,
         IReadOnlyList<double> itemXPositions,
@@ -225,7 +231,8 @@ internal sealed class BeamScoringProblem
         double lineThickness = EngravingDefaults.StaffLineThickness,
         int staffLineCount = 5,
         double? beamLengthFraction = null,
-        IReadOnlyList<double>? restXPositions = null)
+        IReadOnlyList<double>? restXPositions = null,
+        bool noStemExtend = false)
     {
         _group = group;
         _parameters = parameters ?? BeamQuantParameters.Default;
@@ -406,9 +413,18 @@ internal sealed class BeamScoringProblem
         _beamTranslation = EngravingDefaults.BeamTranslationOf(
             beamThickness, _beamLengthFraction, _maxBeamCount, lineThickness);
         _lengthFraction = lengthFraction;
-        _stemDetails = lengthFraction == 1.0
+        // ⚠️ no-stem-extend TRAVELS WITH THE FRACTION BUT IS NOT THE FRACTION. LilyPond guards
+        // calc_stem_info's two staff-boundary clamps with it exactly as it guards the unbeamed
+        // rule (lily/stem.cc:1233-1235 against :591-593), and general-grace-settings states it
+        // for a grace where \name CueVoice does not — so a grace BEAM is not dragged toward
+        // the staff either. See StemDetails.NoStemExtend.
+        _stemDetails = lengthFraction == 1.0 && !noStemExtend
             ? StemDetails.Default
-            : StemDetails.Default with { LengthFraction = lengthFraction };
+            : StemDetails.Default with
+              {
+                  LengthFraction = lengthFraction,
+                  NoStemExtend = noStemExtend,
+              };
         _minStemLength = EngravingDefaults.MinStemLength;      // 2.5 staff spaces
 
         // The beam's own segments — the SAME maths the renderer draws with, so the ink a

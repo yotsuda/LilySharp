@@ -41,7 +41,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:493** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
-- **:443** ⚠️ NOT PORTED — the per-duration grace head: the head shape is BLACK for every
+- **:424** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:1172** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
 - **:1177** whiteout −1) is not ported.
@@ -63,7 +63,7 @@
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`
 - **:99** ⚠️ The X test itself is NOT ported HERE: a row's ink X-range is not on StaffLayout.
 ### `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs`
-- **:778** differ by half the bump whenever MinimumDy actually bites. Not ported here
+- **:794** differ by half the bump whenever MinimumDy actually bites. Not ported here
 ### `LilySharp.Core/Svg/Layout/ChordNameGlyphRun.cs`
 - **:64** ⚠️ WHAT IS NOT PORTED HERE, named so it is not mistaken for a defect in this file:
 ### `LilySharp.Core/Svg/Layout/DynamicAlignEngraver.cs`
@@ -237,9 +237,9 @@
 - **:324** LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
 ### `LilySharp.Core/Rendering/SharedRenderer.cs`
 - **:70** LILYSHARP-OWN: the swing feel-equation's small note size. The equation is Lily#'s
-- **:437** prefix — LILYSHARP-OWN, a decided divergence (user decision
+- **:457** prefix — LILYSHARP-OWN, a decided divergence (user decision
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
-- **:298** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
+- **:270** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:601** LILYSHARP-OWN sizes: the feel equation keeps the small chart-style note (1.6)
 - **:1284** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
@@ -280,8 +280,8 @@
 - **:229** Lily#'s own object, hence LILYSHARP-OWN rather than a REF.
 ### `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs`
 - **:154** LILYSHARP-OWN: a TAB string position carries no pitch default-direction.
-- **:379** LILYSHARP-OWN: LilyPond's charge there is 0/0 = NaN (dist/gap.length()
-- **:1274** LILYSHARP-OWN: with no normal stems every flat off-line candidate
+- **:386** LILYSHARP-OWN: LilyPond's charge there is 0/0 = NaN (dist/gap.length()
+- **:1290** LILYSHARP-OWN: with no normal stems every flat off-line candidate
 ### `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs`
 - **:78** LILYSHARP-OWN: the band is Lily#'s model of an independent row (HANDOFF 3); LilyPond
 - **:100** LILYSHARP-OWN, and ONE HOME for it: the rule decides which baseline the symbols are

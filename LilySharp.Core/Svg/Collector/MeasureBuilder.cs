@@ -245,13 +245,29 @@ internal sealed class MeasureBuilder
     /// says "unbalanced" where a bool would silently forgive it.
     /// </para>
     /// </remarks>
-    public void EnterGraceTime() => _graceDepth++;
+    /// <param name="slash">
+    /// True for an <c>acciaccatura { }</c>: every item added inside the region also carries
+    /// <see cref="MusicItem.GraceSlash"/>, the way LilyPond states the stroke as a property
+    /// of the note's own Flag (see that member).
+    /// </param>
+    public void EnterGraceTime(bool slash = false)
+    {
+        _graceDepth++;
+        if (slash)
+            _graceSlashDepth++;
+    }
+
+    /// <summary>How deep into <c>acciaccatura { }</c> bodies this builder is — a counter for
+    /// the reason <see cref="_graceDepth"/> is one.</summary>
+    private int _graceSlashDepth;
 
     /// <summary>Closes the region <see cref="EnterGraceTime"/> opened.</summary>
-    public void ExitGraceTime()
+    public void ExitGraceTime(bool slash = false)
     {
         if (_graceDepth > 0)
             _graceDepth--;
+        if (slash && _graceSlashDepth > 0)
+            _graceSlashDepth--;
     }
 
     /// <summary>
@@ -281,37 +297,46 @@ internal sealed class MeasureBuilder
     /// the source position, which is click-to-source data no engraver reads.
     /// </para>
     /// </remarks>
-    private static MusicItem NarrowToGraceTime(MusicItem item) => item switch
+    private MusicItem NarrowToGraceTime(MusicItem item)
     {
-        NoteItem n => new NoteItem(
-            n.StaffPosition, n.BaseDuration, n.Dots, n.Accidental, n.NeedsLedgerLines,
-            n.SourcePosition)
+        // The stroke an acciaccatura's flag carries — a property of the FLAG in LilyPond, so
+        // it rides the item and is drawn by whoever draws that flag (MusicItem.GraceSlash).
+        bool slash = _graceSlashDepth > 0;
+        return item switch
         {
-            GraceTime = true,
-            Midi = n.Midi,
-            StringNumber = n.StringNumber,
-        },
+            NoteItem n => new NoteItem(
+                n.StaffPosition, n.BaseDuration, n.Dots, n.Accidental, n.NeedsLedgerLines,
+                n.SourcePosition)
+            {
+                GraceTime = true,
+                GraceSlash = slash,
+                Midi = n.Midi,
+                StringNumber = n.StringNumber,
+            },
 
-        ChordItem c => new ChordItem(
-            // The members keep the same seven answers and nothing else — a member can carry
-            // its own fingering and its own notehead style, and both are drops here too.
-            c.Notes.Select(static m => new ChordNoteInfo(
-                m.StaffPosition, m.Accidental, m.NeedsLedgerLines,
-                StringNumber: m.StringNumber, Midi: m.Midi,
-                SourcePosition: m.SourcePosition)).ToImmutableArray(),
-            c.BaseDuration, c.Dots, c.SourcePosition)
-        {
-            GraceTime = true,
-        },
+            ChordItem c => new ChordItem(
+                // The members keep the same seven answers and nothing else — a member can carry
+                // its own fingering and its own notehead style, and both are drops here too.
+                c.Notes.Select(static m => new ChordNoteInfo(
+                    m.StaffPosition, m.Accidental, m.NeedsLedgerLines,
+                    StringNumber: m.StringNumber, Midi: m.Midi,
+                    SourcePosition: m.SourcePosition)).ToImmutableArray(),
+                c.BaseDuration, c.Dots, c.SourcePosition)
+            {
+                GraceTime = true,
+                GraceSlash = slash,
+            },
 
-        RestItem r => new RestItem(r.BaseDuration, r.Dots, r.SourcePosition)
-        {
-            GraceTime = true,
-            IsSpacer = r.IsSpacer,
-        },
+            // A REST TAKES NO SLASH: the stroke is the Flag's, and a rest has none.
+            RestItem r => new RestItem(r.BaseDuration, r.Dots, r.SourcePosition)
+            {
+                GraceTime = true,
+                IsSpacer = r.IsSpacer,
+            },
 
-        _ => item with { GraceTime = true },
-    };
+            _ => item with { GraceTime = true },
+        };
+    }
 
     /// <summary>
     /// Adds a music item and automatically completes the measure if duration is reached.

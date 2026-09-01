@@ -465,7 +465,13 @@ internal sealed partial class LayoutEngine
             a.LedgerLineSpans,
             a.BarNumbers,
             a.StanzaNumbers,
-            voiceOffsets, headWipeEntries, dotAdjustments, restShifts);
+            voiceOffsets, headWipeEntries, dotAdjustments, restShifts)
+        {
+            // Where each grace column stands, keyed by the item standing there — the one
+            // address an ordinary engraver can reach a grace grob by. Indexed from the grace
+            // layouts just built, so there is no second computation of the X.
+            GraceColumnXs = GraceNoteEngraver.IndexColumnXs(a.GraceNotes),
+        };
     }
 
     /// <summary>

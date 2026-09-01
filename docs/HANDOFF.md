@@ -57,6 +57,9 @@ gh run list --limit 5
 #      gh run view <runId>                          # ✓/X と job ID
 #      gh run view --job <jobId> --log > $env:TEMP\ci.log   # `--log-failed` は途中で切れる
 #      Select-String -Path $env:TEMP\ci.log -Pattern '\sFailed\s+LilySharp\.'
+#    ⚠️⚠️⚠️ ★★★★ **この WSL 脚は 2026-09-01 現在この機械で回らない**（第313 実測）——
+#    **`wsl -l -v` が "no installed distributions"。`Ubuntu-24.04` は消えている。**
+#    **⇒ ubuntu の緑は `gh run list` / `gh run view` で*読む*しかない。下の 5 行は距離が戻ったときのため。**
 #    ⚠️ ★★★ **CI を待たなくてよい**（2026-08-19・第213 が建てた）。**ubuntu 脚はこの機械で
 #    30 秒で回る**——**手順と罠は `scratch/linux-repro/README.md`**（`scratch/` は git 管理外なので
 #    無ければ建て直す。中身は 10 行）:
@@ -192,52 +195,42 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第311セッション＝**ユーザーが初めて「§2 を進めよ」ではない指示を出した**——**「Lily# の次のバージョンをリリースしたい。リリースブロッカーや、些末な問題だがすぐ安全に直せるものを優先して直して」**。⇒ ★★★★ **本便の骨は「リリースブロッカーは*コード*に 1 つも無く、*出荷する散文*に 3 つ在った」**: **CHANGELOG が 51 commit ぶん遅れており、そのうち 5 つが言語を壊す変更だった（⑴）／`README.md` の例 10 個を*コンパイル*したら 3 個が赤で、2 個は 0.4.0 のタグの*中で*既に赤だった（⑵）／版番号は 7 か所に在り、そのうち 1 つは CRLF 格納で `sed` が 503 行の幻の diff を作った（⑶）。** **commit は 4 本＝README・診断 doc・リリース・この handoff。** ⚠️ **push もタグも打っていない**（**どちらもユーザーの手番**・RULES §5.1）。
+最終更新 第313セッション＝**入り方は第298〜第312 と同じ**——**ユーザーは `docs/HANDOFF.md` を読んで着手せよとだけ言った**。⇒ ★★★★ **本便の骨は 3 つ**: **⑴ §2 U8 ⒝2 の本体を入れた＝普通の engraver が grace 時間を描く／⑵ 3 便が「壊れている」と書いていた正典 LilyPond は*起動のしかた*の問題で、回避策は 80 日前から memory に在った／⑶ そして*この機械から WSL が消えている*——§0 の脚の片方が回らない。** **commit は 3 本＝休符 `0e27b056`／⒝2 本体 `ccf30003`／この commit。**
 
-⚠️⚠️⚠️ ★★★★ **⑴ 最大のブロッカー＝CHANGELOG は 51 commit 遅れており、`docs/RELEASING.md` はその最上段の節を「GitHub Release の本文にそのまま貼る」と言っている。** **最後に触られたのは `2201818f`**（第286 の頃）——**そこから HEAD までに実質 51 commit あり、言語を壊すものが 5 つ**: **LYS1034（`|:` `:|` `[N. …]` は form 専用。**ユーザーの 326 冊のうち 115 冊・追跡 11 冊がコンパイルを止める**）／`@!X`（span は閉じる。1 小節の既定・「次の rit が閉じる」探索・自分の 2 回目を閉じない番人の 3 つが同時に退役）／`@loco`・`@sustainOn`／`Off`・`@sostenutoOn`／`Off` の退役／LYS4018 の Unterminated が warning → error／LYS1035・LYS1036 の 2 つの拒否**。⇒ ★★★ **「breaking change を落としたリリースノートは、リリースノートが無いより悪い」**——**0.4.0 の読者は自分のファイルがまだ通るかを判定できない。** ★ **書いたもの**: **Breaking を*止まる冊数の順*に並べ直し**（LYS1034 が先頭）**＋ New 群 3 件・Diagnostics 4 件・Engraving 10 件・Export 5 件**。**各項目は起票 commit が測った到達冊数を持って行った**——**「読者に届くか」を言える数はそれだけだから。** ⚠️ **拡張の CHANGELOG は Marketplace の changelog タブになり、公開後は*編集できない***ので、**breaking の要約と本体 CHANGELOG へのリンクを頭に置いた。**
+⚠️⚠️⚠️ ★★★★ **⑴ ⒝2＝符頭・ledger・臨時記号・休符・符尾・旗・acciaccatura の斜線を普通の engraver が grob ごとのフォントで描く**（§2 U8 に全部書いた）。**住所は層が publish する＝`GraceNoteItem.ColumnItemIndices` と `ScoreLayout.GraceColumnXs`（`(staff, voice, measure, item) → X`）。X は第 2 の計算ではなく `SpacingRules.GraceColumns` の同じ鎖で、新しいのは*鍵*だけ。** ★★ **grace 家に残ったのは LP が grace のためだけに宣言しているもの＝梁（接頭辞・0.384・0.8）とその下の符尾／主音符への slur／付点（下の ⒞）。** ★ **2 段に割った**: **⑴a 休符だけを先に移した**（`0e27b056`）——**`general-grace-settings` が Rest を名指さない＝*唯一 LP が縮めない grob* なので、位置もサイズも動かない**（**A/B で座標 4 桁一致**）——**そして*その 1 冊で欠陥が出た*: 休符は grace group の `MusicFace(Emmentaler-14)` スコープの中でフル サイズに描かれており、五線の休符と*同じ字形ではなかった***（**LP は同一と測ってある・第308**）。⚠️⚠️ ★★★ **ディスク 1420 冊のうち grace 本体に休符を書いた本は 0 だった**——**だから何も見張っていなかった。`LilySharp.Tests/Fixtures/test/grace-rest.lys` を足した**（**追跡 581 → 582・snapshot 231 → 232**）。
 
-⚠️⚠️⚠️ ★★★★ **⑵ `README.md` の例は「読んで」ではなく「コンパイルして」確かめた。10 個中 3 個が赤だった。** **⒜ リード シートの例が `chords prog { c2 g:7 | a:m f | c1 :| }`**——**小文字 `:` の和音入力は*0.4.0 で*退役している**（LYS1028）**ので、この 1 例だけで 6 本のエラー・うち 5 本は 0.4.0 のタグの*中で*既に赤だった**。**その上の散文「Chord entries are `root[duration][:quality][/bass]`」も同い年。** **⒝「Repeats and Alternatives」節が `{ |: c4 d e f | [1. g2 g | ] :| [2. a2 a | ] }` を教えていた**＝**LYS1034 が 4 本。`docs/TUTORIAL.md` は規則が入った便に直され、`README.md` は直されなかった。** **⒞ 一番最初の「Basic Syntax」例**——**新しい読者が最初に写すもの**——**が `time 3/4` の下に `c4 d e f | g2 g |` を書いており、LYS2002 が 2 本。ずっとそうだった。** ⇒ ★★★ **RULES §5.4 に規則として汎化した**（**言語を狭める便は綴りを grep するのではなく全ブロックを `lysc` に通す／除外は `LYS0020` 1 つだけ／抜き出し器はまず既知の赤を出してから信用する**）。⚠️ **`TUTORIAL.md`・`SYNTAX_REFERENCE.md`・`GRAMMAR_FOR_LLM.md` は退役綴りを*文字で*掃いて白**（`:` 和音入力・form の外の `|:` `[N. …]`・`@loco`・`@sustainOn`）**だが、fence が ```` ```lilysharp ```` でないのでコンパイラには通していない**——**次に触る便の仕事。**
+⚠️⚠️⚠️ ★★★★ **⑵ 符尾が初めて LP と一致した。そして*正典 exe は 15 秒で回る*。** **`cmd.exe /d /s /c "<lilypond …> < NUL > log 2>&1"`＝デタッチして stdin を NUL から。** ⚠️⚠️ **第302（13 分）・第308（17 分）・第309（「⒝2 を見送る理由の筆頭」）の 3 便が、`memory/reference_lilypond_mcp_console_hang.md` に 80 日前から書いてある同じ署名（CPU 数秒で停止・WS 28 MB）を読みながら memory を引かなかった。** ⇒ ★★★ **汎化＝「この機械のツールが動かない」は*環境の記憶*に当たること。** ★ **測ったもの**（`scratch/p313/lp/measurements.md`・9 冊・全部 4 桁一致）: **grace の符尾＝*音価が選んだ長さ × 0.8*、短縮は積の中、中央線への延長は無し。** **第312 まで全部 2.475**（3.5 × magstep(−3)）——**8 分で −0.325・64 分で −1.525。** ★★ **表の*もう半分*が欠けていた＝`no-stem-extend`**（`StemDetails.NoStemExtend`。**`lily/stem.cc:591-593` と梁側の双子 `:1233-1235` を門番する property。cue は宣言しない**）。**`APPROXIMATIONS` の `UNWATCHED` 51 → 50・計 224 → 223。**
 
-⚠️⚠️ ★★★ **⑶ 版番号は `RELEASING.md` の言う 7 か所に入れた。「ビルドはどれも検査しない」も本当だった。** **`Directory.Build.props` ／ `package.json` ／ `package-lock.json` の*2 つの*欄 ／ 拡張 README の版バナー ／ `DEPLOY.md` の導入パス例 ／ 2 つの CHANGELOG。** ⚠️⚠️ ★★★ **`editors/vscode/package.json` は*CRLF 格納*で、周りの兄弟は LF**——**`sed -i` で 1 行直したら `--numstat` が `503 503`＝全行 diff**（**レビュー 1 本ぶんの変更に見えて中身は 1 行**）。**`git checkout` で戻し、`Update-MatchInFile` で入れ直して `1 1`。** ⇒ **この木の blob は EOL 混在で、`sed` / スクリプトで書き戻すと*格納が CRLF のファイルだけ*全行 diff になる。今回は `.cs` ではなく `.json`。書き戻したら必ず `--numstat` を見て、編集した行数と合うことを確かめること**（RULES §5.1 の `.md` の項の兄弟）。 ★ **`npm install --package-lock-only` は 0.4.0 の前と違って依存の drift 無し**（**diff は版の 2 欄だけ**）。
+⚠️⚠️⚠️ ★★★★ **⑶ この機械に WSL が無い**（`wsl -l -v` は "no installed distributions"）。**`Ubuntu-24.04` は §0 の ubuntu Release 脚であり、第308・第310 が LilyPond を測った場所でもある。** ⇒ **§0 にその旨を書いた。ubuntu の緑は `gh run list` で*読む*しかない。** ⚠️ **LilyPond のほうは損ではない**——**残った 1 本が*台帳の要求する 2.26.0 そのもの*だから**（第308 以来の「WSL の 2.27.3 で測って 1 度突き合わせる」運用はもう要らない）。
 
-✅ ★★★ **⑷ 出荷経路を、後戻りできない手順の*手前*まで実際に通した。** **⒜ `lysc --version` が `lysc 0.5.0`**（Release ビルド）／**⒝ Windows Debug 6808 / 0 / 4 / 6812・WSL ubuntu Release も 6808 / 0 / 4 / 6812**（**§0 の両脚を読んだ**。`.md` を動かすと `HistoryCitationTests` が動くので、散文の commit ごとに回した）／**⒞ `npm ci` が exit 0**（**0.4.0 の前に落ちるところだった当のコマンド**）／**⒟ `release.yml` の `awk '/^## /{n++; next} n==1'` を実際に回して、Release 本文が 416 行・見出し 5 個・0.4.0 へ漏れないことを確認**／**⒠ `win32-x64` の vsix を 1 本実際に詰めた**（`vsce package` exit 0・328 ファイル・131.19 MB）**——`.vscodeignore` の修理が効いていて `DEPLOY.md` は 0 件**（**0.4.0 はこれを同梱してしまい、`RELEASING.md` が「修理は必然的に 0.5.0 に載る」と書いていた項目。これで載った**）。⚠️ **詰めた vsix は消した**（**作業ツリーは 0**）。
+⚠️⚠️ ★★★ **⑷ 移す途中で欠陥が 2 つ出た。どちらも「サイズは合っていて*デザイン*が違う」形**: **`DrawNote`/`DrawChord` の `gc.MusicFace` は符頭と臨時記号しか包んでおらず、旗と付点は*縮んだサイズ*で*五線のデザイン*から出ていた**（**Emmentaler は光学サイズ＝`GrobFontSize` が `DesignOf` と `FontOf` を対にしている理由そのもの**）。**付点の*幅*も同じ形**（**2 つの付点は 1 幅ぶん離すのに、幅をフル サイズの付点で測っていた**）。⚠️⚠️ **cue も同じ欠陥を持っており、コーパスは 1 冊も観測していない**——**旗つき・付点つきの cue を書いた fixture が無いので snapshot は 1 枚も動かなかった。** ⇒ **観測者を足す価値がある**（→ 次の一手 ⑵）。
 
-✅ ★★★ **⑸ 便の後半＝ユーザーが push したあと、拡張の*紹介文*を直した**（**タグの前に**）。**⒜ 元の `description` は 94 字で、検索行が `…for Lily#, a Lil...` で切れていた**——**ユーザーの指摘は 2 点で、どちらも正しい**: **「Language support」は*その言語を知らない人*に何も伝えない**（**Lily# ユーザーの大半は拡張としてしか使わない**）／**行に収まらない**。⇒ **`Sheet music from plain text — LilyPond-quality engraving, live as you type.`**（75 字）。★★ **決めているのは長さではなく*位置***——**既定幅は 56 字前後で切れるので、`LilyPond` がその内側に来るように置いた**（**切れると `…LilyPond-quality engraving...` で語境界に落ちる**）。**「LilyPond を入れたい＝lilypond で検索して出したい」もユーザー指示だが、`lilypond` は*既に keywords に在って tag にもなっている*ので検索は元から当たる。description が足すのは*人が結果行を眺めるときに見える*ことのほう。** ⚠️ **`LilyPond's engraving` ではなく `LilyPond-quality` にした＝前者は「LilyPond が要る」と読める**（**この拡張は全部同梱で何も要らない**）。**⒝ 一覧本文（`editors/vscode/README.md`）も同じ文で始まっていた**ので、**offer を先頭に、版バナーをその下へ**（**バナーは `RELEASING.md` の 7 か所の 1 つなので残す**）＋**LP との関係の段落を足した**（**根 README の慎重な言い回しのまま＝「layout engine は*一部*移植」**）。**⒞ そこで見つけた欠陥＝意味色の表が `Dynamics (\p, \f, \ff)` と書いていた**——**Lily# は `@p` `@f` `@ff` で、拡張自身の tmLanguage が「backslash dynamics は*パーサが拒否する*」とコメントしている**（`lilysharp.tmLanguage.json:482`）。**一覧が、自分が説明している当の機能について、拒否される綴りを教えていた。**
+⚠️⚠️ ★★★★ **⑸ 起票の 4 つのうち*⒞ 付点だけは向きが逆*だった。** **起票は「2 軒が違う規則を持っている」と書いたが、正しい規則を持っているのは*grace 家のほう***——**`DotColumn`（LP の移植）の唯一の呼び手が `GraceNoteEngraver.Dots` で、`DrawNote`/`DrawChord` の「符頭インク右＋付点 1 つ」は移植ではない。** **フル サイズでは一致するが grace では一致しない**（**短い符尾のせいで持ち上がった付点が旗に当たる＝1.226600 対 1.747300**）。**`DrawNote` に渡したら両方 1.2266 になったので、付点は grace 家に残した**（**知って残した・理由はコードに書いた**）。⇒ ★★ **測った規則を*捨てる*移行はしないこと**——**移す前に「どちらの家が LP を持っているか」を訊く。**
 
-⚠️⚠️ ★★★ **⑹ ユーザーの「タグの `Lily` を外したい／`Lily#` とは書けないのか」に、*パッケージした manifest を読んで*答えた。** **web の 9 個の出どころは 3 つ**: **`keywords` の 6 個**／**`keybindings`＝`contributes.keybindings` 由来**／**`lilysharp` と `Lily`＝`contributes.languages[].aliases` = `["Lily#","lilysharp"]` 由来で、`vsce` が `#` を落として `Lily` にしている**（**＋ `__ext_lys` は web が隠す**）。⇒ ★★ **だから `Lily` は `keywords` をいじっても消せない**——**消すには alias から `"Lily#"` を落とすしかなく、それは VS Code 内の*言語表示名*（ステータスバー・Change Language Mode）**。**web の見た目のために製品内の名前を差し出す取引になる。** ★ **`Lily#` は*tag*にはできる**（**`keywords` に入れると `#` ごと manifest に通る＝実測**）**が、そうすると `Lily` と `Lily#` が並んで重複に見える**。⚠️ **`#` を含む tag を web がどうリンクするかは*未検証*で、公開せずには検証できない。** ⚠️⚠️ ★★★★ **`Lily#` は*category*にはできない**（**category は VS Code の固定リスト**）——**そして `vsce package` はそれを*検査しない***: **`"categories": ["Programming Languages","Lily#"]` が警告 0 で通り、manifest にそのまま入った。** **弾くのは publish 時のサーバ側＝タグを押して版を焼いたあと。** ⇒ ★★★ **だから tag / category は*タグ時に触るものではない***。**別便に回す**（**RELEASING.md に表と警告を書いた**）。
+⇒ ★★★ **次の一手**: ★★★★ **⑴ `DrawNote`/`DrawChord` も `DotColumn` に訊く**（**`DotColumn` の remarks は既に「ONE HOUSE, THREE CALLERS」と書いているが、呼び手は 1 つしかない。これが閉じると `GraceNoteEngraver.Dots` が死に、⒝2 の付点も家に帰る。フル サイズの答えは変わらないはずで、`AGraceDotClearsTheFlagOnlyWhenTheFlagIsOnItsRow` が 4 桁で見張っている**）／★★★ **⑵ 旗つき・付点つきの *cue* に観測者を足す**（**⑷ の欠陥をコーパスは 1 冊も見ていない。`test/cue-notes` は旗も付点も書かない**）／★★★★ **⑶ §2 U8b**（二声の同時 grace。**⒝2 が「構築により閉じる」と言っていた 3 つのうち U8b だけは*まだ確かめていない*——⒞ スラー・⒟ 注釈は普通の engraver が届くようになったので次便が測れば分かる**）／**⑷ §2 U8c**（cue の和音の 0.004270）／**⑸ §2 の X/Y 側**（§2 A/B/D/E）／**⑹ §2 C⑴ の多声 walk の moment 順への再設計**（**最大の構造負債・未着手**）。⚠️ **承認待ちは無い。** ⚠️ **§2 F は開いている項目が無い。**
 
-⚠️⚠️⚠️ ★★★★ **⑺ そして CHANGELOG は*書きすぎ*だった——ユーザーが読み手を訂正した。** **「Lily# のダウンロードは自分の分を除けば 1 回。ユーザーはまだ一人もいない前提で全体を見直せ／自分の手元の楽譜のことは書かなくてよい」。** ⇒ ★★★★ **これは長さの指摘ではなく*宛先*の指摘**——**⑴ で書いた「115 冊が止まる」「アップグレード前に breaking を読め」「移行に猶予は無い」は*存在しない読者*に向けた文で、しかも数はユーザーの私物の蔵書。** ★★ **書き直した軸は 2 つ**: **⒜ 到達冊数・掃きの冊数・「あなたのファイルが壊れる」を全部落とす**（**機械で確認＝0.5.0 節に `author|corpus|326|115|books|stop compiling|before upgrading|your files|migration|tracked` が 1 件も残っていない**）／**⒝ 各項目を「何が起きるか」1〜7 行に畳み、*なぜそう決めたか*の考古学は commit message と診断 doc に置いたまま引かない。** ⇒ **本体 30986 → 17614 字（43% 減）・LYS1034 の項は 25 行 → 7 行／拡張 6214 → 5583 字。** **Release 本文は 259 行・見出し 5 個で通る。** ⚠️ **0.4.0 と 0.3.0 の節は*触っていない*——タグ済みで、その本文は GitHub Release として既に凍っているから**（**第278 が「出荷済みの節に足すのはリリースノートの改竄」と決めた形）。**ユーザーが望むなら別便で。** ★ **教訓は §5 に出す価値がある**: **リリースノートの分量は「変更の大きさ」ではなく*読者が誰か*で決まる。**
+★ **開始時裏取り**: HEAD `fc11696b`・**未 push 3**（**第312 の 3 本。`origin/master` は `925cab98`**）・木 0・未追跡 0・Core 0 エラー 0 警告・**Windows Debug 6808 / 0 / 4 / 6812**（**第312 の終了時と一致**）・追跡 `.lys` 581・snapshot 231。
+終了時: **commit 3 本**（**この commit を含む**）＝**休符 `0e27b056`／⒝2 本体 `ccf30003`／この commit**・**未 push 6**⚠️ **数を閉じる commit が数を動かすので、最後の 1 本は*自分を数えて*「この commit」と書く**（第305〜第312 と同じ形）・作業ツリー 0・未追跡 0（**`scratch/p313` は git 管理外**）・Core 0 エラー 0 警告・**Windows Debug 6809 / 0 / 4 / 6813**（**+1 は本便が足した fixture `test/grace-rest`**）・**追跡 `.lys` 582・snapshot 232**。⚠️ **`docs/APPROXIMATIONS.md` は `UNWATCHED` が 1 減った**（**51 → 50・計 224 → 223。閉じたのは第312 が起票した grace stem。`audit/magic_constants.csv` は行番号のずれだけで定数の増減 0**）。⚠️⚠️ **WSL ubuntu Release は取れない**（**⑶＝この機械に WSL が無い**）——**本便はインクを動かしているので、ubuntu の緑は push 後に `gh run list` で読むこと。** ★ **base 用 worktree は建てていない。**
+⚠️⚠️ ★★★ **全木 A/B 掃きは*していない*。** **射程は述語で数えた**——**`grace|acciaccatura|appoggiatura` を書く本、そのうち休符を含むもの 2 冊**（**両方本便が書いた**）——**そして動いた snapshot 10 枚は第309 が名指した 9 枚＋本便の 1 枚と*完全に一致*した。** ⚠️ **次便が掃くなら `scratch/p312/sweep312.ps1` が残っている**（**2 出力・並列 throttle 6 で 32〜34 分/側。共有 PC なので上げる前に一声**）。
+⚠️⚠️ ★★★ **計器は `scratch/p313/`**（**git 管理外**）: **`lp/g1..g3.ly`（正典 2.26.0 の符尾プローブ）・`lp/dump.py`（幅 0.13 の rect＝符尾だけを絶対座標で刷る）・`lp/measurements.md`・`ab/*.lys`（stem・dots・graceRest の対）。**
 
-⇒ ★★★ **次の一手**: ✅ ★★★★ **⑴ 0.5.0 は出荷済み**（2026-08-31・ユーザーの明示指示「タグを打ってリリースして」）。**手順は `RELEASING.md` どおり＝push → CI 緑を*目で見る*（run `33403428365`・`3fbaeba7` で success）→ 注釈付きタグ → tag push。** ★★★ **直列化した workflow が本物のタグを初めて通り、13 job 全緑・8 target 全部が publish された**（run `33404095317`・約 14 分）——**0.4.0 は 5/8 が落ちて手作業だったので、これが直列化の全差分。`RELEASING.md` の "fixed but not yet proven" は ✅ に書き換えた。** **GitHub Release は 12 asset（vsix 8 ＋ CLI 4）・draft でも prerelease でもなく、本文は 0.5.0 節。** ⚠️⚠️ ★★★★ **そして §7 は*自分自身と 10 分間食い違った***——**run が緑になった直後 `extensionquery` は 3/8 と答え、`vsce show` は同時刻に 7 を挙げていた。3→4→5→6→7→8 と約 10 分かけて収束**（**最初に欠けて見えたのは*最後に publish された* `darwin-arm64`、最後まで残ったのは `darwin-x64`**）。**実際には 1 つも欠けていない。** ⇒ ★★★★ **最初の読みを信じて 5 target を手で publish していたら、Marketplace は同じ版を2 度受け取らないので*間違った理由で*失敗していた。** **判定は「package URL への HEAD が 200 か」＝8/8 とも 200。** ★ **PAT も生きていた。**／★★★★ **⑵ 次便は §2 U8 ⒝2＝脇の模型を畳み、普通の engraver に grace のフォントで描かせる** §2 U8 ⒝2＝脇の模型を畳み、普通の engraver に grace のフォントで描かせる**（**第310 の「次の一手」がそのまま生きている。1 便まるごと。`grep -n "GraceTime" LilySharp.Core` が仕事一覧**）／**⑶ §2 U8b**（二声の同時 grace）／**⑷ §2 U8c**（cue の和音の 0.004270）／**⑸ §2 の X/Y 側**（§2 A/B/D/E）／**⑹ §2 C⑴ の多声 walk の moment 順への再設計**（**最大の構造負債・未着手**）。⚠️ **承認待ちは無い**（**snapshot は 1 枚も動いていない**）。⚠️ **§2 F は開いている項目が無い。**
+## 以下は第312セッションの経緯
 
-★ **開始時裏取り**: HEAD `0c925495`・**未 push 62**・木 0・未追跡 0・Core 0 エラー 0 警告・**Windows Debug 6808 / 0 / 4 / 6812**・追跡 `.lys` 581・snapshot 231——**第310 の終了時の数と 1 つも違わなかった。**
-終了時: **commit 11 本**（**この commit を含む**）＝**⑴ 前半 4 本＝README の 3 例／LYS4018 の doc／0.5.0 の版と 51 commit ぶんの CHANGELOG／§1・RULES §5.4。⚠️ **ユーザーがそこで push し、*履歴を畳んだ*ので 4 本は `0a3835e0` と `acfa61f1` に吸収されて元の SHA は存在しない**／**⑵ 後半 7 本＝紹介文と一覧本文 `70690fa4`／tag・category の出どころを `RELEASING.md` へ `87a36b0f`／description に LilyPond `5863e357`／CHANGELOG を*読者に合わせて*書き直し `4123d075`／§1 の数 `fbe5717f`／`LilyPond-derived` へ `475f4fde`／この commit**・**未 push 7**⚠️ **数を閉じる commit が数を動かすので、最後の 1 本は*自分を数えて*「この commit」と書く**（第305〜第310 と同じ形）・作業ツリー 0・未追跡 0・Core 0 エラー 0 警告・**Windows Debug 6808 / 0 / 4 / 6812**・**WSL ubuntu Release 6808 / 0 / 4 / 6812**（**`475f4fde`＝*畳んだあとの* HEAD で取り直した。畳みのあと 4 回・commit ごとに両脚を読んでいる**・build 7 秒 / test 28 秒）・**追跡 `.lys` 581・snapshot 231 は開始時と同じ**。⚠️ **`docs/APPROXIMATIONS.md` は不動**（**定数も `audit/magic_constants.csv` も REF/OWN も増減 0**）。★ **base 用 worktree は建てていない**（**A/B 掃きをしていない＝出力を動かす変更が 1 つも無い**）。
-⚠️⚠️ ★★★ **ユーザーが便の途中で履歴を畳んだ**（**66 commit を数本へ。`acfa61f1` が「畳みが孤児にした citation を貼り直す」commit**）。⇒ ★★ **畳んだあとに*両脚を取り直した***——**`HistoryCitationTests` は git 履歴を読むので、畳みはこの suite が動きうる変更**。**Windows も WSL ubuntu も `5863e357` で 6808 / 0 / 4 / 6812**、**7 か所の版・両 CHANGELOG の `## 0.5.0`・Release 本文 416 行 5 見出し・README 全ブロック 0 診断も畳みのあとに確認済み**（**畳みで落ちたものは無い**）。⚠️ **§1 の前半が同じ SHA を 3 回引いているのは、ユーザーが機械的に貼り直したため。**
-⚠️⚠️ ★★ **本便はエンジンを 1 行も変えていない。** **触ったのは `README.md` の 3 例・`Diagnostic.cs` の XML doc 1 件・版番号 5 か所・CHANGELOG 2 本・拡張の `description` と一覧本文・`RULES.md` §5.4・`RELEASING.md`・この §1 だけ**——**SVG / MIDI / MusicXML / LilyPond / check のどれも動きようがない**（**`Diagnostic.cs` の変更はコメントのみで、`--no-incremental` の 0 警告が XML doc の健全性まで見ていることが観測者**）。
-⚠️ **計器は `$env:CLAUDE_JOB_DIR\tmp` に在り、git には入れていない**: **`checkdocs.py`／`checkdocs3.py`**（**`.md` から ```` ```lilysharp ```` ブロックを抜いて `lysc check` / `lysc svg` に通し、`LYS0020` だけ除外して残りを刷る**）。**再現は 20 行なので、必要になった便が建て直すこと**（**RULES §5.4 の新項目にレシピを書いた**）。
+最終更新 第312セッション＝**入り方は第298〜第310 と同じ**——**ユーザーは `docs/HANDOFF.md` を読んで着手せよとだけ言った**。⇒ ★★★★ **本便の骨は 2 つ**: **⑴ §0 の「全緑」が赤く、赤らせていたのは*計器のほう*だった／⑵ ⒝2 の入口は「誰にフォントを訊くか」で、LP はその答えを*2 つの別々の機構*で持っている。** **commit は 3 本＝計器の修理 `ce72a372`／`GrobFontSize` `3ccc8a8d`／この commit。**
 
-## 以下は第310セッションの経緯
+⚠️⚠️⚠️ ★★★★ **⑴ 開始時に `HistoryCitationTests.CitedCommitsAreNotHeldAliveByAnotherRef` が赤で、zombie を 63 個挙げていた。13 個は本物の残骸 ref、残り 50 個は*どの ref も持っていなかった*。** **13 個の持ち主は `refs/original/refs/heads/master`＝第311 の履歴畳みが `filter-branch` で残したバックアップ**（**ユーザー承認のうえ削除**）。**残り 50 個について、報告は自分で答えを刷っていた**——**50 個とも `kept alive by:` の後ろが*空*だった。** ⇒ ★★★ **`git rev-list --all` は refs/ に加えて*各 worktree の HEAD* を数える。detached worktree HEAD は ref ではない**（**refs/ に無い・`for-each-ref` が挙げない・clone が取らない**）——**この test 自身の remarks が「未参照のゴミは*ある 1 台のディスクの事実*」として除外している側の物。** ★★ **持ち主を名指したのは `git worktree list`**: **過去便の A/B base worktree が 21 個残っている**（`LilySharp-base`・`LilySharp-perfbase-*` 20 個・`LilySharp-redbase-11e7`）。**`0a93b7bc`（`HANDOFF-ARCHIVE.md` が引いている）は `C:/MyProj/LilySharp-base` の `cc19cccc` の祖先で、どの ref の祖先でもない。この機械で `--all` は ref の届かない 979 commit に届く。** ⇒ **survey は ref を列挙して `rev-list` に渡すようにした**（**過大報告は一方向＝`--all` は ref の上位集合なので、本物の残骸 ref を*隠したことは一度も無い*。畳みが worktree の抱えている commit を master から落とした日に、偽物を*作った*だけ**）。★★★ **陽性対照**: **`git tag poison-stale-ref-312 0a93b7bc` で再び赤くなり、しかも報告が持ち主を*名指す*（`refs/tags/poison-stale-ref-312`）**——**50 個に無かったのがまさにこれ。** タグは削除済み。⇒ ★★★ **汎化＝計器の 2 つの問い合わせが食い違ったら、食い違いのほうが所見**（RULES §5.3 / [検査監査] の形。**「計器の負債を払う前に計器を監査する」——ここで払わされかけた債務は「worktree を 21 個消す」だった**）。⚠️ **その 21 個は消していない**（**ユーザーの perf base。消すかどうかは別便・別判断**）。⚠️ **GitHub CI は HEAD で緑だった**（run `33407172813`）——**`refs/original/*` も worktree HEAD も clone に付いて行かないので、この赤はこの機械だけ。**
 
-最終更新 第310セッション＝**§1 が「1 便まるごとを充てよ」と名指した §2 U8 ⒝ に着手し、⒝1 を実装して*全木 2007 冊 × 5 出力がバイト同一*を示した**。**入り方は第298〜第309 と同じ**——**ユーザーは `docs/HANDOFF.md` を読んで着手せよとだけ言った**。⇒ ★★★★ **本便の骨は「⒝ の*入口*は 6 秒で終わり、⒝1 の*難所*は起票が予想した場所に無かった」**: **13 分ブロックすると身構えた LP 実測は WSL で 18 冊 6 秒（⑴）／⒝1 と ⒝2 は「どちらか」ではなく「前半と後半」（⑵）／実際に効いた修理は*時計の 1 行*で、テストの赤 50 本のうち 26 本がそれだけで消えた（⑶）。** **commit は 2 本＝コード 1 本と docs 1 本。**
+⚠️⚠️ ★★★ **⑵ 母集団が動いている。§2 U8 の数を*そのまま引かないこと*。** **ディスクの `.lys` は 2007 → 1418**、**grace 族（`grace|acciaccatura|appoggiatura`）は 172 → 58**、**cue は 7**。**追跡 `.lys` 581・そのうち grace 族 34 は不変**（**§2 U8 の数え方のレシピはそのまま使える。数だけが古い**）。**第311 までのどこかで `scratch/` が掃除された**（本便は `.lys` を 1 冊も足していない）。
 
-⚠️⚠️ ★★★ **⑴ 「長く遅延の読めない LP 実測」は 6 秒だった——*正典 exe を訊かなかった*から。** **§1 も §2 も「入口は LP 実測、正典は 13 分・17 分ブロックの前科」と書いており、第309 はそれを見送る理由の筆頭に挙げていた。** ⇒ **本便は WSL 2.27.3 に 18 冊を投げて 6 秒で全部受け取った**（`scratch/p310/lp/`＝`dump.py` と `measurements.md`）。★★ **測ったのは 3 つとも**: **⒜ grace body のスラーは*描かれ、しかも run を広げる***（`{ d'16 e'16 }` の列歩は 1.4179 → `{ d'16( e'16) }` で 1.5000。**フル サイズでは同じ対が 2.5042 で動かない＝これは grace 専用の規則ではなく、grace run だけが感じるほど狭い普通のロッド**）／**⒝ タイは*何も動かさない***（`{ d'16~ d'16 }` は `{ d'16 d'16 }` と符頭・stem・梁 span まで 4 桁一致。**⚠️ 第309 が壊した「音高違いの対」を繰り返さないよう両方 `d' d'`**）／**⒞ script は*grace のフォントで描かれ、幅を 1 も予約しない***（`-.` は sc=0.0028・列原点は対照とバイト同一。**休符が full size だったのと逆で、両方 `general-grace-settings` の名指し表から出る**）。⚠️⚠️ ★★★ **ただし版は 2.27.3 で、正典と突き合わせたのは梁 span だけ**（第308 の突き合わせを再利用）。**残りは*未照合*で、⒞⒟ を彫る便は照合するか 2.26.0 で取り直すこと。** ⚠️ **スラーの下限を決めている数は*未解決***——`d'( e')` はちょうど 1.5000（`Slur.minimum-length` の既定）だが `d'( g')` は 1.6479。**3 冊は規則ではない**（RULES §5.0）。
+⚠️⚠️⚠️ ★★★★ **⑶ ⒝2 の入口は「フォントを誰に訊くか」で、LP はそれを*2 つの別々の機構*で持っている。** **⒜ cue は*context*——`ly/engraver-init.ly` の `\name CueVoice` が `fontSize = #-4` を置き、`lily/font-size-engraver.cc:47-62 Font_size_engraver::acknowledge_font` が*その context が acknowledge する全 grob*の `font-size` に**加算**する**（`font_size = size + grob の font-size`）。**⒝ grace は context ではない**（`grep -c "name Grace"` は 0）——**普通の `\name Voice` の中の `\consists Grace_engraver` が置くのは*grob ごとの表*`scm/music-functions.scm:636-650 general-grace-settings`**（**NoteHead −3・Accidental −4・TabNoteHead −4・Fingering/StringNumber −8・**Rest の行は無い**）。⇒ ★★★★ **だから「この項目はどれだけ小さいか」という*1 つの数*では ⒝2 は書けない。問いは grob ごと。** ⇒ **`Svg/Layout/GrobFontSize.cs`＝`StepOf(item, grob)` とその上の `FontOf` / `DesignOf` / `ScaleOf`。最初の読み手は普通の音符・和音の描画**（**`note.IsCue ? … : …` が 14 か所あり、grace は*綴りようが無かった*）。**インクは 1 も動かない**（**全木掃き 1418 冊 ×（svg・check）＝SAME 1418 / MOVED 0・NO-OUTPUT 両側 0**）。
 
-⚠️⚠️⚠️ ★★★★ **⑵ ⒝1 と ⒝2 は「どちらを採るか」ではなく「前半と後半」。§2 はそれを*選択肢*として書いていたが、⒝2 は ⒝1 の項目を前提にしている。** ★★★ **本便が ⒝1 を選んだ理由は 3 つで、どれも正しさの側**: **⑴ ⒝2 も同じ項目を要るので ⒝1 は*部分集合*であって別設計ではない**／**⑵ ⒝1 だけが*証明できる*——「ページが動かない」は全木掃きが言える唯一の形で、⒝2 の正しさは*まだ存在しない* LP campaign（spring・梁の接頭辞と quant・acciaccatura の斜線・主音符 anchor の 4 つ）に依存する**／**⑶ 本便が測った 3 量は ⒞⒟ を*彫る*ための材料であって、⒝1 を*通す*ためには 1 つも要らなかった。** ⚠️⚠️⚠️ ★★★★ **⒝1 は*終点ではない*。** **ここで止めて ⒞⒟ を grace の家に彫ると、スラーの幾何の*第 2 の綴り*ができる**（RULES §5.2.1②）——**⒝1 が入れた skip は 11 か所あり、11 か所とも「これは足場で、⒝2 が消す」とコメントに書いてある。** ★ **⒝2 が閉じるまで ⒞⒟ に手を出さないこと。**
+⚠️⚠️ ★★★ **⑷ ⑶ を書く途中で正典から出てきたものが 2 つ。どちらも「departs from / goes away when / observed by」で置いた。** **⒜ 2 つのサイズは LP では*加算で合成する*ので、`cue { grace { } }` は LP で −7・Lily# で −3**（**observed by: NOTHING——コーパスに入れ子は 1 冊も無い**）。**⒝ grace stem の `length-fraction` は*宣言された 0.8*で、`magstep(-3)` = 0.707107 ではない——そして*描かれている grace stem はそのどちらでもない*。** **`GraceNoteEngraver.StemLength` は平らな 3.5 に*フォントの縮尺*を掛けるが、`lily/stem.cc:481-557 Stem::internal_calc_stem_end_position` は*音価が選んだ長さ*に `length-fraction` を掛ける**（**しかも grace beam のほうは既に 0.8 を取っている＝梁つき run と旗つき run が別々の規則で測られている**）。⇒ **⒝2 の 4 campaign の 1 つ（符尾）に、初めて*数字の付いた*起票ができた**（`docs/APPROXIMATIONS.md` の `UNWATCHED` 50 → 51）。
 
-⚠️⚠️⚠️ ★★★★ **⑶ 効いた修理は*時計の 1 行*だった。** **`MusicItem.Duration` を grace time で `Fraction.Zero` にする**——**LP が grace を Moment の `grace_part_` に置くのは主時計に見せないためで、Lily# はこの 1 行でそれを言う。** ⇒ **テストの赤が 50 → 24 に落ちた**（**項目 spring・列グリッド・小節充足・梁のグルーパが全部この数で歩くので、grace が*書かれた 16 分*を申告すると後続の列がまとめてずれる**）。★★ **起票（§2 U8）は難所を「誰が skip するか・325 箇所」と書いていた**——**実際は 325 のうち*11* で、しかもその 11 は「grace を skip する」より先に「grace は時間を取らない」を言えば減る。** ⇒ **RULES §5.0 の「起票の数値は着手する便が数え直す」の 7 例目**（**今回は数ではなく*形*が違った**）。
+⇒ ★★★ **次の一手**: ★★★★ **⑴ §2 U8 ⒝2 の本体＝*普通の engraver に grace を描かせる*。** **道具立てはできた**（`GrobFontSize`）**が、まだ 1 つも grace を描いていない**——**`SharedRenderer.EnumerateStaffItems` の `if (item.GraceTime) continue;` を外すのが次の一歩で、そこから先はインクが動く。** ⚠️⚠️ ★★★★ **本便が読んで分かった*動く理由*は 4 つあり、どれも「同じ量を 2 軒が違う規則で持っている」形**（**⒝2 が閉じるのは、まさにこの 4 つ**）: **⒜ 符頭の字形——脇の模型は*どの音価でも* `NoteheadBlack` を描く**（`graceHeadNoteValue = 4` の自白つき）**が、普通の engraver は音価から選ぶ＝`grace { d'2 }` が動く**／**⒝ ledger——脇の模型はその場で引き、普通の路は*隣の列と短くし合う pre-pass* を通る**／**⒞ 付点——`GraceNoteEngraver.Dots`（flag を support に取る）対 `DrawNote` の素直な dot 列**／**⒟ 臨時記号——`GraceColumnHeads.AccidentalOffsets` 対 `StaffAccidentalColumns` の詰め。** ⇒ ★★ **だから ⒝2 は*バイト同一で通せない*。9 枚の snapshot 再ベース（第309 が名指し済み）と台帳の再測が要る。** ★ **X は脇の模型が持ったままでよい**（**`SpacingRules.GraceColumns` は「残る grace 固有の 4 つ」の 1 つ＝spring。⒝2 は*描く側*の統合であって、列を主 chain に入れる話ではない**）——**ただし普通の engraver は `ml.Items[i].X` / `GetXForTiming` からしか X を取れないので、*grace 項目の X を層に出す*のが最初の設計判断になる**（**`ml.Items` は primary voice のスロットしか無いので、そこは向かない。`ScoreLayout.GraceNoteLayouts` に voice を持たせて `(staff, voice, measure, itemIndex) → X` を引ける器を足すのが素直**）。／★★★ **⑵ §2 U8b**（二声の同時 grace）／**⑶ §2 U8c**（cue の和音の 0.004270）／**⑷ §2 の X/Y 側**（§2 A/B/D/E）／**⑸ §2 C⑴ の多声 walk の moment 順への再設計**（**最大の構造負債・未着手**）。⚠️ **承認待ちは無い**（**snapshot は 1 枚も動いていない**）。⚠️ **§2 F は開いている項目が無い。**
 
-⚠️⚠️ ★★★ **⑷ 掃きが*前から在った欠陥*を 1 つ露出させた＝`GraceNoteItem` は自分の voice を知らなかった。** **`MainNoteItemIndex` は*その grace を書いた voice の*項目列を数えるのに、`GraceNoteEngraver` はそれを譜の*第 1 voice*に対して解決していた**——**`LayoutUtilities.VoiceItemAt` の doc が注釈の側で名指している、まさにその欠陥。** **見えなかったのは偶然で、grace が項目でなかったころは*どちらの voice の添字も動かなかった*から。** ⇒ **`VoiceIndex` を足し、dynamics と scripts が既にやっている 2 段解決（`ResolveStaffMeasures` → `ResolveVoiceMeasures`）に揃えた**（**3 人目の読み手が 1 段のままだった**）。
-
-⚠️⚠️ ★★★ **⑸ 掃きは「緑のテスト」の*後*に 8 冊を出した。** **6812 本が全緑になった時点で全木掃きを回したら SVG が 8 冊動いた**（`audit/lpreg/lyhygrace`・`perf-slurgrace300`・`sttremcol`・`scratch/p298/tg3`・`tg4`・`p308/ab/g1_2vgrace`・**ユーザーの `Real Gone.lys` と `Something That I Want.lys`**）。**8 冊が名指した穴は 5 つ**: **多声の衝突列（voice 2 の grace が*別 voice の*符頭を 1.04 ずらした）／tab の桁幅予約（0.66）／梁のグルーパ（grace が run を*切った*——`IsBeamable` を false にするのは「休符扱い」で、正しくは*跨ぐ*）／slur の障害物（grace を full size の柱として二重に読む）／破断 slur の端点（行頭の grace の音高を端の音高として拾う）。** ⇒ ★★★ **教訓＝*単体テスト 6812 本は「掃きの代わり」ではない*。** **231 枚の snapshot と 748 点の台帳が知らない本が 1776 冊在る**（→ RULES §5.4）。
-
-✅ ★★★ **⑹ 結果＝全木 2007 冊 × 5 出力（svg / midi / xml / ly / check）が*1 バイトも動かない***（`scratch/p310/sweep310.ps1` / `.json`・**両側 Release**・base `1f6d8c71`）。⚠️ **`NO-OUTPUT` が 2 冊在るが*両側とも*で、本便より前からの状態**（`scratch/p216/pins/chords-attach.lys`・`chords-row.lys`）。
-
-⇒ ★★★ **次の一手**: ★★★★ **⑴ §2 U8 ⒝2＝脇の模型を畳み、普通の engraver に grace のフォントで描かせる。1 便まるごとをこれに充てること。** **⒝1 が入れた 11 の skip を*消す*のが仕事の本体**（**足場は全部コメントで名指してある——`grep -n "GraceTime" LilySharp.Core` が仕事一覧になる**）。**要る LP campaign は 4 つに絞れている**（**spring・梁の接頭辞と quant・acciaccatura の斜線・主音符への anchor**。**符頭と臨時記号は測り直し不要＝`GraceColumnHeads` が既に普通の規則を呼んでいる**）。⚠️⚠️ ★★★ **⒝2 は「フル サイズの規則 × 0.7」では*ない*——本便が 2 つ反例を測った**: **タイの Y は grace でもフル サイズでも符頭の 1.0000 下（量子化されているので縮まない）／休符は full size で描かれる（第308）。** ⇒ **engraver は*自分で掛け算せず grob にフォントを訊く*形にすること。** ★★ **再ベースが要る snapshot は 9 枚で名前が分かっている**（第309 が数えた）。／**⑵ §2 U8b**（二声の同時 grace。**⒝2 と同じ族＝`VoiceCollector` の足場コメントが起票の在り処を指している**）／**⑶ §2 U8c**（cue の和音の 0.004270。**独立**）／**⑷ §2 の X/Y 側**（§2 A/B/D/E）／**⑸ §2 C⑴ の多声 walk の moment 順への再設計**（**最大の構造負債・未着手**）。⚠️ **承認待ちは無い**（snapshot は 1 枚も動いていない）。⚠️ **§2 F は開いている項目が無い。**
-
-★ **開始時裏取り**: HEAD `1f6d8c71`・**未 push 58**・木 0・未追跡 0・Core 0 エラー 0 警告・**Windows Debug 6808 / 0 / 4 / 6812**・台帳 **748／exact 588／ss 非ゼロ 190／総和 24.714570188／count 点 158（非ゼロ 2）／OPEN: 0**・追跡 `.lys` 581・snapshot 231——**第309 の終了時の数と 1 つも違わなかった**（**素朴に数えると `exact` 556・`OPEN:` 12 が出る。§0 のレシピは `-le 1e-6` と `why -like 'OPEN:*'`**）。
-終了時: **commit 4 本**（**⒝1 の実装 `0c925495`** ／ **§1・§2 U8・RULES と LP 実測 `0c925495`** ／ **⒝2 の掃き母集団の数え直し＝`grace` は述語として狭かった `0c925495`** ／ **この行＝この commit**）・**未 push 62**⚠️ **数を閉じる commit が数を動かすので、最後の 1 本は*自分を数えて*「この commit」と書く**（第305〜第309 と同じ形）・作業ツリー 0・未追跡 0・Core 0 エラー 0 警告・**Windows Debug 6808 / 0 / 4 / 6812**（**開始と同じ**）・**台帳 748／588／190／24.714570188／158 中 2／`OPEN:` 0・追跡 `.lys` 581・snapshot 231 は開始時と同じ**。⚠️ **`docs/APPROXIMATIONS.md` は行番号だけ動いた**（**`UNWATCHED` の増減 0・定数 0・`audit/magic_constants.csv` も行番号だけ・REF/OWN の増減 0**）。⚠️ **間の push は無し**（`origin/master` は `be16a770` のまま）。★★ **WSL ubuntu Release は Windows と一致**（`0c925495` で **6808 / 0 / 4 / 6812**・build 8 秒 / test 26 秒）——**§0 の両脚を読んだ。** ★ **base 用 worktree `lys-base310` は `git worktree` からは外した**（`git worktree list` は `LilySharp` 1 本）——**ただし空のディレクトリ `C:\MyProj\lys-base310` が残っている**: **別の PowerShell コンソールがそこを cwd にしていて削除できなかった**。**中身は 0 ファイル。**
-⚠️ **計器は `scratch/p310/` に全部残っている**: **`lp/`**（**LP 22 冊＋`dump.py`＋`measurements.md`**＝**スラー・タイ・script の 3 量と、その*対照*。⚠️ `dump.py` は curve を*4 つの制御点*で出す——slur/tie の決めている量は端点ではなく制御点だから**）／**`sweep310.ps1`/`.json`**（**2007 冊・5 出力・base `1f6d8c71`**）。
-⚠️ **本便は grace 本体の*描画*を 1 行も変えていない**——**`GraceNoteEngraver` も `SharedRenderer.GraceNotes` も `GraceColumnHeads` も無傷で、`SpacingRules.Grace` も無傷。** **動いたのは「誰が項目を作るか」と「誰がそれを見ないか」だけ。**
+★ **開始時裏取り**: HEAD `925cab98`・**未 push 0**（**第311 の 7 本はユーザーが push 済み。`origin/master` も `925cab98`**）・木 0・未追跡 0・Core 0 エラー 0 警告・**Windows Debug 6807 / 1 / 4 / 6812**（⚠️ **緑ではなかった。⑴ を見よ**。**計器を直したあと 6808 / 0 / 4 / 6812 で、これは第311 の終了時の数と一致**）・追跡 `.lys` 581・snapshot 231。
+終了時: **commit 3 本**（**この commit を含む**）＝**計器 `ce72a372`／`GrobFontSize` `3ccc8a8d`／この commit**・**未 push 3**⚠️ **数を閉じる commit が数を動かすので、最後の 1 本は*自分を数えて*「この commit」と書く**（第305〜第311 と同じ形）・作業ツリー 0・未追跡 0（**`scratch/p312` は git 管理外**）・Core 0 エラー 0 警告・**Windows Debug 6808 / 0 / 4 / 6812**・**追跡 `.lys` 581・snapshot 231 は開始時と同じ**。⚠️ **`docs/APPROXIMATIONS.md` は `UNWATCHED` が 1 増えた**（**50 → 51・計 223 → 224。増やしたのは ⑷⒝ の grace stem。定数・REF/OWN の増減は 0**）。★ **base 用 worktree は建てていない**（**A/B は `git stash` で取った——`git stash push -- <触った .cs>` ＋ 新規ファイルを一時退避 → Release build → 掃き → 戻す**）。⚠️ **WSL ubuntu Release は取っていない**（**本便はコードのインクを 1 も動かしておらず、全木掃きが両側 Release でバイト同一。次にインクを動かす便は §0 の両脚を読むこと**）。
+⚠️⚠️ ★★★ **計器は `scratch/p312/`**（**git 管理外**）: **`sweep312.ps1`（全木 A/B・**svg と check の 2 出力だけ**・並列 throttle 6）と `compare312.ps1`。** ⚠️ **2 出力なのは理由が書いてある**——**本便の diff は `SharedRenderer.Noteheads.cs` と新規 `GrobFontSize.cs` だけで、MIDI / MusicXML / `.ly` の writer はどちらにも届かない。`check` は*計器の陽性対照*として残した。** ⚠️⚠️ **collector か model を触る便は 5 出力に戻すこと。** ★ **実測した掛かり**: **逐次 5 出力は ~4 s/冊＝1418 冊で 100 分/側（470 秒で 100 冊に届かず、途中で捨てた）／並列 throttle 6 の 2 出力で 32〜34 分/側。** ⚠️ **共有 PC なので throttle を上げる前に一声かけること。**
 
 ## 2. 開いている作業
 
@@ -729,7 +722,8 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
   ⚠️ **後者は第310 の掃きが出した 8 冊の 1 つだった**＝**射程の数え方が落としていた本が、実際に動いた。**
   ★★ **⒝2 が掃く母集団はこちらで数えること**:
   ```powershell
-  # ディスク全部（scratch を含む）— 2007 冊中 172 冊
+  # ディスク全部（scratch を含む）— 第310 は 2007 冊中 172 冊。第312 は 1418 冊中 58 冊
+  #   ⚠️ 母集団が縮んだのは本が減ったから（scratch の掃除）。レシピは同じ、数だけ取り直す
   @(Get-ChildItem . -Recurse -Filter *.lys -File |
     Where-Object { $_.FullName -notmatch '\\(bin|obj|artifacts|output)\\' -and
                    (Get-Content $_.FullName -Raw) -match '\b(grace|acciaccatura|appoggiatura)\b' }).Count
@@ -816,7 +810,88 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
   破断 slur の端点が行頭の grace を拾う。** ⇒ **231 枚の snapshot と 748 点の台帳が知らない本が
   1776 冊在る**（→ RULES §5.4）。
 
-  ▶ **残りは ⒝2＝脇の模型を畳み、普通の engraver に grace のフォントで描かせる。**
+  ✅✅ ★★★★ **【⒝2 の本体は第313 が入れた（`0e27b056` ＋ `ccf30003`）——普通の engraver が grace 時間を描く】**
+  **符頭・ledger・臨時記号・休符・符尾・旗・acciaccatura の斜線は普通の engraver が、
+  grob ごとのフォントで（`GrobFontSize`）描く。** **住所は層が publish する**＝
+  **`GraceNoteItem.ColumnItemIndices`（列 → その voice の項目添字）と
+  `ScoreLayout.GraceColumnXs`（`(staff, voice, measure, item) → X`）**。
+  **X は第 2 の計算ではない**——**`layout.X + ColumnOffsets[i]`＝`SpacingRules.GraceColumns` の
+  同じ鎖。新しいのは*鍵*だけ。**
+  ★ **grace 家に残したのは LP が grace のためだけに宣言しているもの**: **梁（接頭辞・thickness 0.384・
+  length-fraction 0.8）とその下の符尾／主音符への slur／付点（下の ⒞ を見よ）。**
+  **普通の pass に「この列の符尾は他所が描く」と伝えるのは*普通の梁と同じ集合*
+  （`BuildBeamedItemsSet`）**なので、2 軒が食い違えない。
+  ★★ **acciaccatura の斜線は*項目の属性*になった**（`MusicItem.GraceSlash`）——**LP でもそれは
+  Flag の属性だから**（`ly/grace-init.ly` の `Flag.stroke-style = "grace"`）。**旗を描く者が描く。**
+  - ✅✅ ★★★★ **符尾は初めて LP と一致した。9 冊・全部 4 桁一致**（`scratch/p313/lp/measurements.md`）:
+    **`\grace { d'8 }` `{ d'16 }` 2.80 ／ `{ d'32 }` 3.40 ／ `{ d'64 }` 4.00 ／
+    `{ b'16 }`（中央線）2.70 ／ `{ d''16 }` 2.60 ／ `{ a16 }` `{ f16 }`（五線の下）2.80。**
+    ⇒ ★★★ **grace の符尾＝*音価が選んだ長さ × 0.8*、短縮は積の中、中央線への延長は無し。**
+    **第312 までは全部 3.5 × magstep(−3) = 2.475**（**音価を見ない・0.8 ではなく 0.7071**）
+    ＝**8 分で −0.325・64 分で −1.525。** **`APPROXIMATIONS` の `UNWATCHED` 51 → 50・計 224 → 223。**
+  - ⚠️⚠️ ★★★★ **表の*もう半分*が欠けていた＝`no-stem-extend`。**
+    **`general-grace-settings` は `length-fraction 0.8` の隣に `(Voice Stem no-stem-extend #t)` を置き、
+    `lily/stem.cc:591-593` は「符尾は中央線まで届く」規則をその property で門番している**
+    （**梁側の双子 `:1233-1235` `calc_stem_info` も同じ property で 2 つの clamp を門番——
+    Lily# は knee の半分だけ守っていた**）。**`StemDetails.NoStemExtend` がそれ。cue は宣言しないので
+    cue の符尾は今も延びる。** ★ **決め手の対は `\grace { a16 }`（2.80 で止まる）とその full-size 対照
+    （4.00 まで引かれる）。** ⚠️ **quanter にも通したが 1 冊も動かない**——**clamp が効く位置に
+    grace の梁を書いた本がコーパスに無い。**
+  - ⚠️⚠️ ★★★ **移す途中で出た欠陥 2 つ。どちらも「サイズは合っていて*デザイン*が違う」形**:
+    **⒜ `DrawNote`/`DrawChord` の `gc.MusicFace` は符頭と臨時記号しか包んでおらず、旗と付点は
+    *縮んだサイズ*で*五線のデザイン*から出ていた**（**Emmentaler は光学サイズなので 14 の輪郭と
+    20 を縮めたものは別物＝`GrobFontSize` が `DesignOf` と `FontOf` を対にしている理由そのもの**）。
+    **付点の*幅*も同じ形**（**2 つの付点は 1 幅ぶん離すのに、幅をフル サイズの付点で測っていた**）。
+    ⚠️ **cue も同じ欠陥を持っていて、コーパスは 1 冊も観測していない**——**旗つき・付点つきの cue を
+    書いた fixture が無いので snapshot は 1 枚も動かなかった。** ⇒ **観測者を足す価値がある。**
+    **⒝ 休符は grace pass の `MusicFace(Emmentaler-14)` スコープの中で*フル サイズ*に描かれていた**
+    （第313 前半・`0e27b056`）。
+  - ⚠️⚠️ ★★★★ **⒞ 付点だけは grace 家に残した。故意で、理由は測ってある。**
+    **付点の X は `Svg/Layout/DotColumn`＝LP の移植（support の右スカイラインを符頭のインク右で床張り）で、
+    その*唯一の呼び手*が `GraceNoteEngraver.Dots`。`DrawNote`/`DrawChord` は「符頭インク右＋付点 1 つ」の
+    平らな式**——**フル サイズでは一致する**（**旗が付点の段に届かない**）**が grace では一致しない**
+    （**符尾が短いので、持ち上がった付点が旗に当たる**）。**実測 1.226600（空き）対 1.747300（線）。**
+    **`DrawNote` に渡すと両方 1.2266 になって対が消える。**
+    ⇒ ★★★ **次の一手はここ＝`DrawNote`/`DrawChord` も `DotColumn` に訊く**（**`DotColumn` の remarks は
+    既に「ONE HOUSE, THREE CALLERS」と*書いている*——規則については本当で、呼び手については未だ**）。
+    ★ **フル サイズの答えは変わらないはず**（**その indistinguishability は `DotColumn` の doc が測ってある**）
+    **が、`AGraceDotClearsTheFlagOnlyWhenTheFlagIsOnItsRow` が 4 桁で見張っているので、動いたら分かる。**
+  - ⚠️⚠️ ★★★ **⒝2 で*まだ*畳んでいないもの**: **`GraceColumnHeads` の `HeadOffsets`/`AccidentalOffsets`
+    は*予約*側（`HeadInkRight`/`AccidentalInkLeft` → `SpacingRules.GraceColumns`）が読むので死んでいない。**
+    **`GraceNoteEngraver.Dots` は上の ⒞ が閉じた日に死ぬ。**
+    **`SharedRenderer.GraceNotes` は 744 → 約 460 行、`DrawGraceStemsAndBeam` は `DrawGraceBeam` になった。**
+  - ⚠️⚠️ ★★★★ **X について 2 軒が今も食い違いうる唯一の場所＝*ossia の上の梁つき grace*。**
+    **符頭は staff の group の中（X は縮まない・共有列の上）、梁は overlay pass のままで
+    列 offset に ossia 係数を掛ける。** ⚠️ **そういう本はコーパスに 1 冊も無い**
+    （`test/ossia-beams` の grace は単音）。**`DrawGraceNotes` に名指してある。**
+  - ★ **動いた snapshot は 10 枚で、9 枚は第309 が名指したその 9 枚**（10 枚目は本便が足した
+    `test/grace-rest`）。**どれも要素数は増減 0**（**grace font 40・score font 4・line 27 が両側同数**）。
+
+  - ✅ ★★★ **第312 が道具立てを入れた＝`Svg/Layout/GrobFontSize.cs`**（`3ccc8a8d`）。
+    **`StepOf(item, grob)` ＋ `FontOf` / `DesignOf` / `ScaleOf`。**
+    **問いが *grob ごと*なのは LP がそうだから**——**cue は context の `fontSize` を
+    `Font_size_engraver::acknowledge_font` が全 grob に*加算*し、grace は
+    `general-grace-settings` という*grob ごとの表*（Rest の行が無い）**。
+    **最初の読み手は普通の音符・和音の描画**（`note.IsCue ? … : …` 14 か所を畳んだ）。
+    **インクは 1 も動いていない**（**全木 1418 冊 ×（svg・check）SAME 1418 / MOVED 0**）。
+  - ⚠️⚠️ ★★★★ **⒝2 は*バイト同一で通せない*。動く理由が 4 つ在り、どれも「同じ量を 2 軒が
+    違う規則で持っている」形**（**閉じるのはまさにこの 4 つ**）
+    ★★ **【第313 の結果＝4 つのうち 3 つは当たり、⒞ は*外れた*。当たった/外れた記録として残す】
+    ⒜ ⒝ ⒟ は畳んだ**（**⒟ は本当に「測り直しが要らない」だった＝snapshot の臨時記号 X は 1 つも動いていない**）／
+    **⒞ は畳めなかった——起票は「2 軒が違う規則」と書いたが、*正しい規則を持っているのは grace 家のほう*で、
+    普通の路の平らな式が LP の移植でない。向きが逆だった**（上の ⒞ を見よ）:
+    **⒜ 符頭の字形——脇の模型は*どの音価でも* `NoteheadBlack`**（`graceHeadNoteValue = 4` の
+    自白つき）**、普通の engraver は音価から選ぶ＝`grace { d'2 }` が動く**／
+    **⒝ ledger——脇の模型はその場で引き、普通の路は*隣の列と短くし合う pre-pass*** ／
+    **⒞ 付点——`GraceNoteEngraver.Dots`（flag を support に取る）対 `DrawNote` の素直な dot 列** ／
+    **⒟ 臨時記号——`GraceColumnHeads.AccidentalOffsets` 対 `StaffAccidentalColumns` の詰め。**
+  - ★★ ✅ **最初の設計判断は「grace 項目の X をどう層に出すか」**（**第313 が下の助言のとおりに実装した＝
+    `ScoreLayout.GraceColumnXs`。予測は当たり**）——**普通の engraver は
+    `ml.Items[i].X` / `GetXForTiming` からしか X を取れず、どちらも grace 列を知らない**
+    （**`ml.Items` は primary voice のスロットしか無いので向かない**）。
+    **`ScoreLayout.GraceNoteLayouts` に voice を持たせ、`(staff, voice, measure, itemIndex) → X`
+    を引ける器を足すのが素直**（**X の*法*は `SpacingRules.GraceColumns` のままでよい＝
+    spring は「残る grace 固有の 4 つ」の 1 つ**）。
   - **⒝2 が畳めるもの**: **`GraceNoteEngraver` 645 行・`SharedRenderer.GraceNotes` 744 行・
     `GraceColumnHeads` 231 行**、**そして ⒝1 の足場 11 か所。** ⇒ **⒞・⒟・U8b は*構築により*閉じる。**
   - ★★★ **`GraceColumnHeads` は自分で「A TRANSLATION, NOT A SECOND MODEL」と書いており、
@@ -3273,7 +3348,24 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 ### G. 保守性の負債・未 commit のプローブ
 
-- ⚠️⚠️ ★★★ **この機械の正典 LilyPond 2.26.0 は起動しきらない。第308 で容疑者を 3 つ潰したが、原因は未特定**（2026-08-31・第308。**第302 の 13 分に続く 2 例目で、今回は 17 分**）。
+- ✅✅ ★★★★ **【閉じた・2026-09-01・第313】この hang は*起動のしかた*で、回避策は 1 行。正典 2.26.0 は 15 秒で完走する。**
+  **`cmd.exe /d /s /c "<lilypond …> < NUL > log 2>&1"`＝*デタッチして stdin を NUL から与える*。**
+  ```powershell
+  cmd.exe /d /s /c "C:\bin\lilypond-2.26.0\bin\lilypond.exe -dbackend=svg -dno-point-and-click -o out in.ly < NUL > lp.log 2>&1"
+  ```
+  ⚠️ **これは*新発見ではない*——`memory/reference_lilypond_mcp_console_hang.md` に 80 日前から書いてあった**
+  （**lilypond.exe を MCP コンソールの*子*として起動すると Guile 初期化でデッドロックする。CPU を数秒使って止まり、
+  WS 28 MB のまま**＝**下に書いてある「署名」そのもの**）。**第302・第308・第309 の 3 便が、この署名を読みながら
+  memory を引かなかった。** ⇒ ★★★ **汎化＝「この機械のツールが動かない」は*環境の記憶*に当たること**（RULES §5.3）。
+  ★ **第313 実測**: **14 冊 1 launch で 15 秒／さらに 6 冊足して 3 秒**（`scratch/p313/lp/g1..g3.ly`）。
+  ⚠️⚠️ ★★★ **だから「正典で取り直す」は*計画に入れてよい*。** **第309 が ⒝2 を見送る理由の筆頭に挙げていた前科は、無い。**
+
+  ⚠️⚠️⚠️ ★★★★ **そして代替のほうが消えた＝*この機械に WSL はもう無い***（2026-09-01・第313 実測）。
+  **`wsl -l -v` は "no installed distributions"**——**`Ubuntu-24.04` は §0 の ubuntu Release 脚でもあり、
+  第308・第310 が LilyPond を測った場所でもある。** ⇒ **§0 の WSL 行は今この機械では回らない**（→ §0）。
+  **LilyPond は上の正典 1 本だけになったが、それは*台帳が要求している版そのもの*なので、質はむしろ上がった**（RULES §5.2）。
+
+- ⚠️⚠️ ★★★ **【以下は第308 までの記録。原因は上のとおり起動方法だった】この機械の正典 LilyPond 2.26.0 は起動しきらない。第308 で容疑者を 3 つ潰したが、原因は未特定**（2026-08-31・第308。**第302 の 13 分に続く 2 例目で、今回は 17 分**）。
 
   ★ **署名**（`Get-Process lilypond` で読める）: **WS 28 MB のまま・CPU は 17 分で 1.4 秒**
   ＝**計算していない。何かを*待って*いる。** **出力は 1 バイトも書かれない**（`scratch/p308/canon/`）。
@@ -3288,9 +3380,9 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
     `VerifiedAndReputablePolicyState = 0`。**2026-08-29 に切った記録どおり**）＝**犯人ではない。**
   ⚠️ **Defender 自体はリアルタイム ON・`MAPSReporting = 2`・`SubmitSamplesConsent = 1`** のまま。
 
-  ⇒ ★★★ **だから「正典で取り直す」は*計画に入れない*。入れるなら 20 分の予算と、失敗したときの代替を先に決めておく。**
-  ★★ **代替は第308 が示した**: **WSL の 2.27.3 で測り、*その量について*既存の正典実測と 1 度突き合わせる**
-  （**梁 span は第300 の正典値と 4 桁一致した**）。**一致すればその量は WSL で読める**（→ RULES §5.2）。
+  ⇒ ~~★★★ **だから「正典で取り直す」は*計画に入れない*。**~~ ⚠️ **取り消し（第313）＝上の 1 行で 15 秒。**
+  ★★ **第308 が示した代替（WSL の 2.27.3 で測って正典実測と 1 度突き合わせる）は*機械から消えた*が、
+  規則自体は生きている**（→ RULES §5.2）——**別版で測るなら、その量について 1 度突き合わせること。**
 
 - ⚠️ ★★ **コード内の `HANDOFF §1 ⒪` 参照 4 本は宛先が無い**（2026-08-31・第306 に発見・**未修理**）。**`§1` は毎便*書き換える*節なので、そこの letter を指す参照は書いた次の便から宙に浮く**（`IncrementalCompilerTests.cs:771` `⒪′` ／ `LpGeometryProbes.cs:10403` `:10501` `:14091`）。⚠️ **`▶ ⒯` `▶ ⒭` の族とは*別の壊れ方***——**あちらは letter が*再利用*されて「今日の別の項目」に当たる**（第306 が 14 本まとめて retired と明記した）が、**こちらは当たる先が*存在しない*。** ⇒ **直すには ⒪ が何だったかを `HANDOFF-ARCHIVE.md` で特定する必要があり、本便はそこまでやっていない。**★ **原則としては同じ**: **コードから引くのは*主題*であって letter ではない**（RULES §5.1）。
 > ## ★ 引用の **OVERRUN 検査**（範囲が関数の外へはみ出す）は **C# に無い**（2026-08-14・**未移植**）

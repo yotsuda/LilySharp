@@ -284,6 +284,30 @@ public sealed record GraceNoteItem
     /// </remarks>
     public int VoiceIndex { get; }
 
+    /// <summary>
+    /// Where each of <see cref="Columns"/> STANDS in <see cref="VoiceIndex"/>'s own item list
+    /// — entry for entry, the same frame <see cref="MainNoteItemIndex"/> counts in.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS THE ADDRESS THE GRACE DID NOT HAVE, and it exists because the body is walked
+    /// now: since session 310 a grace column IS a measure item
+    /// (<c>MeasureCollector.ProcessGraceRegion</c>), so it has an item index like every other,
+    /// and the ordinary engravers reach a grob by that index. Recording it is what lets a
+    /// LAYOUT fact be published per column — see <c>ScoreLayout.GraceColumnXs</c>, which the
+    /// ordinary note pass reads to find out where a grace column stands.
+    /// <para>
+    /// ⚠️ NOT DERIVABLE BY ARITHMETIC, which is why it is carried rather than recomputed as
+    /// <c>MainNoteItemIndex - Columns.Length + i</c>: a tuplet inside a grace body adds a
+    /// BRACKET item that is not a column (<c>MeasureCollector.CanStandInGraceTime</c> lets
+    /// <c>TupletExpressionSyntax</c> through), so the columns are not guaranteed to be the
+    /// contiguous run immediately before the main note.
+    /// </para>
+    /// ⚠️ EMPTY IS LEGAL: a hand-built group (tests, and the two exporters' fixtures) states
+    /// its columns without stating where they stand, and every reader of this treats an
+    /// absent entry as "this column publishes no address" rather than as index 0.
+    /// </remarks>
+    public ImmutableArray<int> ColumnItemIndices { get; }
+
     /// <summary>Creates a grace note group attached to a main note.</summary>
     public GraceNoteItem(
         GraceNoteType type,
@@ -292,7 +316,8 @@ public sealed record GraceNoteItem
         int mainNoteItemIndex,
         int sourcePosition,
         int staffIndex = 0,
-        int voiceIndex = 0)
+        int voiceIndex = 0,
+        ImmutableArray<int> columnItemIndices = default)
     {
         Type = type;
         Columns = columns;
@@ -301,6 +326,8 @@ public sealed record GraceNoteItem
         SourcePosition = sourcePosition;
         StaffIndex = staffIndex;
         VoiceIndex = voiceIndex;
+        ColumnItemIndices = columnItemIndices.IsDefault
+            ? ImmutableArray<int>.Empty : columnItemIndices;
     }
 
     /// <summary>

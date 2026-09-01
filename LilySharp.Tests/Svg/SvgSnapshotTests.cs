@@ -150,6 +150,12 @@ public class SvgSnapshotTests
         yield return new object[] { "test/dynamics" };
         yield return new object[] { "test/beaming" };
         yield return new object[] { "test/grace-notes" };
+        // A REST in a grace body. Registered 2026-09-01: until then the whole disk — 1418
+        // .lys, tracked and untracked — held not one book that wrote one, so the corpus
+        // could not see that the grace pass was drawing a full-size rest out of the
+        // FOURTEEN design's outline. The fixture's own header carries the LilyPond
+        // measurement it is watching (a grace rest is byte-identical to a main-stream one).
+        yield return new object[] { "test/grace-rest" };
         yield return new object[] { "test/ties-slurs" };
         // Accidentals an octave apart straddling the middle line group into distinct
         // octaves (floored division) — they must not overstrike.

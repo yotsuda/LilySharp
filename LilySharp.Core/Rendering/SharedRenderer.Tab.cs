@@ -203,7 +203,7 @@ internal static partial class SharedRenderer
         // every voice would otherwise be overprinted once per voice.
         if (engravesMeter)
             foreach (var (item, _, _, itemX, _) in
-                     EnumerateStaffItems(primaryVoice, 1, system, layout))
+                     EnumerateStaffItems(primaryVoice, 1, system, layout, staffIndex))
                 if (item is TimeSignatureChangeItem timeChange
                     && !timeChange.NewTime.SenzaMisura)
                     DrawTimeSignatureChange(timeChange, itemX, meterStaffY, gc);

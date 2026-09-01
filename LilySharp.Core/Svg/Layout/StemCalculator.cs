@@ -82,6 +82,31 @@ public sealed record StemDetails
     /// LILYPOND-REF: define-grobs.scm Stem.length-fraction (default 1.0)
     /// </summary>
     public double LengthFraction { get; init; } = 1.0;
+
+    /// <summary>
+    /// Whether this stem REFUSES to be lengthened to reach the middle staff line.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem.cc:591-593 <c>internal_calc_stem_end_position</c> —
+    ///   <c>if (!no_extend &amp;&amp; dir * stem_end &lt; 0) stem_end = 0.0;</c>, and the beamed
+    ///   twin at :1233-1235 <c>calc_stem_info</c>, which guards its two staff-boundary
+    ///   clamps with the SAME property (beside the knee test Lily# already honours).
+    /// <para>
+    /// ⚠️ THIS IS A SEPARATE PROPERTY FROM <see cref="LengthFraction"/> AND IT IS NOT
+    /// DERIVABLE FROM IT: <c>general-grace-settings</c> states both for a grace
+    /// (scm/music-functions.scm:642-643, <c>length-fraction 0.8</c> and
+    /// <c>no-stem-extend #t</c>) while <c>\name CueVoice</c> states only the fraction, so a
+    /// cue stem still extends and a grace stem does not.
+    /// </para>
+    /// <para>
+    /// MEASURED on 2.26.0 (scratch/p313/lp/g3.ly, three pitches where the two answers
+    /// differ): <c>\grace { a16 }</c>, two ledgers below the staff, draws a 2.80 stem that
+    /// STOPS SHORT of the middle line, where the full-size <c>a16</c> beside it is dragged
+    /// out to 4.00 and ends exactly on it. Without this flag Lily# drew the grace at 4.00
+    /// too — the extension was firing on the one voice LilyPond turns it off for.
+    /// </para>
+    /// </remarks>
+    public bool NoStemExtend { get; init; }
 }
 
 /// <summary>
@@ -232,11 +257,16 @@ public static class StemCalculator
 
         // --- Staff extension: stems should reach at least the middle line ---
         // LILYPOND-REF: stem.cc:591-593 — an up stem must not end below the
-        // middle line (up < 0); a down stem must not end above it (up > 0).
-        if (stemUp && stemEndUp < 0)
-            stemEndUp = 0;
-        else if (!stemUp && stemEndUp > 0)
-            stemEndUp = 0;
+        // middle line (up < 0); a down stem must not end above it (up > 0) —
+        // UNLESS the stem states no-stem-extend, which a grace does and a cue does not
+        // (see StemDetails.NoStemExtend, and the measurement on it).
+        if (!d.NoStemExtend)
+        {
+            if (stemUp && stemEndUp < 0)
+                stemEndUp = 0;
+            else if (!stemUp && stemEndUp > 0)
+                stemEndUp = 0;
+        }
 
         // THE MINIMUM-LENGTH FLOOR IS GONE (session 85), because LilyPond has none.
         // internal_calc_stem_end_position runs :506-517 (the table), :519-555 (the
@@ -324,7 +354,11 @@ public static class StemCalculator
         // lower than the second staffline. NOT applied to knees ("Also, not
         // for knees. Seems to be a good thing.") — for a knee the ideal beam
         // sits in the gap between the pitch groups, outside the staff.
-        if (!isKnee)
+        // ⚠️ AND NOT WHEN THE STEM REFUSES TO BE EXTENDED: :1233-1235 guards both clamps
+        // with no-stem-extend as well as the knee test, which is the same property the
+        // unbeamed rule at :591-593 reads (StemDetails.NoStemExtend). Lily# honoured the knee
+        // half and not this one, so a grace BEAM was still being dragged toward the staff.
+        if (!d.NoStemExtend && !isKnee)
         {
             idealY = Math.Max(idealY, 0.0);
             idealY = Math.Max(idealY, -1.0 - beamThickness + heightOfMyBeams);

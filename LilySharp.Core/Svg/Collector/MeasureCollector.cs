@@ -3830,7 +3830,10 @@ public sealed partial class MeasureCollector
         _defaultDots = 0;
 
         _graceDepth++;
-        builder.EnterGraceTime();
+        // An acciaccatura's stroke is a property of each item's own Flag, not of the group —
+        // see MusicItem.GraceSlash for LilyPond's spelling of it.
+        bool slash = type == GraceNoteType.Acciaccatura;
+        builder.EnterGraceTime(slash);
         // The body items are reds already (a grace body is always live), exactly as
         // ProcessCueRegion's are.
         // ⚠️ GatherMusicSite, NOT a bare GreenSite each: a phrase reference is a CONTAINER
@@ -3843,13 +3846,13 @@ public sealed partial class MeasureCollector
         foreach (var item in grace.Body.Items)
             GatherMusicSite(new GreenSite(item), graceSites);
         ProcessMusicNodeSequence(graceSites, builder);
-        builder.ExitGraceTime();
+        builder.ExitGraceTime(slash);
         _graceDepth--;
 
         _defaultDuration = savedDuration;
         _defaultDots = savedDots;
 
-        var graceColumns = DeriveGraceColumns(builder, firstItemIndex);
+        var (graceColumns, columnItemIndices) = DeriveGraceColumns(builder, firstItemIndex);
         if (graceColumns.Length == 0)
             return;
 
@@ -3864,7 +3867,10 @@ public sealed partial class MeasureCollector
             grace.SourceStart,
             _cursor.StaffIndex,
             // The voice whose item list MainNoteItemIndex counts — see GraceNoteItem.
-            _cursor.VoiceIndex));
+            _cursor.VoiceIndex,
+            // Where each column stands in that same list — the address the ordinary
+            // engravers reach a grob by (GraceNoteItem.ColumnItemIndices).
+            columnItemIndices));
         // Hand the infos to the next main note/chord so it can reserve front space.
         _pendingLeadingGrace = graceColumns;
     }
@@ -3886,16 +3892,21 @@ public sealed partial class MeasureCollector
     /// <c>Semantics.GraceBodySupport.IsCarried</c> rather than being a default case.
     /// </para>
     /// </remarks>
-    private static ImmutableArray<GraceColumnInfo> DeriveGraceColumns(
-        MeasureBuilder builder, int firstItemIndex)
+    private static (ImmutableArray<GraceColumnInfo> Columns, ImmutableArray<int> ItemIndices)
+        DeriveGraceColumns(MeasureBuilder builder, int firstItemIndex)
     {
         var items = builder.CurrentItems;
         if (firstItemIndex >= items.Count)
-            return ImmutableArray<GraceColumnInfo>.Empty;
+            return (ImmutableArray<GraceColumnInfo>.Empty, ImmutableArray<int>.Empty);
 
         var columns = ImmutableArray.CreateBuilder<GraceColumnInfo>(items.Count - firstItemIndex);
+        // The item index each column was read off, entry for entry — GraceNoteItem's own
+        // remarks say why it is recorded here rather than recomputed from MainNoteItemIndex:
+        // this loop SKIPS items (a tuplet bracket), so the columns are not a contiguous run.
+        var indices = ImmutableArray.CreateBuilder<int>(items.Count - firstItemIndex);
         for (int i = firstItemIndex; i < items.Count; i++)
         {
+            int before = columns.Count;
             switch (items[i])
             {
                 case NoteItem note:
@@ -3927,8 +3938,10 @@ public sealed partial class MeasureCollector
                         rest.BaseDuration, rest.Dots, IsSpacer: rest.IsSpacer));
                     break;
             }
+            if (columns.Count > before)
+                indices.Add(i);
         }
-        return columns.ToImmutable();
+        return (columns.ToImmutable(), indices.ToImmutable());
     }
 
     /// <summary>

@@ -257,6 +257,26 @@ internal static partial class SharedRenderer
                 set.Add((staff, beam.Group.VoiceIndex, measure, member.ItemIndex));
             }
         }
+        // A GRACE RUN'S BEAM IS STILL THE GRACE HOUSE'S, and its stems come with it — the
+        // beam's PREFIX and its quant are two of the four things HANDOFF §2 U8 ⒝2 leaves
+        // grace-specific, because LilyPond states both on the grace's own Beam
+        // (scm/music-functions.scm:636-650: beam-thickness 0.384, length-fraction 0.8) and
+        // because the prefix is a measured rule of its own — the beam covers the LEADING run
+        // of head columns and stops at the first rest (scratch/p308/lp2/measurements.md).
+        // Listing those columns HERE, in the one set that already means "somebody else draws
+        // this stem", is what keeps the ordinary pass from drawing a second, shorter stem
+        // under the beam — exactly what the set does for an ordinary beam.
+        foreach (var g in layout.GraceNoteLayouts)
+        {
+            // A TAB grace is a bare fret number: no stem and no beam on either side.
+            if (g.Tuning is not null || g.ColumnItemIndices.IsDefaultOrEmpty)
+                continue;
+            int beamed = GraceNoteEngraver.BeamedPrefix(g.Columns);
+            if (beamed < 2) continue;      // one column is a flag, not a beam
+            int staff = g.StaffIndex < 0 ? 0 : g.StaffIndex;
+            for (int i = 0; i < beamed && i < g.ColumnItemIndices.Length; i++)
+                set.Add((staff, g.VoiceIndex, g.MeasureIndex, g.ColumnItemIndices[i]));
+        }
         return set;
     }
 

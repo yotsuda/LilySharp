@@ -211,6 +211,23 @@ public readonly record struct VoiceItemKey(int MeasureIndex, int VoiceId, int It
 public readonly record struct RestShiftKey(int MeasureIndex, int VoiceIndex, int ItemIndex);
 
 /// <summary>
+/// Key for a GRACE column's X — the address of one item that stands in grace time.
+/// </summary>
+/// <remarks>
+/// ⚠️ FOUR AXES, NOT THREE, and the staff is the one <see cref="VoiceItemKey"/> lacks: a grace
+/// group already records the staff it belongs to (<c>GraceNoteItem.StaffIndex</c>) because a
+/// multi-staff score routes it, and item indices are numbered per VOICE inside that staff, so
+/// dropping either axis makes two graces on two staves share one entry.
+/// <para>
+/// ⚠️ <c>VoiceIndex</c> IS ZERO-BASED — the voice's own index inside its staff, as
+/// <c>GraceNoteItem.VoiceIndex</c> and <c>RestShiftKey.VoiceIndex</c> are, NOT the 1-based
+/// <c>voiceId</c> <see cref="VoiceItemKey"/> takes.
+/// </para>
+/// </remarks>
+public readonly record struct GraceColumnKey(
+    int StaffIndex, int VoiceIndex, int MeasureIndex, int ItemIndex);
+
+/// <summary>
 /// Complete layout information for a score.
 /// All coordinates are in staff spaces unless otherwise noted.
 /// </summary>
@@ -267,6 +284,37 @@ internal sealed record ScoreLayout(
     /// </summary>
     public ImmutableDictionary<RestShiftKey, int> RestDotOffsets { get; init; }
         = ImmutableDictionary<RestShiftKey, int>.Empty;
+
+    /// <summary>
+    /// Where each GRACE column stands, by the address of the item that is standing there —
+    /// the X an ordinary engraver reads when the item it is drawing is in grace time.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS EXISTS BECAUSE THE TWO ORDINARY SOURCES OF AN ITEM'S X CANNOT ANSWER FOR A
+    /// GRACE, and both for the same reason — grace time is not a column of the measure's
+    /// timing grid:
+    /// <list type="bullet">
+    /// <item><c>MeasureLayout.GetXForTiming</c> is keyed by the moment, and a grace takes NO
+    /// measure time (<c>MusicItem.Duration</c> is zero in grace time), so a whole run shares
+    /// the FOLLOWING note's moment and would be stacked on it.</item>
+    /// <item><c>MeasureLayout.Items[i].X</c> is the primary voice's slot list, and grace
+    /// columns are deliberately kept out of the timing grid that builds it
+    /// (<c>MeasureLayouter.BuildTimingToItemsMap</c>, <c>SpacingRules.IsMusicalColumn</c>).</item>
+    /// </list>
+    /// <para>
+    /// The X itself is NOT a second spelling: it is the run's own chain,
+    /// <c>SpacingRules.GraceColumns</c> — the same offsets the reservation and the beam
+    /// quanter read — resolved once by <c>GraceNoteEngraver.Calculate</c> and published here.
+    /// LILYPOND-REF: lily/spacing-basic.cc:163-180 <c>Spacing_spanner::note_spacing</c>, the
+    /// grace branch: a grace run is spaced off <c>delta_t.grace_part_</c>, beside the main
+    /// grid rather than inside it.
+    /// </para>
+    /// ⚠️ EMPTY MEANS "NO ADDRESSES PUBLISHED", not "no graces": a hand-built layout (tests)
+    /// carries none, and every reader must then leave grace items undrawn rather than place
+    /// them at zero.
+    /// </remarks>
+    public ImmutableDictionary<GraceColumnKey, double> GraceColumnXs { get; init; }
+        = ImmutableDictionary<GraceColumnKey, double>.Empty;
 
     /// <summary>
     /// Layout options used to compute this layout. Renderers consult these for
@@ -353,5 +401,17 @@ internal sealed record ScoreLayout(
     {
         var key = new VoiceItemKey(measureIndex, voiceId, itemIndex);
         return HeadWipeEntries.Contains(key);
+    }
+
+    /// <summary>
+    /// Where the grace column standing at this address sits, or <c>null</c> when this item is
+    /// not a grace column of a group that reached the layout — see <see cref="GraceColumnXs"/>
+    /// for why an absent entry means "do not draw" rather than "draw at zero".
+    /// </summary>
+    /// <param name="voiceIndex">The voice's ZERO-based index inside its staff.</param>
+    public double? GetGraceColumnX(int staffIndex, int voiceIndex, int measureIndex, int itemIndex)
+    {
+        var key = new GraceColumnKey(staffIndex, voiceIndex, measureIndex, itemIndex);
+        return GraceColumnXs.TryGetValue(key, out var x) ? x : null;
     }
 }

@@ -37,11 +37,16 @@
   <text class="music" x="9.34" y="22.32" font-size="4.00" data-pos="376"></text>
   <text class="music" x="13.54" y="23.32" font-size="4.00" data-pos="318"></text>
   <line x1="27.56" y1="20.32" x2="29.51" y2="20.32" stroke="#000000" stroke-width="0.200"/>
-  <line x1="34.16" y1="20.32" x2="36.22" y2="20.32" stroke="#000000" stroke-width="0.200"/>
-  <line x1="34.16" y1="19.32" x2="36.22" y2="19.32" stroke="#000000" stroke-width="0.200"/>
+  <line x1="31.44" y1="20.32" x2="32.79" y2="20.32" stroke="#000000" stroke-width="0.200"/>
+  <line x1="32.89" y1="20.32" x2="34.20" y2="20.32" stroke="#000000" stroke-width="0.200"/>
+  <line x1="32.89" y1="19.32" x2="34.20" y2="19.32" stroke="#000000" stroke-width="0.200"/>
+  <line x1="34.30" y1="20.32" x2="36.22" y2="20.32" stroke="#000000" stroke-width="0.200"/>
+  <line x1="34.30" y1="19.32" x2="36.22" y2="19.32" stroke="#000000" stroke-width="0.200"/>
   <line x1="38.43" y1="20.32" x2="40.50" y2="20.32" stroke="#000000" stroke-width="0.200"/>
   <line x1="38.43" y1="19.32" x2="40.50" y2="19.32" stroke="#000000" stroke-width="0.200"/>
   <line x1="38.43" y1="18.32" x2="40.50" y2="18.32" stroke="#000000" stroke-width="0.200"/>
+  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="16.04" y="22.82" font-size="2.83" data-pos="442"></text>
+  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="17.46" y="22.32" font-size="2.83" data-pos="446"></text>
   <text class="music" x="18.88" y="21.82" font-size="4.00" data-pos="450"></text>
   <line x1="18.94" y1="21.97" x2="18.94" y2="25.32" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="21.88" y="21.32" font-size="4.00" data-pos="453"></text>
@@ -50,23 +55,18 @@
   <line x1="24.94" y1="20.97" x2="24.94" y2="24.32" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="27.88" y="20.32" font-size="4.00" data-pos="457"></text>
   <line x1="27.95" y1="20.47" x2="27.95" y2="23.82" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="31.67" y="19.82" font-size="2.83" data-pos="469"></text>
+  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="33.08" y="19.32" font-size="2.83" data-pos="473"></text>
   <text class="music" x="34.50" y="18.82" font-size="4.00" data-pos="477"></text>
   <line x1="34.57" y1="18.82" x2="34.57" y2="23.32" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="38.78" y="18.32" font-size="4.00" data-pos="480"></text>
   <line x1="38.84" y1="18.32" x2="38.84" y2="23.32" stroke="#000000" stroke-width="0.130"/>
   <rect x="30.68" y="21.32" width="0.19" height="4.00" data-pos="459"/>
   <rect x="42.91" y="21.32" width="0.19" height="4.00" data-pos="483"/>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="16.04" y="22.82" font-size="2.83" data-pos="434"></text>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="17.46" y="22.32" font-size="2.83" data-pos="434"></text>
   <line x1="16.89" y1="22.82" x2="16.89" y2="20.45" stroke="#000000" stroke-width="0.130" data-pos="434"/>
   <line x1="18.31" y1="22.32" x2="18.31" y2="20.19" stroke="#000000" stroke-width="0.130" data-pos="434"/>
   <polygon points="16.83,20.27 18.38,19.98 18.38,20.37 16.83,20.65" data-pos="434"/>
   <polygon points="16.83,20.92 18.38,20.63 18.38,21.02 16.83,21.30" data-pos="434"/>
-  <line x1="31.44" y1="20.32" x2="32.81" y2="20.32" stroke="#000000" stroke-width="0.200" data-pos="461"/>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="31.67" y="19.82" font-size="2.83" data-pos="461"></text>
-  <line x1="32.86" y1="20.32" x2="34.23" y2="20.32" stroke="#000000" stroke-width="0.200" data-pos="461"/>
-  <line x1="32.86" y1="19.32" x2="34.23" y2="19.32" stroke="#000000" stroke-width="0.200" data-pos="461"/>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="33.08" y="19.32" font-size="2.83" data-pos="461"></text>
   <line x1="32.52" y1="19.82" x2="32.52" y2="17.45" stroke="#000000" stroke-width="0.130" data-pos="461"/>
   <line x1="33.94" y1="19.32" x2="33.94" y2="17.19" stroke="#000000" stroke-width="0.130" data-pos="461"/>
   <polygon points="32.45,17.27 34.00,16.98 34.00,17.37 32.45,17.65" data-pos="461"/>

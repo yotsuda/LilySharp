@@ -18,6 +18,11 @@
   <line x1="16.52" y1="10.55" x2="18.33" y2="10.55" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="8.59" y="11.05" font-size="4.00" data-pos="414"></text>
   <line x1="8.65" y1="11.20" x2="8.65" y2="14.55" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="11.38" y="13.05" font-size="2.52" data-pos="433"></text>
+  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="12.42" y="13.05" font-size="2.83" data-pos="433"></text>
+  <line x1="13.28" y1="12.90" x2="13.28" y2="10.45" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="13.35" y="10.45" font-size="2.83"></text>
+  <line x1="12.86" y1="11.98" x2="13.87" y2="11.16" stroke="#000000" stroke-width="0.138"/>
   <text class="music" x="15.55" y="10.05" font-size="4.00" data-pos="450"></text>
   <text class="music" x="14.58" y="11.05" font-size="4.00" data-pos="445"></text>
   <text class="music" x="16.70" y="12.05" font-size="4.00" data-pos="442"></text>
@@ -26,11 +31,6 @@
   <line x1="16.76" y1="10.20" x2="16.76" y2="15.55" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="19.70" y="13.55" font-size="4.00" data-pos="457"></text>
   <rect x="24.10" y="11.55" width="0.19" height="4.00" data-pos="458"/>
-  <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="11.38" y="13.05" font-size="2.52" data-pos="418"></text>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="12.42" y="13.05" font-size="2.83" data-pos="418"></text>
-  <line x1="13.28" y1="13.05" x2="13.28" y2="10.58" stroke="#000000" stroke-width="0.130" data-pos="418"/>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="13.34" y="10.58" font-size="2.83" data-pos="418"></text>
-  <line x1="12.86" y1="12.10" x2="13.86" y2="11.28" stroke="#000000" stroke-width="0.138" data-pos="418"/>
   <path d="M 12.88,14.05 C 13.96,14.59 15.81,14.16 16.55,13.20 C 15.83,14.24 13.98,14.67 12.88,14.05 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="418"/>
   <rect x="0.30" y="6.69" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="396"/>
   <text x="1.34" y="8.89" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="396">A</text>

@@ -50,7 +50,7 @@ internal static partial class SharedRenderer
         // LILYPOND-REF: scm/define-grobs.scm LedgerLineSpanner (layer . 0);
         // NoteHead uses the default layer 1.
         var ledgerPlan = new List<LedgerRequest>();
-        foreach (var (item, ledgerMl, _, itemX, _) in EnumerateStaffItems(voice, voiceNumber, system, layout, fragmentFrom, fragmentTo))
+        foreach (var (item, ledgerMl, _, itemX, _) in EnumerateStaffItems(voice, voiceNumber, system, layout, staffIndex, fragmentFrom, fragmentTo))
         {
             // Percent-covered measures draw no notes — and no ledgers either.
             if (percentCovered != null && percentCovered.Contains(ledgerMl.MeasureIndex))
@@ -59,7 +59,7 @@ internal static partial class SharedRenderer
         }
         DrawPlannedLedgers(ledgerPlan, gc);
 
-        foreach (var (item, ml, itemIdx, itemX, voiceX) in EnumerateStaffItems(voice, voiceNumber, system, layout, fragmentFrom, fragmentTo))
+        foreach (var (item, ml, itemIdx, itemX, voiceX) in EnumerateStaffItems(voice, voiceNumber, system, layout, staffIndex, fragmentFrom, fragmentTo))
         {
             // Head-wipe when this voice's notehead merges with another's.
             bool headWiped = layout.IsHeadWiped(ml.MeasureIndex, voiceNumber, itemIdx);
@@ -72,8 +72,15 @@ internal static partial class SharedRenderer
             // \voiceOne/\voiceTwo hold only where the voice { } span does, so this
             // is asked per measure — not once per part.
             // LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
-            bool? forcedStemUp = VoiceDefaults.GetDefaultStemUpAt(
-                staffVoices, voiceNumber - 1, ml.MeasureIndex);
+            // ⚠️ GRACE TIME OUTRANKS THE VOICE, and it is stated rather than derived from the
+            // pitch: LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings —
+            // ((Voice Stem direction ,UP) (Voice Slur direction ,DOWN)), so a grace stem
+            // points up whatever the note's own position would ask for. The grace side model
+            // has always drawn them so; the ordinary pass has to be told.
+            bool? forcedStemUp = item.GraceTime
+                ? true
+                : VoiceDefaults.GetDefaultStemUpAt(
+                    staffVoices, voiceNumber - 1, ml.MeasureIndex);
 
             // LILYPOND-REF: lily/grob-property.cc — apply \override / \revert at this position.
             // Each voice/staff pass restarts at its first measure; the resolver detects the
@@ -165,6 +172,7 @@ internal static partial class SharedRenderer
     private static IEnumerable<(MusicItem Item, MeasureLayout Ml, int ItemIdx, double ItemX,
                                 double VoiceX)>
         EnumerateStaffItems(Voice voice, int voiceNumber, SystemLayout system, ScoreLayout layout,
+            int staffIndex,
             int fragmentFrom = int.MinValue, int fragmentTo = int.MaxValue)
     {
         foreach (var ml in system.Measures)
@@ -192,17 +200,29 @@ internal static partial class SharedRenderer
             {
                 var item = measure.Items[itemIdx];
 
-                // GRACE TIME IS NOT DRAWN HERE — it is drawn by GraceNoteEngraver, from the
-                // group's own GraceNoteItem, at the grace font. Since session 310 the grace
-                // body is walked by the ordinary walker, so its columns ARE measure items and
-                // reach this loop; drawing them here too would print every grace note twice,
-                // the second time full size on the main column grid.
-                // ⚠️ THIS SKIP IS SCAFFOLDING AND GOES AWAY WITH THE REST OF IT: when the
-                // ordinary engravers learn the grace font (HANDOFF §2 U8 ⒝2), this loop is
-                // exactly where a grace note SHOULD be drawn, and the side model it is
-                // deferring to is what disappears.
+                // GRACE TIME IS DRAWN HERE, by the ordinary engravers, at the font each of
+                // its grobs states. That is LilyPond's own shape: a grace body is an
+                // ordinary stretch of an ordinary Voice — ly/engraver-init.ly has no
+                // `\name Grace` at all, only `\consists Grace_engraver` inside `\name Voice`
+                // (:368), and lily/grace-engraver.cc makes no grob, it only switches
+                // properties. Every size below is asked of the GROB (GrobFontSize), because
+                // scm/music-functions.scm:636-650 general-grace-settings is a per-grob table
+                // and not one voice-wide number.
+                // ⚠️ THE X IS THE PUBLISHED ONE. Neither ordinary source can answer for a
+                // grace — see ScoreLayout.GraceColumnXs — and an address the layout did not
+                // publish means "this group did not reach the layout", so the item is left
+                // undrawn rather than drawn at the measure's origin.
                 if (item.GraceTime)
+                {
+                    if (layout.GetGraceColumnX(
+                            staffIndex, voiceNumber - 1, ml.MeasureIndex, itemIdx) is { } graceX)
+                    {
+                        yield return (item, ml, itemIdx, graceX, 0);
+                    }
+                    // No timing advance: grace time takes no measure time at all
+                    // (MusicItem.Duration is zero in it), so the column grid is untouched.
                     continue;
+                }
 
                 // A meter change opening the first measure of a (non-first)
                 // system is drawn in the system-start prefix (see DrawSystem),
@@ -428,7 +448,8 @@ internal static partial class SharedRenderer
                 // This is the DRAW half of the pair SkylineBuilder seeds; the two must stay
                 // one spelling.
                 // (Every notehead's ink Left is 0.000000, so HeadLeft = x still holds.)
-                double headWidth = GlyphMetrics.GetNoteheadBBox(noteValue).Width * (note.IsCue ? EngravingDefaults.CueScale : 1.0);
+                double headWidth = GlyphMetrics.GetNoteheadBBox(noteValue).Width
+                                   * GrobFontSize.ScaleOf(note, SizedGrob.NoteHead);
                 CollectLedgerRequest(ledgerPlan, note.StaffPosition, x, headWidth,
                     staffMiddleY, note.Accidental != null);
                 break;
@@ -436,7 +457,7 @@ internal static partial class SharedRenderer
             case ChordItem chord when chord.Notes.Length > 0:
             {
                 int noteValue = GlyphMetrics.NoteValueOf(chord.BaseDuration);
-                double chordScale = chord.IsCue ? EngravingDefaults.CueScale : 1.0;
+                double chordScale = GrobFontSize.ScaleOf(chord, SizedGrob.NoteHead);
                 // The ink width — see the note branch above.
                 double headWidth = GlyphMetrics.GetNoteheadBBox(noteValue).Width * chordScale;
                 // Seconds shift reversed heads sideways — the ledger run
@@ -502,6 +523,32 @@ internal static partial class SharedRenderer
     private const double StemHeadInset = 0.15;
 
     /// <summary>
+    /// The stem parameters this item's stem is measured and drawn with — null at the staff's
+    /// own size, so the calculator keeps its own defaults.
+    /// </summary>
+    /// <remarks>
+    /// A <c>length-fraction</c> is NOT a font-size, which is why it is asked separately from
+    /// <see cref="GrobFontSize"/>: LilyPond declares both, and for a grace they disagree
+    /// (0.8 against <c>magstep(-3)</c> = 0.707107) while for a cue they happen to coincide.
+    /// LILYPOND-REF: lily/stem.cc:481-557 <c>Stem::internal_calc_stem_end_position</c> — the
+    ///   fraction multiplies the length the duration chose, wherever it was declared:
+    ///   <c>\name CueVoice</c> in ly/engraver-init.ly spells <c>#(magstep -4)</c>, and
+    ///   scm/music-functions.scm:636-650 <c>general-grace-settings</c> states a flat 0.8.
+    /// ⚠️ THE GRACE ARM HAS NO READER YET — the grace stem is drawn by the side model
+    /// (<c>GraceNoteEngraver.StemLength</c>), which multiplies a flat 3.5 by the FONT scale.
+    /// The arm is here because the ordinary stem is what HANDOFF §2 U8 ⒝2 hands the grace to,
+    /// and one house has to answer for both by then. See <see cref="GrobFontSize.GraceStemDetails"/>.
+    /// </remarks>
+    private static StemDetails? StemDetailsOf(MusicItem item)
+        => item.GraceTime ? GrobFontSize.GraceStemDetails
+         : item switch
+           {
+               NoteItem { IsCue: true } or ChordItem { IsCue: true }
+                   => EngravingDefaults.CueStemDetails,
+               _ => null,
+           };
+
+    /// <summary>
     /// Draws one note at <paramref name="x"/>, which already carries
     /// <paramref name="voiceX"/> — the multi-voice collision shift. Everything the note
     /// column owns rides that shift; its ACCIDENTAL does not, and subtracts it back off to
@@ -514,9 +561,13 @@ internal static partial class SharedRenderer
     {
         int noteValue = GlyphMetrics.NoteValueOf(note.BaseDuration);
         double noteY = staffMiddleY + note.StaffPosition / 2.0;
-        // A cue grob states font-size −4, so its glyphs are the THIRTEEN design's own outline
-        // read at magstep(−4) — EngravingDefaults.CueFontSizeStep / CueScale / CueDesignSize.
-        double noteFontSize = note.IsCue ? FontSize * EngravingDefaults.CueScale : FontSize;
+        // EVERY SIZE BELOW IS ASKED OF THE GROB, not derived from one "how small is this
+        // note" number — a cue states one context-wide font-size and a grace states a
+        // per-grob table whose Accidental is a step below its NoteHead (GrobFontSize).
+        // A cue grob's glyphs are the THIRTEEN design's own outline read at magstep(−4).
+        double headScale = GrobFontSize.ScaleOf(note, SizedGrob.NoteHead);
+        double noteFontSize = FontSize * headScale;
+        double flagFontSize = FontSize * GrobFontSize.ScaleOf(note, SizedGrob.Flag);
 
         // Voice stem direction override (voice 1 up / voice 2 down); falls back
         // to the note's own position-based default in single-voice staves. A
@@ -533,22 +584,32 @@ internal static partial class SharedRenderer
         // accidental with the head (LP CueVoice fontSize = -4 reduces the accidental grob too).
         if (note.Accidental != null)
         {
-            double accScale = note.IsCue ? EngravingDefaults.CueScale : 1.0;
+            double accScale = GrobFontSize.ScaleOf(note, SizedGrob.Accidental);
             // ⚠️ THE FONT IS THE DESIGN THE FONT-SIZE SELECTS, not the 20 shrunk. It was
             // Design20.Scaled(0.66) until 2026-08-03 — a rounded scale off the wrong table,
             // which is both halves of the same mistake: a cue states font-size −4, that asks
             // for 12.599pt, and 12.599pt lands on the THIRTEEN design, whose glyphs are drawn
             // differently and not merely smaller (Emmentaler is optically sized).
-            var cueFont = note.IsCue ? EngravingDefaults.CueFont : null;
+            // ⚠️ TWO FONTS, NOT ONE, because the placement clears an ACCIDENTAL against a
+            // HEAD and the two grobs need not state the same size: a cue's context-wide
+            // fontSize gives both −4, while general-grace-settings gives the accidental −4
+            // and the head −3 (GrobFontSize / GraceNoteItem.AccidentalFontSizeStep). Null
+            // for a full-size note keeps the callee on its own defaults, byte for byte.
+            var accFont = GrobFontSize.IsReduced(note)
+                ? GrobFontSize.FontOf(note, SizedGrob.Accidental) : null;
+            var accHeadFont = GrobFontSize.IsReduced(note)
+                ? GrobFontSize.FontOf(note, SizedGrob.NoteHead) : null;
             // The packed X is measured from the STAFF COLUMN, so undo the collision shift
             // this note's head took; without a packing there is no other voice on the
             // column and the two frames coincide.
             double? accInkLeft = note.AccidentalX is { } packedX
                 ? x - voiceX + packedX
-                : AccidentalColumn.CalculateSinglePosition(note, cueFont, cueFont)
+                : AccidentalColumn.CalculateSinglePosition(note, accFont, accHeadFont)
                     is { } al ? x + al.XOffset : null;
             if (accInkLeft is { } inkLeft)
-                using (note.IsCue ? gc.MusicFace(EngravingDefaults.CueDesignSize) : NullScope.Instance)
+                using (GrobFontSize.IsReduced(note)
+                       ? gc.MusicFace(GrobFontSize.DesignOf(note, SizedGrob.Accidental))
+                       : NullScope.Instance)
                     DrawAccidentalAtInkLeft(note.Accidental, note.IsCourtesy, inkLeft, noteY,
                         note.SourcePosition, gc, accScale);
         }
@@ -564,7 +625,9 @@ internal static partial class SharedRenderer
             using (gc.Source(note.SourcePosition))
             // A cue head is drawn OUT OF ITS OWN DESIGN, paired with the CueFont the
             // reservation measured — see EngravingDefaults.CueDesignSize.
-            using (note.IsCue ? gc.MusicFace(EngravingDefaults.CueDesignSize) : NullScope.Instance)
+            using (GrobFontSize.IsReduced(note)
+                   ? gc.MusicFace(GrobFontSize.DesignOf(note, SizedGrob.NoteHead))
+                   : NullScope.Instance)
             {
                 if (note.IsDead)
                     DrawDeadNotehead(x, noteY, noteheadColor, gc);
@@ -575,10 +638,9 @@ internal static partial class SharedRenderer
                     // Both axes from the ink box, as the remark above says: the width
                     // read the ADVANCE until 2026-08-05 (session 95) while the height
                     // beside it read the ink.
-                    double headInk = note.IsCue ? EngravingDefaults.CueScale : 1.0;
                     gc.DrawNotehead(head, x, noteY, noteFontSize, noteheadColor,
-                        GlyphMetrics.GetNoteheadBBox(noteValue).Width * headInk,
-                        GlyphMetrics.GetNoteheadBBox(noteValue).Height * headInk);
+                        GlyphMetrics.GetNoteheadBBox(noteValue).Width * headScale,
+                        GlyphMetrics.GetNoteheadBBox(noteValue).Height * headScale);
                 }
             }
 
@@ -604,7 +666,6 @@ internal static partial class SharedRenderer
             // left edge, which doesn't move with the scale.
             // LILYPOND-REF: lily/stem.cc internal_calc_stem_offset_from_head —
             // the offset comes from the (scaled) head extent.
-            double headScale = note.IsCue ? EngravingDefaults.CueScale : 1.0;
             double stemX = x + LayoutUtilities.StemAttachX(stemUp, noteValue, note.Notehead, headScale);
             // Duration-dependent length + unnatural-direction shortening + the
             // extend-to-center-line rule, faithfully following LilyPond's
@@ -622,7 +683,7 @@ internal static partial class SharedRenderer
             // (SpacingRules.StemSpacingInfo), so the stem this draws is the stem they reserve.
             double stemEndY = pageHeight - StemCalculator.CalculateStemEndY(
                 deviceNoteY, stemUp, deviceStaffTop, durLog, note.StaffPosition,
-                note.IsCue ? EngravingDefaults.CueStemDetails : null);
+                StemDetailsOf(note));
             if (!stemTransparent)
                 gc.DrawLine(stemX, noteY - StemAttachYOffset(note.Notehead, stemUp, noteValue),
                     stemX, stemEndY,
@@ -641,10 +702,25 @@ internal static partial class SharedRenderer
                     if (!stemTransparent)
                         // The flag hangs on the stem's RIGHT EDGE — LayoutUtilities.FlagDrawX is the
                         // one house for that term, and it is measured (ledger flag.x.*).
-                        gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX), stemEndY,
-                            noteFontSize, stemColor);
+                        // ⚠️ THE FACE, NOT ONLY THE SIZE. Emmentaler is optically sized, so a
+                        // font-size selects a DESIGN and then a magnification, and drawing a
+                        // reduced flag out of the score's own design gives the twenty's
+                        // outline shrunk instead of the fourteen's own — the same pairing
+                        // GrobFontSize.FontOf/DesignOf exists to keep together, and the same
+                        // one the notehead above already asks for.
+                        using (GrobFontSize.IsReduced(note)
+                               ? gc.MusicFace(GrobFontSize.DesignOf(note, SizedGrob.Flag))
+                               : NullScope.Instance)
+                            gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX), stemEndY,
+                                flagFontSize, stemColor);
                     hasFlag = true;
                 }
+                // An acciaccatura's stroke, drawn where the flag is because in LilyPond it IS
+                // the flag's — Flag.stroke-style = "grace" (MusicItem.GraceSlash). It follows
+                // the flag's transparency for the same reason the flag follows the stem's.
+                if (note.GraceSlash && !stemTransparent)
+                    DrawGraceSlash(stemX, stemEndY,
+                        GrobFontSize.ScaleOf(note, SizedGrob.Flag), gc);
             }
 
             if (note.HasTremolo)
@@ -666,8 +742,7 @@ internal static partial class SharedRenderer
             // LILYPOND-REF: scm/define-grobs.scm StemTremolo
             //   (parent-alignment-X . CENTER) — centred on the head column.
             double headCenterX = x
-                + GlyphMetrics.GetNoteheadBBox(noteValue).Width / 2
-                  * (note.IsCue ? EngravingDefaults.CueScale : 1.0);
+                + GlyphMetrics.GetNoteheadBBox(noteValue).Width / 2 * headScale;
             DrawStemlessTremolo(headCenterX, noteY, stemUp, note.TremoloBeams, gc);
         }
 
@@ -683,15 +758,25 @@ internal static partial class SharedRenderer
         // head's grob EXTENT, which is the ink (1.962 / 1.3774 / 1.3042 against advances of
         // 1.960 / 1.376 / 1.304 — dumped in audit/lp-geometry/probes/dynamic-support.ly).
         // LILYPOND-REF: lily/dot-column.cc:82-84 Dot_column::calc_positioning_done — base_x.unite (Stem::first_head (parent_stems[i])->extent (commonx, X_AXIS))
-        double dotWidth = GlyphMetrics.AugmentationDot.Width;
-        double dotStartX = x + GlyphMetrics.GetNoteheadBBox(noteValue).Right * (note.IsCue ? EngravingDefaults.CueScale : 1.0) + dotWidth;
+        // ⚠️ THE DOT'S OWN FONT, because the dot's own font-size is what is drawn: two dots
+        // are stacked one dot WIDTH apart, so measuring a full-size dot for a reduced one
+        // spaces the pair for a glyph that is not there. general-grace-settings gives Dots
+        // −3 and a cue's context-wide fontSize gives it −4 (GrobFontSize).
+        double dotWidth = GrobFontSize.FontOf(note, SizedGrob.Dots).AugmentationDot.Width;
+        double dotStartX = x + GlyphMetrics.GetNoteheadBBox(noteValue).Right * headScale + dotWidth;
         // A collision's dot side supports push the whole dot column right of the
         // opposite voice's heads; the minimum X is in the staff column's frame
         // (x − voiceX), settled in NoteCollision.CalculateVoiceOffsets.
         // LILYPOND-REF: lily/note-collision.cc:352-372 check_meshing_chords — add_support.
         if (dotAdjust.ColumnMinX is { } dotMinX)
             dotStartX = Math.Max(dotStartX, x - voiceX + dotMinX);
-        if (note.Dots > 0)
+        // ⚠️ A GRACE'S DOT IS DRAWN BY THE GRACE HOUSE, and it is the one grob of a grace
+        // column that is: where a dot stands is Svg/Layout/DotColumn, LilyPond's own rightward
+        // skyline over the column's supports, and GraceNoteEngraver.Dots is its only caller —
+        // the answer below is a flat "head ink right plus one dot", which agrees with the
+        // ported rule for a full-size note and not for a grace. See the note at the deferral
+        // (SharedRenderer.DrawGraceNotes) for the measured pair and for when this goes.
+        if (note.Dots > 0 && !note.GraceTime)
         {
             // Same Dot_configuration machinery as chords. The dots' preferred
             // direction has two layers, exactly LilyPond's: \voiceOne/\voiceTwo set
@@ -706,9 +791,16 @@ internal static partial class SharedRenderer
                 new[] { note.StaffPosition },
                 dotDir != 0 ? new[] { dotDir } : null)[0];
             double dotY = staffMiddleY + dotPos / 2.0;
-            for (int d = 0; d < note.Dots; d++)
-                gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
-                    dotStartX + d * 2 * dotWidth, dotY, noteFontSize, noteheadColor);
+            // The DOTS' own font-size, out of the DOTS' own design — general-grace-settings
+            // gives Dots the head's −3 and not the accidental's −4, which is why it is asked
+            // per grob (GrobFontSize) even where the answer happens to match the head's.
+            using (GrobFontSize.IsReduced(note)
+                   ? gc.MusicFace(GrobFontSize.DesignOf(note, SizedGrob.Dots))
+                   : NullScope.Instance)
+                for (int d = 0; d < note.Dots; d++)
+                    gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
+                        dotStartX + d * 2 * dotWidth, dotY,
+                        FontSize * GrobFontSize.ScaleOf(note, SizedGrob.Dots), noteheadColor);
         }
     }
 
@@ -727,9 +819,13 @@ internal static partial class SharedRenderer
         // Writer's @stemUp/@stemDown outranks the voice default — see DrawNote.
         bool stemUp = chord.ForcedStemUp ?? forcedStemUp ?? chord.StemUp;
 
-        // Cue chords take the same font-size −4 recipe as cue notes (EngravingDefaults.Cue*).
-        double headScale = chord.IsCue ? EngravingDefaults.CueScale : 1.0;
-        double noteFontSize = chord.IsCue ? FontSize * EngravingDefaults.CueScale : FontSize;
+        // EVERY SIZE IS ASKED OF THE GROB — see DrawNote. A cue chord takes the same
+        // context-wide font-size −4 its heads do; a grace chord's accidental is a step below
+        // its head, which is why the two scales are separate locals here.
+        double headScale = GrobFontSize.ScaleOf(chord, SizedGrob.NoteHead);
+        double accScale = GrobFontSize.ScaleOf(chord, SizedGrob.Accidental);
+        double noteFontSize = FontSize * headScale;
+        double flagFontSize = FontSize * GrobFontSize.ScaleOf(chord, SizedGrob.Flag);
 
         // Within-chord seconds/unisons: reversed heads shift to the far side
         // of the stem. LILYPOND-REF: lily/stem.cc:606-760 calc_positioning_done.
@@ -744,7 +840,10 @@ internal static partial class SharedRenderer
         // fontSize -4 — but the PADDINGS between them and the heads do not (they are the
         // staff's, not the font's; see AccidentalPlacementParameters). The FONT is the design
         // that font-size selects, the same one the single-note path takes.
-        var cueChordFont = chord.IsCue ? EngravingDefaults.CueFont : null;
+        var chordAccFont = GrobFontSize.IsReduced(chord)
+            ? GrobFontSize.FontOf(chord, SizedGrob.Accidental) : null;
+        var chordHeadFont = GrobFontSize.IsReduced(chord)
+            ? GrobFontSize.FontOf(chord, SizedGrob.NoteHead) : null;
         // A chord sharing its column with another voice was packed against that voice's
         // accidentals too, and in the STAFF COLUMN's frame — so those X's undo the collision
         // shift, exactly as the single-note branch does.
@@ -757,7 +856,7 @@ internal static partial class SharedRenderer
                     n.StaffPosition, n.Accidental!, n.AccidentalX!.Value, n.IsCourtesy))
                 .ToImmutableArray()
             : AccidentalColumn.CalculatePositions(
-                chord.Notes, headOffsets, cueChordFont, cueChordFont);
+                chord.Notes, headOffsets, chordAccFont, chordHeadFont);
         foreach (var al in accLayouts)
         {
             double ay = staffMiddleY + al.StaffPosition / 2.0;
@@ -766,9 +865,11 @@ internal static partial class SharedRenderer
             int accSource = chord.SourcePosition;
             foreach (var n in chord.Notes)
                 if (n.StaffPosition == al.StaffPosition && n.SourcePosition >= 0) { accSource = n.SourcePosition; break; }
-            using (chord.IsCue ? gc.MusicFace(EngravingDefaults.CueDesignSize) : NullScope.Instance)
+            using (GrobFontSize.IsReduced(chord)
+                   ? gc.MusicFace(GrobFontSize.DesignOf(chord, SizedGrob.Accidental))
+                   : NullScope.Instance)
                 DrawAccidentalAtInkLeft(al.Accidental, al.IsCourtesy,
-                    accOriginX + al.XOffset, ay, accSource, gc, headScale);
+                    accOriginX + al.XOffset, ay, accSource, gc, accScale);
         }
 
         // topY/bottomY are the visually top/bottom heads. In the Y-up frame the top
@@ -808,10 +909,12 @@ internal static partial class SharedRenderer
         // LILYPOND-REF: scm/define-grobs.scm DotColumn padding (one dot width)
         // LILYPOND-REF: lily/dot-configuration.cc; lily/dot-column.cc:194-224.
         // The dot column clears heads reversed to the RIGHT of the stem.
-        if (chord.Dots > 0 && chord.Notes.Length > 0)
+        // A grace chord's dot is the grace house's too — see the single-note branch.
+        if (chord.Dots > 0 && chord.Notes.Length > 0 && !chord.GraceTime)
         {
-            // The head's INK right — see the single-note branch for the LilyPond citation.
-            double dotWidth = GlyphMetrics.AugmentationDot.Width;
+            // The head's INK right, and the DOT's own font's dot — see the single-note
+            // branch for both, and for the LilyPond citation.
+            double dotWidth = GrobFontSize.FontOf(chord, SizedGrob.Dots).AugmentationDot.Width;
             double dotStartX = x + GlyphMetrics.GetNoteheadBBox(noteValue).Right * headScale
                 + Math.Max(0, headOffsets.Max()) + dotWidth;
             // Collision dot side supports — same push as the single-note branch.
@@ -828,14 +931,20 @@ internal static partial class SharedRenderer
             var resolved = DotConfiguration.Resolve(
                 chord.Notes.Select(n => n.StaffPosition).ToArray(),
                 dotDir != 0 ? Enumerable.Repeat(dotDir, chord.Notes.Length).ToArray() : null);
-            foreach (int p in resolved)
-            {
-                double dotY = staffMiddleY + p / 2.0;
-                for (int d = 0; d < chord.Dots; d++)
-                    using (gc.Source(chord.SourcePosition))
-                        gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
-                            dotStartX + d * 2 * dotWidth, dotY, noteFontSize, noteheadColor);
-            }
+            // The DOTS' design, paired with the width above — see DrawNote.
+            using (GrobFontSize.IsReduced(chord)
+                   ? gc.MusicFace(GrobFontSize.DesignOf(chord, SizedGrob.Dots))
+                   : NullScope.Instance)
+                foreach (int p in resolved)
+                {
+                    double dotY = staffMiddleY + p / 2.0;
+                    for (int d = 0; d < chord.Dots; d++)
+                        using (gc.Source(chord.SourcePosition))
+                            gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
+                                dotStartX + d * 2 * dotWidth, dotY,
+                                FontSize * GrobFontSize.ScaleOf(chord, SizedGrob.Dots),
+                                noteheadColor);
+                }
         }
 
         // Skip chord stem when chord is part of a beam — DrawBeams handles it.
@@ -865,7 +974,7 @@ internal static partial class SharedRenderer
             // Cue length-fraction, exactly as in DrawNote.
             double stemEndY = pageHeight - StemCalculator.CalculateStemEndY(
                 deviceTipY, stemUp, deviceStaffTop, durLog, stemTipPos,
-                chord.IsCue ? EngravingDefaults.CueStemDetails : null);
+                StemDetailsOf(chord));
             if (!stemTransparent)
                 gc.DrawLine(stemX, stemStartY, stemX, stemEndY,
                     stemColor ?? Color.Black, EngravingDefaults.StemThickness);
@@ -888,11 +997,19 @@ internal static partial class SharedRenderer
                 if (flag.HasValue)
                 {
                     if (!stemTransparent)
-                        gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX), stemEndY,
-                            noteFontSize, stemColor);
+                        // Out of the FLAG's own design, paired with its own size — see DrawNote.
+                        using (GrobFontSize.IsReduced(chord)
+                               ? gc.MusicFace(GrobFontSize.DesignOf(chord, SizedGrob.Flag))
+                               : NullScope.Instance)
+                            gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX), stemEndY,
+                                flagFontSize, stemColor);
                     hasFlag = true;
                 }
             }
+            // An acciaccatura's stroke belongs to the flag — see DrawNote / MusicItem.GraceSlash.
+            if (chord.GraceSlash && !stemTransparent)
+                DrawGraceSlash(stemX, stemEndY,
+                    GrobFontSize.ScaleOf(chord, SizedGrob.Flag), gc);
 
             // The tremolo is the STEM's grob too — one StemTremolo per stem however
             // many heads hang on it, the single-note recipe exactly (DrawNote). This
