@@ -311,8 +311,46 @@ public class HistoryCitationTests
             $"rev-list {tip} returned {reachable.Count} commits — that is not this history.");
 
         // Commits some OTHER ref keeps alive. This is the line between a defect that travels
-        // with the repository and a local housekeeping detail: see HeldOnlyByAnotherRef.
-        var heldElsewhere = Git(new[] { "rev-list", "--all", "--not", tip }).Out
+        // with the repository and a local housekeeping detail: see
+        // CitedCommitsAreNotHeldAliveByAnotherRef.
+        //
+        // ⚠️ THE REFS ARE ENUMERATED, AND `--all` IS THE WRONG INSTRUMENT FOR THIS QUESTION.
+        // `git rev-list --all` pretends that every ref in refs/ is listed AND every WORKTREE's
+        // HEAD with it. A detached worktree HEAD is not a ref: it is not under refs/,
+        // `for-each-ref` does not list it, and no clone ever fetches it — it is a fact about
+        // one disk, which is the side of the line this test's remarks put unreferenced garbage
+        // on for exactly the same reason.
+        //
+        // MEASURED (session 312, at 925cab98). The suite came up with this test red and 63
+        // "zombies"; thirteen of them were a real leftover ref (refs/original/refs/heads/master,
+        // the filter-branch backup of session 311's history fold, deleted) and the other FIFTY
+        // were named by no ref at all. The report said so itself, in the shape a broken
+        // instrument fails in: every one of the fifty printed `kept alive by:` and then
+        // NOTHING, because the report asks `for-each-ref --contains` — the ref-truthful query —
+        // while the survey asked `--all`. The two disagreed, and the survey was the wrong one.
+        // `git worktree list` named the holders: twenty-one detached base worktrees left over
+        // from past A/B sweeps, and 0a93b7bc — cited in docs/HANDOFF-ARCHIVE.md — is an
+        // ancestor of C:/MyProj/LilySharp-base's cc19cccc and of no ref. On this machine `--all`
+        // reaches 979 commits that no ref reaches.
+        //
+        // ⇒ The over-report is one-directional (`--all` is a superset of the refs), so this
+        // never hid a real stale ref; it invented false ones the day a history rewrite dropped
+        // commits that an old worktree still had checked out. Nothing about the guard's charter
+        // changes: a tag or a branch or a remote-tracking ref pointing off the history is still
+        // a red, which is the partial-rewrite defect it was written for.
+        var refs = Git(new[] { "for-each-ref", "--format=%(refname)" }).Out
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(l => l.Trim())
+            .Where(l => l.Length > 0)
+            .ToArray();
+        Assert.True(refs.Length > 0,
+            "git for-each-ref listed no refs at all, so the 'held alive by another ref' set "
+            + "would be empty for a reason that has nothing to do with the citations.");
+        var heldArguments = new List<string> { "rev-list" };
+        heldArguments.AddRange(refs);
+        heldArguments.Add("--not");
+        heldArguments.Add(tip);
+        var heldElsewhere = Git(heldArguments.ToArray()).Out
             .Split('\n', StringSplitOptions.RemoveEmptyEntries)
             .Select(l => l.Trim())
             .ToHashSet(StringComparer.Ordinal);
@@ -342,6 +380,14 @@ public class HistoryCitationTests
     /// about one disk. It is not ignored — it stops counting as a live citation and falls into
     /// <see cref="DeadCitationsDoNotGrow"/>, which is what it honestly is: a citation whose
     /// commit is not in the history, that happens to still get an answer here.
+    /// </para>
+    /// <para>
+    /// ⚠️ A DETACHED WORKTREE HEAD IS ON THE DISK SIDE OF THAT LINE, and for two sessions the
+    /// survey put it on the other one — <c>git rev-list --all</c> counts every worktree's HEAD
+    /// as if it were a ref. Session 312 came up red with fifty of them and the report could not
+    /// name a single holder, which is what a checker looks like when its two queries disagree;
+    /// see <c>Take</c> for the measurement and the repair. Prune the worktrees or do not, the
+    /// citations are the same either way.
     /// </para>
     /// </remarks>
     [Fact]
