@@ -43,40 +43,34 @@ public static class ChordHeadPositioning
     /// <param name="stemUp">Stem direction (drives the shift side).</param>
     /// <param name="noteValue">1=whole, 2=half, 4=quarter, … (head glyph and
     /// the stemless-semibreve rule).</param>
-    /// <param name="headScale">Head glyph scale (cue chords: 0.66) — the
-    /// reversal shift follows the scaled head extent.</param>
-    public static double[] CalculateOffsets(
-        IReadOnlyList<ChordNoteInfo> notes, bool stemUp, int noteValue,
-        double headScale = 1.0)
-        // LILYPOND-REF: stem.cc:684 — ell = head right ink extent.
-        => OffsetsForEll(notes, stemUp, noteValue,
-            GlyphMetrics.GetNoteheadBBox(noteValue).Right * headScale);
-
-    /// <summary>
-    /// The same rule with the heads' OWN FONT rather than a scale: Emmentaler is optically
-    /// sized, so a small head is a DIFFERENT design's outline and not the 20's multiplied
-    /// down, and the two answers are not the same number.
-    /// </summary>
+    /// <param name="headFont">The font the HEADS read — the design their <c>font-size</c>
+    /// selects, already magnified (<see cref="GlyphMetrics.AtFontSize"/>). Null is the plain
+    /// 20, which is what a head with no font-size reads.</param>
     /// <remarks>
-    /// ⚠️ THE DIFFERENCE IS VISIBLE, AND IT IS MEASURED RATHER THAN ARGUED. A grace second's
-    /// shift is <c>1.298161 × magstep(−3) − 0.065 = 0.852938</c> off the 14 design and
-    /// <c>1.304200 × magstep(−3) − 0.065 = 0.857209</c> off the 20 design scaled; LilyPond
-    /// 2.27.3 prints the FIRST (scratch/p308/lp book y1_gsecond,
-    /// <c>\grace { &lt;c' d'&gt;16 }</c>: heads at 16.1208 and 16.9738). The same books pin
-    /// the full-size rule to the digit — <c>&lt;c' d'&gt;4</c> shifts 1.2392 = 1.304200 −
-    /// 0.065 — so the two readings differ only in which design's box they open.
-    /// <para>
-    /// ⚠️ THE CUE CALLER STILL PASSES A SCALE (<c>SharedRenderer.Noteheads</c> hands
-    /// <c>EngravingDefaults.CueScale</c>), so a cue chord's second carries that same 0.0043.
-    /// That is a live divergence rather than a decision; closing it moves cue snapshots and
-    /// wants its own measurement. See docs/HANDOFF.md §2 U8c, which is where it is filed.
-    /// </para>
+    /// ⚠️ A FONT, NOT A SCALE, and the difference is MEASURED rather than argued. Emmentaler is
+    /// optically sized, so a reduced head is a DIFFERENT design's outline and not the 20's
+    /// multiplied down, and the reversal shift follows whichever box is opened. Canonical
+    /// LilyPond 2.26.0, three regimes in one dump (scratch/p316/sec-dump.ly, each number the
+    /// second head's left minus the first's):
+    /// <list type="bullet">
+    /// <item><c>&lt;c' d'&gt;4</c> — 1.239200 = 1.304200 − 0.065, the twenty's box.</item>
+    /// <item><c>\grace { &lt;c' d'&gt;16 }</c> — 0.852939 = 1.298161·magstep(−3) − 0.065, the
+    /// FOURTEEN's. Reading the twenty scaled would say 0.857209, off by 0.004270.</item>
+    /// <item><c>\new CueVoice { &lt;c' d'&gt;4 }</c> — 0.750349 = 1.294282·magstep(−4) − 0.065,
+    /// the THIRTEEN's. The twenty scaled would say 0.756597, off by 0.006248.</item>
+    /// </list>
+    /// Both reduced answers were Lily#'s wrong ones until session 316; the control with no
+    /// second (<c>\grace { &lt;c' e'&gt;16 }</c>, both heads at 16.120827) is zero either way,
+    /// which is why no book without a second could have caught it.
     /// </remarks>
+    // Internal because a FONT is: GlyphMetrics.DesignMetrics is the internal table, the same
+    // reason AccidentalPlacement.CalculatePositions takes one internally.
     internal static double[] CalculateOffsets(
         IReadOnlyList<ChordNoteInfo> notes, bool stemUp, int noteValue,
-        GlyphMetrics.DesignMetrics headFont)
+        GlyphMetrics.DesignMetrics? headFont = null)
+        // LILYPOND-REF: stem.cc:684 — ell = head right ink extent.
         => OffsetsForEll(notes, stemUp, noteValue,
-            GlyphMetrics.GetNoteheadBBox(headFont, noteValue).Right);
+            GlyphMetrics.GetNoteheadBBox(headFont ?? GlyphMetrics.Design20, noteValue).Right);
 
     /// <summary>The rule itself, over the head right extent its caller resolved.</summary>
     private static double[] OffsetsForEll(

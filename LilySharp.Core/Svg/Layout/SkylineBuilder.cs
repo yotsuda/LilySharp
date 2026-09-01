@@ -1896,8 +1896,10 @@ internal sealed class SkylineBuilder
                 // here either (NoteItem case's remark).
                 if (chord.Dots > 0 && chord.Notes.Length > 0)
                 {
+                    // The staff's own font, like every other box this profile reads — a
+                    // reduced column's skyline is a separate island (docs/HANDOFF.md §2 U8c).
                     var chordHeadOffsets = ChordHeadPositioning.CalculateOffsets(
-                        chord.Notes, chordStemUp, chordNoteValue, 1.0);
+                        chord.Notes, chordStemUp, chordNoteValue);
                     double chordDotX = x + size.Ink(GlyphMetrics.GetNoteheadBBox(chordNoteValue)).Right
                         + size.Span(Math.Max(0, chordHeadOffsets.Max()))
                         + size.Span(GlyphMetrics.AugmentationDot.Width);
@@ -2048,7 +2050,7 @@ internal sealed class SkylineBuilder
 
         foreach (var al in AccidentalStagger.CalculatePositions(
             chord.Notes,
-            ChordHeadPositioning.CalculateOffsets(chord.Notes, stemUp, noteValue, 1.0)))
+            ChordHeadPositioning.CalculateOffsets(chord.Notes, stemUp, noteValue)))
             yield return (al.Accidental, al.StaffPosition, al.XOffset);
     }
 

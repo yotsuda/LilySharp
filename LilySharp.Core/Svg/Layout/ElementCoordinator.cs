@@ -1661,7 +1661,7 @@ internal sealed class ElementCoordinator
     /// <paramref name="staffPosition"/> inside the item at <paramref name="itemIndex"/>,
     /// or 0 when the item is a single note or the chord has no second/unison that
     /// reverses a head to the far side of the stem. This mirrors the per-head offset
-    /// the renderer applies (<see cref="ChordHeadPositioning.CalculateOffsets(System.Collections.Generic.IReadOnlyList{LilySharp.Core.Svg.Model.ChordNoteInfo},bool,int,double)"/>) so a
+    /// the renderer applies (<see cref="ChordHeadPositioning.CalculateOffsets(System.Collections.Generic.IReadOnlyList{LilySharp.Core.Svg.Model.ChordNoteInfo},bool,int,GlyphMetrics.DesignMetrics?)"/>) so a
     /// tie or slur attaches to the DISPLACED head's edge, not the undisplaced chord
     /// column. Without it, a tie/slur on the reversed head of a seconds chord starts
     /// inside its own head and fails to reach the matching head at the other end.
@@ -1679,9 +1679,10 @@ internal sealed class ElementCoordinator
         if (measure.Items[itemIndex] is not ChordItem chord)
             return 0;
         int noteValue = GlyphMetrics.NoteValueOf(chord.BaseDuration);
-        double scale = chord.IsCue ? EngravingDefaults.CueScale : 1.0;
+        // The head's own FONT, not the twenty's box times a scale — see ChordHeadPositioning.
         var offsets = ChordHeadPositioning.CalculateOffsets(
-            chord.Notes, chord.StemUp, noteValue, scale);
+            chord.Notes, chord.StemUp, noteValue,
+            chord.IsCue ? EngravingDefaults.CueFont : null);
         for (int i = 0; i < chord.Notes.Length; i++)
             if (chord.Notes[i].StaffPosition == staffPosition)
                 return offsets[i];
@@ -1729,9 +1730,13 @@ internal sealed class ElementCoordinator
         var offsets = new List<double>();
         if (item is ChordItem chord)
         {
-            double scale = chord.IsCue ? EngravingDefaults.CueScale : 1.0;
+            // ⚠️ The OFFSETS come out of the cue's own font while headBBox above is still the
+            // twenty's — a tie column of a cue chord reads two sizes. Only the offsets were in
+            // this session's island; the boxes beside them are the wider cue-outline ticket
+            // (docs/HANDOFF.md §2 U8c).
             var chordOffsets = ChordHeadPositioning.CalculateOffsets(
-                chord.Notes, chord.StemUp, noteValue, scale);
+                chord.Notes, chord.StemUp, noteValue,
+                chord.IsCue ? EngravingDefaults.CueFont : null);
             for (int i = 0; i < chord.Notes.Length; i++)
             {
                 positions.Add(chord.Notes[i].StaffPosition);
@@ -2966,8 +2971,9 @@ internal sealed class ElementCoordinator
                     case ChordItem { Dots: > 0 } chord when chord.Notes.Length > 0:
                     {
                         int value = GlyphMetrics.NoteValueOf(chord.BaseDuration);
+                        // The staff's own font, matching the box on the line below.
                         var headOffsets = ChordHeadPositioning.CalculateOffsets(
-                            chord.Notes, chord.StemUp, value, 1.0);
+                            chord.Notes, chord.StemUp, value);
                         double dotX = x + GlyphMetrics.GetNoteheadBBox(value).Right
                             + Math.Max(0, headOffsets.Max())
                             + GlyphMetrics.AugmentationDot.Width;

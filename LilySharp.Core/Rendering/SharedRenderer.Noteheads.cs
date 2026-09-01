@@ -448,8 +448,9 @@ internal static partial class SharedRenderer
                 // This is the DRAW half of the pair SkylineBuilder seeds; the two must stay
                 // one spelling.
                 // (Every notehead's ink Left is 0.000000, so HeadLeft = x still holds.)
-                double headWidth = GlyphMetrics.GetNoteheadBBox(noteValue).Width
-                                   * GrobFontSize.ScaleOf(note, SizedGrob.NoteHead);
+                // Asked of the HEAD'S OWN font, not the twenty's box scaled — see DrawNote.
+                double headWidth =
+                    GlyphMetrics.GetNoteheadBBox(HeadFontOf(note), noteValue).Width;
                 CollectLedgerRequest(ledgerPlan, note.StaffPosition, x, headWidth,
                     staffMiddleY, note.Accidental != null);
                 break;
@@ -457,13 +458,13 @@ internal static partial class SharedRenderer
             case ChordItem chord when chord.Notes.Length > 0:
             {
                 int noteValue = GlyphMetrics.NoteValueOf(chord.BaseDuration);
-                double chordScale = GrobFontSize.ScaleOf(chord, SizedGrob.NoteHead);
+                var chordHeadFont = HeadFontOf(chord);
                 // The ink width — see the note branch above.
-                double headWidth = GlyphMetrics.GetNoteheadBBox(noteValue).Width * chordScale;
+                double headWidth = GlyphMetrics.GetNoteheadBBox(chordHeadFont, noteValue).Width;
                 // Seconds shift reversed heads sideways — the ledger run
                 // follows the extreme head's real X.
                 double[] offsets = ChordHeadPositioning.CalculateOffsets(
-                    chord.Notes, chord.StemUp, noteValue, chordScale);
+                    chord.Notes, chord.StemUp, noteValue, chordHeadFont);
                 int maxIdx = -1, minIdx = -1;
                 for (int i = 0; i < chord.Notes.Length; i++)
                 {
@@ -549,6 +550,27 @@ internal static partial class SharedRenderer
            };
 
     /// <summary>
+    /// The font this item's NOTEHEAD reads every one of its dimensions from — its ink box, the
+    /// ledger run it seeds, the reversal shift of a second, its click target.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A BOX IS ASKED OF A FONT, NEVER OF THE TWENTY TIMES A SCALE. Emmentaler is optically
+    /// sized, so the design a reduced head's <c>font-size</c> selects has its OWN outline: the
+    /// thirteen's black head inks 1.294282 and the fourteen's 1.298161 where the twenty's inks
+    /// 1.304200, and they are TALLER, not merely narrower (1.124440 / 1.114568 against
+    /// 1.090000). Session 314 moved the stem attachment and the flag and dot widths here;
+    /// these were the rest of the same table (docs/HANDOFF.md §2 U8c).
+    /// <para>
+    /// A full-size item reads <see cref="GlyphMetrics.Design20"/> itself rather than the
+    /// font-size machinery, so nothing at the staff's own size can move.
+    /// </para>
+    /// </remarks>
+    private static GlyphMetrics.DesignMetrics HeadFontOf(MusicItem item)
+        => GrobFontSize.IsReduced(item)
+            ? GrobFontSize.FontOf(item, SizedGrob.NoteHead)
+            : GlyphMetrics.Design20;
+
+    /// <summary>
     /// Draws one note at <paramref name="x"/>, which already carries
     /// <paramref name="voiceX"/> — the multi-voice collision shift. Everything the note
     /// column owns rides that shift; its ACCIDENTAL does not, and subtracts it back off to
@@ -565,9 +587,11 @@ internal static partial class SharedRenderer
         // note" number — a cue states one context-wide font-size and a grace states a
         // per-grob table whose Accidental is a step below its NoteHead (GrobFontSize).
         // A cue grob's glyphs are the THIRTEEN design's own outline read at magstep(−4).
-        double headScale = GrobFontSize.ScaleOf(note, SizedGrob.NoteHead);
-        double noteFontSize = FontSize * headScale;
+        double noteFontSize = FontSize * GrobFontSize.ScaleOf(note, SizedGrob.NoteHead);
         double flagFontSize = FontSize * GrobFontSize.ScaleOf(note, SizedGrob.Flag);
+        // Every BOX below comes out of this font; only the drawn glyph's POINT SIZE above is
+        // a scale. See HeadFontOf.
+        var headFont = HeadFontOf(note);
 
         // Voice stem direction override (voice 1 up / voice 2 down); falls back
         // to the note's own position-based default in single-voice staves. A
@@ -634,13 +658,13 @@ internal static partial class SharedRenderer
                 else
                 {
                     // Interactive preview gets a tight click target the size of the
-                    // head ink (× the cue scale), centred on noteY — see DrawNotehead.
-                    // Both axes from the ink box, as the remark above says: the width
-                    // read the ADVANCE until 2026-08-05 (session 95) while the height
-                    // beside it read the ink.
+                    // head ink, centred on noteY — see DrawNotehead. Both axes from the
+                    // ink box, as the remark above says: the width read the ADVANCE until
+                    // 2026-08-05 (session 95) while the height beside it read the ink.
+                    // The box is THIS head's font's, so it is the box the glyph fills.
                     gc.DrawNotehead(head, x, noteY, noteFontSize, noteheadColor,
-                        GlyphMetrics.GetNoteheadBBox(noteValue).Width * headScale,
-                        GlyphMetrics.GetNoteheadBBox(noteValue).Height * headScale);
+                        GlyphMetrics.GetNoteheadBBox(headFont, noteValue).Width,
+                        GlyphMetrics.GetNoteheadBBox(headFont, noteValue).Height);
                 }
             }
 
@@ -796,7 +820,7 @@ internal static partial class SharedRenderer
             // LILYPOND-REF: scm/define-grobs.scm StemTremolo
             //   (parent-alignment-X . CENTER) — centred on the head column.
             double headCenterX = x
-                + GlyphMetrics.GetNoteheadBBox(noteValue).Width / 2 * headScale;
+                + GlyphMetrics.GetNoteheadBBox(headFont, noteValue).Width / 2;
             DrawStemlessTremolo(headCenterX, noteY, stemUp, note.TremoloBeams, gc);
         }
 
@@ -903,15 +927,19 @@ internal static partial class SharedRenderer
         // EVERY SIZE IS ASKED OF THE GROB — see DrawNote. A cue chord takes the same
         // context-wide font-size −4 its heads do; a grace chord's accidental is a step below
         // its head, which is why the two scales are separate locals here.
-        double headScale = GrobFontSize.ScaleOf(chord, SizedGrob.NoteHead);
         double accScale = GrobFontSize.ScaleOf(chord, SizedGrob.Accidental);
-        double noteFontSize = FontSize * headScale;
+        double noteFontSize = FontSize * GrobFontSize.ScaleOf(chord, SizedGrob.NoteHead);
         double flagFontSize = FontSize * GrobFontSize.ScaleOf(chord, SizedGrob.Flag);
+        // Every BOX below comes out of this font; only the point size above is a scale.
+        var chordHeadFont = HeadFontOf(chord);
 
         // Within-chord seconds/unisons: reversed heads shift to the far side
-        // of the stem. LILYPOND-REF: lily/stem.cc:606-760 calc_positioning_done.
+        // of the stem, by the reduced head's OWN ink right — a grace second moves 0.852939
+        // and a cue second 0.750349, neither of which is the twenty's 1.239200 scaled
+        // (ChordHeadPositioning, measured against 2.26.0).
+        // LILYPOND-REF: lily/stem.cc:606-760 calc_positioning_done.
         double[] headOffsets = ChordHeadPositioning.CalculateOffsets(
-            chord.Notes, stemUp, noteValue, headScale);
+            chord.Notes, stemUp, noteValue, chordHeadFont);
 
         // Accidentals through the full placement machinery (stagger/skylines),
         // aware of the shifted head ink — drawing each one at the same fixed
@@ -923,8 +951,6 @@ internal static partial class SharedRenderer
         // that font-size selects, the same one the single-note path takes.
         var chordAccFont = GrobFontSize.IsReduced(chord)
             ? GrobFontSize.FontOf(chord, SizedGrob.Accidental) : null;
-        var chordHeadFont = GrobFontSize.IsReduced(chord)
-            ? GrobFontSize.FontOf(chord, SizedGrob.NoteHead) : null;
         // A chord sharing its column with another voice was packed against that voice's
         // accidentals too, and in the STAFF COLUMN's frame — so those X's undo the collision
         // shift, exactly as the single-note branch does.
@@ -969,11 +995,16 @@ internal static partial class SharedRenderer
             // preview highlights/selects one chord note at a time and jumps the
             // caret to that pitch, not the chord's '<' (falls back to the chord
             // when a member has no recorded position).
+            // ⚠️ THE WIDTH IS THE ADVANCE HERE AND THE INK IN DrawNote, and that is older than
+            // this line: session 95 moved the single note's click target off the advance and
+            // onto the ink box and did not move the chord's. It is 0.024 on a black head, it
+            // is the full-size answer too, and it wants its own point — the FONT is what
+            // changed here, not which box.
             if (!headWiped && !headTransparent)
                 using (gc.Source(n.SourcePosition >= 0 ? n.SourcePosition : chord.SourcePosition))
                     gc.DrawNotehead(memberHead, x + headOffsets[i], y, noteFontSize, noteheadColor,
-                        GlyphMetrics.GetNoteheadAdvance(noteValue) * headScale,
-                        GlyphMetrics.GetNoteheadBBox(noteValue).Height * headScale);
+                        GlyphMetrics.GetNoteheadAdvance(chordHeadFont, noteValue),
+                        GlyphMetrics.GetNoteheadBBox(chordHeadFont, noteValue).Height);
             if (y > topY) topY = y;
             if (y < bottomY) bottomY = y;
             if (n.StaffPosition > maxPos) maxPos = n.StaffPosition;
@@ -1160,7 +1191,8 @@ internal static partial class SharedRenderer
             // single-note recipe (DrawNote).
             // LILYPOND-REF: lily/stem-tremolo.cc:349-366 y_offset — end_y =
             //   note_head + dir * 1.5 when duration_log <= 0 (invisible stem).
-            double headCenterX = x + GlyphMetrics.GetNoteheadBBox(noteValue).Width / 2 * headScale;
+            double headCenterX =
+                x + GlyphMetrics.GetNoteheadBBox(chordHeadFont, noteValue).Width / 2;
             DrawStemlessTremolo(headCenterX, stemUp ? topY : bottomY, stemUp,
                 chord.TremoloBeams, gc);
         }

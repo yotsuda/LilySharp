@@ -96,9 +96,13 @@ internal static class StaffAccidentalColumns
             if (column.Entries.Select(IsCue).Distinct().Count() != 1)
                 continue;
 
+            // ONE FONT ANSWERS BOTH HALVES. The stacking below read CueFont — the design
+            // font-size −4 selects — while the within-chord reversal beside it read the
+            // twenty's box times CueScale, so the same column packed its accidentals against
+            // heads it had placed 0.006248 away from where it drew them
+            // (ChordHeadPositioning, measured against 2.26.0).
             bool isCue = IsCue(column.Entries[0]);
-            var font = isCue ? EngravingDefaults.CueFont : null;
-            double headScale = isCue ? EngravingDefaults.CueScale : 1.0;
+            var font = isCue ? EngravingDefaults.CueFont : (GlyphMetrics.DesignMetrics?)null;
 
             var offsets = collision.CalculateVoiceOffsets(column);
 
@@ -133,7 +137,7 @@ internal static class StaffAccidentalColumns
                         int noteValue = LayoutUtilities.GetNoteValueFromFraction(chord.BaseDuration);
                         bool stemUp = entry.ForcedStemUp ?? chord.StemUp;
                         var within = ChordHeadPositioning.CalculateOffsets(
-                            chord.Notes, stemUp, noteValue, headScale);
+                            chord.Notes, stemUp, noteValue, font);
                         for (int i = 0; i < chord.Notes.Length; i++)
                         {
                             notes.Add(chord.Notes[i]);

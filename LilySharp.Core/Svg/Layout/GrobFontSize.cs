@@ -216,9 +216,16 @@ internal static class GrobFontSize
     /// <remarks>
     /// ⚠️ THIS IS ONLY HALF OF WHAT A FONT-SIZE DECIDES. Emmentaler is optically sized, so
     /// LilyPond picks the FILE before it scales anything; a metric wanted at this size comes
-    /// from <see cref="FontOf"/> and not from multiplying a full-size one by this. The factor
-    /// is what remains for the things that are genuinely a scaling — the drawn glyph's point
-    /// size, and a click target's box.
+    /// from <see cref="FontOf"/> and not from multiplying a full-size one by this. What
+    /// remains for the factor is the one thing that is genuinely a scaling — the drawn glyph's
+    /// POINT SIZE.
+    /// <para>
+    /// ⚠️ A CLICK TARGET'S BOX IS NOT ONE OF THEM, and this remark said it was until session
+    /// 316. A click target has to be the box the glyph FILLS, and the glyph is drawn out of
+    /// <see cref="DesignOf"/>'s outline — so its box is <see cref="FontOf"/>'s, which for a cue
+    /// head is 0.006248 wider and 0.021696 taller than the twenty's scaled. The rule is the one
+    /// <see cref="DesignOf"/> already states: the two must come from the same step.
+    /// </para>
     /// </remarks>
     internal static double ScaleOf(MusicItem item, SizedGrob grob)
     {

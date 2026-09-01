@@ -1148,4 +1148,78 @@ public class NoteCollisionTests
         Assert.True(offsets[1] > 0);
         Assert.Equal(0, offsets[2]);
     }
+
+    // --- The shift is read off a FONT, not off the twenty's box times a scale ---
+    //
+    // ⚠️ THESE THREE NUMBERS ARE THE OBSERVER FOR A DIFFERENCE NO PAGE CAN SHOW. Lily#'s SVG
+    // carries two decimals and the reduced answers are wrong in the third, so no snapshot and
+    // no sweep can see this; the corpus was blind to it from the day session 313 handed grace
+    // chords to the ordinary renderer until session 316 measured it.
+    //
+    // MEASURED on canonical LilyPond 2.26.0 (scratch/p316/sec-dump.ly — a grob dump of every
+    // NoteHead's X extent; each number is the second head's left minus the first's):
+    //   <c' d'>4                      1.239200  = 1.304200 (Design20) - 0.065
+    //   \grace { <c' d'>16 }          0.852939  = 1.298161 (Design14) * magstep(-3) - 0.065
+    //   \new CueVoice { <c' d'>4 }    0.750349  = 1.294282 (Design13) * magstep(-4) - 0.065
+    // Reading the TWENTY scaled would answer 0.857209 and 0.756597 — the errors this closed,
+    // 0.004270 and 0.006248. Emmentaler is optically sized, so the reduced designs are not the
+    // twenty shrunk (docs/HANDOFF.md §2 U8c).
+
+    /// <summary>LilyPond 2.26.0's own shift for the full-size second, to four digits.</summary>
+    private const double LpFullSizeSecond = 1.239200;
+
+    /// <summary>LilyPond 2.26.0's own shift for a GRACE second (font-size −3).</summary>
+    private const double LpGraceSecond = 0.852939;
+
+    /// <summary>LilyPond 2.26.0's own shift for a CUE second (font-size −4).</summary>
+    private const double LpCueSecond = 0.750349;
+
+    [Fact]
+    public void ChordHeadPositioning_FullSizeSecond_IsLilyPonds()
+    {
+        var offsets = ChordHeadPositioning.CalculateOffsets(Infos(0, 1), stemUp: true, noteValue: 4);
+        Assert.Equal(LpFullSizeSecond, offsets[1], precision: 4);
+    }
+
+    [Fact]
+    public void ChordHeadPositioning_GraceSecond_ReadsTheFourteenDesign_NotTheTwentyScaled()
+    {
+        var offsets = ChordHeadPositioning.CalculateOffsets(
+            Infos(0, 1), stemUp: true, noteValue: 4,
+            GlyphMetrics.AtFontSize(GraceNoteItem.FontSizeStep));
+        Assert.Equal(LpGraceSecond, offsets[1], precision: 4);
+        // The control that says the difference is real rather than rounding: the same rule
+        // over the TWENTY's box, scaled, is 0.004270 away and would fail the line above.
+        double twentyScaled = GlyphMetrics.NoteheadBlack.Right
+                * EmmentalerDesignSize.Magstep(GraceNoteItem.FontSizeStep)
+            - 0.5 * EngravingDefaults.StemThickness;
+        Assert.Equal(0.004270, twentyScaled - offsets[1], precision: 6);
+    }
+
+    [Fact]
+    public void ChordHeadPositioning_CueSecond_ReadsTheThirteenDesign_NotTheTwentyScaled()
+    {
+        var offsets = ChordHeadPositioning.CalculateOffsets(
+            Infos(0, 1), stemUp: true, noteValue: 4, EngravingDefaults.CueFont);
+        Assert.Equal(LpCueSecond, offsets[1], precision: 4);
+        double twentyScaled = GlyphMetrics.NoteheadBlack.Right * EngravingDefaults.CueScale
+            - 0.5 * EngravingDefaults.StemThickness;
+        Assert.Equal(0.006248, twentyScaled - offsets[1], precision: 6);
+    }
+
+    [Fact]
+    public void ChordHeadPositioning_NoSecond_IsZeroWhicheverFontIsAsked()
+    {
+        // \grace { <c' e'>16 } — LilyPond puts both heads at 16.120827 (the same dump). A book
+        // without a second cannot tell the two readings apart, which is why one was needed.
+        foreach (var font in new[]
+                 {
+                     null,
+                     GlyphMetrics.AtFontSize(GraceNoteItem.FontSizeStep),
+                     EngravingDefaults.CueFont,
+                 })
+            Assert.All(
+                ChordHeadPositioning.CalculateOffsets(Infos(0, 2), stemUp: true, noteValue: 4, font),
+                o => Assert.Equal(0, o));
+    }
 }

@@ -250,21 +250,23 @@ internal static class GlissandoEngraver
     {
         switch (item)
         {
+            // The head's ink is asked of the head's own FONT, not of the twenty's box times a
+            // scale — the same design LeftmostAccidentalInkX below hands the accidentals.
             case NoteItem n:
             {
-                double scale = n.IsCue ? EngravingDefaults.CueScale : 1.0;
+                var font = n.IsCue ? EngravingDefaults.CueFont : GlyphMetrics.Design20;
                 int noteValue = GlyphMetrics.NoteValueOf(n.BaseDuration);
-                return right ? GlyphMetrics.GetNoteheadBBox(noteValue).Right * scale : 0;
+                return right ? GlyphMetrics.GetNoteheadBBox(font, noteValue).Right : 0;
             }
             case ChordItem c when c.Notes.Length > 0:
             {
-                double scale = c.IsCue ? EngravingDefaults.CueScale : 1.0;
+                var font = c.IsCue ? EngravingDefaults.CueFont : GlyphMetrics.Design20;
                 int noteValue = GlyphMetrics.NoteValueOf(c.BaseDuration);
                 int i = memberIndex >= 0 && memberIndex < c.Notes.Length ? memberIndex : 0;
                 double[] offsets = ChordHeadPositioning.CalculateOffsets(
-                    c.Notes, c.StemUp, noteValue, scale);
+                    c.Notes, c.StemUp, noteValue, font);
                 return offsets[i]
-                    + (right ? GlyphMetrics.GetNoteheadBBox(noteValue).Right * scale : 0);
+                    + (right ? GlyphMetrics.GetNoteheadBBox(font, noteValue).Right : 0);
             }
             default:
                 return 0;
@@ -308,11 +310,12 @@ internal static class GlissandoEngraver
                             best = ax;
                     return best;
                 }
-                double scale = c.IsCue ? EngravingDefaults.CueScale : 1.0;
-                int noteValue = GlyphMetrics.NoteValueOf(c.BaseDuration);
-                double[] offsets = ChordHeadPositioning.CalculateOffsets(
-                    c.Notes, c.StemUp, noteValue, scale);
                 var cueFont = c.IsCue ? EngravingDefaults.CueFont : null;
+                int noteValue = GlyphMetrics.NoteValueOf(c.BaseDuration);
+                // ONE FONT for the heads the stacking clears and for the reversal that moves
+                // them — see ChordHeadPositioning.
+                double[] offsets = ChordHeadPositioning.CalculateOffsets(
+                    c.Notes, c.StemUp, noteValue, cueFont);
                 foreach (var al in AccidentalColumn.CalculatePositions(
                     c.Notes, offsets, cueFont, cueFont))
                     if (best is not { } b || al.XOffset < b)
