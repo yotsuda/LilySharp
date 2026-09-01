@@ -42,8 +42,27 @@ internal sealed class EmmentalerFontResolver : IFontResolver
     // one document can carry several. When Bytes is null the face is NOT embedded — it
     // resolves to the bundled face of its family instead, so a non-`embedded` document
     // never silently embeds a system font.
-    private readonly Dictionary<string, ConfiguredTextFace> _textFaces =
-        new(StringComparer.OrdinalIgnoreCase);
+    // ⚠️ AN IMMUTABLE SNAPSHOT, SWAPPED WHOLE, for the reason its neighbour _fallbackFaces
+    // states two fields down: THIS RESOLVER IS A PROCESS GLOBAL (PdfSharpCore's
+    // GlobalFontSettings.FontResolver — see PdfDocumentContext.EnsureFontResolver), so every
+    // document alive in the process shares this one instance. SetTextFonts used to Clear()
+    // and refill a plain Dictionary in place, which two documents built at once corrupt:
+    //   System.InvalidOperationException : Operations that change non-concurrent collections
+    //   must have exclusive access.
+    // MEASURED 2026-09-01 (session 317): the parallelised suite threw exactly that out of
+    // Dictionary.TryInsert under SetTextFonts, red in
+    // BackendKerningTests.PdfPlacesTextWhereTheLayoutReservedItForANamedFace and green on the
+    // next run — an intermittent that is NOT the shaping crash fixed in the same session.
+    // Building a fresh map and publishing it with one reference write also closes the window
+    // where a reader saw the map CLEARED but not yet refilled, which no lock around the
+    // writer alone would have.
+    // ⚠️ WHAT THIS DOES NOT FIX, deliberately: two documents with DIFFERENT `fonts { }` still
+    // overwrite each other's faces, because the resolver they share has room for one answer.
+    // That is the pre-existing limitation PdfDocumentContext.EnsureFontResolver already
+    // records; it goes away only by keying the faces per document, which PdfSharpCore's
+    // one-resolver-per-process API does not invite. HANDOFF §2 carries it.
+    private volatile IReadOnlyDictionary<string, ConfiguredTextFace> _textFaces =
+        new Dictionary<string, ConfiguredTextFace>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>A face a <c>font</c> directive named: its program when embedding, and the
     /// bundled family it stands in for when not.</summary>
@@ -126,7 +145,8 @@ internal sealed class EmmentalerFontResolver : IFontResolver
     /// </remarks>
     public void SetTextFonts(TextFontPlan plan)
     {
-        _textFaces.Clear();
+        // Built aside, then published with one reference write — see the field's remark.
+        var faces = new Dictionary<string, ConfiguredTextFace>(StringComparer.OrdinalIgnoreCase);
         foreach (var role in TextRoles.All)
         {
             var face = plan.Resolve(role);
@@ -135,7 +155,7 @@ internal sealed class EmmentalerFontResolver : IFontResolver
             bool sans = face.Family == TextFontFamily.Sans;
             foreach (var name in face.Names)
             {
-                if (_textFaces.ContainsKey(name))
+                if (faces.ContainsKey(name))
                     continue;   // first role bound to this name decides the stand-in
                 byte[]? bytes = null;
                 if (plan.Embed)
@@ -145,9 +165,10 @@ internal sealed class EmmentalerFontResolver : IFontResolver
                                     or FontEmbedInfo.FontEmbedClass.NotFound))
                         bytes = FontEmbedInfo.TryGetFontBytes(name);
                 }
-                _textFaces[name] = new ConfiguredTextFace(bytes, sans);
+                faces[name] = new ConfiguredTextFace(bytes, sans);
             }
         }
+        _textFaces = faces;
     }
 
     /// <summary>

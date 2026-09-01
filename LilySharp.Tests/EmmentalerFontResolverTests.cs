@@ -119,4 +119,84 @@ public class EmmentalerFontResolverTests
         Assert.Equal("Schola#", r.ResolveTypeface(BogusFont, false, false)?.FaceName);
         Assert.Equal("Heros#", r.ResolveTypeface(Other, false, false)?.FaceName);
     }
+
+    /// <summary>
+    /// Two documents configuring this resolver at once must not corrupt its face map.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE RESOLVER IS A PROCESS GLOBAL — PdfSharpCore's
+    /// <c>GlobalFontSettings.FontResolver</c>, installed once by
+    /// <c>PdfDocumentContext.EnsureFontResolver</c> — and EVERY <c>PdfDocumentContext</c>
+    /// constructor calls <see cref="EmmentalerFontResolver.SetTextFonts"/> on it. So this is
+    /// not a hypothetical: it is what two threads rendering PDFs do.
+    /// <para>
+    /// FOUND 2026-09-01 (session 317) as an intermittent red in
+    /// <c>BackendKerningTests.PdfPlacesTextWhereTheLayoutReservedItForANamedFace</c>:
+    /// <c>System.InvalidOperationException : Operations that change non-concurrent
+    /// collections must have exclusive access</c>, thrown from <c>Dictionary.TryInsert</c>
+    /// under <c>SetTextFonts</c>, which used to <c>Clear()</c> and refill a plain
+    /// <c>Dictionary</c> in place. Green on the next run — a DIFFERENT intermittent from the
+    /// HarfBuzz shaping crash closed in the same session, and both were read as one flake of
+    /// session 315's parallelisation.
+    /// </para>
+    /// <para>
+    /// ⚠️ A STRESS NET, NOT A PROOF: it cannot show the absence of a race, only catch a
+    /// mutable map back in that field, which it does essentially always — the poison
+    /// (restoring the in-place Clear-and-refill) throws within the first few iterations.
+    /// What it does prove for the repair is the reachable half: no reader ever sees a
+    /// half-built map, because the map a reader can reach is never written to.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task ConfiguringFromTwoDocumentsAtOnce_NeitherCorruptsNorTearsTheFaceMap()
+    {
+        const string Other = "NoSuchFontFace-Second";
+        var r = new EmmentalerFontResolver();
+
+        // Neither plan asks to embed, so no plan touches the machine's fonts: the case is
+        // about the map, and stays the same on every platform.
+        var plans = new[]
+        {
+            new TextFontPlan.Builder().Role(TextRole.LyricText, [BogusFont]).Build(),
+            new TextFontPlan.Builder().Role(TextRole.LyricText, [Other]).Build(),
+            new TextFontPlan.Builder()
+                .Role(TextRole.LyricText, [BogusFont]).Role(TextRole.ChordName, [Other]).Build(),
+        };
+
+        var failures = new System.Collections.Concurrent.ConcurrentBag<Exception>();
+        var workers = new List<Task>();
+        for (int t = 0; t < 8; t++)
+        {
+            int seed = t;
+            workers.Add(Task.Run(() =>
+            {
+                try
+                {
+                    for (int i = 0; i < 500; i++)
+                    {
+                        if ((seed + i) % 2 == 0)
+                            r.SetTextFonts(plans[(seed + i) % plans.Length]);
+                        else
+                        {
+                            // A reader must always get one of the bundled stand-ins or the
+                            // generic answer — never a torn read, and never an exception.
+                            var name = r.ResolveTypeface(BogusFont, false, false)?.FaceName;
+                            Assert.True(name is null or "Schola#" or "Heros#",
+                                $"torn read: {name}");
+                            r.EmbedsOwnProgram(Other);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    failures.Add(ex);
+                }
+            }));
+        }
+        await Task.WhenAll(workers);
+
+        Assert.True(failures.IsEmpty,
+            "SetTextFonts must publish a finished map rather than mutate the shared one: "
+            + string.Join("\n", failures.Select(e => e.ToString())));
+    }
 }

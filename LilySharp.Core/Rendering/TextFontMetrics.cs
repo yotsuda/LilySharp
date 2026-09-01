@@ -343,21 +343,36 @@ public static class TextFontMetrics
     // paths already use (FontLocator), and shared: building a Face parses the tables.
     // ⚠️ hb_font_t is not thread-safe for shaping, hence the lock above; the engine measures
     // from parallel layout passes.
+    // ⚠️⚠️ A Lazy, NOT A BARE GetOrAdd FACTORY, and the difference is native ownership rather
+    // than speed. ConcurrentDictionary may run a GetOrAdd factory on SEVERAL threads for one
+    // cold key and keep only the winner — every loser here is a Blob+Face+Font triple nobody
+    // disposes, dropped for a finaliser to destroy while other threads are shaping, and
+    // (since BlobOver) each one also PINS a font-sized byte[] until that finaliser runs.
+    // MEASURED 2026-09-01 (session 317, scratch/p317/hbstress arm `getoradd`, the real
+    // triple as its factory): 4 threads on a cold key ran the factory more than once in
+    // 38 of 40 trials, orphaning 64 triples; 8 and 16 threads, 16/40 and 19/40.
+    // A Lazy is built per losing thread too, but a Lazy costs an allocation and no native
+    // handle, and only the STORED one is ever evaluated — so the triple is built exactly once.
+    // ⚠️ THE LINE DRAWN: this and MusicFaces get it because their factories take native
+    // ownership. Faces (one SKTypeface), Paths, RunCache, Cache do not — a duplicate there
+    // is wasted work and an ordinary managed orphan, which is what a cache race costs
+    // everywhere else in this tree. Widen it if one of those ever holds a pinned buffer.
     private static readonly ConcurrentDictionary<TextFace,
-        (HarfBuzzSharp.Font Font, uint UnitsPerEm)> ShapingFonts = new();
+        Lazy<(HarfBuzzSharp.Font Font, uint UnitsPerEm)>> ShapingFonts = new();
 
     private static (HarfBuzzSharp.Font Font, uint UnitsPerEm) ShapingFont(TextFace face)
         => ShapingFonts.GetOrAdd(face, static key =>
-        {
-            var blob = ShapingBlob(key);
-            blob.MakeImmutable();
-            var hbFace = new HarfBuzzSharp.Face(blob, 0);
-            uint upem = (uint)hbFace.UnitsPerEm;
-            var font = new HarfBuzzSharp.Font(hbFace);
-            font.SetScale((int)upem, (int)upem);
-            font.SetFunctionsOpenType();
-            return (font, upem);
-        });
+            new Lazy<(HarfBuzzSharp.Font, uint)>(() =>
+            {
+                var blob = ShapingBlob(key);
+                blob.MakeImmutable();
+                var hbFace = new HarfBuzzSharp.Face(blob, 0);
+                uint upem = (uint)hbFace.UnitsPerEm;
+                var font = new HarfBuzzSharp.Font(hbFace);
+                font.SetScale((int)upem, (int)upem);
+                font.SetFunctionsOpenType();
+                return (font, upem);
+            }, LazyThreadSafetyMode.ExecutionAndPublication)).Value;
 
     // The shaper wants a font PROGRAM. A bundled face is a file on disk; a named one is
     // whatever the machine handed back, streamed out of the typeface (and lifted out of a
@@ -374,8 +389,60 @@ public static class TextFontMetrics
             ?? throw Unmeasurable(face);
         var bytes = FontEmbedInfo.TryGetFontBytes(typeface)
             ?? throw Unmeasurable(face);
-        using var stream = new MemoryStream(bytes);
-        return HarfBuzzSharp.Blob.FromStream(stream);
+        return BlobOver(bytes);
+    }
+
+    /// <summary>
+    /// A blob over font bytes THIS SIDE keeps alive and pinned for as long as HarfBuzz can
+    /// read them.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ NOT <c>HarfBuzzSharp.Blob.FromStream</c>, WHICH HANDS HARFBUZZ A DANGLING POINTER.
+    /// That factory ends (HarfBuzzSharp 8.3.1.3, binding/HarfBuzzSharp.Shared/Blob.cs):
+    /// <code>
+    /// var data = ms.ToArray ();
+    /// fixed (byte* dataPtr = data)
+    ///     return new Blob ((IntPtr)dataPtr, data.Length, MemoryMode.ReadOnly, () =&gt; ms.Dispose ());
+    /// </code>
+    /// <c>fixed</c> pins for the BLOCK, and the release delegate captures <c>ms</c> — not
+    /// <c>data</c>. So the moment it returns, the buffer is neither pinned nor reachable,
+    /// while HarfBuzz reads the face's tables out of that pointer LAZILY, on the first shape.
+    /// A font file is 85 KB and up, so it is a LARGE object: the default gen-2 collection
+    /// does not MOVE it, it RECLAIMS it, and the next shape reads freed memory. Either way
+    /// the failure is an access violation inside <c>hb_shape_full</c> — a torn-down process,
+    /// not a catchable exception.
+    /// <para>
+    /// ⚠️ ONLY A NAMED SYSTEM FACE EVER REACHED IT. A bundled face takes
+    /// <c>Blob.FromFile</c>, which mmaps natively and owns its own memory, so the whole
+    /// corpus was blind to this: it needs a <c>fonts { }</c> naming a face off the machine.
+    /// </para>
+    /// <para>
+    /// MEASURED, 2026-09-01 (session 317, <c>scratch/p317/hbstress</c>, four arms over
+    /// <c>C:\Windows\Fonts\arial.ttf</c>, single-threaded, forcing a blocking gen-2
+    /// collection between shapes): <c>fromstream</c> and <c>fromstream-lohc</c> both die
+    /// <c>0xC0000005</c> at <c>hb_shape_full</c> before the first round completes, while
+    /// <c>pinned</c> and <c>pinned-lohc</c> — this code — survive 300 rounds with the shaped
+    /// checksum unmoved at 40816. The crash frames are the ones the test host printed.
+    /// </para>
+    /// <para>
+    /// FOUND BY the suite aborting after 1625 of 6819 cases with "Test host process crashed"
+    /// in <c>FontEditIncrementalTests.FontsFaceEdit_MatchesFullRecompile</c> — the book that
+    /// says <c>fonts { serif "Arial" }</c>. It reads as a flake of session 315's
+    /// parallelisation and is not one: parallelism only raised the gen-2 rate, and the
+    /// dangling pointer had been there since the named-face path was written.
+    /// </para>
+    /// ⚠️ THE PIN IS FOR THE PROCESS, deliberately: the blob is reached through the Face and
+    /// Font cached in <see cref="ShapingFonts"/>, which are never evicted, so the handle is
+    /// freed only if HarfBuzz releases the blob. That is the same lifetime the bundled
+    /// faces' mmap already has.
+    /// </remarks>
+    private static HarfBuzzSharp.Blob BlobOver(byte[] bytes)
+    {
+        var pin = System.Runtime.InteropServices.GCHandle.Alloc(
+            bytes, System.Runtime.InteropServices.GCHandleType.Pinned);
+        return new HarfBuzzSharp.Blob(
+            pin.AddrOfPinnedObject(), bytes.Length,
+            HarfBuzzSharp.MemoryMode.ReadOnly, () => pin.Free());
     }
 
     private static string BundledPath(TextFace face)
@@ -632,24 +699,27 @@ public static class TextFontMetrics
     // music face diverges between the platforms exactly as the text faces do (MEASURED
     // 2026-08-19 — emmentaler-20 U+E0A4 reads top -782 on Windows and -781.982421875 on
     // Linux through Skia, and the identical -782 on both through HarfBuzz).
-    private static readonly ConcurrentDictionary<int, (HarfBuzzSharp.Font Font, uint UnitsPerEm)?>
-        MusicFaces = new();
+    // ⚠️ A Lazy for the same reason ShapingFonts is one — the factory takes native ownership,
+    // and a GetOrAdd factory may run on several threads for one cold key. See that field.
+    private static readonly ConcurrentDictionary<int,
+        Lazy<(HarfBuzzSharp.Font Font, uint UnitsPerEm)?>> MusicFaces = new();
 
     private static (HarfBuzzSharp.Font Font, uint UnitsPerEm)? MusicFace(int design) =>
         MusicFaces.GetOrAdd(design, static d =>
-        {
-            var file = FontLocator.ResolveFile(EmmentalerFaces.OtfFile(d));
-            if (file == null)
-                return null;
-            var blob = HarfBuzzSharp.Blob.FromFile(file);
-            blob.MakeImmutable();
-            var face = new HarfBuzzSharp.Face(blob, 0);
-            uint upem = (uint)face.UnitsPerEm;
-            var font = new HarfBuzzSharp.Font(face);
-            font.SetScale((int)upem, (int)upem);
-            font.SetFunctionsOpenType();
-            return (font, upem);
-        });
+            new Lazy<(HarfBuzzSharp.Font, uint)?>(() =>
+            {
+                var file = FontLocator.ResolveFile(EmmentalerFaces.OtfFile(d));
+                if (file == null)
+                    return null;
+                var blob = HarfBuzzSharp.Blob.FromFile(file);
+                blob.MakeImmutable();
+                var face = new HarfBuzzSharp.Face(blob, 0);
+                uint upem = (uint)face.UnitsPerEm;
+                var font = new HarfBuzzSharp.Font(face);
+                font.SetScale((int)upem, (int)upem);
+                font.SetFunctionsOpenType();
+                return (font, upem);
+            }, LazyThreadSafetyMode.ExecutionAndPublication)).Value;
 
     /// <summary>
     /// Outline path of one Emmentaler glyph at 1000 units/em (the same frame

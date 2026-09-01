@@ -47,7 +47,16 @@ dotnet build LilySharp.slnx --no-incremental -v q 2>&1 |
 # ⚠️⚠️ ★★★ **`成功!` の語ではなく*合計*を読む**（2026-08-30・第302 実測）——同じ木・同じ
 #    コマンドで 1 度だけ `合格: 5304 … 合計: 5307` と「成功!」を刷った（正しい合計は 6688）。
 #    **赤は 0 のまま 1378 ケースが黙って走らなかった。** 引き継いだ合計と突き合わせること（RULES §5.5）。
-dotnet test  LilySharp.Tests\LilySharp.Tests.csproj -v q 2>&1 | Select-String '成功!|失敗!|Passed!|Failed!'
+# ⚠️⚠️⚠️ ★★★★ **`--logger trx` を*最初から*付ける**（第316 が申し送り・**第317 の 1 発目がそれで捕まった**）——
+#    **落ちるのが「赤いテスト」ではなく*ホストの死*のことがある**。そのとき合計は黙って足りなくなり、
+#    **緑になった 2 度目には証拠が残らない**。**trx には残る**（`ResultSummary/RunInfos` に理由と全スタック）:
+#      [xml]$x = Get-Content scratch\pNNN\run1.trx -Raw; $x.TestRun.ResultSummary.RunInfos.RunInfo.Text
+#    ⚠️ **logger は無いディレクトリを自分で作る**ので、パスが無いことは失敗の原因ではない（第317 実測）。
+dotnet test  LilySharp.Tests\LilySharp.Tests.csproj -v q `
+  --logger "trx;LogFileName=$PWD\scratch\pNNN\run1.trx" 2>&1 |
+  Select-String '成功!|失敗!|Passed!|Failed!'
+# ⚠️⚠️ ★★★ **`exit 1` なのに `Passed!` と刷ることがある**（第317 実測＝`Passed! … Total: 1625` で
+#    終了コード 1）。**語も終了コードも別々では足りない。合計を引き継ぎと突き合わせること。**
 # ⚠️⚠️ ★★★ **この緑は「この機械の Windows での緑」でしかない**（2026-08-19・第212セッション）。
 #    **GitHub の門は 214 便のあいだ 1 度も読まれておらず、実際には赤だった**——
 #    **最後に push した木で ubuntu Release は 5331 合格 / 59 失敗**。**必ず両方読むこと**:
@@ -195,6 +204,30 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第317セッション＝**入り方は第298〜第316 と同じ**——**ユーザーは `docs/HANDOFF.md` を読んで着手せよとだけ言い、便の間 1 度も口を挟んでいない。** ⇒ ★★★★ **本便の骨は 4 つ**: **⑴ 第316 の申し送り（「suite は最初から `--logger trx` を付けて回せ」）に従ったら*1 発目で*捕まえた——そして flake は並列化のせいではなかった／⑵ 正体は `HarfBuzzSharp.Blob.FromStream` が HarfBuzz に*宙吊りのポインタ*を渡すこと。テスト ホストごと落ちる 0xC0000005 で、欠陥は named face の経路が書かれた日から在った／⑶ その修理を検算する途中で*別の*競合が出た＝PDF の font resolver がプロセス グローバルなのに素の `Dictionary` を書き換えていた／⑷ インクは 1 バイトも動かない（陽性対照つきで実測）／⑸ 便の後半＝ユーザーが「有利なら着手して」と言ったので、*本便が作った残骸*だけを閉じた＝native を所有する cache は 1 度だけ建てる。** **commit は 5 本＝blob の所有権 `b20cf57d`／resolver の地図 `0e45222f`／§1 の第 1 稿 `b610b61e`／exactly-once `793f1d7e`／この commit。**
+
+⚠️⚠️⚠️ ★★★★ **⑴⑵ 第315 の「並列化が原因と決めつけるな」は正しかった。決めつけていたら直らなかった。** **`run1.trx` が残っていたので `ResultSummary/RunInfos` が犯人を名指しした**——**`Test host process crashed : Fatal error. 0xC0000005` at `hb_shape_full` ← `TextFontMetrics.ShapedAdvancesPerEm` ← `FontEditIncrementalTests.FontsFaceEdit_MatchesFullRecompile`。** **HarfBuzzSharp 8.3.1.3 の `Blob.FromStream` は `fixed (byte* p = data)` の*ブロックの中で* Blob を作って返す**——**`fixed` はブロックの間しか固定せず、release delegate が捕まえているのは `data` ではなく `ms`。** ⇒ **戻った瞬間、バッファは固定も参照もされていない。HarfBuzz は face の table を*最初の shape で遅延読み*するので、その間の gen-2 が動かすか回収すればポインタが死ぬ。** **フォントは 85 KB 超＝LOH なので既定の gen-2 は*動かさず回収する*。** ⇒ ★★★★ **並列化は gen-2 の頻度を上げただけ＝*古い欠陥の露出率を変えた*。第315 を疑って半日溶かす形だった。**
+
+⚠️⚠️ ★★★ **⑵ 射程が「追跡コーパス 0 冊」だったのは偶然ではない**——**bundled face は `Blob.FromFile`（mmap・HarfBuzz が所有）を通る。この穴に落ちるのは `fonts { }` が*機械の* face を名指した本だけ**で、**585 冊にそれは 1 冊も無く、テストにちょうど 1 本あった**（`fonts { serif "Arial" }`）。⇒ ★★ **「コーパスが見ていない」は「安全」ではなく「観測者が居ない」。** ★ **A/B は `scratch/p317/hbstress`（単スレッド・shape の間に blocking gen-2）: `fromstream` / `fromstream-lohc` は round 0 に届かず 0xC0000005、`pinned` / `pinned-lohc` は 300 round 完走で checksum 40816 不動。** ★★ **番人は*構造*テスト**（`ShapingBlobOwnershipTests`＝Core に `Blob.FromStream(` を禁ずる）——⚠️⚠️ **毒が「赤」ではなく「ホストの死」だから振る舞いでは張れない**（**走行が中断され、§0 が言う「合計が足りないのに Passed!」の嘘そのものになる**）。**毒で赤を実測。**
+
+⚠️⚠️ ★★★ **⑶ 同じ suite に*別の*競合が居た**（`BackendKerningTests.PdfPlacesTextWhereTheLayoutReservedItForANamedFace`・**1 度赤・次は緑**）: **`Operations that change non-concurrent collections must have exclusive access` @ `EmmentalerFontResolver.SetTextFonts`。** **resolver は `GlobalFontSettings.FontResolver`＝プロセス グローバルで、`PdfDocumentContext` の ctor が毎回 `SetTextFonts` を呼ぶ**のに、**中は `_textFaces.Clear()` → 素の `Dictionary` へ詰め直し**だった。⚠️ **隣の `_fallbackFaces` は最初から `ConcurrentDictionary`**（「renderer が書き PdfSharpCore が読む」と*自分で書いてある*）——**同じ class で `_textFaces` だけが取り残されていた。** ⇒ **不変スナップショットを丸ごと差し替える形にした**（**Clear と詰め直しの窓＝読み手が*空の*地図を見る、も同時に閉じる。writer だけを lock しても閉じない窓**）。**番人は 8 スレッド × 500・毒で 84 ms で赤。** ⇒ ★★★ **「flake が 1 つ」と決めてかかると 2 つ目を取り逃がす。** **本便は 1 つ目を直したあとの検算で 2 つ目に当たった。**
+
+⚠️ ★★ **⑶ が閉じないものを明記した（意図的）**: **違う `fonts { }` を持つ 2 文書は今も互いの face を上書きする**——**`EnsureFontResolver` が既に「long-lived host では latent」と書いている既存の制約で、per-document に鍵を付けるまで消えない**（PdfSharpCore は 1 プロセス 1 resolver）。**§2 G に起票した。**
+
+⚠️ ★★★ **⑷ インクは動かない、を*陽性対照つきで*測った。** **`scratch/p317/named.lys`＝全 text role を named system face に束ねた本**（`serif "Georgia"` / `sans "Verdana"` / `lyricText "Georgia"` ＋ title・composer・歌詞）を **base（`git stash` の Release exe）と head で叩く**: **SVG は `D84D7B0D48712A98` で*バイト同一*・行単位でも同一。** ⚠️ **PDF は 128 バイト違ったが、これは変更ではない**——**同じ exe の 2 回が 126 バイト違う**（**作成日時。`EmmentalerFontResolver` の注記が既に「2 回の run が 114 バイト違う」と書いている**）。⇒ ★★ **PDF の A/B は「同じ exe を 2 回」を必ず隣に置くこと。置かなければこの 128 は「動いた」に見える。**
+
+⚠️⚠️ ★★★ **⑸ ユーザーが「このセッションでやる方が有利なら着手して。次のセッションでやった方が有利なら着手してはいけない」と言った**（第315 ⑹ と同じ形の指示）。⇒ **判断は第315 の前例どおり**——**次の一手 ⑴〜⑹ はどれも*新しい測定キャンペーン***（正典の grob dump ＋ 1500 冊の掃き）**なので着手しない**。**閉じたのは*本便が作った残骸*だけ**＝**`ShapingFonts` / `MusicFaces` の `GetOrAdd` factory が cold key で複数回走り、負けた側の Blob+Face+Font が誰にも dispose されずに落ちる**——**しかも `BlobOver` 以後、負けた側は font 大の `byte[]` を finalizer が走るまで*pin する*。つまりコストを増やしたのは `b20cf57d`＝本便。**
+⚠️⚠️ ★★★★ **そして触る前に測った**（§5.0・第316 の「起票の引用は診断ではない」を*自分に*当てた）: **`scratch/p317/hbstress` の arm `getoradd`＝本物の triple を factory にして cold key を N スレッドで叩く**——**4 スレッドで 40 試行中 38 試行が factory を 2 回以上走らせ、64 個の native triple を孤児にした**（**8 スレッドで 16/40・16 スレッドで 19/40**）。⇒ **機構は理論ではなく、並列 suite は cold で始まる。** ★ **直しは `Lazy<T>`（`ExecutionAndPublication`）を*格納する*形**——**負けたスレッドも Lazy は作るが、Lazy は allocation 1 個で native handle を持たず、評価されるのは*格納された 1 個だけ***。
+⚠️ ★★ **引いた線（意図的）**: **native を所有する factory だけ**。**`Faces`（SKTypeface 1 個）・`Paths`・`RunCache`・`Cache` は素の factory のまま**——**そこの重複は「無駄な仕事＋普通のマネージド孤児」で、この木の他の cache 競合と同じコスト。** ★★ **番人は*構造*で、しかも 2 つの field 名ではなく*不変条件*を述べる**（`EveryStaticCacheThatOwnsAHarfBuzzFontBuildsItExactlyOnce`＝Core の全 static `ConcurrentDictionary` を走査し、値型が `HarfBuzzSharp.Font` を含むなら `Lazy<>` を要求）——**3 つ目が足された日に誰も覚えていなくても効く。** ⚠️ **構造でしか張れない**: **これらの cache は process-static で、先に走った test が必ず温めてしまう**ので、**suite の中から cold key に到達して factory を数えられるケースは存在しない。** **毒で赤を実測。**
+
+★ **開始時裏取り**: HEAD `1a4abb55`・**未 push 17**（**第312〜第316 の 17 本。`origin/master` は `925cab98`**）・木 0・未追跡 0・Core 0 エラー 0 警告・**Windows Debug 6815 / 0 / 4 / 6819**（**第316 の終了時と一致。ただし⑴ のとおり 1 発目は `1625 / 6819` で落ちた**）・追跡 `.lys` 585・snapshot 235。
+終了時: **commit 5 本**（**この commit を含む**）・**未 push 22**（**開始時 17 ＋ 本便 5**）⚠️ **数を閉じる commit が数を動かすので、最後の 1 本は*自分を数えて*「この commit」と書く**・作業ツリー 0・未追跡 0（**`scratch/p317` は git 管理外**）・Core 0 エラー 0 警告・**Windows Debug 6818 / 0 / 4 / 6822**（**+3 は本便の番人 3 本。fixture も snapshot も 1 つも足していない＝3 つの欠陥がどれも紙に出ないから**）・**追跡 `.lys` 585・snapshot 235**（**増減 0・中身も不動**）。⚠️ **`docs/APPROXIMATIONS.md` は行番号だけ・件数の増減 0**（`TextFontMetrics.cs:476 → :528 → :543`＝**本便が同じ file を 2 度伸ばした**）・**`audit/magic_constants.csv` 不動**。⚠️⚠️ ★★★ **警告は一度 20 → 21 になった**——**§1 第316 ⑸ の教訓どおり*行*を見たら、増えた 1 本は Core ではなく本便のテストの `xUnit1031`（`Task.WaitAll`）だった。`await Task.WhenAll` にして 20 に戻した。** ⚠️⚠️ **WSL ubuntu Release は取れない**（**この機械に WSL が無い＝第313 ⑶**）——**本便はインクを動かしていないが、`push` 後に `gh run list` で読むこと**（**ubuntu では `Blob.FromStream` の経路に載る named face が Windows と違う**）。
+⚠️⚠️ ★★★ **計器は `scratch/p317/`**（**git 管理外**）: **`hbstress/`（`dotnet run -c Release -- <arm> <n>`。**arm は 5 つ＝`fromstream` / `fromstream-lohc` / `pinned` / `pinned-lohc` の宙吊り A/B と、`getoradd`＝cold key の factory 重複を数える arm**）・`named.lys` と `base.svg`/`head.svg`/`base.pdf`/`base2.pdf`/`head.pdf`・`measurements.md`・`run{1..8}.trx`（**`run1.trx` が証拠そのもの**）。**
+
+⇒ ★★★ **次の一手**（**第316 の並びを引き継ぐ。本便は 1 つも消費していない**）: ★★★★ **⑴ §2 U8c の残した島 ⑴＝`ItemSkylineFactory`/`SpacingRules`/`SkylineBuilder` が cue の列を*丸ごとフル サイズ*で読む**（**0.006 ではなく縮尺 1 つぶん。grace は `GraceTime` の門で通らないので cue だけ。本便は着手前に読んで裏取りだけした——`ItemSkylineFactory.ColumnParts` は `GlyphMetrics.GetNoteheadBBox(noteValue)`＝Design20 を撒き、`ChordHeadPositioning.CalculateOffsets` にも font を渡していない。`SpacingRules.CalculateLeftExtent` も同型。`SkylineBuilder` の `size.Ink(...)` の `size` は StaffSize であって font-size ではない**）／★★★ **⑵ §2 U8b**（二声の同時 grace。**⚠️ 起票自身が「⒞⒟ と一緒に住所を作る便で閉じるのが安い・単独で追わないこと」と書いており、射程は実コーパス 0 冊**）／★★★ **⑶ §2 U8 の残り＝⒞ のスラーとタイ・⒟ 注釈の全族**／**⑷ §2 の X/Y 側**（§2 A/B/D/E）／**⑸ §2 C⑴ の多声 walk の moment 順への再設計**（**最大の構造負債・未着手**）／**⑹ §2 G の per-document font resolver**（**本便が起票。ユーザーが PDF を 2 つ同時に作る日まで観測者は居ない**）。⚠️ **承認待ちは無い。** ⚠️ **§2 F は開いている項目が無い。**
+
+## 以下は第316セッションの経緯
+
 最終更新 第316セッション＝**入り方は第298〜第315 と同じ**——**ユーザーは `docs/HANDOFF.md` を読んで着手せよとだけ言い、便の間 1 度も口を挟んでいない。** ⇒ ★★★★ **本便の骨は 4 つ**: **⑴ 第315 の次の一手のうち*⑵ と ⑶ は同じ 1 つ*だった＝U8c と「残る `Design20 × magstep` の島」で、閉じたのは「符頭の箱をその符頭の*フォント*に訊く」1 語／⑵ 起票は狭かった——scale を渡していたのは cue だけでなく grace もで、しかも*予約と描画が割れていた*／⑶ ページに出たのは ledger だけ・二度そのものは丸めの下なので番人は単体テスト／⑷ 開始時の suite が 1 度だけ赤く、2 度目は緑＝第315 が並列化した suite の flake を*初日に*踏んだ。** **commit は 3 本＝島 `33dbf588`／§1 と U8c `d738f0da`／この commit。**
 
 ⚠️⚠️⚠️ ★★★★ **⑴⑵ の中身は §2 U8c に全部書いた**（**LP の 3 数・幅の裏取り・対照・射程・残した島 3 つ**）。**ここに 2 つ目の綴りを置かない**（§5.2.1②）。**要点だけ**: **正典 2.26.0 は反転符頭を `ell − thickness/2` で置き、`ell` は*その符頭のデザインの* ink right**——**full `<c' d'>4` 1.239200 ／ grace 0.852939（Design14）／ cue 0.750349（Design13）**。**Lily# は 20 を縮めて 0.857209 / 0.756597 を刷っていた。**
@@ -220,38 +253,6 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 
 終了時: **commit 3 本**（**この commit を含む**）・**未 push 17**（**開始時 14 ＋ 本便 3**）⚠️ **数を閉じる commit が数を動かすので、最後の 1 本は*自分を数えて*「この commit」と書く**・作業ツリー 0・未追跡 0（**`scratch/p316` は git 管理外**）・Core 0 エラー 0 警告・**Windows Debug 6815 / 0 / 4 / 6819**（**+4 は本便の番人 4 本。fixture は 1 冊も足していない＝二度は丸めの下で紙に出ないから**）・**追跡 `.lys` 585・snapshot 235**（**増減 0。動いたのは既存 3 枚の中身**）。⚠️ **`docs/APPROXIMATIONS.md` は行番号だけ・件数の増減 0**（**`audit/magic_constants.csv` は 919 → 914＝消した `: 1.0` の literal 5 個**）。⚠️⚠️ **WSL ubuntu Release は取れない**（**この機械に WSL が無い＝第313 ⑶**）——**本便はインクを動かしているので、ubuntu の緑は push 後に `gh run list` で読むこと。**
 ⚠️⚠️ ★★★ **計器は `scratch/p316/`**（**git 管理外**）: **`sec-dump.ly`（正典 2.26.0 の 4 冊 grob dump・雛形は `scratch/p315/gracedot-dump.ly`）・`s{0,1,2}_{fullsec,gracesec,cuesec}.lys` とその `.ly` 双子・`measurements.md`（表と、ページでは測れない話）・`sweep316.ps1`（`-Only pred|rest`＝*動きうる集合を全数*＋*残りを対照で間引き*という割り方）・`exe-{base,head}`（A/B・base は `git stash` で作った）。**
-
-## 以下は第315セッションの経緯
-
-最終更新 第315セッション＝**入り方は第298〜第314 と同じ**——**ユーザーは `docs/HANDOFF.md` を読んで着手せよとだけ言い、便の後半で 1 件だけ指示した（「テストに時間がかかりすぎている。次回に同様のテストをするときは、必ずテストコードを並列化してから実行して」）**。⇒ ★★★★ **本便の骨は 4 つ**: **⑴ 第314 の次の一手 ⑴ を入れた＝grace の付点が家に帰り `GraceNoteEngraver.Dots` が死んだ／⑵ そこで*生きた欠陥*が出た——付点を旗の右へ押すかどうかを決めているのは「符頭が線か間か」ではなく*描かれた符尾の長さ*で、Lily# は canonical の 6 例中 1 例を 0.5207 外していた／⑶ そして*その 1 例の真因は `DotColumn` の Y 門が切れていたこと*——`Skyline.FromBoxes` は重なる箱を和集合に畳んで X の max を採るので、必ず旗と重なる符尾の箱に旗の X が垂れていた。LP の `Skyline::height` ではない／⑷ ユーザー指示で suite を並列化した。** **commit は 5 本＝付点の帰宅と Y 門 `a7d73faf`／suite の並列化 `6dc1c6a2`／§1 の第 1 稿 `175df9bc`／`Skyline` の削除 `5a5b4f6b`／この commit。**（**便の後半でユーザーが「このセッションでやる方が有利なら着手して」と言ったので、次の一手のうち*本便が作った残骸*である ⑷ だけを閉じた**）
-
-⚠️⚠️⚠️ ★★★★ **⑴ 付点は `DrawNote`/`DrawChord` が描く**（§2 U8 ⒝2 ⒞ に全部書いた）。**入れたのは `!GraceTime` の門を外したことだけ**——**床は符頭自身のフォントのインク、旗の支持は*その場で描いた符尾*から吊る**ので、**grace かどうかを訊く行は 1 つも無い。** **`GraceNoteEngraver.Dots` は退役し、`StemLength` の読み手は `DrawGraceBeam` の quant できなかったときの fallback 1 つだけになった**（**観測者ゼロの近似として `APPROXIMATIONS` に載せた＝`UNWATCHED` 51 → 52・計 224 → 225**）。
-
-⚠️⚠️⚠️ ★★★★ **⑵ canonical 2.26.0 に 6 冊訊いた**（`scratch/p315/gracedot-dump.ly`＝grob dump・**答え＝Dots 左 − NoteHead 左**。**Lily# 絶対 c ＝ LP c'**）:
-**`\grace { g'8. }`（線・付点は持ち上がる・符尾 2.80）1.226585 ／ `f'8.`（間）1.226585 ／
-`d''8.`（線・持ち上げ・符尾は中央線より上なので*短縮されて* 2.50）1.747274 ／
-`e''8.`（間・2.40）1.226585 ／ `d''16.` 1.747274 ／ `g'16.`（短縮無しでも 16 分の旗は 0.354 深い）1.747274。**
-⇒ ★★★★ **第299 の「1.2266 と 1.7473 の対」は当たっていたが、対を分けているのは*線／間ではない*。**
-**旗は符尾端に吊るので、答えは*描かれた符尾の長さ*で決まる**——**`g'8.` は「線・持ち上げ」なのに 1.2266。**
-**Lily# はそこを 1.7473 で刷っていた。**
-
-⚠️⚠️⚠️ ★★★★ **⑶ 真因は計器ではなく `DotColumn` 自身だった。** **`Skyline.MergeSegments` は*重なる 2 箱を和集合 1 本に畳んで X は max を採る***ので、**符尾の箱（符頭の行から 7 つ）と旗の箱が畳まれ、旗の X が符尾の全域に垂れていた**＝**この class が存在する理由である Y 門が事実上効いていない。** ⚠️ **第314 の 4 冊で割れなかったのは偶然**（**問い合わせが両端 strict ＋ 上向き符尾の箱が*符頭の行から*始まるので、持ち上がらない付点は下端でちょうど外れ、持ち上がった 3 冊はどれも旗自身の箱の中に入っていた**）。⇒ **箱ごとに `PositionBottom < p && p < PositionTop` を見て max を採る形に直した**（`lily/dot-configuration.cc:129-137` ＝ `head_skyline().height(position)` そのもの）。**フル サイズの 4 冊は 4 桁で不動、grace の 6 冊は全部 LP。**
-⚠️⚠️ ★★★ **この直しは grace 以外にも射程がある**——**符尾が中央線まで*延長*された音符**（五線の下の低音）**は旗の下端が付点の行よりずっと上なのに押されていた。** ⚠️ **`Svg/Layout/Skyline.cs` は本便で Core の呼び手を失った**（`Skyline.` の grep が `DotColumn` のコメント 1 件しか当たらない）——**LP の `Skyline::height` ではない畳み方をする class が「skyline」の名前で残っている。次に手を伸ばす者への罠。**
-
-⚠️⚠️ ★★★ **⑷ 射程は掃きで数えた**（`scratch/p315/sweep315.ps1`＝第314 の形・**base と head を本ごとに続けて叩く・一時ファイルは `$PID` 分け**）: **追跡 fixture 238 冊＝SAME 237 / MOVED 1**（**動いたのは本便が足した番人だけ**）・**ユーザー実コーパス `scratch\ベースタブLy` 314 冊＝SAME 314 / MOVED 0 / NO-OUTPUT 0**（**読み手の紙は 1 mm も動いていない**）・**`audit/` 341 冊（LP 双子プローブ）＝SAME 341 / MOVED 0 / NO-OUTPUT 0**——**計 893 冊で動いたのは 1 冊だけ**。**snapshot は 1 枚も動いていない**（**追跡コーパスに旗つき付点の grace も、長い符尾の付点音符も 1 冊も無かった**）。
-★ **番人 `test/grace-dot-flag-column`**（**6 冊 ＋ 梁の対照 1 冊。fixture の頭に LP の 6 数。追跡 `.lys` 584 → 585・snapshot 234 → 235**）と、**`AGraceDotClearsTheFlagOnlyWhenTheFlagIsOnItsRow` をページから読む形に書き換えた**（**`GraceNoteEngraver.Dots` の単体呼び出しが消えたので必然。ページの x は 2 桁＝±0.01 だが、答えの差は 0.52**）。
-
-⚠️⚠️ ★★★ **⑸ ユーザー指示で suite を並列化した**——**`LilySharp.Tests/xunit.runner.json` の `maxParallelThreads 1 → 0`（＝論理プロセッサ数）・`parallelizeTestCollections false → true`。** ⚠️ **直列だった理由はどこにも書かれていない**（`docs/` にも csproj にも記述なし）ので、**壊れうる静的状態を先に 1 つ塞いだ**＝**`ModelDeepDiff.Props` は素の `Dictionary` で、2 スレッドから書くと無関係な読み手が落ちる**（`ConcurrentDictionary.GetOrAdd` にした）。**`VisualDiffReport` は最初から lock 済み。** ⚠️ **並列で 1 度も落ちないことは*この機械で 1 回*しか確かめていない**——**flake が出たら「並列化が原因」と決めつける前に、その test が触っている静的状態を名指すこと。**
-⚠️⚠️⚠️ ★★★★ **効きは*測ってある*——そして最初に出した数は間違っていた。** **直列 14 分 52 秒 → 並列 2 分 38 秒**（**5.6 倍**）。⚠️ **本便は最初「12 分 09 秒＝期待ほどではない」と書いた**が、**それは掃き 2 本が全コアを食っている最中の数**で、**掃きが終わったあとの同じ suite は 2 分 38 秒**。⇒ ★★★ **計測の隣で重い物を回していたら、その数は「並列化の効き」ではなく「取り合いの結果」。** **xunit は*クラス単位のコレクション*で並列化するので床は「いちばん長いクラス」**——**取り合いの最中の内訳は `LpFidelity` 2 分 54 秒（806 ケース）／`CollectEditResume` 2 分 08 秒／`CollectResume` 1 分 39 秒（**3 ケース**）／`AnnotationRoundTrip` 42 秒／`SvgSnapshot` 32 秒（233 ケース）**——**この比だけは有効で、snapshot 233 枚は犯人ではない。** **さらに縮めるなら長いクラスを割る**（**`CollectResume` は 1 ケースが全木を歩く**）。
-
-⚠️⚠️ ★★★ **⑹ ユーザーが「このセッションでやる方が有利なら着手して」と言ったので、次の一手 ⑷ を閉じた＝`Svg/Layout/Skyline.cs` を消した**（`5a5b4f6b`）。**判断の理由は「本便が作った残骸で、呼び手が消えた経緯も*なぜ LP の skyline ではないか*も本便の文脈にしかなく、検証はコンパイラが済ませる**（**呼び手ゼロの class を消してもインクは動きようがない＝掃き直しが要らない**）」。**U8b・U8c・座標の島・多声 walk は新しい測定キャンペーンなので着手していない。**
-★ **消したときに*2 つの登記簿*が赤くなった**——**`audit/magic_constants.csv` の `Targets` 一覧**（「**消えた file は*黙って*落とすな**」と自分で言う）と**`LILYPOND-ATTRIBUTION.md`**（GPLv3 §4 の対）。**どちらも「消した」と分かる形で更新した**（census の一覧にはコメントで理由を残した）。⇒ ★★ **移植した file を消すときは、この 2 つが必ず付いてくる。**
-
-⇒ ★★★ **次の一手**: ★★★★ **⑴ §2 U8b**（二声の同時 grace。**⒝2 が「構築により閉じる」と言っていた 3 つの最後の 1 つ**）／★★★ **⑵ §2 U8c**（cue の和音の 0.004270）／★★★ **⑶ 残る `Design20 × magstep` の島＝`ChordHeadPositioning.CalculateOffsets(..., headScale)` と click target の箱**（**和音の反転符頭は縮んだ列で 0.006 ずれる。測ってから触ること**）／**⑷ §2 の X/Y 側**（§2 A/B/D/E）／**⑹ §2 C⑴ の多声 walk の moment 順への再設計**（**最大の構造負債・未着手**）。⚠️ **承認待ちは無い。** ⚠️ **§2 F は開いている項目が無い。**
-
-★ **開始時裏取り**: HEAD `8f7644ab`・**未 push 9**（**第312/313/314 の 9 本。`origin/master` は `925cab98`**）・木 0・未追跡 0・Core 0 エラー 0 警告・**Windows Debug 6811 / 0 / 4 / 6815**（**第314 の終了時と一致**）・追跡 `.lys` 584・snapshot 234。
-終了時: **commit 5 本**（**この commit を含む**）＝**`a7d73faf`／`6dc1c6a2`／`175df9bc`／`5a5b4f6b`／この commit**・**未 push 14**（**開始時 9 ＋ 本便 5**）⚠️ **数を閉じる commit が数を動かすので、最後の 1 本は*自分を数えて*「この commit」と書く**・作業ツリー 0・未追跡 0（**`scratch/p315` は git 管理外**）・Core 0 エラー 0 警告・**Windows Debug 6811 / 0 / 4 / 6815**（**開始 6815 と同数だが中身が違う**＝**+1 は番人 `test/grace-dot-flag-column`・−1 は消した `Skyline` の唯一の test**）・**追跡 `.lys` 585・snapshot 235**。⚠️ **`docs/APPROXIMATIONS.md` は `UNWATCHED` が 1 増えた**（**51 → 52・計 224 → 225。増やしたのは ⑴ の grace 梁 fallback。`audit/magic_constants.csv` は `GraceNoteEngraver.Dots` の 0.5 と、消した `Skyline.cs` の行が 1 つずつ減った**）。⚠️⚠️ **WSL ubuntu Release は取れない**（**この機械に WSL が無い＝第313 ⑶**）——**本便はインクを動かしているので、ubuntu の緑は push 後に `gh run list` で読むこと。**
-⚠️⚠️ ★★★ **計器は `scratch/p315/`**（**git 管理外**）: **`gracedot-dump.ly`（正典 2.26.0 の 6 冊 dump・雛形は `audit/lp-geometry/probes/dynamic-support.ly` の `page-post-process`）・`gracedot2.lys`（その双子）・`measurements.md`（表と、Y 門が切れていた話）・`sweep315.ps1`（`-Recurse`/`-Tag` つき）・`exe-{base,head}`（A/B・base は `git stash` で作った）。**
 
 ## 2. 開いている作業
 
@@ -3460,6 +3461,15 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   `COORDINATE_AUDIT.md` §4.5 の島2 行。単独でやると差分が巨大なわりに何も守らない）
 
 ### G. 保守性の負債・未 commit のプローブ
+
+- **G-pdf. ⚠️⚠️ 起票（2026-09-01・第317）＝PDF の font resolver はプロセスに 1 つしかなく、2 文書が互いの face を上書きする**
+
+  ★★★ **第317 が*競合*のほうは閉じた**（`0e45222f`＝`EmmentalerFontResolver._textFaces` は不変スナップショットを丸ごと差し替える。**素の `Dictionary` を `Clear()` して詰め直していたので、2 文書同時で `Operations that change non-concurrent collections must have exclusive access` が出ていた**）。**残るのは*設計*のほう**:
+  **`PdfDocumentContext.EnsureFontResolver` はプロセスに 1 つだけ resolver を据える**（**PdfSharpCore の `GlobalFontSettings.FontResolver` は 1 回しか設定できない**）が、
+  **`SetTextFonts` はその 1 つを*文書ごとに*書き換える**。⇒ **違う `fonts { }` を持つ 2 文書を同時に作ると、後から書いたほうの face で両方が埋め込まれうる。**
+  ⚠️ **これは第317 が作った穴ではない**——**`EnsureFontResolver` の remark が前から「一 shot の CLI では無害・long-lived host（LSP など）では latent」と書いている**。**第317 はその文の*半分*（地図の破壊）だけを閉じ、もう半分（どの文書の地図か）は開けたまま残した。**
+  ★ **閉じ方は「face を文書ごとに鍵付ける」**——`ResolveTypeface` が呼ばれた文脈から文書を引けないので、**face 名そのものに文書を混ぜる**のが素直（`LysEmbed:…#` が既に名前に情報を載せている形）。
+  ⚠️ **観測者はまだ居ない**: **CLI は 1 プロセス 1 文書**で、**suite は同時に PDF を作るが `fonts { }` は同じ**。**LSP / プレビューが 2 つの本を同時に PDF にした日に出る。**
 
 - ✅✅ ★★★★ **【閉じた・2026-09-01・第313】この hang は*起動のしかた*で、回避策は 1 行。正典 2.26.0 は 15 秒で完走する。**
   **`cmd.exe /d /s /c "<lilypond …> < NUL > log 2>&1"`＝*デタッチして stdin を NUL から与える*。**
