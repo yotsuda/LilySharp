@@ -140,8 +140,31 @@ public class HistoryCitationTests
     /// a ceiling does buy is that the NEXT history rewrite cannot add to them silently — a
     /// citation written today always names a commit that exists today, so the only way this
     /// number rises is a rewrite that failed to re-point something.
+    /// <para>
+    /// ⚠️ RAISED 469 → 495, DELIBERATELY, AND THE REWRITE IS NAMED. The twenty-nine unpushed
+    /// commits of sessions 312-319 were regrouped into nine before pushing, and the
+    /// twenty-eight of them that §1 and the archive cite by SHA went with it.
+    /// </para>
+    /// <para>
+    /// The citations were NOT re-pointed, and that is the decision rather than an omission.
+    /// The 533 → 564 raise above was a regroup whose citations COULD be repaired by naming the
+    /// commits that absorbed them; these cannot, because every one of them sits inside a
+    /// session's own account of what that session committed — "three commits: this one and
+    /// those two", "17 unpushed", "the tip I started from". Re-pointing the SHA alone leaves a
+    /// sentence that counts three and names one; repairing the sentence rewrites the record of
+    /// what those sessions did, which is the one thing an archive is for. So the SHAs stay as
+    /// written and the ceiling carries them, which is honestly what they are: citations of
+    /// commits that are no longer in the history.
+    /// </para>
+    /// <para>
+    /// What the regroup did NOT change is the content. Every new commit's tree is the tree of
+    /// the last old commit it took in, verified group by group, and the diff between the
+    /// pre-regroup tip and the new one is empty — so the map from an orphaned SHA to the
+    /// commit that absorbed it is recoverable by tree for as long as the old commits are, and
+    /// the LIVE ratchet did not move (731, floor 564).
+    /// </para>
     /// </remarks>
-    private const int DeadCitationsWhenWritten = 469;
+    private const int DeadCitationsWhenWritten = 495;
 
     /// <summary>
     /// Extensions scanned for citations. Chosen because they are where citations are actually
