@@ -501,6 +501,45 @@ internal readonly struct TabStaffGeometry
     }
 
     /// <summary>
+    /// Where the digit on ONE SIDE of an item is drawn — the TOP string's for
+    /// <paramref name="top"/>, the BOTTOM string's otherwise. This is the tab's answer to
+    /// LilyPond's <c>extremes_[d].slur_head_</c>: the single head a slur attaches to and
+    /// measures its width from, which on a chord is the one on the slur's own side.
+    /// </summary>
+    /// <remarks>
+    /// The allocation and the zigzag ordering are <see cref="ChordNoteDigitColumn"/>'s, so
+    /// an item's slur end and its drawn digit cannot disagree about which column they mean.
+    /// A note that resolved no string answers string 1 with a zero-width digit at the axis —
+    /// the same fallback its neighbours have.
+    /// </remarks>
+    public (int StringNum, double Dx, double HalfWidth) EdgeDigitColumn(MusicItem item, bool top)
+    {
+        switch (item)
+        {
+            case NoteItem n:
+                return NoteDigitColumn(n.Midi, n.StringNumber);
+            case ChordItem c when c.Notes.Length > 0:
+            {
+                int shift = _octaveShift;
+                var alloc = Tunings.CalculateChordFrets(
+                    c.Notes.Select(x => (x.Midi + shift, x.StringNumber)).ToList(), _tuning);
+                var ordered = alloc
+                    .Select(p => (str: p.stringNum, fret: p.fret))
+                    .OrderBy(p => p.str)
+                    .ToList();
+                int k = top ? 0 : ordered.Count - 1;
+                if (k < 0 || ordered[k].str < 1)
+                    return (1, 0, 0);
+                return (ordered[k].str,
+                        TabChordColumns.Offsets(ordered)[k],
+                        TabChordColumns.FretWidth(ordered[k].fret) / 2);
+            }
+            default:
+                return (1, 0, 0);
+        }
+    }
+
+    /// <summary>
     /// Where ONE note's (not a chord's) fret digit is drawn — the same three answers
     /// <see cref="ChordNoteDigitColumn"/> gives, for an item that has no zigzag to be in.
     /// </summary>

@@ -1373,6 +1373,41 @@
       "residual": 0.0,
       "why": "EXACT. The same flat group on the HIGHEST string with stems DOWN, which LilyPond answers as the exact negative. The pair is the up/down control: a reading that had absorbed a constant on one side would break the symmetry."
     },
+    "slur.tab.up.string-to-attachment": {
+      "probe": "tab-slur.ly",
+      "score": "A",
+      "lilypond": 1.043326007320374,
+      "residual": 0.328673993,
+      "why": "THE FRET DIGIT'S OWN INK, and the whole residual is that one ratified deviation — no part of it is the slur. LilyPond's attachment is the digit's ink edge + dir*0.5*staff_space, then -0.35 for the tablature.scm transformer: 0.5 (string 2's position) + 0.393326 + 0.5 - 0.35 = 1.043326 tab spaces, so 0.393326 of it is HALF LILYPOND'S TabNoteHead (0.589989 page units, dumped from the grob). Lily#'s fret digits are deliberately larger (TabConstants.FretFontSize 3.0, ratified in HANDOFF §3 and tuned by eye on request): TabConstants.FretDigitHeight measures 2.166 at that size, half of it is 1.083 page = 0.722000 tab spaces, and 0.722000 - 0.393326 = 0.328674 to nine digits. It cannot go to 0 while the larger digits stand, and it is NOT a licence to tune the 0.5 or the 0.35 -- those two are exact (see the pairs below)."
+    },
+    "slur.tab.up.attachment-to-control": {
+      "probe": "tab-slur.ly",
+      "score": "A",
+      "lilypond": 1.0312245505858564,
+      "residual": 0.073123652,
+      "why": "THE WIDER BOW, which is the SAME ratified deviation seen through the spacing rather than through the digit box -- see slur.tab.span, which measures it directly. A bow's height is h_inf*(2/pi)*atan(pi*width*ratio/(2*h_inf)) with h_inf = staff_space*height-limit = 3.0 and ratio 0.25 (lily/bezier-bow.cc slur_height; scm/define-grobs.scm Slur). Feeding it LilyPond's span 8.023631 page units gives 1.545960 page = 1.030640 tab spaces, i.e. LilyPond's own answer to within the indent clamp; feeding it Lily#'s span 9.006735 gives 1.103945, which is 0.072720 of the 0.073124 measured here. The bow is FLAT here, so this rise IS the height with nothing else in it. What this point rules out is the alternative: a height-limit or ratio that had drifted would move it with the span unchanged."
+    },
+    "slur.tab.down.string-to-attachment": {
+      "probe": "tab-slur.ly",
+      "score": "A",
+      "lilypond": -1.043326007320374,
+      "residual": -0.328673993,
+      "why": "The exact negative of the up bow's, which is the point of the pair -- bar 2 is bar 1 with its strings REFLECTED (positions 1,3,3,1 become -1,-3,-3,-1), so LilyPond returns exactly minus bar 1's numbers. LilyPond's slur direction reads the STRING, not the notated pitch (lily/slur.cc:60-68 calc_direction -- UP as soon as one encompassed column's stem points DOWN), so the low strings bow DOWN and subtract the 0.525 upward instead. A constant absorbed on one side, or a direction rule that had fallen back to 'tab slurs bow up' (which is what Lily# did until 2026-09-01), breaks this symmetry rather than hiding in it. Same cause as slur.tab.up.string-to-attachment."
+    },
+    "slur.tab.down.attachment-to-control": {
+      "probe": "tab-slur.ly",
+      "score": "A",
+      "lilypond": -1.031224550585857,
+      "residual": -0.073123652,
+      "why": "The exact negative of the up bow's rise. Same cause as slur.tab.up.attachment-to-control (the wider span); the pair is what says the height rule is direction-symmetric on both sides."
+    },
+    "slur.tab.span": {
+      "probe": "tab-slur.ly",
+      "score": "A",
+      "lilypond": 5.3490871636235555,
+      "residual": 0.655402835,
+      "why": "TAB COLUMN SPACING, not the slur: the attachment X is the fret digit's ink centre on both sides, so this is the distance between the first and last digit of the bar, and Lily#'s digits are wider because they are LARGER (TabConstants.FretFontSize 3.0, ratified HANDOFF §3 -- FretGlyphWidth and the FretColumnGap that goes with it). 0.655403 tab spaces = 0.983104 page units over four columns. It is recorded because it is the CAUSE of the two attachment-to-control residuals rather than an independent divergence: LilyPond's own height formula fed Lily#'s span 9.006735 page units returns 1.103945 tab spaces against LilyPond's 1.031225, i.e. 0.072720 of the measured 0.073124 -- the remaining 0.0004 is the indent/max-height clamp the same routine applies. Closing it means changing the digit size, which is a decision that was made the other way."
+    },
     "beam.quant.over-stem.beamed": {
       "probe": "beam-over-stem.ly",
       "score": "qA",

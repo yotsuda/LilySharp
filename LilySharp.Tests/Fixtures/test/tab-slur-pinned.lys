@@ -1,0 +1,55 @@
+// The tab book that shows LilyPond's TWO-STAGE tab slur on paper, and the only one whose
+// slurs can be COMPARED with LilyPond, because it removes the variable that stops the others:
+// every note names its string (\4 \3 \2 \1), so the two engines cannot pick different strings.
+// Their fret/string allocators do not agree, and a slur hangs off the DIGIT, so a book that
+// leaves the choice open compares two fingerings rather than two slurs. Same device as
+// test/tab-string-pinned, which does it for the beam.
+//
+// Bass tuning E1 A1 D2 G2, and a tab frets the SOUNDING pitch (written -12), so every note
+// here is fret 5 on its own string: the fret is constant and only the STRING moves.
+//
+// ⚠️ BOTH DIRECTIONS, and that is the subject. LilyPond's slur direction reads the STRING,
+// not the notated pitch (lily/slur.cc:60-68 calc_direction — UP as soon as one encompassed
+// column's stem points DOWN). Bar 1 sits on the two HIGH strings (tab positions 1, 3, 3, 1;
+// stems down) and must bow UP; bar 2 is its EXACT REFLECTION on the two LOW ones
+// (−1, −3, −3, −1; stems up) and must bow DOWN. Until 2026-09-01 Lily# bowed every tab slur
+// UP from an invented arch, so bar 2 is the half of this book that a snapshot of the old
+// code could never show.
+// ⚠️ REFLECTED, not merely "the other direction". Written as 4,3,3,4 the second bar is still
+// a slur-down book, but its ENDPOINTS sit on the outer string where bar 1's sit on the inner
+// — so the two numbers are unrelated and the pair asserts nothing. Reflected, LilyPond
+// answers exact negatives, and a constant absorbed on one side cannot hide.
+//
+// What LilyPond does, in two stages (ly/engraver-init.ly:1248-1256 and :1275 →
+// scm/lily/tablature.scm:144-157): ⑴ the ORDINARY slur scorer runs over bare fret digits —
+// the TabStaff zeroes Stem.details "to minimize their influence on the
+// slur::calc-control-points routine" — then ⑵ all four control points move
+// staff-space × direction × 0.35 = 0.525 back toward the numbers.
+//
+// Measured against LilyPond 2.26.0 (audit/lp-geometry/probes/tab-slur.ly dumps
+// control-points), in the tab staff's own spaces above its middle:
+//   up    P0  1.043326  C1  2.074551      down  P0 −1.043326  C1 −2.074551
+// exact negatives. The same two bars are ledger points slur.tab.*; the residuals there are
+// the larger fret digits (ratified, docs/HANDOFF.md §3) and nothing else.
+octave absolute
+time 4/4
+key c major
+
+part bl { clef bass tuning bass }
+
+section A {
+  bl {
+    g,4\2( c\1 c\1 g,\2) |
+    d,4\3( a,,\4 a,,\4 d,\3) |
+  }
+}
+
+form main { A }
+
+score main {
+  tab bl as numbers
+}
+
+// ⚠ `as numbers` ON PURPOSE, matching the twin's PLAIN `\new TabStaff`: the two stages are
+// what the DEFAULT tab does, and `\tabFullNotation` reverts the stem overrides stage ⑴
+// depends on. A tab-only score would otherwise default to `as full`.

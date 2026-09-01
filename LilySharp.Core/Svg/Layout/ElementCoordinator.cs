@@ -3315,16 +3315,16 @@ internal sealed class ElementCoordinator
                     segEndX = lastMeasure.X + lastMeasure.Width;
                 }
 
-                // On a TAB staff a slur connects fret DIGITS on their string
-                // lines, not notation pitch heights. The notation SlurScoringProblem
-                // (5 staff lines, pitch dy) is meaningless here and ran the arc
-                // through the digits — including a grace note's digit. Lay the tab
-                // slur out directly instead, hugging above the numbers it spans.
+                // On a TAB staff the same scorer runs, but in the tab's own frame —
+                // staff-space 1.5, its own line count, fret digits for heads and no
+                // stems — and its answer is then translated back toward the numbers.
+                // See BuildTabSlurLayout for LilyPond's two stages and the measurement.
                 if (staff is { IsTab: true })
                 {
                     var tabLayout = BuildTabSlurLayout(
                         score, slur, segment.IsFirst, segment.IsLast, segSystem,
-                        staffIndex, staff, segStartX, segEndX, graceNotes);
+                        staffIndex, staff, segStartX, segEndX, graceNotes,
+                        graceByMeasure, graceGeomCache, slurLayouts);
                     if (tabLayout != null)
                         slurLayouts.Add(tabLayout with { RenderMeasureIndex = segment.StartMeasureIndex });
                     continue;
@@ -3500,14 +3500,6 @@ internal sealed class ElementCoordinator
     private static bool SpanBefore(int m1, int i1, int m2, int i2) =>
         m1 < m2 || (m1 == m2 && i1 < i2);
 
-    /// <summary>
-    /// Device-Y of an item's TOP fret-digit row (smallest string number = highest
-    /// line). Used both to hang a tab slur's endpoints off the digits and to find
-    /// the topmost digit the arch must clear.
-    /// </summary>
-    private static double TabItemTopDigitY(MusicItem item, TabStaffGeometry geom)
-        => geom.StringY(geom.StemHeadString(item, stemUp: true));
-
     /// <summary>The voice item at (measure, index), or null if out of range.</summary>
     private static MusicItem? ItemAt(Voice voice, int measureIndex, int itemIndex)
     {
@@ -3517,18 +3509,73 @@ internal sealed class ElementCoordinator
     }
 
     /// <summary>
-    /// Lays out a slur on a TAB staff: a shallow arch ABOVE the fret numbers,
-    /// anchored on each edge's digit and lifted clear of the TOPMOST digit it
-    /// spans — the encompassed main notes AND the grace digits hanging off them,
-    /// which is exactly what a pitch-based arc used to run straight through.
-    /// Bypasses <see cref="SlurScoringProblem"/> (five staff lines, pitch dy),
-    /// which does not model a tab staff.
+    /// Lays out a slur on a TAB staff the way LilyPond does — in two stages, neither of
+    /// them invented here: ⑴ the ORDINARY slur scorer, run in the tab staff's own frame
+    /// (staff-space 1.5, four or six lines, fret digits for note heads and no stems at
+    /// all), then ⑵ the whole curve translated <c>staff-space × direction × 0.35</c> back
+    /// toward the numbers.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:1248-1258 no-stem-extend, stem-shorten,
+    ///   beamed-lengths — the TabStaff zeroes every entry of <c>Stem.details</c>, under the
+    ///   comment "make the Stems as short as possible to minimize their influence on the
+    ///   slur::calc-control-points routine", and then hides the stencil. So the scorer
+    ///   runs, and it runs over bare heads.
+    /// LILYPOND-REF: ly/engraver-init.ly:1275 → scm/tablature.scm:144-157 slur::move-closer-to-tab-note-heads
+    ///   — ⑵ a <c>control-points</c> transformer that subtracts
+    ///   <c>staff-space × direction × 0.35</c> from ALL FOUR points, i.e. a rigid
+    ///   translation; the shape the scorer chose survives it.
+    /// LILYPOND-REF: lily/slur.cc:47-70 Slur::calc_direction — UP as soon as ONE
+    ///   encompassed non-rest column's stem points DOWN, else DOWN. On a tab that stem
+    ///   direction is the STRING's, not the notated pitch's (TabStaffGeometry.StringStemUp).
+    /// <para>
+    /// MEASURED on 2.26.0, scratch/p318/tabslur-dump.ly (four-string bass tab, the pair
+    /// <c>ts.ly</c>/<c>ts.lys</c> the report came in on). Score 0 is the default TabStaff,
+    /// score 1 the same staff with <c>Slur.control-points</c> reverted to
+    /// <c>ly:slur::calc-control-points</c>, so the two differ by the transformer alone:
+    /// <code>
+    ///   e4( g)        raw  (0.533956, 3.601926) (1.291445, 4.242020)
+    ///                      (2.458072, 4.236815) (3.209821, 3.589989)
+    ///                 final    same x, every y − 0.525000  = 1.5 × 1 × 0.35
+    ///   c8( d e f g4) raw  (0.532636, 3.589989) (2.282832, 5.092561)
+    ///                      (6.442477, 5.092561) (8.192674, 3.589989)
+    /// </code>
+    /// and the raw base attachment is the digit's ink top + 0.750000 =
+    /// <c>dir × 0.5 × staff_space</c> (slur-scoring.cc:555-557), NOT a stem: the dumped
+    /// tab Stem's Y extent is empty.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHAT THIS REPLACED WAS AN INVENTION, and the reason it had to go rather than be
+    /// re-tuned: it built a symmetric cubic whose peak cleared the topmost digit by a
+    /// hand-chosen <c>0.36 × FretFontSize + 0.1</c>, and bowed UP always. Multiplying an
+    /// invented arch by LilyPond's 0.35 would only have brought it NEAR the right answer by
+    /// coincidence — the second invention covering the first (docs/RULES.md §5.2.1).
+    /// </para>
+    /// <para>
+    /// ⚠️ Lily# DRAWS tab stems where LilyPond hides them
+    /// (<see cref="TabConstants.UnbeamedStemLength"/>, a ratified deviation), and they stay
+    /// out of this scorer because that is what the ported code reads. They are not in the
+    /// curve's way: the direction rule above puts the slur on the side away from the stems
+    /// (a column whose stem points down forces the slur up), so the two sit on opposite
+    /// sides of the digits by construction.
+    /// </para>
+    /// <para>
+    /// ⚠️ Rests do not enter. On a TabStaff LilyPond sets <c>Rest.stencil = ##f</c>
+    /// (engraver-init.ly:1266), so a rest column carries no ink for the curve to clear —
+    /// unlike the notation path, where <see cref="BuildSlurObstacles"/> reads a rest's own
+    /// box. Nor do dots, tuplet numbers, scripts or text: the same block hides all of them,
+    /// which is why there is no extra-encompass set here.
+    /// </para>
+    /// </remarks>
     private SlurLayout? BuildTabSlurLayout(
         Score score, SlurItem slur, bool isFirst, bool isLast, SystemLayout segSystem,
         int staffIndex, Model.Staff staff, double segStartX, double segEndX,
-        ImmutableArray<GraceNoteItem> graceNotes)
+        ImmutableArray<GraceNoteItem> graceNotes,
+        Dictionary<int, List<int>>? graceByMeasure,
+        GraceObstacleGeom?[]? graceGeomCache,
+        IReadOnlyList<SlurLayout> slurLayouts)
     {
+        const double eps = 0.001;
         var voice = score.Voices[slur.VoiceIndex];
         // Within-system staff-top offset (device, down from system top), NOT absolute —
         // so the tab slur's digit/string geometry is system-independent and DrawSlurs
@@ -3537,25 +3584,13 @@ internal sealed class ElementCoordinator
         // a pure origin shift that leaves the device string frame intact (island 2).
         double staffY = LayoutUtilities.StaffOffsetInSystemDown(segSystem, staffIndex);
         var geom = new TabStaffGeometry(staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef, staff.Transposition);
+        double space = geom.StringSpace;
+        double staffMiddleDown = staffY + (geom.StringCount - 1) * space / 2.0;
+        double halfDigit = TabConstants.FretDigitHeight / 2.0;
 
-        // The fret digits sit a TabHeadCenterOffset right of their note columns
-        // (see EngravingDefaults); shift the real (unbroken) edges to hang the
-        // slur off the digit, not the bare column — same as the tab tie.
-        double startX = segStartX + (isFirst ? EngravingDefaults.TabHeadCenterOffset : 0);
-        double endX = segEndX + (isLast ? EngravingDefaults.TabHeadCenterOffset : 0);
-        if (endX - startX < 0.5)
-            return null;
-
-        // Digit row at each edge (the edge item's top string). A broken
-        // continuation has no edge note in this piece — anchor at the staff top.
-        MusicItem? startItem = isFirst ? EdgeItem(voice, slur.StartMeasureIndex, slur.StartItemIndex) : null;
-        MusicItem? endItem = isLast ? EdgeItem(voice, slur.EndMeasureIndex, slur.EndItemIndex) : null;
-        double startDigitY = startItem is { } si ? TabItemTopDigitY(si, geom) : geom.StaffY;
-        double endDigitY = endItem is { } ei ? TabItemTopDigitY(ei, geom) : geom.StaffY;
-
-        // Topmost digit the arch must clear: every encompassed main note plus the
-        // grace digits attached to them.
-        double topDigitY = Math.Min(startDigitY, endDigitY);
+        // The note columns this segment encompasses, in X order — LilyPond's
+        // note_columns_. A grace column joins below, at its own (smaller) digit size.
+        var columns = new List<(double X, MusicItem Item)>();
         foreach (var ml in segSystem.Measures)
         {
             int mi = ml.MeasureIndex;
@@ -3566,45 +3601,80 @@ internal sealed class ElementCoordinator
             int hi = mi == slur.EndMeasureIndex ? slur.EndItemIndex : items.Length - 1;
             hi = Math.Min(hi, items.Length - 1);
             for (int i = lo; i <= hi; i++)
-                if (items[i] is NoteItem or ChordItem)
-                    topDigitY = Math.Min(topDigitY, TabItemTopDigitY(items[i], geom));
+            {
+                if (items[i].GraceTime || items[i] is not (NoteItem or ChordItem))
+                    continue;
+                double cx = ml.X + GetItemXOffset(voice, mi, i, ml);
+                if (cx < segStartX - eps || cx > segEndX + eps)
+                    continue;
+                columns.Add((cx, items[i]));
+            }
         }
-        var graces = graceNotes.IsDefault ? ImmutableArray<GraceNoteItem>.Empty : graceNotes;
-        foreach (var gr in graces)
+        if (columns.Count == 0)
+            return null;
+
+        // LILYPOND-REF: lily/slur.cc:60-68 calc_direction — DOWN unless some column's stem
+        //   points DOWN.
+        bool curveUp = false;
+        foreach (var (_, item) in columns)
         {
-            if (gr.StaffIndex != staffIndex
-                || gr.MeasureIndex < slur.StartMeasureIndex || gr.MeasureIndex > slur.EndMeasureIndex)
-                continue;
-            int lo = gr.MeasureIndex == slur.StartMeasureIndex ? slur.StartItemIndex : 0;
-            int hi = gr.MeasureIndex == slur.EndMeasureIndex ? slur.EndItemIndex : int.MaxValue;
-            if (gr.MainNoteItemIndex < lo || gr.MainNoteItemIndex > hi)
-                continue;
-            // EVERY head of every column: a tab grace chord prints one digit per pitch,
-            // so the topmost of them is what the slur has to clear.
-            foreach (var col in gr.Columns)
-                foreach (var head in col.Heads)
-                    topDigitY = Math.Min(topDigitY, geom.DigitY(head.Midi));
+            if (!geom.StringStemUp(geom.MeanString(item)))
+            {
+                curveUp = true;
+                break;
+            }
         }
+        int dir = curveUp ? 1 : -1;              // LilyPond's dir_, in the Y-UP frame
+        double outward = curveUp ? -1.0 : 1.0;   // the same direction in DEVICE Y (down)
 
-        // Hug just above the digit (the visible glyph half-height plus a hair,
-        // matching the tab tie's clearance), and let the arch peak clear the
-        // topmost digit by the same margin — and rise a touch above the endpoints
-        // so it reads as a curve even on one string.
-        double clearance = 0.36 * TabConstants.FretFontSize + 0.1;
-        double startY = startDigitY - clearance;
-        double endY = endDigitY - clearance;
-        double peakY = Math.Min(topDigitY - clearance, Math.Min(startY, endY) - 0.4);
-        // Symmetric cubic midpoint B(0.5).y = (startY + endY + 6*controlY)/8; solve
-        // controlY so the peak reaches peakY.
-        double controlY = (8 * peakY - startY - endY) / 6;
-        double dx = endX - startX;
-        var c1 = (X: startX + dx * 0.3, Y: controlY);
-        var c2 = (X: startX + dx * 0.7, Y: controlY);
+        // Base attachments. The head is the digit on the SLUR'S OWN SIDE of the column
+        // (LilyPond's extremes_[d].slur_head_); a broken edge has no edge note of its own,
+        // so it reads the nearest covered column instead and keeps the system-edge X.
+        // LILYPOND-REF: lily/slur-scoring.cc:555-557 get_base_attachments (real edge) and
+        //   :600-614 breakable_bound_extent (broken).
+        var startCol = geom.EdgeDigitColumn(columns[0].Item, top: curveUp);
+        var endCol = geom.EdgeDigitColumn(columns[^1].Item, top: curveUp);
+        double startDigitY = geom.StringY(startCol.StringNum);
+        double endDigitY = geom.StringY(endCol.StringNum);
+        double startY = startDigitY + outward * (halfDigit + 0.5 * space);
+        double endY = endDigitY + outward * (halfDigit + 0.5 * space);
 
-        // Tab slurs bow UP (above the numbers), independent of the notation slur's
-        // pitch-derived direction; DrawBow tapers by CurveUp, so record it here.
+        // The fret digits sit a TabHeadCenterOffset right of their note columns
+        // (see EngravingDefaults), plus the chord zigzag of the digit actually attached to.
+        double startX = segStartX + (isFirst ? EngravingDefaults.TabHeadCenterOffset + startCol.Dx : 0);
+        double endX = segEndX + (isLast ? EngravingDefaults.TabHeadCenterOffset + endCol.Dx : 0);
+        if (endX - startX < 0.5)
+            return null;
+
+        // One obstacle per column: its digit stack's ink box, at the slur-side digit's X.
+        // No StemY — see the remark.
+        var obstacles = new List<SlurObstacle>(columns.Count);
+        foreach (var (cx, item) in columns)
+        {
+            var top = geom.EdgeDigitColumn(item, top: true);
+            var bottom = geom.EdgeDigitColumn(item, top: false);
+            obstacles.Add(new SlurObstacle(
+                cx + EngravingDefaults.TabHeadCenterOffset + (curveUp ? top.Dx : bottom.Dx),
+                geom.StringY(top.StringNum) - halfDigit,
+                geom.StringY(bottom.StringNum) + halfDigit));
+        }
+        AddTabGraceObstacles(
+            obstacles, voice, slur, geom, graceNotes, graceByMeasure, graceGeomCache,
+            segSystem, segStartX, segEndX);
+        obstacles.Sort((a, b) => a.X.CompareTo(b.X));
+
+        // No stem on either edge (LilyPond's are zero-length and stencil-less), so the
+        // edge info carries only the head width the min-length snap-back and the tilt
+        // shift read — LilyPond's slur_head_x_extent_.
+        var leftEdge = new SlurEdgeInfo(
+            HasStem: false, StemUp: false, BeamedInner: false, Beamed: false,
+            HeadWidth: isFirst ? startCol.HalfWidth * 2 : 0.0);
+        var rightEdge = new SlurEdgeInfo(
+            HasStem: false, StemUp: false, BeamedInner: false, Beamed: false,
+            HeadWidth: isLast ? endCol.HalfWidth * 2 : 0.0);
+
         var tabSlur = new SlurItem(
-            slur.StartStaffPosition, slur.EndStaffPosition, curveUp: true,
+            slur.StartStaffPosition, slur.EndStaffPosition, curveUp,
             slur.StartMeasureIndex, slur.EndMeasureIndex,
             slur.StartItemIndex, slur.EndItemIndex, slur.VoiceIndex)
         {
@@ -3614,17 +3684,106 @@ internal sealed class ElementCoordinator
             StartSourcePosition = slur.StartSourcePosition,
             EndSourcePosition = slur.EndSourcePosition,
         };
-        // The geometry above is device Y; BowLayout stores page Y-up (= -device),
-        // so reflect the endpoints and control points on the way in.
-        return new SlurLayout(tabSlur, startX, -startY, endX, -endY,
-            (c1.X, -c1.Y), (c2.X, -c2.Y),
-            isBrokenLeft: !isFirst, isBrokenRight: !isLast) { StaffIndex = staffIndex };
 
-        static MusicItem? EdgeItem(Voice v, int mi, int ii)
+        var solved = new SlurScoringProblem(
+            tabSlur, startX, startY, endX, endY, staffMiddleDown,
+            obstacles: obstacles,
+            existingSlurs: slurLayouts.Where(sl => SlurSpansOverlap(slur, sl.Slur)).ToList(),
+            isBrokenLeft: !isFirst,
+            isBrokenRight: !isLast,
+            leftEdge: leftEdge,
+            rightEdge: rightEdge,
+            staffSpace: space,
+            staffLineCount: geom.StringCount,
+            // LILYPOND-REF: lily/slur-scoring.cc:334-341 musical_dy_ — the two edge HEADS'
+            //   reference coordinates, which on a tab are their STRING lines (Y-up = −device).
+            musicalDy: startDigitY - endDigitY).Solve();
+
+        // ⑵ The transformer: every control point down toward the numbers by
+        // staff-space × direction × 0.35 (0.525 on a 1.5-space tab). BowLayout's Ys are
+        // page Y-up, which is the frame LilyPond's control-points live in, so the
+        // subtraction is spelled exactly as scm/lily/tablature.scm:155-156 spells it.
+        double closer = space * dir * 0.35;
+        return new SlurLayout(tabSlur,
+            solved.StartX, solved.StartYUp - closer,
+            solved.EndX, solved.EndYUp - closer,
+            (solved.Control1.X, solved.Control1.Y - closer),
+            (solved.Control2.X, solved.Control2.Y - closer),
+            isBrokenLeft: !isFirst, isBrokenRight: !isLast) { StaffIndex = staffIndex };
+    }
+
+    /// <summary>
+    /// Adds the GRACE fret digits a tab slur covers to <paramref name="obstacles"/> — one
+    /// per head of every covered grace column, at the grace digit size, with no stem
+    /// (a tab grace is a bare number: GraceNoteEngraver skips the beam quant for one).
+    /// </summary>
+    /// <remarks>
+    /// The X is the renderer's own: <c>groupX + ColumnOffsets[k]</c>, which
+    /// <c>SharedRenderer.TabGraceDigits</c> draws centred on — so, unlike the main
+    /// columns, there is no TabHeadCenterOffset here. The group origin is
+    /// <see cref="AddGraceObstaclesForMeasure"/>'s (the main note's column less the run's
+    /// span), which carries the same disclosed simplification: the script overhang
+    /// GraceNoteEngraver subtracts is not read.
+    /// </remarks>
+    private static void AddTabGraceObstacles(
+        List<SlurObstacle> obstacles, Voice voice, SlurItem slur, TabStaffGeometry geom,
+        ImmutableArray<GraceNoteItem> graceNotes,
+        Dictionary<int, List<int>>? graceByMeasure, GraceObstacleGeom?[]? graceGeomCache,
+        SystemLayout segSystem, double segStartX, double segEndX)
+    {
+        if (graceByMeasure is null || graceGeomCache is null || graceNotes.IsDefaultOrEmpty)
+            return;
+        const double eps = 0.001;
+        double halfGrace = TabConstants.FretDigitHeight * TabConstants.GraceFretScale / 2.0;
+
+        foreach (var ml in segSystem.Measures)
         {
-            if (mi < 0 || mi >= v.Measures.Length) return null;
-            var items = v.Measures[mi].Items;
-            return ii >= 0 && ii < items.Length ? items[ii] : null;
+            int mi = ml.MeasureIndex;
+            if (mi < slur.StartMeasureIndex || mi > slur.EndMeasureIndex || mi >= voice.Measures.Length)
+                continue;
+            if (!graceByMeasure.TryGetValue(mi, out var groupIndices))
+                continue;
+
+            foreach (int gi in groupIndices)
+            {
+                var g = graceNotes[gi];
+                // Covered = the main note lies inside the span, excluding the start note
+                // itself (its run sounds BEFORE the slur opens) — the same gate the
+                // notation path takes.
+                bool afterStart = mi > slur.StartMeasureIndex || g.MainNoteItemIndex > slur.StartItemIndex;
+                bool beforeEnd = mi < slur.EndMeasureIndex || g.MainNoteItemIndex <= slur.EndItemIndex;
+                if (!afterStart || !beforeEnd)
+                    continue;
+
+                if (graceGeomCache[gi] is not { } cached)
+                {
+                    var mainItem = ItemAt(voice, mi, g.MainNoteItemIndex);
+                    var cols = SpacingRules.GraceColumns(g.Columns, mainItem);
+                    var (bl, br) = GraceNoteEngraver.QuantGraceBeam(g, cols.Offsets);
+                    cached = new GraceObstacleGeom(cols.Offsets, cols.Span, bl, br);
+                    graceGeomCache[gi] = cached;
+                }
+                double groupX = ml.X + GetItemXOffset(voice, mi, g.MainNoteItemIndex, ml) - cached.Span;
+
+                for (int k = 0; k < g.Columns.Length; k++)
+                {
+                    double hx = groupX + (k < cached.Offsets.Length ? cached.Offsets[k] : 0.0);
+                    if (hx < segStartX - eps || hx > segEndX + eps)
+                        continue;
+                    // ONE DIGIT PER HEAD, as the renderer draws them: a tab grace chord
+                    // prints a number on every string it sounds.
+                    double top = double.PositiveInfinity, bottom = double.NegativeInfinity;
+                    foreach (var head in g.Columns[k].Heads)
+                    {
+                        double y = geom.DigitY(head.Midi, head.StringNumber);
+                        top = Math.Min(top, y);
+                        bottom = Math.Max(bottom, y);
+                    }
+                    if (double.IsInfinity(top))
+                        continue;
+                    obstacles.Add(new SlurObstacle(hx, top - halfGrace, bottom + halfGrace));
+                }
+            }
         }
     }
 

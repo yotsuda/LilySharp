@@ -187,6 +187,27 @@ internal sealed class SlurScoringProblem
     // attachments, avoid_staff_line on the generated curves).
     private readonly double _staffMiddleDown;
 
+    /// <summary>
+    /// The staff this slur lives on, measured in the page's own unit — LilyPond's
+    /// <c>staff_space_</c> (slur-scoring.cc:247). 1.0 for a notation staff; 1.5 for a
+    /// TabStaff, whose string gap is that wide (<c>StaffSymbol.staff-space 1.5</c>,
+    /// ly/engraver-init.ly:1207).
+    /// </summary>
+    /// <remarks>
+    /// It is NOT a cosmetic scale: LilyPond multiplies six separate quantities by it —
+    /// the base-attachment lift (:557), the grid step (:798/:801), the minimum length
+    /// (:729), the stem-extent widening (:747), the curve's height-limit (:714) and both
+    /// staff-line avoidances (:650/:655 and slur-configuration.cc:61/69). Everything else
+    /// (the demerit weights in <c>slur-details</c>, the note-column extents, the line
+    /// thickness) is already absolute and comes through untouched.
+    /// </remarks>
+    private readonly double _staffSpace;
+
+    /// <summary>How many lines the staff has — 5 for notation, the string count for a tab.
+    /// Only the two staff-line avoidances read it, and they must: a four-line tab's lines
+    /// are at ODD positions (3, 1, −1, −3).</summary>
+    private readonly int _staffLineCount;
+
     public SlurScoringProblem(
         SlurItem slur,
         double startX,
@@ -201,8 +222,13 @@ internal sealed class SlurScoringProblem
         bool isBrokenRight = false,
         SlurEdgeInfo leftEdge = default,
         SlurEdgeInfo rightEdge = default,
-        IReadOnlyList<SlurExtraObject>? extraObjects = null)
+        IReadOnlyList<SlurExtraObject>? extraObjects = null,
+        double staffSpace = 1.0,
+        int staffLineCount = 5,
+        double? musicalDy = null)
     {
+        _staffSpace = staffSpace;
+        _staffLineCount = staffLineCount;
         // Internal vertical frame: LilyPond's native Y-up. We obtain it from
         // the device frame (Y-down) by exact negation (yUp = -yDevice), so the
         // scorers below read sign-for-sign against lily/slur-configuration.cc
@@ -218,9 +244,9 @@ internal sealed class SlurScoringProblem
         //   both the real-head (:559) and broken-edge (:616) base attachments
         //   pass through it.
         _startX = startX;
-        _startY = MoveAwayFromStaffline(-startY, staffMiddleDown, slurDir);
+        _startY = MoveAwayFromStaffline(-startY, staffMiddleDown, slurDir, staffSpace, staffLineCount);
         _endX = endX;
-        _endY = MoveAwayFromStaffline(-endY, staffMiddleDown, slurDir);
+        _endY = MoveAwayFromStaffline(-endY, staffMiddleDown, slurDir, staffSpace, staffLineCount);
         _parameters = parameters ?? SlurScoreParameters.Default;
         _existingSlurs = existingSlurs;
         _isBrokenLeft = isBrokenLeft;
@@ -268,8 +294,11 @@ internal sealed class SlurScoringProblem
         }
 
         // Musical dy in the Y-up frame: higher pitch = larger Y.
-        // LILYPOND-REF: lily/slur-scoring.cc:334-341
-        _musicalDy = (slur.EndStaffPosition - slur.StartStaffPosition) / 2.0;
+        // LILYPOND-REF: lily/slur-scoring.cc:334-341 — the difference of the two edge
+        // HEADS' reference coordinates, in the page's own unit. On a five-line staff that
+        // is the pitch difference in half-spaces halved; on a TAB it is a difference of
+        // STRING lines, which no staff position of this slur knows, so the caller states it.
+        _musicalDy = musicalDy ?? (slur.EndStaffPosition - slur.StartStaffPosition) / 2.0;
 
         _staffMiddleDown = staffMiddleDown;
     }
@@ -280,31 +309,35 @@ internal sealed class SlurScoringProblem
 
     // Bow arc height / control-point indent: the shared bezier-bow math, bound to
     // this slur's height-limit and ratio. See BezierBow (LilyPond bezier-bow.cc).
+    // LILYPOND-REF: lily/slur-scoring.cc:713-714 generate_curves, height-limit —
+    //   h_inf = staff_space_ * height-limit; the ratio is unscaled.
     private double CalculateSlurHeight(double width) =>
-        BezierBow.Height(_parameters.HeightLimit, _parameters.Ratio, width);
+        BezierBow.Height(_parameters.HeightLimit * _staffSpace, _parameters.Ratio, width);
 
     private double CalculateIndent(double width) =>
-        BezierBow.Indent(_parameters.HeightLimit, width);
+        BezierBow.Indent(_parameters.HeightLimit * _staffSpace, width);
 
     /// <summary>
-    /// Nudges a base attachment 0.15 ss slurward when it rounds onto one of the
-    /// five staff lines (Y-up frame; staff space = 1).
+    /// Nudges a base attachment 0.15 staff-space slurward when it rounds onto one
+    /// of the staff's lines (Y-up frame).
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/slur-scoring.cc:639-658 move_away_from_staffline —
     /// pos = y * 2 / staff_space; the round is <c>round_halfway_up</c>
     /// (floor(x+0.5)) for the closeness test but <c>rint</c> (half-to-even) for
-    /// the line lookup, and on_staff_line means an even position within the five
-    /// lines. y += 1.5 * staff_space * dir / 10 when both hold.
+    /// the line lookup, and on_staff_line means a position of the staff's own
+    /// parity within its outer lines. y += 1.5 * staff_space * dir / 10 when both
+    /// hold.
     /// </remarks>
-    private static double MoveAwayFromStaffline(double yUp, double staffMiddleDown, int dir)
+    private static double MoveAwayFromStaffline(
+        double yUp, double staffMiddleDown, int dir, double staffSpace, int staffLineCount)
     {
-        double pos = (yUp + staffMiddleDown) * 2.0;
+        double pos = (yUp + staffMiddleDown) * 2.0 / staffSpace;
         double roundedUp = Math.Floor(pos + 0.5);
         int rint = (int)Math.Round(pos, MidpointRounding.ToEven);
-        bool onLine = EngravingDefaults.OnStaffLine(rint);
+        bool onLine = EngravingDefaults.OnStaffLine(rint, staffLineCount);
         if (Math.Abs(pos - roundedUp) < 0.2 && onLine)
-            yUp += 1.5 * dir / 10.0;
+            yUp += 1.5 * staffSpace * dir / 10.0;
         return yUp;
     }
 
@@ -434,15 +467,15 @@ internal sealed class SlurScoringProblem
         double factor = 3.0 * t * (1.0 - t);
 
         // Y-up frame: the staff middle line sits at -staffMiddleDown.
-        double p = 2 * (y + _staffMiddleDown);
+        double p = 2 * (y + _staffMiddleDown) / _staffSpace;
         int roundP = (int)Math.Floor(p + 0.5);
-        static bool OnLine(int pos) => EngravingDefaults.OnStaffLine(pos);
+        bool OnLine(int pos) => EngravingDefaults.OnStaffLine(pos, _staffLineCount);
         if (!OnLine(roundP))
             roundP += (p > roundP) ? 1 : -1;
         if (!OnLine(roundP))
             return bez;
 
-        double distance = (p - roundP) / 2.0;
+        double distance = (p - roundP) * _staffSpace / 2.0;
         // Half the slur's thickness at t, plus one basic blot-diameter (half for
         // the slur outline, half for the staff line).
         double minDistance = 0.5 * slurThickness * factor + lineThickness
@@ -616,8 +649,11 @@ internal sealed class SlurScoringProblem
     /// snaps back to the head centres.
     /// </summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm Slur (minimum-length . 1.5),
-    /// consumed at lily/slur-scoring.cc:728-730.</remarks>
-    private const double MinimumLength = 1.5;
+    /// consumed at lily/slur-scoring.cc:728-730 as
+    /// <c>staff_space_ * minimum-length</c> — so a TabStaff's is 2.25.</remarks>
+    private const double MinimumLengthSpaces = 1.5;
+
+    private double MinimumLength => MinimumLengthSpaces * _staffSpace;
 
     /// <summary>
     /// The stem-attachment X rule for one candidate endpoint: when the edge
@@ -641,8 +677,8 @@ internal sealed class SlurScoringProblem
     {
         if (!edge.HasStem || edge.StemUp != _slur.CurveUp || double.IsNaN(edge.StemXLo))
             return false;
-        double lo = Math.Min(edge.StemBeginY, edge.StemTipY) - 0.25;
-        double hi = Math.Max(edge.StemBeginY, edge.StemTipY) + 0.25;
+        double lo = Math.Min(edge.StemBeginY, edge.StemTipY) - 0.25 * _staffSpace;
+        double hi = Math.Max(edge.StemBeginY, edge.StemTipY) + 0.25 * _staffSpace;
         if (y >= lo && y <= hi)
         {
             // stem_extent_[X][-d] - d*0.3: the extent edge FACING the slur's
@@ -729,7 +765,9 @@ internal sealed class SlurScoringProblem
             endYRight += additional;
         }
 
-        const double step = 0.5; // half staff space
+        // LILYPOND-REF: lily/slur-scoring.cc:798-801 enumerate_attachments —
+        //   os[d][Y_AXIS] += dir_ * staff_space_ / 2 on both loops.
+        double step = 0.5 * _staffSpace; // half a staff space of THIS staff
         const double eps = 1e-9;
 
         // The avoid points every candidate's curve is amplified over.

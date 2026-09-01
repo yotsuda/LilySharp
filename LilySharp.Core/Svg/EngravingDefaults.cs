@@ -51,6 +51,22 @@ internal static class EngravingDefaults
     public static bool OnStaffLine(int roundedPosition)
         => roundedPosition % 2 == 0 && System.Math.Abs(roundedPosition) <= 4;
 
+    /// <summary>Whether a rounded staff position sits ON a real line of a staff with
+    /// <paramref name="lineCount"/> lines — the general form of <see cref="OnStaffLine(int)"/>,
+    /// which is this one at <paramref name="lineCount"/> 5.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/staff-symbol-referencer.cc on_staff_line / lily/staff-symbol.cc
+    ///   line_positions — with no explicit <c>line-positions</c> an N-line staff sits at
+    ///   <c>N-1, N-3, …, −(N−1)</c>, so a position is on a line when it has the same parity
+    ///   as <c>N−1</c> and lies within the outer lines.
+    /// A four-string TAB staff is therefore (3, 1, −1, −3) — ODD positions, which is why
+    /// the five-line predicate above cannot serve it: it would call every tab line a gap
+    /// and every tab gap a line.
+    /// </remarks>
+    public static bool OnStaffLine(int roundedPosition, int lineCount)
+        => System.Math.Abs(roundedPosition) <= lineCount - 1
+           && ((roundedPosition - (lineCount - 1)) % 2 == 0);
+
     /// <summary>Staff line thickness: 1.0 × line-thickness.</summary>
     /// <remarks>
     /// LILYPOND-REF: lily/staff-symbol.cc — StaffSymbol thickness default 1.0

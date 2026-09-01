@@ -2145,6 +2145,75 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// A bow's control point on a TAB staff, in that staff's own spaces above its middle —
+    /// the frame <see cref="TabBeamPositionAboveStaffMiddle"/> reports in, and the one
+    /// LilyPond's tab-slur probe converts its <c>control-points</c> into.
+    /// <paramref name="which"/> is 0 for the left attachment <c>P0</c> and 1 for the first
+    /// control point <c>C1</c> (the sandwich's two halves averaged, which is the point the
+    /// scorer actually solved).
+    /// </summary>
+    /// <remarks>
+    /// <see cref="BowAttachmentAboveStaffMiddle"/> cannot serve: it measures against
+    /// <see cref="StaffRefpoints"/>, which is a five-line staff's middle LINE, and a
+    /// four-string tab has no line there at all — its middle falls in the gap between
+    /// strings 2 and 3. Both the middle and the space are read back off the drawn strings
+    /// here, so a four- and a six-string staff are the same reading.
+    /// <para>
+    /// ⚠️ The page must hold exactly ONE staff, for the reason its neighbours give: with
+    /// two, "the middle" is a question rather than a reference.
+    /// </para>
+    /// </remarks>
+    public double TabBowPointAboveStaffMiddle(int index, int which, int page = 0)
+    {
+        var ys = StaffLineYs(page);
+        if (ys.Count < 4)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: found {ys.Count} staff line(s); a tab staff reading needs at "
+                + "least four strings.\nDrawn geometry:\n" + Describe());
+        }
+        double top = ys.Min(), bottom = ys.Max();
+        double space = (bottom - top) / (ys.Count - 1);
+        double middle = (top + bottom) / 2;
+
+        var bows = _pages[page].Beziers;
+        if (index < 0 || index >= bows.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for bow {index} but {bows.Count} were drawn.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        double y = which == 0 ? bows[index].P0.Y : bows[index].Centreline1.Y;
+        return (middle - y) / space;
+    }
+
+    /// <summary>
+    /// A bow's end-to-end length on a TAB staff, in that staff's own spaces — LilyPond's
+    /// <c>control-points</c> [3].x − [0].x, and the number a bow's HEIGHT is a function of
+    /// (lily/bezier-bow.cc slur_height). <see cref="BowSpan"/> answers the same question in
+    /// drawn spaces; this one shares the tab reader's frame so the pair can be read together.
+    /// </summary>
+    public double TabBowSpan(int index, int page = 0)
+    {
+        var ys = StaffLineYs(page);
+        if (ys.Count < 4)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: found {ys.Count} staff line(s); a tab staff reading needs at "
+                + "least four strings.\nDrawn geometry:\n" + Describe());
+        }
+        double space = (ys.Max() - ys.Min()) / (ys.Count - 1);
+        var bows = _pages[page].Beziers;
+        if (index < 0 || index >= bows.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for bow {index} but {bows.Count} were drawn.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        return (bows[index].P1.X - bows[index].P0.X) / space;
+    }
+
+    /// <summary>
     /// How many beam lines reach a stem on one side — LilyPond's <c>Stem.beaming</c>, read
     /// off what was DRAWN.
     /// </summary>

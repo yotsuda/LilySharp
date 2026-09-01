@@ -53,8 +53,8 @@
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
 - **:172** ⚠️ WHAT IS NOT PORTED, and why it cannot be reached rather than was skipped:
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
-- **:390** ⚠️ What is NOT ported is the semibreve exception: the beam covered-grob booking
-- **:813** ⚠️ NOT PORTED: the fold-and-search itself. `dist` is a per-staff search over
+- **:406** ⚠️ What is NOT ported is the semibreve exception: the beam covered-grob booking
+- **:829** ⚠️ NOT PORTED: the fold-and-search itself. `dist` is a per-staff search over
 ### `LilySharp.Core/Svg/Layout/AlignmentWalk.cs`
 - **:140** ⚠️ THE ONE LINE OF THAT BRANCH NOT PORTED is its dy,
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
@@ -106,10 +106,10 @@
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
 - **:445** ⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED PEDAL IS **NOT PORTED HERE** either:
 ### `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs`
-- **:418** case of broken slur") — not ported; every slur this scorer sees lives on
-- **:593** column allows only 0.3 of movement) is not ported: every edge here
-- **:963** approximation there); RIGHT wins when both edges match, as LP's
-- **:966** ⚠️ The Tie forbidden-attachment term (:352-388) is not ported: ties are
+- **:451** case of broken slur") — not ported; every slur this scorer sees lives on
+- **:626** column allows only 0.3 of movement) is not ported: every edge here
+- **:1001** approximation there); RIGHT wins when both edges match, as LP's
+- **:1004** ⚠️ The Tie forbidden-attachment term (:352-388) is not ported: ties are
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
 - **:337** ⚠️ THIS IS A DERIVATION, NOT A TRANSCRIPTION, and it rests on one premise worth
 ### `LilySharp.Core/Svg/Layout/StaffAffinity.cs`
@@ -149,8 +149,8 @@
 - **:456** this is unobserved rather than known-good; it closes when the labels travel with
 - **:1617** accidental, ledgers and fingering only. ⚠️ No point observes it: the corpus has no
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
-- **:113** snapshot and no ledger point. What remains is the BEAM quanter's use below, which is a
-- **:705** would be fitting inside a formula that is not yet LilyPond's. No point observes it.
+- **:129** snapshot and no ledger point. What remains is the BEAM quanter's use below, which is a
+- **:721** would be fitting inside a formula that is not yet LilyPond's. No point observes it.
 ### `LilySharp.Core/Svg/Layout/ArpeggioEngraver.cs`
 - **:186** fixture carries one, so there is no ledger point and no twin — it is ported literally
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
@@ -271,14 +271,14 @@
 ### `LilySharp.Core/Svg/Collector/TabResolver.cs`
 - **:287** is built on ( — LILYSHARP-OWN and deliberately
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
-- **:106** LILYSHARP-OWN: a 5-half-space floor with no single named LP constant behind it.
-- **:411** ⚠️ LILYSHARP-OWN: A NOMINAL BOX, AND LILYPOND HAS NO COUNTERPART TO IT. A Flag's
-- **:606** LILYSHARP-OWN: hand-tuned, and the only width on this list that is. ⚠️ NOT because
-- **:676** LILYSHARP-OWN: a frame, not a quantity. LilyPond has no counterpart to look up
-- **:687** ⚠️ LILYSHARP-OWN: A NOMINAL HALF-HEAD, NOT THE GLYPH'S. LilyPond has no such constant —
-- **:718** ⚠️ LILYSHARP-OWN: ONE NOMINAL BOX FOR EVERY REST, WHICH LILYPOND DOES NOT HAVE. There a
-- **:771** ⚠️ LILYSHARP-OWN, AND LILYPOND'S ANSWER IS MEASURABLE THOUGH NOT DECLARED. There is no
-- **:832** a LILYSHARP-OWN divergence that had been measured and left because closing it redraws
+- **:122** LILYSHARP-OWN: a 5-half-space floor with no single named LP constant behind it.
+- **:427** ⚠️ LILYSHARP-OWN: A NOMINAL BOX, AND LILYPOND HAS NO COUNTERPART TO IT. A Flag's
+- **:622** LILYSHARP-OWN: hand-tuned, and the only width on this list that is. ⚠️ NOT because
+- **:692** LILYSHARP-OWN: a frame, not a quantity. LilyPond has no counterpart to look up
+- **:703** ⚠️ LILYSHARP-OWN: A NOMINAL HALF-HEAD, NOT THE GLYPH'S. LilyPond has no such constant —
+- **:734** ⚠️ LILYSHARP-OWN: ONE NOMINAL BOX FOR EVERY REST, WHICH LILYPOND DOES NOT HAVE. There a
+- **:787** ⚠️ LILYSHARP-OWN, AND LILYPOND'S ANSWER IS MEASURABLE THOUGH NOT DECLARED. There is no
+- **:848** a LILYSHARP-OWN divergence that had been measured and left because closing it redraws
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`
 - **:213** ⚠️ LILYSHARP-OWN, AND IT IS THE BAND TOP, NOT LILYPOND'S REFPOINT.
 - **:229** Lily#'s own object, hence LILYSHARP-OWN rather than a REF.

@@ -9330,6 +9330,64 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A TAB slur, in BOTH directions — the regime the notation slur points miss, because a
+    /// tab slur is the same scorer on a different STAFF plus one translation afterwards.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond does it in two stages.
+    /// LILYPOND-REF: ly/engraver-init.ly:1248-1256 no-stem-extend, stem-shorten — ⑴ the
+    ///   ordinary scorer runs over bare fret digits, because the TabStaff zeroes every entry
+    ///   of <c>Stem.details</c> under the comment "make the Stems as short as possible to
+    ///   minimize their influence on the slur::calc-control-points routine".
+    /// LILYPOND-REF: ly/engraver-init.ly:1275 → scm/tablature.scm:144-157 slur::move-closer-to-tab-note-heads
+    ///   — ⑵ subtracts <c>staff-space × direction × 0.35</c> from all four control points,
+    ///   a rigid translation, so ⑴ owns the shape.
+    /// <para>
+    /// BOTH BARS, because the direction rule is the other half of the port and it reads the
+    /// STRING, not the notated pitch.
+    /// LILYPOND-REF: lily/slur.cc:60-68 calc_direction — UP as soon as one encompassed
+    ///   column's stem points DOWN.
+    /// Bar 1 sits on the two HIGH strings (positions 3 and 1, stems down) and bows UP; bar 2
+    /// is its exact REFLECTION on the two LOW ones (−1, −3, stems up) and bows DOWN. With
+    /// only the first, the rule and the SIGN of the 0.525 are both unobserved.
+    /// </para>
+    /// <para>
+    /// The music is <c>test/tab-slur-pinned</c>'s, tab staff only, and every note names its
+    /// STRING for the reason <see cref="BQT"/> gives: the two engines' string allocators do
+    /// not agree, and a slur hangs off the digit. Bass tuning E1 A1 D2 G2, every note fret 5
+    /// on its own string.
+    /// </para>
+    /// <para>
+    /// ⚠️ <c>as numbers</c>, matching the twin's PLAIN <c>\new TabStaff</c>: the two stages
+    /// above are what the default tab does, and <c>\tabFullNotation</c> reverts the stem
+    /// overrides ⑴ depends on.
+    /// </para>
+    /// LilyPond twin (audit/lp-geometry/probes/tab-slur.ly) — MEASURED, in the tab staff's
+    /// own spaces above its middle: the two bows are EXACT negatives of one another, which is
+    /// what the reflected strings buy and what a one-sided book cannot say.
+    /// <para>
+    /// ⚠️ UNIT: read with <see cref="RenderedGeometry.TabBowPointAboveStaffMiddle"/>, which
+    /// answers in the TAB staff's own spaces, and the probe divides LilyPond's page-unit
+    /// control points by the same 1.5 — the convention <see cref="BQT"/> already set.
+    /// </para>
+    /// </remarks>
+    private static readonly string TSL = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part bl { clef bass tuning bass }
+
+        section Main {
+          bl { g,4\2( c\1 c\1 g,\2) | d,4\3( a,,\4 a,,\4 d,\3) | }
+        }
+
+        form main { ~Main }
+
+        score main "TSL" { tab bl as numbers }
+        """;
+
+    /// <summary>
     /// A beam quanted against the STEM of a note in another voice — the half of the
     /// covered-grob supply that is not a box at all.
     /// </summary>
@@ -14161,6 +14219,27 @@ internal static class LpGeometryProbes
         new("beam.quant.tab.falling.left", BQT, g => g.TabBeamPositionAboveStaffMiddle(1, false)),
         new("beam.quant.tab.flat-lowest-string", BQT, g => g.TabBeamPositionAboveStaffMiddle(2, false)),
         new("beam.quant.tab.flat-highest-string", BQT, g => g.TabBeamPositionAboveStaffMiddle(3, false)),
+        // The TAB slur, both directions, read as a PAIR PER BOW so the two things it is made
+        // of are counted apart. `string-to-attachment` is where the bow lands: the digit's own
+        // ink half-height plus dir·0.5·staff_space, then LilyPond's 0.35 back toward the
+        // number — so it carries the ratified deviation of Lily#'s LARGER fret digits
+        // (TabConstants.FretFontSize, HANDOFF §3) and can never be exact while that stands.
+        // `attachment-to-control` is the SCORER's own rise, which that deviation does not
+        // reach; recording only the first would let a wrong curve hide inside a known
+        // font difference. See TSL.
+        new("slur.tab.up.string-to-attachment", TSL,
+            g => g.TabBowPointAboveStaffMiddle(0, 0)),
+        new("slur.tab.up.attachment-to-control", TSL,
+            g => g.TabBowPointAboveStaffMiddle(0, 1) - g.TabBowPointAboveStaffMiddle(0, 0)),
+        new("slur.tab.down.string-to-attachment", TSL,
+            g => g.TabBowPointAboveStaffMiddle(1, 0)),
+        new("slur.tab.down.attachment-to-control", TSL,
+            g => g.TabBowPointAboveStaffMiddle(1, 1) - g.TabBowPointAboveStaffMiddle(1, 0)),
+        // …and the number the two rises are MADE OF. A bow's height is a function of its
+        // LENGTH (lily/bezier-bow.cc slur_height), so without this the rise residual could be
+        // a wrong height or a wrong span and the ledger could not tell. One entry, not a pair:
+        // LilyPond prints the same span for both bars, and so does Lily#.
+        new("slur.tab.span", TSL, g => g.TabBowSpan(0)),
         // The REACH of a voice { } span, measured one bar outside it, against the same bar
         // with no span in the part at all. LilyPond prints the pair identically because
         // \voiceOne dies with the span; a part-wide reading moves only the first.

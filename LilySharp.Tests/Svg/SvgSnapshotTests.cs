@@ -699,10 +699,16 @@ public class SvgSnapshotTests
         // the first beamed group, so the stacker must lift the whole tempo mark
         // clear of both the beam and the fermata rising under the swing symbol.
         yield return new object[] { "test/tempo-swing" };
-        // A slur spanning a grace note on a tab staff must arch above the fret
-        // digits — clearing the encompassed main-note digits AND the grace digit —
-        // instead of running a pitch-based curve straight through them.
+        // A slur spanning a grace note on a tab staff must clear the encompassed
+        // main-note digits AND the grace digit — which is what the ported scorer's
+        // obstacle list is for; a pitch-based curve used to run straight through them.
         yield return new object[] { "test/tab-grace-slur" };
+        // Both TAB SLUR DIRECTIONS on one page, strings pinned so the book is
+        // comparable with LilyPond's: bar 1 on the high strings bows UP, bar 2 —
+        // its exact reflection on the low ones — bows DOWN. Until 2026-09-01 every
+        // tab slur was an invented arch that bowed up, so the second bar is the
+        // half of this picture no earlier snapshot could hold.
+        yield return new object[] { "test/tab-slur-pinned" };
         // A tied chord on a tab staff: each string's tie must sit on its own fret
         // digit (via the chord's exclusive allocation), not pile onto one string.
         yield return new object[] { "test/tab-chord-tie" };
