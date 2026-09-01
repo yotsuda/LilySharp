@@ -53,7 +53,6 @@ headers of the cited LilyPond files. Regenerate it when the ports change.
 | `LilySharp.Core/Svg/Layout/PageBreaker.cs` | `lily/constrained-breaking.cc` | Copyright (C) 2006--2026 Joe Neeman <joeneeman@gmail.com> |
 | `LilySharp.Core/Svg/Layout/PageLayouter.cs` | `lily/page-layout-problem.cc` | Copyright (C) 2009--2026 Joe Neeman <joeneeman@gmail.com> |
 | `LilySharp.Core/Svg/Layout/PageLayouter.cs` | `lily/page-breaking.cc` | Copyright (C) 2006--2026 Joe Neeman <joeneeman@gmail.com> |
-| `LilySharp.Core/Svg/Layout/Skyline.cs` | `lily/skyline.cc` | Copyright (C) 2006--2026 Joe Neeman <joeneeman@gmail.com> |
 | `LilySharp.Core/Svg/Layout/SkylineBuilding.cs` | `lily/skyline.cc` | Copyright (C) 2006--2026 Joe Neeman <joeneeman@gmail.com> |
 | `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs` | `lily/slur-scoring.cc` | Copyright (C) 1996--2026 Han-Wen Nienhuys <hanwen@xs4all.nl>; Jan Nieuwenhuizen <janneke@gnu.org> |
 | `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs` | `lily/slur-configuration.cc` | Copyright (C) 2004--2026 Han-Wen Nienhuys <hanwen@xs4all.nl> |

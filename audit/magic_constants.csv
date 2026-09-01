@@ -117,7 +117,6 @@
 "Svg/Layout/SkylineBuilder.cs","2184","0.5","double noteUp = size.Span(staffPosition * 0.5);   // staff-spaces above middle, up+","(file-level) LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline()","Yellow"
 "Svg/Layout/SkylineBuilder.cs","2255","0.5","double ledgerUp = size.Span(pos * 0.5);","(file-level) LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline()","Yellow"
 "Svg/Layout/SkylineBuilder.cs","2268","0.5","double ledgerUp = size.Span(pos * 0.5);","(file-level) LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline()","Yellow"
-"Svg/Layout/Skyline.cs","141","0.0","return Distance(other, 0.0);","(file-level) LILYPOND-REF: lily/skyline.cc — Skyline class (simplified version)","Yellow"
 "Svg/Layout/HorizontalSkyline.cs","233","0.0","if (horizonPadding <= 0.0)","(file-level) LILYPOND-REF: Uses sky = +1 for RIGHT, -1 for LEFT","Yellow"
 "Svg/Layout/HorizontalSkyline.cs","248","0.0","=> horizonPadding <= 0.0","LILYPOND-REF: lily/skyline.cc:558-615 Skyline::padded (horizon_padding) — LilyPond returns a","Green"
 "Svg/Layout/VerticalSkyline.cs","72","10","private const double ContinuityEpsilon = 1e-10;","(file-level) LILYPOND-REF: flower/include/direction.hh — UP = +1, DOWN = -1.","Yellow"

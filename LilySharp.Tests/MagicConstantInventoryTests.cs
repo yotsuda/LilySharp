@@ -111,7 +111,10 @@ public class MagicConstantInventoryTests
         "Svg/Layout/PageBreaker.cs",
         "Svg/Layout/PageLayouter.cs",
         "Svg/Layout/SkylineBuilder.cs",
-        "Svg/Layout/Skyline.cs",
+        // Svg/Layout/Skyline.cs left this list in session 315: the simplified flat-segment
+        // class was DELETED as dead code once the dot column stopped calling it, so the
+        // census loses no coverage. Its merge was not LilyPond's — it folded overlapping
+        // boxes into their union — which is the defect that session repaired in DotColumn.
         "Svg/Layout/HorizontalSkyline.cs",
         "Svg/Layout/VerticalSkyline.cs",
         "Svg/Layout/AccidentalPlacement.cs",

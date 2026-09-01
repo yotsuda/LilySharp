@@ -319,27 +319,11 @@ public class SkylineMergeTests
         Assert.Equal(25, skyline.Height(80), Epsilon);  // Only third
     }
 
-    /// <summary>
-    /// Simplified Skyline: Distance with horizon_padding extends Y ranges.
-    /// </summary>
-    [Fact]
-    public void SimplifiedSkyline_Distance_WithHorizonPadding()
-    {
-        // Right skyline: segment at Y=[10,20], X=30
-        var right = Skyline.FromBox(10, 20, 0, 30, Skyline.Direction.Right);
-
-        // Left skyline: segment at Y=[25,35], X=50 (no Y overlap with right)
-        var left = Skyline.FromBox(25, 35, 50, 100, Skyline.Direction.Left);
-
-        // Without padding: no Y overlap → PositiveInfinity
-        double distNopad = right.Distance(left, 0.0);
-        Assert.Equal(double.PositiveInfinity, distNopad);
-
-        // With horizon_padding 6: Y ranges become [10-6,20+6]=[4,26] and [25-6,35+6]=[19,41]
-        // Overlap: [19,26], distance = 50 - 30 = 20
-        double distPadded = right.Distance(left, 6.0);
-        Assert.Equal(20.0, distPadded, Epsilon);
-    }
+    // A test for the SIMPLIFIED Skyline's padded Distance stood here until session 315, when
+    // the class it exercised was deleted — see the commit that removed
+    // Svg/Layout/Skyline.cs. Nothing in the engine had called that class since the dot
+    // column stopped, and its merge was not LilyPond's: it folded two overlapping boxes
+    // into one spanning their union, which is the defect that commit repaired.
 
     /// <summary>
     /// A building that reaches ±∞ still reaches ±∞ after a FINITE one is merged over it —

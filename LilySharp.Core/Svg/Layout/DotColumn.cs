@@ -179,11 +179,13 @@ internal static class DotColumn
         // THE MAX IS TAKEN PER SUPPORT, over the rows THAT support covers — which is what a
         // skyline's height at one y is, and NOT what Lily#'s Skyline answers for this input.
         // ⚠️⚠️ THIS WAS `Skyline.FromBoxes(...).QueryXInRange(p, p)` UNTIL SESSION 315, AND THE
-        // TWO ARE NOT THE SAME FUNCTION. Skyline.MergeSegments folds any two OVERLAPPING boxes
-        // into one segment spanning their union with the outermost X, so a stem's box (which
-        // always overlaps its flag's) carried the FLAG's x down over the stem's whole seven
-        // positions — the Y gate this class exists for was switched off for every row between
-        // the head and the flag's real ink. It survived session 314's four full-size books by
+        // TWO ARE NOT THE SAME FUNCTION. That `Skyline` — a simplified flat-segment class,
+        // deleted in the same session once this was its last caller in the engine; it is in the
+        // history of Svg/Layout/Skyline.cs — merged any two OVERLAPPING boxes into ONE segment
+        // spanning their union with the outermost X, so a stem's box (which always overlaps its
+        // flag's) carried the FLAG's x down over the stem's whole seven positions: the Y gate
+        // this class exists for was switched off for every row between the head and the flag's
+        // real ink. It survived session 314's four full-size books by
         // luck: a stem-up stem's box BEGINS at the head's own row and the query is strict at
         // both edges, so an unlifted dot fell out of the merged segment anyway, and a lifted
         // one was inside the flag's own box in all four. A GRACE is where the two answers come
