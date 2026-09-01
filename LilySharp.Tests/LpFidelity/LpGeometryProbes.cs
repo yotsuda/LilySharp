@@ -11066,6 +11066,59 @@ internal static class LpGeometryProbes
     private static readonly string KC2 = Score("d2 e | fis2 g |", "KC2", "d major");
 
     /// <summary>
+    /// A piece that OPENS with a repeat. LilyPond prints no automatic repeat bar line at the
+    /// start of a piece — <c>lily/bar-engraver.cc:432-449
+    /// Bar_engraver::pre_process_music</c>, "At the start of a piece, we
+    /// don't print any repeat bars": the <c>repeatCommands</c> loop that turns
+    /// <c>start-repeat</c> into <c>startRepeatBarType</c> is skipped while <c>first_time_</c>
+    /// holds. The grob is never created, so it costs no ink AND no width, which is what this
+    /// point reads: 3.700000, byte-for-byte the number <see cref="IRN"/> gets without the
+    /// repeat, and LilyPond's own dump of score IR carries no BarLine left of the first head.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ THE PAIR IS THE POINT, and it separates three outcomes a single reading cannot.
+    /// If the opener is suppressed grob-and-all, IRB and IRN agree. If it is suppressed only
+    /// at DRAW time with its column still reserved, IRB is wider by that column — Lily#'s own
+    /// history is the measurement: before this rule was ported the same book read 5.540000,
+    /// i.e. +1.840000 of reserved repeat bar, while IRN read 3.700000 exactly on the same
+    /// build. If the repeat were simply not COLLECTED, the
+    /// closing <c>:|</c> would go too, which is why the pinned fixture
+    /// <c>test/initial-repeat-bar</c> keeps both a close and an identical <c>|:</c> two bars
+    /// later that IS drawn.
+    /// </para>
+    /// <para>
+    /// The value coinciding with <c>line-start.time-to-first-note.standard-key</c> is not a
+    /// duplicate reading: that point asks what a metered line start costs, this one asks what
+    /// an opener at moment 0 adds to it, and the answer being "nothing" is only legible
+    /// because the control sits beside it.
+    /// </para>
+    /// </remarks>
+    /// <remarks>LilyPond twin: probe score IR of initial-repeat-bar.ly —
+    /// <c>\new Staff { \time 4/4 \repeat volta 2 { c'1 c'1 } }</c>.</remarks>
+    private static readonly string IRB = Preamble("c major") + """
+        section Main {
+          melody { c1 | c1 | }
+        }
+
+        form main { |: Main :| }
+
+        score main "IRB" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
+    /// The control of the <see cref="IRB"/> pair: the same meter and the same two whole notes
+    /// with no repeat anywhere. Any difference from IRB is width the suppressed opener cost.
+    /// </summary>
+    /// <remarks>LilyPond twin: probe score IN of initial-repeat-bar.ly —
+    /// <c>\new Staff { \time 4/4 c'1 c'1 }</c>. Same music as probe score E, deliberately
+    /// re-declared under its own name so the ledger's <c>probe</c>/<c>score</c> pair points at
+    /// the file that asks THIS question.</remarks>
+    private static readonly string IRN = Score("c1 | c1 |", "IRN");
+
+    /// <summary>
     /// The same quantity on the DIGIT path, with the digit whose glyph cut Lily# gets
     /// wrong. A time signature is <c>\number</c> markup, and <c>\number</c> prepends
     /// <c>font-encoding fetaText</c> and NO font-features
@@ -14709,6 +14762,15 @@ internal static class LpGeometryProbes
         new("line-start.time-to-first-note.standard-key", KCS, g => g.TimeSignatureToFirstNotehead()),
         new("line-start.time-to-first-note.custom-key", KCC, g => g.TimeSignatureToFirstNotehead()),
         new("line-start.time-to-first-note.cut-common", KC2, g => g.TimeSignatureToFirstNotehead()),
+        // The repeat bar line LilyPond does NOT print at the start of a piece
+        // (bar-engraver.cc:432-449 Bar_engraver::pre_process_music). The pair is the
+        // reading: IRB opens with `|:`, IRN is the
+        // same music without it, and the rule says they are the same distance. See IRB's
+        // remark for what each of the three possible answers would have looked like.
+        new("line-start.time-to-first-note.initial-repeat", IRB,
+            g => g.TimeSignatureToFirstNotehead()),
+        new("line-start.time-to-first-note.no-initial-repeat", IRN,
+            g => g.TimeSignatureToFirstNotehead()),
         // The DIGIT path's own three readings, which KC2's remark says these points pin and
         // which nothing pinned until now: every meter-width point above stands on a C GLYPH
         // (4/4, 2/2) or on digits whose two candidate cuts coincide — eight of the ten do.

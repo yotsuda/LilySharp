@@ -34,17 +34,25 @@ public sealed class BackToBackRepeatTests
     private static Measure[] Measures(string src) =>
         new MeasureCollector().Collect(SyntaxTree.Parse(src), "m").Voice.Measures.ToArray();
 
+    // ⚠️ The books below open with a bar of plain music, and that is load-bearing rather
+    // than decorative: LilyPond prints no automatic repeat bar at the START of a piece
+    // (bar-engraver.cc:432-449 Bar_engraver::pre_process_music, pinned by
+    // InitialRepeatBarTests), so a `|:` written in the
+    // first measure is collected and then dropped by the assembler. Placing these fixtures
+    // at moment 0 would make "the leading |: is kept" unobservable — the assertion would
+    // read None for a reason that has nothing to do with the merge under test.
+
     [Fact]
     public void RepeatEndThenRepeatStart_MergeIntoOneRepeatBoth()
     {
-        // `x` = one bar `|: c1 :|`; `x x` places two, so bar1's `:|` meets bar2's `|:`.
+        // `x` = one bar `|: c1 :|`; `x x` places two, so x1's `:|` meets x2's `|:`.
         var m = Measures("phrase x { |: c1 :| }\n"
-                       + "part m { clef treble section A { x x } }\n"
+                       + "part m { clef treble section A { d1 x x } }\n"
                        + "form main { A }\nscore main { staff m }");
-        Assert.Equal(2, m.Length);
-        Assert.Equal(BarlineType.RepeatBoth, m[0].EndBarline); // :| + |: -> :|:
-        Assert.Equal(BarlineType.None, m[1].StartBarline);     // the duplicate start is dropped
-        Assert.Equal(BarlineType.RepeatStart, m[0].StartBarline); // the leading |: is kept
+        Assert.Equal(3, m.Length);
+        Assert.Equal(BarlineType.RepeatBoth, m[1].EndBarline); // :| + |: -> :|:
+        Assert.Equal(BarlineType.None, m[2].StartBarline);     // the duplicate start is dropped
+        Assert.Equal(BarlineType.RepeatStart, m[1].StartBarline); // the leading |: is kept
     }
 
     [Fact]
@@ -64,9 +72,9 @@ public sealed class BackToBackRepeatTests
     public void AnOrdinaryRepeatIsUntouched()
     {
         // A lone `|: … :|` with no adjacent repeat keeps its plain end/start.
-        var m = Measures("part m { clef treble section A { |: c1 :| d1 } }\n"
+        var m = Measures("part m { clef treble section A { d1 |: c1 :| e1 } }\n"
                        + "form main { A }\nscore main { staff m }");
-        Assert.Equal(BarlineType.RepeatStart, m[0].StartBarline);
-        Assert.Equal(BarlineType.RepeatEnd, m[0].EndBarline);
+        Assert.Equal(BarlineType.RepeatStart, m[1].StartBarline);
+        Assert.Equal(BarlineType.RepeatEnd, m[1].EndBarline);
     }
 }

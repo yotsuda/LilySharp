@@ -132,7 +132,13 @@ public class NoteheadHitTargetTests
         int sectionPlain = src.IndexOf('|', src.IndexOf("{ x")); // the `|` between x1 and x2
         int sectionBoth = src.IndexOf(":|:");                    // the `:|:` between x2 and x3
         var svg = SvgGenerator.Generate(SyntaxTree.Parse(src), SvgRenderOptions.Preview());
-        Assert.Equal(3, HighlightTargets(svg, repeatStart));     // |: at all 3 sites
+        // 2, not 3: the FIRST `x` opens the piece, and LilyPond draws no automatic repeat
+        // bar at moment 0 (bar-engraver.cc:432-449 Bar_engraver::pre_process_music, pinned
+        // by InitialRepeatBarTests). A
+        // highlight needs ink to hang on, so the site that draws nothing lights nothing —
+        // the two `|:` that ARE drawn still both carry the phrase's offset, which is the
+        // claim. Its `:|` is drawn, so that side keeps all 3.
+        Assert.Equal(2, HighlightTargets(svg, repeatStart));     // |: at both DRAWN sites
         Assert.Equal(3, HighlightTargets(svg, repeatEnd));       // :| at all 3 sites
         Assert.True(HighlightTargets(svg, sectionPlain) >= 1);   // section | lights its bar
         Assert.True(HighlightTargets(svg, sectionBoth) >= 1);    // section :|: lights its bar
@@ -159,8 +165,12 @@ public class NoteheadHitTargetTests
     {
         // A `|:` opens the next measure; the drawn start barline must highlight from the
         // `|:` offset, not the previous close SourceStart otherwise holds.
+        // ⚠️ A bar of music comes FIRST, because a `|:` that opens the piece draws no
+        // automatic repeat bar at all (bar-engraver.cc:432-449
+        // Bar_engraver::pre_process_music) — placed at moment 0 this
+        // book would have no drawn start barline for the assertion to be about.
         const string src = "phrase x { |: c1 :| }\n"
-                         + "part m { clef treble section A { x } }\n"
+                         + "part m { clef treble section A { d1 x } }\n"
                          + "form main { A }\nscore main \"s\" { staff m }";
         int repeatStart = src.IndexOf("|:");
         var svg = SvgGenerator.Generate(SyntaxTree.Parse(src), SvgRenderOptions.Preview());

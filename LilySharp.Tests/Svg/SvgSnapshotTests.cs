@@ -376,6 +376,11 @@ public class SvgSnapshotTests
         yield return new object[] { "test/tuplets" };
         yield return new object[] { "test/tuplets-beamed" };
         yield return new object[] { "test/grandstaff-repeat" };
+        // Both halves of LilyPond's "no automatic repeat bar at the start of a piece" rule
+        // in one picture: the `|:` at moment 0 draws nothing (and reserves nothing), the
+        // identical `|:` two bars later draws normally.
+        // LILYPOND-REF: lily/bar-engraver.cc:432-449 Bar_engraver::pre_process_music.
+        yield return new object[] { "test/initial-repeat-bar" };
         yield return new object[] { "test/bass-clef" };
         yield return new object[] { "test/keysig-treble" };
         yield return new object[] { "test/keysig-bass" };

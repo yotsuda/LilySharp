@@ -87,6 +87,14 @@ public class UnrenderedPartStructureMarkTests
         Assert.DoesNotContain(Collect(src).MusicMarks, m => m.Type == MusicMarkType.Segno);
     }
 
+    // ⚠️ THE REPEATING SECTION IS NEVER THE FIRST ONE IN THE FORM below, and that is
+    // load-bearing rather than tidiness: LilyPond draws no automatic repeat bar at the
+    // START of a piece (bar-engraver.cc:432-449 Bar_engraver::pre_process_music, pinned by
+    // InitialRepeatBarTests), so a
+    // projected `|:` landing on measure 0 is dropped by the assembler. Written that way
+    // these books would read None for a reason that has nothing to do with the harvest
+    // gate they exist to pin — the assertion would go quiet instead of going red.
+
     [Fact]
     public void RepeatBarlinesInOmittedPart_ProjectOntoTheChordRow()
     {
@@ -96,14 +104,14 @@ public class UnrenderedPartStructureMarkTests
             time 4/4
             part piano { clef treble  section A { |: c4 d e f | g a b c :| } section B { c1 | g1 } }
             chords prog { section A { C | G } section B { C | G } }
-            form main { A B }
+            form main { B A }
             score main { chords prog }
             """;
         var measures = Collect(src).StaffGroups
             .SelectMany(g => g.Staves).SelectMany(s => s.Voices).First().Measures;
-        Assert.Equal(BarlineType.RepeatStart, measures[0].StartBarline);   // section A, bar 0
-        Assert.Equal(BarlineType.RepeatEnd, measures[1].EndBarline);       // section A, bar 1
-        Assert.DoesNotContain(measures.Skip(2), m =>                       // section B: no repeat
+        Assert.Equal(BarlineType.RepeatStart, measures[2].StartBarline);   // section A, bar 0
+        Assert.Equal(BarlineType.RepeatEnd, measures[3].EndBarline);       // section A, bar 1
+        Assert.DoesNotContain(measures.Take(2), m =>                       // section B: no repeat
             m.StartBarline == BarlineType.RepeatStart || m.EndBarline == BarlineType.RepeatEnd);
     }
 
@@ -138,14 +146,14 @@ public class UnrenderedPartStructureMarkTests
             chords prog { section A { C | G } section B { C | G } }
             section A { piano { |: c4 d e f | g a b c :| } }
             section B { piano { c1 | g1 } }
-            form main { A B }
+            form main { B A }
             score main { chords prog }
             """;
         var measures = Collect(src).StaffGroups
             .SelectMany(g => g.Staves).SelectMany(s => s.Voices).First().Measures;
-        Assert.Equal(BarlineType.RepeatStart, measures[0].StartBarline);   // section A, bar 0
-        Assert.Equal(BarlineType.RepeatEnd, measures[1].EndBarline);       // section A, bar 1
-        Assert.DoesNotContain(measures.Skip(2), m =>                       // section B: no repeat
+        Assert.Equal(BarlineType.RepeatStart, measures[2].StartBarline);   // section A, bar 0
+        Assert.Equal(BarlineType.RepeatEnd, measures[3].EndBarline);       // section A, bar 1
+        Assert.DoesNotContain(measures.Take(2), m =>                       // section B: no repeat
             m.StartBarline == BarlineType.RepeatStart || m.EndBarline == BarlineType.RepeatEnd);
     }
 
@@ -208,15 +216,16 @@ public class UnrenderedPartStructureMarkTests
             time 4/4
             phrase hook { |: g8 g a4 a8 a a4 | g2 f :| }
             part piano { clef treble }
-            chords prog { section A { C | G } }
+            chords prog { section Z { C } section A { C | G } }
+            section Z { piano { c1 } }
             section A { piano { hook } }
-            form main { A }
+            form main { Z A }
             score main { chords prog }
             """;
         var measures = Collect(src).StaffGroups
             .SelectMany(g => g.Staves).SelectMany(s => s.Voices).First().Measures;
-        Assert.Equal(BarlineType.RepeatStart, measures[0].StartBarline);
-        Assert.Equal(BarlineType.RepeatEnd, measures[1].EndBarline);
+        Assert.Equal(BarlineType.RepeatStart, measures[1].StartBarline);
+        Assert.Equal(BarlineType.RepeatEnd, measures[2].EndBarline);
     }
 
     [Fact]
@@ -228,15 +237,15 @@ public class UnrenderedPartStructureMarkTests
             time 4/4
             phrase core { |: g8 g a4 a8 a a4 | g2 f :| }
             phrase hook { core }
-            part piano { clef treble  section A { hook } }
-            chords prog { section A { C | G } }
-            form main { A }
+            part piano { clef treble  section Z { c1 } section A { hook } }
+            chords prog { section Z { C } section A { C | G } }
+            form main { Z A }
             score main { chords prog }
             """;
         var measures = Collect(src).StaffGroups
             .SelectMany(g => g.Staves).SelectMany(s => s.Voices).First().Measures;
-        Assert.Equal(BarlineType.RepeatStart, measures[0].StartBarline);
-        Assert.Equal(BarlineType.RepeatEnd, measures[1].EndBarline);
+        Assert.Equal(BarlineType.RepeatStart, measures[1].StartBarline);
+        Assert.Equal(BarlineType.RepeatEnd, measures[2].EndBarline);
     }
 
     [Fact]
@@ -285,15 +294,16 @@ public class UnrenderedPartStructureMarkTests
         var src = """
             time 4/4
             part sax { }
-            part piano { clef treble  section A { |: c4 d e f | g a b c :| } }
+            part piano { clef treble  section Z { c1 } section A { |: c4 d e f | g a b c :| } }
+            section Z { sax { c1 } }
             section A { sax { c4 d e f | g4 f e d | } }
-            form main { A }
+            form main { Z A }
             score main { staff sax }
             """;
         var measures = CollectViaRenderPath(src).StaffGroups
             .SelectMany(g => g.Staves).SelectMany(s => s.Voices).First().Measures;
-        Assert.Equal(BarlineType.RepeatStart, measures[0].StartBarline);
-        Assert.Equal(BarlineType.RepeatEnd, measures[1].EndBarline);
+        Assert.Equal(BarlineType.RepeatStart, measures[1].StartBarline);
+        Assert.Equal(BarlineType.RepeatEnd, measures[2].EndBarline);
     }
 
     [Fact]
@@ -303,17 +313,21 @@ public class UnrenderedPartStructureMarkTests
             time 4/4
             part sax { }
             part piano { clef treble }
+            section Z {
+              sax { c1 }
+              piano { c1 }
+            }
             section A {
               sax { c4 d e f | g4 f e d | }
               piano { |: c4 d e f | g a b c :| }
             }
-            form main { A }
+            form main { Z A }
             score main { staff sax }
             """;
         var measures = CollectViaRenderPath(src).StaffGroups
             .SelectMany(g => g.Staves).SelectMany(s => s.Voices).First().Measures;
-        Assert.Equal(BarlineType.RepeatStart, measures[0].StartBarline);
-        Assert.Equal(BarlineType.RepeatEnd, measures[1].EndBarline);
+        Assert.Equal(BarlineType.RepeatStart, measures[1].StartBarline);
+        Assert.Equal(BarlineType.RepeatEnd, measures[2].EndBarline);
     }
 
     [Fact]
@@ -338,15 +352,16 @@ public class UnrenderedPartStructureMarkTests
         var src = """
             time 4/4
             part sax { }
-            part piano { clef treble  section A { |: c4 d e f | g a b c :| } }
+            part piano { clef treble  section Z { c1 } section A { |: c4 d e f | g a b c :| } }
+            section Z { sax { voice { c1 } { c,1 } } }
             section A { sax { voice { c4 d e f | g4 f e d | } { c,4 d e f | g,4 f e d | } } }
-            form main { A }
+            form main { Z A }
             score main { staff sax }
             """;
         var measures = CollectViaRenderPath(src).StaffGroups
             .SelectMany(g => g.Staves).SelectMany(s => s.Voices).First().Measures;
-        Assert.Equal(BarlineType.RepeatStart, measures[0].StartBarline);
-        Assert.Equal(BarlineType.RepeatEnd, measures[1].EndBarline);
+        Assert.Equal(BarlineType.RepeatStart, measures[1].StartBarline);
+        Assert.Equal(BarlineType.RepeatEnd, measures[2].EndBarline);
     }
 
     [Fact]

@@ -78,7 +78,7 @@ internal static class ScoreAssembler
     /// </summary>
     public static Score BuildScore(ImmutableArray<Voice> voices, ScoreContent c) =>
         new Score(
-            voices,
+            WithoutInitialRepeatBar(voices),
             c.TimeSignature,
             c.KeySignature,
             c.Clef,
@@ -122,7 +122,7 @@ internal static class ScoreAssembler
     /// </summary>
     public static MultiStaffScore BuildMultiStaffScore(ImmutableArray<StaffGroup> staffGroups, ScoreContent c) =>
         new MultiStaffScore(
-            staffGroups,
+            WithoutInitialRepeatBar(staffGroups),
             c.TimeSignature,
             c.KeySignature,
             c.Tempo,
@@ -153,4 +153,109 @@ internal static class ScoreAssembler
             Fonts = c.Fonts,
             Paper = c.Paper,
         };
+
+    /// <summary>
+    /// LilyPond prints no automatic repeat bar line at the START of a piece, so neither
+    /// does Lily#: the score's first measure loses an opening repeat, and nothing else
+    /// about it changes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// LILYPOND-REF: <c>lily/bar-engraver.cc:432-449 Bar_engraver::pre_process_music</c>,
+    /// whose own comment above the method reads "At the start of a piece, we don't print any
+    /// repeat bars". The whole <c>repeatCommands</c> loop — the one that turns the
+    /// <c>start-repeat</c> posted by
+    /// <c>lily/repeat-acknowledge-engraver.cc:96-109
+    /// Repeat_acknowledge_engraver::listen_volta_repeat_start</c> into
+    /// <c>startRepeatBarType</c> — is skipped while <c>first_time_</c> holds, i.e. while
+    /// the Timing context is still at its first moment
+    /// (<c>lily/bar-engraver.cc:414-417 Bar_engraver::initialize</c>). So the grob is
+    /// never CREATED; this is a model edit, not a draw-time skip, because Lily#'s
+    /// <c>StartBarline</c> is read by fifteen spacing/layout sites as well as the
+    /// renderer — suppressing it only in <see cref="Rendering.SharedRenderer"/> would
+    /// leave the reserved width behind as a gap.
+    /// </para>
+    /// <para>
+    /// MEASURED on 2.26.0 (session 318, <c>scratch/p318/t4/startrepeat.ly</c>): the same
+    /// <c>\repeat volta 2</c> prints no opener when it opens the piece and prints
+    /// <c>.|:</c> when one bar precedes it — position alone decides, which is what makes
+    /// this a rule rather than a quirk of the example.
+    /// </para>
+    /// <para>
+    /// ⚠️ Scope, in LilyPond's own terms: the gate is on AUTOMATIC bars. An explicit
+    /// <c>\bar ".|:"</c> sets <c>whichBar</c> and prints even at moment 0
+    /// (<c>lily/bar-engraver.cc:441-445 Bar_engraver::pre_process_music</c>, the branch above
+    /// the gate), and <c>\set Score.printInitialRepeatBar = ##t</c> restores the opener for
+    /// the lead-sheet convention that does want it
+    /// (Documentation/en/notation/repeats.itely:160-172, "Repeats / Long repeats").
+    /// Lily# spells neither, so it has one behaviour and it is LilyPond's default. A
+    /// <c>|:</c> is always the structural kind here, which is exactly the kind LilyPond
+    /// suppresses.
+    /// </para>
+    /// <para>
+    /// This runs HERE because this is the one place both model constructors are invoked,
+    /// so the rule has one home for every path — single voice, several voices, staff
+    /// groups, and the chord / lyric text rows, which draw their own barlines from their
+    /// own <see cref="Voice"/> and would otherwise keep an opener the staff above had
+    /// dropped (§5.2.1② — the same quantity must not be decided in two places).
+    /// </para>
+    /// </remarks>
+    private static ImmutableArray<StaffGroup> WithoutInitialRepeatBar(ImmutableArray<StaffGroup> groups)
+    {
+        ImmutableArray<StaffGroup>.Builder? builder = null;
+        for (int i = 0; i < groups.Length; i++)
+        {
+            var staves = WithoutInitialRepeatBar(groups[i].Staves);
+            if (staves.Equals(groups[i].Staves))
+                continue;
+            builder ??= groups.ToBuilder();
+            builder[i] = groups[i] with { Staves = staves };
+        }
+        return builder?.ToImmutable() ?? groups;
+    }
+
+    /// <inheritdoc cref="WithoutInitialRepeatBar(ImmutableArray{StaffGroup})"/>
+    private static ImmutableArray<Staff> WithoutInitialRepeatBar(ImmutableArray<Staff> staves)
+    {
+        ImmutableArray<Staff>.Builder? builder = null;
+        for (int i = 0; i < staves.Length; i++)
+        {
+            var voices = WithoutInitialRepeatBar(staves[i].Voices);
+            if (voices.Equals(staves[i].Voices))
+                continue;
+            builder ??= staves.ToBuilder();
+            builder[i] = staves[i] with { Voices = voices };
+        }
+        return builder?.ToImmutable() ?? staves;
+    }
+
+    /// <inheritdoc cref="WithoutInitialRepeatBar(ImmutableArray{StaffGroup})"/>
+    private static ImmutableArray<Voice> WithoutInitialRepeatBar(ImmutableArray<Voice> voices)
+    {
+        ImmutableArray<Voice>.Builder? builder = null;
+        for (int i = 0; i < voices.Length; i++)
+        {
+            var voice = voices[i];
+            if (voice.Measures.Length == 0)
+                continue;
+            var first = voice.Measures[0];
+            // RepeatBoth is the fused ':| |:' glyph. Nothing in the collector produces one at
+            // a measure's START today — every producer writes RepeatStart and
+            // SynchronizeBarlines takes a max over {None, RepeatStart} — so this arm is
+            // named for the same reason StartBarWithBreakPieces and RepeatPairingScanner
+            // name it, and because LilyPond's gate would cover it unchanged: at moment 0 it
+            // drops the whole automatic bar, both observations at once (the else arm of
+            // lily/bar-engraver.cc:489-494 Bar_engraver::pre_process_music), so there is no
+            // half of it left to draw.
+            if (first.StartBarline is not (BarlineType.RepeatStart or BarlineType.RepeatBoth))
+                continue;
+            builder ??= voices.ToBuilder();
+            builder[i] = voice with
+            {
+                Measures = voice.Measures.SetItem(
+                    0, first with { StartBarline = BarlineType.None }),
+            };
+        }
+        return builder?.ToImmutable() ?? voices;
+    }
 }

@@ -1,0 +1,32 @@
+// Regression: LilyPond prints no automatic repeat bar line at the START of a piece, and
+// prints one everywhere else — so ONE book has to show both halves, or the picture cannot
+// tell "the rule fired" from "the repeat was never collected".
+//
+// `form main { |: A :| B |: C :| }`:
+//   · the opening `|:` before A is at moment 0 and draws NOTHING — no thick bar, no dots,
+//     and no reserved width either (the grob is not created, so the spacing never sees it);
+//   · the `:|` closing A still draws, as does the `|:` opening C one bar later.
+// The two `|:` are the same written sign in the same book; only the position differs,
+// which is what makes the picture a statement about the rule rather than about this file.
+//
+// LILYPOND-REF: lily/bar-engraver.cc:432-449 Bar_engraver::pre_process_music — "At the
+// start of a piece, we don't print
+// any repeat bars": the repeatCommands loop that would turn `start-repeat` into
+// `startRepeatBarType` is skipped while `first_time_` holds. MEASURED on 2.26.0
+// (scratch/p318/t4/startrepeat.ly): `\repeat volta 2 { c1 } \repeat volta 2 { d1 }` opens
+// bare, while `c1 \repeat volta 2 { d1 }` opens the second repeat with `.|:`.
+time 4/4
+
+part tune {
+  clef treble
+}
+
+section A { tune { c'1 } }
+section B { tune { d'1 } }
+section C { tune { e'1 } }
+
+form main { |: A :| B |: C :| }
+
+score main "initial-repeat-bar" {
+  staff tune
+}

@@ -2052,6 +2052,20 @@
       "residual": 0.0,
       "why": "OPENED EXACT as the cut-common half of the C-glyph width pair (with line-start.time-to-first-note.standard-key). LilyPond's default style prints ONLY 2/2 and 4/4 as glyphs (timesig.C22/C44, make-c-time-signature-markup); C22's LILC ink is 1.700000 like C44's, so time -> first note is 3.700000 for BOTH -- the pair's equality is the cross-check that the two C widths ride one (glyph) path while every other fraction stays on the Pango digit path. Lily# reserved 2/2 from the digit table too (GetTimeSigWidth max digit '2' = 1.4657 Pango) under a drawn cut-C glyph; the same fix (GetTimeSigWidth's LP-style branch) closes both."
     },
+    "line-start.time-to-first-note.initial-repeat": {
+      "probe": "initial-repeat-bar.ly",
+      "score": "IR",
+      "lilypond": 3.700000,
+      "residual": 0.0,
+      "why": "OPENED AT +1.840000 AND CLOSED IN THE SAME SESSION (319). A piece that OPENS with a repeat: LilyPond prints no automatic repeat bar line at the start of a piece (lily/bar-engraver.cc:432-449 Bar_engraver::pre_process_music, whose comment says so in those words -- the repeatCommands loop that turns start-repeat into startRepeatBarType is skipped while first_time_ holds, so the grob is never created and costs neither ink nor width). Lily# drew one, and this point is what says the second half of that: measured on the pre-port build the same book read 5.540000 while its control read 3.700000 exactly, i.e. the opener was also RESERVING 1.840000 ss that LilyPond does not spend. That is why the fix is a model edit in ScoreAssembler and not a skip in the renderer -- StartBarline is read by fifteen spacing/layout sites, and suppressing only the drawing would have left this 1.840000 behind as a gap. Paired with line-start.time-to-first-note.no-initial-repeat, which is the same music without the repeat; the pair's EQUALITY is the reading, and no single point could have made it."
+    },
+    "line-start.time-to-first-note.no-initial-repeat": {
+      "probe": "initial-repeat-bar.ly",
+      "score": "IN",
+      "lilypond": 3.700000,
+      "residual": 0.0,
+      "why": "The CONTROL of the initial-repeat pair -- the same meter and the same two whole notes with no repeat anywhere. Exact before and after the port (3.700000 on both builds), which is what makes it a control: it pins that the 1.840000 recorded next door belonged to the opener and not to the metered line start those two share. Same music as probe score E, re-declared under its own name so the ledger's probe/score pair points at the file that asks THIS question."
+    },
     "line-start.time-to-first-note.digit-one": {
       "probe": "barline-spacing.ly",
       "score": "TD1",
