@@ -148,6 +148,26 @@
           "description": "Delay in milliseconds before refreshing preview after document change",
           "type": "number"
         },
+        "lilysharp.preview.theme": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "light",
+            "dark"
+          ],
+          "enumItemLabels": [
+            "Follow VS Code's color theme",
+            "Light",
+            "Dark"
+          ],
+          "enumDescriptions": [
+            "The preview is light under a light VS Code theme and dark under a dark one (the default).",
+            "Always the printed page: black notes on white, whatever the editor theme.",
+            "Always dark: the page inverted to white notes on a dark ground."
+          ],
+          "default": "auto",
+          "description": "The score preview's color scheme. Takes effect immediately in open previews."
+        },
         "lilysharp.completion.flatSpelling": {
           "type": "string",
           "enum": [

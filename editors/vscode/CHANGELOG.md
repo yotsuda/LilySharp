@@ -37,6 +37,9 @@ reasoning behind each one.
 
 ### Added
 
+- **`lilysharp.preview.theme`** — the score preview's color scheme: follow VS Code's theme
+  (the default, and what the preview always did), always light (the printed page), or
+  always dark (the page inverted). A change reaches every open preview at once.
 - **The key's chords are offered in a section's music, and accepting one writes its notes.**
   In C major the list carries `C`, `Cmaj7`, `Dm`, `Dm7` … and the degrees `I`, `IIm7`, `V7` …
   beside the pitch letters; choosing `C` inserts `<c e g>`, `IIm7` inserts `<d f a c>`, in

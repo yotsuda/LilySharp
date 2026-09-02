@@ -326,6 +326,20 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    // Push preview.theme changes to every open preview, so the setting takes effect
+    // without reopening (a new panel reads it when its HTML is built).
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (!e.affectsConfiguration('lilysharp.preview.theme')) {
+                return;
+            }
+            const theme = getPreviewTheme();
+            for (const panel of previewPanels.values()) {
+                panel.webview.postMessage({ type: 'setTheme', theme });
+            }
+        })
+    );
+
     // Register preview commands
     context.subscriptions.push(
         vscode.commands.registerCommand('lilysharp.openPreview', () => {
@@ -759,7 +773,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
 
     // Set initial HTML structure with font
     outputChannel.appendLine('Setting webview HTML');
-    panel.webview.html = getPreviewHtml(fontUri.toString(), braceFontUri.toString(), panel.webview.cspSource, getNonce());
+    panel.webview.html = getPreviewHtml(fontUri.toString(), braceFontUri.toString(), panel.webview.cspSource, getNonce(), getPreviewTheme());
 
     // Then load content
     outputChannel.appendLine('Calling updatePreviewContent');
@@ -1574,13 +1588,34 @@ function getNonce(): string {
     return text;
 }
 
-function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string, nonce: string): string {
+/** The preview's color scheme, as the `lilysharp.preview.theme` setting spells it:
+ *  `auto` (follow VS Code's theme — the webview's prefers-color-scheme tracks it),
+ *  `light` or `dark`. Anything else reads as `auto`. */
+function getPreviewTheme(): 'auto' | 'light' | 'dark' {
+    const v = vscode.workspace.getConfiguration('lilysharp').get<string>('preview.theme', 'auto');
+    return v === 'light' || v === 'dark' ? v : 'auto';
+}
+
+function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string, nonce: string,
+                        theme: 'auto' | 'light' | 'dark'): string {
     return `<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src ${cspSource}; script-src 'nonce-${nonce}';">
+    <script nonce="${nonce}">
+        // The color scheme is a class on <html>, set HERE — before the body parses —
+        // so a dark preview never flashes white on open. 'auto' follows VS Code's
+        // theme through prefers-color-scheme (the webview mirrors the editor theme);
+        // the main script below re-applies it when the setting or the theme changes.
+        (function () {
+            const mode = '${theme}';
+            const dark = mode === 'dark'
+                || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            document.documentElement.classList.toggle('theme-dark', dark);
+        })();
+    </script>
     <style>
         @font-face {
             font-family: 'Emmentaler';
@@ -1666,10 +1701,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             min-width: 44px;
             text-align: center;
         }
-        @media (prefers-color-scheme: dark) {
-            .toolbar .sep { background: #555; }
-            #pageInfo { color: #ccc; }
-        }
+        /* Dark scheme: :root.theme-dark, not a prefers-color-scheme media query — the
+           class is the lilysharp.preview.theme setting resolved (see the head script),
+           which is how "always light" / "always dark" can override the editor theme. */
+        :root.theme-dark .toolbar .sep { background: #555; }
+        :root.theme-dark #pageInfo { color: #ccc; }
         .main-content {
             flex: 1;
             /* A flex item defaults to min-height:auto, which refuses to shrink
@@ -1753,40 +1789,38 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             opacity: 0.45;
             transition: opacity 0.15s;
         }
-        @media (prefers-color-scheme: dark) {
-            body {
-                background: #1e1e1e;
-            }
-            .toolbar {
-                background: #2d2d2d;
-                border-bottom-color: #444;
-            }
-            .toolbar label {
-                color: #ccc;
-            }
-            .toolbar select {
-                background: #3c3c3c;
-                color: #ccc;
-                border-color: #555;
-            }
-            #svgContainer svg {
-                filter: invert(1) hue-rotate(180deg);
-            }
-            .highlight {
-                filter: drop-shadow(0 0 4px #00ccff);
-            }
-            .error {
-                background: #4a1515;
-                color: #ff8a80;
-            }
-            .error-banner {
-                background: #4a1515;
-                color: #ff8a80;
-                border-top-color: rgba(255, 138, 128, 0.4);
-            }
-            .loading {
-                color: #aaa;
-            }
+        :root.theme-dark body {
+            background: #1e1e1e;
+        }
+        :root.theme-dark .toolbar {
+            background: #2d2d2d;
+            border-bottom-color: #444;
+        }
+        :root.theme-dark .toolbar label {
+            color: #ccc;
+        }
+        :root.theme-dark .toolbar select {
+            background: #3c3c3c;
+            color: #ccc;
+            border-color: #555;
+        }
+        :root.theme-dark #svgContainer svg {
+            filter: invert(1) hue-rotate(180deg);
+        }
+        :root.theme-dark .highlight {
+            filter: drop-shadow(0 0 4px #00ccff);
+        }
+        :root.theme-dark .error {
+            background: #4a1515;
+            color: #ff8a80;
+        }
+        :root.theme-dark .error-banner {
+            background: #4a1515;
+            color: #ff8a80;
+            border-top-color: rgba(255, 138, 128, 0.4);
+        }
+        :root.theme-dark .loading {
+            color: #aaa;
         }
         /* M3: floating "transform with AI" action, shown while a score note range
            is selected. */
@@ -1986,9 +2020,26 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             updateZoom();
         }
 
-        function getHighlightColor() {
-            return window.matchMedia('(prefers-color-scheme: dark)').matches ? '#00ccff' : '#ff6600';
+        function isDarkTheme() {
+            return document.documentElement.classList.contains('theme-dark');
         }
+
+        function getHighlightColor() {
+            return isDarkTheme() ? '#00ccff' : '#ff6600';
+        }
+
+        // ---- color scheme ---------------------------------------------------
+        // lilysharp.preview.theme, resolved onto <html class="theme-dark"> (the head
+        // script set it once before paint; this keeps it current). 'auto' follows the
+        // editor theme, which the webview reports through prefers-color-scheme.
+        let themeMode = '${theme}';
+        const darkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+        function applyTheme(mode) {
+            if (mode === 'light' || mode === 'dark' || mode === 'auto') themeMode = mode;
+            const dark = themeMode === 'dark' || (themeMode === 'auto' && darkScheme.matches);
+            document.documentElement.classList.toggle('theme-dark', dark);
+        }
+        darkScheme.addEventListener('change', () => applyTheme(themeMode));
 
         // Put an attribute back to the value the SVG shipped with: re-apply the
         // saved string, or drop the attribute entirely if it never had one.
@@ -2626,6 +2677,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const message = event.data;
             console.log('Webview received message:', message.type);
             switch (message.type) {
+                case 'setTheme':
+                    applyTheme(message.theme);
+                    break;
                 case 'updateContent': {
                     updateRenderSelect(message.renders, message.selectedRender);
                     const hasPreview = !!svgContainer.querySelector('svg');
