@@ -723,6 +723,105 @@ public class PercentRepeatTests
         Assert.NotEmpty(Beams(svg));
     }
 
+    // --- what the body WRITES prints once ---
+
+    /// <summary>
+    /// A slur, a tie, a script and a dynamic inside a `repeat percent` body belong to the
+    /// written iteration alone: LilyPond's iterator never re-plays the body — every later
+    /// repetition is ONE percent event and nothing else (lily/percent-repeat-iterator.cc
+    /// next_element). Lily# re-walks the body to keep the notes, and until 2026-09-02 the
+    /// re-walk carried the markers and post-events too, so the slur (owner report,
+    /// scratch/ベースタブLy/tab-percent.lys, a numbers tab) and the p / accent / f drew a
+    /// second time over the sign. The gate is the collector's percent depth, so this pins
+    /// the bows, the scripts and the dynamics together — one per written bar, none under
+    /// the sign — on the notation staff and on the numbers tab alike.
+    /// </summary>
+    [Theory]
+    [InlineData("staff melody")]
+    [InlineData("tab melody as numbers")]
+    public void PercentCoveredMeasures_CarryNoSlurTieScriptOrDynamic(string staffSpec)
+    {
+        // A ONE-bar body, so every repetition is a single sign that RE-WALKS the body
+        // (a body of three or more bars is a slash whose repetitions are spacers and
+        // never reach the walk at all). Bar 0 is written; bars 1-3 are the signs.
+        var layout = LayoutOf($$"""
+            part melody {
+              section A { repeat percent 4 { c4@p@accent( d) e~ e@f | } }
+            }
+            form main { A }
+            score main { {{staffSpec}} }
+            """);
+
+        Assert.Equal(3, layout.PercentRepeatLayouts.Length);
+        Assert.All(layout.PercentRepeatLayouts, pr => Assert.InRange(pr.MeasureIndex, 1, 3));
+
+        var slur = Assert.Single(layout.SlurLayouts);
+        Assert.Equal(0, slur.Slur.StartMeasureIndex);
+        // The notation staff lays out exactly one tie, two dynamics and one script; a
+        // numbers tab has rules of its own for those (no tie, no dynamics) and is only
+        // held to "nothing under a sign" — the slur above is the tab's own report.
+        if (staffSpec.StartsWith("staff"))
+        {
+            Assert.Single(layout.TieLayouts);
+            Assert.Equal(2, layout.DynamicLayouts.Length);
+            Assert.Single(layout.ArticulationLayouts);
+        }
+        Assert.All(layout.TieLayouts, t => Assert.Equal(0, t.Tie.StartMeasureIndex));
+        Assert.All(layout.DynamicLayouts, d => Assert.Equal(0, d.MeasureIndex));
+        Assert.All(layout.ArticulationLayouts, a => Assert.Equal(0, a.MeasureIndex));
+    }
+
+    /// <summary>
+    /// Positive control for the test above: the same body under `repeat unfold` IS re-played
+    /// in full — LilyPond's unfold iterator plays the body every time — so every bow, script
+    /// and dynamic prints twice. If the gate ever leaked past the percent repeat, this is
+    /// the test that reddens.
+    /// </summary>
+    [Fact]
+    public void UnfoldRepeat_StillCarriesEverySlurTieScriptAndDynamic()
+    {
+        var layout = LayoutOf("""
+            part melody {
+              section A { repeat unfold 4 { c4@p@accent( d) e~ e@f | } }
+            }
+            form main { A }
+            score main { staff melody }
+            """);
+
+        Assert.Empty(layout.PercentRepeatLayouts);
+        Assert.Equal(4, layout.SlurLayouts.Length);
+        Assert.Equal(4, layout.TieLayouts.Length);
+        Assert.Equal(8, layout.DynamicLayouts.Length);
+        Assert.Equal(4, layout.ArticulationLayouts.Length);
+    }
+
+    /// <summary>
+    /// A TWO-bar body (the double sign) re-walks the body too, through the same depth.
+    /// </summary>
+    [Fact]
+    public void DoubleSignCoveredMeasures_CarryNoSlur()
+    {
+        var layout = LayoutOf("""
+            part melody {
+              section A { repeat percent 3 { c1( | d1) | } }
+            }
+            form main { A }
+            score main { staff melody }
+            """);
+
+        Assert.Equal(2, layout.PercentRepeatLayouts.Length);
+        var slur = Assert.Single(layout.SlurLayouts);
+        Assert.Equal(0, slur.Slur.StartMeasureIndex);
+    }
+
+    private static ScoreLayout LayoutOf(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        var spec = RenderSpecParser.FindFirst(tree);
+        Assert.NotNull(spec);
+        return new LayoutEngine().Layout(LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, spec));
+    }
+
     /// <summary>Beam ribbons — the same discriminator <see cref="Slashes"/> excludes by, read
     /// from the one home (<see cref="IsBeamRibbon"/>) so the two can never disagree about a
     /// polygon.</summary>

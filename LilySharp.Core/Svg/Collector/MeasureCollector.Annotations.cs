@@ -378,6 +378,9 @@ public sealed partial class MeasureCollector
             CollectGraceColumnlessAnnotations(ArticulationsOf(node), measureIndex);
             return;
         }
+        // Under a % sign nothing that rides a note is collected — see _percentCoveredDepth.
+        if (_percentCoveredDepth > 0)
+            return;
         // A chord's scripts come from the whole-chord post-events AND from each
         // member (<c@staccato e@accent>), and the two are DIFFERENT GROBS in
         // LilyPond, not one list: a chord/note-level script is Script_engraver's,

@@ -1,0 +1,14 @@
+// A slur, a tie, a script and a dynamic inside a `repeat percent` body print ONCE, in the
+// written iteration; the covered bars show the % sign alone. LilyPond's percent iterator
+// never re-plays the body, so nothing the body writes exists there (owner report
+// 2026-09-02, tab-percent.lys: the slur drew a second time over the sign on a numbers tab).
+part melody {
+  section A { repeat percent 2 { c1@p@accent( | c@f) | } }
+}
+
+form main { A }
+
+score main "percent-covered-bows" {
+  staff melody
+  tab melody as numbers
+}

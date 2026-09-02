@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="354.9" viewBox="0 0 119.50 35.49" font-family="TeX Gyre Schola, serif">
+<style>
+  @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
+  .music { font-family: 'Emmentaler', serif; }
+</style>
+  <rect x="0" y="0" width="119.50" height="35.49" fill="#FFFFFF"/>
+  <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
+  <line x1="0.00" y1="11.55" x2="0.00" y2="29.75" stroke="#000000" stroke-width="0.160"/>
+  <line x1="0.00" y1="11.55" x2="39.12" y2="11.55" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="12.55" x2="39.12" y2="12.55" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="13.55" x2="39.12" y2="13.55" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.55" x2="39.12" y2="14.55" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.55" x2="39.12" y2="15.55" stroke="#000000" stroke-width="0.100"/>
+  <text class="music" x="0.80" y="14.55" font-size="4.00"></text>
+  <text class="music" x="5.12" y="13.55" font-size="4.00"></text>
+  <line x1="7.93" y1="16.55" x2="10.87" y2="16.55" stroke="#000000" stroke-width="0.200"/>
+  <line x1="16.08" y1="16.55" x2="19.02" y2="16.55" stroke="#000000" stroke-width="0.200"/>
+  <text class="music" x="8.42" y="16.55" font-size="4.00" data-pos="403"></text>
+  <text class="music" x="16.57" y="16.55" font-size="4.00" data-pos="418"></text>
+  <rect x="14.48" y="11.55" width="0.19" height="4.00" data-pos="416"/>
+  <rect x="22.63" y="11.55" width="0.19" height="4.00" data-pos="423"/>
+  <rect x="30.78" y="11.55" width="0.19" height="4.00" data-pos="416"/>
+  <rect x="38.93" y="11.55" width="0.19" height="4.00" data-pos="423"/>
+  <text class="music" x="0.80" y="26.00" font-size="4.00"></text>
+  <rect x="14.48" y="22.25" width="0.19" height="7.50" data-pos="416"/>
+  <rect x="22.63" y="22.25" width="0.19" height="7.50" data-pos="423"/>
+  <rect x="30.78" y="22.25" width="0.19" height="7.50" data-pos="416"/>
+  <rect x="38.93" y="22.25" width="0.19" height="7.50" data-pos="423"/>
+  <text x="9.07" y="24.82" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="403">1</text>
+  <text x="17.22" y="24.82" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="418">1</text>
+  <line x1="0.00" y1="22.25" x2="39.12" y2="22.25" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="23.75" x2="8.22" y2="23.75" stroke="#000000" stroke-width="0.100"/>
+  <line x1="9.93" y1="23.75" x2="16.37" y2="23.75" stroke="#000000" stroke-width="0.100"/>
+  <line x1="18.08" y1="23.75" x2="39.12" y2="23.75" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="25.25" x2="39.12" y2="25.25" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="26.75" x2="39.12" y2="26.75" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="28.25" x2="39.12" y2="28.25" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="29.75" x2="39.12" y2="29.75" stroke="#000000" stroke-width="0.100"/>
+  <path d="M 9.40,17.60 C 10.99,18.82 15.96,18.82 17.55,17.60 C 15.96,18.94 10.99,18.94 9.40,17.60 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="414"/>
+  <path d="M 9.07,22.45 C 10.90,20.82 15.39,20.82 17.22,22.45 C 15.39,20.94 10.90,20.94 9.07,22.45 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="414"/>
+  <text x="9.40" y="20.62" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="405">p</text>
+  <text x="17.55" y="19.59" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="419">f</text>
+  <text class="music" x="9.40" y="18.64" font-size="4.00" data-pos="407"></text>
+  <polygon points="29.09,14.55 29.77,14.55 31.77,12.55 31.09,12.55" data-pos="384"/>
+  <polygon points="30.17,14.55 30.85,14.55 32.85,12.55 32.17,12.55" data-pos="384"/>
+  <circle cx="29.62" cy="13.05" r="0.23" data-pos="384"/>
+  <circle cx="32.32" cy="14.05" r="0.23" data-pos="384"/>
+  <polygon points="28.15,27.50 29.17,27.50 32.17,24.50 31.15,24.50" data-pos="384"/>
+  <polygon points="29.77,27.50 30.79,27.50 33.79,24.50 32.77,24.50" data-pos="384"/>
+  <circle cx="29.05" cy="25.25" r="0.23" data-pos="384"/>
+  <circle cx="32.89" cy="26.75" r="0.23" data-pos="384"/>
+  <rect x="0.30" y="6.69" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="372"/>
+  <text x="1.34" y="8.89" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="372">A</text>
+  </g>
+</svg>

@@ -396,6 +396,33 @@ public sealed partial class MeasureCollector
     private int _graceDepth = 0;
 
     /// <summary>
+    /// Non-zero while the walk is re-playing a <c>repeat percent</c> body for an iteration
+    /// that a % sign (or a double sign) stands for. LilyPond never plays those iterations:
+    /// its iterator hands the context ONE percent event in place of the music, so nothing
+    /// the body writes — no slur, no tie, no script, no dynamic — exists there at all.
+    /// Lily# re-walks the body (its unfold keeps the notes for playback and spacing, and
+    /// the visual passes hide them by measure), so this depth is where the walk says
+    /// "the notes come through, nothing that rides them does".
+    /// LILYPOND-REF: lily/percent-repeat-iterator.cc:75-111 Percent_repeat_iterator::next_element —
+    ///   for every repetition after the first, <c>make_music_by_name (event_type_)</c> is
+    ///   reported and the body's music is not.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE NOTES ARE KEPT AND THEIR MARKERS ARE NOT, and the split is deliberate: the
+    /// percent-covered measures already print nothing of their notes (SharedRenderer's two
+    /// <c>percentCovered</c> sets, the beams, the MMR symbol — <see cref="PercentRepeatItem.FirstCoveredMeasure"/>),
+    /// but a slur, a tie, a script or a dynamic collected there is drawn by an engraver
+    /// that never asks which measures are covered — measured 2026-09-02 on
+    /// scratch/ベースタブLy/tab-percent.lys, where <c>repeat percent 2 { c1( | c) | }</c>
+    /// drew the slur a second time over the % sign, and scratch/p320/percent-dyn.lys drew
+    /// the <c>p</c>, the accent and the <c>f</c> under it. Gating at the collect is ONE
+    /// line per collector instead of one percent filter per engraver, and matches where
+    /// LilyPond's silence comes from (the iterator, not the engravers).
+    /// ⚠️ A beat slash never reaches this: its repetitions are spacers, not a re-walk.
+    /// </remarks>
+    private int _percentCoveredDepth = 0;
+
+    /// <summary>
     /// True between entering a <c>cue { … }</c> region and the first note or chord it emits —
     /// the one item that gets <see cref="MusicItem.BeginsCueRegion"/>. Set on entry and cleared
     /// BOTH by that item and on the way out, so outside a region it is always false and a
@@ -3110,6 +3137,9 @@ public sealed partial class MeasureCollector
         // Grace time has no column for it to hang off — see CollectArticulations.
         if (_graceDepth > 0)
             return;
+        // Under a % sign nothing that rides a note is collected — see _percentCoveredDepth.
+        if (_percentCoveredDepth > 0)
+            return;
         var articulations = ArticulationsOf(node);
 
         foreach (var articulation in articulations)
@@ -3563,7 +3593,11 @@ public sealed partial class MeasureCollector
                 }
 
                 int iterStart = builder.CurrentMeasureIndex;
-                ProcessBodyOnce();
+                // The re-walk of a covered iteration: notes only, no bows and no
+                // scripts (see _percentCoveredDepth for what LilyPond does instead).
+                _percentCoveredDepth++;
+                try { ProcessBodyOnce(); }
+                finally { _percentCoveredDepth--; }
 
                 // A TWO-MEASURE body gets ONE double-percent sign for the whole repetition,
                 // on the bar line between its two measures — not a single sign in each.

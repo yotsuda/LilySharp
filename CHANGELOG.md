@@ -182,6 +182,17 @@ The rest is defects found by engraving real scores.
 
 ### Engraving
 
+- **A dotted chord on an `as numbers` tab draws no augmentation dot.** A dotted single note
+  already drew none there; the chord arm had no gate, so `<c e g>4.` printed its dots beside
+  the fret digits on a numbers tab.
+
+- **What a `repeat percent` body writes prints once.** The slur, tie, script and dynamic of
+  the body drew again under every percent sign — on a notation staff and a tab alike —
+  because the covered iterations re-walked the body with its markers and post-events.
+  LilyPond never plays those iterations (its iterator reports one percent event in their
+  place), so the collector now drops the bows and note-riding annotations while it re-walks
+  a covered iteration; the notes stay for playback and spacing, hidden as before.
+
 - **A pedal bracket under a system now keeps the next system away.** The bracket was solved
   against its own staff and seeded into that staff's profile — the one the lyric floor and the
   staff-to-staff springs read — but not into the silhouette the page spaces systems by, so a

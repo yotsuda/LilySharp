@@ -268,6 +268,17 @@ public class SvgSnapshotTests
         // `tab … as numbers`: fret digits only — no stems, beams, dots, rests or
         // tuplet brackets (the paired notation staff above carries the rhythm).
         yield return new object[] { "test/tab-as-numbers" };
+        // …and a dotted CHORD on a numbers tab draws no dots either (2026-09-02: the chord
+        // arm of the tab renderer had no `as numbers` gate on its dots).
+        yield return new object[] { "test/tab-numbers-dotted-chord" };
+        // A 3+-bar `repeat percent` body repeats as ONE slash and then blank bars, on the
+        // tab as on the staff (2026-09-02: the tab arm drew the collector's spacer rests
+        // as whole rests in the blank bars; the notation arm had always skipped them).
+        yield return new object[] { "test/tab-percent-blank-bars" };
+        // What a `repeat percent` body writes prints ONCE: the covered bars carry the sign
+        // and no slur, tie, script or dynamic (2026-09-02: the collector re-walked the body
+        // with its markers, and the slur/script/dynamic engravers have no percent filter).
+        yield return new object[] { "test/percent-covered-bows" };
         // A tie on a staff+tab pair with no `as` clause: the tab defaults to numbers because
         // the part is also on a notation staff, and a numbers tab draws no tie — so the bow
         // appears once, on the staff (session 286; a reader reported the second one).

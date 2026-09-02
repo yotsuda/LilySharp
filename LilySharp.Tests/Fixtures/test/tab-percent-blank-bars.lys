@@ -1,0 +1,26 @@
+// A `repeat percent` whose body is THREE bars or longer repeats as one slash and then
+// BLANK bars (LilyPond prints nothing in them — lily/percent-repeat-iterator.cc emits a
+// single RepeatSlashEvent for the whole body). The collector fills those blank bars with
+// spacer rests; the notation staff never drew them, but until 2026-09-02 the tab arm of
+// the renderer had no `IsSpacer` gate and printed a WHOLE REST in each blank bar (owner's
+// Billie Jean bassTab book, bars 8-10 / 12-14). Both staves here must show bars 4-6 as
+// slash + blank + blank. The `r1` in bar 7 is the positive control: a REAL whole rest
+// still prints on both staves.
+octave absolute
+time 4/4
+
+part bl {
+  clef bass
+  tuning bass
+  section A {
+    repeat percent 2 { a,,8\4 a,,\4 a,,\4 a,,\4 c\1 c\1 c\1 c\1 | d,4\3 d,\3 d,\3 d,\3 | g,2\2 g,\2 | }
+    r1 |
+  }
+}
+
+form main { A }
+
+score main "tab-percent-blank-bars" {
+  staff bl
+  tab bl as full
+}

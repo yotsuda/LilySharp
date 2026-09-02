@@ -363,12 +363,26 @@ internal static partial class SharedRenderer
                             columnX, staffY, staff, isBeamed, gc, pageHeight);
                     break;
                 case ChordItem chord:
-                    DrawTabChord(chord, itemX, staffY, tuning, octaveShift, stringSpace, gc, digitGaps);
+                    // The dots are gated exactly as a single note's are one arm up: `as
+                    // numbers` draws fret digits and nothing of the rhythm. ⚠️ THIS ARM PASSED
+                    // NO GATE until 2026-09-02 and a dotted chord drew its dots on a numbers
+                    // tab (owner report, tab-dot.lys — `<c e g>4.` printed "0·").
+                    DrawTabChord(chord, itemX, staffY, tuning, octaveShift, stringSpace,
+                        numbersOnly ? 0 : chord.Dots, gc, digitGaps);
                     if (!numbersOnly)
                         DrawUnbeamedTabStem(chord, chord.BaseDuration, dirGeom.StringStemUp(dirGeom.MeanString(chord)),
                             columnX, staffY, staff, isBeamed, gc, pageHeight);
                     break;
-                case RestItem rest when !numbersOnly:
+                // A SPACER draws nothing here either: the notation arm has read
+                // `!rest.IsSpacer` since it first drew rests (SharedRenderer.Noteheads), and
+                // this arm did not — so the blank measures a 3+-bar `repeat percent` body
+                // leaves after its single slash (MeasureCollector.ProcessRepeatExpression
+                // fills them with spacer rests) printed a WHOLE REST on the tab, under
+                // nothing, while the notation staff of the same book stayed blank. LilyPond
+                // prints nothing there on either staff (measured 2026-09-02, the owner's
+                // Billie Jean bassTab book, bars 8-10 / 12-14). Same shape as the dotted
+                // chord gate the day before: one rule, two arms, one of them not asking.
+                case RestItem rest when !numbersOnly && !rest.IsSpacer:
                     // In \tabFullNotation whole and half rests ATTACH to a staff line, just
                     // like on the notation staff — a bar floating in a gap looks wrong. The
                     // central inter-line space holds both: the HALF rest SITS ON the lower
@@ -700,8 +714,11 @@ internal static partial class SharedRenderer
     /// resolution. Two-note chords put the SMALLER fret on the left; three-or-more
     /// zigzag between two columns (rather than slanting) so the stack stays compact.
     /// </summary>
+    /// <param name="dots">The augmentation dots to draw — the chord's own, or 0 on an
+    /// <c>as numbers</c> tab, decided by the caller the way <see cref="DrawTabNote"/>'s
+    /// caller decides it (one gate, two item kinds).</param>
     private static void DrawTabChord(ChordItem chord, double itemX, double staffY,
-        int[] tuning, int octaveShift, double stringSpace, IDrawingContext gc,
+        int[] tuning, int octaveShift, double stringSpace, int dots, IDrawingContext gc,
         List<(int StringIndex, double Left, double Right)> digitGaps)
     {
         // LP-style exclusive allocation: each chord note gets its OWN string
@@ -725,14 +742,14 @@ internal static partial class SharedRenderer
         // The helper puts dots a dot-width past digitCenterX + digitWidth/2, so pass
         // itemX as the centre and 2*(rightEdge - itemX) as the width to land them
         // just past the chord's rightmost digit.
-        if (chord.Dots > 0)
+        if (dots > 0)
         {
             double rightEdge = itemX;
             for (int i = 0; i < notes.Count; i++)
                 rightEdge = Math.Max(rightEdge, itemX + dx[i] + TabChordColumns.FretWidth(notes[i].fret) / 2);
             double alignWidth = 2 * (rightEdge - itemX);
             foreach (var (str, _) in notes)
-                DrawTabAugmentationDots(chord.Dots, itemX, alignWidth,
+                DrawTabAugmentationDots(dots, itemX, alignWidth,
                     staffY - (str - 1) * stringSpace, stringSpace, chord.SourcePosition, gc);
         }
     }

@@ -158,6 +158,17 @@ public sealed partial class MeasureCollector
     private static bool IsMarkerKind(SyntaxKind kind)
         => kind is SyntaxKind.Tie or SyntaxKind.Slur or SyntaxKind.BeamMarker;
 
+    /// <summary>
+    /// The flags with the tie and slur markers cleared while the walk is inside a
+    /// percent-covered iteration (<see cref="_percentCoveredDepth"/>), unchanged otherwise.
+    /// Beams stay: the beam pass already hides them by covered measure, and the beam
+    /// grouping decides stems the spacing pass reads even under the sign.
+    /// </summary>
+    private MarkerFlags WithoutBowsUnderPercent(MarkerFlags m)
+        => _percentCoveredDepth > 0
+            ? m with { HasTieAfter = false, HasSlurStartAfter = false, HasSlurEndAfter = false }
+            : m;
+
     /// <summary>Adds one marker node to the flags.</summary>
     private static MarkerFlags FoldMarker(MarkerFlags m, SyntaxNode node) => node switch
     {
@@ -680,9 +691,13 @@ public sealed partial class MeasureCollector
         if ((_pendingEmptyChordSlurStart || _pendingEmptyChordSlurEnd) && BindsASlur(node))
             TakeEmptyChordSlurs(ref m);
 
-        // Unpacked AFTER the empty-chord take, which is the only thing that can still
-        // change them; the arms below read the locals exactly as they did when these
-        // were five parameters.
+        // Under a % sign the bows are dropped — AFTER the empty-chord take, so a pending
+        // `<>(` is consumed here and not carried out past the repeat.
+        m = WithoutBowsUnderPercent(m);
+
+        // Unpacked AFTER the empty-chord take and the percent drop, which are the only
+        // things that can still change them; the arms below read the locals exactly as
+        // they did when these were five parameters.
         bool hasTieAfter = m.HasTieAfter;
         bool hasSlurStartAfter = m.HasSlurStartAfter;
         bool hasSlurEndAfter = m.HasSlurEndAfter;
@@ -1713,6 +1728,7 @@ public sealed partial class MeasureCollector
         // Flags first, as in ProcessMusicNode — this is the tuplet body's per-item path.
         if ((_pendingEmptyChordSlurStart || _pendingEmptyChordSlurEnd) && BindsASlur(item))
             TakeEmptyChordSlurs(ref m);
+        m = WithoutBowsUnderPercent(m);
 
         bool hasTieAfter = m.HasTieAfter;
         bool hasSlurStartAfter = m.HasSlurStartAfter;

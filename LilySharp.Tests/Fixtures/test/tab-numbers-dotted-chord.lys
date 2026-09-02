@@ -1,0 +1,15 @@
+// A dotted CHORD on an `as numbers` tab: fret digits only, no augmentation dots — the
+// same rule the dotted single note beside it already obeyed. Until 2026-09-02 the chord
+// arm of the tab renderer drew its dots on the numbers tab (owner report, tab-dot.lys).
+time 6/8
+
+part melody {
+  instrument guitar
+  section A { <c e g>4. e4. | <c e g>4. <c e g>4. | }
+}
+
+form main { A }
+
+score main "tab-numbers-dotted-chord" {
+  tab melody as numbers
+}
