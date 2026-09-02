@@ -103,13 +103,11 @@ public sealed partial class MeasureCollector
                 bool live = _resumePending == null && !_suffixSpliced;
                 if (child is BreakSyntax brk)
                 {
-                    // `break` / `nobreak` inside the repeat flags the section just played.
+                    // A break directive inside the repeat flags the section just played
+                    // (MeasureBuilder.ApplyBreak — the same dispatch as outside the block).
                     // Resume: the flag is baked into the adopted measures (both sides).
                     if (live)
-                    {
-                        if (brk.IsNoBreak) builder.SetNoBreak();
-                        else builder.SetBreak();
-                    }
+                        builder.ApplyBreak(brk.Directive);
                 }
                 else if (child is SectionReferenceSyntax reference)
                 {

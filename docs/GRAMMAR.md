@@ -96,7 +96,7 @@ Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
         | 'staff' | 'grandStaff' | 'staffGroup' | 'choirStaff'
         | 'condensedStaff' | 'combinedStaff' | 'tab' | 'ossia' | 'voice'
         | 'lyrics' | 'chords' | 'tuning' | 'instrument' | 'percussion' | 'drummap'
-        | 'transpose' | 'octave' | 'using' | 'break' | 'nobreak' | 'partial'
+        | 'transpose' | 'octave' | 'using' | 'break' | 'noBreak' | 'pageBreak' | 'noPageBreak' | 'partial'
         | 'tuplet' | 'grace' | 'acciaccatura' | 'appoggiatura' | 'cue'
         | 'repeat' | 'volta' | 'alternative' | 'embedded' | 'fonts' | 'paper'
         | 'override' | 'revert' | 'once'
@@ -763,7 +763,11 @@ StructureItem  = SectionRef                        (* Identifier , { OctaveMark 
                                                       '|' is kept as an inert divider. The
                                                       repeat halves are legal ONLY here —
                                                       §8.1 MusicItem *)
-               | ( 'break' | 'nobreak' )            (* force / forbid a system break here *)
+               | ( 'break' | 'noBreak' )            (* force / forbid a system break here *)
+               | ( 'pageBreak' | 'noPageBreak' )    (* force / forbid a PAGE break here. A forced
+                                                      page break forces the system break too,
+                                                      as LilyPond's \pageBreak carries both
+                                                      permissions *)
                ;
 
 (* A repeat block. The endings go BETWEEN the barlines — |: … [1. D] :| [2. O] — and the
@@ -1138,7 +1142,11 @@ MidMusicCommand = 'clef' , ClefName
                | 'key' , PitchBase , [ Accidental-text ] , Mode
                | 'time' , Integer , '/' , Integer
                | 'partial' , DurationToken
-               | 'break' ;
+               | 'break' | 'noBreak'                (* force / forbid a system break after
+                                                      this measure *)
+               | 'pageBreak' | 'noPageBreak' ;      (* force / forbid a page break after this
+                                                      measure — the forced one breaks the
+                                                      system too (LilyPond's \pageBreak) *)
 
 ### 8.2 Notes, Rests, Chords
 

@@ -449,7 +449,8 @@ internal sealed partial class Parser
         SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword
             or SyntaxKind.AppoggiaturaKeyword => true,
         SyntaxKind.TupletKeyword => true,
-        SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword => true,
+        SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword
+            or SyntaxKind.PageBreakKeyword or SyntaxKind.NoPageBreakKeyword => true,
 
         SyntaxKind.TimeKeyword or SyntaxKind.TempoKeyword or SyntaxKind.KeyKeyword
             or SyntaxKind.ClefKeyword or SyntaxKind.OctaveKeyword
@@ -525,7 +526,8 @@ internal sealed partial class Parser
             SyntaxKind.AppoggiaturaKeyword => ParseGraceExpression(),
 
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
-            SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword => ParseBreak(),
+            SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword
+                or SyntaxKind.PageBreakKeyword or SyntaxKind.NoPageBreakKeyword => ParseBreak(),
             SyntaxKind.TupletKeyword => ParseTupletExpression(),
             SyntaxKind.OverrideKeyword => ParseOverrideDeclaration(),
             SyntaxKind.RevertKeyword => ParseRevertDeclaration(),

@@ -135,7 +135,7 @@
 ## UNWATCHED — 観測者がゼロだと自認しているもの（52 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:1732** container, and the value stops being unobserved with the line above.
+- **:1738** container, and the value stops being unobserved with the line above.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:496** no observer; add the paren widths when a book brings one. The unpacked
 - **:498** bare glyph width, which is exact for one and unobserved for many.
@@ -227,8 +227,8 @@
 ## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（115 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:1727** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:3381** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:1733** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
+- **:3387** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:2079** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Rendering/HarfBuzzOutline.cs`
@@ -317,11 +317,11 @@
 - **:1522** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
 - **:1817** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
-- **:631** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
+- **:632** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
-- **:464** LILYSHARP-OWN, DECLARED: the CROP. LilyPond always engraves onto the paper; a
-- **:667** ⚠️ LILYSHARP-OWN: THE FALLBACK. A system with no spaceable staff at all — a chords-only
-- **:679** ⚠️ LILYSHARP-OWN: THE SECOND PAIR HAS NO LILYPOND COUNTERPART, and it exists because a
+- **:505** LILYSHARP-OWN, DECLARED: the CROP. LilyPond always engraves onto the paper; a
+- **:708** ⚠️ LILYSHARP-OWN: THE FALLBACK. A system with no spaceable staff at all — a chords-only
+- **:720** ⚠️ LILYSHARP-OWN: THE SECOND PAIR HAS NO LILYPOND COUNTERPART, and it exists because a
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
 - **:373** ⚠️ A LYRICS ROW KEEPS ITS DRAWN EXTENT, AND THAT IS LILYSHARP-OWN, not a second
 - **:490** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
@@ -365,8 +365,8 @@
 ### `LilySharp.Core/Svg/Layout/PageBreaker.cs`
 - **:84** ⚠️ LILYSHARP-OWN: THE NULLABILITY. LilyPond's Line_details ALWAYS carries a shape —
 ### `LilySharp.Core/Svg/Layout/PageLayouter.cs`
-- **:241** ⚠️ LILYSHARP-OWN: THE BREAKER KEEPS THE NOMINAL PAIR, deliberately and under
-- **:454** ⚠️ LILYSHARP-OWN: THE CHAIN'S LAST NODE, WHICH IS NOT ALWAYS THE LAST STAFF.
+- **:242** ⚠️ LILYSHARP-OWN: THE BREAKER KEEPS THE NOMINAL PAIR, deliberately and under
+- **:463** ⚠️ LILYSHARP-OWN: THE CHAIN'S LAST NODE, WHICH IS NOT ALWAYS THE LAST STAFF.
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
 - **:126** ⚠️ LILYSHARP-OWN: THE TWO-EDGE MODEL ITSELF. LilyPond has no such pair —
 - **:266** ⚠️ LILYSHARP-OWN: THE SELECTION IS DELIBERATELY THE OLD ONE, and it is a KNOWN

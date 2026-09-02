@@ -124,7 +124,7 @@ public class BreakKeywordTests
               section A { c'4 d' e' f' | }
               section B { g'4 a' b' c'' | }
             }
-            form main { A nobreak B }
+            form main { A noBreak B }
             score main { staff m }
             """;
         var score = new MeasureCollector().Collect(SyntaxTree.Parse(source), "m");

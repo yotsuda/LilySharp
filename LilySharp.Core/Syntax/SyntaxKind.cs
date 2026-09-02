@@ -202,8 +202,15 @@ public enum SyntaxKind : ushort
     InstrumentKeyword,
     /// <summary>The <c>break</c> keyword (line break).</summary>
     BreakKeyword,
-    /// <summary>The <c>nobreak</c> keyword (forbid a line break here). LilyPond's <c>\noBreak</c>.</summary>
+    /// <summary>The <c>noBreak</c> keyword (forbid a line break here). LilyPond's <c>\noBreak</c>.</summary>
     NoBreakKeyword,
+    /// <summary>The <c>pageBreak</c> keyword (force a page break — and the line break it
+    /// implies — here). LilyPond's <c>\pageBreak</c>, spelled the way <c>noBreak</c>
+    /// spells <c>\noBreak</c>.</summary>
+    PageBreakKeyword,
+    /// <summary>The <c>noPageBreak</c> keyword (forbid a page break here). LilyPond's
+    /// <c>\noPageBreak</c>.</summary>
+    NoPageBreakKeyword,
     /// <summary>The <c>partial</c> keyword (anacrusis / pickup measure).</summary>
     PartialKeyword,
 

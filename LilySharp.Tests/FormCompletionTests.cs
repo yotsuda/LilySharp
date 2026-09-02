@@ -96,7 +96,7 @@ public class FormCompletionTests
         var labels = LilySharpLanguageServer.GetFormCompletions(Doc).Items
             .Select(i => i.Label).ToHashSet();
         foreach (var expected in new[] { "|:", ":|", ":|:", ":|*3", "[1. ]", "[2. ]", "[3. ]", "[1-2. ]",
-                                         "||", "|.", "!", "break", "nobreak", "_\"\"" })
+                                         "||", "|.", "!", "break", "noBreak", "_\"\"" })
             Assert.Contains(expected, labels);
         // A plain `|` is an inert divider in a form and is not offered.
         Assert.DoesNotContain("|", labels);

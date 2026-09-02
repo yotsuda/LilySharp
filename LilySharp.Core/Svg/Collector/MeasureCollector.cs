@@ -2720,17 +2720,17 @@ public sealed partial class MeasureCollector
                         SyntaxFacts.NetOctaveMarks(silent));
                     break;
 
-                // `break` / `nobreak` between sections force / forbid a system break
-                // after the section just played (SetBreak/SetNoBreak flag the last
-                // emitted measure). Runs once per part; each flags the same measure
-                // index, so the score-wide break stays consistent.
+                // `break` / `noBreak` between sections force / forbid a system break
+                // after the section just played, `pageBreak` / `noPageBreak` a page
+                // break (MeasureBuilder.ApplyBreak flags the last emitted measure). Runs
+                // once per part; each flags the same measure index, so the score-wide
+                // break stays consistent.
                 case BreakSyntax brk when !IsInsideRepeatBlock(brk):
                     // Resume: the flag is baked into the adopted prefix measures —
                     // and, post-splice, into the adopted tail measures.
                     if (_resumePending != null || _suffixSpliced)
                         break;
-                    if (brk.IsNoBreak) builder.SetNoBreak();
-                    else builder.SetBreak();
+                    builder.ApplyBreak(brk.Directive);
                     break;
 
                 // A ':|' written in the form itself, outside any '|: … :|' block. It is

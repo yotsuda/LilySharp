@@ -46,15 +46,15 @@ public sealed partial class LilySharpLanguageServer
     /// nothing else — the document's section names (plain and silent <c>~Name</c>), the
     /// repeat block (<c>|:</c> <c>:|</c> <c>:|:</c> <c>:|*N</c>), the volta endings
     /// (<c>[1. …]</c>), the navigation marks (segno / coda / to coda / D.C. / D.S. …),
-    /// the engraved barlines (<c>||</c> <c>|.</c> <c>!</c>), <c>break</c> / <c>nobreak</c>
-    /// and custom text (<c>_"…"</c>). Deliberately offers NO note names — the form is a
+    /// the engraved barlines (<c>||</c> <c>|.</c> <c>!</c>), <c>break</c> / <c>noBreak</c> /
+    /// <c>pageBreak</c> / <c>noPageBreak</c> and custom text (<c>_"…"</c>). Deliberately offers NO note names — the form is a
     /// playing order of sections, not music.
     /// </summary>
     /// <remarks>
     /// THE LIST IS THE PARSER'S (Parser.Form.cs ParseFormItem, GRAMMAR.md StructureItem),
     /// and FormCompletionTests compiles every plain item into a form to prove it. Until
     /// 2026-09-02 it was short of <c>:|:</c>, the count, the three engraved barlines and
-    /// break/nobreak, and read alphabetically (VS Code sorts by label when no sortText is
+    /// break/noBreak, and read alphabetically (VS Code sorts by label when no sortText is
     /// given), so the repeat bars sat under the section names. The groups now sort in the
     /// order a writer reaches for them: sections, silent sections, repeat, endings,
     /// navigation, barlines, breaks, text.
@@ -172,7 +172,9 @@ public sealed partial class LilySharpLanguageServer
         items.Add(Item("|.", "Final barline", CompletionItemKind.Operator, "5b"));
         items.Add(Item("!", "Dotted barline", CompletionItemKind.Operator, "5c"));
         items.Add(Item("break", "Force a system break here", CompletionItemKind.Keyword, "6a"));
-        items.Add(Item("nobreak", "Forbid a system break here", CompletionItemKind.Keyword, "6b"));
+        items.Add(Item("noBreak", "Forbid a system break here", CompletionItemKind.Keyword, "6b"));
+        items.Add(Item("pageBreak", "Force a page break here (and the system break with it)", CompletionItemKind.Keyword, "6c"));
+        items.Add(Item("noPageBreak", "Forbid a page break here", CompletionItemKind.Keyword, "6d"));
         items.Add(Snippet("_\"\"", "_\"$0\"", "Custom text annotation (glued: _\"text\")", "7"));
 
         return new CompletionList { Items = items.ToArray() };
@@ -2436,7 +2438,9 @@ public sealed partial class LilySharpLanguageServer
             new CompletionItem { Label = "tuplet", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tuplet 3/2 { $0 }", Detail = "Tuplet (e.g., triplet)", SortText = "3tuplet" },
             new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Change time signature", SortText = "4time", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
             new CompletionItem { Label = "break", Kind = CompletionItemKind.Keyword, InsertText = "break", Detail = "Force a line/system break here", SortText = "4break" },
-            new CompletionItem { Label = "nobreak", Kind = CompletionItemKind.Keyword, InsertText = "nobreak", Detail = "Forbid a line break here (LilyPond \\noBreak)", SortText = "4nobreak" },
+            new CompletionItem { Label = "noBreak", Kind = CompletionItemKind.Keyword, InsertText = "noBreak", Detail = "Forbid a line break here (LilyPond \\noBreak)", SortText = "4nobreak" },
+            new CompletionItem { Label = "pageBreak", Kind = CompletionItemKind.Keyword, InsertText = "pageBreak", Detail = "Force a page break here (LilyPond \\pageBreak; breaks the line too)", SortText = "4pagebreak" },
+            new CompletionItem { Label = "noPageBreak", Kind = CompletionItemKind.Keyword, InsertText = "noPageBreak", Detail = "Forbid a page break here (LilyPond \\noPageBreak)", SortText = "4nopagebreak" },
         });
         // voice { } is only meaningful directly in the part's music —
         // NESTED voice blocks silently become parallel siblings (verified),
@@ -2575,7 +2579,9 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "acciaccatura", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "acciaccatura { $0 }", Detail = "Slashed grace note", SortText = "2acciaccatura" },
                 new CompletionItem { Label = "appoggiatura", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "appoggiatura { $0 }", Detail = "Unslashed grace note", SortText = "2appoggiatura" },
                 new CompletionItem { Label = "break", Kind = CompletionItemKind.Keyword, InsertText = "break", Detail = "Force a line/system break here", SortText = "2break" },
-                new CompletionItem { Label = "nobreak", Kind = CompletionItemKind.Keyword, InsertText = "nobreak", Detail = "Forbid a line break here (LilyPond \\noBreak)", SortText = "2nobreak" },
+                new CompletionItem { Label = "noBreak", Kind = CompletionItemKind.Keyword, InsertText = "noBreak", Detail = "Forbid a line break here (LilyPond \\noBreak)", SortText = "2nobreak" },
+                new CompletionItem { Label = "pageBreak", Kind = CompletionItemKind.Keyword, InsertText = "pageBreak", Detail = "Force a page break here (LilyPond \\pageBreak; breaks the line too)", SortText = "2pagebreak" },
+                new CompletionItem { Label = "noPageBreak", Kind = CompletionItemKind.Keyword, InsertText = "noPageBreak", Detail = "Forbid a page break here (LilyPond \\noPageBreak)", SortText = "2nopagebreak" },
 
                 // Mid-measure declarations
                 new CompletionItem { Label = "clef", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "clef $0", Detail = "Change clef", SortText = "3clef", Command = new Command { Title = "Suggest clef", CommandIdentifier = "editor.action.triggerSuggest" } },

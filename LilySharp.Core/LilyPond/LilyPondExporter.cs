@@ -1162,7 +1162,7 @@ public sealed class LilyPondExporter
                 result.Add(l.Node);
                 break;
 
-            // `break` / `nobreak`, navigation marks and `@` marks are music where they
+            // `break` / `noBreak`, navigation marks and `@` marks are music where they
             // stand, and EmitItem already writes all three. Anything else a form can
             // hold (today only `_text`) goes through TOO, so that EmitItem's Skip
             // WARNS about it — filtering it here would put the drop back below the
@@ -1482,7 +1482,13 @@ public sealed class LilyPondExporter
         SlashNoteSyntax sl => EmitSlashNote(sl),
         BareDurationSyntax bd => EmitBareDuration(bd),
         BarlineSyntax b => EmitBarline(b),
-        BreakSyntax br => br.IsNoBreak ? "\\noBreak" : "\\break",
+        BreakSyntax br => br.Directive switch
+        {
+            BreakKind.NoLine => "\\noBreak",
+            BreakKind.Page => "\\pageBreak",
+            BreakKind.NoPage => "\\noPageBreak",
+            _ => "\\break",
+        },
         TieSyntax => "~",
         SlurSyntax s => s.IsOpen ? "(" : ")",
         BeamMarkerSyntax bm => bm.IsStart ? "[" : "]",

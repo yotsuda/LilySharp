@@ -1295,11 +1295,9 @@ public sealed partial class MeasureCollector
                 break;
 
             case BreakSyntax brk:
-                // 'break' forces a line break here; 'nobreak' forbids one.
-                if (brk.IsNoBreak)
-                    builder.SetNoBreak();
-                else
-                    builder.SetBreak();
+                // `break` / `noBreak` force / forbid a line break here, `pageBreak` /
+                // `noPageBreak` a page break — one dispatch (MeasureBuilder.ApplyBreak).
+                builder.ApplyBreak(brk.Directive);
                 break;
 
             case MusicMarkSyntax mark:

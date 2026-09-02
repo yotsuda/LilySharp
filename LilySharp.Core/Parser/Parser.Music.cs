@@ -61,7 +61,8 @@ internal sealed partial class Parser
             SyntaxKind.OpenBracket or SyntaxKind.CloseBracket => true,
             SyntaxKind.RepeatKeyword => true,
             SyntaxKind.TupletKeyword => true,
-            SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword => true,
+            SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword
+                or SyntaxKind.PageBreakKeyword or SyntaxKind.NoPageBreakKeyword => true,
             SyntaxKind.PartialKeyword => true,
             SyntaxKind.KeyKeyword => true,
             SyntaxKind.ClefKeyword => true,
@@ -148,7 +149,8 @@ internal sealed partial class Parser
             // file level it can be written. Reported and kept — ParseMusicBlock's `Advance()`
             // dropped its width and slid every later note's source offset (LYS0029).
             SyntaxKind.UsingKeyword => ParseMisplacedUsing("a music block"),
-            SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword => ParseBreak(),
+            SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword
+                or SyntaxKind.PageBreakKeyword or SyntaxKind.NoPageBreakKeyword => ParseBreak(),
             // Navigation marks are standalone landmarks — bare (not '@'), the same
             // token in a section's music (at a note) and in a form (at a boundary).
             SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
@@ -762,8 +764,9 @@ internal sealed partial class Parser
 
     private BreakGreen ParseBreak()
     {
-        // `break` (force a line break here) or `nobreak` (forbid one). The keyword
-        // token distinguishes them; BreakSyntax.IsNoBreak reads it.
+        // `break` / `noBreak` (force / forbid a line break here) and `pageBreak` /
+        // `noPageBreak` (force / forbid a page break). The keyword token distinguishes the
+        // four; BreakSyntax.Kind reads it.
         var breakKeyword = Advance();
         return new BreakGreen(breakKeyword);
     }

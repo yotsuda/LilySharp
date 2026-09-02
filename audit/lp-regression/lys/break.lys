@@ -1,12 +1,12 @@
 // lilypond-src/input/regression/break.ly の Lily# 訳。
 // CLAIM: break は改行を強制し、noBreak は改行を抑止する。
-// 綴り: LP \relative c''(c1=c'')→ Lily# c'。全音符 6 小節、nobreak ×3 のあと break ×2
+// 綴り: LP \relative c''(c1=c'')→ Lily# c'。全音符 6 小節、noBreak ×3 のあと break ×2
 // ＝段の割りは [1-4][5][6] の 3 段。
 // ⚠️ 枠の差: LP 原本は line-width 4cm で「自然改行を noBreak が抑止する」側も踏むが、
 // この訳は A4 のまま（訳出時 Lily# に paper 文法が無かった。paper { } は第232 で入ったが
 // 枠は据え置き）＝全音 6 小節に自然改行が無く、noBreak 側は
 // 空振り(vacuous)。観測できるのは break の強制と段割り [1-4][5][6] の一致だけ。
-// ⚠️ LP 原本の \textMark("nobreak"/"break" のラベル)は飾りで、Lily# に対応物が無いので落とした。
+// ⚠️ LP 原本の \textMark("noBreak"/"break" のラベル)は飾りで、Lily# に対応物が無いので落とした。
 octave absolute
 time 4/4
 
@@ -14,9 +14,9 @@ part m { clef treble }
 
 section Main {
   m {
-    c'1 | nobreak
-    c'1 | nobreak
-    c'1 | nobreak
+    c'1 | noBreak
+    c'1 | noBreak
+    c'1 | noBreak
     c'1 | break
     c'1 | break
     c'1

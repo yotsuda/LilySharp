@@ -152,7 +152,8 @@ internal sealed class PageLayouter
         IReadOnlyList<double>? systemBodyHeights = null,
         ImmutableArray<(double toFirst, double toLast, double halfFirst, double halfLast)>?
             systemAnchors = null,
-        ImmutableArray<LineShape?>? systemShapes = null)
+        ImmutableArray<LineShape?>? systemShapes = null,
+        ImmutableArray<BreakPermission>? systemPagePermissions = null)
     {
         if (systems.Length == 0)
         {
@@ -267,6 +268,14 @@ internal sealed class PageLayouter
                 // force the breaker solved for was nothing like the one the chain then
                 // solved, and the page count came from the wrong one.
                 InverseHooke = topExtent + staffHeight + bottomExtent + vs.SystemSystem.BasicDistance,
+                // LILYPOND-REF: lily/constrained-breaking.cc:530-535 fill_line_details —
+                //   page_permission_ is the LAST column's page-break-permission (through
+                //   min_permission with the line's), which is what the caller hands in per
+                //   system (LayoutEngine.PagePermissionsAfterSystems); `pageBreak` /
+                //   `noPageBreak` reach the breaker through this and nothing else.
+                PagePermission = systemPagePermissions is { } pp && i < pp.Length
+                    ? pp[i]
+                    : BreakPermission.Allow,
             });
         }
 

@@ -262,8 +262,8 @@ internal sealed partial class Parser
     /// later node one character early. Measured 2026-08-16 on
     /// <c>melody { \foo c4 d e f | }</c>: <c>c4</c> reported at 37 where the source has it
     /// at 38. The recovery is now one shape instead of three — consume the <c>\</c>, keep
-    /// it, and let the loop handle the word — which also fixed <c>\nobreak</c>, whose
-    /// keyword the old structural branch dropped even though <c>nobreak</c> is a real
+    /// it, and let the loop handle the word — which also fixed <c>\noBreak</c>, whose
+    /// keyword the old structural branch dropped even though <c>noBreak</c> is a real
     /// Lily# spelling that the very next dispatch would have parsed.
     /// </para>
     /// <para>
@@ -284,8 +284,11 @@ internal sealed partial class Parser
             "relative" => "Lily# is relative by default — drop '\\relative …'; switch modes "
                 + "with 'octave absolute'.",
             "addlyrics" => "Lily# writes lyrics as 'lyrics { … }', not '\\addlyrics'.",
-            "noBreak" or "nobreak" => "Lily# writes '\\noBreak' as 'nobreak' (no backslash).",
-            "tempo" or "clef" or "key" or "time" or "transpose" or "octave" or "break"
+            // The break family is LilyPond's own spelling minus the backslash (`noBreak`,
+            // `pageBreak`, `noPageBreak` — owner's decision 2026-09-02, which retired the
+            // lowercase `nobreak`), so it takes the general command hint like `tempo` does.
+            "tempo" or "clef" or "key" or "time" or "transpose" or "octave"
+                or "break" or "noBreak" or "pageBreak" or "noPageBreak"
                 => $"Lily# commands take no leading backslash — write '{word} …', not '\\{word} …'.",
             // A phrase reference is the commonest thing a LilyPond habit puts a backslash
             // on, and it is written bare (or with '$'), so that is what the general hint

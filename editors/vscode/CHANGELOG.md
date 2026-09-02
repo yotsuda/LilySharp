@@ -18,6 +18,11 @@ reasoning behind each one.
 - **Every span has to be closed, and `@!X` is how** — `@rit … @!rit`, `@ottava … @!ottava`,
   `@sustain … @!sustain`. An unclosed span draws nothing at all, which is LilyPond's own
   answer, and is an error (`LYS4018`).
+- **`pageBreak` / `noPageBreak`** — the page-break pair beside `break` / `noBreak`, in a
+  section's music or in a `form`; `pageBreak` breaks the system too, as LilyPond's
+  `\pageBreak` does. Both are offered by the completion where `break` is.
+- **`nobreak` is renamed `noBreak`** — the break family is LilyPond's spelling minus the
+  backslash. The old lowercase word is no longer a keyword.
 - **`@loco`, `@sustainOn`, `@sustainOff`, `@sostenutoOn` and `@sostenutoOff` are retired.**
   The direction moved out of the name and into the `!`. `@treCorde` stays, because unlike
   the others it is a word the page actually prints.
@@ -41,7 +46,7 @@ reasoning behind each one.
 - **A form's completion carries the whole form vocabulary, in a writer's order.** Sections,
   silent sections, then the repeat block — `|:`, `:|`, `:|:`, `:|*N` — the endings
   `[1. ]` `[2. ]` `[3. ]` `[1-2. ]`, the navigation marks, the engraved barlines `||` `|.`
-  `!`, `break` / `nobreak` and `_"…"`. The list used to sort by label, which buried the
+  `!`, `break` / `noBreak` and `_"…"`. The list used to sort by label, which buried the
   repeat bars under the section names, and lacked `:|:`, the count, the barlines and the
   breaks. A repeat bar typed as far as `|` is replaced by the item rather than appended to
   (`||:` no more). Every plain item is compiled in a form by a test.

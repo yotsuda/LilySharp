@@ -101,6 +101,18 @@ The rest is defects found by engraving real scores.
 
 ### New
 
+- **`pageBreak` and `noPageBreak`** — the page-break pair beside `break` / `noBreak`, written
+  where those are written: in a section's music after a bar, or in a `form` between sections.
+  `pageBreak` forces a page break and, with it, the system break (LilyPond's `\pageBreak`
+  carries both permissions); `noPageBreak` forbids a page break and leaves the line alone.
+  The LilyPond twin writes `\pageBreak` and `\noPageBreak`.
+
+- **`nobreak` is renamed `noBreak`.** The break family is now LilyPond's own spelling minus
+  the backslash — `break`, `noBreak`, `pageBreak`, `noPageBreak` — the rule every other
+  command already follows (`grandStaff`, `tempo`). The lowercase `nobreak` was the one word
+  that had been folded to lowercase, and it is not accepted any more: it reads as an
+  ordinary name, so a book that still writes it reports an undefined phrase at that word.
+
 - **A section reference carries octave marks** — `~B'`, `~B,`, `[1. B']` — shifting the
   relative frame that play opens in, one octave per mark. It is the spelling and the meaning
   a phrase reference already had. The shift belongs to the occurrence: `~B ~B'` is one

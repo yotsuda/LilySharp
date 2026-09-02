@@ -1264,7 +1264,7 @@ be declared and referenced).
 | Group | Words |
 |-------|-------|
 | Structure | `section` `form` `using` `tab` `ossia` `transpose` `octave` `instrument` `percussion` `drummap` |
-| Score / layout | `score` `part` `staff` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff` `voice` `phrase` `repeat` `volta` `alternative` `break` `nobreak` `partial` `embedded` `fonts` `paper` |
+| Score / layout | `score` `part` `staff` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff` `voice` `phrase` `repeat` `volta` `alternative` `break` `noBreak` `pageBreak` `noPageBreak` `partial` `embedded` `fonts` `paper` |
 | Metadata | `title` `composer` `tempo` `time` `key` `clef` |
 | Modes | `major` `minor` `ionian` `dorian` `phrygian` `lydian` `mixolydian` `aeolian` `locrian` |
 | Clef names | `treble` `bass` `alto` `tenor` `treble_8` `bass_8` `soprano` `mezzosoprano` `baritone` |

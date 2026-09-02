@@ -24,7 +24,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// <c>nobreak</c> (LilyPond's <c>\noBreak</c>) forbids a line break after the
+/// <c>noBreak</c> (LilyPond's <c>\noBreak</c>) forbids a line break after the
 /// measure it closes — the mirror of <c>break</c>, which forces one. The layout's
 /// Forbid handling is covered elsewhere; these pin the keyword → permission wiring.
 /// </summary>
@@ -41,8 +41,8 @@ public sealed class NoBreakTests
     [Fact]
     public void NoBreak_ForbidsTheBreakAfterThePrecedingMeasure()
     {
-        // `nobreak` at the second bar's start forbids the break between bars 1 and 2.
-        var m = Collect("c4 d e f | nobreak g a b c |");
+        // `noBreak` at the second bar's start forbids the break between bars 1 and 2.
+        var m = Collect("c4 d e f | noBreak g a b c |");
         Assert.Equal(BreakPermission.Forbid, m[0].LineBreakPermission);
         Assert.False(m[0].HasBreakAfter);
     }
@@ -58,8 +58,8 @@ public sealed class NoBreakTests
     [Fact]
     public void MidMeasureNoBreak_AppliesToThatMeasure()
     {
-        // A `nobreak` written inside a measure forbids the break after that measure.
-        var m = Collect("c4 d nobreak e f | g a b c |");
+        // A `noBreak` written inside a measure forbids the break after that measure.
+        var m = Collect("c4 d noBreak e f | g a b c |");
         Assert.Equal(BreakPermission.Forbid, m[0].LineBreakPermission);
     }
 }

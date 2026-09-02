@@ -287,7 +287,8 @@ internal sealed partial class LayoutEngine
 
         var (pages, systemsArray) = CreatePages(
             systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,
-            prelim.PagingSkylines, perSystemHeights, perSystemBandUps, placed.CropDown);
+            prelim.PagingSkylines, perSystemHeights, perSystemBandUps, placed.CropDown,
+            PagePermissionsAfterSystems(score, systems));
 
         var looseChainEnd = BuildLooseChainEnds(
             score, pages, systemsArray, perSystemExtents,

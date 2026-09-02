@@ -508,6 +508,8 @@ public sealed partial class MeasureCollector
             || live.PendingEndBarline != recB.PendingEndBarline
             || live.PendingBreak != recB.PendingBreak
             || live.PendingNoBreak != recB.PendingNoBreak
+            || live.PendingPageBreak != recB.PendingPageBreak
+            || live.PendingNoPageBreak != recB.PendingNoPageBreak
             || !string.Equals(live.SectionLabel, recB.SectionLabel, StringComparison.Ordinal))
             return false;
         if (!w.TryShift(recB.SectionLabelPosition, out int labelPos)

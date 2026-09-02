@@ -990,8 +990,25 @@ public sealed partial class MidiPartRenderSyntax : SyntaxNode
 }
 
 
+/// <summary>What a break directive asks of the page: the four spellings of one node.</summary>
+public enum BreakKind
+{
+    /// <summary><c>break</c> — force a line (system) break here. LilyPond's <c>\break</c>.</summary>
+    Line,
+    /// <summary><c>noBreak</c> — forbid a line break here. LilyPond's <c>\noBreak</c>.</summary>
+    NoLine,
+    /// <summary><c>pageBreak</c> — force a page break here, and with it the line break
+    /// (LilyPond's <c>\pageBreak</c> carries both permissions —
+    /// ly/music-functions-init.ly:1411-1418).</summary>
+    Page,
+    /// <summary><c>noPageBreak</c> — forbid a page break here. LilyPond's
+    /// <c>\noPageBreak</c>.</summary>
+    NoPage,
+}
+
 /// <summary>
-/// Represents a line break: break
+/// Represents a break directive: <c>break</c>, <c>noBreak</c>, <c>pageBreak</c> or
+/// <c>noPageBreak</c>.
 /// </summary>
 public sealed partial class BreakSyntax : SyntaxNode
 {
@@ -1000,9 +1017,22 @@ public sealed partial class BreakSyntax : SyntaxNode
     {
     }
 
-    /// <summary>The <c>break</c> / <c>nobreak</c> keyword token.</summary>
+    /// <summary>The <c>break</c> / <c>noBreak</c> / <c>pageBreak</c> / <c>noPageBreak</c>
+    /// keyword token.</summary>
     public SyntaxTokenNode BreakKeyword => (SyntaxTokenNode)GetChild(0)!;
 
-    /// <summary>True for <c>nobreak</c> (forbid a line break here), false for <c>break</c>.</summary>
-    public bool IsNoBreak => BreakKeyword.Kind == SyntaxKind.NoBreakKeyword;
+    /// <summary>Which of the four directives this is, read off the keyword — the ONE
+    /// reader every consumer (the collector, the exporter) dispatches on. (Not named
+    /// <c>Kind</c>: that is the node's own <see cref="SyntaxNode.Kind"/>.)</summary>
+    public BreakKind Directive => BreakKeyword.Kind switch
+    {
+        SyntaxKind.NoBreakKeyword => BreakKind.NoLine,
+        SyntaxKind.PageBreakKeyword => BreakKind.Page,
+        SyntaxKind.NoPageBreakKeyword => BreakKind.NoPage,
+        _ => BreakKind.Line,
+    };
+
+    /// <summary>True for <c>noBreak</c> (forbid a line break here) — the line-break pair's
+    /// old reader, kept for the callers that only ever asked about that pair.</summary>
+    public bool IsNoBreak => Directive == BreakKind.NoLine;
 }

@@ -231,13 +231,41 @@ internal sealed partial class LayoutEngine
         return shapes.MoveToImmutable();
     }
 
+    /// <summary>
+    /// Per system, the page-break permission AFTER it: the permission the last measure of
+    /// the system carries, after LilyPond's <c>min_permission</c> chain with the line's
+    /// (<see cref="Measure.EffectivePagePermission"/>). Read off the PRIMARY staff's
+    /// measures, the same staff <see cref="SystemBreaker"/> reads the line permissions
+    /// from, so the two directives of one keyword (<c>pageBreak</c> forces both) come from
+    /// one measure.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/constrained-breaking.cc:530-535 fill_line_details — a line's
+    ///   page_permission_ is its last column's page-break-permission.
+    /// </remarks>
+    internal static ImmutableArray<BreakPermission> PagePermissionsAfterSystems(
+        MultiStaffScore score, IReadOnlyList<SystemLayout> systems)
+    {
+        var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
+        var result = ImmutableArray.CreateBuilder<BreakPermission>(systems.Count);
+        foreach (var system in systems)
+        {
+            int last = system.Measures.IsDefaultOrEmpty ? -1 : system.Measures[^1].MeasureIndex;
+            result.Add(last >= 0 && last < measures.Length
+                ? measures[last].EffectivePagePermission
+                : BreakPermission.Allow);
+        }
+        return result.MoveToImmutable();
+    }
+
     private (ImmutableArray<PageLayout> pages, ImmutableArray<SystemLayout> systems) CreatePages(
         ImmutableArray<SystemLayout> systems, double headerHeight,
         List<(double upExtent, double downExtent)> perSystemExtents, double systemHeight,
         List<(VerticalSkyline up, VerticalSkyline down)>? perSystemSkylines = null,
         List<double>? perSystemHeights = null,
         List<double>? perSystemBandUps = null,
-        List<double>? perSystemCropDown = null)
+        List<double>? perSystemCropDown = null,
+        ImmutableArray<BreakPermission>? perSystemPagePermissions = null)
     {
         // The down extent the CROP reads: the system's own, raised to clear its loose block
         // standing at REST rather than at its alignment minimum
@@ -321,12 +349,25 @@ internal sealed partial class LayoutEngine
             var pages = _pageLayouter.CreatePagesWithOptimalBreaking(
                 systems, headerHeight, perSystemExtents.ToImmutableArray(), skylines,
                 perSystemBandUps?.ToImmutableArray(), perSystemHeights, anchors,
-                BuildLineShapes(systems, perSystemSkylines, perSystemExtents, SysHeight));
+                BuildLineShapes(systems, perSystemSkylines, perSystemExtents, SysHeight),
+                perSystemPagePermissions);
             return (pages, pages.SelectMany(p => p.Systems).ToImmutableArray());
         }
 
         if (_options.UseOptimalPageBreaking && _options.PageHeight > 0)
             return OptimalPages();
+
+        // A FORCED page break (`pageBreak`) after any system but the last is a page count
+        // the single-page stack below cannot honour: it stacks everything on one page and
+        // only overflows into the breaker. The breaker is the one reader of page
+        // permissions (SystemDetails.PagePermission → PageBreaker.IsValidBreak), so the
+        // book goes there whether or not it would have fit.
+        if (_options.PageHeight > 0 && perSystemPagePermissions is { } permissions)
+        {
+            for (int i = 0; i + 1 < systems.Length && i < permissions.Length; i++)
+                if (permissions[i] == BreakPermission.Force)
+                    return OptimalPages();
+        }
 
         // Recalculate Y positions using skyline extents to avoid overlaps
         var pageAnchor = PageAnchorOffsets(systems[0].StaffGroups);

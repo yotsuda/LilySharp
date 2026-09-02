@@ -81,9 +81,11 @@ internal sealed partial class Parser
             // (user decision 2026-08-16).
             _ when SyntaxFacts.IsBarlineKind(Current.Kind) => ParseFormBarline(),
             SyntaxKind.OpenBracket => ParseVoltaBracket(),
-            // `break` / `nobreak` between sections force / forbid a system break at
-            // that point in the played sequence (a layout directive, so no '@').
-            SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword => ParseBreak(),
+            // `break` / `noBreak` between sections force / forbid a system break at
+            // that point in the played sequence, `pageBreak` / `noPageBreak` a page break
+            // (layout directives, so no '@').
+            SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword
+                or SyntaxKind.PageBreakKeyword or SyntaxKind.NoPageBreakKeyword => ParseBreak(),
             SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
                 or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword
                 => ParseNavigationMark(),
@@ -99,7 +101,7 @@ internal sealed partial class Parser
                     + "label, a trailing ' or , to shift the octave), repeat blocks "
                     + "('|: … :|'), volta endings ('[1. … ]'), "
                     + "navigation marks (segno, fine, ds al coda), '@' marks, '_' texts and "
-                    + "break/nobreak.")
+                    + "break/noBreak/pageBreak/noPageBreak.")
         };
     }
 

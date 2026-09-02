@@ -713,7 +713,9 @@ internal sealed class Lexer
             "chords" => SyntaxKind.ChordsKeyword,
             "tuning" => SyntaxKind.TuningKeyword,
             "break" => SyntaxKind.BreakKeyword,
-            "nobreak" => SyntaxKind.NoBreakKeyword,
+            "noBreak" => SyntaxKind.NoBreakKeyword,
+            "pageBreak" => SyntaxKind.PageBreakKeyword,
+            "noPageBreak" => SyntaxKind.NoPageBreakKeyword,
             "partial" => SyntaxKind.PartialKeyword,
 
             // Articulation/ornament names (staccato, tr, mordent, cresc, dim, …) are

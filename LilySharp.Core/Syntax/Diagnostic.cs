@@ -1190,7 +1190,7 @@ public static class DiagnosticCodes
     /// through the engraver, alone and beside a real reference: <b>46 shapes, 16 of which
     /// engrave zero bytes, 15 of them caught here</b> (an empty body; a body holding only
     /// barlines <c>| || |. ! :|</c>, only navigation marks <c>segno fine coda dc ds</c>, only
-    /// <c>break</c>/<c>nobreak</c>, only <c>@mark("X")</c>, or only <c>_"text"</c>).
+    /// <c>break</c>/<c>noBreak</c>, only <c>@mark("X")</c>, or only <c>_"text"</c>).
     /// <b>The sixteenth shape — <c>form main { [1. A] }</c>, a volta ending that no repeat
     /// opens — is no longer one of them.</b> It NAMES a section, so this check was right to
     /// stay quiet; what was wrong was the ENGRAVER dropping it, and that half is now fixed

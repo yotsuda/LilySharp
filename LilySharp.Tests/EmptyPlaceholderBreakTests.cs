@@ -25,7 +25,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// A pending <c>break</c> / <c>nobreak</c> just before a bare-barline empty placeholder
+/// A pending <c>break</c> / <c>noBreak</c> just before a bare-barline empty placeholder
 /// measure belongs to THAT measure — exactly as it does for a content measure — not the
 /// next real bar (it must not silently jump the placeholder).
 /// </summary>
@@ -55,7 +55,7 @@ public class EmptyPlaceholderBreakTests
     public void NoBreakBeforeLeadingPlaceholder_ForbidsBreakAfterThePlaceholder()
     {
         var measures = PrimaryMeasures(
-            "part m { section A { nobreak | | c4 c g' g | a a g2 } } form main { A } score main { staff m }");
+            "part m { section A { noBreak | | c4 c g' g | a a g2 } } form main { A } score main { staff m }");
         Assert.True(measures[0].IsEmptyPlaceholder);
         Assert.Equal(BreakPermission.Forbid, measures[0].LineBreakPermission);
         Assert.Equal(BreakPermission.Allow, measures[1].LineBreakPermission);

@@ -81,6 +81,10 @@ internal sealed class MeasureBuilder
     private BarlineType _pendingEndBarline = BarlineType.None;
     private bool _pendingBreak = false;
     private bool _pendingNoBreak = false;
+    // `pageBreak` / `noPageBreak` written mid-measure, deferred to the boundary like the
+    // line pair above (a `pageBreak` also raises _pendingBreak: the line break it implies).
+    private bool _pendingPageBreak = false;
+    private bool _pendingNoPageBreak = false;
     private string? _sectionLabel;
     private int _sectionLabelPosition;
     private int _measureSourceStart;
@@ -482,6 +486,7 @@ internal sealed class MeasureBuilder
 
         bool hasBreak = _pendingBreak;
         bool noBreak = _pendingNoBreak;
+        var pagePermission = TakePendingPagePermission();
         _pendingBreak = false;
         _pendingNoBreak = false;
 
@@ -493,8 +498,9 @@ internal sealed class MeasureBuilder
             _measureSourceStart,
             sourceEnd,
             hasBreakAfter: hasBreak,
-            // `nobreak` forbids a break after this measure (Force wins if both).
+            // `noBreak` forbids a break after this measure (Force wins if both).
             lineBreakPermission: noBreak ? Layout.BreakPermission.Forbid : Layout.BreakPermission.Allow,
+            pageBreakPermission: pagePermission,
             sectionLabelPosition: _sectionLabelPosition,
             isPickup: _partialRestore != null));
 
@@ -589,7 +595,7 @@ internal sealed class MeasureBuilder
         }
     }
 
-    /// <summary>Forbids a line break after this measure (<c>nobreak</c>, LP's
+    /// <summary>Forbids a line break after this measure (<c>noBreak</c>, LP's
     /// <c>\noBreak</c>) — the mirror of <see cref="SetBreak"/>.</summary>
     public void SetNoBreak()
     {
@@ -597,6 +603,67 @@ internal sealed class MeasureBuilder
             _measures[^1] = _measures[^1] with { LineBreakPermission = Layout.BreakPermission.Forbid };
         else
             _pendingNoBreak = true;
+    }
+
+    /// <summary>Forces a page break after this measure (<c>pageBreak</c>, LP's
+    /// <c>\pageBreak</c>) — and the line break that goes with it: a page cannot end
+    /// mid-line, and LilyPond's event carries both permissions.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/music-functions-init.ly:1411-1418 pageBreak — line-break-permission 'force AND page-break-permission 'force
+    /// </remarks>
+    public void SetPageBreak()
+    {
+        if (_currentItems.Count == 0 && _measures.Count > 0)
+            _measures[^1] = _measures[^1] with
+            {
+                LineBreakPermission = Layout.BreakPermission.Force,
+                PageBreakPermission = Layout.BreakPermission.Force,
+            };
+        else
+        {
+            _pendingBreak = true;
+            _pendingPageBreak = true;
+        }
+    }
+
+    /// <summary>Forbids a page break after this measure (<c>noPageBreak</c>, LP's
+    /// <c>\noPageBreak</c>) — the line-break permission is untouched.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/music-functions-init.ly:1255-1259 noPageBreak — page-break-permission 'forbid alone
+    /// </remarks>
+    public void SetNoPageBreak()
+    {
+        if (_currentItems.Count == 0 && _measures.Count > 0)
+            _measures[^1] = _measures[^1] with { PageBreakPermission = Layout.BreakPermission.Forbid };
+        else
+            _pendingNoPageBreak = true;
+    }
+
+    /// <summary>Applies one break directive — the one dispatch every collector site
+    /// calls, so the four keywords have one meaning wherever they stand (a section's
+    /// music, a form, a repeat block).</summary>
+    public void ApplyBreak(BreakKind kind)
+    {
+        switch (kind)
+        {
+            case BreakKind.NoLine: SetNoBreak(); break;
+            case BreakKind.Page: SetPageBreak(); break;
+            case BreakKind.NoPage: SetNoPageBreak(); break;
+            default: SetBreak(); break;
+        }
+    }
+
+    /// <summary>The page-break permission the measure being emitted carries, from the
+    /// pending page directives, which it consumes (Force wins over Forbid, as the line
+    /// pair's Force does).</summary>
+    private Layout.BreakPermission TakePendingPagePermission()
+    {
+        var permission = _pendingPageBreak ? Layout.BreakPermission.Force
+            : _pendingNoPageBreak ? Layout.BreakPermission.Forbid
+            : Layout.BreakPermission.Allow;
+        _pendingPageBreak = false;
+        _pendingNoPageBreak = false;
+        return permission;
     }
 
     /// <summary>
@@ -711,10 +778,11 @@ internal sealed class MeasureBuilder
     /// </summary>
     private void EmitEmptyMeasure(int sourceEnd, BarlineType endType)
     {
-        // A pending break/nobreak belongs to THIS measure (as in EmitMeasure) — a `break`
+        // A pending break/noBreak belongs to THIS measure (as in EmitMeasure) — a `break`
         // just before a bare `|` breaks after the placeholder, not the next real bar.
         bool hasBreak = _pendingBreak;
         bool noBreak = _pendingNoBreak;
+        var pagePermission = TakePendingPagePermission();
         _pendingBreak = false;
         _pendingNoBreak = false;
 
@@ -749,6 +817,7 @@ internal sealed class MeasureBuilder
             sourceEnd,
             hasBreakAfter: hasBreak,
             lineBreakPermission: noBreak ? Layout.BreakPermission.Forbid : Layout.BreakPermission.Allow,
+            pageBreakPermission: pagePermission,
             sectionLabelPosition: _sectionLabelPosition,
             isPickup: _partialRestore != null)
         {
@@ -905,6 +974,8 @@ internal sealed class MeasureBuilder
         BarlineType PendingEndBarline,
         bool PendingBreak,
         bool PendingNoBreak,
+        bool PendingPageBreak,
+        bool PendingNoPageBreak,
         string? SectionLabel,
         int SectionLabelPosition,
         int MeasureSourceStart,
@@ -919,7 +990,7 @@ internal sealed class MeasureBuilder
         _confirmableBoundary, _boundaryRetargetable, _lastEndAutoFill,
         _timeSignature, _partialRestore,
         _pendingStartBarline, _pendingEndBarline,
-        _pendingBreak, _pendingNoBreak,
+        _pendingBreak, _pendingNoBreak, _pendingPageBreak, _pendingNoPageBreak,
         _sectionLabel, _sectionLabelPosition, _measureSourceStart,
         _measures.Count > 0 ? _measures[^1] : null);
 
@@ -943,6 +1014,8 @@ internal sealed class MeasureBuilder
         _pendingEndBarline = ck.PendingEndBarline;
         _pendingBreak = ck.PendingBreak;
         _pendingNoBreak = ck.PendingNoBreak;
+        _pendingPageBreak = ck.PendingPageBreak;
+        _pendingNoPageBreak = ck.PendingNoPageBreak;
         _sectionLabel = ck.SectionLabel;
         _sectionLabelPosition = ck.SectionLabelPosition;
         _measureSourceStart = ck.MeasureSourceStart;
