@@ -324,9 +324,65 @@ public class SectionNameCompletionTests
         Assert.Equal(LilySharpLanguageServer.CompletionContext.SectionBlock,
             LilySharpLanguageServer.GetCompletionContext(text, text.Length));
         var items = LilySharpLanguageServer.GetSectionBlockCompletions(text, text.Length).Items;
-        Assert.Equal(new[] { "melody", "bass" }, items.Select(i => i.Label).ToArray());
+        // The part cells first, then the section-wide directives the header position takes
+        // (2026-09-02: a section-major section is a header too — `partial` is writable HERE
+        // and nowhere in the music, and this list had no row for it).
+        Assert.Equal(new[] { "melody", "bass", "partial", "key", "time", "tempo", "override" },
+            items.Select(i => i.Label).ToArray());
+        Assert.Equal(items.Select(i => i.Label).ToArray(),
+            items.OrderBy(i => i.SortText, System.StringComparer.Ordinal).Select(i => i.Label).ToArray());
         // Not a fresh line (caret after `section A { `) → the cell nests one level in.
         Assert.Equal("\n\tmelody {\n\t\t$0\n\t}", items.Single(i => i.Label == "melody").InsertText);
+        // No note letters: the body holds cells and directives, not notes.
+        Assert.DoesNotContain("c", items.Select(i => i.Label));
+    }
+
+    /// <summary>
+    /// Every directive the section-major list offers compiles at the head of a section-major
+    /// section, beside a real part cell — parser and validators both silent. This is the net
+    /// the music list has (MusicCompletionFlatSpellingTests), for the other side of the
+    /// `partial` rule: the row is offered exactly where the compiler accepts it.
+    /// </summary>
+    [Fact]
+    public void EverySectionMajorHeaderDirective_CompilesWhereItIsOffered()
+    {
+        var text = "part melody { }\npart bass { }\nsection A { ";
+        var directives = LilySharpLanguageServer.GetSectionBlockCompletions(text, text.Length).Items
+            .Where(i => i.Kind == LilySharp.Lsp.Protocol.CompletionItemKind.Keyword).ToArray();
+        Assert.NotEmpty(directives);
+        foreach (var item in directives)
+        {
+            string head = item.Label switch
+            {
+                "partial" => "partial 4",
+                "key" => "key g major",
+                "time" => "time 3/4",
+                "tempo" => "tempo 4 = 100",
+                "override" => "override Stem.transparent = true",
+                _ => throw new System.InvalidOperationException($"unmapped directive '{item.Label}'"),
+            };
+            // A 3/4 first bar is legal under every directive: a plain bar, a `time 3/4` bar,
+            // and a `partial 4` pickup (the first bar shorter than 4/4, which is what the
+            // pickup declares).
+            string body = item.Label == "partial" ? "c4 | d4 e f g |" : "c4 d e | f4 g a |";
+            var tree = LilySharp.Core.Syntax.SyntaxTree.Parse($$"""
+                time 4/4
+                part melody { clef treble }
+                part bass { clef bass }
+                section A { {{head}}
+                  melody { {{body}} }
+                  bass { {{body}} }
+                }
+                form main { A }
+                score main { staff melody  staff bass }
+                """);
+            Assert.False(tree.HasErrors,
+                $"'{item.Label}' → {head} does not parse: " + string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
+            var errors = LilySharp.Core.Semantics.SemanticValidation.Run(tree)
+                .Where(d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error).ToList();
+            Assert.True(errors.Count == 0,
+                $"'{item.Label}' → {head} is refused: " + string.Join(" | ", errors.Select(d => d.Message)));
+        }
     }
 
     [Fact]

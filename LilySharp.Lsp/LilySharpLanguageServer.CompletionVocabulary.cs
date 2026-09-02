@@ -1593,7 +1593,12 @@ public sealed partial class LilySharpLanguageServer
             return new CompletionList { Items = SectionHeaderDirectiveItems() };
 
         // Section-major (or a parts file not yet committed to a layout): the section body holds
-        // one music cell per part. Offer the declared part names as `NAME { }` cell scaffolds.
+        // one music cell per part. Offer the declared part names as `NAME { }` cell scaffolds —
+        // and, after them, the same section-wide directives the part-major header takes: a
+        // section-major section is a header AND a body (GRAMMAR SectionSetting stands beside
+        // the part cells — `section A { partial 4  key g major  m { … } }`), and until
+        // 2026-09-02 this list offered only the cells, so the one place a pickup CAN be
+        // written had no `partial` row while the music list, where it cannot, did.
         var parts = new System.Collections.Generic.List<string>();
         var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
         foreach (Match m in DeclaredNameRegex().Matches(text))
@@ -1602,30 +1607,34 @@ public sealed partial class LilySharpLanguageServer
 
         bool freshLine = LineIsBlankBefore(text, WordStartBefore(text, offset));
         string Body(string head) => freshLine ? head + " {\n\t$0\n}" : "\n\t" + head + " {\n\t\t$0\n\t}";
+        var cells = parts.Select((n, i) => new CompletionItem
+        {
+            Label = n,
+            Kind = CompletionItemKind.Reference,
+            Detail = "Part cell — this section's music for " + n,
+            InsertTextFormat = InsertTextFormat.Snippet,
+            InsertText = Body(n),
+            SortText = i.ToString("D2"),
+        });
         return new CompletionList
         {
-            Items = parts.Select((n, i) => new CompletionItem
-            {
-                Label = n,
-                Kind = CompletionItemKind.Reference,
-                Detail = "Part cell — this section's music for " + n,
-                InsertTextFormat = InsertTextFormat.Snippet,
-                InsertText = Body(n),
-                SortText = i.ToString("D2"),
-            }).ToArray()
+            Items = cells.Concat(SectionHeaderDirectiveItems("9")).ToArray()
         };
     }
 
-    /// <summary>The directives a top-level section HEADER may carry in a part-major file: a
-    /// pickup and the section-wide key / time / tempo, plus a section-scoped grob override.
+    /// <summary>The directives a top-level section may carry beside (or instead of) its part
+    /// cells — the part-major HEADER's whole body, and the section-major section's opening:
+    /// a pickup and the section-wide key / time / tempo, plus a section-scoped grob override.
     /// They apply to every part of the section; clef is deliberately absent (it is per-part).</summary>
-    private static CompletionItem[] SectionHeaderDirectiveItems() => new[]
+    /// <param name="sortPrefix">Where the block sorts in the caller's list — after the part
+    /// cells in a section-major section, first (empty) in a part-major header.</param>
+    private static CompletionItem[] SectionHeaderDirectiveItems(string sortPrefix = "") => new[]
     {
-        new CompletionItem { Label = "partial", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "partial $0", Detail = "Pickup — shorten this section's first bar (applies to every part)" },
-        new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "key $0", Detail = "This section's key signature", Command = new Command { Title = "Suggest key tonic", CommandIdentifier = "editor.action.triggerSuggest" } },
-        new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "This section's time signature", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
-        new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tempo $0", Detail = "This section's tempo (BPM)" },
-        new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "override $0", Detail = "Grob override — a default for this section on every staff", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } },
+        new CompletionItem { Label = "partial", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "partial $0", Detail = "Pickup — shorten this section's first bar (applies to every part)", SortText = sortPrefix + "0partial" },
+        new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "key $0", Detail = "This section's key signature", SortText = sortPrefix + "1key", Command = new Command { Title = "Suggest key tonic", CommandIdentifier = "editor.action.triggerSuggest" } },
+        new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "This section's time signature", SortText = sortPrefix + "2time", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
+        new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tempo $0", Detail = "This section's tempo (BPM)", SortText = sortPrefix + "3tempo" },
+        new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "override $0", Detail = "Grob override — a default for this section on every staff", SortText = sortPrefix + "4override", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } },
     };
 
     /// <summary>
@@ -2589,7 +2598,10 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Change time signature", SortText = "3time", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tempo $0", Detail = "Change tempo (BPM)", SortText = "3tempo", Command = new Command { Title = "Suggest tempo", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "octave", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "octave $0", Detail = "Octave mode (absolute / relative)", SortText = "3octave", Command = new Command { Title = "Suggest octave mode", CommandIdentifier = "editor.action.triggerSuggest" } },
-                new CompletionItem { Label = "partial", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "partial $0", Detail = "Pickup: the next measure is a partial of this length", SortText = "3partial" },
+                // ⚠️ NO `partial` here: a pickup is a SECTION directive (`section A { partial 4 … }`,
+                // LYS1024 anywhere in a part's or voice's music — PartialScopeValidator), and
+                // this row taught the rejected spelling until 2026-09-02 (owner report). The
+                // section-header list (SectionHeaderDirectiveItems) is where it is offered.
 
                 // Grob overrides
                 new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "override $0", Detail = "Override grob property", SortText = "4override", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } },

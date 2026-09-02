@@ -50,6 +50,13 @@ reasoning behind each one.
   repeat bars under the section names, and lacked `:|:`, the count, the barlines and the
   breaks. A repeat bar typed as far as `|` is replaced by the item rather than appended to
   (`||:` no more). Every plain item is compiled in a form by a test.
+- **A section-major section's body offers its header directives.** After the part cells,
+  `partial`, `key`, `time`, `tempo` and `override` — the directives a `section A { … }` takes
+  beside its cells, which the list did not carry (the part-major header already had them).
+- **The music list no longer offers `partial`.** A pickup is a section directive
+  (`section A { partial 4 … }`); written inside a part's music it is `LYS1024`, and the row
+  had been teaching that. The test behind the list now runs the semantic validators too,
+  not just the parser, which is how this one got through.
 - **The music list no longer offers `|: :|`.** Repeat structure is form-only (`LYS1034`), so
   the two volta snippets that still stood in a section's completion taught a spelling the
   compiler refuses; they are gone, and a test now compiles every plain item the list offers.

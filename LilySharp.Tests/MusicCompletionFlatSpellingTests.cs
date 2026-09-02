@@ -85,7 +85,8 @@ public class MusicCompletionFlatSpellingTests
         // offered — break/octave/tempo/partial/voice were previously missing.
         var labels = LilySharpLanguageServer.GetMusicCompletions("", 0, false)
             .Items.Select(i => i.Label).ToList();
-        foreach (var kw in new[] { "break", "noBreak", "octave", "tempo", "partial", "voice",
+        // (`partial` is NOT among them: it is a section directive, LYS1024 in music.)
+        foreach (var kw in new[] { "break", "noBreak", "octave", "tempo", "voice",
                                    "repeat", "tuplet", "grace", "acciaccatura", "appoggiatura",
                                    "clef", "key", "time", "override", "revert", "once override" })
             Assert.Contains(kw, labels);
@@ -97,9 +98,14 @@ public class MusicCompletionFlatSpellingTests
     /// stayed in this list taught the rejected spelling (owner report, 2026-09-02).
     /// </summary>
     /// <remarks>
-    /// ⚠️ The net is the COMPILER, not a blacklist: every plain-insert item is written into a
-    /// section's music and must parse. Snippets with tab stops are checked by label only
-    /// (the stop is not source), so a future volta snippet trips the label half.
+    /// ⚠️ The net is the COMPILER, not a blacklist: every item — a snippet by its keyword,
+    /// the rest by its insert — is written into a section's music as a whole bar and must
+    /// pass the parser AND the semantic validators with no error. Labels are also refused
+    /// the repeat spellings outright.
+    /// ⚠️ IT WAS THE PARSER ALONE until 2026-09-02, and that let `partial` through: the
+    /// parser reads `partial 4` anywhere, and the refusal is PartialScopeValidator's LYS1024
+    /// (a pickup is a section directive). Owner report the same day. A net that stops at the
+    /// parser is half a net.
     /// </remarks>
     [Fact]
     public void MusicCompletion_OffersNothingTheMusicGrammarRefuses()
@@ -110,28 +116,54 @@ public class MusicCompletionFlatSpellingTests
             Assert.DoesNotContain("|:", item.Label);
             Assert.DoesNotContain(":|", item.Label);
             Assert.DoesNotContain("[1.", item.Label);
-            if (item.InsertTextFormat == LilySharp.Lsp.Protocol.InsertTextFormat.Snippet)
-                continue;
             string insert = item.InsertText ?? item.Label!;
-            // A declaration keyword needs its argument; the plain items stand alone.
-            string body = insert switch
+            // The keyword a snippet inserts (its insert carries tab stops, which are not
+            // source), else the plain insert.
+            string word = item.InsertTextFormat == LilySharp.Lsp.Protocol.InsertTextFormat.Snippet
+                ? item.Label!.Split(' ')[0]
+                : insert;
+            // One whole 4/4 bar around the item, so nothing but the item can be at fault: a
+            // declaration takes its argument, a pitch or rest its duration, a block its body.
+            string bar = word switch
             {
-                "clef" => "clef bass", "key" => "key g major", "time" => "time 3/4",
-                "tempo" => "tempo 4 = 100", "octave" => "octave relative", "partial" => "partial 4",
-                "override" => "override Stem.thickness = 2", "revert" => "revert Stem.thickness",
-                "once override" => "once override Stem.thickness = 2",
-                _ => insert,
+                "clef" => "clef bass g4 a b c' |",
+                "key" => "key g major g4 a b c' |",
+                "time" => "time 3/4 g4 a b |",
+                "tempo" => "tempo 4 = 100 g4 a b c' |",
+                "octave" => "octave relative g4 a b c' |",
+                "override" => "override Stem.transparent = true g4 a b c' |",
+                "revert" => "revert Stem.transparent g4 a b c' |",
+                "once" => "once override Stem.transparent = true g4 a b c' |",
+                "repeat" => "repeat unfold 2 { g4 a b c' | }",
+                "tuplet" => "tuplet 3/2 { g8 a b } c'4 d' e' |",
+                "<<" => "<< g b d' >>4 e'4 f' g' |",   // the group's duration goes after >>
+
+                "grace" => "grace { g16 } a4 b c' d' |",
+                "acciaccatura" => "acciaccatura { g16 } a4 b c' d' |",
+                "appoggiatura" => "appoggiatura { g16 } a4 b c' d' |",
+                "voice" => "voice { g4 a b c' | } { e4 f g a | }",   // one keyword, N blocks
+                "R" => "R1 |",
+                "r" or "s" => word + "4 a b c' |",
+                _ when insert.StartsWith('<') => insert + "4 a4 b c' |",
+                _ when insert.Length <= 4 && char.IsLower(insert[0]) && !insert.Contains(' ')
+                    => insert + "4 a b c' |",            // a pitch row: c, fis, bes …
+                _ => insert + " g4 a b c' |",            // break, noBreak, pageBreak, noPageBreak
             };
             var tree = LilySharp.Core.Syntax.SyntaxTree.Parse($$"""
                 time 4/4
                 part m { clef treble }
-                section A { m { c4 d {{body}} e f | } }
+                section A { m { c4 d e f | {{bar}} } }
                 form main { A }
                 score main { staff m }
                 """);
             Assert.False(tree.HasErrors,
-                $"'{item.Label}' → {insert} does not parse in music: "
+                $"'{item.Label}' → {bar} does not parse in music: "
                 + string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
+            var errors = LilySharp.Core.Semantics.SemanticValidation.Run(tree)
+                .Where(d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error).ToList();
+            Assert.True(errors.Count == 0,
+                $"'{item.Label}' → {bar} is refused in music: "
+                + string.Join(" | ", errors.Select(d => d.Message)));
         }
     }
 
