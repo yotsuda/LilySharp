@@ -292,7 +292,7 @@ c4@trill         // Trill
 d4@mordent       // Mordent
 e4@prall         // Inverted mordent (pralltriller)
 f4@turn          // Turn
-g4@invertedturn  // Inverted turn
+g4@reverseturn   // Reverse (inverted) turn — LilyPond's \reverseturn
 ```
 
 ## Dynamics
@@ -1270,7 +1270,7 @@ be declared and referenced).
 | Clef names | `treble` `bass` `alto` `tenor` `treble_8` `bass_8` `soprano` `mezzosoprano` `baritone` |
 | Notation | `tuplet` `grace` `acciaccatura` `appoggiatura` `cue` `lyrics` `chords` `tuning` |
 | Overrides | `override` `revert` `once` |
-| Navigation (form block) | `segno` `fine` `coda` `dc` `ds` `al` `to` `tocoda` |
+| Navigation (form block) | `segno` `fine` `coda` `dc` `ds` `al` `to` |
 | Dynamics | `ppp` `pp` `p` `mp` `mf` `f` `ff` `fff` |
 
 ⚠️ The `fonts { }` keys (`serif` `header` `lyricText` `chordName` `barNumber` …) are **not**

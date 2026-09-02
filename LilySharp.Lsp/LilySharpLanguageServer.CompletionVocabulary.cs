@@ -2732,7 +2732,7 @@ public sealed partial class LilySharpLanguageServer
         // most likely to type has to be listed.
         ["shortfermata"] = "fermata short",
         ["longfermata"] = "fermata long",
-        ["invertedturn"] = "turn inverted",
+        ["reverseturn"] = "turn inverted",
         ["pralltriller"] = "trill prall",
         ["staccatissimo"] = "staccato wedge",
         ["upbow"] = "bow up",
@@ -2888,7 +2888,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "mordent", Kind = CompletionItemKind.Value, Detail = "Mordent ornament", SortText = "1mordent" },
                 new CompletionItem { Label = "prall", Kind = CompletionItemKind.Value, Detail = "Inverted mordent (pralltriller)", SortText = "1prall" },
                 new CompletionItem { Label = "turn", Kind = CompletionItemKind.Value, Detail = "Turn ornament", SortText = "1turn" },
-                new CompletionItem { Label = "invertedturn", Kind = CompletionItemKind.Value, Detail = "Inverted turn", SortText = "1invertedturn" },
+                new CompletionItem { Label = "reverseturn", Kind = CompletionItemKind.Value, Detail = "Reverse (inverted) turn", SortText = "1reverseturn" },
                 new CompletionItem { Label = "pralltriller", Kind = CompletionItemKind.Value, Detail = "Prall-triller (trill with prall)", SortText = "1pralltriller" },
 
                 // Dynamics (@ prefix style)

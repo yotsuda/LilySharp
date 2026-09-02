@@ -88,20 +88,13 @@ public class FormNavigationTests
     }
 
     [Fact]
-    public void ToCoda_OneWordSpelling_IsCollected()
+    public void ToCoda_IsTwoWords_TheRunTogetherSpellingIsNotAKeyword()
     {
-        // "tocoda" (run together) is accepted as "to coda" — it previously read as
-        // an undefined section name.
-        var marks = Marks("A tocoda B coda C D");
-        Assert.Contains(MusicMarkType.ToCoda, marks);
-    }
-
-    [Fact]
-    public void ToCoda_OneWordAndTwoWord_AreEquivalent()
-    {
-        Assert.Equal(
-            Marks("A to coda B coda C D"),
-            Marks("A tocoda B coda C D"));
+        // "tocoda" was a second spelling of "to coda" until 2026-09-02 (user decision: one
+        // spelling per instruction). It is an ordinary identifier now — an undefined
+        // section name in a form, not a navigation mark.
+        Assert.Contains(MusicMarkType.ToCoda, Marks("A to coda B coda C D"));
+        Assert.DoesNotContain(MusicMarkType.ToCoda, Marks("A tocoda B coda C D"));
     }
 
     [Fact]

@@ -107,6 +107,13 @@ The rest is defects found by engraving real scores.
   carries both permissions); `noPageBreak` forbids a page break and leaves the line alone.
   The LilyPond twin writes `\pageBreak` and `\noPageBreak`.
 
+- **`@invertedturn` is renamed `@reverseturn`.** Ornament names are LilyPond's, and this
+  one was MusicXML's (`inverted-turn`) — the only articulation spelled by another
+  vocabulary. The MusicXML importer writes the new name; the old one is an unknown
+  annotation (`LYS1008`).
+- **`tocoda` is gone; `to coda` is the one spelling.** The run-together word was a second
+  way to write the same instruction, and one spelling per instruction is the rule that
+  retired `$`. `tocoda` reads as an ordinary name now — in a form, an undefined section.
 - **`nobreak` is renamed `noBreak`.** The break family is now LilyPond's own spelling minus
   the backslash — `break`, `noBreak`, `pageBreak`, `noPageBreak` — the rule every other
   command already follows (`grandStaff`, `tempo`). The lowercase `nobreak` was the one word

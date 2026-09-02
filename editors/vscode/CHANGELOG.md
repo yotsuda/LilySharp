@@ -23,6 +23,10 @@ reasoning behind each one.
   `\pageBreak` does. Both are offered by the completion where `break` is.
 - **`nobreak` is renamed `noBreak`** — the break family is LilyPond's spelling minus the
   backslash. The old lowercase word is no longer a keyword.
+- **`@invertedturn` is renamed `@reverseturn`** — LilyPond's name for the ornament; the old
+  one was MusicXML's. Completion and highlighting follow.
+- **`tocoda` is gone; write `to coda`** — one spelling per navigation instruction. The
+  run-together word is an ordinary name now.
 - **`@loco`, `@sustainOn`, `@sustainOff`, `@sostenutoOn` and `@sostenutoOff` are retired.**
   The direction moved out of the name and into the `!`. `@treCorde` stays, because unlike
   the others it is a word the page actually prints.

@@ -484,12 +484,9 @@ internal sealed partial class Parser
             return new NavigationMarkGreen(first);
         }
 
-        // "to coda" (two words) or "tocoda" (one word). The one-word spelling
-        // already carries the whole instruction, so there is no trailing 'coda'.
+        // "to coda", two words — the one spelling (Lexer.GetKeywordKind's note on `to`).
         if (first.Kind == SyntaxKind.ToKeyword)
         {
-            if (first.Text.Equals("tocoda", StringComparison.OrdinalIgnoreCase))
-                return new NavigationMarkGreen(first);
             var coda = Expect(SyntaxKind.CodaKeyword);
             return new NavigationMarkGreen(first, coda);
         }

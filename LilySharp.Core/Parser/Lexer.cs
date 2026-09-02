@@ -634,12 +634,11 @@ internal sealed class Lexer
             "dc" => SyntaxKind.DcKeyword,
             "ds" => SyntaxKind.DsKeyword,
             "al" => SyntaxKind.AlKeyword,
+            // "to coda" is two words, as the chart prints it ("To Coda"). The run-together
+            // "tocoda" was accepted as a second spelling until 2026-09-02 (user decision: one
+            // spelling per instruction — the reason `$` left, GRAMMAR_AUDIT §1.1); it is an
+            // ordinary identifier now, and reads as an undefined section name.
             "to" => SyntaxKind.ToKeyword,
-            // "tocoda" (one word) is accepted alongside "to coda" (two words) —
-            // LP charts write "To Coda" and the run-together spelling is a common
-            // reflex. Both lex to ToKeyword; ParseNavigationMark handles the one-
-            // word form (no trailing 'coda' to consume).
-            "tocoda" => SyntaxKind.ToKeyword,
 
             // Legacy structure keywords
             "score" => SyntaxKind.ScoreKeyword,

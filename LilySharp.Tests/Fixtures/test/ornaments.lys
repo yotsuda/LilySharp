@@ -1,5 +1,5 @@
 // Ornaments Test
-// Tests @trill, @mordent, @prall, @turn, @invertedturn, @pralltriller, :8 tremolo
+// Tests @trill, @mordent, @prall, @turn, @reverseturn, @pralltriller, :8 tremolo
 title "Ornaments"
 composer "Lily#"
 
@@ -19,7 +19,7 @@ phrase mordentPrall {
 }
 
 phrase turns {
-  c2@turn d2@invertedturn |
+  c2@turn d2@reverseturn |
   e2@pralltriller f2 |
 }
 

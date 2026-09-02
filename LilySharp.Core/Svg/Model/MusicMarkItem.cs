@@ -335,7 +335,9 @@ public sealed record MusicMarkItem
             "ds.al.coda" => MusicMarkType.DalSegnoAlCoda,
             "dc.al.fine" => MusicMarkType.DaCapoAlFine,
             "dc.al.coda" => MusicMarkType.DaCapoAlCoda,
-            "to.coda" or "tocoda" => MusicMarkType.ToCoda,
+            // One spelling, like the form's `to coda` (the run-together `tocoda` left the
+            // language 2026-09-02).
+            "to.coda" => MusicMarkType.ToCoda,
             // The text spanner: the general spelling plus the three sugar words. All four
             // open the SAME spanner and differ only in the text they print, which
             // TextSpanSugarText / the @textSpan argument supplies — see BuildPlain.

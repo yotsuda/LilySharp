@@ -74,7 +74,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         "staccatissimo", "upbow", "downbow", "harmonic", "flageolet",
         "sfz", "sf", "fp", "rf", "rfz", "fz", "sffz",
         "pppp", "ppppp", "ffff", "fffff",
-        "trill", "mordent", "prall", "turn", "invertedturn", "pralltriller",
+        "trill", "mordent", "prall", "turn", "reverseturn", "pralltriller",
         "startTrillSpan", "stopTrillSpan", "courtesy", "editorial", "glissando",
         // ⚠️ The navigation marks (segno, coda, fine, ds, dc, to coda) are NOT
         // here: they are bare landmarks, and writing one with an '@' has its own

@@ -378,16 +378,16 @@
             ]
         },
         "keywords": {
-            "comment": "⚠️ THIS FILE MAY SAY WHAT A WORD IS, AND MAY NOT SAY THAT IT IS WRONG. A rule here sees one line and no position, so it cannot tell a dead spelling from a live one: `repeat volta 2` is removed (LYS0006) while `fonts { volta \"TeX Gyre Schola\" }` is accepted, and one regex holds nothing that separates them. Errors travel as diagnostics, which are anchored to a span — user decision 2026-08-18, ratcheted by EditorColouringTests.TheGrammarCallsNothingInvalid. ⚠️ The words below are held to Lexer.GetKeywordKind by that same file: a reserved word a writer can type and no pattern here matches is a word the editor leaves plain (23 of them were, until 2026-08-18). A spelling that is NOT reserved is equally a defect. The '_8' clefs and 'tocoda' are written before their shorter twins so the longer spelling is read whole.",
+            "comment": "⚠️ THIS FILE MAY SAY WHAT A WORD IS, AND MAY NOT SAY THAT IT IS WRONG. A rule here sees one line and no position, so it cannot tell a dead spelling from a live one: `repeat volta 2` is removed (LYS0006) while `fonts { volta \"TeX Gyre Schola\" }` is accepted, and one regex holds nothing that separates them. Errors travel as diagnostics, which are anchored to a span — user decision 2026-08-18, ratcheted by EditorColouringTests.TheGrammarCallsNothingInvalid. ⚠️ The words below are held to Lexer.GetKeywordKind by that same file: a reserved word a writer can type and no pattern here matches is a word the editor leaves plain (23 of them were, until 2026-08-18). A spelling that is NOT reserved is equally a defect. The '_8' clefs are written before their shorter twins so the longer spelling is read whole.",
             "patterns": [
                 {
                     "name": "keyword.control.lilysharp",
                     "match": "\\b(score|part|staff|grandStaff|staffGroup|choirStaff|condensedStaff|combinedStaff|tab|ossia|voice|phrase|section|form|using|drummap|transpose|repeat|grace|cue|tuplet|acciaccatura|appoggiatura|override|revert|once|lyrics|chords)\\b"
                 },
                 {
-                    "comment": "Navigation marks, written bare in a form block: 'A dc al fine', 'to coda', and the run-together 'tocoda'.",
+                    "comment": "Navigation marks, written bare in a form block: 'A dc al fine', 'to coda' (two words; the run-together 'tocoda' left the language 2026-09-02).",
                     "name": "keyword.control.navigation.lilysharp",
-                    "match": "\\b(segno|tocoda|coda|fine|dc|ds|al|to)\\b"
+                    "match": "\\b(segno|coda|fine|dc|ds|al|to)\\b"
                 },
                 {
                     "name": "keyword.other.lilysharp",
@@ -512,7 +512,7 @@
                 {
                     "name": "keyword.other.articulation.lilysharp",
                     "comment": "Keep in sync with LilySharp.Core ArticulationRegistry (full names + abbreviations).",
-                    "match": "@(staccato|stac|accent|acc|tenuto|ten|marcato|marc|fermata|ferm|portato|trill|tr|mordent|prall|turn|invertedturn|pralltriller)\\b"
+                    "match": "@(staccato|stac|accent|acc|tenuto|ten|marcato|marc|fermata|ferm|portato|trill|tr|mordent|prall|turn|reverseturn|pralltriller)\\b"
                 }
             ]
         },

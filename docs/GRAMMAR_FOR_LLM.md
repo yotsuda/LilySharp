@@ -245,7 +245,7 @@ An annotation that takes a VALUE puts it in parentheses (space- or comma-separat
   On a beamed note the beam's shared direction wins.
 - Articulations: `@staccato @staccatissimo @accent @tenuto @marcato @fermata @portato`
 - String technique: `@upbow @downbow @flageolet` - always above
-- Ornaments: `@trill @mordent @prall @turn @invertedturn`
+- Ornaments: `@trill @mordent @prall @turn @reverseturn`
 - Dynamics: `@ppp @pp @p @mp @mf @f @ff @fff` and the accent dynamics `@sfz @sf @fp @rfz @fz` (default below the staff; `.up` / `.down`
   forces the side, e.g. `@f.up`)
 - Accidental style: `@courtesy` (cautionary, parenthesized), `@editorial` (musica ficta)
@@ -650,7 +650,7 @@ major minor ionian dorian phrygian lydian mixolydian aeolian locrian
 treble bass alto tenor treble_8 bass_8 soprano mezzosoprano baritone
 tuplet grace acciaccatura appoggiatura lyrics chords tuning
 override revert once
-segno fine coda dc ds al to tocoda
+segno fine coda dc ds al to
 ppp pp p mp mf ff fff   (f is a PITCH; @f still works - dynamics resolve from text)
 ```
 

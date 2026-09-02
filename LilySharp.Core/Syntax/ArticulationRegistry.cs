@@ -67,7 +67,10 @@ public static class ArticulationRegistry
             ["mordent"] = ArticulationType.Mordent,
             ["prall"] = ArticulationType.Prall,
             ["turn"] = ArticulationType.Turn,
-            ["invertedturn"] = ArticulationType.InvertedTurn,
+            // LilyPond's name (\reverseturn, scm/script.scm); the MusicXML term
+            // "inverted-turn" was the spelling until 2026-09-02. The enum member keeps its
+            // name (a rename is the owner's MSVS job).
+            ["reverseturn"] = ArticulationType.InvertedTurn,
             ["pralltriller"] = ArticulationType.PrallTriller,
             // Breathing signs (after the note they follow)
             ["breath"] = ArticulationType.Breath,

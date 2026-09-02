@@ -614,7 +614,7 @@ internal static class MusicXmlReader
         "mordent" => "mordent",
         "inverted-mordent" => "prall",
         "turn" => "turn",
-        "inverted-turn" => "invertedturn",
+        "inverted-turn" => "reverseturn",
         _ => null,
     };
 

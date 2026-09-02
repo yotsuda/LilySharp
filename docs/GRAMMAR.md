@@ -104,7 +104,7 @@ Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
         | 'aeolian' | 'locrian'
         | 'treble' | 'bass' | 'alto' | 'tenor' | 'treble_8' | 'bass_8'
         | 'soprano' | 'mezzosoprano' | 'baritone'
-        | 'segno' | 'fine' | 'coda' | 'dc' | 'ds' | 'al' | 'to' | 'tocoda'
+        | 'segno' | 'fine' | 'coda' | 'dc' | 'ds' | 'al' | 'to'
         | 'ppp' | 'pp' | 'p' | 'mp' | 'mf' | 'ff' | 'fff'
         ;
 
@@ -1437,7 +1437,7 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
 
 (* - Articulations: @staccato @staccatissimo @accent @tenuto @marcato @fermata @portato  (.up/.down ok)
    - Strings:       @upbow @downbow @flageolet  (always above)
-   - Ornaments:     @trill @mordent @prall @turn @invertedturn
+   - Ornaments:     @trill @mordent @prall @turn @reverseturn
    - Dynamics:      @ppp @pp @p @mp @mf @f @ff @fff @sfz @sf @fp @rfz @fz   (default below; @f.up forces side)
    - Hairpins:      @cresc @decresc @dim  (start note → next dynamic; .up/.down REJECTED)
    - Stem:          @stemUp @stemDown      (a beam's shared direction wins)
