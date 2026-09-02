@@ -91,6 +91,50 @@ public class MusicCompletionFlatSpellingTests
             Assert.Contains(kw, labels);
     }
 
+    /// <summary>
+    /// Nothing the music grammar refuses is offered. Repeat structure — <c>|:</c>, <c>:|</c>,
+    /// <c>[1. …]</c> — is form-only (LYS1034, 2026-08-31), and the two volta snippets that
+    /// stayed in this list taught the rejected spelling (owner report, 2026-09-02).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The net is the COMPILER, not a blacklist: every plain-insert item is written into a
+    /// section's music and must parse. Snippets with tab stops are checked by label only
+    /// (the stop is not source), so a future volta snippet trips the label half.
+    /// </remarks>
+    [Fact]
+    public void MusicCompletion_OffersNothingTheMusicGrammarRefuses()
+    {
+        var items = LilySharpLanguageServer.GetMusicCompletions("", 0, false).Items;
+        foreach (var item in items)
+        {
+            Assert.DoesNotContain("|:", item.Label);
+            Assert.DoesNotContain(":|", item.Label);
+            Assert.DoesNotContain("[1.", item.Label);
+            if (item.InsertTextFormat == LilySharp.Lsp.Protocol.InsertTextFormat.Snippet)
+                continue;
+            string insert = item.InsertText ?? item.Label!;
+            // A declaration keyword needs its argument; the plain items stand alone.
+            string body = insert switch
+            {
+                "clef" => "clef bass", "key" => "key g major", "time" => "time 3/4",
+                "tempo" => "tempo 4 = 100", "octave" => "octave relative", "partial" => "partial 4",
+                "override" => "override Stem.thickness = 2", "revert" => "revert Stem.thickness",
+                "once override" => "once override Stem.thickness = 2",
+                _ => insert,
+            };
+            var tree = LilySharp.Core.Syntax.SyntaxTree.Parse($$"""
+                time 4/4
+                part m { clef treble }
+                section A { m { c4 d {{body}} e f | } }
+                form main { A }
+                score main { staff m }
+                """);
+            Assert.False(tree.HasErrors,
+                $"'{item.Label}' → {insert} does not parse in music: "
+                + string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
+        }
+    }
+
     [Fact]
     public void MusicCompletion_InsideVoice_WithholdsNestedVoice()
     {

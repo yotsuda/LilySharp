@@ -85,6 +85,123 @@ public class FormCompletionTests
         Assert.DoesNotContain("~", labels);
     }
 
+    /// <summary>
+    /// The whole of what a form body can hold (Parser.Form.cs ParseFormItem): the repeat
+    /// family with its count, the three engraved barlines, the breaks — the rows the list
+    /// was short of until 2026-09-02.
+    /// </summary>
+    [Fact]
+    public void StructureCompletions_OfferTheWholeFormVocabulary()
+    {
+        var labels = LilySharpLanguageServer.GetFormCompletions(Doc).Items
+            .Select(i => i.Label).ToHashSet();
+        foreach (var expected in new[] { "|:", ":|", ":|:", ":|*3", "[1. ]", "[2. ]", "[3. ]", "[1-2. ]",
+                                         "||", "|.", "!", "break", "nobreak", "_\"\"" })
+            Assert.Contains(expected, labels);
+        // A plain `|` is an inert divider in a form and is not offered.
+        Assert.DoesNotContain("|", labels);
+    }
+
+    /// <summary>
+    /// Every plain item compiles where it is inserted — the net is the compiler, not this
+    /// file's idea of the grammar. A `|:` needs its `:|` to be a block, so it is placed as
+    /// one; every other item stands between two sections.
+    /// </summary>
+    [Fact]
+    public void EveryOfferedPlainItem_CompilesInAForm()
+    {
+        var items = LilySharpLanguageServer.GetFormCompletions(Doc).Items
+            .Where(i => i.InsertTextFormat != LilySharp.Lsp.Protocol.InsertTextFormat.Snippet);
+        foreach (var item in items)
+        {
+            string insert = item.InsertText ?? item.Label!;
+            string body = insert == "|:" ? "|: Intro :| Verse" : $"Intro {insert} Verse";
+            var tree = LilySharp.Core.Syntax.SyntaxTree.Parse($$"""
+                part m {
+                  section Intro { c4 d e f | }
+                  section Verse { g4 a b c | }
+                }
+                form main { {{body}} }
+                score main { staff m }
+                """);
+            Assert.False(tree.HasErrors,
+                $"'{item.Label}' → {insert} does not parse in a form: "
+                + string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
+        }
+    }
+
+    /// <summary>
+    /// The list reads in the order a writer reaches for it — sections, silent sections,
+    /// the repeat block, endings, navigation, barlines, breaks, text — by sortText, which
+    /// the editor honours; without one VS Code sorted by label and the repeat bars sat
+    /// under the section names.
+    /// </summary>
+    [Fact]
+    public void StructureCompletions_SortInGroups()
+    {
+        var sorted = LilySharpLanguageServer.GetFormCompletions(Doc).Items
+            .OrderBy(i => i.SortText, System.StringComparer.Ordinal)
+            .Select(i => i.Label!).ToArray();
+        Assert.Equal(
+            new[] { "Intro", "Verse", "~Intro", "~Verse", "|:", ":|", ":|:", ":|*3",
+                    "[1. ]", "[2. ]", "[3. ]", "[1-2. ]", "segno" },
+            sorted.Take(13).ToArray());
+        Assert.True(System.Array.IndexOf(sorted, "||") > System.Array.IndexOf(sorted, "ds al coda"));
+        Assert.True(System.Array.IndexOf(sorted, "break") > System.Array.IndexOf(sorted, "!"));
+        Assert.Equal("_\"\"", sorted[^1]);
+    }
+
+    // ── end to end: the real Completion path, with a repeat bar half-typed ──
+
+    private static LilySharp.Lsp.Protocol.CompletionItem[] CompletionAt(string text, int offset)
+    {
+        var server = new LilySharpLanguageServer(System.IO.Stream.Null, System.IO.Stream.Null);
+        var uri = new System.Uri("file:///form.lys");
+        server.DidOpen(new LilySharp.Lsp.Protocol.DidOpenTextDocumentParams
+        {
+            TextDocument = new LilySharp.Lsp.Protocol.TextDocumentItem
+            { Uri = uri, Text = text, LanguageId = "lilysharp", Version = 1 },
+        });
+        var (line, character) = LilySharpLanguageServer.GetLineAndCharacter(text, offset);
+        var list = server.Completion(new LilySharp.Lsp.Protocol.CompletionParams
+        {
+            TextDocument = new LilySharp.Lsp.Protocol.TextDocumentIdentifier { Uri = uri },
+            Position = new LilySharp.Lsp.Protocol.Position(line, character),
+        });
+        return list?.Items ?? System.Array.Empty<LilySharp.Lsp.Protocol.CompletionItem>();
+    }
+
+    [Theory]
+    [InlineData("form main { Intro ")]
+    [InlineData("form main {\n  Intro\n  ")]
+    [InlineData("form main {\n  |: Intro [1. Verse ] :| ")]
+    public void InAFormBody_TheRepeatBarIsOffered(string tail)
+    {
+        string doc = "part m {\n  section Intro { c4 d e f | }\n  section Verse { g4 a b c | }\n}\n" + tail;
+        var labels = CompletionAt(doc, doc.Length).Select(i => i.Label).ToArray();
+        Assert.Contains("|:", labels);
+        Assert.Contains(":|", labels);
+        Assert.Contains("Intro", labels);
+        Assert.DoesNotContain("c", labels);
+    }
+
+    [Fact]
+    public void AHalfTypedRepeatBar_IsReplacedNotAppendedTo()
+    {
+        // `|` typed, caret after it: accepting `|:` must give `|:`, not `||:`. `|` is no
+        // word character, so the editor's own replace range is empty; the item carries the
+        // range over the typed `|` itself.
+        string doc = "part m {\n  section Intro { c4 d e f | }\n}\nform main { Intro |";
+        var item = CompletionAt(doc, doc.Length).Single(i => i.Label == "|:");
+        Assert.NotNull(item.TextEdit);
+        Assert.Equal("|:", item.TextEdit!.NewText);
+        var (line, character) = LilySharpLanguageServer.GetLineAndCharacter(doc, doc.Length - 1);
+        Assert.Equal(line, item.TextEdit.Range!.Start.Line);
+        Assert.Equal(character, item.TextEdit.Range.Start.Character);
+        // A section name, being a word, carries no such edit.
+        Assert.Null(CompletionAt(doc, doc.Length).Single(i => i.Label == "Intro").TextEdit);
+    }
+
     [Fact]
     public void StructureCompletions_OfferNoNoteNames()
     {

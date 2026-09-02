@@ -987,16 +987,26 @@ public sealed partial class LilySharpLanguageServer
     /// for the nearest preceding <c>key &lt;tonic&gt; &lt;mode&gt;</c> declaration, and
     /// returns its sharp(+)/flat(-) count (0 = C major / no key found).
     /// </summary>
-    private static int CurrentKeySharps(string text, int offset)
+    private static int CurrentKeySharps(string text, int offset) => CurrentKey(text, offset).Sharps;
+
+    /// <summary>
+    /// The key in force at <paramref name="offset"/>: its tonic LETTER and its signature —
+    /// the LAST <c>key</c> declaration before the caret, C major when there is none. ONE
+    /// spelling for every reader that asks (the pitch rows, the chord lists in music, in
+    /// <c>@chord(…)</c> and in <c>chords { }</c>), so the key the pitches are spelled for
+    /// and the key the chords are built on cannot be two different keys.
+    /// </summary>
+    internal static (char Tonic, int Sharps) CurrentKey(string text, int offset)
     {
         if (offset > text.Length) offset = text.Length;
         var prefix = text.Substring(0, offset);
         // tonic carries its own accidental suffix (fis, bes, …); mode is a word.
         var matches = KeyDeclRegex().Matches(prefix);
-        if (matches.Count == 0) return 0;
+        if (matches.Count == 0) return ('c', 0);
         var last = matches[matches.Count - 1];
-        return LilySharp.Core.Music.KeySpelling.SharpsFor(
-            last.Groups[1].Value, last.Groups[2].Value) ?? 0;
+        return (char.ToLowerInvariant(last.Groups[1].Value[0]),
+            LilySharp.Core.Music.KeySpelling.SharpsFor(
+                last.Groups[1].Value, last.Groups[2].Value) ?? 0);
     }
 
     /// <summary>

@@ -127,10 +127,16 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.TopLevel => GetTopLevelCompletions(doc.Text, offset, position),
             // A percussion part's music block offers the drum-kit vocabulary,
             // not pitch letters (LILYPOND-REF: \drummode note names).
+            // The key's tonic travels with its signature: the pitch rows are spelled for the
+            // signature and the diatonic chord rows are built on the tonic (`C` → `<c e g>`,
+            // `IIm7` → `<d f a c>`), from the same declaration.
             CompletionContext.MusicBlock => IsInsidePercussionPartMusic(doc.Text, offset, out bool inVoice)
                 ? GetDrumCompletions(inVoice)
-                : GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset), _flatSpellingContracted, inVoice),
-            CompletionContext.FormBlock => GetFormCompletions(doc.Text),
+                : GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset), _flatSpellingContracted, inVoice,
+                    CurrentKey(doc.Text, offset).Tonic),
+            // The position goes with the text here too: a repeat barline typed as far as
+            // `|` or `:` is REPLACED by the item, not appended to (see GetFormCompletions).
+            CompletionContext.FormBlock => GetFormCompletions(doc.Text, offset, position),
             CompletionContext.PartBlock => GetPartBlockCompletions(doc.Text, offset),
             CompletionContext.LyricsBlock => GetLyricsSectionCompletions(doc.Text, offset),
             CompletionContext.SectionBlock => GetSectionBlockCompletions(doc.Text, offset),

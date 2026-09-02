@@ -32,6 +32,25 @@ reasoning behind each one.
 
 ### Added
 
+- **The key's chords are offered in a section's music, and accepting one writes its notes.**
+  In C major the list carries `C`, `Cmaj7`, `Dm`, `Dm7` … and the degrees `I`, `IIm7`, `V7` …
+  beside the pitch letters; choosing `C` inserts `<c e g>`, `IIm7` inserts `<d f a c>`, in
+  the spelling of the key in force at the caret (`F#m` in D major is `<fis a cis>`). The
+  `flatSpelling` setting applies to these notes as it does to the pitch rows. This row had
+  been lost; it is back with a test that compiles every offered chord.
+- **A form's completion carries the whole form vocabulary, in a writer's order.** Sections,
+  silent sections, then the repeat block — `|:`, `:|`, `:|:`, `:|*N` — the endings
+  `[1. ]` `[2. ]` `[3. ]` `[1-2. ]`, the navigation marks, the engraved barlines `||` `|.`
+  `!`, `break` / `nobreak` and `_"…"`. The list used to sort by label, which buried the
+  repeat bars under the section names, and lacked `:|:`, the count, the barlines and the
+  breaks. A repeat bar typed as far as `|` is replaced by the item rather than appended to
+  (`||:` no more). Every plain item is compiled in a form by a test.
+- **The music list no longer offers `|: :|`.** Repeat structure is form-only (`LYS1034`), so
+  the two volta snippets that still stood in a section's completion taught a spelling the
+  compiler refuses; they are gone, and a test now compiles every plain item the list offers.
+- **The music list reads in the key's order.** On Ctrl+Space the pitches come in scale order
+  from the tonic (`d e fis g a b cis` in D major), then the chord names root by root — triad,
+  7th, sus4, sus2 — then the degrees in the same shape (`I Imaj7 Isus4 Isus2 IIm IIm7 …`).
 - **A section reference carries octave marks** — `~B'`, `~B,`, `[1. B']` — the same
   spelling a phrase reference already had.
 - **`section ~A { … }` declares that the section prints no rehearsal letter**, so a section

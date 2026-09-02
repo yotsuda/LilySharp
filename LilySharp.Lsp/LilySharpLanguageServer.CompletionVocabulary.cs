@@ -42,19 +42,88 @@ public sealed partial class LilySharpLanguageServer
     // a chord is written as it prints, so there is no ':' to complete after.)
 
     /// <summary>
-    /// Completions for a <c>structure { … }</c> block: everything a structure body
-    /// can hold — the document's section names, the navigation marks (segno / coda /
-    /// to coda / D.C. / D.S. …), repeat barlines (<c>|:</c> <c>:|</c>), volta
-    /// brackets (<c>[1. …]</c>), the silent-section prefix (<c>~</c>) and custom
-    /// text (<c>_"…"</c>). Deliberately offers NO note names — the structure is a
-    /// playback order of sections, not music.
+    /// Completions for a <c>form { … }</c> block: everything a form body can hold, and
+    /// nothing else — the document's section names (plain and silent <c>~Name</c>), the
+    /// repeat block (<c>|:</c> <c>:|</c> <c>:|:</c> <c>:|*N</c>), the volta endings
+    /// (<c>[1. …]</c>), the navigation marks (segno / coda / to coda / D.C. / D.S. …),
+    /// the engraved barlines (<c>||</c> <c>|.</c> <c>!</c>), <c>break</c> / <c>nobreak</c>
+    /// and custom text (<c>_"…"</c>). Deliberately offers NO note names — the form is a
+    /// playing order of sections, not music.
     /// </summary>
-    internal static CompletionList GetFormCompletions(string text)
+    /// <remarks>
+    /// THE LIST IS THE PARSER'S (Parser.Form.cs ParseFormItem, GRAMMAR.md StructureItem),
+    /// and FormCompletionTests compiles every plain item into a form to prove it. Until
+    /// 2026-09-02 it was short of <c>:|:</c>, the count, the three engraved barlines and
+    /// break/nobreak, and read alphabetically (VS Code sorts by label when no sortText is
+    /// given), so the repeat bars sat under the section names. The groups now sort in the
+    /// order a writer reaches for them: sections, silent sections, repeat, endings,
+    /// navigation, barlines, breaks, text.
+    /// <para>
+    /// ⚠️ A repeat bar the writer has STARTED TYPING is replaced, not appended to. <c>|</c>
+    /// and <c>:</c> are not word characters, so the editor's own replace range is empty
+    /// there and accepting <c>|:</c> after a typed <c>|</c> wrote <c>||:</c>. When
+    /// <paramref name="offset"/> and <paramref name="position"/> are given, every operator
+    /// item carries a TextEdit over the run of <c>|</c> <c>:</c> <c>*</c> <c>.</c> <c>!</c>
+    /// characters before the caret.
+    /// </para>
+    /// </remarks>
+    internal static CompletionList GetFormCompletions(string text, int offset = -1, Position? position = null)
     {
         var items = new System.Collections.Generic.List<CompletionItem>();
 
+        // The run of barline characters before the caret — the thing an operator item
+        // replaces. Null when the caret follows a word or a space (nothing to replace) or
+        // when the caller gave no position (the range cannot be expressed).
+        LilySharp.Lsp.Protocol.Range? operatorRange = null;
+        if (offset >= 0 && position is not null)
+        {
+            int start = Math.Min(offset, text.Length);
+            while (start > 0 && text[start - 1] is '|' or ':' or '*' or '.' or '!')
+                start--;
+            if (start < offset)
+            {
+                var (line, character) = GetLineAndCharacter(text, start);
+                operatorRange = new LilySharp.Lsp.Protocol.Range
+                {
+                    Start = new Position(line, character),
+                    End = position,
+                };
+            }
+        }
+
+        CompletionItem Item(string label, string detail, CompletionItemKind kind, string sort,
+            string? insert = null)
+        {
+            string newText = insert ?? label;
+            return new CompletionItem
+            {
+                Label = label,
+                InsertText = newText,
+                Kind = kind,
+                Detail = detail,
+                SortText = sort,
+                FilterText = label,
+                TextEdit = kind == CompletionItemKind.Operator && operatorRange is not null
+                    ? new TextEdit { Range = operatorRange, NewText = newText }
+                    : null,
+            };
+        }
+        CompletionItem Snippet(string label, string insert, string detail, string sort) => new()
+        {
+            Label = label,
+            InsertText = insert,
+            InsertTextFormat = InsertTextFormat.Snippet,
+            Kind = CompletionItemKind.Snippet,
+            Detail = detail,
+            SortText = sort,
+            FilterText = label,
+        };
+
         // Section names declared anywhere in the document (in declaration order,
-        // deduplicated) — these are what a structure plays.
+        // deduplicated) — these are what a form plays. Plain reference, then the silent
+        // form (~Name = render, no rehearsal label) — one per section, so the ~ prefix is
+        // never offered on its own. (A trailing ' or , shifts the octave of that play; it
+        // is typed after the name and not offered as a second row per section.)
         var sections = new System.Collections.Generic.List<string>();
         var seen = new System.Collections.Generic.HashSet<string>();
         foreach (Match m in SectionRefRegex().Matches(text))
@@ -63,25 +132,24 @@ public sealed partial class LilySharpLanguageServer
             if (seen.Add(name))
                 sections.Add(name);
         }
-        // Plain reference, then the silent form (~Name = render, no rehearsal
-        // label) — one per section, so the ~ prefix is never offered on its own.
-        foreach (var name in sections)
-            items.Add(new CompletionItem
-            {
-                Label = name,
-                Kind = CompletionItemKind.Reference,
-                Detail = "Section",
-            });
-        foreach (var name in sections)
-            items.Add(new CompletionItem
-            {
-                Label = "~" + name,
-                InsertText = "~" + name,
-                Kind = CompletionItemKind.Reference,
-                Detail = "Silent section (renders, no rehearsal label)",
-            });
+        for (int i = 0; i < sections.Count; i++)
+            items.Add(Item(sections[i], "Section", CompletionItemKind.Reference, $"0{i:D3}"));
+        for (int i = 0; i < sections.Count; i++)
+            items.Add(Item("~" + sections[i], "Silent section (renders, no rehearsal label)",
+                CompletionItemKind.Reference, $"1{i:D3}"));
 
-        // Navigation marks placed between sections.
+        // The repeat block: |: … :| with its endings between the bars, and the count on
+        // the closing bar (:|*N, default 2). Form-only since LYS1034.
+        items.Add(Item("|:", "Repeat start — |: … :|", CompletionItemKind.Operator, "2a"));
+        items.Add(Item(":|", "Repeat end (:|*3 to play three times)", CompletionItemKind.Operator, "2b"));
+        items.Add(Item(":|:", "Repeat end and the next repeat's start, back to back", CompletionItemKind.Operator, "2c"));
+        items.Add(Snippet(":|*3", ":|*${1:3}", "Repeat end played N times", "2d"));
+        items.Add(Snippet("[1. ]", "[1. $0]", "1st ending (volta bracket)", "3a"));
+        items.Add(Snippet("[2. ]", "[2. $0]", "2nd ending (volta bracket)", "3b"));
+        items.Add(Snippet("[3. ]", "[3. $0]", "3rd ending (volta bracket)", "3c"));
+        items.Add(Snippet("[1-2. ]", "[${1:1-2}. $0]", "Multi-pass ending, e.g. [1-2. …] or [1,3. …]", "3d"));
+
+        // Navigation marks placed between sections — BARE words (the '@' form is LYS1022).
         var navs = new (string Label, string Detail)[]
         {
             ("segno", "Segno (jump target)"),
@@ -95,39 +163,17 @@ public sealed partial class LilySharpLanguageServer
             ("ds al fine", "Dal Segno al Fine"),
             ("ds al coda", "Dal Segno al Coda"),
         };
-        foreach (var (label, detail) in navs)
-            items.Add(new CompletionItem
-            {
-                Label = label,
-                Kind = CompletionItemKind.Keyword,
-                Detail = detail,
-            });
+        for (int i = 0; i < navs.Length; i++)
+            items.Add(Item(navs[i].Label, navs[i].Detail, CompletionItemKind.Keyword, $"4{i:D2}"));
 
-        // Repeat barlines, volta brackets, the silent-section prefix and custom
-        // text — the remaining things a structure body can hold.
-        items.Add(new CompletionItem
-        {
-            Label = "|:", InsertText = "|:", Kind = CompletionItemKind.Operator,
-            Detail = "Repeat start",
-        });
-        items.Add(new CompletionItem
-        {
-            Label = ":|", InsertText = ":|", Kind = CompletionItemKind.Operator,
-            Detail = "Repeat end (suffix x3 for a count)",
-        });
-
-        CompletionItem Snippet(string label, string insert, string detail) => new()
-        {
-            Label = label,
-            InsertText = insert,
-            InsertTextFormat = InsertTextFormat.Snippet,
-            Kind = CompletionItemKind.Snippet,
-            Detail = detail,
-        };
-        items.Add(Snippet("[1. ]", "[1. $0]", "1st ending (volta bracket)"));
-        items.Add(Snippet("[2. ]", "[2. $0]", "2nd ending (volta bracket)"));
-        items.Add(Snippet("[1-2. ]", "[${1:1-2}. $0]", "Multi-pass ending, e.g. [1-2. …] or [1,3. …]"));
-        items.Add(Snippet("_\"\"", "_\"$0\"", "Custom text annotation"));
+        // The engraved barlines a form may write between sections (a plain `|` is an inert
+        // divider and is not offered), then the system-break directives, then custom text.
+        items.Add(Item("||", "Double barline", CompletionItemKind.Operator, "5a"));
+        items.Add(Item("|.", "Final barline", CompletionItemKind.Operator, "5b"));
+        items.Add(Item("!", "Dotted barline", CompletionItemKind.Operator, "5c"));
+        items.Add(Item("break", "Force a system break here", CompletionItemKind.Keyword, "6a"));
+        items.Add(Item("nobreak", "Forbid a system break here", CompletionItemKind.Keyword, "6b"));
+        items.Add(Snippet("_\"\"", "_\"$0\"", "Custom text annotation (glued: _\"text\")", "7"));
 
         return new CompletionList { Items = items.ToArray() };
     }
@@ -2297,16 +2343,8 @@ public sealed partial class LilySharpLanguageServer
     internal static CompletionList GetDiatonicChordCompletions(
         string text, int offset, bool degreesToo = false)
     {
-        var prefix = text.Substring(0, Math.Min(offset, text.Length));
-        var matches = KeyDeclRegex().Matches(prefix);
-        char tonic = 'c';
-        int sharps = 0;
-        if (matches.Count > 0)
-        {
-            var last = matches[^1];
-            tonic = char.ToLowerInvariant(last.Groups[1].Value[0]);
-            sharps = KeySpelling.SharpsFor(last.Groups[1].Value, last.Groups[2].Value) ?? 0;
-        }
+        // The key the chords are built on — the one spelling every completion reads.
+        var (tonic, sharps) = CurrentKey(text, offset);
 
         // Each diatonic degree offers its triad, seventh, and suspended chords — the NAMES
         // first, all seven degrees of them, and then the DEGREES, all seven of those: within
@@ -2408,16 +2446,41 @@ public sealed partial class LilySharpLanguageServer
         return new CompletionList { IsIncomplete = false, Items = [.. items] };
     }
 
-    internal static CompletionList GetMusicCompletions(string word, int keySharps, bool contracted = false, bool insideVoice = false)
+    /// <param name="keyTonic">The tonic LETTER of the key in force (with
+    /// <paramref name="keySharps"/>, the key the diatonic chord rows are built on —
+    /// <see cref="CurrentKey"/>). Defaults to C so a caller that only knows the
+    /// signature still gets the rows of that signature's C-rooted scale.</param>
+    internal static CompletionList GetMusicCompletions(string word, int keySharps, bool contracted = false, bool insideVoice = false, char keyTonic = 'c')
     {
         var items = new System.Collections.Generic.List<CompletionItem>();
+
+        // lilysharp.completion.flatSpelling = "contracted": the Dutch contractions es/as
+        // for E-flat and A-flat, wherever a note chord is inserted (the pitch rows below
+        // apply the same mapping to their own single note).
+        static string Contract(string noteChord, bool contracted)
+        {
+            if (!contracted) return noteChord;
+            var tones = noteChord.Trim('<', '>').Split(' ');
+            for (int i = 0; i < tones.Length; i++)
+                tones[i] = tones[i] switch
+                {
+                    "ees" => "es", "aes" => "as", "ees," => "es,", "aes," => "as,", _ => tones[i],
+                };
+            return "<" + string.Join(" ", tones) + ">";
+        }
 
         // Pitches, spelled for the key in force at the cursor: in G major (one
         // sharp) the F row is offered as "fis", so accepting it writes the
         // sounding note. Filtering on the spelled form keeps the row visible
         // whether the user typed just "f" or the full "fis".
-        foreach (char letter in "cdefgab")
+        // IN SCALE ORDER FROM THE TONIC (owner, 2026-09-02): D major lists d e fis g a b
+        // cis, the way the chord rows below already run — the list reads as the key, not
+        // as the alphabet. The sort key is the scale degree, and the emit order matches it
+        // (a client that ignores sortText gets the same list).
+        int tonicStep = Math.Max(0, KeySpelling.StepOf(keyTonic));
+        for (int scaleDegree = 0; scaleDegree < 7; scaleDegree++)
         {
+            char letter = "cdefgab"[(tonicStep + scaleDegree) % 7];
             int alt = LilySharp.Core.Music.KeySpelling.Alteration(
                 LilySharp.Core.Music.KeySpelling.StepOf(letter), keySharps);
             string spelled = LilySharp.Core.Music.KeySpelling.SpellLetter(letter, keySharps);
@@ -2436,9 +2499,61 @@ public sealed partial class LilySharpLanguageServer
                     : $"{upper}{(alt > 0 ? "♯" : "♭")} pitch (from key signature)",
                 FilterText = spelled,
                 InsertText = spelled,
-                SortText = "0" + letter
+                SortText = "0" + scaleDegree,
             });
         }
+
+        // THE KEY'S DIATONIC CHORDS AS NOTE CHORDS — the same seven-degree list the
+        // `@chord(…)` and `chords { }` completions offer (GetDiatonicChordCompletions), each
+        // inserted here as the notes that voice it: `C` → `<c e g>`, `Dm7` → `<d f a c>`,
+        // `F#m` → `<fis a cis>`, and the DEGREE spelling beside each (`IIm7` → `<d f a c>`),
+        // so a progression can be put down in a section without spelling every tone. The
+        // tones are ChordStructure.ToNoteChord's — the one spelling the typed-word expansion
+        // below and the harmonizer read — bare, so relative mode voices them ascending from
+        // the root (the root is the first member and the rest stack above it, the chord
+        // anchor model). Names first, then degrees (the 2026-08-28 owner's ordering), each
+        // block in scale order with triad < 7th < sus4 < sus2 per root — the degree block
+        // carrying the same four forms as the name block (owner, 2026-09-02: I Imaj7 Isus4
+        // Isus2 IIm IIm7 …) — and the whole thing right after the pitch rows.
+        // ⚠️ The degree labels are FILTER words only. `IIm7` is not a music spelling — the
+        // compiler reads `<d f a c>`, which is what the item inserts — so no Roman numeral
+        // ever reaches the source (unlike the chords{} block, whose entries ARE degrees,
+        // which is why THAT list offers no `Isus4`: its parser has no such entry).
+        // ⚠️ THIS ROW EXISTED ONCE AND WENT MISSING (owner, 2026-09-02: "実装したのに回帰して
+        // なくなってしまった"); MusicChordCompletionTests is the net that was not there.
+        static CompletionItem ChordItem(
+            string label, string notes, string detail, string group, int degree, int rank) => new()
+        {
+            Label = label,
+            Kind = CompletionItemKind.Value,
+            FilterText = label,
+            InsertText = notes,
+            Detail = detail,
+            SortText = $"{group}{degree:D2}{rank}",
+        };
+        // Two passes, not one: the emit order has to BE the sort order (all names, then all
+        // degrees), and a single loop over the degrees interleaves the two blocks.
+        var degreeRows = new System.Collections.Generic.List<CompletionItem>();
+        foreach (var c in DiatonicChords.ForKey(keyTonic, keySharps))
+        {
+            foreach (var (symbol, roman, detail, rank) in new (string, string, string, int)[]
+            {
+                (c.Symbol, c.RomanSymbol, "Diatonic triad", 0),
+                (c.SeventhSymbol, c.RomanSeventhSymbol, "Diatonic 7th", 1),
+                (c.SusFourthSymbol, c.Numeral + "sus4", "Suspended 4th", 2),
+                (c.SusSecondSymbol, c.Numeral + "sus2", "Suspended 2nd", 3),
+            })
+            {
+                // The symbol is the chords{} entry spelling, so the entry parser is the
+                // one reader of it — a symbol it refuses is not offered.
+                if (!ChordStructure.TryParseChordEntry(symbol, out var structure))
+                    continue;
+                string chordNotes = Contract(structure.ToNoteChord(), contracted);
+                items.Add(ChordItem(symbol, chordNotes, $"{detail} ({c.Roman})  {chordNotes}", "0zc", c.Degree, rank));
+                degreeRows.Add(ChordItem(roman, chordNotes, $"Degree of the key — {symbol}  {chordNotes}", "0zd", c.Degree, rank));
+            }
+        }
+        items.AddRange(degreeRows);
 
         items.AddRange(new[]
         {
@@ -2447,9 +2562,12 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "s", Kind = CompletionItemKind.Value, Detail = "Spacer rest (invisible)", SortText = "1s" },
                 new CompletionItem { Label = "R", Kind = CompletionItemKind.Value, Detail = "Full-measure rest", SortText = "1R" },
 
-                // Structures
-                new CompletionItem { Label = "|: :|", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "|: $0 :|", Detail = "Volta repeat (symbolic; add endings [1. …] [2. …])", SortText = "2repeat" },
-                new CompletionItem { Label = "|: :| [1.][2.]", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "|: $1 [1. $2 ] :| [2. $0 ]", Detail = "Volta repeat with endings", SortText = "2repeatalt" },
+                // Structures. ⚠️ NO `|: :|` and NO `[1. …]` here: repeat structure is written
+                // in a `form { … }` and nowhere else since 2026-08-31 (LYS1034 — a `|:` in
+                // music is an error), and the two volta snippets that stood here taught that
+                // rejected spelling for two more sessions (owner report, 2026-09-02). What
+                // stays is what the music grammar keeps: `repeat unfold/percent/tremolo`, which
+                // abbreviate notes rather than change the playing order.
                 new CompletionItem { Label = "repeat", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "repeat unfold 2 {\n\t$0\n}", Detail = "Repeat block (unfold/percent/tremolo)", SortText = "2repeatkw" },
                 new CompletionItem { Label = "tuplet", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tuplet 3/2 { $0 }", Detail = "Tuplet (e.g., triplet)", SortText = "2tuplet" },
                 new CompletionItem { Label = "<< >>", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "<< $0 >>", Detail = "Arpeggio: sequential notes, octaves stacked above the first (like a chord). Add a duration after >> for an auto-tuplet.", SortText = "2arpeggio" },
@@ -2483,9 +2601,13 @@ public sealed partial class LilySharpLanguageServer
         // offers to replace itself with the spelled note chord <c e g b> — the same
         // tone set that names and (later) voices the chord. The notes are bare so
         // relative mode voices them ascending. LILYPOND-REF: scm/chord-entry.scm.
-        if (word.Length >= 2 && ChordStructure.TryParseSymbol(word, out var chord))
+        // A word that names one of the key's own chords (`dm7`) is already offered by the
+        // diatonic row above with the same insert, so the expansion stays for the chords
+        // OUTSIDE the key (`besm7` in C major) and does not double a row.
+        if (word.Length >= 2 && ChordStructure.TryParseSymbol(word, out var chord)
+            && Contract(chord.ToNoteChord(), contracted) is var notes
+            && !items.Any(i => i.InsertText == notes))
         {
-            var notes = chord.ToNoteChord();
             items.Insert(0, new CompletionItem
             {
                 Label = $"{word}  →  {notes}",
