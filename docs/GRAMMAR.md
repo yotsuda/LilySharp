@@ -643,13 +643,19 @@ PartBlock      = Identifier , MusicBlock ;
        engraving the melody (a part sheet carrying the chorus words —
        LilyPond's shape is \lyricsto over a NullVoice: the moments join the
        spacing, the notes print nothing).
-   The binding is a property of the TRACK NAME, stated once; later same-name blocks
-   may repeat it identically or omit it (a different target is LYS7005; an unknown
-   one LYS7004). With no 'sings' anywhere the NAME can be the binding — the part
-   itself, or one of that part's voices ('voice sop { }' + 'lyrics sop { }') —
-   and a track that binds to nothing placed as a row keeps the even-spread
-   lead-sheet reading (§7). Placement cannot re-decide the association: a row
-   after a staff it does not sing simply stays an independent band. *)
+   The definition's binding is the track's DEFAULT melody, stated once; later
+   same-name definition blocks may repeat it identically or omit it (a different
+   target is LYS7005; an unknown one LYS7004). A SCORE ROW may carry its own
+   'sings' (§7): that binds THIS PLACEMENT, overriding the default, which is how
+   one verse is placed under every staff of a chorale
+   ('staff sop  lyrics verse  staff alt  lyrics verse sings alt  …' — user
+   decision, 2026-09-02; before it the row spelling was the same single track
+   property and a second target was LYS7005). With no 'sings' anywhere the NAME
+   can be the binding — the part itself, or one of that part's voices
+   ('voice sop { }' + 'lyrics sop { }') — and a track that binds to nothing
+   placed as a row keeps the even-spread lead-sheet reading (§7). A row without
+   its own 'sings' cannot re-decide the association by position: after a staff
+   it does not sing it simply stays an independent band. *)
 LyricsBlock    = 'lyrics' , Identifier , [ 'sings' , PartRef ] , '{' , { LyricMeasure } , '}' ;
 LyricMeasure   = { LyricSyllable } , '|' ;
 LyricSyllable  = LyricText , [ '-' ] | '--' | '-' | '~' | '_' ;
@@ -845,14 +851,16 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                         tests cut the block at the first *)
                | 'chords' , PartRef                  (* independent chord ROW (lead sheet) *)
                | 'lyrics' , PartRef , [ 'sings' , PartRef ]
-                                                     (* lyrics ROW. The optional 'sings' states
-                                                        or repeats the track's melody binding
-                                                        on the row - the SAME property the
-                                                        definition spells, resolved together
-                                                        (a different target is LYS7005, an
-                                                        unknown one LYS7004). Unbound with no
-                                                        'sings' anywhere - the even-spread
-                                                        lead-sheet row. *)
+                                                     (* lyrics ROW. The optional 'sings' names
+                                                        the melody THIS ROW sings - it overrides
+                                                        the definition's default for this
+                                                        placement, so one track can be placed
+                                                        under several parts, each row naming
+                                                        its own (an unknown target is LYS7004,
+                                                        and rows never conflict). Without it
+                                                        the row takes the definition's default.
+                                                        Unbound with no 'sings' anywhere - the
+                                                        even-spread lead-sheet row. *)
                | ( 'title' | 'composer' ) , String   (* THIS score's own header — see below *)
                | 'fonts' , Identifier , [ FontBlock ] (* THIS score's faces: a reference to a
                                                         named top-level block, the optional
@@ -886,9 +894,10 @@ StaffGroupBody = '{' , { StaffRender | 'lyrics' PartRef [ 'sings' PartRef ] } , 
                  (* Several staves engraved as ONE GROUP. All three take `staff` items
                     with `lyrics NAME` rows between them — inside the braces as outside,
                     a bound row directly below the staff it sings is that staff's verse
-                    (the chorale writes its words between the sopranos and the altos),
-                    and a row that sings no adjacent staff is LYS6012, anything else
-                    LYS6011. They differ only in what is drawn down the left edge, and
+                    (the chorale writes its words between the sopranos and the altos,
+                    and ONE verse serves every staff when each row names its own
+                    melody: `staff alt  lyrics verse sings alt`), and a row that
+                    sings no adjacent staff is LYS6012, anything else LYS6011. They differ only in what is drawn down the left edge, and
                     each is the LilyPond context of the same name (engraver-init.ly):
 
                       grandStaff    a BRACE, and bar lines drawn through the gap between

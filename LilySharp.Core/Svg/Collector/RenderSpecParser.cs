@@ -103,7 +103,7 @@ public static class RenderSpecParser
                 // A row inside a group body belongs to the group (ParseGrandStaff
                 // folds it into the staff above), same guard as the staff case.
                 case LyricsRowRenderSyntax lyricsRow when !IsInsideGrandStaff(lyricsRow):
-                    items.Add(new LyricsRowSpec(lyricsRow.PartName));
+                    items.Add(new LyricsRowSpec(lyricsRow.PartName, lyricsRow.SingsTarget));
                     break;
 
                 // `title` / `composer` inside the score block: this score's own
@@ -263,7 +263,7 @@ public static class RenderSpecParser
         {
             if (items[i] is LyricsRowSpec row && open >= 0
                 && PartOfFoldTarget(items[open]) is { Length: > 0 } part
-                && RowBindsToPart(root, row.PartName, part))
+                && RowBindsToPart(root, row.PartName, row.Sings, part))
             {
                 items[open] = AddFoldedVerse(items[open], row.PartName);
                 items.RemoveAt(i);
@@ -285,16 +285,20 @@ public static class RenderSpecParser
     };
 
     /// <summary>
-    /// Whether the named lyrics track belongs to the named part — the SAME rule
-    /// the attachment validator applies (LyricSingsValidator): a declared
-    /// <c>sings</c> target naming the part or one of its voices binds; with no
-    /// <c>sings</c> anywhere, the track's NAME being the part or one of its
-    /// voices is the binding (<c>voice sop { } + lyrics sop { }</c>).
+    /// Whether ONE placed row of the named lyrics track belongs to the named
+    /// part — the SAME rule the group validator applies (LyricSingsValidator):
+    /// the row's resolved <c>sings</c> target (its own, else the definition's
+    /// default — <see cref="Music.LyricBindings.TargetOfRow"/>) naming the part
+    /// or one of its voices binds; with no <c>sings</c> anywhere, the track's
+    /// NAME being the part or one of its voices is the binding
+    /// (<c>voice sop { } + lyrics sop { }</c>).
     /// </summary>
-    internal static bool RowBindsToPart(SyntaxNode root, string track, string part)
+    /// <param name="rowSings">The row's own <c>sings</c> target, null when the
+    /// row writes none.</param>
+    internal static bool RowBindsToPart(SyntaxNode root, string track, string? rowSings, string part)
     {
         var voices = Music.LyricBindings.VoicesOfPart(root, part);
-        return Music.LyricBindings.TargetOf(root, track) is { } sings
+        return Music.LyricBindings.TargetOfRow(root, track, rowSings) is { } sings
             ? string.Equals(sings, part, StringComparison.Ordinal) || voices.Contains(sings)
             : string.Equals(track, part, StringComparison.Ordinal) || voices.Contains(track);
     }
@@ -511,7 +515,7 @@ public static class RenderSpecParser
                         staves.Add(staffSpec);
                     break;
                 case LyricsRowRenderSyntax row when staves.Count > 0
-                    && RowBindsToPart(grandStaff, row.PartName, staves[^1].VoiceName):
+                    && RowBindsToPart(grandStaff, row.PartName, row.SingsTarget, staves[^1].VoiceName):
                     staves[^1] = staves[^1] with
                     {
                         WithLyrics = (staves[^1].WithLyrics.IsDefault

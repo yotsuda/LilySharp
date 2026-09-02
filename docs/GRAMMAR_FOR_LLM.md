@@ -364,16 +364,18 @@ voice { c'2 d } { e2 f }     // each voice { } is a simultaneous voice
 
 ## Lyrics (a named track that SINGS a part)
 
-A lyric track binds to its melody at the definition: `lyrics NAME sings PART`.
-The score row may state (or repeat) the same binding: `lyrics NAME sings PART`
-among the score items - one property of the track name, spelled at either site.
+A lyric track binds to its DEFAULT melody at the definition: `lyrics NAME sings PART`.
+A score row may carry its own binding: `lyrics NAME sings PART` among the score
+items binds THAT ROW's placement, overriding the default - so one track can be
+placed under several parts (a chorale's one verse under soprano, alto, tenor and
+bass: `staff alt  lyrics verse sings alt`). A row without `sings` takes the default.
 The score places its row by ORDER (score = a vertical stack of bands): a
-`lyrics NAME` row directly below the staff engraving PART is that staff's verse
-(a run of rows stacks as verses); anywhere else it shows only the words, at the
-melody's rhythm, without engraving the melody. Multiple tracks may sing one part
-(two languages = two names). A track named after the part or one of its voices
-is bound by the name. An unbound row is the even-spread lead-sheet row; inside a
-staff group a row must sing the staff directly above it (LYS6012).
+`lyrics NAME` row directly below the staff engraving the part it sings is that
+staff's verse (a run of rows stacks as verses); anywhere else it shows only the
+words, at the melody's rhythm, without engraving the melody. Multiple tracks may
+sing one part (two languages = two names). A track named after the part or one of
+its voices is bound by the name. An unbound row is the even-spread lead-sheet row;
+inside a staff group a row must sing the staff directly above it (LYS6012).
 
 A `lyrics NAME { … }` track sits in a section next to the part it sings; the score
 places it with a `lyrics NAME` row under the staff. Syllables are separated by

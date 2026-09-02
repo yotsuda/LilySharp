@@ -204,8 +204,11 @@ public sealed record ChordRowSpec(
 /// <summary>
 /// Independent lyrics-row render item: <c>lyrics name</c> places a lyrics part
 /// (<c>lyrics name { … }</c>) as its own row in the score's staff order.
+/// <paramref name="Sings"/> is the row's OWN melody binding (<c>lyrics name
+/// sings part</c>), null when the row writes none and the track's default
+/// applies — resolved by <see cref="Music.LyricBindings.TargetOfRow"/>.
 /// </summary>
-public sealed record LyricsRowSpec(string PartName) : RenderItemSpec;
+public sealed record LyricsRowSpec(string PartName, string? Sings = null) : RenderItemSpec;
 
 /// <summary>
 /// Complete render specification parsed from a render block.

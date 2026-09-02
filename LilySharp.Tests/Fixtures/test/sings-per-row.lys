@@ -1,0 +1,32 @@
+// A score row's `sings` is ITS OWN placement's melody (user decision, 2026-09-02):
+// ONE lyric track placed under every staff of a chorale, each row naming the part
+// it sings. The definition binds the track's default (sop); the alto and bass rows
+// override it. The alto's syllables sit at the alto's onsets (a dotted rhythm the
+// soprano does not have), the bass's at the bass's — not at the soprano's, and
+// not spread evenly.
+title "One verse, three staves"
+time 4/4  key g major  octave absolute
+
+part sop { clef treble }
+part alt { clef treble }
+part bas { clef bass octave 3 }
+
+section Chorale {
+  sop { b4 b c' d' | d'4 c' b a | }
+  alt { g4. g8 g4 g | g4 g g fis | }
+  bas { g,4 g, c g, | g,8 g, c4 g, d | }
+  lyrics verse sings sop { Freu- de, schö- ner | Göt- ter- fun- ken, | }
+}
+
+form main { Chorale }
+
+score main "sings-per-row" {
+  choirStaff {
+    staff sop "Soprano"
+    lyrics verse
+    staff alt "Alto"
+    lyrics verse sings alt
+    staff bas "Bass"
+    lyrics verse sings bas
+  }
+}

@@ -169,7 +169,8 @@ score places it as a `lyrics NAME` row directly under the staff. The `sings`
 word is the binding: the words belong to that melody wherever the score places
 them — write the row under another part's staff (or alone) and you get ONLY the
 words, at the melody's rhythm, without the melody's staff (chorus words on a
-horn part).
+horn part). A row can also name its own melody — `lyrics words sings alto` —
+so one verse serves every staff of a chorale.
 
 ```
 part melody

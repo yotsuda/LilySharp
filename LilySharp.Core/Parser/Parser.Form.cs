@@ -773,8 +773,8 @@ internal sealed partial class Parser
 
     /// <summary>
     /// Parse lyrics-row render: <c>lyrics partName [sings partName]</c> (places a
-    /// lyrics part as a row; the optional <c>sings</c> states — or repeats — the
-    /// track's melody binding, the same one the definition spells).
+    /// lyrics part as a row; the optional <c>sings</c> names the melody THIS ROW
+    /// sings, overriding the definition's default for this placement).
     /// </summary>
     private LyricsRowRenderGreen ParseLyricsRowRender()
     {

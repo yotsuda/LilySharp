@@ -929,7 +929,8 @@ public sealed partial class MeasureCollector
         string? previousBinding = null;
         // Lyrics rows are collected AFTER the music, so the per-section bar count
         // (used to auto-wrap one block's verses) is known from the real content.
-        var pendingLyricsRows = new List<(string Name, int StaffIndex)>();
+        // Sings = the row's OWN `sings` target (null = the track's default applies).
+        var pendingLyricsRows = new List<(string Name, int StaffIndex, string? Sings)>();
         // `staff NAME with chords CHORDPART` attachments, applied post-loop.
         var attachedChords = new List<(string PartName, int StaffIndex, ChordDisplayMode Mode)>();
         // `staff NAME with lyrics L [with lyrics L2 …]`: named lyrics parts aligned
@@ -998,9 +999,9 @@ public sealed partial class MeasureCollector
             // An independent lyrics row (`lyrics name` in the score). Defer its
             // collection (placeholder voice for now) until the music bar count is
             // known, so one block of flat verses can auto-wrap to that bar count.
-            if (renderSpec.Items.OfType<LyricsRowSpec>().Any(c => c.PartName == voiceName))
+            if (renderSpec.Items.OfType<LyricsRowSpec>().FirstOrDefault(c => c.PartName == voiceName) is { } lyricsRow)
             {
-                pendingLyricsRows.Add((voiceName, _cursor.StaffIndex));
+                pendingLyricsRows.Add((voiceName, _cursor.StaffIndex, lyricsRow.Sings));
                 staffVoices[voiceName] = ImmutableArray.Create(
                     new Voice(voiceName, ImmutableArray<Measure>.Empty));
                 continue;
@@ -1081,13 +1082,14 @@ public sealed partial class MeasureCollector
                 if (!_lyricsRowNames.Contains(kv.Key))
                     foreach (var v in kv.Value)
                         wrapBars = Math.Max(wrapBars, v.Measures.Length);
-            foreach (var (name, idx) in pendingLyricsRows)
+            foreach (var (name, idx, rowSings) in pendingLyricsRows)
             {
-                // A track that SINGS a part places its syllables at that part's
+                // A row that SINGS a part places its syllables at that part's
                 // rhythm: the row is the lyric line of a melody the score does
                 // not engrave (the LilyPond shape is \lyricsto over a NullVoice
-                // - the moments join the spacing, the notes print nothing).
-                if (Music.LyricBindings.TargetOf(tree.GetRoot(), name) is { } sings)
+                // - the moments join the spacing, the notes print nothing). The
+                // row's own `sings` wins over the track's default.
+                if (Music.LyricBindings.TargetOfRow(tree.GetRoot(), name, rowSings) is { } sings)
                 {
                     var melody = staffVoices.TryGetValue(sings, out var mv)
                         && mv.Length > 0 && mv[0].Measures.Length > 0

@@ -21,12 +21,24 @@ namespace LilySharp.Core.Music;
 
 /// <summary>
 /// The shared lyric-binding resolver: which part a lyrics TRACK sings. The
-/// binding is a property of the track NAME — <c>lyrics ja sings vocal</c> on any
-/// one block binds every block spelled <c>lyrics ja</c>; later blocks may repeat
-/// the target identically or omit it, and a different target is a conflict
-/// (LYS7005, reported by the validator from <see cref="Conflicts"/>). ONE walk
-/// per tree, read by the collector, the exporters and the validators — never a
-/// per-walker re-derivation.
+/// binding has two sites, and they are NOT the same property (user decision,
+/// 2026-09-02 — it replaces the 2026-08-19 "one track property, two spellings"
+/// rule):
+/// <list type="bullet">
+/// <item>the DEFINITION states the track's DEFAULT melody —
+/// <c>lyrics ja sings vocal { … }</c> on any one block binds every block spelled
+/// <c>lyrics ja</c>; later definition blocks may repeat the target identically
+/// or omit it, and a different target is a conflict (LYS7005, reported by the
+/// validator from <see cref="Conflicts"/>);</item>
+/// <item>a SCORE ROW binds ITS OWN placement — <c>lyrics ja sings alt</c> puts
+/// this row's syllables at <c>alt</c>'s rhythm whatever the definition says,
+/// which is how ONE verse serves every staff of a chorale
+/// (<c>staff sop  lyrics verse sings sop  staff alt  lyrics verse sings alt …</c>).
+/// A row without <c>sings</c> takes the definition's default
+/// (<see cref="TargetOfRow"/>).</item>
+/// </list>
+/// ONE walk per tree, read by the collector, the exporters and the validators —
+/// never a per-walker re-derivation.
 /// </summary>
 /// <remarks>
 /// A track with no <c>sings</c> anywhere is UNBOUND: as a score row it stays the
@@ -39,8 +51,10 @@ public static class LyricBindings
 {
     private static readonly ConditionalWeakTable<SyntaxNode, Dictionary<string, string>> Maps = new();
 
-    /// <summary>The part the named track sings, or null when no block of that
-    /// name declares a binding.</summary>
+    /// <summary>The track's DEFAULT melody: the part the first definition block
+    /// of that name says it sings, or null when no definition block of that name
+    /// declares a binding. A score row's own <c>sings</c> is not consulted here —
+    /// that is the row's placement, read by <see cref="TargetOfRow"/>.</summary>
     public static string? TargetOf(SyntaxNode root, string trackName)
     {
         while (root.Parent != null)
@@ -49,21 +63,30 @@ public static class LyricBindings
         return map.TryGetValue(trackName, out var target) ? target : null;
     }
 
-    /// <summary>The track name and stated target of any node that can spell a
-    /// binding — a definition block (<c>lyrics ja sings vocal { … }</c>) or a
-    /// score row (<c>lyrics ja sings vocal</c>). Both are the SAME declaration
-    /// of the same track property; every walk below reads them through this so
-    /// the two spellings cannot resolve differently.</summary>
-    private static (string? Name, string? Target) BindingOf(SyntaxNode node) => node switch
+    /// <summary>The part ONE placed row sings: the row's own <c>sings</c> when
+    /// it writes one, else the track's default (<see cref="TargetOf"/>), else
+    /// null (unbound — the even-spread lead-sheet row). The one reader of a
+    /// row's target: the fold in RenderSpecParser, the group validator and the
+    /// collector all ask this, so a row cannot fold under one staff and sing
+    /// another.</summary>
+    public static string? TargetOfRow(SyntaxNode root, string trackName, string? rowSings)
+        => rowSings ?? TargetOf(root, trackName);
+
+    /// <summary>The track name and stated target of a DEFINITION block
+    /// (<c>lyrics ja sings vocal { … }</c>) — the site that states the track's
+    /// default. A score row's <c>sings</c> is deliberately NOT read here: it
+    /// binds only its own placement, so it neither sets the default nor
+    /// conflicts with it.</summary>
+    private static (string? Name, string? Target) DefinitionBindingOf(SyntaxNode node) => node switch
     {
         LyricsBlockSyntax b => (b.VoiceName, b.SingsTarget),
-        LyricsRowRenderSyntax r => (r.PartName, r.SingsTarget),
         _ => (null, null),
     };
 
-    /// <summary>Every declaration that states a target DIFFERENT from its track's
-    /// first-declared one — the validator's input for LYS7005. The node is a
-    /// <see cref="LyricsBlockSyntax"/> or a <see cref="LyricsRowRenderSyntax"/>.</summary>
+    /// <summary>Every DEFINITION block that states a target DIFFERENT from its
+    /// track's first-declared one — the validator's input for LYS7005. The node
+    /// is a <see cref="LyricsBlockSyntax"/>. Score rows never conflict: each
+    /// binds its own placement.</summary>
     public static IEnumerable<(SyntaxNode Node, string Target, string First)> Conflicts(SyntaxNode root)
     {
         while (root.Parent != null)
@@ -71,7 +94,7 @@ public static class LyricBindings
         var first = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var node in root.DescendantNodes())
         {
-            if (BindingOf(node) is not ({ } name, { } target))
+            if (DefinitionBindingOf(node) is not ({ } name, { } target))
                 continue;
             if (first.TryGetValue(name, out var t0))
             {
@@ -89,7 +112,7 @@ public static class LyricBindings
     {
         var map = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var node in root.DescendantNodes())
-            if (BindingOf(node) is ({ } name, { } target) && !map.ContainsKey(name))
+            if (DefinitionBindingOf(node) is ({ } name, { } target) && !map.ContainsKey(name))
                 map[name] = target;
         return map;
     }

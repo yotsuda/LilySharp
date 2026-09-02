@@ -12,6 +12,15 @@ The rest is defects found by engraving real scores.
 
 ### Language
 
+- **A score row's `sings` is that row's own melody.** `lyrics verse sings alt` among the
+  score items places the `verse` track at the alto's rhythm — under the alto staff it is the
+  alto's verse — whatever the definition said. The definition's `sings` is now the track's
+  DEFAULT, taken by a row that writes none; a second target on a definition block is still
+  `LYS7005`, but rows never conflict. It is how a chorale writes its words once and puts
+  them under the soprano, alto, tenor and bass: `staff alt  lyrics verse sings alt`. Until
+  now the row spelling was the same single track property, so the second staff's row was
+  refused (`LYS7005`) and, inside the group, refused again (`LYS6012`).
+
 - **Repeat structure is written in a `form { … }` and nowhere else** (`LYS1034`). A repeat
   bar (`|:` `:|` `:|:`) or a volta ending (`[1. … ]`) written in music is an error. The line
   is whether it changes the playing ORDER: `repeat percent`, `repeat unfold` and `tremolo`

@@ -22,12 +22,16 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// The lyric-binding rules (user decision, 2026-08-19 — closed before the first
-/// tag): lyrics bind to their OWN melody at the definition
-/// (<c>lyrics ja sings vocal { … }</c>), and the score only PLACES them.
+/// The lyric-binding rules (user decisions, 2026-08-19 and 2026-09-02): the
+/// definition states the track's DEFAULT melody (<c>lyrics ja sings vocal { … }</c>),
+/// and a score row PLACES the track — under its default melody's staff, or,
+/// with its own <c>sings</c>, under any other part's (<c>lyrics verse sings alt</c>
+/// — one verse serving every staff of a chorale). See <see cref="LyricBindings"/>.
 /// <list type="bullet">
-/// <item>LYS7004 — <c>sings T</c> where T names no part or voice in the file.</item>
-/// <item>LYS7005 — two blocks of one track name different targets.</item>
+/// <item>LYS7004 — <c>sings T</c> (either site) where T names no part or voice in
+/// the file.</item>
+/// <item>LYS7005 — two DEFINITION blocks of one track name different targets.
+/// Rows never conflict: each binds only its own placement.</item>
 /// <item>LYS6012 — a row inside a staff group that does not sing the staff
 /// directly above it (a group has no independent band to fall back to).</item>
 /// </list>
@@ -62,9 +66,9 @@ internal sealed class LyricSingsValidator : ISemanticValidator
             PartReferenceFinder.CollectVoiceNames(n, voiceNames);
         }
 
-        // Both spellings of the declaration — the definition block and the score
-        // row (`lyrics verse sings melody`) — state the same track property, so
-        // both go through the same nets.
+        // Both sites — the definition block (the track's default) and the score
+        // row (`lyrics verse sings melody`, this placement's own melody) — name a
+        // part, so both go through the unknown-target net.
         static (string? Name, string? Target, TextSpan Span)? SingsOf(SyntaxNode node) => node switch
         {
             LyricsBlockSyntax b => (b.VoiceName, b.SingsTarget, (b.SingsKeyword ?? b.LyricsKeyword).Span),
@@ -84,6 +88,9 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                     + "that name exists in this file.");
         }
 
+        // Definition blocks only (LyricBindings.Conflicts): a score row's `sings`
+        // binds that row's placement and may name any part — that is how one
+        // verse is placed under four staves.
         foreach (var (node, target, first) in LyricBindings.Conflicts(root))
         {
             if (SingsOf(node) is not ({ } name, _, var span))
@@ -91,8 +98,10 @@ internal sealed class LyricSingsValidator : ISemanticValidator
             _diagnostics.Error(
                 span,
                 DiagnosticCodes.SingsConflict,
-                $"'{name}' already sings '{first}' - a track sings ONE part; "
-                + "state the binding once (later blocks may repeat it identically or omit it).");
+                $"'{name}' already sings '{first}' - a track's definition states ONE default melody; "
+                + "state it once (later blocks may repeat it identically or omit it). "
+                + "To place the same words under another part, write 'sings' on the score row "
+                + $"('lyrics {name} sings {target}').");
         }
 
         // (The `with lyrics` attachment checks — LYS6009/LYS6010 — died with the
@@ -116,7 +125,7 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                         break;
                     case LyricsRowRenderSyntax row
                         when partAbove == null
-                          || !RenderSpecParser.RowBindsToPart(root, row.PartName, partAbove):
+                          || !RenderSpecParser.RowBindsToPart(root, row.PartName, row.SingsTarget, partAbove):
                         _diagnostics.Error(
                             row.LyricsKeyword.Span,
                             DiagnosticCodes.GroupRowNotBoundToStaffAbove,
@@ -125,7 +134,8 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                                   + "inside a group a row is the verse of the staff directly above it."
                                 : $"lyrics '{row.PartName}' does not sing '{partAbove}', the staff "
                                   + "directly above it - inside a group a row is that staff's verse; "
-                                  + "a row for another part goes outside the braces.");
+                                  + $"write 'lyrics {row.PartName} sings {partAbove}' to place these words "
+                                  + "under it, or move a row for another part outside the braces.");
                         break;
                 }
             }

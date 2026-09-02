@@ -1072,14 +1072,17 @@ c4 d e f |       // 'once' applies to the next note only
 
 ## Lyrics
 
-Lyrics bind to their **own melody at the definition** — `lyrics NAME sings PART`
-— and the score only places them, by ORDER: a `lyrics NAME` row directly below
+Lyrics bind to their **default melody at the definition** — `lyrics NAME sings PART`
+— and the score places them, by ORDER: a `lyrics NAME` row directly below
 the staff engraving PART is that staff's verse (a run of rows stacks as
 verses); anywhere else it draws **only the words, at the melody's rhythm**,
-without engraving the melody — a part sheet carrying the chorus words. Several
-tracks may sing the same part (Japanese and English words, a parody). A track
-whose name matches the part (or one of its voices) is bound by the name alone;
-a track with no binding is the even-spread lead-sheet row.
+without engraving the melody — a part sheet carrying the chorus words. A score
+row may name **its own** melody — `lyrics NAME sings OTHER` — which overrides
+the default for that placement: one verse written once and placed under every
+staff of a chorale (`staff alt  lyrics verse sings alt`). Several tracks may
+sing the same part (Japanese and English words, a parody). A track whose name
+matches the part (or one of its voices) is bound by the name alone; a track
+with no binding is the even-spread lead-sheet row.
 
 ```
 part melody

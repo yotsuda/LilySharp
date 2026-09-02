@@ -770,10 +770,12 @@ public sealed class LyricsRowRenderSyntax : SyntaxNode
             && GetChild(3) is SyntaxTokenNode { Kind: SyntaxKind.Identifier, Text.Length: > 0 } t2
             ? t2 : null;
 
-    /// <summary>The part this row says its track sings (<c>lyrics verse sings
-    /// melody</c> → "melody"), or null when the row states no binding. Same
-    /// quantity as the definition's — the binding is a property of the TRACK
-    /// name; see <see cref="Music.LyricBindings"/> for the resolved answer.</summary>
+    /// <summary>The part THIS ROW sings (<c>lyrics verse sings melody</c> →
+    /// "melody"), or null when the row states none and the track's default (the
+    /// definition's <c>sings</c>) applies. The row's binding is its own
+    /// placement's — a score may place one track under several parts, each row
+    /// naming its melody; see <see cref="Music.LyricBindings.TargetOfRow"/> for
+    /// the resolved answer.</summary>
     public string? SingsTarget => SingsTargetToken?.Text;
 }
 

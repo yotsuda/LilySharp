@@ -1121,16 +1121,17 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>The <c>sings</c> keyword item a lyrics ROW offers after its track
-    /// name — the row spelling of the binding the definition states
-    /// (<c>lyrics verse sings melody</c>). Shared by the score-body and
-    /// group-body row contexts.</summary>
+    /// name — THIS ROW's melody binding (<c>lyrics verse sings melody</c>), which
+    /// overrides the definition's default for this placement so one verse can
+    /// be placed under several staves. Shared by the score-body and group-body
+    /// row contexts.</summary>
     private static CompletionItem RowSingsItem() => new()
     {
         Label = "sings",
         Kind = CompletionItemKind.Keyword,
         InsertTextFormat = InsertTextFormat.Snippet,
         InsertText = "sings $0",
-        Detail = "Bind this track to the part it sings - the same binding the definition states",
+        Detail = "The part THIS row sings - overrides the definition's melody for this placement",
         SortText = "0",
         Command = new Command
         {

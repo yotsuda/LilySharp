@@ -692,6 +692,10 @@ public class SvgSnapshotTests
         // The `sings` binding: two lyric tracks bound to an UNENGRAVED melody,
         // stacked as rows at that melody's rhythm under another part's staff.
         yield return new object[] { "test/sings-chorus-row" };
+        // A score row's `sings` is its OWN placement's melody (2026-09-02): one
+        // verse under every staff of a chorale, each row naming the part it sings,
+        // the syllables at each staff's own onsets.
+        yield return new object[] { "test/sings-per-row" };
         // sfz-family dynamics + staccatissimo / bowing / harmonic scripts.
         yield return new object[] { "test/scripts-dynamics" };
         // @text("...") free expressive text (italic, below by default, .up above).

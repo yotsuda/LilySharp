@@ -258,9 +258,10 @@ public static class PartReferenceFinder
         _ => null,
     };
 
-    /// <summary>The token naming the part a lyric track sings, or null. Both spellings
-    /// state the same track property — the definition <c>lyrics verse sings melody { … }</c>
-    /// and the score row <c>lyrics verse sings melody</c> — so both answer here.</summary>
+    /// <summary>The token naming the part a lyric track sings, or null. Both sites
+    /// name a part — the definition <c>lyrics verse sings melody { … }</c> (the track's
+    /// default) and the score row <c>lyrics verse sings melody</c> (that row's own
+    /// placement) — so both answer here.</summary>
     /// <remarks>
     /// ⚠️ This target resolves against a WIDER set than the score's part references do:
     /// parts AND the named voices of a <c>&lt;&lt; … &gt;&gt;</c>, which is what

@@ -1299,9 +1299,12 @@ public static class DiagnosticCodes
     /// <summary>Track error: <c>lyrics N sings T</c> where T names no declared part.</summary>
     public const string SingsTargetUnknown = "LYS7004";
 
-    /// <summary>Track error: two blocks of the same lyrics track name different
-    /// <c>sings</c> targets — the binding is a property of the TRACK, stated once
-    /// (later same-name blocks may repeat it identically or omit it).</summary>
+    /// <summary>Track error: two DEFINITION blocks of the same lyrics track name
+    /// different <c>sings</c> targets — the definition states the track's ONE default
+    /// melody (later same-name blocks may repeat it identically or omit it). A score
+    /// row's <c>sings</c> is not this: it binds only that row's placement, so
+    /// <c>lyrics verse sings sop … lyrics verse sings alt</c> in a score is legal
+    /// (one verse under every staff of a chorale).</summary>
     public const string SingsConflict = "LYS7005";
 
     // Font warnings (LYS8xxx)
