@@ -18,6 +18,46 @@
 
 ---
 
+## 以下は第319セッションの経緯
+
+最終更新 第319セッション＝**入り方は第298〜第318 と同じ**——**ユーザーは `docs/HANDOFF.md` を読んで着手せよとだけ言い、便の間 1 度も口を挟んでいない。** ⇒ ★★★★ **本便は §2 T5（曲頭の反復開始記号）を 1 件だけ閉じた。骨は 5 つ**: **⑴ 規則は LP のソースが*自分の言葉で*書いていた——第318 が引いた行は種類を選ぶ所で、規則はそこには無かった／⑵ ★★★★ これは「描かない」ではなく「作らない」で、Lily# は*幅を 1.840000 ss 予約していた*。台帳の対がそれを言う——片方だけ足していたら「3.7 になった」としか言えなかった／⑶ 直す場所は renderer ではなくモデル。`StartBarline` は spacing/layout 15 箇所が読む／⑷ 掃きは 5 出力 × 379 冊で、動いたのは svg だけ・対照群 0・ユーザー実コーパス 10 冊／⑸ 境界（冒頭 grace）を測った＝LP はそこで*刷る*ので「measure 0 なら落とす」は近似だが、Lily# にその綴りは無い（実測）。** **commit は 3 本＝移植 `ab063c03`／§1 と T5 `263fdbb2`／この commit（§7 の積み残しと §5 への汎化）。**
+
+⚠️⚠️⚠️ ★★★★ **⑴ 規則は `lily/bar-engraver.cc:432-449 Bar_engraver::pre_process_music` で、コメントが "At the start of a piece, we don't print any repeat bars" と*そのまま書いている*。** **`repeatCommands` を読む loop がまるごと `first_time_` で門番される**（`first_time_` は `!(Timing.init_mom < Timing.now_mom)`＝`:414-417 Bar_engraver::initialize`）。⚠️ **第318 が引いた `:304-310` は `startRepeatBarType` を*選ぶ* jenga tower で、「立てるか」の分岐はそこには無い**——**§5.2「LP はこうしている、は*分岐の在るファイル*を読む」の、同じ file の中で 100 行外していた版。**
+
+⚠️⚠️⚠️ ★★★★ **⑵ 台帳 2 点。開き記号は*インクだけでなく幅も*払っていた。** **`line-start.time-to-first-note.{initial-repeat,no-initial-repeat}`**（プローブ `audit/lp-geometry/probes/initial-repeat-bar.ly` の IR / IN）: **移植前、`|:` で開く本は拍子→最初の符頭が 5.540000（LP 3.700000）／同じ音楽から `|:` を取った対照は 3.700000 で厳密一致** ⇒ **残差 +1.840000 は開き記号が予約していた列そのもの。今はどちらも exact。**
+⇒ ★★★ **「両側を足す」がここでは*読めるかどうか*を決めた**: **片方だけなら「3.700000 になった」で終わり、それは metered line start の既存点と同じ数なので何も主張しない。** **対の*等しさ*が主張。**
+
+⚠️⚠️ ★★★ **⑶ 住所は `ScoreAssembler`**（Score / MultiStaffScore の constructor を呼ぶ唯一の場所）。**`RepeatStart` を作る所は 4 つある**（`MeasureBuilder` の pending start・rows-only の form walk・`ChordNameCollector`・`LyricsCollector`）ので**そこに置くと規則が 4 つになる**（§5.2.1②）。**番人 `InitialRepeatBarTests` は 4 本の道を 1 つずつ通し、各テストが*陽性対照*（2 小節あとの同じ `|:` は残る）を自分で持つ。** **毒で 6 本 ＋ snapshot 2 枚が赤。**
+⚠️ ★★ **書きかけた 8 本目は*空振り*だったので消した**——**`RepeatBoth` は measure の *start* には立ち得ない**（4 つの producer は全部 `RepeatStart` を書き、`SynchronizeBarlines` の `Stronger` は {None, RepeatStart} の max）。**実測して、テストではなくコメントにした。** ⇒ ★★ **毒で赤にならなかった番人は、通っているのではなく*何も言っていない*。**
+
+⚠️⚠️ ★★★ **⑷ 掃き（`scratch/p319/sweep319.ps1` / `.csv`・379 冊・約 90 分）は組む前に `RULES.md` で「掃き」を引いた**（第318 の教訓）。**母集団は「`|:` を含む本」339 冊＝上位集合**＋**対照 40 冊**。**出力は 5 つ全部**: **svg（`--combined`）MOVED 38 / SAME 340 / no-output 1**・**midi・xml・ly・check は 379 冊すべて SAME**・**対照群の MOVED 0**。**ユーザー実コーパス 10 冊が動く**（`Air on G String` ほか）。⚠️ **`no-output 1` は base も head も同じ**（§2 ⒨）。
+⚠️⚠️ ★★★ **第318 の「追跡コーパス 6 冊 ⇒ snapshot 6 枚」は間違いだった**——**6 冊のうち 5 冊は `audit/lpreg` と `audit/lp-regression/lys` の*回帰コーパス*で snapshot を持たない**。**動いた既存 snapshot は 1 枚。** ⇒ ★★ **冊数から枚数を推定しない。**
+
+⚠️⚠️⚠️ ★★★★ **⑸ 境界を測った＝*冒頭の grace*。LP はそこで開き記号を刷る**（`\grace f'8 \repeat volta 2 { b'1 }` は `‖:` を刷り、grace を内側に入れると刷らない＝`scratch/p319/gracerepeat.ly`）——**grace が `now_mom` を進めて `first_time_` を偽にするから**。⇒ **「measure 0 なら落とす」は LP の規則の*近似*。** ★★ **ただし Lily# にその綴りは無い**（**music の `|:` は LYS1034 の error・form の `|:` の前に音楽は置けない・grace だけの section を置いても grace が自分の小節を取るので `|:` は measure 1 に乗る＝base と head で SVG バイト同一**）。⇒ **穴は無いが、*同じ言葉ではない*ことは書いておく。**
+
+⚠️⚠️ ★★★ **⑹ 終了時チェックリスト（§7）を*読み直して*から閉じた。3 件やっていなかった。**
+**⒜ §7.3.5＝第317 の経緯を `HANDOFF-ARCHIVE.md` へ*逐語で*積む**——**本便は最初それを
+「削除」していた**（`git` から拾い直して先頭に積んだ。**33046 → 33098 行**）。
+⚠️ **「§1 に残すのは直近 2 便」は*落とす*のであって*捨てる*のではない。**
+**⒝ §7.5＝移植した diff を §5.2 片手に数える**: **Core の `+` 107 行に `LILYPOND-REF` 1 本・
+`LILYSHARP-OWN` 0 本**。**「0 本や 1 本なら監査対象」なので読み直した**——
+**数値定数は 1 つも入っていない**（`+` 行の数字は `2.26.0` と `§5.2.1②` の 2 行だけ。
+`magic_constants.csv` が 923 で不動なのと一致）ので、**発明の潜り込みは無い**と言える。
+**⒞ §7.4/§7.3＝恒久の学びを §5 へ汎化**（下）。
+★★★ **`RULES.md` に 3 本足した**: **§5.2＝「LP はこうしている」は*分岐の在る関数*で引く
+（第286 の grob description と本便の jenga tower の 2 例が同じ形）／§5.3＝冊数から
+snapshot 枚数を推定しない（母集団は 3 つに分かれて住んでいる）／§5.4＝*自分が今書いた網*が
+毒で赤くならないなら、それは陽性対照か空振りのどちらか**。
+
+★ **副産物 1 件（起票せず記録のみ）**: **その `graceopen3` は Lily# が 2 小節・LP が 1 小節**（grace 専用 section が空小節を取る）。**base ≡ head なので本便の物ではない**——**`audit/lp-regression` の `repeat-volta-initial-grace`（state=open）と同じ族。**
+⚠️ **lpreg の 5 冊は LP に近づいたが `audit/lp-regression/status.json` は触っていない**（**あの台帳は lpreg のハーネスで取り直すもの＝`audit/lpreg/REGENERATE.md`**）。
+
+★ **開始時裏取り**: HEAD `e079c739`・**未 push 26**（**第312〜第318 の 26 本。`origin/master` は `925cab98`**）・木 2（**README.md と samples/README.md＝第318 ⑸ のユーザー手直し。本便も 1 バイトも触っていない**）・未追跡 0・Core 0 エラー 0 警告（solution 全体で 20＝Tests の analyzer）・**Windows Debug 6826 / 0 / 4 / 6830**（**第318 の終了時と一致**）・追跡 `.lys` 586・snapshot 236・台帳 753 点（exact 588 / ss 非ゼロ 195 / 総和 26.173568 / `OPEN:` 0）。
+終了時: **commit 3 本**（**この commit を含む**）・**未 push 29**・作業ツリーは **README.md と samples/README.md の 2 件だけ**・未追跡 0（**`scratch/p319` は git 管理外**）・Core 0 エラー 0 警告（solution 20）・**Windows Debug 6836 / 0 / 4 / 6840**（**+10＝番人 7 本 ＋ snapshot 1 枚 ＋ 台帳 2 点**）・**追跡 `.lys` 587**（**+1＝`test/initial-repeat-bar`**）・**snapshot 237**（**+1。既存で動いたのは `test__grandstaff-repeat.svg` 1 枚**）・**台帳 755 点**（**exact 590＝+2・ss 非ゼロ 195＝増減 0・総和 26.173568＝不動。新しい 2 点はどちらも 0**）。⚠️ **`docs/APPROXIMATIONS.md` も `audit/magic_constants.csv`（923）も不動**（**新しい literal は 1 つも無い**）。⚠️⚠️ **WSL ubuntu Release は取れない**（第313 ⑶）——**本便はインクを動かしているので `push` 後に `gh run list` で読むこと。**
+⚠️⚠️ ★★★ **計器は `scratch/p319/`**（git 管理外）: **`exe-base` / `exe-head`（A/B。base は `git stash push -- ScoreAssembler.cs` で作った）・`sweep319.ps1` と `sweep319.csv` / `.log`（5 出力 × 379 冊）・`startrepeat.lys` と `sr_{head,late}_{base,new}.png`（第318 の最小対の Lily# 側）・`irb_twin.ly` と `irb_lp.png`（新 fixture の LP 双子）・`gracerepeat.ly` / `.png`（LP の grace 境界）・`graceopen{,2,3}.lys` と `go3_{base,head}.{png,svg}`（Lily# 側の綴り探し）・`air_{base,head}.png`（実コーパスの前後）・`run{1..11}.trx` と `poison.trx`。**
+
+⇒ ★★★★ **次の一手**（**§2 T は T1・T4・T5 が閉じた。T2 は判断待ち、T3/T6 が残る。第316→第318 の並びは 1 つも消費していない**）: ★★★★ **⑴ §2 T3＝残り 11 冊の error**（**和音の綴り 26 が最大の族で機械的に直せる。`scratch/p317/tab/check-final.csv` が名前を持つ**）／★★★ **⑵ §2 T6＝移行が可視化した古い変換の負債**（**LYS2006 28/112・拍子欠落・記号欠落。⚠️ 記号の数え方は要り直し**）／★★ **⑶ `audit/lpreg` の回帰台帳を取り直す**（**本便で 5 冊が動いた。`audit/lpreg/REGENERATE.md`**）／★★★ **⑷ §2 U8c の残した島 ⑴＝`ItemSkylineFactory`/`SpacingRules`/`SkylineBuilder` が cue の列を*丸ごとフル サイズ*で読む**／★★★ **⑸ §2 U8b**（二声の同時 grace。**単独で追わないこと**）／★★★ **⑹ §2 U8 の残り＝⒞ のスラーとタイ・⒟ 注釈の全族**／**⑺ §2 の X/Y 側**（§2 A/B/D/E）／**⑻ §2 C⑴ の多声 walk の moment 順への再設計**（**最大の構造負債・未着手**）／**⑼ §2 G の per-document font resolver**。⚠️ **承認待ちは §2 T2 の 1 件**（`Lambada Complicada.lys`）＋**§2 T5 の ⏸ 1 件**（**曲頭の `|:` を出す設定を足すか。LP 自身は `printInitialRepeatBar` を持ち、リードシートでは伝統的に刷る**）。⚠️ **§2 F は開いている項目が無い。**
+
 ## 以下は第318セッションの経緯（第320 が §1 から落とした）
 
 最終更新 第318セッション＝**入り方は第298〜第317 と同じ**——**ユーザーは `docs/HANDOFF.md` を読んで着手せよとだけ言い、便の間 1 度も口を挟んでいない。** ⇒ ★★★★ **本便の骨は 5 つ**: **⑴ 第317 が起票した §2 T1（タブのスラー）を閉じた＝案A の忠実移植。LP は 2 段で、Lily# は ⑴ 段目を持っていなかった／⑵ 正典から 4 桁を取り、両向きで*厳密な鏡像*になる対を作った——最初の版は鏡像になっておらず、そのことに自分のテストが落ちて気づいた／⑶ ★★★★ **掃きの第1稿は母集団ではなく*見ている絵*を間違えていた＝`lysc svg` は最初の score block しか描かない**。ユーザー実コーパスはたいてい `staff` の score を先に置くので、**第1稿は 759 冊を 54 分かけて叩いて「タブの絵を 1 枚も見ていない」**——**そしてこれは `RULES.md:1111-1117` に第298 が同じ言葉で書いていた。私が引かなかっただけ**／⑷ 台帳 5 点を足し、**残差の全部が「Lily# のフレット数字が大きい」という*既決の逸脱 1 つ*に帰着することを式で示した**／⑸ 起票が「同じ棚で一緒に片付く」と書いていた 2 件は、**両方とも着手する物が無かった**（片方は Lily# に対応する grob が無い・片方は U4 で既決）。** **commit は 3 本＝移植 `b8e060fa`／§1 と T1 `284156e7`／この commit。** ⚠️ **⑹ 便の後半＝ユーザーが「このセッションでやる方が有利なら着手して」と言ったので、§2 T4（移行済みコーパスの LP 検証）を閉じた。判断の理由と結果は下の ⑹。**

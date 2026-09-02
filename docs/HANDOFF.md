@@ -204,6 +204,42 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第321セッション＝**入り方は第298〜第319 と同じ**（ユーザーは `docs/HANDOFF.md` を読んで着手せよとだけ言い、**便の途中で 3 度口を挟んだ**＝下の ⑸）。⇒ ★★★★ **本便は §1 の次の一手 ⑴＝§2 T の本体（絵の突き合わせ）を*全数で*回し、族に分けた。閉じたのは族 1 つ（§2 T7 の F3）。骨は 6 つ**:
+
+⚠️⚠️⚠️ ★★★★ **⑴ 掃きは `scratch/p321/sweep321.ps1`**（git 管理外・**286 冊・6 並列・47 分**）: **LP 側は `-dbackend=cairo --png -dresolution=96`**（**gs 経由の `--png` は 1 冊 30 秒、cairo は 1 秒**＝第318 の「1 本 15 秒」は svg backend の数で、絵は cairo が桁で速い）＋ **`-dinclude-settings=probe-settings.ly`**（第318 の BarNumber all-visible に `(object-address (ly:grob-system grob))` を足して**「どの小節がどの段か」**を stdout に出す。⚠️ **LP は `C:\…` の backslash パスを "file name not normalized" と*プログラミングエラー*で叱るが継続する**——40 冊の exit≠0 は `\paper { set-global-fonts }`（2.24 の綴り・2.26 で unbound）と `voltaSpannerDuration` 廃止の警告で、**絵は 286 冊全部出た**）。**Lily# 側は `lysc layout --all`（段組みの文字版）＋ `lysc png --scale 1.0 --score NAME` を score ごと**（**`png` に `--combined` は無い**）。**出力は `scratch/p321/out/<本>/`**（`lp*.png`・`lys-<i>-<score>.png`・`layout.txt`・`lp.out`）。**解析は `parse321.ps1` → `structure321.csv`**（1 行＝LP の book × Lily# の score の対・**譜の種類で対にし、無ければ最初の score で代用**＝段組みは break で強制されているので score 間で同じ）／**`profile321.ps1` → `profile321.csv`**（コーパスの特徴プロファイル・**`.ly` はコメントを剥いでから数える**＝素の grep は雛形のメモを拾って `\deadNote` を 280/286 冊に「在る」と答える）／**`book-categories.csv`・`categories.txt`**（本ごとの分類と両側の段署名）。
+⚠️ ★★ **数え方（LP 側の小節）**: **段の小節数＝その段の BarNumber の max − min**（all-visible は段末と次段頭の両方に同じ番号を刷る）、**book の最初の段は +1**（bar 1 は無番号）、**さらに `\partial` が本のどこかに在れば +1**（pickup は bar 0 で無番号・Lily# の `layout` は 1 小節に数える＝`My Girl` で LP 72 / Lily# 73 を出して気づいた。**`\partial` は `\book` の外の音楽変数に居るので本全体で grep する**）。**book の境目＝「この段の先頭番号 < 前段の末尾番号」**（⚠️ **`currentBarNumber` を途中で戻す本 11 冊はここで割れる**＝§2 T7 の C 族の一部はそれ）。
+⚠️⚠️ ★★★ **`lysc ly` の双子に TabStaff は無い**——**`--score tab` でも `\new Staff` を書く**（本便実測）。**LP のタブの証拠は手書き `.ly`（ユーザーのコーパス）か手で書いた `.ly` から取ること**（`scratch/p321/fx/fx3-hand-tab.ly`）。
+
+⚠️⚠️ ★★★ **⑵ 構造の結果（283 冊が比較可能）**: **A 段組み完全一致 170 冊／B-eng 小節数一致・段割れが違う・`\break` と `break` の数は同じ 69 冊（うち `.lys` に percent が在るのは 36）／B-src 同・break 数が違う 7 冊／C 小節数が違う 37 冊**（`book-categories.csv`）。**B-eng の形は「LP が 4 小節で組む段を Lily# が 2+2 に割る」**（`Friend Like Me` LP 2,4,4 ↔ Lily# 2,2,2・`I Should Be So Lucky` LP 2,2,4,4 ↔ Lily# 2,2,2,2）——**Lily# の段が入りきらずに自動改行している**のか、`.lys` の `break` の*位置*が違うのかは**未測**（数は同じ）。**C の形は 3 つ**: **`.lys` が 2 倍前後**（`Get Back` 96/186・`Hello, my friend` 89/173・`We're All Alone` 66/120 ほか 11 冊）／**`.lys` が少ない**（`Rose Garden` 96/76・`I Will Always Love You` 47/27＝T6 の欠落）／**LP 側の book が別物**（`Sweet Memories` の staff book は `s1` 4 小節＝blank book を staff と誤分類）。⚠️ **C の 2 倍族は `repeat percent N { 1 小節 } |` の綴り**（`Get Back` 全編・**`}` の直後の `|` が percent の小節を閉じずに LYS2002「duration 2 exceeds」を出す**＝`scratch/p321/fx/fx5-percent-break.lys` で再現）**が混じる。移行器の綴りの負債＝T6。**
+
+⚠️⚠️⚠️ ★★★★ **⑶ 絵で見つけて fixture で裏取りした族**（`scratch/p321/fx/`・**§2 T7 に表**）: **F3＝tab の percent 空小節に全休符が出る（閉じた・下 ⑷）**／**F2＝section 名の箱の X（行頭寄り）と、それが押す tempo の横滑り**（`fx4`: **key signature が在ると Lily# の staff は `Intro` と `♩=117` を横並びにし、LP は縦積み**＝§3 第220 の「縦積み LP 忠実」から外れる。**根は第257 の「SectionLabel を RehearsalMark と同じ左端に立てる」＝要ユーザー判断のまま**）／**F11＝tab の tempo が段上の梁を貫通する**（`fx3k`・**ユーザー起票**・LP は MetronomeMark を skyline で逃がす）／**F1＝弦選択**（固有機能・§3 既決。**全音符固定 92 冊・一部 86・無指定 22**）。⚠️⚠️ ★★★ **撤回 2 つ**: **F6「上弦の梁が UP になる」は*私の目視の誤り***——**同じ本を 10 回描いて svg/png のハッシュが 1 種類・弦固定の LP 双子（`fx3f` ＋ `fx3-hand-tab.ly`）で向きが一致**。**目視の所見はハッシュか座標で裏取りしてから書くこと**（RULES §5.0 の 1x ラスタの罠の兄弟）／**F4「volta が次段に続かない」は LP も Lily# も続く**（`fx2`・`fx2b`）——**`Billie Jean` の LP だけ 43-46 で括弧が切れる理由は未解明**（LP 側の癖。追わない）。
+
+★★★ **⑷ F3 を閉じた**（commit 1 本）: **`MeasureCollector.ProcessRepeatExpression` は 3 小節以上の body の覆われた空小節を spacer 休符で埋め、notation 側 `SharedRenderer.Noteheads` は最初から `!rest.IsSpacer` で飛ばしていたが、tab 側 `SharedRenderer.Tab` の `case RestItem` にその門が無かった**（**⑼ の付点と同じ「同じ規則が 2 腕・片方が訊かない」**）。**番人 `TabPercentBlankBarsTests` 5 本**（両譜で 0・`r1` の陽性対照 1・`s1` は 0）＋ **fixture/snapshot `test/tab-percent-blank-bars`**。**既存 snapshot 不動・`APPROXIMATIONS.md` は行番号だけ再生成。REF 0・OWN 0・新しい数字 0**（§7.5: Core の `+` 10 行に数字は日付と小節番号だけ）。
+
+★★ **⑸ ユーザーの 3 つの口挟み**: **⒜「全小節に番号を書くと volta の番号と重なる」→ 私の計器（all-visible）の副作用で LP 既定でも Lily# でも出ない**／**⒝「Lily# で全小節に番号を描く指定は？」→ 無い**（`override` の語彙は `NoteHead`/`Stem` の 4 つ・§ SYNTAX_REFERENCE Override）／**⒞「タブのテンポと最初の小節の beam が重なる」→ F11 として起票**。
+
+★★★ **⑹ T6 を全数で数え直した**（`profile321.csv`・§2 T6 に追記）: **スラー `.ly` 1099 → `.lys` 1**（**138 冊が全部失っている**＝`Bohemian Rhapsody` の bar 6-7/16-17 の弧）／**タイ 4776 → 4768**（3 冊）／**音価の無い音で始まる section 5 冊 17 箇所**（LP は直前の音価を引き継ぐ・Lily# は 4 分になる＝`Billie Jean` の B1 が 8 分から 4 分に化けた・`fx3c`）／**`\break` と `break` の数が違う本 21 冊**。
+
+⚠️⚠️⚠️ ★★★★ **⑺ 便の末尾＝ユーザー指示「次便をこの便でやる方が有利なら着手」→ 次の一手 ⑴（B-eng 69 冊）を 1 冊で測り、根を LP の分岐で特定した（製品コードは触っていない・移植は次便）**:
+**⒜ 再現は `scratch/p321/fx/bis-v6-proper-rests-first.lys`**（`r1 | r1 | break` ＋ 16 分入りの 4 小節 ＋ `break` ＋ 2 小節・staff のみ）: **Lily# は 2 | 2+2 | 2、LP 双子は 2 | 4 | 2**（`bis-v6-…-lp.out`）。**同じ 4 小節だけなら Lily# も 1 段に組む**（`bis-v3-nointro`）。**最初の段が 2 小節の 4 分音符でも割れ**（`bis-v8`・LP は割らない）、**最初の段が 8 分音符 4 小節で満ちていれば割れない**（`bis-v12`）。**LP の `line-width` を 150mm まで狭めても LP は 4 小節を保ち、Lily# は `paperWidth` 300mm でも割る。** ⇒ 幅の問題ではなく*選び方*の問題。
+**⒝ Lily# の数字**（一時テスト `P321ForceProbeTests`＝削除済み・`ComputeMultiStaffSpringData` の和と `CalculateLineForce`）: **段 [1-2] の力 +6.030（全休符 2 小節・ideal 19.3 / 幅 94.4）、[3-6] −0.121（ideal 105.3 / 幅 97.2・min 39.1＝入る）、[3-4] +1.239、[5-6] +1.466**。**行 DP の demerits＝force² ＋ (前段 − この段)² は [1-2][3-6] が 74.2、[1-2][3-4][5-6] が 63.1**＝**(−0.12 − 6.03)² の 37.8 が (1.24 − 6.03)² の 22.9 に負ける**。**強制改行で足りない段の力が次の段に結合する形。**
+**⒞ LP は同じ DP で 4 段を「理想」に出したあと、段数を 1 つずつ減らして*頁の得点*で選び直す**——`-ddebug-page-breaking-scoring`（`bis-v6-dbg.err`）: **「4 個のシステム 42.466 → 3 個 38.781 → 2 個 inf → 5 個 76.07 …」で 3 段を採る**。**その得点は `lily/page-breaking.cc:1548-1586 Page_breaking::finalize_spacing_result`＝Σ 段の force² ＋ Σ break_penalty ＋ 10 × Σ 頁の force²**（**(前段 − この段)² の項が無い**）。**Lily# の力でこれを計算すると 4 段 42.0・3 段 38.4＝LP の 42.47・38.78 と 0.4 差**（残りは頁の力²）。**ループは `lily/optimal-page-breaking.cc:139-190 Optimal_page_breaking::solve`**（`ideal_sys_count` から `min_sys_count` まで減らしながら `space_systems_on_best_pages`・`:196-248` は増やす側）。
+⇒ ★★★★ **乖離＝Lily# は行 DP の最適（Δforce² 込み）をそのまま段数にし、LP はその段数を頁の得点（Δforce² 無し）で選び直す。** **Lily# の `KnuthPlassBreaker` は (break, 段数) の DP と `BacktrackByLineCount` を既に持つ**ので、**足すのは `LayoutEngine` 側の外側ループ**（段数ごとに行を組み → `PageBreaker` で頁に置き → `finalize_spacing_result` の式で採点 → 最小）。**射程は B-eng 69 冊＝全コーパスの 24%**。⚠️ **snapshot は大量に動く**（強制改行の直後の段を持つ本すべて）——**移植は便の先頭で、掃き（`sweep321.ps1 -Only`）と A/B を添えて。**
+
+⚠️⚠️ ★★★ **⑻ 便の末尾 2＝ユーザー指示「次便をこの便でやる方が有利なら着手」→ ⑴ の移植は*着手しなかった*。理由は設計の制約が 3 つ見えたからで、それを書いて次便に渡す**:
+**⒜ 住所**: `LayoutEngine.Layout` は `BreakIntoSystems`（`LayoutEngine.cs:129`）→ 各段の measure layout・skyline（重い）→ `OptimalPages`（`LayoutEngine.Pages.cs:337`）の一本道。**LP のループ（`optimal-page-breaking.cc:139-190/196-248`）は「段数 N の行分割 → 頁に置いて採点」を N ごとに繰り返す**が、**LP の採点は `cache_line_details` の*pure height*（推定）で済み、Lily# は各段を実際に組まないと高さが出ない**。⇒ **候補 N ごとに全段の layout を回すと layout 費用 × 候補数**（LP は早期打ち切りで 2〜4 候補）。**`SystemLayoutCache` は「同じ小節範囲の段」を content key で memo する**ので候補間で同じ段は当たるが、割れ方が変わる段は当たらない。**perf（プレビュー速度）はユーザー重視＝§7.9 の A/B を添えること。**
+**⒝ 増分の門**: F3 の cutoff（`LayoutEngine.cs:124-131`・`SystemBreaker.cs:72-79 precomputedLineSizes`）は**「行分割は ばね vector ＋ 幅だけの関数」を前提に DP を飛ばす**。**頁の得点で段数を選ぶと、行分割が*縦*（段の高さ）にも依存する**ので、**この門の前提が崩れる**——増分側は「ばね不変」だけでなく「段の高さ不変」も見るか、門を通るときは前回の段数を*そのまま*使う（LP は毎回全体を解き直す）かを決めること。`IncrementalCompiler` の incremental==full harness が番人。
+**⒞ 部品は在る**: `KnuthPlassBreaker.FindOptimalBreaks` の DP は (break, 段数) の表と `BacktrackByLineCount`（`:532`）・段ごとの stored force（`lineForce`）を持つ＝**N 段解と Σforce² は取れる**（内部 API を 1 つ切る）。**`PageBreaker.BreakIntoPages` は break 位置しか返さず、`PageBreakResult`（`:512`・Penalty/Forces/SystemsPerPage）は今どこからも使われていない**＝頁の demerits（Σ 頁 force²・`BAD_SPACING_PENALTY` clamp・`line_count_penalty`）を返す口を足す。**式は `page-breaking.cc:1584`＝`line_force + line_penalty + page_demerits × page-spacing-weight(10)`**。**ループの上下限と打ち切り**: 理想 N（行 DP の best）から `min_sys_count`（`optimal-page-breaking.cc:120-128`＝理想 − 最終頁の段数（− 直前頁の段数））まで減らし、**頁数が減って平均力 > 0 なら止める・demerits ≥ BAD なら止める**（`:181-189`）；`N+1` から `max_sys_count` まで増やし、**demerits ≥ BAD で止める**（`:243-246`）。
+⇒ **次便の順番**: ⒞ の口を 2 つ切る（番人＝`bis-v6` の Σforce² が 4 段 42.0 / 3 段 38.4 を再現） → ⒜ のループを `LayoutEngine` に足して `bis-v6` が 2|4|2 になる → ⒝ の門の扱いを決めて harness を通す → 掃き（`sweep321.ps1`・69 冊の段署名が LP に寄るか）→ perf A/B。**snapshot の再ベースは LP 双子の段署名で正当化する。**
+
+★ **開始時裏取り**: HEAD `4fd104bf`・**未 push 13**（`origin/master` は `b7865029`）・木 2（README.md と samples/README.md＝第318 ⑸ のユーザー手直し。本便も触っていない）・未追跡 0・Core 0 エラー 0 警告・追跡 `.lys` 591・snapshot 241・台帳 759 点（exact 594 / `OPEN:` 0）・`LilySharp.Cli\bin\Debug` は `net10.0` だけ・コーパス `.ly` 286 / `.lys` 317。
+終了時: **commit 4 本**（**⑷ の修正 `TabPercentBlankBars`／HANDOFF 第321／⑺ を足した HANDOFF／⑻ の設計を足した HANDOFF**）・**未 push 17**・作業ツリーは README.md と samples/README.md の 2 件だけ・未追跡 0（`scratch/p321` は git 管理外）・Core 0 エラー 0 警告・**Windows Debug 6892 / 0 / 4 / 6896**（**`scratch/p321/full1.trx` は 6891 / 1 で、赤は `ApproximationInventoryTests` の行番号ドリフト＝`LILYSHARP_UPDATE_DOCS=1` で再生成して緑**。**+6＝第320 比: 番人 5 本 ＋ snapshot 1 枚**）・**追跡 `.lys` 592**（+1）・**snapshot 242**（+1・既存不動）・**台帳 759 点不動**（本便は台帳を触っていない）・`audit/magic_constants.csv` 不動。⚠️⚠️ **WSL ubuntu Release は取れない**（第313 ⑶）——**本便は Core を触っているので `push` 後に `gh run list` で読むこと。**
+⚠️ **計器は `scratch/p321/`**（git 管理外）: **`sweep321.ps1` / `.csv` / `.log`・`probe-settings.ly`・`parse321.ps1` → `structure321.csv`・`profile321.ps1` → `profile321.csv`・`book-categories.csv`・`categories.txt`（両側の段署名）・`out/<本>/`（286 冊の絵と layout）・`fx/`（族の再現 fixture と LP 双子・`det/` はハッシュ検査）・`run1.trx`・`full1.trx`**。
+
+⇒ ★★★★ **次の一手**（**第320 の並びの ⑴ を本便が消費した。差し替えと追加**）: ★★★★ **⑴ `Optimal_page_breaking::solve` の段数ループを移植する**（**⑺ ⒞**: `LayoutEngine` で段数 N を理想から減らし／増やしながら `KnuthPlassBreaker` の N 段解 → `PageBreaker` → `finalize_spacing_result` の式で採点し最小を採る。**陽性対照＝`scratch/p321/fx/bis-v6-proper-rests-first.lys` が 2 | 4 | 2 になる・`bis-v3`/`bis-v12` は不動**。**射程 69 冊なので snapshot の再ベースは台帳キーではなく LP 双子の段署名で正当化する**）／★★★ **⑵ F11＝tab の tempo と梁**（`scratch/p321/fx/fx3k-intro-percent-only.lys`・LP は `MetronomeMark` を outside-staff skyline に載せる＝tab の段上の梁が skyline に居ない）／★★★ **⑶ F2＝section 名の X（要ユーザー判断・第257 から据え置き）**／★★★ **⑷ T6＝スラー復元 138 冊**（`.ly` を正解に `.lys` へ `(` `)` を戻す。移行器ではなく綴り直し）／★★ **⑸ T7 の C 37 冊を 1 冊ずつ**（`currentBarNumber` の 11 冊は計器側・`Get Back` 族は `} |` の綴り・`Rose Garden` 族は欠落）／**⑹ 以下は第320 の並び**: §2 T6 の残り（拍子欠落・記号欠落）／`audit/lpreg` 取り直し／§2 U8c の島／§2 U8b／§2 U8 の残り／§2 A/B/D/E／§2 C⑴／§2 G。⚠️ **承認待ちは §2 T2 の 1 件**（`Lambada Complicada.lys`）＋**§2 T5 の ⏸ 1 件**＋**§2 T7 の F2**。⚠️ **§2 F の開いている項目は第320 の ⒲ 1 件。**
+
+## 以下は第320セッションの経緯
+
 最終更新 第320セッション＝**入り方が第298〜第319 と違う**——**ユーザーは `docs/HANDOFF.md` を読ませたうえで「残債の返済に着手する前に」と*名指しの 1 件*を先に置いた**: **`scratch/site-showcase/ode-to-joy.lys`（四声コラール。1 つの `verse` を `choirStaff` の 4 譜の下に `lyrics verse sings sop / alt / ten / bas` と置く本）が L34/L36/L38 で落ちる＝「歌詞を複数のメロディに対して利用できるようにして」**。⇒ ★★★★ **本便はその 1 件だけを閉じた（言語の決定＝§3 の先頭行）。§2 の残債は 1 つも触っていない。骨は 5 つ**:
 
 ⚠️⚠️ ★★★ **⑴ 再現＝LYS7005 ×3（`'verse' already sings 'sop'`）＋ LYS6012 ×3（群の行が真上の譜を歌っていない）。** **原因は欠陥ではなく 2026-08-19・第218 の決定**——**「score 行の `sings` は定義と*同じ 1 つの track 属性*」**。1 track ＝ 1 メロディなので、**4 譜に置く綴りがそもそも存在しなかった**。⚠️ **§0 の `lysc` は `bin\Debug\net9.0` が 08-15 の化石で、生きているのは `net10.0`**（**化石は L32 で parser error を出す＝別の症状**）。**⇒ ユーザー指示で化石は全部消した**（5 プロジェクトとも TFM は net10.0。`bin\*\net9.0`・`obj\*\net9.0`・`Lsp\bin\Debug2` の 22 ディレクトリ。git 管理外）。**以後 `LilySharp.Cli\bin\Debug` には `net10.0` しか無い。**
@@ -247,46 +283,6 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ⚠️ **計器は `scratch/p320/`**（git 管理外）: **`ode.svg` / `ode.png`（修正後の showcase 本＝4 譜すべての下に verse）・`fixture.png`（新 fixture）・`valse.png` / `valse-after.png`（ペダルの前後）・`ledger-pre.trx` / `ledger-post.trx`（⑹ の修正前後の台帳）・`run1..6.trx`・**`tabpercent.png` / `tabpercent-after.png`・`percent-staff.png`・`percent-dyn.png` / `percent-dyn-after.png`（⑽ の前後＝tab・staff・dynamic）・`fixture-bows.png`（新 fixture）**。
 
 ⇒ ★★★★ **次の一手**（**第319 の並びから ⑴ T3 だけ本便 ⑾ が消費した。⑴ を差し替える**）: ★★★★ **⑴ §2 T の本体＝絵の突き合わせ**（**`scratch/ベースタブLy` の `.ly` 285 本を LP に描かせ、Lily# の `.lys` と並べて逸脱を族に分ける。error 本は 0（T2 の 1 冊を除く）なので全冊が対象。便の先頭で静かな窓を取り、`cmd /c "... < NUL"` で 1 本 15 秒・Guile 死は再実行。第318 の `barcount.ps1`（BarNumber は `break-visibility = #all-visible`）が小節数の計器**）／★★★ **⑵ §2 T6＝移行が可視化した古い変換の負債**（**LYS2006 28/112・拍子欠落・記号欠落。⚠️ 記号の数え方は要り直し**）／★★ **⑶ `audit/lpreg` の回帰台帳を取り直す**（**第319 で 5 冊が動いた。`audit/lpreg/REGENERATE.md`**）／★★★ **⑷ §2 U8c の残した島 ⑴＝`ItemSkylineFactory`/`SpacingRules`/`SkylineBuilder` が cue の列を*丸ごとフル サイズ*で読む**／★★★ **⑸ §2 U8b**（二声の同時 grace。**単独で追わないこと**）／★★★ **⑹ §2 U8 の残り＝⒞ のスラーとタイ・⒟ 注釈の全族**／**⑺ §2 の X/Y 側**（§2 A/B/D/E）／**⑻ §2 C⑴ の多声 walk の moment 順への再設計**（**最大の構造負債・未着手**）／**⑼ §2 G の per-document font resolver**。⚠️ **承認待ちは §2 T2 の 1 件**（`Lambada Complicada.lys`）＋**§2 T5 の ⏸ 1 件**（**曲頭の `|:` を出す設定を足すか**）。⚠️ **§2 F の開いている項目は本便の ⒲ 1 件（実需 0 冊・急がない）。**
-
-## 以下は第319セッションの経緯
-
-最終更新 第319セッション＝**入り方は第298〜第318 と同じ**——**ユーザーは `docs/HANDOFF.md` を読んで着手せよとだけ言い、便の間 1 度も口を挟んでいない。** ⇒ ★★★★ **本便は §2 T5（曲頭の反復開始記号）を 1 件だけ閉じた。骨は 5 つ**: **⑴ 規則は LP のソースが*自分の言葉で*書いていた——第318 が引いた行は種類を選ぶ所で、規則はそこには無かった／⑵ ★★★★ これは「描かない」ではなく「作らない」で、Lily# は*幅を 1.840000 ss 予約していた*。台帳の対がそれを言う——片方だけ足していたら「3.7 になった」としか言えなかった／⑶ 直す場所は renderer ではなくモデル。`StartBarline` は spacing/layout 15 箇所が読む／⑷ 掃きは 5 出力 × 379 冊で、動いたのは svg だけ・対照群 0・ユーザー実コーパス 10 冊／⑸ 境界（冒頭 grace）を測った＝LP はそこで*刷る*ので「measure 0 なら落とす」は近似だが、Lily# にその綴りは無い（実測）。** **commit は 3 本＝移植 `ab063c03`／§1 と T5 `263fdbb2`／この commit（§7 の積み残しと §5 への汎化）。**
-
-⚠️⚠️⚠️ ★★★★ **⑴ 規則は `lily/bar-engraver.cc:432-449 Bar_engraver::pre_process_music` で、コメントが "At the start of a piece, we don't print any repeat bars" と*そのまま書いている*。** **`repeatCommands` を読む loop がまるごと `first_time_` で門番される**（`first_time_` は `!(Timing.init_mom < Timing.now_mom)`＝`:414-417 Bar_engraver::initialize`）。⚠️ **第318 が引いた `:304-310` は `startRepeatBarType` を*選ぶ* jenga tower で、「立てるか」の分岐はそこには無い**——**§5.2「LP はこうしている、は*分岐の在るファイル*を読む」の、同じ file の中で 100 行外していた版。**
-
-⚠️⚠️⚠️ ★★★★ **⑵ 台帳 2 点。開き記号は*インクだけでなく幅も*払っていた。** **`line-start.time-to-first-note.{initial-repeat,no-initial-repeat}`**（プローブ `audit/lp-geometry/probes/initial-repeat-bar.ly` の IR / IN）: **移植前、`|:` で開く本は拍子→最初の符頭が 5.540000（LP 3.700000）／同じ音楽から `|:` を取った対照は 3.700000 で厳密一致** ⇒ **残差 +1.840000 は開き記号が予約していた列そのもの。今はどちらも exact。**
-⇒ ★★★ **「両側を足す」がここでは*読めるかどうか*を決めた**: **片方だけなら「3.700000 になった」で終わり、それは metered line start の既存点と同じ数なので何も主張しない。** **対の*等しさ*が主張。**
-
-⚠️⚠️ ★★★ **⑶ 住所は `ScoreAssembler`**（Score / MultiStaffScore の constructor を呼ぶ唯一の場所）。**`RepeatStart` を作る所は 4 つある**（`MeasureBuilder` の pending start・rows-only の form walk・`ChordNameCollector`・`LyricsCollector`）ので**そこに置くと規則が 4 つになる**（§5.2.1②）。**番人 `InitialRepeatBarTests` は 4 本の道を 1 つずつ通し、各テストが*陽性対照*（2 小節あとの同じ `|:` は残る）を自分で持つ。** **毒で 6 本 ＋ snapshot 2 枚が赤。**
-⚠️ ★★ **書きかけた 8 本目は*空振り*だったので消した**——**`RepeatBoth` は measure の *start* には立ち得ない**（4 つの producer は全部 `RepeatStart` を書き、`SynchronizeBarlines` の `Stronger` は {None, RepeatStart} の max）。**実測して、テストではなくコメントにした。** ⇒ ★★ **毒で赤にならなかった番人は、通っているのではなく*何も言っていない*。**
-
-⚠️⚠️ ★★★ **⑷ 掃き（`scratch/p319/sweep319.ps1` / `.csv`・379 冊・約 90 分）は組む前に `RULES.md` で「掃き」を引いた**（第318 の教訓）。**母集団は「`|:` を含む本」339 冊＝上位集合**＋**対照 40 冊**。**出力は 5 つ全部**: **svg（`--combined`）MOVED 38 / SAME 340 / no-output 1**・**midi・xml・ly・check は 379 冊すべて SAME**・**対照群の MOVED 0**。**ユーザー実コーパス 10 冊が動く**（`Air on G String` ほか）。⚠️ **`no-output 1` は base も head も同じ**（§2 ⒨）。
-⚠️⚠️ ★★★ **第318 の「追跡コーパス 6 冊 ⇒ snapshot 6 枚」は間違いだった**——**6 冊のうち 5 冊は `audit/lpreg` と `audit/lp-regression/lys` の*回帰コーパス*で snapshot を持たない**。**動いた既存 snapshot は 1 枚。** ⇒ ★★ **冊数から枚数を推定しない。**
-
-⚠️⚠️⚠️ ★★★★ **⑸ 境界を測った＝*冒頭の grace*。LP はそこで開き記号を刷る**（`\grace f'8 \repeat volta 2 { b'1 }` は `‖:` を刷り、grace を内側に入れると刷らない＝`scratch/p319/gracerepeat.ly`）——**grace が `now_mom` を進めて `first_time_` を偽にするから**。⇒ **「measure 0 なら落とす」は LP の規則の*近似*。** ★★ **ただし Lily# にその綴りは無い**（**music の `|:` は LYS1034 の error・form の `|:` の前に音楽は置けない・grace だけの section を置いても grace が自分の小節を取るので `|:` は measure 1 に乗る＝base と head で SVG バイト同一**）。⇒ **穴は無いが、*同じ言葉ではない*ことは書いておく。**
-
-⚠️⚠️ ★★★ **⑹ 終了時チェックリスト（§7）を*読み直して*から閉じた。3 件やっていなかった。**
-**⒜ §7.3.5＝第317 の経緯を `HANDOFF-ARCHIVE.md` へ*逐語で*積む**——**本便は最初それを
-「削除」していた**（`git` から拾い直して先頭に積んだ。**33046 → 33098 行**）。
-⚠️ **「§1 に残すのは直近 2 便」は*落とす*のであって*捨てる*のではない。**
-**⒝ §7.5＝移植した diff を §5.2 片手に数える**: **Core の `+` 107 行に `LILYPOND-REF` 1 本・
-`LILYSHARP-OWN` 0 本**。**「0 本や 1 本なら監査対象」なので読み直した**——
-**数値定数は 1 つも入っていない**（`+` 行の数字は `2.26.0` と `§5.2.1②` の 2 行だけ。
-`magic_constants.csv` が 923 で不動なのと一致）ので、**発明の潜り込みは無い**と言える。
-**⒞ §7.4/§7.3＝恒久の学びを §5 へ汎化**（下）。
-★★★ **`RULES.md` に 3 本足した**: **§5.2＝「LP はこうしている」は*分岐の在る関数*で引く
-（第286 の grob description と本便の jenga tower の 2 例が同じ形）／§5.3＝冊数から
-snapshot 枚数を推定しない（母集団は 3 つに分かれて住んでいる）／§5.4＝*自分が今書いた網*が
-毒で赤くならないなら、それは陽性対照か空振りのどちらか**。
-
-★ **副産物 1 件（起票せず記録のみ）**: **その `graceopen3` は Lily# が 2 小節・LP が 1 小節**（grace 専用 section が空小節を取る）。**base ≡ head なので本便の物ではない**——**`audit/lp-regression` の `repeat-volta-initial-grace`（state=open）と同じ族。**
-⚠️ **lpreg の 5 冊は LP に近づいたが `audit/lp-regression/status.json` は触っていない**（**あの台帳は lpreg のハーネスで取り直すもの＝`audit/lpreg/REGENERATE.md`**）。
-
-★ **開始時裏取り**: HEAD `e079c739`・**未 push 26**（**第312〜第318 の 26 本。`origin/master` は `925cab98`**）・木 2（**README.md と samples/README.md＝第318 ⑸ のユーザー手直し。本便も 1 バイトも触っていない**）・未追跡 0・Core 0 エラー 0 警告（solution 全体で 20＝Tests の analyzer）・**Windows Debug 6826 / 0 / 4 / 6830**（**第318 の終了時と一致**）・追跡 `.lys` 586・snapshot 236・台帳 753 点（exact 588 / ss 非ゼロ 195 / 総和 26.173568 / `OPEN:` 0）。
-終了時: **commit 3 本**（**この commit を含む**）・**未 push 29**・作業ツリーは **README.md と samples/README.md の 2 件だけ**・未追跡 0（**`scratch/p319` は git 管理外**）・Core 0 エラー 0 警告（solution 20）・**Windows Debug 6836 / 0 / 4 / 6840**（**+10＝番人 7 本 ＋ snapshot 1 枚 ＋ 台帳 2 点**）・**追跡 `.lys` 587**（**+1＝`test/initial-repeat-bar`**）・**snapshot 237**（**+1。既存で動いたのは `test__grandstaff-repeat.svg` 1 枚**）・**台帳 755 点**（**exact 590＝+2・ss 非ゼロ 195＝増減 0・総和 26.173568＝不動。新しい 2 点はどちらも 0**）。⚠️ **`docs/APPROXIMATIONS.md` も `audit/magic_constants.csv`（923）も不動**（**新しい literal は 1 つも無い**）。⚠️⚠️ **WSL ubuntu Release は取れない**（第313 ⑶）——**本便はインクを動かしているので `push` 後に `gh run list` で読むこと。**
-⚠️⚠️ ★★★ **計器は `scratch/p319/`**（git 管理外）: **`exe-base` / `exe-head`（A/B。base は `git stash push -- ScoreAssembler.cs` で作った）・`sweep319.ps1` と `sweep319.csv` / `.log`（5 出力 × 379 冊）・`startrepeat.lys` と `sr_{head,late}_{base,new}.png`（第318 の最小対の Lily# 側）・`irb_twin.ly` と `irb_lp.png`（新 fixture の LP 双子）・`gracerepeat.ly` / `.png`（LP の grace 境界）・`graceopen{,2,3}.lys` と `go3_{base,head}.{png,svg}`（Lily# 側の綴り探し）・`air_{base,head}.png`（実コーパスの前後）・`run{1..11}.trx` と `poison.trx`。**
-
-⇒ ★★★★ **次の一手**（**§2 T は T1・T4・T5 が閉じた。T2 は判断待ち、T3/T6 が残る。第316→第318 の並びは 1 つも消費していない**）: ★★★★ **⑴ §2 T3＝残り 11 冊の error**（**和音の綴り 26 が最大の族で機械的に直せる。`scratch/p317/tab/check-final.csv` が名前を持つ**）／★★★ **⑵ §2 T6＝移行が可視化した古い変換の負債**（**LYS2006 28/112・拍子欠落・記号欠落。⚠️ 記号の数え方は要り直し**）／★★ **⑶ `audit/lpreg` の回帰台帳を取り直す**（**本便で 5 冊が動いた。`audit/lpreg/REGENERATE.md`**）／★★★ **⑷ §2 U8c の残した島 ⑴＝`ItemSkylineFactory`/`SpacingRules`/`SkylineBuilder` が cue の列を*丸ごとフル サイズ*で読む**／★★★ **⑸ §2 U8b**（二声の同時 grace。**単独で追わないこと**）／★★★ **⑹ §2 U8 の残り＝⒞ のスラーとタイ・⒟ 注釈の全族**／**⑺ §2 の X/Y 側**（§2 A/B/D/E）／**⑻ §2 C⑴ の多声 walk の moment 順への再設計**（**最大の構造負債・未着手**）／**⑼ §2 G の per-document font resolver**。⚠️ **承認待ちは §2 T2 の 1 件**（`Lambada Complicada.lys`）＋**§2 T5 の ⏸ 1 件**（**曲頭の `|:` を出す設定を足すか。LP 自身は `printInitialRepeatBar` を持ち、リードシートでは伝統的に刷る**）。⚠️ **§2 F は開いている項目が無い。**
 
 ## 2. 開いている作業
 
@@ -1862,6 +1858,34 @@ snapshot 枚数を推定しない（母集団は 3 つに分かれて住んで�
   **⒠ `r1 r1 r1 r1 \break` の LP 自動小節線が `.lys` に `|` として写っていない**（`Green-Tinted` L13＝
   「duration 4 exceeds」。同じ本の 5/8 warning は `\time 5/8` 欠落＝上の ⒝）／**⒡ 全数の warning は
   208 冊 / 1457 件**（`scratch/p320/check-320.csv`。⚠️ 数え方＝`lysc check` の `): warning:` 行数）。
+  ★★★ **第321 が全数で数え直した**（`scratch/p321/profile321.ps1` → `profile321.csv`・**`.ly` はコメントを剥いでから**）:
+  **⒢ スラー `.ly` 1099 → `.lys` 1＝138 冊が全部失っている**（`Bohemian Rhapsody` の bar 6-7 / 16-17 の弧が Lily# に無い。
+  数え方＝音名・音価・弦番号の直後の `(`。`#(every-nth…)` の Scheme 括弧を数えると 1831 になる）／
+  **⒣ タイ 4776 → 4768**（3 冊）／**⒤ 音価の無い音で始まる section 5 冊 17 箇所**（LP は直前の音価を引き継ぐが
+  Lily# は 4 分にする＝`Billie Jean` の B1 `b, fis, a, b, r …` が 8 分から 4 分に化けた・`scratch/p321/fx/fx3c-billie-excerpt.lys`）／
+  **⒥ `\break` と `break` の数が違う本 21 冊**／**⒦ `repeat percent N { 1 小節 } |`＝`}` の直後の `|` が percent の
+  小節を閉じず LYS2002「Measure duration 2 exceeds」を出す綴り**（`Get Back` 全編・`fx5-percent-break.lys`）。
+  **直すなら ⒢ から**（実需が最大・`.ly` を正解に `(` `)` を戻すだけ）。
+
+- **T7. ▶ 起票（第321）＝絵の突き合わせ（286 冊全数）の結果＝族の表。計器は `scratch/p321/`（§1 ⑴）**
+
+  ★★★ **構造（段組み）**: **比較可能 283 冊＝A 完全一致 170／B-eng 小節数一致・段割れ違い・break 数同じ 69（percent あり 36）／
+  B-src 7／C 小節数違い 37**（`book-categories.csv`・両側の段署名は `categories.txt`）。**B-eng の形は「LP が 4 で組む段を
+  Lily# が 2+2 に割る」**（`Friend Like Me` 2,4,4 ↔ 2,2,2）＝**根は §1 ⑺＝Lily# は行 DP の最適（Δforce² 込み）を段数に
+  し、LP は段数を頁の得点（`page-breaking.cc:1548-1586 finalize_spacing_result`＝Σ force² ＋ 10×Σ 頁 force²・Δ 無し）で
+  選び直す（`optimal-page-breaking.cc:139-190`）。再現 `scratch/p321/fx/bis-v6-proper-rests-first.lys`・次の一手 ⑴**。**C は 3 形**（§1 ⑵）。
+
+  ★★★ **絵の族**（fixture は `scratch/p321/fx/`・LP の絵は `out/<本>/lp*.png`）:
+  | 族 | 症状 | 裏取り | 射程（`profile321.csv`） | 状態 |
+  |---|---|---|---|---|
+  | **F3** | tab の percent 空小節に全休符 | `fx1`・`fx3h`・`Billie Jean` LP 8-10 空 | percent 106 冊（body 3 小節以上のみ） | ✅ 第321 で閉じた（`TabPercentBlankBarsTests`・`test/tab-percent-blank-bars`） |
+  | **F2** | section 名の箱が行頭寄り・key があると tempo が横滑り（LP は縦積み） | `fx4`（key 有/無）・LP `Billie Jean` | `\mark` 281 冊・`\tempo` 277 冊 | ⏸ **要ユーザー判断**（第257 の SectionLabel＝RehearsalMark 問題・§3 第220 の縦積み決定と食い違う） |
+  | **F11** | tab の tempo が段上の梁を貫通 | `fx3k`・**ユーザー起票（第321）** | tab ＋ tempo ＋ 冒頭が上向き梁の本 | ▶ 次の一手 ⑵（LP は MetronomeMark を outside-staff skyline に載せる） |
+  | **F1** | 弦選択が LP と違う | `fx3e`（`a,` を 1 弦 2 → 2 弦 7） | 全固定 92／一部 86／無指定 22 | §3 既決（固有機能・比較は固定本で） |
+  | F9 | フレット数字が大きい | 台帳 `slur.tab.*` | tab 281 冊 | §3 既決 |
+  | 撤回 F6 | 上弦の梁が UP | 10 回描いてハッシュ 1 種・`fx3f` ＋ `fx3-hand-tab.ly` で LP と一致 | — | **私の目視の誤り**（RULES §5.0 の 1x ラスタの罠の兄弟＝所見はハッシュか座標で裏取り） |
+  | 撤回 F4 | volta が次段に続かない | `fx2`・`fx2b`（LP も続く） | — | `Billie Jean` の LP だけ 43-46 で切れる理由は未解明・追わない |
+  | 源 | スラー消失 138 冊・音価欠落 5 冊・break 21 冊・`} \|` 綴り | T6 ⒢〜⒦ | — | T6 |
 
 ### A. 予約と描画・複数モデルの統一（▶ と同じ族）
 
