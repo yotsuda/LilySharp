@@ -958,6 +958,41 @@ internal sealed class VerticalSkyline
     }
 
     /// <summary>
+    /// <see cref="MaxHeight"/> over the X range [<paramref name="xLeft"/>, <paramref name="xRight"/>]
+    /// alone, in real Y coordinates — the direction's empty answer (∓∞) when nothing lies in
+    /// the range, exactly as <see cref="MaxHeightsSplitAt"/> answers for an empty half.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:359-474 adjacent_pure_heights — LilyPond's
+    /// page-breaking estimate of a line's height is built per COLUMN range from the grobs'
+    /// pure extents, and a candidate line is priced by the max over its columns. Lily# has no
+    /// pure extent per grob at that seam; it has the placed paging skyline, and a bar's share
+    /// of it is this range walk. The estimate is consumed in LayoutEngine.EstimateMeasureHeights,
+    /// where the deviation is stated. Same walk shape as MaxHeightsSplitAt (a building is a
+    /// straight line, so its extreme over a range is at the range's ends), one pass.
+    /// </remarks>
+    public double MaxHeightInRange(double xLeft, double xRight)
+    {
+        int sky = (int)_direction;
+        double max = NegativeInfinity;
+        foreach (var b in _buildings)
+        {
+            double l = Math.Max(b.Start, xLeft);
+            double r = Math.Min(b.End, xRight);
+            if (l > r)
+                continue;
+            double a = b.ValueAt(l);
+            double c = b.ValueAt(r);
+            if (!double.IsNegativeInfinity(a))
+                max = Math.Max(max, a);
+            if (!double.IsNegativeInfinity(c))
+                max = Math.Max(max, c);
+        }
+        double empty = _direction == VerticalDirection.Up ? NegativeInfinity : PositiveInfinity;
+        return double.IsNegativeInfinity(max) ? empty : sky * max;
+    }
+
+    /// <summary>
     /// The maximum protrusion above Y=0 over the X range [<paramref name="xLeft"/>,
     /// <paramref name="xRight"/>] — i.e. how far the skyline's content rises above
     /// the staff top within that span (0 if nothing protrudes). Used to space a

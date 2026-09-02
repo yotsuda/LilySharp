@@ -286,6 +286,14 @@ internal sealed record ScoreLayout(
         = ImmutableDictionary<RestShiftKey, int>.Empty;
 
     /// <summary>
+    /// The line-break DP's whole solution table this layout was broken from, so the
+    /// incremental driver can hand it back when the line-break gate is unchanged (the
+    /// table is a pure function of the gate) — see <see cref="LineBreakSolutions"/>. Null
+    /// for a layout the engine did not produce through the breaker.
+    /// </summary>
+    public LineBreakSolutions? LineBreaks { get; init; }
+
+    /// <summary>
     /// Where each GRACE column stands, by the address of the item that is standing there —
     /// the X an ordinary engraver reads when the item it is drawing is in grace time.
     /// </summary>

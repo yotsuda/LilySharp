@@ -96,12 +96,14 @@ public sealed class IncrementalCompiler
     // Null until the first compile.
     private Layout.LayoutOptions? _paper;
 
-    // Cached line-break gate and its solution. _lineSizes != null marks a warm
-    // cache. _springs is internal MeasureSpringData (this type lives in Core).
+    // Cached line-break gate and its solution — the line DP's whole table, which is a
+    // pure function of the gate and which the page-scored system-count loop reads too
+    // (LayoutEngine.ChooseSystemCount). _lineBreaks != null marks a warm cache.
+    // _springs is internal MeasureSpringData (this type lives in Core).
     private MeasureSpringData[]? _springs;
     private double _firstPrefix;
     private double _contPrefix;
-    private int[]? _lineSizes;
+    private Layout.LineBreakSolutions? _lineBreaks;
     // The score-global common shortest duration _springs was built with (⒟⁗ per-measure
     // memo): every spring's duration space is a function of it, so the memo may only
     // reuse a measure's springs while it is unchanged. Null until the first build.
@@ -352,7 +354,7 @@ public sealed class IncrementalCompiler
             _fontPlan = score.Fonts;
             _paper = score.Paper;
             _springs = null;
-            _lineSizes = null;
+            _lineBreaks = null;
             _shortest = null;
             _systemCache = null;
             _cachedLayout = null;
@@ -485,7 +487,7 @@ public sealed class IncrementalCompiler
         double contPrefix = SystemBreaker.GateContinuationPrefixWidth(score, maxClefWidth);
 
         bool skip = allowSkip
-            && _lineSizes != null
+            && _lineBreaks != null
             && _springs != null
             && firstPrefix == _firstPrefix
             && contPrefix == _contPrefix
@@ -533,11 +535,13 @@ public sealed class IncrementalCompiler
             // it in the else branch, and carried when the whole vector was reused — keys
             // equal ⇒ shortest equal, the ⒟⁗ implication above).
             layout = new LayoutEngine(score.Paper).Layout(
-                score, skip ? _lineSizes : null, cacheForEdit, springs, _shortest);
-            // Reuse the prior line sizes on a gate-skip (still the correct solution);
-            // otherwise capture the fresh ones.
+                score, skip ? _lineBreaks : null, cacheForEdit, springs, _shortest);
+            // Reuse the prior table on a gate-skip (still the correct solution — and the
+            // engine re-runs its page-scored count loop on it, so an ink-only edit that
+            // moves the page score still moves the system count, as a full compile would);
+            // otherwise capture the fresh one.
             if (!skip)
-                _lineSizes = layout.AllSystems.Select(s => s.Measures.Length).ToArray();
+                _lineBreaks = layout.LineBreaks;
         }
 
         // ⒭ per-system SVG fragment memo: replay needs the window that maps the

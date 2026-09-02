@@ -61,22 +61,21 @@ internal sealed class SystemBreaker
     /// Breaks measures into systems for a multi-staff score.
     /// Uses the primary voice of the first staff group for measure widths.
     /// </summary>
+    /// <param name="lineBreaks">The line DP's whole solution table when the DP ran
+    /// (<see cref="LineBreakSolutions.HasAlternatives"/>), for the page-scored system-count
+    /// loop to read; a <see cref="LineBreakSolutions.Fixed"/> instance on the greedy path.
+    /// ⚠️ The F3 incremental cutoff used to live here as a regroup-by-cached-sizes shortcut
+    /// (the F3 incremental design notes §4). It moved up a level: the incremental driver
+    /// now hands <c>LayoutEngine.Layout</c> the previous keystroke's table itself when the
+    /// gate is unchanged, and the engine regroups from its ideal breaks without calling
+    /// this at all — the same skip, and the count loop still has its input.</param>
     public List<List<Measure>> BreakIntoSystems(MultiStaffScore score,
-                                                double? baseShortestDuration = null,
-                                                IReadOnlyList<int>? precomputedLineSizes = null,
-                                                MeasureSpringData[]? precomputedSprings = null,
-                                                LineBreakDpSession? dpSession = null)
+                                                double? baseShortestDuration,
+                                                MeasureSpringData[]? precomputedSprings,
+                                                LineBreakDpSession? dpSession,
+                                                out LineBreakSolutions lineBreaks)
     {
         var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
-
-        // F3 incremental cutoff (the F3 incremental design notes §4): when the caller
-        // has verified the line-break gate (per-measure spring vector + prefix
-        // widths) is unchanged, the break solution cannot change, so regroup the
-        // new measures by the cached line sizes and skip the spring computation
-        // and the DP entirely. The default path (precomputedLineSizes == null) is
-        // byte-identical to before.
-        if (precomputedLineSizes != null)
-            return RegroupBySizes(measures, precomputedLineSizes);
 
         // Fold each system's indent into the prefix width so the break decision
         // matches the rendered fit (the layout subtracts the same indent from the
@@ -128,10 +127,25 @@ internal sealed class SystemBreaker
             // MEASURED: 385-780 ms per edit on a 1000-bar book, paid twice.
             var springData = precomputedSprings
                 ?? ComputeMultiStaffSpringData(score, baseShortestDuration);
-            return breaker.BreakIntoLines(measures, springData, dpSession);
+            if (measures.Length == 0)
+            {
+                lineBreaks = LineBreakSolutions.Fixed(new List<int>());
+                return new List<List<Measure>>();
+            }
+            lineBreaks = breaker.Solve(springData, dpSession);
+            return KnuthPlassBreaker.CreateMeasureGroups(measures, lineBreaks.IdealBreaks);
         }
 
-        return BreakIntoSystemsGreedy(measures, firstPrefixWidth, continuationPrefixWidth, baseShortestDuration);
+        var greedy = BreakIntoSystemsGreedy(measures, firstPrefixWidth, continuationPrefixWidth, baseShortestDuration);
+        var greedyBreaks = new List<int>(greedy.Count);
+        int end = 0;
+        foreach (var group in greedy)
+        {
+            end += group.Count;
+            greedyBreaks.Add(end);
+        }
+        lineBreaks = LineBreakSolutions.Fixed(greedyBreaks);
+        return greedy;
     }
 
     /// <summary>
@@ -315,33 +329,6 @@ internal sealed class SystemBreaker
                 lineEndLyricMinExcess);
         }
         return springData;
-    }
-
-    /// <summary>
-    /// Regroups measures into systems by cached per-line measure counts — the
-    /// incremental reuse of a prior break solution when the gate is unchanged.
-    /// </summary>
-    private static List<List<Measure>> RegroupBySizes(ImmutableArray<Measure> measures, IReadOnlyList<int> sizes)
-    {
-        var groups = new List<List<Measure>>(sizes.Count);
-        int idx = 0;
-        foreach (int size in sizes)
-        {
-            var group = new List<Measure>(size);
-            for (int k = 0; k < size && idx < measures.Length; k++)
-                group.Add(measures[idx++]);
-            groups.Add(group);
-        }
-        // Defensive: a correct gate guarantees the sizes cover every measure, but
-        // never drop measures if a caller misuses the hook — append the remainder.
-        if (idx < measures.Length)
-        {
-            var tail = new List<Measure>(measures.Length - idx);
-            while (idx < measures.Length)
-                tail.Add(measures[idx++]);
-            groups.Add(tail);
-        }
-        return groups;
     }
 
     /// <summary>

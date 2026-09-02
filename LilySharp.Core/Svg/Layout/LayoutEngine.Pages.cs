@@ -685,7 +685,7 @@ internal sealed partial class LayoutEngine
     /// element's top line). This is that conversion, and it is one function because it was
     /// three: <c>_options.StaffHeight / 2.0</c> stood in for it in
     /// <see cref="Layout(LilySharp.Core.Svg.Model.MultiStaffScore,
-    /// System.Collections.Generic.IReadOnlyList{int}, SystemLayoutCache, MeasureSpringData[],
+    /// LineBreakSolutions, SystemLayoutCache, MeasureSpringData[],
     /// System.Nullable{double})"/>,
     /// in <see cref="CreatePages"/> and in <c>PageLayouter</c>, and which
     /// of the three was live depended on the paper regime (HANDOFF 5.2.1 (2)).

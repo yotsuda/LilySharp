@@ -125,6 +125,116 @@ internal sealed class PageLayouter
     }
 
     /// <summary>
+    /// The page breaker for this paper, with the first page's title header.
+    /// </summary>
+    internal PageBreaker CreateBreaker(double headerHeight) => new(
+        pageHeight: _options.PageHeight,
+        topMargin: _options.MarginTop,
+        bottomMargin: _options.MarginBottom,
+        headerHeight: headerHeight,
+        parameters: _options.PageBreaking,
+        verticalSpacing: _options.VerticalSpacing);
+
+    /// <summary>
+    /// The ONE spelling of a system's <see cref="SystemDetails"/> — what the page breaker
+    /// prices a line by — shared by the paging path (real, placed systems) and the
+    /// system-count loop (estimated candidate lines, LayoutEngine.ChooseSystemCount), so the
+    /// two cannot price the same line differently.
+    /// </summary>
+    /// <param name="systemIndex">The system's index, which selects the spacing spec.</param>
+    /// <param name="staffHeight">The system BODY height.</param>
+    /// <param name="topExtent">Ink above the body.</param>
+    /// <param name="bottomExtent">Ink below the body.</param>
+    /// <param name="shape">The begin/rest split of the extents, or null to price the whole
+    /// line's extents on both sides.</param>
+    /// <param name="pagePermission">The page-break permission AFTER this system.</param>
+    internal SystemDetails BuildSystemDetails(
+        int systemIndex, double staffHeight, double topExtent, double bottomExtent,
+        LineShape? shape, BreakPermission pagePermission)
+    {
+        var vs = _options.VerticalSpacing;
+
+        // LILYPOND-REF: lily/page-layout-problem.cc:488-535
+        // Select spacing spec based on pair context.
+        // Title/markup distinction is handled via SystemDetails.IsTitle when
+        // the caller provides it (future extension).
+        // For now, determine spec from the pair relationship:
+        VerticalSpacingSpec spec;
+        if (systemIndex == 0)
+        {
+            // First system uses top-system spec (applied during positioning)
+            spec = vs.SystemSystem;
+        }
+        else
+        {
+            spec = vs.SelectSpec(
+                isFirstOnPage: false,
+                prevIsTitle: false,
+                currentIsTitle: false,
+                currentIsNewScore: false);
+        }
+
+        // LILYPOND-REF: lily/include/constrained-breaking.hh:56-60
+        // refpoint_extent_ (LilyPond reads the real grobs; see SystemDetails).
+        double halfStaffNominal = _options.StaffHeight / 2.0;
+
+        return new SystemDetails
+        {
+            // LILYPOND-REF: lily/constrained-breaking.cc:547 fill_line_details, the line
+            // that builds Line_shape — the pair of pure heights the breaker prices this
+            // line by. Absent, CalcLineHeights lends the whole-line extents to both.
+            Shape = shape,
+            Height = topExtent + staffHeight + bottomExtent,
+            TopExtent = topExtent,
+            BottomExtent = bottomExtent,
+            StaffHeight = staffHeight,
+            Padding = spec.Padding,
+            // LILYPOND-REF: constrained-breaking.hh:66,69 min_distance_ / space_ —
+            // both are refpoint-to-refpoint and both go in RAW. Subtracting the
+            // minimum from the ideal here is what Line_details::spring_length does
+            // later, against the rod that tallness_ actually spends; doing it twice
+            // is what made the breaker under-fill pages.
+            MinDistance = spec.MinimumDistance,
+            SpringLength = spec.BasicDistance,
+            // ⚠️ LILYSHARP-OWN: THE BREAKER KEEPS THE NOMINAL PAIR, deliberately and under
+            // protest — LilyPond reads the real grobs here too, so this is a Lily# value
+            // and not a ported one, and it goes when a point measures a page COUNT over a
+            // staff that is not four staff spaces tall. This
+            // is LilyPond's refpoint_extent_ and the placement chain's own anchors are
+            // now the placed ones, so the two models disagree here — but the breaker is a
+            // SECOND implementation of the page's spring model (HANDOFF 5.2.1 (2)) and
+            // moving it changes which systems land on which page: measured, taking the
+            // placed pair re-broke book LYRHKG's pages and left its staves interleaved.
+            // No corpus point measures a page COUNT over a staff that is not four staff
+            // spaces tall, so there is nothing to justify that rebreak with yet.
+            RefpointExtentUp = -halfStaffNominal,
+            RefpointExtentDown = -(staffHeight - halfStaffNominal),
+            // LILYPOND-REF: lily/constrained-breaking.cc:555 —
+            //   out->inverse_hooke_ = out->full_height () + system_system_space_;
+            // where system_system_space_ is system-system-spacing's BASIC-DISTANCE
+            // (:426-430, with page-breaking-system-system-spacing allowed to override
+            // it; Lily# models no such variable). full_height() is the line's own
+            // extent-to-extent height, which is exactly SystemDetails.Height.
+            //
+            // ⚠️ The breaker does NOT use stretchability. This read
+            // `max(0.1, Stretchability / 60)` — the same /60 invention cfdf85b4 struck
+            // out of the placement chain, which survived here because the breaker is a
+            // SECOND implementation of the page's spring model (HANDOFF 5.2.1 (2): a
+            // duplicate is where a port lands only half the time). On the shipping
+            // specs the two differ by a factor of ~19 (1.0 against 7.35 + 12), so the
+            // force the breaker solved for was nothing like the one the chain then
+            // solved, and the page count came from the wrong one.
+            InverseHooke = topExtent + staffHeight + bottomExtent + vs.SystemSystem.BasicDistance,
+            // LILYPOND-REF: lily/constrained-breaking.cc:530-535 fill_line_details —
+            //   page_permission_ is the LAST column's page-break-permission (through
+            //   min_permission with the line's), which is what the caller hands in per
+            //   system (LayoutEngine.PagePermissionsAfterSystems); `pageBreak` /
+            //   `noPageBreak` reach the breaker through this and nothing else.
+            PagePermission = pagePermission,
+        };
+    }
+
+    /// <summary>
     /// Creates pages using optimal page breaking algorithm with full skyline collision detection.
     /// </summary>
     /// <remarks>
@@ -194,102 +304,17 @@ internal sealed class PageLayouter
             double staffHeight = systemBodyHeights != null && i < systemBodyHeights.Count
                 ? systemBodyHeights[i]
                 : _options.StaffHeight;
-            double topExtent = systemExtents[i].upExtent;
-            double bottomExtent = systemExtents[i].downExtent;
-
-            // LILYPOND-REF: lily/page-layout-problem.cc:488-535
-            // Select spacing spec based on pair context.
-            // Title/markup distinction is handled via SystemDetails.IsTitle when
-            // the caller provides it (future extension).
-            // For now, determine spec from the pair relationship:
-            VerticalSpacingSpec spec;
-            if (i == 0)
-            {
-                // First system uses top-system spec (applied during positioning)
-                spec = vs.SystemSystem;
-            }
-            else
-            {
-                spec = vs.SelectSpec(
-                    isFirstOnPage: false,
-                    prevIsTitle: false,
-                    currentIsTitle: false,
-                    currentIsNewScore: false);
-            }
-
-            // LILYPOND-REF: lily/include/constrained-breaking.hh:56-60
-            // refpoint_extent_ (LilyPond reads the real grobs; see SystemDetails).
-            double halfStaffNominal = _options.StaffHeight / 2.0;
-
-            systemDetails.Add(new SystemDetails
-            {
-                // LILYPOND-REF: lily/constrained-breaking.cc:547 fill_line_details, the line
-                // that builds Line_shape — the pair of pure heights the breaker prices this
-                // line by. Absent, CalcLineHeights lends the whole-line extents to both.
-                Shape = systemShapes is { } sh && i < sh.Length ? sh[i] : null,
-                Height = topExtent + staffHeight + bottomExtent,
-                TopExtent = topExtent,
-                BottomExtent = bottomExtent,
-                StaffHeight = staffHeight,
-                Padding = spec.Padding,
-                // LILYPOND-REF: constrained-breaking.hh:66,69 min_distance_ / space_ —
-                // both are refpoint-to-refpoint and both go in RAW. Subtracting the
-                // minimum from the ideal here is what Line_details::spring_length does
-                // later, against the rod that tallness_ actually spends; doing it twice
-                // is what made the breaker under-fill pages.
-                MinDistance = spec.MinimumDistance,
-                SpringLength = spec.BasicDistance,
-                // ⚠️ LILYSHARP-OWN: THE BREAKER KEEPS THE NOMINAL PAIR, deliberately and under
-                // protest — LilyPond reads the real grobs here too, so this is a Lily# value
-                // and not a ported one, and it goes when a point measures a page COUNT over a
-                // staff that is not four staff spaces tall. This
-                // is LilyPond's refpoint_extent_ and the placement chain's own anchors are
-                // now the placed ones, so the two models disagree here — but the breaker is a
-                // SECOND implementation of the page's spring model (HANDOFF 5.2.1 (2)) and
-                // moving it changes which systems land on which page: measured, taking the
-                // placed pair re-broke book LYRHKG's pages and left its staves interleaved.
-                // No corpus point measures a page COUNT over a staff that is not four staff
-                // spaces tall, so there is nothing to justify that rebreak with yet.
-                RefpointExtentUp = -halfStaffNominal,
-                RefpointExtentDown = -(staffHeight - halfStaffNominal),
-                // LILYPOND-REF: lily/constrained-breaking.cc:555 —
-                //   out->inverse_hooke_ = out->full_height () + system_system_space_;
-                // where system_system_space_ is system-system-spacing's BASIC-DISTANCE
-                // (:426-430, with page-breaking-system-system-spacing allowed to override
-                // it; Lily# models no such variable). full_height() is the line's own
-                // extent-to-extent height, which is exactly SystemDetails.Height.
-                //
-                // ⚠️ The breaker does NOT use stretchability. This read
-                // `max(0.1, Stretchability / 60)` — the same /60 invention cfdf85b4 struck
-                // out of the placement chain, which survived here because the breaker is a
-                // SECOND implementation of the page's spring model (HANDOFF 5.2.1 (2): a
-                // duplicate is where a port lands only half the time). On the shipping
-                // specs the two differ by a factor of ~19 (1.0 against 7.35 + 12), so the
-                // force the breaker solved for was nothing like the one the chain then
-                // solved, and the page count came from the wrong one.
-                InverseHooke = topExtent + staffHeight + bottomExtent + vs.SystemSystem.BasicDistance,
-                // LILYPOND-REF: lily/constrained-breaking.cc:530-535 fill_line_details —
-                //   page_permission_ is the LAST column's page-break-permission (through
-                //   min_permission with the line's), which is what the caller hands in per
-                //   system (LayoutEngine.PagePermissionsAfterSystems); `pageBreak` /
-                //   `noPageBreak` reach the breaker through this and nothing else.
-                PagePermission = systemPagePermissions is { } pp && i < pp.Length
-                    ? pp[i]
-                    : BreakPermission.Allow,
-            });
+            systemDetails.Add(BuildSystemDetails(
+                i, staffHeight, systemExtents[i].upExtent, systemExtents[i].downExtent,
+                systemShapes is { } sh && i < sh.Length ? sh[i] : null,
+                systemPagePermissions is { } pp && i < pp.Length ? pp[i] : BreakPermission.Allow));
         }
 
         // Tallness is filled in by the breaker itself, as LilyPond does it
         // (page-breaking.cc:1037, at the end of cache_line_details).
 
         // Run page breaker
-        var breaker = new PageBreaker(
-            pageHeight: _options.PageHeight,
-            topMargin: _options.MarginTop,
-            bottomMargin: _options.MarginBottom,
-            headerHeight: headerHeight,
-            parameters: _options.PageBreaking,
-            verticalSpacing: vs);
+        var breaker = CreateBreaker(headerHeight);
 
         var breakPoints = breaker.BreakIntoPages(systemDetails);
 

@@ -317,7 +317,7 @@
 - **:1522** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
 - **:1817** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
-- **:632** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
+- **:738** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
 - **:505** LILYSHARP-OWN, DECLARED: the CROP. LilyPond always engraves onto the paper; a
 - **:708** ⚠️ LILYSHARP-OWN: THE FALLBACK. A system with no spaceable staff at all — a chords-only
@@ -365,8 +365,8 @@
 ### `LilySharp.Core/Svg/Layout/PageBreaker.cs`
 - **:84** ⚠️ LILYSHARP-OWN: THE NULLABILITY. LilyPond's Line_details ALWAYS carries a shape —
 ### `LilySharp.Core/Svg/Layout/PageLayouter.cs`
-- **:242** ⚠️ LILYSHARP-OWN: THE BREAKER KEEPS THE NOMINAL PAIR, deliberately and under
-- **:463** ⚠️ LILYSHARP-OWN: THE CHAIN'S LAST NODE, WHICH IS NOT ALWAYS THE LAST STAFF.
+- **:199** ⚠️ LILYSHARP-OWN: THE BREAKER KEEPS THE NOMINAL PAIR, deliberately and under
+- **:488** ⚠️ LILYSHARP-OWN: THE CHAIN'S LAST NODE, WHICH IS NOT ALWAYS THE LAST STAFF.
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
 - **:126** ⚠️ LILYSHARP-OWN: THE TWO-EDGE MODEL ITSELF. LilyPond has no such pair —
 - **:272** ⚠️ LILYSHARP-OWN: THE SELECTION IS DELIBERATELY THE OLD ONE, and it is a KNOWN

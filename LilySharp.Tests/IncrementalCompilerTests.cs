@@ -1232,13 +1232,16 @@ public class IncrementalCompilerTests
     /// <summary>A pitch toggle in one bar of a multi-system beamed book: the SVG equals
     /// a full recompile and every system outside the edited window replays its recorded
     /// text. The drawn count is bounded, not exact, because the edited measure may sit
-    /// at a system boundary (its ±1-measure window then touches two systems).</summary>
+    /// at a system boundary (its ±1-measure window then touches two systems).
+    /// ⚠️ 36 bars, not 18: since the page-scored system count (2026-09-02) an 18-bar book
+    /// of these eighths is 6 | 6 | 6 — LilyPond's own breaking of its twin
+    /// (scratch/p322/fx/eighths18) — and three systems leave this net nothing to replay.</summary>
     [Fact]
     public void RenderFragments_ReplayAllButTheEditedWindow_AndMatchFull()
     {
-        var plain = string.Join(" ", Enumerable.Repeat("c8 d8 e8 f8 g8 a8 b8 c'8 |", 9));
+        var plain = string.Join(" ", Enumerable.Repeat("c8 d8 e8 f8 g8 a8 b8 c'8 |", 18));
         var bars = plain + " c8 d8 e8 f8 g8 g8 b8 c'8 | "
-            + string.Join(" ", Enumerable.Repeat("c8 d8 e8 f8 g8 a8 b8 c'8 |", 8));
+            + string.Join(" ", Enumerable.Repeat("c8 d8 e8 f8 g8 a8 b8 c'8 |", 17));
         string source = "time 4/4\nkey c major\npart melody { clef treble }\n"
             + "section Main { melody { " + bars + " } }\n";
         var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
@@ -1268,7 +1271,8 @@ public class IncrementalCompilerTests
     [Fact]
     public void RenderFragments_MidBookTriviaInsertion_ShiftsEveryLaterDataPos()
     {
-        var bars = string.Join(" ", Enumerable.Repeat("c8 d8 e8 f8 g8 a8 b8 c'8 |", 18));
+        // 36 bars for the reason RenderFragments_ReplayAllButTheEditedWindow_AndMatchFull gives.
+        var bars = string.Join(" ", Enumerable.Repeat("c8 d8 e8 f8 g8 a8 b8 c'8 |", 36));
         string source = "time 4/4\nkey c major\npart melody { clef treble }\n"
             + "section Main { melody { " + bars + " } }\n";
         var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);

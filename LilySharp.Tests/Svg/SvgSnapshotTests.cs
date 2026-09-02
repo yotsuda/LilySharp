@@ -279,6 +279,13 @@ public class SvgSnapshotTests
         // up-beam in the first bar (2026-09-02: the tab skyline held fret digits only and the
         // tempo printed through the beam; LilyPond's MetronomeMark clears it).
         yield return new object[] { "test/tab-tempo-over-beam" };
+        // The system count is chosen by the PAGE's score, not by the line DP alone: two
+        // whole-rest bars, a forced break, four sixteenth-laden bars, a forced break, two
+        // bars — LilyPond engraves 2 | 4 | 2 and so does this (2026-09-02: the line DP's
+        // Δforce² term split the four into 2+2 against the very underfull first line;
+        // lily/optimal-page-breaking.cc:139-248 Optimal_page_breaking::solve re-chooses the
+        // count by page score).
+        yield return new object[] { "test/system-count-page-score" };
         // What a `repeat percent` body writes prints ONCE: the covered bars carry the sign
         // and no slur, tie, script or dynamic (2026-09-02: the collector re-walked the body
         // with its markers, and the slur/script/dynamic engravers have no percent filter).

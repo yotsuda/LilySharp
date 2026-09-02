@@ -39,7 +39,7 @@ internal sealed partial class LayoutEngine
     /// ⚠️ NOT READONLY, and the reason is the score's <c>font</c> directive: the builder
     /// reserves text ink (dynamic labels, tuplet numbers) and so has to know the faces,
     /// which the CONSTRUCTOR cannot — it is handed options and no score. It is therefore
-    /// re-seated at the top of <see cref="Layout(MultiStaffScore, IReadOnlyList{int},
+    /// re-seated at the top of <see cref="Layout(MultiStaffScore, LineBreakSolutions,
     /// SystemLayoutCache, MeasureSpringData[], System.Nullable{double})"/>.
     /// <para>
     /// SAFE because an engine lays out ONE score: every production construction is
@@ -78,12 +78,18 @@ internal sealed partial class LayoutEngine
     }
 
     /// <summary>Calculates the complete layout for a multi-staff score.</summary>
+    /// <param name="precomputedLineBreaks">The previous keystroke's line-break solution table,
+    /// when the caller (the incremental driver) has verified the line-break gate — the
+    /// per-measure spring vector and the prefix widths — unchanged. The table is a pure
+    /// function of that gate, so it is this keystroke's table too, and the breaker is
+    /// bypassed (the F3 incremental cutoff, the F3 incremental design notes §4). Null ⇒
+    /// break here.</param>
     /// <param name="precomputedShortest">The score-global common shortest duration, when the
     /// caller (the incremental driver) has already computed it for the break gate — the same
     /// value this method would derive from the same score, handed over instead of derived
     /// twice per keystroke (SystemBreaker's "one quantity, two places" remark names this
     /// pair). Null ⇒ compute here (the full-render path).</param>
-    public ScoreLayout Layout(MultiStaffScore score, IReadOnlyList<int>? precomputedLineSizes = null,
+    public ScoreLayout Layout(MultiStaffScore score, LineBreakSolutions? precomputedLineBreaks = null,
         SystemLayoutCache? systemCache = null, MeasureSpringData[]? precomputedSprings = null,
         double? precomputedShortest = null)
     {
@@ -121,14 +127,26 @@ internal sealed partial class LayoutEngine
             : CalculateIndentFromInstrumentNames(score);
         double shortIndent = _options.ShortIndent;
 
-        // F3 incremental cutoff: when the line-break gate is unchanged the driver
-        // passes the cached per-line measure counts so SystemBreaker regroups the
-        // new measures and skips the DP. Null => normal (byte-identical) breaking.
-        // When the DP does run in a session, the cache's row-prefix resume
+        // The line-break DP's WHOLE table, not only its best row: the system count is
+        // chosen below by the page's score, which reads the other line counts too. F3
+        // incremental cutoff: when the line-break gate is unchanged the driver hands back
+        // the previous keystroke's table, the ideal breaks regroup the new measures and the
+        // DP is skipped. When the DP does run in a session, the cache's row-prefix resume
         // (finding 4-5) refills only the rows after the first changed spring.
-        var systemMeasures = _systemBreaker.BreakIntoSystems(
-            score, commonShortestDuration, precomputedLineSizes, precomputedSprings,
-            systemCache?.LineBreakDp);
+        var primaryMeasures = score.PrimaryContentStaff.PrimaryVoice.Measures;
+        LineBreakSolutions lineBreaks;
+        List<List<Measure>> systemMeasures;
+        if (precomputedLineBreaks != null)
+        {
+            lineBreaks = precomputedLineBreaks;
+            systemMeasures = KnuthPlassBreaker.CreateMeasureGroups(primaryMeasures, lineBreaks.IdealBreaks);
+        }
+        else
+        {
+            systemMeasures = _systemBreaker.BreakIntoSystems(
+                score, commonShortestDuration, precomputedSprings, systemCache?.LineBreakDp,
+                out lineBreaks);
+        }
 
         // Chord symbols on a TEXT ROW (lead sheets) live in their own band and must not
         // inflate a music staff's up-extent; inline chord symbols (nameless `chords { }`) sit
@@ -147,6 +165,81 @@ internal sealed partial class LayoutEngine
             if (st.IsTextRow)
                 textRowStaves.Add(gi);
 
+        var pass = PlaceSystems(score, multiStaffLayouter, systemMeasures, systemCache,
+            indent, shortIndent, commonShortestDuration, headerHeight);
+
+        // LILYPOND-REF: lily/optimal-page-breaking.cc:41-254 Optimal_page_breaking::solve —
+        // the line DP's best count is only where LilyPond STARTS; the count it engraves is
+        // the one whose lines AND pages score best (ChooseSystemCount). The placement above
+        // is that loop's height estimate; when the loop settles on another count, the book
+        // is placed again on the chosen lines and the ideal placement is discarded.
+        if (lineBreaks.HasAlternatives && _options.PageHeight > 0)
+        {
+            var chosen = ChooseSystemCount(score, lineBreaks, pass, headerHeight);
+            if (chosen != null)
+            {
+                systemMeasures = KnuthPlassBreaker.CreateMeasureGroups(primaryMeasures, chosen);
+                pass = PlaceSystems(score, multiStaffLayouter, systemMeasures, systemCache,
+                    indent, shortIndent, commonShortestDuration, headerHeight);
+            }
+        }
+        var systems = pass.Systems;
+        var perSystemExtents = pass.Extents;
+        var perSystemSkylines = pass.Skylines;
+        var perSystemHeights = pass.Heights;
+        var perSystemBandUps = pass.BandUps;
+        var placed = pass.Placed;
+        var prelim = pass.Prelim;
+        double systemHeight = pass.FirstSystemHeight;
+
+        var (pages, systemsArray) = CreatePages(
+            systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,
+            prelim.PagingSkylines, perSystemHeights, perSystemBandUps, placed.CropDown,
+            PagePermissionsAfterSystems(score, systems));
+
+        return FinishLayout(score, systemCache, multiStaffLayouter, textRowStaves,
+            systems, perSystemExtents, perSystemSkylines, placed, prelim, pages, systemsArray,
+            lineBreaks);
+    }
+
+    /// <summary>What one placement of the systems produces, index-aligned by system —
+    /// the ideal placement the count loop estimates from, or the chosen one the page is
+    /// built from.</summary>
+    /// <param name="Systems">The placed systems.</param>
+    /// <param name="Extents">Per system, its protrusion above and below its own frame, AFTER
+    /// the preliminary annotation pass raised it with the real ink.</param>
+    /// <param name="Skylines">Per system, the whole-system up/down silhouette.</param>
+    /// <param name="Heights">Per system, its body height.</param>
+    /// <param name="BandUps">Per system, the whole-line chord-row band above it.</param>
+    /// <param name="FirstSystemHeight">System 0's body height — the scalar the page's
+    /// SysHeight falls back to.</param>
+    /// <param name="Placed">The per-system pass's own tables.</param>
+    /// <param name="Prelim">The preliminary annotation pass's result (paging skylines).</param>
+    private readonly record struct SystemPass(
+        List<SystemLayout> Systems,
+        List<(double upExtent, double downExtent)> Extents,
+        List<(VerticalSkyline up, VerticalSkyline down)> Skylines,
+        List<double> Heights,
+        List<double> BandUps,
+        double FirstSystemHeight,
+        SystemPlacements Placed,
+        PreliminaryPass Prelim);
+
+    /// <summary>
+    /// Places every system of one breaking — measure layouts, staff skylines, staff groups,
+    /// system silhouettes, the loose-line extents and the preliminary annotation pass —
+    /// everything between the line breaking and the page.
+    /// </summary>
+    /// <remarks>
+    /// Extracted verbatim from <c>Layout</c>'s body so the page-scored system-count loop can
+    /// run it twice: once on the line DP's ideal breaking (its height estimate) and, when
+    /// the loop chooses another count, once on the chosen one.
+    /// </remarks>
+    private SystemPass PlaceSystems(
+        MultiStaffScore score, MultiStaffLayouter multiStaffLayouter,
+        List<List<Measure>> systemMeasures, SystemLayoutCache? systemCache,
+        double indent, double shortIndent, double commonShortestDuration, double headerHeight)
+    {
         // LILYPOND-REF: lily/align-interface.cc:217-268
         // Compute first system measure layouts first, then use skyline-based staff spacing
         multiStaffLayouter.CurrentIndent = indent;
@@ -285,11 +378,23 @@ internal sealed partial class LayoutEngine
             commonShortestDuration, placed.StaffSpanners, placed.StaffInside,
             rowsAboveFirstStaff, placed.LyricBands, placed.PedalLines);
 
-        var (pages, systemsArray) = CreatePages(
-            systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,
-            prelim.PagingSkylines, perSystemHeights, perSystemBandUps, placed.CropDown,
-            PagePermissionsAfterSystems(score, systems));
+        return new SystemPass(systems, perSystemExtents, perSystemSkylines, perSystemHeights,
+            perSystemBandUps, systemHeight, placed, prelim);
+    }
 
+    /// <summary>
+    /// Everything after the page: spanners, annotations, voice collisions, the final
+    /// <see cref="ScoreLayout"/>. Extracted verbatim from <c>Layout</c>'s tail.
+    /// </summary>
+    private ScoreLayout FinishLayout(
+        MultiStaffScore score, SystemLayoutCache? systemCache, MultiStaffLayouter multiStaffLayouter,
+        HashSet<int> textRowStaves, List<SystemLayout> systems,
+        List<(double upExtent, double downExtent)> perSystemExtents,
+        List<(VerticalSkyline up, VerticalSkyline down)> perSystemSkylines,
+        SystemPlacements placed, PreliminaryPass prelim,
+        ImmutableArray<PageLayout> pages, ImmutableArray<SystemLayout> systemsArray,
+        LineBreakSolutions lineBreaks)
+    {
         var looseChainEnd = BuildLooseChainEnds(
             score, pages, systemsArray, perSystemExtents,
             multiStaffLayouter.RestCollisionsOf, placed.StaffSpanners, placed.StaffSkylines);
@@ -443,6 +548,7 @@ internal sealed partial class LayoutEngine
             partCombineLayouts) with
         {
             RestDotOffsets = restDotOffsetsBuilder.ToImmutable(),
+            LineBreaks = lineBreaks,
         };
         return FinalizeLayout(result, score.GrobOverrides, score.GrobReverts);
     }

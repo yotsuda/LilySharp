@@ -270,7 +270,8 @@ internal sealed record SystemDetails
 internal sealed class PageSpacing
 {
     private readonly double _pageHeight;
-    private readonly double _topMargin;
+    // Not readonly: Resize re-seats it, as Page_spacing::resize re-seats page_height_.
+    private double _topMargin;
     private readonly double _bottomMargin;
     private readonly VerticalSpacingSpec _topSystem;
     private readonly VerticalSpacingSpec _lastBottom;
@@ -323,7 +324,7 @@ internal sealed class PageSpacing
     /// chain into. LILYPOND-REF: lily/page-layout-problem.cc:511-518, :538-545 (the two
     /// springs) — the breaker does not build them, it reserves their minimum here.
     /// </remarks>
-    private double MinWhitespaceAtTopOfPage(SystemDetails line)
+    internal double MinWhitespaceAtTopOfPage(SystemDetails line)
         => Math.Max(0.0, Math.Max(_topSystem.Padding, _topSystem.MinimumDistance - line.TopExtent));
 
     /// <summary>
@@ -337,10 +338,24 @@ internal sealed class PageSpacing
     /// point: ink hanging below the origin REDUCES what minimum-distance still demands,
     /// which is why the term is added rather than subtracted.
     /// </remarks>
-    private double MinWhitespaceAtBottomOfPage(SystemDetails line)
+    internal double MinWhitespaceAtBottomOfPage(SystemDetails line)
     {
         double translate = -(line.StaffHeight + line.BottomExtent);   // shape.*_[DOWN]
         return Math.Max(0.0, Math.Max(_lastBottom.Padding, _lastBottom.MinimumDistance + translate));
+    }
+
+    /// <summary>
+    /// Re-seats the page this accumulator is priced against — the walk of the unconstrained
+    /// page DP learns which page a configuration lands on only as it goes, and the first
+    /// page's band is shorter by the title header.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/page-spacing.cc:43-48 Page_spacing::resize — a new
+    /// page_height_, then calc_force (). Lily#'s pages differ only in the first page's
+    /// header, so what is re-seated is the top margin.</remarks>
+    internal void Resize(double topMargin)
+    {
+        _topMargin = topMargin;
+        CalcForce();
     }
 
     /// <summary>
@@ -525,6 +540,24 @@ internal sealed record PageBreakResult
     /// Number of systems on each page.
     /// </summary>
     public ImmutableArray<int> SystemsPerPage { get; init; }
+
+    /// <summary>LILYPOND-REF: lily/page-spacing-result.cc:32-36 page_count.</summary>
+    public int PageCount => SystemsPerPage.IsDefault ? 0 : SystemsPerPage.Length;
+
+    /// <summary>The mean of the page forces.
+    /// LILYPOND-REF: lily/page-spacing-result.cc:38-47 average_force.</summary>
+    public double AverageForce
+    {
+        get
+        {
+            if (Forces.IsDefaultOrEmpty)
+                return 0;
+            double sum = 0;
+            foreach (double f in Forces)
+                sum += f;
+            return sum / Forces.Length;
+        }
+    }
 }
 
 /// <summary>
@@ -566,7 +599,7 @@ internal sealed class PageBreaker
     /// Penalty for bad spacing (overflow or extreme stretch).
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/include/page-spacing.hh:45 BAD_SPACING_PENALTY = 1e6</remarks>
-    private const double BadSpacingPenalty = 1e6;
+    internal const double BadSpacingPenalty = 1e6;
 
     /// <summary>
     /// Penalty for terrible spacing (ignoring user constraints).
@@ -608,6 +641,286 @@ internal sealed class PageBreaker
 
         // Use dynamic programming to find optimal breaks
         return FindOptimalBreaks(systems);
+    }
+
+    /// <summary>
+    /// The pages priced, with the page count UNCONSTRAINED: the page count, the systems per
+    /// page, each page's solved force and the penalties the pages incurred — what the
+    /// system-count loop compares one line count against another by.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-breaking.cc:1413-1424 space_systems_on_best_pages →
+    /// lily/page-spacing.cc:147-181 Page_spacer::solve () — the ONE-dimensional DP over
+    /// lines (<c>simple_state_</c>, page == VPOS) LilyPond uses when nothing fixes the page
+    /// count, then the walk back collecting <c>force_</c> and <c>systems_per_page_</c> per
+    /// page and <c>penalty_</c> over all of them. <see cref="FindOptimalBreaks"/> is the
+    /// two-dimensional (line, page count) table LilyPond keeps for a FORCED page count
+    /// (<c>state_</c>, :183-267); it answers the same question when the best page count is
+    /// taken over its columns, at a page-count factor more work — measured on a 200-system
+    /// book, 79 candidate counts × 5 ms (session 322 ⑹), which the count loop cannot afford
+    /// per keystroke. The paging path keeps the table (its ties are the corpus's), this
+    /// path takes LilyPond's own shape for it.
+    /// </remarks>
+    internal PageBreakResult BreakIntoPagesScored(IReadOnlyList<SystemDetails> systems)
+    {
+        if (systems.Count == 0)
+        {
+            return new PageBreakResult
+            {
+                Penalty = 0,
+                Forces = ImmutableArray<double>.Empty,
+                SystemsPerPage = ImmutableArray<int>.Empty,
+            };
+        }
+        return SolveUnconstrained(CalcLineHeights(systems));
+    }
+
+    /// <summary>
+    /// LilyPond's unconstrained page DP: for each line, the cheapest way to end a page on
+    /// it, walking the page's start DOWN from the line and prepending a system each step.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-spacing.cc:298-405 Page_spacer::calc_subproblem with
+    /// page == VPOS, transcribed per line; :147-181 solve () for the walk back. Read beside
+    /// the source:
+    /// <list type="bullet">
+    /// <item>:312-314, :324-332 — the page's height is re-seated as the walk learns which
+    /// page the configuration lands on (<see cref="PageSpacing.Resize"/>); Lily#'s pages
+    /// differ only in the first page's header, so page_start == 0 is the first page.</item>
+    /// <item>:337-349 — prepend, then the overfull exit that spares a page holding one system
+    /// (the same exit <see cref="FindOptimalBreaks"/> takes, and the same hedge).</item>
+    /// <item>:357-358 — a ragged LAST page that would stretch is priced at force 0.</item>
+    /// <item>:360-366 — demerits are the BARE force squared clamped at BAD_SPACING_PENALTY
+    /// (the page-spacing weight is applied by <see cref="Demerits"/>, as finalize_spacing_result
+    /// applies it), plus the predecessor's.</item>
+    /// <item>:368-373 — the line-count penalty, and the page/turn penalty of the line before the
+    /// page start (LilyPond charges the turn penalty on even pages only; nothing in Lily# sets
+    /// one, so the parity is not modelled).</item>
+    /// <item>:386-396 — the first configuration for a line is always recorded, so a line is
+    /// never left without a state; :399-402 — the walk stops at a forced page break.</item>
+    /// </list>
+    /// ⚠️ A page may not END on a line whose page permission is Forbid (Lily#'s
+    /// <see cref="IsValidBreak"/> rule). LilyPond's permissions reach its DP through the
+    /// breakpoint list (page-breaking.cc:780-875 find_chunks_and_breaks), which Lily# has no
+    /// model of; the rule is stated here so both DPs refuse the same page.
+    /// </remarks>
+    private PageBreakResult SolveUnconstrained(IReadOnlyList<SystemDetails> lines)
+    {
+        int n = lines.Count;
+        var demerits = new double[n];
+        var force = new double[n];
+        var penalty = new double[n];
+        var prev = new int[n];
+        Array.Fill(demerits, double.PositiveInfinity);
+        Array.Fill(force, double.PositiveInfinity);
+        Array.Fill(penalty, double.PositiveInfinity);
+        Array.Fill(prev, -1);
+
+        for (int line = 0; line < n; line++)
+        {
+            bool last = line == n - 1;
+            bool ragged = _params.RaggedBottom || (_params.RaggedLastBottom && last);
+            bool endsOnForbid = !last && lines[line].PagePermission == BreakPermission.Forbid;
+            var space = new PageSpacing(_pageHeight, _topMargin, _bottomMargin,
+                _vs.TopSystem, _vs.LastBottom);
+            int lineCount = 0;
+
+            for (int pageStart = line; pageStart >= 0; pageStart--)
+            {
+                int prevIdx = pageStart - 1;
+                space.Resize(pageStart == 0 ? _topMargin + _headerHeight : _topMargin);
+                space.PrependSystem(lines[pageStart]);
+
+                bool overfull = double.IsNegativeInfinity(space.Force);
+                bool tooFewLines = _params.MinSystemsPerPage > 0 && lineCount < _params.MinSystemsPerPage;
+                if (!tooFewLines && pageStart < line && overfull)
+                    break;
+
+                lineCount++;
+                bool prevReachable = prevIdx < 0 || !double.IsPositiveInfinity(demerits[prevIdx]);
+                if (!endsOnForbid && prevReachable)
+                {
+                    double f = space.Force;
+                    if (last && ragged && f > 0)
+                        f = 0;
+                    double dem = Math.Min(f * f, BadSpacingPenalty)
+                                 + (prevIdx >= 0 ? demerits[prevIdx] : 0);
+                    double pen = CalculateLineCountPenalty(lineCount);
+                    if (pageStart > 0)
+                        pen += lines[prevIdx].PagePenalty + lines[prevIdx].TurnPenalty;
+                    dem += pen;
+                    if (dem < demerits[line] || pageStart == line)
+                    {
+                        demerits[line] = dem;
+                        force[line] = f;
+                        penalty[line] = pen + (prevIdx >= 0 ? penalty[prevIdx] : 0);
+                        prev[line] = prevIdx;
+                    }
+                }
+
+                if (pageStart > 0 && lines[prevIdx].PagePermission == BreakPermission.Force)
+                    break;
+            }
+        }
+
+        if (double.IsPositiveInfinity(demerits[n - 1]))
+        {
+            return new PageBreakResult
+            {
+                Penalty = double.PositiveInfinity,
+                Forces = ImmutableArray<double>.Empty,
+                SystemsPerPage = ImmutableArray<int>.Empty,
+            };
+        }
+
+        // LILYPOND-REF: lily/page-spacing.cc:157-180 Page_spacer::solve — the walk back from the last line.
+        var forces = new List<double>();
+        var perPage = new List<int>();
+        int system = n - 1;
+        while (system >= 0)
+        {
+            int p = prev[system];
+            forces.Add(force[system]);
+            perPage.Add(system - p);
+            system = p;
+        }
+        forces.Reverse();
+        perPage.Reverse();
+        return new PageBreakResult
+        {
+            Penalty = penalty[n - 1] + lines[n - 1].PagePenalty + lines[n - 1].TurnPenalty,
+            Forces = forces.ToImmutableArray(),
+            SystemsPerPage = perPage.ToImmutableArray(),
+        };
+    }
+
+    /// <summary>
+    /// The demerits of one whole configuration — a line count's lines AND the pages they
+    /// were put on — the number the system-count loop minimises.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-breaking.cc:1548-1586 finalize_spacing_result, transcribed:
+    /// <code>
+    ///   line_force   = Σ details[i].force_ * details[i].force_
+    ///   line_penalty = Σ details[i].break_penalty_
+    ///   page_demerits = res.penalty_ + Σ_{pages in range} min (f * f, BAD_SPACING_PENALTY)
+    ///   res.demerits_ = line_force + line_penalty + page_demerits * page-spacing-weight
+    /// </code>
+    /// where the page range is <c>[ragged () ? last : 0, count − (is_last () &amp;&amp;
+    /// ragged_last () ? 1 : 0))</c> — ragged pages are not charged for their force, and with
+    /// ragged-last-bottom (the default) the last page never is. <c>is_last ()</c> is true:
+    /// Lily# pages one book.
+    /// <para>
+    /// ⚠️ THERE IS NO (prev − force)² TERM. The line DP minimises force² + Δforce² per line
+    /// (constrained-breaking.cc:568-573); the page score charges force² alone. A forced
+    /// break that leaves a line very underfull makes every Δ against it expensive, so the
+    /// line DP splits its neighbour to soften the step while this score does not — measured
+    /// on scratch/p321/fx/bis-v6-proper-rests-first.lys (session 321): the line DP's
+    /// 4-system demerits 74.2 against 63.1 for 3, LilyPond's page score 42.47 against 38.78
+    /// the other way. That difference is the 69-book B-eng family of HANDOFF §2 T7.
+    /// </para>
+    /// </remarks>
+    internal double Demerits(PageBreakResult pages, double lineForceSquared, double lineBreakPenalty)
+    {
+        if (pages.Forces.IsDefaultOrEmpty)
+            return double.PositiveInfinity;
+
+        double pageDemerits = pages.Penalty;
+        int count = pages.Forces.Length;
+        int from = _params.RaggedBottom ? count - 1 : 0;
+        int to = count - (_params.RaggedLastBottom ? 1 : 0);
+        for (int i = from; i < to; i++)
+        {
+            double f = pages.Forces[i];
+            pageDemerits += Math.Min(f * f, BadSpacingPenalty);
+        }
+        return lineForceSquared + lineBreakPenalty + pageDemerits * _params.PageSpacingWeight;
+    }
+
+    /// <summary>
+    /// The fewest pages the systems can be stacked on at MINIMUM spacing — the bound the
+    /// system-count loop uses to skip a line count that could not keep the ideal page count.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-breaking.cc:1186-1278 Page_breaking::min_page_count,
+    /// transcribed. A greedy stack: each system adds its full height when it opens a page
+    /// and its tallness otherwise (the same two quantities <see cref="PageSpacing"/> sums);
+    /// ragged pages count their springs too; a page closes when the next system would not
+    /// fit, when it would exceed max-systems-per-page, or after a forced page break. The
+    /// last page is then re-checked at its own height, and one more page is added when the
+    /// stack overflows it and holds more than that page's last system alone (:1257-1275).
+    /// <para>
+    /// LilyPond's <c>page_height (num, last)</c> varies per page with headers and footers;
+    /// Lily#'s pages differ only in the first page's title header, so the first page's band
+    /// is the printable height less the header and every other page's is the printable
+    /// height — the same two bands <see cref="CalculatePagePenalty"/> prices with. The
+    /// <c>compressed_nontitle_lines_count_</c> of a line is 1 here, as everywhere in this
+    /// breaker (see FindOptimalBreaks' remark on too_few_lines).
+    /// </para>
+    /// </remarks>
+    internal int MinPageCount(IReadOnlyList<SystemDetails> systems)
+    {
+        if (systems.Count == 0)
+            return 0;
+        var lines = CalcLineHeights(systems);
+        var whitespace = new PageSpacing(_pageHeight, _topMargin, _bottomMargin,
+            _vs.TopSystem, _vs.LastBottom);
+        double FirstBand() => _pageHeight - (_topMargin + _headerHeight) - _bottomMargin;
+        double RestBand() => _pageHeight - _topMargin - _bottomMargin;
+        bool TooFewLines(int lineCount) =>
+            _params.MinSystemsPerPage > 0 && lineCount < _params.MinSystemsPerPage;
+        bool TooManyLines(int lineCount) =>
+            _params.MaxSystemsPerPage > 0 && lineCount > _params.MaxSystemsPerPage;
+        bool ragged = _params.RaggedBottom;
+
+        int ret = 1;
+        int pageStarter = 0;
+        double curRodHeight = 0;
+        double curSpringHeight = 0;
+        double curPageHeight = FirstBand() - whitespace.MinWhitespaceAtTopOfPage(lines[0]);
+        int lineCount = 0;
+
+        for (int i = 0; i < lines.Count; i++)
+        {
+            var cur = lines[i];
+            var prev = i > 0 ? lines[i - 1] : null;
+            double extLen = curRodHeight > 0 ? cur.Tallness : cur.Height;
+            double springLen = prev != null ? prev.SpringLengthTo(cur) : 0;
+            double nextRodHeight = curRodHeight + extLen;
+            double nextSpringHeight = curSpringHeight + springLen;
+            double nextHeight = nextRodHeight + (ragged ? nextSpringHeight : 0)
+                                + whitespace.MinWhitespaceAtBottomOfPage(cur);
+            int nextLineCount = lineCount + 1;
+
+            if ((!TooFewLines(lineCount) && nextHeight > curPageHeight && curRodHeight > 0)
+                || TooManyLines(nextLineCount)
+                || (prev != null && prev.PagePermission == BreakPermission.Force))
+            {
+                lineCount = 1;
+                curRodHeight = cur.Height;
+                curSpringHeight = 0;
+                pageStarter = i;
+                curPageHeight = RestBand() - whitespace.MinWhitespaceAtTopOfPage(cur);
+                ret++;
+            }
+            else
+            {
+                curRodHeight = nextRodHeight;
+                curSpringHeight = nextSpringHeight;
+                lineCount = nextLineCount;
+            }
+        }
+
+        // LILYPOND-REF: :1257-1275 — is_last (): the last page at its own height.
+        double lastPageHeight = (ret == 1 ? FirstBand() : RestBand())
+            - whitespace.MinWhitespaceAtTopOfPage(lines[pageStarter])
+            - whitespace.MinWhitespaceAtBottomOfPage(lines[^1]);
+        if (!TooFewLines(lineCount - 1)
+            && curRodHeight > lastPageHeight
+            && curRodHeight > lines[^1].Height)
+            ret++;
+
+        return ret;
     }
 
     /// <summary>

@@ -145,8 +145,7 @@ internal sealed class KnuthPlassBreaker
     {
         if (measures.Count == 0)
             return new List<List<Measure>>();
-        var breakPoints = FindOptimalBreaks(springData, dpSession);
-        return CreateMeasureGroups(measures, breakPoints);
+        return CreateMeasureGroups(measures, Solve(springData, dpSession).IdealBreaks);
     }
 
     /// <summary>
@@ -189,7 +188,10 @@ internal sealed class KnuthPlassBreaker
     }
 
     /// <summary>
-    /// Finds optimal break points using dynamic programming with force-based demerits.
+    /// Runs the line-break DP and returns its whole table as <see cref="LineBreakSolutions"/>:
+    /// the DP's own choice (<see cref="LineBreakSolutions.IdealBreaks"/>) and, behind it, the
+    /// best breaking into every other reachable line count, which the page-scored system
+    /// count loop reads (LayoutEngine.ChooseSystemCount).
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/constrained-breaking.cc:83-126, 224-232
@@ -200,7 +202,7 @@ internal sealed class KnuthPlassBreaker
     /// 1-3: looseness selects solution with line_count closest to optimal+looseness
     /// 1-4: break permission forbid/force (lily/include/constrained-breaking.hh:74)
     /// </remarks>
-    private List<int> FindOptimalBreaks(MeasureSpringData[] springData,
+    internal LineBreakSolutions Solve(MeasureSpringData[] springData,
         LineBreakDpSession? dpSession = null)
     {
         int n = springData.Length;
@@ -467,7 +469,7 @@ internal sealed class KnuthPlassBreaker
         }
 
         if (best == null)
-            return GreedyBreak(springData, cumMin);
+            return LineBreakSolutions.Fixed(GreedyBreak(springData, cumMin));
 
         // 1-3: LILYPOND-REF: lily/constrained-breaking.cc looseness — bias the chosen line
         // count, taking the solution for that count when it is reachable.
@@ -475,10 +477,10 @@ internal sealed class KnuthPlassBreaker
         {
             int target = Math.Max(1, bestLines + (int)_looseness);
             if (target <= n && dp[n * cols + target] < Infinity)
-                return BacktrackByLineCount(n, cols, prev, target) ?? best;
+                best = BacktrackByLineCount(n, cols, prev, target) ?? best;
         }
 
-        return best;
+        return new LineBreakSolutions(springData, n, cols, dp, prev, lineForce, best);
     }
 
     /// <summary>
