@@ -163,8 +163,17 @@ public class HistoryCitationTests
     /// commit that absorbed it is recoverable by tree for as long as the old commits are, and
     /// the LIVE ratchet did not move (731, floor 564).
     /// </para>
+    /// <para>
+    /// ⚠️ RAISED 495 → 501, THE SAME WAY, ON 2026-09-02 (session 322). The twenty-eight
+    /// unpushed commits of sessions 320-322 were regrouped into thirteen by the owner
+    /// during the session and pushed; §1 of the handoff had already recorded that
+    /// session's own commits by SHA — "six commits: this one and those" — and the six it
+    /// names are the ones the regroup absorbed. Not re-pointed, for the reason the
+    /// paragraph above gives: the sentence is the record of what the session committed,
+    /// and the trees match (the regroup changed no content).
+    /// </para>
     /// </remarks>
-    private const int DeadCitationsWhenWritten = 495;
+    private const int DeadCitationsWhenWritten = 501;
 
     /// <summary>
     /// Extensions scanned for citations. Chosen because they are where citations are actually
