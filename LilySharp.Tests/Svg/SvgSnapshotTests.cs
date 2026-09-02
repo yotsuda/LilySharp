@@ -275,6 +275,10 @@ public class SvgSnapshotTests
         // tab as on the staff (2026-09-02: the tab arm drew the collector's spacer rests
         // as whole rests in the blank bars; the notation arm had always skipped them).
         yield return new object[] { "test/tab-percent-blank-bars" };
+        // A full-notation tab's stems and beams are in its skyline, so a tempo mark clears an
+        // up-beam in the first bar (2026-09-02: the tab skyline held fret digits only and the
+        // tempo printed through the beam; LilyPond's MetronomeMark clears it).
+        yield return new object[] { "test/tab-tempo-over-beam" };
         // What a `repeat percent` body writes prints ONCE: the covered bars carry the sign
         // and no slur, tie, script or dynamic (2026-09-02: the collector re-walked the body
         // with its markers, and the slur/script/dynamic engravers have no percent filter).

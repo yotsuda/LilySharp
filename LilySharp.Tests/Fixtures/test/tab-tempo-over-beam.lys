@@ -1,0 +1,22 @@
+// A full-notation tab whose first bar beams UP (a bass run on the low strings): the tempo
+// mark must clear the beam, as it clears the same beam on the notation staff and as
+// LilyPond's MetronomeMark clears it on a TabStaff (\tabFullNotation reverts the Stem and
+// Beam stencils, and the axis group's skyline carries every member — measured 2.26.0,
+// session 321, owner report on the Billie Jean bassTab book). Until 2026-09-02 the tab's
+// skyline held only its fret digits, so the tempo's quiet baseline ran through the beam.
+octave absolute
+tempo 117
+key d major
+time 4/4
+
+part bl {
+  clef bass
+  tuning bass
+  section A { fis,,8\4 cis,\3 e,\3 fis,\3 e,\3 cis,\3 b,,\4 cis,\3 | fis,,8\4 cis,\3 e,\3 fis,\3 e,\3 cis,\3 b,,\4 cis,\3 | }
+}
+
+form main { A }
+
+score main "tab-tempo-over-beam" {
+  tab bl as full
+}

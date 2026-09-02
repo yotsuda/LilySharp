@@ -255,7 +255,13 @@ internal sealed class SkylineBuilder
                 BeamedItemsToSuppress(beams));
             SeedClef(staff, staffMiddleUp, systemLeft, size, upSkyline, downSkyline);
         }
-        AddBeamsToSkyline(beams, staffMiddleUp, size, upSkyline, downSkyline);
+        // The same fork as BuildInsideStaffSkylines: a tab's stems and beams are seeded from
+        // the tab's own geometry, so the page spaces against the beam the tab really draws.
+        if (staff is { IsTab: true })
+            AddTabStemsAndBeamsToSkylines(staff, measureLayouts, staffMiddleUp, beams,
+                upSkyline, downSkyline);
+        else
+            AddBeamsToSkyline(beams, staffMiddleUp, size, upSkyline, downSkyline);
     }
 
     /// <summary>
@@ -813,6 +819,137 @@ internal sealed class SkylineBuilder
         }
     }
 
+    /// <summary>
+    /// Seeds a FULL-notation tab staff's DRAWN stems and beams — the tab's own geometry, not
+    /// the notation quanter's — into its skylines. A numbers-only tab draws neither and seeds
+    /// nothing.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/property-init.ly:822-839 tabFullNotation, tabvoice::draw-double-stem-for-half-notes
+    ///   — that block's <c>\revert TabStaff.Stem.stencil</c> / <c>\revert TabStaff.Beam.stencil</c>
+    ///   lines: on a full-notation tab the Stem and Beam grobs of the TabVoice print again, and
+    ///   they are members of the TabStaff's axis group like any other ink.
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914-940 skyline_spacing — a group's inside
+    ///   skyline is its members' stencils, so those stems and beams are in it and every
+    ///   outside-staff grob (a MetronomeMark above all) is placed clear of them.
+    /// <para>
+    /// ⚠️ THE NOTATION SEED IS WRONG FOR A TAB IN BOTH AXES, which is why this arm exists
+    /// instead of letting <see cref="AddBeamsToSkyline"/> run: a tab beam's direction comes from
+    /// the STRINGS (<see cref="TabStaffGeometry.GroupStemUp"/>, a bass run on the low strings
+    /// beams UP where the notation staff beams DOWN) and its line is the tab quanter's
+    /// (<see cref="TabBeamQuant"/>), so the notation <c>BeamLayout</c> positions describe ink the
+    /// tab never draws. MEASURED 2026-09-02 on the owner's Billie Jean bassTab book and
+    /// scratch/p321/fx/fx11-tempo-beam.lys: the tempo's quiet baseline (staff + 0.8) ran
+    /// straight through the first bar's up-beam, while the notation staff of the same book —
+    /// whose skyline carried its beam — lifted the tempo over it, as LilyPond does for the tab
+    /// too (fx11-hand-tab.ly, 2.26.0).
+    /// </para>
+    /// <para>
+    /// The frame: device Y grows DOWNWARD and the tab's middle sits at device 0, so the
+    /// geometry's top line is at −(tabHeight/2) and a device y is <c>staffMiddleUp − y</c> in
+    /// this skyline's Y-up. The beam edge is the same quanted line the renderer draws and the
+    /// scripts clear (<see cref="ArticulationEngraver.TabBeamOuterEdgeY"/>); the unbeamed stem
+    /// tip is <see cref="TabStaffGeometry.UnbeamedStemTipY"/>, the renderer's own reach, and
+    /// the flag of an unbeamed eighth is the same box the notation seed claims (Flag::width),
+    /// hung from that tip.
+    /// </para>
+    /// </remarks>
+    private static void AddTabStemsAndBeamsToSkylines(
+        Staff staff, ImmutableArray<MeasureLayout> measureLayouts, double staffMiddleUp,
+        ImmutableArray<BeamLayout> beams,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        if (staff.TabNumbersOnly || staff.Tuning is not { } tuning)
+            return;
+        int strings = Tunings.GetStringCount(tuning);
+        if (strings == 0)
+            return;
+        double space = EngravingDefaults.TabStringSpace(strings);
+        double tabHeight = (strings - 1) * space;
+        var geom = new TabStaffGeometry(tuning, -tabHeight / 2.0, staff.TabSourceClef, staff.Transposition);
+        double YUp(double deviceY) => staffMiddleUp - deviceY;
+
+        var beamed = BeamedItemsToSuppress(beams);
+        if (!beams.IsDefaultOrEmpty)
+        {
+            foreach (var b in beams)
+            {
+                var g = b.Group;
+                if (g.IsCrossStaff)
+                    continue;
+                double xLeft = Math.Min(b.LeftX, b.RightX);
+                double xRight = Math.Max(b.LeftX, b.RightX);
+                if (xRight <= xLeft)
+                    continue;
+                bool up = geom.GroupStemUp(System.Linq.Enumerable.Select(g.Members, m => m.Item));
+                double yLeft = YUp(ArticulationEngraver.TabBeamOuterEdgeY(b, geom, xLeft));
+                double yRight = YUp(ArticulationEngraver.TabBeamOuterEdgeY(b, geom, xRight));
+                var sky = up ? upSkyline : downSkyline;
+                sky.Merge(VerticalSkyline.FromSlope(xLeft, yLeft, xRight, yRight, thickness: 0,
+                    up ? VerticalDirection.Up : VerticalDirection.Down));
+            }
+        }
+
+        double halfStem = EngravingDefaults.StemThickness / 2;
+        for (int vi = 0; vi < staff.Voices.Length; vi++)
+        {
+            var voice = staff.Voices[vi];
+            foreach (var measureLayout in measureLayouts)
+            {
+                int measureIndex = measureLayout.MeasureIndex;
+                if (measureIndex >= voice.Measures.Length)
+                    continue;
+                var measure = voice.Measures[measureIndex];
+                for (int itemIndex = 0; itemIndex < measure.Items.Length; itemIndex++)
+                {
+                    var item = measure.Items[itemIndex];
+                    if (item.GraceTime || item is not (NoteItem or ChordItem))
+                        continue;
+                    if (beamed.Contains((vi, measureIndex, itemIndex)))
+                        continue;
+                    bool stemUp = geom.StringStemUp(geom.MeanString(item));
+                    double headY = geom.StringY(geom.StemHeadString(item, stemUp));
+                    if (geom.UnbeamedStemTipY(item, stemUp, headY) is not { } tipY)
+                        continue;
+                    // The stem stands on the digit axis (SharedRenderer.TabStemX).
+                    double x = measureLayout.X
+                        + LayoutUtilities.GetItemXOffset(
+                            voice.Measures, measureIndex, itemIndex, measureLayout)
+                        + EngravingDefaults.TabHeadCenterOffset;
+                    double yHead = YUp(headY);
+                    double yTip = YUp(tipY);
+                    if (stemUp)
+                        upSkyline.Merge(VerticalSkyline.FromBox(
+                            x - halfStem, x + halfStem, yHead, yTip, VerticalDirection.Up));
+                    else
+                        downSkyline.Merge(VerticalSkyline.FromBox(
+                            x - halfStem, x + halfStem, yTip, yHead, VerticalDirection.Down));
+
+                    // ...and the FLAG of an unbeamed eighth or shorter, hanging from the tip
+                    // back towards the digit and running right of the stem — the same box the
+                    // notation seed claims for its flag, at the tab's own tip. \tabFullNotation
+                    // reverts Flag.stencil too (ly/property-init.ly:833), so the flag is drawn
+                    // and is in the axis group's skyline like the stem it hangs from.
+                    // LILYPOND-REF: lily/flag.cc:51-69 Flag::width, get_x_parent — the flag's X
+                    //   extent is measured from its STEM's right edge, i.e. it runs right of it.
+                    int noteValue = GlyphMetrics.NoteValueOf(item);
+                    if (noteValue >= 8)
+                    {
+                        double flagHeight = LayoutUtilities.CalculateFlagHeight(noteValue);
+                        double flagLeft = x - halfStem;
+                        double flagRight = flagLeft + EngravingDefaults.FlagWidth;
+                        if (stemUp)
+                            upSkyline.Merge(VerticalSkyline.FromBox(
+                                flagLeft, flagRight, yTip - flagHeight, yTip, VerticalDirection.Up));
+                        else
+                            downSkyline.Merge(VerticalSkyline.FromBox(
+                                flagLeft, flagRight, yTip, yTip + flagHeight, VerticalDirection.Down));
+                    }
+                }
+            }
+        }
+    }
+
     /// <summary>The (midi, preferred string) of every fret digit an item draws.</summary>
     private static IEnumerable<(int Midi, int PreferredString)> TabSoundingNotes(MusicItem item)
     {
@@ -1047,7 +1184,14 @@ internal sealed class SkylineBuilder
         // carries vertical-skylines from its stencil and sets no outside-staff-priority), so a
         // staff below must clear its outer edge exactly as it clears a tuplet bracket. The
         // members' fixed stems were suppressed above; this seeds the real drawn geometry.
-        AddBeamsToSkyline(beams, staffMiddleUp, size, upSkyline, downSkyline);
+        // A TAB staff's beams (and its unbeamed stems) are its OWN geometry — the string-based
+        // direction and the tab quanter's line — so they take their own arm; the notation
+        // BeamLayout positions describe ink a tab never draws (AddTabStemsAndBeamsToSkylines).
+        if (staff.IsTab)
+            AddTabStemsAndBeamsToSkylines(staff, measureLayouts, staffMiddleUp, beams,
+                upSkyline, downSkyline);
+        else
+            AddBeamsToSkyline(beams, staffMiddleUp, size, upSkyline, downSkyline);
 
         // ...and the accumulation is complete: resolve once, before the one pass that reads.
         upSkyline.EndBatch();

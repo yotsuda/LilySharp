@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="328.1" viewBox="0 0 119.50 32.81" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="340.5" viewBox="0 0 119.50 34.05" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="32.81" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="34.05" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="6">tab dotted values</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <text x="8.16" y="14.32" font-size="3.00" text-anchor="end" dominant-baseline="central">guitar</text>
