@@ -97,7 +97,8 @@ internal sealed partial class LayoutEngine
         List<List<MultiStaffLayouter.StaffInsideSpanners>> staffSpanners,
         List<List<(VerticalSkyline Up, VerticalSkyline Down)>> staffInside,
         IReadOnlyList<double> rowsAboveFirstStaff,
-        List<VerticalSkyline?>? lyricBands = null)
+        List<VerticalSkyline?>? lyricBands = null,
+        List<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>>? pedalLines = null)
     {
         var (prelimStaff, prelimStaffIndex) = score.PrimaryContentStaffWithIndex();
         var prelimScore = new Score(
@@ -272,7 +273,7 @@ internal sealed partial class LayoutEngine
         });
         EnrichExtentsWithAnnotationProtrusions(score.TextMetrics, perSystemExtents, prelimSystems,
             prelimAnn, prelimTies.ToImmutableArray(), prelimSlurs.ToImmutableArray(),
-            rowsAboveFirstStaff);
+            rowsAboveFirstStaff, pedalLines);
         return new PreliminaryPass(
             AugmentSkylinesForPaging(
                 score.TextMetrics,
@@ -282,7 +283,7 @@ internal sealed partial class LayoutEngine
                 prelimAnn.Dynamics,
                 prelimAnn.BarNumbers, prelimAnn.TupletBrackets, prelimSlurs.ToImmutableArray(),
                 prelimTies.ToImmutableArray(), prelimAnn.TextSpanners,
-                systemCache, lyricBands),
+                systemCache, lyricBands, pedalLines),
             prelimBeamsByStaff,
             annotationBeamGroups,
             prelimTiesByStaff,

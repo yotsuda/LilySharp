@@ -5090,6 +5090,36 @@
       "why": "HANDOFF 5.0 trap 8: the gap readings are indexed, so the count is carried. Two systems (the first with its chord row) on page 1.",
       "residual": 0.0
     },
+    "page.pedal-bracket.gap-first": {
+      "probe": "pedal-page.ly",
+      "score": "PDB",
+      "lilypond": 13.345,
+      "why": "A PEDAL BRACKET UNDER A SYSTEM'S LAST STAFF (opened 2026-09-02, session 320, from the user report on petite-valse.lys: the bracket under system 1's left hand printed through the trill and the fermata above system 2's right hand). PedalEngraver.SolveAndSeed seeds the bracket into the STAFF's down profile (the lyric floor and the staff-to-staff springs -- lyrics.pedal-bracket.staff-to-lyric) but the spring BETWEEN two systems reads the PAGING silhouette (AugmentSkylinesForPaging) through the X-aware Distance(), and that silhouette had no pedal arm: the same hole page.dynamics.leading-row.* (2026-08-28) and the rit. spanner (2026-08-30) each closed for their family. LILYPOND: 13.345000 = bracket ink bottom 5.300000 below the refpoint (PianoPedalBracket rel -9.026 against staff rel -3.776, ext bottom -0.05; the line itself at 5.250 = stem bottom 3.000 + SustainPedalLineSpanner padding 1.2 + edge-height 1.0 + half thickness 0.05) + a''' ink top 7.045000 + padding 1.000000. MEASURED IN LILY# BEFORE THE FIX (scratch/p320/ledger-pre.trx): the control read 12.000000 exact and THIS book could not be read at all -- RenderedGeometry counted the bracket's line as a sixth staff line ('found 11 staff lines'), so the instrument was taught that a staff line has a sibling one line step away and a lone rule has none; with that, the pre-fix reading is the floor 12.000000, residual -1.345000. *** LANDED 2026-09-02, SAME SESSION: the paging arm merges the bracket stencil's own box (PedalEngraver.BracketStencilBox -- the one spelling the staff profile reads) raised by the staff's translation, page-layout-problem.cc build_system_skyline's loop body for this element, and the entry lands 13.345000000 EXACT; the control did not move.",
+      "residual": 0.0
+    },
+    "page.pedal-bracket.staves-on-first-page": {
+      "probe": "pedal-page.ly",
+      "score": "PDB",
+      "lilypond": 2,
+      "unit": "count",
+      "why": "HANDOFF 5.0 trap 8: the gap readings are indexed, so the count is carried. Two one-staff systems on page 1.",
+      "residual": 0.0
+    },
+    "page.pedal-bracket.no-pedal.gap-first": {
+      "probe": "pedal-page.ly",
+      "score": "PDBN",
+      "lilypond": 12.0,
+      "why": "The bracket taken out and nothing else changed -- the note-note control on the system-system basic-distance floor (stem bottom 3.000 + a''' top 7.045 + padding 1 = 11.045 < 12), EXACT in LilyPond. It isolates the pedal's charge to the bracket alone and must STAY on the floor when the arm is added -- and it did: 12.000000000 before and after (2026-09-02).",
+      "residual": 0.0
+    },
+    "page.pedal-bracket.no-pedal.staves-on-first-page": {
+      "probe": "pedal-page.ly",
+      "score": "PDBN",
+      "lilypond": 2,
+      "unit": "count",
+      "why": "HANDOFF 5.0 trap 8: the gap readings are indexed, so the count is carried. Two one-staff systems on page 1.",
+      "residual": 0.0
+    },
     "page.custom-text.x.left-of-ink.gap-first": {
       "probe": "custom-text-x.ly",
       "score": "CTXL",

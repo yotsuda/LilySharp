@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="393.2" viewBox="0 0 119.50 39.32" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="416.2" viewBox="0 0 119.50 41.62" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="39.32" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="41.62" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="340">A pedal keeps its own staff baseline, clear of the vocal lyrics</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <text x="6.26" y="20.50" font-size="3.00" text-anchor="end" dominant-baseline="central">Voc</text>

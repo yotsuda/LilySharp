@@ -94,11 +94,36 @@ internal static class PedalEngraver
     private const double HookWidth = 0.1;
 
     /// <summary>One solved bracket line of one system: which bracket (by its start
-    /// measure and pedal type) and where its LINE sits, Y-up about the staff's middle
-    /// line. Solved once, at skyline-build time, and read by the draw -- one computation,
-    /// two readers (HANDOFF 7.7).</summary>
+    /// measure and pedal type), where its LINE sits, Y-up about the staff's middle
+    /// line, and the portion's X span on this system with its two hooks (a broken end
+    /// runs to the system edge hook-less). Solved once, at skyline-build time, and read
+    /// by the draw and by the page's silhouette -- one computation, three readers
+    /// (HANDOFF 7.7).</summary>
     internal readonly record struct SolvedPedalLine(
-        PedalType Type, int StartMeasureIndex, double LineYUp);
+        PedalType Type, int StartMeasureIndex, double LineYUp,
+        double StartX, double EndX, bool LeftHook, bool RightHook);
+
+    /// <summary>
+    /// The bracket stencil's box about its solved line: the line's own thickness across
+    /// the portion's span, and the edge lines rising edge-height from it toward the staff.
+    /// ONE spelling of what LilyPond's PianoPedalBracket stencil covers, read by the
+    /// staff's down profile (<see cref="SolveAndSeed"/>) and by the page's silhouette
+    /// (<c>LayoutEngine.AugmentSkylinesForPaging</c>) -- one stencil, two readers
+    /// (HANDOFF 7.7): the same reason the bracket and the page could disagree about
+    /// where the ink is if either spelled it alone.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/piano-pedal-bracket.cc:39-40 Piano_pedal_bracket::print -- height = edge-height per end
+    /// LILYPOND-REF: lily/piano-pedal-bracket.cc:93-94 Piano_pedal_bracket::print -- the stencil is Bracket::make_bracket
+    /// LILYPOND-REF: lily/bracket.cc:63-86 Bracket::make_bracket -- the straight line between the corners plus, per end, a line to the flare corner raised by height[d] on the protrusion axis
+    /// LILYPOND-REF: scm/define-grobs.scm:2865 PianoPedalBracket -- vertical-skylines from the stencil
+    /// The edge lines protrude toward the staff (up), so the line's lower edge is the
+    /// stencil's whole DOWN outline: a down skyline of this box and of the exact stencil
+    /// agree, and the up side only ever meets the staff's own profile.
+    /// </remarks>
+    internal static (double Left, double Right, double Bottom, double Top) BracketStencilBox(
+        double startX, double endX, double lineYUp)
+        => (startX, endX, lineYUp - HalfThickness, lineYUp + EdgeHeight + HalfThickness);
 
     /// <summary>One solved TEXT-style pedal WORD of one system: which mark (by its
     /// source position) and where its BASELINE sits, Y-up about the staff's middle
@@ -405,10 +430,12 @@ internal static class PedalEngraver
             lineYUp += move;
             foreach (var p in family)
             {
+                // The stencil's box, from the one spelling the page's silhouette reads too.
+                var (bx0, bx1, bBottom, bTop) = BracketStencilBox(p.StartX, p.EndX, lineYUp);
                 downProfile.Merge(VerticalSkyline.FromBox(
-                    p.StartX, p.EndX, lineYUp - HalfThickness,
-                    lineYUp + EdgeHeight + HalfThickness, VerticalDirection.Down));
-                solved.Add(new SolvedPedalLine(p.Type, p.StartMeasureIndex, lineYUp));
+                    bx0, bx1, bBottom, bTop, VerticalDirection.Down));
+                solved.Add(new SolvedPedalLine(p.Type, p.StartMeasureIndex, lineYUp,
+                    p.StartX, p.EndX, p.LeftHook, p.RightHook));
             }
             foreach (var (mark, x) in mixedWords)
             {

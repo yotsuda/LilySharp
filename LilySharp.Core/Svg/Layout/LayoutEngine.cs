@@ -283,7 +283,7 @@ internal sealed partial class LayoutEngine
             score, multiStaffLayouter, systems.ToImmutableArray(), perSystemExtents,
             perSystemSkylines, multiStaffLayouter.RestCollisionsOf, systemCache,
             commonShortestDuration, placed.StaffSpanners, placed.StaffInside,
-            rowsAboveFirstStaff, placed.LyricBands);
+            rowsAboveFirstStaff, placed.LyricBands, placed.PedalLines);
 
         var (pages, systemsArray) = CreatePages(
             systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,

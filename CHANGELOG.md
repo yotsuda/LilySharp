@@ -170,6 +170,16 @@ The rest is defects found by engraving real scores.
 
 ### Engraving
 
+- **A pedal bracket under a system now keeps the next system away.** The bracket was solved
+  against its own staff and seeded into that staff's profile — the one the lyric floor and the
+  staff-to-staff springs read — but not into the silhouette the page spaces systems by, so a
+  sustain bracket under the last staff of one system was drawn through the trill and the
+  fermata above the first staff of the next. The bracket's stencil now joins the page's
+  silhouette the way LilyPond's `build_system_skyline` merges every element, raised by its
+  staff's translation, and the pair of systems opens by exactly LilyPond's amount
+  (ledger `page.pedal-bracket.gap-first`, 13.345 staff spaces on the probe, exact). A page's
+  bottom edge counts the bracket too, so a book ending in a pedal is cropped a little deeper.
+
 - **A grace body is engraved, heard and exported.** The body is now walked by the ordinary
   walker rather than read for a bare note's pitch and duration, and everything that walk
   reaches comes with it: a CHORD is one column with N heads, through the same chord and

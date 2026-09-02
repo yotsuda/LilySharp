@@ -696,6 +696,10 @@ public class SvgSnapshotTests
         // verse under every staff of a chorale, each row naming the part it sings,
         // the syllables at each staff's own onsets.
         yield return new object[] { "test/sings-per-row" };
+        // A pedal bracket under system 1's bottom staff clears the trill and the fermata
+        // over system 2's top staff (2026-09-02): the bracket joins the paging silhouette
+        // (ledger page.pedal-bracket.*).
+        yield return new object[] { "test/pedal-under-next-system" };
         // sfz-family dynamics + staccatissimo / bowing / harmonic scripts.
         yield return new object[] { "test/scripts-dynamics" };
         // @text("...") free expressive text (italic, below by default, .up above).

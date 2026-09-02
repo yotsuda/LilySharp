@@ -3541,6 +3541,52 @@ internal static class LpGeometryProbes
     /// <summary>The dynamic taken out and nothing else changed — the note-note control.</summary>
     private static readonly string DYWO = DynamicsLeadingRowScore("DYWO", row: true, dyn: false);
 
+    /// <summary>
+    /// A PEDAL BRACKET UNDER THE LAST STAFF OF A SYSTEM — books PDB/PDBN (pedal-page.ly),
+    /// the user report of 2026-09-02 (petite-valse.lys) distilled: a sustain bracket
+    /// under system 1 printed through the trill and the fermata above system 2.
+    /// </summary>
+    /// <remarks>
+    /// WHY THE PAIR EXISTS. <c>PedalEngraver.SolveAndSeed</c> seeds the bracket into the
+    /// STAFF's down profile — the one the lyric floor and the staff-to-staff springs read,
+    /// and the one lyrics.pedal-bracket.staff-to-lyric measures — but the spring BETWEEN
+    /// two systems reads the PAGING silhouette (<c>LayoutEngine.AugmentSkylinesForPaging</c>)
+    /// through the X-aware Distance(), and until session 320 that silhouette had no pedal
+    /// arm at all: the same hole the dynamics arm (page.dynamics.leading-row.*) and the
+    /// text-spanner arm (TextSpannerSystemSpacingTests) each closed for their family.
+    /// <paramref name="pedal"/> false is the CONTROL — the same two lines with no bracket,
+    /// which both engines should read from the system-system basic-distance floor.
+    /// ⚠️ Lily# <c>c'</c> / <c>a''</c> (octave absolute) is LilyPond <c>c''</c> / <c>a'''</c>.
+    /// </remarks>
+    private static string PedalBracketPageScore(string name, bool pedal)
+    {
+        string on = pedal ? "@sustain" : "";
+        string off = pedal ? "@!sustain" : "";
+        return $$"""
+            octave absolute
+            time 4/4
+
+            part melody { clef treble }
+
+            section A {
+              melody { c'4{{on}} c' c' c' | c'4 c' c' c'{{off}} | break }
+            }
+
+            section B {
+              melody { a''4 a'' a'' a'' | a''4 a'' a'' a'' | }
+            }
+
+            form main { ~A ~B }
+
+            score main "{{name}}" { staff melody }
+            """;
+    }
+
+    private static readonly string PDB = PedalBracketPageScore("PDB", pedal: true);
+
+    /// <summary>The bracket taken out and nothing else changed — the note-note control.</summary>
+    private static readonly string PDBN = PedalBracketPageScore("PDBN", pedal: false);
+
 
     /// <summary>
     /// LYRB WITH AN OSSIA ADDED — the mirror of book LYROS, and the other half of the
@@ -15015,6 +15061,20 @@ internal static class LpGeometryProbes
         new("page.dynamics.leading-row.no-dynamic.gap-first", DYWO,
             g => g.StaffGapAt(0), RaggedBottomPaper),
         new("page.dynamics.leading-row.no-dynamic.staves-on-first-page", DYWO,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+
+        // ...and the PEDAL BRACKET under a system's last staff (books PDB/PDBN -
+        // pedal-page.ly, session 320): the bracket was seeded into the STAFF's down
+        // profile but never into the paging silhouette, so the pair gap under it sat on
+        // the basic-distance floor and the bracket was drawn into the next system's
+        // trill and fermata. See PedalBracketPageScore's remarks.
+        new("page.pedal-bracket.gap-first", PDB,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("page.pedal-bracket.staves-on-first-page", PDB,
+            g => g.StavesOnPage(0), RaggedBottomPaper),
+        new("page.pedal-bracket.no-pedal.gap-first", PDBN,
+            g => g.StaffGapAt(0), RaggedBottomPaper),
+        new("page.pedal-bracket.no-pedal.staves-on-first-page", PDBN,
             g => g.StavesOnPage(0), RaggedBottomPaper),
     };
 

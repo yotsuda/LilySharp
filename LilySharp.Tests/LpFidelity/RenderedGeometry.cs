@@ -198,8 +198,19 @@ internal sealed class RenderedGeometry
     /// every reading on the page threw "found 6 staff lines". The dash is the only thing
     /// that tells them apart, which is why <see cref="DrawnLine"/> now carries it.
     /// </remarks>
-    private List<double> StaffLineYs(int page) =>
-        _pages[page].Lines
+    /// <remarks>
+    /// ⚠️ AND A LONE RULE IS NEVER A STAFF LINE (2026-09-02). A pedal bracket's line is
+    /// drawn at exactly <see cref="StaffLineThickness"/>, solid, and reaches across most of
+    /// the system, so thickness, dash and span ALL admit it: book PDB (pedal-page.ly) put
+    /// one 3.25 below a staff and every reading on the page threw "found 11 staff lines".
+    /// What a staff line has that the bracket lacks is a SIBLING one line step away — a
+    /// staff space (1.0) on a staff, a string space (1.5) on a tab — so a rule with no
+    /// neighbour at either step is dropped. (A bracket sits at least 2.25 below the bottom
+    /// line: staff ink 2.05 + spanner padding 1.2 + edge-height 1.0 from the middle.)
+    /// </remarks>
+    private List<double> StaffLineYs(int page)
+    {
+        var ys = _pages[page].Lines
             .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
                         && !l.IsDashed
                         && Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9)
@@ -209,6 +220,12 @@ internal sealed class RenderedGeometry
             .Select(g => g.Key)
             .OrderBy(y => y)
             .ToList();
+        static bool Sibling(double a, double b)
+            => Math.Abs(Math.Abs(a - b) - 1.0) <= 1e-6 || Math.Abs(Math.Abs(a - b) - 1.5) <= 1e-6;
+        return ys
+            .Where((y, i) => (i > 0 && Sibling(ys[i - 1], y)) || (i + 1 < ys.Count && Sibling(y, ys[i + 1])))
+            .ToList();
+    }
 
     public IReadOnlyList<double> StaffRefpoints(int page = 0)
     {

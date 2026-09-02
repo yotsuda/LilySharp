@@ -210,7 +210,8 @@ internal sealed partial class LayoutEngine
         AnnotationLayouts ann,
         ImmutableArray<TieLayout> ties,
         ImmutableArray<SlurLayout> slurs,
-        IReadOnlyList<double> rowsAboveFirstStaff)
+        IReadOnlyList<double> rowsAboveFirstStaff,
+        IReadOnlyList<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>>? pedalLines = null)
     {
         int n = Math.Min(perSystemExtents.Count, systems.Length);
         // ⚠️ NEGATIVE INFINITY, NOT 0. The up extent is SIGNED (LayoutUtilities'
@@ -251,6 +252,13 @@ internal sealed partial class LayoutEngine
         {
             if (!measureToSystem.TryGetValue(measureIndex, out int s))
                 return;
+            AddAt(s, topRel, bottomRel);
+        }
+
+        // The same two maxima for a grob already attributed to its system (the solved
+        // pedal lines arrive per system, not per measure).
+        void AddAt(int s, double topRel, double bottomRel)
+        {
             up[s] = Math.Max(up[s], -topRel);
             down[s] = Math.Max(down[s], bottomRel - bottoms[s]);
         }
@@ -424,6 +432,29 @@ internal sealed partial class LayoutEngine
                 fbY - FiguredBassEngraver.FigureInkTop(
                     fb.FigureTexts.Length > 0 ? fb.FigureTexts[0] : string.Empty),
                 fbY + BassFigureAlignment.ColumnDepth(fb.RowOffsets, fb.FigureTexts));
+        }
+        // The pedal bracket under a staff — the SAME box the staff's down profile was solved
+        // with and the X-aware arm below merges (PedalEngraver.BracketStencilBox), for the
+        // scalar the breaker and the rows-only fallback read. Per staff, like the figures:
+        // Y-up about that staff's middle, so the same StaffOffsetInSystemDown step.
+        if (pedalLines is not null)
+        {
+            for (int s = 0; s < n && s < pedalLines.Count; s++)
+            {
+                var staves = pedalLines[s];
+                for (int staffIndex = 0; staffIndex < staves.Count; staffIndex++)
+                {
+                    if (staves[staffIndex].IsDefaultOrEmpty)
+                        continue;
+                    double pdOff = LayoutUtilities.StaffOffsetInSystemDown(systems[s], staffIndex);
+                    foreach (var line in staves[staffIndex])
+                    {
+                        var (_, _, pdBottom, pdTop) =
+                            PedalEngraver.BracketStencilBox(line.StartX, line.EndX, line.LineYUp);
+                        AddAt(s, pdOff + (2.0 - pdTop), pdOff + (2.0 - pdBottom));
+                    }
+                }
+            }
         }
         // Note-bound scripts (a fermata over the top staff, a staccatissimo
         // under the bottom) extend the system silhouette like any other
@@ -725,7 +756,8 @@ internal sealed partial class LayoutEngine
         ImmutableArray<TieLayout> ties = default,
         ImmutableArray<TextSpannerLayout> textSpanners = default,
         SystemLayoutCache? systemCache = null,
-        IReadOnlyList<VerticalSkyline?>? lyricBands = null)
+        IReadOnlyList<VerticalSkyline?>? lyricBands = null,
+        IReadOnlyList<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>>? pedalLines = null)
     {
         if (skylines == null)
             return null;
@@ -1191,6 +1223,49 @@ internal sealed partial class LayoutEngine
                     bn.Text, BarNumberEngraver.FontSize,
                     TextRole.BarNumber, Rendering.FontStyle.Bold).Top;
                 BuilderAt(s).AddBarNumberBox(x0, x0 + w, rel, rel + capTop);
+            }
+        }
+
+        // THE PEDAL BRACKET under a staff, X-AWARE (2026-09-02, session 320; user report,
+        // petite-valse.lys: the bracket under system 1's left hand drawn through the trill
+        // and the fermata over system 2's right hand). PedalEngraver.SolveAndSeed seeds the
+        // bracket into the STAFF's down profile — that is LilyPond's skyline_spacing merging
+        // the SustainPedalLineSpanner (priority 1000) into its VerticalAxisGroup's
+        // vertical-skylines — but that profile is what the alignment and the lyric floor
+        // read; the page reads THIS silhouette, and the bracket was in none of its arms, so
+        // the pair under it sat on the basic-distance floor: ledger
+        // page.pedal-bracket.gap-first read 12.000000 against LilyPond's 13.345000 (the
+        // bracket's ink bottom 5.300000 + the a''' top 7.045000 + padding 1).
+        // LILYPOND-REF: lily/axis-group-interface.cc:969-978 skyline_spacing — the placed
+        //   outside-staff grobs' skylines are merged into the group's own outline.
+        // LILYPOND-REF: lily/page-layout-problem.cc:1093-1108 build_system_skyline — each
+        //   element's vertical-skylines, raised by its own translation dy, merged into the
+        //   system's. This arm is that loop's body for the one element the two-edge
+        //   silhouette (SkylineBuilder.OuterStaff — a declared Lily#-own deviation from
+        //   that loop) leaves out of the page: the stencil's box, at the line the staff's
+        //   profile was solved with, raised by the staff's translation in the system.
+        // ⚠️ THE BOX IS THE STENCIL'S OWN, from the one spelling the staff-profile merge
+        // reads (PedalEngraver.BracketStencilBox) — not a box fitted to the number above.
+        // Appended after the bar numbers and before the lyric band so every earlier family
+        // keeps its association on systems without a pedal (the program remark's ULP
+        // discipline); a system with one changes anyway.
+        if (pedalLines is not null)
+        {
+            for (int s = 0; s < systemCount && s < pedalLines.Count && s < systems.Length; s++)
+            {
+                var staves = pedalLines[s];
+                for (int staffIndex = 0; staffIndex < staves.Count; staffIndex++)
+                {
+                    if (staves[staffIndex].IsDefaultOrEmpty)
+                        continue;
+                    double staffMidUp = LayoutUtilities.StaffMiddleUpInSystem(systems[s], staffIndex);
+                    foreach (var line in staves[staffIndex])
+                    {
+                        var (x0, x1, bottom, top) =
+                            PedalEngraver.BracketStencilBox(line.StartX, line.EndX, line.LineYUp);
+                        BuilderAt(s).AddMarkBox(x0, x1, bottom + staffMidUp, top + staffMidUp);
+                    }
+                }
             }
         }
 
