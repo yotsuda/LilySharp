@@ -42,3 +42,28 @@ jobs:
       with:
         name: coverage-report
         path: '**/coverage.cobertura.xml'
+
+  # The VS Code extension's own tests: the smart-typing core runs under plain
+  # node (editors/vscode/test), so it needs no editor and no .NET here.
+  extension-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: editors/vscode
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    - name: Install
+      run: npm ci
+
+    - name: Type-check the extension
+      run: npm run check-types
+
+    - name: Test
+      run: npm test

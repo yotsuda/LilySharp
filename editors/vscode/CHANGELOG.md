@@ -75,8 +75,9 @@ reasoning behind each one.
   note it goes directly after the core, and the caret goes with it, ready for the digit —
   `|a4( d)` + `\` gives `a4\|( d)`. A digit typed on a note whose `\` is still waiting for
   it is the string number, not a duration. On a note that already has a `\N`, `\` inserts
-  nothing and selects the N, so `\` + digit changes the string. A rest and a chord take it
-  as typed.
+  nothing and selects the N, so `\` + digit changes the string. Inside a chord the `\` is the
+  member's the caret is on (`<c| e>4` + `\` gives `<c\| e>4`), as is a typed `@`; a rest
+  takes it as typed.
 - **After `\` the completion offers the tab string numbers `1`–`6` and nothing else.** It
   used to offer the LilyPond dynamic names (`ppp` … `cresc`, `dim`), every one of which the
   compiler refuses (`@p`, not `\p`); only a digit follows a backslash.

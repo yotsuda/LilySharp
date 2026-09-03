@@ -1,0 +1,13 @@
+{
+    // The node test build: the editor-free core and the tests that drive it,
+    // compiled side by side into out-test/ (git-ignored, never shipped). The
+    // extension itself is bundled by esbuild.js from tsconfig.json's view.
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "rootDir": ".",
+        "outDir": "out-test",
+        "sourceMap": false,
+        "types": ["node"]
+    },
+    "include": ["src/smartTypingCore.ts", "test/**/*"]
+}

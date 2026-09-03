@@ -4,6 +4,10 @@ src/**
 *.map
 .gitignore
 tsconfig.json
+# The node test build and its sources (npm test) — nothing the extension runs.
+tsconfig.test.json
+test/**
+out-test/**
 **/*.map
 *.vsix
 dist/**
