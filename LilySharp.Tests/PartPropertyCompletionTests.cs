@@ -49,6 +49,27 @@ public class PartPropertyCompletionTests
     }
 
     [Theory]
+    [InlineData("part m { pitch ")]
+    [InlineData("part m { pitch w")]
+    [InlineData("part m { instrument alto-sax pitch c")]
+    public void AfterPitch_OffersItsModes(string text)
+    {
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterPitch, ContextOf(text));
+    }
+
+    [Fact]
+    public void PitchProperty_AutoTriggersTheModeList()
+    {
+        // Picking `pitch` from the property list inserts the keyword and re-opens the popup
+        // so written / concert appear at once, without a second Ctrl+Space — the same motion
+        // as `removeEmpty` (reported 2026-09-03: the item inserted the bare word and stopped).
+        var pitch = LilySharpLanguageServer.GetPartPropertyCompletions().Items
+            .Single(i => i.Label == "pitch");
+        Assert.Equal("pitch $0", pitch.InsertText);
+        Assert.Equal("editor.action.triggerSuggest", pitch.Command?.CommandIdentifier);
+    }
+
+    [Theory]
     [InlineData("part m { clef ", "AfterClef")]
     [InlineData("part m { instrument ", "AfterInstrument")]
     [InlineData("section S { m { ", "MusicBlock")] // part REFERENCE, not a header

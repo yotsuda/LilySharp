@@ -190,7 +190,7 @@ public sealed partial class LilySharpLanguageServer
 
     // Prose per property, and whether the editor has a VALUE list to enumerate for it.
     // ⚠️ Values must be true only where a value context actually exists — AfterClef,
-    // AfterInstrument, AfterRemoveEmpty. It is false for `octave` because the part-header
+    // AfterInstrument, AfterRemoveEmpty, AfterPitch. It is false for `octave` because the part-header
     // `octave` takes a NUMBER (the AfterOctave context is gated to the top-level directive),
     // and false for `tuning`/`pedal`/`transposition`, which have no value context at
     // all. Setting it re-opens suggestions onto whatever list is general to the position,
@@ -218,7 +218,7 @@ public sealed partial class LilySharpLanguageServer
                           + "directive and a part header refuses them", false),
             ["transpose"] = ("Transpose target pitch, e.g. `transpose d`, `transpose bes,`", false),
             ["transposition"] = ($"Sounding-octave marker ({string.Join("/", LanguageVocabulary.TranspositionMarkers)})", false),
-            ["pitch"] = ($"This part's pitch convention for a transposing instrument ({string.Join("/", LanguageVocabulary.PitchModes)}) — overrides the top-level directive", false),
+            ["pitch"] = ($"This part's pitch convention for a transposing instrument ({string.Join("/", LanguageVocabulary.PitchModes)}) — overrides the top-level directive", true),
             ["pedal"] = ($"Piano pedal style ({string.Join("/", LanguageVocabulary.PedalStyles)})", false),
             ["removeEmpty"] = ("Hara-kiri: hide this staff in rest-only systems "
                                + $"({string.Join(" | ", LanguageVocabulary.RemoveEmptyValues)})", true),
@@ -239,7 +239,8 @@ public sealed partial class LilySharpLanguageServer
         // offered, without a description.
         //
         // Values = the property takes a value LIST the editor can enumerate — so it is true only
-        // where a value context actually exists (AfterClef, AfterInstrument, AfterRemoveEmpty).
+        // where a value context actually exists (AfterClef, AfterInstrument, AfterRemoveEmpty,
+        // AfterPitch).
         // ⚠️ Setting it for a property with no such context re-opens suggestions onto whatever
         // the general list is, which is worse than not offering to help.
         var props = new System.Collections.Generic.List<(string Label, string? Detail, bool Values)>();
@@ -312,6 +313,83 @@ public sealed partial class LilySharpLanguageServer
                 Kind = CompletionItemKind.EnumMember,
                 Detail = RemoveEmptyDetails.TryGetValue(name, out var d) ? d : null,
                 SortText = i.ToString(),
+            }).ToArray()
+        };
+    }
+
+    // Prose per pitch mode. The ORDER is the compiler's (ConcertPitch.Modes: the default
+    // first). Membership decides nothing — the words come from the compiler.
+    private static readonly System.Collections.Generic.Dictionary<string, string> PitchModeDetails = new()
+    {
+        ["written"] = "The note letters are what the player reads; a transposing part prints them as-is and only playback moves (default)",
+        ["concert"] = "The note letters are what sounds; a transposing part is printed transposed for its player",
+    };
+
+    /// <summary>
+    /// The values valid right after <c>pitch</c> — at the top level, in a part header and on
+    /// a score header, the same two words in all three — READ FROM THE COMPILER
+    /// (<c>LanguageVocabulary.PitchModes</c> = <c>ConcertPitch.Modes</c>, which the parser
+    /// enforces).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Until 2026-09-03 the top-level <c>pitch</c> item carried the two words as a snippet
+    /// CHOICE (<c>${1|concert,written|}</c>) — a private copy of the list, and one the part
+    /// header and the score header never got. Now every <c>pitch</c> item inserts the keyword
+    /// and re-opens the popup on this list, the shape <c>removeEmpty</c> uses.
+    /// </remarks>
+    internal static CompletionList GetPitchModeCompletions()
+    {
+        return new CompletionList
+        {
+            Items = LanguageVocabulary.PitchModes.Select((name, i) => new CompletionItem
+            {
+                Label = name,
+                Kind = CompletionItemKind.EnumMember,
+                Detail = PitchModeDetails.TryGetValue(name, out var d) ? d : null,
+                SortText = i.ToString(),
+            }).ToArray()
+        };
+    }
+
+    // Prose and the default count per repeat kind. A tremolo's count is the number of
+    // strokes the body is played in (repeat tremolo 4 { c16 e } = one beat), so its default
+    // is a beat's worth rather than the "twice" the other two mean. Membership decides
+    // nothing — the words come from the compiler.
+    private static readonly System.Collections.Generic.Dictionary<string, (string Detail, int Count)> RepeatKindDetails = new()
+    {
+        ["unfold"] = ("Write the body out N times (LP \\repeat unfold)", 2),
+        ["percent"] = ("Play the body N times, printed as % / ⁒ repeat signs (LP \\repeat percent)", 2),
+        ["tremolo"] = ("Tremolo: alternate the body's notes N times under beams (LP \\repeat tremolo)", 4),
+    };
+
+    /// <summary>
+    /// The kinds valid right after <c>repeat</c> in music, READ FROM THE COMPILER
+    /// (<c>LanguageVocabulary.RepeatKinds</c>). Each is a snippet that finishes the
+    /// construct — the count and the braced body — so picking a kind leaves the caret inside
+    /// the block, which is where the old one-shot <c>repeat unfold 2 { }</c> snippet left it.
+    /// </summary>
+    /// <remarks>
+    /// Written 2026-09-03 (owner request): completing <c>repeat</c> committed the writer to
+    /// <c>unfold</c> (or <c>percent</c> in drum music) and the other two kinds were only
+    /// mentioned in the item's Detail. The keyword now inserts itself and re-opens the popup
+    /// on this list, the motion <c>time</c> / <c>key</c> / <c>pitch</c> use.
+    /// </remarks>
+    internal static CompletionList GetRepeatKindCompletions()
+    {
+        return new CompletionList
+        {
+            Items = LanguageVocabulary.RepeatKinds.Select((name, i) =>
+            {
+                var d = RepeatKindDetails.TryGetValue(name, out var found) ? found : (null, 2);
+                return new CompletionItem
+                {
+                    Label = name,
+                    Kind = CompletionItemKind.EnumMember,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = $"{name} ${{1:{d.Item2}}} {{\n\t$0\n}}",
+                    Detail = d.Item1,
+                    SortText = i.ToString(),
+                };
             }).ToArray()
         };
     }
@@ -2253,7 +2331,10 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Time signature", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "key $0", Detail = "Key signature", Command = new Command { Title = "Suggest key tonic", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "octave", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "octave $0", Detail = "Octave mode: absolute | relative (default)", Command = new Command { Title = "Suggest octave mode", CommandIdentifier = "editor.action.triggerSuggest" } },
-                new CompletionItem { Label = "pitch", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "pitch ${1|concert,written|}$0", Detail = "Pitch convention for transposing instruments: concert (the letters are what sounds; the part is printed transposed) | written (default)" },
+                // Inserts the keyword and re-opens the popup on GetPitchModeCompletions — NOT a
+                // snippet choice, which was a second copy of the two words and one the
+                // part-header item never had (fixed 2026-09-03).
+                new CompletionItem { Label = "pitch", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "pitch $0", Detail = "Pitch convention for transposing instruments: written (default) | concert", Command = new Command { Title = "Suggest pitch mode", CommandIdentifier = "editor.action.triggerSuggest" } },
                 // `override` is a valid global default; `revert` / `once` are NOT offered at
                 // the top level — they only work in a music stream (LYS1023 otherwise).
                 // `partial` is likewise NOT offered here — a pickup belongs to a section, not
@@ -2416,7 +2497,9 @@ public sealed partial class LilySharpLanguageServer
     /// vocabulary (aliases first — the idiomatic form), plus rests and the
     /// structural snippets that remain valid in drum music. No pitch letters.
     /// </summary>
-    private static CompletionList GetDrumCompletions(bool insideVoice)
+    // Internal with a default so the tests reach it — CompletionInsertsValidSyntaxTests nets
+    // every parameterless list, and until 2026-09-03 this one was private and outside it.
+    internal static CompletionList GetDrumCompletions(bool insideVoice = false)
     {
         var items = new System.Collections.Generic.List<CompletionItem>();
         foreach (var kv in LilySharp.Core.Syntax.DrumNameRegistry.AliasEntries)
@@ -2445,7 +2528,9 @@ public sealed partial class LilySharpLanguageServer
             new CompletionItem { Label = "r", Kind = CompletionItemKind.Value, Detail = "Rest", SortText = "2r" },
             new CompletionItem { Label = "s", Kind = CompletionItemKind.Value, Detail = "Spacer rest (invisible)", SortText = "2s" },
             new CompletionItem { Label = "R", Kind = CompletionItemKind.Value, Detail = "Full-measure rest", SortText = "2R" },
-            new CompletionItem { Label = "repeat", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "repeat percent 2 {\n\t$0\n}", Detail = "Repeat block (percent/unfold/tremolo)", SortText = "3repeat" },
+            // The kind is chosen from the popup this re-opens (GetRepeatKindCompletions), not
+            // committed to here — this item used to insert `repeat percent 2 { }` outright.
+            new CompletionItem { Label = "repeat", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "repeat $0", Detail = $"Repeat block — {string.Join(" | ", LanguageVocabulary.RepeatKinds)}", SortText = "3repeat", Command = new Command { Title = "Suggest repeat kind", CommandIdentifier = "editor.action.triggerSuggest" } },
             new CompletionItem { Label = "tuplet", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tuplet 3/2 { $0 }", Detail = "Tuplet (e.g., triplet)", SortText = "3tuplet" },
             new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Change time signature", SortText = "4time", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
             new CompletionItem { Label = "break", Kind = CompletionItemKind.Keyword, InsertText = "break", Detail = "Force a line/system break here", SortText = "4break" },
@@ -2583,7 +2668,9 @@ public sealed partial class LilySharpLanguageServer
                 // rejected spelling for two more sessions (owner report, 2026-09-02). What
                 // stays is what the music grammar keeps: `repeat unfold/percent/tremolo`, which
                 // abbreviate notes rather than change the playing order.
-                new CompletionItem { Label = "repeat", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "repeat unfold 2 {\n\t$0\n}", Detail = "Repeat block (unfold/percent/tremolo)", SortText = "2repeatkw" },
+                // The kind is chosen from the popup this re-opens (GetRepeatKindCompletions),
+                // not committed to here — this item used to insert `repeat unfold 2 { }` outright.
+                new CompletionItem { Label = "repeat", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "repeat $0", Detail = $"Repeat block — {string.Join(" | ", LanguageVocabulary.RepeatKinds)}", SortText = "2repeatkw", Command = new Command { Title = "Suggest repeat kind", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "tuplet", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tuplet 3/2 { $0 }", Detail = "Tuplet (e.g., triplet)", SortText = "2tuplet" },
                 new CompletionItem { Label = "<< >>", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "<< $0 >>", Detail = "Arpeggio: sequential notes, octaves stacked above the first (like a chord). Add a duration after >> for an auto-tuplet.", SortText = "2arpeggio" },
                 new CompletionItem { Label = "grace", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "grace { $0 }", Detail = "Grace notes", SortText = "2grace" },
@@ -3135,25 +3222,32 @@ public sealed partial class LilySharpLanguageServer
         ]
     };
 
-    private static CompletionList GetDynamicCompletions()
+    /// <summary>The most strings any tuning has (<c>Tunings.GetStringCount</c>: guitar and
+    /// 6-string bass), so the list after <c>\</c> reaches every string a book can name.</summary>
+    private static readonly int MaxTabStrings =
+        Enum.GetValues<TuningType>().Max(t => LilySharp.Core.Tablature.Tunings.GetStringCount(t));
+
+    /// <summary>
+    /// The values valid right after <c>\</c> on a note: the tab string numbers
+    /// <c>1</c>…<c>6</c> (<c>c4\3</c>), 1 being the highest string. Nothing else follows a
+    /// backslash in Lily# — the lexer reads <c>\</c> + digit as a string number and any
+    /// other <c>\name</c> is refused as a LilyPond habit (<c>@p</c>, not <c>\p</c>).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Until 2026-09-03 this context offered the LilyPond dynamic names
+    /// (<c>ppp</c> … <c>cresc</c>, <c>dim</c>): every one of them typed a diagnostic
+    /// (LYS…LilypondBackslashCommand). Owner report: "after <c>\</c> only a digit is valid".
+    /// </remarks>
+    internal static CompletionList GetStringNumberCompletions() => new()
     {
-        return new CompletionList
+        Items = Enumerable.Range(1, MaxTabStrings).Select(n => new CompletionItem
         {
-            Items =
-            [
-                new CompletionItem { Label = "ppp", Kind = CompletionItemKind.Value, Detail = "Pianississimo" },
-                new CompletionItem { Label = "pp", Kind = CompletionItemKind.Value, Detail = "Pianissimo" },
-                new CompletionItem { Label = "p", Kind = CompletionItemKind.Value, Detail = "Piano" },
-                new CompletionItem { Label = "mp", Kind = CompletionItemKind.Value, Detail = "Mezzo-piano" },
-                new CompletionItem { Label = "mf", Kind = CompletionItemKind.Value, Detail = "Mezzo-forte" },
-                new CompletionItem { Label = "f", Kind = CompletionItemKind.Value, Detail = "Forte" },
-                new CompletionItem { Label = "ff", Kind = CompletionItemKind.Value, Detail = "Fortissimo" },
-                new CompletionItem { Label = "fff", Kind = CompletionItemKind.Value, Detail = "Fortississimo" },
-                new CompletionItem { Label = "cresc", Kind = CompletionItemKind.Value, Detail = "Crescendo" },
-                new CompletionItem { Label = "decresc", Kind = CompletionItemKind.Value, Detail = "Decrescendo" },
-                new CompletionItem { Label = "dim", Kind = CompletionItemKind.Value, Detail = "Diminuendo" }
-            ]
-        };
-    }
+            Label = n.ToString(),
+            Kind = CompletionItemKind.Value,
+            Detail = n == 1 ? "Tab string 1 — the highest (thinnest) string"
+                : $"Tab string {n}" + (n == 4 ? " — a 4-string bass's lowest" : n == 6 ? " — a guitar's lowest" : ""),
+            SortText = n.ToString(),
+        }).ToArray()
+    };
 
 }

@@ -55,6 +55,43 @@ reasoning behind each one.
 - **The music list reads in the key's order.** On Ctrl+Space the pitches come in scale order
   from the tonic (`d e fis g a b cis` in D major), then the chord names root by root — triad,
   7th, sus4, sus2 — then the degrees in the same shape (`I Imaj7 Isus4 Isus2 IIm IIm7 …`).
+- **Completing `pitch` re-opens the popup on `written` / `concert`** — at the top level, in a
+  part header and on a score header alike, the same motion `octave`, `key` and `time` have.
+  The top-level item used to insert a snippet choice; the part-header item inserted the bare
+  word and stopped. The two words are read from the compiler.
+- **Completing `repeat` re-opens the popup on `unfold` / `percent` / `tremolo`**, and picking a
+  kind finishes the construct — count and braced body, caret inside. The item used to commit
+  to `repeat unfold 2 { }` (`percent` in drum music) with the other kinds named only in its
+  description.
+- **A typed `[` closes on the FOLLOWING note, as `(` does.** `c8|` + `[` gives `c8[ d] e f`;
+  widening the beam is dragging one `]` forward. It used to run to the last beamable note of
+  the measure (`c8[ d e f]`). `]` mirrors it — the `[` goes after the beamable note before —
+  and a beam already ending there is extended by one note, as a slur is.
+- **Smart `(` and `[` see a tab's string number.** In `c\3 d` the typed mark found no note
+  ahead — the walk ended the note at `c` and read `\3` as a wall — and did nothing. The
+  `\N` is the note's own annotation, as the compiler reads it, so `c|\3 d` + `(` gives
+  `c\3( d)` and `[` likewise.
+- **A typed `\` opens the note's tab string number in its slot.** Pressed anywhere on a
+  note it goes directly after the core, and the caret goes with it, ready for the digit —
+  `|a4( d)` + `\` gives `a4\|( d)`. A digit typed on a note whose `\` is still waiting for
+  it is the string number, not a duration. On a note that already has a `\N`, `\` inserts
+  nothing and selects the N, so `\` + digit changes the string. A rest and a chord take it
+  as typed.
+- **After `\` the completion offers the tab string numbers `1`–`6` and nothing else.** It
+  used to offer the LilyPond dynamic names (`ppp` … `cresc`, `dim`), every one of which the
+  compiler refuses (`@p`, not `\p`); only a digit follows a backslash.
+- **The smart keys write a note's marks in one order**, whatever order they were pressed
+  in: string number, `@` annotations, `]`, `)`, `(`, `[`, `~` — from the note outward by
+  how much music each mark spans, what ends on the note before what begins on it, brackets
+  nested with the slur outside the beam, and the tie last, beside the note it joins. So
+  `c8([ d e f])`, `d4)( e`, `a,4\4~` and `c4)~ c`, and `\4~` or `)~` can be searched for.
+  The marks used to land wherever the earlier keystrokes had left the note's end. Text in
+  another order is read as before and is not rewritten; a new mark on such a note goes
+  after the last one that ranks at or below it. A typed `@` follows the same table: on a
+  note it goes after the string number and the annotations already there, before the
+  marks, with the caret after it and the name list opened there (`c4~|` + `@` gives
+  `c4@|~`). A digit or an octave mark typed among a note's marks is typed on the note too:
+  `c8\8(|[` + `4` gives `c4\8([`, the caret staying put.
 
 ### Engraving
 

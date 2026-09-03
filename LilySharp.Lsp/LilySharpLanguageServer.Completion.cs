@@ -194,6 +194,8 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterTabDisplayAs => GetTabDisplayModeCompletions(),
             CompletionContext.AfterInstrument => GetInstrumentCompletions(doc.Text, offset, position),
             CompletionContext.AfterRemoveEmpty => GetRemoveEmptyCompletions(),
+            CompletionContext.AfterPitch => GetPitchModeCompletions(),
+            CompletionContext.AfterRepeat => GetRepeatKindCompletions(),
             // The bare-@chord item is offered only when the group before the '@'
             // will actually auto-name; an unrecognizable one falls back to the
             // note form — @chord() with the caret inside the parens.
@@ -204,7 +206,9 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterArticulationPlacement => PlacementAndStillMatchingNames(
                 doc.Text, offset, position,
                 AtFollowsChord(doc.Text, offset) && GroupBeforeAtAutoNames(doc.Text, offset)),
-            CompletionContext.AfterBackslash => GetDynamicCompletions(),
+            // Only a tab string number follows a backslash (the dynamic names this
+            // offered until 2026-09-03 were all refused by the parser).
+            CompletionContext.AfterBackslash => GetStringNumberCompletions(),
             _ => null
         };
     }

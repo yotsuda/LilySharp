@@ -94,6 +94,10 @@ public static class LanguageVocabulary
     /// score header alike (<see cref="ConcertPitch"/>).</summary>
     public static IReadOnlyCollection<string> PitchModes => ConcertPitch.Modes;
 
+    /// <summary>The three kinds <c>repeat</c> takes in music (<c>repeat unfold 2 { … }</c>),
+    /// in the order the parser's own message names them.</summary>
+    public static IReadOnlyCollection<string> RepeatKinds => Syntax.SyntaxFacts.RepeatKindVocabulary;
+
     /// <summary>Every ottava marker <c>transposition</c> accepts.</summary>
     public static IReadOnlyCollection<string> TranspositionMarkers => InstrumentDefaults.TranspositionMarkers;
 

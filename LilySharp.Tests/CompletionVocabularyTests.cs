@@ -90,6 +90,10 @@ public class CompletionVocabularyTests
                      .Items.Select(i => i.Label))
             offered.Add(("instrument", value));
 
+        foreach (string value in LilySharpLanguageServer.GetPitchModeCompletions()
+                     .Items.Select(i => i.Label))
+            offered.Add(("pitch", value));
+
         var rejected = offered
             .Where(o => Errors(PartHeaderDoc($"{o.Property} {o.Value}")).Count > 0)
             .Select(o => $"{o.Property} {o.Value}")
@@ -187,6 +191,9 @@ public class CompletionVocabularyTests
         undescribed.AddRange(LilySharpLanguageServer.GetRemoveEmptyCompletions().Items
             .Where(i => i.Detail is null).Select(i => $"removeEmpty {i.Label}"));
 
+        undescribed.AddRange(LilySharpLanguageServer.GetPitchModeCompletions().Items
+            .Where(i => i.Detail is null).Select(i => $"pitch {i.Label}"));
+
         undescribed.AddRange(LilySharpLanguageServer.GetPartPropertyCompletions().Items
             .Where(i => i.Detail is null).Select(i => $"property {i.Label}"));
 
@@ -204,6 +211,51 @@ public class CompletionVocabularyTests
             LanguageVocabulary.RemoveEmptyValues.OrderBy(n => n, System.StringComparer.Ordinal),
             LilySharpLanguageServer.GetRemoveEmptyCompletions().Items
                 .Select(i => i.Label).OrderBy(n => n, System.StringComparer.Ordinal));
+    }
+
+    /// <summary>The two words after <c>pitch</c> come from the compiler, in the compiler's
+    /// order (the default first). Written 2026-09-03 with the value context; until then the
+    /// top-level item carried its own copy of the pair as a snippet choice.</summary>
+    [Fact]
+    public void PitchModeCompletions_AreExactlyTheAcceptedValues_InTheCompilersOrder()
+    {
+        Assert.Equal(
+            LanguageVocabulary.PitchModes,
+            LilySharpLanguageServer.GetPitchModeCompletions().Items.Select(i => i.Label));
+    }
+
+    /// <summary>The kinds offered after <c>repeat</c> are the compiler's, in its order, each
+    /// carries a description, and each snippet — the kind, its default count and the braced
+    /// body, resolved as the editor leaves it — compiles as a whole in a section's music.
+    /// The body is filled per kind because a tremolo's count multiplies a SHORT body
+    /// (<c>repeat tremolo 4 { g16 }</c> is one beat) while the other two repeat a bar.</summary>
+    [Fact]
+    public void RepeatKindCompletions_AreTheCompilersKinds_AndEachSnippetCompiles()
+    {
+        var items = LilySharpLanguageServer.GetRepeatKindCompletions().Items;
+        Assert.Equal(LanguageVocabulary.RepeatKinds, items.Select(i => i.Label));
+        Assert.All(items, i => Assert.NotNull(i.Detail));
+
+        var body = new Dictionary<string, (string Body, string Tail)>
+        {
+            ["unfold"] = ("g4 a", ""),            // 2 × a half bar
+            ["percent"] = ("g4 a b c'", ""),       // 2 × a bar
+            ["tremolo"] = ("g16", "a4 b c'"),      // 4 strokes = one beat, then the rest of the bar
+        };
+        var rejected = new List<string>();
+        foreach (var item in items)
+        {
+            var (b, tail) = body[item.Label!];
+            string resolved = System.Text.RegularExpressions.Regex.Replace(item.InsertText!, @"\$\{\d+:([^}]*)\}", "$1")
+                .Replace("$0", b);
+            string doc = $"part vln {{ clef treble }}\nsection A {{ vln {{ repeat {resolved} {tail} }} }}\n"
+                + "form main { A }\nscore main { staff vln }";
+            var errors = Errors(doc);
+            if (errors.Count > 0)
+                rejected.Add($"{item.Label}: {errors[0].Message}");
+        }
+        Assert.True(rejected.Count == 0,
+            "the editor offers these after `repeat` and the compiler refuses them: " + string.Join("; ", rejected));
     }
 
     /// <summary>

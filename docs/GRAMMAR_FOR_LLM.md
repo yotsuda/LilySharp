@@ -671,6 +671,11 @@ Rules worth knowing before emitting one:
   backslash is reserved for tablature only (`\3` string numbers, `\tuning`). Lily# is NOT
   LilyPond — do not emit LilyPond-only constructs (`\repeat volta`, `\relative`, `\new
   Staff`, `\version`, `<< ... \\ ... >>`, etc.).
+- **Write a note's marks in this order** (the parser accepts any order; this is the house
+  style the editor writes, so files stay searchable): string number, `@` annotations, `]`,
+  `)`, `(`, `[`, `~` — from the note outward by how much music each spans, what ends on
+  the note before what begins on it, brackets nested (slur outside, beam inside), tie last.
+  `a,4\4~`, `c8\3@accent([ d e f])`, `d4)( e`, `c4)~ c`.
 
 ## Reserved words
 

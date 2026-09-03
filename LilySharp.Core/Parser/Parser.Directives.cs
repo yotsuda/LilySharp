@@ -55,7 +55,7 @@ internal sealed partial class Parser
         {
             var span = new TextSpan(_textPosition, Current.FullWidth);
             _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
-                "Expected repeat type (unfold, percent, tremolo)");
+                $"Expected repeat type ({string.Join(", ", Syntax.SyntaxFacts.RepeatKindVocabulary)})");
             // Missing token: zero-width so root.FullWidth == text.Length holds
             // (matches Expect); the diagnostic above already reported the error.
             repeatType = new SyntaxToken(SyntaxKind.VoltaKeyword, "", null, null);

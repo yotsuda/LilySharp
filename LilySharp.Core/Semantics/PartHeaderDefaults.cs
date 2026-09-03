@@ -104,7 +104,11 @@ public sealed class PartHeaderDefaults
     /// the instrument, not a key the conductor has to un-transpose. So the octave
     /// transposers print the same under <c>pitch concert</c> as under <c>pitch written</c>,
     /// and only the chromatic ones move. Decided with the first implementation
-    /// (2026-09-03, HANDOFF §1); <see cref="ConcertPitch"/> is the reader.
+    /// (2026-09-03, HANDOFF §1) and CONFIRMED BY THE OWNER the same day (session 327,
+    /// HANDOFF §3): the score one copies from — a C score, a lead sheet — already shows the
+    /// bass at its octave, so a concert-pitch book copies it note for note; shifting would
+    /// make every bass line an octave of ledger lines. <see cref="ConcertPitch"/> is the
+    /// reader.
     /// </remarks>
     public int ConcertShiftSemitones => TranspositionSemitones % 12 == 0 ? 0 : TranspositionSemitones;
 

@@ -68,7 +68,7 @@ const windows = new Map<string, { base: number, text: string }>();
 // The insertions this module reacts to — the pairs VS Code auto-closes included.
 // Checked BEFORE the document text is read, so an ordinary letter, a space or a
 // paste never pays for a full getText().
-const SMART_INSERTS = new Set(['<', '<>', '>', '(', '()', ')', "'", ',', '.', '~', '[', '[]', ']']);
+const SMART_INSERTS = new Set(['<', '<>', '>', '(', '()', ')', "'", ',', '.', '~', '[', '[]', ']', '\\', '@']);
 
 // The durations that carry a flag, and so can be beamed. A note that spells no
 // duration inherits the running one — `c8 d e f` beams all four and only the
@@ -153,15 +153,22 @@ let applyingFix = false;
  *    `c2~`). Which note it ties TO is whatever follows, and whether the pitch
  *    repeats is the compiler's business (LYS4007), not the editor's.
  *
- * 20. A manual beam opens the same way and closes on MUSIC rather than on a
- *    count: '[' typed on a note runs to the last note in the SAME MEASURE that
- *    can still be beamed (`c8|` + '[' → `c8[ d e f]`), because a beam cannot
- *    cross a barline and cannot hold a quarter, a longer note or a rest. The
- *    run is read with the running duration carried along, so the `d e f` of
- *    `c8 d e f` count as eighths even though only the first says so. A rest is
- *    SPANNED (`c8[ r8 d]`) but never ends a beam.
- * 21. ']' mirrors it backwards: it reaches for the first note of the beamable
- *    run that ends where it was typed, and puts the '[' there.
+ * 20. A manual beam opens the same way and closes the way a slur does — on the
+ *    FOLLOWING note, not on a run: '[' typed on a note puts the ']' after the
+ *    next note in the SAME MEASURE that can still be beamed (`c8|` + '[' →
+ *    `c8[ d] e f`), so the shortest real beam is one keystroke and widening it
+ *    means dragging one ']' forward — exactly rule 8. (Until 2026-09-03 it ran to
+ *    the LAST beamable note of the measure, `c8[ d e f]`; owner request.) A
+ *    beam cannot cross a barline and cannot hold a quarter, a longer note or a
+ *    rest, so the measure bounds the search, the running duration is carried
+ *    along (the `d e f` of `c8 d e f` count as eighths even though only the
+ *    first says so), and a rest is SPANNED (`c8[ r8 d]`) but never closed on.
+ *    A beam already starting on that next note is extended backwards instead
+ *    (`c8| d[ e]` + '[' → `c8[ d e]`), rule 8's extension in the other direction.
+ * 21. ']' mirrors it backwards, as ')' does '(' (rule 11): the '[' goes after
+ *    the beamable note BEFORE the one the ']' closes on (`c8 d` + ']' →
+ *    `c8[ d]`), and a beam already ending on that note is EXTENDED by one
+ *    (`c8[ d] e` + ']' → `c8[ d e]`, rule 13) instead of opening a second one.
  * 22. A note that cannot carry a beam, or one with nothing beamable beside it,
  *    is left as typed — as is a '[' that is not on a note, which is what an
  *    inline volta's `[1.` is.
@@ -210,7 +217,52 @@ let applyingFix = false;
  *    moves to the end of that run: `c|'8.` + '.' → `c'8..`. A REST takes dots on
  *    the same terms (`r4.`), unlike octave marks.
  *
- * Rules 14–23 move TEXT and never the CARET: the mark or digit travels to the
+ * Smart string numbers (tab), on the same reading of the caret — owner request,
+ * 2026-09-03:
+ *
+ * 24. A '\' typed anywhere ON a note opens that note's string number in its slot
+ *    — directly after the core, before any `@` annotation or slur/tie/beam mark
+ *    (`|c4( d)` + '\' → `c4\|( d)`), which is where every `\N` in the language's
+ *    own tests is spelled; the parser reads the post-events unordered, so the
+ *    slot is a convention, not a constraint. ⚠️ Unlike every other relocated
+ *    mark THE CARET FOLLOWS, to just after the '\': a backslash is never the
+ *    end of what is being typed — the string number comes next, and it has to
+ *    land after the '\' (owner decision, 2026-09-03: `|a4` + '\' → `a4\|`). A
+ *    rest plays no string and a chord's members are named one by one inside
+ *    the brackets, so on those the '\' is typed as pressed.
+ * 24a. When the note ALREADY carries a `\N` — in the slot, or after a mark, as
+ *    `g')\2` is legal — the keystroke inserts nothing and SELECTS the N, so the
+ *    next digit typed replaces it: the string is changed with '\' + digit, no
+ *    backspacing. A '\' still waiting for its digit absorbs the keystroke.
+ * 25. A digit typed on a note whose '\' is still waiting for its digit is that
+ *    string number, not a duration: `c|4\` + '3' → `c4\3`, the caret staying
+ *    put. Rule 24 leaves the caret after the '\' so the common case never
+ *    comes here; this is for a caret that was moved away and back onto the
+ *    core, where rule 16 would otherwise take the digit and write `c43\`. 0 is
+ *    no string number and is typed as pressed.
+ *
+ * 26. EVERY mark this module places lands in its note's CANONICAL SLOT, so one
+ *    spelling reaches the page whatever order the keys were pressed in
+ *    (owner decision, 2026-09-03 — see POST_EVENT_RANK for the reasoning):
+ *
+ *        core  \N  @…  ]  )  (  [  ~
+ *
+ *    `c8([ d e f])`, `d4)( e`, `a,4\4~`, `c4)~ c`. A note whose marks are in
+ *    another order is not rewritten; the new mark goes after the last one that
+ *    ranks at or below it. The parser reads any order.
+ * 27. '@' is placed by the same table (owner request, 2026-09-03: "its position
+ *    was indeterminate"): typed anywhere on a note it lands after the string
+ *    number and the annotations already there, before the marks, with the
+ *    caret after it and the name completion re-opened there. It is not
+ *    intercepted — '@' has no layout-safe key — so it travels through the
+ *    change-event route, with that route's one-frame flicker.
+ * 28. A digit or an octave mark typed among a note's marks is still typed ON
+ *    the note (`c8\8(|[` + '4' → `c4\8([`, the caret staying put; owner
+ *    request 2026-09-03) — the run is the note's. Inside an annotation's
+ *    argument list it is the argument and is typed as pressed. The dot keeps
+ *    to the core: after `@text("x")` a '.' is the `.up` placement.
+ *
+ * Rules 14–23 and 25 move TEXT and never the CARET: the mark or digit travels to the
  * slot it belongs in and the cursor keeps the position it was pressed at (see
  * stayPut), because a correction to what was typed is not a request to go
  * somewhere. Octave marks stay reachable from wherever the caret rests and stack
@@ -337,10 +389,22 @@ export function registerSmartTyping(
                 const before = text.slice(0, offset) + text.slice(offset + 1);
                 const plan = octaveMarkPlan(before, offset, change.text);
                 if (plan) { applyPlanAfterKeystroke(editor, text, offset, plan, log, change.text); }
-            } else if (change.text === '.' || /^[0-9]$/.test(change.text)) {
+            } else if (change.text === '.' || change.text === '\\' || /^[0-9]$/.test(change.text)) {
                 const before = text.slice(0, offset) + text.slice(offset + 1);
                 const plan = planFor(change.text, before, offset);
                 if (plan) { applyPlanAfterKeystroke(editor, text, offset, plan, log, change.text); }
+            } else if (change.text === '@') {
+                // Not intercepted (rule 27): '@' has no layout-safe key — on a JIS
+                // keyboard it is its own key, on a US one Shift+2 — so it always
+                // comes through here. The '@' is a completion trigger and the
+                // suggestions VS Code opened were asked for at the OLD position, so
+                // once the mark has moved the popup is asked for again where it is.
+                const before = text.slice(0, offset) + text.slice(offset + 1);
+                const plan = annotationPlan(before, offset);
+                if (plan) {
+                    applyPlanAfterKeystroke(editor, text, offset, plan, log, change.text,
+                        () => { void vscode.commands.executeCommand('editor.action.triggerSuggest'); });
+                }
             }
         })
     );
@@ -351,6 +415,7 @@ export function registerSmartTyping(
 function planFor(ch: string, before: string, offset: number): TypePlan | null {
     if (ch === "'" || ch === ',') { return octaveMarkPlan(before, offset, ch); }
     if (ch === '.') { return dotPlan(before, offset); }
+    if (ch === '\\') { return stringNumberPlan(before, offset); }
     if (/^[0-9]$/.test(ch)) { return durationPlan(before, offset, ch); }
     return null;
 }
@@ -401,7 +466,7 @@ function registerSmartTypeKeys(context: vscode.ExtensionContext, log: (msg: stri
             if (!plan) { return plain(); }
             applyPlanForTypedKey(editor, before, offset, plan, log, ch);
         }));
-    log('smartTyping: key interception registered for \' , and 0-9');
+    log('smartTyping: key interception registered for \' , . \\ and 0-9');
 }
 
 /** Applies a follow-up rewrite AND places the caret in ONE operation.
@@ -419,7 +484,7 @@ function registerSmartTypeKeys(context: vscode.ExtensionContext, log: (msg: stri
  * the tabstop can be placed by simple subtraction. */
 function applyFixWithCaret(editor: vscode.TextEditor, text: string,
     edits: { at: number, del?: number, ins?: string }[], caret: number,
-    ownUndoStep = false) {
+    ownUndoStep = false, selectLen = 0, after?: () => void) {
     let lo = Infinity;
     let hi = -Infinity;
     for (const e of edits) {
@@ -447,9 +512,10 @@ function applyFixWithCaret(editor: vscode.TextEditor, text: string,
     // span and a caret at the far end. Grow the span until it reaches, copying
     // the text on the way; unchanged text costs nothing to replace with itself.
     let caretIn = caret - lo;
-    while (caretIn > out.length && hi < text.length) { out += text[hi]; hi++; }
+    while (caretIn + selectLen > out.length && hi < text.length) { out += text[hi]; hi++; }
     while (caretIn < 0 && lo > 0) { lo--; out = text[lo] + out; caretIn++; }
     caretIn = Math.max(0, Math.min(out.length, caretIn));
+    selectLen = Math.min(selectLen, out.length - caretIn);
     const snippet = new vscode.SnippetString();
     snippet.appendText(out.slice(0, caretIn));
     // BRACED, and appendTabstop() is not usable here: it writes a bare `$0`, and
@@ -457,8 +523,14 @@ function applyFixWithCaret(editor: vscode.TextEditor, text: string,
     // of `c,2` is read as tabstop 02 and eats the digit. Every caret this helper
     // places sits next to a duration or an octave mark, which is exactly where a
     // digit follows. The text either side is still escaped by appendText().
-    snippet.value += '${0}';
-    snippet.appendText(out.slice(caretIn));
+    // With `selectLen` the tabstop is a PLACEHOLDER over the next characters,
+    // which the snippet leaves SELECTED — how a string number is offered for
+    // retyping (rule 24a). The placeholder's text is escaped by hand, as
+    // appendPlaceholder() would do; it is only ever a digit here.
+    snippet.value += selectLen > 0
+        ? '${0:' + out.slice(caretIn, caretIn + selectLen).replace(/[$}\\]/g, '\\$&') + '}'
+        : '${0}';
+    snippet.appendText(out.slice(caretIn + selectLen));
     applyingFix = true;
     // A follow-up to a keystroke merges into that keystroke's undo step. An
     // INTERCEPTED key has no keystroke edit to merge with, so it opens its own —
@@ -467,7 +539,7 @@ function applyFixWithCaret(editor: vscode.TextEditor, text: string,
     editor.insertSnippet(snippet,
         new vscode.Range(editor.document.positionAt(lo), editor.document.positionAt(hi)),
         { undoStopBefore: ownUndoStep, undoStopAfter: true })
-        .then(() => { applyingFix = false; }, () => { applyingFix = false; });
+        .then(() => { applyingFix = false; after?.(); }, () => { applyingFix = false; });
 }
 
 /** What a typed octave mark or duration digit does to the text, decided ENTIRELY
@@ -482,8 +554,11 @@ function applyFixWithCaret(editor: vscode.TextEditor, text: string,
  *
  * `at`/`del`/`ins` replace one span; `caret` is the finished text's offset for
  * the cursor. A plan whose `ins` equals what it replaces is a NO-OP: the
- * keystroke is absorbed and nothing is edited at all. */
-interface TypePlan { at: number, del: number, ins: string, caret: number, what: string }
+ * keystroke is absorbed and nothing is edited at all — unless it carries a
+ * `select`, the number of characters from `caret` to leave SELECTED, which is
+ * how a keystroke that changes no text still offers something to retype
+ * (rule 24a). */
+interface TypePlan { at: number, del: number, ins: string, caret: number, what: string, select?: number }
 
 /** Where the caret belongs when a keystroke was RELOCATED rather than accepted
  * where it was pressed: exactly where the typist left it.
@@ -521,13 +596,14 @@ function stayPut(at: number, spanAt: number, oldLen: number, newLen: number): nu
  * this module was told anything, and no edit made afterwards can un-paint that.
  * Interception is what removes it — see registerSmartTypeKeys. */
 function applyPlanAfterKeystroke(editor: vscode.TextEditor, text: string, offset: number,
-    plan: TypePlan, log: (msg: string) => void, typed: string) {
+    plan: TypePlan, log: (msg: string) => void, typed: string, after?: () => void) {
     const lo = Math.min(plan.at, offset);
     const hi = Math.max(plan.at + plan.del, offset);
     const before = text.slice(0, offset) + text.slice(offset + 1);
     const replacement =
         before.slice(lo, plan.at) + plan.ins + before.slice(plan.at + plan.del, hi);
-    applyFixWithCaret(editor, text, [{ at: lo, del: hi + 1 - lo, ins: replacement }], plan.caret);
+    applyFixWithCaret(editor, text, [{ at: lo, del: hi + 1 - lo, ins: replacement }], plan.caret,
+        false, plan.select ?? 0, after);
     log(`smartTyping: ${typed} typed -> ${plan.what}`);
 }
 
@@ -536,12 +612,23 @@ function applyPlanAfterKeystroke(editor: vscode.TextEditor, text: string, offset
  * to take back out and no moment at which the caret sat anywhere else. */
 function applyPlanForTypedKey(editor: vscode.TextEditor, before: string, offset: number,
     plan: TypePlan, log: (msg: string) => void, typed: string) {
-    if (plan.ins === before.slice(plan.at, plan.at + plan.del) && plan.caret === offset) {
-        log(`smartTyping: ${typed} typed -> ${plan.what} (absorbed, nothing to change)`);
-        return;
+    if (plan.ins === before.slice(plan.at, plan.at + plan.del)) {
+        if (plan.select) {
+            // Nothing to write: the keystroke only moves the selection, which
+            // is no edit and so opens no undo step of its own.
+            const doc = editor.document;
+            editor.selection = new vscode.Selection(
+                doc.positionAt(plan.caret), doc.positionAt(plan.caret + plan.select));
+            log(`smartTyping: ${typed} typed -> ${plan.what}`);
+            return;
+        }
+        if (plan.caret === offset) {
+            log(`smartTyping: ${typed} typed -> ${plan.what} (absorbed, nothing to change)`);
+            return;
+        }
     }
     applyFixWithCaret(editor, before,
-        [{ at: plan.at, del: plan.del, ins: plan.ins }], plan.caret, true);
+        [{ at: plan.at, del: plan.del, ins: plan.ins }], plan.caret, true, plan.select ?? 0);
     log(`smartTyping: ${typed} typed -> ${plan.what}`);
 }
 
@@ -663,23 +750,126 @@ const hasUnresolvedSlurClose = (text: string, from: number, end: number) =>
     unresolvedSlurClose(text, from, end) >= 0;
 
 /** Past the `@annotation`s glued to the note ending at `i` — name, any
- * `(args)`, and a `.up` / `.down` placement suffix — so a ')' lands after the
- * whole note item rather than between the note and its own markings. */
+ * `(args)`, and a `.up` / `.down` placement suffix — and past a tab's `\N`
+ * string number, which the parser reads in the same post-event list as the
+ * `@`s and in any order with them — so a ')' lands after the whole note item
+ * rather than between the note and its own markings.
+ *
+ * ⚠️ The string number was not read here until 2026-09-03 (owner report): in
+ * `c\3 d` the walk ended the note at `c`, met `\3` as a BARRIER, and every mark
+ * typed on that note — '(' , '[' and their closes — found "no note ahead" and
+ * did nothing. The lexer's rule is the one used: a backslash directly followed
+ * by a digit 1–9 (Lexer.cs, StringNumber). */
 function skipAnnotations(text: string, i: number, end: number): number {
-    while (text[i] === '@') {
-        let k = i + 1;
-        while (k < end && /[A-Za-z0-9_-]/.test(text[k])) { k++; }
-        if (text[k] === '(') {
-            let depth = 1;
-            for (k++; k < end && depth > 0; k++) {
-                if (text[k] === '(') { depth++; }
-                else if (text[k] === ')') { depth--; }
-            }
-        }
-        const placement = /^\.(?:up|down)/.exec(text.slice(k, end));
-        i = placement ? k + placement[0].length : k;
+    while (text[i] === '@' || (text[i] === '\\' && /[1-9]/.test(text[i + 1] ?? ''))) {
+        i = text[i] === '\\' ? i + 2 : skipAnnotation(text, i, end);
     }
     return i;
+}
+
+/** Past ONE `@annotation` starting at `i`: its name, any `(args)` and a
+ * `.up` / `.down` placement suffix. */
+function skipAnnotation(text: string, i: number, end: number): number {
+    let k = i + 1;
+    while (k < end && /[A-Za-z0-9_-]/.test(text[k])) { k++; }
+    if (text[k] === '(') {
+        let depth = 1;
+        for (k++; k < end && depth > 0; k++) {
+            if (text[k] === '(') { depth++; }
+            else if (text[k] === ')') { depth--; }
+        }
+    }
+    const placement = /^\.(?:up|down)/.exec(text.slice(k, end));
+    return placement ? k + placement[0].length : k;
+}
+
+/** The tab string number glued to the note whose core ends at `from` — the `\`
+ * of its `\N` — read across everything the parser lets stand between the note
+ * and it: `@` annotations and the slur, tie and beam marks (`g')\2` is legal,
+ * the post-events being unordered). `digit` says whether the N is there yet; a
+ * bare `\` is one still waiting for it (rules 24a, 25). null when the note has
+ * none. Whitespace or anything else ends the note, so the scan is short. */
+function stringNumberAt(text: string, from: number): { at: number, digit: boolean } | null {
+    const item = postEventRun(text, from).find(e => e.kind === 'string');
+    return item ? { at: item.at, digit: item.end - item.at === 2 } : null;
+}
+
+/** THE CANONICAL ORDER OF A NOTE'S POST-EVENTS — what every smart key writes, so
+ * that one shape reaches the page whatever order the marks were typed in and
+ * `\3~`, `)~`, `([` can be searched for (owner decision, 2026-09-03).
+ *
+ * From the note outward, by how much music the mark spans: the string number
+ * and the `@` annotations belong to this note alone; a beam stays inside the
+ * bar; a slur spans a phrase; and the tie stands between the two notes it
+ * joins, so it goes last, next to its partner. What ENDS on the note is written
+ * before what BEGINS on it (`d4)(`), and the brackets nest — slur outside, beam
+ * inside — so `c8([ d e f])` reads like parenthesised code:
+ *
+ *     core  \N  @…  ]  )  (  [  ~
+ *
+ * The parser reads the post-events unordered (LILYPOND-REF: lily/parser.yy
+ * post_events), so this is a writing convention and not a constraint: text in
+ * another order is left as it is, and a new mark simply goes after the last
+ * item that ranks at or below it — which nudges `c4(~` + '[' to `c4([~`. */
+type PostEventKind = 'string' | 'annotation' | ']' | ')' | '(' | '[' | '~';
+const POST_EVENT_RANK: Record<PostEventKind, number> =
+    { string: 0, annotation: 1, ']': 2, ')': 3, '(': 4, '[': 5, '~': 6 };
+
+/** The post-events glued to the note whose core ends at `from`, in source
+ * order, each as [at, end). A `\` still waiting for its digit is a 'string'
+ * item of length 1. Whitespace or anything else ends the note. */
+function postEventRun(text: string, from: number): { kind: PostEventKind, at: number, end: number }[] {
+    const run: { kind: PostEventKind, at: number, end: number }[] = [];
+    for (let i = from; i < text.length;) {
+        const c = text[i];
+        if (c === '\\') {
+            const end = /[1-9]/.test(text[i + 1] ?? '') ? i + 2 : i + 1;
+            run.push({ kind: 'string', at: i, end });
+            i = end;
+        } else if (c === '@') {
+            const end = skipAnnotation(text, i, text.length);
+            run.push({ kind: 'annotation', at: i, end });
+            i = end;
+        } else if (c === '(' || c === ')' || c === '~' || c === '[' || c === ']') {
+            run.push({ kind: c, at: i, end: i + 1 });
+            i++;
+        } else { break; }
+    }
+    return run;
+}
+
+/** Where a new post-event of `kind` goes on the note whose core ends at
+ * `coreEnd`: after the last mark already there that ranks at or below it, so
+ * the run stays in the canonical order. */
+function postEventSlot(text: string, coreEnd: number, kind: PostEventKind): number {
+    let slot = coreEnd;
+    for (const item of postEventRun(text, coreEnd)) {
+        if (POST_EVENT_RANK[item.kind] <= POST_EVENT_RANK[kind]) { slot = item.end; }
+    }
+    return slot;
+}
+
+/** The mark of `kind` already on the note whose core ends at `coreEnd`, or
+ * undefined — the question "does this note already open a slur?" asked of the
+ * run rather than of the one character after the note, where it used to be
+ * asked and where a `~` or a `\3` in front of the '(' hid it. */
+function postEventOn(text: string, coreEnd: number, kind: PostEventKind) {
+    return postEventRun(text, coreEnd).find(e => e.kind === kind);
+}
+
+/** Where the core of the note event [start, end) ends — the slot the
+ * post-events hang off. Falls back to the event's end for anything noteSlots
+ * cannot read. */
+function coreEndOf(text: string, event: { start: number, end: number }): number {
+    return noteSlots(text, event.start, event.end)?.coreEnd ?? event.end;
+}
+
+/** Where the note event's glued post-events end — the far end of what a caret
+ * can be "on" for that note. musicEvents ends an event after its `@`s and `\N`
+ * only; the slur, tie and beam marks are read here. */
+function postEventEnd(text: string, event: { start: number, end: number }): number {
+    const run = postEventRun(text, coreEndOf(text, event));
+    return run.length > 0 ? run[run.length - 1].end : event.end;
 }
 
 /** One step of a music walk: a note EVENT with its offsets, or a BARRIER —
@@ -772,17 +962,18 @@ function firstNoteEvent(text: string, from: number, end: number)
     return null;
 }
 
-/** The offset just after the note event BEFORE the one a ')' typed at `at`
- * closes on — where that ')' wants its '('. Mirrors nextNoteEnd, so the shortest
- * automatic slur spans two notes whichever end is typed first. A barrier resets
- * the pair, keeping the '(' on this side of anything unrecognized. -1 = none. */
-function precedingNoteEnd(text: string, start: number, at: number): number {
-    let beforeLast = -1;
-    let last = -1;
+/** The note event BEFORE the one a ')' typed at `at` closes on — the note that
+ * ')' wants its '(' on. Mirrors firstNoteEvent, so the shortest automatic slur
+ * spans two notes whichever end is typed first. A barrier resets the pair,
+ * keeping the '(' on this side of anything unrecognized. null = none. */
+function precedingNote(text: string, start: number, at: number)
+    : { start: number, end: number } | null {
+    let beforeLast: { start: number, end: number } | null = null;
+    let last: { start: number, end: number } | null = null;
     for (const event of musicEvents(text, start, at)) {
-        if (!event.note) { beforeLast = -1; last = -1; continue; }
+        if (!event.note) { beforeLast = null; last = null; continue; }
         beforeLast = last;
-        last = event.end;
+        last = { start: event.start, end: event.end };
     }
     return beforeLast;
 }
@@ -791,16 +982,22 @@ function precedingNoteEnd(text: string, start: number, at: number): number {
  * slur the typed ')' is there to close. An annotation's still-open `(args)`
  * counts too, which is exactly right: that ')' closes the arguments. */
 function hasUnresolvedSlurOpen(text: string, start: number, at: number): boolean {
+    return unresolvedSlurOpen(text, start, at) >= 0;
+}
+
+/** The offset of the '(' in [start, at) that no ')' inside the span closes, or
+ * -1 — the one hasUnresolvedSlurOpen reports on. */
+function unresolvedSlurOpen(text: string, start: number, at: number): number {
     let depth = 0;
     for (let i = at - 1; i >= start; i--) {
         const c = text[i];
         if (c === ')') { depth++; }
         else if (c === '(') {
-            if (depth === 0) { return true; }
+            if (depth === 0) { return i; }
             depth--;
         }
     }
-    return false;
+    return -1;
 }
 
 /** True when `offset` sits inside a string literal or a comment, where a '(' is
@@ -842,19 +1039,40 @@ function slurAnchorAt(text: string, offset: number)
     : { start: number, end: number } | 'member' | null {
     const [blockStart, blockEnd] = blockBounds(text, offset);
     for (const event of musicEvents(text, blockStart, blockEnd)) {
-        if (!event.note || event.end < offset) { continue; }
+        // The note reaches to the end of its glued post-events — a caret after
+        // the '[' of `a8[|` is still on the a (owner report 2026-09-03: '(' typed
+        // there stayed put, because the walk's event ends before the marks).
+        if (!event.note || postEventEnd(text, event) < offset) { continue; }
         if (event.start > offset) { return null; } // between events
         const slots = noteSlots(text, event.start, event.end);
         if (slots && text[event.start] === '<'
             && offset > event.start && offset < slots.marksEnd) { return 'member'; }
         // Past the core the caret is among the note's annotations, and an
-        // unclosed '(' there is an argument list being typed (`@fig(6| 4)`) —
-        // the parens are the annotation's, not the music's.
-        if (slots && offset > slots.coreEnd
-            && hasUnresolvedSlurOpen(text, slots.coreEnd, offset)) { return 'member'; }
+        // unclosed '(' there that is GLUED TO A NAME is an argument list being
+        // typed (`@fig(6| 4)`) — the parens are the annotation's, not the
+        // music's. An unclosed slur '(' (`c4(|`) is the note's own mark, and
+        // the caret after it is still on the note (2026-09-03: it used to read
+        // as 'member' too, which left a '@' typed there where it was).
+        if (slots && insideAnnotationArgs(text, slots.coreEnd, offset)) { return 'member'; }
         return { start: event.start, end: event.end };
     }
     return null;
+}
+
+/** True when a caret past the note's core (which ends at `coreEnd`) sits inside
+ * an annotation's still-open argument list (`@fig(6| 4)`): the unclosed '(' is
+ * glued to a NAME — back over the name's characters to an '@', the same reading
+ * isSlurOpen uses. An unclosed slur '(' (`c4(|`) is the note's own mark and the
+ * caret after it is still on the note. ⚠️ Testing just the one character before
+ * the '(' read the `8` of `c8\8(` as a name and left a '@' typed after that '('
+ * where it was (owner report, 2026-09-03). */
+function insideAnnotationArgs(text: string, coreEnd: number, offset: number): boolean {
+    if (offset <= coreEnd) { return false; }
+    const open = unresolvedSlurOpen(text, coreEnd, offset);
+    if (open < 0) { return false; }
+    let j = open - 1;
+    while (j >= 0 && /[A-Za-z0-9_-]/.test(text[j])) { j--; }
+    return text[j] === '@';
 }
 
 /** '(' typed in music: the slur's ')' belongs after the note the slur COVERS,
@@ -880,8 +1098,10 @@ function onInsertSlurOpen(editor: vscode.TextEditor, text: string, offset: numbe
     // note's end by itself.
     const anchor = slurAnchorAt(before, offset);
     if (anchor === 'member') { return; } // pointing inside a chord
-    let openAt = anchor ? anchor.end : offset;
-    let closeOn = firstNoteEvent(before, openAt, end);
+    // The '(' goes into the note's canonical slot (POST_EVENT_RANK): after what
+    // ends there, before a '[' and the tie.
+    let openAt = anchor ? postEventSlot(before, coreEndOf(before, anchor), '(') : offset;
+    let closeOn = firstNoteEvent(before, anchor ? anchor.end : offset, end);
     if (!closeOn) {
         // Nothing after the anchor to cover. When the caret was pointing AHEAD
         // at that note, the nearest legal two-note slur is the one anchored on
@@ -891,16 +1111,16 @@ function onInsertSlurOpen(editor: vscode.TextEditor, text: string, offset: numbe
         closeOn = firstNoteEvent(before, offset, end);
         if (!closeOn) { return; } // nothing to slur to — keep the pair as typed
     }
+    const closeCore = coreEndOf(before, closeOn);
 
     // An unresolved ')' ahead: the '(' pairs with THAT, so no close is added —
     // it still moves onto the note the caret pointed at.
     const paired = hasUnresolvedSlurClose(before, openAt, end);
     // A slur already STARTING where this one would close is extended backwards
     // instead: its open gives way to this one (`e| c4( d)` → `e( c4 d)`).
-    let existingOpen = closeOn.end;
-    while (before[existingOpen] === ' ' || before[existingOpen] === '\t') { existingOpen++; }
-    const extend = !paired && before[existingOpen] === '('
-        && hasUnresolvedSlurClose(before, existingOpen + 1, end);
+    const existingOpen = paired ? undefined : postEventOn(before, closeCore, '(');
+    const extend = existingOpen !== undefined
+        && hasUnresolvedSlurClose(before, existingOpen.at + 1, end);
 
     // Offsets computed on `before` are placed in the document as it stands, which
     // still holds the keystroke. The caret goes right after the '(' — in the same
@@ -911,8 +1131,8 @@ function onInsertSlurOpen(editor: vscode.TextEditor, text: string, offset: numbe
         { at: offset, del: typedLen },
         { at: insertAt(openAt), ins: '(' },
     ];
-    if (extend) { edits.push({ at: charAt(existingOpen), del: 1 }); }
-    else if (!paired) { edits.push({ at: insertAt(closeOn.end), ins: ')' }); }
+    if (extend) { edits.push({ at: charAt(existingOpen!.at), del: 1 }); }
+    else if (!paired) { edits.push({ at: insertAt(postEventSlot(before, closeCore, ')')), ins: ')' }); }
     applyFixWithCaret(editor, text, edits, openAt + 1);
 
     log(`smartTyping: ( typed -> ${openAt === offset ? '' : 'moved to the end of its note, '}`
@@ -926,10 +1146,11 @@ function onInsertSlurOpen(editor: vscode.TextEditor, text: string, offset: numbe
  * only the first note of `c8 d e f` spells the eighth out. Bounded by the
  * MEASURE and not by the block, which is what separates a beam from a slur: a
  * beam cannot cross a barline. A barrier ends what can be read. */
-function measureEvents(text: string, at: number)
-    : { start: number, end: number, duration: number, rest: boolean }[] {
+type MeasureEvent = { start: number, end: number, core: number, duration: number, rest: boolean };
+
+function measureEvents(text: string, at: number): MeasureEvent[] {
     const [mStart, mEnd] = measureBounds(text, at);
-    const events: { start: number, end: number, duration: number, rest: boolean }[] = [];
+    const events: MeasureEvent[] = [];
     let running = 0;
     for (const event of musicEvents(text, mStart, mEnd)) {
         if (!event.note) {
@@ -941,31 +1162,27 @@ function measureEvents(text: string, at: number)
         const digits = text.slice(slots.marksEnd, slots.digitsEnd);
         running = digits ? parseInt(digits, 10) : running;
         events.push({
-            start: event.start, end: event.end,
+            start: event.start, end: event.end, core: slots.coreEnd,
             duration: running, rest: slots.octave === null,
         });
     }
     return events;
 }
 
-/** Walks the beamable run from `i` in `step` direction and returns the offset
- * just after the LAST NOTE it reaches, or -1 when fewer than two notes line up.
- * A rest is spanned — `c8[ r8 d8]` is a beam over a rest — but never ends one,
- * so a trailing rest is not what the bracket lands after. A duration that
- * carries no flag ends the run, rest or not. */
-function beamRun(events: { end: number, duration: number, rest: boolean }[],
-    i: number, step: 1 | -1): number {
+/** The beamable note NEXT to `events[i]` in `step` direction — the one a beam
+ * typed on `events[i]` pairs with — as its index, or -1 when the note at `i`
+ * cannot carry a beam or nothing beamable stands beside it. A rest is spanned —
+ * `c8[ r8 d8]` is a beam over a rest — but is never the partner, so the walk
+ * steps over beamable rests to the first NOTE. A duration that carries no flag
+ * (a quarter, a longer note) is a wall, rest or not: the beam cannot reach past
+ * it. Until 2026-09-03 this walked the whole run and answered its far end. */
+function beamNeighbour(events: MeasureEvent[], i: number, step: 1 | -1): number {
     if (i < 0 || !events[i] || events[i].rest || !BEAMABLE.has(events[i].duration)) { return -1; }
-    let notes = 0;
-    let lastNoteEnd = -1;
-    for (let k = i; k >= 0 && k < events.length; k += step) {
-        if (!BEAMABLE.has(events[k].duration)) { break; }
-        if (!events[k].rest) {
-            notes++;
-            lastNoteEnd = events[k].end;
-        }
+    for (let k = i + step; k >= 0 && k < events.length; k += step) {
+        if (!BEAMABLE.has(events[k].duration)) { return -1; }
+        if (!events[k].rest) { return k; }
     }
-    return notes >= 2 ? lastNoteEnd : -1;
+    return -1;
 }
 
 /** True when [from, end) holds a ']' that no '[' inside the span opens — an
@@ -997,10 +1214,11 @@ function hasUnresolvedBeamOpen(text: string, start: number, at: number): boolean
 }
 
 /** '[' typed in music: a manual beam opens after the note it starts on, exactly
- * as a slur and a tie do, and closes on the last note that can still be beamed
- * in the same measure (`c8|` + '[' → `c8[ d e f]`). A note that cannot carry a
- * beam, or one with nothing beamable behind it, is left as typed — as is a '['
- * that is not on a note at all, which is what an inline volta's `[1.` is. */
+ * as a slur and a tie do, and closes on the FOLLOWING beamable note of the same
+ * measure (`c8|` + '[' → `c8[ d] e f`) — the slur's shape (onInsertSlurOpen),
+ * bounded by the barline. A note that cannot carry a beam, or one with nothing
+ * beamable beside it, is left as typed — as is a '[' that is not on a note at
+ * all, which is what an inline volta's `[1.` is. */
 function onInsertBeamOpen(editor: vscode.TextEditor, text: string, offset: number,
     autoClosed: boolean, log: (msg: string) => void) {
     if (inStringOrComment(text, offset)) { return; }
@@ -1009,26 +1227,42 @@ function onInsertBeamOpen(editor: vscode.TextEditor, text: string, offset: numbe
     const anchor = slurAnchorAt(before, offset);
     if (!anchor || anchor === 'member') { return; }
     const events = measureEvents(before, anchor.start);
-    const runEnd = beamRun(events, events.findIndex(e => e.start === anchor.start), 1);
-    if (runEnd < 0) { return; } // not beamable, or nothing to group with
+    const closeIdx = beamNeighbour(events, events.findIndex(e => e.start === anchor.start), 1);
+    if (closeIdx < 0) { return; } // not beamable, or nothing to group with
+    const closeOn = events[closeIdx];
+    // Both ends go into their notes' canonical slots (POST_EVENT_RANK).
+    const openAt = postEventSlot(before, coreEndOf(before, anchor), '[');
+    const closeAt = postEventSlot(before, closeOn.core, ']');
 
+    // An unresolved ']' ahead: the '[' pairs with THAT, so no close is added.
     const [, mEnd] = measureBounds(before, anchor.end);
-    const paired = hasUnresolvedBeamClose(before, anchor.end, mEnd);
+    const paired = hasUnresolvedBeamClose(before, openAt, mEnd);
+    // A beam already STARTING on the note this one would close on is extended
+    // backwards instead: its open gives way to this one (`c8| d[ e]` → `c8[ d e]`).
+    const existingOpen = paired ? undefined : postEventOn(before, closeOn.core, '[');
+    const extend = existingOpen !== undefined
+        && hasUnresolvedBeamClose(before, existingOpen.at + 1, mEnd);
+
     const insertAt = (p: number) => (p <= offset ? p : p + typedLen);
+    const charAt = (p: number) => (p < offset ? p : p + typedLen);
     const edits: { at: number, del?: number, ins?: string }[] = [
         { at: offset, del: typedLen },
-        { at: insertAt(anchor.end), ins: '[' },
+        { at: insertAt(openAt), ins: '[' },
     ];
-    if (!paired) { edits.push({ at: insertAt(runEnd), ins: ']' }); }
-    applyFixWithCaret(editor, text, edits, anchor.end + 1);
-    log(`smartTyping: [ typed -> beam ${paired ? 'opened against the ] ahead' : 'closed on its run'}`);
+    if (extend) { edits.push({ at: charAt(existingOpen!.at), del: 1 }); }
+    else if (!paired) { edits.push({ at: insertAt(closeAt), ins: ']' }); }
+    applyFixWithCaret(editor, text, edits, openAt + 1);
+    log(`smartTyping: [ typed -> beam ${extend ? 'extended the beam starting on the next note'
+        : paired ? 'opened against the ] ahead' : '] placed after the following note'}`);
 }
 
 /** ']' typed in music: the end of a beam is written after its note like every
  * other mark here, so one typed inside a note moves to that note's end — and it
- * reaches BACK for the note the beam started on, the mirror of what '[' does
- * forwards: the first note of the beamable run that ends here. An unresolved '['
- * already in the measure means the ']' simply closes that, and only moves. */
+ * reaches BACK for the beamable note BEFORE the one it closes on, the mirror of
+ * what '[' does forwards and the shape ')' has (onInsertSlurClose). A beam that
+ * already ends on that preceding note is EXTENDED by one instead of a second one
+ * opening beside it. An unresolved '[' already in the measure means the ']'
+ * simply closes that, and only moves. */
 function onInsertBeamClose(editor: vscode.TextEditor, text: string, offset: number,
     log: (msg: string) => void) {
     if (inStringOrComment(text, offset)) { return; }
@@ -1038,20 +1272,45 @@ function onInsertBeamClose(editor: vscode.TextEditor, text: string, offset: numb
 
     const [mStart] = measureBounds(before, anchor.start);
     const events = measureEvents(before, anchor.start);
-    const runStart = hasUnresolvedBeamOpen(before, mStart, anchor.start)
-        ? -1 // already open — this ']' is its close
-        : beamRun(events, events.findIndex(e => e.start === anchor.start), -1);
-    if (runStart < 0 && anchor.end === offset) { return; } // nothing to do at all
-
+    // The ']' goes into its note's canonical slot (POST_EVENT_RANK): after the
+    // string number and the annotations, before a ')' and anything that opens.
+    const closeAt = postEventSlot(before, coreEndOf(before, anchor), ']');
     const insertAt = (p: number) => (p <= offset ? p : p + 1);
-    const edits: { at: number, del?: number, ins?: string }[] = [
-        { at: offset, del: 1 },
-        { at: insertAt(anchor.end), ins: ']' },
-    ];
-    if (runStart >= 0) { edits.push({ at: insertAt(runStart), ins: '[' }); }
-    // Past the ']' — which the '[' inserted before it has pushed along by one.
-    applyFixWithCaret(editor, text, edits, anchor.end + (runStart >= 0 ? 2 : 1));
-    log(`smartTyping: ] typed -> ${runStart >= 0 ? '[ placed on its run' : 'moved to the end of its note'}`);
+    const charAt = (p: number) => (p < offset ? p : p + 1);
+    const edits: { at: number, del?: number, ins?: string }[] = [];
+    if (closeAt !== offset) {
+        edits.push({ at: offset, del: 1 }, { at: insertAt(closeAt), ins: ']' });
+    }
+    let caret = closeAt + 1;
+    let what: string;
+
+    if (hasUnresolvedBeamOpen(before, mStart, anchor.start)) {
+        // Already open — this ']' is its close, and only moves onto its note.
+        if (edits.length === 0) { return; } // nothing to do at all
+        what = 'moved into its slot on the note';
+    } else {
+        const openIdx = beamNeighbour(events, events.findIndex(e => e.start === anchor.start), -1);
+        const openOn = openIdx >= 0 ? events[openIdx] : undefined;
+        const old = openOn ? postEventOn(before, openOn.core, ']') : undefined;
+        if (openOn && old && hasUnresolvedBeamOpen(before, mStart, old.at)) {
+            // A beam already ends on that note: EXTEND it by one rather than
+            // opening a second one beside it (`c8[ d] e` + ']' → `c8[ d e]`).
+            edits.push({ at: charAt(old.at), del: 1 });
+            caret -= 1;
+            what = 'extended the beam ending on the previous note';
+        } else if (openOn) {
+            edits.push({ at: insertAt(postEventSlot(before, openOn.core, '[')), ins: '[' });
+            // Past the ']' — which the '[' inserted before it has pushed along by one.
+            caret += 1;
+            what = '[ placed after the preceding note';
+        } else if (edits.length === 0) {
+            return; // not beamable, or nothing to open on — leave the ']' as typed
+        } else {
+            what = 'moved into its slot on the note';
+        }
+    }
+    applyFixWithCaret(editor, text, edits, caret);
+    log(`smartTyping: ] typed -> ${what}`);
 }
 
 /** '~' typed in music: a tie is written after the note it starts from, exactly
@@ -1065,11 +1324,14 @@ function onInsertTie(editor: vscode.TextEditor, text: string, offset: number,
     const before = text.slice(0, offset) + text.slice(offset + 1);
     const anchor = slurAnchorAt(before, offset);
     if (!anchor || anchor === 'member') { return; } // between events, or a chord member
-    if (anchor.end === offset) { return; } // already where it belongs
+    // The tie is the LAST post-event (POST_EVENT_RANK): it stands between the
+    // two notes it joins, after everything that ends or begins on this one.
+    const slot = postEventSlot(before, coreEndOf(before, anchor), '~');
+    if (slot === offset) { return; } // already where it belongs
     applyFixWithCaret(editor, text, [
         { at: offset, del: 1 },
-        { at: anchor.end <= offset ? anchor.end : anchor.end + 1, ins: '~' },
-    ], anchor.end + 1);
+        { at: slot <= offset ? slot : slot + 1, ins: '~' },
+    ], slot + 1);
     log('smartTyping: ~ typed -> moved to the end of its note');
 }
 
@@ -1084,10 +1346,11 @@ function onInsertSlurClose(editor: vscode.TextEditor, text: string, offset: numb
     const before = text.slice(0, offset) + text.slice(offset + 1);
     const [blockStart, blockEnd] = blockBounds(before, offset);
 
-    // WHERE it belongs: after the note the caret is on, like every other mark.
+    // WHERE it belongs: in its slot on the note the caret is on (POST_EVENT_RANK
+    // — after a ']', before anything that opens and before the tie).
     const anchor = slurAnchorAt(before, offset);
     if (anchor === 'member') { return; }
-    const closeAt = anchor ? anchor.end : offset;
+    const closeAt = anchor ? postEventSlot(before, coreEndOf(before, anchor), ')') : offset;
 
     const insertAt = (p: number) => (p <= offset ? p : p + 1);
     const charAt = (p: number) => (p < offset ? p : p + 1);
@@ -1110,18 +1373,17 @@ function onInsertSlurClose(editor: vscode.TextEditor, text: string, offset: numb
     } else {
         // Not inside one: the ')' needs a slur to belong to, so it reaches back
         // for the note BEFORE the one it closes on.
-        const openOn = precedingNoteEnd(before, blockStart, anchor ? anchor.end : offset);
-        let old = openOn;
-        while (before[old] === ' ' || before[old] === '\t') { old++; }
-        if (openOn >= 0 && before[old] === ')'
-            && hasUnresolvedSlurOpen(before, blockStart, old)) {
+        const openOn = precedingNote(before, blockStart, anchor ? anchor.end : offset);
+        const openCore = openOn ? coreEndOf(before, openOn) : -1;
+        const old = openOn ? postEventOn(before, openCore, ')') : undefined;
+        if (openOn && old && hasUnresolvedSlurOpen(before, blockStart, old.at)) {
             // A slur already ends on that note: EXTEND it by one rather than
             // opening a second one beside it.
-            edits.push({ at: charAt(old), del: 1 });
+            edits.push({ at: charAt(old.at), del: 1 });
             caret -= 1;
             what = 'extended the slur ending on the previous note';
-        } else if (openOn >= 0) {
-            edits.push({ at: insertAt(openOn), ins: '(' });
+        } else if (openOn) {
+            edits.push({ at: insertAt(postEventSlot(before, openCore, '(')), ins: '(' });
             caret += 1;
             what = '( placed after the preceding note';
         } else if (edits.length === 0) {
@@ -1178,18 +1440,25 @@ function noteSlots(text: string, start: number, end: number): NoteSlots | null {
  * inside a plain note counts; a chord counts only at its ENDS, because its
  * interior belongs to the members (`<c, e g>`, `<c 3 5>`) and what is typed
  * there is already in the right place. */
-function noteAtCaret(text: string, offset: number)
+function noteAtCaret(text: string, offset: number, throughMarks = false)
     : { start: number, slots: NoteSlots } | null {
     const [blockStart, blockEnd] = blockBounds(text, offset);
     for (const event of musicEvents(text, blockStart, blockEnd)) {
-        if (!event.note || event.end < offset) { continue; }
+        if (!event.note || postEventEnd(text, event) < offset) { continue; }
         if (event.start > offset) { return null; } // the caret is between events
         const slots = noteSlots(text, event.start, event.end);
         if (!slots) { return null; }
+        // `throughMarks`: the caret is on the note ANYWHERE in its glued
+        // post-events too (`c8\8(|[` + '4' → `c4\8([`, owner request 2026-09-03)
+        // — except inside an annotation's argument list, where a digit is the
+        // argument. The dot does not ask for this: a '.' typed after
+        // `@text("x")` is the `.up` placement, not an augmentation dot.
+        const far = throughMarks && !insideAnnotationArgs(text, slots.coreEnd, offset)
+            ? postEventEnd(text, event) : slots.coreEnd;
         const onIt = text[event.start] === '<'
             ? offset === event.start
-                || (offset >= slots.marksEnd && offset <= slots.coreEnd)
-            : offset >= event.start && offset <= slots.coreEnd;
+                || (offset >= slots.marksEnd && offset <= far)
+            : offset >= event.start && offset <= far;
         return onIt ? { start: event.start, slots } : null;
     }
     return null;
@@ -1202,7 +1471,7 @@ function noteAtCaret(text: string, offset: number)
  * is walked back with the key that caused it, no selecting or backspacing. */
 function octaveMarkPlan(before: string, offset: number, mark: string): TypePlan | null {
     if (inStringOrComment(before, offset)) { return null; }
-    const found = noteAtCaret(before, offset);
+    const found = noteAtCaret(before, offset, true);
     if (!found || found.slots.octave === null) { return null; } // a rest takes none
     const { octave, marksEnd } = found.slots;
 
@@ -1239,9 +1508,28 @@ function octaveMarkPlan(before: string, offset: number, mark: string): TypePlan 
  * left exactly as typed. */
 function durationPlan(before: string, offset: number, digit: string): TypePlan | null {
     if (inStringOrComment(before, offset)) { return null; }
-    const found = noteAtCaret(before, offset);
+    const found = noteAtCaret(before, offset, true);
     if (!found) { return null; }
     const { marksEnd, digitsEnd } = found.slots;
+
+    // A '\' on the note still waiting for its digit takes this one (rule 25): it
+    // is the string number rule 24 opened, and handing the digit to the duration
+    // would write `c43\`. The caret stays put here as well. 0 is no string number
+    // (the lexer reads `\1`–`\9`) and goes to the duration path, which leaves it
+    // as typed too. A caret DIRECTLY after that '\' — where rule 24 leaves it — is
+    // ordinary typing: the digit lands there by itself and carries the caret.
+    const stringNumber = found.slots.octave === null ? null
+        : stringNumberAt(before, found.slots.coreEnd);
+    if (stringNumber && !stringNumber.digit && digit !== '0') {
+        const slot = stringNumber.at + 1;
+        if (slot === offset) { return null; }
+        return {
+            at: slot, del: 0, ins: digit,
+            caret: stayPut(offset, slot, 0, 1),
+            what: `string number ${digit} (rule 25)`,
+        };
+    }
+
     const digits = before.slice(marksEnd, digitsEnd);
 
     const atRunEnd = offset === digitsEnd;
@@ -1313,6 +1601,79 @@ function dotPlan(before: string, offset: number): TypePlan | null {
         at: coreEnd, del: 0, ins: '.',
         caret: stayPut(offset, coreEnd, 0, 1),
         what: 'moved into the dot slot',
+    };
+}
+
+/** '\' typed in music: a tab string number belongs to the note it plays, in the
+ * slot directly after the note's core (`c4\3`, `g'\2`) — so one typed anywhere
+ * ON the note opens it there, and the caret goes with it, to just after the
+ * '\', because the digit is what gets typed next (rule 24; `|a4` + '\' →
+ * `a4\|`). A note that already carries a `\N` gets nothing inserted: its N is SELECTED
+ * instead, so the digit typed next replaces it (rule 24a). A `\` still waiting
+ * for its digit absorbs the keystroke.
+ *
+ * The caret counts as on the note ANYWHERE in the event — its core, its
+ * annotations, its own `\N` — because a string number is about the note, not a
+ * slot the caret has to be in. A rest plays no string; a chord names its
+ * members' strings one by one inside the brackets, which is where the parser
+ * reads them (chord_body post-events), and the editor does not read into a
+ * chord — both are typed as pressed. */
+function stringNumberPlan(before: string, offset: number): TypePlan | null {
+    if (inStringOrComment(before, offset)) { return null; }
+    const [blockStart, blockEnd] = blockBounds(before, offset);
+    for (const event of musicEvents(before, blockStart, blockEnd)) {
+        if (!event.note || postEventEnd(before, event) < offset) { continue; }
+        if (event.start > offset) { return null; } // the caret is between events
+        if (before[event.start] === '<') { return null; } // a chord: members carry their own
+        const slots = noteSlots(before, event.start, event.end);
+        if (!slots || slots.octave === null) { return null; } // a rest plays no string
+
+        const existing = stringNumberAt(before, slots.coreEnd);
+        if (existing && existing.digit) {
+            // Already numbered: offer the digit for retyping. No text changes —
+            // the plan replaces the digit with itself — and the caret becomes a
+            // one-character selection over it.
+            const at = existing.at + 1;
+            return {
+                at, del: 1, ins: before[at], caret: at, select: 1,
+                what: 'selected the string number to retype',
+            };
+        }
+        if (existing) {
+            // A `\` with no digit yet: the string number is already opened.
+            return {
+                at: existing.at + 1, del: 0, ins: '', caret: offset,
+                what: 'string number already opened, waiting for its digit',
+            };
+        }
+        const slot = postEventSlot(before, slots.coreEnd, 'string'); // = the core's end
+        if (slot === offset) { return null; } // already in the slot — type it normally
+        // The caret FOLLOWS the '\' (not stayPut): the string number is typed
+        // next and belongs right after it.
+        return {
+            at: slot, del: 0, ins: '\\',
+            caret: slot + 1,
+            what: 'moved into the string-number slot, caret after it',
+        };
+    }
+    return null;
+}
+
+/** '@' typed in music: an annotation belongs to the note it decorates, in the
+ * slot after the string number and the annotations already there and before
+ * every slur, tie and beam mark (POST_EVENT_RANK, rule 27) — so one typed
+ * anywhere ON a note goes there, the caret following it because the name is
+ * typed next (`c4~|` + '@' → `c4@|~`). Between events, in a chord's brackets or
+ * inside an annotation's arguments the '@' is left where it was typed. */
+function annotationPlan(before: string, offset: number): TypePlan | null {
+    if (inStringOrComment(before, offset)) { return null; }
+    const anchor = slurAnchorAt(before, offset);
+    if (!anchor || anchor === 'member') { return null; }
+    const slot = postEventSlot(before, coreEndOf(before, anchor), 'annotation');
+    if (slot === offset) { return null; } // already in the slot
+    return {
+        at: slot, del: 0, ins: '@', caret: slot + 1,
+        what: 'moved into the annotation slot, caret after it',
     };
 }
 

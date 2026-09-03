@@ -42,6 +42,22 @@ public class ValueContextCompletionTests
     // `octave ` at global scope offers only its two modes. NOT in a part header — see
     // OctaveModes_AreNotOfferedInsideAPartHeader below, which is where that row went.
     [InlineData("octave ", "AfterOctave")]
+    // `pitch ` offers its two modes in all three homes of the word: the top-level directive,
+    // a part header, and a score header (before the brace, so the block stack is empty).
+    [InlineData("pitch ", "AfterPitch")]
+    [InlineData("pitch wr", "AfterPitch")]
+    [InlineData("part sax { pitch ", "AfterPitch")]
+    [InlineData("score full pitch ", "AfterPitch")]
+    [InlineData("score full \"out\" transpose d pitch ", "AfterPitch")]
+    // …and NOT in a music body, where `pitch` is no directive; nor inside a string.
+    [InlineData("section A { m { pitch ", "MusicBlock")]
+    [InlineData("title \"perfect pitch ", "AfterTitleText")]
+    // `repeat ` in music offers its three kinds — in a section cell, mid-bar, in a voice,
+    // and in a part-major inner section alike.
+    [InlineData("section A { m { repeat ", "AfterRepeat")]
+    [InlineData("section A { m { c4 d repeat un", "AfterRepeat")]
+    [InlineData("section A { m { voice { repeat ", "AfterRepeat")]
+    [InlineData("part m { section A { repeat ", "AfterRepeat")]
     // `override ` — and `once override `, whose previous word is also `override` —
     // offers the grob properties (at global scope and mid-music).
     [InlineData("override ", "AfterOverride")]
@@ -233,6 +249,86 @@ public class ValueContextCompletionTests
         var modes = LilySharpLanguageServer.GetOctaveCompletions().Items
             .Select(i => i.Label).ToArray();
         Assert.Equal(new[] { "absolute", "relative" }, modes);
+    }
+
+    [Fact]
+    public void PitchKeyword_IsOfferedAtTopLevel_AndAutoTriggersTheModeList()
+    {
+        // `pitch` completes at global scope, inserts the bare keyword and re-opens the
+        // suggest popup so written / concert appear immediately — the same motion as
+        // `octave`. Until 2026-09-03 it inserted a snippet CHOICE instead, a private copy of
+        // the two words that the part-header item never had.
+        var pitch = LilySharpLanguageServer.GetTopLevelCompletions().Items
+            .Single(i => i.Label == "pitch");
+        Assert.Equal("pitch $0", pitch.InsertText);
+        Assert.Equal("editor.action.triggerSuggest", pitch.Command?.CommandIdentifier);
+
+        var modes = LilySharpLanguageServer.GetPitchModeCompletions().Items
+            .Select(i => i.Label).ToArray();
+        Assert.Equal(new[] { "written", "concert" }, modes);
+    }
+
+    [Theory]
+    // `repeat` is an English word: as a LYRIC (a top-level track's inner section, and a
+    // note-bound lyrics cell), as a stray in a part header, and at the top level it is not
+    // the directive, and the kinds are not offered.
+    [InlineData("lyrics v sings m { section A { repeat ")]
+    [InlineData("lyrics v { section A { repeat ")]
+    [InlineData("section A { m { c } lyrics { repeat ")]
+    [InlineData("part m { repeat ")]
+    [InlineData("repeat ")]
+    [InlineData("title \"repeat ")]
+    public void RepeatKinds_AreNotOfferedWhereTheWordIsNotTheDirective(string text)
+    {
+        Assert.NotEqual(LilySharpLanguageServer.CompletionContext.AfterRepeat, ContextOf(text));
+    }
+
+    [Fact]
+    public void RepeatKeyword_AutoTriggersTheKindList_InBothMusicLists()
+    {
+        // Completing `repeat` inserts the bare keyword and re-opens the popup so unfold /
+        // percent / tremolo appear at once (owner request 2026-09-03). Until then the pitched
+        // list committed the writer to `repeat unfold 2 { }` and the drum list to `percent`,
+        // and the other kinds were only named in the Detail.
+        foreach (var list in new[]
+        {
+            LilySharpLanguageServer.GetMusicCompletions("", keySharps: 0),
+            LilySharpLanguageServer.GetDrumCompletions(),
+        })
+        {
+            var repeat = list.Items.Single(i => i.Label == "repeat");
+            Assert.Equal("repeat $0", repeat.InsertText);
+            Assert.Equal("editor.action.triggerSuggest", repeat.Command?.CommandIdentifier);
+        }
+
+        var kinds = LilySharpLanguageServer.GetRepeatKindCompletions().Items
+            .Select(i => i.Label).ToArray();
+        Assert.Equal(new[] { "unfold", "percent", "tremolo" }, kinds);
+    }
+
+    [Theory]
+    [InlineData("section A { m { c4\\")]
+    [InlineData("section A { m { c4\\3 d\\")]
+    public void AfterBackslash_OffersOnlyTabStringNumbers(string text)
+    {
+        // Owner report 2026-09-03: Ctrl+Space right after `\` offered the LilyPond dynamic
+        // names (`cresc`, `dim`, `ppp` …), every one of which the parser refuses — only a
+        // digit follows a backslash in Lily#. The list is the string numbers 1..N where N is
+        // the most strings any tuning has, and each compiles on a note.
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterBackslash, ContextOf(text));
+        var labels = LilySharpLanguageServer.GetStringNumberCompletions().Items
+            .Select(i => i.Label!).ToArray();
+        Assert.Equal(new[] { "1", "2", "3", "4", "5", "6" }, labels);
+        foreach (string n in labels)
+        {
+            string doc = $"part gtr {{ clef treble_8 tuning guitar }}\nsection A {{ gtr {{ c4\\{n} d e f | }} }}\n"
+                + "form main { A }\nscore main { tab gtr }";
+            var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(doc);
+            var errors = tree.Diagnostics.Concat(LilySharp.Core.Semantics.SemanticValidation.Run(tree))
+                .Where(d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error)
+                .Select(d => d.Message).ToArray();
+            Assert.True(errors.Length == 0, $"`c4\\{n}` is offered and refused: {string.Join("; ", errors)}");
+        }
     }
 
     [Fact]

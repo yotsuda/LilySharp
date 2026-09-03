@@ -177,6 +177,15 @@ internal static class SyntaxFacts
             .Except(ClefNameVocabulary, StringComparer.Ordinal)
             .OrderBy(name => name, StringComparer.Ordinal)];
 
+    /// <summary>The three kinds a <c>repeat</c> takes (GRAMMAR.md: Repeat) — the words the
+    /// parser's "Expected repeat type" message names and the editor offers after the keyword.
+    /// The ORDER is the one both show. Published 2026-09-03 when the editor gained the value
+    /// context; until then the message was the only enumeration and the completion snippet
+    /// carried its own copy of the three in a Detail string.</summary>
+    /// <remarks>⚠️ <c>volta</c> is deliberately absent: <c>repeat volta</c> is refused
+    /// (LYS0006) in favour of the form's <c>|: … :|</c>.</remarks>
+    public static IReadOnlyList<string> RepeatKindVocabulary { get; } = ["unfold", "percent", "tremolo"];
+
     /// <summary>
     /// The token kinds that can spell a PART NAME: a plain identifier, or one of the four
     /// clef words, which are legal part names (<c>part bass { … }</c>).

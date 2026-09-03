@@ -441,6 +441,12 @@
       },
       {
         "command": "lilysharp.smartType",
+        "key": "\\",
+        "args": { "text": "\\" },
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+      },
+      {
+        "command": "lilysharp.smartType",
         "key": "0",
         "args": { "text": "0" },
         "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"

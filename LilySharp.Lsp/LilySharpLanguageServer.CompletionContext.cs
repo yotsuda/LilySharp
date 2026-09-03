@@ -451,6 +451,8 @@ public sealed partial class LilySharpLanguageServer
         AfterTabDisplayAs,
         AfterInstrument,
         AfterRemoveEmpty,
+        AfterPitch,
+        AfterRepeat,
         AfterAt,
         AfterBackslash,
         AfterArticulationPlacement
@@ -658,6 +660,33 @@ public sealed partial class LilySharpLanguageServer
             && IsInsidePartBlock(scan.Stack)
             && !IsInsideStringLiteral(text, offset))
             return CompletionContext.AfterRemoveEmpty;
+
+        // Right after `pitch ` only its two modes are valid (written / concert —
+        // Semantics.ConcertPitch). The word has THREE homes and all three take the same two
+        // words: the top-level directive (`pitch concert`), a part header (`part sax { pitch
+        // concert }`) and a score header (`score full pitch concert { … }`, where the caret
+        // sits BEFORE the brace, so the block stack is the top level's). Gated to those —
+        // not a music body, where `pitch` is not a directive, and not a string, so a lyric
+        // like "perfect pitch" is not hijacked.
+        if (prevWord == "pitch"
+            && !IsInsideStringLiteral(text, offset)
+            && (InnermostOpenBlock(scan.Stack) == null || IsInsidePartBlock(scan.Stack)))
+            return CompletionContext.AfterPitch;
+
+        // Right after `repeat ` in MUSIC only its three kinds fit (unfold / percent /
+        // tremolo — SyntaxFacts.RepeatKindVocabulary). `repeat` is an ordinary English word,
+        // so the position has to be one where the keyword is read as one: inside some block
+        // (music is always braced), not a part header, not a string, and nowhere under a
+        // `lyrics` frame — a syllable body is unquoted words, and "repeat after me" is a
+        // lyric, not a directive. ⚠️ A frame reads the TWO words before its brace, so
+        // `lyrics v sings m {` shows as Prefix=sings, Name=m — the `sings` clause is the
+        // lyrics track's other spelling and is checked by name.
+        if (prevWord == "repeat"
+            && scan.Stack.Count > 0
+            && !IsInsidePartBlock(scan.Stack)
+            && !IsInsideStringLiteral(text, offset)
+            && !scan.Stack.Any(b => FrameKeyword(b.Frame) == "lyrics" || b.Frame.Prefix == "sings"))
+            return CompletionContext.AfterRepeat;
 
         // Right after `section `: offer the section names known to the piece but not yet
         // declared in this scope, not the property list. Two scopes carry a fill-in:

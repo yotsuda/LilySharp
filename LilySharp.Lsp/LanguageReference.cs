@@ -60,10 +60,12 @@ internal static class LanguageReference
     // the line wins). Adding a keyword's help is one table row.
     internal static readonly SignatureEntry[] Signatures =
     {
-        new("repeat", "repeat (unfold|percent|tremolo) count { music }",
+        // The kinds are joined from the compiler's list (SyntaxFacts.RepeatKindVocabulary),
+        // not spelled here — this row carried its own copy of the three until 2026-09-03.
+        new("repeat", $"repeat ({string.Join("|", LilySharp.Core.Semantics.LanguageVocabulary.RepeatKinds)}) count {{ music }}",
             "Repeats the music block. For volta repeats use the symbolic form "
                 + "'|: … :|' (count '|: … :|*N') with inline endings '[1. …] [2. …]'.",
-            new[] { ("unfold|percent|tremolo", "Repeat kind (volta is the symbolic |: :| form, not this keyword)"),
+            new[] { (string.Join("|", LilySharp.Core.Semantics.LanguageVocabulary.RepeatKinds), "Repeat kind (volta is the symbolic |: :| form, not this keyword)"),
                     ("count", "Number of repetitions (integer)"),
                     ("{ music }", "Music block to repeat") },
             Sample: "part melody\nsection A { melody {\nrepeat unfold 2 { c4 d e f }\n} }\nform main { ~A }\nscore main { staff melody }",

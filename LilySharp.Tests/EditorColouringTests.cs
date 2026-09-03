@@ -736,6 +736,25 @@ public class EditorColouringTests
             $"`{source}` is not a duration, but the rule painted `{match.Value}` as one.");
     }
 
+    /// <summary>The <c>repeat KIND</c> colouring rule paints exactly the kinds the compiler
+    /// names — read out of the shipped grammar's alternation and compared as SETS to
+    /// <c>SyntaxFacts.RepeatKindVocabulary</c>, so a kind the language grows (or drops) turns
+    /// this red instead of leaving the word plain (or painting a dead one).</summary>
+    [Fact]
+    public void TheRepeatKindRule_ColoursExactlyTheCompilersKinds()
+    {
+        string pattern = MatchPatternOf("directive-value", 1);
+        var alternation = Regex.Match(pattern, @"\(repeat\)\\s\+\(([^)]+)\)");
+        Assert.True(alternation.Success, $"the repeat rule has moved or changed shape: {pattern}");
+
+        var painted = alternation.Groups[1].Value.Split('|').OrderBy(k => k, StringComparer.Ordinal);
+        var known = LilySharp.Core.Syntax.SyntaxFacts.RepeatKindVocabulary.OrderBy(k => k, StringComparer.Ordinal);
+        Assert.Equal(known, painted);
+
+        foreach (string kind in LilySharp.Core.Syntax.SyntaxFacts.RepeatKindVocabulary)
+            Assert.True(Regex.IsMatch($"repeat {kind} 2 {{", pattern), $"`repeat {kind}` is left plain");
+    }
+
     [Fact]
     public void ASectionInsideAPart_IsColouredLikeOneAtTheTopLevel()
     {
