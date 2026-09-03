@@ -211,6 +211,9 @@ internal static partial class SharedRenderer
             if (staves.Count < 2)
                 continue;
 
+            // The line-start bar line's column gap — the same derivation the staff's own
+            // DrawBarlines reads, so the span bar stands on the staff bar it extends.
+            double lineStartBarGap = MultiStaffLayouter.LineStartBarGap(score, system);
             bool lineStart = true;
             foreach (var ml in system.Measures)
             {
@@ -229,8 +232,8 @@ internal static partial class SharedRenderer
                         || EndBarYieldsToRepeatStart(voice, system, ml.MeasureIndex));
                 double endWidth = GetVisualBarlineWidth(endType);
                 // Keep the inter-staff connector aligned with the staff barlines,
-                // which clear the line-start clef by LineStartBarClearance.
-                double startX = atLineStart ? ml.X + LineStartBarClearance : ml.X;
+                // which stand in the line-start staff-bar column past the prefix.
+                double startX = atLineStart ? ml.X + lineStartBarGap : ml.X;
 
                 for (int i = 0; i + 1 < staves.Count; i++)
                 {

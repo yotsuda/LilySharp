@@ -1,0 +1,26 @@
+// A chord ROW leading the system, a two-ending repeat, and a section label at each
+// ending's head — the owner's `Lambada Complicada` shape (session 328). Until this session
+// the second ending's label was drawn UNDER the bracket, level with the symbols: the
+// bracket's floor was measured from the system's top edge (the row's band top, one band
+// too high) and the row's symbols were kept out of the outside-staff support, so the
+// bracket never met a symbol and the label found a pocket under the hooks.
+//
+// LilyPond 2.26.0 (audit/lp-geometry/probes/volta-chord-row.ly, book VCR): the bracket's
+// line stands on the "Am" under its number by outside-staff-padding 0.46, and both labels
+// stand 0.46 over the bracket — ledger page.volta.chord-row.symbol-to-line and
+// mark.second-ending.chord-row.line-to-box-bottom. "A", with no symbol under it, keeps its
+// plain height beside the first symbol, as LilyPond's does.
+time 2/4
+part mel {
+  clef treble
+  section A { c4 d | e f | }
+  section E1 { g4 a | b c' | }
+  section E2 { a4 g | f e | d c | }
+}
+chords prog {
+  section A { C | G | }
+  section E1 { Am | | }
+  section E2 { | Dm G | C | }
+}
+form main { |: A [1. E1 ] :| [2. E2 ] |. }
+score main { chords prog staff mel }

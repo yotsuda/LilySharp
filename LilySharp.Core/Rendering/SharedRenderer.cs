@@ -54,14 +54,9 @@ namespace LilySharp.Core.Rendering;
 internal static partial class SharedRenderer
 {
     private const double StaffHeight = 4.0;
-    // Clearance from the redrawn clef/key/time prefix to a start barline that
-    // opens a line, so a `|:` at a system start doesn't overprint the clef.
-    // LILYPOND-REF: scm/define-grobs.scm BarLine space-alist — clef /
-    // key-signature / time-signature all reserve (extra-space . 1.15).
-    // ⚠️ internal, not private: MusicMarkEngraver break-aligns a segno/coda that opens a
-    // line ON this bar line, so the mark and the stroke must read ONE number. Spelling it
-    // twice is exactly the shape §7.7 keeps naming.
-    internal const double LineStartBarClearance = 1.15;
+    // (A `|:` that opens a line stands in the line-start break-align group's staff-bar
+    // column, after the meter — MultiStaffLayouter.LineStartBarGap; the 1.15 nudge that
+    // stood here until session 328 was not a LilyPond number.)
     // Mirror of LyricEngraver's VerseSpacing (baseline step between stacked verses).
     private const double LyricVerseSpacing = 3.2;
     // Internal so LP-fidelity readers can identify a text run by the SAME size expression
@@ -450,8 +445,19 @@ internal static partial class SharedRenderer
                     // bar takes; on the first line it stands just left of the meter
                     // (TimeX = the LeftEdge gap), on a continuation just left of the
                     // first bar's content, whose line-start floor already clears it.
-                    DrawBarline(BarlineType.Single, systemStartX, rowTopY, h, gc);
-                    DrawBarlines(system, staff, rowTopY, layout, gc, barHeight: h);
+                    // ⚠️ Unless the first bar OPENS WITH ITS OWN bar line (a `|:`) and
+                    // nothing prefatory stands between: then the opener IS the line's
+                    // bar — it sits on the left edge (LeftEdge.space-alist
+                    // (staff-bar . (extra-space . 0.0)), scm/define-grobs.scm:2094), and
+                    // a thin stroke under its thick one would read as a double bar.
+                    bool openerOnTheEdge = system.PrefixWidth <= 0.0
+                        && system.Measures.Length > 0
+                        && MultiStaffLayouter.DrawnLineStartBarline(
+                            staff.PrimaryVoice, system.Measures[0].MeasureIndex)
+                           != BarlineType.None;
+                    if (!openerOnTheEdge)
+                        DrawBarline(BarlineType.Single, systemStartX, rowTopY, h, gc);
+                    DrawBarlines(score, system, staff, rowTopY, layout, gc, barHeight: h);
 
                     // The grid row ENGRAVES the score meter at the line-start
                     // prefix — LILYSHARP-OWN, a decided divergence (user decision
@@ -704,7 +710,7 @@ internal static partial class SharedRenderer
                 }
 
                 // Barlines (typed: single / double / final / repeat) per measure
-                DrawBarlines(system, staff, localStaffY, layout, sgc,
+                DrawBarlines(score, system, staff, localStaffY, layout, sgc,
                     fromMeasure: fragFrom, toMeasure: fragTo);
 
                 // End-of-line courtesy group: the cancellation + new key signature when the

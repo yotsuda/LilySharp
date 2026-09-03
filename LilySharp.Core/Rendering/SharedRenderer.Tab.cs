@@ -132,6 +132,9 @@ internal static partial class SharedRenderer
             }
         }
 
+        // The line-start bar line's column gap — the SAME derivation the notation staff's
+        // DrawBarlines reads, since the staff-bar column spans the system.
+        double lineStartBarGap = MultiStaffLayouter.LineStartBarGap(score, system);
         bool lineStart = true;
         foreach (var ml in system.Measures)
         {
@@ -140,12 +143,13 @@ internal static partial class SharedRenderer
             var measure = primaryVoice.Measures[ml.MeasureIndex];
             bool atLineStart = lineStart;
             lineStart = false;
-            // Line-start start barline clears the redrawn tab clef (see DrawBarlines).
+            // Line-start start barline stands in its break-align column, past the redrawn
+            // tab clef / meter (see DrawBarlines).
             // Both ends are clickable/highlightable, like the notation staff's.
             var startType = StartBarWithBreakPieces(measure, primaryVoice, ml.MeasureIndex, atLineStart);
             if (startType != BarlineType.None)
             {
-                double sx = atLineStart ? ml.X + LineStartBarClearance : ml.X;
+                double sx = atLineStart ? ml.X + lineStartBarGap : ml.X;
                 using (gc.Source(measure.SourceStart))
                 {
                     DrawBarline(startType, sx, staffY, tabHeight, gc, tabDots: tabDots);

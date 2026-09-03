@@ -621,6 +621,120 @@ public class LineStartColumnTests
     }
 
     /// <summary>
+    /// A line that OPENS WITH A REPEAT: the <c>.|:</c> is the LAST column of the line-start
+    /// break-align group — after the meter (scm/define-grobs.scm:668-683, begin-of-line
+    /// order) — and the first-note wish is BarLine's own
+    /// <c>(first-note . (semi-shrink-space . 1.3))</c> off the bar's ink, not the meter's 2.0.
+    /// LilyPond 2.26.0's dump of audit/lp-geometry/probes/initial-repeat-bar.ly score IR:
+    /// TIME 4.885 (ink 1.7), BAR 7.585 (ink 1.84), HEAD 10.725 — i.e. meter right 6.585 +
+    /// TimeSignature's (staff-bar . (extra-space . 1.0)), then 1.84, then 1.3.
+    /// </summary>
+    /// <remarks>
+    /// Until session 328 the bar was not in the column at all: the wish was the meter's 2.0
+    /// and the measure frame inserted the bar's 1.84 after it, which put the opener 0.15 too
+    /// far right and the first head 0.30 too close to it (the owner's report on Lambada's
+    /// section C: "|: と最初の音符の x 距離が近すぎる").
+    /// </remarks>
+    [Fact]
+    public void OpeningRepeat_BarColumnAndSpringAreLilyPonds()
+    {
+        double barInk = EngravingDefaults.BarlineDrawnWidth(BarlineType.RepeatStart);
+        Assert.Equal(1.840000, barInk, 6);
+
+        var columns = BreakAlignSpacing.SolvePrefixColumns(
+            GlyphMetrics.LineStartClefWidth(ClefType.Treble), 0.0, includeTimeSignature: true,
+            "4", "4", staffBarWidth: barInk);
+        // The prefix proper still ends on the meter; the bar is its own column after it.
+        Assert.Equal(6.585000, columns.Right, 6);
+        Assert.True(columns.HasBar);
+        Assert.Equal(7.585000, columns.BarX, 6);
+        Assert.Equal(1.000000, columns.BarGap, 6);
+
+        // The bar's box (ink ± the default 0.1 esw) is what min_dist now reaches:
+        // 9.425 + 0.1 - (0 - 0.1) = 9.625.
+        // min_dist reads the head's LEFT reach (-0.1) and the stretched Y bands, so the
+        // probe's whole note and this quarter head give the same number.
+        var notes = FirstNote(staffPosition: -6);
+        var prefatory = Prefatory(KeySignature.CMajor, 4, 4, notes[0].YBottom, notes[0].YTop);
+        // The bar line spans the staff and, like every prefatory grob, is stretched to its
+        // neighbour — the head below the staff — so its box faces the note column.
+        prefatory.Add(LineStartColumn.PrefatoryBox(
+            columns.BarX, columns.BarX + barInk, StaffBottom, StaffTop,
+            -SpacingRules.DefaultExtraSpacingWidth, SpacingRules.DefaultExtraSpacingWidth,
+            StaffBottom, StaffTop, notes[0].YBottom, notes[0].YTop));
+        double minDist = LineStartColumn.MinimumDistance(prefatory, notes);
+        Assert.Equal(9.625000, minDist, 6);
+
+        // semi-shrink-space 1.3 off the bar's ink: fixed = 9.425 + 0.65, ideal = + 1.3,
+        // and no stretch.
+        var (fixed_, ideal, stretchability) = BreakAlignSpacing.SpaceAlistDistances(
+            BreakAlignSpacing.GetSpacing(BreakAlignSymbol.StaffBar, BreakAlignSymbol.FirstNote),
+            columns.BarX, columns.BarX + barInk);
+        Assert.Equal(10.075000, fixed_, 6);
+        Assert.Equal(10.725000, ideal, 6);
+        Assert.Equal(0.0, stretchability, 6);
+
+        var spring = LineStartColumn.SpringWithMinimumDistanceFloor(
+            ideal, fixed_, stretchability, minDist);
+        // The floor (0.3 + 9.625 = 9.925) does not bind against fixed 10.075, so the head
+        // lands on LilyPond's 10.725 and the spring keeps its 0.65 of compressibility.
+        Assert.Equal(10.725000, spring.IdealDistance, 6);
+        Assert.Equal(9.625000, spring.MinDistance, 6);
+        Assert.Equal(0.650000, spring.InverseCompressStrength, 6);
+    }
+
+    /// <summary>
+    /// A CONTINUATION line opening with a repeat — the owner's case (Lambada's section C):
+    /// the prefix is the clef alone, so the bar is spaced off the CLEF by Clef.space-alist's
+    /// <c>(staff-bar . (extra-space . 0.7))</c> (scm/define-grobs.scm:916), and with a key
+    /// signature off the KEY by KeySignature's <c>(staff-bar . (extra-space . 1.1))</c>
+    /// (:1991). Three different gaps for three different last grobs — which is why the
+    /// pen reads the column and not one number.
+    /// </summary>
+    [Fact]
+    public void OpeningRepeat_OnAContinuationLine_IsSpacedOffTheClefOrTheKey()
+    {
+        double clefInk = GlyphMetrics.LineStartClefWidth(ClefType.Treble);
+        double barInk = EngravingDefaults.BarlineDrawnWidth(BarlineType.RepeatStart);
+
+        var clefOnly = BreakAlignSpacing.SolvePrefixColumns(
+            clefInk, 0.0, includeTimeSignature: false, staffBarWidth: barInk);
+        Assert.Equal(3.365000, clefOnly.Right, 6);
+        Assert.Equal(0.700000, clefOnly.BarGap, 6);
+        Assert.Equal(4.065000, clefOnly.BarX, 6);
+
+        double keyInk = SpacingRules.KeySignatureInkWidth(new KeySignature(2));
+        var withKey = BreakAlignSpacing.SolvePrefixColumns(
+            clefInk, keyInk, includeTimeSignature: false, staffBarWidth: barInk);
+        Assert.Equal(withKey.KeyX + keyInk, withKey.Right, 6);
+        Assert.Equal(1.100000, withKey.BarGap, 6);
+
+        // …and the prefix proper is what it was without the bar: the bar is priced through
+        // the line-start spring, not booked as prefix width (see PrefixColumns).
+        Assert.Equal(
+            BreakAlignSpacing.SolvePrefixColumns(clefInk, keyInk, includeTimeSignature: false).Right,
+            withKey.Right, 9);
+    }
+
+    /// <summary>
+    /// With nothing prefatory engraved at all (a rows-only continuation line) the opener
+    /// is the FIRST present grob and sits on the left edge — LeftEdge's
+    /// <c>(staff-bar . (extra-space . 0.0))</c> (scm/define-grobs.scm:2094) — not on the
+    /// clef's 0.8.
+    /// </summary>
+    [Fact]
+    public void OpeningRepeat_WithNoPrefix_SitsOnTheLeftEdge()
+    {
+        var columns = BreakAlignSpacing.SolvePrefixColumns(
+            clefWidth: 0.0, keyInkWidth: 0.0, includeTimeSignature: false,
+            staffBarWidth: EngravingDefaults.BarlineDrawnWidth(BarlineType.RepeatStart));
+        Assert.Equal(0.0, columns.Right, 6);
+        Assert.Equal(0.0, columns.BarX, 6);
+        Assert.Equal(0.0, columns.BarGap, 6);
+        Assert.True(columns.HasBar);
+    }
+
+    /// <summary>
     /// The Y stretch is LOAD-BEARING, not decoration. c' sits below the staff, so with the
     /// prefatory boxes stretched only to the STAFF (positions -4..4) the meter's box would
     /// not face the notehead at all and the stem would bind instead. LilyPond stretches

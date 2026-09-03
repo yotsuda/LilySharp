@@ -68,6 +68,36 @@ scores against LilyPond's picture of the same book.
 
 ### Engraving
 
+- **On a lead sheet, the volta bracket stands on the chord row and both ending labels stand
+  on the bracket.** A chord row leading the system used to float the bracket a whole band
+  too high — its floor was measured from the row's top edge rather than the staff — and the
+  row's symbols were kept out of the bracket's and the labels' way, so a second ending's
+  label could land under the bracket, level with the symbols (reported on `Lambada
+  Complicada`). The bracket now hangs off the staff it spans and clears the row's symbols by
+  LilyPond's outside-staff padding, as its `Volta_engraver` does at the score level, and the
+  labels clear the bracket's drawn line exactly (a 0.02 of air over the line went with it).
+  Text spanners and dynamics, which belong to the staff, still sit under the row as before.
+- **A `|:` that opens the piece is printed.** LilyPond's default drops the automatic repeat
+  bar at the very start of a piece, and 0.6.0's earlier builds copied that; but in Lily# a
+  `|:` is always one the writer wrote, and lead sheets print it — LilyPond itself keeps the
+  door open with `printInitialRepeatBar`. So the sign goes where it was written, the LilyPond
+  twin now carries `\set Score.printInitialRepeatBar = ##t` so both pages agree, and a `|:`
+  one bar in is unchanged.
+- **A `|:` that opens a line stands where LilyPond's does, and the first note keeps its
+  distance from it.** At a line start the repeat bar is the last column of the clef/key/meter
+  group — 1.0 after the meter, 0.7 after a bare clef, 1.1 after a key signature — and the
+  first note stands 1.3 off the bar's ink, LilyPond's own `first-note` distance for a bar
+  line. The bar used to be nudged past the prefix by a number nobody had measured and the
+  first note spaced as if the bar were not there, which put the note 0.3 too close to it
+  (reported on `Lambada Complicada`'s section C). Measured against LilyPond to the digit on
+  both quantities; the span bar of a grand staff and the tab staff follow the same column.
+- **A hand-written slur from a grace note to its main note is drawn.** `grace { g16( } a8)`
+  now draws the bow `appoggiatura { g16 } a8` has always drawn — in LilyPond the two are the
+  same pair of slur events (`ly/grace-init.ly`), and the corpus writes the pair by hand seven
+  times. The `(` must stand on the LAST grace note and the `)` on the main note; a `(` on an
+  earlier grace note, or on a grace rest, is still reported as not engraved (LYS4020), and a
+  `(` the main note does not close is reported unpaired (LYS4010) and draws nothing, as
+  LilyPond's "unterminated slur" does.
 - **A section name's box stands where LilyPond's rehearsal mark stands.** At a line start
   the box used to sit on the system's left edge, over the clef, and a tempo mark beside it
   slid right whenever a key signature widened the prefix. The box now takes the rehearsal

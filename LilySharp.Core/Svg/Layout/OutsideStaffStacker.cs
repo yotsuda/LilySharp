@@ -1395,8 +1395,10 @@ internal static class OutsideStaffStacker
         var adjTextSpanners = PlaceTextSpanners(fonts, textSpanners, trackers, measureToSystem, systems);
         var adjOttavas = PlaceOttavas(fonts, ottavas, trackers, measureToSystem);
         var adjCustomTexts = PlaceCustomTexts(fonts, customTexts, trackers, measureToSystem, systems);
-        var adjVoltas = PlaceVoltas(fonts, voltas, trackers, measureToSystem, topStaff);
-        var adjMarks = PlaceMusicMarks(fonts, musicMarks, trackers, measureToSystem, systems);
+        // The Score-level movers' extra support: a chord ROW's symbols (ChordRowSupport).
+        var rowSupport = ChordRowSupport(fonts, systems, chordNames, chordItems, measureToSystem);
+        var adjVoltas = PlaceVoltas(fonts, voltas, trackers, measureToSystem, topStaff, rowSupport);
+        var adjMarks = PlaceMusicMarks(fonts, musicMarks, trackers, measureToSystem, systems, rowSupport);
 
         return (adjTrills, adjBarNumbers, adjOttavas, adjCustomTexts, adjVoltas, adjMarks,
             adjDynamics, adjTextSpanners, adjArticulations);
@@ -1767,12 +1769,18 @@ internal static class OutsideStaffStacker
         // occupancy instead. What a literal port needs is one grob list per axis group — the
         // same thing the articulation and tuplet seeds above are standing in for, which is why
         // all three are spelled out here rather than gathered by one walk.
-        // ⚠️ A CHORD ROW IS NOT ABOVE-STAFF INK. A row's symbols live in their own band, and
-        // their YUp carries that band's offset rather than a height above some staff; seeding
-        // them here would put a text row's contents into a staff's support. They are excluded
-        // by the item's own IsChordRow, and the ink-above-the-top-line test below is the
-        // second gate — an INLINE symbol on a lower staff must not raise the top staff's
-        // movers either, which is why the seed is keyed by the symbol's own staff.
+        // ⚠️ A CHORD ROW IS NOT ABOVE-STAFF INK — to the STAFF's own movers. A row's symbols
+        // live in their own band, and their YUp carries that band's offset rather than a
+        // height above some staff; seeding them here would put a text row's contents into a
+        // staff's support, and a text spanner or a dynamic of the staff would then climb over
+        // the row where LilyPond puts the ROW over them (the ChordNames line is a
+        // VerticalAxisGroup of its own, placed above the staff group's finished skyline —
+        // test/chordrow-rit-second-system is the book that says so). They are excluded by the
+        // item's own IsChordRow, and the ink-above-the-top-line test below is the second gate
+        // — an INLINE symbol on a lower staff must not raise the top staff's movers either,
+        // which is why the seed is keyed by the symbol's own staff.
+        // ⚠️ THE SCORE-LEVEL MOVERS DO SEE THE ROW — see ChordRowSupport, which hands the same
+        // symbols to PlaceVoltas and PlaceMusicMarks as an extra support, and nowhere else.
         if (!chordNames.IsDefaultOrEmpty && !chordItems.IsDefaultOrEmpty)
         {
             foreach (var cn in chordNames)
@@ -1796,6 +1804,75 @@ internal static class OutsideStaffStacker
                     cn.YUp + ink.Bottom, cn.YUp + ink.Top, VerticalDirection.Up));
             }
         }
+    }
+
+    /// <summary>
+    /// A chord ROW's symbols, per system, as the extra support the SCORE-LEVEL movers — the
+    /// volta brackets and the marks — are placed against, in the system frame the trackers
+    /// use. Empty for a system without a row, and for a STAFFLESS sheet.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:764-768 — Mark_engraver, Volta_engraver and
+    ///   Metronome_mark_engraver are \Score engravers; their grobs are placed by the
+    ///   System's outside-staff pass, whose support is every vertical axis group's finished
+    ///   skyline — the ChordNames line included, whose ChordName declares no
+    ///   outside-staff-priority and so is support (lily/axis-group-interface.cc:914-935).
+    /// LILYPOND-REF: lily/axis-group-interface.cc:648-676 avoid_outside_staff_collisions —
+    ///   the row's symbols enter as one more (skyline, padding) pair of the forbidden set.
+    /// <para>
+    /// MEASURED on LilyPond 2.26.0 (audit/lp-geometry/probes/volta-chord-row.ly, book VCR,
+    /// the owner's `Lambada Complicada` shape): the bracket's line stands on the "Am" under
+    /// its number by outside-staff-padding, and both ending labels stand 0.460000 over the
+    /// bracket. Until session 328 the row was kept out of every support here, the bracket
+    /// floated a band above the row, and the second ending's label found a pocket under the
+    /// hooks — drawn level with the symbols, under the line (owner report).
+    /// </para>
+    /// <para>
+    /// ⚠️ EXTRA SUPPORT, NOT A SEED, because the STAFF's own movers must not see it: a text
+    /// spanner or a dynamic belongs to the Staff's axis group, which LilyPond finishes
+    /// before the row is placed above it — the row clears THEM (test/chordrow-rit-second-
+    /// system). Merging the row into the staff's tracker lifted `rit.` over the row, so the
+    /// row's skyline is handed to the two Score-level passes alone.
+    /// </para>
+    /// <para>
+    /// ⚠️ NOT ON A STAFFLESS SHEET: there the movers' anchor IS the row, and the owner's
+    /// lead-sheet decision puts a label ON the symbols' line with the overlap resolved in X
+    /// (MusicMarkEngraver.StafflessAnchorRefpointBelowTop).
+    /// </para>
+    /// </remarks>
+    private static Dictionary<int, (VerticalSkyline Up, VerticalSkyline Down)> ChordRowSupport(
+        ScoreTextMetrics fonts,
+        ImmutableArray<SystemLayout> systems,
+        ImmutableArray<ChordNameLayout> chordNames,
+        ImmutableArray<ChordNameItem> chordItems,
+        Dictionary<int, int> measureToSystem)
+    {
+        var support = new Dictionary<int, (VerticalSkyline Up, VerticalSkyline Down)>();
+        if (chordNames.IsDefaultOrEmpty || chordItems.IsDefaultOrEmpty)
+            return support;
+        foreach (var cn in chordNames)
+        {
+            if (cn.SourceIndex < 0 || cn.SourceIndex >= chordItems.Length)
+                continue;
+            if (!chordItems[cn.SourceIndex].IsChordRow
+                || !measureToSystem.TryGetValue(cn.MeasureIndex, out int sysIdx))
+                continue;
+            if (StaffAffinity.TopSpaceableStaff(systems[sysIdx]) is null)
+                continue;   // staffless: the row is the anchor, and its line is the label's
+            var ink = ChordNameEngraver.SymbolInk(fonts, cn.ChordText);
+            if (!support.TryGetValue(sysIdx, out var pair))
+                support[sysIdx] = pair = (
+                    new VerticalSkyline(VerticalDirection.Up), new VerticalSkyline(VerticalDirection.Down));
+            // cn.X IS THE SYMBOL'S LEFT EDGE (TextAnchor.Start), the width the one
+            // SymbolInkWidth the draw and the reservation read — the same box the inline
+            // seed above merges, in the same frame (cn.YUp is above the system top).
+            double x1 = cn.X + ChordNameEngraver.SymbolInkWidth(fonts, cn.ChordText);
+            pair.Up.Merge(VerticalSkyline.FromBox(
+                cn.X, x1, cn.YUp + ink.Bottom, cn.YUp + ink.Top, VerticalDirection.Up));
+            pair.Down.Merge(VerticalSkyline.FromBox(
+                cn.X, x1, cn.YUp + ink.Bottom, cn.YUp + ink.Top, VerticalDirection.Down));
+        }
+        return support;
     }
 
     // ---- 50: TrillSpanner ----
@@ -2184,7 +2261,8 @@ internal static class OutsideStaffStacker
     private static ImmutableArray<VoltaBracketLayout> PlaceVoltas(
         ScoreTextMetrics fonts,
         ImmutableArray<VoltaBracketLayout> voltas, Func<int, int, OutsideStaffSkylines> trackers,
-        Dictionary<int, int> measureToSystem, int[] topStaff)
+        Dictionary<int, int> measureToSystem, int[] topStaff,
+        Dictionary<int, (VerticalSkyline Up, VerticalSkyline Down)>? rowSupport = null)
     {
         if (voltas.IsDefaultOrEmpty)
             return voltas;
@@ -2252,12 +2330,17 @@ internal static class OutsideStaffStacker
                     // on both engines (ledger page.volta.plain.staff-to-line's why).
                     double half = VoltaBracketEngraver.LineThickness / 2.0;
                     double hookTip = anchor0 - half - VoltaBracketEngraver.GetEdgeHeight();
+                    // ⚠️ THE TOP IS THE LINE'S OWN TOP EDGE, anchor0 + half. It was a bare
+                    // `anchor0 + 0.1` until session 328, 0.02 above the drawn line, and the
+                    // two marks placed against it read 0.480000 over the line where LilyPond
+                    // reads its outside-staff-padding 0.460000 exactly (ledger
+                    // mark.second-ending.*.line-to-box-bottom, both books).
                     void AddBox(double x0, double x1, double bottom)
                     {
                         spanUp.Merge(VerticalSkyline.FromBox(
-                            x0, x1, bottom, anchor0 + 0.1, VerticalDirection.Up));
+                            x0, x1, bottom, anchor0 + half, VerticalDirection.Up));
                         spanDown.Merge(VerticalSkyline.FromBox(
-                            x0, x1, bottom, anchor0 + 0.1, VerticalDirection.Down));
+                            x0, x1, bottom, anchor0 + half, VerticalDirection.Down));
                     }
                     bool hasText = !string.IsNullOrEmpty(v.VoltaText);
                     AddBox(v.StartX, v.EndX, anchor0 - half);           // the line
@@ -2277,8 +2360,12 @@ internal static class OutsideStaffStacker
                     }
                 }
 
+                // A chord ROW under the chain is support too (ChordRowSupport): the line
+                // stands on the symbol under its number, as LilyPond's does (probe VCR).
+                (VerticalSkyline Up, VerticalSkyline Down)? extra =
+                    rowSupport != null && rowSupport.TryGetValue(sysIdx, out var row) ? row : null;
                 double anchor = anchor0 + trackers(sysIdx, topStaff[sysIdx])
-                    .Place(spanUp, spanDown, OutsideStaffPadding);
+                    .Place(spanUp, spanDown, OutsideStaffPadding, extraSupport: extra);
 
                 foreach (int i in chain)
                     b[i] = b[i] with { YUp = anchor };
@@ -2291,10 +2378,15 @@ internal static class OutsideStaffStacker
     private static ImmutableArray<MusicMarkLayout> PlaceMusicMarks(
         ScoreTextMetrics fonts,
         ImmutableArray<MusicMarkLayout> musicMarks, Func<int, int, OutsideStaffSkylines> trackers,
-        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems,
+        Dictionary<int, (VerticalSkyline Up, VerticalSkyline Down)>? rowSupport = null)
     {
         if (musicMarks.IsDefaultOrEmpty)
             return musicMarks;
+        // A chord ROW under the mark is support too (ChordRowSupport): the marks are
+        // Score-level movers and LilyPond's System pass sees the ChordNames line.
+        (VerticalSkyline Up, VerticalSkyline Down)? RowOf(int sysIdx)
+            => rowSupport != null && rowSupport.TryGetValue(sysIdx, out var row) ? row : null;
         // A boundary "To Coda" and the section label it shares a barline with are one
         // arrangement, not two grobs: pair them and move the sign beside the label
         // BEFORE anything is priced, then place each pair as ONE union extent below —
@@ -2448,7 +2540,7 @@ internal static class OutsideStaffStacker
                     }
                 }
                 double tMove = trackers(sysIdx, m.StaffIndex).Place(tUp, tDown, OutsideStaffPadding,
-                    OutsideStaffHorizontalPadding);
+                    OutsideStaffHorizontalPadding, extraSupport: RowOf(sysIdx));
                 b[i] = m with { YUp = m.YUp + tMove };
                 continue;
             }
@@ -2472,7 +2564,7 @@ internal static class OutsideStaffStacker
                 var (mUp, mDown) = TextOutlineSkylines.Place(
                     m.Text, fs, fonts.Face(role, style), m.X - halfW, m.YUp + midUp);
                 double mMove = trackers(sysIdx, m.StaffIndex).Place(mUp, mDown, OutsideStaffPadding,
-                    OutsideStaffHorizontalPadding);
+                    OutsideStaffHorizontalPadding, extraSupport: RowOf(sysIdx));
                 b[i] = m with { YUp = m.YUp + mMove };
                 continue;
             }
@@ -2496,7 +2588,7 @@ internal static class OutsideStaffStacker
             // The whole mark family declares the horizontal 0.2 (see the constant).
             double newRel = Place(trackers(sysIdx, m.StaffIndex), m.X + x0, m.X + x1,
                 m.YUp + midUp, topOffset: top, bottomOffset: bottom,
-                horizonPadding: OutsideStaffHorizontalPadding);
+                horizonPadding: OutsideStaffHorizontalPadding, extraSupport: RowOf(sysIdx));
             b[i] = m with { YUp = newRel - midUp };
             // The pair moves as one: the sign keeps its tucked offset under the
             // label's line wherever the union landed.
@@ -2617,14 +2709,15 @@ internal static class OutsideStaffStacker
     /// </summary>
     private static double Place(OutsideStaffSkylines tracker, double x0, double x1,
         double anchorY, double topOffset, double bottomOffset, double horizonPadding = 0,
-        double padding = OutsideStaffPadding, double? registerPadding = null)
+        double padding = OutsideStaffPadding, double? registerPadding = null,
+        (VerticalSkyline Up, VerticalSkyline Down)? extraSupport = null)
     {
         double move = tracker.Place(
             VerticalSkyline.FromBox(x0, x1,
                 anchorY - bottomOffset, anchorY + topOffset, VerticalDirection.Up),
             VerticalSkyline.FromBox(x0, x1,
                 anchorY - bottomOffset, anchorY + topOffset, VerticalDirection.Down),
-            padding, horizonPadding, registerPadding);
+            padding, horizonPadding, registerPadding, extraSupport);
         return anchorY + move;
     }
 
@@ -2702,8 +2795,14 @@ internal static class OutsideStaffStacker
         /// two entries' paddings (:660); the move is
         /// <c>Interval_set::interval_union(...).complement().nearest_point(0, dir)</c>.
         /// </remarks>
+        /// <param name="extraSupport">One more (up, down) pair the mover must clear — support
+        /// that belongs to THIS placement and is not stored: a chord ROW's symbols for a
+        /// Score-level mover (ChordRowSupport). It enters the forbidden set with the mover's
+        /// own padding, as a priority-less grob's skyline does in LilyPond, and is not the
+        /// support entry, so its far side is not forbidden.</param>
         public double Place(VerticalSkyline up, VerticalSkyline down,
-            double padding, double horizonPadding = 0, double? registerPadding = null)
+            double padding, double horizonPadding = 0, double? registerPadding = null,
+            (VerticalSkyline Up, VerticalSkyline Down)? extraSupport = null)
         {
             // The padded copy of the mover's own profile is the same object for every
             // entry that resolves to the same horizon padding (LP recomputes it per
@@ -2744,6 +2843,13 @@ internal static class OutsideStaffStacker
                     else pushUp = double.PositiveInfinity;
                 }
                 if (-pushDown < pushUp)   // empty when either side has no skyline
+                    forbidden.Add((-pushDown, pushUp));
+            }
+            if (extraSupport is { } extra)
+            {
+                double pushUp = PaddedBy(paddedDown, down, horizonPadding).Distance(extra.Up) + padding;
+                double pushDown = PaddedBy(paddedUp, up, horizonPadding).Distance(extra.Down) + padding;
+                if (-pushDown < pushUp)
                     forbidden.Add((-pushDown, pushUp));
             }
 

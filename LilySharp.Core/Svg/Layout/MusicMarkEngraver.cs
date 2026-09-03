@@ -1772,7 +1772,8 @@ internal static class MusicMarkEngraver
             // ⚠️ ...AND AT A LINE START THE BAR LINE IS NOT ALWAYS INVISIBLE. The fallback
             // above reads "no bar line here, so align on the prefix", which is true of a
             // system that merely continues and false of one that OPENS WITH A REPEAT: the
-            // `|:` is drawn, past the prefix, at LineStartBarClearance. The owner's book put
+            // `|:` is drawn, past the prefix, in the staff-bar column
+            // (MultiStaffLayouter.LineStartBarGap). The owner's book put
             // this sign at the system's left edge (0.30) with the `|:` at 6.44.
             // These two grobs break-align on the STAFF BAR first —
             // LILYPOND-REF: scm/define-grobs.scm CodaMark and SegnoMark both declare

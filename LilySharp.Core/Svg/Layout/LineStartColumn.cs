@@ -328,7 +328,41 @@ internal static class LineStartColumn
             grobs.Add(new PrefatoryGrob(BreakAlignSymbol.TimeSignature,
                 columns.TimeX, columns.TimeX + timeInkWidth, 0.0, TimeSignatureEswRight));
 
+        // The bar line the system OPENS with (a `|:`), LAST in the begin-of-line order and
+        // so the grob every staff's first-note wish is measured from
+        // (BarLine.space-alist (first-note . (semi-shrink-space . 1.3))). Every staff draws
+        // it — a tab staff too. BarLine declares no extra-spacing-width of its own
+        // (LILYPOND-REF: scm/define-grobs.scm:268-302 BarLine, no extra-spacing-width entry),
+        // so its box takes separation-item.cc:166-167's default (-0.1 . 0.1).
+        if (columns.HasBar)
+            grobs.Add(new PrefatoryGrob(BreakAlignSymbol.StaffBar,
+                columns.BarX, columns.BarX + columns.BarWidth,
+                -SpacingRules.DefaultExtraSpacingWidth, SpacingRules.DefaultExtraSpacingWidth));
+
         return grobs;
+    }
+
+    /// <summary>
+    /// The FIRST sounding item of each voice of <paramref name="staff"/> in measure
+    /// <paramref name="measureIndex"/> — the note columns <c>Spacing_interface::right_note_columns</c>
+    /// hands <c>Staff_spacing::next_notes_correction</c>.
+    /// </summary>
+    private static List<Model.MusicItem> FirstMusicalItems(Model.Staff staff, int measureIndex)
+    {
+        var items = new List<Model.MusicItem>();
+        foreach (var voice in staff.Voices)
+        {
+            if (measureIndex < 0 || measureIndex >= voice.Measures.Length)
+                continue;
+            foreach (var item in voice.Measures[measureIndex].Items)
+            {
+                if (!SpacingRules.IsMusicalColumn(item))
+                    continue;
+                items.Add(item);
+                break;
+            }
+        }
+        return items;
     }
 
     /// <summary>
@@ -448,11 +482,36 @@ internal static class LineStartColumn
     /// <c>min_dist</c> is a property of the column PAIR, not of a staff
     /// (<c>Paper_column::minimum_distance (left_col, right_col)</c>, staff-spacing.cc:210),
     /// so every wish is floored against the same <see cref="MinimumDistanceAtLineStart"/>.
-    /// The optical correction (staff-spacing.cc:206) is 0 here for every staff: it needs
-    /// <c>bar_y_positions</c> of the extremal grob, which is empty unless that grob is a bar
-    /// line, and a line start has none.
+    /// The optical correction (staff-spacing.cc:206) needs <c>bar_y_positions</c> of the
+    /// extremal grob, which is empty unless that grob is a bar line — so it is 0 on an
+    /// ordinary line start and live on one that OPENS WITH A REPEAT, where the drawn
+    /// <c>|:</c> is the extremal grob and a down stem right after it earns
+    /// <see cref="SpacingRules.BarlineToNextNotesCorrection"/>, exactly as mid-line.
+    /// </para>
+    /// <para>
+    /// THE OPENING BAR LINE AND THE TWO FRAMES. When the opening measure draws a start bar
+    /// line, <paramref name="columns"/> carries it as the <c>staff-bar</c> column (after the
+    /// meter — scm/define-grobs.scm:668-683 break-align-orders) and the wish is built off ITS ink, as LilyPond's
+    /// is: TimeSignature→staff-bar 1.0, the 1.84 of <c>.|:</c>, then BarLine's
+    /// <c>(first-note . (semi-shrink-space . 1.3))</c>. MEASURED (2.26.0,
+    /// audit/lp-geometry/probes/initial-repeat-bar.ly IR): TIME 4.885+1.7, BAR 7.585+1.84,
+    /// HEAD 10.725. But the measure frame this spring is spliced into ALREADY inserts the
+    /// measure's own start bar line before spring 0 (<c>MeasureLayouter</c>,
+    /// <c>x = startBarlineWidth + positions[i + 1]</c>), so
+    /// <paramref name="measureStartBarWidth"/> — that inserted width — is taken OUT of the
+    /// returned distances and put INTO the floor's frame, and the two frames agree: first
+    /// head = prefix right + measure bar + spring 0 = LilyPond's column. Until session 328
+    /// the bar was not in the column at all: the wish was the meter's 2.0 and the bar's
+    /// 1.84 was inserted after it for free, which put the opener 0.15 too far right and the
+    /// first head 0.30 too close to it (the ledger's OPEN −0.30 on
+    /// line-start.time-to-first-note.initial-repeat).
     /// </para>
     /// </remarks>
+    /// <param name="measureStartBarWidth">The width the measure frame inserts before spring 0
+    /// — <see cref="SpacingRules.GetBarlineWidth"/> of the opening measure's OWN
+    /// <c>StartBarline</c>. Usually equal to <c>columns.BarWidth</c>; 0 when the measure
+    /// record says None but a <c>|:</c> is still drawn (the begin-of-line piece of a
+    /// predecessor's <c>:|:</c>), where the whole column is priced through this spring.</param>
     /// <param name="ownFixedFloor">A LOWER BOUND on each wish's FIXED distance, expressed
     /// like everything the caller hands in — see the frame note below — or null for none.
     /// This is Lily#'s own (<c>LILYSHARP-OWN</c>), not LilyPond's: LilyPond puts a leading
@@ -460,8 +519,9 @@ internal static class LineStartColumn
     /// where Lily# folds their widths into the measure's spring 0. It is applied to every
     /// wish, so it survives the merge (a mean of values each at least the floor is at least
     /// the floor).</param>
-    /// <returns>The merged spring in the caller's PREFIX-RELATIVE frame (0 = where the
-    /// prefix ink ends, <see cref="BreakAlignSpacing.PrefixColumns.Right"/>), which the
+    /// <returns>The merged spring in the caller's MEASURE frame (0 = where the prefix ink
+    /// ends, <see cref="BreakAlignSpacing.PrefixColumns.Right"/>, plus the opening measure's
+    /// own start bar line width, <paramref name="measureStartBarWidth"/>), which the
     /// measure's spring chain speaks. The wishes themselves are built in LilyPond's
     /// COLUMN-relative frame, because <c>last_ext</c> only means anything there; the shift
     /// between the two is a constant, and a spring's two strengths are differences, so only
@@ -472,11 +532,15 @@ internal static class LineStartColumn
         double clefGroupLeft,
         double timeInkWidth,
         int startMeasureIndex,
-        double? ownFixedFloor)
+        double? ownFixedFloor,
+        double measureStartBarWidth = 0.0)
     {
         double minDistance = MinimumDistanceAtLineStart(
             score, columns, clefGroupLeft, timeInkWidth, startMeasureIndex);
-        double floor = ownFixedFloor is { } f ? columns.Right + f : double.NegativeInfinity;
+        // The caller's frame starts where the measure's own start bar line ENDS (see the
+        // remarks): prefix right + the inserted bar width. The floor is stated there.
+        double frame = columns.Right + measureStartBarWidth;
+        double floor = ownFixedFloor is { } f ? frame + f : double.NegativeInfinity;
 
         var wishes = new List<Spring>();
         foreach (var (_, staff, _) in score.EnumerateStaves())
@@ -491,7 +555,15 @@ internal static class LineStartColumn
             if (ExtremalBreakAlignedGrob(grobs) is not { } last)
                 continue;
 
-            wishes.Add(WishFrom(last.Symbol, last.InkLeft, last.InkRight, floor, minDistance));
+            // staff-spacing.cc:206 next_notes_correction — bar_y_positions is empty for
+            // anything but a bar line, so only the opening `|:` earns it.
+            double optical = last.Symbol == BreakAlignSymbol.StaffBar
+                ? SpacingRules.BarlineToNextNotesCorrection(
+                    FirstMusicalItems(staff, startMeasureIndex))
+                : 0.0;
+
+            wishes.Add(WishFrom(
+                last.Symbol, last.InkLeft, last.InkRight, floor, minDistance, optical));
         }
 
         // No Staff_spacing wish at all — a system made only of chord / lyric rows. Neither
@@ -528,7 +600,20 @@ internal static class LineStartColumn
             // meter here at all, so its measured 0.5 is the meterless regime's number
             // and cannot price a column the decision added. The floor still carries the
             // first syllable's leading reach (ownFixedFloor), exactly as on a staff.
-            if (columns.HasTime && timeInkWidth > 0.0)
+            // LILYSHARP-OWN, the same decision one step on: a text row DOES draw the bar
+            // line its measure opens with (DrawBarlines runs on the grid row), so with a
+            // `|:` in the column the row wishes off the BAR's ink — the grob the column
+            // actually ends on — and the bar's box is the left column's reach for min_dist
+            // (a text row contributes no box of its own). LilyPond has no bar line on a
+            // ChordNames / Lyrics line at all, so there is no number to pin this to.
+            if (columns.HasBar)
+            {
+                minDistance = Math.Max(minDistance,
+                    columns.BarX + columns.BarWidth + 2 * SpacingRules.DefaultExtraSpacingWidth);
+                wishes.Add(WishFrom(BreakAlignSymbol.StaffBar,
+                    columns.BarX, columns.BarX + columns.BarWidth, floor, minDistance));
+            }
+            else if (columns.HasTime && timeInkWidth > 0.0)
             {
                 wishes.Add(WishFrom(BreakAlignSymbol.TimeSignature,
                     columns.TimeX, columns.TimeX + timeInkWidth, floor, minDistance));
@@ -537,7 +622,7 @@ internal static class LineStartColumn
             {
                 var standard = StandardBreakableColumnSpacing(minDistance);
                 return new Spring(
-                    standard.IdealDistance - columns.Right, standard.MinDistance - columns.Right,
+                    standard.IdealDistance - frame, standard.MinDistance - frame,
                     standard.InverseStretchStrength);
             }
         }
@@ -545,7 +630,7 @@ internal static class LineStartColumn
         var merged = Spring.MergeSprings(wishes);
 
         return new Spring(
-            merged.IdealDistance - columns.Right, merged.MinDistance - columns.Right,
+            merged.IdealDistance - frame, merged.MinDistance - frame,
             merged.InverseStretchStrength, merged.InverseCompressStrength);
     }
 
@@ -583,15 +668,19 @@ internal static class LineStartColumn
     /// <c>first-note</c> space-alist entry against that grob's own ink, floored.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/staff-spacing.cc:143-220 — the alist lookup
-    /// (<see cref="BreakAlignSpacing.SpaceAlistDistances"/>) and the <c>0.3 + min_dist</c>
-    /// correction (<see cref="SpringWithMinimumDistanceFloor"/>) that ends it.</remarks>
+    /// (<see cref="BreakAlignSpacing.SpaceAlistDistances"/>), the optical correction
+    /// (:206-208, <paramref name="opticalCorrection"/> added to BOTH fixed and ideal) and
+    /// the <c>0.3 + min_dist</c> correction (<see cref="SpringWithMinimumDistanceFloor"/>)
+    /// that ends it.</remarks>
     private static Spring WishFrom(
         BreakAlignSymbol symbol, double inkLeft, double inkRight,
-        double fixedFloor, double minDistance)
+        double fixedFloor, double minDistance, double opticalCorrection = 0.0)
     {
         var entry = BreakAlignSpacing.GetSpacing(symbol, BreakAlignSymbol.FirstNote);
         var (fixed_, ideal, stretchability) =
             BreakAlignSpacing.SpaceAlistDistances(entry, inkLeft, inkRight);
+        fixed_ += opticalCorrection;
+        ideal += opticalCorrection;
         return SpringWithMinimumDistanceFloor(
             ideal, Math.Max(fixed_, fixedFloor), stretchability, minDistance);
     }

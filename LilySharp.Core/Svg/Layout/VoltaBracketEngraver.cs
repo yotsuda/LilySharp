@@ -226,13 +226,30 @@ internal static class VoltaBracketEngraver
                 // Only the last segment carries the right hook (if the bracket is closed).
                 bool segClosed = segment.IsLast && bracket.IsClosed;
 
+                // The floor hangs off the STAFF the bracket supports itself on, not off the
+                // system's top edge: when a chords row leads the system the top staff sits
+                // below that edge by the row's band, and a floor measured from the edge stood
+                // the bracket that band too high — above every symbol, so the pass never
+                // met one, and a second ending's label found a pocket under the hooks
+                // (owner report, session 328, scratch/p328/volta). LilyPond side-positions
+                // the spanner against the staves it spans (lily/volta-engraver.cc:407,:497
+                // Side_position_interface::add_support) and its floor is the staff's ink +
+                // padding; the row's symbols reach it through the outside-staff pass instead
+                // (OutsideStaffStacker.SeedAboveTrackers), the way LilyPond's System-level
+                // pass sees the ChordNames line. Ledger: page.volta.chord-row.symbol-to-line.
+                double staffBelowTop = measureToSystemIdx.TryGetValue(segment.StartMeasureIndex, out int segSys)
+                    && segSys >= 0 && segSys < systems.Length
+                    ? LayoutUtilities.StaffOffsetInSystemUp(
+                        systems[segSys], LayoutUtilities.TopScoreGrobStaff(systems[segSys]))
+                    : 0.0;
+
                 layouts.Add(new VoltaBracketLayout(
                     segment.StartMeasureIndex,
                     segment.EndMeasureIndex,
                     segStartMeasure.X + StartPadding,
                     segEndMeasure.X + segEndMeasure.Width - EndPadding,
                     // Y-up from the system top (the renderer resolves the segment's system top).
-                    YOffsetYUp,
+                    YOffsetYUp + staffBelowTop,
                     segText,
                     segClosed,
                     bracket.SourcePosition,

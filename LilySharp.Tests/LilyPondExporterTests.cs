@@ -473,7 +473,9 @@ public class LilyPondExporterTests
         // .lys never shows — which is the whole failure mode a twin is built to avoid.
         Assert.Contains("instrumentName = \"violin\"", named);
         Assert.Contains("instrumentName = \"viola\"", named);
-        Assert.Contains("\\layout { indent = 15\\mm }", named);
+        // The indent shares its \layout with the opening-repeat switch every twin carries
+        // (InitialRepeatBarTests.TheTwin_TellsLilyPondToPrintItsOwn).
+        Assert.Contains("\\layout { indent = 15\\mm \\context { \\Score printInitialRepeatBar = ##t } }", named);
 
         // ⚠️ AND THE SUPPRESSION REACHES IT TOO, or `staff ~x` would be a twin-only label.
         var bare = Export("""
@@ -482,7 +484,7 @@ public class LilyPondExporterTests
             score main { staff ~vln }
             """);
         Assert.DoesNotContain("instrumentName", bare);
-        Assert.Contains("\\layout { indent = 0\\mm }", bare);
+        Assert.Contains("\\layout { indent = 0\\mm \\context { \\Score printInitialRepeatBar = ##t } }", bare);
     }
 
     [Fact]

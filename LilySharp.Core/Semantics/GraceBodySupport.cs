@@ -450,8 +450,12 @@ internal static class GraceBodySupport
     /// </summary>
     internal static IEnumerable<GraceDrop> Drops(IReadOnlyList<GraceBodyElement> elements)
     {
-        foreach (var (item, via) in elements)
+        int graceSlurOpen = IndexOfEngravedSlurOpen(elements);
+        for (int index = 0; index < elements.Count; index++)
         {
+            var (item, via) = elements[index];
+            if (index == graceSlurOpen)
+                continue;
             // The container was expanded, so its NOTES are gone from this list and its
             // decoration is what is left to report. The span comes off the tuplet as
             // WRITTEN: the marker is zero-width and stands at position 0, so on its own it
@@ -489,6 +493,37 @@ internal static class GraceBodySupport
                     GraceDropKind.Annotation, annotation.Span, Describe(annotation), via);
             }
         }
+    }
+
+    /// <summary>
+    /// The index of the one slur mark a grace body DOES engrave — a <c>(</c> standing after
+    /// the last carried element (the last grace column), which the collector reads as the
+    /// appoggiatura's bow written by hand (<see cref="Svg.Model.GraceNoteItem.ExplicitSlur"/>)
+    /// — or −1 when the body carries no such mark. A <c>(</c> on an earlier column is still a
+    /// drop, and so is one after a rest column (a rest draws no bow).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE COLLECTOR READS THE SAME SHAPE: <c>MeasureCollector.ProcessGraceRegion</c> takes
+    /// the <c>(</c> the walk folded onto the LAST column and refuses a rest there. If either
+    /// side learns another shape, the other must too, or the reader is told a bow was dropped
+    /// that is drawn — the drift <see cref="IsCarried"/> exists to prevent.
+    /// </remarks>
+    internal static int IndexOfEngravedSlurOpen(IReadOnlyList<GraceBodyElement> elements)
+    {
+        int lastCarried = -1;
+        for (int i = 0; i < elements.Count; i++)
+            if (IsCarried(elements[i].Node))
+                lastCarried = i;
+        if (lastCarried < 0 || CarriedRest(elements[lastCarried].Node) != null)
+            return -1;
+        for (int i = lastCarried + 1; i < elements.Count; i++)
+        {
+            var item = elements[i].Node;
+            if (IsFrameMarker(item))
+                continue;
+            return item is SlurSyntax { IsOpen: true } ? i : -1;
+        }
+        return -1;
     }
 
     /// <summary>True when the body engraves no grace group at all — every element in it is

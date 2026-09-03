@@ -615,6 +615,36 @@ public sealed partial class MeasureCollector
                 SlurEndSourcePosition = m.HasSlurEndAfter ? m.SlurEndSource : MusicItem.NoSourcePosition,
             };
 
+    /// <summary>
+    /// Called by the main note's arm right after <c>ProcessGraceRegion</c> walked the grace
+    /// in front of it: when that group's last column opened a slur
+    /// (<see cref="Model.GraceNoteItem.ExplicitSlur"/>), the main note's <c>)</c> is that
+    /// slur's end and goes to the group, not to the ordinary detector. Without one the
+    /// <c>(</c> pairs with nothing — LilyPond warns "unterminated slur" and draws no bow, and
+    /// so does this: the group is told, and the scanner's own sink is told.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ IT RUNS INSIDE THE ARM, NOT AT THE TOP OF <see cref="ProcessMusicNode"/>: the grace
+    /// region is walked from the main note's arm (<c>_pendingGrace</c> is consumed there), so
+    /// the group does not exist yet when the method's locals are unpacked — the first draft
+    /// read the flag at the top and never saw a pending group (measured: both marks of
+    /// <c>grace { g16( } a8)</c> came back unpaired).
+    /// </remarks>
+    private void TakeGraceSlurEnd(ref bool hasSlurEndAfter)
+    {
+        if (_pendingGraceSlurIndex < 0)
+            return;
+        if (hasSlurEndAfter)
+            hasSlurEndAfter = false;
+        else
+        {
+            _graceNotes[_pendingGraceSlurIndex] =
+                _graceNotes[_pendingGraceSlurIndex] with { ExplicitSlur = false };
+            _unpairedSlurWarnings.Add(new UnpairedSlurWarning(_pendingGraceSlurSource, IsOpen: true));
+        }
+        _pendingGraceSlurIndex = -1;
+    }
+
     /// <summary>Whether this node emits an item a slur can bind to — the carrier an empty
     /// chord's slur mark is waiting for. A wrapper (tuplet, grace, repeat) is not one; its
     /// own inner emit picks the mark up.</summary>
@@ -682,8 +712,19 @@ public sealed partial class MeasureCollector
         // grace time, keeps the drop where the reader was told it is, in ONE line.
         // ⚠️ SCAFFOLDING: ⒝2 deletes this line, and the marks then draw at the grace font
         // through the same Slur / Tie / Beam engravers LilyPond hands them to.
+        // ⚠️ ONE MARK IS READ BEFORE IT IS DROPPED: the `(` on a column, remembered so that
+        // after the body walk the LAST column's answer is in hand — the bow a hand-written
+        // `grace { g16( } a8)` asks for is the appoggiatura's, which the GROUP draws
+        // (GraceNoteItem.ExplicitSlur), so nothing here rides the item.
         if (_graceDepth > 0)
+        {
+            if (BindsASlur(node))
+            {
+                _graceSlurOpen = m.HasSlurStartAfter;
+                _graceSlurOpenSource = m.SlurStartSource;
+            }
             m = default;
+        }
 
         // ⚠️ The two bool reads come FIRST on purpose: they are false for every item of
         // every score that never writes `<>`, and that short-circuit keeps the type switch
@@ -764,6 +805,7 @@ public sealed partial class MeasureCollector
                         // had a reader of its own that never re-entered the walk.)
                         _pendingGrace = null;
                         ProcessGraceRegion(pendingGrace, builder, measureIndex);
+                        TakeGraceSlurEnd(ref hasSlurEndAfter);
                         // ⚠️ RE-READ, because the grace walk just added items. The index was
                         // taken before the grace so the ANCHOR TIMING above could be read at
                         // the same moment; a grace takes no measure time, so that one is
@@ -986,6 +1028,7 @@ public sealed partial class MeasureCollector
                         // had a reader of its own that never re-entered the walk.)
                         _pendingGrace = null;
                         ProcessGraceRegion(pendingGrace, builder, measureIndex);
+                        TakeGraceSlurEnd(ref hasSlurEndAfter);
                         // ⚠️ RE-READ, because the grace walk just added items. The index was
                         // taken before the grace so the ANCHOR TIMING above could be read at
                         // the same moment; a grace takes no measure time, so that one is
@@ -1069,6 +1112,7 @@ public sealed partial class MeasureCollector
                         // had a reader of its own that never re-entered the walk.)
                         _pendingGrace = null;
                         ProcessGraceRegion(pendingGrace, builder, measureIndex);
+                        TakeGraceSlurEnd(ref hasSlurEndAfter);
                         // ⚠️ RE-READ, because the grace walk just added items. The index was
                         // taken before the grace so the ANCHOR TIMING above could be read at
                         // the same moment; a grace takes no measure time, so that one is
@@ -1153,6 +1197,7 @@ public sealed partial class MeasureCollector
                         // had a reader of its own that never re-entered the walk.)
                         _pendingGrace = null;
                         ProcessGraceRegion(pendingGrace, builder, measureIndex);
+                        TakeGraceSlurEnd(ref hasSlurEndAfter);
                         // ⚠️ RE-READ, because the grace walk just added items. The index was
                         // taken before the grace so the ANCHOR TIMING above could be read at
                         // the same moment; a grace takes no measure time, so that one is
@@ -1209,6 +1254,7 @@ public sealed partial class MeasureCollector
                         // had a reader of its own that never re-entered the walk.)
                         _pendingGrace = null;
                         ProcessGraceRegion(pendingGrace, builder, measureIndex);
+                        TakeGraceSlurEnd(ref hasSlurEndAfter);
                         // ⚠️ RE-READ, because the grace walk just added items. The index was
                         // taken before the grace so the ANCHOR TIMING above could be read at
                         // the same moment; a grace takes no measure time, so that one is

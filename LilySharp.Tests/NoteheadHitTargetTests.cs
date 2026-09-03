@@ -132,13 +132,11 @@ public class NoteheadHitTargetTests
         int sectionPlain = src.IndexOf('|', src.IndexOf("{ x")); // the `|` between x1 and x2
         int sectionBoth = src.IndexOf(":|:");                    // the `:|:` between x2 and x3
         var svg = SvgGenerator.Generate(SyntaxTree.Parse(src), SvgRenderOptions.Preview());
-        // 2, not 3: the FIRST `x` opens the piece, and LilyPond draws no automatic repeat
-        // bar at moment 0 (bar-engraver.cc:432-449 Bar_engraver::pre_process_music, pinned
-        // by InitialRepeatBarTests). A
-        // highlight needs ink to hang on, so the site that draws nothing lights nothing —
-        // the two `|:` that ARE drawn still both carry the phrase's offset, which is the
-        // claim. Its `:|` is drawn, so that side keeps all 3.
-        Assert.Equal(2, HighlightTargets(svg, repeatStart));     // |: at both DRAWN sites
+        // 3 again since session 328: the FIRST `x` opens the piece and its `|:` IS drawn
+        // (owner decision — a written `|:` is printed even at moment 0, InitialRepeatBarTests),
+        // so all three call sites have ink to hang a highlight on. (Between sessions 319 and
+        // 328 the opener was dropped, as LilyPond's default does, and this read 2.)
+        Assert.Equal(3, HighlightTargets(svg, repeatStart));     // |: at all 3 sites
         Assert.Equal(3, HighlightTargets(svg, repeatEnd));       // :| at all 3 sites
         Assert.True(HighlightTargets(svg, sectionPlain) >= 1);   // section | lights its bar
         Assert.True(HighlightTargets(svg, sectionBoth) >= 1);    // section :|: lights its bar

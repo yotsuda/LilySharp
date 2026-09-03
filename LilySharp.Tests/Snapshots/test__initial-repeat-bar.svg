@@ -6,33 +6,37 @@
 </style>
   <rect x="0" y="0" width="119.50" height="21.72" fill="#FFFFFF"/>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="10.49" x2="36.28" y2="10.49" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="11.49" x2="36.28" y2="11.49" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="12.49" x2="36.28" y2="12.49" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="13.49" x2="36.28" y2="13.49" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="14.49" x2="36.28" y2="14.49" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="10.49" x2="38.42" y2="10.49" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="11.49" x2="38.42" y2="11.49" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="12.49" x2="38.42" y2="12.49" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="13.49" x2="38.42" y2="13.49" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.49" x2="38.42" y2="14.49" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="13.49" font-size="4.00" data-pos="1216"></text>
   <text class="music" x="4.88" y="12.49" font-size="4.00" data-pos="1192"></text>
-  <text class="music" x="8.59" y="11.99" font-size="4.00" data-pos="1245"></text>
-  <text class="music" x="18.39" y="11.49" font-size="4.00" data-pos="1272"></text>
-  <text class="music" x="28.38" y="10.99" font-size="4.00" data-pos="1299"></text>
-  <circle cx="14.87" cy="11.99" r="0.23" data-pos="1325"/>
-  <circle cx="14.87" cy="12.99" r="0.23" data-pos="1325"/>
-  <rect x="15.40" y="10.49" width="0.19" height="4.00" data-pos="1325"/>
-  <rect x="15.89" y="10.49" width="0.60" height="4.00" data-pos="1325"/>
-  <rect x="24.64" y="10.49" width="0.60" height="4.00" data-pos="1330"/>
-  <rect x="25.54" y="10.49" width="0.19" height="4.00" data-pos="1330"/>
-  <circle cx="26.25" cy="11.99" r="0.23" data-pos="1330"/>
-  <circle cx="26.25" cy="12.99" r="0.23" data-pos="1330"/>
-  <circle cx="34.66" cy="11.99" r="0.23" data-pos="1335"/>
-  <circle cx="34.66" cy="12.99" r="0.23" data-pos="1335"/>
-  <rect x="35.19" y="10.49" width="0.19" height="4.00" data-pos="1335"/>
-  <rect x="35.68" y="10.49" width="0.60" height="4.00" data-pos="1335"/>
-  <rect x="3.37" y="6.69" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1226"/>
-  <text x="4.40" y="8.89" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1226">A</text>
-  <rect x="16.49" y="6.69" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1253"/>
-  <text x="17.54" y="8.89" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1253">B</text>
-  <rect x="24.64" y="6.69" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1280"/>
-  <text x="25.69" y="8.89" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1280">C</text>
+  <text class="music" x="10.73" y="11.99" font-size="4.00" data-pos="1245"></text>
+  <text class="music" x="20.53" y="11.49" font-size="4.00" data-pos="1272"></text>
+  <text class="music" x="30.52" y="10.99" font-size="4.00" data-pos="1299"></text>
+  <rect x="7.58" y="10.49" width="0.60" height="4.00" data-pos="1320"/>
+  <rect x="8.49" y="10.49" width="0.19" height="4.00" data-pos="1320"/>
+  <circle cx="9.20" cy="11.99" r="0.23" data-pos="1320"/>
+  <circle cx="9.20" cy="12.99" r="0.23" data-pos="1320"/>
+  <circle cx="17.01" cy="11.99" r="0.23" data-pos="1325"/>
+  <circle cx="17.01" cy="12.99" r="0.23" data-pos="1325"/>
+  <rect x="17.54" y="10.49" width="0.19" height="4.00" data-pos="1325"/>
+  <rect x="18.03" y="10.49" width="0.60" height="4.00" data-pos="1325"/>
+  <rect x="26.78" y="10.49" width="0.60" height="4.00" data-pos="1330"/>
+  <rect x="27.68" y="10.49" width="0.19" height="4.00" data-pos="1330"/>
+  <circle cx="28.39" cy="11.99" r="0.23" data-pos="1330"/>
+  <circle cx="28.39" cy="12.99" r="0.23" data-pos="1330"/>
+  <circle cx="36.80" cy="11.99" r="0.23" data-pos="1335"/>
+  <circle cx="36.80" cy="12.99" r="0.23" data-pos="1335"/>
+  <rect x="37.33" y="10.49" width="0.19" height="4.00" data-pos="1335"/>
+  <rect x="37.82" y="10.49" width="0.60" height="4.00" data-pos="1335"/>
+  <rect x="7.58" y="6.69" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1226"/>
+  <text x="8.62" y="8.89" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1226">A</text>
+  <rect x="18.63" y="6.69" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1253"/>
+  <text x="19.68" y="8.89" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1253">B</text>
+  <rect x="26.78" y="6.69" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1280"/>
+  <text x="27.83" y="8.89" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1280">C</text>
   </g>
 </svg>

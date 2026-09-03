@@ -1000,6 +1000,15 @@ internal sealed class MultiStaffLayouter
                 ? null
                 : Math.Max(measureSpring0.MinDistance, lyricLeadingFloor);
 
+        // The width the measure frame inserts before spring 0 — the opening measure's OWN
+        // start bar line (MeasureLayouter: x = startBarlineWidth + positions[i + 1]). The
+        // spring is handed back in that frame; see LineStartColumn.LineStartSpring's remarks.
+        var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
+        double measureStartBarWidth =
+            startMeasureIndex >= 0 && startMeasureIndex < measures.Length
+                ? SpacingRules.GetBarlineWidth(measures[startMeasureIndex].StartBarline)
+                : 0.0;
+
         // ONE Staff_spacing wish per staff, merged — spacing-spanner.cc:492-517. The staves
         // need NOT agree: a NUMBERS-ONLY tab staff ends its prefix on the TAB clef
         // (minimum-fixed-space 5.0) where its notation neighbour ends on the meter
@@ -1010,8 +1019,45 @@ internal sealed class MultiStaffLayouter
             prefix.HasTime
                 ? GlyphMetrics.GetTimeSigWidth(prefix.Numerator, prefix.Denominator)
                 : 0.0,
-            startMeasureIndex, ownFixedFloor);
+            startMeasureIndex, ownFixedFloor, measureStartBarWidth);
     }
+
+    /// <summary>
+    /// The start bar line a measure DRAWS when it opens a system: its own
+    /// <c>StartBarline</c>, or the begin-of-line piece of the combined <c>:|:</c> its
+    /// predecessor's end carries (the collector folded the pair into the predecessor, so
+    /// this measure's record says None). ONE home for the layout, which prices the column,
+    /// and the renderer (<c>SharedRenderer.StartBarWithBreakPieces</c>), which draws it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/bar-line.scm define-bar-line ":|.|:" / ":|.:" — end-of-line piece
+    /// ":|.", begin-of-line piece ".|:".
+    /// </remarks>
+    internal static BarlineType DrawnLineStartBarline(Voice voice, int measureIndex)
+    {
+        if (measureIndex < 0 || measureIndex >= voice.Measures.Length)
+            return BarlineType.None;
+        var measure = voice.Measures[measureIndex];
+        return measure.StartBarline == BarlineType.None
+               && measureIndex > 0
+               && voice.Measures[measureIndex - 1].EndBarline == BarlineType.RepeatBoth
+            ? BarlineType.RepeatStart
+            : measure.StartBarline;
+    }
+
+    /// <summary>
+    /// How far RIGHT of its measure's X the bar line that opens <paramref name="system"/> is
+    /// drawn — the <c>staff-bar</c> column's gap from the last prefatory grob
+    /// (<see cref="BreakAlignSpacing.PrefixColumns.BarGap"/>), 0 when the system opens with
+    /// no bar line. The renderer's three bar-line walks (staff, tab, span bars) and the
+    /// mark engraver's anchor all read this one derivation, so the drawn stroke, the
+    /// spaced column and the mark aligned to it cannot come apart.
+    /// </summary>
+    internal static double LineStartBarGap(MultiStaffScore score, SystemLayout system)
+        => system.Measures.IsDefaultOrEmpty
+            ? 0.0
+            : SolveLineStartPrefix(score, system.Measures[0].MeasureIndex, system.SystemIndex == 0)
+                .Columns.BarGap;
 
     /// <summary>A system's solved line-start break-align table plus the inputs it was
     /// solved from (the hoisted meter change, whether a meter is engraved at all, and
@@ -1087,10 +1133,16 @@ internal sealed class MultiStaffLayouter
             leadingTimeChange?.NewTime.NumeratorText ?? score.TimeSignature.NumeratorText;
         string prefixDenominator =
             leadingTimeChange?.NewTime.DenominatorText ?? score.TimeSignature.DenominatorText;
+        // The bar line the system OPENS with (a `|:`) is the LAST column of the line-start
+        // break-align group, after the meter (scm/define-grobs.scm:668-683); its drawn width
+        // is what the column books, and the type is the one the renderer will draw.
+        double staffBarWidth = EngravingDefaults.BarlineDrawnWidth(
+            DrawnLineStartBarline(primaryVoice, startMeasureIndex));
         // The break-align table itself, not just its right edge: the min_dist needs every
         // column's X to place the prefatory boxes (staff-spacing.cc:210).
         var prefixColumns = BreakAlignSpacing.SolvePrefixColumns(
-            maxClefWidth, activeKeyInk, prefixHasTime, prefixNumerator, prefixDenominator);
+            maxClefWidth, activeKeyInk, prefixHasTime, prefixNumerator, prefixDenominator,
+            staffBarWidth);
         return new LineStartPrefix(
             prefixColumns, leadingTimeChange, prefixHasTime, prefixNumerator, prefixDenominator,
             leadingKeyChange);

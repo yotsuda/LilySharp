@@ -96,6 +96,20 @@ reasoning behind each one.
 
 ### Engraving
 
+- **On a lead sheet, the volta bracket stands on the chord row and both ending labels stand
+  on the bracket.** A chord row used to float the bracket a band too high, and a second
+  ending's label could land under it, level with the symbols. The bracket now hangs off the
+  staff and clears the row's symbols by LilyPond's padding; the labels clear the line exactly.
+- **A `|:` that opens the piece is printed.** LilyPond's default drops the automatic repeat
+  bar at the start of a piece; in Lily# a `|:` is always one the writer wrote, and lead
+  sheets print it. The LilyPond twin carries `printInitialRepeatBar = ##t` so both pages agree.
+- **A `|:` that opens a line stands where LilyPond's does, and the first note keeps its
+  distance from it.** The bar is the last column of the clef/key/meter group and the first
+  note stands 1.3 off its ink; it used to be spaced as if the bar were not there.
+- **A hand-written slur from a grace note to its main note is drawn.** `grace { g16( } a8)`
+  draws the bow `appoggiatura { g16 } a8` has always drawn — LilyPond's own pair of slur
+  events. The `(` goes on the last grace note and the `)` on the main note; other placements
+  are still reported as not engraved, and an unclosed `(` is reported unpaired.
 - **The number of systems is chosen by the page's score, as LilyPond chooses it** — the line
   breaker's best count is only where the choice starts. On a 286-book bass corpus the system
   breaks matching LilyPond rose from 356 to 388 pairs. Known: two or three books now merge or

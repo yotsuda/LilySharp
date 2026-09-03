@@ -1,0 +1,18 @@
+// A hand-written slur from a plain grace to its main note: `grace { g16( } a8)` draws the
+// same bow `appoggiatura { g16 } a8` draws on its own (session 328, owner decision:
+// "LilyPond prints it, so should Lily#"). LILYPOND-REF: ly/grace-init.ly startGraceSlur /
+// stopGraceSlur — an appoggiatura is a grace with exactly these two slur events.
+//
+// Three bars, three shapes: bar 1 the hand-written pair (drawn), bar 2 the keyword
+// (drawn, the control it must match), bar 3 a `(` on the FIRST of two grace notes with its
+// `)` on the main note — not the appoggiatura's bow, still reported by LYS4020 and not drawn.
+// The corpus shape this covers: the owner's `\grace cis16( e4\3)` in Real Gone, and six more.
+time 4/4
+part mel {
+  clef treble
+  section A {
+    c4 grace { g16( } a8) c4 d | c4 appoggiatura { g16 } a8 c4 d | c4 grace { f16( g16 } a8) c4 d |
+  }
+}
+form main { A }
+score main { staff mel }

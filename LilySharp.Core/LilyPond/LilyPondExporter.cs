@@ -2946,9 +2946,17 @@ public sealed class LilyPondExporter
         // while LilyPond compiled it without a murmur. Writing LilyPond's own spelling of its
         // own default removes the conversion instead of getting it right.
         // LILYPOND-REF: ly/paper-defaults-init.ly — indent = 15\mm.
+        // ⚠️ printInitialRepeatBar IS WRITTEN, ALWAYS. Lily# prints a `|:` that opens the piece
+        // (owner decision, session 328: the writer spelled it, so it is printed — the
+        // lead-sheet convention the corpus follows), where LilyPond's default drops the
+        // automatic opener at moment 0 (lily/bar-engraver.cc:432-449
+        // Bar_engraver::pre_process_music, "At the start of a piece, we don't print any repeat
+        // bars"). The twin says so in LilyPond's own words so the two pages agree; on a piece
+        // that does not open with a repeat the setting changes nothing.
+        // LILYPOND-REF: Documentation/en/notation/repeats.itely:160-172 printInitialRepeatBar.
         _sb.Append("  \\layout { indent = ")
            .Append(_instrumentNames.Count > 0 ? "15\\mm" : "0\\mm")
-           .Append(" }\n}\n");
+           .Append(" \\context { \\Score printInitialRepeatBar = ##t } }\n}\n");
     }
 
     /// <summary>

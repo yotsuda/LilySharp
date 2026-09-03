@@ -28,8 +28,8 @@ internal static partial class SharedRenderer
 {
     // ---------- Barlines ----------
 
-    private static void DrawBarlines(SystemLayout system, Staff staff, double staffY,
-        ScoreLayout layout, IDrawingContext gc, double? barHeight = null,
+    private static void DrawBarlines(MultiStaffScore score, SystemLayout system, Staff staff,
+        double staffY, ScoreLayout layout, IDrawingContext gc, double? barHeight = null,
         int fromMeasure = int.MinValue, int toMeasure = int.MaxValue)
     {
         // A lead-sheet text row has no staff, so its barlines are short ticks the
@@ -41,6 +41,12 @@ internal static partial class SharedRenderer
         // staff's (EngravingDefaults.RepeatDotHalfSpan).
         int staffLines = staff.IsTextRow ? 0 : staff.Lines;
         var voice = staff.PrimaryVoice;
+        // Where the bar line a system OPENS with stands, past the measure's X: the
+        // staff-bar column of the line-start break-align group, which at a line start
+        // comes AFTER the meter — the same table the first measure was spaced from, so the
+        // stroke lands where the column was priced (MultiStaffLayouter.LineStartBarGap).
+        // LILYPOND-REF: scm/define-grobs.scm:668-683 break-align-orders, begin of line.
+        double lineStartBarGap = MultiStaffLayouter.LineStartBarGap(score, system);
         bool lineStart = true;
         foreach (var ml in system.Measures)
         {
@@ -53,16 +59,12 @@ internal static partial class SharedRenderer
             bool atLineStart = lineStart;
             lineStart = false;
 
-            // Start barline (e.g. repeat-start) at the measure's left edge. At a
-            // line start the redrawn clef/key/time prefix sits immediately left of
-            // this measure, so nudge the barline right by LilyPond's prefix→bar
-            // extra-space (1.15 ss) — otherwise a `|:` opening a line overprints
-            // the clef. LILYPOND-REF: scm/define-grobs.scm BarLine space-alist
-            // (clef/key-signature/time-signature . (extra-space . 1.15)).
+            // Start barline (e.g. repeat-start) at the measure's left edge — at a line
+            // start, past the redrawn clef/key/time prefix by the column gap above.
             var startType = StartBarWithBreakPieces(measure, voice, ml.MeasureIndex, atLineStart);
             if (startType != BarlineType.None)
             {
-                double sx = atLineStart ? ml.X + LineStartBarClearance : ml.X;
+                double sx = atLineStart ? ml.X + lineStartBarGap : ml.X;
                 // The barline is clickable/highlightable in the preview: it carries
                 // the measure boundary's source position (the written `|:` token's
                 // spot). The transparent hit rect widens the thin ink to a
@@ -169,13 +171,13 @@ internal static partial class SharedRenderer
     /// repeat-START (the collector folded the pair into the predecessor's end, so
     /// this measure's own record says None).
     /// </summary>
+    /// <remarks>The line-start rule itself lives in
+    /// <see cref="MultiStaffLayouter.DrawnLineStartBarline"/>, because the layout prices
+    /// that bar line's column and must agree with the pen about which type stands there.</remarks>
     private static BarlineType StartBarWithBreakPieces(
         Measure measure, Voice voice, int measureIndex, bool atLineStart)
-        => measure.StartBarline == BarlineType.None
-           && atLineStart && measureIndex > 0
-           && measureIndex - 1 < voice.Measures.Length
-           && voice.Measures[measureIndex - 1].EndBarline == BarlineType.RepeatBoth
-            ? BarlineType.RepeatStart
+        => atLineStart
+            ? MultiStaffLayouter.DrawnLineStartBarline(voice, measureIndex)
             : measure.StartBarline;
 
     /// <summary>Extra clickable margin on each side of a barline's ink (staff

@@ -3265,6 +3265,42 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A CHORD ROW UNDER A TWO-ENDING REPEAT — book VCR (volta-chord-row.ly), the owner's
+    /// `Lambada Complicada` shape (session 328), and VCN its control without the row.
+    /// </summary>
+    /// <remarks>
+    /// THE DEFECT: the second ending's label was drawn UNDER the bracket, level with the
+    /// symbols, while the first ending's rode above it. The bracket's floor was measured from
+    /// the system's top edge (the row's band top) and the row's symbols were kept out of the
+    /// Score-level movers' support, so the bracket stood a band too high and the label found a
+    /// pocket under the hooks. LilyPond's bracket stands on the "Am" under its number by
+    /// outside-staff-padding, and both labels stand 0.460000 over the bracket; the control
+    /// reads the same 0.460000 for the labels with no row at all.
+    /// </remarks>
+    private static string VoltaChordRowScore(string name, bool row) => $$"""
+        time 2/4
+        part mel {
+          clef treble
+          section A { c4 d | e f | }
+          section E1 { g4 a | b c' | }
+          section E2 { a4 g | f e | d c | }
+        }
+        chords prog {
+          section A { C | G | }
+          section E1 { Am | | }
+          section E2 { | Dm G | C | }
+        }
+        form main { |: A [1. E1 ] :| [2. E2 ] |. }
+        score main "{{name}}" { {{(row ? "chords prog " : "")}}staff mel }
+        """;
+
+    /// <inheritdoc cref="VoltaChordRowScore"/>
+    private static readonly string VCR = VoltaChordRowScore("VCR", row: true);
+
+    /// <inheritdoc cref="VoltaChordRowScore"/>
+    private static readonly string VCN = VoltaChordRowScore("VCN", row: false);
+
+    /// <summary>
     /// A CUSTOM TEXT AS THE PAGE'S TOP INK — the mirror of book CTP (custom-text-page.ly),
     /// and the first observer either paging arm of the custom text ever had.
     /// </summary>
@@ -11112,36 +11148,36 @@ internal static class LpGeometryProbes
     private static readonly string KC2 = Score("d2 e | fis2 g |", "KC2", "d major");
 
     /// <summary>
-    /// A piece that OPENS with a repeat. LilyPond prints no automatic repeat bar line at the
-    /// start of a piece — <c>lily/bar-engraver.cc:432-449
-    /// Bar_engraver::pre_process_music</c>, "At the start of a piece, we
-    /// don't print any repeat bars": the <c>repeatCommands</c> loop that turns
-    /// <c>start-repeat</c> into <c>startRepeatBarType</c> is skipped while <c>first_time_</c>
-    /// holds. The grob is never created, so it costs no ink AND no width, which is what this
-    /// point reads: 3.700000, byte-for-byte the number <see cref="IRN"/> gets without the
-    /// repeat, and LilyPond's own dump of score IR carries no BarLine left of the first head.
+    /// A piece that OPENS with a repeat, and the opener PRINTED — Lily# prints a written
+    /// <c>|:</c> at moment 0 (owner decision, session 328; <c>InitialRepeatBarTests</c>), and
+    /// the twin asks LilyPond for the same with <c>\set Score.printInitialRepeatBar = ##t</c>
+    /// (LilyPond's default prints none: <c>lily/bar-engraver.cc:432-449
+    /// Bar_engraver::pre_process_music</c>). Two points read this book: TIME→HEAD, and
+    /// TIME→BAR. LilyPond's dump: TIME 4.885 (ink 1.7), BAR 7.585 (ink 1.84), HEAD 10.725 —
+    /// the opener is the LAST column of the begin-of-line break-align group, after the
+    /// meter (scm/define-grobs.scm:668-683 break-align-orders), spaced by TimeSignature's
+    /// <c>(staff-bar . (extra-space . 1.0))</c>, and the first head then stands off the BAR's
+    /// ink by BarLine's <c>(first-note . (semi-shrink-space . 1.3))</c>: 5.840000 and
+    /// 2.700000 against the control <see cref="IRN"/>'s 3.700000.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// ⚠️ THE PAIR IS THE POINT, and it separates three outcomes a single reading cannot.
-    /// If the opener is suppressed grob-and-all, IRB and IRN agree. If it is suppressed only
-    /// at DRAW time with its column still reserved, IRB is wider by that column — Lily#'s own
-    /// history is the measurement: before this rule was ported the same book read 5.540000,
-    /// i.e. +1.840000 of reserved repeat bar, while IRN read 3.700000 exactly on the same
-    /// build. If the repeat were simply not COLLECTED, the
-    /// closing <c>:|</c> would go too, which is why the pinned fixture
-    /// <c>test/initial-repeat-bar</c> keeps both a close and an identical <c>|:</c> two bars
-    /// later that IS drawn.
+    /// ⚠️ THE PAIR IS STILL THE POINT. IRB − IRN is the width the printed opener costs
+    /// (2.140000 = 1.84 of ink + 0.30 of column padding), and the SECOND point splits that
+    /// column into its two gaps. Until session 328 Lily# read 5.540000 here: the bar was
+    /// not a break-align column at all — the wish was the meter's 2.0, the bar's 1.84 was
+    /// inserted after it, and the pen nudged the stroke by a 1.15 nobody had measured — so
+    /// the opener stood 0.15 too far right and the first head 0.30 too close to it, which is
+    /// what the owner saw on Lambada's section C.
     /// </para>
     /// <para>
-    /// The value coinciding with <c>line-start.time-to-first-note.standard-key</c> is not a
-    /// duplicate reading: that point asks what a metered line start costs, this one asks what
-    /// an opener at moment 0 adds to it, and the answer being "nothing" is only legible
-    /// because the control sits beside it.
+    /// HISTORY: opened at +1.840000 (the opener reserved and drawn), read 3.700000 = IRN on
+    /// the session-319 build that ported LilyPond's default gate, and measures the printed
+    /// opener's column since session 328 reversed that gate on the owner's word.
     /// </para>
     /// </remarks>
     /// <remarks>LilyPond twin: probe score IR of initial-repeat-bar.ly —
-    /// <c>\new Staff { \time 4/4 \repeat volta 2 { c'1 c'1 } }</c>.</remarks>
+    /// <c>\new Staff { \set Score.printInitialRepeatBar = ##t \time 4/4 \repeat volta 2 { c'1 c'1 } }</c>.</remarks>
     private static readonly string IRB = Preamble("c major") + """
         section Main {
           melody { c1 | c1 | }
@@ -12328,6 +12364,19 @@ internal static class LpGeometryProbes
             g => g.VoltaLineBottomAboveStaffMiddle()),
         new("page.volta.no-ink.staff-to-line", VOCF,
             g => g.VoltaLineBottomAboveStaffMiddle()),
+
+        // --- A CHORD ROW UNDER THE REPEAT (books VCR / VCN, volta-chord-row.ly) ---
+        // The bracket stands on the row's symbol under its number; both ending labels stand
+        // on the bracket. Session 328, owner report on `Lambada Complicada`: the second
+        // ending's label sat under the bracket, level with the symbols — the bracket's floor
+        // was measured from the row's band top and the row was not in the Score-level
+        // movers' support. VCN is the same book without the row.
+        new("page.volta.chord-row.symbol-to-line", VCR,
+            g => g.VoltaLineBottomAboveChordInk("Am")),
+        new("mark.second-ending.chord-row.line-to-box-bottom", VCR,
+            g => g.MusicMarkBoxBottomAboveVoltaLineTop("E2")),
+        new("mark.second-ending.line-to-box-bottom", VCN,
+            g => g.MusicMarkBoxBottomAboveVoltaLineTop("E2")),
 
         // ...and the TERM INSIDE the floor those two read. The refpoint entry above is one
         // number holding two: on the side where the floor binds it is
@@ -14808,15 +14857,17 @@ internal static class LpGeometryProbes
         new("line-start.time-to-first-note.standard-key", KCS, g => g.TimeSignatureToFirstNotehead()),
         new("line-start.time-to-first-note.custom-key", KCC, g => g.TimeSignatureToFirstNotehead()),
         new("line-start.time-to-first-note.cut-common", KC2, g => g.TimeSignatureToFirstNotehead()),
-        // The repeat bar line LilyPond does NOT print at the start of a piece
-        // (bar-engraver.cc:432-449 Bar_engraver::pre_process_music). The pair is the
-        // reading: IRB opens with `|:`, IRN is the
-        // same music without it, and the rule says they are the same distance. See IRB's
-        // remark for what each of the three possible answers would have looked like.
+        // The repeat bar line that opens the piece, PRINTED on both sides (see IRB's
+        // remark). The pair is the reading: IRB opens with `|:`, IRN is the same music
+        // without it, and their difference is the opener's column; the third point splits
+        // that column at the bar — TimeSignature (staff-bar . (extra-space . 1.0)) before
+        // it, BarLine (first-note . (semi-shrink-space . 1.3)) after.
         new("line-start.time-to-first-note.initial-repeat", IRB,
             g => g.TimeSignatureToFirstNotehead()),
         new("line-start.time-to-first-note.no-initial-repeat", IRN,
             g => g.TimeSignatureToFirstNotehead()),
+        new("line-start.time-to-repeat-bar", IRB,
+            g => g.TimeSignatureToLineStartBarline()),
         // The DIGIT path's own three readings, which KC2's remark says these points pin and
         // which nothing pinned until now: every meter-width point above stands on a C GLYPH
         // (4/4, 2/2) or on digits whose two candidate cuts coincide — eight of the ten do.

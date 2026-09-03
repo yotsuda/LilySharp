@@ -381,8 +381,8 @@ internal sealed partial class LayoutEngine
     /// By MEASURE index: where the bar line that OPENS a system is actually drawn, or NaN
     /// when there is none. A mark that break-aligns on <c>staff-bar</c> needs this because at
     /// a line start the bar line is not at the measure's X — the redrawn clef/key/time prefix
-    /// stands there and the stroke is nudged past it by
-    /// <see cref="Rendering.SharedRenderer.LineStartBarClearance"/>, which this reads from
+    /// stands there and the stroke sits in the staff-bar column after it, by
+    /// <see cref="MultiStaffLayouter.LineStartBarGap"/>, which this reads from
     /// that one home so the mark cannot land beside the stroke it is aligning to.
     /// </summary>
     /// <remarks>
@@ -406,7 +406,7 @@ internal sealed partial class LayoutEngine
             foreach (var sys in systems)
                 if (!sys.Measures.IsDefaultOrEmpty
                     && sys.Measures[0].MeasureIndex == measureIndex)
-                    return sys.Measures[0].X + Rendering.SharedRenderer.LineStartBarClearance;
+                    return sys.Measures[0].X + MultiStaffLayouter.LineStartBarGap(score, sys);
             return double.NaN;
         };
 

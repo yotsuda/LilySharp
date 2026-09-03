@@ -267,6 +267,26 @@ public sealed record GraceNoteItem
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; init; }
 
+    /// <summary>
+    /// True when the writer slurred the LAST grace column to the main note by hand —
+    /// <c>grace { g16( } a8)</c> — so the group draws the same bow an
+    /// <c>appoggiatura</c> draws on its own.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/grace-init.ly startGraceSlur / stopGraceSlur — an appoggiatura IS a
+    /// grace with a slur event on its last note and the matching end on the main note; a
+    /// hand-written <c>(</c> … <c>)</c> on a plain <c>\grace</c> is the same two events, and
+    /// LilyPond draws the same Slur for both. Lily# draws that bow from the group
+    /// (<c>SharedRenderer.DrawGraceSlur</c>) rather than through the ordinary slur engraver,
+    /// so the hand-written pair has to reach the group the way the keyword does: the
+    /// collector reads the <c>(</c> off the last column and takes the <c>)</c> off the main
+    /// note (<c>MeasureCollector.ProcessGraceRegion</c> and the walk's main-note arm). A
+    /// <c>(</c> on an EARLIER grace column, or one whose <c>)</c> lands past the main note,
+    /// is not this bow and is still reported dropped (LYS4020) — that is the island HANDOFF
+    /// §2 U8 ⒝2 names: grace marks through the ordinary Slur engraver at the grace font.
+    /// </remarks>
+    public bool ExplicitSlur { get; init; }
+
     /// <summary>Global staff index this grace group belongs to (multi-staff
     /// routing; see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>
     public int StaffIndex { get; }

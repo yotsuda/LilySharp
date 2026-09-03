@@ -76,7 +76,10 @@ public readonly record struct GraceNoteLayout(
     // Carried so the group's X can be PUBLISHED per item (ScoreLayout.GraceColumnXs) — an
     // ordinary engraver reaches a grob by its item index, and until session 310 a grace
     // column had none. Empty for a hand-built layout, which then publishes no addresses.
-    ImmutableArray<int> ColumnItemIndices = default
+    ImmutableArray<int> ColumnItemIndices = default,
+    // A hand-written slur from the last grace column to the main note (GraceNoteItem.
+    // ExplicitSlur): the group draws the appoggiatura's bow whatever its Type says.
+    bool ExplicitSlur = false
 );
 
 /// <summary>
@@ -237,7 +240,8 @@ internal static class GraceNoteEngraver
                 BeamRightY: beamRightY,
                 ColumnOffsets: columns.Offsets,
                 VoiceIndex: grace.VoiceIndex,
-                ColumnItemIndices: grace.ColumnItemIndices
+                ColumnItemIndices: grace.ColumnItemIndices,
+                ExplicitSlur: grace.ExplicitSlur
             ));
         }
 

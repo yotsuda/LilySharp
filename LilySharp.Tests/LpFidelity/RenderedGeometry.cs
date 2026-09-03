@@ -1410,6 +1410,80 @@ internal sealed class RenderedGeometry
         return (staffMiddle, ys[0] + half[0]);
     }
 
+    /// <summary>The volta bracket line's TOP edge (device-down), by the same reading as
+    /// <see cref="VoltaLineRaw"/>'s bottom — the edge an ending's label is cleared from.</summary>
+    private double VoltaLineTop(int page)
+    {
+        var (_, lineBottom) = VoltaLineRaw(page);
+        var rules = _pages[page].Lines
+            .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9 && Math.Abs(l.Y1 + l.StrokeWidth / 2.0 - lineBottom) < 1e-9)
+            .ToList();
+        return lineBottom - rules[0].StrokeWidth;
+    }
+
+    /// <summary>
+    /// How far the volta bracket line's bottom edge stands above the NAMED chord symbol's ink
+    /// top — <see cref="VoltaLineBottomAboveChordInk(int)"/> for a book that carries a whole
+    /// chord ROW, where the symbol under the bracket's number is the one that binds.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:648-676 avoid_outside_staff_collisions — the
+    /// ChordNames line's symbols are support for the System-level pass that places the
+    /// VoltaBracketSpanner (probes/volta-chord-row.ly book VCR: the line stands on "Am").
+    /// </remarks>
+    public double VoltaLineBottomAboveChordInk(string chord, int page = 0)
+    {
+        var (_, lineBottom) = VoltaLineRaw(page);
+        var chords = ChordSymbols.Where(t => t.Text == chord).ToList();
+        if (chords.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE chord symbol reading \"{chord}\", found "
+                + $"{chords.Count} — the probe is not measuring what it claims.\nDrawn geometry:\n"
+                + Describe());
+        }
+        var ink = ChordNameEngraver.SymbolInk(
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, chords[0].Text);
+        return (chords[0].Y - ink.Top) - lineBottom;
+    }
+
+    /// <summary>
+    /// How far the boxed mark reading <paramref name="label"/> stands above the volta bracket's
+    /// line: its drawn BOX's bottom edge above the line's TOP edge — the outside-staff
+    /// clearance a RehearsalMark (1500) keeps from a VoltaBracketSpanner (600).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:648-676 avoid_outside_staff_collisions —
+    /// outside-staff-padding 0.46 between the mark's DOWN skyline and the bracket's UP; the
+    /// box is read from the drawn RECT that contains the label, as
+    /// <see cref="MusicMarkBoxLeftFromClefLeft"/> reads it (probes/volta-chord-row.ly: 0.460000
+    /// on both endings, with and without a chord row).
+    /// </remarks>
+    public double MusicMarkBoxBottomAboveVoltaLineTop(string label, int page = 0)
+    {
+        var texts = _pages[page].Texts
+            .Where(t => t.Role == TextRole.Mark && t.Text == label).ToList();
+        if (texts.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected ONE boxed mark reading \"{label}\", found "
+                + $"{texts.Count}.\nDrawn geometry:\n" + Describe());
+        }
+        var t = texts[0];
+        var boxes = _pages[page].Rects
+            .Where(r => r.X <= t.X && t.X <= r.X + r.Width
+                        && r.Y <= t.Y && t.Y <= r.Y + r.Height).ToList();
+        if (boxes.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: the mark \"{label}\" at ({t.X:F3},{t.Y:F3}) sits in "
+                + $"{boxes.Count} rect(s) — the reading cannot name its box.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        // Device-down: the box's bottom is the larger Y; the line's top the smaller.
+        return VoltaLineTop(page) - (boxes[0].Y + boxes[0].Height);
+    }
+
     /// <summary>
     /// How far the volta bracket line's bottom edge stands above the staff's MIDDLE line.
     /// </summary>
@@ -3472,8 +3546,10 @@ internal sealed class RenderedGeometry
     /// The <paramref name="index"/>-th bar line, 0-based, left to right.
     /// </summary>
     /// <remarks>
-    /// Index 0 is the bar line between the FIRST and SECOND measures: Lily# draws no bar
-    /// line at a system start, so there is no opening one to skip past. A compound bar
+    /// Index 0 is the bar line between the FIRST and SECOND measures on every probe whose
+    /// first measure opens with no bar line — which is all of them but the initial-repeat
+    /// books, where the printed <c>.|:</c> at the system start is index 0 (its thin stroke;
+    /// <see cref="TimeSignatureToLineStartBarline"/> reads the thick one). A compound bar
     /// (<c>||</c>, <c>|:</c>) is ONE entry here — see <see cref="BarlineGroups"/>.
     /// ⚠️ A final <c>|.</c> still contributes only its thin half, because
     /// <see cref="ThinBarlineMaxWidth"/> filters the thick one out before the grouping runs;
@@ -4477,6 +4553,36 @@ internal sealed class RenderedGeometry
                 return g.X - ts.X;
         throw new InvalidOperationException(
             "no notehead after the time signature.\nDrawn geometry:\n" + Describe());
+    }
+
+    /// <summary>
+    /// The TIME-signature anchor → the LEFT ink edge of the bar line that OPENS the line
+    /// (a <c>.|:</c>), on a single-system probe whose first measure draws one. This is the
+    /// <c>staff-bar</c> column of the begin-of-line break-align group, which LilyPond puts
+    /// AFTER the meter at TimeSignature's <c>(staff-bar . (extra-space . 1.0))</c>:
+    /// LILYPOND-REF: scm/define-grobs.scm:668-683 break-align-orders (begin of line),
+    /// :3945-3953 TimeSignature's space-alist, whose staff-bar entry is the last. 2.700000
+    /// for a 4/4.
+    /// </summary>
+    /// <remarks>
+    /// A <c>.|:</c> opens with its THICK stroke, so this takes the first bar-line stroke of
+    /// any width right of the meter — <see cref="Barlines"/> keeps thin strokes only, which
+    /// here would name the second stroke and read 0.9 too much. Rects wider than a thick
+    /// bar line (a section-label box, a hit rect) are not bar lines.
+    /// </remarks>
+    public double TimeSignatureToLineStartBarline()
+    {
+        var ts = Glyphs.FirstOrDefault(g => IsTimeSignature(g.Glyph),
+            throw_: "no time signature in the probe.\nDrawn geometry:\n" + Describe());
+        var strokes = _page.Rects
+            .Where(r => r.Width > 0 && r.Width <= EngravingDefaults.ThickBarlineThickness + 1e-6
+                        && r.X > ts.X + 1e-9)
+            .OrderBy(r => r.X)
+            .ToList();
+        if (strokes.Count == 0)
+            throw new InvalidOperationException(
+                "no bar-line stroke after the time signature.\nDrawn geometry:\n" + Describe());
+        return strokes[0].X - ts.X;
     }
 
     /// <summary>

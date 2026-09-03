@@ -59,6 +59,7 @@ public sealed partial class MeasureCollector
     private bool WalkCarriesNothing()
         => _pendingGrace == null && _pendingLeadingGrace.IsDefaultOrEmpty
             && !_pendingEmptyChordSlurStart && !_pendingEmptyChordSlurEnd
+            && _pendingGraceSlurIndex < 0
             && _tremoloPairShape == null
             && _cueDepth == 0 && _percentCoveredDepth == 0
             && _cursor.VoiceScope == null && _cursor.MetadataMeasureOffset == 0
@@ -149,6 +150,9 @@ public sealed partial class MeasureCollector
         _pendingEmptyChordSlurEnd = false;
         _pendingEmptyChordSlurStartSource = 0;
         _pendingEmptyChordSlurEndSource = 0;
+        _pendingGraceSlurIndex = -1;
+        _pendingGraceSlurSource = 0;
+        _graceSlurOpen = false;
 
         // Walk-local lists: the recorded prefix (append-only within the walk, so
         // the recording's first N entries are exactly the checkpoint's state).

@@ -92,6 +92,14 @@ public class SvgSnapshotTests
         // watched this: the side model measured the flag off a FLAT 2.475 for every pitch, and
         // the merged skyline under it had the Y gate switched off entirely.
         yield return new object[] { "test/grace-dot-flag-column" };
+        // A hand-written slur from a plain grace to its main note draws the appoggiatura's
+        // bow (session 328, owner decision); a `(` on an EARLIER grace note does not. The
+        // fixture's three bars are the pair, the keyword control, and that non-case.
+        yield return new object[] { "test/grace-explicit-slur" };
+        // A chord row under a two-ending repeat: the bracket stands on the row's symbols
+        // and BOTH ending labels stand on the bracket (session 328, owner report — the
+        // second one used to sit under the hooks, level with the symbols).
+        yield return new object[] { "test/volta-chord-row" };
         // Beamed rests are pushed clear of the beam (Beam::rest_collision_callback).
         yield return new object[] { "test/beamed-rest" };
         // Piano pedal styles (part property `pedal`: text and mixed; the default

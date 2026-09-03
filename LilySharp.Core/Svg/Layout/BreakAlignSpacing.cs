@@ -428,9 +428,35 @@ internal static class BreakAlignSpacing
     /// <see cref="PrefixColumns.Right"/> is where the prefix ink ends (the first-note spring
     /// starts here — <see cref="SpaceAlistDistances"/>, read per staff by
     /// <see cref="LineStartColumn"/>).
+    /// <para>
+    /// <c>BarX</c>/<c>BarWidth</c> are the <c>staff-bar</c> column — the bar line a system
+    /// OPENS with (a <c>|:</c>), which at a line start stands AFTER the meter:
+    /// LILYPOND-REF: scm/define-grobs.scm:668-683 BreakAlignment.break-align-orders, the
+    /// begin-of-line order <c>… key-signature time-signature staff-bar …</c> (mid-line the
+    /// bar comes BEFORE the key and meter, :650-666, which is <c>BoundaryColumn</c>'s order).
+    /// ⚠️ <c>Right</c> deliberately EXCLUDES the bar: the measure frame inserts its own
+    /// start bar line's width before spring 0 (<c>MeasureLayouter</c>,
+    /// <c>x = startBarlineWidth + positions[i + 1]</c>) and its X is the prefix's
+    /// <c>Right</c>, so the bar column is priced through the line-start spring
+    /// (<see cref="LineStartColumn.LineStartSpring"/>) and drawn at <c>Right + BarGap</c>,
+    /// not booked as prefix width a second time.
+    /// </para>
     /// </remarks>
     public readonly record struct PrefixColumns(
-        double ClefX, double KeyX, double TimeX, double Right, bool HasKey, bool HasTime);
+        double ClefX, double KeyX, double TimeX, double Right, bool HasKey, bool HasTime,
+        double BarX = 0.0, double BarWidth = 0.0)
+    {
+        /// <summary>Whether the prefix ends on a drawn bar line (<see cref="BarWidth"/> &gt; 0).</summary>
+        public bool HasBar => BarWidth > 0.0;
+
+        /// <summary>
+        /// Where the opening bar line's ink STARTS, measured from <see cref="Right"/> — the
+        /// space-alist distance from the last prefatory grob to <c>staff-bar</c> (meter 1.0,
+        /// key 1.1, clef 0.7; LeftEdge 0.0 when nothing prefatory is engraved at all). 0 with
+        /// no bar. The renderer nudges the measure's start bar line right by this.
+        /// </summary>
+        public double BarGap => HasBar ? BarX - Right : 0.0;
+    }
 
     /// <summary>
     /// Solves the line-start break-align column table — LilyPond's
@@ -454,11 +480,15 @@ internal static class BreakAlignSpacing
     /// meter is its spelling ("3+2") — the reservation lays out the same run the pen draws
     /// (<see cref="MeterGlyphRun"/>), so it takes the row and not a beat count.</param>
     /// <param name="timeSigDenominator">The denominator as printed.</param>
+    /// <param name="staffBarWidth">The drawn width of the bar line the system OPENS with
+    /// (<see cref="EngravingDefaults.BarlineDrawnWidth"/> of a <c>|:</c>), or 0 when the
+    /// opening measure draws none — which is every ordinary line start.</param>
     public static PrefixColumns SolvePrefixColumns(
         double clefWidth,
         double keyInkWidth,
         bool includeTimeSignature,
-        string timeSigNumerator = "4", string timeSigDenominator = "4")
+        string timeSigNumerator = "4", string timeSigDenominator = "4",
+        double staffBarWidth = 0.0)
     {
         bool hasKey = keyInkWidth > 0.0;
 
@@ -475,23 +505,27 @@ internal static class BreakAlignSpacing
         if (includeTimeSignature)
             items.Add((BreakAlignSymbol.TimeSignature,
                 GlyphMetrics.GetTimeSigWidth(timeSigNumerator, timeSigDenominator)));
+        // The bar line a system OPENS with comes LAST at a line start — after the meter —
+        // LILYPOND-REF: scm/define-grobs.scm:668-683 break-align-orders, begin of line
+        //   (… key-signature time-signature staff-bar …); MEASURED on 2.26.0,
+        //   audit/lp-geometry/probes/initial-repeat-bar.ly score IR: TIME ink right 6.585,
+        //   BAR 7.585 = + (staff-bar . (extra-space . 1.0)) of TimeSignature.space-alist.
+        bool prefatory = clefWidth > 0.0 || hasKey || includeTimeSignature;
+        if (staffBarWidth > 0.0)
+            items.Add((BreakAlignSymbol.StaffBar, staffBarWidth));
 
-        var placed = SolveColumns(items, EngravingDefaults.ClefGlyphXOffset);
+        // With nothing prefatory engraved the bar line IS the first present grob, and it
+        // sits on the left edge — not the clef's 0.8:
+        // LILYPOND-REF: scm/define-grobs.scm:2080-2104 LeftEdge, break-align-symbol left-edge,
+        //   whose space-alist has (staff-bar . (extra-space . 0.0)) at :2094.
+        var placed = SolveColumns(items,
+            prefatory ? EngravingDefaults.ClefGlyphXOffset : 0.0);
 
         // An absent column's X is 0 (see PrefixColumns) — including the clef's, which a
         // system of chord / lyric rows does not have at all.
-        double clefX = 0.0, keyX = 0.0, timeX = 0.0;
-        foreach (var col in placed)
-        {
-            switch (col.Symbol)
-            {
-                case BreakAlignSymbol.Clef: clefX = col.Left; break;
-                case BreakAlignSymbol.KeySignature: keyX = col.Left; break;
-                case BreakAlignSymbol.TimeSignature: timeX = col.Left; break;
-            }
-        }
-
-        // The prefix ends at the last item's INK. The prefix→first-note distance is NOT part of
+        double clefX = 0.0, keyX = 0.0, timeX = 0.0, barX = 0.0, barWidth = 0.0;
+        // The prefix ends at the last PREFATORY item's INK — the bar line is excluded, see
+        // PrefixColumns. The prefix→first-note distance is NOT part of
         // the prefix: it is carried by the first measure's leading spring (see FirstNoteSpring)
         // so it can take part in spring solving with the proper minimum — adding it here AND in
         // the spring double-counted the gap and line-start measures came out ~3x wide.
@@ -502,8 +536,20 @@ internal static class BreakAlignSpacing
         // empty group rather than spacing past it. Returning 0.8 here made the line-start
         // spring measure from ink nobody draws, which is what forced the ownFixedFloor
         // fallback in LineStartColumn.LineStartSpring (its label lives there).
-        double right = placed.Count > 0 ? placed[placed.Count - 1].Right : 0.0;
-        return new PrefixColumns(clefX, keyX, timeX, right, hasKey, includeTimeSignature);
+        double right = 0.0;
+        foreach (var col in placed)
+        {
+            switch (col.Symbol)
+            {
+                case BreakAlignSymbol.Clef: clefX = col.Left; right = col.Right; break;
+                case BreakAlignSymbol.KeySignature: keyX = col.Left; right = col.Right; break;
+                case BreakAlignSymbol.TimeSignature: timeX = col.Left; right = col.Right; break;
+                case BreakAlignSymbol.StaffBar: barX = col.Left; barWidth = col.Right - col.Left; break;
+            }
+        }
+
+        return new PrefixColumns(clefX, keyX, timeX, right, hasKey, includeTimeSignature,
+            barX, barWidth);
     }
 
     /// <summary>

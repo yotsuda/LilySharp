@@ -376,6 +376,30 @@ public sealed partial class MeasureCollector
     private readonly Dictionary<int, int> _markHostMeasure = new();
     // Pending grace notes to attach to the next main note
     private GraceExpressionSyntax? _pendingGrace = null;
+
+    /// <summary>
+    /// Whether the grace column the walk is producing right now carries a <c>(</c> — read
+    /// per column inside grace time, so after the body walk it says whether the LAST column
+    /// opened a slur; <see cref="_graceSlurOpenSource"/> is that mark's offset.
+    /// </summary>
+    /// <remarks>
+    /// The markers a grace column carries are otherwise dropped on the floor (the walk's
+    /// grace-time gate, MusicWalk) and reported by <c>Semantics.GraceBodyValidator</c>. This
+    /// one is kept because the grace has a bow of its own to give it: see
+    /// <see cref="GraceNoteItem.ExplicitSlur"/>.
+    /// </remarks>
+    private bool _graceSlurOpen;
+    private int _graceSlurOpenSource;
+
+    /// <summary>
+    /// Index into <see cref="_graceNotes"/> of a group whose last column opened a slur and
+    /// whose main note has not been walked yet — the note that has to CLOSE it. −1 when none
+    /// is waiting. A main note that carries the <c>)</c> gives it up to the group; one that
+    /// does not leaves the <c>(</c> unpaired, exactly as <see cref="SlurPairingScanner"/>
+    /// would report an ordinary one.
+    /// </summary>
+    private int _pendingGraceSlurIndex = -1;
+    private int _pendingGraceSlurSource;
     /// <summary>
     /// How many <c>cue { … }</c> regions enclose the item being collected. A cue is a
     /// REGION in LilyPond — the size comes from the CueVoice context's <c>fontSize = #-4</c>
@@ -3873,6 +3897,7 @@ public sealed partial class MeasureCollector
         _defaultDots = 0;
 
         _graceDepth++;
+        _graceSlurOpen = false;
         // An acciaccatura's stroke is a property of each item's own Flag, not of the group —
         // see MusicItem.GraceSlash for LilyPond's spelling of it.
         bool slash = type == GraceNoteType.Acciaccatura;
@@ -3899,6 +3924,12 @@ public sealed partial class MeasureCollector
         if (graceColumns.Length == 0)
             return;
 
+        // The last column's `(` (read by the walk's grace-time gate) is the appoggiatura's
+        // bow written by hand; the main note that follows has to close it — see the walk's
+        // main-note arm and GraceNoteItem.ExplicitSlur.
+        bool explicitSlur = _graceSlurOpen && !graceColumns[^1].IsRest;
+        _graceSlurOpen = false;
+
         _graceNotes.Add(new GraceNoteItem(
             type,
             graceColumns,
@@ -3913,7 +3944,15 @@ public sealed partial class MeasureCollector
             _cursor.VoiceIndex,
             // Where each column stands in that same list — the address the ordinary
             // engravers reach a grob by (GraceNoteItem.ColumnItemIndices).
-            columnItemIndices));
+            columnItemIndices)
+        {
+            ExplicitSlur = explicitSlur,
+        });
+        if (explicitSlur)
+        {
+            _pendingGraceSlurIndex = _graceNotes.Count - 1;
+            _pendingGraceSlurSource = _graceSlurOpenSource;
+        }
         // Hand the infos to the next main note/chord so it can reserve front space.
         _pendingLeadingGrace = graceColumns;
     }

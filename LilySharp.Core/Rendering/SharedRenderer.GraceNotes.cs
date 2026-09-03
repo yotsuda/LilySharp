@@ -195,9 +195,12 @@ internal static partial class SharedRenderer
 
                 // Grace slur from the last grace notehead to the main notehead.
                 // LILYPOND-REF: ly/grace-init.ly startGraceSlur/stopGraceSlur —
-                // acciaccatura and appoggiatura are auto-slurred to the main note.
+                // acciaccatura and appoggiatura are auto-slurred to the main note, and a
+                // hand-written `grace { g16( } a8)` is the same two slur events
+                // (GraceNoteItem.ExplicitSlur), so it draws the same bow.
                 if (g.Columns.Length > 0 &&
-                    g.Type is GraceNoteType.Acciaccatura or GraceNoteType.Appoggiatura)
+                    (g.Type is GraceNoteType.Acciaccatura or GraceNoteType.Appoggiatura
+                     || g.ExplicitSlur))
                 {
                     double mainY = os.YUp(
                         staffMiddleY + g.MainNoteStaffPosition / 2.0,
