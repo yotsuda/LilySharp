@@ -594,8 +594,8 @@ internal static class LpGeometryProbes
 
         part melody {
           clef treble
-          section A { c'4 c' g'' g'' | a'' a'' g''2 | f''4 f'' e'' e'' | d'' d'' c''2 | break }
-          section B { g''4 g'' f'' f'' | e'' e'' d''2 | break }
+          section A { c4 c g g | a a g2 | f4 f e e | d d c2 | break }
+          section B { g4 g f f | e e d2 | break }
         }
 
         form main { A B A B }

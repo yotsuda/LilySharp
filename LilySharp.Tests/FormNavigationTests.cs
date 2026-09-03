@@ -243,41 +243,47 @@ public class FormNavigationTests
     [Fact]
     public void ACodaOpeningALine_SitsOnItsRepeatBarline()
     {
-        var (codaX, labelX, barX, _) = LineStartGeometry();
+        var (codaX, _, barX, _) = LineStartGeometry();
 
         Assert.Equal(barX, codaX, 2);
-        Assert.True(labelX < barX - 1.0,
-            $"the section label keeps the LEFT EDGE ({labelX:F2}) — only the sign moves to the "
-            + $"bar line ({barX:F2})");
     }
 
     /// <summary>
-    /// ⚠️ AND THE LABEL MUST NOT BE LIFTED BY IT. Marks are grouped by (measure, position,
-    /// timing), which was a PROXY for "these share an X" — true only while every mark of an
-    /// opening column was anchored alike. Once the sign moved to the bar line and the label
-    /// kept the edge, the proxy broke and the stack floated the label: measured on the owner's
-    /// book, the "E" box sat 4.96 ss above its staff where an unstacked label sits at 2.28.
+    /// ⚠️ SINCE 2026-09-03 (session 324, HANDOFF §3 第322 F2) THE LABEL SHARES THE SIGN'S
+    /// COLUMN: a section label takes the RehearsalMark's line-start arm, and with a drawn
+    /// <c>|:</c> that arm is the bar line — the same anchor the coda sign break-aligns on. So
+    /// the label's box LEFT edge stands on the bar line, and the two are stacked in ONE column
+    /// by outside-staff priority (sign 1500-family below, label above), which is exactly the
+    /// lift the previous version of this test forbade while the label kept the left edge.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/axis-group-interface.cc avoid_outside_staff_collisions — outside-staff
-    ///   grobs are skylined pointwise, so two that do not meet in X do not raise each other
-    ///   however close their moments are.
+    ///   grobs are skylined pointwise, so two that DO meet in X are stacked, and two that do not
+    ///   are not. Both halves are asserted: the label's box begins on the bar line (it meets the
+    ///   sign), and it stands clear above the sign rather than through it.
     /// </remarks>
     [Fact]
-    public void ACodaOpeningALine_DoesNotLiftTheSectionLabelBesideIt()
+    public void ACodaOpeningALine_TheSectionLabelSharesItsColumnAndStacksAboveIt()
     {
-        var (codaX, labelX, _, staffTop) = LineStartGeometry();
+        var (codaX, labelX, barX, staffTop) = LineStartGeometry();
         string svg = LiveRender.SvgFromRenderSpec(CodaOpeningALineWithRepeat);
 
-        // The label's box bottom, and how far it stands above its staff.
+        // The label's box: its left edge and bottom. The LAST system's label is the lowest box
+        // above that staff (the first system's "A" box stands above it too).
         var box = System.Text.RegularExpressions.Regex
             .Matches(svg, @"<rect x=""([\d.]+)"" y=""([\d.]+)"" width=""[\d.]+"" height=""2\.60""")
             .Select(m => (X: double.Parse(m.Groups[1].Value), Y: double.Parse(m.Groups[2].Value)))
             .Where(r => r.Y < staffTop).OrderBy(r => r.Y).Last();
+        // The coda glyph's Y (its text baseline; the sign's ink rises ~2 ss above it).
+        double codaY = System.Text.RegularExpressions.Regex
+            .Matches(svg, @"<text class=""music"" x=""([\d.]+)"" y=""([\d.]+)""")
+            .Select(m => (X: double.Parse(m.Groups[1].Value), Y: double.Parse(m.Groups[2].Value)))
+            .Where(g => g.Y < staffTop && g.Y > staffTop - 5.0).Select(g => g.Y).Single();
 
-        Assert.True(codaX - labelX > 1.0, "the two must actually stand apart for this to mean anything");
-        Assert.True(staffTop - (box.Y + 2.60) < 3.0,
-            $"the label is floating {staffTop - (box.Y + 2.60):F2} ss above its staff — it is "
-            + "being stacked on a sign that is not in its column");
+        Assert.Equal(barX, box.X, 1);
+        Assert.True(labelX > barX, $"the label's text ({labelX:F2}) begins inside its box, right of the bar line ({barX:F2})");
+        Assert.True(Math.Abs(codaX - barX) < 0.01, "the sign is on the bar line too — the two share the column");
+        Assert.True(box.Y + 2.60 <= codaY - 1.5,
+            $"the label's box bottom ({box.Y + 2.60:F2}) must stand above the coda sign (baseline {codaY:F2}, ink to ~{codaY - 2.0:F2})");
     }
 }

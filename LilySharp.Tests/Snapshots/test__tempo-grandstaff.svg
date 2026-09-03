@@ -45,7 +45,7 @@
   <text class="music" x="5.00" y="13.19" font-size="3.56" data-pos="429"></text>
   <line x1="6.11" y1="13.03" x2="6.11" y2="10.52" stroke="#000000" stroke-width="0.116" data-pos="429"/>
   <text x="6.78" y="13.68" font-size="2.20" data-pos="429">= 120</text>
-  <rect x="0.30" y="7.46" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="508"/>
-  <text x="3.40" y="9.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="508">Main</text>
+  <rect x="3.48" y="7.46" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="508"/>
+  <text x="6.59" y="9.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="508">Main</text>
   </g>
 </svg>

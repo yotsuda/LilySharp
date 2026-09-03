@@ -202,10 +202,10 @@
   <text class="music" x="4.88" y="13.34" font-size="3.56" data-pos="128"></text>
   <line x1="5.99" y1="13.17" x2="5.99" y2="10.66" stroke="#000000" stroke-width="0.116" data-pos="128"/>
   <text x="6.66" y="13.82" font-size="2.20" data-pos="128">= 120</text>
-  <rect x="0.30" y="15.56" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="837"/>
-  <text x="1.34" y="17.76" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="837">A</text>
-  <rect x="0.30" y="31.52" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="893"/>
-  <text x="1.35" y="33.72" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="893">B</text>
+  <rect x="3.37" y="16.62" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="837"/>
+  <text x="4.40" y="18.82" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="837">A</text>
+  <rect x="4.52" y="32.95" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="893"/>
+  <text x="5.57" y="35.15" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="893">B</text>
   <rect x="38.86" y="30.46" width="6.31" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="928"/>
   <text x="42.02" y="32.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="928">End1</text>
   <rect x="71.40" y="30.46" width="6.31" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="967"/>

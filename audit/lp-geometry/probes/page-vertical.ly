@@ -3712,3 +3712,32 @@ probeTag =
     \layout { indent = 15\mm }
   }
 }
+
+%% RWMA — THE \mark SPELLING OF ROWMA (2026-09-03, session 324): RWM with the chord row on
+%%     EVERY system.  It exists because the Lily# `form' section label now stands where
+%%     LilyPond's RehearsalMark stands (HANDOFF §3 第322 F2 — the twin spells a section name
+%%     `\mark \markup \box', LilyPondExporter), so the section-label family's marked
+%%     readings (lyrics.chord-row.marked.*.gap-second, page.section-label.first-staff-refpoint)
+%%     are refereed by the \mark books from this session on: ROWM -> RWM, ROWMN -> RWMN,
+%%     ROWMA -> this book.  MEASURED 2026-09-03 on 2.26.0 (Measure-LilyPondPageGeometry on
+%%     RWM / RWMN / RWMA alone, the dump above unchanged): gap 2 = 12.563793 here and in RWM
+%%     (the lift, identical whether the row is on system 1 or everywhere), 12.000000 in RWMN;
+%%     first STAFF refpoint below the edge = 12.284649 in all three (top-margin + 6.594098).
+\book {
+  \probeTag "RWMA"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t
+           property-defaults.fonts.serif = "LilyPond Serif" }
+  \score {
+    <<
+      \new ChordNames { \chordmode { \repeat unfold 12 { c1 } } }
+      \new Staff \with { instrumentName = "Melody" } { \new Voice = "mel" {
+        \mark \markup \box "A" \repeat unfold 4 { g'4 a' g' a' } \break
+        \mark \markup \box "B" \repeat unfold 4 { g'4 a' g' a' } \break
+        \mark \markup \box "C" \repeat unfold 4 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 48 { no } }
+      \new Staff \with { instrumentName = "Lower" } {
+        \repeat unfold 12 { g'4 a' g' a' } }
+    >>
+    \layout { indent = 15\mm }
+  }
+}

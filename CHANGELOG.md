@@ -49,6 +49,14 @@ scores against LilyPond's picture of the same book.
 
 ### Engraving
 
+- **A section name's box stands where LilyPond's rehearsal mark stands.** At a line start
+  the box used to sit on the system's left edge, over the clef, and a tempo mark beside it
+  slid right whenever a key signature widened the prefix. The box now takes the rehearsal
+  mark's anchor — the key signature's right edge, the clef's when there is no key, or the
+  drawn `|:` of a section that opens a line with a repeat — with the tempo stacked under
+  it, which is the picture LilyPond draws for the `\mark \markup \box` the twin writes.
+  LilyPond's own `\sectionLabel` grob keeps the left edge; that placement is not gone for
+  good, it is the `marks beside` display option still to come.
 - **The number of systems is chosen by the page's score, as LilyPond chooses it.** The line
   breaker's best breaking was the breaking engraved; LilyPond's `Optimal_page_breaking::solve`
   only starts there, then tries fewer and more systems and engraves the count whose lines

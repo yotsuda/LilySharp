@@ -1739,7 +1739,17 @@ internal static class MusicMarkEngraver
             //   the staff-bar's calc-anchor (the bar stencil's centre), a placement no
             //   probe has measured yet — mark.rehearsal.line-start.* referee only the
             //   line start, and this arm moves only what they referee.
-            if (mark.Type == MusicMarkType.Rehearsal && lineStartSystem >= 0)
+            // ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
+            //   SECTION LABEL takes the same line-start arm. LilyPond's own SectionLabel
+            //   grob keeps the left edge (its list is (left-edge staff-bar)), but a Lily#
+            //   `form' section name is spelled `\mark \markup \box` in the LilyPond twin
+            //   (LilyPondExporter), i.e. a RehearsalMark, and the owner's books read that
+            //   way: the box stands at the meter column with the tempo stacked under it.
+            //   The ledger point mark.section-label.line-start.box-left-from-clef-left is
+            //   therefore refereed against the RehearsalMark's number (MKQ), not MKB's.
+            //   The line-start edge (Indent + 0.3) is not lost: `marks beside' (§3, not yet
+            //   built) is the display option that brings it back.
+            if (lineStartSystem >= 0)
             {
                 if (lineStartBarlineX?.Invoke(measureLayout.MeasureIndex) is { } barX
                     && !double.IsNaN(barX))
