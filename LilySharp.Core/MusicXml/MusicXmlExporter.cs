@@ -2154,6 +2154,9 @@ public sealed class MusicXmlExporter
                 && members.Count > 0:
             {
                 EmitPendingDynamic();
+                // A run that reached here through a `q'` repeats the chord where that
+                // q left it, the same as a following q would.
+                int bareDisplacement = Music.BareDurations.DisplacementOf(bare);
                 bool isFirst = true;
                 foreach (var m in members)
                 {
@@ -2161,7 +2164,7 @@ public sealed class MusicXmlExporter
                     {
                         Step = m.Step,
                         Alter = m.Alter,
-                        Octave = m.Octave,
+                        Octave = m.Octave + bareDisplacement,
                         Duration = durationTicks,
                         Type = type,
                         Dots = dots,
@@ -2541,6 +2544,10 @@ public sealed class MusicXmlExporter
 
         EmitPendingDynamic();
         var (tupletActual, tupletNormal) = CurrentTupletRatio();
+        // q' repeats the chord an octave up, accumulated along the q chain. MusicXML
+        // spells the octave as a number, so the displacement is simply added to it —
+        // the step and the alter do not move, which is why the spelling is preserved.
+        int displacement = ChordRepetitions.DisplacementOf(rep);
         bool isFirst = true;
         foreach (var m in members)
         {
@@ -2548,7 +2555,7 @@ public sealed class MusicXmlExporter
             {
                 Step = m.Step,
                 Alter = m.Alter,
-                Octave = m.Octave,
+                Octave = m.Octave + displacement,
                 Duration = durationTicks,
                 Type = type,
                 Dots = dots,

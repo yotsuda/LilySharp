@@ -584,8 +584,17 @@ internal static partial class SharedRenderer
                 // fragment opens bare).
                 bool ossiaAtSystemStart = !isOssia
                     || (system.Measures.Length > 0 && fragFrom <= system.Measures[0].MeasureIndex);
-                bool drawClef = !isOssia
-                    || (ossiaAtSystemStart && OssiaAppearedBefore(layout, staff, system, globalIdx));
+                // A ONE-LINE staff carries no clef and no key signature. `as lines 1` is
+                // how a rhythm staff is written, and a chart does not put a treble clef on
+                // one — LilyPond's RhythmicStaff drops the Clef_engraver and the
+                // Key_engraver for the same reason. Two to five lines are ordinary staves
+                // and keep both.
+                // LILYPOND-REF: ly/engraver-init.ly \context RhythmicStaff — \remove
+                // Clef_engraver, \remove Key_engraver.
+                bool prefatoryStaff = staff.Lines > 1 && !staff.IsTextRow;
+                bool drawClef = prefatoryStaff
+                    && (!isOssia
+                        || (ossiaAtSystemStart && OssiaAppearedBefore(layout, staff, system, globalIdx)));
                 if (drawClef)
                 {
                     // Tag the clef with the declaration that put it in force HERE, on every
@@ -611,7 +620,7 @@ internal static partial class SharedRenderer
                 // reserved rather than tight against the clef. Each gap is measured off the
                 // previous item's ink (extra-space). LILYPOND-REF Clef/KeySignature space-alist.
                 bool keyDrawn = false;
-                if (ossiaAtSystemStart)
+                if (ossiaAtSystemStart && prefatoryStaff)
                 {
                     // Tag the key sig with the declaration that put it in force HERE, on
                     // every line — the score's `key`, or the last mid-piece change before

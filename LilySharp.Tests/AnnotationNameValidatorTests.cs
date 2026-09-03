@@ -45,6 +45,52 @@ public class AnnotationNameValidatorTests
         Assert.Contains($"'@{name}'", warning.Message);
     }
 
+    // --- A chord with a good root but an unregistered quality names the REAL problem ---
+
+    [Theory]
+    [InlineData("c4@chord(C7b9) d |", "7b9", "7-9")]
+    [InlineData("c4@chord(F#m7b5) d |", "m7b5", "m7-5")]
+    [InlineData("c4@chord(A7#5) d |", "7#5", "7+5")]
+    public void AChordQualitySpelledWithSharpOrFlat_NamesTheAlterationRule(
+        string source, string quality, string suggestion)
+    {
+        var warning = Assert.Single(Validate(source), d => d.Code == DiagnosticCodes.UnknownAnnotation);
+        // The half that failed is the QUALITY. Saying "unknown annotation" sent the
+        // reader to look at '@chord', which is spelled correctly.
+        Assert.Contains($"'{quality}' is not a chord quality", warning.Message);
+        Assert.Contains("'+' or '-'", warning.Message);
+        Assert.Contains($"'{suggestion}'", warning.Message);
+        Assert.DoesNotContain("Unknown annotation", warning.Message);
+    }
+
+    [Fact]
+    public void AChordQualityWithNoAlternativeSpelling_StatesTheRuleAndGuessesNothing()
+    {
+        var warning = Assert.Single(Validate("c4@chord(Czz) d |"),
+            d => d.Code == DiagnosticCodes.UnknownAnnotation);
+        Assert.Contains("'zz' is not a chord quality", warning.Message);
+        Assert.DoesNotContain("Did you mean", warning.Message);
+    }
+
+    [Fact]
+    public void AChordWhoseROOTDoesNotParse_IsStillAnOrdinaryUnknownAnnotation()
+    {
+        // No root to hang a quality on, so the quality message would be a lie; the
+        // ordinary unknown-name path (and its own suggestion machinery) is right here.
+        var warning = Assert.Single(Validate("c4@chord(zz) d |"),
+            d => d.Code == DiagnosticCodes.UnknownAnnotation);
+        Assert.Contains("Unknown annotation", warning.Message);
+    }
+
+    [Theory]
+    [InlineData("c4@chord(C7-9) d |")]
+    [InlineData("c4@chord(F#m7-5) d |")]
+    [InlineData("c4@chord(Cadd9) d |")]
+    public void AnAlteredTensionInTheRegisteredSpelling_IsAccepted(string source)
+    {
+        Assert.DoesNotContain(Validate(source), d => d.Code == DiagnosticCodes.UnknownAnnotation);
+    }
+
     [Theory]
     [InlineData("c4@feather.up d |")]    // not a feather direction
     [InlineData("c4@trillspan(begin) d |")]

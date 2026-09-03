@@ -723,10 +723,41 @@ public sealed class ChordRepetitionSyntax : SyntaxNode
 
     /// <summary>The <c>q</c> identifier token.</summary>
     public SyntaxTokenNode QToken => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>
+    /// The slot just past the octave marks. They sit between the <c>q</c> and the
+    /// duration (source order), so every slot after them moves by however many were
+    /// written; the marks are the only non-null tokens that can appear there.
+    /// </summary>
+    private int AfterOctaveMarks
+    {
+        get
+        {
+            int i = 1;
+            while (GetChild(i) is SyntaxTokenNode t
+                   && (t.Kind == SyntaxKind.Apostrophe || t.Kind == SyntaxKind.Comma))
+                i++;
+            return i;
+        }
+    }
+
+    /// <summary>
+    /// The octaves this repetition is displaced by: <c>q'</c> repeats the chord an
+    /// octave up, <c>q,,</c> two octaves down, <c>q</c> at its own pitch.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond's <c>q</c> repeats the previous chord and cannot be
+    /// displaced. The marks read as they do after a chord's <c>&gt;</c> — they move
+    /// the whole chord and the anchor with it — and they ACCUMULATE, so the next
+    /// <c>q</c> repeats the displaced chord rather than the written one
+    /// (user decision, 2026-09-03). <see cref="Music.ChordRepetitions"/> threads that.
+    /// </remarks>
+    public int OctaveOffset => SyntaxFacts.NetOctaveMarks(this);
+
     /// <summary>The repetition's duration, or null when unspecified (inherited from the previous note).</summary>
-    public DurationSyntax? Duration => GetChild(1) as DurationSyntax;
+    public DurationSyntax? Duration => GetChild(AfterOctaveMarks) as DurationSyntax;
     /// <summary>The tremolo suffix (:8, :16, :32), or null.</summary>
-    public SyntaxTokenNode? Tremolo => GetChild(2) as SyntaxTokenNode;
+    public SyntaxTokenNode? Tremolo => GetChild(AfterOctaveMarks + 1) as SyntaxTokenNode;
 
     /// <summary>The articulations and dynamics attached to this repetition itself
     /// (the original chord's post-events are NOT copied — LP copies note events only).</summary>
@@ -734,7 +765,7 @@ public sealed class ChordRepetitionSyntax : SyntaxNode
     {
         get
         {
-            for (int i = 3; i < Green.SlotCount; i++)
+            for (int i = AfterOctaveMarks + 2; i < Green.SlotCount; i++)
             {
                 var child = GetChild(i);
                 if (child != null)

@@ -187,7 +187,28 @@ a,4@rest    // quarter rest printed where the note a, would sit (a PITCHED rest)
 <c e g>4    // chord (shared duration after '>'), C major triad as a quarter
 <c 3 5>4    // the same triad by scale degrees (root + 3rd + 5th of the key)
 <1 3 5>2    // degrees only: anchored on the key TONIC (C E G in C major)
+q           // THE PREVIOUS CHORD AGAIN, at the running duration
+q2          // ...at its own duration; q@staccato takes its own post-events too
+q'          // ...an octave up (q,, two down) — the marks ACCUMULATE, see below
 ```
+
+`q` repeats the chord before it (notes and rests are transparent; only a written
+`<…>` chord replaces it, and the run does not leak across a part/section/phrase
+body). The original's own articulations are NOT copied — `q` carries only its own.
+With no chord before it, `q` warns and occupies its time silently.
+
+⚠️ **`q` takes octave marks and a bare duration cannot** — that is the difference
+between them. `<c e g>4 4` and `<c e g>4 q4` engrave and play identically (measured:
+same SVG, same MIDI), because a bare duration is a LENGTH — "the previous event
+again, this long" — and a length has nothing to displace, so `4'` is not a spelling.
+`q` is an EVENT — "this chord again" — so it takes a duration, post-events, and
+octave marks. **The displacement accumulates along the chain**: `q' q` sounds the
+chord up an octave twice, `q' q'` climbs by one then two, and a bare duration in the
+run repeats the chord where the last `q` left it (LILYSHARP-OWN — LilyPond's `q`
+takes no marks; user decision 2026-09-03).
+⚠️ `lysc ly` cannot express a displaced `q`: LilyPond expands chord repetitions
+*after* `\transpose` is applied, so the wrapper reaches an empty placeholder
+(measured against 2.26.0). The twin writes a plain `q` and warns.
 
 A rest normally places itself: the middle line, the voiced position inside a
 `voice { } { }` span, and clear of the notes sounding with it. `@rest` on a NOTE
@@ -508,8 +529,11 @@ quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LY
   reference's marks — never to how the body ends.
 - A reference's trailing marks shift octaves (`Chorus'` / `Chorus,`). There is no
   per-reference transposition: a glued `'(N)` diatonic interval was removed 2026-08-28,
-  and `transpose` is a part property (chromatic), so a motif quoted at another interval
-  is written out.
+  and `transpose` is a part property, so a motif quoted at another interval
+  is written out. ⚠️ **`transpose` takes a PITCH, not a number of steps** —
+  `part cl { clef treble transpose bes }`, and `transpose -2` is an error naming the
+  pitch form. Do not confuse it with `transposition`, a *different* part property that
+  takes an octave marker (`8va` / `8vb` / `15ma` / `15mb`) and nothing else.
 - **`section ~A { … }` flips that section's label default.** A section prints a rehearsal
   letter by default and a reference's `~` hides it; declare it `section ~A` and it prints
   none by default, so there `~A` is the spelling that SHOWS. One meaning for the tilde at

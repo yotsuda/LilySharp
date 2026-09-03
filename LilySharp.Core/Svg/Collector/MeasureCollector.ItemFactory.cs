@@ -285,7 +285,21 @@ public sealed partial class MeasureCollector
     // Internal (was private) since finding 3-4: VoiceWalkRecording.ResolvedSpellings
     // carries these values across keystrokes for the resume's re-keyed replay.
     internal readonly record struct ResolvedChordMember(
-        int StaffPosition, int? Step, int? Alter, int? Octave, NoteheadStyle Notehead, int Midi);
+        int StaffPosition, int? Step, int? Alter, int? Octave, NoteheadStyle Notehead, int Midi)
+    {
+        /// <summary>
+        /// The same member displaced by whole octaves — what <c>q'</c> repeats. A
+        /// diatonic octave is seven staff positions, twelve semitones and one octave
+        /// number; the letter, the accidental and the notehead do not move, which is
+        /// why the displaced chord keeps its spelling.
+        /// </summary>
+        internal ResolvedChordMember DisplacedBy(int octaves) => octaves == 0 ? this : this with
+        {
+            StaffPosition = StaffPosition + 7 * octaves,
+            Octave = Octave + octaves,
+            Midi = Midi + 12 * octaves,
+        };
+    }
 
     /// <summary>The resolved members of every chord this walk has built, keyed by
     /// node — what a following <c>q</c> copies. Refilled on every re-walk (form
@@ -678,9 +692,14 @@ public sealed partial class MeasureCollector
             || !_resolvedChordMembers.TryGetValue(original, out var members))
             return new RestItem(Fraction.FromNoteValue(noteValue), dots, rep.SourceStart) { IsSpacer = true };
 
+        // q' repeats the chord an octave up. The displacement accumulates along the q
+        // chain, so ChordRepetitions answers with the total rather than this node's marks.
+        int displacement = Music.ChordRepetitions.DisplacementOf(rep);
+
         var notes = new List<ChordNoteInfo>(members.Length);
-        foreach (var m in members)
+        foreach (var written in members)
         {
+            var m = written.DisplacedBy(displacement);
             string? accidental = m.Step is { } step
                 ? GetDisplayAccidental(step, m.Alter!.Value, m.Octave!.Value)
                 : null;
@@ -808,10 +827,13 @@ public sealed partial class MeasureCollector
             {
                 // The full chord again — same copy a `q` makes (accidentals
                 // re-derived through the measure's own state, post-events not
-                // copied).
+                // copied), displacement included: a run that reached here through
+                // a `q'` repeats the chord where that q left it.
+                int bareDisplacement = Music.BareDurations.DisplacementOf(bare);
                 var notes = new List<ChordNoteInfo>(members.Length);
-                foreach (var m in members)
+                foreach (var writtenMember in members)
                 {
+                    var m = writtenMember.DisplacedBy(bareDisplacement);
                     string? accidental = m.Step is { } step
                         ? GetDisplayAccidental(step, m.Alter!.Value, m.Octave!.Value)
                         : null;

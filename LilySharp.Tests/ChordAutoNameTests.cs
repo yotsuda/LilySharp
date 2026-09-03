@@ -22,9 +22,10 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// Bare <c>@chord</c> on a chord auto-derives the chord symbol from its notes:
-/// the root is the first member, the remaining members' pitch classes give the
-/// quality. The explicit form stays <c>@chord(Cmaj7)</c>.
+/// Bare <c>@chord</c> on a chord auto-derives the chord symbol from its notes. The
+/// root is found from the PITCH CLASSES — no member is privileged for being written
+/// first — and when it is not the lowest note the chord is an inversion, whose lowest
+/// note prints as the slash bass. The explicit form stays <c>@chord(Cmaj7)</c>.
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class ChordAutoNameTests
@@ -57,6 +58,40 @@ public sealed class ChordAutoNameTests
         // The chord is order-independent, so its derived name is too.
         Assert.Equal("C", AutoName("<c e g>"));
         Assert.Equal("C", AutoName("<c g e>"));
+    }
+
+    // --- Inversions: the root comes from the pitches, not from the write order ---
+
+    [Theory]
+    // These are RELATIVE (the harness writes no `octave absolute`), so a member that
+    // would fall below the one before it goes up instead: <e g c> sounds e g c', whose
+    // lowest note is e. Under `octave absolute` the same spelling sounds e g c and is
+    // therefore plain "C" — the name follows what SOUNDS, not what is typed.
+    [InlineData("<e g c>", "C/E")]
+    [InlineData("<g c e>", "C/G")]
+    [InlineData("<e g c e>", "C/E")]
+    public void AnInversion_TakesItsLowestNoteAsTheSlashBass(string chord, string expected)
+        => Assert.Equal(expected, AutoName(chord));
+
+    [Fact]
+    public void TheBassIsTriedFirst_SoAChordThatNamesTodayKeepsItsName()
+    {
+        // {C,E,G,A} reads as C6 rooted on C and as Am7 rooted on A. Preferring the BASS
+        // settles it, which is why making inversions nameable could not turn C6 into
+        // Am7/C — the ambiguity is decided before the other roots are ever tried.
+        Assert.Equal("C6", AutoName("<c e g a>"));
+        Assert.Equal("Am7", AutoName("<a c e g>"));
+        // And a four-pitch-class set cannot read as a three-note triad at all: C-E-G-B
+        // has no Em reading to lose to.
+        Assert.Equal("Cmaj7", AutoName("<c e g b>"));
+    }
+
+    [Fact]
+    public void ASetNoRootCanName_IsStillLeftUnnamed()
+    {
+        // The reader tries every member as the root; when none of them names a
+        // registered quality the chord gets no symbol, exactly as before.
+        Assert.Null(AutoName("<c cis d>"));
     }
 
     [Theory]

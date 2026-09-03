@@ -69,6 +69,43 @@ public enum ChordQuality
     Sus4,
     /// <summary>Dominant seventh with a suspended fourth (no third); suffix <c>7sus4</c>.</summary>
     Dominant7Sus4,
+
+    // The altered and extended qualities. Their ENTRY spellings use '+'/'-' for the
+    // altered tension, never '#'/'b' — those belong to the root and the bass alone, which
+    // is what keeps "Bb9" unambiguous (see the ByToken remark). They PRINT with the ♭/♯
+    // glyphs all the same, exactly as Cm7♭5 has always done.
+    /// <summary>Dominant seventh with a lowered fifth; entry <c>7-5</c>, prints <c>7♭5</c>.</summary>
+    Dominant7Flat5,
+    /// <summary>Dominant seventh with a raised fifth; entry <c>7+5</c>, prints <c>7♯5</c>.</summary>
+    Dominant7Sharp5,
+    /// <summary>Dominant seventh with a lowered ninth; entry <c>7-9</c>, prints <c>7♭9</c>.</summary>
+    Dominant7Flat9,
+    /// <summary>Dominant seventh with a raised ninth; entry <c>7+9</c>, prints <c>7♯9</c>.</summary>
+    Dominant7Sharp9,
+    /// <summary>Dominant seventh with a raised eleventh; entry <c>7+11</c>, prints <c>7♯11</c>.</summary>
+    Dominant7Sharp11,
+    /// <summary>Major triad plus a ninth, no seventh; suffix <c>add9</c>.</summary>
+    MajorAdd9,
+
+    // The plain extensions. ⚠️ A DELIBERATE DEPARTURE FROM LILYPOND, declared here: a
+    // thirteenth chord does NOT carry the eleventh. LilyPond's ':13' stacks every third
+    // mechanically (c e g bes d' f' a'), and the natural eleventh it lands on is a
+    // semitone from the major third — an interval no player voices and no chart means.
+    // Lily# realizes the symbol the way a reader of the chart would play it, and takes
+    // the eleventh only when the symbol asks for it by name ('11', 'm11').
+    // Nothing measures this against LilyPond: the .ly exporter writes chord names as
+    // markup and never emits a \chordmode entry, so the twin never asks LilyPond to
+    // realize one.
+    /// <summary>Dominant eleventh; suffix <c>11</c>.</summary>
+    Dominant11,
+    /// <summary>Dominant thirteenth, without the eleventh; suffix <c>13</c>.</summary>
+    Dominant13,
+    /// <summary>Minor eleventh; suffix <c>m11</c>.</summary>
+    Minor11,
+    /// <summary>Minor thirteenth, without the eleventh; suffix <c>m13</c>.</summary>
+    Minor13,
+    /// <summary>Major thirteenth, without the eleventh; suffix <c>maj13</c>.</summary>
+    Major13,
 }
 
 /// <summary>One chord tone: a diatonic step above the root (0=root, 2=third,
@@ -111,6 +148,17 @@ public static class ChordQualityRegistry
         [ChordQuality.Sus2] = [new(0, 0), new(1, 2), new(4, 7)],
         [ChordQuality.Sus4] = [new(0, 0), new(3, 5), new(4, 7)],
         [ChordQuality.Dominant7Sus4] = [new(0, 0), new(3, 5), new(4, 7), new(6, 10)],
+        [ChordQuality.Dominant7Flat5] = [new(0, 0), new(2, 4), new(4, 6), new(6, 10)],
+        [ChordQuality.Dominant7Sharp5] = [new(0, 0), new(2, 4), new(4, 8), new(6, 10)],
+        [ChordQuality.Dominant7Flat9] = [new(0, 0), new(2, 4), new(4, 7), new(6, 10), new(8, 13)],
+        [ChordQuality.Dominant7Sharp9] = [new(0, 0), new(2, 4), new(4, 7), new(6, 10), new(8, 15)],
+        [ChordQuality.Dominant7Sharp11] = [new(0, 0), new(2, 4), new(4, 7), new(6, 10), new(10, 18)],
+        [ChordQuality.MajorAdd9] = [new(0, 0), new(2, 4), new(4, 7), new(8, 14)],
+        [ChordQuality.Dominant11] = [new(0, 0), new(2, 4), new(4, 7), new(6, 10), new(8, 14), new(10, 17)],
+        [ChordQuality.Dominant13] = [new(0, 0), new(2, 4), new(4, 7), new(6, 10), new(8, 14), new(12, 21)],
+        [ChordQuality.Minor11] = [new(0, 0), new(2, 3), new(4, 7), new(6, 10), new(8, 14), new(10, 17)],
+        [ChordQuality.Minor13] = [new(0, 0), new(2, 3), new(4, 7), new(6, 10), new(8, 14), new(12, 21)],
+        [ChordQuality.Major13] = [new(0, 0), new(2, 4), new(4, 7), new(6, 11), new(8, 14), new(12, 21)],
     };
 
     private static readonly Dictionary<ChordQuality, string> Suffix = new()
@@ -133,6 +181,17 @@ public static class ChordQualityRegistry
         [ChordQuality.Sus2] = "sus2",
         [ChordQuality.Sus4] = "sus4",
         [ChordQuality.Dominant7Sus4] = "7sus4",
+        [ChordQuality.Dominant7Flat5] = "7♭5",
+        [ChordQuality.Dominant7Sharp5] = "7♯5",
+        [ChordQuality.Dominant7Flat9] = "7♭9",
+        [ChordQuality.Dominant7Sharp9] = "7♯9",
+        [ChordQuality.Dominant7Sharp11] = "7♯11",
+        [ChordQuality.MajorAdd9] = "add9",
+        [ChordQuality.Dominant11] = "11",
+        [ChordQuality.Dominant13] = "13",
+        [ChordQuality.Minor11] = "m11",
+        [ChordQuality.Minor13] = "m13",
+        [ChordQuality.Major13] = "maj13",
     };
 
     // Entry tokens (after the ':') that select each quality. Several spellings map
@@ -169,6 +228,24 @@ public static class ChordQualityRegistry
         ["sus4"] = ChordQuality.Sus4,
         ["sus"] = ChordQuality.Sus4,
         ["7sus4"] = ChordQuality.Dominant7Sus4,
+        // The altered and extended qualities, spelled by the same rule as m7-5 above:
+        // the alteration is '+'/'-', because '#'/'b' after a letter are the ROOT's.
+        // Before these were registered a chords row printed them from its raw-suffix
+        // fallback (so they looked fine and did not play) while '@chord' refused them
+        // outright — one quantity, two answers.
+        ["7-5"] = ChordQuality.Dominant7Flat5,
+        ["7+5"] = ChordQuality.Dominant7Sharp5,
+        ["7-9"] = ChordQuality.Dominant7Flat9,
+        ["7+9"] = ChordQuality.Dominant7Sharp9,
+        ["7+11"] = ChordQuality.Dominant7Sharp11,
+        ["add9"] = ChordQuality.MajorAdd9,
+        ["11"] = ChordQuality.Dominant11,
+        ["13"] = ChordQuality.Dominant13,
+        ["m11"] = ChordQuality.Minor11,
+        ["min11"] = ChordQuality.Minor11,
+        ["m13"] = ChordQuality.Minor13,
+        ["min13"] = ChordQuality.Minor13,
+        ["maj13"] = ChordQuality.Major13,
     };
 
     /// <summary>The tones (diatonic step + semitone above root) of a quality.</summary>
@@ -335,6 +412,56 @@ public sealed record ChordStructure(
             return false;
         structure = new ChordStructure(rootStep, rootAlter, quality);
         return true;
+    }
+
+    /// <summary>
+    /// Recognizes a chord from its SOUNDING members without privileging the one that
+    /// happens to be written first: every member is tried as the root, and the first
+    /// that names a registered quality wins. When that root is not the lowest note the
+    /// chord is an inversion, and the lowest note becomes the printed slash bass —
+    /// E-G-C sounding in that order is <c>C/E</c>.
+    /// </summary>
+    /// <param name="membersLowestFirst">
+    /// The chord's members as (diatonic step, alteration), ordered by sounding pitch,
+    /// lowest first. Order is the whole point: see the remark.
+    /// </param>
+    /// <remarks>
+    /// ⚠️ THE BASS IS TRIED FIRST, and that is what keeps this from renaming chords that
+    /// already work. Several sets read as more than one chord — {C,E,G,A} is C6 from C
+    /// and Am7 from A, and a diminished seventh reads from all four of its notes — so
+    /// without a preference the answer would depend on iteration order. Preferring the
+    /// bass means a root-position chord keeps the name it has today (C6 stays C6, not
+    /// Am7/C) and an inversion is only ever consulted when the bass names nothing at all.
+    /// LILYPOND-REF: scm/chord-ignatzek-names.scm — the bass note is the inversion's
+    /// printed bass, and the root is found from the interval set.
+    /// </remarks>
+    public static bool TryRecognize(
+        IReadOnlyList<(int Step, int Alter)> membersLowestFirst, out ChordStructure? structure)
+    {
+        structure = null;
+        if (membersLowestFirst.Count == 0)
+            return false;
+
+        var pcs = new int[membersLowestFirst.Count];
+        for (int i = 0; i < membersLowestFirst.Count; i++)
+        {
+            var (s, a) = membersLowestFirst[i];
+            pcs[i] = Mod12(Semantics.RelativeOctave.StepSemitoneOf(s) + a);
+        }
+
+        for (int i = 0; i < membersLowestFirst.Count; i++)
+        {
+            int rootPc = pcs[i];
+            if (!ChordQualityRegistry.TryRecognize(pcs.Select(pc => Mod12(pc - rootPc)), out var quality))
+                continue;
+            var (rootStep, rootAlter) = membersLowestFirst[i];
+            var (bassStep, bassAlter) = membersLowestFirst[0];
+            structure = rootPc == pcs[0]
+                ? new ChordStructure(rootStep, rootAlter, quality)
+                : new ChordStructure(rootStep, rootAlter, quality, bassStep, bassAlter);
+            return true;
+        }
+        return false;
     }
 
     private static int Mod12(int a) => ((a % 12) + 12) % 12;

@@ -186,7 +186,16 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                             + "'@!accel', '@!rall', '@!textSpan'.");
                 }
                 else if (!IsKnownCompoundName(mark))
-                    WarnUnknown(mark, name);
+                {
+                    // A chord symbol with a good ROOT but a quality nobody registered is
+                    // not a typo in the annotation's NAME, and "unknown annotation" sends
+                    // the reader to look at '@chord'. Name the real problem instead.
+                    if (string.Equals(mark.Name, "chord", StringComparison.Ordinal)
+                        && UnregisteredChordQuality(mark) is { } quality)
+                        WarnUnregisteredChordQuality(mark, quality);
+                    else
+                        WarnUnknown(mark, name);
+                }
                 else if (AnnotationValues.Rehearsal(mark, out var labelIsQuoted) is not null
                          && !labelIsQuoted)
                     _diagnostics.Error(
@@ -277,11 +286,29 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         if (chord.Root is null || chord.Degrees.Any() || chord.DrumNames.Any())
             return true;
 
-        int rootStep = RelativeOctave.StepIndex(chord.Root.PitchName.ToLowerInvariant()[0]);
-        var pcs = chord.Pitches.Select(p =>
-            RelativeOctave.StepSemitoneOf(RelativeOctave.StepIndex(p.PitchName.ToLowerInvariant()[0]))
-            + p.AccidentalOffset);
-        return ChordStructure.TryRecognize(rootStep, chord.Root.AccidentalOffset, pcs, out _);
+        return CanName(chord.Pitches);
+    }
+
+    /// <summary>
+    /// Whether SOME root names this set of members — the question this validator asks,
+    /// and the only one it can answer.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The members go in WRITTEN order, not sounding order, and that is deliberate:
+    /// whether a set names a chord does not depend on which member is lowest, only
+    /// WHICH root wins and whether there is a slash bass do. Those need the resolved
+    /// octaves, which the collector has and this validator does not — so the collector
+    /// decides the name and this decides only whether to warn. Asking the same recognizer
+    /// keeps the two from disagreeing about what is nameable, which is how a chord came
+    /// to be warned about here and named there.
+    /// </remarks>
+    private static bool CanName(IEnumerable<PitchSyntax> pitches)
+    {
+        var members = pitches
+            .Select(p => (Step: RelativeOctave.StepIndex(p.PitchName.ToLowerInvariant()[0]),
+                          Alter: p.AccidentalOffset))
+            .ToList();
+        return members.Count == 0 || ChordStructure.TryRecognize(members, out _);
     }
 
     /// <summary>
@@ -311,11 +338,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         }
         if (pitches.Count == 0)
             return true; // nothing to derive from — the collector shows nothing
-        int rootStep = RelativeOctave.StepIndex(pitches[0].PitchName.ToLowerInvariant()[0]);
-        var pcs = pitches.Select(p =>
-            RelativeOctave.StepSemitoneOf(RelativeOctave.StepIndex(p.PitchName.ToLowerInvariant()[0]))
-            + p.AccidentalOffset);
-        return ChordStructure.TryRecognize(rootStep, pitches[0].AccidentalOffset, pcs, out _);
+        return CanName(pitches);
     }
 
     /// <summary>True for an annotation sitting on a <c>&lt;&lt; … &gt;&gt;</c> group
@@ -331,8 +354,66 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             + "a chord name (@chord) work there; for per-note articulations write the "
             + "passage as plain notes (a tuplet gives the same rhythm).");
 
+    /// <summary>
+    /// The quality of a <c>@chord(…)</c> whose ROOT parses but whose quality is not
+    /// registered, or null when the argument is not that shape (quoted free text, no
+    /// argument, or a root that does not parse — those stay ordinary unknown names).
+    /// </summary>
+    private static string? UnregisteredChordQuality(MusicMarkSyntax mark)
+    {
+        var written = AnnotationValues.WrittenArgument(mark);
+        if (written.Length == 0 || written[0] == '"')
+            return null;
+        int slash = written.IndexOf('/');
+        string main = slash >= 0 ? written[..slash] : written;
+        return ChordStructure.TryParseSymbolPitch(main, out _, out _, out var quality)
+               && quality.Length > 0
+            ? quality
+            : null;
+    }
+
+    /// <summary>
+    /// Says which half of the symbol Lily# could not read, and states the alteration
+    /// rule — because the row and the annotation used to answer differently here, and a
+    /// reader who has just seen the same symbol print in a <c>chords</c> row needs to be
+    /// told why the note refuses it.
+    /// </summary>
+    private void WarnUnregisteredChordQuality(MusicMarkSyntax mark, string quality)
+    {
+        var message =
+            $"'{quality}' is not a chord quality Lily# knows, so this @chord names nothing "
+            + "and is ignored. An altered tension is spelled with '+' or '-' — '#' and 'b' "
+            + "belong to the root and the bass alone, which is what keeps 'Bb9' unambiguous.";
+
+        var altered = quality.Replace('b', '-').Replace('#', '+');
+        if (!string.Equals(altered, quality, StringComparison.Ordinal)
+            && ChordQualityRegistry.TryResolve(altered, out _))
+            message += $" Did you mean '{altered}'?";
+
+        _diagnostics.Warning(mark.Span, DiagnosticCodes.UnknownAnnotation, message);
+    }
+
     private void WarnUnknown(SyntaxNode node, string name)
     {
+        // A REAL name written without its argument — '@bend', or the '@bend.half' that
+        // reaches here as a bare '@bend' after the parser has left the '.half' alone.
+        // "Unknown annotation" sends the reader to check the spelling of a word they
+        // spelled correctly, and it is the line they read first when one such typo
+        // produces three diagnostics at once. A dotted MarkName ('ds.al.fine') is not in
+        // the vocabulary and falls through to the ordinary path, which is right: those
+        // are names, not names missing an argument.
+        if (node is not MusicMarkSyntax { HasArgumentList: true }
+            && SyntaxFacts.IsArgumentTakingAnnotationName(name))
+        {
+            _diagnostics.Warning(
+                node.Span,
+                DiagnosticCodes.UnknownAnnotation,
+                $"'@{name}' takes its argument in parentheses — write '@{name}(…)'. "
+                + "A '.' after an annotation name is the '.up' / '.down' placement "
+                + "qualifier, not an argument.");
+            return;
+        }
+
         // Both the name and the suggestion are shown as they are TYPED, not as the
         // collector keys them: the reader has to be able to copy what they read.
         //

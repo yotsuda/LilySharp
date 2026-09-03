@@ -200,8 +200,13 @@ internal sealed class ChordGreen : GreenSyntaxNode
 /// </summary>
 internal sealed class ChordRepetitionGreen : GreenSyntaxNode
 {
-    public ChordRepetitionGreen(SyntaxToken qToken, DurationGreen? duration, SyntaxToken? tremolo, GreenNode?[] articulations)
-        : base(SyntaxKind.ChordRepetition, [qToken, duration, tremolo, .. articulations])
+    public ChordRepetitionGreen(
+        SyntaxToken qToken,
+        GreenNode?[] octaveMarks,
+        DurationGreen? duration,
+        SyntaxToken? tremolo,
+        GreenNode?[] articulations)
+        : base(SyntaxKind.ChordRepetition, [qToken, .. octaveMarks, duration, tremolo, .. articulations])
     {
     }
 }

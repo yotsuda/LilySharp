@@ -132,6 +132,11 @@ public sealed class ChordNamesTests
     [InlineData("7sus4", "c f g bes")]
     [InlineData("9", "c e g bes d'")]
     public void LpEntryRealization_MatchesLilyPond(string token, string expected)
+        => AssertRealizes(token, expected);
+
+    /// <summary>The tones a registered quality realizes to, spelled the way a .lys
+    /// writes them. One copy, so three theories cannot drift apart.</summary>
+    private static void AssertRealizes(string token, string expected)
     {
         Assert.True(ChordQualityRegistry.TryResolve(token, out var q));
         var spelled = new ChordStructure(0, 0, q).Tones.Select(t =>
@@ -142,19 +147,62 @@ public sealed class ChordNamesTests
         Assert.Equal(expected, string.Join(" ", spelled));
     }
 
-    // The remaining entries of chord-name-entry.ly use entry FORMS outside the
-    // quality vocabulary: step alterations (3-, 3+, 5+.3-), extensions 11/13/m13,
-    // ^ removals and slash-bass realization. They stay unresolved tokens; the
-    // corpus twin hand-expands their LP realization (audit/lp-regression).
+    // The remaining entries of chord-name-entry.ly use LilyPond ENTRY SYNTAX that Lily#
+    // does not have: step alterations (3-, 3+, 5+.3-) and '^' removals. They stay
+    // unresolved tokens; the corpus twin hand-expands their LP realization
+    // (audit/lp-regression).
+    // ⚠️ 11 / 13 / m13 were listed here too, and that conflated two different things:
+    // they are not LilyPond entry syntax, they are ordinary chart symbols that happen to
+    // appear in the same LP file. They are registered now — see TheExtensions_Realize.
     [Theory]
     [InlineData("3-")]
     [InlineData("3+")]
     [InlineData("5+.3-")]
-    [InlineData("11")]
-    [InlineData("13")]
-    [InlineData("m13")]
     [InlineData("7^5")]
     public void LpEntryForms_OutsideTheVocabulary_DoNotResolve(string token)
+    {
+        Assert.False(ChordQualityRegistry.TryResolve(token, out _));
+    }
+
+    // The ALTERED tensions the registry's own rule is about: the alteration is '+'/'-',
+    // never '#'/'b' (those belong to the root and the bass, which is what keeps "Bb9"
+    // unambiguous). Until these were registered, a chords ROW printed them through its
+    // raw-suffix fallback — so they looked right and did not play — while '@chord'
+    // refused them outright: one quantity, two answers.
+    // ⚠️ The plain extensions 11 / 13 / m13 stay OUT, and the theory above says so.
+    [Theory]
+    [InlineData("7-5", "c e ges bes")]
+    [InlineData("7+5", "c e gis bes")]
+    [InlineData("7-9", "c e g bes des'")]
+    [InlineData("7+9", "c e g bes dis'")]
+    [InlineData("7+11", "c e g bes fis'")]
+    [InlineData("add9", "c e g d'")]
+    public void AlteredTensions_ResolveAndRealize(string token, string expected)
+        => AssertRealizes(token, expected);
+
+    // ⚠️ A DECLARED DEPARTURE FROM LILYPOND: a thirteenth does NOT carry the eleventh.
+    // LilyPond's ':13' stacks every third mechanically (… d' f' a'), and that natural
+    // eleventh sits a semitone from the major third — an interval no player voices and
+    // no chart means. The eleventh appears only when the symbol names it ('11', 'm11').
+    // Nothing measures this against LilyPond: the .ly exporter writes chord names as
+    // markup and never emits a \chordmode entry, so no twin asks LP to realize one.
+    [Theory]
+    [InlineData("11", "c e g bes d' f'")]
+    [InlineData("13", "c e g bes d' a'")]
+    [InlineData("m11", "c ees g bes d' f'")]
+    [InlineData("m13", "c ees g bes d' a'")]
+    [InlineData("maj13", "c e g b d' a'")]
+    public void TheExtensions_Realize(string token, string expected)
+        => AssertRealizes(token, expected);
+
+    // The '#'/'b' spellings a player would type stay refused — that is the invariant,
+    // not an oversight. The diagnostic that redirects them lives in
+    // AnnotationNameValidatorTests.
+    [Theory]
+    [InlineData("7b9")]
+    [InlineData("7#5")]
+    [InlineData("m7b5")]
+    public void TheSharpFlatSpellingOfATension_StaysUnregistered(string token)
     {
         Assert.False(ChordQualityRegistry.TryResolve(token, out _));
     }

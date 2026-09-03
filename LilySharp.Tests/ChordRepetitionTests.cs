@@ -56,6 +56,69 @@ public class ChordRepetitionTests
             Assert.Equal(original, copy.Notes.Select(n => n.Midi).ToArray());
     }
 
+    // --- Octave marks on a q (LILYSHARP-OWN; LilyPond's q takes none) ---
+
+    [Theory]
+    [InlineData("<c' e g>4 q", 0)]
+    [InlineData("<c' e g>4 q'", 12)]
+    [InlineData("<c' e g>4 q''", 24)]
+    [InlineData("<c' e g>4 q,", -12)]
+    [InlineData("<c' e g>4 q,,", -24)]
+    public void AMarkOnAQ_DisplacesTheRepeatedChord(string source, int semitones)
+    {
+        var chords = Items(source).OfType<ChordItem>().ToList();
+        Assert.Equal(2, chords.Count);
+        Assert.Equal(
+            chords[0].Notes.Select(n => n.Midi + semitones).ToArray(),
+            chords[1].Notes.Select(n => n.Midi).ToArray());
+    }
+
+    [Fact]
+    public void TheDisplacementAccumulatesAlongTheQChain()
+    {
+        // User decision, 2026-09-03: each q repeats the chord as the PREVIOUS q left
+        // it, so the marks add up and a plain q holds where the chain has got to.
+        var chords = Items("<c' e g>4 q' q' q").OfType<ChordItem>().ToList();
+        int root = chords[0].Notes[0].Midi;
+        Assert.Equal(
+            new[] { root, root + 12, root + 24, root + 24 },
+            chords.Select(c => c.Notes[0].Midi).ToArray());
+    }
+
+    [Fact]
+    public void MarksInOppositeDirections_CancelAlongTheChain()
+    {
+        var chords = Items("<c' e g>4 q' q, q").OfType<ChordItem>().ToList();
+        int root = chords[0].Notes[0].Midi;
+        Assert.Equal(
+            new[] { root, root + 12, root, root },
+            chords.Select(c => c.Notes[0].Midi).ToArray());
+    }
+
+    [Fact]
+    public void ABareDurationAfterADisplacedQ_RepeatsTheDisplacedChord()
+    {
+        // The bare duration threads flat to the written chord, so without carrying
+        // the displacement `q' 4` would answer differently from `q' q` — the same
+        // question with two answers, which is what the displacement threading avoids.
+        var chords = Items("<c' e g>4 q' 4").OfType<ChordItem>().ToList();
+        int root = chords[0].Notes[0].Midi;
+        Assert.Equal(
+            new[] { root, root + 12, root + 12 },
+            chords.Select(c => c.Notes[0].Midi).ToArray());
+    }
+
+    [Fact]
+    public void ADisplacedQ_KeepsTheChordsSpelling()
+    {
+        // Only the octave moves: the letters and accidentals are the original's, which
+        // is why a displaced q prints as the same chord rather than a respelled one.
+        var chords = Items("<cis' e gis>4 q'").OfType<ChordItem>().ToList();
+        Assert.Equal(
+            chords[0].Notes.Select(n => n.StaffPosition + 7).ToArray(),
+            chords[1].Notes.Select(n => n.StaffPosition).ToArray());
+    }
+
     [Fact]
     public void Repetition_TakesItsOwnDuration_AndFeedsTheCarry()
     {

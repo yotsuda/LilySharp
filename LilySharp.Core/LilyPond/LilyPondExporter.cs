@@ -1608,7 +1608,33 @@ public sealed class LilyPondExporter
     {
         var (prefix, suffix) = SplitAttachments(q.Articulations);
         string trem = q.Tremolo is { } t ? t.Text : "";
-        return prefix + "q" + EmitEventDuration(q.Duration) + trem + suffix;
+        string body = prefix + "q" + EmitEventDuration(q.Duration) + trem + suffix;
+
+        // ⚠️ Lily#'s q takes octave marks and LilyPond's does not, so a displaced q
+        // has to be SAID a different way: the chord is written out at its new octave.
+        //
+        // ⚠️⚠️ \transpose c c' { q } was tried first and is WRONG — it compiles and
+        // changes nothing. LilyPond expands chord repetitions in
+        // toplevel-music-functions, AFTER \transpose has been applied, so the wrapper
+        // moves an empty placeholder and the expansion then fills in the original's
+        // untransposed pitches. Measured against 2.26.0: all eight chords came out at
+        // the written octave. Writing the chord out is the only spelling that holds.
+        //
+        // ⚠️⚠️ NOT DONE YET, and deliberately loud rather than quietly wrong. Writing
+        // the chord out means re-entering EmitChord at the q's position, and that
+        // function resolves its octave against the RUNNING relative frame, while a q
+        // copies the original's ABSOLUTE pitches and is transparent to that frame. In
+        // `octave absolute` the two agree; in relative mode they need not. Until that
+        // is worked out and measured, the twin says what it cannot express instead of
+        // shipping a chord in the wrong octave.
+        int displacement = Music.ChordRepetitions.DisplacementOf(q);
+        if (displacement != 0)
+            _warnings.Add(
+                "a displaced chord repetition (q" + OctaveMarks(displacement) + ") has no LilyPond "
+                + "spelling — LilyPond's q takes no octave marks, and \\transpose does not reach it "
+                + "because chord repetitions expand after transposition. The twin writes a plain q, "
+                + "so it sounds an octave away from the Lily# score; write the chord out by hand.");
+        return body;
     }
 
     /// <summary>The written pitch that sits on the MIDDLE staff line of a clef -

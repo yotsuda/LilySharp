@@ -152,6 +152,28 @@ public sealed partial class MeasureCollector
     private bool TryNameChord(ChordSyntax chord, out ChordStructure? structure)
     {
         structure = null;
+
+        // Prefer the RESOLVED members — the notes as they sound, with their octaves —
+        // so the root is found from the pitches rather than from whichever member was
+        // typed first, and the lowest note becomes the slash bass of an inversion.
+        // CollectChordNames runs after the chord item is built, so this entry is there
+        // for every chord this walk has engraved; the syntax path below still answers
+        // for anything that never became one (and for a drum chord, whose members carry
+        // no step at all).
+        if (_resolvedChordMembers.TryGetValue(chord, out var resolved)
+            && resolved.Length > 0
+            && resolved.All(m => m.Step is not null && m.Alter is not null))
+        {
+            var sounding = resolved
+                .OrderBy(m => m.Midi)
+                .Select(m => (Step: m.Step!.Value, Alter: m.Alter!.Value))
+                .ToList();
+            if (ChordStructure.TryRecognize(sounding, out structure))
+                return true;
+            // Fall through: a set the inversion-aware reader cannot name is not going to
+            // be named by the write-order reader either, but letting it try keeps this
+            // change from being able to LOSE a name.
+        }
         int keySharps = _meta.KeySharps - _octave.TransposeKeySharps(0); // written key
         // (Until 2026-08-28 a shifted phrase reference — Melody'(3) — made the chord
         // SOUND a diatonic interval away from what is written, and this named what

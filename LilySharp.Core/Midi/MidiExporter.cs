@@ -1715,10 +1715,13 @@ public sealed class MidiExporter
             }
             case ChordSyntax chord when _resolvedChordNotes.TryGetValue(chord, out var notes):
             {
-                // The full chord again - same emission as ProcessChordRepetition.
+                // The full chord again - same emission as ProcessChordRepetition,
+                // displacement included: a run that reached here through a `q'` repeats
+                // the chord where that q left it. Drums are exempt for the same reason.
                 var tieTargets = OpenTieTargets(track);
                 var onset = new List<int>();
                 int ordinal = NextOrdinal(bare.Position);
+                int semitones = 12 * Music.BareDurations.DisplacementOf(bare);
                 foreach (var n in notes)
                 {
                     if (n.IsDrum)
@@ -1727,9 +1730,10 @@ public sealed class MidiExporter
                             bare.Position, SourceOrdinal: ordinal, Timbre: 9));
                         continue;
                     }
-                    int tiedInto = ExtendTied(track, tieTargets, n.MidiPitch, durationTicks);
+                    int pitch = n.MidiPitch + semitones;
+                    int tiedInto = ExtendTied(track, tieTargets, pitch, durationTicks);
                     if (tiedInto >= 0) { onset.Add(tiedInto); continue; }
-                    track.Notes.Add(new MidiNote(track.Channel, n.MidiPitch, velocity, startTick, actualDuration,
+                    track.Notes.Add(new MidiNote(track.Channel, pitch, velocity, startTick, actualDuration,
                         bare.Position, QuarterBend: n.QuarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre));
                     onset.Add(track.Notes.Count - 1);
                 }
@@ -1951,6 +1955,10 @@ public sealed class MidiExporter
         if (ChordRepetitions.OriginalOf(rep) is { } original
             && _resolvedChordNotes.TryGetValue(original, out var notes))
         {
+            // q' sounds the chord an octave up, accumulated along the q chain.
+            // ⚠️ A DRUM chord is exempt: its "pitch" is an instrument slot on channel 10,
+            // not a pitch, so displacing it would silently pick a different instrument.
+            int semitones = 12 * ChordRepetitions.DisplacementOf(rep);
             int ordinal = NextOrdinal(rep.Position);
             foreach (var n in notes)
             {
@@ -1960,9 +1968,10 @@ public sealed class MidiExporter
                         rep.Position, SourceOrdinal: ordinal, Timbre: 9));
                     continue;
                 }
-                int tiedInto = ExtendTied(track, tieTargets, n.MidiPitch, durationTicks);
+                int pitch = n.MidiPitch + semitones;
+                int tiedInto = ExtendTied(track, tieTargets, pitch, durationTicks);
                 if (tiedInto >= 0) { onset.Add(tiedInto); continue; }
-                track.Notes.Add(new MidiNote(track.Channel, n.MidiPitch, _velocity, startTick, durationTicks,
+                track.Notes.Add(new MidiNote(track.Channel, pitch, _velocity, startTick, durationTicks,
                     rep.Position, QuarterBend: n.QuarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre));
                 onset.Add(track.Notes.Count - 1);
             }

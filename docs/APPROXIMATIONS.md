@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 58 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 52 | 観測者がゼロだと自認しているもの |
-| `OWN` | 116 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **226** | |
+| `OWN` | 119 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **229** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -135,7 +135,7 @@
 ## UNWATCHED — 観測者がゼロだと自認しているもの（52 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:1738** container, and the value stops being unobserved with the line above.
+- **:1764** container, and the value stops being unobserved with the line above.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:496** no observer; add the paren widths when a book brings one. The unpacked
 - **:498** bare glyph width, which is exact for one and unobserved for many.
@@ -224,13 +224,17 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（116 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（119 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:1733** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:3387** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:1759** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
+- **:3413** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/MidiExporter.cs`
-- **:2079** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+- **:2088** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+### `LilySharp.Core/Music/ChordRepetitions.cs`
+- **:68** LILYSHARP-OWN: LilyPond's q takes no marks, so there is nothing to port.
+### `LilySharp.Core/Parser/Parser.Music.cs`
+- **:418** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
 ### `LilySharp.Core/Rendering/HarfBuzzOutline.cs`
 - **:50** LILYSHARP-OWN: LilyPond reads its text ink through FreeType as well (Pango over the
 ### `LilySharp.Core/Rendering/Pdf/EmmentalerFontResolver.cs`
@@ -254,7 +258,7 @@
 ### `LilySharp.Core/Rendering/TextFontMetrics.cs`
 - **:543** LILYSHARP-OWN: LilyPond has no equivalent refusal, and cannot — it resolves through
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
-- **:361** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
+- **:442** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Svg/Collector/BeamDetector.cs`
 - **:968** LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
 - **:998** LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's
@@ -402,6 +406,8 @@
 - **:158** LILYSHARP-OWN: the @fig(…) SPELLING is Lily#'s, not a port — LilyPond writes
 ### `LilySharp.Core/Svg/Model/Measure.cs`
 - **:195** ⚠️ LILYSHARP-OWN: THE FLAGGED ZERO-WIDTH MEASURE IS A TRANSLATION DEVICE. LilyPond
+### `LilySharp.Core/Syntax/SyntaxNodes.cs`
+- **:749** LILYSHARP-OWN: LilyPond's q repeats the previous chord and cannot be
 ### `LilySharp.Core/Tablature/Tunings.cs`
 - **:196** LILYSHARP-OWN. Four is the guitarist's one-finger-per-fret span and also the number
 - **:208** LILYSHARP-OWN. Without it the hand never comes down on its own — "do not move" beats

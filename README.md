@@ -10,7 +10,8 @@ from plain text, with an IDE-first toolchain.
 ## Overview
 
 Lily# compiles a `.lys` source file to engraved sheet music (SVG, PDF, PNG), and to
-MIDI, MusicXML and LilyPond source.
+MIDI, MusicXML, LilyPond source and VOCALOID sequences. It engraves staff notation,
+guitar tablature and staff-less lead sheets from the same source.
 
 Its layout engine is in part a **port of LilyPond**, the GNU music typesetter: beam
 quanting, slur and tie scoring, skylines, springs and page breaking are modified
@@ -24,27 +25,43 @@ The language, by contrast, is deliberately not LilyPond's. It is designed for:
 
 ## Project Structure
 
+One library does the work; everything else is a front end onto it or a net under it.
+
+```mermaid
+flowchart TD
+    src["score.lys"] --> Core
+
+    subgraph Core["LilySharp.Core"]
+        direction TB
+        A["<b>Parser · Syntax</b><br/>lexer, recursive-descent parser,<br/>red-green tree"]
+        B["<b>Semantics · Music · Harmony</b><br/>durations, measure validation,<br/>keys, chords"]
+        C["<b>Svg · Rendering</b><br/>beam quanting, slur and tie scoring,<br/>skylines, springs, page breaking<br/><i>— ported from LilyPond</i>"]
+        D["<b>Back ends</b><br/>Pdf · Png · Midi · MusicXml ·<br/>LilyPond · Vocaloid · Tablature"]
+        A --> B --> C --> D
+    end
+
+    Core --> Cli["<b>LilySharp.Cli</b><br/>the lysc command"]
+    Core --> Lsp["<b>LilySharp.Lsp</b><br/>language server"]
+    Lsp --> Ext["<b>editors/vscode</b><br/>extension — bundles the server"]
+
+    Tests["<b>LilySharp.Tests</b><br/>unit + SVG snapshots"] -.->|guards| Core
+    Audit["<b>audit/</b><br/>LilyPond-fidelity ledger<br/>+ regression corpus"] -.->|measures| Core
+    Bench["<b>LilySharp.Benchmarks</b><br/>layout and parse timing"] -.->|times| Core
 ```
-LilySharp/
-├── LilySharp.Core/          # Core compiler (lexer, parser, semantic analysis)
-│   ├── Parser/              # Lexer and recursive descent parser
-│   ├── Syntax/              # Syntax kinds, green/red tree nodes
-│   ├── Semantics/           # Duration calculation, measure validation
-│   └── Midi/                # MIDI export
-├── LilySharp.Cli/           # Command-line interface (lysc)
-├── LilySharp.Lsp/           # Language Server Protocol implementation
-├── LilySharp.Tests/         # Unit + SVG-snapshot tests (3,500+ test methods)
-├── LilySharp.Benchmarks/    # Layout and parse benchmarks
-├── editors/
-│   └── vscode/              # VS Code extension (bundles the language server)
-├── samples/                 # Complete public-domain pieces — see samples/README.md
-├── audit/                   # LilyPond-fidelity ledger and regression corpus
-└── docs/
-    ├── GRAMMAR_FOR_LLM.md   # Canonical single-file spec
-    ├── GRAMMAR.md           # Formal EBNF
-    ├── SYNTAX_REFERENCE.md  # Browsable reference
-    └── TUTORIAL.md          # Getting started
-```
+
+The engraving engine is `LilySharp.Core/Svg/` and `LilySharp.Core/Rendering/` — that is
+where the LilyPond port lives, and where most of the code is.
+
+Alongside the code:
+
+| Path | What it holds |
+|------|---------------|
+| [`samples/`](samples/) | Complete public-domain pieces — see [samples/README.md](samples/README.md) |
+| [`audit/`](audit/) | The LilyPond-fidelity ledger and the regression corpus |
+| [`docs/GRAMMAR_FOR_LLM.md`](docs/GRAMMAR_FOR_LLM.md) | Canonical single-file spec |
+| [`docs/GRAMMAR.md`](docs/GRAMMAR.md) | Formal EBNF |
+| [`docs/SYNTAX_REFERENCE.md`](docs/SYNTAX_REFERENCE.md) | Browsable reference |
+| [`docs/TUTORIAL.md`](docs/TUTORIAL.md) | Getting started |
 
 [CHANGELOG.md](CHANGELOG.md) records what changed between releases.
 
@@ -88,6 +105,25 @@ Standard pitch names with accidentals:
 - `c'` = one octave up
 - `c''` = two octaves up
 - `c,` = one octave down
+
+By default each bare pitch takes the octave nearest the previous note (an interval of a
+fourth or less), and `'`/`,` shift from there.
+
+**`octave absolute`** switches that off: bare `c` is always C4, and `'`/`,` are absolute
+offsets from it (`c'` = C5, `c,` = C3), resolved independently per note. A wrong octave
+then stays one wrong note instead of cascading through everything after it — which is why
+it is the recommended mode when a tool, or a person, writes notes it cannot immediately
+hear. Write it at the top level, in a part header, or mid-music; `part bass { octave 3 }`
+re-anchors a low part so commas do not pile up.
+
+```lilysharp
+octave absolute
+
+part melody { clef treble }
+part bass   { clef bass octave 3 }   // bare c = C3 in this part
+```
+
+Every file in [`samples/`](samples/) uses it.
 
 ### Articulations and Dynamics
 
@@ -197,6 +233,67 @@ form main { Main }
 score main "out" { staff melody }
 ```
 
+### Staves and groups
+
+A `score` is a vertical stack of bands: each item is a row, and what a row means comes
+from its order, not from a clause attached to it. Several staves can be bracketed together:
+
+| Item | Left edge | Bar lines between staves | Pick it for |
+|------|-----------|--------------------------|-------------|
+| `grandStaff` | brace | drawn through | one instrument on two staves (piano, harp) |
+| `staffGroup` | bracket | drawn through | one family (the woodwinds) |
+| `choirStaff` | bracket | **not** drawn through | independent lines (voices) |
+
+```lilysharp
+score choral "satb" { choirStaff { staff sop  staff alt  staff ten  staff bas } }
+```
+
+Two more put several parts on ONE staff: `condensedStaff { fl1 fl2 }` gives each part its
+own voice, and `combinedStaff { fl1 fl2 }` merges them the way an orchestral score
+condenses two players — unisons become one notehead marked `a2`, a lone part is marked
+`Solo`. Both take bare part names, and both are score items, so one source can print the
+condensed score and the separate parts.
+
+A staff can also change its line count where it is rendered — `staff comp as lines 1` is a
+one-line rhythm staff for slash notation (`/4 4 4 4`), while the same part keeps five lines
+in the full score.
+
+### Guitar tablature
+
+A part with a `tuning` renders as tablature with `tab NAME`, next to ordinary notation or
+on its own:
+
+```lilysharp
+part gt { clef treble_8 tuning guitar }
+
+section Main { gt { c'4 e' g' e' | } }
+form main { Main }
+
+score main "guitar" {
+  staff gt        // the notation
+  tab gt          // the tablature under it
+}
+```
+
+A tab standing beside a staff prints fret numbers only — the staff above it already carries
+the meter, stems and beams. A tab on its own carries all of that itself. Say which you want
+with `tab gt as numbers` / `tab gt as full`. `\3` pins a note to a string when the
+automatic choice is not the one your fingers want.
+
+### More of the language
+
+Not shown above, all in [`docs/GRAMMAR_FOR_LLM.md`](docs/GRAMMAR_FOR_LLM.md):
+
+- **Page and type** — `paper { … }` for page size, margins and vertical spacing;
+  `fonts { … }` to bind text faces per role, both also as named blocks used per score
+- **Spanners** — ottava (`@ottava` … `@!ottava`), pedals (`@sustain` … `@!sustain`),
+  text spanners (`@rit` / `@accel`), trill spanners, hairpins
+- **Cue notes** — `cue { … }`, optionally read in another instrument's clef
+- **Arpeggios** — `<< c e g >>` writes a broken chord out; `@arpeggio` rolls a chord
+- **Scale degrees** — `<c 3 5>` and `<1 3 5>` spell chords by degree instead of by letter
+- **Transposing instruments**, percussion staves and `drummap`
+- **Multi-file sources** — `using "other.lys"`
+
 ## Install
 
 ### VS Code extension (recommended)
@@ -244,8 +341,8 @@ lysc svg --help                         # options for one command
 | `check` | Syntax check, no output |
 | `layout` | Text summary of system and line breaks |
 
-[`samples/`](samples/) holds five complete public-domain pieces —
-see [samples/README.md](samples/README.md) for what each one demonstrates.
+[`samples/`](samples/) holds five complete public-domain pieces, plus a two-bar manual
+beaming demo — see [samples/README.md](samples/README.md) for what each one demonstrates.
 
 ## Building from source
 
@@ -345,6 +442,8 @@ The LSP server supports incremental text synchronization:
 - [x] Multi-system layout with Knuth-Plass line breaking
 - [x] Multi-staff / GrandStaff rendering (cross-staff beam layout is not yet implemented)
 - [x] Lead sheets — staff-less chord rows and lyric rows drawn as a measure grid (chords, lyrics, or both)
+- [x] Guitar tablature — beside a notation staff or on its own, with per-note string pinning
+- [x] Paper and font blocks (`paper { … }`, `fonts { … }`), per file or per score
 - [x] MusicXML export (notes, ties, slurs, grace notes, dynamics, articulations, ornaments, multi-part, lyrics, tuplets, navigation marks, volta endings) — custom text marks written in a `form` are not yet mapped
 - [x] MusicXML import (`lysc import`)
 - [x] LilyPond (`.ly`) export

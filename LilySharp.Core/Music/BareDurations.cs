@@ -46,7 +46,11 @@ public static class BareDurations
     // The resolved target, plus whether a barline stands between the bare
     // duration and its lexically nearest WRITTEN event (which for a chain is
     // the previous bare duration, not the flat-threaded original).
-    private readonly record struct Resolution(SyntaxNode Original, bool CrossesBarline);
+    // Octave is the displacement the running event carried when this bare duration
+    // copied it: 0 after a written note or chord, and the q chain's running total
+    // after a `q'`. Without it `<c e g>4 q' 4` would repeat the WRITTEN chord while
+    // `<c e g>4 q' q` repeats the displaced one — the same question, two answers.
+    private readonly record struct Resolution(SyntaxNode Original, bool CrossesBarline, int Octave);
 
     // One map per red tree root, built on first query and dropped with the tree.
     private static readonly ConditionalWeakTable<SyntaxNode, Dictionary<BareDurationSyntax, Resolution>> Maps = new();
@@ -57,6 +61,14 @@ public static class BareDurations
     /// top-level body.</summary>
     public static SyntaxNode? OriginalOf(BareDurationSyntax bare)
         => MapFor(bare).TryGetValue(bare, out var r) ? r.Original : null;
+
+    /// <summary>
+    /// The octaves the repeated event was displaced by — 0 unless the run reached
+    /// this bare duration through a displaced <c>q</c>. <c>&lt;c e g&gt;4 q' 4</c>
+    /// repeats the chord an octave up, the same as <c>q' q</c> does.
+    /// </summary>
+    public static int DisplacementOf(BareDurationSyntax bare)
+        => MapFor(bare).TryGetValue(bare, out var r) ? r.Octave : 0;
 
     // The map's original set, for O(1) IsOriginal membership — derived from the
     // same build, one per tree, dropped with it.
@@ -103,7 +115,8 @@ public static class BareDurations
         var map = new Dictionary<BareDurationSyntax, Resolution>();
         SyntaxNode? last = null;
         bool crossed = false;
-        Thread(root, map, ref last, ref crossed);
+        int octave = 0;
+        Thread(root, map, ref last, ref crossed, ref octave);
         return map;
     }
 
@@ -117,7 +130,7 @@ public static class BareDurations
     /// though the map threads flat past it) — so the crossing warning fires on
     /// the bare duration that opens a measure's run, once.</summary>
     private static void Thread(SyntaxNode node, Dictionary<BareDurationSyntax, Resolution> map,
-        ref SyntaxNode? last, ref bool crossed)
+        ref SyntaxNode? last, ref bool crossed, ref int octave)
     {
         switch (node)
         {
@@ -132,6 +145,7 @@ public static class BareDurations
                 {
                     last = n;
                     crossed = false;
+                    octave = 0;   // a WRITTEN event is at its own octave
                 }
                 return;
             // The empty chord <> is a post-event carrier occupying no time —
@@ -141,15 +155,23 @@ public static class BareDurations
                 {
                     last = c;
                     crossed = false;
+                    octave = 0;
                 }
                 return;
             case SlashNoteSyntax or DrumNoteSyntax:
                 last = node;
                 crossed = false;
+                octave = 0;
                 return; // an event holds no further events
             case ChordRepetitionSyntax q:
                 if (ChordRepetitions.OriginalOf(q) is { } chord)
+                {
                     last = chord;
+                    // The q threads flat to the written chord, so the displacement it
+                    // resolved to has to travel with it or a following bare duration
+                    // would repeat the chord back at its written octave.
+                    octave = ChordRepetitions.DisplacementOf(q);
+                }
                 crossed = false; // written either way; an unresolved q errors on its own
                 return;
             // An arpeggio BREAKS the run rather than becoming its target: its
@@ -161,10 +183,11 @@ public static class BareDurations
             case ArpeggioSyntax:
                 last = null;
                 crossed = false;
+                octave = 0;
                 return;
             case BareDurationSyntax bare:
                 if (last != null)
-                    map[bare] = new Resolution(last, crossed);
+                    map[bare] = new Resolution(last, crossed, octave);
                 crossed = false;
                 return;
         }
@@ -176,11 +199,12 @@ public static class BareDurations
             {
                 SyntaxNode? inner = null;
                 bool innerCrossed = false;
-                Thread(child, map, ref inner, ref innerCrossed);
+                int innerOctave = 0;
+                Thread(child, map, ref inner, ref innerCrossed, ref innerOctave);
             }
             else
             {
-                Thread(child, map, ref last, ref crossed);
+                Thread(child, map, ref last, ref crossed, ref octave);
             }
         }
     }

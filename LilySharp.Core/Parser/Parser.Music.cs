@@ -398,16 +398,33 @@ internal sealed partial class Parser
         return new NoteGreen(pitch, duration, tremolo, articulations);
     }
 
+    /// <summary>
+    /// Whether <paramref name="next"/> was written with nothing between it and
+    /// <paramref name="previous"/> — no space, no comment, no newline. Trivia is where
+    /// all of those live, so "nothing was written between them" is "neither token
+    /// carries any on the side that faces the other".
+    /// </summary>
+    private static bool GluedToPrevious(SyntaxToken previous, SyntaxToken next)
+        => (previous.TrailingTrivia?.FullWidth ?? 0) == 0
+           && (next.LeadingTrivia?.FullWidth ?? 0) == 0;
+
     // q4@f — ParseNote without the pitch; the previous chord's notes are filled
     // in by the shared resolver at walk time.
     // LILYPOND-REF: lily/parser.yy CHORD_REPETITION.
     private ChordRepetitionGreen ParseChordRepetition()
     {
         var qToken = Advance();
+        // Octave marks right after the q, in the same slot a chord takes them after
+        // its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
+        // cannot be displaced, and a bare duration cannot grow this because a length
+        // has nothing to displace. See ChordRepetitions for what a following q sees.
+        var octaveMarks = new List<GreenNode?>();
+        while (Check(SyntaxKind.Apostrophe) || Check(SyntaxKind.Comma))
+            octaveMarks.Add(Advance());
         var duration = ParseOptionalDuration();
         var tremolo = Check(SyntaxKind.TremoloSuffix) ? Advance() : null;
         var articulations = ParsePostEvents();
-        return new ChordRepetitionGreen(qToken, duration, tremolo, articulations);
+        return new ChordRepetitionGreen(qToken, [.. octaveMarks], duration, tremolo, articulations);
     }
 
     // /4 — ParseNote with a slash in place of the pitch: rhythm (comping)
@@ -1102,8 +1119,15 @@ private GreenNode?[] ParseArticulations()
                     // from MusicMarkSyntax.MarkName, which still yields "name.arg.arg" so the
                     // downstream collectors (figured bass / chord / fingering / mark) are
                     // unchanged.
+                    // ⚠️ The '(' must be GLUED to the name. Written with a space it is a
+                    // SLUR: `c4@arpeggio ( d4 e4 )` used to read the parenthesised group
+                    // as @arpeggio's argument and swallow three notes, reporting only
+                    // "Unknown annotation '@arpeggio ( d4 e4 )'". Every argument anyone
+                    // writes is glued (`@fig(6 4)`, `@text("dolce")`), so the rule costs
+                    // nothing and the trap is gone.
                     else if (Current.Kind == SyntaxKind.Identifier
-                             && Peek(1)?.Kind == SyntaxKind.OpenParen
+                             && Peek(1) is { Kind: SyntaxKind.OpenParen } openParen
+                             && GluedToPrevious(Current, openParen)
                              && SyntaxFacts.AnnotationReadsAParenthesisedArgument(Current.Text))
                     {
                         var name = Advance();

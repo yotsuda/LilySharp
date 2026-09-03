@@ -312,4 +312,13 @@ internal static class SyntaxFacts
     public static bool AnnotationReadsAParenthesisedArgument(string name)
         => ArgumentTakingAnnotations.Contains(name)
             || !Semantics.AnnotationNameValidator.IsKnownPlainName(name);
+
+    /// <summary>
+    /// Whether <paramref name="name"/> is one of the names that CAN take a
+    /// parenthesised argument — the vocabulary above, without the "unknown names read
+    /// one too" arm. A diagnostic uses this to tell a reader who wrote the name bare
+    /// (or dotted) what the spelling is, instead of reporting the name as unknown.
+    /// </summary>
+    public static bool IsArgumentTakingAnnotationName(string name)
+        => ArgumentTakingAnnotations.Contains(name);
 }

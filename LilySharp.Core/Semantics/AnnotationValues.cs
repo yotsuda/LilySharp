@@ -337,6 +337,22 @@ public static class AnnotationValues
     /// </para>
     /// LILYPOND-REF: scm/chord-ignatzek-names.scm — root + quality → printed name.
     /// </remarks>
+    /// <summary>
+    /// A mark's argument exactly as written, with the runs concatenated —
+    /// <c>@chord(C 7)</c> and <c>@chord(C7)</c> both give "C7". Empty when the mark
+    /// carries no argument at all.
+    /// </summary>
+    /// <remarks>
+    /// One spelling, so the reader and the diagnostic that explains a rejection cannot
+    /// disagree about what the writer typed.
+    /// </remarks>
+    public static string WrittenArgument(MusicMarkSyntax mark) => mark.Arguments.Length switch
+    {
+        0 => "",
+        1 => mark.Arguments[0].Text,
+        _ => string.Concat(mark.Arguments.Select(a => a.Text)),
+    };
+
     public static string? Chord(MusicMarkSyntax mark, out Music.ChordStructure? structure)
     {
         structure = null;
@@ -346,12 +362,7 @@ public static class AnnotationValues
         // No argument at all: a bare '@chord' derives its symbol from the notes it sits
         // on, and '@chord()' is the state the completion leaves behind. Both are known
         // annotations that name nothing here, which is what the empty string says.
-        var written = mark.Arguments.Length switch
-        {
-            0 => "",
-            1 => mark.Arguments[0].Text,
-            _ => string.Concat(mark.Arguments.Select(a => a.Text)),
-        };
+        var written = WrittenArgument(mark);
         if (written.Length == 0)
             return "";
 
