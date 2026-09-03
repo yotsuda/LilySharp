@@ -172,8 +172,18 @@ public class HistoryCitationTests
     /// paragraph above gives: the sentence is the record of what the session committed,
     /// and the trees match (the regroup changed no content).
     /// </para>
+    /// <para>
+    /// ⚠️ RAISED 501 → 529, THE SAME WAY, ON 2026-09-03 (after session 328). The fifty-one
+    /// unpushed commits of sessions 322-328 were regrouped into ten before pushing; §1 and
+    /// the archive cite thirty-two of them by SHA — each session's own "these commits", the
+    /// tip a leg started from, the full-run tally's commit — and every one went dead with
+    /// the regroup. Not re-pointed, for the reason two paragraphs up: the sentences are the
+    /// record of what those sessions committed. Every new commit's tree is the tree of the
+    /// last old commit it took in, verified group by group, and the diff between the old
+    /// tip and the new one is empty; the LIVE ratchet did not move (734, floor 564).
+    /// </para>
     /// </remarks>
-    private const int DeadCitationsWhenWritten = 501;
+    private const int DeadCitationsWhenWritten = 529;
 
     /// <summary>
     /// Extensions scanned for citations. Chosen because they are where citations are actually
