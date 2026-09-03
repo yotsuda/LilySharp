@@ -231,7 +231,8 @@ internal sealed class MeasureLayouter
 
         // End spring: last column → barline (see CreateLastToBarlineSpring).
         springs.Add(CreateLastToBarlineSpring(timings, timingToItems, measuresToScan, totalDuration,
-            baseShortestDuration, SpacingRules.BoundaryClefAllowance(measure.EndBarline, nextMeasure)));
+            baseShortestDuration, SpacingRules.BoundaryClefAllowance(measure.EndBarline, nextMeasure),
+            SpacingRules.LeadingMusicalItems(nextMeasure)));
 
         return looseRods.Count > 0
             ? SpringSolver.ApplyRods(springs.ToImmutableArray(), looseRods)
@@ -619,16 +620,21 @@ internal sealed class MeasureLayouter
     /// refinement and the last-item → barline skyline rod.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/spacing-basic.cc:107-162; lily/note-spacing.cc:77.</remarks>
+    /// <param name="rightNeighbours">What opens the next measure, when known — the bar
+    /// line's other neighbours (SpacingRules.NoteColumnToBarlineFloorPair).</param>
     private static Spring CreateLastToBarlineSpring(
         List<Fraction> timings, Dictionary<Fraction, List<MusicItem>> timingToItems,
         IReadOnlyList<Measure> measuresToScan, Fraction totalDuration, double? baseShortestDuration,
-        double boundaryClefAllowance = 0)
+        double boundaryClefAllowance = 0, IReadOnlyList<MusicItem>? rightNeighbours = null)
     {
         var endDuration = totalDuration - timings[^1];
         var endShortestPlaying = SpacingRules.ComputeShortestPlayingAt(timings[^1], measuresToScan);
         var endSpring = SpacingRules.CreateTimingSpringMultiVoice(
             endDuration, endShortestPlaying, baseShortestDuration);
 
+        // The column ROD toward the bar line, applied last (below) — a floor on the
+        // compressed length alone, as on every inter-column spring.
+        double maxRod = 0;
         if (timingToItems.TryGetValue(timings[^1], out var lastItems))
         {
             endSpring = SpacingRules.ApplyLeftHeadWidth(endSpring, lastItems);
@@ -645,11 +651,16 @@ internal sealed class MeasureLayouter
             endSpring = SpacingRules.MergeVoiceStemWishesToBarline(
                 endSpring, measuresToScan, timings[^1], NoteSpacingParameters.Default);
 
+            // The column's whole skyline — flag included — against the bar line's box:
+            // the spring minimum now, the rod after the headroom.
+            // LILYPOND-REF: lily/note-spacing.cc:78-83 get_spacing (the minimum);
+            // LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods (the rod).
             double maxSkyDist = 0;
             foreach (var item in lastItems)
             {
-                double skyDist = SpacingRules.CalculateSkylineDistance(item, null, staffY: 0);
+                var (skyDist, rod) = SpacingRules.NoteColumnToBarlineFloorPair(item, rightNeighbours);
                 maxSkyDist = Math.Max(maxSkyDist, skyDist);
+                maxRod = Math.Max(maxRod, rod);
             }
 
             // LILYPOND-REF: lily/spring.cc:155-159 Spring::ensure_min_distance.
@@ -687,7 +698,17 @@ internal sealed class MeasureLayouter
         //   lily/spring.cc:122 avg_distance = max (min_distance + 0.3, avg_distance).
         // LILYPOND-REF: lily/note-spacing.cc:78-83 — the spring MINIMUM is the
         //   padding-free skyline distance, which is what the 0.3 is measured from.
-        return SpacingRules.ApplyMergeSpringsHeadroom(endSpring);
+        endSpring = SpacingRules.ApplyMergeSpringsHeadroom(endSpring);
+
+        // …and only now the rod — the same order as CreateInterColumnSpring, and for the
+        // same reason: it stands 0.1 above the skyline distance the headroom put 0.3
+        // above, so it binds only under compression. A clef before the bar line widens it
+        // as it widened the minimum. Until 2026-09-03 this pair had no rod at all, so a
+        // compressed line closed on its last note 0.1 tighter than LilyPond's, on top of
+        // the flag it did not see (NoteColumnToBarlineFloorPair).
+        // LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods — every adjacent
+        //   pair, the breakable columns included.
+        return endSpring.EnsureMinDistance(maxRod + boundaryClefAllowance);
     }
 
     /// <summary>

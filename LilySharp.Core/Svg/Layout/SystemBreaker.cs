@@ -279,8 +279,13 @@ internal sealed class SystemBreaker
             }
             // The run rod, priced exactly as the layouter prices it, so the break gate
             // and the layout agree on how wide a multi-measure rest bar really is.
+            // A measure carrying it hands the gate SUMS only (no per-spring vector): the rod
+            // is a constraint over the whole run, not a spring, and a line holding it takes
+            // the linear force path (KnuthPlassBreaker.TryBuildLineSprings).
+            bool runRod = false;
             if (runMap.TryGetRunStartingAt(i, out var run))
             {
+                runRod = true;
                 var measureLength = Fraction.Zero;
                 foreach (var item in primaryMeasure.Items)
                     measureLength += item.Duration;
@@ -326,7 +331,12 @@ internal sealed class SystemBreaker
                 s0?.InverseStretchStrength ?? 0, s0?.InverseCompressStrength ?? 0,
                 lineStartSpring,
                 barPricing,
-                lineEndLyricMinExcess);
+                lineEndLyricMinExcess,
+                // The springs the sums above were taken from, so the breaker can SOLVE a
+                // candidate line instead of estimating its force from the sums; and the
+                // rigid width beside them (the two bar lines).
+                runRod ? default : springs,
+                barlines);
         }
         return springData;
     }

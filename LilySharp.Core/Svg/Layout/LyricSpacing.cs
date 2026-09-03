@@ -422,7 +422,15 @@ internal static class LyricSpacing
             return;
         var sp = springs[to];
         double newMin = sp.MinDistance + (need - have);
-        springs[to] = new Spring(System.Math.Max(sp.IdealDistance, newMin), newMin, sp.InverseStretchStrength);
+        // A rod: the minimum moves and the strengths stay — LilyPond's add_rod raises
+        // blocking forces only. The 3-argument constructor reset the compress strength
+        // to ideal − min (SpacingRules.ApplyTabChordSpacing's Widen has the measurement).
+        // LILYPOND-REF: lily/simple-spacer.cc:90-127 Simple_spacer::add_rod.
+        // ...and rigid once the rod reaches the ideal (SpacingRules.ApplyTabChordSpacing's
+        // Widen says why a blocking-0 spring must carry no compress strength).
+        springs[to] = new Spring(System.Math.Max(sp.IdealDistance, newMin), newMin,
+                                 sp.InverseStretchStrength,
+                                 newMin >= sp.IdealDistance ? 0.0 : sp.InverseCompressStrength);
     }
 
     /// <summary>

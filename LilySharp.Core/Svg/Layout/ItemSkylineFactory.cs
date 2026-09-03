@@ -118,6 +118,34 @@ internal static class ItemSkylineFactory
             HorizontalDirection.Right);
 
     /// <summary>
+    /// The right skyline with the COLUMN ORIGIN — the head's left edge, LilyPond's paper
+    /// column reference — at <paramref name="columnX"/>. This is the frame a column PAIR is
+    /// measured in: two columns' distance is the LEFT column's whole reach, not half of
+    /// each head.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="CreateRightSkyline"/> takes the head's CENTRE as its reference, and the
+    /// pair functions used to hand both columns the same centre, which measured a pair of
+    /// unequal heads between their centres: MEASURED (2.26.0, scratch/p323/fx/m-base.ly
+    /// compressed to its minimum) a half → eighth rod is 1.677400 = the half head's
+    /// 1.377400 + 0.3, where centre to centre read 1.640800 — half of each width.
+    /// LILYPOND-REF: lily/separation-item.cc:163-164 Separation_item::boxes —<c>il-&gt;extent (pc, X_AXIS)</c>,
+    ///   every part in its PAPER COLUMN's frame, whose origin is the head's left edge
+    ///   (SpacingRules.CalculateNoteheadRightExtent documents the dump that showed it).
+    /// </remarks>
+    public static HorizontalSkyline CreateRightSkylineAtColumn(MusicItem item, double columnX, double staffY)
+        => CreateRightSkyline(item, columnX + ColumnReferenceOffset(item), staffY);
+
+    /// <inheritdoc cref="CreateRightSkylineAtColumn"/>
+    public static HorizontalSkyline CreateLeftSkylineAtColumn(MusicItem item, double columnX, double staffY)
+        => CreateLeftSkyline(item, columnX + ColumnReferenceOffset(item), staffY);
+
+    /// <summary>What <see cref="ColumnParts"/> subtracts from its reference to find the
+    /// head's left edge — so adding it puts that edge AT the reference.</summary>
+    private static double ColumnReferenceOffset(MusicItem item)
+        => GlyphMetrics.GetNoteheadBBox(SpacingRules.GetNoteValue(item)).CenterX;
+
+    /// <summary>
     /// Creates the left skyline for a music item.
     /// The left skyline represents the leftmost extent at each Y coordinate.
     /// </summary>
@@ -140,6 +168,31 @@ internal static class ItemSkylineFactory
         => HorizontalSkyline.FromBoxes(
             Boxes(item, referenceX, staffY, ColumnElements.All),
             HorizontalDirection.Left);
+
+    /// <summary>
+    /// The Y band the column's parts occupy — conditional parts included — in the
+    /// skyline's device frame (y down, the staff's middle line at <paramref name="staffY"/>):
+    /// the column as a NEIGHBOUR of a break-aligned grob sees it, when that grob grows its
+    /// spacing box to reach the columns beside it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/pure-from-neighbor-engraver.cc:105-137 Pure_from_neighbor_engraver::finalize — every
+    ///   pure-relevant Item of the columns on either side becomes a <c>neighbors</c> entry,
+    ///   accidentals included (the engraver never asks which set an item is in).
+    /// LILYPOND-REF: scm/output-lib.scm:934-942 pure-from-neighbor-interface::extra-spacing-height
+    ///   — the union of the neighbours' pure heights, less the grob's own height.
+    /// The Y ranges here are the same pure ones the boxes carry, so the two readings agree.
+    /// </remarks>
+    internal static (double YMin, double YMax) ColumnYExtent(MusicItem item, double staffY)
+    {
+        double yMin = double.PositiveInfinity, yMax = double.NegativeInfinity;
+        foreach (var p in ColumnParts(item, 0, staffY))
+        {
+            yMin = Math.Min(yMin, p.YBottom);
+            yMax = Math.Max(yMax, p.YTop);
+        }
+        return (yMin, yMax);
+    }
 
     /// <summary>
     /// The column's parts, each widened by its own <c>extra-spacing-width</c>.
@@ -210,9 +263,11 @@ internal static class ItemSkylineFactory
             // the rod, or tucks in when the rest sits out of its band).
             // LILYPOND-REF: lily/separation-item.cc:163 boxes — pure_y_extent;
             // LILYPOND-REF: lily/beam.cc:1421-1494 pure_rest_collision_callback.
-            var restBox = GlyphMetrics.GetRestBBox(GlyphMetrics.NoteValueOf(item));
+            // `noteValue` is the NOTATED value; GlyphMetrics.NoteValueOf(item) answers 4 for
+            // any rest, which boxed every beamed rest as a quarter rest until 2026-09-03.
+            var restBox = GlyphMetrics.GetRestBBox(noteValue);
             double restY = staffY
-                - (GlyphMetrics.NoteValueOf(item) == 1 ? 1.0 : 0.0)
+                - (noteValue == 1 ? 1.0 : 0.0)
                 - beamedRest.PureBeamShift / 2.0;
             parts.Add(ColumnPart.Ink(
                 restY - restBox.Top, restY - restBox.Bottom,
@@ -237,25 +292,46 @@ internal static class ItemSkylineFactory
             // its pure position is the pitch it was written at, and the collision that
             // is chained past this box never moves it. It is admitted by the branch
             // above even when no voice { } span stamped it a direction.
-            int restValue = GlyphMetrics.NoteValueOf(item);
-            var restBox = GlyphMetrics.GetRestBBox(restValue);
+            // `noteValue` is the NOTATED value (see the beamed branch's note on NoteValueOf).
+            var restBox = GlyphMetrics.GetRestBBox(noteValue);
             double restY = staffY
-                - ElementCoordinator.RestStaffPosition(voicedRest, voicedRest.VoiceDirection, restValue)
+                - ElementCoordinator.RestStaffPosition(voicedRest, voicedRest.VoiceDirection, noteValue)
                     / 2.0;
+            parts.Add(ColumnPart.Ink(
+                restY - restBox.Top, restY - restBox.Bottom,
+                noteheadLeftX + restBox.Left, noteheadLeftX + restBox.Right));
+        }
+        else if (item is RestItem { IsSpacer: false, IsMultiMeasure: false })
+        {
+            // A plain DRAWN rest — unbeamed, unvoiced — at its resting place: the middle
+            // line, or hanging from the line above it for a whole rest (the same Y the
+            // beamed branch starts from), with its OWN glyph box. Until 2026-09-03 this
+            // branch gave it a NOTEHEAD-shaped box while SpacingRules.CalculateNoteheadRightExtent
+            // read the rest glyph — two spellings of one quantity, and the skyline one was
+            // wrong by the width difference: MEASURED (2.26.0, scratch/p323/fx/m-base.ly
+            // compressed to its minimum) an eighth rest → eighth note rod is 1.300000 =
+            // rest 1.0 + 0.1 + 0.1 + 0.1, where a black-head box priced it 1.604200.
+            // LILYPOND-REF: lily/separation-item.cc:163-164 Separation_item::boxes —the element's own
+            //   extent in the column's frame; lily/rest.cc Rest::width.
+            // A spacer engraves no grob in LilyPond and a multi-measure rest is a spanner
+            // spaced by its rod; both keep the placeholder box below, as before.
+            // ⚠️ `noteValue` (SpacingRules.GetNoteValue, the NOTATED value) and not
+            // GlyphMetrics.NoteValueOf(item), which answers 4 for every headless item — an
+            // eighth rest boxed as a QUARTER rest read 0.95 wide here where LilyPond's rod
+            // says 1.0 (the same 1.30 rod above).
+            var restBox = GlyphMetrics.GetRestBBox(noteValue);
+            double restY = staffY - (noteValue == 1 ? 1.0 : 0.0);
             parts.Add(ColumnPart.Ink(
                 restY - restBox.Top, restY - restBox.Bottom,
                 noteheadLeftX + restBox.Left, noteheadLeftX + restBox.Right));
         }
         else
         {
-            // A rest, and anything else without a staff position, sits on the middle line.
-            // ⚠️ An UNBEAMED, UNVOICED REST STILL TAKES A NOTEHEAD-SHAPED BOX HERE while
-            //   SpacingRules.CalculateNoteheadRightExtent gives it the REST glyph's own
-            //   extent (lily/rest.cc Rest::width). Two spellings of one quantity, named
-            //   rather than fixed: pre-existing, and changing it is not this port. The
-            //   beamed and voiced branches above DO use the real box — the position is
-            //   the whole point there, and the notehead approximation has no defensible
-            //   reading once the rest leaves the middle line.
+            // Anything else without a staff position — a spacer, a multi-measure rest —
+            // sits on the middle line with a notehead-shaped placeholder box. LilyPond has
+            // no box for either (see the rest branch above); the placeholder is what the
+            // lead-sheet slot grids were calibrated on (ApplyRowCommandColumnSprings) and
+            // stays.
             double noteY = item switch
             {
                 NoteItem n => staffY - n.StaffPosition / 2.0,

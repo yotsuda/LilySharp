@@ -2,7 +2,7 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
-## 0.5.0
+## 0.6.0
 
 ### Language
 
@@ -11,33 +11,18 @@ diagnosed rather than silent, and the repository's
 [CHANGELOG](https://github.com/yotsuda/LilySharp/blob/master/CHANGELOG.md) carries the
 reasoning behind each one.
 
-- **Repeat structure is written in a `form { … }` and nowhere else** (`LYS1034`). A repeat
-  bar (`|:` `:|` `:|:`) or a volta ending (`[1. … ]`) written in music is an error.
-  `repeat percent`, `repeat unfold` and `tremolo` stay in the music — they abbreviate notes
-  rather than change the playing order.
-- **Every span has to be closed, and `@!X` is how** — `@rit … @!rit`, `@ottava … @!ottava`,
-  `@sustain … @!sustain`. An unclosed span draws nothing at all, which is LilyPond's own
-  answer, and is an error (`LYS4018`).
-- **`pageBreak` / `noPageBreak`** — the page-break pair beside `break` / `noBreak`, in a
-  section's music or in a `form`; `pageBreak` breaks the system too, as LilyPond's
-  `\pageBreak` does. Both are offered by the completion where `break` is.
 - **`nobreak` is renamed `noBreak`** — the break family is LilyPond's spelling minus the
   backslash. The old lowercase word is no longer a keyword.
 - **`@invertedturn` is renamed `@reverseturn`** — LilyPond's name for the ornament; the old
   one was MusicXML's. Completion and highlighting follow.
 - **`tocoda` is gone; write `to coda`** — one spelling per navigation instruction. The
   run-together word is an ordinary name now.
-- **`@loco`, `@sustainOn`, `@sustainOff`, `@sostenutoOn` and `@sostenutoOff` are retired.**
-  The direction moved out of the name and into the `!`. `@treCorde` stays, because unlike
-  the others it is a word the page actually prints.
-- **A part setting (`clef`, `octave`, `instrument`, `transpose`) written beside a section's
-  part cells is refused** (`LYS1035`, `LYS0030`) — it belonged to no cell, so nothing read
-  it. **A `form` that plays a section declared only as a header is refused** (`LYS1036`).
-- **A phrase reference's interval argument is removed.** `Melody'(3)` no longer plays the
-  phrase a third up; the octave marks `Melody'` and `Melody,` are unchanged.
-- **A percent repeat prints the sign its body's length earns**, and **a tab staff's style
-  follows the score** — `tab NAME` with no `as` clause is `as numbers` beside a notation
-  staff and `as full` when it stands alone.
+- **`pageBreak` / `noPageBreak`** — the page-break pair beside `break` / `noBreak`, in a
+  section's music or in a `form`; `pageBreak` breaks the system too, as LilyPond's
+  `\pageBreak` does. Both are offered by the completion where `break` is.
+- **A score row's `sings` is that row's own melody** — `lyrics verse sings alt` under the alto
+  staff is the alto's verse, whatever the definition said, so a chorale writes its words once
+  and places them under every staff.
 
 ### Added
 
@@ -70,6 +55,54 @@ reasoning behind each one.
 - **The music list reads in the key's order.** On Ctrl+Space the pitches come in scale order
   from the tonic (`d e fis g a b cis` in D major), then the chord names root by root — triad,
   7th, sus4, sus2 — then the degrees in the same shape (`I Imaj7 Isus4 Isus2 IIm IIm7 …`).
+
+### Engraving
+
+- **The number of systems is chosen by the page's score, as LilyPond chooses it** — the line
+  breaker's best count is only where the choice starts. On a 286-book bass corpus the system
+  breaks matching LilyPond rose from 356 to 388 pairs. Known: two or three books now merge or
+  split a line LilyPond does not (`Alone Again`, `Livin' It Up`); their bar widths are next.
+- **A full-notation tab's stems, beams and flags are in its skyline**, so a tempo mark above
+  the tab clears an up-beam in the first bar instead of printing through it.
+- **The blank bars of a `repeat percent` over three or more bars print nothing on a tab**;
+  the tab drew a whole rest in each.
+- **A dotted chord on an `as numbers` tab draws no augmentation dot.**
+- **What a `repeat percent` body writes prints once** — no slur, tie, script or dynamic
+  under the percent signs.
+- **A pedal bracket under a system keeps the next system away** — it joins the page's
+  silhouette, so a bracket under one system no longer prints through the marks above the
+  next.
+
+## 0.5.0
+
+### Language
+
+The extension bundles the compiler, so these change what a `.lys` file means. Each is
+diagnosed rather than silent, and the repository's
+[CHANGELOG](https://github.com/yotsuda/LilySharp/blob/master/CHANGELOG.md) carries the
+reasoning behind each one.
+
+- **Repeat structure is written in a `form { … }` and nowhere else** (`LYS1034`). A repeat
+  bar (`|:` `:|` `:|:`) or a volta ending (`[1. … ]`) written in music is an error.
+  `repeat percent`, `repeat unfold` and `tremolo` stay in the music — they abbreviate notes
+  rather than change the playing order.
+- **Every span has to be closed, and `@!X` is how** — `@rit … @!rit`, `@ottava … @!ottava`,
+  `@sustain … @!sustain`. An unclosed span draws nothing at all, which is LilyPond's own
+  answer, and is an error (`LYS4018`).
+- **`@loco`, `@sustainOn`, `@sustainOff`, `@sostenutoOn` and `@sostenutoOff` are retired.**
+  The direction moved out of the name and into the `!`. `@treCorde` stays, because unlike
+  the others it is a word the page actually prints.
+- **A part setting (`clef`, `octave`, `instrument`, `transpose`) written beside a section's
+  part cells is refused** (`LYS1035`, `LYS0030`) — it belonged to no cell, so nothing read
+  it. **A `form` that plays a section declared only as a header is refused** (`LYS1036`).
+- **A phrase reference's interval argument is removed.** `Melody'(3)` no longer plays the
+  phrase a third up; the octave marks `Melody'` and `Melody,` are unchanged.
+- **A percent repeat prints the sign its body's length earns**, and **a tab staff's style
+  follows the score** — `tab NAME` with no `as` clause is `as numbers` beside a notation
+  staff and `as full` when it stands alone.
+
+### Added
+
 - **A section reference carries octave marks** — `~B'`, `~B,`, `[1. B']` — the same
   spelling a phrase reference already had.
 - **`section ~A { … }` declares that the section prints no rehearsal letter**, so a section

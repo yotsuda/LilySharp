@@ -74,19 +74,27 @@ public class SpringRodModelTests
         Assert.Equal(1.1742, Math.Abs(corr), 4);
     }
 
+    private static NoteItem UnbeamedQuarter(int staffPosition, bool stemUp) =>
+        new NoteItem(staffPosition, Fraction.Quarter, 0, null, false, 0)
+        { StemUpOverride = stemUp };
+
     [Fact]
     public void OppositeStemsInDifferentBeams_TakeTheOverlapBranch_JustLikeUnbeamedOnes()
     {
         // LilyPond forks on `beams_drul[LEFT] == beams_drul[RIGHT]` — one BEAM, not merely
         // "both beamed". Two adjacent beams must therefore behave exactly like no beam.
+        // The unbeamed control is a QUARTER pair: an unbeamed eighth carries a flag, and
+        // note-spacing.cc:264-266 returns before any correction for a flagged left note
+        // (BarlineColumnRodTests.FlaggedNoteOnTheLeft_TakesNoStemCorrection).
         double twoBeams = SpacingRules.CalculateStemCorrection(
             BeamedEighth(-6, true, 1), BeamedEighth(6, false, 2),
             NoteSpacingParameters.Default);
         double unbeamed = SpacingRules.CalculateStemCorrection(
-            BeamedEighth(-6, true, null), BeamedEighth(6, false, null),
+            UnbeamedQuarter(-6, true), UnbeamedQuarter(6, false),
             NoteSpacingParameters.Default);
 
         Assert.Equal(unbeamed, twoBeams, 9);
+        Assert.NotEqual(0.0, twoBeams);
         // The overlap branch cannot reach the knee term: it is bounded by its own property.
         Assert.True(Math.Abs(twoBeams) <= NoteSpacingParameters.Default.StemSpacingCorrection);
     }

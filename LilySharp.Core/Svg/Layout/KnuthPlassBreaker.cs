@@ -25,6 +25,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Immutable;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -63,7 +64,57 @@ internal readonly record struct MeasureSpringData(
     // ...and when this measure ENDS the line while a lyric line continues past it (the
     // re-supplied trailing reservation, less the suffix springs' minima). Zero on every
     // unsung measure, so both are inert wherever they were before the port.
-    double LineEndLyricMinExcess = 0);
+    double LineEndLyricMinExcess = 0,
+    // The measure's springs THEMSELVES — the vector the sums above were taken from, bar
+    // lines excluded — so the breaker can SOLVE a candidate line with the layout's own
+    // SpringSolver (LilyPond's range_solve, blocking springs walked one by one) instead
+    // of estimating its force from the sums, which is exact only until the first spring
+    // blocks. Default (unset) when the sums are NOT a plain function of a spring vector —
+    // a multi-measure-rest run rod, a hand-built test vector — and such a measure keeps
+    // its line on the linear estimate (TryBuildLineSprings). Compared by VALUE below, so
+    // the incremental gate's vector comparison and the DP session's row-prefix resume
+    // read it as they read every other field.
+    ImmutableArray<Spring> Springs = default,
+    // The rigid width beside those springs: the measure's two bar lines. The line's
+    // springs are solved for the available width less this.
+    double RigidWidth = 0)
+{
+    /// <summary>Value equality, the spring vector included element by element — an
+    /// ImmutableArray compares by reference on its own, which would make every
+    /// recomputed-but-identical measure look changed to the two comparisons above.</summary>
+    public bool Equals(MeasureSpringData other)
+        => IdealWidth == other.IdealWidth
+           && MinWidth == other.MinWidth
+           && InverseStretchStrength == other.InverseStretchStrength
+           && BreakPenalty == other.BreakPenalty
+           && BreakPermission == other.BreakPermission
+           && InverseCompressStrength == other.InverseCompressStrength
+           && Spring0Ideal == other.Spring0Ideal
+           && Spring0Min == other.Spring0Min
+           && Spring0Stretch == other.Spring0Stretch
+           && Spring0Compress == other.Spring0Compress
+           && Equals(LineStartSpring, other.LineStartSpring)
+           && Equals(CrossBarLyricPricing, other.CrossBarLyricPricing)
+           && LineEndLyricMinExcess == other.LineEndLyricMinExcess
+           && RigidWidth == other.RigidWidth
+           && SpringsEqual(Springs, other.Springs);
+
+    public override int GetHashCode()
+        => HashCode.Combine(IdealWidth, MinWidth, InverseStretchStrength, InverseCompressStrength,
+                            BreakPenalty, BreakPermission, Spring0Ideal, RigidWidth);
+
+    private static bool SpringsEqual(ImmutableArray<Spring> a, ImmutableArray<Spring> b)
+    {
+        if (a.IsDefault || b.IsDefault)
+            return a.IsDefault && b.IsDefault;
+        if (a.Length != b.Length)
+            return false;
+        for (int i = 0; i < a.Length; i++)
+            if (!a[i].Equals(b[i]))
+                return false;
+        return true;
+    }
+}
 
 /// <summary>
 /// Knuth-Plass optimal line breaking algorithm for music scores.
@@ -166,12 +217,14 @@ internal sealed class KnuthPlassBreaker
     /// cheaper than it is.
     /// </para>
     /// <para>
-    /// ⚠️ Still an approximation of compress_line, and knowingly: LilyPond walks the
-    /// individual springs in blocking-force order and drops each out of the Hooke sum as it
-    /// reaches its minimum, which needs per-spring data. The break gate deliberately carries
-    /// only per-measure SUMS (see <see cref="MeasureSpringData"/> — the F3 incremental gate
-    /// compares that vector), so this is the linear part of compress_line, exact until the
-    /// first spring blocks.
+    /// ⚠️ An approximation of compress_line: LilyPond walks the individual springs in
+    /// blocking-force order and drops each out of the Hooke sum as it reaches its minimum,
+    /// so this is the linear part of compress_line, exact until the first spring blocks.
+    /// Since 2026-09-03 the DP solves every line it CAN solve with the layout's
+    /// <see cref="SpringSolver"/> over the measures' own springs
+    /// (<see cref="MeasureSpringData.Springs"/>); this estimate remains for the lines it
+    /// cannot — a multi-measure-rest run rod or a lyric rod in the line, or a hand-built
+    /// vector with no springs behind its sums.
     /// </para>
     /// </remarks>
     internal static double CalculateLineForce(
@@ -296,6 +349,9 @@ internal sealed class KnuthPlassBreaker
             startRow = 1;
         }
 
+        // One buffer for every candidate line's springs (TryBuildLineSprings refills it).
+        var lineSprings = new List<Spring>();
+
         for (int j = startRow; j <= n; j++)
         {
             for (int i = 0; i < j; i++)
@@ -349,8 +405,47 @@ internal sealed class KnuthPlassBreaker
                 // observable effect at all: 3286 tests and 87 ledger points unmoved, no
                 // snapshot touched.
                 double effectiveWidth = Math.Max(idealSum, minSum);
-                double force = CalculateLineForce(
-                    availableWidth, effectiveWidth, invStretchSum, invCompressSum);
+
+                // The line's force: SOLVED over its springs when the measures carry them —
+                // LilyPond fills every candidate line's Line_details by spacing that line
+                // with the Simple_spacer, walking the springs' blocking forces one by one —
+                // and estimated from the sums (the linear part of compress_line, exact only
+                // until the first spring blocks) where a measure cannot hand over its
+                // springs. The estimate understates a compressed line's force by whatever
+                // the blocked springs can no longer give: MEASURED (2.26.0,
+                // scratch/p322/fx/alone-intro8.lys, an 8-bar first line whose every bar
+                // ends on a flagged eighth that blocks at force −0.17) LilyPond scores the
+                // 8|4 breaking 1.648 where the sums priced it 1.222 — under 4|4|4's 1.276
+                // — and Lily# broke 8|4 where LilyPond breaks 4|4|4 (HANDOFF §2 T7 F12).
+                // Only lines whose minimum fits are solved: the sum test is O(1) and the
+                // solve is O(springs · log), and the DP asks about every (i, j).
+                // LILYPOND-REF: lily/constrained-breaking.cc:127-152 space_line → get_line_configuration;
+                // LILYPOND-REF: lily/simple-spacer.cc:181-204 range_solve.
+                double force;
+                bool solvedFits = true;
+                double lyricExtra = (cumPairMin[j - 1] - cumPairMin[i])
+                                    + springData[j - 1].LineEndLyricMinExcess;
+                if (minSum <= availableWidth
+                    && TryBuildLineSprings(springData, i, j, lyricExtra, lineSprings,
+                                           out double rigidWidth, out double maxBlockingForce,
+                                           out double springIdealSum)
+                    // A STRETCHED line with no spring blocking above force 0 is
+                    // expand_line from the neutral length — range_max_block_force starts
+                    // at 0, so that is exactly the linear estimate below, and the solve
+                    // (a sort per candidate) is spent only where it can differ.
+                    // LILYPOND-REF: lily/simple-spacer.cc:165-172 range_max_block_force.
+                    && !(maxBlockingForce <= 0 && availableWidth - rigidWidth >= springIdealSum))
+                {
+                    var solved = new SpringSolver(lineSprings)
+                        .Solve(availableWidth - rigidWidth, _raggedRight);
+                    force = solved.Force;
+                    solvedFits = solved.Fits;
+                }
+                else
+                {
+                    force = CalculateLineForce(
+                        availableWidth, effectiveWidth, invStretchSum, invCompressSum);
+                }
 
                 // Simple_spacer::range_solve's fits_: compress_line runs out of springs to
                 // block while the line is still longer than the target — that is, the total
@@ -359,6 +454,7 @@ internal sealed class KnuthPlassBreaker
                 // LILYPOND-REF: lily/simple-spacer.cc:285 (compress_line's fits_ = false),
                 //   :200-201 (ragged && force < 0).
                 bool fits = minSum <= availableWidth
+                            && solvedFits
                             && !double.IsNegativeInfinity(force)
                             && !(_raggedRight && force < 0);
 
@@ -501,6 +597,50 @@ internal sealed class KnuthPlassBreaker
         // was the second spelling, and the pair had already drifted — the solver-side
         // copy had its ragged arm reversed).
         => SpringSolver.ForcePenaltyOf(lineLength, force, naturalLength, _raggedRight);
+
+    /// <summary>
+    /// Gathers the springs of the candidate line <paramref name="i"/>..<paramref name="j"/>−1
+    /// into <paramref name="buffer"/> — each measure's own vector end to end, the first
+    /// measure's spring 0 swapped for its line-start spring exactly as
+    /// <see cref="ApplyLineStartSpring"/> swaps it in the sums — and the line's rigid width
+    /// (its bar lines) beside them. False when the line cannot be solved from springs: a
+    /// measure that carries none (a multi-measure-rest run rod, a hand-built vector), or a
+    /// lyric rod priced into the line's minimum (<paramref name="lyricExtra"/>) — those keep
+    /// the linear estimate, unchanged.
+    /// </summary>
+    private static bool TryBuildLineSprings(
+        MeasureSpringData[] springData, int i, int j, double lyricExtra,
+        List<Spring> buffer, out double rigidWidth, out double maxBlockingForce,
+        out double springIdealSum)
+    {
+        rigidWidth = 0;
+        // LILYPOND-REF: lily/simple-spacer.cc:165-172 range_max_block_force — the max
+        //   starts at 0, so a line of ordinary springs (every minimum under its ideal)
+        //   reports 0 and solves from its neutral length.
+        maxBlockingForce = 0;
+        springIdealSum = 0;
+        buffer.Clear();
+        if (lyricExtra > 0)
+            return false;
+        for (int m = i; m < j; m++)
+        {
+            ref readonly var d = ref springData[m];
+            if (d.Springs.IsDefault)
+                return false;
+            rigidWidth += d.RigidWidth;
+            var springs = d.Springs;
+            for (int s = 0; s < springs.Length; s++)
+            {
+                var spring = m == i && s == 0 && d.LineStartSpring is { } lineStart
+                    ? lineStart
+                    : springs[s];
+                buffer.Add(spring);
+                maxBlockingForce = Math.Max(maxBlockingForce, spring.BlockingForce);
+                springIdealSum += spring.IdealDistance;
+            }
+        }
+        return buffer.Count > 0;
+    }
 
     /// <summary>
     /// Swaps a line's first measure from its mid-line spring 0 to the line-start spring the

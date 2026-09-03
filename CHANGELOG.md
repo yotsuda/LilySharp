@@ -4,14 +4,34 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
-## 0.5.0
+## 0.6.0
 
-The language settles two things it had left loose — where a book's playing order is
-written, and how a span ends — and the engraver starts walking the inside of a grace body.
-The rest is defects found by engraving real scores.
+Three spellings settle to LilyPond's, the page chooses how many systems a score gets, and
+a tab staff's stems and beams join the skyline. The rest is defects found by engraving real
+scores against LilyPond's picture of the same book.
+
+### Breaking changes
+
+- **`nobreak` is renamed `noBreak`.** The break family is now LilyPond's own spelling minus
+  the backslash — `break`, `noBreak`, `pageBreak`, `noPageBreak` — the rule every other
+  command already follows (`grandStaff`, `tempo`). The lowercase `nobreak` was the one word
+  that had been folded to lowercase, and it is not accepted any more: it reads as an
+  ordinary name, so a book that still writes it reports an undefined phrase at that word.
+- **`@invertedturn` is renamed `@reverseturn`.** Ornament names are LilyPond's, and this
+  one was MusicXML's (`inverted-turn`) — the only articulation spelled by another
+  vocabulary. The MusicXML importer writes the new name; the old one is an unknown
+  annotation (`LYS1008`).
+- **`tocoda` is gone; `to coda` is the one spelling.** The run-together word was a second
+  way to write the same instruction, and one spelling per instruction is the rule that
+  retired `$`. `tocoda` reads as an ordinary name now — in a form, an undefined section.
 
 ### Language
 
+- **`pageBreak` and `noPageBreak`** — the page-break pair beside `break` / `noBreak`, written
+  where those are written: in a section's music after a bar, or in a `form` between sections.
+  `pageBreak` forces a page break and, with it, the system break (LilyPond's `\pageBreak`
+  carries both permissions); `noPageBreak` forbids a page break and leaves the line alone.
+  The LilyPond twin writes `\pageBreak` and `\noPageBreak`.
 - **A score row's `sings` is that row's own melody.** `lyrics verse sings alt` among the
   score items places the `verse` track at the alto's rhythm — under the alto staff it is the
   alto's verse — whatever the definition said. The definition's `sings` is now the track's
@@ -20,6 +40,81 @@ The rest is defects found by engraving real scores.
   them under the soprano, alto, tenor and bass: `staff alt  lyrics verse sings alt`. Until
   now the row spelling was the same single track property, so the second staff's row was
   refused (`LYS7005`) and, inside the group, refused again (`LYS6012`).
+
+### New
+
+- **The score preview's color scheme is a setting** — `lilysharp.preview.theme`: follow
+  VS Code's theme (the default, and what the preview always did), always light (the printed
+  page), or always dark (the page inverted). A change reaches every open preview at once.
+
+### Engraving
+
+- **The number of systems is chosen by the page's score, as LilyPond chooses it.** The line
+  breaker's best breaking was the breaking engraved; LilyPond's `Optimal_page_breaking::solve`
+  only starts there, then tries fewer and more systems and engraves the count whose lines
+  AND pages score best — without the term that made the line breaker split the line after
+  a very underfull forced-break line into two half-full ones. On a real-world corpus of 286
+  bass books the system breaks matching LilyPond's rose from 356 to 388 pairs, and the books
+  matching on every score from 170 to 183.
+- **A candidate line is priced by solving its springs, as LilyPond spaces every line it
+  considers.** The line breaker estimated a compressed line's force from per-measure sums —
+  the linear part of LilyPond's `compress_line`, exact only until the first spring reaches
+  its minimum — and so priced a line whose every bar ends on a flagged eighth (each of which
+  blocks early) far too cheaply: the head of `Alone Again` scored 1.22 as one 8-bar system
+  where LilyPond scores it 1.65, and was engraved 8 | 4 where LilyPond engraves 4 | 4 | 4.
+  Each candidate line is now solved with the same spring solver the engraved system is,
+  blocking springs walked one by one; the reproduction scores 1.58 and breaks as LilyPond
+  does. Lines carrying a multi-measure-rest rod or a lyric rod keep the estimate. ⚠️ On the
+  286-book corpus this moves the system breaks of 32 books: four scores now match LilyPond
+  that did not (`Livin' It Up`, `Lovely Day`, `Together Forever`) and ten no longer do, eight
+  of them tab scores — lines the estimate accepted but the solver refuses, because a spring
+  with no compress strength (a line-start spring, a tab fret-digit floor) cannot give what
+  the estimate assumed. Those lines were set past the margin before; the springs behind
+  them are the next measurement.
+- **The gap on either side of a bar line takes LilyPond's column rods.** A note before a
+  bar line was priced by its head alone, so an up-stem flag reached through the bar line
+  when a line was compressed (LilyPond's rod for a flagged eighth before a bar line is
+  2.3674 staff spaces against the head-only 1.6042); the bar line → note gap lacked the
+  0.1 rod padding; a drawn rest was boxed as a notehead (an eighth rest is 1.0 wide, not
+  1.3042); a pair of unequal heads was measured between the heads' centres rather than
+  from the left head's column origin; and an unbeamed eighth or shorter took the optical
+  stem correction that LilyPond skips after a flag. With all five the reproduction's bar
+  compresses to 9.0432 and sets 15.8432, LilyPond's to four digits. The visible change is
+  small: a flagged note before a bar line stands a little further from it, and a rest
+  before a note a little closer.
+- **A full-notation tab's stems, beams and flags are in its skyline.** A tempo mark or any
+  other outside-staff item above a tab staff cleared only the fret digits, and printed
+  through an up-beam in the first bar; now it clears the drawn stems, beams and flags the
+  way it clears them above a notation staff (LilyPond's `\tabFullNotation` reverts the
+  Stem, Beam and Flag stencils, so they are in the axis group's skyline there too).
+- **The blank bars of a `repeat percent` over three or more bars print nothing on a tab.**
+  The notation staff already left them empty; the tab drew a whole rest in each.
+- **A dotted chord on an `as numbers` tab draws no augmentation dot.** A dotted single note
+  already drew none there; the chord arm had no gate, so `<c e g>4.` printed its dots beside
+  the fret digits on a numbers tab.
+- **What a `repeat percent` body writes prints once.** The slur, tie, script and dynamic of
+  the body drew again under every percent sign — on a notation staff and a tab alike —
+  because the covered iterations re-walked the body with its markers and post-events.
+  LilyPond never plays those iterations (its iterator reports one percent event in their
+  place), so the collector now drops the bows and note-riding annotations while it re-walks
+  a covered iteration; the notes stay for playback and spacing, hidden as before.
+- **A pedal bracket under a system now keeps the next system away.** The bracket was solved
+  against its own staff and seeded into that staff's profile — the one the lyric floor and the
+  staff-to-staff springs read — but not into the silhouette the page spaces systems by, so a
+  sustain bracket under the last staff of one system was drawn through the trill and the
+  fermata above the first staff of the next. The bracket's stencil now joins the page's
+  silhouette the way LilyPond's `build_system_skyline` merges every element, raised by its
+  staff's translation, and the pair of systems opens by exactly LilyPond's amount
+  (ledger `page.pedal-bracket.gap-first`, 13.345 staff spaces on the probe, exact). A page's
+  bottom edge counts the bracket too, so a book ending in a pedal is cropped a little deeper.
+
+## 0.5.0
+
+The language settles two things it had left loose — where a book's playing order is
+written, and how a span ends — and the engraver starts walking the inside of a grace body.
+The rest is defects found by engraving real scores.
+
+### Language
 
 - **Repeat structure is written in a `form { … }` and nowhere else** (`LYS1034`). A repeat
   bar (`|:` `:|` `:|:`) or a volta ending (`[1. … ]`) written in music is an error. The line
@@ -101,25 +196,6 @@ The rest is defects found by engraving real scores.
 
 ### New
 
-- **`pageBreak` and `noPageBreak`** — the page-break pair beside `break` / `noBreak`, written
-  where those are written: in a section's music after a bar, or in a `form` between sections.
-  `pageBreak` forces a page break and, with it, the system break (LilyPond's `\pageBreak`
-  carries both permissions); `noPageBreak` forbids a page break and leaves the line alone.
-  The LilyPond twin writes `\pageBreak` and `\noPageBreak`.
-
-- **`@invertedturn` is renamed `@reverseturn`.** Ornament names are LilyPond's, and this
-  one was MusicXML's (`inverted-turn`) — the only articulation spelled by another
-  vocabulary. The MusicXML importer writes the new name; the old one is an unknown
-  annotation (`LYS1008`).
-- **`tocoda` is gone; `to coda` is the one spelling.** The run-together word was a second
-  way to write the same instruction, and one spelling per instruction is the rule that
-  retired `$`. `tocoda` reads as an ordinary name now — in a form, an undefined section.
-- **`nobreak` is renamed `noBreak`.** The break family is now LilyPond's own spelling minus
-  the backslash — `break`, `noBreak`, `pageBreak`, `noPageBreak` — the rule every other
-  command already follows (`grandStaff`, `tempo`). The lowercase `nobreak` was the one word
-  that had been folded to lowercase, and it is not accepted any more: it reads as an
-  ordinary name, so a book that still writes it reports an undefined phrase at that word.
-
 - **A section reference carries octave marks** — `~B'`, `~B,`, `[1. B']` — shifting the
   relative frame that play opens in, one octave per mark. It is the spelling and the meaning
   a phrase reference already had. The shift belongs to the occurrence: `~B ~B'` is one
@@ -188,27 +264,6 @@ The rest is defects found by engraving real scores.
   says it stands, and the two orders of a post-event run agree on their diagnostics too.
 
 ### Engraving
-
-- **A dotted chord on an `as numbers` tab draws no augmentation dot.** A dotted single note
-  already drew none there; the chord arm had no gate, so `<c e g>4.` printed its dots beside
-  the fret digits on a numbers tab.
-
-- **What a `repeat percent` body writes prints once.** The slur, tie, script and dynamic of
-  the body drew again under every percent sign — on a notation staff and a tab alike —
-  because the covered iterations re-walked the body with its markers and post-events.
-  LilyPond never plays those iterations (its iterator reports one percent event in their
-  place), so the collector now drops the bows and note-riding annotations while it re-walks
-  a covered iteration; the notes stay for playback and spacing, hidden as before.
-
-- **A pedal bracket under a system now keeps the next system away.** The bracket was solved
-  against its own staff and seeded into that staff's profile — the one the lyric floor and the
-  staff-to-staff springs read — but not into the silhouette the page spaces systems by, so a
-  sustain bracket under the last staff of one system was drawn through the trill and the
-  fermata above the first staff of the next. The bracket's stencil now joins the page's
-  silhouette the way LilyPond's `build_system_skyline` merges every element, raised by its
-  staff's translation, and the pair of systems opens by exactly LilyPond's amount
-  (ledger `page.pedal-bracket.gap-first`, 13.345 staff spaces on the probe, exact). A page's
-  bottom edge counts the bracket too, so a book ending in a pedal is cropped a little deeper.
 
 - **A grace body is engraved, heard and exported.** The body is now walked by the ordinary
   walker rather than read for a bare note's pitch and duration, and everything that walk

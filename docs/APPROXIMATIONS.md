@@ -82,7 +82,7 @@
 - **:79** same order, with the same source indices). Stated rather than silently approximated:
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
 - **:92** NOT ported: no part here declares one, and the grobs that do in LilyPond — the ones
-- **:293** (-0.5 . 0.5) widens the Y band, not X (not ported — see the
+- **:369** (-0.5 . 0.5) widens the Y band, not X (not ported — see the
 ### `LilySharp.Core/Svg/Layout/LyricHyphen.cs`
 - **:460** ⚠️ NOT PORTED — the bound extent: the barline's ink width is taken
 - **:476** ⚠️ NOT PORTED — the boundary-column regime: the left bound is the
@@ -175,7 +175,7 @@
 ### `LilySharp.Core/Svg/Layout/GraceNoteEngraver.cs`
 - **:495** observed by: NO OBSERVER — every book in the corpus quants, so nothing reaches the
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
-- **:464** NOT MEASURED — no ledger point reads a flag's draw x, and the last
+- **:540** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
 - **:2077** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
 - **:2099** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
@@ -374,7 +374,7 @@
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
 - **:454** LILYSHARP-OWN, a DECIDED divergence (user decision 2026-08-20, HANDOFF §3):
 ### `LilySharp.Core/Svg/Layout/SpacingRules.MeasureSprings.cs`
-- **:618** LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
+- **:657** LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
 ### `LilySharp.Core/Svg/Layout/StaffSize.cs`
 - **:62** ⚠️ LILYSHARP-OWN: THIS LINE IS A TYPE ENUMERATION, and it is the one part of this file
 ### `LilySharp.Core/Svg/Layout/TabChordColumns.cs`

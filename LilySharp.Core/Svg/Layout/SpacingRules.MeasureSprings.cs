@@ -185,6 +185,12 @@ internal static partial class SpacingRules
         var lastItem = spacingItems[^1];
         var lastSpring = CreateSpring(lastItem, null, lastItem.Duration,
             baseShortestDuration: baseShortestDuration);
+        // The column's skyline against the bar line's box, the bar line's box grown toward
+        // BOTH its neighbours — the same pair the timing-column system prices
+        // (MeasureLayouter.CreateLastToBarlineSpring). CreateSpring saw the left neighbour
+        // only; the rod is applied after the headroom below.
+        var barPair = NoteColumnToBarlineFloorPair(lastItem, LeadingMusicalItems(nextMeasure));
+        lastSpring = lastSpring.EnsureMinDistance(barPair.SkyMin);
         lastSpring = ApplyLeftHeadWidth(lastSpring, One(lastItem));
 
         // The bar line stands in for the right-hand stem, so LilyPond runs
@@ -217,9 +223,37 @@ internal static partial class SpacingRules
         //   lily/note-spacing.cc:78-83 for the padding-free minimum it floors from.
         lastSpring = ApplyMergeSpringsHeadroom(lastSpring);
 
+        // …and the column rod last, a floor on the compressed length only — mirror of
+        // MeasureLayouter.CreateLastToBarlineSpring.
+        // LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods.
+        lastSpring = lastSpring.EnsureMinDistance(barPair.Rod + clefAllowance);
+
         springs.Add(lastSpring);
 
         return springs.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// The musical item(s) a measure OPENS with — its first column's note, chord or drawn
+    /// rest, zero-duration changes and grace time stepped over — or null when it opens with
+    /// none (a spacer, an empty placeholder, no measure at all). The bar line closing the
+    /// previous measure has these as its right-hand neighbours.
+    /// </summary>
+    internal static IReadOnlyList<MusicItem>? LeadingMusicalItems(Measure? measure)
+    {
+        if (measure == null)
+            return null;
+        List<MusicItem>? items = null;
+        foreach (var item in measure.Items)
+        {
+            if (item.GraceTime || IsChangeItem(item))
+                continue;
+            if (IsMusicalColumn(item))
+                (items ??= new List<MusicItem>()).Add(item);
+            if (item.Duration > Fraction.Zero)
+                break;
+        }
+        return items;
     }
 
     /// <summary>
@@ -289,9 +323,14 @@ internal static partial class SpacingRules
         void Widen(int springIndex, double needed)
         {
             var s = result[springIndex];
+            // A rod: the minimum moves, the strengths do not (see ApplyTabChordSpacing's
+            // Widen for the measured consequence of resetting the compress strength).
+            // LILYPOND-REF: lily/simple-spacer.cc:90-127 Simple_spacer::add_rod.
             if (needed > s.MinDistance)
                 result[springIndex] = new Spring(
-                    Math.Max(s.IdealDistance, needed), needed, s.InverseStretchStrength);
+                    Math.Max(s.IdealDistance, needed), needed,
+                    s.InverseStretchStrength,
+                    needed >= s.IdealDistance ? 0.0 : s.InverseCompressStrength);
         }
         // How far a column's symbol reaches on each side, extra-spacing-width included.
         // A column with no symbol reaches nowhere: LilyPond has no grob there to grow.
@@ -700,9 +739,23 @@ internal static partial class SpacingRules
         void Widen(int idx, double needed)
         {
             var s = result[idx];
+            // A reservation is a ROD: it moves the minimum (and the ideal up to it) and
+            // neither strength — LilyPond's add_rod raises blocking forces only. The
+            // 3-argument constructor here used to reset the compress strength to
+            // ideal − min, so a rest → note spring under a chord symbol blocked at
+            // −1.0 where LilyPond's blocks at −0.62 (Freedom bars 69-76, session 323).
+            // LILYPOND-REF: lily/simple-spacer.cc:90-127 Simple_spacer::add_rod.
+            // ⚠️ A rod that reaches the ideal leaves min == ideal, and LilyPond's blocking
+            // force is then 0 ONLY because the compress strength is 0 (spring.cc:78-82):
+            // compress_line takes a blocking-0 spring as already blocked, never adds its
+            // flexibility, and subtracts it anyway — a positive strength there breaks the
+            // solve (Simple_spacer::compress_line, 想い人 bars 84-87 read "does not fit").
+            // So the strength survives only while the rod stays under the ideal.
             if (needed > s.MinDistance)
                 result[idx] = new Spring(
-                    Math.Max(s.IdealDistance, needed), needed, s.InverseStretchStrength);
+                    Math.Max(s.IdealDistance, needed), needed,
+                    s.InverseStretchStrength,
+                    needed >= s.IdealDistance ? 0.0 : s.InverseCompressStrength);
         }
         Widen(0, left[0]);
         for (int t = 0; t < timings.Count - 1; t++)
@@ -864,12 +917,14 @@ internal static partial class SpacingRules
                     var r = right[ri];
                     if (l.Voice == r.Voice && l.Shift == 0 && r.Shift == 0)
                         continue;
+                    // Column-origin frame, each item's head-left at its collision shift —
+                    // the same frame CalculateSkylineDistance / SeparationRodDistance use.
                     if (!rightSkyOf.TryGetValue((t - 1, li), out var rs))
                         rightSkyOf[(t - 1, li)] = rs =
-                            ItemSkylineFactory.CreateRightSkyline(l.Item, l.Shift, 0);
+                            ItemSkylineFactory.CreateRightSkylineAtColumn(l.Item, l.Shift, 0);
                     if (!leftSkyOf.TryGetValue((t, ri), out var ls))
                         leftSkyOf[(t, ri)] = ls =
-                            ItemSkylineFactory.CreateLeftSkyline(r.Item, r.Shift, 0);
+                            ItemSkylineFactory.CreateLeftSkylineAtColumn(r.Item, r.Shift, 0);
                     var (sky, rod) = SkylineFloorPair(rs, ls);
                     maxSky = Math.Max(maxSky, sky);
                     maxRod = Math.Max(maxRod, rod);
@@ -957,9 +1012,23 @@ internal static partial class SpacingRules
         void Widen(int idx, double needed)
         {
             var s = result[idx];
+            // A reservation is a ROD: it moves the minimum (and the ideal up to it) and
+            // neither strength — LilyPond's add_rod raises blocking forces only. The
+            // 3-argument constructor here used to reset the compress strength to
+            // ideal − min, so a rest → note spring under a chord symbol blocked at
+            // −1.0 where LilyPond's blocks at −0.62 (Freedom bars 69-76, session 323).
+            // LILYPOND-REF: lily/simple-spacer.cc:90-127 Simple_spacer::add_rod.
+            // ⚠️ A rod that reaches the ideal leaves min == ideal, and LilyPond's blocking
+            // force is then 0 ONLY because the compress strength is 0 (spring.cc:78-82):
+            // compress_line takes a blocking-0 spring as already blocked, never adds its
+            // flexibility, and subtracts it anyway — a positive strength there breaks the
+            // solve (Simple_spacer::compress_line, 想い人 bars 84-87 read "does not fit").
+            // So the strength survives only while the rod stays under the ideal.
             if (needed > s.MinDistance)
                 result[idx] = new Spring(
-                    Math.Max(s.IdealDistance, needed), needed, s.InverseStretchStrength);
+                    Math.Max(s.IdealDistance, needed), needed,
+                    s.InverseStretchStrength,
+                    needed >= s.IdealDistance ? 0.0 : s.InverseCompressStrength);
         }
 
         // The between-column spring t+1 spans colItem[t] → colItem[t+1]. A script

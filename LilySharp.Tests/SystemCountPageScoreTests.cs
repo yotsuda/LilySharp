@@ -173,6 +173,66 @@ public sealed class SystemCountPageScoreTests
         Assert.Equal(solutions.IdealBreaks, solutions.For(4)!.Value.Breaks);
     }
 
+    /// <summary>scratch/p322/fx/alone-intro8.lys — the head of the corpus book "Alone Again"
+    /// (HANDOFF §2 T7 F12): LilyPond breaks its twelve bars 4 | 4 | 4, and until session 323
+    /// Lily# broke them 8 | 4.</summary>
+    private const string AloneAgainIntro = """
+        octave absolute
+        tempo 86
+        key fis major
+        time 4/4
+        part bl {
+          clef bass
+          section Intro {
+            fis,,2 fis,,8 fis,, r cis, | ais,,2 ais,,8 ais,, r ais,, | gis,,4 r8 dis,8 cis, cis, r cis, | fis,,2 r8 fis,, cis,16 c, cis,8 |
+          }
+          section A {
+            fis,2 fis,8 fis, r fis, | ais,2 ais,8 ais, r ais, | cis,4. cis,8 cis,4. cis,8 | ais,4 r8 ais, dis,2 | break
+            gis,4. dis,8 gis, gis, r dis, | gis,2 gis,8 gis, r cis, | fis,2 fis,8 fis, r cis, | fis,,4 r8 fis,, eis,,4 eis, |
+          }
+        }
+        form main { Intro A }
+        score main { staff bl }
+        """;
+
+    /// <summary>
+    /// A compressed line is priced by SOLVING its springs, not by the linear estimate: the
+    /// 8-bar first line of this book has every bar end on an up-stem flagged eighth whose
+    /// spring blocks at force −0.17, and once those block the rest must give more. LilyPond
+    /// (2.26.0, -ddebug-page-breaking-scoring on scratch/p322/fx/alone-intro8.ly) scores
+    /// 3 systems 1.274284 and 2 systems 1.648071; the sums-only estimate priced the 2-system
+    /// breaking 1.222 and chose it.
+    /// </summary>
+    [Fact]
+    public void AloneAgainIntro_TakesLilyPondsThreeSystems()
+    {
+        Assert.Equal(new[] { 4, 4, 4 }, BarsPerSystem(AloneAgainIntro));
+
+        var score = ScoreOf(AloneAgainIntro);
+        var options = score.Paper;
+        double shortest = SpacingRules.CalculateCommonShortestDuration(score);
+        var springs = SystemBreaker.ComputeMultiStaffSpringData(score, shortest);
+        double clef = SpacingRules.MaxClefWidth(score);
+        var breaker = new KnuthPlassBreaker(
+            options.ContentWidth,
+            SystemBreaker.GateFirstPrefixWidth(score, clef) + options.Indent,
+            SystemBreaker.GateContinuationPrefixWidth(score, clef) + options.ShortIndent,
+            raggedRight: options.RaggedRight);
+        // The forced break after bar 8 splits the book: 12 bars, so the first 8 are the
+        // part the count loop weighs, 2 or 3 lines before the forced break.
+        var solutions = breaker.Solve(springs);
+        var three = solutions.For(3);
+        var two = solutions.For(2);
+        Assert.NotNull(three);
+        Assert.NotNull(two);
+        _output.WriteLine($"3 lines: Σf² {three!.Value.ForceSquaredSum:F4} {string.Join(",", three.Value.Breaks)}");
+        _output.WriteLine($"2 lines: Σf² {two!.Value.ForceSquaredSum:F4} {string.Join(",", two.Value.Breaks)}");
+        // One page, ragged last: the page term is 0, so these ARE LilyPond's scores.
+        Assert.InRange(three.Value.ForceSquaredSum, 1.274 - 0.05, 1.274 + 0.05);
+        Assert.InRange(two.Value.ForceSquaredSum, 1.648 - 0.2, 1.648 + 0.2);
+        Assert.True(two.Value.ForceSquaredSum > three.Value.ForceSquaredSum);
+    }
+
     private static PageBreaker Breaker(PageBreakingParameters parameters) =>
         new(pageHeight: 169.009370, topMargin: 5.690551, bottomMargin: 5.690551,
             headerHeight: 0, parameters: parameters);

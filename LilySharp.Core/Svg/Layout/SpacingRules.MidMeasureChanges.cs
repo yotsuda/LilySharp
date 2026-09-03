@@ -992,9 +992,23 @@ internal static partial class SpacingRules
         // No ApplyMergeSpringsHeadroom call follows: breakable_column_spacing does hand this
         // wish on to merge_springs, but the correction just above already guarantees
         // ideal >= fixed >= 0.3 + min_distance, so the headroom is provably a no-op here.
-        return new Spring(ideal, minDistance,
-                          Math.Max(0.0, stretchability),
-                          Math.Max(0.0, ideal - fixedDistance));
+        var spring = new Spring(ideal, minDistance,
+                                Math.Max(0.0, stretchability),
+                                Math.Max(0.0, ideal - fixedDistance));
+
+        // The column ROD over this pair: set_column_rods walks every adjacent column pair,
+        // the breakable ones included, and the rod is the spanner's padding over the SAME
+        // skyline distance min_dist is. The compress strength above stays measured against
+        // `fixed` (LilyPond's), so only the blocking point moves. MEASURED (2.26.0,
+        // scratch/p323/fx/m-base.ly compressed to its minimum): bar line origin → next note
+        // column 0.490000 = 0.19 ink + 0.1 + 0.1 + 0.1, where min_dist alone is 0.2 past
+        // the ink; until 2026-09-03 this spring stopped at 0.2.
+        // LILYPOND-REF: lily/spacing-spanner.cc:315-316 generate_springs;
+        // LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods;
+        // LILYPOND-REF: lily/separation-item.cc:47-68 set_distance.
+        return firstItems == null
+            ? spring
+            : spring.EnsureMinDistance(minDistance + SeparationRodPadding);
     }
 
     /// <summary>

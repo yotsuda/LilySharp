@@ -140,14 +140,25 @@ internal static partial class SpacingRules
     ///   exceeds one staff position: ±same-direction-correction depending on
     ///   which side is lower (same_direction_correction, :162-197); skipped
     ///   when an accidental sticks out of the right side (:305-308)
-    /// Simplification vs LilyPond: the flagged-unbeamed-left gate (:264-266) is not
-    /// applied. Stem directions ARE beam-resolved — the collector bakes the beam's
+    /// - a FLAG hanging from the LEFT stem (an unbeamed eighth or shorter) → no correction
+    ///   of any kind (:260-266, "Correction doesn't seem appropriate when there is a large
+    ///   flag hanging from the note"). Until 2026-09-03 this gate was a documented
+    ///   simplification; MEASURED (2.26.0, scratch/p322/fx/w-h8-bass-fis.ly) it is the
+    ///   whole of a +0.10 per bar that <c>fis,,2 fis,,8 fis,, r cis,</c> carried into the
+    ///   bar line — LilyPond's flagged eighth → bar line gap is 2.567400, the flag's
+    ///   skyline + the 0.3 headroom and nothing else, where the correction read 0.1653.
+    /// Stem directions ARE beam-resolved — the collector bakes the beam's
     /// direction, and its identity (<see cref="NoteItem.BeamId"/>), into the items.
     /// </remarks>
     internal static double CalculateStemCorrection(MusicItem? prevItem, MusicItem? nextItem,
                                                    NoteSpacingParameters noteParams)
     {
         if (StemSpacingInfo(prevItem) is not { } l || StemSpacingInfo(nextItem) is not { } r)
+            return 0;
+
+        // LILYPOND-REF: lily/note-spacing.cc:264-266 stem_dir_correction — the left-side
+        // flag gate returns before any branch below, the same-direction one included.
+        if (HasHangingFlag(prevItem))
             return 0;
 
         int leftDir = l.StemUp ? 1 : -1;
@@ -186,6 +197,20 @@ internal static partial class SpacingRules
         double delta = lowest > 0 ? l.HeadMin - r.HeadMax : r.HeadMin - l.HeadMax;
         return delta > 1 ? -lowest * noteParams.SameDirectionCorrection : 0;
     }
+
+    /// <summary>
+    /// An unbeamed eighth or shorter — a note whose stem carries a FLAG. Read off the
+    /// item the way <see cref="ItemSkylineFactory"/> reads it for the flag's box: the
+    /// collector has resolved beaming before any spacing runs.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/note-spacing.cc:264-266 stem_dir_correction —
+    /// <c>Stem::duration_log (stem) &gt; 2 &amp;&amp; !Stem::get_beam (stem)</c>.</remarks>
+    private static bool HasHangingFlag(MusicItem? item) => item switch
+    {
+        NoteItem { IsBeamed: false } n => GetNoteValue(n) >= 8,
+        ChordItem { IsBeamed: false } c => GetNoteValue(c) >= 8,
+        _ => false,
+    };
 
     /// <summary>
     /// The optical correction for a KNEE — two columns of one beam whose stems point
@@ -289,6 +314,12 @@ internal static partial class SpacingRules
         MusicItem? prevItem, NoteSpacingParameters noteParams)
     {
         if (StemSpacingInfo(prevItem) is not { } l)
+            return 0;
+
+        // The left-side flag gate stands BEFORE the bar branch in stem_dir_correction's
+        // loop, so a flagged note before a bar line takes no correction either.
+        // LILYPOND-REF: lily/note-spacing.cc:264-266 stem_dir_correction.
+        if (HasHangingFlag(prevItem))
             return 0;
 
         // The bar line's Y extent in staff positions: the staff's own half-height.

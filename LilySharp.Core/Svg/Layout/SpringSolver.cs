@@ -44,9 +44,19 @@ namespace LilySharp.Core.Svg.Layout;
 /// </remarks>
 internal sealed class SpringSolver
 {
-    private readonly ImmutableArray<Spring> _springs;
+    private readonly IReadOnlyList<Spring> _springs;
 
     public SpringSolver(ImmutableArray<Spring> springs)
+        : this((IReadOnlyList<Spring>)springs)
+    {
+    }
+
+    /// <summary>
+    /// Over any spring list — the break gate hands a candidate LINE's springs (its measures'
+    /// springs end to end, gathered per candidate into a reused buffer) to the same solver
+    /// the system layout uses, so the two price a line with one spelling of range_solve.
+    /// </summary>
+    public SpringSolver(IReadOnlyList<Spring> springs)
     {
         _springs = springs;
     }
@@ -98,7 +108,7 @@ internal sealed class SpringSolver
     /// <returns>Solution containing force and whether the line fits</returns>
     public (double Force, bool Fits) Solve(double targetWidth, bool ragged = false)
     {
-        if (_springs.Length == 0)
+        if (_springs.Count == 0)
             return (0, true);
 
         double maxBlockForce = MaxBlockingForce();

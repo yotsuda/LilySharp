@@ -124,7 +124,10 @@ internal static partial class SpacingRules
     }
 
     /// <summary>
-    /// Gets the space from the last item in a measure to the barline.
+    /// Gets the space beyond its own ink that a NON-musical item (a change glyph closing a
+    /// measure) keeps from the bar line. A musical column no longer comes here: its pair is
+    /// priced by <see cref="NoteColumnToBarlineFloorPair"/> off the column skyline, and the
+    /// note arm below is its head-only fallback for the callers that still ask.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/separation-item.cc:49-70
@@ -187,10 +190,9 @@ internal static partial class SpacingRules
             }
             else if (prevItem != null && nextItem == null)
             {
-                // Item → barline: use type-aware barline padding
-                double itemExtent = CalculateNoteheadRightExtent(prevItem);
-                double barlinePad = GetItemToBarlineSpace(prevItem);
-                return itemExtent + barlinePad;
+                // Item → barline: the column's skyline against the bar line's box — the
+                // spring minimum of the two constraints NoteColumnToBarlineFloorPair prices.
+                return NoteColumnToBarlineFloorPair(prevItem).SkyMin;
             }
             else
             {
@@ -213,9 +215,13 @@ internal static partial class SpacingRules
         // could exceed the skyline answer it was standing in for. Nor is one needed —
         // a non-overlapping pair gives -infinity and max(0, -inf) is 0, which is LilyPond's
         // own answer through its own max.
+        // Both columns in the COLUMN-ORIGIN frame (each head's left edge at its shift), so
+        // a pair of unequal heads is measured as LilyPond measures it — the left column's
+        // whole reach — and not between the two heads' centres, which is what handing both
+        // the same centre reference did (ItemSkylineFactory.CreateRightSkylineAtColumn).
         return SkylineFloorPair(
-            ItemSkylineFactory.CreateRightSkyline(prevItem, prevShift, staffY),
-            ItemSkylineFactory.CreateLeftSkyline(nextItem, nextShift, staffY)).SkyMin;
+            ItemSkylineFactory.CreateRightSkylineAtColumn(prevItem, prevShift, staffY),
+            ItemSkylineFactory.CreateLeftSkylineAtColumn(nextItem, nextShift, staffY)).SkyMin;
     }
 
     /// <summary>
@@ -271,27 +277,127 @@ internal static partial class SpacingRules
                                                NoteSpacingParameters? noteParams = null,
                                                double prevShift = 0, double nextShift = 0)
     {
-        // A boundary (bar line) pair is priced by its space-alist, not by a column rod —
-        // that is CalculateSkylineDistance's own branch, and it has no separate rod.
+        // A boundary (bar line) pair carries a rod too: set_column_rods walks EVERY adjacent
+        // column pair, breakable columns included, and the rod is the spanner's padding over
+        // the same skyline distance the spring minimum is.
+        if (prevItem != null && nextItem == null)
+            return NoteColumnToBarlineFloorPair(prevItem).Rod;
         if (prevItem == null || nextItem == null)
-            return CalculateSkylineDistance(prevItem, nextItem, staffY, noteParams);
+            return CalculateSkylineDistance(prevItem, nextItem, staffY, noteParams)
+                   + SeparationRodPadding;
 
         return SkylineFloorPair(
-            ItemSkylineFactory.CreateRightSkyline(prevItem, prevShift, staffY),
-            ItemSkylineFactory.CreateLeftSkyline(nextItem, nextShift, staffY)).Rod;
+            ItemSkylineFactory.CreateRightSkylineAtColumn(prevItem, prevShift, staffY),
+            ItemSkylineFactory.CreateLeftSkylineAtColumn(nextItem, nextShift, staffY)).Rod;
     }
 
     /// <summary>
-    /// Calculates the item's RIGHTward ink reach from its column: the HEAD's right edge,
-    /// which is what the bar-line pair is measured from.
+    /// How far a bar line's spacing box may grow past the bar's own extent to reach the
+    /// columns beside it, each way, in staff spaces.
     /// </summary>
     /// <remarks>
-    /// ⚠️ STEMS AND FLAGS ARE OUT OF THIS ONE, AND THAT IS A FACT ABOUT THE BAR-LINE PAIR,
-    /// NOT ABOUT THE COLUMN'S SKYLINE. This doc used to say "excluding stems and flags" with
-    /// the separation-item citation below standing right under it, and the next reader (twice)
-    /// took that as "LilyPond's column skyline has no stem in it". It has one — every Item in
-    /// the column is a box (see <see cref="ItemSkylineFactory"/>), and a bass line in E-flat
-    /// found the omission by running a flat through a stem. What LilyPond really reads for
+    /// LILYPOND-REF: scm/output-lib.scm:965-974 pure-from-neighbor-interface::account-for-span-bar —
+    ///   <c>(interval-intersection esh (cons -1.01 1.01))</c>, the branch a staff with no span
+    ///   bar takes; <c>esh</c> is the neighbours' reach past the bar
+    ///   (:934-942 pure-from-neighbor-interface::extra-spacing-height).
+    /// LILYPOND-REF: scm/define-grobs.scm:274-275 BarLine extra-spacing-height.
+    /// </remarks>
+    internal const double BarLineExtraSpacingHeightCap = 1.01;
+
+    /// <summary>
+    /// LilyPond's TWO constraints over a note column → bar line pair: the SPRING minimum
+    /// (the column's right skyline against the bar line's spacing box, padding-free) and
+    /// the column ROD (the same distance plus the spanner's 0.1). Both are measured from
+    /// the column origin — the head's left edge — to the bar line's ink left edge, the
+    /// frame the closing spring already stands in.
+    /// </summary>
+    /// <param name="item">The item at the measure's last column.</param>
+    /// <param name="rightNeighbours">What opens the NEXT measure, when known — the bar
+    /// line's other neighbours, whose reach past the staff also grows its box.</param>
+    /// <remarks>
+    /// <para>
+    /// The column's skyline is EVERYTHING in it — head, stem, FLAG, dots, half-ties, a
+    /// reversed head — exactly as <see cref="ItemSkylineFactory"/> walks it for a note →
+    /// note pair. Until 2026-09-03 this pair was priced head-only
+    /// (<see cref="CalculateNoteheadRightExtent"/> + 0.2), and that is what an up-stem
+    /// flag before a bar line fell through: MEASURED (2.26.0, scratch/p323/fx/m-base.ly,
+    /// <c>fis,,2 fis,,8 fis,, r cis,</c> compressed to its minimum, the rod read off the
+    /// column's minimum-distances) the flagged eighth → bar line rod is 2.367400 =
+    /// stem 1.239200 + flag 0.828200 + 0.1 + 0.1 + 0.1, against the head-only 1.604200 —
+    /// and a DOWN-stem flag (m-gis.ly), a beamed eighth, or the same note as a quarter
+    /// (m-q.ly) all read 1.604200, the flag-less control (Flag.stencil off, m-noflag.ly)
+    /// too. This was the largest of the four per-bar minimum deviations behind HANDOFF
+    /// §2 T7 F12 (−0.86 of a 9.04 bar).
+    /// </para>
+    /// <para>
+    /// The bar line's box is its ink (0.19 wide, extra-spacing-width the default 0.1),
+    /// spanning the staff and grown to reach its neighbours past it, at most
+    /// <see cref="BarLineExtraSpacingHeightCap"/> each way — so a flag hanging from an
+    /// in-staff stem always meets it, and a flag standing wholly above staff + 1.01 (a
+    /// forced-up stem on a high note) does not. The neighbours are this column and the
+    /// next measure's opening column; LilyPond takes every item of both.
+    /// </para>
+    /// LILYPOND-REF: lily/note-spacing.cc:78-83 Note_spacing::get_spacing — the spring
+    ///   minimum is <c>skys[LEFT].distance (skys[RIGHT], skyline-vertical-padding)</c>,
+    ///   the right column's padding, which a NonMusicalPaperColumn leaves at 0.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods →
+    ///   lily/separation-item.cc:47-68 set_distance — <c>padding + …distance (right)</c>.
+    /// LILYPOND-REF: lily/paper-column.cc:145-164 Paper_column::minimum_distance — the
+    ///   same skyline reading the bar line → note direction takes.
+    /// LILYPOND-REF: scm/define-grobs.scm:274-283 BarLine — extra-spacing-height from
+    ///   its neighbours, horizontal-skylines from its stencil.
+    /// </remarks>
+    internal static (double SkyMin, double Rod) NoteColumnToBarlineFloorPair(
+        MusicItem item, IEnumerable<MusicItem>? rightNeighbours = null)
+    {
+        // A change item shares no column with a bar line in LilyPond (a mid-measure change
+        // is its own non-musical column); a spacer engraves nothing. Both keep the type
+        // arms they had — see GetItemToBarlineSpace's note.
+        if (!IsMusicalColumn(item))
+        {
+            double d = CalculateNoteheadRightExtent(item) + GetItemToBarlineSpace(item);
+            return (d, d);
+        }
+
+        // The column's parts in the COLUMN's frame — its origin, the head's left edge, at 0.
+        var itemRight = ItemSkylineFactory.CreateRightSkylineAtColumn(item, 0, staffY: 0);
+
+        var (yMin, yMax) = ItemSkylineFactory.ColumnYExtent(item, 0);
+        if (rightNeighbours != null)
+            foreach (var n in rightNeighbours)
+                if (IsMusicalColumn(n))
+                {
+                    var (nMin, nMax) = ItemSkylineFactory.ColumnYExtent(n, 0);
+                    yMin = Math.Min(yMin, nMin);
+                    yMax = Math.Max(yMax, nMax);
+                }
+        // Device frame, y down: the staff's top line is StaffYBottom (-2), its bottom line
+        // StaffYTop (+2) — BoundaryColumn's box convention.
+        double reachAbove = Math.Clamp(BoundaryColumn.StaffYBottom - yMin, 0, BarLineExtraSpacingHeightCap);
+        double reachBelow = Math.Clamp(yMax - BoundaryColumn.StaffYTop, 0, BarLineExtraSpacingHeightCap);
+        var barLeft = HorizontalSkyline.FromBox(
+            BoundaryColumn.StaffYBottom - reachAbove, BoundaryColumn.StaffYTop + reachBelow,
+            -DefaultExtraSpacingWidth, DefaultExtraSpacingWidth, HorizontalDirection.Left);
+
+        double distance = itemRight.Distance(barLeft);
+        return (Math.Max(0.0, distance), Math.Max(0.0, SeparationRodPadding + distance));
+    }
+
+    /// <summary>
+    /// Calculates the item's RIGHTward ink reach from its column: the HEAD's right edge
+    /// (dots and a half-tie included) — LilyPond's <c>left_head_end</c>, the quantity the
+    /// note-spacing IDEAL is refined by, and the note half of the keep-inside-line rod.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ STEMS AND FLAGS ARE OUT OF THIS ONE, AND THAT IS A FACT ABOUT THE IDEAL'S
+    /// left_head_end, NOT ABOUT THE COLUMN'S SKYLINE. This doc used to say "excluding stems
+    /// and flags" with the separation-item citation below standing right under it, and the
+    /// next reader (twice) took that as "LilyPond's column skyline has no stem in it". It has
+    /// one — every Item in the column is a box (see <see cref="ItemSkylineFactory"/>), and a
+    /// bass line in E-flat found the omission by running a flat through a stem. And until
+    /// 2026-09-03 the bar-line pair's MINIMUM was priced from this head-only number too, which
+    /// is how an up-stem FLAG reached through a bar line — that pair now reads the column
+    /// skyline in <see cref="NoteColumnToBarlineFloorPair"/>. What LilyPond really reads for
     /// THIS quantity is the first head's own extent:
     /// LILYPOND-REF: lily/note-spacing.cc:46-70 Note_spacing::get_spacing —
     ///   <c>left_head_end = g->extent (col, X_AXIS)[RIGHT]</c> where <c>g</c> is the rest or
