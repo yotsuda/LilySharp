@@ -151,6 +151,16 @@ one, put it where `c4 d e f |` sits in the minimal document.
   `c,` = C3), independent per note - octave mistakes never cascade. RECOMMENDED
   when generating scores. `part X { octave 2 }` re-anchors the base (bass parts).
   Sections restore the file-level mode.
+- `pitch concert` (top level) says the letters are what SOUNDS: a part whose `instrument`
+  transposes (clarinet, trumpet, horn, alto-sax, tenor-sax, …) is then PRINTED the way its
+  player reads it, pitches and key signature together — an alto-sax `c'` prints as `a'` in
+  A major when the piece is in C, and still plays C. The default, `pitch written`, prints
+  the letters as they are and only playback moves. Octave-only instruments (bass, piccolo)
+  keep their notation either way. A part header takes the same words for that part alone
+  (`part sax { instrument alto-sax pitch written }` beside a top-level `pitch concert`: own
+  wins, as with `transpose`), and without a transposing `instrument` the word changes
+  nothing. `score full pitch concert { … }` prints THAT score at concert pitch (the
+  conductor's score) whichever way the file is written.
 
 ```
 c d e f g a b c    // C4 D4 E4 F4 G4 A4 B4 C5
@@ -533,7 +543,10 @@ quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LY
   is written out. ⚠️ **`transpose` takes a PITCH, not a number of steps** —
   `part cl { clef treble transpose bes }`, and `transpose -2` is an error naming the
   pitch form. Do not confuse it with `transposition`, a *different* part property that
-  takes an octave marker (`8va` / `8vb` / `15ma` / `15mb`) and nothing else.
+  takes an octave marker (`8va` / `8vb` / `15ma` / `15mb`) and nothing else. For a B♭
+  or E♭ instrument you normally write NO `transpose` at all: name the `instrument` and
+  either write what the player reads (the default) or write what sounds under a top-level
+  `pitch concert` — the part is transposed for you (see Pitches).
 - **`section ~A { … }` flips that section's label default.** A section prints a rehearsal
   letter by default and a reference's `~` hides it; declare it `section ~A` and it prints
   none by default, so there `~A` is the spelling that SHOWS. One meaning for the tilde at
@@ -666,7 +679,7 @@ These are keywords and cannot be used as bare identifiers, EXCEPT the four clef-
 part is fine). Keywords:
 
 ```text
-section form using tab ossia transpose octave instrument percussion drummap
+section form using tab ossia transpose octave pitch instrument percussion drummap
 score part staff grandStaff staffGroup choirStaff condensedStaff combinedStaff
 voice phrase repeat volta alternative break noBreak pageBreak noPageBreak partial cue embedded fonts paper
 title composer tempo time key clef

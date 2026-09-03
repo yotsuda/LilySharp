@@ -526,6 +526,7 @@ internal sealed partial class Parser
         // by the validator, not here, so recovery stays local.
         SyntaxToken? formName = Check(SyntaxKind.OpenBrace)
             || Check(SyntaxKind.TransposeKeyword)
+            || Check(SyntaxKind.PitchKeyword)
             || Check(SyntaxKind.StringLiteral)
             ? null : Advance();
 
@@ -533,9 +534,12 @@ internal sealed partial class Parser
         // is dropped downstream (the file format is a CLI choice).
         SyntaxToken? filename = Check(SyntaxKind.StringLiteral) ? Advance() : null;
 
-        // Optional per-score transpose: `score <Form> transpose <pitch> { ... }`.
-        // Stored as a transpose property (same shape the part header uses).
-        GreenNode? transpose = Check(SyntaxKind.TransposeKeyword) ? ParsePartProperty() : null;
+        // Optional per-score options, in either order: `transpose <pitch>` (stored as a
+        // transpose property, the shape the part header uses) and `pitch concert|written`
+        // (how this score prints a transposing part — Semantics.ConcertPitch).
+        var options = new List<GreenNode?>();
+        while (Check(SyntaxKind.TransposeKeyword) || Check(SyntaxKind.PitchKeyword))
+            options.Add(Check(SyntaxKind.TransposeKeyword) ? ParsePartProperty() : ParsePitchDirective());
 
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
@@ -543,7 +547,7 @@ internal sealed partial class Parser
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
         // The `name` slot now carries the form reference; `filename` the basename.
-        return new RenderDeclarationGreen(keyword, formName, filename, transpose, openBrace, [.. items], closeBrace);
+        return new RenderDeclarationGreen(keyword, formName, filename, [.. options], openBrace, [.. items], closeBrace);
     }
 
 

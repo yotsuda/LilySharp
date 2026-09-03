@@ -39,8 +39,12 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
     private static readonly HashSet<string> PropertyNames = new(StringComparer.Ordinal)
     {
         "clef", "instrument", "transpose", "transposition", "tuning",
-        "octave", "removeEmpty", "pedal",
+        "octave", "removeEmpty", "pedal", "pitch",
     };
+
+    /// <summary>The two words <c>pitch</c> takes, read from their one home.</summary>
+    private static readonly HashSet<string> PitchModes =
+        new(ConcertPitch.Modes, StringComparer.Ordinal);
 
     private static readonly HashSet<string> PedalValues = new(StringComparer.Ordinal)
     {
@@ -219,6 +223,11 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
                 // vocabulary (InstrumentPresetTests holds it to that switch), and Ordinal is
                 // the rule every other symbol in this header obeys.
                 CheckValue(valueTokens, TranspositionMarkers, "transposition", "markers");
+                break;
+            case "pitch":
+                // The same two words the top-level directive takes (the parser refuses a
+                // third there; here the header's generic value path leaves it to this rule).
+                CheckValue(valueTokens, PitchModes, "pitch", "modes");
                 break;
         }
     }

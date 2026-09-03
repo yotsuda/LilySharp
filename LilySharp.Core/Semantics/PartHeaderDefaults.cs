@@ -91,6 +91,23 @@ public sealed class PartHeaderDefaults
     /// <summary>Everything between what the part prints and what it sounds.</summary>
     public int SoundingShiftSemitones => ClefOctaveSemitones + TranspositionSemitones;
 
+    /// <summary>
+    /// The part of <see cref="TranspositionSemitones"/> a concert-pitch score REWRITES: the
+    /// whole of it for a chromatic transposer (a B♭ clarinet's −2, an E♭ alto saxophone's
+    /// −9, a tenor saxophone's −14), and 0 for an octave-only one (a bass's −12, a
+    /// piccolo's +12, a bass tuning's −12).
+    /// </summary>
+    /// <remarks>
+    /// The convention of the printed page: a score at concert pitch shows the clarinets and
+    /// saxophones at their sounding pitch, but keeps the piccolo, the contrabass and the
+    /// guitar in their octave-transposed notation — the octave is a reading convenience of
+    /// the instrument, not a key the conductor has to un-transpose. So the octave
+    /// transposers print the same under <c>pitch concert</c> as under <c>pitch written</c>,
+    /// and only the chromatic ones move. Decided with the first implementation
+    /// (2026-09-03, HANDOFF §1); <see cref="ConcertPitch"/> is the reader.
+    /// </remarks>
+    public int ConcertShiftSemitones => TranspositionSemitones % 12 == 0 ? 0 : TranspositionSemitones;
+
     /// <summary>The defaults of a part that declares nothing.</summary>
     public static readonly PartHeaderDefaults Empty = new();
 

@@ -27,6 +27,25 @@ scores against LilyPond's picture of the same book.
 
 ### Language
 
+- **Transposing instruments, both ways.** An `instrument` preset now carries its chromatic
+  transposition — `clarinet`, `clarinet-a`, `trumpet`, `trumpet-c`, `horn`, `soprano-sax`,
+  `alto-sax`, `tenor-sax`, `baritone-sax` — so a part written the way its player reads it
+  plays at concert pitch in the `.mid` (an alto saxophone's written `c'` sounds E♭). And a
+  top-level **`pitch concert`** says the letters are what SOUNDS: every such part is then
+  printed the way its player reads it, pitches and key signature together — the alto
+  saxophone's `c'` prints as `a'`, in A major when the piece is in C, and still plays C.
+  The default, `pitch written`, is what every book meant before. A part header takes the
+  same words for that part alone — `part sax { instrument alto-sax pitch written }` beside a
+  top-level `pitch concert` copies the saxophone from its transposed part-sheet and the rest
+  from the concert-pitch score — and `score full pitch concert { … }` prints one score at
+  concert pitch, the conductor's score of a book written either way. Without a transposing
+  `instrument` the word changes nothing. Octave-only instruments (bass, piccolo, a `transposition 8vb`) keep their notation
+  under both, as a printed concert score keeps them. The MusicXML carries the same
+  `<transpose>` whichever way the file is written; the LilyPond twin wraps the part in the
+  `\transpose` the shift amounts to.
+- **A part-major book's `transpose` reaches the `.mid`.** A `transpose` on a part whose
+  sections are written inside the `part { }` block moved the page and not the playback; the
+  section-major spelling of the same book already played the transposed pitch.
 - **`pageBreak` and `noPageBreak`** — the page-break pair beside `break` / `noBreak`, written
   where those are written: in a section's music after a bar, or in a `form` between sections.
   `pageBreak` forces a page break and, with it, the system break (LilyPond's `\pageBreak`

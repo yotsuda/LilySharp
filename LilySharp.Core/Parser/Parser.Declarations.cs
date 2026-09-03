@@ -237,7 +237,8 @@ internal sealed partial class Parser
             Current.Kind == SyntaxKind.InstrumentKeyword ||
             Current.Kind == SyntaxKind.TuningKeyword ||
             Current.Kind == SyntaxKind.OctaveKeyword ||
-            Current.Kind == SyntaxKind.TransposeKeyword)
+            Current.Kind == SyntaxKind.TransposeKeyword ||
+            Current.Kind == SyntaxKind.PitchKeyword)   // pitch concert|written: this part's convention
         {
             var propName = Advance();
             // Bare canonical form ('clef treble'); a stray ':' is flagged and skipped.
@@ -320,6 +321,45 @@ internal sealed partial class Parser
         while (Check(SyntaxKind.Apostrophe) || Check(SyntaxKind.Comma))
             values.Add(Advance());
         return new PropertyAssignmentGreen(keyword, null, [.. values]);
+    }
+
+    // `pitch concert` / `pitch written` — at the top level, whether the file's note letters
+    // are SOUNDING pitches (a transposing part is then printed transposed) or the pitches
+    // the player reads (the default); on a score header, how THAT score prints them
+    // (Semantics.ConcertPitch is the reader). The same property-node shape as the
+    // top-level `transpose`, so the readers that walk top-level properties need no new
+    // node kind. The value is checked HERE, as `octave absolute|relative` is: a word
+    // outside the two is refused at the word, and the node still carries it so the
+    // round trip holds.
+    private PropertyAssignmentGreen ParsePitchDirective()
+    {
+        var keyword = Advance(); // pitch
+        SyntaxToken mode;
+        if (Check(SyntaxKind.Identifier)
+            && Semantics.ConcertPitch.Modes.Contains(Current.Text))
+        {
+            mode = Advance();
+        }
+        else if (Check(SyntaxKind.Identifier))
+        {
+            // A wrong word: report it where it stands and keep it, so the offsets after
+            // it are unmoved (the recovery rule every header property follows).
+            var span = new TextSpan(_textPosition, Current.FullWidth);
+            _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
+                $"'{Current.Text}' is not a pitch mode. 'pitch' takes "
+                + $"{string.Join(" or ", Semantics.ConcertPitch.Modes)} — e.g. 'pitch concert'.");
+            mode = Advance();
+        }
+        else
+        {
+            var span = new TextSpan(_textPosition, Current.FullWidth);
+            _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
+                $"Expected pitch mode ({string.Join(" or ", Semantics.ConcertPitch.Modes)})");
+            // Zero-width missing token, as ParseOctaveDirective recovers: an empty mode
+            // reads as neither word, i.e. the written-pitch default.
+            mode = new SyntaxToken(SyntaxKind.Identifier, "", null, null);
+        }
+        return new PropertyAssignmentGreen(keyword, null, [mode]);
     }
 
     private MetadataDeclarationGreen ParseMetadataDeclaration()

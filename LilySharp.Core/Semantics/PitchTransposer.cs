@@ -115,6 +115,39 @@ public static class PitchTransposer
     public static int IntervalSemitones(int toStep, int toAlteration, int toOctave = 0)
         => RelativeOctave.StepSemitoneOf(toStep) + toAlteration + 12 * toOctave;
 
+    // The c→target spelling of each semitone class, flats for the black keys the way a
+    // transposing instrument's key is named (B♭ clarinet, E♭ saxophone, not A♯ / D♯):
+    // the key-signature shift each carries (KeySignatureFifthsShift) is then the one
+    // the instrument's part is printed in — c→a is A major, c→ees, is E♭ major.
+    private static readonly (int step, int alt)[] SemitoneSpellings =
+    {
+        (0, 0),  // c
+        (1, -1), // des
+        (1, 0),  // d
+        (2, -1), // ees
+        (2, 0),  // e
+        (3, 0),  // f
+        (3, 1),  // fis
+        (4, 0),  // g
+        (5, -1), // aes
+        (5, 0),  // a
+        (6, -1), // bes
+        (6, 0),  // b
+    };
+
+    /// <summary>
+    /// The c→target transpose interval that moves music by <paramref name="semitones"/>
+    /// (negative = down), spelled as <see cref="SemitoneSpellings"/> spells the class and
+    /// carrying the octave in the target's octave marks — so
+    /// <see cref="IntervalSemitones"/> of the answer is exactly the argument. +9 is c→a
+    /// (an E♭ alto saxophone's written pitch above its sounding one), −9 is c→ees,.
+    /// </summary>
+    public static (int step, int alt, int oct) IntervalFromSemitones(int semitones)
+    {
+        var (step, alt) = SemitoneSpellings[Mod(semitones, 12)];
+        return (step, alt, FloorDiv(semitones, 12));
+    }
+
     /// <summary>
     /// How a key signature's sharp count changes when the music is transposed
     /// up by the c→(toStep, toAlteration) interval — each fifth adds one sharp.
@@ -161,4 +194,14 @@ public static class PitchTransposer
         if (outer is not { } o) return inner;
         return Transpose(i.step, i.alt, i.oct, o.step, o.alt, o.oct);
     }
+
+    /// <summary>
+    /// Null for the identity interval (c→c), so two shifts that cancel — a concert-pitch
+    /// file printed as a concert-pitch score — leave the part "untransposed" to every reader
+    /// that tests for null (no <c>\transpose c c</c> wrapper in the twin, no per-staff key).
+    /// A hand-written <c>transpose c</c> is left as it is; this is asked only of composed
+    /// intervals.
+    /// </summary>
+    public static (int step, int alt, int oct)? NullIfIdentity((int step, int alt, int oct)? interval)
+        => interval is (0, 0, 0) ? null : interval;
 }

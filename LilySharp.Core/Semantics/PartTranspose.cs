@@ -28,21 +28,30 @@ namespace LilySharp.Core.Semantics;
 /// </summary>
 public static class PartTranspose
 {
-    /// <summary>The effective transpose for <paramref name="partName"/>, or null.</summary>
+    /// <summary>
+    /// The effective transpose for <paramref name="partName"/>, or null: the part's own
+    /// option, else the file default — and, in a file written at concert pitch
+    /// (<see cref="ConcertPitch"/>), the instrument's own written-side shift composed
+    /// inside it, so an alto saxophone's part prints a major sixth above the letters.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The concert-pitch shift lives HERE, in the one reader every consumer of a part's
+    /// transpose already asks (the page's collector, MIDI, MusicXML, the LilyPond twin),
+    /// and not beside any of them: the alternative — each consumer adding the instrument's
+    /// shift for itself — is a second spelling of "shift this part", and the MIDI exporter
+    /// would then pass the preset's −9 twice (once here, once as the sounding shift).
+    /// </remarks>
     public static (int step, int alt, int oct)? Read(SyntaxNode root, string partName)
     {
         // Part declarations are top-level only (Parser.ParseTopLevelItem), so the
         // root's direct children are the whole search space (SyntaxNode.ChildNodes).
         // ReadScoreDefault stays on the descendant walk, but no longer counts a
         // render block's own transpose as the file's default — see there.
-        foreach (var partDecl in root.ChildNodes().OfType<PartDeclarationSyntax>())
-            if (partDecl.Name.Text == partName)
-            {
-                var own = Read(partDecl);
-                if (own != null) return own; // a part's own transpose overrides the default
-                break;
-            }
-        return ReadScoreDefault(root);
+        var partDecl = ConcertPitch.FindPart(root, partName);
+        // a part's own transpose overrides the default
+        var written = (partDecl != null ? Read(partDecl) : null) ?? ReadScoreDefault(root);
+        return PitchTransposer.NullIfIdentity(PitchTransposer.Compose(
+            ConcertPitch.InputShift(ConcertPitch.FileIsConcert(root), partDecl), written));
     }
 
     /// <summary>

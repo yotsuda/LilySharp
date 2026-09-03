@@ -290,12 +290,20 @@
                         "2": { "name": "support.constant.remove-empty.lilysharp" }
                     }
                 },
+                {
+                    "comment": "`pitch concert|written` — this part's convention for a transposing instrument (LilySharp.Core ConcertPitch.Modes). The same pair the top-level directive takes.",
+                    "match": "\\b(pitch)\\s+(written|concert)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.other.lilysharp" },
+                        "2": { "name": "support.constant.pitch-mode.lilysharp" }
+                    }
+                },
                 { "include": "#directive-value" },
                 { "include": "#instrument-value" },
                 {
                     "comment": "The bare key, read AFTER every key/value pair above so the pair wins and the value is scoped as the value it is. `transposition` precedes `transpose`, which is a prefix of it.",
                     "name": "keyword.other.lilysharp",
-                    "match": "\\b(clef|instrument|transposition|transpose|tuning|octave|removeEmpty|pedal|key)\\b"
+                    "match": "\\b(clef|instrument|transposition|transpose|tuning|octave|pitch|removeEmpty|pedal|key)\\b"
                 },
                 { "include": "#keywords" },
                 { "include": "#pitches" },
@@ -391,7 +399,7 @@
                 },
                 {
                     "name": "keyword.other.lilysharp",
-                    "match": "\\b(title|composer|tempo|time|partial|key|clef|fonts|paper|embedded|volta|major|minor|ionian|dorian|phrygian|lydian|mixolydian|aeolian|locrian|instrument|octave|tuning|noPageBreak|pageBreak|noBreak|break|treble_8|treble|bass_8|bass|alto|tenor|soprano|mezzosoprano|baritone|percussion)\\b"
+                    "match": "\\b(title|composer|tempo|time|partial|key|clef|fonts|paper|embedded|volta|major|minor|ionian|dorian|phrygian|lydian|mixolydian|aeolian|locrian|instrument|octave|pitch|tuning|noPageBreak|pageBreak|noBreak|break|treble_8|treble|bass_8|bass|alto|tenor|soprano|mezzosoprano|baritone|percussion)\\b"
                 }
             ]
         },

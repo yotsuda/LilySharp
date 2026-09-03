@@ -50,6 +50,13 @@ public sealed partial class MeasureCollector
     public (int step, int alt, int oct)? ScoreTranspose { get; set; }
 
     /// <summary>
+    /// <c>score … pitch concert { … }</c>: this score prints every chromatically transposing
+    /// part at what it sounds (RenderSpec.ScoreConcert). Composed onto each part's transpose
+    /// in GetPartDefaults, beside the part's own — Semantics.ConcertPitch.OutputShift.
+    /// </summary>
+    public bool ScoreConcert { get; set; }
+
+    /// <summary>
     /// The <c>title</c> / <c>composer</c> the score being collected states for itself
     /// (<c>score sub { title "Violin I" … }</c>). Set by the render pipeline before
     /// collecting, and applied by <see cref="CollectDefinitions"/> after the file-level
@@ -674,7 +681,7 @@ public sealed partial class MeasureCollector
         {
             // Part-body grob defaults (`part <voice> { override … }`) — staff 0 here.
             CollectPartBodyOverrides(tree.GetRoot(), voiceName, _cursor.StaffIndex);
-            var (partClef, partOctave, partExplicitOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(tree.GetRoot(), voiceName);
+            var (partClef, partOctave, partExplicitOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(tree.GetRoot(), voiceName, ScoreConcert);
             // The POSITION follows the clef it describes. A part without its own
             // `clef` keeps the top-level one, so overwriting the offset regardless
             // dropped it to 0 — and 0 reads as "no position", which left the clef
@@ -1035,7 +1042,7 @@ public sealed partial class MeasureCollector
             }
 
             // Set clef and octave for this voice from part definition
-            var (partClef, partOctave, partExplicitOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(tree.GetRoot(), voiceName);
+            var (partClef, partOctave, partExplicitOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(tree.GetRoot(), voiceName, ScoreConcert);
             _meta.Clef = partClef ?? "treble";
             _meta.ClefPosition = partClefPos;
             // …and remember it per VOICE: the staff built for this part carries its own
@@ -1810,7 +1817,7 @@ public sealed partial class MeasureCollector
     /// sub-collect rides its own per-part resume channel (finding 3-5).</summary>
     private ImmutableArray<Measure> CollectMelodyFor(SyntaxTree tree, RenderSpec renderSpec, string partName)
     {
-        var (partClef, _, _, _, _, _) = GetPartDefaults(tree.GetRoot(), partName);
+        var (partClef, _, _, _, _, _) = GetPartDefaults(tree.GetRoot(), partName, ScoreConcert);
         var spec = renderSpec with
         {
             Items = ImmutableArray.Create<RenderItemSpec>(

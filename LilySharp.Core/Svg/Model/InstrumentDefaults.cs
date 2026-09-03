@@ -244,7 +244,9 @@ public static class InstrumentDefaults
         // ⚠️ THIS SHIFTS PLAYBACK, NOT THE PAGE. You write what the player reads and the
         // part prints exactly that; the value here is what MIDI (and a tab's frets) apply
         // so it SOUNDS right. Writing at concert pitch and having the part transposed for
-        // you is the other convention and is NOT implemented — see the remark below.
+        // you is the other convention — `pitch concert` at the top level, since 2026-09-03 —
+        // and it reads THIS value too, negated, through the `transpose` channel
+        // (Semantics.ConcertPitch); nothing here changes for it.
         // ⚠️ A bare name takes the common member of its family, because that is the
         // instrument people mean when they write no more: clarinet and trumpet are the
         // B♭ ones, horn is in F. The other members have their own spellings.
@@ -258,20 +260,6 @@ public static class InstrumentDefaults
 
         _ => 0,
     };
-
-    /// <summary>
-    /// ⚠️ WHAT THE CONCERT-PITCH CONVENTION WOULD STILL NEED, recorded here so the next
-    /// step does not lose it. <see cref="GetTransposition"/> answers "what does this part
-    /// SOUND", which makes playback right for a part written the way its player reads it.
-    /// The other direction — write concert pitch, print a transposed part — is a separate
-    /// feature, and pitch is only half of it: a transposing part also carries its OWN KEY
-    /// SIGNATURE (an E♭ alto saxophone part of a piece in C major prints in A major).
-    /// Shifting the printed pitches without the signature would put every such part in the
-    /// wrong key, so the two have to land together, along with a way to ask for the score
-    /// at concert pitch.
-    /// </summary>
-    internal const string ConcertPitchIsNotImplemented =
-        "written pitch in, written pitch out; the preset shifts only what is heard";
 
     /// <summary>
     /// Maps a <c>transposition</c> property value (an ottava marker — <c>8va</c>,

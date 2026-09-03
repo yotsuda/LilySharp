@@ -96,7 +96,7 @@ Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
         | 'staff' | 'grandStaff' | 'staffGroup' | 'choirStaff'
         | 'condensedStaff' | 'combinedStaff' | 'tab' | 'ossia' | 'voice'
         | 'lyrics' | 'chords' | 'tuning' | 'instrument' | 'percussion' | 'drummap'
-        | 'transpose' | 'octave' | 'using' | 'break' | 'noBreak' | 'pageBreak' | 'noPageBreak' | 'partial'
+        | 'transpose' | 'octave' | 'pitch' | 'using' | 'break' | 'noBreak' | 'pageBreak' | 'noPageBreak' | 'partial'
         | 'tuplet' | 'grace' | 'acciaccatura' | 'appoggiatura' | 'cue'
         | 'repeat' | 'volta' | 'alternative' | 'embedded' | 'fonts' | 'paper'
         | 'override' | 'revert' | 'once'
@@ -176,13 +176,29 @@ MetadataKey    = 'title' | 'composer' ;
 
 ### 2.3 Global Settings
 
-GlobalSetting  = TempoDecl | TimeDecl | KeyDecl | PartialDecl | OctaveDecl ;
+GlobalSetting  = TempoDecl | TimeDecl | KeyDecl | PartialDecl | OctaveDecl | PitchDecl
+               | TransposeDecl ;
 
 PartialDecl    = 'partial' , DurationToken ;
                  (* the piece-opening pickup, declared ONCE for every part; an
                     in-music 'partial' declares it per voice (or mid-piece).
                     A bare underfull first bar gets a warning suggesting this. *)
 OctaveDecl     = 'octave' , ( 'absolute' | 'relative' ) ;
+PitchDecl      = 'pitch' , PitchMode ;
+PitchMode      = 'written' | 'concert' ;
+                 (* Which convention the note letters follow for a TRANSPOSING instrument.
+                    'written' (the default): the letters are what the player reads; the part
+                    prints exactly that and only playback moves (InstrumentDefaults'
+                    sounding shift — a B♭ clarinet's c sounds b♭). 'concert': the letters
+                    are what SOUNDS, and every chromatically transposing part is printed
+                    the way its player reads it, pitches AND key signature together — an
+                    E♭ alto saxophone's c' prints as a', in A major when the piece is in C.
+                    Octave-only transposers (bass, piccolo, a 'transposition 8vb') keep
+                    their notation under both, as a concert score keeps them. A third word
+                    is refused at the word. Semantics.ConcertPitch holds the rule; the
+                    per-score 'pitch' option (ScoreDecl, §7) says how a SCORE prints. *)
+TransposeDecl  = 'transpose' , PitchToken ;
+                 (* the file default: every part that sets no 'transpose' of its own *)
 
 TempoDecl      = 'tempo' , [ Marking ] , [ DurationBase , [ Dots ] , '=' ] , [ Integer ] ,
                  [ FeelWord , [ Integer ] ] ;
@@ -458,6 +474,8 @@ PartProperty   = 'clef'          , PartClefName
                | 'transposition' , TranspositionMarker
                | 'tuning'        , TuningName
                | 'octave'        , Integer
+               | 'pitch'         , PitchMode        (* this part's convention — own wins
+                                                       over the top-level PitchDecl, §2.3 *)
                | 'removeEmpty'   , RemoveEmptyValue
                | 'pedal'         , PedalStyleName ;
                (* 'lines' left this list 2026-08-19 (user decision): the staff-line
@@ -536,7 +554,9 @@ TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;
 
 (* transposition: the part's written->sounding shift, BEYOND whatever octave the clef
    word already carries. 'transpose' moves the written pitches; 'transposition' states
-   that the written pitches sound elsewhere. *)
+   that the written pitches sound elsewhere. A chromatic transposer's shift comes from
+   its 'instrument' preset (clarinet −2, alto-sax −9, …); under the file-level
+   'pitch concert' (§2.3) that same shift, negated, is what the part is PRINTED by. *)
 
 (* pedal: how a sustain span is drawn - the 'Ped.' text, a bracket, or 'mixed'
    (text at the start, bracket for the hold). *)
@@ -822,7 +842,12 @@ NavMark        = 'segno' | 'coda' | 'fine' | 'to' 'coda'
    basename. Multiple 'score' blocks emit multiple files. MIDI has NO source block —
    it is a CLI output: `lysc midi song.lys song.mid`. *)
 
-ScoreDecl      = 'score' , Identifier , [ String ] , '{' , { ScoreItem } , '}' ;
+ScoreDecl      = 'score' , Identifier , [ String ] , { ScoreOption } , '{' , { ScoreItem } , '}' ;
+ScoreOption    = 'transpose' , PitchToken       (* this score's transpose, composed on each part's own *)
+               | 'pitch' , PitchMode ;          (* 'pitch concert': print THIS score at concert pitch —
+                                                   every chromatically transposing part shown at what it
+                                                   sounds, the conductor's score of a book written either
+                                                   way (§2.3 PitchDecl). 'pitch written' is the default. *)
                  (* The Identifier NAMES THE FORM this score renders and is REQUIRED —
                     'score "out" { … }' is refused with "A 'score' must name the form it
                     renders". The optional String is the output basename.

@@ -137,7 +137,11 @@ public static class SvgGenerator
     /// <see cref="Generate(SyntaxTree, SvgRenderOptions, string)"/> byte for byte.
     /// </summary>
     internal static MultiStaffScore CollectScore(SyntaxTree tree, RenderSpec? renderSpec)
-        => CollectScore(new MeasureCollector { ScoreTranspose = renderSpec?.ScoreTranspose },
+        => CollectScore(new MeasureCollector
+            {
+                ScoreTranspose = renderSpec?.ScoreTranspose,
+                ScoreConcert = renderSpec?.ScoreConcert ?? false,
+            },
             tree, renderSpec);
 
     /// <summary>

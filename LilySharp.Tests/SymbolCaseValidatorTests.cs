@@ -126,6 +126,8 @@ public class SymbolCaseValidatorTests
     [InlineData("octave banana")]
     [InlineData("transpose banana")]
     [InlineData("transposition banana")]
+    [InlineData("pitch banana")]
+    [InlineData("pitch Concert")]
     public void ValueTheReaderCannotRead_IsError(string header)
         => Assert.True(HasSymbolError(header));
 
@@ -139,6 +141,8 @@ public class SymbolCaseValidatorTests
     [InlineData("transpose bes,")]      // the octave mark is a token of its own
     [InlineData("transposition 8vb")]
     [InlineData("transposition 15ma")]
+    [InlineData("pitch concert")]
+    [InlineData("pitch written")]
     public void EverySpellingTheLanguageMeans_StillCompiles(string header)
         => Assert.False(HasSymbolError(header));
 

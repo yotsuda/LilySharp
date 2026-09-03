@@ -295,7 +295,9 @@ Not shown above, all in [`docs/GRAMMAR_FOR_LLM.md`](docs/GRAMMAR_FOR_LLM.md):
 - **Cue notes** — `cue { … }`, optionally read in another instrument's clef
 - **Arpeggios** — `<< c e g >>` writes a broken chord out; `@arpeggio` rolls a chord
 - **Scale degrees** — `<c 3 5>` and `<1 3 5>` spell chords by degree instead of by letter
-- **Transposing instruments**, percussion staves and `drummap`
+- **Transposing instruments** — name the `instrument` (clarinet, horn, alto-sax, …) and
+  write either what the player reads or, under `pitch concert`, what sounds; the part is
+  printed in its own key and plays at concert pitch either way — percussion staves and `drummap`
 - **Multi-file sources** — `using "other.lys"`
 
 ## Install

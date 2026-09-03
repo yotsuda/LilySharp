@@ -69,13 +69,16 @@ public sealed partial class MeasureCollector
     /// (PartHeaderDefaults.SoundingShiftSemitones); only the ANCHOR is per-mode, which is what
     /// the two modes are for. See AbsoluteModeAnchorTests.
     /// </remarks>
+    /// <param name="scoreConcert">Whether the score being collected prints at concert pitch
+    /// (<see cref="ScoreConcert"/>): its shift is composed onto the part's transpose here,
+    /// beside the part's own, so ApplyTranspose sees one interval.</param>
     // NOTE (cross-edit resume): the part-level config reads that seed a walk's entry
     // state — GetPartDefaults (clef/instrument/octave/transpose/header key) and
     // CollectPartBodyOverrides — are plan-time-checkable constants, verified by
     // CollectResumePlanner.WindowRespectsTopLevel (every part declaration's
     // non-section direct children must be content- and position-stable across the
     // edit), NOT folded into MaxSourceRead. See ProcessSection's matching note.
-    private static (string? clef, int? octave, int? explicitOctave, (int step, int alt, int oct)? transpose, int clefPos, KeySignatureSyntax? key) GetPartDefaults(SyntaxNode root, string partName)
+    private static (string? clef, int? octave, int? explicitOctave, (int step, int alt, int oct)? transpose, int clefPos, KeySignatureSyntax? key) GetPartDefaults(SyntaxNode root, string partName, bool scoreConcert)
     {
         foreach (var partDecl in root.ChildNodes().OfType<PartDeclarationSyntax>())
         {
@@ -126,7 +129,13 @@ public sealed partial class MeasureCollector
                     octave = oct;
             }
 
-            transpose = PartTranspose.Read(root, partName);
+            // The part's transpose (own, else the file default, with a concert-pitch FILE's
+            // instrument shift inside it — PartTranspose.Read), then a concert-pitch SCORE's
+            // shift back to sounding pitch on top: with both, a transposing part prints
+            // what the letters say, as ConcertPitch's table spells out.
+            transpose = PitchTransposer.NullIfIdentity(PitchTransposer.Compose(
+                PartTranspose.Read(root, partName),
+                ConcertPitch.OutputShift(scoreConcert, partDecl)));
 
             // Resolve clef: explicit > instrument > null
             string? resolvedClef = clef;

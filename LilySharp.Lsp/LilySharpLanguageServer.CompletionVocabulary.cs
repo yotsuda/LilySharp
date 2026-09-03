@@ -185,7 +185,7 @@ public sealed partial class LilySharpLanguageServer
     private static readonly string[] PartPropertyOrder =
     {
         "clef", "instrument", "tuning", "octave", "transpose",
-        "transposition", "pedal", "removeEmpty",
+        "transposition", "pitch", "pedal", "removeEmpty",
     };
 
     // Prose per property, and whether the editor has a VALUE list to enumerate for it.
@@ -218,6 +218,7 @@ public sealed partial class LilySharpLanguageServer
                           + "directive and a part header refuses them", false),
             ["transpose"] = ("Transpose target pitch, e.g. `transpose d`, `transpose bes,`", false),
             ["transposition"] = ($"Sounding-octave marker ({string.Join("/", LanguageVocabulary.TranspositionMarkers)})", false),
+            ["pitch"] = ($"This part's pitch convention for a transposing instrument ({string.Join("/", LanguageVocabulary.PitchModes)}) — overrides the top-level directive", false),
             ["pedal"] = ($"Piano pedal style ({string.Join("/", LanguageVocabulary.PedalStyles)})", false),
             ["removeEmpty"] = ("Hara-kiri: hide this staff in rest-only systems "
                                + $"({string.Join(" | ", LanguageVocabulary.RemoveEmptyValues)})", true),
@@ -2252,6 +2253,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Time signature", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "key $0", Detail = "Key signature", Command = new Command { Title = "Suggest key tonic", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "octave", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "octave $0", Detail = "Octave mode: absolute | relative (default)", Command = new Command { Title = "Suggest octave mode", CommandIdentifier = "editor.action.triggerSuggest" } },
+                new CompletionItem { Label = "pitch", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "pitch ${1|concert,written|}$0", Detail = "Pitch convention for transposing instruments: concert (the letters are what sounds; the part is printed transposed) | written (default)" },
                 // `override` is a valid global default; `revert` / `once` are NOT offered at
                 // the top level — they only work in a music stream (LYS1023 otherwise).
                 // `partial` is likewise NOT offered here — a pickup belongs to a section, not
@@ -2314,7 +2316,7 @@ public sealed partial class LilySharpLanguageServer
     /// (title/composer/font/paper) and the piece-wide defaults (time/key/tempo/octave).
     /// Completion drops them once present; duplicable keywords are NOT listed here.</summary>
     private static readonly System.Collections.Generic.HashSet<string> GlobalSingletonKeywords =
-        new(StringComparer.Ordinal) { "title", "composer", "fonts", "paper", "tempo", "time", "key", "octave" };
+        new(StringComparer.Ordinal) { "title", "composer", "fonts", "paper", "tempo", "time", "key", "octave", "pitch" };
 
     /// <summary>True when <paramref name="keyword"/> appears as a whole word at the GLOBAL
     /// scope (brace depth 0) in live code — not inside a block, a string, or a comment.</summary>

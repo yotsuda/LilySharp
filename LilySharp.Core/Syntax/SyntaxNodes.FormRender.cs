@@ -682,17 +682,25 @@ public sealed partial class RenderDeclarationSyntax : SyntaxNode
     /// <summary>
     /// The optional per-score <c>transpose &lt;pitch&gt;</c> (a property node before the
     /// brace), or null. Render items are staff/tab/etc. nodes, never properties, so
-    /// a direct-child property is unambiguously the score transpose.
+    /// a direct-child property is one of the score's header options — picked by name,
+    /// since <see cref="PitchMode"/> is a second one since 2026-09-03.
     /// </summary>
-    public PropertyAssignmentSyntax? Transpose
+    public PropertyAssignmentSyntax? Transpose => HeaderOption("transpose");
+
+    /// <summary>
+    /// The optional per-score <c>pitch concert</c> / <c>pitch written</c> (a property node
+    /// before the brace), or null: how THIS score prints a transposing part
+    /// (<c>Semantics.ConcertPitch.ScoreIsConcert</c> reads it).
+    /// </summary>
+    public PropertyAssignmentSyntax? PitchMode => HeaderOption("pitch");
+
+    private PropertyAssignmentSyntax? HeaderOption(string name)
     {
-        get
-        {
-            for (int i = 1; i < SlotCount; i++)
-                if (GetChild(i) is PropertyAssignmentSyntax prop)
-                    return prop;
-            return null;
-        }
+        for (int i = 1; i < SlotCount; i++)
+            if (GetChild(i) is PropertyAssignmentSyntax prop
+                && string.Equals(prop.NameToken.Text, name, System.StringComparison.OrdinalIgnoreCase))
+                return prop;
+        return null;
     }
 }
 

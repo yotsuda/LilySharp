@@ -625,6 +625,10 @@ internal sealed class Lexer
             "transpose" => SyntaxKind.TransposeKeyword,
             "octave" => SyntaxKind.OctaveKeyword,
             "instrument" => SyntaxKind.InstrumentKeyword,
+            // `pitch concert` / `pitch written` — a file-level directive like `octave`, and a
+            // score-header option like `transpose`. Reserved 2026-09-03: 0 of the 594 tracked
+            // books use the word outside a comment (measured before the keyword was added).
+            "pitch" => SyntaxKind.PitchKeyword,
 
 
             // Navigation keywords (structure block)

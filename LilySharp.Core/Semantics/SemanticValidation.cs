@@ -171,7 +171,11 @@ public static class SemanticValidation
             // so a validator reading back the collector's recorded warnings sees exactly
             // what renders. A scoreless file has no RenderSpec and falls through to the
             // single-staff collect with no attach — nothing is auto-attached.
-            var collector = new MeasureCollector { ScoreTranspose = renderSpec?.ScoreTranspose };
+            var collector = new MeasureCollector
+            {
+                ScoreTranspose = renderSpec?.ScoreTranspose,
+                ScoreConcert = renderSpec?.ScoreConcert ?? false,
+            };
             Svg.SvgGenerator.CollectScore(collector, tree, renderSpec);
             return collector;
         }

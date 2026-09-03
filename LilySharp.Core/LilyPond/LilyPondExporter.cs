@@ -367,8 +367,16 @@ public sealed class LilyPondExporter
         var scoreTranspose = render?.Transpose is { } t
             ? Semantics.PartTranspose.ReadProperty(t)
             : null;
+        // A concert-pitch FILE's instrument shift is inside PartTranspose.Read; a
+        // concert-pitch SCORE's shift back to sounding pitch composes on top, as the
+        // collector's GetPartDefaults composes it (Semantics.ConcertPitch).
+        var scoreConcert = Semantics.ConcertPitch.OutputShift(
+            Semantics.ConcertPitch.ScoreIsConcert(render),
+            Semantics.ConcertPitch.FindPart(root, partName));
         return Semantics.PitchTransposer.Compose(
-            Semantics.PartTranspose.Read(root, partName), scoreTranspose);
+            Semantics.PitchTransposer.NullIfIdentity(Semantics.PitchTransposer.Compose(
+                Semantics.PartTranspose.Read(root, partName), scoreConcert)),
+            scoreTranspose);
     }
 
     /// <summary>

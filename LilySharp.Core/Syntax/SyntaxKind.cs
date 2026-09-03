@@ -198,6 +198,10 @@ public enum SyntaxKind : ushort
     TransposeKeyword,
     /// <summary>The <c>octave</c> keyword.</summary>
     OctaveKeyword,
+    /// <summary>The <c>pitch</c> keyword (<c>pitch concert</c> / <c>pitch written</c>: whether
+    /// the file's note letters are sounding pitches or the pitches the player reads; on a
+    /// score header, how that score prints them). See <c>Semantics.ConcertPitch</c>.</summary>
+    PitchKeyword,
     /// <summary>The <c>instrument</c> keyword.</summary>
     InstrumentKeyword,
     /// <summary>The <c>break</c> keyword (line break).</summary>

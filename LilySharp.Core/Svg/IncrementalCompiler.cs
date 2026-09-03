@@ -696,6 +696,7 @@ public sealed class IncrementalCompiler
                     var collector = new MeasureCollector
                     {
                         ScoreTranspose = spec?.ScoreTranspose,
+                        ScoreConcert = spec?.ScoreConcert ?? false,
                         WalkProbe = resumer,
                         BeamMemo = _beamMemo,
                         NestedResume = _nestedResume,
@@ -760,6 +761,7 @@ public sealed class IncrementalCompiler
         var source = new MeasureCollector
         {
             ScoreTranspose = spec?.ScoreTranspose,
+            ScoreConcert = spec?.ScoreConcert ?? false,
             WalkProbe = recorder,
             BeamMemo = _beamMemo,
             NestedResume = _nestedResume,

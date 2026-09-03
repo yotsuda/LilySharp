@@ -90,6 +90,10 @@ public static class LanguageVocabulary
     /// <summary>Every value <c>removeEmpty</c> accepts (enforced since 2026-08-19).</summary>
     public static IReadOnlyCollection<string> RemoveEmptyValues => SymbolCaseValidator.RemoveEmptyValueVocabulary;
 
+    /// <summary>The two words <c>pitch</c> takes — in a part header, at the top level and on a
+    /// score header alike (<see cref="ConcertPitch"/>).</summary>
+    public static IReadOnlyCollection<string> PitchModes => ConcertPitch.Modes;
+
     /// <summary>Every ottava marker <c>transposition</c> accepts.</summary>
     public static IReadOnlyCollection<string> TranspositionMarkers => InstrumentDefaults.TranspositionMarkers;
 

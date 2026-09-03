@@ -236,7 +236,12 @@ public sealed record RenderSpec(
     // by MeasureCollector.CollectDefinitions, the same road as HeaderOverrides.
     FontDeclarationSyntax? FontsRef = null,
     // `paper NAME [{ … }]`, same contract as FontsRef.
-    PaperDeclarationSyntax? PaperRef = null
+    PaperDeclarationSyntax? PaperRef = null,
+    // `score <Form> pitch concert { … }`: print this score at CONCERT pitch — every
+    // chromatically transposing part shown at what it sounds, the conductor's score
+    // (Semantics.ConcertPitch). False = written pitch, the default and what every score
+    // printed before the option existed.
+    bool ScoreConcert = false
 )
 {
     /// <summary>

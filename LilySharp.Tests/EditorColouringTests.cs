@@ -636,6 +636,8 @@ public class EditorColouringTests
         // Colouring the key and not the value is the reported defect with the halves swapped.
         foreach (string v in InstrumentDefaults.TranspositionMarkers)
             if (!IsColoured($"transposition {v}")) plain.Add($"transposition {v}");
+        foreach (string v in LanguageVocabulary.PitchModes)
+            if (!IsColoured($"pitch {v}")) plain.Add($"pitch {v}");
         foreach (string v in SymbolCaseValidator.TuningValueVocabulary)
         {
             // ⚠️ BOTH positions. A tuning name is also the value of `tab NAME` in a score
@@ -666,6 +668,7 @@ public class EditorColouringTests
             ["pedal"] = SymbolCaseValidator.PedalValueVocabulary,
             ["removeEmpty"] = SymbolCaseValidator.RemoveEmptyValueVocabulary,
             ["transposition"] = InstrumentDefaults.TranspositionMarkers,
+            ["pitch"] = LanguageVocabulary.PitchModes,
         };
 
         string[] stray = [.. PartHeaderPairsInTheGrammar()

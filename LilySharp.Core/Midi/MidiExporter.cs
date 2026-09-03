@@ -88,6 +88,9 @@ public sealed class MidiExporter
     // Score-wide `transpose` default (a free-standing top-level transpose),
     // computed once; a part's own transpose overrides it.
     private (int step, int alt, int oct)? _scoreTransposeDefault;
+    // Whether the file is written at concert pitch (`pitch concert`), read once per export
+    // like the transpose default above — ConcertPitch.FileIsConcert.
+    private bool _fileConcert;
 
     // Per-PART relative-pitch state WITHIN one section, so a part whose music is split
     // over more than one block picks its own chain up again instead of inheriting the
@@ -324,6 +327,7 @@ public sealed class MidiExporter
                 _partDecls.TryAdd(pd.Name.Text, pd); // first-wins, matching the old first-match scans
         }
         _scoreTransposeDefault = PartTranspose.ReadScoreDefault(_root);
+        _fileConcert = ConcertPitch.FileIsConcert(_root);
         _homeTonic = ScoreHomeKey.Read(_root);
         _ambientTonic = _homeTonic;
         _homeKeySharps = ScoreHomeKey.Sharps(_root);
@@ -389,18 +393,7 @@ public sealed class MidiExporter
             case PartBlockSyntax partBlock:
                 // A section's `partName { ... }` block: arm the part's transpose
                 // (sounding-pitch shift) for the notes inside, then disarm it.
-                // Part's own transpose (from the cached declaration) overrides the
-                // score-wide default — same result as PartTranspose.Read(root, name),
-                // without the per-call tree scan.
-                var transpose = (_partDecls.TryGetValue(partBlock.Name, out var tpd)
-                    ? PartTranspose.Read(tpd) : null) ?? _scoreTransposeDefault;
-                // The instrument's SOUNDING shift (bass 8vb, guitar treble_8, piccolo
-                // 8va) composes on top of any `transpose` option: both move the played
-                // pitch, so the .mid sounds what the instrument really produces —
-                // matching the tab. The clef octave + `transposition` property.
-                _currentTransposeSemitones = (transpose is { } t
-                    ? PitchTransposer.IntervalSemitones(t.step, t.alt, t.oct)
-                    : 0) + PartSoundingShift(partBlock.Name);
+                _currentTransposeSemitones = PartPlaybackShift(partBlock.Name);
                 ProcessChildren(partBlock, track, conductorTrack);
                 _currentTransposeSemitones = 0;
                 break;
@@ -663,9 +656,13 @@ public sealed class MidiExporter
         _currentClef = Header(partName).Clef;  // a mid-music `clef` is a change FROM this
         _currentTimbre = PartTimbre(partName);
         // Music without a PartBlockSyntax around it never passes the arming in ProcessNode,
-        // so the instrument's sounding shift is armed here — otherwise a bass or guitar
-        // sounded at written pitch.
-        _currentTransposeSemitones = PartSoundingShift(partName);
+        // so the part's shift is armed here — otherwise a bass or guitar sounded at
+        // written pitch. ⚠️ The SAME shift as the part-block arm, transpose included: until
+        // 2026-09-03 this line armed the sounding shift alone, so a part-major book's
+        // `transpose` (and, with it, a concert-pitch file's instrument shift) reached the
+        // page and not the .mid — measured on `part x { transpose d section A { c1 | } }`,
+        // which played C4 where the section-major spelling of the same book played D4.
+        _currentTransposeSemitones = PartPlaybackShift(partName);
         body();
         _partPitchLanes[partName] = (_currentNoteName, _currentOctave, _defaultDuration);
         (_partOctaveAnchor, _partAbsoluteBase) = (4, 4);
@@ -1072,6 +1069,30 @@ public sealed class MidiExporter
     /// the tab. Shares the same resolution as the tab's fret shift.
     /// </summary>
     private int PartSoundingShift(string partName) => Header(partName).SoundingShiftSemitones;
+
+    /// <summary>
+    /// Everything between the letters a part is written with and the pitch the .mid plays:
+    /// the part's <c>transpose</c> (its own option, else the file default, with a
+    /// concert-pitch file's instrument shift composed in — the same answer as
+    /// <c>PartTranspose.Read(root, name)</c>, from the cached declaration and without the
+    /// per-call tree scan), plus the instrument's SOUNDING shift (bass 8vb, guitar treble_8,
+    /// piccolo 8va, a clarinet's −2). Both move the played pitch, so the .mid sounds what
+    /// the instrument really produces — matching the tab.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ For a concert-pitch file the two halves CANCEL for a chromatic transposer — an
+    /// alto saxophone's <c>c'</c> is printed <c>a'</c> (+9) and sounds <c>c'</c> (−9) — and
+    /// the cancellation happens exactly once because the instrument shift enters through
+    /// the transpose reader and nowhere else (ConcertPitch's remarks).
+    /// </remarks>
+    private int PartPlaybackShift(string partName)
+    {
+        var decl = _partDecls.TryGetValue(partName, out var pd) ? pd : null;
+        var written = (decl != null ? PartTranspose.Read(decl) : null) ?? _scoreTransposeDefault;
+        var transpose = PitchTransposer.Compose(ConcertPitch.InputShift(_fileConcert, decl), written);
+        return (transpose is { } t ? PitchTransposer.IntervalSemitones(t.step, t.alt, t.oct) : 0)
+            + PartSoundingShift(partName);
+    }
 
     /// <summary>The part's octave anchor, resolved the way the page resolves it, so a bare
     /// <c>c</c> sounds at the octave it prints.</summary>

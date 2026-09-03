@@ -174,7 +174,8 @@ public static class RenderSpecParser
         var form = ResolveForm(render, formName);
 
         return new RenderSpec(name, outputFile, [.. items], scoreTranspose, form,
-            [.. headerOverrides], fontsRef, paperRef);
+            [.. headerOverrides], fontsRef, paperRef,
+            ScoreConcert: LilySharp.Core.Semantics.ConcertPitch.ScoreIsConcert(render));
     }
 
     /// <summary>

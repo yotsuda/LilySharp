@@ -46,8 +46,8 @@ public class InstrumentTranspositionMidiTests
     /// <summary>
     /// A part written the way its player reads it SOUNDS where the instrument really is.
     /// The page is untouched — this is the sounding side only; writing at concert pitch and
-    /// having the part transposed for you is the other convention and is not implemented
-    /// (InstrumentDefaults.ConcertPitchIsNotImplemented).
+    /// having the part transposed for you is the other convention, <c>pitch concert</c>
+    /// (ConcertPitchTests, where the same presets play the letter that was written).
     /// </summary>
     [Theory]
     [InlineData("flute", 72)]        // control: sounds as written
