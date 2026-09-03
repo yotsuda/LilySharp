@@ -230,7 +230,7 @@
 - **:1759** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
 - **:3413** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/MidiExporter.cs`
-- **:2088** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+- **:2092** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
 - **:68** LILYSHARP-OWN: LilyPond's q takes no marks, so there is nothing to port.
 ### `LilySharp.Core/Parser/Parser.Music.cs`

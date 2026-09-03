@@ -111,10 +111,14 @@ fourth or less), and `'`/`,` shift from there.
 
 **`octave absolute`** switches that off: bare `c` is always C4, and `'`/`,` are absolute
 offsets from it (`c'` = C5, `c,` = C3), resolved independently per note. A wrong octave
-then stays one wrong note instead of cascading through everything after it — which is why
-it is the recommended mode when a tool, or a person, writes notes it cannot immediately
-hear. Write it at the top level, in a part header, or mid-music; `part bass { octave 3 }`
-re-anchors a low part so commas do not pile up.
+then stays one wrong note instead of cascading through everything after it.
+
+Relative is the default and the one to write by hand — it is shorter, and it is how a
+player reads music anyway. Absolute earns its extra marks when something other than a
+person is doing the writing: a generator, an importer, or an AI producing a score it
+cannot hear back, where a mistake that stays local is worth paying for. Write it at the
+top level, in a part header, or mid-music; `part bass { octave 3 }` re-anchors a low part
+so commas do not pile up.
 
 ```lilysharp
 octave absolute

@@ -41,6 +41,59 @@ public class InstrumentTranspositionMidiTests
         return midi.Tracks[1].Notes[0].Pitch;
     }
 
+    // --- The chromatic transposers: written pitch in, transposed pitch heard ---
+
+    /// <summary>
+    /// A part written the way its player reads it SOUNDS where the instrument really is.
+    /// The page is untouched — this is the sounding side only; writing at concert pitch and
+    /// having the part transposed for you is the other convention and is not implemented
+    /// (InstrumentDefaults.ConcertPitchIsNotImplemented).
+    /// </summary>
+    [Theory]
+    [InlineData("flute", 72)]        // control: sounds as written
+    [InlineData("oboe", 72)]         // control
+    [InlineData("trumpet-c", 72)]    // control: the C trumpet does not transpose
+    [InlineData("clarinet", 70)]     // in B♭, a major 2nd down
+    [InlineData("trumpet", 70)]      // in B♭
+    [InlineData("clarinet-a", 69)]   // in A, a minor 3rd down
+    [InlineData("horn", 65)]         // in F, a perfect 5th down
+    [InlineData("french-horn", 65)]
+    [InlineData("soprano-sax", 70)]  // in B♭
+    [InlineData("alto-sax", 63)]     // in E♭, a major 6th down
+    [InlineData("tenor-sax", 58)]    // in B♭, a major 9th down
+    [InlineData("baritone-sax", 51)] // in E♭, an octave and a major 6th down
+    public void AChromaticTransposer_SoundsWhereTheInstrumentIs(string preset, int expected)
+        // ⚠️ `octave absolute` on purpose: a preset also moves the RELATIVE anchor (a flute
+        // part anchors at 5), and that would mix a second variable into a test about the
+        // sounding shift. Absolute pins the written note at C5 = 72 for every row, so the
+        // only thing that can move the answer is the transposition being measured.
+        => Assert.Equal(expected, FirstPitch(
+            $"octave absolute\npart x {{ instrument {preset} section A {{ c'1 | }} }}"));
+
+    /// <summary>
+    /// ⚠️ Every saxophone is named after a VOICE range, and the MIDI timbre families are
+    /// substring tests read in order — so 'alto-sax' matched "alto" and played as a choir
+    /// until the reed test moved above the voice test. The control is the voice itself,
+    /// which must still be a voice.
+    /// </summary>
+    [Theory]
+    [InlineData("alto-sax", 2)]
+    [InlineData("tenor-sax", 2)]
+    [InlineData("soprano-sax", 2)]
+    [InlineData("baritone-sax", 2)]
+    [InlineData("voice-alto", 8)]     // the control
+    [InlineData("voice-tenor", 8)]    // the control
+    public void ASaxophoneIsAReed_NotAVoice(string preset, int expectedTimbre)
+    {
+        var tree = SyntaxTree.Parse(
+            "time 4/4\nkey c major\n"
+            + $"part x {{ instrument {preset} section A {{ c'1 | }} }}"
+            + "\nform main { A }\nscore main { staff x }");
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+        var midi = new MidiExporter().Export(tree);
+        Assert.Equal(expectedTimbre, midi.Tracks[1].Notes[0].Timbre);
+    }
+
     [Fact]
     public void Bass_SoundsOctaveBelowWrittenBassClef()
     {

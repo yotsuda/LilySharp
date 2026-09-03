@@ -1,0 +1,80 @@
+EditKeystrokeBench / PreviewUpdateBench — Release, quiet window (user granted), 2026-09-03
+==========================================================================================
+Answers HANDOFF §1's standing perf item: price the system-count loop + the break gate's
+per-line SOLVE that session 323 introduced (38cb4dad), in Release rather than Debug.
+
+MACHINE / CONFIG.  Windows, Release, `dotnet test -c Release --no-build`.  Each row is the
+bench's own floor = min of 14 rounds after 2 warmups; the column value is the MIN OF THREE
+SUCH RUNS (RULES: measure the same book three times, a single sample says nothing).
+Regime control printed by the bench itself: every EditKeystrokeBench row on every commit
+reported `gateMoved True  reusedLayout False`, which is the bench's stated condition for a
+clean before/after comparison.
+
+WHY FOUR POINTS.  The handoff named base a8ae0ad6, but a8ae0ad6 -> HEAD spans two spacing
+commits plus F2, so a two-point A/B cannot say what the SOLVE costs.  The two middle
+commits split it.
+
+  a8ae0ad6  session 322 end (before both spacing commits)
+  ccab465f  bar-line pairs carry LilyPond's column rods      (session 323 ⑴)
+  38cb4dad  the break gate SOLVES each candidate line        (session 323 ⑵)  <- the subject
+  2a37fbf2  + F2 (mark X) + session p325 docs/instrument commits
+
+EditKeystrokeBench — regime ⑶ (a real one-note edit; the gate moves and layout runs).
+floor ms, min of 3 runs:
+
+  book                a8ae0ad6   ccab465f   38cb4dad   2a37fbf2
+  perf-plain1k           114.3      118.2      127.5      127.7
+  perf-fingbeam1k        174.2      179.0      194.1      196.9
+  perf-v2bow1k           153.9      141.9      246.3      257.4
+
+step cost (floor):
+  ccab465f  (rods)      +3.4%      +2.8%      -7.8%   <- free; v2bow1k got FASTER
+  38cb4dad  (solve)     +7.9%      +8.4%     +73.6%   <- the whole cost
+  -> 2a37fbf2           +0.2%      +1.4%      +4.5%   <- noise
+
+⇒ THE SOLVE IS THE COST, AND IT IS CONCENTRATED.  ~8% on the two single-voice books,
++74% on perf-v2bow1k — the two-voice bowing book, i.e. the one with the most springs per
+candidate line, which is exactly where SpringSolver has the most to do.  The shape of the
+cost matches the mechanism; it is not a flat tax.
+
+PreviewUpdateBench — regime ⑴ (unchanged tree; whole-layout reuse fires, so the break DP
+does not run at all).  THE CONTROL: the change must not reach here.
+keystroke floor ms, min of 2 runs, a8ae0ad6 vs 2a37fbf2:
+
+  perf-plain1k        60.8 -> 60.8      perf-fingbeam1k     67.9 -> 67.3
+  perf-comb300        21.1 -> 21.8      perf-fingslur300     5.0 ->  4.9
+  perf-fingstack1k    50.7 -> 45.2      perf-slur300         5.4 ->  4.8
+  perf-slurinside1k   30.7 -> 30.1      perf-figbass100      1.2 ->  1.2
+  perf-slurscript1k   29.0 -> 25.6
+
+⇒ Nothing moves (the largest change is head being slightly FASTER).  The cost lives in the
+break gate, not in collect / content keys / render.
+
+⚠️ TWO HONEST LIMITS ON THE ABOVE.
+⑴ perf-v2bow1k is NOT on the PreviewUpdateBench shelf.  Regime ⑴ was controlled on the
+   other nine books, NOT on the book that carries the regression.
+⑵ The bench's `svg` column shows base and head produce DIFFERENT pages for seven of the
+   nine preview books (plain1k and comb300 are byte-identical).  That is the intended
+   output change of sessions 323/324, so these numbers price NEW BEHAVIOUR — they are not
+   a regression on identical work.  Read them as "what the fidelity costs", not as "what
+   broke".
+
+⚠️ MEDIANS ARE NOT USED ABOVE and are much noisier (one run put perf-plain1k's median at
+415 ms on the middle commit and 222 ms on the base).  Floors are the bench's headline and
+the only column stable enough to compare.  A first pass of this measurement used ONE run
+per side and read perf-plain1k as +72%; three runs put it at +9%.  The single sample was
+wrong, in the direction that would have overstated the finding.
+
+FEEDS THE STANDING DECISION.  Session 323 ⑶ left "revert 38cb4dad?" open (session 323's own
+recommendation, reaffirmed by session 324 ⑴⒣, is DO NOT revert: the corpus losses were all
+explained and none was a gate regression).  This is the price side of that same decision,
+which had never been quantified in Release: +74% on the heaviest book's real-edit keystroke.
+No recommendation is made here — the fidelity argument and this number are for the user to
+weigh together.
+
+Raw per-run files: scratch/p325/perf/ (git-ignored; regenerate with the commands in the
+session log).  Worktrees left in place for the next measurement:
+  C:\MyProj\LilySharp-perfbase-a8ae    a8ae0ad6
+  C:\MyProj\LilySharp-perfmid-ccab     ccab465f
+  C:\MyProj\LilySharp-perfsolve-38cb   38cb4dad
+⚠️ C:\MyProj\LilySharp-base is at cc19cccc, NOT a8ae0ad6 — do not reuse it as "the base".

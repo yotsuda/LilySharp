@@ -1054,8 +1054,12 @@ public sealed class MidiExporter
         if (Has("bass")) return 5;
         if (Has("trumpet", "horn", "trombone", "tuba", "brass", "cornet")) return 6;
         if (Has("organ", "harmonium", "accordion")) return 7;
-        if (Has("voice", "soprano", "alto", "tenor", "bariton", "choir", "vocal", "upper", "lower")) return 8;
+        // ⚠️ THE REEDS COME BEFORE THE VOICES. These are substring tests read in order,
+        // and every saxophone is named after a voice range: 'alto-sax' matched "alto" and
+        // played as a CHOIR before this line moved up. The voice test is the general one,
+        // so it goes last among the families that can collide with it.
         if (Has("oboe", "bassoon", "sax")) return 2;
+        if (Has("voice", "soprano", "alto", "tenor", "bariton", "choir", "vocal", "upper", "lower")) return 8;
         return 0; // piano-ish default
     }
 

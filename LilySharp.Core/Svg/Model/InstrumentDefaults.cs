@@ -74,11 +74,17 @@ public static class InstrumentDefaults
             // Woodwinds
             "flute" or "piccolo" => (ClefType.Treble, 5),
             "oboe" => (ClefType.Treble, 4),
-            "clarinet" => (ClefType.Treble, 4),
+            "clarinet" or "clarinet-a" => (ClefType.Treble, 4),
             "bassoon" => (ClefType.Bass, 3),
-            
+
+            // Saxophones. Every one of them READS treble, whatever it sounds — and each
+            // needs its own spelling because "alto" and "tenor" are already the VOICE
+            // presets, and a saxophone is not a voice.
+            "soprano-sax" or "alto-sax" or "tenor-sax" or "baritone-sax"
+                => (ClefType.Treble, 4),
+
             // Brass
-            "trumpet" => (ClefType.Treble, 4),
+            "trumpet" or "trumpet-c" => (ClefType.Treble, 4),
             "horn" or "french-horn" => (ClefType.Treble, 4),
             "trombone" => (ClefType.Bass, 3),
             "tuba" => (ClefType.Bass, 2),
@@ -232,8 +238,40 @@ public static class InstrumentDefaults
         "bass" or "bass-guitar" or "electric-bass" or "contrabass" or "double-bass"
             or "bass5" or "5-string-bass" or "bass6" or "6-string-bass" => -12,
         "piccolo" => 12,
+
+        // The CHROMATIC transposers. Written C sounds the named pitch, so the shift is
+        // negative for every instrument that sounds below what it reads.
+        // ⚠️ THIS SHIFTS PLAYBACK, NOT THE PAGE. You write what the player reads and the
+        // part prints exactly that; the value here is what MIDI (and a tab's frets) apply
+        // so it SOUNDS right. Writing at concert pitch and having the part transposed for
+        // you is the other convention and is NOT implemented — see the remark below.
+        // ⚠️ A bare name takes the common member of its family, because that is the
+        // instrument people mean when they write no more: clarinet and trumpet are the
+        // B♭ ones, horn is in F. The other members have their own spellings.
+        "clarinet" or "trumpet" or "soprano-sax" => -2,   // in B♭
+        "clarinet-a" => -3,                               // in A
+        "trumpet-c" => 0,                                 // in C — sounds as written
+        "horn" or "french-horn" => -7,                    // in F
+        "alto-sax" => -9,                                 // in E♭
+        "tenor-sax" => -14,                               // in B♭, an octave lower
+        "baritone-sax" => -21,                            // in E♭, an octave lower
+
         _ => 0,
     };
+
+    /// <summary>
+    /// ⚠️ WHAT THE CONCERT-PITCH CONVENTION WOULD STILL NEED, recorded here so the next
+    /// step does not lose it. <see cref="GetTransposition"/> answers "what does this part
+    /// SOUND", which makes playback right for a part written the way its player reads it.
+    /// The other direction — write concert pitch, print a transposed part — is a separate
+    /// feature, and pitch is only half of it: a transposing part also carries its OWN KEY
+    /// SIGNATURE (an E♭ alto saxophone part of a piece in C major prints in A major).
+    /// Shifting the printed pitches without the signature would put every such part in the
+    /// wrong key, so the two have to land together, along with a way to ask for the score
+    /// at concert pitch.
+    /// </summary>
+    internal const string ConcertPitchIsNotImplemented =
+        "written pitch in, written pitch out; the preset shifts only what is heard";
 
     /// <summary>
     /// Maps a <c>transposition</c> property value (an ottava marker — <c>8va</c>,
@@ -294,9 +332,11 @@ public static class InstrumentDefaults
         "bass-guitar", "electric-bass", "bass5", "5-string-bass", "bass6", "6-string-bass",
         "ukulele", "uke",
         // Woodwinds
-        "flute", "piccolo", "oboe", "clarinet", "bassoon",
+        "flute", "piccolo", "oboe", "clarinet", "clarinet-a", "bassoon",
+        // Saxophones — their own names, because "alto" and "tenor" are voices
+        "soprano-sax", "alto-sax", "tenor-sax", "baritone-sax",
         // Brass
-        "trumpet", "horn", "french-horn", "trombone", "tuba",
+        "trumpet", "trumpet-c", "horn", "french-horn", "trombone", "tuba",
         // Voice
         "soprano", "voice-soprano", "alto", "voice-alto",
         "tenor", "voice-tenor", "voice-bass",
