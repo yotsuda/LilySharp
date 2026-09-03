@@ -1,8 +1,10 @@
 // lilypond-src/input/regression/chord-names-rests.ly の Lily# 訳。
 // CLAIM: chords 行では通常の休符(r)も複数小節休符(R)も noChordSymbol("N.C.")を
-// 印字し、スキップ(s)は何も印字しない。
+// 印字し、LP のスキップ(s)にあたる小節は何も印字しない。
 // LP 原本は小節線なし——Lily# の chords 行 idiom に合わせ | で区切る(同じ 3 小節)。
-// chords 行の r/s/R 対応はこの本の翻訳で追加(ChordRow_RestsPrintNC が観測者)。
+// chords 行の r/R 対応はこの本の翻訳で追加(ChordRow_RestsPrintNC が観測者)。
+// Lily# の chords 行に `s` は無い(2026-09-04・ユーザー決定): 何も刷らない slot は
+// 小節頭の `.`、空の小節は `| |`。ここは LP の s1 の小節を `.` で写す。
 octave absolute
 time 4/4
 
@@ -10,7 +12,7 @@ part v { clef treble }
 
 section Main {
   v { r1 | s1 | R1 | }
-  chords prog { r | s | R | }
+  chords prog { r | . | R | }
 }
 
 form main { ~Main }

@@ -2289,20 +2289,21 @@ internal static class LpGeometryProbes
         string chords = string.Concat(Enumerable.Repeat("C | ", 4)).Trim();
         string outer = rows == Rows.None ? "" : $"\n  chords prog {{ {chords} }}";
         string middle = rows == Rows.Every ? outer : "";
-        // ⚠️ THE LAST SECTION IS ITS OWN STRING, and only Rows.AlternatingLate uses it. `s` in
-        // a chord row is a SPACER -- it takes one slot of the bar's grid and prints nothing
-        // (Parser.Sections' chord-row entry arm) -- so this row fills the same four bars with
-        // one fewer chord, its first standing one bar further right. That is the whole
-        // variable ROWMX exists to move; see ROWM's remark for what it decides.
+        // ⚠️ THE LAST SECTION IS ITS OWN STRING, and only Rows.AlternatingLate uses it. A
+        // bar-head `.` in a chord row is the SILENT slot -- it takes one slot of the bar's
+        // grid and prints nothing (ChordNameCollector.ForEachSlotGroup; it was the `s`
+        // spacer until 2026-09-04) -- so this row fills the same four bars with one fewer
+        // chord, its first standing one bar further right. That is the whole variable ROWMX
+        // exists to move; see ROWM's remark for what it decides.
         string late = string.Concat(Enumerable.Repeat("C | ", 3)).Trim();
-        // ...and Rows.AlternatingEmpty takes the same slot to the other extreme: FOUR spacers,
-        // so the row occupies the same four bars with no symbol anywhere in them. The two
+        // ...and Rows.AlternatingEmpty takes the same slot to the other extreme: FOUR silent
+        // bars, so the row occupies the same four bars with no symbol anywhere in them. The two
         // together bracket the ink — AlternatingLate moves it, AlternatingEmpty removes it —
         // which is what makes "charged for the ink" and "charged for the line" separable.
-        string empty = string.Concat(Enumerable.Repeat("s | ", 4)).Trim();
+        string empty = string.Concat(Enumerable.Repeat(". | ", 4)).Trim();
         string last = rows switch
         {
-            Rows.AlternatingLate => $"\n  chords prog {{ s | {late} }}",
+            Rows.AlternatingLate => $"\n  chords prog {{ . | {late} }}",
             Rows.AlternatingEmpty => $"\n  chords prog {{ {empty} }}",
             _ => outer,
         };
@@ -11201,6 +11202,32 @@ internal static class LpGeometryProbes
     private static readonly string IRN = Score("c1 | c1 |", "IRN");
 
     /// <summary>
+    /// The opener followed by a DOWN stem: <c>Staff_spacing::get_spacing</c> adds
+    /// <c>next_notes_correction</c> to both fixed and ideal when the extremal grob is a bar
+    /// line (lily/staff-spacing.cc:206-208 Staff_spacing::get_spacing), which at a line start
+    /// it never was until the opener became the staff-bar column. For a head at position 6
+    /// the stem's overlap with the bar is 2.5 → 2.5/7 × 0.4 = 0.142857, the same number the
+    /// mid-line probes read on these four notes (<c>a''4 b'' c''' d'''</c>, 1.042857 off the
+    /// bar). LilyPond's dump: HEAD 10.867857 = <see cref="IRB"/>'s 10.725 + 0.142857, so
+    /// TIME→HEAD is 5.982857.
+    /// </summary>
+    /// <remarks>LilyPond twin: probe score ID of initial-repeat-bar.ly —
+    /// <c>\new Staff { \set Score.printInitialRepeatBar = ##t \time 4/4 \repeat volta 2 { a''4 b'' c''' d''' a''4 b'' c''' d''' } }</c>.
+    /// Lily#'s absolute <c>c</c> is LilyPond's <c>c'</c>, so the twin's <c>a''</c> is
+    /// <c>a'</c> here (the same octave reading every other probe pair uses).</remarks>
+    private static readonly string IRD = Preamble("c major") + """
+        section Main {
+          melody { a'4 b' c'' d'' | a'4 b' c'' d'' | }
+        }
+
+        form main { |: Main :| }
+
+        score main "IRD" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
     /// The same quantity on the DIGIT path, with the digit whose glyph cut Lily# gets
     /// wrong. A time signature is <c>\number</c> markup, and <c>\number</c> prepends
     /// <c>font-encoding fetaText</c> and NO font-features
@@ -14868,6 +14895,10 @@ internal static class LpGeometryProbes
             g => g.TimeSignatureToFirstNotehead()),
         new("line-start.time-to-repeat-bar", IRB,
             g => g.TimeSignatureToLineStartBarline()),
+        // …and the optical correction a DOWN stem earns off that opener (staff-spacing.cc:206),
+        // which IRB's whole notes cannot show.
+        new("line-start.time-to-first-note.initial-repeat.down-stem", IRD,
+            g => g.TimeSignatureToFirstNotehead()),
         // The DIGIT path's own three readings, which KC2's remark says these points pin and
         // which nothing pinned until now: every meter-width point above stands on a C GLYPH
         // (4/4, 2/2) or on digits whose two candidate cuts coincide — eight of the ten do.

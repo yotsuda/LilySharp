@@ -24,6 +24,11 @@ scores against LilyPond's picture of the same book.
 - **`tocoda` is gone; `to coda` is the one spelling.** The run-together word was a second
   way to write the same instruction, and one spelling per instruction is the rule that
   retired `$`. `tocoda` reads as an ordinary name now — in a form, an undefined section.
+- **A chord row has no `s`, and a `.` at a bar's head is the bar's silent slot.** The spacer
+  said nothing the row could not already say: an empty bar is `| |`, a slot with no chord
+  is `.`, and `r` prints N.C. So `| . C |` is "no chord, then C on the second beat" — it
+  used to be refused (LYS2010, retired) — and `s` in a `chords` block is reported (LYS1028)
+  with the two spellings that replace it.
 
 ### Language
 
@@ -65,6 +70,16 @@ scores against LilyPond's picture of the same book.
 - **The score preview's color scheme is a setting** — `lilysharp.preview.theme`: follow
   VS Code's theme (the default, and what the preview always did), always light (the printed
   page), or always dark (the page inverted). A change reaches every open preview at once.
+
+### Diagnostics
+
+- **A chord track's bars are no longer checked as if they held durations.** A `chords`
+  track written per section (`chords prog { section A { s | C#m | … } }`) was walked by the
+  bar check like a part, and a slot's `s` or `r` was priced as a quarter rest, so every bar
+  of a 2/4 row that held one was reported as "1/4 is less than 2/4" (LYS2001 / LYS2006). A
+  chord row is measure-relative — its entries carry no duration and divide the bar on the
+  beat grid — so its bars can be neither short nor long, and the row keeps only its own
+  grid diagnostics (LYS2009 / LYS2010).
 
 ### Engraving
 

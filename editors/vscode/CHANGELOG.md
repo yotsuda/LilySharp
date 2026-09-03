@@ -17,6 +17,9 @@ reasoning behind each one.
   one was MusicXML's. Completion and highlighting follow.
 - **`tocoda` is gone; write `to coda`** — one spelling per navigation instruction. The
   run-together word is an ordinary name now.
+- **A chord row has no `s`; a `.` at a bar's head is the silent slot** — `| . C |` is "no
+  chord, then C", `| |` an empty bar, `r` prints N.C. An `s` in a `chords` block is reported
+  with the spellings that replace it.
 - **`pageBreak` / `noPageBreak`** — the page-break pair beside `break` / `noBreak`, in a
   section's music or in a `form`; `pageBreak` breaks the system too, as LilyPond's
   `\pageBreak` does. Both are offered by the completion where `break` is.
@@ -93,6 +96,13 @@ reasoning behind each one.
   marks, with the caret after it and the name list opened there (`c4~|` + `@` gives
   `c4@|~`). A digit or an octave mark typed among a note's marks is typed on the note too:
   `c8\8(|[` + `4` gives `c4\8([`, the caret staying put.
+
+### Fixed
+
+- **A chord track's bars are no longer checked as if they held durations.** A per-section
+  `chords` track had each `s` / `r` slot priced as a quarter rest, so a 2/4 row spelled
+  `s | C#m | …` reported every such bar as too short. A chord row divides its bars on the
+  beat grid and keeps only its own grid diagnostics.
 
 ### Engraving
 

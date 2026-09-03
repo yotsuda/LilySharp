@@ -26,8 +26,9 @@ namespace LilySharp.Tests;
 /// <summary>
 /// The chord row's measure-relative placement, end to end (GRAMMAR_AUDIT 8.1):
 /// a bar's written slots — entries, rests, <c>.</c> extensions — divide it on
-/// the meter's beat grid, a <c>.</c> merges into the previous entry's time, and
-/// the two grid faults speak (LYS2009 off-grid, LYS2010 bar-head '.').
+/// the meter's beat grid, a <c>.</c> merges into the previous entry's time — or, at a
+/// bar's head, is the bar's silent slot — and the one grid fault speaks (LYS2009
+/// off-grid; the bar-head '.' was LYS2010 until 2026-09-04).
 /// </summary>
 [Trait("Category", "Unit")]
 public class ChordSlotGridTests
@@ -92,21 +93,26 @@ public class ChordSlotGridTests
     [Fact]
     public void OnTheGrid_StaysSilent()
     {
-        foreach (var row in new[] { "C |", "C F |", "C F G . |", "C F G A |" })
+        foreach (var row in new[] { "C |", "C F |", "C F G . |", "C F G A |", ". C |", "C | . |" })
             Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(Sheet(row))),
-                x => x.Code == DiagnosticCodes.ChordSlotMismatch
-                     || x.Code == DiagnosticCodes.ChordExtendAtBarHead);
+                x => x.Code == DiagnosticCodes.ChordSlotMismatch);
     }
 
+    /// <summary>
+    /// A <c>.</c> at a bar's head is the bar's SILENT slot (owner decision 2026-09-04,
+    /// HANDOFF §3): it prints nothing, its time passes, and the chord that follows lands on
+    /// the next beat of the grid. That is the one job the retired <c>s</c> spacer had — an
+    /// empty bar being <c>| |</c> — and until that day this spelling was refused (LYS2010).
+    /// </summary>
     [Fact]
-    public void ADotAtTheBarHead_HasNothingToExtend_AndSaysSo()
+    public void ADotAtTheBarHead_IsTheSilentSlot()
     {
-        // '.' never crosses a barline: `| C | . |` is LYS2010 (an ERROR — the
-        // spelling has no meaning, like a bare duration with nothing to repeat),
-        // and the slot's time still passes, so the bar keeps its width.
-        var diags = SemanticValidation.Run(SyntaxTree.Parse(Sheet("C | . |")));
-        var d = Assert.Single(diags, x => x.Code == DiagnosticCodes.ChordExtendAtBarHead);
-        Assert.Equal(DiagnosticSeverity.Error, d.Severity);
+        // | C | . G | — no chord on the second bar's first half, G on its second.
+        Assert.Equal([("C", 0.0), ("G", 0.5)], Chords(Sheet("C | . G |")));
+        // | C | . | — a bar of nothing, its width kept: no symbol, no diagnostic.
+        Assert.Equal([("C", 0.0)], Chords(Sheet("C | . |")));
+        Assert.Empty(SemanticValidation.Run(SyntaxTree.Parse(Sheet("C | . G |")))
+            .Where(x => x.Severity >= DiagnosticSeverity.Warning));
     }
 
     [Fact]

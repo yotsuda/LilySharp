@@ -20,13 +20,13 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// Surfaces the chord-row grid faults the shared collect recorded
+/// Surfaces the chord-row grid fault the shared collect recorded
 /// (<see cref="Svg.Collector.MeasureCollector.ChordRowGridWarnings"/>): a bar
 /// whose slot count fits no beat-grid shape (LYS2009 — the bar fell back to
-/// dividing equally), and a <c>.</c> at a bar's head with nothing to extend
-/// (LYS2010). Reads back what the walk that PLACES the symbols recorded, so the
+/// dividing equally). Reads back what the walk that PLACES the symbols recorded, so the
 /// diagnostic can never disagree with what is drawn (the
-/// <see cref="BeamPairingValidator"/> pattern).
+/// <see cref="BeamPairingValidator"/> pattern). A <c>.</c> at a bar's head was the
+/// second fault here (LYS2010) until 2026-09-04; it is the silent slot now.
 /// </summary>
 internal sealed class ChordRowGridValidator : ISharedCollectValidator
 {
@@ -47,24 +47,16 @@ internal sealed class ChordRowGridValidator : ISharedCollectValidator
 
         // A section replayed by the structure walks its bars once per occurrence;
         // one spelling is one fault, so report each source position once.
-        foreach (var w in warnings.DistinctBy(w => (w.SourcePosition, w.HeadDot)))
+        foreach (var w in warnings.DistinctBy(w => w.SourcePosition))
         {
             // ASCII punctuation only: these strings reach legacy-codepage consoles via the CLI.
-            if (w.HeadDot)
-                _diagnostics.Error(new TextSpan(w.SourcePosition, 1),
-                    DiagnosticCodes.ChordExtendAtBarHead,
-                    "a '.' at the start of a chord-row bar has nothing to extend - "
-                    + "a '.' never reaches across a barline. Write the chord again "
-                    + "('| C | C |', not '| C | . |'); the slot's time still passes, "
-                    + "so the rest of the bar stays where it was.");
-            else
-                _diagnostics.Warning(new TextSpan(w.SourcePosition, 1),
-                    DiagnosticCodes.ChordSlotMismatch,
-                    $"{w.SlotCount} chord slot(s) in a {w.Beats}/{w.BeatType} bar fit no "
-                    + $"beat: one slot takes the bar, a multiple of the beat count splits "
-                    + $"each beat, a divisor groups whole beats. The bar is divided "
-                    + $"equally instead; add '.' to land on beats "
-                    + $"('| C F G |' -> '| C F G . |' in 4/4).");
+            _diagnostics.Warning(new TextSpan(w.SourcePosition, 1),
+                DiagnosticCodes.ChordSlotMismatch,
+                $"{w.SlotCount} chord slot(s) in a {w.Beats}/{w.BeatType} bar fit no "
+                + $"beat: one slot takes the bar, a multiple of the beat count splits "
+                + $"each beat, a divisor groups whole beats. The bar is divided "
+                + $"equally instead; add '.' to land on beats "
+                + $"('| C F G |' -> '| C F G . |' in 4/4).");
         }
     }
 }

@@ -437,7 +437,8 @@ lyrics below. A chord entry is the SYMBOL as it prints — `C`, `Am`, `G7`, `F#m
 `Bb7`, `Gm7-5`, `C/G` — with NO durations: a bar's entries divide it on the meter's
 beat grid (one entry = the bar, two in 4/4 = halves, four = beats), and `.` holds
 the previous chord one more beat (`| C . . G7 |`; a `.` never crosses a barline).
-`r`/`R` print "N.C." in their slot, `s` prints nothing. Barlines in the source
+`r`/`R` print "N.C." in their slot; a `.` at a bar's head is the bar's SILENT slot
+(`| . C |` = no chord, then C), and there is no `s`. Barlines in the source
 (`|` `||` `|.`) are drawn, and follow the same bare-barline rule as music
 and lyrics: every written `|` closes exactly one bar, the one that OPENS the run
 included, so `| C | F |` is an empty bar and then two. A `|:` in a chord row IS a repeat,

@@ -98,6 +98,22 @@ public class ChordBlockStrayTokenTests
         Assert.Equal("別の楽譜", Source.Substring(at + 1, 4));
     }
 
+    /// <summary>
+    /// The <c>s</c> spacer left the chord row on 2026-09-04 (owner decision, HANDOFF §3): a
+    /// slot with no chord is <c>.</c> and an empty bar is <c>| |</c>, so it said nothing of
+    /// its own. It strays now, and the report names the two spellings that replace it.
+    /// </summary>
+    [Fact]
+    public void ARetiredSpacer_IsReported_NamingTheDotAndTheEmptyBar()
+    {
+        var tree = SyntaxTree.Parse(Source.Replace("{ c | f | g | c }", "{ C | s | G | C }"));
+        var d = Assert.Single(tree.Diagnostics,
+            d => d.Code == LilySharp.Core.Syntax.DiagnosticCodes.ChordBlockBadMember);
+        Assert.Contains("'s' is not a chord-row slot", d.Message);
+        Assert.Contains("'| . C |'", d.Message);
+        Assert.Contains("'| |'", d.Message);
+    }
+
     [Fact]
     public void UppercaseSymbols_ParseCleanly()
     {

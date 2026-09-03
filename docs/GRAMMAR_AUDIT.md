@@ -732,7 +732,10 @@ snapshot の再ベースは**不要**であり、**してはならない**。再
 >   `BeamingPattern.Options` の拍構造（梁と同じ 1 格子）。1 slot＝小節・拍数と同数＝拍・
 >   整数倍 k＝細分・約数＝拍の束。**外れは LYS2009（warning・等分 fallback）**、
 >   **小節頭の `.` は LYS2010（error・時間は経過）**——判定は描画と同じ walk が記録し
->   `ChordRowGridValidator` が発話（BeamPairing の型）。旧 `ChordRhythm` の 4/4 専用表
+>   `ChordRowGridValidator` が発話（BeamPairing の型）。
+>   **⇒ 2026-09-04（第328・ユーザー決定）で反転**: 小節頭の `.` は「和音の無い slot」（何も刷らず時間は経過）
+>   ＝LYS2010 は退役（番号は再利用しない）。同時に `s` を chords から外した（`| |`＝空の小節・`.`＝空 slot・
+>   `r`＝N.C. で全部書けるので、`s` だけが言うことが無かった）。旧 `s` は LYS1028 が綴りを名指す。旧 `ChordRhythm` の 4/4 専用表
 >   （3 個→4 4 2 等）は**廃止**＝3/5/6/7 個は今は診断つき等分。
 > - **費用実測**：書き換え＝corpus 15 冊＋inline @chord 3 冊＋テスト 24 file＋probe 7 site・
 >   docs 4 本・completion（挿入＝symbol そのもの・`:` 品質補完は廃止）・harmonizer（symbol を生成）・

@@ -55,6 +55,29 @@ public sealed class MeasureValidatorSectionTests
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.PickupWithoutPartial);
     }
 
+    /// <summary>
+    /// A CHORD track's sections are not bar streams: an entry carries no duration, and a
+    /// slot's <c>s</c> / <c>r</c> is a beat-grid slot, not a quarter rest. The part-major
+    /// chord form wraps its cells in the same SectionDeclaration a part does, and the
+    /// inline-music pass priced every rest slot of a 2/4 row as "1/4 is less than 2/4"
+    /// (reported 2026-09-04 on the Lambada proposal, then spelled with the `s` spacer). The
+    /// control is the same row spelled in a PART, where a bare rest IS a quarter and the
+    /// warning is right.
+    /// </summary>
+    [Fact]
+    public void ChordTrackSections_AreNotBarChecked()
+    {
+        const string chords =
+            "time 2/4\nchords prog {\n  section A { . | C | | r | G . | }\n}\n";
+        Assert.DoesNotContain(Diagnose(chords), d => d.Code == DiagnosticCodes.MeasureIncomplete
+            || d.Code == DiagnosticCodes.MeasureOverflow
+            || d.Code == DiagnosticCodes.PickupWithoutPartial);
+
+        const string part = "time 2/4\npart mel {\n  section A { s | c2 | r | }\n}\n";
+        Assert.Contains(Diagnose(part), d => d.Code == DiagnosticCodes.PickupWithoutPartial
+            || d.Code == DiagnosticCodes.MeasureIncomplete);
+    }
+
     [Fact]
     public void PartMajorSection_FullMeasures_NoWarning()
     {

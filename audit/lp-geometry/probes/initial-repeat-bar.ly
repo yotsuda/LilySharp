@@ -29,6 +29,8 @@
 %% order), at TimeSignature's (staff-bar . (extra-space . 1.0)); the head then stands off the
 %% BAR's ink by BarLine's (first-note . (semi-shrink-space . 1.3)). Dumped on 2.26.0:
 %% TIME x=4.885 ext 1.7, BAR x=7.585 ext 1.84, HEAD x=10.725 — 2.700000 and 5.840000.
+%% ID below adds the fourth point: the same column with a down stem after the opener
+%% (line-start.time-to-first-note.initial-repeat.down-stem, HEAD x=10.867857).
 %%
 %% ragged-right, like every other X probe here: force 0, so this reads the spring's ideal
 %% rather than a share of some line's stretch (see barline-spacing.ly's header).
@@ -63,3 +65,11 @@ lay =
 %% IN — the control: the same two whole notes and the same meter, no repeat anywhere. The
 %%   difference between IR and IN is the width the printed opener costs.
 \score { \new Staff { \time 4/4 c'1 c'1 } \lay "IN" }
+
+%% ID — the opener followed by a DOWN stem. Staff_spacing::get_spacing adds
+%%   next_notes_correction (lily/staff-spacing.cc:206-208) to both fixed and ideal when the
+%%   extremal grob is a bar line: for a down stem, min(overlap with the bar / 7, 1) times
+%%   StaffSpacing's stem-spacing-correction 0.4. The same four notes read 1.042857 mid-line
+%%   (barline-spacing probes, head pos 6: overlap 2.5 → 0.142857); at a LINE START the bar is
+%%   the opener and the head should stand 10.725 + 0.142857 = 10.867857 from the left edge.
+\score { \new Staff { \set Score.printInitialRepeatBar = ##t \time 4/4 \repeat volta 2 { a''4 b'' c''' d''' a''4 b'' c''' d''' } } \lay "ID" }

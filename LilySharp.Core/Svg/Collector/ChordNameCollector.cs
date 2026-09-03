@@ -198,10 +198,10 @@ internal sealed class ChordNameCollector
         var pending = new List<SyntaxNode>();
 
         // One bar's slots, placed on the meter's beat grid. r / R print the
-        // no-chord symbol at their slot; s (a skip) prints nothing; a '.' prints
-        // nothing (the previous slot's symbol holds). All occupy their slot.
+        // no-chord symbol at their slot; a '.' prints nothing (the previous slot's
+        // symbol holds — or, at a bar's head, nothing does). All occupy their slot.
         // LILYPOND-REF: scm/scheme-engravers.scm:1520-1527 Current_chord_text_engraver
-        //   — general-rest-event (r and R, not s) → currentChordText = noChordSymbol;
+        //   — general-rest-event → currentChordText = noChordSymbol;
         // LILYPOND-REF: ly/engraver-init.ly:952 noChordSymbol = "N.C.", below ignatzek-chord-names.
         void Commit()
         {
@@ -212,10 +212,9 @@ internal sealed class ChordNameCollector
             {
                 if (node is RestSyntax rest)
                 {
-                    if (rest.RestToken.Text != "s")
-                        _items.Add(new ChordNameItem(
-                            "N.C.", mi, itemIndex: -1, rest.RestToken.SourceStart, staffIndex,
-                            useTiming: true, timing: timing));
+                    _items.Add(new ChordNameItem(
+                        "N.C.", mi, itemIndex: -1, rest.RestToken.SourceStart, staffIndex,
+                        useTiming: true, timing: timing));
                 }
                 else if (node is ChordEntrySyntax entry)
                 {
@@ -263,7 +262,7 @@ internal sealed class ChordNameCollector
         if (slots == null)
         {
             _gridWarnings.Add(new ChordRowGridWarning(
-                PositionOf(items[0]), HeadDot: false, slotCount, timeBeats, timeBeatType));
+                PositionOf(items[0]), slotCount, timeBeats, timeBeatType));
             var equal = new Fraction(timeBeats, timeBeatType) * new Fraction(1, slotCount);
             var eq = System.Collections.Immutable.ImmutableArray.CreateBuilder<Fraction>(slotCount);
             for (int i = 0; i < slotCount; i++)
@@ -283,11 +282,11 @@ internal sealed class ChordNameCollector
                 dur += slots.Value[next];
                 next++;
             }
-            if (node is ChordExtendSyntax head)
-                // Nothing before it in THIS bar to extend ('.' never crosses a
-                // barline). The group stays silent but keeps its time.
-                _gridWarnings.Add(new ChordRowGridWarning(
-                    head.DotToken.SourceStart, HeadDot: true, slotCount, timeBeats, timeBeatType));
+            // A '.' opening the group at a bar's head has nothing before it in THIS bar
+            // to extend ('.' never crosses a barline): the group is the bar's silent
+            // slot — it prints nothing and keeps its time. That IS the spelling for a
+            // chord-less slot (owner decision 2026-09-04, HANDOFF §3; it was LYS2010, an
+            // error, while `s` was the spacer).
             emit(node, timing, dur);
             timing += dur;
             at = next;
@@ -515,11 +514,10 @@ internal sealed class ChordNameCollector
                     DisplayMode = mode,
                 });
             }
-            else if (node is RestSyntax rest && rest.RestToken.Text != "s")
+            else if (node is RestSyntax)
             {
-                // r / R print "N.C." at their slot; s prints nothing. All three
-                // occupy it (see ProcessRun's remark). A bar-head '.' group prints
-                // nothing either (recorded by the grid walk, LYS2010).
+                // r / R print "N.C." at their slot and occupy it (see ProcessRun's
+                // remark). A bar-head '.' group prints nothing and occupies its slot too.
                 _items.Add(new ChordNameItem(
                     "N.C.", measureIndex, itemIndex: -1, position,
                     staffIndex: staffIndex, useTiming: true, timing: timing,
@@ -587,8 +585,7 @@ internal sealed class ChordNameCollector
 
 /// <summary>One grid fault a chord-row walk recorded, surfaced by
 /// <c>ChordRowGridValidator</c>: a bar whose slot count fits no beat-grid shape
-/// (<see cref="HeadDot"/> false — the bar fell back to equal division, LYS2009),
-/// or a '.' at the head of a bar with nothing to extend (<see cref="HeadDot"/>
-/// true, LYS2010).</summary>
+/// (the bar fell back to equal division, LYS2009). A '.' at a bar's head used to be
+/// the second kind (LYS2010); since 2026-09-04 it is the silent slot and no fault.</summary>
 public readonly record struct ChordRowGridWarning(
-    int SourcePosition, bool HeadDot, int SlotCount, int Beats, int BeatType);
+    int SourcePosition, int SlotCount, int Beats, int BeatType);

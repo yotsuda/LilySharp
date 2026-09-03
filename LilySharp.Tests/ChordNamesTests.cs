@@ -298,13 +298,14 @@ public sealed class ChordNamesTests
     }
 
     [Fact]
-    public void ChordRow_RestsPrintNC_SkipsDoNot()
+    public void ChordRow_RestsPrintNC_ADotDoesNot()
     {
         // corpus: chord-names-rests.ly — r and R print the no-chord symbol
-        // ("N.C."), s prints nothing; all three advance the row. Pre-fix, rests
-        // in a chords{} block were silently dropped by stray-token recovery.
+        // ("N.C."); a bar-head '.' is the silent slot (the `s` spacer until
+        // 2026-09-04); all three advance the row. Pre-fix, rests in a chords{}
+        // block were silently dropped by stray-token recovery.
         var src = "section Main {\n  m { time 4/4 r1 | s1 | R1 | }\n" +
-                  "  chords prog { r | s | R | }\n}\n" +
+                  "  chords prog { r | . | R | }\n}\n" +
                   "form main { Main }\nscore \"x\" { chords prog  staff m }\n";
         var tree = SyntaxTree.Parse(src);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
@@ -313,6 +314,18 @@ public sealed class ChordNamesTests
         Assert.Equal(2, items.Count);
         Assert.All(items, c => Assert.Equal("N.C.", c.ChordText));
         Assert.Equal(new[] { 0, 2 }, items.Select(c => c.MeasureIndex));
+    }
+
+    [Fact]
+    public void ChordRow_TheSpacerIsGone()
+    {
+        // `s` had one job — a slot that prints nothing — and '.' has it now, so the
+        // spacer is a stray token whose report says so (ChordBlockStrayTokenTests).
+        var src = "section Main {\n  m { time 4/4 r1 | s1 | }\n" +
+                  "  chords prog { r | s | }\n}\n" +
+                  "form main { Main }\nscore \"x\" { chords prog  staff m }\n";
+        Assert.Contains(SyntaxTree.Parse(src).Diagnostics,
+            d => d.Code == DiagnosticCodes.ChordBlockBadMember);
     }
 
     // ---- Note-expansion (editor completion) --------------------------------

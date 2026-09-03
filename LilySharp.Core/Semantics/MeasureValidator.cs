@@ -178,6 +178,17 @@ internal sealed class MeasureValidator : ISemanticValidator
         if (node is ParallelExpressionSyntax)
             return;
 
+        // A chord track is not a bar stream of durations: its entries carry none and divide
+        // each bar on the meter's beat grid (ChordEntrySyntax, Svg.Collector.ChordRhythm), so
+        // a bar of it can be neither underfull nor overfull and the grid walk owns its own
+        // diagnostics (LYS2010). The part-major form wraps its cells in
+        // SectionDeclarationSyntax, which ValidateSectionInlineMusic would otherwise read as
+        // inline music — pricing a slot's `s` / `r` as a QUARTER rest and reporting every
+        // bar that holds one as "1/4 is less than 2/4" (reported 2026-09-04 on the Lambada
+        // proposal, a 2/4 row spelled `s | C#m | …`).
+        if (node is ChordPartBlockSyntax)
+            return;
+
         switch (node)
         {
             case MusicBlockSyntax block:

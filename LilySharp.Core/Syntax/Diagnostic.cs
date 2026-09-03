@@ -884,11 +884,11 @@ public static class DiagnosticCodes
     /// count: <c>| C F G |</c> → <c>| C F G . |</c>).</summary>
     public const string ChordSlotMismatch = "LYS2009";
 
-    /// <summary>Measure error: a <c>.</c> at the head of a chord-row bar has no
-    /// entry before it in that bar to extend — a <c>.</c> never crosses a barline
-    /// (write <c>| C | C |</c>, not <c>| C | . |</c>). The slot still counts, so
-    /// the bar's grid stays honest; the slot itself prints nothing.</summary>
-    public const string ChordExtendAtBarHead = "LYS2010";
+    // ⚠️ LYS2010 (ChordExtendAtBarHead) IS RETIRED — 2026-09-04, owner decision (HANDOFF §3),
+    // and the number is not reused. It refused a `.` at the head of a chord-row bar as
+    // having nothing to extend. That `.` IS the spelling for a slot with no chord now
+    // (`| . C |`; an empty bar is `| |`, and `r` prints N.C.), so the `s` spacer, whose only
+    // job that was, went with it (Parser.Sections' chord-row arm names the retired spelling).
 
     /// <summary>Chord error: a top-level chords track in a part-major file is written
     /// flat; it must group its bars by section (<c>chords prog { section A { … } }</c>).

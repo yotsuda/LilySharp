@@ -712,8 +712,10 @@ Quality        = { 'm' | 'maj' | 'dim' | 'aug' | 'sus' | 'add' | Integer
                     a divisor groups whole beats — anything else warns (LYS2009)
                     and divides equally. '.' holds the previous chord one more
                     slot ('| C . . G7 |' in 4/4 = C for three beats) and never
-                    crosses a barline (a bar-head '.' is LYS2010). r/R print
-                    N.C. in their slot, s prints nothing — each occupies one. *)
+                    crosses a barline: at a bar's head it is the bar's SILENT
+                    slot ('| . C |' = no chord, then C on the second beat), and
+                    '| |' is an empty bar. r/R print N.C. in their slot — each
+                    occupies one. There is no 's' (retired 2026-09-04). *)
 
 (* Example (the track sings its melody; the score attaches it under that staff —
    or, as 'lyrics words' among the score items, shows ONLY the words at the

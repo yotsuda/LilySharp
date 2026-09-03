@@ -307,13 +307,18 @@ internal sealed partial class Parser
         // LilyPond-shaped 'a:m' / 'g2:7' that Lily# used until 2026-08-23), or a
         // bare lowercase root by analogy with it.
         bool looksLikeRetiredEntry = SyntaxFacts.IsPitchKind(Current.Kind);
+        // The spacer was accepted until 2026-09-04; its two jobs already had spellings.
+        bool isRetiredSpacer = Current.Kind == SyntaxKind.RestS;
         _diagnostics.Error(span, DiagnosticCodes.ChordBlockBadMember,
             looksLikeRetiredEntry
                 ? $"A chord is written the way it PRINTS: an UPPERCASE root with '#'/'b' "
                   + $"and a bare quality ('Am', 'G7', 'F#m', 'Bb'). The lowercase ':' entry "
                   + $"('a:m', 'g2:7') and its durations were replaced: a bar's entries divide "
                   + $"it on the beat grid, and '.' holds the previous chord one more beat."
-                : $"'chords' takes chord symbols ('Am', 'G7'), '.', rests and barlines; "
+                : isRetiredSpacer
+                ? $"'s' is not a chord-row slot any more: write '.' for a slot with no chord "
+                  + $"('| . C |'), '| |' for an empty bar, and 'r' to print N.C."
+                : $"'chords' takes chord symbols ('Am', 'G7'), '.', 'r'/'R' (N.C.) and barlines; "
                   + $"'{text}' is none of these.");
         return Advance();
     }
@@ -342,12 +347,15 @@ internal sealed partial class Parser
         // parser's business — ChordNameCollector resolves it against the key at the bar.
         if (StartsRomanChordEntry())
             return ParseChordEntry();
-        // r / s / R in a chord row: rests print the no-chord symbol, spacers
-        // print nothing; each occupies ONE SLOT of the grid (no duration — a
-        // glued digit falls to the stray-token report like any other).
+        // r / R in a chord row: a rest prints the no-chord symbol and occupies ONE
+        // SLOT of the grid (no duration — a glued digit falls to the stray-token
+        // report like any other).
         // LILYPOND-REF: scm/scheme-engravers.scm:1520-1527 Current_chord_text_engraver
         //   — general-rest-event sets currentChordText to noChordSymbol.
-        if (Current.Kind is SyntaxKind.RestR or SyntaxKind.RestS or SyntaxKind.RestR_Full)
+        // ⚠️ NOT `s` (owner decision 2026-09-04, HANDOFF §3): a silent slot is spelled
+        // '.' — at a bar's head too — and an empty bar '| |', so the spacer said nothing
+        // those two do not; it falls to the stray report, which names the spelling.
+        if (Current.Kind is SyntaxKind.RestR or SyntaxKind.RestR_Full)
             return new RestGreen(Advance(), null);
         return null;
     }

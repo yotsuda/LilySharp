@@ -2066,6 +2066,13 @@
       "residual": 0.0,
       "why": "Meter anchor to the LEFT ink edge of the .|: that opens the piece: 1.7 of meter + 1.0, the (staff-bar . (extra-space . 1.0)) entry of TimeSignature.space-alist (scm/define-grobs.scm:3953), because at a line start the staff-bar column comes AFTER the meter (:668-683, begin of line: ... key-signature time-signature staff-bar ...) -- mid-line the bar comes first and it is the meter that is spaced off the bar (BarLine (time-signature . (extra-space . 0.75)), the courtesy.meter.barline-to-meter points). Splits the column its sibling line-start.time-to-first-note.initial-repeat reads whole, so a residual there can be laid at the bar's door or the head's. LilyPond's dump: TIME x=4.885 ext 1.7, BAR x=7.585 ext 1.84. Lily#: the prefix's PrefixColumns.BarX (BreakAlignSpacing.SolvePrefixColumns), which the pen draws the measure's start bar line at (MultiStaffLayouter.LineStartBarGap, one derivation for the staff, the tab and the span bar). Exact on its first run, 2026-09-04."
     },
+    "line-start.time-to-first-note.initial-repeat.down-stem": {
+      "probe": "initial-repeat-bar.ly",
+      "score": "ID",
+      "lilypond": 5.982857,
+      "residual": 0.0,
+      "why": "IR's column with a DOWN stem after the opener: 5.840000 + 0.142857, the optical correction Staff_spacing::get_spacing adds to both fixed and ideal when the extremal break-aligned grob is a bar line (lily/staff-spacing.cc:206-208 next_notes_correction, :43-67 optical_correction = min(stem-bar overlap / 7, 1) x StaffSpacing's stem-spacing-correction 0.4; a head at position 6 overlaps the bar by 2.5). At a line start that grob was never a bar line until session 328 made the opener the staff-bar column, so this is the point that says the correction reaches the line start too and not only the mid-line bar (barline-spacing's down-stem points, which read the same 0.142857 there). Lily# reuses the mid-line arithmetic (SpacingRules.BarlineToNextNotesCorrection) inside LineStartColumn.LineStartSpring. LilyPond's dump: HEAD x=10.867857 against IR's 10.725. Exact on its first run, 2026-09-04."
+    },
     "line-start.time-to-first-note.no-initial-repeat": {
       "probe": "initial-repeat-bar.ly",
       "score": "IN",
