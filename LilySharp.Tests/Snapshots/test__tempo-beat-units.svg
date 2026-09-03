@@ -79,11 +79,11 @@
   <text x="54.64" y="20.98" font-size="2.20" data-pos="490">= 240)</text>
   <rect x="3.37" y="16.32" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="295"/>
   <text x="4.40" y="18.52" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="295">A</text>
-  <rect x="15.54" y="14.25" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="347"/>
-  <text x="16.59" y="16.45" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="347">B</text>
-  <rect x="26.80" y="10.66" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="403"/>
-  <text x="27.85" y="12.86" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="403">C</text>
-  <rect x="42.50" y="16.33" width="2.24" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="466"/>
-  <text x="43.63" y="18.53" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="466">D</text>
+  <rect x="14.39" y="15.18" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="347"/>
+  <text x="15.44" y="17.38" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="347">B</text>
+  <rect x="25.65" y="10.66" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="403"/>
+  <text x="26.70" y="12.86" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="403">C</text>
+  <rect x="41.29" y="16.33" width="2.24" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="466"/>
+  <text x="42.41" y="18.53" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="466">D</text>
   </g>
 </svg>

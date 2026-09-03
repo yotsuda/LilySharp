@@ -149,13 +149,13 @@
   <text x="51.57" y="12.33" font-size="1.75" font-weight="bold" data-pos="619">2.</text>
   <rect x="3.37" y="13.57" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="529"/>
   <text x="4.40" y="15.77" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="529">A</text>
-  <rect x="20.64" y="13.57" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="554"/>
-  <text x="21.69" y="15.77" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="554">B</text>
-  <rect x="35.55" y="7.46" width="5.08" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="554"/>
-  <text x="38.09" y="9.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="554">first</text>
-  <rect x="50.27" y="7.46" width="8.29" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="554"/>
-  <text x="54.42" y="9.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="554">second</text>
-  <rect x="63.34" y="7.48" width="3.34" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="529"/>
-  <text x="65.01" y="9.68" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="529">A2</text>
+  <rect x="20.13" y="13.57" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="554"/>
+  <text x="21.19" y="15.77" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="554">B</text>
+  <rect x="32.92" y="7.46" width="5.08" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="554"/>
+  <text x="35.46" y="9.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="554">first</text>
+  <rect x="45.58" y="7.46" width="8.29" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="554"/>
+  <text x="49.73" y="9.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="554">second</text>
+  <rect x="61.58" y="7.46" width="3.34" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="529"/>
+  <text x="63.25" y="9.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="529">A2</text>
   </g>
 </svg>

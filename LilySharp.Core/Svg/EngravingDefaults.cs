@@ -1245,6 +1245,38 @@ internal static class EngravingDefaults
         _ => ThinBarlineThickness
     };
 
+    /// <summary>
+    /// Where a bar line's <c>break-align-anchor</c> stands, measured from the LEFT edge of
+    /// its drawn ink: the centre of its strokes WITHOUT the repeat dots. A rehearsal mark,
+    /// a bar number or a coda sign that break-aligns on the bar mid-line is centred here.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/bar-line.scm:812-852 ly:bar-line::calc-anchor, span-bar-glyph-alist —
+    ///   a one-glyph bar (or one whose span glyph is itself) anchors at the centre of its X
+    ///   extent; any other anchors at the centre of its SPAN-BAR stencil, the glyph with the
+    ///   dots dropped: scm/bar-line.scm:1308-1313 define-bar-line ":|." → " |.", ".|:" → ".|",
+    ///   ":|.|:" → " |.|" (the leading space is an empty piece).
+    /// MEASURED on 2.26.0 (audit/lp-geometry/probes/mark-mid-line.ly): the mark's centre
+    /// lands 0.095 into a "|" (half the thin stroke), 0.545 into ".|:" (half of thick +
+    /// kern + thin, the dots on the right excluded), 0.545 past the dots of ":|." and 0.75
+    /// past the dots of ":|.|:" (LilyPond's inner strokes there span 1.5; Lily#'s own span
+    /// 1.58, so its centre is 0.79 — the 0.04 is the bar's drawn width, not the anchor rule).
+    /// </remarks>
+    public static double BarlineAnchorFromInkLeft(BarlineType type) => type switch
+    {
+        BarlineType.None => 0,
+        BarlineType.Single or BarlineType.Dashed => ThinBarlineThickness / 2,
+        BarlineType.Double => (ThinBarlineThickness + BarlineSeparation + ThinBarlineThickness) / 2,
+        BarlineType.Final => (ThinBarlineThickness + BarlineSeparation + ThickBarlineThickness) / 2,
+        BarlineType.RepeatStart => (ThickBarlineThickness + BarlineSeparation + ThinBarlineThickness) / 2,
+        BarlineType.RepeatEnd => RepeatDotsOffset
+                                 + (ThinBarlineThickness + BarlineSeparation + ThickBarlineThickness) / 2,
+        BarlineType.RepeatBoth => RepeatDotsOffset
+                                  + (ThinBarlineThickness + BarlineSeparation + ThickBarlineThickness
+                                     + BarlineSeparation + ThinBarlineThickness) / 2,
+        _ => ThinBarlineThickness / 2
+    };
+
     // Bow (slur/tie) thickness — LilyPond's bezier sandwich (lily/lookup.cc:395-405
     // Lookup::slur): the two arcs are offset by ±0.5·curvethick and the outline is stroked
     // with a linethick round-cap pen. curvethick = the grob's `thickness` property, linethick

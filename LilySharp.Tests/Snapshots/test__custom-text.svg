@@ -48,8 +48,8 @@
   <rect x="52.06" y="11.78" width="0.19" height="4.00" data-pos="333"/>
   <rect x="3.37" y="7.98" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="255"/>
   <text x="4.40" y="10.18" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="255">A</text>
-  <rect x="30.86" y="6.69" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="298"/>
-  <text x="31.91" y="8.89" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="298">B</text>
+  <rect x="29.71" y="6.69" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="298"/>
+  <text x="30.76" y="8.89" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="298">B</text>
   <text x="21.92" y="10.78" font-size="2.20" font-style="italic" data-pos="354">poco a poco dim.</text>
   </g>
 </svg>

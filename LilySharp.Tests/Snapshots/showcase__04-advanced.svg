@@ -206,9 +206,9 @@
   <text x="4.40" y="18.82" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="837">A</text>
   <rect x="4.06" y="32.93" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="893"/>
   <text x="5.12" y="35.13" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="893">B</text>
-  <rect x="38.58" y="30.46" width="6.31" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="928"/>
-  <text x="41.73" y="32.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="928">End1</text>
-  <rect x="71.25" y="30.46" width="6.31" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="967"/>
-  <text x="74.41" y="32.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="967">End2</text>
+  <rect x="35.33" y="30.46" width="6.31" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="928"/>
+  <text x="38.48" y="32.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="928">End1</text>
+  <rect x="67.56" y="30.46" width="6.31" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="967"/>
+  <text x="70.71" y="32.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="967">End2</text>
   </g>
 </svg>

@@ -65,9 +65,9 @@
   <text x="37.82" y="21.99" font-size="2.20" font-style="italic" text-anchor="middle" data-pos="487">D.C.</text>
   <rect x="3.37" y="6.69" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="312"/>
   <text x="4.40" y="8.89" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="312">A</text>
-  <rect x="20.55" y="6.69" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="343"/>
-  <text x="21.60" y="8.89" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="343">B</text>
-  <rect x="38.32" y="6.69" width="3.34" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="312"/>
-  <text x="39.99" y="8.89" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="312">A2</text>
+  <rect x="20.04" y="6.69" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="343"/>
+  <text x="21.09" y="8.89" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="343">B</text>
+  <rect x="36.10" y="6.69" width="3.34" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="312"/>
+  <text x="37.77" y="8.89" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="312">A2</text>
   </g>
 </svg>

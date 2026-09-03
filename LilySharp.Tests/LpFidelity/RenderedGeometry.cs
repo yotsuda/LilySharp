@@ -792,6 +792,75 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The boxed mark reading <paramref name="label"/>: its drawn BOX's centre minus the
+    /// <c>break-align-anchor</c> of the bar line nearest it — the centre of that bar line's
+    /// STROKES, repeat dots excluded. Mid-line LilyPond centres a RehearsalMark on exactly
+    /// that anchor (scm/bar-line.scm:812-852 ly:bar-line::calc-anchor, span-bar-glyph-alist;
+    /// RehearsalMark's self-alignment-X is the opposite of the bar's CENTER anchor
+    /// alignment), so the number to read is 0.
+    /// </summary>
+    /// <remarks>
+    /// The bar line is read from the drawn strokes: every rect no wider than a thick
+    /// stroke, grouped into one bar line where the gaps are under one staff space (the
+    /// same grouping <see cref="BarlineGroups"/> uses, but thick strokes included — a
+    /// <c>.|:</c> opens with one). Repeat dots are circles, not rects, so they fall out of
+    /// the reading by themselves, which is what makes the group's centre LilyPond's
+    /// span-bar centre. The nearest group to the box's centre is the mark's bar.
+    /// </remarks>
+    public double MusicMarkBoxCenterFromBarlineAnchor(string label, int page = 0)
+    {
+        var texts = _pages[page].Texts
+            .Where(t => t.Role == TextRole.Mark && t.Text == label).ToList();
+        if (texts.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected ONE boxed mark reading \"{label}\", found "
+                + $"{texts.Count}.\nDrawn geometry:\n" + Describe());
+        }
+        var t = texts[0];
+        var boxes = _pages[page].Rects
+            .Where(r => r.X <= t.X && t.X <= r.X + r.Width
+                        && r.Y <= t.Y && t.Y <= r.Y + r.Height).ToList();
+        if (boxes.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: the mark \"{label}\" at ({t.X:F3},{t.Y:F3}) sits in "
+                + $"{boxes.Count} rect(s) — the reading cannot name its box.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        double boxCenter = boxes[0].X + boxes[0].Width / 2;
+
+        // Bar-line strokes on the staff under the mark: thin or thick, taller than they
+        // are wide, below the label within one system's height.
+        var strokes = _pages[page].Rects
+            .Where(r => r.Width > 0 && r.Width <= EngravingDefaults.ThickBarlineThickness + 1e-6
+                        && r.Height > r.Width && r.Y > t.Y && r.Y < t.Y + 12.0)
+            .OrderBy(r => r.X).ToList();
+        var groups = new List<DrawnRect>();
+        foreach (var r in strokes)
+        {
+            if (groups.Count > 0)
+            {
+                var last = groups[^1];
+                if (r.X - (last.X + last.Width) < MaxBarlineStrokeGap)
+                {
+                    groups[^1] = last with { Width = r.X + r.Width - last.X };
+                    continue;
+                }
+            }
+            groups.Add(r);
+        }
+        if (groups.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: no bar-line stroke under the mark \"{label}\".\nDrawn geometry:\n"
+                + Describe());
+        }
+        var bar = groups.OrderBy(g => Math.Abs(g.X + g.Width / 2 - boxCenter)).First();
+        return boxCenter - (bar.X + bar.Width / 2);
+    }
+
+    /// <summary>
     /// The FIRST boxed mark's BASELINE above the staff reference point it rides over.
     /// </summary>
     /// <remarks>

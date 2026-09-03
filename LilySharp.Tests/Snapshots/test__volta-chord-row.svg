@@ -97,9 +97,9 @@
   <text x="58.15" y="13.96" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="1148">C</text>
   <rect x="7.49" y="10.76" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="966"/>
   <text x="8.53" y="12.96" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="966">A</text>
-  <rect x="24.37" y="6.69" width="3.34" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="995"/>
-  <text x="26.04" y="8.89" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="995">E1</text>
-  <rect x="40.61" y="6.69" width="3.34" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1026"/>
-  <text x="42.28" y="8.89" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1026">E2</text>
+  <rect x="22.61" y="6.69" width="3.34" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="995"/>
+  <text x="24.27" y="8.89" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="995">E1</text>
+  <rect x="38.40" y="6.69" width="3.34" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1026"/>
+  <text x="40.07" y="8.89" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1026">E2</text>
   </g>
 </svg>

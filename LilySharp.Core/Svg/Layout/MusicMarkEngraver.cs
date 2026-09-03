@@ -470,7 +470,7 @@ internal static class MusicMarkEngraver
             var measureLayout = measureLayouts[mark.MeasureIndex];
             double x = CalculateXPosition(
                 fonts, mark, measureLayout, systems, prefixTimeSignatureX, lineStartBarlineX,
-                prefixMarkAnchorX);
+                prefixMarkAnchorX, measures);
             markEntries.Add((mark, x, si));
         }
 
@@ -1546,7 +1546,7 @@ internal static class MusicMarkEngraver
                 continue;
             double x = CalculateXPosition(
                 fonts, mark, measureLayouts[mark.MeasureIndex], systems,
-                prefixTimeSignatureX, lineStartBarlineX, prefixMarkAnchorX);
+                prefixTimeSignatureX, lineStartBarlineX, prefixMarkAnchorX, measures);
             var (x0, x1) = MarkXExtent(fonts, mark, x);
             windows.Add((mark.MeasureIndex, x0, x1));
         }
@@ -1619,7 +1619,8 @@ internal static class MusicMarkEngraver
         ImmutableArray<SystemLayout> systems,
         Func<int, double>? prefixTimeSignatureX = null,
         Func<int, double>? lineStartBarlineX = null,
-        Func<int, double>? prefixMarkAnchorX = null)
+        Func<int, double>? prefixMarkAnchorX = null,
+        ImmutableArray<Measure> measures = default)
     {
         if (mark.Position == MusicMarkPosition.End)
             return measureLayout.X + measureLayout.Width - 0.5; // Before end barline
@@ -1735,10 +1736,21 @@ internal static class MusicMarkEngraver
             //   the mark's refpoint lands on the parent's break-align-anchor.
             // LILYPOND-REF: scm/define-grobs.scm:905-907 Clef break-align-anchor-alignment, :1975-1977 KeySignature break-align-anchor-alignment —
             //   break-align-anchor calc-extent-aligned-anchor, anchor-alignment RIGHT.
-            // ⚠️ Mid-line marks keep the measure-start anchor: LilyPond hangs them on
-            //   the staff-bar's calc-anchor (the bar stencil's centre), a placement no
-            //   probe has measured yet — mark.rehearsal.line-start.* referee only the
-            //   line start, and this arm moves only what they referee.
+            // MID-LINE the staff-bar is visible and wins the list: the mark's refpoint lands
+            //   on the bar's calc-anchor — the centre of its strokes, dots excluded
+            //   (EngravingDefaults.BarlineAnchorFromInkLeft) — and its self-alignment-X is
+            //   the OPPOSITE of the bar's break-align-anchor-alignment, which a BarLine
+            //   leaves at CENTER, so the box is CENTRED on that anchor.
+            // LILYPOND-REF: scm/define-grobs.scm:2890-2894 RehearsalMark, self-alignment-opposite-of-anchor
+            //   (its self-alignment-X, via break-alignable-interface) and its X-offset
+            //   self-alignment-interface::self-aligned-on-breakable;
+            // LILYPOND-REF: scm/output-lib.scm:484-488 self-alignment-opposite-of-anchor,
+            //   :498-504 self-aligned-on-breakable.
+            // MEASURED on 2.26.0 (audit/lp-geometry/probes/mark-mid-line.ly, five books —
+            //   |, .|:, :|., :|.|:, and the owner's \alternative endings): box centre =
+            //   bar anchor to six digits in every one. Until session 328 this arm put the
+            //   box's LEFT edge on the measure's X, which the owner saw as the E1/E2 boxes
+            //   of Lambada Complicada standing right of LilyPond's.
             // ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
             //   SECTION LABEL takes the same line-start arm. LilyPond's own SectionLabel
             //   grob keeps the left edge (its list is (left-edge staff-bar)), but a Lily#
@@ -1757,6 +1769,12 @@ internal static class MusicMarkEngraver
                 else if (prefixMarkAnchorX?.Invoke(lineStartSystem) is { } prefX
                          && !double.IsNaN(prefX))
                     anchor = prefX;
+            }
+            else if (!measures.IsDefaultOrEmpty
+                     && MidLineBarAnchorX(measureLayout, measures) is { } barAnchor)
+            {
+                // Centred on the bar line's anchor: the returned X IS the box centre.
+                return barAnchor;
             }
             // LEFT edge on the anchor: returned X is the box center.
             double fs = mark.Type == MusicMarkType.Rehearsal ? 4.0 * 0.6 : 4.0 * 0.55;
@@ -1796,5 +1814,32 @@ internal static class MusicMarkEngraver
         }
 
         return anchor + 0.5;
+    }
+
+    /// <summary>
+    /// The absolute X of the <c>break-align-anchor</c> of the bar line standing at the
+    /// START of <paramref name="measureLayout"/> mid-line, or null when no bar line is
+    /// drawn there. The bar is the measure's own start bar line when it draws one
+    /// (a <c>|:</c>, drawn from the measure's X rightwards — a plain end bar before it
+    /// yields, SharedRenderer.EndBarYieldsToRepeatStart), else the previous measure's end
+    /// bar line (drawn ending AT the measure's X; a <c>:|</c> before a <c>|:</c> is one
+    /// <c>:|.|:</c> on the predecessor's end, the collector's folding). The anchor is
+    /// then <see cref="EngravingDefaults.BarlineAnchorFromInkLeft"/> from the ink's left.
+    /// </summary>
+    private static double? MidLineBarAnchorX(MeasureLayout measureLayout, ImmutableArray<Measure> measures)
+    {
+        int idx = measureLayout.MeasureIndex;
+        if (idx < 0 || idx >= measures.Length)
+            return null;
+        var start = measures[idx].StartBarline;
+        if (start != BarlineType.None)
+            return measureLayout.X + EngravingDefaults.BarlineAnchorFromInkLeft(start);
+        if (idx == 0)
+            return null;
+        var end = measures[idx - 1].EndBarline;
+        if (end == BarlineType.None)
+            return null;
+        return measureLayout.X - EngravingDefaults.BarlineDrawnWidth(end)
+               + EngravingDefaults.BarlineAnchorFromInkLeft(end);
     }
 }

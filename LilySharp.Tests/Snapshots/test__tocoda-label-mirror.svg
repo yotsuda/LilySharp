@@ -50,14 +50,14 @@
   <rect x="34.19" y="15.02" width="0.19" height="4.00" data-pos="1106"/>
   <rect x="47.51" y="15.02" width="0.19" height="4.00" data-pos="1145"/>
   <rect x="55.66" y="15.02" width="0.19" height="4.00" data-pos="1150"/>
-  <text x="29.19" y="10.06" font-size="2.20" font-style="italic" data-pos="1173">To </text>
-  <text class="music" x="32.34" y="9.10" font-size="3.20" data-pos="1173"></text>
+  <text x="28.05" y="10.06" font-size="2.20" font-style="italic" data-pos="1173">To </text>
+  <text class="music" x="31.19" y="9.10" font-size="3.20" data-pos="1173"></text>
   <text class="music" x="34.38" y="12.52" font-size="4.00" data-pos="1130"></text>
-  <rect x="34.38" y="7.46" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1112"/>
-  <text x="35.44" y="9.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1112">C</text>
+  <rect x="33.23" y="7.46" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1112"/>
+  <text x="34.29" y="9.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1112">C</text>
   <rect x="3.37" y="11.22" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1045"/>
   <text x="4.40" y="13.42" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1045">A</text>
-  <rect x="21.02" y="11.22" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1078"/>
-  <text x="22.07" y="13.42" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1078">B</text>
+  <rect x="19.87" y="11.22" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1078"/>
+  <text x="20.93" y="13.42" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1078">B</text>
   </g>
 </svg>

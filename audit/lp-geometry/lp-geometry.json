@@ -3389,6 +3389,48 @@
       "why": "THE SAME QUESTION WITH A KEY SIGNATURE (book MKK, D major): key-signature stands before clef in the mark's break-align list, so the box left moves to the KEY ink's right edge -- MEASURED 2026-08-27 on 2.26.0: KeySignature spans [4.185, 6.385], RehearsalMark X 6.385000, and this entry reads 6.385 - 0.8 = 5.585000. The pair with mark.rehearsal.line-start.box-left-from-clef-left is one variable apart and is what says the anchor is the LIST, not the clef. Lily# reads -0.500000 (the left edge) -- residual -6.085000. Same prediction and approval as that entry's why. => LANDED EXACT, same session: the Rehearsal arm anchors on the prefix table's key/clef right edge (BuildPrefixMarkAnchorX, one derivation with the meter anchor), and this entry reads the LilyPond number to nine digits -- Lily#'s prefix metrics (clef ink 2.565, key column) are LilyPond's already, so nothing of the residual was a metric difference. The section-label control did not move (+0.300000 recorded, still its own user-judgment item).",
       "residual": 0.0
     },
+    "mark.rehearsal.mid-line.box-center-from-bar-anchor": {
+      "probe": "mark-mid-line.ly",
+      "score": "MMB",
+      "lilypond": 0.000000,
+      "residual": 0.0,
+      "why": "THE REHEARSAL MARK'S X MID-LINE (2026-09-04, session 328): the mark's BOX CENTRE minus the bar line's break-align-anchor. Mid-line the staff-bar is visible and wins the mark's list (staff-bar key-signature clef), the refpoint lands on the bar's calc-anchor -- for a one-glyph bar the centre of its X extent (scm/bar-line.scm:812-838) -- and self-alignment-X is the opposite of the bar's anchor alignment, which a BarLine leaves at CENTER (scm/define-grobs.scm:2890-2891, scm/output-lib.scm:484-488), so the box is centred on the bar. MEASURED on 2.26.0, book MMB, a plain | at bar 3: BarLine X 33.484831 ext (0 . 0.19) -> anchor 33.579831; RehearsalMark X 32.572604 ext (-0.351984 . 2.366439) -> centre 33.579832. Zero to six digits. Until this session Lily# put the box's LEFT edge on the measure's X (MusicMarkEngraver's mid-line fallthrough, declared unmeasured in its own remark), which the owner saw on Lambada Complicada's E1/E2. Exact on the first run after the port: the arm centres the box on EngravingDefaults.BarlineAnchorFromInkLeft of the bar drawn at the measure's start."
+    },
+    "mark.rehearsal.mid-line.repeat-start.box-center-from-bar-anchor": {
+      "probe": "mark-mid-line.ly",
+      "score": "MMS",
+      "lilypond": 0.000000,
+      "residual": 0.0,
+      "why": "The same reading with a repeat OPENING at the mark (.|:). A multi-glyph bar anchors at the centre of its SPAN-BAR stencil, the glyph with its dots dropped -- define-bar-line \".|:\" -> \".|\" (scm/bar-line.scm:1313, :839-850) -- so the anchor is half of thick + kern + thin = 0.545 into the bar, NOT the centre of the full 1.84 extent (0.92). MEASURED: BarLine X 33.484831 ext (0 . 1.84), RehearsalMark centre 33.022604 + 1.007228 = 34.029832 = 33.484831 + 0.545 to six digits. Lily# draws its |: with the dots on the right of the strokes, so the reader's stroke-only centre is the same number; exact on the first run."
+    },
+    "mark.rehearsal.mid-line.repeat-end.box-center-from-bar-anchor": {
+      "probe": "mark-mid-line.ly",
+      "score": "MMR",
+      "lilypond": 0.000000,
+      "residual": 0.0,
+      "why": "The same reading with a repeat CLOSING at the mark (:|.). Span glyph \" |.\" (scm/bar-line.scm:1312) -- the dots become an empty piece -- so the anchor is the centre of thin + kern + thick past the dots: MEASURED BarLine X 34.377689 ext (-0.75 . 1.09), mark centre 33.915461 + 1.007228 = 34.922689 = X + 0.545. In Lily# the bar is the PREVIOUS measure's end bar line, drawn ending at the measure's X; the arm reads it there (MusicMarkEngraver.MidLineBarAnchorX). Exact on the first run."
+    },
+    "mark.rehearsal.mid-line.repeat-both.box-center-from-bar-anchor": {
+      "probe": "mark-mid-line.ly",
+      "score": "MMD",
+      "lilypond": 0.000000,
+      "residual": 0.0,
+      "why": "The same reading at :|.|: (one repeat closes, another opens; the collector folds the pair into RepeatBoth on the predecessor's end). Span glyph \" |.|\" (scm/bar-line.scm:1310). MEASURED: BarLine X 34.377689 ext (-0.75 . 2.25), mark centre 34.120461 + 1.007228 = 35.127689 = X + 0.75 -- LilyPond's inner strokes span 1.5 here where Lily#'s own :|.|: strokes span 1.58 (the 0.04 is the bar's drawn width, its own question); the READING is centre-of-strokes on both sides and is exact."
+    },
+    "mark.section-label.mid-line.first-ending.box-center-from-bar-anchor": {
+      "probe": "mark-mid-line.ly",
+      "score": "MMV",
+      "lilypond": 0.000000,
+      "residual": 0.0,
+      "why": "The owner's shape: \\alternative, the FIRST ending's label on a plain bar line under the volta bracket. In Lily# the label is a FORM SECTION NAME (E1), i.e. the SectionLabel arm, which by the owner's decision (HANDOFF §3 第322) stands where LilyPond's RehearsalMark stands -- the twin spells it \\mark \\markup \\box, so the pair referees the label against the rehearsal rule, as mark.section-label.line-start.* does. MEASURED: BarLine X 33.484831 (|), RehearsalMark E1 X 31.804379 ext (-0.351984 . 3.902888) -> centre 33.579831 = bar anchor. The bracket does not move the X (it is a Y question). Exact on the first run."
+    },
+    "mark.section-label.mid-line.second-ending.box-center-from-bar-anchor": {
+      "probe": "mark-mid-line.ly",
+      "score": "MMV",
+      "lilypond": 0.000000,
+      "residual": 0.0,
+      "why": "The SECOND ending's label, on the :|. that closes the first ending -- the E2 of Lambada Complicada the owner reported. MEASURED: BarLine X 47.448097 ext (-0.75 . 1.09) -> anchor 47.993097; RehearsalMark E2 X 46.217645 + 1.775452 = 47.993097. Exact on the first run."
+    },
     "mark.section-label.line-start.box-left-from-clef-left": {
       "probe": "mark-chord-row.ly",
       "score": "MKQ",

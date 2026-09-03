@@ -106,6 +106,12 @@ scores against LilyPond's picture of the same book.
   first note spaced as if the bar were not there, which put the note 0.3 too close to it
   (reported on `Lambada Complicada`'s section C). Measured against LilyPond to the digit on
   both quantities; the span bar of a grand staff and the tab staff follow the same column.
+- **A rehearsal mark or section name mid-line is centred on its bar line.** LilyPond
+  break-aligns the mark on the bar and centres it on the bar's anchor, the middle of the
+  strokes with the repeat dots left out; Lily# stood the box's left edge on the bar, a whole
+  half-box too far right (reported on `Lambada Complicada`'s endings). Five LilyPond
+  measurements now referee it: a plain bar, `|:`, `:|`, `:|:`, and the two ending labels of
+  an alternative. A mark that opens a line is unchanged.
 - **A hand-written slur from a grace note to its main note is drawn.** `grace { g16( } a8)`
   now draws the bow `appoggiatura { g16 } a8` has always drawn — in LilyPond the two are the
   same pair of slur events (`ly/grace-init.ly`), and the corpus writes the pair by hand seven

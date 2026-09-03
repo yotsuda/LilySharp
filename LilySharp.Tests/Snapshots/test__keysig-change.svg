@@ -154,9 +154,9 @@
   <text x="8.21" y="16.88" font-size="2.20" data-pos="153">= 120</text>
   <rect x="5.29" y="10.66" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="666"/>
   <text x="6.32" y="12.86" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="666">A</text>
-  <rect x="66.85" y="13.21" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="694"/>
-  <text x="67.90" y="15.41" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="694">B</text>
-  <rect x="23.37" y="25.52" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="722"/>
-  <text x="24.42" y="27.72" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="722">C</text>
+  <rect x="65.70" y="13.50" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="694"/>
+  <text x="66.75" y="15.70" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="694">B</text>
+  <rect x="22.22" y="25.97" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="722"/>
+  <text x="23.28" y="28.17" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="722">C</text>
   </g>
 </svg>

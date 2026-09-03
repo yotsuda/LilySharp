@@ -90,9 +90,9 @@
   <text x="6.66" y="16.88" font-size="2.20" data-pos="123">= 120</text>
   <rect x="3.37" y="10.66" width="6.00" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="322"/>
   <text x="6.36" y="12.86" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="322">First</text>
-  <rect x="34.38" y="13.97" width="8.66" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="368"/>
-  <text x="38.71" y="16.17" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="368">Second</text>
-  <rect x="61.53" y="13.97" width="16.52" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="322"/>
-  <text x="69.79" y="16.17" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="322">First (reprise)</text>
+  <rect x="29.96" y="13.97" width="8.66" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="368"/>
+  <text x="34.29" y="16.17" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="368">Second</text>
+  <rect x="53.18" y="13.97" width="16.52" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="322"/>
+  <text x="61.44" y="16.17" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="322">First (reprise)</text>
   </g>
 </svg>

@@ -119,11 +119,11 @@
   <text x="23.96" y="21.47" font-size="1.75" font-style="italic" text-anchor="middle" dominant-baseline="central" data-pos="122">3</text>
   <rect x="3.60" y="12.17" width="2.21" height="2.80" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="103"/>
   <text x="4.70" y="14.57" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="103">A</text>
-  <rect x="20.44" y="12.17" width="2.28" height="2.80" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="137"/>
-  <text x="21.58" y="14.57" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="137">B</text>
-  <rect x="44.68" y="7.46" width="2.28" height="2.80" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="555"/>
-  <text x="45.82" y="9.86" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="555">C</text>
-  <rect x="54.48" y="7.46" width="2.41" height="2.80" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="588"/>
-  <text x="55.69" y="9.86" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="588">D</text>
+  <rect x="19.20" y="12.17" width="2.28" height="2.80" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="137"/>
+  <text x="20.34" y="14.57" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="137">B</text>
+  <rect x="43.45" y="7.46" width="2.28" height="2.80" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="555"/>
+  <text x="44.58" y="9.86" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="555">C</text>
+  <rect x="52.73" y="7.46" width="2.41" height="2.80" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="588"/>
+  <text x="53.93" y="9.86" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="588">D</text>
   </g>
 </svg>

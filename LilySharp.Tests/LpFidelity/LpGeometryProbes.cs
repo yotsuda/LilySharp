@@ -4197,6 +4197,105 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// THE MARK'S X MID-LINE — the mirrors of mark-mid-line.ly's five books. Mid-line the
+    /// staff-bar is visible and wins a RehearsalMark's break-align list, the mark's refpoint
+    /// lands on the bar's <c>calc-anchor</c> (the centre of its strokes, dots excluded —
+    /// scm/bar-line.scm:812-852 span-bar-glyph-alist), and its self-alignment-X is the opposite of the bar's
+    /// CENTER anchor alignment, so the box is CENTRED on that anchor. MEASURED 2026-09-04 on
+    /// 2.26.0: box centre − bar anchor = 0.000000 in every book. Each reads
+    /// <see cref="RenderedGeometry.MusicMarkBoxCenterFromBarlineAnchor"/>, which finds the
+    /// bar by its drawn strokes (the dots are circles and fall out by themselves).
+    /// ⚠️ Lily# <c>c'</c> is LilyPond <c>c''</c> (HANDOFF 5.5); <c>~A</c> engraves no label.
+    /// </summary>
+    /// <remarks>LilyPond twin (MMB): <c>c4 d e f | g a b c | \mark \markup \box "B" c4 b a g
+    /// | f e d c |</c> under <c>\relative c''</c> — a plain bar line at the mark.</remarks>
+    private static readonly string MMB = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section A { melody { c'4 d' e' f' | g' a' b' c'' | c''4@mark("B") b' a' g' | f' e' d' c' | } }
+
+        form main { ~A }
+
+        score main "MMB" { staff melody }
+        """;
+
+    /// <summary>MMS — a repeat OPENS at the mark (<c>|:</c>, LilyPond's <c>.|:</c>).</summary>
+    private static readonly string MMS = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section A { melody { c'4 d' e' f' | g' a' b' c'' | } }
+        section B { melody { c''4@mark("B") b' a' g' | f' e' d' c' | } }
+
+        form main { ~A |: ~B :| }
+
+        score main "MMS" { staff melody }
+        """;
+
+    /// <summary>MMR — a repeat CLOSES at the mark (<c>:|</c>, LilyPond's <c>:|.</c>).</summary>
+    private static readonly string MMR = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section A { melody { c'4 d' e' f' | g' a' b' c'' | } }
+        section B { melody { c''4@mark("B") b' a' g' | f' e' d' c' | } }
+
+        form main { |: ~A :| ~B }
+
+        score main "MMR" { staff melody }
+        """;
+
+    /// <summary>MMD — one repeat closes and another opens at the mark (<c>:|.|:</c>).</summary>
+    private static readonly string MMD = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section A { melody { c'4 d' e' f' | g' a' b' c'' | } }
+        section B { melody { c''4@mark("B") b' a' g' | f' e' d' c' | } }
+
+        form main { |: ~A :| |: ~B :| }
+
+        score main "MMD" { staff melody }
+        """;
+
+    /// <summary>
+    /// MMV — the owner's shape (Lambada Complicada's endings): <c>\alternative</c>, the
+    /// first ending's label on a plain bar under the volta bracket, the second's on
+    /// <c>:|</c>. The labels are FORM SECTION NAMES here, i.e. Lily#'s SectionLabel arm,
+    /// which the twin spells <c>\mark \markup \box</c> (LilyPondExporter; HANDOFF §3 第322):
+    /// the pair therefore referees the section label against the RehearsalMark's rule,
+    /// exactly as mark.section-label.line-start.* does at a line start.
+    /// </summary>
+    private static readonly string MMV = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section A { melody { c'4 d' e' f' | g' a' b' c'' | } }
+        section E1 { melody { c''4 b' a' g' | } }
+        section E2 { melody { f'4 e' d' c' | } }
+
+        form main { |: ~A [1. E1 ] :| [2. E2 ] }
+
+        score main "MMV" { staff melody }
+        """;
+
+    /// <summary>
     /// A section label standing OVER a chord symbol on a STAFFED sheet — the mirror of book
     /// MKW, and the first point in the tree to measure that arrangement at all.
     /// </summary>
@@ -13515,6 +13614,24 @@ internal static class LpGeometryProbes
             g => g.MusicMarkBoxLeftFromClefLeft("A"), RaggedBottomPaper),
         new("mark.section-label.line-start.box-left-from-clef-left", RXB,
             g => g.MusicMarkBoxLeftFromClefLeft("A"), RaggedBottomPaper),
+
+        // THE MARK'S X MID-LINE (session 328, mark-mid-line.ly MMB/MMS/MMR/MMD/MMV): the
+        // box is CENTRED on the bar line's anchor — the centre of its strokes, dots
+        // excluded — whatever the glyph, and the section label takes the same rule. The
+        // owner saw Lambada's E1/E2 boxes standing right of LilyPond's; this is the
+        // reading that says where they belong.
+        new("mark.rehearsal.mid-line.box-center-from-bar-anchor", MMB,
+            g => g.MusicMarkBoxCenterFromBarlineAnchor("B"), RaggedBottomPaper),
+        new("mark.rehearsal.mid-line.repeat-start.box-center-from-bar-anchor", MMS,
+            g => g.MusicMarkBoxCenterFromBarlineAnchor("B"), RaggedBottomPaper),
+        new("mark.rehearsal.mid-line.repeat-end.box-center-from-bar-anchor", MMR,
+            g => g.MusicMarkBoxCenterFromBarlineAnchor("B"), RaggedBottomPaper),
+        new("mark.rehearsal.mid-line.repeat-both.box-center-from-bar-anchor", MMD,
+            g => g.MusicMarkBoxCenterFromBarlineAnchor("B"), RaggedBottomPaper),
+        new("mark.section-label.mid-line.first-ending.box-center-from-bar-anchor", MMV,
+            g => g.MusicMarkBoxCenterFromBarlineAnchor("E1"), RaggedBottomPaper),
+        new("mark.section-label.mid-line.second-ending.box-center-from-bar-anchor", MMV,
+            g => g.MusicMarkBoxCenterFromBarlineAnchor("E2"), RaggedBottomPaper),
 
         // ...and the arrangement BOTH of those deliberately avoid: the label standing ON a
         // chord symbol, mid-line, with a staff under it (books MKW/MKX). Opened 2026-08-25 to

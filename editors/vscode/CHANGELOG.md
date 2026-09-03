@@ -116,6 +116,8 @@ reasoning behind each one.
 - **A `|:` that opens a line stands where LilyPond's does, and the first note keeps its
   distance from it.** The bar is the last column of the clef/key/meter group and the first
   note stands 1.3 off its ink; it used to be spaced as if the bar were not there.
+- **A rehearsal mark or section name mid-line is centred on its bar line**, as LilyPond
+  centres it; the box used to hang off the bar to the right.
 - **A hand-written slur from a grace note to its main note is drawn.** `grace { g16( } a8)`
   draws the bow `appoggiatura { g16 } a8` has always drawn — LilyPond's own pair of slur
   events. The `(` goes on the last grace note and the `)` on the main note; other placements
