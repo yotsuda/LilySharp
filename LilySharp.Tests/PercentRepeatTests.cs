@@ -470,7 +470,18 @@ public class PercentRepeatTests
         Assert.Equal(0.23, dots[0].R, 3);
         Assert.Equal(groupLeft + 0.75 - 0.225, dots[0].Cx, 1);
         Assert.Equal(groupRight - 0.75 + 0.225, dots[1].Cx, 1);
-        Assert.Equal(1.354, (groupLeft + groupRight) / 2 - dots[0].Cx, 1);
+        // ⚠️ A TOLERANCE AND NOT A ROUNDING, because 1.354 sits 0.004 from the boundary that
+        // `Assert.Equal(…, 1)` rounds at, and this number carries up to 0.01 of the SVG's
+        // two-decimal printing (three printed coordinates go into it). Rounding to one place
+        // therefore left 0.004 of room on the low side and 0.046 on the high — a gate whose
+        // width depended on which side the noise fell. It held until session 332 spaced a
+        // repeated bar as an empty one, which moved the SIGN and so re-rolled the rounding.
+        // The SHAPE is what this line is about and the shape did not move: rendering the same
+        // sign at three anchor positions (scratch/p332/t7/pd1..pd3, dotoffset.ps1) gives the
+        // same slash-group span 3.76 every time, with the two dots reading 1.35 and 1.36 —
+        // LilyPond's 1.354 straddled by the printing. 0.01 admits both and still stands 31×
+        // clear of the 1.039 this replaced.
+        Assert.Equal(1.354, (groupLeft + groupRight) / 2 - dots[0].Cx, 0.01);
 
         // BOTH measures of the repeated pair print no music, which is the FirstCoveredMeasure
         // walk reaching the FIRST measure of the pair and not only the anchored second one.

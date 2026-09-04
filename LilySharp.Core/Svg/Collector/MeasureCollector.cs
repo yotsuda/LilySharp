@@ -431,25 +431,29 @@ public sealed partial class MeasureCollector
     /// that a % sign (or a double sign) stands for. LilyPond never plays those iterations:
     /// its iterator hands the context ONE percent event in place of the music, so nothing
     /// the body writes — no slur, no tie, no script, no dynamic — exists there at all.
-    /// Lily# re-walks the body (its unfold keeps the notes for playback and spacing, and
-    /// the visual passes hide them by measure), so this depth is where the walk says
-    /// "the notes come through, nothing that rides them does".
     /// LILYPOND-REF: lily/percent-repeat-iterator.cc:75-111 Percent_repeat_iterator::next_element —
     ///   for every repetition after the first, <c>make_music_by_name (event_type_)</c> is
     ///   reported and the body's music is not.
     /// </summary>
     /// <remarks>
-    /// ⚠️ THE NOTES ARE KEPT AND THEIR MARKERS ARE NOT, and the split is deliberate: the
-    /// percent-covered measures already print nothing of their notes (SharedRenderer's two
-    /// <c>percentCovered</c> sets, the beams, the MMR symbol — <see cref="PercentRepeatItem.FirstCoveredMeasure"/>),
-    /// but a slur, a tie, a script or a dynamic collected there is drawn by an engraver
-    /// that never asks which measures are covered — measured 2026-09-02 on
-    /// scratch/ベースタブLy/tab-percent.lys, where <c>repeat percent 2 { c1( | c) | }</c>
-    /// drew the slur a second time over the % sign, and scratch/p320/percent-dyn.lys drew
-    /// the <c>p</c>, the accent and the <c>f</c> under it. Gating at the collect is ONE
-    /// line per collector instead of one percent filter per engraver, and matches where
-    /// LilyPond's silence comes from (the iterator, not the engravers).
-    /// ⚠️ A beat slash never reaches this: its repetitions are spacers, not a re-walk.
+    /// ⚠️⚠️ NOTHING RAISES THIS DEPTH ANY MORE, and the reason is that the halfway house it
+    /// named is gone. Lily# used to re-walk the body for every repetition and hide the notes
+    /// by measure, keeping this depth to drop what RIDES those notes — a slur, a tie, a
+    /// script, a dynamic — because the engravers that draw those never ask which measures are
+    /// covered (measured 2026-09-02: scratch/ベースタブLy/tab-percent.lys drew the slur a
+    /// second time over the % sign, scratch/p320/percent-dyn.lys drew the <c>p</c>, the accent
+    /// and the <c>f</c> under it). Session 332 measured what the kept notes cost in SPACING —
+    /// a repeated bar came out as wide as the music underneath it, 13.11 ss against
+    /// LilyPond's 5.51 (scratch/p332/t7) — and replaced the re-walk with the spacers the beat
+    /// slash already used, so now no repetition writes a note and there is nothing left to
+    /// drop. The gate is honoured by absence rather than by a flag.
+    /// <para>
+    /// ⚠️ KEPT, NOT DELETED, because deletion is the user's call and because the readers below
+    /// state the rule they enforce: <see cref="WithoutBowsUnderPercent"/>, the annotation gates
+    /// in <c>MeasureCollector.Annotations</c>, and the resume gate. A shape that has to re-walk
+    /// a body some day re-arms them by raising this depth again. Until then they are correct
+    /// and unreachable, which is why no test can pin them.
+    /// </para>
     /// </remarks>
     private int _percentCoveredDepth = 0;
 
@@ -3558,7 +3562,61 @@ public sealed partial class MeasureCollector
                 ? CalcRepeatSlashCount(bodyNodes, defaultAtBody)
                 : 0;
 
-            // Additional iterations: process body again but mark as percent repeat
+            // A REPETITION IS WRITTEN AS SPACERS, never as the body again — LilyPond's
+            // iterator hands the context ONE event in place of the music, so a repeated
+            // measure holds no notes at all and is spaced as an empty bar.
+            // LILYPOND-REF: lily/percent-repeat-iterator.cc:75-111 Percent_repeat_iterator::next_element
+            //   — every iteration after the first reports a Percent / DoublePercent /
+            //   RepeatSlash event and NOT the body's music.
+            // ⚠️ RE-WALKING THE BODY AND HIDING IT SPACES IT WRONG, which is what Lily# did
+            // for the two measure-wide signs until session 332: the hidden notes' springs
+            // stayed in the measure, so a repeated bar was as wide as the music underneath it.
+            // Measured on 2.26.0 (scratch/p332/t7): `repeat percent 4 { g,4 a, b, c }` gives
+            // LilyPond bars of 5.51 ss for the repetitions and Lily# gave 13.11 — and 5.51 is
+            // EXACTLY what LilyPond gives a bar holding nothing but `s1` (probe pc5), which is
+            // the check that says a repeated bar is an empty bar and not a bar of its own kind.
+            // The engraved consequence is system breaking: LilyPond fitted eight such bars on
+            // one system where Lily# needed three (probe pc2), which is the shape of the 27
+            // books in HANDOFF §2 T7's B-eng whose forced breaks agree and whose systems do not.
+            // ⚠️ THE HIDING MACHINERY IS STILL CORRECT, it is simply no longer load-bearing for
+            // these two shapes: nothing is collected in a covered measure for the renderer's
+            // percentCovered sets to skip (see PercentRepeatItem.FirstCoveredMeasure).
+            // ⚠️ PLAYBACK AND EXPORT ARE UNAFFECTED: MidiExporter walks the SYNTAX tree
+            // (ProcessRepeat, MidiExporter.cs) and never reads these items, and so do the
+            // MusicXML and .ly exporters. Only the engraved page changes.
+            // ⚠️ THE SPACER IS WRITTEN IN BAR-SIZED PIECES, because the builder auto-completes
+            // AT MOST ONE measure per item: a single item carrying three whole notes closes one
+            // bar and swallows the other two. LilyPond has no such item — its event carries the
+            // body's whole length and the CONTEXT's bar machinery keeps closing measures
+            // underneath it, so the repetition occupies exactly as many bars as the body did.
+            // Splitting at the bar lines is how that reads here, and it is why the measure
+            // arithmetic below is unchanged by the switch: the spacer run has the same duration
+            // structure as the body, so every bar line falls exactly where it fell before.
+            // ⚠️ The spacer's duration is written straight onto the RestItem rather than as a
+            // note value plus dots, because a body's length need not BE a note value (five
+            // sixteenths is not). RestItem.Duration is BaseDuration when Dots is 0, so an
+            // arbitrary fraction rides through unchanged.
+            void WriteRepetitionAsSpacers(Fraction length)
+            {
+                var remaining = length;
+                while (remaining > Fraction.Zero)
+                {
+                    // The room left in the bar that is open right now — the builder's
+                    // CurrentDuration is always the position INSIDE it. Read the meter
+                    // each turn so a body that outlives a mid-piece `time` still lands on
+                    // the bar lines the reader sees.
+                    var bar = builder.CurrentMeasureLength;
+                    var room = bar - builder.CurrentDuration;
+                    if (room <= Fraction.Zero)
+                        room = bar;
+                    var piece = remaining < room ? remaining : room;
+                    builder.AddItem(
+                        new RestItem(piece, 0, repeat.SourceStart) { IsSpacer = true });
+                    remaining -= piece;
+                }
+            }
+
+            // Additional iterations: one event's worth of spacers, marked with the sign.
             for (int iter = 1; iter < count; iter++)
             {
                 if (!ChargeExpansion(passCost, repeat.SourceStart))
@@ -3566,53 +3624,12 @@ public sealed partial class MeasureCollector
 
                 if (isBeatSlashBody)
                 {
-                    // LilyPond does not re-engrave the body here AT ALL: the iterator hands
-                    // the context a RepeatSlashEvent in place of the music, so the repetition
-                    // occupies its own duration with one grob and no notes. Lily# has to say
-                    // that in the collector, because everywhere else its unfold KEEPS the
-                    // repeated music and lets the visual passes hide it by measure — and a
-                    // beat slash covers no measure, so there is no measure to hide.
-                    // ⚠️ HIDING WOULD ALSO SPACE IT WRONG: the notes' springs would still be
-                    // there, so `{ c16 d e f }` would leave four sixteenths' worth of room
-                    // with two slashes floating in it. The spacer below carries the body's
-                    // duration and nothing else, which is the spring LilyPond prices.
-                    // ⚠️ The spacer's duration is written straight onto the RestItem rather
-                    // than as a note value plus dots, because a body's length need not BE a
-                    // note value (five sixteenths is not). RestItem.Duration is BaseDuration
-                    // when Dots is 0, so an arbitrary fraction rides through unchanged.
-                    // ⚠️ PLAYBACK IS UNAFFECTED: MidiExporter walks the SYNTAX tree
-                    // (ProcessRepeat, MidiExporter.cs:1895) and never reads these items, and
-                    // so do the MusicXML and .ly exporters. Only the engraved page changes.
-                    // ⚠️ THE SPACER IS WRITTEN IN BAR-SIZED PIECES, because the builder
-                    // auto-completes AT MOST ONE measure per item: a single item carrying
-                    // three whole notes closes one bar and swallows the other two, which is
-                    // what a three-measure body looked like on the first attempt — one slash
-                    // and one measure where LilyPond draws one slash and three measures.
-                    // LilyPond has no such item: the RepeatSlashEvent carries the body's
-                    // whole length and the CONTEXT's bar machinery keeps closing measures
-                    // underneath it, so the repetition occupies exactly as many bars as the
-                    // body did. Splitting at the bar lines is how that reads here. The pieces
-                    // are all spacers and only the FIRST carries the sign, so a body shorter
-                    // than the room left in the open bar is one piece and unchanged.
+                    // A beat slash covers no measure, so the sign needs the moment and the
+                    // item slot it stands at inside the measure it lands in.
                     int slashMeasure = builder.CurrentMeasureIndex;
                     var slashTiming = builder.CurrentDuration;
                     int slashItemIndex = builder.CurrentItemCount;
-                    var remaining = bodyLength;
-                    while (remaining > Fraction.Zero)
-                    {
-                        // The room left in the bar that is open right now — the builder's
-                        // CurrentDuration is always the position INSIDE it. Read the meter
-                        // each turn so a body that outlives a mid-piece `time` still lands on
-                        // the bar lines the reader sees.
-                        var bar = builder.CurrentMeasureLength;
-                        var room = bar - builder.CurrentDuration;
-                        if (room <= Fraction.Zero)
-                            room = bar;
-                        var piece = remaining < room ? remaining : room;
-                        builder.AddItem(
-                            new RestItem(piece, 0, repeat.SourceStart) { IsSpacer = true });
-                        remaining -= piece;
-                    }
+                    WriteRepetitionAsSpacers(bodyLength);
                     _percentRepeats.Add(new PercentRepeatItem(
                         slashMeasure,
                         repeat.SourceStart,
@@ -3624,21 +3641,13 @@ public sealed partial class MeasureCollector
                 }
 
                 int iterStart = builder.CurrentMeasureIndex;
-                // The re-walk of a covered iteration: notes only, no bows and no
-                // scripts (see _percentCoveredDepth for what LilyPond does instead).
-                _percentCoveredDepth++;
-                try { ProcessBodyOnce(); }
-                finally { _percentCoveredDepth--; }
+                WriteRepetitionAsSpacers(bodyLength);
 
                 // A TWO-MEASURE body gets ONE double-percent sign for the whole repetition,
                 // on the bar line between its two measures — not a single sign in each.
                 // LILYPOND-REF: lily/double-percent-repeat-engraver.cc:56-64 process_music —
                 //   the item is made when now_mom() reaches start_mom_ = the event's moment
                 //   plus one measure_length, i.e. at the SECOND measure's downbeat.
-                // ⚠️ A body of THREE OR MORE WHOLE MEASURES still reaches the per-measure
-                // percent below, and that is a DECIDED divergence rather than an unported
-                // branch — see the isBeatSlashBody remark above for what LilyPond draws there
-                // and why it is not worth copying.
                 if (isDoubleBody)
                 {
                     _percentRepeats.Add(new PercentRepeatItem(
