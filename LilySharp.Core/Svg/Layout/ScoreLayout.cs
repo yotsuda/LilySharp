@@ -196,8 +196,13 @@ internal sealed record PageLayout(
     int PageIndex,
     double Width,                          // Page width (staff spaces)
     double Height,                         // Page height (staff spaces)
-    double HeaderHeight,                   // Space for title/composer (staff spaces)
-    ImmutableArray<SystemLayout> Systems   // Systems on this page
+    double HeaderHeight,                   // The title column's ink depth on this page, 0 when it carries none (staff spaces)
+    ImmutableArray<SystemLayout> Systems,  // Systems on this page
+    // The title column this page OPENS with — the first page of a titled book, LilyPond's
+    // book-title paper system (HeaderBand) — and how far below the page's top edge its top
+    // sits: the page chain's top-markup spring solved with the rest of the page.
+    HeaderBand? Header = null,
+    double HeaderTop = 0
 );
 
 /// <summary>

@@ -65,6 +65,22 @@ internal readonly record struct LineShape(
     double BeginUp, double BeginDown, double RestUp, double RestDown);
 
 /// <summary>
+/// The refpoint frame the page breaker prices one system in: how far below the system's
+/// ORIGIN its first spaceable staff's refpoint sits, how far below it the last one's sits
+/// once every staff pair is squeezed to its alignment minimum, and the squeeze itself.
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/constrained-breaking.cc:562 fill_line_details — the breaker's
+/// Line_details carry <c>pure_refpoint_extent</c>, i.e. the outer spaceable staves at the
+/// alignment's MINIMUM translations, and its <c>full_height ()</c> is the pure height at
+/// those same translations. Lily# derives both from a placed system: the anchors from
+/// <c>LayoutEngine.PageAnchorOffsets</c>, the squeeze from its staff springs
+/// (drawn refpoint distance − <see cref="StaffSpring.MinimumDistance"/>, summed).
+/// </remarks>
+internal readonly record struct BreakerRefpointFrame(
+    double ToFirst, double ToLastAtMinimum, double StaffCompression);
+
+/// <summary>
 /// Vertical spacing details for a single system (line of music).
 /// </summary>
 /// <remarks>
@@ -113,9 +129,37 @@ internal sealed record SystemDetails
     public required double BottomExtent { get; init; }
 
     /// <summary>
-    /// Staff height (fixed, typically 4 staff spaces).
+    /// The system's BODY — its first spaceable staff's top line down to its last one's
+    /// bottom line — with every staff pair at the alignment's MINIMUM translation, which is
+    /// the height LilyPond's breaker prices a line at.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/system.cc:892-923 part_of_line_pure_height — the pure heights the
+    /// breaker's Line_details are built from translate each staff by
+    /// <c>get_pure_minimum_translations</c>, i.e. the pair's minimum-distance or its skyline
+    /// floor, NOT the basic-distance the page later stretches the pair to. A staff-plus-tab
+    /// system is 8 between its refpoints here and 9 once placed; pricing the placed 9 made
+    /// Lily# stack such systems 1 ss taller than LilyPond per staff pair and turn a page
+    /// LilyPond fills (audit/lp-geometry page.staff-tab.compressed.staves-on-first-page,
+    /// session 336). Hand-built details in tests give a plain staff's 4.
+    /// </remarks>
     public required double StaffHeight { get; init; }
+
+    /// <summary>
+    /// How much taller the PLACED body is than <see cref="StaffHeight"/>: the sum over the
+    /// system's staff springs of (drawn refpoint distance − alignment minimum). Zero on a
+    /// one-staff system and on any system whose pairs were drawn at their floor.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: the number itself has no LilyPond counterpart, because LilyPond's
+    /// Line_details never see a placed system at all — they are pure estimates. Lily#'s are
+    /// built from a system that was laid out at its basic-distances first (LayoutEngine's
+    /// placement pass), so the placement's own consumers of these details (the ink below the
+    /// last refpoint, PageLayouter.PositionSystemsOnPage) need the drawn body back, and this
+    /// is the difference they add. It goes when the details are built from a pure estimate
+    /// rather than from a placement. Nothing in the breaker reads it.
+    /// </remarks>
+    public double StaffCompression { get; init; }
 
     /// <summary>
     /// Compulsory space after this system (padding).
@@ -214,13 +258,17 @@ internal sealed record SystemDetails
     /// should be measured from the bottom refpoint_extent of one line to the top
     /// refpoint_extent of the next".
     /// <para>
-    /// LilyPond reads the real grobs. Lily# has no per-staff refpoints in this model, so
-    /// they are derived from the geometry it does have: every Lily# staff is a five-line
-    /// staff whose refpoint is its centre, so the first staff's refpoint sits half a
-    /// staff height below the body's top and the last staff's the same distance above its
-    /// bottom. That is exact for the staves Lily# engraves; it would NOT be for a staff
-    /// with a different line count, and this is the one place in the port that assumes
-    /// something LilyPond looks up.
+    /// LILYPOND-REF: lily/constrained-breaking.cc:562 fill_line_details —
+    /// <c>refpoint_extent_ = sys->pure_refpoint_extent (start_rank, end_rank)</c>, the
+    /// first and last SPACEABLE staff's offsets at the alignment's pure minimum
+    /// translations (system.cc:864-890). Lily# reads the same two staves off the placed
+    /// alignment (LayoutEngine.PageAnchorOffsets, the ClassifySystem selection every page
+    /// spring uses) and takes the last one back up by <see cref="StaffCompression"/> so
+    /// the pair is at the minimum LilyPond's is. Until session 336 this was a NOMINAL half
+    /// staff at both ends — 2.000000 whatever the staff — which put a five-string tab's
+    /// refpoint 1.0 too high (it is 3.0 above its outer line) and was one of the two terms
+    /// that made Lily# turn a page LilyPond fills. Hand-built details in tests may still
+    /// pass the nominal pair; the production callers pass the placed one.
     /// </para>
     /// </remarks>
     public double RefpointExtentUp { get; init; }
@@ -274,6 +322,7 @@ internal sealed class PageSpacing
     private double _topMargin;
     private readonly double _bottomMargin;
     private readonly VerticalSpacingSpec _topSystem;
+    private readonly VerticalSpacingSpec _topMarkup;
     private readonly VerticalSpacingSpec _lastBottom;
 
     private double _rodHeight;
@@ -298,12 +347,14 @@ internal sealed class PageSpacing
     public double SpringLength => _springLength;
 
     public PageSpacing(double pageHeight, double topMargin, double bottomMargin,
-        VerticalSpacingSpec topSystem, VerticalSpacingSpec lastBottom)
+        VerticalSpacingSpec topSystem, VerticalSpacingSpec lastBottom,
+        VerticalSpacingSpec? topMarkup = null)
     {
         _pageHeight = pageHeight;
         _topMargin = topMargin;
         _bottomMargin = bottomMargin;
         _topSystem = topSystem;
+        _topMarkup = topMarkup ?? VerticalSpacingParameters.Default.TopMarkup;
         _lastBottom = lastBottom;
         Clear();
     }
@@ -325,7 +376,13 @@ internal sealed class PageSpacing
     /// springs) — the breaker does not build them, it reserves their minimum here.
     /// </remarks>
     internal double MinWhitespaceAtTopOfPage(SystemDetails line)
-        => Math.Max(0.0, Math.Max(_topSystem.Padding, _topSystem.MinimumDistance - line.TopExtent));
+    {
+        // LILYPOND-REF: lily/page-breaking.cc:1789-1790 min_whitespace_at_top_of_page — a
+        // TITLE line at the top of a page reads top-markup-spacing instead (the book title
+        // is such a line: HeaderBand).
+        var spec = line.IsTitle ? _topMarkup : _topSystem;
+        return Math.Max(0.0, Math.Max(spec.Padding, spec.MinimumDistance - line.TopExtent));
+    }
 
     /// <summary>
     /// The whitespace <c>last-bottom-spacing</c> forces below the LAST system on a page.
@@ -722,7 +779,7 @@ internal sealed class PageBreaker
             bool ragged = _params.RaggedBottom || (_params.RaggedLastBottom && last);
             bool endsOnForbid = !last && lines[line].PagePermission == BreakPermission.Forbid;
             var space = new PageSpacing(_pageHeight, _topMargin, _bottomMargin,
-                _vs.TopSystem, _vs.LastBottom);
+                _vs.TopSystem, _vs.LastBottom, _vs.TopMarkup);
             int lineCount = 0;
 
             for (int pageStart = line; pageStart >= 0; pageStart--)
@@ -736,7 +793,12 @@ internal sealed class PageBreaker
                 if (!tooFewLines && pageStart < line && overfull)
                     break;
 
-                lineCount++;
+                // LILYPOND-REF: lily/page-spacing.cc:351 — line_count sums
+                // compressed_nontitle_lines_count_, which is 0 for a title line
+                // (constrained-breaking.cc:632): the book title does not count against
+                // min/max-systems-per-page.
+                if (!lines[pageStart].IsTitle)
+                    lineCount++;
                 bool prevReachable = prevIdx < 0 || !double.IsPositiveInfinity(demerits[prevIdx]);
                 if (!endsOnForbid && prevReachable)
                 {
@@ -864,7 +926,7 @@ internal sealed class PageBreaker
             return 0;
         var lines = CalcLineHeights(systems);
         var whitespace = new PageSpacing(_pageHeight, _topMargin, _bottomMargin,
-            _vs.TopSystem, _vs.LastBottom);
+            _vs.TopSystem, _vs.LastBottom, _vs.TopMarkup);
         double FirstBand() => _pageHeight - (_topMargin + _headerHeight) - _bottomMargin;
         double RestBand() => _pageHeight - _topMargin - _bottomMargin;
         bool TooFewLines(int lineCount) =>
@@ -890,7 +952,9 @@ internal sealed class PageBreaker
             double nextSpringHeight = curSpringHeight + springLen;
             double nextHeight = nextRodHeight + (ragged ? nextSpringHeight : 0)
                                 + whitespace.MinWhitespaceAtBottomOfPage(cur);
-            int nextLineCount = lineCount + 1;
+            // LILYPOND-REF: lily/page-breaking.cc:1216 — line_count sums
+            // compressed_nontitle_lines_count_; a title line counts 0.
+            int nextLineCount = lineCount + (cur.IsTitle ? 0 : 1);
 
             if ((!TooFewLines(lineCount) && nextHeight > curPageHeight && curRodHeight > 0)
                 || TooManyLines(nextLineCount)
@@ -983,10 +1047,14 @@ internal sealed class PageBreaker
             // TIE — toward LilyPond's, which keeps the largest page_start (:386 keeps the
             // earlier candidate too). Ties are what the corpus run has to answer for.
             var pageSpacing = new PageSpacing(_pageHeight, _topMargin, _bottomMargin,
-                _vs.TopSystem, _vs.LastBottom);
+                _vs.TopSystem, _vs.LastBottom, _vs.TopMarkup);
             for (int i = j - 1; i >= 0; i--)
             {
-                int systemCount = j - i;
+                // The lines on this candidate page, and the MUSIC systems among them: the
+                // min/max-systems-per-page filters count the latter (LilyPond's
+                // compressed_nontitle_lines_count_, 0 for the book title at line 0).
+                int lineSpan = j - i;
+                int systemCount = lineSpan - (i == 0 && systems[0].IsTitle ? 1 : 0);
 
                 // LILYPOND-REF: lily/page-spacing.cc:337 space.prepend_system (lines_[page_start])
                 // — unconditional, BEFORE any of the filters below, because the accumulator
@@ -1032,7 +1100,7 @@ internal sealed class PageBreaker
                 // min-systems-per-page is 0 and `line_count < 0` is already false.
                 bool tooFewLines = _params.MinSystemsPerPage > 0
                     && systemCount - 1 < _params.MinSystemsPerPage;
-                if (!tooFewLines && i < j - 1 && double.IsNegativeInfinity(pageSpacing.Force))
+                if (!tooFewLines && lineSpan > 1 && double.IsNegativeInfinity(pageSpacing.Force))
                     break;
 
                 // A start no page count reaches prices to nothing — every p below would
@@ -1213,7 +1281,7 @@ internal sealed class PageBreaker
         // Calculate available height
         double topMargin = isFirstPage ? _topMargin + _headerHeight : _topMargin;
         var spacing = new PageSpacing(_pageHeight, topMargin, _bottomMargin,
-            _vs.TopSystem, _vs.LastBottom);
+            _vs.TopSystem, _vs.LastBottom, _vs.TopMarkup);
 
         // Add systems to page
         for (int i = startIdx; i < endIdx; i++)
@@ -1237,7 +1305,11 @@ internal sealed class PageBreaker
         bool isLastPage,
         bool isRagged)
     {
-        int systemCount = endIdx - startIdx;
+        // The lines on the page, and the MUSIC systems among them — the book title at line 0
+        // is a line that counts 0 towards min/max-systems-per-page (LilyPond's
+        // compressed_nontitle_lines_count_).
+        int lineSpan = endIdx - startIdx;
+        int systemCount = lineSpan - (startIdx == 0 && systems[0].IsTitle ? 1 : 0);
         double force = spacing.Force;
         bool overfull = double.IsNegativeInfinity(force);
 
@@ -1245,10 +1317,10 @@ internal sealed class PageBreaker
         //   if (!breaker_->too_few_lines (line_count) && page_start < line && overfull) break;
         // The loop it guards starts at `page_start = line` and walks BACKWARDS, so the first
         // configuration tried for any line is the page holding that line ALONE, and
-        // `page_start < line` deliberately exempts it. A single system is therefore never
+        // `page_start < line` deliberately exempts it. A single line is therefore never
         // rejected for failing to fit — which is what guarantees the search always has an
-        // answer. Only a page of two or more systems can be thrown out for overflowing.
-        if (overfull && systemCount > 1)
+        // answer. Only a page of two or more lines can be thrown out for overflowing.
+        if (overfull && lineSpan > 1)
         {
             return double.MaxValue;
         }

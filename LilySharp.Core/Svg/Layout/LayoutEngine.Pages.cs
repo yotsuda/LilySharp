@@ -260,7 +260,7 @@ internal sealed partial class LayoutEngine
     }
 
     private (ImmutableArray<PageLayout> pages, ImmutableArray<SystemLayout> systems) CreatePages(
-        ImmutableArray<SystemLayout> systems, double headerHeight,
+        ImmutableArray<SystemLayout> systems, HeaderBand? header,
         List<(double upExtent, double downExtent)> perSystemExtents, double systemHeight,
         List<(VerticalSkyline up, VerticalSkyline down)>? perSystemSkylines = null,
         List<double>? perSystemHeights = null,
@@ -347,6 +347,9 @@ internal sealed partial class LayoutEngine
             var anchors = systems
                 .Select(s => PageAnchorOffsets(s.StaffGroups))
                 .ToImmutableArray();
+            // ...and the BREAKER's frame, per system: the same anchors with the last one
+            // taken back up to the pairs' alignment minimum (BreakerFrame).
+            var frames = systems.Select(BreakerFrame).ToImmutableArray();
             var shapes = BuildLineShapes(systems, perSystemSkylines, perSystemExtents, SysHeight);
             if (DebugPageBreakingScoring is { } debug)
             {
@@ -357,16 +360,18 @@ internal sealed partial class LayoutEngine
                     placedDetails.Add(_pageLayouter.BuildSystemDetails(
                         i, SysHeight(i), perSystemExtents[i].upExtent, perSystemExtents[i].downExtent,
                         shapes is { } sh && i < sh.Length ? sh[i] : null,
-                        perSystemPagePermissions is { } pp && i < pp.Length ? pp[i] : BreakPermission.Allow));
+                        perSystemPagePermissions is { } pp && i < pp.Length ? pp[i] : BreakPermission.Allow,
+                        frames[i]));
                 var stacked = PageBreaker.CalcLineHeights(placedDetails);
                 for (int i = 0; i < stacked.Count; i++)
                     debug($"  placed sys {i + 1}: {DescribeDetails(stacked[i])}");
             }
             var pages = _pageLayouter.CreatePagesWithOptimalBreaking(
-                systems, headerHeight, perSystemExtents.ToImmutableArray(), skylines,
+                systems, header, perSystemExtents.ToImmutableArray(), skylines,
                 perSystemBandUps?.ToImmutableArray(), perSystemHeights, anchors,
                 shapes,
-                perSystemPagePermissions);
+                perSystemPagePermissions,
+                frames);
             return (pages, pages.SelectMany(p => p.Systems).ToImmutableArray());
         }
 
@@ -388,8 +393,8 @@ internal sealed partial class LayoutEngine
         // Recalculate Y positions using skyline extents to avoid overlaps
         var pageAnchor = PageAnchorOffsets(systems[0].StaffGroups);
         double skylineY = LayoutUtilities.CalculateFirstSystemY(
-            _options.MarginTop, headerHeight, perSystemExtents[0].upExtent,
-            pageAnchor.ToFirst, _options.VerticalSpacing.TopSystem);
+            _options.MarginTop, header, perSystemExtents[0].upExtent,
+            pageAnchor.ToFirst, _options.VerticalSpacing);
 
         // ⚠️ THE SINGLE-PAGE STACK IS THROWN AWAY WHEN THE SCORE OVERFLOWS (the check below
         // hands the whole thing to OptimalPages), and it is not cheap to build: the loop
@@ -557,7 +562,13 @@ internal sealed partial class LayoutEngine
         var systemsArray = updatedSystems
             .Select(s => s with { Y = totalHeight - s.Y })
             .ToImmutableArray();
-        var page = new PageLayout(0, _options.PageWidth, totalHeight, headerHeight, systemsArray);
+        // A single page runs at force 0, so the title column's top is the top-markup
+        // spring's own length below the margin (4 at rest — LayoutUtilities.TitleTopSpring).
+        var page = new PageLayout(0, _options.PageWidth, totalHeight, header?.Depth ?? 0, systemsArray,
+            Header: header,
+            HeaderTop: header is null
+                ? 0
+                : _options.MarginTop + LayoutUtilities.TitleTopSpring(_options.VerticalSpacing).Length(0));
         return (ImmutableArray.Create(page), systemsArray);
     }
 
@@ -784,6 +795,62 @@ internal sealed partial class LayoutEngine
             ? (-MultiStaffLayouter.StaffRefpoint(first), -MultiStaffLayouter.StaffRefpoint(last),
                first.Height / 2.0, last.Height / 2.0)
             : (nominal, nominal, nominal, nominal);
+    }
+
+    /// <summary>
+    /// The frame the page BREAKER prices one placed system in — <see cref="PageAnchorOffsets"/>'
+    /// two refpoints with the last taken back up by <see cref="StaffSpringCompression"/>, so
+    /// the pair stands at the alignment minimum LilyPond's Line_details read it at.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/constrained-breaking.cc:562 fill_line_details — refpoint_extent_ is
+    /// <c>pure_refpoint_extent</c>, the outer spaceable staves at
+    /// <c>get_pure_minimum_translations</c> (system.cc:864-890); the body the same details
+    /// price (<c>full_height ()</c>) is at those translations too. Lily# lays a system out at
+    /// its basic-distances first and springs the pairs on the page afterwards, so the placed
+    /// system is the STRETCHED one and the breaker's is recovered by subtracting the squeeze.
+    /// A system with one spaceable staff has no spring and no squeeze; a plain five-line
+    /// staff's frame is the nominal (2, 2, 0) the breaker always priced.
+    /// </remarks>
+    private BreakerRefpointFrame BreakerFrame(SystemLayout system)
+    {
+        var a = PageAnchorOffsets(system.StaffGroups);
+        double compression = StaffSpringCompression(system);
+        return new BreakerRefpointFrame(a.ToFirst, a.ToLast - compression, compression);
+    }
+
+    /// <summary>
+    /// How much taller a placed system's body is than its alignment minimum: over its staff
+    /// springs, the drawn refpoint distance less the spring's floor, summed.
+    /// </summary>
+    /// <remarks>
+    /// The placement puts a spaceable pair at <c>max (basic-distance, minimum)</c> (the
+    /// alignment's answer at force 0 — MultiStaffLayouter's pair branch), and
+    /// <see cref="StaffSpring.MinimumDistance"/> IS that alignment minimum
+    /// (StaffSprings.AddSpring: "the alignment's own minimum translation for the pair"), so
+    /// the difference per pair is exactly what LilyPond's pure translations leave out. On a
+    /// staff-plus-tab system it is 9 − 8 = 1.0 (audit/lp-geometry
+    /// page.staff-tab.compressed.staves-on-first-page's other term). Clamped at 0 per pair:
+    /// a pair drawn on its floor contributes nothing.
+    /// </remarks>
+    private static double StaffSpringCompression(SystemLayout system)
+    {
+        if (system.StaffSprings.IsDefaultOrEmpty || system.StaffGroups.IsDefaultOrEmpty)
+            return 0;
+        var byIndex = new Dictionary<int, StaffLayout>();
+        foreach (var group in system.StaffGroups)
+            foreach (var staff in group.Staves)
+                byIndex[staff.StaffIndex] = staff;
+        double total = 0;
+        foreach (var spring in system.StaffSprings)
+        {
+            if (!byIndex.TryGetValue(spring.UpperStaffIndex, out var upper)
+                || !byIndex.TryGetValue(spring.LowerStaffIndex, out var lower))
+                continue;
+            double drawn = MultiStaffLayouter.StaffRefpoint(upper) - MultiStaffLayouter.StaffRefpoint(lower);
+            total += Math.Max(0, drawn - spring.MinimumDistance);
+        }
+        return total;
     }
 
 }

@@ -50,8 +50,13 @@ internal sealed partial class LayoutEngine
     /// a system there, the bare continuation prefix everywhere else (see the remarks of
     /// <see cref="EstimateMeasureHeights"/>).</param>
     /// <param name="BeginDownAt">Its ink below the body, likewise per line start.</param>
+    /// <param name="Frame">Per measure, the breaker's refpoint frame of the system it was
+    /// placed in (<c>LayoutEngine.BreakerFrame</c>): the outer staves' refpoints and the
+    /// squeeze that takes the body back to its alignment minimum. Null where no placed
+    /// system holds the bar.</param>
     private readonly record struct MeasureHeightEstimate(
-        double[] UpRest, double[] DownRest, double[] Body, double[] BeginUpAt, double[] BeginDownAt);
+        double[] UpRest, double[] DownRest, double[] Body, double[] BeginUpAt, double[] BeginDownAt,
+        BreakerRefpointFrame?[] Frame);
 
     /// <summary>
     /// Slices the ideal placement's paging silhouettes by bar, so that any candidate line —
@@ -106,13 +111,14 @@ internal sealed partial class LayoutEngine
     /// scalar extents to each of its bars.
     /// </para>
     /// </remarks>
-    private static MeasureHeightEstimate EstimateMeasureHeights(
+    private MeasureHeightEstimate EstimateMeasureHeights(
         SystemPass pass, int measureCount, double fallbackBody)
     {
         var upRest = new double[measureCount];
         var downRest = new double[measureCount];
         var body = new double[measureCount];
         Array.Fill(body, fallbackBody);
+        var frame = new BreakerRefpointFrame?[measureCount];
         // The begin bucket per line start: NaN until a placed system starting there fills
         // it; the rest take the bare continuation prefix below.
         var beginUpAt = new double[measureCount];
@@ -186,6 +192,10 @@ internal sealed partial class LayoutEngine
                 bareUp = Math.Min(bareUp, lineBeginUp);
                 bareDown = Math.Min(bareDown, lineBeginDown);
             }
+            // The breaker's frame of the system this bar was placed in — the same
+            // BreakerFrame the paging path hands the placed systems' details, so an
+            // estimated line of one system's bars is priced in exactly that system's frame.
+            var sysFrame = BreakerFrame(sys);
             for (int k = 0; k < count; k++)
             {
                 int mi = sys.Measures[k].MeasureIndex;
@@ -194,6 +204,7 @@ internal sealed partial class LayoutEngine
                 upRest[mi] = measureUp[k] + excessUp;
                 downRest[mi] = measureDown[k] + excessDown;
                 body[mi] = h;
+                frame[mi] = sysFrame;
             }
         }
         if (double.IsPositiveInfinity(bareUp))
@@ -208,7 +219,7 @@ internal sealed partial class LayoutEngine
             if (double.IsNaN(beginDownAt[m]))
                 beginDownAt[m] = bareDown;
         }
-        return new MeasureHeightEstimate(upRest, downRest, body, beginUpAt, beginDownAt);
+        return new MeasureHeightEstimate(upRest, downRest, body, beginUpAt, beginDownAt, frame);
     }
 
     /// <summary>
@@ -231,14 +242,25 @@ internal sealed partial class LayoutEngine
         {
             int end = Math.Min(breaks[i], measures.Length);
             double restUp = 0, restDown = 0, body = 0;
+            // The frame travels with the body it belongs to: the bar whose placed system
+            // is the tallest lends the line its body AND its refpoints, so the two never
+            // come from different systems.
+            BreakerRefpointFrame? frame = null;
             for (int m = start; m < end; m++)
             {
                 restUp = Math.Max(restUp, estimate.UpRest[m]);
                 restDown = Math.Max(restDown, estimate.DownRest[m]);
-                body = Math.Max(body, estimate.Body[m]);
+                if (estimate.Body[m] > body)
+                {
+                    body = estimate.Body[m];
+                    frame = estimate.Frame[m];
+                }
             }
             if (body <= 0)
+            {
                 body = _options.StaffHeight;
+                frame = null;
+            }
             var permission = end > start
                 ? measures[end - 1].EffectivePagePermission
                 : BreakPermission.Allow;
@@ -250,7 +272,7 @@ internal sealed partial class LayoutEngine
                 i, body,
                 Math.Max(beginUp, restUp), Math.Max(beginDown, restDown),
                 new LineShape(beginUp, beginDown, restUp, restDown),
-                permission));
+                permission, frame));
             start = end;
         }
         return details;
@@ -298,14 +320,29 @@ internal sealed partial class LayoutEngine
     /// </para>
     /// </remarks>
     private List<int>? ChooseSystemCount(
-        MultiStaffScore score, LineBreakSolutions lineBreaks, SystemPass ideal, double headerHeight)
+        MultiStaffScore score, LineBreakSolutions lineBreaks, SystemPass ideal, HeaderBand? header)
     {
         var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
         if (measures.Length == 0 || ideal.Systems.Count == 0)
             return null;
 
         var estimate = EstimateMeasureHeights(ideal, measures.Length, _options.StaffHeight);
-        var breaker = _pageLayouter.CreateBreaker(headerHeight);
+        var breaker = _pageLayouter.CreateBreaker();
+        // The book title is the page's first LINE (paper-book.cc:570-580), priced by the
+        // same DP as the systems; the page loop below sees it in front of every candidate.
+        var title = header is null ? null : _pageLayouter.BuildTitleDetails(header);
+        List<SystemDetails> WithTitle(List<SystemDetails> details)
+        {
+            if (title is not null)
+                details.Insert(0, title);
+            return details;
+        }
+        // The MUSIC systems a page holds: LilyPond's systems_per_page_ counts compressed
+        // lines, and its title is compressed INTO the first system's line
+        // (page-breaking.cc:155-190 compress_lines); Lily# keeps the title a line of its own,
+        // so the first page's count is one more than its systems.
+        int SystemsOn(PageBreakResult pages, int page) =>
+            pages.SystemsPerPage[page] - (page == 0 && title is not null ? 1 : 0);
 
         // LILYPOND-REF: :156 space_systems_on_best_pages (i, first_page_num), then the
         // finalize_spacing_result inside it.
@@ -313,7 +350,7 @@ internal sealed partial class LayoutEngine
         {
             if (lineBreaks.For(lineCount) is not { } candidate)
                 return null;
-            var details = EstimatedSystemDetails(candidate.Breaks, estimate, measures);
+            var details = WithTitle(EstimatedSystemDetails(candidate.Breaks, estimate, measures));
             var pages = breaker.BreakIntoPagesScored(details);
             double demerits = breaker.Demerits(pages, candidate.ForceSquaredSum, candidate.BreakPenaltySum);
             return (demerits, pages, candidate.Breaks);
@@ -332,7 +369,7 @@ internal sealed partial class LayoutEngine
                 + string.Join(" ", lineBreaks.IdealBreaks.Prepend(0).Take(lineBreaks.IdealBreaks.Count)
                     .Select(m => $"{m + 1}:{estimate.BeginUpAt[m]:F3}/{estimate.BeginDownAt[m]:F3}")));
             var idealDetails = PageBreaker.CalcLineHeights(
-                EstimatedSystemDetails(lineBreaks.IdealBreaks, estimate, measures));
+                WithTitle(EstimatedSystemDetails(lineBreaks.IdealBreaks, estimate, measures)));
             for (int i = 0; i < idealDetails.Count; i++)
                 debug($"  est line {i + 1}: {DescribeDetails(idealDetails[i])}");
         }
@@ -349,9 +386,9 @@ internal sealed partial class LayoutEngine
         }
         else
         {
-            minCount = idealCount - best.pages.SystemsPerPage[pageCount - 1];
-            if (pageCount > 1 && best.pages.SystemsPerPage[pageCount - 2] > 1)
-                minCount -= best.pages.SystemsPerPage[pageCount - 2];
+            minCount = idealCount - SystemsOn(best.pages, pageCount - 1);
+            if (pageCount > 1 && SystemsOn(best.pages, pageCount - 2) > 1)
+                minCount -= SystemsOn(best.pages, pageCount - 2);
             if (minCount > idealCount || minCount <= 0)
                 minCount = 1;
         }

@@ -155,6 +155,27 @@ internal sealed record VerticalSpacingParameters
     };
 
     /// <summary>
+    /// Spacing from the page top to a TITLE that opens the page — the spring the page's top
+    /// takes instead of <see cref="TopSystem"/> when its first line is a markup.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/paper-defaults-init.ly:81-83 top-markup-spacing
+    /// ((basic-distance . 4) (minimum-distance . 0) (padding . 1)) — no stretchability, so
+    /// the spring tracks its ideal, as <see cref="TopSystem"/> does.
+    /// LILYPOND-REF: lily/page-layout-problem.cc:468-469 Page_layout_problem — the constructor
+    /// swaps it in for top-system-spacing when the first element of the page is a Prob;
+    /// lily/page-breaking.cc:1789-1790 min_whitespace_at_top_of_page reads it for a title line.
+    /// </remarks>
+    public VerticalSpacingSpec TopMarkup { get; init; } = new()
+    {
+        BasicDistance = 4,
+        MinimumDistance = 0,
+        Padding = 1,
+        // ly/paper-defaults-init.ly:81-83 declares no stretchability.
+        Stretchability = null,
+    };
+
+    /// <summary>
     /// Spacing from page top to first system.
     /// </summary>
     /// <remarks>

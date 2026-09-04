@@ -114,8 +114,7 @@ public class LeadSheetHeaderClearanceTests
     {
         var g = RenderedGeometry.Render(LeadSheetWithHeader);
         var options = new LayoutOptions();
-        double headerBottom = options.MarginTop
-            + LayoutUtilities.CalculateHeaderHeight("T", "C");
+        double headerBottom = HeaderBottom(options);
 
         var chords = g.ChordSymbols;
         Assert.NotEmpty(chords);
@@ -147,8 +146,7 @@ public class LeadSheetHeaderClearanceTests
     {
         var g = RenderedGeometry.Render(LeadSheetWithHeader);
         var options = new LayoutOptions();
-        double headerBottom = options.MarginTop
-            + LayoutUtilities.CalculateHeaderHeight("T", "C");
+        double headerBottom = HeaderBottom(options);
 
         var syllables = g.Texts.Where(t => t.Text == "la").ToList();
         Assert.NotEmpty(syllables);
@@ -171,19 +169,71 @@ public class LeadSheetHeaderClearanceTests
     {
         var g = RenderedGeometry.Render(StaffOnlyWithHeader);
         var options = new LayoutOptions();
-        double header = LayoutUtilities.CalculateHeaderHeight("T", "C");
+        double headerBottom = HeaderBottom(options);
 
-        // top-margin 5.690551 + max(basic-distance 6, header + ink + padding). This book's
-        // ink above the refpoint is the section label's, so the floor binds; what the control
-        // fixes is that the anchor is built from the STAFF and nothing else stands over it.
+        // The title column's bottom + markup-system-spacing's floor (padding 0.5 + the
+        // system's ink over the refpoint). This book's ink above the refpoint is the section
+        // label's, so the floor binds; what the control fixes is that the anchor is built from
+        // the STAFF and nothing else stands over it.
         double refpoint = g.FirstStaffRefpoint();
         Assert.True(
-            refpoint >= options.MarginTop + header + 1,
+            refpoint >= headerBottom + options.VerticalSpacing.MarkupSystem.Padding,
             $"first staff refpoint {refpoint:F6} is inside the header + padding.");
         Assert.True(
-            refpoint <= options.MarginTop + header + 12,
+            refpoint <= headerBottom + 12,
             $"first staff refpoint {refpoint:F6} is implausibly far down for a staff-topped "
             + "system — the rows-above conversion has leaked into a score that has no rows.");
+    }
+
+    /// <summary>
+    /// Where the header's ink ENDS on a single-page book: the title column's top is
+    /// top-markup-spacing's length below the margin (4 at rest — a page that fits stands at
+    /// force 0), and the column reaches its own depth below that.
+    /// </summary>
+    private static double HeaderBottom(LayoutOptions options)
+        => options.MarginTop
+           + LayoutUtilities.TitleTopSpring(options.VerticalSpacing).Length(0)
+           + HeaderBand.Build("T", "C", ScoreTextMetrics.Bundled)!.Depth;
+
+    /// <summary>
+    /// The column stacks its rows as bookTitleMarkup does: the composer's baseline is
+    /// baseline-skip below the title's when that is the larger step, and the ink height of
+    /// the two rows otherwise — never the sum of two font sizes.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/titling-init.ly bookTitleMarkup (line 69) baseline-skip 3.5; scm/stencil.scm
+    /// stack-lines (lines 153-168) via ly:stencil-stack — reference points at least the skip apart, extents at least
+    /// touching. Poisoned by dropping either arm of the max, one of the two books here fails.
+    /// </remarks>
+    [Fact]
+    public void HeaderBand_StacksTheComposerUnderTheTitle_BySkipOrByInk()
+    {
+        var fonts = ScoreTextMetrics.Bundled;
+
+        // "T" over "C": a short title with no descender, a cap-height composer — the skip binds.
+        var skipBound = HeaderBand.Build("T", "C", fonts)!;
+        var titleInk = fonts.Ink("T", HeaderBand.TitleFontSize, TextRole.Title, FontStyle.Bold);
+        var composerInk = fonts.Ink("C", HeaderBand.ComposerFontSize, TextRole.Composer);
+        Assert.Equal(titleInk.Top, skipBound.TitleBaseline!.Value, 9);
+        Assert.Equal(titleInk.Top + HeaderBand.BaselineSkip, skipBound.ComposerBaseline!.Value, 9);
+        Assert.Equal(skipBound.ComposerBaseline!.Value - composerInk.Bottom, skipBound.Depth, 9);
+
+        // A title alone is exactly its ink; a composer alone exactly its.
+        Assert.Equal(titleInk.Top - titleInk.Bottom, HeaderBand.Build("T", null, fonts)!.Depth, 9);
+        Assert.Equal(composerInk.Top - composerInk.Bottom, HeaderBand.Build(null, "C", fonts)!.Depth, 9);
+        Assert.Null(HeaderBand.Build(null, null, fonts));
+
+        // The other arm: a title whose descender reaches further than the skip leaves room
+        // for is pushed apart by INK. "gjpqy" descends about 0.2 em at 3.49; the composer's
+        // ascender at 2.2 rises about 0.7 em — together more than 3.5 − the title's ascent
+        // only when the title is all descenders, so the arm is asserted on its own terms:
+        // the composer baseline is never above the title's ink bottom plus its own ink top.
+        var deep = HeaderBand.Build("gjpqy", "ÅÉÎ", fonts)!;
+        var deepTitle = fonts.Ink("gjpqy", HeaderBand.TitleFontSize, TextRole.Title, FontStyle.Bold);
+        var tallComposer = fonts.Ink("ÅÉÎ", HeaderBand.ComposerFontSize, TextRole.Composer);
+        double byInk = (deepTitle.Top - deepTitle.Bottom) + tallComposer.Top;
+        double bySkip = deepTitle.Top + HeaderBand.BaselineSkip;
+        Assert.Equal(Math.Max(byInk, bySkip), deep.ComposerBaseline!.Value, 9);
     }
 
     /// <summary>The same book twice, one word apart: a ROUND capital against a FLAT one.</summary>

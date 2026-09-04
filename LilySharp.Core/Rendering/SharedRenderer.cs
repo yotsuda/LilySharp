@@ -246,32 +246,37 @@ internal static partial class SharedRenderer
 
     // ---------- Header ----------
 
-    // LILYPOND-REF: ly/titling-init.ly:75 — \huge \larger \larger \bold ≈ 3.49 ss
-    // LILYPOND-REF: ly/titling-init.ly:89 — composer baseline ≈ 2.2 ss
-    private const double TitleFontSize = 3.49;
-    private const double ComposerFontSize = 2.2;
-
+    // The book title, drawn where the page's chain put its column: the title's baseline
+    // and the composer's are HeaderBand's, below the column's top (PageLayout.HeaderTop),
+    // which top-markup-spacing solved with the rest of the page. Sizes and faces are
+    // bookTitleMarkup's (ly/titling-init.ly:68-97): \huge \larger \larger \bold for the
+    // title on its own \fill-line (centred), the composer at text size, upright, at the
+    // right end of the poet/instrument/composer line.
+    // ★ THE BASELINE WAS AT THE MARGIN until session 336 — the title's ascender stood in
+    // the top margin and the composer sat TitleFontSize under it in italics; LilyPond's
+    // column starts 4 ss below the margin and its composer is not italic
+    // (audit/lp-geometry titled-page.ly, page.titled.first-staff-refpoint).
     private static void DrawHeader(
         MultiStaffScore score, PageLayout page, LayoutOptions options, IDrawingContext gc)
     {
-        // Keep the device-Y downward accumulation, but emit each baseline in the
-        // page's Y-up frame (page-bottom origin): the flipping context turns
-        // page.Height − y back into the device y.
-        double y = options.MarginTop;
-        if (score.Title is { } title)
+        if (page.Header is not { } band)
+            return;
+        // Baselines accumulate DOWN the device; each is emitted in the page's Y-up frame
+        // (page-bottom origin): the flipping context turns page.Height − y back into it.
+        double top = page.HeaderTop;
+        if (score.Title is { } title && band.TitleBaseline is { } titleBaseline)
         {
             double centerX = page.Width / 2;
             using (SourceScope(gc, score.Header.Title))
-                gc.DrawText(title, centerX, page.Height - y, TitleFontSize, TextRole.Title,
-                    FontStyle.Bold, TextAnchor.Middle);
-            y += TitleFontSize;
+                gc.DrawText(title, centerX, page.Height - (top + titleBaseline),
+                    HeaderBand.TitleFontSize, TextRole.Title, FontStyle.Bold, TextAnchor.Middle);
         }
-        if (score.Composer is { } composer)
+        if (score.Composer is { } composer && band.ComposerBaseline is { } composerBaseline)
         {
             double rightX = page.Width - options.MarginLeft;
             using (SourceScope(gc, score.Header.Composer))
-                gc.DrawText(composer, rightX, page.Height - y, ComposerFontSize, TextRole.Composer,
-                    FontStyle.Italic, TextAnchor.End);
+                gc.DrawText(composer, rightX, page.Height - (top + composerBaseline),
+                    HeaderBand.ComposerFontSize, TextRole.Composer, FontStyle.Regular, TextAnchor.End);
         }
     }
 

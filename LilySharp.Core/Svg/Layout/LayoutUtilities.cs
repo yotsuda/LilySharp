@@ -390,16 +390,55 @@ internal static class LayoutUtilities
     /// the origin frame ONCE, in <see cref="CalculateFirstSystemY"/>.
     /// </remarks>
     public static double CalculateFirstStaffRefpoint(
-        double topMargin, double headerHeight, double systemUpExtent,
-        double originToRefpoint, VerticalSpacingSpec topSpec)
+        double topMargin, HeaderBand? header, double systemUpExtent,
+        double originToRefpoint, VerticalSpacingParameters vs)
         // LILYPOND-REF: lily/simple-spacer.cc:295-305 spring_positions — a system's
         // position is the running sum of its springs' lengths, and for the FIRST system
-        // that sum is the top spring alone. At force 0 Spring::length is
-        // max(min_distance_, ideal_distance_) (spring.cc:219-237), which is why a system
-        // whose ink is smaller than top-system-spacing's basic-distance is not measured by
-        // its ink at all.
-        => topMargin + CreateTopSystemSpring(headerHeight, systemUpExtent, originToRefpoint, topSpec)
-                       .Length(0);
+        // that sum is the top spring alone — or, under a title, the top-markup spring and
+        // the markup-system spring (page-layout-problem.cc:468-469, :506-507). At force 0
+        // Spring::length is max(min_distance_, ideal_distance_) (spring.cc:219-237), which
+        // is why a system whose ink is smaller than top-system-spacing's basic-distance is
+        // not measured by its ink at all.
+        => topMargin + (header is null
+            ? CreateTopSystemSpring(systemUpExtent, originToRefpoint, vs.TopSystem).Length(0)
+            : TitleTopSpring(vs).Length(0)
+              + TitleToSystemSpring(header, systemUpExtent, originToRefpoint, vs).Length(0));
+
+    /// <summary>
+    /// The spring from the top of the printable area down to the TITLE column's top — the
+    /// page's first spring when the page opens with a title.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:468-469 Page_layout_problem — the top spring
+    /// is <c>top-markup-spacing</c> when the first element is a Prob; :734-770 append_prob
+    /// floors it with the prob's ink above its reference point plus the padding, and a
+    /// top-aligned title (paper-book.cc:443) has none, so the floor is the padding alone and
+    /// the spring sits at its basic-distance 4 at rest. MEASURED (audit/lp-geometry
+    /// titled-page.ly): the title's Y-offset is 4.000000 on every titled book.
+    /// </remarks>
+    public static Spring TitleTopSpring(VerticalSpacingParameters vs)
+        => CreateSpring(vs.TopMarkup, vs.TopMarkup.Padding);
+
+    /// <summary>
+    /// The spring from the title column's top down to the first system's first staff
+    /// refpoint — <c>markup-system-spacing</c>, floored by the title's depth, the system's
+    /// ink above its refpoint and the padding.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:506-507 — <c>last_system_was_title</c>
+    /// selects markup-system-spacing for the system after a title; :625-633 append_system
+    /// floors it with <c>up_skyline.distance (bottom_skyline_) + padding</c>, where
+    /// bottom_skyline_ is the title's down side (:746) and the system's up skyline is
+    /// anchored on its first spaceable staff (:1120-1122). The title is a \fill-line, so its
+    /// ink spans the line and the distance is against the system's TALLEST ink — MEASURED
+    /// on titled-page.ly TTL: 20.073246 = top-margin + 4 + depth 6.106695 + 0.5 + the treble
+    /// clef's 3.776 over the refpoint, to the digit.
+    /// </remarks>
+    public static Spring TitleToSystemSpring(
+        HeaderBand header, double systemUpExtent, double originToRefpoint,
+        VerticalSpacingParameters vs)
+        => CreateSpring(vs.MarkupSystem,
+            header.Depth + systemUpExtent + originToRefpoint + vs.MarkupSystem.Padding);
 
     /// <summary>
     /// The spring from the top of the printable area down to the first system's staff
@@ -429,14 +468,17 @@ internal static class LayoutUtilities
     /// <see cref="CalculateFirstStaffRefpoint"/>'s remark for the measurement).
     /// </param>
     public static Spring CreateTopSystemSpring(
-        double headerHeight, double systemUpExtent, double originToRefpoint,
-        VerticalSpacingSpec topSpec)
+        double systemUpExtent, double originToRefpoint, VerticalSpacingSpec topSpec)
     {
         // Lily#'s up extent is the ink above the system's ORIGIN; LilyPond's up_skyline is
         // measured from the first spaceable staff's REFPOINT and always contains the staff
         // symbol itself, so the same quantity is originToRefpoint more there.
+        // ★ THE HEADER LEFT THIS FLOOR IN SESSION 336. LilyPond's header_height_ (:435, :444)
+        // is the PAGE header — oddHeaderMarkup, which Lily# does not print — and the book
+        // TITLE is not in it: it is a paper system of its own at the head of the chain
+        // (TitleTopSpring / TitleToSystemSpring), which is where Lily#'s title went too.
         double inkAboveRefpoint = systemUpExtent + originToRefpoint;
-        return CreateSpring(topSpec, headerHeight + inkAboveRefpoint + topSpec.Padding);
+        return CreateSpring(topSpec, inkAboveRefpoint + topSpec.Padding);
     }
 
     /// <summary>
@@ -493,45 +535,18 @@ internal static class LayoutUtilities
     /// answer back OUT of it. Half a staff exactly while the topmost element is that staff.
     /// </param>
     public static double CalculateFirstSystemY(
-        double topMargin, double headerHeight, double systemUpExtent,
-        double originToRefpoint, VerticalSpacingSpec topSpec)
+        double topMargin, HeaderBand? header, double systemUpExtent,
+        double originToRefpoint, VerticalSpacingParameters vs)
         => CalculateFirstStaffRefpoint(
-               topMargin, headerHeight, systemUpExtent, originToRefpoint, topSpec)
+               topMargin, header, systemUpExtent, originToRefpoint, vs)
            - originToRefpoint;
 
-    /// <summary>
-    /// Calculates the actual header height based on title and composer presence.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/page-layout-problem.cc:435
-    /// header_height_ = head ? head->extent(Y_AXIS).length() : 0;
-    ///
-    /// SVG text coordinates specify the baseline, which is approximately
-    /// the bottom of the text (excluding descenders). Therefore:
-    /// - Title at y=MarginTop has its bottom at MarginTop
-    /// - Composer follows with spacing from title baseline
-    /// - headerBottom = MarginTop + (vertical extent of all header elements)
-    /// </remarks>
-    // Mirror of SharedRenderer.DrawHeader: the title BASELINE sits at
-    // MarginTop (fs 3.49) and the composer baseline TitleFontSize below it
-    // (fs 2.2). Header HEIGHT is the ink below MarginTop — the old model
-    // pretended the title had no descender (and used a stale 3.0 for the
-    // composer step), so a first system with no tall content of its own
-    // (a lyrics/chords ROW score) started inside the title's descender ink.
-    private const double HeaderTitleFontSize = 3.49;
-    private const double HeaderComposerFontSize = 2.2;
-    private const double DescentEm = 0.22; // serif descender depth per em
-
-    public static double CalculateHeaderHeight(string? title, string? composer)
-    {
-        if (title != null && composer != null)
-            return HeaderTitleFontSize + HeaderComposerFontSize * DescentEm;
-        if (title != null)
-            return HeaderTitleFontSize * DescentEm;
-        if (composer != null)
-            return HeaderComposerFontSize * DescentEm;
-        return 0;
-    }
+    // CalculateHeaderHeight lived here until session 336: "the ink below the title's
+    // baseline, drawn at MarginTop" (3.974 for a title and a composer), folded into the
+    // top-system spring's floor. It read LilyPond's header_height_ (page-layout-problem.cc:435)
+    // as the book title, and it is not — that is the PAGE header. The title is HeaderBand, a
+    // top-aligned column paged as a system of its own; audit/lp-geometry titled-page.ly
+    // (page.titled.first-staff-refpoint, −5.632695 before the port) is the measurement.
 
     /// <summary>
     /// A staff's WITHIN-SYSTEM vertical offset in LilyPond's frame: staff-spaces

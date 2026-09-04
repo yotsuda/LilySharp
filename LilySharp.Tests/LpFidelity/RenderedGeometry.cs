@@ -406,17 +406,72 @@ internal sealed class RenderedGeometry
     /// </para>
     /// </remarks>
     public IReadOnlyList<double> ScaledPairRefpoints(
-        int upperLines, double upperScale, int lowerLines, int page = 0)
+        int upperLines, double upperScale, int lowerLines, int page = 0) =>
+        PairRefpoints(upperLines, upperScale, lowerLines, 1.0, page);
+
+    /// <summary>
+    /// Every staff refpoint on a page whose systems are each a five-line notation staff over
+    /// a TAB staff of <paramref name="tabLines"/> strings — the frame of books STBN / STBK
+    /// (probes/staff-tab-page.ly) and of every <c>staff X  tab X</c> book in the bass corpus.
+    /// </summary>
+    /// <remarks>
+    /// The same walk as <see cref="ScaledPairRefpoints"/> with the LOWER staff's line step
+    /// passed instead of assumed: a tab's strings are
+    /// <see cref="EngravingDefaults.TabStringSpace(int)"/> apart at the staff's own line
+    /// thickness, so the ossia reading — which keys the upper staff on a scaled THICKNESS and
+    /// the lower on a step of 1.0 — admits the lines and then refuses the tab as "not 1.0
+    /// apart". Its refpoint is the midpoint of the span, LilyPond staff position 0 on a
+    /// TabStaff too (system.cc:705-717 staff-refpoint-extent), which on five strings is the
+    /// middle string.
+    /// </remarks>
+    public IReadOnlyList<double> StaffTabPairRefpoints(int tabLines, int page = 0) =>
+        PairRefpoints(5, 1.0, tabLines, EngravingDefaults.TabStringSpace(tabLines), page);
+
+    /// <summary>
+    /// One named gap down a page of staff-over-tab systems: even indices are a system's own
+    /// staff-to-tab distance, odd ones the distance from a system's tab to the next system's
+    /// staff — <see cref="ScaledPairGapAt"/> for the tab frame.
+    /// </summary>
+    public double StaffTabPairGapAt(int index, int tabLines, int page = 0)
+    {
+        var refs = StaffTabPairRefpoints(tabLines, page);
+        if (index < 0 || index + 1 >= refs.Count)
+            throw new InvalidOperationException(
+                $"page {page}: asked for gap {index} but the page holds {refs.Count} staves."
+                + "\nDrawn geometry:\n" + Describe());
+        return refs[index + 1] - refs[index];
+    }
+
+    /// <summary>How many STAVES a page of staff-over-tab systems drew — the count the index reads need.</summary>
+    public int StaffTabPairStavesOnPage(int tabLines, int page = 0) =>
+        StaffTabPairRefpoints(tabLines, page).Count;
+
+    /// <summary>Top paper edge down to the FIRST staff refpoint of a page of staff-over-tab systems.</summary>
+    public double StaffTabPairFirstStaffRefpoint(int tabLines, int page = 0) =>
+        StaffTabPairRefpoints(tabLines, page)[0];
+
+    /// <summary>The LAST refpoint (a tab's) on a page of staff-over-tab systems down to the bottom paper edge.</summary>
+    public double StaffTabPairLastStaffToFoot(int tabLines, int page = 0) =>
+        PageHeight(page) - StaffTabPairRefpoints(tabLines, page)[^1];
+
+    private IReadOnlyList<double> PairRefpoints(
+        int upperLines, double upperScale, int lowerLines, double lowerSpace, int page)
     {
         double upperThickness = StaffLineThickness * upperScale;
+        // Grouped by Y and judged on the ROW's span, as StaffLineYs does, not segment by
+        // segment: a tab string is drawn in pieces around its fret digits
+        // (SharedRenderer.Tab.cs DrawTabStringLine), and a row whose every piece is shorter
+        // than MinStaffLineSpan vanished from the per-segment reading — book STBN came back
+        // with 28 lines for 3 staff-plus-tab systems.
         var ys = _pages[page].Lines
             .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
                         && !l.IsDashed
                         && (Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9
-                            || Math.Abs(l.StrokeWidth - upperThickness) < 1e-9)
-                        && Math.Abs(l.X2 - l.X1) >= MinStaffLineSpan)
-            .Select(l => l.Y1)
-            .Distinct()
+                            || Math.Abs(l.StrokeWidth - upperThickness) < 1e-9))
+            .GroupBy(l => Math.Round(l.Y1, 9))
+            .Where(g => g.Max(l => Math.Max(l.X1, l.X2)) - g.Min(l => Math.Min(l.X1, l.X2))
+                        >= MinStaffLineSpan)
+            .Select(g => g.Key)
             .OrderBy(y => y)
             .ToList();
 
@@ -444,7 +499,7 @@ internal sealed class RenderedGeometry
         for (int i = 0; i < ys.Count; i += perSystem)
         {
             refpoints.Add(Refpoint(ys, i, upperLines, upperScale, page));
-            refpoints.Add(Refpoint(ys, i + upperLines, lowerLines, 1.0, page));
+            refpoints.Add(Refpoint(ys, i + upperLines, lowerLines, lowerSpace, page));
         }
         return refpoints;
     }

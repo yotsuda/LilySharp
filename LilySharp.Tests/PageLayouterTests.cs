@@ -60,6 +60,48 @@ public class PageLayouterTests
         return builder.ToImmutable();
     }
 
+    /// <summary>
+    /// The breaker prices a system in LilyPond's PURE frame: the outer staves' refpoints as
+    /// placed, the last one taken back up by the pairs' squeeze, and the body at that minimum
+    /// — not the drawn body with a nominal half staff at each end.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/constrained-breaking.cc:562 fill_line_details — refpoint_extent_ is
+    /// pure_refpoint_extent, the outer spaceable staves at get_pure_minimum_translations.
+    /// The numbers are a staff-plus-tab system's (audit/lp-geometry
+    /// page.staff-tab.compressed.staves-on-first-page): body 14 = 2 + 9 + 3 as drawn, the
+    /// tab's refpoint 3.0 above its outer string, the pair at basic 9 over a minimum of 8.
+    /// Poisoned by dropping either term of the frame, the nominal pair (−2, −12) and body 14
+    /// come back — the reading that turned a page LilyPond fills.
+    /// </remarks>
+    [Fact]
+    public void BuildSystemDetails_PricesTheBodyAndRefpointsInThePureFrame()
+    {
+        var layouter = new PageLayouter(LayoutOptions.Default);
+        var frame = new BreakerRefpointFrame(ToFirst: 2.0, ToLastAtMinimum: 10.0, StaffCompression: 1.0);
+
+        var d = layouter.BuildSystemDetails(
+            1, staffHeight: 14.0, topExtent: 2.311, bottomExtent: 0.54,
+            shape: null, BreakPermission.Allow, frame);
+
+        Assert.Equal(13.0, d.StaffHeight, 9);            // 14 drawn, pair squeezed 9 → 8
+        Assert.Equal(1.0, d.StaffCompression, 9);
+        Assert.Equal(2.311 + 13.0 + 0.54, d.Height, 9);
+        Assert.Equal(-2.0, d.RefpointExtentUp, 9);
+        Assert.Equal(-10.0, d.RefpointExtentDown, 9);   // 2 + 8 to the tab's middle string
+        Assert.Equal(d.Height + LayoutOptions.Default.VerticalSpacing.SystemSystem.BasicDistance,
+            d.InverseHooke, 9);
+
+        // Without a frame the nominal five-line reading stands, as every hand-built detail
+        // in PageBreakerTests assumes.
+        var nominal = layouter.BuildSystemDetails(
+            1, staffHeight: 14.0, topExtent: 2.311, bottomExtent: 0.54, shape: null, BreakPermission.Allow);
+        Assert.Equal(14.0, nominal.StaffHeight, 9);
+        Assert.Equal(0.0, nominal.StaffCompression, 9);
+        Assert.Equal(-2.0, nominal.RefpointExtentUp, 9);
+        Assert.Equal(-12.0, nominal.RefpointExtentDown, 9);
+    }
+
     [Fact]
     public void PerSystemExtents_ProduceDifferentYPositions()
     {
@@ -74,7 +116,7 @@ public class PageLayouterTests
             (upExtent: 1.0, downExtent: 5.0),
             (upExtent: 4.0, downExtent: 1.0));
 
-        var pages = layouter.CreatePagesWithOptimalBreaking(systems, headerHeight: 3, extents);
+        var pages = layouter.CreatePagesWithOptimalBreaking(systems, header: new HeaderBand(3, null, null), extents);
 
         Assert.Single(pages);
         var pageSystems = pages[0].Systems;
@@ -110,7 +152,7 @@ public class PageLayouterTests
             (upExtent: 1.0, downExtent: 1.0),
             (upExtent: 1.0, downExtent: 1.0));
 
-        var pages = layouter.CreatePagesWithOptimalBreaking(systems, headerHeight: 0, extents);
+        var pages = layouter.CreatePagesWithOptimalBreaking(systems, header: null, extents);
 
         Assert.Single(pages);
         var pageSystems = pages[0].Systems;
@@ -141,7 +183,7 @@ public class PageLayouterTests
             (upExtent: 3.0, downExtent: 6.0),
             (upExtent: 3.0, downExtent: 6.0));
 
-        var pages = layouter.CreatePagesWithOptimalBreaking(systems, headerHeight: 0, extents);
+        var pages = layouter.CreatePagesWithOptimalBreaking(systems, header: null, extents);
 
         Assert.Single(pages);
         var pageSystems = pages[0].Systems;
@@ -165,7 +207,7 @@ public class PageLayouterTests
         var systems = ImmutableArray<SystemLayout>.Empty;
         var extents = ImmutableArray<(double, double)>.Empty;
 
-        var pages = layouter.CreatePagesWithOptimalBreaking(systems, headerHeight: 3, extents);
+        var pages = layouter.CreatePagesWithOptimalBreaking(systems, header: new HeaderBand(3, null, null), extents);
 
         Assert.Empty(pages);
     }
@@ -315,8 +357,8 @@ public class PageLayouterTests
             (up: new VerticalSkyline(VerticalDirection.Up), down: sys0Down),
             (up: sys1Up, down: new VerticalSkyline(VerticalDirection.Down)));
 
-        var pagesWithSkylines = layouter.CreatePagesWithOptimalBreaking(systems, 0, extents, skylines);
-        var pagesWithoutSkylines = layouter.CreatePagesWithOptimalBreaking(systems, 0, extents);
+        var pagesWithSkylines = layouter.CreatePagesWithOptimalBreaking(systems, null, extents, skylines);
+        var pagesWithoutSkylines = layouter.CreatePagesWithOptimalBreaking(systems, null, extents);
 
         // Y-up (W2-core): upper system has the larger Y, so distance = prev − next.
         double gapWithSkylines = pagesWithSkylines[0].Systems[0].Y - pagesWithSkylines[0].Systems[1].Y;
@@ -342,8 +384,8 @@ public class PageLayouterTests
             (upExtent: 2.0, downExtent: 3.0),
             (upExtent: 2.0, downExtent: 3.0));
 
-        var pagesNull = layouter.CreatePagesWithOptimalBreaking(systems, 0, extents, systemSkylines: null);
-        var pagesOmitted = layouter.CreatePagesWithOptimalBreaking(systems, 0, extents);
+        var pagesNull = layouter.CreatePagesWithOptimalBreaking(systems, null, extents, systemSkylines: null);
+        var pagesOmitted = layouter.CreatePagesWithOptimalBreaking(systems, null, extents);
 
         Assert.Equal(pagesNull[0].Systems[0].Y, pagesOmitted[0].Systems[0].Y, 3);
         Assert.Equal(pagesNull[0].Systems[1].Y, pagesOmitted[0].Systems[1].Y, 3);
@@ -367,8 +409,8 @@ public class PageLayouterTests
             (up: new VerticalSkyline(VerticalDirection.Up), down: new VerticalSkyline(VerticalDirection.Down)),
             (up: new VerticalSkyline(VerticalDirection.Up), down: new VerticalSkyline(VerticalDirection.Down)));
 
-        var pagesWithEmpty = layouter.CreatePagesWithOptimalBreaking(systems, 0, extents, skylines);
-        var pagesWithout = layouter.CreatePagesWithOptimalBreaking(systems, 0, extents);
+        var pagesWithEmpty = layouter.CreatePagesWithOptimalBreaking(systems, null, extents, skylines);
+        var pagesWithout = layouter.CreatePagesWithOptimalBreaking(systems, null, extents);
 
         // Should produce same positioning as scalar-only
         Assert.Equal(pagesWithout[0].Systems[0].Y, pagesWithEmpty[0].Systems[0].Y, 3);
@@ -396,7 +438,7 @@ public class PageLayouterTests
             (up: new VerticalSkyline(VerticalDirection.Up), down: sys0Down),
             (up: sys1Up, down: new VerticalSkyline(VerticalDirection.Down)));
 
-        var pages = layouter.CreatePagesWithOptimalBreaking(systems, 0, extents, skylines);
+        var pages = layouter.CreatePagesWithOptimalBreaking(systems, null, extents, skylines);
 
         double gap = pages[0].Systems[0].Y - pages[0].Systems[1].Y; // Y-up (W2-core): upper system has larger Y
         var spec = options.VerticalSpacing.SystemSystem;
@@ -442,8 +484,8 @@ public class PageLayouterTests
             (upExtent: 1.0, downExtent: 1.0),
             (upExtent: 1.0, downExtent: 1.0));
 
-        var customPages = layouterCustom.CreatePagesWithOptimalBreaking(systems, 0, extents);
-        var defaultPages = layouterDefault.CreatePagesWithOptimalBreaking(systems, 0, extents);
+        var customPages = layouterCustom.CreatePagesWithOptimalBreaking(systems, null, extents);
+        var defaultPages = layouterDefault.CreatePagesWithOptimalBreaking(systems, null, extents);
 
         // Y-up (W2-core): upper system has the larger Y, so distance = prev − next.
         double customGap = customPages[0].Systems[0].Y - customPages[0].Systems[1].Y;

@@ -428,6 +428,38 @@ internal sealed class SkylineBuilder
         if (double.IsNaN(systemLeft) || staff.IsTextRow)
             return;
 
+        if (staff.IsTab)
+        {
+            // A TAB staff prints clefs.tab, centred on its middle line and at the staff's own
+            // size, and that glyph is an ordinary Clef grob in the staff's skyline like any
+            // other (SharedRenderer.DrawTabStaff draws it so; DrawClef's remark carries the
+            // LilyPond measurement).
+            // LILYPOND-REF: ly/engraver-init.ly:1218 clef::print-modern-tab-if-set — the
+            //   TabStaff context's Clef.stencil, with clefGlyph "clefs.tab" and clefPosition 0.
+            // ★ UNTIL SESSION 336 THIS FELL THROUGH ClefGlyph(ClefType.Tab) TO THE G CLEF'S
+            // OUTLINE — 3.55 below the middle and 3.8 above it — which a six-string tab
+            // (strings at ±3.75) hides and a five-string bass tab (±3.0) does not: every bass
+            // system carried 0.55 of phantom ink under its lowest string and 0.8 over its
+            // highest. MEASURED: audit/lp-geometry page.staff-tab.compressed.last-staff-to-foot
+            // read 0.49 more ink under the tab than LilyPond (3.54 against the string line's
+            // 3.05), and that one rod was the whole of the compressed page's force
+            // difference (0.0111 on every spring of book STBK).
+            // No outline quads are baked for clefs.tab, so its LILC box is the seed; the
+            // letters T A B fill their box nearly edge to edge, and the box (±2.888) sits
+            // INSIDE the strings of every tab of five strings or more, so the approximation
+            // reaches no reader on those. On a four-string bass tab (±2.25) the box does
+            // protrude, 0.64 each way — exactly as LilyPond's glyph does.
+            var tab = size.Ink(GlyphMetrics.ClefTabOutline);
+            double tabX = systemLeft + EngravingDefaults.ClefGlyphXOffset;
+            upSkyline.Merge(VerticalSkyline.FromBox(
+                tabX + tab.Left, tabX + tab.Right,
+                staffMiddleUp + tab.Bottom, staffMiddleUp + tab.Top, VerticalDirection.Up));
+            downSkyline.Merge(VerticalSkyline.FromBox(
+                tabX + tab.Left, tabX + tab.Right,
+                staffMiddleUp + tab.Bottom, staffMiddleUp + tab.Top, VerticalDirection.Down));
+            return;
+        }
+
         var (glyph, aboveMiddleStaff) = ClefGlyph(staff.Clef);
         // The glyph's OUTLINE, not a box around it: the two profiles of two facing staves are
         // compared pointwise, so the shape between the extremes is part of the answer. See

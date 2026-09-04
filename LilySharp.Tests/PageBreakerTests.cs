@@ -652,7 +652,7 @@ public class PageBreakerTests
         var (systems, extents) = PlainSystems(18);
 
         var pages = new PageLayouter(LayoutOptions.Default)
-            .CreatePagesWithOptimalBreaking(systems, headerHeight: 0, extents);
+            .CreatePagesWithOptimalBreaking(systems, header: null, extents);
 
         Assert.Equal(2, pages.Length);
         double firstPageGap = UniformGap(pages[0]);
@@ -674,7 +674,7 @@ public class PageBreakerTests
         var (systems, extents) = PlainSystems(5);
 
         var pages = new PageLayouter(LayoutOptions.Default)
-            .CreatePagesWithOptimalBreaking(systems, headerHeight: 0, extents);
+            .CreatePagesWithOptimalBreaking(systems, header: null, extents);
 
         Assert.Single(pages);
         Assert.Equal(12.0, UniformGap(pages[0]), 6);

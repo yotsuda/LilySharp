@@ -125,15 +125,62 @@ internal sealed class PageLayouter
     }
 
     /// <summary>
-    /// The page breaker for this paper, with the first page's title header.
+    /// The page breaker for this paper.
     /// </summary>
-    internal PageBreaker CreateBreaker(double headerHeight) => new(
+    /// <remarks>
+    /// Its <c>headerHeight</c> is LilyPond's <c>header_height_</c> — the PAGE header
+    /// (oddHeaderMarkup), which Lily# does not print — and so 0. The book TITLE is not a
+    /// header: it is a line of the page (<see cref="BuildTitleDetails"/>), which is how
+    /// LilyPond pages it (paper-book.cc:570-580 get_system_specs puts it first).
+    /// </remarks>
+    internal PageBreaker CreateBreaker() => new(
         pageHeight: _options.PageHeight,
         topMargin: _options.MarginTop,
         bottomMargin: _options.MarginBottom,
-        headerHeight: headerHeight,
+        headerHeight: 0,
         parameters: _options.PageBreaking,
         verticalSpacing: _options.VerticalSpacing);
+
+    /// <summary>
+    /// The page breaker's line for the book title — the <see cref="SystemDetails"/> LilyPond
+    /// builds for a markup Prob, from the header's column.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/constrained-breaking.cc:576-624 Line_details — the Prob
+    /// constructor: the shape is the stencil's Y-extent on both sides ("pretend it goes all
+    /// the way across", :618-619), tallness 0, refpoint_extent (0 . 0), padding / min-distance
+    /// / space from markup-system-spacing (:578-590), inverse_hooke 1.0 (:622). The stencil
+    /// is top-aligned (paper-book.cc:443), so its extent is (−Depth . 0): the body IS the
+    /// depth and nothing stands above or below it.
+    /// ⚠️ THE PERMISSION IS FORBID, and it stands for a mechanism Lily# does not model:
+    /// LilyPond's title Prob has no page-break-permission symbol, and
+    /// lily/page-breaking.cc:155-190 compress_lines therefore MERGES it with the following
+    /// system into one Line_details, so no page can end between the two. Lily# keeps the two
+    /// lines apart (the breaker's counts and the chain's springs want them apart) and refuses
+    /// the break instead (IsValidBreak), which is the same set of pages.
+    /// </remarks>
+    internal SystemDetails BuildTitleDetails(HeaderBand header)
+    {
+        var spec = _options.VerticalSpacing.MarkupSystem;
+        return new SystemDetails
+        {
+            Shape = new LineShape(0, 0, 0, 0),
+            Height = header.Depth,
+            TopExtent = 0,
+            BottomExtent = 0,
+            StaffHeight = header.Depth,
+            StaffCompression = 0,
+            Padding = spec.Padding,
+            MinDistance = spec.MinimumDistance,
+            SpringLength = spec.BasicDistance,
+            RefpointExtentUp = 0,
+            RefpointExtentDown = 0,
+            // LILYPOND-REF: lily/constrained-breaking.cc:622 Line_details — inverse_hooke_ = 1.0
+            InverseHooke = 1.0,
+            IsTitle = true,
+            PagePermission = BreakPermission.Forbid,
+        };
+    }
 
     /// <summary>
     /// The ONE spelling of a system's <see cref="SystemDetails"/> — what the page breaker
@@ -150,7 +197,8 @@ internal sealed class PageLayouter
     /// <param name="pagePermission">The page-break permission AFTER this system.</param>
     internal SystemDetails BuildSystemDetails(
         int systemIndex, double staffHeight, double topExtent, double bottomExtent,
-        LineShape? shape, BreakPermission pagePermission)
+        LineShape? shape, BreakPermission pagePermission,
+        BreakerRefpointFrame? frame = null)
     {
         var vs = _options.VerticalSpacing;
 
@@ -174,9 +222,25 @@ internal sealed class PageLayouter
                 currentIsNewScore: false);
         }
 
-        // LILYPOND-REF: lily/include/constrained-breaking.hh:56-60
-        // refpoint_extent_ (LilyPond reads the real grobs; see SystemDetails).
+        // THE BREAKER'S FRAME IS THE PURE ONE. LilyPond prices a line at its staves'
+        // MINIMUM translations — refpoint_extent_ and full_height () both come from
+        // get_pure_minimum_translations — and the page later stretches the pairs to their
+        // basic-distance. Lily# is handed a PLACED system (pairs at the basic-distance), so
+        // the frame carries the difference and the body is taken back down here.
+        // LILYPOND-REF: lily/constrained-breaking.cc:562 fill_line_details —
+        //   out->refpoint_extent_ = sys->pure_refpoint_extent (start_rank, end_rank);
+        // LILYPOND-REF: lily/system.cc:864-890 pure_refpoint_extent — the first and last
+        //   spaceable staff's offsets out of get_pure_minimum_translations.
+        // LILYPOND-REF: lily/align-interface.cc:137-143 get_pure_minimum_translations —
+        //   include_fixed_spacing = true, so the pair's minimum-distance is in.
+        // Without a frame (tests, and a system with no spaceable staff at all) the nominal
+        // half staff stands in at both ends and the body is the given one — exact for a
+        // lone five-line staff, which is the only system the fallback describes.
         double halfStaffNominal = _options.StaffHeight / 2.0;
+        double compression = frame?.StaffCompression ?? 0;
+        double body = staffHeight - compression;
+        double toFirst = frame?.ToFirst ?? halfStaffNominal;
+        double toLast = frame?.ToLastAtMinimum ?? (staffHeight - halfStaffNominal);
 
         return new SystemDetails
         {
@@ -184,10 +248,11 @@ internal sealed class PageLayouter
             // that builds Line_shape — the pair of pure heights the breaker prices this
             // line by. Absent, CalcLineHeights lends the whole-line extents to both.
             Shape = shape,
-            Height = topExtent + staffHeight + bottomExtent,
+            Height = topExtent + body + bottomExtent,
             TopExtent = topExtent,
             BottomExtent = bottomExtent,
-            StaffHeight = staffHeight,
+            StaffHeight = body,
+            StaffCompression = compression,
             Padding = spec.Padding,
             // LILYPOND-REF: constrained-breaking.hh:66,69 min_distance_ / space_ —
             // both are refpoint-to-refpoint and both go in RAW. Subtracting the
@@ -196,25 +261,23 @@ internal sealed class PageLayouter
             // is what made the breaker under-fill pages.
             MinDistance = spec.MinimumDistance,
             SpringLength = spec.BasicDistance,
-            // ⚠️ LILYSHARP-OWN: THE BREAKER KEEPS THE NOMINAL PAIR, deliberately and under
-            // protest — LilyPond reads the real grobs here too, so this is a Lily# value
-            // and not a ported one, and it goes when a point measures a page COUNT over a
-            // staff that is not four staff spaces tall. This
-            // is LilyPond's refpoint_extent_ and the placement chain's own anchors are
-            // now the placed ones, so the two models disagree here — but the breaker is a
-            // SECOND implementation of the page's spring model (HANDOFF 5.2.1 (2)) and
-            // moving it changes which systems land on which page: measured, taking the
-            // placed pair re-broke book LYRHKG's pages and left its staves interleaved.
-            // No corpus point measures a page COUNT over a staff that is not four staff
-            // spaces tall, so there is nothing to justify that rebreak with yet.
-            RefpointExtentUp = -halfStaffNominal,
-            RefpointExtentDown = -(staffHeight - halfStaffNominal),
+            // The placed outer staves' refpoints, the last one at the pairs' minimum —
+            // LilyPond's pure_refpoint_extent (see the remark above and SystemDetails).
+            // ★ THE NOMINAL PAIR STOOD HERE UNTIL SESSION 336, "under protest", waiting for
+            // a point that measures a page COUNT over a staff that is not four staff spaces
+            // tall. audit/lp-geometry page.staff-tab.compressed.staves-on-first-page and
+            // page.staff-tab.eight-systems.* are those points: eight staff-plus-tab systems
+            // that LilyPond compresses onto one page, which Lily# priced 2 ss taller each
+            // (1.0 from this pair, 1.0 from the body above) and turned the page on.
+            RefpointExtentUp = -toFirst,
+            RefpointExtentDown = -toLast,
             // LILYPOND-REF: lily/constrained-breaking.cc:555 —
             //   out->inverse_hooke_ = out->full_height () + system_system_space_;
             // where system_system_space_ is system-system-spacing's BASIC-DISTANCE
             // (:426-430, with page-breaking-system-system-spacing allowed to override
             // it; Lily# models no such variable). full_height() is the line's own
-            // extent-to-extent height, which is exactly SystemDetails.Height.
+            // extent-to-extent height at the pure translations, which is exactly
+            // SystemDetails.Height.
             //
             // ⚠️ The breaker does NOT use stretchability. This read
             // `max(0.1, Stretchability / 60)` — the same /60 invention cfdf85b4 struck
@@ -224,7 +287,7 @@ internal sealed class PageLayouter
             // specs the two differ by a factor of ~19 (1.0 against 7.35 + 12), so the
             // force the breaker solved for was nothing like the one the chain then
             // solved, and the page count came from the wrong one.
-            InverseHooke = topExtent + staffHeight + bottomExtent + vs.SystemSystem.BasicDistance,
+            InverseHooke = topExtent + body + bottomExtent + vs.SystemSystem.BasicDistance,
             // LILYPOND-REF: lily/constrained-breaking.cc:530-535 fill_line_details —
             //   page_permission_ is the LAST column's page-break-permission (through
             //   min_permission with the line's), which is what the caller hands in per
@@ -255,7 +318,7 @@ internal sealed class PageLayouter
     /// </param>
     public ImmutableArray<PageLayout> CreatePagesWithOptimalBreaking(
         ImmutableArray<SystemLayout> systems,
-        double headerHeight,
+        HeaderBand? header,
         ImmutableArray<(double upExtent, double downExtent)> systemExtents,
         ImmutableArray<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
         ImmutableArray<double>? systemBandUps = null,
@@ -263,7 +326,8 @@ internal sealed class PageLayouter
         ImmutableArray<(double toFirst, double toLast, double halfFirst, double halfLast)>?
             systemAnchors = null,
         ImmutableArray<LineShape?>? systemShapes = null,
-        ImmutableArray<BreakPermission>? systemPagePermissions = null)
+        ImmutableArray<BreakPermission>? systemPagePermissions = null,
+        ImmutableArray<BreakerRefpointFrame>? systemBreakerFrames = null)
     {
         if (systems.Length == 0)
         {
@@ -307,16 +371,25 @@ internal sealed class PageLayouter
             systemDetails.Add(BuildSystemDetails(
                 i, staffHeight, systemExtents[i].upExtent, systemExtents[i].downExtent,
                 systemShapes is { } sh && i < sh.Length ? sh[i] : null,
-                systemPagePermissions is { } pp && i < pp.Length ? pp[i] : BreakPermission.Allow));
+                systemPagePermissions is { } pp && i < pp.Length ? pp[i] : BreakPermission.Allow,
+                systemBreakerFrames is { } bf && i < bf.Length ? bf[i] : null));
         }
 
         // Tallness is filled in by the breaker itself, as LilyPond does it
         // (page-breaking.cc:1037, at the end of cache_line_details).
 
-        // Run page breaker
-        var breaker = CreateBreaker(headerHeight);
+        // Run page breaker — over the TITLE line and the systems, as LilyPond's page DP
+        // runs over its lines (the book title is line 0, paper-book.cc:570-580). The break
+        // points come back as line indices; with a title in front, each is one more than
+        // the system index it ends at.
+        var breaker = CreateBreaker();
+        IReadOnlyList<SystemDetails> lines = header is null
+            ? systemDetails
+            : new[] { BuildTitleDetails(header) }.Concat(systemDetails).ToList();
 
-        var breakPoints = breaker.BreakIntoPages(systemDetails);
+        var breakPoints = breaker.BreakIntoPages(lines);
+        if (header is not null)
+            breakPoints = breakPoints.Select(b => b - 1).Where(b => b > 0).ToList();
 
         // Create pages from break points with context-aware Y positioning
         var pages = new List<PageLayout>();
@@ -371,10 +444,12 @@ internal sealed class PageLayouter
             // Position systems using context-aware spacing specs
             // LILYPOND-REF: lily/page-layout-problem.cc:1070-1127 build_system_skyline
             // When skylines are available, use Distance() for X-dependent collision detection
+            var pageHeader = isFirstPage ? header : null;
             var pageSystems = PositionSystemsOnPage(
                 systems, systemExtents, systemDetails, systemStart, systemEnd,
-                isFirstPage, headerHeight, isRagged, useFixedForce, lastPageForce,
-                vs, systemSkylines, systemBandUps, Anchor, out double pageForce);
+                pageHeader, isRagged, useFixedForce, lastPageForce,
+                vs, systemSkylines, systemBandUps, Anchor, out double pageForce,
+                out double headerTop);
 
             // LILYPOND-REF: lily/page-breaking.cc:577-582 — the force is carried forward
             // after every page, so "the previous page" always means the immediately
@@ -385,8 +460,10 @@ internal sealed class PageLayouter
                 PageIndex: pageIdx,
                 Width: _options.PageWidth,
                 Height: _options.PageHeight,
-                HeaderHeight: isFirstPage ? headerHeight : 0,
-                Systems: pageSystems));
+                HeaderHeight: pageHeader?.Depth ?? 0,
+                Systems: pageSystems,
+                Header: pageHeader,
+                HeaderTop: headerTop));
 
             systemStart = systemEnd;
         }
@@ -412,13 +489,14 @@ internal sealed class PageLayouter
         ImmutableArray<(double upExtent, double downExtent)> systemExtents,
         List<SystemDetails> systemDetails,
         int startIdx, int endIdx,
-        bool isFirstPage, double headerHeight,
+        HeaderBand? header,
         bool isRagged, bool useFixedForce, double fixedForce,
         VerticalSpacingParameters vs,
         ImmutableArray<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
         ImmutableArray<double>? systemBandUps,
         Func<int, (double ToFirst, double ToLast, double HalfFirst, double HalfLast)> anchor,
-        out double pageForce)
+        out double pageForce,
+        out double headerTop)
     {
         var pageSystems = new List<SystemLayout>();
 
@@ -437,8 +515,13 @@ internal sealed class PageLayouter
         // page.natural/page.stretched.staff-staff-inside are the pair that measured it.
         var springs = ImmutableArray.CreateBuilder<Spring>();
 
-        // Spring 0 — down to the first system's staff refpoint. Only the first page
-        // carries a header, and the header enters this spring's FLOOR, not the anchor.
+        // Spring 0 — down to the first system's staff refpoint; or, on the page that OPENS
+        // WITH THE BOOK TITLE, two springs: top-markup-spacing down to the title column's
+        // top, then markup-system-spacing from there to the first staff refpoint
+        // (page-layout-problem.cc:468-469, :506-507; LayoutUtilities.TitleTopSpring /
+        // TitleToSystemSpring carry the floors). The title used to enter the top spring's
+        // FLOOR as "header height" with its baseline pinned at the margin — measured 5.63 ss
+        // above LilyPond's first staff on a titled book (audit/lp-geometry titled-page.ly).
         // ⚠️ ToFirst, not HalfFirst. The floor is built from an EXTENT and the extent is
         // measured from the system's ORIGIN, so the conversion into the refpoint frame the
         // spring is written in is the whole origin-to-refpoint distance — LilyPond's
@@ -448,9 +531,18 @@ internal sealed class PageLayouter
         // a lead sheet the chord row is already inside that extent"; it is not — the rows
         // stand BELOW the origin the extent is measured from, so their whole band fell out
         // of the floor and was spaced into the top margin (user report, session 255).
-        springs.Add(LayoutUtilities.CreateTopSystemSpring(
-            isFirstPage ? headerHeight : 0,
-            systemExtents[startIdx].upExtent, anchor(startIdx).ToFirst, vs.TopSystem));
+        bool titled = header is not null;
+        if (titled)
+        {
+            springs.Add(LayoutUtilities.TitleTopSpring(vs));
+            springs.Add(LayoutUtilities.TitleToSystemSpring(
+                header!, systemExtents[startIdx].upExtent, anchor(startIdx).ToFirst, vs));
+        }
+        else
+        {
+            springs.Add(LayoutUtilities.CreateTopSystemSpring(
+                systemExtents[startIdx].upExtent, anchor(startIdx).ToFirst, vs.TopSystem));
+        }
 
         int count = endIdx - startIdx;
         // positions[FirstStaffPosition(local)] is that system's FIRST staff refpoint; its
@@ -475,8 +567,14 @@ internal sealed class PageLayouter
         // BottomExtent, so the reach below the refpoint is the body less the origin's
         // distance to that refpoint. Reading it as HalfLast + BottomExtent drops the rows
         // and the next system lands on top of them (measured: LYRHKG's staves interleaved).
+        // ⚠️ THE DRAWN BODY, NOT SystemDetails.StaffHeight: the details price the body at
+        // the pairs' MINIMUM (the breaker's frame), while originToLast is read off the
+        // PLACED alignment, so the two agree only once the squeeze is put back
+        // (SystemDetails.StaffCompression). The difference is invariant either way — body
+        // and last refpoint move together — but the two terms must come from ONE frame.
+        double DrawnBody(SystemDetails d) => d.StaffHeight + d.StaffCompression;
         double InkBelowLastRefpoint(SystemDetails d, int sysIdx)
-            => d.StaffHeight - originToLast[sysIdx - startIdx] + d.BottomExtent;
+            => DrawnBody(d) - originToLast[sysIdx - startIdx] + d.BottomExtent;
 
         for (int sysIdx = startIdx; sysIdx < endIdx; sysIdx++)
         {
@@ -553,7 +651,7 @@ internal sealed class PageLayouter
                 var aNext = anchor(sysIdx + 1);
                 double skylineDistance = LayoutUtilities.InterSystemPairMinimum(
                     hasSkylines, rawDist,
-                    prevBodyHeight: d.StaffHeight,
+                    prevBodyHeight: DrawnBody(d),
                     prevDownExtent: d.BottomExtent,
                     nextUpExtent: systemExtents[sysIdx + 1].upExtent,
                     prevOriginToLast: originToLast[local],
@@ -637,6 +735,11 @@ internal sealed class PageLayouter
             // out at force 0 even when the solve reported a positive one.
             positions = solver.GetPositions(isRagged && pageForce > 0 ? 0.0 : pageForce);
         }
+
+        // The title column's top, where the page's first spring ended — solved with the
+        // page like every other node of the chain (LilyPond's title Prob gets its Y-offset
+        // from the same solution_, page-layout-problem.cc:868-878 find_system_offsets).
+        headerTop = titled ? _options.MarginTop + positions[1] : 0;
 
         for (int sysIdx = startIdx; sysIdx < endIdx; sysIdx++)
         {

@@ -1461,6 +1461,109 @@ internal static class LpGeometryProbes
     /// <summary>The notation control — book NTL.</summary>
     private static readonly string NTL = TabPageScore("NTL", "staff");
 
+    /// <summary>
+    /// One staff under a header, or under none — the Lily# half of books TTL / TTT / TTC /
+    /// TTN in probes/titled-page.ly.
+    /// </summary>
+    /// <remarks>
+    /// The one quantity read is where the FIRST STAFF lands below the paper edge when a title
+    /// stands over it. LilyPond makes the book title a paper system of its own — top-aligned
+    /// (paper-book.cc:443), placed by <c>top-markup-spacing</c> and followed by
+    /// <c>markup-system-spacing</c> whose floor is the title's depth + the staff's ink + 0.5 —
+    /// while Lily# draws the title's BASELINE at the top margin and lets only the ink below
+    /// that baseline into the floor of the ordinary <c>top-system-spacing</c> spring
+    /// (the CalculateHeaderHeight of sessions before 336; the port is <see cref="HeaderBand"/>).
+    /// Three header shapes because that method had three branches; the strings are the user book's (Express Yourself /
+    /// Madonna) because a column's depth is glyph-dependent and the pair is filed on the
+    /// book that raised it. 8 bars is one system.
+    /// </remarks>
+    private static string TitledPageScore(string name, string? title, string? composer) => $$"""
+        octave absolute
+        {{(title is null ? "" : $"title \"{title}\"")}}
+        {{(composer is null ? "" : $"composer \"{composer}\"")}}
+        time 4/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody { {{string.Concat(Enumerable.Repeat("c4 d e f | ", 8)).Trim()}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff melody
+        }
+        """;
+
+    /// <summary>Title and composer — book TTL.</summary>
+    private static readonly string TTL = TitledPageScore("TTL", "Express Yourself", "Madonna");
+
+    /// <summary>Title only — book TTT.</summary>
+    private static readonly string TTT = TitledPageScore("TTT", "Express Yourself", null);
+
+    /// <summary>Composer only — book TTC.</summary>
+    private static readonly string TTC = TitledPageScore("TTC", null, "Madonna");
+
+    /// <summary>No header — book TTN, the control.</summary>
+    private static readonly string TTN = TitledPageScore("TTN", null, null);
+
+    /// <summary>
+    /// A bass part as a notation staff OVER its own tab, many systems — the Lily# half of
+    /// books STBN (natural) and STBK (compressed) in probes/staff-tab-page.ly.
+    /// </summary>
+    /// <remarks>
+    /// The frame every <c>staff X  tab X</c> book in the user's bass corpus is written in, and
+    /// the one no page entry read: TABL puts a tab ALONE on a page, staff.tab-pair.* reads
+    /// staff-to-tab INSIDE one system. Here the page's chain is top-system-spacing, then per
+    /// system the staff→tab spring (default-staff-staff-spacing 9 / 8, compress strength 1)
+    /// and the tab→next-staff spring (system-system-spacing 12 / 8, compress strength 4),
+    /// then last-bottom-spacing. STBN reads the springs at rest, STBK compressed under a cap
+    /// of eight systems, where LilyPond solves ONE force for the page (measured −0.200517:
+    /// 9 − f, 12 − 4f and 6 − 6f agree to six digits); STB8 is exactly eight systems with no
+    /// cap, asking whether they fit one page at all.
+    /// <para>
+    /// ⚠️ THE LINES ARE FORCED (<c>break</c> after every eighth bar) on both sides. Left to
+    /// the line breakers, LilyPond put 8 bars on a line and Lily# 7 — its bars are wider,
+    /// the T7 spacing family — so the two were paging different systems and no vertical
+    /// reading compared. Express Yourself is written with a break after every phrase,
+    /// which is why its two engravings shared one line breaking.
+    /// </para>
+    /// <para>
+    /// ⚠️ Octaves: LilyPond <c>g,</c> is Lily# <c>g,,</c>. G2 A2 B2 sit on and just above the
+    /// bass staff's bottom line so nothing hangs below the staff and every floor stays
+    /// asleep; <c>bass5</c> is LilyPond's bass-five-string-tuning — five strings 1.5 apart.
+    /// </para>
+    /// </remarks>
+    private static string StaffTabPageScore(string name, int lines) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part bassline { clef bass tuning bass5 }
+
+        section Main {
+          bassline { {{string.Concat(Enumerable.Repeat(string.Concat(Enumerable.Repeat("g,,4 a,, b,, a,, | ", 8)) + "break ", lines)).Trim()}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff bassline
+          tab bassline
+        }
+        """;
+
+    /// <summary>Three forced eight-bar systems at rest — book STBN.</summary>
+    private static readonly string STBN = StaffTabPageScore("STBN", 3);
+
+    /// <summary>Fifteen forced eight-bar systems, eight to a page — book STBK.</summary>
+    private static readonly string STBK = StaffTabPageScore("STBK", 15);
+
+    /// <summary>Exactly eight forced eight-bar systems, no cap — book STB8.</summary>
+    private static readonly string STB8 = StaffTabPageScore("STB8", 8);
+
     private static string CoexistScore(string name, string scoreBlock, bool secondBound) => $$"""
         octave absolute
         time 4/4
@@ -12414,6 +12517,53 @@ internal static class LpGeometryProbes
         new("page.tab-control.first-staff-refpoint", NTL, g => g.FirstStaffRefpoint()),
         new("system.tab-control.natural-distance", NTL, g => g.StaffGap()),
         new("page.tab-control.staves-on-first-page", NTL, g => g.StavesOnPage()),
+
+        // --- THE HEAD OF A TITLED PAGE (books TTL / TTT / TTC / TTN, probes/titled-page.ly) ---
+        // Where the first staff lands when a header stands over it. Every other page book
+        // here carries no \header on purpose, so this band — the one Express Yourself's first
+        // page was short by (HANDOFF §1 第335 ⑼) — had no reading. LilyPond: the title is a
+        // top-aligned paper system placed by top-markup-spacing (4, its floor of 1 loses),
+        // then markup-system-spacing to the first staff, whose floor (title depth + staff
+        // line 2.05 + 0.5) binds for any real title. Lily#: the title's BASELINE is at the top
+        // margin and only the ink under it enters the top-system-spacing floor. One header
+        // shape per CalculateHeaderHeight branch, and the control with no header at all.
+        new("page.titled.first-staff-refpoint", TTL, g => g.FirstStaffRefpoint(), RaggedBottomPaper),
+        new("page.title-only.first-staff-refpoint", TTT, g => g.FirstStaffRefpoint(), RaggedBottomPaper),
+        new("page.composer-only.first-staff-refpoint", TTC, g => g.FirstStaffRefpoint(), RaggedBottomPaper),
+        new("page.untitled-control.first-staff-refpoint", TTN, g => g.FirstStaffRefpoint(), RaggedBottomPaper),
+
+        // --- A STAFF-PLUS-TAB SYSTEM ON THE PAGE (books STBN / STBK, probes/staff-tab-page.ly) ---
+        // The page chain over the bass corpus's own frame, at rest and compressed. Indices:
+        // gap 0 is the first system's staff→tab, gap 1 its tab→the next system's staff. The
+        // counts guard the indices (HANDOFF 5.0 trap 8): 3 systems = 6 staves at rest, 8 = 16
+        // under the cap. In the compressed book every reading is one force's worth off its
+        // basic distance on LilyPond's side — a Lily# that compresses the staff spring and the
+        // system spring on different strengths, or whose foot rod differs, lands off on some
+        // but not all of them.
+        new("page.staff-tab.first-staff-refpoint", STBN,
+            g => g.StaffTabPairFirstStaffRefpoint(5), RaggedBottomPaper),
+        new("page.staff-tab.natural.staff-to-tab-inside", STBN,
+            g => g.StaffTabPairGapAt(0, 5), RaggedBottomPaper),
+        new("system.staff-tab.natural-distance", STBN,
+            g => g.StaffTabPairGapAt(1, 5), RaggedBottomPaper),
+        new("page.staff-tab.natural.staves-on-first-page", STBN,
+            g => g.StaffTabPairStavesOnPage(5), RaggedBottomPaper),
+        new("page.staff-tab.compressed.first-staff-refpoint", STBK,
+            g => g.StaffTabPairFirstStaffRefpoint(5), EightSystemsPerPage),
+        new("page.staff-tab.compressed.staff-to-tab-inside", STBK,
+            g => g.StaffTabPairGapAt(0, 5), EightSystemsPerPage),
+        new("system.staff-tab.compressed-distance", STBK,
+            g => g.StaffTabPairGapAt(1, 5), EightSystemsPerPage),
+        new("page.staff-tab.compressed.last-staff-to-foot", STBK,
+            g => g.StaffTabPairLastStaffToFoot(5), EightSystemsPerPage),
+        new("page.staff-tab.compressed.staves-on-first-page", STBK,
+            g => g.StaffTabPairStavesOnPage(5), EightSystemsPerPage),
+        // Exactly eight such systems and no cap: do they FIT one page? LilyPond compresses
+        // them onto one (the same three numbers as STBK's first page); a breaker whose
+        // minimum stack is taller turns the page instead.
+        new("page.staff-tab.eight-systems.staves-on-first-page", STB8,
+            g => g.StaffTabPairStavesOnPage(5)),
+        new("page.staff-tab.eight-systems.page-count", STB8, g => g.PageCount),
 
         // --- WHERE THE FIRST STAFF SITS UNDER A CHORD ROW, on BOTH sides of the boundary
         // top-system-spacing's floor has (books CHR1/CHR2) ---

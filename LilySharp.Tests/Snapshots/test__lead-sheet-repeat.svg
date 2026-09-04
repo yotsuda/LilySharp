@@ -1,29 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="194.5" viewBox="0 0 119.50 19.45" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="254.1" viewBox="0 0 119.50 25.41" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="19.45" fill="#FFFFFF"/>
-  <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="599">Repeat</text>
+  <rect x="0" y="0" width="119.50" height="25.41" fill="#FFFFFF"/>
+  <text x="59.75" y="12.21" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="599">Repeat</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <rect x="0.00" y="11.26" width="0.19" height="4.00"/>
-  <rect x="15.71" y="11.26" width="0.60" height="4.00" data-pos="0"/>
-  <rect x="16.61" y="11.26" width="0.19" height="4.00" data-pos="0"/>
-  <circle cx="17.33" cy="12.81" r="0.23" data-pos="0"/>
-  <circle cx="17.33" cy="13.71" r="0.23" data-pos="0"/>
-  <rect x="29.74" y="11.26" width="0.19" height="4.00" data-pos="0"/>
-  <circle cx="40.46" cy="12.81" r="0.23" data-pos="0"/>
-  <circle cx="40.46" cy="13.71" r="0.23" data-pos="0"/>
-  <rect x="40.98" y="11.26" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="41.47" y="11.26" width="0.60" height="4.00" data-pos="0"/>
-  <text class="music" x="0.80" y="13.26" font-size="4.00" data-pos="613"></text>
-  <text x="7.10" y="14.16" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="648">C</text>
-  <text x="9.70" y="14.16" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="650">Am</text>
-  <text x="18.45" y="14.16" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="690">F</text>
-  <text x="23.05" y="14.16" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="692">G7</text>
-  <text x="30.83" y="14.16" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="697">C</text>
-  <rect x="0.30" y="11.96" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="617"/>
-  <text x="3.40" y="14.16" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="617">Main</text>
+  <rect x="0.00" y="17.22" width="0.19" height="4.00"/>
+  <rect x="15.71" y="17.22" width="0.60" height="4.00" data-pos="0"/>
+  <rect x="16.61" y="17.22" width="0.19" height="4.00" data-pos="0"/>
+  <circle cx="17.33" cy="18.77" r="0.23" data-pos="0"/>
+  <circle cx="17.33" cy="19.67" r="0.23" data-pos="0"/>
+  <rect x="29.74" y="17.22" width="0.19" height="4.00" data-pos="0"/>
+  <circle cx="40.46" cy="18.77" r="0.23" data-pos="0"/>
+  <circle cx="40.46" cy="19.67" r="0.23" data-pos="0"/>
+  <rect x="40.98" y="17.22" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="41.47" y="17.22" width="0.60" height="4.00" data-pos="0"/>
+  <text class="music" x="0.80" y="19.22" font-size="4.00" data-pos="613"></text>
+  <text x="7.10" y="20.12" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="648">C</text>
+  <text x="9.70" y="20.12" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="650">Am</text>
+  <text x="18.45" y="20.12" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="690">F</text>
+  <text x="23.05" y="20.12" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="692">G7</text>
+  <text x="30.83" y="20.12" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="697">C</text>
+  <rect x="0.30" y="17.92" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="617"/>
+  <text x="3.40" y="20.12" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="617">Main</text>
   </g>
 </svg>

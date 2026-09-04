@@ -97,7 +97,10 @@ internal sealed partial class LayoutEngine
         // builder cannot be given them in the constructor.
         _skylineBuilder = new SkylineBuilder(_options.StaffHeight, score.TextMetrics);
 
-        double headerHeight = LayoutUtilities.CalculateHeaderHeight(score.Title, score.Composer);
+        // The book title as LilyPond pages it — a top-aligned column at the head of the
+        // page's chain, or nothing (HeaderBand). It reaches the first system's placement,
+        // the count loop's page estimate and the page breaker as ONE value.
+        var header = HeaderBand.Build(score.Title, score.Composer, score.TextMetrics);
 
         // LILYPOND-REF: lily/page-layout-problem.cc:656-717 alignment_distances
         // Apply user overrides for StaffGrouper spacing before layout
@@ -166,7 +169,7 @@ internal sealed partial class LayoutEngine
                 textRowStaves.Add(gi);
 
         var pass = PlaceSystems(score, multiStaffLayouter, systemMeasures, systemCache,
-            indent, shortIndent, commonShortestDuration, headerHeight);
+            indent, shortIndent, commonShortestDuration, header);
 
         // LILYPOND-REF: lily/optimal-page-breaking.cc:41-254 Optimal_page_breaking::solve —
         // the line DP's best count is only where LilyPond STARTS; the count it engraves is
@@ -175,12 +178,12 @@ internal sealed partial class LayoutEngine
         // is placed again on the chosen lines and the ideal placement is discarded.
         if (lineBreaks.HasAlternatives && _options.PageHeight > 0)
         {
-            var chosen = ChooseSystemCount(score, lineBreaks, pass, headerHeight);
+            var chosen = ChooseSystemCount(score, lineBreaks, pass, header);
             if (chosen != null)
             {
                 systemMeasures = KnuthPlassBreaker.CreateMeasureGroups(primaryMeasures, chosen);
                 pass = PlaceSystems(score, multiStaffLayouter, systemMeasures, systemCache,
-                    indent, shortIndent, commonShortestDuration, headerHeight);
+                    indent, shortIndent, commonShortestDuration, header);
             }
         }
         var systems = pass.Systems;
@@ -193,7 +196,7 @@ internal sealed partial class LayoutEngine
         double systemHeight = pass.FirstSystemHeight;
 
         var (pages, systemsArray) = CreatePages(
-            systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,
+            systems.ToImmutableArray(), header, perSystemExtents, systemHeight,
             prelim.PagingSkylines, perSystemHeights, perSystemBandUps, placed.CropDown,
             PagePermissionsAfterSystems(score, systems));
 
@@ -238,7 +241,7 @@ internal sealed partial class LayoutEngine
     private SystemPass PlaceSystems(
         MultiStaffScore score, MultiStaffLayouter multiStaffLayouter,
         List<List<Measure>> systemMeasures, SystemLayoutCache? systemCache,
-        double indent, double shortIndent, double commonShortestDuration, double headerHeight)
+        double indent, double shortIndent, double commonShortestDuration, HeaderBand? header)
     {
         // LILYPOND-REF: lily/align-interface.cc:217-268
         // Compute first system measure layouts first, then use skyline-based staff spacing
@@ -314,8 +317,8 @@ internal sealed partial class LayoutEngine
             firstStaffSkylines.Skylines);
         var firstAnchor = PageAnchorOffsets(firstStaffGroupLayouts);
         double currentY = LayoutUtilities.CalculateFirstSystemY(
-            _options.MarginTop, headerHeight, LayoutUtilities.CalculateUpExtent(firstUpSkyline),
-            firstAnchor.ToFirst, _options.VerticalSpacing.TopSystem);
+            _options.MarginTop, header, LayoutUtilities.CalculateUpExtent(firstUpSkyline),
+            firstAnchor.ToFirst, _options.VerticalSpacing);
 
         var placed = LayoutSystems(new SystemPassContext
         {

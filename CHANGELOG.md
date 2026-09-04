@@ -90,6 +90,32 @@ scores against LilyPond's picture of the same book.
 
 ### Engraving
 
+- **A tab staff's silhouette is its own clef's.** The layout's skyline for a tab staff
+  carried a TREBLE clef's outline — 3.55 staff spaces under the middle string and 3.8 over
+  it — where the staff prints the TAB clef, which sits inside the strings. A six-string tab
+  hid it; a five-string bass tab reserved 0.55 of phantom ink below its lowest string and
+  0.8 above its highest on every system, so a full page of bass systems compressed a little
+  more than LilyPond's and a one-page book was that much taller. The skyline now holds the
+  TAB clef's own box. Six-string tabs are unchanged.
+- **The title sits where LilyPond puts it, and the first system under it.** The title's
+  baseline used to be drawn AT the top margin — its ascenders in the margin, the composer a
+  title-height below in italics — and only the ink under that baseline kept the first system
+  down, so a titled book's first staff stood 5.6 staff spaces higher than LilyPond's and
+  its first page held one system fewer. The title is now LilyPond's book-title column: its
+  top 4 staff spaces below the margin (top-markup-spacing), the composer 3.5 below the
+  title's baseline (the column's baseline-skip), upright, and the first system spaced from
+  the column's bottom by markup-system-spacing — a spring of the page like any other, so a
+  full page compresses or stretches the gap with the rest. Books without a title or a
+  composer are unchanged.
+- **The page breaker prices a multi-staff system at the height LilyPond does.** It used to
+  measure a system as it was drawn — its staff pairs at their basic distance, and its last
+  staff's reference point a nominal half staff above the bottom line whatever the staff — so
+  a staff-plus-tab system was priced two staff spaces taller than LilyPond prices it, and
+  eight such systems that LilyPond squeezes onto one page went 7 + 1 (the user's bass book
+  paged 7 systems where LilyPond pages 8). The breaker now reads each system at its
+  alignment minimum, with the tab's real reference point, exactly as LilyPond's page
+  breaking estimates do; the placement of the chosen systems is unchanged. Books whose
+  systems have one staff page as before.
 - **A chord symbol written on a note keeps its neighbours off.** An inline `@chord` used to
   reserve no width at all — only a `chords` track's symbols did — so two whole-note chords
   with wide names (`F♯sus4` then `Emaj7/D♯`) printed 0.78 staff spaces apart and read as one

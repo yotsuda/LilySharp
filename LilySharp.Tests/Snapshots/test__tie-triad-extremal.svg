@@ -1,47 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="266.9" viewBox="0 0 119.50 26.69" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="327.4" viewBox="0 0 119.50 32.74" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="26.69" fill="#FFFFFF"/>
-  <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="3081">Tied Triads</text>
-  <text x="110.97" y="9.18" font-size="2.20" font-style="italic" text-anchor="end" data-pos="3104">Lily#</text>
+  <rect x="0" y="0" width="119.50" height="32.74" fill="#FFFFFF"/>
+  <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="3081">Tied Triads</text>
+  <text x="110.97" y="15.76" font-size="2.20" text-anchor="end" data-pos="3104">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="14.46" x2="27.18" y2="14.46" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="15.46" x2="27.18" y2="15.46" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.46" x2="27.18" y2="16.46" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.46" x2="27.18" y2="17.46" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="18.46" x2="27.18" y2="18.46" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="0.80" y="17.46" font-size="4.00" data-pos="3154"></text>
-  <text class="music" x="4.88" y="16.46" font-size="4.00" data-pos="3118"></text>
-  <line x1="8.24" y1="19.46" x2="10.31" y2="19.46" stroke="#000000" stroke-width="0.200"/>
-  <line x1="12.52" y1="19.46" x2="14.58" y2="19.46" stroke="#000000" stroke-width="0.200"/>
-  <text class="music" x="8.59" y="19.46" font-size="4.00" data-pos="3195"></text>
-  <text class="music" x="8.59" y="18.46" font-size="4.00" data-pos="3197"></text>
-  <text class="music" x="8.59" y="17.46" font-size="4.00" data-pos="3199"></text>
-  <line x1="9.90" y1="19.46" x2="9.90" y2="13.96" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="12.86" y="19.46" font-size="4.00" data-pos="3206"></text>
-  <text class="music" x="12.86" y="18.46" font-size="4.00" data-pos="3208"></text>
-  <text class="music" x="12.86" y="17.46" font-size="4.00" data-pos="3210"></text>
-  <line x1="14.17" y1="19.46" x2="14.17" y2="13.96" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="18.63" y="17.46" font-size="4.00" data-pos="3221"></text>
-  <text class="music" x="18.63" y="16.46" font-size="4.00" data-pos="3223"></text>
-  <text class="music" x="18.63" y="15.46" font-size="4.00" data-pos="3225"></text>
-  <line x1="18.70" y1="15.46" x2="18.70" y2="20.46" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="22.91" y="17.46" font-size="4.00" data-pos="3233"></text>
-  <text class="music" x="22.91" y="16.46" font-size="4.00" data-pos="3235"></text>
-  <text class="music" x="22.91" y="15.46" font-size="4.00" data-pos="3237"></text>
-  <line x1="22.97" y1="15.46" x2="22.97" y2="20.46" stroke="#000000" stroke-width="0.130"/>
-  <rect x="17.39" y="14.46" width="0.19" height="4.00" data-pos="3214"/>
-  <rect x="26.99" y="14.46" width="0.19" height="4.00" data-pos="3242"/>
-  <path d="M 9.47,20.46 C 10.24,21.11 12.58,21.11 13.35,20.46 C 12.58,21.23 10.24,21.23 9.47,20.46 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="3203"/>
-  <path d="M 10.30,18.96 C 10.85,19.47 12.11,19.47 12.66,18.96 C 12.11,19.59 10.85,19.59 10.30,18.96 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="3203"/>
-  <path d="M 10.30,16.24 C 10.96,15.54 12.69,15.54 13.35,16.24 C 12.69,15.66 10.96,15.66 10.30,16.24 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="3203"/>
-  <path d="M 20.21,17.71 C 20.76,18.21 22.02,18.21 22.57,17.71 C 22.02,18.33 20.76,18.33 20.21,17.71 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="3230"/>
-  <path d="M 20.21,16.73 C 20.76,17.24 22.02,17.24 22.57,16.73 C 22.02,17.36 20.76,17.36 20.21,16.73 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="3230"/>
-  <path d="M 20.21,15.24 C 20.78,14.60 22.13,14.60 22.71,15.24 C 22.13,14.72 20.78,14.72 20.21,15.24 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="3230"/>
-  <rect x="3.37" y="10.66" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="3164"/>
-  <text x="6.47" y="12.86" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="3164">Main</text>
+  <line x1="0.00" y1="20.52" x2="27.18" y2="20.52" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="21.52" x2="27.18" y2="21.52" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="22.52" x2="27.18" y2="22.52" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="23.52" x2="27.18" y2="23.52" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="24.52" x2="27.18" y2="24.52" stroke="#000000" stroke-width="0.100"/>
+  <text class="music" x="0.80" y="23.52" font-size="4.00" data-pos="3154"></text>
+  <text class="music" x="4.88" y="22.52" font-size="4.00" data-pos="3118"></text>
+  <line x1="8.24" y1="25.52" x2="10.31" y2="25.52" stroke="#000000" stroke-width="0.200"/>
+  <line x1="12.52" y1="25.52" x2="14.58" y2="25.52" stroke="#000000" stroke-width="0.200"/>
+  <text class="music" x="8.59" y="25.52" font-size="4.00" data-pos="3195"></text>
+  <text class="music" x="8.59" y="24.52" font-size="4.00" data-pos="3197"></text>
+  <text class="music" x="8.59" y="23.52" font-size="4.00" data-pos="3199"></text>
+  <line x1="9.90" y1="25.52" x2="9.90" y2="20.02" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="12.86" y="25.52" font-size="4.00" data-pos="3206"></text>
+  <text class="music" x="12.86" y="24.52" font-size="4.00" data-pos="3208"></text>
+  <text class="music" x="12.86" y="23.52" font-size="4.00" data-pos="3210"></text>
+  <line x1="14.17" y1="25.52" x2="14.17" y2="20.02" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="18.63" y="23.52" font-size="4.00" data-pos="3221"></text>
+  <text class="music" x="18.63" y="22.52" font-size="4.00" data-pos="3223"></text>
+  <text class="music" x="18.63" y="21.52" font-size="4.00" data-pos="3225"></text>
+  <line x1="18.70" y1="21.52" x2="18.70" y2="26.52" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="22.91" y="23.52" font-size="4.00" data-pos="3233"></text>
+  <text class="music" x="22.91" y="22.52" font-size="4.00" data-pos="3235"></text>
+  <text class="music" x="22.91" y="21.52" font-size="4.00" data-pos="3237"></text>
+  <line x1="22.97" y1="21.52" x2="22.97" y2="26.52" stroke="#000000" stroke-width="0.130"/>
+  <rect x="17.39" y="20.52" width="0.19" height="4.00" data-pos="3214"/>
+  <rect x="26.99" y="20.52" width="0.19" height="4.00" data-pos="3242"/>
+  <path d="M 9.47,26.52 C 10.24,27.16 12.58,27.16 13.35,26.52 C 12.58,27.28 10.24,27.28 9.47,26.52 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="3203"/>
+  <path d="M 10.30,25.02 C 10.85,25.52 12.11,25.52 12.66,25.02 C 12.11,25.64 10.85,25.64 10.30,25.02 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="3203"/>
+  <path d="M 10.30,22.29 C 10.96,21.59 12.69,21.59 13.35,22.29 C 12.69,21.71 10.96,21.71 10.30,22.29 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="3203"/>
+  <path d="M 20.21,23.76 C 20.76,24.26 22.02,24.26 22.57,23.76 C 22.02,24.38 20.76,24.38 20.21,23.76 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="3230"/>
+  <path d="M 20.21,22.78 C 20.76,23.29 22.02,23.29 22.57,22.78 C 22.02,23.41 20.76,23.41 20.21,22.78 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="3230"/>
+  <path d="M 20.21,21.29 C 20.78,20.65 22.13,20.65 22.71,21.29 C 22.13,20.77 20.78,20.77 20.21,21.29 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="3230"/>
+  <rect x="3.37" y="16.72" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="3164"/>
+  <text x="6.47" y="18.92" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="3164">Main</text>
   </g>
 </svg>
