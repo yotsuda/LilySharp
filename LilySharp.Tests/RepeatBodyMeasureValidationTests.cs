@@ -78,6 +78,34 @@ public sealed class RepeatBodyMeasureValidationTests
         // bar there (the old standalone frame checked it against the header 4/4).
         AssertClean("c4 c c c | time 2/4 c4 c | repeat percent 2 { d4 d } |");
 
+    /// <summary>
+    /// A <c>time</c> written AFTER a repeat body, inside the same written bar, governs the
+    /// music after it — not the body. The body closes its own rendered bars, so the enclosing
+    /// written bar legitimately reads <c>repeat percent 9 { r1 } time 1/4 r4 |</c> (the tab
+    /// corpus's I Love You, 2026-09-04): the collector walks it in order and draws the r1's
+    /// in 4/4 and the r4 in 1/4, while the validator adopted the bar's last meter up front
+    /// and reported the body's r1 as "1 exceeds 1/4". The two spellings — with and without a
+    /// bar line between <c>}</c> and <c>time</c> — must both be clean, as they render alike.
+    /// </summary>
+    [Fact]
+    public void AMeterChangeAfterTheBodyDoesNotReachBackIntoIt()
+    {
+        AssertClean("c1 | repeat percent 2 { r1 } time 1/4 r4 | time 4/4 d1 | e1 |");
+        AssertClean("c1 | repeat percent 2 { r1 } | time 1/4 r4 | time 4/4 d1 | e1 |");
+    }
+
+    /// <summary>The control: a meter change BEFORE the body still governs it (the body's
+    /// r1 is overfull in 1/4), and one after it still governs the bar's own remainder (a
+    /// half rest in 1/4 is overfull).</summary>
+    [Fact]
+    public void AMeterChangeStillGovernsWhatFollowsIt()
+    {
+        Assert.Contains(Diagnose("c1 | time 1/4 repeat percent 2 { r1 } | time 4/4 d1 |"),
+            d => d.Code == DiagnosticCodes.MeasureOverflow && d.Message.Contains("1/4"));
+        Assert.Contains(Diagnose("c1 | repeat percent 2 { r1 } time 1/4 r2 | time 4/4 d1 |"),
+            d => d.Code == DiagnosticCodes.MeasureOverflow && d.Message.Contains("1/2 exceeds"));
+    }
+
     [Fact]
     public void AGenuinelyOverfullBodyBarStillWarns()
     {

@@ -80,6 +80,13 @@ scores against LilyPond's picture of the same book.
   chord row is measure-relative — its entries carry no duration and divide the bar on the
   beat grid — so its bars can be neither short nor long, and the row keeps only its own
   grid diagnostics (LYS2009 / LYS2010).
+- **A `time` written after a repeat body no longer reaches back into it.** A percent or
+  volta body closes its own rendered bars, so the written bar around it may read
+  `repeat percent 9 { r1 } time 1/4 r4 |` — the meter change belongs to the `r4`. The bar
+  check adopted the bar's last meter before looking inside the repeat and reported the
+  body's `r1` as "1 exceeds 1/4" (LYS2002) while the page drew the book right; the meter
+  is now adopted in the order it is written, so the two spellings — with and without a bar
+  line between `}` and `time` — are both clean, as they render alike.
 
 ### Engraving
 

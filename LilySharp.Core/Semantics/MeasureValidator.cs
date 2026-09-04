@@ -340,13 +340,30 @@ internal sealed class MeasureValidator : ISemanticValidator
             Fraction? partialLength = null;
             foreach (var item in barItems)
             {
-                if (item is TimeSignatureSyntax ts)
-                {
-                    if (ts.IsSenzaMisura) _senzaMisura = true;
-                    else { _senzaMisura = false; SetTimeSignature(ts.Beats, ts.BeatType); }
-                }
-                else if (item is PartialDeclarationSyntax pd)
+                if (item is PartialDeclarationSyntax pd)
                     partialLength = pd.ToFraction();
+            }
+            // ⚠️ The meter is adopted IN ITEM ORDER, segment by segment around the repeat
+            // cuts below — not for the whole written bar up front. A `repeat percent`
+            // body closes its own rendered bars, so the enclosing written bar can hold
+            // `repeat percent 9 { r1 } time 1/4 r4 |`: the `time` stands AFTER the body and
+            // governs only the `r4`. Adopting it before the cuts validated the body's `r1`
+            // against 1/4 ("Measure duration 1 exceeds time signature 1/4") while the
+            // collector, which walks the stream in order, drew the book right — the
+            // validator and the page disagreed on the same source (I Love You, the tab
+            // corpus, 2026-09-04; the probe pair is `} time 1/4 r4 |` vs `} | time 1/4 r4 |`,
+            // and only the first warned). The bar's own fill check still uses the LAST
+            // meter written in it, as before.
+            void AdoptMeters(int fromIndex, int toIndex)
+            {
+                for (int k = fromIndex; k < toIndex; k++)
+                {
+                    if (barItems[k] is TimeSignatureSyntax ts)
+                    {
+                        if (ts.IsSenzaMisura) _senzaMisura = true;
+                        else { _senzaMisura = false; SetTimeSignature(ts.Beats, ts.BeatType); }
+                    }
+                }
             }
 
             // The bar this stream starts inside may already be part-elapsed (a voice
@@ -374,6 +391,7 @@ internal sealed class MeasureValidator : ISemanticValidator
             int from = 0;
             foreach (var (itemIndex, span, rep) in cuts)
             {
+                AdoptMeters(from, itemIndex);
                 total += MeasureDurations.CalculateMeasureDuration(
                     barItems.GetRange(from, itemIndex - from), ref defaultDuration);
                 from = itemIndex;
@@ -465,6 +483,7 @@ internal sealed class MeasureValidator : ISemanticValidator
                         rep.Body.Items.ToList(), ref defaultDuration);
                 }
             }
+            AdoptMeters(from, barItems.Count);
             total += MeasureDurations.CalculateMeasureDuration(
                 barItems.GetRange(from, barItems.Count - from), ref defaultDuration);
             var duration = total;
