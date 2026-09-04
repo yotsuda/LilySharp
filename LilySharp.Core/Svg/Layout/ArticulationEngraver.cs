@@ -803,7 +803,7 @@ internal static class ArticulationEngraver
                 // stem-coupled mark sits on the opposite (DOWN) side. A BEAMED note takes
                 // its whole beam's direction, not its own string: an inner note on a high
                 // string still points up with the group, so its staccato dot sits below.
-                bool tabStemUp = isTabBeamed ? tabBeamUp : geom.StringStemUp(geom.MeanString(item));
+                bool tabStemUp = isTabBeamed ? tabBeamUp : geom.TabStemUp(item);
                 // Fermata, ornaments and bow marks keep direction = UP on a tab
                 // staff too — LilyPond's TabVoice keeps the Script_engraver and
                 // the script side-positions above the staff symbol; only
@@ -857,7 +857,8 @@ internal static class ArticulationEngraver
                     // a forced-above script clears the whole staff (clamped to the top
                     // line, so a low-string note's mark doesn't park at a phantom top
                     // digit a staff away).
-                    double noteTop = geom.StringY(geom.StemHeadString(item, stemUp: true));
+                    int topString = geom.StemHeadString(item, stemUp: true);
+                    double noteTop = geom.StringY(topString);
                     double clear = insideEligible
                         ? noteTop - fretHalf
                         : Math.Min(noteTop - fretHalf, topLine);
@@ -880,7 +881,7 @@ internal static class ArticulationEngraver
                     //   both would be a condition that cannot fire — but if insideEligible's
                     //   definition changes, this fold is the thing that breaks.
                     if (tabStemUp
-                        && geom.UnbeamedStemTipY(item, stemUp: true, noteTop) is { } tipUp)
+                        && geom.UnbeamedStemTipY(item, stemUp: true, topString) is { } tipUp)
                         clear = Math.Min(clear, tipUp);
                     tabY = clear - tabGap;
                 }
@@ -889,13 +890,14 @@ internal static class ArticulationEngraver
                     // Below the note's own BOTTOM digit — inside the staff for a
                     // stem-coupled mark (when it isn't the bottom string), else clamped
                     // to the bottom line so a forced mark clears the whole staff.
-                    double noteBottom = geom.StringY(geom.StemHeadString(item, stemUp: false));
+                    int bottomString = geom.StemHeadString(item, stemUp: false);
+                    double noteBottom = geom.StringY(bottomString);
                     double clear = insideEligible
                         ? noteBottom + fretHalf
                         : Math.Max(noteBottom + fretHalf, bottomLine);
                     // The same stem term on the other side (see the above branch).
                     if (!tabStemUp
-                        && geom.UnbeamedStemTipY(item, stemUp: false, noteBottom) is { } tipDown)
+                        && geom.UnbeamedStemTipY(item, stemUp: false, bottomString) is { } tipDown)
                         clear = Math.Max(clear, tipDown);
                     tabY = clear + tabGap;
                 }

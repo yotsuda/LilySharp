@@ -2315,8 +2315,7 @@ internal sealed class ElementCoordinator
             // digit has no head extent for the scored direction search to weigh (see the
             // note above), so there is nothing for the search to overturn it WITH. On the
             // notation staff the same rule only SEEDS a configuration.
-            bool curveUp = tabCurveUp ?? !geom.StringStemUp(
-                geom.MeanString(tieItem ?? (MusicItem) tie.StartNote));
+            bool curveUp = tabCurveUp ?? !geom.TabStemUp(tieItem ?? (MusicItem) tie.StartNote);
             y = digitY + (curveUp ? -clearance : clearance);
             tieForProblem = new TieItem(
                 tie.StartNote, tie.EndNote, tie.StaffPosition, forcedCurveUp: curveUp,
@@ -3527,7 +3526,7 @@ internal sealed class ElementCoordinator
     ///   translation; the shape the scorer chose survives it.
     /// LILYPOND-REF: lily/slur.cc:47-70 Slur::calc_direction — UP as soon as ONE
     ///   encompassed non-rest column's stem points DOWN, else DOWN. On a tab that stem
-    ///   direction is the STRING's, not the notated pitch's (TabStaffGeometry.StringStemUp).
+    ///   direction is the STRING's, not the notated pitch's (TabStaffGeometry.TabStemUp).
     /// <para>
     /// MEASURED on 2.26.0, scratch/p318/tabslur-dump.ly (four-string bass tab, the pair
     /// <c>ts.ly</c>/<c>ts.lys</c> the report came in on). Score 0 is the default TabStaff,
@@ -3552,9 +3551,9 @@ internal sealed class ElementCoordinator
     /// coincidence — the second invention covering the first (docs/RULES.md §5.2.1).
     /// </para>
     /// <para>
-    /// ⚠️ Lily# DRAWS tab stems where LilyPond hides them
-    /// (<see cref="TabConstants.UnbeamedStemLength"/>, a ratified deviation), and they stay
-    /// out of this scorer because that is what the ported code reads. They are not in the
+    /// ⚠️ Lily# DRAWS tab stems where a default TabStaff hides them (a lone tab is full
+    /// notation, U4; the stem's reach is <see cref="TabStaffGeometry.UnbeamedStemTipY"/>), and
+    /// they stay out of this scorer because that is what the ported code reads. They are not in the
     /// curve's way: the direction rule above puts the slur on the side away from the stems
     /// (a column whose stem points down forces the slur up), so the two sit on opposite
     /// sides of the digits by construction.
@@ -3618,7 +3617,7 @@ internal sealed class ElementCoordinator
         bool curveUp = false;
         foreach (var (_, item) in columns)
         {
-            if (!geom.StringStemUp(geom.MeanString(item)))
+            if (!geom.TabStemUp(item))
             {
                 curveUp = true;
                 break;

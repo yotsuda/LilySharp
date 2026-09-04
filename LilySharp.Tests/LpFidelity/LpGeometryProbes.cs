@@ -1458,6 +1458,33 @@ internal static class LpGeometryProbes
     /// <summary>The tab half — book TABL.</summary>
     private static readonly string TABL = TabPageScore("TABL", "tab");
 
+    /// <summary>
+    /// One unbeamed eighth on the top string of a full-notation guitar tab — the twin of
+    /// audit/lp-geometry/probes/tab-stem.ly. String 1 is pinned (<c>\1</c>) so the head sits
+    /// at staff-position +5 whatever fret the pitch takes; the stem points DOWN (the upper
+    /// half of the fretboard) and, on the side away from its head, is not shortened. The
+    /// quantity measured is the stem's TIP in the tab's own spaces above the middle — the
+    /// reading that had no ledger point until the full-notation tab stem was ported from
+    /// LilyPond's stem machinery (session 337).
+    /// </summary>
+    private static readonly string TABSTEM = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part gtr { clef treble_8 tuning guitar }
+
+        section Main {
+          gtr { e'8\1 r8 r2. }
+        }
+
+        form main { Main }
+
+        score main "TABSTEM" {
+          tab gtr as full
+        }
+        """;
+
     /// <summary>The notation control — book NTL.</summary>
     private static readonly string NTL = TabPageScore("NTL", "staff");
 
@@ -12517,6 +12544,16 @@ internal static class LpGeometryProbes
         new("page.tab-control.first-staff-refpoint", NTL, g => g.FirstStaffRefpoint()),
         new("system.tab-control.natural-distance", NTL, g => g.StaffGap()),
         new("page.tab-control.staves-on-first-page", NTL, g => g.StavesOnPage()),
+
+        // The tip of an unbeamed stem on a full-notation tab (book TABSTEM). LilyPond draws
+        // no tab stem by default, so nothing here observed one until session 337 ported it
+        // from the ordinary stem machinery run in the tab's own frame. LilyPond's tip
+        // (stem-end-position) for the top string's DOWN eighth is −2.0 half-tab-spaces = −1.0
+        // tab-space below the middle; the begin sits on the digit's far edge, which shortens
+        // the DRAWN line but not the tip. Before the port a flat 3.0 × string-space put the
+        // tip far past this and every full-notation tab system stood ~1.45 ss too tall.
+        new("stem.tab-full.top-string.eighth.tip-above-middle", TABSTEM,
+            g => g.UnbeamedTabStemTipAboveStaffMiddle()),
 
         // --- THE HEAD OF A TITLED PAGE (books TTL / TTT / TTC / TTN, probes/titled-page.ly) ---
         // Where the first staff lands when a header stands over it. Every other page book

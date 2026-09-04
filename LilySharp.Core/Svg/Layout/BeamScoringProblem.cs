@@ -548,8 +548,15 @@ internal sealed class BeamScoringProblem
     private double ComputeBeamShorten()
     {
         // LILYPOND-REF: lily/beam.cc:1068 — shortening looks silly for knee/x-staff beams.
-        // TAB beams quant from string lines, which have no pitch default-direction.
-        if (_isKnee || _isTab)
+        // ⚠️ A TAB beam is NOT exempt, and until 2026-09-05 it was here: "string lines have no
+        // pitch default-direction". They have LilyPond's — a TabVoice stem's default-direction
+        // is calc_default_direction over its fret digits' staff positions (which are the
+        // string positions fed in as stemPositions above), and forced_stem_count reads exactly
+        // that (beam.cc:1286-1291). MEASURED on 2.26.0 (scratch/p337/sugar3, Sugar.ly): the
+        // pair E string (−2) + D string (+2) beams DOWN, the E stem is forced, the fraction is
+        // 0.5 and the beam sits 0.75 ss (0.5 tab spaces) nearer the digits than the unshortened
+        // ideal — the 0.94 of the 1.45 ss a tab system stood too tall (HANDOFF §1 第337 ⑺).
+        if (_isKnee)
             return 0.0;
 
         double[] beamedStemShorten = StemDetails.Default.BeamedStemShorten; // (1.0 0.5 0.25)

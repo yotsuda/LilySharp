@@ -193,72 +193,35 @@ internal static class TabConstants
     public const double FretColumnGap = 0.6;
 
     /// <summary>
-    /// How far a tab stem's NEAR end sits from the string line its digit is centred on —
-    /// midway between the digit's ink edge and the neighbouring string line.
+    /// How far from its string line a tab stem's NEAR end is drawn — where LilyPond's
+    /// <c>stem-begin-position</c> puts it: on the far side of the digit, 1.35 of the digit's
+    /// half-height from the line.
     /// </summary>
     /// <remarks>
-    /// LILYSHARP-OWN, and it has to be: LilyPond's TabStaff draws no stems at all by default,
-    /// so there is no quantity to port. The stem may only begin in the window between the
-    /// digit it leaves (<see cref="FretDigitHeight"/> / 2) and the next string line
-    /// (<paramref name="stringSpace"/>), and this centres it in that window.
+    /// LILYPOND-REF: lily/note-head.cc:224-234 Note_head::calc_tab_stem_attachment — a
+    ///   TabNoteHead's <c>stem-attachment</c> is <c>(0, dir * 1.35)</c>, in the head's own
+    ///   half-extents.
+    /// LILYPOND-REF: lily/stem.cc:945-960 internal_calc_stem_begin_position —
+    ///   <c>pos += y_attach * 2 / ss</c> with <c>y_attach = head_height.linear_combination
+    ///   (attachment)</c>, so the stem begins <c>1.35 × (digit height / 2)</c> from the string
+    ///   line, past the digit's edge by 0.35 of its half-height.
+    /// LILYPOND-REF: scm/define-grobs.scm:3741-3743 TabNoteHead stem-attachment, whiteout —
+    ///   the digit is whited out, so the stem is drawn from its far edge and never through it.
     /// <para>
-    /// ⚠️ IT IS A WINDOW, NOT A PADDING, and that is the whole point. This used to be
-    /// <c>FretDigitHeight / 2 + 0.3</c> — a fixed gap past the digit — which walks toward the
-    /// next line as the font grows because the digit grows and the line does not. MEASURED on
-    /// test/tab-with-chords at font 3.3: stems ran 13.78..18.28 against string lines at 13.85
-    /// and 18.35, i.e. both ends stopping 0.07 short of a line and reading as flush with it.
-    /// Centring instead keeps the clearance proportional at any size.
+    /// MEASURED on 2.26.0 (scratch/p337/sugar3, 488 stems of the owner's Sugar.ly with
+    /// <c>TabNoteHead.font-size = 2</c>, digit half-height 1.0): every
+    /// <c>stem-begin-position</c> sat ±1.8 half-tab-spaces = ±1.35 ss from its string.
     /// </para>
     /// <para>
-    /// ★ At the size the old constant was tuned for (2.6) the two agree to 0.003 —
-    /// <c>1.197</c> against <c>1.194</c> — so this is a re-derivation of the same intent, not
-    /// a new number. What changes is that it no longer decays as the digits grow.
-    /// </para>
-    /// </remarks>
-    public static double StemClearance(double stringSpace)
-        => (FretDigitHeight / 2 + stringSpace) / 2;
-
-    /// <summary>
-    /// How far an UNBEAMED tab stem runs from its near end to its tip.
-    /// </summary>
-    /// <remarks>
-    /// <c>\tabFullNotation</c> reverts the TabStaff's stem overrides, so a tab stem is bought
-    /// with the ORDINARY stem lengths — and on a tab the staff space IS the string gap, so
-    /// whatever that length is, it scales with it.
-    /// LILYPOND-REF: ly/property-init.ly:828-832 — the reverts of Stem.length, no-stem-extend,
-    ///   details and stencil that <c>\tabFullNotation</c> performs.
-    /// LILYPOND-REF: ly/engraver-init.ly:1250-1258 no-stem-extend — what those reverts undo:
-    ///   TabStaff sets <c>details</c> to <c>lengths 0 0 0 0 0 0</c> and the stencil to
-    ///   <c>##f</c>, precisely so that no stem is drawn at all.
-    /// LILYPOND-REF: scm/define-grobs.scm Stem details lengths.
-    /// <para>
-    /// ⚠️ 3.0 IS NOT THE CITED NUMBER, AND THE CITED LINE IS NOT A LENGTH. What
-    /// <c>details.lengths</c> holds is <c>(3.5 3.5 3.5 4.25 5.0 …)</c>, and LilyPond does not
-    /// use it directly: <c>length</c> is the callback <c>ly:stem::calc-length</c>, which picks
-    /// the entry by duration-log and then applies the shortening, the middle-line pull and the
-    /// minimum — the machinery <see cref="StemCalculator"/> already ports for NOTATION stems.
-    /// So this is case ⒝ of HANDOFF §7.6: derived from LilyPond, not copied from it. What it
-    /// would take to make it literal is to run a tab column through
-    /// <see cref="StemCalculator"/> in the string-gap frame instead of writing one flat
-    /// number here. ⚠️ DO NOT SWAP THE NUMBER ON ITS OWN: 3.0 → 3.5 moves every tab stem and
-    /// every script now clearing one, and NO ledger point observes a tab stem (a tab book is
-    /// not comparable to LilyPond until its strings are pinned). Open the book first.
-    /// ⚠️ The wording this replaced said "the default 3 staff spaces measured FROM THE NOTE
-    /// HEAD" beside a citation that reads 3.5, which is the shape §5.2 warns about — a
-    /// LILYPOND-REF whose neighbouring formula is a different number.
-    /// </para>
-    /// <para>
-    /// ⚠️ IT LIVES HERE BECAUSE TWO LAYERS NEED IT, and for three sessions only one had it.
-    /// The renderer drew the stem; <see cref="ArticulationEngraver"/> has to place scripts
-    /// clear of it, and its non-beamed branch simply had no stem term — while the BEAMED
-    /// branch beside it had always cleared the beam's outer edge. MEASURED on
-    /// test/tab-articulations-multistaff before the fix: the stems ran up to 17.960000 (2.85
-    /// past the top string line) and both the flageolet and the fermata were pinned at
-    /// 19.810000 — one number for two glyphs of different heights, which is the signature of
-    /// a clamp rather than a placement, and the fermata's right arm crossed the stem.
+    /// ⚠️ This is NOT where the stem ENDS. LilyPond's stem end is a function of the head
+    /// position and the duration alone (<see cref="StemCalculator.CalculateStemEndPosition"/>);
+    /// the begin only shortens the visible line. Before 2026-09-05 Lily# added a fixed
+    /// length to a "clearance" that centred the near end between digit and next line —
+    /// so the tip moved with the digit size, and every tab system stood 1.45 ss taller
+    /// than LilyPond's (HANDOFF §1 第337 ⑺).
     /// </para>
     /// </remarks>
-    public static double UnbeamedStemLength(double stringSpace) => 3.0 * stringSpace;
+    public static double StemBeginOffset() => 1.35 * FretDigitHeight / 2;
 
     /// <summary>
     /// A tab beam's <c>length-fraction</c>: 0.62, the one number LilyPond states rather than
@@ -593,68 +556,204 @@ internal readonly struct TabStaffGeometry
         }
     }
 
+    /// <summary>Half the string span in the tab's OWN spaces — LilyPond's
+    /// <c>Staff_symbol_referencer::staff_radius</c> for this staff symbol.</summary>
+    public double StaffRadius => (StringCount - 1) / 2.0;
+
+    /// <summary>Device-Y of the tab's middle — staff position 0, the refpoint every LilyPond
+    /// position on this staff is measured from (a gap between two strings when the count is
+    /// even).</summary>
+    public double MiddleY => StaffY + (StringCount - 1) * StringSpace / 2.0;
+
     /// <summary>
-    /// Device-Y of an UNBEAMED tab stem's TIP, measured from the digit line the stem leaves
-    /// (<paramref name="headY"/>, which the caller already has from
-    /// <see cref="StemHeadString"/>) — or null when the item carries no stem at all, a whole
-    /// note or a breve, which is the same gate the renderer takes before drawing one.
+    /// Device-Y of an UNBEAMED tab stem's TIP — or null when the item carries no stem at
+    /// all, a whole note or a breve, which is the same gate the renderer takes before drawing
+    /// one.
     /// </summary>
     /// <remarks>
-    /// Composed from the parts that already exist rather than re-derived:
-    /// <see cref="TabConstants.StemClearance"/> is the gap the stem starts after and
-    /// <see cref="TabConstants.UnbeamedStemLength"/> is how far it runs — that last one moved
-    /// out of the renderer so this could read it rather than spell it a second time.
+    /// The ordinary stem rule run in the tab's frame: <c>\tabFullNotation</c> reverts the
+    /// TabStaff's stem overrides, so a tab stem is bought with the ordinary
+    /// <c>details.lengths</c> by duration, the ordinary unnatural-direction shortening, and the
+    /// ordinary pull to the middle line — everything in half-spaces of THIS staff, whose space
+    /// is the string gap. <see cref="StemCalculator.CalculateStemEndPosition"/> is that rule;
+    /// this converts its answer to device Y.
+    /// LILYPOND-REF: ly/property-init.ly:828-832 tabFullNotation — the reverts of
+    ///   Stem.length, no-stem-extend, details and stencil.
+    /// LILYPOND-REF: lily/stem.cc:481-596 internal_calc_stem_end_position — the rule itself;
+    ///   :505 staff_rad (<see cref="StaffRadius"/>), :588 <c>hp[dir] + dir * length</c>.
     /// <para>
-    /// ⚠️ <paramref name="headY"/> IS A PARAMETER RATHER THAN A LOOKUP ON PURPOSE. Resolving
-    /// the head string again would run <c>Tunings.CalculateChordFrets</c> a second time for
-    /// every chord that carries a script — the caller has just done it — and it would also
-    /// let the two answers drift. Passing it keeps one resolution per script and makes the
-    /// clearance provably the same line the caller measured its digit from.
+    /// MEASURED on 2.26.0 (scratch/p337/sugar3, the owner's Sugar.ly, five-string bass):
+    /// an eighth on the E string (position −2) stems UP to 3.750000 above the middle
+    /// (= (−2 + 7) × 0.75, no shortening), an eighth on the A string (0) stems DOWN to
+    /// −5.062500 (= −(7 − 0.25) × 0.75, the middle-line head is shortened by one step). Both
+    /// fall out of the rule to the digit. Before 2026-09-05 this was a flat
+    /// <c>clearance + 3.0 × string space</c> from the digit — 5.55 ss from the string, which
+    /// put an A-string up-stem 2.6 ss above the top string where LilyPond's reaches 0.75, and
+    /// made every full-notation tab system 1.45 ss taller than LilyPond's (HANDOFF §1 第337).
+    /// </para>
+    /// <para>
+    /// ⚠️ <paramref name="headString"/> IS A PARAMETER RATHER THAN A LOOKUP ON PURPOSE.
+    /// Resolving the head string again would run <c>Tunings.CalculateChordFrets</c> a second
+    /// time for every chord that carries a script — the caller has just done it via
+    /// <see cref="StemHeadString"/> — and it would also let the two answers drift.
     /// </para>
     /// </remarks>
-    public double? UnbeamedStemTipY(MusicItem item, bool stemUp, double headY)
+    public double? UnbeamedStemTipY(MusicItem item, bool stemUp, int headString)
     {
         if (NoteColumnLayout.Of(item) is not { HasStem: true })
             return null;
-        double reach = TabConstants.StemClearance(StringSpace)
-                     + TabConstants.UnbeamedStemLength(StringSpace);
-        return stemUp ? headY - reach : headY + reach;
+        int durationLog = StemCalculator.GetDurationLog(GlyphMetrics.NoteValueOf(item));
+        double endPosition = StemCalculator.CalculateStemEndPosition(
+            stemUp, durationLog, StaffPositionOfString(headString), null, StaffRadius);
+        // Positions are half-spaces of THIS staff above its middle; device Y grows downward.
+        return MiddleY - endPosition * StringSpace / 2.0;
     }
 
-    /// <summary>The mean tab-head string of a note/chord (a chord averages its notes),
-    /// for the string-based stem-direction decision.</summary>
-    public double MeanString(MusicItem item)
+    /// <summary>The staff positions of an item's OUTERMOST fret digits — LilyPond's
+    /// <c>head_positions</c> on a TabVoice stem, (lowest, highest). A chord's strings come
+    /// from the same exclusive allocation the drawn chord uses.</summary>
+    private (int Low, int High) HeadPositions(MusicItem item)
     {
         switch (item)
         {
             case NoteItem n:
-                return Fret(n.Midi, n.StringNumber).stringNum;
+            {
+                int p = StaffPositionOfString(Fret(n.Midi, n.StringNumber).stringNum);
+                return (p, p);
+            }
             case ChordItem c when c.Notes.Length > 0:
-                double sum = 0;
-                foreach (var x in c.Notes) sum += Fret(x.Midi, x.StringNumber).stringNum;
-                return sum / c.Notes.Length;
+            {
+                int shift = _octaveShift;
+                var alloc = Tunings.CalculateChordFrets(
+                    c.Notes.Select(x => (x.Midi + shift, x.StringNumber)).ToList(), _tuning);
+                int lo = int.MaxValue, hi = int.MinValue;
+                foreach (var a in alloc)
+                {
+                    int p = StaffPositionOfString(a.stringNum);
+                    lo = System.Math.Min(lo, p);
+                    hi = System.Math.Max(hi, p);
+                }
+                return (lo, hi);
+            }
             default:
-                return 1.0;
+                return (0, 0);
         }
     }
 
-    /// <summary>
-    /// The tab stem direction for a mean string position: UP for the LOWER half of the
-    /// fretboard (a low note, like a low notated pitch), DOWN for the upper. LilyPond
-    /// decides a tab stem from the STRING (the tab head), not the notated pitch — so a
-    /// bass run on the bottom strings points its stems up, not down.
-    /// </summary>
-    /// <remarks>LILYPOND-REF: the TabStaff's stems follow the tab note-column positions
-    /// (Stem::calc_direction over the fret heads), not the sounding pitch.</remarks>
-    public bool StringStemUp(double meanString) => meanString > (StringCount + 1) / 2.0;
+    private static bool? ForcedStemUpOf(MusicItem item) => item switch
+    {
+        NoteItem n => n.ForcedStemUp,
+        ChordItem c => c.ForcedStemUp,
+        _ => null,
+    };
 
-    /// <summary>The string-based stem direction for a whole beam group (its members'
-    /// mean tab-head string).</summary>
+    /// <summary>
+    /// The direction of an UNBEAMED tab stem: LilyPond's default-direction rule run on the
+    /// fret digits' staff positions — the head FARTHER from the middle decides, a tie (one
+    /// digit ON the middle string, or a chord symmetric about it) falls to the neutral
+    /// direction, DOWN — unless the writer turned the stem.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem.cc:793-809 Stem::calc_default_direction —
+    ///   <c>udistance = hp[UP]</c>, <c>ddistance = -hp[DOWN]</c>,
+    ///   <c>dir = sign (ddistance - udistance)</c>.
+    /// LILYPOND-REF: lily/stem.cc:769-788 Stem::calc_direction — a CENTER default falls to
+    ///   <c>neutral-direction</c>, which is DOWN (scm/define-grobs.scm Stem).
+    /// LILYPOND-REF: lily/tab-note-heads-engraver.cc:99-122 — the digit's staff-position is
+    ///   its string's (<see cref="StaffPositionOfString"/>), so on a TabVoice the ordinary rule
+    ///   reads strings, not sounding pitch: a bass run on the bottom strings stems UP.
+    /// <para>
+    /// MEASURED on 2.26.0 (scratch/p337/sugar3, five-string bass): 44 lone eighths on the E
+    /// string (−2) UP, 72 on the A string (0, the middle) DOWN, 8 on the B string (−4) UP.
+    /// For a SINGLE digit this is the "lower half of the fretboard stems up" rule Lily# had
+    /// since 2026-07 (string &gt; (count+1)/2); what changed is the chord — the farther
+    /// extreme rather than the mean string — and that the rule is now the cited one.
+    /// </para>
+    /// </remarks>
+    public bool TabStemUp(MusicItem item)
+    {
+        if (ForcedStemUpOf(item) is { } forced)
+            return forced;
+        var (lo, hi) = HeadPositions(item);
+        int udistance = hi;
+        int ddistance = -lo;
+        return ddistance - udistance > 0;   // sign > 0 → UP; 0 → neutral DOWN; < 0 → DOWN
+    }
+
+    /// <summary>
+    /// The direction of a whole tab BEAM: LilyPond's beam default-direction rule run on the
+    /// members' fret-digit positions — the farthest extreme decides, then a per-stem vote,
+    /// then the sides' reach, then the neutral direction (DOWN).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc:876-940 Beam::get_default_dir — :880-889 the extremes,
+    ///   :894-916 the per-stem tally (a forced stem votes its own way and raises force_dir),
+    ///   :918-924 the extremes check (skipped when any stem is forced), :928-937 the vote,
+    ///   the averages, the totals, then <c>neutral-direction</c>.
+    /// LILYPOND-REF: lily/beam.cc:182-246 Beam::calc_direction — the group's answer is set on
+    ///   every unforced stem (:243 set_stem_directions), which is why a tab beam is never kneed
+    ///   here: the members take one side.
+    /// <para>
+    /// The same rule <c>BeamDetector.DefaultBeamStemUp</c> runs for a notation beam on
+    /// notated pitch, spelled here over strings because that is what a TabVoice stem's
+    /// heads are. MEASURED on 2.26.0 (Sugar.ly): the pair E string (−2) + D string (+2) ties
+    /// at every step and beams DOWN, the neutral direction; 36 such pairs, all DOWN. Before
+    /// 2026-09-05 this was the MEAN string of the group, which agrees on that pair and
+    /// disagrees wherever an outlier outweighs the majority (the notation side found the
+    /// same defect in its mean rule, BeamDetector.cs).
+    /// </para>
+    /// </remarks>
     public bool GroupStemUp(System.Collections.Generic.IEnumerable<MusicItem> items)
     {
-        double sum = 0;
+        int extremeUp = 0, extremeDown = 0;
+        bool forceDir = false;
+        int upVotes = 0, downVotes = 0, totalUp = 0, totalDown = 0;
         int count = 0;
-        foreach (var it in items) { sum += MeanString(it); count++; }
-        return StringStemUp(count > 0 ? sum / count : 1.0);
+        foreach (var item in items)
+        {
+            if (item is not (NoteItem or ChordItem))
+                continue;
+            count++;
+            var (lo, hi) = HeadPositions(item);
+            // LILYPOND-REF: beam.cc:883-888 — extremes[d] over head_positions, on each side.
+            if (hi > 0) extremeUp = System.Math.Max(extremeUp, hi);
+            if (lo < 0) extremeDown = System.Math.Min(extremeDown, lo);
+
+            // LILYPOND-REF: beam.cc:897-915 — a stem with a set direction votes it (force_dir);
+            //   otherwise its default-direction, falling to neutral-direction (DOWN) when
+            //   that is CENTER; total[dir] += max (-dir * hp[-dir], 0).
+            bool? forced = ForcedStemUpOf(item);
+            if (forced is not null) forceDir = true;
+            bool voteUp = forced ?? (-lo - hi > 0);
+            if (voteUp)
+            {
+                upVotes++;
+                totalUp += System.Math.Max(-lo, 0);
+            }
+            else
+            {
+                downVotes++;
+                totalDown += System.Math.Max(hi, 0);
+            }
+        }
+        if (count == 0)
+            return false;
+
+        // LILYPOND-REF: beam.cc:918-924 — the farther extreme wins, unless a stem is forced.
+        if (!forceDir)
+        {
+            if (System.Math.Abs(extremeUp) > -extremeDown) return false;
+            if (extremeUp < -extremeDown) return true;
+        }
+        // LILYPOND-REF: beam.cc:928-937 — the vote, then the sides' average reach (INTEGER
+        //   division: Drul_array<int>), then the totals, then neutral-direction = DOWN.
+        if (upVotes != downVotes) return upVotes > downVotes;
+        if (upVotes > 0 && downVotes > 0)
+        {
+            int avgDiff = totalUp / upVotes - totalDown / downVotes;
+            if (avgDiff != 0) return avgDiff > 0;
+        }
+        if (totalUp != totalDown) return totalUp > totalDown;
+        return false;
     }
 }

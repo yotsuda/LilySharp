@@ -70,6 +70,11 @@ scores against LilyPond's picture of the same book.
 - **The score preview's color scheme is a setting** — `lilysharp.preview.theme`: follow
   VS Code's theme (the default, and what the preview always did), always light (the printed
   page), or always dark (the page inverted). A change reaches every open preview at once.
+- **`lysc layout` reports the pages.** A line `pages: 3  |  systems per page: 8, 7, 3`
+  follows the system count, so how the systems fell onto pages — the page breaker's one
+  decision a system list cannot show — can be read without rendering. The report used to
+  say the engine had no printed-page concept, which stopped being true when the page chain
+  was ported.
 
 ### Diagnostics
 
@@ -90,6 +95,17 @@ scores against LilyPond's picture of the same book.
 
 ### Engraving
 
+- **A full-notation tab stem is the length LilyPond draws it.** A tab under `\tabFullNotation`
+  draws stems, and Lily# gave every one a flat three string-spaces from the fret digit — so a
+  low bass note's up-stem reached far above the staff and, more consequentially, every
+  full-notation tab system stood about 1.4 staff spaces taller than LilyPond's, enough to cost
+  a page: a bass tab that fills two pages in LilyPond spilled onto a third. The stem now
+  follows LilyPond's own rule run in the tab's frame — its tip is the ordinary stem end by
+  duration and string, and it is drawn from the far edge of the whited-out digit rather than a
+  fixed gap past it, so the visible line is shorter and its tip lands where LilyPond's does.
+  Its direction, and a beam's, is LilyPond's default-direction rule read over the fret digits'
+  strings (the farther string decides, a chord by its extremes, not the average), and a tab
+  beam's stems shorten when forced against their natural direction, as a notation beam's do.
 - **A tab staff's silhouette is its own clef's.** The layout's skyline for a tab staff
   carried a TREBLE clef's outline — 3.55 staff spaces under the middle string and 3.8 over
   it — where the staff prints the TAB clef, which sits inside the strings. A six-string tab

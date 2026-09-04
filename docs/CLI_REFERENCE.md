@@ -149,9 +149,10 @@ lysc layout [--all] <input.lys>
 ```
 
 Prints a plain-text summary of the engine's layout decisions to stdout: the staves,
-the meter (with any mid-piece changes), the system count, which bars landed in each
-system, and where the line breaker split the music. This exposes the facts a source
-file does not reveal — where breaks actually fell and how the bars are distributed —
+the meter (with any mid-piece changes), the system count, the page count with the
+number of systems on each page, which bars landed in each system, and where the line
+breaker split the music. This exposes the facts a source file does not reveal — where
+breaks actually fell, how the bars are distributed, how the systems fell onto pages —
 so you can verify the layout without rendering an image. (For resolved pitches, use
 `check --pitches`.)
 
@@ -167,6 +168,7 @@ short final line) print on their own. Explicit `break`s are listed separately
 lysc layout score.lys
 # score main "demo"
 #   staves: treble, bass  |  time 4/4  |  10 systems, 40 bars
+#   pages: 2  |  systems per page: 6, 4
 #   system 1: bars 1-4     (4 bars)
 #   systems 2-3: 5 bars each (bars 5-14)
 #   systems 4-5: 4 bars each (bars 15-22)

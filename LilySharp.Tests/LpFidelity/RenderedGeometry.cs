@@ -2360,6 +2360,67 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The TIP of the page's ONE unbeamed tab stem, in the tab's own spaces above its middle —
+    /// the frame LilyPond's <c>stem-end-position</c> speaks (positions ÷ 2). The tip is the
+    /// stem's end FARTHER from the tab's middle; a stem-up tip is above the middle (positive),
+    /// a stem-down tip below it (negative).
+    /// </summary>
+    /// <remarks>
+    /// <see cref="TabBeamPositionAboveStaffMiddle"/>'s sibling for the UNBEAMED stem — the
+    /// quantity that had no ledger reading until session 337, when the full-notation tab stem
+    /// was ported from LilyPond's own machinery (before that a flat 3.0 × string-space made
+    /// every tab system 1.45 ss too tall). A tab stem is the only vertical stroke drawn at
+    /// <see cref="EngravingDefaults.StemThickness"/>; bar lines are 0.16 and the string/staff lines
+    /// <see cref="StaffLineThickness"/>.
+    /// <para>
+    /// ⚠️ Exactly ONE such stem, or this throws — a probe that grew a second note would
+    /// otherwise silently start reporting a different stem. The page must be a single tab
+    /// staff (its middle is read off the drawn strings, as the beam reader's is).
+    /// </para>
+    /// </remarks>
+    public double UnbeamedTabStemTipAboveStaffMiddle(int page = 0)
+    {
+        var ys = StaffLineYs(page);
+        if (ys.Count < 4)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: found {ys.Count} staff line(s); a tab staff reading needs at "
+                + "least four strings.\nDrawn geometry:\n" + Describe());
+        }
+        double top = ys.Min(), bottom = ys.Max();
+        double space = (bottom - top) / (ys.Count - 1);
+        double middle = (top + bottom) / 2;
+
+        var stems = _page.Lines
+            .Where(l => Math.Abs(l.X1 - l.X2) < 1e-9
+                        && Math.Abs(l.StrokeWidth - EngravingDefaults.StemThickness) < 1e-9)
+            .ToList();
+        if (stems.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE unbeamed tab stem, found {stems.Count}.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        var stem = stems[0];
+        // The tip is the end farther from the DIGIT the stem leaves, not from the middle:
+        // Lily#'s tall fret digit (a ratified deviation) starts the stem far from its string,
+        // so on a top-string down-stem the BEGIN is farther from the middle than the tip is —
+        // "farthest from middle" would report the begin. The one fret digit on the page marks
+        // the head; the tip is the stem end farther from it.
+        var digits = Texts.Where(t => t.Role == TextRole.TabFret).ToList();
+        if (digits.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE tab fret digit, found {digits.Count}.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        double digitY = digits[0].Y;
+        double tip = Math.Abs(stem.Y1 - digitY) >= Math.Abs(stem.Y2 - digitY)
+            ? stem.Y1 : stem.Y2;
+        return (middle - tip) / space;
+    }
+
+    /// <summary>
     /// A bow's control point on a TAB staff, in that staff's own spaces above its middle —
     /// the frame <see cref="TabBeamPositionAboveStaffMiddle"/> reports in, and the one
     /// LilyPond's tab-slur probe converts its <c>control-points</c> into.

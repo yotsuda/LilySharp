@@ -853,6 +853,13 @@
       "residual": 0.0,
       "why": "SEEDED 2026-07-28. The structural guard for the two TABL readings (HANDOFF 5.0, trap 8): both of them return a plausible number off a page that holds a different number of systems -- the refpoint one reads the topmost staff whatever it is, and the gap one reads whatever gaps a page happens to have uniformly. 24 bars of tab land 3 systems on one page on both engravers. ⚠️ A count is not a distance and does not enter the ss total (unit)."
     },
+    "stem.tab-full.top-string.eighth.tip-above-middle": {
+      "probe": "tab-stem.ly",
+      "score": "TABSTEM",
+      "lilypond": -1.0,
+      "residual": 0.0,
+      "why": "SEEDED 2026-09-05 (session 337). The first ledger point to observe a tab STEM. A default TabStaff draws none (ly/engraver-init.ly:1258 Stem.stencil = ##f), so the corpus read a tab staff's placement and its beams but never the length of an unbeamed stem; under \\tabFullNotation the Stem prints again (ly/property-init.ly:832) and is bought with the ORDINARY stem machinery run in the tab's own frame (whose space is the string gap). One eighth on the top string of a six-string guitar tab (staff-position +5, upper half -> stem DOWN, on the side away from its head so NOT shortened): LilyPond's stem-end-position is -2.0 half-tab-spaces = -1.0 tab-space below the middle (measured tab-stem.ly, lily/stem.cc:588 hp[dir] + dir*length with length 3.5). The stem BEGINS instead on the digit's far edge (lily/note-head.cc:224-234 calc_tab_stem_attachment, +-1.35 of the head half-height -> begin 3.938), which shortens the drawn line but NOT the tip. Before this session Lily# drew a flat 3.0 * string-space from the digit (TabConstants.UnbeamedStemLength, retired), putting the tip 2.6 ss past the top string where LilyPond reaches 0.75 and standing every full-notation tab system ~1.45 ss too tall -- the owner's Sugar paged 3 pages where LilyPond makes 2. THIS ENTRY IS THE KEY THAT JUSTIFIES REBASING THE 18 FULL-NOTATION TAB SNAPSHOTS (HANDOFF 5.2.1 (3)); it did not exist before, which is the reason the code carried a LILYSHARP-OWN note saying 'no ledger point observes a tab stem'. ⚠️ EXACT, and it must stay exact: the port derives the tip from StemCalculator.CalculateStemEndPosition in the tab's frame, so a regression to a flat length or a wrong string-space would move it."
+    },
     "page.tab-control.first-staff-refpoint": {
       "probe": "page-vertical.ly",
       "score": "NTL",

@@ -83,15 +83,26 @@ public static class LayoutReport
             .ToList();
         int totalBars = layout.AllSystems.Sum(s => s.Measures.Length);
 
-        // No page count: the engine lays a score out as one continuous flow (SVG/PNG
-        // are a single tall image; PDF auto-sizes one page), so there is no printed-page
-        // concept to report — only systems (lines) and where they break.
         sb.Append("  staves: ")
             .Append(staves.Count > 0 ? string.Join(", ", staves) : "(none)")
             .Append("  |  time ").Append(TimeField(score))
             .Append("  |  ").Append(Count(layout.SystemCount, "system"))
             .Append(", ").Append(Count(totalBars, "bar"))
             .AppendLine();
+
+        // Pages, and how the systems fell onto them. The page breaker's choice is the
+        // one layout decision a system list cannot show: two scores with the same line
+        // breaks can page 8+3 or 7+4, and that is exactly what the system-count loop and
+        // the pure breaker frame decide (LayoutEngine.ChooseSystemCount / PageLayouter).
+        // Until 2026-09-05 this report said there was "no printed-page concept" — true
+        // when it was written, and false since the page chain was ported; the corpus
+        // sweep (scratch/p321/parse321.ps1) reads this line, so keep its shape.
+        var pages = layout.Pages;
+        sb.Append("  pages: ").Append(pages.IsDefaultOrEmpty ? 0 : pages.Length);
+        if (!pages.IsDefaultOrEmpty)
+            sb.Append("  |  systems per page: ")
+                .Append(string.Join(", ", pages.Select(p => p.Systems.IsDefaultOrEmpty ? 0 : p.Systems.Length)));
+        sb.AppendLine();
 
         // Systems, with consecutive equal-bar-count systems collapsed into one run line.
         // Real scores run to 100+ bars / 40+ systems; one line per system (plus a parallel

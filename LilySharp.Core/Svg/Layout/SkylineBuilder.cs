@@ -939,9 +939,10 @@ internal sealed class SkylineBuilder
                         continue;
                     if (beamed.Contains((vi, measureIndex, itemIndex)))
                         continue;
-                    bool stemUp = geom.StringStemUp(geom.MeanString(item));
-                    double headY = geom.StringY(geom.StemHeadString(item, stemUp));
-                    if (geom.UnbeamedStemTipY(item, stemUp, headY) is not { } tipY)
+                    bool stemUp = geom.TabStemUp(item);
+                    int headString = geom.StemHeadString(item, stemUp);
+                    double headY = geom.StringY(headString);
+                    if (geom.UnbeamedStemTipY(item, stemUp, headString) is not { } tipY)
                         continue;
                     // The stem stands on the digit axis (SharedRenderer.TabStemX).
                     double x = measureLayout.X

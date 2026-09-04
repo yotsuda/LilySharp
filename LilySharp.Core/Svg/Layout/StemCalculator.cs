@@ -159,11 +159,18 @@ public static class StemCalculator
     /// up-positive — LilyPond's <c>hp[dir]</c>.
     /// </param>
     /// <param name="details">Stem details parameters.</param>
+    /// <param name="staffRadius">
+    /// Half the staff's line span in ITS OWN staff spaces — LilyPond's
+    /// <c>Staff_symbol_referencer::staff_radius</c>, (line-count − 1) / 2: 2.0 for a five-line
+    /// staff, 1.5 for a four-string tab, 2.5 for a six-string one. Only the shortening
+    /// transition reads it (stem.cc:548-549 <c>which_step</c>).
+    /// </param>
     public static double CalculateStemLength(
         bool stemUp,
         int durationLog = 2,
         int staffPosition = 0,
-        StemDetails? details = null)
+        StemDetails? details = null,
+        double staffRadius = 2.0)
     {
         var d = details ?? StemDetails.Default;
 
@@ -194,7 +201,8 @@ public static class StemCalculator
             // Smooth shortening transition
             // LILYPOND-REF: stem.cc:541-554
             double quarterStemLength = 2 * d.Lengths[0]; // in half-spaces
-            double staffRadius = 2.0; // half-staff height in half-spaces
+            // LILYPOND-REF: stem.cc:505 staff_rad = Staff_symbol_referencer::staff_radius, in
+            // staff spaces; :549 reads 2 * staff_rad, i.e. the radius in half-spaces.
             double shorteningStep = Math.Clamp(shortenProperty / 6.0, 0.25, 0.5);
             double whichStep = Math.Min(1.0, quarterStemLength - 2 * staffRadius - 2)
                                + Math.Abs(staffPosition); // staffPosition already in half-spaces
@@ -205,6 +213,49 @@ public static class StemCalculator
         // LILYPOND-REF: stem.cc:557 — length *= length-fraction.
         length *= d.LengthFraction;
         return length;
+    }
+
+    /// <summary>
+    /// Where an UNBEAMED stem ENDS, in staff POSITIONS (half-spaces from the middle line,
+    /// up-positive) — LilyPond's <c>stem_end</c>: the head the stem leaves plus its length,
+    /// dragged back to the middle line when it would stop short of it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem.cc:588-595 internal_calc_stem_end_position —
+    ///   <c>stem_end = hp[dir] + dir * length</c> (:588, length in half-spaces), then
+    ///   <c>if (!no_extend &amp;&amp; dir * stem_end &lt; 0) stem_end = 0.0</c> (:591-593).
+    /// <para>
+    /// The whole answer is a function of the HEAD POSITION and the duration — the point the
+    /// stem is DRAWN from (<c>stem-begin-position</c>, the head's stem attachment) does not
+    /// enter it. That is what lets a stem start behind a whited-out tablature digit and still
+    /// end where a notation stem of the same duration would: the visible stem is shorter, the
+    /// tip is not moved. <see cref="CalculateStemEndY"/> is the same rule for a notation staff
+    /// spoken in device Y from a drawn attach point; this one speaks LilyPond's own frame so a
+    /// staff of any line count and any space (a tab's 1.5) can ask it.
+    /// </para>
+    /// </remarks>
+    /// <param name="stemUp">True if the stem points up.</param>
+    /// <param name="durationLog">Duration log (2=quarter, 3=eighth, 4=16th...).</param>
+    /// <param name="headPosition">LilyPond's <c>hp[dir]</c>: the position of the head on the
+    /// stem's own side (the highest head of an up-stem, the lowest of a down-stem).</param>
+    /// <param name="details">Stem details parameters.</param>
+    /// <param name="staffRadius">See <see cref="CalculateStemLength"/>.</param>
+    public static double CalculateStemEndPosition(
+        bool stemUp,
+        int durationLog,
+        int headPosition,
+        StemDetails? details = null,
+        double staffRadius = 2.0)
+    {
+        var d = details ?? StemDetails.Default;
+        int dir = stemUp ? 1 : -1;
+        // CalculateStemLength answers in staff spaces; LilyPond's length local is in
+        // half-spaces (stem.cc:516 "2 * from_scm<double> (len)"), so double it here.
+        double lengthHalf = 2 * CalculateStemLength(stemUp, durationLog, headPosition, d, staffRadius);
+        double stemEnd = headPosition + dir * lengthHalf;
+        if (!d.NoStemExtend && dir * stemEnd < 0)
+            stemEnd = 0.0;
+        return stemEnd;
     }
 
     /// <summary>

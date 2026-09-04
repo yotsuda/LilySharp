@@ -18,6 +18,7 @@ using LilySharp.Core.Rendering;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Tablature;
 using LilySharp.Tests.LpFidelity;
@@ -140,8 +141,10 @@ public sealed class TabScriptStemClearanceTests
     {
         // The engraver clears a tip it computes from TabStaffGeometry while the renderer
         // draws one of its own; if the two ever disagree the clearance above is measured
-        // against a stem nobody drew. This pins them to one number — the reason
-        // TabConstants.UnbeamedStemLength was moved out of the renderer.
+        // against a stem nobody drew. This pins the DRAWN stem to the geometry: its length is
+        // the span from LilyPond's stem-begin-position (the digit's far edge,
+        // TabConstants.StemBeginOffset) to LilyPond's stem end (UnbeamedStemTipY), the two
+        // ends the renderer and the engraver now share.
         var page = RenderFirstPage(Book);
         var tabStems = page.Lines
             .Where(l => System.Math.Abs(l.X1 - l.X2) < 1e-9
@@ -149,12 +152,26 @@ public sealed class TabScriptStemClearanceTests
             .OrderBy(l => System.Math.Max(l.Y1, l.Y2))
             .TakeLast(4)
             .ToList();
+        // All four notes are the same pitch on the same string and duration, so one length.
         double drawnLength = tabStems
-            .Select(l => System.Math.Round(System.Math.Abs(l.Y1 - l.Y2), 9))
+            .Select(l => System.Math.Round(System.Math.Abs(l.Y1 - l.Y2), 6))
             .Distinct()
             .Single();
-        double stringSpace = EngravingDefaults.TabStringSpace(
-            Tunings.GetStringCount(TuningType.Bass));
-        Assert.Equal(TabConstants.UnbeamedStemLength(stringSpace), drawnLength, 9);
+
+        // Rebuild the geometry the renderer used, from the tab staff and the note the score
+        // actually collected — so the expected length is derived, not transcribed.
+        var tree = SyntaxTree.Parse(Book);
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var tabStaff = score.EnumerateStaves().Select(t => t.Staff).First(s => s.IsTab);
+        var note = tabStaff.Voices[0].Measures[0].Items
+            .First(it => it is NoteItem or ChordItem);
+        var geom = new TabStaffGeometry(
+            tabStaff.Tuning!.Value, staffY: 0.0, tabStaff.TabSourceClef, tabStaff.Transposition);
+        bool up = geom.TabStemUp(note);
+        int headString = geom.StemHeadString(note, up);
+        double near = geom.StringY(headString)
+            + (up ? -TabConstants.StemBeginOffset() : TabConstants.StemBeginOffset());
+        double tip = geom.UnbeamedStemTipY(note, up, headString)!.Value;
+        Assert.Equal(System.Math.Abs(near - tip), drawnLength, 6);
     }
 }

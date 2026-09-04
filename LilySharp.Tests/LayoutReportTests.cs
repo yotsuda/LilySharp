@@ -106,6 +106,45 @@ public class LayoutReportTests
     }
 
     [Fact]
+    public void Pages_AreReportedWithTheirSystemCounts()
+    {
+        // Twelve forced one-bar systems on a page too short to hold them: the breaker
+        // must split them over more than one page, and the report says how — the page
+        // count and each page's system count, which is what the corpus sweep compares
+        // against LilyPond's page count.
+        var bars = string.Join(" break\n", Enumerable.Repeat("c4 d e f |", 12));
+        var report = Report(
+            "paper { paperHeight 80mm }\n" +
+            "part melody\n" +
+            "section Main { melody {\n" + bars + "\n} }\n" +
+            "form main { Main }\n" +
+            "score main \"pg\" { staff melody }\n");
+
+        Assert.Contains("12 systems, 12 bars", report);
+        var line = report.Split('\n').Single(l => l.TrimStart().StartsWith("pages: ")).Trim();
+        var m = System.Text.RegularExpressions.Regex.Match(
+            line, @"pages: (\d+)  \|  systems per page: ([\d, ]+)$");
+        Assert.True(m.Success, line);
+        int pageCount = int.Parse(m.Groups[1].Value);
+        var perPage = m.Groups[2].Value.Split(", ").Select(int.Parse).ToArray();
+        Assert.True(pageCount > 1, line);
+        Assert.Equal(pageCount, perPage.Length);
+        Assert.Equal(12, perPage.Sum());
+    }
+
+    [Fact]
+    public void SinglePage_ReportsOnePageHoldingEverySystem()
+    {
+        var report = Report(
+            "part melody\n" +
+            "section Main { melody { c4 d e f | g4 a b c' | } }\n" +
+            "form main { Main }\n" +
+            "score main \"one\" { staff melody }\n");
+
+        Assert.Contains("pages: 1  |  systems per page: 1", report);
+    }
+
+    [Fact]
     public void Header_ListsEveryStaffAndClef()
     {
         var report = Report(

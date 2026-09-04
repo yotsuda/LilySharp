@@ -363,7 +363,7 @@ internal static partial class SharedRenderer
                             numbersOnly ? 0 : note.Dots, gc, digitGaps, note.IsDead,
                             parenthesized: true);
                     if (!numbersOnly)
-                        DrawUnbeamedTabStem(note, note.BaseDuration, dirGeom.StringStemUp(dirGeom.MeanString(note)),
+                        DrawUnbeamedTabStem(note, note.BaseDuration, dirGeom.TabStemUp(note),
                             columnX, staffY, staff, isBeamed, gc, pageHeight);
                     break;
                 case ChordItem chord:
@@ -374,7 +374,7 @@ internal static partial class SharedRenderer
                     DrawTabChord(chord, itemX, staffY, tuning, octaveShift, stringSpace,
                         numbersOnly ? 0 : chord.Dots, gc, digitGaps);
                     if (!numbersOnly)
-                        DrawUnbeamedTabStem(chord, chord.BaseDuration, dirGeom.StringStemUp(dirGeom.MeanString(chord)),
+                        DrawUnbeamedTabStem(chord, chord.BaseDuration, dirGeom.TabStemUp(chord),
                             columnX, staffY, staff, isBeamed, gc, pageHeight);
                     break;
                 // A SPACER draws nothing here either: the notation arm has read
@@ -442,19 +442,26 @@ internal static partial class SharedRenderer
         if (noteValue < 2 || isBeamed)
             return; // whole notes have no stem; beamed notes are drawn elsewhere.
 
-        // The length is TabStaffGeometry's, not this method's — the articulation engraver
-        // has to place scripts clear of this stem, and a second spelling here is exactly
-        // what let its non-beamed branch have no stem term at all.
-        double stringSpace = EngravingDefaults.TabStringSpace(
-            Tunings.GetStringCount(staff.Tuning ?? TuningType.Guitar));
-        double stemLength = TabConstants.UnbeamedStemLength(stringSpace);
+        // Both ends are TabStaffGeometry's, not this method's — the articulation engraver
+        // has to place scripts clear of this stem and the skyline has to reserve it, and a
+        // second spelling here is exactly what let the engraver's non-beamed branch have no
+        // stem term at all. The NEAR end is where LilyPond draws the stem from (the digit's
+        // far edge, TabConstants.StemBeginOffset); the FAR end is LilyPond's stem end, a
+        // function of the head's string and the duration alone (UnbeamedStemTipY) — so the
+        // visible stem is shorter than a notation stem of the same value by the digit it
+        // starts behind, and its tip is where that notation stem's would be.
         // The axis the digits are placed around — see TabStemX for why it is not the
         // companion notation stem's x any more.
         double stemX = TabStemX(columnX);
-        // TabStemHeadY works in device coordinates; round-trip through it, then lift
-        // both stem ends to the page Y-up frame.
-        double nearYDev = TabStemHeadY(item, stemUp, pageHeight - staffY, staff);
-        double farYDev = nearYDev + (stemUp ? -stemLength : stemLength);
+        // Device frame (Y down, top string at pageHeight − staffY) for both ends, then lift
+        // to the page Y-up frame.
+        var geom = new TabStaffGeometry(staff.Tuning ?? TuningType.Guitar, pageHeight - staffY,
+            staff.TabSourceClef, staff.Transposition);
+        int headString = geom.StemHeadString(item, stemUp);
+        double nearYDev = geom.StringY(headString)
+            + (stemUp ? -TabConstants.StemBeginOffset() : TabConstants.StemBeginOffset());
+        if (geom.UnbeamedStemTipY(item, stemUp, headString) is not { } farYDev)
+            return;
         double nearY = pageHeight - nearYDev;
         double farY = pageHeight - farYDev;
 

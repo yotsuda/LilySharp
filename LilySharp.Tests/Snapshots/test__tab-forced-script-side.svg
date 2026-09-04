@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="301.7" viewBox="0 0 119.50 30.17" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="296.3" viewBox="0 0 119.50 29.63" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="30.17" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="29.63" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="6">tab forced script side</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <text class="music" x="0.60" y="19.52" font-size="4.00"></text>
   <text class="music" x="4.92" y="19.52" font-size="4.00" data-pos="36"></text>
   <rect x="20.99" y="17.27" width="0.19" height="4.50" data-pos="140"/>
   <text x="9.27" y="18.31" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="98">0</text>
-  <line x1="9.27" y1="18.56" x2="9.27" y2="23.06" stroke="#000000" stroke-width="0.130"/>
+  <line x1="9.27" y1="18.73" x2="9.27" y2="22.52" stroke="#000000" stroke-width="0.130"/>
   <text x="12.27" y="18.32" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="114">2</text>
-  <line x1="12.27" y1="18.56" x2="12.27" y2="23.06" stroke="#000000" stroke-width="0.130"/>
+  <line x1="12.27" y1="18.73" x2="12.27" y2="22.52" stroke="#000000" stroke-width="0.130"/>
   <text x="15.53" y="18.31" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="124">7</text>
-  <line x1="15.53" y1="18.56" x2="15.53" y2="23.06" stroke="#000000" stroke-width="0.130"/>
+  <line x1="15.53" y1="18.73" x2="15.53" y2="22.52" stroke="#000000" stroke-width="0.130"/>
   <text x="18.78" y="18.32" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="139">12</text>
-  <line x1="18.78" y1="18.56" x2="18.78" y2="23.06" stroke="#000000" stroke-width="0.130"/>
+  <line x1="18.78" y1="18.73" x2="18.78" y2="22.52" stroke="#000000" stroke-width="0.130"/>
   <line x1="0.00" y1="17.27" x2="8.42" y2="17.27" stroke="#000000" stroke-width="0.100"/>
   <line x1="10.13" y1="17.27" x2="11.42" y2="17.27" stroke="#000000" stroke-width="0.100"/>
   <line x1="13.13" y1="17.27" x2="14.67" y2="17.27" stroke="#000000" stroke-width="0.100"/>
@@ -26,7 +26,7 @@
   <line x1="0.00" y1="18.77" x2="21.18" y2="18.77" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="20.27" x2="21.18" y2="20.27" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="21.77" x2="21.18" y2="21.77" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="9.27" y="24.06" font-size="4.00" data-pos="101"></text>
+  <text class="music" x="9.27" y="23.52" font-size="4.00" data-pos="101"></text>
   <text class="music" x="12.27" y="15.18" font-size="4.00" data-pos="116"></text>
   <text class="music" x="15.53" y="15.18" font-size="4.00" data-pos="126"></text>
   <rect x="3.40" y="13.47" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="86"/>
