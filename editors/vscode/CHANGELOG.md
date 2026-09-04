@@ -118,6 +118,21 @@ reasoning behind each one.
   and the language server, asked which names to highlight, walked the syntax tree five
   times before knowing whether the caret was on a name at all (the name lists are now
   built once per edit).
+- **The preview redraws only the page an edit changed.** Every render used to replace the
+  whole SVG, and on a five-page song that parse, layout and paint took about half a
+  second in the editor's own window after each keystroke. The pages are now compared as
+  text: a changed page is parsed again, a page whose drawing is the same but whose source
+  offsets moved (everything after the edit) keeps its elements and has the offsets
+  re-stamped, and untouched pages are left alone — about a fifth of the time, with the
+  same picture as the full replacement (checked element for element in a browser).
+  Within a changed page the same goes system by system: the preview's SVG now wraps each
+  system, and each page's overlays (slurs, lyrics, dynamics, marks), in a group of its own,
+  and only the group the edit touched is parsed again. Exported SVG is unchanged.
+- **The Lily# output channel now times each preview update**: the round trip to the
+  language server on the `Got response` line, and a `PREVIEW update:` line from the page
+  saying what it swapped (pages kept, re-stamped, updated by group, replaced) and how long
+  the swap and the re-fit took. When an update feels slow, these two lines say which side
+  to look at.
 - **A chord track's bars are no longer checked as if they held durations.** A per-section
   `chords` track had each `s` / `r` slot priced as a quarter rest, so a 2/4 row spelled
   `s | C#m | …` reported every such bar as too short. A chord row divides its bars on the

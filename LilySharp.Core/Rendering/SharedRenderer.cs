@@ -137,8 +137,14 @@ internal static partial class SharedRenderer
                 : null;
             try
             {
+                // Each system in a labeled group of its own, and the page's overlays below
+                // in one more (interactive SVG only — IDrawingContext.BeginLabeledGroup):
+                // the preview swaps the one group an edit changed instead of the page.
+                // The group sits OUTSIDE the fragment memo's capture, so a replayed system
+                // and a drawn one are wrapped alike.
                 foreach (var system in page.Systems)
                 {
+                    using var systemGroup = gc.BeginLabeledGroup("system");
                     if (fragHost != null && fragments!.TryReplay(score, system, fragHost, page.Height))
                         continue;
                     using (fragHost != null
@@ -146,6 +152,7 @@ internal static partial class SharedRenderer
                         : null)
                         DrawSystem(score, layout, system, resolver, beamedItems, gc, page.Height);
                 }
+                using var overlayGroup = gc.BeginLabeledGroup("overlay");
                 // Page-level overlays that span systems. The Y-anchor map is
                 // built from THIS page's systems only: system Y is page-local
                 // (each page restarts at MarginTop), so every overlay whose

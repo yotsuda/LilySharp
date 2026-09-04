@@ -143,7 +143,16 @@ function Publish-Server([string[]]$Extra) {
     # to its output stream, so letting the publish log through makes the caller's
     # $builtVersion an array of build lines with the version at the end -- which the
     # identity check below then reports as a copy that did not land.
-    dotnet publish (Join-Path $repoRoot 'LilySharp.Lsp') -c $Configuration -o $repoServer --nologo @Extra | Out-Host
+    # ReadyToRun: the server is precompiled, so the first renders after a launch do
+    # not wait for the JIT. Every Reload Window relaunches the server cold, and the
+    # editor's first previews were paying for it -- MEASURED (session 329, the
+    # 3-page bench.lys, a bar inserted mid-score over real stdio): first svg after
+    # didOpen 2.1-5.0 s with JIT against 1.3-1.5 s ReadyToRun, the first insertion
+    # 0.7-1.0 s against 0.43-0.45 s, and the next ones 0.21-0.32 s against
+    # 0.15-0.19 s. ReadyToRun needs a RID; --self-contained false keeps the
+    # framework-dependent shape the client runs via `dotnet` (no coreclr beside it).
+    dotnet publish (Join-Path $repoRoot 'LilySharp.Lsp') -c $Configuration -o $repoServer --nologo `
+        -r win-x64 --self-contained false -p:PublishReadyToRun=true @Extra | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed ($LASTEXITCODE)" }
     $dll = Join-Path $repoServer 'lilysharp-lsp.dll'
     if (-not (Test-Path $dll)) { throw "publish produced no lilysharp-lsp.dll in $repoServer" }

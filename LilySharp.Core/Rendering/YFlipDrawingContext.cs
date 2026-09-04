@@ -142,4 +142,6 @@ internal sealed class YFlipDrawingContext : IDrawingContext
             ScaleY: transform.ScaleY);
         return _inner.BeginGroup(deviceTransform);
     }
+
+    public IDisposable BeginLabeledGroup(string label) => _inner.BeginLabeledGroup(label);
 }

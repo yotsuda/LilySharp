@@ -102,4 +102,6 @@ internal sealed class UnscaledXDrawingContext : IDrawingContext
     // compensation; its own scale factors pass through untouched.
     public IDisposable BeginGroup(DrawingTransform transform)
         => _inner.BeginGroup(transform with { TranslateX = X(transform.TranslateX) });
+
+    public IDisposable BeginLabeledGroup(string label) => _inner.BeginLabeledGroup(label);
 }

@@ -325,6 +325,16 @@ internal sealed class SvgDrawingContext : IDrawingContext
         });
     }
 
+    /// <summary>Interactive preview only (see <see cref="IDrawingContext.BeginLabeledGroup"/>):
+    /// static export emits nothing, so exported files stay byte for byte what they were.</summary>
+    public IDisposable BeginLabeledGroup(string label)
+    {
+        if (!_interactive)
+            return NullScope.Instance;
+        _sb.AppendLine($"  <g class=\"{label}\">");
+        return new ScopeAction(() => _sb.AppendLine("  </g>"));
+    }
+
     private string SourceAttr()
     {
         if (!_currentSourcePosition.HasValue)

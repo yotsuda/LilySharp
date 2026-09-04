@@ -234,4 +234,19 @@ public interface IDrawingContext
     /// Dispose the returned token to end the scope.
     /// </summary>
     IDisposable BeginGroup(DrawingTransform transform);
+
+    /// <summary>
+    /// Begins a LABELED group — no transform, a name a viewer can find the group by
+    /// (<c>&lt;g class="system"&gt;</c> in SVG). Interactive SVG only; every other
+    /// backend, and static SVG export, ignores it so their output is unchanged.
+    /// Dispose the returned token to end the scope.
+    /// </summary>
+    /// <remarks>
+    /// What it is for: the VS Code preview replaces the score on every keystroke, and
+    /// re-parsing, laying out and painting the WHOLE page costs it more than the render
+    /// did (measured 2026-09-04: a five-page song was half a second of the editor's
+    /// own thread per keystroke). With each system and each page's overlay block in a
+    /// group of its own, the preview swaps only the group the edit changed.
+    /// </remarks>
+    IDisposable BeginLabeledGroup(string label) => NullScope.Instance;
 }

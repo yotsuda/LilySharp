@@ -703,6 +703,14 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     `WEBVIEW ERROR: ${message.message} (line ${message.line})`);
                 return;
             }
+            if (message.type === 'webviewPerf') {
+                // The preview's own account of one update — what it swapped and
+                // how long the swap took in the page's thread — beside the
+                // request timing logged by updatePreviewContent, so a slow
+                // update can be laid at the server's door or the page's.
+                outputChannel.appendLine(`PREVIEW ${message.text}`);
+                return;
+            }
             if (message.type === 'requestPlayback') {
                 // The webview cannot reach the LSP: fetch note events here and
                 // hand them back for WebAudio scheduling.
@@ -851,6 +859,7 @@ async function updatePreviewContent(
     }
 
     outputChannel.appendLine('Sending lilysharp/svg request...');
+    const requestedAt = Date.now();
     // Stamp this request and cancel the previous one still in flight: the server
     // collapses a queued burst to the newest ticket by itself, but only a client-side
     // generation can order the RESPONSES — without it, a slow old answer arriving
@@ -866,7 +875,8 @@ async function updatePreviewContent(
             renderName: selectedRender || null
         }, requestCancellation.token);
 
-        outputChannel.appendLine(`Got response: error=${response.Error}, hasSvg=${!!response.Svg}`);
+        outputChannel.appendLine(`Got response: error=${response.Error}, hasSvg=${!!response.Svg}`
+            + ` (${Date.now() - requestedAt} ms round trip)`);
 
         // A newer request owns the preview now — its response paints, this one drops.
         if (svgRequestGeneration.get(uri) !== generation) {
@@ -2061,6 +2071,205 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
         }
 
+        // ---- page-level update -----------------------------------------------
+        // The score arrives as ONE SVG string on every render, and replacing the
+        // whole of it (innerHTML) parses, lays out and paints every page in the
+        // editor's own window. Measured on a five-page song: 150 ms to parse,
+        // 230 ms to lay out, 80 ms to paint — half a second between a keystroke
+        // and the caret whenever the preview was open (2026-09-04, owner report).
+        // A keystroke changes one page, so the pages are compared as STRINGS and
+        // only the changed ones are parsed again (37 ms for one page of that
+        // song). A page whose drawing is the same but whose source offsets moved
+        // — every element after the edit carries a new data-pos — keeps its DOM
+        // and has the offsets re-stamped from the new markup, in document order
+        // (8 ms). Anything this cannot account for — a different page count, a
+        // changed frame around the pages, an element count that does not match
+        // — falls back to the whole replacement, so the picture can never differ
+        // from what innerHTML would have shown.
+        const PAGE_OPEN = '<g class="page" data-page-top=';
+        // A source attribute with its VALUE blanked and its NAME kept: two pages
+        // that agree on this carry the attributes on the same elements in the
+        // same order, which is what lets the values be re-stamped by index.
+        // ⚠️ This script is the body of a TypeScript template literal, so a regex
+        // backslash has to be written DOUBLED here to survive into the page: a
+        // single one is the template's own escape and vanishes (a \\s written
+        // singly became an s, and a \\/ a /, which ended the regex early and took
+        // the whole script down — the preview stayed on "Loading", 2026-09-04).
+        const SOURCE_ATTRS = /\\s(data-pos|data-alt)="[^"]*"/g;
+        let shownPages = null;      // per page: { markup, blank } of what is on screen
+        let shownFrame = null;      // the markup around the pages (svg tag, style, closing)
+
+        function forgetShownPages() { shownPages = null; shownFrame = null; }
+
+        // The SVG string as [head, page, page, …, tail]: each page runs from its
+        // opening tag to the next page's (or to </svg>), so the closing </g> and
+        // the whitespace after it belong to it. null when the shape is not that.
+        function splitPages(svg) {
+            const close = svg.lastIndexOf('</svg>');
+            const first = svg.indexOf(PAGE_OPEN);
+            if (first < 0 || close < 0 || first > close) return null;
+            const pages = [];
+            for (let at = first; at >= 0 && at < close;) {
+                const next = svg.indexOf(PAGE_OPEN, at + PAGE_OPEN.length);
+                const end = next < 0 || next > close ? close : next;
+                pages.push(svg.slice(at, end));
+                at = next;
+            }
+            return { head: svg.slice(0, first), pages, tail: svg.slice(close) };
+        }
+
+        // Re-stamps one page's source offsets from the markup, whose blanked form
+        // the caller has found equal to the page's: the source attributes then sit
+        // on the same elements, in the same order, under the same names, so one
+        // pass over the markup's attributes and one over the elements that carry
+        // any line up one to one. false when they do not — a count that differs —
+        // and the caller replaces the page instead.
+        function restampPage(page, markup) {
+            const els = page.querySelectorAll('[data-pos], [data-alt]');
+            const attrs = /\\sdata-(pos|alt)="([^"]*)"/g;
+            for (let k = 0; k < els.length; k++) {
+                const el = els[k];
+                const carried = (el.hasAttribute('data-pos') ? 1 : 0) + (el.hasAttribute('data-alt') ? 1 : 0);
+                for (let j = 0; j < carried; j++) {
+                    const m = attrs.exec(markup);
+                    if (!m) return false;
+                    el.setAttribute('data-' + m[1], m[2]);
+                }
+            }
+            return attrs.exec(markup) === null;
+        }
+
+        // Inside a page the renderer puts each SYSTEM, and then the page's overlays
+        // (slurs, lyrics, dynamics, marks — drawn after every system), in a labeled
+        // group of its own (SharedRenderer, BeginLabeledGroup — interactive SVG
+        // only). A page whose drawing changed is therefore compared group by
+        // group, and only the group the edit touched is parsed again: a system
+        // is a few kilobytes where the page is a hundred.
+        const CHUNK_OPEN = /<g class="(system|overlay)">/g;
+        const G_TAGS = /<g[\\s>]|<\\/g>/g;
+
+        // A page's markup as its labeled groups and the FRAME around and between
+        // them — the page's own tag, the header texts, the margin group's tags,
+        // the whitespace. null when a group has no close, which no page of the
+        // renderer's has.
+        function splitChunks(markup) {
+            const chunks = [];
+            let frame = '';
+            let at = 0;
+            CHUNK_OPEN.lastIndex = 0;
+            for (let open; (open = CHUNK_OPEN.exec(markup));) {
+                G_TAGS.lastIndex = open.index;
+                let depth = 0, end = -1;
+                for (let tag; (tag = G_TAGS.exec(markup));) {
+                    depth += tag[0] === '</g>' ? -1 : 1;
+                    if (depth === 0) { end = tag.index + tag[0].length; break; }
+                }
+                if (end < 0) return null;
+                frame += markup.slice(at, open.index);
+                chunks.push({ label: open[1], markup: markup.slice(open.index, end) });
+                at = end;
+                CHUNK_OPEN.lastIndex = end;
+            }
+            frame += markup.slice(at);
+            return { frame, chunks };
+        }
+
+        // A fresh element parsed from one group's or one page's markup, or null
+        // when the markup is not exactly one element.
+        function parseOne(markup) {
+            const holder = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            holder.innerHTML = markup;
+            const fresh = holder.firstElementChild;
+            return fresh && fresh === holder.lastElementChild ? fresh : null;
+        }
+
+        // Brings the live page up to the markup group by group. false when the two
+        // do not line up — the frame or the group list differs — and the caller
+        // replaces the page whole. shown is the page's record, whose split is
+        // kept between calls; stamped says the page's offsets are current already.
+        function updateChunks(page, markup, shown, split, stamped) {
+            const before = shown.split || (shown.split = splitChunks(shown.markup));
+            if (!before || !split) return false;
+            if (split.frame !== before.frame || split.chunks.length !== before.chunks.length) return false;
+            const live = page.querySelectorAll('g.system, g.overlay');
+            if (live.length !== split.chunks.length) return false;
+            for (let k = 0; k < split.chunks.length; k++) {
+                const chunk = split.chunks[k];
+                const was = before.chunks[k];
+                if (chunk.label !== was.label || !live[k].classList.contains(chunk.label)) return false;
+                if (chunk.markup === was.markup) continue;
+                const blank = chunk.markup.replace(SOURCE_ATTRS, ' $1');
+                const wasBlank = was.blank || (was.blank = was.markup.replace(SOURCE_ATTRS, ' $1'));
+                if (blank === wasBlank) {
+                    if (stamped || restampPage(live[k], chunk.markup)) { chunk.blank = blank; continue; }
+                }
+                const fresh = parseOne(chunk.markup);
+                if (!fresh) return false;
+                live[k].parentNode.replaceChild(fresh, live[k]);
+                chunk.blank = blank;
+            }
+            return true;
+        }
+
+        // Shows the svg: the pages that changed are replaced — group by group
+        // where the page's groups line up — the ones that only moved in the
+        // source are re-stamped, the rest are left as they are.
+        // Returns a one-line account of what it did, for the output channel.
+        function applySvg(svg) {
+            const split = splitPages(svg);
+            const live = svgContainer.querySelector('svg');
+            const livePages = live ? live.querySelectorAll(':scope > g.page') : [];
+            const frame = split ? split.head + split.tail : null;
+            const whole = () => {
+                svgContainer.innerHTML = svg;
+                shownFrame = frame;
+                shownPages = split
+                    ? split.pages.map(markup => ({ markup, blank: markup.replace(SOURCE_ATTRS, ' $1') }))
+                    : null;
+            };
+            if (!split || !shownPages || !live
+                || livePages.length !== split.pages.length || frame !== shownFrame) {
+                whole();
+                return 'whole document (' + (split ? split.pages.length + ' pages' : 'no page groups') + ')';
+            }
+            let pagesKept = 0, pagesRestamped = 0, pagesByGroup = 0, pagesReplaced = 0;
+            for (let i = 0; i < split.pages.length; i++) {
+                const markup = split.pages[i];
+                const shown = shownPages[i];
+                if (markup === shown.markup) { pagesKept++; continue; }
+                const blank = markup.replace(SOURCE_ATTRS, ' $1');
+                const next = { markup, blank };
+                if (blank === shown.blank) {
+                    // The drawing is the same: only offsets moved.
+                    if (restampPage(livePages[i], markup)) { shownPages[i] = next; pagesRestamped++; continue; }
+                } else {
+                    // The drawing changed somewhere on the page: group by group. The
+                    // frame around the groups is compared with its offsets blanked,
+                    // and when only those moved the page is stamped whole first —
+                    // the header text's offsets are not in any group.
+                    const pieces = splitChunks(markup);
+                    const before = shown.split || (shown.split = splitChunks(shown.markup));
+                    if (pieces && before && pieces.frame !== before.frame
+                        && pieces.frame.replace(SOURCE_ATTRS, ' $1') === before.frame.replace(SOURCE_ATTRS, ' $1')
+                        && restampPage(livePages[i], markup)) {
+                        before.frame = pieces.frame;
+                        if (updateChunks(livePages[i], markup, shown, pieces, true)) {
+                            next.split = pieces; shownPages[i] = next; pagesByGroup++; continue;
+                        }
+                    } else if (updateChunks(livePages[i], markup, shown, pieces, false)) {
+                        next.split = pieces; shownPages[i] = next; pagesByGroup++; continue;
+                    }
+                }
+                const fresh = parseOne(markup);
+                if (!fresh) { whole(); return 'whole document (a page did not parse alone)'; }
+                live.replaceChild(fresh, livePages[i]);
+                shownPages[i] = next;
+                pagesReplaced++;
+            }
+            return 'pages kept ' + pagesKept + ', re-stamped ' + pagesRestamped
+                + ', updated by group ' + pagesByGroup + ', replaced ' + pagesReplaced;
+        }
+
         // ---- source-position index -------------------------------------------
         // Every source offset the rendered score carries, sorted. Built once per
         // SVG and reused by the caret handlers, which run on every cursor
@@ -2732,6 +2941,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         // showing the last score while the server (re)starts.
                         if (!hasPreview) {
                             svgContainer.innerHTML = '<div class="loading">Waiting for language server...</div>';
+                            forgetShownPages();
                             invalidateSourcePositions();
                         }
                     } else if (message.svg) {
@@ -2744,7 +2954,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                             hideErrorBanner();
                         }
                         svgContainer.classList.remove('stale');
-                        svgContainer.innerHTML = message.svg;
+                        const applyStart = performance.now();
+                        const applied = applySvg(message.svg);
+                        const applyEnd = performance.now();
                         invalidateSourcePositions();
                         // The score changed: the cached note list is stale, so the
                         // next audition / Play refetches fresh events.
@@ -2760,6 +2972,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         } else if (lastHighlightPos >= 0) {
                             highlightNearestElement(lastHighlightPos, lastHighlightTokenStart);
                         }
+                        const settled = performance.now();
+                        vscode.postMessage({ type: 'webviewPerf', text: 'update: ' + applied
+                            + ' in ' + (applyEnd - applyStart).toFixed(1) + ' ms, then pages/fit/highlight '
+                            + (settled - applyEnd).toFixed(1) + ' ms (' + message.svg.length + ' chars)' });
                     } else if (message.error) {
                         // Nothing could render at all. Keep the last good preview,
                         // DIM it, and show the error in a banner. Only when nothing
@@ -2771,6 +2987,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         } else {
                             hideErrorBanner();
                             svgContainer.innerHTML = '<div class="error">' + escapeHtml(message.error) + '</div>';
+                            forgetShownPages();
                             invalidateSourcePositions();
                         }
                     }
