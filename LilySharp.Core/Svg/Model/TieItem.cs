@@ -117,4 +117,15 @@ public sealed record TieItem
         EndItemIndex = endItemIndex;
         VoiceIndex = voiceIndex;
     }
+
+    /// <summary>The same tie with both measure numbers moved by <paramref name="delta"/> —
+    /// what a per-system memo hands back when it serves a laid-out tie found under other
+    /// measure numbers (<c>SystemLayoutCache</c>). The notes, the item indices and the
+    /// source offset are carried as they are; the offset is re-derived at render time
+    /// (see <see cref="SourcePosition"/>). A NEW identity, like every copy of this record.</summary>
+    internal TieItem WithMeasureIndicesShifted(int delta)
+        => new(StartNote, EndNote, StaffPosition, ForcedCurveUp,
+            StartMeasureIndex + delta, EndMeasureIndex + delta, StartItemIndex, EndItemIndex,
+            VoiceIndex)
+        { SourcePosition = SourcePosition };
 }

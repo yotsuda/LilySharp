@@ -909,6 +909,211 @@ public class IncrementalCompilerTests
     }
 
     /// <summary>
+    /// A bar INSERTED mid-score shifts every later key by one. Read index-aligned, the
+    /// whole tail missed (session 329: 3 of 112 measures reused on a 3-page book);
+    /// through KeyAlignment the tail is found where it went, so exactly the inserted
+    /// measure and its two neighbours are rebuilt — and the vector still equals a
+    /// from-scratch build, which is the only standard that matters.
+    /// </summary>
+    [Fact]
+    public void SpringMemo_AnInsertedMeasure_ReusesTheShiftedTail()
+    {
+        // octave absolute: in relative octave the inserted bar would re-pitch every note
+        // after it, and the tail's CONTENT would genuinely change.
+        const string src = """
+            octave absolute
+            time 4/4
+            key c major
+            part melody { clef treble }
+            phrase mel { c4 d e f | g4 a b c | d4 e f g | a4 b c d | e4 f g a | f4 g a b | g4 a b c | a4 g f e | }
+            section Main { melody { mel } }
+            form main { Main }
+            score main "x" { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = Replace(src, "e4 f g a | f4 g a b", "e4 f g a | c4 c c c | f4 g a b"); // new measure index 5
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+        AssertSpringsMatchFromScratch(session);
+        // 9 measures now; measure 4 (its right neighbour is new), the inserted 5, and
+        // measure 6 (its left neighbour is new) recomputed; the other 6 — three before,
+        // three after, the latter shifted by one — reused.
+        Assert.Equal((6, 3), session.LastSpringMemo);
+    }
+
+    /// <summary>The mirror: a bar DELETED mid-score, the tail shifted the other way.</summary>
+    [Fact]
+    public void SpringMemo_ADeletedMeasure_ReusesTheShiftedTail()
+    {
+        const string src = """
+            octave absolute
+            time 4/4
+            key c major
+            part melody { clef treble }
+            phrase mel { c4 d e f | g4 a b c | d4 e f g | a4 b c d | e4 f g a | f4 g a b | g4 a b c | a4 g f e | }
+            section Main { melody { mel } }
+            form main { Main }
+            score main "x" { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = Replace(src, "e4 f g a | f4 g a b | g4 a b c", "e4 f g a | g4 a b c"); // measure 5 gone
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+        AssertSpringsMatchFromScratch(session);
+        // 7 measures now; measure 4 (new right neighbour) and measure 5 (new left
+        // neighbour) recomputed, the other 5 reused.
+        Assert.Equal((5, 2), session.LastSpringMemo);
+    }
+
+    // --- the per-system layout memos across a bar inserted or deleted mid-score ------
+    // Every store of SystemLayoutCache used to key on the ABSOLUTE first measure index,
+    // so a bar inserted mid-score missed every later system (session 329: 70–95 ms of a
+    // 200 ms keystroke on a 3-page bass book). The memo now serves a system found under
+    // other measure numbers re-stamped (SystemLayoutCache's class remarks). These nets
+    // hold that to byte identity against a full compile PLUS liveness per store — the
+    // stores whose values carry stamps (measures, beams, ties, slurs, the room's
+    // spanners) are exactly the ones a wrong re-stamp would break, so each is asserted
+    // to have SERVED shifted, not merely to have stayed green by recomputing.
+    // ⚠️ The book pins its systems with `break`: under the line-break DP a bar inserted
+    // into a uniform book cascades one bar into every later system, and no later slice is
+    // the same music any more — the memo cannot help there, and that is the DP's regime,
+    // not this memo's. Explicit breaks are the reported regime (tab books).
+
+    private static string PinnedSystemsBook()
+    {
+        var bars = new[]
+        {
+            "c8( d e f) g8 a b c' |",
+            "c'8~ c' b a g f e d |",
+            "e8 f g a b( c' d' e') |",
+            "e'8 d' c' b a g f e | break",
+        };
+        var sb = new System.Text.StringBuilder(
+            "octave absolute\ntime 4/4\nkey c major\ntempo 96\npart melody { clef treble }\n"
+            + "section Main { melody {\n");
+        for (int i = 0; i < 6; i++)
+            foreach (var bar in bars)
+                sb.Append(bar).Append('\n');
+        sb.Append("} }\nform main { Main }\nscore main \"x\" { staff melody }\n");
+        return sb.ToString();
+    }
+
+    private static readonly SystemLayoutCache.Store[] StampedStores =
+    {
+        SystemLayoutCache.Store.Measures, SystemLayoutCache.Store.Skylines,
+        SystemLayoutCache.Store.StaffSkylines, SystemLayoutCache.Store.StaffSystemBeams,
+        SystemLayoutCache.Store.StaffSystemTies, SystemLayoutCache.Store.StaffSystemSlurs,
+    };
+
+    private static void AssertEveryStampedStoreServedShifted(IncrementalCompiler session)
+    {
+        var cache = session.SystemCache!;
+        foreach (var store in StampedStores)
+        {
+            var c = cache.PassCounters(store);
+            Assert.True(c.ShiftedHits > 0,
+                $"{store}: no shifted hit (hits {c.Hits}, shifted {c.ShiftedHits}, misses {c.Misses})");
+        }
+    }
+
+    /// <summary>A bar inserted into the first system of a six-system book: the SVG equals a
+    /// full recompile, and every stamped store served the five later systems re-stamped
+    /// — only the edited system's units were computed.</summary>
+    [Fact]
+    public void LayoutMemo_AnInsertedMeasure_ReStampsTheShiftedSystems()
+    {
+        string src = PinnedSystemsBook();
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = Replace(src, "c'8~ c' b a g f e d |", "c'8~ c' b a g f e d | c4 d e f |"); // new bar 2
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+        AssertEveryStampedStoreServedShifted(session);
+        // Six systems: the edited one is computed, the other five are found shifted. The
+        // numbers are pinned so the window cannot silently widen or narrow.
+        Assert.Equal(new SystemLayoutCache.MemoCounters(0, 5, 1),
+            session.SystemCache!.PassCounters(SystemLayoutCache.Store.Measures));
+        Assert.Equal(new SystemLayoutCache.MemoCounters(0, 5, 1),
+            session.SystemCache!.PassCounters(SystemLayoutCache.Store.StaffSkylines));
+    }
+
+    /// <summary>The mirror: a bar deleted from the first system, the tail shifted back.</summary>
+    [Fact]
+    public void LayoutMemo_ADeletedMeasure_ReStampsTheShiftedSystems()
+    {
+        string src = PinnedSystemsBook();
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = Replace(src, "c'8~ c' b a g f e d |\n", ""); // bar 1 gone
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+        AssertEveryStampedStoreServedShifted(session);
+        Assert.Equal(new SystemLayoutCache.MemoCounters(0, 5, 1),
+            session.SystemCache!.PassCounters(SystemLayoutCache.Store.Measures));
+    }
+
+    /// <summary>
+    /// Chained keystrokes over re-stamped systems: a bar inserted, a note edited far
+    /// past it, another bar inserted before the first, and the first insertion undone —
+    /// every render equals a full compile of the live text, INCLUDING every data-pos (the
+    /// session-190 shape: a carried system whose picture is right and whose offsets are
+    /// not). A re-stamped system's stamps are what the renderer resolves data-pos through,
+    /// so a stale or doubly-shifted stamp shows here as an offset, not as ink.
+    /// </summary>
+    [Fact]
+    public void LayoutMemo_ChainedEditsOverShiftedSystems_AlwaysMatchFull()
+    {
+        string src = PinnedSystemsBook();
+        var session = new IncrementalCompiler(SyntaxTree.Parse(src), Opt);
+        session.Render();
+
+        string live = src;
+        // The n-th occurrence (0-based) of `find` — the book repeats one group six times,
+        // so a plain first-occurrence Replace can only reach the first system.
+        void Step(string find, int nth, string replacement)
+        {
+            int at = -1;
+            for (int i = 0; i <= nth; i++)
+            {
+                at = live.IndexOf(find, at + 1, System.StringComparison.Ordinal);
+                Assert.True(at >= 0, $"occurrence {nth} of snippet not found: {find}");
+            }
+            var change = new TextChange(new TextSpan(at, find.Length), replacement);
+            var incremental = Norm(session.Edit(change));
+            live = live[..at] + replacement + live[(at + find.Length)..];
+            Assert.Equal(Full(live), incremental);
+        }
+
+        Step("c'8~ c' b a g f e d |", 0, "c'8~ c' b a g f e d | c4 d e f |"); // bar 2 inserted (system 1)
+        Assert.True(session.LastLayoutMemo.ShiftedHits > 0, $"{session.LastLayoutMemo}");
+        Step("a g f e |", 3, "a gis f e |");                                  // a note in system 4
+        Assert.True(session.LastLayoutMemo.Hits > 0,
+            $"the tail was not found under its new numbers: {session.LastLayoutMemo}");
+        Step("c8( d e f) g8 a b c' |", 0, "c8( d e f) g8 a b c' | d4 d d d |"); // bar 1 inserted
+        Assert.True(session.LastLayoutMemo.ShiftedHits > 0, $"{session.LastLayoutMemo}");
+        Step(" c4 d e f |", 0, "");                                           // bar 2's insertion undone
+        // The tail is back at the numbers the first two keystrokes stored it under, so
+        // this is an EXACT hit, not a shift — the entries outlive the edits between.
+        var measures = session.SystemCache!.PassCounters(SystemLayoutCache.Store.Measures);
+        Assert.True(measures.Hits == 5 && measures.Misses == 1,
+            $"the tail shifted back and was not found: {measures}");
+    }
+
+    /// <summary>
     /// The LEFT-neighbour window is load-bearing: a multi-measure-rest run whose opening
     /// measure declares no start bar line prices its run rod from the PREVIOUS measure's
     /// end bar line (SpacingRules.RunLeftBoundBarline) — a spring input that lives in key

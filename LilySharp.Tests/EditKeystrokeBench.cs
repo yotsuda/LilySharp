@@ -55,6 +55,15 @@ public class EditKeystrokeBench
         yield return ["perf-plain1k.lys", "g8", "a8"];
         yield return ["perf-fingbeam1k.lys", "e@finger(3)", "f@finger(3)"];
         yield return ["perf-v2bow1k.lys", "e4(", "f4("];
+        // ...and a BAR INSERTED mid-book (the keystroke the user reported slow, session
+        // 329): every later measure's springs and every later system's memo entry sit
+        // one index further on. The spring memo follows them by KeyAlignment; the system
+        // memos serve them re-stamped — but only where the later systems are still the
+        // same music, and in THIS book (no `break`) the line-break DP cascades one bar
+        // into every later system, so the output line's shifted count is expected to be
+        // ~0 here. A pinned-break book is where the re-stamp pays; the unit is
+        // IncrementalCompilerTests.LayoutMemo_*.
+        yield return ["perf-plain1k.lys", "c8 d8 e8 f8 g8 a8 b8 c'8 |", "c8 d8 e8 f8 g8 a8 b8 c'8 | c4 d4 e4 f4 |"];
     }
 
     [Theory]
@@ -88,6 +97,7 @@ public class EditKeystrokeBench
 
         var times = new List<double>(Rounds);
         bool everBrokeGate = false, everReusedLayout = false;
+        var memo = default(LilySharp.Core.Svg.Layout.SystemLayoutCache.MemoCounters);
         for (int i = 0; i < Warmups + Rounds; i++)
         {
             // Parse OUTSIDE the clock: the keystroke being priced is the compile.
@@ -99,10 +109,14 @@ public class EditKeystrokeBench
                 times.Add(sw.Elapsed.TotalMilliseconds);
             everBrokeGate |= !compiler.LastEditSkippedLineBreak;
             everReusedLayout |= compiler.LastEditReusedLayout;
+            // The per-system memos' outcome on the EDITED keystroke (the same every round).
+            if (i % 2 == 0)
+                memo = compiler.LastLayoutMemo;
         }
         times.Sort();
         File.AppendAllText(outPath,
             $"{book}\tedit floor {times[0]:F1} ms\tmedian {times[times.Count / 2]:F1} ms"
-            + $"\tgateMoved {everBrokeGate}\treusedLayout {everReusedLayout}\n");
+            + $"\tgateMoved {everBrokeGate}\treusedLayout {everReusedLayout}"
+            + $"\tlayoutMemo hit {memo.Hits} shifted {memo.ShiftedHits} miss {memo.Misses}\n");
     }
 }

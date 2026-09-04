@@ -112,6 +112,28 @@ public sealed record BeamGroup
     /// <summary>Gets the number of notes in this beam group.</summary>
     public int Count => Members.Length;
 
+    /// <summary>The same group under other measure numbers: its own
+    /// <see cref="MeasureIndex"/> and every member's and rest stem's EXPLICIT one moved
+    /// by <paramref name="delta"/> (the <c>-1</c> "same as the group" sentinel stays).
+    /// What a per-system memo hands back when it serves a laid-out beam found under
+    /// other measure numbers (<c>SystemLayoutCache</c>).</summary>
+    internal BeamGroup WithMeasureIndexShifted(int delta)
+    {
+        var members = ImmutableArray.CreateBuilder<BeamMember>(Members.Length);
+        foreach (var m in Members)
+            members.Add(m.WithMeasureIndexShifted(delta));
+        var rests = RestStems;
+        if (!rests.IsEmpty)
+        {
+            var rb = ImmutableArray.CreateBuilder<BeamRestStem>(rests.Length);
+            foreach (var r in rests)
+                rb.Add(r.MeasureIndex < 0 ? r : r with { MeasureIndex = r.MeasureIndex + delta });
+            rests = rb.MoveToImmutable();
+        }
+        return new BeamGroup(members.MoveToImmutable(), MeasureIndex + delta, StartIndex,
+            StemUp, GrowDirection, VoiceIndex, rests);
+    }
+
     /// <summary>
     /// Whether this beam is a kneed beam (stems change direction within the group).
     /// </summary>
@@ -296,6 +318,16 @@ public sealed record BeamMember
     /// </summary>
     public int ResolveMeasureIndex(int defaultMeasureIndex)
         => MeasureIndex >= 0 ? MeasureIndex : defaultMeasureIndex;
+
+    /// <summary>The same member with an EXPLICIT measure number moved by
+    /// <paramref name="delta"/>; the <c>-1</c> sentinel stays (it follows the group).
+    /// See <see cref="BeamGroup.WithMeasureIndexShifted"/>.</summary>
+    internal BeamMember WithMeasureIndexShifted(int delta)
+        => MeasureIndex < 0
+            ? this
+            : new BeamMember(Item, BeamCount, BeamCountLeft, BeamCountRight, StaffPosition,
+                ItemIndex, MemberStemUp, TargetStaffIndex, MeasureIndex + delta,
+                HeadPositionMin, HeadPositionMax);
 }
 
 /// <summary>
@@ -399,6 +431,14 @@ public sealed record BeamLayout
         MemberStaffIndices = memberStaffIndices.IsDefault ? ImmutableArray<int>.Empty : memberStaffIndices;
         RestXPositions = restXPositions.IsDefault ? ImmutableArray<double>.Empty : restXPositions;
     }
+
+    /// <summary>The same laid-out beam under other measure numbers — the group re-stamped
+    /// (<see cref="BeamGroup.WithMeasureIndexShifted"/>), the geometry, the staff and the
+    /// system carried as they are. What a per-system memo hands back when it serves a
+    /// beam found under other measure numbers (<c>SystemLayoutCache</c>).</summary>
+    internal BeamLayout WithMeasureIndicesShifted(int delta)
+        => new(Group.WithMeasureIndexShifted(delta), LeftY, RightY, LeftX, RightX,
+            MemberXPositions, StaffIndex, SystemIndex, MemberStaffIndices, RestXPositions);
 
     /// <summary>Gets the slope of the beam (rise per unit run).</summary>
     public double Slope => (RightX - LeftX) > 0.001

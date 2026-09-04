@@ -98,4 +98,13 @@ public sealed record SlurItem
         EndItemIndex = endItemIndex;
         VoiceIndex = voiceIndex;
     }
+
+    /// <summary>The same slur with both measure numbers moved by <paramref name="delta"/> —
+    /// see <see cref="TieItem.WithMeasureIndicesShifted"/>; the two source offsets ride
+    /// along and are re-derived at render time.</summary>
+    internal SlurItem WithMeasureIndicesShifted(int delta)
+        => new(StartStaffPosition, EndStaffPosition, CurveUp,
+            StartMeasureIndex + delta, EndMeasureIndex + delta, StartItemIndex, EndItemIndex,
+            VoiceIndex)
+        { StartSourcePosition = StartSourcePosition, EndSourcePosition = EndSourcePosition };
 }

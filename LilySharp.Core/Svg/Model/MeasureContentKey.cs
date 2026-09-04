@@ -66,9 +66,12 @@ namespace LilySharp.Core.Svg.Model;
 /// each item's <c>SourcePosition</c>, and each side-table item's absolute
 /// <c>MeasureIndex</c>/<c>StartMeasureIndex</c>/<c>EndMeasureIndex</c> (the latter
 /// are the bucketing key, not content; spanners instead fold a position-independent
-/// relative role: start / middle / end). So a measure whose rendered content is
-/// unchanged keeps its key even when an edit elsewhere shifts it — what lets S5+
-/// recompute only the measures (and systems) that actually changed.
+/// relative role: start / middle / end) — and, since session 330, each item's
+/// <c>BeamId</c>, an identity numbered in score order that a beam added or removed
+/// EARLIER moves (the grouping it names is folded relationally instead). So a measure
+/// whose rendered content is unchanged keeps its key even when an edit elsewhere
+/// shifts it — what lets S5+ recompute only the measures (and systems) that actually
+/// changed.
 /// </para>
 /// <para>
 /// SOUNDNESS BIAS: fields are folded by reflection so a new content field cannot
@@ -100,12 +103,18 @@ public readonly record struct MeasureContentKey(long Hash)
         return new MeasureContentKey(hc.ToHashCode());
     }
 
-    /// <summary>Intrinsic content keys for a measure list, in document order.</summary>
+    /// <summary>Intrinsic content keys for a measure list, in document order — each with
+    /// its beam grouping related to its neighbours (<see cref="AddBeamGrouping"/>), which
+    /// the single-measure <see cref="Of"/> cannot see.</summary>
     public static ImmutableArray<MeasureContentKey> Compute(IReadOnlyList<Measure> measures)
     {
         var builder = ImmutableArray.CreateBuilder<MeasureContentKey>(measures.Count);
         for (int i = 0; i < measures.Count; i++)
-            builder.Add(Of(measures[i]));
+        {
+            var hc = new Hash64();
+            AddIntrinsic(ref hc, measures, i);
+            builder.Add(new MeasureContentKey(hc.ToHashCode()));
+        }
         return builder.MoveToImmutable();
     }
 
@@ -126,7 +135,7 @@ public readonly record struct MeasureContentKey(long Hash)
         for (int i = 0; i < n; i++)
         {
             var hc = new Hash64();
-            AddIntrinsic(ref hc, measures[i]);
+            AddIntrinsic(ref hc, measures, i);
             hc.Add(chain.Entry[i]);                  // line-start prefix identity
             foreach (long itemHash in sideTables[i]) // attached annotations (ordered)
                 hc.Add(itemHash);
@@ -166,7 +175,7 @@ public readonly record struct MeasureContentKey(long Hash)
                 acc[i].Add(staffIndex);                 // discriminate which staff
                 AddStaffIdentity(ref acc[i], staff);    // per-staff (indent/name/tuning/…)
                 AddGroupIdentity(ref acc[i], group);    // ...and which brace/bracket it is in
-                AddIntrinsic(ref acc[i], measures[i]);
+                AddIntrinsic(ref acc[i], measures, i);
                 acc[i].Add(chain.Entry[i]);
 
                 // A clef change opening measure i+1 is engraved BEFORE the bar line the
@@ -204,7 +213,7 @@ public readonly record struct MeasureContentKey(long Hash)
                 for (int i = 0; i < mv; i++)
                 {
                     acc[i].Add(v);                      // discriminate which voice
-                    AddIntrinsic(ref acc[i], voiceMeasures[i]);
+                    AddIntrinsic(ref acc[i], voiceMeasures, i);
                 }
             }
         }
@@ -262,6 +271,86 @@ public readonly record struct MeasureContentKey(long Hash)
 
         foreach (var item in measure.Items)
             hc.Add(HashContent(item, ItemExclusions));
+    }
+
+    /// <summary>The intrinsic content of <c>measures[i]</c> PLUS its beam grouping in
+    /// relation to its neighbours — the form every vector computation uses; the
+    /// single-measure <see cref="Of"/> has no neighbours to relate to and folds the
+    /// grouping within the measure only.</summary>
+    private static void AddIntrinsic(ref Hash64 hc, IReadOnlyList<Measure> measures, int i)
+    {
+        AddIntrinsic(ref hc, measures[i]);
+        AddBeamGrouping(ref hc, measures, i);
+    }
+
+    /// <summary>
+    /// The measure's beam grouping, RELATIONALLY: which items share a beam (a running
+    /// group number within the measure, −1 for an unbeamed item — a rest a manual beam
+    /// runs over keeps the group's number on both sides, as its id does) and whether the
+    /// first and last groups continue across the bar line into the neighbouring measure.
+    /// The absolute <c>BeamId</c> is excluded from the item hash (see
+    /// <see cref="ItemExclusions"/>); this is the position-independent spelling of the
+    /// same fact.
+    /// </summary>
+    /// <remarks>
+    /// The two bar-line booleans read the NEIGHBOUR — the same shape as
+    /// <c>SpacingRules.BoundaryClefAllowance</c> folded above, and for the same reason: a
+    /// beam continuing from the previous measure changes this measure's own stems and
+    /// beam (BeamContinuationTests), so a key that could not see it would serve a system
+    /// starting at this measure its solo-beam layout after the manual bracket was closed
+    /// one bar earlier. Two SEPARATE groups whose ids are not consecutive (another voice's
+    /// group numbered between them) fold the same running numbers as two consecutive
+    /// ones — the relation is the same, and that is the point.
+    /// </remarks>
+    private static void AddBeamGrouping(ref Hash64 hc, IReadOnlyList<Measure> measures, int i)
+    {
+        int? previous = null, firstId = null, lastId = null;
+        int run = -1;
+        foreach (var item in measures[i].Items)
+        {
+            int? id = BeamIdOf(item);
+            if (id is null)
+            {
+                hc.Add(-1);
+                continue;
+            }
+            if (id != previous)
+            {
+                run++;
+                previous = id;
+            }
+            firstId ??= id;
+            lastId = id;
+            hc.Add(run);
+        }
+        hc.Add(firstId is not null && i > 0 && EdgeBeamId(measures[i - 1], first: false) == firstId);
+        hc.Add(lastId is not null && i + 1 < measures.Count && EdgeBeamId(measures[i + 1], first: true) == lastId);
+    }
+
+    private static int? BeamIdOf(MusicItem item) => item switch
+    {
+        NoteItem n => n.BeamId,
+        ChordItem c => c.BeamId,
+        _ => null,
+    };
+
+    // The first (or last) beamed item's id in the measure, or null when none is beamed.
+    private static int? EdgeBeamId(Measure measure, bool first)
+    {
+        var items = measure.Items;
+        if (first)
+        {
+            foreach (var item in items)
+                if (BeamIdOf(item) is { } id)
+                    return id;
+        }
+        else
+        {
+            for (int k = items.Length - 1; k >= 0; k--)
+                if (BeamIdOf(items[k]) is { } id)
+                    return id;
+        }
+        return null;
     }
 
     // --- staff-level identity (per-staff fields, not per-measure) ---
@@ -357,6 +446,16 @@ public readonly record struct MeasureContentKey(long Hash)
         nameof(MusicItem.SlurEndSourcePosition),
         nameof(MusicItem.LaissezVibrerSourcePosition),
         nameof(MusicItem.RepeatTieSourcePosition),
+        // ...and the beam IDENTITY, which is a number the bake hands out in score order
+        // (MeasureCollector.ResolveBeamStemDirections: one `_nextBeamId++` per group), so
+        // its value moves with every beam group added or removed EARLIER in the score
+        // while the item's music is unchanged. MEASURED (session 330): a bar of beamed
+        // eighths deleted at bar 1 renumbered every later measure's items — 23 of 23
+        // later keys moved, and every memo (springs, systems) missed on a keystroke that
+        // changed one bar. Only equality between two items' ids means anything
+        // (NoteItem.BeamId's remarks), and that RELATION is what AddBeamGrouping folds
+        // instead — the same posture as the span tables' relative role.
+        nameof(NoteItem.BeamId),
     };
 
     // Excluded from side-table item hashes: the source offset AND the absolute

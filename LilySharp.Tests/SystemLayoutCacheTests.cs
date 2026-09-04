@@ -16,6 +16,7 @@
 
 using System;
 using System.Collections.Immutable;
+using System.Linq;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
@@ -128,6 +129,67 @@ public class SystemLayoutCacheTests
         cache.GetOrComputeMeasures(2, 2, false, true, 1.0, 0.25, factory); // hit
         Assert.True(cache.LastWasHit);
         Assert.Equal(4, calls);
+    }
+
+    /// <summary>
+    /// A system found under OTHER measure numbers — the same content slice, the same edge
+    /// flags and scalars, only firstMeasureIndex differs, as after a bar inserted before it
+    /// — is served re-stamped instead of recomputed: the value's measure numbers move by
+    /// the difference, nothing is computed, and the shifted result is then an EXACT hit
+    /// under its new numbers (the same instances, for the reference-keyed memos downstream).
+    /// </summary>
+    [Fact]
+    public void ShiftedHit_ReStampsTheMeasureNumbers_AndIsExactAfterwards()
+    {
+        var cache = new SystemLayoutCache();
+        cache.SetContentKeys(ImmutableArray.Create(
+            new MeasureContentKey(1), new MeasureContentKey(2),
+            new MeasureContentKey(3), new MeasureContentKey(4)));
+
+        int calls = 0;
+        Func<ImmutableArray<MeasureLayout>> factory = () =>
+        {
+            calls++;
+            return ImmutableArray.Create(
+                new MeasureLayout(2, 0, 1, ImmutableArray<ItemLayout>.Empty),
+                new MeasureLayout(3, 1, 1, ImmutableArray<ItemLayout>.Empty));
+        };
+        var stored = cache.GetOrComputeMeasures(2, 2, false, true, 1.0, 0.25, factory);
+        Assert.Equal(1, calls);
+        Assert.Equal(new SystemLayoutCache.MemoCounters(0, 0, 1),
+            cache.PassCounters(SystemLayoutCache.Store.Measures));
+
+        // A bar inserted at index 1: the slice (3, 4) now starts at 3, not 2.
+        cache.SetContentKeys(ImmutableArray.Create(
+            new MeasureContentKey(1), new MeasureContentKey(99), new MeasureContentKey(2),
+            new MeasureContentKey(3), new MeasureContentKey(4)));
+        var shifted = cache.GetOrComputeMeasures(3, 2, false, true, 1.0, 0.25, factory);
+        Assert.True(cache.LastWasHit);
+        Assert.Equal(1, calls);
+        Assert.Equal(new SystemLayoutCache.MemoCounters(0, 1, 0),
+            cache.PassCounters(SystemLayoutCache.Store.Measures));
+        Assert.Equal(new[] { 3, 4 }, shifted.Select(m => m.MeasureIndex));
+        Assert.Equal(stored.Select(m => (m.X, m.Width)), shifted.Select(m => (m.X, m.Width)));
+
+        // ...and again under the new numbers: exact, the same instances.
+        var again = cache.GetOrComputeMeasures(3, 2, false, true, 1.0, 0.25, factory);
+        Assert.Equal(1, calls);
+        Assert.Equal(new SystemLayoutCache.MemoCounters(1, 1, 0),
+            cache.PassCounters(SystemLayoutCache.Store.Measures));
+        Assert.Same(shifted[0], again[0]);
+
+        // A bar DELETED before it (the slice moves the other way) is the mirror.
+        cache.SetContentKeys(ImmutableArray.Create(
+            new MeasureContentKey(2), new MeasureContentKey(3), new MeasureContentKey(4)));
+        var back = cache.GetOrComputeMeasures(1, 2, false, true, 1.0, 0.25, factory);
+        Assert.Equal(1, calls);
+        Assert.Equal(new[] { 1, 2 }, back.Select(m => m.MeasureIndex));
+
+        // The shift is a re-stamp of the SAME computation, never a different one: a
+        // differing edge flag under the new numbers is still a miss.
+        cache.GetOrComputeMeasures(1, 2, false, false, 1.0, 0.25, factory);
+        Assert.False(cache.LastWasHit);
+        Assert.Equal(2, calls);
     }
 
     [Fact]

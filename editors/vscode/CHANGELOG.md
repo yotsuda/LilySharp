@@ -133,6 +133,26 @@ reasoning behind each one.
   saying what it swapped (pages kept, re-stamped, updated by group, replaced) and how long
   the swap and the re-fit took. When an update feels slow, these two lines say which side
   to look at.
+- **A bar inserted or deleted mid-score no longer re-prices every bar after it.** The
+  per-bar spacing memo read the previous score bar by bar at the same index, so a bar added
+  in the middle shifted every later one out of its slot and the whole tail was rebuilt (3
+  of 112 bars reused on a 3-page bass book, against 110 for the same bar added at the end).
+  The memo now looks where the tail went. The picture is unchanged; two tests pin the
+  reuse counts for an insertion and a deletion.
+- **...and no longer lays every system after it out again.** The per-system memos
+  (spacing, skylines, beams, ties, slurs, lyric bands) keyed each system on its first bar
+  NUMBER, so a bar inserted or deleted mid-score put every later system under a number
+  the memo had never seen and the whole tail was recomputed — the layout stage of such a
+  keystroke cost three to four times that of the same bar added at the end. A system
+  found under other numbers with the same music is now served with its numbers re-stamped.
+  This pays where the systems after the edit are still the same bars — a book that pins
+  its lines with `break`, as tab books do; under the automatic line breaker a bar inserted
+  into a uniform book spills one bar into every later line, and those lines are new
+  music. Separately, deleting a bar of BEAMED notes used to invalidate every later bar
+  outright (the beam identity is numbered in score order), which had silently defeated
+  every memo — spacing included — on such a keystroke; the key now folds the grouping,
+  not the number. The picture is unchanged; the reuse counts are pinned for an insertion,
+  a deletion and a chain of edits.
 - **A chord track's bars are no longer checked as if they held durations.** A per-section
   `chords` track had each `s` / `r` slot priced as a quarter rest, so a 2/4 row spelled
   `s | C#m | …` reported every such bar as too short. A chord row divides its bars on the

@@ -236,6 +236,17 @@ public sealed class IncrementalCompiler
     /// liveness half of the nested-resume nets.</summary>
     internal (int Resumed, int Full) NestedResumeStats => _nestedResume.Stats;
 
+    /// <summary>How the most recent compile's PER-SYSTEM layout memos were paid for, summed
+    /// over the stores of <see cref="SystemLayoutCache"/>: exact hits, hits served by
+    /// re-stamping a system found under other measure numbers (a bar inserted or deleted
+    /// before it), and misses. Default when the compile did not consult the cache (a full
+    /// compile, an ineligible edit, or whole-layout reuse). For diagnostics / tests; the
+    /// per-store view is <see cref="SystemCache"/>'s <c>PassCounters</c>.</summary>
+    internal SystemLayoutCache.MemoCounters LastLayoutMemo =>
+        _lastCompileConsultedCache ? _systemCache!.PassCountersTotal : default;
+
+    private bool _lastCompileConsultedCache;
+
     /// <summary>How the most recent render's per-system SVG text was paid for (⒭):
     /// how many systems replayed their recorded fragment and how many drew live
     /// (declined systems count as drawn). (0, 0) on a fragment-ineligible pass.
@@ -407,6 +418,7 @@ public sealed class IncrementalCompiler
             _systemCache.SetContentKeys(contentKeys);
             cacheForEdit = _systemCache;
         }
+        _lastCompileConsultedCache = cacheForEdit != null;
 
         // ⒟⁗ (HANDOFF §1 ▶): when every per-measure content key matches the PREVIOUS edit's,
         // the spring vector is the same function of the same inputs — reuse it instead of
@@ -444,10 +456,16 @@ public sealed class IncrementalCompiler
             // measure's end bar line (SpacingRules.RunLeftBoundBarline), the next measure's
             // run membership (MmrRunMap.ForbidsBreakAfter) and the score-global shortest
             // duration — nothing else (inventoried session 150); so keys i−1..i+1 unchanged
-            // (index-aligned) plus an unchanged shortest make springs[i] the same function
-            // of the same inputs. Reuse is index-aligned on purpose: an inserted/deleted
-            // measure shifts every later key and correctly rebuilds the tail, and the
-            // index-dependent inputs (isFirstSystem == 0, startMeasureIndex) stay valid.
+            // plus an unchanged shortest make springs[i] the same function of the same
+            // inputs. The previous vector is read through an INDEX MAP (KeyAlignment): a
+            // measure inserted or deleted mid-score shifts every later key by one, and
+            // read index-aligned the whole tail missed — MEASURED (session 329, a 3-page
+            // bass book, a bar inserted at bar 4): 3 of 112 measures reused against 110
+            // for the same bar added at the end, 70-90 ms of a 200 ms keystroke. The
+            // map is only a WHERE-TO-LOOK: the neighbourhood test is what certifies the
+            // reuse, so a wrong map can only miss, never serve a wrong entry. Nothing a
+            // spring reads depends on the measure's absolute index (the inventory
+            // above), which is what makes a shifted entry the same function.
             double shortest = SpacingRules.CalculateCommonShortestDuration(score);
             int reusedCount = 0, recomputedCount = 0;
             Func<int, MeasureSpringData?>? memo = null;
@@ -461,12 +479,14 @@ public sealed class IncrementalCompiler
                 var prevSprings = _springs;
                 var prevKeys = _contentKeys;
                 var newKeys = contentKeys;
+                var alignment = KeyAlignment.Between(prevKeys, newKeys);
                 memo = i =>
                 {
-                    if (SpringReusable(i, newKeys, prevKeys))
+                    int previous = alignment.PreviousIndexOf(i);
+                    if (previous >= 0 && SpringReusable(i, previous, newKeys, prevKeys))
                     {
                         reusedCount++;
-                        return prevSprings[i];
+                        return prevSprings[previous];
                     }
                     recomputedCount++;
                     return null;
@@ -613,9 +633,51 @@ public sealed class IncrementalCompiler
     }
 
     /// <summary>
-    /// Whether measure <paramref name="i"/>'s springs from the previous edit's vector are
-    /// provably identical to what a from-scratch build would produce — the ⒟⁗ per-measure
-    /// memo's key test. Index-aligned: keys i−1, i and i+1 must all be unchanged.
+    /// Where each measure of the CURRENT key vector was in the PREVIOUS one, for the
+    /// spring memo: the two vectors' common prefix keeps its indices, their common
+    /// suffix is shifted by the difference in length, and whatever lies between — the
+    /// edited measures, inserted or deleted ones included — has no previous index.
+    /// </summary>
+    /// <remarks>
+    /// A where-to-look, not a proof: <see cref="SpringReusable"/> still compares the
+    /// three-key neighbourhood at the mapped index, so an alignment fooled by repeated
+    /// bars (a bar inserted beside its own copy) costs a miss and nothing else. The
+    /// suffix is bounded so it never overlaps the prefix.
+    /// </remarks>
+    internal readonly record struct KeyAlignment(int Prefix, int Suffix, int NewLength, int PreviousLength)
+    {
+        public static KeyAlignment Between(
+            ImmutableArray<MeasureContentKey> previous, ImmutableArray<MeasureContentKey> current)
+        {
+            int shortest = Math.Min(previous.Length, current.Length);
+            int prefix = 0;
+            while (prefix < shortest && previous[prefix] == current[prefix])
+                prefix++;
+            int suffix = 0;
+            while (suffix < shortest - prefix
+                && previous[previous.Length - 1 - suffix] == current[current.Length - 1 - suffix])
+                suffix++;
+            return new KeyAlignment(prefix, suffix, current.Length, previous.Length);
+        }
+
+        /// <summary>The previous vector's index of current measure <paramref name="i"/>,
+        /// or -1 when it has none.</summary>
+        public int PreviousIndexOf(int i)
+        {
+            if (i < Prefix)
+                return i;
+            if (i >= NewLength - Suffix)
+                return i - (NewLength - PreviousLength);
+            return -1;
+        }
+    }
+
+    /// <summary>
+    /// Whether measure <paramref name="i"/>'s springs can be taken from the previous
+    /// edit's vector at index <paramref name="previous"/> — provably identical to what a
+    /// from-scratch build would produce, the ⒟⁗ per-measure memo's key test: keys i−1, i
+    /// and i+1 must equal the previous keys previous−1, previous and previous+1, with the
+    /// same edges (a first measure against a first, a last against a last).
     /// </summary>
     /// <remarks>
     /// The neighbourhood window is not caution, it is the inventory (session 150 — every
@@ -646,17 +708,21 @@ public sealed class IncrementalCompiler
     /// </list>
     /// </remarks>
     private static bool SpringReusable(
-        int i, ImmutableArray<MeasureContentKey> newKeys, ImmutableArray<MeasureContentKey> prevKeys)
+        int i, int previous, ImmutableArray<MeasureContentKey> newKeys, ImmutableArray<MeasureContentKey> prevKeys)
     {
-        if (i >= prevKeys.Length || newKeys[i] != prevKeys[i])
+        if (previous < 0 || previous >= prevKeys.Length || newKeys[i] != prevKeys[previous])
             return false;
-        if (i > 0 && newKeys[i - 1] != prevKeys[i - 1])
+        // A first measure only ever reuses a first measure's entry: the left edge is an
+        // input (no left neighbour to read), and so is the right edge below.
+        if ((i > 0) != (previous > 0))
+            return false;
+        if (i > 0 && newKeys[i - 1] != prevKeys[previous - 1])
             return false;
         bool hasRight = i + 1 < newKeys.Length;
-        bool hadRight = i + 1 < prevKeys.Length;
+        bool hadRight = previous + 1 < prevKeys.Length;
         if (hasRight != hadRight)
             return false;
-        return !hasRight || newKeys[i + 1] == prevKeys[i + 1];
+        return !hasRight || newKeys[i + 1] == prevKeys[previous + 1];
     }
 
     /// <summary>The tree's render-block sequence folded to what <see cref="RenderSpecParser.Choose"/>

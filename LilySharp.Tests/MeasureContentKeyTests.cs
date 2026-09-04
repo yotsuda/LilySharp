@@ -113,6 +113,55 @@ public class MeasureContentKeyTests
         Assert.NotEqual(keys[0], keys[1]); // different content -> different key
     }
 
+    private static string BeamedBars(params string[] bars) =>
+        "octave absolute\ntime 4/4\nkey c major\npart melody { clef treble }\n"
+        + "section Main { melody {\n" + string.Join("\n", bars) + "\n} }\n"
+        + "form main { Main }\nscore main \"x\" { staff melody }\n";
+
+    /// <summary>
+    /// A beamed bar deleted (or added) EARLIER leaves a beamed measure's key alone. BeamId
+    /// is numbered by the bake in score order, so before session 330 it moved every later
+    /// item's hash — a one-bar deletion made every later key miss (springs and systems
+    /// alike), while the same book with the bar ADDED as quarters kept them (no new group,
+    /// no renumbering). Position-independence has to hold in both directions.
+    /// </summary>
+    [Fact]
+    public void BeamedMeasures_AfterADeletedBeamedBar_KeepTheirKeys()
+    {
+        // Bar 0 stays in both books: the section's first measure carries the section
+        // label, so it is never the same measure as a later one.
+        const string bar = "c8 d e f g a b c' |";
+        var four = CompleteKeys(BeamedBars(bar, "d8 e f g a b c' d' |", bar, "e8 f g a b c' d' e' |"));
+        var three = CompleteKeys(BeamedBars(bar, bar, "e8 f g a b c' d' e' |"));
+        Assert.Equal(4, four.Length);
+        Assert.Equal(3, three.Length);
+        Assert.Equal(four[2], three[1]);
+        Assert.Equal(four[3], three[2]);
+        // ...and the grouping is still in the key: the same pitches unbeamed differ.
+        Assert.NotEqual(four[2], CompleteKeys(BeamedBars(bar, "c4 d e f g a b c' |"))[1]);
+    }
+
+    /// <summary>
+    /// The grouping the key folds instead is RELATIONAL, and it reaches across the bar
+    /// line: a manual beam continuing into the next measure changes BOTH measures' keys
+    /// against the same music beamed within each bar (the continuation changes both
+    /// bars' stems and beam — BeamContinuationTests), while the numbers themselves stay
+    /// out (the two bars of one book agree with the same two bars placed later).
+    /// </summary>
+    [Fact]
+    public void ABeamCrossingTheBarLine_EntersBothKeys_ByRelationNotByNumber()
+    {
+        // A leading rest bar keeps the compared measures off the section's labelled first.
+        var crossing = Keys(BeamedBars("r1 |", "c8[ d e f | g8 a b c8] |"));
+        var separate = Keys(BeamedBars("r1 |", "c8 d e f | g8 a b c8 |"));
+        Assert.NotEqual(separate[1], crossing[1]);
+        Assert.NotEqual(separate[2], crossing[2]);
+
+        var later = Keys(BeamedBars("r1 |", "c8 d e f g a b c' |", "c8[ d e f | g8 a b c8] |"));
+        Assert.Equal(crossing[1], later[2]);
+        Assert.Equal(crossing[2], later[3]);
+    }
+
     [Fact]
     public void Edit_PitchChange_ChangesOnlyThatKey()
     {

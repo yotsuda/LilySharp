@@ -37,12 +37,30 @@ namespace LilySharp.Core.Svg.Layout;
 /// exactly — the system's ordered per-measure <see cref="MeasureContentKey"/> slice
 /// plus every scalar the computation depends on (firstMeasureIndex, count,
 /// isFirst/isLast, indent, common shortest duration; and for the skyline also the
-/// system height). firstMeasureIndex is part of the key because cached measure
-/// layouts stamp an absolute <see cref="MeasureLayout.MeasureIndex"/>. Lookups
-/// VERIFY the key exactly (a hash bucket holds a short list, compared element-wise),
-/// so a hash collision degrades to a recompute, never a wrong reuse. Because the
-/// stored value is exactly what a fresh computation would produce, GEOMETRY stays
-/// byte-identical — proven by the IncrementalCompiler incremental==full harness.
+/// system height). Lookups VERIFY the key exactly (a hash bucket holds a short list,
+/// compared element-wise), so a hash collision degrades to a recompute, never a wrong
+/// reuse. Because the stored value is exactly what a fresh computation would produce,
+/// GEOMETRY stays byte-identical — proven by the IncrementalCompiler incremental==full
+/// harness.
+/// </para>
+/// <para>
+/// ★ firstMeasureIndex IS A STAMP, NOT AN INPUT, since session 330. Nothing a system's
+/// layout READS depends on where in the score the system sits — the content slice folds
+/// every measure, side-table bucket and entry context, the edge flags and indent are
+/// keyed beside it — but the VALUES carry the absolute measure numbers of the edit that
+/// computed them (<see cref="MeasureLayout.MeasureIndex"/>, a bow's
+/// <c>StartMeasureIndex</c>, a beam group's <c>MeasureIndex</c>), and the renderer and
+/// the annotation pass read those to find the live measure. So an entry whose key
+/// matches in everything BUT firstMeasureIndex is the same geometry under other numbers:
+/// a lookup that misses exactly takes such an entry and RE-STAMPS its value by the
+/// difference (<see cref="TypedCache{T}"/>'s shift function, one per store, saying where
+/// that store's stamps live). MEASURED (session 329, a 3-page bass book, one bar
+/// inserted at bar 4): every system after the insertion missed on firstMeasureIndex
+/// alone — 70–95 ms of a 200 ms keystroke against 20–35 for the same bar added at the
+/// end. A store whose value carries no stamp at all (a skyline pair) shifts by identity.
+/// ⚠️ The stamps a shift does NOT touch are named at each shift function; a stamp that
+/// is unreliable on an EXACT hit already (a source offset, a side-table index) is left
+/// exactly as unreliable, not made to look repaired.
 /// </para>
 /// <para>
 /// ⚠️ NOT SOURCE OFFSETS. <see cref="MeasureContentKey"/> is blind to where the text sits
@@ -64,14 +82,45 @@ namespace LilySharp.Core.Svg.Layout;
 internal sealed class SystemLayoutCache
 {
     private ImmutableArray<MeasureContentKey> _keys;
-    private readonly TypedCache<ImmutableArray<MeasureLayout>> _measures = new();
-    private readonly TypedCache<(VerticalSkyline up, VerticalSkyline down)> _skylines = new();
-    private readonly TypedCache<MultiStaffLayouter.StaffSkylineSet> _staffSkylines = new();
-    private readonly TypedCache<ImmutableArray<BeamLayout>> _staffSystemBeams = new();
-    private readonly TypedCache<ImmutableArray<TieLayout>> _staffSystemTies = new();
-    private readonly TypedCache<ImmutableArray<SlurLayout>> _staffSystemSlurs = new();
-    private readonly TypedCache<LayoutEngine.LooseBlockProfiles> _lyricBands = new();
-    private readonly TypedCache<IReadOnlyList<MultiStaffLayouter.PairLooseLine>?> _looseLines = new();
+    // One shift function per store: where that store's absolute measure stamps live
+    // (see the class remarks). `Unstamped` is the identity — the value carries none.
+    private readonly TypedCache<ImmutableArray<MeasureLayout>> _measures = new(ShiftMeasures);
+    private readonly TypedCache<(VerticalSkyline up, VerticalSkyline down)> _skylines = new(Unstamped);
+    private readonly TypedCache<MultiStaffLayouter.StaffSkylineSet> _staffSkylines = new(ShiftStaffSkylines);
+    private readonly TypedCache<ImmutableArray<BeamLayout>> _staffSystemBeams = new(ShiftBeams);
+    private readonly TypedCache<ImmutableArray<TieLayout>> _staffSystemTies = new(ShiftTies);
+    private readonly TypedCache<ImmutableArray<SlurLayout>> _staffSystemSlurs = new(ShiftSlurs);
+    private readonly TypedCache<LayoutEngine.LooseBlockProfiles> _lyricBands = new(Unstamped);
+    private readonly TypedCache<IReadOnlyList<MultiStaffLayouter.PairLooseLine>?> _looseLines = new(Unstamped);
+
+    /// <summary>The memo stores, for <see cref="PassCounters"/>.</summary>
+    public enum Store
+    {
+        Measures, Skylines, StaffSkylines, StaffSystemBeams, StaffSystemTies, StaffSystemSlurs,
+        LyricBands, LooseLines,
+    }
+
+    /// <summary>How one store paid for the CURRENT pass's lookups (since the last
+    /// <see cref="SetContentKeys"/>): exact hits, hits served by re-stamping an entry
+    /// found under another firstMeasureIndex, and misses (computed). For diagnostics /
+    /// tests — the liveness counter of the shifted-hit nets.</summary>
+    public MemoCounters PassCounters(Store store) => store switch
+    {
+        Store.Measures => _measures.Pass,
+        Store.Skylines => _skylines.Pass,
+        Store.StaffSkylines => _staffSkylines.Pass,
+        Store.StaffSystemBeams => _staffSystemBeams.Pass,
+        Store.StaffSystemTies => _staffSystemTies.Pass,
+        Store.StaffSystemSlurs => _staffSystemSlurs.Pass,
+        Store.LyricBands => _lyricBands.Pass,
+        Store.LooseLines => _looseLines.Pass,
+        _ => throw new ArgumentOutOfRangeException(nameof(store)),
+    };
+
+    /// <summary>The sum of <see cref="PassCounters"/> over every store.</summary>
+    public MemoCounters PassCountersTotal =>
+        _measures.Pass + _skylines.Pass + _staffSkylines.Pass + _staffSystemBeams.Pass
+        + _staffSystemTies.Pass + _staffSystemSlurs.Pass + _lyricBands.Pass + _looseLines.Pass;
 
     /// <summary>Refreshes the per-measure content keys for the current edit. Must be
     /// called before the layout consults the cache. Also marks the edit boundary for
@@ -347,8 +396,10 @@ internal sealed class SystemLayoutCache
     /// edge-beam lambda in <c>LayoutEngine</c> relies on.
     /// <list type="bullet">
     /// <item><paramref name="systemIndex"/> is in the key because <see cref="BeamLayout"/>
-    /// stamps <c>SystemIndex</c> — the same reason firstMeasureIndex is (an absolute stamp
-    /// must not survive a reuse under a different absolute).</item>
+    /// stamps <c>SystemIndex</c> — an absolute stamp must not survive a reuse under a
+    /// different absolute. (The measure stamps get the shifted-hit treatment the class
+    /// remarks describe; the system stamp does not — a system index moves only when the
+    /// break moved, and then the slice has usually moved with it.)</item>
     /// <item><paramref name="staffIndex"/> is in the key because the value is one staff's
     /// beams and the stamp rides in <c>BeamLayout.StaffIndex</c>.</item>
     /// <item>⚠️ A group whose members CROSS a system boundary must never be memoized here:
@@ -459,10 +510,115 @@ internal sealed class SystemLayoutCache
         VerticalSkyline BaseUp, VerticalSkyline BaseDown,
         PagingAugmentProgram Program, (VerticalSkyline up, VerticalSkyline down) Value);
 
+    /// <summary>Lookups of one memo store by outcome — see <see cref="PassCounters"/>.</summary>
+    internal readonly record struct MemoCounters(int Hits, int ShiftedHits, int Misses)
+    {
+        public MemoCounters WithHit() => this with { Hits = Hits + 1 };
+        public MemoCounters WithShiftedHit() => this with { ShiftedHits = ShiftedHits + 1 };
+        public MemoCounters WithMiss() => this with { Misses = Misses + 1 };
+        public static MemoCounters operator +(MemoCounters a, MemoCounters b)
+            => new(a.Hits + b.Hits, a.ShiftedHits + b.ShiftedHits, a.Misses + b.Misses);
+    }
+
     private readonly Dictionary<int, PagingAugmentEntry> _pagingAugments = new();
 
-    // A keyed memo: bucket by a hash of (system identity + extra scalar + content
-    // slice), verify the full key exactly on hit so collisions only cost a recompute.
+    // ---- the shift functions: where each store's absolute measure stamps live ----
+
+    private static T Unstamped<T>(T value, int delta) => value;
+
+    private static ImmutableArray<MeasureLayout> ShiftMeasures(ImmutableArray<MeasureLayout> v, int delta)
+    {
+        var b = ImmutableArray.CreateBuilder<MeasureLayout>(v.Length);
+        foreach (var m in v)
+            b.Add(m.WithMeasureIndex(m.MeasureIndex + delta));
+        return b.MoveToImmutable();
+    }
+
+    private static ImmutableArray<TieLayout> ShiftTies(ImmutableArray<TieLayout> v, int delta)
+    {
+        if (v.IsDefaultOrEmpty) return v;
+        var b = ImmutableArray.CreateBuilder<TieLayout>(v.Length);
+        foreach (var t in v)
+            b.Add(t with
+            {
+                Tie = t.Tie.WithMeasureIndicesShifted(delta),
+                RenderMeasureIndex = t.RenderMeasureIndex < 0 ? -1 : t.RenderMeasureIndex + delta,
+            });
+        return b.MoveToImmutable();
+    }
+
+    private static ImmutableArray<SlurLayout> ShiftSlurs(ImmutableArray<SlurLayout> v, int delta)
+    {
+        if (v.IsDefaultOrEmpty) return v;
+        var b = ImmutableArray.CreateBuilder<SlurLayout>(v.Length);
+        foreach (var s in v)
+            b.Add(s with
+            {
+                Slur = s.Slur.WithMeasureIndicesShifted(delta),
+                RenderMeasureIndex = s.RenderMeasureIndex < 0 ? -1 : s.RenderMeasureIndex + delta,
+            });
+        return b.MoveToImmutable();
+    }
+
+    private static ImmutableArray<BeamLayout> ShiftBeams(ImmutableArray<BeamLayout> v, int delta)
+    {
+        if (v.IsDefaultOrEmpty) return v;
+        var b = ImmutableArray.CreateBuilder<BeamLayout>(v.Length);
+        foreach (var beam in v)
+            b.Add(beam.WithMeasureIndicesShifted(delta));
+        return b.MoveToImmutable();
+    }
+
+    // The room's per-staff skylines are pure geometry in the staff's own frame and are
+    // SHARED with the entry they were found under (read-only by contract — see
+    // GetOrComputeStaffSkylines). The spanners and the pedal lines carry measures.
+    // ⚠️ NOT SHIFTED, deliberately: a tuplet bracket's SourceIndex (into
+    // score.TupletBrackets) and every SourcePosition in the spanners and pedal rows. Both
+    // are already unreliable on an EXACT hit — a tuplet added in an EARLIER measure moves
+    // the table under an unchanged system, and the content key excludes source offsets
+    // by design — and no consumer of the room's spanners reads them: they are collision
+    // geometry (SkylineBuilder.BuildInsideStaffSkylines and the two profile seeds beside
+    // it), while the brackets and bows that are DRAWN are the annotation pass's own,
+    // whose data-pos SharedRenderer.ResolveDataPos re-derives. Re-stamping the index
+    // here by the measure delta would make a number that is wrong on both kinds of hit
+    // look repaired on one of them.
+    private static MultiStaffLayouter.StaffSkylineSet ShiftStaffSkylines(
+        MultiStaffLayouter.StaffSkylineSet set, int delta)
+    {
+        var spanners = new List<MultiStaffLayouter.StaffInsideSpanners>(set.Spanners.Count);
+        foreach (var s in set.Spanners)
+        {
+            var tuplets = s.TupletBrackets;
+            if (!tuplets.IsDefaultOrEmpty)
+            {
+                var tb = ImmutableArray.CreateBuilder<TupletBracketLayout>(tuplets.Length);
+                foreach (var t in tuplets)
+                    tb.Add(t with { MeasureIndex = t.MeasureIndex + delta });
+                tuplets = tb.MoveToImmutable();
+            }
+            spanners.Add(new MultiStaffLayouter.StaffInsideSpanners(
+                ShiftSlurs(s.Slurs, delta), ShiftTies(s.Ties, delta), tuplets));
+        }
+        var pedalLines = new List<ImmutableArray<PedalEngraver.SolvedPedalLine>>(set.PedalLines.Count);
+        foreach (var lines in set.PedalLines)
+        {
+            if (lines.IsDefaultOrEmpty)
+            {
+                pedalLines.Add(lines);
+                continue;
+            }
+            var lb = ImmutableArray.CreateBuilder<PedalEngraver.SolvedPedalLine>(lines.Length);
+            foreach (var l in lines)
+                lb.Add(l with { StartMeasureIndex = l.StartMeasureIndex + delta });
+            pedalLines.Add(lb.MoveToImmutable());
+        }
+        return set with { Spanners = spanners, PedalLines = pedalLines };
+    }
+
+    // A keyed memo: bucket by a hash of (system shape + extra scalars + content slice),
+    // verify the full key exactly on hit so collisions only cost a recompute. The bucket
+    // hash EXCLUDES firstMeasureIndex so that an entry for the same content under other
+    // measure numbers lands in the same bucket, where a shifted hit can find it.
     private sealed class TypedCache<T>
     {
         private sealed class Entry
@@ -487,11 +643,14 @@ internal sealed class SystemLayoutCache
                 Generation = generation;
             }
 
-            public bool Matches(int first, int count, bool isFirst, bool isLast, double indent,
+            /// <summary>Everything the computation READ is equal — the key without the
+            /// firstMeasureIndex stamp. The caller decides whether First is equal too
+            /// (an exact hit) or only shifted.</summary>
+            public bool MatchesContent(int count, bool isFirst, bool isLast, double indent,
                 double shortest, double extra, double extra2,
                 ReadOnlySpan<MeasureContentKey> content)
             {
-                if (First != first || Count != count || IsFirst != isFirst || IsLast != isLast
+                if (Count != count || IsFirst != isFirst || IsLast != isLast
                     || Indent != indent || Shortest != shortest || Extra != extra
                     || Extra2 != extra2 || Content.Length != content.Length)
                     return false;
@@ -501,6 +660,15 @@ internal sealed class SystemLayoutCache
                 return true;
             }
         }
+
+        /// <summary>Re-stamps a value found under another firstMeasureIndex by the
+        /// difference (new − stored). Identity for a store whose values carry no stamp.</summary>
+        private readonly Func<T, int, T> _shift;
+
+        public TypedCache(Func<T, int, T> shift) => _shift = shift;
+
+        /// <summary>This pass's lookups by outcome — reset at <see cref="NextGeneration"/>.</summary>
+        public MemoCounters Pass { get; private set; }
 
         // Cap on the STALE backlog: each edit that changes a system leaves its
         // now-stale entry behind, so entries would otherwise accumulate monotonically
@@ -522,7 +690,11 @@ internal sealed class SystemLayoutCache
 
         /// <summary>Marks an edit boundary (a new layout pass) for the eviction
         /// exemption. Called once per edit via <see cref="SetContentKeys"/>.</summary>
-        public void NextGeneration() => _generation++;
+        public void NextGeneration()
+        {
+            _generation++;
+            Pass = default;
+        }
 
         public T GetOrCompute(ImmutableArray<MeasureContentKey> keys,
             int first, int count, bool isFirst, bool isLast, double indent, double shortest,
@@ -541,7 +713,6 @@ internal sealed class SystemLayoutCache
             var slice = keys.AsSpan().Slice(first, count);
 
             var hc = new HashCode();
-            hc.Add(first);
             hc.Add(count);
             hc.Add(isFirst);
             hc.Add(isLast);
@@ -553,16 +724,23 @@ internal sealed class SystemLayoutCache
                 hc.Add(k);
             int bucketKey = hc.ToHashCode();
 
+            Entry? shiftable = null;
             if (_buckets.TryGetValue(bucketKey, out var list))
             {
                 foreach (var e in list)
                 {
-                    if (e.Matches(first, count, isFirst, isLast, indent, shortest, extra, extra2, slice))
+                    if (!e.MatchesContent(count, isFirst, isLast, indent, shortest, extra, extra2, slice))
+                        continue;
+                    if (e.First == first)
                     {
                         e.Generation = _generation; // live this pass -> eviction-exempt
+                        Pass = Pass.WithHit();
                         hit = true;
                         return e.Value;
                     }
+                    // The same computation under other measure numbers. Keep looking for
+                    // an exact entry (no re-stamp at all); fall back to this one.
+                    shiftable ??= e;
                 }
             }
             else
@@ -571,15 +749,31 @@ internal sealed class SystemLayoutCache
                 _buckets[bucketKey] = list;
             }
 
-            var fresh = compute();
+            T value;
+            if (shiftable != null)
+            {
+                value = _shift(shiftable.Value, first - shiftable.First);
+                Pass = Pass.WithShiftedHit();
+                hit = true;
+            }
+            else
+            {
+                value = compute();
+                Pass = Pass.WithMiss();
+                hit = false;
+            }
+            // A shifted hit is stored under its own firstMeasureIndex like a computed value:
+            // the next keystroke then hits it exactly and hands out the SAME instances, which
+            // the reference-keyed memos downstream (LyricChainMemo, VerseSkylineMemo, the
+            // paging augment) need to hit at all. The content slice is shared with the entry
+            // it came from — an ImmutableArray, so sharing is free.
             var entry = new Entry(first, count, isFirst, isLast, indent, shortest, extra, extra2,
-                ImmutableArray.Create(keys, first, count), fresh, _generation);
+                shiftable?.Content ?? ImmutableArray.Create(keys, first, count), value, _generation);
             list.Add(entry);
             _insertionOrder.Enqueue((bucketKey, entry));
             _count++;
             EvictOldestIfOverCap();
-            hit = false;
-            return fresh;
+            return value;
         }
 
         // Second-chance FIFO, oldest first: an entry the current pass inserted or hit

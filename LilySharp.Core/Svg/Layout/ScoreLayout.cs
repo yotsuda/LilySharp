@@ -87,6 +87,13 @@ internal sealed record MeasureLayout
         Columns = columns;
     }
 
+    /// <summary>The same layout under another measure number — the ONLY absolute stamp
+    /// this record carries (item and column offsets are measure-relative). What a
+    /// per-system memo hands back when it serves a system found under other numbers
+    /// (<see cref="SystemLayoutCache"/>).</summary>
+    public MeasureLayout WithMeasureIndex(int measureIndex)
+        => new(measureIndex, X, Width, Items, Columns) { LooseChangeHangs = LooseChangeHangs };
+
     /// <summary>
     /// Gets the X coordinate for a given timing within this measure.
     /// Uses column information if available, otherwise interpolates.
