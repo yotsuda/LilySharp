@@ -123,7 +123,8 @@ internal static partial class SharedRenderer
             // device output happens here, in the Y-flip decorator wrapping the page
             // context. Every primitive Y handed to `gc` below is page Y-up
             // (page-bottom origin) and the decorator maps it to device.
-            IDrawingContext gc = new YFlipDrawingContext(doc.BeginPage(page.Width, page.Height), page.Height);
+            var device = doc.BeginPage(page.Width, page.Height);
+            IDrawingContext gc = new YFlipDrawingContext(device, page.Height);
             // LILYPOND-REF: lily/page-layout-problem.cc:434 — header at MarginTop;
             // SystemLayout.Y already includes MarginTop, so apply MarginLeft only.
             // The title/composer header belongs to the FIRST page only (later
@@ -144,36 +145,56 @@ internal static partial class SharedRenderer
                 // and a drawn one are wrapped alike.
                 //
                 // And, where the document asks for it (IDocumentContext.SystemLocalFrames —
-                // the interactive preview), each system is drawn in its OWN frame: the
-                // SystemLayout it is drawn from has its top at the page's Y-up origin
-                // (Y = page.Height, so every device Y DrawSystem emits is the distance
-                // below the system's top) and a translate group — also outside the
-                // capture — carries it to where it sits. DrawSystem derives every Y it
-                // draws from system.Y (StaffTopYUp / FindStaffYInSystem / SystemTopYUp)
-                // and the page height it flips against, and nothing else about the page,
-                // so the two spellings draw the same picture; the ossia groups' own
-                // flip-conjugated transforms compose with this one the way they compose
-                // with the margin's. What differs is the TEXT: a system that moved down
-                // the page is the same bytes under a new transform, so the fragment memo
-                // replays it (the geometry fold sees Y = page.Height on every system) and
-                // the preview re-attributes the group instead of parsing it again.
+                // the interactive preview), each system is drawn in its OWN frame: a flip
+                // context of its own whose base is 0 and a SystemLayout whose top is at
+                // Y-up 0, so every device Y DrawSystem emits is exactly the distance below
+                // the system's top (0 − (0 − d) = d, no page height in the arithmetic),
+                // and a DEVICE-space translate group — also outside the capture — carries
+                // it to where it sits. DrawSystem derives every Y it draws from system.Y
+                // (StaffTopYUp / FindStaffYInSystem / SystemTopYUp) and the flip base it is
+                // handed, and nothing else about the page, so the two spellings draw the
+                // same picture; the ossia groups' own flip-conjugated transforms are
+                // written against that same base and compose with this one the way they
+                // compose with the margin's. What differs is the TEXT: a system that moved
+                // down the page — or onto a page of another height — is the same bytes
+                // under a new transform, so the fragment memo replays it (the geometry
+                // fold sees Y = 0 and page height 0 on every system) and the preview
+                // re-attributes the group instead of parsing it again.
+                // ⚠️ The first spelling of this (2026-09-04, earlier the same day) drew
+                // with Y = page.Height against the page's own flip base, which put the
+                // page height into every emitted Y's arithmetic and into the fragment key:
+                // a book whose page grows with its music (every test fixture) declined
+                // every fragment the moment a system was added.
                 bool localFrames = doc.SystemLocalFrames;
                 foreach (var system in page.Systems)
                 {
                     using var systemGroup = gc.BeginLabeledGroup("system");
-                    // Y-up translate: the local frame sits at the page top (Y-up
-                    // page.Height); the real one at system.Y — move it DOWN by the
-                    // difference (the flip decorator conjugates this into device space).
-                    using var localFrame = localFrames
-                        ? gc.BeginGroup(DrawingTransform.Translate(0, system.Y - page.Height))
-                        : null;
-                    var drawn = localFrames ? system with { Y = page.Height } : system;
-                    if (fragHost != null && fragments!.TryReplay(score, drawn, fragHost, page.Height))
-                        continue;
-                    using (fragHost != null
-                        ? fragments!.BeginCapture(score, drawn, fragHost, page.Height)
-                        : null)
-                        DrawSystem(score, layout, drawn, resolver, beamedItems, gc, page.Height);
+                    IDrawingContext systemGc = gc;
+                    var drawn = system;
+                    double flipBase = page.Height;
+                    IDisposable? localFrame = null;
+                    if (localFrames)
+                    {
+                        // Device space: the frame's origin is the system's top, which sits
+                        // page.Height − system.Y below the page's top (system.Y is Y-up).
+                        localFrame = device.BeginGroup(DrawingTransform.Translate(0, page.Height - system.Y));
+                        systemGc = new YFlipDrawingContext(device, 0);
+                        drawn = system with { Y = 0 };
+                        flipBase = 0;
+                    }
+                    try
+                    {
+                        if (fragHost != null && fragments!.TryReplay(score, drawn, fragHost, flipBase))
+                            continue;
+                        using (fragHost != null
+                            ? fragments!.BeginCapture(score, drawn, fragHost, flipBase)
+                            : null)
+                            DrawSystem(score, layout, drawn, resolver, beamedItems, systemGc, flipBase);
+                    }
+                    finally
+                    {
+                        localFrame?.Dispose();
+                    }
                 }
                 using var overlayGroup = gc.BeginLabeledGroup("overlay");
                 // Page-level overlays that span systems. The Y-anchor map is

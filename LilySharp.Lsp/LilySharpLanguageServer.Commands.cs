@@ -66,6 +66,23 @@ public sealed partial class LilySharpLanguageServer
         /// without rendering, so a typing burst's queued previews collapse to the newest
         /// instead of running serially to thrown-away answers.</summary>
         public int LatestTicket;
+
+        /// <summary>The cancellation of the render RUNNING under <see cref="Gate"/>, if
+        /// any — cancelled ON the dispatch thread the moment a newer request for this
+        /// selection takes a ticket, so the running render gives up at its next stage
+        /// boundary (<c>IncrementalCompiler.RenderIncremental(tree, token)</c>) instead of
+        /// finishing an answer nobody wants while the newer request waits for the gate
+        /// (the `lock` term of the client's timing line). Guarded by
+        /// <see cref="RunningGate"/>, never by <see cref="Gate"/> (the canceller must not
+        /// wait for the render it cancels).</summary>
+        public CancellationTokenSource? Running;
+        public readonly object RunningGate = new();
+
+        public void CancelRunning()
+        {
+            lock (RunningGate)
+                Running?.Cancel();
+        }
     }
 
     // All of a document's slots are dropped on close. _svgSessionLock guards the MAP
@@ -314,6 +331,8 @@ public sealed partial class LilySharpLanguageServer
         // the thread pool: arrival order alone decides which request is newest.
         var slot = SvgSlotFor(@params.TextDocument.Uri, @params.RenderName);
         int ticket = System.Threading.Interlocked.Increment(ref slot.LatestTicket);
+        // ...and the render already running for an OLDER ticket is told to stop.
+        slot.CancelRunning();
         return Task.Run(() => GetSvg(@params, slot, ticket, token, receipt), token);
     }
 
@@ -463,7 +482,22 @@ public sealed partial class LilySharpLanguageServer
                 token.ThrowIfCancellationRequested();
 
                 long renderStart = System.Diagnostics.Stopwatch.GetTimestamp();
-                svg = RenderSvgIncremental(slot, @params.RenderName, tree, renderOptions);
+                // The render's own cancellation: the client's token (a $/cancelRequest)
+                // and the slot's "a newer ticket arrived" signal, either of which stops
+                // it at its next stage boundary.
+                using var running = CancellationTokenSource.CreateLinkedTokenSource(token);
+                lock (slot.RunningGate)
+                    slot.Running = running;
+                try
+                {
+                    svg = RenderSvgIncremental(slot, @params.RenderName, tree, renderOptions, running.Token);
+                }
+                finally
+                {
+                    lock (slot.RunningGate)
+                        if (ReferenceEquals(slot.Running, running))
+                            slot.Running = null;
+                }
                 timing.RenderMs = receipt.MsSince(renderStart);
             }
 
@@ -502,12 +536,19 @@ public sealed partial class LilySharpLanguageServer
     /// <paramref name="slot"/>'s Gate.
     /// </summary>
     private static string RenderSvgIncremental(SvgSessionSlot slot, string? renderName,
-        SyntaxTree tree, LilySharp.Core.Svg.Renderer.SvgRenderOptions options)
+        SyntaxTree tree, LilySharp.Core.Svg.Renderer.SvgRenderOptions options,
+        CancellationToken token)
     {
         try
         {
             slot.Session ??= new IncrementalCompiler(tree, options, renderName);
-            return slot.Session.RenderIncremental(tree);
+            return slot.Session.RenderIncremental(tree, token);
+        }
+        catch (OperationCanceledException)
+        {
+            // A render given up on request leaves the session sound (its contract);
+            // the newer request renders from it. Not a failure, so not the fallback.
+            throw;
         }
         catch
         {

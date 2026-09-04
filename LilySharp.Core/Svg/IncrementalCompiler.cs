@@ -260,6 +260,10 @@ public sealed class IncrementalCompiler
     internal (int Replayed, int Drawn) LastRenderOverlays =>
         _fragments?.LastOverlayPass ?? (0, 0);
 
+    /// <summary>The session's per-system fragment memo (null until the first eligible
+    /// render) — for the nets that read its per-pass account of declines.</summary>
+    internal Rendering.Svg.SvgSystemFragmentCache? FragmentsForTest => _fragments;
+
     /// <summary>The spring vector the most recent compile ended with — the same array the
     /// break gate and the layout consumed. For the tests that assert the per-measure memo
     /// reproduces a from-scratch build exactly.</summary>
@@ -302,7 +306,36 @@ public sealed class IncrementalCompiler
     /// keyed on the new score's per-measure content, not on how the tree was produced.</summary>
     public string RenderIncremental(SyntaxTree tree) => Compile(tree, allowSkip: true);
 
-    private string Compile(SyntaxTree tree, bool allowSkip)
+    /// <summary>
+    /// <see cref="RenderIncremental(SyntaxTree)"/> with a cancellation: the compile is
+    /// given up at the next stage boundary once <paramref name="token"/> is cancelled —
+    /// after the collect, before the layout, before the render — and throws
+    /// <see cref="OperationCanceledException"/>. The session is left SOUND at each of
+    /// those points: nothing a later compile reads is committed piecemeal (the spring
+    /// vector, keys, line breaks and layout are committed together, after the layout),
+    /// and what is touched before — the collect and beam memos, the per-system cache —
+    /// is content-addressed and verified on read. For the preview, whose caller cancels
+    /// a render the moment a newer keystroke arrives: it used to run to a thrown-away
+    /// answer while the newer request waited for it (the `lock` term of the editor's
+    /// timing line, 17–142 ms per burst keystroke, session 330).
+    /// </summary>
+    public string RenderIncremental(SyntaxTree tree, CancellationToken token)
+        => Compile(tree, allowSkip: true, token);
+
+    /// <summary>Where a compile can be given up — see <see cref="RenderIncremental(SyntaxTree, CancellationToken)"/>.</summary>
+    internal enum CompileStage { Collected, BeforeLayout, BeforeRender }
+
+    /// <summary>Test seam: called at every stage boundary a cancellation is honoured at,
+    /// before the token is checked, so a net can cancel at a chosen stage.</summary>
+    internal Action<CompileStage>? StageProbe { get; set; }
+
+    private void Checkpoint(CompileStage stage, CancellationToken token)
+    {
+        StageProbe?.Invoke(stage);
+        token.ThrowIfCancellationRequested();
+    }
+
+    private string Compile(SyntaxTree tree, bool allowSkip, CancellationToken token = default)
     {
         var specs = RenderSpecParser.FindAll(tree);
         var spec = RenderSpecParser.Choose(specs, _renderName);
@@ -334,6 +367,9 @@ public sealed class IncrementalCompiler
         // Finding 3-5: arm the nested-collect resume channels for this compile.
         _nestedResume.BeginCompile(tree, allowResume: allowSkip);
         var score = CollectWithResume(tree, spec, allowResume: allowSkip);
+        // Sound to stop here: the collect and beam memos above are addressed by the
+        // tree/content they recorded and verified on read, never by "the last compile".
+        Checkpoint(CompileStage.Collected, token);
 
         // A `fonts { }` edit changes the TEXT METRICS every layout stage measures with —
         // an input that lives OUTSIDE every reuse key this session keeps: the per-measure
@@ -442,6 +478,10 @@ public sealed class IncrementalCompiler
             && overridesUnchanged
             && contentKeys.AsSpan().SequenceEqual(_contentKeys.AsSpan());
         MeasureSpringData[] springs;
+        // The shortest duration `springs` is built with. Committed with the vector at the
+        // end (a compile given up between here and there must not leave a shortest that
+        // belongs to no vector: the memo's eligibility compares it).
+        double? shortestOfSprings = _shortest;
         if (sameContentAsLastEdit && _springs != null)
         {
             springs = _springs;
@@ -493,7 +533,7 @@ public sealed class IncrementalCompiler
                 };
             }
             springs = SystemBreaker.ComputeMultiStaffSpringData(score, shortest, memo);
-            _shortest = shortest;
+            shortestOfSprings = shortest;
             LastSpringMemo = (reusedCount, recomputedCount);
         }
         // The break gate's OWN key model — the union of the signatures the staves engrave
@@ -540,6 +580,12 @@ public sealed class IncrementalCompiler
             && globalKey == _globalKey
             && ReuseSafe(_cachedLayout);
 
+        // Sound to stop here: nothing of this compile is committed yet — the springs,
+        // keys, prefixes, line breaks and layout all commit together after the layout —
+        // and the per-system cache's refreshed keys and any entries it stored are
+        // content-addressed and verified on read.
+        Checkpoint(CompileStage.BeforeLayout, token);
+
         ScoreLayout layout;
         if (reuse)
         {
@@ -551,11 +597,11 @@ public sealed class IncrementalCompiler
             // the gate moved there is no cached line-size answer, so the breaker runs its DP
             // and used to rebuild the identical vector to feed it. One quantity, two places
             // (HANDOFF §2 A) — in its perf clothing. The shortest duration rides along for
-            // the same reason (_shortest is the value `springs` was built with: set beside
-            // it in the else branch, and carried when the whole vector was reused — keys
-            // equal ⇒ shortest equal, the ⒟⁗ implication above).
+            // the same reason (shortestOfSprings is the value `springs` was built with: set
+            // beside it in the else branch, and carried when the whole vector was reused —
+            // keys equal ⇒ shortest equal, the ⒟⁗ implication above).
             layout = new LayoutEngine(score.Paper).Layout(
-                score, skip ? _lineBreaks : null, cacheForEdit, springs, _shortest);
+                score, skip ? _lineBreaks : null, cacheForEdit, springs, shortestOfSprings);
             // Reuse the prior table on a gate-skip (still the correct solution — and the
             // engine re-runs its page-scored count loop on it, so an ink-only edit that
             // moves the page score still moves the system count, as a full compile would);
@@ -571,6 +617,7 @@ public sealed class IncrementalCompiler
         // fragments are refreshed EVERY render, the collect recording is not).
         string oldText = _tree.Text;
         _springs = springs;
+        _shortest = shortestOfSprings;
         _firstPrefix = firstPrefix;
         _contPrefix = contPrefix;
         _contentKeys = contentKeys;
@@ -581,6 +628,12 @@ public sealed class IncrementalCompiler
         _tree = tree;
         LastEditSkippedLineBreak = skip;
         LastEditReusedLayout = reuse;
+        // Sound to stop here: the session is now exactly as after a render of this tree
+        // minus the picture. The fragment memo has not begun its pass, so the next
+        // compile replays from the entries of the render before — whose anchors are
+        // offsets in an older text than the window maps, which the anchor check declines
+        // (a conservative miss, never a wrong replay).
+        Checkpoint(CompileStage.BeforeRender, token);
 
         Rendering.Svg.SvgSystemFragmentCache? fragments = null;
         if (reuseEligible)

@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using LilySharp.Core.Svg.Layout;
@@ -126,10 +127,12 @@ internal enum OverlayDrawerId
 /// <para>
 /// STALENESS: slot values are offsets into the text of the render that produced them,
 /// so an entry is replayable ONLY on the immediately following render (the window maps
-/// exactly one text to the next). Every render bumps <see cref="BeginPass"/>'s
-/// generation; replay requires the entry to be from the previous pass and re-stamps it;
-/// a declined or skipped system's entry simply goes stale and the next eligible edit
-/// re-captures it from the live draw.
+/// exactly one text to the next). <see cref="BeginPass"/> makes the previous pass's
+/// table the only source of replays and starts an empty one for this pass; an entry
+/// replayed or re-captured is carried into it under the index it was drawn at, and a
+/// declined or skipped system's entry is simply not carried — the next eligible edit
+/// re-captures it from the live draw. (The overlay entries keep a generation stamp for
+/// the same rule.)
 /// </para>
 /// <para>
 /// OVERLAY ENTRIES (⒭ second slice — the page-level drawers that run AFTER the
@@ -154,6 +157,7 @@ internal sealed class SvgSystemFragmentCache
         public bool HasLeft, HasRight;
         public int MeasureCount, SystemIndex;
         public long GeometryHash;
+        public string GeometryScalars = "";   // the fold spelled out, for a mismatch report
         // The system's source ANCHORS at capture time (see PositionFingerprint):
         // replay demands the live score's anchors equal these mapped through the edit
         // window, or the fragment declines.
@@ -164,7 +168,6 @@ internal sealed class SvgSystemFragmentCache
         public int[] InsertAt = [];
         public int[] Values = [];
         public int[]? Designs;   // Emmentaler designs the capture recorded (usually null)
-        public int Generation;   // pass that produced/last replayed this entry
     }
 
     // Page-level overlay fragments (⒭ second slice): one drawer's output on one page,
@@ -180,7 +183,16 @@ internal sealed class SvgSystemFragmentCache
         public int Generation;
     }
 
-    private readonly Dictionary<int, Entry> _entries = new(); // by SystemIndex
+    // The system entries of the PREVIOUS pass (what this pass may replay from) and of
+    // THIS pass (what it stores and carries forward), each by the system index the entry
+    // was drawn or replayed at. Two dictionaries rather than one with a generation
+    // stamp, because a system may replay from the entry of a NEIGHBOURING index — a
+    // `break` inserted before it moved its number by one — and writing that entry under
+    // its new index must not overwrite the entry the next system is about to look for.
+    // An entry that neither replays nor is re-captured this pass is simply not carried
+    // forward, which is the staleness rule the generation stamp used to enforce.
+    private Dictionary<int, Entry> _previous = new();
+    private Dictionary<int, Entry> _current = new();
     private readonly Dictionary<(OverlayDrawerId Drawer, int Page), OverlayEntry> _overlays = new();
     private ImmutableArray<MeasureContentKey> _keys;
     private int _generation;
@@ -218,6 +230,10 @@ internal sealed class SvgSystemFragmentCache
         _generation++;
         _enabled = false;
         _declinedSystems = null;
+        // This pass replays from what the previous pass left; what it leaves is a
+        // fresh dictionary (see the fields' remark).
+        _previous = _current;
+        _current = new Dictionary<int, Entry>();
     }
 
     /// <summary>
@@ -229,6 +245,7 @@ internal sealed class SvgSystemFragmentCache
     {
         LastPass = (0, 0);
         LastOverlayPass = (0, 0);
+        LastPassDeclines.Clear();
         _enabled = !_keys.IsDefault
             && score.GrobOverrides.IsDefaultOrEmpty
             && score.GrobReverts.IsDefaultOrEmpty
@@ -306,15 +323,12 @@ internal sealed class SvgSystemFragmentCache
     public bool TryReplay(MultiStaffScore score, SystemLayout system,
         SvgDocumentContext host, double pageHeight)
     {
-        if (!_enabled || _declinedSystems?.Contains(system.SystemIndex) == true)
-            return false;
-        if (!_entries.TryGetValue(system.SystemIndex, out var e)
-            || e.Generation != _generation - 1
-            || !_windowValid)
-            return false;
-        if (!KeyMatches(e, system, pageHeight))
-            return false;
-
+        if (!_enabled || _declinedSystems?.Contains(system.SystemIndex) == true || !_windowValid)
+            return Decline(system, !_enabled ? "memo disabled" : !_windowValid ? "no window" : "declined system");
+        // The entry drawn at this index last pass — or, when a system was inserted or
+        // removed before this one, the entry a neighbouring index left: the number is a
+        // stamp (see KeyMatches), so the same music one or two indices away is the same
+        // text. Nearest first; the key check is what certifies the candidate.
         // ⚠️ THE ANCHOR CHECK IS LOAD-BEARING, not belt: content keys deliberately
         // exclude source positions, so "same content keys + same geometry" does NOT
         // imply the live model's positions follow the text window — the session-151
@@ -322,13 +336,39 @@ internal sealed class SvgSystemFragmentCache
         // recovered model converges to the SAME content anchored 2 chars away, where
         // the window shifts by 1. The live anchors must equal the recorded ones mapped
         // through the window, or the recorded slot values are not the live offsets.
+        // ⚠️ AND IT IS PART OF CHOOSING THE CANDIDATE, not a check after: a book of
+        // repeated bars has neighbouring systems with the same keys and the same
+        // geometry, and the one at this index — another system's entry, once a system
+        // was inserted before it — passes the key and fails here; the entry one index
+        // over is the one whose anchors follow (session 330's inserted-system net).
         var liveAnchors = PositionFingerprint(score, system);
-        if (!AnchorsFollowWindow(e.Anchors, liveAnchors))
-            return false;
-
-        // Every slot must map before anything is appended (all-or-nothing).
-        if (!TryMapSlots(e.Values, out var final))
-            return false;
+        Entry? e = null;
+        int foundAt = -1;
+        int[]? final = null;
+        string? nearest = null;
+        foreach (int d in NeighbourOffsets)
+        {
+            int at = system.SystemIndex + d;
+            if (at < 0 || !_previous.TryGetValue(at, out var candidate))
+                continue;
+            string why;
+            if (!KeyMatches(candidate, system, pageHeight, out string mismatch))
+                why = mismatch;
+            else if (!AnchorsFollowWindow(candidate.Anchors, liveAnchors))
+                why = "anchors do not follow the window";
+            // Every slot must map before anything is appended (all-or-nothing).
+            else if (!TryMapSlots(candidate.Values, out final))
+                why = "a slot lies inside the window";
+            else
+            {
+                e = candidate;
+                foundAt = at;
+                break;
+            }
+            nearest = (nearest == null ? "" : nearest + " / ") + "entry " + at + ": " + why;
+        }
+        if (e == null || final == null)
+            return Decline(system, nearest ?? "no entry within " + NeighbourOffsets[^1] + " of this index");
 
         AppendFragment(host.CurrentContent!, e.Text, e.InsertAt, final);
 
@@ -345,9 +385,27 @@ internal sealed class SvgSystemFragmentCache
         // live model had drifted. The live vector IS the mapped vector here (the loop
         // above proved them equal), so it is stored as-is.
         e.Anchors = liveAnchors;
-        e.Generation = _generation;
+        // Carried forward under the index it was replayed at; taken out of the previous
+        // pass's table so no second system can replay the same entry.
+        e.SystemIndex = system.SystemIndex;
+        _previous.Remove(foundAt);
+        _current[system.SystemIndex] = e;
         LastPass = (LastPass.Replayed + 1, LastPass.Drawn);
         return true;
+    }
+
+    // Where a system's entry may sit in the previous pass's table, nearest first: its
+    // own index, then one either side (a system inserted or removed before it), then two.
+    private static readonly int[] NeighbourOffsets = [0, -1, 1, -2, 2];
+
+    /// <summary>Why each system of the most recent pass did NOT replay, by system index —
+    /// the memo's own account, for the nets and the output channel. Cleared per pass.</summary>
+    internal List<(int SystemIndex, string Reason)> LastPassDeclines { get; } = new();
+
+    private bool Decline(SystemLayout system, string reason)
+    {
+        LastPassDeclines.Add((system.SystemIndex, reason));
+        return false;
     }
 
     /// <summary>The recorded source anchors, mapped through the edit window, must equal
@@ -541,7 +599,7 @@ internal sealed class SvgSystemFragmentCache
         if (!TrySplit(fragment, log, out var text, out var insertAt, out var values))
             return; // decline: the next edit draws this system live
 
-        _entries[system.SystemIndex] = new Entry
+        _current[system.SystemIndex] = new Entry
         {
             Slice = SliceFor(system, out bool hasLeft, out bool hasRight),
             HasLeft = hasLeft,
@@ -549,12 +607,12 @@ internal sealed class SvgSystemFragmentCache
             MeasureCount = system.Measures.Length,
             SystemIndex = system.SystemIndex,
             GeometryHash = HashGeometry(system, pageHeight),
+            GeometryScalars = GeometryScalars(system, pageHeight),
             Anchors = PositionFingerprint(score, system),
             Text = text,
             InsertAt = insertAt,
             Values = values,
             Designs = designs.Count > 0 ? [.. designs] : null,
-            Generation = _generation,
         };
     }
 
@@ -606,27 +664,56 @@ internal sealed class SvgSystemFragmentCache
         return [.. anchors];
     }
 
-    private bool KeyMatches(Entry e, SystemLayout system, double pageHeight)
+    // ⚠️ NOT the first measure's NUMBER. It used to be compared here (and every
+    // measure's number was folded into the geometry hash), and that made a bar
+    // inserted or deleted before the system a guaranteed miss for every later system
+    // — the same trap SystemLayoutCache fell into (session 330). The number is a
+    // stamp: nothing DrawSystem emits is a function of it — the content it selects is
+    // certified by the slice, the offsets by the anchors, the picture by the geometry
+    // fold — so a system found under other numbers is the same text. The count
+    // stays (it bounds the slice). The SYSTEM index is a stamp too, since the second
+    // half of session 330: DrawSystem reads it only as "is this the first system"
+    // (the prefix, the instrument names — SharedRenderer.Prefix / Noteheads), so
+    // that one bit is compared and the number is not; TryReplay looks one or two
+    // indices either side for the entry a `break` inserted before this system moved.
+    // The mismatch names the first check that failed, for LastPassDeclines.
+    private bool KeyMatches(Entry e, SystemLayout system, double pageHeight, out string mismatch)
     {
-        // ⚠️ NOT the first measure's NUMBER. It used to be compared here (and every
-        // measure's number was folded into the geometry hash), and that made a bar
-        // inserted or deleted before the system a guaranteed miss for every later system
-        // — the same trap SystemLayoutCache fell into (session 330). The number is a
-        // stamp: nothing DrawSystem emits is a function of it — the content it selects is
-        // certified by the slice, the offsets by the anchors, the picture by the geometry
-        // fold — so a system found under other numbers is the same text. The count and
-        // the system index stay: the count bounds the slice, and the index is emitted
-        // nowhere either but pins the entry's slot.
-        if (e.MeasureCount != system.Measures.Length
-            || e.SystemIndex != system.SystemIndex)
-            return false;
+        mismatch = "";
+        if (e.MeasureCount != system.Measures.Length) { mismatch = "measure count"; return false; }
+        if ((e.SystemIndex == 0) != (system.SystemIndex == 0)) { mismatch = "first-system bit"; return false; }
         var slice = SliceFor(system, out bool hasLeft, out bool hasRight);
         if (e.HasLeft != hasLeft || e.HasRight != hasRight || e.Slice.Length != slice.Length)
-            return false;
+        { mismatch = "slice shape"; return false; }
         for (int i = 0; i < slice.Length; i++)
-            if (e.Slice[i] != slice[i])
-                return false;
-        return e.GeometryHash == HashGeometry(system, pageHeight);
+            if (e.Slice[i] != slice[i]) { mismatch = "slice key " + i; return false; }
+        if (e.GeometryHash != HashGeometry(system, pageHeight))
+        {
+            mismatch = "geometry: entry " + e.GeometryScalars + " vs live " + GeometryScalars(system, pageHeight);
+            return false;
+        }
+        return true;
+    }
+
+    // The scalar half of the geometry fold spelled out, for a mismatch report.
+    private static string GeometryScalars(SystemLayout system, double pageHeight)
+    {
+        var sb = new StringBuilder();
+        sb.Append(CultureInfo.InvariantCulture,
+            $"[first={system.SystemIndex == 0} Y={system.Y} W={system.Width} P={system.PrefixWidth} I={system.Indent} H={pageHeight} measures=");
+        foreach (var m in system.Measures)
+            sb.Append(CultureInfo.InvariantCulture, $"({m.X},{m.Width},{m.Items.Length}/{m.Columns.Length})");
+        sb.Append(" groups=");
+        if (!system.StaffGroups.IsDefaultOrEmpty)
+            foreach (var g in system.StaffGroups)
+            {
+                sb.Append(CultureInfo.InvariantCulture, $"[{g.Type} Y={g.Y} H={g.Height}");
+                foreach (var st in g.Staves)
+                    sb.Append(CultureInfo.InvariantCulture, $" s{st.StaffIndex}:Y={st.Y},H={st.Height},hid={st.IsHidden}");
+                sb.Append(']');
+            }
+        sb.Append(']');
+        return sb.ToString();
     }
 
     private ImmutableArray<MeasureContentKey> SliceFor(
@@ -652,7 +739,7 @@ internal sealed class SvgSystemFragmentCache
     private static long HashGeometry(SystemLayout system, double pageHeight)
     {
         var hc = new MeasureContentKey.Hash64();
-        hc.Add(system.SystemIndex);
+        hc.Add(system.SystemIndex == 0);   // the one bit of the index DrawSystem reads
         hc.Add(system.Y);
         hc.Add(system.Width);
         hc.Add(system.PrefixWidth);

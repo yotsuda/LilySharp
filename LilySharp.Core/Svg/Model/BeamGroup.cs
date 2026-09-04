@@ -440,6 +440,14 @@ public sealed record BeamLayout
         => new(Group.WithMeasureIndexShifted(delta), LeftY, RightY, LeftX, RightX,
             MemberXPositions, StaffIndex, SystemIndex, MemberStaffIndices, RestXPositions);
 
+    /// <summary>The same laid-out beam attributed to another system — the stamp
+    /// <see cref="SystemIndex"/> moved by <paramref name="delta"/>, nothing else (the X
+    /// positions are in the system's own frame, which is the same frame under either
+    /// number). The system-count twin of <see cref="WithMeasureIndicesShifted"/>.</summary>
+    internal BeamLayout WithSystemIndexShifted(int delta)
+        => new(Group, LeftY, RightY, LeftX, RightX,
+            MemberXPositions, StaffIndex, SystemIndex + delta, MemberStaffIndices, RestXPositions);
+
     /// <summary>Gets the slope of the beam (rise per unit run).</summary>
     public double Slope => (RightX - LeftX) > 0.001
         ? (RightY - LeftY) / (RightX - LeftX)

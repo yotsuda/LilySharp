@@ -84,12 +84,17 @@ internal sealed class SystemLayoutCache
     private ImmutableArray<MeasureContentKey> _keys;
     // One shift function per store: where that store's absolute measure stamps live
     // (see the class remarks). `Unstamped` is the identity — the value carries none.
+    // ...and, for the three per-(staff, system) stores, a second one for the SYSTEM
+    // stamp: a bar inserted with a `break` before a system moves its number by one
+    // while its measures and its music stay. Only a beam carries that number
+    // (BeamLayout.SystemIndex); a tie or slur is drawn in the staff's within-system
+    // frame and carries none, so its shift is the identity.
     private readonly TypedCache<ImmutableArray<MeasureLayout>> _measures = new(ShiftMeasures);
     private readonly TypedCache<(VerticalSkyline up, VerticalSkyline down)> _skylines = new(Unstamped);
     private readonly TypedCache<MultiStaffLayouter.StaffSkylineSet> _staffSkylines = new(ShiftStaffSkylines);
-    private readonly TypedCache<ImmutableArray<BeamLayout>> _staffSystemBeams = new(ShiftBeams);
-    private readonly TypedCache<ImmutableArray<TieLayout>> _staffSystemTies = new(ShiftTies);
-    private readonly TypedCache<ImmutableArray<SlurLayout>> _staffSystemSlurs = new(ShiftSlurs);
+    private readonly TypedCache<ImmutableArray<BeamLayout>> _staffSystemBeams = new(ShiftBeams, ShiftBeamSystems);
+    private readonly TypedCache<ImmutableArray<TieLayout>> _staffSystemTies = new(ShiftTies, Unstamped);
+    private readonly TypedCache<ImmutableArray<SlurLayout>> _staffSystemSlurs = new(ShiftSlurs, Unstamped);
     private readonly TypedCache<LayoutEngine.LooseBlockProfiles> _lyricBands = new(Unstamped);
     private readonly TypedCache<IReadOnlyList<MultiStaffLayouter.PairLooseLine>?> _looseLines = new(Unstamped);
 
@@ -395,11 +400,12 @@ internal sealed class SystemLayoutCache
     /// computes (via <c>MultiStaffLayouter.StaffBeamLayouts</c>), and the same one the
     /// edge-beam lambda in <c>LayoutEngine</c> relies on.
     /// <list type="bullet">
-    /// <item><paramref name="systemIndex"/> is in the key because <see cref="BeamLayout"/>
-    /// stamps <c>SystemIndex</c> — an absolute stamp must not survive a reuse under a
-    /// different absolute. (The measure stamps get the shifted-hit treatment the class
-    /// remarks describe; the system stamp does not — a system index moves only when the
-    /// break moved, and then the slice has usually moved with it.)</item>
+    /// <item><paramref name="systemIndex"/> is a STAMP like firstMeasureIndex, not an input:
+    /// <see cref="BeamLayout"/> carries <c>SystemIndex</c>, and a hit found under another
+    /// system number is served re-stamped (<c>ShiftBeamSystems</c>) — a `break` inserted
+    /// before the system moves every later system's number while their music and
+    /// measures stay (session 330: the beams, ties and slurs of a 3-page book all missed on
+    /// such a keystroke while the measures and skylines shifted fine).</item>
     /// <item><paramref name="staffIndex"/> is in the key because the value is one staff's
     /// beams and the stamp rides in <c>BeamLayout.StaffIndex</c>.</item>
     /// <item>⚠️ A group whose members CROSS a system boundary must never be memoized here:
@@ -415,8 +421,8 @@ internal sealed class SystemLayoutCache
         double indent, double commonShortestDuration,
         Func<ImmutableArray<BeamLayout>> compute)
         => _staffSystemBeams.GetOrCompute(_keys, firstMeasureIndex, measureCount, isFirstSystem,
-            isLastSystem, indent, commonShortestDuration, extra: systemIndex,
-            compute, out _, extra2: staffIndex);
+            isLastSystem, indent, commonShortestDuration, extra: 0,
+            compute, out _, extra2: staffIndex, systemIndex: systemIndex);
 
     /// <summary>Reuses or computes ONE staff's laid-out TIES for ONE system — keyed like
     /// <see cref="GetOrComputeStaffSystemBeams"/> and standing on the same claim, extended
@@ -442,8 +448,8 @@ internal sealed class SystemLayoutCache
         Func<ImmutableArray<TieLayout>> compute)
     {
         var result = _staffSystemTies.GetOrCompute(_keys, firstMeasureIndex, measureCount,
-            isFirstSystem, isLastSystem, indent, commonShortestDuration, extra: systemIndex,
-            compute, out bool hit, extra2: staffIndex);
+            isFirstSystem, isLastSystem, indent, commonShortestDuration, extra: 0,
+            compute, out bool hit, extra2: staffIndex, systemIndex: systemIndex);
         BowMemoStats = hit
             ? (BowMemoStats.Hits + 1, BowMemoStats.Misses)
             : (BowMemoStats.Hits, BowMemoStats.Misses + 1);
@@ -461,8 +467,8 @@ internal sealed class SystemLayoutCache
         Func<ImmutableArray<SlurLayout>> compute)
     {
         var result = _staffSystemSlurs.GetOrCompute(_keys, firstMeasureIndex, measureCount,
-            isFirstSystem, isLastSystem, indent, commonShortestDuration, extra: systemIndex,
-            compute, out bool hit, extra2: staffIndex);
+            isFirstSystem, isLastSystem, indent, commonShortestDuration, extra: 0,
+            compute, out bool hit, extra2: staffIndex, systemIndex: systemIndex);
         BowMemoStats = hit
             ? (BowMemoStats.Hits + 1, BowMemoStats.Misses)
             : (BowMemoStats.Hits, BowMemoStats.Misses + 1);
@@ -569,6 +575,15 @@ internal sealed class SystemLayoutCache
         return b.MoveToImmutable();
     }
 
+    private static ImmutableArray<BeamLayout> ShiftBeamSystems(ImmutableArray<BeamLayout> v, int delta)
+    {
+        if (v.IsDefaultOrEmpty) return v;
+        var b = ImmutableArray.CreateBuilder<BeamLayout>(v.Length);
+        foreach (var beam in v)
+            b.Add(beam.WithSystemIndexShifted(delta));
+        return b.MoveToImmutable();
+    }
+
     // The room's per-staff skylines are pure geometry in the staff's own frame and are
     // SHARED with the entry they were found under (read-only by contract — see
     // GetOrComputeStaffSkylines). The spanners and the pedal lines carry measures.
@@ -623,7 +638,7 @@ internal sealed class SystemLayoutCache
     {
         private sealed class Entry
         {
-            public readonly int First, Count;
+            public readonly int First, Count, System;
             public readonly bool IsFirst, IsLast;
             public readonly double Indent, Shortest, Extra, Extra2;
             public readonly ImmutableArray<MeasureContentKey> Content;
@@ -633,11 +648,11 @@ internal sealed class SystemLayoutCache
             /// or hit this entry — current-pass entries are exempt from eviction.</summary>
             public int Generation;
 
-            public Entry(int first, int count, bool isFirst, bool isLast, double indent,
+            public Entry(int first, int count, int system, bool isFirst, bool isLast, double indent,
                 double shortest, double extra, double extra2,
                 ImmutableArray<MeasureContentKey> content, T value, int generation)
             {
-                First = first; Count = count; IsFirst = isFirst; IsLast = isLast;
+                First = first; Count = count; System = system; IsFirst = isFirst; IsLast = isLast;
                 Indent = indent; Shortest = shortest; Extra = extra; Extra2 = extra2;
                 Content = content; Value = value;
                 Generation = generation;
@@ -665,7 +680,14 @@ internal sealed class SystemLayoutCache
         /// difference (new − stored). Identity for a store whose values carry no stamp.</summary>
         private readonly Func<T, int, T> _shift;
 
-        public TypedCache(Func<T, int, T> shift) => _shift = shift;
+        /// <summary>The same for the SYSTEM stamp (the three per-(staff, system) stores).</summary>
+        private readonly Func<T, int, T> _shiftSystem;
+
+        public TypedCache(Func<T, int, T> shift, Func<T, int, T>? shiftSystem = null)
+        {
+            _shift = shift;
+            _shiftSystem = shiftSystem ?? Unstamped<T>;
+        }
 
         /// <summary>This pass's lookups by outcome — reset at <see cref="NextGeneration"/>.</summary>
         public MemoCounters Pass { get; private set; }
@@ -698,7 +720,7 @@ internal sealed class SystemLayoutCache
 
         public T GetOrCompute(ImmutableArray<MeasureContentKey> keys,
             int first, int count, bool isFirst, bool isLast, double indent, double shortest,
-            double extra, Func<T> compute, out bool hit, double extra2 = 0)
+            double extra, Func<T> compute, out bool hit, double extra2 = 0, int systemIndex = 0)
         {
             if (keys.IsDefault || first < 0 || first + count > keys.Length)
             {
@@ -731,15 +753,15 @@ internal sealed class SystemLayoutCache
                 {
                     if (!e.MatchesContent(count, isFirst, isLast, indent, shortest, extra, extra2, slice))
                         continue;
-                    if (e.First == first)
+                    if (e.First == first && e.System == systemIndex)
                     {
                         e.Generation = _generation; // live this pass -> eviction-exempt
                         Pass = Pass.WithHit();
                         hit = true;
                         return e.Value;
                     }
-                    // The same computation under other measure numbers. Keep looking for
-                    // an exact entry (no re-stamp at all); fall back to this one.
+                    // The same computation under other measure (or system) numbers. Keep
+                    // looking for an exact entry (no re-stamp at all); fall back to this one.
                     shiftable ??= e;
                 }
             }
@@ -752,7 +774,11 @@ internal sealed class SystemLayoutCache
             T value;
             if (shiftable != null)
             {
-                value = _shift(shiftable.Value, first - shiftable.First);
+                value = shiftable.Value;
+                if (first != shiftable.First)
+                    value = _shift(value, first - shiftable.First);
+                if (systemIndex != shiftable.System)
+                    value = _shiftSystem(value, systemIndex - shiftable.System);
                 Pass = Pass.WithShiftedHit();
                 hit = true;
             }
@@ -767,7 +793,7 @@ internal sealed class SystemLayoutCache
             // the reference-keyed memos downstream (LyricChainMemo, VerseSkylineMemo, the
             // paging augment) need to hit at all. The content slice is shared with the entry
             // it came from — an ImmutableArray, so sharing is free.
-            var entry = new Entry(first, count, isFirst, isLast, indent, shortest, extra, extra2,
+            var entry = new Entry(first, count, systemIndex, isFirst, isLast, indent, shortest, extra, extra2,
                 shiftable?.Content ?? ImmutableArray.Create(keys, first, count), value, _generation);
             list.Add(entry);
             _insertionOrder.Enqueue((bucketKey, entry));

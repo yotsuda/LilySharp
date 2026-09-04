@@ -1145,6 +1145,78 @@ public class IncrementalCompilerTests
     }
 
     /// <summary>
+    /// A `break` inserted into the first system SPLITS it: every later system keeps its
+    /// measures and its music but is one system number further on. The measures and
+    /// skylines never keyed on that number; the beams, ties and slurs did (the number is a
+    /// stamp on a beam), and the fragment memo keyed its entries by it — so on such a
+    /// keystroke the three bow/beam stores and every fragment missed for the whole tail
+    /// (session 330, the x7 round of the bench). Now the stores serve them re-stamped and
+    /// the fragments are found one index over; the SVG equals a full interactive render.
+    /// </summary>
+    [Fact]
+    public void LayoutMemo_AnInsertedSystem_ReStampsTheShiftedSystems_AndReplaysTheirFragments()
+    {
+        var interactive = new SvgRenderOptions { EmbedFont = false, Interactive = true };
+        string src = PinnedSystemsBook();
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, interactive);
+        session.Render();
+
+        var change = Replace(src, "c'8~ c' b a g f e d |", "c'8~ c' b a g f e d | break"); // system 0 splits
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(
+            Norm(SvgGenerator.Generate(SyntaxTree.Parse(tree.WithChange(change).Text), interactive)),
+            incremental);
+        var cache = session.SystemCache!;
+        // Seven systems now: the two halves of the old first system compute, the five
+        // later ones are found under their old system number and re-stamped.
+        foreach (var store in new[] { SystemLayoutCache.Store.StaffSystemBeams,
+                     SystemLayoutCache.Store.StaffSystemTies, SystemLayoutCache.Store.StaffSystemSlurs })
+        {
+            var c = cache.PassCounters(store);
+            Assert.True(c.ShiftedHits >= 5,
+                $"{store}: the five later systems should be found under their old number (hits {c.Hits}, shifted {c.ShiftedHits}, misses {c.Misses})");
+        }
+        var (replayed, drawn) = session.LastRenderFragments;
+        Assert.True(replayed == 5 && drawn == 2,
+            $"the five later systems should replay from one index over and the two halves draw: replayed {replayed} / drawn {drawn}; "
+            + string.Join("; ", session.FragmentsForTest!.LastPassDeclines.Select(d => $"system {d.SystemIndex}: {d.Reason}")));
+    }
+
+    /// <summary>
+    /// A compile given up at any of its stage boundaries leaves the session sound: the
+    /// next compile — of the same edited text, then of a further edit — equals a full
+    /// compile byte for byte. The preview cancels a render the moment a newer keystroke
+    /// arrives, so every boundary is a state the session must be able to continue from.
+    /// The stage is chosen through the test seam, not by timing.
+    /// </summary>
+    [Theory]
+    [InlineData(0)]   // Collected
+    [InlineData(1)]   // BeforeLayout
+    [InlineData(2)]   // BeforeRender
+    public void ACompileGivenUpAtAStageBoundary_LeavesTheSessionSound(int stageNumber)
+    {
+        var stage = (IncrementalCompiler.CompileStage)stageNumber;
+        string src = PinnedSystemsBook();
+        var session = new IncrementalCompiler(SyntaxTree.Parse(src), Opt);
+        session.Render();
+
+        // An edit that moves the springs, the breaks and the layout (a bar inserted).
+        string edited = ApplyFirst(src, "c'8~ c' b a g f e d |", "c'8~ c' b a g f e d | c4 d e f |");
+        using var cts = new System.Threading.CancellationTokenSource();
+        session.StageProbe = s => { if (s == stage) cts.Cancel(); };
+        Assert.Throws<System.OperationCanceledException>(
+            () => session.RenderIncremental(SyntaxTree.Parse(edited), cts.Token));
+        session.StageProbe = null;
+
+        // The same text again, then a further edit: both equal a full compile.
+        Assert.Equal(Full(edited), Norm(session.RenderIncremental(SyntaxTree.Parse(edited))));
+        string further = ApplyFirst(edited, "a g f e |", "a gis f e |");
+        Assert.Equal(Full(further), Norm(session.RenderIncremental(SyntaxTree.Parse(further))));
+    }
+
+    /// <summary>
     /// The LEFT-neighbour window is load-bearing: a multi-measure-rest run whose opening
     /// measure declares no start bar line prices its run rod from the PREVIOUS measure's
     /// end bar line (SpacingRules.RunLeftBoundBarline) — a spring input that lives in key
