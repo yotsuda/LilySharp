@@ -36,16 +36,60 @@ namespace LilySharp.Tests;
 /// </remarks>
 internal static class StaffLineGeometry
 {
+    // The elements this instrument reads, with the groups around them: the preview's SVG
+    // draws each system in its own frame — a <g transform="translate(0,Y) …"> around it
+    // (IDocumentContext.SystemLocalFrames) — so a line's or a text's y is page-down only
+    // after the translates of the groups it sits in are added. Static export has no such
+    // groups and reads as before.
+    private static readonly Regex Token = new(
+        "<g\\b[^>]*>|</g>|<line [^>]*>|<text[^>]*>[^<]*</text>", RegexOptions.Compiled);
+    private static readonly Regex TranslateY = new(
+        "transform=\"translate\\(-?[0-9.]+,(-?[0-9.]+)\\)", RegexOptions.Compiled);
+
+    /// <summary>Every line and text element of the page with the Y translation of the
+    /// groups enclosing it, in document order.</summary>
+    private static IEnumerable<(string Element, double Dy)> Elements(string svg)
+    {
+        var frames = new Stack<double>();
+        frames.Push(0);
+        foreach (Match t in Token.Matches(svg))
+        {
+            string s = t.Value;
+            if (s.StartsWith("</g", System.StringComparison.Ordinal))
+            {
+                if (frames.Count > 1) frames.Pop();
+                continue;
+            }
+            if (s.StartsWith("<g", System.StringComparison.Ordinal))
+            {
+                double dy = frames.Peek();
+                var tm = TranslateY.Match(s);
+                if (tm.Success)
+                    dy += double.Parse(tm.Groups[1].Value, CultureInfo.InvariantCulture);
+                frames.Push(dy);
+                continue;
+            }
+            yield return (s, frames.Peek());
+        }
+    }
+
+    private static readonly Regex Line = new(
+        "<line x1=\"(-?[0-9.]+)\" y1=\"(-?[0-9.]+)\" x2=\"(-?[0-9.]+)\" y2=\"(-?[0-9.]+)\"",
+        RegexOptions.Compiled);
+    private static readonly Regex Text = new(
+        "<text[^>]*\\sy=\"(-?[0-9.]+)\"[^>]*>([^<]+)</text>", RegexOptions.Compiled);
+
     /// <summary>Every staff's (top line, bottom line), in page order.</summary>
     internal static List<(double Top, double Bottom)> Staves(string svg)
     {
-        var ys = Regex.Matches(svg,
-                "<line x1=\"(-?[0-9.]+)\" y1=\"(-?[0-9.]+)\" x2=\"(-?[0-9.]+)\" y2=\"(-?[0-9.]+)\"")
-            .Select(m => (
-                X1: double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture),
-                Y1: double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture),
-                X2: double.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture),
-                Y2: double.Parse(m.Groups[4].Value, CultureInfo.InvariantCulture)))
+        var ys = Elements(svg)
+            .Select(e => (Match: Line.Match(e.Element), e.Dy))
+            .Where(e => e.Match.Success)
+            .Select(e => (
+                X1: double.Parse(e.Match.Groups[1].Value, CultureInfo.InvariantCulture),
+                Y1: double.Parse(e.Match.Groups[2].Value, CultureInfo.InvariantCulture) + e.Dy,
+                X2: double.Parse(e.Match.Groups[3].Value, CultureInfo.InvariantCulture),
+                Y2: double.Parse(e.Match.Groups[4].Value, CultureInfo.InvariantCulture) + e.Dy))
             .Where(l => l.Y1 == l.Y2 && l.X2 - l.X1 > 20)
             .Select(l => l.Y1)
             .Distinct().OrderBy(y => y).ToList();
@@ -71,9 +115,10 @@ internal static class StaffLineGeometry
     /// no font metric enters this reading and it is comparable across platforms.
     /// </remarks>
     internal static List<double> Baselines(string svg, double above, double below)
-        => Regex.Matches(svg, "<text[^>]*\\sy=\"(-?[0-9.]+)\"[^>]*>([^<]+)</text>")
-            .Where(m => Regex.IsMatch(m.Groups[2].Value, "[A-Za-z]"))
-            .Select(m => double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture))
+        => Elements(svg)
+            .Select(e => (Match: Text.Match(e.Element), e.Dy))
+            .Where(e => e.Match.Success && Regex.IsMatch(e.Match.Groups[2].Value, "[A-Za-z]"))
+            .Select(e => double.Parse(e.Match.Groups[1].Value, CultureInfo.InvariantCulture) + e.Dy)
             .Where(y => y > above && y < below)
             .Distinct().OrderBy(y => y).ToList();
 

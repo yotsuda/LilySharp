@@ -71,7 +71,12 @@ internal enum OverlayDrawerId
 /// heights, hidden flags, delimiter box) and the page height (the Y-flip bakes it into
 /// every emitted Y) — are folded by VALUE into <see cref="Entry.GeometryHash"/>. A 64-bit
 /// FNV fold decides equality, the same bound <see cref="MeasureContentKey"/> already
-/// accepts for reuse (~2⁻⁶⁴ per differing leaf).</item>
+/// accepts for reuse (~2⁻⁶⁴ per differing leaf). NOT the measure NUMBERS: they select
+/// content the slice certifies and are emitted nowhere, and folding them made a bar
+/// inserted before a system a guaranteed miss for every later system (session 330 —
+/// see KeyMatches). In the preview's system-local frames
+/// (<see cref="IDocumentContext.SystemLocalFrames"/>) system.Y is a constant too, which
+/// is what lets a system that moved down the page replay.</item>
 /// <item>PER-ITEM LAYOUT answers (VoiceOffsets / HeadWipes / DotAdjustments /
 /// RestShifts / RestDotOffsets) are keyed by (measure, voice, item) and are functions
 /// of the measures at that index — folded by the content keys.</item>
@@ -147,7 +152,7 @@ internal sealed class SvgSystemFragmentCache
         // Key.
         public ImmutableArray<MeasureContentKey> Slice; // [first-1 .. last+1] as present
         public bool HasLeft, HasRight;
-        public int FirstMeasureIndex, MeasureCount, SystemIndex;
+        public int MeasureCount, SystemIndex;
         public long GeometryHash;
         // The system's source ANCHORS at capture time (see PositionFingerprint):
         // replay demands the live score's anchors equal these mapped through the edit
@@ -541,7 +546,6 @@ internal sealed class SvgSystemFragmentCache
             Slice = SliceFor(system, out bool hasLeft, out bool hasRight),
             HasLeft = hasLeft,
             HasRight = hasRight,
-            FirstMeasureIndex = system.Measures[0].MeasureIndex,
             MeasureCount = system.Measures.Length,
             SystemIndex = system.SystemIndex,
             GeometryHash = HashGeometry(system, pageHeight),
@@ -604,8 +608,16 @@ internal sealed class SvgSystemFragmentCache
 
     private bool KeyMatches(Entry e, SystemLayout system, double pageHeight)
     {
-        if (e.FirstMeasureIndex != system.Measures[0].MeasureIndex
-            || e.MeasureCount != system.Measures.Length
+        // ⚠️ NOT the first measure's NUMBER. It used to be compared here (and every
+        // measure's number was folded into the geometry hash), and that made a bar
+        // inserted or deleted before the system a guaranteed miss for every later system
+        // — the same trap SystemLayoutCache fell into (session 330). The number is a
+        // stamp: nothing DrawSystem emits is a function of it — the content it selects is
+        // certified by the slice, the offsets by the anchors, the picture by the geometry
+        // fold — so a system found under other numbers is the same text. The count and
+        // the system index stay: the count bounds the slice, and the index is emitted
+        // nowhere either but pins the entry's slot.
+        if (e.MeasureCount != system.Measures.Length
             || e.SystemIndex != system.SystemIndex)
             return false;
         var slice = SliceFor(system, out bool hasLeft, out bool hasRight);
@@ -633,6 +645,10 @@ internal sealed class SvgSystemFragmentCache
     }
 
     // Folds every geometry value DrawSystem reads (see the class remarks' inventory).
+    // Not the measure NUMBERS (see KeyMatches). system.Y is folded because in page
+    // coordinates every emitted Y carries it; in a system-local frame
+    // (IDocumentContext.SystemLocalFrames) the renderer hands every system the same Y,
+    // and the fold sees a constant — which is exactly what lets a moved system replay.
     private static long HashGeometry(SystemLayout system, double pageHeight)
     {
         var hc = new MeasureContentKey.Hash64();
@@ -644,7 +660,6 @@ internal sealed class SvgSystemFragmentCache
         hc.Add(pageHeight);
         foreach (var m in system.Measures)
         {
-            hc.Add(m.MeasureIndex);
             hc.Add(m.X);
             hc.Add(m.Width);
             foreach (var item in m.Items)

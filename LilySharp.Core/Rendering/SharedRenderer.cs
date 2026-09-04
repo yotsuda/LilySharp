@@ -142,15 +142,38 @@ internal static partial class SharedRenderer
                 // the preview swaps the one group an edit changed instead of the page.
                 // The group sits OUTSIDE the fragment memo's capture, so a replayed system
                 // and a drawn one are wrapped alike.
+                //
+                // And, where the document asks for it (IDocumentContext.SystemLocalFrames —
+                // the interactive preview), each system is drawn in its OWN frame: the
+                // SystemLayout it is drawn from has its top at the page's Y-up origin
+                // (Y = page.Height, so every device Y DrawSystem emits is the distance
+                // below the system's top) and a translate group — also outside the
+                // capture — carries it to where it sits. DrawSystem derives every Y it
+                // draws from system.Y (StaffTopYUp / FindStaffYInSystem / SystemTopYUp)
+                // and the page height it flips against, and nothing else about the page,
+                // so the two spellings draw the same picture; the ossia groups' own
+                // flip-conjugated transforms compose with this one the way they compose
+                // with the margin's. What differs is the TEXT: a system that moved down
+                // the page is the same bytes under a new transform, so the fragment memo
+                // replays it (the geometry fold sees Y = page.Height on every system) and
+                // the preview re-attributes the group instead of parsing it again.
+                bool localFrames = doc.SystemLocalFrames;
                 foreach (var system in page.Systems)
                 {
                     using var systemGroup = gc.BeginLabeledGroup("system");
-                    if (fragHost != null && fragments!.TryReplay(score, system, fragHost, page.Height))
+                    // Y-up translate: the local frame sits at the page top (Y-up
+                    // page.Height); the real one at system.Y — move it DOWN by the
+                    // difference (the flip decorator conjugates this into device space).
+                    using var localFrame = localFrames
+                        ? gc.BeginGroup(DrawingTransform.Translate(0, system.Y - page.Height))
+                        : null;
+                    var drawn = localFrames ? system with { Y = page.Height } : system;
+                    if (fragHost != null && fragments!.TryReplay(score, drawn, fragHost, page.Height))
                         continue;
                     using (fragHost != null
-                        ? fragments!.BeginCapture(score, system, fragHost, page.Height)
+                        ? fragments!.BeginCapture(score, drawn, fragHost, page.Height)
                         : null)
-                        DrawSystem(score, layout, system, resolver, beamedItems, gc, page.Height);
+                        DrawSystem(score, layout, drawn, resolver, beamedItems, gc, page.Height);
                 }
                 using var overlayGroup = gc.BeginLabeledGroup("overlay");
                 // Page-level overlays that span systems. The Y-anchor map is

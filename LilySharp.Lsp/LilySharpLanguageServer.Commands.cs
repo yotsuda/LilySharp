@@ -306,11 +306,15 @@ public sealed partial class LilySharpLanguageServer
     [JsonRpcMethod("lilysharp/svg", UseSingleObjectParameterDeserialization = true)]
     public Task<SvgResponse> GetSvgAsync(SvgParams @params, CancellationToken token)
     {
+        // The clock starts here, ON the dispatch thread: everything after this line is
+        // the server's own time, everything before it is transport or the dispatch loop.
+        var receipt = SvgReceipt.Now();
+        NoteSvgActivity();
         // The ticket is taken here, ON the dispatch thread, before the work races onto
         // the thread pool: arrival order alone decides which request is newest.
         var slot = SvgSlotFor(@params.TextDocument.Uri, @params.RenderName);
         int ticket = System.Threading.Interlocked.Increment(ref slot.LatestTicket);
-        return Task.Run(() => GetSvg(@params, slot, ticket, token), token);
+        return Task.Run(() => GetSvg(@params, slot, ticket, token, receipt), token);
     }
 
     /// <summary>Direct entry (tests, in-process callers): a fresh newest ticket, no
@@ -319,7 +323,59 @@ public sealed partial class LilySharpLanguageServer
     {
         var slot = SvgSlotFor(@params.TextDocument.Uri, @params.RenderName);
         return GetSvg(@params, slot,
-            System.Threading.Interlocked.Increment(ref slot.LatestTicket), CancellationToken.None);
+            System.Threading.Interlocked.Increment(ref slot.LatestTicket), CancellationToken.None,
+            SvgReceipt.Now());
+    }
+
+    /// <summary>When a lilysharp/svg request reached the dispatch thread — the origin
+    /// of every duration in <see cref="SvgTiming"/>.</summary>
+    internal readonly record struct SvgReceipt(long Timestamp, long UnixMs)
+    {
+        public static SvgReceipt Now() => new(
+            System.Diagnostics.Stopwatch.GetTimestamp(),
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+        public double MsSince(long timestamp)
+            => System.Diagnostics.Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
+    }
+
+    /// <summary>Duration of the most recent diagnostics run (see
+    /// <see cref="SvgTiming.DiagnosticsLastMs"/>); written by PublishDiagnostics.</summary>
+    private static double _lastDiagnosticsMs;
+
+    /// <summary>Duration of the most recent didChange handler on the dispatch thread
+    /// (see <see cref="SvgTiming.LastDidChangeMs"/>).</summary>
+    private static double _lastDidChangeMs;
+
+    /// <summary>Stopwatch timestamp of the most recent svg activity — a request received
+    /// or a response handed back — for the diagnostics pass to yield to
+    /// (<see cref="SvgQuietMs"/>). 0 until the first request.</summary>
+    private static long _lastSvgActivity;
+
+    /// <summary>How long after the last svg activity the diagnostics pass may start.</summary>
+    private const int SvgQuietMs = 300;
+
+    private static void NoteSvgActivity()
+        => System.Threading.Volatile.Write(ref _lastSvgActivity, System.Diagnostics.Stopwatch.GetTimestamp());
+
+    /// <summary>Milliseconds since the last svg activity (infinite before the first).</summary>
+    private static double SvgActivityAgeMs()
+    {
+        long at = System.Threading.Volatile.Read(ref _lastSvgActivity);
+        return at == 0 ? double.PositiveInfinity
+            : System.Diagnostics.Stopwatch.GetElapsedTime(at).TotalMilliseconds;
+    }
+
+    private SvgResponse WithTiming(SvgResponse response, SvgTiming timing, SvgReceipt receipt)
+    {
+        timing.TotalServerMs = receipt.MsSince(receipt.Timestamp);
+        timing.ServerSentAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        timing.DiagnosticsLastMs = System.Threading.Volatile.Read(ref _lastDiagnosticsMs);
+        timing.LastDidChangeMs = System.Threading.Volatile.Read(ref _lastDidChangeMs);
+        timing.ThreadPoolThreads = System.Threading.ThreadPool.ThreadCount;
+        timing.PendingWorkItems = System.Threading.ThreadPool.PendingWorkItemCount;
+        NoteSvgActivity();
+        response.Timing = timing;
+        return response;
     }
 
     /// <summary>True when a newer request for the same selection has taken a ticket —
@@ -332,23 +388,34 @@ public sealed partial class LilySharpLanguageServer
     // request's answer, which is either rendering or queued behind this return.
     private static SvgResponse SupersededResponse() => new() { Superseded = true };
 
+    /// <summary>Test entry with an explicit ticket: the clock starts at the call.</summary>
     internal SvgResponse GetSvg(SvgParams @params, SvgSessionSlot slot, int ticket, CancellationToken token)
+        => GetSvg(@params, slot, ticket, token, SvgReceipt.Now());
+
+    internal SvgResponse GetSvg(SvgParams @params, SvgSessionSlot slot, int ticket, CancellationToken token,
+        SvgReceipt receipt)
     {
+        var timing = new SvgTiming
+        {
+            ReceivedAfterMs = @params.ClientSentAt is { } sentAt ? receipt.UnixMs - sentAt : null,
+            QueuedMs = receipt.MsSince(receipt.Timestamp),
+        };
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
         {
-            return new SvgResponse
+            return WithTiming(new SvgResponse
             {
                 Svg = null,
                 Error = "Document not found"
-            };
+            }, timing, receipt);
         }
 
         // Superseded already? A typing burst queues several previews; only the newest
         // is worth even the expansion below, let alone the render.
         if (IsStale(slot, ticket))
-            return SupersededResponse();
+            return WithTiming(SupersededResponse(), timing, receipt);
 
+        long expandStart = System.Diagnostics.Stopwatch.GetTimestamp();
         // Resolve `using "..."` directives so the preview shows the whole piece.
         // The main file is the prefix of the combined source, so its positions
         // (data-pos editor<->preview sync) are unchanged.
@@ -356,6 +423,7 @@ public sealed partial class LilySharpLanguageServer
 
         // Extract render definitions
         var renders = ExtractRenderInfo(tree);
+        timing.ExpandMs = receipt.MsSince(expandStart);
 
         // Best-effort policy: a tree with parse errors still renders — the parser's
         // recovery drops the offending tokens, so the score that DID parse is shown
@@ -381,26 +449,30 @@ public sealed partial class LilySharpLanguageServer
             var renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Preview();
 
             string svg;
+            long lockStart = System.Diagnostics.Stopwatch.GetTimestamp();
             lock (slot.Gate)
             {
+                timing.LockWaitMs = receipt.MsSince(lockStart);
                 // The queue-collapse point: while this request waited for the running
                 // render, newer ones may have arrived — every stale request answers
                 // here without rendering, and only the newest pays for a render.
                 if (IsStale(slot, ticket))
-                    return SupersededResponse();
+                    return WithTiming(SupersededResponse(), timing, receipt);
                 // The client no longer wants this answer ($/cancelRequest while
                 // queued): answer with the cancel error, not a render.
                 token.ThrowIfCancellationRequested();
 
+                long renderStart = System.Diagnostics.Stopwatch.GetTimestamp();
                 svg = RenderSvgIncremental(slot, @params.RenderName, tree, renderOptions);
+                timing.RenderMs = receipt.MsSince(renderStart);
             }
 
-            return new SvgResponse
+            return WithTiming(new SvgResponse
             {
                 Svg = svg,
                 Error = errorText,
                 Renders = renders
-            };
+            }, timing, receipt);
         }
         catch (OperationCanceledException)
         {
@@ -411,12 +483,12 @@ public sealed partial class LilySharpLanguageServer
         }
         catch (Exception ex)
         {
-            return new SvgResponse
+            return WithTiming(new SvgResponse
             {
                 Svg = null,
                 Error = errorText == null ? ex.Message : $"{errorText}\n{ex.Message}",
                 Renders = renders
-            };
+            }, timing, receipt);
         }
     }
 

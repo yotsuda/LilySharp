@@ -262,6 +262,23 @@ public sealed partial class LilySharpLanguageServer
     [JsonRpcMethod(Methods.TextDocumentDidChangeName, UseSingleObjectParameterDeserialization = true)]
     public void DidChange(DidChangeTextDocumentParams @params)
     {
+        // Timed for SvgTiming.LastDidChangeMs: this handler runs ON the dispatch thread
+        // (notifications stay synchronous — see OffDispatch), so its time is time no
+        // other message, the svg request included, can be read.
+        long started = System.Diagnostics.Stopwatch.GetTimestamp();
+        try
+        {
+            DidChangeCore(@params);
+        }
+        finally
+        {
+            System.Threading.Volatile.Write(ref _lastDidChangeMs,
+                System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+        }
+    }
+
+    private void DidChangeCore(DidChangeTextDocumentParams @params)
+    {
         var uri = @params.TextDocument.Uri;
         var version = @params.TextDocument.Version;
 
@@ -350,6 +367,16 @@ public sealed partial class LilySharpLanguageServer
             {
                 await Task.Delay(debounceMs, token);
 
+                // Yield to the preview. The validation pass is the other computation a
+                // keystroke starts, and MEASURED in a user's editor (2026-09-04, a 3-page
+                // bass book) it ran 400 ms per keystroke right on top of the render, whose
+                // own time went from 31 ms to 562 ms on the keystrokes it overlapped. The
+                // Problems panel can wait a few hundred ms; the picture cannot. So while
+                // an svg request is in flight or was answered within the last
+                // SvgQuietMs, keep sleeping — a new keystroke cancels this run anyway.
+                while (SvgActivityAgeMs() < SvgQuietMs)
+                    await Task.Delay(SvgQuietMs, token);
+
                 // Drop if the document moved on (or was closed) while we slept.
                 var current = _documentManager.GetDocument(doc.Uri);
                 if (current == null || current.Version != doc.Version)
@@ -377,6 +404,22 @@ public sealed partial class LilySharpLanguageServer
     }
 
     private void PublishDiagnostics(Document doc)
+    {
+        // Timed for the svg response's SvgTiming.DiagnosticsLastMs: this is the other
+        // computation a keystroke starts, and it shares the machine with the render.
+        long started = System.Diagnostics.Stopwatch.GetTimestamp();
+        try
+        {
+            PublishDiagnosticsCore(doc);
+        }
+        finally
+        {
+            System.Threading.Volatile.Write(ref _lastDiagnosticsMs,
+                System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+        }
+    }
+
+    private void PublishDiagnosticsCore(Document doc)
     {
         var diagnostics = new List<LilySharp.Lsp.Protocol.Diagnostic>();
 

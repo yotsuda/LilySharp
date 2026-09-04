@@ -115,7 +115,8 @@
           "comments": "off",
           "strings": "on"
         },
-        "editor.wordBasedSuggestions": "off"
+        "editor.wordBasedSuggestions": "off",
+        "editor.inlineSuggest.enabled": false
       }
     },
     "configuration": {

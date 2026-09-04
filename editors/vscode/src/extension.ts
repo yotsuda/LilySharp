@@ -869,14 +869,32 @@ async function updatePreviewContent(
     cancelSvgRequest(uri);
     const requestCancellation = new vscode.CancellationTokenSource();
     svgRequestCancellation.set(uri, requestCancellation);
+    const lagProbe = new EventLoopLagProbe();
+    lagProbe.start();
     try {
         const response = await client.sendRequest<SvgResponse>('lilysharp/svg', {
             textDocument: { uri: uri },
-            renderName: selectedRender || null
+            renderName: selectedRender || null,
+            clientSentAt: requestedAt
         }, requestCancellation.token);
+        const hostLag = lagProbe.stop();
 
+        // The round trip, split where the server's clock says it went: a stall shows up
+        // as a large `to server` (transport or the server's dispatch loop), `queued`
+        // (its thread pool), `lock` (an older render of the same selection still
+        // running) or `back` (the return leg, incl. this extension host's event loop)
+        // — not as `render`, which is the engine's own time.
+        const t = response.Timing;
+        const ms = (v: number | null | undefined) => v == null ? '-' : Math.round(v).toString();
+        const split = t
+            ? `: to server ${ms(t.ReceivedAfterMs)}, queued ${ms(t.QueuedMs)}, expand ${ms(t.ExpandMs)},`
+              + ` lock ${ms(t.LockWaitMs)}, render ${ms(t.RenderMs)}, server total ${ms(t.TotalServerMs)},`
+              + ` back ${ms(Date.now() - t.ServerSentAt)}; last diagnostics ${ms(t.DiagnosticsLastMs)},`
+              + ` last didChange ${ms(t.LastDidChangeMs)}, pool ${t.ThreadPoolThreads ?? '-'} threads`
+              + ` / ${t.PendingWorkItems ?? '-'} queued`
+            : '';
         outputChannel.appendLine(`Got response: error=${response.Error}, hasSvg=${!!response.Svg}`
-            + ` (${Date.now() - requestedAt} ms round trip)`);
+            + ` (${Date.now() - requestedAt} ms round trip${split}; host lag max ${hostLag} ms)`);
 
         // A newer request owns the preview now — its response paints, this one drops.
         if (svgRequestGeneration.get(uri) !== generation) {
@@ -966,6 +984,8 @@ async function updatePreviewContent(
                 selectedRender: ''
             });
         }
+    } finally {
+        lagProbe.stop();
     }
 }
 
@@ -1588,6 +1608,43 @@ interface SvgResponse {
     // no Svg, no Error; the newer response carries the picture. Absent on servers
     // older than 2026-08-27.
     Superseded?: boolean;
+    // Where the server spent this request's time (absent on servers older than
+    // 2026-09-04). Same machine, so the client's clock and ServerSentAt compare.
+    Timing?: {
+        ReceivedAfterMs: number | null;   // client send -> dispatch-thread receipt
+        QueuedMs: number;                 // receipt -> thread-pool pickup
+        ExpandMs: number;                 // `using` expansion + render-block scan
+        LockWaitMs: number;               // waiting for the selection's render gate
+        RenderMs: number;                 // the incremental render
+        TotalServerMs: number;            // receipt -> response handed to RPC
+        ServerSentAt: number;             // server clock, Unix ms
+        DiagnosticsLastMs: number;        // the last diagnostics pass (off-thread)
+        LastDidChangeMs?: number;         // the last didChange handler, on the dispatch thread
+        ThreadPoolThreads?: number;
+        PendingWorkItems?: number;
+    };
+}
+
+// The extension host's event-loop lag while a request is in flight: the largest gap,
+// in ms, between a 10 ms timer's due time and when it actually ran. A large value is
+// this process (any extension, or VS Code's own work here) being busy — the reason a
+// response can sit unread and a request unsent, which the server's clock cannot see.
+class EventLoopLagProbe {
+    private timer: NodeJS.Timeout | undefined;
+    private last = Date.now();
+    maxLag = 0;
+    start(): void {
+        this.last = Date.now();
+        this.timer = setInterval(() => {
+            const now = Date.now();
+            this.maxLag = Math.max(this.maxLag, now - this.last - 10);
+            this.last = now;
+        }, 10);
+    }
+    stop(): number {
+        if (this.timer) { clearInterval(this.timer); this.timer = undefined; }
+        return Math.max(0, this.maxLag);
+    }
 }
 
 // Webview scripts must be nonce-allowed: newer VS Code builds reject
@@ -2147,6 +2204,31 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // is a few kilobytes where the page is a hundred.
         const CHUNK_OPEN = /<g class="(system|overlay)">/g;
         const G_TAGS = /<g[\\s>]|<\\/g>/g;
+        // A system's FRAME: the renderer draws each system in its own frame and puts it
+        // where it sits with the first tag inside the group, <g transform="translate(0,Y)
+        // scale(1,1)"> (IDocumentContext.SystemLocalFrames). A system that moved down
+        // the page is therefore the same text under another transform, and the preview
+        // sets the attribute instead of parsing the system again. The frame tag is
+        // matched right after the group's open tag only — nested groups (an ossia's
+        // scale) carry transforms of their own that must not be touched.
+        const FRAME_TAG = /^(<g class="system">\\s*<g)( transform="[^"]*")?(>)/;
+        // The chunk with its frame transform blanked, and the transform itself.
+        function unframe(markup) {
+            const m = FRAME_TAG.exec(markup);
+            if (!m) return { text: markup, transform: null };
+            return {
+                text: markup.slice(0, m[1].length) + '>' + markup.slice(m[0].length),
+                transform: m[2] ? m[2].slice(' transform="'.length, -1) : ''
+            };
+        }
+        function setFrameTransform(group, transform) {
+            const frame = group.firstElementChild;
+            if (!frame || frame.tagName.toLowerCase() !== 'g') return false;
+            if (transform) frame.setAttribute('transform', transform);
+            else frame.removeAttribute('transform');
+            return true;
+        }
+        let systemsMoved = 0;
 
         // A page's markup as its labeled groups and the FRAME around and between
         // them — the page's own tag, the header texts, the margin group's tags,
@@ -2198,15 +2280,27 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 const was = before.chunks[k];
                 if (chunk.label !== was.label || !live[k].classList.contains(chunk.label)) return false;
                 if (chunk.markup === was.markup) continue;
-                const blank = chunk.markup.replace(SOURCE_ATTRS, ' $1');
-                const wasBlank = was.blank || (was.blank = was.markup.replace(SOURCE_ATTRS, ' $1'));
+                // Compared with the frame transform AND the source offsets blanked: a
+                // system that only moved down the page, or only moved in the source, or
+                // both, keeps its DOM — the transform is set, the offsets re-stamped.
+                const next = unframe(chunk.markup);
+                const prev = was.unframed || (was.unframed = unframe(was.markup));
+                const blank = next.text.replace(SOURCE_ATTRS, ' $1');
+                const wasBlank = was.blank || (was.blank = prev.text.replace(SOURCE_ATTRS, ' $1'));
                 if (blank === wasBlank) {
-                    if (stamped || restampPage(live[k], chunk.markup)) { chunk.blank = blank; continue; }
+                    const moved = next.transform !== prev.transform;
+                    const shifted = next.text !== prev.text;
+                    if ((!moved || setFrameTransform(live[k], next.transform))
+                        && (!shifted || stamped || restampPage(live[k], chunk.markup))) {
+                        if (moved) systemsMoved++;
+                        chunk.blank = blank; chunk.unframed = next;
+                        continue;
+                    }
                 }
                 const fresh = parseOne(chunk.markup);
                 if (!fresh) return false;
                 live[k].parentNode.replaceChild(fresh, live[k]);
-                chunk.blank = blank;
+                chunk.blank = blank; chunk.unframed = next;
             }
             return true;
         }
@@ -2233,6 +2327,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 return 'whole document (' + (split ? split.pages.length + ' pages' : 'no page groups') + ')';
             }
             let pagesKept = 0, pagesRestamped = 0, pagesByGroup = 0, pagesReplaced = 0;
+            systemsMoved = 0;
             for (let i = 0; i < split.pages.length; i++) {
                 const markup = split.pages[i];
                 const shown = shownPages[i];
@@ -2267,7 +2362,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 pagesReplaced++;
             }
             return 'pages kept ' + pagesKept + ', re-stamped ' + pagesRestamped
-                + ', updated by group ' + pagesByGroup + ', replaced ' + pagesReplaced;
+                + ', updated by group ' + pagesByGroup + ' (systems moved ' + systemsMoved + ')'
+                + ', replaced ' + pagesReplaced;
         }
 
         // ---- source-position index -------------------------------------------

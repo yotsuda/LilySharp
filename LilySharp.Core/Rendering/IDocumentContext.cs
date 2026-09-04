@@ -52,4 +52,23 @@ public interface IDocumentContext : IDisposable
     /// <see cref="BeginPage"/>.
     /// </summary>
     void EndPage();
+
+    /// <summary>
+    /// Whether the renderer should draw each system in a frame of its OWN — its top at
+    /// the page's origin, inside a group that translates it to where it sits — instead of
+    /// in page coordinates. False for every backend but the interactive SVG preview.
+    /// </summary>
+    /// <remarks>
+    /// The picture is the same either way; what changes is the TEXT. In page coordinates
+    /// every Y of a system carries the system's position, so a system that moved down the
+    /// page (a bar inserted before it, a system above it grown taller) is new text from
+    /// its first byte: the per-system fragment memo cannot replay it and the preview has
+    /// to parse and lay it out again — MEASURED in the editor (2026-09-04): 200 ms to
+    /// swap two later pages plus 200–245 ms of layout, on the renderer's own thread, for
+    /// a one-system edit. In its own frame the same system is the same bytes under a
+    /// different <c>transform</c>, which the memo replays and the preview re-attributes.
+    /// Static export keeps page coordinates, so exported files are byte for byte what
+    /// they were (the same posture as <see cref="IDrawingContext.BeginLabeledGroup"/>).
+    /// </remarks>
+    bool SystemLocalFrames => false;
 }

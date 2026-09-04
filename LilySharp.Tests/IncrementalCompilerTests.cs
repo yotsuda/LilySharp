@@ -1114,6 +1114,37 @@ public class IncrementalCompilerTests
     }
 
     /// <summary>
+    /// In the interactive preview every system is drawn in its OWN frame
+    /// (IDocumentContext.SystemLocalFrames): a bar inserted into the first system moves
+    /// every later system down the page, and in page coordinates that made each of them
+    /// new text — no fragment replayed, and the preview parsed them all again. In their
+    /// own frames they are the same bytes under a new translate, so the fragment memo
+    /// replays them and only the edited system draws. The SVG still equals a full
+    /// interactive render, and the export render (page coordinates) is untouched — the
+    /// snapshot suite holds that.
+    /// </summary>
+    [Fact]
+    public void LayoutMemo_AnInsertedMeasure_ReplaysTheShiftedSystemsInTheirOwnFrames()
+    {
+        var interactive = new SvgRenderOptions { EmbedFont = false, Interactive = true };
+        string src = PinnedSystemsBook();
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, interactive);
+        string first = session.Render();
+        Assert.Contains("<g class=\"system\">\n  <g transform=\"translate(0.00,", first.Replace("\r\n", "\n"));
+
+        var change = Replace(src, "c'8~ c' b a g f e d |", "c'8~ c' b a g f e d | c4 d e f |");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(
+            Norm(SvgGenerator.Generate(SyntaxTree.Parse(tree.WithChange(change).Text), interactive)),
+            incremental);
+        var (replayed, drawn) = session.LastRenderFragments;
+        Assert.True(replayed == 5 && drawn == 1,
+            $"the five shifted systems should replay and the edited one draw: replayed {replayed} / drawn {drawn}");
+    }
+
+    /// <summary>
     /// The LEFT-neighbour window is load-bearing: a multi-measure-rest run whose opening
     /// measure declares no start bar line prices its run rod from the PREVIOUS measure's
     /// end bar line (SpacingRules.RunLeftBoundBarline) — a spring input that lives in key

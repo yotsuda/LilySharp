@@ -92,6 +92,10 @@ internal sealed class SvgDocumentContext : IDocumentContext
     /// <inheritdoc/>
     public TextFontPlan Fonts { get; set; } = TextFontPlan.Default;
 
+    /// <inheritdoc/>
+    /// <remarks>Interactive only — the export SVG stays in page coordinates.</remarks>
+    public bool SystemLocalFrames => _options.Interactive;
+
     public IDrawingContext BeginPage(double widthSpaces, double heightSpaces)
     {
         if (_currentPage != null)

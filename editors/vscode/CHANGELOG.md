@@ -132,13 +132,28 @@ reasoning behind each one.
   language server on the `Got response` line, and a `PREVIEW update:` line from the page
   saying what it swapped (pages kept, re-stamped, updated by group, replaced) and how long
   the swap and the re-fit took. When an update feels slow, these two lines say which side
-  to look at.
+  to look at. The `Got response` line now also splits the round trip where the server's
+  clock says it went — to server, queued, expand, lock, render, back, and how long the
+  last diagnostics pass took — so a stall (the same one-system edit answered in 140 ms
+  once and 3.8 s the next time, in one user log) is attributed to transport, the
+  server's queue, an older render still running, or the editor's own event loop, and
+  not read as engine time.
 - **A bar inserted or deleted mid-score no longer re-prices every bar after it.** The
   per-bar spacing memo read the previous score bar by bar at the same index, so a bar added
   in the middle shifted every later one out of its slot and the whole tail was rebuilt (3
   of 112 bars reused on a 3-page bass book, against 110 for the same bar added at the end).
   The memo now looks where the tail went. The picture is unchanged; two tests pin the
   reuse counts for an insertion and a deletion.
+- **Inline suggestions (ghost text) are off in Lily# files by default.** Measured with the
+  extension host profiler on a real book (2026-09-04): with GitHub Copilot installed, every
+  keystroke in a `.lys` file spent one to two seconds inside Copilot's inline-completion
+  prompt building — the extension host, where every extension's messages pass, was
+  blocked for that long, and the preview's request and answer sat behind it while the
+  engine itself took under 100 ms. Lily# has completion of its own, so
+  `"[lilysharp]": { "editor.inlineSuggest.enabled": false }` is now the extension's
+  default; a user who wants ghost text in scores can turn it back on in their settings,
+  which win over this default. The `Got response` line's `host lag max` is the number
+  that shows whether something else in the extension host is in the way.
 - **...and no longer lays every system after it out again.** The per-system memos
   (spacing, skylines, beams, ties, slurs, lyric bands) keyed each system on its first bar
   NUMBER, so a bar inserted or deleted mid-score put every later system under a number

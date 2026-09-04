@@ -32,6 +32,50 @@ public class SvgParams
     /// If null, returns the first score render or default preview.
     /// </summary>
     public string? RenderName { get; set; }
+    /// <summary>The client's clock (Unix ms) when it sent the request — same machine,
+    /// so the server can say how long the request took to REACH its dispatch thread
+    /// (<see cref="SvgTiming.ReceivedAfterMs"/>). Optional; older clients omit it.</summary>
+    public long? ClientSentAt { get; set; }
+}
+
+/// <summary>
+/// Where one lilysharp/svg request spent its time on the server, so the client's
+/// round-trip number can be split into transport, queueing and rendering. Added
+/// 2026-09-04 (session 330) after a user log showed the same one-system edit answered
+/// in 140 ms once and 3827 ms the next time, with the engine measured at ~100 ms
+/// in-process: a stall, not a computation, and this is the instrument that says whose.
+/// All durations in milliseconds.
+/// </summary>
+public class SvgTiming
+{
+    /// <summary>Client send → dispatch-thread receipt (transport + whatever the dispatch
+    /// loop was doing). Null when the client sent no clock.</summary>
+    public double? ReceivedAfterMs { get; set; }
+    /// <summary>Dispatch-thread receipt → the thread-pool worker picking the request up.</summary>
+    public double QueuedMs { get; set; }
+    /// <summary>`using` expansion and render-block extraction.</summary>
+    public double ExpandMs { get; set; }
+    /// <summary>Waiting for the selection's render gate (a previous render of the same
+    /// selection still running — a superseded request answers as soon as it gets the gate).</summary>
+    public double LockWaitMs { get; set; }
+    /// <summary>The incremental render itself (0 for a superseded request).</summary>
+    public double RenderMs { get; set; }
+    /// <summary>Receipt → response handed back to the RPC layer.</summary>
+    public double TotalServerMs { get; set; }
+    /// <summary>The server's clock (Unix ms) when the response was handed back, for the
+    /// client to measure the return leg.</summary>
+    public long ServerSentAt { get; set; }
+    /// <summary>How long the most recent diagnostics run (the full semantic validation
+    /// pass, off-thread, debounced) took — the other per-keystroke computation that
+    /// shares the machine with the render.</summary>
+    public double DiagnosticsLastMs { get; set; }
+    /// <summary>How long the most recent didChange handler held the dispatch thread —
+    /// the one synchronous handler a keystroke runs before the svg request can be read.</summary>
+    public double LastDidChangeMs { get; set; }
+    /// <summary>Thread-pool threads alive and work items still queued when the response
+    /// was built — a saturated pool is a queue the render sat in.</summary>
+    public int ThreadPoolThreads { get; set; }
+    public long PendingWorkItems { get; set; }
 }
 
 /// <summary>
@@ -41,6 +85,8 @@ public class SvgResponse
 {
     public string? Svg { get; set; }
     public string? Error { get; set; }
+    /// <summary>Server-side timing of this request (see <see cref="SvgTiming"/>).</summary>
+    public SvgTiming? Timing { get; set; }
     /// <summary>
     /// List of available render definitions in the document.
     /// </summary>
