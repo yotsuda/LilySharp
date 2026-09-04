@@ -10640,7 +10640,8 @@ internal static class LpGeometryProbes
     /// <summary>
     /// A SECOND VOICE's slur drooping DOWN out of each system — <see cref="SSD"/> with the
     /// bow moved into voice 2, which is the one place the preliminary annotation pass cannot
-    /// see it. The books behind HANDOFF §1 ⒪.
+    /// see it. The books behind session 140's finding that the preliminary spacing did not
+    /// see the second voice's ties and slurs (HANDOFF-ARCHIVE §1 第140).
     /// </summary>
     /// <remarks>
     /// <c>LayoutEngine.RunPreliminaryAnnotationPass</c> lays ties and slurs out on the
@@ -10738,7 +10739,7 @@ internal static class LpGeometryProbes
     /// <summary>
     /// A SECOND VOICE's tie drooping DOWN out of each system — <see cref="TSID"/> with the
     /// bow moved into voice 2, the tie side of the same prelim asymmetry <see cref="VSSD"/>
-    /// reads (HANDOFF §1 ⒪ names both grobs).
+    /// reads (session 140's finding names both grobs — HANDOFF-ARCHIVE §1 第140).
     /// </summary>
     /// <remarks>
     /// TID's design, not SSD's: a tie is flat (height-limit 1.0 / ratio 0.333 vs the slur's
@@ -14438,7 +14439,8 @@ internal static class LpGeometryProbes
         // pass cannot see them: RunPreliminaryAnnotationPass lays ties/slurs on the PRIMARY
         // VOICE ONLY (staffScore) while the final pass draws every voice (staffSpannerScore),
         // an asymmetry its own comment marks "(unchanged)". Beams already moved to the staff
-        // quantity; these are the first points that reach the tie/slur half (HANDOFF §1 ⒪).
+        // quantity; these are the first points that reach the tie/slur half (session 140's
+        // second-voice finding — HANDOFF-ARCHIVE §1 第140).
         // Each probe ships with its identity control (only the bow removed), which pins the
         // two-voice frame: the controls must read the floor (12) and the bare heads (12.595)
         // exactly, or the pair is broken before the probe says anything. Interior gap for the

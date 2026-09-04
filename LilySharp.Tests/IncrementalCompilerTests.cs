@@ -768,7 +768,8 @@ public class IncrementalCompilerTests
     }
 
     /// <summary>
-    /// The per-system PAGING-AUGMENT memo's incremental==full gate (HANDOFF §1 ⒪′). The
+    /// The per-system PAGING-AUGMENT memo's incremental==full gate (the sessions-141/142
+    /// repayment of the second-voice bow debt — HANDOFF-ARCHIVE §1 第141・第142). The
     /// beamed fixture above never returns a cached AUGMENTED skyline into a rendered
     /// picture — its books carry no bows and few scripts, so the paging programs are
     /// trivial. This one is the v2bow texture in miniature: two voices, the second
