@@ -87,22 +87,21 @@ public sealed partial class LilySharpLanguageServer
     /// </summary>
     private static IReadOnlyList<SyntaxNode> SymbolOccurrences(Document doc, int offset)
     {
-        var root = doc.Tree.GetRoot();
+        var names = NameTokensOf(doc.Tree);
 
-        if (PartReferenceFinder.PartNameTokenAt(root, offset) is { } partTok)
-            return PartReferenceFinder.Occurrences(root, partTok.Text);
-
-        if (SectionReferenceFinder.SectionNameTokenAt(root, offset) is { } sectionTok)
-            return SectionReferenceFinder.Occurrences(root, sectionTok.Text);
-
-        if (OccurrencesAmong(FormNameTokens(root), offset) is { Count: > 0 } forms)
+        if (OccurrencesAmong(names.Parts, offset) is { Count: > 0 } parts)
+            return parts;
+        if (OccurrencesAmong(names.Sections, offset) is { Count: > 0 } sections)
+            return sections;
+        if (OccurrencesAmong(names.Forms, offset) is { Count: > 0 } forms)
             return forms;
-        if (OccurrencesAmong(LyricsNameTokens(root), offset) is { Count: > 0 } lyrics)
+        if (OccurrencesAmong(names.Lyrics, offset) is { Count: > 0 } lyrics)
             return lyrics;
-        if (OccurrencesAmong(ChordNameTokens(root), offset) is { Count: > 0 } chords)
+        if (OccurrencesAmong(names.Chords, offset) is { Count: > 0 } chords)
             return chords;
 
         // Phrase / legacy variable: declaration + every bare reference.
+        var root = doc.Tree.GetRoot();
         var node = doc.Tree.FindNode(offset);
         if (node != null && FindVariableNameAt(node) is { } variableName)
         {
@@ -114,16 +113,52 @@ public sealed partial class LilySharpLanguageServer
         return Array.Empty<SyntaxNode>();
     }
 
+    /// <summary>The name tokens of a tree, one list per namespace, in the order
+    /// <see cref="SymbolOccurrences"/> tries them.</summary>
+    private sealed record NameTokens(
+        IReadOnlyList<SyntaxTokenNode> Parts,
+        IReadOnlyList<SyntaxTokenNode> Sections,
+        IReadOnlyList<SyntaxTokenNode> Forms,
+        IReadOnlyList<SyntaxTokenNode> Lyrics,
+        IReadOnlyList<SyntaxTokenNode> Chords);
+
+    /// <summary>
+    /// The five name-token lists of a tree, built once per TREE instance.
+    /// </summary>
+    /// <remarks>
+    /// Document Highlight is asked on every caret movement, and each ask used to
+    /// walk the whole tree five times over — every node materialized as a red node
+    /// each time — before it knew whether the caret was on a name at all, which on a
+    /// long score is the same work as the outline for every arrow key (owner report
+    /// 2026-09-04: the caret itself felt sluggish). The lists depend on nothing but
+    /// the tree, and the document manager replaces the tree on every edit, so the
+    /// entry is exact for as long as it exists and dies with the version that owned
+    /// it — the same shape as <see cref="LineStartsCache"/>. Rename and Find All
+    /// References read the same lists.
+    /// </remarks>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<SyntaxTree, NameTokens> NameTokensCache = new();
+
+    private static NameTokens NameTokensOf(SyntaxTree tree) =>
+        NameTokensCache.GetValue(tree, static t =>
+        {
+            var root = t.GetRoot();
+            return new NameTokens(
+                PartReferenceFinder.AllPartNameTokens(root),
+                SectionReferenceFinder.AllSectionNameTokens(root),
+                FormNameTokens(root).ToList(),
+                LyricsNameTokens(root).ToList(),
+                ChordNameTokens(root).ToList());
+        });
+
     /// <summary>If <paramref name="offset"/> lands on a token in
-    /// <paramref name="tokens"/>, every token there sharing its text; else empty.
-    /// <paramref name="tokens"/> is enumerated once.</summary>
-    private static IReadOnlyList<SyntaxNode> OccurrencesAmong(IEnumerable<SyntaxTokenNode> tokens, int offset)
+    /// <paramref name="tokens"/> (end inclusive, so a caret just past the name still
+    /// resolves), every token there sharing its text; else empty.</summary>
+    private static IReadOnlyList<SyntaxNode> OccurrencesAmong(IReadOnlyList<SyntaxTokenNode> tokens, int offset)
     {
-        var all = tokens.ToList();
-        var hit = all.FirstOrDefault(t => offset >= t.Span.Start && offset <= t.Span.End);
+        var hit = tokens.FirstOrDefault(t => offset >= t.Span.Start && offset <= t.Span.End);
         return hit == null
             ? Array.Empty<SyntaxNode>()
-            : all.Where(t => t.Text == hit.Text).ToArray();
+            : tokens.Where(t => t.Text == hit.Text).ToArray();
     }
 
     /// <summary>A single-token replacement edit: covers the bare token span

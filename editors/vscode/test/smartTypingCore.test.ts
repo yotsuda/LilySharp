@@ -100,6 +100,15 @@ describe('slurs (rules 8–13)', () => {
         typed('c4 d‸', ')', 'c4( d)‸');
         typed('c4 ‸d', ')', 'c4( d)‸');           // typed at the note's start: same slur
     });
+    it('11. the note before may lie in the bar before — a slur crosses barlines', () => {
+        typed('c4 | d‸', ')', 'c4( | d)‸');
+        typed('c4 | time 3/4 | d‸', ')', 'c4( | time 3/4 | d)‸'); // an event-less bar between
+        typed('c4 Melody | d‸', ')', 'c4 Melody | d)‸');           // a barrier there still resets
+    });
+    it('a barline inside a comment or a string is no place to start reading from', () => {
+        typed('c4 // bar |\n d‸', ')', 'c4( // bar |\n d)‸');
+        typed('c4@text("|") d‸', ')', 'c4@text("|")( d)‸');
+    });
     it('12. an unresolved ( before the ) is simply closed — annotations included', () => {
         typed('c4( d‸', ')', 'c4( d)‸');
         typed('c4@finger(3‸', ')', 'c4@finger(3)‸');

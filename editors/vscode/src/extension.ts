@@ -523,8 +523,13 @@ export function activate(context: vscode.ExtensionContext) {
                         return;
                     }
 
-                    const offset = doc.offsetAt(event.selections[0].active);
-                    const text = doc.getText();
+                    const active = event.selections[0].active;
+                    const offset = doc.offsetAt(active);
+                    // The caret's LINE is all that is read: a token never crosses a line
+                    // break, and this runs on every caret movement — the whole document
+                    // (getText) was being rebuilt for each arrow key on a long score.
+                    const line = doc.lineAt(active.line).text;
+                    const col = active.character;
                     const isWs = (c: string | undefined) =>
                         c === undefined || c === ' ' || c === '\t' || c === '\n' || c === '\r';
                     // The caret's note is the one whose source lies INSIDE the
@@ -534,9 +539,10 @@ export function activate(context: vscode.ExtensionContext) {
                     // keyword, brace or a gap (their token holds no note, so the preview
                     // clears). A caret in pure whitespace corresponds to no note.
                     let tokenStart = -1;
-                    if (!isWs(text[offset]) || !isWs(text[offset - 1])) {
-                        tokenStart = offset;
-                        while (tokenStart > 0 && !isWs(text[tokenStart - 1])) { tokenStart--; }
+                    if (!isWs(line[col]) || !isWs(line[col - 1])) {
+                        let startCol = col;
+                        while (startCol > 0 && !isWs(line[startCol - 1])) { startCol--; }
+                        tokenStart = offset - (col - startCol);
                     }
                     panel.webview.postMessage({
                         type: 'highlightPosition',
@@ -2063,37 +2069,70 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // lagged behind the caret. A barline can also carry a data-alt list (the
         // other written bars that collapse onto it), and those offsets count too.
         let posSorted = [];        // ascending, unique
+        let posElements = new Map(); // offset -> the drawn elements that carry it
         let posIndexBuilt = false;
 
         function invalidateSourcePositions() {
             posIndexBuilt = false;
             posSorted = [];
+            posElements = new Map();
         }
 
+        // The elements sharing one data-pos are indexed here as well, so a caret
+        // movement paints its note from a Map lookup: the attribute selector it
+        // used to run ('[data-pos="N"], [data-alt~="N"]') walks EVERY element of
+        // the SVG, and the preview's frame runs in the editor's window — on a
+        // long score each arrow key spent that walk before the caret could move
+        // (owner report 2026-09-04). Two kinds of element that share a note's
+        // offset are left out of the index because they must never be
+        // recolored: the transparent 'nh-hit' notehead click target (a filled box
+        // would show), and the white OCCLUDER behind a tab fret digit (it hides
+        // the string line). A genuine boxed label (section/rehearsal) is STROKED;
+        // the occluder is fill-only. It is told by its EXPLICIT fill: a barline is
+        // a strokeless rect too, but drawn in the black default (no fill
+        // attribute), so an unstroked rect WITHOUT a fill attribute is real ink
+        // and must still highlight — only an unstroked rect that carries a fill
+        // (the white mask) is the occluder. Leaving the mask in made hasBox true,
+        // which coloured the box and suppressed the notehead's own highlight.
         function sourcePositions() {
             if (posIndexBuilt) return posSorted;
             const seen = new Set();
+            const byPos = new Map();
+            const add = (n, el) => {
+                if (!Number.isFinite(n)) return;
+                seen.add(n);
+                if (!el) return;
+                const list = byPos.get(n);
+                if (list) list.push(el); else byPos.set(n, [el]);
+            };
             const svg = svgContainer.querySelector('svg');
             if (svg) {
-                for (const el of svg.querySelectorAll('[data-pos]')) {
-                    const primary = parseInt(el.getAttribute('data-pos'), 10);
-                    if (Number.isFinite(primary)) seen.add(primary);
+                for (const el of svg.querySelectorAll('[data-pos], [data-alt]')) {
+                    const paintable = !el.classList.contains('nh-hit')
+                        && !(el.tagName.toLowerCase() === 'rect'
+                            && !el.getAttribute('stroke') && el.getAttribute('fill'));
+                    const keep = paintable ? el : null;
+                    add(parseInt(el.getAttribute('data-pos'), 10), keep);
                     const alt = el.getAttribute('data-alt');
                     if (alt) {
-                        for (const a of alt.split(' ')) {
-                            const n = parseInt(a, 10);
-                            if (Number.isFinite(n)) seen.add(n);
-                        }
+                        for (const a of alt.split(' ')) add(parseInt(a, 10), keep);
                     }
                 }
             }
             posSorted = Array.from(seen).sort((a, b) => a - b);
+            posElements = byPos;
             posIndexBuilt = true;
             return posSorted;
         }
 
+        // The elements currently painted, so clearing them costs those elements
+        // and not a '.highlight' query over the whole SVG.
+        let highlighted = [];
+
         function clearHighlights() {
-            document.querySelectorAll('.highlight').forEach(el => {
+            const els = highlighted;
+            highlighted = [];
+            els.forEach(el => {
                 el.classList.remove('highlight');
                 // Only restore what we actually recolored (origStroke/origFill set);
                 // a boxed label's text is left untouched on highlight, so leave its
@@ -2113,6 +2152,24 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     el.__origParent = null;
                     el.__origNextSibling = null;
                 }
+            });
+        }
+
+        // A caret highlight is painted once per frame, from the LAST message: a
+        // held arrow key sends a caret position per repeat, and painting each
+        // one — recolor, raise, restore — costs a style and layout pass of the
+        // whole SVG in the editor's own window. Only the position the caret has
+        // now is worth a frame.
+        let pendingHighlight = null;
+        let highlightFrame = 0;
+        function scheduleHighlight(paint) {
+            pendingHighlight = paint;
+            if (highlightFrame) return;
+            highlightFrame = requestAnimationFrame(() => {
+                highlightFrame = 0;
+                const paintNow = pendingHighlight;
+                pendingHighlight = null;
+                if (paintNow) paintNow();
             });
         }
 
@@ -2215,27 +2272,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             for (const entry of positions) {
                 const pos = typeof entry === 'object' ? entry.pos : entry;
                 const occ = typeof entry === 'object' ? entry.occ : -1;
-                // Skip two kinds of rect that share a note's data-pos but must
-                // never be recolored:
-                //  - the transparent 'nh-hit' notehead click target (a filled
-                //    box would show), and
-                //  - the white OCCLUDER behind a tab fret digit (it hides the
-                //    string line). A genuine boxed label (section/rehearsal) is
-                //    STROKED; the occluder is fill-only. Match it by its EXPLICIT
-                //    fill: a barline is a strokeless rect too, but it is drawn in
-                //    the black default (no fill attribute), so an unstroked rect
-                //    WITHOUT a fill attribute is real ink (a barline) and must
-                //    still highlight — only an unstroked rect that carries a fill
-                //    (the white mask) is the occluder to skip. Leaving the mask in
-                //    made hasBox true, which coloured the box and suppressed the
-                //    notehead's own highlight.
-                // Match the primary data-pos OR any data-alt member (a barline that
-                // several written bars collapse onto lights from any of their offsets).
-                let matches = Array.from(document.querySelectorAll(
-                        '[data-pos="' + pos + '"], [data-alt~="' + pos + '"]'))
-                    .filter(el => !el.classList.contains('nh-hit'))
-                    .filter(el => !(el.tagName.toLowerCase() === 'rect'
-                        && !el.getAttribute('stroke') && el.getAttribute('fill')));
+                // Every drawn element carrying this offset — as its data-pos OR as
+                // a data-alt member (a barline that several written bars collapse
+                // onto lights from any of their offsets) — from the index, which
+                // already leaves out the click targets and occluders that must
+                // never be recolored (see sourcePositions).
+                sourcePositions();
+                let matches = (posElements.get(pos) || []).slice();
                 if (occ >= 0 && matches.length > 1) {
                     // Pick the occ-th printed INSTANCE — a chord's every head
                     // (plus dots/accidentals) shares one data-pos, so slicing
@@ -2245,6 +2288,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     matches = instances[Math.min(occ, instances.length - 1)] || matches;
                 }
                 painted.push.apply(painted, matches);
+                highlighted.push.apply(highlighted, matches);
                 // A boxed mark (section/rehearsal) is a <rect> with a <text> label on
                 // top. Recoloring both to the highlight color hides the label, so when
                 // the group has a box we recolor the box only and leave its text its
@@ -2810,12 +2854,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     lastHighlightPos = message.position;
                     lastHighlightTokenStart = message.tokenStart;
                     lastHighlightRanges = null;
-                    highlightNearestElement(message.position, message.tokenStart);
+                    scheduleHighlight(() => highlightNearestElement(message.position, message.tokenStart));
                     break;
                 case 'highlightRange':
                     lastHighlightRanges = message.ranges;
                     lastHighlightPos = -1;
-                    highlightRange(message.ranges);
+                    scheduleHighlight(() => highlightRange(message.ranges));
                     break;
             }
         });

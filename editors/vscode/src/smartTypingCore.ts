@@ -231,10 +231,34 @@ const NOTE_TOKEN = /^[a-g][a-z]*[',]*/;
 // and `rightHand` can never pose as notes.
 const NOTE_EVENT = /^(?:[a-g](?:isis|eses|is|es)?[',]*|[rsR])(?:[0-9]+\.*)?/;
 
+// ⚠️ PER-CHARACTER TESTS ARE CHARACTER COMPARISONS, NOT REGEXES. The walks below
+// look at every character of the block before the caret, and a regex `.test()`
+// per character — a matcher call, and for a literal an allocation, each — was
+// most of what a keystroke cost: 8–25 ms at the end of a 1000-bar block
+// (2026-09-04, owner report of a sluggish editor). The same tests as
+// comparisons are well under a millisecond. The one exception is kept exact:
+// `\s` matches the Unicode spaces too, so a character above ASCII falls through
+// to the regex.
+const isSpace = (c: string | undefined): boolean =>
+    c !== undefined && (c === ' ' || c === '\n' || c === '\r' || c === '\t'
+        || (c > '~' && /\s/.test(c)) || c === '\f' || c === '\v');
+const isDigit = (c: string | undefined): boolean => c !== undefined && c >= '0' && c <= '9';
+const isOctaveMark = (c: string | undefined): boolean => c === "'" || c === ',';
+/** A character of a word — a keyword's, a phrase name's: what a note's letters
+ * must NOT run into, or `clef` and `bass` would pose as notes. */
+const isWordChar = (c: string | undefined): boolean =>
+    c !== undefined && ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || isDigit(c) || c === '_');
+/** A character of an annotation's name: `@finger`, `@text-above`, `@fig_2`. */
+const isNameChar = (c: string | undefined): boolean => isWordChar(c) || c === '-';
+/** A string number's digit: the lexer reads `\1`–`\9` (Lexer.cs, StringNumber). */
+const isStringDigit = (c: string | undefined): boolean => c !== undefined && c >= '1' && c <= '9';
+
 // Characters that sit BETWEEN note events — barlines and repeat marks, beam and
 // volta brackets, ties, other slur marks, and the bare numbers of a volta or a
 // `:|*N` repeat count. A slur spans all of them.
-const BETWEEN_EVENTS = /[|:.*[\]~()\-0-9]/;
+const isBetweenEvents = (c: string): boolean =>
+    c === '|' || c === ':' || c === '.' || c === '*' || c === '[' || c === ']' || c === '~'
+    || c === '(' || c === ')' || c === '-' || isDigit(c);
 
 // The pitch letters an octave mark attaches to: the note name with its glued
 // accidental spelling. The marks go after these and BEFORE the duration.
@@ -535,6 +559,28 @@ function blockBounds(text: string, at: number): [number, number] {
     return [start, end];
 }
 
+/** Where a walk that only needs the events AROUND the caret at `offset` may
+ * start: just after the nearest barline before it that is not inside a string
+ * or a comment, or `blockStart` when there is none.
+ *
+ * A '|' cannot sit inside a note, a chord or an annotation's arguments, so the
+ * walk from `blockStart` is at a token boundary there and reads the same events
+ * from there on — the walk keeps no state between tokens. That is what makes a
+ * keystroke cost the size of a BAR and not of the block: read from the block's
+ * start, a key at the end of a 1000-bar block cost 8–25 ms, and 3–13 ms even
+ * with the character tests made cheap (2026-09-04, owner report of a sluggish
+ * editor). The bar it costs now is a few notes.
+ *
+ * ⚠️ Only for readers that want the event the caret is ON. One that reaches
+ * BACK for earlier events (precedingNote) has to allow for them lying in the
+ * bar before. */
+function walkStart(text: string, blockStart: number, offset: number): number {
+    for (let i = offset - 1; i >= blockStart; i--) {
+        if (text[i] === '|' && !inStringOrComment(text, i + 1)) { return i + 1; }
+    }
+    return blockStart;
+}
+
 /** The offset of the first ')' in [from, end) that no '(' inside the span opens
  * — the end of the slur that is already open at `from`, and the one a just-typed
  * '(' would pair with. -1 when there is none. An annotation's `(args)` is
@@ -567,17 +613,17 @@ const hasUnresolvedSlurClose = (text: string, from: number, end: number) =>
  * did nothing. The lexer's rule is the one used: a backslash directly followed
  * by a digit 1–9 (Lexer.cs, StringNumber). */
 function skipAnnotations(text: string, i: number, end: number): number {
-    while (text[i] === '@' || (text[i] === '\\' && /[1-9]/.test(text[i + 1] ?? ''))) {
+    while (text[i] === '@' || (text[i] === '\\' && isStringDigit(text[i + 1]))) {
         i = text[i] === '\\' ? i + 2 : skipAnnotation(text, i, end);
     }
     return i;
 }
 
 /** Past ONE `@annotation` starting at `i`: its name, any `(args)` and a
- * `.up` / `.down` placement suffix. */
+ * `.up` / `.down` placement suffix. Nothing past `end` is read. */
 function skipAnnotation(text: string, i: number, end: number): number {
     let k = i + 1;
-    while (k < end && /[A-Za-z0-9_-]/.test(text[k])) { k++; }
+    while (k < end && isNameChar(text[k])) { k++; }
     if (text[k] === '(') {
         let depth = 1;
         for (k++; k < end && depth > 0; k++) {
@@ -585,8 +631,9 @@ function skipAnnotation(text: string, i: number, end: number): number {
             else if (text[k] === ')') { depth--; }
         }
     }
-    const placement = /^\.(?:up|down)/.exec(text.slice(k, end));
-    return placement ? k + placement[0].length : k;
+    if (k + 3 <= end && text.startsWith('.up', k)) { return k + 3; }
+    if (k + 5 <= end && text.startsWith('.down', k)) { return k + 5; }
+    return k;
 }
 
 /** The tab string number glued to the note whose core ends at `from` — the `\`
@@ -627,21 +674,35 @@ export const POST_EVENT_RANK: Record<PostEventKind, number> =
 export function postEventRun(text: string, from: number): { kind: PostEventKind, at: number, end: number }[] {
     const run: { kind: PostEventKind, at: number, end: number }[] = [];
     for (let i = from; i < text.length;) {
+        const end = postEventItemEnd(text, i);
+        if (end < 0) { break; }
         const c = text[i];
-        if (c === '\\') {
-            const end = /[1-9]/.test(text[i + 1] ?? '') ? i + 2 : i + 1;
-            run.push({ kind: 'string', at: i, end });
-            i = end;
-        } else if (c === '@') {
-            const end = skipAnnotation(text, i, text.length);
-            run.push({ kind: 'annotation', at: i, end });
-            i = end;
-        } else if (c === '(' || c === ')' || c === '~' || c === '[' || c === ']') {
-            run.push({ kind: c, at: i, end: i + 1 });
-            i++;
-        } else { break; }
+        run.push({ kind: c === '\\' ? 'string' : c === '@' ? 'annotation' : c as PostEventKind, at: i, end });
+        i = end;
     }
     return run;
+}
+
+/** The end of the post-event item that starts at `i` — a `\N` (or a bare `\`
+ * still waiting for its digit), an `@annotation`, or one slur, beam or tie
+ * mark — or -1 when `i` starts none, which is what ends a run. */
+function postEventItemEnd(text: string, i: number): number {
+    const c = text[i];
+    if (c === '\\') { return isStringDigit(text[i + 1]) ? i + 2 : i + 1; }
+    if (c === '@') { return skipAnnotation(text, i, text.length); }
+    if (c === '(' || c === ')' || c === '~' || c === '[' || c === ']') { return i + 1; }
+    return -1;
+}
+
+/** Where the post-event run starting at `from` ends — `from` itself when there
+ * is none. The same reading as postEventRun's, without building the items:
+ * this is asked of EVERY event the walk passes on its way to the caret. */
+function postEventsEnd(text: string, from: number): number {
+    for (let i = from; ;) {
+        const end = postEventItemEnd(text, i);
+        if (end < 0) { return i; }
+        i = end;
+    }
 }
 
 /** Where a new post-event of `kind` goes on the note whose core ends at
@@ -680,7 +741,7 @@ function coreEndOf(text: string, event: { start: number, end: number }): number 
  * belongs to that member and not to the chord (rule 29). */
 function chordMemberAtCaret(text: string, offset: number): number | null {
     const [blockStart, blockEnd] = blockBounds(text, offset);
-    for (const event of musicEvents(text, blockStart, blockEnd)) {
+    for (const event of musicEvents(text, walkStart(text, blockStart, offset), blockEnd)) {
         if (!event.note || postEventEnd(text, event) < offset) { continue; }
         if (event.start > offset || text[event.start] !== '<') { return null; }
         const arpeggio = text[event.start + 1] === '<';
@@ -694,14 +755,14 @@ function chordMemberAtCaret(text: string, offset: number): number | null {
             }
         }
         for (let k = bodyStart; k < close;) {
-            if (/\s/.test(text[k])) { k++; continue; }
+            if (isSpace(text[k])) { k++; continue; }
             const m = PITCH_LETTERS.exec(text.slice(k, close));
             if (!m) {
-                while (k < close && !/\s/.test(text[k])) { k++; } // a degree, a nested chord
+                while (k < close && !isSpace(text[k])) { k++; } // a degree, a nested chord
                 continue;
             }
             let core = k + m[0].length;
-            while (core < close && (text[core] === "'" || text[core] === ',')) { core++; }
+            while (core < close && isOctaveMark(text[core])) { core++; }
             const run = postEventRun(text, core);
             const end = run.length > 0 ? run[run.length - 1].end : core;
             if (offset >= k && offset <= end) {
@@ -716,10 +777,15 @@ function chordMemberAtCaret(text: string, offset: number): number | null {
 
 /** Where the note event's glued post-events end — the far end of what a caret
  * can be "on" for that note. musicEvents ends an event after its `@`s and `\N`
- * only; the slur, tie and beam marks are read here. */
+ * only; the slur, tie and beam marks are read here.
+ *
+ * Read on from the event's END, not from its core: the walk stopped at an item
+ * boundary of the same run, so the two readings end at the same place, and
+ * this one costs no noteSlots. It used to go through coreEndOf, which put a
+ * regex on a slice under every event before the caret — the bulk of the 8–25 ms
+ * a keystroke cost at the end of a long block (2026-09-04). */
 function postEventEnd(text: string, event: { start: number, end: number }): number {
-    const run = postEventRun(text, coreEndOf(text, event));
-    return run.length > 0 ? run[run.length - 1].end : event.end;
+    return postEventsEnd(text, event.end);
 }
 
 /** One step of a music walk: a note EVENT with its offsets, or a BARRIER —
@@ -749,7 +815,7 @@ function* musicEvents(text: string, from: number, end: number): Generator<MusicE
     let i = from;
     while (i < end) {
         const c = text[i];
-        if (/\s/.test(c) || BETWEEN_EVENTS.test(c)) { i++; continue; }
+        if (isSpace(c) || isBetweenEvents(c)) { i++; continue; }
         if (c === '/' && text[i + 1] === '/') {
             while (i < end && text[i] !== '\n') { i++; }
             continue;
@@ -773,20 +839,23 @@ function* musicEvents(text: string, from: number, end: number): Generator<MusicE
             if (j >= end) { yield { note: false }; return; } // unclosed
             j++;                                                        // past '>'
             if (arpeggio && text[j] === '>') { j++; }
-            while (j < end && /[',]/.test(text[j])) { j++; }             // octave marks
-            while (j < end && /[0-9.]/.test(text[j])) { j++; }           // duration + dots
+            while (j < end && isOctaveMark(text[j])) { j++; }            // octave marks
+            while (j < end && (isDigit(text[j]) || text[j] === '.')) { j++; } // duration + dots
             const chordEnd = skipAnnotations(text, j, end);
             yield { note: true, start: i, end: chordEnd };
             i = chordEnd;
             continue;
         }
+        // The two anchored regexes are asked only of a character that could
+        // begin their match — the first letter of a command, a pitch or a rest
+        // — so an ordinary note pays for one exec and a barrier word for none.
         const rest = text.slice(i, end);
-        const command = MID_MUSIC_COMMAND.exec(rest);
+        const command = 'cktpob'.includes(c) ? MID_MUSIC_COMMAND.exec(rest) : null;
         if (command) { i += command[0].length; continue; }
-        const m = NOTE_EVENT.exec(rest);
+        const m = (c >= 'a' && c <= 'g') || c === 'r' || c === 's' || c === 'R' ? NOTE_EVENT.exec(rest) : null;
         const after = m ? i + m[0].length : -1;
         // A longer word merely STARTS like a note: `clef`, `bass`, `rightHand`.
-        if (m && !(after < end && /[A-Za-z0-9'_,]/.test(text[after]))) {
+        if (m && !(after < end && (isWordChar(text[after]) || isOctaveMark(text[after])))) {
             const noteEnd = skipAnnotations(text, after, end);
             yield { note: true, start: i, end: noteEnd };
             i = noteEnd;
@@ -815,17 +884,27 @@ function firstNoteEvent(text: string, from: number, end: number)
 /** The note event BEFORE the one a ')' typed at `at` closes on — the note that
  * ')' wants its '(' on. Mirrors firstNoteEvent, so the shortest automatic slur
  * spans two notes whichever end is typed first. A barrier resets the pair,
- * keeping the '(' on this side of anything unrecognized. null = none. */
+ * keeping the '(' on this side of anything unrecognized. null = none.
+ *
+ * Read from the nearest barline first (walkStart), a bar further back each
+ * time the events run out: a slur crosses barlines, so the note wanted may lie
+ * in the bar before (`c4 | d4` + ')' → `c4( | d4)`). A walk that met a BARRIER
+ * is final either way — the walk from the block's start resets at that same
+ * barrier — and so is one that found its two notes, which are the last two
+ * before `at` from wherever the walk began. */
 function precedingNote(text: string, start: number, at: number)
     : { start: number, end: number } | null {
-    let beforeLast: { start: number, end: number } | null = null;
-    let last: { start: number, end: number } | null = null;
-    for (const event of musicEvents(text, start, at)) {
-        if (!event.note) { beforeLast = null; last = null; continue; }
-        beforeLast = last;
-        last = { start: event.start, end: event.end };
+    for (let from = walkStart(text, start, at); ; from = walkStart(text, start, from - 1)) {
+        let beforeLast: { start: number, end: number } | null = null;
+        let last: { start: number, end: number } | null = null;
+        let barrier = false;
+        for (const event of musicEvents(text, from, at)) {
+            if (!event.note) { beforeLast = null; last = null; barrier = true; continue; }
+            beforeLast = last;
+            last = { start: event.start, end: event.end };
+        }
+        if (beforeLast || barrier || from === start) { return beforeLast; }
     }
-    return beforeLast;
 }
 
 /** True when [start, at) holds a '(' that no ')' inside the span closes — the
@@ -888,7 +967,7 @@ function isSlurOpen(text: string, offset: number): boolean {
 function slurAnchorAt(text: string, offset: number)
     : { start: number, end: number } | 'member' | null {
     const [blockStart, blockEnd] = blockBounds(text, offset);
-    for (const event of musicEvents(text, blockStart, blockEnd)) {
+    for (const event of musicEvents(text, walkStart(text, blockStart, offset), blockEnd)) {
         // The note reaches to the end of its glued post-events — a caret after
         // the '[' of `a8[|` is still on the a (owner report 2026-09-03: '(' typed
         // there stayed put, because the walk's event ends before the marks).
@@ -1275,9 +1354,9 @@ function noteSlots(text: string, start: number, end: number): NoteSlots | null {
         else if ('rsR'.includes(text[start])) { marksEnd = start + 1; } // a rest
         else { return null; }
     }
-    while (marksEnd < end && (text[marksEnd] === "'" || text[marksEnd] === ',')) { marksEnd++; }
+    while (marksEnd < end && isOctaveMark(text[marksEnd])) { marksEnd++; }
     let digitsEnd = marksEnd;
-    while (digitsEnd < end && /[0-9]/.test(text[digitsEnd])) { digitsEnd++; }
+    while (digitsEnd < end && isDigit(text[digitsEnd])) { digitsEnd++; }
     let coreEnd = digitsEnd;
     while (coreEnd < end && text[coreEnd] === '.') { coreEnd++; }
     return { octave, marksEnd, digitsEnd, coreEnd };
@@ -1292,7 +1371,7 @@ function noteSlots(text: string, start: number, end: number): NoteSlots | null {
 function noteAtCaret(text: string, offset: number, throughMarks = false)
     : { start: number, slots: NoteSlots } | null {
     const [blockStart, blockEnd] = blockBounds(text, offset);
-    for (const event of musicEvents(text, blockStart, blockEnd)) {
+    for (const event of musicEvents(text, walkStart(text, blockStart, offset), blockEnd)) {
         if (!event.note || postEventEnd(text, event) < offset) { continue; }
         if (event.start > offset) { return null; } // the caret is between events
         const slots = noteSlots(text, event.start, event.end);
@@ -1469,7 +1548,7 @@ export function dotPlan(before: string, offset: number): TypePlan | null {
 export function stringNumberPlan(before: string, offset: number): TypePlan | null {
     if (inStringOrComment(before, offset)) { return null; }
     const [blockStart, blockEnd] = blockBounds(before, offset);
-    for (const event of musicEvents(before, blockStart, blockEnd)) {
+    for (const event of musicEvents(before, walkStart(before, blockStart, offset), blockEnd)) {
         if (!event.note || postEventEnd(before, event) < offset) { continue; }
         if (event.start > offset) { return null; } // the caret is between events
         let core: number;

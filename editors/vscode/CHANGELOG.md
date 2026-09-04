@@ -99,6 +99,25 @@ reasoning behind each one.
 
 ### Fixed
 
+- **The smart keys no longer slow the editor down in a long score.** Every mark a smart key
+  places — `' , . \ @ ( ) [ ] ~` and the digits — is decided by reading the music around
+  the caret, and that reading began at the start of the enclosing block on every keystroke,
+  testing each character with a regex on the way: at the end of a 1000-bar block a key cost
+  8–25 ms before anything was typed, and the one-order rule (above) had tripled the work per
+  note. The reading now starts at the nearest barline before the caret — a barline cannot
+  sit inside a note, a chord or an annotation, so the walk sees the same events — and the
+  character tests are comparisons. The same keys cost 0.2–1 ms there; `npm run bench` in
+  `editors/vscode` prints the figures for the repository's 1000-bar books. What each key
+  writes is unchanged, and two new tests pin the one reader that has to look into the
+  previous bar (`c4 | d` + `)` gives `c4( | d)`).
+- **Moving the caret no longer costs the whole score.** Three things ran on every arrow
+  key: the extension rebuilt the document's text to find the caret's token (now it reads
+  the caret's line); the preview searched every drawn element for the note to light and
+  cleared the last one with another search of the whole page (now both come from an index
+  built once per render, and a held key paints only the position the caret has reached);
+  and the language server, asked which names to highlight, walked the syntax tree five
+  times before knowing whether the caret was on a name at all (the name lists are now
+  built once per edit).
 - **A chord track's bars are no longer checked as if they held durations.** A per-section
   `chords` track had each `s` / `r` slot priced as a quarter rest, so a 2/4 row spelled
   `s | C#m | …` reported every such bar as too short. A chord row divides its bars on the

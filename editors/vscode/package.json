@@ -512,6 +512,7 @@
     "compile": "node esbuild.js",
     "check-types": "tsc --noEmit",
     "test": "tsc -p tsconfig.test.json && node --test \"out-test/test/**/*.test.js\"",
+    "bench": "tsc -p tsconfig.test.json && node out-test/test/bench.js",
     "watch": "node esbuild.js --watch",
     "deploy-server": "pwsh -Command \"dotnet publish ../../LilySharp.Lsp -c Release -r win-x64 --self-contained true -o ./server\"",
     "package": "vsce package",
