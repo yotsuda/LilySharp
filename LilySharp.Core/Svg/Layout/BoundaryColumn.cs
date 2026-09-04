@@ -240,7 +240,7 @@ internal sealed class BoundaryColumn
     /// but by where it sits: BEFORE the bar line, and so outside this frame.
     /// LILYPOND-REF: lily/separation-item.cc:163-186 (box = extent + esw).
     /// </remarks>
-    public HorizontalSkyline RightSkylineFromBarLine()
+    public HorizontalSkyline RightSkylineFromBarLine(double doublePercentHalfWidth = 0)
     {
         // No bar line: nothing to frame against, so the column's own origin is the frame.
         double origin = BarLineLeft ?? 0;
@@ -252,6 +252,29 @@ internal sealed class BoundaryColumn
             boxes.Add((StaffYBottom, StaffYTop,
                 g.Left - origin + g.EswLeft, g.Right - origin + g.EswRight));
         }
+        if (doublePercentHalfWidth > 0)
+            boxes.Add(DoublePercentBox(doublePercentHalfWidth));
         return HorizontalSkyline.FromBoxes(boxes, HorizontalDirection.Right);
     }
+
+    /// <summary>
+    /// The box a DOUBLE percent sign puts on the bar-line column it straddles, in the
+    /// bar-line-left-edge frame: the sign is centred on the bar line's X, reaches
+    /// <paramref name="halfWidth"/> to either side, and carries the default
+    /// extra-spacing-width, having declared none of its own.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:1290-1309 DoublePercentRepeat break-align-symbol staff-bar
+    ///   — the bar line's own group, so its X is the bar's; and no extra-spacing-width, so
+    ///   lily/separation-item.cc:166-167's default (−0.1 . 0.1) applies as it does to the
+    ///   bar line.
+    /// LILYPOND-REF: lily/percent-repeat-interface.cc:94-103 double_percent —
+    ///   <c>m.align_to (X_AXIS, CENTER)</c>: the stencil straddles its X.
+    /// MEASURED, 2.26.0 (scratch/p333/fx dp-settings.ly): DoublePercentRepeat X ==
+    /// BarLine X, extent ±1.878823 about it on a staff; the column's origin moves to the
+    /// sign's left edge and the pair on each side reads its reach (pc4r: 0.39 / 3.96 of
+    /// min_dist, ALLCOL against the formula).
+    /// </remarks>
+    internal static (double YBottom, double YTop, double XLeft, double XRight) DoublePercentBox(double halfWidth)
+        => (StaffYBottom, StaffYTop, -halfWidth + EswDefaultLeft, halfWidth + EswDefaultRight);
 }

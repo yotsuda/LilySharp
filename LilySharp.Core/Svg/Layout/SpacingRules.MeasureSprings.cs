@@ -120,6 +120,32 @@ internal static partial class SpacingRules
         if (spacingItems.Count == 0)
             return ImmutableArray<Spring>.Empty;
 
+        // AN EMPTY BAR — skips and nothing else — has no column LilyPond keeps, so its two
+        // bar lines are spaced as one breakable pair (SpacingRules.EmptyBarSprings; the
+        // timing-column system decides the same in MultiStaffLayouter.ApplySharedColumnReservations,
+        // where the score's side tables can also say whether a chord symbol or a syllable
+        // stands over the skip — this single-measure estimate sees only the measure).
+        // ⚠️ DERIVED, NOT TRANSCRIBED, on four counts this estimate cannot help (the fourth:
+        // a double percent sign on a bounding bar line is a score-table fact, unseen here,
+        // so no sign reaches into this estimate's bar): LilyPond's
+        // measure-length is the METER's bar (the column system reads the prevailing meter);
+        // a lone measure carries only its own duration, so a pickup bar of skips is priced
+        // by its length here and by the meter there. The left bounding bar line of a
+        // measure declaring none is the PREVIOUS bar's end line, which this estimate cannot
+        // see, so it assumes the single line every such boundary draws by default. And the
+        // left bar line's break permission is the previous measure's, unseen too, so the
+        // pair is read as breakable on that side and this measure's own permission decides.
+        // LILYPOND-REF: lily/paper-column.cc:115-136 Paper_column::is_used.
+        if (BarHoldsOnlySkips(measure.Items))
+            return EmptyBarSprings(
+                spacingItems.Count,
+                measure.StartBarline == BarlineType.None ? BarlineType.Single : measure.StartBarline,
+                measure.Items,
+                measure.LineBreakPermission != BreakPermission.Forbid,
+                measure.TotalDuration,
+                measure.TotalDuration,
+                baseShortestDuration ?? EngravingDefaults.BaseShortestDuration);
+
         // NOTE: a full-measure rest gets ORDINARY springs here. LilyPond does the
         // same — a rested bar is spaced like any other bar, and the compaction of a
         // multi-measure rest comes from the run-level ROD
@@ -130,6 +156,30 @@ internal static partial class SpacingRules
         // approximation is linear in the count where LP's rod grows ~2·log2(count))
         // and a lowercase `r1` bar ~25% too narrow (LP spaces it as a normal bar:
         // `r1`×3 spans 31.214 ss with or without \compressMMRests, vs `R1*3` 20.810).
+
+        // A SKIP HAS NO COLUMN: its onset is LilyPond's unused column and leaves the
+        // chain, so the items on either side become neighbours and the leg between them
+        // spans the skip's time (MultiStaffLayouter.CollectAllTimingsForMeasure is the
+        // column system's spelling of the same drop). Each kept item carries its onset, so
+        // a leg's delta_t is the distance to the NEXT KEPT item or to the bar.
+        // LILYPOND-REF: lily/paper-column.cc:115-136 Paper_column::is_used.
+        var kept = new List<(MusicItem Item, Fraction Onset)>(spacingItems.Count);
+        {
+            var onset = Fraction.Zero;
+            var keep = new HashSet<MusicItem>(ReferenceEqualityComparer.Instance);
+            foreach (var item in spacingItems)
+                keep.Add(item);
+            foreach (var item in measure.Items)
+            {
+                if (keep.Contains(item) && item is not RestItem { IsSpacer: true })
+                    kept.Add((item, onset));
+                onset += item.Duration;
+            }
+        }
+        if (kept.Count == 0)
+            return ImmutableArray<Spring>.Empty;
+        var keptItems = kept.Select(k => k.Item).ToList();
+        var totalDuration = measure.TotalDuration;
 
         var springs = new List<Spring>();
 
@@ -144,8 +194,18 @@ internal static partial class SpacingRules
         // LP passes it as `situational_space` to Staff_spacing::get_spacing, keyed on
         // the measure that FOLLOWS the barline.
         // LILYPOND-REF: lily/spacing-spanner.cc:484-489 breakable_column_spacing.
-        var firstItem = spacingItems[0];
-        var firstSpring = BarlineToFirstColumnSpring(new[] { firstItem }, FillsMeasure(measure));
+        // A bar that OPENS with a skip has its first kept item at a later moment, and the
+        // bar line → item pair takes the duration-space branch instead (the column system's
+        // CreateBarlineToFirstSpring makes the same fork). The left bounding line is the
+        // measure's own start line, a single line standing in where it declares none — the
+        // previous bar's end line is not in this estimate's sight.
+        var (firstItem, firstOnset) = kept[0];
+        var firstSpring = firstOnset > Fraction.Zero
+            ? SkipOpenedBarFirstSpring(
+                measure.StartBarline == BarlineType.None ? BarlineType.Single : measure.StartBarline,
+                measure.Items, new[] { firstItem }, firstOnset,
+                baseShortestDuration ?? EngravingDefaults.BaseShortestDuration)
+            : BarlineToFirstColumnSpring(new[] { firstItem }, FillsMeasure(measure));
         springs.Add(firstSpring);
 
         // Springs between items (the spring into a grace-bearing note reserves its grace;
@@ -153,12 +213,13 @@ internal static partial class SpacingRules
         // column, so this estimate totals what the timing-column layout will produce and
         // line breaking does not mis-measure change measures — pinned by
         // SpacingInvariantTests.BothSpringSystems_AgreeAcrossAMidMeasureChangeColumn).
-        for (int i = 0; i < spacingItems.Count - 1; i++)
+        for (int i = 0; i < kept.Count - 1; i++)
         {
-            var prevItem = spacingItems[i];
-            var nextItem = spacingItems[i + 1];
-            var spring = CreateSpring(prevItem, nextItem, prevItem.Duration,
-                baseShortestDuration: baseShortestDuration);
+            var (prevItem, prevOnset) = kept[i];
+            var (nextItem, nextOnset) = kept[i + 1];
+            var spring = CreateSpring(prevItem, nextItem, nextOnset - prevOnset,
+                baseShortestDuration: baseShortestDuration,
+                shortestPlaying: prevItem.Duration);
             // Swap the generic spacing-increment for the LEFT column's real head
             // width, exactly as the timing-column system does (MeasureLayouter) —
             // this is LilyPond's ideal, and leaving it out made every spring here
@@ -169,7 +230,7 @@ internal static partial class SpacingRules
             // A pair touching a mid-measure change column is priced by the change column,
             // not by duration — and NOT by merge_springs' headroom afterwards, which would
             // add 0.3 to a gap LilyPond has already fixed.
-            if (ChangeColumnItemSpring(spacingItems, i, spring.IdealDistance) is { } changeSpring)
+            if (ChangeColumnItemSpring(keptItems, i, spring.IdealDistance) is { } changeSpring)
             {
                 springs.Add(changeSpring);
                 continue;
@@ -181,10 +242,12 @@ internal static partial class SpacingRules
         }
 
         // Spring from last item to end barline. full-measure-extra-space is charged to
-        // the LEADING spring above, mirroring LilyPond's attribution.
-        var lastItem = spacingItems[^1];
-        var lastSpring = CreateSpring(lastItem, null, lastItem.Duration,
-            baseShortestDuration: baseShortestDuration);
+        // the LEADING spring above, mirroring LilyPond's attribution. The leg runs from
+        // the last KEPT item to the bar over any skip that follows it.
+        var (lastItem, lastOnset) = kept[^1];
+        var lastSpring = CreateSpring(lastItem, null, totalDuration - lastOnset,
+            baseShortestDuration: baseShortestDuration,
+            shortestPlaying: lastItem.Duration);
         // The column's skyline against the bar line's box, the bar line's box grown toward
         // BOTH its neighbours — the same pair the timing-column system prices
         // (MeasureLayouter.CreateLastToBarlineSpring). CreateSpring saw the left neighbour

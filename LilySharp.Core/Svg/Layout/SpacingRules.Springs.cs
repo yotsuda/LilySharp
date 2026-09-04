@@ -33,9 +33,26 @@ internal static partial class SpacingRules
     /// - inverse_stretch_strength = max(0.1, ideal - min)
     /// - stem direction optical correction applied to ideal
     /// </remarks>
+    /// <param name="prevItem">The left item.</param>
+    /// <param name="nextItem">The right item, or null for the bar line.</param>
+    /// <param name="prevDuration">The time between the two columns — <c>delta_t</c>. For a
+    /// single voice with no skip between the items this is the left item's own duration.</param>
+    /// <param name="noteParams">Note spacing parameters.</param>
+    /// <param name="baseShortestDuration">The common shortest duration.</param>
+    /// <param name="shortestPlaying">The shortest duration sounding at the left column —
+    /// the left item's own, in a single voice — when it is SHORTER than
+    /// <paramref name="prevDuration"/>: a note followed by a skip whose unused column is
+    /// gone runs to the next kept column over the skip's time, and LilyPond prices that
+    /// leg as <c>fraction = delta_t / shortest_playing</c> of the note's own spring, not as
+    /// the duration space of the whole span. Null (or a value equal to the delta) is the
+    /// single-column case, fraction 1.
+    /// LILYPOND-REF: lily/spacing-basic.cc:147-162 Spacing_spanner::note_spacing —
+    ///   <c>Spring (fraction * len, fraction * min)</c> with
+    ///   <c>set_inverse_stretch_strength (fraction * max (0.1, len - min))</c>.</param>
     public static Spring CreateSpring(MusicItem? prevItem, MusicItem? nextItem, Fraction prevDuration,
                                       NoteSpacingParameters? noteParams = null,
-                                      double? baseShortestDuration = null)
+                                      double? baseShortestDuration = null,
+                                      Fraction? shortestPlaying = null)
     {
         var np = noteParams ?? NoteSpacingParameters.Default;
 
@@ -45,11 +62,19 @@ internal static partial class SpacingRules
         // Skyline-based collision distance (rod)
         double skylineDistance = CalculateSkylineDistance(prevItem, nextItem, staffY: 0);
 
+        // The controlling duration and the share of its spring this leg takes.
+        // LILYPOND-REF: lily/spacing-basic.cc:151-157 note_spacing — len from the
+        //   shortest playing duration, fraction = delta_t / shortest_playing.
+        Fraction controlling = shortestPlaying is { } sp && sp > Fraction.Zero && sp < prevDuration
+            ? sp : prevDuration;
+        double fraction = controlling > Fraction.Zero
+            ? prevDuration.ToDouble() / controlling.ToDouble() : 1.0;
+
         // min_distance = max(defaultMin, skylineDistance) - ensures no collision
-        double minDistance = Math.Max(defaultMin, skylineDistance);
+        double minDistance = Math.Max(fraction * defaultMin, skylineDistance);
 
         // LILYPOND-REF: lily/spacing-basic.cc:107 note_spacing() - duration space
-        double idealDistance = CalculateDurationSpace(prevDuration,
+        double idealDistance = fraction * CalculateDurationSpace(controlling,
             baseShortestDuration ?? EngravingDefaults.BaseShortestDuration);
 
         // --- Stem direction optical correction ---

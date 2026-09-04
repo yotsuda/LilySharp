@@ -200,7 +200,6 @@ internal static partial class SharedRenderer
         in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.PercentRepeatLayouts.IsDefaultOrEmpty) return;
-        const double thickness = 0.48;
         // The `dots.dot` glyph is a CIRCLE, and it does not scale with the staff: the same
         // path with the same scale appears on the notation staff and on the 1.5-spaced
         // TabStaff of one book (measured 2026-08-28, the two-bar percent twin). Only its
@@ -212,68 +211,28 @@ internal static partial class SharedRenderer
         // rendered SVG is one decimal short of the font, and this constant was 0.224 for a
         // few hours on 2026-08-28 because of it.
         const double dotRadius = EngravingDefaults.RepeatDotRadius;
-        // dot-negative-kern and slash-negative-kern: the paddings x_percent and brew_slash
-        // hand to add_at_edge, both scaled by the staff space.
-        // LILYPOND-REF: scm/define-grobs.scm — the PercentRepeat and DoublePercentRepeat
-        //   entries: dot-negative-kern 0.75, slash-negative-kern 1.6, slope 1.0,
-        //   thickness 0.48. Range-less: the grob names are one word each.
-        const double dotKern = 0.75;
 
         foreach (var pr in layout.PercentRepeatLayouts)
         {
             if (!sysTopYUp.ContainsKey(pr.MeasureIndex)) continue;
-            // LILYPOND-REF: lily/percent-repeat-interface.cc:40-49 brew_slash —
-            // "Scale everything by staff-space": wid = 2.0/slope·ss and
-            // thick = thickness·ss; :69-77 x_percent translates each dot ±0.5·ss.
             // A TabStaff sets StaffSymbol.staff-space = 1.5, so its sign is
-            // one-and-a-half-sized.
+            // one-and-a-half-sized (PercentRepeatEngraver.Geometry scales by it).
             var staff = os.StaffLayoutOf(pr.StaffIndex, pr.MeasureIndex);
             double ss = staff?.Tuning is { } tuning
                 ? EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuning))
                 : 1.0;
-            // FOUR GROBS SHARE THIS DRAWING and they differ in three numbers: how many
-            // slashes, how steep, and how hard the copies overlap. The plain beat slash is
-            // the odd one — steeper (1.7) and more tightly kerned (0.85) than the percent
-            // family, and it carries NO dots.
-            // LILYPOND-REF: scm/define-grobs.scm — the RepeatSlash entry (slope 1.7,
-            //   slash-negative-kern 0.85) against the DoubleRepeatSlash entry (slope 1.0,
-            //   slash-negative-kern 1.6, dot-negative-kern 0.75), which is the picture the
-            //   PercentRepeat / DoublePercentRepeat pair already draws. Range-less like the
-            //   neighbouring citation: the grob names are one word each (HANDOFF §5.2.1⑦).
-            // LILYPOND-REF: lily/percent-repeat-interface.cc:107-121 beat_slash — count 0
-            //   draws x_percent (me, 2), i.e. WITH dots, and any other count brew_slash
-            //   (me, count), i.e. without.
-            bool plainSlash = pr.IsBeatSlash && pr.SlashCount >= 1;
-            double slope = plainSlash ? 1.7 : 1.0;
-            double slashKern = plainSlash ? 0.85 : 1.6;
-            int slashes = pr.IsBeatSlash
-                ? (pr.SlashCount >= 1 ? pr.SlashCount : 2)
-                : (pr.IsDouble ? 2 : 1);
-            double slashWidth = 2.0 / slope * ss;
-            double slashHeight = slashWidth * slope;
-            double thick = thickness * ss;
-            // THE SLASH IS A PARALLELOGRAM, NOT A STROKED LINE, and the difference is the
-            // ENDS: LilyPond cuts them HORIZONTALLY, so the shape's height is exactly
-            // `wid·slope` and its width `wid + x_width`. A stroked line of the same
-            // perpendicular thickness cuts them square to the slope instead, which on a
-            // 45° slash pushes each corner out by thick/(2√2) in BOTH axes — the ink comes
-            // out 0.509 too tall and 0.51 too narrow on a TabStaff (ss 1.5), and a user
-            // reported the tab sign as looking too thick. It is not: the perpendicular
-            // thickness was right all along (0.720 = LP's, measured), the outline was not.
-            // LILYPOND-REF: lily/lookup.cc:519-539 repeat_slash — the four points are
-            //   (0,0) (x_width,0) (x_width+w,height) (w,height) with
-            //   x_width = hypot (t, t/s) and height = w·s, and the box is (0, w + x_width).
-            double xWidth = System.Math.Sqrt(thick * thick + thick / slope * (thick / slope));
-            double slashInk = slashWidth + xWidth;
-            // EVERY COPY BEYOND THE FIRST is added at the group's right edge with a NEGATIVE
-            // padding, so consecutive origins end up (slash ink width − kern·ss) apart. ZERO
-            // for a single slash, which then draws exactly one.
-            // LILYPOND-REF: lily/percent-repeat-interface.cc:37-60 brew_slash — the
-            //   `for (int i = count - 1; i--;) add_at_edge (X_AXIS, RIGHT, slash,
-            //   -slash_neg_kern)` loop. It is a LOOP, not a pair: a sixteenth-note beat slash
-            //   asks for two and nothing stops a thirty-second asking for three.
-            double pairGap = slashes > 1 ? slashInk - slashKern * ss : 0.0;
-            double groupWidth = slashInk + (slashes - 1) * pairGap;
+            // ONE GEOMETRY, TWO READERS: the stencil the spacing reserves on the bar-line
+            // column (SpacingRules.MmrRodMinimumDistance, through
+            // PercentRepeatEngraver.DoublePercentInkWidth) is the stencil drawn here, so
+            // the reservation and the ink cannot drift apart.
+            var g = PercentRepeatEngraver.Geometry(pr.IsBeatSlash, pr.SlashCount, pr.IsDouble, ss);
+            bool plainSlash = g.PlainSlash;
+            int slashes = g.Slashes;
+            double slashWidth = g.SlashWidth;
+            double slashHeight = g.SlashHeight;
+            double xWidth = g.XWidth;
+            double pairGap = g.PairGap;
+            double groupWidth = g.GroupWidth;
             // ⚠️ A BEAT SLASH IS NOT CENTRED ON ITS X: beat_slash returns brew_slash's
             // stencil as it stands, where double_percent re-aligns to CENTRE. So the layout's
             // X is this group's LEFT EDGE, and the percent family's is its middle.
@@ -294,9 +253,9 @@ internal static partial class SharedRenderer
             // LILYPOND-REF: lily/percent-repeat-interface.cc:63-81 x_percent — the two
             //   add_at_edge (X_AXIS, LEFT/RIGHT, d, -dot_neg_kern) calls, and the ±0.5·ss
             //   translate_axis that puts the upper dot LEFT and the lower one RIGHT.
-            double upperDotCx = left + dotKern * ss - dotRadius;
-            double lowerDotCx = left + groupWidth - dotKern * ss + dotRadius;
-            double dotDy = 0.5 * ss;
+            double upperDotCx = left + g.DotKern - dotRadius;
+            double lowerDotCx = left + groupWidth - g.DotKern + dotRadius;
+            double dotDy = g.DotDy;
             using (gc.Source(pr.SourcePosition))
             {
                 // Bottom-left to top-right, with a dot in each pocket the slash leaves —

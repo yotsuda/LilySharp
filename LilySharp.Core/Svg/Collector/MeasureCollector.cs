@@ -3596,6 +3596,27 @@ public sealed partial class MeasureCollector
             // note value plus dots, because a body's length need not BE a note value (five
             // sixteenths is not). RestItem.Duration is BaseDuration when Dots is 0, so an
             // arbitrary fraction rides through unchanged.
+            // ⚠️ NO LINE BREAK INSIDE A REPETITION. LilyPond's event is ONE rhythmic grob
+            // (RepeatSlash, DoublePercentRepeat — both carry rhythmic-grob-interface) that
+            // sounds for the body's whole length, and a Staff forbids a line break at any
+            // moment a rhythmic grob is still sounding; the double percent's own engraver
+            // forbids the break over its sign in as many words. A bar line the spacer run
+            // crosses is therefore NOT a break point, and the pair of bar lines around such
+            // a bar is not a breakable pair either — which is what decides the bar's width
+            // (SpacingRules.StandardBreakableColumnSpacing: a covered bar between two
+            // breakable bar lines is linear in the meter over the common shortest, one
+            // beside a forbidden bar line takes the duration space of its length).
+            // MEASURED, 2.26.0 (scratch/p333/fx ALLCOL): the bar-line columns inside a
+            // three-bar slash body and between the two bars of a double percent carry no
+            // line-break-permission; a single percent's, and those at the ends of any
+            // repetition, carry `allow`.
+            // LILYPOND-REF: lily/forbid-break-engraver.cc:41-62 Forbid_line_break_engraver::pre_process_music
+            //   — every busyGrobs entry with rhythmic-grob-interface raises forbidBreak;
+            // LILYPOND-REF: ly/engraver-init.ly:378 — \consists Forbid_line_break_engraver, in \Staff;
+            // LILYPOND-REF: lily/double-percent-repeat-engraver.cc:63-71 Double_percent_repeat_engraver::pre_process_music
+            //   — forbidBreak at the pair's middle bar line;
+            // LILYPOND-REF: lily/paper-column-engraver.cc:264-271 Paper_column_engraver::stop_translation_timestep
+            //   — the command column loses its line-break-permission where a break is not allowed.
             void WriteRepetitionAsSpacers(Fraction length)
             {
                 var remaining = length;
@@ -3613,6 +3634,11 @@ public sealed partial class MeasureCollector
                     builder.AddItem(
                         new RestItem(piece, 0, repeat.SourceStart) { IsSpacer = true });
                     remaining -= piece;
+                    // The piece filled its bar and the event goes on: the bar line just
+                    // closed lies STRICTLY INSIDE the repetition, where the event still
+                    // sounds. (The last piece's bar line is the event's end — breakable.)
+                    if (remaining > Fraction.Zero)
+                        builder.SetNoBreak();
                 }
             }
 

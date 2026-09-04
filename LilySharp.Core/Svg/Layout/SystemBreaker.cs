@@ -222,7 +222,8 @@ internal sealed class SystemBreaker
             var springs = layouter.CreateTimingSprings(
                 primaryMeasure, allTimings, baseShortestDuration, allMeasures,
                 i + 1 < measures.Length ? measures[i + 1] : null,
-                MultiStaffLayouter.CollectStaffIndicesAtIndex(score, i));
+                MultiStaffLayouter.CollectStaffIndicesAtIndex(score, i),
+                SpacingRules.RunLeftBoundBarline(measures, i));
 
             // The shared-column reservations (lyrics, chords, tab digits, wide
             // scripts) — the SAME list the system layout applies, from the one home
@@ -231,7 +232,7 @@ internal sealed class SystemBreaker
             // digits were never priced here, so an all-tab book packed onto one
             // system and ran past the page edge.
             springs = MultiStaffLayouter.ApplySharedColumnReservations(
-                score, i, springs, primaryMeasure, allTimings, allMeasures);
+                score, i, springs, primaryMeasure, allTimings, allMeasures, baseShortestDuration);
 
             // The measure's lyric line edges — the same function the layout reads, off the
             // same reserved springs — for three prices: its half of the cross-bar PAIR

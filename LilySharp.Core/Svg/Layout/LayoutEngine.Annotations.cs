@@ -770,7 +770,7 @@ internal sealed partial class LayoutEngine
 
         // Layout percent repeats
         var percentRepeatLayouts = PercentRepeatEngraver.Calculate(
-            percentRepeats ?? ImmutableArray<PercentRepeatItem>.Empty, systems, ml);
+            percentRepeats ?? ImmutableArray<PercentRepeatItem>.Empty, systems, ml, measures);
 
         // Layout trill spanners (tr + wavy line). The drawn beams ride along so a
         // beamed support column's stem ends at the quanted face (ledger

@@ -1274,7 +1274,8 @@ internal sealed class MultiStaffLayouter
                 ? primaryVoice.Measures[i + 1] : null;
             var springs = _measureLayouter.CreateTimingSprings(
                 primaryMeasure, allTimings, baseShortestDuration, allMeasures, nextMeasure,
-                CollectStaffIndicesAtIndex(score, i));
+                CollectStaffIndicesAtIndex(score, i),
+                SpacingRules.RunLeftBoundBarline(primaryVoice.Measures, i));
 
             // An empty placeholder measure (`| |`) has no timing springs at all —
             // without a floor it collapses to its barlines and reads as a double
@@ -1293,7 +1294,7 @@ internal sealed class MultiStaffLayouter
             // exactly as it will be laid out. Applied before the FirstNoteSpring
             // tweak below, which Math.Max-preserves any widened minimum.
             springs = ApplySharedColumnReservations(
-                score, i, springs, primaryMeasure, allTimings, allMeasures);
+                score, i, springs, primaryMeasure, allTimings, allMeasures, baseShortestDuration);
 
             // LINE-START measure: spring 0 is the prefix→first-note spacing
             // (space-alist of the last prefix item), not the mid-line
@@ -1714,14 +1715,69 @@ internal sealed class MultiStaffLayouter
     /// shape as the container-skip predicates (docs/HANDOFF.md §1 第98): a
     /// per-caller copy of a whitelist is where drift grows, so there is no copy.
     /// </summary>
+    /// <param name="baseShortestDuration">The piece's common shortest duration — the
+    /// <c>global_shortest</c> an EMPTY bar's one spring is linear in; null for the score
+    /// default, as the timing springs take it.</param>
     internal static ImmutableArray<Spring> ApplySharedColumnReservations(
         MultiStaffScore score,
         int measureIndex,
         ImmutableArray<Spring> springs,
         Measure primaryMeasure,
         List<Fraction> allTimings,
-        List<Measure> allMeasures)
+        List<Measure> allMeasures,
+        double? baseShortestDuration = null)
     {
+        // AN EMPTY BAR — no grob in any of its columns, in any staff or row — is not
+        // reserved on at all: LilyPond drops every unused column from the spacing problem
+        // and spaces the two bar lines as one breakable pair. This is decided HERE, in the
+        // one home both the layout and the break gate read, because whether a bar is empty
+        // is a question about the whole score's tables (a chord symbol or a syllable over a
+        // skip keeps the column, exactly as LilyPond's ChordName or LyricText grob does),
+        // which the per-voice timing springs cannot see.
+        // LILYPOND-REF: lily/system.cc:751-777 System::used_columns_in_range — the spacer's
+        //   column list, filtered through Paper_column::is_used.
+        // LILYPOND-REF: lily/spacing-basic.cc:40-66 Spacing_spanner::standard_breakable_column_spacing
+        //   — the pair's spring, in SpacingRules.EmptyBarSprings.
+        var usedBars = ScoreSideTables.UsedBars(score);
+        if (measureIndex < usedBars.Count && !usedBars[measureIndex])
+        {
+            var primaryMeasures = score.PrimaryContentStaff.PrimaryVoice.Measures;
+            // The bar's two bar lines: the left one's break permission is the PREVIOUS
+            // measure's (a permission is "after this measure"), the right one's is this
+            // measure's. The score's first moment and its last column are always
+            // breakable — LilyPond does not honour forbidBreak on the first moment and
+            // allows a line break at the end of a score whatever was asked.
+            // LILYPOND-REF: lily/paper-column-engraver.cc:264-271 Paper_column_engraver::stop_translation_timestep
+            //   — `&& breaks_`: "don't honour forbidBreak if it occurs on the first moment".
+            // LILYPOND-REF: lily/paper-column-engraver.cc:299-305 Paper_column_engraver::finalize
+            //   — "line breaks are always allowed at the end of a score".
+            bool leftBreakable = measureIndex == 0
+                || primaryMeasures[measureIndex - 1].LineBreakPermission != BreakPermission.Forbid;
+            bool rightBreakable = measureIndex == primaryMeasures.Length - 1
+                || primaryMeasure.LineBreakPermission != BreakPermission.Forbid;
+            // dt = the bar's own duration: the union over the staves, the same total the
+            // timing springs were built from.
+            var dt = Fraction.Zero;
+            foreach (var m in allMeasures)
+                if (m.TotalDuration > dt)
+                    dt = m.TotalDuration;
+            // A double percent sign on either bounding bar line reaches into this bar.
+            var signHalf = ScoreSideTables.DoublePercentHalfWidths(score);
+            var empty = SpacingRules.EmptyBarSprings(
+                allTimings.Count,
+                SpacingRules.RunLeftBoundBarline(primaryMeasures, measureIndex),
+                primaryMeasure.Items,
+                leftBreakable && rightBreakable,
+                ScoreSideTables.PrevailingMeters(score)[measureIndex],
+                dt,
+                baseShortestDuration ?? EngravingDefaults.BaseShortestDuration,
+                leftDoublePercentHalfWidth: measureIndex < signHalf.Count ? signHalf[measureIndex] : 0,
+                rightDoublePercentHalfWidth: measureIndex + 1 < signHalf.Count ? signHalf[measureIndex + 1] : 0);
+            // A lead sheet's grid floor is Lily#'s own and applies to every bar of the
+            // grid, the empty ones included (see EnsureLeadSheetBarWidth).
+            return score.IsLeadSheet ? SpacingRules.EnsureLeadSheetBarWidth(empty) : empty;
+        }
+
         // Cross-voice column pairs of each staff, with each item's ink at the X the
         // renderer will draw it (note-collision shifts included) — the floors the
         // per-voice rod loop in CreateInterColumnSpring cannot raise, because no
@@ -1824,18 +1880,41 @@ internal sealed class MultiStaffLayouter
     /// Collects all unique timings from all voices for a specific measure.
     /// </summary>
     /// <remarks>
-    /// A notation staff's spacer (<c>s</c>) makes NO column of its own while another
-    /// voice's note sounds through it: LilyPond's skip engraves no grobs, so its paper
-    /// column is empty, gets left/right neighbours from the sustained note's spacing
-    /// wishes, and is pruned from the spring chain as a loose column — <c>c'4</c>
-    /// against <c>s8[ s]</c> spaces as one plain quarter spring (LP regression
-    /// beam-skip.ly). A spacer onset nothing sounds through KEEPS its column: with no
-    /// note columns beside it there is nothing to attach the loose column to, and its
-    /// duration space survives (<c>c'8 s8 c'8</c> reads two eighth springs in LP, and
-    /// the whole lead-sheet spacing model rides on those surviving columns — the
-    /// ApplyRowCommandColumnSprings remarks tell the same story from the other side).
-    /// Text-row slot spacers and timing-placed chord symbols therefore always stay.
-    /// LILYPOND-REF: lily/spacing-determine-loose-columns.cc:82-90 is_loose_column.
+    /// A notation staff's spacer (<c>s</c>) makes NO column of its own: LilyPond's skip
+    /// engraves no grob, a column with no grob is NOT USED, and an unused column leaves the
+    /// spacing problem before any spring is made — whether another voice's note sounds
+    /// through the skip (<c>c'4</c> against <c>s8[ s]</c>, LP regression beam-skip.ly) or
+    /// nothing does (<c>c4 s2.</c>). The kept columns on either side are then spaced as
+    /// neighbours: a note's spring runs straight to the next kept column, or to the bar
+    /// line, over the skip's time (lily/spacing-basic.cc note_spacing's
+    /// <c>fraction = delta_t / shortest_playing</c> — <c>c4 s2.</c> prices four quarters'
+    /// space from the note to the bar), and a bar line to a note that opens after a skip
+    /// takes standard_breakable_column_spacing's duration-space branch
+    /// (<see cref="SpacingRules.SkipOpenedBarFirstSpring"/>).
+    /// LILYPOND-REF: lily/paper-column.cc:115-136 Paper_column::is_used — elements,
+    ///   bounded-by-me, is_breakable, "used", labels; a skip's column has none.
+    /// LILYPOND-REF: lily/system.cc:751-777 System::used_columns_in_range — the spacer's
+    ///   column list is filtered through is_used.
+    /// MEASURED, 2.26.0 (scratch/p333/ps ALLCOL dumps): <c>c4 s2.</c> has columns at the
+    /// bar, the note and the next bar only, and the bar measures 12.75 = 1.23 + 4 × a
+    /// quarter's refined spring; <c>c8 s8 c8 s8 c4 s4</c> keeps three note columns and no
+    /// skip column (15.16); <c>s4 c4 d e</c> opens with 0.39 + a quarter's duration space
+    /// (3.288). Lily# kept every skip column and priced its legs with the delta_t fallback
+    /// (9.03 / 15.35 / 12.85 for the same three bars).
+    /// <para>
+    /// ⚠️ TEXT-ROW slot spacers stand for the chord symbol or syllable drawn at them, and
+    /// where one IS drawn LilyPond's column is used (ChordName and LyricText are grobs in
+    /// it); a filler slot with nothing on it is a column LilyPond would not keep, and it is
+    /// kept here — the lead-sheet grid is priced on those slots (ApplyRowCommandColumnSprings)
+    /// and that is a separate, measured regime. So the drop applies to an onset whose only
+    /// occupants are NOTATION-staff spacers; a text-row item at the onset anchors it, as a
+    /// timing-placed chord symbol and a beat slash do. LILYSHARP-OWN: the filler-slot keep.
+    ///   departs from: lily/paper-column.cc:115-136 is_used, for a chord/lyric row's slot
+    ///     with no grob on it.
+    ///   goes away when: the row's own spacing is measured against LilyPond's kept columns
+    ///     (audit/lp-geometry chord.symbol-width.* were measured with a symbol in every slot).
+    ///   observed by: nothing — no fixture writes an empty row cell beside a staff skip.
+    /// </para>
     /// </remarks>
     internal static List<Fraction> CollectAllTimingsForMeasure(MultiStaffScore score, int measureIndex)
     {
@@ -1887,22 +1966,26 @@ internal sealed class MultiStaffLayouter
     }
 
     /// <summary>
-    /// The loose-column prune (see <see cref="CollectAllTimingsForMeasure"/>): drops
-    /// onsets owed ONLY to notation-staff spacers when a musical item sounds strictly
-    /// through them (started before, ends after). Everything the filter could empty is
-    /// anchored, so the empty-result guard never fires for real music; it protects a
-    /// degenerate all-spacer measure from losing its one column. Runs only when the
-    /// measure actually contains a notation-staff spacer.
+    /// The unused-column drop (see <see cref="CollectAllTimingsForMeasure"/>): keeps an onset
+    /// only when some grob stands on it — any item that is not a notation-staff spacer
+    /// (a note, a rest, a change; a text-row slot), a timing-placed chord symbol, or a beat
+    /// slash. An onset owed to notation-staff spacers alone is LilyPond's unused column and
+    /// leaves. Everything the filter could empty is anchored, so the empty-result guard
+    /// never fires for real music; it protects an all-spacer measure from losing its one
+    /// column (that bar is priced by <see cref="SpacingRules.EmptyBarSprings"/>, which keeps
+    /// the onsets as zero legs). Runs only when the measure actually contains a
+    /// notation-staff spacer.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/paper-column.cc:115-136 Paper_column::is_used. The "another
+    /// voice sounds through it" test this used to apply (the loose-column reading,
+    /// lily/spacing-determine-loose-columns.cc:82-90 is_loose_column) is subsumed: a column
+    /// with no grob never reaches the loose-column pass, because it is not in the list.
+    /// </remarks>
     private static List<Fraction> PruneSpacerOnlyOnsets(
         MultiStaffScore score, int measureIndex, HashSet<Fraction> timings)
     {
-        // Onsets owed to something OTHER than a notation-staff spacer: a musical item
-        // anywhere, or any text-row item (a lead sheet's slot columns are its spacers).
         var anchoredOnsets = new HashSet<Fraction>();
-        // Spans of notation-staff MUSICAL items — the "another voice sounds through it"
-        // test for pruning a spacer-only onset.
-        var soundingSpans = new List<(Fraction Start, Fraction End)>();
 
         foreach (var staffGroup in score.StaffGroups)
         {
@@ -1915,11 +1998,8 @@ internal sealed class MultiStaffLayouter
                         var currentTiming = Fraction.Zero;
                         foreach (var item in voice.Measures[measureIndex].Items)
                         {
-                            bool musical = SpacingRules.IsMusicalColumn(item);
-                            if (musical || staff.IsTextRow)
+                            if (staff.IsTextRow || item is not RestItem { IsSpacer: true })
                                 anchoredOnsets.Add(currentTiming);
-                            if (musical && !staff.IsTextRow && item.Duration > Fraction.Zero)
-                                soundingSpans.Add((currentTiming, currentTiming + item.Duration));
                             currentTiming += item.Duration;
                         }
                     }
@@ -1931,11 +2011,14 @@ internal sealed class MultiStaffLayouter
             foreach (var cn in ScoreSideTables.ChordNames(score).At(measureIndex))
                 if (cn.UseTiming)
                     anchoredOnsets.Add(cn.Timing);
+        // A beat slash is a RepeatSlash grob in the musical column at its moment.
+        // LILYPOND-REF: scm/define-grobs.scm:2909-2918 RepeatSlash rhythmic-grob-interface.
+        if (!score.PercentRepeats.IsDefaultOrEmpty)
+            foreach (var pr in score.PercentRepeats)
+                if (pr.IsBeatSlash && pr.MeasureIndex == measureIndex)
+                    anchoredOnsets.Add(pr.BeatTiming!.Value);
 
-        var pruned = timings
-            .Where(t => anchoredOnsets.Contains(t)
-                        || !soundingSpans.Any(s => s.Start < t && t < s.End))
-            .ToList();
+        var pruned = timings.Where(anchoredOnsets.Contains).ToList();
         return pruned.Count == 0 ? timings.ToList() : pruned;
     }
 

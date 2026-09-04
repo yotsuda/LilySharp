@@ -16,7 +16,10 @@
 
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Tablature;
 
 namespace LilySharp.Core.Svg.Layout;
 
@@ -199,4 +202,125 @@ internal static class ScoreSideTables
                         s, TextSpannerEngraver.DetectTextSpanners(s.MusicMarks),
                         static t => t.StaffIndex),
                     t => t.StaffIndex));
+
+    // ---- BAR-keyed facts the spring builders read for EVERY bar, from both the break
+    // gate and the layout (one instance each, §5.4's one-list rule).
+
+    // Arrays, not ImmutableArray: the weak table wants a reference type. Neither is
+    // handed out for writing — every reader indexes.
+    private static readonly System.Runtime.CompilerServices
+        .ConditionalWeakTable<MultiStaffScore, bool[]> _usedBarsByScore = new();
+    private static readonly System.Runtime.CompilerServices
+        .ConditionalWeakTable<MultiStaffScore, Fraction[]> _metersByScore = new();
+
+    /// <summary>
+    /// Per bar index: whether ANY grob stands in a column of that bar — a note, chord or
+    /// drawn rest in any voice of any staff, a chord symbol, a lyric syllable, a dynamic,
+    /// a script, a text, a tuplet bracket, a bass figure, a grace, or a beat slash. A bar
+    /// with none is an EMPTY BAR (<see cref="SpacingRules.EmptyBarSprings"/>).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/paper-column.cc:115-136 Paper_column::is_used — a column is used
+    ///   by the grobs it holds (<c>elements</c>), whatever their kind; the reader of this
+    ///   table is the spacing problem, which drops every unused column
+    ///   (lily/system.cc:751-777 System::used_columns_in_range).
+    /// The side tables are the grobs Lily# hangs on a bar's columns rather than on a note;
+    /// a measure-wide percent sign is NOT one of them — LilyPond's PercentRepeat is a
+    /// spanner bounded by the BAR-LINE columns and DoublePercentRepeat is an item ON the
+    /// bar line (scm/define-grobs.scm:1290-1309 DoublePercentRepeat break-align-symbol
+    /// staff-bar) — while a beat slash is a RepeatSlash grob in the musical column
+    /// (scm/define-grobs.scm:2909-2918 RepeatSlash rhythmic-grob-interface). Rehearsal
+    /// marks, tempo marks and volta brackets live on the bar-line column too and so are
+    /// not read here.
+    /// </remarks>
+    internal static IReadOnlyList<bool> UsedBars(MultiStaffScore score)
+        => _usedBarsByScore.GetValue(score, ComputeUsedBars);
+
+    private static bool[] ComputeUsedBars(MultiStaffScore score)
+    {
+        int n = score.MeasureCount;
+        var used = new bool[n];
+        foreach (var (_, staff, _) in score.EnumerateStaves())
+            foreach (var voice in staff.Voices)
+            {
+                int m = System.Math.Min(n, voice.Measures.Length);
+                for (int i = 0; i < m; i++)
+                    if (!used[i] && !SpacingRules.BarHoldsOnlySkips(voice.Measures[i].Items))
+                        used[i] = true;
+            }
+
+        void Mark(int measureIndex)
+        {
+            if (measureIndex >= 0 && measureIndex < n)
+                used[measureIndex] = true;
+        }
+        foreach (var it in score.Lyrics) Mark(it.MeasureIndex);
+        foreach (var it in score.ChordNames) Mark(it.MeasureIndex);
+        foreach (var it in score.Dynamics) Mark(it.MeasureIndex);
+        foreach (var it in score.Articulations) Mark(it.MeasureIndex);
+        foreach (var it in score.CustomTexts) Mark(it.MeasureIndex);
+        foreach (var it in score.TupletBrackets) Mark(it.MeasureIndex);
+        foreach (var it in score.FiguredBasses) Mark(it.MeasureIndex);
+        foreach (var it in score.GraceNotes) Mark(it.MeasureIndex);
+        foreach (var it in score.PercentRepeats)
+            if (it.IsBeatSlash)
+                Mark(it.MeasureIndex);
+        return used;
+    }
+
+    private static readonly System.Runtime.CompilerServices
+        .ConditionalWeakTable<MultiStaffScore, double[]> _doublePercentHalfWidthsByScore = new();
+
+    /// <summary>
+    /// Per bar index: half the ink width of the widest DOUBLE percent sign centred on the
+    /// bar line that OPENS that bar (the line between the two bars of a `%%` pair, on which
+    /// LilyPond break-aligns the sign), 0 where none stands. A sign on a tab staff is
+    /// one-and-a-half-sized, and the column's skyline is the union over the staves, so the
+    /// widest wins.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:1290-1309 DoublePercentRepeat break-align-symbol staff-bar.
+    ///   The item's MeasureIndex is the pair's SECOND measure, so the sign stands on that
+    ///   measure's opening bar line (<see cref="PercentRepeatItem"/>).
+    /// </remarks>
+    internal static IReadOnlyList<double> DoublePercentHalfWidths(MultiStaffScore score)
+        => _doublePercentHalfWidthsByScore.GetValue(score, ComputeDoublePercentHalfWidths);
+
+    private static double[] ComputeDoublePercentHalfWidths(MultiStaffScore score)
+    {
+        int n = score.MeasureCount;
+        var half = new double[n];
+        if (score.PercentRepeats.IsDefaultOrEmpty)
+            return half;
+        // The staff space each global staff index draws in: 1 for notation, the string
+        // spacing for a tab (the same reading SharedRenderer.DrawPercentRepeats makes).
+        var staffSpace = new Dictionary<int, double>();
+        foreach (var (_, staff, index) in score.EnumerateStaves())
+            staffSpace[index] = staff.Tuning is { } tuning
+                ? EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuning))
+                : 1.0;
+        foreach (var pr in score.PercentRepeats)
+        {
+            if (!pr.IsDouble || pr.MeasureIndex < 0 || pr.MeasureIndex >= n)
+                continue;
+            double ss = staffSpace.TryGetValue(pr.StaffIndex, out var s) ? s : 1.0;
+            double h = PercentRepeatEngraver.DoublePercentInkWidth(ss) / 2;
+            if (h > half[pr.MeasureIndex])
+                half[pr.MeasureIndex] = h;
+        }
+        return half;
+    }
+
+    /// <summary>
+    /// The meter's bar length in force at each bar index — LilyPond's <c>measure-length</c>,
+    /// stamped on the first command column of every bar (the citation is on
+    /// <see cref="SpacingRules.StandardBreakableColumnSpacing"/>, which reads it) — memoized
+    /// per score. The same walk <see cref="SpacingRules.CalculateCommonShortestDuration(MultiStaffScore)"/>
+    /// takes for its full-measure-rest test, cut once.
+    /// </summary>
+    internal static IReadOnlyList<Fraction> PrevailingMeters(MultiStaffScore score)
+        => _metersByScore.GetValue(score, s =>
+            MultiMeasureRestEngraver.PrevailingMeters(
+                s.AllVoices.Select(v => v.Measures).ToList(), s.MeasureCount,
+                s.TimeSignature.MeasureDuration));
 }

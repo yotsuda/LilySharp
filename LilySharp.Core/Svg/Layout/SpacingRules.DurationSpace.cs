@@ -257,16 +257,37 @@ internal static partial class SpacingRules
     /// <c>Clef.space-alist (staff-bar . (extra-space . 0.7))</c>. Adding a clef box here
     /// would therefore widen the run by ~2.847 ss that LilyPond does not spend.
     /// </remarks>
-    internal static double MmrRodMinimumDistance(BarlineType leftBound, IEnumerable<MusicItem>? runStartItems)
+    /// <param name="leftBound">The bar line drawn at the left bounding column.</param>
+    /// <param name="runStartItems">The right-hand measure's items, scanned for the
+    /// break-aligned change riding the left bounding column.</param>
+    /// <param name="leftDoublePercentHalfWidth">Half the ink width of a DOUBLE percent sign
+    /// centred on the LEFT bounding bar line, 0 when none — the sign reaches past the bar
+    /// line into the span (<see cref="BoundaryColumn.DoublePercentBox"/>).</param>
+    /// <param name="rightDoublePercentHalfWidth">The same for a sign centred on the RIGHT
+    /// bounding bar line, whose left half reaches back into the span.</param>
+    internal static double MmrRodMinimumDistance(
+        BarlineType leftBound, IEnumerable<MusicItem>? runStartItems,
+        double leftDoublePercentHalfWidth = 0, double rightDoublePercentHalfWidth = 0)
     {
         HorizontalSkyline leftColumnRight =
-            BoundaryColumn.Build(leftBound, runStartItems).RightSkylineFromBarLine();
-        // The right bounding column carries only its bar line: whatever sits there, the
-        // column origin coincides with the leftmost grob's left edge and that grob's
-        // default extra-spacing-width left is −0.1, so the column's left reach is −0.1.
+            BoundaryColumn.Build(leftBound, runStartItems)
+                .RightSkylineFromBarLine(leftDoublePercentHalfWidth);
+        // The right bounding column carries its bar line and, straddling it, a double
+        // percent sign when one stands there: whatever sits there, the column origin
+        // coincides with the leftmost grob's left edge and that grob's default
+        // extra-spacing-width left is −0.1, so the column's left reach is −0.1 — or the
+        // sign's left half further, since the sign is centred on the bar line.
         // LILYPOND-REF: lily/separation-item.cc:167.
-        HorizontalSkyline rightColumnLeft = HorizontalSkyline.FromBox(
-            StaffYBottom, StaffYTop, xLeft: -0.1, xRight: 0.1, HorizontalDirection.Left);
+        HorizontalSkyline rightColumnLeft = rightDoublePercentHalfWidth > 0
+            ? HorizontalSkyline.FromBoxes(
+                new[]
+                {
+                    (StaffYBottom, StaffYTop, -0.1, 0.1),
+                    BoundaryColumn.DoublePercentBox(rightDoublePercentHalfWidth),
+                },
+                HorizontalDirection.Left)
+            : HorizontalSkyline.FromBox(
+                StaffYBottom, StaffYTop, xLeft: -0.1, xRight: 0.1, HorizontalDirection.Left);
 
         return Math.Max(0.0, leftColumnRight.Distance(rightColumnLeft));
     }
@@ -368,7 +389,9 @@ internal static partial class SpacingRules
     /// global minimum this method used previously.
     /// </remarks>
     public static double CalculateCommonShortestDuration(Model.MultiStaffScore score)
-        => CommonShortestDuration(score.AllVoices.Select(v => v.Measures),
+        => CommonShortestDuration(
+            score.EnumerateStaves().SelectMany(t =>
+                t.Staff.Voices.Select(v => (v.Measures, t.Staff.IsTextRow))),
             score.TimeSignature.MeasureDuration);
 
     /// <summary>
@@ -378,27 +401,27 @@ internal static partial class SpacingRules
     /// LILYPOND-REF: lily/spacing-spanner.cc:92-173 calc_common_shortest_duration
     /// </remarks>
     public static double CalculateCommonShortestDuration(Model.Score score)
-        => CommonShortestDuration(score.Voices.Select(v => v.Measures),
+        => CommonShortestDuration(score.Voices.Select(v => (v.Measures, IsTextRow: false)),
             score.TimeSignature.MeasureDuration);
 
     private static double CommonShortestDuration(
-        IEnumerable<ImmutableArray<Model.Measure>> voiceMeasures,
+        IEnumerable<(ImmutableArray<Model.Measure> Measures, bool IsTextRow)> voiceMeasures,
         Fraction initialMeasureDuration)
     {
         var voices = voiceMeasures.ToList();
-        int measureCount = voices.Count == 0 ? 0 : voices.Max(m => m.Length);
+        int measureCount = voices.Count == 0 ? 0 : voices.Max(m => m.Measures.Length);
 
         // A full-measure rest is measured against the PREVAILING meter, so a 2/4 bar's
         // half rest is dropped from the vote just like a 4/4 bar's whole rest.
         var meters = MultiMeasureRestEngraver.PrevailingMeters(
-            voices, measureCount, initialMeasureDuration);
+            voices.Select(v => v.Measures).ToList(), measureCount, initialMeasureDuration);
 
         // Per-measure shortest across all voices, then count occurrences.
         var counts = new Dictionary<double, int>();
         for (int m = 0; m < measureCount; m++)
         {
             double shortest = double.MaxValue;
-            foreach (var measures in voices)
+            foreach (var (measures, isTextRow) in voices)
             {
                 if (m >= measures.Length)
                     continue;
@@ -410,6 +433,28 @@ internal static partial class SpacingRules
 
                 foreach (var item in measures[m].Items)
                 {
+                    // A SKIP casts no vote: the starter durations a column votes with are
+                    // read off the rhythmic grobs the spacing engraver acknowledges, and a
+                    // skip engraves none — so a bar of `s1` under a piece of eighths does
+                    // not pull the common shortest up to a whole, and a bar a percent
+                    // repeat covers (a spacer run since session 332) votes nothing, as
+                    // LilyPond's covered bar has no music to vote with. MEASURED
+                    // (scratch/p332/t7 pc6r): `c8 ×8 | s1 | s1 | s1 | c4 ×4` spaces its skip
+                    // bars at 8.07, the eighth's value, not the quarter's 5.51.
+                    // LILYPOND-REF: lily/spacing-engraver.cc:164-197 add_starter_duration —
+                    //   reached only through acknowledge_rhythmic_grob / acknowledge_rhythmic_head,
+                    //   i.e. from a grob; and it returns early for a lyric syllable and a
+                    //   multi-measure rest, the LilyPond home of the full-measure-rest skip above.
+                    // LILYPOND-REF: lily/spacing-spanner.cc:109-124 calc_common_shortest_duration
+                    //   — shortest-starter-duration is the only quantity a column votes with.
+                    // ⚠️ A TEXT ROW'S slot spacer stands for the chord symbol drawn at it, and
+                    // ChordName IS a rhythmic grob (scm/define-grobs.scm:837-855 ChordName
+                    // rhythmic-grob-interface), so a row's slots keep voting — the lead-sheet
+                    // recipe (ApplyRowCommandColumnSprings) was measured on that vote. A
+                    // LYRIC row's slot would not vote in LilyPond (the early return above);
+                    // it still does here, unmeasured and left as it was.
+                    if (!isTextRow && item is RestItem { IsSpacer: true })
+                        continue;
                     double dur = item.Duration.ToDouble();
                     // Skip zero-duration items (grace notes, clef changes, etc.)
                     if (dur > 0 && dur < shortest)

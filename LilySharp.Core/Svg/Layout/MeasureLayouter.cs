@@ -169,12 +169,17 @@ internal sealed class MeasureLayouter
     /// it is engraved before the shared bar line, so its width is charged to THIS
     /// measure's closing spring — see <see cref="SpacingRules.BoundaryClefAllowance"/>.
     /// </param>
+    /// <param name="leftBound">The bar line drawn at the bar's LEFT bounding column — its own
+    /// start bar line, or the previous bar's end when it declares none
+    /// (<see cref="SpacingRules.RunLeftBoundBarline"/>). Null reads the measure's own start
+    /// line, a single line standing in where it declares none — the single-measure callers.</param>
     public ImmutableArray<Spring> CreateTimingSprings(
         Measure measure, List<Fraction> timings,
         double? baseShortestDuration = null,
         IReadOnlyList<Measure>? allMeasures = null,
         Measure? nextMeasure = null,
-        IReadOnlyList<int>? staffOfMeasures = null)
+        IReadOnlyList<int>? staffOfMeasures = null,
+        BarlineType? leftBound = null)
     {
         if (timings.Count == 0)
             return ImmutableArray<Spring>.Empty;
@@ -221,8 +226,30 @@ internal sealed class MeasureLayouter
         //   set_distances_for_loose_col — r.item_drul_ = next_door; r.add_to_cols ().
         var looseRods = new List<(int Left, int Right, double Distance)>();
 
+        // Whether an onset AFTER the first kept one was dropped as unused (a skip's column):
+        // the union of every voice's onsets against the kept list. Only a measure holding a
+        // notation-staff spacer can have one, and only then is the union walked.
+        bool droppedOnsetFollows = false;
+        foreach (var m in measuresToScan)
+        {
+            var t = Fraction.Zero;
+            foreach (var item in m.Items)
+            {
+                if (item is RestItem { IsSpacer: true } && t > timings[0] && !timings.Contains(t))
+                {
+                    droppedOnsetFollows = true;
+                    break;
+                }
+                t += item.Duration;
+            }
+            if (droppedOnsetFollows) break;
+        }
+
         // Spring 0: barline → first column (see CreateBarlineToFirstSpring).
-        springs.Add(CreateBarlineToFirstSpring(timings, timingToItems));
+        springs.Add(CreateBarlineToFirstSpring(
+            timings, timingToItems, measure,
+            leftBound ?? (measure.StartBarline == BarlineType.None ? BarlineType.Single : measure.StartBarline),
+            droppedOnsetFollows, baseShortestDuration));
 
         // Springs between adjacent timing columns (see CreateInterColumnSpring).
         for (int i = 1; i < timings.Count; i++)
@@ -324,12 +351,32 @@ internal sealed class MeasureLayouter
     /// does — the same predicate SpacingRules.FillsMeasure applies on the line-breaking
     /// side, because the two spring gates must price identically.
     /// </remarks>
+    /// <param name="timings">The kept onsets — a skip's unused column is not among them.</param>
+    /// <param name="timingToItems">Items by onset.</param>
+    /// <param name="measure">The primary measure (its leading change items ride the bar).</param>
+    /// <param name="leftBound">The bar line drawn at the bar's left bounding column.</param>
+    /// <param name="droppedOnsetFollows">Whether an unused (skip-only) onset was dropped AFTER
+    /// the first kept one. LilyPond's fills_measure looks at the column of the NEXT RANK,
+    /// which for <c>c4 s2.</c> is the skip's unused column: <c>!is_used (next)</c> and no
+    /// full-measure-extra-space — MEASURED, ps1's bar line → c4 is 1.23, not 2.23.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:446-472 Spacing_spanner::fills_measure.</param>
+    /// <param name="baseShortestDuration">The common shortest, for a skip-opened bar's
+    /// duration-space spring.</param>
     private static Spring CreateBarlineToFirstSpring(
-        List<Fraction> timings, Dictionary<Fraction, List<MusicItem>> timingToItems)
+        List<Fraction> timings, Dictionary<Fraction, List<MusicItem>> timingToItems,
+        Measure measure, BarlineType leftBound, bool droppedOnsetFollows,
+        double? baseShortestDuration)
     {
         timingToItems.TryGetValue(timings[0], out var firstItems);
+        // A bar that opens with a skip: the bar line's neighbour is a column at a later
+        // moment — the duration-space branch, not Staff_spacing.
+        if (timings[0] > Fraction.Zero)
+            return SpacingRules.SkipOpenedBarFirstSpring(
+                leftBound, measure.Items, firstItems, timings[0],
+                baseShortestDuration ?? EngravingDefaults.BaseShortestDuration);
         bool fillsMeasure =
             timings.Count == 1
+            && !droppedOnsetFollows
             && firstItems != null
             && firstItems.Any(SpacingRules.IsMusicalColumn);
         return SpacingRules.BarlineToFirstColumnSpring(firstItems, fillsMeasure);

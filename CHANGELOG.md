@@ -90,6 +90,27 @@ scores against LilyPond's picture of the same book.
 
 ### Engraving
 
+- **An empty bar is as wide as LilyPond's.** A bar holding nothing but a skip (`s1`, or
+  the `| |` placeholder), and a bar a percent repeat covers, used to be spaced as if a
+  whole note stood in it — 6.39 staff spaces whatever the piece — where LilyPond drops the
+  skip's column altogether and spaces the two bar lines as one pair, linear in the bar's
+  length over the piece's shortest note: 5.51 in a piece of quarters, 8.07 in eighths,
+  15.75 in sixteenths. Both formulas are LilyPond's own (`standard_breakable_column_spacing`),
+  the second for a bar beside a bar line that cannot break — the inside of a two-bar `%%`
+  pair or of a slash body of three bars or more, where LilyPond forbids the break while the
+  repeat's sign is still sounding, and Lily# now forbids it there too. A skip also stops
+  voting for the piece's common shortest note, as LilyPond's skips never did, so a book
+  that is mostly percent repeats keeps the spacing of its written music. Measured against
+  LilyPond 2.26.0 to the digit on six probes. The `%%` sign itself is in the bar's width
+  too: LilyPond break-aligns it on the bar line it straddles, so its ink is part of that
+  column and each bar of the pair is wider by half the sign — 7.57 and 7.38 in a piece of
+  quarters, LilyPond's figures — and the sign is now centred on the bar line's left edge as
+  LilyPond's is. And a skip inside a bar has no column of its own either: `c4 s2.` spaces
+  the note to the bar line as four quarters of the note's own spring (12.75, LilyPond's
+  figure, where 9.03 was drawn), a bar opening with a skip reaches its first note by the
+  bar-to-column duration space, and a note sounding through another voice's skip is
+  unchanged. Two voices sharing a staff over skips (`beam-over-stem`) now sit within a
+  third of a space of LilyPond's bar widths where they were five spaces narrow.
 - **On a lead sheet, the volta bracket stands on the chord row and both ending labels stand
   on the bracket.** A chord row leading the system used to float the bracket a whole band
   too high — its floor was measured from the row's top edge rather than the staff — and the
