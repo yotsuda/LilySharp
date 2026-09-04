@@ -228,7 +228,7 @@
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:1767** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:3429** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:3433** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:2113** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
@@ -385,7 +385,7 @@
 ### `LilySharp.Core/Svg/Layout/SpacingRules.EmptyBar.cs`
 - **:240** LILYSHARP-OWN: LilyPond has no such spring because it has no such column — the
 ### `LilySharp.Core/Svg/Layout/SpacingRules.MeasureSprings.cs`
-- **:720** LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
+- **:740** LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
 ### `LilySharp.Core/Svg/Layout/StaffSize.cs`
 - **:62** ⚠️ LILYSHARP-OWN: THIS LINE IS A TYPE ENUMERATION, and it is the one part of this file
 ### `LilySharp.Core/Svg/Layout/TabChordColumns.cs`

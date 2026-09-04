@@ -96,7 +96,11 @@ public sealed record ChordNameItem
     /// </summary>
     public bool UseTiming { get; }
 
-    /// <summary>The chord's start time from its measure's start (used when <see cref="UseTiming"/>).</summary>
+    /// <summary>The chord's start time from its measure's start. A <c>chordnames</c> entry
+    /// is PLACED by it (<see cref="UseTiming"/>); a note-attached <c>@chord</c> carries its
+    /// note's onset here and is placed by <see cref="ItemIndex"/>, but the spacing prices
+    /// its width on the timing column at this moment either way
+    /// (<c>SpacingRules.ApplyChordRowSpacing</c>).</summary>
     public Fraction Timing { get; }
 
     /// <summary>

@@ -90,6 +90,13 @@ scores against LilyPond's picture of the same book.
 
 ### Engraving
 
+- **A chord symbol written on a note keeps its neighbours off.** An inline `@chord` used to
+  reserve no width at all — only a `chords` track's symbols did — so two whole-note chords
+  with wide names (`F♯sus4` then `Emaj7/D♯`) printed 0.78 staff spaces apart and read as one
+  word. The symbol now carries its note's onset and prices its width on that column exactly
+  as a track's symbol does (LilyPond has one grob for both spellings): the bar line clears
+  the name and the next symbol stands a clear four spaces on. A bar the name did not
+  outgrow is unchanged.
 - **An empty bar is as wide as LilyPond's.** A bar holding nothing but a skip (`s1`, or
   the `| |` placeholder), and a bar a percent repeat covers, used to be spaced as if a
   whole note stood in it — 6.39 staff spaces whatever the piece — where LilyPond drops the
@@ -213,6 +220,13 @@ scores against LilyPond's picture of the same book.
   staff's translation, and the pair of systems opens by exactly LilyPond's amount
   (ledger `page.pedal-bracket.gap-first`, 13.345 staff spaces on the probe, exact). A page's
   bottom edge counts the bracket too, so a book ending in a pedal is cropped a little deeper.
+
+### MIDI, MusicXML and the LilyPond twin
+
+- **A shifted chord in an absolute-octave book exports a twin LilyPond can read.** `lysc ly`
+  wrote a member's own octave mark and then the chord's after it, so `<b cis' fis>,` became
+  `<b, cis', fis,>` — and `cis',` is a syntax error in LilyPond, which takes `'` or `,` on a
+  pitch but never both. Each member now carries one net figure: `<b, cis fis,>`.
 
 ## 0.5.0
 

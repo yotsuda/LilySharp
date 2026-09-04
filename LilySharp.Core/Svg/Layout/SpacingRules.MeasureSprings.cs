@@ -334,6 +334,18 @@ internal static partial class SpacingRules
     /// from its column and the spacing extent runs <c>(-0.5 . w + 0.5)</c>. A column therefore
     /// owes 0.5 to its LEFT neighbour and <c>w + 0.5</c> to its right one, whichever side the
     /// neighbour is — not <c>w/2 + 0.5</c> to each, which is what a centred symbol would owe.
+    /// <para>
+    /// ⚠️ NAMED DIVERGENCE (measured 2026-09-05, scratch/p334/bench-cn.ly with cn-settings.ly):
+    /// LilyPond's rod is between the ChordName and what shares its HEIGHT — the next
+    /// ChordName (<c>w + 0.5 + 0.5 + 0.1</c>) and the line end — because Separation_item
+    /// distances are horizontal-skyline distances. A bar line and a note column do not
+    /// reach the chord line, so a name wider than its bar OVERHANGS the bar line and even the
+    /// next note column (`F♯sus4' ext 6.90 at 16.34, next bar at 21.88, `Emaj7/D♯' at 25.42:
+    /// the names keep 2.17, the bar line stands under the first). Lily# prices the last
+    /// symbol's reach to the bar EDGE instead (the bar line clears it), which is stronger:
+    /// the springs are per measure and no rod spans the bar column. Same answer where the
+    /// natural spacing already clears; wider bars where it does not.
+    /// </para>
     /// </remarks>
     public static ImmutableArray<Spring> ApplyChordRowSpacing(
         Rendering.ScoreTextMetrics fonts,
@@ -354,7 +366,14 @@ internal static partial class SpacingRules
                 continue;
             // Row symbols always price; STAFF-ATTACHED symbols only when the
             // caller opts in (an all-rest measure has no other width source).
-            if (!cn.IsChordRow && (!includeAttached || !cn.UseTiming))
+            // ⚠️ A note-attached @chord (UseTiming false) is attached too: it carries its
+            // note's onset in Timing (MeasureCollector.CollectChordNames), so it stands on
+            // that column here exactly as a chords-track symbol does. Until 2026-09-05 the
+            // filter also required UseTiming, and an inline symbol reserved NOTHING — two
+            // whole-note chords with wide names (`F♯sus4' `Emaj7/D♯') printed 0.78 ss apart,
+            // reading as one word (scratch/ベースタブLy/bench.lys). LilyPond has one grob for
+            // both spellings, so one price.
+            if (!cn.IsChordRow && !includeAttached)
                 continue;
             for (int t = 0; t < timings.Count; t++)
             {
@@ -460,7 +479,8 @@ internal static partial class SpacingRules
         {
             if (cn.MeasureIndex != measureIndex)
                 continue;
-            if (!cn.IsChordRow && (!includeAttached || !cn.UseTiming))
+            // The same filter as ApplyChordRowSpacing: an inline @chord is attached too.
+            if (!cn.IsChordRow && !includeAttached)
                 continue;
             for (int t = 0; t < timings.Count; t++)
                 if (timings[t] == cn.Timing)

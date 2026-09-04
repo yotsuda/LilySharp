@@ -369,6 +369,7 @@ public sealed partial class MeasureCollector
 
         int measureIndex = builder.CurrentMeasureIndex;
         int startNoteIndex = builder.CurrentItemCount;
+        Fraction startTiming = builder.CurrentDuration;
 
         // The ROOT is the first PITCHED member (leading rests just advance time) — it
         // resolves relative to the incoming frame and anchors the group. Every later PITCHED
@@ -436,7 +437,7 @@ public sealed partial class MeasureCollector
         // takes effect at the group's start, as if written on the first member),
         // both anchored on the group's first item. Other annotations are not
         // applied; AnnotationNameValidator warns (LYS4008) so nothing is silent.
-        CollectChordNames(arpeggio, measureIndex, startNoteIndex);
+        CollectChordNames(arpeggio, measureIndex, startNoteIndex, startTiming);
         CollectDynamics(arpeggio, measureIndex, startNoteIndex);
 
         // Auto-tuplet: the members were added WITHOUT duration — draw the bracket now.
@@ -878,7 +879,7 @@ public sealed partial class MeasureCollector
                     CollectArticulations(note, measureIndex, itemIndex, noteItem.StemUp,
                         noteItem.EditorialAccidental, noteAnchorTiming);
                     CollectFiguredBass(note, measureIndex, itemIndex);
-                    CollectChordNames(note, measureIndex, itemIndex);
+                    CollectChordNames(note, measureIndex, itemIndex, noteAnchorTiming);
                     CollectCrossStaff(note, measureIndex, itemIndex);
                 }
                 break;
@@ -1082,7 +1083,7 @@ public sealed partial class MeasureCollector
                     // Use chord stem direction for articulation placement
                     CollectArticulations(chord, measureIndex, itemIndex, chordItem.StemUp, anchorTiming: chordAnchorTiming);
                     CollectFiguredBass(chord, measureIndex, itemIndex);
-                    CollectChordNames(chord, measureIndex, itemIndex);
+                    CollectChordNames(chord, measureIndex, itemIndex, chordAnchorTiming);
                     CollectCrossStaff(chord, measureIndex, itemIndex);
                     // Collect arpeggio if present (bracket or wiggle — see arpBracket above).
                     if ((hasArpeggio || arpBracket) && chordItem.Notes.Length > 0)
@@ -1167,7 +1168,7 @@ public sealed partial class MeasureCollector
                     CollectDynamics(rep, measureIndex, itemIndex);
                     CollectArticulations(rep, measureIndex, itemIndex, chordCopy.StemUp, anchorTiming: repAnchorTiming);
                     CollectFiguredBass(rep, measureIndex, itemIndex);
-                    CollectChordNames(rep, measureIndex, itemIndex);
+                    CollectChordNames(rep, measureIndex, itemIndex, repAnchorTiming);
                     CollectCrossStaff(rep, measureIndex, itemIndex);
                     if ((hasArpeggio || arpBracket) && chordCopy.Notes.Length > 0)
                     {
@@ -1232,7 +1233,7 @@ public sealed partial class MeasureCollector
                     CollectDynamics(slash, measureIndex, itemIndex);
                     CollectArticulations(slash, measureIndex, itemIndex, slashItem.StemUp, anchorTiming: slashAnchorTiming);
                     CollectFiguredBass(slash, measureIndex, itemIndex);
-                    CollectChordNames(slash, measureIndex, itemIndex);
+                    CollectChordNames(slash, measureIndex, itemIndex, slashAnchorTiming);
                     CollectCrossStaff(slash, measureIndex, itemIndex);
                 }
                 break;
@@ -1318,7 +1319,7 @@ public sealed partial class MeasureCollector
                     CollectDynamics(bare, measureIndex, itemIndex);
                     CollectArticulations(bare, measureIndex, itemIndex, bareStemUp, anchorTiming: bareAnchorTiming);
                     CollectFiguredBass(bare, measureIndex, itemIndex);
-                    CollectChordNames(bare, measureIndex, itemIndex);
+                    CollectChordNames(bare, measureIndex, itemIndex, bareAnchorTiming);
                     CollectCrossStaff(bare, measureIndex, itemIndex);
                 }
                 break;
@@ -1798,7 +1799,7 @@ public sealed partial class MeasureCollector
                 CollectArticulations(note, annMeasureIndex, annItemIndex, noteItem.StemUp,
                     noteItem.EditorialAccidental, annAnchor);
                 CollectFiguredBass(note, annMeasureIndex, annItemIndex);
-                CollectChordNames(note, annMeasureIndex, annItemIndex);
+                CollectChordNames(note, annMeasureIndex, annItemIndex, annAnchor);
                 CollectCrossStaff(note, annMeasureIndex, annItemIndex);
                 return noteItem.Duration;
             }
@@ -1825,7 +1826,7 @@ public sealed partial class MeasureCollector
                 CollectDynamics(chord, annMeasureIndex, annItemIndex);
                 CollectArticulations(chord, annMeasureIndex, annItemIndex, chordItem.StemUp, anchorTiming: annAnchor);
                 CollectFiguredBass(chord, annMeasureIndex, annItemIndex);
-                CollectChordNames(chord, annMeasureIndex, annItemIndex);
+                CollectChordNames(chord, annMeasureIndex, annItemIndex, annAnchor);
                 CollectCrossStaff(chord, annMeasureIndex, annItemIndex);
                 return chordItem.Duration;
             }
@@ -1842,7 +1843,7 @@ public sealed partial class MeasureCollector
                     CollectDynamics(rep, annMeasureIndex, annItemIndex);
                     CollectArticulations(rep, annMeasureIndex, annItemIndex, chordCopy.StemUp, anchorTiming: annAnchor);
                     CollectFiguredBass(rep, annMeasureIndex, annItemIndex);
-                    CollectChordNames(rep, annMeasureIndex, annItemIndex);
+                    CollectChordNames(rep, annMeasureIndex, annItemIndex, annAnchor);
                     CollectCrossStaff(rep, annMeasureIndex, annItemIndex);
                     return chordCopy.Duration;
                 }
@@ -1858,7 +1859,7 @@ public sealed partial class MeasureCollector
                 builder.AddItemWithoutDuration(WithBowSources(slashItem with { TimeScale = scale }, m));
                 CollectDynamics(slash, annMeasureIndex, annItemIndex);
                 CollectArticulations(slash, annMeasureIndex, annItemIndex, slashItem.StemUp, anchorTiming: annAnchor);
-                CollectChordNames(slash, annMeasureIndex, annItemIndex);
+                CollectChordNames(slash, annMeasureIndex, annItemIndex, annAnchor);
                 return slashItem.Duration;
             }
             case BareDurationSyntax bare:
@@ -1873,13 +1874,13 @@ public sealed partial class MeasureCollector
                         builder.AddItemWithoutDuration(WithBowSources(n with { TimeScale = scale }, m));
                         CollectDynamics(bare, annMeasureIndex, annItemIndex);
                         CollectArticulations(bare, annMeasureIndex, annItemIndex, n.StemUp, anchorTiming: annAnchor);
-                        CollectChordNames(bare, annMeasureIndex, annItemIndex);
+                        CollectChordNames(bare, annMeasureIndex, annItemIndex, annAnchor);
                         return n.Duration;
                     case ChordItem c:
                         builder.AddItemWithoutDuration(WithBowSources(c with { TimeScale = scale }, m));
                         CollectDynamics(bare, annMeasureIndex, annItemIndex);
                         CollectArticulations(bare, annMeasureIndex, annItemIndex, c.StemUp, anchorTiming: annAnchor);
-                        CollectChordNames(bare, annMeasureIndex, annItemIndex);
+                        CollectChordNames(bare, annMeasureIndex, annItemIndex, annAnchor);
                         return c.Duration;
                     default:
                         var bareSpacer = (RestItem)bareItem;

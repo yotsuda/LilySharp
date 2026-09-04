@@ -97,9 +97,20 @@ public sealed partial class MeasureCollector
     /// <c>@chord.up</c>, the one shape that could have disagreed, parses to no music
     /// mark whatsoever. The net is <c>ChordNameTests.ABareChord_…</c>.
     /// </para>
+    /// <para>
+    /// <paramref name="anchorTiming"/> is the note's onset from its bar's start — the same
+    /// moment the articulations on the note anchor at. The symbol is DRAWN at the note's
+    /// item (<c>ChordNameItem.ItemIndex</c>), but it is PRICED on the bar's timing column at
+    /// this moment (<c>SpacingRules.ApplyChordRowSpacing</c>), which is where LilyPond's
+    /// ChordName grob would stand: a chord symbol above a note is an item in that note's
+    /// paper column. Until 2026-09-05 an inline symbol carried no moment, so the spacing
+    /// could not find its column and reserved nothing for it — two whole-note chords with
+    /// wide names printed straight through each other (scratch/ベースタブLy/bench.lys).
+    /// </para>
     /// LILYPOND-REF: scm/scheme-engravers.scm:1513 - Current_chord_text_engraver
     /// </remarks>
-    private void CollectChordNames(SyntaxNode node, int measureIndex, int itemIndex)
+    private void CollectChordNames(SyntaxNode node, int measureIndex, int itemIndex,
+        Fraction anchorTiming)
     {
         // Grace time has no column for it to hang off — see CollectArticulations.
         if (_graceDepth > 0)
@@ -139,7 +150,8 @@ public sealed partial class MeasureCollector
             }
 
             _chordNameCollector.AddInline(
-                chordText, measureIndex, itemIndex, markSyntax.SourceStart, _cursor.StaffIndex, structure);
+                chordText, measureIndex, itemIndex, anchorTiming, markSyntax.SourceStart,
+                _cursor.StaffIndex, structure);
         }
     }
 

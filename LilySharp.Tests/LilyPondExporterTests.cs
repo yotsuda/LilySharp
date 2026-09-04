@@ -81,6 +81,22 @@ public class LilyPondExporterTests
     }
 
     /// <summary>
+    /// Absolute mode, a chord shifted as a whole whose member carries its own mark: the twin
+    /// writes ONE net figure per member. Until 2026-09-05 it wrote the member's marks and then
+    /// the chord's (`cis',`), which LilyPond's lexer refuses — the twin of
+    /// scratch/ベースタブLy/bench.lys did not compile.
+    /// </summary>
+    [Fact]
+    public void Absolute_ChordLevelShift_FoldsIntoEachMembersMarks()
+    {
+        var ly = Export(Score("<b cis' fis>,4 <e' gis b dis>,"));
+        Assert.Contains("<b, cis fis,>4", ly);
+        Assert.Contains("<e gis, b, dis,>", ly);
+        Assert.DoesNotContain("',", ly);
+        Assert.DoesNotContain(",'", ly);
+    }
+
+    /// <summary>
     /// A relative part is anchored at ITS OWN default octave, which follows its clef.
     /// </summary>
     /// <remarks>

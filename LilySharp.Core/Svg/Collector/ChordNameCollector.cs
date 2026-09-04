@@ -97,12 +97,15 @@ internal sealed class ChordNameCollector
 
     /// <summary>Adds one inline chord name (a <c>@chord(c:m)</c> mark on a note). The
     /// main walk parses the mark text/structure and supplies the note's
-    /// measure/item/position. The structure lets it render as a Roman degree if the
-    /// staff's attached chords are shown that way (see <see cref="ApplyDisplayMode"/>).</summary>
-    public void AddInline(string text, int measureIndex, int itemIndex, int position, int staffIndex,
-        LilySharp.Core.Music.ChordStructure? structure = null)
+    /// measure/item/onset/position. The structure lets it render as a Roman degree if the
+    /// staff's attached chords are shown that way (see <see cref="ApplyDisplayMode"/>).
+    /// <c>UseTiming</c> stays false — the symbol is drawn at its note's item — but
+    /// <paramref name="timing"/> is the note's onset, the column the spacing prices the
+    /// symbol on (see <c>MeasureCollector.CollectChordNames</c>).</summary>
+    public void AddInline(string text, int measureIndex, int itemIndex, Fraction timing,
+        int position, int staffIndex, LilySharp.Core.Music.ChordStructure? structure = null)
         => _items.Add(new ChordNameItem(text, measureIndex, itemIndex, position, staffIndex,
-            structure: structure));
+            timing: timing, structure: structure));
 
     /// <summary>Applies a display mode to the INLINE <c>@chord</c> symbols already
     /// collected on a staff (aligned/row items already carry their own mode). Called

@@ -1871,7 +1871,6 @@ public sealed class LilyPondExporter
     private string EmitChord(ChordSyntax c)
     {
         int off = c.ChordOctaveOffset;
-        string marks = OctaveMarks(off);
         bool hasDegrees = c.Degrees.Any();
         if (hasDegrees && !_frameTracked)
             _warnings.Add(
@@ -1924,9 +1923,14 @@ public sealed class LilyPondExporter
             {
                 // Absolute: every pitch stands on its own, so every one carries the shift —
                 // the chord-level marks, and the section reference's own (_sectionOctaveOffset).
+                // ⚠️ ONE net figure, not the member's marks followed by the chord's: until
+                // 2026-09-05 this appended the chord-level marks as a second string, so
+                // `<b cis' fis>,` came out `<b, cis', fis,>` — and `cis',` is a LilyPond
+                // syntax error (lily/parser.yy steno_pitch: sup_quotes OR sub_quotes, never
+                // both). Found
+                // by the twin of scratch/ベースタブLy/bench.lys refusing to compile.
                 sb.Append(p.PitchToken.Text)
-                  .Append(OctaveMarks(p.OctaveOffset + _sectionOctaveOffset))
-                  .Append(marks);
+                  .Append(OctaveMarks(p.OctaveOffset + _sectionOctaveOffset + off));
             }
             else
             {

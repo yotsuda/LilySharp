@@ -16,6 +16,7 @@
 
 using System.Collections.Immutable;
 using System.Linq;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
@@ -272,6 +273,25 @@ public class ChordNameTests
         Assert.Equal(0, cn.MeasureIndex);
         Assert.Equal(0, cn.ItemIndex);
         Assert.Equal("C", cn.ChordText);
+    }
+
+    /// <summary>An inline symbol carries its note's onset (the column the spacing prices
+    /// it on) while staying item-placed — see MeasureCollector.CollectChordNames.</summary>
+    [Fact]
+    public void Collector_ChordName_CarriesTheNoteOnset()
+    {
+        var source = "c4 d e @chord(C) f | <c e g>2 r4 <d f a>@chord";
+        var tree = SyntaxTree.Parse(source);
+        var score = new MeasureCollector().Collect(tree);
+
+        Assert.Equal(2, score.ChordNames.Length);
+        var first = score.ChordNames[0];
+        Assert.False(first.UseTiming);
+        Assert.Equal(2, first.ItemIndex);
+        Assert.Equal(new Fraction(1, 2), first.Timing);
+        var second = score.ChordNames[1];
+        Assert.Equal(1, second.MeasureIndex);
+        Assert.Equal(new Fraction(3, 4), second.Timing);
     }
 
     [Fact]

@@ -151,6 +151,46 @@ public sealed class ChordAttachedSpacingTests
         Assert.Equal(10.0, result.Sum(s => s.MinDistance), precision: 9);
     }
 
+    /// <summary>
+    /// A note-attached <c>@chord</c> (UseTiming false) is attached too: it carries its note's
+    /// onset in Timing and prices on that column like a chords-track symbol. Until 2026-09-05
+    /// it reserved nothing, and two whole-note chords with wide names printed 0.78 ss apart
+    /// (scratch/ベースタブLy/bench.lys).
+    /// </summary>
+    [Fact]
+    public void InlineChord_OnAWholeNoteBar_HoldsTheBarOpenOnTheRight()
+    {
+        var inline = new ChordNameItem("F♯sus4", measureIndex: 0, itemIndex: 0,
+            sourcePosition: 0, useTiming: false, timing: Fraction.Zero);
+        double w = ChordNameEngraver.SymbolInkWidth(ScoreTextMetrics.Bundled, "F♯sus4");
+
+        var result = SpacingRules.ApplyChordRowSpacing(ScoreTextMetrics.Bundled,
+            Springs(2), new List<Fraction> { Fraction.Zero },
+            measureIndex: 0, ImmutableArray.Create(inline), includeAttached: true);
+
+        Assert.Equal(0.6, result[0].MinDistance, precision: 6);
+        Assert.Equal(w + 0.6, result[1].MinDistance, precision: 6);
+        Assert.True(w > 2.0, $"the probe symbol must be wider than the 2.0 floor (was {w:F3})");
+    }
+
+    /// <summary>The inline symbol's onset is honoured, not its item index: a symbol on
+    /// beat 2 prices the second column, and the bar's opening spring stays bare.</summary>
+    [Fact]
+    public void InlineChord_PricesTheColumnAtItsOnset()
+    {
+        var inline = new ChordNameItem("Cmaj7", measureIndex: 0, itemIndex: 1,
+            sourcePosition: 0, useTiming: false, timing: new Fraction(1, 4));
+        double w = ChordNameEngraver.SymbolInkWidth(ScoreTextMetrics.Bundled, "Cmaj7");
+
+        var result = SpacingRules.ApplyChordRowSpacing(ScoreTextMetrics.Bundled,
+            Springs(3), TwoColumns, measureIndex: 0, ImmutableArray.Create(inline),
+            includeAttached: true);
+
+        Assert.Equal(0.5, result[0].MinDistance, precision: 6);   // no symbol on beat 1
+        Assert.Equal(0.5, result[1].MinDistance, precision: 6);   // overhang, not a push
+        Assert.Equal(w + 0.6, result[2].MinDistance, precision: 6);
+    }
+
     [Fact]
     public void TwoAdjacentAttachedChords_StillReserveWidthBetweenThem()
     {
