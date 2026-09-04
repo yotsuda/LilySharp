@@ -182,8 +182,21 @@ public class HistoryCitationTests
     /// last old commit it took in, verified group by group, and the diff between the old
     /// tip and the new one is empty; the LIVE ratchet did not move (734, floor 564).
     /// </para>
+    /// <para>
+    /// ⚠️ RAISED 529 → 560, THE SAME WAY, ON 2026-09-05 (after session 337). The seventy-six
+    /// unpushed commits of sessions 329-337 were regrouped into fourteen before pushing.
+    /// Thirty-seven of them are cited by SHA in §1 and the archive — each session's own
+    /// "these commits", the commit an approval was given on, the tip a leg started from —
+    /// and the thirty-one of those tokens this census reads as citation-shaped went dead
+    /// with the regroup. Not re-pointed, for the reason the paragraphs above give: the
+    /// sentences are the record of what those sessions committed, and a leg that says "the
+    /// port is approved and committed" names the commit it means. Every new commit's tree is
+    /// the tree of the last old commit it took in, verified group by group, and the diff
+    /// between the old tip and the new one is empty; the LIVE ratchet did not move (735,
+    /// floor 564).
+    /// </para>
     /// </remarks>
-    private const int DeadCitationsWhenWritten = 529;
+    private const int DeadCitationsWhenWritten = 560;
 
     /// <summary>
     /// Extensions scanned for citations. Chosen because they are where citations are actually
