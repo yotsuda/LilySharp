@@ -191,6 +191,24 @@ public sealed class LilyPondExporter
     private readonly HashSet<string> _drumParts = new(StringComparer.Ordinal);
     private bool _drumMode;
 
+    /// <summary>
+    /// The parts whose music carries a <c>\N</c> string number. LilyPond's Staff prints a
+    /// StringNumber grob for every one of them — a circled digit beside the note — and
+    /// Lily#'s notation staff draws none: the number steers the TAB's string choice
+    /// (<c>MeasureCollector.ExtractStringNumber</c>) and nothing else. So the twin's Staff
+    /// asks LilyPond not to print them, which is what the hand-written corpus books say in
+    /// as many words (<c>\new Staff \with { \omit StringNumber }</c>).
+    /// </summary>
+    /// <remarks>
+    /// The same switch as <c>\tabFullNotation</c> on the TabStaff, the other way round:
+    /// the two engines' defaults differ, and the twin declares what Lily# draws. Measured
+    /// (2026-09-05, session 335, scratch/p335): without this the twin of "Le Freak" bars
+    /// 1-57 printed the digits over bars 10-11 of the notation staff, widened them, and
+    /// tied the two 11-line breakings of its A1 the other way from the hand-written book
+    /// (6 + 10 against 4 + 12, at the same system count).
+    /// </remarks>
+    private readonly HashSet<string> _stringNumberParts = new(StringComparer.Ordinal);
+
     /// <summary>Whether the twin currently has <c>\improvisationOn</c> open — the
     /// LilyPond spelling of a slash-note run. Opened by the first slash, closed
     /// by the next pitched event.</summary>
@@ -325,6 +343,8 @@ public sealed class LilyPondExporter
                             "drummap { } is not exported — the twin uses LilyPond's default "
                             + "drum table, so any remapped position, notehead or MIDI key differs");
                 }
+                if (HasStringNumbers(music))
+                    _stringNumberParts.Add(name);
                 _drumMode = _drumParts.Contains(name);
                 _partTranspose = EffectiveTranspose(root, name, render);
                 EmitPartVariable(varName, music, root);
@@ -741,6 +761,17 @@ public sealed class LilyPondExporter
     /// that writes both cannot be spelled at all, and saying so is better than writing a
     /// <c>.ly</c> LilyPond refuses to read.
     /// </remarks>
+    /// <summary>Whether any note of the part's music carries a <c>\N</c> string number
+    /// (see <see cref="_stringNumberParts"/>).</summary>
+    private static bool HasStringNumbers(List<SyntaxNode> music)
+    {
+        foreach (var item in music)
+            foreach (var n in item.DescendantNodes().Prepend(item))
+                if (n is StringNumberAnnotationSyntax)
+                    return true;
+        return false;
+    }
+
     private bool IsDrumPart(string partName, List<SyntaxNode> music)
     {
         bool drums = false, pitched = false;
@@ -2887,7 +2918,7 @@ public sealed class LilyPondExporter
                         break;
                     case TabRenderSyntax tb:
                         rows.Add(EmitStaff(RenderPartName(tb), parts, partVars, tab: true, "    ",
-                            tabNumbersOnly: TabIsNumbersOnly(tb)));
+                            tabNumbersOnly: TabIsNumbersOnly(tb, render)));
                         lastMainStaffPart = RenderPartName(tb) ?? lastMainStaffPart;
                         break;
                     case OssiaRenderSyntax os:
@@ -3114,8 +3145,12 @@ public sealed class LilyPondExporter
     /// must agree, or the twin is drawn in the other mode from the page", which is the
     /// argument for one reading rather than two careful ones (HANDOFF §5.2.1②).
     /// </remarks>
-    private static bool TabIsNumbersOnly(TabRenderSyntax tab) =>
-        Semantics.TabRenderVocabularyValidator.IsNumbersOnly(tab);
+    /// <summary>The page's answer to a tab's style — explicit clause, else numbers beside
+    /// a notation staff of the same part and full alone — asked of the one home that
+    /// answers it for the page (session 335: the twin used to read the explicit word only,
+    /// and exported every paired tab with <c>\tabFullNotation</c>).</summary>
+    private static bool TabIsNumbersOnly(TabRenderSyntax tab, RenderDeclarationSyntax render) =>
+        Svg.Collector.RenderSpecParser.TabIsNumbersOnly(tab, render);
 
     /// <summary>Fills <see cref="_instrumentNames"/> from the page's own reading of the
     /// render block.</summary>
@@ -3186,11 +3221,13 @@ public sealed class LilyPondExporter
             if (tabWith.Count > 0)
                 sb.Append(" \\with { ").Append(string.Join(" ", tabWith)).Append(" }");
             sb.Append(" { ");
-            // ⚠️ The two engines' DEFAULTS are opposite ends of the same switch. A bare
-            // LilyPond TabStaff prints fret digits ALONE — it omits Stem, Beam, Flag, Dots,
-            // Rest and TupletBracket (ly/engraver-init.ly TabStaff / `\tabFullNotation` in
-            // ly/property-init.ly) — and that is Lily#'s `tab part as numbers`. Lily#'s
-            // DEFAULT `tab part` draws the rhythm, so its twin has to ask for it back.
+            // ⚠️ A bare LilyPond TabStaff prints fret digits ALONE — it omits Stem, Beam,
+            // Flag, Dots, Rest and TupletBracket (ly/engraver-init.ly TabStaff /
+            // `\tabFullNotation` in ly/property-init.ly) — and that is Lily#'s `tab part as
+            // numbers`, which is also the page's DEFAULT for a tab beside a notation staff
+            // of the same part (user decision, 2026-08-29). A lone `tab part` draws the
+            // rhythm, so its twin has to ask for it back; tabNumbersOnly is the page's own
+            // answer (RenderSpecParser.TabIsNumbersOnly), not a reading of the clause alone.
             // Measured: without this the twin of `tab-beam-script` held TWO Beam grobs (the
             // notation staff's) against the page's four, so every tab book was uncomparable
             // on beams and was written off as a frame problem in the sweep.
@@ -3222,8 +3259,14 @@ public sealed class LilyPondExporter
         else
         {
             sb.Append(indent).Append("\\new Staff");
-            if (InstrumentNameClause(partName) is { } staffName)
-                sb.Append(" \\with { ").Append(staffName).Append(" }");
+            var staffWith = new List<string>(2);
+            if (InstrumentNameClause(partName) is { } staffName) staffWith.Add(staffName);
+            // LilyPond would print a circled digit for every `\N` on this staff; Lily#'s
+            // notation staff never draws one (see _stringNumberParts).
+            if (partName != null && _stringNumberParts.Contains(partName))
+                staffWith.Add("\\omit StringNumber");
+            if (staffWith.Count > 0)
+                sb.Append(" \\with { ").Append(string.Join(" ", staffWith)).Append(" }");
             sb.Append(" { ");
             if (clef != null) sb.Append("\\clef ").Append(LyClefName(clef)).Append(' ');
             sb.Append('\\').Append(varName).Append(" }\n");

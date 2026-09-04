@@ -516,6 +516,30 @@ public class LilyPondExporterTests
     }
 
     /// <summary>
+    /// A <c>\N</c> string number steers the TAB's string choice and is drawn nowhere on
+    /// Lily#'s notation staff; LilyPond's Staff prints a circled digit for every one. The
+    /// twin's Staff therefore omits StringNumber, as the hand-written corpus books do —
+    /// and only when the part carries a string number, so a twin without one is unchanged.
+    /// </summary>
+    /// <remarks>
+    /// Measured (session 335): the twin of "Le Freak" bars 1-57 printed the digits over
+    /// bars 10-11 of the notation staff and tied the two 11-line breakings of its A1 the
+    /// other way from the hand-written book (6 + 10 against 4 + 12).
+    /// </remarks>
+    [Fact]
+    public void StaffTwin_OmitsStringNumbers_WhenThePartCarriesThem()
+    {
+        var withNumbers = Export(Score("c,4\\4 d,\\3", render: "staff bassline\n  tab bassline"));
+        Assert.Contains("\\new Staff \\with { \\omit StringNumber } { \\clef \"bass\"", withNumbers);
+        // The numbers themselves still reach the twin (the TabStaff frets by them).
+        Assert.Contains("c,4\\4", withNumbers);
+
+        var without = Export(Score("c,4 d,", render: "staff bassline\n  tab bassline"));
+        Assert.DoesNotContain("StringNumber", without);
+        Assert.Contains("\\new Staff { \\clef \"bass\"", without);
+    }
+
+    /// <summary>
     /// The two engines' tab DEFAULTS are opposite ends of the same switch, so a bare
     /// <c>\new TabStaff</c> is the twin of <c>tab part AS NUMBERS</c>, never of a plain
     /// <c>tab part</c>.
@@ -530,14 +554,25 @@ public class LilyPondExporterTests
     /// missing tab FRAME in the sweep rather than as a twin in the wrong mode.
     /// </remarks>
     [Fact]
-    public void TabTwin_AsksForFullNotation_UnlessTheScoreSaidAsNumbers()
+    public void TabTwin_TakesThePagesStyle_FullForALoneTab_NumbersBesideItsStaff()
     {
-        var full = Export(Score("c,8 d, e, f,", render: "staff bassline\n  tab bassline"));
-        Assert.Contains("\\tabFullNotation", full);
+        // A lone tab carries the rhythm itself: full, as the page draws it.
+        var lone = Export(Score("c,8 d, e, f,", render: "tab bassline"));
+        Assert.Contains("\\tabFullNotation", lone);
 
-        var numbers = Export(Score("c,8 d, e, f,", render: "staff bassline\n  tab bassline as numbers"));
+        // Beside a notation staff of the same part the page draws fret digits only (user
+        // decision, 2026-08-29), so the twin is a bare TabStaff — it used to ask for full
+        // notation here and was a different page (session 335).
+        var paired = Export(Score("c,8 d, e, f,", render: "staff bassline\n  tab bassline"));
+        Assert.DoesNotContain("\\tabFullNotation", paired);
+        Assert.Contains("\\new TabStaff", paired);
+
+        // An explicit clause wins either way.
+        var numbers = Export(Score("c,8 d, e, f,", render: "tab bassline as numbers"));
         Assert.DoesNotContain("\\tabFullNotation", numbers);
         Assert.Contains("\\new TabStaff", numbers);
+        var full = Export(Score("c,8 d, e, f,", render: "staff bassline\n  tab bassline as full"));
+        Assert.Contains("\\tabFullNotation", full);
     }
 
     // ---- the `instrument` preset (HANDOFF gate ⑹) ---------------------------

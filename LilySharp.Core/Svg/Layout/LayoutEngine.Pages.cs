@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using LilySharp.Core.Rendering;
@@ -346,10 +347,25 @@ internal sealed partial class LayoutEngine
             var anchors = systems
                 .Select(s => PageAnchorOffsets(s.StaffGroups))
                 .ToImmutableArray();
+            var shapes = BuildLineShapes(systems, perSystemSkylines, perSystemExtents, SysHeight);
+            if (DebugPageBreakingScoring is { } debug)
+            {
+                // The placed systems' own details — what the page is really broken from —
+                // beside the count loop's estimate of the same lines (ChooseSystemCount).
+                var placedDetails = new List<SystemDetails>(systems.Length);
+                for (int i = 0; i < systems.Length; i++)
+                    placedDetails.Add(_pageLayouter.BuildSystemDetails(
+                        i, SysHeight(i), perSystemExtents[i].upExtent, perSystemExtents[i].downExtent,
+                        shapes is { } sh && i < sh.Length ? sh[i] : null,
+                        perSystemPagePermissions is { } pp && i < pp.Length ? pp[i] : BreakPermission.Allow));
+                var stacked = PageBreaker.CalcLineHeights(placedDetails);
+                for (int i = 0; i < stacked.Count; i++)
+                    debug($"  placed sys {i + 1}: {DescribeDetails(stacked[i])}");
+            }
             var pages = _pageLayouter.CreatePagesWithOptimalBreaking(
                 systems, headerHeight, perSystemExtents.ToImmutableArray(), skylines,
                 perSystemBandUps?.ToImmutableArray(), perSystemHeights, anchors,
-                BuildLineShapes(systems, perSystemSkylines, perSystemExtents, SysHeight),
+                shapes,
                 perSystemPagePermissions);
             return (pages, pages.SelectMany(p => p.Systems).ToImmutableArray());
         }

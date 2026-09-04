@@ -294,6 +294,13 @@ public class SvgSnapshotTests
         // lily/optimal-page-breaking.cc:139-248 Optimal_page_breaking::solve re-chooses the
         // count by page score).
         yield return new object[] { "test/system-count-page-score" };
+        // The count loop prices each candidate line by ITS OWN line-start ink: "Le Freak"
+        // bars 1-57 (staff + tab), whose first line carries the tempo and the "Intro" box
+        // over its prefix — LilyPond engraves 11 systems with A1 as 4 + 12 (2026-09-05:
+        // every candidate line was priced with the first line's ink, six systems fitted a
+        // page where eight do, and the loop stopped one count short at 12 systems, A1 as
+        // 4 + 6 + 6).
+        yield return new object[] { "test/system-count-line-start-ink" };
         // What a `repeat percent` body writes prints ONCE: the covered bars carry the sign
         // and no slur, tie, script or dynamic (2026-09-02: the collector re-walked the body
         // with its markers, and the slur/script/dynamic engravers have no percent filter).

@@ -84,12 +84,13 @@ internal sealed class TabRenderVocabularyValidator : ISemanticValidator
     /// shape LilyPond's default was chosen for.
     /// </para>
     /// <para>
-    /// ⚠️ ONE HOME, and it is this one: <c>RenderSpecParser.ParseTab</c> and
-    /// <c>LilyPondExporter.TabIsNumbersOnly</c> each test <c>== "numbers"</c> for themselves,
-    /// which is safe only because there are exactly two styles — the moment a third arrives,
-    /// a test for one word stops being a test for the vocabulary. The editor's completion
-    /// reads this list (LanguageVocabulary.TabStyles) so it cannot offer a word the compiler
-    /// would now refuse.
+    /// ⚠️ ONE HOME, and it is this one: <c>RenderSpecParser.ParseTab</c> tests
+    /// <c>== "numbers"</c> for itself, which is safe only because there are exactly two
+    /// styles — the moment a third arrives, a test for one word stops being a test for the
+    /// vocabulary. The twin asks the page (<c>RenderSpecParser.TabIsNumbersOnly</c>, session
+    /// 335) so the DEFAULT is the page's too. The editor's completion reads this list
+    /// (LanguageVocabulary.TabStyles) so it cannot offer a word the compiler would now
+    /// refuse.
     /// </para>
     /// <para>
     /// ⚠️ THE ORDER IS THE LANGUAGE'S, not alphabetical, and it is load-bearing: the editor

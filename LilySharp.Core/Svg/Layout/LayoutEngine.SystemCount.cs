@@ -44,11 +44,14 @@ internal sealed partial class LayoutEngine
     /// (the REST bucket's share).</param>
     /// <param name="DownRest">Per measure, the ink below the body over that bar's X span.</param>
     /// <param name="Body">Per measure, the body height of the system it was placed in.</param>
-    /// <param name="BeginUp">The line-start prefix's ink above the body, the widest any
-    /// placed system showed (the BEGIN bucket, which every candidate line carries).</param>
-    /// <param name="BeginDown">Its ink below the body.</param>
+    /// <param name="BeginUpAt">Per measure, the ink above the body a candidate line STARTING
+    /// at that measure carries in its BEGIN bucket — its line-start prefix and whatever
+    /// stands over it: the placed system's own begin bucket where the ideal breaking started
+    /// a system there, the bare continuation prefix everywhere else (see the remarks of
+    /// <see cref="EstimateMeasureHeights"/>).</param>
+    /// <param name="BeginDownAt">Its ink below the body, likewise per line start.</param>
     private readonly record struct MeasureHeightEstimate(
-        double[] UpRest, double[] DownRest, double[] Body, double BeginUp, double BeginDown);
+        double[] UpRest, double[] DownRest, double[] Body, double[] BeginUpAt, double[] BeginDownAt);
 
     /// <summary>
     /// Slices the ideal placement's paging silhouettes by bar, so that any candidate line —
@@ -69,11 +72,32 @@ internal sealed partial class LayoutEngine
     /// <see cref="VerticalSkyline.MaxHeightInRange"/> over the bar's X span — the begin
     /// bucket being the ink left of the first bar (<c>BuildLineShapes</c>' cut). So where
     /// LilyPond's estimate is a function of the columns alone, this one carries the ideal
-    /// line's spacing and its neighbours' collisions, and a candidate line's first bar is
-    /// given the widest line-start prefix any placed system showed rather than its own.
-    /// Both estimates differ from the engraved height; the page is still broken from the
-    /// real, placed systems (CreatePages), exactly as before — only the COUNT is chosen
-    /// from this.
+    /// line's spacing and its neighbours' collisions. Both estimates differ from the
+    /// engraved height; the page is still broken from the real, placed systems
+    /// (CreatePages), exactly as before — only the COUNT is chosen from this.
+    /// </para>
+    /// <para>
+    /// THE BEGIN BUCKET IS PER LINE START, as LilyPond's is per break rank
+    /// (LILYPOND-REF: lily/axis-group-interface.cc:417-458 adjacent_pure_heights —
+    /// <c>begin_line_heights[j]</c> unites, for a line that would start at break rank
+    /// <c>ranks[j]</c>, the prebroken pieces there and every grob whose rank span starts at
+    /// or before that column; lily/system.cc:906-928 part_of_line_pure_height reads the ONE
+    /// entry at the candidate line's start rank). Lily#'s stand-in: a bar the ideal breaking
+    /// started a system at takes that system's measured begin bucket; every other bar takes
+    /// the BARE continuation prefix — the smallest begin bucket any continuation system
+    /// showed (clef, key and the bar number over them; a mark or tempo standing over a
+    /// line start is in that line's bucket only). What stands over such a bar mid-line
+    /// (its mark box, a tempo) is in the bar's REST share already, so a line starting
+    /// there is still priced for it, through max(begin, rest).
+    /// ⚠️ It used to be ONE bucket for every line — the WIDEST any placed system showed —
+    /// and the first system's is the widest by construction (the tempo and the opening mark
+    /// stand over its prefix): every candidate line of "Le Freak" (staff + tab, 24 lines)
+    /// was priced 7.301 above the body where the placed continuation lines are 2.311, six
+    /// systems fitted a page where the placement then fitted eight, the ideal count needed
+    /// a page more than the count below it, and the loop's "one page fewer and stretched"
+    /// exit (optimal-page-breaking.cc:183-185) fired one count too early — LilyPond's
+    /// 23-line breaking, whose line sum Lily# had already priced cheapest, was never tried
+    /// (session 335, scratch/p335).
     /// </para>
     /// <para>
     /// What the silhouette cannot account for (whole-line bands, anything the extents were
@@ -89,7 +113,16 @@ internal sealed partial class LayoutEngine
         var downRest = new double[measureCount];
         var body = new double[measureCount];
         Array.Fill(body, fallbackBody);
-        double beginUp = 0, beginDown = 0;
+        // The begin bucket per line start: NaN until a placed system starting there fills
+        // it; the rest take the bare continuation prefix below.
+        var beginUpAt = new double[measureCount];
+        var beginDownAt = new double[measureCount];
+        Array.Fill(beginUpAt, double.NaN);
+        Array.Fill(beginDownAt, double.NaN);
+        // The bare continuation prefix: the smallest begin bucket a continuation system
+        // showed. A book of one system has no continuation and lends that system's.
+        double bareUp = double.PositiveInfinity, bareDown = double.PositiveInfinity;
+        double firstUp = 0, firstDown = 0;
         var skylines = pass.Prelim.PagingSkylines;
 
         for (int s = 0; s < pass.Systems.Count; s++)
@@ -135,8 +168,24 @@ internal sealed partial class LayoutEngine
             // What the silhouette could not account for belongs to every bucket.
             double excessUp = Math.Max(0, ext.upExtent - Math.Max(sysBeginUp, sysRestUp));
             double excessDown = Math.Max(0, ext.downExtent - Math.Max(sysBeginDown, sysRestDown));
-            beginUp = Math.Max(beginUp, sysBeginUp + excessUp);
-            beginDown = Math.Max(beginDown, sysBeginDown + excessDown);
+            double lineBeginUp = sysBeginUp + excessUp;
+            double lineBeginDown = sysBeginDown + excessDown;
+            int firstMeasure = sys.Measures[0].MeasureIndex;
+            if (firstMeasure >= 0 && firstMeasure < measureCount)
+            {
+                beginUpAt[firstMeasure] = lineBeginUp;
+                beginDownAt[firstMeasure] = lineBeginDown;
+            }
+            if (s == 0)
+            {
+                firstUp = lineBeginUp;
+                firstDown = lineBeginDown;
+            }
+            else
+            {
+                bareUp = Math.Min(bareUp, lineBeginUp);
+                bareDown = Math.Min(bareDown, lineBeginDown);
+            }
             for (int k = 0; k < count; k++)
             {
                 int mi = sys.Measures[k].MeasureIndex;
@@ -147,7 +196,19 @@ internal sealed partial class LayoutEngine
                 body[mi] = h;
             }
         }
-        return new MeasureHeightEstimate(upRest, downRest, body, beginUp, beginDown);
+        if (double.IsPositiveInfinity(bareUp))
+        {
+            bareUp = firstUp;
+            bareDown = firstDown;
+        }
+        for (int m = 0; m < measureCount; m++)
+        {
+            if (double.IsNaN(beginUpAt[m]))
+                beginUpAt[m] = bareUp;
+            if (double.IsNaN(beginDownAt[m]))
+                beginDownAt[m] = bareDown;
+        }
+        return new MeasureHeightEstimate(upRest, downRest, body, beginUpAt, beginDownAt);
     }
 
     /// <summary>
@@ -181,10 +242,14 @@ internal sealed partial class LayoutEngine
             var permission = end > start
                 ? measures[end - 1].EffectivePagePermission
                 : BreakPermission.Allow;
+            // The begin bucket of a line starting HERE (LilyPond's begin_line_heights at
+            // this line's start rank), not one bucket for every line.
+            double beginUp = start < estimate.BeginUpAt.Length ? estimate.BeginUpAt[start] : 0;
+            double beginDown = start < estimate.BeginDownAt.Length ? estimate.BeginDownAt[start] : 0;
             details.Add(_pageLayouter.BuildSystemDetails(
                 i, body,
-                Math.Max(estimate.BeginUp, restUp), Math.Max(estimate.BeginDown, restDown),
-                new LineShape(estimate.BeginUp, estimate.BeginDown, restUp, restDown),
+                Math.Max(beginUp, restUp), Math.Max(beginDown, restDown),
+                new LineShape(beginUp, beginDown, restUp, restDown),
                 permission));
             start = end;
         }
@@ -258,6 +323,19 @@ internal sealed partial class LayoutEngine
         int idealCount = lineBreaks.IdealLineCount;
         if (Score(idealCount) is not { } best)
             return null;
+        var debug = DebugPageBreakingScoring;
+        if (debug != null)
+        {
+            // What each candidate line is priced at — LilyPond's line_details per chunk,
+            // laid beside the placed systems' own details (CreatePages prints those).
+            debug("estimate: begin up/down per line start "
+                + string.Join(" ", lineBreaks.IdealBreaks.Prepend(0).Take(lineBreaks.IdealBreaks.Count)
+                    .Select(m => $"{m + 1}:{estimate.BeginUpAt[m]:F3}/{estimate.BeginDownAt[m]:F3}")));
+            var idealDetails = PageBreaker.CalcLineHeights(
+                EstimatedSystemDetails(lineBreaks.IdealBreaks, estimate, measures));
+            for (int i = 0; i < idealDetails.Count; i++)
+                debug($"  est line {i + 1}: {DescribeDetails(idealDetails[i])}");
+        }
         double bestDemerits = best.demerits;
         List<int> bestBreaks = best.breaks;
         bool changed = false;
@@ -280,7 +358,6 @@ internal sealed partial class LayoutEngine
 
         // LILYPOND-REF: :139-190 — "try a smaller number of systems than the ideal number
         // for line breaking". The ideal count itself is the first iteration there too.
-        var debug = DebugPageBreakingScoring;
         debug?.Invoke($"ideal {idealCount} systems on {pageCount} page(s): {best.demerits:F6} "
             + $"(pages {string.Join(",", best.pages.SystemsPerPage)} forces "
             + $"{string.Join(",", best.pages.Forces.Select(f => f.ToString("F3")))}); min_sys_count {minCount}");
@@ -357,6 +434,17 @@ internal sealed partial class LayoutEngine
         debug?.Invoke($"chosen {bestBreaks.Count} systems: {bestDemerits:F6}"
             + (changed ? "" : " (the ideal)"));
         return changed ? bestBreaks : null;
+    }
+
+    /// <summary>One line's page-breaking details, for the scoring report: the three heights,
+    /// the two silhouette buckets and the tallness the breaker stacks it at.</summary>
+    internal static string DescribeDetails(SystemDetails d)
+    {
+        string shape = d.Shape is { } s
+            ? $"begin {s.BeginUp:F3}/{s.BeginDown:F3} rest {s.RestUp:F3}/{s.RestDown:F3}"
+            : "-";
+        return $"top {d.TopExtent:F3} body {d.StaffHeight:F3} bottom {d.BottomExtent:F3} "
+            + $"height {d.Height:F3} shape {shape} tallness {d.Tallness:F3} perm {d.PagePermission}";
     }
 
     /// <summary>Line sizes (bars per line) of a breaking, for the scoring report.</summary>

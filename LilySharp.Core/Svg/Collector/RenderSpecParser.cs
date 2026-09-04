@@ -689,6 +689,23 @@ public static class RenderSpecParser
         _ => ChordDisplayMode.Names,
     };
 
+    /// <summary>
+    /// Whether a tab item is drawn as fret digits only — the PAGE's answer to the style
+    /// question, for the LilyPond twin to ask (<c>LilyPondExporter.TabIsNumbersOnly</c>):
+    /// an explicit <c>as</c> wins, else a tab beside a notation staff of the same part is
+    /// numbers and a lone tab is full (<see cref="ParseTab"/>).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONE HOME. The twin used to read only the explicit word for itself, so a paired
+    /// tab with no clause — numbers on the page since the 2026-08-29 decision — was
+    /// exported with <c>\tabFullNotation</c>: stems, beams and rests on a tab the page
+    /// draws bare, wider columns and taller systems, and a twin that broke its lines
+    /// differently from the page for no reason the page could show (session 335, the
+    /// A1 of "Le Freak": 6 + 10 against the page's and the hand-written book's 4 + 12).
+    /// </remarks>
+    internal static bool TabIsNumbersOnly(TabRenderSyntax tab, RenderDeclarationSyntax render)
+        => ParseTab(tab, StaffRenderedParts(render))?.NumbersOnly ?? false;
+
     private static TabStaffSpec? ParseTab(TabRenderSyntax tab, HashSet<string> staffParts)
     {
         // [tuning?] part [as numbers|full]; braces (if any) are skipped.

@@ -233,6 +233,60 @@ public sealed class SystemCountPageScoreTests
         Assert.True(two.Value.ForceSquaredSum > three.Value.ForceSquaredSum);
     }
 
+    private static string FixtureText(string name)
+    {
+        var dir = AppContext.BaseDirectory;
+        while (dir != null)
+        {
+            var candidate = Path.Combine(dir, "LilySharp.Tests", "Fixtures");
+            if (Directory.Exists(candidate))
+                return File.ReadAllText(Path.Combine(candidate, name + ".lys"));
+            dir = Path.GetDirectoryName(dir);
+        }
+        throw new DirectoryNotFoundException("Cannot find LilySharp.Tests/Fixtures/");
+    }
+
+    /// <summary>
+    /// The count loop prices each candidate line's BEGIN bucket by that line's own start —
+    /// LilyPond's begin_line_heights is per break rank (lily/axis-group-interface.cc:417-458
+    /// adjacent_pure_heights; lily/system.cc:926-928 begin_of_line_pure_height reads the one
+    /// entry at the line's start) — and not by the widest line start the ideal placement
+    /// showed. The excerpt is the real-corpus book "Le Freak", bars 1-57, staff + tab: the
+    /// first line carries the tempo and the "Intro" box over its prefix (7.30 above the
+    /// body), every continuation line a clef and a bar number (2.31). With one bucket for
+    /// every line the estimate fitted six systems to a page where the placement fits eight,
+    /// the ideal 13 lines needed three pages against 12's two, and the loop's "one page
+    /// fewer and stretched" exit stopped it at 12 — LilyPond's 11, whose line sum the DP
+    /// had already priced cheapest (4.56 against LilyPond's 4.54,
+    /// -ddebug-page-breaking-scoring on scratch/p335/lsi.ly), was never tried.
+    /// <para>
+    /// LilyPond 2.26.0 engraves 11 systems: the twin of this fixture as 5|4|6|10|…
+    /// (scratch/p335/lsi-when.txt) and the hand-written corpus book as 5|4|4|12|… — the
+    /// two 11-line breakings of A1 are 0.02 demerits apart at the DP state that decides
+    /// them (Lily# prices 4|12 at 13.28 and 6|10 at 12.82 over the whole book, but the
+    /// state after bar 25 keeps 4|12 by 2.52 against 2.55), and the tie turns on bars
+    /// 10-11 being 1.3 ss wider in Lily# than in LilyPond — NOT on the twin's string
+    /// numbers or its tab mode: both were taken out of the twin (session 335) and its
+    /// widths did not move by a hundredth. The COUNT is what this test guards; the split
+    /// is the hand-written book's, which the corpus sweep measures
+    /// (scratch/p335/structure-after335.csv: Le Freak's three scores match LilyPond).
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void LineStartInk_IsPricedPerCandidateLine()
+    {
+        var withInk = FixtureText("test/system-count-line-start-ink");
+        Assert.Equal(new[] { 5, 4, 4, 12, 4, 6, 2, 8, 4, 4, 4 }, BarsPerSystem(withInk));
+
+        // The pair: the same book without the ink over its first line. The first line's
+        // ink must not price the other lines, so the two books break the same way — and
+        // LilyPond engraves the plain book in the same 11 systems (lsi-plain-when.txt).
+        var plain = withInk.Replace("tempo 120\n", "").Replace("tempo 120\r\n", "")
+            .Replace("@mark(\"Intro\")", "");
+        Assert.NotEqual(withInk, plain);
+        Assert.Equal(new[] { 5, 4, 4, 12, 4, 6, 2, 8, 4, 4, 4 }, BarsPerSystem(plain));
+    }
+
     private static PageBreaker Breaker(PageBreakingParameters parameters) =>
         new(pageHeight: 169.009370, topMargin: 5.690551, bottomMargin: 5.690551,
             headerHeight: 0, parameters: parameters);

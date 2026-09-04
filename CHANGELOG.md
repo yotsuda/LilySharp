@@ -169,6 +169,21 @@ scores against LilyPond's picture of the same book.
   a very underfull forced-break line into two half-full ones. On a real-world corpus of 286
   bass books the system breaks matching LilyPond's rose from 356 to 388 pairs, and the books
   matching on every score from 170 to 183.
+- **The system-count loop prices each candidate line by its own line-start ink.** The
+  loop's page estimate gave every candidate line ONE begin bucket — the widest line start
+  any placed system showed, which is the first system's by construction, since the tempo
+  and the opening mark stand over its prefix. LilyPond's `begin_line_heights` is per break
+  rank: a line starting at a given column is priced for what stands at THAT column. On
+  `Le Freak` (staff + tab) every candidate line was priced 7.30 above the body where the
+  placed continuation lines are 2.31, so the estimate fitted six systems to a page where
+  the placement fits eight; the ideal count then needed a page more than the count below
+  it, and the loop's "one page fewer and stretched" exit fired one count too early —
+  LilyPond's 23-line breaking, whose line sum Lily# had already priced cheapest, was
+  never tried and the book was set in 24. A candidate line now takes the begin bucket of
+  the placed system that started at its first bar, and the bare continuation prefix
+  (clef, key, bar number) where none did. On the 286-book corpus the T7 pairs matching
+  LilyPond rise from 148 to 149 (`Le Freak`, all three scores) and all pairs from 440 to
+  443; no pair is lost.
 - **A candidate line is priced by solving its springs, as LilyPond spaces every line it
   considers.** The line breaker estimated a compressed line's force from per-measure sums —
   the linear part of LilyPond's `compress_line`, exact only until the first spring reaches
@@ -227,6 +242,14 @@ scores against LilyPond's picture of the same book.
   wrote a member's own octave mark and then the chord's after it, so `<b cis' fis>,` became
   `<b, cis', fis,>` — and `cis',` is a syntax error in LilyPond, which takes `'` or `,` on a
   pitch but never both. Each member now carries one net figure: `<b, cis fis,>`.
+- **The twin declares two more things the page does not draw.** A `\N` string number
+  steers the tab's string choice and is drawn nowhere on Lily#'s notation staff, while
+  LilyPond's Staff prints a circled digit for every one; the twin's Staff now omits
+  StringNumber when the part carries one, as the hand-written corpus books do. And a tab
+  beside a notation staff of the same part is fret digits only on the page, but the
+  exporter read only the explicit `as` word and asked LilyPond for `\tabFullNotation` on
+  every paired tab — stems, beams and rests the page never draws. The twin now takes the
+  page's own reading: a lone tab stays full, a paired one is bare, an explicit clause wins.
 
 ## 0.5.0
 
