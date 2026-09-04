@@ -127,7 +127,15 @@ reasoning behind each one.
   same picture as the full replacement (checked element for element in a browser).
   Within a changed page the same goes system by system: the preview's SVG now wraps each
   system, and each page's overlays (slurs, lyrics, dynamics, marks), in a group of its own,
-  and only the group the edit touched is parsed again. Exported SVG is unchanged.
+  and only the group the edit touched is parsed again. Exported SVG is unchanged. Each
+  system is also drawn in a frame of its own (its coordinates start at its top, and a
+  transform puts it on the page), so a system that only moved down the page — every system
+  below an edit that changed a height — keeps its elements and gets its transform set
+  And the pages whose drawing changed are reconciled together, group by group and across
+  the pages: every system is matched by content, kept where it is, moved by its transform,
+  or carried to the page the breaker moved it to; only a system whose drawing changed (the
+  edited one) and the pages' overlays are parsed (`reconciled N (groups kept K, moved M,
+  carried C, parsed P)` on the update line).
 - **The Lily# output channel now times each preview update**: the round trip to the
   language server on the `Got response` line, and a `PREVIEW update:` line from the page
   saying what it swapped (pages kept, re-stamped, updated by group, replaced) and how long

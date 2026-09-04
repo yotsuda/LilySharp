@@ -2228,7 +2228,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             else frame.removeAttribute('transform');
             return true;
         }
-        let systemsMoved = 0;
 
         // A page's markup as its labeled groups and the FRAME around and between
         // them — the page's own tag, the header texts, the margin group's tags,
@@ -2237,6 +2236,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function splitChunks(markup) {
             const chunks = [];
             let frame = '';
+            let head = null, gapsBlank = true;
             let at = 0;
             CHUNK_OPEN.lastIndex = 0;
             for (let open; (open = CHUNK_OPEN.exec(markup));) {
@@ -2247,13 +2247,19 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     if (depth === 0) { end = tag.index + tag[0].length; break; }
                 }
                 if (end < 0) return null;
-                frame += markup.slice(at, open.index);
+                const gap = markup.slice(at, open.index);
+                if (head === null) head = gap; else if (gap.trim() !== '') gapsBlank = false;
+                frame += gap;
                 chunks.push({ label: open[1], markup: markup.slice(open.index, end) });
                 at = end;
                 CHUNK_OPEN.lastIndex = end;
             }
-            frame += markup.slice(at);
-            return { frame, chunks };
+            const tail = markup.slice(at);
+            frame += tail;
+            // head/tail: the frame BEFORE the first group and AFTER the last one, for a
+            // comparison that does not count the groups (reflowPages); gapsBlank says the
+            // text between groups is whitespace only, so head + groups + tail is the page.
+            return { frame, chunks, head: head === null ? frame : head, tail, gapsBlank };
         }
 
         // A fresh element parsed from one group's or one page's markup, or null
@@ -2265,44 +2271,134 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             return fresh && fresh === holder.lastElementChild ? fresh : null;
         }
 
-        // Brings the live page up to the markup group by group. false when the two
-        // do not line up — the frame or the group list differs — and the caller
-        // replaces the page whole. shown is the page's record, whose split is
-        // kept between calls; stamped says the page's offsets are current already.
-        function updateChunks(page, markup, shown, split, stamped) {
-            const before = shown.split || (shown.split = splitChunks(shown.markup));
-            if (!before || !split) return false;
-            if (split.frame !== before.frame || split.chunks.length !== before.chunks.length) return false;
-            const live = page.querySelectorAll('g.system, g.overlay');
-            if (live.length !== split.chunks.length) return false;
-            for (let k = 0; k < split.chunks.length; k++) {
-                const chunk = split.chunks[k];
-                const was = before.chunks[k];
-                if (chunk.label !== was.label || !live[k].classList.contains(chunk.label)) return false;
-                if (chunk.markup === was.markup) continue;
-                // Compared with the frame transform AND the source offsets blanked: a
-                // system that only moved down the page, or only moved in the source, or
-                // both, keeps its DOM — the transform is set, the offsets re-stamped.
-                const next = unframe(chunk.markup);
-                const prev = was.unframed || (was.unframed = unframe(was.markup));
-                const blank = next.text.replace(SOURCE_ATTRS, ' $1');
-                const wasBlank = was.blank || (was.blank = prev.text.replace(SOURCE_ATTRS, ' $1'));
-                if (blank === wasBlank) {
-                    const moved = next.transform !== prev.transform;
-                    const shifted = next.text !== prev.text;
-                    if ((!moved || setFrameTransform(live[k], next.transform))
-                        && (!shifted || stamped || restampPage(live[k], chunk.markup))) {
-                        if (moved) systemsMoved++;
-                        chunk.blank = blank; chunk.unframed = next;
-                        continue;
-                    }
+        // Brings every page whose drawing changed up to the markup, group by group and
+        // ACROSS the pages: the live groups of all those pages go into one pool keyed
+        // by content (frame transform and source offsets blanked), and each group of
+        // the new markup takes its match from the pool — the same page's same slot
+        // when that is a match, else wherever it is — moved into place with the
+        // transform set and the offsets re-stamped. Only a group with no match (the
+        // edited system, a page's overlays) is parsed.
+        // ⚠️ ONE POOL FOR ALL CHANGED PAGES, not one per page: when the page breaker
+        // re-cuts the pages, a page that handed one system on and took one in keeps
+        // its group COUNT, and a per-page, slot-by-slot comparison of it parsed every
+        // one of its systems while the system it handed on was never in any pool —
+        // the editor's own line said "carried 0, parsed 4" for exactly that keystroke
+        // (2026-09-04; no backticks in this script — it is a template literal). The
+        // result names what it did; a "fail" says why the pages
+        // cannot be accounted for (a frame that differs beyond its offsets, a group
+        // whose class does not match), and the caller then replaces those pages
+        // whole, which is safe after a partial reconcile because only they took part.
+        function reflowPages(livePages, split, failed) {
+            const pool = new Map(); // blank -> [{ node, prev }] of the failed pages' live groups
+            for (const i of failed) {
+                const shown = shownPages[i];
+                const before = shown.split || (shown.split = splitChunks(shown.markup));
+                if (!before) return { fail: 'page ' + i + ' has no group split' };
+                const nodes = livePages[i].querySelectorAll('g.system, g.overlay');
+                if (nodes.length !== before.chunks.length)
+                    return { fail: 'page ' + i + ' shows ' + nodes.length + ' groups, the record says ' + before.chunks.length };
+                for (let k = 0; k < nodes.length; k++) {
+                    const was = before.chunks[k];
+                    const prev = was.unframed || (was.unframed = unframe(was.markup));
+                    const blank = was.blank || (was.blank = prev.text.replace(SOURCE_ATTRS, ' $1'));
+                    let list = pool.get(blank);
+                    if (!list) pool.set(blank, list = []);
+                    list.push({ node: nodes[k], prev, label: was.label, page: i, index: k, blank });
                 }
-                const fresh = parseOne(chunk.markup);
-                if (!fresh) return false;
-                live[k].parentNode.replaceChild(fresh, live[k]);
-                chunk.blank = blank; chunk.unframed = next;
             }
-            return true;
+            let carried = 0, parsed = 0, moved = 0, kept = 0;
+            let why = '';
+            // When a SYSTEM finds no match, say what the nearest unclaimed system in the
+            // pool differs by — the first differing character with its neighbourhood —
+            // so a mismatch is diagnosed from the output channel, not guessed at.
+            let explained = 0;
+            function explain(i, k, blank) {
+                if (explained >= 3) return;
+                let best = null, bestAt = -1;
+                for (const list of pool.values())
+                    for (const e of list) {
+                        if (e.label !== 'system') continue;
+                        let n = 0;
+                        const lim = Math.min(e.blank.length, blank.length);
+                        while (n < lim && e.blank[n] === blank[n]) n++;
+                        if (n > bestAt) { bestAt = n; best = e; }
+                    }
+                if (!best) { explained++; why += (why ? ' | ' : '') + 'no unclaimed system in the pool'; return; }
+                // Its own old self in the same slot is the EDITED system — expected to
+                // differ, not worth a line. Anything else is a system that should have
+                // matched somewhere and did not.
+                if (best.page === i && best.index === k) return;
+                explained++;
+                const ctx = s => JSON.stringify(s.slice(Math.max(0, bestAt - 30), bestAt + 40));
+                why += (why ? ' | ' : '') + 'a system on page ' + i + ' differs from page ' + best.page
+                    + ' group ' + best.index + ' at ' + bestAt + '/' + blank.length + ' vs ' + best.blank.length
+                    + ': new ' + ctx(blank) + ' old ' + ctx(best.blank);
+            }
+            for (const i of failed) {
+                const markup = split.pages[i];
+                const pieces = splitChunks(markup);
+                const before = shownPages[i].split;
+                if (!pieces) return { fail: 'page ' + i + ' does not split' };
+                // The frame without its groups: the group COUNT is what changed here, so
+                // the frame as a whole differs by the whitespace between groups; what must
+                // agree is the text before the first group and after the last, offsets
+                // blanked, with nothing but whitespace between the groups on either side.
+                if (!pieces.gapsBlank || !before.gapsBlank
+                    || pieces.head.replace(SOURCE_ATTRS, ' $1') !== before.head.replace(SOURCE_ATTRS, ' $1')
+                    || pieces.tail !== before.tail)
+                    return { fail: 'page ' + i + ' frame differs beyond its offsets' };
+                const page = livePages[i];
+                const existing = Array.from(page.querySelectorAll('g.system, g.overlay'));
+                // The groups' parent: the margin group when there is one, else the page.
+                const parent = existing.length ? existing[0].parentNode
+                    : (page.querySelector(':scope > g:not(.system):not(.overlay)') || page);
+                const anchor = existing.length ? existing[existing.length - 1].nextSibling : null;
+                const desired = [];
+                for (let k = 0; k < pieces.chunks.length; k++) {
+                    const chunk = pieces.chunks[k];
+                    const next = unframe(chunk.markup);
+                    const blank = next.text.replace(SOURCE_ATTRS, ' $1');
+                    chunk.blank = blank; chunk.unframed = next;
+                    const list = pool.get(blank);
+                    let node = null;
+                    if (list && list.length) {
+                        // The same page's same slot first — the common case is a page
+                        // whose systems all stayed where they were — else any match.
+                        let at = list.findIndex(e => e.page === i && e.index === k);
+                        if (at < 0) at = 0;
+                        const hit = list.splice(at, 1)[0];
+                        if (hit.label !== chunk.label) return { fail: 'page ' + i + ': a ' + hit.label + ' matched a ' + chunk.label };
+                        node = hit.node;
+                        const transformed = next.transform !== hit.prev.transform;
+                        if (transformed && !setFrameTransform(node, next.transform))
+                            return { fail: 'page ' + i + ': a carried system has no frame' };
+                        if (next.text !== hit.prev.text && !restampPage(node, chunk.markup))
+                            return { fail: 'page ' + i + ': a carried group could not be re-stamped' };
+                        if (node.parentNode !== parent) carried++;
+                        else if (transformed) moved++;
+                        else kept++;
+                    } else {
+                        if (chunk.label === 'system') explain(i, k, blank);
+                        node = parseOne(chunk.markup);
+                        if (!node) return { fail: 'page ' + i + ': a group did not parse' };
+                        parsed++;
+                    }
+                    desired.push(node);
+                }
+                // Put the page's groups in the markup's order (inserting each before the
+                // same anchor keeps them in sequence, and moves a node that is already
+                // there), then drop the live groups the markup no longer has — they are
+                // either carried elsewhere already or gone.
+                const keep = new Set(desired);
+                for (const node of desired) parent.insertBefore(node, anchor);
+                for (const node of existing) if (!keep.has(node) && node.parentNode === parent) parent.removeChild(node);
+                // The frame's own offsets (the first page's header): a whole-page
+                // re-stamp is exact now that the DOM order is the markup's.
+                if (pieces.head !== before.head && !restampPage(page, markup))
+                    return { fail: 'page ' + i + ': the frame could not be re-stamped' };
+                shownPages[i] = { markup, blank: markup.replace(SOURCE_ATTRS, ' $1'), split: pieces };
+            }
+            return { carried, parsed, moved, kept, why };
         }
 
         // Shows the svg: the pages that changed are replaced — group by group
@@ -2326,44 +2422,41 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 whole();
                 return 'whole document (' + (split ? split.pages.length + ' pages' : 'no page groups') + ')';
             }
-            let pagesKept = 0, pagesRestamped = 0, pagesByGroup = 0, pagesReplaced = 0;
-            systemsMoved = 0;
+            let pagesKept = 0, pagesRestamped = 0, pagesReplaced = 0;
+            const changed = []; // pages whose drawing changed — reconciled together below
             for (let i = 0; i < split.pages.length; i++) {
                 const markup = split.pages[i];
                 const shown = shownPages[i];
                 if (markup === shown.markup) { pagesKept++; continue; }
                 const blank = markup.replace(SOURCE_ATTRS, ' $1');
-                const next = { markup, blank };
-                if (blank === shown.blank) {
-                    // The drawing is the same: only offsets moved.
-                    if (restampPage(livePages[i], markup)) { shownPages[i] = next; pagesRestamped++; continue; }
-                } else {
-                    // The drawing changed somewhere on the page: group by group. The
-                    // frame around the groups is compared with its offsets blanked,
-                    // and when only those moved the page is stamped whole first —
-                    // the header text's offsets are not in any group.
-                    const pieces = splitChunks(markup);
-                    const before = shown.split || (shown.split = splitChunks(shown.markup));
-                    if (pieces && before && pieces.frame !== before.frame
-                        && pieces.frame.replace(SOURCE_ATTRS, ' $1') === before.frame.replace(SOURCE_ATTRS, ' $1')
-                        && restampPage(livePages[i], markup)) {
-                        before.frame = pieces.frame;
-                        if (updateChunks(livePages[i], markup, shown, pieces, true)) {
-                            next.split = pieces; shownPages[i] = next; pagesByGroup++; continue;
-                        }
-                    } else if (updateChunks(livePages[i], markup, shown, pieces, false)) {
-                        next.split = pieces; shownPages[i] = next; pagesByGroup++; continue;
-                    }
+                // The drawing is the same: only offsets moved.
+                if (blank === shown.blank && restampPage(livePages[i], markup)) {
+                    shownPages[i] = { markup, blank }; pagesRestamped++; continue;
                 }
-                const fresh = parseOne(markup);
-                if (!fresh) { whole(); return 'whole document (a page did not parse alone)'; }
-                live.replaceChild(fresh, livePages[i]);
-                shownPages[i] = next;
-                pagesReplaced++;
+                changed.push(i);
             }
-            return 'pages kept ' + pagesKept + ', re-stamped ' + pagesRestamped
-                + ', updated by group ' + pagesByGroup + ' (systems moved ' + systemsMoved + ')'
-                + ', replaced ' + pagesReplaced;
+            let account = '';
+            if (changed.length) {
+                const r = reflowPages(livePages, split, changed);
+                if (r.fail) {
+                    // A partial reconcile may have moved groups between the changed pages;
+                    // replacing each of them from its own markup rebuilds exactly those
+                    // pages, so it is safe (only they took part).
+                    for (const i of changed) {
+                        const fresh = parseOne(split.pages[i]);
+                        if (!fresh) { whole(); return 'whole document (a page did not parse alone)'; }
+                        live.replaceChild(fresh, livePages[i]);
+                        const markup = split.pages[i];
+                        shownPages[i] = { markup, blank: markup.replace(SOURCE_ATTRS, ' $1') };
+                        pagesReplaced++;
+                    }
+                    account = ', replaced ' + pagesReplaced + ' (reconcile gave up: ' + r.fail + ')';
+                } else {
+                    account = ', reconciled ' + changed.length + ' (groups kept ' + r.kept + ', moved ' + r.moved
+                        + ', carried ' + r.carried + ', parsed ' + r.parsed + (r.why ? '; ' + r.why : '') + ')';
+                }
+            }
+            return 'pages kept ' + pagesKept + ', re-stamped ' + pagesRestamped + account;
         }
 
         // ---- source-position index -------------------------------------------
