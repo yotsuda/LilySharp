@@ -209,4 +209,40 @@ public class PageChainDebugTests
         }
         Assert.True(compared, "no page carried two systems, so nothing was compared");
     }
+
+    /// <summary>
+    /// The page-count costs reported beside the chosen split must BE the table the choice was
+    /// made from: the count marked <c>*</c> is the one the layout used, and it is the cheapest
+    /// of those reported.
+    /// </summary>
+    /// <remarks>
+    /// What this is for: on the books where Lily# and LilyPond still page differently they
+    /// agree on the system count and the line breaking, so the whole difference is which
+    /// column of this table wins — and a margin of 1e-5 and a margin of 1 look identical from
+    /// outside. A dump that named a count the layout did not take, or ranked them by anything
+    /// but the DP's own cell, would answer that question wrongly and silently.
+    /// </remarks>
+    [Fact]
+    public void ThePageCountCosts_RankTheCountTheLayoutTook_Cheapest()
+    {
+        var log = Capture(pageHeight: 60, bars: 48, out var layout);
+        var costs = log.Where(l => l.StartsWith("page-count costs", StringComparison.Ordinal)).ToList();
+        Assert.NotEmpty(costs);
+
+        foreach (string line in costs)
+        {
+            var entries = Regex.Matches(line, @"(\d+):(-?[\d.]+)(\*?)")
+                .Select(m => (
+                    Count: int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture),
+                    Cost: double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture),
+                    Chosen: m.Groups[3].Value == "*"))
+                .ToList();
+            Assert.True(entries.Count >= 2,
+                $"a book that pages must be able to report an alternative: {line}");
+
+            var chosen = Assert.Single(entries.Where(e => e.Chosen));
+            Assert.Equal(chosen.Cost, entries.Min(e => e.Cost), 9);
+            Assert.Equal(layout.Pages.Length, chosen.Count);
+        }
+    }
 }

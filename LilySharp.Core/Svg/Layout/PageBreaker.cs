@@ -1207,6 +1207,26 @@ internal sealed class PageBreaker
             }
         }
 
+        // WHAT EVERY OTHER PAGE COUNT WOULD HAVE COST. The table already holds it — one
+        // column per count — and the choice between two counts is the whole of what
+        // separates a Lily# book's paging from LilyPond's on the books that still differ
+        // (session 339: LilyPond and Lily# agree on the system count and the line breaking
+        // for Boogie, and split it 7+8+8+1 against 8+8+8). A margin of 1e-5 between two
+        // columns and a margin of 1 are the same "wrong page count" from the outside, and
+        // only this line tells them apart. Reported, not decided on: the winner above is
+        // unchanged, and the loop below is skipped entirely when no probe is listening.
+        if (LayoutEngine.DebugPageBreakingScoring is { } dumpCounts)
+        {
+            var costs = new List<string>();
+            for (int p = minPages; p <= maxPages; p++)
+            {
+                double d = dp[n * cols + p];
+                if (d < double.MaxValue)
+                    costs.Add($"{p}:{d:F6}{(p == bestPages ? "*" : "")}");
+            }
+            dumpCounts($"page-count costs ({n} lines): {string.Join(" ", costs)}");
+        }
+
         // ⚠️ Now unreachable for any non-empty score, and deliberately kept: every line has
         // at least the page-holding-it-alone candidate, which CalculatePagePenalty never
         // rejects (LILYPOND-REF: lily/page-spacing.cc:339-349). It survives as the guard
