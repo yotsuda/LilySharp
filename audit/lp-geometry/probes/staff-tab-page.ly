@@ -186,6 +186,10 @@ line = { \repeat unfold 8 \cell \break }
 %%
 %%        PREDICTION, written before running: LilyPond turns the page — 7 systems (14 staves)
 %%        on page 1 and 1 on page 2, page-count 2 — where STB8 holds all eight on one.
+%%        ⚠️ THE PREDICTION WAS WRONG, and the entry records what happened: LilyPond keeps all
+%%        eight under the title (title + 8 lines on page 1), and so does Lily#. The band is not
+%%        what turns Boogie's page — see STB8B below, which asks about the ink STB8T does NOT
+%%        have.
 \book {
   \probeTag "STB8T"
   \header { title = "Express Yourself" composer = "Madonna" tagline = ##f }
@@ -193,6 +197,83 @@ line = { \repeat unfold 8 \cell \break }
     <<
       \new Staff { \clef bass \repeat unfold 8 \line }
       \new TabStaff \with { stringTunings = #bass-five-string-tuning } { \repeat unfold 8 \line }
+    >>
+  }
+}
+
+%% STB8B (session 338, leg 3) — STB8 INSIDE A StaffGroup, i.e. WITH A SYSTEM-START BRACKET.
+%%
+%%        WHY. STB8 and STB8T are written `<< \new Staff \new TabStaff >>`, which gets a
+%%        SystemStartBar and no bracket — so neither of them exercises the one ink Lily# draws
+%%        and never reserves. The owner's books DO: `Boogie Oogie Oogie` is a StaffGroup, and
+%%        its SystemStartBracket reaches 1.643 ss past the outer staff's ink at BOTH ends
+%%        (brackettips' box 1.368 plus add_at_edge's 0.225), while SkylineBuilder seeds no
+%%        delimiter at all — about 3.2 ss per system that Lily# does not carry.
+%%
+%%        THE QUESTION this book answers, which the Boogie A/B could not: is that ink in the
+%%        height the PAGE BREAKER prices a line by? Page_layout_problem::build_system_skyline
+%%        walks the STAVES only (page-layout-problem.cc:1080-1124), so the bracket is not in
+%%        the inter-system skyline; but System::part_of_line_pure_height unites the staves'
+%%        pure heights with `Axis_group_interface::begin_of_line_pure_height (this, ...)` —
+%%        the System's OWN elements (system.cc:893-923) — and the bracket is one of those.
+%%        Dropping the bracket from the whole of Boogie left its paging at 8,8,8,1, but that
+%%        arm dropped it from every page and re-ran the whole optimization; here the only
+%%        difference from STB8 is the bracket, on a page that already holds its eight systems
+%%        by one force of compression.
+%%
+%%        PREDICTION, written before running: if the bracket is in the pure height, its
+%%        3.2 ss × 8 = 25 ss is more than one system and LilyPond turns the page — 7 systems
+%%        (14 staves) on page 1, page-count 2 — where STB8 holds eight on one. If it is not,
+%%        STB8B reads exactly STB8 and the delimiter is confirmed irrelevant to paging, which
+%%        retires the question the corpus has been carrying since session 338 leg 1.
+%%
+%%        MEASURED 2026-09-05: eight systems on one page, exactly as STB8. The bracket buys no
+%%        page. ⚠️ IT IS NOT FILED WITH THIS MUSIC: Lily# cannot spell a bracketed staff+tab
+%%        (LYS6011, `staffGroup` holds `staff NAME` items), so there is no twin to compare.
+%%        The pair that IS filed is TWOP / TWOB below, two ordinary staves, where both
+%%        engravers draw the bracket.
+\book {
+  \probeTag "STB8B"
+  \header { tagline = ##f }
+  \score {
+    \new StaffGroup <<
+      \new Staff { \clef bass \repeat unfold 8 \line }
+      \new TabStaff \with { stringTunings = #bass-five-string-tuning } { \repeat unfold 8 \line }
+    >>
+  }
+}
+
+%% TWOP / TWOB (session 338, leg 3) — TWO ORDINARY STAVES, BARE AND BRACKETED.
+%%
+%%        The filed form of STB8B's question, on music both engravers can spell. TWOP is a
+%%        bare pair (SystemStartBar, no bracket); TWOB puts the identical music in a
+%%        StaffGroup, so the ONE difference is the SystemStartBracket — 1.643 ss of tip past
+%%        the outer staff's ink at each end.
+%%
+%%        ⚠️ THE PAGE MUST BE TIGHT or the pair proves nothing: a bracket that costs 3.2 ss a
+%%        system can only show up where the page has less than that in slack. The system count
+%%        is chosen so the BARE pair exactly fills page 1 (measured, not guessed — see the
+%%        entry's `why`), which is the same discipline STB8 follows.
+twoLine = { \repeat unfold 8 { g,4 a, b, a, } \break }
+
+\book {
+  \probeTag "TWOP"
+  \header { tagline = ##f }
+  \score {
+    <<
+      \new Staff { \clef bass \repeat unfold 10 \twoLine }
+      \new Staff { \clef bass \repeat unfold 10 \twoLine }
+    >>
+  }
+}
+
+\book {
+  \probeTag "TWOB"
+  \header { tagline = ##f }
+  \score {
+    \new StaffGroup <<
+      \new Staff { \clef bass \repeat unfold 10 \twoLine }
+      \new Staff { \clef bass \repeat unfold 10 \twoLine }
     >>
   }
 }

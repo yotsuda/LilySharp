@@ -1023,6 +1023,38 @@
       "residual": 0.0,
       "why": "SEEDED 2026-09-05 (session 338). Carried with page.staff-tab.titled.staves-on-first-page for the reason page.staff-tab.eight-systems.page-count is carried with its own count: a breaker that reaches eight on page 1 by some other route cannot pass the pair by accident."
     },
+    "page.bracketed-pair.staves-on-first-page": {
+      "probe": "staff-tab-page.ly",
+      "score": "TWOB",
+      "lilypond": 16,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "SEEDED 2026-09-05 (session 338). WHAT A SYSTEM-START BRACKET COSTS THE PAGE. The delimiter is the one ink Lily# DRAWS and never RESERVES: SkylineBuilder seeds none, while SharedRenderer.DrawSystemStartBracket hangs brackettips 1.593 ss past the staff line at each end — about 3.2 ss a system, and every book in the owner's corpus is a StaffGroup. THE ANSWER IS THAT IT COSTS NOTHING: TWOB pages exactly as its bare control TWOP, eight systems of ten on a COMPRESSED first page (6 + 8x9 + 7x12 against a band of 157.628268), where 3.2 ss a system would have been worth more than a system. Page_layout_problem::build_system_skyline walks the STAVES (page-layout-problem.cc:1080-1124), and System::part_of_line_pure_height's `other_elements` (system.cc:893-923) does not reach this grob. Filed as a GUARD rather than a defect: a port that seeds a delimiter into the paging silhouette moves these counts, and nothing else in the corpus would notice. ⚠️ TWO ORDINARY STAVES RATHER THAN THE CORPUS'S STAFF-PLUS-TAB, and that is forced: Lily# cannot spell a bracketed staff+tab (LYS6011), so the book that matches the corpus exactly (STB8B in the probe, measured the same day at eight systems on one page — identical to STB8) has no twin to compare."
+    },
+    "page.bracketed-pair.page-count": {
+      "probe": "staff-tab-page.ly",
+      "score": "TWOB",
+      "lilypond": 2,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "SEEDED 2026-09-05 (session 338). Carried with page.bracketed-pair.staves-on-first-page for the reason page.staff-tab.eight-systems.page-count is carried with its own count: a breaker that reaches eight on page 1 by some other route cannot pass the pair by accident."
+    },
+    "page.bare-pair-control.staves-on-first-page": {
+      "probe": "staff-tab-page.ly",
+      "score": "TWOP",
+      "lilypond": 16,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "SEEDED 2026-09-05 (session 338). THE CONTROL for page.bracketed-pair.*: the identical ten systems with no staffGroup around them, so the DIFFERENCE of the two counts is the bracket's cost in systems and neither reading rests on a page-height constant."
+    },
+    "page.bare-pair-control.page-count": {
+      "probe": "staff-tab-page.ly",
+      "score": "TWOP",
+      "lilypond": 2,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "SEEDED 2026-09-05 (session 338). Carried with page.bare-pair-control.staves-on-first-page."
+    },
     "page.chord-row.first-staff-refpoint": {
       "probe": "page-vertical.ly",
       "score": "CHR1",

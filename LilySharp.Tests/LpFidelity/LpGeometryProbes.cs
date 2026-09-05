@@ -1607,7 +1607,8 @@ internal static class LpGeometryProbes
     /// asleep; <c>bass5</c> is LilyPond's bass-five-string-tuning — five strings 1.5 apart.
     /// </para>
     /// </remarks>
-    private static string StaffTabPageScore(string name, int lines, bool titled = false) => $$"""
+    private static string StaffTabPageScore(
+        string name, int lines, bool titled = false, bool bracketed = false) => $$"""
         octave absolute
         {{(titled ? "title \"Express Yourself\"" : "")}}
         {{(titled ? "composer \"Madonna\"" : "")}}
@@ -1623,8 +1624,7 @@ internal static class LpGeometryProbes
         form main { ~Main }
 
         score main "{{name}}" {
-          staff bassline
-          tab bassline
+        {{(bracketed ? "  staffGroup {\n    staff bassline\n    tab bassline\n  }" : "  staff bassline\n  tab bassline")}}
         }
         """;
 
@@ -1646,6 +1646,55 @@ internal static class LpGeometryProbes
     /// page 1), which is what makes this a control worth carrying rather than a guess.
     /// </remarks>
     private static readonly string STB8T = StaffTabPageScore("STB8T", 8, titled: true);
+
+    /// <summary>
+    /// Ten forced eight-bar systems of TWO ordinary staves, bare or inside a
+    /// <c>staffGroup</c> — the Lily# half of books TWOP / TWOB in probes/staff-tab-page.ly.
+    /// </summary>
+    /// <remarks>
+    /// The one ink Lily# DRAWS and never RESERVES is the system-start delimiter:
+    /// SkylineBuilder seeds none, while SharedRenderer.DrawSystemStartBracket hangs
+    /// brackettips 1.593 ss past the staff line at each end — about 3.2 ss a system, and every
+    /// book in the owner's corpus is a StaffGroup. This pair asks what that costs the page,
+    /// with the bracket as the ONLY difference between the two books.
+    /// <para>
+    /// ⚠️ TWO ORDINARY STAVES, NOT THE CORPUS'S STAFF-PLUS-TAB, and that is forced: Lily#
+    /// cannot spell a bracketed staff+tab (LYS6011 — a <c>staffGroup</c> holds
+    /// <c>staff NAME</c> items), so the book that matches the corpus exactly (STB8B in the
+    /// probe) has no twin to compare. The delimiter's question does not depend on what is
+    /// under it, and LilyPond answers both books the same way.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE PAGE IS TIGHT, which is what makes the pair bind: ten systems do not fit, and
+    /// the eight that do are on a COMPRESSED page (6 + 8×9 + 7×12 against a band of
+    /// 157.628268). A bracket worth 3.2 ss a system would be worth more than a system there.
+    /// </para>
+    /// </remarks>
+    private static string TwoStaffPageScore(string name, int lines, bool bracketed) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part upper { clef bass }
+        part lower { clef bass }
+
+        section Main {
+          upper { {{string.Concat(Enumerable.Repeat(string.Concat(Enumerable.Repeat("g,,4 a,, b,, a,, | ", 8)) + "break ", lines)).Trim()}} }
+          lower { {{string.Concat(Enumerable.Repeat(string.Concat(Enumerable.Repeat("g,,4 a,, b,, a,, | ", 8)) + "break ", lines)).Trim()}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+        {{(bracketed ? "  staffGroup {\n    staff upper\n    staff lower\n  }" : "  staff upper\n  staff lower")}}
+        }
+        """;
+
+    /// <summary>Ten systems of two bare staves — book TWOP, the control.</summary>
+    private static readonly string TWOP = TwoStaffPageScore("TWOP", 10, bracketed: false);
+
+    /// <summary>The same ten inside a staffGroup, i.e. bracketed — book TWOB.</summary>
+    private static readonly string TWOB = TwoStaffPageScore("TWOB", 10, bracketed: true);
 
     private static string CoexistScore(string name, string scoreBlock, bool secondBound) => $$"""
         octave absolute
@@ -12681,6 +12730,21 @@ internal static class LpGeometryProbes
         new("page.staff-tab.titled.staves-on-first-page", STB8T,
             g => g.StaffTabPairStavesOnPage(5)),
         new("page.staff-tab.titled.page-count", STB8T, g => g.PageCount),
+        // --- WHAT A SYSTEM-START BRACKET COSTS THE PAGE (books TWOP / TWOB, session 338) ---
+        // The delimiter is the one ink Lily# DRAWS and never RESERVES: SkylineBuilder seeds
+        // none, SharedRenderer hangs brackettips 1.593 ss past the staff line at each end, and
+        // every book in the owner's corpus is a StaffGroup. LilyPond's answer is that it costs
+        // nothing — TWOB pages exactly as TWOP, eight systems of ten on a COMPRESSED first
+        // page, where 3.2 ss a system would have been worth more than a system.
+        // Page_layout_problem::build_system_skyline walks the STAVES
+        // (page-layout-problem.cc:1080-1124), and System::part_of_line_pure_height's
+        // `other_elements` (system.cc:893-923) does not reach this grob.
+        // Filed as a GUARD, not a defect: a port that seeds a delimiter into the paging
+        // silhouette moves these counts, and nothing else in the corpus would notice.
+        new("page.bracketed-pair.staves-on-first-page", TWOB, g => g.StavesOnPage(0)),
+        new("page.bracketed-pair.page-count", TWOB, g => g.PageCount),
+        new("page.bare-pair-control.staves-on-first-page", TWOP, g => g.StavesOnPage(0)),
+        new("page.bare-pair-control.page-count", TWOP, g => g.PageCount),
 
         // --- WHERE THE FIRST STAFF SITS UNDER A CHORD ROW, on BOTH sides of the boundary
         // top-system-spacing's floor has (books CHR1/CHR2) ---
