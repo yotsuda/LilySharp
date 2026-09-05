@@ -910,6 +910,22 @@
       "residual": 0.0,
       "why": "SEEDED 2026-09-05 (session 336). THE CONTROL for the three titled readings: the same 8 bars with no header at all, so the first line is a system and top-system-spacing governs. 11.690551 = top-margin + 6 on both sides, the figure page.first-staff-refpoint pins on other music; carried here so that 'the titled reading is off' cannot be confused with 'this music is off'."
     },
+    "page.titled.full.staves-on-first-page": {
+      "probe": "titled-page.ly",
+      "score": "TTLF",
+      "lilypond": 13,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "SEEDED 2026-09-05 (session 338). WHAT THE TITLE BAND COSTS A PAGE THAT IS FULL, which the four refpoint readings above cannot see: every one of them is a one-system ragged page, where nothing competes for the room the title takes. The corpus's remaining page-count island is the other regime — LilyPond puts 7 systems on the titled first page of the owner's `Boogie Oogie Oogie` and 8 on every page after, Lily# 8 everywhere, and stripping the \\header from that very book makes LilyPond page it 8,8,8 = Lily#'s answer exactly (scratch/p338/ab-notitle). Sixteen forced eight-bar systems, justified. LilyPond's answer HERE is that the band costs no system: 13 either way, the title absorbed by compressing the twelve system-system springs (compress strength 4 each). LilyPond counts the title as a LINE of the page (14 lines on page 1); the figure filed is the number of SYSTEMS, which is what a staff count reads on both sides. MEASURED the same day: Lily# is exact (13 either way), so this pair is a passing control; the tight half of the question is page.staff-tab.titled.staves-on-first-page."
+    },
+    "page.untitled-full-control.staves-on-first-page": {
+      "probe": "titled-page.ly",
+      "score": "TTNF",
+      "lilypond": 13,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "SEEDED 2026-09-05 (session 338). THE CONTROL for page.titled.full.staves-on-first-page: the identical sixteen systems with no header at all, so the DIFFERENCE of the two counts is the band's cost in systems and neither reading rests on a page-height constant."
+    },
     "page.staff-tab.first-staff-refpoint": {
       "probe": "staff-tab-page.ly",
       "score": "STBN",
@@ -990,6 +1006,22 @@
       "unit": "count",
       "residual": 0.0,
       "why": "SEEDED 2026-09-05 (session 336) at +1: the page count of book STB8, one on LilyPond, two on Lily#. Carried with the staves count so that a breaker that puts eight on page 1 by some other route (a shorter tail page, an overfull page) cannot pass the pair by accident. ---- CLOSED THE SAME DAY by the pure-frame port (page.staff-tab.compressed.staves-on-first-page): one page on both."
+    },
+    "page.staff-tab.titled.staves-on-first-page": {
+      "probe": "staff-tab-page.ly",
+      "score": "STB8T",
+      "lilypond": 16,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "SEEDED 2026-09-05 (session 338). STB8 WITH A TITLE OVER IT — the tight half of the question page.titled.full.staves-on-first-page asks on one-staff systems. That page swallows the band in twelve system-system springs; this one already spends a force of compression to hold its eight staff-plus-tab systems, so the band has nowhere to hide. LilyPond keeps all eight anyway (title + 8 lines on page 1 = 16 staves), which is what makes the pair a control. It is the shape of the corpus's last page-count island: LilyPond pages the owner's `Boogie Oogie Oogie` 7,8,8,1 with its header and 8,8,8 without it (scratch/p338/ab-notitle), so a Lily# that prices this band right and still parts from LilyPond there is being told the difference is the SYSTEMS' height, not the title's. MEASURED the same day: Lily# is exact here (16 staves, one page), so that is what it is being told."
+    },
+    "page.staff-tab.titled.page-count": {
+      "probe": "staff-tab-page.ly",
+      "score": "STB8T",
+      "lilypond": 1,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "SEEDED 2026-09-05 (session 338). Carried with page.staff-tab.titled.staves-on-first-page for the reason page.staff-tab.eight-systems.page-count is carried with its own count: a breaker that reaches eight on page 1 by some other route cannot pass the pair by accident."
     },
     "page.chord-row.first-staff-refpoint": {
       "probe": "page-vertical.ly",

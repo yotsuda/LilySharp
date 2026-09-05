@@ -153,3 +153,48 @@ music = { \repeat unfold 8 { c'4 d' e' f' } }
   \header { tagline = ##f }
   \score { \new Staff \music }
 }
+
+%% ---------------------------------------------------------------------------------------
+%% TTLF / TTNF (session 338) — HOW MANY SYSTEMS A **FULL** TITLED PAGE HOLDS.
+%%
+%% WHY THESE EXIST. TTL/TTT/TTC/TTN read where the first staff LANDS, and the port of session
+%% 336 closed all four to a thousandth. They do not read what the band COSTS the page, because
+%% every one of them is a one-system book on a ragged page — nothing is competing for the room
+%% the title takes. The user's corpus is where that shows: on `Boogie Oogie Oogie` LilyPond
+%% puts 7 systems on the titled first page and 8 on every page after, while Lily# puts 8
+%% everywhere (measured 2026-09-05, session 338). The A/B is decisive and it is the header:
+%% strip the \header from that very book and LilyPond pages it 8,8,8 — Lily#'s answer exactly
+%% (scratch/p338/ab-notitle). So the remaining page-count island of the corpus is one
+%% quantity, and it is a COUNT, not a distance: the first page's budget with a title on it.
+%%
+%% THE PAIR. Sixteen forced eight-bar systems, JUSTIFIED (LilyPond's default, and the regime
+%% the corpus books are in — probeTag's ragged-bottom is turned back off here). TTLF carries
+%% the same title and composer as TTL; TTNF is the identical music with no header, so the
+%% DIFFERENCE of the two counts is the band's cost in systems and neither reading rests on a
+%% page-height constant.
+%%
+%% PREDICTION, written before running (HANDOFF 5.0-2): TTNF holds one more system on page 1
+%% than TTLF. Lily# should match TTNF (its untitled paging already agrees with LilyPond's on
+%% the corpus) and hold one too many on TTLF.
+%%
+%% ⚠️ THE COUNT IS CARRIED (HANDOFF 5.0 trap 8): these two entries ARE counts, so nothing is
+%% read by index off them; but a Lily# that splits 16 systems differently makes the SECOND
+%% page's count differ too, and only page 1 is filed — the question asked is the first page's.
+
+lineT = { \repeat unfold 8 { c'4 d' e' f' } \break }
+
+%% TTLF — TITLE AND COMPOSER over a page that is full.
+\book {
+  \probeTag "TTLF"
+  \paper { ragged-bottom = ##f }
+  \header { title = "Express Yourself" composer = "Madonna" tagline = ##f }
+  \score { \new Staff { \repeat unfold 16 \lineT } }
+}
+
+%% TTNF — THE CONTROL: the same sixteen systems with no header at all.
+\book {
+  \probeTag "TTNF"
+  \paper { ragged-bottom = ##f }
+  \header { tagline = ##f }
+  \score { \new Staff { \repeat unfold 16 \lineT } }
+}

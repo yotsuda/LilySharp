@@ -170,3 +170,29 @@ line = { \repeat unfold 8 \cell \break }
     >>
   }
 }
+
+%% STB8T (session 338) — STB8 WITH A TITLE OVER IT. The same eight systems, the same page,
+%%        plus the book title band. This is `Boogie Oogie Oogie`'s first page in miniature:
+%%        eight staff-plus-tab systems that fit one page bare, under a title.
+%%
+%%        WHY IT IS HERE AND NOT IN titled-page.ly: the pair TTLF/TTNF asks the same question
+%%        on ONE-staff systems and LilyPond answers "the band costs no system" — thirteen
+%%        either way, because twelve system-system springs at compress strength 4 swallow it.
+%%        A staff-plus-tab page is the tight regime: STB8 already needs one force of
+%%        compression (f ≈ −0.20) to hold its eight, so the band has nowhere to go.
+%%        MEASURED on the owner's book (session 338, scratch/p338/ab-notitle): with its
+%%        \header LilyPond pages Boogie 7,8,8,1 and without it 8,8,8 — Lily#'s answer exactly.
+%%        This is that A/B with the music of STB8 instead of a user file.
+%%
+%%        PREDICTION, written before running: LilyPond turns the page — 7 systems (14 staves)
+%%        on page 1 and 1 on page 2, page-count 2 — where STB8 holds all eight on one.
+\book {
+  \probeTag "STB8T"
+  \header { title = "Express Yourself" composer = "Madonna" tagline = ##f }
+  \score {
+    <<
+      \new Staff { \clef bass \repeat unfold 8 \line }
+      \new TabStaff \with { stringTunings = #bass-five-string-tuning } { \repeat unfold 8 \line }
+    >>
+  }
+}

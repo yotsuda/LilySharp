@@ -1537,6 +1537,50 @@ internal static class LpGeometryProbes
     private static readonly string TTN = TitledPageScore("TTN", null, null);
 
     /// <summary>
+    /// Sixteen forced eight-bar systems on a JUSTIFIED page, with a header or without — the
+    /// Lily# half of books TTLF / TTNF in probes/titled-page.ly.
+    /// </summary>
+    /// <remarks>
+    /// TTL..TTN read where the first staff LANDS on a page holding one system; nothing read
+    /// what the title band COSTS a page that is full. The user's corpus is where that shows:
+    /// LilyPond puts 7 systems on `Boogie Oogie Oogie`'s titled first page and 8 on every page
+    /// after, Lily# 8 everywhere — and stripping the \header from that very book makes
+    /// LilyPond page it 8,8,8, Lily#'s answer exactly (session 338, scratch/p338/ab-notitle).
+    /// The pair here is the general form of that A/B, and the DIFFERENCE of the two counts is
+    /// the band's cost in systems, so neither reading rests on a page-height constant.
+    /// <para>
+    /// ⚠️ THE LINES ARE FORCED on both sides, for the reason StaffTabPageScore's remark gives:
+    /// LilyPond breaks this music eight bars to a line and Lily# seven, and two engravers
+    /// paging different systems compare nothing.
+    /// </para>
+    /// </remarks>
+    private static string TitledFullPageScore(string name, bool titled) => $$"""
+        octave absolute
+        {{(titled ? "title \"Express Yourself\"" : "")}}
+        {{(titled ? "composer \"Madonna\"" : "")}}
+        time 4/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody { {{string.Concat(Enumerable.Repeat(string.Concat(Enumerable.Repeat("c4 d e f | ", 8)) + "break ", 16)).Trim()}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff melody
+        }
+        """;
+
+    /// <summary>Title and composer over a full page — book TTLF.</summary>
+    private static readonly string TTLF = TitledFullPageScore("TTLF", titled: true);
+
+    /// <summary>The same sixteen systems with no header — book TTNF.</summary>
+    private static readonly string TTNF = TitledFullPageScore("TTNF", titled: false);
+
+    /// <summary>
     /// A bass part as a notation staff OVER its own tab, many systems — the Lily# half of
     /// books STBN (natural) and STBK (compressed) in probes/staff-tab-page.ly.
     /// </summary>
@@ -1563,8 +1607,10 @@ internal static class LpGeometryProbes
     /// asleep; <c>bass5</c> is LilyPond's bass-five-string-tuning — five strings 1.5 apart.
     /// </para>
     /// </remarks>
-    private static string StaffTabPageScore(string name, int lines) => $$"""
+    private static string StaffTabPageScore(string name, int lines, bool titled = false) => $$"""
         octave absolute
+        {{(titled ? "title \"Express Yourself\"" : "")}}
+        {{(titled ? "composer \"Madonna\"" : "")}}
         time 4/4
         key c major
 
@@ -1590,6 +1636,16 @@ internal static class LpGeometryProbes
 
     /// <summary>Exactly eight forced eight-bar systems, no cap — book STB8.</summary>
     private static readonly string STB8 = StaffTabPageScore("STB8", 8);
+
+    /// <summary>The same eight systems with the book title over them — book STB8T.</summary>
+    /// <remarks>
+    /// `Boogie Oogie Oogie`'s first page in miniature (session 338): eight staff-plus-tab
+    /// systems that fit one page bare, under a title. STB8 already needs one force of
+    /// compression to hold its eight, so unlike the one-staff pair TTLF/TTNF the band has
+    /// little room to hide in — and LilyPond nevertheless keeps all eight (title + 8 lines on
+    /// page 1), which is what makes this a control worth carrying rather than a guess.
+    /// </remarks>
+    private static readonly string STB8T = StaffTabPageScore("STB8T", 8, titled: true);
 
     private static string CoexistScore(string name, string scoreBlock, bool secondBound) => $$"""
         octave absolute
@@ -12568,6 +12624,19 @@ internal static class LpGeometryProbes
         new("page.title-only.first-staff-refpoint", TTT, g => g.FirstStaffRefpoint(), RaggedBottomPaper),
         new("page.composer-only.first-staff-refpoint", TTC, g => g.FirstStaffRefpoint(), RaggedBottomPaper),
         new("page.untitled-control.first-staff-refpoint", TTN, g => g.FirstStaffRefpoint(), RaggedBottomPaper),
+        // ...and what the band COSTS a page that is FULL (books TTLF / TTNF, session 338).
+        // The four readings above are of a one-system ragged page, where nothing competes for
+        // the room the title takes; the corpus's remaining page-count island is the other
+        // regime. LilyPond's answer on this pair is that the band costs NO system — thirteen
+        // systems on page 1 either way, the title absorbed by compressing the twelve
+        // system-system springs (4 units of compress strength each). So these two are a
+        // CONTROL: a Lily# that fits fourteen under the title, or twelve, is pricing the band
+        // wrongly in the breaker even though page.titled.first-staff-refpoint places it right.
+        // ⚠️ LilyPond COUNTS THE TITLE AS A LINE of the page (14 lines on TTLF's page 1); the
+        // figure filed is the number of SYSTEMS, which is what a staff count reads on both
+        // sides.
+        new("page.titled.full.staves-on-first-page", TTLF, g => g.StavesOnPage(0)),
+        new("page.untitled-full-control.staves-on-first-page", TTNF, g => g.StavesOnPage(0)),
 
         // --- A STAFF-PLUS-TAB SYSTEM ON THE PAGE (books STBN / STBK, probes/staff-tab-page.ly) ---
         // The page chain over the bass corpus's own frame, at rest and compressed. Indices:
@@ -12601,6 +12670,17 @@ internal static class LpGeometryProbes
         new("page.staff-tab.eight-systems.staves-on-first-page", STB8,
             g => g.StaffTabPairStavesOnPage(5)),
         new("page.staff-tab.eight-systems.page-count", STB8, g => g.PageCount),
+        // ...and the same eight under a TITLE (book STB8T, session 338). The tight half of the
+        // pair TTLF/TTNF answers on one-staff systems: this page already spends one force of
+        // compression to hold its eight, so the band cannot hide in the springs the way it
+        // does there. LilyPond keeps all eight anyway. It is the shape of the corpus's last
+        // page-count island — LilyPond pages the owner's `Boogie Oogie Oogie` 7,8,8,1 with its
+        // header and 8,8,8 without (session 338) — with quiet music instead of a user file, so
+        // a Lily# that prices the band right here and still parts from LilyPond there is being
+        // told the difference is the SYSTEMS' height, not the title's.
+        new("page.staff-tab.titled.staves-on-first-page", STB8T,
+            g => g.StaffTabPairStavesOnPage(5)),
+        new("page.staff-tab.titled.page-count", STB8T, g => g.PageCount),
 
         // --- WHERE THE FIRST STAFF SITS UNDER A CHORD ROW, on BOTH sides of the boundary
         // top-system-spacing's floor has (books CHR1/CHR2) ---
