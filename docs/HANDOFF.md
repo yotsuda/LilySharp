@@ -260,12 +260,28 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 **⒝ 測定**（LP は `Measure-LilyPondProbe.ps1`・Lily# は `scratch/p339/ZzP339bProbeTests.cs.txt` → `probe4.txt`）: **LP STB8T 題＋8 段 1 頁／STB8TM 題＋8 段 1 頁／STB9T 題＋8 段 ＋ 1 段 ＝ 2 頁／STB9TM 同じ。Lily# は 4 冊とも同一。** ⇒ **台帳 6 点・全部 exact**（`page.staff-tab.titled.marked.*`／`.nine-systems.*`／`.nine-systems.marked.*`）。**guard として起票**（defect ではない）。
 ⚠️ ★★★ **⒞ 陽性対照つきの negative**: **8 段の題付き頁は mark 箱より大きい余裕を持っている**ので、**mark をどれだけ間違って値付けしても 8 段では現れない**——だから **9 段（頁が実際に折れる数）を対にした**。**STB8T は載り STB9T は折れる＝この計器は「1 段ぶんの高さ」を見分けられる。それでも両エンジンの差は 0。**（`feedback_negative_result_needs_positive_control` の型）
 ⇒ ⚠️⚠️ ★★★★ **⒟ 第338 ⑺⒜ の読み方を狭めること**: あの A/B は「**Boogie から mark を落とすと LP が 1 段増える**」を示しただけで、「**mark が高さの主因**」は示していない。**頁が縁に在るとき、十分大きいインクを落とせば何であれ 1 段買える**——`Accidental`・`Slur`・`Script` 等が動かなかったのは**それらが mark より小さいから**。**mark は最後の一押しであって荷物ではない。** ⇒ ★★ **1 grob ずつの A/B は「藁」を名指すのであって「荷」を名指さない。荷を知るには*その grob だけを対照に足す*こと**（＝この便がやったこと）。
-⇒ **⒠ この音楽に無くて Boogie に在るもの＝tab が `\tabFullNotation`（符尾と梁）・volta bracket・臨時記号・4 弦**。**次はそこ。**
+⚠️⚠️ ★★★ **⒠ 「次は `\tabFullNotation`」は前提が偽だった（第 4 便の頭で潰した・`feedback_lilysharp_verify_comparison_premise`）**: **割れているのは book "bass"＝「both」で、その TabStaff は素**（`Boogie Oogie Oogie.ly:128-136`＝`stringTunings` と `TabNoteHead.font-size = 2` だけ）。**`\tabFullNotation` が在るのは別 book の "bassTab"（:154）で、そちらは LP も Lily# も 2 頁で一致している。** ⇒ **この候補は消える。**（第337 ⑺ の「実コーパスの tab 本は全部 `\tabFullNotation`」は *tab 単独の本*についての話。）
+⇒ **⒡ 「both」に在って STB9T に無いもの（更新後の候補）**: **volta bracket・臨時記号・高い音（`e'`/`g'`＝五線の上インク）・percent 反復・`TabNoteHead.font-size = 2`（数字が大きい＝tab のインクが縦に伸びる）・4 弦 tuning（STB は bass5）**。⚠️ **ただし ⑾⒟ の教訓により、候補を 1 つずつ*足して*測ること。**
 ★ **⑿ 第 3 便の数**: 台帳 794 → **800**／exact 626 → **632**／ss 非ゼロ 203（26.789）不動／count 172 → **178** うち非ゼロ 0／OPEN 0。full **7165 / 0 / 4 / 7169**（`scratch/p339/full4.trx`・2 分 34 秒・**+6＝台帳点**）・build 0 エラー・Core 0 警告（266 秒）・snapshot 247・追跡 597＝不動。
 **終了時（第 3 便）**: **commit 2 本（台帳 6 点＋プローブ 3 book＋Lily# 側の双子／この HANDOFF）・未 push 16・木 clean・未追跡 0**・製品コード不変（出力不動・snapshot 0 枚）。
 
+✅ ⚠️ ★★ **⒀ 第 4 便（ユーザー「有利なら着手」→ *着手しなかった*・製品 0・台帳 0）**: 次の一手の候補 **`\tabFullNotation`** を建てる前に**前提を確かめて、偽だと分かった**（⑾⒠）ので**その book は建てていない**。代わりに**次便が冷えた頭で始められるように 2 つだけ置いた**: **⒜ 候補表の差し替え**（⑾⒡）と、**⒝ ⒞ の Lily# 半分を表にして下の「次の一手」へ**（`placed sys` は既に取れていた＝新たに測っていない）。**LP 半分は設計仕事が要り、それはこの便の文脈の重さより新しい頭のほうが安い**——**だから止めた。**
+
 ⇒ ★★★★ **次の一手**: ✅ 第338 ⑺ mark・✅ ⑻ 括弧・✅ ⑾ 2.311・✅ ⑿ 段の高さ・✅ **⑵ 段間の rod**・✅ **⑷ 段数と line breaking**・✅ **⑺ spec**・✅ **⑼⒜ 頁 DP の目的関数**・✅ **⑼⒝ `calc_force` の移植**。**残るのは 1 つ: breaker が 1 行を値付けする 3 つの数（`full_height` / `tallness` / `inverse_hooke`）。**
-**⑴ その 3 値を LP と対で縛る**——**⑾ で mark は落ちたので、次の候補は `\tabFullNotation` の tab**: **⒜ 新 book `STB8TF`／`STB9TF`＝STB8T／STB9T の TabStaff を `\tabFullNotation` にするだけ**（Boogie の tab はこれ・第337 ⑻ で符尾の幾何は移植済みなので**インクは両側で同じはず**）。**mark と同じ手順**——**8 段（余裕あり）と 9 段（折れる）を対にして `staves-on-first-page` と `page-count` を台帳点に**。**Lily# 側は `tab bassline` に full notation を出させる綴りを確かめること**（`project_lilysharp_tab_display_modes`）。**⒝ そこで割れなければ volta bracket → 臨時記号の順に同じ手**（1 つずつ足す＝**藁ではなく荷を測る**・⑾⒟）。**⒞ 3 つとも割れなければ差は「段の高さ」ではない**ので、**`tallness` を段ごとに直接突き合わせる**（Lily# は `placed sys i: …`＝`LayoutEngine.DescribeDetails` が既に吐いている／LP 側は `Line_details` が Scheme から見えないので `bare/lp.out` の `yoff` 差分＝段が積み上がる量で代用）。⚠️ **移植に触るのはそのあと**（`Line_details` の値が動けば全本の頁割りが動く＝**承認事項**）。
+**⑴ `tallness` を段ごとに直接突き合わせる（合成 book を 1 つずつ足す路線より先にこちらを勧める）**——**⑾ で mark が落ち、⑾⒠ で `\tabFullNotation` の前提も落ちたので、候補を当てにいく費用が上がった。**
+**⒜ Lily# 側は*もう取ってある***（`scratch/p339/probe2.txt` の `placed sys` 行＝`LayoutEngine.DescribeDetails`）。**Boogie「both」の 1 頁目 8 段**（`top / body / bottom / tallness`・**body は全段 12.250＝譜対を整列の最小 8 に戻した値**＝五線の半分 2.0 ＋ 8 ＋ tab の半分 2.25。⑾ 以降の枠と整合）:
+
+| sys | top | tallness | | sys | top | tallness |
+|---|---|---|---|---|---|---|
+|1|7.101|19.989| |5|3.900|17.869|
+|2|5.160|18.460| |6|2.293|16.181|
+|3|5.545|18.845| |7|3.900|18.453|
+|4|5.160|18.460| |8|2.311|16.199|
+
+（`top` 5.16／5.545 は mark の段・2.29／2.31 は静かな段＝⑾⒜ の小節番号。**この表は題ぬきで `CalcLineHeights` を回した値**なので、題を先頭に付けた本番では sys 1 の tallness だけ変わる。）
+**⒝ LP 側が要る**。`Line_details` は Scheme から見えないので**直接は取れない**——**次便の設計仕事はここ**。案: **(i) `bare/lp.out` の `yoff` 差分**は*解いた*距離であって最小ではないので、そのままでは `tallness` ではない。**(ii) `page-count = #N` を 1 ずつ動かして LP が警告（`too few pages: n (should have at least m)`）を出す境目を探す**と **LP の `min_page_count` が読める**＝**「最小の積み方で何頁要るか」**が分かり、Σ tallness に対する不等式が 1 本引ける（**この便で `#3` は無警告＝LP の min_page_count ≤ 3 は既知**）。**(iii) `ragged-bottom = ##t` にすると全ばねが自然長になる**ので、そこでの `yoff` 差分は tallness ＋ ばねの自然長＝**spec から引き算できる**。**(iii) が一番安い。**
+⚠️ **移植に触るのはそのあと**（`Line_details` の値が動けば全本の頁割りが動く＝**承認事項**）。
+**⒞ 合成 book の路線を続けるなら**、⑾⒡ の候補（volta／臨時記号／高い音／percent／`TabNoteHead.font-size = 2`／4 弦）を**1 つずつ*足して***・**必ず 8 段と 9 段の対で**（⑾⒞ の陽性対照）。⚠️ **落として測らないこと**（⑾⒟）。
 ⚠️ **もう疑わなくてよい**: 段数の選択・line breaking（⑷）・spec の値（⑺）・題の値付け（第338 ⑸）・括弧（第338 ⑻）・段ごとの*描かれた*上下インク（第338 ⑾⒠）・段間の rod（⑵）・**頁 DP の目的関数と力の式（⑼⒜⒝）**・**mark（⑾＝台帳 6 点・陽性対照つき）**。
 ⚠️ **LP に「8 段が載るか」を訊く道具は `scratch/p339/lp-pagecount.ps1`**（`page-count` を強制して段署名を読む）。⚠️ **インク比較は `scratch/p338/lp-bare.ps1`**（素の LP）。⚠️ **`SystemLayout.Y` は頁の下端からの Y-up**・**段の高さを LP と並べるときは `ToFirst` を足す**。
 ⑵ 以下は第338 の並び（`lysc ly` の ChordNames＝ユーザーと綴りを決めてから／lyric row の slot の投票／ps2 の 0.017・beam-over-stem bar 1 の +0.33／push 後 `gh run list`／`audit/lpreg` 取り直し／§2 U8c・U8b・U8／A/B/D/E／C⑴／G）。⚠️ **承認待ち・リリース 0.6.0 の bump／tag は第328 と同じ。**
