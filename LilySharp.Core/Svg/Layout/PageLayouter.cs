@@ -515,6 +515,16 @@ internal sealed class PageLayouter
         // page.natural/page.stretched.staff-staff-inside are the pair that measured it.
         var springs = ImmutableArray.CreateBuilder<Spring>();
 
+        // What each spring IS, parallel to the builder — built only when a probe has asked
+        // for the chain (LayoutEngine.DebugPageBreakingScoring; null in production, where
+        // this costs one null test per spring and nothing else). A spring carries its ideal,
+        // its rod and its two strengths, but not which boundary of the page it spans, and the
+        // rod is the one number this chain is read for: the label names the boundary and the
+        // Spring object answers everything else, so the dump has no second arithmetic of its
+        // own to drift from the chain it is describing.
+        var debug = LayoutEngine.DebugPageBreakingScoring;
+        var springLabels = debug is null ? null : new List<string>();
+
         // Spring 0 — down to the first system's staff refpoint; or, on the page that OPENS
         // WITH THE BOOK TITLE, two springs: top-markup-spacing down to the title column's
         // top, then markup-system-spacing from there to the first staff refpoint
@@ -535,13 +545,19 @@ internal sealed class PageLayouter
         if (titled)
         {
             springs.Add(LayoutUtilities.TitleTopSpring(vs));
+            springLabels?.Add("top-markup → title top");
             springs.Add(LayoutUtilities.TitleToSystemSpring(
                 header!, systemExtents[startIdx].upExtent, anchor(startIdx).ToFirst, vs));
+            springLabels?.Add($"markup-system → sys {startIdx + 1} refpoint "
+                + $"(title depth {header!.Depth:F3} + up {systemExtents[startIdx].upExtent:F3} "
+                + $"+ toFirst {anchor(startIdx).ToFirst:F3})");
         }
         else
         {
             springs.Add(LayoutUtilities.CreateTopSystemSpring(
                 systemExtents[startIdx].upExtent, anchor(startIdx).ToFirst, vs.TopSystem));
+            springLabels?.Add($"top-system → sys {startIdx + 1} refpoint "
+                + $"(up {systemExtents[startIdx].upExtent:F3} + toFirst {anchor(startIdx).ToFirst:F3})");
         }
 
         int count = endIdx - startIdx;
@@ -608,6 +624,8 @@ internal sealed class PageLayouter
                     // (basic-distance / stretchability), floored by the minimum translation
                     // through ensure_min_distance.
                     springs.Add(LayoutUtilities.CreateSpring(ss.Spec, ss.MinimumDistance));
+                    springLabels?.Add($"staff-staff  sys {sysIdx + 1} "
+                        + $"staff {ss.UpperStaffIndex}→{ss.LowerStaffIndex}");
                 }
             }
 
@@ -689,6 +707,13 @@ internal sealed class PageLayouter
                 springs.Add(LayoutUtilities.CreateSpring(
                     spec with { BasicDistance = basicDist, Padding = padding },
                     skylineDistance + padding));
+                // The raw pair minimum is named here because it is the one term of the rod
+                // the Spring cannot be asked for afterwards: what reaches it is
+                // skylineDistance + padding, already maxed against the spec's own minimum.
+                springLabels?.Add($"system-system sys {sysIdx + 1}→{sysIdx + 2} "
+                    + $"(pair min {skylineDistance:F3}"
+                    + (hasSkylines ? $", skyline raw {rawDist:F3}" : ", no skylines")
+                    + $" + padding {padding:F3})");
             }
         }
 
@@ -709,6 +734,8 @@ internal sealed class PageLayouter
             double inkBelowLastRefpoint = InkBelowLastRefpoint(lastDetails, endIdx - 1);
             springs.Add(LayoutUtilities.CreateSpring(
                 vs.LastBottom, vs.LastBottom.Padding + inkBelowLastRefpoint));
+            springLabels?.Add($"last-bottom  from sys {endIdx} refpoint "
+                + $"(ink below {inkBelowLastRefpoint:F3} + padding {vs.LastBottom.Padding:F3})");
         }
 
         // LILYPOND-REF: lily/page-layout-problem.cc:471-476 — page_height_ deliberately
@@ -734,6 +761,34 @@ internal sealed class PageLayouter
             // LILYPOND-REF: lily/simple-spacer.cc:301-303 — a ragged configuration is laid
             // out at force 0 even when the solve reported a positive one.
             positions = solver.GetPositions(isRagged && pageForce > 0 ? 0.0 : pageForce);
+        }
+
+        // THE CHAIN, SPRING BY SPRING, once the page has solved. The question this answers is
+        // whether a spring's length is the page's force or its ROD: a spring at its rod is
+        // spending a floor the geometry imposed and no force will move it, so a page whose
+        // chain is all rods is as short as this port can make it — which is a different
+        // finding from a page that merely solved to a small force. `ROD` marks those.
+        // (LILYPOND-REF: lily/spring.cc:219-237 — length is max(ideal + force * strength,
+        // min_distance), so equality with min_distance is exactly "the rod is binding".)
+        if (debug is { } dump && springLabels is { } labels)
+        {
+            var chain = springs.ToImmutable();
+            dump($"page chain: sys {startIdx + 1}-{endIdx}"
+                + (titled ? " (titled)" : "")
+                + $" force {pageForce:F6} height {pageHeight:F3} springs {chain.Length}"
+                + (isRagged ? " ragged" : "")
+                + (useFixedForce ? $" fixed-force {fixedForce:F6}" : ""));
+            for (int k = 0; k < chain.Length; k++)
+            {
+                var s = chain[k];
+                double solved = positions[k + 1] - positions[k];
+                bool atRod = Math.Abs(solved - s.MinDistance) <= 1e-9;
+                dump($"    spring {k + 1,2} {labels[k]}: ideal {s.IdealDistance:F3} "
+                    + $"rod {s.MinDistance:F3} invStretch {s.InverseStretchStrength:F3} "
+                    + $"invCompress {s.InverseCompressStrength:F3} "
+                    + $"blocking {s.BlockingForce:F3} -> solved {solved:F3}"
+                    + (atRod ? " ROD" : ""));
+            }
         }
 
         // The title column's top, where the page's first spring ended — solved with the

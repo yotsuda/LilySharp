@@ -34,6 +34,14 @@ internal sealed partial class LayoutEngine
     /// Lily# book's scores can be laid beside LilyPond's for the same book. Null in
     /// production; a probe test sets it. Not read anywhere else.
     /// </summary>
+    /// <remarks>
+    /// It also carries the PLACED page's own chain — <c>PageLayouter.PositionSystemsOnPage</c>
+    /// reports the springs it built and the lengths the page solved for them. The count loop
+    /// prices lines and the chain spaces them, and the two answers only ever meet in a book's
+    /// output; laying them side by side is what this delegate is for, so both write here
+    /// rather than each inventing a switch. INERT: nothing reads the strings in production
+    /// and no branch below depends on whether the delegate is set.
+    /// </remarks>
     internal static Action<string>? DebugPageBreakingScoring { get; set; }
 
     /// <summary>
