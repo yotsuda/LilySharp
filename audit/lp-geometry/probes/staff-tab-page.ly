@@ -201,6 +201,75 @@ line = { \repeat unfold 8 \cell \break }
   }
 }
 
+%% STB8TM / STB9TM (session 339, leg 3) — STB8T WITH A BOXED REHEARSAL MARK OVER EVERY
+%%        SYSTEM, at eight systems and at nine.
+%%
+%%        WHY. STB8T is a control that PASSES: LilyPond and Lily# both keep eight
+%%        staff-plus-tab systems on the titled page. `Boogie Oogie Oogie` is the same shape
+%%        and does NOT pass — LilyPond puts seven on its titled first page and Lily# eight.
+%%        Session 338 leg 2 ran LilyPond over ten grob families on that book, dropping each
+%%        one's stencil in turn, and exactly ONE moved the answer: RehearsalMark. Drop the
+%%        marks and LilyPond fits eight, Lily#'s answer. So the ink that separates STB8T from
+%%        Boogie's first page is the mark box, and this is STB8T with that ink added and
+%%        nothing else.
+%%
+%%        Lily# spells this `@mark("A")`, which LilyPondExporter writes as
+%%        `\mark \markup \box "A"` (LilyPondExporter.cs:2297) — the same markup Boogie's own
+%%        source uses. Same ink on both sides by construction.
+%%
+%%        WHY TWO COUNTS. The mark can only turn a page where the page has less slack than
+%%        the mark costs, and STB8 holds its eight by one force of compression (f ≈ −0.20)
+%%        with every rod still asleep — the between-systems floor is 6.125 against a spring
+%%        of 12. A mark reaching ~2 ss over the staff raises that floor to about 8.1, still
+%%        short of 12, so eight marked systems may well page exactly as eight bare ones and
+%%        the pair would be inert. Nine is the count that makes the page choose.
+%%
+%%        PREDICTION, written before running (HANDOFF 5.0-2): STB8TM reads STB8T — eight
+%%        systems, one page, on both engravers, because the mark does not reach the rod.
+%%        STB9TM is where they part: LilyPond turns the page (8 + 1) and Lily# holds nine, the
+%%        Boogie shape in miniature. ⚠️ If BOTH books agree across the engravers, the mark is
+%%        not the term and the difference is something Boogie has that this music does not
+%%        (its tab is \tabFullNotation with stems and beams; these staves are frets only) —
+%%        which is itself the finding, and says to measure `tallness` system by system
+%%        instead.
+markedLine = { \mark \markup { \box "A" } \repeat unfold 8 \cell \break }
+
+\book {
+  \probeTag "STB8TM"
+  \header { title = "Express Yourself" composer = "Madonna" tagline = ##f }
+  \score {
+    <<
+      \new Staff { \clef bass \repeat unfold 8 \markedLine }
+      \new TabStaff \with { stringTunings = #bass-five-string-tuning } { \repeat unfold 8 \line }
+    >>
+  }
+}
+
+\book {
+  \probeTag "STB9TM"
+  \header { title = "Express Yourself" composer = "Madonna" tagline = ##f }
+  \score {
+    <<
+      \new Staff { \clef bass \repeat unfold 9 \markedLine }
+      \new TabStaff \with { stringTunings = #bass-five-string-tuning } { \repeat unfold 9 \line }
+    >>
+  }
+}
+
+%% STB9T (session 339, leg 3) — NINE SYSTEMS UNDER THE TITLE, NO MARKS. The control STB9TM
+%%        needs: if nine marked systems split the engravers, the reading is only about the
+%%        mark when nine BARE ones do not.
+\book {
+  \probeTag "STB9T"
+  \header { title = "Express Yourself" composer = "Madonna" tagline = ##f }
+  \score {
+    <<
+      \new Staff { \clef bass \repeat unfold 9 \line }
+      \new TabStaff \with { stringTunings = #bass-five-string-tuning } { \repeat unfold 9 \line }
+    >>
+  }
+}
+
 %% STB8B (session 338, leg 3) — STB8 INSIDE A StaffGroup, i.e. WITH A SYSTEM-START BRACKET.
 %%
 %%        WHY. STB8 and STB8T are written `<< \new Staff \new TabStaff >>`, which gets a

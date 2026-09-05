@@ -1023,6 +1023,54 @@
       "residual": 0.0,
       "why": "SEEDED 2026-09-05 (session 338). Carried with page.staff-tab.titled.staves-on-first-page for the reason page.staff-tab.eight-systems.page-count is carried with its own count: a breaker that reaches eight on page 1 by some other route cannot pass the pair by accident."
     },
+    "page.staff-tab.titled.marked.staves-on-first-page": {
+      "probe": "staff-tab-page.ly",
+      "score": "STB8TM",
+      "lilypond": 16,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "SEEDED 2026-09-06 (session 339). STB8T WITH A BOXED REHEARSAL MARK OVER EVERY SYSTEM. Session 338 leg 2 ran LilyPond over `Boogie Oogie Oogie` ten times, dropping one grob family's stencil each time, and exactly ONE moved its paging: RehearsalMark (book1 8,8,8,1 becomes 9,8,8 without it). Boogie is a titled staff-plus-tab book whose first page LilyPond gives seven systems and Lily# eight; STB8T is the same shape in quiet music and both engravers keep eight. So the mark is the ink that separates the control from the island, and this book is the control with that ink added and nothing else changed. MEASURED: it buys nothing — eight marked systems still hold the titled page on both engravers, exactly as STB8T. Filed as a GUARD (Lily# is exact): a port that changes what a mark costs the page moves this count, and this is the only entry that would notice."
+    },
+    "page.staff-tab.titled.marked.page-count": {
+      "probe": "staff-tab-page.ly",
+      "score": "STB8TM",
+      "lilypond": 1,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "SEEDED 2026-09-06 (session 339). Carried with page.staff-tab.titled.marked.staves-on-first-page for the reason page.staff-tab.eight-systems.page-count is carried with its own count: a breaker that reaches sixteen staves on page 1 by some other route cannot pass the pair by accident."
+    },
+    "page.staff-tab.titled.nine-systems.staves-on-first-page": {
+      "probe": "staff-tab-page.ly",
+      "score": "STB9T",
+      "lilypond": 16,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "SEEDED 2026-09-06 (session 339). NINE SYSTEMS UNDER THE TITLE — the count where the page has to turn. THIS IS THE POSITIVE CONTROL FOR THE MARKED PAIR, and without it that pair proves nothing: at eight systems the titled page has more slack than a mark box costs, so a mark priced arbitrarily wrongly could not show. At nine the page is deciding, and both engravers put eight systems on page 1 and one on page 2. So this probe CAN see one system's worth of height, and it still sees no difference between Lily# and LilyPond in this frame. ⇒ Boogie's first page is not tall because of its marks; whatever the term is, this music does not have it (its tab is frets only, Boogie's is \\tabFullNotation with stems and beams)."
+    },
+    "page.staff-tab.titled.nine-systems.page-count": {
+      "probe": "staff-tab-page.ly",
+      "score": "STB9T",
+      "lilypond": 2,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "SEEDED 2026-09-06 (session 339). Carried with page.staff-tab.titled.nine-systems.staves-on-first-page. The pair of counts is what says WHERE the turn is: sixteen staves on page 1 and two pages, rather than sixteen staves and one page (which would mean the ninth system vanished) or eighteen and two."
+    },
+    "page.staff-tab.titled.nine-systems.marked.staves-on-first-page": {
+      "probe": "staff-tab-page.ly",
+      "score": "STB9TM",
+      "lilypond": 16,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "SEEDED 2026-09-06 (session 339). The nine-system book WITH the marks — the deciding page asked the question the eight-system book could not. LilyPond turns in the same place marked or bare, and so does Lily#. Together with page.staff-tab.titled.marked.* this says the mark costs the page nothing at either count on either engraver, which retires it as the explanation of Boogie's first page."
+    },
+    "page.staff-tab.titled.nine-systems.marked.page-count": {
+      "probe": "staff-tab-page.ly",
+      "score": "STB9TM",
+      "lilypond": 2,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "SEEDED 2026-09-06 (session 339). Carried with page.staff-tab.titled.nine-systems.marked.staves-on-first-page."
+    },
     "page.bracketed-pair.staves-on-first-page": {
       "probe": "staff-tab-page.ly",
       "score": "TWOB",

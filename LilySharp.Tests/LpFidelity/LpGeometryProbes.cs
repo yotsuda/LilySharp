@@ -1607,8 +1607,17 @@ internal static class LpGeometryProbes
     /// asleep; <c>bass5</c> is LilyPond's bass-five-string-tuning — five strings 1.5 apart.
     /// </para>
     /// </remarks>
+    /// <param name="marked">
+    /// Puts a boxed rehearsal mark on the first note of every line — Lily#'s
+    /// <c>@mark("A")</c>, which LilyPondExporter writes as <c>\mark \markup \box "A"</c>
+    /// (LilyPondExporter.cs:2297), the same markup the probe's marked books use and the same
+    /// one `Boogie Oogie Oogie` is written with. Session 339: LilyPond's own grob-by-grob A/B
+    /// over that book named RehearsalMark as the ONE ink whose removal moved its paging, so
+    /// this is that ink on the control that passes.
+    /// </param>
     private static string StaffTabPageScore(
-        string name, int lines, bool titled = false, bool bracketed = false) => $$"""
+        string name, int lines, bool titled = false, bool bracketed = false,
+        bool marked = false) => $$"""
         octave absolute
         {{(titled ? "title \"Express Yourself\"" : "")}}
         {{(titled ? "composer \"Madonna\"" : "")}}
@@ -1618,7 +1627,7 @@ internal static class LpGeometryProbes
         part bassline { clef bass tuning bass5 }
 
         section Main {
-          bassline { {{string.Concat(Enumerable.Repeat(string.Concat(Enumerable.Repeat("g,,4 a,, b,, a,, | ", 8)) + "break ", lines)).Trim()}} }
+          bassline { {{StaffTabPageBody(lines, marked)}} }
         }
 
         form main { ~Main }
@@ -1627,6 +1636,15 @@ internal static class LpGeometryProbes
         {{(bracketed ? "  staffGroup {\n    staff bassline\n    tab bassline\n  }" : "  staff bassline\n  tab bassline")}}
         }
         """;
+
+    /// <summary>Eight bars to a line, <paramref name="lines"/> of them, each forced.</summary>
+    private static string StaffTabPageBody(int lines, bool marked)
+    {
+        const string Bar = "g,,4 a,, b,, a,, | ";
+        string first = marked ? "g,,4@mark(\"A\") a,, b,, a,, | " : Bar;
+        return string.Concat(Enumerable.Repeat(
+            first + string.Concat(Enumerable.Repeat(Bar, 7)) + "break ", lines)).Trim();
+    }
 
     /// <summary>Three forced eight-bar systems at rest — book STBN.</summary>
     private static readonly string STBN = StaffTabPageScore("STBN", 3);
@@ -1646,6 +1664,25 @@ internal static class LpGeometryProbes
     /// page 1), which is what makes this a control worth carrying rather than a guess.
     /// </remarks>
     private static readonly string STB8T = StaffTabPageScore("STB8T", 8, titled: true);
+
+    /// <summary>STB8T with a boxed mark over every system — book STB8TM.</summary>
+    /// <remarks>
+    /// The one ink that separates STB8T from `Boogie Oogie Oogie`'s first page. Session 338
+    /// dropped ten grob families from that book one at a time and only RehearsalMark moved
+    /// LilyPond's answer; session 339 adds it here, to the control that passes.
+    /// </remarks>
+    private static readonly string STB8TM = StaffTabPageScore("STB8TM", 8, titled: true, marked: true);
+
+    /// <summary>Nine systems under the title, bare and marked — books STB9T / STB9TM.</summary>
+    /// <remarks>
+    /// The count where the titled page has to turn. It is what makes the marked pair mean
+    /// anything: eight fit with slack to spare, so a mark that costs less than that slack
+    /// could never show at eight however wrong it was priced. At nine the page is deciding,
+    /// and both engravers decide the same way with the mark and without it.
+    /// </remarks>
+    private static readonly string STB9T = StaffTabPageScore("STB9T", 9, titled: true);
+
+    private static readonly string STB9TM = StaffTabPageScore("STB9TM", 9, titled: true, marked: true);
 
     /// <summary>
     /// Ten forced eight-bar systems of TWO ordinary staves, bare or inside a
@@ -12730,6 +12767,29 @@ internal static class LpGeometryProbes
         new("page.staff-tab.titled.staves-on-first-page", STB8T,
             g => g.StaffTabPairStavesOnPage(5)),
         new("page.staff-tab.titled.page-count", STB8T, g => g.PageCount),
+        // ...and the same page with the ONE ink that separates it from Boogie's first page
+        // (books STB8TM / STB9T / STB9TM, session 339). LilyPond's own grob-by-grob A/B over
+        // Boogie dropped ten families' stencils in turn and exactly one moved its paging:
+        // RehearsalMark. Added here to the control that passes, the mark buys nothing —
+        // eight marked systems still hold the titled page on BOTH engravers, and the turn
+        // still comes at nine, marked or bare.
+        // ⚠️ THE NINE-SYSTEM BOOKS ARE WHAT MAKE THE MARKED ONES READABLE. At eight the page
+        // has more slack than a mark box costs, so a mark priced arbitrarily wrongly could
+        // not show; at nine the page is deciding, and both engravers decide alike. That is
+        // the positive control for the negative result: this probe CAN see one system's worth
+        // of height (STB8T holds, STB9T turns), and it sees no difference here.
+        // ⇒ Boogie's first page is not tall because of its marks. Whatever the term is, this
+        // music does not have it — its tab is frets only, where Boogie's is
+        // \tabFullNotation with stems and beams.
+        new("page.staff-tab.titled.marked.staves-on-first-page", STB8TM,
+            g => g.StaffTabPairStavesOnPage(5)),
+        new("page.staff-tab.titled.marked.page-count", STB8TM, g => g.PageCount),
+        new("page.staff-tab.titled.nine-systems.staves-on-first-page", STB9T,
+            g => g.StaffTabPairStavesOnPage(5)),
+        new("page.staff-tab.titled.nine-systems.page-count", STB9T, g => g.PageCount),
+        new("page.staff-tab.titled.nine-systems.marked.staves-on-first-page", STB9TM,
+            g => g.StaffTabPairStavesOnPage(5)),
+        new("page.staff-tab.titled.nine-systems.marked.page-count", STB9TM, g => g.PageCount),
         // --- WHAT A SYSTEM-START BRACKET COSTS THE PAGE (books TWOP / TWOB, session 338) ---
         // The delimiter is the one ink Lily# DRAWS and never RESERVES: SkylineBuilder seeds
         // none, SharedRenderer hangs brackettips 1.593 ss past the staff line at each end, and
