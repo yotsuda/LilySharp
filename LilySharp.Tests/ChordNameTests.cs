@@ -509,4 +509,69 @@ score main {{ chords prog  staff m }}
             "the row must clear the rest pushed up out of its own staff: "
             + $"printed rests {moved.Clearance:F6}, spacer control {spacer.Clearance:F6}");
     }
+
+    /// <summary>
+    /// A note-attached <c>@chord</c> on a TAB staff stands over ITS OWN top line, the same
+    /// distance a notation staff's does — so its ink stays out of the staff above it.
+    /// </summary>
+    /// <remarks>
+    /// The placement is <c>0.6 + the protrusion of this staff's own up-skyline</c>, and that
+    /// skyline is built about the staff's REFERENCE POINT and reflected once, at the edge, to
+    /// "above the top line" (<c>LayoutEngine.LayoutChordNames</c>). The reflection subtracted
+    /// the SCORE's nominal half-staff (2.000000) from a TAB staff that spans 7.500000, so
+    /// 1.750000 of it was left undone and the tab's chord floated that much too high — through
+    /// the bottom line of the staff above, while the room reserved for it below stood empty
+    /// (owner report 2026-09-06, scratch/ベースタブLy/tab-chord.lys: <c>staff back</c> over
+    /// <c>tab melody</c>, Cmaj7 crossing the staff line above it).
+    /// <para>
+    /// ⚠️ THE ASSERTION IS A COMPARISON, NOT A CONSTANT: the same book carries a chord on the
+    /// notation staff, so the tab's distance is measured against the one the corpus already
+    /// engraves rather than against a number written here. Two legs, as the family above:
+    /// the quantity (both stand the same distance over their own top line) and the consequence
+    /// the reader saw (the tab's ink is below the staff above, measured through the engraver's
+    /// own ink, not a guessed cap height).
+    /// </para>
+    /// <para>
+    /// ⚠️ ONE OBSERVER. Sweeping the tracked corpus and the owner's 323 bass-tab books
+    /// (920 books, base against head) MOVED exactly this one: no other book puts an
+    /// <c>@chord</c> on a tab staff, which is why the frame stayed wrong.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ChordOnATabStaff_StandsOverItsOwnTopLine_NotTheStaffAbove()
+    {
+        var tree = SyntaxTree.Parse(
+            "part melody { section A { c1\\3@chord(Cmaj7) } }\n"
+            + "part back { section A { e1\\3@chord(Dm7) } }\n"
+            + "form main { A }\n"
+            + "score main { staff back  tab melody }\n");
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var layout = new LayoutEngine().Layout(score);
+
+        var staves = layout.Systems[0].StaffGroups.SelectMany(g => g.Staves)
+            .ToDictionary(s => s.StaffIndex);
+        // Y is the staff's TOP LINE and YUp the symbol's baseline, both up-positive from the
+        // system origin, so the difference is "above this staff's own top line".
+        double OverItsTopLine(string text)
+        {
+            var chord = layout.ChordNameLayouts.Single(c => c.ChordText == text);
+            var owner = score.ChordNames.Single(c => c.ChordText == text);
+            return chord.YUp - staves[owner.StaffIndex].Y;
+        }
+
+        double onNotation = OverItsTopLine("Dm7");   // staff back, the control
+        double onTab = OverItsTopLine("Cmaj7");      // tab melody
+
+        Assert.Equal(onNotation, onTab, 9);
+
+        // ...and therefore the consequence: the tab's symbol is BELOW the bottom line of the
+        // staff above it. The ink is the engraver's own measurement of this very string.
+        var above = staves[0];
+        double inkTop = layout.ChordNameLayouts.Single(c => c.ChordText == "Cmaj7").YUp
+            + ChordNameEngraver.SymbolInk(score.TextMetrics, "Cmaj7").Top;
+        Assert.True(inkTop < above.Y - above.Height,
+            $"the tab's chord ink reaches {inkTop:F6}, the staff above ends at "
+            + $"{above.Y - above.Height:F6} (up-positive: smaller is lower)");
+    }
 }

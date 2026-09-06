@@ -133,6 +133,16 @@ scores against LilyPond's picture of the same book.
 
 ### Engraving
 
+- **A chord written on a tab note stands over the tab, not through the staff above it.** An
+  `@chord` is placed 0.6 staff-spaces above its staff's top line, plus whatever that staff's
+  own ink protrudes — and the protrusion is read from a skyline built about the staff's
+  reference point, reflected once into "above the top line". The reflection subtracted the
+  score's nominal half-staff (2.0) from a TAB staff, which spans 7.5 (LilyPond gives a
+  TabStaff 1.5 per string whatever the string count), so 1.75 of it was left undone: the
+  symbol floated 1.75 too high, crossing the bottom line of the staff above, while the room
+  reserved for it under that staff stood empty. A tab's chord now takes the same 0.65 over its
+  own top line that a notation staff's does. Sweeping the tracked corpus and 323 bass-tab
+  books — 920 in all — moves exactly the one book that puts an `@chord` on a tab staff.
 - **A full-notation tab stem is the length LilyPond draws it.** A tab under `\tabFullNotation`
   draws stems, and Lily# gave every one a flat three string-spaces from the fret digit — so a
   low bass note's up-stem reached far above the staff and, more consequentially, every

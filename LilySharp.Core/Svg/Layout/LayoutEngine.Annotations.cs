@@ -1158,7 +1158,20 @@ internal sealed partial class LayoutEngine
                         // frame, so it needs no branch and no knowledge of either. Reflecting
                         // inside the engraver would put a half-staff on one path and not the
                         // other, which is the shape this migration exists to remove.
-                        up.Raise(-_options.StaffHeight / 2.0);
+                        // ⚠️⚠️ THE HALF-STAFF IS THIS STAFF'S, NOT THE SCORE'S NOMINAL ONE.
+                        // A six-string tab spans 7.500000 (LilyPond's TabStaff sets
+                        // StaffSymbol.staff-space = 1.5 whatever the string count), so the
+                        // nominal 2.000000 left 1.750000 of the reflection undone: the
+                        // protrusion the engraver then read was "above a line 1.75 inside the
+                        // staff", and the @chord of a tab was placed that much too high —
+                        // through the bottom line of the staff above it, while the band
+                        // reserved for it (MultiStaffLayouter.ReserveChordRowBand, which reads
+                        // the SAME skyline in its own frame) booked the room where the symbol
+                        // should have been. Reported 2026-09-06 on tab-chord.lys, `staff back`
+                        // over `tab melody`: Cmaj7's ink crossed the staff line above it.
+                        // The one home for a staff's own height is StaffHeightOf — the same
+                        // question SkylineBuilder asks when it BUILDS this skyline.
+                        up.Raise(-MultiStaffLayouter.StaffHeightOf(staff, _options.StaffHeight) / 2.0);
                         sky = up;
                         skyCache[key] = sky;
                     }
