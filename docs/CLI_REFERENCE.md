@@ -77,9 +77,13 @@ lysc svg [options] <input.lys> [output.svg]
 | Option | Description |
 |--------|-------------|
 | `-o, --output <file>` | Output file path |
-| `--no-embed-font, -n` | Don't embed Emmentaler font (smaller file, requires font installed) |
+| `-n, --no-embed-font` | Don't embed Emmentaler font (smaller file, requires font installed) |
+| `--all` | Generate all render blocks as separate SVG files |
+| `--combined` | Stack all render blocks into ONE SVG (like a `\book`) |
 | `--score <name>` | Render the named score block (default: the first) |
 | `-h, --help` | Show help |
+
+`--all` and `--combined` are mutually exclusive.
 
 **Examples:**
 ```bash
@@ -87,6 +91,9 @@ lysc svg score.lys                    # Creates score.svg
 lysc svg score.lys output.svg         # Specify output name
 lysc svg -o sheet.svg score.lys       # With -o flag
 lysc svg --no-embed-font score.lys    # Without embedded font
+lysc svg --score greensleeves-grid greensleeves.lys
+lysc svg --all multi-movement.lys     # One .svg per score block
+lysc svg --combined multi-movement.lys # All of them stacked into one
 ```
 
 ### pdf - Export to PDF
@@ -119,8 +126,12 @@ lysc png [options] <input.lys> [output.png]
 |--------|-------------|
 | `-o, --output <file>` | Output file path |
 | `--scale <factor>` | Scale factor for resolution (default: 2.0 = 192 DPI) |
+| `--crop` | Crop each page to its ink instead of keeping the page box |
 | `--score <name>` | Render the named score block (default: the first) |
 | `-h, --help` | Show help |
+
+A score of more than one page writes `BASE-page1.png`, `BASE-page2.png`, … (LilyPond's
+own naming).
 
 **Scale Values:**
 | Scale | DPI | Use Case |
@@ -146,12 +157,20 @@ lysc midi [options] <input.lys> [output.mid]
 | Option | Description |
 |--------|-------------|
 | `-o, --output <file>` | Output file path |
+| `--score <name>` | Write the named score's form (default: the first) |
+| `--all` | Write every score to its own `.mid` file |
 | `-h, --help` | Show help |
+
+One file holds one form. A `.lys` declaring several movements therefore writes one of
+them and names the rest in a warning; `--score` picks one, `--all` writes them all.
+`--all` and `--score` are mutually exclusive.
 
 **Examples:**
 ```bash
 lysc midi score.lys                   # Creates score.mid
 lysc midi -o audio.mid score.lys      # With -o flag
+lysc midi --score movement2 suite.lys # One named movement
+lysc midi --all suite.lys             # Every movement, one file each
 ```
 
 ### xml - Export to MusicXML
@@ -166,12 +185,111 @@ Exports to MusicXML 4.0 partwise format, compatible with Finale, Sibelius, MuseS
 | Option | Description |
 |--------|-------------|
 | `-o, --output <file>` | Output file path |
+| `--score <name>` | Write the named score's form (default: the first) |
+| `--all` | Write every score to its own `.xml` file |
 | `-h, --help` | Show help |
+
+The same one-file-one-form rule as `midi` above.
 
 **Examples:**
 ```bash
 lysc xml score.lys                    # Creates score.xml
 lysc xml -o export.xml score.lys      # With -o flag
+lysc xml --all suite.lys              # Every movement, one file each
+```
+
+### ly - Export to LilyPond
+
+```bash
+lysc ly [options] <input.lys> [output.ly]
+```
+
+Writes a LilyPond `.ly` twin of the score — the file used to compare Lily#'s engraving
+against real LilyPond. The octave marks you wrote are preserved verbatim: an
+`octave absolute` source is wrapped in `\fixed c'`, a relative one in `\relative c'`, so
+the pitches stay identical in LilyPond.
+
+**Options:**
+| Option | Description |
+|--------|-------------|
+| `-o, --output <file>` | Output file path |
+| `--score <name>` | Write the named score's form (default: the first) |
+| `--all` | Write every score to its own `.ly` file |
+| `-h, --help` | Show help |
+
+The same one-file-one-form rule as `midi` above.
+
+**Examples:**
+```bash
+lysc ly score.lys                     # Creates score.ly
+lysc ly -o export.ly score.lys        # With -o flag
+lysc ly --all multi-movement.lys      # Every movement, one file each
+```
+
+### vsqx - Export to VOCALOID
+
+```bash
+lysc vsqx <input.lys> [output.vsqx]
+```
+
+Writes a VOCALOID4 sequence. The first part carrying lyrics becomes the vocal track
+(Piapro Studio and VOCALOID4+ import this directly): kana lyrics get VOCALOID phonemes,
+ties merge, and rests become gaps.
+
+**Options:**
+| Option | Description |
+|--------|-------------|
+| `-o, --output <file>` | Output file path |
+| `-h, --help` | Show help |
+
+**Examples:**
+```bash
+lysc vsqx song.lys                    # Creates song.vsqx
+```
+
+### import - Import MusicXML
+
+```bash
+lysc import [options] <input.(xml|musicxml|mxl)> [output.lys]
+```
+
+Reads a MusicXML score (or an `.mxl` zip) and writes an idiomatic Lily# source file that
+renders the same music. Import is an opinionated, non-unique mapping: the result is a
+faithful **starting point to edit**, not a byte round-trip. Anything not representable is
+reported, never emitted wrong.
+
+**Options:**
+| Option | Description |
+|--------|-------------|
+| `-o, --output <file>` | Output file path (default: input with `.lys`) |
+| `-r, --relative` | Emit relative-octave notes (default: absolute) |
+| `-h, --help` | Show help |
+
+**Examples:**
+```bash
+lysc import song.xml                  # Creates song.lys
+lysc import song.mxl song.lys         # From a compressed MusicXML
+lysc import --relative song.xml       # Relative-octave output
+```
+
+### harmonize - Suggest a chord track
+
+```bash
+lysc harmonize <input.lys>
+```
+
+Reads the melody and key and prints a `chords harmony { … }` part — one diatonic chord per
+measure — to stdout. A starting point to drop into your section (referenced with
+`staff <melody> with chords harmony`) and edit.
+
+**Options:**
+| Option | Description |
+|--------|-------------|
+| `-h, --help` | Show help |
+
+**Examples:**
+```bash
+lysc harmonize song.lys               # Prints a chords part
 ```
 
 ### check - Syntax Check
@@ -181,6 +299,12 @@ lysc check <input.lys>
 ```
 
 Validates syntax without producing output. Reports errors with line and column numbers.
+
+**Options:**
+| Option | Description |
+|--------|-------------|
+| `-p, --pitches` | Also print each note's resolved absolute pitch (written → resolved), so relative-octave mistakes are visible before rendering |
+| `-h, --help` | Show help |
 
 **Exit Codes:**
 | Code | Meaning |
@@ -208,6 +332,12 @@ breaker split the music. This exposes the facts a source file does not reveal �
 breaks actually fell, how the bars are distributed, how the systems fell onto pages —
 so you can verify the layout without rendering an image. (For resolved pitches, use
 `check --pitches`.)
+
+**Options:**
+| Option | Description |
+|--------|-------------|
+| `--all` | Report every score block (default: first only) |
+| `-h, --help` | Show help |
 
 By default the first score block is reported; `--all` reports every score block.
 
