@@ -232,9 +232,25 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 **⒠ 番人 1 本**（`ChordNameTests.ChordOnATabStaff_StandsOverItsOwnTopLine_NotTheStaffAbove`）＝**定数ではなく*比較***（同じ本の五線の `@chord` と同じ距離）＋**帰結**（記号のインクが上の譜の下線より下・インクは engraver 自身の `SymbolInk` で測る）。**毒**: 公称 half に戻すと赤（`Assert.Equal` 9 桁）。
 **⒡ 数**: full **7188 / 0 / 4 / 7192**（`scratch/p342/full2.trx`・**+1＝番人**）・`--no-incremental` build 0 エラー・Core 0 警告。⚠️ **`docs/APPROXIMATIONS.md` は行番号だけ動いた**ので `LILYSHARP_UPDATE_DOCS=1` で再生成（1 度目の full はそれで 1 本赤になった＝作法どおり）。
 
+✅ ★★★ **⑽ 第 3 便＝ユーザー決定「`as numbers` としてレンダされた tab には `@chord` を出さない」**（`TabStaffStencils` の一族に 1 本足した）:
+**⒜ 家は既に在った**——`TabStaffStencils` は「**numbers-only の tab が*何も刷らない* grob 族**」の唯一の家で、script・dynamic・text spanner・hairpin が既に居る。読みもそこに書いてある: **numbers-only の tab は「上の五線が残り全部を運ぶから」数字だけを運ぶ線**。**音符に付いた `@chord` はまさにその「残り」**（同じ名前が五線の上と tab の上に 2 度出る）。⇒ **`BlanksNoteAttachedChord` を足した**。
+⚠️ ★★ **これは移植ではなく LILYSHARP-OWN**: **LP は和音名を `ChordNames` context でしか綴れない**ので、`Tab_staff_symbol_engraver` のブロックに ChordName の行は存在しえない。**足したのは Lily# 自身の読み**（ファイル頭注に「何を消し何を残すか」の線として明記）。
+**⒝ 残すもの**: **chords トラック**（`tab X with chords P`／tab に畳まれた `chords` 行）は**書き手がその tab に*置いた*線**なので残す。**`as full` の tab も残す**（＝「明示 full ＋ 同じ part の五線」で 2 度出るのは書き手の選択、と頭注が既に決めている形）。
+**⒞ 3 か所に効かせる**（この一族の作法どおり・**インクと予約は別々に訊く**）: **インク**＝`ChordNameEngraver.Calculate` の中で*飛ばす*（⚠️ **入力配列を filter してはいけない**——`SourceIndex` は `score.ChordNames` の index で `ResolveDataPos` がそれで data-pos を引き直す。中で飛ばせば index はそのまま・**下流の判断からも消える**）。**帯の門**＝`BuildAllStaffSkylines`（刷らない線の下に部屋を取らない）。**幅**＝`ScoreSideTables.ChordNames`（描かない記号の列幅を取らない）。
+**⒟ 実測**（`tab-chord.lys`）: **`score tab2`**（`staff melody` と対＝numbers）**は tab の Cmaj7 が消え、tab が 0.84 上がる**（27.68 → 26.84＝空いていた帯も返った）。**`score main` はバイト同一**——**そちらの `tab melody` は `staff back` と別 part なので*full*** で、規則の外。
+**⒠ 射程**: 掃き **920 冊で MOVED 1 冊**（`tab-chord.lys`）。⚠️ **掃きは既定 score しか描かない**ので、**構造でも数えた**: **`@chord` を持つ本は全部で 9 冊**（実コーパス 4・追跡 5）で、**そのうち `tab` を持つのは `tab-chord.lys` だけ**。⇒ 他の score でも動きようがない。
+**⒡ 番人 1 本**（`ChordNameTests.ANumbersOnlyTab_PrintsNoAttachedChord_AndBooksNoRoomForOne`）＝**3 脚**: numbers は 1 個／**同じ本の `as full` は 2 個（陽性対照＝「1 個」が本のせいでないことを言う）**／**部屋**（numbers の tab の Y ＝ `@chord` を持たない本の Y）。**毒**: 述語を false に戻すと赤。
+**⒢ 数**: full **7189 / 0 / 4 / 7193**（`scratch/p342/full3.trx`・**+1**）・build 0 エラー・Core 0 警告・生成物 2 つ（`docs/APPROXIMATIONS.md`・`audit/magic_constants.csv`）は `LILYSHARP_UPDATE_DOCS=1` で再生成（行番号のみ）。
+
+⚠️⚠️ ★★★★ **⑾ 第 4 便＝頁の島（次の一手 ⑶）に*着手しなかった***（ユーザー「次便は、このセッションでやる方が有利なら着手して。次のセッションでやった方が有利なら着手してはいけない」）。**理由は第339 第 4 便・第340 と同じだが、この便はさらに遠い**:
+**⒜ この便の文脈は 1 つも効かない**——拾い箱の解決・VS Code の CDP 運転・`@chord` の枠・`TabStaffStencils` で埋まっている。**島が要るのは LP の source（`constrained-breaking.cc fill_line_details`）・LP 側の probe 設計（`ragged-bottom = ##t` の `yoff`）・Boogie の本・`Line_details` の読み**で、**どれも冷えている**。
+**⒝ Lily# 半分は §1 に*書いてある***（第339 ⒜ の 8 段の `top`/`tallness` 表）ので、**新しい頭は何も失わない**。**残っているのは設計仕事＝新しい頭のほうが安い**、という第339 の一行がそのまま当たる。
+★★ **⒞ 代わりに「道具が生きているか」だけ確かめた**（`scratch/` は git 管理外なので、ここが死んでいると次便が痛い）: **`scratch/p339/lp-pagecount.ps1`・`lp-scoring.ps1`・`probe2.txt`・`ZzP339bProbeTests.cs.txt`・`scratch/p338/lp-bare.ps1` は全部在る**。**LP 2.26.0 も在る**（`C:\bin\lilypond-2.26.0\bin\lilypond.exe`）。⚠️ **§1 が `probes/staff-tab-page.ly` と書いているのは `audit/lp-geometry/probes/staff-tab-page.ly` の略**（`audit/lp-geometry` からの相対。ルートに `probes/` は無い）。`Measure-LilyPondProbe.ps1` も `audit/lp-geometry/` に在る。
+
 ★ **開始時裏取り**: HEAD **`fb2784a0`**・**未 push 26**・木 clean・未追跡 0・deployed 拡張は `out/extension.js` が HEAD の source から建てたものとバイト同一・deployed LSP は `0.5.0+fb2784a0`（**両方ともユーザーが 21:23–21:24 に配布した HEAD**）。
 **終了時（第 1 便）**: **commit 2 本**（`e7ffe059`＝製品 4〔`RenderSpecParser.cs`／`DuplicateScoreNameValidator.cs`／`LilySharpLanguageServer.Commands.cs`／`LspProtocolDtos.cs`〕＋拡張 1〔`editors/vscode/src/extension.ts`〕＋番人 1〔`LilySharp.Tests/Lsp/ScorePickerTests.cs`〕＋`CHANGELOG.md`／この HANDOFF＋ARCHIVE＝第339 の経緯を ARCHIVE の先頭へ逐語）・**未 push 28**・木 clean・未追跡 0。
-**終了時（第 2 便）**: **commit 2 本**（`6454b130`＝製品 1〔`LayoutEngine.Annotations.cs`〕＋番人 1〔`ChordNameTests`〕＋`CHANGELOG.md`＋生成物 1〔`docs/APPROXIMATIONS.md`＝行番号のみ〕／この HANDOFF・**✅ ユーザー承認「承認する。コミットして」**）・**未 push 30**・木 clean・未追跡 0。⚠️ **配布はどちらの便もしていない**（`pwsh tools/Deploy-Lsp.ps1` ＋ Reload Window はユーザーの判断＝今動いている LSP を落とすため）。
+**終了時（第 2 便）**: **commit 2 本**（`6454b130`＝製品 1〔`LayoutEngine.Annotations.cs`〕＋番人 1〔`ChordNameTests`〕＋`CHANGELOG.md`＋生成物 1〔`docs/APPROXIMATIONS.md`＝行番号のみ〕／この HANDOFF・**✅ ユーザー承認「承認する。コミットして」**）・**未 push 30**・木 clean・未追跡 0。
+**終了時（第 3・4 便）**: **commit 2 本**（`cbd1bbe1`＝製品 5〔`TabStaffStencils.cs`／`ChordNameEngraver.cs`／`LayoutEngine.Annotations.cs`／`MultiStaffLayouter.cs`／`ScoreSideTables.cs`〕＋番人 1〔`ChordNameTests`〕＋`CHANGELOG.md`＋生成物 2／この HANDOFF・**✅ ユーザー承認「コミットして」**）・**未 push 32**・木 clean・未追跡 0。⚠️ **配布はどの便もしていない**（`pwsh tools/Deploy-Lsp.ps1` ＋ Reload Window はユーザーの判断＝今動いている LSP を落とすため）。**push もしていない**。
 
 ## 以下は第340セッションの経緯
 
