@@ -83,19 +83,24 @@ public static class FontEmbedInfo
     /// </para>
     /// </remarks>
     public static FaceShape ShapeOf(string family)
-    {
-        if (string.IsNullOrEmpty(family))
-            return FaceShape.Unknown;
-        if (ShapeCache.TryGetValue(family, out var cached))
-            return cached;
+        => string.IsNullOrEmpty(family)
+            ? FaceShape.Unknown
+            : ShapeCache.GetOrAdd(family, ShapeOfUncached);
 
-        var shape = ShapeOfUncached(family);
-        ShapeCache[family] = shape;
-        return shape;
-    }
-
-    private static readonly Dictionary<string, FaceShape> ShapeCache =
-        new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>
+    /// family -> its shape. CONCURRENT because more than one document can be engraved in one
+    /// process since <c>lysc --batch --parallel</c> existed; before that every run had one
+    /// thread and a plain Dictionary was safe by construction.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A RACE HERE COSTS A SECOND CALL, NOT A WRONG ANSWER: the value is a pure function of
+    /// the family name and the machine's installed faces (<see cref="ShapeOfUncached"/> reads
+    /// the face's OS/2 table), so two threads that miss together compute the same thing.
+    /// <c>GetOrAdd</c> is used rather than a lock for exactly that reason — there is nothing
+    /// to serialise except the dictionary itself.
+    /// </remarks>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, FaceShape>
+        ShapeCache = new(StringComparer.OrdinalIgnoreCase);
 
     private static FaceShape ShapeOfUncached(string family)
     {
@@ -138,25 +143,20 @@ public static class FontEmbedInfo
             },
         };
 
-    private static readonly Dictionary<string, FontEmbedClass> Cache =
-        new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>family -> its embeddability. Concurrent for the reason
+    /// <see cref="ShapeCache"/> gives, and it is the same kind of value: a pure function of
+    /// the family name and what is installed.</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, FontEmbedClass>
+        Cache = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Classifies the embeddability of the font resolved from <paramref name="family"/>.
     /// Results are cached (case-insensitive) since a score can name the same font often.
     /// </summary>
     public static FontEmbedClass Classify(string family)
-    {
-        if (string.IsNullOrEmpty(family))
-            return FontEmbedClass.NotFound;
-
-        if (Cache.TryGetValue(family, out var cached))
-            return cached;
-
-        var result = ClassifyUncached(family);
-        Cache[family] = result;
-        return result;
-    }
+        => string.IsNullOrEmpty(family)
+            ? FontEmbedClass.NotFound
+            : Cache.GetOrAdd(family, ClassifyUncached);
 
     private static FontEmbedClass ClassifyUncached(string family)
     {

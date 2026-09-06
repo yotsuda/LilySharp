@@ -57,7 +57,10 @@ static int Run(string[] args)
     // it belongs to the RUN, not to the command, and every command gets it at once.
     var rest = args.Skip(1).ToArray();
     if (Batch.Take(ref rest) is { } list)
+    {
+        if (!Batch.TakeParallel(ref rest)) return 1;
         return Batch.Run(list, first, rest, Dispatch);
+    }
 
     return Dispatch(first, rest);
 }
@@ -107,6 +110,11 @@ static void ShowHelp()
           -V, --version       Show version
           --batch <list>      Run the command over every file in <list>, in ONE process
                               (- reads the list from standard input)
+          -j, --parallel <n>  Engrave n files of the batch at once (0 = one per
+                              processor). Sequential by default. Not for `pdf`.
+                              ⚠️ Buys less than the core count: rendering serialises
+                              on the shaping lock (svg 1.3x for 5x the CPU; ly 2.2x).
+                              Several --batch PROCESSES scale better than one -j N.
           --verbose, --debug  Print full stack traces on error
 
         Examples:
@@ -123,6 +131,7 @@ static void ShowHelp()
         a TAB names that file's output.
 
           lysc svg --batch books.txt            # each book -> its own .svg
+          lysc svg --batch books.txt -j 0       # ...one per processor
           lysc check --batch books.txt          # syntax-check a whole corpus
           dir /b/s *.lys | lysc ly --batch -    # take the list from a pipe
 

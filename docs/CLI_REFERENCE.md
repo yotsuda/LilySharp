@@ -21,6 +21,7 @@ These are read before the command, so they work with every command below.
 | `-h, --help` | Show help (global, or for one command) |
 | `-V, --version` | Show version |
 | `--batch <list>` | Run the command over every file in `<list>`, in ONE process (`-` = stdin) |
+| `-j, --parallel <n>` | Engrave `n` files of the batch at once (`0` = one per processor) |
 | `--verbose, --debug` | Print full stack traces on error |
 
 ### `--batch` - many files, one process
@@ -55,6 +56,38 @@ one-process-per-file runs:
 
 The saving is the same ~950 ms per book either way; the ratio differs because a big book
 spends more of its time actually engraving.
+
+### `-j, --parallel <n>` - engrave several at once
+
+Sequential by default. `-j 0` uses one worker per processor. Each file's report is still
+printed as one block, so the output stays readable.
+
+```bash
+lysc svg --batch books.txt -j 0        # one per processor
+lysc ly --batch books.txt -j 0
+```
+
+⚠️ **It buys much less than the core count suggests, and for `svg` it is usually the wrong
+tool.** Measured, 200 books, 16 processors:
+
+| Command | `-j 1` | `-j 0` | Wall | CPU |
+|---|---|---|---|---|
+| `check` | 0.6 s | 0.7 s | 1.0x | nothing to overlap — parsing is already ~3 ms/book |
+| `ly` | 8.5 s | 3.8 s | **2.2x** | 6.5 → 24.1 s |
+| `svg` | 9.7 s | 7.6 s | **1.3x** | 9.1 → 37.6 s |
+
+Rendering serialises on a process-wide lock (HarfBuzz shaping is not thread-safe, so the
+font is locked for the duration of each shaping call), which is why `svg` gains little
+while spending five times the CPU. **On a machine you are also working on, prefer several
+`lysc --batch` processes over one `--batch -j N`** — separate processes have separate locks,
+and that is where the scaling actually is: a 597-book two-sided corpus comparison takes
+11.1 minutes as one process per book, and 2.6 minutes as ten `--batch` processes.
+
+⚠️ **Not available for `pdf`.** PdfSharpCore allows one font resolver per process and each
+document re-points it at its own faces before drawing; sequentially that is correct (and
+tested), concurrently a document would embed another's faces. `lysc pdf --batch … -j 2`
+refuses rather than producing a file that is wrong under load. Split the list across
+processes if you need parallel PDF.
 
 Notes:
 

@@ -80,6 +80,17 @@ scores against LilyPond's picture of the same book.
   file's output; `-` reads the list from a pipe. A file that fails does not stop the rest —
   the exit code reports that one did. It cannot be combined with `-o`, since one path
   cannot name many files.
+- **`-j, --parallel <n>`: engrave several files of a batch at once.** Off by default; `-j 0`
+  uses one worker per processor, and each file's report still arrives as one block rather
+  than interleaved. ⚠️ It buys much less than the core count suggests, and the measurement
+  ships with it rather than being left for the reader to discover: on 16 processors, `ly`
+  goes 2.2x faster and `svg` only 1.3x — for five times the CPU — because rendering
+  serialises on a process-wide lock (HarfBuzz shaping is not thread-safe). Several `--batch`
+  processes scale far better than one `--batch -j N`, since separate processes have separate
+  locks: a 597-book two-sided corpus comparison takes 11.1 minutes as one process per book
+  and 2.6 minutes as ten `--batch` processes. `pdf` refuses `-j` outright — PdfSharpCore
+  allows one font resolver per process and each document re-points it at its own faces, so
+  concurrent PDF export would embed another document's fonts.
 - **The score preview's color scheme is a setting** — `lilysharp.preview.theme`: follow
   VS Code's theme (the default, and what the preview always did), always light (the printed
   page), or always dark (the page inverted). A change reaches every open preview at once.

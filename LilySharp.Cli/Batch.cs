@@ -66,6 +66,30 @@ internal static class Batch
         return list;
     }
 
+    /// <summary>How many files a batch engraves at once. 1 unless <c>--parallel N</c>
+    /// (<c>-j N</c>) says otherwise; <c>0</c> means "as many as there are processors".</summary>
+    private static int _parallel = 1;
+
+    /// <summary>
+    /// Detects and STRIPS <c>--parallel &lt;n&gt;</c> / <c>-j &lt;n&gt;</c>. Returns false with
+    /// a message when the value is not a non-negative number.
+    /// </summary>
+    public static bool TakeParallel(ref string[] args)
+    {
+        _parallel = 1;
+        int i = Array.FindIndex(args, a => a is "--parallel" or "-j");
+        if (i < 0)
+            return true;
+        if (i + 1 >= args.Length || !int.TryParse(args[i + 1], out int n) || n < 0)
+        {
+            Console.Error.WriteLine("Error: --parallel requires a count (0 = one per processor)");
+            return false;
+        }
+        _parallel = n == 0 ? Environment.ProcessorCount : n;
+        args = args.Take(i).Concat(args.Skip(i + 2)).ToArray();
+        return true;
+    }
+
     /// <summary>
     /// Runs <paramref name="command"/> once per entry of <paramref name="listPath"/>, sharing
     /// this process. Returns 0 only when every file succeeded.
@@ -111,36 +135,110 @@ internal static class Batch
             return 1;
         }
 
-        var sw = Stopwatch.StartNew();
-        int failed = 0;
-        for (int n = 0; n < entries.Count; n++)
+        if (_parallel > 1 && SerialOnly.TryGetValue(command, out string? why))
         {
-            var e = entries[n];
-            Console.WriteLine($"[{n + 1}/{entries.Count}] {e.Input}");
-            string[] one = e.Output is null
-                ? [.. args, e.Input]
-                : [.. args, e.Input, e.Output];
-            int rc;
+            Console.Error.WriteLine($"Error: `{command}` cannot run in parallel — {why}");
+            Console.Error.WriteLine("       Drop --parallel, or split the list across processes.");
+            return 1;
+        }
+
+        string[] ArgsFor(Entry e) => e.Output is null
+            ? [.. args, e.Input]
+            : [.. args, e.Input, e.Output];
+
+        int RunOne(Entry e)
+        {
             try
             {
-                rc = dispatch(command, one);
+                return dispatch(command, ArgsFor(e));
             }
             catch (Exception ex)
             {
                 // The per-command paths catch their own exceptions, but a batch must not be
                 // ended by one that gets through — the remaining files are still owed a run.
                 Console.Error.WriteLine(CliParser.Verbose ? ex.ToString() : $"Error: {ex.Message}");
-                rc = 1;
+                return 1;
             }
-            if (rc != 0)
-                failed++;
+        }
+
+        var sw = Stopwatch.StartNew();
+        int failed = 0;
+
+        if (_parallel <= 1)
+        {
+            for (int n = 0; n < entries.Count; n++)
+            {
+                Console.WriteLine($"[{n + 1}/{entries.Count}] {entries[n].Input}");
+                if (RunOne(entries[n]) != 0)
+                    failed++;
+            }
+        }
+        else
+        {
+            // ⚠️ EACH FILE'S REPORT ARRIVES WHOLE. Every command prints straight to Console,
+            // so without this the four in flight would interleave a line at a time —
+            // see CapturedConsole for why the redirect is process-wide and AsyncLocal-keyed.
+            CapturedConsole.Install();
+            int done = 0;
+            Parallel.ForEach(
+                entries,
+                new ParallelOptions { MaxDegreeOfParallelism = _parallel },
+                e =>
+                {
+                    int rc = 0;
+                    var (outText, errText) = CapturedConsole.Collect(() => rc = RunOne(e));
+                    int n = Interlocked.Increment(ref done);
+                    if (rc != 0)
+                        Interlocked.Increment(ref failed);
+                    CapturedConsole.Emit(
+                        $"[{n}/{entries.Count}] {e.Input}{Environment.NewLine}{outText}", errText);
+                });
         }
 
         Console.WriteLine(
             $"Batch: {entries.Count} file(s), {failed} failed, "
-            + $"{sw.Elapsed.TotalSeconds:F1} s ({sw.Elapsed.TotalMilliseconds / entries.Count:F0} ms/file)");
+            + $"{sw.Elapsed.TotalSeconds:F1} s ({sw.Elapsed.TotalMilliseconds / entries.Count:F0} ms/file"
+            + (_parallel > 1 ? $", {_parallel} at a time" : "") + ")");
         return failed == 0 ? 0 : 1;
     }
+
+    /// <summary>
+    /// Commands that must not be run concurrently, and the reason a reader needs.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ MEASURED, NOT GUESSED, and the reason is in the code it names:
+    /// <c>PdfDocumentContext</c>'s own remark says PdfSharpCore lets the font resolver be set
+    /// ONCE PER PROCESS, and each document re-points that one resolver at its own faces
+    /// before drawing. Sequentially that is correct — construct, point, draw, save — and
+    /// <c>CliBatchTests</c> proves it. Concurrently it is not: one document points the
+    /// resolver while another is mid-draw, and the second embeds the first's faces. There is
+    /// no per-document resolver to give it, so the honest answer is to refuse rather than to
+    /// ship a mode that is wrong under load.
+    /// </remarks>
+    /// <remarks>
+    /// ⚠️ THE UNIT OF PARALLELISM IS THE DOCUMENT, and that is what makes the rest of the
+    /// engine safe here. Audited 2026-09-06: every other cache on the render path is either
+    /// a <c>ConcurrentDictionary</c> memo keyed by content (family name, glyph, text run —
+    /// a race costs a recomputation, never a wrong answer) or a
+    /// <c>ConditionalWeakTable</c> keyed by the score or the syntax tree, which is per
+    /// document by construction. <c>TextFontMetrics</c> already locks the HarfBuzz font
+    /// (shaping is documented not thread-safe) and already uses <c>Lazy</c> for the two
+    /// caches that own native handles.
+    /// <para>
+    /// ⚠️ ONE THING WOULD NOT SURVIVE PARALLELISM *INSIDE* ONE DOCUMENT:
+    /// <c>PageLayouter</c>'s pair-distance memo is a check-then-write of a two-field entry
+    /// with no synchronisation, keyed by skyline reference identity. Two threads laying out
+    /// ONE score could publish a torn pair and get a wrong inter-system distance. Across
+    /// documents it cannot happen — the skylines are different objects — so it is not a
+    /// hazard for this mode, and it is written down here so nobody reaches for
+    /// per-document parallelism without meeting it first.
+    /// </para>
+    /// </remarks>
+    private static readonly Dictionary<string, string> SerialOnly = new()
+    {
+        ["pdf"] = "PdfSharpCore allows one font resolver per process, and each document "
+                + "re-points it at its own faces before drawing",
+    };
 
     /// <summary>
     /// One entry per non-blank line: <c>input</c>, or <c>input TAB output</c>. A line whose

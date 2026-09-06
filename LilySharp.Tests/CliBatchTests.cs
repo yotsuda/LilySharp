@@ -224,6 +224,53 @@ public class CliBatchTests : IDisposable
     }
 
     [Fact]
+    public void AParallelBatchWritesExactlyWhatASequentialOneWrites()
+    {
+        // ★ THE CLAIM FOR --parallel, and the only one worth making: engraving several
+        // documents at once in ONE process must not change a single byte. Every static on
+        // the render path is a way for it to, which is why this compares bytes over enough
+        // books to keep several workers genuinely overlapping rather than finishing in turn.
+        string[] books = [.. Enumerable.Range(0, 12).Select(i => Book($"p{i}"))];
+
+        string seqList = List([.. books.Select(b => $"{b}\t{b}.seq.svg")]);
+        Assert.Equal(0, Lysc("svg", "-n", "--batch", seqList).Exit);
+
+        string parList = List([.. books.Select(b => $"{b}\t{b}.par.svg")]);
+        var par = Lysc("svg", "-n", "--batch", parList, "-j", "4");
+        Assert.Equal(0, par.Exit);
+
+        foreach (string b in books)
+            Assert.Equal(File.ReadAllBytes($"{b}.seq.svg"), File.ReadAllBytes($"{b}.par.svg"));
+
+        // ...and every file got exactly one progress line, none lost and none doubled.
+        // ⚠️ THE PROGRESS LINES, not every mention of the name: `Created: …\p1.lys.par.svg`
+        // contains `p1.lys` too, so counting bare occurrences finds two and says nothing.
+        Assert.Contains("12 file(s), 0 failed", par.Stdout);
+        Assert.Contains("4 at a time", par.Stdout);
+        foreach (string b in books)
+            // ⚠️ `\r?$`: the CLI writes CRLF on Windows, and Multiline's `$` matches before
+            // the `\n` — with the `\r` still unconsumed, a bare `$` never matches.
+            Assert.Equal(1, Regex.Matches(
+                par.Stdout, @"^\[\d+/12\] " + Regex.Escape(b) + @"\r?$",
+                RegexOptions.Multiline).Count);
+    }
+
+    [Fact]
+    public void ParallelIsRefusedForPdf_WithTheReason()
+    {
+        // ⚠️ THE ONE COMMAND THAT CANNOT. The font resolver is a process singleton each
+        // document re-points at its own faces; sequentially that is correct and
+        // ABatchedPdfDoesNotInheritThePreviousBooksFonts proves it, concurrently it is not.
+        // Refusing beats shipping a mode that is wrong only under load — the worst kind.
+        string list = List(Book("one"), Book("two"));
+        var r = Lysc("pdf", "--batch", list, "-j", "2");
+
+        Assert.NotEqual(0, r.Exit);
+        Assert.Contains("cannot run in parallel", r.Stderr);
+        Assert.Contains("font resolver", r.Stderr);
+    }
+
+    [Fact]
     public void BatchIsAvailableToEveryCommand_NotJustSvg()
     {
         // The flag is taken before dispatch, so it is not a per-command feature; `check`
