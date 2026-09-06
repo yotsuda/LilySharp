@@ -12,6 +12,59 @@ dotnet build LilySharp.Cli -c Release
 dotnet run --project LilySharp.Cli -- <command> [options] <input>
 ```
 
+## Global Options
+
+These are read before the command, so they work with every command below.
+
+| Option | Description |
+|--------|-------------|
+| `-h, --help` | Show help (global, or for one command) |
+| `-V, --version` | Show version |
+| `--batch <list>` | Run the command over every file in `<list>`, in ONE process (`-` = stdin) |
+| `--verbose, --debug` | Print full stack traces on error |
+
+### `--batch` - many files, one process
+
+Most of what a single `lysc` run costs is starting up. Measured on an idle machine
+(ReadyToRun build, median of 7): a **one-bar** file takes 1352 ms through `lysc svg` and
+245 ms through `lysc check`, while a real three-page book takes 2390 ms — about a second
+of engraving and the rest fixed. `--batch` pays that once for the whole list.
+
+```bash
+lysc svg --batch books.txt            # each book -> its own .svg
+lysc check --batch books.txt          # syntax-check a whole corpus
+dir /b/s *.lys | lysc ly --batch -    # take the list from a pipe
+```
+
+The list is one file per line. Blank lines and lines starting with `#` are skipped, and a
+**TAB** separates an input from the output it should be written to (a tab, not a space, so
+that filenames containing spaces still work):
+
+```
+score.lys                             # -> score.svg
+suite.lys<TAB>out/suite-a.svg         # -> out/suite-a.svg
+```
+
+Measured speed-up, same machine, `svg -n`, outputs verified byte-identical to the
+one-process-per-file runs:
+
+| Population | Per process | One batch | Speed-up |
+|---|---|---|---|
+| 120 small fixture books | 995 ms/book | 45 ms/book | **22.2x** |
+| 40 books from a real bass-tab corpus | 1149 ms/book | 231 ms/book | **5.0x** |
+
+The saving is the same ~950 ms per book either way; the ratio differs because a big book
+spends more of its time actually engraving.
+
+Notes:
+
+- `--batch` cannot be combined with `-o/--output` — one path cannot name many files. Put
+  the output in the list instead.
+- Paths in the list resolve against the **working directory**, exactly as a path typed on
+  the command line does — not against the list file's own directory.
+- A file that fails does not stop the rest. The run's exit code is non-zero if any file
+  failed, and the closing line reports how many did.
+
 ## Commands
 
 ### svg - Export to SVG

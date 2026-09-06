@@ -67,6 +67,19 @@ scores against LilyPond's picture of the same book.
 
 ### New
 
+- **`--batch <list>`: one command, many files, one process.** Most of what a `lysc` run
+  costs is starting up — a one-bar file takes 1352 ms through `lysc svg` where a real
+  three-page book takes 2390 ms, so about a second of every run is fixed cost paid before
+  any music is engraved. `--batch` reads a list of files and pays it once: measured on the
+  same machine with outputs verified byte-identical to the one-process-per-file runs, 120
+  small books go from 995 to 45 ms each (22x) and 40 books of a real bass-tab corpus from
+  1149 to 231 ms each (5x — the same ~950 ms saved per book, a smaller ratio only because a
+  big book spends more of its time actually engraving). The flag is read before the command
+  is chosen, so every command has it, including the ones that write nothing (`check`,
+  `layout`). One file per line, `#` comments and blank lines skipped, and a TAB naming that
+  file's output; `-` reads the list from a pipe. A file that fails does not stop the rest —
+  the exit code reports that one did. It cannot be combined with `-o`, since one path
+  cannot name many files.
 - **The score preview's color scheme is a setting** — `lilysharp.preview.theme`: follow
   VS Code's theme (the default, and what the preview always did), always light (the printed
   page), or always dark (the page inverted). A change reaches every open preview at once.

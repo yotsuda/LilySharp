@@ -52,23 +52,32 @@ static int Run(string[] args)
         return 0;
     }
 
-    // Commands
-    return first switch
-    {
-        "svg" => RunSvg(args.Skip(1).ToArray()),
-        "pdf" => RunPdf(args.Skip(1).ToArray()),
-        "png" => RunPng(args.Skip(1).ToArray()),
-        "midi" => RunMidi(args.Skip(1).ToArray()),
-        "xml" => RunXml(args.Skip(1).ToArray()),
-        "ly" => RunLy(args.Skip(1).ToArray()),
-        "import" => RunImport(args.Skip(1).ToArray()),
-        "vsqx" => RunVsqx(args.Skip(1).ToArray()),
-        "harmonize" => RunHarmonize(args.Skip(1).ToArray()),
-        "check" => RunCheck(args.Skip(1).ToArray()),
-        "layout" => RunLayout(args.Skip(1).ToArray()),
-        _ => UnknownCommand(first)
-    };
+    // ★ --batch <list>: run this same command over MANY files in ONE process. Taken and
+    // stripped here, before the per-command parsers, for the same reason --verbose is:
+    // it belongs to the RUN, not to the command, and every command gets it at once.
+    var rest = args.Skip(1).ToArray();
+    if (Batch.Take(ref rest) is { } list)
+        return Batch.Run(list, first, rest, Dispatch);
+
+    return Dispatch(first, rest);
 }
+
+// The command table, reached once per run normally and once per file under --batch.
+static int Dispatch(string command, string[] args) => command switch
+{
+    "svg" => RunSvg(args),
+    "pdf" => RunPdf(args),
+    "png" => RunPng(args),
+    "midi" => RunMidi(args),
+    "xml" => RunXml(args),
+    "ly" => RunLy(args),
+    "import" => RunImport(args),
+    "vsqx" => RunVsqx(args),
+    "harmonize" => RunHarmonize(args),
+    "check" => RunCheck(args),
+    "layout" => RunLayout(args),
+    _ => UnknownCommand(command)
+};
 
 static void ShowHelp()
 {
@@ -94,8 +103,11 @@ static void ShowHelp()
           layout     Print a text summary of the layout (system/line breaks, bars per system)
 
         Global Options:
-          -h, --help       Show this help
-          -V, --version    Show version
+          -h, --help          Show this help
+          -V, --version       Show version
+          --batch <list>      Run the command over every file in <list>, in ONE process
+                              (- reads the list from standard input)
+          --verbose, --debug  Print full stack traces on error
 
         Examples:
           lysc svg score.lys                    # Output: score.svg
@@ -104,6 +116,23 @@ static void ShowHelp()
           lysc pdf score.lys                    # Output: score.pdf
           lysc midi score.lys                   # Output: score.mid
           lysc check score.lys                  # Syntax check only
+
+        Batch: one command, many files, one process. The launch cost (~1 s, mostly font
+        and JIT warm-up) is paid ONCE instead of per file, which is what makes a whole-
+        corpus run practical. One file per line; '#' comments and blank lines are skipped;
+        a TAB names that file's output.
+
+          lysc svg --batch books.txt            # each book -> its own .svg
+          lysc check --batch books.txt          # syntax-check a whole corpus
+          dir /b/s *.lys | lysc ly --batch -    # take the list from a pipe
+
+          # books.txt
+          score.lys                             # -> score.svg
+          suite.lys<TAB>out/suite-a.svg         # -> out/suite-a.svg
+
+        Note: --batch cannot be combined with -o/--output (one path cannot name many
+        files); put the output in the list instead. A file that fails does not stop the
+        rest — the run's exit code is non-zero if any file failed.
 
         Per-command help:
           lysc svg --help
