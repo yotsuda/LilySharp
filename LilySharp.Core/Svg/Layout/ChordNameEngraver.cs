@@ -35,7 +35,15 @@ public readonly record struct ChordNameLayout(
     double YUp,
     string ChordText,        // Display text (e.g., "Cm7", "B♭7", or "IIm7" in Roman mode)
     int SourcePosition,
-    int SourceIndex = -1     // F3/B: index into score.ChordNames (data-pos resolved at render)
+    int SourceIndex = -1,    // F3/B: index into score.ChordNames (data-pos resolved at render)
+    // The staff index of the independent chord ROW whose LINE this symbol is printed on,
+    // or -1 when it is not on a row's line. A row's own symbol carries its row; a
+    // note-attached @chord carries the row it was aligned onto (see
+    // ChordNameEngraver.InlineSymbolsJoiningTheRow). ★ THIS, NOT `IsChordRow`, IS THE
+    // QUESTION EVERY DOWNSTREAM PASS ASKS — "is this ink on the row's line?" — because
+    // once an @chord prints at the row's baseline it moves with the row's solve and it
+    // stops being the staff's own above-staff ink.
+    int RowStaffIndex = -1
 );
 
 /// <summary>
@@ -116,6 +124,252 @@ internal static class ChordNameEngraver
     internal static double RowTextBaseline(bool chordGridSheet)
         => chordGridSheet ? GridChordBaseline : ChordRowTextBaseline;
 
+    // ========== THE CHORD LINE A NOTE-ATTACHED @chord PRINTS ON (owner, 2026-09-06) ==========
+    //
+    // ★ THE DECISION: "align the Y of the `chords` row's symbol and the `@chord`'s; stack them
+    // vertically ONLY where their X overlap", and — after the first cut left the staff's band
+    // reserved and empty — "the blank line under the chord names is no good". So the rule is
+    // not only where a symbol is DRAWN; it also says whether the staff still needs a chord
+    // line of its own at all. Both questions are answered here, off the same two facts (which
+    // row stands above the staff, and whether the boxes meet), because answering them in two
+    // places is how a symbol ends up drawn on the row while the room below it stays booked.
+    //
+    // ⚠️ LILYSHARP-OWN. LilyPond cannot spell the configuration: a `ChordNames` context is its
+    // only way to name chords, so its two kinds are two contexts and therefore always two
+    // lines. `@chord` is Lily#'s own surface (MultiStaffLayouter.AttachedChordLineInRun says
+    // the same of it), and this is what a book that uses both gets.
+
+    /// <summary>
+    /// The independent chord ROW standing above each staff, by global staff index (absent, or
+    /// -1, where no row stands over it) — the line a note-attached <c>@chord</c> on that staff
+    /// can join.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ STRUCTURAL, NOT GEOMETRIC, and that is what lets the two callers agree: the skyline
+    /// pass asks this question BEFORE the rows are placed, so an answer read off solved Y
+    /// positions would not exist yet. The staff table is keyed by the global index
+    /// <c>MultiStaffScore.EnumerateStaves</c> hands out in score order, so ascending index IS
+    /// top-to-bottom order.
+    /// <para>
+    /// ⚠️ A ROW BELONGS TO THE FIRST REAL STAFF UNDER IT. <c>staff hi / chords prog / staff
+    /// lo</c> gives the row to <c>lo</c> and nothing to <c>hi</c> — the same reading
+    /// <c>ChordNameTests.LowerStaffChordClearance</c> builds its book on. A LYRICS row between
+    /// the two does not take the row away, because it is not a chord line; the nearest chord
+    /// row above is still the one an <c>@chord</c> would join.
+    /// </para>
+    /// </remarks>
+    internal static Dictionary<int, int> ChordRowAboveStaff(
+        IReadOnlyDictionary<int, Staff> staffByIndex, ImmutableArray<ChordNameItem> chordNames)
+    {
+        var above = new Dictionary<int, int>();
+        if (chordNames.IsDefaultOrEmpty || staffByIndex.Count == 0)
+            return above;
+
+        var rowStaves = new HashSet<int>();
+        foreach (var c in chordNames)
+            if (c.IsChordRow)
+                rowStaves.Add(c.StaffIndex);
+        if (rowStaves.Count == 0)
+            return above;
+
+        int pending = -1;
+        foreach (int idx in staffByIndex.Keys.OrderBy(i => i))
+        {
+            var st = staffByIndex[idx];
+            if (st.IsTextRow)
+            {
+                if (rowStaves.Contains(idx))
+                    pending = idx;   // a later row wins: the NEAREST one above the staff
+                continue;
+            }
+            above[idx] = pending;
+            pending = -1;
+        }
+        return above;
+    }
+
+    /// <summary>
+    /// ONE SYSTEM's chord line for a row: every symbol printed on it, the X it is drawn at,
+    /// and how far it is LIFTED above the row's baseline to clear a symbol it stands on.
+    /// </summary>
+    /// <remarks>
+    /// ★ THE ONE HOME FOR THE OWNER'S RULE (2026-09-06, in three readings): "align the Y of
+    /// the <c>chords</c> row's symbol and the <c>@chord</c>'s; stack vertically ONLY where
+    /// their X overlap" → "line the Y up for beat one and beat three too" (so the test is the
+    /// BOXES, not the bar) → and, on the picture, "the lower line must hold
+    /// <c>Cmaj7 F♯sus4 Emaj7</c> with only <c>Dmaj7</c> stacked above it."
+    /// <para>
+    /// ⇒ ★★ THE LINE NEAREST THE STAFF IS THE SHARED ONE, AND THE ROW'S SYMBOL IS WHAT MOVES.
+    /// A note-attached <c>@chord</c> names what the notes under it actually spell, so it keeps
+    /// the line beside them; the row's own symbol — the nominal harmony — is the one lifted
+    /// off when the two want one column. The first cut of this rule stacked the other way
+    /// (the row held the line and the <c>@chord</c> dropped below it), which put two of the
+    /// three symbols of a reading on one line and the third on another.
+    /// </para>
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN, all of it. LilyPond cannot spell the configuration: a
+    /// <c>ChordNames</c> context is its only way to name chords, so its two kinds are two
+    /// contexts and therefore always two lines. <c>@chord</c> is Lily#'s own surface
+    /// (<c>MultiStaffLayouter.AttachedChordLineInRun</c> says the same of it).
+    /// </para>
+    /// <para>
+    /// ⚠️ "STAND ON" IS THE BOXES PLUS <see cref="SymbolGap"/>, not bare intersection — the
+    /// same clearance <see cref="ClearOfPrevious"/> keeps between two symbols of one line.
+    /// Bare intersection would leave two names that merely touch on one baseline, reading as
+    /// a single word, which is the defect session 334 closed in X.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE LIFT IS DERIVED, NOT PICKED: the displaced symbol's ink BOTTOM is put
+    /// <see cref="SymbolGap"/> over the ink TOP of the tallest symbol it stands on, so an
+    /// accidental in either name (a sharp runs to 2.224872 where <c>Am</c> stops at 1.907250)
+    /// is paid for rather than approximated. No new constant enters the tree.
+    /// </para>
+    /// <para>
+    /// ⚠️ ONE STEP FOR THE WHOLE LINE, not one per symbol: the lift is the largest any of
+    /// them needs, so the symbols that leave the line stay level with each other. Derived
+    /// per symbol it goes ragged — measured on <c>scratch/site-showcase/chord-axes.lys</c>,
+    /// where four lifted names landed at 18.50 / 19.11 / 19.02 / 18.50.
+    /// </para>
+    /// <para>
+    /// ⚠️⚠️ AND THE MERGE IS OFF WHEN NOTHING WOULD BE SHARED (<c>Merged</c> false). If every
+    /// <c>@chord</c> stands on a row symbol's column, lifting them all is just the two lines
+    /// the book already had, drawn worse — the same <c>chord-axes.lys</c>, whose whole subject
+    /// is four spellings of one progression on four lines, had its third row hauled up into
+    /// its second. The rule exists to put symbols a reader takes in at one glance ON one line;
+    /// where it cannot, it does nothing and the book is untouched.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE X MODEL IS THE DRAWN ONE, but it does NOT carry the boxed-label shift
+    /// <see cref="Calculate"/> makes. That shift exists only on a STAFFLESS lead sheet
+    /// (<c>MusicMarkEngraver.StafflessAnchorRefpointBelowTop</c>), and a staffless sheet has
+    /// no staff for an <c>@chord</c> to hang on — so the two never disagree about a symbol
+    /// either of them is asked about.
+    /// </para>
+    /// </remarks>
+    private static (List<(double X, ChordNameItem Chord, double Lift)> Line, bool Merged)
+        ChordLineOfSystem(
+            Rendering.ScoreTextMetrics fonts,
+            ImmutableArray<ChordNameItem> chordNames,
+            Dictionary<int, MeasureLayout> byMeasure,
+            int rowStaff,
+            ImmutableArray<Measure> rowMeasures,
+            IReadOnlyList<(int StaffIndex, ImmutableArray<Measure> Measures)> inlineStaves)
+    {
+        // ⑴ The note-bound @chord symbols. They keep the line, at their notes' own X.
+        var inline = new List<(double X, ChordNameItem C)>();
+        foreach (var (inlineStaff, staffMeasures) in inlineStaves)
+            foreach (var c in chordNames)
+            {
+                if (c.IsChordRow || c.UseTiming || c.StaffIndex != inlineStaff)
+                    continue;
+                if (!byMeasure.TryGetValue(c.MeasureIndex, out var ml))
+                    continue;   // another system
+                inline.Add((SymbolX(c, ml, staffMeasures), c));
+            }
+
+        // ⑵ The row's own symbols, in the order and with the left-to-right clearance the row
+        //    gets on its own — that part of the picture is unchanged by any of this.
+        var rowSyms = new List<(double X, ChordNameItem C)>();
+        foreach (var c in chordNames)
+        {
+            if (!c.IsChordRow || c.StaffIndex != rowStaff)
+                continue;
+            if (!byMeasure.TryGetValue(c.MeasureIndex, out var ml))
+                continue;
+            rowSyms.Add((SymbolX(c, ml, rowMeasures), c));
+        }
+        rowSyms.Sort((a, b) => a.X.CompareTo(b.X));
+        for (int i = 1; i < rowSyms.Count; i++)
+            rowSyms[i] = (ClearOfPrevious(fonts, rowSyms[i - 1].C, rowSyms[i - 1].X,
+                                          rowSyms[i].C, rowSyms[i].X), rowSyms[i].C);
+
+        var rowOnly = new List<(double, ChordNameItem, double)>(rowSyms.Count);
+        foreach (var (x, c) in rowSyms)
+            rowOnly.Add((x, c, 0.0));
+        if (inline.Count == 0)
+            return (rowOnly, false);
+
+        // ⑶ Which row symbols stand on an @chord's column, and how far the line has to lift
+        //    to clear them — one step, the largest of them.
+        bool Meets(double x, double w, double ix, double iw)
+            => x < ix + iw + SymbolGap && ix < x + w + SymbolGap;
+
+        var lifted = new HashSet<ChordNameItem>();
+        var blocked = new HashSet<ChordNameItem>();
+        double step = 0;
+        foreach (var (x, c) in rowSyms)
+        {
+            double w = SymbolWidth(fonts, c);
+            double bottom = SymbolInk(fonts, DisplayText(c)).Bottom;
+            foreach (var (ix, ic) in inline)
+            {
+                if (!Meets(x, w, ix, SymbolWidth(fonts, ic)))
+                    continue;
+                lifted.Add(c);
+                blocked.Add(ic);
+                step = Math.Max(step, SymbolInk(fonts, DisplayText(ic)).Top + SymbolGap - bottom);
+            }
+        }
+
+        // ⚠️ NOTHING TO SHARE ⇒ NOTHING TO DO: every @chord is on a row symbol's column, so
+        //    the merged line would hold only @chord and the whole row would ride above it.
+        if (blocked.Count == inline.Count)
+            return (rowOnly, false);
+
+        var line = new List<(double, ChordNameItem, double)>(rowSyms.Count + inline.Count);
+        foreach (var (x, c) in inline)
+            line.Add((x, c, 0.0));
+        foreach (var (x, c) in rowSyms)
+            line.Add((x, c, lifted.Contains(c) ? step : 0.0));
+        return (line, true);
+    }
+
+    /// <summary>
+    /// Does this staff still need a chord line of ITS OWN — i.e. is there a symbol on it that
+    /// the row above does not take?
+    /// </summary>
+    /// <remarks>
+    /// ★ THE ROOM HALF OF THE SAME DECISION (owner report on <c>bench.lys</c>, 2026-09-06:
+    /// "the Ys line up, but there is wasted space under them"). The band
+    /// <c>MultiStaffLayouter.ReserveChordRowBand</c> books above a staff exists to hold that
+    /// staff's own chord line; when the row above has taken every symbol, it is room nothing
+    /// stands in and the reader sees a blank line under the names.
+    /// <para>
+    /// ⚠️ A CHORD <i>TRACK</i> KEEPS THE LINE (<c>UseTiming</c>): <c>staff X with chords P</c>
+    /// and a folded interior row are lines the writer asked for by placing them, and they are
+    /// never moved onto a row. One of them on the staff answers true on its own.
+    /// </para>
+    /// <para>
+    /// ⚠️ TRUE WHEN THERE IS NO ROW ABOVE, which is every book that had a band before this
+    /// rule existed — so the reservation is unchanged for all of them, and the only books this
+    /// can move are those with a chord row over a staff that carries <c>@chord</c>.
+    /// </para>
+    /// </remarks>
+    internal static bool StaffKeepsItsOwnChordLine(
+        Rendering.ScoreTextMetrics fonts,
+        ImmutableArray<ChordNameItem> chordNames,
+        ImmutableArray<MeasureLayout> systemMeasureLayouts,
+        int staffIndex, int rowStaff,
+        ImmutableArray<Measure> staffMeasures, ImmutableArray<Measure> rowMeasures)
+    {
+        if (rowStaff < 0 || chordNames.IsDefaultOrEmpty || systemMeasureLayouts.IsDefaultOrEmpty)
+            return true;
+        foreach (var c in chordNames)
+            if (!c.IsChordRow && c.UseTiming && c.StaffIndex == staffIndex)
+                return true;
+
+        // ⚠️ THE SAME ANSWER THE PLACEMENT USES, from the same function: the merge can decline
+        // (ChordLineOfSystem's `Merged`), and a staff whose symbols were NOT taken still needs
+        // the room to print them in.
+        var byMeasure = new Dictionary<int, MeasureLayout>();
+        foreach (var ml in systemMeasureLayouts)
+            byMeasure[ml.MeasureIndex] = ml;
+        var (_, merged) = ChordLineOfSystem(
+            fonts, chordNames, byMeasure, rowStaff, rowMeasures,
+            [(staffIndex, staffMeasures)]);
+        return !merged;
+    }
+
     /// <summary>
     /// Calculates chord name layouts from collected items.
     /// </summary>
@@ -140,7 +394,8 @@ internal static class ChordNameEngraver
         bool chordGridSheet = false,
         Func<int, int, VerticalSkyline?>? lowerStaffUpSkyline = null,
         IReadOnlyList<(int MeasureIndex, double X0, double X1)>? labelWindows = null,
-        Func<int, int, double?>? attachedBaselineAboveTop = null)
+        Func<int, int, double?>? attachedBaselineAboveTop = null,
+        IReadOnlyDictionary<int, int>? chordRowAboveStaff = null)
     {
         if (chordNames.IsDefaultOrEmpty || systems.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
             return ImmutableArray<ChordNameLayout>.Empty;
@@ -234,6 +489,12 @@ internal static class ChordNameEngraver
                 prepared[i] = (cur.chord, shifted, cur.staffOffset, cur.topStaff, cur.sysIdx, cur.idx);
         }
 
+        // ★ ONE CHORD LINE, AND THE ROW'S SYMBOL IS WHAT LIFTS OFF IT WHERE THEY MEET
+        // (owner's decision, 2026-09-06 — see ChordLineOfSystem, which owns the rule).
+        var (joinsRow, rowLift) = ChordLinePlacement(
+            fonts, prepared, measureLayouts, measureToSystem, measuresByStaff, measures,
+            staffYAt, chordRowAboveStaff);
+
         // Per system, the peak protrusion of staff content above the staff top,
         // sampled UNDER EACH SYMBOL (its own X window), then maxed over the
         // system's symbols — the chord line shares one baseline per system.
@@ -283,11 +544,28 @@ internal static class ChordNameEngraver
             {
                 double rowBaseline = RowTextBaseline(chordGridSheet);
                 string rowText = DisplayText(p.chord);
+                // ★ ...LIFTED, where an @chord of the staff below stands on its column. Y-up
+                // is up-positive, so clearing the symbol under it ADDS the step
+                // (ChordLineOfSystem derives it from the two symbols' ink).
+                double lift = rowLift.TryGetValue(p.chord, out double lf) ? lf : 0;
                 // Store Y-up from the system top (= negation of the system-relative
                 // device baseline); no staff offset is baked.
                 results.Add(new ChordNameLayout(
-                    p.chord.MeasureIndex, p.x, -(p.staffOffset + rowBaseline),
-                    rowText, p.chord.SourcePosition, p.idx));
+                    p.chord.MeasureIndex, p.x, -(p.staffOffset + rowBaseline) + lift,
+                    rowText, p.chord.SourcePosition, p.idx, p.chord.StaffIndex));
+                continue;
+            }
+
+            // A note-attached @chord STANDS ON THE ROW'S LINE: the same baseline the row's
+            // own symbols take, computed from the same two terms, so the two cannot drift. It
+            // carries the row's staff index for the same reason a row symbol does — the solve
+            // moves the line, and everything on the line goes with it.
+            if (joinsRow.TryGetValue(p.idx, out var join))
+            {
+                results.Add(new ChordNameLayout(
+                    p.chord.MeasureIndex, p.x,
+                    -(join.RowStaffOffset + RowTextBaseline(chordGridSheet)),
+                    DisplayText(p.chord), p.chord.SourcePosition, p.idx, join.RowStaffIndex));
                 continue;
             }
 
@@ -317,6 +595,114 @@ internal static class ChordNameEngraver
         }
 
         return results.ToImmutable();
+    }
+
+    /// <summary>
+    /// Where the two kinds of chord symbol land: which note-attached <c>@chord</c> symbols
+    /// print on a ROW's line (by their index in <c>prepared</c>, with that row and its band
+    /// top), and how far each ROW symbol is lifted off that line to clear one of them.
+    /// </summary>
+    /// <remarks>
+    /// The rule itself is <see cref="ChordLineOfSystem"/>'s; this walks the systems and turns
+    /// its answer into the two lookups <see cref="Calculate"/>'s placement arms want.
+    /// <para>
+    /// ⚠️ EVERY <c>@chord</c> UNDER A ROW JOINS IT — the box test decides which ROW symbol
+    /// moves, not whether the <c>@chord</c> comes along. That is the owner's third reading
+    /// (2026-09-06) and it is why the band under the row can be given back at all: a staff
+    /// whose symbols have all gone up needs no line of its own
+    /// (<see cref="StaffKeepsItsOwnChordLine"/>).
+    /// </para>
+    /// <para>
+    /// ⚠️ A CHORD <i>TRACK</i> DOES NOT JOIN (<c>UseTiming</c>): <c>staff X with chords P</c>
+    /// and a folded interior row are lines the writer asked for by placing them, and they carry
+    /// their own solve (<c>MultiStaffLayouter.AttachedChordBaselineAboveTop</c>). Only the
+    /// note-attached annotation, which has no line of its own, is moved.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHICH ROW COMES FROM <see cref="ChordRowAboveStaff"/> — the staff table, not the
+    /// solved Y positions — so this and the band gate name the same line. Where the row's
+    /// BASELINE sits is then read from <paramref name="staffYAt"/> at the <c>@chord</c>'s OWN
+    /// measure, which is the same call the row's own arm resolves its offset by: the two land
+    /// on one number, and a system the row happens to be silent in still has a line to join.
+    /// </para>
+    /// </remarks>
+    private static (Dictionary<int, (int RowStaffIndex, double RowStaffOffset)> Joins,
+                    Dictionary<ChordNameItem, double> RowLift)
+        ChordLinePlacement(
+            Rendering.ScoreTextMetrics fonts,
+            List<(ChordNameItem chord, double x, double staffOffset, bool topStaff, int sysIdx, int idx)> prepared,
+            ImmutableArray<MeasureLayout> measureLayouts,
+            Dictionary<int, int> measureToSystem,
+            Dictionary<int, ImmutableArray<Measure>>? measuresByStaff,
+            ImmutableArray<Measure> measures,
+            Func<int, int, double>? staffYAt,
+            IReadOnlyDictionary<int, int>? rowAboveStaff)
+    {
+        var joins = new Dictionary<int, (int, double)>();
+        var lift = new Dictionary<ChordNameItem, double>();
+        if (staffYAt is null || rowAboveStaff is not { Count: > 0 })
+            return (joins, lift);
+
+        // The staves each row stands over, and the measures each is placed by.
+        var stavesUnder = new Dictionary<int, List<(int, ImmutableArray<Measure>)>>();
+        foreach (var (staffIdx, rowIdx) in rowAboveStaff)
+        {
+            if (rowIdx < 0)
+                continue;
+            if (!stavesUnder.TryGetValue(rowIdx, out var list))
+                stavesUnder[rowIdx] = list = [];
+            list.Add((staffIdx,
+                LayoutUtilities.ResolveStaffMeasures(measuresByStaff, staffIdx, measures)));
+        }
+        if (stavesUnder.Count == 0)
+            return (joins, lift);
+
+        // ⚠️ PER SYSTEM: a box in one system says nothing about a box in another, and
+        // MeasureIndex is score-wide while a system's layouts are a slice of it.
+        var bySystem = new Dictionary<int, Dictionary<int, MeasureLayout>>();
+        foreach (var ml in measureLayouts)
+        {
+            if (!measureToSystem.TryGetValue(ml.MeasureIndex, out int sys))
+                continue;
+            if (!bySystem.TryGetValue(sys, out var byMeasure))
+                bySystem[sys] = byMeasure = [];
+            byMeasure[ml.MeasureIndex] = ml;
+        }
+
+        // The items in one array (the shape ChordLineOfSystem reads), and the way back from an
+        // item to the caller's index — identity, which is what ChordNameItem.Equals is.
+        var items = ImmutableArray.CreateBuilder<ChordNameItem>(prepared.Count);
+        var indexOf = new Dictionary<ChordNameItem, int>(prepared.Count);
+        foreach (var p in prepared)
+        {
+            items.Add(p.chord);
+            indexOf[p.chord] = p.idx;
+        }
+        var chordItems = items.ToImmutable();
+
+        foreach (var (rowStaff, inlineStaves) in stavesUnder)
+        {
+            var rowMeasures =
+                LayoutUtilities.ResolveStaffMeasures(measuresByStaff, rowStaff, measures);
+            foreach (var byMeasure in bySystem.Values)
+            {
+                var (line, merged) = ChordLineOfSystem(
+                    fonts, chordItems, byMeasure, rowStaff, rowMeasures, inlineStaves);
+                if (!merged)
+                    continue;   // this system keeps the two lines it had
+                foreach (var (_, chord, step) in line)
+                {
+                    if (chord.IsChordRow)
+                    {
+                        if (step > 0)
+                            lift[chord] = step;
+                    }
+                    else if (indexOf.TryGetValue(chord, out int idx))
+                        joins[idx] = (rowStaff, staffYAt(chord.MeasureIndex, rowStaff));
+                }
+            }
+        }
+        return (joins, lift);
     }
 
     // ===================== ONE SYMBOL: WHERE IT IS AND HOW BIG IT IS =====================
@@ -482,13 +868,20 @@ internal static class ChordNameEngraver
     /// frame as the independent row; only the selection differs.
     /// </para>
     /// </remarks>
+    /// <param name="joinedInline">
+    /// For an independent ROW, the staves whose note-attached <c>@chord</c> symbols print on
+    /// its line, with the measures each is placed by. ★ THEY ARE THE ROW'S INK: once the staff
+    /// below stops booking a band for them, this skyline is the only thing that says they are
+    /// there, and whatever stands above the row is spaced against it.
+    /// </param>
     internal static (VerticalSkyline Up, VerticalSkyline Down) RowSkylines(
         Rendering.ScoreTextMetrics fonts,
         ImmutableArray<ChordNameItem> chordNames,
         ImmutableArray<MeasureLayout> measureLayouts,
         int staffIndex,
         ImmutableArray<Measure> staffMeasures,
-        bool attachedLine = false)
+        bool attachedLine = false,
+        IReadOnlyList<(int StaffIndex, ImmutableArray<Measure> Measures)>? joinedInline = null)
     {
         var up = new VerticalSkyline(VerticalDirection.Up);
         var down = new VerticalSkyline(VerticalDirection.Down);
@@ -499,25 +892,42 @@ internal static class ChordNameEngraver
         foreach (var ml in measureLayouts)
             byMeasure[ml.MeasureIndex] = ml;
 
-        var placed = new List<(double X, ChordNameItem Chord)>();
-        foreach (var chord in chordNames)
+        List<(double X, ChordNameItem Chord, double Lift)> placed;
+        if (attachedLine)
         {
-            if (chord.IsChordRow == attachedLine || chord.StaffIndex != staffIndex)
-                continue;
-            if (!byMeasure.TryGetValue(chord.MeasureIndex, out var ml))
-                continue;
-            placed.Add((SymbolX(chord, ml, staffMeasures), chord));
+            // An ATTACHED track's line: its own symbols, in the order and with the clearance
+            // they are drawn with. Nothing joins it and nothing lifts off it.
+            placed = [];
+            foreach (var chord in chordNames)
+            {
+                if (chord.IsChordRow || chord.StaffIndex != staffIndex)
+                    continue;
+                if (!byMeasure.TryGetValue(chord.MeasureIndex, out var ml))
+                    continue;
+                placed.Add((SymbolX(chord, ml, staffMeasures), chord, 0.0));
+            }
+            placed.Sort((a, b) => a.X.CompareTo(b.X));
+            for (int i = 1; i < placed.Count; i++)
+                placed[i] = (ClearOfPrevious(fonts, placed[i - 1].Chord, placed[i - 1].X,
+                                             placed[i].Chord, placed[i].X), placed[i].Chord, 0.0);
         }
+        else
+        {
+            // ★ AN INDEPENDENT ROW'S LINE IS THE DRAWN ONE, joined @chord symbols and lifted
+            // row symbols included — ChordLineOfSystem owns that answer, and asking it here is
+            // what keeps the reservation and the picture the same shape. Once the staff below
+            // stops booking a band (StaffKeepsItsOwnChordLine), this skyline is the ONLY thing
+            // that says the @chord ink is there.
+            // ⚠️ `Merged` false ⇒ the row's own symbols alone, which is what the function
+            // returns then: the @chord line stays where it was and books its own band.
+            (placed, _) = ChordLineOfSystem(fonts, chordNames, byMeasure, staffIndex,
+                                            staffMeasures, joinedInline ?? []);
+        }
+
         if (placed.Count == 0)
             return (up, down);
 
-        // The same order and the same clearance the drawn row gets — one line, one staff.
-        placed.Sort((a, b) => a.X.CompareTo(b.X));
-        for (int i = 1; i < placed.Count; i++)
-            placed[i] = (ClearOfPrevious(fonts, placed[i - 1].Chord, placed[i - 1].X,
-                                         placed[i].Chord, placed[i].X), placed[i].Chord);
-
-        foreach (var (x, chord) in placed)
+        foreach (var (x, chord, lift) in placed)
         {
             // ⚠️ THE SYMBOL'S ink, not the STRING's: an accidental is an Emmentaler glyph and
             // reaches far outside the letters' band (a sharp runs from -0.953517 to 2.224872
@@ -526,8 +936,8 @@ internal static class ChordNameEngraver
             // SymbolInk and ChordNameGlyphRun.
             var (bottom, top) = SymbolInk(fonts, DisplayText(chord));
             double right = x + SymbolWidth(fonts, chord);
-            up.Merge(VerticalSkyline.FromBox(x, right, bottom, top, VerticalDirection.Up));
-            down.Merge(VerticalSkyline.FromBox(x, right, bottom, top, VerticalDirection.Down));
+            up.Merge(VerticalSkyline.FromBox(x, right, bottom + lift, top + lift, VerticalDirection.Up));
+            down.Merge(VerticalSkyline.FromBox(x, right, bottom + lift, top + lift, VerticalDirection.Down));
         }
         return (up, down);
     }

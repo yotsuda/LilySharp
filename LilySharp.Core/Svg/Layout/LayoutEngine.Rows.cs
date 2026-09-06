@@ -679,8 +679,12 @@ internal sealed partial class LayoutEngine
                 var c = newChords[i];
                 if (c.SourceIndex < 0 || c.SourceIndex >= score.ChordNames.Length) continue;
                 if (!measureToSystem.TryGetValue(c.MeasureIndex, out int sysIdx)) continue;
-                if (!delta.TryGetValue((sysIdx, score.ChordNames[c.SourceIndex].StaffIndex),
-                        out double d))
+                // ⚠️ THE LINE IT PRINTS ON, NOT THE PART IT CAME FROM: a note-attached
+                // @chord aligned onto the row (ChordNameEngraver.InlineSymbolsJoiningTheRow)
+                // is drawn at the row's baseline, so the row's delta is its delta too. Its
+                // ITEM still belongs to a music staff, which is never a solved row — asking
+                // the item would leave it behind while the line moved out from under it.
+                if (!delta.TryGetValue((sysIdx, c.RowStaffIndex), out double d))
                     continue;
                 newChords[i] = c with { YUp = c.YUp + d };
             }
@@ -715,7 +719,8 @@ internal sealed partial class LayoutEngine
             ? (new VerticalSkyline(VerticalDirection.Up), new VerticalSkyline(VerticalDirection.Down))
             : ChordNameEngraver.RowSkylines(
                 score.TextMetrics, score.ChordNames, measures, staffIndex,
-                row.PrimaryVoice.Measures);
+                row.PrimaryVoice.Measures,
+                joinedInline: MultiStaffLayouter.InlineChordStavesOnRow(score, staffIndex));
 
     /// <summary>A text ROW as a run element: its own affinity and its own context's specs —
     /// the two things <c>get_spacing_spec</c> reads off a grob. The spec rule is

@@ -203,6 +203,30 @@ internal static class ScoreSideTables
                         static t => t.StaffIndex),
                     t => t.StaffIndex));
 
+    private static readonly System.Runtime.CompilerServices
+        .ConditionalWeakTable<MultiStaffScore, Dictionary<int, int>> _chordRowAboveByScore = new();
+
+    /// <summary>
+    /// The independent chord ROW standing above each staff, by global staff index (memoized
+    /// per score) — <c>ChordNameEngraver.ChordRowAboveStaff</c>'s answer for this score.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ MEMOISED FOR THE SAME REASON <see cref="TextSpannersByStaff"/> IS: the staff-skyline
+    /// pass asks it once per (system, staff) and the walk behind it is over the WHOLE staff
+    /// table. Its consumer is the chord-band gate — the room a staff books for its own
+    /// <c>@chord</c> line — so it is read on every system of every book that has one.
+    /// </remarks>
+    internal static IReadOnlyDictionary<int, int> ChordRowAboveStaff(MultiStaffScore score)
+        => score.ChordNames.IsDefaultOrEmpty
+            ? new Dictionary<int, int>()
+            : _chordRowAboveByScore.GetValue(score, s =>
+            {
+                var byIndex = new Dictionary<int, Model.Staff>();
+                foreach (var (_, staff, idx) in s.EnumerateStaves())
+                    byIndex[idx] = staff;
+                return ChordNameEngraver.ChordRowAboveStaff(byIndex, s.ChordNames);
+            });
+
     // ---- BAR-keyed facts the spring builders read for EVERY bar, from both the break
     // gate and the layout (one instance each, §5.4's one-list rule).
 

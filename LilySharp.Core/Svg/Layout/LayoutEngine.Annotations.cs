@@ -1251,12 +1251,22 @@ internal sealed partial class LayoutEngine
             };
         }
 
+        // Which chord ROW (if any) stands over each staff — the line a note-attached @chord
+        // on that staff prints on. ⚠️ THE SAME ANSWER THE BAND GATE READS: the reservation
+        // above the staff and the placement of the symbol have to name one line, or the
+        // symbols go up and the room they left stays booked (owner report, 2026-09-06).
+        var rowAbove = ctx.MultiScore is { } ms
+            ? ScoreSideTables.ChordRowAboveStaff(ms)
+            : staffByIndex is null ? null
+              : ChordNameEngraver.ChordRowAboveStaff(staffByIndex, cn);
+
         return ChordNameEngraver.Calculate(ctx.Fonts,
             cn, systems, ml, ctx.Measures,
             ctx.MeasuresByStaff, staffYAt, minStaffYAt, scriptedSkylines,
             chordGridSheet: chordGridSheet, lowerStaffUpSkyline: lowerStaffUpSkyline,
             labelWindows: labelWindows,
-            attachedBaselineAboveTop: attachedBaselineAboveTop);
+            attachedBaselineAboveTop: attachedBaselineAboveTop,
+            chordRowAboveStaff: rowAbove);
     }
 
     /// <summary>

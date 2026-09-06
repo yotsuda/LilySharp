@@ -1788,7 +1788,13 @@ internal static class OutsideStaffStacker
                 if (cn.SourceIndex < 0 || cn.SourceIndex >= chordItems.Length)
                     continue;   // no item to ask for the staff: not seedable
                 var item = chordItems[cn.SourceIndex];
-                if (item.IsChordRow
+                // ⚠️ THE LINE IT PRINTS ON, NOT THE PART IT CAME FROM (RowStaffIndex): an
+                // @chord aligned onto the row above its staff is on the ROW's line now
+                // (ChordNameEngraver.InlineSymbolsJoiningTheRow), and everything the remark
+                // above says about a row's symbols applies to it unchanged — it is not the
+                // staff's own above-staff ink any more. It reaches the Score-level movers
+                // through ChordRowSupport instead, by the same test.
+                if (cn.RowStaffIndex >= 0
                     || !measureToSystem.TryGetValue(cn.MeasureIndex, out int sysIdx))
                     continue;
                 double staffTopUp = LayoutUtilities.StaffOffsetInSystemUp(
@@ -1854,7 +1860,12 @@ internal static class OutsideStaffStacker
         {
             if (cn.SourceIndex < 0 || cn.SourceIndex >= chordItems.Length)
                 continue;
-            if (!chordItems[cn.SourceIndex].IsChordRow
+            // ⚠️ THE LINE IT PRINTS ON, NOT THE PART IT CAME FROM: an @chord aligned onto
+            // the row (ChordNameEngraver.InlineSymbolsJoiningTheRow) is ink of the row's line
+            // and the volta / mark passes must clear it exactly as they clear the row's own
+            // symbols. Its counterpart gate is in the inline seed above; the two read the
+            // same field, so no symbol is in both and none is in neither.
+            if (cn.RowStaffIndex < 0
                 || !measureToSystem.TryGetValue(cn.MeasureIndex, out int sysIdx))
                 continue;
             if (StaffAffinity.TopSpaceableStaff(systems[sysIdx]) is null)

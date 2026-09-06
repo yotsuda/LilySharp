@@ -2993,9 +2993,21 @@ internal sealed class MultiStaffLayouter
                 // time, priced Lily#-shaped (the double-count HANDOFF names as 帯と walk).
                 // The band survives only where no pair walks the line: the system's top
                 // staff, and a staff whose only symbols are note-attached @chord.
+                // ★ ...AND UNLESS THE SYMBOLS HAVE GONE UP ONTO THE ROW ABOVE (owner,
+                // 2026-09-06). When every @chord of this staff prints on the chord row's line
+                // (ChordNameEngraver.StaffKeepsItsOwnChordLine), this band is room nothing
+                // stands in: the reader saw the names on one line with an EMPTY line under
+                // them, which was the second half of the report. ⚠️ The question is asked of
+                // the LINE, not of the item — a `with chords` track never joins a row, and a
+                // staff with no row above it answers true, so every book that had a band
+                // before the rule existed still has one.
                 if (!score.ChordNames.IsDefaultOrEmpty
                     && score.ChordNames.Any(c => c.StaffIndex == thisStaff && !c.IsChordRow)
-                    && !AttachedChordLineInRun(score, thisStaff))
+                    && !AttachedChordLineInRun(score, thisStaff)
+                    && ChordNameEngraver.StaffKeepsItsOwnChordLine(
+                        score.TextMetrics, score.ChordNames, measureLayouts, thisStaff,
+                        ChordRowAbove(score, thisStaff), staff.PrimaryVoice.Measures,
+                        RowStaffMeasures(score, ChordRowAbove(score, thisStaff))))
                     ReserveChordRowBand(sky.Up, measureLayouts, _options.StaffHeight / 2.0);
 
                 // An independent chord ROW is a line of the alignment in its own right, and
@@ -3029,7 +3041,8 @@ internal sealed class MultiStaffLayouter
                         ? LyricRowInk(score, measureLayouts, thisStaff)
                         : ChordNameEngraver.RowSkylines(
                             score.TextMetrics, score.ChordNames, measureLayouts, thisStaff,
-                            staff.PrimaryVoice.Measures);
+                            staff.PrimaryVoice.Measures,
+                            joinedInline: InlineChordStavesOnRow(score, thisStaff));
                     sky.Up.Merge(rowInk.Up);
                     sky.Down.Merge(rowInk.Down);
                 }
@@ -3897,6 +3910,51 @@ internal sealed class MultiStaffLayouter
                 return true;
         }
         return false;
+    }
+
+    /// <summary>
+    /// The independent chord ROW standing above <paramref name="staffIndex"/>, or -1.
+    /// </summary>
+    /// <remarks>
+    /// One home for the relation is <c>ChordNameEngraver.ChordRowAboveStaff</c>; this is the
+    /// score-side lookup of it, and it is a memo because the skyline pass runs per (system,
+    /// staff) while the walk behind it is over the whole staff table — the shape
+    /// <c>ScoreSideTables</c> exists for.
+    /// </remarks>
+    internal static int ChordRowAbove(MultiStaffScore score, int staffIndex)
+        => ScoreSideTables.ChordRowAboveStaff(score).TryGetValue(staffIndex, out int row) ? row : -1;
+
+    /// <summary>The measures a chord ROW's symbols are placed against, or empty for -1.</summary>
+    internal static ImmutableArray<Measure> RowStaffMeasures(MultiStaffScore score, int rowStaff)
+    {
+        if (rowStaff < 0)
+            return ImmutableArray<Measure>.Empty;
+        foreach (var (_, staff, idx) in score.EnumerateStaves())
+            if (idx == rowStaff)
+                return staff.PrimaryVoice.Measures;
+        return ImmutableArray<Measure>.Empty;
+    }
+
+    /// <summary>
+    /// The staves whose note-attached <c>@chord</c> symbols print on <paramref name="rowStaff"/>'s
+    /// line, with the measures each is placed by — what <c>ChordNameEngraver.RowSkylines</c>
+    /// needs to include them in the row's own ink.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ EVERY staff the row stands over, not only the ones that gave up their band: a staff
+    /// keeps its band when ONE of its symbols stacks, and the others still stand on the row.
+    /// Which of them do is decided inside <c>RowSkylines</c>, by the same box test.
+    /// </remarks>
+    internal static List<(int StaffIndex, ImmutableArray<Measure> Measures)> InlineChordStavesOnRow(
+        MultiStaffScore score, int rowStaff)
+    {
+        var list = new List<(int, ImmutableArray<Measure>)>();
+        if (rowStaff < 0 || score.ChordNames.IsDefaultOrEmpty)
+            return list;
+        foreach (var (_, staff, idx) in score.EnumerateStaves())
+            if (!staff.IsTextRow && ChordRowAbove(score, idx) == rowStaff)
+                list.Add((idx, staff.PrimaryVoice.Measures));
+        return list;
     }
 
     /// <summary>

@@ -139,6 +139,21 @@ scores against LilyPond's picture of the same book.
   as a track's symbol does (LilyPond has one grob for both spellings): the bar line clears
   the name and the next symbol stands a clear four spaces on. A bar the name did not
   outgrow is unchanged.
+- **A chord row and a chord written on a note print on one line.** A score carrying both an
+  independent `chords` row and inline `@chord` symbols on the staff under it engraved them on
+  two lines — the row in its own band, every `@chord` about three staff spaces lower, just over
+  the staff — so a reader following one chord line had to follow two. An `@chord` now prints at
+  the row's own baseline, and keeps its own line below the row only where the two symbols'
+  boxes share an X, which is exactly the case one line could not hold: a row chord on beat one
+  and an `@chord` on beat three share the line, two on the same column do not. Where they do
+  share a column it is the ROW's symbol that lifts clear — the `@chord` names what the notes
+  under it actually spell, so it keeps the line beside them, and the reading stays on one row
+  with the odd nominal chord stacked over it. The room goes with the symbols: a staff whose
+  chord line the row has taken stops reserving the band above itself, so the page is that much
+  shorter instead of carrying a blank line under the names. Several `chords` rows stacked in
+  one `score` keep their own separate lines, and an `@chord` joins the nearest one above its
+  staff. A `staff … with chords` track is untouched — that is a line the writer asked for by
+  placing it — and so is a score that uses only one of the two spellings.
 - **An empty bar is as wide as LilyPond's.** A bar holding nothing but a skip (`s1`, or
   the `| |` placeholder), and a bar a percent repeat covers, used to be spaced as if a
   whole note stood in it — 6.39 staff spaces whatever the piece — where LilyPond drops the
