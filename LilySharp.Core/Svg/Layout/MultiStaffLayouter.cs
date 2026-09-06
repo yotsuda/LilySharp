@@ -3001,8 +3001,15 @@ internal sealed class MultiStaffLayouter
                 // the LINE, not of the item — a `with chords` track never joins a row, and a
                 // staff with no row above it answers true, so every book that had a band
                 // before the rule existed still has one.
+                // ★ ...AND UNLESS THE STAFF PRINTS NO SUCH SYMBOL AT ALL (reader, 2026-09-07):
+                // a numbers-only tab blanks the note-attached @chord it would repeat from the
+                // staff above (TabStaffStencils.BlanksNoteAttachedChord), and a band under a
+                // line nothing is drawn on is the empty room this gate already exists to
+                // avoid. The RESERVATION half of that blanking is this line and the width
+                // table (ScoreSideTables.ChordNames); the INK half is LayoutChordNames.
                 if (!score.ChordNames.IsDefaultOrEmpty
-                    && score.ChordNames.Any(c => c.StaffIndex == thisStaff && !c.IsChordRow)
+                    && score.ChordNames.Any(c => c.StaffIndex == thisStaff && !c.IsChordRow
+                        && !TabStaffStencils.BlanksNoteAttachedChord(score, c))
                     && !AttachedChordLineInRun(score, thisStaff)
                     && ChordNameEngraver.StaffKeepsItsOwnChordLine(
                         score.TextMetrics, score.ChordNames, measureLayouts, thisStaff,

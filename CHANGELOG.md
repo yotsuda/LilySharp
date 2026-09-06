@@ -133,6 +133,16 @@ scores against LilyPond's picture of the same book.
 
 ### Engraving
 
+- **A numbers-only tab prints no `@chord`.** A tab written (or defaulting to) `as numbers` is
+  the line that carries the fret digits *because* the notation staff above it carries
+  everything else — the meter, the rests, the stems, the scripts — and the chord name over a
+  note is more of that same list: printed on both lines it is the same annotation twice, once
+  over the staff and once over the tab of the same part. It now prints on the staff only, and
+  the room reserved for it under the tab goes with it (a band under a line nothing is drawn on
+  is the empty gap that reads as a mistake). A tab the writer asked to be complete —
+  `tab X as full`, and a lone tab, which is full by default — keeps its own chord names, as it
+  keeps its own scripts and dynamics. A chords TRACK placed on a tab (`tab X with chords P`, or
+  a `chords` row folded into it) is a line the writer put there, and stays.
 - **A chord written on a tab note stands over the tab, not through the staff above it.** An
   `@chord` is placed 0.6 staff-spaces above its staff's top line, plus whatever that staff's
   own ink protrudes — and the protrusion is read from a skyline built about the staff's

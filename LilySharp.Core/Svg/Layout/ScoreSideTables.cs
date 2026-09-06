@@ -118,11 +118,17 @@ internal static class ScoreSideTables
     internal static IndexBuckets<LyricItem> BucketLyrics(IReadOnlyList<LyricItem> lyrics)
         => IndexBuckets<LyricItem>.Build(lyrics, ly => ly.MeasureIndex);
 
-    /// <summary>The score's chord symbols bucketed by measure (memoized per score).</summary>
+    /// <summary>The score's chord symbols bucketed by measure (memoized per score) —
+    /// minus the note-attached ones a numbers-only tab prints nothing for, which is the
+    /// RESERVATION half of that blanking: this table is what prices a symbol's width into
+    /// its column (<c>MultiStaffLayouter.ApplyChordRowSpacing</c>), and room for a symbol
+    /// that is never drawn is room nothing stands in. See <see cref="TabStaffStencils"/>;
+    /// the score's own array is never filtered (a layout's SourceIndex indexes it).</summary>
     internal static IndexBuckets<ChordNameItem> ChordNames(MultiStaffScore score)
         => score.ChordNames.IsDefaultOrEmpty
             ? IndexBuckets<ChordNameItem>.Empty
-            : _chordsByScore.GetValue(score, s => BucketChordNames(s.ChordNames));
+            : _chordsByScore.GetValue(score, s => BucketChordNames(
+                TabStaffStencils.BlankAttachedChords(s, s.ChordNames)));
 
     /// <summary>The one bucketing spelling for chord symbols, as above.</summary>
     internal static IndexBuckets<ChordNameItem> BucketChordNames(IReadOnlyList<ChordNameItem> chordNames)

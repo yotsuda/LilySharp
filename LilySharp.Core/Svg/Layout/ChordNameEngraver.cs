@@ -395,7 +395,8 @@ internal static class ChordNameEngraver
         Func<int, int, VerticalSkyline?>? lowerStaffUpSkyline = null,
         IReadOnlyList<(int MeasureIndex, double X0, double X1)>? labelWindows = null,
         Func<int, int, double?>? attachedBaselineAboveTop = null,
-        IReadOnlyDictionary<int, int>? chordRowAboveStaff = null)
+        IReadOnlyDictionary<int, int>? chordRowAboveStaff = null,
+        Func<ChordNameItem, bool>? blanked = null)
     {
         if (chordNames.IsDefaultOrEmpty || systems.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
             return ImmutableArray<ChordNameLayout>.Empty;
@@ -421,6 +422,18 @@ internal static class ChordNameEngraver
         {
             var chord = chordNames[cni];
             if (chord.MeasureIndex >= measureLayouts.Length)
+                continue;
+            // ...and the symbols a staff prints nothing for: a note-attached @chord on a
+            // numbers-only tab, which the notation staff above it is already showing over
+            // the same note (TabStaffStencils.BlanksNoteAttachedChord — the one home).
+            // ⚠️ SKIPPED HERE, INSIDE, rather than by filtering the caller's array: `cni`
+            // is the index a layout carries as its SourceIndex, and SharedRenderer's
+            // ResolveDataPos re-derives every data-pos by indexing score.ChordNames with
+            // it — a filtered input would renumber the whole editor sync. Skipping also
+            // takes the symbol out of every decision downstream (the row it would have
+            // joined, the lift it would have caused, this staff's chord line), which a
+            // filter on the OUTPUT would not.
+            if (blanked != null && blanked(chord))
                 continue;
 
             var ml = measureLayouts[chord.MeasureIndex];

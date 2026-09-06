@@ -511,6 +511,59 @@ score main {{ chords prog  staff m }}
     }
 
     /// <summary>
+    /// A NUMBERS-ONLY tab prints no note-attached <c>@chord</c>: the notation staff above it
+    /// is already printing that name over the same note, and it books no room for one either.
+    /// </summary>
+    /// <remarks>
+    /// The same reading <see cref="LilySharp.Core.Svg.Layout.TabStaffStencils"/> applies to
+    /// the scripts and the markup families — a numbers-only tab carries the fret digits
+    /// BECAUSE the staff above carries the rest — extended to the chord name (reader,
+    /// 2026-09-07). LILYSHARP-OWN: LilyPond names chords only in a <c>ChordNames</c> context,
+    /// so its TabStaff block has no ChordName line to port.
+    /// <para>
+    /// ⚠️ THREE LEGS, one book: the numbers tab (the quantity), the SAME tab written
+    /// <c>as full</c> (the control — the writer asked for a complete tab, and a complete tab
+    /// carries its own markup, so the name prints twice), and the ROOM (a numbers tab with
+    /// the chord sits exactly where one whose part has no chord at all does — the band that
+    /// used to be booked under an empty line is gone with the symbol).
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ANumbersOnlyTab_PrintsNoAttachedChord_AndBooksNoRoomForOne()
+    {
+        static (int Symbols, double TabY) Read(string scoreBlock, bool withChord = true)
+        {
+            var tree = SyntaxTree.Parse(
+                $"part melody {{ section A {{ c1\\3{(withChord ? "@chord(Cmaj7)" : "")} }} }}\n"
+                + "form main { A }\n"
+                + scoreBlock + "\n");
+            Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+            var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+            var layout = new LayoutEngine().Layout(score);
+            double tabY = layout.Systems[0].StaffGroups.SelectMany(g => g.Staves)
+                .OrderBy(s => s.StaffIndex).Last().Y;
+            return (layout.ChordNameLayouts.Count(c => c.ChordText == "Cmaj7"), tabY);
+        }
+
+        var numbers = Read("score main { staff melody  tab melody }");
+        var full = Read("score main { staff melody  tab melody as full }");
+        var noChord = Read("score main { staff melody  tab melody }", withChord: false);
+
+        // The control first: a tab the writer asked to be COMPLETE carries its own markup,
+        // so the name is over the staff AND over the tab. That is the premise the quantity
+        // is a departure from — without it, "one symbol" could just mean the book has one.
+        Assert.Equal(2, full.Symbols);
+        Assert.Equal(1, numbers.Symbols);
+
+        // ...and the room went with it: the tab sits where it does when nothing on it
+        // carries a chord at all.
+        Assert.Equal(noChord.TabY, numbers.TabY, 9);
+        Assert.True(full.TabY < numbers.TabY - 0.1,
+            "the full tab must still book the band its own symbol stands in: "
+            + $"full {full.TabY:F6}, numbers {numbers.TabY:F6} (up-positive: lower is smaller)");
+    }
+
+    /// <summary>
     /// A note-attached <c>@chord</c> on a TAB staff stands over ITS OWN top line, the same
     /// distance a notation staff's does — so its ink stays out of the staff above it.
     /// </summary>

@@ -1273,13 +1273,22 @@ internal sealed partial class LayoutEngine
             : staffByIndex is null ? null
               : ChordNameEngraver.ChordRowAboveStaff(staffByIndex, cn);
 
+        // The INK half of the numbers-only tab's blanking: a note-attached @chord on such a
+        // tab prints nothing, because the notation staff above it already prints that name
+        // over the same note. The RESERVATION half is ScoreSideTables.ChordNames and the
+        // band gate in MultiStaffLayouter.BuildAllStaffSkylines; both ask TabStaffStencils.
+        Func<ChordNameItem, bool>? blanked = ctx.MultiScore is { } blankScore
+            ? c => TabStaffStencils.BlanksNoteAttachedChord(blankScore, c)
+            : null;
+
         return ChordNameEngraver.Calculate(ctx.Fonts,
             cn, systems, ml, ctx.Measures,
             ctx.MeasuresByStaff, staffYAt, minStaffYAt, scriptedSkylines,
             chordGridSheet: chordGridSheet, lowerStaffUpSkyline: lowerStaffUpSkyline,
             labelWindows: labelWindows,
             attachedBaselineAboveTop: attachedBaselineAboveTop,
-            chordRowAboveStaff: rowAbove);
+            chordRowAboveStaff: rowAbove,
+            blanked: blanked);
     }
 
     /// <summary>

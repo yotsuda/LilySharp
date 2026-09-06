@@ -116,6 +116,13 @@ namespace LilySharp.Core.Svg.Layout;
 /// entire subject. <see cref="ArticulationEngraver.TabTechniqueLetterOf"/> is already the
 /// one home for "is this a technique letter", so this reads it rather than spelling the
 /// four types again.</item>
+/// <item><b>A NOTE-ATTACHED <c>@chord</c> IS BLANKED ON A NUMBERS-ONLY TAB</b> (reader
+/// report, 2026-09-07: "as numbers としてレンダされた tab には @chord がレンダされない
+/// ようにして"). It is the same duplicate the scripts were — the name stands over the
+/// note on the staff above and over the same note on the tab — but it is LILYSHARP-OWN
+/// rather than ported, because LilyPond names chords only in a <c>ChordNames</c> CONTEXT
+/// and so cannot put one inside a TabStaff at all. A chords TRACK on the tab stays: see
+/// <see cref="BlanksNoteAttachedChord"/>.</item>
 /// <item>The four lines ABOVE this block in the same LilyPond context (<c>Tie</c>,
 /// <c>RepeatTie</c>, <c>LaissezVibrerTie</c>, <c>PhrasingSlur</c>) are likewise not ported:
 /// Lily# draws ties on a tab staff, with <c>test/tab-tie</c> and
@@ -205,6 +212,66 @@ internal static class TabStaffStencils
         => Blanks(staff)
            && ArticulationEngraver.IsSidePositionedScript(articulation.Type)
            && ArticulationEngraver.TabTechniqueLetterOf(articulation) is null;
+
+    /// <summary>
+    /// True when this chord symbol prints nothing because it is a note-attached
+    /// <c>@chord</c> on a numbers-only tab — the ChordName arm of the table.
+    /// </summary>
+    /// <remarks>
+    /// ★ LILYSHARP-OWN, and it has to be: LilyPond names chords only through a
+    /// <c>ChordNames</c> CONTEXT, which is a line of its own and never a grob inside a
+    /// <c>TabStaff</c>, so its Tab_staff_symbol_engraver block has nothing to say here.
+    /// The reading is the table's own (reader decision, 2026-09-07, on
+    /// scratch/ベースタブLy/tab-chord.lys): a numbers-only tab is the line that carries the
+    /// fret digits BECAUSE the notation staff above it carries everything else, and the
+    /// chord name over a note is exactly that — the same annotation printed twice, once
+    /// over the staff and once over the tab of the same part.
+    /// <para>
+    /// ⚠️ ONLY THE NOTE-ATTACHED ANNOTATION. A chords TRACK on a tab — <c>tab X with
+    /// chords P</c>, or a <c>chords</c> row the score folded into the tab below it
+    /// (<c>RenderSpecParser.FoldAdjacentRows</c>'s TabStaffSpec arm) — is a line the
+    /// writer PLACED on that tab, and placing it is the request. Same reading under which
+    /// the tab technique letters stay above: what goes is what the tab repeats from the
+    /// staff, not what the tab was asked for.
+    /// </para>
+    /// <para>
+    /// ⚠️ A FULL tab keeps its <c>@chord</c>, by <see cref="Blanks(Staff?)"/>'s criterion —
+    /// including the one combination that still prints twice, an explicit <c>tab m as
+    /// full</c> beside <c>staff m</c>, which is the writer's choice showing through exactly
+    /// as it is for the markup families above.
+    /// </para>
+    /// </remarks>
+    internal static bool BlanksNoteAttachedChord(MultiStaffScore score, ChordNameItem chord)
+        => !chord.IsChordRow && !chord.UseTiming && Blanks(score, chord.StaffIndex);
+
+    /// <summary>
+    /// <paramref name="items"/> without the note-attached <c>@chord</c> symbols a
+    /// numbers-only tab blanks (<see cref="BlanksNoteAttachedChord"/>) — for the
+    /// RESERVATION half, which prices a symbol's width into its column.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE MEASURE-BUCKETED TABLE, NOT <c>score.ChordNames</c> ITSELF: a chord layout's
+    /// <c>SourceIndex</c> indexes the score array, and <c>SharedRenderer.ResolveDataPos</c>
+    /// re-derives every data-pos through it, so that array is never filtered — the INK half
+    /// skips these items inside <see cref="ChordNameEngraver.Calculate"/>, where the index
+    /// is still the score's own. See the class remarks for why two passes ask separately.
+    /// </remarks>
+    internal static ImmutableArray<ChordNameItem> BlankAttachedChords(
+        MultiStaffScore? score, ImmutableArray<ChordNameItem> items)
+    {
+        if (score == null || items.IsDefaultOrEmpty || SetOf(score).Indices.Count == 0)
+            return items;
+        bool any = false;
+        foreach (var item in items)
+            if (BlanksNoteAttachedChord(score, item)) { any = true; break; }
+        if (!any)
+            return items;
+        var kept = ImmutableArray.CreateBuilder<ChordNameItem>(items.Length);
+        foreach (var item in items)
+            if (!BlanksNoteAttachedChord(score, item))
+                kept.Add(item);
+        return kept.ToImmutable();
+    }
 
     /// <summary>
     /// <paramref name="items"/> without the ones a tab staff blanks — the DynamicText /

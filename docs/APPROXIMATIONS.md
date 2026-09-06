@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 58 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 51 | 観測者がゼロだと自認しているもの |
-| `OWN` | 124 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **233** | |
+| `OWN` | 126 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **235** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -89,7 +89,7 @@
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
 - **:2463** ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
 - **:2515** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
-- **:3280** same approximation the scripts' own remark records for the movers; the books that
+- **:3287** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:956** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
@@ -117,7 +117,7 @@
 ### `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs`
 - **:87** ⚠️⚠️ AND THIS IS WHY LILYPOND'S TabNoteHead (whiteout . #t) IS NOT PORTED, which
 ### `LilySharp.Core/Svg/Layout/TabStaffStencils.cs`
-- **:120** RepeatTie, LaissezVibrerTie, PhrasingSlur) are likewise not ported:
+- **:127** RepeatTie, LaissezVibrerTie, PhrasingSlur) are likewise not ported:
 ### `LilySharp.Core/Svg/Layout/TextSpannerEngraver.cs`
 - **:206** bound-details) and that branch is NOT PORTED HERE. No ledger point reads a
 - **:219** ⚠️ THE RIGHT BOUND'S ARITHMETIC IS NOT PORTED HERE, and the left repair is
@@ -177,8 +177,8 @@
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
 - **:540** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
-- **:2100** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
-- **:2122** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
+- **:2109** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
+- **:2131** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
 - **:497** ⚠️ NO POINT OBSERVES THE FOLD: audit/lp-geometry hairpin.page.quiet reads the
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
@@ -188,7 +188,7 @@
 ### `LilySharp.Core/Svg/Layout/LyricSpacing.cs`
 - **:152** is measured-exact there, and no ledger point prices replacing it.
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:4126** company on a row whose symbols sit closer than its spec's 1.0. No point measures
+- **:4133** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:702** does not spell a per-type padding — no point observes a segno/coda over a
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
@@ -222,7 +222,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（124 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（126 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:1798** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -295,9 +295,9 @@
 - **:108** LILYSHARP-OWN, and ONE HOME for it: the rule decides which baseline the symbols are
 - **:137** ⚠️ LILYSHARP-OWN. LilyPond cannot spell the configuration: a `ChordNames` context is its
 - **:210** ⚠️ LILYSHARP-OWN, all of it. LilyPond cannot spell the configuration: a
-- **:452** ⚠️ LILYSHARP-OWN, and it is the SAME shift ClearOfPrevious makes — a symbol whose
-- **:731** LILYSHARP-OWN: LilyPond does not shift a ChordName off its column at all — a
-- **:804** LILYSHARP-OWN: the 2.0 floor has no LilyPond source. It is inherited (it was a 1.0
+- **:465** ⚠️ LILYSHARP-OWN, and it is the SAME shift ClearOfPrevious makes — a symbol whose
+- **:744** LILYSHARP-OWN: LilyPond does not shift a ChordName off its column at all — a
+- **:817** LILYSHARP-OWN: the 2.0 floor has no LilyPond source. It is inherited (it was a 1.0
 ### `LilySharp.Core/Svg/Layout/CustomTextEngraver.cs`
 - **:93** LILYSHARP-OWN, two declared bridges inside that rule (HANDOFF 5.2):
 ### `LilySharp.Core/Svg/Layout/DynamicEngraver.cs`
@@ -320,8 +320,8 @@
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
 - **:443** ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's mark aligns to the BreakAlignGroup,
 - **:858** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
-- **:1545** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
-- **:1840** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
+- **:1554** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
+- **:1849** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
 - **:741** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
@@ -394,6 +394,9 @@
 ### `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs`
 - **:34** LILYSHARP-OWN: deliberately LARGER than LilyPond's, whose tab digits are small
 - **:178** LILYSHARP-OWN. Reserving the glyph WIDTH alone only promises the digits will not
+### `LilySharp.Core/Svg/Layout/TabStaffStencils.cs`
+- **:122** note on the staff above and over the same note on the tab — but it is LILYSHARP-OWN
+- **:221** ★ LILYSHARP-OWN, and it has to be: LilyPond names chords only through a
 ### `LilySharp.Core/Svg/Layout/TextOutlineSkylines.cs`
 - **:54** ⚠️ LILYSHARP-OWN, two declared substitutions inside the walk, neither of which changes
 ### `LilySharp.Core/Svg/Layout/TieFormattingProblem.cs`
