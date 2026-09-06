@@ -92,6 +92,15 @@ public class SvgResponse
     /// </summary>
     public RenderInfo[]? Renders { get; set; }
     /// <summary>
+    /// WHICH score this response drew — the <see cref="RenderInfo.Filename"/> of the
+    /// entry the request resolved to, which is the requested one unless it names no
+    /// score (a stale selection, a renamed block) and the first score was drawn
+    /// instead. The picker shows this, so a selection that cannot be honoured is
+    /// VISIBLE rather than a picture that silently stays on the first score. Null when
+    /// the file declares no score at all.
+    /// </summary>
+    public string? SelectedRender { get; set; }
+    /// <summary>
     /// True when a newer lilysharp/svg request for the same (document, render name)
     /// arrived while this one was queued: no render was performed, Svg and Error are
     /// both null, and the newer request's response carries the picture. The client

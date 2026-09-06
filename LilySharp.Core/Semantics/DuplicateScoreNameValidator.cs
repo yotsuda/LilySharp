@@ -35,13 +35,14 @@ internal sealed class DuplicateScoreNameValidator : ISemanticValidator
         var seen = new HashSet<string>(System.StringComparer.Ordinal);
         foreach (var render in tree.GetRoot().DescendantNodes().OfType<RenderDeclarationSyntax>())
         {
-            // The on-disk output name: an explicit "basename" wins; else the form
-            // `main` writes to the input stem (the "" key), and any other form name
-            // becomes the file name. Two scores sharing that key collide on disk.
-            string? basename = render.BasenameText;
-            string form = render.FormNameText;
-            string outputKey = !string.IsNullOrEmpty(basename) ? basename
-                : form == "main" ? "" : form;
+            // The on-disk output name, from the ONE home that the renderer and the
+            // preview's picker also read (RenderSpecParser.OutputNameOf). Two scores
+            // sharing that key collide on disk — and, because the picker carries this
+            // very word, the second one could not be selected in the preview either.
+            // ⚠️ Reading the RAW basename here was not the same test: "Take 1.0" and
+            // "Take 1.1" are different words but ONE output name (the rule drops what
+            // follows the last dot), so the collision went unreported (2026-09-06).
+            string outputKey = Svg.Collector.RenderSpecParser.OutputNameOf(render);
 
             if (seen.Add(outputKey)) continue; // first time → fine
 

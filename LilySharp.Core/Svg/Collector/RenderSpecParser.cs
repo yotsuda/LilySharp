@@ -27,6 +27,79 @@ namespace LilySharp.Core.Svg.Collector;
 public static class RenderSpecParser
 {
     /// <summary>
+    /// A score's OUTPUT NAME: the stem <c>svg --all</c> writes, the word <c>--score</c>
+    /// selects, and the value the preview's score picker carries. An explicit
+    /// <c>"basename"</c> wins (minus an extension, so <c>score main "song.svg"</c> writes
+    /// song.svg); else the reserved form name <c>main</c> writes to the input .lys stem
+    /// (empty = "derive from the input file"), and any other form name becomes the name.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONE HOME, and it has to be: the rule was written out three times — here, in the
+    /// language server's picker (<c>ExtractRenderInfo</c>) and in
+    /// <c>DuplicateScoreNameValidator</c> — and the two copies kept the RAW basename while
+    /// this one drops the extension. A basename with a dot in it therefore made the picker
+    /// offer a word (<c>"Take 1.0"</c>) that <see cref="MatchesName(string, string, string)"/>
+    /// could not match (the spec's name being <c>Take 1</c>), so choosing that score
+    /// silently drew the FIRST one instead — the preview looked stuck on the main score —
+    /// and the duplicate check, comparing raw basenames, did not see that <c>"Take 1.0"</c>
+    /// and <c>"Take 1.1"</c> collide (2026-09-06, owner report).
+    /// </remarks>
+    public static string OutputNameOf(RenderDeclarationSyntax render)
+    {
+        string? basename = render.BasenameText;
+        if (!string.IsNullOrEmpty(basename))
+            return System.IO.Path.GetFileNameWithoutExtension(basename);
+        string formName = render.FormNameText;
+        return formName == "main" ? "" : formName;
+    }
+
+    /// <summary>
+    /// The score picker's list and its answer, from ONE walk of the render declarations
+    /// and the SAME rule the renderer resolves with: every score's display label and
+    /// output name in document order, plus the index <paramref name="renderName"/>
+    /// selects (<see cref="Choose"/>'s policy — a match, else the first score; −1 when
+    /// the file declares none).
+    /// </summary>
+    /// <remarks>
+    /// The client shows the labels, sends back an output name, and the renderer resolves
+    /// that name with <see cref="MatchesName(string, string, string)"/> — so the list and
+    /// the resolution must come from one rule or a picker entry can name a score the
+    /// renderer will not draw. Deliberately does NOT <see cref="Parse"/> the blocks: only
+    /// the form name and the basename decide either answer, and the preview asks this on
+    /// every keystroke.
+    /// </remarks>
+    public static (System.Collections.Generic.List<(string Label, string OutputName)> Scores, int Chosen)
+        ScoreIndex(SyntaxTree tree, string? renderName)
+    {
+        var scores = new System.Collections.Generic.List<(string Label, string OutputName)>();
+        var forms = new System.Collections.Generic.List<string>();
+        // Render declarations only parse at the top level (Parser.ParseTopLevelItem's
+        // ScoreKeyword arm), so the root's children are the whole search space.
+        foreach (var node in tree.GetRoot().ChildNodes())
+        {
+            if (node is not RenderDeclarationSyntax render)
+                continue;
+            string formName = render.FormNameText;
+            string? basename = render.BasenameText;
+            // The LABEL is what the writer wrote — the basename when given, else the form
+            // name — so two scores on one form still read apart ("main" and "both").
+            scores.Add((!string.IsNullOrEmpty(basename) ? basename! : formName, OutputNameOf(render)));
+            // Parse's spec Name is the form name; MatchesName reads it, so it is carried.
+            forms.Add(string.IsNullOrEmpty(formName) ? "score" : formName);
+        }
+
+        int chosen = scores.Count > 0 ? 0 : -1;
+        if (!string.IsNullOrEmpty(renderName))
+            for (int i = 0; i < scores.Count; i++)
+                if (MatchesName(forms[i], scores[i].OutputName, renderName!))
+                {
+                    chosen = i;
+                    break;
+                }
+        return (scores, chosen);
+    }
+
+    /// <summary>
     /// Parses a RenderDeclarationSyntax into a RenderSpec.
     /// </summary>
     public static RenderSpec? Parse(RenderDeclarationSyntax render)
@@ -39,14 +112,9 @@ public static class RenderSpecParser
         // Header: `score <FormName> ["basename"] [transpose …]`. The form name says
         // WHICH form to render; the basename names the OUTPUT file.
         string formName = render.FormNameText;
-        string? basename = render.BasenameText;
 
-        // Output basename rule: an explicit "basename" wins; else the reserved
-        // form name `main` writes to the input .lys stem (empty OutputFile = "derive
-        // from the input file"); any other form name becomes the file name.
-        string outputFile = !string.IsNullOrEmpty(basename)
-            ? System.IO.Path.GetFileNameWithoutExtension(basename)
-            : formName == "main" ? "" : formName;
+        // Output basename rule — ONE HOME (see OutputNameOf).
+        string outputFile = OutputNameOf(render);
 
         // Name doubles as the `--score <name>` selector — the form name, or "score"
         // when the header is malformed (no form name).
@@ -432,18 +500,24 @@ public static class RenderSpecParser
 
     /// <summary>Whether <paramref name="name"/> selects <paramref name="spec"/> — by its
     /// Name (e.g. "sub"), its full output filename (e.g. "fur-elise.svg"), or that
-    /// filename without its extension. The name-match policy has ONE home: both
-    /// <see cref="FindByName"/> and <see cref="Choose"/> read it, so the CLI's
-    /// <c>--score</c> and the preview's render session cannot drift apart.</summary>
+    /// filename without its extension. The name-match policy has ONE home:
+    /// <see cref="FindByName"/>, <see cref="Choose"/> and <see cref="ScoreIndex"/> read it,
+    /// so the CLI's <c>--score</c>, the preview's picker and its render session cannot
+    /// drift apart.</summary>
     private static bool MatchesName(RenderSpec spec, string name)
-        => spec.Name == name
-            || spec.OutputFile == name
-            || System.IO.Path.GetFileNameWithoutExtension(spec.OutputFile) == name;
+        => MatchesName(spec.Name, spec.OutputFile, name);
+
+    /// <summary>The same policy over a score's two names alone — for
+    /// <see cref="ScoreIndex"/>, which answers the picker without parsing the blocks.</summary>
+    public static bool MatchesName(string specName, string outputFile, string name)
+        => specName == name
+            || outputFile == name
+            || System.IO.Path.GetFileNameWithoutExtension(outputFile) == name;
 
     /// <summary>
     /// The render-selection policy of <see cref="SvgGenerator.Generate(SyntaxTree, Renderer.SvgRenderOptions, string)"/>,
     /// over an already-parsed spec list: no name (null/empty) takes the first spec;
-    /// a name takes the first spec it matches (<see cref="MatchesName"/>), falling
+    /// a name takes the first spec it matches (<see cref="MatchesName(RenderSpec, string)"/>), falling
     /// back to the first spec when nothing matches — a stale preview selection still
     /// shows the default score rather than nothing. Shared by that full path and by
     /// <see cref="IncrementalCompiler"/> so a named session resolves the SAME spec

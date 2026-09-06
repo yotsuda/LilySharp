@@ -858,7 +858,10 @@ async function updatePreviewContent(
         return;
     }
 
-    outputChannel.appendLine('Sending lilysharp/svg request...');
+    // The selection is logged with the request and the answer: "the preview will not
+    // switch scores" is a report about these two words, and without them in the log the
+    // question cannot be settled from a session that already happened.
+    outputChannel.appendLine(`Sending lilysharp/svg request (score ${JSON.stringify(selectedRender ?? null)})...`);
     const requestedAt = Date.now();
     // Stamp this request and cancel the previous one still in flight: the server
     // collapses a queued burst to the newest ticket by itself, but only a client-side
@@ -894,6 +897,7 @@ async function updatePreviewContent(
               + ` / ${t.PendingWorkItems ?? '-'} queued`
             : '';
         outputChannel.appendLine(`Got response: error=${response.Error}, hasSvg=${!!response.Svg}`
+            + `, drew score ${JSON.stringify(response.SelectedRender ?? null)}`
             + ` (${Date.now() - requestedAt} ms round trip${split}; host lag max ${hostLag} ms)`);
 
         // A newer request owns the preview now — its response paints, this one drops.
@@ -923,6 +927,17 @@ async function updatePreviewContent(
             setTimeout(() => updatePreviewContent(document, panel, context, retries - 1), 150);
             return;
         }
+        // What the picker must show is the score the server DREW, not the one this
+        // request asked for: a selection the document no longer has (a block renamed or
+        // removed since it was picked) resolves to the first score, and a picker still
+        // naming the old one would make the preview look stuck on the main score with
+        // nothing to say why. Older servers do not answer this; then the request stands.
+        const drawnRender = response.SelectedRender ?? selectedRender ?? '';
+        if (drawnRender !== (selectedRender ?? '')) {
+            outputChannel.appendLine(`Score ${JSON.stringify(selectedRender ?? null)} is not in this`
+                + ` document; drew ${JSON.stringify(drawnRender)} instead`);
+            selectedRenders.set(uri, drawnRender);
+        }
         if (response.Svg) {
             // The response may carry an error TOO: a file with parse errors still
             // renders best-effort (the bad parts are dropped), the score shows
@@ -944,7 +959,7 @@ async function updatePreviewContent(
                     svg: response.Svg,
                     error: response.Error ?? undefined,
                     renders: response.Renders || [],
-                    selectedRender: selectedRender || ''
+                    selectedRender: drawnRender
                 });
             }
         } else if (response.Error) {
@@ -959,7 +974,7 @@ async function updatePreviewContent(
                 type: 'updateContent',
                 error: response.Error,
                 renders: response.Renders || [],
-                selectedRender: selectedRender || ''
+                selectedRender: drawnRender
             });
         } else {
             outputChannel.appendLine('Response has neither error nor SVG');
@@ -1603,6 +1618,12 @@ interface SvgResponse {
     Svg: string | null;
     Error: string | null;
     Renders: RenderInfo[] | null;
+    // WHICH score was drawn (a RenderInfo.Filename). Normally the one asked for; when the
+    // request named no score of this document — a selection left over from an edit that
+    // renamed or removed the block — the server draws the first one and says so here, and
+    // the picker follows, so the mismatch is visible instead of a picture that looks stuck
+    // on the main score. Absent on servers older than 2026-09-06.
+    SelectedRender?: string | null;
     // True when the server's latest-wins machinery skipped this render because a
     // newer request for the same (document, render name) had already arrived —
     // no Svg, no Error; the newer response carries the picture. Absent on servers

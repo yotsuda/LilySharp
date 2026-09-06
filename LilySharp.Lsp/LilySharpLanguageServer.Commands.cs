@@ -23,6 +23,7 @@ using StreamJsonRpc;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Music;
 using LspRange = LilySharp.Lsp.Protocol.Range;
@@ -440,8 +441,9 @@ public sealed partial class LilySharpLanguageServer
         // (data-pos editor<->preview sync) are unchanged.
         var (tree, _) = ExpandUsings(doc, @params.TextDocument.Uri);
 
-        // Extract render definitions
-        var renders = ExtractRenderInfo(tree);
+        // The picker's list AND the entry this request resolves to, from one walk and
+        // the renderer's own rule (RenderSpecParser.ScoreIndex).
+        var (renders, drawnRender) = ExtractRenderInfo(tree, @params.RenderName);
         timing.ExpandMs = receipt.MsSince(expandStart);
 
         // Best-effort policy: a tree with parse errors still renders — the parser's
@@ -505,7 +507,8 @@ public sealed partial class LilySharpLanguageServer
             {
                 Svg = svg,
                 Error = errorText,
-                Renders = renders
+                Renders = renders,
+                SelectedRender = drawnRender
             }, timing, receipt);
         }
         catch (OperationCanceledException)
@@ -521,7 +524,8 @@ public sealed partial class LilySharpLanguageServer
             {
                 Svg = null,
                 Error = errorText == null ? ex.Message : $"{errorText}\n{ex.Message}",
-                Renders = renders
+                Renders = renders,
+                SelectedRender = drawnRender
             }, timing, receipt);
         }
     }
@@ -912,7 +916,7 @@ public sealed partial class LilySharpLanguageServer
     public SvgResponse RenderText(RenderTextParams @params)
     {
         var tree = SyntaxTree.Parse(@params.Text ?? "");
-        var renders = ExtractRenderInfo(tree);
+        var (renders, drawn) = ExtractRenderInfo(tree, @params.RenderName);
 
         if (tree.HasErrors)
         {
@@ -925,18 +929,18 @@ public sealed partial class LilySharpLanguageServer
                     // a human, so show 1-based line/column to match the editor gutter.
                     return $"Line {line + 1}, Col {col + 1}: {d.Message}";
                 }));
-            return new SvgResponse { Svg = null, Error = errors, Renders = renders };
+            return new SvgResponse { Svg = null, Error = errors, Renders = renders, SelectedRender = drawn };
         }
 
         try
         {
             var svg = LilySharp.Core.Svg.SvgGenerator.Generate(
                 tree, LilySharp.Core.Svg.Renderer.SvgRenderOptions.Preview(), @params.RenderName);
-            return new SvgResponse { Svg = svg, Error = null, Renders = renders };
+            return new SvgResponse { Svg = svg, Error = null, Renders = renders, SelectedRender = drawn };
         }
         catch (Exception ex)
         {
-            return new SvgResponse { Svg = null, Error = ex.Message, Renders = renders };
+            return new SvgResponse { Svg = null, Error = ex.Message, Renders = renders, SelectedRender = drawn };
         }
     }
 
@@ -991,38 +995,35 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>
     /// Extract render definitions from the syntax tree.
     /// </summary>
-    private RenderInfo[] ExtractRenderInfo(SyntaxTree tree)
+    /// <summary>
+    /// The preview's score picker: one entry per <c>score</c> block (its LABEL — the
+    /// basename when given, else the form name — and the output name the client sends
+    /// back to select it), plus the output name <paramref name="renderName"/> actually
+    /// resolves to, so the response can say WHICH score was drawn.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The list and the resolution both come from
+    /// <see cref="RenderSpecParser.ScoreIndex"/> — the renderer's own rule. This method
+    /// used to compute the value itself, from the RAW basename, while the renderer
+    /// resolved the extension-less form: a score named <c>"Take 1.0"</c> could then be
+    /// offered but never selected, and picking it silently drew the FIRST score
+    /// (2026-09-06, owner report — the preview looked stuck on the main score).
+    /// </remarks>
+    private static (RenderInfo[] Renders, string? Drawn) ExtractRenderInfo(
+        SyntaxTree tree, string? renderName = null)
     {
-        var renders = new List<RenderInfo>();
-        // Render declarations only parse at the top level (Parser.ParseTopLevelItem's
-        // ScoreKeyword arm), and this runs per preview request — ChildNodes, not a
-        // whole-tree DescendantNodes materialization (RenderSpecParser.FindAll's shape).
-        foreach (var node in tree.GetRoot().ChildNodes())
+        var (scores, chosen) = RenderSpecParser.ScoreIndex(tree, renderName);
+        var renders = new RenderInfo[scores.Count];
+        for (int i = 0; i < scores.Count; i++)
         {
-            if (node is RenderDeclarationSyntax render)
+            renders[i] = new RenderInfo
             {
-                // `score <FormName> ["basename"] { ... }`.
-                string basename = render.BasenameText ?? "";
-                string formName = render.FormNameText;
-                // Picker label / --score selector: the basename when given, else the
-                // form name — so two scores on the same form still read distinctly
-                // (e.g. "main" and "あいう"). FindByName matches either.
-                string label = basename.Length > 0 ? basename : formName;
-                // Export basename: an explicit basename wins; else the reserved form
-                // `main` writes to the input file's name (empty ⇒ the previewer uses
-                // the source .lys stem); any other form name becomes the file name.
-                string exportName = basename.Length > 0 ? basename
-                    : formName == "main" ? "" : formName;
-
-                renders.Add(new RenderInfo
-                {
-                    Name = label,
-                    Type = "score",
-                    Filename = exportName
-                });
-            }
+                Name = scores[i].Label,
+                Type = "score",
+                Filename = scores[i].OutputName,
+            };
         }
-        return renders.ToArray();
+        return (renders, chosen >= 0 ? scores[chosen].OutputName : null);
     }
 
 }

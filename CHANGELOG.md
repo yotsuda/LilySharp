@@ -91,6 +91,16 @@ scores against LilyPond's picture of the same book.
   and 2.6 minutes as ten `--batch` processes. `pdf` refuses `-j` outright — PdfSharpCore
   allows one font resolver per process and each document re-points it at its own faces, so
   concurrent PDF export would embed another document's fonts.
+- **The preview's score picker selects the score it names.** A score's output name — the
+  stem `svg --all` writes and the word `--score` takes — was computed in three places, and
+  only the renderer's copy dropped an extension: a score written `score main "Take 1.0"`
+  was therefore offered in the picker under a word (`Take 1.0`) that the renderer matched
+  against nothing, so choosing it silently drew the FIRST score and the preview looked
+  stuck on the main score. The rule now has one home, which the renderer, the picker and
+  the duplicate check all read. The picker's LABEL is still what the writer wrote; its
+  value is the output name. And the answer now says which score was drawn, so a selection
+  that cannot be honoured — a block renamed or deleted since it was picked — moves the
+  picker to the score on screen instead of naming one that is not the picture.
 - **The score preview's color scheme is a setting** — `lilysharp.preview.theme`: follow
   VS Code's theme (the default, and what the preview always did), always light (the printed
   page), or always dark (the page inverted). A change reaches every open preview at once.
@@ -109,6 +119,10 @@ scores against LilyPond's picture of the same book.
   chord row is measure-relative — its entries carry no duration and divide the bar on the
   beat grid — so its bars can be neither short nor long, and the row keeps only its own
   grid diagnostics (LYS2009 / LYS2010).
+- **Two scores whose names differ only after a dot are reported as the collision they are.**
+  The duplicate-output check compared the written basenames, so `score main "Take 1.0"` and
+  `score main "Take 1.1"` read as two names — while both write `Take 1.svg` and both offer
+  the same word to the preview's picker. It reads the output name now (LYS6001 as before).
 - **A `time` written after a repeat body no longer reaches back into it.** A percent or
   volta body closes its own rendered bars, so the written bar around it may read
   `repeat percent 9 { r1 } time 1/4 r4 |` — the meter change belongs to the `r4`. The bar
