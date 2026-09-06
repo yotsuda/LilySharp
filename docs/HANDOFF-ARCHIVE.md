@@ -18,6 +18,90 @@
 
 ---
 
+## 以下は第339セッションの経緯
+
+最終更新 第339セッション＝**入り方は第298〜第338 と同じ**（ユーザーは `docs/HANDOFF.md` を読んで着手せよとだけ言い・background job・口挟み 0）。第338 の次の一手 **⑴「Lily# 自身の鎖を計器にする」**に入り、**3 便で ⒜⒝⒞ を通し、その先の台帳点まで建てた**。**製品は inert な debug の吐き出し 2 本だけ**（出力不動・snapshot 0 枚）・**台帳 794 → 800（+6・全部 exact・guard）**。**骨は 12**（⑴〜⑻ 第 1 便・⑼⑽ 第 2 便・⑾⑿ 第 3 便）:
+
+★★★ **⑴ 計器（製品・`49ef3c14`）＝頁の鎖が自分を名乗る**: `PageLayouter.PositionSystemsOnPage` が既存の `LayoutEngine.DebugPageBreakingScoring`（**LP の `-ddebug-page-breaking-scoring` と同名の delegate・段数ループが既に書いている**）へ**ばねを 1 本ずつ**吐く: 境界の種類（`top-system`／題の頁は `top-markup`＋`markup-system`／`staff-staff`／`system-system`／`last-bottom`）・spec の ideal・**`ensure_min_distance` 後の rod**・invStretch／invCompress／blocking・**解いた長さ**・両者が等しければ **`ROD`**。**数は全部 `Spring` 自身から読む**（新しいのはラベルだけ＝**第2の算術を持たない**）。番人 `PageChainDebugTests` 2 本＝**ラベルが鎖と同じ並び**（題の頁と素の頁の両方を踏むことも表明）／**解いた長さが実際の配置を再現する**（`Y_i − Y_{i+1}` ＝ 譜ばね ＋ 段間ばね）。production では delegate が null＝**ばね 1 本につき null テスト 1 回**だけ。
+
+⚠️⚠️ ★★★ **⑵ 第338 ⒀ の表を engine 自身の rod で置き換えた**（Boogie「both」1 頁目・**force −0.673977**・18 ばね・頁 157.628・`scratch/p339/probe2.txt`）:
+
+| 対 | Lily# 解いた | Lily# rod | | ⒀ の単純和 | LP 解いた(⒀) |
+|---|---|---|---|---|---|
+|1→2|10.407|10.407|**ROD**|11.048|14.030|
+|2→3|10.845|10.845|**ROD**|11.433|11.384|
+|3→4|10.407|10.407|**ROD**|11.048|12.323|
+|4→5| 9.304| 9.200| | 9.788|13.335|
+|5→6| 9.304| 8.181| | 8.181|13.168|
+|6→7| 9.448| 9.448|**ROD**| 9.788|10.539|
+|7→8| 9.304| 8.199| | — | — |
+
+⇒ ★★★ **⒀ の「Lily# は 6 対中 5 対で床を 0.59〜0.83 下回る」は誤り**——**ばねは rod を下回れない**。**⒀ の「Lily# ばね」列も 4→5・5→6・6→7 が違う**（refDist の取り違え。正しくは 9.304／9.304／9.448＝⑿ の原点→原点から譜ばねを引けば一意）。**engine の rod は ⒀ の単純和より 0.34〜0.64 小さい**＝X を見た距離（⒀ 自身が予告した向き）。**譜ばね 8.326 ＝ 9 ＋ (−0.674)×invCompress 1**・段間の非 ROD **9.304 ＝ 12 ＋ (−0.674)×4**＝**全部同じ力で解けている**。
+
+★★ **⑶ 1 頁目は最大圧縮ではない**: 段間 7 対のうち rod に乗っているのは 4 対だけ。**全部を rod まで落とすと 153.036＝余裕 4.59 ss**（頁 157.628）。9 段目（~18 ss）は入らない。
+
+⚠️⚠️ ★★★★ **⑷ LP を `-ddebug-page-breaking-scoring` で走らせて並べた（339 便が初めて）＝段数も line breaking も一致していた**（`scratch/p339/lp-scoring.ps1` → `lpscore/lp.err`）:
+
+| | 選んだ段数 | best score | 頁 |
+|---|---|---|---|
+|LP book1（both）|**24**|**19.531366**|**4**|
+|Lily# book1|**24**|**20.263592**|**3**|
+|LP book2（bassTab）|**24**|19.824125|2|
+|Lily# book2|**24**|21.586817|2|
+
+**LP の「8,8,8,1」は題を頁の*行*に数えた署名＝1 頁目は題＋7 段**（段の合計は 24）。Lily# は題＋8／8／8。**Lily# の段割り（`lines 4,4,4,4,4,12,4,12,…`）も 24 段で同じ。** ⇒ ★★★ **breaker の段数選択も line breaking も無罪。残るのは「題の頁に 7 段か 8 段か」ただ 1 点。**
+
+⚠️ ★★★★ **⑸ LP は 8 段を*載せられる*。載せないだけ**（`scratch/p339/lp-pagecount.ps1`＝原本の定義部＋`"bass"` book だけを組み直して `\paper { page-count = #N }` を挿す。⚠️ **93 行目が `%{` で 94..113 の 2 book を殺している**ので定義部は **1..92 行**）: **`page-count = #3` で LP は警告 0・PDF 3 頁・段署名 `9,8,8`＝Lily# の答えそのもの**（対照＝強制なし `8,8,8,1`／`#4` も同じ）。**しかも forced-3 の best score は 19.531211 で、free の 19.531366 より*低い*。** ⇒ ★★★ **幾何の島ではない**——LP 自身の採点でも 3 頁のほうが安いのに、**LP の free な DP は 4 頁を返す**。
+
+⚠️⚠️ ★★★★ **⑹ その矛盾の在処＝LP の DP が最小化する量と、報告される demerits が違う**: `lily/page-spacing.cc:148-181 Page_spacer::solve ()` は `ret.demerits_ += cur.force_ * cur.force_` を**全頁**について足す。一方 `lily/page-breaking.cc:1571-1577 finalize_spacing_result` は `for (i = ragged () ? size−1 : 0; i < size − (is_last () && ragged_last ()); i++)`＝**`ragged-last-bottom = ##t`（既定）なら最終頁の力は 1 度も課金されない**。**⇒ 最終頁に 1 段だけ置く解は報告側では*ただ*で、DP 側では課金される（逆も同じ）＝DP の argmin は報告される点数の argmin ではない。** Lily# 側は `PageBreaker.Demerits` が finalize を逐語（最終頁の除外を含む）・`SolveUnconstrained` が `Page_spacer::solve()` の移植。⚠️⚠️ **この段は LP の中の記述としては正しいが、両者の差の説明にはならない**——**第 2 便 ⑼⒜ が「Lily# も LP と同じく DP では最終頁を課金している」ことを確かめた。ここを移植の根拠にしないこと。**
+
+★ **⑺ spec は完全一致**（`ly/paper-defaults-init.ly:62-87` の実物と照合＝system-system 12/8/1/60・markup-system 5/–/0.5/30・top-system 6/0/1・top-markup 4/0/1・last-bottom 1/0/1/30）＝`VerticalSpacingParameters` と字面まで同じ。**仕様値の食い違いではない。**
+
+★ **⑻ 数**: 台帳 794／exact 626／ss 非ゼロ 203（総和 26.789）／count 172 うち非ゼロ 0／OPEN 0＝**全部不動**。full **7158 / 0 / 4 / 7162**（`scratch/p339/full2.trx`・4 分 38 秒・**+2＝番人**）・`--no-incremental` build 0 エラー・Core 0 警告（445 秒）・snapshot 247・追跡 `.lys` 597＝不動。
+
+★ **開始時裏取り**: HEAD **`44803e37`**・**未 push 10**・木 clean・未追跡 0・`gh run list` の最新 push は緑・build 0 エラー／Core 0 警告（297 秒）・full **7156 / 0 / 4 / 7160**（`scratch/p339/run1.trx`・6 分 23 秒）・台帳 794／exact 626／ss 非ゼロ 203（26.789）／count 172／OPEN 0・snapshot 247・追跡 597＝**全部引き継ぎどおり**。
+⚠️ ★★ **踏んだ罠 2 つ**: ⒜ **捨て計器（`Zz*ProbeTests.cs`）を `LilySharp.Tests` に置いたまま full を回すと 3 本落ちる**（GPL 札／`audit/magic_constants.csv`／`docs/APPROXIMATIONS.md` の行番号）——**使い終わったら `scratch/pNNN/*.cs.txt` へ戻す**（第338 までと同じ作法）。⒝ **`DebugPageBreakingScoring` は static** なので、**hook を張る test が 2 本並列に走ると互いの hook を null にし、他人の鎖が自分の log に流れ込む**——番人は**自分のスレッドで上がった行だけ拾う**ようにしてある。⚠️ 生成物 2 つは `LILYSHARP_UPDATE_DOCS=1` で再生成（**行番号だけ**動いた）。
+**終了時（第 1 便）**: **commit 2 本（debug hook＝Core 2＋番人 1＋生成物 2／この HANDOFF＋ARCHIVE＝第337 の経緯を先頭へ逐語）・未 push 12・木 clean・未追跡 0**・製品の出力不変（台帳・snapshot・追跡 `.lys` すべて不動）。
+
+✅ ⚠️⚠️ ★★★★ **⑼ 第 2 便（ユーザー「このセッションでやる方が有利なら着手」→ 計器が温かいので ⒜⒝ を潰した）＝⑹ の仮説は死んだ。目的関数も力の式も正しい移植で、違うのは*入力***:
+**⒜ Lily# の DP は最終頁の力を課金している**——LP と同じ。`PageBreaker.SolveUnconstrained` は `if (last && ragged && f > 0) f = 0; dem = min(f*f, BAD) + demerits[prev]`＝**頁の除外は無い**（`lily/page-spacing.cc:357-366 calc_subproblem` と同形。LP 側も `Page_spacer::solve ()` の `ret.demerits_ += cur.force_ * cur.force_` に除外は無い）。⇒ **⑹ の「Lily# は最終頁を課金していないのでは」は外れ。**（⑹ の*機構の記述*——DP は全頁を課金し `finalize_spacing_result` は最終頁を免除する——は正しい。**LP の中の話としては残るが、両者の差の説明にはならない。**）
+**⒝ 力の式も逐語**: `PageSpacing.CalcForce` ＝ `Page_spacing::calc_force`（`(height − rod − bottom_padding − spring_len) / max (0.1, Σ inverse_hooke)`・`height = page_height − min_whitespace_at_top − min_whitespace_at_bottom`）。rod の積み方（先頭だけ `full_height`・以降 `tallness`）も `append_system`／`prepend_system` のまま。⚠️ **breaker の力が鎖の力の 1/18（−0.038 対 −0.674）なのは LP でも同じ**（`inverse_hooke_ = full_height + 12` を全行足すので分母が ~260 になる）＝**欠陥ではない。並べるときに混ぜないこと。**
+⚠️⚠️ ★★★★ **⒞ 数が出た（計器をもう 1 つ・製品・inert・`36284b0e`）**: `PageBreaker.FindOptimalBreaks` が既に持っている `dp[n, p]` の列を、**選んだ数を `*` で印して**同じ hook へ吐く（番人 `ThePageCountCosts_RankTheCountTheLayoutTook_Cheapest`）。**Boogie「both」25 行（題＋24 段）で Lily# は `3:0.024652* 4:0.037448 5:2.307230`**＝**3 頁と 4 頁が「安い 2 つ」で 5 頁は 2 桁上。Lily# は 3 頁を 0.012796 だけ好む**（重み 10 込み・生 Σf² は 0.0024652 対 0.0037448）。**LP 側の同じ 2 つ＝報告値 4 頁 19.531366（自由）対 3 頁 19.531211（`page-count = #3`）＝3 頁のほうが 1.55e-4 安いのに LP は 4 頁を返す。** ⇒ ★★★ **両者とも 3 頁と 4 頁はほぼ互角で、落ちる側が逆。Lily# の差（生 1.3e-3）は LP の差（生 1.6e-5）の ~80 倍＝Lily# のほうが 3 頁を強く好む。**
+⇒ ★★★★ **⒟ 残った所在＝breaker に渡す `Line_details` の*値***: 目的関数（⒜）も力の式（⒝）も spec（⑺）も段数と段割り（⑷）も一致しているので、**残るのは 1 行ぶんの `full_height()`／`tallness_`／`inverse_hooke_` しかない**。**LP はこれを pure heights から作る**（`lily/constrained-breaking.cc:505-565 fill_line_details` → `System::begin_of_line_pure_height`／`rest_of_line_pure_height`）が、**`PageLayouter` の頭注が自分で「NOT IMPLEMENTED — pure heights」と書いている**＝Lily# は置かれた系の silhouette から作る。⚠️ **第338 ⑾⒠ が ≤0.31 と測ったのは*描かれた*インクで、pure の値ではない。ここはまだ 1 度も対で測っていない。**
+★ **⑽ 第 2 便の数**: full **7159 / 0 / 4 / 7163**（`scratch/p339/full3.trx`・4 分 27 秒・**+1＝番人**）・`--no-incremental` build 0 エラー・Core 0 警告（437 秒）。台帳 794／exact 626／snapshot 247／追跡 597＝不動。⚠️ **生成物 2 つは今度は動かなかった**（`PageBreaker.cs` の追加行より後ろに census の行が無い）——**それでも `LILYSHARP_UPDATE_DOCS=1` で確かめてから full を回すこと。**
+**終了時（第 2 便）**: **commit 2 本（page-count costs＝Core 1＋番人 1／この HANDOFF）・未 push 14・木 clean・未追跡 0**・製品の出力不変。
+
+✅ ⚠️ ★★★★ **⑾ 第 3 便（ユーザー「有利なら着手」→ 次の一手 ⑴⒝ の台帳点を建てた・製品 0・台帳 +6）＝mark は無罪。Boogie の 1 頁目が高い理由は mark ではない**:
+**⒜ 新 book 3 つ**（`probes/staff-tab-page.ly`）: **STB8TM**（STB8T ＋ 全段に `\mark \markup { \box "A" }`）・**STB9T**（題付き **9 段**・素）・**STB9TM**（9 段・mark 付き）。Lily# 側は `StaffTabPageScore(…, marked:)` ＝ **`@mark("A")`**（exporter が `\mark \markup \box "A"` を出す＝**両側が同じインクを持つことを*構成で*保証**——目視で確かめない）。
+**⒝ 測定**（LP は `Measure-LilyPondProbe.ps1`・Lily# は `scratch/p339/ZzP339bProbeTests.cs.txt` → `probe4.txt`）: **LP STB8T 題＋8 段 1 頁／STB8TM 題＋8 段 1 頁／STB9T 題＋8 段 ＋ 1 段 ＝ 2 頁／STB9TM 同じ。Lily# は 4 冊とも同一。** ⇒ **台帳 6 点・全部 exact**（`page.staff-tab.titled.marked.*`／`.nine-systems.*`／`.nine-systems.marked.*`）。**guard として起票**（defect ではない）。
+⚠️ ★★★ **⒞ 陽性対照つきの negative**: **8 段の題付き頁は mark 箱より大きい余裕を持っている**ので、**mark をどれだけ間違って値付けしても 8 段では現れない**——だから **9 段（頁が実際に折れる数）を対にした**。**STB8T は載り STB9T は折れる＝この計器は「1 段ぶんの高さ」を見分けられる。それでも両エンジンの差は 0。**（`feedback_negative_result_needs_positive_control` の型）
+⇒ ⚠️⚠️ ★★★★ **⒟ 第338 ⑺⒜ の読み方を狭めること**: あの A/B は「**Boogie から mark を落とすと LP が 1 段増える**」を示しただけで、「**mark が高さの主因**」は示していない。**頁が縁に在るとき、十分大きいインクを落とせば何であれ 1 段買える**——`Accidental`・`Slur`・`Script` 等が動かなかったのは**それらが mark より小さいから**。**mark は最後の一押しであって荷物ではない。** ⇒ ★★ **1 grob ずつの A/B は「藁」を名指すのであって「荷」を名指さない。荷を知るには*その grob だけを対照に足す*こと**（＝この便がやったこと）。
+⚠️⚠️ ★★★ **⒠ 「次は `\tabFullNotation`」は前提が偽だった（第 4 便の頭で潰した・`feedback_lilysharp_verify_comparison_premise`）**: **割れているのは book "bass"＝「both」で、その TabStaff は素**（`Boogie Oogie Oogie.ly:128-136`＝`stringTunings` と `TabNoteHead.font-size = 2` だけ）。**`\tabFullNotation` が在るのは別 book の "bassTab"（:154）で、そちらは LP も Lily# も 2 頁で一致している。** ⇒ **この候補は消える。**（第337 ⑺ の「実コーパスの tab 本は全部 `\tabFullNotation`」は *tab 単独の本*についての話。）
+⇒ **⒡ 「both」に在って STB9T に無いもの（更新後の候補）**: **volta bracket・臨時記号・高い音（`e'`/`g'`＝五線の上インク）・percent 反復・`TabNoteHead.font-size = 2`（数字が大きい＝tab のインクが縦に伸びる）・4 弦 tuning（STB は bass5）**。⚠️ **ただし ⑾⒟ の教訓により、候補を 1 つずつ*足して*測ること。**
+★ **⑿ 第 3 便の数**: 台帳 794 → **800**／exact 626 → **632**／ss 非ゼロ 203（26.789）不動／count 172 → **178** うち非ゼロ 0／OPEN 0。full **7165 / 0 / 4 / 7169**（`scratch/p339/full4.trx`・2 分 34 秒・**+6＝台帳点**）・build 0 エラー・Core 0 警告（266 秒）・snapshot 247・追跡 597＝不動。
+**終了時（第 3 便）**: **commit 2 本（台帳 6 点＋プローブ 3 book＋Lily# 側の双子／この HANDOFF）・未 push 16・木 clean・未追跡 0**・製品コード不変（出力不動・snapshot 0 枚）。
+
+✅ ⚠️ ★★ **⒀ 第 4 便（ユーザー「有利なら着手」→ *着手しなかった*・製品 0・台帳 0）**: 次の一手の候補 **`\tabFullNotation`** を建てる前に**前提を確かめて、偽だと分かった**（⑾⒠）ので**その book は建てていない**。代わりに**次便が冷えた頭で始められるように 2 つだけ置いた**: **⒜ 候補表の差し替え**（⑾⒡）と、**⒝ ⒞ の Lily# 半分を表にして下の「次の一手」へ**（`placed sys` は既に取れていた＝新たに測っていない）。**LP 半分は設計仕事が要り、それはこの便の文脈の重さより新しい頭のほうが安い**——**だから止めた。**
+
+⇒ ★★★★ **次の一手**: ✅ 第338 ⑺ mark・✅ ⑻ 括弧・✅ ⑾ 2.311・✅ ⑿ 段の高さ・✅ **⑵ 段間の rod**・✅ **⑷ 段数と line breaking**・✅ **⑺ spec**・✅ **⑼⒜ 頁 DP の目的関数**・✅ **⑼⒝ `calc_force` の移植**。**残るのは 1 つ: breaker が 1 行を値付けする 3 つの数（`full_height` / `tallness` / `inverse_hooke`）。**
+**⑴ `tallness` を段ごとに直接突き合わせる（合成 book を 1 つずつ足す路線より先にこちらを勧める）**——**⑾ で mark が落ち、⑾⒠ で `\tabFullNotation` の前提も落ちたので、候補を当てにいく費用が上がった。**
+**⒜ Lily# 側は*もう取ってある***（`scratch/p339/probe2.txt` の `placed sys` 行＝`LayoutEngine.DescribeDetails`）。**Boogie「both」の 1 頁目 8 段**（`top / body / bottom / tallness`・**body は全段 12.250＝譜対を整列の最小 8 に戻した値**＝五線の半分 2.0 ＋ 8 ＋ tab の半分 2.25。⑾ 以降の枠と整合）:
+
+| sys | top | tallness | | sys | top | tallness |
+|---|---|---|---|---|---|---|
+|1|7.101|19.989| |5|3.900|17.869|
+|2|5.160|18.460| |6|2.293|16.181|
+|3|5.545|18.845| |7|3.900|18.453|
+|4|5.160|18.460| |8|2.311|16.199|
+
+（`top` 5.16／5.545 は mark の段・2.29／2.31 は静かな段＝⑾⒜ の小節番号。**この表は題ぬきで `CalcLineHeights` を回した値**なので、題を先頭に付けた本番では sys 1 の tallness だけ変わる。）
+**⒝ LP 側が要る**。`Line_details` は Scheme から見えないので**直接は取れない**——**次便の設計仕事はここ**。案: **(i) `bare/lp.out` の `yoff` 差分**は*解いた*距離であって最小ではないので、そのままでは `tallness` ではない。**(ii) `page-count = #N` を 1 ずつ動かして LP が警告（`too few pages: n (should have at least m)`）を出す境目を探す**と **LP の `min_page_count` が読める**＝**「最小の積み方で何頁要るか」**が分かり、Σ tallness に対する不等式が 1 本引ける（**この便で `#3` は無警告＝LP の min_page_count ≤ 3 は既知**）。**(iii) `ragged-bottom = ##t` にすると全ばねが自然長になる**ので、そこでの `yoff` 差分は tallness ＋ ばねの自然長＝**spec から引き算できる**。**(iii) が一番安い。**
+⚠️ **移植に触るのはそのあと**（`Line_details` の値が動けば全本の頁割りが動く＝**承認事項**）。
+**⒞ 合成 book の路線を続けるなら**、⑾⒡ の候補（volta／臨時記号／高い音／percent／`TabNoteHead.font-size = 2`／4 弦）を**1 つずつ*足して***・**必ず 8 段と 9 段の対で**（⑾⒞ の陽性対照）。⚠️ **落として測らないこと**（⑾⒟）。
+⚠️ **もう疑わなくてよい**: 段数の選択・line breaking（⑷）・spec の値（⑺）・題の値付け（第338 ⑸）・括弧（第338 ⑻）・段ごとの*描かれた*上下インク（第338 ⑾⒠）・段間の rod（⑵）・**頁 DP の目的関数と力の式（⑼⒜⒝）**・**mark（⑾＝台帳 6 点・陽性対照つき）**。
+⚠️ **LP に「8 段が載るか」を訊く道具は `scratch/p339/lp-pagecount.ps1`**（`page-count` を強制して段署名を読む）。⚠️ **インク比較は `scratch/p338/lp-bare.ps1`**（素の LP）。⚠️ **`SystemLayout.Y` は頁の下端からの Y-up**・**段の高さを LP と並べるときは `ToFirst` を足す**。
+⑵ 以下は第338 の並び（`lysc ly` の ChordNames＝ユーザーと綴りを決めてから／lyric row の slot の投票／ps2 の 0.017・beam-over-stem bar 1 の +0.33／push 後 `gh run list`／`audit/lpreg` 取り直し／§2 U8c・U8b・U8／A/B/D/E／C⑴／G）。⚠️ **承認待ち・リリース 0.6.0 の bump／tag は第328 と同じ。**
+
 ## 以下は第338セッションの経緯
 
 最終更新 第338セッション＝**入り方は第298〜第337 と同じ**（ユーザーは `docs/HANDOFF.md` を読んで着手せよとだけ言い・background job・口挟み 0）。第337 の次の一手 **⑴「tab の頁 skyline の above-tab インク完全性（bend を播く）」**に入ったが、**その前提が枠の取り違えだったので移植せず、島を測り直して台帳 4 点（対照 2 組）を起票した。製品コードは 1 行も触っていない（出力不動・snapshot 0 枚）。骨は 6 つ**:
