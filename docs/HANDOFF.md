@@ -247,6 +247,21 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 **⒝ Lily# 半分は §1 に*書いてある***（第339 ⒜ の 8 段の `top`/`tallness` 表）ので、**新しい頭は何も失わない**。**残っているのは設計仕事＝新しい頭のほうが安い**、という第339 の一行がそのまま当たる。
 ★★ **⒞ 代わりに「道具が生きているか」だけ確かめた**（`scratch/` は git 管理外なので、ここが死んでいると次便が痛い）: **`scratch/p339/lp-pagecount.ps1`・`lp-scoring.ps1`・`probe2.txt`・`ZzP339bProbeTests.cs.txt`・`scratch/p338/lp-bare.ps1` は全部在る**。**LP 2.26.0 も在る**（`C:\bin\lilypond-2.26.0\bin\lilypond.exe`）。⚠️ **§1 が `probes/staff-tab-page.ly` と書いているのは `audit/lp-geometry/probes/staff-tab-page.ly` の略**（`audit/lp-geometry` からの相対。ルートに `probes/` は無い）。`Measure-LilyPondProbe.ps1` も `audit/lp-geometry/` に在る。
 
+✅ ⚠️⚠️⚠️ ★★★★ **⑿ 第 5 便＝⑺⒝ に名前だけ置いた穴を*実機で再現して*閉じた。第 1 便の「再現しない」の答えかもしれない**（ユーザー「ほかに、このセッションが有利な残債はない？」→ これを推薦 →「やって」）:
+**⒜ 穴**: **プレビューを開いたまま元のエディタ タブを閉じると、`selectRender` は `workspace.textDocuments` に本を見つけられず*何もしない***——**要求も出さず・バナーも出さず・ログにも出ない**。⇒ **画面の上では「拾い箱は動くのに絵が第 1 score のまま」**＝**第 1 便でユーザーが報告した絵そのもの**。
+★★★ **⒝ 実機で再現した**（`scratch/p343/closetab.js`＝⑹ の CDP 運転に「ソース タブを閉じる」を足したもの）: **タブを閉じる前は Take 1 → Take 2 で len 4660 → 7189。閉じた後は拾い箱だけ Take 2 に動き、絵は 4660 のまま・banner 空・stale false**。**9 秒待っても動かない。**
+**⒞ 直し**＝`previewDocument(uri)` を 1 つ置き、**閉じていたら `workspace.openTextDocument` で*黙って*開き直す**（**エディタは出ない**——直後の tab 一覧で確認済み）。**LSP にも再登録される**ので、`updatePreviewContent` の既存の「Document not found → 150 ms × 8 で再試行」がそのまま受ける。**`untitled:` だけは開き直さない**——**中身はエディタと一緒に消えているので、開き直すと*空の本*を書き手の本として描いてしまう**。そこは警告で言う。
+**⒟ 同じ穴の兄弟も 1 つ直した**: **client-ready 後の `previewPanels.forEach`**（サーバ再起動のたびに、タブを閉じたプレビューが黙って古い絵のままだった）。⚠️ **`aiTransform` と `aiTransformFromScore` は直していない**——**あちらは既に「閉じている」と*言っている***（`showErrorMessage`）ので、この族の穴（無言）ではない。
+**⒠ 実機で直りを確認**（同じ CDP 台）: **ソース タブを閉じたまま Take 2 → Take 1 で 7189 → 4660**・**エディタ タブは復活しない**。**タブが開いているときの経路も従来どおり**（4660 → 7189）。
+⚠️ **⒡ 番人は無い、と正直に言う**: 拡張ホスト側は `vscode` API 無しでは単体テストできず（`editors/vscode/test` は smartTyping と webview script の parse だけ）。**この便のピンは実機の CDP レシピ**＝`scratch/p343/{open2,switch3,closetab,tabs}.js`（⑹ に手順）。**次に触る人はまずこれを回すこと。**
+
+✅ ⚠️⚠️ ★★★★ **⒀ 第 6 便＝「枠の族」の監査＝*陰性*（製品 0）。第 2 便の直しは*一人っ子*だと測った**（ユーザーの判断規則に従って着手＝この便が一番温かい島）:
+**⒜ 問い**: 第 2 便で「`_options.StaffHeight/2` を*その譜自身の半分*の代わりに使う」枠の取り違えを 1 か所直した。**同じ形が他にもあるか。**
+**⒝ 読まずに*測った***——**「その場所に tab が届くか」を刷る計器**を 7 か所に入れ（`scratch/p343/instrument3.js` が当てる）、**陽性対照は第 2 便で直した場所そのもの**（tab の本で必ず光る＝計器が盲でないことを先に言う）。**結果**: **tab が届くのは 4 か所**——対照 S0・**S4.1/2/3＝slur / tie / beam のために建てる「1 譜だけの仮システム」**（`Height: _options.StaffHeight` で建てている）・**S6＝loose-row の鎖が「譜の上線→refpoint」を刻む段**（`tab-lyrics-inside-strings` で **7.500/7.500**・`rit-across-systems` で **4.000/7.500** と光った）。**届かないのは 3 か所**: **タイの中央線 S1・スラーの中央線 S2**（**tab 本では 1 度も光らない**＝tab のタイ／スラーは tab 自身の幾何で描かれる。⚠️ **陽性対照つき**——同じ計器が Boogie の五線では 92 回／12 回光る）・**figured bass の反射 S3**（tab に figured bass を書いた本がコーパスに無い）。
+**⒞ 届く 2 族を*実際に差し替えて*測った**（母集団＝**tab を持つ本 325 冊**・base/head バイト比較・`scratch/p343/sweep-tab.ps1`）: **仮システムを譜自身の高さに → MOVED 0 / 325**。**loose-row の段を `halfFirst`/`halfLast`（PageLayouter が既に持っている語彙）に → MOVED 0 / 325**。
+⚠️ ★★★ **⒟ その 0 が盲でないことを、同じ母集団・同じ掃きで確かめた**: **第 2 便の直しを*戻した* exe を head にすると MOVED 1（`tab-chord.lys`）**。⇒ **この配管はこの種の枠の変化を検出する。だから 0 は本物の陰性。**
+⇒ ★★★★ **結論: 枠の族の生きた一員は 1 つで、それは閉じた。製品は 1 行も触っていない**（計器も flip も戻し、木は clean）。**次に tab がらみで絵が変なときも、この 3 か所を再監査しなくてよい**——ただし **⚠️ 「届かない」は*今のコーパスで*の話**（S3 は「tab ＋ figured bass」の本が 1 冊でも書かれたら生き返る）。
+
 ★ **開始時裏取り**: HEAD **`fb2784a0`**・**未 push 26**・木 clean・未追跡 0・deployed 拡張は `out/extension.js` が HEAD の source から建てたものとバイト同一・deployed LSP は `0.5.0+fb2784a0`（**両方ともユーザーが 21:23–21:24 に配布した HEAD**）。
 **終了時（第 1 便）**: **commit 2 本**（`e7ffe059`＝製品 4〔`RenderSpecParser.cs`／`DuplicateScoreNameValidator.cs`／`LilySharpLanguageServer.Commands.cs`／`LspProtocolDtos.cs`〕＋拡張 1〔`editors/vscode/src/extension.ts`〕＋番人 1〔`LilySharp.Tests/Lsp/ScorePickerTests.cs`〕＋`CHANGELOG.md`／この HANDOFF＋ARCHIVE＝第339 の経緯を ARCHIVE の先頭へ逐語）・**未 push 28**・木 clean・未追跡 0。
 **終了時（第 2 便）**: **commit 2 本**（`6454b130`＝製品 1〔`LayoutEngine.Annotations.cs`〕＋番人 1〔`ChordNameTests`〕＋`CHANGELOG.md`＋生成物 1〔`docs/APPROXIMATIONS.md`＝行番号のみ〕／この HANDOFF・**✅ ユーザー承認「承認する。コミットして」**）・**未 push 30**・木 clean・未追跡 0。
