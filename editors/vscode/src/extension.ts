@@ -54,6 +54,47 @@ function armPanelReady(uri: string) {
     panelReady.set(uri, { promise, resolve });
 }
 
+// The document a preview renders — REOPENED when its editor tab has been closed.
+//
+// ⚠️ Closing the last editor of a file disposes its TextDocument (and the language
+// client sends didClose with it) while the PREVIEW stays on screen. Every path that
+// looked the document up by walking `workspace.textDocuments` therefore found nothing
+// and did nothing AT ALL: picking another score moved the picker and left the picture
+// on the first one, with no banner, no dimmed score and no line in the log. That is
+// indistinguishable, on screen, from "the preview will not switch scores" — and it is
+// measured, not supposed: with the source tab closed the picker went to "Take 2" and
+// the drawing stayed byte-for-byte the first score's (2026-09-07, driven over CDP).
+// Reopening is silent (no editor is shown), it re-registers the document with the
+// server, and updatePreviewContent already retries the "Document not found" window
+// while that didOpen is in flight.
+//
+// An UNTITLED buffer is the one that cannot come back: its content lived in the editor
+// that closed, and `openTextDocument` on that URI would hand back a NEW EMPTY document
+// — a blank score drawn as if it were the writer's. That case says so instead.
+async function previewDocument(uri: string): Promise<vscode.TextDocument | undefined> {
+    const open = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri);
+    if (open && !open.isClosed) {
+        return open;
+    }
+    const parsed = vscode.Uri.parse(uri);
+    if (parsed.scheme !== 'file') {
+        outputChannel.appendLine(`Preview source is gone (unsaved buffer closed): ${uri}`);
+        vscode.window.showWarningMessage(
+            'Lily#: this preview\'s source was an unsaved editor and it has been closed, '
+            + 'so the score cannot be re-rendered. Reopen the file and press Ctrl+K V.');
+        return undefined;
+    }
+    try {
+        outputChannel.appendLine(`Reopening the preview's source (its editor was closed): ${uri}`);
+        return await vscode.workspace.openTextDocument(parsed);
+    } catch (err) {
+        outputChannel.appendLine(`Cannot reopen ${uri}: ${err}`);
+        vscode.window.showWarningMessage(
+            `Lily#: the previewed file could not be reopened, so the score cannot be re-rendered (${err}).`);
+        return undefined;
+    }
+}
+
 // The preview the user is acting on: a context-menu command fires while its own
 // webview holds focus, so the ACTIVE panel is the one that must receive it. With
 // several previews open, posting to any other would act on the wrong score.
@@ -290,13 +331,17 @@ export function activate(context: vscode.ExtensionContext) {
             outputChannel.appendLine(`Failed to get server version: ${err}`);
         });
 
-        // Update any open preview panels now that client is ready
+        // Update any open preview panels now that client is ready — through
+        // previewDocument for the same reason the picker goes through it: a preview
+        // whose editor tab is closed would otherwise sit on its old picture with
+        // nothing said, and a server restart is exactly when it should come back.
         previewPanels.forEach((panel, uri) => {
             outputChannel.appendLine(`Updating preview for ${uri}`);
-            const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri);
-            if (doc) {
-                updatePreviewContent(doc, panel, context);
-            }
+            void previewDocument(uri).then(doc => {
+                if (doc) {
+                    updatePreviewContent(doc, panel, context);
+                }
+            });
         });
     }).catch((error) => {
         outputChannel.appendLine(`Failed to start language client: ${error}`);
@@ -760,7 +805,10 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 }
             } else if (message.type === 'selectRender') {
                 selectedRenders.set(uri, message.renderName);
-                const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri);
+                // ...through previewDocument, so a preview whose editor tab was closed
+                // still answers: it used to find no document and return, which looked
+                // exactly like a picker that does not switch scores.
+                const doc = await previewDocument(uri);
                 if (doc) {
                     updatePreviewContent(doc, panel, context);
                 }

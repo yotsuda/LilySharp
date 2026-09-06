@@ -91,6 +91,14 @@ scores against LilyPond's picture of the same book.
   and 2.6 minutes as ten `--batch` processes. `pdf` refuses `-j` outright — PdfSharpCore
   allows one font resolver per process and each document re-points it at its own faces, so
   concurrent PDF export would embed another document's fonts.
+- **A preview whose editor tab is closed still answers.** Closing the last editor of a file
+  disposes its document, and every path that looked the previewed document up among the OPEN
+  ones then did nothing at all: picking another score moved the picker and left the picture on
+  the first score, with no banner, no dimming and no line in the log — indistinguishable, on
+  screen, from a picker that does not work. The preview now reopens its source silently (no
+  editor is shown) and renders, and the same goes for the refresh that follows a language
+  server restart. The one source that cannot come back — an unsaved buffer, whose text went
+  with its editor — says so rather than drawing an empty score.
 - **The preview's score picker selects the score it names.** A score's output name — the
   stem `svg --all` writes and the word `--score` takes — was computed in three places, and
   only the renderer's copy dropped an extension: a score written `score main "Take 1.0"`
