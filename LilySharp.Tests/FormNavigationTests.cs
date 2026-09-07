@@ -268,11 +268,17 @@ public class FormNavigationTests
         var (codaX, labelX, barX, staffTop) = LineStartGeometry();
         string svg = LiveRender.SvgFromRenderSpec(CodaOpeningALineWithRepeat);
 
-        // The label's box: its left edge and bottom. The LAST system's label is the lowest box
-        // above that staff (the first system's "A" box stands above it too).
+        // The label's box: its left edge, top and HEIGHT. The LAST system's label is the
+        // lowest box above that staff (the first system's "A" box stands above it too).
+        // ⚠️ THE HEIGHT IS READ, NOT PINNED (session 344). It used to be spelled `2\.60' in
+        // this pattern, from the days when a boxed label was the font's em box plus a flat
+        // padding and every label in every book was the same height. LilyPond's frame wraps
+        // the STRING'S INK, so `A' and `x' get different boxes — pinning one number here
+        // silently stopped matching any rect at all.
         var box = System.Text.RegularExpressions.Regex
-            .Matches(svg, @"<rect x=""([\d.]+)"" y=""([\d.]+)"" width=""[\d.]+"" height=""2\.60""")
-            .Select(m => (X: double.Parse(m.Groups[1].Value), Y: double.Parse(m.Groups[2].Value)))
+            .Matches(svg, @"<rect x=""([\d.]+)"" y=""([\d.]+)"" width=""[\d.]+"" height=""([\d.]+)""[^>]*stroke=""#000000""")
+            .Select(m => (X: double.Parse(m.Groups[1].Value), Y: double.Parse(m.Groups[2].Value),
+                          H: double.Parse(m.Groups[3].Value)))
             .Where(r => r.Y < staffTop).OrderBy(r => r.Y).Last();
         // The coda glyph's Y (its text baseline; the sign's ink rises ~2 ss above it).
         double codaY = System.Text.RegularExpressions.Regex
@@ -283,7 +289,7 @@ public class FormNavigationTests
         Assert.Equal(barX, box.X, 1);
         Assert.True(labelX > barX, $"the label's text ({labelX:F2}) begins inside its box, right of the bar line ({barX:F2})");
         Assert.True(Math.Abs(codaX - barX) < 0.01, "the sign is on the bar line too — the two share the column");
-        Assert.True(box.Y + 2.60 <= codaY - 1.5,
-            $"the label's box bottom ({box.Y + 2.60:F2}) must stand above the coda sign (baseline {codaY:F2}, ink to ~{codaY - 2.0:F2})");
+        Assert.True(box.Y + box.H <= codaY - 1.5,
+            $"the label's box bottom ({box.Y + box.H:F2}) must stand above the coda sign (baseline {codaY:F2}, ink to ~{codaY - 2.0:F2})");
     }
 }

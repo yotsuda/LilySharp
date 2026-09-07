@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -208,16 +208,44 @@ internal sealed class RenderedGeometry
     /// neighbour at either step is dropped. (A bracket sits at least 2.25 below the bottom
     /// line: staff ink 2.05 + spanner padding 1.2 + edge-height 1.0 from the middle.)
     /// </remarks>
+    /// <summary>
+    /// The decimal place the two staff-line readers group on — and the reason neither of them
+    /// may RETURN what it groups by.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Rules that belong to one staff line are drawn in pieces (a tab string is broken around
+    /// its fret digits, SharedRenderer.Tab.cs DrawTabStringLine), so the pieces have to be
+    /// gathered by Y before their span can be judged. Rounding to nine places is a safe key for
+    /// that: two different lines of one staff are 1.0 or 1.5 apart, nine orders of magnitude
+    /// away.
+    /// </para>
+    /// <para>
+    /// ⚠️ BUT THE KEY IS NOT THE MEASUREMENT. Handing back <c>g.Key</c> stamped this reader's
+    /// own quantisation onto every reading taken off a staff line, and probes then asserted on
+    /// digits the reader had just discarded. MEASURED 2026-09-07 (scratch/p345):
+    /// <c>TabSlurDirectionTests</c> asks whether two tab slurs are exact mirrors about the staff
+    /// middle to NINE places. The bows are exact — their raw ys 10.588414262266500 and
+    /// 14.704414262266500 have midpoint 12.646414262266500 — but <c>g.Key</c> answered
+    /// 12.646414262, and the 2.665e-10 residue, over the 1.5 string space, WAS the whole of the
+    /// reported asymmetry (3.553e-10). The residue is a function of where the staff happens to
+    /// sit on the page, so the probe passed or failed by luck of an absolute Y that no part of
+    /// its claim mentions: moving a rehearsal box 0.25 up the page turned it red.
+    /// </para>
+    /// </remarks>
+    private const int RoundedKey = 9;
+
     private List<double> StaffLineYs(int page)
     {
         var ys = _pages[page].Lines
             .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
                         && !l.IsDashed
                         && Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9)
-            .GroupBy(l => Math.Round(l.Y1, 9))
+            .GroupBy(l => Math.Round(l.Y1, RoundedKey))
             .Where(g => g.Max(l => Math.Max(l.X1, l.X2)) - g.Min(l => Math.Min(l.X1, l.X2))
                         >= MinStaffLineSpan)
-            .Select(g => g.Key)
+            // ⚠️ THE ROUNDED VALUE IS THE GROUPING KEY, NOT THE ANSWER — see RoundedKey.
+            .Select(g => g.Min(l => l.Y1))
             .OrderBy(y => y)
             .ToList();
         static bool Sibling(double a, double b)
@@ -468,10 +496,11 @@ internal sealed class RenderedGeometry
                         && !l.IsDashed
                         && (Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9
                             || Math.Abs(l.StrokeWidth - upperThickness) < 1e-9))
-            .GroupBy(l => Math.Round(l.Y1, 9))
+            .GroupBy(l => Math.Round(l.Y1, RoundedKey))
             .Where(g => g.Max(l => Math.Max(l.X1, l.X2)) - g.Min(l => Math.Min(l.X1, l.X2))
                         >= MinStaffLineSpan)
-            .Select(g => g.Key)
+            // ⚠️ THE ROUNDED VALUE IS THE GROUPING KEY, NOT THE ANSWER — see RoundedKey.
+            .Select(g => g.Min(l => l.Y1))
             .OrderBy(y => y)
             .ToList();
 
@@ -1515,7 +1544,7 @@ internal sealed class RenderedGeometry
                         && l.Y1 < staffLines[0] - 1e-6
                         && Math.Abs(l.X2 - l.X1) >= 5.0)
             .ToList();
-        var ys = rules.Select(l => Math.Round(l.Y1, 9)).Distinct().ToList();
+        var ys = rules.Select(l => Math.Round(l.Y1, RoundedKey)).Distinct().ToList();
         if (ys.Count != 1)
         {
             throw new InvalidOperationException(

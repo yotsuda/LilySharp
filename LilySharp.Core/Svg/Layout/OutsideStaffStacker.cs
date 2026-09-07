@@ -2630,8 +2630,8 @@ internal static class OutsideStaffStacker
     internal static (double X0, double X1, double Top, double Bottom) MusicMarkExtents(
         ScoreTextMetrics fonts, MusicMarkLayout m)
     {
-        const double fontSize = 4.0; // renderer FontSize
-
+        // (The renderer's 4.0 em used to be spelled here for the boxed arm; that arm now reads
+        // MusicMarkEngraver.LabelEm, which is LilyPond's own, so nothing else needs it.)
         if (m.IsSymbol)
         {
             // Segno/Coda glyphs (U+E062/U+E064), centered on the anchor;
@@ -2648,14 +2648,13 @@ internal static class OutsideStaffStacker
             case MusicMarkType.Rehearsal:
             case MusicMarkType.SectionLabel:
             {
-                // Boxed bold text anchored at the box center.
-                double fs = m.MarkType == MusicMarkType.Rehearsal
-                    ? fontSize * 0.6
-                    : fontSize * 0.55;
-                const double pad = 0.2;
-                double halfW =
-                    (fonts.Advance(m.Text, fs, TextRole.Mark, FontStyle.Bold) + 2 * pad) / 2;
-                double halfH = (fs + 2 * pad) / 2;
+                // Boxed bold text anchored at the box centre. ⚠️ THE FRAME WRAPS THE STRING'S
+                // INK, not the font's em box (session 344): LilyPond's box-stencil widens the
+                // ink and lays its rule outside that, so `A' and `x' get 2.744098 and 1.995679
+                // where one em-derived constant gave both 2.800000. The dimensions have one
+                // home in MusicMarkEngraver — this method is the adapter onto it.
+                double halfW = MusicMarkEngraver.LabelBoxHalfWidth(fonts, m.MarkType, m.Text);
+                double halfH = MusicMarkEngraver.LabelBoxHalfHeight(fonts, m.MarkType, m.Text);
                 return (-halfW, halfW, halfH, halfH);
             }
             case MusicMarkType.Tempo:

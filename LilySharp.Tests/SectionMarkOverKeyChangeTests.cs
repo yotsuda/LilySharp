@@ -78,8 +78,22 @@ public class SectionMarkOverKeyChangeTests
     private static void AssertClears(string svg, string label, char glyph, string glyphKind)
     {
         var box = MarkBox(svg, label);
+        // ⚠️ "UNDER" IS REAL HORIZONTAL OVERLAP, and the right-hand slack used to be +1.0
+        // (session 344). The left-hand 1.2 is the GLYPH'S OWN WIDTH — a natural whose anchor
+        // is left of the box still reaches into it — but a glyph whose anchor is right of the
+        // box's right edge cannot touch it, and the +1.0 made one that stands 0.65 clear of
+        // the box count as a collision. MEASURED both ways once the boxed label took
+        // LilyPond's own dimensions: the natural genuinely under the A2 box is cleared by
+        // 0.462000 — the outside-staff padding, i.e. the pass doing its job — while the one
+        // 0.65 to its right reads −0.038 and was the only thing red.
+        // LILYPOND-REF, measured: scratch/p344/markkey.ly. LilyPond's own mark over a
+        // mid-line key change does not clear what it does not cover — in the cancellation
+        // book the mark's X span and the key's do not meet at all (`meets=0`), and in the
+        // sharps book, where they do meet, LilyPond's box bottom sits 0.040000 BELOW the
+        // key's ink-box top because the collision is decided pointwise on the outline.
+        // A box-shaped test with slack on the far side is stricter than LilyPond.
         var under = MusicGlyphs(svg, glyph)
-            .Where(g => g.X < box.X + box.W + 1.0 && g.X + 1.2 > box.X)
+            .Where(g => g.X < box.X + box.W && g.X + 1.2 > box.X)
             .ToList();
         Assert.NotEmpty(under);
         double glyphTopHalf = LilySharp.Core.Svg.Layout.GlyphMetrics

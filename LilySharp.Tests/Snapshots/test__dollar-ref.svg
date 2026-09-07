@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="365.5" viewBox="0 0 119.50 36.55" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="365.6" viewBox="0 0 119.50 36.56" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="36.55" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="36.56" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="80">Dollar Reference</text>
   <text x="110.97" y="15.76" font-size="2.20" text-anchor="end" data-pos="108">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
@@ -86,13 +86,13 @@
   <rect x="74.68" y="23.82" width="0.19" height="4.00" data-pos="214"/>
   <rect x="88.04" y="23.82" width="0.19" height="4.00" data-pos="244"/>
   <text class="music" x="4.88" y="22.45" font-size="3.56" data-pos="123"></text>
-  <line x1="5.99" y1="22.28" x2="5.99" y2="19.78" stroke="#000000" stroke-width="0.116" data-pos="123"/>
-  <text x="6.66" y="22.93" font-size="2.20" data-pos="123">= 120</text>
-  <rect x="3.37" y="16.72" width="6.00" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="322"/>
-  <text x="6.36" y="18.92" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="322">First</text>
-  <rect x="29.96" y="20.02" width="8.66" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="368"/>
-  <text x="34.29" y="22.22" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="368">Second</text>
-  <rect x="53.18" y="20.02" width="16.52" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="322"/>
-  <text x="61.44" y="22.22" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="322">First (reprise)</text>
+  <line x1="5.99" y1="22.29" x2="5.99" y2="19.78" stroke="#000000" stroke-width="0.116" data-pos="123"/>
+  <text x="6.66" y="22.94" font-size="2.20" data-pos="123">= 120</text>
+  <rect x="3.37" y="16.72" width="7.33" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="322"/>
+  <text x="7.03" y="18.94" font-size="2.62" font-weight="bold" text-anchor="middle" data-pos="322">First</text>
+  <rect x="29.03" y="20.33" width="10.51" height="2.64" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="368"/>
+  <text x="34.29" y="22.59" font-size="2.62" font-weight="bold" text-anchor="middle" data-pos="368">Second</text>
+  <rect x="51.49" y="19.84" width="19.90" height="3.13" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="322"/>
+  <text x="61.44" y="22.10" font-size="2.62" font-weight="bold" text-anchor="middle" data-pos="322">First (reprise)</text>
   </g>
 </svg>

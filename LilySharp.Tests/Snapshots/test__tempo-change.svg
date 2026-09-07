@@ -42,12 +42,12 @@
   <rect x="33.39" y="23.82" width="0.19" height="4.00" data-pos="533"/>
   <rect x="44.79" y="23.82" width="0.19" height="4.00" data-pos="543"/>
   <text class="music" x="27.62" y="21.83" font-size="3.56" data-pos="525"></text>
-  <line x1="28.73" y1="21.66" x2="28.73" y2="19.15" stroke="#000000" stroke-width="0.116" data-pos="525"/>
-  <text x="29.40" y="22.31" font-size="2.20" data-pos="525">= 160</text>
+  <line x1="28.73" y1="21.67" x2="28.73" y2="19.16" stroke="#000000" stroke-width="0.116" data-pos="525"/>
+  <text x="29.40" y="22.32" font-size="2.20" data-pos="525">= 160</text>
   <text class="music" x="4.88" y="22.45" font-size="3.56" data-pos="433"></text>
-  <line x1="5.99" y1="22.28" x2="5.99" y2="19.78" stroke="#000000" stroke-width="0.116" data-pos="433"/>
-  <text x="6.66" y="22.93" font-size="2.20" data-pos="433">= 120</text>
-  <rect x="3.37" y="16.72" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="476"/>
-  <text x="6.47" y="18.92" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="476">Main</text>
+  <line x1="5.99" y1="22.29" x2="5.99" y2="19.78" stroke="#000000" stroke-width="0.116" data-pos="433"/>
+  <text x="6.66" y="22.94" font-size="2.20" data-pos="433">= 120</text>
+  <rect x="3.37" y="16.72" width="7.57" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="476"/>
+  <text x="7.15" y="18.94" font-size="2.62" font-weight="bold" text-anchor="middle" data-pos="476">Main</text>
   </g>
 </svg>

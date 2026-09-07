@@ -276,7 +276,7 @@ public class DynamicPlacementTests
     private static string TwoSystemsWithBelowAnnotation(string annotation) => $$"""
         part melody {
           clef treble
-          section A { c,,1{{annotation}} | c1 | c1 | c1 | break }
+          section A { c1 | c1 | c,,1{{annotation}} | c1 | break }
           section B { c1 | c1 }
         }
 
@@ -307,6 +307,19 @@ public class DynamicPlacementTests
     /// Asserted as a RELATION (the gap must grow) rather than a pinned distance: what is
     /// being fixed is that the grob is in the silhouette at all, and the distance it then
     /// earns is the paging rule's, which this test is not about.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE DEEP NOTE IS IN BAR 3, NOT BAR 1, and that is the whole reason the relation is
+    /// readable (session 344). The inter-system distance is X-AWARE, and the next system's
+    /// line start carries the SECTION LABEL's box. With the annotation's own column at the
+    /// line start, the label and this book's <c>c,,1</c> ledger stack meet in x, so the BARE
+    /// gap is already set by that pair and the annotation has almost nothing left to buy —
+    /// MEASURED when the boxed label took LilyPond's own width (0.65 wider than Lily#'s old
+    /// one, which was 2.07 against LilyPond's 2.72 for a one-letter box): bare 13.595000 →
+    /// 15.909401 while the annotated book stayed at 16.035000, i.e. the annotation "bought"
+    /// 0.126. Nothing about the annotation changed; the control moved. Three bars along,
+    /// the label is 50 staff spaces away and the pair the test means to watch is the only
+    /// one that binds.
     /// </para>
     /// </remarks>
     [Theory]

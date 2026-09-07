@@ -813,7 +813,7 @@ internal static class MusicMarkEngraver
             for (int i = 0; i < aboveMarks.Count; i++)
             {
                 var (mark, x, si) = aboveMarks[i];
-                double halfExtent = GetMarkHalfExtent(mark.Type);
+                double halfExtent = GetMarkHalfExtent(fonts, mark.Type, mark.Text);
                 var (chainX0, chainX1) = MarkXExtent(fonts, mark, x);
                 // The highest already-placed neighbour whose ink meets this one's, or the
                 // base when there is none. The reach is the mark family's own
@@ -869,11 +869,24 @@ internal static class MusicMarkEngraver
                         // the two are meant to share a line. The overlap is resolved in X
                         // instead (ChordNameEngraver reserves the box), so lifting as well
                         // would undo the placement the decision asks for.
-                        yUp = 2.0 - below + LabelBaselineBelowCentre(mark.Type);
+                        yUp = 2.0 - below + LabelBaselineBelowCentre(fonts, mark.Type, mark.Text);
                     }
                     else
                     {
-                        yUp = baseAboveYUp + Padding;
+                        // A BOXED LABEL STANDS ON LilyPond's OWN SIDE-POSITION PADDING, not on
+                        // this family's generic base: 0.8 above the staff symbol's outer edge
+                        // (scm/define-grobs.scm:2889-2896 side-position-interface::y-aligned-side,
+                        // and :3065-3071 for SectionLabel). MEASURED 2026-09-07
+                        // (scratch/p344/markbase.ly): LilyPond puts the frame's bottom at
+                        // 0.850000 over the top line for A / x / Q alike, on an empty staff and
+                        // over notes two ledger lines up, where `baseAboveYUp + Padding' put it
+                        // at 1.100000 — 0.250000 of air on every marked system in the corpus.
+                        // ⚠️ The generic base stays for every OTHER above-mark type; this arm
+                        // deliberately does not re-price a tempo, a segno or a jump instruction,
+                        // none of which has been measured against LilyPond here.
+                        yUp = IsBoxedLabel(mark.Type)
+                            ? LabelFrameBottomAboveStaffMiddle + halfExtent
+                            : baseAboveYUp + Padding;
                         if (!double.IsNegativeInfinity(markCeilingUp))
                             yUp = Math.Max(yUp, markCeilingUp + halfExtent); // box bottom clears the chord
                     }
@@ -972,7 +985,7 @@ internal static class MusicMarkEngraver
                 {
                     double half = belowMarks
                         .Where(e => IsPedal(e.Mark.Type) && PedalFamilyRank(e.Mark.Type) == rank)
-                        .Max(e => GetMarkHalfExtent(e.Mark.Type));
+                        .Max(e => GetMarkHalfExtent(fonts, e.Mark.Type, e.Mark.Text));
                     if (!firstRow)
                         rowYUp -= prevHalf + StackGap + half;
                     pedalRowYUp[rank] = rowYUp;
@@ -998,7 +1011,7 @@ internal static class MusicMarkEngraver
                 // instead; skip the text layout (its SourceIndex si is already fixed).
                 if (keepMarkText != null && !keepMarkText(mark))
                     continue;
-                double halfExtent = GetMarkHalfExtent(mark.Type);
+                double halfExtent = GetMarkHalfExtent(fonts, mark.Type, mark.Text);
 
                 double yUp;
                 bool solvedPedalRow = false;
@@ -1442,9 +1455,7 @@ internal static class MusicMarkEngraver
             case MusicMarkType.Rehearsal:
             case MusicMarkType.SectionLabel:
             {
-                double fs = type == MusicMarkType.Rehearsal ? 2.4 : 2.2;
-                double half =
-                    fonts.Advance(text, fs, TextRole.Mark, FontStyle.Bold) / 2 + LabelBoxPadding;
+                double half = LabelBoxHalfWidth(fonts, type, text);
                 return (x - half, x + half);
             }
             case MusicMarkType.Segno:
@@ -1471,6 +1482,110 @@ internal static class MusicMarkEngraver
     /// <summary>The two marks Lily# draws as a framed box around bold text.</summary>
     internal static bool IsBoxedLabel(MusicMarkType type)
         => type is MusicMarkType.Rehearsal or MusicMarkType.SectionLabel;
+
+    // ------------------------------------------------------------------------------------
+    // THE BOXED LABEL'S DIMENSIONS — ONE HOME (session 344).
+    //
+    // Everything below was three separate approximations before: the em was a hand-picked
+    // 2.4 / 2.2, the frame wrapped the font's EM BOX rather than the string's INK, and the
+    // label stood on a constant that put it 0.250000 too high. MEASURED against LilyPond
+    // 2.26.0 (scratch/p344/{markbox,markbase,ink-stb}.ly, the probes' own dumps):
+    //
+    //   em 2.4 vs LilyPond's 2.771822  → every letter's ink 13.4% short
+    //   box = em + 2x0.2               → A +0.055902, x +0.804321, Q -0.470752 (SIGN FLIPS,
+    //                                    so no constant could have fixed it)
+    //   box bottom 1.100000            → LilyPond stands it at 0.850000 for all eight texts
+    //                                    measured, empty staff or high notes underneath
+    //
+    // ⚠️ The BOX ITSELF and the BOLD are Lily#'s own decisions, not LilyPond's (LilyPond
+    // draws a bare mark, and scm/define-grobs.scm:3051-3053 font-size carries SectionLabel's
+    // own comment that it avoids bold on purpose).
+    // Those stay; the ledger's mark.over-chord.* residual is that box term and is
+    // OPEN on purpose. What is ported here is the GEOMETRY of a box around a string.
+    // ------------------------------------------------------------------------------------
+
+    /// <summary>The text font's em, in staff spaces, before a grob's own font-size.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/paper.scm:78 text-font-size = 11 pt, and
+    /// scm/paper.scm:80 output-scale = staff-height / 4 = 5 pt at staff-size 20 — so one em is
+    /// 11/5 = 2.2 staff spaces.
+    /// </remarks>
+    internal const double TextFontEm = 2.2;
+
+    /// <summary>LilyPond's <c>magstep</c>: a font-size step is a sixth of a doubling.</summary>
+    /// <remarks>LILYPOND-REF: scm/lily-library.scm <c>magstep</c> = <c>2^(n/6)</c>.</remarks>
+    internal static double Magstep(double fontSize) => Math.Pow(2.0, fontSize / 6.0);
+
+    /// <summary>A boxed label's own <c>font-size</c> step.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:2885-2888 outside-staff-priority — RehearsalMark's
+    /// block, whose font-size is 2 — and
+    /// scm/define-grobs.scm:3053 SectionLabel font-size = 1.5 ("Larger than MetronomeMark;
+    /// smaller than RehearsalMark").
+    /// </remarks>
+    internal static double LabelFontSizeStep(MusicMarkType type)
+        => type == MusicMarkType.Rehearsal ? 2.0 : 1.5;
+
+    /// <summary>A boxed label's em, in staff spaces — 2.771822 / 2.616256.</summary>
+    internal static double LabelEm(MusicMarkType type)
+        => TextFontEm * Magstep(LabelFontSizeStep(type));
+
+    /// <summary>
+    /// How far the frame stands outside the string's INK, per side.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-markup-commands.scm <c>box-markup</c> scales
+    /// <c>box-padding</c> (0.2) by the prevailing <c>magstep</c> and hands it to
+    /// scm/stencil.scm <c>box-stencil</c>, which widens the ink by that padding and then
+    /// lays a rule of <c>line-thickness</c> OUTSIDE it. MEASURED: LilyPond's boxed extent
+    /// is the plain one + 0.703969 for all eight texts tried, and 0.703969 / 2 =
+    /// 0.2 x magstep(2) + 0.1 exactly.
+    /// </remarks>
+    internal static double LabelBoxMargin(MusicMarkType type)
+        => LabelBoxPadding * Magstep(LabelFontSizeStep(type)) + EngravingDefaults.LineThickness;
+
+    /// <summary>The string's ink about its baseline, at the label's own em.</summary>
+    internal static (double Bottom, double Top) LabelInk(
+        ScoreTextMetrics fonts, MusicMarkType type, string text)
+        => fonts.Ink(text, LabelEm(type), TextRole.Mark, FontStyle.Bold);
+
+    /// <summary>
+    /// Half the drawn frame's height — the string's ink plus the frame, about the box centre
+    /// that <see cref="MusicMarkLayout.YUp"/> carries.
+    /// </summary>
+    internal static double LabelBoxHalfHeight(
+        ScoreTextMetrics fonts, MusicMarkType type, string text)
+    {
+        var ink = LabelInk(fonts, type, text);
+        return (ink.Top - ink.Bottom) / 2 + LabelBoxMargin(type);
+    }
+
+    /// <summary>Half the drawn frame's width.</summary>
+    internal static double LabelBoxHalfWidth(
+        ScoreTextMetrics fonts, MusicMarkType type, string text)
+        => fonts.Advance(text, LabelEm(type), TextRole.Mark, FontStyle.Bold) / 2
+           + LabelBoxMargin(type);
+
+    /// <summary>
+    /// How far above the anchor staff's MIDDLE line a boxed label's frame bottom stands when
+    /// nothing pushes it higher.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:2889-2896 side-position-interface::y-aligned-side
+    /// (RehearsalMark's padding 0.8 and the Y-offset that spends it) and
+    /// scm/define-grobs.scm:3065-3071 side-position-interface::y-aligned-side (SectionLabel's),
+    /// measured from the staff symbol's own extent, whose outer edge is half a staff line
+    /// past the top line. MEASURED (scratch/p344/markbase.ly): 0.850000 above the top line
+    /// for A / x / Q, with an empty staff and with two ledger lines' worth of notes on it.
+    /// ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
+    /// the stacker adds when something is actually under the label.
+    /// </remarks>
+    internal static double LabelFrameBottomAboveStaffMiddle
+        => 2.0 + EngravingDefaults.StaffLineThickness / 2 + LabelSidePositionPadding;
+
+    // Both labels declare it and spend it through side-position-interface::y-aligned-side;
+    // the addresses are on LabelFrameBottomAboveStaffMiddle, which is the one reader.
+    private const double LabelSidePositionPadding = 0.8;
 
     /// <summary>
     /// Where each boxed label's frame stands horizontally, per measure — the X half of
@@ -1558,8 +1673,11 @@ internal static class MusicMarkEngraver
     /// </summary>
     /// <remarks>
     /// ⚠️ internal because <c>SharedRenderer.DrawSingleMusicMark</c> DRAWS the frame with it
-    /// while <see cref="GetMarkHalfExtent"/> and <c>MarkXExtent</c> RESERVE for it. Three
-    /// spellings of one number is the shape HANDOFF 5.2.1② names; this is the home.
+    /// while <see cref="LabelBoxMargin"/> — which every reservation reads — scales it.
+    /// Three spellings of one number is the shape HANDOFF 5.2.1② names; this is the home.
+    /// ⚠️ This is LilyPond's UNSCALED <c>box-padding</c>; the drawn margin is
+    /// <see cref="LabelBoxMargin"/>, which multiplies it by the label's own magstep and adds
+    /// the frame rule. Reading this constant directly under-reserves by 0.151984.
     /// </remarks>
     internal const double LabelBoxPadding = 0.2;
 
@@ -1568,23 +1686,36 @@ internal static class MusicMarkEngraver
     /// carries for one — its text baseline is drawn.
     /// </summary>
     /// <remarks>
-    /// Derived from the half extent rather than restated: the box is
-    /// <c>fontSize + 2 × padding</c> tall about its centre and the text sits
-    /// <c>fontSize / 2 − padding</c> below it, so the offset is
-    /// <c>halfExtent − 2 × padding</c> and the font size never appears twice.
+    /// Derived from the frame rather than restated: the frame's bottom edge is
+    /// <see cref="LabelBoxHalfHeight"/> below the centre, the ink starts
+    /// <see cref="LabelBoxMargin"/> inside that, and the ink's own bottom is
+    /// <c>ink.Bottom</c> above the baseline (negative for a descender). So the baseline is
+    /// <c>halfHeight − margin + ink.Bottom</c> below the centre and no em appears twice.
     /// <c>SharedRenderer.DrawSingleMusicMark</c> draws at exactly this offset.
     /// </remarks>
-    internal static double LabelBaselineBelowCentre(MusicMarkType type)
-        => GetMarkHalfExtent(type) - 2 * LabelBoxPadding;
+    internal static double LabelBaselineBelowCentre(
+        ScoreTextMetrics fonts, MusicMarkType type, string text)
+        => LabelBoxHalfHeight(fonts, type, text) - LabelBoxMargin(type)
+           + LabelInk(fonts, type, text).Bottom;
 
-    private static double GetMarkHalfExtent(MusicMarkType type) => type switch
+    /// <summary>
+    /// Half a mark's vertical extent about its anchor.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A BOXED LABEL'S IS NOT A CONSTANT any more (session 344): LilyPond's frame wraps
+    /// the STRING'S INK, so `A' and `x' get different boxes — 2.744098 against 1.995679 —
+    /// and the old single 1.4 was right for neither (+0.056 on one, +0.804 on the other).
+    /// The other arms are still per-type shapes.
+    /// </remarks>
+    private static double GetMarkHalfExtent(
+        ScoreTextMetrics fonts, MusicMarkType type, string text) => type switch
     {
         // Tempo is NOT priced here any more: its ink is baseline-anchored and asymmetric
         // (note top ~3.16, digit overshoot below), read from MetronomeMarkGeometry by
         // every consumer. The arm remains only for the generic fallback shape.
         MusicMarkType.Tempo => 1.8,
-        MusicMarkType.Rehearsal => 1.4,       // (FontSize*0.6 + 0.2*2) / 2 = (2.4+0.4)/2
-        MusicMarkType.SectionLabel => 1.3,    // (FontSize*0.55 + 0.2*2) / 2 = (2.2+0.4)/2
+        MusicMarkType.Rehearsal or MusicMarkType.SectionLabel
+            => LabelBoxHalfHeight(fonts, type, text),
         MusicMarkType.Segno or MusicMarkType.Coda => 2.0,
         _ => 1.0
     };
@@ -1777,10 +1908,13 @@ internal static class MusicMarkEngraver
                 return barAnchor;
             }
             // LEFT edge on the anchor: returned X is the box center.
-            double fs = mark.Type == MusicMarkType.Rehearsal ? 4.0 * 0.6 : 4.0 * 0.55;
-            double boxWidth =
-                fonts.Advance(mark.Text, fs, TextRole.Mark, FontStyle.Bold) + 0.4;
-            return anchor + boxWidth / 2;
+            // ⚠️⚠️ THIS WAS A FOURTH SPELLING OF THE BOX'S WIDTH (session 344) — `4.0 * 0.6`
+            // and a flat `+ 0.4` — and being a spelling of the width it is really a spelling
+            // of the ANCHOR: widen the box anywhere else and the left edge this arm is
+            // supposed to pin walks left by the difference. It did, by 0.305629 (ledger
+            // mark.rehearsal.line-start.box-left-from-clef-left, recorded exact). The home is
+            // LabelBoxHalfWidth; §5.2.1② is about exactly this.
+            return anchor + LabelBoxHalfWidth(fonts, mark.Type, mark.Text);
         }
 
         // Segno/Coda glyphs have a symmetric bbox (origin = horizontal centre), so

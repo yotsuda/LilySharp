@@ -20,7 +20,7 @@
   <text class="music" x="12.86" y="25.97" font-size="4.00" data-pos="180"></text>
   <line x1="14.17" y1="25.97" x2="14.17" y2="22.97" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="18.29" y="25.47" font-size="4.00" data-pos="184"></text>
-  <line x1="19.60" y1="25.47" x2="19.60" y2="22.63" stroke="#000000" stroke-width="0.130"/>
+  <line x1="19.60" y1="25.47" x2="19.60" y2="22.64" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="22.56" y="24.97" font-size="4.00" data-pos="187"></text>
   <line x1="23.87" y1="24.97" x2="23.87" y2="22.30" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="27.88" y="26.47" font-size="4.00" data-pos="264"></text>
@@ -32,13 +32,13 @@
   <line x1="31.81" y1="29.97" x2="33.88" y2="29.97" stroke="#000000" stroke-width="0.200"/>
   <line x1="31.81" y1="30.97" x2="33.88" y2="30.97" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="8.59" y="28.97" font-size="4.00" data-pos="195"></text>
-  <line x1="8.65" y1="28.97" x2="8.65" y2="31.63" stroke="#000000" stroke-width="0.130"/>
+  <line x1="8.65" y1="28.97" x2="8.65" y2="31.64" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="12.86" y="28.47" font-size="4.00" data-pos="198"></text>
   <line x1="12.93" y1="28.47" x2="12.93" y2="31.30" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="18.29" y="27.97" font-size="4.00" data-pos="202"></text>
   <line x1="18.35" y1="27.97" x2="18.35" y2="30.97" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="22.56" y="27.47" font-size="4.00" data-pos="205"></text>
-  <line x1="22.63" y1="27.47" x2="22.63" y2="30.63" stroke="#000000" stroke-width="0.130"/>
+  <line x1="22.63" y1="27.47" x2="22.63" y2="30.64" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="27.88" y="31.47" font-size="4.00" data-pos="274"></text>
   <line x1="27.95" y1="31.47" x2="27.95" y2="33.97" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="32.16" y="30.97" font-size="4.00" data-pos="277"></text>
@@ -51,9 +51,9 @@
   <rect x="26.79" y="24.97" width="0.19" height="4.00" data-pos="189"/>
   <rect x="36.53" y="24.97" width="0.19" height="4.00" data-pos="291"/>
   <text class="music" x="4.88" y="22.45" font-size="3.56" data-pos="64"></text>
-  <line x1="5.99" y1="22.28" x2="5.99" y2="19.78" stroke="#000000" stroke-width="0.116" data-pos="64"/>
-  <text x="6.66" y="22.93" font-size="2.20" data-pos="64">= 80</text>
-  <rect x="3.37" y="16.72" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="296"/>
-  <text x="6.47" y="18.92" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="296">Main</text>
+  <line x1="5.99" y1="22.29" x2="5.99" y2="19.78" stroke="#000000" stroke-width="0.116" data-pos="64"/>
+  <text x="6.66" y="22.94" font-size="2.20" data-pos="64">= 80</text>
+  <rect x="3.37" y="16.72" width="7.57" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="296"/>
+  <text x="7.15" y="18.94" font-size="2.62" font-weight="bold" text-anchor="middle" data-pos="296">Main</text>
   </g>
 </svg>

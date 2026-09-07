@@ -19,6 +19,7 @@ using System.Linq;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Renderer;
 using LilySharp.Core.Syntax;
+using LilySharp.Tests.LpFidelity;
 using Xunit;
 
 namespace LilySharp.Tests;
@@ -81,15 +82,26 @@ public class LyricAnchorPerSystemTests
     /// the whole claim: same music, same syllables, same run, so the only thing that could
     /// separate them is which system's geometry the block was placed in.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ READ OFF THE RECORDER, NOT THE SVG TEXT. This probe took both readings out of
+    /// <c>&lt;text&gt;</c> and staff-line attributes, and SvgGenerator formats every coordinate
+    /// with <c>F2</c>: each reading is then a difference of two numbers ON A 0.01 GRID, so two
+    /// systems that agree perfectly report 3.87 and 3.86 as soon as they sit on different
+    /// fractions of that grid — while a claim asserted to SIX places cannot see anything
+    /// finer than the grid anyway. MEASURED 2026-09-07 (scratch/p345): unrounded, the two
+    /// systems' readings are 5.864959964924 and 5.864959965167, and their difference is
+    /// 2.428e-10 BOTH before and after the rehearsal box moved 0.25 up the page — the quantity
+    /// this probe claims to watch never moved; only which side of the grid it landed on did.
+    /// RecordingDocumentContext exists for exactly this (its own remark says so).
+    /// </remarks>
     [Fact]
     public void TheSameBlockOnTwoSystems_SitsTheSameDistanceBelowItsOwnStaff()
     {
-        string svg = Render();
-        var staves = StaffLineGeometry.Staves(svg);
-        Assert.Equal(4, staves.Count);   // two systems of two staves
+        var g = RenderedGeometry.Render(Source);
+        Assert.Equal(4, g.StaffRefpoints().Count);   // two systems of two staves
 
-        double first = Below(svg, staves[0], staves[1]);
-        double second = Below(svg, staves[2], staves[3]);
+        double first = g.LyricBaselineBelowStaff(0);
+        double second = g.LyricBaselineBelowStaff(2);
         Assert.Equal(first, second, 6);
     }
 

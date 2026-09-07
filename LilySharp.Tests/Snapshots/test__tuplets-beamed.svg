@@ -39,25 +39,25 @@
   <polygon points="9.76,23.73 16.67,23.11 16.67,23.59 9.76,24.21"/>
   <line x1="9.82" y1="27.01" x2="9.82" y2="23.96" stroke="#000000" stroke-width="0.130"/>
   <line x1="13.21" y1="26.51" x2="13.21" y2="23.66" stroke="#000000" stroke-width="0.130"/>
-  <line x1="16.60" y1="26.01" x2="16.60" y2="23.35" stroke="#000000" stroke-width="0.130"/>
+  <line x1="16.60" y1="26.01" x2="16.60" y2="23.36" stroke="#000000" stroke-width="0.130"/>
   <polygon points="18.77,28.73 25.68,28.11 25.68,28.59 18.77,29.21"/>
   <line x1="18.83" y1="25.81" x2="18.83" y2="28.96" stroke="#000000" stroke-width="0.130"/>
   <line x1="22.22" y1="25.31" x2="22.22" y2="28.66" stroke="#000000" stroke-width="0.130"/>
-  <line x1="25.61" y1="24.81" x2="25.61" y2="28.35" stroke="#000000" stroke-width="0.130"/>
+  <line x1="25.61" y1="24.81" x2="25.61" y2="28.36" stroke="#000000" stroke-width="0.130"/>
   <polygon points="36.44,29.92 46.59,28.73 46.59,29.21 36.44,30.40"/>
   <polygon points="36.44,29.11 46.59,27.92 46.59,28.40 36.44,29.59"/>
   <line x1="36.50" y1="27.31" x2="36.50" y2="30.15" stroke="#000000" stroke-width="0.130"/>
   <line x1="39.01" y1="26.81" x2="39.01" y2="29.86" stroke="#000000" stroke-width="0.130"/>
-  <line x1="41.51" y1="26.31" x2="41.51" y2="29.56" stroke="#000000" stroke-width="0.130"/>
+  <line x1="41.51" y1="26.31" x2="41.51" y2="29.57" stroke="#000000" stroke-width="0.130"/>
   <line x1="44.02" y1="25.81" x2="44.02" y2="29.27" stroke="#000000" stroke-width="0.130"/>
-  <line x1="46.52" y1="25.31" x2="46.52" y2="28.97" stroke="#000000" stroke-width="0.130"/>
-  <text x="13.21" y="22.20" font-size="1.75" font-style="italic" text-anchor="middle" dominant-baseline="central" data-pos="714">3</text>
+  <line x1="46.52" y1="25.31" x2="46.52" y2="28.98" stroke="#000000" stroke-width="0.130"/>
+  <text x="13.21" y="22.21" font-size="1.75" font-style="italic" text-anchor="middle" dominant-baseline="central" data-pos="714">3</text>
   <text x="22.22" y="30.00" font-size="1.75" font-style="italic" text-anchor="middle" dominant-baseline="central" data-pos="737">3</text>
-  <text x="41.51" y="30.90" font-size="1.75" font-style="italic" text-anchor="middle" dominant-baseline="central" data-pos="813">5</text>
+  <text x="41.51" y="30.91" font-size="1.75" font-style="italic" text-anchor="middle" dominant-baseline="central" data-pos="813">5</text>
   <text class="music" x="4.88" y="22.45" font-size="3.56" data-pos="579"></text>
-  <line x1="5.99" y1="22.28" x2="5.99" y2="19.78" stroke="#000000" stroke-width="0.116" data-pos="579"/>
-  <text x="6.66" y="22.93" font-size="2.20" data-pos="579">= 120</text>
-  <rect x="3.37" y="16.72" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="853"/>
-  <text x="6.47" y="18.92" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="853">Main</text>
+  <line x1="5.99" y1="22.29" x2="5.99" y2="19.78" stroke="#000000" stroke-width="0.116" data-pos="579"/>
+  <text x="6.66" y="22.94" font-size="2.20" data-pos="579">= 120</text>
+  <rect x="3.37" y="16.72" width="7.57" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="853"/>
+  <text x="7.15" y="18.94" font-size="2.62" font-weight="bold" text-anchor="middle" data-pos="853">Main</text>
   </g>
 </svg>

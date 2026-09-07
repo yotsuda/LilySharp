@@ -88,7 +88,7 @@
   <line x1="90.85" y1="43.97" x2="90.85" y2="47.32" stroke="#000000" stroke-width="0.130"/>
   <rect x="52.33" y="44.82" width="0.19" height="4.00" data-pos="708"/>
   <rect x="102.24" y="44.82" width="0.19" height="4.00" data-pos="721"/>
-  <text x="-0.30" y="63.48" font-size="4.00" font-family="Emmentaler-Brace" text-anchor="end"></text>
+  <text x="-0.30" y="63.49" font-size="4.00" font-family="Emmentaler-Brace" text-anchor="end"></text>
   <line x1="0.00" y1="56.82" x2="0.00" y2="70.15" stroke="#000000" stroke-width="0.160"/>
   <rect x="52.25" y="60.82" width="0.19" height="5.33"/>
   <rect x="102.24" y="60.82" width="0.19" height="5.33"/>
@@ -179,14 +179,14 @@
   <line x1="82.55" y1="81.15" x2="82.55" y2="77.65" stroke="#000000" stroke-width="0.130"/>
   <rect x="56.78" y="78.15" width="0.19" height="4.00" data-pos="661"/>
   <rect x="102.24" y="78.15" width="0.19" height="4.00" data-pos="668"/>
-  <text x="56.55" y="51.36" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="712">f</text>
-  <text x="0.00" y="34.74" font-size="1.75" font-weight="bold" text-anchor="end">3</text>
-  <text x="0.00" y="55.74" font-size="1.75" font-weight="bold" text-anchor="end">5</text>
+  <text x="56.55" y="51.37" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="712">f</text>
+  <text x="0.00" y="34.75" font-size="1.75" font-weight="bold" text-anchor="end">3</text>
+  <text x="0.00" y="55.75" font-size="1.75" font-weight="bold" text-anchor="end">5</text>
   <text x="0.00" y="77.08" font-size="1.75" font-weight="bold" text-anchor="end">7</text>
   <text class="music" x="5.00" y="22.45" font-size="3.56" data-pos="427"></text>
-  <line x1="6.11" y1="22.28" x2="6.11" y2="19.78" stroke="#000000" stroke-width="0.116" data-pos="427"/>
-  <text x="6.78" y="22.93" font-size="2.20" data-pos="427">= 120</text>
-  <rect x="3.48" y="16.72" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="516"/>
-  <text x="6.59" y="18.92" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="516">Main</text>
+  <line x1="6.11" y1="22.29" x2="6.11" y2="19.78" stroke="#000000" stroke-width="0.116" data-pos="427"/>
+  <text x="6.78" y="22.94" font-size="2.20" data-pos="427">= 120</text>
+  <rect x="3.48" y="16.72" width="7.57" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="516"/>
+  <text x="7.27" y="18.94" font-size="2.62" font-weight="bold" text-anchor="middle" data-pos="516">Main</text>
   </g>
 </svg>

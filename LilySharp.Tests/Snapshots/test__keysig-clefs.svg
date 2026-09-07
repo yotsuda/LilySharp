@@ -73,9 +73,9 @@
   <rect x="23.34" y="32.82" width="0.19" height="4.00" data-pos="327"/>
   <rect x="36.62" y="32.82" width="0.19" height="4.00" data-pos="340"/>
   <text class="music" x="7.65" y="22.45" font-size="3.56" data-pos="129"></text>
-  <line x1="8.76" y1="22.28" x2="8.76" y2="19.78" stroke="#000000" stroke-width="0.116" data-pos="129"/>
-  <text x="9.43" y="22.93" font-size="2.20" data-pos="129">= 120</text>
-  <rect x="6.50" y="16.72" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="345"/>
-  <text x="9.61" y="18.92" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="345">Main</text>
+  <line x1="8.76" y1="22.29" x2="8.76" y2="19.78" stroke="#000000" stroke-width="0.116" data-pos="129"/>
+  <text x="9.43" y="22.94" font-size="2.20" data-pos="129">= 120</text>
+  <rect x="6.50" y="16.72" width="7.57" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="345"/>
+  <text x="10.29" y="18.94" font-size="2.62" font-weight="bold" text-anchor="middle" data-pos="345">Main</text>
   </g>
 </svg>

@@ -713,20 +713,22 @@ internal static partial class SharedRenderer
         }
         if (m.MarkType == MusicMarkType.Rehearsal || m.MarkType == MusicMarkType.SectionLabel)
         {
-            double fs = m.MarkType == MusicMarkType.Rehearsal ? FontSize * 0.6 : FontSize * 0.55;
-            // The frame's padding has ONE home, shared with the two sites that RESERVE for
-            // this box (MusicMarkEngraver.GetMarkHalfExtent and MarkXExtent) — and with
-            // LabelBaselineBelowCentre, which is how the engraver knows where this call puts
-            // the baseline when it wants the label on a chord row's own line.
-            const double pad = MusicMarkEngraver.LabelBoxPadding;
-            double textWidth = fonts.Advance(m.Text, fs, TextRole.Mark, FontStyle.Bold);
-            double boxW = textWidth + pad * 2;
-            double boxH = fs + pad * 2;
+            // EVERY dimension of this box has ONE home in MusicMarkEngraver, shared with the
+            // sites that RESERVE for it (MarkXExtent, GetMarkHalfExtent,
+            // OutsideStaffStacker.MusicMarkExtents) and with LabelBaselineBelowCentre, which
+            // is how the engraver knows where this call puts the baseline when it wants the
+            // label on a chord row's own line.
+            // ⚠️ THE FRAME WRAPS THE STRING'S INK AT LilyPond's OWN em (session 344), not the
+            // font's em box at a hand-picked 2.4 / 2.2 — see LabelEm / LabelBoxMargin.
+            double fs = MusicMarkEngraver.LabelEm(m.MarkType);
+            double halfW = MusicMarkEngraver.LabelBoxHalfWidth(fonts, m.MarkType, m.Text);
+            double halfH = MusicMarkEngraver.LabelBoxHalfHeight(fonts, m.MarkType, m.Text);
             // DrawRectangle's y is the visual-top edge (Y-up): anchor + half the box.
-            gc.DrawRectangle(m.X - boxW / 2, absY + boxH / 2, boxW, boxH,
+            gc.DrawRectangle(m.X - halfW, absY + halfH, halfW * 2, halfH * 2,
                 fill: Color.White, stroke: Color.Black, strokeWidth: EngravingDefaults.LineThickness);
-            gc.DrawText(m.Text, m.X, absY - fs / 2 + pad, fs, TextRole.Mark,
-                FontStyle.Bold, TextAnchor.Middle, Color.Black);
+            gc.DrawText(m.Text, m.X,
+                absY - MusicMarkEngraver.LabelBaselineBelowCentre(fonts, m.MarkType, m.Text),
+                fs, TextRole.Mark, FontStyle.Bold, TextAnchor.Middle, Color.Black);
             return;
         }
         if (IsPedalMark(m.MarkType))

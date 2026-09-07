@@ -141,6 +141,20 @@ scores against LilyPond's picture of the same book.
 
 ### Engraving
 
+- **A boxed label — a rehearsal mark, a section label — is the size and height LilyPond draws
+  it.** Three spellings were off at once and they could only be corrected together. The label's
+  em was `FontSize × 0.6` = 2.4 where LilyPond's is `text-font-size` 11pt = 2.2 staff spaces
+  magnified by `font-size 2`, 2.771822 — 13.4% small. The frame was drawn around the letter's
+  *ink* rather than around its em box, so the box's height followed the letter and the error
+  changed sign from one letter to the next (`A` too tall, `x` far too tall, `Q` too short) —
+  which is why no constant could fix it and why fitting the box to `A` alone moved every other
+  letter further away. And the frame's bottom stood 1.1 over the top line where LilyPond puts
+  it at 0.85 (`padding` 0.8 plus the staff line's half-thickness), a quarter space of air on
+  every marked system. Measured on a two-staff bass-plus-tab book, the marked system's height
+  was 0.305957 over LilyPond's and is now 0.002761; ten ledger points improve and none regress.
+  ⚠️ The label is also 0.65 WIDER than it was, which is the correct width — and a wider box at
+  a system's head can meet ink hanging below the system above it, so a book with a very low
+  note under a labelled system may space its systems differently.
 - **A numbers-only tab prints no `@chord`.** A tab written (or defaulting to) `as numbers` is
   the line that carries the fret digits *because* the notation staff above it carries
   everything else — the meter, the rests, the stems, the scripts — and the chord name over a

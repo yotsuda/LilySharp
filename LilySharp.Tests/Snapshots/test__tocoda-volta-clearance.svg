@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="347.6" viewBox="0 0 119.50 34.76" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="347.7" viewBox="0 0 119.50 34.77" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="34.76" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="34.77" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="738">To Coda over a second ending</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="21.03" x2="82.70" y2="21.03" stroke="#000000" stroke-width="0.100"/>
@@ -80,27 +80,27 @@
   <line x1="36.52" y1="17.90" x2="36.52" y2="19.98" stroke="#000000" stroke-width="0.160" data-pos="986"/>
   <line x1="36.52" y1="17.90" x2="50.89" y2="17.90" stroke="#000000" stroke-width="0.160" data-pos="986"/>
   <line x1="50.89" y1="17.90" x2="50.89" y2="19.98" stroke="#000000" stroke-width="0.160" data-pos="986"/>
-  <text x="37.52" y="19.63" font-size="1.75" font-weight="bold" data-pos="986">1.</text>
+  <text x="37.52" y="19.64" font-size="1.75" font-weight="bold" data-pos="986">1.</text>
   <line x1="51.49" y1="17.90" x2="51.49" y2="19.98" stroke="#000000" stroke-width="0.160" data-pos="997"/>
   <line x1="51.49" y1="17.90" x2="60.91" y2="17.90" stroke="#000000" stroke-width="0.160" data-pos="997"/>
   <line x1="60.91" y1="17.90" x2="60.91" y2="19.98" stroke="#000000" stroke-width="0.160" data-pos="997"/>
-  <text x="52.49" y="19.63" font-size="1.75" font-weight="bold" data-pos="997">2.</text>
+  <text x="52.49" y="19.64" font-size="1.75" font-weight="bold" data-pos="997">2.</text>
   <text class="music" x="0.30" y="17.27" font-size="4.00" data-pos="973"></text>
-  <rect x="3.37" y="17.23" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="803"/>
-  <text x="4.40" y="19.43" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="803">A</text>
-  <text x="54.63" y="17.36" font-size="2.20" font-style="italic" data-pos="1005">To </text>
-  <text class="music" x="57.77" y="16.40" font-size="3.20" data-pos="1005"></text>
+  <rect x="3.37" y="17.58" width="2.66" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="803"/>
+  <text x="4.69" y="19.84" font-size="2.62" font-weight="bold" text-anchor="middle" data-pos="803">A</text>
+  <text x="54.63" y="17.38" font-size="2.20" font-style="italic" data-pos="1005">To </text>
+  <text class="music" x="57.77" y="16.42" font-size="3.20" data-pos="1005"></text>
   <text x="68.86" y="28.53" font-size="2.20" font-style="italic" text-anchor="middle" data-pos="1018">D.S. al Coda</text>
   <text class="music" x="69.36" y="18.53" font-size="4.00" data-pos="1029"></text>
-  <rect x="68.23" y="13.47" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="803"/>
-  <text x="69.27" y="15.67" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="803">A</text>
-  <rect x="20.51" y="17.23" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="836"/>
-  <text x="21.57" y="19.43" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="836">B</text>
-  <rect x="35.07" y="14.76" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="870"/>
-  <text x="36.13" y="16.96" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="870">C</text>
-  <rect x="49.52" y="14.76" width="2.24" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="903"/>
-  <text x="50.64" y="16.96" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="903">D</text>
-  <rect x="59.83" y="14.76" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="933"/>
-  <text x="60.87" y="16.96" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="933">E</text>
+  <rect x="67.94" y="13.47" width="2.66" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="803"/>
+  <text x="69.27" y="15.73" font-size="2.62" font-weight="bold" text-anchor="middle" data-pos="803">A</text>
+  <rect x="20.20" y="17.62" width="2.72" height="2.56" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="836"/>
+  <text x="21.57" y="19.84" font-size="2.62" font-weight="bold" text-anchor="middle" data-pos="836">B</text>
+  <rect x="34.77" y="14.72" width="2.72" height="2.64" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="870"/>
+  <text x="36.13" y="16.98" font-size="2.62" font-weight="bold" text-anchor="middle" data-pos="870">C</text>
+  <rect x="49.21" y="14.80" width="2.86" height="2.56" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="903"/>
+  <text x="50.64" y="17.02" font-size="2.62" font-weight="bold" text-anchor="middle" data-pos="903">D</text>
+  <rect x="59.54" y="14.80" width="2.66" height="2.56" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="933"/>
+  <text x="60.87" y="17.02" font-size="2.62" font-weight="bold" text-anchor="middle" data-pos="933">E</text>
   </g>
 </svg>

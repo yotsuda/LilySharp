@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="360.5" viewBox="0 0 119.50 36.05" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="360.6" viewBox="0 0 119.50 36.06" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="36.05" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="36.06" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="89">Phrases</text>
   <text x="110.97" y="15.76" font-size="2.20" text-anchor="end" data-pos="108">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
@@ -74,9 +74,9 @@
   <rect x="67.25" y="23.82" width="0.19" height="4.00" data-pos="318"/>
   <rect x="75.40" y="23.82" width="0.19" height="4.00" data-pos="323"/>
   <text class="music" x="4.88" y="22.45" font-size="3.56" data-pos="123"></text>
-  <line x1="5.99" y1="22.28" x2="5.99" y2="19.78" stroke="#000000" stroke-width="0.116" data-pos="123"/>
-  <text x="6.66" y="22.93" font-size="2.20" data-pos="123">= 120</text>
-  <rect x="3.37" y="16.72" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="373"/>
-  <text x="6.47" y="18.92" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="373">Main</text>
+  <line x1="5.99" y1="22.29" x2="5.99" y2="19.78" stroke="#000000" stroke-width="0.116" data-pos="123"/>
+  <text x="6.66" y="22.94" font-size="2.20" data-pos="123">= 120</text>
+  <rect x="3.37" y="16.72" width="7.57" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="373"/>
+  <text x="7.15" y="18.94" font-size="2.62" font-weight="bold" text-anchor="middle" data-pos="373">Main</text>
   </g>
 </svg>

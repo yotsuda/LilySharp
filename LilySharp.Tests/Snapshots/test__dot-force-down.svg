@@ -22,10 +22,10 @@
   <line x1="9.86" y1="13.57" x2="9.86" y2="16.75" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="11.55" y="13.92" font-size="4.00"></text>
   <text class="music" x="14.25" y="13.42" font-size="4.00" data-pos="1229"></text>
-  <line x1="14.32" y1="13.57" x2="14.32" y2="16.79" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="14.38" y="16.79" font-size="4.00"></text>
+  <line x1="14.32" y1="13.57" x2="14.32" y2="16.80" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="14.38" y="16.80" font-size="4.00"></text>
   <rect x="16.76" y="11.42" width="0.19" height="4.00" data-pos="1214"/>
-  <rect x="3.37" y="6.69" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1176"/>
-  <text x="6.47" y="8.89" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1176">Main</text>
+  <rect x="3.37" y="6.69" width="7.57" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1176"/>
+  <text x="7.15" y="8.92" font-size="2.62" font-weight="bold" text-anchor="middle" data-pos="1176">Main</text>
   </g>
 </svg>
