@@ -483,13 +483,21 @@ internal sealed partial class LayoutEngine
 
     /// <summary>One line's page-breaking details, for the scoring report: the three heights,
     /// the two silhouette buckets and the tallness the breaker stacks it at.</summary>
+    /// <remarks>
+    /// SIX DIGITS, not three: the only reader of this line is someone laying it beside
+    /// LilyPond's own numbers, and the ledger's tolerance is 1e-6. Session 344 measured
+    /// LilyPond's <c>tallness_</c> for the same staff-plus-tab line at 16.355472 against
+    /// this report's "16.361" and could not tell a 0.0055 ss gap from rounding without
+    /// re-running; three digits are coarser than the question (HANDOFF §5
+    /// closeness-claim-limited-by-coarser-digits).
+    /// </remarks>
     internal static string DescribeDetails(SystemDetails d)
     {
         string shape = d.Shape is { } s
-            ? $"begin {s.BeginUp:F3}/{s.BeginDown:F3} rest {s.RestUp:F3}/{s.RestDown:F3}"
+            ? $"begin {s.BeginUp:F6}/{s.BeginDown:F6} rest {s.RestUp:F6}/{s.RestDown:F6}"
             : "-";
-        return $"top {d.TopExtent:F3} body {d.StaffHeight:F3} bottom {d.BottomExtent:F3} "
-            + $"height {d.Height:F3} shape {shape} tallness {d.Tallness:F3} perm {d.PagePermission}";
+        return $"top {d.TopExtent:F6} body {d.StaffHeight:F6} bottom {d.BottomExtent:F6} "
+            + $"height {d.Height:F6} shape {shape} tallness {d.Tallness:F6} perm {d.PagePermission}";
     }
 
     /// <summary>Line sizes (bars per line) of a breaking, for the scoring report.</summary>
