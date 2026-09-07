@@ -141,6 +141,21 @@ scores against LilyPond's picture of the same book.
 
 ### Engraving
 
+- **A tuplet bracket that rides a beam is placed the way LilyPond places one, and never off
+  another staff's beam.** Three faults, all in the same arm. LilyPond has two ways of placing a
+  bracket and they are separate: one for a bracket that follows its own beam — take the outer
+  two *columns'* stem tips, slope between them, done — and one for everything else, where the
+  staff joins in, the slope is checked against the notes' own contour and then damped. Lily#
+  ran the second arm's checks over the first arm's answer as well, so a bracket over a beam
+  that rises while its notes descend was flattened; it read its two points at the outer *note*
+  columns, missing a bounding rest's invisible stem and reading each note's tip half a
+  stem-attach off along the slope; and it would accept a beam belonging to a **different
+  staff** of the same measure, so a grand staff's right-hand triplet followed the left hand's
+  beam. Measured against LilyPond: on a triplet whose beam crosses its leading rest the
+  bracket's rise is now 1.043497 where LilyPond's is 1.043497 (it was flat); on the two-staff
+  fixture the bracket is now flat at 3.4 below the middle line, LilyPond's own answer, where it
+  had been at 1.5. Eighteen of 920 swept books move, all of them books with a tuplet bracket
+  over a beam.
 - **A manual beam may open and close on a rest, and it reaches that rest.** `r8[ c d e]` and
   `c8[ d e r]` were refused — the bracket on the rest was dropped on the floor, the `]` then
   paired with nothing (`LYS4016`), and the grouping the file asked for was discarded in favour

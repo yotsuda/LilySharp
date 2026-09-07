@@ -6102,6 +6102,53 @@ internal static class LpGeometryProbes
         "c'2 tuplet 3/2 { c4 e g } | c'2 tuplet 3/2 { c4 e g } | b1 |");
 
     /// <summary>
+    /// THE BRACKET THAT FOLLOWS ITS BEAM — the mirrors of tuplet-bracket-follow-beam.ly's
+    /// books TFB / TFR / TFC, the pair session 343 owed after correcting three faults in
+    /// LilyPond's follow-beam arm with nothing here watching.
+    /// </summary>
+    /// <remarks>
+    /// <c>calc_position_and_height</c> has TWO arms. The follow-beam one
+    /// (lily/tuplet-bracket.cc:495-519) takes the outer two COLUMNS' stem tips, sets dy to
+    /// their difference, pushes exactly those two points and stops; uniting with the staff,
+    /// the musical sign gates, the damping and the per-column points are all in the ELSE arm
+    /// (:520-631), and :633-637 pushes the staff edge only <c>if (!follow_beam)</c>. The three
+    /// tuplet-bracket pairs that were already here measure the ELSE arm only — TBSD/TBSA have
+    /// no beam at all and TPB's beam is FLAT, where the two arms cannot be told apart.
+    /// <para>
+    /// MEASURED (audit/lp-geometry/probes/tuplet-bracket-follow-beam.ly, 2026-09-07), every
+    /// book one system / two staves, the tuplet staff ABOVE so its down-hanging bracket binds:
+    /// </para>
+    /// <list type="bullet">
+    /// <item>TFB (<c>e''8[ \tuplet 3/2 { d''8 c'' b' ] }</c>, the beam starting outside the
+    /// tuplet so the bracket is drawn) 7.527420 = number ink bottom 4.477420 + 2.05 + 1.
+    /// <c>beam=SET</c> and <c>positions=(-3.549603 . -4.149803)</c> — SLOPED, dy = -0.600200:
+    /// the ±0.2 staff-edge collapse TBSD/TBSA measure is absent, which is the whole point of
+    /// the book.</item>
+    /// <item>TFR (the tuplet's first column a REST the beam runs over) 7.611908 = number ink
+    /// bottom 4.561908 + 2.05 + 1; <c>positions=(-3.719148 . -4.149235)</c>. par_beam is STILL
+    /// set — every LilyPond note column has a stem, a rest's included — and the left encompass
+    /// point is that invisible stem. ⚠️ The written prediction ("TFR ≈ TFB at the binding end")
+    /// was WRONG: the left end goes DOWN, not up, so the number rides 0.084488 lower. The
+    /// deepest point is not what moves; the pair separates in the gap after all.</item>
+    /// <item>TFC (the same four notes, no tuplet) 6.590000 — the falsifier, and the same
+    /// clef-bound number TPC reads. ⚠️ The FIRST draft of this probe put the tuplet on the
+    /// lower staff with the bracket above and all three books printed an identical 6.826: a
+    /// follow-beam bracket sits only one padding off the BEAM, so it never cleared that
+    /// staff's own treble clef. The deafness is recorded in the probe header.</item>
+    /// </list>
+    /// </remarks>
+    private static readonly string TFB = BeamedTupletScore("TFB",
+        "b2 e'8[ tuplet 3/2 { d'8 c' b ] } b8 | b2 e'8[ tuplet 3/2 { d'8 c' b ] } b8 | b1 |");
+
+    /// <summary>The tuplet's first column a rest the beam runs over.</summary>
+    private static readonly string TFR = BeamedTupletScore("TFR",
+        "b2 e'8[ tuplet 3/2 { r8 c' b ] } b8 | b2 e'8[ tuplet 3/2 { r8 c' b ] } b8 | b1 |");
+
+    /// <summary>The falsifier: the same four notes with no tuplet at all.</summary>
+    private static readonly string TFC = BeamedTupletScore("TFC",
+        "b2 e'8[ d'8 c' b ] | b2 e'8[ d'8 c' b ] | b1 |");
+
+    /// <summary>
     /// A DYNAMIC under a forced-down column — the mirrors of dynamic-support.ly's books
     /// DSQ / DSW / DSB, the points that gate the LAST raw-3.5 read
     /// (<c>NoteColumnLayout.RawSupportEdgeUp</c>, session 35's model table).
@@ -14161,6 +14208,18 @@ internal static class LpGeometryProbes
         // part of the claim. See SlopedTupletScore's remark for the decomposition.
         new("staff.staff.tuplet-bracket-sloped-desc", TBSD, g => g.StaffGap(), ZeroStaffStaffPaper),
         new("staff.staff.tuplet-bracket-sloped-asc", TBSA, g => g.StaffGap(), ZeroStaffStaffPaper),
+
+        // --- the bracket that FOLLOWS its beam (TFB/TFR/TFC) ---
+        // The regime the three pairs above CANNOT see: TBSD/TBSA have no beam and TPB's
+        // beam is flat, so LilyPond's two arms are indistinguishable in all of them.
+        // Session 343 corrected three faults inside the follow arm — the else arm's sign
+        // gates were flattening it, its points were taken at the outer NOTE columns rather
+        // than the outer columns, and both beam lookups would reach another staff — and
+        // moved 18 of 920 swept books with nothing here watching. See BeamedTupletScore's
+        // TFB remark for the measured decomposition and for the deaf first draft.
+        new("staff.staff.tuplet-bracket-follow-beam", TFB, g => g.StaffGap(), ZeroStaffStaffPaper),
+        new("staff.staff.tuplet-bracket-follow-beam-rest", TFR, g => g.StaffGap(), ZeroStaffStaffPaper),
+        new("staff.staff.tuplet-bracket-follow-beam-control", TFC, g => g.StaffGap(), ZeroStaffStaffPaper),
 
         // --- the DYNAMIC's support (DSQ/DSW/DSB + mechanism pair DMF/DMW) ---
         // The points that gate the last raw-3.5 read (NoteColumnLayout.RawSupportEdgeUp).

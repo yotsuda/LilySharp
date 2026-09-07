@@ -96,11 +96,19 @@ public class TupletBracketRestBoundTests
             .ToList();
         Assert.NotEmpty(strokes);
 
-        var line = strokes
+        // The bracket LINE, as its two ENDS — not as its two drawn segments' left corners:
+        // the number splits a sloped bracket into two pieces, and the rise between the pieces
+        // is not the bracket's own dy.
+        var pieces = strokes
             .Where(l => Math.Abs(l.X1 - l.X2) > 1e-9)          // the horizontal segments
-            .Select(l => middle - l.Y1)
-            .ToArray();
-        Assert.Equal(2, line.Length);                           // split by the number
+            .OrderBy(l => Math.Min(l.X1, l.X2))
+            .ToList();
+        Assert.Equal(2, pieces.Count);                          // split by the number
+        var first = pieces[0];
+        var last = pieces[^1];
+        double leftY = first.X1 <= first.X2 ? first.Y1 : first.Y2;
+        double rightY = last.X1 >= last.X2 ? last.Y1 : last.Y2;
+        double[] line = { middle - leftY, middle - rightY };
         double inkTop = strokes.Max(l => middle - Math.Min(l.Y1, l.Y2));
         return (line, inkTop);
     }
@@ -137,6 +145,72 @@ public class TupletBracketRestBoundTests
         Assert.True(inkTop < restInkBottom,
             $"the bracket's ink reaches {inkTop:F6} above the middle line and the r16's ink "
             + $"bottom is {restInkBottom:F6} — the two overlap, which is the reported defect.");
+    }
+
+    // A manual beam that starts OUTSIDE the tuplet and runs over its bounding rest. LilyPond
+    // follows it (the rest's stem carries it), so the bracket slopes with the beam.
+    private const string BeamOverTheBoundingRest = """
+        octave absolute
+        part melody { instrument bass
+          section A { c,16[ tuplet 3/4 { r16 c a,\2 ] } g,4\2 a,,4 r8. | }
+        }
+        form main { A }
+        score main { staff melody }
+        """;
+
+    // A GrandStaff whose UPPER tuplet is three unbeamed quarters while the LOWER staff of the
+    // same measure carries a beam. LilyPond's par_beam lives on the tuplet's own columns, so
+    // there is none here at all.
+    // The music is LilySharp.Tests/Fixtures/test/multistaff-tuplet-beams.lys, which is the
+    // book the LilyPond twin below was taken from.
+    private const string OtherStaffHasTheBeam = """
+        octave absolute
+        part rh { clef treble }
+        part lh { clef bass }
+        section S {
+          rh { tuplet 3/2 { c''4 c'' c'' } c''2 | }
+          lh { c8 d e f g a b c' | }
+        }
+        form main { S }
+        score main { grandStaff { staff rh staff lh } }
+        """;
+
+    /// <summary>
+    /// A beam that runs over the tuplet's bounding rest IS the tuplet's parallel beam, so the
+    /// bracket follows it and slopes — LilyPond's follow-beam arm takes the outer COLUMNS'
+    /// stem tips, the rest's invisible one included.
+    /// </summary>
+    /// <remarks>
+    /// LP 2.26.0 (scratch/p345/e1-probe.ly): <c>beam=&lt;Beam&gt;</c>,
+    /// <c>positions=(-4.315073 . -3.271576)</c> — a rise of 1.043497 over the bracket. Lily#
+    /// drew it FLAT at -3.730 until 2026-09-07: the follow arm was running the general arm's
+    /// musical sign gates, and the beam rises where the heads descend, so the gate zeroed the
+    /// slope. LILYPOND-REF: lily/tuplet-bracket.cc:495-519 calc_position_and_height — the
+    ///   gates and the damping are in the ELSE arm (:520-631), not this one.
+    /// </remarks>
+    [Fact]
+    public void ABeamOverTheBoundingRest_SlopesTheBracketWithIt_LpExact()
+    {
+        var (line, _) = Bracket(BeamOverTheBoundingRest);
+        Assert.Equal(1.043497, line[1] - line[0], precision: 6);
+    }
+
+    /// <summary>
+    /// …and a beam on ANOTHER STAFF is never the tuplet's, however well it covers the same
+    /// item range: LilyPond reads the beam off the tuplet's own columns' stems.
+    /// </summary>
+    /// <remarks>
+    /// LP 2.26.0 (scratch/p345/mtb-probe.ly): the bracket's ink is (-3.48 . -2.62) about the
+    /// upper staff's middle line, i.e. the flat staff-driven <c>positions</c> -3.4 — staff ink
+    /// 2.05 widened by staff-padding 0.25, plus padding 1.1. Lily# read -1.500 while it was
+    /// following the LEFT hand's beam.
+    /// </remarks>
+    [Fact]
+    public void ATupletDoesNotFollowAnotherStaffsBeam_LpExact()
+    {
+        var (line, _) = Bracket(OtherStaffHasTheBeam);
+        Assert.Equal(line[0], line[1], precision: 9);
+        Assert.Equal(-3.4, line[0], precision: 6);
     }
 
     /// <summary>

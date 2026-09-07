@@ -127,8 +127,8 @@
 ### `LilySharp.Core/Svg/Layout/TieVariantEngraver.cs`
 - **:169** quantizes each tie's Y off staff lines; that scorer is not ported (ticketed) —
 ### `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs`
-- **:697** ⚠️ Disclosed, not ported: LilyPond also requires the last column's stem to share a
-- **:1199** inner tuplets' boxes, :646-680 — not ported; no pinned point).
+- **:752** ⚠️ Disclosed, not ported: LilyPond also requires the last column's stem to share a
+- **:1335** inner tuplets' boxes, :646-680 — not ported; no pinned point).
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **:169** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 ### `LilySharp.Core/Svg/Model/LyricItem.cs`
@@ -219,8 +219,8 @@
 ### `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs`
 - **:313** string slots, not pitches, and no ledger point measures the tab
 - **:352** invisible bracket. No ledger point measures the tab
-- **:787** and no ledger point measures the tab bracket regime (LILYSHARP-OWN gate, the
-- **:1041** positions are string slots; no ledger point measures that regime).
+- **:845** and no ledger point measures the tab bracket regime (LILYSHARP-OWN gate, the
+- **:1126** positions are string slots; no ledger point measures that regime).
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 

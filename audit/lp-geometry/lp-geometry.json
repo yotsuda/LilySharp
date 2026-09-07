@@ -4397,6 +4397,27 @@
       "residual": 0.000021102,
       "why": "CLOSED to +0.000021102 (from +1.506021951) by the same session-118 port as its mirror — and the LP asymmetry is reproduced EXACTLY: Lily# 7.223999151 - 7.177737800 = 0.046261351, the port's own check. Leftover = the TPS/TNB number half-ink sliver; do NOT fit it here. The ascending mirror of tuplet-bracket-sloped-desc — LP is NOT identical: positions (3.446261350737798 . 3.646261350737798), +0.046261 above the descending book, because here the binder IS the g' column mid-span (2.5 - 0.2*(4.3342/5.6384) = 2.346261 + 1.1, six-digit; the desc book's binder is the staff point at x1 instead) (the falsified LP-identity prediction is the probe header's; the port reproducing 0.046261 is its own check). Lily# measured 8.730000000, NINE-DIGIT the desc book's number as predicted (mirror-symmetric slope application) — the identity, not only the residual, is the defect (HANDOFF 5.3)."
     },
+    "staff.staff.tuplet-bracket-follow-beam": {
+      "probe": "tuplet-bracket-follow-beam.ly",
+      "score": "TFB",
+      "lilypond": 7.527419740671665,
+      "residual": 0.007810558,
+      "why": "OPENED 2026-09-07 (session 343), and it is the point that regime never had: LilyPond's calc_position_and_height has TWO arms and the three tuplet-bracket pairs that existed measure only the ELSE one (TBSD/TBSA have no beam, TPB's beam is FLAT, and where the beam is flat the two arms cannot be told apart). Session 343 corrected three faults inside the FOLLOW arm and moved 18 of 920 swept books with nothing here watching. OPEN at +0.007811 = the beam's slope times half a stem thickness (0.119904 x 0.065 = 0.007794, matching to 2e-5). MEASURED: the BEAM is LilyPond's exactly (ink -3.050 . -1.570 on both sides) and the bracket's dy is LilyPond's to the drawn precision (-0.600 against -0.600200), so the whole residual is a CONSTANT depth offset, both ends about 0.010 lower. It is the last half-stem seam in BeamLayout: LeftY/RightY are the quanter's answer AT THE OUTER STEMS while LeftX/RightX are the COLUMN anchors, so a beam-face read at a stem's x is off by slope times stem-attach and clamps outside the anchors. The follow arm's two encompass points are corrected for that by the slope; the tip they start from (NoteColumnLayout.OutwardTipDeviceY, read at the column's head anchor) is not. Closing it means fixing that frame, and it must NOT move the dy, which is already right."
+    },
+    "staff.staff.tuplet-bracket-follow-beam-rest": {
+      "probe": "tuplet-bracket-follow-beam.ly",
+      "score": "TFR",
+      "lilypond": 7.611907881566059,
+      "residual": 0.006569266,
+      "why": "OPENED 2026-09-07 (session 343), the sibling of staff.staff.tuplet-bracket-follow-beam with the tuplet's FIRST column a rest the beam runs over. It exists to hold two claims the other book cannot: that par_beam is still SET when a bound column is a rest (every LilyPond note column has a stem, a rest's included, and a beamed rest's is one of the beam's own), and that the left encompass point is then that INVISIBLE stem. LilyPond answers beam=SET and positions=(-3.719148 . -4.149235) -- sloped, and 0.084488 lower than its sibling, which falsified this probe's written prediction that the two would agree at the binding end. OPEN at +0.006569, the same half-stem seam its sibling names, at this book's own beam slope (0.006569 / 0.065 = 0.1011). The two close together."
+    },
+    "staff.staff.tuplet-bracket-follow-beam-control": {
+      "probe": "tuplet-bracket-follow-beam.ly",
+      "score": "TFC",
+      "lilypond": 6.590000000000000,
+      "residual": -0.006512447,
+      "why": "OPENED 2026-09-07 (session 343), the FALSIFIER of the follow-beam pair: the same four notes beamed with no tuplet at all, so no bracket and no number. Its 6.590000 is the clef-bound quantity, and its residual is byte-identical to staff.staff.tuplet-bracket-partial-beam-control's -0.006512447 -- the same TNC sliver, the clef binding on both sides. It earns its place because the FIRST draft of this probe was deaf: with the tuplet on the lower staff and the bracket above, a follow-beam bracket sits only one padding off the BEAM and never cleared that staff's own treble clef, so all three books printed an identical 6.826. This entry is what says the pair above is bracket-bound rather than clef-bound."
+    },
     "staff.staff.dynamic-head-support": {
       "probe": "dynamic-support.ly",
       "score": "DSQ",

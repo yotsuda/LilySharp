@@ -646,6 +646,61 @@ internal static class TupletBracketEngraver
     }
 
     /// <summary>
+    /// A beam's slope in staff spaces per unit x. Exact in either of the frames
+    /// <see cref="BeamLayout"/> mixes (column anchors in X, outer-stem Y): the two differ by
+    /// one stem-attach at BOTH ends, so the run cancels out of the ratio.
+    /// </summary>
+    private static double BeamSlope(BeamLayout beam)
+    {
+        double run = beam.RightX - beam.LeftX;
+        return Math.Abs(run) < 1e-9 ? 0.0 : (beam.RightY - beam.LeftY) / 2.0 / run;
+    }
+
+    /// <summary>
+    /// The invisible stem of a REST at the tuplet's first (or last) column, when this beam
+    /// carries it: its x — the rest's own ink centre, which is where LilyPond stands the stem
+    /// it gives a beamed rest — and the beam face that stem ends on. Null when that column is
+    /// a note (the caller already has its tip) or when the beam does not carry it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:498-510 calc_position_and_height — the follow-beam
+    ///   arm reads <c>Note_column::get_stem(columns[0])</c> and <c>columns.back()</c>, and
+    ///   takes each stem's own extent on its own side. A rest column's stem is invisible but
+    ///   present, and its extent is the single point where the beam is.
+    /// LILYPOND-REF: lily/stem.cc:1093-1105 Stem::offset_callback — the "rests" branch puts
+    ///   that stem on the rest's extent centre.
+    /// </remarks>
+    private static (double X, double TipUp)? OuterColumnRestStem(
+        BeamLayout beam, TupletBracketItem tuplet, Measure measure, bool isStemUp, bool first)
+    {
+        int step = first ? 1 : -1;
+        int from = first ? tuplet.StartNoteIndex : tuplet.EndNoteIndex;
+        int to = first ? tuplet.EndNoteIndex : tuplet.StartNoteIndex;
+        for (int i = from; first ? i <= to : i >= to; i += step)
+        {
+            if (i < 0 || i >= measure.Items.Length) continue;
+            var item = measure.Items[i];
+            // The first thing that forms a COLUMN, in the direction asked. A note ends the
+            // walk with no answer: the caller already holds that column's tip.
+            if (item is NoteItem or ChordItem) return null;
+            if (item is not RestItem { IsSpacer: false }) continue;
+            var rests = beam.Group.RestStems;
+            if (beam.RestXPositions.Length != rests.Length) return null;
+            for (int r = 0; r < rests.Length; r++)
+            {
+                if (rests[r].ItemIndex != i) continue;
+                int rm = rests[r].MeasureIndex < 0
+                    ? beam.Group.MeasureIndex : rests[r].MeasureIndex;
+                if (rm != tuplet.MeasureIndex) continue;
+                double x = beam.RestXPositions[r];
+                return (x, beam.OuterEdgeStaffSpaceAtX(x, isStemUp));
+            }
+            return null;
+        }
+        return null;
+    }
+
+    /// <summary>
     /// True when <paramref name="beam"/> is the tuplet's <c>par_beam</c>: its OUTER TWO note
     /// columns are both carried by this one beam. Same measure and same VOICE first — another
     /// voice's beam at the same item range is never this bracket's.
@@ -762,17 +817,20 @@ internal static class TupletBracketEngraver
         // notes carry both a notation beam (no string numbers) and a tab beam. A tab
         // tuplet must read its TAB beam so the number's side and the beam edge come
         // from the strings, not the pitch. Covers() matches only measure+voice.
-        BeamLayout? fallback = null;
+        // ⚠️ AND ONLY THAT STAFF'S. LilyPond's par_beam is the beam on the tuplet's OWN outer
+        // columns' stems (scm/output-lib.scm:3955-3967), so it cannot be another staff's; the
+        // old cross-staff fallback here made a GrandStaff's right-hand tuplet follow the LEFT
+        // hand's beam. MEASURED 2026-09-07 on LilySharp.Tests/Fixtures/test/
+        // multistaff-tuplet-beams.lys, whose tuplet is three unbeamed QUARTERS: LilyPond
+        // answers no parallel beam and flattens the bracket on the staff, while this engraver
+        // was following a beam belonging to the other staff of the same measure and voice.
         foreach (var beam in beamLayouts)
         {
-            if (!Covers(beam.Group, tuplet, tupMeasures))
+            if (beam.StaffIndex != tuplet.StaffIndex)
                 continue;
-            if (beam.StaffIndex == tuplet.StaffIndex)
+            if (Covers(beam.Group, tuplet, tupMeasures))
                 return beam;
-            fallback ??= beam;
         }
-        if (fallback != null)
-            return fallback;
         return null;
     }
 
@@ -855,9 +913,14 @@ internal static class TupletBracketEngraver
         {
             if (beamLayouts.IsDefaultOrEmpty)
                 return null;
-            (BeamLayout, int)? fallback = null;
             foreach (var b in beamLayouts)
             {
+                // ⚠️ THIS STAFF'S BEAMS ONLY, as FindCoveringBeam does and for the same
+                // reason: a stem's beam is a fact about its own staff (lily/stem.cc
+                // Stem::get_beam), and the cross-staff fallback that used to stand here let a
+                // GrandStaff's upper tuplet read its column tips off the LOWER staff's beam.
+                if (b.StaffIndex != tuplet.StaffIndex)
+                    continue;
                 if (b.Group.MeasureIndex != tuplet.MeasureIndex
                     || b.Group.VoiceIndex != tuplet.VoiceIndex)
                     continue;
@@ -874,11 +937,9 @@ internal static class TupletBracketEngraver
                 }
                 if (member < 0)
                     continue;
-                if (b.StaffIndex == tuplet.StaffIndex)
-                    return (b, member);
-                fallback ??= (b, member);
+                return (b, member);
             }
-            return fallback;
+            return null;
         }
 
         // Get staff positions of first and last notes, and — separately — the most
@@ -895,6 +956,11 @@ internal static class TupletBracketEngraver
         var lpPoints = new List<(double X, double YUp)>();
         int firstLo = 0, firstHi = 0, lastLo = 0, lastHi = 0;
         double firstTipUp = 0, lastTipUp = 0, lastColX = double.NaN;
+        // The outer NOTE columns' drawn stem x, and the beam each of those stems joins —
+        // LilyPond's follow-beam arm asks the STEMS, not the columns.
+        double firstStemX = double.NaN, lastStemX = double.NaN;
+        double firstStemShift = 0, lastStemShift = 0;
+        BeamLayout? firstStemBeam = null, lastStemBeam = null;
         (BeamLayout beam, int memberIndex)? lpAnyBeam = null;
         // The extreme ENCOMPASS POINT in the staff-top device frame (down-positive),
         // not the extreme staff POSITION. Those are different aggregates the moment the
@@ -983,11 +1049,30 @@ internal static class TupletBracketEngraver
                 tip = NoteColumnLayout.Of(item, null, member?.beam, stemX) is { } col
                     ? col.OutwardTipDeviceY(isStemUp)
                     : RawOutwardTip(pos.Value, duration, isStemUp);
+                // The DRAWN stem's x, which is not `stemX' above when the column is beamed:
+                // MemberXPositions are head anchors and the renderer applies
+                // LayoutUtilities.StemX on top (SharedRenderer.Beams). LilyPond's follow-beam
+                // arm takes its two points at the STEMS (:514-518
+                // `stems[side]->relative_coordinate'), where its general arm takes them at the
+                // COLUMNS (:559 `columns[i]->relative_coordinate') — so both frames are
+                // needed, and only the follow arm reads this one.
+                double drawnStemX = member is { } mbx && !mbx.beam.MemberXPositions.IsDefaultOrEmpty
+                    ? LayoutUtilities.StemX(mbx.beam.MemberXPositions[mbx.memberIndex], itemUp,
+                        GlyphMetrics.NoteValueOf(item), LayoutUtilities.NoteheadStyleOf(item))
+                    : stemX;
                 // Y-up staff-middle spaces (device staff-top middle = 2.0).
                 double tipUp = 2.0 - tip;
                 if (lpPoints.Count == 0)
+                {
                     firstTipUp = tipUp;
+                    firstStemX = drawnStemX;
+                    firstStemShift = drawnStemX - stemX;   // the tip was read at stemX
+                    firstStemBeam = member?.beam;
+                }
                 lastTipUp = tipUp;
+                lastStemX = drawnStemX;
+                lastStemShift = drawnStemX - stemX;
+                lastStemBeam = member?.beam;
                 lastColX = colX;
                 lpPoints.Add((colX, tipUp));
             }
@@ -1080,21 +1165,68 @@ internal static class TupletBracketEngraver
             bool followBeam = parBeam != null
                               && parBeam.Group.StemUp == isStemUp
                               && !parBeam.Group.IsKnee;
+            // ⚠️ LILYPOND'S TWO BRANCHES ARE NOT ONE BRANCH WITH A FLAG. Everything below the
+            // `else' here — uniting with the staff, the musical sign gates, the damping, and
+            // the per-column points — lives in lily/tuplet-bracket.cc's ELSE arm (:520-631).
+            // The follow-beam arm (:495-519) does one thing: it takes the OUTER TWO COLUMNS'
+            // STEM TIPS, sets dy to their difference, and pushes exactly those two points.
+            // Running the sign gates over it as well flattened brackets LilyPond slopes:
+            // MEASURED on `c,16[ tuplet 3/4 { r16 c a, ] }' (scratch/p345/e1.lys), the beam
+            // rises (+0.561446) while the heads descend, so `sign(graphicalDy) != musDown'
+            // zeroed the dy and the bracket came out flat at -3.730 against LilyPond's
+            // sloped positions=(-4.315073 . -3.271576).
+            double staffEdge = 2.3 * dir;
+            var followPoints = new List<(double X, double YUp)>();
+            double dy;
+            if (followBeam)
+            {
+                // LILYPOND-REF: lily/tuplet-bracket.cc:495-519 calc_position_and_height —
+                //   the follow_beam arm. poss[side] is
+                //   `stems[side]->extent(...)[stem dir] + parent_relative', i.e. the outer
+                //   COLUMN's stem tip. A bracketed rest at a bound has one too: an INVISIBLE
+                //   stem standing on the rest's ink centre and ending on the beam's face
+                //   (MEASURED, scratch/p345/beamslope.ly: `r8[ c e g]' reports that stem's
+                //   extent as the single point 0.253716, which is the beam's upper edge at
+                //   the rest's x). The follow arm only ever runs when both outer stems carry
+                //   this one beam, so a bounding rest here is always a beamed one.
+                double lvX = lpPoints[0].X, lvY = firstTipUp;
+                double rvX = lpPoints[^1].X, rvY = lastTipUp;
+                // A BEAMED note column's stem ends on the beam AT THE STEM'S OWN X, and the
+                // tip above was read at the column's head anchor — the seam this file has
+                // disclosed since 2026-08-09 as "a SLOPED partial beam would surface it; no
+                // corpus book measures that regime". `r16[' made that regime writable:
+                // MEASURED on scratch/p345/e1.lys the two points came out 0.0133 short and
+                // the bracket's dy with them (1.030237 against LilyPond's 1.043497).
+                // ⚠️ Corrected by the beam's SLOPE rather than by re-reading its face at the
+                // stem x: BeamLayout.LeftX/RightX are column anchors while LeftY/RightY are
+                // the quanter's answer at the STEMS, so a face read outside the anchors
+                // clamps — but the SLOPE is exact in either frame, the two differing by one
+                // stem-attach at both ends.
+                if (firstStemBeam is { } fb && !double.IsNaN(firstStemX))
+                    (lvX, lvY) = (firstStemX, lvY + BeamSlope(fb) * firstStemShift);
+                if (lastStemBeam is { } lb && !double.IsNaN(lastStemX))
+                    (rvX, rvY) = (lastStemX, rvY + BeamSlope(lb) * lastStemShift);
+                if (OuterColumnRestStem(parBeam!, tuplet, measure, isStemUp, first: true) is { } lr)
+                    (lvX, lvY) = lr;
+                if (OuterColumnRestStem(parBeam!, tuplet, measure, isStemUp, first: false) is { } rr)
+                    (rvX, rvY) = rr;
+                dy = rvY - lvY;
+                followPoints.Add((lvX, lvY));
+                followPoints.Add((rvX, rvY));
+            }
+            else
+            {
             // The staff, ink 2.05 widened by staff-padding 0.25, united into the
             // bound columns' extents — THIS is what flattens a within-staff
             // tuplet (:530-535 rv.unite (staff)).
-            double staffEdge = 2.3 * dir;
-            double lvDir = followBeam ? firstTipUp
-                : dir > 0 ? Math.Max(firstTipUp, staffEdge) : Math.Min(firstTipUp, staffEdge);
-            double rvDir = followBeam ? lastTipUp
-                : dir > 0 ? Math.Max(lastTipUp, staffEdge) : Math.Min(lastTipUp, staffEdge);
+            double lvDir = dir > 0 ? Math.Max(firstTipUp, staffEdge) : Math.Min(firstTipUp, staffEdge);
+            double rvDir = dir > 0 ? Math.Max(lastTipUp, staffEdge) : Math.Min(lastTipUp, staffEdge);
             double graphicalDy = rvDir - lvDir;
 
             // Musical sign gates (:537-549): zero the dy when the chord's top and
             // bottom move opposite ways, or when the graphical dy contradicts them.
             int musUp = Math.Sign(lastHi - firstHi);
             int musDown = Math.Sign(lastLo - firstLo);
-            double dy;
             if (musUp != musDown)
                 dy = 0.0;
             else if (Math.Sign(graphicalDy) != musDown)
@@ -1132,10 +1264,14 @@ internal static class TupletBracketEngraver
                     dy = lpMaxDy;
                 }
             }
+            }
 
-            // The offset pass (:708-719): every column point + the staff edge at
+            // The offset pass (:708-719): the branch's own points + the staff edge at
             // x0 and x1, cleared against the sloped chord, then padding 1.1.
-            double factor = lpPoints.Count > 1 ? 1.0 / span : 1.0;
+            // ⚠️ WHICH POINTS depends on the branch, as it does in LilyPond: the follow arm
+            // pushed exactly two (:514-518) and the general arm one per column (:554-562).
+            var passPoints = followBeam ? followPoints : lpPoints;
+            double factor = passPoints.Count > 1 ? 1.0 / span : 1.0;
             double offsetUp = dir > 0 ? double.NegativeInfinity : double.PositiveInfinity;
             void Clear(double px, double py)
             {
@@ -1143,7 +1279,7 @@ internal static class TupletBracketEngraver
                 if (dir * py > dir * (offsetUp + tuplety))
                     offsetUp = py - tuplety;
             }
-            foreach (var p in lpPoints)
+            foreach (var p in passPoints)
                 Clear(p.X - x0, p.YUp);
             // LILYPOND-REF: lily/tuplet-bracket.cc:633-637 calc_position_and_height —
             //   `if (!follow_beam) { points.push_back(staff[dir]) ×2 }`. A bracket that
