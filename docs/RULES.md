@@ -3807,6 +3807,15 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
   ⚠️ **`git stash pop` / `git checkout --` では起きない**（git は書いた時刻を入れる）。
   **起きるのは「ファイルをコピーで戻す」ときだけ**——**毒の当て方としてはこれが一番手軽なので、
   一番踏みやすい。** ★ **確かめ方は上と同じで、`Get-FileHash` を full ビルドと突き合わせる。**
+- ★★★ ⚠️⚠️ **同じ顔をした別の罠＝`Copy-Item -Recurse -Force <bin> scratch\pNNN\exe-head` は、
+  宛先が*既に在る*と中に入れ子で複製する**（2026-09-07・第345 が踏んだ）。**`-Force` は上書き許可で
+  あって「中身を同期」ではない**——2 回目からは `exe-head\net10.0\…` が増えるだけで、
+  **`exe-head\lysc.exe` は初回の build のまま**。⇒ **修正を入れて掃きを回しても MOVED が変わらず、
+  「増分ビルドが腐った」と誤診して `--no-incremental` と再掃きに 15 分捨てた**（上の項が
+  「再現しない」と書いているとおり、腐ってはいなかった）。
+  ⇒ ★★ **掃きの exe を更新するときは `Remove-Item -Recurse` してから複製し、直後に
+  `LilySharp.Core.dll` の `Get-FileHash` を bin と突き合わせる 1 行を同じパイプラインに置く**
+  （`scratch\p347\` の最後の掃きがその形）。**「修正が効かない」の第一容疑者は build ではなく写し。**
 - ★ ⚠️ **`PublishReadyToRun` の R2R 中間物が腐ると、publish は古い依存を配りながら
   deps.json では新しい版を名乗る**。crossgen2 の出力は
   `<proj>/obj/<cfg>/<tfm>/<rid>/R2R/*.dll` にキャッシュされ、**PackageReference の版だけを

@@ -216,7 +216,8 @@ internal static class TupletBracketEngraver
         Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
         Func<int, int, double>? staffYAt = null,
         Dictionary<int, Staff>? staffByIndex = null,
-        ImmutableArray<ArticulationLayout> scripts = default)
+        ImmutableArray<ArticulationLayout> scripts = default,
+        Func<int, IReadOnlyDictionary<RestShiftKey, double>?>? restShiftsOf = null)
     {
         if (tuplets.IsDefaultOrEmpty)
             return ImmutableArray<TupletBracketLayout>.Empty;
@@ -310,7 +311,8 @@ internal static class TupletBracketEngraver
             // Calculate slope based on first/last note staff positions
             var (startY, endY) = CalculateSlope(tuplet, tupMeasures, isStemUp, endX - startX,
                 isTabStaff ? default : beamLayouts, measureLayout, useRealExtents: !isTabStaff,
-                bracketStartX: startX, scripts: scripts);
+                bracketStartX: startX, scripts: scripts,
+                restShifts: restShiftsOf?.Invoke(tuplet.StaffIndex));
 
             // When the bracket is suppressed (fully beamed), the NUMBER
             // attaches to the BEAM: centered between the outer stems, sitting
@@ -863,7 +865,8 @@ internal static class TupletBracketEngraver
         TupletBracketItem tuplet, ImmutableArray<Measure> measures, bool isStemUp, double bracketWidth,
         ImmutableArray<BeamLayout> beamLayouts = default, MeasureLayout? measureLayout = null,
         bool useRealExtents = false, double bracketStartX = double.NaN,
-        ImmutableArray<ArticulationLayout> scripts = default)
+        ImmutableArray<ArticulationLayout> scripts = default,
+        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
     {
         double nestingOffset = tuplet.NestingDepth * NestingDepthOffset;
         // Fallback only — when no note positions are found the bracket
@@ -942,6 +945,66 @@ internal static class TupletBracketEngraver
         //   the note columns' own extents (Note_column::cross_staff_extent[dir]).
         double? extremeTip = null;
 
+        // A rest column's reach on the bracket's side, Y-up in staff-middle spaces: the
+        // glyph the renderer draws (GlyphMetrics.GetRestBBox — LilyPond's Rest extent is
+        // its stencil's, the LILC box) at the origin it draws it at (the middle line, a
+        // semibreve hanging one space above, plus the shift the rest-collision pass gave
+        // it — the SAME memo the renderer's GetRestShift and the skyline seed read), united
+        // with the beam face where a beam carries the rest as an invisible stem.
+        // ⚠️ With no memo handed in (the slur pass rebuilding tuplet numbers), the PURE
+        // position stands: the written pitch of `a4@rest', the voiced base, or the middle
+        // line — LilyPond's own pure-chain reading, the collision push left out.
+        // LILYPOND-REF: lily/rest.cc:33-45 y_offset_callback, :47-145 staff_position_internal;
+        //   lily/rest.cc:229-257 brew_internal_stencil — the extent is the glyph's;
+        //   lily/note-column.cc:251-258 cross_staff_extent — `iv.unite (stem extent)'.
+        double RestReachUp(RestItem rest, int itemIndex)
+        {
+            int restValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
+            double shift;   // staff positions from the glyph's default origin, up-positive
+            if (restShifts is not null)
+                shift = restShifts.TryGetValue(
+                    new RestShiftKey(tuplet.MeasureIndex, tuplet.VoiceIndex, itemIndex), out var rs)
+                    ? rs : 0.0;
+            else
+                shift = rest.StaffPosition ?? (rest.VoiceDirection != 0
+                    ? ElementCoordinator.RestStaffPosition(rest, rest.VoiceDirection, restValue)
+                        - (restValue == 1 ? 2.0 : 0.0)
+                    : 0.0);
+            double originUp = (restValue == 1 ? 1.0 : 0.0) + shift * 0.5;
+            var box = GlyphMetrics.GetRestBBox(restValue);
+            double lo = originUp + box.Bottom, hi = originUp + box.Top;
+            // The invisible stem of a rest a beam runs over ends on the beam's face at the
+            // rest's own x (MEASURED, scratch/p345/beamslope.ly: its extent is that single
+            // point) — one of the beam's own stems, on THIS staff and voice.
+            // LILYPOND-REF: lily/beam-engraver.cc:211-220 acknowledge_rest; lily/stem.cc
+            //   Stem::get_beam — the rest's stem carries the beam.
+            if (!beamLayouts.IsDefaultOrEmpty)
+            {
+                foreach (var b in beamLayouts)
+                {
+                    if (b.StaffIndex != tuplet.StaffIndex
+                        || b.Group.MeasureIndex != tuplet.MeasureIndex
+                        || b.Group.VoiceIndex != tuplet.VoiceIndex)
+                        continue;
+                    var rests = b.Group.RestStems;
+                    if (b.RestXPositions.Length != rests.Length)
+                        continue;
+                    for (int r = 0; r < rests.Length; r++)
+                    {
+                        if (rests[r].ItemIndex != itemIndex)
+                            continue;
+                        int rm = rests[r].MeasureIndex < 0 ? b.Group.MeasureIndex : rests[r].MeasureIndex;
+                        if (rm != tuplet.MeasureIndex)
+                            continue;
+                        double face = b.OuterEdgeStaffSpaceAtX(b.RestXPositions[r], b.Group.StemUp);
+                        lo = Math.Min(lo, face);
+                        hi = Math.Max(hi, face);
+                    }
+                }
+            }
+            return isStemUp ? hi : lo;
+        }
+
         for (int i = tuplet.StartNoteIndex; i <= tuplet.EndNoteIndex && i < measure.Items.Length; i++)
         {
             var item = measure.Items[i];
@@ -954,7 +1017,33 @@ internal static class TupletBracketEngraver
                 _ => null
             };
 
-            if (pos == null) continue;
+            if (pos == null)
+            {
+                // A REST is a column too, and LilyPond's general arm walks every column
+                // raw: the rest's own ink on the bracket's side is an encompass point,
+                // united with its (invisible) stem when a beam carries it. Only the SLOPE
+                // bounds skip rests (get_bounds, :423-438) — so a rest joins lpPoints and
+                // last_x here and stays out of firstPos/lastPos.
+                // MEASURED (audit/lp-geometry/probes/tuplet-bracket-rest-point.ly): a
+                // quarter rest written at c' under \tuplet 3/2 { c''4 c'4\rest c'' } drops
+                // LilyPond's bracket from (-4.1 . -4.1) to (-5.35 . -5.35) = its ink bottom
+                // -4.25 + padding, and does so at a bound (TQB) exactly as in the middle
+                // (TQD); a rest raised to the far side (TQU) moves nothing. Before this
+                // arm the ledger pair read -1.250000 on both deep books.
+                // LILYPOND-REF: lily/tuplet-bracket.cc:554-562 calc_position_and_height —
+                //   `for (i < columns.size ()) points.push_back (x, note_ext[dir])';
+                //   lily/note-column.cc:251-258 Note_column::cross_staff_extent — the
+                //   column's extent united with its stem's.
+                if (item is RestItem { IsSpacer: false, IsMultiMeasure: false } rest
+                    && useRealExtents && measureLayout is { } rml)
+                {
+                    double restColX = rml.X
+                        + LayoutUtilities.GetItemXOffset(measures, tuplet.MeasureIndex, i, rml);
+                    lpPoints.Add((restColX, RestReachUp(rest, i)));
+                    lastColX = restColX;
+                }
+                continue;
+            }
 
             // Head-position interval of the column (chord: min..max) — only the
             // SIGNS of last−first feed the LP gates.
@@ -965,7 +1054,10 @@ internal static class TupletBracketEngraver
                                  c2.Notes.Max(n => n.StaffPosition)),
                 _ => (pos.Value, pos.Value),
             };
-            if (firstPos == null)
+            // "First NON-REST column" — the slope bound — is asked of firstPos, not of
+            // lpPoints being empty: a leading rest already pushed its point there.
+            bool firstNote = firstPos == null;
+            if (firstNote)
                 (firstLo, firstHi) = posIv;
             (lastLo, lastHi) = posIv;
 
@@ -1023,7 +1115,7 @@ internal static class TupletBracketEngraver
                     : RawOutwardTip(pos.Value, duration, isStemUp);
                 // Y-up staff-middle spaces (device staff-top middle = 2.0).
                 double tipUp = 2.0 - tip;
-                if (lpPoints.Count == 0)
+                if (firstNote)
                 {
                     firstTipUp = tipUp;
                     firstStemX = stemX;
@@ -1042,37 +1134,19 @@ internal static class TupletBracketEngraver
                 : (isStemUp ? Math.Min(extremeTip.Value, tip) : Math.Max(extremeTip.Value, tip));
         }
 
-        if (firstPos == null || lastPos == null || extremeTip == null)
-        {
-            // An ALL-REST tuplet still runs LP's offset pass: with no note
-            // points the staff edge at both bounds is the only encompass, so
-            // the flat bracket sits at staff ink 2.3 + padding 1.1 = 3.4 above
-            // the middle line (tuplet-rest.ly t4, LP 3.400 measured; the old
-            // fallback parked it at the fixed 4.5).
-            // LILYPOND-REF: lily/tuplet-bracket.cc:633-637 calc_position_and_height
-            //   (the staff points join regardless of columns); :708-726 the
-            //   offset pass + padding.
-            // ⚠️ Disclosed: LP also pushes the REST columns' own ink as points
-            //   (:554-562 walks every column raw) and takes a rest column as a
-            //   slope BOUND (:525-535) — a default mid-staff rest never beats
-            //   the staff edge, so neither is wired; tuplet-rest.ly t5/t6
-            //   measure the bound seam at ≤0.055 (rest-bound slope regime).
-            if (useRealExtents && !double.IsNaN(bracketStartX) && bracketWidth > 0.001)
-            {
-                int rdir = isStemUp ? 1 : -1;
-                double off = (2.3 + BracketPadding) * rdir + nestingOffset * rdir;
-                double posQ = off / 0.5;
-                if (posQ >= -5.0 && posQ <= 5.0)
-                {
-                    posQ = Math.Round(posQ, MidpointRounding.ToEven);
-                    if ((int)posQ % 2 == 0 && Math.Abs((int)posQ) <= 4)
-                        posQ += rdir;
-                    off = posQ * 0.5;
-                }
-                return (2.0 - off, 2.0 - off);
-            }
+        // An ALL-REST tuplet runs the SAME general arm below: get_bounds finds no bounds so
+        // dy is 0 (:551-552), and the offset pass clears the rest columns' own ink (the loop
+        // above pushed them) plus the staff edge at both bounds — for middle-line rests the
+        // staff edge wins and the flat bracket sits at 2.3 + 1.1 = 3.4 (tuplet-rest.ly t4,
+        // LP 3.400 measured). Until 2026-09-07 a SECOND spelling of that offset pass stood
+        // here, staff edge only, under "a default mid-staff rest never beats the staff
+        // edge" — true of `r4', false of `c4@rest' (the ledger books
+        // staff.staff.tuplet-bracket-rest-point-* are where the ink was measured).
+        // LILYPOND-REF: lily/tuplet-bracket.cc:551-552 calc_position_and_height —
+        //   `else *dy = 0'; :633-637 the staff points join regardless of columns.
+        bool allRest = firstPos == null || lastPos == null || extremeTip == null;
+        if (allRest && !(useRealExtents && !double.IsNaN(bracketStartX) && bracketWidth > 0.001))
             return (baseY, baseY);
-        }
 
         // ---- LP port: calc_position_and_height, the no-beam (drawn-bracket)
         // branch — graphical dy from the bound columns UNITED WITH THE STAFF,
@@ -1104,7 +1178,7 @@ internal static class TupletBracketEngraver
         //   ⑸ x0/x1 come from the caller's stem-attach faces for BOTH bounds —
         //     LP's get_x_bound_item falls back to the COLUMN when a bound stem
         //     points AGAINST the bracket (mixed-direction tuplets).
-        if (lpPoints.Count > 0 && !double.IsNaN(bracketStartX) && bracketWidth > 0.001)
+        if ((lpPoints.Count > 0 || allRest) && !double.IsNaN(bracketStartX) && bracketWidth > 0.001)
         {
             int dir = isStemUp ? 1 : -1;             // Y-up
             double span = bracketWidth;              // x0..x1 = bound stem faces
@@ -1119,7 +1193,12 @@ internal static class TupletBracketEngraver
             //    with no beams at all. Same guard the caller uses before FindCoveringBeam.
             var parBeam = beamLayouts.IsDefaultOrEmpty
                 ? null : FindCoveringBeam(beamLayouts, tuplet, measures);
+            // ⚠️ `firstPos != null': a beam needs a NOTE member in this model (BeamDetector
+            // builds no group from rests alone), so a par_beam over an all-rest tuplet cannot
+            // occur; the gate only keeps the follow arm from reading an unset stem x if that
+            // ever changes. LilyPond would follow such a beam (every rest has a stem).
             bool followBeam = parBeam != null
+                              && firstPos != null
                               && parBeam.Group.StemUp == isStemUp
                               && !parBeam.Group.IsKnee;
             // ⚠️ LILYPOND'S TWO BRANCHES ARE NOT ONE BRANCH WITH A FLAG. Everything below the
@@ -1162,6 +1241,12 @@ internal static class TupletBracketEngraver
                 dy = rvY - lvY;
                 followPoints.Add((lvX, lvY));
                 followPoints.Add((rvX, rvY));
+            }
+            else if (allRest)
+            {
+                // No non-rest column on either side: no slope bounds, no slope.
+                // LILYPOND-REF: lily/tuplet-bracket.cc:551-552 calc_position_and_height.
+                dy = 0.0;
             }
             else
             {
@@ -1305,7 +1390,9 @@ internal static class TupletBracketEngraver
 
         // LILYPOND-REF: lily/tuplet-bracket.cc:566-629 slope calculation
         // Convert staff position difference to slope (half staff spaces)
-        double positionDiff = (lastPos.Value - firstPos.Value) * 0.5;
+        // (`!': an all-rest tuplet never reaches this fallback — it either returned above
+        // or took the general arm, whose gate `allRest' implies.)
+        double positionDiff = (lastPos!.Value - firstPos!.Value) * 0.5;
 
         // Limit the endpoint height difference to max-slope-factor × bracket width
         // (width-proportional, not an absolute cap).

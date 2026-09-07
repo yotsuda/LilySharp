@@ -6149,6 +6149,53 @@ internal static class LpGeometryProbes
         "b2 e'8[ d'8 c' b ] | b2 e'8[ d'8 c' b ] | b1 |");
 
     /// <summary>
+    /// THE REST AS AN ENCOMPASS POINT — the mirrors of tuplet-bracket-rest-point.ly's books
+    /// TQC / TQD / TQU / TQB: does a REST column push a point into the general (else) arm's
+    /// offset pass, and does it do so even at a bound where it is no slope bound?
+    /// </summary>
+    /// <remarks>
+    /// <c>calc_position_and_height</c>'s general arm walks EVERY note column raw
+    /// (lily/tuplet-bracket.cc:554-562) and pushes each column's
+    /// <c>cross_staff_extent[dir]</c>; only the SLOPE bounds skip rests (:423-438
+    /// <c>get_bounds</c>, "outer non-rest columns"). Session 343 disclosed that Lily#'s
+    /// engraver pushed note and chord columns only, harmless while a rest sits on the middle
+    /// line (its ink loses to the staff edge) and wrong the moment a rest is written at a
+    /// pitch (<c>a,4@rest</c>) or pushed out of the staff. No point measured that regime.
+    /// <para>
+    /// MEASURED (audit/lp-geometry/probes/tuplet-bracket-rest-point.ly, 2026-09-07), every
+    /// book one system / two staves, the tuplet staff ABOVE so its down-hanging bracket binds,
+    /// the outer notes both <c>c''</c> so every bracket is FLAT and only the depth is in play:
+    /// </para>
+    /// <list type="bullet">
+    /// <item>TQC (<c>\tuplet 3/2 { c''4 r4 c'' }</c>, the control) 7.777717: positions
+    /// (-4.1 . -4.1), the bracket one padding past the c'' stem tips at -3.0; the middle-line
+    /// rest's ink (-1.25 . 1.5624) loses to the staff edge and the tips alike.</item>
+    /// <item>TQD (the rest written at <c>c'</c>, staff-position -6) 9.027717 = TQC + 1.250000
+    /// exactly: positions (-5.35 . -5.35), the rest's ink bottom -4.25 now the extreme.</item>
+    /// <item>TQU (the rest written at <c>a''</c>, +3.0) 7.777717, identical to TQC to 1e-15:
+    /// the point is <c>note_ext[dir]</c>, and that column's DOWN reach (1.75) is above the
+    /// tips. The whole system shifts up for the raised rest; the gap does not.</item>
+    /// <item>TQB (the deep rest FIRST, <c>\tuplet 3/2 { c'4\rest c''4 c'' }</c>) 9.027717,
+    /// identical to TQD: <c>get_bounds</c> skips the rest for the slope, the points loop does
+    /// not. Only the x-span differs (x0 at the rest's ink left).</item>
+    /// </list>
+    /// </remarks>
+    private static readonly string TQC = BeamedTupletScore("TQC",
+        "tuplet 3/2 { c'4 r4 c' } c'2 | tuplet 3/2 { c'4 r4 c' } c'2 | c'1 |");
+
+    /// <summary>The middle rest written deep (LilyPond <c>c'4\rest</c>).</summary>
+    private static readonly string TQD = BeamedTupletScore("TQD",
+        "tuplet 3/2 { c'4 c4@rest c' } c'2 | tuplet 3/2 { c'4 c4@rest c' } c'2 | c'1 |");
+
+    /// <summary>The middle rest written high (LilyPond <c>a''4\rest</c>) — the wrong side.</summary>
+    private static readonly string TQU = BeamedTupletScore("TQU",
+        "tuplet 3/2 { c'4 a'4@rest c' } c'2 | tuplet 3/2 { c'4 a'4@rest c' } c'2 | c'1 |");
+
+    /// <summary>The deep rest at the LEFT bound — no slope bound, still a point.</summary>
+    private static readonly string TQB = BeamedTupletScore("TQB",
+        "tuplet 3/2 { c4@rest c'4 c' } c'2 | tuplet 3/2 { c4@rest c'4 c' } c'2 | c'1 |");
+
+    /// <summary>
     /// THE BEAM'S X EXTENT IN THE SKYLINE — the mirrors of beam-band-extent.ly's books
     /// BXS / BXW / BXO: the point that watches WHERE a beam's band begins, which none of the
     /// 803 points before it did (session 344 moved the band from the column anchors to the
@@ -14283,6 +14330,16 @@ internal static class LpGeometryProbes
         new("staff.staff.tuplet-bracket-follow-beam", TFB, g => g.StaffGap(), ZeroStaffStaffPaper),
         new("staff.staff.tuplet-bracket-follow-beam-rest", TFR, g => g.StaffGap(), ZeroStaffStaffPaper),
         new("staff.staff.tuplet-bracket-follow-beam-control", TFC, g => g.StaffGap(), ZeroStaffStaffPaper),
+
+        // --- the REST as an encompass point (TQC/TQD/TQU/TQB) ---
+        // The general arm pushes EVERY column's reach, a rest column's included
+        // (lily/tuplet-bracket.cc:554-562); Lily# pushed notes and chords only. TQD/TQB are
+        // an LP-identity pair in depth (a deep rest in the middle / at a bound), TQC/TQU
+        // another (a middle-line rest / a rest raised to the wrong side). See TQC's remark.
+        new("staff.staff.tuplet-bracket-rest-point-control", TQC, g => g.StaffGap(), ZeroStaffStaffPaper),
+        new("staff.staff.tuplet-bracket-rest-point-deep", TQD, g => g.StaffGap(), ZeroStaffStaffPaper),
+        new("staff.staff.tuplet-bracket-rest-point-up", TQU, g => g.StaffGap(), ZeroStaffStaffPaper),
+        new("staff.staff.tuplet-bracket-rest-point-bound", TQB, g => g.StaffGap(), ZeroStaffStaffPaper),
 
         // --- the BEAM's X extent in the skyline (BXS/BXW/BXO) ---
         // Where a beam's band BEGINS: at the drawn beam (LilyPond's stencil skyline) or at the

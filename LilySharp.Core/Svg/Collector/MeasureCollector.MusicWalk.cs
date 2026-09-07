@@ -837,10 +837,18 @@ public sealed partial class MeasureCollector
                         {
                             HasSlurStart = hasSlurStartAfter,
                             HasSlurEnd = hasSlurEndAfter,
+                            // …and a legal BEAM bound, as the RestSyntax arm below says
+                            // of `r16[' — a pitched rest is that rest with a position.
+                            HasBeamStart = hasBeamStartAfter,
+                            HasBeamEnd = hasBeamEndAfter,
                         }, m));
-                        // Post-events ride a pitched rest exactly as they ride `r4`.
+                        // Post-events ride a pitched rest exactly as they ride `r4` —
+                        // scripts AND dynamics (the RestSyntax arm's `r2@p' rule; this
+                        // arm dropped the dynamic until 2026-09-07 while its tuplet
+                        // sibling in EmitScaledItem was written to match it).
                         CollectArticulations(note, prMeasureIndex, prItemIndex,
                             stemUp: false, anchorTiming: prAnchorTiming);
+                        CollectDynamics(note, prMeasureIndex, prItemIndex);
                         break;
                     }
 
@@ -1796,6 +1804,31 @@ public sealed partial class MeasureCollector
         {
             case NoteSyntax note:
             {
+                // `a4@rest` inside a tuplet body is the same pitched REST the main walk's
+                // note arm turns aside above, and this arm is the one-arm-of-two hole for
+                // it: until 2026-09-07 it built a NOTE here — head, stem, ledger line and
+                // MIDI note-on — where the page's own main walk draws a rest. MEASURED on
+                // the ledger books staff.staff.tuplet-bracket-rest-point-{deep,bound}
+                // (`tuplet 3/2 { c'4 c4@rest c' }'): the rendered glyph was noteheads.s2,
+                // and the bracket cleared a phantom stem instead of the rest's ink.
+                // Same shape as the tuplet RestSyntax arm below: slur and beam bounds,
+                // scripts and dynamics ride it as they ride `r4`.
+                // LILYPOND-REF: lily/rest-engraver.cc:62-80 process_music — the pitch sets
+                //   staff-position and nothing else, inside \tuplet as anywhere.
+                if (Semantics.PitchedRest.Is(note))
+                {
+                    var pitchedRest = CreatePitchedRestItem(note) with
+                    {
+                        HasSlurStart = hasSlurStartAfter,
+                        HasSlurEnd = hasSlurEndAfter,
+                        HasBeamStart = hasBeamStartAfter,
+                        HasBeamEnd = hasBeamEndAfter,
+                    };
+                    builder.AddItemWithoutDuration(WithBowSources(pitchedRest with { TimeScale = scale }, m));
+                    CollectArticulations(note, annMeasureIndex, annItemIndex, stemUp: false, anchorTiming: annAnchor);
+                    CollectDynamics(note, annMeasureIndex, annItemIndex);
+                    return pitchedRest.Duration;
+                }
                 // hasGlissando read here too — the main walk's arm reads it and this
                 // arm didn't, which is the same one-arm-of-two hole the rest dynamics
                 // above already had (a tuplet note's @glissando dropped silently).

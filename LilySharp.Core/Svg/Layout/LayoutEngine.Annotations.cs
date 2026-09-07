@@ -963,7 +963,13 @@ internal sealed partial class LayoutEngine
             tupletBrackets, ml, measures, beamGroups ?? default, beamLayouts ?? default,
             forceStemUp: tupletForceStemUp,
             measuresByStaff: measuresByStaff, voicesByStaff: voicesByStaff, staffYAt: staffYAt,
-            staffByIndex: staffByIndex, scripts: tupletScripts);
+            staffByIndex: staffByIndex, scripts: tupletScripts,
+            // A rest column is an encompass point, read where Rest_collision put the rest —
+            // the room's table (ctx.RestCollisionsOf), so the drawn bracket and the band the
+            // room reserved for it clear the same rest.
+            restShiftsOf: si => staffByIndex is { } rsStaves && rsStaves.TryGetValue(si, out var rsStaff)
+                ? ctx.RestCollisionsOf(rsStaff)
+                : null);
         // TEXT-style pedal words were solved where the room was built (the same
         // skyline-time solve the brackets take); hand the draw those baselines, keyed
         // (staff, system, the mark's source position), Y-up about the mark's OWN staff

@@ -3197,7 +3197,10 @@ internal sealed class MultiStaffLayouter
             voicesByStaff: new Dictionary<int, ImmutableArray<Voice>> { [staffIndex] = staff.Voices },
             staffYAt: null,
             staffByIndex: new Dictionary<int, Staff> { [staffIndex] = staff },
-            scripts: articulations);
+            scripts: articulations,
+            // A rest column is an encompass point, read where Rest_collision put the rest
+            // — the room's memo, the same table the skyline seed and the renderer read.
+            restShiftsOf: _ => RestCollisionsOf(staff));
     }
 
     /// <summary>

@@ -141,6 +141,27 @@ scores against LilyPond's picture of the same book.
 
 ### Engraving
 
+- **A rest inside a tuplet is one of the things the bracket clears.** LilyPond's bracket is
+  placed one padding beyond every column of the tuplet, rests included — a rest's own ink, or
+  its invisible stem where a beam runs over it; only the *slope* is taken from the outer
+  notes. Lily# cleared the notes and chords and the staff edge, which is the same answer for
+  a rest on the middle line (its ink never reaches past the staff) and the wrong one for a
+  rest written at a pitch or pushed out of the staff by another voice. Measured on a probe
+  built for it: with the middle rest of `tuplet 3/2 { c'4 c4@rest c' }` written at C4,
+  LilyPond's bracket drops from 4.1 to 5.35 below the middle line — exactly the rest's ink
+  bottom plus the padding — and does so with the rest at the tuplet's edge just as in its
+  middle; Lily#'s bracket stayed at 4.1, 1.250000 shallow on both books, and now reads
+  LilyPond's to +0.000021 (the constant every staff-gap book of this family carries). A rest
+  raised to the bracket's far side moves nothing, in either engine. None of 920 swept books
+  writes a rest that reaches past its tuplet's notes, so none moves.
+- **`c4@rest` inside a `tuplet { }` draws a rest.** The tuplet body is walked by an arm of
+  its own, and that arm did not know the pitched-rest spelling: it built a note — head, stem,
+  a note-on in the `.mid` and a `<pitch>` in the MusicXML — where the same words outside the
+  tuplet drew a rest. The probe above found it: the first reading of the deep-rest book came
+  back 0.545 (a notehead's half-height) off the prediction instead of 1.25. The tuplet arm now
+  turns the spelling aside exactly as the main walk does, with slur and beam bounds, scripts
+  and dynamics riding it as they ride `r4`; a pitched rest outside a tuplet now also takes a
+  beam bound (`c8@rest[`) and a dynamic, which its plain sibling already did.
 - **The beam's face is read in one frame — the stems' — by everything that must clear a
   beam.** A quanted beam's two heights are LilyPond's `positions`: the line at the beam's two
   outer *stems*. Lily# kept them but interpolated between the two outer note *columns*, one

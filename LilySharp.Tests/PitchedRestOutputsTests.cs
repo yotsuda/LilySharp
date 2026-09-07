@@ -117,6 +117,43 @@ public class PitchedRestOutputsTests
     }
 
     /// <summary>
+    /// The same claim INSIDE A TUPLET BODY. The collector walks a tuplet's items through a
+    /// second arm (<c>EmitScaledItem</c>), and that arm read no spelling: until 2026-09-07 a
+    /// <c>c4@rest</c> written inside <c>tuplet 3/2 { }</c> became a NOTE on the page — head,
+    /// stem, MIDI note-on — while the same spelling outside the tuplet drew a rest. Found by
+    /// the ledger books staff.staff.tuplet-bracket-rest-point-{deep,bound}, whose rendered
+    /// glyph list showed noteheads.s2 where a rest glyph was expected.
+    /// </summary>
+    [Fact]
+    public void APitchedRest_InsideATuplet_IsARestInEveryOutput()
+    {
+        const string book = """
+            octave absolute
+            time 4/4
+            part v { clef treble }
+            section S { v { tuplet 3/2 { c'4 c4@rest c'4 } c'2 | } }
+            form main { ~S }
+            score main { staff v }
+            """;
+        var tree = SyntaxTree.Parse(book);
+
+        // ⑴ the page: three heads for the three notes, none for the rest
+        Assert.Equal(3, RenderedGeometry.Render(book).Noteheads.Count);
+
+        // ⑵ the twin (written in \fixed c', so Lily# `c' is LilyPond `c')
+        Assert.Contains("\\tuplet 3/2 { c'4 c4\\rest c'4 }", new LilyPondExporter().Export(tree));
+
+        // ⑶ MusicXML: the tuplet's middle event is a rest displayed at C4
+        var xml = new MusicXmlExporter().Export(tree).Parts[0].Measures[0].Notes;
+        Assert.Equal(4, xml.Count);
+        Assert.True(xml[1].IsRest && xml[1].RestHasDisplayPitch, "the tuplet's middle event is a rest");
+        Assert.Equal(("C", 4), (xml[1].Step, xml[1].Octave));
+
+        // ⑷ MIDI: three note-ons, none of them the rest
+        Assert.Equal(3, new MidiExporter().Export(tree).Tracks.SelectMany(t => t.Notes).Count());
+    }
+
+    /// <summary>
     /// The display position is the SOUNDING one when the part transposes, because that is
     /// where the page draws the glyph: a transpose moves a pitched rest with everything else,
     /// and LilyPond's <c>\transpose</c> — which is what the twin now writes — moves the pitch
