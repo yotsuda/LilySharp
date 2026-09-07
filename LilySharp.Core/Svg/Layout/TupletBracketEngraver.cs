@@ -283,27 +283,17 @@ internal static class TupletBracketEngraver
                     ?? CalculateDirection(tuplet, tupMeasures))
                 : CalculateDirection(tuplet, tupMeasures);
 
-            // The bracket's bound items are the OUTER STEMS when the stems
-            // point in the bracket's direction (always true here: the
-            // bracket sits on the stem side), so the end hooks align with
-            // the stem X — not the notehead edges.
-            // LILYPOND-REF: lily/tuplet-bracket.cc:71-85 get_x_bound_item —
-            //   bound = the column's stem when Note_column::dir == bracket
-            //   dir; :180-189 x_span = bound extent LEFT/RIGHT edges.
-            // Each bound reads its OWN head shape: :71-85 hands back that column's stem, and
-            // a stem's x is its head's attachment (LayoutUtilities.StemAttachX). A tuplet
-            // whose ends are a half note and a quarter has two different offsets.
+            // The bracket's bound items are the OUTER STEMS when the bound column has a
+            // visible stem pointing the bracket's way, and the COLUMNS themselves otherwise
+            // (a rest, a stemless whole, a stem pointing against the bracket) — so the end
+            // hooks align with the stem edge on a note and with the ink edge on a rest.
+            // Each bound reads its OWN item: a tuplet whose ends are a half note and a
+            // quarter has two different offsets; one whose end is a rest has that rest's
+            // own ink edge (BoundEdgeOffset carries the citations).
             var startItem = TupletItemAt(tuplet, tupMeasures, tuplet.StartNoteIndex);
             var endItem = TupletItemAt(tuplet, tupMeasures, tuplet.EndNoteIndex);
-            double startAttach = LayoutUtilities.StemAttachX(isStemUp,
-                GlyphMetrics.NoteValueOf(startItem),
-                LayoutUtilities.NoteheadStyleOf(startItem));
-            double endAttach = LayoutUtilities.StemAttachX(isStemUp,
-                GlyphMetrics.NoteValueOf(endItem),
-                LayoutUtilities.NoteheadStyleOf(endItem));
-            double halfStem = EngravingDefaults.StemThickness / 2;
-            double startX = measureLayout.X + startOffset + startAttach - halfStem;
-            double endX = measureLayout.X + endOffset + endAttach + halfStem;
+            double startX = measureLayout.X + startOffset + BoundEdgeOffset(startItem, isStemUp, left: true);
+            double endX = measureLayout.X + endOffset + BoundEdgeOffset(endItem, isStemUp, left: false);
 
             // LILYPOND-REF: lily/tuplet-bracket.cc:100-115 bracket_basic_visibility —
             //   the bracket is hidden ONLY when the tuplet's own beam is equally long.
@@ -335,12 +325,15 @@ internal static class TupletBracketEngraver
                 if (beam != null)
                 {
                     isStemUp = beam.Group.StemUp;
-                    // The outer MEMBER stems — the beam's own frame, which BeamLayout now
-                    // carries (this spelled the anchor + attach itself until 2026-09-07;
-                    // same number for a same-direction beam, and per OUTER MEMBER's head
-                    // shape as DrawBeams does).
-                    startX = beam.LeftStemX;
-                    endX = beam.RightStemX;
+                    // The invisible bracket's X span stays the tuplet's OWN bounds computed
+                    // above (BoundEdgeOffset = LilyPond's X-positions: a stem's edge, a
+                    // bounding rest's ink edge), which is what the number centres on.
+                    // LILYPOND-REF: lily/tuplet-number.cc:294-299 calc_x_offset — the number
+                    //   centres on the bracket's own X-positions, printed or not.
+                    // Until 2026-09-07 this read the BEAM's outer member stems and then
+                    // re-read the tuplet's bound MEMBERS' stems — right for a note-bound
+                    // tuplet, and off by half the rest's reach for one bounded by a
+                    // bracketed rest (`tuplet 3/2 { r8[ c c] }'), whose bound is no member.
                     // TAB BRANCH ONLY: the tab renderer's text offset assumes a
                     // baseline-anchored digit, so its clearance arithmetic still
                     // carries the digit height. The notation branch below no
@@ -397,41 +390,19 @@ internal static class TupletBracketEngraver
                     }
                     else
                     {
-                        // The INVISIBLE bracket spans the TUPLET'S OWN outer stems,
-                        // not the covering beam's ends: one auto-beam can cover
+                        // The INVISIBLE bracket spans the TUPLET'S OWN bounds (startX/endX
+                        // above), not the covering beam's ends: one auto-beam can cover
                         // several tuplets (two 16th triplets inside one beat —
                         // tuplet-number-alignment.ly), and reading the beam's span
-                        // stacked every number onto the same beam midpoint.
+                        // stacked every number onto the same beam midpoint. The bound
+                        // stems' EDGES (∓ halfStem) centre where their centres did, so the
+                        // note-bound number (tupnumss twin, stem midpoint 26.73 = LP number
+                        // centre 26.69) is unchanged by reading the bounds instead of the
+                        // members.
                         // LILYPOND-REF: lily/tuplet-bracket.cc:495-519
                         //   calc_position_and_height follow-beam — points from
-                        //   columns[0] / columns.back(), the tuplet's own stems;
-                        // LILYPOND-REF: lily/tuplet-number.cc:294-299 calc_x_offset —
-                        //   the number centres on the bracket's own X-positions.
-                        // MemberXPositions are HEAD anchors (SharedRenderer.Beams
-                        // applies LayoutUtilities.StemX on top of them), so the
-                        // stem centre needs the same attach correction here —
-                        // an up-stem tuplet's number sat half a head left without
-                        // it (LP centres on the stems: tupnumss twin, stem
-                        // midpoint 26.73 = LP number centre 26.69).
-                        if (!beam.MemberXPositions.IsDefaultOrEmpty)
-                        {
-                            for (int mi = 0; mi < beam.Group.Members.Length
-                                 && mi < beam.MemberXPositions.Length; mi++)
-                            {
-                                var m = beam.Group.Members[mi];
-                                if (m.ResolveMeasureIndex(beam.Group.MeasureIndex)
-                                    != tuplet.MeasureIndex)
-                                    continue;
-                                double attach = LayoutUtilities.StemAttachX(isStemUp,
-                                    GlyphMetrics.NoteValueOf(m.Item),
-                                    LayoutUtilities.NoteheadStyleOf(m.Item));
-                                if (m.ItemIndex == tuplet.StartNoteIndex)
-                                    startX = beam.MemberXPositions[mi] + attach;
-                                if (m.ItemIndex == tuplet.EndNoteIndex)
-                                    endX = beam.MemberXPositions[mi] + attach;
-                            }
-                        }
-                        // ⚠️ THE Y IS NOT RECOMPUTED HERE ANY MORE — only the X is.
+                        //   columns[0] / columns.back(), the tuplet's own stems.
+                        // ⚠️ THE Y IS NOT RECOMPUTED HERE — nor, since 2026-09-07, the X.
                         // LILYPOND-REF: lily/tuplet-number.cc:342 calc_y_offset — the
                         //   TupletNumber reads the BRACKET's midpoint whether or not the
                         //   bracket is printed, for every tuplet that is not a knee.
@@ -633,12 +604,29 @@ internal static class TupletBracketEngraver
     {
         if (beam.Members.Length == 0)
             return false;
+        // The beam's bound COLUMNS: a rest the writer bracketed at either end is the beam's
+        // bound there, not the first or last note member — LilyPond's beam spanner is bound
+        // to that rest's column, so `tuplet 3/2 { r8[ c c] }' has equal bounds and no bracket
+        // (MEASURED 2026-09-07, scratch/p346/hid-probe.ly: TupletBracket extent empty, the
+        // number centred on X-positions (0 . 6.0084) from the rest's column). Until then the
+        // bounds were read from Members alone and the bracket was drawn over the beam.
         var first = beam.Members[0];
         var last = beam.Members[^1];
-        return first.ResolveMeasureIndex(beam.MeasureIndex) == tuplet.MeasureIndex
-               && last.ResolveMeasureIndex(beam.MeasureIndex) == tuplet.MeasureIndex
-               && first.ItemIndex == tuplet.StartNoteIndex
-               && last.ItemIndex == tuplet.EndNoteIndex;
+        int leftMeasure = first.ResolveMeasureIndex(beam.MeasureIndex), leftItem = first.ItemIndex;
+        int rightMeasure = last.ResolveMeasureIndex(beam.MeasureIndex), rightItem = last.ItemIndex;
+        foreach (var r in beam.RestStems)
+        {
+            if (!r.BracketBound) continue;
+            int rm = r.MeasureIndex < 0 ? beam.MeasureIndex : r.MeasureIndex;
+            if (r.BeforeMember == 0)
+                (leftMeasure, leftItem) = (rm, r.ItemIndex);
+            else if (r.BeforeMember == beam.Members.Length)
+                (rightMeasure, rightItem) = (rm, r.ItemIndex);
+        }
+        return leftMeasure == tuplet.MeasureIndex
+               && rightMeasure == tuplet.MeasureIndex
+               && leftItem == tuplet.StartNoteIndex
+               && rightItem == tuplet.EndNoteIndex;
     }
 
     /// <summary>
@@ -1384,6 +1372,75 @@ internal static class TupletBracketEngraver
     /// range — the bound whose STEM a bracket hook stands on, so each end can read its own
     /// head shape rather than sharing one offset with the other end.
     /// </summary>
+    /// <summary>
+    /// The x of the bracket's bound on <paramref name="left"/>'s side, relative to the bound
+    /// item's column x: the STEM's edge when the item has a visible stem pointing the
+    /// bracket's way, the COLUMN's ink edge otherwise — a rest's glyph box, a stemless
+    /// whole's head, or a head united with a stem that points AGAINST the bracket.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:71-85 get_x_bound_item — the bound is
+    ///   <c>Note_column::get_stem</c> only when the column's direction is the bracket's AND
+    ///   the stem is not <c>Stem::is_invisible</c> AND it has a stencil; otherwise the bound
+    ///   stays the column. A rest column's stem is invisible (it prints nothing on its own),
+    ///   so a rest bound is its column.
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:180-189 calc_x_positions —
+    ///   <c>x_span[d] = generic_bound_extent(bounds[d])[d]</c>: the bound's own X extent
+    ///   edge, i.e. the stem's edge (its x ± half its thickness) or the column's ink edge.
+    /// <para>
+    /// ⚠️ UNTIL 2026-09-07 EVERY BOUND WAS TREATED AS A STEM IN THE BRACKET'S DIRECTION,
+    /// a rest's included: <c>StemAttachX(bracketDir, 4, Default) ∓ halfStem</c>, which put a
+    /// rest-bound bracket's x0 one up-stem attach (1.1742) to the right of the rest's ink
+    /// left. That x0 is the frame the encompass points' x are read in, so the offset pass
+    /// landed the bracket dy × Δx / span low. MEASURED (scratch/p346/upr-probe.ly,
+    /// <c>e8[ \tuplet 3/2 { r8 d c ] } c8</c>): LilyPond's <c>X-positions</c> start at the
+    /// rest's ink left (relX 11.791155 = the Rest's own extent left, the NoteColumn's), and
+    /// Lily#'s bracket sat 0.040574 low at both ends with the dy exact.
+    /// The stem-against-the-bracket and stemless cases are the same clause, ported with it:
+    /// for a default head the column's edge on the bracket's side IS the attachment edge the
+    /// old spelling read (down attach 0.065 − halfStem = the head's left edge; up attach
+    /// + halfStem = its right), so those bounds do not move on default heads.
+    /// </para>
+    /// </remarks>
+    private static double BoundEdgeOffset(MusicItem? item, bool bracketUp, bool left)
+    {
+        double halfStem = EngravingDefaults.StemThickness / 2;
+        switch (item)
+        {
+            case RestItem { IsSpacer: false } rest:
+            {
+                var box = GlyphMetrics.GetRestBBox(GlyphMetrics.NoteValueOf(rest.BaseDuration));
+                return left ? box.Left : box.Right;
+            }
+            case NoteItem or ChordItem:
+            {
+                int value = GlyphMetrics.NoteValueOf(item);
+                var style = LayoutUtilities.NoteheadStyleOf(item);
+                bool itemUp = item is NoteItem n ? n.StemUp : ((ChordItem)item).StemUp;
+                // LILYPOND-REF: lily/stem.cc Stem::is_normal_stem — a whole or a breve has no
+                //   stem to be the bound (the same gate NoteColumnLayout.HasStem takes).
+                bool hasStem = value >= 2;
+                if (hasStem && itemUp == bracketUp)
+                    return LayoutUtilities.StemAttachX(bracketUp, value, style)
+                        + (left ? -halfStem : halfStem);
+                // The column: its head's ink united with its stem's, on the bound's side.
+                var head = GlyphMetrics.GetNoteheadBBox(value);
+                double edge = left ? head.Left : head.Right;
+                if (hasStem)
+                {
+                    double stemX = LayoutUtilities.StemAttachX(itemUp, value, style);
+                    edge = left ? Math.Min(edge, stemX - halfStem) : Math.Max(edge, stemX + halfStem);
+                }
+                return edge;
+            }
+            default:
+                // A spacer or nothing at the bound: no ink to bound on. The pre-2026-09-07
+                // reading, a stem in the bracket's direction, stands in.
+                return LayoutUtilities.StemAttachX(bracketUp, 4, NoteheadStyle.Default)
+                    + (left ? -halfStem : halfStem);
+        }
+    }
+
     private static MusicItem? TupletItemAt(
         TupletBracketItem tuplet, ImmutableArray<Measure> measures, int itemIndex)
     {

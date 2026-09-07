@@ -158,6 +158,26 @@ scores against LilyPond's picture of the same book.
   LilyPond's 2.094 above the middle line where it had been 0.14 high. Forty-eight of 920
   swept books move — tuplet numbers and brackets over sloped beams by up to 0.3, slur ends
   on beamed stems by up to 0.15, and the pages that reflow beneath them.
+- **A tuplet bracket bounded by a rest opens at the rest's ink, not at a stem the rest
+  does not have.** LilyPond's bracket spans from bound to bound, and a bound is the column's
+  stem only when that stem is visible and points the bracket's way; a rest's is invisible,
+  so a rest-bound bracket starts at the rest's own edge. Lily# gave every bound a stem in the
+  bracket's direction, which put a rest-bound bracket's left end one up-stem attachment
+  (1.17 staff spaces) to the right of LilyPond's — and since that end is the origin the
+  bracket's slope is laid out from, a sloped bracket over a bounding rest also sat low: on
+  `e8[ tuplet 3/2 { r8 d c ] } c8` the bracket's slope was LilyPond's to six digits but both
+  ends were 0.040574 too deep. Both ends now read LilyPond's `positions`
+  (1.989688 . 1.569942) exactly. The same rule covers a stemless whole and a stem pointing
+  against the bracket, whose column edges are the attachment edges Lily# already read, so
+  those do not move.
+- **A beam bracketed onto a tuplet's bounding rest is the tuplet's own beam, and hides the
+  bracket.** `tuplet 3/2 { r8[ c c] }` drew a bracket over its beam: the beam's bounds were
+  read from its note members, so a beam that opens on the rest looked one column shorter
+  than the tuplet. LilyPond's beam is bound to the rest's column, the bounds are equal, and
+  the bracket is not printed — only the number, centred on the bracket's X span from the
+  rest's ink at the bracket's height (measured: LilyPond's number centre 3.0042 from the
+  rest's left, 1.5 above the middle line; Lily#'s the same). No swept book writes this
+  shape yet.
 - **A tuplet bracket that rides a beam is placed the way LilyPond places one, and never off
   another staff's beam.** Three faults, all in the same arm. LilyPond has two ways of placing a
   bracket and they are separate: one for a bracket that follows its own beam — take the outer

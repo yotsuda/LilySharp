@@ -74,30 +74,29 @@ public class TupletBracketFollowsBeamTests
 
     /// <summary>
     /// LP 2.26.0 (scratch/p346/upr-probe.ly): Beam <c>positions=(0.81 . 0.19)</c>, bracket
-    /// <c>positions=(1.9896883028340395 . 1.5699421598295629)</c>, <c>beam=SET</c>; the
-    /// rest's invisible stem reports its extent as the single point 0.854758 = the beam's
-    /// upper face at the rest's ink centre.
+    /// <c>positions=(1.9896883028340395 . 1.5699421598295629)</c>, <c>beam=SET</c>,
+    /// <c>X-positions=(0.0 . 6.0084)</c> from the rest's ink left; the rest's invisible stem
+    /// reports its extent as the single point 0.854758 = the beam's upper face at the rest's
+    /// ink centre.
     /// </summary>
     /// <remarks>
-    /// ⚠️ The dy is LilyPond's to six digits; the absolute position is 0.040574 LOW at both
-    /// ends, and that residual is NOT the beam-face frame (the sibling above is exact): it is
-    /// the bracket's own X frame at a REST bound. Lily# opens the bracket one up-stem attach
-    /// (1.1742 ≈ 1.2392 − 0.065) to the right of where LilyPond does (LilyPond's
-    /// X-positions start at the rest COLUMN — MEASURED: LP bracket X extent 11.5116 against
-    /// the beam's 9.7592; Lily# 21.3012 against 18.2950), so the encompass points' x are read
-    /// against a shorter, right-shifted span and the offset pass lands 0.040574 lower
-    /// (dy × 0.581 / 6.0084). It is the disclosed clause ⑸ of TupletBracketEngraver's port
-    /// ("x0/x1 come from the caller's stem-attach faces for BOTH bounds — LP's
-    /// get_x_bound_item falls back to the COLUMN"), now with a number on it. Recorded here as
-    /// a residual with a named cause, the ledger's way; closing it moves the bracket's X on
-    /// every rest-bound tuplet and wants its own point first.
+    /// Two seams met on this book and they were closed one at a time, each with its number.
+    /// With the beam face in the stems' frame the dy was LilyPond's to six digits but the
+    /// bracket sat 0.040574 LOW at both ends: the bracket's own X frame at a REST bound.
+    /// Lily# opened the bracket one up-stem attach (1.1742 ≈ 1.2392 − 0.065) to the right of
+    /// where LilyPond does — LilyPond's <c>X-positions</c> start at the rest's ink left
+    /// (MEASURED: relX 11.791155 = the Rest's and its NoteColumn's extent left; the beam's
+    /// left is 9.7592), because <c>get_x_bound_item</c> hands back the COLUMN when the bound's
+    /// stem is invisible — so the encompass points' x were read against a shorter,
+    /// right-shifted span and the offset pass landed dy × 0.581 / 6.0084 lower. That was the
+    /// disclosed clause ⑸ of TupletBracketEngraver's port; BoundEdgeOffset now reads the
+    /// rest's ink edge, and this asserts LilyPond's positions outright.
     /// </remarks>
     [Fact]
-    public void AnUpStemSlopedBeamOverABoundingRest_SlopesTheBracketWithIt()
+    public void AnUpStemSlopedBeamOverABoundingRest_SlopesTheBracketWithIt_LpExact()
     {
         var (line, _) = TupletBracketRestBoundTests.Bracket(RestBound);
-        Assert.Equal(1.569942160 - 1.989688303, line[1] - line[0], precision: 6);
-        const double restBoundXSeam = 0.040573793;
-        Assert.Equal(1.989688303 - restBoundXSeam, line[0], precision: 6);
+        Assert.Equal(1.989688303, line[0], precision: 6);
+        Assert.Equal(1.569942160, line[1], precision: 6);
     }
 }

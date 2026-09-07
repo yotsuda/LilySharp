@@ -230,4 +230,45 @@ public class TupletBracketRestBoundTests
             + "(scratch/p345/m4ctl.ly: TupletBracket extent (+inf.0 . -inf.0)) — and if a "
             + "bracket appears here, the beam is not being found and the pair proves nothing.");
     }
+
+    // A manual beam that OPENS on the tuplet's bounding rest and closes on its last note: the
+    // beam's bounds are the tuplet's, rest included.
+    private const string BeamOpensOnTheBoundingRest = """
+        octave absolute
+        part melody {
+          section A { tuplet 3/2 { r8[ c c] } c4 c4 r4 | }
+        }
+        form main { A }
+        score main { staff melody }
+        """;
+
+    /// <summary>
+    /// A beam bracketed onto the tuplet's bounding rest is bound to that rest's column, so it
+    /// is EQUALLY LONG and hides the bracket — and the number then centres on the bracket's
+    /// X span, which starts at the rest's ink, at the bracket's own height.
+    /// </summary>
+    /// <remarks>
+    /// LP 2.26.0 (scratch/p346/hid-probe.ly): TupletBracket extent <c>(+inf.0 . -inf.0)</c>,
+    /// <c>X-positions=(0.0 . 6.0084)</c> from relX 8.585 = the rest's ink left,
+    /// <c>positions=(1.5 . 1.5)</c>, TupletNumber x extent (11.1112 . 12.0672) — centre 11.589
+    /// = relX + 3.0042. Lily# drew the bracket until 2026-09-07 (its beam bounds were read
+    /// from the note members alone, so the rest-bound beam looked shorter than the tuplet).
+    /// </remarks>
+    [Fact]
+    public void ABeamOpeningOnTheBoundingRest_IsEquallyLong_AndHidesTheBracket_LpExact()
+    {
+        var g = RenderedGeometry.Render(BeamOpensOnTheBoundingRest);
+        double middle = g.StaffRefpoints()[0];
+        var strokes = g.Lines.Where(l => Math.Abs(l.StrokeWidth - 0.16) < 1e-9).ToList();
+        Assert.True(strokes.Count == 0,
+            $"{strokes.Count} bracket stroke(s) drawn; LilyPond hides this bracket "
+            + "(scratch/p346/hid-probe.ly: TupletBracket extent (+inf.0 . -inf.0)).");
+
+        var rest = Assert.Single(g.Glyphs.Where(q => q.Glyph == EmmentalerGlyphs.Rest8th));
+        var number = Assert.Single(g.Texts.Where(t => t.Text == "3"));
+        // The rest's ink left is its glyph origin (Rest8th.Left = 0); the number's centre is
+        // half the bracket's X span from it.
+        Assert.Equal(6.0084 / 2.0, number.X - (rest.X + GlyphMetrics.GetRestBBox(8).Left), 3);
+        Assert.Equal(1.5, middle - number.Y, 6);
+    }
 }
