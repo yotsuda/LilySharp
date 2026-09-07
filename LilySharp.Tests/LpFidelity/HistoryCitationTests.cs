@@ -195,8 +195,22 @@ public class HistoryCitationTests
     /// between the old tip and the new one is empty; the LIVE ratchet did not move (735,
     /// floor 564).
     /// </para>
+    /// <para>
+    /// ⚠️ RAISED 560 → 576, THE SAME WAY, ON 2026-09-07 (after session 345). The twenty-seven
+    /// unpushed commits of sessions 342-345 were regrouped into eight before pushing.
+    /// Twenty-one of them are cited by SHA in §1 and the archive — each session's own "these
+    /// commits", the commit an approval was given on, the tip a leg started from — and the
+    /// sixteen of those tokens this census reads as citation-shaped went dead with the
+    /// regroup. The other five carry fewer than two letters in their abbreviation, so
+    /// <c>LooksLikeCitation</c> does not see them; that is the honest miss the census declares
+    /// above, not a repair. Not re-pointed, for the reason the paragraphs above give: the
+    /// sentences are the record of what those sessions committed. Every new commit's tree is
+    /// the tree of the last old commit it took in, verified group by group, and the diff
+    /// between the old tip and the new one is empty; the LIVE ratchet did not fall (750,
+    /// floor 564).
+    /// </para>
     /// </remarks>
-    private const int DeadCitationsWhenWritten = 560;
+    private const int DeadCitationsWhenWritten = 576;
 
     /// <summary>
     /// Extensions scanned for citations. Chosen because they are where citations are actually
