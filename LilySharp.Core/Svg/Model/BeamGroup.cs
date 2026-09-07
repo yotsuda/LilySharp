@@ -345,26 +345,61 @@ public sealed record BeamLayout
     /// <summary>The original beam group.</summary>
     public BeamGroup Group { get; }
 
-    /// <summary>Y position of the beam at the first stem (in staff positions from middle line).</summary>
+    /// <summary>Y of the quanted primary beam line AT THE FIRST MEMBER'S STEM
+    /// (<see cref="LeftStemX"/>), in staff positions from the middle line.</summary>
     public double LeftY { get; }
 
-    /// <summary>Y position of the beam at the last stem (in staff positions from middle line).</summary>
+    /// <summary>Y of the quanted primary beam line AT THE LAST MEMBER'S STEM
+    /// (<see cref="RightStemX"/>), in staff positions from the middle line.</summary>
     public double RightY { get; }
 
-    /// <summary>X position of the first stem (in staff spaces).</summary>
+    /// <summary>The first member's COLUMN anchor x (staff spaces) — or, when the writer
+    /// bracketed a rest before it, that rest's invisible stem x, further left.</summary>
+    /// <remarks>
+    /// ⚠️ A MIXED FRAME, kept for the two readers that want an "outer x" of the beam
+    /// without its stem geometry (the skyline band's x-extent, the hidden-bracket tuplet
+    /// number's span). It is NOT the x <see cref="LeftY"/> is answered at — that is
+    /// <see cref="LeftStemX"/>. Until 2026-09-07 <see cref="OuterEdgeStaffSpaceAtX"/>
+    /// interpolated between THESE and the two Y, i.e. in the column-anchor frame; see that
+    /// method's remarks for what that cost.
+    /// </remarks>
     public double LeftX { get; }
 
-    /// <summary>X position of the last stem (in staff spaces).</summary>
+    /// <summary>The last member's COLUMN anchor x (staff spaces) — or a bracketed rest's
+    /// invisible stem x after it. See <see cref="LeftX"/>.</summary>
     public double RightX { get; }
 
-    /// <summary>X positions for each member (in staff spaces).</summary>
+    /// <summary>
+    /// The x the FIRST MEMBER'S STEM is drawn at (staff spaces): the frame <see cref="LeftY"/>
+    /// is answered in (<c>BeamScoringProblem.AtOuterStems</c>), and the left end of the line
+    /// <see cref="OuterEdgeStaffSpaceAtX"/> interpolates. <c>MemberXPositions[0]</c> plus the
+    /// head's stem attachment — 1.2392 for an up stem on a black head, 0.065 for a down one
+    /// (<c>LayoutUtilities.BeamMemberStemX</c>).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:313-315 init_instance_variables — the stems' own
+    ///   x fill <c>stem_xpositions_</c>, and <c>positions</c> (the two Y) are given over
+    ///   <c>x_span_</c> from them; LilyPond has no column-anchor frame for a beam at all. A
+    ///   bracketed rest at this end widens the beam past this stem (lily/beam.cc:631
+    ///   calc_beam_segments) without moving it.
+    /// </remarks>
+    public double LeftStemX { get; }
+
+    /// <summary>The x the LAST MEMBER'S STEM is drawn at — the frame of
+    /// <see cref="RightY"/>. See <see cref="LeftStemX"/>.</summary>
+    public double RightStemX { get; }
+
+    /// <summary>X positions for each member (in staff spaces) — the COLUMN anchors, not the
+    /// stems; <see cref="MemberStemX"/> turns one into its stem's x.</summary>
     public ImmutableArray<double> MemberXPositions { get; }
 
     /// <summary>
     /// X positions for each of <see cref="BeamGroup.RestStems"/> (in staff spaces), parallel
-    /// to that array — the rest's COLUMN x, with no notehead attachment offset: an invisible
-    /// stem has no head to attach beside (LilyPond's <c>Stem::offset_callback</c> moves a
-    /// stem only relative to its heads). Empty when the group runs over no rests.
+    /// to that array — where the rest's INVISIBLE STEM stands: the rest glyph's ink centre
+    /// (<c>LayoutUtilities.RestStemX</c>), with no notehead attachment offset, since an
+    /// invisible stem has no head to attach beside (LilyPond's <c>Stem::offset_callback</c>
+    /// "rests" branch centres it on the rest's extent). Empty when the group runs over no
+    /// rests.
     /// </summary>
     public ImmutableArray<double> RestXPositions { get; }
 
@@ -421,6 +456,8 @@ public sealed record BeamLayout
         double rightY,
         double leftX,
         double rightX,
+        double leftStemX,
+        double rightStemX,
         ImmutableArray<double> memberXPositions,
         int staffIndex,
         int systemIndex,
@@ -432,6 +469,8 @@ public sealed record BeamLayout
         RightY = rightY;
         LeftX = leftX;
         RightX = rightX;
+        LeftStemX = leftStemX;
+        RightStemX = rightStemX;
         MemberXPositions = memberXPositions;
         StaffIndex = staffIndex;
         SystemIndex = systemIndex;
@@ -445,6 +484,7 @@ public sealed record BeamLayout
     /// beam found under other measure numbers (<c>SystemLayoutCache</c>).</summary>
     internal BeamLayout WithMeasureIndicesShifted(int delta)
         => new(Group.WithMeasureIndexShifted(delta), LeftY, RightY, LeftX, RightX,
+            LeftStemX, RightStemX,
             MemberXPositions, StaffIndex, SystemIndex, MemberStaffIndices, RestXPositions);
 
     /// <summary>The same laid-out beam attributed to another system — the stamp
@@ -452,16 +492,55 @@ public sealed record BeamLayout
     /// positions are in the system's own frame, which is the same frame under either
     /// number). The system-count twin of <see cref="WithMeasureIndicesShifted"/>.</summary>
     internal BeamLayout WithSystemIndexShifted(int delta)
-        => new(Group, LeftY, RightY, LeftX, RightX,
+        => new(Group, LeftY, RightY, LeftX, RightX, LeftStemX, RightStemX,
             MemberXPositions, StaffIndex, SystemIndex + delta, MemberStaffIndices, RestXPositions);
 
-    /// <summary>Gets the slope of the beam (rise per unit run).</summary>
-    public double Slope => (RightX - LeftX) > 0.001
-        ? (RightY - LeftY) / (RightX - LeftX)
+    /// <summary>
+    /// The x member <paramref name="memberIndex"/>'s stem is drawn at — the only x a reader
+    /// of the beam face may ask for a member's own tip (<c>NoteColumnLayout.BeamStemX</c>).
+    /// <c>MemberXPositions[i]</c> plus the head's stem attachment, per member head shape and
+    /// direction (<c>LayoutUtilities.BeamMemberStemX</c>, the renderer's recipe).
+    /// </summary>
+    public double MemberStemX(int memberIndex)
+        => Layout.LayoutUtilities.BeamMemberStemX(Group.Members[memberIndex], MemberXPositions[memberIndex]);
+
+    /// <summary>Slope of the beam line: staff POSITIONS per staff space of x, over the
+    /// outer member stems (the frame of <see cref="LeftY"/>/<see cref="RightY"/>).</summary>
+    public double Slope => (RightStemX - LeftStemX) > 0.001
+        ? (RightY - LeftY) / (RightStemX - LeftStemX)
         : 0;
 
-    /// <summary>Gets the Y position at a given X position.</summary>
-    public double GetYAtX(double x) => LeftY + Slope * (x - LeftX);
+    /// <summary>The primary beam line's Y (staff positions) at <paramref name="x"/> — a REAL
+    /// x (a stem's, a rest's ink centre), interpolated from the outer member stems.</summary>
+    public double GetYAtX(double x) => LeftY + Slope * (x - LeftStemX);
+
+    /// <summary>The beam's drawn left end: the leftmost stem it carries — the first member's,
+    /// or a rest the writer bracketed before it — less half a stem thickness.
+    /// LILYPOND-REF: lily/beam.cc:631 calc_beam_segments — <c>horizontal_[dir] += dir * stem_width / 2</c>.</summary>
+    public double DrawnLeftX
+    {
+        get
+        {
+            double x = LeftStemX;
+            for (int r = 0; r < Group.RestStems.Length && r < RestXPositions.Length; r++)
+                if (Group.RestStems[r].BracketBound && Group.RestStems[r].BeforeMember == 0)
+                    x = System.Math.Min(x, RestXPositions[r]);
+            return x - Svg.EngravingDefaults.StemThickness / 2.0;
+        }
+    }
+
+    /// <summary>The beam's drawn right end — the twin of <see cref="DrawnLeftX"/>.</summary>
+    public double DrawnRightX
+    {
+        get
+        {
+            double x = RightStemX;
+            for (int r = 0; r < Group.RestStems.Length && r < RestXPositions.Length; r++)
+                if (Group.RestStems[r].BracketBound && Group.RestStems[r].BeforeMember == Group.Members.Length)
+                    x = System.Math.Max(x, RestXPositions[r]);
+            return x + Svg.EngravingDefaults.StemThickness / 2.0;
+        }
+    }
 
     /// <summary>
     /// Staff-space Y (Y-UP from the middle line — frame B) of the beam stack's edge at
@@ -481,9 +560,33 @@ public sealed record BeamLayout
     ///   line; LP's drawn stem rect stops at that line's centre, measured tupnumb-lp);
     /// LILYPOND-REF: lily/beam.cc:129-145 get_beam_translation (count-aware from 4 beams).
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ <paramref name="x"/> IS A REAL X — a drawn stem's (<see cref="MemberStemX"/>), a
+    /// beamed rest's ink centre (<see cref="RestXPositions"/>) — and the line is interpolated
+    /// between the outer MEMBER STEMS (<see cref="LeftStemX"/>/<see cref="RightStemX"/>),
+    /// which is where the two Y were answered. Beyond the drawn ends
+    /// (<see cref="DrawnLeftX"/>/<see cref="DrawnRightX"/>) it clamps: there is no beam there.
+    /// </para>
+    /// <para>
+    /// UNTIL 2026-09-07 THIS INTERPOLATED BETWEEN THE COLUMN ANCHORS <see cref="LeftX"/>/
+    /// <see cref="RightX"/> — the two Y attributed to x's one stem attachment LEFT of where
+    /// they were true. That frame is shifted from the stems' by one attach at both ends, so
+    /// a reader that handed in a member's ANCHOR got that member's stem tip exactly (the
+    /// shift cancelled), while every reader that handed in a real x — the slur's stem
+    /// attachment (ElementCoordinator.TryGetBeamedStemTipDeviceY), the tuplet's bounding
+    /// rest stem, the rest-collision shift — read the line one attach further right: off by
+    /// slope × attach, 1.2392 for an up stem. The tuplet engraver then "corrected" its note
+    /// tips by slope × attach for a shift they had never suffered, and the follow-beam
+    /// bracket landed slope × half a stem too deep with its dy exact — MEASURED by ledger
+    /// <c>staff.staff.tuplet-bracket-follow-beam</c> (+0.007811 = 0.119904 × 0.065) and
+    /// <c>-rest</c> (+0.006569 = 0.1011 × 0.065). One frame, every reader in it, closed both.
+    /// </para>
+    /// </remarks>
     public double OuterEdgeStaffSpaceAtX(double x, bool stemUp)
     {
-        double centerPos = x < LeftX ? LeftY : x > RightX ? RightY : GetYAtX(x); // half-space
+        double lo = DrawnLeftX, hi = DrawnRightX;
+        double centerPos = GetYAtX(x < lo ? lo : x > hi ? hi : x);              // half-space
         double centerSs = centerPos / 2.0;                                       // → staff-space Y-up
         int beamCount = 1;
         foreach (var m in Group.Members)

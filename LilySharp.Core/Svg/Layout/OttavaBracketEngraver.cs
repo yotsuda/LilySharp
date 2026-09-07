@@ -415,7 +415,7 @@ internal static class OttavaBracketEngraver
         in SpannerBreakSegment segment, ImmutableArray<Voice> voices,
         ImmutableArray<MeasureLayout> measureLayouts,
         Dictionary<(int Staff, int Voice, int Measure, int Item),
-            (BeamLayout Beam, double MemberX, bool StemUp)> beamMembers,
+            (BeamLayout Beam, double StemX, bool StemUp)> beamMembers,
         int staffIndex)
     {
         double dir = isAbove ? 1.0 : -1.0;

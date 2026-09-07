@@ -232,7 +232,7 @@ internal static class FingeringEngraver
         Score score,
         ImmutableArray<MeasureLayout> measureLayouts,
         int staffIndex,
-        Dictionary<(int, int, int, int), (BeamLayout Beam, double MemberX, bool StemUp)>? beamedTips)
+        Dictionary<(int, int, int, int), (BeamLayout Beam, double StemX, bool StemUp)>? beamedTips)
     {
         if (score.Voices.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
             return ImmutableArray<FingeringLayout>.Empty;
@@ -258,7 +258,7 @@ internal static class FingeringEngraver
         System.Func<int, bool> isPlaced,
         int staffIndex,
         ImmutableArray<BeamLayout> beamLayouts = default,
-        Dictionary<(int, int, int, int), (BeamLayout Beam, double MemberX, bool StemUp)>?
+        Dictionary<(int, int, int, int), (BeamLayout Beam, double StemX, bool StemUp)>?
             prebuiltTips = null)
     {
         var layouts = ImmutableArray.CreateBuilder<FingeringLayout>();
@@ -293,7 +293,7 @@ internal static class FingeringEngraver
                 if (beamedTips != null
                     && beamedTips.TryGetValue((System.Math.Max(0, staffIndex), 0, mi, ii),
                         out var beamTip))
-                    column = NoteColumnLayout.Of(item, beamTip.StemUp, beamTip.Beam, beamTip.MemberX);
+                    column = NoteColumnLayout.Of(item, beamTip.StemUp, beamTip.Beam, beamTip.StemX);
 
                 if (item is NoteItem note && note.Fingering.HasValue)
                 {

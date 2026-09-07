@@ -163,10 +163,12 @@ public class TupletNumberTests
         Assert.True(bracket.ShowBracket); // the third eighth is flagged, not beamed
         var beam = Assert.Single(layout.BeamLayouts);
 
-        // The deepest encompass: the beam's face at its b-stem (the beam model's own
-        // member X), one bracket padding out.
+        // The deepest encompass: the beam's face at its b-STEM (the member's drawn stem x,
+        // BeamLayout.MemberStemX — the frame the face is read in since 2026-09-07; until
+        // then this read the column anchor, which the anchor-frame face answered with the
+        // same number), one bracket padding out.
         double face = beam.OuterEdgeStaffSpaceAtX(
-            beam.MemberXPositions[1], beam.Group.StemUp);
+            beam.MemberStemX(1), beam.Group.StemUp);
         double expected = -((2.0 - face) + 1.1);
         Assert.Equal(expected, bracket.StartYUp, precision: 9);
         Assert.Equal(expected, bracket.EndYUp, precision: 9);

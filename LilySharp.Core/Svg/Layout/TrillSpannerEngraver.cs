@@ -339,7 +339,7 @@ internal static class TrillSpannerEngraver
         double glyphX, double lineStartX, double endX,
         ImmutableArray<Voice> voices, ImmutableArray<MeasureLayout> measureLayouts,
         Dictionary<(int Staff, int Voice, int Measure, int Item),
-            (BeamLayout Beam, double MemberX, bool StemUp)> beamMembers,
+            (BeamLayout Beam, double StemX, bool StemUp)> beamMembers,
         int dir)
     {
         // The DOWN arm (dir = −1) is the same aligned_side with every side flipped: my_dim

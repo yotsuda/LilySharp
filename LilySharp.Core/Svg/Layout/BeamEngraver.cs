@@ -99,8 +99,12 @@ internal sealed class BeamEngraver
             restXPositions: restXPositions);
         var (leftY, rightY) = problem.Solve();
 
+        // leftY/rightY are the line AT THE OUTER MEMBER STEMS (BeamScoringProblem.AtOuterStems);
+        // the layout carries those stems' x as the frame the Y are read in.
+        var (leftStemX, rightStemX) = problem.OuterMemberStemXs;
         return new BeamLayout(
-            group, leftY, rightY, leftX, rightX, memberXPositions, staffIndex, systemIndex,
+            group, leftY, rightY, leftX, rightX, leftStemX, rightStemX,
+            memberXPositions, staffIndex, systemIndex,
             restXPositions: restXPositions);
     }
 }

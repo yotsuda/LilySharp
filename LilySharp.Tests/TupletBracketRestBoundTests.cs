@@ -87,7 +87,7 @@ public class TupletBracketRestBoundTests
     /// these books is — <see cref="RenderedGeometry"/>'s own beam reader documents the same
     /// separation from the other side (a stem is EngravingDefaults.StemThickness thick).
     /// </remarks>
-    private static (double[] Line, double InkTop) Bracket(string source)
+    internal static (double[] Line, double InkTop) Bracket(string source)
     {
         var g = RenderedGeometry.Render(source);
         double middle = g.StaffRefpoints()[0];

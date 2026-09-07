@@ -84,6 +84,7 @@ public class SkylineStaffSpacingTests
         var group = new BeamGroup(members, measureIndex: 0, startIndex: 0,
             stemUp: false, growDirection: 0, voiceIndex: 0);
         return new BeamLayout(group, leftY: -13, rightY: -13, leftX: 5.0, rightX: 9.0,
+            leftStemX: 5.0, rightStemX: 9.0,
             ImmutableArray.Create(5.0, 9.0), staffIndex: 0, systemIndex: 0);
     }
 

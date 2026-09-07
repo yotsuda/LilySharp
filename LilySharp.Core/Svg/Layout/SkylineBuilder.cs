@@ -1373,8 +1373,16 @@ internal sealed class SkylineBuilder
             bool stemUp = g.StemUp;
             // The beam's edge is given in the STAFF's staff-spaces (the quanter works in
             // them), so it arrives at this staff's size; its X is the drawn column and does not.
-            double yLeft = size.Span(b.OuterEdgeStaffSpaceAtX(xLeft, stemUp)) + staffMiddleUp;
-            double yRight = size.Span(b.OuterEdgeStaffSpaceAtX(xRight, stemUp)) + staffMiddleUp;
+            // ⚠️ THE BAND STANDS AT THE COLUMN ANCHORS (LeftX/RightX) WITH THE FACE READ AT
+            // THE OUTER STEMS. Those are two frames: the face is the quanter's answer at the
+            // stems, and reading it AT the anchors (as this did until 2026-09-07, when the
+            // face was in the anchor frame) gave these same two numbers. LilyPond's Beam
+            // skyline is its stencil, i.e. the drawn extent [stem − w/2 .. stem + w/2] — an
+            // up-stem beam's band here starts one attach (1.2392) LEFT of that, a down-stem
+            // one's 0.065. Kept, disclosed: moving the band is inter-staff-spacing-moving
+            // and no ledger point watches the band's x (HANDOFF §1, session 344).
+            double yLeft = size.Span(b.OuterEdgeStaffSpaceAtX(b.LeftStemX, stemUp)) + staffMiddleUp;
+            double yRight = size.Span(b.OuterEdgeStaffSpaceAtX(b.RightStemX, stemUp)) + staffMiddleUp;
             var direction = stemUp ? VerticalDirection.Up : VerticalDirection.Down;
             var sky = stemUp ? upSkyline : downSkyline;
             sky.Merge(VerticalSkyline.FromSlope(xLeft, yLeft, xRight, yRight, thickness: 0, direction));

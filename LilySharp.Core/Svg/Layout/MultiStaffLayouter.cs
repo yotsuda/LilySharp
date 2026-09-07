@@ -3185,7 +3185,7 @@ internal sealed class MultiStaffLayouter
         var staffBeams = beamLayouts.IsDefaultOrEmpty
             ? beamLayouts
             : beamLayouts.Select(b1 => new BeamLayout(
-                b1.Group, b1.LeftY, b1.RightY, b1.LeftX, b1.RightX,
+                b1.Group, b1.LeftY, b1.RightY, b1.LeftX, b1.RightX, b1.LeftStemX, b1.RightStemX,
                 b1.MemberXPositions, staffIndex, b1.SystemIndex,
                 b1.MemberStaffIndices, b1.RestXPositions)).ToImmutableArray();
         return TupletBracketEngraver.Calculate(
@@ -3302,7 +3302,7 @@ internal sealed class MultiStaffLayouter
         var localBeams = beamLayouts.IsDefaultOrEmpty
             ? beamLayouts
             : beamLayouts.Select(b => new BeamLayout(
-                b.Group, b.LeftY, b.RightY, b.LeftX, b.RightX,
+                b.Group, b.LeftY, b.RightY, b.LeftX, b.RightX, b.LeftStemX, b.RightStemX,
                 b.MemberXPositions, staffIndex, b.SystemIndex,
                 b.MemberStaffIndices, b.RestXPositions)).ToImmutableArray();
         return FingeringEngraver.Calculate(staffScore, measureLayouts, staffIndex, localBeams);
@@ -3335,7 +3335,7 @@ internal sealed class MultiStaffLayouter
         var staffBeams = beamLayouts.IsDefaultOrEmpty
             ? beamLayouts
             : beamLayouts.Select(b => new BeamLayout(
-                b.Group, b.LeftY, b.RightY, b.LeftX, b.RightX,
+                b.Group, b.LeftY, b.RightY, b.LeftX, b.RightX, b.LeftStemX, b.RightStemX,
                 b.MemberXPositions, staffIndex, b.SystemIndex,
                 b.MemberStaffIndices, b.RestXPositions)).ToImmutableArray();
         // Restamped with this staff's index for the same reason the beams are:
@@ -3506,7 +3506,7 @@ internal sealed class MultiStaffLayouter
         var localBeams = beamLayouts.IsDefaultOrEmpty
             ? beamLayouts
             : beamLayouts.Select(b => new BeamLayout(
-                b.Group, b.LeftY, b.RightY, b.LeftX, b.RightX,
+                b.Group, b.LeftY, b.RightY, b.LeftX, b.RightX, b.LeftStemX, b.RightStemX,
                 b.MemberXPositions, staffIndex, b.SystemIndex,
                 b.MemberStaffIndices, b.RestXPositions)).ToImmutableArray();
         var localTies = tieLayouts.IsDefaultOrEmpty

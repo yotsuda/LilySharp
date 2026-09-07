@@ -346,7 +346,7 @@ internal static class DynamicEngraver
     internal static double PointwiseBaselineY(Rendering.ScoreTextMetrics fonts, bool above,
         ImmutableArray<Voice> voices, int voiceIndex, int measureIndex, int itemIndex,
         double xColumn, double xLabel, string? text, bool expressive,
-        Func<int, (BeamLayout Beam, double MemberX, bool StemUp)?>? beamOf)
+        Func<int, (BeamLayout Beam, double StemX, bool StemUp)?>? beamOf)
     {
         var support = ColumnSupportSkylines(
             voices, voiceIndex, measureIndex, itemIndex, xColumn, beamOf);
@@ -381,7 +381,7 @@ internal static class DynamicEngraver
     internal static (VerticalSkyline Up, VerticalSkyline Down) ColumnSupportSkylines(
         ImmutableArray<Voice> voices, int voiceIndex, int measureIndex, int itemIndex,
         double xColumn,
-        Func<int, (BeamLayout Beam, double MemberX, bool StemUp)?>? beamOf)
+        Func<int, (BeamLayout Beam, double StemX, bool StemUp)?>? beamOf)
     {
         var (up, down) = StaffFloorSupport();
         MergeColumnSupport(up, down, voices, voiceIndex, measureIndex, itemIndex, xColumn, beamOf);
@@ -406,7 +406,7 @@ internal static class DynamicEngraver
     internal static (VerticalSkyline Up, VerticalSkyline Down) SpanSupportSkylines(
         ImmutableArray<Voice> voices, int voiceIndex,
         IEnumerable<(int Measure, int Item, double X)> columns,
-        Func<int, int, int, (BeamLayout Beam, double MemberX, bool StemUp)?>? beamOf)
+        Func<int, int, int, (BeamLayout Beam, double StemX, bool StemUp)?>? beamOf)
     {
         var (up, down) = StaffFloorSupport();
         // A span is many boxes into one skyline, which is the shape Merge's batch mode
@@ -449,7 +449,7 @@ internal static class DynamicEngraver
         VerticalSkyline up, VerticalSkyline down,
         ImmutableArray<Voice> voices, int voiceIndex, int measureIndex, int itemIndex,
         double xColumn,
-        Func<int, (BeamLayout Beam, double MemberX, bool StemUp)?>? beamOf)
+        Func<int, (BeamLayout Beam, double StemX, bool StemUp)?>? beamOf)
     {
         var vs = voices.IsDefaultOrEmpty ? ImmutableArray<Voice>.Empty : voices;
         if (vs.Length > 0)
@@ -469,7 +469,7 @@ internal static class DynamicEngraver
                 if (beamInfo is { } bi)
                     forcedStemUp = bi.StemUp;
                 if (NoteColumnLayout.Of(item, forcedStemUp,
-                        beamInfo?.Beam, beamInfo?.MemberX ?? 0.0) is { } col)
+                        beamInfo?.Beam, beamInfo?.StemX ?? 0.0) is { } col)
                 {
                     // The head's extent box, at the drawn head's X. BOTH axes come from
                     // the INK box: a NoteHead's default skyline is its own extent, and
@@ -563,7 +563,7 @@ internal static class DynamicEngraver
     /// probe books, so the voice-0-only articulation map cannot serve here).
     /// </summary>
     internal static Dictionary<(int Staff, int Voice, int Measure, int Item),
-        (BeamLayout Beam, double MemberX, bool StemUp)> BuildBeamMembers(
+        (BeamLayout Beam, double StemX, bool StemUp)> BuildBeamMembers(
         ImmutableArray<BeamLayout> beamLayouts)
     {
         var map = new Dictionary<(int, int, int, int), (BeamLayout, double, bool)>();
@@ -579,9 +579,11 @@ internal static class DynamicEngraver
                     && i < beam.MemberStaffIndices.Length
                     ? beam.MemberStaffIndices[i]
                     : Math.Max(0, beam.StaffIndex);
+                // The DRAWN stem's x — the frame the beam face is read in (see
+                // ArticulationEngraver.BuildBeamedStemTips, the same map for scripts).
                 map[(staffIdx, group.VoiceIndex,
                      member.ResolveMeasureIndex(group.MeasureIndex), member.ItemIndex)]
-                    = (beam, beam.MemberXPositions[i], member.MemberStemUp);
+                    = (beam, beam.MemberStemX(i), member.MemberStemUp);
             }
         }
         return map;

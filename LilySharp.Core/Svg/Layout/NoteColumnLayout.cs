@@ -112,8 +112,17 @@ public readonly record struct NoteColumnLayout
     /// LILYPOND-REF: lily/stem.cc Stem::get_beam — a beamed stem ends at its beam.</summary>
     public BeamLayout? Beam { get; init; }
 
-    /// <summary>The X the stem meets the beam at (the beam model's member X).
+    /// <summary>The X the stem meets the beam at — the DRAWN stem's x
+    /// (<see cref="BeamLayout.MemberStemX"/>), which is the frame the beam face is read in.
     /// Read only when <see cref="Beam"/> is non-null.</summary>
+    /// <remarks>
+    /// ⚠️ NOT the column anchor <c>BeamLayout.MemberXPositions[i]</c>, which every producer
+    /// handed in until 2026-09-07. The face's two Y are the quanter's answer AT THE OUTER
+    /// STEMS, so an anchor read only agreed with the stem read by accident (the frame shift
+    /// cancelled for a member's own tip) and disagreed for every other x — the seam the
+    /// ledger pair <c>staff.staff.tuplet-bracket-follow-beam{,-rest}</c> measured at the
+    /// beam's slope times half a stem.
+    /// </remarks>
     public double BeamStemX { get; init; }
 
     /// <summary>

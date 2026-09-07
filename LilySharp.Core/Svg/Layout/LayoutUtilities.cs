@@ -164,6 +164,30 @@ internal static class LayoutUtilities
     }
 
     /// <summary>
+    /// The x a BEAM MEMBER's stem stands at, given its column's x: a whole-note display
+    /// pair's invisible stem at its head's ink centre (<see cref="InvisibleStemX"/>), any other
+    /// head at its own glyph's attachment point in the MEMBER's direction (<see cref="StemX(double, bool, int, NoteheadStyle, GlyphMetrics.DesignMetrics?)"/>
+    /// — a knee's members differ, a tremolo pair's half heads attach 0.073200 further out).
+    /// </summary>
+    /// <remarks>
+    /// The ONE recipe for that x. The quanter scores in it (<c>BeamScoringProblem</c>,
+    /// <c>_leftX</c>), the renderer draws at it (<c>SharedRenderer.DrawBeams</c>,
+    /// asserted equal by <c>BeamStemFrameTests</c>), and <see cref="BeamLayout.MemberStemX"/>
+    /// answers every reader of the beam face from it — a face read anywhere else is off by
+    /// the beam's slope times the distance (HANDOFF §1, session 344: the tuplet bracket that
+    /// followed its beam sat slope × half a stem too deep because its tip was read at the
+    /// column anchor and then "corrected" by the attach it had never been off by).
+    /// </remarks>
+    public static double BeamMemberStemX(BeamMember member, double columnX,
+        GlyphMetrics.DesignMetrics? font = null)
+    {
+        int noteValue = GlyphMetrics.NoteValueOf(member.Item);
+        return noteValue <= 1
+            ? InvisibleStemX(columnX, noteValue)
+            : StemX(columnX, member.MemberStemUp, noteValue, NoteheadStyleOf(member.Item), font);
+    }
+
+    /// <summary>
     /// Where a FLAG's glyph origin sits, given the x its stem stands at.
     /// </summary>
     /// <remarks>

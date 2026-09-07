@@ -768,7 +768,7 @@ internal static class ArticulationEngraver
                 out var beamTip))
             {
                 memberBeam = beamTip.Beam;
-                memberStemX = beamTip.MemberX;
+                memberStemX = beamTip.StemX;
                 stemUp = beamTip.StemUp;
             }
 
@@ -1996,11 +1996,17 @@ internal static class ArticulationEngraver
         return TabBeamMath.At(line, noteX) + (up ? -half : half);
     }
 
-    /// <summary>Which beam a (staff, voice, measure, item) is a member of, with the member's
-    /// own X and the beam's stem direction — <see cref="FingeringEngraver"/> asks the same
-    /// question for the same reason (a beamed stem ends on the beam), so the map is spelled
-    /// here once rather than twice.</summary>
-    internal static Dictionary<(int Staff, int Voice, int Measure, int Item), (BeamLayout Beam, double MemberX, bool StemUp)>
+    /// <summary>Which beam a (staff, voice, measure, item) is a member of, with the x its
+    /// STEM is drawn at and the beam's stem direction — <see cref="FingeringEngraver"/> asks
+    /// the same question for the same reason (a beamed stem ends on the beam), so the map is
+    /// spelled here once rather than twice.</summary>
+    /// <remarks>
+    /// ⚠️ The x is the DRAWN STEM's (<see cref="BeamLayout.MemberStemX"/>), not the column
+    /// anchor <c>MemberXPositions[i]</c> it carried until 2026-09-07: the beam face is read at
+    /// it (<see cref="NoteColumnLayout.OutwardTipDeviceY"/> →
+    /// <see cref="BeamLayout.OuterEdgeStaffSpaceAtX"/>), and that face is in the stems' frame.
+    /// </remarks>
+    internal static Dictionary<(int Staff, int Voice, int Measure, int Item), (BeamLayout Beam, double StemX, bool StemUp)>
         BuildBeamedStemTips(ImmutableArray<BeamLayout> beamLayouts)
     {
         var tips = new Dictionary<(int, int, int, int), (BeamLayout, double, bool)>();
@@ -2015,14 +2021,14 @@ internal static class ArticulationEngraver
                 // A script on the beam's side must clear the beam stack's OUTER edge (the
                 // outermost beam's far face, not the single-beam centre) — the same canonical
                 // line the slur/tuplet use. The face itself is read by the single house of a
-                // column's reach (NoteColumnLayout, at the beam model's member X); this map
+                // column's reach (NoteColumnLayout, at the member's drawn stem x); this map
                 // only resolves WHICH beam a (staff, measure, item) belongs to.
                 int staff = !beam.MemberStaffIndices.IsDefaultOrEmpty
                     ? beam.MemberStaffIndices[i]
                     : Math.Max(0, beam.StaffIndex);
                 tips[(staff, group.VoiceIndex,
                       member.ResolveMeasureIndex(group.MeasureIndex), member.ItemIndex)] =
-                    (beam, beam.MemberXPositions[i], member.MemberStemUp);
+                    (beam, beam.MemberStemX(i), member.MemberStemUp);
             }
         }
         return tips;

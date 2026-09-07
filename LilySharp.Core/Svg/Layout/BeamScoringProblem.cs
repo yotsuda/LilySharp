@@ -72,6 +72,15 @@ internal sealed class BeamScoringProblem
     private readonly double _leftX;
     private readonly double _rightX;
     private readonly double[] _stemXPositions;
+
+    /// <summary>
+    /// The x of the first and last MEMBER's stem (staff spaces, absolute) — the frame
+    /// <see cref="Solve"/>'s answer is given in: its two Y are the quanted line AT these two
+    /// stems (<c>AtOuterStems</c>), not at the beam's drawn ends and not at a bracketed rest
+    /// the scored span may reach past them. <see cref="BeamLayout.LeftStemX"/> /
+    /// <see cref="BeamLayout.RightStemX"/> carry them to every reader of the beam face.
+    /// </summary>
+    public (double Left, double Right) OuterMemberStemXs { get; }
     private readonly int[] _headMin;
     private readonly int[] _headMax;
     private readonly int _maxBeamCount;
@@ -276,6 +285,10 @@ internal sealed class BeamScoringProblem
         var lastMember = group.Members[^1];
         _leftX = StemXOf(firstMember);
         _rightX = StemXOf(lastMember);
+        // The outer MEMBER stems — the frame Solve answers in (AtOuterStems), before a
+        // bracketed rest widens the scored span below. BeamLayout carries them as
+        // LeftStemX/RightStemX so every reader of the beam face interpolates in this frame.
+        OuterMemberStemXs = (_leftX, _rightX);
         // …and a bracketed REST at either end is one of the beam's stems, so the span the
         // beam is scored over is the span it is drawn over. LilyPond scores in exactly that
         // frame: x_span_ is the beam's own extent (lily/beam-quanting.cc:419), which
@@ -293,21 +306,16 @@ internal sealed class BeamScoringProblem
                     _rightX = Math.Max(_rightX, restXPositions[r]);
             }
         }
-        // The stem's own x, not its column's — LayoutUtilities.StemX is the single house the
-        // renderer and the collision collector already read, so the beam is scored in the
-        // frame it is drawn in (BeamStemFrameTests asserts the two agree).
+        // The stem's own x, not its column's — LayoutUtilities.BeamMemberStemX is the single
+        // house the renderer and the collision collector already read, so the beam is scored
+        // in the frame it is drawn in (BeamStemFrameTests asserts the two agree).
         // Per MEMBER head shape: a two-note tremolo pair beams HALF notes
         // (BeamDetector.IsBeamable), whose attachment is 0.073200 further out than a black
         // head's — so this cannot be lifted out of the loop as one offset for the group.
         // A WHOLE-note display pair's stem is invisible and stands at the head's CENTRE,
         // not at an attachment edge (LayoutUtilities.InvisibleStemX).
         double StemXOf(BeamMember m) =>
-            GlyphMetrics.NoteValueOf(m.Item) <= 1
-                ? LayoutUtilities.InvisibleStemX(itemXPositions[m.ItemIndex],
-                    GlyphMetrics.NoteValueOf(m.Item))
-                : LayoutUtilities.StemX(itemXPositions[m.ItemIndex], m.MemberStemUp,
-                    GlyphMetrics.NoteValueOf(m.Item),
-                    LayoutUtilities.NoteheadStyleOf(m.Item), headFont);
+            LayoutUtilities.BeamMemberStemX(m, itemXPositions[m.ItemIndex], headFont);
         double halfBeamOverhang = EngravingDefaults.StemThickness / 2.0;
         _xSpan = (_rightX - _leftX) + 2 * halfBeamOverhang; // spanner length
 

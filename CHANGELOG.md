@@ -141,6 +141,23 @@ scores against LilyPond's picture of the same book.
 
 ### Engraving
 
+- **The beam's face is read in one frame — the stems' — by everything that must clear a
+  beam.** A quanted beam's two heights are LilyPond's `positions`: the line at the beam's two
+  outer *stems*. Lily# kept them but interpolated between the two outer note *columns*, one
+  stem attachment to the left of where the numbers were true — 1.2392 staff spaces for an up
+  stem. A reader that asked for a member's own tip by its column got the right answer by
+  accident, since the shift cancelled; a reader that asked at a real x — a slur attaching to a
+  beamed stem, a tuplet's bounding rest, a rest the beam runs over — read the line one
+  attachment further along its slope. The tuplet engraver had then corrected its note tips for
+  a shift they had never suffered, so a bracket that follows a sloped beam sat too deep by the
+  slope times an attachment, its slope exact. The layout now carries the outer stems' x and
+  every reader hands in a drawn stem's x. Measured against LilyPond: the two follow-beam
+  ledger points close from +0.007811 and +0.006569 to +0.000021; a bracket following an
+  up-stem sloped beam reads LilyPond's `positions` (2.279442 . 2.191727) to six digits; a
+  slur's attachment on a beamed, rising eighth is now within the drawn precision of
+  LilyPond's 2.094 above the middle line where it had been 0.14 high. Forty-eight of 920
+  swept books move — tuplet numbers and brackets over sloped beams by up to 0.3, slur ends
+  on beamed stems by up to 0.15, and the pages that reflow beneath them.
 - **A tuplet bracket that rides a beam is placed the way LilyPond places one, and never off
   another staff's beam.** Three faults, all in the same arm. LilyPond has two ways of placing a
   bracket and they are separate: one for a bracket that follows its own beam — take the outer

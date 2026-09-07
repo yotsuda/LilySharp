@@ -205,6 +205,23 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ## 1. 現在地 ← **毎セッション書き換える**
 
 
+最終更新 第344セッション＝**入り方は第298〜第340 と同じ**（ユーザーは `docs/HANDOFF.md` を読んで着手せよとだけ言い・background job・口挟み 0）。**第343 ⑾⒜「半符尾の継ぎ目を閉じる」に着手し、閉じた**——**ただし正体は起票と違った**（§5.0「起票の難所は予測」の 9 例目）。**製品 14 ファイル・検査 6・番人 5 本・台帳 2 点再 seed・snapshot 5 枚・生成物 2**。**骨は 7**:
+
+⚠️⚠️⚠️ ★★★★ **⑴ 継ぎ目は「tip の読み」ではなく「家の*枠*」だった**。**`BeamLayout.LeftY/RightY` は quanter が*外側の符尾*で答えた Y**（`BeamScoringProblem.AtOuterStems`）なのに、**`OuterEdgeStaffSpaceAtX` はそれを `LeftX/RightX`＝*符頭アンカー*の間で内挿していた**——**符尾の枠を attach 1 つぶん（上向き 1.2392・下向き 0.065）左へずらした枠**。⇒ **アンカーを渡す読み手（tuplet の tip・script・dynamic・fingering）は*ずれが相殺して*正しい答えを得ていた**が、**実 x を渡す読み手（スラーの符尾 x・tuplet の境界休符・梁を跨ぐ休符の衝突 shift）は slope × attach だけ先の線を読んでいた**。**第343 ⑼⒝ はそのうえで note の tip に slope × attach を*足し*た**（「tip はアンカーで読まれた」と信じて）——**足す相手は最初からずれていなかった**ので、**両端が slope × attach 深くなり dy だけ正しい**＝台帳の +0.007811（= 0.119904 × 0.065）そのもの。⚠️ **下向き符尾では 0.065 だから小さく見えた。上向きは 1.2392 で 19 倍**——**実コーパスの movers はそちら**（0.1〜0.3 ss）。
+★★★ **⑵ 直し＝家を符尾の枠に**: **`BeamLayout` に `LeftStemX/RightStemX`（外側メンバーの描画符尾 x・`BeamScoringProblem.OuterMemberStemXs` が渡す）と `MemberStemX(i)`・`DrawnLeftX/RightX`**。**`Slope`／`GetYAtX`／`OuterEdgeStaffSpaceAtX` はその枠で内挿し、描画端（外側符尾 ± 0.065・括弧つき休符まで）の外で clamp**。**符尾 x の綴りは `LayoutUtilities.BeamMemberStemX` 1 軒**（quanter の `StemXOf` もそこを読む）。**読み手**: tuplet の follow 枝は `MemberStemX` を渡して**補正を消した**／`BuildBeamedStemTips`・`BuildBeamMembers` の tuple は **`MemberX` → `StemX`**（コンパイラが 10 署名を弾いた）／damping と隠し bracket の番号 x は `LeftStemX/RightStemX`／スラーと休符 shift は**無変更で正しくなった**。⚠️ **コンストラクタに必須引数 2 つを足したので、写し直す 6 か所と検査 4 か所は全部コンパイラが名指した。**
+★★★★ **⑶ 実測**（全部 LP 2.26.0・`scratch/p346/`）: **⒜ 台帳 TFB/TFR: +0.007811／+0.006569 → 両方 +0.000021048**（9 桁同一＝傾き非依存の定数・梁インクを比べた 3 桁の下）。**⒝ 上向き・音符境界**（`up3`＝`c8[ tuplet 3/2 { e8 d c } a,8]`・LP `positions=(2.2794417 . 2.1917270)`）: **Lily# 2.279442／2.191727＝六桁一致**。**⒞ 上向き・休符境界**（`upr`＝`e8[ tuplet 3/2 { r8 d c ] } c8`・LP `(1.9896883 . 1.5699422)`）: **dy 六桁一致・絶対位置は両端 0.040574 低い**＝**別の継ぎ目**（下 ⑸）。**⒟ スラー**（`audit/lpreg/ecslur-a.ly`・上向き符尾の梁つき e'8 に付く弓）: **LP 中線の 2.0940 上・Lily# 2.08（F2）・旧 2.23**＝0.14 直った。**⒠ 第343 の番人 dy 1.043497 不動・TFC 不動・他 800 点不動。**
+★★ **⑷ 掃き 920 冊 MOVED 48**（追跡 13 ＋ ユーザー 35・`sweep346.ps1`／`whatmoved.ps1`／`deltas.ps1`）: **隠し bracket の番号だけ動いた本 21**（傾いた梁の上・0.01〜0.31）／**bracket の線 4**（`beaming` 0.01・`05-special`＝**knee の damping が stem-to-stem span になった**・`case`・`multivoice-voice2`）／**スラー 16**（梁つき符尾に付く端が 0.02〜0.15）／**頁が組み直った本 5**（`Hold the Line`・`Progress`・`Sweet Memories`・`SUMMER`・`You're So Vain`＝上の局所移動が段間を 0.01〜0.11 動かした）。⚠️ **LP と突き合わせたのは ⑶ の 5 冊**（音符境界・休符境界・スラーの各 regime 1 冊ずつ）。**knee の bracket（`05-special`）は未照合**——**LP の `quantized-positions` の傾きは梁の X 範囲（＝符尾間）なので向きは正しい**が、点は無い。
+★ **⑸ 開示（*やっていない*こと）**: **⒜ 休符境界の bracket の X 枠**——**Lily# は休符の列にも `StemAttachX(up)` を足して x0 を置く**（実測: LP の bracket X 範囲は梁左端の +1.7524・Lily# は +3.0062＝**1.1738 ≈ 1.2392 − 0.065 右**）。**LP の `get_x_bound_item` は符尾の無い境界で*列*へ落ちる**（`TupletBracketEngraver` の開示 ⑸ そのもの）。**効きは dy × Δx/span＝upr で 0.040574**。**番人 `AnUpStemSlopedBeamOverABoundingRest_SlopesTheBracketWithIt` がその数を*名前つきで*pin している**（閉じたら消す）。**⒝ skyline の梁の帯は x をアンカーに置いたまま**（`AddBeamsToSkyline`・Y は符尾で読む＝バイト同一。**LP の帯は描画範囲**＝上向きで 1.24 右。段間を動かす移植で点が無い）。**⒞ `ElementCoordinator.BeamStemX`（衝突の枠）は `BeamMemberStemX` を通していない**（invisible stem の枝が無い綴り。tremolo の全音符対でだけ違う）。**⒟ tab 枝の `beam.LeftX + StemAttachX`（`:384`）は tab 方向の attach なので残した。**
+★ **⑹ 数**: full **7206 / 0 / 4 / 7210**（`scratch/p346/full2.trx`・3 分 49 秒・**+5＝番人 `BeamFaceFrameTests` 3 ＋ `TupletBracketFollowsBeamTests` 2**。引継ぎ 7205 ＋ 5）・`--no-incremental` build 0 エラー／Core 0 警告・**台帳 803／exact 632／ss 非ゼロ 206（25.6781681623963＝引継ぎ 25.6925058903963 − 0.0143377＝TFB・TFR の 2 点ぶん）／count 178 うち非ゼロ 0／OPEN 0**・**snapshot 247（5 枚再 seed＝`test/tab-tuplet-number`・`test/tuplet-articulations`・`test/tuplets-beamed`・`test/multivoice-voice2-tuplet`・`showcase/05-special-techniques`。正当化する台帳キーは `staff.staff.tuplet-bracket-follow-beam{,-rest}` ＋ 番人 `AnUpStemSlopedBeam_PutsTheBracketWhereLilyPondDoes_LpExact`）**・**追跡 `.lys` 597**。
+
+⇒ ★★★★ **⑺ 次の一手**: **⒜ ✅ ユーザー承認「コミットは承認する。プッシュはしないで」**（第 2 便・`a7e1f816` と `14262479`）——**push は禁止のまま**（未 push 16・この行の commit を含む）。**⒝ ⑸⒜ の休符境界の X 枠**——**点を先に**（`upr-probe.ly` が LP の `X-positions`＝`(0.0 . 6.0084)` と bracket X 範囲を刷る。`Measure-LilyPondProbe.ps1` の型にするなら TFR の probe に X を足すのが素直）。**⒞ ⑸⒝ の帯の x**（段間を動かす・掃きで数えてから）。**⒟ 第343 ⑸ の休符 encompass 点（else 枝）**。**⒠ 以下は第342 の並び**（拾い箱の ⑺⒜／`lysc ly` の ChordNames／lyric row の slot の投票／ps2 の 0.017／`audit/lpreg` 取り直し／§2 U8c・U8b・U8／A/B/D/E／C⑴／G）。⚠️ **承認待ち・リリース 0.6.0 の bump／tag は第328 と同じ。**
+
+★ **開始時裏取り**: HEAD **`53fed475`**（**第343 が §1 の「読む前に」を足した 1 本が引継ぎの `dd6a4720` の上に在った**）・**未 push 13**（引継ぎ 11 ＋ 2）・木 clean・未追跡 0・`LilySharp.Cli\bin\Debug` は net10.0 のみ・`--no-incremental` build 0 エラー／Core 0 警告。**台帳 803／exact 632／ss 非ゼロ 206（25.6925058903963）**＝引継ぎどおり。
+**終了時**: **commit 3 本**（`a7e1f816`＝製品・検査・台帳・snapshot・生成物・CHANGELOG／`14262479`＝この HANDOFF＝第342 の経緯を ARCHIVE の先頭へ逐語／第 2 便＝承認の 1 行）・**未 push 16**（第343 までの 13 を含む・**✅ ユーザー承認済み・push は指示により保留**）・木 clean・未追跡 0・**台帳 803／exact 632／ss 非ゼロ 206（25.6781681623963）／count 178 うち非ゼロ 0／OPEN 0・snapshot 247・追跡 597**。⚠️ **Co-Authored-By は付けていない**（2026-07-06 のオーナー決定・memory）。
+⚠️ **捨て計器は `scratch/p346/ZzP346UpProbeTests.cs.txt` へ戻してある**。**計器は `scratch/p346/`**（`up3-probe.ly`／`upr-probe.ly`＝**LP の bracket `positions` と `X-positions` の型**・`up-probe.ly`／`up2-probe.ly`＝平らになって外れた 2 冊・`ecslur-probe.ly`＝スラーの control-points・`sweep346.ps1`／`whatmoved.ps1`／`deltas.ps1`・`reseed.ps1`・`archive-342.ps1`・`exe-base`／`exe-head`＝掃きの 2 exe）。⚠️ **`sweep346.ps1 -Tag base` は `scratch\p346\base` を*消して*作る**——**この便は最初 exe をそこへ建てて消した**（exe は `exe-*` へ）。⚠️ **`scratch/` は git 管理外**なので、消えたら上の数がこのファイルの唯一の記録になる。
+
+## 以下は第343セッションの経緯
+
 最終更新 第343セッション＝**入り方は第341・第342 と同じ**（ユーザーが `docs/HANDOFF.md` と `scratch/ベースタブLy/rest-tuplet.lys` を読ませたうえで「**4小節目のtupletのブレースと16分休符が重なる問題を直して**」と*症状と本を名指し*・background job）。⚠️ **ただし着手順はユーザーが 2 度組み替えた**——1 度目「**未コミット分を先にコミットして**」、2 度目（その赤 3 本を数えて報告した直後）「**その赤いのを緑に直して**」。⇒ **実際にやったのは ⑴ 第342 の赤 3 本を緑に → ⑵ commit 2 本 → ⑶ 報告の欠陥を直す**。**骨は 6**:
 
 ⚠️⚠️⚠️ ★★★★ **⑴ 第342 が「ラベルの Y が触れてはいけない量へ漏れている」と書いた赤 3 本は、*製品ではなく検査*だった。3 本とも「丸めた数の差」を、丸めより細かい桁で assert していた**（`scratch/p345/{head,poison}.txt`＝毒つきで両側を測った）:
@@ -255,117 +272,11 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ★★★★ **⒞ 残差 3 つは*当て推量でなく算術*で名前が付いた**: **TFC −0.006512447 は `tuplet-bracket-partial-beam-control` と*バイト同一***（同じ clef 由来の TNC sliver）。**TFB +0.007810558 / TFR +0.006569266 は 1 つの継ぎ目**——**梁は LP と完全一致**（ink `-3.050 . -1.570` 両側）・**dy も一致**（−0.600 対 −0.600200）で、**残るのは一様な深さのずれ**。そして **+0.007810558 ＝ 梁の傾き × 半符尾（0.119904 × 0.065 = 0.007794・2e-5 で一致）**。⇒ **正体は `BeamLayout` の最後の半符尾の継ぎ目**（`LeftY/RightY` は**外側符尾**での quanter の答え・`LeftX/RightX` は**列の錨**なので、符尾の x で面を読むと傾き×stem-attach ずれ、錨の外は clamp）。**follow 枝の 2 点は傾きで補正済みだが、その出発点の tip（`NoteColumnLayout.OutwardTipDeviceY`＝列の頭の錨で読む）は未補正。**⇒ **閉じ方は枠の修理で、dy を動かしてはいけない**（dy はもう正しい）。
 **⒟ 数**: **台帳 800 → 803**・exact 632 不動・**ss 非ゼロ 203 → 206**・総和 25.6716136193963 → **25.6925058903963**・full **7201 / 0 / 4 / 7205**（`scratch/p345/full11.trx`・**+3＝この 3 点**）。
 
-⇒ ★★★★ **⑾ 次の一手**: **⒜ ⑽⒞ の半符尾の継ぎ目を閉じる**（**もう点が見ている**——`staff.staff.tuplet-bracket-follow-beam{,-rest}` が +0.0078/+0.0066 で待っている。⚠️ **dy を動かさずに**）。**⒝ 承認と push**（**未 push 11**・`push` はしていない・配布もしていない）。**⒞ ⑸ の休符 encompass 点**（else 枝側・未着手）。**⒟ 以下は第342 の並び**（拾い箱の ⑺⒜／`lysc ly` の ChordNames／lyric row の slot の投票／ps2 の 0.017／`audit/lpreg` 取り直し／§2 U8c・U8b・U8／A/B/D/E／C⑴／G）。⚠️ **承認待ち・リリース 0.6.0 の bump／tag は第328 と同じ。**
+⇒ ★★★★ **⑾ 次の一手**: **⒜ ⑽⒞ の半符尾の継ぎ目を閉じる**（**もう点が見ている**——`staff.staff.tuplet-bracket-follow-beam{,-rest}` が +0.0078/+0.0066 で待っている。⚠️ **dy を動かさずに**）。⚠️⚠️ ★★★ **着手前に読む: `OuterEdgeStaffSpaceAtX` は共有の家で、読み手は 4 つ**（`grep` 実測・第343）——**⑴ スラーの接続**（`ElementCoordinator.cs:2609 TryGetBeamedStemTipDeviceY`）／**⑵ 列の外向き先端**（`NoteColumnLayout.cs:204,253`＝tuplet だけでなく dynamic・script も通る）／**⑶ 譜スカイラインの梁の帯**（`SkylineBuilder.cs:1376-1377`＝**段間の spacing に入る**）／**⑷ tuplet**（`TupletBracketEngraver.cs:696` と damping の `:1249-1250`）。⇒ **家の枠を直せば ⑴⑶ が動く＝段間が動く**ので、**その前にスラーと skyline 側の pinned 点を見ておくこと**。**呼び手側（tuplet の tip の読み）だけを直す道もある**——どちらを採るかは、動く点を数えてから決める設計判断で、**第343 はそこに入っていない**。**⒝ 承認と push**（**未 push 11**・`push` はしていない・配布もしていない）。**⒞ ⑸ の休符 encompass 点**（else 枝側・未着手）。**⒟ 以下は第342 の並び**（拾い箱の ⑺⒜／`lysc ly` の ChordNames／lyric row の slot の投票／ps2 の 0.017／`audit/lpreg` 取り直し／§2 U8c・U8b・U8／A/B/D/E／C⑴／G）。⚠️ **承認待ち・リリース 0.6.0 の bump／tag は第328 と同じ。**
 
 ★ **開始時裏取り**: HEAD **`2ebbef2b`**・**未 push 2**・**木は clean ではない**（**第342 が意図的に残した 244 ファイル＝赤 3 本つき**）・`--no-incremental` build 0 エラー／Core 0 警告・赤は引継ぎどおり `LyricAnchorPerSystemTests` ／ `TabDoubleStemTremoloTests` ／ `TabSlurDirectionTests` の 3 本（`CitationsThatNameNothing_DoNotGrow` は**この木では緑**＝引継ぎの「4 本」は 3 本だった）。
 **終了時**: **commit 9 本**（`6167721c`／`88273fa3`／`6ef71e09`／`256cc217`／`d575a7df`／`dd6a4720`／この HANDOFF）・**未 push 11**（**第342 の 2 本を含む**）・木 clean・未追跡 0。
 ⚠️ **捨て計器は `scratch/p345/*.cs.txt` へ戻してある**（`ZzP345ProbeTests`／`ZzP345TupletProbeTests`／`ZzP345OpenArmsProbeTests`／`ZzP345E1ProbeTests`／`ZzP345B1ProbeTests`）。**計器は `scratch/p345/`**（`m4-probe.ly`＝**LP の grob dump の型**／`m4ctl.ly`／**`beamrest.ly`＝「休符に符尾はあるか」**／**`beambound.ly`・`beamslope.ly`＝境界の休符の梁**／`e1-probe.ly`・`s1-probe.ly`＝双子／`sweep345.ps1`／`whatmoved.ps1`／`brackets.ps1`／`beamx.ps1`）。⚠️ **`scratch/` は git 管理外**なので、消えたら上の数がこのファイルの唯一の記録になる。
-
-## 以下は第342セッションの経緯
-
-最終更新 第342セッション＝**入り方は第298〜第340 と同じ**（ユーザーは `docs/HANDOFF.md` を読んで着手せよとだけ言い・background job・口挟み 0）。**第340・第341 が 2 便続けて「新しい頭のほうが安い」と言って先送りした §1 ⑶＝頁の島に着手した。**成果は**計器 1 つと、島の主仮説を殺した陰性 1 つと、LP の `tallness_` の実表 3 枚**。**製品は 1 ファイル 1 か所（debug 文字列の桁）だけで、出力は 1 バイトも動いていない。骨は 7**:
-
-★★★★ **⑴ LP の `Line_details::tallness_` を*外から*読む計器を建てた**（`scratch/p344/`）。**`Line_details` は Scheme から見えない**——第339 ⒝ が「次便の設計仕事はここ」と書いた穴で、答えは **breaker 自身に訊く**ことだった: **`\paper { page-breaking = #ly:minimal-breaking }`** は `Page_breaking::pack_systems_on_least_pages`（`page-breaking.cc:1483`）で**貪欲に**詰め、その唯一の判定 `Page_spacing::append_system`→`calc_force`（`page-spacing.cc:29-70`）が**まさに欲しい 2 つの数だけ**を使う:
-```
-rod_height_ = full_height(line0) + tallness_(line1) + … + tallness_(line j−1)
-force_ = −inf  iff  rod_height_ + bottom_padding ≥ page_height
-                                                   − min_whitespace_at_top(line0)
-                                                   − min_whitespace_at_bottom(line j−1)
-```
-⇒ **1 頁目が載せる段数は `paper-height` の*単調な階段*で、j 番目の段差は `H_j = C + full_height(line0) + Σ_{i<j} tallness_(line i)`**（C は同種の行なら共通）。⇒ **`tallness_(line j) = (H_{j+1} − H_j) / output-scale`＝定数は全部消える。** 掃き（`sweep.ps1`）で階段を挟み、二分法（`bisect.ps1`）で段差を詰める。
-⚠️ **行分けを固定すること**——`ly:minimal-breaking` は `set_to_ideal_line_configuration` を使うので、break が自由な本では*別の段*を測る。STB は全段 `\break`・Boogie も元から `\break` 固定で、**貪欲でも最適でも 25 行（題＋24 段）**と確認済み。
-⚠️ **`bisect.ps1` の刷る `tallness(line N)` の N は 1 つずれていた**（直した）。**表は `fromCount` が正しい。**
-
-⚠️⚠️⚠️ ★★★★ **⑵ その計器が島の主仮説を殺した＝LP の pure height は、この枠では*描いたインクそのもの***: 第339 ⒟ は「LP は `fill_line_details` で pure heights から作り（`constrained-breaking.cc:505-565`）、Lily# は置かれた silhouette から作る（`PageLayouter` の頭注が自白）」を**残った所在**と名指していた。**測ったら差が無い**——STB の bare 段は**値付け 2.305472 対描画 2.305433（差 3.9e-5）**、marked 段は**値付け 3.594043 対描画 3.594098（差 5.5e-5）**（描画は `ink-stb.ly`＝第338 の `p338/grob-top.ly` を同じ音楽に当てたもの）。⇒ ★★★ **「pure heights が未実装」を移植の根拠にしないこと。この枠では inert。**（効くとすれば `outside-staff` の置き直しが pure と placed で割れる本＝まだ 1 冊も名指せていない。）
-★★ **副産物**: **分岐 1（padding 側）が勝つ段では `tallness = 段のインク高 ＋ padding 1`**。STB で 4e-5 一致。⇒ **インクが読めれば掃かなくても tallness が出る**（begin/rest が割れず分岐 2 も勝たない段に限る＝Boogie の sys22 はその外）。
-
-★★★ **⑶ STB（bass 五線＋bass5 タブ・8 小節 × 9 段）の実表**——**LP 対 Lily#**:
-
-| 段 | LP | Lily# | 残差 |
-|---|---|---|---|
-| bare（上インク＝小節番号） | **16.355472** | 16.360714 | **+0.005242** |
-| marked（`\mark \markup { \box "A" }`） | **17.644043** | 17.950000 | **+0.305957** |
-
-⚠️ ★★ **計器が同じ段を見ていることの裏取り 2 つ**: **⒜ 両エンジンとも「他と違う 1 段」を*同じ line 5* に置く**（LP 16.329076 / Lily# 16.336268）。**⒝ 陽性対照**——mark を足すと階段の間隔が **28.74 → 31.01 mm** に動く＝**計器は盲ではない**。
-⚠️ **Lily# の tallness は頁高に依らない**（169.009370 / 142.263780 / 85.358268 ss の 3 通りで同一）＝「置かれた系から作る」ことがこの本では頁高依存を生んでいない。
-
-★★★★ **⑷ その 0.305957 の内訳＝リハーサル記号の箱で、*2 つの独立な差*だった**（`ink-stb.ly`・LP の描画）。**LP は箱の底を*常に*譜の上線の 0.850000 上に置き**（＝`RehearsalMark.padding` 0.8 ＋ 譜線の半太さ 0.05）、**箱の高さは字のインクに従う**:
-
-| 印 | `A` | `Q` | `x` | `1` | `M` |
-|---|---|---|---|---|---|
-| LP 箱の高さ | 2.744098 | 3.270752 | 1.995679 | 2.655405 | 2.705286 |
-
-**Lily# は箱の底 1.100000・高さ 2.800000（字に依らない）・頂 3.900000**＝`OutsideStaffStacker.MusicMarkExtents` の `halfH = (fs + 2·pad)/2 = (4.0×0.6 + 0.4)/2 = 1.4`（同じ 1.4 が `MusicMarkEngraver.GetMarkHalfExtent` にも在る）。⇒
-1. **据え付け**: Lily# 1.100000 対 LP 0.850000 ＝ **+0.250000**（この枠では定数）
-2. **箱の高さ**: Lily# 2.800000（**公称フォント サイズの近似**）対 LP のグリフのインク箱＝**`A` で +0.055902・`x` で +0.804321・`Q` で −0.470752＝*符号が反転する***。⇒ ★★★ **定数の補正では直らない。字のインクを測る必要がある。**
-
-⚠️ ★★ **既存の台帳と重なるが、同じではない**: `mark.plain.staff-to-baseline`／`mark.chord-row.staff-to-baseline`（LP 2.85＝上線の 0.85 上・**残差 +0.75**）と `mark.over-chord.*`（残差 0.400＝「箱の項」）が既に OPEN。**あちらは LP 側が*素の字*・Lily# 側が*箱*という混ざった比較**で、**こちらは両側とも `\box`** なので**据え付けと箱の高さを切り分けている**。⇒ **直すなら絵が動く（承認事項・下 ⑺）。**
-
-⚠️⚠️ ★★★★ **⑸ Boogie「both」の tallness を段ごとに並べた＝第339 ⒟ が求めた表**（LP は `boogie-tall.ly`＝あの本の staff+tab book だけを切り出したもの・二分法許容 0.0004 mm ⇒ 差の誤差 ±0.00023 ss。Lily# は `ZzP344ProbeTests.BoogieBoth`）。⚠️ **枠**: **LP の line 0 は*題の markup 行*で、line k (k≥1) が Lily# の `placed sys k`**。
-
-| line | LP | Lily# | 残差 | Lily# の top |
-|---|---|---|---|---|
-| 3 | 19.336204 | 18.845000 | **−0.491204** | 5.545000 |
-| 4 | 18.822165 | 18.460070 | **−0.362095** | 5.160070 |
-| 5 | 19.509727 | 17.868551 | **−1.641176** | 3.900000（印） |
-| 6 | 15.894087 | 16.181253 | **+0.287166** | 2.293253（小節番号） |
-| 7 | 19.509866 | 18.453235 | **−1.056631** | 3.900000（印） |
-| 8 | 15.855187 | 16.198714 | **+0.343527** | 2.310714（小節番号） |
-| 9 | 20.726610 | 22.443258 | **+1.716648** | 8.110258 |
-
-⇒ ★★★★ **静かな段では Lily# が +0.29〜+0.34 高く**（STB の +0.005 とは桁が違う）、**印の段では Lily# が −1.06〜−1.64 *低い***（STB の marked が **+0.31** だったのと**符号が逆**）。⇒ ★★★ **STB の答えを Boogie にそのまま持ち込めない。** **LP は line 5 と 7 を*同じ* 19.5098… と読むのに Lily# は 17.869 と 18.453 に割る**——ここが次の的。
-⚠️ **line 1・2 は取れていない**: 1 頁目が「題＋1 段」になる `paper-height` を LP が受け付けない（32 mm まで下げても `page1=2`）＝**頁高に下限の clamp が在る疑い**。取るなら題を落とした対を建てること。
-
-★ **⑹ 製品は 1 か所だけ・出力不動**: `LayoutEngine.DescribeDetails` の書式を **F3 → F6**（debug hook の報告行。**唯一の読み手は LP の数と並べる人で、台帳の許容は 1e-6**——この便は「16.361」と 16.355472 の 0.0055 を丸めと区別できず、実際に取り直した）。**この行を assert しているテストは 1 本も無い**（grep 済み）。**絵にも生成物にも効かない。**
-
-★ **⑺ 数**: full **7189 / 0 / 4 / 7193**（`scratch/p344/full1.trx`・6 分 27 秒・**引継ぎと同数**）・`--no-incremental` build 0 エラー・Core 0 警告・**台帳 800／exact 632／ss 非ゼロ 203（26.7886591883963）／count 178 うち非ゼロ 0／OPEN 0**・**snapshot 247**・**追跡 `.lys` 597**＝**全部不動**。生成物 2 つは `LILYSHARP_UPDATE_DOCS=1` で回しても動かなかった。
-
-⇒ ★★★★ **⑻ 次の一手**: ⚠️ **⑴〜⑸ は commit していない（ユーザー承認待ち）。** 作業ツリーは製品 1 ファイルだけ。
-**⒜ まず承認を 2 つ訊く**: **(i) この便の commit**（debug の桁＋この HANDOFF＋ARCHIVE）。**(ii) 印の箱を直すか**——**⑷ の 2 つはどちらも*絵を動かす***（`@mark` を持つ本すべて）ので RULES §5.1 の承認事項。**直すなら順は「箱の高さ（グリフのインクを測る）」が先**——据え付けの 0.25 は定数で、箱の高さは符号が反転するので、先に定数を動かすと後の測りが濁る。
-**⒝ 島の次の一手＝⑸ の符号反転を名指す**: **Boogie の印の段で Lily# が LP より*低い*のはなぜか**。⚠️ **⑷⒉ は説明にならない**——`A5`/`B3`/`A6` は `A` と*高さ*が同じ族（大文字＋数字）なので、Lily# の固定 2.800 との差は STB の `A` と同じ向き（Lily# が*高い*）に出るはずで、観測は逆。⇒ **印そのものではなく、印の段が*他に何を持っているか*が効いている。**候補は **⑴ tab が `\tabFullNotation`（符尾と梁＝タブの上インクが伸びる）**・**⑵ volta bracket**・**⑶ percent 反復**・**⑷ `TabNoteHead.font-size = 2`**。**第339 ⑾⒟ の作法どおり「落として測る」のではなく「1 つずつ*足して*測る」**——`probes/staff-tab-page.ly` の STB に 1 つずつ足した合成 book を建て、**⑴ の計器で tallness を直接読む**（頁数ではなく。**頁数は tallness の粗い読み**で、⑶ の 0.31 は頁数では見えなかった）。
-**⒞ 台帳点にするなら**: この便の数はどれも**掃きの二分法が出所**で `Measure-LilyPondProbe.ps1` が読める形ではない。**台帳に載せるには LP 側を probe の `PROBEG` 行から出せる形（＝⑵ の「描いたインク＝値付け」を使う）に直す**のが素直——**⑵ が成り立つ段なら `tallness = インク高 + 1` なので、既存の ink probe だけで台帳に載る。**
-⑼ **以下は第341 の並び**（拾い箱の ⑺⒜＝ユーザーの本と手順待ち／`lysc ly` の ChordNames／lyric row の slot の投票／ps2 の 0.017／`audit/lpreg` 取り直し／§2 U8c・U8b・U8／A/B/D/E／C⑴／G）。⚠️ **承認待ち・リリース 0.6.0 の bump／tag は第328 と同じ。**
-
-✅ ⚠️⚠️ ★★★★ **⑽ 第 2 便＝印の箱の幾何を LP に揃えた（ユーザー承認「幾何を全部 LP に揃える」）。効きは大きいが *commit していない*——⑾ の未解決が 1 つ在る**:
-**⒜ 正体は 3 つ重なっていた**（`scratch/p344/{markbox,markbase,ink-stb}.ly`）: **⑴ em が 13.4% 小さい**（Lily# `FontSize*0.6 = 2.400000` 対 LP `text-font-size 11pt = 2.200000 ss × magstep(font-size 2) = 2.771822`。`scm/paper.scm:78`＋`scm/define-grobs.scm:2885`）／**⑵ 箱が*字のインク*ではなく*em 箱*を包む**（LP は `box-stencil` が インク ± `0.2×magstep + line-thickness` ＝ **実測 箱 = 素の字 + 0.703969 が 8 通りとも一定**）／**⑶ 据え付けが 0.250000 高い**（LP は箱の底を*常に*上線の **0.850000** 上＝`padding 0.8` ＋ 譜線の半太さ。`markbase.ly` で A/x/Q・空の譜・2 本加線の音符の下、全部同じ）。
-⚠️ ★★ **箱の高さは字で符号が反転する**（`A` +0.055902・`x` +0.804321・`Q` −0.470752）ので**定数では直らない**。だから ⑴ と ⑵ は一緒にしか直せない（`A` だけ見て箱を直すと *遠ざかる*）。
-★★★ **⒝ 家を 1 つにした**（`MusicMarkEngraver` の `TextFontEm`／`Magstep`／`LabelFontSizeStep`／`LabelEm`／`LabelBoxMargin`／`LabelInk`／`LabelBoxHalfHeight`／`LabelBoxHalfWidth`／`LabelFrameBottomAboveStaffMiddle`）。⚠️ **綴りは 3 つではなく 4 つ在った**——`CalculateXPosition` が `4.0*0.6` と `+0.4` で箱幅を*自分で*計算していて、**箱を広げると行頭の錨が左へ歩いた**（台帳 `mark.rehearsal.line-start.box-left-from-clef-left` が exact 0 から −0.305629 へ）。**幅の綴りは錨の綴りでもある**（§5.2.1②）。
-★★★★ **⒞ 効き（測定済み）**: **STB の mark 付き段の tallness 17.950000 → 17.646804（LP 17.644043）＝残差 +0.305957 → +0.002761**。**台帳は 10 点が良化・悪化 0**（X の 3 点は exact のまま）: `mark.plain`／`mark.chord-row.staff-to-baseline` **0.750000 → 0.337841**・`mark.over-chord` 0.399959 → 0.337801・`.tall` 0.400000 → 0.337842・`page.section-label.first-staff-refpoint` 0.205902 → −0.140235・`mark.rehearsal.lift.gap-second` 0.219582 → 0.207964・`lyrics.chord-row.marked*.gap-second` −0.108252 → +0.062689。
-⇒ ★★★ **上 4 点の残差はいま*ちょうど* `LabelBoxMargin`**（0.337841 = `0.2×magstep(1.5) + 0.1`）＝**残るのは「Lily# は箱を描き LP は素の字を描く」1 つだけ**（台帳が*意図的に* OPEN と書いてきた項）。
-★★ **⒟ 検査 2 本は*検査側*が古かった**（どちらも実測で裏を取ってから直した）: **⑴ `SectionMarkOverKeyChangeTests` の「下に居る」判定が右側に +1.0 の遊びを持っていた**——**箱の下に*本当に*居るナチュラルは 0.462000 でクリアされている**（＝outside-staff padding 0.46 そのもの＝pass は働いている）のに、**箱の 0.65 *右*に立つナチュラルを遊びが拾って赤にしていた**。**LP も同じ本で `meets=0`**（`scratch/p344/markkey.ly`＝行中の調号変更の上の印。**sharps の対では LP 自身が 0.040000 食い込む**＝衝突は箱ではなく*輪郭*で点ごとに決まる）。⇒ **右側の遊びだけ外した**（左の 1.2 は*グリフ自身の幅*なので残す）。**⑵ `FormNavigationTests` は箱の高さ `2.60` を正規表現に焼き込んでいた**——インク箱では字ごとに変わるので**高さを読む**形にした。
-✅ ⚠️⚠️ ★★★★ **⑾ 第 3 便＝「段間が +2.31 動く」の正体は*箱の幅*だった（毒で 1 発で割れた）。欠陥ではなく、正しい幅の帰結**:
-★★★ **⒜ 毒**: `LabelBoxHalfWidth` だけを旧式（em 2.4/2.2・padding 0.2）に戻し、高さと据え付けは新しいまま測ると、**段間 3 つとも baseline に戻った**（13.595000 / 16.035000 / 15.947000）。⇒ **高さでも据え付けでもなく*幅*。**
-★★ **⒝ そして旧い幅が間違っていた**: LP の実測は `A` の箱で **幅 2.718424**（`scratch/p344/markbox.ly`）、**旧 Lily# は 2.07**＝**0.65 狭すぎ**、新 Lily# は 2.66。⇒ **正しくした結果**。
-★★★ **⒞ なぜ段間が動くか＝段間の距離が X を見るから**: この本は `c,,1` が譜の **8.545 下**にぶら下がり、**次の段の行頭には section label の箱**が立つ。**箱が 0.65 広がって両者が x で出会った**ので、X を見た段間距離がその対で決まるようになった。⇒ **検査 `ABelowStaffDynamic_PushesTheNextSystemAway` が測れなくなったのは注釈のせいではなく、*対照*が動いたから**——**深い音符を 1 小節目から 3 小節目へ動かして**（ラベルから 50 ss 離す）**測りたい対だけが残るようにした**（remark にその実測を書いた）。
-⚠️ **教訓**: **段間の距離は X を見る**ので、**上の段の*下*インクと下の段の*上*インクが x で出会うかどうかが答えを変える**。**行頭の grob の幅を変える移植は、遠く離れた別の grob の縦距離を動かしうる。**
-
-⚠️⚠️ ★★★ **⑿ 残っている赤は 4 本**（`scratch/p344/full5.trx`＝**7184 / 5 / 4 / 7193**。うち `TheInventoryIsNotStale` は `LILYSHARP_UPDATE_DOCS=1` で解消済み ⇒ **実質 4 本**。snapshot は `LILYSHARP_UPDATE_SNAPSHOTS=1` で再生成済み・**244 ファイル**）:
-**⒜ `LpReferenceCitationTests.CitationsThatNameNothing_DoNotGrow` 681 → 682**（**684 から 2 本まで詰めた**）。★★ **規則を読んで初めて詰まった**——**この検査の「記号」は `_` か `-` を含む多語名**（`IsVerifiableSymbol` の doc）なので、**`RehearsalMark` も `padding` も*名前として数えられない***。`side-position-interface::y-aligned-side`／`font-size`／`text-font-size` に書き換えて 2 本消えた。⚠️ **残る 1 本は未特定**——**検査の失敗メッセージは `.TakeLast(20)` で末尾しか出さない**（`LpReferenceCitationTests.cs:383`）ので、**`LilySharp.Core\…` の項は原理的に見えない**。⇒ **次に触る人は `.TakeLast(20)` を一時的に外して自分の行を見ること**（それが一番速い）。
-⚠️⚠️⚠️ ★★★★ **⒝ 残る 3 本は*据え付けの 0.25* が唯一の原因で、3 本とも「無関係な量への漏れ」＝*不変量*の検査**（baseline では緑・stash で確認済み）:
-`LyricAnchorPerSystemTests.TheSameBlockOnTwoSystems_SitsTheSameDistanceBelowItsOwnStaff`（3.870000 対 3.860000）・`TabHalfNoteTremolo_CentresOnTheDoubleStem`（0.375 対 0.370）・`ATabSlurTakesItsDirectionFromTheString_AndTheTwoAreMirrorImages`（9 桁目）。
-★★★★ **毒で 2 手で割れた**: **⑴ 箱の高さを字に依らせない**（`LabelInk` に定数の `"A"`）→ **3 本とも赤のまま**＝*字への依存*は無罪。**⑵ 据え付けだけ旧に戻す**（`yUp = baseAboveYUp + Padding`）→ **3 本とも緑**。⇒ **犯人は `LabelFrameBottomAboveStaffMiddle` の 1 行だけ。**
-★★★ **3 本とも「literal がずれた」ではなく「*不変量*が割れた」**: 同じ音楽の 2 段で歌詞が譜から同じ距離／tremolo が二重符尾の*中心*に居る／タブのスラーが*鏡像*である。**ラベルを 0.25 下げると、ラベルと無関係なこれらが動く。** ⇒ **ラベルの Y が、触れてはいけない量へ漏れている。**
-⚠️ **歌詞の本の実測**（`scratch/p344/ZzP344LyricProbeTests.cs.txt`）: **ラベルは両段とも上線の 0.85/0.86 上＝正しい**。段1 は 18.010−14.140=**3.870**、段2 は 40.370−36.510=**3.860**。**2 段の違いは「段1 にだけ chords 行が在る」ことと「ラベルが `A` か `B` か」だけ。**
-⇒ ★★★★ **これも「私が作った結合」ではなく「ラベルが 0.25 高かったから見えていなかった結合」**（調号の 0.46・段間の 2.31 と同じ族＝**この便は同じ形の露出を 3 回踏んだ**）。
-⚠️ **横の spacing は無罪**（確認済み）: ラベルの幅は `SharedRenderer`（描画）・`LayoutEngine.PagingSkylines`（頁の silhouette）・`OutsideStaffStacker`（上側の積み）・`BoxedLabelXWindows`（譜なしの紙）にしか入らず、**音符の横 spacing には入らない**＝`scm/define-grobs.scm:2881-2888 outside-staff-priority`（RehearsalMark の `extra-spacing-width` が `(+inf.0 . -inf.0)`）は既に守られている。
-⇒ ★★★★ **次便の 1 手目**: **ラベルの Y が歌詞ばね／tab の幾何へ漏れる経路を名指す**。⚠️ **据え付けを分離して出荷することはできない**——**tallness の残差 +0.305957 → +0.002761 のほとんどは据え付けが稼いでいる**（据え付けを戻すと +0.253 に戻る）ので、**据え付け抜きの移植は効きの 8 割を失う**。⚠️ **毒は 1 行**（上の ⑵）なので、**次に触る人はそれを当てて緑にしてから 1 つずつ戻せばよい。**
-
-⚠️⚠️⚠️ ★★★★ **⒀ 以下は ⑾ が解ける前の記録（読む必要は無い）——「この変更は段間を動かし、その量が説明できていない」**:
-**⒜ 実測**（`scratch/p344/ZzP344GapProbeTests.cs.txt`＝`DynamicPlacementTests` の 2 段の本の `StaffRefpointGap(5,5)`・base は stash で取った）:
-| 注釈 | 前 | 後 |
-|---|---|---|
-| 無し | **13.595000** | **15.909401** |
-| `@text("g"×20)` | 16.035000 | 16.035000 |
-| `@pp` | 15.947000 | **18.532346** |
-⇒ **注釈の無い本で段間が +2.314401**・**`@pp` の本で +2.585346**。**印は 0.31 *低く*なったのだから段間は縮むはずで、向きが逆**。⇒ **`DynamicPlacementTests.ABelowStaffDynamic_PushesTheNextSystemAway(@text …)` が赤**（「注釈が何も買っていない」＝`16.035 − 15.909 = 0.126 < 0.5`）。**検査は relation なので数の直しでは済まない——買えなくなったのは注釈ではなく、素の側が 2.31 迫り上がったから。**
-**⒝ 分かっていること**: 実描画では section label の箱は**上線の 1.850000 上**に立っている（据え付けの 0.850000 ＋ **1.0**）＝**pass が何かの上へ 1.0 持ち上げている**。行頭の小節番号（インク 2.310714）とはこの本では X が重ならない（箱 x=[3.37,6.09]・番号 x=[0,~1.2]）ので**番号ではない**。**clef（`SeedClefInk` の板・上線の上 1.8）が候補**だが 0.46 を足すと 2.26 で観測の 1.85 と合わない。**未特定。**
-⇒ ★★★★ **⒞ だから commit していない**。**2.31 ss/段は追跡 597 冊のほぼ全部（`form` 宣言 591 冊）に効く大きさ**で、**理由が言えないものを出荷しない**（§5 の家訓）。**次便の 1 手目はこれ**——**`OutsideStaffStacker.PlaceMusicMarks` が boxed label を置いた最終 YUp と、その根拠になった support を 1 本刷る**（`MusicMarkEngraver` の見積り YUp と並べる）。**上の表が回帰の観測者**。
-
-★ **開始時裏取り**: HEAD **`51abc397`**・**未 push 0**（**第341 の 32 便ぶんはユーザーが push 済み**）・木 clean・未追跡 0・`gh run list` の最新 push（HEAD）は**緑**・`--no-incremental` build 0 エラー／Core 0 警告（147 秒）・full **7189 / 0 / 4 / 7193**（`scratch/p344/run1.trx`・2 分 33 秒）・台帳 800／exact 632／ss 非ゼロ 203（26.789）／count 178／OPEN 0・snapshot 247・追跡 597＝**全部引継ぎどおり**。
-**終了時（第 1 便）**: **commit 2 本**（`62222c83`＝debug の桁／`2ebbef2b`＝この HANDOFF＋ARCHIVE＝第340 の経緯を ARCHIVE の先頭へ逐語・**✅ ユーザー承認「1 2 両方とも承認する」**）・**未 push 2**・木 clean・未追跡 0。
-**終了時（第 2〜4 便）**: **commit 0**——⑿⒝ の赤 **3 本**が残っているので**意図的に出していない**（**full 7186 / 3 / 4 / 7193**＝`scratch/p344/full6.trx`。**252 → 3**）。**作業ツリーは 244 ファイル**（製品 3＝`SharedRenderer.Marks.cs`／`MusicMarkEngraver.cs`／`OutsideStaffStacker.cs`・検査 4＝`DynamicPlacementTests.cs`／`FormNavigationTests.cs`／`SectionMarkOverKeyChangeTests.cs`（＋台帳）・**台帳 `audit/lp-geometry/lp-geometry.json`＝8 点を再 seed**（`scratch/p344/reseed.ps1`＝生テキストを触るので他の 792 点と書式は不動）・**snapshot 244 枚**・生成物 2 つ・`docs/HANDOFF.md`）・未追跡 0・**未 push 2**・build 0 エラー／Core 0 警告。
-⚠️ **掃きも番人も CHANGELOG もまだ**（赤が消えてから）。
-⚠️ **捨て計器は全部 `scratch/p344/*.cs.txt` へ戻してある**（`ZzP344ProbeTests`／`ZzP344InkProbeTests`／`ZzP344GapProbeTests`）。**計器は `scratch/p344/`**（`tallness-stb.ly`／`ink-stb.ly`／`boogie-tall.ly`／`sweep.ps1`／`bisect.ps1`／`ZzP344ProbeTests.cs.txt`／**`RESULTS.md`＝この便の全数値と再現手順**）。⚠️ **`scratch/` は git 管理外**なので、消えたら上の表がこのファイルの唯一の記録になる。
 
 ## 2. 開いている作業
 

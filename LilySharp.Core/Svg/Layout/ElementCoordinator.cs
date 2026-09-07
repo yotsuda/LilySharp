@@ -539,6 +539,7 @@ internal sealed class ElementCoordinator
             group,
             beamLayout.LeftY, beamLayout.RightY,
             beamLayout.LeftX, beamLayout.RightX,
+            beamLayout.LeftStemX, beamLayout.RightStemX,
             beamLayout.MemberXPositions,
             beamLayout.StaffIndex,
             beamLayout.SystemIndex,
@@ -1092,6 +1093,9 @@ internal sealed class ElementCoordinator
                 // face toward the rest (the beams that cross it are the outermost ones).
                 int restBeamCount = Math.Max(rest.CountLeft, rest.CountRight);
                 double heightOfBeams = beamThickness / 2 + (restBeamCount - 1) * beamTranslation;
+                // The line at the rest's own x — GetYAtX interpolates between the outer
+                // member STEMS (since 2026-09-07; it interpolated between the column anchors
+                // before, i.e. read the line one attach to the right of the rest).
                 double stemY = beamLayout.GetYAtX(restX);
                 double beamY = stemY - d * heightOfBeams;
 
@@ -2595,6 +2599,13 @@ internal sealed class ElementCoordinator
     /// side. Uses the canonical <see cref="BeamLayout.OuterEdgeStaffSpaceAtX"/> (frame B) and
     /// converts to device once. False when the note is not in any supplied beam layout.
     /// </summary>
+    /// <remarks>
+    /// <paramref name="noteX"/> is the DRAWN STEM's x (every caller hands
+    /// <see cref="LayoutUtilities.StemX(double, bool, int, NoteheadStyle, double)"/>), and
+    /// since 2026-09-07 the face is in that frame. Until then the face was in the column
+    /// ANCHOR frame, so this read was off by the beam's slope times the attach — 1.2392 for
+    /// an up stem — on every sloped beam a slur attached to.
+    /// </remarks>
     private static bool TryGetBeamedStemTipDeviceY(
         Dictionary<(int Measure, int Item), BeamLayout>? beamByMember,
         int measureIndex, int itemIndex, double noteX,

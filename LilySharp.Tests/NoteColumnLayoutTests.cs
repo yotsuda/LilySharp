@@ -51,7 +51,9 @@ public class NoteColumnLayoutTests
             new BeamMember(e1, 1, 0, 1, 0, 0, memberStemUp: stemUp),
             new BeamMember(e2, 1, 1, 0, 0, 1, memberStemUp: stemUp));
         var group = new BeamGroup(members, 0, 0, stemUp);
+        // Flat, so the stem frame (leftStemX/rightStemX) cannot change the face read here.
         return new BeamLayout(group, leftY: 6, rightY: 6, leftX: 0, rightX: 10,
+            leftStemX: 0, rightStemX: 10,
             ImmutableArray.Create(0.0, 10.0), staffIndex: 0, systemIndex: 0);
     }
 
