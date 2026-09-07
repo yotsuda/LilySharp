@@ -11,7 +11,7 @@ translations of LilyPond's own algorithms rather than independent approximations
 engraving is derived from LilyPond's — without LilyPond, or anything else, having to be
 installed. The language, by contrast, is deliberately not LilyPond's.
 
-**Version 0.5.0** — the bundled language server and the `lysc` compiler carry the
+**Version 0.6.0** — the bundled language server and the `lysc` compiler carry the
 same number. See the [changelog](https://github.com/yotsuda/LilySharp/blob/master/editors/vscode/CHANGELOG.md) for what is in this release.
 
 ## Features
