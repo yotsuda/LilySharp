@@ -346,8 +346,14 @@ public sealed partial class MeasureCollector
 
                 // beam.cc:1443-1469 left/right are the nearest stems WITH HEADS — other
                 // rests are not in my_stems, so these are the flanking visible members.
-                var left = group.Members[restStem.BeforeMember - 1];
-                var right = group.Members[restStem.BeforeMember];
+                // ⚠️ A rest at the beam's END has only ONE neighbour, and LilyPond uses it
+                // for BOTH sides (:1461-1464 `left = right = my_stems[1]' at the head,
+                // `my_stems[idx - 1]' at the tail). Indexing blindly threw here the moment
+                // a bracketed rest could bound a beam (2026-09-07, `r8[ c c c]').
+                var left = group.Members[Math.Max(0, restStem.BeforeMember - 1)];
+                var right = group.Members[Math.Min(group.Members.Length - 1, restStem.BeforeMember)];
+                if (restStem.BeforeMember == 0) left = right;
+                else if (restStem.BeforeMember >= group.Members.Length) right = left;
 
                 // beam.cc:1471-1478 the closest beam is estimated four staff positions
                 // past the neighbouring heads' beam-side average, and never crosses the

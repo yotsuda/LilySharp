@@ -313,6 +313,7 @@ c4~ | c4 d e f       // tie (same pitch across the barline) with ~
 c4( d e f)           // slur (different pitches) with ( )
 <c e>4( <d f>)       // a slur may bind chords, not just single notes
 c8[ d e f]           // manual beam; beaming is automatic otherwise
+r8[ c d e]           // a manual beam may open or close on a rest, and reaches it
 ```
 
 ## Hairpins (spanners over several notes)

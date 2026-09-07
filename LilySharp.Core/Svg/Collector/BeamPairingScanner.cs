@@ -82,8 +82,14 @@ internal static class BeamPairingScanner
             sink.Add(new UnpairedBeamWarning(position, IsOpen: true));
     }
 
-    /// <summary>Only notes and chords carry beam brackets; rests and everything else are
-    /// transparent to the scan, exactly as they are to the detector's marker collection.</summary>
+    /// <summary>Notes, chords and RESTS carry beam brackets; everything else is transparent
+    /// to the scan, exactly as it is to the detector's marker collection.</summary>
+    /// <remarks>
+    /// ⚠️ Rests were transparent here until 2026-09-07, so <c>r16[ c a ]</c> paired the
+    /// writer's <c>]</c> against nothing and reported LYS4016 while discarding the group.
+    /// LilyPond beams a rest's stem like any other (see <see cref="RestItem.HasBeamStart"/>);
+    /// a SPACER is still transparent, since it occupies no column to hang a stem on.
+    /// </remarks>
     private static bool TryGetBeamFlags(MusicItem item, out bool hasStart, out bool hasEnd)
     {
         switch (item)
@@ -95,6 +101,10 @@ internal static class BeamPairingScanner
             case ChordItem c:
                 hasStart = c.HasBeamStart;
                 hasEnd = c.HasBeamEnd;
+                return true;
+            case RestItem { IsSpacer: false } r:
+                hasStart = r.HasBeamStart;
+                hasEnd = r.HasBeamEnd;
                 return true;
             default:
                 hasStart = hasEnd = false;

@@ -205,6 +205,51 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ## 1. 現在地 ← **毎セッション書き換える**
 
 
+最終更新 第343セッション＝**入り方は第341・第342 と同じ**（ユーザーが `docs/HANDOFF.md` と `scratch/ベースタブLy/rest-tuplet.lys` を読ませたうえで「**4小節目のtupletのブレースと16分休符が重なる問題を直して**」と*症状と本を名指し*・background job）。⚠️ **ただし着手順はユーザーが 2 度組み替えた**——1 度目「**未コミット分を先にコミットして**」、2 度目（その赤 3 本を数えて報告した直後）「**その赤いのを緑に直して**」。⇒ **実際にやったのは ⑴ 第342 の赤 3 本を緑に → ⑵ commit 2 本 → ⑶ 報告の欠陥を直す**。**骨は 6**:
+
+⚠️⚠️⚠️ ★★★★ **⑴ 第342 が「ラベルの Y が触れてはいけない量へ漏れている」と書いた赤 3 本は、*製品ではなく検査*だった。3 本とも「丸めた数の差」を、丸めより細かい桁で assert していた**（`scratch/p345/{head,poison}.txt`＝毒つきで両側を測った）:
+**⒜ `SvgGenerator` は座標を `F2` で刷る**＝**0.01 のグリッド**。`RecordingDocumentContext` の頭注が**まさにこのために自分は在ると書いている**（「LP-fidelity measurements are not taken from SVG text … quantises to 0.01」）のに、2 本が SVG の字を読んでいた。
+- **`TabHalfNoteTremolo_CentresOnTheDoubleStem`**: 斜線の立ち上がりを `Assert.Equal(0.375, y1-y2, 2)`。**F2 の 2 数の差は必ず 0.01 の倍数なので 0.375 には決してならない**（0.37 か 0.38 で、どちらになるかは**譜が頁のどこに座ったかだけ**で決まる）。**素の値は 0.375000000000・幅 1.500000000000 ちょうど**——**毒の前後で 1 ビットも動いていない。**
+- **`TheSameBlockOnTwoSystems_SitsTheSameDistanceBelowItsOwnStaff`**: 2 段の差を 6 桁で。**素の値は 5.864959964924 対 5.864959965167＝差 2.428e-10 で、これも毒の前後で*同一***。F2 で読むから 3.87 対 3.86 になっていた。
+**⒝ 3 本目は*読み手自身*が捨てた桁だった**: `RenderedGeometry.StaffLineYs` が **`GroupBy(Math.Round(y, 9))` の*キー*をそのまま答えとして返していた**ので、譜線から取る全ての読みに読み手の量子化が乗る。**`ATabSlurTakesItsDirectionFromTheString_AndTheTwoAreMirrorImages` の 9 桁の鏡像主張は、それだけで出来ていた**——**弓は厳密に鏡像**（素の y 10.588414262266500 / 14.704414262266500 の中点 12.646414262266500）で、**`g.Key` が返した 12.646414262 との 2.665e-10 が報告された非対称のすべて**（÷1.5 で 1.777e-10、両側で 3.553e-10＝観測値ちょうど）。
+⇒ ★★★★ **直しは 3 つとも検査側**（`RenderedGeometry` は `g.Min(l => l.Y1)` を返す＝**キーは grouping のためであって答えではない**。2 か所とも。`RoundedKey` に理由を書いた）。**製品は 1 行も触っていない。** ⚠️ **どれも*緩めて*緑にしたのではない**——tremolo は 2 桁 → **9 桁**、歌詞は F2 の 6 桁 → **素の 6 桁**で、**前より厳しい**。
+
+★★★ **⑵ commit 2 本**（**✅ ユーザー指示「未コミット分を先にコミットして」**）: `6167721c`＝第342 の印の箱（製品 3・検査 4 ＋上の ⑴ の 3 本・snapshot 234・台帳 8 点再 seed・生成物 2・CHANGELOG）／`88273fa3`＝下 ⑶。⚠️ **生成物は commit ごとに*その状態で*建て直した**（`LILYSHARP_UPDATE_DOCS=1`）——片方の commit にもう片方のコードを説明する行が入らないように。
+
+⚠️⚠️ ★★★★ **⑶ 報告の欠陥＝「梁を追うか否か」の判定が LP と違っていた。1 述語の直し**（`88273fa3`）:
+**⒜ 正体**: tuplet の bracket は**梁を追う**か**追わない**かで置き方が丸ごと変わる（追えば符尾先端＋padding で*傾く*／追わなければ **`if (!follow_beam)` で譜の縁が encompass に加わり**〔`lily/tuplet-bracket.cc:633-637`〕**平坦**になる）。**Lily# は「tuplet の全*音符*を覆う梁が在るか」で決めていた（休符は透明）。LP は `scm/output-lib.scm:3945-3968 ly:tuplet-bracket::calc-potential-beam` で*外側 2 列だけ*を見て、両方に符尾が要る**——**休符の列に符尾は無い**。
+**⒝ LP の実測**（`scratch/p345/m4-probe.ly`＝報告の本の第 4 小節の双子。grob dump）: **`beam=#f`**・**`positions=(-3.4 . -3.4)`**・`edge-height=(0.7 . 0.7)`・**Rest のインク Y `(-2.05 . 0.82)`**。**譜のインク 2.05 ＋ `staff-padding` 0.25 ＋ `padding` 1.1 ＝ 3.40 ちょうど。**
+**⒞ Lily# は −1.382893 〜 −1.913535 に*傾けて*引いていた**＝**インク −2.05 の 16 分休符を貫く**（`scratch/p345/tuplet-head.txt`）。**直して −3.400000 平坦・フックは 0.7 上がって −2.700000**＝**LP と六桁一致**（`tuplet-fix.txt`）。
+★★ **⒟ 移植は 1 述語で足りた**: **Lily# では梁の member は符尾**——**休符は「rides the beam as an INVISIBLE stem: no member」で `BeamRestStem` に居る**（`BeamDetector.cs` にそう書いてある）ので、**「外側 2 列がこの梁の member か」だけで LP の符尾テストと梁同一性テストの両方に答えている**。⚠️ **最初 `Stemmed()` の門を別に足したが、毒を当てたら*効かなかった*＝到達不能だった**ので落とした（**その事実自体を注記に書いた**）。**LP の残りの節（`tupletFullNote` の paper-column 門）は Lily# に文法が無いので*書かずに開示*。**
+**⒠ 掃き 920 冊**（追跡 597 ＋ ユーザーの `ベースタブLy` 323。base/head の SVG バイト比較・`scratch/p345/sweep345.ps1`）: **MOVED 11・全部ユーザーの実コーパス**（**追跡側は 0＝だから snapshot も台帳も 1 つも動かない**）。**11 冊とも「tuplet の端が休符」の本。9 冊は差分が bracket の線と数字だけ**（`whatmoved.ps1`）・`rest-tuplet.lys` は頁が伸びた分・**`Baby It's Cold Outside.lys` は段が高くなって下の段が動いた**（**頁数・要素数・頁高は不変**＝**消えても増えてもいない**）。**bracket の本数はどの本でも不変**＝**可視性は動いていない**（`brackets.ps1`）。
+**⒡ 番人 3 本 `TupletBracketRestBoundTests`**: **LP の数**／**帰結**（bracket のインクが休符のインクより下。**両方とも描いたものから読む**）／**控え**（休符を音符に替えると同じ梁が tuplet と同境界になり **LP は bracket を描かない**＝`scratch/p345/m4ctl.ly` で `extent (+inf.0 . -inf.0)` を裏取り済み）。**毒**: 旧述語に戻すと **2 本が赤**——`-1.382892722` と**「the two overlap, which is the reported defect」**が出る。
+
+★ **⑷ 数**: full **7192 / 0 / 4 / 7196**（`scratch/p345/full3.trx`・2 分 41 秒・**+3＝番人**。引継ぎ 7193 ＋ 3）・`--no-incremental` build 0 エラー／**Core 0 警告**・**台帳 800／exact 632／ss 非ゼロ 203（25.6716136193963）／count 178 うち非ゼロ 0**・**snapshot 247**・**追跡 `.lys` 597**。⚠️ **台帳の総和が引継ぎの 26.7886591883963 から 25.6716136193963 に減っているのは第342 の印の箱**（10 点良化・悪化 0）。
+
+⚠️ ★★ **⑸ *やっていない*こと（開示）**: **LP の `:554-562` は `columns` を*生で*歩き、休符の列のインクも encompass 点に積む**。**Lily# はいまも音符／和音の列しか積まない**（`TupletBracketEngraver` の `pos == null` の門）。**この本では効かない**——休符の底 −2.05 は譜の縁 −2.30 に負けるので、点になっても答えは変わらない——**が、`@rest` で押し下げた休符や譜の外へ出る休符では効きうる**。⇒ **次に tuplet を触る人の候補。台帳点が無いので、入れるなら測ってから。**
+
+⚠️⚠️⚠️ ★★★★ **⑹ 第 2 便＝ユーザーの問い「休符を member にするように修正すべきでは？」で、⑶ で書いた*理由*が誤りだと分かった**（`6ef71e09`）。**答えは合っていたが、根拠が嘘だった**:
+**⒜ 「休符の列に符尾は無い」は LP について偽**（`scratch/p345/beamrest.ly`・4 冊）。**LP は*すべての* NoteColumn に符尾を与え**（`stem=YES rest=YES`）、**梁の中の休符はその `stems` の一員**（`STEMLESS`＝頭の無い符尾）。**梁は休符から始まることもできる。**
+**⒝ 報告の本で `beam=#f` になる本当の理由は「その休符の符尾が*梁を持っていない*」**（梁は次の音符から始まる）。**跨がれていれば LP は梁を追う**——`c,16[ tuplet 3/4 { r16 c a, ] }` で **`beam=<Beam>`・`positions=(-4.315073 . -3.271576)`＝傾き**（`e1-probe.ly`）。**⑶ の述語はそこで false を返していた**ので、**`Members` だけでなく `RestStems` も見る**形に直した（掃き 920 冊 **MOVED 0**＝当時その構文は書けなかった）。
+★★ **⒞ ただし「休符を `Members` にする」は*採らなかった***: **LP 自身が `Stem::is_normal_stem`（`beam-quanting.cc:299`）で休符を*stem 採点から外す***（実測: 境界が休符の梁と、そこを音符にした梁は **positions が同一 `(0.0 . 0.0)`**）。**LP は「1 本のリスト＋使う場所ごとの門」、Lily# は「2 本のリスト」で、後者は門が構造になっている。** `Members` に移すと quanter・描画・向きの投票の全部に門を書き戻す必要がある。
+
+✅ ⚠️⚠️ ★★★★ **⑺ 第 3 便＝ユーザー決定「LP が受け付けるなら Lily# も受け付けるように修正すべきだ」＝`r16[` を通した**（`256cc217`。**文法はユーザーの決定事項**なので指示を受けてから着手）:
+**⒜ LP の実測**（`scratch/p345/beambound.ly`・3 冊）: **見えない符尾は*休符インクの中心*に立ち、梁はその半符尾（0.065）だけ外へ伸びる**——`r8[ c c c]` 中心 9.085 → 梁左 **9.020**／`c8[ c c r]` 中心 16.5976 → 梁右 **16.6626**。**傾いた本**（`beamslope.ly` ＋ `lysc ly` 双子 `s1-probe.ly`）: LP `x 9.0200..16.4234`・`positions (-2.81 . -1.19)`・ink `(-3.05 . -0.95)` ⇒ **Lily# は `x 9.02..16.42`・ink `(-3.05 . -0.95)`・中心線 −2.81/−1.19＝描画精度で一致。**
+**⒝ 層は 7 つ**: `RestItem` に `HasBeamStart/End`（walk の休符アーム 2 か所が渡す。**slur の 2 つと同じ穴・同じ直し**）／`BeamPairingScanner`・`DetectManualBeamGroups`・`DetectCrossMeasureManualBeams` が休符の括弧を読む（**memo の hash にも足した**）／「休符は内側だけ」の門を外す／`RestStemsStandingIn` が**書き手が括弧を置いた**端の休符を残す（`BracketBound`。**漂着した休符は従来どおり捨てる**）／clip-edges を外側の**列**へ／**quanter の span を梁自身の extent へ**。
+⚠️⚠️ ★★★ **⒞ 描画の内挿枠は*動かしてはいけない***: `PrimaryBeamYAt` の枠は外側**メンバー**の符尾で、そこに入れる Y は `BeamScoringProblem.AtOuterStems` が**その符尾で**返した値。**枠だけ広げると梁全体が傾く**——実測で**左端が LP より 0.39 上・右端は 0.01 で一致**という形で出た。**描画の伸びは segment 側**（休符の x を食わせてあるので `CalcBeamSegments` が外挿する）。
+**⒟ `MeasureCollector.Stems` が落ちた**: pure な rest-push が `Members[BeforeMember - 1]` を素で引いていた。**LP は明示的に扱っている**（`beam.cc:1461-1464`＝端では `left = right = 隣の 1 本`）。そのとおりに直した。
+**⒠ 掃き 920 冊 MOVED 0**（**この構文は今まで書けなかった**）。**番人 4 本 `BeamOnRestBoundTests`**（括弧が通る／開く側・閉じる側の梁が休符に届く〔**両方とも描いたグリフから読む**〕／**控え**＝休符を音符にすると梁は外側の符尾で終わる）。**毒**: 端の休符をまた捨てると**届く 2 本が赤**。**文書も直した**（`SYNTAX_REFERENCE.md`／`GRAMMAR_FOR_LLM.md`）。
+
+★ **⑻ 数（最終）**: full **7196 / 0 / 4 / 7200**（`scratch/p345/full8.trx`・3 分 40 秒・**+4＝⑺ の番人**）・build 0 エラー／Core 0 警告・**snapshot 247 で不動**・台帳不動。
+
+⇒ ★★★★ **⑼ 次の一手**: **⒜ 承認と push**（**未 push 7**・`push` はしていない・配布もしていない）。**⒝ ⑸ の休符 encompass 点**（未着手）。**⒞ ★ tuplet の follow-beam 枝が読む端**——**LP は外側*列*の符尾**（`tuplet-bracket.cc:495-519`。**境界の休符の見えない符尾を含む**）**を encompass 点にするが、Lily# は外側*音符*列の先端を読む**。⑺ で `r16[` が書けるようになったので**この差はいま観測できる**: `e1.lys` で **LP は傾き −4.315/−3.272・Lily# は平坦 −3.730**（再測済み）。**次に tuplet か梁を触る人の 1 手目はこれ。** **⒟ 以下は第342 の並び**（拾い箱の ⑺⒜／`lysc ly` の ChordNames／lyric row の slot の投票／ps2 の 0.017／`audit/lpreg` 取り直し／§2 U8c・U8b・U8／A/B/D/E／C⑴／G）。⚠️ **承認待ち・リリース 0.6.0 の bump／tag は第328 と同じ。**
+
+★ **開始時裏取り**: HEAD **`2ebbef2b`**・**未 push 2**・**木は clean ではない**（**第342 が意図的に残した 244 ファイル＝赤 3 本つき**）・`--no-incremental` build 0 エラー／Core 0 警告・赤は引継ぎどおり `LyricAnchorPerSystemTests` ／ `TabDoubleStemTremoloTests` ／ `TabSlurDirectionTests` の 3 本（`CitationsThatNameNothing_DoNotGrow` は**この木では緑**＝引継ぎの「4 本」は 3 本だった）。
+**終了時**: **commit 5 本**（`6167721c`／`88273fa3`／`6ef71e09`／`256cc217`／この HANDOFF）・**未 push 7**（**第342 の 2 本を含む**）・木 clean・未追跡 0。
+⚠️ **捨て計器は `scratch/p345/*.cs.txt` へ戻してある**（`ZzP345ProbeTests`／`ZzP345TupletProbeTests`／`ZzP345OpenArmsProbeTests`／`ZzP345E1ProbeTests`／`ZzP345B1ProbeTests`）。**計器は `scratch/p345/`**（`m4-probe.ly`＝**LP の grob dump の型**／`m4ctl.ly`／**`beamrest.ly`＝「休符に符尾はあるか」**／**`beambound.ly`・`beamslope.ly`＝境界の休符の梁**／`e1-probe.ly`・`s1-probe.ly`＝双子／`sweep345.ps1`／`whatmoved.ps1`／`brackets.ps1`／`beamx.ps1`）。⚠️ **`scratch/` は git 管理外**なので、消えたら上の数がこのファイルの唯一の記録になる。
+
+## 以下は第342セッションの経緯
+
 最終更新 第342セッション＝**入り方は第298〜第340 と同じ**（ユーザーは `docs/HANDOFF.md` を読んで着手せよとだけ言い・background job・口挟み 0）。**第340・第341 が 2 便続けて「新しい頭のほうが安い」と言って先送りした §1 ⑶＝頁の島に着手した。**成果は**計器 1 つと、島の主仮説を殺した陰性 1 つと、LP の `tallness_` の実表 3 枚**。**製品は 1 ファイル 1 か所（debug 文字列の桁）だけで、出力は 1 バイトも動いていない。骨は 7**:
 
 ★★★★ **⑴ LP の `Line_details::tallness_` を*外から*読む計器を建てた**（`scratch/p344/`）。**`Line_details` は Scheme から見えない**——第339 ⒝ が「次便の設計仕事はここ」と書いた穴で、答えは **breaker 自身に訊く**ことだった: **`\paper { page-breaking = #ly:minimal-breaking }`** は `Page_breaking::pack_systems_on_least_pages`（`page-breaking.cc:1483`）で**貪欲に**詰め、その唯一の判定 `Page_spacing::append_system`→`calc_force`（`page-spacing.cc:29-70`）が**まさに欲しい 2 つの数だけ**を使う:
@@ -268,74 +313,46 @@ force_ = −inf  iff  rod_height_ + bottom_padding ≥ page_height
 **⒞ 台帳点にするなら**: この便の数はどれも**掃きの二分法が出所**で `Measure-LilyPondProbe.ps1` が読める形ではない。**台帳に載せるには LP 側を probe の `PROBEG` 行から出せる形（＝⑵ の「描いたインク＝値付け」を使う）に直す**のが素直——**⑵ が成り立つ段なら `tallness = インク高 + 1` なので、既存の ink probe だけで台帳に載る。**
 ⑼ **以下は第341 の並び**（拾い箱の ⑺⒜＝ユーザーの本と手順待ち／`lysc ly` の ChordNames／lyric row の slot の投票／ps2 の 0.017／`audit/lpreg` 取り直し／§2 U8c・U8b・U8／A/B/D/E／C⑴／G）。⚠️ **承認待ち・リリース 0.6.0 の bump／tag は第328 と同じ。**
 
+✅ ⚠️⚠️ ★★★★ **⑽ 第 2 便＝印の箱の幾何を LP に揃えた（ユーザー承認「幾何を全部 LP に揃える」）。効きは大きいが *commit していない*——⑾ の未解決が 1 つ在る**:
+**⒜ 正体は 3 つ重なっていた**（`scratch/p344/{markbox,markbase,ink-stb}.ly`）: **⑴ em が 13.4% 小さい**（Lily# `FontSize*0.6 = 2.400000` 対 LP `text-font-size 11pt = 2.200000 ss × magstep(font-size 2) = 2.771822`。`scm/paper.scm:78`＋`scm/define-grobs.scm:2885`）／**⑵ 箱が*字のインク*ではなく*em 箱*を包む**（LP は `box-stencil` が インク ± `0.2×magstep + line-thickness` ＝ **実測 箱 = 素の字 + 0.703969 が 8 通りとも一定**）／**⑶ 据え付けが 0.250000 高い**（LP は箱の底を*常に*上線の **0.850000** 上＝`padding 0.8` ＋ 譜線の半太さ。`markbase.ly` で A/x/Q・空の譜・2 本加線の音符の下、全部同じ）。
+⚠️ ★★ **箱の高さは字で符号が反転する**（`A` +0.055902・`x` +0.804321・`Q` −0.470752）ので**定数では直らない**。だから ⑴ と ⑵ は一緒にしか直せない（`A` だけ見て箱を直すと *遠ざかる*）。
+★★★ **⒝ 家を 1 つにした**（`MusicMarkEngraver` の `TextFontEm`／`Magstep`／`LabelFontSizeStep`／`LabelEm`／`LabelBoxMargin`／`LabelInk`／`LabelBoxHalfHeight`／`LabelBoxHalfWidth`／`LabelFrameBottomAboveStaffMiddle`）。⚠️ **綴りは 3 つではなく 4 つ在った**——`CalculateXPosition` が `4.0*0.6` と `+0.4` で箱幅を*自分で*計算していて、**箱を広げると行頭の錨が左へ歩いた**（台帳 `mark.rehearsal.line-start.box-left-from-clef-left` が exact 0 から −0.305629 へ）。**幅の綴りは錨の綴りでもある**（§5.2.1②）。
+★★★★ **⒞ 効き（測定済み）**: **STB の mark 付き段の tallness 17.950000 → 17.646804（LP 17.644043）＝残差 +0.305957 → +0.002761**。**台帳は 10 点が良化・悪化 0**（X の 3 点は exact のまま）: `mark.plain`／`mark.chord-row.staff-to-baseline` **0.750000 → 0.337841**・`mark.over-chord` 0.399959 → 0.337801・`.tall` 0.400000 → 0.337842・`page.section-label.first-staff-refpoint` 0.205902 → −0.140235・`mark.rehearsal.lift.gap-second` 0.219582 → 0.207964・`lyrics.chord-row.marked*.gap-second` −0.108252 → +0.062689。
+⇒ ★★★ **上 4 点の残差はいま*ちょうど* `LabelBoxMargin`**（0.337841 = `0.2×magstep(1.5) + 0.1`）＝**残るのは「Lily# は箱を描き LP は素の字を描く」1 つだけ**（台帳が*意図的に* OPEN と書いてきた項）。
+★★ **⒟ 検査 2 本は*検査側*が古かった**（どちらも実測で裏を取ってから直した）: **⑴ `SectionMarkOverKeyChangeTests` の「下に居る」判定が右側に +1.0 の遊びを持っていた**——**箱の下に*本当に*居るナチュラルは 0.462000 でクリアされている**（＝outside-staff padding 0.46 そのもの＝pass は働いている）のに、**箱の 0.65 *右*に立つナチュラルを遊びが拾って赤にしていた**。**LP も同じ本で `meets=0`**（`scratch/p344/markkey.ly`＝行中の調号変更の上の印。**sharps の対では LP 自身が 0.040000 食い込む**＝衝突は箱ではなく*輪郭*で点ごとに決まる）。⇒ **右側の遊びだけ外した**（左の 1.2 は*グリフ自身の幅*なので残す）。**⑵ `FormNavigationTests` は箱の高さ `2.60` を正規表現に焼き込んでいた**——インク箱では字ごとに変わるので**高さを読む**形にした。
+✅ ⚠️⚠️ ★★★★ **⑾ 第 3 便＝「段間が +2.31 動く」の正体は*箱の幅*だった（毒で 1 発で割れた）。欠陥ではなく、正しい幅の帰結**:
+★★★ **⒜ 毒**: `LabelBoxHalfWidth` だけを旧式（em 2.4/2.2・padding 0.2）に戻し、高さと据え付けは新しいまま測ると、**段間 3 つとも baseline に戻った**（13.595000 / 16.035000 / 15.947000）。⇒ **高さでも据え付けでもなく*幅*。**
+★★ **⒝ そして旧い幅が間違っていた**: LP の実測は `A` の箱で **幅 2.718424**（`scratch/p344/markbox.ly`）、**旧 Lily# は 2.07**＝**0.65 狭すぎ**、新 Lily# は 2.66。⇒ **正しくした結果**。
+★★★ **⒞ なぜ段間が動くか＝段間の距離が X を見るから**: この本は `c,,1` が譜の **8.545 下**にぶら下がり、**次の段の行頭には section label の箱**が立つ。**箱が 0.65 広がって両者が x で出会った**ので、X を見た段間距離がその対で決まるようになった。⇒ **検査 `ABelowStaffDynamic_PushesTheNextSystemAway` が測れなくなったのは注釈のせいではなく、*対照*が動いたから**——**深い音符を 1 小節目から 3 小節目へ動かして**（ラベルから 50 ss 離す）**測りたい対だけが残るようにした**（remark にその実測を書いた）。
+⚠️ **教訓**: **段間の距離は X を見る**ので、**上の段の*下*インクと下の段の*上*インクが x で出会うかどうかが答えを変える**。**行頭の grob の幅を変える移植は、遠く離れた別の grob の縦距離を動かしうる。**
+
+⚠️⚠️ ★★★ **⑿ 残っている赤は 4 本**（`scratch/p344/full5.trx`＝**7184 / 5 / 4 / 7193**。うち `TheInventoryIsNotStale` は `LILYSHARP_UPDATE_DOCS=1` で解消済み ⇒ **実質 4 本**。snapshot は `LILYSHARP_UPDATE_SNAPSHOTS=1` で再生成済み・**244 ファイル**）:
+**⒜ `LpReferenceCitationTests.CitationsThatNameNothing_DoNotGrow` 681 → 682**（**684 から 2 本まで詰めた**）。★★ **規則を読んで初めて詰まった**——**この検査の「記号」は `_` か `-` を含む多語名**（`IsVerifiableSymbol` の doc）なので、**`RehearsalMark` も `padding` も*名前として数えられない***。`side-position-interface::y-aligned-side`／`font-size`／`text-font-size` に書き換えて 2 本消えた。⚠️ **残る 1 本は未特定**——**検査の失敗メッセージは `.TakeLast(20)` で末尾しか出さない**（`LpReferenceCitationTests.cs:383`）ので、**`LilySharp.Core\…` の項は原理的に見えない**。⇒ **次に触る人は `.TakeLast(20)` を一時的に外して自分の行を見ること**（それが一番速い）。
+⚠️⚠️⚠️ ★★★★ **⒝ 残る 3 本は*据え付けの 0.25* が唯一の原因で、3 本とも「無関係な量への漏れ」＝*不変量*の検査**（baseline では緑・stash で確認済み）:
+`LyricAnchorPerSystemTests.TheSameBlockOnTwoSystems_SitsTheSameDistanceBelowItsOwnStaff`（3.870000 対 3.860000）・`TabHalfNoteTremolo_CentresOnTheDoubleStem`（0.375 対 0.370）・`ATabSlurTakesItsDirectionFromTheString_AndTheTwoAreMirrorImages`（9 桁目）。
+★★★★ **毒で 2 手で割れた**: **⑴ 箱の高さを字に依らせない**（`LabelInk` に定数の `"A"`）→ **3 本とも赤のまま**＝*字への依存*は無罪。**⑵ 据え付けだけ旧に戻す**（`yUp = baseAboveYUp + Padding`）→ **3 本とも緑**。⇒ **犯人は `LabelFrameBottomAboveStaffMiddle` の 1 行だけ。**
+★★★ **3 本とも「literal がずれた」ではなく「*不変量*が割れた」**: 同じ音楽の 2 段で歌詞が譜から同じ距離／tremolo が二重符尾の*中心*に居る／タブのスラーが*鏡像*である。**ラベルを 0.25 下げると、ラベルと無関係なこれらが動く。** ⇒ **ラベルの Y が、触れてはいけない量へ漏れている。**
+⚠️ **歌詞の本の実測**（`scratch/p344/ZzP344LyricProbeTests.cs.txt`）: **ラベルは両段とも上線の 0.85/0.86 上＝正しい**。段1 は 18.010−14.140=**3.870**、段2 は 40.370−36.510=**3.860**。**2 段の違いは「段1 にだけ chords 行が在る」ことと「ラベルが `A` か `B` か」だけ。**
+⇒ ★★★★ **これも「私が作った結合」ではなく「ラベルが 0.25 高かったから見えていなかった結合」**（調号の 0.46・段間の 2.31 と同じ族＝**この便は同じ形の露出を 3 回踏んだ**）。
+⚠️ **横の spacing は無罪**（確認済み）: ラベルの幅は `SharedRenderer`（描画）・`LayoutEngine.PagingSkylines`（頁の silhouette）・`OutsideStaffStacker`（上側の積み）・`BoxedLabelXWindows`（譜なしの紙）にしか入らず、**音符の横 spacing には入らない**＝`scm/define-grobs.scm:2881-2888 outside-staff-priority`（RehearsalMark の `extra-spacing-width` が `(+inf.0 . -inf.0)`）は既に守られている。
+⇒ ★★★★ **次便の 1 手目**: **ラベルの Y が歌詞ばね／tab の幾何へ漏れる経路を名指す**。⚠️ **据え付けを分離して出荷することはできない**——**tallness の残差 +0.305957 → +0.002761 のほとんどは据え付けが稼いでいる**（据え付けを戻すと +0.253 に戻る）ので、**据え付け抜きの移植は効きの 8 割を失う**。⚠️ **毒は 1 行**（上の ⑵）なので、**次に触る人はそれを当てて緑にしてから 1 つずつ戻せばよい。**
+
+⚠️⚠️⚠️ ★★★★ **⒀ 以下は ⑾ が解ける前の記録（読む必要は無い）——「この変更は段間を動かし、その量が説明できていない」**:
+**⒜ 実測**（`scratch/p344/ZzP344GapProbeTests.cs.txt`＝`DynamicPlacementTests` の 2 段の本の `StaffRefpointGap(5,5)`・base は stash で取った）:
+| 注釈 | 前 | 後 |
+|---|---|---|
+| 無し | **13.595000** | **15.909401** |
+| `@text("g"×20)` | 16.035000 | 16.035000 |
+| `@pp` | 15.947000 | **18.532346** |
+⇒ **注釈の無い本で段間が +2.314401**・**`@pp` の本で +2.585346**。**印は 0.31 *低く*なったのだから段間は縮むはずで、向きが逆**。⇒ **`DynamicPlacementTests.ABelowStaffDynamic_PushesTheNextSystemAway(@text …)` が赤**（「注釈が何も買っていない」＝`16.035 − 15.909 = 0.126 < 0.5`）。**検査は relation なので数の直しでは済まない——買えなくなったのは注釈ではなく、素の側が 2.31 迫り上がったから。**
+**⒝ 分かっていること**: 実描画では section label の箱は**上線の 1.850000 上**に立っている（据え付けの 0.850000 ＋ **1.0**）＝**pass が何かの上へ 1.0 持ち上げている**。行頭の小節番号（インク 2.310714）とはこの本では X が重ならない（箱 x=[3.37,6.09]・番号 x=[0,~1.2]）ので**番号ではない**。**clef（`SeedClefInk` の板・上線の上 1.8）が候補**だが 0.46 を足すと 2.26 で観測の 1.85 と合わない。**未特定。**
+⇒ ★★★★ **⒞ だから commit していない**。**2.31 ss/段は追跡 597 冊のほぼ全部（`form` 宣言 591 冊）に効く大きさ**で、**理由が言えないものを出荷しない**（§5 の家訓）。**次便の 1 手目はこれ**——**`OutsideStaffStacker.PlaceMusicMarks` が boxed label を置いた最終 YUp と、その根拠になった support を 1 本刷る**（`MusicMarkEngraver` の見積り YUp と並べる）。**上の表が回帰の観測者**。
+
 ★ **開始時裏取り**: HEAD **`51abc397`**・**未 push 0**（**第341 の 32 便ぶんはユーザーが push 済み**）・木 clean・未追跡 0・`gh run list` の最新 push（HEAD）は**緑**・`--no-incremental` build 0 エラー／Core 0 警告（147 秒）・full **7189 / 0 / 4 / 7193**（`scratch/p344/run1.trx`・2 分 33 秒）・台帳 800／exact 632／ss 非ゼロ 203（26.789）／count 178／OPEN 0・snapshot 247・追跡 597＝**全部引継ぎどおり**。
-**終了時**: **commit 0（承認待ち）**・作業ツリーは `LilySharp.Core/Svg/Layout/LayoutEngine.SystemCount.cs` 1 ファイルのみ・未追跡 0・**未 push 0**。**計器は `scratch/p344/`**（`tallness-stb.ly`／`ink-stb.ly`／`boogie-tall.ly`／`sweep.ps1`／`bisect.ps1`／`ZzP344ProbeTests.cs.txt`／**`RESULTS.md`＝この便の全数値と再現手順**）。⚠️ **`scratch/` は git 管理外**なので、消えたら上の表がこのファイルの唯一の記録になる。
-
-## 以下は第341セッションの経緯
-
-最終更新 第341セッション＝**入り方が第298〜第340 と違う**（ユーザーが `docs/HANDOFF.md` を読ませたうえで「**VS Code のプレビューで Score を切り替えられない。コンボボックスを切り替えても楽譜が main のまま。最近の修正による回帰だと思う。直して**」と*症状を名指し*・background job・口挟み 0）。**報告どおりの一般形は 4 層で測って再現しなかった**が、**同じ絵を出す実欠陥を見つけて直した**（製品 4 ファイル＋拡張 1・番人 4 本＝`e7ffe059`。**✅ ユーザー承認「直ったように見える。コミットして」を得てから commit・RULES §5.1**）。**骨は 7**:
-
-⚠️⚠️ ★★★★ **⑴ まず 4 層で測った。どの層でも切り替わる**（＝「切り替えが壊れている」の一般形は偽）:
-**⒜ in-process**（`GetSvg` を renderName 違いで直に）／**⒝ 実 JSON-RPC**（**ユーザーが今動かしているのと同じ deployed exe** を node の LSP クライアントで叩く＝`scratch/p341/lspclient*.js`）／**⒞ コーパス全数**（**score を 2 つ以上持つ 373 冊**の各 score を描いて hash 比較＝`scratch/p341/sweep2.js`。**「先頭と同じ絵」は 2 冊だけで、どちらも無罪**＝`audit/lpreg/sptab.lys` は Title 1 と Title 3 が*同一内容の score*・`scratch/dogfood/t-c.lys` は parse error）／**⒟ 本物の VS Code を CDP で運転**（下 ⑹。合成 change でも本物のクリック＋ArrowDown でも切り替わる）。
-⇒ ★★★ **だから「直した」と言えるのは下 ⑵ の形だけで、ユーザーの本がその形かはまだ分からない。**
-
-★★★★ **⑵ 同じ絵になる実欠陥＝「拾い箱の値」と「解決の鍵」が別々に書かれていた**: score の**出力名**（`svg --all` が書く stem・`--score` が取る語・**プレビューの拾い箱が持つ値**）が**3 か所に別々に書いてあり、renderer の 1 本だけが拡張子を落としていた**（`Path.GetFileNameWithoutExtension`）。⇒ **`score main "Take 1.0"` は拾い箱に `Take 1.0` として並ぶのに `MatchesName` は `Take 1` としか合わず、`Choose` が何も見つけられずに*先頭の score*へ落ちる**＝**「切り替えても main のまま」そのもの**。**実測**（deployed exe・`scratch/p341/dots.lys`）: **null／"Take 1.0"／"Take 2.0" の 3 通りとも len 4465 でバイト同一**。**直した後 4465／4465／6917。**
-⚠️ **ユーザーのコーパスにドット入り basename は 1 冊も無い**（373 冊の掃きでも grep でも 0）。**⇒ これがユーザーの当たった欠陥だとは言えない。同じ症状を出す別の実欠陥、が正しい。**
-
-★★★ **⑶ 直し＝規則に家を 1 つ与えた**（製品 4 ファイル）: **⒜ `RenderSpecParser.OutputNameOf(render)` が出力名の唯一の家。⒝ `MatchesName(specName, outputFile, name)` を公開し、⒞ `ScoreIndex(tree, renderName)`**（拾い箱の一覧と**選ばれる番号**を*1 走査*で。**blocks を `Parse` しない**——プレビューは毎打鍵これを訊く）を建てて、**LSP の `ExtractRenderInfo` と `DuplicateScoreNameValidator` がその家を読む**。**⒟ `SvgResponse.SelectedRender`＝*実際に描いた score*** を返し、**拡張は拾い箱をそれに合わせる**＝**合わない選択が「黙って先頭を描く」から「見える」に変わる**。**⒠ 出力チャネルに要求と応答の両方の score 名を刷る**（下 ⑺⒜）。⚠️ **表示ラベルは書き手の語のまま**（`Take 1.0`）・**値だけが出力名**（`Take 1`）。
-
-★★ **⑷ 番人 4 本 `ScorePickerTests`**（`LilySharp.Tests/Lsp/`）: 拾い箱の全項が**自分の絵**を描く（＋`SelectedRender` が要求と一致）／**拾い箱の値の列＝renderer が解決する spec の列**（⚠️ **層をまたいで測る**＝server の `Renders` 対 Core の `FindAll`。**Core 対 Core では今回の欠陥を跨げない**——欠陥は継ぎ目に居た）／**古い選択は先頭を描き、そう名乗る**／**出力名が衝突する 2 つの basename は重複**（`"Take 1.0"` と `"Take 1.1"`＝LYS6001。この検査も生の basename を見ていたので見逃していた）。**毒**: `OutputNameOf` を生の basename に戻すと**2 本が赤**（拾い箱の絵・重複検査）。
-
-★ **⑸ 数**: full **7187 / 0 / 4 / 7191**（`scratch/p341/full1.trx`・6 分 40 秒・**+4＝番人**・第340 の 7183 ちょうど＋4）・`dotnet build LilySharp.Core` **0 警告**・拡張の `tsc --noEmit` clean・`npm test` **71/71**。**snapshot・台帳・追跡 `.lys` は 1 つも動いていない**（触ったのは名前の解決であって絵ではない）。
-
-★★★ **⑹ 道具＝VS Code を CDP で運転してプレビューの中を読む**（`scratch/p341/*.js`。**次に「プレビューが変だ」と言われたら、まずこれ**）: `Code.exe --remote-debugging-port=9222 --user-data-dir=<temp> --extensions-dir=<temp>` で**ユーザーの窓に触らずに**立て、`/json/list` の workbench target で**エディタ タイトルの「Open Preview to Side」を DOM から click**（⚠️ **F1 でパレットを開く手は使えない**——**エディタに字を打ち込んだ**。1 度踏んだ）。**プレビューは webview の iframe target**で、その中の `document.querySelector('iframe').contentDocument` が**ページ本体**（同一オリジンで読める）。そこで**拾い箱を実際に切り替えて `svgContainer` の長さと `viewBox` を前後で読む**。⚠️ **`--extensions-dir` に拡張を丸ごと複製して DLL と `out/extension.js` だけ差し替えれば、ユーザーの入っている拡張に触らずに直った版を実機で確かめられる**（この便はそれで ⑵ の直りを確認＝**4660 → 7189・viewBox 28.97 → 37.97**）。
-
-⇒ ★★★★ **⑺ 次の一手（ユーザー待ち・これが 1 手目）**: **⒜ ユーザーの当たった本と手順が要る**——**どの `.lys` か／拾い箱に何が並んでいたか／`Lily# Extension` 出力チャネルの `Sending lilysharp/svg request (score …)` と `Got response: …, drew score …`**（この便で足した 2 行）。**要求と応答の score 名が食い違えば拡張側、一致して絵が変わらなければ engine 側**と、1 往復で切り分く。**⒝ 私が測れた範囲では engine も LSP も拡張も切り替わる**ので、残る候補は**その本に固有の何か**か**あの窓の状態**（例: プレビューを開いたまま元のエディタ タブを閉じると `selectRender` は*黙って何もしない*——`workspace.textDocuments` に無いので。これは直していない・下 §2 U 行きの候補）。**⒞ 配布はユーザーの判断**（`pwsh tools/Deploy-Lsp.ps1` ＋ Reload Window。**今動いている LSP を落とす**ので勝手にやっていない）。
-**⑻ 以下は第340 の並び**（頁の島＝breaker が 1 行を値付けする 3 つの数の LP 側／`lysc ly` の ChordNames／lyric row の slot の投票／ps2 の 0.017／push 後 `gh run list`／`audit/lpreg` 取り直し／§2 U8c・U8b・U8／A/B/D/E／C⑴／G）。⚠️ **承認待ち・リリース 0.6.0 の bump／tag は第328 と同じ。**
-
-✅ ⚠️⚠️ ★★★★ **⑼ 第 2 便＝ユーザー報告「`score main` の `Cmaj7` が `back` の五線と重なる」（`scratch/ベースタブLy/tab-chord.lys`）＝*枠の取り違え*（§5.2.1② の族）。1 行の直し**:
-**⒜ 正体**: `@chord` は「**自分の譜の上線 ＋ 0.6 ＋ その譜自身の出っ張り**」に置かれる。出っ張りは**譜の refpoint で建てた skyline** から読み、**縁で 1 度だけ**「上線の上」へ反射する（`LayoutEngine.LayoutChordNames` の `up.Raise(-half)`）。**その half が*score の公称* 2.0 だった**——**tab は 7.5**（LP の TabStaff は弦の数に関わらず 1.5/弦）なので **1.75 反射し残し**、記号は 1.75 高く浮いて**上の譜の下線を突き抜けた**。⚠️ ★★★ **帯の予約**（`ReserveChordRowBand`）**は同じ skyline を*自分の枠のまま*読むので正しい場所を取っていた**——だから絵は「**下に空の部屋・上に食い込む記号**」になる。**片方だけが枠を間違えると、部屋と記号が別々の場所を指す**（第340 ⑸ と同じ族の裏返し）。
-**⒝ 実測**（`scratch/p342`）: `back`（五線 10.49–14.49）の下に `tab melody`（18.59–26.09）。**Cmaj7 の baseline 16.19＝tab 上線の 2.40 上**（インク上端 14.36 が下線 14.49 を越える）→ **直して 17.94＝0.65 上**＝**同じ本の `back` の Dm7 が取る 0.65 と同一**。`tab2` の側も同じだけ動いた（25.28 → 27.03）。**譜の間隔は動いていない**（帯は元から正しかった）。
-**⒞ 直しは 1 行**: `MultiStaffLayouter.StaffHeightOf(staff, _options.StaffHeight) / 2`——**`SkylineBuilder` がこの skyline を*建てる*ときに訊いているのと同じ家**（そこには「a six-string tab spans 7.500000 … differ only for a tab, which is the staff the nominal answer was wrong about」と*既に書いてあった*）。
-**⒟ 掃き**: **920 冊**（追跡コーパス ＋ `scratch/ベースタブLy` 全冊）を base/head でバイト比較＝**MOVED 1 冊＝報告の `tab-chord.lys` だけ**（10.5 分・`scratch/p342/sweep342.ps1`＝`--batch` × 10 プロセス・落としたのは `scratch/` の使い捨てプローブ）。⚠️ ★★ **観測者が 1 冊しか居ない**——**tab に `@chord` を書いた本は他に無い**。だから枠は壊れたまま誰にも気づかれなかった。
-**⒠ 番人 1 本**（`ChordNameTests.ChordOnATabStaff_StandsOverItsOwnTopLine_NotTheStaffAbove`）＝**定数ではなく*比較***（同じ本の五線の `@chord` と同じ距離）＋**帰結**（記号のインクが上の譜の下線より下・インクは engraver 自身の `SymbolInk` で測る）。**毒**: 公称 half に戻すと赤（`Assert.Equal` 9 桁）。
-**⒡ 数**: full **7188 / 0 / 4 / 7192**（`scratch/p342/full2.trx`・**+1＝番人**）・`--no-incremental` build 0 エラー・Core 0 警告。⚠️ **`docs/APPROXIMATIONS.md` は行番号だけ動いた**ので `LILYSHARP_UPDATE_DOCS=1` で再生成（1 度目の full はそれで 1 本赤になった＝作法どおり）。
-
-✅ ★★★ **⑽ 第 3 便＝ユーザー決定「`as numbers` としてレンダされた tab には `@chord` を出さない」**（`TabStaffStencils` の一族に 1 本足した）:
-**⒜ 家は既に在った**——`TabStaffStencils` は「**numbers-only の tab が*何も刷らない* grob 族**」の唯一の家で、script・dynamic・text spanner・hairpin が既に居る。読みもそこに書いてある: **numbers-only の tab は「上の五線が残り全部を運ぶから」数字だけを運ぶ線**。**音符に付いた `@chord` はまさにその「残り」**（同じ名前が五線の上と tab の上に 2 度出る）。⇒ **`BlanksNoteAttachedChord` を足した**。
-⚠️ ★★ **これは移植ではなく LILYSHARP-OWN**: **LP は和音名を `ChordNames` context でしか綴れない**ので、`Tab_staff_symbol_engraver` のブロックに ChordName の行は存在しえない。**足したのは Lily# 自身の読み**（ファイル頭注に「何を消し何を残すか」の線として明記）。
-**⒝ 残すもの**: **chords トラック**（`tab X with chords P`／tab に畳まれた `chords` 行）は**書き手がその tab に*置いた*線**なので残す。**`as full` の tab も残す**（＝「明示 full ＋ 同じ part の五線」で 2 度出るのは書き手の選択、と頭注が既に決めている形）。
-**⒞ 3 か所に効かせる**（この一族の作法どおり・**インクと予約は別々に訊く**）: **インク**＝`ChordNameEngraver.Calculate` の中で*飛ばす*（⚠️ **入力配列を filter してはいけない**——`SourceIndex` は `score.ChordNames` の index で `ResolveDataPos` がそれで data-pos を引き直す。中で飛ばせば index はそのまま・**下流の判断からも消える**）。**帯の門**＝`BuildAllStaffSkylines`（刷らない線の下に部屋を取らない）。**幅**＝`ScoreSideTables.ChordNames`（描かない記号の列幅を取らない）。
-**⒟ 実測**（`tab-chord.lys`）: **`score tab2`**（`staff melody` と対＝numbers）**は tab の Cmaj7 が消え、tab が 0.84 上がる**（27.68 → 26.84＝空いていた帯も返った）。**`score main` はバイト同一**——**そちらの `tab melody` は `staff back` と別 part なので*full*** で、規則の外。
-**⒠ 射程**: 掃き **920 冊で MOVED 1 冊**（`tab-chord.lys`）。⚠️ **掃きは既定 score しか描かない**ので、**構造でも数えた**: **`@chord` を持つ本は全部で 9 冊**（実コーパス 4・追跡 5）で、**そのうち `tab` を持つのは `tab-chord.lys` だけ**。⇒ 他の score でも動きようがない。
-**⒡ 番人 1 本**（`ChordNameTests.ANumbersOnlyTab_PrintsNoAttachedChord_AndBooksNoRoomForOne`）＝**3 脚**: numbers は 1 個／**同じ本の `as full` は 2 個（陽性対照＝「1 個」が本のせいでないことを言う）**／**部屋**（numbers の tab の Y ＝ `@chord` を持たない本の Y）。**毒**: 述語を false に戻すと赤。
-**⒢ 数**: full **7189 / 0 / 4 / 7193**（`scratch/p342/full3.trx`・**+1**）・build 0 エラー・Core 0 警告・生成物 2 つ（`docs/APPROXIMATIONS.md`・`audit/magic_constants.csv`）は `LILYSHARP_UPDATE_DOCS=1` で再生成（行番号のみ）。
-
-⚠️⚠️ ★★★★ **⑾ 第 4 便＝頁の島（次の一手 ⑶）に*着手しなかった***（ユーザー「次便は、このセッションでやる方が有利なら着手して。次のセッションでやった方が有利なら着手してはいけない」）。**理由は第339 第 4 便・第340 と同じだが、この便はさらに遠い**:
-**⒜ この便の文脈は 1 つも効かない**——拾い箱の解決・VS Code の CDP 運転・`@chord` の枠・`TabStaffStencils` で埋まっている。**島が要るのは LP の source（`constrained-breaking.cc fill_line_details`）・LP 側の probe 設計（`ragged-bottom = ##t` の `yoff`）・Boogie の本・`Line_details` の読み**で、**どれも冷えている**。
-**⒝ Lily# 半分は §1 に*書いてある***（第339 ⒜ の 8 段の `top`/`tallness` 表）ので、**新しい頭は何も失わない**。**残っているのは設計仕事＝新しい頭のほうが安い**、という第339 の一行がそのまま当たる。
-★★ **⒞ 代わりに「道具が生きているか」だけ確かめた**（`scratch/` は git 管理外なので、ここが死んでいると次便が痛い）: **`scratch/p339/lp-pagecount.ps1`・`lp-scoring.ps1`・`probe2.txt`・`ZzP339bProbeTests.cs.txt`・`scratch/p338/lp-bare.ps1` は全部在る**。**LP 2.26.0 も在る**（`C:\bin\lilypond-2.26.0\bin\lilypond.exe`）。⚠️ **§1 が `probes/staff-tab-page.ly` と書いているのは `audit/lp-geometry/probes/staff-tab-page.ly` の略**（`audit/lp-geometry` からの相対。ルートに `probes/` は無い）。`Measure-LilyPondProbe.ps1` も `audit/lp-geometry/` に在る。
-
-✅ ⚠️⚠️⚠️ ★★★★ **⑿ 第 5 便＝⑺⒝ に名前だけ置いた穴を*実機で再現して*閉じた。第 1 便の「再現しない」の答えかもしれない**（ユーザー「ほかに、このセッションが有利な残債はない？」→ これを推薦 →「やって」）:
-**⒜ 穴**: **プレビューを開いたまま元のエディタ タブを閉じると、`selectRender` は `workspace.textDocuments` に本を見つけられず*何もしない***——**要求も出さず・バナーも出さず・ログにも出ない**。⇒ **画面の上では「拾い箱は動くのに絵が第 1 score のまま」**＝**第 1 便でユーザーが報告した絵そのもの**。
-★★★ **⒝ 実機で再現した**（`scratch/p343/closetab.js`＝⑹ の CDP 運転に「ソース タブを閉じる」を足したもの）: **タブを閉じる前は Take 1 → Take 2 で len 4660 → 7189。閉じた後は拾い箱だけ Take 2 に動き、絵は 4660 のまま・banner 空・stale false**。**9 秒待っても動かない。**
-**⒞ 直し**＝`previewDocument(uri)` を 1 つ置き、**閉じていたら `workspace.openTextDocument` で*黙って*開き直す**（**エディタは出ない**——直後の tab 一覧で確認済み）。**LSP にも再登録される**ので、`updatePreviewContent` の既存の「Document not found → 150 ms × 8 で再試行」がそのまま受ける。**`untitled:` だけは開き直さない**——**中身はエディタと一緒に消えているので、開き直すと*空の本*を書き手の本として描いてしまう**。そこは警告で言う。
-**⒟ 同じ穴の兄弟も 1 つ直した**: **client-ready 後の `previewPanels.forEach`**（サーバ再起動のたびに、タブを閉じたプレビューが黙って古い絵のままだった）。⚠️ **`aiTransform` と `aiTransformFromScore` は直していない**——**あちらは既に「閉じている」と*言っている***（`showErrorMessage`）ので、この族の穴（無言）ではない。
-**⒠ 実機で直りを確認**（同じ CDP 台）: **ソース タブを閉じたまま Take 2 → Take 1 で 7189 → 4660**・**エディタ タブは復活しない**。**タブが開いているときの経路も従来どおり**（4660 → 7189）。
-⚠️ **⒡ 番人は無い、と正直に言う**: 拡張ホスト側は `vscode` API 無しでは単体テストできず（`editors/vscode/test` は smartTyping と webview script の parse だけ）。**この便のピンは実機の CDP レシピ**＝`scratch/p343/{open2,switch3,closetab,tabs}.js`（⑹ に手順）。**次に触る人はまずこれを回すこと。**
-
-✅ ⚠️⚠️ ★★★★ **⒀ 第 6 便＝「枠の族」の監査＝*陰性*（製品 0）。第 2 便の直しは*一人っ子*だと測った**（ユーザーの判断規則に従って着手＝この便が一番温かい島）:
-**⒜ 問い**: 第 2 便で「`_options.StaffHeight/2` を*その譜自身の半分*の代わりに使う」枠の取り違えを 1 か所直した。**同じ形が他にもあるか。**
-**⒝ 読まずに*測った***——**「その場所に tab が届くか」を刷る計器**を 7 か所に入れ（`scratch/p343/instrument3.js` が当てる）、**陽性対照は第 2 便で直した場所そのもの**（tab の本で必ず光る＝計器が盲でないことを先に言う）。**結果**: **tab が届くのは 4 か所**——対照 S0・**S4.1/2/3＝slur / tie / beam のために建てる「1 譜だけの仮システム」**（`Height: _options.StaffHeight` で建てている）・**S6＝loose-row の鎖が「譜の上線→refpoint」を刻む段**（`tab-lyrics-inside-strings` で **7.500/7.500**・`rit-across-systems` で **4.000/7.500** と光った）。**届かないのは 3 か所**: **タイの中央線 S1・スラーの中央線 S2**（**tab 本では 1 度も光らない**＝tab のタイ／スラーは tab 自身の幾何で描かれる。⚠️ **陽性対照つき**——同じ計器が Boogie の五線では 92 回／12 回光る）・**figured bass の反射 S3**（tab に figured bass を書いた本がコーパスに無い）。
-**⒞ 届く 2 族を*実際に差し替えて*測った**（母集団＝**tab を持つ本 325 冊**・base/head バイト比較・`scratch/p343/sweep-tab.ps1`）: **仮システムを譜自身の高さに → MOVED 0 / 325**。**loose-row の段を `halfFirst`/`halfLast`（PageLayouter が既に持っている語彙）に → MOVED 0 / 325**。
-⚠️ ★★★ **⒟ その 0 が盲でないことを、同じ母集団・同じ掃きで確かめた**: **第 2 便の直しを*戻した* exe を head にすると MOVED 1（`tab-chord.lys`）**。⇒ **この配管はこの種の枠の変化を検出する。だから 0 は本物の陰性。**
-⇒ ★★★★ **結論: 枠の族の生きた一員は 1 つで、それは閉じた。製品は 1 行も触っていない**（計器も flip も戻し、木は clean）。**次に tab がらみで絵が変なときも、この 3 か所を再監査しなくてよい**——ただし **⚠️ 「届かない」は*今のコーパスで*の話**（S3 は「tab ＋ figured bass」の本が 1 冊でも書かれたら生き返る）。
-
-★ **開始時裏取り**: HEAD **`fb2784a0`**・**未 push 26**・木 clean・未追跡 0・deployed 拡張は `out/extension.js` が HEAD の source から建てたものとバイト同一・deployed LSP は `0.5.0+fb2784a0`（**両方ともユーザーが 21:23–21:24 に配布した HEAD**）。
-**終了時（第 1 便）**: **commit 2 本**（`e7ffe059`＝製品 4〔`RenderSpecParser.cs`／`DuplicateScoreNameValidator.cs`／`LilySharpLanguageServer.Commands.cs`／`LspProtocolDtos.cs`〕＋拡張 1〔`editors/vscode/src/extension.ts`〕＋番人 1〔`LilySharp.Tests/Lsp/ScorePickerTests.cs`〕＋`CHANGELOG.md`／この HANDOFF＋ARCHIVE＝第339 の経緯を ARCHIVE の先頭へ逐語）・**未 push 28**・木 clean・未追跡 0。
-**終了時（第 2 便）**: **commit 2 本**（`6454b130`＝製品 1〔`LayoutEngine.Annotations.cs`〕＋番人 1〔`ChordNameTests`〕＋`CHANGELOG.md`＋生成物 1〔`docs/APPROXIMATIONS.md`＝行番号のみ〕／この HANDOFF・**✅ ユーザー承認「承認する。コミットして」**）・**未 push 30**・木 clean・未追跡 0。
-**終了時（第 3・4 便）**: **commit 2 本**（`cbd1bbe1`＝製品 5〔`TabStaffStencils.cs`／`ChordNameEngraver.cs`／`LayoutEngine.Annotations.cs`／`MultiStaffLayouter.cs`／`ScoreSideTables.cs`〕＋番人 1〔`ChordNameTests`〕＋`CHANGELOG.md`＋生成物 2／この HANDOFF・**✅ ユーザー承認「コミットして」**）・**未 push 32**・木 clean・未追跡 0。⚠️ **配布はどの便もしていない**（`pwsh tools/Deploy-Lsp.ps1` ＋ Reload Window はユーザーの判断＝今動いている LSP を落とすため）。**push もしていない**。
-
+**終了時（第 1 便）**: **commit 2 本**（`62222c83`＝debug の桁／`2ebbef2b`＝この HANDOFF＋ARCHIVE＝第340 の経緯を ARCHIVE の先頭へ逐語・**✅ ユーザー承認「1 2 両方とも承認する」**）・**未 push 2**・木 clean・未追跡 0。
+**終了時（第 2〜4 便）**: **commit 0**——⑿⒝ の赤 **3 本**が残っているので**意図的に出していない**（**full 7186 / 3 / 4 / 7193**＝`scratch/p344/full6.trx`。**252 → 3**）。**作業ツリーは 244 ファイル**（製品 3＝`SharedRenderer.Marks.cs`／`MusicMarkEngraver.cs`／`OutsideStaffStacker.cs`・検査 4＝`DynamicPlacementTests.cs`／`FormNavigationTests.cs`／`SectionMarkOverKeyChangeTests.cs`（＋台帳）・**台帳 `audit/lp-geometry/lp-geometry.json`＝8 点を再 seed**（`scratch/p344/reseed.ps1`＝生テキストを触るので他の 792 点と書式は不動）・**snapshot 244 枚**・生成物 2 つ・`docs/HANDOFF.md`）・未追跡 0・**未 push 2**・build 0 エラー／Core 0 警告。
+⚠️ **掃きも番人も CHANGELOG もまだ**（赤が消えてから）。
+⚠️ **捨て計器は全部 `scratch/p344/*.cs.txt` へ戻してある**（`ZzP344ProbeTests`／`ZzP344InkProbeTests`／`ZzP344GapProbeTests`）。**計器は `scratch/p344/`**（`tallness-stb.ly`／`ink-stb.ly`／`boogie-tall.ly`／`sweep.ps1`／`bisect.ps1`／`ZzP344ProbeTests.cs.txt`／**`RESULTS.md`＝この便の全数値と再現手順**）。⚠️ **`scratch/` は git 管理外**なので、消えたら上の表がこのファイルの唯一の記録になる。
 
 ## 2. 開いている作業
 
@@ -2485,6 +2502,29 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   ③**device 島の縁では 1 回だけ反射する**（反射を島の内側へ押し込まない）。
 
 ### F. 言語・ツール側（X/Y とは独立・**一覧は伝聞。着手前に実コードで確認**）
+
+- ▶ **F-fonts. `fonts { }` に*サイズとスタイル*を持たせる（2026-09-07・第342 起票。✅ 文法はユーザー承認済み——「その形で起票して。VS code editor の自動補完も、それに合わせて修正して」）**
+  ★★ **なぜ**: 今の `fonts { }` は **face しか運ばない**（`TextFontPlan` が持つのはキー → face 名の連鎖 or 家族への転送と `Embed` だけ＝`Rendering/TextFontPlan.cs:81-86`）。**サイズは約 30 か所に散っている**——`EngravingDefaults` の定数・各 engraver の `*FontSize` static・描画点の裸のリテラル。**スタイルを決める「家」は 3 つしかない**（`MusicMarkEngraver.TextStyleOf`・`DynamicEngraver.LabelStyle`・`EngravingDefaults.ChordNameFontStyle`）。**doc は「スタイルとサイズは engraving の決定で `fonts` は触れない」と明言している**（`GRAMMAR.md:319`・`MusicMarkEngraver.cs:149`）。
+  ⚠️⚠️ ★★★ **この便がその代償を測った**: `SharedRenderer.Marks.cs` の印の em は **`FontSize * 0.6 = 2.4`** という手書きの数で、**LilyPond の 2.771822 より 13.4% 小さかった**（§1 第342 第 2 便）。**誰の目にも触れない場所に居たから 200 便気づかれなかった。** サイズが role ごとに 1 つの家に集まっていれば、その定数は LilyPond の値の隣に在った。
+  ★★★★ **決まった文法＝ブレース無し・1 エントリ ＝ キー ＋（順不同の）属性**:
+  ```
+  fonts {
+    serif  "Charis SIL"                 % 従来と同じ字面だが、特例ではなく一般規則の 1 属性版
+    chordName as sans                   % 家族への転送（`as` は Lily# の家の語）
+    mark   "Charis SIL" step +1         % 順不同
+    lyrics step -1                      % グループ
+    tempo  italic
+    title  size 3.8 bold
+  }
+  ```
+  **規則は 1 つ**: エントリは**キー**（`AllKeySpellings()`＝家族 2・グループ 6・leaf role 25）＋属性。**属性は「引用符付きの face 名（複数で連鎖）／`as <家族>`／`step ±n`／`size n`／`bold` `italic` `regular`」の 5 種だけ**で、**エントリは次のキーで終わる**（キーも属性語も閉じた語彙・face は必ず引用符付き ⇒ 曖昧さ無し）。
+  ⚠️ **後方互換は取らない**（プレリリース・`.lys` 3493 冊に `fonts` ブロックは **0 冊**）。**平たい形とブロック形の 2 つを持たない**——2 つの綴りは §5.2.1⑤ の「第 2 の綴りに移植が届かない」形そのもの。**変わる綴りは 1 つだけ＝転送** `chordName serif` → **`chordName as sans`**（裸の家族語がキーと値の両方に出るのが唯一の曖昧さの種だった）。
+  ★★★ **`step` が主・`size` は逃げ道**: `step ±n` は **LilyPond の `font-size`**（magstep = 2^(n/6)）そのもので、**⑴ role の既定に対する相対なので既定が動いても意図が生き残る／⑵ `.ly` 双子に `\override Grob.font-size = #n` として書き出せる**（`LilyPondExporter.cs:694-713` が `fonts` を*意図的に*書き出していない理由＝双子の忠実度が、`step` なら消える）**／⑶ `size 2` を「2 段大きく」と誤読する罠が無い**。**`size n`（staff space 絶対）は逃げ道**で、**使うと `.ly` 双子の幾何が再現されないと doc に明記すること**。
+  ★ **解決順は既存の 4 段そのまま**（leaf → group → engraving の既定）を**属性ごとに独立**に。`lyrics { step -1 }` と `stanza { bold }` は合成される。
+  ★ **診断**: `LYS8015 UnknownFontAttribute`／`LYS8016 FontSizeOutOfRange`／`LYS8017 FontSizeAndStepBothGiven`。属性の重複は既存の `LYS8005` を再利用。`mark bold serif` は `serif` がキーとして読まれ **`LYS8006`**（「`as serif` のつもりですか」と言える）。
+  ⚠️ **追随が要る場所**（どれも既存のテストが一致を強制している）: `Semantics/FontPlanReader.cs`（キーと値の読み）・`FontBindingValidator`・**LSP 補完** `LilySharpLanguageServer.CompletionVocabulary.cs:576/629/899` と `CompletionContext.cs:602`・**TextMate 文法** `editors/vscode/syntaxes/lilysharp.tmLanguage.json`（**`EditorColouringTests.cs:553,871` が `TextRoles.AllKeySpellings()` との一致を強制**）・doc 3 本（`GRAMMAR.md` §2.4／`SYNTAX_REFERENCE.md`／`GRAMMAR_FOR_LLM.md`）。
+  ⚠️⚠️ ★★★ **重いのは文法ではなく 30 か所の付け替え**（`ScoreTextMetrics.Size(role)` / `Style(role)` 経由にする）。**段階的に**: ⑴ plan が値を運び、**既に 1 つの家を持つ role だけ従う**（mark・lyricText・chordName・title・composer・tempo・barNumber・volta・tuplet）／⑵ 描画点に裸のリテラルが残る role（movement title・`Nfr`・bend・compound meter の `+`）は次段／**⑶ 「どの role が plan に従うか」を列挙するテストを置く**——**従わない role が*黙って*無視されるのが一番悪い**。
+  ⚠️ **台帳との関係**: 全 800 点は**既定サイズでの数**なので、サイズを変えた本は台帳の外に出る。**`step` ならその本の `.ly` 双子も同じ override を持つので比較可能なまま**——ここでも `step` が効く。
 
 - ★ **⒲ 同じ lyrics track を*独立行*（fold されない words-only 行）として 2 つの別メロディで置く綴りは 2 本目が 1 本目を上書きする**（2026-09-02・第320 起票・**未実装・実需 0 冊**）。**第320 で行の `sings` は行ごとの束縛になった**（§3 先頭行）が、`MeasureCollector.CollectMultiStaff` の `staffVoices` は **track 名で辞書引き**なので、`score { staff sax  lyrics w sings a  lyrics w sings b }` のように**譜の下に fold されない行を同じ名前で 2 本**置くと、後の行の骨格が前の行の骨格を上書きする（`pendingLyricsRows` は `FirstOrDefault` で最初の spec の `Sings` を取る）。**コラール（各行がすぐ上の譜に fold される形）は 4 譜で実測済みで無事**。直すなら「行の識別を (track, 出現順) にする」＝`GetVoiceBindings` の voice 名の一意性の話で、`ChordRowSpec` の同名 2 行も同じ形。**着手前に corpus に訊くこと**（第320 時点で追跡 587 冊に「行に `sings`」は 3 冊・全部 1 本）。
 - ★★★ **⒵ 本文の長さが変わる編集（＝打鍵の大半）は suffix splice を丸ごと失う。根まで測った・要ユーザー判断で製品コード未着手**（2026-09-03 起票＋同日に根まで。計器 `scratch/p325/P325SpliceDeltaProbe.cs.txt`＝60 小節・absolute 固定でオクターブ変数を外し、**編集の種類と位置**を振って `LastCollectResume` と毒のカウンタを読む。**各行で `incremental == full` を確かめてから数を読む**）。

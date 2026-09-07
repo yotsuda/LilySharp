@@ -276,6 +276,23 @@ internal sealed class BeamScoringProblem
         var lastMember = group.Members[^1];
         _leftX = StemXOf(firstMember);
         _rightX = StemXOf(lastMember);
+        // …and a bracketed REST at either end is one of the beam's stems, so the span the
+        // beam is scored over is the span it is drawn over. LilyPond scores in exactly that
+        // frame: x_span_ is the beam's own extent (lily/beam-quanting.cc:419), which
+        // lily/beam.cc:631 built from the outer STEMS, invisible ones included. Scoring a
+        // shorter span than the renderer draws puts the quanted line at the wrong Y once the
+        // renderer interpolates it across the real ends.
+        if (restXPositions != null && restXPositions.Count == group.RestStems.Length)
+        {
+            for (int r = 0; r < group.RestStems.Length; r++)
+            {
+                if (!group.RestStems[r].BracketBound) continue;
+                if (group.RestStems[r].BeforeMember == 0)
+                    _leftX = Math.Min(_leftX, restXPositions[r]);
+                else if (group.RestStems[r].BeforeMember == group.Members.Length)
+                    _rightX = Math.Max(_rightX, restXPositions[r]);
+            }
+        }
         // The stem's own x, not its column's — LayoutUtilities.StemX is the single house the
         // renderer and the collision collector already read, so the beam is scored in the
         // frame it is drawn in (BeamStemFrameTests asserts the two agree).

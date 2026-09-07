@@ -300,6 +300,10 @@ internal sealed class BeamDetector
                     AddFraction(ref hc, r.BaseDuration);
                     hc.Add(r.IsSpacer);
                     hc.Add(r.IsMultiMeasure);
+                    // A rest's bracket decides the group's bounds, so two measures that
+                    // differ only in it are not the same measure to this memo.
+                    hc.Add(r.HasBeamStart);
+                    hc.Add(r.HasBeamEnd);
                     break;
                 case TimeSignatureChangeItem tsc:
                     hc.Add(4);
@@ -424,16 +428,19 @@ internal sealed class BeamDetector
             for (int ii = 0; ii < measure.Items.Length; ii++)
             {
                 var item = measure.Items[ii];
+                // Rests carry brackets too — see RestItem.HasBeamStart.
                 bool hasStart = item switch
                 {
                     NoteItem n => n.HasBeamStart,
                     ChordItem c => c.HasBeamStart,
+                    RestItem { IsSpacer: false } r => r.HasBeamStart,
                     _ => false,
                 };
                 bool hasEnd = item switch
                 {
                     NoteItem n => n.HasBeamEnd,
                     ChordItem c => c.HasBeamEnd,
+                    RestItem { IsSpacer: false } r => r.HasBeamEnd,
                     _ => false,
                 };
                 if (hasStart) markers.Add((mi, ii, IsStart: true));
@@ -566,7 +573,8 @@ internal sealed class BeamDetector
                     itemIdx, BeforeMember: stemCount, beamlets[i].Left, beamlets[i].Right,
                     NoteValue: (int)restItem.BaseDuration.Denominator,
                     MeasureIndex: mi,
-                    PrePositioned: restItem.StaffPosition is not null));
+                    PrePositioned: restItem.StaffPosition is not null,
+                    BracketBound: restItem.HasBeamStart || restItem.HasBeamEnd));
                 continue;
             }
 
@@ -582,16 +590,21 @@ internal sealed class BeamDetector
         // The beam is asked where it STARTS — one beam has one direction.
         bool stemUp = forceStemUpAt?.Invoke(startMeasure) ?? DefaultBeamStemUp(visible);
 
+        bool boundRestLeft = HasBoundRest(restStems, 0);
+        bool boundRestRight = HasBoundRest(restStems, stemCount);
+        ClipOuterRests(restStems, stemCount);
+
         var members = ImmutableArray.CreateBuilder<BeamMember>(stemCount);
         for (int i = 0; i < stemCount; i++)
         {
             var c = visible[i];
-            // clip-edges on the outer VISIBLE stems, as in CreateBeamGroup.
+            // clip-edges on the outer stems, as in CreateBeamGroup — and a bracketed rest
+            // at an end IS the outer stem there.
             // LILYPOND-REF: lily/beam.cc:1264-1268 Beam::set_beaming.
             members.Add(new BeamMember(
                 c.Item, c.BeamCount,
-                i == 0 ? 0 : c.BeamletLeft,
-                i == stemCount - 1 ? 0 : c.BeamletRight,
+                i == 0 && !boundRestLeft ? 0 : c.BeamletLeft,
+                i == stemCount - 1 && !boundRestRight ? 0 : c.BeamletRight,
                 c.StaffPosition, c.ItemIndex,
                 // A stem the writer turned keeps its own side (beam.cc:946-956).
                 memberStemUp: ForcedStemUpOf(c.Item) ?? stemUp,
@@ -811,7 +824,8 @@ internal sealed class BeamDetector
                 (restStems ??= new List<BeamRestStem>()).Add(new BeamRestStem(
                     itemIndex, BeforeMember: stemCount, beamlets[i].Left, beamlets[i].Right,
                     NoteValue: (int)restItem.BaseDuration.Denominator,
-                    PrePositioned: restItem.StaffPosition is not null));
+                    PrePositioned: restItem.StaffPosition is not null,
+                    BracketBound: restItem.HasBeamStart || restItem.HasBeamEnd));
                 continue;
             }
 
@@ -840,6 +854,13 @@ internal sealed class BeamDetector
         // the voice's side, so auto-knee only runs in a neutral single voice.
         double? kneeGapCenter = forcedStemUp is null ? AutoKneeGapCenter(visible) : null;
 
+        // Does the writer's bracket END on a rest? Then that rest is the beam's outer stem
+        // and takes the clip; the note beside it is interior. Its own outward count goes to
+        // zero for the same reason (ClipOuterRests below).
+        bool boundRestLeft = HasBoundRest(restStems, 0);
+        bool boundRestRight = HasBoundRest(restStems, stemCount);
+        ClipOuterRests(restStems, stemCount);
+
         var members = ImmutableArray.CreateBuilder<BeamMember>(stemCount);
         for (int i = 0; i < stemCount; i++)
         {
@@ -856,14 +877,16 @@ internal sealed class BeamDetector
             // clip-edges (default #t): the OUTER side of an outer stem carries nothing, and
             // LilyPond zeroes it after the pattern has been beamified rather than in it. Its
             // INNER side keeps the stem's own count — the pattern only ever reduces interior
-            // stems, so an outer one is never chipped down to its neighbour's count. The outer
-            // STEMS are the outer VISIBLE stems (a rest has no stem to clip), which is why
-            // this indexes the candidates rather than the group.
+            // stems, so an outer one is never chipped down to its neighbour's count.
+            // ⚠️ THE OUTER STEM MAY BE A REST'S. LilyPond clips the beam's END stems, and a
+            // bracketed rest at the end IS one (RestItem.HasBeamStart); the note beside it is
+            // then an interior stem and keeps both its counts. This used to index the visible
+            // candidates unconditionally, on the belief that a rest never bounds a beam.
             // LILYPOND-REF: lily/beam.cc:1264-1268 Beam::set_beaming.
             members.Add(new BeamMember(
                 c.Item, c.BeamCount,
-                i == 0 ? 0 : c.BeamletLeft,
-                i == stemCount - 1 ? 0 : c.BeamletRight,
+                i == 0 && !boundRestLeft ? 0 : c.BeamletLeft,
+                i == stemCount - 1 && !boundRestRight ? 0 : c.BeamletRight,
                 c.StaffPosition, c.ItemIndex,
                 memberStemUp: memberUp,
                 measureIndex: c.MeasureIndex,
@@ -883,16 +906,46 @@ internal sealed class BeamDetector
             RestStemsStandingIn(restStems, stemCount));
     }
 
-    /// <summary>The rest stems that stand BETWEEN two visible stems — the rest hang from
-    /// nothing outside them. Empty (and allocation-free) for the overwhelmingly common beam
-    /// that runs over no rest at all.</summary>
+    /// <summary>True when a bracketed rest stands at <paramref name="beforeMember"/> — i.e.
+    /// at one of the beam's two ends.</summary>
+    private static bool HasBoundRest(List<BeamRestStem>? restStems, int beforeMember)
+    {
+        if (restStems is null) return false;
+        foreach (var r in restStems)
+            if (r.BracketBound && r.BeforeMember == beforeMember) return true;
+        return false;
+    }
+
+    /// <summary>clip-edges for a beam whose END is a rest: its OUTWARD count goes to zero,
+    /// exactly as an outer stem's does (lily/beam.cc:1264-1268 Beam::set_beaming).</summary>
+    private static void ClipOuterRests(List<BeamRestStem>? restStems, int stemCount)
+    {
+        if (restStems is null) return;
+        for (int i = 0; i < restStems.Count; i++)
+        {
+            var r = restStems[i];
+            if (!r.BracketBound) continue;
+            if (r.BeforeMember == 0) restStems[i] = r with { CountLeft = 0 };
+            else if (r.BeforeMember == stemCount) restStems[i] = r with { CountRight = 0 };
+        }
+    }
+
+    /// <summary>The rest stems this beam actually carries: every one BETWEEN two visible
+    /// stems, plus one at either END that the writer bracketed. A rest that merely drifts
+    /// outside the visible stems hangs from nothing and is dropped. Empty (and
+    /// allocation-free) for the overwhelmingly common beam that runs over no rest at all.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The two ends used to be dropped unconditionally, which is right for a DRIFTING rest
+    /// and wrong for a bracketed one — see <see cref="BeamRestStem.BracketBound"/>.
+    /// </remarks>
     private static ImmutableArray<BeamRestStem> RestStemsStandingIn(
         List<BeamRestStem>? restStems, int stemCount)
     {
         if (restStems is null) return ImmutableArray<BeamRestStem>.Empty;
         var kept = ImmutableArray.CreateBuilder<BeamRestStem>(restStems.Count);
         foreach (var r in restStems)
-            if (r.BeforeMember > 0 && r.BeforeMember < stemCount)
+            if ((r.BeforeMember > 0 && r.BeforeMember < stemCount) || r.BracketBound)
                 kept.Add(r);
         return kept.Count == kept.Capacity ? kept.MoveToImmutable() : kept.ToImmutable();
     }
@@ -1481,16 +1534,20 @@ internal sealed class BeamDetector
         for (int i = 0; i < measure.Items.Length; i++)
         {
             var item = measure.Items[i];
+            // A rest is a legal bound: LilyPond stems and beams a rest's column like any
+            // other (RestItem.HasBeamStart). A spacer holds no column and so no bracket.
             bool hasStart = item switch
             {
                 NoteItem note => note.HasBeamStart,
                 ChordItem chord => chord.HasBeamStart,
+                RestItem { IsSpacer: false } rest => rest.HasBeamStart,
                 _ => false
             };
             bool hasEnd = item switch
             {
                 NoteItem note => note.HasBeamEnd,
                 ChordItem chord => chord.HasBeamEnd,
+                RestItem { IsSpacer: false } rest => rest.HasBeamEnd,
                 _ => false
             };
 
@@ -1522,12 +1579,15 @@ internal sealed class BeamDetector
                         group.Add((groupItem, j, pos));
                         visibleCount++;
                     }
-                    // A rest INSIDE the bracket rides the beam as an invisible stem — the
-                    // bracket itself always opens and closes on a note, so interior is
-                    // strict. LilyPond's beam engraver takes the stem the rest's
-                    // rhythmic-head interface earns it and finds it invisible
+                    // A rest under the bracket rides the beam as an invisible stem —
+                    // LilyPond's beam engraver takes the stem the rest's rhythmic-head
+                    // interface earns it and finds it invisible
                     // (lily/template-engraver-for-beams.cc:75 Stem::is_invisible).
-                    else if (j > start && j < end && IsBeamedRest(groupItem))
+                    // ⚠️ AT THE BOUND TOO, since 2026-09-07: this arm read `j > start &&
+                    // j < end' on the belief that "the bracket always opens and closes on a
+                    // note". LilyPond has no such rule — MEASURED (scratch/p345/beambound.ly)
+                    // `r8[ c c c]' beams the rest's stem and the beam reaches it.
+                    else if (IsBeamedRest(groupItem))
                     {
                         group.Add((groupItem, j, pos));
                     }

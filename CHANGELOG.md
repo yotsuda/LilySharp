@@ -141,6 +141,33 @@ scores against LilyPond's picture of the same book.
 
 ### Engraving
 
+- **A manual beam may open and close on a rest, and it reaches that rest.** `r8[ c d e]` and
+  `c8[ d e r]` were refused — the bracket on the rest was dropped on the floor, the `]` then
+  paired with nothing (`LYS4016`), and the grouping the file asked for was discarded in favour
+  of automatic beaming. LilyPond has no such rule: it gives every note column a stem, a rest's
+  included, and beams it like any other, so a rest inside or at the edge of a beam is one of
+  that beam's stems — an invisible one, standing on the rest's own ink centre, with the beam
+  reaching half a stem thickness past it. Lily# now reads the bracket on a rest, makes that
+  rest the beam's bound, and draws the beam to it, at LilyPond's own arithmetic: measured on
+  `r8[ c e g]`, the beam spans exactly LilyPond's x and its line sits at LilyPond's
+  `positions` to the drawn precision. The invisible stem still stays out of the stem scoring,
+  as LilyPond keeps it out (`Stem::is_normal_stem`), so a beam bounded by a rest quants like
+  the same beam with a note in the rest's place. Automatic beams still end at every rest —
+  only a written bracket spans one. Sweeping 920 books moves none of them: no file could
+  write this before.
+- **A tuplet whose first or last note is a rest no longer draws its bracket through that
+  rest.** A tuplet bracket may follow the beam under it instead of the staff, and which one it
+  does decides everything: following the beam, the bracket rides one padding off the stems and
+  slopes with them; not following it, the staff joins the encompass points and the bracket
+  comes out flat, one padding clear of the staff. Lily# picked the beam whenever one covered
+  every *note* of the tuplet, treating rests as transparent. LilyPond looks only at the
+  tuplet's OUTER two columns and needs a stem on each of them — and a rest column has no stem
+  — so `tuplet 3/4 { r16 c a, }`, whose two notes are beamed, has no parallel beam there at
+  all. Lily# followed the beam, drew a bracket sloped 1.38 to 2.15 below the middle line, and
+  ran it straight through the 16th rest, whose ink reaches 2.05 down. It now reads LilyPond's
+  rule and draws the flat bracket LilyPond draws, 3.40 below the middle line. Sweeping the
+  tracked corpus and 323 bass-tab books — 920 in all — moves 11, every one a book with a rest
+  at a tuplet's edge, and moves nothing on any of them but the bracket and its number.
 - **A boxed label — a rehearsal mark, a section label — is the size and height LilyPond draws
   it.** Three spellings were off at once and they could only be corrected together. The label's
   em was `FontSize × 0.6` = 2.4 where LilyPond's is `text-font-size` 11pt = 2.2 staff spaces

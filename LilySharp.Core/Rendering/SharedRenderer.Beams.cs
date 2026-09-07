@@ -172,6 +172,20 @@ internal static partial class SharedRenderer
             // A tab beam's height can't come from the notation quanter — its Y is in
             // staff positions, not string lines. Lay it out from the STRING contour so
             // each stem's length is set by its string.
+            // The invisible stems this beam carries, guarded exactly as the segment walk
+            // below guards them (a producer that supplied no rest x has none).
+            var restStemsForSpan = grp.RestStems.Length == beam.RestXPositions.Length
+                ? grp.RestStems
+                : ImmutableArray<BeamRestStem>.Empty;
+
+            // ⚠️ THE OUTER MEMBER STEMS, even when the beam reaches PAST them to a bracketed
+            // rest. This pair is the frame PrimaryBeamYAt interpolates in, and the Y it
+            // interpolates (BeamLayout.LeftY/RightY) is the quanter's answer AT THOSE STEMS
+            // (BeamScoringProblem.AtOuterStems). Widening the frame here without moving the
+            // Y with it tilts the whole beam: measured on `r8[ c e g]', the left end came
+            // out 0.39 above LilyPond's while the right end still agreed to 0.01. The beam's
+            // drawn EXTENT reaches the rest anyway — the segment walk below is fed the rest's
+            // own x and CalcBeamSegments extrapolates the line to it.
             double leftStemX = StemAttachX(0);
             double rightStemX = StemAttachX(grp.Members.Length - 1);
 
@@ -213,9 +227,7 @@ internal static partial class SharedRenderer
             // stem — and the segment runs that survive over it are exactly the ranks it
             // lets through; the leftovers end as beamlets on the visible neighbours.
             // LilyPond's "stems" holds its invisible ones the same way.
-            var restStems = grp.RestStems;
-            if (restStems.Length != beam.RestXPositions.Length)
-                restStems = ImmutableArray<BeamRestStem>.Empty; // a producer without rest x
+            var restStems = restStemsForSpan;   // same guard, hoisted above for the span
             var beamingInput = new BeamSubdivision.StemBeaming[grp.Members.Length + restStems.Length];
             var memberWalkIndex = new int[grp.Members.Length];
             {

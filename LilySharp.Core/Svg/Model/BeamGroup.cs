@@ -192,9 +192,16 @@ public sealed record BeamGroup
 /// away from where it prints.
 /// LILYPOND-REF: lily/beam.cc:1336-1338 Beam::rest_collision_callback — the guard;
 /// LILYPOND-REF: lily/beam.cc:1421-1494 Beam::pure_rest_collision_callback — without it.</param>
+/// <param name="BracketBound">True when this rest is the beam's own END — the writer put the
+/// <c>[</c> or <c>]</c> on it. A rest that merely drifts outside the visible stems (a
+/// degenerate group whose edge note was not beamable) has nothing to hang from and is
+/// dropped; one the writer bracketed IS the bound, and LilyPond beams its stem and reaches
+/// it (scratch/p345/beambound.ly: <c>r8[ c c c]</c> puts the beam's left edge half a stem
+/// thickness past the rest's ink centre).</param>
 public sealed record BeamRestStem(
     int ItemIndex, int BeforeMember, int CountLeft, int CountRight,
-    int NoteValue = 4, int MeasureIndex = -1, bool PrePositioned = false);
+    int NoteValue = 4, int MeasureIndex = -1, bool PrePositioned = false,
+    bool BracketBound = false);
 
 /// <summary>
 /// Represents a single member of a beam group.

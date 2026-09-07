@@ -646,17 +646,60 @@ internal static class TupletBracketEngraver
     }
 
     /// <summary>
-    /// True when <paramref name="beam"/> is the tuplet's own beam: same measure,
-    /// same VOICE, and its member set contains every NOTE slot of the tuplet's
-    /// range (rests are transparent — a manual beam legitimately spans them).
-    /// The old span check (StartIndex + Members.Length - 1) assumed contiguous
-    /// members, and no voice check meant ANOTHER voice's beam at the same item
-    /// range could hide this voice's bracket.
+    /// True when <paramref name="beam"/> is the tuplet's <c>par_beam</c>: its OUTER TWO note
+    /// columns are both carried by this one beam. Same measure and same VOICE first — another
+    /// voice's beam at the same item range is never this bracket's.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/tuplet-bracket.cc:107-112 — the if-no-beam visibility
-    /// check consults the bracket's OWN beam (the beam of the stems it
-    /// encompasses), never a different voice's.
+    /// <para>
+    /// LILYPOND-REF: scm/output-lib.scm:3945-3968 <c>ly:tuplet-bracket::calc-potential-beam</c>
+    ///   — the object callback behind <c>TupletBracket.beam</c>
+    ///   (scm/define-grobs.scm:4118-4120), which reads
+    ///   <c>(ly:grob-object first-col 'stem)</c> and <c>(ly:grob-object last-col 'stem)</c>,
+    ///   takes each stem's <c>'beam</c>, and answers that beam only when both exist and are
+    ///   <c>eq?</c>; scm/output-lib.scm:3970-3977 <c>ly:tuplet-bracket::calc-beam</c> adds the
+    ///   not-broken gate. lily/tuplet-bracket.cc:481 reads it as <c>par_beam</c>.
+    /// </para>
+    /// <para>
+    /// ⚠️ ONLY THE OUTER COLUMNS ARE CONSULTED. This predicate used to ask instead whether the
+    /// beam covered every NOTE slot of the range, treating rests as transparent — which is
+    /// right for the MIDDLE of a tuplet and wrong at its ENDS. MEASURED 2026-09-07 on the
+    /// reported book (scratch/ベースタブLy/rest-tuplet.lys bar 4,
+    /// <c>\tuplet 3/4 { r16 c a, }</c>, LP dump in scratch/p345): LilyPond answers
+    /// <c>beam=#f</c> there, so <c>follow_beam</c> is false, the staff edge joins the encompass
+    /// points (lily/tuplet-bracket.cc:633-637) and the bracket comes out FLAT at
+    /// <c>positions=(-3.4 . -3.4)</c>. Lily# found the beam over the two notes, followed it,
+    /// and drew a SLOPED bracket at -1.383 .. -2.149 — through the rest, whose ink reaches
+    /// -2.05. That collision is what the reader reported.
+    /// </para>
+    /// <para>
+    /// ⚠️⚠️ AND THE REASON IS NOT "A REST COLUMN HAS NO STEM" — it was written that way here
+    /// for one commit and it is false. MEASURED (scratch/p345/beamrest.ly, four books):
+    /// EVERY LilyPond NoteColumn carries a stem, a rest's included, and a rest inside a beam
+    /// IS one of that beam's <c>stems</c> (it prints as a stem with no note-heads); a manual
+    /// beam may even BEGIN on a rest. What answers <c>#f</c> on the reported book is that the
+    /// r16's stem carries NO beam — the beam there starts at the note after it. Where a beam
+    /// does run over the bounding rest, LilyPond follows it:
+    /// <c>c,16[ tuplet 3/4 { r16 c a, ] }</c> answers <c>beam=&lt;Beam&gt;</c> and
+    /// <c>positions=(-4.315073 . -3.271576)</c>, sloped (scratch/p345/e1-probe.ly).
+    /// So the question to ask a column is not "is it a note" but "is it carried by THIS beam",
+    /// and Lily# spells that carriage in two lists rather than one: a stem is a
+    /// <see cref="BeamGroup.Members"/> entry, a rest ridden over is a
+    /// <see cref="BeamGroup.RestStems"/> entry ("an INVISIBLE stem: no member",
+    /// Svg/Collector/BeamDetector.cs). Both are consulted below.
+    /// ⚠️ The two lists are not an accident to be merged away: LilyPond keeps rests out of the
+    /// stem SCORING with <c>Stem::is_normal_stem</c> (lily/beam-quanting.cc:299), which is the
+    /// gate <see cref="BeamGroup.RestStems"/>' own remark cites. Moving rests into
+    /// <c>Members</c> would hand them to the quanter, the drawing and the direction vote and
+    /// need that gate written back at each of those; the split makes it structural.
+    /// </para>
+    /// <para>
+    /// ⚠️ Disclosed, not ported: LilyPond also requires the last column's stem to share a
+    /// paper column with the bracket's right bound — the guard its own comment calls
+    /// "don't use a parallel beam if tupletFullNote = ##t" (scm/output-lib.scm:3960-3962).
+    /// Lily# has no <c>tupletFullNote</c> / <c>span-all-note-heads</c> grammar, so the
+    /// bracket's right bound is always its last column and the test is vacuously true.
+    /// </para>
     /// </remarks>
     private static bool Covers(BeamGroup beam, TupletBracketItem tuplet,
         ImmutableArray<Measure> tupMeasures)
@@ -664,29 +707,42 @@ internal static class TupletBracketEngraver
         if (beam.MeasureIndex != tuplet.MeasureIndex || beam.VoiceIndex != tuplet.VoiceIndex)
             return false;
 
-        var members = new HashSet<int>();
-        foreach (var m in beam.Members)
-            if (m.ResolveMeasureIndex(beam.MeasureIndex) == tuplet.MeasureIndex)
-                members.Add(m.ItemIndex);
-
         var items = !tupMeasures.IsDefaultOrEmpty && tuplet.MeasureIndex < tupMeasures.Length
             ? tupMeasures[tuplet.MeasureIndex].Items
             : default;
 
-        bool sawNote = false;
+        // The tuplet's first and last NOTE COLUMNS. A spacer occupies no column, so it is
+        // not a bound; a rest occupies one and is, which is the whole point.
+        int firstCol = -1, lastCol = -1;
         for (int i = tuplet.StartNoteIndex; i <= tuplet.EndNoteIndex; i++)
         {
-            // Without item info every slot is treated as a note (conservative:
-            // more slots must be members before the bracket may hide).
-            bool isNote = items.IsDefault || i >= items.Length
-                || items[i] is NoteItem or ChordItem;
-            if (!isNote)
+            // Without item info every slot is treated as a column that carries a stem,
+            // which keeps the pre-2026-09-07 answer for callers that pass no measures.
+            bool isColumn = items.IsDefault || i >= items.Length
+                || items[i] is NoteItem or ChordItem or RestItem { IsSpacer: false };
+            if (!isColumn)
                 continue;
-            sawNote = true;
-            if (!members.Contains(i))
-                return false;
+            if (firstCol < 0) firstCol = i;
+            lastCol = i;
         }
-        return sawNote;
+        if (firstCol < 0)
+            return false;
+
+        // Every column this beam carries, however it carries it: a visible stem is a member,
+        // a rest ridden over is one of the invisible stems. Together they are LilyPond's
+        // `the column has a stem, and that stem's beam is this one'.
+        var carried = new HashSet<int>();
+        foreach (var m in beam.Members)
+            if (m.ResolveMeasureIndex(beam.MeasureIndex) == tuplet.MeasureIndex)
+                carried.Add(m.ItemIndex);
+        foreach (var r in beam.RestStems)
+            if ((r.MeasureIndex < 0 ? beam.MeasureIndex : r.MeasureIndex) == tuplet.MeasureIndex)
+                carried.Add(r.ItemIndex);
+
+        // Both outer columns on THIS beam — the whole of
+        // `(and left-stem right-stem left-beam right-beam (eq? left-beam right-beam))',
+        // since a column can be on at most one beam.
+        return carried.Contains(firstCol) && carried.Contains(lastCol);
     }
 
     /// <summary>

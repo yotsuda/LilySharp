@@ -623,6 +623,22 @@ public sealed record RestItem : MusicItem
     /// </summary>
     public bool IsSpacer { get; init; }
 
+    /// <summary>Whether this rest opens a manual beam group.</summary>
+    /// <remarks>
+    /// ⚠️ A REST IS A LEGAL BEAM BOUND, the same way it is a legal slur bound
+    /// (<see cref="HasSlurStart"/>). LilyPond gives EVERY NoteColumn a stem, a rest's
+    /// included, and beams that stem like any other — MEASURED 2026-09-07
+    /// (scratch/p345/beamrest.ly): <c>r8[ c' c' c']</c> comes back with the Beam's
+    /// <c>stems</c> = (STEMLESS note note note), and the beam reaches the rest.
+    /// LILYPOND-REF: lily/beaming-pattern.cc:33-35 <c>Beam_rhythmic_element</c> — "Sometimes
+    ///   (for example, if the stem belongs to a rest and stemlets aren't used) the stem will
+    ///   be invisible."
+    /// </remarks>
+    public bool HasBeamStart { get; init; }
+
+    /// <summary>Whether this rest closes a manual beam group. See <see cref="HasBeamStart"/>.</summary>
+    public bool HasBeamEnd { get; init; }
+
     /// <summary>
     /// True iff this rest was written as an explicit multi-measure rest (LilyPond's
     /// capital <c>R</c>), which is centred between the bar lines as a Multi_measure_rest.

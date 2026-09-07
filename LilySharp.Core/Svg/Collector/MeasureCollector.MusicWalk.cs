@@ -925,6 +925,12 @@ public sealed partial class MeasureCollector
                         {
                             HasSlurStart = hasSlurStartAfter,
                             HasSlurEnd = hasSlurEndAfter,
+                            // …and a legal BEAM bound, for the same reason and with the
+                            // same history: these two were dropped here as well, so
+                            // `r16[' reported an unopened ']' (LYS4016) and the grouping
+                            // the writer asked for was silently discarded.
+                            HasBeamStart = hasBeamStartAfter,
+                            HasBeamEnd = hasBeamEndAfter,
                         }, m));
                         // Post-events on the rest (r4@fermata, r2@coda, ...).
                         // Rests have no stem; stemUp=false makes the default
@@ -1811,6 +1817,8 @@ public sealed partial class MeasureCollector
                 {
                     HasSlurStart = hasSlurStartAfter,
                     HasSlurEnd = hasSlurEndAfter,
+                    HasBeamStart = hasBeamStartAfter,
+                    HasBeamEnd = hasBeamEndAfter,
                 };
                 builder.AddItemWithoutDuration(WithBowSources(restItem with { TimeScale = scale }, m));
                 CollectArticulations(rest, annMeasureIndex, annItemIndex, stemUp: false, anchorTiming: annAnchor);

@@ -76,6 +76,22 @@ internal sealed class BeamEngraver
 
         double leftX = memberXPositions[0];
         double rightX = memberXPositions[^1];
+        // …unless the beam's END is a rest the writer bracketed: LilyPond reaches it. The
+        // frame is the member one (the renderer turns these into stem X), so a bounding rest
+        // contributes its own item X, and the stem-X conversion is skipped for it — a rest's
+        // stem stands on its ink centre, which LayoutUtilities.RestStemX already answers and
+        // restXPositions already holds.
+        // LILYPOND-REF: lily/beam.cc:631 — the end is the outer STEM ± stem_width/2, and a
+        //   beamed rest's stem is one of them (scratch/p345/beambound.ly: `r8[ c c c]' puts
+        //   the beam's left edge at 9.020, the rest's ink centre 9.085 less half a stem).
+        for (int r = 0; r < group.RestStems.Length; r++)
+        {
+            if (!group.RestStems[r].BracketBound) continue;
+            if (group.RestStems[r].BeforeMember == 0)
+                leftX = Math.Min(leftX, restXPositions[r]);
+            else if (group.RestStems[r].BeforeMember == group.Members.Length)
+                rightX = Math.Max(rightX, restXPositions[r]);
+        }
 
         // Use BeamScoringProblem to find optimal beam positions
         var problem = new BeamScoringProblem(

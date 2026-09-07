@@ -1,5 +1,73 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
+
+## 以下は第341セッションの経緯
+
+最終更新 第341セッション＝**入り方が第298〜第340 と違う**（ユーザーが `docs/HANDOFF.md` を読ませたうえで「**VS Code のプレビューで Score を切り替えられない。コンボボックスを切り替えても楽譜が main のまま。最近の修正による回帰だと思う。直して**」と*症状を名指し*・background job・口挟み 0）。**報告どおりの一般形は 4 層で測って再現しなかった**が、**同じ絵を出す実欠陥を見つけて直した**（製品 4 ファイル＋拡張 1・番人 4 本＝`e7ffe059`。**✅ ユーザー承認「直ったように見える。コミットして」を得てから commit・RULES §5.1**）。**骨は 7**:
+
+⚠️⚠️ ★★★★ **⑴ まず 4 層で測った。どの層でも切り替わる**（＝「切り替えが壊れている」の一般形は偽）:
+**⒜ in-process**（`GetSvg` を renderName 違いで直に）／**⒝ 実 JSON-RPC**（**ユーザーが今動かしているのと同じ deployed exe** を node の LSP クライアントで叩く＝`scratch/p341/lspclient*.js`）／**⒞ コーパス全数**（**score を 2 つ以上持つ 373 冊**の各 score を描いて hash 比較＝`scratch/p341/sweep2.js`。**「先頭と同じ絵」は 2 冊だけで、どちらも無罪**＝`audit/lpreg/sptab.lys` は Title 1 と Title 3 が*同一内容の score*・`scratch/dogfood/t-c.lys` は parse error）／**⒟ 本物の VS Code を CDP で運転**（下 ⑹。合成 change でも本物のクリック＋ArrowDown でも切り替わる）。
+⇒ ★★★ **だから「直した」と言えるのは下 ⑵ の形だけで、ユーザーの本がその形かはまだ分からない。**
+
+★★★★ **⑵ 同じ絵になる実欠陥＝「拾い箱の値」と「解決の鍵」が別々に書かれていた**: score の**出力名**（`svg --all` が書く stem・`--score` が取る語・**プレビューの拾い箱が持つ値**）が**3 か所に別々に書いてあり、renderer の 1 本だけが拡張子を落としていた**（`Path.GetFileNameWithoutExtension`）。⇒ **`score main "Take 1.0"` は拾い箱に `Take 1.0` として並ぶのに `MatchesName` は `Take 1` としか合わず、`Choose` が何も見つけられずに*先頭の score*へ落ちる**＝**「切り替えても main のまま」そのもの**。**実測**（deployed exe・`scratch/p341/dots.lys`）: **null／"Take 1.0"／"Take 2.0" の 3 通りとも len 4465 でバイト同一**。**直した後 4465／4465／6917。**
+⚠️ **ユーザーのコーパスにドット入り basename は 1 冊も無い**（373 冊の掃きでも grep でも 0）。**⇒ これがユーザーの当たった欠陥だとは言えない。同じ症状を出す別の実欠陥、が正しい。**
+
+★★★ **⑶ 直し＝規則に家を 1 つ与えた**（製品 4 ファイル）: **⒜ `RenderSpecParser.OutputNameOf(render)` が出力名の唯一の家。⒝ `MatchesName(specName, outputFile, name)` を公開し、⒞ `ScoreIndex(tree, renderName)`**（拾い箱の一覧と**選ばれる番号**を*1 走査*で。**blocks を `Parse` しない**——プレビューは毎打鍵これを訊く）を建てて、**LSP の `ExtractRenderInfo` と `DuplicateScoreNameValidator` がその家を読む**。**⒟ `SvgResponse.SelectedRender`＝*実際に描いた score*** を返し、**拡張は拾い箱をそれに合わせる**＝**合わない選択が「黙って先頭を描く」から「見える」に変わる**。**⒠ 出力チャネルに要求と応答の両方の score 名を刷る**（下 ⑺⒜）。⚠️ **表示ラベルは書き手の語のまま**（`Take 1.0`）・**値だけが出力名**（`Take 1`）。
+
+★★ **⑷ 番人 4 本 `ScorePickerTests`**（`LilySharp.Tests/Lsp/`）: 拾い箱の全項が**自分の絵**を描く（＋`SelectedRender` が要求と一致）／**拾い箱の値の列＝renderer が解決する spec の列**（⚠️ **層をまたいで測る**＝server の `Renders` 対 Core の `FindAll`。**Core 対 Core では今回の欠陥を跨げない**——欠陥は継ぎ目に居た）／**古い選択は先頭を描き、そう名乗る**／**出力名が衝突する 2 つの basename は重複**（`"Take 1.0"` と `"Take 1.1"`＝LYS6001。この検査も生の basename を見ていたので見逃していた）。**毒**: `OutputNameOf` を生の basename に戻すと**2 本が赤**（拾い箱の絵・重複検査）。
+
+★ **⑸ 数**: full **7187 / 0 / 4 / 7191**（`scratch/p341/full1.trx`・6 分 40 秒・**+4＝番人**・第340 の 7183 ちょうど＋4）・`dotnet build LilySharp.Core` **0 警告**・拡張の `tsc --noEmit` clean・`npm test` **71/71**。**snapshot・台帳・追跡 `.lys` は 1 つも動いていない**（触ったのは名前の解決であって絵ではない）。
+
+★★★ **⑹ 道具＝VS Code を CDP で運転してプレビューの中を読む**（`scratch/p341/*.js`。**次に「プレビューが変だ」と言われたら、まずこれ**）: `Code.exe --remote-debugging-port=9222 --user-data-dir=<temp> --extensions-dir=<temp>` で**ユーザーの窓に触らずに**立て、`/json/list` の workbench target で**エディタ タイトルの「Open Preview to Side」を DOM から click**（⚠️ **F1 でパレットを開く手は使えない**——**エディタに字を打ち込んだ**。1 度踏んだ）。**プレビューは webview の iframe target**で、その中の `document.querySelector('iframe').contentDocument` が**ページ本体**（同一オリジンで読める）。そこで**拾い箱を実際に切り替えて `svgContainer` の長さと `viewBox` を前後で読む**。⚠️ **`--extensions-dir` に拡張を丸ごと複製して DLL と `out/extension.js` だけ差し替えれば、ユーザーの入っている拡張に触らずに直った版を実機で確かめられる**（この便はそれで ⑵ の直りを確認＝**4660 → 7189・viewBox 28.97 → 37.97**）。
+
+⇒ ★★★★ **⑺ 次の一手（ユーザー待ち・これが 1 手目）**: **⒜ ユーザーの当たった本と手順が要る**——**どの `.lys` か／拾い箱に何が並んでいたか／`Lily# Extension` 出力チャネルの `Sending lilysharp/svg request (score …)` と `Got response: …, drew score …`**（この便で足した 2 行）。**要求と応答の score 名が食い違えば拡張側、一致して絵が変わらなければ engine 側**と、1 往復で切り分く。**⒝ 私が測れた範囲では engine も LSP も拡張も切り替わる**ので、残る候補は**その本に固有の何か**か**あの窓の状態**（例: プレビューを開いたまま元のエディタ タブを閉じると `selectRender` は*黙って何もしない*——`workspace.textDocuments` に無いので。これは直していない・下 §2 U 行きの候補）。**⒞ 配布はユーザーの判断**（`pwsh tools/Deploy-Lsp.ps1` ＋ Reload Window。**今動いている LSP を落とす**ので勝手にやっていない）。
+**⑻ 以下は第340 の並び**（頁の島＝breaker が 1 行を値付けする 3 つの数の LP 側／`lysc ly` の ChordNames／lyric row の slot の投票／ps2 の 0.017／push 後 `gh run list`／`audit/lpreg` 取り直し／§2 U8c・U8b・U8／A/B/D/E／C⑴／G）。⚠️ **承認待ち・リリース 0.6.0 の bump／tag は第328 と同じ。**
+
+✅ ⚠️⚠️ ★★★★ **⑼ 第 2 便＝ユーザー報告「`score main` の `Cmaj7` が `back` の五線と重なる」（`scratch/ベースタブLy/tab-chord.lys`）＝*枠の取り違え*（§5.2.1② の族）。1 行の直し**:
+**⒜ 正体**: `@chord` は「**自分の譜の上線 ＋ 0.6 ＋ その譜自身の出っ張り**」に置かれる。出っ張りは**譜の refpoint で建てた skyline** から読み、**縁で 1 度だけ**「上線の上」へ反射する（`LayoutEngine.LayoutChordNames` の `up.Raise(-half)`）。**その half が*score の公称* 2.0 だった**——**tab は 7.5**（LP の TabStaff は弦の数に関わらず 1.5/弦）なので **1.75 反射し残し**、記号は 1.75 高く浮いて**上の譜の下線を突き抜けた**。⚠️ ★★★ **帯の予約**（`ReserveChordRowBand`）**は同じ skyline を*自分の枠のまま*読むので正しい場所を取っていた**——だから絵は「**下に空の部屋・上に食い込む記号**」になる。**片方だけが枠を間違えると、部屋と記号が別々の場所を指す**（第340 ⑸ と同じ族の裏返し）。
+**⒝ 実測**（`scratch/p342`）: `back`（五線 10.49–14.49）の下に `tab melody`（18.59–26.09）。**Cmaj7 の baseline 16.19＝tab 上線の 2.40 上**（インク上端 14.36 が下線 14.49 を越える）→ **直して 17.94＝0.65 上**＝**同じ本の `back` の Dm7 が取る 0.65 と同一**。`tab2` の側も同じだけ動いた（25.28 → 27.03）。**譜の間隔は動いていない**（帯は元から正しかった）。
+**⒞ 直しは 1 行**: `MultiStaffLayouter.StaffHeightOf(staff, _options.StaffHeight) / 2`——**`SkylineBuilder` がこの skyline を*建てる*ときに訊いているのと同じ家**（そこには「a six-string tab spans 7.500000 … differ only for a tab, which is the staff the nominal answer was wrong about」と*既に書いてあった*）。
+**⒟ 掃き**: **920 冊**（追跡コーパス ＋ `scratch/ベースタブLy` 全冊）を base/head でバイト比較＝**MOVED 1 冊＝報告の `tab-chord.lys` だけ**（10.5 分・`scratch/p342/sweep342.ps1`＝`--batch` × 10 プロセス・落としたのは `scratch/` の使い捨てプローブ）。⚠️ ★★ **観測者が 1 冊しか居ない**——**tab に `@chord` を書いた本は他に無い**。だから枠は壊れたまま誰にも気づかれなかった。
+**⒠ 番人 1 本**（`ChordNameTests.ChordOnATabStaff_StandsOverItsOwnTopLine_NotTheStaffAbove`）＝**定数ではなく*比較***（同じ本の五線の `@chord` と同じ距離）＋**帰結**（記号のインクが上の譜の下線より下・インクは engraver 自身の `SymbolInk` で測る）。**毒**: 公称 half に戻すと赤（`Assert.Equal` 9 桁）。
+**⒡ 数**: full **7188 / 0 / 4 / 7192**（`scratch/p342/full2.trx`・**+1＝番人**）・`--no-incremental` build 0 エラー・Core 0 警告。⚠️ **`docs/APPROXIMATIONS.md` は行番号だけ動いた**ので `LILYSHARP_UPDATE_DOCS=1` で再生成（1 度目の full はそれで 1 本赤になった＝作法どおり）。
+
+✅ ★★★ **⑽ 第 3 便＝ユーザー決定「`as numbers` としてレンダされた tab には `@chord` を出さない」**（`TabStaffStencils` の一族に 1 本足した）:
+**⒜ 家は既に在った**——`TabStaffStencils` は「**numbers-only の tab が*何も刷らない* grob 族**」の唯一の家で、script・dynamic・text spanner・hairpin が既に居る。読みもそこに書いてある: **numbers-only の tab は「上の五線が残り全部を運ぶから」数字だけを運ぶ線**。**音符に付いた `@chord` はまさにその「残り」**（同じ名前が五線の上と tab の上に 2 度出る）。⇒ **`BlanksNoteAttachedChord` を足した**。
+⚠️ ★★ **これは移植ではなく LILYSHARP-OWN**: **LP は和音名を `ChordNames` context でしか綴れない**ので、`Tab_staff_symbol_engraver` のブロックに ChordName の行は存在しえない。**足したのは Lily# 自身の読み**（ファイル頭注に「何を消し何を残すか」の線として明記）。
+**⒝ 残すもの**: **chords トラック**（`tab X with chords P`／tab に畳まれた `chords` 行）は**書き手がその tab に*置いた*線**なので残す。**`as full` の tab も残す**（＝「明示 full ＋ 同じ part の五線」で 2 度出るのは書き手の選択、と頭注が既に決めている形）。
+**⒞ 3 か所に効かせる**（この一族の作法どおり・**インクと予約は別々に訊く**）: **インク**＝`ChordNameEngraver.Calculate` の中で*飛ばす*（⚠️ **入力配列を filter してはいけない**——`SourceIndex` は `score.ChordNames` の index で `ResolveDataPos` がそれで data-pos を引き直す。中で飛ばせば index はそのまま・**下流の判断からも消える**）。**帯の門**＝`BuildAllStaffSkylines`（刷らない線の下に部屋を取らない）。**幅**＝`ScoreSideTables.ChordNames`（描かない記号の列幅を取らない）。
+**⒟ 実測**（`tab-chord.lys`）: **`score tab2`**（`staff melody` と対＝numbers）**は tab の Cmaj7 が消え、tab が 0.84 上がる**（27.68 → 26.84＝空いていた帯も返った）。**`score main` はバイト同一**——**そちらの `tab melody` は `staff back` と別 part なので*full*** で、規則の外。
+**⒠ 射程**: 掃き **920 冊で MOVED 1 冊**（`tab-chord.lys`）。⚠️ **掃きは既定 score しか描かない**ので、**構造でも数えた**: **`@chord` を持つ本は全部で 9 冊**（実コーパス 4・追跡 5）で、**そのうち `tab` を持つのは `tab-chord.lys` だけ**。⇒ 他の score でも動きようがない。
+**⒡ 番人 1 本**（`ChordNameTests.ANumbersOnlyTab_PrintsNoAttachedChord_AndBooksNoRoomForOne`）＝**3 脚**: numbers は 1 個／**同じ本の `as full` は 2 個（陽性対照＝「1 個」が本のせいでないことを言う）**／**部屋**（numbers の tab の Y ＝ `@chord` を持たない本の Y）。**毒**: 述語を false に戻すと赤。
+**⒢ 数**: full **7189 / 0 / 4 / 7193**（`scratch/p342/full3.trx`・**+1**）・build 0 エラー・Core 0 警告・生成物 2 つ（`docs/APPROXIMATIONS.md`・`audit/magic_constants.csv`）は `LILYSHARP_UPDATE_DOCS=1` で再生成（行番号のみ）。
+
+⚠️⚠️ ★★★★ **⑾ 第 4 便＝頁の島（次の一手 ⑶）に*着手しなかった***（ユーザー「次便は、このセッションでやる方が有利なら着手して。次のセッションでやった方が有利なら着手してはいけない」）。**理由は第339 第 4 便・第340 と同じだが、この便はさらに遠い**:
+**⒜ この便の文脈は 1 つも効かない**——拾い箱の解決・VS Code の CDP 運転・`@chord` の枠・`TabStaffStencils` で埋まっている。**島が要るのは LP の source（`constrained-breaking.cc fill_line_details`）・LP 側の probe 設計（`ragged-bottom = ##t` の `yoff`）・Boogie の本・`Line_details` の読み**で、**どれも冷えている**。
+**⒝ Lily# 半分は §1 に*書いてある***（第339 ⒜ の 8 段の `top`/`tallness` 表）ので、**新しい頭は何も失わない**。**残っているのは設計仕事＝新しい頭のほうが安い**、という第339 の一行がそのまま当たる。
+★★ **⒞ 代わりに「道具が生きているか」だけ確かめた**（`scratch/` は git 管理外なので、ここが死んでいると次便が痛い）: **`scratch/p339/lp-pagecount.ps1`・`lp-scoring.ps1`・`probe2.txt`・`ZzP339bProbeTests.cs.txt`・`scratch/p338/lp-bare.ps1` は全部在る**。**LP 2.26.0 も在る**（`C:\bin\lilypond-2.26.0\bin\lilypond.exe`）。⚠️ **§1 が `probes/staff-tab-page.ly` と書いているのは `audit/lp-geometry/probes/staff-tab-page.ly` の略**（`audit/lp-geometry` からの相対。ルートに `probes/` は無い）。`Measure-LilyPondProbe.ps1` も `audit/lp-geometry/` に在る。
+
+✅ ⚠️⚠️⚠️ ★★★★ **⑿ 第 5 便＝⑺⒝ に名前だけ置いた穴を*実機で再現して*閉じた。第 1 便の「再現しない」の答えかもしれない**（ユーザー「ほかに、このセッションが有利な残債はない？」→ これを推薦 →「やって」）:
+**⒜ 穴**: **プレビューを開いたまま元のエディタ タブを閉じると、`selectRender` は `workspace.textDocuments` に本を見つけられず*何もしない***——**要求も出さず・バナーも出さず・ログにも出ない**。⇒ **画面の上では「拾い箱は動くのに絵が第 1 score のまま」**＝**第 1 便でユーザーが報告した絵そのもの**。
+★★★ **⒝ 実機で再現した**（`scratch/p343/closetab.js`＝⑹ の CDP 運転に「ソース タブを閉じる」を足したもの）: **タブを閉じる前は Take 1 → Take 2 で len 4660 → 7189。閉じた後は拾い箱だけ Take 2 に動き、絵は 4660 のまま・banner 空・stale false**。**9 秒待っても動かない。**
+**⒞ 直し**＝`previewDocument(uri)` を 1 つ置き、**閉じていたら `workspace.openTextDocument` で*黙って*開き直す**（**エディタは出ない**——直後の tab 一覧で確認済み）。**LSP にも再登録される**ので、`updatePreviewContent` の既存の「Document not found → 150 ms × 8 で再試行」がそのまま受ける。**`untitled:` だけは開き直さない**——**中身はエディタと一緒に消えているので、開き直すと*空の本*を書き手の本として描いてしまう**。そこは警告で言う。
+**⒟ 同じ穴の兄弟も 1 つ直した**: **client-ready 後の `previewPanels.forEach`**（サーバ再起動のたびに、タブを閉じたプレビューが黙って古い絵のままだった）。⚠️ **`aiTransform` と `aiTransformFromScore` は直していない**——**あちらは既に「閉じている」と*言っている***（`showErrorMessage`）ので、この族の穴（無言）ではない。
+**⒠ 実機で直りを確認**（同じ CDP 台）: **ソース タブを閉じたまま Take 2 → Take 1 で 7189 → 4660**・**エディタ タブは復活しない**。**タブが開いているときの経路も従来どおり**（4660 → 7189）。
+⚠️ **⒡ 番人は無い、と正直に言う**: 拡張ホスト側は `vscode` API 無しでは単体テストできず（`editors/vscode/test` は smartTyping と webview script の parse だけ）。**この便のピンは実機の CDP レシピ**＝`scratch/p343/{open2,switch3,closetab,tabs}.js`（⑹ に手順）。**次に触る人はまずこれを回すこと。**
+
+✅ ⚠️⚠️ ★★★★ **⒀ 第 6 便＝「枠の族」の監査＝*陰性*（製品 0）。第 2 便の直しは*一人っ子*だと測った**（ユーザーの判断規則に従って着手＝この便が一番温かい島）:
+**⒜ 問い**: 第 2 便で「`_options.StaffHeight/2` を*その譜自身の半分*の代わりに使う」枠の取り違えを 1 か所直した。**同じ形が他にもあるか。**
+**⒝ 読まずに*測った***——**「その場所に tab が届くか」を刷る計器**を 7 か所に入れ（`scratch/p343/instrument3.js` が当てる）、**陽性対照は第 2 便で直した場所そのもの**（tab の本で必ず光る＝計器が盲でないことを先に言う）。**結果**: **tab が届くのは 4 か所**——対照 S0・**S4.1/2/3＝slur / tie / beam のために建てる「1 譜だけの仮システム」**（`Height: _options.StaffHeight` で建てている）・**S6＝loose-row の鎖が「譜の上線→refpoint」を刻む段**（`tab-lyrics-inside-strings` で **7.500/7.500**・`rit-across-systems` で **4.000/7.500** と光った）。**届かないのは 3 か所**: **タイの中央線 S1・スラーの中央線 S2**（**tab 本では 1 度も光らない**＝tab のタイ／スラーは tab 自身の幾何で描かれる。⚠️ **陽性対照つき**——同じ計器が Boogie の五線では 92 回／12 回光る）・**figured bass の反射 S3**（tab に figured bass を書いた本がコーパスに無い）。
+**⒞ 届く 2 族を*実際に差し替えて*測った**（母集団＝**tab を持つ本 325 冊**・base/head バイト比較・`scratch/p343/sweep-tab.ps1`）: **仮システムを譜自身の高さに → MOVED 0 / 325**。**loose-row の段を `halfFirst`/`halfLast`（PageLayouter が既に持っている語彙）に → MOVED 0 / 325**。
+⚠️ ★★★ **⒟ その 0 が盲でないことを、同じ母集団・同じ掃きで確かめた**: **第 2 便の直しを*戻した* exe を head にすると MOVED 1（`tab-chord.lys`）**。⇒ **この配管はこの種の枠の変化を検出する。だから 0 は本物の陰性。**
+⇒ ★★★★ **結論: 枠の族の生きた一員は 1 つで、それは閉じた。製品は 1 行も触っていない**（計器も flip も戻し、木は clean）。**次に tab がらみで絵が変なときも、この 3 か所を再監査しなくてよい**——ただし **⚠️ 「届かない」は*今のコーパスで*の話**（S3 は「tab ＋ figured bass」の本が 1 冊でも書かれたら生き返る）。
+
+★ **開始時裏取り**: HEAD **`fb2784a0`**・**未 push 26**・木 clean・未追跡 0・deployed 拡張は `out/extension.js` が HEAD の source から建てたものとバイト同一・deployed LSP は `0.5.0+fb2784a0`（**両方ともユーザーが 21:23–21:24 に配布した HEAD**）。
+**終了時（第 1 便）**: **commit 2 本**（`e7ffe059`＝製品 4〔`RenderSpecParser.cs`／`DuplicateScoreNameValidator.cs`／`LilySharpLanguageServer.Commands.cs`／`LspProtocolDtos.cs`〕＋拡張 1〔`editors/vscode/src/extension.ts`〕＋番人 1〔`LilySharp.Tests/Lsp/ScorePickerTests.cs`〕＋`CHANGELOG.md`／この HANDOFF＋ARCHIVE＝第339 の経緯を ARCHIVE の先頭へ逐語）・**未 push 28**・木 clean・未追跡 0。
+**終了時（第 2 便）**: **commit 2 本**（`6454b130`＝製品 1〔`LayoutEngine.Annotations.cs`〕＋番人 1〔`ChordNameTests`〕＋`CHANGELOG.md`＋生成物 1〔`docs/APPROXIMATIONS.md`＝行番号のみ〕／この HANDOFF・**✅ ユーザー承認「承認する。コミットして」**）・**未 push 30**・木 clean・未追跡 0。
+**終了時（第 3・4 便）**: **commit 2 本**（`cbd1bbe1`＝製品 5〔`TabStaffStencils.cs`／`ChordNameEngraver.cs`／`LayoutEngine.Annotations.cs`／`MultiStaffLayouter.cs`／`ScoreSideTables.cs`〕＋番人 1〔`ChordNameTests`〕＋`CHANGELOG.md`＋生成物 2／この HANDOFF・**✅ ユーザー承認「コミットして」**）・**未 push 32**・木 clean・未追跡 0。⚠️ **配布はどの便もしていない**（`pwsh tools/Deploy-Lsp.ps1` ＋ Reload Window はユーザーの判断＝今動いている LSP を落とすため）。**push もしていない**。
+
+
+
 > **これは読み物であって、作業の入口ではない。入口は `HANDOFF.md`。**
 >
 > `HANDOFF.md` が肥大したので、その §1「現在地」（セッションごとの経緯）と §2〜§3

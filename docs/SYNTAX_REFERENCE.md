@@ -751,7 +751,13 @@ Beams are automatic for eighth notes and shorter. Manual beam control:
 
 ```
 c8[ d e f]    // Beam these four notes together
+c8[ d r e]    // A manual beam runs over a rest
+r8[ c d e]    // …and may open (or close) on one
 ```
+
+A rest a manual beam covers keeps its place under the beam: it draws no stem, but the beam
+reaches it, so `r8[ c d e]` beams from the rest. Automatic beams still end at every rest —
+only a written bracket spans one.
 
 ## Stem Direction
 
