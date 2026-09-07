@@ -4418,6 +4418,27 @@
       "residual": -0.006512447,
       "why": "OPENED 2026-09-07 (session 343), the FALSIFIER of the follow-beam pair: the same four notes beamed with no tuplet at all, so no bracket and no number. Its 6.590000 is the clef-bound quantity, and its residual is byte-identical to staff.staff.tuplet-bracket-partial-beam-control's -0.006512447 -- the same TNC sliver, the clef binding on both sides. It earns its place because the FIRST draft of this probe was deaf: with the tuplet on the lower staff and the bracket above, a follow-beam bracket sits only one padding off the BEAM and never cleared that staff's own treble clef, so all three books printed an identical 6.826. This entry is what says the pair above is bracket-bound rather than clef-bound."
     },
+    "staff.staff.beam-band-left-end": {
+      "probe": "beam-band-extent.ly",
+      "score": "BXS",
+      "lilypond": 7.050000000000000,
+      "residual": 0.0,
+      "why": "OPENED 2026-09-07 (session 344), the point that watches WHERE a beam's skyline band begins. LilyPond's Beam skyline is its stencil, the drawn beam from half a stem thickness outside the first stem (lily/beam.cc:631); Lily#'s band (SkylineBuilder.AddBeamsToSkyline) stood at the note COLUMN ANCHORS, one up-stem attachment (1.2392) further left at both ends, and none of the 803 points before this one could see it -- the session's 920-book sweep moved 93 books by 0.01-0.12 when the band was put right and the ledger did not blink. The book: a lower bass staff of eight beamed eighths on c (heads inside, stems up, beam face 3.05 above the middle) under an upper treble staff whose only reach below its own clef is voice two's forced-down g' stem (tip 4.0) at the FIRST column, i.e. at the column's left edge + 0.065 -- inside the window between the anchor and the first stem. LilyPond: 7.050000 = stem 4.0 + staff ink 2.05 + padding 1 (the stem meets the LINES, not the beam). PREDICTED before running with signs (probe header): Lily# reads +1.000000 with the band at the anchors (4.0 + beam face 3.05 + 1) and 0 with it at the drawn beam -- MEASURED exactly so (8.050000 / 7.050000). Two deaf drafts are recorded in the probe header: a middle-line stem (3.333) that never cleared the treble clef, and voice-two RESTS that \\voiceTwo pushes onto the beam's band in both engines; and one octave slip on the Lily# side (g, for g) that the later-beam control caught by reading the SAME +3.0."
+    },
+    "staff.staff.beam-band-left-end-no-stem": {
+      "probe": "beam-band-extent.ly",
+      "score": "BXW",
+      "lilypond": 6.590000000000000,
+      "residual": -0.006512447,
+      "why": "OPENED 2026-09-07 (session 344), the floor under staff.staff.beam-band-left-end: no upper stem at all, so the gap is the treble clef (3.54) against the lower staff's lines, 6.590000, the same clef-bound number TFC and TNC read. Its residual is byte-identical to theirs (-0.006512447, the clef's LILC bbox 3.550 against LilyPond's skyline 3.540 -- see system.clef-bounded-distance) and is unchanged by where the band stands, which is what says the pair's +1.000000 was the beam and nothing else."
+    },
+    "staff.staff.beam-band-left-end-later-beam": {
+      "probe": "beam-band-extent.ly",
+      "score": "BXO",
+      "lilypond": 7.050000000000000,
+      "residual": 0.0,
+      "why": "OPENED 2026-09-07 (session 344), the control that isolates the band's LEFT END: the same upper stem, the lower beam starting one column LATER (r8 then seven bracketed eighths), so the stem is left of the anchor band AND of the drawn beam. LilyPond 7.050000 = BXS, as predicted; Lily# reads 0 with the band at the anchors AND at the drawn beam -- so BXS's +1.000000 before the move was the band's left end and not the stem's length (a Lily# stem length other than LilyPond's 4.0 would show here alike). This control is also what caught the Lily# side's octave slip (g, for g): both books read +3.0 together, which no band can do."
+    },
     "staff.staff.dynamic-head-support": {
       "probe": "dynamic-support.ly",
       "score": "DSQ",

@@ -6149,6 +6149,69 @@ internal static class LpGeometryProbes
         "b2 e'8[ d'8 c' b ] | b2 e'8[ d'8 c' b ] | b1 |");
 
     /// <summary>
+    /// THE BEAM'S X EXTENT IN THE SKYLINE — the mirrors of beam-band-extent.ly's books
+    /// BXS / BXW / BXO: the point that watches WHERE a beam's band begins, which none of the
+    /// 803 points before it did (session 344 moved the band from the column anchors to the
+    /// drawn beam, swept 93 of 920 books moving by 0.01–0.12, and the ledger did not blink).
+    /// </summary>
+    /// <remarks>
+    /// The lower (bass) staff carries eight beamed eighths on <c>c,</c> (LilyPond <c>c</c>,
+    /// C3, one step below the middle line: stems UP, heads inside the staff) — the beam alone
+    /// reaches above that staff's ink. The upper (treble) staff's only downward reach past its
+    /// own treble clef (3.54) is voice two's <c>g</c> (LilyPond <c>g'</c>, G4) with its stem
+    /// FORCED down — 5.0 below the middle — at the FIRST column, standing at the column's left
+    /// edge + 0.065, i.e. LEFT of the lower beam's first stem (edge + 1.174) and so left of the
+    /// drawn beam. LilyPond's Beam skyline is its stencil (lily/beam.cc:631
+    /// calc_beam_segments — from half a stem thickness outside the first stem), so that stem
+    /// meets the lower staff's LINES, not the beam.
+    /// <para>
+    /// BXW has no upper stem (the treble clef against the lower staff's lines — the floor both
+    /// engines share); BXO starts the lower beam one column later (the stem is left of the
+    /// anchor band AND the drawn beam — the control that isolates the band's left end). The
+    /// predictions with signs are in the probe header, along with the deaf first draft (a
+    /// middle-line b4's down stem reaches 3.333, less than the clef).
+    /// </para>
+    /// </remarks>
+    private static string BeamBandScore(string name, string upperBars, string lowerBars) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part upper { clef treble }
+        part lower { clef bass }
+
+        section Main {
+          upper { {{upperBars}} }
+          lower { {{lowerBars}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff upper
+          staff lower
+        }
+        """;
+
+    // LilyPond: << { r1 | r1 | b'1 } \\ { g'4 s4 s2 | g'4 s4 s2 | s1 } >> over
+    // \clef bass c8 ×8 — voice two's g' (Lily# g, G4: Lily#'s absolute c is LilyPond's c')
+    // is the forced-DOWN stem, and the rest of that voice is SPACERS (a voice-two rest is
+    // pushed down onto the lower beam's band in both engines and hides the stem — the
+    // probe's second deaf draft). ⚠️ Written `g,' (G3) first: BXS and BXO both read +3.0,
+    // ALIKE — which is the octave trap of feedback memory, caught by the control.
+    private static readonly string BXS = BeamBandScore("BXS",
+        "voice { r1 | r1 | b1 | } { g4 s4 s2 | g4 s4 s2 | s1 | }",
+        "c,8 c, c, c, c, c, c, c, | c,8 c, c, c, c, c, c, c, | c,1 |");
+
+    private static readonly string BXW = BeamBandScore("BXW",
+        "r1 | r1 | b1 |",
+        "c,8 c, c, c, c, c, c, c, | c,8 c, c, c, c, c, c, c, | c,1 |");
+
+    private static readonly string BXO = BeamBandScore("BXO",
+        "voice { r1 | r1 | b1 | } { g4 s4 s2 | g4 s4 s2 | s1 | }",
+        "r8 c,8[ c, c, c, c, c, c,] | r8 c,8[ c, c, c, c, c, c,] | c,1 |");
+
+    /// <summary>
     /// A DYNAMIC under a forced-down column — the mirrors of dynamic-support.ly's books
     /// DSQ / DSW / DSB, the points that gate the LAST raw-3.5 read
     /// (<c>NoteColumnLayout.RawSupportEdgeUp</c>, session 35's model table).
@@ -14220,6 +14283,15 @@ internal static class LpGeometryProbes
         new("staff.staff.tuplet-bracket-follow-beam", TFB, g => g.StaffGap(), ZeroStaffStaffPaper),
         new("staff.staff.tuplet-bracket-follow-beam-rest", TFR, g => g.StaffGap(), ZeroStaffStaffPaper),
         new("staff.staff.tuplet-bracket-follow-beam-control", TFC, g => g.StaffGap(), ZeroStaffStaffPaper),
+
+        // --- the BEAM's X extent in the skyline (BXS/BXW/BXO) ---
+        // Where a beam's band BEGINS: at the drawn beam (LilyPond's stencil skyline) or at the
+        // first note's column anchor, one up-stem attachment (1.2392) further left. BXS's upper
+        // stem stands in that window; BXW has no stem; BXO's beam starts a column later. See
+        // BeamBandScore's remark and the probe header's signed predictions.
+        new("staff.staff.beam-band-left-end", BXS, g => g.StaffGap(), ZeroStaffStaffPaper),
+        new("staff.staff.beam-band-left-end-no-stem", BXW, g => g.StaffGap(), ZeroStaffStaffPaper),
+        new("staff.staff.beam-band-left-end-later-beam", BXO, g => g.StaffGap(), ZeroStaffStaffPaper),
 
         // --- the DYNAMIC's support (DSQ/DSW/DSB + mechanism pair DMF/DMW) ---
         // The points that gate the last raw-3.5 read (NoteColumnLayout.RawSupportEdgeUp).

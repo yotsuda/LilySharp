@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 52 | 観測者がゼロだと自認しているもの |
+| `UNWATCHED` | 51 | 観測者がゼロだと自認しているもの |
 | `OWN` | 126 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **238** | |
+| **計** | **237** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -134,7 +134,7 @@
 ### `LilySharp.Core/Svg/Model/LyricItem.cs`
 - **:100** ⚠️ NOT PORTED — the voice's melismaBusy state: the trigger here is the
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（52 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（51 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:1803** container, and the value stops being unobserved with the line above.
@@ -203,8 +203,6 @@
 - **:1596** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
 - **:485** same part (leftHand). No book reaches the configuration, so no ledger point and
-### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
-- **:1383** and no ledger point watches the band's x (HANDOFF §1, session 344).
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
 - **:56** the distance is taken at — and NO ledger point moves with it. An output change no point
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`

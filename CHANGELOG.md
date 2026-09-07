@@ -170,6 +170,17 @@ scores against LilyPond's picture of the same book.
   (1.989688 . 1.569942) exactly. The same rule covers a stemless whole and a stem pointing
   against the bracket, whose column edges are the attachment edges Lily# already read, so
   those do not move.
+- **A beam's room in the staff skyline is the drawn beam, not the note columns under it.**
+  The band a beam reserves against the neighbouring staff began at its first note's column
+  and ended at its last — one stem attachment (1.24 staff spaces on an up-stem beam) left of
+  the drawn beam at both ends. LilyPond reserves the beam's stencil, from half a stem thickness
+  outside the first stem to the same outside the last. So a grob of the other staff that
+  reached into the gap just left of a beam's first stem met a beam that was not there:
+  measured on a probe built for it, a down stem standing at the first column's edge under an
+  up-stem beam pushed the staves 1.000000 further apart than LilyPond does (the stem meets
+  LilyPond's staff lines, not the beam); the band now at the drawn beam reads LilyPond's
+  7.050000 exactly, and the probe's two controls are unmoved. Ninety-three of 920 swept
+  books move by 0.01–0.12 in system or page position — the same mechanism in small doses.
 - **A beam bracketed onto a tuplet's bounding rest is the tuplet's own beam, and hides the
   bracket.** `tuplet 3/2 { r8[ c c] }` drew a bracket over its beam: the beam's bounds were
   read from its note members, so a beam that opens on the rest looked one column shorter
