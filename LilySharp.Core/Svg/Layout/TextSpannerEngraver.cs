@@ -140,6 +140,17 @@ internal static class TextSpannerEngraver
     /// </summary>
     internal const double TextFontSize = 4.0 * 0.5;
 
+    /// <summary>The label's em for THIS score: <see cref="TextFontSize"/> unless the score's
+    /// <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for <c>text</c> (the spanner's label
+    /// is a TextScript-family string and shares the role).</summary>
+    internal static double TextEm(ScoreTextMetrics fonts)
+        => fonts.Size(TextRole.Text, TextFontSize);
+
+    /// <summary>The label's weight and slant: italic unless the score wrote a style for
+    /// <c>text</c>.</summary>
+    internal static FontStyle TextStyle(ScoreTextMetrics fonts)
+        => fonts.Style(TextRole.Text, FontStyle.Italic);
+
     /// <summary>
     /// Vertical padding between outside-staff layers.
     /// </summary>
@@ -559,7 +570,7 @@ internal static class TextSpannerEngraver
             double top = lineHalf, bottom = lineHalf;
             if (!string.IsNullOrEmpty(text))
             {
-                var textInk = fonts.Ink(text, TextFontSize, TextRole.Text, FontStyle.Italic);
+                var textInk = fonts.Ink(text, TextEm(fonts), TextRole.Text, TextStyle(fonts));
                 top = Math.Max(top, textInk.Top);
                 bottom = Math.Max(bottom, -textInk.Bottom);
             }

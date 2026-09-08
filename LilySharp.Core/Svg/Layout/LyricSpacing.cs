@@ -941,5 +941,6 @@ internal static class LyricSpacing
     // that under-measured capitals — "Up" by ~0.7 ss — so the springs reserved too little
     // and wide syllables overlapped.)
     private static double EstimateLyricTextWidth(Rendering.ScoreTextMetrics fonts, string text)
-        => fonts.Advance(text, EngravingDefaults.LyricTextFontSize, Rendering.TextRole.LyricText);
+        => fonts.Advance(text, LyricEngraver.LyricFontSize(fonts), Rendering.TextRole.LyricText,
+            LyricEngraver.LyricStyle(fonts));
 }

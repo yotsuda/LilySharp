@@ -179,6 +179,17 @@ internal static class VoltaBracketEngraver
     /// </remarks>
     internal static double NumberFontSize => 11.0 * System.Math.Pow(2.0, -2.0 / 6.0) / 5.0;
 
+    /// <summary>The number's em for THIS score: <see cref="NumberFontSize"/> unless the
+    /// score's <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for <c>volta</c>; the draw
+    /// and the outside-staff reservation both read it.</summary>
+    internal static double NumberEm(Rendering.ScoreTextMetrics fonts)
+        => fonts.Size(Rendering.TextRole.Volta, NumberFontSize);
+
+    /// <summary>The number's weight and slant: bold unless the score wrote a style for
+    /// <c>volta</c>.</summary>
+    internal static Rendering.FontStyle NumberStyle(Rendering.ScoreTextMetrics fonts)
+        => fonts.Style(Rendering.TextRole.Volta, Rendering.FontStyle.Bold);
+
     // Padding from barline
     private const double StartPadding = 0.3;
     private const double EndPadding = 0.3;

@@ -168,6 +168,17 @@ internal static class TupletBracketEngraver
     /// <remarks>LILYPOND-REF: <c>scm/define-grobs.scm</c> TupletNumber
     /// <c>(font-shape . italic)</c>, with no weight override.</remarks>
     internal const Rendering.FontStyle NumberFontStyle = Rendering.FontStyle.Italic;
+
+    /// <summary>The number's em for THIS score: <see cref="NumberFontSize"/> unless the
+    /// score's <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for <c>tuplet</c>. The draw,
+    /// the staff skyline, the outside-staff pass and the slur scorer all read it.</summary>
+    internal static double NumberEm(Rendering.ScoreTextMetrics fonts)
+        => fonts.Size(Rendering.TextRole.Tuplet, NumberFontSize);
+
+    /// <summary>The number's weight and slant: <see cref="NumberFontStyle"/> unless the score
+    /// wrote a style for <c>tuplet</c>.</summary>
+    internal static Rendering.FontStyle NumberStyle(Rendering.ScoreTextMetrics fonts)
+        => fonts.Style(Rendering.TextRole.Tuplet, NumberFontStyle);
     private const double StaffMiddleDown = 2.0;    // staff-top frame: middle line = StaffHeight/2
     private const double YOffsetAbove = -2.5;  // Above staff
     private const double YOffsetBelow = 5.5;   // Below staff

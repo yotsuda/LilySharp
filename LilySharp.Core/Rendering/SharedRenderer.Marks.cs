@@ -56,12 +56,14 @@ internal static partial class SharedRenderer
         if (layout.ChordNameLayouts.IsDefaultOrEmpty) return;
         // The one home for the chord em, shared with ChordNameEngraver so the reserved ink
         // and the drawn ink are the same size. It was a local FontSize * 0.65 (= 2.6), an
-        // approximation of LilyPond's own ChordName size.
-        double size = LilySharp.Core.Svg.EngravingDefaults.ChordNameFontSize;
+        // approximation of LilyPond's own ChordName size. Since 2026-09-08 the home answers
+        // for THIS score — a `fonts { chordName step … }` moves the draw and the reservation
+        // together.
+        double size = LilySharp.Core.Svg.Layout.ChordNameGlyphRun.Em(fonts);
         // The series shares the same home as the em: ChordName declares NO font-series
         // (scm/define-grobs.scm:837-855), so the symbol renders regular, in the style the
-        // engraver reserved for.
-        const FontStyle style = LilySharp.Core.Svg.EngravingDefaults.ChordNameFontStyle;
+        // engraver reserved for — unless the score wrote one.
+        FontStyle style = LilySharp.Core.Svg.Layout.ChordNameGlyphRun.Style(fonts);
         // ...and the ACCIDENTALS are not text at all: LilyPond draws each one as an Emmentaler
         // glyph, one font step smaller and lifted off the baseline
         // (scm/chord-name.scm:80-95 — the addresses and the 2.26.0 measurements are on
@@ -72,9 +74,7 @@ internal static partial class SharedRenderer
         // ⚠️ ONE HOME WITH THE RESERVATION: the pieces here are the pieces
         // ChordNameEngraver.SymbolInkWidth and SymbolInk price, so the drawn symbol and the
         // reserved one cannot drift (the failure this file already carries a note about).
-        double glyphEm = FontSize
-            * LilySharp.Core.Svg.Layout.EmmentalerDesignSize.Magstep(
-                LilySharp.Core.Svg.Layout.ChordNameGlyphRun.AccidentalFontSizeStep);
+        double glyphEm = LilySharp.Core.Svg.Layout.ChordNameGlyphRun.AccidentalGlyphEm(FontSize, fonts);
         // ONE line per symbol. `as both` used to draw a second one 2.2 ss above this
         // baseline — a distance that lived here while the ink was reserved for in
         // ChordNameEngraver, so the row under-reserved by exactly it. Retired 2026-08-23:
@@ -292,12 +292,15 @@ internal static partial class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: lily/bar-number-engraver.cc — Bar_number_engraver
     /// </remarks>
-    private static void DrawBarNumbers(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
+    private static void DrawBarNumbers(ScoreTextMetrics fonts, ScoreLayout layout,
+        Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.BarNumberLayouts.IsDefaultOrEmpty) return;
         // LILYPOND-REF: scm/define-grobs.scm BarNumber (font-size . -2) —
-        // 2.2sp text height × magstep(-2); see BarNumberEngraver.FontSize.
-        double fontSize = BarNumberEngraver.FontSize;
+        // 2.2sp text height × magstep(-2); see BarNumberEngraver.FontSize. Read through
+        // the score's plan, as every reservation of the number is.
+        double fontSize = BarNumberEngraver.Em(fonts);
+        var style = BarNumberEngraver.Style(fonts);
         // Collisions with voltas/marks are resolved by the unified
         // outside-staff stacking pass (OutsideStaffStacker.StackAboveStaff).
         foreach (var bn in layout.BarNumberLayouts)
@@ -307,7 +310,7 @@ internal static partial class SharedRenderer
             // Page Y-up: this measure's system top plus the stored offset.
             double y = syUp + bn.YUp;
             gc.DrawText(bn.Text, bn.X, y, fontSize, TextRole.BarNumber,
-                FontStyle.Bold, bn.RightAligned ? TextAnchor.End : TextAnchor.Start,
+                style, bn.RightAligned ? TextAnchor.End : TextAnchor.Start,
                 Color.Black);
         }
     }
@@ -643,23 +646,25 @@ internal static partial class SharedRenderer
             // home the engraver and the stacker price the same mark from.
             // LILYPOND-REF: scm/translation-functions.scm:100-151 format-metronome-markup / metronome-markup;
             // scm/define-markup-commands.scm:5393-5650 note-by-number.
-            double em = EngravingDefaults.MetronomeMarkFontSize;
-            double noteSize = MetronomeMarkGeometry.NoteSize;
-            double s = MetronomeMarkGeometry.NoteScale;
+            double em = MetronomeMarkGeometry.Em(fonts);
+            double noteSize = MetronomeMarkGeometry.NoteSize(fonts);
+            double s = MetronomeMarkGeometry.NoteScale(fonts);
+            var textStyle = MetronomeMarkGeometry.TextStyle(fonts);
+            var plainStyle = MetronomeMarkGeometry.PlainStyle(fonts);
             double x = m.X;
             bool hasMetronome = m.Text.Length > 0;
             if (m.TempoText != null)
             {
                 gc.DrawText(m.TempoText, x, absY, em,
-                    TextRole.Tempo, FontStyle.Bold, TextAnchor.Start, Color.Black);
+                    TextRole.Tempo, textStyle, TextAnchor.Start, Color.Black);
                 if (!hasMetronome)
                     return;
-                x += fonts.Advance(m.TempoText, em, TextRole.Tempo, FontStyle.Bold);
+                x += fonts.Advance(m.TempoText, em, TextRole.Tempo, textStyle);
                 // The concat's " (" — one run; its leading space carried as the
                 // single-run offset so no backend collapses it.
                 gc.DrawText("(", x + MetronomeMarkGeometry.LeadingSpaceAdvance(fonts, "("), absY, em,
-                    TextRole.Tempo, FontStyle.Regular, TextAnchor.Start, Color.Black);
-                x += fonts.Advance(" (", em, TextRole.Tempo);
+                    TextRole.Tempo, plainStyle, TextAnchor.Start, Color.Black);
+                x += fonts.Advance(" (", em, TextRole.Tempo, plainStyle);
             }
             // Beat-unit note: whole (1) = stemless whole head; 2 = hollow
             // half with stem; 4+ = black head, stem, flags from the 8th up.
@@ -677,12 +682,12 @@ internal static partial class SharedRenderer
                 // point (the font's LILC datum — X is the head's right edge, Y a little
                 // above its centre), rising to stemy = magstep x max(3, log-1) above
                 // the head's origin line.
-                double stemTh = MetronomeMarkGeometry.StemThickness;
+                double stemTh = MetronomeMarkGeometry.StemThickness(fonts);
                 var att = MetronomeMarkGeometry.StemAttachment(m.TempoBeatUnit);
                 double stemX = x + att.X * s - stemTh / 2;
                 double stemBottom = headY + att.Y * s;
                 double stemTop = headY
-                    + MetronomeMarkGeometry.StemTopAboveCentre(m.TempoBeatUnit);
+                    + MetronomeMarkGeometry.StemTopAboveCentre(fonts, m.TempoBeatUnit);
                 gc.DrawLine(stemX, stemBottom, stemX, stemTop, Color.Black, stemTh);
                 if (log >= 3)
                     gc.DrawGlyph(EmmentalerGlyphs.Flag8thUp, stemX, stemTop, noteSize);
@@ -693,19 +698,19 @@ internal static partial class SharedRenderer
             // arithmetic lives in MetronomeMarkGeometry.DotX.
             for (int d = 0; d < m.TempoDots; d++)
                 gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
-                    x + MetronomeMarkGeometry.DotX(m.TempoBeatUnit, d), headY, noteSize);
+                    x + MetronomeMarkGeometry.DotX(fonts, m.TempoBeatUnit, d), headY, noteSize);
             // " = N" — one run at the note's ink right; the leading space is the
             // concat's separator, carried as the single-run offset.
             string equation = MetronomeMarkGeometry.EquationText(
                 m.Text, m.TempoText != null);
             double eqX = x
-                + MetronomeMarkGeometry.NoteRight(m.TempoBeatUnit, m.TempoDots)
+                + MetronomeMarkGeometry.NoteRight(fonts, m.TempoBeatUnit, m.TempoDots)
                 + MetronomeMarkGeometry.LeadingSpaceAdvance(fonts, equation);
             gc.DrawText(equation, eqX, absY,
-                em, TextRole.Tempo, FontStyle.Regular, TextAnchor.Start, Color.Black);
+                em, TextRole.Tempo, plainStyle, TextAnchor.Start, Color.Black);
             if (m.SwingSubdivision != 0)
             {
-                double textEnd = eqX + fonts.Advance(equation, em, TextRole.Tempo);
+                double textEnd = eqX + fonts.Advance(equation, em, TextRole.Tempo, plainStyle);
                 // DrawSwingEquation draws in the page Y-up frame; hand it the Y-up baseline.
                 DrawSwingEquation(fonts, gc, textEnd + 0.8, absY, m.SwingSubdivision);
             }
@@ -720,7 +725,7 @@ internal static partial class SharedRenderer
             // label on a chord row's own line.
             // ⚠️ THE FRAME WRAPS THE STRING'S INK AT LilyPond's OWN em (session 344), not the
             // font's em box at a hand-picked 2.4 / 2.2 — see LabelEm / LabelBoxMargin.
-            double fs = MusicMarkEngraver.LabelEm(m.MarkType);
+            double fs = MusicMarkEngraver.LabelEm(fonts, m.MarkType);
             double halfW = MusicMarkEngraver.LabelBoxHalfWidth(fonts, m.MarkType, m.Text);
             double halfH = MusicMarkEngraver.LabelBoxHalfHeight(fonts, m.MarkType, m.Text);
             // DrawRectangle's y is the visual-top edge (Y-up): anchor + half the box.
@@ -728,7 +733,7 @@ internal static partial class SharedRenderer
                 fill: Color.White, stroke: Color.Black, strokeWidth: EngravingDefaults.LineThickness);
             gc.DrawText(m.Text, m.X,
                 absY - MusicMarkEngraver.LabelBaselineBelowCentre(fonts, m.MarkType, m.Text),
-                fs, TextRole.Mark, FontStyle.Bold, TextAnchor.Middle, Color.Black);
+                fs, TextRole.Mark, MusicMarkEngraver.LabelStyle(fonts), TextAnchor.Middle, Color.Black);
             return;
         }
         if (IsPedalMark(m.MarkType))
@@ -747,15 +752,15 @@ internal static partial class SharedRenderer
                     gc.DrawGlyph(g.Glyph, pedalLeft + g.X, absY, FontSize, Color.Black);
                 return;
             }
-            gc.DrawText(m.Text, m.X, absY, MusicMarkEngraver.PlainTextFontSize, TextRole.Pedal,
-                MusicMarkEngraver.TextStyleOf(m.MarkType), TextAnchor.Middle, Color.Black);
+            gc.DrawText(m.Text, m.X, absY, MusicMarkEngraver.PlainMarkEm(fonts, m.MarkType), TextRole.Pedal,
+                MusicMarkEngraver.TextStyleOf(fonts, m.MarkType), TextAnchor.Middle, Color.Black);
             return;
         }
         if (m.MarkType == MusicMarkType.ToCoda)
         {
             // "To" followed by the coda SIGN (not the word "Coda"), centered as a
             // group. LILYPOND-REF: the al-coda text is set with the coda glyph.
-            double ts = MusicMarkEngraver.PlainTextFontSize;
+            double ts = MusicMarkEngraver.PlainMarkEm(fonts, m.MarkType);
             double gs = FontSize * 0.8;
             const string prefix = "To ";
             // The centring measures what the next line draws — one composition, read
@@ -763,7 +768,7 @@ internal static partial class SharedRenderer
             // reservation reads too, so the box and the ink cannot drift apart. (It
             // measured Bold against a BoldItalic draw until 2026-08-18, which put the
             // pair 0.068286614 staff spaces left of centre.)
-            var style = MusicMarkEngraver.TextStyleOf(MusicMarkType.ToCoda);
+            var style = MusicMarkEngraver.TextStyleOf(fonts, MusicMarkType.ToCoda);
             var (textW, glyphW) = MusicMarkEngraver.ToCodaStencilWidths(fonts);
             double left = m.X - (textW + glyphW) / 2;
             gc.DrawText(prefix, left, absY, ts, TextRole.Navigation,
@@ -775,8 +780,8 @@ internal static partial class SharedRenderer
         }
         // Default text marks (D.S./D.C./Fine/etc.) — size and style from the one home the
         // reservations read, so the box and the ink cannot drift apart again.
-        gc.DrawText(m.Text, m.X, absY, MusicMarkEngraver.PlainTextFontSize, TextRole.Navigation,
-            MusicMarkEngraver.TextStyleOf(m.MarkType), TextAnchor.Middle, Color.Black);
+        gc.DrawText(m.Text, m.X, absY, MusicMarkEngraver.PlainMarkEm(fonts, m.MarkType), TextRole.Navigation,
+            MusicMarkEngraver.TextStyleOf(fonts, m.MarkType), TextAnchor.Middle, Color.Black);
     }
 
     private static bool IsHandledBySpannerEngraver(MusicMarkType type) =>
@@ -791,10 +796,15 @@ internal static partial class SharedRenderer
 
     /// <summary>Draws free-form text annotations (e.g. "molto rit.", "a tempo").</summary>
     /// <remarks>LILYPOND-REF: lily/text-interface.cc — text rendering</remarks>
-    private static void DrawCustomTexts(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
-        in OssiaShrink os, IDrawingContext gc)
+    private static void DrawCustomTexts(ScoreTextMetrics fonts, ScoreLayout layout,
+        Dictionary<int, double> sysTopYUp, in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.CustomTextLayouts.IsDefaultOrEmpty) return;
+        // The em and the slant, read once from the plan the reservations read (see
+        // CustomTextEngraver.Em / Style): TextScript's paper size and italic unless the
+        // score wrote otherwise.
+        double em = CustomTextEngraver.Em(fonts);
+        var style = CustomTextEngraver.Style(fonts);
         foreach (var t in layout.CustomTextLayouts)
         {
             if (!sysTopYUp.ContainsKey(t.MeasureIndex)) continue; // other page
@@ -808,8 +818,8 @@ internal static partial class SharedRenderer
             // textscript.x.pen-to-notehead-left). A centred draw here reads half an
             // advance off that entry.
             using (gc.Source(t.SourcePosition))
-                gc.DrawText(t.Text, t.X, y, EngravingDefaults.TextScriptFontSize, TextRole.Text,
-                    FontStyle.Italic, TextAnchor.Start, Color.Black);
+                gc.DrawText(t.Text, t.X, y, em, TextRole.Text,
+                    style, TextAnchor.Start, Color.Black);
         }
     }
 
@@ -823,11 +833,12 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/text-spanner-engraver.cc TextSpanner engraver
     /// LILYPOND-REF: scm/define-grobs.scm:3835 TextSpanner grob
     /// </remarks>
-    private static void DrawTextSpanners(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
-        in OssiaShrink os, IDrawingContext gc)
+    private static void DrawTextSpanners(ScoreTextMetrics fonts, ScoreLayout layout,
+        Dictionary<int, double> sysTopYUp, in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.TextSpannerLayouts.IsDefaultOrEmpty) return;
-        double textSize = LilySharp.Core.Svg.Layout.TextSpannerEngraver.TextFontSize;
+        double textSize = LilySharp.Core.Svg.Layout.TextSpannerEngraver.TextEm(fonts);
+        var textStyle = LilySharp.Core.Svg.Layout.TextSpannerEngraver.TextStyle(fonts);
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var s in layout.TextSpannerLayouts)
         {
@@ -838,7 +849,7 @@ internal static partial class SharedRenderer
             {
                 gc.DrawText(s.Text, s.StartX, absY,
                     os.Size(textSize, s.StaffIndex), TextRole.Text,
-                    FontStyle.Italic, TextAnchor.Start, Color.Black);
+                    textStyle, TextAnchor.Start, Color.Black);
                 if (s.Style != TextSpannerStyle.None && s.LineStartX < s.EndX)
                 {
                     (double On, double Off)? dash = s.Style == TextSpannerStyle.DashedLine

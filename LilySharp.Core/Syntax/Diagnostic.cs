@@ -1372,6 +1372,30 @@ public static class DiagnosticCodes
     /// like every other repeated single-value setting.</summary>
     public const string DuplicateFontsReference = "LYS8014";
 
+    /// <summary>Font error: a size or style attribute (<c>step</c> / <c>size</c> /
+    /// <c>bold</c> / <c>italic</c> / <c>regular</c>) written where no role reads it — on a
+    /// generic family key (<c>serif step +1</c>: a family is a face table, not a role) or
+    /// before any key at all. Refused rather than ignored, the reasoning of
+    /// <see cref="UnknownFontRole"/>: an attribute nobody reads looks exactly like one that
+    /// works.</summary>
+    public const string FontAttributeMisplaced = "LYS8015";
+
+    /// <summary>Font error: a <c>step</c> or <c>size</c> whose value is not a number, or is
+    /// outside the range the engraving can set (<c>step</c> −12…+12, <c>size</c>
+    /// 0.5…20 staff spaces).</summary>
+    public const string FontSizeOutOfRange = "LYS8016";
+
+    /// <summary>Font error: one entry writes both <c>step</c> and <c>size</c>. They answer
+    /// the same question two ways — relative to the role's default and absolute — and the
+    /// engraving cannot honour both; the writer picks one.</summary>
+    public const string FontSizeAndStepBothGiven = "LYS8017";
+
+    /// <summary>Font warning: a size or style attribute on a role whose size or style the
+    /// engraving does not read from the plan in this version (<c>TextRoles.PlanReach</c>).
+    /// Warned rather than silently ignored — the page would come out unchanged and the
+    /// writer would have no way to tell the attribute from one that works.</summary>
+    public const string FontAttributeNotFollowed = "LYS8018";
+
     // Paper diagnostics (LYS9xxx)
 
     /// <summary>Paper error: a <c>paper { }</c> entry names a key that is not in the paper

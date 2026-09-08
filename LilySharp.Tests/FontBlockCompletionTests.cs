@@ -155,7 +155,11 @@ public class FontBlockCompletionTests
     /// <summary>An LSP snippet as the editor leaves it when the writer accepts and changes
     /// nothing: each placeholder becomes its own default.</summary>
     private static string Resolved(string snippet) =>
-        Regex.Replace(Regex.Replace(snippet, @"\$\{\d+:([^}]*)\}", "$1"), @"\$\{\d+\}|\$\d+", "");
+        Regex.Replace(
+            Regex.Replace(
+                Regex.Replace(snippet, @"\$\{\d+\|([^,|}]*)[^}]*\}", "$1"),   // ${1|serif,sans|} -> serif
+                @"\$\{\d+:([^}]*)\}", "$1"),                                  // ${1:face} -> face
+            @"\$\{\d+\}|\$\d+", "");                                          // $0 -> nothing
 
     /// <summary>Every coordinate and extent on the page, in document order.</summary>
     /// <remarks>
@@ -365,10 +369,12 @@ public class FontBlockCompletionTests
         {
             foreach (var item in LilySharpLanguageServer.GetFontRoleValueCompletions(key).Items)
             {
-                // The quoted item is a snippet for a face name; stand a real one in it.
+                // The quoted item is a snippet for a face name; stand a real one in it. The
+                // attribute items are snippets too (`step ${1:+1}`, `as ${1|serif,sans|}`),
+                // resolved the way the editor leaves them when the writer accepts.
                 string value = item.Label == "\"…\""
                     ? $"\"{TextFontMetrics.SerifFamily}\""
-                    : item.Label!;
+                    : Resolved(item.InsertText ?? item.Label!);
                 pairs++;
 
                 var tree = SyntaxTree.Parse($"fonts {{ {key} {value} }}\n" + Book);
@@ -395,13 +401,19 @@ public class FontBlockCompletionTests
                 .Items.Select(i => i.Label).ToArray();
             Assert.Equal(["\"…\""], labels);
         }
-        // …while a role or a group keeps the redirect, which IS accepted there.
+        // …while a role or a group keeps the redirect — spelled `as FAMILY` since 2026-09-08
+        // — and the size and style attributes, all of which ARE accepted there. The bare
+        // family word is NOT offered any more: it is the next key now, and would complete
+        // the line the reader refuses.
         foreach (string key in new[] { "chordName", "lyrics", "title" })
         {
             var labels = LilySharpLanguageServer.GetFontRoleValueCompletions(key)
                 .Items.Select(i => i.Label).ToArray();
-            Assert.Contains("serif", labels);
-            Assert.Contains("sans", labels);
+            Assert.Contains("as", labels);
+            Assert.Contains("step", labels);
+            Assert.Contains("bold", labels);
+            Assert.DoesNotContain("serif", labels);
+            Assert.DoesNotContain("sans", labels);
         }
     }
 

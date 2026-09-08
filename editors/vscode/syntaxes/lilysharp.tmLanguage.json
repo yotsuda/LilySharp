@@ -165,12 +165,22 @@
                 { "include": "#comments" },
                 { "include": "#strings" },
                 {
-                    "comment": "A key POINTED AT a generic family instead of a face name: `marks sans`, `serif sans`. Read before the bare-key rule so the second word is seen as the value it is. ⚠️ `sans-serif` precedes `sans` in both lists — TextMate takes the first alternative that matches, and \\b succeeds before the hyphen, so the shorter spelling would colour `sans` and leave `-serif` plain (the same trap #instrument-value was written for).",
-                    "match": "\\b(serif|sans-serif|sans|header|lyrics|chords|marks|numbers|notation|title|composer|instrument|lyricText|stanza|chordName|fretFrame|figuredBass|tempo|mark|pedal|navigation|text|dynamics|partCombine|barNumber|fingering|tuplet|volta|ottava|bend|tabTechnique|clefOctave|meter|tabFret)\\s+(sans-serif|serif|sans)\\b",
+                    "comment": "A key POINTED AT a generic family instead of a face name: `chordName as sans` (2026-09-08; the bare `chordName serif` is refused). Read before the bare-key rule so the family word is seen as the value it is. ⚠️ `sans-serif` precedes `sans` — TextMate takes the first alternative that matches, and \\b succeeds before the hyphen, so the shorter spelling would colour `sans` and leave `-serif` plain (the same trap #instrument-value was written for).",
+                    "match": "\\b(as)\\s+(sans-serif|serif|sans)\\b",
                     "captures": {
-                        "1": { "name": "keyword.other.font-key.lilysharp" },
+                        "1": { "name": "keyword.other.font-attribute.lilysharp" },
                         "2": { "name": "support.constant.font-family.lilysharp" }
                     }
+                },
+                {
+                    "comment": "The entry attributes (LilySharp.Core TextRoles.AttributeWords): `as`, `step +1`, `size 3.8`, `bold`, `italic`, `regular` — words only INSIDE this block, like the keys (`part step { }` compiles). An `as` with its family is taken by the rule above first; a bare `as` (mid-typing) is coloured here.",
+                    "name": "keyword.other.font-attribute.lilysharp",
+                    "match": "\\b(as|step|size|bold|italic|regular)\\b"
+                },
+                {
+                    "comment": "`step`'s and `size`'s operand: a signed integer or decimal.",
+                    "name": "constant.numeric.font-size.lilysharp",
+                    "match": "[+-]?\\d+(\\.\\d+)?"
                 },
                 {
                     "name": "keyword.other.font-key.lilysharp",

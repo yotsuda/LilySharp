@@ -550,7 +550,10 @@ public class EditorColouringTests
         // between `fonts {` and its `}`. So they were plain — while `tempo` and `title`, which
         // happen to be reserved for unrelated reasons, were coloured in the same block. The
         // user saw exactly that after deploying the extension, and this is the net for it.
-        string[] keys = [.. TextRoles.AllKeySpellings(), "sans-serif"];
+        // …and the entry ATTRIBUTES (as step size bold italic regular) are the block's words
+        // too, since 2026-09-08 — a step that stayed plain beside a coloured key would read
+        // as a typo.
+        string[] keys = [.. TextRoles.AllKeySpellings(), "sans-serif", .. TextRoles.AttributeWords];
         Assert.True(keys.Length > 25, $"only {keys.Length} key spellings came back");
 
         string[] plain = keys.Where(k => !IsColoured(k)).ToArray();
@@ -867,8 +870,8 @@ public class EditorColouringTests
         foreach (string key in FontsBlockWordsInTheGrammar())
         {
             Assert.True(
-                TextRoles.TryParseKey(key, out _, out _, out _),
-                $"the fonts block colours `{key}` and the parser does not know it as a key");
+                TextRoles.TryParseKey(key, out _, out _, out _) || TextRoles.IsAttributeWord(key),
+                $"the fonts block colours `{key}` and the parser does not know it as a key or an attribute");
         }
         //    ⚠️ And the hyphen trap is real, not theoretical: `sans` alone would match the head
         //    of `sans-serif` and leave the tail plain, because \b succeeds before a hyphen.

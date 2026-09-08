@@ -440,7 +440,7 @@ public class FontDirectiveTests
         // A score that binds nothing, and one that only points a role at a generic family,
         // name no face at all — so neither can trip a "not installed" warning.
         Assert.DoesNotContain(Check(Book), x => x.Code == DiagnosticCodes.FontNotFound);
-        Assert.DoesNotContain(Check("fonts { chordName serif }\n" + Book),
+        Assert.DoesNotContain(Check("fonts { chordName as serif }\n" + Book),
             x => x.Code == DiagnosticCodes.FontNotFound);
 
         // ⚠️ THE "BUNDLED" HALF OF THIS NAME WAS NOT OBSERVED BY ANYTHING until 2026-08-18.

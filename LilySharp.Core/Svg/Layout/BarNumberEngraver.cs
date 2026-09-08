@@ -80,6 +80,19 @@ internal static class BarNumberEngraver
     /// </remarks>
     public static readonly double FontSize = 2.2 * Math.Pow(2, -2.0 / 6.0);
 
+    /// <summary>The number's em for THIS score: <see cref="FontSize"/> unless the score's
+    /// <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for <c>barNumber</c>. Every reader
+    /// of the number's em — the draw, the paging silhouette, the outside-staff pass — asks
+    /// here, so a score that writes one moves them together.</summary>
+    public static double Em(Rendering.ScoreTextMetrics fonts)
+        => fonts.Size(Rendering.TextRole.BarNumber, FontSize);
+
+    /// <summary>The number's weight and slant: bold (LilyPond's BarNumber font-series)
+    /// unless the score wrote a style for <c>barNumber</c>.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm BarNumber (font-series . bold).</remarks>
+    public static Rendering.FontStyle Style(Rendering.ScoreTextMetrics fonts)
+        => fonts.Style(Rendering.TextRole.BarNumber, Rendering.FontStyle.Bold);
+
     /// <summary>
     /// The staff a system's bar number hangs on: the topmost non-hidden SPACEABLE staff.
     /// Null on a staffless sheet.

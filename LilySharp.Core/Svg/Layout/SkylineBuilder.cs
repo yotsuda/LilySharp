@@ -1495,13 +1495,12 @@ internal sealed class SkylineBuilder
             {
                 // ...at THIS staff's size, which is what a font size is: LilyPond's
                 // fontSize applies to the number as to every other glyph in the context.
-                double fontSize = size.Span(TupletBracketEngraver.NumberFontSize);
+                double fontSize = size.Span(TupletBracketEngraver.NumberEm(fonts));
+                var tupletStyle = TupletBracketEngraver.NumberStyle(fonts);
                 double halfW = fonts.Advance(
-                    b.NumberText, fontSize, Rendering.TextRole.Tuplet,
-                    TupletBracketEngraver.NumberFontStyle) / 2;
+                    b.NumberText, fontSize, Rendering.TextRole.Tuplet, tupletStyle) / 2;
                 double halfH = fonts.InkHeight(
-                    b.NumberText, fontSize, Rendering.TextRole.Tuplet,
-                    TupletBracketEngraver.NumberFontStyle) / 2;
+                    b.NumberText, fontSize, Rendering.TextRole.Tuplet, tupletStyle) / 2;
                 double midYUp = size.Span(b.NumberYUp) + staffTopUp;
                 sky.Merge(VerticalSkyline.FromBox(
                     b.NumberX - halfW, b.NumberX + halfW,

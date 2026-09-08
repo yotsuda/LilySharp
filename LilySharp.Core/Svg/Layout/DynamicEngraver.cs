@@ -676,14 +676,26 @@ internal static class DynamicEngraver
     internal static Rendering.FontStyle LabelStyle(bool expressive)
         => expressive ? Rendering.FontStyle.Italic : Rendering.FontStyle.BoldItalic;
 
+    /// <summary>The style for THIS score: <see cref="LabelStyle(bool)"/> unless the score's
+    /// <c>fonts { }</c> wrote a style for <c>dynamics</c>. The draw and the reservation both
+    /// read this overload.</summary>
+    internal static Rendering.FontStyle LabelStyle(Rendering.ScoreTextMetrics fonts, bool expressive)
+        => fonts.Style(Rendering.TextRole.Dynamics, LabelStyle(expressive));
+
+    /// <summary>The label's em for THIS score: <see cref="DynamicFontSize"/> unless the
+    /// score's <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for <c>dynamics</c>. ONE
+    /// HOME with the draw — <c>SharedRenderer.DrawDynamics</c> spelled the same 2.0 as
+    /// <c>FontSize * 0.5</c> until 2026-09-08, the two-spellings shape HANDOFF 5.2.1⑤ names.</summary>
+    internal static double LabelEm(Rendering.ScoreTextMetrics fonts)
+        => fonts.Size(Rendering.TextRole.Dynamics, DynamicFontSize);
 
     // internal, not private: MarkReserveVersusDrawTests calls it to state that the reserved
     // half-width is half of the DRAWN advance. Nothing else outside this type uses it.
     internal static double LabelHalfWidth(
         Rendering.ScoreTextMetrics fonts, string text, bool expressive)
     {
-        double w = fonts.Advance(text, DynamicFontSize, Rendering.TextRole.Dynamics,
-            LabelStyle(expressive));
+        double w = fonts.Advance(text, LabelEm(fonts), Rendering.TextRole.Dynamics,
+            LabelStyle(fonts, expressive));
         return w / 2.0;
     }
 

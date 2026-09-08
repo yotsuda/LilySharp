@@ -42,11 +42,13 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm:1433 DynamicText grob
     /// LILYPOND-REF: scm/define-grobs.scm:1444 self-alignment-X = CENTER
     /// </remarks>
-    private static void DrawDynamics(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
-        in OssiaShrink os, IDrawingContext gc)
+    private static void DrawDynamics(ScoreTextMetrics fonts, ScoreLayout layout,
+        Dictionary<int, double> sysTopYUp, in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.DynamicLayouts.IsDefaultOrEmpty) return;
-        double fontSize = FontSize * 0.5;
+        // The em from the one home the reservation reads (it was a second spelling of the
+        // same 2.0, `FontSize * 0.5`, until 2026-09-08), through the score's plan.
+        double fontSize = LilySharp.Core.Svg.Layout.DynamicEngraver.LabelEm(fonts);
         foreach (var d in layout.DynamicLayouts)
         {
             string text = NormalizeDynamicText(d.Text);
@@ -60,7 +62,7 @@ internal static partial class SharedRenderer
             double size = os.Size(fontSize, d.StaffIndex);
             // Free expressive text (@text) prints plain italic; dynamic levels keep LP's
             // bold-italic DynamicText face — from the one home the reservation reads.
-            var style = LilySharp.Core.Svg.Layout.DynamicEngraver.LabelStyle(d.IsExpressiveText);
+            var style = LilySharp.Core.Svg.Layout.DynamicEngraver.LabelStyle(fonts, d.IsExpressiveText);
             using (gc.Source(d.SourcePosition))
                 gc.DrawText(text, d.X, y, size, TextRole.Dynamics,
                     style, TextAnchor.Middle, Color.Black);
@@ -337,10 +339,15 @@ internal static partial class SharedRenderer
     /// drawn ink and the reserved ink are the same size. It used to be a local
     /// FontSize * 0.8 (= 3.2), 29.6% larger, with the divergence declared right here.
     /// </remarks>
-    private static void DrawLyrics(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
+    private static void DrawLyrics(ScoreTextMetrics fonts, ScoreLayout layout,
+        Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.LyricLayouts.IsDefaultOrEmpty) return;
-        double lyricFontSize = LilySharp.Core.Svg.EngravingDefaults.LyricTextFontSize;
+        // Through the score's plan — the same call every reservation of a syllable makes
+        // (LyricEngraver.LyricFontSize / LyricStyle), so `fonts { lyrics step -1 }` moves
+        // the drawn ink and the reserved ink together.
+        double lyricFontSize = LilySharp.Core.Svg.Layout.LyricEngraver.LyricFontSize(fonts);
+        var lyricStyle = LilySharp.Core.Svg.Layout.LyricEngraver.LyricStyle(fonts);
         foreach (var l in layout.LyricLayouts)
         {
             if (!sysTopYUp.TryGetValue(l.Item.MeasureIndex, out var syUp)) continue; // other page
@@ -353,10 +360,10 @@ internal static partial class SharedRenderer
             if (l.Item.SourcePosition > 0)
                 using (gc.Source(l.Item.SourcePosition))
                     gc.DrawText(l.Item.Text, l.X, y, lyricFontSize, TextRole.LyricText,
-                        FontStyle.Regular, TextAnchor.Middle, Color.Black);
+                        lyricStyle, TextAnchor.Middle, Color.Black);
             else
                 gc.DrawText(l.Item.Text, l.X, y, lyricFontSize, TextRole.LyricText,
-                    FontStyle.Regular, TextAnchor.Middle, Color.Black);
+                    lyricStyle, TextAnchor.Middle, Color.Black);
             // Hyphen dashes / extender lines: DrawLyricHyphens (LyricHyphen
             // layouts) — the single source, matching LP's grobs.
         }
@@ -479,7 +486,8 @@ internal static partial class SharedRenderer
         if (layout.VoltaBracketLayouts.IsDefaultOrEmpty) return;
         const double thickness = VoltaBracketEngraver.LineThickness;
         double edgeHeight = VoltaBracketEngraver.GetEdgeHeight();
-        double numberSize = VoltaBracketEngraver.NumberFontSize;
+        double numberSize = VoltaBracketEngraver.NumberEm(fonts);
+        var numberStyle = VoltaBracketEngraver.NumberStyle(fonts);
 
         foreach (var v in layout.VoltaBracketLayouts)
         {
@@ -514,10 +522,10 @@ internal static partial class SharedRenderer
                     // OutsideStaffStacker reserves (the offset plus the string's own
                     // InkHeight, which THIS geometry makes exact).
                     var vInk = fonts.Ink(
-                        v.VoltaText, numberSize, TextRole.Volta, FontStyle.Bold);
+                        v.VoltaText, numberSize, TextRole.Volta, numberStyle);
                     double textY = absY - VoltaBracketEngraver.NumberOffsetY - vInk.Top;
                     gc.DrawText(v.VoltaText, v.StartX + VoltaBracketEngraver.NumberOffsetX, textY,
-                        numberSize, TextRole.Volta, FontStyle.Bold, TextAnchor.Start, Color.Black);
+                        numberSize, TextRole.Volta, numberStyle, TextAnchor.Start, Color.Black);
                 }
             }
         }
@@ -534,10 +542,14 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/tuplet-bracket.cc:290 Tuplet_bracket::print
     /// LILYPOND-REF: scm/define-grobs.scm TupletBracket defaults
     /// </remarks>
-    private static void DrawTupletBrackets(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
-        in OssiaShrink os, IDrawingContext gc)
+    private static void DrawTupletBrackets(ScoreTextMetrics fonts, ScoreLayout layout,
+        Dictionary<int, double> sysTopYUp, in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.TupletBracketLayouts.IsDefaultOrEmpty) return;
+        // The number's em and slant through the score's plan — the same one home every
+        // reservation of the number reads (skyline, stacker, slur scorer).
+        double numberEm = TupletBracketEngraver.NumberEm(fonts);
+        var numberStyle = TupletBracketEngraver.NumberStyle(fonts);
         // Was a bare 0.13 here, shadowing EngravingDefaults.TupletBracketThickness — which
         // has carried LilyPond's own 1.6 x line-thickness = 0.16, with its LILYPOND-REF,
         // all along and simply had no reader. Drawing and reserving must come from ONE
@@ -590,8 +602,8 @@ internal static partial class SharedRenderer
                 // bold-upright; it is now LilyPond's size and face, and SkylineBuilder
                 // reserves exactly this ink.
                 gc.DrawText(b.NumberText, midX, midY,
-                    os.Size(TupletBracketEngraver.NumberFontSize, b.StaffIndex), TextRole.Tuplet,
-                    TupletBracketEngraver.NumberFontStyle, TextAnchor.Middle, Color.Black,
+                    os.Size(numberEm, b.StaffIndex), TextRole.Tuplet,
+                    numberStyle, TextAnchor.Middle, Color.Black,
                     VerticalAnchor.Middle);
             }
         }

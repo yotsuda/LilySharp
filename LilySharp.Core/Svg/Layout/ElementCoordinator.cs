@@ -3048,11 +3048,11 @@ internal sealed class ElementCoordinator
                     continue;
 
                 double halfW = fonts.Advance(
-                    t.NumberText, TupletBracketEngraver.NumberFontSize,
-                    Rendering.TextRole.Tuplet, TupletBracketEngraver.NumberFontStyle) / 2.0;
+                    t.NumberText, TupletBracketEngraver.NumberEm(fonts),
+                    Rendering.TextRole.Tuplet, TupletBracketEngraver.NumberStyle(fonts)) / 2.0;
                 double halfH = fonts.InkHeight(
-                    t.NumberText, TupletBracketEngraver.NumberFontSize,
-                    Rendering.TextRole.Tuplet, TupletBracketEngraver.NumberFontStyle) / 2.0;
+                    t.NumberText, TupletBracketEngraver.NumberEm(fonts),
+                    Rendering.TextRole.Tuplet, TupletBracketEngraver.NumberStyle(fonts)) / 2.0;
                 // NumberYUp is staff-spaces above this staff's TOP line (the
                 // layout ran with no staff offset); page device Y down.
                 double cy = staffMiddleDown - EngravingDefaults.StaffMiddle - t.NumberYUp;

@@ -54,6 +54,20 @@ internal static class CustomTextEngraver
     // LILYPOND-REF: define-grobs.scm:3925 padding = 0.5
     private const double Padding = 0.5;
 
+    /// <summary>
+    /// The text's em for THIS score: TextScript declares no font-size, so the paper's own
+    /// text size (<see cref="EngravingDefaults.TextScriptFontSize"/>) — unless the score's
+    /// <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for <c>text</c>. The draw, the
+    /// outside-staff pass and the paging silhouette all read this one call.
+    /// </summary>
+    internal static double Em(Rendering.ScoreTextMetrics fonts)
+        => fonts.Size(Rendering.TextRole.Text, EngravingDefaults.TextScriptFontSize);
+
+    /// <summary>The text's weight and slant: italic (TextScript's font-shape) unless the
+    /// score wrote a style for <c>text</c>.</summary>
+    internal static Rendering.FontStyle Style(Rendering.ScoreTextMetrics fonts)
+        => fonts.Style(Rendering.TextRole.Text, Rendering.FontStyle.Italic);
+
     // Below-staff custom-text baseline, Y-up from the staff middle: 5.5 below the
     // staff top is 3.5 below the middle (the staff top sits 2 above the middle).
     private const double BelowStaffBaselineYUp = 2.0 - 5.5;

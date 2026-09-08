@@ -164,11 +164,11 @@ internal static class PedalEngraver
             }
             return (up, down);
         }
-        double w = fonts.Advance(text, MusicMarkEngraver.PlainTextFontSize,
-            MusicMarkEngraver.TextRoleOf(type), MusicMarkEngraver.TextStyleOf(type));
+        double em = MusicMarkEngraver.PlainMarkEm(fonts, type);
+        var style = MusicMarkEngraver.TextStyleOf(fonts, type);
+        double w = fonts.Advance(text, em, MusicMarkEngraver.TextRoleOf(type), style);
         return TextOutlineSkylines.Place(
-            text, MusicMarkEngraver.PlainTextFontSize,
-            fonts.Face(MusicMarkEngraver.TextRoleOf(type), MusicMarkEngraver.TextStyleOf(type)),
+            text, em, fonts.Face(MusicMarkEngraver.TextRoleOf(type), style),
             xCentre - w / 2, 0);
     }
 

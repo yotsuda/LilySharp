@@ -209,13 +209,13 @@ internal static partial class SharedRenderer
                 var os = new OssiaShrink(ossiaStaves, measureToSystem);
                 DrawTies(layout, measureToSystemTopYUp, os, gc);
                 DrawSlurs(layout, measureToSystemTopYUp, os, gc);
-                DrawDynamics(layout, measureToSystemTopYUp, os, gc);
+                DrawDynamics(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
                 DrawArticulations(layout, measureToSystemTopYUp, os, gc);
-                DrawLyrics(layout, measureToSystemTopYUp, gc);
+                DrawLyrics(score.TextMetrics, layout, measureToSystemTopYUp, gc);
                 DrawHairpins(layout, measureToSystemTopYUp, os, gc);
                 DrawOttavaBrackets(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
                 DrawVoltaBrackets(score.TextMetrics, layout, measureToSystemTopYUp, gc);
-                DrawTupletBrackets(layout, measureToSystemTopYUp, os, gc);
+                DrawTupletBrackets(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
                 DrawTrillSpanners(layout, measureToSystemTopYUp, os, gc);
                 DrawGlissandos(layout, measureToSystemTopYUp, os, gc);
                 DrawArpeggios(layout, measureToSystemTopYUp, os, gc);
@@ -223,13 +223,13 @@ internal static partial class SharedRenderer
                 DrawChordNames(score.TextMetrics, layout, measureToSystemTopYUp, gc);
                 DrawFiguredBass(layout, measureToSystemTopYUp, os, gc);
                 DrawPercentRepeats(layout, measureToSystemTopYUp, os, gc);
-                DrawBarNumbers(layout, measureToSystemTopYUp, gc);
+                DrawBarNumbers(score.TextMetrics, layout, measureToSystemTopYUp, gc);
                 DrawStanzaNumbers(layout, measureToSystemTopYUp, gc);
                 DrawFingerings(fingeringsByPage?[pageIndex], os, gc,
                     fragHost, fragments, pageIndex, page);
                 DrawMusicMarks(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
-                DrawCustomTexts(layout, measureToSystemTopYUp, os, gc);
-                DrawTextSpanners(layout, measureToSystemTopYUp, os, gc);
+                DrawCustomTexts(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
+                DrawTextSpanners(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
                 DrawPedalBrackets(layout, measureToSystemTopYUp, gc);
                 DrawMultiMeasureRests(layout, measureToSystemTopYUp, gc);
                 DrawTieVariants(layout, measureToSystemTopYUp, os, gc);
@@ -264,19 +264,23 @@ internal static partial class SharedRenderer
         // Baselines accumulate DOWN the device; each is emitted in the page's Y-up frame
         // (page-bottom origin): the flipping context turns page.Height − y back into it.
         double top = page.HeaderTop;
+        // Sizes and styles through the score's plan — the same calls HeaderBand.Build made
+        // when it stacked the column, so a `fonts { title step +2 }` moves the reserved
+        // band and the drawn string together.
+        var fonts = score.TextMetrics;
         if (score.Title is { } title && band.TitleBaseline is { } titleBaseline)
         {
             double centerX = page.Width / 2;
             using (SourceScope(gc, score.Header.Title))
                 gc.DrawText(title, centerX, page.Height - (top + titleBaseline),
-                    HeaderBand.TitleFontSize, TextRole.Title, FontStyle.Bold, TextAnchor.Middle);
+                    HeaderBand.TitleEm(fonts), TextRole.Title, HeaderBand.TitleStyle(fonts), TextAnchor.Middle);
         }
         if (score.Composer is { } composer && band.ComposerBaseline is { } composerBaseline)
         {
             double rightX = page.Width - options.MarginLeft;
             using (SourceScope(gc, score.Header.Composer))
                 gc.DrawText(composer, rightX, page.Height - (top + composerBaseline),
-                    HeaderBand.ComposerFontSize, TextRole.Composer, FontStyle.Regular, TextAnchor.End);
+                    HeaderBand.ComposerEm(fonts), TextRole.Composer, HeaderBand.ComposerStyle(fonts), TextAnchor.End);
         }
     }
 

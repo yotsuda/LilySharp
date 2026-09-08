@@ -8,6 +8,26 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Language
 
+- **A `fonts { }` entry carries a size and a style, not only a face.** After a key, in any
+  order: quoted faces, `as serif|sans` (follow a generic family), `step ±n` (LilyPond
+  `font-size` steps relative to the role's default — six steps double), `size n` (an absolute
+  em in staff spaces), and `bold` / `italic` / `regular` (combine; `regular` clears; a
+  written style replaces the engraving's, so `text bold` is bold and upright). `mark "Charis
+  SIL" step +1 bold` is one entry. The size and the style resolve like the face — the role's
+  entry, then its group's, then the engraving — for the roles whose drawing and reserved
+  space both read the plan: `title composer lyricText chordName tempo mark pedal navigation
+  text dynamics barNumber tuplet volta`; on any other role they warn (LYS8018) and the face
+  still binds. A chord symbol's accidental and a metronome mark's note step with their text.
+  The twin writes a `step` as `\override Grob.font-size = #n` (and a style as `font-series`
+  / `font-shape`) in the `\Score` context, the header roles as `\markup \fontsize`; a `size`
+  has no LilyPond spelling and is warned about. **The redirect is spelled `chordName as sans`**
+  — a bare word after a key is now the next key, so the old `chordName serif` opens an empty
+  `serif` entry and is refused with the `as` form to write (no other book wrote it: 0 of the
+  3493 `.lys` on disk hold a `fonts` block). `step`/`size` on a generic family is refused
+  (LYS8015), a value out of range (`step` ±12, `size` 0.5..20) is LYS8016, both sizes in one
+  entry is LYS8017. The editor completes the attributes after a key and inside an open entry,
+  and colours them in the block.
+
 - **A spaced dot inside `<< … >>` holds the member before it one more share.** `<< c . d >>4`
   is two shares against one in the quarter — the swing figure, spelled as the convention
   spells it, `tuplet 3/2 { c4 d8 }` — and `<< c . . d >>4` is `c8. d16`. The dot is a share,

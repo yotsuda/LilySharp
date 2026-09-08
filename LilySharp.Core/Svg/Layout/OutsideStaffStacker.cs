@@ -1722,13 +1722,12 @@ internal static class OutsideStaffStacker
                 }
                 if (!string.IsNullOrEmpty(tb.NumberText))
                 {
-                    double fs = TupletBracketEngraver.NumberFontSize;
+                    double fs = TupletBracketEngraver.NumberEm(fonts);
+                    var tupletStyle = TupletBracketEngraver.NumberStyle(fonts);
                     double halfW = fonts.Advance(
-                        tb.NumberText, fs, TextRole.Tuplet,
-                        TupletBracketEngraver.NumberFontStyle) / 2;
+                        tb.NumberText, fs, TextRole.Tuplet, tupletStyle) / 2;
                     double halfH = fonts.InkHeight(
-                        tb.NumberText, fs, TextRole.Tuplet,
-                        TupletBracketEngraver.NumberFontStyle) / 2;
+                        tb.NumberText, fs, TextRole.Tuplet, tupletStyle) / 2;
                     trackers(sysIdx, tb.StaffIndex).MergeSupport(up: VerticalSkyline.FromBox(
                         tb.NumberX - halfW, tb.NumberX + halfW,
                         tb.NumberYUp + halfH, tb.NumberYUp + halfH, VerticalDirection.Up));
@@ -2058,12 +2057,12 @@ internal static class OutsideStaffStacker
             // (grob::always-vertical-skylines-from-stencil), so the pair replaces the
             // ink box the interval tracker held.
             double width = fonts.Advance(
-                bn.Text, BarNumberEngraver.FontSize, TextRole.BarNumber, FontStyle.Bold);
+                bn.Text, BarNumberEngraver.Em(fonts), TextRole.BarNumber, BarNumberEngraver.Style(fonts));
             double originX = bn.RightAligned ? bn.X - width : bn.X;
             // System-relative Y-up: bn.YUp is Y-up from the system top, entering directly.
             var (bnUp, bnDown) = TextOutlineSkylines.Place(
-                bn.Text, BarNumberEngraver.FontSize,
-                fonts.Face(TextRole.BarNumber, FontStyle.Bold),
+                bn.Text, BarNumberEngraver.Em(fonts),
+                fonts.Face(TextRole.BarNumber, BarNumberEngraver.Style(fonts)),
                 originX, bn.YUp);
             // The tracker of the staff or ROW the number HANGS ON. LilyPond re-parents the
             // grob onto that element and the outside-staff pass then runs inside THAT
@@ -2161,7 +2160,8 @@ internal static class OutsideStaffStacker
             if (!string.IsNullOrEmpty(ts.Text))
             {
                 var ink = fonts.Ink(
-                    ts.Text, TextSpannerEngraver.TextFontSize, TextRole.Text, FontStyle.Italic);
+                    ts.Text, TextSpannerEngraver.TextEm(fonts), TextRole.Text,
+                    TextSpannerEngraver.TextStyle(fonts));
                 top = Math.Max(top, ink.Top);
                 bottom = Math.Max(bottom, -ink.Bottom);
             }
@@ -2236,7 +2236,8 @@ internal static class OutsideStaffStacker
             // 0 about the note column; ledger textscript.x.pen-to-notehead-left). This
             // is what lands a descender over a neighbour's bowls the way
             // avoid_outside_staff_collisions does (ledger textscript.stacked.outline-step).
-            double ctFs = EngravingDefaults.TextScriptFontSize;
+            double ctFs = CustomTextEngraver.Em(fonts);
+            var ctStyle = CustomTextEngraver.Style(fonts);
             // Stack in system-relative Y-up: ct.YUp relative to this staff's WITHIN-
             // SYSTEM middle is ct.YUp + midUp; place, then shift back.
             double midUp = LayoutUtilities.StaffMiddleUpInSystem(systems[sysIdx], ct.StaffIndex);
@@ -2250,7 +2251,7 @@ internal static class OutsideStaffStacker
                 + (2.0 + EngravingDefaults.StaffLineThickness / 2.0) + TextScriptStaffPadding;
             double anchor = Math.Max(ct.YUp + midUp, staffPaddingFloor);
             var (ctUp, ctDown) = TextOutlineSkylines.Place(
-                ct.Text, ctFs, fonts.Face(TextRole.Text, FontStyle.Italic), ct.X, anchor);
+                ct.Text, ctFs, fonts.Face(TextRole.Text, ctStyle), ct.X, anchor);
             double move = trackers(sysIdx, ct.StaffIndex).Place(ctUp, ctDown, OutsideStaffPadding,
                 OutsideStaffHorizontalPadding);
             b[i] = ct with { YUp = anchor + move - midUp };
@@ -2361,13 +2362,14 @@ internal static class OutsideStaffStacker
                         AddBox(v.EndX - half, v.EndX + half, hookTip);       // end hook
                     if (hasText)
                     {
-                        double size = VoltaBracketEngraver.NumberFontSize;
+                        double size = VoltaBracketEngraver.NumberEm(fonts);
+                        var voltaStyle = VoltaBracketEngraver.NumberStyle(fonts);
                         double w = fonts.Advance(
-                            v.VoltaText, size, TextRole.Volta, FontStyle.Bold);
+                            v.VoltaText, size, TextRole.Volta, voltaStyle);
                         double nx = v.StartX + VoltaBracketEngraver.NumberOffsetX;
                         AddBox(nx, nx + w,                                   // the number
                             anchor0 - VoltaBracketEngraver.NumberOffsetY - fonts.InkHeight(
-                                v.VoltaText, size, TextRole.Volta, FontStyle.Bold));
+                                v.VoltaText, size, TextRole.Volta, voltaStyle));
                     }
                 }
 
@@ -2452,15 +2454,17 @@ internal static class OutsideStaffStacker
             //   = grob::always-vertical-skylines-from-stencil.
             if (m.MarkType == MusicMarkType.Tempo)
             {
-                double em = EngravingDefaults.MetronomeMarkFontSize;
+                double em = MetronomeMarkGeometry.Em(fonts);
+                var tempoTextStyle = MetronomeMarkGeometry.TextStyle(fonts);
+                var tempoPlainStyle = MetronomeMarkGeometry.PlainStyle(fonts);
                 double anchor = m.YUp + midUp;
                 var tUp = new VerticalSkyline(VerticalDirection.Up);
                 var tDown = new VerticalSkyline(VerticalDirection.Down);
                 double tx = m.X;
                 bool hasMetronome = m.Text.Length > 0;
 
-                double noteSize = MetronomeMarkGeometry.NoteSize;
-                double noteScale = MetronomeMarkGeometry.NoteScale;
+                double noteSize = MetronomeMarkGeometry.NoteSize(fonts);
+                double noteScale = MetronomeMarkGeometry.NoteScale(fonts);
                 void MergeGlyph(char g, double gx, double gy, GlyphMetrics.BBox box)
                 {
                     var (gUp, gDown) = TextOutlineSkylines.PlaceMusicGlyph(
@@ -2483,18 +2487,18 @@ internal static class OutsideStaffStacker
                 if (m.TempoText != null)
                 {
                     var (mtUp, mtDown) = TextOutlineSkylines.Place(
-                        m.TempoText, em, fonts.Face(TextRole.Tempo, FontStyle.Bold), tx, anchor);
+                        m.TempoText, em, fonts.Face(TextRole.Tempo, tempoTextStyle), tx, anchor);
                     tUp.Merge(mtUp);
                     tDown.Merge(mtDown);
-                    tx += fonts.Advance(m.TempoText, em, TextRole.Tempo, FontStyle.Bold);
+                    tx += fonts.Advance(m.TempoText, em, TextRole.Tempo, tempoTextStyle);
                     if (hasMetronome)
                     {
                         var (pUp, pDown) = TextOutlineSkylines.Place(
-                            "(", em, fonts.Face(TextRole.Tempo),
+                            "(", em, fonts.Face(TextRole.Tempo, tempoPlainStyle),
                             tx + MetronomeMarkGeometry.LeadingSpaceAdvance(fonts, "("), anchor);
                         tUp.Merge(pUp);
                         tDown.Merge(pDown);
-                        tx += fonts.Advance(" (", em, TextRole.Tempo);
+                        tx += fonts.Advance(" (", em, TextRole.Tempo, tempoPlainStyle);
                     }
                 }
                 if (hasMetronome)
@@ -2510,10 +2514,10 @@ internal static class OutsideStaffStacker
                     if (tempoLog > 0)
                     {
                         var att = MetronomeMarkGeometry.StemAttachment(m.TempoBeatUnit);
-                        double stemTh = MetronomeMarkGeometry.StemThickness;
+                        double stemTh = MetronomeMarkGeometry.StemThickness(fonts);
                         double stemRight = tx + att.X * noteScale;
                         double stemTop = centreY
-                            + MetronomeMarkGeometry.StemTopAboveCentre(m.TempoBeatUnit);
+                            + MetronomeMarkGeometry.StemTopAboveCentre(fonts, m.TempoBeatUnit);
                         tUp.Merge(VerticalSkyline.FromBox(stemRight - stemTh, stemRight,
                             centreY + att.Y * noteScale, stemTop, VerticalDirection.Up));
                         tDown.Merge(VerticalSkyline.FromBox(stemRight - stemTh, stemRight,
@@ -2524,17 +2528,17 @@ internal static class OutsideStaffStacker
                     }
                     for (int d = 0; d < m.TempoDots; d++)
                         MergeGlyph(EmmentalerGlyphs.AugmentationDot,
-                            tx + MetronomeMarkGeometry.DotX(m.TempoBeatUnit, d), centreY,
+                            tx + MetronomeMarkGeometry.DotX(fonts, m.TempoBeatUnit, d), centreY,
                             GlyphMetrics.AugmentationDot);
 
                     double noteRight = MetronomeMarkGeometry.NoteRight(
-                        m.TempoBeatUnit, m.TempoDots);
+                        fonts, m.TempoBeatUnit, m.TempoDots);
                     string eq = MetronomeMarkGeometry.EquationText(
                         m.Text, m.TempoText != null);
                     double eqX = tx + noteRight
                         + MetronomeMarkGeometry.LeadingSpaceAdvance(fonts, eq);
                     var (eUp, eDown) = TextOutlineSkylines.Place(
-                        eq, em, fonts.Face(TextRole.Tempo), eqX, anchor);
+                        eq, em, fonts.Face(TextRole.Tempo, tempoPlainStyle), eqX, anchor);
                     tUp.Merge(eUp);
                     tDown.Merge(eDown);
                     if (m.SwingSubdivision != 0)
@@ -2542,7 +2546,7 @@ internal static class OutsideStaffStacker
                         // The swing feel-equation keeps its named box estimate — a
                         // Lily#-own device; the label lives at
                         // MetronomeMarkGeometry.SwingEquationReach.
-                        double sw0 = eqX + fonts.Advance(eq, em, TextRole.Tempo);
+                        double sw0 = eqX + fonts.Advance(eq, em, TextRole.Tempo, tempoPlainStyle);
                         double sw1 = sw0 + MetronomeMarkGeometry.SwingEquationReach;
                         tUp.Merge(VerticalSkyline.FromBox(sw0, sw1,
                             anchor - 0.5, anchor + 2.0, VerticalDirection.Up));
@@ -2568,8 +2572,8 @@ internal static class OutsideStaffStacker
                 && m.MarkType is not (MusicMarkType.Rehearsal
                     or MusicMarkType.SectionLabel or MusicMarkType.Tempo))
             {
-                double fs = MusicMarkEngraver.PlainTextFontSize;
-                var style = MusicMarkEngraver.TextStyleOf(m.MarkType);
+                double fs = MusicMarkEngraver.PlainMarkEm(fonts, m.MarkType);
+                var style = MusicMarkEngraver.TextStyleOf(fonts, m.MarkType);
                 var role = MusicMarkEngraver.TextRoleOf(m.MarkType);
                 double halfW = fonts.Advance(m.Text, fs, role, style) / 2;
                 var (mUp, mDown) = TextOutlineSkylines.Place(
@@ -2696,8 +2700,8 @@ internal static class OutsideStaffStacker
                 // — LilyPond has no "estimated" widths, a mark's X extent is its markup
                 // stencil's. (To-Coda still prices its text only; the coda glyph beside it
                 // stays an unreserved approximation.)
-                double fs = MusicMarkEngraver.PlainTextFontSize;
-                var style = MusicMarkEngraver.TextStyleOf(m.MarkType);
+                double fs = MusicMarkEngraver.PlainMarkEm(fonts, m.MarkType);
+                var style = MusicMarkEngraver.TextStyleOf(fonts, m.MarkType);
                 var role = MusicMarkEngraver.TextRoleOf(m.MarkType);
                 double halfW = fonts.Advance(m.Text, fs, role, style) / 2;
                 var ink = fonts.Ink(m.Text, fs, role, style);

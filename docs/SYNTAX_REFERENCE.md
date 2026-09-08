@@ -477,18 +477,46 @@ fonts {
   sans      "Verdana"                       // chord symbols are the engine's one sans
 
   lyricText "Charis SIL" "Noto Serif CJK JP"  // a fallback chain, most preferred first
-  title     "Cormorant"
-  chordName serif                           // point a role at the OTHER bundled family
+  title     "Cormorant" size 3.8 bold       // a face, an absolute em, a weight
+  chordName as sans                         // point a role at a bundled family
   marks     "Georgia"                       // a whole group at once
-  tempo     "Playfair Display"              // ...and one member of it, overriding the group
+  tempo     "Playfair Display" italic       // ...and one member of it, overriding the group
+  mark      step +1                         // one LilyPond font-size step larger
+  lyrics    step -1                         // the whole group one step smaller
 
   embedded
 }
 ```
 
-**The narrower spelling wins**, in either source order: `role` beats `group` beats
-`serif`/`sans` beats the bundled face. So the `marks`/`tempo` pair above needs no
-special case.
+An entry is a **key followed by attributes**, in any order, and it ends where the next key
+begins — there is no separator. The attributes:
+
+| Attribute | Meaning |
+|---|---|
+| `"Face"` … | the face, or a fallback chain when several |
+| `as serif` / `as sans` | follow a generic family instead of naming a face |
+| `step ±n` | size relative to the role's default, in LilyPond `font-size` steps (six steps double); the twin writes it as `\override Grob.font-size = #n` |
+| `size n` | an absolute em in staff spaces (0.5..20) — not reproduced by the LilyPond twin, so prefer `step` |
+| `bold` `italic` `regular` | weight and slant; `bold italic` combine, `regular` clears, the last word decides |
+
+A written style **replaces** the engraving's own: `text bold` sets a text script bold and
+upright, `tempo italic` sets the marking italic, not bold-italic. One entry takes `step` or
+`size`, not both.
+
+⚠️ **`chordName serif` — a bare family word after a key — is refused** since 2026-09-08:
+a bare word after a key is the next key, so that line opens an empty `serif` entry. Write
+`chordName as serif`. A generic family (`serif`, `sans`) takes quoted faces only; a size
+or a style on it is an error.
+
+**Size and style reach these roles**: `title composer lyricText chordName tempo mark pedal
+navigation text dynamics barNumber tuplet volta` — the ones whose drawing and reserved
+space both read the plan. On any other role the attribute is a **warning** (LYS8018) and
+only the face binds; a group warns only when none of its roles follows.
+
+**The narrower spelling wins**, in either source order and for each attribute on its own:
+`role` beats `group` beats `serif`/`sans` beats the bundled face (size and style have no
+family layer). So the `marks`/`tempo` pair above needs no special case, and `lyrics step -1`
+with `lyricText bold` gives a small bold syllable.
 
 The keys, by group:
 
@@ -519,8 +547,6 @@ ship with the engine.
 
 ⚠️ **`embedded` does one thing**: it subsets the named faces into an exported PDF. It does
 not change how anything is measured or drawn.
-
-Weight and slant belong to the engraving and cannot be set here.
 
 Unknown keys are an error (a binding that reaches nothing looks exactly like one that
 works), a key bound twice in one block is a warning and the last wins, and `mono` is not a

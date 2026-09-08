@@ -592,21 +592,30 @@ quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LY
   silent fallback.
 ## Text fonts (`fonts { … }`)
 
-A face per kind of text. Keys are a generic family, a group, or a single role; the
-NARROWER spelling wins in either source order.
+A face, a size and a style per kind of text. Keys are a generic family, a group, or a
+single role; an entry is the key followed by its attributes in any order and ends at the
+next key; the NARROWER spelling wins in either source order.
 
 ```
 fonts {
   serif     "Georgia"                         // everything serif unless overridden
   sans      "Verdana"                         // chord symbols are the one sans role
   lyricText "Charis SIL" "Noto Serif CJK JP"  // several names = a fallback chain
-  title     "Cormorant"                       // one role
+  title     "Cormorant" size 3.8 bold         // one role: face, absolute em, weight
   marks     "Georgia"                         // a whole group
-  tempo     "Playfair Display"                // ...beats the group above
-  chordName serif                             // point a role at the other bundled family
+  tempo     "Playfair Display" italic         // ...beats the group above; italic replaces bold
+  mark      step +1                           // one LilyPond font-size step larger than default
+  lyrics    step -1                           // the whole group one step smaller
+  chordName as sans                           // point a role at a bundled family (as FAMILY)
   embedded                                    // subset the named faces into the PDF
 }
 ```
+
+Attributes: quoted faces · `as serif|sans` · `step ±n` (relative, magstep 2^(n/6), −12..+12;
+the twin writes it as `\override Grob.font-size`) · `size n` (absolute em in staff spaces,
+0.5..20; NOT reproduced by the twin, prefer `step`) · `bold` `italic` `regular` (combine;
+`regular` clears; a written style REPLACES the engraving's, e.g. `text bold` is bold, not
+bold-italic). One entry takes `step` or `size`, not both.
 
 Groups → roles: `header` → `title composer instrument` · `lyrics` → `lyricText stanza` ·
 `chords` → `chordName fretFrame figuredBass` · `marks` → `tempo mark pedal navigation text
@@ -627,7 +636,11 @@ Rules worth knowing before emitting one:
   warns rather than passing quietly.
 - `embedded` only subsets the named faces into an exported PDF; it changes nothing about
   measuring or drawing.
-- No weight/slant/size here — those belong to the engraving.
+- ⚠️ **`chordName serif` (a bare family word after a key) is refused** — write
+  `chordName as serif`. A bare word after a key is the next key.
+- Size and style reach these roles: `title composer lyricText chordName tempo mark pedal
+  navigation text dynamics barNumber tuplet volta`; on any other role they are a warning
+  (LYS8018) and only the face binds. A generic family (`serif`/`sans`) takes faces only.
 - `mono` is not a key. Unknown keys are an error; a key bound twice is a warning (last wins).
 - **Named blocks, per score**: `fonts NAME { … }` at the top level declares a reusable
   block (it binds nothing by itself); a score references it as `fonts NAME`, or overrides

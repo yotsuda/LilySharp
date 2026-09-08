@@ -1803,7 +1803,10 @@ internal sealed class RenderedGeometry
     {
         var heads = Glyphs
             .Where(g => g.Glyph == EmmentalerGlyphs.NoteheadBlack
-                        && Math.Abs(g.FontSize - MetronomeMarkGeometry.NoteSize) < 1e-9)
+                        // The probe books write no fonts directive, so the bundled plan's
+                        // metronome size is the one drawn.
+                        && Math.Abs(g.FontSize - MetronomeMarkGeometry.NoteSize(
+                            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled)) < 1e-9)
             .ToList();
         if (heads.Count != 1)
         {

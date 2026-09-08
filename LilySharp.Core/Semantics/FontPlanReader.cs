@@ -152,15 +152,33 @@ internal static class FontPlanReader
     private static void ReadEntriesInto(TextFontPlan.Builder builder, FontDeclarationSyntax font, List<Problem> found)
     {
         var boundKeys = new Dictionary<string, TextSpan>(StringComparer.OrdinalIgnoreCase);
+        // The previous entry's canonical key when it was a role or a group — what the old
+        // redirect spelling (`chordName serif`) meant to point at, so the refusal of the
+        // orphaned `serif` can name the `as` form to write instead.
+        string? previousRoleOrGroup = null;
         foreach (var entry in font.Entries)
         {
             var span = entry.KeyToken.Span;
             if (!TextRoles.TryParseKey(entry.Key, out var role, out var group, out var family))
             {
-                found.Add(new Problem(span, DiagnosticCodes.UnknownFontRole,
-                    $"'{entry.Key}' is not a text role, a role group, or a generic family. " +
-                    "Known keys: " + string.Join(", ", TextRoles.AllKeySpellings()) + ".",
-                    IsError: true));
+                // An attribute word that opened an entry stands before any key
+                // (`fonts { step +1 }`): it belongs to nothing.
+                if (TextRoles.IsAttributeWord(entry.Key))
+                    found.Add(new Problem(span, DiagnosticCodes.FontAttributeMisplaced,
+                        $"'{entry.Key}' is an attribute and follows a key; here it follows " +
+                        $"none. Write the role first, e.g. mark {entry.Key}" +
+                        (entry.Key.Equals("step", StringComparison.OrdinalIgnoreCase) ? " +1" :
+                         entry.Key.Equals("size", StringComparison.OrdinalIgnoreCase) ? " 3" :
+                         entry.Key.Equals("as", StringComparison.OrdinalIgnoreCase) ? " sans" : "") + ".",
+                        IsError: true));
+                else
+                    found.Add(new Problem(span, DiagnosticCodes.UnknownFontRole,
+                        $"'{entry.Key}' is not a text role, a role group, or a generic family. " +
+                        "Known keys: " + string.Join(", ", TextRoles.AllKeySpellings()) + ". " +
+                        "After a key, the attributes are: " +
+                        string.Join(", ", TextRoles.AttributeWords) + ".",
+                        IsError: true));
+                previousRoleOrGroup = null;
                 continue;
             }
 
@@ -174,59 +192,323 @@ internal static class FontPlanReader
                     "font block; only the last one takes effect.", IsError: false));
             boundKeys[canonical] = span;
 
+            var attrs = ReadAttributes(entry, canonical, family != null, found);
             bool hasNames = entry.Names.Count > 0;
-            if (!hasNames && entry.Family == null)
-            {
-                // A GENERIC FAMILY takes only quoted names — pointing serif at sans is a
-                // re-classification, not a face choice, and no role reads it — so its
-                // message must not offer the family form the other keys accept.
-                found.Add(new Problem(span, DiagnosticCodes.FontBindingMissingValue,
-                    family != null
-                        ? $"'{canonical}' names no face. Write one or more quoted names, " +
-                          $"e.g. {canonical} \"Georgia\"."
-                        : $"'{canonical}' names no face. Write one or more quoted names, " +
-                          $"e.g. {canonical} \"Georgia\", or a generic family, " +
-                          $"e.g. {canonical} serif.",
-                    IsError: true));
-                boundKeys.Remove(canonical);
-                continue;
-            }
+            bool hasAttributes = attrs.Redirect != null || attrs.Step != null
+                || attrs.Size != null || attrs.Style != null;
+
             if (hasNames && entry.Names.Any(n => n.Length == 0))
             {
                 found.Add(new Problem(span, DiagnosticCodes.FontBindingMissingValue,
                     $"'{canonical}' has an empty face name.", IsError: true));
                 boundKeys.Remove(canonical);
+                previousRoleOrGroup = null;
                 continue;
             }
 
-            // A generic family may only take face NAMES: `serif sans` would say "measure
-            // the serif roles against the sans face", which is not a face choice at all
-            // but a re-classification, and no role reads it.
+            // A generic family takes only quoted NAMES: it is the face table the roles fall
+            // back to, so a redirect (`serif as sans`) would be a re-classification no role
+            // reads, and a size or style on it would reach nothing (refused in
+            // ReadAttributes). Its message must not offer the forms the other keys accept.
             if (family is { } f)
             {
                 if (!hasNames)
                 {
+                    // The old redirect spelling — `chordName serif` — lands here as a bare
+                    // `serif` right after a role or group: answer with the spelling that
+                    // replaced it rather than with "names no face".
+                    string hint = previousRoleOrGroup is { } prev && !hasAttributes
+                        ? $" To point '{prev}' at the {canonical} family write: {prev} as {canonical}."
+                        : "";
                     found.Add(new Problem(span, DiagnosticCodes.FontBindingMissingValue,
                         $"'{canonical}' is a generic family and takes quoted face names, " +
-                        $"not another family. Write {canonical} \"Georgia\".", IsError: true));
+                        $"e.g. {canonical} \"Georgia\"." + hint, IsError: true));
                     boundKeys.Remove(canonical);
+                    previousRoleOrGroup = null;
                     continue;
                 }
                 builder.Family(f, entry.Names);
+                previousRoleOrGroup = null;
                 continue;
             }
+
+            previousRoleOrGroup = canonical;
+            if (!hasNames && !hasAttributes)
+            {
+                found.Add(new Problem(span, DiagnosticCodes.FontBindingMissingValue,
+                    $"'{canonical}' names nothing. Write one or more quoted faces, " +
+                    $"e.g. {canonical} \"Georgia\"; a generic family to follow, " +
+                    $"e.g. {canonical} as serif; a size, e.g. {canonical} step -1; " +
+                    $"or a style, e.g. {canonical} italic.",
+                    IsError: true));
+                boundKeys.Remove(canonical);
+                continue;
+            }
+
+            var binding = new TextFontPlan.Binding(
+                [.. entry.Names], attrs.Redirect, attrs.Step, attrs.Size, attrs.Style);
             if (group is { } gg)
             {
-                if (hasNames)
-                    builder.Group(gg, entry.Names);
-                else
-                    builder.Group(gg, entry.Family!.Value);
-                continue;
+                WarnWhenThePageIgnoresIt(gg, attrs, span, found);
+                builder.Group(gg, binding);
             }
-            if (hasNames)
-                builder.Role(role!.Value, entry.Names);
             else
-                builder.Role(role!.Value, entry.Family!.Value);
+            {
+                WarnWhenThePageIgnoresIt(role!.Value, attrs, span, found);
+                builder.Role(role!.Value, binding);
+            }
         }
     }
+
+    /// <summary>What one entry's attribute tokens asked for, once read.</summary>
+    private readonly record struct Attributes(
+        TextFontFamily? Redirect, double? Step, double? Size, FontStyle? Style);
+
+    /// <summary>The range a <c>step</c> may take: ±12 is a factor of four either way,
+    /// past which no text role on a page is still that role.</summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: a limit of the LANGUAGE, not a geometry — LilyPond's <c>font-size</c>
+    /// is unbounded, and these bounds exist so a typo (<c>step +100</c>) is refused where it
+    /// is written rather than drawn as a page-wide word. They are read by nothing but this
+    /// reader and the diagnostic text, and observed by FontAttributeTests; they disappear
+    /// only if the owner decides a wider range is wanted.
+    /// </remarks>
+    internal const double MaxStep = 12.0;
+
+    /// <summary>The range a <c>size</c> may take, in staff spaces. LILYSHARP-OWN, as
+    /// <see cref="MaxStep"/> is: half a staff space is below any legible text, twenty is a
+    /// page-tall title.</summary>
+    internal const double MinSize = 0.5, MaxSize = 20.0;
+
+    /// <summary>
+    /// Reads the tokens after an entry's key: <c>as FAMILY</c>, <c>step [±]N</c>,
+    /// <c>size N</c>, and the style words, in any order; reports what is malformed and
+    /// what a generic family key may not carry.
+    /// </summary>
+    /// <remarks>
+    /// Styles ACCUMULATE within an entry (<c>bold italic</c> is bold-italic) and
+    /// <c>regular</c> clears them, so the last word decides; a repeated <c>step</c>,
+    /// <c>size</c> or <c>as</c> is the duplicate warning (LYS8005) and the last wins,
+    /// the rule every repeated setting in the language follows.
+    /// </remarks>
+    private static Attributes ReadAttributes(
+        FontDeclarationSyntax.Entry entry, string canonical, bool isFamily, List<Problem> found)
+    {
+        TextFontFamily? redirect = null;
+        double? step = null, size = null;
+        FontStyle? style = null;
+        TextSpan? redirectSpan = null, stepSpan = null, sizeSpan = null;
+        var tokens = entry.Attributes;
+        for (int i = 0; i < tokens.Count; i++)
+        {
+            var t = tokens[i];
+            string word = t.Text;
+            if (t.Kind is SyntaxKind.Plus or SyntaxKind.Minus
+                or SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral)
+            {
+                found.Add(new Problem(t.Span, DiagnosticCodes.FontBindingMissingValue,
+                    $"'{word}' needs 'step' or 'size' before it: {canonical} step {word} " +
+                    $"(relative to the role's default) or {canonical} size {word} (staff spaces).",
+                    IsError: true));
+                continue;
+            }
+            if (word.Equals("as", StringComparison.OrdinalIgnoreCase))
+            {
+                if (isFamily)
+                {
+                    found.Add(new Problem(t.Span, DiagnosticCodes.FontBindingMissingValue,
+                        $"'{canonical}' is a generic family and cannot follow another one: " +
+                        "pointing serif at sans is a re-classification no role reads. " +
+                        $"Write {canonical} \"Georgia\".", IsError: true));
+                    // Skip the family word so it is not also reported as missing.
+                    if (i + 1 < tokens.Count && TextRoles.TryParseFamily(tokens[i + 1].Text, out _))
+                        i++;
+                    continue;
+                }
+                if (i + 1 < tokens.Count && TextRoles.TryParseFamily(tokens[i + 1].Text, out var fam))
+                {
+                    if (redirectSpan is { } earlier)
+                        found.Add(new Problem(earlier, DiagnosticCodes.DuplicateFontBinding,
+                            $"This 'as' is overwritten by a later 'as' in the same entry; " +
+                            "only the last one takes effect.", IsError: false));
+                    redirect = fam;
+                    redirectSpan = t.Span;
+                    i++;
+                    continue;
+                }
+                found.Add(new Problem(t.Span, DiagnosticCodes.FontBindingMissingValue,
+                    $"'as' takes a generic family: {canonical} as serif or {canonical} as sans.",
+                    IsError: true));
+                continue;
+            }
+            if (word.Equals("step", StringComparison.OrdinalIgnoreCase)
+                || word.Equals("size", StringComparison.OrdinalIgnoreCase))
+            {
+                bool isStep = word.Equals("step", StringComparison.OrdinalIgnoreCase);
+                if (isFamily)
+                {
+                    found.Add(new Problem(t.Span, DiagnosticCodes.FontAttributeMisplaced,
+                        $"'{word}' is written on a role or a group, not on the generic family " +
+                        $"'{canonical}', which is a face table and has no size of its own. " +
+                        $"Write it on the role, e.g. lyricText {word} " + (isStep ? "-1" : "2") + ".",
+                        IsError: true));
+                    i += OperandLength(tokens, i + 1);
+                    continue;
+                }
+                int used = OperandLength(tokens, i + 1);
+                if (used == 0 || !TryReadNumber(tokens, i + 1, used, out double value))
+                {
+                    found.Add(new Problem(t.Span, DiagnosticCodes.FontSizeOutOfRange,
+                        isStep
+                            ? $"'step' takes a signed number of LilyPond font-size steps, e.g. {canonical} step +1 or {canonical} step -2."
+                            : $"'size' takes an em in staff spaces, e.g. {canonical} size 2.2.",
+                        IsError: true));
+                    i += used;
+                    continue;
+                }
+                i += used;
+                if (isStep && Math.Abs(value) > MaxStep)
+                {
+                    found.Add(new Problem(t.Span, DiagnosticCodes.FontSizeOutOfRange,
+                        $"'step {FormatNumber(value)}' is outside -{FormatNumber(MaxStep)}..+{FormatNumber(MaxStep)} " +
+                        "(a factor of four either way).", IsError: true));
+                    continue;
+                }
+                if (!isStep && (value < MinSize || value > MaxSize))
+                {
+                    found.Add(new Problem(t.Span, DiagnosticCodes.FontSizeOutOfRange,
+                        $"'size {FormatNumber(value)}' is outside {FormatNumber(MinSize)}..{FormatNumber(MaxSize)} staff spaces.",
+                        IsError: true));
+                    continue;
+                }
+                if (isStep)
+                {
+                    if (stepSpan is { } earlier)
+                        found.Add(new Problem(earlier, DiagnosticCodes.DuplicateFontBinding,
+                            "This 'step' is overwritten by a later 'step' in the same entry; " +
+                            "only the last one takes effect.", IsError: false));
+                    step = value;
+                    stepSpan = t.Span;
+                }
+                else
+                {
+                    if (sizeSpan is { } earlier)
+                        found.Add(new Problem(earlier, DiagnosticCodes.DuplicateFontBinding,
+                            "This 'size' is overwritten by a later 'size' in the same entry; " +
+                            "only the last one takes effect.", IsError: false));
+                    size = value;
+                    sizeSpan = t.Span;
+                }
+                continue;
+            }
+            // The style words. Anything else cannot reach here: the entry walker only
+            // continues an entry on an attribute word, and the others are handled above.
+            if (isFamily)
+            {
+                found.Add(new Problem(t.Span, DiagnosticCodes.FontAttributeMisplaced,
+                    $"'{word}' is written on a role or a group, not on the generic family " +
+                    $"'{canonical}', which is a face table and has no style of its own. " +
+                    $"Write it on the role, e.g. tempo {word.ToLowerInvariant()}.",
+                    IsError: true));
+                continue;
+            }
+            if (word.Equals("regular", StringComparison.OrdinalIgnoreCase))
+                style = FontStyle.Regular;
+            else if (word.Equals("bold", StringComparison.OrdinalIgnoreCase))
+                style = (style ?? FontStyle.Regular) | FontStyle.Bold;
+            else if (word.Equals("italic", StringComparison.OrdinalIgnoreCase))
+                style = (style ?? FontStyle.Regular) | FontStyle.Italic;
+        }
+
+        if (step != null && size != null)
+        {
+            found.Add(new Problem(sizeSpan!.Value, DiagnosticCodes.FontSizeAndStepBothGiven,
+                $"'{canonical}' writes both 'step' and 'size'. They answer the same question " +
+                "two ways - relative to the role's default and absolute - so write one: " +
+                $"{canonical} step {FormatNumber(step.Value, signed: true)} or {canonical} size {FormatNumber(size.Value)}.",
+                IsError: true));
+            step = null;
+            size = null;
+        }
+        return new Attributes(redirect, step, size, style);
+    }
+
+    /// <summary>How many tokens from <paramref name="at"/> spell one number: an optional
+    /// sign and a literal; 0 when there is no number there.</summary>
+    private static int OperandLength(IReadOnlyList<SyntaxTokenNode> tokens, int at)
+    {
+        int i = at;
+        if (i < tokens.Count && tokens[i].Kind is SyntaxKind.Plus or SyntaxKind.Minus)
+            i++;
+        if (i < tokens.Count && tokens[i].Kind is SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral)
+            return i - at + 1;
+        // A lone sign with no literal after it still counts as consumed, so `step +` does
+        // not also report the sign as a stray number.
+        return i - at;
+    }
+
+    private static bool TryReadNumber(IReadOnlyList<SyntaxTokenNode> tokens, int at, int count, out double value)
+    {
+        value = 0;
+        var sb = new System.Text.StringBuilder();
+        for (int i = at; i < at + count; i++)
+            sb.Append(tokens[i].Text);
+        return double.TryParse(sb.ToString(), System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out value);
+    }
+
+    private static string FormatNumber(double value, bool signed = false)
+    {
+        string s = value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+        return signed && value > 0 ? "+" + s : s;
+    }
+
+    /// <summary>
+    /// LYS8018: a size or style on a LEAF role the engraving does not read it for — see
+    /// <see cref="TextRoles.PlanReachOf"/>. A warning, because the face on the same entry
+    /// still binds; but a silent no-op is the outcome this feature was designed to refuse.
+    /// </summary>
+    private static void WarnWhenThePageIgnoresIt(TextRole role, Attributes attrs, TextSpan span, List<Problem> found)
+    {
+        var reach = TextRoles.PlanReachOf(role);
+        string spelling = TextRoles.Spelling(role);
+        if ((attrs.Step != null || attrs.Size != null) && (reach & PlanReach.Size) == 0)
+            found.Add(new Problem(span, DiagnosticCodes.FontAttributeNotFollowed,
+                $"The engraving sets '{spelling}' at its own size in this version and does not " +
+                "read 'step' or 'size' for it; the face still binds. Roles whose size follows the " +
+                "plan: " + string.Join(", ", SizedRoles()) + ".", IsError: false));
+        if (attrs.Style != null && (reach & PlanReach.Style) == 0)
+            found.Add(new Problem(span, DiagnosticCodes.FontAttributeNotFollowed,
+                $"The engraving decides '{spelling}''s weight and slant in this version and does " +
+                "not read a style for it; the face still binds. Roles whose style follows the " +
+                "plan: " + string.Join(", ", StyledRoles()) + ".", IsError: false));
+    }
+
+    /// <summary>
+    /// LYS8018 for a GROUP: warned only when NO leaf of the group follows the plan — a
+    /// group with one following member is doing what the writer asked for the rest.
+    /// </summary>
+    private static void WarnWhenThePageIgnoresIt(TextRoleGroup group, Attributes attrs, TextSpan span, List<Problem> found)
+    {
+        var leaves = TextRoles.LeavesOf(group).ToList();
+        string spelling = TextRoles.Spelling(group);
+        if ((attrs.Step != null || attrs.Size != null)
+            && !leaves.Any(l => (TextRoles.PlanReachOf(l) & PlanReach.Size) != 0))
+            found.Add(new Problem(span, DiagnosticCodes.FontAttributeNotFollowed,
+                $"No role in '{spelling}' reads 'step' or 'size' from the plan in this version " +
+                "(" + string.Join(", ", leaves.Select(TextRoles.Spelling)) + "); the face still binds.",
+                IsError: false));
+        if (attrs.Style != null
+            && !leaves.Any(l => (TextRoles.PlanReachOf(l) & PlanReach.Style) != 0))
+            found.Add(new Problem(span, DiagnosticCodes.FontAttributeNotFollowed,
+                $"No role in '{spelling}' reads a style from the plan in this version " +
+                "(" + string.Join(", ", leaves.Select(TextRoles.Spelling)) + "); the face still binds.",
+                IsError: false));
+    }
+
+    private static IEnumerable<string> SizedRoles() => TextRoles.All
+        .Where(r => (TextRoles.PlanReachOf(r) & PlanReach.Size) != 0).Select(TextRoles.Spelling);
+
+    private static IEnumerable<string> StyledRoles() => TextRoles.All
+        .Where(r => (TextRoles.PlanReachOf(r) & PlanReach.Style) != 0).Select(TextRoles.Spelling);
 }

@@ -194,7 +194,14 @@ internal sealed class LyricEngraver
     /// which is LilyPond's own <c>LyricText</c> size and is shared with the renderer so the
     /// reserved ink and the drawn ink cannot drift apart.
     /// </summary>
-    private static double LyricFontSize => EngravingDefaults.LyricTextFontSize;
+    internal static double LyricFontSize(Rendering.ScoreTextMetrics fonts)
+        => fonts.Size(Rendering.TextRole.LyricText, EngravingDefaults.LyricTextFontSize);
+
+    /// <summary>The syllable's weight and slant: upright (LyricText declares no series or
+    /// shape) unless the score's <c>fonts { }</c> wrote a style for <c>lyricText</c> or
+    /// <c>lyrics</c>. Read by the draw and by every reservation here.</summary>
+    internal static Rendering.FontStyle LyricStyle(Rendering.ScoreTextMetrics fonts)
+        => fonts.Style(Rendering.TextRole.LyricText, Rendering.FontStyle.Regular);
 
     /// <summary>
     /// Staff bottom line to lyric baseline — see
@@ -272,10 +279,10 @@ internal sealed class LyricEngraver
     /// </remarks>
     private static double LyricUpExtent(Rendering.ScoreTextMetrics fonts, string text)
     {
-        double outline = fonts.Ink(text, LyricFontSize, Rendering.TextRole.LyricText).Top;
+        double outline = fonts.Ink(text, LyricFontSize(fonts), Rendering.TextRole.LyricText, LyricStyle(fonts)).Top;
         foreach (char c in text)
             if (IsFullHeightGlyph(c))
-                return Math.Max(outline, LyricFontSize * CjkAscenderEm);
+                return Math.Max(outline, LyricFontSize(fonts) * CjkAscenderEm);
         return outline;
     }
 
@@ -302,10 +309,10 @@ internal sealed class LyricEngraver
     /// </remarks>
     private static double LyricDownExtent(Rendering.ScoreTextMetrics fonts, string text)
     {
-        double outline = -fonts.Ink(text, LyricFontSize, Rendering.TextRole.LyricText).Bottom;
+        double outline = -fonts.Ink(text, LyricFontSize(fonts), Rendering.TextRole.LyricText, LyricStyle(fonts)).Bottom;
         foreach (char c in text)
             if (IsFullHeightGlyph(c))
-                return Math.Max(outline, LyricFontSize * (1.0 - CjkAscenderEm));
+                return Math.Max(outline, LyricFontSize(fonts) * (1.0 - CjkAscenderEm));
         return outline;
     }
 
@@ -1646,9 +1653,9 @@ internal sealed class LyricEngraver
         foreach (char c in text)
             if (IsFullHeightGlyph(c)) return null;
         if (text.Length == 0) return null;
-        double w = fonts.Advance(text, LyricFontSize, Rendering.TextRole.LyricText);
+        double w = fonts.Advance(text, LyricFontSize(fonts), Rendering.TextRole.LyricText, LyricStyle(fonts));
         var (u, d) = TextOutlineSkylines.ResolvedProfile(
-            text, LyricFontSize, fonts.Face(Rendering.TextRole.LyricText),
+            text, LyricFontSize(fonts), fonts.Face(Rendering.TextRole.LyricText, LyricStyle(fonts)),
             LyricSkylineHorizontalPadding);
         return (u, d, lay.X - w / 2.0);
     }
@@ -1663,9 +1670,9 @@ internal sealed class LyricEngraver
             if (IsFullHeightGlyph(c)) { cjk = true; break; }
         if (!cjk && text.Length > 0)
         {
-            double w = fonts.Advance(text, LyricFontSize, Rendering.TextRole.LyricText);
+            double w = fonts.Advance(text, LyricFontSize(fonts), Rendering.TextRole.LyricText, LyricStyle(fonts));
             var (up, down) = TextOutlineSkylines.Place(
-                text, LyricFontSize, fonts.Face(Rendering.TextRole.LyricText),
+                text, LyricFontSize(fonts), fonts.Face(Rendering.TextRole.LyricText, LyricStyle(fonts)),
                 lay.X - w / 2.0, 0, LyricSkylineHorizontalPadding);
             return dir == VerticalDirection.Up ? up : down;
         }
@@ -1954,5 +1961,5 @@ internal sealed class LyricEngraver
     /// Width classes are grouped by similar advance widths in standard serif fonts.
     /// </remarks>
     private double EstimateTextWidth(string text)
-        => _fonts.Advance(text, LyricFontSize, Rendering.TextRole.LyricText);
+        => _fonts.Advance(text, LyricFontSize(_fonts), Rendering.TextRole.LyricText, LyricStyle(_fonts));
 }

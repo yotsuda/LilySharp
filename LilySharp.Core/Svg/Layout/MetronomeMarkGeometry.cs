@@ -41,11 +41,37 @@ namespace LilySharp.Core.Svg.Layout;
 /// </remarks>
 internal static class MetronomeMarkGeometry
 {
-    /// <summary>The note glyphs' scale: \smaller = magstep(-1).</summary>
-    public static double NoteScale => EngravingDefaults.MetronomeMarkNoteMagstep;
+    /// <summary>
+    /// The mark's text em for THIS score: <see cref="EngravingDefaults.MetronomeMarkFontSize"/>
+    /// unless the score's <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for <c>tempo</c>.
+    /// Every piece of the markup — the marking, the parentheses, the equation — and every
+    /// reservation of it reads this one call.
+    /// </summary>
+    public static double Em(ScoreTextMetrics fonts)
+        => fonts.Size(TextRole.Tempo, EngravingDefaults.MetronomeMarkFontSize);
+
+    /// <summary>The textual marking's weight and slant: <c>\bold</c> (format-metronome-markup)
+    /// unless the score wrote a style for <c>tempo</c>.</summary>
+    public static FontStyle TextStyle(ScoreTextMetrics fonts)
+        => fonts.Style(TextRole.Tempo, FontStyle.Bold);
+
+    /// <summary>The parentheses' and the equation's weight and slant: the mark's plain upright
+    /// text font unless the score wrote a style for <c>tempo</c>.</summary>
+    public static FontStyle PlainStyle(ScoreTextMetrics fonts)
+        => fonts.Style(TextRole.Tempo, FontStyle.Regular);
+
+    /// <summary>
+    /// The note glyphs' scale: \smaller = magstep(-1) of the mark's OWN font-size — so a
+    /// <c>fonts { tempo step … }</c> steps the note with the text, as an
+    /// <c>\override MetronomeMark.font-size</c> does in LilyPond, where the markup's
+    /// <c>\smaller</c> is relative to the grob's size.
+    /// </summary>
+    public static double NoteScale(ScoreTextMetrics fonts)
+        => EngravingDefaults.MetronomeMarkNoteMagstep
+           * EmmentalerDesignSize.Magstep(fonts.StepOf(TextRole.Tempo, EngravingDefaults.MetronomeMarkFontSize));
 
     /// <summary>The note glyphs' font size in staff spaces (nominal 4.0 x magstep(-1)).</summary>
-    public static double NoteSize => SharedRenderer.FontSize * NoteScale;
+    public static double NoteSize(ScoreTextMetrics fonts) => SharedRenderer.FontSize * NoteScale(fonts);
 
     /// <summary>duration log of a beat unit (1 = whole ... 16 = sixteenth).</summary>
     // LILYPOND-REF: lily/duration.cc — log2 of the denominator.
@@ -81,12 +107,12 @@ internal static class MetronomeMarkGeometry
     // LILYPOND-REF: scm/define-markup-commands.scm:5566-5569 note-by-number,
     // stem-length = size-factor * max(3, log-1); :5575 stemy = dir * stem-length
     // (measured in the head's own frame, whose origin is the head centre line).
-    public static double StemTopAboveCentre(int beatUnit)
-        => Log(beatUnit) > 0 ? Math.Max(3, Log(beatUnit) - 1) * NoteScale : 0.0;
+    public static double StemTopAboveCentre(ScoreTextMetrics fonts, int beatUnit)
+        => Log(beatUnit) > 0 ? Math.Max(3, Log(beatUnit) - 1) * NoteScale(fonts) : 0.0;
 
     /// <summary>Stem thickness, scaled (note-by-number stem-thickness 0.13).</summary>
     // LILYPOND-REF: scm/define-markup-commands.scm:5571-5574 note-by-number stem-thickness.
-    public static double StemThickness => 0.13 * NoteScale;
+    public static double StemThickness(ScoreTextMetrics fonts) => 0.13 * NoteScale(fonts);
 
     /// <summary>
     /// The up-stem attachment point on the head, UNSCALED (staff spaces about the head
@@ -110,22 +136,23 @@ internal static class MetronomeMarkGeometry
     /// so its head bottom sits ON the baseline; a stemmed unit tops out at the stem
     /// (plus the 8th flag's small rise above it), the whole note at its own head.
     /// </summary>
-    public static double NoteTop(int beatUnit)
+    public static double NoteTop(ScoreTextMetrics fonts, int beatUnit)
     {
+        double scale = NoteScale(fonts);
         var box = HeadBox(beatUnit);
-        double centre = -box.Bottom * NoteScale;   // head centre above the baseline
+        double centre = -box.Bottom * scale;   // head centre above the baseline
         if (Log(beatUnit) == 0)
-            return centre + box.Top * NoteScale;
-        double top = StemTopAboveCentre(beatUnit);
+            return centre + box.Top * scale;
+        double top = StemTopAboveCentre(fonts, beatUnit);
         if (Log(beatUnit) >= 3)
-            top += GlyphMetrics.Flag8thUp.Top * NoteScale;
+            top += GlyphMetrics.Flag8thUp.Top * scale;
         return centre + top;
     }
 
     /// <summary>The dot glyph's ink width (note-by-number's <c>dotwid</c>), scaled.</summary>
     // LILYPOND-REF: scm/define-markup-commands.scm:5607-5608 note-by-number —
     //   dotwid = interval-length (ly:stencil-extent dot X).
-    public static double DotWidth => GlyphMetrics.AugmentationDot.Width * NoteScale;
+    public static double DotWidth(ScoreTextMetrics fonts) => GlyphMetrics.AugmentationDot.Width * NoteScale(fonts);
 
     /// <summary>
     /// X of the k-th augmentation dot's origin from the note's origin: the dot run
@@ -135,21 +162,22 @@ internal static class MetronomeMarkGeometry
     // LILYPOND-REF: scm/define-markup-commands.scm:5609-5614 note-by-number dots
     //   (2 x dotwid apart); :5674-5682 translate to head extent right + dotwid;
     //   :5664-5668 the +0.5 X shift for a short up-stem flag (dir 1 < 1.15).
-    public static double DotX(int beatUnit, int k)
-        => HeadBox(beatUnit).Right * NoteScale + DotWidth + 2 * k * DotWidth
+    public static double DotX(ScoreTextMetrics fonts, int beatUnit, int k)
+        => HeadBox(beatUnit).Right * NoteScale(fonts) + DotWidth(fonts) + 2 * k * DotWidth(fonts)
            + (Log(beatUnit) > 2 ? 0.5 : 0.0);
 
     /// <summary>The note piece's ink RIGHT edge from its origin: the head's width —
     /// widened by an 8th flag, whose ink hangs off the stem past the head (the concat
     /// advances by the note STENCIL's extent, flag included) — and by the dot run.</summary>
-    public static double NoteRight(int beatUnit, int dots)
+    public static double NoteRight(ScoreTextMetrics fonts, int beatUnit, int dots)
     {
-        double right = HeadBox(beatUnit).Right * NoteScale;
+        double scale = NoteScale(fonts);
+        double right = HeadBox(beatUnit).Right * scale;
         if (Log(beatUnit) >= 3)
             right = Math.Max(right,
-                right - StemThickness / 2.0 + GlyphMetrics.Flag8thUp.Right * NoteScale);
+                right - StemThickness(fonts) / 2.0 + GlyphMetrics.Flag8thUp.Right * scale);
         if (dots > 0)
-            right = Math.Max(right, DotX(beatUnit, dots - 1) + DotWidth);
+            right = Math.Max(right, DotX(fonts, beatUnit, dots - 1) + DotWidth(fonts));
         return right;
     }
 
@@ -166,8 +194,8 @@ internal static class MetronomeMarkGeometry
     /// draw must carry the space as an offset (SVG collapses a drawn leading space).
     /// </summary>
     public static double LeadingSpaceAdvance(ScoreTextMetrics fonts, string rest)
-        => fonts.Advance(" " + rest, EngravingDefaults.MetronomeMarkFontSize, TextRole.Tempo)
-           - fonts.Advance(rest, EngravingDefaults.MetronomeMarkFontSize, TextRole.Tempo);
+        => fonts.Advance(" " + rest, Em(fonts), TextRole.Tempo, PlainStyle(fonts))
+           - fonts.Advance(rest, Em(fonts), TextRole.Tempo, PlainStyle(fonts));
 
     /// <summary>Reach of the swing feel-equation drawn right of the count (lead gap +
     /// the drawn pairs). LILYSHARP-OWN: the shuffle equation is Lily#'s own device with
@@ -183,32 +211,34 @@ internal static class MetronomeMarkGeometry
         ScoreTextMetrics fonts,
         string count, string? tempoText, int beatUnit, int dots, int swingSubdivision)
     {
-        double em = EngravingDefaults.MetronomeMarkFontSize;
+        double em = Em(fonts);
+        var textStyle = TextStyle(fonts);
+        var plainStyle = PlainStyle(fonts);
         double x = 0.0, top = 0.0, bottom = 0.0;
         bool hasMetronome = count.Length > 0;
         if (tempoText != null)
         {
-            var tInk = fonts.Ink(tempoText, em, TextRole.Tempo, FontStyle.Bold);
+            var tInk = fonts.Ink(tempoText, em, TextRole.Tempo, textStyle);
             top = Math.Max(top, tInk.Top);
             bottom = Math.Min(bottom, tInk.Bottom);
-            x += fonts.Advance(tempoText, em, TextRole.Tempo, FontStyle.Bold);
+            x += fonts.Advance(tempoText, em, TextRole.Tempo, textStyle);
             if (!hasMetronome)
                 return (x, top, bottom);
-            var pInk = fonts.Ink("(", em, TextRole.Tempo);
+            var pInk = fonts.Ink("(", em, TextRole.Tempo, plainStyle);
             top = Math.Max(top, pInk.Top);
             bottom = Math.Min(bottom, pInk.Bottom);
-            x += fonts.Advance(" (", em, TextRole.Tempo);
+            x += fonts.Advance(" (", em, TextRole.Tempo, plainStyle);
         }
         // The note: bottom ON the baseline (DOWN-aligned), top at its stem/head.
-        top = Math.Max(top, NoteTop(beatUnit));
-        x += NoteRight(beatUnit, dots);
+        top = Math.Max(top, NoteTop(fonts, beatUnit));
+        x += NoteRight(fonts, beatUnit, dots);
         // " = N" — ONE text run whose leading space is the concat's separator, so its
         // advance is one measurement of the whole string, as one stencil's extent is.
         string eq = EquationText(count, tempoText != null);
-        var eqInk = fonts.Ink(eq, em, TextRole.Tempo);
+        var eqInk = fonts.Ink(eq, em, TextRole.Tempo, plainStyle);
         top = Math.Max(top, eqInk.Top);
         bottom = Math.Min(bottom, eqInk.Bottom);
-        x += fonts.Advance(" " + eq, em, TextRole.Tempo);
+        x += fonts.Advance(" " + eq, em, TextRole.Tempo, plainStyle);
         if (swingSubdivision != 0)
             x += SwingEquationReach;
         return (x, top, bottom);

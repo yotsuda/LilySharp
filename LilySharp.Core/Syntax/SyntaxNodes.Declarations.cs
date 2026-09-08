@@ -469,28 +469,42 @@ public sealed class FontDeclarationSyntax : SyntaxNode
     }
 
     /// <summary>
-    /// One <c>KEY VALUE…</c> entry of the block form.
+    /// One <c>KEY ATTRIBUTE…</c> entry of the block form.
     /// </summary>
     /// <param name="Key">The key as written — a role, a group, or a generic family.</param>
     /// <param name="KeyToken">The key's token, for a diagnostic's span.</param>
-    /// <param name="Names">Quoted face names, in preference order; empty for a redirect.</param>
-    /// <param name="Family">The generic family this entry redirects to, when it does.</param>
+    /// <param name="Names">Quoted face names, in preference order; empty when the entry
+    /// names no face.</param>
+    /// <param name="Attributes">Every other token after the key, in source order: the
+    /// attribute words (<c>as</c> / <c>step</c> / <c>size</c> / <c>bold</c> / <c>italic</c>
+    /// / <c>regular</c>, see <c>TextRoles.AttributeWords</c>) and the sign and number
+    /// tokens that follow <c>step</c> and <c>size</c>. What they MEAN is
+    /// <c>FontPlanReader</c>'s to say; this node only knows where the entry ends.</param>
     public readonly record struct Entry(
         string Key,
         SyntaxTokenNode KeyToken,
         IReadOnlyList<string> Names,
-        Rendering.TextFontFamily? Family);
+        IReadOnlyList<SyntaxTokenNode> Attributes);
 
     /// <summary>
     /// The block's entries. Empty for the one-liner form.
     /// </summary>
     /// <remarks>
     /// An entry runs from its key to the next KEY — there is no separator in this
-    /// language — so a bare word is read as a value only when it is a generic family and
-    /// as a key otherwise. That is why <c>sans</c> and <c>serif</c> are the only bare
-    /// words a value may be: any other bare word would be indistinguishable from the
+    /// language — so a bare word CONTINUES the open entry only when it is one of the
+    /// closed attribute vocabulary (<c>as step size bold italic regular</c>) and opens the
+    /// next entry otherwise. Numbers and signs continue the entry they stand in (they are
+    /// <c>step</c>'s and <c>size</c>'s operands). That closed vocabulary is why the
+    /// grammar has no separator: any other bare word would be indistinguishable from the
     /// next entry's key, and a grammar where <c>lyrics Georgia</c> silently binds nothing
     /// is worse than one that refuses the unquoted name.
+    /// <para>
+    /// ⚠️ A bare family word after a key (<c>chordName serif</c>) does NOT continue the
+    /// entry any more (2026-09-08): the redirect is spelled <c>chordName as serif</c>, so a
+    /// role and a family may never both be bare words in one entry. The old spelling opens
+    /// a <c>serif</c> entry with no face, which the reader refuses and answers with the
+    /// <c>as</c> form.
+    /// </para>
     /// </remarks>
     public IReadOnlyList<Entry> Entries
     {
@@ -501,15 +515,15 @@ public sealed class FontDeclarationSyntax : SyntaxNode
             var entries = new List<Entry>();
             SyntaxTokenNode? keyToken = null;
             var names = new List<string>();
-            Rendering.TextFontFamily? redirect = null;
+            var attributes = new List<SyntaxTokenNode>();
 
             void Flush()
             {
                 if (keyToken != null)
-                    entries.Add(new Entry(keyToken.Text, keyToken, [.. names], redirect));
+                    entries.Add(new Entry(keyToken.Text, keyToken, [.. names], [.. attributes]));
                 keyToken = null;
                 names.Clear();
-                redirect = null;
+                attributes.Clear();
             }
 
             for (int i = NameToken != null ? 3 : 2; i < SlotCount; i++)
@@ -527,13 +541,26 @@ public sealed class FontDeclarationSyntax : SyntaxNode
                         // Read by Embedded; it ends the entry it trails.
                         Flush();
                         continue;
+                    case SyntaxKind.Plus or SyntaxKind.Minus
+                        or SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral:
+                        // An operand of step/size. Before any key it belongs to nothing
+                        // and is dropped here; the reader cannot name it, but the parser
+                        // already refused a block that opens with one (LYS8006).
+                        if (keyToken != null)
+                            attributes.Add(token);
+                        continue;
                 }
-                // A bare word: a family word CONTINUES the open entry, anything else
-                // starts a new one.
-                if (keyToken != null && names.Count == 0 && redirect == null &&
-                    Rendering.TextRoles.TryParseFamily(token.Text, out var fam))
+                // A bare word: an attribute word CONTINUES the open entry — and so does the
+                // family word right after `as`, which is that attribute's operand — anything
+                // else opens a new one, including an attribute word before any key, which the
+                // reader then names as misplaced (LYS8015).
+                if (keyToken != null
+                    && (Rendering.TextRoles.IsAttributeWord(token.Text)
+                        || (attributes.Count > 0
+                            && attributes[^1].Text.Equals("as", StringComparison.OrdinalIgnoreCase)
+                            && Rendering.TextRoles.TryParseFamily(token.Text, out _))))
                 {
-                    redirect = fam;
+                    attributes.Add(token);
                     continue;
                 }
                 Flush();

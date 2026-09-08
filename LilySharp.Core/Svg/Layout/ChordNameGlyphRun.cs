@@ -134,8 +134,30 @@ internal static class ChordNameGlyphRun
     /// for. <c>SharedRenderer.FontSize</c> is the full-size music em, so this is that em one
     /// step down, the same shape every other reduced music glyph in the tree is drawn at.
     /// </remarks>
-    internal static double AccidentalGlyphEm(double staffFontSize)
-        => staffFontSize * EmmentalerDesignSize.Magstep(AccidentalFontSizeStep);
+    internal static double AccidentalGlyphEm(double staffFontSize, ScoreTextMetrics fonts)
+        => staffFontSize * EmmentalerDesignSize.Magstep(AccidentalStep(fonts));
+
+    /// <summary>
+    /// The symbol's text em for THIS score: <see cref="EngravingDefaults.ChordNameFontSize"/>
+    /// unless the score's <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for
+    /// <c>chordName</c> (or <c>chords</c>). Every reader of the em — the draw, the run's
+    /// pieces, the row skyline — asks here.
+    /// </summary>
+    internal static double Em(ScoreTextMetrics fonts)
+        => fonts.Size(TextRole.ChordName, EngravingDefaults.ChordNameFontSize);
+
+    /// <summary>The symbol's weight and slant: <see cref="EngravingDefaults.ChordNameFontStyle"/>
+    /// (regular; ChordName declares no series) unless the score wrote a style.</summary>
+    internal static FontStyle Style(ScoreTextMetrics fonts)
+        => fonts.Style(TextRole.ChordName, EngravingDefaults.ChordNameFontStyle);
+
+    /// <summary>
+    /// The accidental glyph's step for THIS score: one under the NAME's step, whatever the
+    /// score made that — in LilyPond the <c>\smaller</c> inside the markup is relative to the
+    /// grob's font-size, so a stepped chord name steps its accidental with it.
+    /// </summary>
+    internal static double AccidentalStep(ScoreTextMetrics fonts)
+        => AccidentalFontSizeStep + fonts.StepOf(TextRole.ChordName, EngravingDefaults.ChordNameFontSize);
 
     /// <summary>
     /// The alteration a chord-name spelling puts at <paramref name="i"/>, in half steps, or
@@ -158,9 +180,9 @@ internal static class ChordNameGlyphRun
     }
 
     /// <summary>The glyph and its page-space box for an alteration in half steps.</summary>
-    private static (char Glyph, GlyphMetrics.BBox Box) GlyphFor(int alteration)
+    private static (char Glyph, GlyphMetrics.BBox Box) GlyphFor(int alteration, double step)
     {
-        var m = GlyphMetrics.AtFontSize(AccidentalFontSizeStep);
+        var m = GlyphMetrics.AtFontSize(step);
         return alteration switch
         {
             >= 2 => (EmmentalerGlyphs.AccidentalDoubleSharp, m.AccidentalDoubleSharp),
@@ -201,8 +223,10 @@ internal static class ChordNameGlyphRun
         if (string.IsNullOrEmpty(text)) return ImmutableArray<Piece>.Empty;
 
         var pieces = ImmutableArray.CreateBuilder<Piece>();
-        double em = EngravingDefaults.ChordNameFontSize;
-        double magstep = EmmentalerDesignSize.Magstep(AccidentalFontSizeStep);
+        double em = Em(fonts);
+        var style = Style(fonts);
+        double accidentalStep = AccidentalStep(fonts);
+        double magstep = EmmentalerDesignSize.Magstep(accidentalStep);
         double x = 0;
         int runStart = 0;
 
@@ -210,10 +234,8 @@ internal static class ChordNameGlyphRun
         {
             if (end <= runStart) return;
             string run = text[runStart..end];
-            double advance = fonts.Advance(
-                run, em, TextRole.ChordName, EngravingDefaults.ChordNameFontStyle);
-            var (bottom, top) = fonts.Ink(
-                run, em, TextRole.ChordName, EngravingDefaults.ChordNameFontStyle);
+            double advance = fonts.Advance(run, em, TextRole.ChordName, style);
+            var (bottom, top) = fonts.Ink(run, em, TextRole.ChordName, style);
             pieces.Add(new Piece(run, '\0', IsGlyph: false, x, advance, x, 0, bottom, top));
             x += advance;
         }
@@ -228,7 +250,7 @@ internal static class ChordNameGlyphRun
             }
             var (length, alteration) = accidental.Value;
             FlushText(i);
-            var (glyph, box) = GlyphFor(alteration);
+            var (glyph, box) = GlyphFor(alteration, accidentalStep);
             double kern = NarrowGlyph(alteration) ? KernBeforeNarrowGlyph : 0;
             double raise = (ShortGlyph(alteration) ? 0.3 : 0.6) * magstep;
             pieces.Add(new Piece(
@@ -265,9 +287,7 @@ internal static class ChordNameGlyphRun
     internal static double Width(ScoreTextMetrics fonts, string text)
     {
         if (IsPlainText(text))
-            return fonts.Advance(
-                text, EngravingDefaults.ChordNameFontSize,
-                TextRole.ChordName, EngravingDefaults.ChordNameFontStyle);
+            return fonts.Advance(text, Em(fonts), TextRole.ChordName, Style(fonts));
         double w = 0;
         foreach (var p in Pieces(fonts, text)) w += p.Advance;
         return w;
@@ -277,9 +297,7 @@ internal static class ChordNameGlyphRun
     internal static (double Bottom, double Top) Ink(ScoreTextMetrics fonts, string text)
     {
         if (IsPlainText(text))
-            return fonts.Ink(
-                text, EngravingDefaults.ChordNameFontSize,
-                TextRole.ChordName, EngravingDefaults.ChordNameFontStyle);
+            return fonts.Ink(text, Em(fonts), TextRole.ChordName, Style(fonts));
         double bottom = 0, top = 0;
         bool any = false;
         foreach (var p in Pieces(fonts, text))

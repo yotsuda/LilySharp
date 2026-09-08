@@ -511,6 +511,7 @@ internal sealed partial class Parser
         if (name != null)
             tokens.Add(name);
         tokens.Add(Advance()); // {
+        bool sawWord = false;
         while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
         {
             // A key is any word: role names like `text` and `mark` lex as identifiers,
@@ -518,8 +519,19 @@ internal sealed partial class Parser
             // `volta` are already KEYWORDS of the language. Matching by token kind would
             // therefore need the keyword list mirrored here — a second home for it — so
             // the key is matched by its TEXT, in FontDeclarationSyntax, against the one
-            // vocabulary in TextRoles.
+            // vocabulary in TextRoles. The attribute words (`as step size bold italic
+            // regular`) are words too, and are told apart from keys in the same place.
             if (Check(SyntaxKind.StringLiteral) || IsWordLikeToken(Current))
+            {
+                sawWord = true;
+                tokens.Add(Advance());
+                continue;
+            }
+            // A number, signed or not, is `step`'s or `size`'s operand (`step +1`,
+            // `step -1`, `size 3.8`) and is kept for the reader — once a word has opened an
+            // entry for it to belong to. Before any word it belongs to nothing.
+            if (sawWord && (Check(SyntaxKind.Plus) || Check(SyntaxKind.Minus)
+                || Check(SyntaxKind.IntegerLiteral) || Check(SyntaxKind.DecimalLiteral)))
             {
                 tokens.Add(Advance());
                 continue;
@@ -528,8 +540,9 @@ internal sealed partial class Parser
             // one stray token does not swallow the rest of the score.
             var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
             _diagnostics.Error(span, DiagnosticCodes.FontBindingMissingValue,
-                "A 'fonts { }' entry is a key followed by quoted face names or a generic " +
-                "family, e.g. lyricText \"Charis SIL\" — '" + Current.Text + "' is neither.");
+                "A 'fonts { }' entry is a key followed by quoted face names and attributes " +
+                "(as serif|sans, step +N, size N, bold, italic, regular), e.g. " +
+                "lyricText \"Charis SIL\" step -1 — '" + Current.Text + "' is none of these.");
             tokens.Add(Advance());
         }
         if (Check(SyntaxKind.CloseBrace))

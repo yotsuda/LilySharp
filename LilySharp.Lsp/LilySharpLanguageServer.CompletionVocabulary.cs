@@ -855,11 +855,13 @@ public sealed partial class LilySharpLanguageServer
     /// <param name="key">The key the caret sits after. A generic family narrows the list.</param>
     /// <remarks>
     /// <para>
-    /// A role or a group takes a quoted face, or a generic family to FOLLOW instead
-    /// (<c>chordName serif</c>). A GENERIC FAMILY takes only quoted names: pointing
-    /// <c>serif</c> at <c>sans</c> is a re-classification and no role reads it, which
-    /// <c>FontPlanReader</c> refuses with LYS8006 — "a generic family takes quoted face
-    /// names, not another family".
+    /// A role or a group takes a quoted face and any of the attributes — <c>as FAMILY</c>
+    /// to follow a generic family, <c>step ±N</c> / <c>size N</c>, <c>bold</c> /
+    /// <c>italic</c> / <c>regular</c> (2026-09-08; the spellings are
+    /// <see cref="TextRoles.AttributeWords"/>, read from Core). A GENERIC FAMILY takes only
+    /// quoted names: pointing <c>serif</c> at <c>sans</c> is a re-classification and no role
+    /// reads it, and it has no size or style of its own — <c>FontPlanReader</c> refuses
+    /// both (LYS8006 / LYS8015).
     /// </para>
     /// <para>
     /// ⚠️ The list was flat until 2026-08-18 and offered the redirect after EVERY key, so
@@ -867,10 +869,13 @@ public sealed partial class LilySharpLanguageServer
     /// about to refuse. The reader's own message even says the offer must not be made
     /// there — it "must not offer the family form the other keys accept" — and the editor
     /// made it anyway, because the value list did not know which key it was answering for.
+    /// ⚠️ And until 2026-09-08 it offered the bare family words (<c>chordName serif</c>),
+    /// which is the spelling the <c>as</c> form replaced; offering it now would complete
+    /// a line the reader refuses.
     /// </para>
     /// <para>
     /// The quoted item comes first and is preselected, so the common motion (name a face)
-    /// stays one keystroke; the redirect is a deliberate second choice.
+    /// stays one keystroke; the attributes are the deliberate second choices.
     /// </para>
     /// </remarks>
     private static CompletionList? _fontValuesForRole;
@@ -902,26 +907,127 @@ public sealed partial class LilySharpLanguageServer
 
         return _fontValuesForRole ??= new CompletionList
         {
+            Items = [quoted, .. FontAttributeItems()],
+        };
+    }
+
+    /// <summary>
+    /// The attribute items an open entry may still take — one per word of
+    /// <see cref="TextRoles.AttributeWords"/>, spelled with its operand where it has one.
+    /// </summary>
+    private static IEnumerable<CompletionItem> FontAttributeItems()
+    {
+        foreach (string word in TextRoles.AttributeWords)
+        {
+            yield return word switch
+            {
+                "as" => new CompletionItem
+                {
+                    Label = "as",
+                    Kind = CompletionItemKind.Keyword,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = "as ${1|serif,sans|}",
+                    SortText = "1",
+                    Detail = "Follow a generic family instead of naming a face (as serif / as sans)",
+                },
+                "step" => new CompletionItem
+                {
+                    Label = "step",
+                    Kind = CompletionItemKind.Keyword,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = "step ${1:+1}",
+                    SortText = "2",
+                    Detail = "Size relative to the role's default, in LilyPond font-size steps (six to a doubling); the twin writes it as font-size",
+                },
+                "size" => new CompletionItem
+                {
+                    Label = "size",
+                    Kind = CompletionItemKind.Keyword,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = "size ${1:2.2}",
+                    SortText = "3",
+                    Detail = "Absolute em in staff spaces (0.5..20); not reproduced by the LilyPond twin - prefer step",
+                },
+                "bold" => new CompletionItem
+                {
+                    Label = "bold",
+                    Kind = CompletionItemKind.Keyword,
+                    SortText = "4",
+                    Detail = "Bold; replaces the engraving's weight and slant (bold italic combine)",
+                },
+                "italic" => new CompletionItem
+                {
+                    Label = "italic",
+                    Kind = CompletionItemKind.Keyword,
+                    SortText = "4",
+                    Detail = "Italic; replaces the engraving's weight and slant (bold italic combine)",
+                },
+                _ => new CompletionItem
+                {
+                    Label = word,
+                    Kind = CompletionItemKind.Keyword,
+                    SortText = "4",
+                    Detail = "Upright, normal weight - turns the engraving's default style off",
+                },
+            };
+        }
+    }
+
+    /// <summary>At <c>fonts { chordName as |</c>: the two generic families.</summary>
+    private static CompletionList? _fontAsCompletions;
+
+    internal static CompletionList GetFontAsCompletions()
+        => _fontAsCompletions ??= new CompletionList
+        {
             Items =
             [
-                quoted,
                 new CompletionItem
                 {
                     Label = "serif",
                     Kind = CompletionItemKind.Value,
-                    SortText = "1",
                     Detail = "Follow whatever the serif family is bound to",
                 },
                 new CompletionItem
                 {
                     Label = "sans",
                     Kind = CompletionItemKind.Value,
-                    SortText = "1",
                     Detail = "Follow whatever the sans family is bound to",
                 },
             ],
         };
-    }
+
+    /// <summary>At <c>fonts { mark step |</c> / <c>size |</c>: a number belongs there, which
+    /// no list can offer — an empty list, so the popup does not propose pitches.</summary>
+    private static readonly CompletionList _fontNumberCompletions = new() { Items = [] };
+
+    internal static CompletionList GetFontNumberCompletions() => _fontNumberCompletions;
+
+    /// <summary>
+    /// Inside an entry that already has its key and at least one value (<c>fonts { mark
+    /// "X" |</c>): the attributes the entry may still take, then every key that would open
+    /// the next entry — the union, because the grammar has no separator and either may
+    /// come next.
+    /// </summary>
+    private static CompletionList? _fontEntryContinuationCompletions;
+
+    internal static CompletionList GetFontEntryContinuationCompletions()
+        => _fontEntryContinuationCompletions ??= new CompletionList
+        {
+            Items =
+            [
+                .. FontAttributeItems(),
+                .. GetFontBlockCompletions().Items.Select(k => new CompletionItem
+                {
+                    Label = k.Label,
+                    Kind = k.Kind,
+                    InsertTextFormat = k.InsertTextFormat,
+                    InsertText = k.InsertText,
+                    Detail = k.Detail,
+                    Command = k.Command,
+                    SortText = "5" + k.Label,
+                }),
+            ],
+        };
 
     /// <summary>
     /// Enumerates the installed font families and, for the embeddable ones (class

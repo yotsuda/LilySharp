@@ -261,8 +261,13 @@ Mode           = 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian'
 
 FontDecl       = 'fonts' , [ Identifier ] , FontBlock ;
 FontBlock      = '{' , { FontEntry } , '}' ;
-FontEntry      = FontKey , ( String , { String } | GenericFamily )
+FontEntry      = FontKey , { FontAttribute }
                | 'embedded' ;
+FontAttribute  = String                          (* a face; several = a fallback chain *)
+               | 'as' , GenericFamily            (* follow a generic family instead      *)
+               | 'step' , [ '+' | '-' ] , Number (* LilyPond font-size steps, relative   *)
+               | 'size' , Number                 (* an absolute em in staff spaces       *)
+               | 'bold' | 'italic' | 'regular' ;
 FontKey        = GenericFamily | RoleGroup | Role ;
 GenericFamily  = 'serif' | 'sans' | 'sans-serif' ;
 RoleGroup      = 'header' | 'lyrics' | 'chords' | 'marks' | 'numbers' | 'notation' ;
@@ -303,10 +308,55 @@ Role           = 'title' | 'composer' | 'instrument'          (* header  *)
    and a CJK face for the syllables it has no glyph for. SVG hands the whole list to the
    viewer; PNG and PDF take the first name that resolves on this machine.
 
-   A ROLE MAY POINT AT A GENERIC FAMILY instead of naming a face (`chordName serif`),
+   AN ENTRY IS A KEY FOLLOWED BY ATTRIBUTES, in any order, and ends at the next key — the
+   attribute words (`as step size bold italic regular`) and the keys are closed vocabularies
+   and a face is always quoted, so no separator is needed. `mark "Charis SIL" step +1 bold`
+   binds a face, a size and a weight in one entry; a later entry on the same key replaces
+   the whole binding (warned, LYS8005).
+
+   A ROLE MAY POINT AT A GENERIC FAMILY instead of naming a face (`chordName as sans`),
    which also moves what the LAYOUT measures it against — the only way to do that, since
-   both sides are faces this engine ships. A generic family itself takes only quoted
-   names: `serif sans` would be a re-classification, not a face choice, and is refused.
+   both sides are faces this engine ships. ⚠️ THE FAMILY WORD FOLLOWS `as` (2026-09-08):
+   a bare `chordName serif` used to mean the same thing, but a bare word after a key is
+   now the NEXT KEY, so that spelling opens an empty `serif` entry and is refused with the
+   `as` form to write. A generic family itself takes only quoted names: `serif as sans`
+   would be a re-classification, not a face choice, and is refused; so are a size or a
+   style on it (LYS8015) — a family is a face table, not a role.
+
+   SIZE: `step ±n` is LilyPond's `font-size` — n magsteps (2^(n/6)) relative to the role's
+   ENGRAVING default, so `barNumber step +1` means "one step larger than a bar number is",
+   and it survives the default moving when a port lands. It is the primary form for a
+   second reason: the LilyPond twin writes it as `\override BarNumber.font-size = #1`
+   (`lysc ly`), so a score that uses it stays comparable. `size n` is the absolute em in
+   staff spaces (0.5..20) for the writer who needs a number; the twin cannot write it
+   (there is no LilyPond spelling that composes with the grob's own size) and warns, so
+   its geometry is NOT reproduced by the twin. One entry takes one of the two (LYS8017);
+   a step outside ±12 or a size outside the range is LYS8016.
+
+   STYLE: `bold`, `italic`, `regular` — `bold italic` combine, `regular` clears; the last
+   word decides. A written style REPLACES the engraving's decision for that role rather
+   than adding to it: `tempo italic` sets the marking italic, not bold-italic, and
+   `text regular` turns a TextScript's italic off.
+
+   RESOLUTION, per attribute: the role's own entry, then its group's, then the engraving's
+   default — the same narrower-wins rule as the face, applied to the size and to the style
+   independently, so `lyrics step -1` and `lyricText bold` compose (a small bold syllable).
+   A leaf that writes any size ends the search: `lyricText size 3` is not scaled by
+   `lyrics step -1`.
+
+   ⚠️ NOT EVERY ROLE READS ITS SIZE AND STYLE FROM THE PLAN YET. The face reaches every
+   role; the size and the style reach the roles whose every reader — the draw, the space
+   reserved for it, the collision skyline — asks the plan (TextRoles.PlanReachOf, held to
+   the page by a test): title, composer, lyricText, chordName, tempo, mark, pedal,
+   navigation, text, dynamics, barNumber, tuplet, volta. An attribute on another role is a
+   WARNING (LYS8018) rather than a silent no-op — the face on the same entry still binds.
+   A group warns only when none of its roles follows.
+
+   A chord symbol's accidental (an Emmentaler glyph one step under the name) and the
+   metronome mark's note glyph (\smaller of the mark) step with their text, as they do
+   under a LilyPond font-size override; the boxed label's frame padding scales with its
+   step (LilyPond's box-padding × magstep). The sustain pedal's "Ped." is a glyph run and
+   does not follow `pedal step`.
 
    `mono` is NOT a key: no text in this engine is monospace, and a binding that reaches
    nothing looks exactly like one that works. An unknown key is an ERROR for the same
@@ -337,8 +387,8 @@ Role           = 'title' | 'composer' | 'instrument'          (* header  *)
    ⚠️ `embedded` DOES ONE THING: it subsets the named faces into an exported PDF. It is not
    a switch on how anything is measured or drawn.
 
-   Weight and slant are the engraving's, not the score's: there is no way to ask for
-   italic here. *)
+   Weight and slant and size ARE the score's since 2026-09-08 — `bold` / `italic` /
+   `regular` and `step` / `size` above — for the roles that read them. *)
 
 (* NAMED BLOCKS, AND THE PER-SCORE REFERENCE (fonts and paper share this shape).
    Without a name the block is the FILE DEFAULT — one per file, every score that
@@ -368,8 +418,11 @@ Role           = 'title' | 'composer' | 'instrument'          (* header  *)
    fonts {
      serif     "Georgia"
      lyricText "Charis SIL" "Noto Serif CJK JP"
-     chordName serif
-     title     "Cormorant"
+     chordName as serif
+     title     "Cormorant" size 3.8 bold
+     mark      "Charis SIL" step +1
+     lyrics    step -1
+     tempo     italic
      embedded
    }
 *)

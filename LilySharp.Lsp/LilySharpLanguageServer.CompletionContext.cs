@@ -425,6 +425,14 @@ public sealed partial class LilySharpLanguageServer
         AfterFontKeyword,
         FontBlock,
         AfterFontRoleKey,
+        /// <summary><c>fonts { chordName as |</c> — the two generic families.</summary>
+        AfterFontAs,
+        /// <summary><c>fonts { mark step |</c> / <c>size |</c> — a number belongs, which no list serves.</summary>
+        AfterFontNumber,
+        /// <summary>Inside an entry that already has its key (<c>fonts { mark "X" |</c>,
+        /// <c>fonts { mark step +1 |</c>): the attributes that may still follow, and the
+        /// keys that would open the next entry.</summary>
+        FontEntryOpen,
         AfterPaperKeyword,
         PaperBlock,
         PaperSpecBlock,
@@ -467,6 +475,54 @@ public sealed partial class LilySharpLanguageServer
     /// <c>instrument piano-|</c> the partial word is "piano-", and the preceding
     /// word must still come out as "instrument".
     /// </summary>
+    /// <summary>
+    /// The last KEY written in the enclosing <c>fonts { … }</c> block before
+    /// <paramref name="offset"/> — the entry the caret is still inside — or null when no
+    /// key has been written yet. Quoted faces are skipped whole; a word that is not a key
+    /// (an attribute, a number) leaves the last key standing.
+    /// </summary>
+    internal static string? LastFontKeyBefore(string text, int offset)
+    {
+        // Back to the block's `{` — a fonts block nests nothing, so the nearest unquoted
+        // `{` before the caret is its own.
+        int open = offset - 1;
+        bool inString = false;
+        for (; open >= 0; open--)
+        {
+            char c = text[open];
+            if (c == '"') inString = !inString;
+            else if (c == '{' && !inString) break;
+        }
+        if (open < 0)
+            return null;
+        string? lastKey = null;
+        int i = open + 1;
+        while (i < offset)
+        {
+            char c = text[i];
+            if (c == '"')
+            {
+                int close = text.IndexOf('"', i + 1);
+                if (close < 0 || close >= offset) break;
+                i = close + 1;
+                continue;
+            }
+            if (char.IsLetter(c))
+            {
+                int start = i;
+                while (i < offset && (char.IsLetterOrDigit(text[i]) || text[i] == '_' || text[i] == '-')) i++;
+                // A partial word under the caret is what is being typed, not a key written.
+                if (i >= offset) break;
+                string word = text[start..i];
+                if (TextRoles.TryParseKey(word, out _, out _, out _))
+                    lastKey = word;
+                continue;
+            }
+            i++;
+        }
+        return lastKey;
+    }
+
     internal static string WordBeforeCursor(string text, int offset)
     {
         static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '-';
@@ -598,9 +654,22 @@ public sealed partial class LilySharpLanguageServer
             if (IsInsideStringLiteral(text, offset))
                 return CompletionContext.AfterFontName;
             // `fonts { serif |` — a bound key takes quoted faces, and a role or group may
-            // also be redirected to a generic family (`chordName serif`).
+            // also take the attributes (`chordName as sans`, `mark step +1 bold`).
             if (TextRoles.TryParseKey(prevWord, out _, out _, out _))
                 return CompletionContext.AfterFontRoleKey;
+            // `… as |` — the generic family the key follows.
+            if (prevWord.Equals("as", StringComparison.OrdinalIgnoreCase))
+                return CompletionContext.AfterFontAs;
+            // `… step |` / `… size |` — a number, which no list can offer.
+            if (prevWord.Equals("step", StringComparison.OrdinalIgnoreCase)
+                || prevWord.Equals("size", StringComparison.OrdinalIgnoreCase))
+                return CompletionContext.AfterFontNumber;
+            // After a face or an attribute of an OPEN entry (`mark "X" |`, `mark bold |`)
+            // the entry may continue with another attribute or the next key may begin —
+            // unless the open entry is a generic family, which takes faces alone.
+            if (LastFontKeyBefore(text, offset) is { } openKey
+                && !(TextRoles.TryParseKey(openKey, out _, out _, out var fam) && fam != null))
+                return CompletionContext.FontEntryOpen;
             // Anywhere else in the block a KEY is what belongs.
             return CompletionContext.FontBlock;
         }

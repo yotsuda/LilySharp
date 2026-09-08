@@ -403,4 +403,82 @@ public static class TextRoles
             if (r != TextRole.SystemBrace)
                 yield return Spelling(r);
     }
+
+    /// <summary>
+    /// The words an entry may carry AFTER its key besides quoted face names: the redirect
+    /// (<c>as serif</c>), the two sizes (<c>step ±n</c>, <c>size n</c>) and the three
+    /// styles (<c>bold</c>, <c>italic</c>, <c>regular</c>).
+    /// </summary>
+    /// <remarks>
+    /// ONE HOME, read by <c>FontDeclarationSyntax.Entries</c> (which word CONTINUES an entry
+    /// rather than opening the next one), by <c>FontPlanReader</c> (what each means), by the
+    /// LSP's completion and by the TextMate grammar's colouring — a copy in any of those is
+    /// the drift this repo keeps meeting. A bare word that is neither a key nor one of these
+    /// opens a new entry, which the reader then refuses as an unknown key (LYS8004).
+    /// <para>
+    /// ⚠️ THESE ARE NOT RESERVED WORDS. Like the keys, they are the language's words only
+    /// between <c>fonts {</c> and its <c>}</c>; <c>part step { }</c> compiles.
+    /// </para>
+    /// </remarks>
+    public static readonly IReadOnlyList<string> AttributeWords =
+        ["as", "step", "size", "bold", "italic", "regular"];
+
+    /// <summary>True when <paramref name="word"/> is one of <see cref="AttributeWords"/>
+    /// (case-insensitive, like the keys).</summary>
+    public static bool IsAttributeWord(string word)
+    {
+        foreach (var w in AttributeWords)
+            if (string.Equals(word, w, StringComparison.OrdinalIgnoreCase))
+                return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Which of a role's typographic attributes the engraving reads from the score's
+    /// <see cref="TextFontPlan"/>: the face always; the SIZE and the STYLE only where every
+    /// reader of that role's em and weight — the draw, the reservation, the skyline — asks
+    /// <see cref="ScoreTextMetrics.Size"/> / <see cref="ScoreTextMetrics.Style"/>.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS TABLE IS A CLAIM ABOUT THE ENGRAVING, and a test holds it to the page:
+    /// <c>FontAttributeTests.TheReachTable_IsWhatThePageDoes</c> renders every role with
+    /// <c>step +6</c> and asserts that the roles listed here double their drawn em and the
+    /// roles not listed do not move at all. <c>FontBindingValidator</c> reads the same table
+    /// to WARN (LYS8018) on an attribute the page would ignore — the worst outcome, decided
+    /// when this was designed (2026-09-07), is a role that silently disregards its plan.
+    /// <para>
+    /// The roles outside the table (2026-09-08) still draw their size from a literal at the
+    /// draw site or from a glyph run in the music font, where a text em has no meaning:
+    /// instrument names, stanza numbers, fret frames, figured bass and fingering (Emmentaler
+    /// digits), part-combine labels, ottava labels, bend labels, tab technique letters, and
+    /// the three notation roles. Each one that moves into the table needs every reader of
+    /// its em rerouted first; the test above is what says when it has.
+    /// </para>
+    /// </remarks>
+    public static PlanReach PlanReachOf(TextRole role) => role switch
+    {
+        TextRole.Title or TextRole.Composer
+            or TextRole.LyricText
+            or TextRole.ChordName
+            or TextRole.Tempo or TextRole.Mark or TextRole.Pedal or TextRole.Navigation
+            or TextRole.Text or TextRole.Dynamics
+            or TextRole.BarNumber or TextRole.Tuplet or TextRole.Volta
+            => PlanReach.Size | PlanReach.Style,
+        _ => PlanReach.None,
+    };
+}
+
+/// <summary>
+/// Which attributes of a <c>fonts { }</c> entry the engraving honours for a role — see
+/// <see cref="TextRoles.PlanReachOf"/>. The FACE is always honoured and is not a flag here.
+/// </summary>
+[Flags]
+public enum PlanReach
+{
+    /// <summary>Only the face; <c>step</c>/<c>size</c>/<c>bold</c>/<c>italic</c> are warned about.</summary>
+    None = 0,
+    /// <summary><c>step</c> and <c>size</c> reach the page.</summary>
+    Size = 1,
+    /// <summary><c>bold</c>, <c>italic</c> and <c>regular</c> reach the page.</summary>
+    Style = 2,
 }

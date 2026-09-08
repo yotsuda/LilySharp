@@ -85,7 +85,7 @@ internal static class MusicMarkEngraver
     /// ⚠️ THE STYLE IS NOT IN THIS MAPPING. Weight and slant are the engraving's decision (a
     /// sostenuto word is italic, a sustain word is not) and a <c>font</c> directive does not
     /// touch them — <c>IDrawingContext.DrawText</c> splits the two parameters for the same
-    /// reason. It has its own one home beside this one, <see cref="TextStyleOf"/>: separate
+    /// reason. It has its own one home beside this one, <see cref="TextStyleOf(MusicMarkType)"/>: separate
     /// because a binding reaches the role and never the style, not because either may be
     /// spelled twice.
     /// </para>
@@ -187,6 +187,24 @@ internal static class MusicMarkEngraver
             : FontStyle.Italic;
 
     /// <summary>
+    /// The style a plain-text mark is DRAWN AND MEASURED in for THIS score: the engraving's
+    /// (<see cref="TextStyleOf(MusicMarkType)"/>) unless the score's <c>fonts { }</c> wrote
+    /// <c>bold</c>/<c>italic</c>/<c>regular</c> for the mark's role (<c>pedal</c> /
+    /// <c>navigation</c>). Every site that draws or reserves such a mark asks this overload;
+    /// the one-argument form is the default it falls back to and nothing else.
+    /// </summary>
+    internal static FontStyle TextStyleOf(ScoreTextMetrics fonts, MusicMarkType type)
+        => fonts.Style(TextRoleOf(type), TextStyleOf(type));
+
+    /// <summary>
+    /// The em a plain-text mark is set at for THIS score — <see cref="PlainTextFontSize"/>
+    /// unless the score's <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for the mark's
+    /// role. The same one-home rule as <see cref="TextStyleOf(ScoreTextMetrics, MusicMarkType)"/>.
+    /// </summary>
+    internal static double PlainMarkEm(ScoreTextMetrics fonts, MusicMarkType type)
+        => fonts.Size(TextRoleOf(type), PlainTextFontSize);
+
+    /// <summary>
     /// How wide a plain (unboxed, non-symbol) mark's word is drawn — the text families'
     /// advance, or the sustain pedal's glyph run.
     /// </summary>
@@ -200,7 +218,7 @@ internal static class MusicMarkEngraver
     internal static double PlainMarkWidth(ScoreTextMetrics fonts, MusicMarkType type, string text)
         => IsGlyphPedal(type)
             ? SustainPedalExtent(text).Width
-            : fonts.Advance(text, PlainTextFontSize, TextRoleOf(type), TextStyleOf(type));
+            : fonts.Advance(text, PlainMarkEm(fonts, type), TextRoleOf(type), TextStyleOf(fonts, type));
 
     /// <summary>
     /// Whether this mark's word is set in the MUSIC font rather than in a text face —
@@ -211,7 +229,7 @@ internal static class MusicMarkEngraver
     /// the one pedal grob whose stencil is <c>ly:sustain-pedal::print</c> rather than
     /// <c>ly:text-interface::print</c>.
     /// LILYPOND-REF: scm/define-grobs.scm:3190-3208 SostenutoPedal, piano-pedal-script-interface
-    /// — text, which is why <see cref="TextStyleOf"/> still answers for it.
+    /// — text, which is why <see cref="TextStyleOf(MusicMarkType)"/> still answers for it.
     /// LILYPOND-REF: scm/define-grobs.scm:4148-4166 UnaCordaPedal, piano-pedal-script-interface
     /// — text likewise, and this predicate answers for neither.
     /// </remarks>
@@ -1241,8 +1259,8 @@ internal static class MusicMarkEngraver
     /// </summary>
     internal static (double TextW, double GlyphW) ToCodaStencilWidths(ScoreTextMetrics fonts)
     {
-        double textW = fonts.Advance("To ", PlainTextFontSize, TextRole.Navigation,
-            TextStyleOf(MusicMarkType.ToCoda));
+        double textW = fonts.Advance("To ", PlainMarkEm(fonts, MusicMarkType.ToCoda),
+            TextRole.Navigation, TextStyleOf(fonts, MusicMarkType.ToCoda));
         double glyphW = 4.0 * 0.8 * 0.42; // approx advance of scripts.coda at the draw's size
         return (textW, glyphW);
     }
@@ -1526,9 +1544,25 @@ internal static class MusicMarkEngraver
     internal static double LabelFontSizeStep(MusicMarkType type)
         => type == MusicMarkType.Rehearsal ? 2.0 : 1.5;
 
-    /// <summary>A boxed label's em, in staff spaces — 2.771822 / 2.616256.</summary>
-    internal static double LabelEm(MusicMarkType type)
+    /// <summary>A boxed label's ENGRAVING em, in staff spaces — 2.771822 / 2.616256.</summary>
+    internal static double LabelEngravingEm(MusicMarkType type)
         => TextFontEm * Magstep(LabelFontSizeStep(type));
+
+    /// <summary>
+    /// A boxed label's em for THIS score: <see cref="LabelEngravingEm"/> unless the score's
+    /// <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for <c>mark</c>. Every site that
+    /// draws or reserves a label reads this, so the frame, the ink and the box a chord row is
+    /// spaced against cannot come apart on a score that writes one.
+    /// </summary>
+    internal static double LabelEm(ScoreTextMetrics fonts, MusicMarkType type)
+        => fonts.Size(TextRole.Mark, LabelEngravingEm(type));
+
+    /// <summary>
+    /// A boxed label's weight and slant for THIS score: bold (Lily#'s own decision — see the
+    /// section note above) unless the score's <c>fonts { }</c> wrote a style for <c>mark</c>.
+    /// </summary>
+    internal static FontStyle LabelStyle(ScoreTextMetrics fonts)
+        => fonts.Style(TextRole.Mark, FontStyle.Bold);
 
     /// <summary>
     /// How far the frame stands outside the string's INK, per side.
@@ -1540,14 +1574,21 @@ internal static class MusicMarkEngraver
     /// lays a rule of <c>line-thickness</c> OUTSIDE it. MEASURED: LilyPond's boxed extent
     /// is the plain one + 0.703969 for all eight texts tried, and 0.703969 / 2 =
     /// 0.2 x magstep(2) + 0.1 exactly.
+    /// <para>
+    /// The "prevailing magstep" is the label's own font-size PLUS whatever the score's
+    /// <c>fonts { mark step … }</c> added — in LilyPond an <c>\override RehearsalMark.font-size</c>
+    /// scales the box padding with the text, so the padding follows the plan here too.
+    /// </para>
     /// </remarks>
-    internal static double LabelBoxMargin(MusicMarkType type)
-        => LabelBoxPadding * Magstep(LabelFontSizeStep(type)) + EngravingDefaults.LineThickness;
+    internal static double LabelBoxMargin(ScoreTextMetrics fonts, MusicMarkType type)
+        => LabelBoxPadding
+           * Magstep(LabelFontSizeStep(type) + fonts.StepOf(TextRole.Mark, LabelEngravingEm(type)))
+           + EngravingDefaults.LineThickness;
 
     /// <summary>The string's ink about its baseline, at the label's own em.</summary>
     internal static (double Bottom, double Top) LabelInk(
         ScoreTextMetrics fonts, MusicMarkType type, string text)
-        => fonts.Ink(text, LabelEm(type), TextRole.Mark, FontStyle.Bold);
+        => fonts.Ink(text, LabelEm(fonts, type), TextRole.Mark, LabelStyle(fonts));
 
     /// <summary>
     /// Half the drawn frame's height — the string's ink plus the frame, about the box centre
@@ -1557,14 +1598,14 @@ internal static class MusicMarkEngraver
         ScoreTextMetrics fonts, MusicMarkType type, string text)
     {
         var ink = LabelInk(fonts, type, text);
-        return (ink.Top - ink.Bottom) / 2 + LabelBoxMargin(type);
+        return (ink.Top - ink.Bottom) / 2 + LabelBoxMargin(fonts, type);
     }
 
     /// <summary>Half the drawn frame's width.</summary>
     internal static double LabelBoxHalfWidth(
         ScoreTextMetrics fonts, MusicMarkType type, string text)
-        => fonts.Advance(text, LabelEm(type), TextRole.Mark, FontStyle.Bold) / 2
-           + LabelBoxMargin(type);
+        => fonts.Advance(text, LabelEm(fonts, type), TextRole.Mark, LabelStyle(fonts)) / 2
+           + LabelBoxMargin(fonts, type);
 
     /// <summary>
     /// How far above the anchor staff's MIDDLE line a boxed label's frame bottom stands when
@@ -1695,7 +1736,7 @@ internal static class MusicMarkEngraver
     /// </remarks>
     internal static double LabelBaselineBelowCentre(
         ScoreTextMetrics fonts, MusicMarkType type, string text)
-        => LabelBoxHalfHeight(fonts, type, text) - LabelBoxMargin(type)
+        => LabelBoxHalfHeight(fonts, type, text) - LabelBoxMargin(fonts, type)
            + LabelInk(fonts, type, text).Bottom;
 
     /// <summary>

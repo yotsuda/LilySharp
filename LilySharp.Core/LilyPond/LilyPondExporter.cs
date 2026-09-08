@@ -329,12 +329,16 @@ public sealed class LilyPondExporter
 
         CollectPhrases(root);
 
+        var render = root.DescendantNodes<RenderDeclarationSyntax>().FirstOrDefault();
+        // The score's resolved fonts plan — for the SIZE and STYLE attributes the twin
+        // writes as overrides (EmitFontOverrides); the faces stay unwritten (EmitHeader).
+        _fontPlan = ResolveFontPlan(tree, root, render);
+
         EmitHeader(root);
 
         var parts = root.DescendantNodes<PartDeclarationSyntax>().ToList();
         var sections = root.DescendantNodes<SectionDeclarationSyntax>().ToList();
         var form = PrimaryForm(root);
-        var render = root.DescendantNodes<RenderDeclarationSyntax>().FirstOrDefault();
         CollectInstrumentNames(tree);
         // Before the part variables: EmitMark asks whether a part's @chord marks have a
         // ChordNames stream of their own while it writes that part's music.
@@ -408,6 +412,146 @@ public sealed class LilyPondExporter
         EmitChordTracks(root, render, form, sections);
         EmitScore(render, parts, partVars);
         return _sb.ToString();
+    }
+
+    // ---- Fonts: size and style ------------------------------------------------
+
+    /// <summary>The plan the exported score resolves its text through — the page's own
+    /// (<see cref="PageModel"/>, so the twin and the page cannot read two plans), or the
+    /// file's unnamed default when the file has no score block.</summary>
+    private Rendering.TextFontPlan _fontPlan = Rendering.TextFontPlan.Default;
+
+    private Rendering.TextFontPlan ResolveFontPlan(SyntaxTree tree, SyntaxNode root, RenderDeclarationSyntax? render)
+    {
+        if (render != null && PageModel(tree, render) is { } page)
+            return page.Fonts;
+        // No score: the file default, read the way the collector reads it
+        // (MeasureCollector.Definitions — the unnamed top-level block).
+        var file = root.DescendantNodes<FontDeclarationSyntax>()
+            .FirstOrDefault(f => f.NameToken == null && f.IsBlock && !Semantics.FontPlanReader.IsInsideRender(f));
+        return file != null ? Semantics.FontPlanReader.Read(file, out _) : Rendering.TextFontPlan.Default;
+    }
+
+    /// <summary>
+    /// The grobs a text role's <c>step</c> and style reach in the twin, or empty for a role
+    /// the twin spells another way (the header markups, the navigation markups) or not at
+    /// all (a Lily#-own label with no LilyPond grob).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A ROLE IS NOT A GROB, and the map is an approximation stated as one: Lily#'s
+    /// <c>mark</c> is both RehearsalMark and SectionLabel, <c>text</c> is TextScript and
+    /// TextSpanner, <c>pedal</c> is the two TEXT pedals (the sustain pedal is a glyph run
+    /// on both sides and its size does not follow the plan on the page either). The
+    /// grob names are LilyPond 2.26's (scm/define-grobs.scm); a role with no entry here is
+    /// warned about, not silently dropped.
+    /// </remarks>
+    private static string[] TwinGrobsOf(Rendering.TextRole role) => role switch
+    {
+        Rendering.TextRole.Instrument => ["InstrumentName"],
+        Rendering.TextRole.LyricText => ["LyricText"],
+        Rendering.TextRole.Stanza => ["StanzaNumber"],
+        Rendering.TextRole.ChordName => ["ChordName"],
+        Rendering.TextRole.FretFrame => ["FretBoard"],
+        Rendering.TextRole.FiguredBass => ["BassFigure"],
+        Rendering.TextRole.Tempo => ["MetronomeMark"],
+        Rendering.TextRole.Mark => ["RehearsalMark", "SectionLabel"],
+        Rendering.TextRole.Pedal => ["SostenutoPedal", "UnaCordaPedal"],
+        Rendering.TextRole.Text => ["TextScript", "TextSpanner"],
+        Rendering.TextRole.Dynamics => ["DynamicText"],
+        Rendering.TextRole.PartCombine => ["CombineTextScript"],
+        Rendering.TextRole.BarNumber => ["BarNumber"],
+        Rendering.TextRole.Fingering => ["Fingering"],
+        Rendering.TextRole.Tuplet => ["TupletNumber"],
+        Rendering.TextRole.Volta => ["VoltaBracket"],
+        Rendering.TextRole.Ottava => ["OttavaBracket"],
+        Rendering.TextRole.ClefOctave => ["ClefModifier"],
+        Rendering.TextRole.TabFret => ["TabNoteHead"],
+        _ => [],
+    };
+
+    /// <summary>A number as LilyPond's Scheme reader takes it: <c>#1</c>, <c>#-1</c>, <c>#1.5</c>.</summary>
+    private static string LyNumber(double value)
+        => "#" + value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// The <c>\override</c> lines the plan's <c>step</c> and style attributes become, for
+    /// the <c>\Score</c> context of the twin's <c>\layout</c> — one per grob the role
+    /// reaches. <c>size</c> is not written: an absolute em in staff spaces has no
+    /// LilyPond spelling that composes with the grob's own <c>font-size</c>, which is the
+    /// whole reason <c>step</c> is the primary form (HANDOFF §2F F-fonts).
+    /// </summary>
+    /// <remarks>
+    /// The style is written as BOTH <c>font-series</c> and <c>font-shape</c>, because on
+    /// the page a written style REPLACES the engraving's (TextFontPlan.StyleOf): a
+    /// <c>text bold</c> turns TextScript's italic off, so the twin must say
+    /// <c>font-shape = #'upright</c> beside <c>font-series = #'bold</c> or it would draw
+    /// bold-italic where Lily# draws bold.
+    /// </remarks>
+    private string FontOverrideLines()
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (var (role, b) in _fontPlan.SizedOrStyledLeaves())
+        {
+            string spelling = Rendering.TextRoles.Spelling(role);
+            if (b.Size is { } size)
+                _warnings.Add($"fonts {spelling} size {size.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)} "
+                              + "is not exported: an absolute em has no LilyPond spelling in the twin; write step instead");
+            // The header and navigation roles are spelled in their markups, not here.
+            if (role is Rendering.TextRole.Title or Rendering.TextRole.Composer or Rendering.TextRole.Navigation)
+                continue;
+            var grobs = TwinGrobsOf(role);
+            if (grobs.Length == 0)
+            {
+                if (b.Step != null || b.Style != null)
+                    _warnings.Add($"fonts {spelling}: its step/style is not exported — the twin has no LilyPond grob for that label");
+                continue;
+            }
+            foreach (var grob in grobs)
+            {
+                if (b.Step is { } step)
+                    sb.Append("      \\override ").Append(grob).Append(".font-size = ").Append(LyNumber(step)).Append('\n');
+                if (b.Style is { } style)
+                {
+                    bool bold = (style & Rendering.FontStyle.Bold) != 0;
+                    bool italic = (style & Rendering.FontStyle.Italic) != 0;
+                    sb.Append("      \\override ").Append(grob).Append(".font-series = #'").Append(bold ? "bold" : "medium").Append('\n');
+                    sb.Append("      \\override ").Append(grob).Append(".font-shape = #'").Append(italic ? "italic" : "upright").Append('\n');
+                }
+            }
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// A header or navigation string wrapped in the markup its role's <c>step</c> and
+    /// style ask for — <c>\markup { \fontsize #n \normal-text \bold "T" }</c> — or the
+    /// plain quoted string when the plan says nothing about the role. <c>\normal-text</c>
+    /// first, because a written style replaces the default (bookTitleMarkup's bold, the
+    /// navigation markup's italic) rather than adding to it.
+    /// </summary>
+    private string? MarkupForRole(Rendering.TextRole role, string quotedBody, string defaultStyleCommand)
+    {
+        // A relative step only — an absolute `size` is warned about in FontOverrideLines
+        // and has no markup spelling that composes with the default markup's own size.
+        double? step = _fontPlan.WrittenStep(role);
+        var style = _fontPlan.WrittenStyle(role);
+        if (step is null && style is null)
+            return null;
+        var sb = new System.Text.StringBuilder("\\markup { ");
+        if (step is { } s)
+            sb.Append("\\fontsize ").Append(LyNumber(s)).Append(' ');
+        if (style is { } st)
+        {
+            sb.Append("\\normal-text ");
+            if ((st & Rendering.FontStyle.Bold) != 0) sb.Append("\\bold ");
+            if ((st & Rendering.FontStyle.Italic) != 0) sb.Append("\\italic ");
+        }
+        else if (defaultStyleCommand.Length > 0)
+        {
+            sb.Append(defaultStyleCommand).Append(' ');
+        }
+        sb.Append(quotedBody).Append(" }");
+        return sb.ToString();
     }
 
     /// <summary>
@@ -779,9 +923,20 @@ public sealed class LilyPondExporter
         string? composer = MetaString(meta, "composer");
         if (title != null || composer != null)
         {
+            // A `fonts { title step … }` / style reaches the header through its markup:
+            // \fontsize composes with bookTitleMarkup's own \huge \larger \larger, which is
+            // exactly what a STEP means on the page (relative to the role's default em).
             _sb.Append("\\header {\n");
-            if (title != null) _sb.Append("  title = \"").Append(Escape(title)).Append("\"\n");
-            if (composer != null) _sb.Append("  composer = \"").Append(Escape(composer)).Append("\"\n");
+            if (title != null)
+                _sb.Append("  title = ")
+                   .Append(MarkupForRole(Rendering.TextRole.Title, "\"" + Escape(title) + "\"", "")
+                           ?? "\"" + Escape(title) + "\"")
+                   .Append('\n');
+            if (composer != null)
+                _sb.Append("  composer = ")
+                   .Append(MarkupForRole(Rendering.TextRole.Composer, "\"" + Escape(composer) + "\"", "")
+                           ?? "\"" + Escape(composer) + "\"")
+                   .Append('\n');
             _sb.Append("}\n\n");
         }
     }
@@ -3298,20 +3453,36 @@ public sealed class LilyPondExporter
     }
 
     // Navigation marks (segno/coda/fine/D.C./D.S. …) as standalone \mark commands.
-    private static string EmitNavMark(NavigationMarkSyntax nav) => nav.MarkType switch
+    private string EmitNavMark(NavigationMarkSyntax nav)
     {
-        NavigationMarkType.Segno => "\\mark \\markup { \\musicglyph #\"scripts.segno\" }",
-        NavigationMarkType.Coda => "\\mark \\markup { \\musicglyph #\"scripts.coda\" }",
-        NavigationMarkType.Fine => "\\mark \\markup { \\italic \"Fine\" }",
-        NavigationMarkType.ToCoda => "\\mark \\markup { \\italic \"To Coda\" }",
-        NavigationMarkType.DaCapo => "\\mark \\markup { \\italic \"D.C.\" }",
-        NavigationMarkType.DaCapoAlFine => "\\mark \\markup { \\italic \"D.C. al Fine\" }",
-        NavigationMarkType.DaCapoAlCoda => "\\mark \\markup { \\italic \"D.C. al Coda\" }",
-        NavigationMarkType.DalSegno => "\\mark \\markup { \\italic \"D.S.\" }",
-        NavigationMarkType.DalSegnoAlFine => "\\mark \\markup { \\italic \"D.S. al Fine\" }",
-        NavigationMarkType.DalSegnoAlCoda => "\\mark \\markup { \\italic \"D.S. al Coda\" }",
-        _ => "",
-    };
+        // The glyph marks are music-font stencils on both sides and do not follow the
+        // navigation role's plan (the page draws them at the music em).
+        switch (nav.MarkType)
+        {
+            case NavigationMarkType.Segno: return "\\mark \\markup { \\musicglyph #\"scripts.segno\" }";
+            case NavigationMarkType.Coda: return "\\mark \\markup { \\musicglyph #\"scripts.coda\" }";
+        }
+        string? word = nav.MarkType switch
+        {
+            NavigationMarkType.Fine => "Fine",
+            NavigationMarkType.ToCoda => "To Coda",
+            NavigationMarkType.DaCapo => "D.C.",
+            NavigationMarkType.DaCapoAlFine => "D.C. al Fine",
+            NavigationMarkType.DaCapoAlCoda => "D.C. al Coda",
+            NavigationMarkType.DalSegno => "D.S.",
+            NavigationMarkType.DalSegnoAlFine => "D.S. al Fine",
+            NavigationMarkType.DalSegnoAlCoda => "D.S. al Coda",
+            _ => null,
+        };
+        if (word == null)
+            return "";
+        // The word's own markup carries the plan's step and style for `navigation`
+        // (default: italic, JumpScript's font-shape), so a `fonts { navigation bold }`
+        // reaches the twin without touching RehearsalMark, whose grob the boxed labels share.
+        string body = "\"" + word + "\"";
+        return "\\mark " + (MarkupForRole(Rendering.TextRole.Navigation, body, "\\italic")
+                            ?? "\\markup { \\italic " + body + " }");
+    }
 
     private string Skip(SyntaxNode item)
     {
@@ -3453,9 +3624,20 @@ public sealed class LilyPondExporter
         // bars"). The twin says so in LilyPond's own words so the two pages agree; on a piece
         // that does not open with a repeat the setting changes nothing.
         // LILYPOND-REF: Documentation/en/notation/repeats.itely:160-172 printInitialRepeatBar.
+        // …and, after it, the plan's size and style attributes as grob overrides in the
+        // same \Score context (FontOverrideLines) — the one reason a fonts directive
+        // reaches the twin at all: a `step` IS LilyPond's font-size, so writing it keeps
+        // the twin a control for a score that uses one, where the faces (unwritten, see
+        // EmitHeader) would only add a difference that exists in the comparison.
+        string overrides = FontOverrideLines();
         _sb.Append("  \\layout { indent = ")
-           .Append(_instrumentNames.Count > 0 ? "15\\mm" : "0\\mm")
-           .Append(" \\context { \\Score printInitialRepeatBar = ##t } }\n}\n");
+           .Append(_instrumentNames.Count > 0 ? "15\\mm" : "0\\mm");
+        if (overrides.Length == 0)
+            _sb.Append(" \\context { \\Score printInitialRepeatBar = ##t } }\n}\n");
+        else
+            _sb.Append("\n    \\context {\n      \\Score\n      printInitialRepeatBar = ##t\n")
+               .Append(overrides)
+               .Append("    }\n  }\n}\n");
     }
 
     // ---- Chord tracks (\chordmode) ------------------------------------------

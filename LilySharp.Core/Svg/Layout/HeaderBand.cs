@@ -75,6 +75,21 @@ internal sealed record HeaderBand(
     /// composer row; <c>\fromproperty #'header:composer</c> carries no size command.</remarks>
     public const double ComposerFontSize = 2.2;
 
+    /// <summary>The title's em for THIS score: <see cref="TitleFontSize"/> unless the
+    /// score's <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for <c>title</c>. Read by
+    /// <see cref="Build"/> and by the draw, so the two cannot come apart.</summary>
+    public static double TitleEm(ScoreTextMetrics fonts) => fonts.Size(TextRole.Title, TitleFontSize);
+
+    /// <summary>The title's weight and slant: bookTitleMarkup's <c>\bold</c> unless the score
+    /// wrote a style for <c>title</c>.</summary>
+    public static FontStyle TitleStyle(ScoreTextMetrics fonts) => fonts.Style(TextRole.Title, FontStyle.Bold);
+
+    /// <summary>The composer's em for THIS score — see <see cref="TitleEm"/>.</summary>
+    public static double ComposerEm(ScoreTextMetrics fonts) => fonts.Size(TextRole.Composer, ComposerFontSize);
+
+    /// <summary>The composer's weight and slant: upright unless the score wrote a style.</summary>
+    public static FontStyle ComposerStyle(ScoreTextMetrics fonts) => fonts.Style(TextRole.Composer, FontStyle.Regular);
+
     /// <summary>
     /// The column for a header, or null when the book has neither a title nor a composer and
     /// LilyPond would page no title line at all.
@@ -104,10 +119,10 @@ internal sealed record HeaderBand(
 
         double? titleBaseline = title is null
             ? null
-            : Stack(title, TitleFontSize, TextRole.Title, FontStyle.Bold);
+            : Stack(title, TitleEm(fonts), TextRole.Title, TitleStyle(fonts));
         double? composerBaseline = composer is null
             ? null
-            : Stack(composer, ComposerFontSize, TextRole.Composer, FontStyle.Regular);
+            : Stack(composer, ComposerEm(fonts), TextRole.Composer, ComposerStyle(fonts));
 
         return new HeaderBand(depth, titleBaseline, composerBaseline);
     }

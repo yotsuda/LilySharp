@@ -142,9 +142,22 @@ public sealed class TextFontPlan
         parts.Sort(StringComparer.Ordinal);
         return (embed ? "embed;" : "") + string.Join(";", parts);
 
-        static string Spell(Binding b) => b.Redirect is { } r
-            ? "->" + TextRoles.Spelling(r)
-            : string.Join("|", b.Names.IsDefault ? [] : b.Names);
+        static string Spell(Binding b)
+        {
+            string faces = b.Redirect is { } r
+                ? "->" + TextRoles.Spelling(r)
+                : string.Join("|", b.Names.IsDefault ? [] : b.Names);
+            // The size and style ride the same key, so they are part of its identity: a
+            // keystroke that turns `mark step +1` into `mark step +2` is a change the
+            // incremental collector and the fragment memo must both see.
+            if (b.Step is { } step)
+                faces += $" step {step.ToString("R", System.Globalization.CultureInfo.InvariantCulture)}";
+            if (b.Size is { } size)
+                faces += $" size {size.ToString("R", System.Globalization.CultureInfo.InvariantCulture)}";
+            if (b.Style is { } style)
+                faces += $" {style}";
+            return faces;
+        }
     }
 
     /// <inheritdoc/>
@@ -155,11 +168,25 @@ public sealed class TextFontPlan
     public override int GetHashCode() => Signature.GetHashCode(StringComparison.Ordinal);
 
     /// <summary>
-    /// One binding's right-hand side: face names, or a redirect to a generic family.
+    /// One binding's right-hand side: face names and/or a redirect to a generic family,
+    /// and the size and style the entry asked for, each null when it asked for nothing.
     /// </summary>
-    /// <param name="Names">Face names, most-preferred first; empty when this is a redirect.</param>
-    /// <param name="Redirect">The generic family this key points at, when it points at one.</param>
-    internal readonly record struct Binding(ImmutableArray<string> Names, TextFontFamily? Redirect)
+    /// <param name="Names">Face names, most-preferred first; empty when the entry named none.</param>
+    /// <param name="Redirect">The generic family this key points at (<c>as serif</c>), when it points at one.</param>
+    /// <param name="Step">LilyPond's <c>font-size</c> for the role — a magstep count relative
+    /// to the role's engraving default (<c>step +1</c>); null when not written.</param>
+    /// <param name="Size">An absolute em in staff spaces (<c>size 3.8</c>); null when not
+    /// written. The reader refuses an entry that writes both.</param>
+    /// <param name="Style">The weight and slant the entry asked for (<c>bold</c> /
+    /// <c>italic</c> / <c>regular</c>); null when it asked for none.</param>
+    /// <remarks>
+    /// ONE ENTRY, ONE BINDING. A later entry on the same key replaces the whole binding,
+    /// faces and attributes together, which is what the duplicate warning's "only the last
+    /// one takes effect" has always meant; attributes are not merged across entries.
+    /// </remarks>
+    internal readonly record struct Binding(
+        ImmutableArray<string> Names, TextFontFamily? Redirect,
+        double? Step = null, double? Size = null, FontStyle? Style = null)
     {
         /// <summary>A binding to an explicit face chain.</summary>
         public static Binding ToFaces(IEnumerable<string> names) =>
@@ -168,6 +195,133 @@ public sealed class TextFontPlan
         /// <summary>A binding that points at one of the generic families.</summary>
         public static Binding ToFamily(TextFontFamily family) =>
             new([], family);
+
+        /// <summary>True when this binding says anything about the em.</summary>
+        public bool HasSize => Step is not null || Size is not null;
+    }
+
+    /// <summary>
+    /// The em <paramref name="role"/> is set at, given the size the ENGRAVING would set it
+    /// at with no directive: the leaf's <c>size</c> or <c>step</c>, then the group's, then
+    /// <paramref name="engravingDefault"/> itself.
+    /// </summary>
+    /// <remarks>
+    /// The narrower key wins as a whole: a leaf that writes any size ends the search, so a
+    /// leaf <c>size 3</c> is not scaled by a group <c>step -1</c>. A generic family carries
+    /// no size (the reader refuses one there), so there is no third layer.
+    /// <para>
+    /// <c>step</c> is LilyPond's <c>font-size</c>: <c>2^(n/6)</c> of the default
+    /// (LILYPOND-REF: scm/lily-library.scm <c>magstep</c>; the one spelling is
+    /// <see cref="LilySharp.Core.Svg.Layout.EmmentalerDesignSize.Magstep"/>). It is the primary form because
+    /// a role's default may move when a port lands and a relative wish survives that, and
+    /// because the twin can write it as <c>\override Grob.font-size = #n</c>; <c>size</c> is
+    /// the absolute escape and has no twin.
+    /// </para>
+    /// <para>
+    /// ⚠️ A ROLE WITH NO SIZE IN THE PLAN RETURNS THE DEFAULT EXACTLY — not a computed
+    /// <c>default × 1</c>. Every reader of an em in the engraving goes through this (via
+    /// <see cref="ScoreTextMetrics.Size"/>), so a book with no directive has to come out
+    /// byte-identical to the page it made before the accessor existed; the sweep that
+    /// landed the attributes (2026-09-08) checked that on 922 books.
+    /// </para>
+    /// </remarks>
+    public double SizeOf(TextRole role, double engravingDefault)
+    {
+        var group = TextRoles.GroupOf(role);
+        if (_leaves.TryGetValue(role, out var leaf) && leaf.HasSize)
+            return Apply(leaf, engravingDefault);
+        if (group is { } g && _groups.TryGetValue(g, out var grp) && grp.HasSize)
+            return Apply(grp, engravingDefault);
+        return engravingDefault;
+
+        static double Apply(Binding b, double engravingDefault) => b.Size is { } size
+            ? size
+            : engravingDefault * LilySharp.Core.Svg.Layout.EmmentalerDesignSize.Magstep(b.Step!.Value);
+    }
+
+    /// <summary>
+    /// The size of <paramref name="role"/> as a LilyPond <c>font-size</c> step over
+    /// <paramref name="engravingDefault"/> — 0 when the plan says nothing; for an absolute
+    /// <c>size</c> the step that em works out to, so a MUSIC glyph that keeps company with
+    /// the text (a chord symbol's accidental) can be stepped by the same amount.
+    /// </summary>
+    public double StepOf(TextRole role, double engravingDefault)
+    {
+        double size = SizeOf(role, engravingDefault);
+        if (size == engravingDefault || engravingDefault <= 0 || size <= 0)
+            return 0.0;
+        return 6.0 * Math.Log2(size / engravingDefault);
+    }
+
+    /// <summary>
+    /// The weight and slant <paramref name="role"/> is set in, given what the ENGRAVING
+    /// decided (<paramref name="engravingDefault"/>): the leaf's style, then the group's,
+    /// then the default.
+    /// </summary>
+    /// <remarks>
+    /// A written style REPLACES the engraving's rather than adding to it: <c>tempo italic</c>
+    /// on a role the engraving sets bold gives italic, not bold-italic — the writer who
+    /// wants both writes both (<c>bold italic</c>). <c>regular</c> is how a score turns a
+    /// default weight off, which is why it is a word and not the absence of one.
+    /// </remarks>
+    public FontStyle StyleOf(TextRole role, FontStyle engravingDefault)
+    {
+        var group = TextRoles.GroupOf(role);
+        if (_leaves.TryGetValue(role, out var leaf) && leaf.Style is { } ls)
+            return ls;
+        if (group is { } g && _groups.TryGetValue(g, out var grp) && grp.Style is { } gs)
+            return gs;
+        return engravingDefault;
+    }
+
+    /// <summary>The <c>step</c> that reaches <paramref name="role"/> (its own, else its
+    /// group's), or null when none does — including when the reaching binding wrote an
+    /// absolute <c>size</c>, which is not a step. For the twin, which can write a step and
+    /// cannot write a size.</summary>
+    public double? WrittenStep(TextRole role)
+    {
+        if (_leaves.TryGetValue(role, out var leaf) && leaf.HasSize)
+            return leaf.Step;
+        if (TextRoles.GroupOf(role) is { } g && _groups.TryGetValue(g, out var grp) && grp.HasSize)
+            return grp.Step;
+        return null;
+    }
+
+    /// <summary>The style written for <paramref name="role"/> (its own, else its group's),
+    /// or null when the plan says nothing about it.</summary>
+    public FontStyle? WrittenStyle(TextRole role)
+    {
+        if (_leaves.TryGetValue(role, out var leaf) && leaf.Style is { } ls)
+            return ls;
+        if (TextRoles.GroupOf(role) is { } g && _groups.TryGetValue(g, out var grp) && grp.Style is { } gs)
+            return gs;
+        return null;
+    }
+
+    /// <summary>True when any key in this plan writes a size or a style — the twin's
+    /// cue that there is a <c>\layout</c> block to emit.</summary>
+    public bool HasAnySizeOrStyle =>
+        _groups.Values.Any(b => b.HasSize || b.Style is not null)
+        || _leaves.Values.Any(b => b.HasSize || b.Style is not null);
+
+    /// <summary>The LEAF roles this plan gives a size or a style to, each with the binding
+    /// that reaches it (its own, else its group's) — what the twin turns into overrides.
+    /// Roles whose reaching binding says nothing about size or style are left out.</summary>
+    internal IEnumerable<(TextRole Role, Binding Binding)> SizedOrStyledLeaves()
+    {
+        foreach (var role in TextRoles.All)
+        {
+            if (role == TextRole.SystemBrace)
+                continue;
+            Binding? reaching = null;
+            if (_leaves.TryGetValue(role, out var leaf) && (leaf.HasSize || leaf.Style is not null))
+                reaching = leaf;
+            else if (TextRoles.GroupOf(role) is { } g && _groups.TryGetValue(g, out var grp)
+                     && (grp.HasSize || grp.Style is not null))
+                reaching = grp;
+            if (reaching is { } b)
+                yield return (role, b);
+        }
     }
 
     /// <summary>
@@ -274,6 +428,63 @@ public sealed class TextFontPlan
         public Builder Role(TextRole role, TextFontFamily family)
         {
             _leaves[role] = Binding.ToFamily(family);
+            return this;
+        }
+
+        /// <summary>Binds one leaf role to a whole entry — faces and/or redirect, size,
+        /// style — replacing whatever the key held.</summary>
+        internal Builder Role(TextRole role, Binding binding)
+        {
+            _leaves[role] = binding;
+            return this;
+        }
+
+        /// <summary>Binds a group to a whole entry, replacing whatever the key held.</summary>
+        internal Builder Group(TextRoleGroup group, Binding binding)
+        {
+            _groups[group] = binding;
+            return this;
+        }
+
+        /// <summary>Gives one leaf role a <c>step</c> (and optionally a style), keeping the
+        /// faces it already had — a convenience for tests and for callers that build plans
+        /// by hand; the reader binds whole entries through <see cref="Role(TextRole, Binding)"/>.</summary>
+        public Builder RoleStep(TextRole role, double step, FontStyle? style = null)
+        {
+            var b = _leaves.TryGetValue(role, out var had) ? had : new Binding([], null);
+            _leaves[role] = b with { Step = step, Size = null, Style = style ?? b.Style };
+            return this;
+        }
+
+        /// <summary>Gives one leaf role an absolute <c>size</c>, keeping its faces.</summary>
+        public Builder RoleSize(TextRole role, double size)
+        {
+            var b = _leaves.TryGetValue(role, out var had) ? had : new Binding([], null);
+            _leaves[role] = b with { Size = size, Step = null };
+            return this;
+        }
+
+        /// <summary>Gives one leaf role a style, keeping its faces and size.</summary>
+        public Builder RoleStyle(TextRole role, FontStyle style)
+        {
+            var b = _leaves.TryGetValue(role, out var had) ? had : new Binding([], null);
+            _leaves[role] = b with { Style = style };
+            return this;
+        }
+
+        /// <summary>Gives a group a <c>step</c> (and optionally a style), keeping its faces.</summary>
+        public Builder GroupStep(TextRoleGroup group, double step, FontStyle? style = null)
+        {
+            var b = _groups.TryGetValue(group, out var had) ? had : new Binding([], null);
+            _groups[group] = b with { Step = step, Size = null, Style = style ?? b.Style };
+            return this;
+        }
+
+        /// <summary>Gives a group a style, keeping its faces and size.</summary>
+        public Builder GroupStyle(TextRoleGroup group, FontStyle style)
+        {
+            var b = _groups.TryGetValue(group, out var had) ? had : new Binding([], null);
+            _groups[group] = b with { Style = style };
             return this;
         }
 

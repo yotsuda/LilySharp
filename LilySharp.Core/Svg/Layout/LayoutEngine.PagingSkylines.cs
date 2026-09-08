@@ -327,8 +327,8 @@ internal sealed partial class LayoutEngine
             // and that flat 1.8 stood 0.765955 over the drawn ink of a lower-case string
             // (ledger page.custom-text.first-staff-refpoint, measured against 2.26.0 before
             // this arm was changed; the capital half was 0.211526 over).
-            var (ctBottom, ctTop) = fonts.Ink(ct.Text, EngravingDefaults.TextScriptFontSize,
-                TextRole.Text, Rendering.FontStyle.Italic);
+            var (ctBottom, ctTop) = fonts.Ink(ct.Text, CustomTextEngraver.Em(fonts),
+                TextRole.Text, CustomTextEngraver.Style(fonts));
             Add(ct.MeasureIndex, ctY - ctTop, ctY - ctBottom);
         }
         // Chord names ride above the staff and rise (ChordNameEngraver skyline) to
@@ -515,8 +515,8 @@ internal sealed partial class LayoutEngine
             if (!string.IsNullOrEmpty(sp.Text))
             {
                 var ink = fonts.Ink(
-                    sp.Text, TextSpannerEngraver.TextFontSize, TextRole.Text,
-                    Rendering.FontStyle.Italic);
+                    sp.Text, TextSpannerEngraver.TextEm(fonts), TextRole.Text,
+                    TextSpannerEngraver.TextStyle(fonts));
                 spTop = Math.Max(spTop, ink.Top);
                 spBottom = Math.Max(spBottom, -ink.Bottom);
             }
@@ -542,8 +542,8 @@ internal sealed partial class LayoutEngine
             // system.clef-floor.floor-bound-distance to exact and lyrics.*.system-gap from
             // +0.207200 to +0.143468.
             double capTop = fonts.Ink(
-                bn.Text, BarNumberEngraver.FontSize,
-                TextRole.BarNumber, Rendering.FontStyle.Bold).Top;
+                bn.Text, BarNumberEngraver.Em(fonts),
+                TextRole.BarNumber, BarNumberEngraver.Style(fonts)).Top;
             up[s] = Math.Max(up[s], -(rel - capTop));
         }
 
@@ -1034,8 +1034,8 @@ internal sealed partial class LayoutEngine
                 // −0.068845 where only the box's 45° flank survived). The same move the
                 // mark arm's X made in session 204 (MusicMarkEngraver.MarkXExtent).
                 double advance =
-                    fonts.Advance(ct.Text, EngravingDefaults.TextScriptFontSize, TextRole.Text,
-                        Rendering.FontStyle.Italic);
+                    fonts.Advance(ct.Text, CustomTextEngraver.Em(fonts), TextRole.Text,
+                        CustomTextEngraver.Style(fonts));
                 // The system this text's box belongs to — resolved HERE, not only inside
                 // AddMarkBox, because the box's own vertical frame is that system's (the
                 // mark arm above makes the same move).
@@ -1063,8 +1063,8 @@ internal sealed partial class LayoutEngine
                 // holds the two arms apart: the page anchors answer to Enrich, these gaps
                 // to this box (page.custom-text.gap.*, +0.765955 / +0.211526 before this
                 // change, each separated from the other arm by a ±0.03 poison).
-                var (ctBottom, ctTop) = fonts.Ink(ct.Text, EngravingDefaults.TextScriptFontSize,
-                    TextRole.Text, Rendering.FontStyle.Italic);
+                var (ctBottom, ctTop) = fonts.Ink(ct.Text, CustomTextEngraver.Em(fonts),
+                    TextRole.Text, CustomTextEngraver.Style(fonts));
                 AddMarkBox(ct.MeasureIndex, ct.X - 0.2, ct.X + advance + 0.2,
                     ctY + ctTop, ctY + ctBottom);
             }
@@ -1185,8 +1185,8 @@ internal sealed partial class LayoutEngine
                     // The same ink the scalar arm and OutsideStaffStacker.PlaceTextSpanners
                     // read — one description of this label's height, not a third.
                     var ink = fonts.Ink(
-                        sp.Text, TextSpannerEngraver.TextFontSize, TextRole.Text,
-                        Rendering.FontStyle.Italic);
+                        sp.Text, TextSpannerEngraver.TextEm(fonts), TextRole.Text,
+                        TextSpannerEngraver.TextStyle(fonts));
                     spTop = Math.Max(spTop, ink.Top);
                     spBottom = Math.Max(spBottom, -ink.Bottom);
                     if (sp.LineStartX > sp.StartX)
@@ -1216,12 +1216,12 @@ internal sealed partial class LayoutEngine
                 // bn.YUp is Y-up from the system top; the skyline is Y-up too.
                 double rel = bn.YUp;
                 double w = fonts.Advance(
-                    bn.Text, BarNumberEngraver.FontSize,
-                    TextRole.BarNumber, Rendering.FontStyle.Bold);
+                    bn.Text, BarNumberEngraver.Em(fonts),
+                    TextRole.BarNumber, BarNumberEngraver.Style(fonts));
                 double x0 = bn.RightAligned ? bn.X - w : bn.X;
                 double capTop = fonts.Ink(
-                    bn.Text, BarNumberEngraver.FontSize,
-                    TextRole.BarNumber, Rendering.FontStyle.Bold).Top;
+                    bn.Text, BarNumberEngraver.Em(fonts),
+                    TextRole.BarNumber, BarNumberEngraver.Style(fonts)).Top;
                 BuilderAt(s).AddBarNumberBox(x0, x0 + w, rel, rel + capTop);
             }
         }

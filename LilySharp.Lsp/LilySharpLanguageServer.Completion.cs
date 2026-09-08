@@ -174,6 +174,11 @@ public sealed partial class LilySharpLanguageServer
             // only quoted names, a role or group may also redirect to a family.
             CompletionContext.AfterFontRoleKey =>
                 GetFontRoleValueCompletions(WordBeforeCursor(doc.Text, offset)),
+            // `… as |` — the family to follow; `… step |` — a number, nothing to list;
+            // inside an open entry — the attributes that may still follow, then the keys.
+            CompletionContext.AfterFontAs => GetFontAsCompletions(),
+            CompletionContext.AfterFontNumber => GetFontNumberCompletions(),
+            CompletionContext.FontEntryOpen => GetFontEntryContinuationCompletions(),
             CompletionContext.ScoreBlock => GetScoreBlockCompletions(),
             CompletionContext.StaffGroupBlock => GetStaffGroupBlockCompletions(),
             CompletionContext.AfterStaffRef => GetDeclaredNameCompletions(doc.Text, "part", "Part"),

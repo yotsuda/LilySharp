@@ -95,6 +95,44 @@ public sealed class ScoreTextMetrics
             return TextFace.Bundled(sans, key.Style);
         });
 
+    /// <summary>
+    /// The em <paramref name="role"/> is set at: what the score's <c>fonts { }</c> wrote as
+    /// <c>step</c> or <c>size</c> for it, applied to <paramref name="engravingDefault"/> —
+    /// the size the engraving would set it at with no directive.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ EVERY READER OF A ROLE'S EM ASKS HERE, the draw and the reservations alike, or
+    /// the two drift the day a score writes a size — the same reserve-versus-draw split the
+    /// face went through on 2026-08-18. A role whose readers do not all ask is not in
+    /// <see cref="TextRoles.PlanReachOf"/>, and the validator warns on an attribute for it.
+    /// With no size in the plan this returns <paramref name="engravingDefault"/> itself
+    /// (see <see cref="TextFontPlan.SizeOf"/>), so a book without a directive is unchanged.
+    /// </remarks>
+    public double Size(TextRole role, double engravingDefault)
+        => _plan.SizeOf(role, engravingDefault);
+
+    /// <summary>
+    /// The size of <paramref name="role"/> as a LilyPond <c>font-size</c> step over
+    /// <paramref name="engravingDefault"/> — 0 with no directive. For a music glyph drawn
+    /// beside the role's text at a step of its own (a chord symbol's accidental is one
+    /// step under the name), so it can follow the text by the same amount.
+    /// </summary>
+    public double StepOf(TextRole role, double engravingDefault)
+        => _plan.StepOf(role, engravingDefault);
+
+    /// <summary>
+    /// The weight and slant <paramref name="role"/> is set in: what the score wrote as
+    /// <c>bold</c> / <c>italic</c> / <c>regular</c>, else <paramref name="engravingDefault"/>
+    /// — the style the engraving decided (a sostenuto word is italic, a bar number bold).
+    /// </summary>
+    /// <remarks>
+    /// The same one-home rule as <see cref="Size"/>: a role is in
+    /// <see cref="TextRoles.PlanReachOf"/> only when every site that draws or measures it
+    /// takes its style from here.
+    /// </remarks>
+    public FontStyle Style(TextRole role, FontStyle engravingDefault)
+        => _plan.StyleOf(role, engravingDefault);
+
     /// <summary>Advance width of <paramref name="text"/> in staff spaces.</summary>
     public double Advance(string text, double fontSize, TextRole role,
         FontStyle style = FontStyle.Regular)
