@@ -1894,6 +1894,11 @@ public sealed class MusicXmlExporter
             if (a is DynamicSyntax dyn)
                 HandleDynamicText(dyn.DynamicToken.Text);
         EmitPendingDynamic();
+        // A string number on the group (`>>4\3`) is every pitched / degree member's that
+        // names none of its own — the collector's groupString (a chord member inside the
+        // group keeps to the chord's own pairing, as on the page).
+        int? groupString = arpeggio.Articulations.OfType<StringNumberAnnotationSyntax>()
+            .FirstOrDefault()?.StringNumber;
 
         // The root is the first PITCHED member (leading rests just advance time); it
         // resolves relatively and anchors the group. Subsequent PITCHED members stack above
@@ -1919,7 +1924,7 @@ public sealed class MusicXmlExporter
                     rootStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
                     anchorOctave = RelativeOctave.Resolve(_currentStep, _currentOctave, rootStep, 0) + groupOctave;
                 }
-                EmitArpeggioXmlDegree(degree, rootStep, anchorOctave, parts, slurStart, slurEnd);
+                EmitArpeggioXmlDegree(degree, rootStep, anchorOctave, parts, slurStart, slurEnd, groupString);
                 continue;
             }
 
@@ -1937,7 +1942,7 @@ public sealed class MusicXmlExporter
                 _octaveAbsolute = savedAbsolute; // the root, and any rest
             }
             if (member is PitchSyntax pitch)
-                EmitArpeggioXmlPitch(pitch, isRoot ? groupOctave : 0, parts, slurStart, slurEnd);
+                EmitArpeggioXmlPitch(pitch, isRoot ? groupOctave : 0, parts, slurStart, slurEnd, groupString);
             else if (member is ChordSyntax chord)
             {
                 // A second part re-reads the chord, so the frame is put back to what the
@@ -2009,13 +2014,17 @@ public sealed class MusicXmlExporter
     /// <summary>A bare arpeggio pitch → one sequential note per written part (tied to one
     /// another when its shares take more than one), resolved once through the octave frame
     /// the caller set up. The member's own post-events and slur marks ride the first part;
-    /// the last part is what a marker after <c>&gt;&gt;</c> hangs on (_lastEmittedNotes).</summary>
+    /// the last part is what a marker after <c>&gt;&gt;</c> hangs on (_lastEmittedNotes).
+    /// The string number (the member's own, else <paramref name="groupString"/>) rides
+    /// EVERY part, as it does on the page's items — each part is a note of its own.</summary>
     private void EmitArpeggioXmlPitch(PitchSyntax pitch, int octaveShift,
-        IReadOnlyList<(int Value, int Dots)> parts, bool slurStart, bool slurEnd)
+        IReadOnlyList<(int Value, int Dots)> parts, bool slurStart, bool slurEnd, int? groupString)
     {
         if (_currentMeasure == null) return;
         _justAutoClosedPickup = false;
 
+        int? stringNumber = pitch.Articulations.OfType<StringNumberAnnotationSyntax>()
+            .FirstOrDefault()?.StringNumber ?? groupString;
         var (step, alter) = ParsePitch(pitch);
         // Stacked members arrive in forced-absolute mode (plain path). The ROOT, in
         // relative mode, anchors on its bare LETTER: its own '/, marks are LOCAL to
@@ -2065,7 +2074,10 @@ public sealed class MusicXmlExporter
                 NormalNotes = tupletNormal,
             };
             if (first)
-                ProcessArticulations(pitch.Articulations, xmlNote);
+                ProcessArticulations(
+                    pitch.Articulations.Where(a => a is not StringNumberAnnotationSyntax), xmlNote);
+            if (stringNumber is { } s)
+                xmlNote.Technicals.Add(new System.Xml.Linq.XElement("string", s));
             if (first && slurStart) xmlNote.SlurStart = true;
             if (last && slurEnd) xmlNote.SlurStop = true;
             // A tie into the group, or from the previous part, ends here; a part that is not
@@ -2084,7 +2096,7 @@ public sealed class MusicXmlExporter
     /// anchor (the root, or the key tonic when no pitched member precedes — the caller
     /// resolves it) by diatonic steps in the WRITTEN key, then transposed like a pitch.</summary>
     private void EmitArpeggioXmlDegree(ScaleDegreeSyntax degree, int rootStep, int anchorOctave,
-        IReadOnlyList<(int Value, int Dots)> parts, bool slurStart, bool slurEnd)
+        IReadOnlyList<(int Value, int Dots)> parts, bool slurStart, bool slurEnd, int? groupString)
     {
         if (_currentMeasure == null) return;
         _justAutoClosedPickup = false;
@@ -2111,6 +2123,8 @@ public sealed class MusicXmlExporter
                 ActualNotes = tupletActual,
                 NormalNotes = tupletNormal,
             };
+            if (groupString is { } s)
+                xmlNote.Technicals.Add(new System.Xml.Linq.XElement("string", s));
             if (first && slurStart) xmlNote.SlurStart = true;
             if (last && slurEnd) xmlNote.SlurStop = true;
             CloseTies([xmlNote]);
@@ -2446,6 +2460,20 @@ public sealed class MusicXmlExporter
 
         int firstStep = _currentStep, firstOctave = _currentOctave;
         var (tupletActual, tupletNormal) = CurrentTupletRatio();
+
+        // String numbers OUTSIDE the brackets (<e dis'>\5\4) pair with the members in
+        // written order: a member's own \N wins, each member without one takes the next
+        // outside one, and the last outside one repeats once the list is exhausted —
+        // the collector's rule (CreateChordItem), so <e dis'>\5\4 == <e\5 dis'\4>.
+        // LILYPOND-REF: lily/articulations.cc:38-80 articulation_list — per note
+        //   event, the note's own articulation wins; else articulation_events[j],
+        //   j advancing only while more remain.
+        List<int>? chordStrings = null;
+        foreach (var a in chord.Articulations)
+            if (a is StringNumberAnnotationSyntax sn)
+                (chordStrings ??= new()).Add(sn.StringNumber);
+        int nextChordString = 0;
+
         bool isFirst = true;
         foreach (var pitch in pitches)
         {
@@ -2466,6 +2494,25 @@ public sealed class MusicXmlExporter
                 NormalNotes = tupletNormal
             };
 
+            // The member's own <technical> marks: its fingering, and its string number
+            // (own, else paired from the outside list).
+            int? memberString = null;
+            foreach (var a in pitch.Articulations)
+            {
+                if (a is MusicMarkSyntax mm && Semantics.AnnotationValues.Finger(mm) is { } finger)
+                    xmlNote.Technicals.Add(new System.Xml.Linq.XElement("fingering", finger));
+                else if (a is StringNumberAnnotationSyntax own)
+                    memberString ??= own.StringNumber;
+            }
+            if (memberString is null && chordStrings != null)
+            {
+                memberString = chordStrings[nextChordString];
+                if (nextChordString + 1 < chordStrings.Count)
+                    nextChordString++;
+            }
+            if (memberString is { } memberStringNumber)
+                xmlNote.Technicals.Add(new System.Xml.Linq.XElement("string", memberStringNumber));
+
             // Add articulations + tie pairing only on the first note of the chord.
             if (isFirst)
             {
@@ -2479,7 +2526,9 @@ public sealed class MusicXmlExporter
                     _chordArpeggio = "arpeggiate";
                 else if (hasBracket)
                     _chordArpeggio = "non-arpeggiate";
-                ProcessArticulations(chord.Articulations, xmlNote);
+                // The outside string numbers were paired above, member by member.
+                ProcessArticulations(
+                    chord.Articulations.Where(a => a is not StringNumberAnnotationSyntax), xmlNote);
                 isFirst = false;
             }
 
@@ -3077,8 +3126,19 @@ public sealed class MusicXmlExporter
             {
                 HandleDynamicText(dynamic.DynamicToken.Text);
             }
+            else if (artic is StringNumberAnnotationSyntax stringNumber)
+            {
+                // A written \N is the note's <technical><string>. Until 2026-09-08 this
+                // reader had no arm for the node, so no note carried a string — the
+                // page and the twin had read the same annotation since 2026-08-09.
+                xmlNote.Technicals.Add(new System.Xml.Linq.XElement("string", stringNumber.StringNumber));
+            }
             else if (artic is MusicMarkSyntax mark)
             {
+                // @finger(N) is the note's <technical><fingering>; the direction-family
+                // marks (pedal, ottava, chord symbol) go on to their own reader.
+                if (Semantics.AnnotationValues.Finger(mark) is { } finger)
+                    xmlNote.Technicals.Add(new System.Xml.Linq.XElement("fingering", finger));
                 ProcessDirectionMark(mark);
             }
             else if (artic is SlurSyntax slur)

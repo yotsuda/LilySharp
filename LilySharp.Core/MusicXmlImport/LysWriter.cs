@@ -528,11 +528,16 @@ internal static class LysWriter
             // reference first — build the grace block before the main note's body.
             string? graceToken = note.LeadingGrace.Count > 0 ? GraceBlock(note.LeadingGrace, rel) : null;
 
+            // A chord member's string number and fingering are its own, so they are written
+            // inside the brackets (<e\5 dis'\4>); a single note's follow its duration (c4\3),
+            // the canonical post-event order (HANDOFF §3: `核 \N @… ] ) ( [ ~`).
             string body = members.Count == 1
                 ? (rel != null ? rel.Note(note.Step, note.Alter, note.Octave) : Pitch(note))
                 : (rel != null ? rel.Chord(members)
-                               : "<" + string.Join(" ", members.Select(Pitch)) + ">");
+                               : "<" + string.Join(" ", members.Select(m => Pitch(m) + MemberMarks(m))) + ">");
             string token = body + Value(note.NoteValue, note.Dots);
+            if (members.Count == 1)
+                token += MemberMarks(note);
             if (note.TremoloMarks > 0)
                 token += ":" + note.TremoloMarks; // single-note tremolo slash (c2:8)
             if (pendingChord != null)
@@ -580,6 +585,11 @@ internal static class LysWriter
 
     // A Lily# absolute-octave pitch token: letter + accidental + octave marks.
     private static string Pitch(ImportNote note) => PitchToken(note.Step, note.Alter, note.Octave);
+
+    /// <summary>The marks a note carries on its own pitch: <c>\N</c> then <c>@finger(N)</c>.</summary>
+    private static string MemberMarks(ImportNote note)
+        => (note.StringNumber is { } s ? "\\" + s : "")
+           + (note.Fingering is { } f ? "@finger(" + f + ")" : "");
 
     private static string PitchToken(int step, int alter, int octave)
     {
@@ -642,13 +652,13 @@ internal static class LysWriter
                 var m = members[i];
                 if (i == 0)
                 {
-                    parts.Add(Spell(_ref, m.Step, m.Alter, m.Octave));
+                    parts.Add(Spell(_ref, m.Step, m.Alter, m.Octave) + MemberMarks(m));
                 }
                 else
                 {
                     int letter = Mod7(m.Step);
                     int stackedDefault = rootOctave + (letter >= rootStep ? 0 : 1);
-                    parts.Add(Format(letter, m.Alter, m.Octave - stackedDefault));
+                    parts.Add(Format(letter, m.Alter, m.Octave - stackedDefault) + MemberMarks(m));
                 }
             }
             _ref = rootOctave * 7 + rootStep;

@@ -505,6 +505,20 @@ internal static class MusicXmlReader
             // An arpeggiated chord prints @arpeggio (on the head note).
             if (Local(notations, "arpeggiate") != null && !note.Articulations.Contains("arpeggio"))
                 note.Articulations.Add("arpeggio");
+            // <technical>: the string number (\N) and a numeric fingering (@finger(N)).
+            // Until 2026-09-08 nothing under <technical> was read, so a \N did not round trip.
+            if (Local(notations, "technical") is { } technical)
+            {
+                if (int.TryParse(Local(technical, "string")?.Value, out int str) && str > 0)
+                    note.StringNumber = str;
+                if (Local(technical, "fingering") is { } fingering)
+                {
+                    if (int.TryParse(fingering.Value, out int finger) && finger >= 0)
+                        note.Fingering = finger;
+                    else
+                        report.Warn(measureNo, $"fingering '{fingering.Value.Trim()}' is not a number and is dropped.");
+                }
+            }
             // Tuplet bracket: the ratio comes from <time-modification>.
             foreach (var tup in Els(notations, "tuplet"))
                 switch ((string?)tup.Attribute("type"))

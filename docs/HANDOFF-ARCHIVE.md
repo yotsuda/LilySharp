@@ -1,6 +1,31 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第347セッションの経緯（⚠️ **ブロック無し＝番号の飛び。第349 が継ぎ目のために立てた見出し**）
+
+⚠️ **この番号で §1 を書いたセッションは無い。** 下の第345 のブロックが自分の計器を `scratch/p347/` と名指し、`scratch/p346/` は同じ作業の掃き（`base`／`exe-base` …）＝**第345 として記録された作業が p345〜p347 を使った**。第348 のブロックは第345 のブロックを直接の前任として読んでいる（「第345 の『未 push 27』は stale」）ので、**間に失われた §1 は無い**（第349 が `git log` と scratch の中身で確かめた・ユーザーは第342〜345 を `b0e68490` に畳んだ）。`HandoffArchiveContinuityTests` の継ぎ目（archive の最新＝§1 が保つ前任 − 1）と census（穴の上限 9）を両方満たすために、346・347 の 2 見出しを立てる。
+
+## 以下は第346セッションの経緯（⚠️ **ブロック無し＝上の第347 と同じ理由**）
+
+（上の第347 の見出しを見よ。この番号の §1 は存在しなかった。）
+
+## 以下は第345セッションの経緯
+
+最終更新 第345セッション＝**入り方は第298〜第344 と同じ**（ユーザーは `docs/HANDOFF.md` を読んで着手せよとだけ言い・background job・口挟み 0）。**第344 ⑾⒝「第343 ⑸ の休符 encompass 点（else 枝）」に着手し、閉じた**——**ただし途中で台帳が、起票とは*別の・上流の*欠陥を先に捕まえた**（§5.0「起票の難所は予測」の 10 例目。こんどは数でも形でも住所でもなく**測る道具の側の綴り**が外れていた）。**commit 3 本**（`e4b8b085`＝collector／`26a94a38`＝台帳 4 点／`a60987af`＝移植＋生成物＋CHANGELOG）＋この HANDOFF。**骨は 7**:
+
+★★★★ **⑴ 対＝LP オラクル 4 冊** `audit/lp-geometry/probes/tuplet-bracket-rest-point.ly`（**上段 treble・下段 bass の全音符・括弧は下へ垂れて譜間を binding**＝TPB/TFB と同じ床。外側 2 音は c'' で括弧は平坦＝深さだけを測る）: **TQC** 対照 `\tuplet 3/2 { c''4 r4 c'' }`／**TQD** 休符を c' に（`c'4\rest`＝Lily# `c4@rest`）／**TQU** a'' に（括弧の反対側）／**TQB** 深い休符が*左 bound*。**符号つき予測を先に書いて全部当たった**: TQC `positions (-4.1 . -4.1)` gap 7.777717／**TQD (-5.35 . -5.35) ＝ TQC ＋ 1.250000 ちょうど**（休符インク底 −4.25 ＋ padding）／**TQU ≡ TQC（1e-15）**＝点は `note_ext[dir]`／**TQB ≡ TQD（1e-15）**＝**bound の休符も点で、`get_bounds` が飛ばすのは*傾き*だけ**。LP-identity 対が 2 組（TQC/TQU・TQD/TQB）。
+⚠️⚠️⚠️ ★★★★ **⑵ Lily# の最初の読みが予測 −1.25 を外した**: TQD −0.704979（＝対照 ＋ 0.545）・TQB −0.977479（＝対照 ＋ 0.2725）。**0.545 は符頭の半高** → 赤の `Describe()` のグリフ表を読んだら **noteheads.s2 が休符の席に居た** → **`c4@rest` は `tuplet { }` の中では*音符*に集められていた**（`MeasureCollector.EmitScaledItem` の NoteSyntax 腕に `Semantics.PitchedRest` の読み手が無い＝この腕の one-arm-of-two の 4 例目〔glissando・rest dynamics・slur bound に続く〕）。**exporter 3 つは元から正しい**（`ProcessNode` 再帰で note 腕を通る）。直して主腕と同形（slur/beam bound・TimeScale・scripts・dynamics）。**主腕の pitched 腕にも beam bound（`c8@rest[`）と `CollectDynamics` を足し、休符の 4 腕が同じ集合になった。** 番人 `PitchedRestOutputsTests.APitchedRest_InsideATuplet_IsARestInEveryOutput`（頁 3 符頭・双子 `\tuplet 3/2 { c'4 c4\rest c'4 }`・MusicXML の rest＋display C4・MIDI note-on 3）。**直後の読み −1.249978952 ×2**（＝予測 −1.25 ＋ 定数 0.000021048）＝そこで台帳を起票（`26a94a38`）。
+★★★ **⑶ 移植**（`a60987af`・`TupletBracketEngraver.CalculateSlope`）: **休符列を `lpPoints` と `lastColX` に入れ、`firstPos/lastPos` には入れない**（＝`get_bounds` の割れ方。LILYPOND-REF `:554-562`／`note-column.cc:251-258`）。到達は `RestReachUp`＝**`GetRestBBox`（LILC 箱＝LP の Rest extent は stencil）を描画原点（中線／全休符は 1 上）＋ rest-collision memo の shift** に置く——**skyline seed と renderer の `GetRestShift` が読むのと同じ表**（`MultiStaffLayouter.RestCollisionsOf`。`Calculate` に `restShiftsOf` で渡し、Annotations は `ctx.RestCollisionsOf`・memo の無い slur pass は pure 位置）——**beam が跨ぐ休符は `OuterEdgeStaffSpaceAtX(restX, beam.StemUp)` を unite**。**all-rest 分岐（offset pass の第 2 綴り・「中線の休符は譜の縁に勝てない」）は退役**し、dy=0（`:551-552`）で同じ腕を通る（t4 の 3.4 は不動）。**実測 TQD/TQB −1.249978952 → +0.000021048・TQC/TQU 不動・既存 806 点不動。**
+⚠️⚠️ ★★★ **⑷ 掃き 920 冊 MOVED 0**（`scratch/p347/sweep347.ps1`・base＝HEAD `54c0854f` の Debug bin・**SVG バイト**）——**が、そこへ着くまでに 2 度踏んだ**: **⒜ 最初の掃きは MOVED 7**（追跡 1＝`audit/lpreg/tuprest.lys` bar 5 `r c e` が**平坦に**——base は LP の `(-4.398955 . -3.698955)` と一致していた〔`scratch/p347/tbdump.ily` で双子の 8 括弧を dump〕）＝**「最初の音符」を `lpPoints.Count == 0` で訊いていて、先頭の休符がそれを埋めていた** → `firstNote = firstPos == null` に直した。**⒝ 直した後も MOVED 7 のまま** → 「増分ビルドが腐った」と誤診して `--no-incremental` で建て直し＋再掃き（15 分）。**正体は `Copy-Item -Recurse -Force bin exe-head` が宛先既存だと*入れ子*で複製し、`exe-head\lysc.exe` が初回のままだったこと**（RULES §5.5 に項を足した・memory 済み）。**Remove-Item してから複製・`Get-FileHash` で Core.dll 同一を確認して MOVED 0。** ⇒ **「修正が効かない」の第一容疑者は build ではなく*写し*。**
+★ **⑸ 数**: full **7215 / 0 / 4 / 7219**（`scratch/p347/full2.trx`・**+5＝台帳 4 ＋ 番人 1**。引継ぎ 7214 ＋ 5）・`--no-incremental` build 0 エラー／Core 0 警告・**台帳 810／exact 634／ss 非ゼロ 211（25.6847648013963 ＝ 引継ぎ 25.6846806093963 ＋ 4 × 0.000021048）／count 178 うち非ゼロ 0／OPEN 0・snapshot 247（再 seed 0）・追跡 `.lys` 597**。生成物 2（`docs/APPROXIMATIONS.md`・`audit/magic_constants.csv`）は移植 commit で再生成（行番号と退役した Disclosed だけ）。§7.5: Core の `+` 行 166・LILYPOND-REF 6・LILYSHARP-OWN 0。
+★ **⑹ 開示**: **⒜ beam が跨ぐ休符の else 枝（beam face の半分）は点が無い**（掃き 0）。**⒝ +0.000021048 は TFB/TFR/TQC/TQU が 9 桁で共有する族の床で、*既に名前があった***——**TupletNumber の半インクの sliver**（Lily# のアウトライン読み 0.627738 対 LP の Pango 量子化 0.627717。**TU／TNB／TPB の `why` が 2026-07-29 から書いている**・`dynamic-under-whole-note` の −0.000076 と同族・「これ以上閉じない」）。⚠️ **第 2 便でこれを「未命名」と §1 に書きかけた**＝§0 の第197 と同じ形（**§2／台帳を grep する前に「新発見」と書く**）。**6 点の `why` に名前を写した**（TFB/TFR/TQC/TQD/TQU/TQB）。**⒞ `ElementCoordinator` の slur pass（tuplet 番号の再構築）は memo 無し＝pure 位置**（衝突 push は入らない・LP の pure-chain と同じ読み）。
+
+⇒ ★★★★ **⑺ 次の一手**: **⒜ push は禁止のまま**（未 push は終了時の行。**第 4 便・第 5 便（第344）と本便 3 本は未承認**）。**⒝ 第344 ⑾⒞ の並び**（拾い箱の ⑺⒜／`lysc ly` の ChordNames／lyric row の slot の投票／ps2 の 0.017／`audit/lpreg` 取り直し／§2 U8c・U8b・U8／A/B/D/E／C⑴／G）。**⒞ ~~+0.000021048 に名前を付ける~~ → 第 2 便で「既に名前がある」と分かって閉じた（上 ⑹⒝）。** ~~⚠️ 承認待ち・リリース 0.6.0 の bump／tag は第328 と同じ。~~ → ✅ 第348 で出荷（§1 冒頭）。
+
+★ **開始時裏取り**: HEAD **`54c0854f`**・**未 push 22**・木 clean・未追跡 0・`--no-incremental` build 0 エラー／Core 0 警告・**台帳 806／exact 634／ss 非ゼロ 207（25.6846806093963）**＝引継ぎどおり。
+**終了時**: **commit 5 本**（`e4b8b085`／`26a94a38`／`a60987af`／`f18f8109`＝HANDOFF＋RULES §5.5 の項＋第343 の経緯の ARCHIVE 送り／第 2 便＝6 点の `why` に定数の名前を写した＋この HANDOFF）・**未 push 27**（第344 までの 22 ＋ 5・push は指示により保留）・木 clean・未追跡 0・**full 7215 / 0 / 4 / 7219**・**台帳 810／exact 634／ss 非ゼロ 211（25.6847648013963）／count 178 うち非ゼロ 0／OPEN 0・snapshot 247・追跡 597**。⚠️ **Co-Authored-By は付けていない**（2026-07-06 のオーナー決定・memory）。
+⚠️ **計器は `scratch/p347/`**（`lp-rest-point.txt`＝LP dump 4 冊・`tbdump.ily`＋`tuprest-lp.out`＝**双子の全括弧 `positions` を include-settings で吐く型**・`sweep347.ps1`／`whatmoved.ps1`・`exe-base`／`exe-head`・`tq.lys`/`tq.ly`・`msg1-3.txt`・`archive-343.ps1`・`ledger*.trx`／`port*.trx`／`full*.trx`）。⚠️ **`scratch/` は git 管理外**なので、消えたら上の数がこのファイルの唯一の記録になる。
+
 ## 以下は第344セッションの経緯
 
 最終更新 第344セッション＝**入り方は第298〜第340 と同じ**（ユーザーは `docs/HANDOFF.md` を読んで着手せよとだけ言い・background job・口挟み 0）。**第343 ⑾⒜「半符尾の継ぎ目を閉じる」に着手し、閉じた**——**ただし正体は起票と違った**（§5.0「起票の難所は予測」の 9 例目）。**製品 14 ファイル・検査 6・番人 5 本・台帳 2 点再 seed・snapshot 5 枚・生成物 2**。**骨は 7**:

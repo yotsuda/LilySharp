@@ -770,6 +770,46 @@ public class MusicXmlRoundTripTests
         Assert.Equal(NotationSignature(xml1), NotationSignature(xml2));
     }
 
+    [Fact]
+    public void StringNumbersAndFingering_SurviveRoundTrip()
+    {
+        // Until 2026-09-08 neither direction carried them: the exporter wrote no <technical>
+        // <string>/<fingering>, and the importer read nothing under <technical>.
+        var tree = SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            key c major
+            c'4\3 d'4@finger(1) <e'\5 dis''\4>4 <c'@finger(2) e'\4>4 |
+            """);
+        var xml1 = new MusicXmlExporter().Export(tree).ToXml();
+        var (lys, report) = new MusicXmlImporter().Import(xml1.ToString());
+
+        var importedTree = SyntaxTree.Parse(lys);
+        Assert.False(HasErrors(importedTree), $"imported .lys did not parse clean:\n{lys}");
+        Assert.Equal(Signature(tree), Signature(importedTree));
+        Assert.Empty(report.Warnings);
+        // A single note's marks follow its duration; a member's sit inside the brackets.
+        Assert.Contains("c'4\\3", lys);
+        Assert.Contains("d'4@finger(1)", lys);
+        Assert.Contains("<e'\\5 dis''\\4>4", lys);
+        Assert.Contains("<c'@finger(2) e'\\4>4", lys);
+
+        // Same <technical> content out of the imported source, note for note.
+        var xml2 = new MusicXmlExporter().Export(importedTree).ToXml();
+        Assert.Equal("3 f1 5 4 f2 4", TechnicalSignature(xml1));
+        Assert.Equal(TechnicalSignature(xml1), TechnicalSignature(xml2));
+
+        // A lettered fingering has no numeric spelling: dropped with a warning, not an error.
+        var lettered = xml1.ToString().Replace("<fingering>1</fingering>", "<fingering>p</fingering>");
+        var (lys2, report2) = new MusicXmlImporter().Import(lettered);
+        Assert.DoesNotContain("@finger(1)", lys2);
+        Assert.Contains(report2.Warnings, w => w.Contains("fingering 'p'"));
+    }
+
+    private static string TechnicalSignature(XDocument xml) =>
+        string.Join(" ", xml.Descendants("technical").SelectMany(t =>
+            t.Elements().Select(e => e.Name.LocalName == "fingering" ? "f" + e.Value : e.Value)));
+
     private static string NotationSignature(XDocument xml) =>
         string.Join(" ", xml.Descendants("notations").SelectMany(n =>
             n.Elements("articulations").Elements().Select(e => e.Name.LocalName)

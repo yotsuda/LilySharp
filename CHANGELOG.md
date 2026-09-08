@@ -24,6 +24,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixed
 
+- **The MusicXML carried no string number and no fingering, on any note.** `c4\3`,
+  `<e dis'>4\5\4` and `c4@finger(1)` reached the page and the twin but left the note's
+  `<technical>` empty; they are written now as `<string>` and `<fingering>`. A chord's outside
+  list pairs with its members as the page pairs them (a member's own `\N` wins, the last outside
+  one repeats), and a string number on a `<< … >>` group is every member's that names none.
+  The importer reads them back (`lysc import`): a `<string>` is the note's `\N`, a numeric
+  `<fingering>` its `@finger(N)`, each inside the brackets when the note is a chord member.
 - **A string number on a `<< … >>` member or group was dropped in silence.** `<< c\3 e\2 g >>`
   printed no strings and raised no diagnostic; it is applied now.
 - **A slur mark after `>>` was dropped from the page and then blamed on the `)`.** `<< c e g >>4( d)`

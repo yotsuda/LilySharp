@@ -185,6 +185,12 @@ internal sealed class ImportNote : ImportItem
     /// <summary>Lily# articulation/ornament mark names (<c>staccato</c>, <c>accent</c>,
     /// <c>fermata</c>, <c>trill</c>, …), emitted as <c>@name</c> suffixes.</summary>
     public List<string> Articulations { get; } = new();
+    /// <summary>The written string (MusicXML <c>&lt;technical&gt;&lt;string&gt;</c>), emitted
+    /// as a <c>\N</c> on this note — inside the brackets when it is a chord member.</summary>
+    public int? StringNumber { get; set; }
+    /// <summary>A numeric fingering (<c>&lt;technical&gt;&lt;fingering&gt;</c>), emitted as
+    /// <c>@finger(N)</c>; a lettered one (p-i-m-a) has no reading here.</summary>
+    public int? Fingering { get; set; }
     /// <summary>When this note OPENS a tuplet: the ratio (actual in the time of normal,
     /// e.g. 3 in 2 for a triplet), emitted as <c>tuplet A/N { </c> before it.</summary>
     public (int Actual, int Normal)? TupletStart { get; set; }
