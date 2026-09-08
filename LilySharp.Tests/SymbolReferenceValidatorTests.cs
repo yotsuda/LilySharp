@@ -40,6 +40,40 @@ public class SymbolReferenceValidatorTests
     }
     
     [Fact]
+    public void Validate_SpacedUnderscoreInAForm_NamesTheGluedCustomText()
+    {
+        // `_ "shown"` is a reference to a section named `_` with a display label, and stays
+        // one (measured 2026-08-17: `section _` is legal); the custom text is the GLUED
+        // `_"shown"`. Owner's decision 2026-09-08: keep the glue, and say so in LYS1005.
+        var tree = SyntaxTree.Parse("part m { }\nsection A { m { c4 d e f | } }\nform main { A _ \"shown\" }\nscore main { staff m }");
+        var validator = new SymbolReferenceValidator();
+        validator.Validate(tree);
+
+        var d = Assert.Single(validator.Diagnostics, x => x.Code == DiagnosticCodes.UndefinedSection);
+        Assert.Contains("Undefined section: '_'", d.Message);
+        Assert.Contains("glue the quote to the underscore: _\"text\"", d.Message);
+    }
+
+    [Fact]
+    public void Validate_GluedCustomText_IsNotASectionReference()
+    {
+        var tree = SyntaxTree.Parse("part m { }\nsection A { m { c4 d e f | } }\nform main { A _\"shown\" }\nscore main { staff m }");
+        var validator = new SymbolReferenceValidator();
+        validator.Validate(tree);
+        Assert.DoesNotContain(validator.Diagnostics, x => x.Code == DiagnosticCodes.UndefinedSection);
+    }
+
+    [Fact]
+    public void Validate_AnyOtherUndefinedSection_CarriesNoUnderscoreHint()
+    {
+        var tree = SyntaxTree.Parse("part m { }\nsection A { m { c4 d e f | } }\nform main { A Nope }\nscore main { staff m }");
+        var validator = new SymbolReferenceValidator();
+        validator.Validate(tree);
+        var d = Assert.Single(validator.Diagnostics, x => x.Code == DiagnosticCodes.UndefinedSection);
+        Assert.Equal("Undefined section: 'Nope'", d.Message);
+    }
+
+    [Fact]
     public void Validate_DefinedVariable_NoError()
     {
         var source = @"

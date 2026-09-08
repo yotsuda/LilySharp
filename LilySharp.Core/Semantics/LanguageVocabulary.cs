@@ -87,7 +87,8 @@ public static class LanguageVocabulary
     public static IReadOnlyCollection<string> TabStyles =>
         TabRenderVocabularyValidator.StyleVocabulary;
 
-    /// <summary>Every value <c>removeEmpty</c> accepts (enforced since 2026-08-19).</summary>
+    /// <summary>Every value <c>removeEmpty</c> accepts (enforced since 2026-08-19) — the score
+    /// selector <c>staff m as removeEmpty V</c> since 2026-09-08, no longer a part property.</summary>
     public static IReadOnlyCollection<string> RemoveEmptyValues => SymbolCaseValidator.RemoveEmptyValueVocabulary;
 
     /// <summary>The two words <c>pitch</c> takes — in a part header, at the top level and on a

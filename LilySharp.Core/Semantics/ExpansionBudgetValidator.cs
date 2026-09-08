@@ -51,11 +51,18 @@ internal sealed class ExpansionBudgetValidator : ISharedCollectValidator
             return;
 
         // ASCII punctuation only: these strings reach legacy-codepage consoles via the CLI.
+        // The budget is the PAGE's: it sits where the line-break DP would die anyway, so it
+        // is a limit of what can be drawn, not a property of the music. The other three
+        // readers walk the whole expansion (MEASURED 2026-08-30, scratch/p301/budget: the
+        // page cut at the budget while `lysc midi` wrote 1,048,576 notes and `lysc xml`
+        // 192 MB) — owner's decision 2026-09-08: that is right, and the message says so
+        // rather than pretending the book itself was cut.
         _diagnostics.Warning(new TextSpan(position, 1),
             DiagnosticCodes.ExpansionBudgetExceeded,
             "this score expands past the collector's site budget, so the picture is "
-            + "TRUNCATED from here on. Nested phrase references multiply (each level "
-            + "doubles), and 'repeat unfold N' / 'R1*N' take any count - reduce the "
-            + "nesting or the counts.");
+            + "TRUNCATED from here on. Only the picture: 'lysc midi', 'lysc xml' and "
+            + "'lysc ly' write the whole expansion. Nested phrase references multiply "
+            + "(each level doubles), and 'repeat unfold N' / 'R1*N' take any count - "
+            + "reduce the nesting or the counts.");
     }
 }

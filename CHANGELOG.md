@@ -22,6 +22,26 @@ workflow attaches that section to the GitHub Release verbatim.
   member's (`>>4\2`), and a tie or slur mark written after `>>` hangs on the last member. Other
   marks on the group still warn (LYS4008) — write them on the member.
 
+- **A pickup can be declared in the music, mid-piece.** `partial` says "the bar it stands in
+  is this long", and it is taken wherever a bar is: a section directive as before, and now a
+  part's or voice's music at the bar's start — `… | partial 2. r2. | …` closes a three-beat bar
+  and the meter resumes after it. It is per part, like a mid-music `time`: every part sharing
+  the bar writes it, and a part that omits it keeps a full bar, which the cross-part check
+  reports. (LilyPond's `\partial` moves one clock for all staves; Lily# keeps a bar length per
+  voice.) The top level of a structured file and a part header hold no bar and still refuse it
+  (LYS1024). The completion offers `partial` in music again.
+
+- **Hara-kiri is the score's, not the part's: `staff m as removeEmpty true|all`.** `removeEmpty`
+  leaves the part header — where it made a part hide its empty systems in every score it was
+  placed in — and joins `lines` as a selector of the staff item, chained after one `as`
+  (`staff m as lines 1 removeEmpty all`, either order). The full score hides the empty systems
+  and the part sheet of the same part never does, which one part-global value could not spell;
+  LilyPond's `\RemoveEmptyStaves` is likewise a context mod written in `\layout` or a staff's
+  `\with`, never on the music. A part header now refuses the word as an unknown property, like
+  `lines` since 0.3.0; `pedal` stays on the part. Ossia takes the selector (and is hara-kiri
+  regardless); a tab item takes neither. The editor offers `as removeEmpty` after a staff name
+  and its values after it.
+
 ### Fixed
 
 - **The MusicXML carried no string number and no fingering, on any note.** `c4\3`,
@@ -72,8 +92,26 @@ workflow attaches that section to the GitHub Release verbatim.
   is unchanged (the shares were always equal); the MusicXML carries the note type and
   time-modification.
 
+### Diagnostics
+
+- **LYS1033 says which outputs are not cut.** The expansion budget is the picture's alone: it sits
+  where the line breaker would fail anyway, so it is a limit of what can be drawn, not of the
+  book. `lysc midi`, `lysc xml` and `lysc ly` write the whole expansion, and the warning now
+  says so instead of leaving a reader to discover a million-note MIDI after "the picture is
+  truncated".
+- **LYS1005 names the glued custom text.** `form main { A _ "shown" }` is a reference to a section
+  named `_` with a display label (a legal name, so the space cannot be forgiven); the custom
+  text is the glued `_"shown"`. When nothing declares `_`, the error says to glue the quote.
+
 ### MIDI, MusicXML and the LilyPond twin
 
+- **`lysc ly` left-aligns a melisma syllable as the page does.** A syllable held over a melisma
+  (`saved~`, `star __`) stands with its left edge on the note on the page (LilyPond's
+  `lyricMelismaAlignment`); the twin's `\lyricmode` line, carrying durations instead of
+  `\lyricsto`, gave LilyPond no melisma to align by and the word was centred. The syllable now
+  carries `\once \override LyricText.self-alignment-X = #LEFT`, so the two engravers put the
+  word in the same place. (`~` stays Lily#'s own melisma source; LilyPond reads it from the
+  music's slurs, ties or `\melisma` — decided 2026-09-08.)
 - **`lysc ly` writes a `chords` row as a `ChordNames` context.** The track goes out as a
   `\chordmode` variable — `C Am | F Gm7-5 |` is `c2 a2:m | f2 g2:m7.5- |` — following the
   form's repeats and endings exactly as the music does, and the row stands above the staff

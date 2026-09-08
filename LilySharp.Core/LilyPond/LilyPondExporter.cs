@@ -3625,7 +3625,9 @@ public sealed class LilyPondExporter
     /// melisma is simply a longer syllable, and <c>\skip</c> filling the gaps. LilyPond then
     /// sets the words by their own durations, which are the note onsets the page aligned
     /// them to — no <c>\lyricsto</c>, no named voices, and the same reading for all three
-    /// kinds of line. The context stands below the staff it is attached to, or at the row's
+    /// kinds of line. A melisma syllable carries the page's LEFT alignment as a
+    /// <c>\once \override</c>, since without <c>\lyricsto</c> LilyPond has no melisma to
+    /// align by. The context stands below the staff it is attached to, or at the row's
     /// place (<see cref="EmitScore"/>).
     /// </summary>
     /// <remarks>
@@ -3690,6 +3692,15 @@ public sealed class LilyPondExporter
                     for (int j = k; j < items.Count && items[j].MeasureIndex == m; j++)
                         if (items[j].Timing > at) { next = items[j].Timing; break; }
                     if (next > length) next = length;
+                    // A melisma syllable is LEFT-aligned on its note (the page's `~` / `__`;
+                    // LilyPond's lyricMelismaAlignment, lily/lyric-engraver.cc:180-183). LilyPond
+                    // learns a melisma only through \lyricsto from the music's slurs, ties or
+                    // \melisma, which a duration-carrying \lyricmode line never tells it — so
+                    // the alignment the page applies is written out on the syllable itself.
+                    // Owner's decision 2026-09-08: `~` stays Lily#'s melisma source; the twin
+                    // carries its consequence rather than switching to \lyricsto.
+                    if (l.MelismaAlignLeft)
+                        AppendToken(text, "\\once \\override LyricText.self-alignment-X = #LEFT", "  ");
                     AppendToken(text, LyricSyllable(l.Text) + ChordModeDuration(next - at), "  ");
                     if (l.ConnectorType == Svg.Model.LyricConnectorType.Hyphen)
                         AppendToken(text, "--", "  ");
@@ -4118,7 +4129,7 @@ public sealed class LilyPondExporter
         for (int i = 1; i < ossia.SlotCount; i++)
             if (ossia.GetChild(i) is SyntaxTokenNode t)
                 toks.Add(t);
-        Svg.Collector.RenderSpecParser.CutLinesSelector(toks);
+        Svg.Collector.RenderSpecParser.CutStaffSelectors(toks);
         return toks;
     }
 

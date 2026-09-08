@@ -175,8 +175,17 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
     {
         if (!_definedSections.Contains(name))
         {
+            // `_ "text"` with a space is a reference to a section named `_` carrying a display
+            // label; the form's custom text is the GLUED `_"text"` (Lexer: '_' followed by
+            // '"'). `_` is a legal section name, so the space cannot be forgiven without
+            // losing that reading (measured 2026-08-17; owner's decision 2026-09-08: keep the
+            // glue, name the mistake). Hinted only when nothing declares `_`.
+            string hint = name == "_"
+                ? ". To print custom text in a form, glue the quote to the underscore: "
+                  + "_\"text\" (with a space, _ names a section)"
+                : "";
             _diagnostics.Error(span, DiagnosticCodes.UndefinedSection,
-                $"Undefined section: '{name}'");
+                $"Undefined section: '{name}'{hint}");
             return;
         }
 

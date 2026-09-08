@@ -2119,8 +2119,12 @@ public class LilyPondExporterTests
             "lyrics words sings melody { Twin- kle twin- kle | star __ | }",
             "staff melody  lyrics words sings melody"));
         Assert.Contains("Twin4 -- kle4 twin4 -- kle4 |", ly);
-        // `star` holds over the second half: one whole-bar syllable, then the extender.
-        Assert.Contains("star1 __ |", ly);
+        // `star` holds over the second half: one whole-bar syllable, then the extender —
+        // LEFT-aligned on its note as the page aligns a melisma (LilyPond would only learn
+        // the melisma through \lyricsto, which the twin does not use), so the alignment is
+        // written on the syllable. A plain syllable carries no override.
+        Assert.Contains("\\once \\override LyricText.self-alignment-X = #LEFT star1 __ |", ly);
+        Assert.DoesNotContain("#LEFT Twin4", ly);
     }
 
     [Fact]

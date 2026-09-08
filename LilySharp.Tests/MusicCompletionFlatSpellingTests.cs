@@ -103,9 +103,10 @@ public class MusicCompletionFlatSpellingTests
     /// pass the parser AND the semantic validators with no error. Labels are also refused
     /// the repeat spellings outright.
     /// ⚠️ IT WAS THE PARSER ALONE until 2026-09-02, and that let `partial` through: the
-    /// parser reads `partial 4` anywhere, and the refusal is PartialScopeValidator's LYS1024
-    /// (a pickup is a section directive). Owner report the same day. A net that stops at the
-    /// parser is half a net.
+    /// parser reads `partial 4` anywhere, and the refusal was PartialScopeValidator's LYS1024
+    /// (a pickup was a section directive). Owner report the same day. A net that stops at the
+    /// parser is half a net. Since 2026-09-08 a mid-music `partial` is legal (owner's
+    /// decision) and the row is back; the net now proves it, rather than its absence.
     /// </remarks>
     [Fact]
     public void MusicCompletion_OffersNothingTheMusicGrammarRefuses()
@@ -130,6 +131,7 @@ public class MusicCompletionFlatSpellingTests
                 "key" => "key g major g4 a b c' |",
                 "time" => "time 3/4 g4 a b |",
                 "tempo" => "tempo 4 = 100 g4 a b c' |",
+                "partial" => "partial 4 g4 |",   // the bar it stands in is one beat (2026-09-08)
                 "octave" => "octave relative g4 a b c' |",
                 "override" => "override Stem.transparent = true g4 a b c' |",
                 "revert" => "revert Stem.transparent g4 a b c' |",

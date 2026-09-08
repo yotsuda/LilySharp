@@ -7,7 +7,7 @@ octave absolute
 time 4/4
 
 part top { clef treble }
-part bot { clef treble removeEmpty true }
+part bot { clef treble }
 
 section Main {
   top { a4@cresc a a a | break a a a a | break a a a a@f | }
@@ -16,4 +16,4 @@ section Main {
 
 form main { ~Main }
 
-score main { grandStaff { staff top staff bot } }
+score main { grandStaff { staff top staff bot as removeEmpty true } }

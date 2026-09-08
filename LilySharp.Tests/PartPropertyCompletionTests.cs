@@ -23,7 +23,8 @@ namespace LilySharp.Tests;
 /// <summary>
 /// Completion inside a part { } header offers the part PROPERTY names (a part
 /// body holds properties and inner sections, never notes), and completion
-/// right after <c>removeEmpty</c> offers its values.
+/// right after a value-taking property offers its values. (<c>removeEmpty</c>'s
+/// values are served on the SCORE item since 2026-09-08 — StaffLinesCompletionTests.)
 /// </summary>
 [Trait("Category", "Unit")]
 public class PartPropertyCompletionTests
@@ -41,11 +42,12 @@ public class PartPropertyCompletionTests
 
     [Theory]
     [InlineData("part m { removeEmpty ")]
-    [InlineData("part m { removeEmpty tr")]
     [InlineData("part m { clef bass removeEmpty a")]
-    public void AfterRemoveEmpty_OffersItsValues(string text)
+    public void RemoveEmptyInAHeader_IsNotAValueContextAnyMore(string text)
     {
-        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterRemoveEmpty, ContextOf(text));
+        // The word is a score selector now; in a header it is an unknown property, so the
+        // popup must not help finish it (it offers the property list, as after any word).
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.PartBlock, ContextOf(text));
     }
 
     [Theory]
@@ -79,12 +81,15 @@ public class PartPropertyCompletionTests
     }
 
     [Fact]
-    public void PartPropertyCompletions_IncludeRemoveEmpty_AndNoNotes()
+    public void PartPropertyCompletions_AreTheProperties_AndNoNotes()
     {
         var labels = LilySharpLanguageServer.GetPartPropertyCompletions().Items
             .Select(i => i.Label).ToArray();
 
-        Assert.Contains("removeEmpty", labels);
+        // `removeEmpty` and `lines` are score selectors, not properties.
+        Assert.DoesNotContain("removeEmpty", labels);
+        Assert.DoesNotContain("lines", labels);
+        Assert.Contains("pedal", labels);
         Assert.Contains("clef", labels);
         Assert.Contains("instrument", labels);
         // `key` is NOT a parseable part property (ParsePartProperty accepts

@@ -21,7 +21,8 @@ time 4/4                // optional (default 4/4); 4/4 engraves as the C
 key c major             // optional (default c major); all church modes work:
                         // major minor ionian dorian phrygian lydian mixolydian aeolian locrian
                         // (key d dorian = no accidentals, key e dorian = 2 sharps)
-                        // (a pickup is 'partial', but it belongs to a SECTION — see below)
+                        // (a pickup is 'partial': a SECTION directive, or in the music at a
+                        //  bar's start — see below; the top level rejects it)
 fonts {                  // optional; binds text faces. The two generic families together
   serif "Georgia"       // are "the whole document's text"; bind roles separately below
   sans  "Georgia"       // 'embedded' subsets every named face into the PDF
@@ -39,7 +40,9 @@ phrase motif { c4 d e f | }     // optional reusable music, referenced by bare n
 
 section Main {                  // a section binds music to each part by name
   partial 8                     // optional pickup: shortens THIS section's opening bar
-                                // for every part at once (top level rejects it)
+                                // for every part at once (top level rejects it). In a
+                                // part's music, `| partial 2. r2. |` makes THAT bar 3 beats
+                                // long, mid-piece — written in every part sharing the bar
   rightHand { motif g2 g | }
   leftHand  { c2 c | g2 g | }
 }
@@ -573,9 +576,11 @@ quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LY
   belongs an octave away: the boundary's frame reset stays, and the carry is written down.
 - Part header attributes (`clef`/`key`/`time`/`tempo`) are written **bare, no `=`**, like
   the top-level commands. Override/revert use `=`.
-- `removeEmpty true|all` in a part header hides that part's staff in systems where it only
+- `staff NAME as removeEmpty true|all` in a SCORE hides that staff in systems where it only
   rests (hara-kiri). `true` keeps the first system (LP `\RemoveEmptyStaves`), `all` hides it
-  too (`\RemoveAllEmptyStaves`); any playing voice keeps the staff visible.
+  too (`\RemoveAllEmptyStaves`); any playing voice keeps the staff visible. It chains with
+  the line count after one `as` (`staff m as lines 1 removeEmpty all`) and is NOT a part
+  property: the full score hides the empty systems, the part sheet of the same part never does.
 - Identifiers (parts, phrases, sections) may use any Unicode letters: `phrase 動機 { ... }`.
 - Everything is **case-sensitive**: keywords, identifiers, and vocabulary values (clef /
   instrument-preset / tuning names, key modes) are written in their canonical (lowercase)

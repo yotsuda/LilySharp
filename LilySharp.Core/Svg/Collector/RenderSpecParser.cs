@@ -613,31 +613,59 @@ public static class RenderSpecParser
         return new GrandStaffSpec([.. staves], type);
     }
 
+    /// <summary>The presentation selectors a staff or ossia item wrote after its one
+    /// <c>as</c>: the staff-line count (null when absent or unreadable — the parser already
+    /// reported that; the render falls back to five) and hara-kiri (<c>removeEmpty true</c>
+    /// hides the staff in rest-only systems but keeps the FIRST, LP <c>\RemoveEmptyStaves</c>;
+    /// <c>all</c> hides the first too, <c>\RemoveAllEmptyStaves</c>; <c>false</c> or absent
+    /// keeps the staff). LILYPOND-REF: ly/context-mods-init.ly — RemoveEmptyStaves /
+    /// RemoveAllEmptyStaves set VerticalAxisGroup.remove-empty (+ remove-first).</summary>
+    internal readonly record struct StaffSelectors(int? Lines, bool RemoveEmpty, bool RemoveFirst);
+
     /// <summary>
-    /// Cuts a trailing <c>as lines N</c> selector off a render item's target
-    /// tokens and returns the written staff-line count, or null when there is
-    /// no selector or its value is unreadable (the parser already reported
-    /// that; the render falls back to the five-line default). ONE HOME for the
-    /// cut: PartReferenceFinder and the LilyPond twin call this same method so
-    /// the part token stays the last remaining slot everywhere. Matched by
-    /// TEXT — <c>as</c> lexes as the Dutch A-flat pitch, <c>lines</c> as an
-    /// ordinary word.
+    /// Cuts the trailing <c>as …</c> selectors (<c>lines N</c>, <c>removeEmpty V</c>, any
+    /// order after one <c>as</c>) off a render item's target tokens and returns what they
+    /// said. ONE HOME for the cut: PartReferenceFinder and the LilyPond twin call this same
+    /// method so the part token stays the last remaining slot everywhere. Matched by TEXT —
+    /// <c>as</c> lexes as the Dutch A-flat pitch, the selector words as ordinary words — and
+    /// only an <c>as</c> FOLLOWED BY a selector word is the cut, so a part named <c>as</c>
+    /// is left alone. The <c>removeEmpty</c> value is read Ordinal: the parser refused any
+    /// other spelling (<c>TRUE</c> included) before this reader sees the book.
     /// </summary>
-    internal static int? CutLinesSelector(List<SyntaxTokenNode> toks)
+    internal static StaffSelectors CutStaffSelectors(List<SyntaxTokenNode> toks)
     {
+        static bool IsSelectorWord(SyntaxTokenNode t)
+            => string.Equals(t.Text, "lines", System.StringComparison.Ordinal)
+               || string.Equals(t.Text, "removeEmpty", System.StringComparison.Ordinal);
         for (int i = 0; i + 1 < toks.Count; i++)
         {
             if (!string.Equals(toks[i].Text, "as", System.StringComparison.Ordinal)
-                || !string.Equals(toks[i + 1].Text, "lines", System.StringComparison.Ordinal))
+                || !IsSelectorWord(toks[i + 1]))
                 continue;
-            int? lines = i + 2 < toks.Count
-                && int.TryParse(toks[i + 2].Text, out int n)
-                && n >= StaffSpec.MinLines && n <= StaffSpec.MaxLines
-                ? n : null;
+            int? lines = null;
+            string? removeEmpty = null;
+            for (int j = i + 1; j < toks.Count; j++)
+            {
+                if (string.Equals(toks[j].Text, "lines", System.StringComparison.Ordinal))
+                {
+                    lines = j + 1 < toks.Count
+                        && int.TryParse(toks[j + 1].Text, out int n)
+                        && n >= StaffSpec.MinLines && n <= StaffSpec.MaxLines
+                        ? n : null;
+                    if (j + 1 < toks.Count && !IsSelectorWord(toks[j + 1])) j++;
+                }
+                else if (string.Equals(toks[j].Text, "removeEmpty", System.StringComparison.Ordinal))
+                {
+                    removeEmpty = j + 1 < toks.Count && !IsSelectorWord(toks[j + 1]) ? toks[j + 1].Text : null;
+                    if (removeEmpty != null) j++;
+                }
+            }
             toks.RemoveRange(i, toks.Count - i);
-            return lines;
+            return new StaffSelectors(lines,
+                RemoveEmpty: removeEmpty is "true" or "all",
+                RemoveFirst: removeEmpty is "all");
         }
-        return null;
+        return default;
     }
 
     /// <summary>The non-keyword, non-brace tokens of a render item, in order:
@@ -660,10 +688,11 @@ public static class RenderSpecParser
     {
         // [~][clef?] part ["display"] [with chords chordPart]; braces skipped.
         var toks = RenderTargetTokens(staff);
-        // `as lines N` — the staff-line count is a property of THIS rendering
-        // (the part header no longer carries one); cut it before the display
-        // name scan below so `as` cannot be read as a bare display name.
-        int? selectorLines = CutLinesSelector(toks);
+        // `as lines N removeEmpty V` — the staff-line count and hara-kiri are
+        // properties of THIS rendering (the part header carries neither); cut them
+        // before the display name scan below so `as` cannot be read as a bare
+        // display name.
+        var selectors = CutStaffSelectors(toks);
         if (toks.Count == 0) return null;
 
         // `staff ~flute` = no instrument-name label for this staff.
@@ -723,20 +752,20 @@ public static class RenderSpecParser
               ?? GetPartDisplayName(staff, voiceName)
               ?? GetInstrument(staff, voiceName)?.DisplayName;
 
-        // Hara-kiri, as a part property: `removeEmpty true` hides the staff in
-        // systems where it only rests but keeps it in the FIRST system
-        // (LP \RemoveEmptyStaves); `removeEmpty all` hides the first system too
-        // (LP \RemoveAllEmptyStaves). Anything else (or absent) keeps the staff.
-        // LILYPOND-REF: ly/context-mods-init.ly — RemoveEmptyStaves /
-        // RemoveAllEmptyStaves set VerticalAxisGroup.remove-empty (+ remove-first).
-        string? removeEmpty = GetPartProperty(staff, voiceName, "removeempty")?.ToLowerInvariant();
-        int lines = selectorLines ?? StaffSpec.MaxLines;
+        // Hara-kiri is the score item's `as removeEmpty V` (2026-09-08, user decision;
+        // it was a part property until then) — read above with the line count. The
+        // part header is not consulted: a `removeEmpty` written there is an unknown
+        // property (SymbolCaseValidator), the way `lines` has been since 2026-08-19.
+        int lines = selectors.Lines ?? StaffSpec.MaxLines;
         // Piano pedal style (part property `pedal bracket|text|mixed`; default Bracket).
+        // It STAYS on the part by the same decision: LilyPond's pedalSustainStyle is a
+        // context property a `\set` may write anywhere, a house style rather than a
+        // per-score presentation choice.
         var pedalStyle = Staff.ParsePedalStyle(
             GetPartProperty(staff, voiceName, "pedal")?.ToLowerInvariant());
         return new StaffSpec(clef, voiceName, instrumentName,
-            RemoveEmpty: removeEmpty is "true" or "all",
-            RemoveFirst: removeEmpty is "all",
+            RemoveEmpty: selectors.RemoveEmpty,
+            RemoveFirst: selectors.RemoveFirst,
             Lines: lines,
             NameSuppressed: nameSuppressed,
             // Empty, not default: readers Assert/iterate without an IsDefault
@@ -1011,10 +1040,12 @@ public static class RenderSpecParser
     /// </summary>
     private static OssiaStaffSpec? ParseOssia(OssiaRenderSyntax ossia)
     {
-        // ossia [clef] partName [as lines N] — after the selector cut, the LAST
-        // token is always the part name; a clef word alone is a name.
+        // ossia [clef] partName [as lines N …] — after the selector cut, the LAST
+        // token is always the part name; a clef word alone is a name. An ossia is
+        // hara-kiri on every system by construction (Staff.CreateOssia), so its
+        // `removeEmpty` selector, if written, changes nothing.
         var toks = RenderTargetTokens(ossia);
-        int? ossiaLines = CutLinesSelector(toks);
+        int? ossiaLines = CutStaffSelectors(toks).Lines;
         if (toks.Count == 0)
             return null;
         var nameToken = toks[^1];

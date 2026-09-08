@@ -112,24 +112,30 @@ public class HaraKiriTests
         Assert.False(HaraKiri.IsStaffEmpty(staff, 0, 1));
     }
 
-    // --- removeEmpty part property (grammar → Staff flags) ---
+    // --- `as removeEmpty V` score selector (grammar → Staff flags) ---
+    // A part property until 2026-09-08 (user decision): hara-kiri is a property of THIS
+    // rendering, like `as lines N` — the full score hides the empty systems, the part
+    // sheet of the same part never does. LilyPond's \RemoveEmptyStaves is likewise a
+    // context mod written in a score's \layout or a staff's \with, never on the music.
 
     [Theory]
-    [InlineData("", false, false)]                    // absent: never hide
-    [InlineData("removeEmpty true", true, false)]     // LP \RemoveEmptyStaves
-    [InlineData("removeEmpty all", true, true)]       // LP \RemoveAllEmptyStaves
-    [InlineData("removeEmpty false", false, false)]   // explicit off
-    public void RemoveEmptyPartProperty_MapsToStaffFlags(
-        string property, bool removeEmpty, bool removeFirst)
+    [InlineData("", false, false)]                        // absent: never hide
+    [InlineData(" as removeEmpty true", true, false)]     // LP \RemoveEmptyStaves
+    [InlineData(" as removeEmpty all", true, true)]       // LP \RemoveAllEmptyStaves
+    [InlineData(" as removeEmpty false", false, false)]   // explicit off
+    [InlineData(" as lines 1 removeEmpty all", true, true)]   // chained after one `as`
+    [InlineData(" as removeEmpty all lines 1", true, true)]   // either order
+    public void RemoveEmptySelector_MapsToStaffFlags(
+        string selector, bool removeEmpty, bool removeFirst)
     {
         string src = $$"""
             time 4/4
             key c major
             part rh { clef treble }
-            part lh { clef bass {{property}} }
+            part lh { clef bass }
             section Main { rh { c4 d e f | } lh { r1 | } }
             form main { Main }
-            score main "x" { grandStaff { staff rh staff lh } }
+            score main "x" { grandStaff { staff rh staff lh{{selector}} } }
             """;
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(src);
         var spec = Core.Svg.Collector.RenderSpecParser.FindFirst(tree);
@@ -348,7 +354,7 @@ public class HaraKiriTests
             time 4/4
             key c major
 
-            part rh { clef treble{{(declareRemoveEmpty ? " removeEmpty all" : "")}} }
+            part rh { clef treble }
             part lh { clef bass }
 
             section Main {
@@ -360,7 +366,7 @@ public class HaraKiriTests
 
             score main "HKJ" {
               grandStaff {
-                staff rh
+                staff rh{{(declareRemoveEmpty ? " as removeEmpty all" : "")}}
                 staff lh
               }
             }
@@ -516,9 +522,10 @@ public class HaraKiriTests
         return (staff.RemoveEmpty, staff.RemoveFirst);
     }
 
-    private static string Book(string header) =>
-        header + NL + "section A { m { c'1 } }" + NL
-        + "form main { A }" + NL + "score main { staff m }" + NL;
+    /// <summary>A one-part book whose score item is <paramref name="staffItem"/>.</summary>
+    private static string Book(string staffItem) =>
+        "part m { }" + NL + "section A { m { c'1 } }" + NL
+        + "form main { A }" + NL + "score main { " + staffItem + " }" + NL;
 
     private static string NL => Environment.NewLine;
 
@@ -532,27 +539,58 @@ public class HaraKiriTests
         // a check for exactly this reason and this list did not. Found by running the closing
         // checklist, not by a red test.
         //
-        // ⚠️ The mapping itself is NOT re-asserted here — RemoveEmptyPartProperty_MapsToStaffFlags
+        // ⚠️ The mapping itself is NOT re-asserted here — RemoveEmptySelector_MapsToStaffFlags
         // above already holds it, and a copy of those three lines would be a third spelling. What
         // is new is the direction that theory cannot see: it names its own words, so a word ADDED
         // to the published list without the reader learning it stays green there. Measured: adding
         // `none` to the list leaves that theory passing and turns this red.
         var readings = SymbolCaseValidator.RemoveEmptyValueVocabulary
-            .Select(v => StaffFlagsOf(Book($"part m {{ removeEmpty {v} }}")))
+            .Select(v => StaffFlagsOf(Book($"staff m as removeEmpty {v}")))
             .ToArray();
         Assert.Equal(SymbolCaseValidator.RemoveEmptyValueVocabulary.Count, readings.Distinct().Count());
 
-        // ⚠️ And the edge the list sits beside, so the count above is not mistaken for the
-        // whole story: THIS READER still takes anything. An unknown word is silently the
-        // default here, and `TRUE` is silently `true` because the reader lower-cases — which
-        // is why, when the hole was closed on 2026-08-19, it was closed in the VALIDATOR
-        // (SymbolCaseValidator refuses both spellings, Ordinal, like every other symbol in a
-        // part header) and not by tightening these comparisons. A book that reaches this
-        // reader has already been checked; what these two lines pin is that the reader's
-        // leniency is UNCHANGED, so the refusal above it is the only thing anyone has to
-        // reason about. See SymbolCaseValidatorTests for the door itself.
-        Assert.Equal((false, false), StaffFlagsOf(Book("part m { removeEmpty banana }")));
-        Assert.Equal((true, false), StaffFlagsOf(Book("part m { removeEmpty TRUE }")));
+        // ⚠️ And the edge the list sits beside: the door is the PARSER now (2026-09-08, the
+        // word moved to the score item — Parser.Form.ConsumeStaffSelectors reads this very
+        // list, Ordinal), and the reader behind it is Ordinal too, so an unknown word and a
+        // wrong case are both the default AND an error. Until then the reader lower-cased
+        // and the part-header validator was the only refusal.
+        Assert.Equal((false, false), StaffFlagsOf(Book("staff m as removeEmpty banana")));
+        Assert.Equal((false, false), StaffFlagsOf(Book("staff m as removeEmpty TRUE")));
+    }
+
+    [Theory]
+    [InlineData("staff m as removeEmpty TRUE")]     // case, like every other symbol
+    [InlineData("staff m as removeEmpty banana")]   // an unknown word
+    [InlineData("staff m as hidden")]               // not a selector word at all
+    public void ASelectorTheLanguageDoesNotKnow_IsARefusal(string staffItem)
+    {
+        var tree = SyntaxTree.Parse(Book(staffItem));
+        Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.UnknownSymbolCase);
+    }
+
+    [Theory]
+    [InlineData("staff m as removeEmpty true")]
+    [InlineData("staff m as removeEmpty all lines 1")]
+    [InlineData("ossia m as removeEmpty all")]
+    public void EverySpellingTheLanguageMeans_Compiles(string staffItem)
+    {
+        string src = "part m { }" + NL + "part n { }" + NL + "section A { m { c'1 } n { c1 } }" + NL
+            + "form main { A }" + NL + "score main { staff n " + staffItem + " }" + NL;
+        var tree = SyntaxTree.Parse(src);
+        Assert.DoesNotContain(tree.Diagnostics.Concat(SemanticValidation.Run(tree)),
+            d => d.Severity == DiagnosticSeverity.Error);
+    }
+
+    /// <summary>The part header refuses the word since 2026-09-08 — the same unknown-property
+    /// net that has refused <c>lines</c> there since 2026-08-19, no new code.</summary>
+    [Fact]
+    public void RemoveEmptyInAPartHeader_IsAnUnknownProperty()
+    {
+        var tree = SyntaxTree.Parse("part m { clef treble removeEmpty true }" + NL
+            + "section A { m { c'1 } }" + NL + "form main { A }" + NL + "score main { staff m }" + NL);
+        Assert.Contains(SemanticValidation.Run(tree),
+            d => d.Code == DiagnosticCodes.UnknownSymbolCase && d.Message.Contains("Unknown part property 'removeEmpty'"));
+        Assert.DoesNotContain("removeEmpty", SymbolCaseValidator.PropertyNameVocabulary);
     }
 
     /// <summary>
@@ -569,14 +607,14 @@ public class HaraKiriTests
     {
         static string VerseBook(bool verse) =>
             "octave absolute" + Environment.NewLine + "time 4/4" + Environment.NewLine
-            + "part voc { clef treble removeEmpty true }" + Environment.NewLine
+            + "part voc { clef treble }" + Environment.NewLine
             + "part pno { clef bass }" + Environment.NewLine
             + "section A { voc { c'4 d' e' f' | } "
             + (verse ? "lyrics w sings voc { la la la la | } " : "")
             + "pno { c4 d e f | } }" + Environment.NewLine
             + "section B { voc { R1 | } pno { g4 a b c' | } }" + Environment.NewLine
             + "form main { A break B }" + Environment.NewLine
-            + "score main { staff voc " + (verse ? " lyrics w " : "") + " staff pno }"
+            + "score main { staff voc as removeEmpty true " + (verse ? " lyrics w " : "") + " staff pno }"
             + Environment.NewLine;
 
         static (double Gap, int SyllablesPastSystem1) Measure(string src)

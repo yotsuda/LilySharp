@@ -122,7 +122,6 @@ public class SymbolCaseValidatorTests
     }
 
     [Theory]
-    [InlineData("removeEmpty banana")]
     [InlineData("octave banana")]
     [InlineData("transpose banana")]
     [InlineData("transposition banana")]
@@ -132,9 +131,6 @@ public class SymbolCaseValidatorTests
         => Assert.True(HasSymbolError(header));
 
     [Theory]
-    [InlineData("removeEmpty true")]
-    [InlineData("removeEmpty all")]
-    [InlineData("removeEmpty false")]   // in the vocabulary; means what leaving it out means
     [InlineData("octave 3")]
     [InlineData("transpose d")]
     [InlineData("transpose cis")]
@@ -148,14 +144,18 @@ public class SymbolCaseValidatorTests
 
     /// <summary>
     /// `removeEmpty` was the ONE part-header property that ignored case, and it ignored
-    /// it because nobody checked it — <c>RenderSpecParser</c> lower-cases before comparing.
-    /// It now obeys the Ordinal rule the other symbols in this header always obeyed.
+    /// it because nobody checked it — <c>RenderSpecParser</c> lower-cased before comparing.
+    /// From 2026-08-19 it obeyed the Ordinal rule here; on 2026-09-08 the word LEFT the part
+    /// header for the score item (<c>staff m as removeEmpty V</c>, user decision — hara-kiri
+    /// is a property of the rendering, like <c>lines</c>), so in a header it is now an
+    /// unknown property, whatever its value. The case rule travelled with it:
+    /// HaraKiriTests.ASelectorTheLanguageDoesNotKnow_IsARefusal.
     /// </summary>
     [Fact]
-    public void RemoveEmptyValue_IsCaseSensitive_LikeEveryOtherSymbolHere()
+    public void RemoveEmpty_IsNoLongerAPartProperty()
     {
+        Assert.True(HasSymbolError("removeEmpty true"));
         Assert.True(HasSymbolError("removeEmpty TRUE"));
-        Assert.False(HasSymbolError("removeEmpty true"));
     }
 
     /// <summary>

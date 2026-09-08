@@ -2170,8 +2170,9 @@ public sealed class MidiExporter
         // doubling phrase DAG (`P(n) = P(n-1) P(n-1)`, 26 source lines), `lysc svg` truncates
         // at the budget and SAYS SO (LYS1033, "the picture is TRUNCATED from here on") while
         // `lysc midi` emits all 1,048,576 notes (9.4 MB) and `lysc xml` all of them again
-        // (192 MB), silently. LYS1033's own wording is about the PICTURE and is accurate; the
-        // other three outputs are simply not covered by it. See docs/HANDOFF.md §2 F.
+        // (192 MB), silently. LYS1033's wording is about the PICTURE and, since 2026-09-08
+        // (owner's decision: the budget is the page's, a MIDI of a million notes is a correct
+        // output), it also SAYS that the other three outputs write the whole expansion.
         // A grace body is budgeted here anyway because the cap has ONE home and this is the
         // shared expander's own parameter — not because this walker counts anywhere else.
         int expansionBudget = Svg.Collector.MeasureCollector.DefaultExpansionBudgetCap;

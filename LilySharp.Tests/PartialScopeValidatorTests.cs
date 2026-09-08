@@ -16,16 +16,18 @@
 
 using System.Linq;
 using LilySharp.Core.Semantics;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Syntax;
 using Xunit;
 
 namespace LilySharp.Tests;
 
 /// <summary>
-/// A <c>partial</c> (pickup) shortens the opening bar for every part of a section at once, so
-/// in a structured file it must be a section directive — not a top-level global, a part header,
-/// or a per-voice directive. Bare music (no sections) is exempt: a leading partial is just that
-/// note stream's pickup.
+/// A <c>partial</c> (pickup) says "the bar it stands in is this long", so it is legal wherever
+/// a bar is: a section directive, a section body, and — owner's decision 2026-09-08 — a part's
+/// or voice's music mid-piece, written per part like a mid-music <c>time</c>. The top level of
+/// a structured file and a part header hold no bar and stay errors. Bare music (no sections)
+/// is exempt: a leading partial is just that note stream's pickup.
 /// </summary>
 [Trait("Category", "Unit")]
 public class PartialScopeValidatorTests
@@ -48,31 +50,55 @@ public class PartialScopeValidatorTests
 
     [Fact]
     public void SingleVoiceSectionBodyPartial_Ok()
-        // A TOP-LEVEL single-voice section: the section itself IS the lone voice, so its
-        // partial is the section's pickup. (A partial in a part-MAJOR cell is different — it
-        // belongs to only one part; see PartialInPartMajorCell_Errors.)
         => Assert.Equal(0, ErrCount(
             "time 4/4\nsection A { partial 4  g4 | c' d' e' f' | }\nform main { A }\nscore main { staff melody }"));
 
-    // --- Rejected: not a section directive ---
+    // --- Allowed since 2026-09-08: in the music, at the head or mid-piece, per part ---
 
     [Fact]
-    public void PartialInPartMajorCell_Errors()
-        // A section nested in a `part {}` is one part's cell; a section-wide pickup does not
-        // belong there — write it in a standalone `section A { partial N }` header instead.
-        => Assert.Equal(1, ErrCount(
+    public void PartialInPartMajorCell_IsThatPartsPickup_Ok()
+        // One part's cell, one part's pickup — the per-part rule; a second part that shares
+        // the bar writes its own (or CrossPartMeasureValidator says the bars disagree).
+        => Assert.Equal(0, ErrCount(
             "part melody { section A { partial 4  g4 | c' d' e' f' | } }\nform main { A }\nscore main { staff melody }"));
+
+    [Fact]
+    public void PartialInsideAPartBlock_Ok()
+        => Assert.Equal(0, ErrCount(
+            "section A { melody { partial 4  g4 | c' d' e' f' | } }\nform main { A }\nscore main { staff melody }"));
+
+    [Fact]
+    public void MidPiecePartial_ShortensTheBarItStandsIn_OnThePage()
+    {
+        // The census shape of the tab corpus: `| partial 2. r2. |` closes a three-beat bar
+        // mid-piece, and the meter resumes after it. No diagnostic, and the page has the bar.
+        const string src = "time 4/4\nsection A { melody { c'4 d' e' f' | partial 2. r2. | g'4 a' b' c'' | } }\n"
+            + "form main { A }\nscore main { staff melody }";
+        Assert.Empty(SemanticValidation.Run(SyntaxTree.Parse(src)).Where(d => d.Severity == DiagnosticSeverity.Error));
+        Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(src)),
+            d => d.Code == DiagnosticCodes.MeasureIncomplete);
+        var score = new MeasureCollector().Collect(SyntaxTree.Parse(src), "melody");
+        Assert.Equal(3, score.Voice.Measures.Length);
+        Assert.Equal(new Fraction(3, 4), score.Voice.Measures[1].TotalDuration);
+        Assert.Equal(new Fraction(4, 4), score.Voice.Measures[2].TotalDuration);
+    }
+
+    [Fact]
+    public void MidPiecePartial_WrittenInOnePartOnly_IsACrossPartMismatch()
+        // Lily# has no shared Timing (LilyPond's \partial moves every staff's clock through
+        // Score.Timing); a part that omits the pickup keeps its full bar, and the two parts'
+        // bars disagree — which the cross-part check reports rather than the scope check.
+        => Assert.Contains(SemanticValidation.Run(SyntaxTree.Parse(
+                "time 4/4\nsection A { melody { c'4 d' e' f' | partial 4 g'4 | c'4 d' e' f' | }\n"
+                + "  bass { c4 d e f | c4 d e f | c4 d e f | } }\nform main { A }\nscore main { staff melody staff bass }")),
+            d => d.Code == DiagnosticCodes.MeasureDurationMismatch);
+
+    // --- Rejected: no bar there ---
 
     [Fact]
     public void TopLevelPartial_InStructuredFile_Errors()
         => Assert.Equal(1, ErrCount(
             "partial 4\nsection A { melody { c4 d e f | } }\nform main { A }\nscore main { staff melody }"));
-
-    [Fact]
-    public void PartialInsideAPartBlock_Errors()
-        // The old pre-model form: partial nested in a part block applies to only that one part.
-        => Assert.Equal(1, ErrCount(
-            "section A { melody { partial 4  c4 d e f | } }\nform main { A }\nscore main { staff melody }"));
 
     // --- Exempt: bare music has no sections ---
 

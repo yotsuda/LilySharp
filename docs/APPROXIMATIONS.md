@@ -228,7 +228,7 @@
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:1854** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:4480** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:4491** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:2135** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ChordRepetitions.cs`

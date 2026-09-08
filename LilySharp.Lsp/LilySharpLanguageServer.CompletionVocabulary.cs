@@ -185,12 +185,12 @@ public sealed partial class LilySharpLanguageServer
     private static readonly string[] PartPropertyOrder =
     {
         "clef", "instrument", "tuning", "octave", "transpose",
-        "transposition", "pitch", "pedal", "removeEmpty",
+        "transposition", "pitch", "pedal",
     };
 
     // Prose per property, and whether the editor has a VALUE list to enumerate for it.
     // ⚠️ Values must be true only where a value context actually exists — AfterClef,
-    // AfterInstrument, AfterRemoveEmpty, AfterPitch. It is false for `octave` because the part-header
+    // AfterInstrument, AfterPitch. It is false for `octave` because the part-header
     // `octave` takes a NUMBER (the AfterOctave context is gated to the top-level directive),
     // and false for `tuning`/`pedal`/`transposition`, which have no value context at
     // all. Setting it re-opens suggestions onto whatever list is general to the position,
@@ -220,8 +220,8 @@ public sealed partial class LilySharpLanguageServer
             ["transposition"] = ($"Sounding-octave marker ({string.Join("/", LanguageVocabulary.TranspositionMarkers)})", false),
             ["pitch"] = ($"This part's pitch convention for a transposing instrument ({string.Join("/", LanguageVocabulary.PitchModes)}) — overrides the top-level directive", true),
             ["pedal"] = ($"Piano pedal style ({string.Join("/", LanguageVocabulary.PedalStyles)})", false),
-            ["removeEmpty"] = ("Hara-kiri: hide this staff in rest-only systems "
-                               + $"({string.Join(" | ", LanguageVocabulary.RemoveEmptyValues)})", true),
+            // (`removeEmpty` left this table 2026-09-08 with the property: hara-kiri is the
+            // score's `staff m as removeEmpty V` — GetStaffAttachNameCompletions.)
         };
 
     /// <summary>The property names a part { } header accepts (bare `name value`
@@ -239,8 +239,7 @@ public sealed partial class LilySharpLanguageServer
         // offered, without a description.
         //
         // Values = the property takes a value LIST the editor can enumerate — so it is true only
-        // where a value context actually exists (AfterClef, AfterInstrument, AfterRemoveEmpty,
-        // AfterPitch).
+        // where a value context actually exists (AfterClef, AfterInstrument, AfterPitch).
         // ⚠️ Setting it for a property with no such context re-opens suggestions onto whatever
         // the general list is, which is worse than not offering to help.
         var props = new System.Collections.Generic.List<(string Label, string? Detail, bool Values)>();
@@ -287,7 +286,8 @@ public sealed partial class LilySharpLanguageServer
     };
 
     /// <summary>
-    /// The values valid right after the <c>removeEmpty</c> part property, READ FROM THE
+    /// The values valid right after the <c>removeEmpty</c> staff selector
+    /// (<c>staff m as removeEmpty |</c>; a part property until 2026-09-08), READ FROM THE
     /// COMPILER. LILYPOND-REF: ly/context-mods-init.ly — RemoveEmptyStaves (keeps the first
     /// system) / RemoveAllEmptyStaves.
     /// </summary>
@@ -1180,32 +1180,52 @@ public sealed partial class LilySharpLanguageServer
         ]
     };
 
-    /// <summary>After <c>staff NAME</c> / <c>ossia NAME</c>: the <c>as lines N</c>
-    /// staff-line selector, then the ordinary render-item continuations so a
+    /// <summary>The two staff selectors as <c>as …</c> items — the line count and hara-kiri.
+    /// Each inserts its keyword and re-opens the popup on its value list. Both moved OFF
+    /// the part header (lines 2026-08-19, removeEmpty 2026-09-08, user decisions): they are
+    /// properties of THIS rendering, so the same part can print five-lined in the full score
+    /// and one-lined in a lead sheet, and hide its empty systems in one score only.</summary>
+    private static CompletionItem[] StaffSelectorItems(string prefix) =>
+    [
+        new CompletionItem
+        {
+            Label = prefix + "lines",
+            Kind = CompletionItemKind.Keyword,
+            InsertTextFormat = InsertTextFormat.Snippet,
+            InsertText = prefix + "lines $0",
+            Detail = "Staff-line count for this staff - 1 is a one-line rhythm staff",
+            SortText = "0",
+            Command = new Command
+            {
+                Title = "Suggest line count",
+                CommandIdentifier = "editor.action.triggerSuggest",
+            },
+        },
+        new CompletionItem
+        {
+            Label = prefix + "removeEmpty",
+            Kind = CompletionItemKind.Keyword,
+            InsertTextFormat = InsertTextFormat.Snippet,
+            InsertText = prefix + "removeEmpty $0",
+            Detail = "Hara-kiri: hide this staff in rest-only systems "
+                     + $"({string.Join(" | ", LanguageVocabulary.RemoveEmptyValues)})",
+            SortText = "1",
+            Command = new Command
+            {
+                Title = "Suggest value",
+                CommandIdentifier = "editor.action.triggerSuggest",
+            },
+        },
+    ];
+
+    /// <summary>After <c>staff NAME</c> / <c>ossia NAME</c>: the <c>as lines N</c> /
+    /// <c>as removeEmpty V</c> selectors, then the ordinary render-item continuations so a
     /// following staff/chords/lyrics is not blocked — the same shape as
-    /// <see cref="GetChordAttachNameCompletions"/>. The count moved OFF the part
-    /// header (2026-08-19): it is a property of THIS rendering, so the same part
-    /// can print five-lined in the full score and one-lined in a lead sheet.
+    /// <see cref="GetChordAttachNameCompletions"/>.
     /// </summary>
     internal static CompletionList GetStaffAttachNameCompletions()
     {
-        var items = new System.Collections.Generic.List<CompletionItem>
-        {
-            new CompletionItem
-            {
-                Label = "as lines",
-                Kind = CompletionItemKind.Keyword,
-                InsertTextFormat = InsertTextFormat.Snippet,
-                InsertText = "as lines $0",
-                Detail = "Staff-line count for this staff - 1 is a one-line rhythm staff",
-                SortText = "0",
-                Command = new Command
-                {
-                    Title = "Suggest line count",
-                    CommandIdentifier = "editor.action.triggerSuggest",
-                },
-            },
-        };
+        var items = new System.Collections.Generic.List<CompletionItem>(StaffSelectorItems("as "));
         // The next render item can also start here; keep those, sorted after.
         foreach (var it in GetScoreBlockCompletions().Items)
         {
@@ -1216,29 +1236,13 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>After <c>staff NAME</c> INSIDE a staff group: the
-    /// <c>as lines N</c> selector, then the group's own narrow continuations
+    /// <c>as …</c> selectors, then the group's own narrow continuations
     /// (<c>staff</c> / <c>lyrics</c> — a group refuses the wider score list,
     /// LYS6011), the group-body sibling of
     /// <see cref="GetStaffAttachNameCompletions"/>.</summary>
     internal static CompletionList GetGroupStaffAttachNameCompletions()
     {
-        var items = new System.Collections.Generic.List<CompletionItem>
-        {
-            new CompletionItem
-            {
-                Label = "as lines",
-                Kind = CompletionItemKind.Keyword,
-                InsertTextFormat = InsertTextFormat.Snippet,
-                InsertText = "as lines $0",
-                Detail = "Staff-line count for this staff - 1 is a one-line rhythm staff",
-                SortText = "0",
-                Command = new Command
-                {
-                    Title = "Suggest line count",
-                    CommandIdentifier = "editor.action.triggerSuggest",
-                },
-            },
-        };
+        var items = new System.Collections.Generic.List<CompletionItem>(StaffSelectorItems("as "));
         foreach (var it in GetStaffGroupBlockCompletions().Items)
         {
             it.SortText = "9" + (it.SortText ?? "");
@@ -1296,28 +1300,13 @@ public sealed partial class LilySharpLanguageServer
         return new CompletionList { Items = items.ToArray() };
     }
 
-    /// <summary>After <c>staff NAME as</c> / <c>ossia NAME as</c>: the one
-    /// selector a staff takes — <c>lines</c>. The value is enumerated by the
-    /// retrigger (<see cref="GetStaffLinesValueCompletions"/>).</summary>
+    /// <summary>After <c>staff NAME as</c> / <c>ossia NAME as</c>: the selectors a staff
+    /// takes — <c>lines</c> and <c>removeEmpty</c>. Each value is enumerated by the
+    /// retrigger (<see cref="GetStaffLinesValueCompletions"/> /
+    /// <see cref="GetRemoveEmptyCompletions"/>).</summary>
     internal static CompletionList GetStaffLinesSelectorCompletions() => new()
     {
-        Items =
-        [
-            new CompletionItem
-            {
-                Label = "lines",
-                Kind = CompletionItemKind.Keyword,
-                InsertTextFormat = InsertTextFormat.Snippet,
-                InsertText = "lines $0",
-                Detail = "Staff-line count for this staff - 1 is a one-line rhythm staff",
-                SortText = "0",
-                Command = new Command
-                {
-                    Title = "Suggest line count",
-                    CommandIdentifier = "editor.action.triggerSuggest",
-                },
-            },
-        ]
+        Items = StaffSelectorItems(""),
     };
 
     /// <summary>The staff-line counts, offered in the value slot of
@@ -2687,10 +2676,12 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Change time signature", SortText = "3time", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tempo $0", Detail = "Change tempo (BPM)", SortText = "3tempo", Command = new Command { Title = "Suggest tempo", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "octave", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "octave $0", Detail = "Octave mode (absolute / relative)", SortText = "3octave", Command = new Command { Title = "Suggest octave mode", CommandIdentifier = "editor.action.triggerSuggest" } },
-                // ⚠️ NO `partial` here: a pickup is a SECTION directive (`section A { partial 4 … }`,
-                // LYS1024 anywhere in a part's or voice's music — PartialScopeValidator), and
-                // this row taught the rejected spelling until 2026-09-02 (owner report). The
-                // section-header list (SectionHeaderDirectiveItems) is where it is offered.
+                // `partial` in the music: refused (LYS1024) from 2026-09-02, when this row taught a
+                // spelling the validator rejected (owner report), and offered again since
+                // 2026-09-08, when the owner decided a mid-piece pickup is written in the music
+                // at the bar's start, per part (PartialScopeValidator). The section-header list
+                // (SectionHeaderDirectiveItems) still offers the opening pickup.
+                new CompletionItem { Label = "partial", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "partial $0", Detail = "Pickup: the bar this stands in is this long (write it at the bar's start, in every part sharing the bar)", SortText = "3partial" },
 
                 // Grob overrides
                 new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "override $0", Detail = "Override grob property", SortText = "4override", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } },

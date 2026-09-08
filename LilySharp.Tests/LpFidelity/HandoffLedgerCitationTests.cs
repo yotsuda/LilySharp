@@ -91,7 +91,15 @@ public class HandoffLedgerCitationTests
     /// <see cref="LpProvenanceTests"/>'s: it may rise freely and must never fall silently,
     /// because the cheapest way to make a citation test pass is to delete the citation.
     /// </summary>
-    private const int CitationsWhenWritten = 36;
+    /// <remarks>
+    /// 36 → 28 on 2026-09-08 (session 352): session 351 leg 4 folded the BODIES of 64 closed
+    /// §2 items into HANDOFF-ARCHIVE.md "閉じた §2 の本文" (tools/Fold-ClosedHandoffItems.ps1),
+    /// and 23 tagged passages went with them (HANDOFF.md §2 carried 42 tags before the fold,
+    /// 19 after; the archive rose 29 → 58). Nothing was deleted — the archive is verbatim
+    /// history and deliberately outside <see cref="Covered"/> — and the leg ran no full suite
+    /// because it changed no product code, so this guard first spoke a session later.
+    /// </remarks>
+    private const int CitationsWhenWritten = 28;
 
     /// <summary>
     /// The documents that assert CURRENT state about a ledger point, and so must be held to

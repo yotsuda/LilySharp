@@ -938,7 +938,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part rh { clef treble{{(declareRemoveEmpty ? " removeEmpty all" : "")}} }
+        part rh { clef treble }
         part lh { clef bass }
 
         section Main {
@@ -950,7 +950,7 @@ internal static class LpGeometryProbes
 
         score main "{{name}}" {
           grandStaff {
-            staff rh
+            staff rh{{(declareRemoveEmpty ? " as removeEmpty all" : "")}}
             staff lh
           }
         }
@@ -2227,7 +2227,7 @@ internal static class LpGeometryProbes
             key c major
 
             part melody { clef treble }
-            part lower { clef treble{{(haraKiri ? " removeEmpty all" : "")}} }
+            part lower { clef treble }
 
             section Main {
               melody { {{melody}} }
@@ -2240,7 +2240,7 @@ internal static class LpGeometryProbes
             score main "{{name}}" {
               staff melody
               lyrics one{{(secondVerse ? "\n  lyrics two" : "")}}
-              staff lower
+              staff lower{{(haraKiri ? " as removeEmpty all" : "")}}
             }
             """;
     }
@@ -4071,7 +4071,7 @@ internal static class LpGeometryProbes
             key c major
 
             part top { clef treble }
-            part inner { clef treble removeEmpty all }
+            part inner { clef treble }
             part melody { clef treble }
 
             section Main {
@@ -4085,7 +4085,7 @@ internal static class LpGeometryProbes
             form main { ~Main }
 
             score main "LYRHKG" {
-              grandStaff { staff top staff inner }
+              grandStaff { staff top staff inner as removeEmpty all }
               staff melody  lyrics one  lyrics two
             }
             """;
@@ -4101,7 +4101,7 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part upper { clef treble{{(declareRemoveEmpty ? " removeEmpty all" : "")}} }
+            part upper { clef treble }
             part melody { clef treble }
 
             section Main {
@@ -4114,7 +4114,7 @@ internal static class LpGeometryProbes
             form main { ~Main }
 
             score main "{{(declareRemoveEmpty ? "LYRHKD" : "LYRHKN")}}" {
-              staff upper
+              staff upper{{(declareRemoveEmpty ? " as removeEmpty all" : "")}}
               staff melody  lyrics one  lyrics two
             }
             """;
@@ -4226,7 +4226,7 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part rh { clef treble{{(declareRemoveEmpty ? " removeEmpty all" : "")}} }
+            part rh { clef treble }
             part lh { clef bass }
 
             section Main {
@@ -4238,7 +4238,7 @@ internal static class LpGeometryProbes
 
             score main "{{(declareRemoveEmpty ? "HKW" : "HKWN")}}" {
               grandStaff {
-                staff rh
+                staff rh{{(declareRemoveEmpty ? " as removeEmpty all" : "")}}
                 staff lh
               }
             }
@@ -4263,7 +4263,7 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part upper { clef treble removeEmpty all }
+            part upper { clef treble }
             part melody { clef treble }
 
             section Main {
@@ -4276,7 +4276,7 @@ internal static class LpGeometryProbes
             form main { ~Main }
 
             score main "LYRHK" {
-              staff upper
+              staff upper as removeEmpty all
               staff melody  lyrics one  lyrics two
             }
             """;

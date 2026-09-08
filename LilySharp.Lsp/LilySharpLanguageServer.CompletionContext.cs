@@ -654,12 +654,8 @@ public sealed partial class LilySharpLanguageServer
             && !IsInsideStringLiteral(text, offset))
             return CompletionContext.AfterInstrument;
 
-        // Right after the `removeEmpty` part property only its values are valid
-        // (true / all / false — LP RemoveEmptyStaves / RemoveAllEmptyStaves).
-        if (string.Equals(prevWord, "removeEmpty", StringComparison.OrdinalIgnoreCase)
-            && IsInsidePartBlock(scan.Stack)
-            && !IsInsideStringLiteral(text, offset))
-            return CompletionContext.AfterRemoveEmpty;
+        // (`removeEmpty` left the part header on 2026-09-08 — it is a score selector now,
+        // `staff m as removeEmpty V`, served inside the score branch below.)
 
         // Right after `pitch ` only its two modes are valid (written / concert —
         // Semantics.ConcertPitch). The word has THREE homes and all three take the same two
@@ -740,9 +736,19 @@ public sealed partial class LilySharpLanguageServer
                 case "lines":
                     // `staff m as lines |` — the selector's value slot. A
                     // `lines` that no `as` governs falls through to the
-                    // general score list.
-                    if (SecondWordBeforeCursor(text, offset) == "as")
+                    // general score list. The selectors chain after one `as`
+                    // (`as removeEmpty all lines |`), so the `as` may stand
+                    // further back than the second word.
+                    if (StaffAsGoverns(text, offset))
                         return CompletionContext.AfterStaffLinesValue;
+                    break;
+                case "removeEmpty":
+                    // `staff m as removeEmpty |` — hara-kiri's value slot
+                    // (true / all / false — LP RemoveEmptyStaves / RemoveAllEmptyStaves).
+                    // A score selector since 2026-09-08; the part header no longer
+                    // knows the word.
+                    if (StaffAsGoverns(text, offset))
+                        return CompletionContext.AfterRemoveEmpty;
                     break;
             }
             // What a staff GROUP's body accepts is narrower than the score's, and the
@@ -882,6 +888,33 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
+    /// True when the selector word just before the cursor (<c>lines</c> / <c>removeEmpty</c>)
+    /// is governed by a staff or ossia item's <c>as</c>: walking back over the words before
+    /// it, an <c>as</c> is met before any render keyword or non-word. <c>staff m as lines 1
+    /// removeEmpty |</c> qualifies (the chain shares one <c>as</c>); a bare <c>lines</c> row
+    /// or a part named <c>removeEmpty</c> placed as a MIDI-only item does not.
+    /// </summary>
+    private static bool StaffAsGoverns(string text, int offset)
+    {
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '-';
+        int i = offset;
+        while (i > 0 && IsWordChar(text[i - 1])) i--;        // the partial value word
+        while (i > 0 && char.IsWhiteSpace(text[i - 1])) i--;
+        while (i > 0 && IsWordChar(text[i - 1])) i--;        // the selector word itself
+        while (i > 0)
+        {
+            while (i > 0 && char.IsWhiteSpace(text[i - 1])) i--;
+            int end = i;
+            while (i > 0 && IsWordChar(text[i - 1])) i--;
+            if (end == i) return false; // a brace or a quoted name — no `as` governs this
+            string w = text.Substring(i, end - i);
+            if (w == "as") return true;
+            if (w is "staff" or "ossia" or "tab" or "chords" or "lyrics") return false;
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Which display selector an <c>as</c> in a score block governs. <c>tab … as</c>
     /// takes <c>numbers | full</c>; a <c>chords</c> row's <c>as</c> takes
     /// <c>roman | names</c>. The word right before <c>as</c> is the target NAME
@@ -907,8 +940,8 @@ public sealed partial class LilySharpLanguageServer
             string w = text.Substring(i, end - i);
             if (w == "chords") return CompletionContext.AfterChordDisplayAs;
             if (w == "tab") return CompletionContext.AfterTabDisplayAs;
-            // `staff m as |` / `ossia m as |` — the one selector a staff takes
-            // is the line count (`as lines N`).
+            // `staff m as |` / `ossia m as |` — the staff selectors (`lines N`,
+            // `removeEmpty V`; one `as`, any order).
             if (w == "staff" || w == "ossia") return CompletionContext.AfterStaffLinesAs;
         }
         return CompletionContext.AfterChordDisplayAs;

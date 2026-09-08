@@ -101,4 +101,54 @@ public class StaffLinesCompletionTests
     public void PartHeaderCompletions_NoLongerOfferLines()
         => Assert.DoesNotContain(LilySharpLanguageServer.GetPartPropertyCompletions().Items,
             i => i.Label == "lines");
+
+    // ----- `as removeEmpty V` — hara-kiri joined the selectors 2026-09-08 (user decision) -----
+
+    [Theory]
+    [InlineData("score main { staff melody as removeEmpty ")]
+    [InlineData("score main { staff melody as removeEmpty a")]
+    [InlineData("score main { staff melody as lines 1 removeEmpty ")]   // chained after one `as`
+    [InlineData("score main { grandStaff { staff melody as removeEmpty ")]
+    public void AfterAsRemoveEmpty_OffersItsValues(string text)
+        => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterRemoveEmpty, Ctx(text));
+
+    [Fact]
+    public void AfterAsRemoveEmptyAllLines_StillEnumeratesTheCounts()
+        => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterStaffLinesValue,
+            Ctx("score main { staff melody as removeEmpty all lines "));
+
+    [Fact]
+    public void ARemoveEmptyNoAsGoverns_IsNotAValueSlot()
+        // A part that happens to be named removeEmpty, placed as a MIDI-only item.
+        => Assert.NotEqual(LilySharpLanguageServer.CompletionContext.AfterRemoveEmpty,
+            Ctx("score main { staff melody removeEmpty "));
+
+    [Fact]
+    public void TheSelectorLists_OfferRemoveEmptyBesideLines()
+    {
+        Assert.Contains(LilySharpLanguageServer.GetStaffAttachNameCompletions().Items, i => i.Label == "as removeEmpty");
+        Assert.Contains(LilySharpLanguageServer.GetGroupStaffAttachNameCompletions().Items, i => i.Label == "as removeEmpty");
+        Assert.Contains(LilySharpLanguageServer.GetStaffLinesSelectorCompletions().Items, i => i.Label == "removeEmpty");
+        Assert.Contains(LilySharpLanguageServer.GetStaffLinesSelectorCompletions().Items, i => i.Label == "lines");
+    }
+
+    /// <summary>The net for the moved word: every value the editor offers after
+    /// <c>as removeEmpty</c> is compiled in that position and must produce no error.</summary>
+    [Fact]
+    public void EveryOfferedRemoveEmptyValue_Compiles()
+    {
+        var rejected = LilySharpLanguageServer.GetRemoveEmptyCompletions().Items
+            .Select(i => i.Label)
+            .Where(v =>
+            {
+                var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(
+                    "part m { }\nsection A { m { c'1 } }\nform main { A }\nscore main { staff m as removeEmpty " + v + " }\n");
+                return tree.Diagnostics.Concat(SemanticValidation.Run(tree))
+                    .Any(d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error);
+            })
+            .ToList();
+        Assert.True(rejected.Count == 0,
+            "the editor offers these after `as removeEmpty` and the compiler refuses them: "
+            + string.Join(", ", rejected));
+    }
 }

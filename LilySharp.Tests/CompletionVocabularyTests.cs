@@ -82,9 +82,8 @@ public class CompletionVocabularyTests
                      .Items.Select(i => i.Label))
             offered.Add(("clef", value));
 
-        foreach (string value in LilySharpLanguageServer.GetRemoveEmptyCompletions()
-                     .Items.Select(i => i.Label))
-            offered.Add(("removeEmpty", value));
+        // (`removeEmpty` is a SCORE selector since 2026-09-08; its offered values are compiled
+        // in that position by StaffLinesCompletionTests.EveryOfferedRemoveEmptyValue_Compiles.)
 
         foreach (string value in LilySharpLanguageServer.GetInstrumentCompletions()
                      .Items.Select(i => i.Label))

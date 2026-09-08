@@ -28,12 +28,12 @@ public sealed record StaffSpec(
     string VoiceName,
     string? InstrumentName = null,
     // Hara-kiri: hide this staff in systems where it only rests
-    // (part property removeEmpty true — LP RemoveEmptyStaves).
+    // (score selector `staff m as removeEmpty true` — LP RemoveEmptyStaves).
     bool RemoveEmpty = false,
-    // Hara-kiri including the FIRST system (part property
-    // removeEmpty all — LP RemoveAllEmptyStaves).
+    // Hara-kiri including the FIRST system (`as removeEmpty all` —
+    // LP RemoveAllEmptyStaves).
     bool RemoveFirst = false,
-    // Staff line count (part property lines N; 5 default).
+    // Staff line count (score selector `as lines N`; 5 default).
     // The range a written `lines N` may take is MinLines..MaxLines below —
     // RenderSpecParser reads against it and SymbolCaseValidator refuses against
     // it, so the bound is stated once and neither can drift from the other.

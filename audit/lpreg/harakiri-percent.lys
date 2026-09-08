@@ -5,11 +5,13 @@
 // lines 1 + b (中央線上) で対にする (LP 側は音高無視で線上に置くため視覚同値)。
 octave absolute
 
-part n1 { removeEmpty true }
-part n2 { removeEmpty true }
-part tb { removeEmpty true }
-part dr { clef percussion removeEmpty true }
-part rs { lines 1 removeEmpty true }
+// (2026-09-08: `removeEmpty` and `lines` are the score item's `as` selectors,
+//  not part properties; the tab item takes neither — a tab never hara-kiris.)
+part n1 { }
+part n2 { }
+part tb { }
+part dr { clef percussion }
+part rs { }
 
 section Main {
   n1 { c'1 | c' | break c' | c' | }
@@ -21,4 +23,4 @@ section Main {
 
 form main { ~Main }
 
-score main { staff ~n1 staff ~n2 tab tb staff ~dr staff ~rs }
+score main { staff ~n1 as removeEmpty true  staff ~n2 as removeEmpty true  tab tb  staff ~dr as removeEmpty true  staff ~rs as lines 1 removeEmpty true }

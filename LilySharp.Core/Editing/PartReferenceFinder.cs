@@ -338,7 +338,7 @@ public static class PartReferenceFinder
     private static SyntaxTokenNode? StaffPartToken(StaffRenderSyntax staff)
     {
         var toks = TargetTokens(staff);
-        Svg.Collector.RenderSpecParser.CutLinesSelector(toks);
+        Svg.Collector.RenderSpecParser.CutStaffSelectors(toks);
         toks.RemoveAll(t => t.Kind == SyntaxKind.Tilde);
         int si = toks.FindIndex(t => t.Kind == SyntaxKind.StringLiteral);
         if (si >= 0)
@@ -351,12 +351,12 @@ public static class PartReferenceFinder
 
     /// <summary>The part token for <c>ossia</c>: cut the trailing <c>as lines N</c>
     /// selector (the SAME cut RenderSpecParser.ParseOssia makes — one home,
-    /// <see cref="Svg.Collector.RenderSpecParser.CutLinesSelector"/>), then the
+    /// <see cref="Svg.Collector.RenderSpecParser.CutStaffSelectors"/>), then the
     /// last target token (<c>ossia [clef] part</c> takes the last slot).</summary>
     private static SyntaxTokenNode? LastTargetToken(SyntaxNode node)
     {
         var toks = TargetTokens(node);
-        Svg.Collector.RenderSpecParser.CutLinesSelector(toks);
+        Svg.Collector.RenderSpecParser.CutStaffSelectors(toks);
         return toks.Count > 0 ? Referenceable(toks[^1]) : null;
     }
 

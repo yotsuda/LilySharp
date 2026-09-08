@@ -155,6 +155,9 @@ public class ExpansionBudgetTests
         var d = Assert.Single(validator.Diagnostics);
         Assert.Equal(DiagnosticCodes.ExpansionBudgetExceeded, d.Code);
         Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
+        // The budget is the picture's alone (owner's decision 2026-09-08): the message says
+        // which outputs are NOT cut, so a reader who hears the MIDI is not surprised by it.
+        Assert.Contains("Only the picture: 'lysc midi', 'lysc xml' and 'lysc ly' write the whole expansion", d.Message);
     }
 
     [Fact]

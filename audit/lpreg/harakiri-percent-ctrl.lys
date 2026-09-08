@@ -2,8 +2,8 @@
 // (harakiri-percent.lys の n2 だけ r1 に置換)
 octave absolute
 
-part n1 { removeEmpty true }
-part n2 { removeEmpty true }
+part n1 { }
+part n2 { }
 
 section Main {
   n1 { c'1 | c' | break c' | c' | }
@@ -12,4 +12,4 @@ section Main {
 
 form main { ~Main }
 
-score main { staff ~n1 staff ~n2 }
+score main { staff ~n1 as removeEmpty true  staff ~n2 as removeEmpty true }

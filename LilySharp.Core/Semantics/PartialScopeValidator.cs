@@ -20,23 +20,40 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// Flags a <c>partial</c> (pickup) written outside a section. A pickup shortens the opening
-/// bar for EVERY part of a section at once, so — unlike an ongoing default such as tempo — it
-/// is neither a piece-wide global nor a per-voice directive; it belongs to the section. The
-/// canonical place is a section directive, whose immediate parent is the section node:
-/// <list type="bullet">
-/// <item>Section-major header: <c>section A { partial 4  melody {…} bass {…} }</c> — applies
-/// to all part blocks of the section.</item>
-/// <item>Single-voice section body: <c>section A { partial 2. c d f }</c> — the lone voice's
-/// pickup.</item>
-/// </list>
-/// The top level, a <c>part {}</c> header, a <c>partial</c> nested inside one part block /
-/// voice, or a <c>partial</c> in a PART-MAJOR section cell (<c>part melody { section A {
-/// partial 2  … } }</c>) are all errors — none is tied to the section as a whole (the last
-/// would arm the pickup for only one part; write it in a standalone <c>section A { partial 2 }</c>
-/// header instead). A bare-music file (no <c>part</c> / <c>section</c> / <c>form</c>) is a plain
-/// note stream, so a leading <c>partial</c> there is just that music's pickup and is fine.
+/// Flags a <c>partial</c> (pickup) written where no bar can take it. A <c>partial</c> says
+/// "the bar it stands in is this long", and it is legal wherever a bar is: a section
+/// directive (<c>section A { partial 4  melody {…} bass {…} }</c> — every part's opening bar),
+/// a single-voice section body, and — since 2026-09-08 (owner's decision) — anywhere in a
+/// part's or voice's music, mid-piece included (<c>… | partial 2. r2. | …</c>). Two places
+/// remain errors because they hold no bar: the top level of a structured file (the piece-wide
+/// <c>partial</c> is a section directive there) and a <c>part {}</c> header.
 /// </summary>
+/// <remarks>
+/// <para>
+/// LILYPOND-REF: ly/music-functions-init.ly:1697-1705 partial = context-spec-music 'Timing —
+/// "adjust the measure position to end the current measure at dur past the point of use";
+/// <c>Timing</c> is an alias of <c>Score</c> (engraver-init.ly), so ONE
+/// <c>\partial</c> in any staff moves every staff's clock. Lily# has no shared Timing: each
+/// voice's <c>MeasureBuilder</c> keeps its own bar length, and a mid-music <c>time</c> is
+/// restated per part (<see cref="MeasureValidator"/>, the per-block timeline). A mid-music
+/// <c>partial</c> follows the same rule — write it in every part that shares the bar; a part
+/// that omits it keeps a full bar and <see cref="CrossPartMeasureValidator"/> reports the
+/// mismatch. The rule is per part, not "score-wide like LilyPond", by decision: no book of the
+/// 900 swept asked for a shared clock, and one spelling of the fact is enough.
+/// </para>
+/// <para>
+/// Position within the bar: the collector (<c>MeasureBuilder.SetPartial</c>) and the fullness
+/// check (<see cref="MeasureValidator"/>) both read the bar's WHOLE length as the declared
+/// value, so the natural place is the bar's start (right after a <c>|</c>, or at the block's
+/// head); written after notes, the bar is still "N long" and the fill check says what did not
+/// fit. That is a simplification of LilyPond's "the REMAINING length", which differs only in
+/// that placement.
+/// </para>
+/// <para>
+/// A bare-music file (no <c>part</c> / <c>section</c> / <c>form</c>) is a plain note stream, so a
+/// leading <c>partial</c> there is just that music's pickup and is fine.
+/// </para>
+/// </remarks>
 internal sealed class PartialScopeValidator : ISemanticValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
@@ -47,7 +64,7 @@ internal sealed class PartialScopeValidator : ISemanticValidator
     {
         var root = tree.GetRoot();
         // Bare music (no structural nodes) is a plain note stream — a leading `partial` there
-        // is the music's own pickup. The section rule only bites once the file is structured.
+        // is the music's own pickup. The placement rule only bites once the file is structured.
         bool structured = root.DescendantNodes().Any(n =>
             n is PartDeclarationSyntax or SectionDeclarationSyntax or FormDeclarationSyntax);
         if (!structured)
@@ -55,41 +72,19 @@ internal sealed class PartialScopeValidator : ISemanticValidator
 
         foreach (var partial in root.DescendantNodes().OfType<PartialDeclarationSyntax>())
         {
-            if (partial.Parent is SectionDeclarationSyntax section)
-            {
-                // Fine as a TOP-LEVEL section directive (section-major header, standalone
-                // header, or single-voice section). But a section nested in a `part {}` is a
-                // PART-MAJOR CELL — one part's copy of the section — and a section-wide pickup
-                // does not belong to one part (which part's `partial` would win for the shared
-                // section?). Direct it to the standalone header instead.
-                if (!IsInsidePart(section))
-                    continue;
-                _diagnostics.Error(partial.Span, DiagnosticCodes.PartialOutsideSection,
-                    "'partial' cannot go in a part-major section cell — a pickup is section-wide, "
-                    + "not one part's. Declare it in a standalone section header next to the part "
-                    + "bodies: section A { partial 4 }.");
-                continue;
-            }
-
-            string where = partial.Parent switch
+            string? where = partial.Parent switch
             {
                 PartDeclarationSyntax => "a part header",
                 _ when partial.Parent == root => "the top level",
-                _ => "a part/voice",
+                _ => null,   // a section directive, a section body, a part block, a voice: a bar is there
             };
+            if (where == null)
+                continue;
             _diagnostics.Error(partial.Span, DiagnosticCodes.PartialOutsideSection,
-                $"'partial' cannot go in {where} — a pickup shortens the opening bar for every "
-                + "part of a section at once. Write it as a section directive: section A { partial 4  … }.");
+                $"'partial' cannot go in {where} — there is no bar there for it to shorten. "
+                + "Declare the opening pickup as a section directive (section A { partial 4  … }), "
+                + "or write it in the music at the start of the bar it shortens, in every part "
+                + "that shares that bar.");
         }
-    }
-
-    /// <summary>True when <paramref name="node"/> is nested inside a <c>part {}</c> — i.e. a
-    /// part-major section cell — rather than a top-level section.</summary>
-    private static bool IsInsidePart(SyntaxNode node)
-    {
-        for (var p = node.Parent; p != null; p = p.Parent)
-            if (p is PartDeclarationSyntax)
-                return true;
-        return false;
     }
 }

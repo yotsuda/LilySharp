@@ -677,7 +677,7 @@ internal sealed partial class Parser
     /// </summary>
     private StaffRenderGreen ParseStaffRender()
     {
-        // staff [~] [clef] part ["display name"] [as lines N]   (no braces)
+        // staff [~] [clef] part ["display name"] [as lines N] [removeEmpty V]   (no braces; one `as`)
         var tokens = new List<SyntaxToken> { Expect(SyntaxKind.StaffKeyword) };
 
         // `staff ~flute` suppresses the default instrument name label.
@@ -709,7 +709,7 @@ internal sealed partial class Parser
         if (Check(SyntaxKind.StringLiteral))
             tokens.Add(Advance());
 
-        ConsumeLinesSelector(tokens);
+        ConsumeStaffSelectors(tokens);
         return new StaffRenderGreen([.. tokens]);
     }
 
@@ -741,37 +741,76 @@ internal sealed partial class Parser
     }
 
     /// <summary>
-    /// Consumes an optional <c>as lines N</c> staff-line selector on a staff or
-    /// ossia render item. The line count moved OFF the part header (user
-    /// decision, 2026-08-19): the count is presentation, so the SCORE item that
-    /// renders the part carries it — the same part can print five-lined in the
-    /// full score and one-lined in a lead sheet. Matched by TEXT like
-    /// <see cref="ConsumeAsSelector"/>: <c>as</c> also lexes as the Dutch
-    /// A-flat pitch, and <c>lines</c> is an ordinary word, not a keyword.
-    /// The range check keeps the part-header era's message word for word
-    /// (SymbolCaseValidator's CheckWholeNumber, retired with the property).
+    /// Consumes the optional presentation selectors of a staff or ossia render item: ONE
+    /// <c>as</c>, then any of <c>lines N</c> and <c>removeEmpty true|all|false</c>, in any
+    /// order (<c>staff m as lines 1 removeEmpty all</c>). Both are properties of THIS
+    /// rendering, not of the part: the line count moved off the part header on 2026-08-19
+    /// and hara-kiri on 2026-09-08 (user decisions), because the same part prints five-lined
+    /// in the full score and one-lined in a lead sheet, and hides its empty systems in the
+    /// full score while its own part sheet never hides — LilyPond's
+    /// <c>\RemoveEmptyStaves</c> is likewise a context mod written in the score's
+    /// <c>\layout</c> or a staff's <c>\with</c>, never on the music
+    /// (LILYPOND-REF: ly/context-mods-init.ly — RemoveEmptyStaves / RemoveAllEmptyStaves).
+    /// Matched by TEXT like <see cref="ConsumeAsSelector"/>: <c>as</c> also lexes as the
+    /// Dutch A-flat pitch, and the selector words are ordinary words, not keywords. The
+    /// range check keeps the part-header era's message word for word (SymbolCaseValidator's
+    /// CheckWholeNumber, retired with the property), and the <c>removeEmpty</c> vocabulary is
+    /// read from its one home (<see cref="Semantics.SymbolCaseValidator.RemoveEmptyValueVocabulary"/>),
+    /// Ordinal like every other symbol.
     /// </summary>
-    private void ConsumeLinesSelector(List<SyntaxToken> tokens)
+    private void ConsumeStaffSelectors(List<SyntaxToken> tokens)
     {
         if (!string.Equals(Current.Text, "as", System.StringComparison.Ordinal)
-            || Peek(1) is not { } second
-            || !string.Equals(second.Text, "lines", System.StringComparison.Ordinal))
+            || Peek(1) is null)
             return;
 
         tokens.Add(Advance()); // as
-        tokens.Add(Advance()); // lines
-
-        string valueText = Check(SyntaxKind.IntegerLiteral) ? Current.Text : "";
-        if (!(int.TryParse(valueText, out int n)
-            && n >= Semantics.LanguageVocabulary.MinStaffLines
-            && n <= Semantics.LanguageVocabulary.MaxStaffLines))
+        bool any = false;
+        while (true)
+        {
+            if (string.Equals(Current.Text, "lines", System.StringComparison.Ordinal))
+            {
+                tokens.Add(Advance()); // lines
+                string valueText = Check(SyntaxKind.IntegerLiteral) ? Current.Text : "";
+                if (!(int.TryParse(valueText, out int n)
+                    && n >= Semantics.LanguageVocabulary.MinStaffLines
+                    && n <= Semantics.LanguageVocabulary.MaxStaffLines))
+                    _diagnostics.Error(
+                        new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length),
+                        DiagnosticCodes.UnknownSymbolCase,
+                        $"'{Current.Text}' is not a staff-line count. 'lines' takes a whole number " +
+                        $"from {Semantics.LanguageVocabulary.MinStaffLines} to {Semantics.LanguageVocabulary.MaxStaffLines}.");
+                if (Check(SyntaxKind.IntegerLiteral))
+                    tokens.Add(Advance()); // N
+                any = true;
+                continue;
+            }
+            if (string.Equals(Current.Text, "removeEmpty", System.StringComparison.Ordinal))
+            {
+                tokens.Add(Advance()); // removeEmpty
+                var known = Semantics.SymbolCaseValidator.RemoveEmptyValueVocabulary;
+                if (!known.Contains(Current.Text, System.StringComparer.Ordinal))
+                    _diagnostics.Error(
+                        new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length),
+                        DiagnosticCodes.UnknownSymbolCase,
+                        $"Unknown removeEmpty '{Current.Text}'. removeEmpty values are case-sensitive; known: " +
+                        $"{string.Join(", ", known)}.");
+                // A bare word in the value slot is consumed even when unknown, so a typo is
+                // reported once here and not a second time as a MIDI-only part reference.
+                if (Check(SyntaxKind.Identifier))
+                    tokens.Add(Advance()); // true | all | false
+                any = true;
+                continue;
+            }
+            break;
+        }
+        if (!any)
             _diagnostics.Error(
                 new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length),
                 DiagnosticCodes.UnknownSymbolCase,
-                $"'{Current.Text}' is not a staff-line count. 'lines' takes a whole number " +
-                $"from {Semantics.LanguageVocabulary.MinStaffLines} to {Semantics.LanguageVocabulary.MaxStaffLines}.");
-        if (Check(SyntaxKind.IntegerLiteral))
-            tokens.Add(Advance()); // N
+                $"'{Current.Text}' is not a staff selector. 'as' takes 'lines N' " +
+                $"({Semantics.LanguageVocabulary.MinStaffLines}..{Semantics.LanguageVocabulary.MaxStaffLines}) " +
+                "and/or 'removeEmpty true|all|false'.");
     }
 
     /// <summary>
@@ -977,7 +1016,7 @@ internal sealed partial class Parser
             tokens.Add(Advance());
 
         tokens.Add(ExpectPartName());
-        ConsumeLinesSelector(tokens);
+        ConsumeStaffSelectors(tokens);
         return new OssiaRenderGreen([.. tokens]);
     }
 

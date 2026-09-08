@@ -680,10 +680,12 @@ internal sealed class MeasureValidator : ISemanticValidator
             // it (a declared pickup is checked exactly and numbered as bar 0).
             var span = MeasureDurations.GetSpan(measure.Items);
             // A pickup is declared as a section directive in a structured file
-            // (section/part/form), or as a leading `partial` in a bare note stream. It is
-            // NOT allowed at the top level or inside a voice (see PartialScopeValidator).
+            // (section/part/form) — or, since 2026-09-08, in the music at the bar's start,
+            // per part — or as a leading `partial` in a bare note stream. Only the top level
+            // of a structured file and a part header refuse it (PartialScopeValidator).
             string where = _structured
-                ? $"as a section directive (e.g. section A {{ {SuggestPartial(duration)}  … }})"
+                ? $"as a section directive (e.g. section A {{ {SuggestPartial(duration)}  … }}) "
+                  + $"or at the bar's start in each part's music ('{SuggestPartial(duration)}')"
                 : $"with a leading '{SuggestPartial(duration)}'";
             _diagnostics.Warning(span, DiagnosticCodes.PickupWithoutPartial,
                 $"first measure is shorter than the meter ({duration} of {_meterText}); " +

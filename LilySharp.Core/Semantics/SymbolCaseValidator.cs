@@ -36,10 +36,14 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
     private readonly DiagnosticBag _diagnostics = new();
     public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics.ToList();
 
+    // ("lines" left this list 2026-08-19 and "removeEmpty" 2026-09-08, both user decisions:
+    // the staff-line count and hara-kiri are properties of the RENDERING, written
+    // `staff m as lines N removeEmpty V` in the score — Parser.Form.ConsumeStaffSelectors.
+    // `pedal` stays: LilyPond's pedalSustainStyle is a context property, a house style.)
     private static readonly HashSet<string> PropertyNames = new(StringComparer.Ordinal)
     {
         "clef", "instrument", "transpose", "transposition", "tuning",
-        "octave", "removeEmpty", "pedal", "pitch",
+        "octave", "pedal", "pitch",
     };
 
     /// <summary>The two words <c>pitch</c> takes, read from their one home.</summary>
@@ -71,6 +75,9 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
 
     /// <summary>
     /// The values <c>removeEmpty</c> takes — and, since 2026-08-19, the values it ACCEPTS.
+    /// Since 2026-09-08 the word is a SCORE selector (<c>staff m as removeEmpty V</c>) and
+    /// the parser reads this list (Parser.Form.ConsumeStaffSelectors); it is kept here so
+    /// the vocabulary has the one home the editor and the docs already read.
     /// </summary>
     /// <remarks>
     /// Until then the list was written down but not enforced: <c>RenderSpecParser</c> compares
@@ -192,12 +199,9 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
                         $"Unknown instrument preset '{preset}'. Presets are case-sensitive; " +
                         "use a known preset (e.g. violin, cello, piano-right) or a quoted \"…\" name.");
                 break;
-            case "removeEmpty":
-                CheckValue(valueTokens, RemoveEmptyValues, "removeEmpty", "values");
-                break;
-            // ("lines" left this list 2026-08-19: the staff-line count is a
-            // property of the RENDERING, written `staff m as lines N` in the
-            // score; the parser keeps this arm's message word for word.)
+            // ("lines" left this list 2026-08-19 and "removeEmpty" 2026-09-08: both are
+            // properties of the RENDERING, written `staff m as lines N removeEmpty V` in
+            // the score; the parser keeps each arm's message word for word.)
             case "octave":
                 // No bound: an octave number is read as written (PartHeaderDefaults),
                 // so the only thing that can be wrong about it is not being a number.

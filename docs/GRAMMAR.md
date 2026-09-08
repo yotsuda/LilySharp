@@ -180,9 +180,17 @@ GlobalSetting  = TempoDecl | TimeDecl | KeyDecl | PartialDecl | OctaveDecl | Pit
                | TransposeDecl ;
 
 PartialDecl    = 'partial' , DurationToken ;
-                 (* the piece-opening pickup, declared ONCE for every part; an
-                    in-music 'partial' declares it per voice (or mid-piece).
-                    A bare underfull first bar gets a warning suggesting this. *)
+                 (* "the bar this stands in is this long". As a SECTION directive it is
+                    the section's opening pickup for every part at once (§6); in a
+                    part's or voice's music (§8.1) it is that part's bar, at the head or
+                    mid-piece (`… | partial 2. r2. | …`), written at the bar's start and
+                    in EVERY part sharing the bar — LilyPond's \partial moves one clock
+                    for all staves (Timing = Score), Lily# keeps a bar length per voice,
+                    as it does for a mid-music `time` (owner's decision 2026-09-08). At
+                    the top level of a structured file, or in a part header, there is no
+                    bar for it and it is refused (LYS1024); in a bare note stream a
+                    leading `partial` is that music's pickup. A bare underfull first bar
+                    gets a warning suggesting this. *)
 OctaveDecl     = 'octave' , ( 'absolute' | 'relative' ) ;
 PitchDecl      = 'pitch' , PitchMode ;
 PitchMode      = 'written' | 'concert' ;
@@ -476,13 +484,18 @@ PartProperty   = 'clef'          , PartClefName
                | 'octave'        , Integer
                | 'pitch'         , PitchMode        (* this part's convention — own wins
                                                        over the top-level PitchDecl, §2.3 *)
-               | 'removeEmpty'   , RemoveEmptyValue
                | 'pedal'         , PedalStyleName ;
-               (* 'lines' left this list 2026-08-19 (user decision): the staff-line
-                  count is presentation, not music, so the SCORE item that renders
-                  the part carries it — 'staff m as lines 1' (StaffRender, §7). The
-                  same part can print five-lined in the full score and one-lined in
-                  a lead sheet, which one part-global number could not spell. *)
+               (* 'lines' left this list 2026-08-19 and 'removeEmpty' 2026-09-08 (user
+                  decisions): the staff-line count and hara-kiri are presentation, not
+                  music, so the SCORE item that renders the part carries them —
+                  'staff m as lines 1 removeEmpty all' (StaffRender, §7). The same part
+                  can print five-lined in the full score and one-lined in a lead sheet,
+                  and hide its empty systems in the full score while its own part sheet
+                  never hides — which one part-global value could not spell. LilyPond
+                  agrees: \RemoveEmptyStaves is a context mod written in a score's
+                  \layout or a staff's \with, never on the music. 'pedal' stays: LilyPond's
+                  pedalSustainStyle is a context property a \set may write anywhere, a
+                  house style rather than a per-score choice. *)
                (* 'key' is per-part too, but the parser takes it as a KeySignature rather
                   than a PartProperty, so it is not an alternative here. *)
 
@@ -547,10 +560,8 @@ TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;
    preset's defaults: `instrument cello "Cello I"` = cello defaults, label "Cello I".
    A quoted string alone is a free-text name with no preset (default clef). *)
 
-(* removeEmpty (hara-kiri): hide this part's staff in systems where it only
-   rests. 'true' keeps the FIRST system (LilyPond \RemoveEmptyStaves);
-   'all' hides the first system too (\RemoveAllEmptyStaves). A system stays
-   visible if ANY voice of the staff plays. Default: never hide. *)
+(* Hara-kiri (removeEmpty) is NOT a part property: it is the score item's
+   'as removeEmpty true|all|false' selector — see StaffRender, §7. *)
 
 (* transposition: the part's written->sounding shift, BEYOND whatever octave the clef
    word already carries. 'transpose' moves the written pitches; 'transposition' states
@@ -566,7 +577,8 @@ TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;
    part melody                        // minimal
    part melody { clef treble }        // bare attribute, no colon
    part bass   { clef bass  instrument "Cello" }
-   part fill   { clef bass  removeEmpty all }   // hara-kiri staff
+   part fill   { clef bass  pedal text }        // pedal style is the part's
+   // hara-kiri is the score's: score main { staff fill as removeEmpty all }
 *)
 
 ================================================================================
@@ -874,9 +886,9 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                         tests cut the block at the first
                                                         one, and this comment cost three
                                                         red tests on 2026-08-29 *)
-               | 'ossia' , [ ClefName ] , PartRef , [ 'as' , 'lines' , Integer ]
+               | 'ossia' , [ ClefName ] , PartRef , [ 'as' , StaffSelector , { StaffSelector } ]
                                                      (* ossia partName — BARE, like staff,
-                                                        with the same line-count selector.
+                                                        with the same selectors (StaffRender).
                                                         ⚠️ keep semicolons out of comments
                                                         inside this production — the doc
                                                         tests cut the block at the first *)
@@ -989,13 +1001,29 @@ CombinedStaff  = 'combinedStaff' , '{' , PartRef , PartRef , '}' ;
                       score parts { staff fl1  staff fl2 } *)
 
 StaffRender    = 'staff' , [ ClefName ] , PartRef , [ DisplayName ] ,
-                 [ 'as' , 'lines' , Integer ] ;
-                 (* 'as lines N' (1..5) is THIS staff's line count — presentation
-                    belongs to the rendering, so a lead sheet can write
+                 [ 'as' , StaffSelector , { StaffSelector } ] ;
+StaffSelector  = 'lines' , Integer
+               | 'removeEmpty' , RemoveEmptyValue ;
+                 (* ONE 'as', then any of the selectors in any order:
+                    'staff melody as lines 1 removeEmpty all'. Both are properties
+                    of THIS rendering, not of the part. 'lines N' (1..5) is the
+                    staff's line count, so a lead sheet can write
                     'staff melody as lines 1' while the full score keeps five.
-                    'as' and 'lines' are matched by text — 'as' also lexes as the
-                    Dutch A-flat, 'lines' is an ordinary word. Ossia takes the
-                    same selector. *)
+                    'removeEmpty' is hara-kiri (2026-09-08, user decision — a part
+                    property until then): hide this staff in systems where it only
+                    rests. 'true' keeps the FIRST system (LilyPond
+                    \RemoveEmptyStaves), 'all' hides the first system too
+                    (\RemoveAllEmptyStaves), 'false' never hides (the default). A
+                    system stays visible if ANY voice of the staff plays. So the
+                    full score hides the empty systems and the part sheet of the same
+                    part never does — LilyPond's own placement, where
+                    \RemoveEmptyStaves is a context mod in \layout or a staff's \with.
+                    'as' and the selector words are matched by text — 'as' also lexes
+                    as the Dutch A-flat, the selector words are ordinary words. A word
+                    after 'as' that is neither selector, or a value outside its
+                    vocabulary (case included), is refused. Ossia takes the same
+                    selectors (its removeEmpty changes nothing — an ossia is hara-kiri
+                    on every system by construction); a tab item takes neither. *)
                  (* A staff renders ONE part; everything that used to hang off it by
                     clause hangs by ORDER instead — score = a vertical stack of bands
                     (user decision, 2026-08-19, before the first tag). A bound
@@ -1168,7 +1196,8 @@ MusicItem      = Note | Rest | Chord | Arpeggio | Barline | PhraseRef
 MidMusicCommand = 'clef' , ClefName
                | 'key' , PitchBase , [ Accidental-text ] , Mode
                | 'time' , Integer , '/' , Integer
-               | 'partial' , DurationToken
+               | 'partial' , DurationToken         (* this bar is that long — at the bar's
+                                                      start, per part; see PartialDecl §2 *)
                | 'break' | 'noBreak'                (* force / forbid a system break after
                                                       this measure *)
                | 'pageBreak' | 'noPageBreak' ;      (* force / forbid a page break after this

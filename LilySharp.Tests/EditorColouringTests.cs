@@ -629,8 +629,8 @@ public class EditorColouringTests
             if (!IsColoured($"clef {v}")) plain.Add($"clef {v}");
         foreach (string v in SymbolCaseValidator.PedalValueVocabulary)
             if (!IsColoured($"pedal {v}")) plain.Add($"pedal {v}");
-        foreach (string v in SymbolCaseValidator.RemoveEmptyValueVocabulary)
-            if (!IsColoured($"removeEmpty {v}")) plain.Add($"removeEmpty {v}");
+        // (`removeEmpty V` left the header 2026-09-08 for the score's `as` selectors, which
+        // are not coloured — `as lines N` never was.)
         // ★ A sixth vocabulary the ticket that opened this work had not counted: the property
         // name `transposition` was listed as plain, and its four markers were plain beside it.
         // Colouring the key and not the value is the reported defect with the halves swapped.
@@ -666,7 +666,6 @@ public class EditorColouringTests
             ["tuning"] = SymbolCaseValidator.TuningValueVocabulary,
             ["tab"] = SymbolCaseValidator.TuningValueVocabulary,
             ["pedal"] = SymbolCaseValidator.PedalValueVocabulary,
-            ["removeEmpty"] = SymbolCaseValidator.RemoveEmptyValueVocabulary,
             ["transposition"] = InstrumentDefaults.TranspositionMarkers,
             ["pitch"] = LanguageVocabulary.PitchModes,
         };
@@ -890,15 +889,14 @@ public class EditorColouringTests
         // ⑺ The part header — the three measurements the shape of it rests on.
         //    First: these words are the WRITER's. A bare alternation outside a context would
         //    paint a part name as the language's own, which is the `channel` defect again.
-        //    Fifteen of the twenty-one words this context colours are free identifiers;
-        //    only four clef names (soprano mezzosoprano baritone percussion) are reserved,
-        //    and those four were already coloured, for that reason and not for this one.
+        //    Most of the words this context colours are free identifiers; only four clef
+        //    names (soprano mezzosoprano baritone percussion) are reserved, and those four
+        //    were already coloured, for that reason and not for this one.
         foreach (string free in new[]
                  {
-                     "transposition", "removeEmpty", "pedal",
+                     "transposition", "pedal",
                      "bracket", "text", "mixed",
                      "standard", "guitar", "bass5", "bass6", "ukulele", "uke",
-                     "true", "all", "false",
                  })
         {
             Assert.False(SyntaxTree.Parse($"part {free} {{ clef treble }}\nsection A {{ {free} {{ c'1 }} }}\nform main {{ A }}\nscore main {{ staff {free} }}").HasErrors,
