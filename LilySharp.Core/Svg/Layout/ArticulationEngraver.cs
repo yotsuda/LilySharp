@@ -1517,6 +1517,17 @@ internal static class ArticulationEngraver
     /// <summary>…and the style, for the same reason.</summary>
     internal const FontStyle TabTechniqueFontStyle = FontStyle.Italic;
 
+    /// <summary>The letters' em for THIS score: <see cref="TabTechniqueFontSize"/> unless the
+    /// score's <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for <c>tabTechnique</c> (or
+    /// <c>numbers</c>). The ink box below and the draw both read it.</summary>
+    internal static double TabTechniqueEm(ScoreTextMetrics fonts)
+        => fonts.Size(TextRole.TabTechnique, TabTechniqueFontSize);
+
+    /// <summary>The letters' weight and slant: <see cref="TabTechniqueFontStyle"/> unless the
+    /// score wrote a style.</summary>
+    internal static FontStyle TabTechniqueStyle(ScoreTextMetrics fonts)
+        => fonts.Style(TextRole.TabTechnique, TabTechniqueFontStyle);
+
     /// <summary>The letter this script prints, or null when it is not one of the TAB
     /// technique marks.</summary>
     internal static string? TabTechniqueLetterOf(ArticulationItem a) => a.Type switch
@@ -1534,10 +1545,10 @@ internal static class ArticulationEngraver
     /// </summary>
     internal static GlyphMetrics.BBox TabTechniqueInkBox(ScoreTextMetrics fonts, string letter)
     {
-        var ink = fonts.Ink(letter, TabTechniqueFontSize, TextRole.TabTechnique,
-                            TabTechniqueFontStyle);
-        double halfWidth = fonts.Advance(letter, TabTechniqueFontSize, TextRole.TabTechnique,
-                                         TabTechniqueFontStyle) / 2.0;
+        var ink = fonts.Ink(letter, TabTechniqueEm(fonts), TextRole.TabTechnique,
+                            TabTechniqueStyle(fonts));
+        double halfWidth = fonts.Advance(letter, TabTechniqueEm(fonts), TextRole.TabTechnique,
+                                         TabTechniqueStyle(fonts)) / 2.0;
         return new GlyphMetrics.BBox(-halfWidth, ink.Bottom, halfWidth, ink.Top);
     }
 

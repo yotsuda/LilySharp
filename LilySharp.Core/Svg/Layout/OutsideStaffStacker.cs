@@ -2207,7 +2207,7 @@ internal static class OutsideStaffStacker
             var (myUp, myDown) = OttavaBracketEngraver.Skylines(
                 fonts, o.Text, o.StartX,
                 OttavaBracketEngraver.LineStartX(
-                    fonts, o.Text, o.StartX, EngravingDefaults.OttavaBracketFontSize),
+                    fonts, o.Text, o.StartX, OttavaBracketEngraver.LabelEm(fonts)),
                 o.EndX, o.EdgeHeight, o.IsAbove, o.YUp);
             double move = trackers(sysIdx, o.StaffIndex).Place(myUp, myDown, OutsideStaffPadding);
             b[i] = o with { YUp = o.YUp + move };

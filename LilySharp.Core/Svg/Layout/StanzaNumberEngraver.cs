@@ -53,6 +53,24 @@ public readonly record struct StanzaNumberLayout(
 internal static class StanzaNumberEngraver
 {
     /// <summary>
+    /// The number's ENGRAVING em, 2.4 staff spaces. ⚠️ Not LilyPond's: StanzaNumber declares
+    /// <c>font-size -1</c> over the 2.2 text em (1.96). Kept as it was when the plan learned to
+    /// reach it (2026-09-08); moving the default is a separate change with its own ledger.
+    /// </summary>
+    internal const double EngravingEm = 2.4;
+
+    /// <summary>The number's em for THIS score: <see cref="EngravingEm"/> unless the score's
+    /// <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for <c>stanza</c> (or <c>lyrics</c>).
+    /// The draw is its only reader — the number reserves no space of its own.</summary>
+    internal static double Em(Rendering.ScoreTextMetrics fonts)
+        => fonts.Size(Rendering.TextRole.Stanza, EngravingEm);
+
+    /// <summary>The number's weight and slant: bold (StanzaNumber's font-series) unless the
+    /// score wrote a style.</summary>
+    internal static Rendering.FontStyle Style(Rendering.ScoreTextMetrics fonts)
+        => fonts.Style(Rendering.TextRole.Stanza, Rendering.FontStyle.Bold);
+
+    /// <summary>
     /// Calculates stanza number layouts for verses present in the given lyric layouts.
     /// </summary>
     /// <param name="lyrics">All lyric layouts (post-engraver).</param>

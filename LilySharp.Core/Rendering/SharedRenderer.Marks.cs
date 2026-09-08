@@ -324,10 +324,12 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/stanza-number-engraver.cc — Stanza_number_engraver
     /// LILYPOND-REF: scm/define-grobs.scm:3412 StanzaNumber (font-series bold)
     /// </remarks>
-    private static void DrawStanzaNumbers(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
+    private static void DrawStanzaNumbers(ScoreTextMetrics fonts, ScoreLayout layout,
+        Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.StanzaNumberLayouts.IsDefaultOrEmpty) return;
-        const double fontSize = 2.4;
+        double fontSize = StanzaNumberEngraver.Em(fonts);
+        var style = StanzaNumberEngraver.Style(fonts);
         foreach (var sn in layout.StanzaNumberLayouts)
         {
             // sn.YUp is Y-up from the system top (the verse's lyric baseline); lift
@@ -336,7 +338,7 @@ internal static partial class SharedRenderer
             // Page Y-up: lift the system top and add the stored offset, like DrawLyrics.
             double y = syUp + sn.YUp;
             gc.DrawText(sn.Text, sn.X, y, fontSize, TextRole.Stanza,
-                FontStyle.Bold, TextAnchor.Start, Color.Black);
+                style, TextAnchor.Start, Color.Black);
         }
     }
 
@@ -1204,21 +1206,24 @@ internal static partial class SharedRenderer
 
     /// <summary>Draws part-combine text labels ("a2", "Solo", "Solo II").</summary>
     /// <remarks>LILYPOND-REF: lily/part-combine-engraver.cc — CombineTextScript (grob in scm/define-grobs.scm)</remarks>
-    private static void DrawPartCombine(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
+    private static void DrawPartCombine(ScoreTextMetrics fonts, ScoreLayout layout,
+        Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.PartCombineLayouts.IsDefaultOrEmpty) return;
         // LILYPOND-REF: scm/define-grobs.scm:1077-1094 CombineTextScript, outside-staff-priority
         // 475: it declares (font-series . bold) and NO font-shape or font-size entry, so the
         // label is upright text at the default size, not italic. MEASURED
-        // (audit/lpreg/pcombine-lp.ly, dumped): series=bold shape=() size=().
-        double size = LilySharp.Core.Svg.EngravingDefaults.CombineTextFontSize;
+        // (audit/lpreg/pcombine-lp.ly, dumped): series=bold shape=() size=(). Both through
+        // the score's plan (PartCombineAnalyzer.LabelEm / LabelStyle).
+        double size = PartCombineAnalyzer.LabelEm(fonts);
+        var style = PartCombineAnalyzer.LabelStyle(fonts);
         foreach (var pc in layout.PartCombineLayouts)
         {
             if (!sysTopYUp.TryGetValue(pc.MeasureIndex, out var syUp)) continue; // other page
             // Page Y-up: system top plus the stored offset.
             double y = syUp + pc.YUp;
             gc.DrawText(pc.Text, pc.X, y, size, TextRole.PartCombine,
-                FontStyle.Bold, TextAnchor.Start, Color.Black);
+                style, TextAnchor.Start, Color.Black);
         }
     }
 

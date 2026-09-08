@@ -347,8 +347,10 @@ Role           = 'title' | 'composer' | 'instrument'          (* header  *)
    ⚠️ NOT EVERY ROLE READS ITS SIZE AND STYLE FROM THE PLAN YET. The face reaches every
    role; the size and the style reach the roles whose every reader — the draw, the space
    reserved for it, the collision skyline — asks the plan (TextRoles.PlanReachOf, held to
-   the page by a test): title, composer, lyricText, chordName, tempo, mark, pedal,
-   navigation, text, dynamics, barNumber, tuplet, volta. An attribute on another role is a
+   the page by a test): title, composer, instrument, lyricText, stanza, chordName, fretFrame,
+   tempo, mark, pedal, navigation, text, dynamics, partCombine, barNumber, tuplet, volta,
+   ottava, bend, tabTechnique. The rest — figuredBass, fingering, tabFret (Emmentaler digits,
+   where a text em has no meaning), clefOctave, meter (notation) — do not yet. An attribute on such a role is a
    WARNING (LYS8018) rather than a silent no-op — the face on the same entry still binds.
    A group warns only when none of its roles follows.
 

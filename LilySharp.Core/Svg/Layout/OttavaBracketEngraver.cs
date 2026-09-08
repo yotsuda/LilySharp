@@ -182,8 +182,20 @@ internal static class OttavaBracketEngraver
     internal static double LineStartX(ScoreTextMetrics fonts, string text, double startX,
         double fontSize)
         => startX
-           + fonts.Advance(text, fontSize, TextRole.Ottava, FontStyle.BoldItalic)
+           + fonts.Advance(text, fontSize, TextRole.Ottava, LabelStyle(fonts))
            + LabelLineItalicCorrection;
+
+    /// <summary>The label's em for THIS score: <see cref="EngravingDefaults.OttavaBracketFontSize"/>
+    /// unless the score's <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for <c>ottava</c>
+    /// (or <c>numbers</c>). The draw, the bracket's own skyline pair and the line's start all
+    /// read it (the draw scales it once more for an ossia).</summary>
+    internal static double LabelEm(ScoreTextMetrics fonts)
+        => fonts.Size(TextRole.Ottava, EngravingDefaults.OttavaBracketFontSize);
+
+    /// <summary>The label's weight and slant: bold italic (OttavaBracket's font-series and
+    /// font-shape) unless the score wrote a style.</summary>
+    internal static FontStyle LabelStyle(ScoreTextMetrics fonts)
+        => fonts.Style(TextRole.Ottava, FontStyle.BoldItalic);
 
     /// <summary>
     /// The bracket's OWN vertical skyline pair about its LINE at <paramref name="lineY"/>:
@@ -210,11 +222,11 @@ internal static class OttavaBracketEngraver
         string text, double startX, double lineStartX, double endX,
         double edgeHeight, bool isAbove, double lineY)
     {
-        double fontSize = EngravingDefaults.OttavaBracketFontSize;
+        double fontSize = LabelEm(fonts);
         double half = EngravingDefaults.StaffLineThickness / 2.0;
         // The label's ink is CENTRED on the line, so its baseline sits that much below.
         var (up, down) = TextOutlineSkylines.Place(
-            text, fontSize, fonts.Face(TextRole.Ottava, FontStyle.BoldItalic),
+            text, fontSize, fonts.Face(TextRole.Ottava, LabelStyle(fonts)),
             startX, lineY - LabelInkCentre(fonts, text, fontSize));
         if (lineStartX < endX)
         {
@@ -246,7 +258,7 @@ internal static class OttavaBracketEngraver
     /// belongs.</remarks>
     internal static double LabelInkCentre(ScoreTextMetrics fonts, string text, double fontSize)
     {
-        var ink = fonts.Ink(text, fontSize, TextRole.Ottava, FontStyle.BoldItalic);
+        var ink = fonts.Ink(text, fontSize, TextRole.Ottava, LabelStyle(fonts));
         return (ink.Top + ink.Bottom) / 2.0;
     }
 
@@ -423,7 +435,7 @@ internal static class OttavaBracketEngraver
         var my = Skylines(
             fonts,
             text, startX,
-            LineStartX(fonts, text, startX, EngravingDefaults.OttavaBracketFontSize),
+            LineStartX(fonts, text, startX, LabelEm(fonts)),
             endX, edgeHeight, isAbove, 0.0);
 
         // :265-330 — the spanned columns of THIS piece, every voice of the staff, floored

@@ -76,7 +76,7 @@ public class FontAttributeTests
         composer "Cmp"
         tempo 120
         time 4/4
-        part melody { pedal text }
+        part melody "Vln." { pedal text }
         section A {
           chords prog { D | }
           melody { c'4@mf d@sostenuto e@mark("Q") f@!sostenuto | }
@@ -89,7 +89,7 @@ public class FontAttributeTests
         }
         section C {
           chords prog { D | }
-          melody { c'4 d e f | }
+          melody { c''4@ottava d e f@!ottava | }
           lyrics words { la la la la | }
         }
         section Z {
@@ -103,6 +103,48 @@ public class FontAttributeTests
     // (The last section is Z, not D: a section outside the repeat is labelled with its
     // name in a boxed mark, and a "D" label would be read as the chord symbol's "D".)
 
+    /// <summary>A second book for the one role the main book cannot hold: a part-combine
+    /// label ("a2") needs two parts on one combined staff.</summary>
+    private const string CombineBook = """
+        time 4/4
+        part fl { clef treble }
+        part ob { clef treble }
+        section A {
+          fl { c'4 d e f | g4 a b c' | }
+          ob { c'4 d e f | e4 f g a | }
+        }
+        form main { A }
+        score main { combinedStaff { fl ob } }
+        """;
+
+    /// <summary>A guitar book for the three tab-family labels the main book has no place
+    /// for: a technique letter ("H"), a bend amount ("full") and a fret frame above the
+    /// fourth fret ("5fr").</summary>
+    private const string GuitarBook = """
+        octave absolute
+        time 4/4
+        part gtr { clef treble }
+        section S {
+          gtr { c4@hammeron e@bend(full) g@frame(x57565) b | }
+        }
+        form main { S }
+        score main { staff gtr }
+        """;
+
+    /// <summary>A third book for the stanza number: three verses, no volta — every stanza
+    /// number ("1." "2." "3.") reads like a volta ending, so the two cannot share a page.</summary>
+    private const string StanzaBook = """
+        time 4/4
+        section A {
+          melody { c'4 d e f | }
+          lyrics words { la la la la | }
+          lyrics words { lo lo lo lo | }
+          lyrics words { lu lu lu lu | }
+        }
+        form main { A }
+        score main { staff melody  lyrics words }
+        """;
+
     /// <summary>The page with its <c>data-pos</c> source offsets masked: a <c>fonts</c> line
     /// prepended to the book shifts every offset, which is not a change of the picture.</summary>
     private static string Mask(string svg) => Regex.Replace(svg, "\\s*data-pos=\"\\d+\"", "");
@@ -112,7 +154,9 @@ public class FontAttributeTests
     {
         [TextRole.Title] = "Ttl",
         [TextRole.Composer] = "Cmp",
+        [TextRole.Instrument] = "Vln.",
         [TextRole.LyricText] = "lyr",
+        [TextRole.Stanza] = "3.",
         [TextRole.ChordName] = "D",
         [TextRole.Tempo] = "= 120",
         [TextRole.Mark] = "Q",
@@ -120,9 +164,26 @@ public class FontAttributeTests
         [TextRole.Navigation] = "Fine",
         [TextRole.Text] = "rit.",
         [TextRole.Dynamics] = "mf",
+        [TextRole.PartCombine] = "a2",
         [TextRole.BarNumber] = "3",
         [TextRole.Tuplet] = "5",
         [TextRole.Volta] = "2.",
+        [TextRole.Ottava] = "8va",
+        [TextRole.TabTechnique] = "H",
+        [TextRole.Bend] = "full",
+        [TextRole.FretFrame] = "5fr",
+    };
+
+    /// <summary>The book a role's sample is read from — <see cref="CombineBook"/> for the
+    /// part-combine label, <see cref="StanzaBook"/> for the stanza number,
+    /// <see cref="GuitarBook"/> for the tab-family labels, <see cref="Book"/> for everything
+    /// else.</summary>
+    private static string BookFor(TextRole role) => role switch
+    {
+        TextRole.PartCombine => CombineBook,
+        TextRole.Stanza => StanzaBook,
+        TextRole.TabTechnique or TextRole.Bend or TextRole.FretFrame => GuitarBook,
+        _ => Book,
     };
 
     /// <summary>The attribute strings of every <c>&lt;text&gt;</c> whose content is
@@ -343,10 +404,9 @@ public class FontAttributeTests
     {
         // The theory below reads each role by its sample string; a sample that is absent or
         // ambiguous would make the theory pass for the wrong reason (RULES §5.4).
-        string svg = Svg(Book);
         foreach (var (role, sample) in Sample)
         {
-            var found = TextElements(svg, sample);
+            var found = TextElements(Svg(BookFor(role)), sample);
             Assert.True(found.Length >= 1, $"{TextRoles.Spelling(role)}: '{sample}' is not on the page");
         }
     }
@@ -359,8 +419,9 @@ public class FontAttributeTests
     public void TheReachTable_IsWhatThePageDoes(TextRole role)
     {
         // `step +6` is a doubling — the one factor every backend prints exactly.
-        string control = Svg(Book);
-        string stepped = Svg($"fonts {{ {TextRoles.Spelling(role)} step +6 }}\n" + Book);
+        string book = BookFor(role);
+        string control = Svg(book);
+        string stepped = Svg($"fonts {{ {TextRoles.Spelling(role)} step +6 }}\n" + book);
         bool follows = (TextRoles.PlanReachOf(role) & PlanReach.Size) != 0;
         if (!follows)
         {
@@ -384,9 +445,10 @@ public class FontAttributeTests
     [MemberData(nameof(EveryRole))]
     public void TheStyleReach_IsWhatThePageDoes(TextRole role)
     {
-        string control = Svg(Book);
-        string styled = Svg($"fonts {{ {TextRoles.Spelling(role)} bold italic }}\n" + Book);
-        string plain = Svg($"fonts {{ {TextRoles.Spelling(role)} regular }}\n" + Book);
+        string book = BookFor(role);
+        string control = Svg(book);
+        string styled = Svg($"fonts {{ {TextRoles.Spelling(role)} bold italic }}\n" + book);
+        string plain = Svg($"fonts {{ {TextRoles.Spelling(role)} regular }}\n" + book);
         bool follows = (TextRoles.PlanReachOf(role) & PlanReach.Style) != 0;
         if (!follows)
         {
@@ -481,7 +543,8 @@ public class FontAttributeTests
     public void ABookWithoutAttributes_WritesTheLayoutItAlwaysWrote()
     {
         string ly = new LilyPondExporter().Export(SyntaxTree.Parse(Book));
-        Assert.Contains("\\layout { indent = 0\\mm \\context { \\Score printInitialRepeatBar = ##t } }", ly, StringComparison.Ordinal);
+        // (15\mm: the book names its part, so the first system is indented.)
+        Assert.Contains("\\layout { indent = 15\\mm \\context { \\Score printInitialRepeatBar = ##t } }", ly, StringComparison.Ordinal);
         Assert.DoesNotContain("font-size", ly, StringComparison.Ordinal);
         Assert.Contains("title = \"Ttl\"", ly, StringComparison.Ordinal);
     }

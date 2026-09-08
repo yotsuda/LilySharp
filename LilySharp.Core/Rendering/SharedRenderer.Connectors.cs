@@ -59,13 +59,32 @@ internal static partial class SharedRenderer
     /// brace's right edge entirely.
     /// </para>
     /// </remarks>
+    /// <summary>
+    /// The instrument name's ENGRAVING em — 0.75 of the music em, 3.0 staff spaces. ⚠️ Not
+    /// LilyPond's: InstrumentName declares no font-size, so LilyPond sets it at the paper's
+    /// text size (2.2). Kept as it was when the plan learned to reach it (2026-09-08): moving
+    /// the default is a different change, one that moves every named book.
+    /// </summary>
+    internal const double InstrumentNameEngravingEm = FontSize * 0.75;
+
+    /// <summary>The name's em for THIS score: <see cref="InstrumentNameEngravingEm"/> unless
+    /// the score's <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for <c>instrument</c>.
+    /// The name is measured (for its right edge) and drawn in this one method, both through
+    /// this call.</summary>
+    internal static double InstrumentNameEm(ScoreTextMetrics fonts)
+        => fonts.Size(TextRole.Instrument, InstrumentNameEngravingEm);
+
+    /// <summary>The name's weight and slant: upright unless the score wrote a style.</summary>
+    internal static FontStyle InstrumentNameStyle(ScoreTextMetrics fonts)
+        => fonts.Style(TextRole.Instrument, FontStyle.Regular);
+
     private static void DrawInstrumentNames(
         MultiStaffScore score, SystemLayout system, double systemStartX, IDrawingContext gc)
     {
         if (system.Indent <= 0) return;
 
-        const double NameFontScale = 0.75;
-        double actualFontSize = FontSize * NameFontScale;
+        double actualFontSize = InstrumentNameEm(score.TextMetrics);
+        var nameStyle = InstrumentNameStyle(score.TextMetrics);
         double systemYUp = LayoutUtilities.SystemTopYUp(system);
 
         // The leftmost delimiter's ink, which is what every name on this system is placed
@@ -92,7 +111,7 @@ internal static partial class SharedRenderer
         // point of the change: the pair this replaced sized the indent from an estimate and
         // drew from these.
         double NameX(string name) => InstrumentNameRightEdge(
-            score.TextMetrics.Advance(name, actualFontSize, TextRole.Instrument),
+            score.TextMetrics.Advance(name, actualFontSize, TextRole.Instrument, nameStyle),
             system.Indent, totalLeft);
 
         // Single-staff scores carry no StaffGroup layouts — the one staff sits
@@ -105,7 +124,7 @@ internal static partial class SharedRenderer
                     continue;
                 gc.DrawText(st.InstrumentName, NameX(st.InstrumentName),
                     systemYUp - StaffHeight / 2.0,
-                    actualFontSize, TextRole.Instrument, FontStyle.Regular,
+                    actualFontSize, TextRole.Instrument, nameStyle,
                     TextAnchor.End, fill: null,
                     verticalAnchor: VerticalAnchor.Middle);
                 break;
@@ -139,7 +158,7 @@ internal static partial class SharedRenderer
                     double centerY = systemYUp + (gs.BraceTop + gs.BraceBottom) / 2.0;
                     gc.DrawText(onlyNamed.InstrumentName!, NameX(onlyNamed.InstrumentName!),
                         centerY,
-                        actualFontSize, TextRole.Instrument, FontStyle.Regular,
+                        actualFontSize, TextRole.Instrument, nameStyle,
                         TextAnchor.End, fill: null,
                         verticalAnchor: VerticalAnchor.Middle);
                     continue;
@@ -155,7 +174,7 @@ internal static partial class SharedRenderer
                 double centerY = staffY - staffLayout.Height / 2.0;
                 gc.DrawText(staffLayout.InstrumentName, NameX(staffLayout.InstrumentName),
                     centerY,
-                    actualFontSize, TextRole.Instrument, FontStyle.Regular,
+                    actualFontSize, TextRole.Instrument, nameStyle,
                     TextAnchor.End, fill: null,
                     verticalAnchor: VerticalAnchor.Middle);
             }

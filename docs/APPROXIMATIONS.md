@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 51 | 観測者がゼロだと自認しているもの |
-| `OWN` | 128 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **239** | |
+| `OWN` | 130 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **241** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -43,11 +43,11 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:393** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1144** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
-- **:1149** whiteout −1) is not ported.
-- **:1262** NOT ported; this takes the note's own stem direction. No book and
+- **:1146** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
+- **:1151** whiteout −1) is not ported.
+- **:1267** NOT ported; this takes the note's own stem direction. No book and
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
-- **:741** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
+- **:756** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:299** ⚠️ subdivide_beams (:186-188) is not ported: it is gated on
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
@@ -59,7 +59,7 @@
 - **:140** ⚠️ THE ONE LINE OF THAT BRANCH NOT PORTED is its dy,
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **:554** that does not exist yet. Named, not silently approximated.
-- **:2152** ⚠️ NOT PORTED — the per-type padding: the 2.25 is FLAT, but under the
+- **:2163** ⚠️ NOT PORTED — the per-type padding: the 2.25 is FLAT, but under the
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`
 - **:112** ⚠️ The X test itself is NOT ported HERE: a row's ink X-range is not on StaffLayout.
 ### `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs`
@@ -101,9 +101,9 @@
 - **:1078** ⚠️ NOT PORTED: the FLAG boxes of the support heads' stems (dot-column.cc:135-141
 - **:1172** whole note reads [0, 0.375] — is not ported: Lily# has no producer for a
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
-- **:481** ⚠️⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED OTTAVA IS **NOT PORTED HERE**, deliberately.
+- **:493** ⚠️⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED OTTAVA IS **NOT PORTED HERE**, deliberately.
 ### `LilySharp.Core/Svg/Layout/PartCombineAnalyzer.cs`
-- **:71** ⚠️ NOT PORTED — the outside-staff placement: a flat 1.5 staff-spaces above the
+- **:83** ⚠️ NOT PORTED — the outside-staff placement: a flat 1.5 staff-spaces above the
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
 - **:472** ⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED PEDAL IS **NOT PORTED HERE** either:
 ### `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs`
@@ -142,7 +142,7 @@
 - **:507** no observer; add the paren widths when a book brings one. The unpacked
 - **:509** bare glyph width, which is exact for one and unobserved for many.
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1263** no observer reaches that branch yet.
+- **:1268** no observer reaches that branch yet.
 ### `LilySharp.Core/Rendering/SharedRenderer.Noteheads.cs`
 - **:688** observed by: no observer, and none is possible while the term is dominated — it
 ### `LilySharp.Core/Semantics/DrummapValidator.cs`
@@ -158,9 +158,9 @@
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **:270** hands the scorer the band it would have had without the digit. No book reaches that
 - **:1507** them as markup — so there is no LP geometry to port and no ledger point can observe
-- **:1657** see the difference, and no fixture and no ledger point reaches it.
-- **:2157** 2.45; no ledger point or book observes a fermata where this floor
-- **:2276** box per duration, which Lily# does not read for this purpose. No ledger point observes
+- **:1668** see the difference, and no fixture and no ledger point reaches it.
+- **:2168** 2.45; no ledger point or book observes a fermata where this floor
+- **:2287** box per duration, which Lily# does not read for this purpose. No ledger point observes
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:90** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
 ### `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs`
@@ -224,7 +224,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（128 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（130 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2020** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -249,8 +249,11 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:239** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:563** LILYSHARP-OWN sizes: the feel equation keeps the small chart-style note (1.6)
-- **:1256** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
+- **:565** LILYSHARP-OWN sizes: the feel equation keeps the small chart-style note (1.6)
+- **:1261** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
+### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
+- **:237** The "Nfr" label's ENGRAVING em. LILYSHARP-OWN: the fret frame is Lily#'s own
+- **:243** The bend amount label's ENGRAVING em. LILYSHARP-OWN, as
 ### `LilySharp.Core/Rendering/SharedRenderer.Prefix.cs`
 - **:497** LILYSHARP-OWN: the '+' of a compound meter's numerator, which LilyPond
 ### `LilySharp.Core/Rendering/SharedRenderer.Tab.cs`

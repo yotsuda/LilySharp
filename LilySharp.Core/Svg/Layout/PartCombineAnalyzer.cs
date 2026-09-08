@@ -41,6 +41,18 @@ public sealed record PartCombineLayout(
 /// </summary>
 internal static class PartCombineAnalyzer
 {
+    /// <summary>The label's em for THIS score: <see cref="EngravingDefaults.CombineTextFontSize"/>
+    /// unless the score's <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for
+    /// <c>partCombine</c> (or <c>marks</c>). The draw is its only reader today — the label
+    /// stands at a flat height and reserves nothing (see <see cref="Calculate"/>).</summary>
+    internal static double LabelEm(Rendering.ScoreTextMetrics fonts)
+        => fonts.Size(Rendering.TextRole.PartCombine, EngravingDefaults.CombineTextFontSize);
+
+    /// <summary>The label's weight and slant: bold (CombineTextScript's font-series) unless
+    /// the score wrote a style.</summary>
+    internal static Rendering.FontStyle LabelStyle(Rendering.ScoreTextMetrics fonts)
+        => fonts.Style(Rendering.TextRole.PartCombine, Rendering.FontStyle.Bold);
+
     /// <summary>
     /// Turns the marks a <c>combinedStaff</c> produced into placed labels.
     /// </summary>

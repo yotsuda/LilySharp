@@ -447,22 +447,25 @@ public static class TextRoles
     /// to WARN (LYS8018) on an attribute the page would ignore — the worst outcome, decided
     /// when this was designed (2026-09-07), is a role that silently disregards its plan.
     /// <para>
-    /// The roles outside the table (2026-09-08) still draw their size from a literal at the
-    /// draw site or from a glyph run in the music font, where a text em has no meaning:
-    /// instrument names, stanza numbers, fret frames, figured bass and fingering (Emmentaler
-    /// digits), part-combine labels, ottava labels, bend labels, tab technique letters, and
-    /// the three notation roles. Each one that moves into the table needs every reader of
-    /// its em rerouted first; the test above is what says when it has.
+    /// The roles outside the table (2026-09-08, third leg) draw their digits from a glyph run
+    /// in the MUSIC font, where a text em has no meaning — figured bass and fingering
+    /// (FiguredBassGlyphRun / FingeringGlyphRun, whose em and design are static and read
+    /// through DigitRun's memo and a dozen layout sites without a plan in reach), tab fret
+    /// numbers (the tab staff's own geometry) — or are notation drawn as text (the clef's
+    /// octave digit, a compound meter's «+»), whose broad-binding exclusion has to be decided
+    /// for size and style too before they follow. Each one that moves into the table needs
+    /// every reader of its em rerouted first; the test above is what says when it has.
     /// </para>
     /// </remarks>
     public static PlanReach PlanReachOf(TextRole role) => role switch
     {
-        TextRole.Title or TextRole.Composer
-            or TextRole.LyricText
-            or TextRole.ChordName
+        TextRole.Title or TextRole.Composer or TextRole.Instrument
+            or TextRole.LyricText or TextRole.Stanza
+            or TextRole.ChordName or TextRole.FretFrame
             or TextRole.Tempo or TextRole.Mark or TextRole.Pedal or TextRole.Navigation
-            or TextRole.Text or TextRole.Dynamics
-            or TextRole.BarNumber or TextRole.Tuplet or TextRole.Volta
+            or TextRole.Text or TextRole.Dynamics or TextRole.PartCombine
+            or TextRole.BarNumber or TextRole.Tuplet or TextRole.Volta or TextRole.Ottava
+            or TextRole.Bend or TextRole.TabTechnique
             => PlanReach.Size | PlanReach.Style,
         _ => PlanReach.None,
     };

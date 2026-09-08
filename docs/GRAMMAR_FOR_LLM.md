@@ -638,9 +638,11 @@ Rules worth knowing before emitting one:
   measuring or drawing.
 - ⚠️ **`chordName serif` (a bare family word after a key) is refused** — write
   `chordName as serif`. A bare word after a key is the next key.
-- Size and style reach these roles: `title composer lyricText chordName tempo mark pedal
-  navigation text dynamics barNumber tuplet volta`; on any other role they are a warning
-  (LYS8018) and only the face binds. A generic family (`serif`/`sans`) takes faces only.
+- Size and style reach these roles: `title composer instrument lyricText stanza chordName
+  fretFrame tempo mark pedal navigation text dynamics partCombine barNumber tuplet volta
+  ottava bend tabTechnique`; on the others (`figuredBass fingering tabFret clefOctave meter`)
+  they are a warning (LYS8018) and only the face binds. A generic family (`serif`/`sans`)
+  takes faces only.
 - `mono` is not a key. Unknown keys are an error; a key bound twice is a warning (last wins).
 - **Named blocks, per score**: `fonts NAME { … }` at the top level declares a reusable
   block (it binds nothing by itself); a score references it as `fonts NAME`, or overrides

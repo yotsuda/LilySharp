@@ -508,10 +508,12 @@ a bare word after a key is the next key, so that line opens an empty `serif` ent
 `chordName as serif`. A generic family (`serif`, `sans`) takes quoted faces only; a size
 or a style on it is an error.
 
-**Size and style reach these roles**: `title composer lyricText chordName tempo mark pedal
-navigation text dynamics barNumber tuplet volta` — the ones whose drawing and reserved
-space both read the plan. On any other role the attribute is a **warning** (LYS8018) and
-only the face binds; a group warns only when none of its roles follows.
+**Size and style reach these roles**: `title composer instrument lyricText stanza chordName
+fretFrame tempo mark pedal navigation text dynamics partCombine barNumber tuplet volta ottava
+bend tabTechnique` — the ones whose drawing and reserved space both read the plan. On the
+others (`figuredBass fingering tabFret` are Emmentaler digit runs; `clefOctave meter` are
+notation) the attribute is a **warning** (LYS8018) and only the face binds; a group warns
+only when none of its roles follows.
 
 **The narrower spelling wins**, in either source order and for each attribute on its own:
 `role` beats `group` beats `serif`/`sans` beats the bundled face (size and style have no

@@ -210,7 +210,7 @@ internal static partial class SharedRenderer
                 DrawTies(layout, measureToSystemTopYUp, os, gc);
                 DrawSlurs(layout, measureToSystemTopYUp, os, gc);
                 DrawDynamics(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
-                DrawArticulations(layout, measureToSystemTopYUp, os, gc);
+                DrawArticulations(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
                 DrawLyrics(score.TextMetrics, layout, measureToSystemTopYUp, gc);
                 DrawHairpins(layout, measureToSystemTopYUp, os, gc);
                 DrawOttavaBrackets(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
@@ -224,7 +224,7 @@ internal static partial class SharedRenderer
                 DrawFiguredBass(layout, measureToSystemTopYUp, os, gc);
                 DrawPercentRepeats(layout, measureToSystemTopYUp, os, gc);
                 DrawBarNumbers(score.TextMetrics, layout, measureToSystemTopYUp, gc);
-                DrawStanzaNumbers(layout, measureToSystemTopYUp, gc);
+                DrawStanzaNumbers(score.TextMetrics, layout, measureToSystemTopYUp, gc);
                 DrawFingerings(fingeringsByPage?[pageIndex], os, gc,
                     fragHost, fragments, pageIndex, page);
                 DrawMusicMarks(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
@@ -234,7 +234,7 @@ internal static partial class SharedRenderer
                 DrawMultiMeasureRests(layout, measureToSystemTopYUp, gc);
                 DrawTieVariants(layout, measureToSystemTopYUp, os, gc);
                 DrawLyricHyphens(layout, measureToSystemTopYUp, gc);
-                DrawPartCombine(layout, measureToSystemTopYUp, gc);
+                DrawPartCombine(score.TextMetrics, layout, measureToSystemTopYUp, gc);
             }
             finally
             {

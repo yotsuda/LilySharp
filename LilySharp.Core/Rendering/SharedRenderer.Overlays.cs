@@ -87,8 +87,8 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm:2992 Script grob
     /// LILYPOND-REF: lily/script-engraver.cc:235 acknowledge_rhythmic_head / :253 acknowledge_note_column
     /// </remarks>
-    private static void DrawArticulations(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
-        in OssiaShrink os, IDrawingContext gc)
+    private static void DrawArticulations(ScoreTextMetrics fonts, ScoreLayout layout,
+        Dictionary<int, double> sysTopYUp, in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.ArticulationLayouts.IsDefaultOrEmpty) return;
         foreach (var a in layout.ArticulationLayouts)
@@ -125,7 +125,7 @@ internal static partial class SharedRenderer
             {
                 int semis = int.TryParse(a.Glyph.AsSpan(7), out int bs) ? bs : 2;
                 using (gc.Source(a.SourcePosition))
-                    DrawGuitarBend(a.X, y, semis, gc);
+                    DrawGuitarBend(fonts, a.X, y, semis, gc);
                 continue;
             }
             // TAB technique letters (H / P / T, and the pluck letters): small italic
@@ -140,9 +140,9 @@ internal static partial class SharedRenderer
             {
                 using (gc.Source(a.SourcePosition))
                     gc.DrawText(a.Glyph[8..], a.X, y,
-                        LilySharp.Core.Svg.Layout.ArticulationEngraver.TabTechniqueFontSize,
+                        LilySharp.Core.Svg.Layout.ArticulationEngraver.TabTechniqueEm(fonts),
                         TextRole.TabTechnique,
-                        LilySharp.Core.Svg.Layout.ArticulationEngraver.TabTechniqueFontStyle,
+                        LilySharp.Core.Svg.Layout.ArticulationEngraver.TabTechniqueStyle(fonts),
                         TextAnchor.Middle, Color.Black);
                 continue;
             }
@@ -150,7 +150,7 @@ internal static partial class SharedRenderer
             if (a.Glyph.StartsWith("frame:", StringComparison.Ordinal))
             {
                 using (gc.Source(a.SourcePosition))
-                    DrawFretFrame(a.X, y, a.Glyph[6..], gc);
+                    DrawFretFrame(fonts, a.X, y, a.Glyph[6..], gc);
                 continue;
             }
             // Bartók (snap) pizzicato takes the ordinary glyph path below: it is the
@@ -234,7 +234,18 @@ internal static partial class SharedRenderer
     /// Spec is LOW string first ("x32010").
     /// LILYPOND-REF: LP \fret-diagram-terse / MusicXML &lt;frame&gt;.
     /// </summary>
-    private static void DrawFretFrame(double cx, double bottomY, string spec, IDrawingContext gc)
+    /// <summary>The "Nfr" label's ENGRAVING em. LILYSHARP-OWN: the fret frame is Lily#'s own
+    /// device (LilyPond's fret-diagram markup sizes its label from the diagram's own size
+    /// property, which this frame does not carry); the label is drawn here and reserved
+    /// nowhere, so this is the one reader. Through the plan since 2026-09-08.</summary>
+    internal const double FretFrameLabelEm = 1.1;
+
+    /// <summary>The bend amount label's ENGRAVING em. LILYSHARP-OWN, as
+    /// <see cref="FretFrameLabelEm"/> is: the bend arrow is Lily#'s own device and the label
+    /// is drawn here and reserved nowhere.</summary>
+    internal const double BendLabelEm = 1.6;
+
+    private static void DrawFretFrame(ScoreTextMetrics fonts, double cx, double bottomY, string spec, IDrawingContext gc)
     {
         int strings = spec.Length;
         const double dx = 0.55;   // string spacing
@@ -262,8 +273,10 @@ internal static partial class SharedRenderer
                 f == 0 && baseFret == 1 ? 0.16 : 0.05); // nut is thick at position 1
 
         if (baseFret > 1)
-            gc.DrawText($"{baseFret}fr", left + width + 0.35, top - dy * 0.5, 1.1,
-                TextRole.FretFrame, FontStyle.Regular, TextAnchor.Start, Color.Black);
+            gc.DrawText($"{baseFret}fr", left + width + 0.35, top - dy * 0.5,
+                fonts.Size(TextRole.FretFrame, FretFrameLabelEm),
+                TextRole.FretFrame, fonts.Style(TextRole.FretFrame, FontStyle.Regular),
+                TextAnchor.Start, Color.Black);
 
         for (int s = 0; s < strings; s++)
         {
@@ -295,7 +308,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: TAB bend convention (bend-alter in MusicXML terms);
     /// curve idiom follows DrawBendAfter.
     /// </summary>
-    private static void DrawGuitarBend(double x0, double y0, int semitones, IDrawingContext gc)
+    private static void DrawGuitarBend(ScoreTextMetrics fonts, double x0, double y0, int semitones, IDrawingContext gc)
     {
         const double len = 1.6;    // horizontal reach
         const double rise = 2.6;   // vertical reach (upward = larger Y-up)
@@ -322,7 +335,8 @@ internal static partial class SharedRenderer
             2 => "full",
             _ => (semitones % 2 == 0) ? (semitones / 2).ToString() : $"{semitones / 2}½",
         };
-        gc.DrawText(label, topX, topY + 0.35, 1.6, TextRole.Bend, FontStyle.Italic,
+        gc.DrawText(label, topX, topY + 0.35, fonts.Size(TextRole.Bend, BendLabelEm),
+            TextRole.Bend, fonts.Style(TextRole.Bend, FontStyle.Italic),
             TextAnchor.Middle, Color.Black);
     }
 
@@ -433,7 +447,8 @@ internal static partial class SharedRenderer
             // (it declares only font-series and font-shape) — the em the TextScript pair
             // measured, not the 0.45 × FontSize this drew until 2026-08-02
             // (ledger ottava.label.ink-height, −0.288062616 before the port).
-            double textFontSize = os.Size(EngravingDefaults.OttavaBracketFontSize, b.StaffIndex);
+            double textFontSize = os.Size(OttavaBracketEngraver.LabelEm(fonts), b.StaffIndex);
+            var textStyle = OttavaBracketEngraver.LabelStyle(fonts);
             using (gc.Source(b.SourcePosition))
             {
                 // LilyPond CENTRES the label's ink on the line — text.align_to (Y_AXIS,
@@ -445,10 +460,10 @@ internal static partial class SharedRenderer
                 gc.DrawText(b.Text, b.StartX,
                     absY - os.Size(
                         OttavaBracketEngraver.LabelInkCentre(
-                            fonts, b.Text, EngravingDefaults.OttavaBracketFontSize),
+                            fonts, b.Text, OttavaBracketEngraver.LabelEm(fonts)),
                         b.StaffIndex),
                     textFontSize, TextRole.Ottava,
-                    FontStyle.BoldItalic, TextAnchor.Start, Color.Black);
+                    textStyle, TextAnchor.Start, Color.Black);
 
                 double lineStartX = OttavaBracketEngraver.LineStartX(
                     fonts, b.Text, b.StartX, textFontSize);

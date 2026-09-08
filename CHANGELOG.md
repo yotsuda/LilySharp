@@ -15,9 +15,10 @@ workflow attaches that section to the GitHub Release verbatim.
   written style replaces the engraving's, so `text bold` is bold and upright). `mark "Charis
   SIL" step +1 bold` is one entry. The size and the style resolve like the face — the role's
   entry, then its group's, then the engraving — for the roles whose drawing and reserved
-  space both read the plan: `title composer lyricText chordName tempo mark pedal navigation
-  text dynamics barNumber tuplet volta`; on any other role they warn (LYS8018) and the face
-  still binds. A chord symbol's accidental and a metronome mark's note step with their text.
+  space both read the plan: `title composer instrument lyricText stanza chordName fretFrame
+  tempo mark pedal navigation text dynamics partCombine barNumber tuplet volta ottava bend
+  tabTechnique`; on the others (Emmentaler digit runs — `figuredBass fingering tabFret` — and
+  the notation roles `clefOctave meter`) they warn (LYS8018) and the face still binds. A chord symbol's accidental and a metronome mark's note step with their text.
   The twin writes a `step` as `\override Grob.font-size = #n` (and a style as `font-series`
   / `font-shape`) in the `\Score` context, the header roles as `\markup \fontsize`; a `size`
   has no LilyPond spelling and is warned about. **The redirect is spelled `chordName as sans`**
