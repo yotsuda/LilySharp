@@ -55,6 +55,30 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### MIDI, MusicXML and the LilyPond twin
 
+- **`lysc ly` writes a `chords` row as a `ChordNames` context.** The track goes out as a
+  `\chordmode` variable — `C Am | F Gm7-5 |` is `c2 a2:m | f2 g2:m7.5- |` — following the
+  form's repeats and endings exactly as the music does, and the row stands above the staff
+  it is written over. Every Lily# spelling is rewritten into an entry LilyPond accepts
+  (`F#m7-5/C#` → `fis:m7.5-/cis`, `Cmmaj7` → `c:m7+`, `C7sus4` → `c:sus4.7`, a roman degree
+  resolved in its key), and LilyPond then prints its own name for the chord, which is what
+  the twin is for. A `.` extends the entry (at a bar's head it is the silent slot), `r` is LilyPond's
+  `N.C.`, an empty bar (a bare `|`, a pickup's included) is silent and a pickup bar is as
+  short as the section's `partial`. A quality Lily# does not know goes out as its root alone, with a warning; a row shown `as
+  roman` is named, not numbered, on the twin (warned once). The twin used to drop every chord
+  row with "the twin has no chord row".
+- **`lysc ly` writes a part's inline `@chord` marks as a `ChordNames` context over its
+  staff.** The symbols are taken from the page's own placement — at the note's moment, a bare
+  `@chord` named from the notes it sits on, a pickup bar as short as the page's — with silence
+  between them, so LilyPond prints exactly the symbols the page prints. They used to be
+  dropped with "@chord dropped (out of scope)". A numbers-only tab gets none, as on the page.
+- **`lysc ly` writes the lyrics.** Every line the page places — a verse attached under a staff,
+  a row that `sings` a part, an independent row spread over its bars, each stacked verse — is a
+  `Lyrics` context over a `\lyricmode` line whose syllables carry the durations the page
+  aligned them to (`Mu4 -- sic4 fills4 the4 |`, a melisma one longer syllable), standing
+  below its staff or at the row's place. The twin used to carry no lyrics at all ("lyrics
+  row … is not exported", and an attached verse went without a word). Not carried: the stanza
+  number before verse 2+, and an extender's exact end (LilyPond runs `__` to the next
+  syllable; the page stops it at the last held note).
 - **`lysc ly` writes an arpeggio as the tuplet it is.** `<< r c cis >>4` becomes
   `\tuplet 3/2 { r8 c cis }`, `<< c e g a >>` after a quarter `c16 e g a`, with the octave
   marks recomputed for LilyPond's `\relative` — Lily# stacks the members on the root and the
@@ -62,6 +86,12 @@ workflow attaches that section to the GitHub Release verbatim.
   the group written out where the two carries differ. The twin used to drop the whole group
   with "Arpeggio not exported", a bar short by the group's duration, so no book with a
   written-out broken chord could be put against LilyPond.
+- **The twin reopens every section at a quarter.** A section whose first note writes no
+  duration is a quarter on the page (the section is a reusable unit; decided 2026-09-04), but
+  the twin let LilyPond carry the previous section's last duration across the boundary — a
+  section opening `aes aes'` after a whole read as two wholes and failed its bar check. The
+  twin now writes the quarter out at such a boundary; a section following a quarter is
+  written as before.
 - **The note after a dotted one carries the dot in the twin too.** `c4. d` has been a dotted
   quarter followed by a dotted quarter on the page since 0.4.0; the twin still wrote `d4`,
   five eighths where the page has six. It writes `d4.` now.

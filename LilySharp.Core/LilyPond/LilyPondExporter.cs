@@ -257,6 +257,29 @@ public sealed class LilyPondExporter
     /// mere holder of somebody else's cell for the next part.</summary>
     private readonly HashSet<SyntaxNode> _looseSections = new();
 
+    /// <summary>True while a CHORD track is being flattened and written: the form walk
+    /// then appends a section's chord bars instead of its music, and the item emitter
+    /// writes <c>\chordmode</c> bars (see <see cref="EmitChordTracks"/>).</summary>
+    private bool _chordTrack;
+
+    /// <summary>The <c>\chordmode</c> variable written for each chord part a row names
+    /// (part name → variable), filled by <see cref="EmitChordTracks"/> and read by
+    /// <see cref="EmitScore"/>.</summary>
+    private readonly Dictionary<string, string> _chordVars = new(StringComparer.Ordinal);
+
+    /// <summary>Chord symbols already warned about (one warning per spelling, not per bar).</summary>
+    private readonly HashSet<string> _chordWarned = new(StringComparer.Ordinal);
+
+    /// <summary>The <c>\chordmode</c> variable written for each part's INLINE <c>@chord</c>
+    /// marks (part name → variable), filled by <see cref="EmitInlineChordTracks"/>; the
+    /// parts whose ChordNames row <see cref="EmitScore"/> has already placed.</summary>
+    private readonly Dictionary<string, string> _inlineChordVars = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _inlineChordPlaced = new(StringComparer.Ordinal);
+
+    /// <summary>The part whose music variable is being written — what tells
+    /// <see cref="EmitMark"/> whether this part's <c>@chord</c> marks reach the twin.</summary>
+    private string? _currentPartName;
+
     /// <summary>Diagnostics collected while exporting (e.g. constructs dropped
     /// because they are deprecated or out of scope). Not fatal.</summary>
     public IReadOnlyList<string> Warnings => _warnings;
@@ -302,6 +325,10 @@ public sealed class LilyPondExporter
         var form = PrimaryForm(root);
         var render = root.DescendantNodes<RenderDeclarationSyntax>().FirstOrDefault();
         CollectInstrumentNames(tree);
+        // Before the part variables: EmitMark asks whether a part's @chord marks have a
+        // ChordNames stream of their own while it writes that part's music.
+        EmitInlineChordTracks(tree, render);
+        EmitLyricTracks(tree, render);
 
         // One music variable per part. A part-major score keeps its sections inside
         // the part block; the form orders them.
@@ -311,6 +338,7 @@ public sealed class LilyPondExporter
         {
             foreach (string name in names)
             {
+                _currentPartName = name;
                 var part = parts.FirstOrDefault(p => p.Name.Text == name);
                 string varName = SanitizeVar(name);
                 partVars[name] = varName;
@@ -366,6 +394,7 @@ public sealed class LilyPondExporter
             EmitPartVariable("music", TopLevelMusic(root), root);
         }
 
+        EmitChordTracks(root, render, form, sections);
         EmitScore(render, parts, partVars);
         return _sb.ToString();
     }
@@ -1212,8 +1241,12 @@ public sealed class LilyPondExporter
             // hold (today only `_text`) goes through TOO, so that EmitItem's Skip
             // WARNS about it — filtering it here would put the drop back below the
             // waterline, which is the whole defect this method was rewritten for.
+            // ⚠️ In a CHORD track only the breaks go through: a `\mark` or a navigation
+            // mark written into the chord stream as well as the music would stand twice
+            // at one moment, and the music stream already carries them.
             case FormWalk.Other o:
-                result.Add(o.Node);
+                if (!_chordTrack || o.Node is BreakSyntax)
+                    result.Add(o.Node);
                 break;
         }
     }
@@ -1247,6 +1280,14 @@ public sealed class LilyPondExporter
     {
         if (!byName.TryGetValue(name, out var entry))
             return;
+        // A chord track's play of a section is its chord bars, nothing else: no play
+        // marker (the \mark and the key/meter restores are the music stream's) and no
+        // header directives — the key is read for the degree spelling instead.
+        if (_chordTrack)
+        {
+            result.AddRange(ChordBars(entry.Container, ChordKeyFor(name), ChordPickupFor(name)));
+            return;
+        }
         _sectionHeaders.TryGetValue(name, out var headers);
         // The section-PLAY sentinel: the \mark and the score-key restore the collector
         // engraves at this boundary (see SectionPlayMarker). Planted inside volta ending
@@ -1554,6 +1595,9 @@ public sealed class LilyPondExporter
         // volta ending comes back as a GenericSyntaxNode red, and only the green (which
         // carries the payload) survives that rebuild.
         { Green: SectionPlayGreen sp } => EmitSectionPlay(sp),
+        // A chord track's bar, pre-spelled (ChordBars): matched by its green for the same
+        // reason as the play sentinel above.
+        { Green: ChordBarGreen cb } => cb.Entries,
         NavigationMarkSyntax nav => EmitNavMark(nav),
         StringNumberAnnotationSyntax sn => sn.StringNumberToken.Text,
         ArticulationSyntax a => MapArticulation(a),
@@ -2269,6 +2313,24 @@ public sealed class LilyPondExporter
             _lysStep = 0;
             _lysOctave = _anchorOctave + _sectionOctaveOffset;
         }
+        // ⚠️ THE DURATION REOPENS HERE TOO. A section's first unwritten duration is a
+        // QUARTER in Lily# (owner decision 2026-09-04, HANDOFF §3 — the section is a
+        // reusable unit and "the previous section" is not one thing;
+        // MeasureCollector.Form.cs's section prologue resets _defaultDuration), while
+        // LilyPond's parser carries the last duration READ across the boundary
+        // (LILYPOND-REF: lily/parser.yy:3503-3515 optional_notemode_duration —
+        // default_duration_ is parser state and knows no section). So when the last
+        // written value is not a plain quarter, the boundary's first unwritten event
+        // writes the quarter out — otherwise the twin plays that note at the previous
+        // section's value. MEASURED (session 350, the owner's ぐるぐるワンダーランド and
+        // Lambada Complicada through LilyPond 2.26.0): a section opening `aes aes' …`
+        // after `<des' fes>1` read as two wholes and failed the bar check at 1/2.
+        if (_lastWrittenValue != "4" || _lastWrittenDots > 0)
+        {
+            _lastWrittenValue = "4";
+            _lastWrittenDots = 0;
+            _forceNextDuration = true;
+        }
 
         var parts = new List<string>(3);
         // ⚠️ THE METER REVERTS HERE TOO, and this arm is the twin of the key one below.
@@ -2347,6 +2409,10 @@ public sealed class LilyPondExporter
             return na;
         if (Fingering(mk) is { } fg)
             return fg;
+        // An inline @chord rides its part's ChordNames stream (EmitInlineChordTracks), not
+        // the music: the note is written bare here, the symbol stands in that context.
+        if (mk.Name == "chord" && _currentPartName != null && _inlineChordVars.ContainsKey(_currentPartName))
+            return "";
         // Spelt as WRITTEN: MarkName steps over the '!' of a terminator, so a bare
         // "@rit dropped" for a '@!rit' would name a mark the reader did not write.
         _warnings.Add($"@{(mk.IsSpanEnd ? "!" : "")}{name} dropped (out of scope)");
@@ -2464,7 +2530,8 @@ public sealed class LilyPondExporter
         // exists for (see the remark on Fingering_BecomesAnAttachedPostEvent). Say so rather
         // than let it pass: wrapping the whole preceding stream in `\repeat volta 2 { … }`
         // is the fix, and it is a restructure of the emitted file, not a token swap.
-        if (b.BarToken.Kind == SyntaxKind.RepeatEndBar)
+        // (Said once, from the music stream — a chord track meets the same bar line.)
+        if (b.BarToken.Kind == SyntaxKind.RepeatEndBar && !_chordTrack)
             _warnings.Add(
                 "a one-sided ':|' repeats from the beginning of the piece in Lily#, but "
                 + "LilyPond's \\bar \":|.\" only DRAWS the barline — the twin engraves the "
@@ -3258,28 +3325,58 @@ public sealed class LilyPondExporter
                             ?? lastMainStaffPart;
                         break;
                     case StaffRenderSyntax st:
+                        AddInlineChordRow(rows, RenderPartName(st), "    ");
                         rows.Add(EmitStaff(RenderPartName(st), parts, partVars, tab: false, "    "));
+                        AddLyricRows(rows, RenderPartName(st), "    ", asRow: false);
                         lastMainStaffPart = RenderPartName(st) ?? lastMainStaffPart;
                         break;
                     case TabRenderSyntax tb:
-                        rows.Add(EmitStaff(RenderPartName(tb), parts, partVars, tab: true, "    ",
-                            tabNumbersOnly: TabIsNumbersOnly(tb, render)));
-                        lastMainStaffPart = RenderPartName(tb) ?? lastMainStaffPart;
+                        {
+                            bool numbersOnly = TabIsNumbersOnly(tb, render);
+                            // A numbers-only tab prints no attached chord on the page
+                            // (TabStaffStencils.BlanksNoteAttachedChord), so none stands over
+                            // its twin either.
+                            if (!numbersOnly)
+                                AddInlineChordRow(rows, RenderPartName(tb), "    ");
+                            rows.Add(EmitStaff(RenderPartName(tb), parts, partVars, tab: true, "    ",
+                                tabNumbersOnly: numbersOnly));
+                            AddLyricRows(rows, RenderPartName(tb), "    ", asRow: false);
+                            lastMainStaffPart = RenderPartName(tb) ?? lastMainStaffPart;
+                        }
                         break;
                     case OssiaRenderSyntax os:
                         rows.Add(EmitOssia(os, parts, partVars, lastMainStaffPart));
                         if (lastMainStaffPart != null)
                             alignedAbove.Add(lastMainStaffPart);
                         break;
-                    // A chord / lyrics row needs a music stream this transpiler has no reader
-                    // for (chord and lyric blocks are collected separately), so it is REPORTED
+                    // A chord row is the ChordNames context of its part's \chordmode variable
+                    // (EmitChordTracks), standing where the row stands — above the next staff,
+                    // which is where Lily# folds an interior row too (RenderSpecParser
+                    // .FoldAdjacentRows). A row whose part has no chords block is REPORTED
                     // rather than dropped: a twin silently missing a row is the shape that has
                     // cost this exporter five holes already.
                     case ChordRowRenderSyntax chords:
-                        _warnings.Add($"chord row '{chords.PartName}' is not exported — the twin has no chord row");
+                        if (_chordVars.TryGetValue(chords.PartName, out var chordVar))
+                        {
+                            rows.Add("    \\new ChordNames \\" + chordVar + "\n");
+                            // The page can show the row as degrees of the key; LilyPond
+                            // prints the names it realizes, so say so once.
+                            if (string.Equals(chords.DisplayModeText, "roman", StringComparison.OrdinalIgnoreCase))
+                                _warnings.Add($"chord row '{chords.PartName}' is shown as roman degrees on "
+                                    + "the page; the twin prints LilyPond's chord names");
+                        }
+                        else
+                        {
+                            _warnings.Add($"chord row '{chords.PartName}' is not exported — no chords block of that name");
+                        }
                         break;
+                    // A lyrics row is its part's Lyrics context(s), standing where the row
+                    // stands (EmitLyricTracks); a row the page placed nothing for is reported.
                     case LyricsRowRenderSyntax lyrics:
-                        _warnings.Add($"lyrics row '{lyrics.PartName}' is not exported — the twin has no lyrics row");
+                        if (_lyricRowVars.ContainsKey(lyrics.PartName))
+                            AddLyricRows(rows, lyrics.PartName, "    ", asRow: true);
+                        else if (PageKeepsLyricsRow(lyrics.PartName))
+                            _warnings.Add($"lyrics row '{lyrics.PartName}' is not exported — the page placed no syllable of it");
                         break;
                 }
             }
@@ -3339,6 +3436,560 @@ public sealed class LilyPondExporter
            .Append(" \\context { \\Score printInitialRepeatBar = ##t } }\n}\n");
     }
 
+    // ---- Chord tracks (\chordmode) ------------------------------------------
+
+    /// <summary>
+    /// One <c>\chordmode</c> variable per chord part a score row names, written before the
+    /// <c>\score</c> like the part variables — the ChordNames context the row becomes
+    /// (see <see cref="EmitScore"/>). The track is flattened through the SAME form walk as
+    /// the music (<see cref="AppendFormItems"/>, with <see cref="AppendSection"/> taking its
+    /// chord arm), so a repeat, an ending and a reprise fall where the music's do, and the
+    /// bars are spelled as LilyPond's chord entries (<see cref="ChordBarText"/>) so LilyPond
+    /// realizes and names them itself.
+    /// </summary>
+    /// <remarks>
+    /// Owner decision 2026-09-08 (HANDOFF §3): the twin hands LilyPond <c>\chordmode</c>
+    /// entries — LilyPond's own Ignatzek names then stand on the twin, not Lily#'s display
+    /// strings — and every Lily# spelling is rewritten into one LilyPond accepts.
+    /// ⚠️ Inline <c>@chord</c> marks on notes are NOT here: they ride the music stream, where
+    /// <see cref="EmitMark"/> still reports them — a ChordNames stream for them would have to
+    /// be re-timed off the note durations, which is a different reader.
+    /// </remarks>
+    private void EmitChordTracks(CompilationUnitSyntax root, RenderDeclarationSyntax? render,
+        FormDeclarationSyntax? form, List<SectionDeclarationSyntax> allSections)
+    {
+        if (render == null)
+            return;
+        foreach (var item in RenderRows(render))
+        {
+            if (item is not ChordRowRenderSyntax row || row.PartName.Length == 0
+                || _chordVars.ContainsKey(row.PartName))
+                continue;
+            var blocks = root.KindSites(SyntaxKind.ChordPartBlock).OfType<ChordPartBlockSyntax>()
+                .Where(b => b.PartName == row.PartName).ToList();
+            if (blocks.Count == 0)
+                continue;   // EmitScore reports the row
+            var items = OrderedChordItems(blocks, form, allSections);
+            if (items.Count == 0)
+                continue;
+            string varName = SanitizeVar(row.PartName + "Chords");
+            _chordVars[row.PartName] = varName;
+            _sb.Append(varName).Append(" = \\chordmode {\n");
+            _chordTrack = true;
+            EmitMusicStream(items, indent: "  ");
+            _chordTrack = false;
+            _sb.Append("}\n\n");
+        }
+    }
+
+    /// <summary>
+    /// The ChordNames context for a part's INLINE <c>@chord</c> marks, placed over the first
+    /// row that shows the part (a staff, a full-notation tab, a group's staff) — once.
+    /// </summary>
+    private void AddInlineChordRow(List<string> rows, string? partName, string indent)
+    {
+        if (partName != null && _inlineChordVars.TryGetValue(partName, out var v)
+            && _inlineChordPlaced.Add(partName))
+            rows.Add(indent + "\\new ChordNames \\" + v + "\n");
+    }
+
+    /// <summary>
+    /// One <c>\chordmode</c> variable per part carrying INLINE <c>@chord</c> marks — read off
+    /// the PAGE's model rather than the syntax: the collector has already placed every
+    /// symbol at its note's moment, recognized a bare <c>@chord</c> from the notes it sits
+    /// on and resolved a degree in its key, so the twin asks it instead of re-deriving the
+    /// note durations a second time. Each bar is the symbols at their onsets with silent
+    /// <c>s</c> filling the gaps, so LilyPond prints exactly the symbols the page prints,
+    /// where it prints them; a bar's length is the part's own (a pickup is short).
+    /// </summary>
+    /// <remarks>
+    /// The model's bar sequence is the twin's: neither unfolds a <c>\repeat volta</c> or an
+    /// ending (both write the bars once, in order), and both write a reprise twice — so
+    /// the linear stream lines up bar for bar with the music stream's written bars. The
+    /// page collects only when the file writes a <c>@chord</c> at all (the collect costs a
+    /// render). Two symbols at one moment (two voices) keep the first.
+    /// ⚠️ A chords ROW is the other reader (<see cref="EmitChordTracks"/>, syntax-driven
+    /// through the form walk); the two contexts stand side by side when a book has both.
+    /// </remarks>
+    /// <summary>The page's model of the exported score, collected ONCE on first demand —
+    /// the readers that ask the page (inline chords, lyrics) share it. Null when the
+    /// collect fails (warned once) or the file has no score.</summary>
+    private Svg.Model.MultiStaffScore? PageModel(SyntaxTree tree, RenderDeclarationSyntax render)
+    {
+        if (_pageCollected)
+            return _page;
+        _pageCollected = true;
+        try
+        {
+            var spec = Svg.Collector.RenderSpecParser.Parse(render);
+            _pageSpec = spec;
+            if (spec != null)
+                _page = new Svg.Collector.MeasureCollector().CollectMultiStaff(tree, spec);
+        }
+        catch (Exception e)
+        {
+            _warnings.Add("the page could not be collected, so its chords and lyrics are not exported: " + e.Message);
+        }
+        return _page;
+    }
+
+    private Svg.Model.MultiStaffScore? _page;
+    private Svg.Collector.RenderSpec? _pageSpec;
+    private bool _pageCollected;
+
+    /// <summary>Whether the page keeps the named lyrics row as a ROW (a band of its own).
+    /// A row written directly under the staff it sings is FOLDED into that staff's attached
+    /// verses (RenderSpecParser.FoldAdjacentRows) and reaches the twin under the staff's
+    /// name instead — so a row spec of that name is absent, and nothing is missing.</summary>
+    private bool PageKeepsLyricsRow(string partName)
+        => _pageSpec == null
+           || _pageSpec.Items.OfType<Svg.Collector.LyricsRowSpec>().Any(r => r.PartName == partName);
+
+    /// <summary>The length of one bar of a voice: its items' durations summed, else (an
+    /// absent voice's placeholder bar has no items) the meter in force there.</summary>
+    private static Fraction BarLength(Svg.Model.Measure measure, IReadOnlyList<Fraction> meters, int m)
+    {
+        var length = Fraction.Zero;
+        foreach (var it in measure.Items)
+            length += it.Duration;
+        return length > Fraction.Zero || m >= meters.Count ? length : meters[m];
+    }
+
+    private void EmitInlineChordTracks(SyntaxTree tree, RenderDeclarationSyntax? render)
+    {
+        if (render == null)
+            return;
+        var root = tree.GetRoot();
+        if (!root.DescendantNodes<MusicMarkSyntax>().Any(m => m.Name == "chord"))
+            return;
+        if (PageModel(tree, render) is not { } score)
+            return;
+
+        var meters = Svg.Layout.ScoreSideTables.PrevailingMeters(score);
+        foreach (var (_, staff, idx) in score.EnumerateStaves())
+        {
+            if (staff.IsTextRow)
+                continue;
+            string partName = staff.PrimaryVoice.Name;
+            if (_inlineChordVars.ContainsKey(partName))
+                continue;
+            var items = score.ChordNames
+                .Where(c => !c.UseTiming && c.StaffIndex == idx)
+                .OrderBy(c => c.MeasureIndex).ThenBy(c => c.Timing)
+                .ToList();
+            if (items.Count == 0)
+                continue;
+
+            string varName = SanitizeVar(partName + "InlineChords");
+            _inlineChordVars[partName] = varName;
+            _sb.Append(varName).Append(" = \\chordmode {\n");
+            var measures = staff.PrimaryVoice.Measures;
+            int k = 0;
+            for (int m = 0; m < measures.Length; m++)
+            {
+                var length = BarLength(measures[m], meters, m);
+                var line = new StringBuilder("  ");
+                var at = Fraction.Zero;
+                while (k < items.Count && items[k].MeasureIndex == m)
+                {
+                    var c = items[k++];
+                    if (c.Timing < at)
+                        continue;   // the same moment as the symbol just written: the first wins
+                    if (c.Timing > at)
+                    {
+                        AppendToken(line, "s" + ChordModeDuration(c.Timing - at), "  ");
+                        at = c.Timing;
+                    }
+                    // Up to the next symbol of this bar at a LATER moment, else the bar end.
+                    var next = length;
+                    for (int j = k; j < items.Count && items[j].MeasureIndex == m; j++)
+                        if (items[j].Timing > at) { next = items[j].Timing; break; }
+                    if (next > length) next = length;
+                    AppendToken(line, InlineChordEntry(c, ChordModeDuration(next - at)), "  ");
+                    at = next;
+                }
+                if (at < length)
+                    AppendToken(line, "s" + ChordModeDuration(length - at), "  ");
+                _sb.Append(line).Append(" |\n");
+            }
+            // Symbols the walk placed past the part's last bar (none in practice) are dropped.
+            _sb.Append("}\n\n");
+        }
+    }
+
+    /// <summary>
+    /// One <c>\lyricmode</c> variable per lyric LINE the page places — a staff's attached
+    /// verse, a melody-bound row, an independent even-spread row, each stacked verse its own
+    /// — read off the page's model like the inline chords: every syllable at its placed
+    /// moment with its length to the next syllable of the line (or the bar's end), so a
+    /// melisma is simply a longer syllable, and <c>\skip</c> filling the gaps. LilyPond then
+    /// sets the words by their own durations, which are the note onsets the page aligned
+    /// them to — no <c>\lyricsto</c>, no named voices, and the same reading for all three
+    /// kinds of line. The context stands below the staff it is attached to, or at the row's
+    /// place (<see cref="EmitScore"/>).
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 350, scratch/p351/lp b.ly): a <c>\lyricmode</c> line with written
+    /// durations under a Staff is what LilyPond's own spacing was probed with, and it read
+    /// the syllables at the note columns. Deliberately NOT carried: the stanza number the
+    /// page prints before verse 2+ (LilyPond's <c>\set stanza</c>), and the extender's exact
+    /// end (the page stops it at the last held head, LilyPond's <c>__</c> runs to the next
+    /// syllable) — both are named in the CHANGELOG. A connector is the page's:
+    /// <c>--</c> after a hyphenated syllable, <c>__</c> after an extended one.
+    /// </remarks>
+    private void EmitLyricTracks(SyntaxTree tree, RenderDeclarationSyntax? render)
+    {
+        if (render == null)
+            return;
+        if (!tree.GetRoot().DescendantNodes<LyricsBlockSyntax>().Any())
+            return;
+        if (PageModel(tree, render) is not { } score || score.Lyrics.IsDefaultOrEmpty)
+            return;
+
+        var meters = Svg.Layout.ScoreSideTables.PrevailingMeters(score);
+        var staves = score.EnumerateStaves().ToDictionary(t => t.GlobalStaffIndex, t => t.Staff);
+        // One line = one staff's one voice's one verse (a row's lines key on the row's staff).
+        var lines = score.Lyrics
+            .GroupBy(l => (l.StaffIndex, l.VoiceId, l.VerseNumber, l.IsLyricsRow))
+            .OrderBy(g => g.Key.StaffIndex).ThenBy(g => g.Key.VoiceId).ThenBy(g => g.Key.VerseNumber);
+        foreach (var line in lines)
+        {
+            if (!staves.TryGetValue(line.Key.StaffIndex, out var staff))
+                continue;
+            string partName = staff.PrimaryVoice.Name;
+            var items = line.OrderBy(l => l.MeasureIndex).ThenBy(l => l.Timing).ToList();
+            var measures = staff.PrimaryVoice.Measures;
+
+            // A LilyPond identifier is letters only, so the verse (and voice) is a word.
+            string varName = SanitizeVar(partName
+                + (line.Key.VoiceId > 0 && !line.Key.IsLyricsRow ? "Voice" + NumberWord(line.Key.VoiceId) : "")
+                + "Lyrics" + NumberWord(line.Key.VerseNumber));
+            var target = line.Key.IsLyricsRow ? _lyricRowVars : _lyricVars;
+            if (!target.TryGetValue(partName, out var vars))
+                target[partName] = vars = new List<string>();
+            vars.Add(varName);
+
+            _sb.Append(varName).Append(" = \\lyricmode {\n");
+            int k = 0;
+            for (int m = 0; m < measures.Length; m++)
+            {
+                var length = BarLength(measures[m], meters, m);
+                var text = new StringBuilder("  ");
+                var at = Fraction.Zero;
+                while (k < items.Count && items[k].MeasureIndex == m)
+                {
+                    var l = items[k++];
+                    if (l.Timing < at)
+                        continue;   // two syllables on one moment: the first wins
+                    if (l.Timing > at)
+                    {
+                        AppendToken(text, "\\skip " + ChordModeDuration(l.Timing - at), "  ");
+                        at = l.Timing;
+                    }
+                    var next = length;
+                    for (int j = k; j < items.Count && items[j].MeasureIndex == m; j++)
+                        if (items[j].Timing > at) { next = items[j].Timing; break; }
+                    if (next > length) next = length;
+                    AppendToken(text, LyricSyllable(l.Text) + ChordModeDuration(next - at), "  ");
+                    if (l.ConnectorType == Svg.Model.LyricConnectorType.Hyphen)
+                        AppendToken(text, "--", "  ");
+                    else if (l.ConnectorType == Svg.Model.LyricConnectorType.Extender)
+                        AppendToken(text, "__", "  ");
+                    at = next;
+                }
+                if (at < length)
+                    AppendToken(text, "\\skip " + ChordModeDuration(length - at), "  ");
+                _sb.Append(text).Append(" |\n");
+            }
+            _sb.Append("}\n\n");
+        }
+    }
+
+    /// <summary>A small number as a word, for a LilyPond identifier (letters only).</summary>
+    private static string NumberWord(int n) => n switch
+    {
+        1 => "One", 2 => "Two", 3 => "Three", 4 => "Four", 5 => "Five", 6 => "Six",
+        7 => "Seven", 8 => "Eight", 9 => "Nine", 10 => "Ten", 11 => "Eleven", 12 => "Twelve",
+        _ => "Many" + new string('I', Math.Max(0, n - 12)),
+    };
+
+    /// <summary>A syllable as a <c>\lyricmode</c> word: bare when it is letters (an
+    /// apostrophe and the usual punctuation included), quoted otherwise — a digit, a
+    /// space, a quote, a backslash, a lone connector-looking word all need the quotes.</summary>
+    private static string LyricSyllable(string text)
+    {
+        bool bare = text.Length > 0;
+        foreach (char ch in text)
+            if (!(char.IsLetter(ch) || ch is ',' or '.' or '!' or '?' or ';' or ':' or '‿'))
+            {
+                bare = false;
+                break;
+            }
+        if (bare && text != "--" && text != "__" && text != "_" && text != "~")
+            return text;
+        return "\"" + text.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+    }
+
+    /// <summary>The Lyrics contexts attached BELOW a part's staff (each verse its own), or
+    /// standing as a row — placed once per part, in verse order.</summary>
+    private void AddLyricRows(List<string> rows, string? partName, string indent, bool asRow)
+    {
+        var source = asRow ? _lyricRowVars : _lyricVars;
+        var placed = asRow ? _lyricRowPlaced : _lyricPlaced;
+        if (partName != null && source.TryGetValue(partName, out var vars) && placed.Add(partName))
+            foreach (var v in vars)
+                rows.Add(indent + "\\new Lyrics \\" + v + "\n");
+    }
+
+    /// <summary>The <c>\lyricmode</c> variables per part (attached lines, below the staff)
+    /// and per lyrics ROW part (standing rows), in verse order; and the parts placed.</summary>
+    private readonly Dictionary<string, List<string>> _lyricVars = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<string>> _lyricRowVars = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _lyricPlaced = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _lyricRowPlaced = new(StringComparer.Ordinal);
+
+    /// <summary>One placed inline symbol as its entry: the model's resolved structure spelled
+    /// by <see cref="Music.ChordStructure.ToChordMode"/>; a symbol with no tone set (an
+    /// unregistered quality, or a literal the page could not parse) goes out as its root or
+    /// as silence, and the twin says so once.</summary>
+    private string InlineChordEntry(Svg.Model.ChordNameItem c, string duration)
+    {
+        if (c.Structure is { } s)
+        {
+            string spelled = s.ToChordMode(duration);
+            if (s.RawSuffix != null && _chordWarned.Add(c.ChordText))
+                _warnings.Add($"@chord '{c.ChordText}': the quality '{s.RawSuffix}' has no \\chordmode spelling — "
+                    + $"the twin writes the root alone ({spelled})");
+            return spelled;
+        }
+        if (_chordWarned.Add(c.ChordText))
+            _warnings.Add($"@chord '{c.ChordText}' is not a chord symbol the twin can spell — written as a silent slot");
+        return "s" + duration;
+    }
+
+    /// <summary>
+    /// A chord part's bars in playing order — the chord twin of <see cref="OrderedMusic"/>.
+    /// A part-major track (<c>chords P { section A { … } }</c>) registers each inner section
+    /// under its name; a flat block registers under the section that encloses it; a flat
+    /// block at top level plays once, first (the collector anchors it at bar 0).
+    /// </summary>
+    private List<SyntaxNode> OrderedChordItems(List<ChordPartBlockSyntax> blocks,
+        FormDeclarationSyntax? form, List<SectionDeclarationSyntax> allSections)
+    {
+        _sectionHeaders = BuildSectionHeaderRegistry(allSections);
+        var byName = new Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)>(
+            StringComparer.Ordinal);
+        var inOrder = new List<(SectionDeclarationSyntax Section, SyntaxNode Container)>();
+        var loose = new List<ChordPartBlockSyntax>();
+        void Register(SectionDeclarationSyntax section, SyntaxNode container)
+        {
+            byName[section.SectionName] = (section, container);
+            inOrder.Add((section, container));
+        }
+        foreach (var block in blocks)
+        {
+            if (block.HasSections)
+            {
+                foreach (var s in block.Sections)
+                    Register(s, s);
+                continue;
+            }
+            SectionDeclarationSyntax? enclosing = null;
+            for (var n = block.Parent; n != null; n = n.Parent)
+                if (n is SectionDeclarationSyntax s) { enclosing = s; break; }
+            if (enclosing != null)
+                Register(enclosing, block);
+            else
+                loose.Add(block);
+        }
+
+        var result = new List<SyntaxNode>();
+        _chordTrack = true;
+        foreach (var block in loose)
+            result.AddRange(ChordBars(block, (_homeTonic.Step, _homeKeySharps)));
+        if (form != null)
+            AppendFormItems(FormWalk.Read(form), byName, result);
+        else
+            foreach (var entry in inOrder)
+                result.AddRange(ChordBars(entry.Container, ChordKeyFor(entry.Section.SectionName)));
+        _chordTrack = false;
+        return result;
+    }
+
+    /// <summary>The key a scale-degree entry of the named section stacks in: the section's
+    /// own header key, else the score's home key — the two keys the collector's timeline
+    /// holds at a section's opening bar (a key written INSIDE a part cell is a modulation
+    /// this reader does not see; the page's degrees follow it, the twin's do not).</summary>
+    private (int TonicStep, int Sharps) ChordKeyFor(string sectionName)
+    {
+        var key = _sectionHeaders.TryGetValue(sectionName, out var headers)
+            ? headers.OfType<KeySignatureSyntax>().FirstOrDefault()
+            : null;
+        if (key == null || key.IsCustom)
+            return (_homeTonic.Step, _homeKeySharps);
+        return (KeyTonic.Of(key).Step, KeySpelling.SharpsFor(key.Pitch.PitchName, key.Mode.Text) ?? 0);
+    }
+
+    /// <summary>The pickup a section's header declares (<c>partial 4</c>), or null: the
+    /// length of the FIRST bar of that section's play, which the chord track has to write
+    /// as short as the music does or every later chord lands late.</summary>
+    private Fraction? ChordPickupFor(string sectionName)
+        => _sectionHeaders.TryGetValue(sectionName, out var headers)
+            ? headers.OfType<PartialDeclarationSyntax>().FirstOrDefault()?.ToFraction()
+            : null;
+
+    /// <summary>
+    /// One chord container's bars as stream items: each bar's slots pre-spelled into ONE
+    /// <see cref="ChordBarMarker"/>, its written bar lines kept as the nodes they are — so
+    /// <see cref="EmitMusicStream"/> groups an inline <c>|: … :|</c> exactly as it does for
+    /// music, and a form ending rebuilt by <see cref="CreateEnding"/> carries the bars in
+    /// its green. A bar line with nothing before it closes an EMPTY bar (the page's
+    /// bare-barline rule, ChordNameCollector.CollectPart's ProcessRun: the leading <c>|</c>
+    /// of a pickup book included), written as a silent bar of the meter — or of the
+    /// <paramref name="pickup"/> when it is the play's first.
+    /// </summary>
+    private IEnumerable<SyntaxNode> ChordBars(SyntaxNode container, (int TonicStep, int Sharps) key,
+        Fraction? pickup = null)
+    {
+        IEnumerable<SyntaxNode> items = container switch
+        {
+            ChordPartBlockSyntax block => block.Items,
+            SectionDeclarationSyntax section => Svg.Collector.ChordNameCollector.SectionItems(section),
+            _ => Enumerable.Empty<SyntaxNode>(),
+        };
+        var result = new List<SyntaxNode>();
+        var pending = new List<SyntaxNode>();
+        bool firstBar = true;
+        void Flush()
+        {
+            var barLength = firstBar && pickup is { } p ? p : new Fraction(_homeTimeBeats, _homeTimeBeatType);
+            result.Add(new ChordBarMarker(pending.Count == 0
+                ? "s" + ChordModeDuration(barLength)
+                : ChordBarText(pending, key, barLength)));
+            pending.Clear();
+            firstBar = false;
+        }
+        foreach (var item in items)
+        {
+            if (item is BarlineSyntax)
+            {
+                Flush();
+                result.Add(item);
+            }
+            else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
+            {
+                pending.Add(item);
+            }
+        }
+        if (pending.Count > 0)
+            Flush();
+        return result;
+    }
+
+    /// <summary>
+    /// One bar's slots as <c>\chordmode</c> entries: the page's own grouping
+    /// (<see cref="Svg.Collector.ChordNameCollector.SlotGroups"/> — an entry with its
+    /// trailing '.' extensions is one entry of the merged length, a bar-head '.' a silent
+    /// <c>s</c>), each with its duration written out. <c>r</c> / <c>R</c> go out as <c>r</c>
+    /// — LilyPond prints its <c>noChordSymbol</c> there, "N.C." by default
+    /// (LILYPOND-REF: ly/engraver-init.ly:943-952 chordNameFunction = #ignatzek-chord-names …
+    /// noChordSymbol = "N.C."), the page's own text. (A
+    /// chord row has no <c>s</c> slot since 2026-09-04, LYS1028.) The grid is the score
+    /// meter's, as the page reads it.
+    /// </summary>
+    private string ChordBarText(List<SyntaxNode> slots, (int TonicStep, int Sharps) key, Fraction barLength)
+    {
+        // The page grids every bar on the meter (ChordRhythm); a PICKUP bar is shorter, and
+        // its slots are scaled to it so the chords keep their share of the bar they stand in.
+        var meter = new Fraction(_homeTimeBeats, _homeTimeBeatType);
+        var sb = new StringBuilder();
+        foreach (var (node, _, gridDur) in Svg.Collector.ChordNameCollector.SlotGroups(
+                     slots, _homeTimeBeats, _homeTimeBeatType, out _))
+        {
+            var dur = barLength.Equals(meter) ? gridDur : gridDur * barLength / meter;
+            if (sb.Length > 0)
+                sb.Append(' ');
+            string d = ChordModeDuration(dur);
+            switch (node)
+            {
+                case ChordEntrySyntax entry:
+                    sb.Append(ChordModeEntry(entry.SymbolText, d, key));
+                    break;
+                case RestSyntax:
+                    sb.Append('r').Append(d);
+                    break;
+                default:
+                    sb.Append('s').Append(d);
+                    break;
+            }
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// A written chord symbol as LilyPond's entry, read through the SAME three parses the
+    /// page uses (ChordNameCollector.ResolveChordEntry): the absolute symbol, then a roman
+    /// degree of the key in force, then a root with an unregistered quality. The last has
+    /// no tone set to hand LilyPond, so the root goes out alone and the twin says so — a
+    /// symbol LilyPond names differently from the page is the point of the twin, a symbol
+    /// silently reduced is not.
+    /// </summary>
+    private string ChordModeEntry(string symbol, string duration, (int TonicStep, int Sharps) key)
+    {
+        if (Music.ChordStructure.TryParseChordEntry(symbol, out var parsed))
+            return parsed.ToChordMode(duration);
+        if (Music.ChordStructure.TryParseRomanEntry(symbol, key.TonicStep, key.Sharps, out var degree))
+            return degree.ToChordMode(duration);
+
+        int slash = symbol.IndexOf('/');
+        string main = slash >= 0 ? symbol[..slash] : symbol;
+        string? bassText = slash >= 0 ? symbol[(slash + 1)..] : null;
+        if (Music.ChordStructure.TryParseSymbolPitch(main, out int step, out int alter, out string qual))
+        {
+            int? bassStep = null, bassAlter = null;
+            if (bassText != null
+                && Music.ChordStructure.TryParseSymbolPitch(bassText, out int bs, out int ba, out string rest)
+                && rest.Length == 0)
+            {
+                bassStep = bs;
+                bassAlter = ba;
+            }
+            var raw = new Music.ChordStructure(step, alter, Music.ChordQuality.Major,
+                bassStep, bassAlter, RawSuffix: qual);
+            string spelled = raw.ToChordMode(duration);
+            if (_chordWarned.Add(symbol))
+                _warnings.Add($"chord '{symbol}': the quality '{qual}' has no \\chordmode spelling — "
+                    + $"the twin writes the root alone ({spelled})");
+            return spelled;
+        }
+
+        if (_chordWarned.Add(symbol))
+            _warnings.Add($"chord '{symbol}' is not a chord symbol the twin can spell — written as a silent slot");
+        return "s" + duration;
+    }
+
+    /// <summary>
+    /// A slot length as a LilyPond duration: a plain value (<c>1 2 4 8 …</c>), a dotted or
+    /// double-dotted one, else the whole note scaled (<c>1*5/4</c>) — LilyPond's own
+    /// spelling for a length no single value has.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/parser.yy:3532-3536 duration — steno_duration multipliers: a
+    ///   written duration may carry <c>*N/M</c> multipliers.
+    /// </remarks>
+    private static string ChordModeDuration(Fraction f)
+    {
+        int n = f.Numerator, d = f.Denominator;
+        static bool Pow2(int x) => x > 0 && (x & (x - 1)) == 0;
+        if (n == 1 && Pow2(d))
+            return d.ToString();
+        if (n == 3 && d >= 2 && Pow2(d))
+            return (d / 2).ToString() + ".";
+        if (n == 7 && d >= 4 && Pow2(d))
+            return (d / 4).ToString() + "..";
+        return d == 1 ? "1*" + n : "1*" + n + "/" + d;
+    }
+
     /// <summary>
     /// A declared staff group — <c>grandStaff</c> / <c>staffGroup</c> / <c>choirStaff</c> —
     /// as the LilyPond context of the same name.
@@ -3370,7 +4021,15 @@ public sealed class LilyPondExporter
         var sb = new StringBuilder();
         sb.Append("    \\new ").Append(context).Append(" <<\n");
         foreach (var staff in group.Staves)
+        {
+            var groupRows = new List<string>(1);
+            AddInlineChordRow(groupRows, RenderPartName(staff), "      ");
+            foreach (var r in groupRows) sb.Append(r);
             sb.Append(EmitStaff(RenderPartName(staff), parts, partVars, tab: false, "      "));
+            groupRows.Clear();
+            AddLyricRows(groupRows, RenderPartName(staff), "      ", asRow: false);
+            foreach (var r in groupRows) sb.Append(r);
+        }
         sb.Append("    >>\n");
         return sb.ToString();
     }
@@ -3924,6 +4583,32 @@ internal sealed class SectionPlayMarker : SyntaxNode
         : base(new SectionPlayGreen(markLabel, hasHeaderKey, hasHeaderTime, octaveOffset),
             parent: null, position: 0)
     {
+    }
+}
+
+/// <summary>
+/// One bar of a chord track, pre-spelled as <c>\chordmode</c> entries
+/// (<c>LilyPondExporter.ChordBars</c>). A stream item like <see cref="SectionPlayMarker"/>,
+/// carried on its green for the same reason: a form ending rebuilds its items as greens.
+/// </summary>
+internal sealed class ChordBarMarker : SyntaxNode
+{
+    public ChordBarMarker(string text)
+        : base(new ChordBarGreen(text), parent: null, position: 0)
+    {
+    }
+}
+
+/// <summary>The chord bar's green — the spelled entries ride here (see <see cref="ChordBarMarker"/>).</summary>
+internal sealed class ChordBarGreen : InternalSyntax.GreenNode
+{
+    /// <summary>The bar's entries, space-separated, without the bar line.</summary>
+    public string Entries { get; }
+
+    public ChordBarGreen(string entries)
+        : base(SyntaxKind.None, fullWidth: 0)
+    {
+        Entries = entries;
     }
 }
 

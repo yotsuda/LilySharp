@@ -87,15 +87,17 @@ public enum ChordQuality
     /// <summary>Major triad plus a ninth, no seventh; suffix <c>add9</c>.</summary>
     MajorAdd9,
 
-    // The plain extensions. ⚠️ A DELIBERATE DEPARTURE FROM LILYPOND, declared here: a
-    // thirteenth chord does NOT carry the eleventh. LilyPond's ':13' stacks every third
-    // mechanically (c e g bes d' f' a'), and the natural eleventh it lands on is a
-    // semitone from the major third — an interval no player voices and no chart means.
-    // Lily# realizes the symbol the way a reader of the chart would play it, and takes
-    // the eleventh only when the symbol asks for it by name ('11', 'm11').
-    // Nothing measures this against LilyPond: the .ly exporter writes chord names as
-    // markup and never emits a \chordmode entry, so the twin never asks LilyPond to
-    // realize one.
+    // The plain extensions. A thirteenth chord does NOT carry the eleventh: the natural
+    // eleventh a mechanical stack lands on is a semitone from the major third — an
+    // interval no player voices and no chart means. Lily# takes the eleventh only when
+    // the symbol asks for it by name ('11', 'm11').
+    // ⚠️ This is LilyPond's own rule for a NATURAL third, not a departure from it —
+    // LILYPOND-REF: scm/chord-entry.scm:155-162 construct-chord-elements — "If natural 11 +
+    // natural 3 is present, but not given explicitly, we remove the 11" (remove-step), so
+    // ':13' and ':maj13' realize without
+    // it. The rule does NOT fire on a MINOR third (its alteration is not 0), so ':m13'
+    // keeps the eleventh in LilyPond; the twin writes ':m13^11' to say Lily#'s set
+    // (LilyPondModifier below).
     /// <summary>Dominant eleventh; suffix <c>11</c>.</summary>
     Dominant11,
     /// <summary>Dominant thirteenth, without the eleventh; suffix <c>13</c>.</summary>
@@ -248,8 +250,58 @@ public static class ChordQualityRegistry
         ["maj13"] = ChordQuality.Major13,
     };
 
+    // The quality as LilyPond's \chordmode writes it after the ':' — the spelling the
+    // LilyPond twin (lysc ly) hands to LilyPond, so LilyPond realizes and NAMES the chord
+    // by its own rules (owner decision 2026-09-08: the twin carries LilyPond's names, not
+    // Lily#'s display strings). Every entry realizes to the SAME tone set as Tones above.
+    // LILYPOND-REF: ly/chord-modifiers-init.ly:21 chordmodifiers = default-chord-modifier-list
+    //   (m, min, dim, aug, maj, sus — scm/chord-entry.scm:251-257 default-chord-modifier-list);
+    // LILYPOND-REF: scm/chord-entry.scm:67-80 construct-chord-elements' interpret-additions /
+    //   interpret-removals — the '.' additions with their '+' / '-' alterations, and '^' removals.
+    // ⚠️ '7sus4' is written as 'sus4.7': the leading number is the stack-thirds count and
+    //   'sus' is a modifier word, so the sus form takes its steps as additions. 'm7+' is the
+    //   minor-major seventh ('+' raises the added step). 'm13^11' removes the eleventh
+    //   ':m13' would keep (see the enum's remark). ':5.9' is the add-9 triad — thirds up to
+    //   the fifth, plus the ninth.
+    private static readonly Dictionary<ChordQuality, string> LilyPondModifiers = new()
+    {
+        [ChordQuality.Major] = "",
+        [ChordQuality.Minor] = ":m",
+        [ChordQuality.Diminished] = ":dim",
+        [ChordQuality.Augmented] = ":aug",
+        [ChordQuality.Dominant7] = ":7",
+        [ChordQuality.Major7] = ":maj7",
+        [ChordQuality.Minor7] = ":m7",
+        [ChordQuality.MinorMajor7] = ":m7+",
+        [ChordQuality.Diminished7] = ":dim7",
+        [ChordQuality.HalfDiminished7] = ":m7.5-",
+        [ChordQuality.Major6] = ":6",
+        [ChordQuality.Minor6] = ":m6",
+        [ChordQuality.Dominant9] = ":9",
+        [ChordQuality.Major9] = ":maj9",
+        [ChordQuality.Minor9] = ":m9",
+        [ChordQuality.Sus2] = ":sus2",
+        [ChordQuality.Sus4] = ":sus4",
+        [ChordQuality.Dominant7Sus4] = ":sus4.7",
+        [ChordQuality.Dominant7Flat5] = ":7.5-",
+        [ChordQuality.Dominant7Sharp5] = ":7.5+",
+        [ChordQuality.Dominant7Flat9] = ":7.9-",
+        [ChordQuality.Dominant7Sharp9] = ":7.9+",
+        [ChordQuality.Dominant7Sharp11] = ":7.11+",
+        [ChordQuality.MajorAdd9] = ":5.9",
+        [ChordQuality.Dominant11] = ":11",
+        [ChordQuality.Dominant13] = ":13",
+        [ChordQuality.Minor11] = ":m11",
+        [ChordQuality.Minor13] = ":m13^11",
+        [ChordQuality.Major13] = ":maj13",
+    };
+
     /// <summary>The tones (diatonic step + semitone above root) of a quality.</summary>
     public static IReadOnlyList<ChordToneSpec> GetTones(ChordQuality quality) => Tones[quality];
+
+    /// <summary>The quality as a <c>\chordmode</c> modifier (<c>:m7</c>, <c>:7.5-</c>,
+    /// empty for a major triad) — see the table's remark.</summary>
+    public static string LilyPondModifier(ChordQuality quality) => LilyPondModifiers[quality];
 
     /// <summary>The printed suffix after the root (e.g. "m7", "maj7", "").</summary>
     public static string GetSuffix(ChordQuality quality) => Suffix[quality];
@@ -657,6 +709,31 @@ public sealed record ChordStructure(
         foreach (var t in Tones)
             notes.Add(SpellLilyPitch(t.Step, t.Alter));
         return "<" + string.Join(" ", notes) + ">";
+    }
+
+    /// <summary>
+    /// The chord as a LilyPond <c>\chordmode</c> entry — Dutch root, the written
+    /// <paramref name="duration"/>, the quality modifier, the slash bass:
+    /// <c>fis4:m7.5-/cis</c>. LilyPond then realizes the tone set and prints its OWN name for
+    /// it (Ignatzek), which is what the twin is for. A <see cref="RawSuffix"/> chord has no
+    /// tone set to hand over: the root (and bass) go out alone, and the caller says so.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/parser.yy:3848-3856 new_chord — steno_tonic_pitch,
+    ///   optional_notemode_duration, chord_separator, chord_items: the duration stands
+    ///   BETWEEN the root and the ':' (<c>e1:maj7/dis</c>), the bass is a chord_separator.
+    /// LILYPOND-REF: scm/chord-entry.scm:46-50 construct-chord-elements' interpret-bass — '/+'
+    ///   is the added bass, '/' the inversion-or-bass that <see cref="BassIsAdded"/> records.
+    /// </remarks>
+    public string ToChordMode(string duration)
+    {
+        var sb = new StringBuilder();
+        sb.Append(SpellLilyPitch(RootStep, RootAlter)).Append(duration);
+        if (RawSuffix == null)
+            sb.Append(ChordQualityRegistry.LilyPondModifier(Quality));
+        if (BassStep is int bs)
+            sb.Append(BassIsAdded ? "/+" : "/").Append(SpellLilyPitch(bs, BassAlter ?? 0));
+        return sb.ToString();
     }
 
     /// <summary>

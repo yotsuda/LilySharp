@@ -1878,4 +1878,351 @@ public class LilyPondExporterTests
             n++;
         return n;
     }
+
+    // ----- chord rows: a chords track as LilyPond's ChordNames over a \chordmode variable -----
+    // Owner decision 2026-09-08: the twin hands LilyPond chord ENTRIES (LilyPond names them
+    // itself), every Lily# spelling rewritten into one LilyPond accepts.
+
+    private static (string Ly, IReadOnlyList<string> Warnings) ExportWithWarnings(string lys)
+    {
+        var exporter = new LilyPondExporter();
+        string ly = exporter.Export(SyntaxTree.Parse(lys));
+        return (ly, exporter.Warnings);
+    }
+
+    /// <summary>A chords row over one staff — the corpus's lead-sheet shape.</summary>
+    private static string ChordBook(string chords, string key = "key c major",
+        string form = "form main { A }", string moreSections = "",
+        string render = "chords prog  staff m") => $$"""
+        time 4/4
+        {{key}}
+        part m { clef treble }
+        section A {
+          m { c1 | c1 | }
+          chords prog { {{chords}} }
+        }
+        {{moreSections}}
+        {{form}}
+        score main { {{render}} }
+        """;
+
+    [Fact]
+    public void ChordRow_IsAChordNamesContext_OverAChordmodeVariable_AboveTheStaff()
+    {
+        var (ly, warnings) = ExportWithWarnings(ChordBook("C Am | F Gm7-5 |"));
+        Assert.Contains("progChords = \\chordmode {", ly);
+        // Two slots in 4/4 are the two halves; the quality is LilyPond's modifier.
+        Assert.Contains("c2 a2:m |", ly);
+        Assert.Contains("f2 g2:m7.5- |", ly);
+        Assert.Contains("\\new ChordNames \\progChords", ly);
+        // The row stands where it is written: above the staff.
+        Assert.True(ly.IndexOf("\\new ChordNames") < ly.IndexOf("\\new Staff"),
+            "the ChordNames context must precede the staff it stands over");
+        Assert.DoesNotContain(warnings, w => w.Contains("chord row"));
+    }
+
+    [Fact]
+    public void ChordRow_DotsExtendAnEntry_RestsAreNoChord_ABarHeadDotIsSilent()
+    {
+        var ly = Export(ChordBook("C . . G7 | r Am . . | . D . . |"));
+        // `C . .` is three beats of C — one entry of the merged length, as the page groups it.
+        Assert.Contains("c2. g4:7 |", ly);
+        // `r` prints LilyPond's noChordSymbol (the page's "N.C.").
+        Assert.Contains("r4 a2.:m |", ly);
+        // A '.' at the bar's head is the silent slot (owner decision 2026-09-04): `s`.
+        Assert.Contains("s4 d2. |", ly);
+    }
+
+    [Fact]
+    public void ChordRow_RomanDegrees_ResolveInTheKeyInForce()
+    {
+        var ly = Export(ChordBook("V7 | IIm7/I |", key: "key g major"));
+        Assert.Contains("d1:7 |", ly);
+        Assert.Contains("a1:m7/g |", ly);
+    }
+
+    [Fact]
+    public void ChordRow_SlashBassAndAccidentals_SpellAsLilyPondEntries()
+    {
+        var ly = Export(ChordBook("F#m7-5/C# Bb7/D | Db/F Cmmaj7 |"));
+        Assert.Contains("fis2:m7.5-/cis bes2:7/d |", ly);
+        Assert.Contains("des2/f c2:m7+ |", ly);
+    }
+
+    [Fact]
+    public void ChordRow_FollowsTheFormsRepeat_LikeTheMusic()
+    {
+        var (ly, _) = ExportWithWarnings(ChordBook("C | G |",
+            form: "form main { A |: ~B :| }",
+            moreSections: "section B { m { c1 | } chords prog { Am | } }"));
+        // One \repeat in the music, one in the chord track, and B's bar inside the latter.
+        Assert.Equal(2, Occurrences(ly, "\\repeat volta 2 {"));
+        int chords = ly.IndexOf("progChords = \\chordmode {");
+        int repeat = ly.IndexOf("\\repeat volta 2 {", chords);
+        int bar = ly.IndexOf("a1:m |", chords);
+        Assert.True(repeat > 0 && bar > repeat, "B's chord bar must sit inside the chord track's repeat");
+        // The chord track carries no \mark of its own — the music stream has them.
+        Assert.DoesNotContain("\\mark", ly.Substring(chords, ly.IndexOf("\\score", chords) - chords));
+    }
+
+    [Fact]
+    public void ChordRow_AnEmptyBar_IsSilent_AndAPickupBarIsAsShortAsThePartial()
+    {
+        // amazing-grace's shape: a `partial 4` section whose row opens with a bare `|` —
+        // the leading bar line closes an EMPTY pickup bar (the page's rule), which the twin
+        // has to write as a quarter of silence, or LilyPond's bar check fails at -1/4 and
+        // every later chord lands three beats late.
+        var (ly, _) = ExportWithWarnings("""
+            time 4/4
+            key g major
+            part m { clef treble }
+            section A {
+              partial 4
+              m { d'4 | g'2 b'8 g'8 | g'2 d'4 | }
+              chords prog { | G | G | }
+            }
+            form main { A }
+            score main { chords prog  staff m }
+            """);
+        Assert.Contains("s4 |", ly);
+        Assert.Contains("g1 |", ly);
+        // A written chord in the pickup bar takes the pickup's length.
+        var ly2 = Export("""
+            time 4/4
+            key g major
+            part m { clef treble }
+            section A {
+              partial 4
+              m { d'4 | g'1 | }
+              chords prog { D | G | }
+            }
+            form main { A }
+            score main { chords prog  staff m }
+            """);
+        Assert.Contains("d4 |", ly2);
+        Assert.Contains("g1 |", ly2);
+    }
+
+    [Fact]
+    public void ChordRow_AnUnregisteredQuality_WritesTheRootAndSaysSo()
+    {
+        var (ly, warnings) = ExportWithWarnings(ChordBook("CM7 | G |"));
+        Assert.Contains("c1 |", ly);
+        Assert.Contains(warnings, w => w.Contains("CM7") && w.Contains("chordmode"));
+    }
+
+    [Fact]
+    public void ChordRow_ShownAsRomanOnThePage_SaysTheTwinPrintsNames()
+    {
+        var (_, warnings) = ExportWithWarnings(ChordBook("C | G |", render: "chords prog as roman  staff m"));
+        Assert.Contains(warnings, w => w.Contains("roman"));
+    }
+
+    // ----- inline @chord: the page's PLACED symbols as a ChordNames context of their own -----
+
+    private static string InlineBook(string music, string render = "staff m", string header = "") => $$"""
+        octave absolute
+        time 4/4
+        key c major
+        part m { clef treble }
+        section A { {{header}} m { {{music}} } }
+        form main { A }
+        score main { {{render}} }
+        """;
+
+    [Fact]
+    public void InlineChord_RidesItsOwnChordNamesContext_AtTheNotesMoment()
+    {
+        var (ly, warnings) = ExportWithWarnings(
+            InlineBook("e'4@chord(C) e' f' g' | a'4@chord(Am) g' e' d' |"));
+        Assert.Contains("mInlineChords = \\chordmode {", ly);
+        Assert.Contains("c1 |", ly);
+        Assert.Contains("a1:m |", ly);
+        Assert.Contains("\\new ChordNames \\mInlineChords", ly);
+        Assert.True(ly.IndexOf("\\new ChordNames") < ly.IndexOf("\\new Staff"),
+            "the ChordNames context stands over the staff");
+        // The mark is not "dropped" any more, and the note is written bare.
+        Assert.DoesNotContain(warnings, w => w.Contains("@chord"));
+        Assert.Contains("e'4 e' f' g'", ly);
+    }
+
+    [Fact]
+    public void InlineChord_MidBar_FillsTheGapsWithSilence_AndABarWithoutOneIsSilent()
+    {
+        var ly = Export(InlineBook("c'4 d'@chord(G7) e' f' | c'1 | c'2 d'2@chord(F) |"));
+        Assert.Contains("s4 g2.:7 |", ly);
+        Assert.Contains("s1 |", ly);
+        Assert.Contains("s2 f2 |", ly);
+    }
+
+    [Fact]
+    public void InlineChord_Bare_IsNamedFromTheNotes_AsThePageNamesIt()
+    {
+        var ly = Export(InlineBook("<c' e' g' b'>1@chord | <a c' e'>1@chord |"));
+        Assert.Contains("c1:maj7 |", ly);
+        Assert.Contains("a1:m |", ly);
+    }
+
+    [Fact]
+    public void InlineChord_APickupBar_IsAsShortAsThePage_s()
+    {
+        var ly = Export(InlineBook("g'4@chord(G) | c'1 |", header: "partial 4"));
+        Assert.Contains("g4 |", ly);
+        Assert.Contains("s1 |", ly);
+    }
+
+    [Fact]
+    public void InlineChord_StandsOverTheStaffOnce_NotOverANumbersOnlyTab()
+    {
+        var ly = Export(InlineBook("e'4@chord(C) e' f' g' |", render: "staff m  tab m"));
+        Assert.Equal(1, Occurrences(ly, "\\new ChordNames"));
+        Assert.True(ly.IndexOf("\\new ChordNames") < ly.IndexOf("\\new Staff"));
+    }
+
+    // ----- lyrics: the page's PLACED syllables as \lyricmode lines with their durations -----
+
+    private static string LyricBook(string melody, string lyrics, string render) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+        part melody { clef treble }
+        section A {
+          melody { {{melody}} }
+          {{lyrics}}
+        }
+        form main { A }
+        score main { {{render}} }
+        """;
+
+    [Fact]
+    public void AttachedLyrics_AreALyricsContextBelowTheStaff_AtTheNotesMoments()
+    {
+        var (ly, warnings) = ExportWithWarnings(LyricBook(
+            "e'4 e' f' g' | a'2 g' |",
+            "lyrics words sings melody { Mu- sic 'ry- one | air night | }",
+            "staff melody  lyrics words sings melody"));
+        Assert.Contains("melodyLyricsOne = \\lyricmode {", ly);
+        // A hyphenated syllable carries LilyPond's `--`; a word with an apostrophe is quoted.
+        Assert.Contains("Mu4 -- sic4 \"'ry\"4 -- one4 |", ly);
+        Assert.Contains("air2 night2 |", ly);
+        Assert.Contains("\\new Lyrics \\melodyLyricsOne", ly);
+        Assert.True(ly.IndexOf("\\new Staff") < ly.IndexOf("\\new Lyrics \\melodyLyricsOne"),
+            "the attached line stands below its staff");
+        Assert.DoesNotContain(warnings, w => w.Contains("lyrics"));
+    }
+
+    [Fact]
+    public void AttachedLyrics_AMelisma_IsOneLongerSyllable_WithItsExtender()
+    {
+        var ly = Export(LyricBook(
+            "c'4 d' e' f' | g'2 g' |",
+            "lyrics words sings melody { Twin- kle twin- kle | star __ | }",
+            "staff melody  lyrics words sings melody"));
+        Assert.Contains("Twin4 -- kle4 twin4 -- kle4 |", ly);
+        // `star` holds over the second half: one whole-bar syllable, then the extender.
+        Assert.Contains("star1 __ |", ly);
+    }
+
+    [Fact]
+    public void AttachedLyrics_TwoVerses_AreTwoContexts_InVerseOrder()
+    {
+        var ly = Export(LyricBook(
+            "c'4 d' e' f' |",
+            "lyrics one sings melody { a b c d | }\n  lyrics two sings melody { e f g h | }",
+            "staff melody  lyrics one sings melody  lyrics two sings melody"));
+        Assert.Contains("melodyLyricsOne = \\lyricmode {", ly);
+        Assert.Contains("melodyLyricsTwo = \\lyricmode {", ly);
+        Assert.Contains("a4 b4 c4 d4 |", ly);
+        Assert.Contains("e4 f4 g4 h4 |", ly);
+        Assert.True(ly.IndexOf("\\new Lyrics \\melodyLyricsOne") < ly.IndexOf("\\new Lyrics \\melodyLyricsTwo"));
+    }
+
+    [Fact]
+    public void LyricsRow_Independent_SpreadsTheBarEvenly_AndStandsAtItsPlace()
+    {
+        // A rows-only lead sheet: the chords row over an unbound lyrics row.
+        var (ly, warnings) = ExportWithWarnings("""
+            time 4/4
+            key c major
+            part melody { clef treble section A { c4 c g' g | a a g2 | } }
+            chords prog { section A { C | G | } }
+            lyrics verse { section A { one two | three four five six | } }
+            form main { A }
+            score main { chords prog  lyrics verse }
+            """);
+        Assert.Contains("verseLyricsOne = \\lyricmode {", ly);
+        Assert.Contains("one2 two2 |", ly);
+        Assert.Contains("three4 four4 five4 six4 |", ly);
+        Assert.True(ly.IndexOf("\\new ChordNames") < ly.IndexOf("\\new Lyrics \\verseLyricsOne"));
+        Assert.DoesNotContain(warnings, w => w.Contains("lyrics row"));
+    }
+
+    [Fact]
+    public void LyricsRow_BoundToAnUnengravedPart_TakesThatMelodysMoments()
+    {
+        // test/sings-chorus-row's shape: a part sheet carrying the vocal's words.
+        var ly = Export("""
+            time 4/4
+            key c major
+            part sax { }
+            part vocal { }
+            section Chorus {
+              sax   { c4 d e f | g2 g | }
+              vocal { g8 g a4 a8 a a4 | g2 f | }
+              lyrics en sings vocal { Sing it loud and clear now | ev- ery | }
+            }
+            form main { Chorus }
+            score main { staff sax  lyrics en }
+            """);
+        Assert.Contains("enLyricsOne = \\lyricmode {", ly);
+        Assert.Contains("Sing8 it8 loud4 and8 clear8 now4 |", ly);
+        Assert.Contains("ev2 -- ery2 |", ly);
+        Assert.Contains("\\new Lyrics \\enLyricsOne", ly);
+    }
+
+    // ----- the section boundary reopens the DURATION at a quarter (HANDOFF §3, 2026-09-04) -----
+
+    [Fact]
+    public void ASectionOpeningWithoutADuration_WritesTheQuarter_WhenThePreviousSectionEndedOnAnother()
+    {
+        // The page reads B's `d e f g` as quarters (the collector resets the default per
+        // section play); LilyPond would carry A's whole across, so the twin writes `d4`.
+        var ly = Export("""
+            octave absolute
+            time 4/4
+            key c major
+            part m { clef treble }
+            section A { m { c'1 | } }
+            section B { m { d' e' f' g' | } }
+            form main { A B }
+            score main { staff m }
+            """);
+        Assert.Contains("d'4 e' f' g'", ly);
+        // The control: after a section that ends on a quarter nothing is forced.
+        var ly2 = Export("""
+            octave absolute
+            time 4/4
+            key c major
+            part m { clef treble }
+            section A { m { c'4 c' c' c' | } }
+            section B { m { d' e' f' g' | } }
+            form main { A B }
+            score main { staff m }
+            """);
+        Assert.Contains("d' e' f' g'", ly2);
+        Assert.DoesNotContain("d'4 e'", ly2);
+    }
+
+    [Fact]
+    public void EveryChordQuality_HasAChordmodeModifier()
+    {
+        // The table must be total: a quality with no entry would throw on a real book.
+        foreach (LilySharp.Core.Music.ChordQuality q in System.Enum.GetValues<LilySharp.Core.Music.ChordQuality>())
+            _ = LilySharp.Core.Music.ChordQualityRegistry.LilyPondModifier(q);
+        // The two spellings that are NOT the Lily# suffix with a colon (see the table's remark).
+        Assert.Equal(":sus4.7", LilySharp.Core.Music.ChordQualityRegistry.LilyPondModifier(
+            LilySharp.Core.Music.ChordQuality.Dominant7Sus4));
+        Assert.Equal(":m13^11", LilySharp.Core.Music.ChordQualityRegistry.LilyPondModifier(
+            LilySharp.Core.Music.ChordQuality.Minor13));
+    }
 }

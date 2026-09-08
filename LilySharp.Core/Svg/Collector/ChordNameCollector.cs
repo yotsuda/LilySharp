@@ -260,12 +260,30 @@ internal sealed class ChordNameCollector
     private void ForEachSlotGroup(List<SyntaxNode> items, int timeBeats, int timeBeatType,
         Action<SyntaxNode, Fraction, Fraction> emit)
     {
+        var groups = SlotGroups(items, timeBeats, timeBeatType, out bool equalFallback);
+        foreach (var (node, timing, dur) in groups)
+            emit(node, timing, dur);
+        if (equalFallback)
+            _gridWarnings.Add(new ChordRowGridWarning(
+                PositionOf(items[0]), items.Count, timeBeats, timeBeatType));
+    }
+
+    /// <summary>
+    /// ONE BAR's written slots as groups — the one grouping every reader of a chord row
+    /// shares: the page (<see cref="ForEachSlotGroup"/>) and the LilyPond twin
+    /// (<c>LilyPondExporter</c>'s <c>\chordmode</c> bars). Each entry/rest opens a group its
+    /// trailing '.' slots extend; a '.' at the bar's head is its own silent group (the time
+    /// still passes). <paramref name="equalFallback"/> reports a slot count that fits no grid
+    /// shape and was divided equally (the page's LYS2009).
+    /// </summary>
+    internal static List<(SyntaxNode Node, Fraction Timing, Fraction Duration)> SlotGroups(
+        IReadOnlyList<SyntaxNode> items, int timeBeats, int timeBeatType, out bool equalFallback)
+    {
         int slotCount = items.Count;
         var slots = ChordRhythm.SlotDurations(slotCount, timeBeats, timeBeatType);
+        equalFallback = slots == null;
         if (slots == null)
         {
-            _gridWarnings.Add(new ChordRowGridWarning(
-                PositionOf(items[0]), slotCount, timeBeats, timeBeatType));
             var equal = new Fraction(timeBeats, timeBeatType) * new Fraction(1, slotCount);
             var eq = System.Collections.Immutable.ImmutableArray.CreateBuilder<Fraction>(slotCount);
             for (int i = 0; i < slotCount; i++)
@@ -273,6 +291,7 @@ internal sealed class ChordNameCollector
             slots = eq.MoveToImmutable();
         }
 
+        var groups = new List<(SyntaxNode, Fraction, Fraction)>();
         var timing = Fraction.Zero;
         int at = 0;
         while (at < slotCount)
@@ -290,10 +309,11 @@ internal sealed class ChordNameCollector
             // slot — it prints nothing and keeps its time. That IS the spelling for a
             // chord-less slot (owner decision 2026-09-04, HANDOFF §3; it was LYS2010, an
             // error, while `s` was the spacer).
-            emit(node, timing, dur);
+            groups.Add((node, timing, dur));
             timing += dur;
             at = next;
         }
+        return groups;
     }
 
     private static int PositionOf(SyntaxNode node) => node switch
@@ -305,7 +325,7 @@ internal sealed class ChordNameCollector
 
     /// <summary>The chord entries and barlines of a chord-track inner section (the
     /// nodes between its name and closing brace).</summary>
-    private static IEnumerable<SyntaxNode> SectionItems(SectionDeclarationSyntax section)
+    internal static IEnumerable<SyntaxNode> SectionItems(SectionDeclarationSyntax section)
     {
         // Slots: 0 keyword, 1 name, 2 '{', 3..n-2 items, n-1 '}'.
         for (int i = 3; i < section.SlotCount - 1; i++)
