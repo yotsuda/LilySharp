@@ -38,6 +38,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A lyric row no longer votes on the spacing basis.** The shortest duration a piece is
+  spaced on is the most common per-bar shortest of its notes; LilyPond turns lyric syllables
+  away from that vote, and Lily# now does too. An independent `lyrics` row of eight words over
+  a bar of quarters used to loosen the whole piece to the eighth, and a row that `sings` a
+  melody used to vote a whole at each of the melody's rest bars, which could tighten a piece
+  of eighths to the quarter's basis. A chord row's cells keep voting (a chord symbol is a
+  rhythmic grob in LilyPond).
 - **An arpeggio in a dotted total is spelled as compound metre spells it.** `<< c e >>4.`
   is two eighths under 2:3 (a duplet), `<< c e g >>4.` three plain eighths, `<< c e g a >>4.`
   four eighths under 4:3 — where the members used to be dotted (three dotted eighths under

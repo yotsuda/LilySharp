@@ -391,7 +391,7 @@ internal static partial class SpacingRules
     public static double CalculateCommonShortestDuration(Model.MultiStaffScore score)
         => CommonShortestDuration(
             score.EnumerateStaves().SelectMany(t =>
-                t.Staff.Voices.Select(v => (v.Measures, t.Staff.IsTextRow))),
+                t.Staff.Voices.Select(v => (v.Measures, t.Staff.IsTextRow, t.Staff.IsLyricsTextRow))),
             score.TimeSignature.MeasureDuration);
 
     /// <summary>
@@ -401,14 +401,28 @@ internal static partial class SpacingRules
     /// LILYPOND-REF: lily/spacing-spanner.cc:92-173 calc_common_shortest_duration
     /// </remarks>
     public static double CalculateCommonShortestDuration(Model.Score score)
-        => CommonShortestDuration(score.Voices.Select(v => (v.Measures, IsTextRow: false)),
+        => CommonShortestDuration(
+            score.Voices.Select(v => (v.Measures, IsTextRow: false, IsLyricsRow: false)),
             score.TimeSignature.MeasureDuration);
 
     private static double CommonShortestDuration(
-        IEnumerable<(ImmutableArray<Model.Measure> Measures, bool IsTextRow)> voiceMeasures,
+        IEnumerable<(ImmutableArray<Model.Measure> Measures, bool IsTextRow, bool IsLyricsRow)> voiceMeasures,
         Fraction initialMeasureDuration)
     {
-        var voices = voiceMeasures.ToList();
+        // A LYRIC row casts no vote at all. Its slots stand for lyric syllables, and a
+        // LyricText — a rhythmic grob (scm/define-grobs.scm:2213-2236) the spacing engraver
+        // does acknowledge — is turned away before its duration is recorded:
+        // LILYPOND-REF: lily/spacing-engraver.cc:176-183 add_starter_duration — the
+        //   lyric-syllable-interface early return.
+        // What the vote would have been is not a duration any note sounds, either: an
+        // independent row's slot is the bar split evenly by its syllables (a fifth of a bar
+        // for five words), and a bound row's skeleton mirrors the melody it sings — which
+        // votes for itself — except at the melody's full-measure rest, which the skeleton
+        // re-spells as a whole-bar spacer that would vote the whole. MEASURED (session 350,
+        // CommonShortestDurationTests): with the row voting, `c8 ×8 | R1 | R1 | R1` under a
+        // bound row spaced on the whole (capped to 3/16) instead of the eighth, and a row of
+        // eight words over quarters loosened the quarters to the eighth.
+        var voices = voiceMeasures.Where(v => !v.IsLyricsRow).ToList();
         int measureCount = voices.Count == 0 ? 0 : voices.Max(m => m.Measures.Length);
 
         // A full-measure rest is measured against the PREVAILING meter, so a 2/4 bar's
@@ -421,7 +435,7 @@ internal static partial class SpacingRules
         for (int m = 0; m < measureCount; m++)
         {
             double shortest = double.MaxValue;
-            foreach (var (measures, isTextRow) in voices)
+            foreach (var (measures, isTextRow, _) in voices)
             {
                 if (m >= measures.Length)
                     continue;
@@ -447,12 +461,11 @@ internal static partial class SpacingRules
                     //   multi-measure rest, the LilyPond home of the full-measure-rest skip above.
                     // LILYPOND-REF: lily/spacing-spanner.cc:109-124 calc_common_shortest_duration
                     //   — shortest-starter-duration is the only quantity a column votes with.
-                    // ⚠️ A TEXT ROW'S slot spacer stands for the chord symbol drawn at it, and
+                    // ⚠️ A CHORD ROW'S slot spacer stands for the chord symbol drawn at it, and
                     // ChordName IS a rhythmic grob (scm/define-grobs.scm:837-855 ChordName
                     // rhythmic-grob-interface), so a row's slots keep voting — the lead-sheet
-                    // recipe (ApplyRowCommandColumnSprings) was measured on that vote. A
-                    // LYRIC row's slot would not vote in LilyPond (the early return above);
-                    // it still does here, unmeasured and left as it was.
+                    // recipe (ApplyRowCommandColumnSprings) was measured on that vote. (A
+                    // LYRIC row is not in `voices` at all — see the top of this method.)
                     if (!isTextRow && item is RestItem { IsSpacer: true })
                         continue;
                     double dur = item.Duration.ToDouble();
