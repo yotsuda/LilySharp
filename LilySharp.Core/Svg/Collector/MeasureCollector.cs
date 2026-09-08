@@ -1172,6 +1172,20 @@ public sealed partial class MeasureCollector
             }
         }
 
+        // A ROW's bar is as long as the MUSIC's bar at that index. The row grids its slots
+        // on the score meter (ChordRhythm / the even spread), so a PICKUP bar — or any bar
+        // under a mid-piece meter change the row never saw — came out a whole meter long
+        // and priced the bar for that length: amazing-grace's one-beat pickup stood 6.34
+        // staff spaces wider with its chords row than without (MEASURED, session 350,
+        // scratch/p351/pk: 20.46 against 14.12 to the first bar line; LilyPond 14.585).
+        // LILYPOND-REF: ly/engraver-init.ly:756-759 Timing_translator (\alias Timing) —
+        //   the Score holds the one Timing every context reads, so a ChordNames or Lyrics
+        //   bar IS the staff's bar, pickup and meter change included.
+        var rowNames = new HashSet<string>(_lyricsRowNames);
+        foreach (var (rowName, _, _) in pendingChordRows)
+            rowNames.Add(rowName);
+        FitRowsToMusicBars(staffVoices, rowNames);
+
         // A rows-only score prints its section labels from the FIRST row's
         // measures (that row is the PrimaryContentStaff fallback the mark
         // merge reads). No-op for mixed scores: the label list only fills
@@ -1868,6 +1882,69 @@ public sealed partial class MeasureCollector
             // A malformed melody surfaces its real error through the validators;
             // the row then falls back to the even-spread reading.
             return ImmutableArray<Measure>.Empty;
+        }
+    }
+
+    /// <summary>
+    /// Fits every row's bars to the music's: where a music voice's bar at the same index is
+    /// SHORTER than the row's (a pickup, a bar under a meter change the row's grid never
+    /// saw), the row's spacers are scaled down to that length, share for share — the same
+    /// rule the LilyPond twin applies to a pickup's chord slots (LilyPondExporter.ChordBarText).
+    /// A rows-only score (no music voice) keeps its grid; a row bar no longer than the music
+    /// is left as it is.
+    /// </summary>
+    private static void FitRowsToMusicBars(
+        Dictionary<string, ImmutableArray<Voice>> staffVoices, IReadOnlySet<string> rowNames)
+    {
+        if (rowNames.Count == 0)
+            return;
+        // The music's bar length per index: the longest any music voice sounds there.
+        var lengths = new List<Fraction>();
+        foreach (var (name, voices) in staffVoices)
+        {
+            if (rowNames.Contains(name))
+                continue;
+            foreach (var voice in voices)
+                for (int m = 0; m < voice.Measures.Length; m++)
+                {
+                    var sum = Fraction.Zero;
+                    foreach (var it in voice.Measures[m].Items)
+                        sum += it.Duration;
+                    while (lengths.Count <= m)
+                        lengths.Add(Fraction.Zero);
+                    if (sum > lengths[m])
+                        lengths[m] = sum;
+                }
+        }
+        if (lengths.Count == 0)
+            return;
+
+        foreach (string rowName in rowNames)
+        {
+            if (!staffVoices.TryGetValue(rowName, out var rowVoices) || rowVoices.Length == 0)
+                continue;
+            var measures = rowVoices[0].Measures;
+            Measure[]? fitted = null;
+            for (int m = 0; m < measures.Length && m < lengths.Count; m++)
+            {
+                var music = lengths[m];
+                if (music <= Fraction.Zero)
+                    continue;
+                var total = Fraction.Zero;
+                foreach (var it in measures[m].Items)
+                    total += it.Duration;
+                if (total <= music)
+                    continue;
+                var items = ImmutableArray.CreateBuilder<MusicItem>(measures[m].Items.Length);
+                foreach (var it in measures[m].Items)
+                    items.Add(it is RestItem { IsSpacer: true } r
+                        ? new RestItem(r.Duration * music / total, 0, r.SourcePosition) { IsSpacer = true }
+                        : it);
+                fitted ??= measures.ToArray();
+                fitted[m] = measures[m] with { Items = items.MoveToImmutable() };
+            }
+            if (fitted != null)
+                staffVoices[rowName] = ImmutableArray.Create(new Voice(rowName, fitted.ToImmutableArray()));
         }
     }
 

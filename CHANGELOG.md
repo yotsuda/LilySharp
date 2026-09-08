@@ -38,6 +38,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A chord or lyrics row's bar is as long as the music's bar.** The row grids its slots on
+  the score meter, so a pickup bar under a row carried a whole meter of row spacer and was
+  spaced for it — amazing-grace's one-beat pickup stood 6.34 staff spaces wider with its chords
+  row than without. A bar under a mid-piece meter change the row never saw was the same. The
+  row's slots now scale to the music's bar, share for share, and the page is the same with the
+  row as without it.
 - **A lyric row no longer votes on the spacing basis.** The shortest duration a piece is
   spaced on is the most common per-bar shortest of its notes; LilyPond turns lyric syllables
   away from that vote, and Lily# now does too. An independent `lyrics` row of eight words over
