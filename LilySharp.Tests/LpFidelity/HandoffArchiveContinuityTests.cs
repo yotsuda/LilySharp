@@ -163,6 +163,54 @@ public class HandoffArchiveContinuityTests
     }
 
     /// <summary>
+    /// The handoff stays a size one session can read at its start. Two ceilings: the whole
+    /// file, and §1's CURRENT block (the text between the §1 heading and the one kept
+    /// predecessor block).
+    /// </summary>
+    /// <remarks>
+    /// Session 351 measured the start-of-session ritual at a third of the session on a slow
+    /// day and found the bulk was not §1 (7.5 K chars) but §2 keeping the full history of 64
+    /// CLOSED items — 1,923 lines that RULES §7 step 3 already said to drop ("完了した項目は
+    /// 消す") and nobody dropped. Same shape as the archive seam above: the rule was old and
+    /// correct and unrun, so this is its instrument. When the file ceiling trips, run
+    /// <c>tools/Fold-ClosedHandoffItems.ps1</c> (closed bodies → the archive, pointers stay);
+    /// when the §1 ceiling trips, shorten the current block — history goes to the archive,
+    /// not into §1. Raising a ceiling here to get past it is the failure this test exists for.
+    /// </remarks>
+    [Fact]
+    public void TheHandoffStaysReadable()
+    {
+        const int FileCeilingBytes = 450_000;      // 406,651 the day the fold landed
+        const int CurrentBlockCeilingChars = 20_000; // 7,550 that day; the predecessor block was 16,547
+
+        var path = Path.Combine(DocsDir(), "HANDOFF.md");
+        long bytes = new FileInfo(path).Length;
+        string text = File.ReadAllText(path);
+        int s1 = text.IndexOf("## 1. 現在地", StringComparison.Ordinal);
+        int pred = -1;
+        // BlockHeading is anchored per line (Multiline is not set), so search line by line.
+        if (s1 >= 0)
+        {
+            int pos = s1;
+            foreach (var line in text.Substring(s1).Split('\n'))
+            {
+                if (BlockHeading.IsMatch(line.TrimEnd('\r'))) { pred = pos; break; }
+                pos += line.Length + 1;
+            }
+        }
+        int current = s1 >= 0 && pred > s1 ? pred - s1 : -1;
+
+        _output.WriteLine($"HANDOFF.md {bytes} bytes; §1 current block {current} chars");
+        Assert.True(bytes <= FileCeilingBytes,
+            $"docs/HANDOFF.md is {bytes} bytes; the ceiling is {FileCeilingBytes}. Fold the closed "
+            + "§2 items into the archive (tools/Fold-ClosedHandoffItems.ps1) — do not raise the ceiling.");
+        Assert.True(current > 0, "§1 heading or the kept predecessor block not found in HANDOFF.md");
+        Assert.True(current <= CurrentBlockCeilingChars,
+            $"§1's current block is {current} chars; the ceiling is {CurrentBlockCeilingChars}. Keep the "
+            + "numbers and the next move; the narrative belongs in HANDOFF-ARCHIVE.md.");
+    }
+
+    /// <summary>
     /// The census of numbers with no block at all. May shrink; must not grow.
     /// </summary>
     /// <remarks>

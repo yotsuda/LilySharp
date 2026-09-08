@@ -4095,17 +4095,44 @@ dotnet run --project LilySharp.Cli -- png --crop --scale 4.0 "NAME.lys" "out.png
 - snapshot テストは `SvgSnapshotTests.TestSamples()` の**明示 `yield return` リスト**
   （`.lys` を置くだけでは走らない）
 
+### 6.1 引き継ぐ数の数え方 ← **実装は `tools/Session-Check.ps1`。ここは定義と、間違えた履歴**
+
+**数を引き継ぐときは「数え方」も書く。** 以下は §1 が引き継ぐ数の*定義*で、スクリプトはこの定義を
+そのまま実装している。**手で数え直さない**——HANDOFF §0 に 10 例が積み上がった経緯は、どれも
+「答えは何便も正しかったが数え方がどこにも書かれていなかった」か「置いてあったレシピが引き継いだ数を
+再現しなかった」かのどちらか。**レシピを置いたら、引き継がれている数を実際に再現することを 1 度打って確かめる。**
+
+| 数 | 定義（＝スクリプトの式） | 踏んだ間違い |
+|---|---|---|
+| **台帳の点数** | `lp-geometry.json` の `entries` の個数 | `--filter LpGeometryLedger` の*テスト数*を写した（236 対 225・同ファイルに点でないテストが 11 本） |
+| **ss 非ゼロ／総和** | `residual -ne 0` かつ `unit -ne 'count'` の個数と `\|residual\|` の和 | `unit: count` の 2 点（各 −2）を ss の総和に足した——台帳自身が「count を ss に入れるのは*無意味な数*」と書いている |
+| **count 点** | `unit -eq 'count'` の個数と、そのうち非ゼロの個数を**両方** | 「count 点 2」＝非ゼロの個数だけを書いた（実際は 41 点・非ゼロ 2） |
+| **exact** | `\|residual\| -le 1e-6`（台帳が宣言する `tolerance`・**境界を含む**） | 素朴な `-eq 0` は 462（丸めだけ残った 28 点を落とす）／`-lt` は 581（境界ちょうどの 1 点を落とす）——§1 は 490／582 のほう |
+| **OPEN:** | `why` が `OPEN:` で*始まる*点 | 素朴な grep は 12（説明文と「deliberately OPEN:」の語が当たる）——接頭辞で意味が決まる札は grep ではなく*その場所*で数える |
+| **snapshot** | `git ls-files 'LilySharp.Tests/Snapshots/*'` | `*.snap`／`*.verified.*` で数えると 0（この木の snapshot は `.svg`・置き場所が名前） |
+| **追跡コーパス** | `git ls-files '*.lys'`（`Fixtures` も `samples` も含む） | `audit` 配下だけ数えて 341（正しくは 567 級）。**ディスク上の全 `.lys`**（scratch 込み・掃きの母集団）はさらに別の数 |
+| **未追跡** | porcelain の `StartsWith('??')` | `-like '??*'` は PowerShell の `?` がワイルドカードで**全行に一致**——木が clean なら両者 0 で「正しい数を誤った理由で出す計器」になる |
+| **`$e.Count`** | `@($e).Count` | `$e` が PSPropertyInfo の配列だと各要素の `Count` が返る |
+| **full の合計** | trx の `UnitTestResult` を outcome で数える | `成功!`／`Passed!` の語と終了コードは別々では足りない（§0） |
+
+⚠️ **終了時に数えると差が出る**（編集済みファイルが並ぶ）——**開始時と終了時の両方を書く。**
+⚠️ **「追跡コーパスに N 冊」と「snapshot が N 枚」は別の数**（回帰コーパスは snapshot を持たない）。冊数から枚数を推定しない。
+
 ---
 
 ## 7. セッション終了時チェックリスト
 
-1. [ ] 全緑を確認（`Passed!` の数を §1 に書く）
+1. [ ] 全緑を確認（`Passed!` の数を §1 に書く）——**`tools\Session-Check.ps1 -Test -Scratch pNNN -DiffBase <開始時 HEAD>`
+      が全緑・trx の合計・§0 の数・7.5 の数を 1 コマンドで刷る。§1 に写すのはその出力**（手で数え直さない・§6.1）
 2. [ ] **§1「現在地」を書き換える**（追記しない）— HEAD / ahead 数 / テスト数 / 非ゼロ台帳点 / ▶
+      ⚠️ **§1 の現在便は 20,000 字まで・`HANDOFF.md` 全体は 450 KB まで**（`HandoffArchiveContinuityTests` が見張る）。
+      **超えたら §2 の閉じた項目を `tools\Fold-ClosedHandoffItems.ps1` で ARCHIVE へ落とす**（本文だけ・1 行目はポインタとして残る）
 3. [ ] §2「開いている作業」が動いたなら更新する。**完了した項目は消す**（経緯を残したいなら
       §5 へ**汎化**するか、アーカイブ（§8）へ落とす。§1・§2 に溜めない）
       ⚠️ **§1 が 1 画面に収まらなくなったら、それは落とす合図。**
 3.5 [ ] ★★ **§1 に残す経緯は直近 2 便まで。3 便目を `HANDOFF-ARCHIVE.md` の先頭へ移す**
       （`## 以下は第Nセッションの経緯` のブロックを丸ごと・**逐語のまま**・新しい順に積む）。
+      **＝`tools\Session-Check.ps1 -Archive N`**（バイト保存で移す。そのあと §1 の旧文の上に新しい見出しを立て、それから full run）。
       ⚠️ **このステップが無かったせいで 92 便ぶんが積み上がり、`HANDOFF.md` は 1.7 MB・
       §1 だけで全体の 86% になった**（2026-08-11 に降ろした）。文書は最初から
       「経緯は ARCHIVE へ」と書いていて、**設計ではなく手順が実行されていなかった**だけ。
@@ -4139,7 +4166,7 @@ dotnet run --project LilySharp.Cli -- png --crop --scale 4.0 "NAME.lys" "out.png
       beam.cc の関数名を書く」は落ちる——**ファイルごとに REF を分け、各行が
       自分のファイルの記号を名指す**。
 7.5 [ ] ★ **移植した差分を §5.2 片手に読み直したか**。
-      ★ **まず数える**（30 秒・機械的・2026-07-27 に追加）:
+      ★ **まず数える**（30 秒・機械的・2026-07-27 に追加・**`Session-Check.ps1 -DiffBase <base>` が刷る**）:
       `git -c color.ui=false diff <base> HEAD -- LilySharp.Core` の **`+` 行**に対して
       **`LILYPOND-REF` と `LILYSHARP-OWN` が何本あるか**。**0 本や 1 本なら、そこが監査対象。**
       ⚠️ `LpProvenanceTests` は数値定数しか見ないので**式だけ足すと緑のまま素通りする**
