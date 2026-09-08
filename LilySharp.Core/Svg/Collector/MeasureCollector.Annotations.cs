@@ -434,6 +434,10 @@ public sealed partial class MeasureCollector
             SlashNoteSyntax slashNote => slashNote.Articulations.Select(a => (Node: a, IsMember: false)),
             BareDurationSyntax bareDur => bareDur.Articulations.Select(a => (Node: a, IsMember: false)),
             RestSyntax rest => rest.Articulations.Select(a => (Node: a, IsMember: false)),
+            // A bare << >> member is a note of its own (one head, one column), so its
+            // scripts are Script_engraver's like a note's, not a chord member's.
+            PitchSyntax { Parent: ArpeggioSyntax } member =>
+                member.Articulations.Select(a => (Node: a, IsMember: false)),
             _ => Enumerable.Empty<(SyntaxNode Node, bool IsMember)>()
         };
 

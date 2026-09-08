@@ -21,14 +21,28 @@ namespace LilySharp.Core.Music;
 /// <summary>
 /// The equal-subdivision timing for a <c>&lt;&lt; … &gt;&gt;</c> arpeggio — a
 /// written-out broken chord whose members split the group's total duration
-/// equally. Three notes in a quarter play a triplet, five a quintuplet, nine a
-/// nonuplet: the members are notated at the value that fills the total with the
-/// nearest lower power of two, and an <c>M:P</c> tuplet fits the M members into
-/// that P-note frame. When M is itself a power of two there is no tuplet.
+/// equally, written the way engraving convention writes a tuplet: the members take
+/// a plain (undotted) note value that divides the total into P parts, and an
+/// <c>M:P</c> tuplet fits the M members into that P-note frame. For a plain total
+/// P is the largest power of two not above M — three in a quarter are eighths
+/// under 3:2, five, six and seven are sixteenths under 5:4, 6:4, 7:4, nine are
+/// thirty-seconds under 9:8 — and when P equals M there is no tuplet (four in a
+/// quarter are four plain sixteenths). For a dotted total the frames are 3·2^k and
+/// the one nearest M is taken (ties to the smaller): two in a dotted quarter are
+/// eighths under 2:3, four are eighths under 4:3, five sixteenths under 5:6, three
+/// are three plain eighths.
 /// </summary>
 /// <remarks>
-/// Shared by the SVG collector, the MIDI exporter and the MusicXML exporter so
-/// the three outputs agree on how a <c>&lt;&lt; … &gt;&gt;</c> divides its time.
+/// <para>Shared by the SVG collector, the MIDI exporter and the MusicXML exporter so
+/// the three outputs agree on how a <c>&lt;&lt; … &gt;&gt;</c> divides its time.</para>
+/// <para>The plain-total rule is the convention (Gould, Behind Bars, tuplets: the
+/// number against the next lower power of two; the duplet and quadruplet of compound
+/// metre are the exceptions, written against 3). ⚠️ For one day (2026-09-07) the frame
+/// was the count ABOVE M — sixteenths under 3:4 for a triplet — generalised from a
+/// single hand-written <c>tuplet 3/4 { r16 c cis }</c> without checking the
+/// convention; that gave quintuplets three beams (32nds under 5:8) and was reverted
+/// the same day. A hand-written tuplet is what LilyPond draws, not what it
+/// recommends: the twin cannot arbitrate a spelling, only the convention can.</para>
 /// </remarks>
 internal readonly record struct ArpeggioSubdivision(
     Fraction Total,
@@ -53,6 +67,37 @@ internal readonly record struct ArpeggioSubdivision(
     public Fraction TimeScale => new(TupletBase, TupletNum);
 
     /// <summary>
+    /// The written notes for a member holding <paramref name="shares"/> shares of the
+    /// group (<c>&lt;&lt; c . d &gt;&gt;</c> gives c two): one note when the span is a plain or
+    /// dotted value, else the fewest tied notes, longest first. Two shares of a triplet's
+    /// eighths are a quarter (<c>&lt;&lt; c . d &gt;&gt;4</c> = <c>tuplet 3/2 { c4 d8 }</c>),
+    /// three of a plain quarter's sixteenths a dotted eighth (<c>c8. d16</c>), five of
+    /// them a quarter tied to a sixteenth.
+    /// </summary>
+    public IReadOnlyList<(int Value, int Dots)> SpellShares(int shares)
+    {
+        var parts = new List<(int Value, int Dots)>();
+        Fraction left = MemberDisplay * new Fraction(System.Math.Max(1, shares));
+        while (left > Fraction.Zero)
+        {
+            var part = LongestNoteWithin(left);
+            parts.Add(part);
+            left = left - Fraction.FromNoteValue(part.Value).Dotted(part.Dots);
+        }
+        return parts;
+    }
+
+    /// <summary>The longest (up to double-dotted) note value not above <paramref name="f"/>.</summary>
+    private static (int Value, int Dots) LongestNoteWithin(Fraction f)
+    {
+        for (int value = 1; value <= 1024; value *= 2)
+            for (int dots = 2; dots >= 0; dots--)
+                if (Fraction.FromNoteValue(value).Dotted(dots) <= f)
+                    return (value, dots);
+        return (f.Denominator, 0);
+    }
+
+    /// <summary>
     /// Computes the subdivision for <paramref name="memberCount"/> members sharing
     /// <paramref name="total"/> equally. <paramref name="total"/> is the trailing
     /// <c>&gt;&gt;N</c> duration or, absent one, the inherited running duration.
@@ -60,12 +105,42 @@ internal readonly record struct ArpeggioSubdivision(
     public static ArpeggioSubdivision Compute(int memberCount, Fraction total)
     {
         int m = System.Math.Max(1, memberCount);
-        int p = LargestPowerOfTwoAtMost(m);
-        // The member is notated as if the total held P equal notes (P a power of
-        // two), and the bracket says "M in the time of P". display = total / P.
-        Fraction display = total / new Fraction(p);
-        var (value, dots) = DecomposeNoteValue(display);
-        return new ArpeggioSubdivision(total, value, dots, m, p);
+        // Every plain note value that divides the total, with the count P it takes,
+        // ascending in P: for a plain total the powers of two (quarter: 1, 2, 4, 8 …),
+        // for a dotted total 3·2^k (dotted quarter: 3, 6, 12 …).
+        var frames = new List<(int Value, int P)>();
+        for (int value = 1; value <= 1024; value *= 2)
+        {
+            Fraction parts = total / Fraction.FromNoteValue(value);
+            if (parts.Numerator % parts.Denominator == 0)
+                frames.Add((value, parts.Numerator / parts.Denominator));
+        }
+        if (frames.Count > 0)
+        {
+            var pick = frames[0];
+            if (frames[0].P == 1)
+            {
+                // Plain total: the largest power of two not above M (3 → 2, 5..7 → 4,
+                // 9..15 → 8) — the tuplet number against the next lower power of two.
+                foreach (var f in frames)
+                    if (f.P <= m)
+                        pick = f;
+            }
+            else
+            {
+                // Dotted (compound) total: the frame nearest M, ties to the smaller —
+                // the duplet 2:3 and quadruplet 4:3 of compound metre, 5:6 and 7:6.
+                foreach (var f in frames)
+                    if (System.Math.Abs(f.P - m) < System.Math.Abs(pick.P - m))
+                        pick = f;
+            }
+            return new ArpeggioSubdivision(total, pick.Value, 0, m, pick.P);
+        }
+        // A total that is no note value at all: fall back to the power-of-two frame
+        // below M with whatever (dotted) member value that leaves.
+        int q = LargestPowerOfTwoAtMost(m);
+        var (fallbackValue, dots) = DecomposeNoteValue(total / new Fraction(q));
+        return new ArpeggioSubdivision(total, fallbackValue, dots, m, q);
     }
 
     private static int LargestPowerOfTwoAtMost(int n)

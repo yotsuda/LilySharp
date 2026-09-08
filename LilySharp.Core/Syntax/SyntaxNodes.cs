@@ -533,21 +533,98 @@ public sealed class ArpeggioSyntax : SyntaxNode
     /// attached after the closing <c>&gt;&gt;</c> (<c>&lt;&lt; c e g &gt;&gt;@chord</c>),
     /// like a chord's. ⚠️ The markers are on the list for the reason spelled out on
     /// <see cref="RestSyntax.Articulations"/>: a type filter that does not name them
-    /// leaves the tree holding a node no accessor hands out.</summary>
+    /// leaves the tree holding a node no accessor hands out. ⚠️ Only the slots AFTER
+    /// <c>&gt;&gt;</c>: a slur written on a member (<c>&lt;&lt; c( e g) &gt;&gt;</c>) is a
+    /// child before it, and belongs to <see cref="Sequence"/>, not to the group.</summary>
     public IEnumerable<SyntaxNode> Articulations
     {
         get
         {
-            for (int i = 0; i < SlotCount; i++)
+            for (int i = CloseSlot + 1; i < SlotCount; i++)
             {
                 var child = GetChild(i);
+                // The string number is on the list since 2026-09-07: `>>4\3` names every
+                // member's string, and without this arm it was dropped in silence.
                 if (child is ArticulationSyntax or DynamicSyntax or MusicMarkSyntax
+                    or StringNumberAnnotationSyntax
                     or TieSyntax or SlurSyntax or BeamMarkerSyntax)
                     yield return child;
             }
         }
     }
+
+    /// <summary>The slot of the closing <c>&gt;&gt;</c> token (SlotCount when the group
+    /// never closed — a parse error already reported).</summary>
+    private int CloseSlot
+    {
+        get
+        {
+            for (int i = 0; i < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.DoubleCloseAngle })
+                    return i;
+            return SlotCount;
+        }
+    }
+
+    /// <summary>
+    /// The members in order, each with the SHARES its trailing dots give it and the slur
+    /// marks written after it. <c>&lt;&lt; c . d &gt;&gt;4</c> is c with two shares and d
+    /// with one — a 2:1 division of the quarter, spelled <c>tuplet 3/2 { c4 d8 }</c>. A
+    /// dot is written SPACED, as its own token between members, never glued to a pitch or
+    /// a degree (<c>c.</c> would read as a duration dot, <c>3.</c> as a decimal); the
+    /// parser reports a glued or a leading dot (LYS0023). The total number of shares is
+    /// what the auto-tuplet divides the group's time into.
+    /// </summary>
+    public IEnumerable<ArpeggioMember> Sequence
+    {
+        get
+        {
+            var list = new List<ArpeggioMember>();
+            int close = CloseSlot;
+            for (int i = 0; i < close; i++)
+            {
+                var child = GetChild(i);
+                switch (child)
+                {
+                    case PitchSyntax or ScaleDegreeSyntax or ChordSyntax or RestSyntax:
+                        list.Add(new ArpeggioMember(child, 1, false, false, 0, 0));
+                        break;
+                    case SyntaxTokenNode { Kind: SyntaxKind.Dot } when list.Count > 0:
+                        list[^1] = list[^1] with { Shares = list[^1].Shares + 1 };
+                        break;
+                    case SlurSyntax { IsOpen: true } so when list.Count > 0:
+                        list[^1] = list[^1] with { SlurStart = true, SlurStartSource = so.SourceStart };
+                        break;
+                    case SlurSyntax { IsOpen: false } sc when list.Count > 0:
+                        list[^1] = list[^1] with { SlurEnd = true, SlurEndSource = sc.SourceStart };
+                        break;
+                }
+            }
+            return list;
+        }
+    }
+
+    /// <summary>The shares the members divide the group's total into — the member
+    /// count plus one per share dot. Three plain members are 3; <c>&lt;&lt; c . d &gt;&gt;</c>
+    /// is 3 too, split 2 + 1.</summary>
+    public int ShareCount
+    {
+        get
+        {
+            int n = 0;
+            foreach (var m in Sequence)
+                n += m.Shares;
+            return n;
+        }
+    }
 }
+
+/// <summary>One member of a <c>&lt;&lt; … &gt;&gt;</c> group as <see cref="ArpeggioSyntax.Sequence"/>
+/// hands it out: the member node, the shares of the group's total it takes (1 plus one
+/// per spaced dot after it), and the slur marks written on it. The source offsets are the
+/// <c>(</c> / <c>)</c> characters themselves, defined only where the flag is true.</summary>
+public readonly record struct ArpeggioMember(
+    SyntaxNode Node, int Shares, bool SlurStart, bool SlurEnd, int SlurStartSource, int SlurEndSource);
 
 public sealed class ChordSyntax : SyntaxNode
 {

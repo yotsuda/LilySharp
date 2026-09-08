@@ -253,12 +253,20 @@ model above; a degrees-only group anchors on the tonic. NOT LilyPond's `<< >>`
 (parallel voices) — those are `voice { }` in Lily#; a `\\` inside is an error.
 
 ```
-<< c e g >>      // c, then e/g stacked above (E4 G4); after c4 → a triplet of eighths
+<< c e g >>      // c, then e/g stacked above (E4 G4); after c4 → a triplet of eighths (3:2)
 << c 3 5 >>      // by degrees: c e g
 << 8 5 3 1 >>    // degrees-only anchors on the TONIC: C5 G4 E4 C4 — descending, no marks
 << <c e> g >>    // a chord member, then g
 << c r e >>      // a rest is a gap (an equal share); e still stacks above c
-<< c e g >>2     // a duration after >> = the group's total: 3 in a half (triplet 3:2)
+<< c . d >>4     // a SPACED dot = one more share for the member before it: 2:1 → tuplet 3/2 { c4 d8 }
+<< c . . d >>4   // 3:1 → c8. d16 (never glued: `c.` is a duration dot, `3.` a decimal)
+<< c@accent e\3 g( a) >>  // a member carries scripts, string numbers, fingering, dynamics, slur marks
+<< c e g >>4\2   // on the group: a dynamic, a chord name, a string number (every member's);
+                 //   a '~' or '(' after >> hangs on the LAST member
+<< c e g >>2     // a duration after >> = the group's total: 3 in a half (triplet 3:2 of quarters)
+                 // (the convention's spelling: M against the power of two below it —
+                 //  5 in a quarter → 16ths 5:4; 4 in a quarter → plain 16ths; 2 in a
+                 //  dotted quarter → 8ths 2:3)
 << c e g >>'     // marks after >> shift the whole group and propagate to the next note
 ```
 

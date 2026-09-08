@@ -2,6 +2,25 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
+## 0.7.0
+
+### Language
+
+- **A spaced dot inside `<< … >>` holds the member before it one more share** — `<< c . d >>4`
+  is the swing figure (`tuplet 3/2 { c4 d8 }`), `<< c . . d >>4` is `c8. d16`. Written as its
+  own token, never glued.
+- **A `<< … >>` member carries scripts, fingering, dynamics, string numbers and slur marks**
+  (`<< c@accent e\3 g( a) >>`); a string number on the group is every member's, and a tie or
+  slur mark after `>>` hangs on the last member. String numbers on a group used to be dropped
+  in silence.
+
+### Engraving
+
+- **An arpeggio in a dotted total is spelled as compound metre spells it** — `<< c e >>4.`
+  is a 2:3 duplet of eighths, `<< c e g a >>4.` a 4:3 quadruplet, instead of dotted
+  members. See the repository's
+  [CHANGELOG](https://github.com/yotsuda/LilySharp/blob/master/CHANGELOG.md) for the rule.
+
 ## 0.6.0
 
 ### Language

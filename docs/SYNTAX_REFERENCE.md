@@ -243,14 +243,53 @@ Members may be **chords** or **rests**:
 << c r e g >>       // the rest is a gap (an equal share of the total)
 ```
 
-Without a trailing duration the group takes the running duration and acts like one
-note; a **duration after `>>`** sets the group's total. Either way the members split
-it equally, becoming an automatic tuplet when needed:
+A member carries what a note carries — a script, a fingering, a dynamic, a string
+number, a slur mark — written on the member. A mark written after `>>` belongs to the
+group: a dynamic sounds from its first note, a chord name labels it, a string number is
+every member's, and a tie or slur mark hangs on its **last** member.
 
 ```
-<< c e g >>         // after c4: three notes in a quarter → a triplet of eighths
-<< c e g >>2        // three in the time of a half → triplet quarters (3:2)
-<< c d e f g >>4    // five in a quarter → a quintuplet
+<< c@accent e\3 g@finger(1) >>   // per-member marks
+<< c( e g) >>                    // a slur over the group, on the members
+<< c e g >>4\2                   // every member on the second string
+<< c e g >>4~ g                  // the tie is the last member's
+<< c e g >>4( d)                 // …and so is a bow started after '>>'
+```
+
+A **spaced dot** holds the member before it one more share of the total (not the 1.5×
+of a duration dot — inside `<< >>` there is no duration for a dot to belong to). It is
+written as its own token, never glued: `c.` would read as a duration dot and `3.` as a
+decimal, and the parser reports both. Any whole-number ratio is written this way, and
+the tuplet is spelled by the rule above from the total number of shares:
+
+```
+<< c . d >>4        // 2 : 1 in a quarter → tuplet 3/2 { c4 d8 }  (the swing figure)
+<< c . . d >>4      // 3 : 1 → c8. d16, no bracket
+<< c . d . e >>4    // 2 : 2 : 1 → a quintuplet of sixteenths, c and d as eighths
+<< r . d >>4        // a rest holds shares too
+<< c 3 . 5 >>       // after a degree, spaced
+```
+
+A member no single note can spell (five sixteenths) is written as tied notes.
+
+Without a trailing duration the group takes the running duration and acts like one
+note; a **duration after `>>`** sets the group's total. Either way the members split
+it equally, becoming an automatic tuplet when needed. The tuplet is spelled the way
+engraving convention spells it: the members take the plain note value that fills the
+total **with the largest power of two not above their count**, and the bracket is that
+count against it (Gould, *Behind Bars*). In a dotted total the frames are 3, 6, 12 …
+and the nearest one is taken — compound metre's duplet and quadruplet:
+
+```
+<< c e g >>         // after c4: three in a quarter → eighths under 3:2
+                    //   (the same picture as `tuplet 3/2 { c8 e g }`)
+<< r c cis >>4      // an eighth rest, then two eighths, under 3:2
+<< c e g >>2        // three in a half → quarters under 3:2
+<< c e g a >>4      // four in a quarter → four plain sixteenths, no bracket
+<< c d e f g >>4    // five in a quarter → sixteenths under 5:4 (six → 6:4, seven → 7:4)
+<< c e >>4.         // two in a dotted quarter → eighths under 2:3 (a duplet)
+<< c e g >>4.       // three in a dotted quarter → three plain eighths, no bracket
+<< c e g a >>4.     // four in a dotted quarter → eighths under 4:3
 ```
 
 The group must fit within one measure (otherwise it crosses the barline and the measure

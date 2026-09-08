@@ -1865,14 +1865,16 @@ public sealed class MusicXmlExporter
     /// </summary>
     private void ProcessArpeggio(ArpeggioSyntax arpeggio)
     {
-        var members = arpeggio.Members.ToList();
+        var members = arpeggio.Sequence.ToList();
         if (members.Count == 0)
             return;
 
         // The group occupies its total (trailing `>>N`, or the inherited running duration);
-        // its members split that equally. An auto-tuplet fits M members into the P-note frame.
+        // its members split that into shares. An auto-tuplet fits the shares into the
+        // P-note frame; a member's shares are written as ArpeggioSubdivision.SpellShares
+        // spells them — one note, or tied notes.
         Fraction total = arpeggio.TotalDuration?.ToFraction() ?? _defaultDuration;
-        var sub = ArpeggioSubdivision.Compute(members.Count, total);
+        var sub = ArpeggioSubdivision.Compute(arpeggio.ShareCount, total);
         var tupletMeasure = _currentMeasure;
         int tupletFrom = _currentMeasure?.Notes.Count ?? 0;
         int tupletNumber = 0;
@@ -1882,7 +1884,6 @@ public sealed class MusicXmlExporter
             tupletNumber = _tupletStack.Count;
         }
         var savedDefault = _defaultDuration;
-        _defaultDuration = sub.MemberDisplay; // forced member value/dots
         // Octave marks after '>>' shift the whole group (like a chord's '<c e g>,'): applied
         // to the ROOT, inherited by the stacked members / degrees via the anchor octave.
         int groupOctave = arpeggio.OctaveOffset;
@@ -1903,8 +1904,9 @@ public sealed class MusicXmlExporter
         bool rootSet = false;
         int anchorOctave = 0;
         int rootStep = 0;
-        foreach (var member in members)
+        foreach (var (member, shares, slurStart, slurEnd, _, _) in members)
         {
+            var parts = sub.SpellShares(shares);
             if (member is ScaleDegreeSyntax degree)
             {
                 // Degrees anchor on the root — or, before any pitched member, on the
@@ -1917,7 +1919,7 @@ public sealed class MusicXmlExporter
                     rootStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
                     anchorOctave = RelativeOctave.Resolve(_currentStep, _currentOctave, rootStep, 0) + groupOctave;
                 }
-                EmitArpeggioXmlDegree(degree, rootStep, anchorOctave);
+                EmitArpeggioXmlDegree(degree, rootStep, anchorOctave, parts, slurStart, slurEnd);
                 continue;
             }
 
@@ -1935,11 +1937,35 @@ public sealed class MusicXmlExporter
                 _octaveAbsolute = savedAbsolute; // the root, and any rest
             }
             if (member is PitchSyntax pitch)
-                EmitArpeggioXmlPitch(pitch, isRoot ? groupOctave : 0);
+                EmitArpeggioXmlPitch(pitch, isRoot ? groupOctave : 0, parts, slurStart, slurEnd);
             else if (member is ChordSyntax chord)
-                ProcessChord(chord, isRoot ? groupOctave : 0);
+            {
+                // A second part re-reads the chord, so the frame is put back to what the
+                // first part read (the root chord folds the group's marks in on every read).
+                var frame = (_octaveAbsolute, _octaveAnchor, _currentStep, _currentOctave);
+                for (int k = 0; k < parts.Count; k++)
+                {
+                    bool first = k == 0, last = k == parts.Count - 1;
+                    if (!first)
+                        (_octaveAbsolute, _octaveAnchor, _currentStep, _currentOctave) = frame;
+                    _defaultDuration = Fraction.FromNoteValue(parts[k].Value).Dotted(parts[k].Dots);
+                    ProcessChord(chord, isRoot ? groupOctave : 0);
+                    if (first && slurStart)
+                        foreach (var n in _chordMembers) n.SlurStart = true;
+                    if (last && slurEnd)
+                        foreach (var n in _chordMembers) n.SlurStop = true;
+                    if (!last)
+                        OpenTies(_chordMembers);
+                }
+            }
             else
-                ProcessNode(member); // rest
+            {
+                foreach (var part in parts) // a rest: one per part, no tie
+                {
+                    _defaultDuration = Fraction.FromNoteValue(part.Value).Dotted(part.Dots);
+                    ProcessNode(member);
+                }
+            }
             if (!rootSet && letter is { } rl)
             {
                 rootSet = true;
@@ -1980,9 +2006,12 @@ public sealed class MusicXmlExporter
         }
     }
 
-    /// <summary>A bare arpeggio pitch → one sequential note at the forced member duration,
-    /// resolved through the octave frame the caller set up.</summary>
-    private void EmitArpeggioXmlPitch(PitchSyntax pitch, int octaveShift)
+    /// <summary>A bare arpeggio pitch → one sequential note per written part (tied to one
+    /// another when its shares take more than one), resolved once through the octave frame
+    /// the caller set up. The member's own post-events and slur marks ride the first part;
+    /// the last part is what a marker after <c>&gt;&gt;</c> hangs on (_lastEmittedNotes).</summary>
+    private void EmitArpeggioXmlPitch(PitchSyntax pitch, int octaveShift,
+        IReadOnlyList<(int Value, int Dots)> parts, bool slurStart, bool slurEnd)
     {
         if (_currentMeasure == null) return;
         _justAutoClosedPickup = false;
@@ -2007,38 +2036,55 @@ public sealed class MusicXmlExporter
         }
         (step, alter, targetOctave) = ApplyTranspose(pitch, step, alter, targetOctave);
         int quarter = pitch.QuarterOffset;
-
-        var duration = _defaultDuration;
-        int durationTicks = FractionToTicks(duration);
-        var (type, dots) = GetNoteType(duration);
         var (tupletActual, tupletNormal) = CurrentTupletRatio();
 
-        _currentMeasure.Notes.Add(new MusicXmlNote
+        for (int k = 0; k < parts.Count; k++)
         {
-            Step = step,
-            Alter = quarter == 0 ? alter : alter + 0.5 * quarter,
-            Octave = targetOctave,
-            Duration = durationTicks,
-            Type = type,
-            Dots = dots,
-            AccidentalName = (alter, quarter) switch
+            bool first = k == 0, last = k == parts.Count - 1;
+            var duration = Fraction.FromNoteValue(parts[k].Value).Dotted(parts[k].Dots);
+            int durationTicks = FractionToTicks(duration);
+            var (type, dots) = GetNoteType(duration);
+            var xmlNote = new MusicXmlNote
             {
-                (0, 1) => "quarter-sharp",
-                (1, 1) => "three-quarters-sharp",
-                (0, -1) => "quarter-flat",
-                (-1, -1) => "three-quarters-flat",
-                _ => null,
-            },
-            ActualNotes = tupletActual,
-            NormalNotes = tupletNormal,
-        });
-        MaybeClosePickup(duration);
+                Step = step,
+                Alter = quarter == 0 ? alter : alter + 0.5 * quarter,
+                Octave = targetOctave,
+                Duration = durationTicks,
+                Type = type,
+                Dots = dots,
+                AccidentalName = (alter, quarter) switch
+                {
+                    (0, 1) => "quarter-sharp",
+                    (1, 1) => "three-quarters-sharp",
+                    (0, -1) => "quarter-flat",
+                    (-1, -1) => "three-quarters-flat",
+                    _ => null,
+                },
+                Notehead = NoteheadFromMarks(pitch.Articulations),
+                ActualNotes = tupletActual,
+                NormalNotes = tupletNormal,
+            };
+            if (first)
+                ProcessArticulations(pitch.Articulations, xmlNote);
+            if (first && slurStart) xmlNote.SlurStart = true;
+            if (last && slurEnd) xmlNote.SlurStop = true;
+            // A tie into the group, or from the previous part, ends here; a part that is not
+            // the last ties on to the next.
+            CloseTies([xmlNote]);
+            if (!last) OpenTies([xmlNote]);
+            _currentMeasure.Notes.Add(xmlNote);
+            _lastPitchedNote = xmlNote;
+            _lastEmittedNotes.Clear();
+            _lastEmittedNotes.Add(xmlNote);
+            MaybeClosePickup(duration);
+        }
     }
 
     /// <summary>A scale-degree arpeggio member → one sequential note, stacked on the group's
     /// anchor (the root, or the key tonic when no pitched member precedes — the caller
     /// resolves it) by diatonic steps in the WRITTEN key, then transposed like a pitch.</summary>
-    private void EmitArpeggioXmlDegree(ScaleDegreeSyntax degree, int rootStep, int anchorOctave)
+    private void EmitArpeggioXmlDegree(ScaleDegreeSyntax degree, int rootStep, int anchorOctave,
+        IReadOnlyList<(int Value, int Dots)> parts, bool slurStart, bool slurEnd)
     {
         if (_currentMeasure == null) return;
         _justAutoClosedPickup = false;
@@ -2046,24 +2092,35 @@ public sealed class MusicXmlExporter
         var (dstep, dalter, doctave) = ChordDegrees.Resolve(
             rootStep, anchorOctave, degree.Number, degree.Alteration, degree.OctaveOffset, _keyFifths);
         (dstep, dalter, doctave) = ApplyWrittenTransforms(dstep, dalter, doctave);
-
-        var duration = _defaultDuration;
-        int durationTicks = FractionToTicks(duration);
-        var (type, dots) = GetNoteType(duration);
         var (tupletActual, tupletNormal) = CurrentTupletRatio();
 
-        _currentMeasure.Notes.Add(new MusicXmlNote
+        for (int k = 0; k < parts.Count; k++)
         {
-            Step = "CDEFGAB"[dstep].ToString(),
-            Alter = dalter,
-            Octave = doctave,
-            Duration = durationTicks,
-            Type = type,
-            Dots = dots,
-            ActualNotes = tupletActual,
-            NormalNotes = tupletNormal,
-        });
-        MaybeClosePickup(duration);
+            bool first = k == 0, last = k == parts.Count - 1;
+            var duration = Fraction.FromNoteValue(parts[k].Value).Dotted(parts[k].Dots);
+            int durationTicks = FractionToTicks(duration);
+            var (type, dots) = GetNoteType(duration);
+            var xmlNote = new MusicXmlNote
+            {
+                Step = "CDEFGAB"[dstep].ToString(),
+                Alter = dalter,
+                Octave = doctave,
+                Duration = durationTicks,
+                Type = type,
+                Dots = dots,
+                ActualNotes = tupletActual,
+                NormalNotes = tupletNormal,
+            };
+            if (first && slurStart) xmlNote.SlurStart = true;
+            if (last && slurEnd) xmlNote.SlurStop = true;
+            CloseTies([xmlNote]);
+            if (!last) OpenTies([xmlNote]);
+            _currentMeasure.Notes.Add(xmlNote);
+            _lastPitchedNote = xmlNote;
+            _lastEmittedNotes.Clear();
+            _lastEmittedNotes.Add(xmlNote);
+            MaybeClosePickup(duration);
+        }
     }
 
 

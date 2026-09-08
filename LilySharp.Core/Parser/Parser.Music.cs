@@ -708,6 +708,50 @@ internal sealed partial class Parser
                 // A gap in the sequence — no duration (it takes an equal share too).
                 members.Add(new RestGreen(Advance(), null, null, null, []));
             }
+            else if (Check(SyntaxKind.Dot))
+            {
+                // A SHARE DOT: `<< c . d >>` gives c one more share of the total (2:1). It is
+                // written SPACED, as its own token — glued to a pitch it reads as a duration
+                // dot (c.), glued to a degree as a decimal (3.), and inside << >> there is no
+                // duration for a dot to belong to. The token is KEPT either way so the round
+                // trip holds (see ReportUnclaimedDot) and the tree still says what the
+                // writer meant; only the diagnostic decides whether the book is clean.
+                if (firstMember)
+                    ReportArpeggioDot("A share dot extends the member before it, and nothing precedes "
+                        + "this one - write it after a member: << c . d >>.");
+                else if (CurrentGluedToPrevious)
+                    ReportArpeggioDot("A share dot is written spaced, never glued: << c . d >> "
+                        + "(glued, 'c.' reads as a duration dot and '3.' as a decimal).");
+                members.Add(Advance());
+                continue;
+            }
+            else if (Check(SyntaxKind.OpenParen) || Check(SyntaxKind.CloseParen))
+            {
+                // A slur mark on a MEMBER (<< c( e g) >>): the bow starts or ends on the
+                // member before it. Kept as a child of the group, before '>>', which is how
+                // ArpeggioSyntax.Sequence tells it from a mark on the group itself.
+                if (firstMember)
+                    _diagnostics.Error(new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length),
+                        DiagnosticCodes.StrayItemToken,
+                        "A slur mark inside << >> goes after the member it starts or ends on "
+                        + "(<< c( e g) >>); nothing precedes this one.");
+                members.Add(ParseSlur());
+                continue;
+            }
+            else if (Check(SyntaxKind.Tilde) || Check(SyntaxKind.OpenBracket) || Check(SyntaxKind.CloseBracket))
+            {
+                // Named rather than left to the '>>' expectation below, so the reader hears
+                // what to write instead of "Expected DoubleCloseAngle".
+                _diagnostics.Error(new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length),
+                    DiagnosticCodes.StrayItemToken,
+                    Current.Kind == SyntaxKind.Tilde
+                        ? "'~' inside << >> is not a tie: to hold a member longer write a share dot "
+                          + "(<< c . d >> gives c two shares); a tie out of the group goes after '>>' "
+                          + "(<< c e g >>4~ g)."
+                        : "Beams inside << >> are automatic; '[' and ']' are not written there.");
+                members.Add(Advance());
+                continue;
+            }
             else
             {
                 break;
@@ -726,6 +770,13 @@ internal sealed partial class Parser
         var articulations = ParsePostEvents();
         return new ArpeggioGreen(open, [.. members], close, [.. octaveMarks], totalDuration, articulations);
     }
+
+    /// <summary>A share dot written where the rule does not allow it (leading, or glued):
+    /// LYS0023 on the dot's own ink. The caller keeps the token.</summary>
+    private void ReportArpeggioDot(string message)
+        => _diagnostics.Error(
+            new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length),
+            DiagnosticCodes.UnclaimedDot, message);
 
     /// <summary>True when the <c>&lt;&lt; … &gt;&gt;</c> starting at the cursor contains a
     /// <c>\\</c> voice separator — the removed polyphony form — versus an arpeggio.</summary>

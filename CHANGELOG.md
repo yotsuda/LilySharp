@@ -4,6 +4,54 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
+## 0.7.0
+
+### Language
+
+- **A spaced dot inside `<< … >>` holds the member before it one more share.** `<< c . d >>4`
+  is two shares against one in the quarter — the swing figure, spelled as the convention
+  spells it, `tuplet 3/2 { c4 d8 }` — and `<< c . . d >>4` is `c8. d16`. The dot is a share,
+  not the 1.5× of a duration dot: inside a group there is no duration for a dot to belong
+  to, so it is written as its own token, and glued (`c.`, `3.`) or leading it is reported
+  (LYS0023). The tuplet is spelled from the total number of shares; a member no single note
+  can spell is written as tied notes. A `~` inside the group is reported with this spelling
+  to use instead.
+- **A `<< … >>` member carries what a note carries.** A script, a fingering, a dynamic, a
+  string number and a slur mark are written on the member (`<< c@accent e\3 g( a) >>`) and
+  reach the page, the MIDI, the MusicXML and the twin. On the group, a string number is every
+  member's (`>>4\2`), and a tie or slur mark written after `>>` hangs on the last member. Other
+  marks on the group still warn (LYS4008) — write them on the member.
+
+### Fixed
+
+- **A string number on a `<< … >>` member or group was dropped in silence.** `<< c\3 e\2 g >>`
+  printed no strings and raised no diagnostic; it is applied now.
+- **A slur mark after `>>` was dropped from the page and then blamed on the `)`.** `<< c e g >>4( d)`
+  drew no bow and warned that the `)` had no `(` (LYS4010); the MusicXML had the slur all along.
+
+### Engraving
+
+- **An arpeggio in a dotted total is spelled as compound metre spells it.** `<< c e >>4.`
+  is two eighths under 2:3 (a duplet), `<< c e g >>4.` three plain eighths, `<< c e g a >>4.`
+  four eighths under 4:3 — where the members used to be dotted (three dotted eighths under
+  3:2, four dotted sixteenths), a spelling no engraver writes. A plain total is unchanged:
+  three in a quarter are eighths under 3:2, five sixteenths under 5:4, as before. The MIDI
+  is unchanged (the shares were always equal); the MusicXML carries the note type and
+  time-modification.
+
+### MIDI, MusicXML and the LilyPond twin
+
+- **`lysc ly` writes an arpeggio as the tuplet it is.** `<< r c cis >>4` becomes
+  `\tuplet 3/2 { r8 c cis }`, `<< c e g a >>` after a quarter `c16 e g a`, with the octave
+  marks recomputed for LilyPond's `\relative` — Lily# stacks the members on the root and the
+  next note follows the root, LilyPond reads them one after another — and the duration after
+  the group written out where the two carries differ. The twin used to drop the whole group
+  with "Arpeggio not exported", a bar short by the group's duration, so no book with a
+  written-out broken chord could be put against LilyPond.
+- **The note after a dotted one carries the dot in the twin too.** `c4. d` has been a dotted
+  quarter followed by a dotted quarter on the page since 0.4.0; the twin still wrote `d4`,
+  five eighths where the page has six. It writes `d4.` now.
+
 ## 0.6.0
 
 Three spellings settle to LilyPond's, the page chooses how many systems a score gets, and

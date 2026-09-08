@@ -137,7 +137,7 @@
 ## UNWATCHED — 観測者がゼロだと自認しているもの（51 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:1803** container, and the value stops being unobserved with the line above.
+- **:1815** container, and the value stops being unobserved with the line above.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:507** no observer; add the paren widths when a book brings one. The unpacked
 - **:509** bare glyph width, which is exact for one and unobserved for many.
@@ -227,10 +227,10 @@
 ## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（126 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:1798** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:3476** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:1810** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
+- **:3821** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/MidiExporter.cs`
-- **:2113** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+- **:2135** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
 - **:68** LILYSHARP-OWN: LilyPond's q takes no marks, so there is nothing to port.
 ### `LilySharp.Core/Parser/Parser.Music.cs`
@@ -258,7 +258,7 @@
 ### `LilySharp.Core/Rendering/TextFontMetrics.cs`
 - **:543** LILYSHARP-OWN: LilyPond has no equivalent refusal, and cannot — it resolves through
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
-- **:442** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
+- **:439** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Svg/Collector/BeamDetector.cs`
 - **:1021** LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
 - **:1051** LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's
@@ -267,7 +267,7 @@
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
 - **:1970** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:3907** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:3911** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
 - **:67** LILYSHARP-OWN: the DEFAULT five is LilyPond's (scm/define-grobs.scm:3396,
 ### `LilySharp.Core/Svg/Collector/ScoreAssembler.cs`
@@ -417,7 +417,7 @@
 ### `LilySharp.Core/Svg/Model/Measure.cs`
 - **:195** ⚠️ LILYSHARP-OWN: THE FLAGGED ZERO-WIDTH MEASURE IS A TRANSLATION DEVICE. LilyPond
 ### `LilySharp.Core/Syntax/SyntaxNodes.cs`
-- **:749** LILYSHARP-OWN: LilyPond's q repeats the previous chord and cannot be
+- **:826** LILYSHARP-OWN: LilyPond's q repeats the previous chord and cannot be
 ### `LilySharp.Core/Tablature/Tunings.cs`
 - **:196** LILYSHARP-OWN. Four is the guitarist's one-finger-per-fret span and also the number
 - **:208** LILYSHARP-OWN. Without it the hand never comes down on its own — "do not move" beats

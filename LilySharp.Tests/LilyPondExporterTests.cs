@@ -80,6 +80,89 @@ public class LilyPondExporterTests
         Assert.DoesNotContain("\\fixed", ly);
     }
 
+    // ----- << … >> arpeggios: the tuplet LilyPond needs to say them with -----
+
+    /// <summary>
+    /// <c>&lt;&lt; r c cis &gt;&gt;4</c> is the same music as the conventional hand-written
+    /// <c>tuplet 3/2 { r8 c cis }</c> (ArpeggioSubdivision), and until 2026-09-07 the twin
+    /// dropped the whole group with a warning — a bar short by a quarter, so no
+    /// <c>&lt;&lt; &gt;&gt;</c> book could be put against LilyPond at all. The twin now writes
+    /// the tuplet, and the two spellings export to the same text.
+    /// </summary>
+    [Fact]
+    public void Arpeggio_BecomesTheTupletOfItsSubdivision()
+    {
+        var exporter = new LilyPondExporter();
+        var ly = exporter.Export(SyntaxTree.Parse(Score("c4 r8 c g4 << r c cis >>4", headers: "")));
+        // Every member writes its duration (a held member's parts differ, so all are explicit).
+        Assert.Contains("c4 r8 c g4 \\tuplet 3/2 { r8 c8 cis8 }", ly);
+        Assert.DoesNotContain(exporter.Warnings, w => w.Contains("not exported"));
+        var twin = Export(Score("c4 r8 c g4 tuplet 3/2 { r8 c8 cis8 }", headers: ""));
+        Assert.Equal(twin, ly);
+    }
+
+    /// <summary>
+    /// Shares and member marks in the twin: <c>&lt;&lt; c . d &gt;&gt;4</c> is the swing
+    /// <c>\tuplet 3/2 { c4 d8 }</c>; a member no one note can spell is written tied; a
+    /// member's string number, script and slur marks go where a note's go, and a string
+    /// number on the group is written on every member that names none.
+    /// </summary>
+    [Fact]
+    public void Arpeggio_SharesAndMemberMarks_AreWrittenOut()
+    {
+        Assert.Contains("\\tuplet 3/2 { c4 d8 }", Export(Score("c4 << c . d >>4", headers: "")));
+        Assert.Contains("c8. d16", Export(Score("c4 << c . . d >>4", headers: "")));
+        Assert.Contains("\\tuplet 6/4 { c4~ c16 d16 }", Export(Score("c4 << c . . . . d >>4", headers: "")));
+        Assert.Contains("\\tuplet 3/2 { c8\\3 e8-\\accent g8 }", Export(Score("c4 << c\\3 e@accent g >>4", headers: "")));
+        Assert.Contains("\\tuplet 3/2 { c8\\3 e8\\3 g8\\1 }", Export(Score("c4 << c e g\\1 >>4\\3", headers: "")));
+        Assert.Contains("\\tuplet 3/2 { c8( e8 g8) } d", Export(Score("c4 << c( e g) >>4 d", headers: "")));
+        Assert.Contains("\\tuplet 3/2 { c8 e8 g8 } ~ g", Export(Score("c4 << c e g >>4 ~ g", headers: "")));
+    }
+
+    /// <summary>
+    /// Relative mode. Lily# stacks the members on the root (<c>&lt;&lt; c g e &gt;&gt;</c> is
+    /// C G E all above C, like the chord <c>&lt;c g e&gt;</c>), while LilyPond's \relative
+    /// reads them as a sequence — from c the nearest g is the one BELOW — so the marks are
+    /// recomputed against LilyPond's chain: <c>g'</c>. And the note after the group is
+    /// relative to the ROOT in Lily# but to the LAST pitch in LilyPond: after <c>c e g</c> a
+    /// bare <c>c</c> is the root's C in Lily# and the C above g in LilyPond, so the twin
+    /// writes <c>c,</c>.
+    /// </summary>
+    [Fact]
+    public void Arpeggio_StacksOnTheRoot_AndTheNextNoteFollowsTheRoot()
+    {
+        Assert.Contains("\\tuplet 3/2 { c8 g'8 e8 }", Export(Score("c4 << c g e >>", headers: "")));
+        Assert.Contains("\\tuplet 3/2 { c8 e8 g8 } c,", Export(Score("c4 << c e g >> c", headers: "")));
+        // Four in a quarter are four plain sixteenths — no bracket, and the chain agrees
+        // with the stacking so no marks either.
+        Assert.Contains("c4 c16 e16 g16 a16", Export(Score("c4 << c e g a >>", headers: "")));
+    }
+
+    /// <summary>
+    /// The carry after the group. LilyPond would go on from the member value (the tuplet's
+    /// last written duration); Lily# goes on from the trailing <c>&gt;&gt;N</c>, dots and
+    /// all, or from what ran before the group. So the next event writes Lily#'s value out.
+    /// </summary>
+    [Fact]
+    public void Arpeggio_TheNextEventWritesLilySharpsCarry()
+    {
+        // `>>2` carries a half: the c after it is a half in Lily#, a quarter to LilyPond.
+        Assert.Contains("\\tuplet 3/2 { c4 e4 g4 } c,2", Export(Score("c4 << c e g >>2 c", headers: "")));
+        // No trailing duration: the group inherits the dotted quarter (three in a dotted
+        // quarter = three plain eighths, no bracket) and the c after it is a dotted quarter.
+        Assert.Contains("c4. c8 e8 g8 c,4.", Export(Score("c4. << c e g >> c", headers: "")));
+    }
+
+    /// <summary>
+    /// Absolute mode: every mark is measured from the <c>\fixed c'</c> base. The stacked
+    /// <c>g,</c> is the G below the root's octave (stacked = same octave, then its own mark).
+    /// </summary>
+    [Fact]
+    public void Arpeggio_Absolute_WritesTheStackedOctavesFromTheBase()
+    {
+        Assert.Contains("\\tuplet 3/2 { c8 e8 g,8 }", Export(Score("c4 << c e g, >>")));
+    }
+
     /// <summary>
     /// Absolute mode, a chord shifted as a whole whose member carries its own mark: the twin
     /// writes ONE net figure per member. Until 2026-09-05 it wrote the member's marks and then
@@ -1491,29 +1574,41 @@ public class LilyPondExporterTests
     }
 
     /// <summary>
-    /// After a DOTTED duration the next event writes its value out, because the two engines
-    /// carry a dot differently.
+    /// After a DOTTED duration the next event writes its value out — with the dots, because
+    /// that is what Lily# gives it.
     /// </summary>
     /// <remarks>
-    /// Lily# carries the note VALUE and drops the dots (MeasureCollector.ItemFactory
-    /// <c>_defaultDuration = Fraction.FromNoteValue(noteValue)</c>); LilyPond carries the whole
-    /// duration (lily/parser.yy default_duration_). So <c>c4. d</c> is 5/8 on the page and 6/8
-    /// in the twin — and in 6/8 that twin's bar is complete, so LilyPond does not complain
-    /// either. Measured: <c>c'4. d'</c> draws the same six glyphs as <c>c'4. d'4</c> and raises
-    /// the same LYS2006, while <c>c'4. d'4.</c> draws seven.
+    /// Until 2026-08-07 Lily# carried the note VALUE and dropped the dots, LilyPond carries the
+    /// whole duration (lily/parser.yy default_duration_), and this test held the twin to
+    /// <c>c'4. d'4</c> — 5/8 on the page, 5/8 in the twin. Since then the collector carries
+    /// the dots too (MeasureCollector.ItemFactory CreateNoteItem: <c>dots =
+    /// note.Duration?.DotCount ?? _defaultDots</c>), so <c>c4. d</c> is 6/8 on the page, and
+    /// a twin still writing <c>d'4</c> was 5/8 — different music that LilyPond's bar check
+    /// reported, not this suite (found 2026-09-07 by the arpeggio arm, which needs the running
+    /// duration with its dots). The premise is asserted on the page below, not assumed:
+    /// the d IS a dotted quarter to the collector.
     /// </remarks>
     [Fact]
-    public void AnEventAfterADottedOne_WritesItsValue_BecauseLilyPondCarriesTheDot()
+    public void AnEventAfterADottedOne_WritesItsValue_WithTheDotsLilySharpGivesIt()
     {
-        var ly = Export("""
+        const string src = """
             octave absolute
             time 6/8
             part m { clef treble }
             section S { m { c'4. d' | } }
             form main { S }
             score main { staff m }
-            """);
-        Assert.Contains("c'4. d'4 |", ly);
+            """;
+        // The premise: Lily# reads the bare d' as a dotted quarter.
+        var score = new MeasureCollector().Collect(SyntaxTree.Parse(src), "m");
+        int seen = 0, dDots = -1;
+        foreach (var item in score.Voice.Measures[0].Items)
+            if (item is NoteItem n && ++seen == 2)
+                dDots = n.Dots;
+        Assert.Equal(1, dDots);
+
+        var ly = Export(src);
+        Assert.Contains("c'4. d'4. |", ly);
 
         // An undotted duration still carries silently — the source is copied, not re-spelled.
         var plain = Export("""

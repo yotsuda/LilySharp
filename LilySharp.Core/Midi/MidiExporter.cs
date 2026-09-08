@@ -1409,19 +1409,20 @@ public sealed class MidiExporter
     /// </summary>
     private void ProcessArpeggio(ArpeggioSyntax arpeggio, MidiTrack track, MidiTrack conductorTrack)
     {
-        var members = arpeggio.Members.ToList(); // bare pitches, degrees, chords and/or rests
+        var members = arpeggio.Sequence.ToList(); // bare pitches, degrees, chords and/or rests, with shares
         if (members.Count == 0)
             return;
 
         // The group occupies its total (trailing `>>N`, or the inherited running duration);
-        // its members split that equally. Push the auto-tuplet so every played duration
-        // scales like `tuplet num/base { … }`, and force the member value via _defaultDuration.
+        // its members split that into shares (one each, plus one per spaced dot). Push the
+        // auto-tuplet so every played duration scales like `tuplet num/base { … }`, and
+        // force each member's length — its shares of the unit — via _defaultDuration. A
+        // member's parts (ArpeggioSubdivision.SpellShares) are ONE sounding note here.
         Fraction total = arpeggio.TotalDuration?.ToFraction() ?? _defaultDuration;
-        var sub = ArpeggioSubdivision.Compute(members.Count, total);
+        var sub = ArpeggioSubdivision.Compute(arpeggio.ShareCount, total);
         if (sub.HasTuplet)
             _tupletStack.Push((sub.TupletNum, sub.TupletBase));
         var savedDefault = _defaultDuration;
-        _defaultDuration = sub.MemberDisplay;
         // Octave marks after '>>' shift the whole group (like a chord's '<c e g>,'): applied
         // to the ROOT, inherited by the stacked members / degrees via the anchor octave.
         int groupOctave = arpeggio.OctaveOffset;
@@ -1444,8 +1445,9 @@ public sealed class MidiExporter
         bool rootSet = false;
         int anchorOctave = 0;
         int rootStep = 0;
-        foreach (var member in members)
+        foreach (var (member, shares, _, _, _, _) in members)
         {
+            _defaultDuration = sub.MemberDisplay * new Fraction(shares);
             if (member is ScaleDegreeSyntax degree)
             {
                 // Degrees anchor on the root — or, before any pitched member, on the
@@ -1526,10 +1528,29 @@ public sealed class MidiExporter
             _currentNoteName = step;
             _currentOctave = anchor;
         }
+        // The member's own dynamic and scripts, read as a note's are (ProcessNote).
+        int velocity = _velocity;
+        int durationPercent = 100;
+        foreach (var child in pitch.Articulations)
+        {
+            switch (child)
+            {
+                case DynamicSyntax dynamic:
+                    velocity = dynamic.Velocity;
+                    _velocity = velocity;
+                    break;
+                case ArticulationSyntax articulation:
+                    (velocity, durationPercent) = ApplyArticulationType(articulation.Type, velocity, durationPercent);
+                    break;
+            }
+        }
         int ticks = FractionToTicks(_defaultDuration);
-        track.Notes.Add(new MidiNote(track.Channel, SoundKey(midiPitch, pitch.Position), _velocity,
-            _currentTick, ticks, pitch.Position, QuarterBend: pitch.QuarterOffset,
+        int actualTicks = Math.Max(1, ticks * durationPercent / 100);
+        track.Notes.Add(new MidiNote(track.Channel, SoundKey(midiPitch, pitch.Position), velocity,
+            _currentTick, actualTicks, pitch.Position, QuarterBend: pitch.QuarterOffset,
             SourceOrdinal: NextOrdinal(pitch.Position), Timbre: _currentTimbre));
+        // The last member is what a '~' after '>>' ties on from (OpenTieTargets).
+        CloseOnset(track, [track.Notes.Count - 1], false);
         _currentTick += ticks;
     }
 
@@ -1545,6 +1566,7 @@ public sealed class MidiExporter
         track.Notes.Add(new MidiNote(track.Channel, SoundKey(midiPitch, degree.Position), _velocity,
             _currentTick, ticks, degree.Position,
             SourceOrdinal: NextOrdinal(degree.Position), Timbre: _currentTimbre));
+        CloseOnset(track, [track.Notes.Count - 1], false); // see EmitArpeggioMidiPitch
         _currentTick += ticks;
     }
 

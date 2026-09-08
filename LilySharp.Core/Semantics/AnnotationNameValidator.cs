@@ -160,14 +160,10 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                         DiagnosticCodes.UnknownAnnotation,
                         "'@rest' prints a NOTE as a rest at that note's pitch, so it belongs "
                         + "on a note (a4@rest). For an ordinary rest write 'r'.");
-                else if (OnArpeggioGroupOrMember(art))
+                else if (OnArpeggioGroup(art))
                     WarnArpeggioUnsupported(art, name);
                 break;
             }
-            case DynamicSyntax dyn when dyn.Parent is PitchSyntax { Parent: ArpeggioSyntax }:
-                // A dynamic works on the GROUP (`<< … >>@f`) but not on a bare member.
-                WarnArpeggioUnsupported(dyn, dyn.DynamicToken.Text);
-                break;
             case MusicMarkSyntax mark:
             {
                 var name = mark.MarkName;
@@ -221,9 +217,9 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                         DiagnosticCodes.ChordNotRecognized,
                         "@chord can't name this arpeggio — its notes match no known chord quality; "
                         + "use the explicit form, e.g. @chord(Cmaj7).");
-                else if (OnArpeggioGroupOrMember(mark)
+                else if (OnArpeggioGroup(mark)
                          && name != "chord" && AnnotationValues.Chord(mark, out _) == null)
-                    // Chord names work on the group; everything else is unwired.
+                    // Chord names work on the group; other marks belong on a member.
                     WarnArpeggioUnsupported(mark, name);
                 break;
             }
@@ -342,17 +338,18 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     }
 
     /// <summary>True for an annotation sitting on a <c>&lt;&lt; … &gt;&gt;</c> group
-    /// itself or on one of its BARE pitch members (a nested chord member keeps the
-    /// chord's own annotation handling and is not flagged).</summary>
-    private static bool OnArpeggioGroupOrMember(SyntaxNode annotation) =>
-        annotation.Parent is ArpeggioSyntax
-        || annotation.Parent is PitchSyntax { Parent: ArpeggioSyntax };
+    /// ITSELF (after the <c>&gt;&gt;</c>). A mark on a member — a bare pitch's
+    /// <c>@accent</c>, <c>@finger(1)</c>, <c>@f</c>, a string number — is applied to that
+    /// member since 2026-09-07 (MeasureCollector.MusicWalk.ProcessArpeggio and the three
+    /// exporters), and a nested chord member keeps the chord's own handling.</summary>
+    private static bool OnArpeggioGroup(SyntaxNode annotation) =>
+        annotation.Parent is ArpeggioSyntax;
 
     private void WarnArpeggioUnsupported(SyntaxNode node, string name)
         => _diagnostics.Warning(node.Span, DiagnosticCodes.ArpeggioAnnotationUnsupported,
-            $"'@{name}' on a '<< >>' group is not applied yet - only a dynamic (@f) and "
-            + "a chord name (@chord) work there; for per-note articulations write the "
-            + "passage as plain notes (a tuplet gives the same rhythm).");
+            $"'@{name}' on a '<< >>' group is not applied - on the group only a dynamic (@f), "
+            + "a chord name (@chord) and a string number (\\3) work; write the mark on the "
+            + "member it belongs to: << c@accent e g >>.");
 
     /// <summary>
     /// The quality of a <c>@chord(…)</c> whose ROOT parses but whose quality is not

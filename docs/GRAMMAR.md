@@ -1286,23 +1286,38 @@ ChordNote      = PitchToken , { Annotation } ;
 (* Arpeggio: a written-out broken chord. Members carry NO duration of their own — they play
    in SEQUENCE and EQUALLY SUBDIVIDE the group's total, so a bare number is always a scale
    degree (never a duration): '<< c 3 5 >>' = c e g. The share becomes an auto-tuplet when it
-   is not a plain note value (3 members in a beat = a triplet, 5 = a quintuplet, 9 = a
-   nonuplet). A trailing DurationToken sets the total; without one the group inherits the
+   is not a plain note value, spelled by engraving convention (Gould): the members take the
+   plain value that fills the total with the largest power of two not above M, and the
+   bracket is M against it — 3 in a quarter are eighths under 3:2 (the picture of
+   'tuplet 3/2 { c8 e g }'), 5, 6 and 7 are sixteenths under 5:4, 6:4, 7:4, 9 are
+   thirty-seconds under 9:8; 4 in a quarter are four plain sixteenths with no bracket. A
+   dotted total frames on 3·2^k, nearest M: 2 in a dotted quarter are eighths under 2:3,
+   4 are eighths under 4:3, 3 are three plain eighths.
+   A trailing DurationToken sets the total; without one the group inherits the
    running duration and acts like a single note. Octaves follow the chord anchor model
    (above): the anchor is the first pitched member's bare letter — or the key tonic when
    the group opens with degrees, so a descending figure needs no marks: << 8 5 3 1 >> =
    C5 G4 E4 C4. Each member's own marks are local; marks after '>>' shift the whole group
    and propagate. Members may be pitches, scale degrees, chords or rests.
-   Annotations after '>>': a dynamic (@f) applies to the whole group and a chord name
-   (@chord / @chord(Am7)) labels it; any other annotation on the group or a bare member is not
-   applied yet and warns (LYS4008) — nothing is dropped silently. A nested chord member
-   keeps its own annotation handling ('<< <c e>@arpeggio g >>' is fine).
+   A bare pitch member carries post-events like a note ('<< c@accent e\3 g@finger(1) >>':
+   scripts, fingering, a dynamic, a string number) and a slur mark after it ('<< c( e g) >>').
+   A SHARE DOT — '.' written spaced, as its own token after a member — holds that member one
+   more share of the total: '<< c . d >>4' is 2:1 (spelled 'tuplet 3/2 { c4 d8 }'),
+   '<< c . . d >>4' is 3:1 ('c8. d16'); the tuplet is spelled from the total shares. Glued
+   ('c.', '3.') or leading, the dot is reported (LYS0023). A tie '~' or beam mark inside is
+   reported with the spelling to use instead.
+   Annotations after '>>': a dynamic (@f) applies to the whole group, a chord name
+   (@chord / @chord(Am7)) labels it, a string number (\3) is every member's; a tie or slur
+   mark after '>>' hangs on the LAST member. Any other annotation on the group is not
+   applied and warns (LYS4008) — write it on the member. A nested chord member keeps its own
+   annotation handling ('<< <c e>@arpeggio g >>' is fine).
    This reuses '<< … >>' (LilyPond's parallel-voice form, which Lily# writes as
    'voice { }'); a '\\' inside is reported as the removed-polyphony form, not an arpeggio. *)
 ArpMember      = PitchToken | ScaleDegree | Chord | Rest ;   (* no DurationToken on a member *)
 ScaleDegree    = Integer , [ 'is' | 'isis' | 'es' | 'eses' ] , { "'" | ',' } ;
                  (* anchor-relative degree: 1 = root/tonic, 3 = third, 8 = octave; also the '<c 3 5>' chord form *)
-Arpeggio       = '<<' , ArpMember , { ArpMember } , '>>' , { "'" | ',' } , [ DurationToken ] ;
+ArpItem        = ArpMember | '.' | '(' | ')' ;               (* '.' = one more share for the member before it *)
+Arpeggio       = '<<' , ArpMember , { ArpItem } , '>>' , { "'" | ',' } , [ DurationToken ] ;
 
 Barline        = '|' | '||' | '|.' | '!' ;           (* MUSIC: the divisions *)
 RepeatBarline  = '|:' | ':|:' | RepeatEnd ;          (* FORM ONLY — changes the playing order *)

@@ -345,9 +345,21 @@ public sealed partial class MeasureCollector
     /// octave reference stays frozen on the root while the pitch names flow) — and scale
     /// degrees (<c>&lt;&lt; c 3 5 &gt;&gt;</c>) resolve against the root and the key.
     /// </summary>
-    private void ProcessArpeggio(ArpeggioSyntax arpeggio, MeasureBuilder builder)
+    /// <remarks>
+    /// Since 2026-09-07 a member carries what a note carries: its own scripts, fingering,
+    /// dynamic and string number (<c>&lt;&lt; c@accent e\3 g &gt;&gt;</c>), a slur mark
+    /// (<c>&lt;&lt; c( e g) &gt;&gt;</c>), and SHARES — <c>&lt;&lt; c . d &gt;&gt;4</c> holds c
+    /// for two of three shares, spelled as the convention spells the tuplet
+    /// (<c>tuplet 3/2 { c4 d8 }</c>) and tied across parts where one note cannot say it
+    /// (<see cref="ArpeggioSubdivision.SpellShares"/>). A mark written AFTER <c>&gt;&gt;</c>
+    /// hangs on the LAST member (<c>&gt;&gt;4~</c> ties it on, <c>&gt;&gt;4(</c> starts the
+    /// bow there); a string number on the group is every member's.
+    /// </remarks>
+    private void ProcessArpeggio(ArpeggioSyntax arpeggio, MeasureBuilder builder,
+        bool tieAfterGroup = false, bool slurStartAfterGroup = false, bool slurEndAfterGroup = false,
+        int tieAfterSource = 0, int slurStartAfterSource = 0, int slurEndAfterSource = 0)
     {
-        var members = arpeggio.Members.ToList(); // bare pitches, degrees, chords and/or rests
+        var members = arpeggio.Sequence.ToList(); // bare pitches, degrees, chords and/or rests, with shares
         if (members.Count == 0)
             return;
 
@@ -359,13 +371,14 @@ public sealed partial class MeasureCollector
         // LILYPOND-REF: lily/parser.yy:3505-3514 optional_notemode_duration — default_duration_
         Fraction total = arpeggio.TotalDuration?.ToFraction()
             ?? _defaultDuration.Dotted(_defaultDots);
-        var sub = ArpeggioSubdivision.Compute(members.Count, total);
+        var sub = ArpeggioSubdivision.Compute(arpeggio.ShareCount, total);
         Fraction scale = sub.TimeScale;
-        var forced = (sub.MemberValue, sub.MemberDots);
         // Octave marks after '>>' shift the whole group (like a chord's '<c e g>,'): the
         // shift is applied to the ROOT, and the stacked members / degrees inherit it through
         // the anchor octave the root sets.
         int groupOctave = arpeggio.OctaveOffset;
+        // `>>4\3`: the string every member plays on, unless the member names its own.
+        int? groupString = ExtractStringNumber(arpeggio);
 
         int measureIndex = builder.CurrentMeasureIndex;
         int startNoteIndex = builder.CurrentItemCount;
@@ -382,8 +395,21 @@ public sealed partial class MeasureCollector
         int anchorOctave = 0;
         char rootLetter = 'c';
         int rootStep = 0;
-        foreach (var member in members)
+        for (int mi = 0; mi < members.Count; mi++)
         {
+            var (member, shares, slurStart, slurEnd, slurStartSrc, slurEndSrc) = members[mi];
+            bool lastMember = mi == members.Count - 1;
+            // The bows: the member's own marks, plus — on the last member — whatever was
+            // written after '>>'.
+            var marks = new ArpeggioMarks(
+                SlurStart: slurStart || (lastMember && slurStartAfterGroup),
+                SlurEnd: slurEnd || (lastMember && slurEndAfterGroup),
+                TieAfter: lastMember && tieAfterGroup,
+                SlurStartSource: slurStart ? slurStartSrc : slurStartAfterSource,
+                SlurEndSource: slurEnd ? slurEndSrc : slurEndAfterSource,
+                TieSource: tieAfterSource);
+            var parts = sub.SpellShares(shares);
+
             if (member is ScaleDegreeSyntax degree)
             {
                 // Degrees anchor on the root — or, before any pitched member, on the
@@ -397,7 +423,7 @@ public sealed partial class MeasureCollector
                     rootLetter = "cdefgab"[rootStep];
                     anchorOctave = _octave.Resolve(rootStep, 0, rootLetter) + groupOctave;
                 }
-                EmitArpeggioDegree(degree, builder, forced, scale, rootStep, anchorOctave);
+                EmitArpeggioDegree(degree, builder, parts, scale, rootStep, anchorOctave, marks, groupString);
                 continue;
             }
 
@@ -414,7 +440,7 @@ public sealed partial class MeasureCollector
             {
                 _octave.OctaveAbsolute = savedAbsolute; // the root, and any rest
             }
-            EmitArpeggioMember(member, builder, forced, scale, isRoot ? groupOctave : 0);
+            EmitArpeggioMember(member, builder, parts, scale, isRoot ? groupOctave : 0, marks, groupString, measureIndex);
             if (!rootSet && letter is { } rl)
             {
                 rootSet = true;
@@ -462,33 +488,91 @@ public sealed partial class MeasureCollector
         }
     }
 
-    /// <summary>Emit one arpeggio pitch / chord / rest member at the group's forced
-    /// equal-subdivision value and tuplet <paramref name="scale"/> (added WITHOUT
-    /// advancing the measure duration — the group adds its total once).</summary>
+    /// <summary>The bows a <c>&lt;&lt; &gt;&gt;</c> member draws: its own slur marks, and on
+    /// the last member whatever was written after <c>&gt;&gt;</c>. Sources are the marks'
+    /// own characters, defined only where the flag is true (see MarkerFlags).</summary>
+    private readonly record struct ArpeggioMarks(
+        bool SlurStart, bool SlurEnd, bool TieAfter,
+        int SlurStartSource, int SlurEndSource, int TieSource);
+
+    /// <summary>Emit one arpeggio pitch / chord / rest member as the written
+    /// <paramref name="parts"/> its shares spell (tied to one another when there are
+    /// several) at the tuplet <paramref name="scale"/>, added WITHOUT advancing the
+    /// measure duration — the group adds its total once. The member's own post-events
+    /// (scripts, dynamic, string number) are collected on its first part.</summary>
     private void EmitArpeggioMember(SyntaxNode member, MeasureBuilder builder,
-        (int Value, int Dots) forced, Fraction scale, int octaveShift)
+        IReadOnlyList<(int Value, int Dots)> parts, Fraction scale, int octaveShift,
+        ArpeggioMarks marks, int? groupString, int measureIndex)
     {
         switch (member)
         {
             case PitchSyntax pitch:
-                builder.AddItemWithoutDuration(BuildArpeggioNoteItem(pitch, forced, octaveShift) with { TimeScale = scale });
+            {
+                var items = BuildArpeggioNoteItems(pitch, parts, octaveShift, marks, groupString);
+                for (int k = 0; k < items.Count; k++)
+                {
+                    int itemIndex = builder.CurrentItemCount;
+                    builder.AddItemWithoutDuration(items[k] with { TimeScale = scale });
+                    if (k == 0)
+                    {
+                        CollectDynamics(pitch, measureIndex, itemIndex);
+                        CollectArticulations(pitch, measureIndex, itemIndex, items[k].StemUp);
+                    }
+                }
                 break;
+            }
             case ChordSyntax chord:
-                builder.AddItemWithoutDuration(
-                    CreateChordItem(chord, forcedDuration: forced, extraOctave: octaveShift) with { TimeScale = scale });
+            {
+                // A second part re-reads the chord, so the frame is put back to what the
+                // first part read: the root chord adds the group's marks to the anchor on
+                // every read, and a stacked one is read in absolute mode on its base.
+                var frame = (_octave.OctaveAbsolute, _octave.OctaveBase, _octave.CurrentOctave, _octave.LastPitchName);
+                for (int k = 0; k < parts.Count; k++)
+                {
+                    bool first = k == 0, last = k == parts.Count - 1;
+                    if (!first)
+                        (_octave.OctaveAbsolute, _octave.OctaveBase, _octave.CurrentOctave, _octave.LastPitchName) = frame;
+                    int itemIndex = builder.CurrentItemCount;
+                    var item = CreateChordItem(chord, forcedDuration: parts[k], extraOctave: octaveShift,
+                        hasTieAfter: !last || marks.TieAfter,
+                        hasSlurStartAfter: first && marks.SlurStart,
+                        hasSlurEndAfter: last && marks.SlurEnd) with
+                    {
+                        TimeScale = scale,
+                        TieStartSourcePosition = !last ? chord.SourceStart : marks.TieAfter ? marks.TieSource : MusicItem.NoSourcePosition,
+                        SlurStartSourcePosition = first && marks.SlurStart ? marks.SlurStartSource : MusicItem.NoSourcePosition,
+                        SlurEndSourcePosition = last && marks.SlurEnd ? marks.SlurEndSource : MusicItem.NoSourcePosition,
+                    };
+                    builder.AddItemWithoutDuration(item);
+                    if (first)
+                    {
+                        CollectDynamics(chord, measureIndex, itemIndex);
+                        CollectArticulations(chord, measureIndex, itemIndex, item.StemUp);
+                    }
+                }
                 break;
+            }
             case RestSyntax rest:
-                builder.AddItemWithoutDuration(
-                    CreateRestItem(rest, forcedDuration: forced) with { TimeScale = scale });
+                for (int k = 0; k < parts.Count; k++)
+                {
+                    int itemIndex = builder.CurrentItemCount;
+                    builder.AddItemWithoutDuration(
+                        CreateRestItem(rest, forcedDuration: parts[k]) with { TimeScale = scale });
+                    if (k == 0)
+                        CollectArticulations(rest, measureIndex, itemIndex, stemUp: false);
+                }
                 break;
         }
     }
 
-    /// <summary>A bare arpeggio pitch → NoteItem, resolved through the octave frame the
-    /// caller set up (root relative, later members stacked in absolute mode), at the group's
-    /// forced value/dots. <paramref name="octaveShift"/> is the group-level octave mark,
-    /// applied to the root (0 for stacked members, which inherit it via the anchor).</summary>
-    private NoteItem BuildArpeggioNoteItem(PitchSyntax pitch, (int Value, int Dots) forced, int octaveShift)
+    /// <summary>A bare arpeggio pitch → one NoteItem per written part, resolved ONCE through
+    /// the octave frame the caller set up (root relative, later members stacked in absolute
+    /// mode). <paramref name="octaveShift"/> is the group-level octave mark, applied to the
+    /// root (0 for stacked members, which inherit it via the anchor). The parts are tied to
+    /// one another; the member's fingering, l.v. / repeat-tie half-ties, string number and
+    /// dead-note head ride the parts the way a note's would.</summary>
+    private List<NoteItem> BuildArpeggioNoteItems(PitchSyntax pitch, IReadOnlyList<(int Value, int Dots)> parts,
+        int octaveShift, ArpeggioMarks marks, int? groupString)
     {
         // Stacked members arrive in forced-absolute mode and keep the plain path.
         // The ROOT, in relative mode, anchors on its bare LETTER: its own '/, marks
@@ -514,19 +598,48 @@ public sealed partial class MeasureCollector
         if (pitch.QuarterOffset != 0)
             accidental = QuarterToneAccidental(pitch, accidental);
         bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
-        return new NoteItem(staffPosition, Fraction.FromNoteValue(forced.Value), forced.Dots,
-            accidental, needsLedger, pitch.SourceStart, 0, isCourtesy: false)
+        int midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
+        int? fingering = ExtractFingering(pitch);
+        bool hasLv = HasLaissezVibrerAnnotation(pitch);
+        bool hasRepeatTie = HasRepeatTieAnnotation(pitch);
+        int? stringNumber = ExtractStringNumber(pitch) ?? groupString;
+        bool isDead = HasNamedArticulation(pitch, "dead");
+
+        var items = new List<NoteItem>(parts.Count);
+        for (int k = 0; k < parts.Count; k++)
         {
-            Midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
-        };
+            bool first = k == 0, last = k == parts.Count - 1;
+            bool tieStart = !last || marks.TieAfter;
+            items.Add(new NoteItem(staffPosition, Fraction.FromNoteValue(parts[k].Value), parts[k].Dots,
+                // A tied continuation does not print its accidental again.
+                first ? accidental : null, needsLedger, pitch.SourceStart, 0,
+                hasTieStart: tieStart,
+                hasSlurStart: first && marks.SlurStart,
+                hasSlurEnd: last && marks.SlurEnd,
+                isCourtesy: false,
+                fingering: first ? fingering : null,
+                hasLaissezVibrer: last && hasLv,
+                hasRepeatTie: first && hasRepeatTie)
+            {
+                Midi = midi,
+                StringNumber = stringNumber,
+                IsDead = isDead,
+                TieStartSourcePosition = tieStart ? (last ? marks.TieSource : pitch.SourceStart) : MusicItem.NoSourcePosition,
+                SlurStartSourcePosition = first && marks.SlurStart ? marks.SlurStartSource : MusicItem.NoSourcePosition,
+                SlurEndSourcePosition = last && marks.SlurEnd ? marks.SlurEndSource : MusicItem.NoSourcePosition,
+            });
+        }
+        return items;
     }
 
-    /// <summary>A scale-degree arpeggio member (<c>&lt;&lt; c 3 5 &gt;&gt;</c>) → NoteItem,
-    /// stacked on the group's anchor (the root, or the key tonic when no pitched member
-    /// precedes — the caller resolves it) by diatonic steps in the WRITTEN key (the
-    /// transpose is applied once by <see cref="ResolveAbsolutePitch"/>).</summary>
+    /// <summary>A scale-degree arpeggio member (<c>&lt;&lt; c 3 5 &gt;&gt;</c>) → one NoteItem
+    /// per written part, stacked on the group's anchor (the root, or the key tonic when no
+    /// pitched member precedes — the caller resolves it) by diatonic steps in the WRITTEN
+    /// key (the transpose is applied once by <see cref="ResolveAbsolutePitch"/>). A degree
+    /// carries no post-events of its own; the group's string number is its.</summary>
     private void EmitArpeggioDegree(ScaleDegreeSyntax degree, MeasureBuilder builder,
-        (int Value, int Dots) forced, Fraction scale, int rootStep, int anchorOctave)
+        IReadOnlyList<(int Value, int Dots)> parts, Fraction scale, int rootStep, int anchorOctave,
+        ArpeggioMarks marks, int? groupString)
     {
         int writtenKeySharps = _meta.KeySharps - _octave.TransposeKeySharps(0);
         var (step, alteration, octave) = ChordDegrees.Resolve(
@@ -534,12 +647,26 @@ public sealed partial class MeasureCollector
         var rp = ResolveAbsolutePitch(step, alteration, octave, degree.SourceStart);
         var accidental = GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
         bool needsLedger = rp.StaffPosition is <= -6 or >= 6;
-        var noteItem = new NoteItem(rp.StaffPosition, Fraction.FromNoteValue(forced.Value), forced.Dots,
-            accidental, needsLedger, degree.SourceStart, 0, isCourtesy: false)
+        int midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
+        for (int k = 0; k < parts.Count; k++)
         {
-            Midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
-        };
-        builder.AddItemWithoutDuration(noteItem with { TimeScale = scale });
+            bool first = k == 0, last = k == parts.Count - 1;
+            bool tieStart = !last || marks.TieAfter;
+            var noteItem = new NoteItem(rp.StaffPosition, Fraction.FromNoteValue(parts[k].Value), parts[k].Dots,
+                first ? accidental : null, needsLedger, degree.SourceStart, 0,
+                hasTieStart: tieStart,
+                hasSlurStart: first && marks.SlurStart,
+                hasSlurEnd: last && marks.SlurEnd,
+                isCourtesy: false)
+            {
+                Midi = midi,
+                StringNumber = groupString,
+                TieStartSourcePosition = tieStart ? (last ? marks.TieSource : degree.SourceStart) : MusicItem.NoSourcePosition,
+                SlurStartSourcePosition = first && marks.SlurStart ? marks.SlurStartSource : MusicItem.NoSourcePosition,
+                SlurEndSourcePosition = last && marks.SlurEnd ? marks.SlurEndSource : MusicItem.NoSourcePosition,
+            };
+            builder.AddItemWithoutDuration(noteItem with { TimeScale = scale });
+        }
     }
 
 
@@ -1339,7 +1466,10 @@ public sealed partial class MeasureCollector
                 break;
 
             case ArpeggioSyntax arpeggio:
-                ProcessArpeggio(arpeggio, builder);
+                // The markers after '>>' hang on the LAST member (a tie out of the group,
+                // a bow starting or ending on its last note).
+                ProcessArpeggio(arpeggio, builder, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter,
+                    m.TieSource, m.SlurStartSource, m.SlurEndSource);
                 break;
 
             case BarlineSyntax barline:

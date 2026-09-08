@@ -3353,6 +3353,10 @@ public sealed partial class MeasureCollector
         BareDurationSyntax bare => bare.Articulations,
         DrumNoteSyntax drum => drum.Articulations,
         ArpeggioSyntax arpeggio => arpeggio.Articulations,
+        // A bare << >> member (<< c@accent e\3 g >>) carries its own post-events, read
+        // through the same funnel as a note's since 2026-09-07; a chord member's pitches
+        // are read by CreateChordItem, so no other caller hands a PitchSyntax in here.
+        PitchSyntax pitch => pitch.Articulations,
         // A rest carries post-events too (r2\p) — this arm was missing, so
         // CollectDynamics saw an empty list for every rest and r@p dropped the
         // p silently while the fermata path (its own switch in Annotations.cs)

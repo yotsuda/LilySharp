@@ -218,6 +218,11 @@ public sealed class LilyPondExporter
     /// rule, not LilyPond's. See <see cref="EmitEventDuration"/>.</summary>
     private string _lastWrittenValue = "4";
 
+    /// <summary>The dots that go with <see cref="_lastWrittenValue"/> — Lily# carries them
+    /// too (MeasureCollector.ItemFactory: an undurated note takes <c>_defaultDots</c>), and an
+    /// arpeggio's total is that value with its dots.</summary>
+    private int _lastWrittenDots;
+
     /// <summary>Set when the next event must write its duration out because LilyPond would
     /// otherwise infer a different one. See <see cref="EmitEventDuration"/>.</summary>
     private bool _forceNextDuration;
@@ -830,6 +835,7 @@ public sealed class LilyPondExporter
         // Each part starts from Lily#'s own default duration, as the collector does
         // (MeasureCollector resets _defaultDuration to a quarter per part).
         _lastWrittenValue = "4";
+        _lastWrittenDots = 0;
         _forceNextDuration = false;
         // Each part's music variable is its own scope - a slash run cannot stay
         // open across the boundary (the next part opened with a stray
@@ -1538,6 +1544,7 @@ public sealed class LilyPondExporter
         ClefDeclarationSyntax cl => EmitClef(cl),
         PartialDeclarationSyntax p => EmitPartial(p),
         TupletExpressionSyntax tup => EmitTuplet(tup),
+        ArpeggioSyntax arp => CloseImprovisation() + EmitArpeggio(arp),
         ParallelExpressionSyntax par => EmitParallel(par),
         GraceExpressionSyntax g => EmitGrace(g),
         CueExpressionSyntax cue => EmitCue(cue),
@@ -1574,12 +1581,17 @@ public sealed class LilyPondExporter
     /// head of a piece. The twin was then a different piece of music, and LilyPond said so:
     /// test/ossia-beams failed its bar check at 7/8.
     /// <para>
-    /// A DOT parts them the same way, and in the other direction: Lily# carries the note VALUE
-    /// and drops the dots, LilyPond carries the duration whole. So <c>c4. d</c> is 5/8 of music
-    /// on the page and 6/8 in the twin — and in 6/8 that twin's bar is COMPLETE, so LilyPond
-    /// has nothing to say about it. Measured 2026-08-01: <c>c'4. d'</c> and <c>c'4. d'4</c>
-    /// draw the same six glyphs and raise the same short-measure LYS2006, while
-    /// <c>c'4. d'4.</c> draws seven. ⇒ the event after a DOTTED one writes its value out too.
+    /// A DOT parted them the same way, and in the other direction: until 2026-08-07 Lily#
+    /// carried the note VALUE and dropped the dots while LilyPond carries the duration whole,
+    /// so <c>c4. d</c> was 5/8 of music on the page and 6/8 in the twin (measured 2026-08-01:
+    /// <c>c'4. d'</c> and <c>c'4. d'4</c> drew the same six glyphs). ⇒ the event after a
+    /// DOTTED one writes its value out. ⚠️ Since 2026-08-07 the collector carries the dots too
+    /// (MeasureCollector.ItemFactory CreateNoteItem: <c>dots = note.Duration?.DotCount ??
+    /// _defaultDots</c>), so the forced write now says the value WITH its dots
+    /// (<see cref="_lastWrittenDots"/>) — the same music LilyPond would carry unwritten. The
+    /// write stays because the arpeggio arm (<see cref="EmitArpeggio"/>) reuses this forcing
+    /// where the two sides really do part: after a <c>&lt;&lt; … &gt;&gt;</c> LilyPond carries
+    /// the member value and Lily# the group's.
     /// </para>
     /// <para>
     /// Those two cases aside, everything keeps copying the source, because a transpiler that
@@ -1598,15 +1610,15 @@ public sealed class LilyPondExporter
         if (d != null)
         {
             _lastWrittenValue = d.NumberToken.Text;
-            // Lily#'s carry is the value alone, so the next event has to be told the value
-            // whenever this one wrote dots LilyPond would carry with it.
+            _lastWrittenDots = d.DotCount;
+            // A dotted event's carry is written out on the next one (see the remarks).
             _forceNextDuration = d.DotCount > 0;
             return EmitDuration(d);
         }
         if (!_forceNextDuration)
             return "";
         _forceNextDuration = false;
-        return _lastWrittenValue;
+        return _lastWrittenValue + new string('.', _lastWrittenDots);
     }
 
     private string EmitNote(NoteSyntax n)
@@ -2542,6 +2554,339 @@ public sealed class LilyPondExporter
         _warnings.AddRange(buf._warnings);
         string body = buf._sb.ToString().Replace("\n", " ").Trim();
         return $"\\tuplet {tup.Numerator.Text}/{tup.Denominator.Text} {{ {body} }}";
+    }
+
+    /// <summary>
+    /// A written-out broken chord (<c>&lt;&lt; c e g &gt;&gt;</c>) as the tuplet LilyPond
+    /// needs to say it with: the members at <see cref="ArpeggioSubdivision"/>'s value under its
+    /// M/P bracket — <c>\tuplet 3/2 { c8 e g }</c> — or plain notes when the frame holds them
+    /// exactly (<c>&lt;&lt; c e g a &gt;&gt;</c> after a quarter is <c>c16 e g a</c>).
+    /// </summary>
+    /// <remarks>
+    /// <para>OCTAVES. Lily# STACKS every pitched member on the ROOT — the first pitched
+    /// member, its letter resolved bare in the incoming frame plus the group's own marks —
+    /// exactly as a chord's members stack, and the event after the group is relative to that
+    /// root (MeasureCollector.MusicWalk ProcessArpeggio; degrees stack by ChordDegrees on the
+    /// same anchor, or on the key's tonic when no pitched member precedes; a nested chord
+    /// stacks by its first letter and its own members are then read in ABSOLUTE mode on that
+    /// octave, so <c>&lt;&lt; c &lt;g e&gt; &gt;&gt;</c> is C E-below-G, not E stacked above G).
+    /// LilyPond's <c>\relative</c> reads the members as a SEQUENCE, each against the previous
+    /// pitch with rests passed over, so every mark is recomputed against that chain — the
+    /// source's marks are not the twin's — and after the group the two frames part (Lily# on
+    /// the root, LilyPond on the last pitch) the way a degree chord parts them;
+    /// <see cref="EmitMusicPitch"/> closes the gap on the next note.
+    /// LILYPOND-REF: lily/music-sequence.cc:142-160 music_list_to_relative — the chain, and
+    ///   a rest has no pitch to hand it, which is why a rest leaves <c>last</c> alone.</para>
+    /// <para>DURATIONS. The members carry none, so the first writes the subdivision's value
+    /// and the rest inherit it inside the tuplet, as both parsers carry. After the group
+    /// LilyPond would carry that member value while Lily# carries the trailing
+    /// <c>&gt;&gt;N</c> (dots and all) or, absent one, what ran before — so the next event is
+    /// forced to write Lily#'s value (<see cref="EmitEventDuration"/>).</para>
+    /// <para>Until 2026-09-07 this node fell to <see cref="Skip"/>: a twin with an "Arpeggio
+    /// not exported" warning and a bar short by the group's whole duration, so no
+    /// <c>&lt;&lt; … &gt;&gt;</c> book could be measured against LilyPond at all — found when
+    /// ArpeggioSubdivision's spelling needed its LilyPond picture and the twin could only be
+    /// built from the hand-written tuplet.</para>
+    /// </remarks>
+    private string EmitArpeggio(ArpeggioSyntax arp)
+    {
+        var members = arp.Sequence.ToList();
+        if (members.Count == 0)
+            return "";
+
+        // The group's total: the trailing `>>N`, or the running duration Lily# would give a
+        // bare note here — value AND dots (MeasureCollector.ItemFactory carries both).
+        string runningValue = _lastWrittenValue;
+        int runningDots = _lastWrittenDots;
+        Fraction total = arp.TotalDuration?.ToFraction()
+            ?? Fraction.FromNoteValue(int.TryParse(runningValue, out int rv) ? rv : 4).Dotted(runningDots);
+        var sub = ArpeggioSubdivision.Compute(arp.ShareCount, total);
+        int groupOctave = arp.OctaveOffset;
+
+        if (!_octaveAbsolute && !_frameTracked && members.Any(m => m.Node is ScaleDegreeSyntax))
+            _warnings.Add(
+                "a degree arpeggio follows a phrase reference, whose nested \\relative leaves the "
+                + "octave frame with a different answer on each side — check its octave by hand");
+
+        // Group-level post-events (`>>@f`): the prefix goes before the tuplet, the suffix
+        // rides on the FIRST member, which is where Lily# sounds them (CollectDynamics). A
+        // string number on the group is every member's (the collector's groupString), so it
+        // is written on each member that names none of its own, not on the first.
+        string? groupString = arp.Articulations.OfType<StringNumberAnnotationSyntax>()
+            .FirstOrDefault()?.StringNumberToken.Text;
+        var (groupPrefix, groupSuffix) = SplitAttachments(
+            arp.Articulations.Where(a => a is not StringNumberAnnotationSyntax));
+
+        var body = new StringBuilder();
+        bool rootSet = false;
+        int rootStep = 0, anchorOctave = 0;
+        for (int i = 0; i < members.Count; i++)
+        {
+            var (member, shares, slurStart, slurEnd, _, _) = members[i];
+            // What the member's shares spell: one note, or notes tied to one another
+            // (a rest's parts stand apart). Every part writes its duration.
+            var parts = sub.SpellShares(shares);
+            if (i > 0)
+                body.Append(' ');
+            string head;               // the member without its duration
+            string prefix = "", suffix = "";
+            bool tieParts = true;
+            switch (member)
+            {
+                case RestSyntax rest:
+                    (prefix, suffix) = SplitAttachments(rest.Articulations);
+                    head = rest.RestToken.Text;
+                    tieParts = false;
+                    break;
+
+                case ScaleDegreeSyntax degree:
+                {
+                    if (!rootSet)
+                    {
+                        // Degrees before any pitched member anchor on the KEY'S TONIC (C when
+                        // the key has none), which then becomes the group's anchor.
+                        rootSet = true;
+                        rootStep = _tonic.Valid ? _tonic.Step : 0;
+                        anchorOctave = (_octaveAbsolute ? _absoluteBaseOctave
+                            : RelativeOctave.Resolve(_lysStep, _lysOctave, rootStep, 0)) + groupOctave;
+                    }
+                    var (step, alteration, octave) = ChordDegrees.Resolve(
+                        rootStep, anchorOctave, degree.Number, degree.Alteration,
+                        degree.OctaveOffset, _keySharps);
+                    head = SpellPitch(step, alteration) + OctaveMarks(ArpeggioMarks(step, octave));
+                    suffix = groupString ?? "";
+                    AdvanceLilyPondFrame(step, octave);
+                    break;
+                }
+
+                case PitchSyntax p:
+                {
+                    int step = RelativeOctave.StepIndex(p.PitchName[0]);
+                    int want;
+                    if (!rootSet)
+                    {
+                        // The root. Relative: the anchor is its bare letter in the frame plus
+                        // the group's marks, and its own marks are local. Absolute: there is
+                        // no frame, so the anchor is where it sounds, marks included — the
+                        // collector's two arms (BuildArpeggioNoteItems).
+                        rootSet = true;
+                        rootStep = step;
+                        if (_octaveAbsolute)
+                        {
+                            anchorOctave = _absoluteBaseOctave + p.OctaveOffset + groupOctave;
+                            want = anchorOctave;
+                        }
+                        else
+                        {
+                            anchorOctave = RelativeOctave.Resolve(_lysStep, _lysOctave, step, 0) + groupOctave;
+                            want = anchorOctave + p.OctaveOffset;
+                        }
+                    }
+                    else
+                    {
+                        // Stacked on the root: the root's octave, bumped when the letter is
+                        // below the root's, plus its own marks.
+                        want = anchorOctave + (step >= rootStep ? 0 : 1) + p.OctaveOffset;
+                    }
+                    (prefix, suffix) = SplitAttachments(p.Articulations);
+                    if (groupString != null && !p.Articulations.OfType<StringNumberAnnotationSyntax>().Any())
+                        suffix += groupString;
+                    head = p.PitchToken.Text + OctaveMarks(ArpeggioMarks(step, want));
+                    AdvanceLilyPondFrame(step, want);
+                    break;
+                }
+
+                case ChordSyntax chord:
+                    head = EmitArpeggioChord(chord, groupOctave, ref rootSet, ref rootStep, ref anchorOctave);
+                    (prefix, suffix) = SplitAttachments(chord.Articulations);
+                    break;
+
+                default:
+                    continue;
+            }
+
+            body.Append(prefix);
+            for (int k = 0; k < parts.Count; k++)
+            {
+                bool first = k == 0, last = k == parts.Count - 1;
+                if (!first)
+                    body.Append(' ');
+                body.Append(head).Append(parts[k].Value).Append('.', parts[k].Dots);
+                if (first)
+                {
+                    body.Append(suffix);
+                    if (i == 0)
+                        body.Append(groupSuffix);
+                    if (slurStart)
+                        body.Append('(');
+                }
+                if (last && slurEnd)
+                    body.Append(')');
+                if (!last && tieParts)
+                    body.Append('~');
+            }
+        }
+
+        // After the group Lily# stands on the root; LilyPond's frame already stands on the
+        // last pitch written (AdvanceLilyPondFrame).
+        if (!_octaveAbsolute && rootSet)
+        {
+            _lysStep = rootStep;
+            _lysOctave = anchorOctave;
+        }
+
+        // Lily#'s carry after the group: the trailing `>>N` whole, or what ran before it.
+        // LilyPond's is the member value, so the next event writes Lily#'s out.
+        if (arp.TotalDuration is { } td)
+        {
+            _lastWrittenValue = td.NumberToken.Text;
+            _lastWrittenDots = td.DotCount;
+        }
+        else
+        {
+            _lastWrittenValue = runningValue;
+            _lastWrittenDots = runningDots;
+        }
+        _forceNextDuration = true;
+
+        string inner = body.ToString();
+        return groupPrefix + (sub.HasTuplet
+            ? $"\\tuplet {sub.TupletNum}/{sub.TupletBase} {{ {inner} }}"
+            : inner);
+    }
+
+    /// <summary>The octave marks that put a pitch at <paramref name="octave"/>: against
+    /// LilyPond's running relative frame, or against the <c>\fixed</c> base plus the section
+    /// reference's shift in absolute mode.</summary>
+    private int ArpeggioMarks(int step, int octave) => _octaveAbsolute
+        ? octave - _absoluteBaseOctave + _sectionOctaveOffset
+        : octave - RelativeOctave.Resolve(_lyStep, _lyOctave, step, 0);
+
+    /// <summary>LilyPond's frame moves past every pitch it reads in a sequence; Lily#'s is
+    /// set once, after the group (the root).</summary>
+    private void AdvanceLilyPondFrame(int step, int octave)
+    {
+        if (_octaveAbsolute)
+            return;
+        _lyStep = step;
+        _lyOctave = octave;
+    }
+
+    /// <summary>
+    /// A chord member of an arpeggio (<c>&lt;&lt; &lt;c e&gt; g &gt;&gt;</c>), written where the
+    /// collector sounds it (MeasureCollector.ItemFactory CreateChordItem through
+    /// MusicWalk.EmitArpeggioMember): as the ROOT it is an ordinary chord in the incoming
+    /// frame with the group's marks folded in — its members stack on its own root in relative
+    /// mode; STACKED, its first letter takes the stacked octave and every member is then read
+    /// in ABSOLUTE mode on that octave (its own marks and the chord's, no stacking). Degrees
+    /// resolve on the chord's root either way. Written against LilyPond's chain member by
+    /// member, whose frame then stands on the chord's FIRST member
+    /// (LILYPOND-REF: lily/music-sequence.cc:213-219 event_chord_relative_callback).
+    /// Returns the <c>&lt;…&gt;</c> alone — no duration, no post-events.
+    /// </summary>
+    private string EmitArpeggioChord(ChordSyntax chord, int groupOctave,
+        ref bool rootSet, ref int rootStep, ref int anchorOctave)
+    {
+        int chordOff = chord.ChordOctaveOffset;
+        var pitches = chord.Pitches.ToList();
+        char? letter = RelativeOctave.FirstPitchLetter(chord);
+        bool isRoot = !rootSet;
+
+        // The chord's own root letter, the octave its degrees stack on (CreateChordItem's
+        // firstOctave: the bare anchor in relative mode, the root's sounding octave in
+        // absolute mode), where its first pitch sounds, and — for a stacked chord — the base
+        // every member is read from.
+        int chordRootStep, chordRootOctave, firstPitchOctave = 0, stackedBase = 0;
+        if (letter is { } l)
+        {
+            chordRootStep = RelativeOctave.StepIndex(l);
+            int rootMarks = pitches[0].OctaveOffset;
+            if (isRoot)
+            {
+                rootSet = true;
+                rootStep = chordRootStep;
+                if (_octaveAbsolute)
+                {
+                    anchorOctave = _absoluteBaseOctave + rootMarks + chordOff + groupOctave;
+                    chordRootOctave = firstPitchOctave = anchorOctave;
+                }
+                else
+                {
+                    anchorOctave = RelativeOctave.Resolve(_lysStep, _lysOctave, chordRootStep, 0)
+                        + chordOff + groupOctave;
+                    chordRootOctave = anchorOctave;
+                    firstPitchOctave = anchorOctave + rootMarks; // its own marks are local
+                }
+            }
+            else
+            {
+                stackedBase = anchorOctave + (chordRootStep >= rootStep ? 0 : 1);
+                chordRootOctave = firstPitchOctave = stackedBase + rootMarks + chordOff;
+            }
+        }
+        else
+        {
+            // No pitch at all (<1 3 5>): the tonic is the chord's root, as CreateChordItem
+            // reads it; as the group's root it becomes the anchor as well.
+            chordRootStep = _tonic.Valid ? _tonic.Step : 0;
+            if (isRoot)
+            {
+                rootSet = true;
+                rootStep = chordRootStep;
+                anchorOctave = (_octaveAbsolute ? _absoluteBaseOctave
+                    : RelativeOctave.Resolve(_lysStep, _lysOctave, chordRootStep, 0)) + chordOff + groupOctave;
+                chordRootOctave = anchorOctave;
+            }
+            else
+            {
+                stackedBase = anchorOctave + (chordRootStep >= rootStep ? 0 : 1);
+                chordRootOctave = stackedBase + chordOff;
+            }
+        }
+
+        var sb = new StringBuilder("<");
+        bool first = true;
+        int firstStep = -1, firstOctave = 0;
+        foreach (var p in pitches)
+        {
+            if (!first) sb.Append(' ');
+            int step = RelativeOctave.StepIndex(p.PitchName[0]);
+            int octave;
+            if (first)
+                octave = firstPitchOctave;
+            else if (isRoot && !_octaveAbsolute)
+                octave = anchorOctave + (step >= chordRootStep ? 0 : 1) + p.OctaveOffset; // stacked on the chord's root
+            else if (isRoot)
+                octave = _absoluteBaseOctave + p.OctaveOffset + chordOff + groupOctave;
+            else
+                octave = stackedBase + p.OctaveOffset + chordOff;                          // absolute on the stacked base
+            sb.Append(p.PitchToken.Text).Append(OctaveMarks(ArpeggioMarks(step, octave)));
+            foreach (var art in p.Articulations)
+                _warnings.Add($"arpeggio chord member {p.PitchName}: {art.GetType().Name} dropped (out of scope)");
+            if (first) { firstStep = step; firstOctave = octave; }
+            AdvanceLilyPondFrame(step, octave);
+            first = false;
+        }
+        foreach (var degree in chord.Degrees)
+        {
+            if (!first) sb.Append(' ');
+            var (step, alteration, octave) = ChordDegrees.Resolve(
+                chordRootStep, chordRootOctave, degree.Number, degree.Alteration,
+                degree.OctaveOffset, _keySharps);
+            sb.Append(SpellPitch(step, alteration)).Append(OctaveMarks(ArpeggioMarks(step, octave)));
+            if (first) { firstStep = step; firstOctave = octave; }
+            AdvanceLilyPondFrame(step, octave);
+            first = false;
+        }
+        foreach (var drum in chord.DrumNames)
+            _warnings.Add($"arpeggio chord member '{drum.DrumName}': a drum name inside << >> is not exported");
+        sb.Append('>');
+        // LilyPond's frame after a chord is its FIRST member, not its last.
+        if (firstStep >= 0)
+            AdvanceLilyPondFrame(firstStep, firstOctave);
+        // The caller writes the duration(s) and the chord's own post-events: a chord
+        // holding several shares is written once per part, tied.
+        return sb.ToString();
     }
 
     /// <summary>
