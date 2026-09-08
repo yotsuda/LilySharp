@@ -621,6 +621,11 @@ public class SpacingInvariantTests
     /// so WITHOUT the join one line wins; WITH it the one-line candidate is unsettable
     /// (min &gt; available) and the breaker must split. The precondition min+excess &gt;
     /// ideal is asserted too — it is what makes the window between the two widths real.
+    /// ⚠️ The words are "mummum", not LCW's "mum": the window is the cross-bar deficit
+    /// against Σ(ideal − min) of the pair's non-lyric springs, and once session 351
+    /// dropped the bar-line halves (the pair's minimum lost two of them) "mum" fell
+    /// 0.6 short of it (min+excess 46.953 against ideal 47.551). A wider word raises the
+    /// deficit and nothing else — the in-bar rods lift min and ideal together.
     /// </remarks>
     [Fact]
     public void BreakGate_PricesTheCrossBarLyricRod()
@@ -635,7 +640,7 @@ public class SpacingInvariantTests
             }
 
             lyrics w sings melody {
-              section A { mum mum mum mum | mum mum mum mum }
+              section A { mummum mummum mummum mummum | mummum mummum mummum mummum }
             }
 
             form main { ~A }

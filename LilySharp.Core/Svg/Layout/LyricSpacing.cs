@@ -129,9 +129,9 @@ internal static class LyricSpacing
     }
 
     /// <summary>
-    /// One lyric line's reservations over a measure's spring chain: the leading extent to
-    /// the opening bar, the word/hyphen distance between consecutive syllables, the
-    /// trailing extent to the closing bar. Reserves across the SPANS between
+    /// One lyric line's reservations over a measure's spring chain: the word/hyphen
+    /// distance between consecutive syllables — and, on a LEAD SHEET only, the leading and
+    /// trailing extents to the bar lines. Reserves across the SPANS between
     /// syllable-carrying columns — a wide syllable held over following notes (a melisma)
     /// overlaps THEIR columns freely in LilyPond; only the next SYLLABLE's ink binds.
     /// An ADJACENT pair (one spring) takes a min bump on that spring; a pair whose span
@@ -154,27 +154,30 @@ internal static class LyricSpacing
     /// on their max in ApplyRods, as the adjacent bumps' have-checks do on one spring.
     /// </summary>
     /// <remarks>
-    /// ⚠️ LILYSHARP-OWN, the leading/trailing halves: LilyPond reserves NOTHING between a
-    /// syllable and a bar line (their spacing boxes never overlap in Y — LyricText even
-    /// recedes 0.2 each side, extra-spacing-height (0.2 . -0.2)) and rods the next
-    /// SYLLABLE's ink straight across the bar instead. Lily# prices measures one at a time
-    /// for breaking and laying out, so a half is applied only where NO cross-bar rod will
-    /// take over: since 2026-08-20 a line that CONTINUES into the adjacent measure drops
-    /// the half on that side, and the pair is rodded across the bar at line level instead
+    /// A SYLLABLE AND A BAR LINE: LilyPond reserves NOTHING between them. Their spacing
+    /// boxes never overlap in Y — LyricText even recedes 0.2 each side (LILYPOND-REF:
+    /// scm/define-grobs.scm:2213-2218 LyricText extra-spacing-height (0.2 . -0.2)) — so
+    /// the only thing that binds a syllable horizontally is the next SYLLABLE's ink,
+    /// rodded straight across the bar (lily/lyric-hyphen.cc:163-179 set_spacing_rods).
+    /// MEASURED 2026-09-08 (session 351) on the twins of three fixtures, LilyPond 2.26.0
+    /// ragged-right, serif pinned: in test/lyrics-after-rest-bar the line's first word
+    /// "Twin-" starts 1.11 ss LEFT of the bar line it follows (column 15.405, ext −2.335,
+    /// bar 14.183) and the bar is 18.147 wide; Lily#'s leading half priced that bar at
+    /// 19.67 = +1.523, the half's deficit to the digit (2.335 + 0.4 − 1.222). test/lyrics
+    /// ("how" overhangs its bar by 0.55) and test/lyrics-volta (verse 2's "How", +1.6)
+    /// read the same way. So a staff-backed score reserves no half at either bar: a line
+    /// that CONTINUES into the adjacent measure is rodded across the bar at line level
     /// (<see cref="CrossBarLyricRodDistance(in LyricLineEdge, in LyricLineEdge, double)"/>,
-    /// fed to MultiStaffLayouter's Simple_spacer
-    /// rod list AND — as a minimum excess — to the break gate's pricing; the ledger point
-    /// lyrics.column.word-gap.cross-barline closed on that rod). What the halves still
-    /// stand in for, deliberately: a line's FIRST/LAST syllable against its bar line
-    /// (LilyPond reserves nothing there either, but that regime is UNMEASURED — no probe
-    /// point yet — so the invented 0.4 stays until one exists), and the same quantities
-    /// re-appear at a SYSTEM's edges when a broken line's halves were dropped here
-    /// (LineStartLyricFloor / LineEndLyricReservation — LilyPond's own line-end hyphen
-    /// reservation at a break is likewise unmeasured, so the pre-port numbers are kept
-    /// there rather than guessed).
-    /// ⚠️ The leading half is kept when the first syllable is NOT on column 0 even for a
-    /// continuing line: its bump lands on an interior spring the line-start substitution
-    /// never touches, and no floor could re-supply it at a break.
+    /// fed to MultiStaffLayouter's Simple_spacer rod list AND — as a minimum excess — to
+    /// the break gate's pricing; the ledger point lyrics.column.word-gap.cross-barline
+    /// closed on that rod), and a line's FIRST/LAST syllable simply overhangs its bar.
+    /// Until session 351 the halves stood in for that first/last regime ("unmeasured, so
+    /// the invented 0.4 stays until a point exists") — the point now exists.
+    /// ⚠️ LILYSHARP-OWN, what remains: (a) the LEAD-SHEET halves (keepEdgeHalves — user
+    /// decision 2026-08-20, below), and (b) the same quantities re-supplied at a SYSTEM's
+    /// edges for a line that continues across the break (LineStartLyricFloor /
+    /// LineEndLyricReservation — LilyPond's own line-end hyphen reservation at a break is
+    /// still unmeasured, so the pre-port numbers are kept there rather than guessed).
     /// </remarks>
     private static void ReserveLyricLine(
         ImmutableArray<Spring>.Builder result,
@@ -182,24 +185,20 @@ internal static class LyricSpacing
         SortedDictionary<int, List<LyricItem>> byCol,
         int endColumn,
         System.Func<int, (double Left, double Centre)> edge,
-        bool continuesFromPrev,
-        bool continuesIntoNext,
         List<(int Left, int Right, double Distance)> rods,
         bool keepEdgeHalves = false)
     {
         var cols = new List<int>(byCol.Keys);
 
-        // Leading extent: the line's first syllable clears the start barline — unless the
-        // line continues from the previous measure, where the cross-bar rod binds instead
-        // (and, at a line START, LineStartLyricFloor re-supplies this same quantity).
-        // LILYSHARP-OWN, keepEdgeHalves: on a LEAD SHEET the halves are kept even for a
-        // continuing line (user report 2026-08-20, "the bar and the next word overlap"):
-        // the grid's bar lines run THROUGH the lyric band, so ink flowing over a bar —
-        // LilyPond's own behaviour for lyrics under a staff, where the bar is elsewhere
-        // — reads as a collision on the grid. The cross-bar rod still applies; halves
-        // and rod are both minima, so the effective constraint is their max.
+        // Leading extent: LILYSHARP-OWN, keepEdgeHalves only — on a LEAD SHEET the line's
+        // first syllable clears the start barline (user report 2026-08-20, "the bar and
+        // the next word overlap"): the grid's bar lines run THROUGH the lyric band, so ink
+        // flowing over a bar — LilyPond's own behaviour for lyrics under a staff, where
+        // the bar is elsewhere — reads as a collision on the grid. The cross-bar rod still
+        // applies; halves and rod are both minima, so the effective constraint is their
+        // max. A staff-backed score reserves nothing here (see the remark).
         int first = cols[0];
-        if (keepEdgeHalves || !(continuesFromPrev && first == 0))
+        if (keepEdgeHalves)
             BumpSpanMin(result, 0, first,
                 GetLyricLeftExtent(fonts, byCol[first], edge(first)) + GlyphMetrics.MinItemGap);
 
@@ -218,11 +217,11 @@ internal static class LyricSpacing
                 rods.Add((a + 1, b + 1, need));
         }
 
-        // Trailing extent: the line's last syllable clears the end barline — unless the
-        // line continues into the next measure, where the cross-bar rod binds instead
-        // (and, at a line END, LineEndLyricReservation re-supplies this same quantity).
+        // Trailing extent: the lead-sheet half again (the line's last syllable clears the
+        // end barline); a staff-backed score's last syllable overhangs its bar as
+        // LilyPond's does, and a continuing line is rodded across it at line level.
         int last = cols[^1];
-        if (keepEdgeHalves || !continuesIntoNext)
+        if (keepEdgeHalves)
             BumpSpanMin(result, last + 1, endColumn,
                 GetLyricRightExtent(fonts, byCol[last], edge(last)) + GlyphMetrics.MinItemGap);
     }
@@ -354,8 +353,10 @@ internal static class LyricSpacing
             return -1;
         }
 
-        var lines = GroupByLine(lyrics, measureIndex, ColumnOf, include,
-            out var prevKeys, out var nextKeys);
+        // The neighbour keys are the cross-bar model's (MeasureLineEdges); the in-measure
+        // reservations no longer read them — nothing here depends on whether the line
+        // continues, since session 351 dropped the bar-line halves (ReserveLyricLine).
+        var lines = GroupByLine(lyrics, measureIndex, ColumnOf, include, out _, out _);
         if (lines.Count == 0)
             return springs;
 
@@ -373,10 +374,7 @@ internal static class LyricSpacing
                 : c => (lineByCol.TryGetValue(c, out var ls) && ls.Count > 0
                             ? ownEdge(ls[0]) : null)
                        ?? AlignmentEdge(parentAlignmentEdges, c);
-            ReserveLyricLine(result, fonts, byCol, cols, lineEdge,
-                continuesFromPrev: prevKeys?.Contains(key) == true,
-                continuesIntoNext: nextKeys?.Contains(key) == true,
-                rods, keepEdgeHalves);
+            ReserveLyricLine(result, fonts, byCol, cols, lineEdge, rods, keepEdgeHalves);
         }
         // The spanning reservations, as the RANGE rods they are in LilyPond — applied
         // measure-locally through the one Simple_spacer::add_rod port, AFTER every line's
@@ -406,10 +404,10 @@ internal static class LyricSpacing
     /// (<see cref="ReserveLyricLine"/>): counting the have in minimums while a ragged
     /// line stands at ideals over-opens the span by Σ(ideal − min) of the non-final
     /// springs and leaves the intermediate gaps undistributed — the lyrics.melisma-span.*
-    /// pair priced both faces. The remaining multi-spring callers are the LILYSHARP-OWN
-    /// leading/trailing halves, kept deliberately: their regime is unmeasured, and the
-    /// leading bump's last-spring landing is what the line-start substitution's
-    /// keep-the-interior-spring guarantee relies on.
+    /// pair priced both faces. The remaining multi-spring callers are the LEAD-SHEET
+    /// leading/trailing halves (LILYSHARP-OWN, a user decision — see
+    /// <see cref="ReserveLyricLine"/>); a staff-backed score has no bar-line half at all
+    /// since session 351.
     /// </remarks>
     private static void BumpSpanMin(ImmutableArray<Spring>.Builder springs, int from, int to, double need)
     {
@@ -862,10 +860,13 @@ internal static class LyricSpacing
         if (lyrics == null || lyrics.Count == 0)
             return 0;
 
-        // Find the widest lyric (for multiple verses)
-        double maxExtent = 0;
-        foreach (var lyric in lyrics)
-            maxExtent = Math.Max(maxExtent, LyricRightExtent(fonts, lyric, alignmentEdge));
+        // The widest reach among the syllables on the column (several verses of ONE line
+        // is not a regime — callers pass one line — but the list form is kept). Seeded from
+        // the first syllable, not from 0: a reach is a SIGNED protrusion in LilyPond and the
+        // rod is plain arithmetic on it — see GetLyricLeftExtent, where the sign matters.
+        double maxExtent = LyricRightExtent(fonts, lyrics[0], alignmentEdge);
+        for (int i = 1; i < lyrics.Count; i++)
+            maxExtent = Math.Max(maxExtent, LyricRightExtent(fonts, lyrics[i], alignmentEdge));
         return maxExtent;
     }
 
@@ -881,13 +882,23 @@ internal static class LyricSpacing
     }
 
     /// <summary>
-    /// How far the widest syllable on a column reaches LEFT of that column — negative when
+    /// How far the widest syllable on a column reaches LEFT of that column — NEGATIVE when
     /// the syllable does not reach left of it at all (a narrow centred syllable, or any
     /// left-aligned melisma syllable, whose ink starts AT the extent's left edge).
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/self-alignment-interface.cc:117-176, as for
-    /// <see cref="GetLyricRightExtent"/>.
+    /// <see cref="GetLyricRightExtent"/>. The SIGN is load-bearing: LilyPond's rod is
+    /// minimum-distance + bounds_protrusion, and the protrusion is signed arithmetic on
+    /// the bounds' extents (LILYPOND-REF: lily/rod.cc:56-67 bounds_protrusion — the right
+    /// bound contributes <c>−extent[LEFT]</c>, positive for ink left of its origin, negative
+    /// for ink that starts right of it), then add_to_cols shifts by each bound's X-offset
+    /// (lily/rod.cc:33-54). A syllable narrower than its head's alignment extent — "I"
+    /// centred on a quarter's 0.652 — thus SHORTENS the rod to it: "How I" is 3.505 in
+    /// LilyPond (3.213 + 0.45 − 0.157, test/lyrics-after-rest-bar's twin, 2026-09-08), and
+    /// until session 351 this function clamped the reach at 0 and priced the same pair at
+    /// 3.67 (+0.16 on every bar with a narrow syllable after a wide one — the "how I won-
+    /// der" bar of test/lyrics read +0.161 against its twin).
     /// </remarks>
     internal static double GetLyricLeftExtent(
         Rendering.ScoreTextMetrics fonts, List<LyricItem>? lyrics, (double Left, double Centre) alignmentEdge)
@@ -895,10 +906,11 @@ internal static class LyricSpacing
         if (lyrics == null || lyrics.Count == 0)
             return 0;
 
-        // Find the widest lyric (for multiple verses)
-        double maxExtent = 0;
-        foreach (var lyric in lyrics)
-            maxExtent = Math.Max(maxExtent, LyricLeftExtent(fonts, lyric, alignmentEdge));
+        // The widest reach among the syllables on the column, seeded from the first one
+        // so a negative reach survives (a 0 seed was the clamp described above).
+        double maxExtent = LyricLeftExtent(fonts, lyrics[0], alignmentEdge);
+        for (int i = 1; i < lyrics.Count; i++)
+            maxExtent = Math.Max(maxExtent, LyricLeftExtent(fonts, lyrics[i], alignmentEdge));
         return maxExtent;
     }
 

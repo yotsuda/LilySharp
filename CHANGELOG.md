@@ -38,6 +38,19 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A line's first or last syllable overhangs its bar line, as LilyPond's does.** Lily# used
+  to hold a lyric line's first syllable clear of the bar line before it (and its last clear of
+  the bar after it) by half the word plus 0.4 staff spaces — a reservation LilyPond does not
+  have: a syllable and a bar line never meet in LilyPond's spacing, only the next syllable
+  binds. Measured on the twins: the bar that opens "Twin- kle twin- kle" after a rest bar stood
+  19.67 staff spaces wide against LilyPond's 18.147 (+1.52, the reservation's deficit to the
+  digit), the bar where a second verse begins +1.6. A lead sheet keeps its clearance: there the
+  grid's bar lines run through the lyric band (user decision, 2026-08-20).
+- **A narrow syllable after a wide one no longer pushes its note.** The rod between two
+  syllables is LilyPond's arithmetic on their reaches, and a syllable narrower than the note
+  head's alignment extent — "I" centred on a quarter — reaches a negative distance left of its
+  column, which shortens the rod. Lily# clamped that reach at 0, so "How I won- der" was 0.16
+  staff spaces wider than LilyPond's on every such bar.
 - **A chord or lyrics row's bar is as long as the music's bar.** The row grids its slots on
   the score meter, so a pickup bar under a row carried a whole meter of row spacer and was
   spaced for it — amazing-grace's one-beat pickup stood 6.34 staff spaces wider with its chords

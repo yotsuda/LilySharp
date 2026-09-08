@@ -349,9 +349,9 @@
 ### `LilySharp.Core/Svg/Layout/LyricHyphen.cs`
 - **:63** LILYSHARP-OWN: LP scales h by lily/lyric-hyphen.cc:66-68 font_size_step
 ### `LilySharp.Core/Svg/Layout/LyricSpacing.cs`
-- **:157** ⚠️ LILYSHARP-OWN, the leading/trailing halves: LilyPond reserves NOTHING between a
-- **:195** LILYSHARP-OWN, keepEdgeHalves: on a LEAD SHEET the halves are kept even for a
-- **:409** pair priced both faces. The remaining multi-spring callers are the LILYSHARP-OWN
+- **:176** ⚠️ LILYSHARP-OWN, what remains: (a) the LEAD-SHEET halves (keepEdgeHalves — user
+- **:193** Leading extent: LILYSHARP-OWN, keepEdgeHalves only — on a LEAD SHEET the line's
+- **:408** leading/trailing halves (LILYSHARP-OWN, a user decision — see
 ### `LilySharp.Core/Svg/Layout/MeterGlyphRun.cs`
 - **:110** ⚠️ LILYSHARP-OWN: the fallback branch. The only non-digit that reaches here is the
 ### `LilySharp.Core/Svg/Layout/MetronomeMarkGeometry.cs`
