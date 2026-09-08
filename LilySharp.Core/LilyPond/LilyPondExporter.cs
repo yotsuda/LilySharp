@@ -147,6 +147,15 @@ public sealed class LilyPondExporter
     private int _homeTimeBeats = 4;
     private int _homeTimeBeatType = 4;
     private TimeSignatureSyntax? _homeTimeNode;
+    // `time none` in force — LilyPond's \cadenzaOn (Timing.timing = ##f). The running flag
+    // decides two spellings: a metered `time` after it writes \cadenzaOff first (or LilyPond
+    // keeps not counting, draws no bar and numbers nothing), and a written `|` inside it is
+    // `\bar "|"` — under \cadenzaOn LilyPond's `|` is only a bar CHECK and draws nothing,
+    // while Lily#'s `|` is the boundary and draws the bar (MeasureBuilder.HandleBarline).
+    // MEASURED (2.26.0, scratch/p354/lp/senza-misura.ly against senza-fixed.ly, 2026-09-08):
+    // with plain `|` the cadenza drew no bar line and the bars after \time 4/4 none either.
+    private bool _timeSenza;
+    private bool _homeTimeSenza;
 
     /// <summary>
     /// The relative-octave frame, TWICE: where Lily# stands, and where the text this exporter
@@ -313,8 +322,10 @@ public sealed class LilyPondExporter
         // …and the meter the same boundary reverts to, read the same way.
         (_homeTimeBeats, _homeTimeBeatType) = ScoreHomeMeter.Read(root);
         _homeTimeNode = ScoreHomeMeter.Declaration(root);
+        _homeTimeSenza = _homeTimeNode?.IsSenzaMisura ?? false;
         _timeBeats = _homeTimeBeats;
         _timeBeatType = _homeTimeBeatType;
+        _timeSenza = _homeTimeSenza;
 
         CollectPhrases(root);
 
@@ -1875,8 +1886,10 @@ public sealed class LilyPondExporter
         buf._homeTonic = _homeTonic;
         buf._timeBeats = _timeBeats;
         buf._timeBeatType = _timeBeatType;
+        buf._timeSenza = _timeSenza;
         buf._homeTimeBeats = _homeTimeBeats;
         buf._homeTimeBeatType = _homeTimeBeatType;
+        buf._homeTimeSenza = _homeTimeSenza;
         buf._homeTimeNode = _homeTimeNode;
     }
 
@@ -1899,6 +1912,7 @@ public sealed class LilyPondExporter
         _tonic = buf._tonic;
         _timeBeats = buf._timeBeats;
         _timeBeatType = buf._timeBeatType;
+        _timeSenza = buf._timeSenza;
     }
 
     /// <summary>Octave marks for a net shift: <c>'</c> up, <c>,</c> down.</summary>
@@ -2341,7 +2355,8 @@ public sealed class LilyPondExporter
         // this carrier answered only the key question, so `section A { … time 3/4 … }
         // section B { c'4 d e f | }` handed LilyPond a 3/4 bar holding four quarters.
         if (!sp.HasHeaderTime
-            && (_timeBeats != _homeTimeBeats || _timeBeatType != _homeTimeBeatType))
+            && (_timeBeats != _homeTimeBeats || _timeBeatType != _homeTimeBeatType
+                || _timeSenza != _homeTimeSenza))
         {
             if (_homeTimeNode != null)
             {
@@ -2349,9 +2364,10 @@ public sealed class LilyPondExporter
             }
             else
             {
-                parts.Add("\\time 4/4");
+                parts.Add(_timeSenza ? "\\cadenzaOff \\time 4/4" : "\\time 4/4");
                 _timeBeats = 4;
                 _timeBeatType = 4;
+                _timeSenza = false;
             }
         }
         if (!sp.HasHeaderKey && (_keySharps != _homeKeySharps || _tonic != _homeTonic))
@@ -2539,7 +2555,9 @@ public sealed class LilyPondExporter
 
         return b.BarToken.Kind switch
         {
-            SyntaxKind.Bar => "|",
+            // Under \cadenzaOn a bare `|` is a bar CHECK that draws nothing; Lily#'s `|`
+            // closes and draws the bar wherever it stands, so the twin writes the glyph.
+            SyntaxKind.Bar => _timeSenza ? "\\bar \"|\"" : "|",
             SyntaxKind.DoubleBar => "\\bar \"||\"",
             SyntaxKind.FinalBar => "\\bar \"|.\"",
             SyntaxKind.DashedBar => "\\bar \"!\"",
@@ -2574,18 +2592,22 @@ public sealed class LilyPondExporter
     /// </summary>
     private string EmitTime(TimeSignatureSyntax ts)
     {
-        if (!ts.IsSenzaMisura)
-        {
-            _timeBeats = ts.Beats;
-            _timeBeatType = ts.BeatType;
-        }
-        return TimeText(ts);
+        // `time none` → \cadenzaOn; the next metered `time` → \cadenzaOff \time N/M. LilyPond
+        // 2.26.0's \cadenzaOff is only `\set Timing.timing = ##t` (ly/property-init.ly:284) and
+        // resets nothing else, so the \time that follows it is the re-arm — and it PRINTS, as
+        // every \time event does (measured, scratch/p354/lp/senza-reprint.ly), which is what
+        // the page draws for it too (MeasureCollector.MusicWalk's TimeSignatureChangeItem).
+        bool wasSenza = _timeSenza;
+        _timeSenza = ts.IsSenzaMisura;
+        if (ts.IsSenzaMisura)
+            return "\\cadenzaOn";
+        _timeBeats = ts.Beats;
+        _timeBeatType = ts.BeatType;
+        return (wasSenza ? "\\cadenzaOff " : "") + TimeText(ts);
     }
 
     private static string TimeText(TimeSignatureSyntax ts)
-        => ts.IsSenzaMisura
-            ? "\\cadenzaOn"
-            : "\\time " + (ts.BeatsText ?? ts.Beats.ToString()) + "/" + ts.BeatType;
+        => "\\time " + (ts.BeatsText ?? ts.Beats.ToString()) + "/" + ts.BeatType;
 
     private static string EmitTempo(TempoDeclarationSyntax t)
     {

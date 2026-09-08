@@ -1646,15 +1646,23 @@ public sealed partial class MeasureCollector
                         _meta.TimeBeats = timeSigChange.Beats;
                         _meta.TimeBeatsText = timeSigChange.BeatsText;
                         _meta.TimeBeatType = timeSigChange.BeatType;
-                        builder.SetMeasureLength(new Fraction(timeSigChange.Beats, timeSigChange.BeatType));
+                        _meta.TimeSenzaMisura = timeSigChange.IsSenzaMisura;
+                        builder.SetMeasureLength(new Fraction(timeSigChange.Beats, timeSigChange.BeatType),
+                            timeSigChange.IsSenzaMisura);
                     }
                     else
                     {
                         // Mid-piece change: a zero-duration grob printed at the
                         // change point, re-arming the following measures' length.
-                        var newTime = new TimeSignature(timeSigChange.Beats, timeSigChange.BeatType, timeSigChange.BeatsText);
+                        // `time none` carries no ink and no width (LilyPond's \cadenzaOn is
+                        // a property set, not a grob) — see TimeSignatureChangeItem.Blanked.
+                        var newTime = new TimeSignature(timeSigChange.Beats, timeSigChange.BeatType,
+                            timeSigChange.BeatsText, timeSigChange.IsSenzaMisura);
                         // The numerator, not the keyword — see TimeDataPos.
-                        builder.AddItem(new TimeSignatureChangeItem(newTime, TimeDataPos(timeSigChange)));
+                        builder.AddItem(new TimeSignatureChangeItem(newTime, TimeDataPos(timeSigChange))
+                        {
+                            Blanked = timeSigChange.IsSenzaMisura,
+                        });
                     }
                 }
                 break;

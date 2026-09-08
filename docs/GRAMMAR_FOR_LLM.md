@@ -17,7 +17,11 @@ title "Song"            // optional metadata
 composer "Composer"     // optional
 tempo 120               // optional; also: tempo "Allegro" 120, tempo "Andante" 4 = 96 (text + beat unit), tempo "Lively" 4. = 116 (dotted unit), tempo Comodo 4 = 84 (a bare word is the marking); 'tempo 120 swing' adds a shuffle-feel equation ('swing 16' = 16th swing)
 time 4/4                // optional (default 4/4); 4/4 engraves as the C
-                        // (common time) glyph and 2/2 as cut-C, like LilyPond
+                        // (common time) glyph and 2/2 as cut-C, like LilyPond.
+                        // 'time none' = senza misura (LilyPond \cadenzaOn): until the next
+                        // 'time N/M' a measure ends only at a written '|' (drawn, breakable),
+                        // no meter is drawn, no automatic beams (write c8[ d e f]), no
+                        // length checks, and the bar number does not advance across it
 key c major             // optional (default c major); all church modes work:
                         // major minor ionian dorian phrygian lydian mixolydian aeolian locrian
                         // (key d dorian = no accidentals, key e dorian = 2 sharps)

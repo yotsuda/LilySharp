@@ -656,6 +656,12 @@ public class SvgSnapshotTests
         // drawn at each change point, measure length re-armed, validator follows
         // the new meter. Verified against LilyPond \time at matching bars.
         yield return new object[] { "test/timesig-change" };
+        // Senza misura: `time none` builds no automatic bar — the cadenza's two bars are the
+        // written `|` (drawn), no meter is drawn for it, its eighths carry no automatic beam,
+        // and the second system is numbered 2, not 4. Verified against LilyPond 2.26.0's
+        // \cadenzaOn/\cadenzaOff twin (scratch/p354/lp, session 353); until then the page
+        // filled 4/4 bars under it (7 bars where the twin has 5).
+        yield return new object[] { "test/senza-misura" };
         // ...and the same changes on a staff that draws NONE of them: a score built only of
         // `tab … as numbers` is LilyPond's bare TabStaff, whose TimeSignature stencil is
         // BLANKED, so it reserves no column for a mid-piece meter either. The corpus's only

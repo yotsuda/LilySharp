@@ -250,7 +250,8 @@ internal static class StaffAccidentalColumns
                     pageBreakPermission: measure.PageBreakPermission,
                     pageTurnPermission: measure.PageTurnPermission,
                     sectionLabelPosition: measure.SectionLabelPosition,
-                    isPickup: measure.IsPickup);
+                    isPickup: measure.IsPickup,
+                    unmetered: measure.Unmetered);
                 voiceChanged = true;
             }
 

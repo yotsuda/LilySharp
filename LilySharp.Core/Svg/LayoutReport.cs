@@ -215,7 +215,7 @@ public static class LayoutReport
     /// </summary>
     private static string TimeField(MultiStaffScore score)
     {
-        string initial = score.TimeSignature.ToString();
+        string initial = score.TimeSignature.ToString(); // "none" for time none
         var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
         var changes = new List<string>();
         for (int i = 0; i < measures.Length; i++)

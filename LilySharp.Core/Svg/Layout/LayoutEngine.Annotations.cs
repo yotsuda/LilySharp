@@ -1002,7 +1002,8 @@ internal sealed partial class LayoutEngine
         // the renderer that draws them (MultiStaffScore.GridBarlineRowIndex).
         var barNumberLayouts = BarNumberEngraver.Calculate(ctx.Fonts, systems,
             numberOffset: barNumberOffset,
-            gridBarlineRowIndex: ctx.GridBarlineRowIndex);
+            gridBarlineRowIndex: ctx.GridBarlineRowIndex,
+            displayedNumbers: BarNumberEngraver.NumberMeasures(measures, barNumberOffset));
         // Forced-above dynamics (@f.up) join the above-staff pass so they clear, and are
         // cleared by, the other above-staff grobs. Below dynamics were already placed by
         // StackBelowStaff and pass through untouched.

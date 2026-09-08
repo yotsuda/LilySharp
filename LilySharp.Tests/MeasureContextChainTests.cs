@@ -166,6 +166,7 @@ public class MeasureContextChainTests
     [InlineData("test/keysig-change")]
     [InlineData("test/clef-change")]
     [InlineData("test/timesig-change")]
+    [InlineData("test/senza-misura")]
     [InlineData("test/mixed-meters")]
     [InlineData("test/ties-slurs")]
     public void Fixtures_ChainAlignsToMeasuresAndStaysContinuous(string fixture)

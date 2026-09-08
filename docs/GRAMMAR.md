@@ -230,7 +230,20 @@ FeelWord       = 'swing' | 'shuffle' ;      (* contextual, NOT reserved words *)
                     Every one of those is pinned in TempoValueTests; changing one changes
                     what existing scores mean. A Decimal anywhere in the run is LYS0022 —
                     a metronome mark is whole and a beat unit is a note value. *)
-TimeDecl       = 'time' , Integer , '/' , Integer ;
+TimeDecl       = 'time' , Integer , '/' , Integer
+               | 'time' , 'none' ;
+                 (* 'time none' is SENZA MISURA — unmetered music, LilyPond's \cadenzaOn.
+                    From it to the next 'time N/M' the engine builds no automatic measure
+                    boundary: a measure ends only at a WRITTEN '|', which still draws the
+                    bar line and still lets the line break there; no time signature is
+                    drawn for it; no automatic beam is made (write them: c8[ d e f]); the
+                    measure-length checks are off; and the bar number does not advance
+                    across the span — the measure after the unmetered ones is numbered as
+                    they are (LilyPond's Timing.timing = ##f freezes currentBarNumber;
+                    measured on 2.26.0, session 353). Written here it is the file default,
+                    in a section header the section's meter, in the music a mid-piece
+                    change — per part, like any 'time'. The twin writes \cadenzaOn, a
+                    '|' inside it as \bar "|", and \cadenzaOff before the returning \time. *)
 KeyDecl        = 'key' , PitchBase , [ Accidental-text ] , Mode ;
 
 Mode           = 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian'
@@ -1196,6 +1209,8 @@ MusicItem      = Note | Rest | Chord | Arpeggio | Barline | PhraseRef
 MidMusicCommand = 'clef' , ClefName
                | 'key' , PitchBase , [ Accidental-text ] , Mode
                | 'time' , Integer , '/' , Integer
+               | 'time' , 'none'                    (* unmetered from here to the next
+                                                      'time N/M' — see TimeDecl §2 *)
                | 'partial' , DurationToken         (* this bar is that long — at the bar's
                                                       start, per part; see PartialDecl §2 *)
                | 'break' | 'noBreak'                (* force / forbid a system break after

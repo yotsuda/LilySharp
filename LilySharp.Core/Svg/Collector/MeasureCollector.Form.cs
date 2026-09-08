@@ -361,10 +361,16 @@ public sealed partial class MeasureCollector
         // it and re-arm the measure length; otherwise revert to the score meter.
         if (_sectionHeaderTimes.TryGetValue(section.SectionName, out var sectionTime))
         {
+            // A `time none` header carries no ink and no width — TimeSignatureChangeItem.Blanked.
             builder.AddItem(new TimeSignatureChangeItem(
-                new TimeSignature(sectionTime.Beats, sectionTime.BeatType, sectionTime.BeatsText),
-                sectionPos));
-            builder.SetMeasureLength(new Fraction(sectionTime.Beats, sectionTime.BeatType));
+                new TimeSignature(sectionTime.Beats, sectionTime.BeatType, sectionTime.BeatsText,
+                    sectionTime.IsSenzaMisura),
+                sectionPos)
+            {
+                Blanked = sectionTime.IsSenzaMisura,
+            });
+            builder.SetMeasureLength(new Fraction(sectionTime.Beats, sectionTime.BeatType),
+                sectionTime.IsSenzaMisura);
         }
         else
         {
@@ -372,15 +378,22 @@ public sealed partial class MeasureCollector
             // redraw) against the SNAPSHOT, not _meta.Time - a mid-music `time` in a prior
             // section mutates _meta (which also drives the opening signature), so _meta no
             // longer holds the score meter. Only redraw when the previous section actually
-            // left a different meter on the staff.
+            // left a different meter on the staff. `time none` is part of the comparison: a
+            // section that ended unmetered against a 4/4 score meter differs, and the 4/4
+            // is redrawn — LilyPond prints a grob for every \time event (measured 2.26.0,
+            // scratch/p354/lp/senza-reprint.ly: `\time 4/4 … \time 4/4` prints twice).
             var resetTime = new Fraction(_sectionResetTimeBeats, _sectionResetTimeBeatType);
-            if (builder.CurrentMeasureLength != resetTime)
+            if (builder.CurrentMeasureLength != resetTime
+                || builder.SenzaMisura != _sectionResetTimeSenzaMisura)
             {
                 builder.AddItem(new TimeSignatureChangeItem(
                     new TimeSignature(_sectionResetTimeBeats, _sectionResetTimeBeatType,
                         _sectionResetTimeBeatsText, _sectionResetTimeSenzaMisura),
-                    sectionPos));
-                builder.SetMeasureLength(resetTime);
+                    sectionPos)
+                {
+                    Blanked = _sectionResetTimeSenzaMisura,
+                });
+                builder.SetMeasureLength(resetTime, _sectionResetTimeSenzaMisura);
             }
         }
 

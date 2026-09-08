@@ -268,6 +268,7 @@ public readonly record struct MeasureContentKey(long Hash)
         hc.Add(measure.PageBreakPermission);
         hc.Add(measure.PageTurnPermission);
         hc.Add(measure.IsPickup);
+        hc.Add(measure.Unmetered);
 
         foreach (var item in measure.Items)
             hc.Add(HashContent(item, ItemExclusions));

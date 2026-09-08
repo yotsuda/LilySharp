@@ -1079,6 +1079,13 @@ public sealed record TimeSignatureChangeItem : MusicItem
     /// Set once, by <c>MeterStencil.Blank</c> at the end of the collect phase — the staves do
     /// not exist until the voices they are built from do, so no earlier point can answer.
     /// </para>
+    /// <para>
+    /// …and set at CREATION for a <c>time none</c> change (<see cref="TimeSignature.SenzaMisura"/>),
+    /// which is blanked on every staff: LilyPond's <c>\cadenzaOn</c> is a property set
+    /// (LILYPOND-REF: ly/property-init.ly cadenzaOn = <c>\set Timing.timing = ##f</c>), not a
+    /// TimeSignature grob, so there is no column for it to widen — and the drawing walk already
+    /// draws nothing for it (<c>SharedRenderer.Prefix.DrawTimeSignature</c>).
+    /// </para>
     /// </remarks>
     public bool Blanked { get; init; }
 

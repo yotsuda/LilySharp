@@ -162,10 +162,12 @@ internal static class MeasureModel
                     // spacer of the meter in force. This model exists to give the
                     // validators the collector's own answer, so a zero here would make
                     // every `| |` read underfull to a pass that only sees durations.
-                    // Under `time none` there is no measure length to fill, so the bar
-                    // stays at zero exactly as an auto-fill would never close there.
+                    // Under `time none` the collector still fills the gap with the LAST
+                    // METERED length (MeasureBuilder keeps it for exactly this spacer), and
+                    // `meter` here is that same value — a senza `time` re-arms nothing. One
+                    // answer, both sides; no check reads it there (the fill checks are off).
                     int start = prevBarEnd >= 0 ? prevBarEnd : barStart;
-                    bars.Add(new Bar(senzaMisura ? Fraction.Zero : meter,
+                    bars.Add(new Bar(meter,
                         new TextSpan(start, Math.Max(1, barEnd - start)), IsEmpty: true));
                 }
                 prevBarEnd = barEnd;

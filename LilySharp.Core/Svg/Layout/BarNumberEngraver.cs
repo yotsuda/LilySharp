@@ -165,6 +165,35 @@ internal static class BarNumberEngraver
     }
 
     /// <summary>
+    /// The number each measure DISPLAYS, indexed by measure: one more than the count of
+    /// counted measures before it, plus <paramref name="numberOffset"/> (a leading pickup's
+    /// −1). A measure closed under <c>time none</c> (<see cref="Measure.Unmetered"/>) is not
+    /// counted, so the measure after it carries the same number.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/timing-translator.cc:478-507 Timing_translator::start_translation_timestep
+    ///   — `++cbn` (currentBarNumber) sits inside `if (timing)`, so the number stands still
+    ///   across the cadenza's bars and resumes at the same value when timing returns;
+    ///   ly/property-init.ly cadenzaOn / cadenzaOff are the ##f / ##t of that property.
+    /// MEASURED (2.26.0, scratch/p354/lp/senza-fixed.ly): bar 1 in 4/4, then \cadenzaOn with
+    /// two \bar "|", \break, \cadenzaOff \time 4/4 — the second line's BarNumber reads 2.
+    /// </remarks>
+    public static ImmutableArray<int> NumberMeasures(ImmutableArray<Measure> measures, int numberOffset)
+    {
+        if (measures.IsDefaultOrEmpty)
+            return ImmutableArray<int>.Empty;
+        var numbers = ImmutableArray.CreateBuilder<int>(measures.Length);
+        int counted = 0;
+        foreach (var m in measures)
+        {
+            numbers.Add(counted + 1 + numberOffset);
+            if (!m.Unmetered)
+                counted++;
+        }
+        return numbers.MoveToImmutable();
+    }
+
+    /// <summary>
     /// Calculates bar number layouts. When <paramref name="period"/> is greater
     /// than 1, also numbers every Nth measure within a system; default 0 means
     /// system starts only. <paramref name="numberFirstMeasure"/> set to false (LP
@@ -177,7 +206,8 @@ internal static class BarNumberEngraver
         int period = 0,
         bool numberFirstMeasure = false,
         int numberOffset = 0,
-        int gridBarlineRowIndex = -1)
+        int gridBarlineRowIndex = -1,
+        ImmutableArray<int> displayedNumbers = default)
     {
         if (systems.IsDefaultOrEmpty)
             return ImmutableArray<BarNumberLayout>.Empty;
@@ -258,8 +288,12 @@ internal static class BarNumberEngraver
 
                 // LP shows 1-based numbers. measureIndex is 0-based. A leading
                 // \partial pickup shifts everything down by one (numberOffset = -1)
-                // so the pickup is bar 0 and the first full measure is bar 1.
-                int displayedNumber = measureIndex + 1 + numberOffset;
+                // so the pickup is bar 0 and the first full measure is bar 1 — and a
+                // measure closed under `time none` advances nothing, which is what the
+                // per-measure table from NumberMeasures says when the caller has one.
+                int displayedNumber = !displayedNumbers.IsDefault && measureIndex < displayedNumbers.Length
+                    ? displayedNumbers[measureIndex]
+                    : measureIndex + 1 + numberOffset;
 
                 // Line-start numbers break-align to the LEFT EDGE — the staff-line
                 // origin, BEFORE the clef, as LilyPond's own comment on

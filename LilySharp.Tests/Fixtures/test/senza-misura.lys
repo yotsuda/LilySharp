@@ -1,0 +1,32 @@
+// Senza misura (`time none`) — an unmetered span. From `time none` to the next
+// `time N/M` the engine builds no automatic measure boundary: a measure closes only
+// at a written `|` (which still draws a bar line and still lets the line break),
+// the bar number does not advance across the span (the second system is bar 2,
+// not 4), no automatic beam is made, and no time signature is drawn for it.
+// LilyPond twin: \cadenzaOn … \bar "|" … \cadenzaOff \time 4/4 (Timing.timing = ##f);
+// the bar lines land where LilyPond's do (SenzaMisuraTests names the numbers).
+title "Senza misura"
+composer "Lily#"
+
+time 4/4
+key c major
+
+part melody {
+  clef treble
+}
+
+section Main {
+  melody {
+    c'4 d e f |
+    time none g8 a b c d c b a g4 f e2 |
+    d4 e f g a g f e | break
+    time 4/4 c1 |
+    d1 |
+  }
+}
+
+form main { Main }
+
+score main "senza-misura" {
+  staff melody
+}

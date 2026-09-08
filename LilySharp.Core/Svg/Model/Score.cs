@@ -47,8 +47,9 @@ public readonly record struct TimeSignature(int Beats, int BeatType, string? Bea
     /// <summary>Duration of one full measure.</summary>
     public Fraction MeasureDuration => new(Beats, BeatType);
 
-    /// <summary>Returns the printed form of the meter, e.g. <c>3/4</c>.</summary>
-    public override string ToString() => $"{BeatsText ?? Beats.ToString()}/{BeatType}";
+    /// <summary>Returns the printed form of the meter, e.g. <c>3/4</c> — or <c>none</c> for
+    /// senza misura, whose Beats/BeatType only hold the 4/4 the syntax falls back to.</summary>
+    public override string ToString() => SenzaMisura ? "none" : $"{BeatsText ?? Beats.ToString()}/{BeatType}";
 }
 
 /// <summary>

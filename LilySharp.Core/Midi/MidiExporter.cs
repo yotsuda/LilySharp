@@ -745,8 +745,10 @@ public sealed class MidiExporter
         // later section, so the bar grid a DAW draws parted from the page after the first
         // meter change. Only written when the pair actually moves, so a boundary that
         // changes nothing adds no event (ProcessTimeSignature is the one writer).
+        // A `time none` header is no meter at all (see ProcessTimeSignature): the running
+        // pair stays, and nothing is written.
         var boundaryTime = _sectionHeaderTimes.TryGetValue(section.SectionName, out var headerTime)
-            ? (headerTime.Beats, headerTime.BeatType)
+            ? headerTime.IsSenzaMisura ? (_timeNumerator, _timeDenominator) : (headerTime.Beats, headerTime.BeatType)
             : (_homeTimeBeats, _homeTimeBeatType);
         if (boundaryTime != (_timeNumerator, _timeDenominator))
         {
@@ -2030,6 +2032,16 @@ public sealed class MidiExporter
 
     private void ProcessTimeSignature(TimeSignatureSyntax timeSig, MidiTrack conductorTrack)
     {
+        // `time none` writes NO meta event and leaves the running meter alone: LilyPond's
+        // \cadenzaOn sets Timing.timing, not timeSignature, and the performer emits only on
+        // a \time event or a changed fraction. The bars the MIDI grid draws through a cadenza
+        // are the last meter's — the same picture a DAW gets from LilyPond's file.
+        // LILYPOND-REF: lily/time-signature-performer.cc:102-115 Time_signature_performer::process_music
+        //   — `if (scm_is_pair (fr) && (event_ || !ly_is_equal (fr, last_time_fraction_)))`.
+        // Before session 353 this wrote the 4/4 the syntax falls back to, so a `time none`
+        // after a 3/4 stretch flipped the DAW's grid to 4/4 where the page shows no meter.
+        if (timeSig.IsSenzaMisura)
+            return;
         _timeNumerator = timeSig.Beats;
         _timeDenominator = timeSig.BeatType;
         conductorTrack.TimeSignatures.Add(new TimeSignatureChange(_currentTick, _timeNumerator, _timeDenominator));

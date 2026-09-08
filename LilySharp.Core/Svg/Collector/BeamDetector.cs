@@ -266,6 +266,7 @@ internal sealed class BeamDetector
     private static void AddDetectionInputs(ref MeasureContentKey.Hash64 hc, Measure measure)
     {
         hc.Add(measure.IsPickup);
+        hc.Add(measure.Unmetered);
         hc.Add(measure.Items.Length);
         foreach (var item in measure.Items)
         {
@@ -689,6 +690,18 @@ internal sealed class BeamDetector
         // Phase 0: Detect manual beam groups (c8[ d e f])
         var manualRanges = DetectManualBeamGroups(measure, measureIndex, beamOptions, beamGroups,
             tupletSpans, voiceIndex, forceStemUpAt);
+
+        // UNMETERED (`time none`): no automatic beams at all — only the ones written.
+        // LILYPOND-REF: scm/auto-beam.scm:82-90 default-auto-beam-check — the end rule is
+        //   `(zero? pos)` on measurePosition modulo the beaming period, and under \cadenzaOn
+        //   (Timing.timing = ##f) measurePosition never advances (lily/timing-translator.cc
+        //   Timing_translator::start_translation_timestep), so it is zero at every stem and
+        //   every beam is required to end where it began:
+        // LILYPOND-REF: lily/auto-beam-engraver.cc:171-182 Auto_beam_engraver::consider_end.
+        // MEASURED (2.26.0, scratch/p354/lp/senza-fixed.ly against senza-control.ly): eight
+        // eighths under \cadenzaOn make no Beam grob; the same eighths in 4/4 make two.
+        if (timeSig.SenzaMisura)
+            return;
 
         var stems = new List<(MusicItem item, int index, Fraction startPos)>();
         // LILYPOND-REF: lily/auto-beam-engraver.cc:241 junk_beam / :278 end_beam — shortest_dur_

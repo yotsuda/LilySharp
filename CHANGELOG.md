@@ -22,6 +22,18 @@ workflow attaches that section to the GitHub Release verbatim.
   member's (`>>4\2`), and a tie or slur mark written after `>>` hangs on the last member. Other
   marks on the group still warn (LYS4008) — write them on the member.
 
+- **`time none` is engraved.** Senza misura was read by the parser and the validator and
+  ignored by the page, which kept filling 4/4 bars under it. Now, from `time none` to the next
+  `time N/M`, a measure ends only at a written `|` (still drawn, still a place the line may
+  break), no time signature is drawn for it, no automatic beam is made (write them), and the
+  bar number does not advance across the span — the bar after the unmetered ones carries the
+  same number, as LilyPond's `\cadenzaOn` (`Timing.timing = ##f`) numbers it. Written at the
+  top, in a section header, or in the music, per part like any `time`. The twin writes
+  `\cadenzaOn`, a `|` inside it as `\bar "|"` (a bare `|` is only a bar check there), and
+  `\cadenzaOff` before the returning `\time`; `lysc layout` reports the meter as `none`; the
+  MIDI conductor track writes no meter event for it and keeps the last one, as LilyPond's
+  performer does.
+
 - **A pickup can be declared in the music, mid-piece.** `partial` says "the bar it stands in
   is this long", and it is taken wherever a bar is: a section directive as before, and now a
   part's or voice's music at the bar's start — `… | partial 2. r2. | …` closes a three-beat bar

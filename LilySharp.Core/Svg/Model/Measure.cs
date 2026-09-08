@@ -169,6 +169,20 @@ public sealed record Measure
     public bool IsPickup { get; init; }
 
     /// <summary>
+    /// True when this measure closed under <c>time none</c> (senza misura): its bar line was
+    /// WRITTEN — the engine builds no automatic boundary in an unmetered span — and it does
+    /// not advance the bar number, so the measure after it is numbered as this one is.
+    /// LILYPOND-REF: lily/timing-translator.cc:478-507 Timing_translator::start_translation_timestep
+    ///   — measurePosition advances and currentBarNumber increments only while `timing` holds;
+    /// LILYPOND-REF: ly/property-init.ly cadenzaOn / cadenzaOff set Timing.timing ##f / ##t, and
+    ///   scm/define-context-properties.scm documents `timing` as "Keep administration of measure
+    ///   length, position, bar number, etc.? Switch off for cadenzas."
+    /// MEASURED (2.26.0, scratch/p354/lp/senza-fixed.ly): a cadenza opening bar 2 and
+    /// holding two <c>\bar "|"</c> is followed by a line whose BarNumber reads 2.
+    /// </summary>
+    public bool Unmetered { get; init; }
+
+    /// <summary>
     /// True when this measure is an empty placeholder written as a bare barline gap —
     /// a leading <c>|</c>, a <c>| |</c> gap, or a trailing <c>| |</c> — with no music.
     /// It occupies a measure slot (so parts stay aligned) and renders as an empty bar.
@@ -220,7 +234,8 @@ public sealed record Measure
         BreakPermission pageBreakPermission = BreakPermission.Allow,
         BreakPermission pageTurnPermission = BreakPermission.Allow,
         int sectionLabelPosition = 0,
-        bool isPickup = false)
+        bool isPickup = false,
+        bool unmetered = false)
     {
         Items = items;
         StartBarline = startBarline;
@@ -230,6 +245,7 @@ public sealed record Measure
         SourceEnd = sourceEnd;
         SectionLabelPosition = sectionLabelPosition;
         IsPickup = isPickup;
+        Unmetered = unmetered;
         // Derive permission: hasBreakAfter implies Force for backward
         // compatibility. HasBreakAfter is a computed property off this value.
         LineBreakPermission = hasBreakAfter ? BreakPermission.Force : lineBreakPermission;

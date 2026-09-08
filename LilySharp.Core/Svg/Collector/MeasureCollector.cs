@@ -887,7 +887,8 @@ public sealed partial class MeasureCollector
                     pageBreakPermission: m.PageBreakPermission,
                     pageTurnPermission: m.PageTurnPermission,
                     sectionLabelPosition: m.SectionLabelPosition,
-                    isPickup: m.IsPickup);
+                    isPickup: m.IsPickup,
+                    unmetered: m.Unmetered);
             }
             if (builder != null)
                 voiceDict[name] = new Voice(voice.Name, builder.ToImmutable());
@@ -1979,7 +1980,8 @@ public sealed partial class MeasureCollector
             null,
             reference.SourceStart,
             reference.SourceEnd,
-            isPickup: reference.IsPickup);
+            isPickup: reference.IsPickup,
+            unmetered: reference.Unmetered);
 
     /// <summary>
     /// Gathers a voice block's music nodes (variable refs expanded), used to
@@ -1998,7 +2000,7 @@ public sealed partial class MeasureCollector
     private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode,
         bool applyFilePartial = true, Fraction? leadingOffset = null)
     {
-        var builder = new MeasureBuilder(TimeSignatureFraction, voiceNode.SourceStart);
+        var builder = new MeasureBuilder(TimeSignatureFraction, voiceNode.SourceStart, _meta.TimeSenzaMisura);
         // The file-level pickup arms a sub-collection only when it really sits
         // at the piece's start (a mid-piece voice{} span must not shorten its
         // own first bar).
@@ -2351,7 +2353,7 @@ public sealed partial class MeasureCollector
         _phraseAnchorSaves.Clear();
         _phraseAbsoluteBaseSaves.Clear();
 
-        var builder = new MeasureBuilder(TimeSignatureFraction);
+        var builder = new MeasureBuilder(TimeSignatureFraction, senzaMisura: _meta.TimeSenzaMisura);
         if (_filePartial is { } filePickup)
             builder.SetPartial(filePickup); // top-level partial N arms every voice
         _measureAccidentals.Clear();
