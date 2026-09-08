@@ -305,8 +305,8 @@ public class CommonShortestDurationTests
         // Verify that CreateSpring uses the provided baseShortestDuration
         var quarter = new Fraction(1, 4);
 
-        var springDefault = SpacingRules.CreateSpring(null, null, quarter);
-        var springQuarterBase = SpacingRules.CreateSpring(null, null, quarter,
+        var springDefault = SpacingRules.CreateSpring(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, null, null, quarter);
+        var springQuarterBase = SpacingRules.CreateSpring(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, null, null, quarter,
             baseShortestDuration: 0.25);
 
         // Default uses BaseShortestDuration = 0.125, so ideal is larger
@@ -339,8 +339,8 @@ public class CommonShortestDurationTests
         var score = new MeasureCollector().Collect(tree);
         var measure = score.Voice.Measures[0];
 
-        double widthDefault = SpacingRules.CalculateMeasureIdealWidth(measure);
-        double widthQuarterBase = SpacingRules.CalculateMeasureIdealWidth(measure,
+        double widthDefault = SpacingRules.CalculateMeasureIdealWidth(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, measure);
+        double widthQuarterBase = SpacingRules.CalculateMeasureIdealWidth(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, measure,
             baseShortestDuration: 0.25);
 
         // With base=1/4, quarter notes are the shortest, so spacing is tighter

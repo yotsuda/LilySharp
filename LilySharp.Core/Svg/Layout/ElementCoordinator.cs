@@ -1897,8 +1897,11 @@ internal sealed class ElementCoordinator
     /// A tie that crosses one or more system breaks is split into per-system pieces.
     /// Each piece's bound on the broken side is reattached to the system edge.
     /// </remarks>
-    public ImmutableArray<TieLayout> LayoutTies(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1, Model.Staff? staff = null)
-        => LayoutTies(_tieDetector.DetectTies(score), score, systems, staffIndex, staff);
+    /// <param name="fonts">The SCORE's text metrics — a tab tie hangs off its fret digit,
+    /// whose em is the plan's (<see cref="TabConstants.FretEm"/>). Passed rather than read
+    /// off <paramref name="score"/>: a per-staff <c>Score</c> carries no plan.</param>
+    public ImmutableArray<TieLayout> LayoutTies(Rendering.ScoreTextMetrics fonts, Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1, Model.Staff? staff = null)
+        => LayoutTies(fonts, _tieDetector.DetectTies(score), score, systems, staffIndex, staff);
 
     /// <summary>The detectors themselves, for a caller that must run them ONCE and lay out
     /// per system — see the remark on the pre-detected overloads below. They live here
@@ -1926,6 +1929,7 @@ internal sealed class ElementCoordinator
     /// </para>
     /// </remarks>
     internal ImmutableArray<TieLayout> LayoutTies(
+        Rendering.ScoreTextMetrics fonts,
         ImmutableArray<TieItem> ties, Score score, ImmutableArray<SystemLayout> systems,
         int staffIndex = -1, Model.Staff? staff = null)
     {
@@ -2026,7 +2030,7 @@ internal sealed class ElementCoordinator
             // A TAB column's directions come from the STRING LINES, so they are decided here,
             // once for the column, and handed to every segment's specifications.
             bool[]? tabCurveUp = staff is { IsTab: true }
-                ? TabColumnCurveUp(score, staff, ordered)
+                ? TabColumnCurveUp(fonts, score, staff, ordered)
                 : null;
 
             var solved = new TieLayout[ordered.Count, segments.Length];
@@ -2037,7 +2041,7 @@ internal sealed class ElementCoordinator
                 for (int i = 0; i < ordered.Count; i++)
                 {
                     specs.Add(BuildTieSpecification(
-                        score, systems, staff, staffIndex, ordered[i], segments[s],
+                        fonts, score, systems, staff, staffIndex, ordered[i], segments[s],
                         startMeasure, endMeasure, tiedPositions, tabCurveUp?[i]));
                 }
 
@@ -2108,11 +2112,11 @@ internal sealed class ElementCoordinator
     /// USER DECISION (2026-08-16): for CHORDS, defer to LilyPond's spread.
     /// </para>
     /// </remarks>
-    private static bool[] TabColumnCurveUp(Score score, Model.Staff staff, List<TieItem> ordered)
+    private static bool[] TabColumnCurveUp(Rendering.ScoreTextMetrics fonts, Score score, Model.Staff staff, List<TieItem> ordered)
     {
         // staffY is irrelevant to a string number and a staff position; this geometry is
         // asked for neither of the two things it needs a page position for.
-        var geom = new TabStaffGeometry(
+        var geom = new TabStaffGeometry(fonts,
             staff.Tuning ?? TuningType.Guitar, 0, staff.TabSourceClef, staff.Transposition);
 
         var byPosition = new (int Index, int Position)[ordered.Count];
@@ -2150,6 +2154,7 @@ internal sealed class ElementCoordinator
     /// a tab digit.
     /// </remarks>
     private TieSpecification BuildTieSpecification(
+        Rendering.ScoreTextMetrics fonts,
         Score score,
         ImmutableArray<SystemLayout> systems,
         Model.Staff? staff,
@@ -2254,7 +2259,7 @@ internal sealed class ElementCoordinator
             //     x arithmetic directly.
             // On a tab the tie connects two fret digits on ONE string, so it
             // belongs on that string's line — NOT at the notation pitch height.
-            var geom = new TabStaffGeometry(staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef, staff.Transposition);
+            var geom = new TabStaffGeometry(fonts, staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef, staff.Transposition);
             // A chord's per-string ties must each hug their OWN string, AND HANG OFF THEIR
             // OWN DIGIT. Both answers come from one call so they cannot disagree about which
             // note they are talking about.
@@ -2311,7 +2316,7 @@ internal sealed class ElementCoordinator
             // LilyPond hangs the tab tie right at the digit's edge — a small,
             // shallow curve hugging the number — so offset by the VISIBLE
             // glyph half-height plus a hair, not the full erase-box height.
-            double clearance = 0.36 * TabConstants.FretFontSize + 0.1; // ~0.54 sp at font 2.6
+            double clearance = 0.36 * TabConstants.FretEm(fonts) + 0.1; // ~0.54 sp at font 2.6
             // Which SIDE of its digit this bow hangs on was decided for the whole column, by
             // LilyPond's own rule run on the string lines (TabColumnCurveUp). Passed in
             // rather than recomputed because the rule reads the column, not the tie.
@@ -3137,12 +3142,15 @@ internal sealed class ElementCoordinator
         return extras;
     }
 
-    public ImmutableArray<SlurLayout> LayoutSlurs(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1, Model.Staff? staff = null, ImmutableArray<GraceNoteItem> graceNotes = default, ImmutableArray<BeamLayout> beamLayouts = default, Func<ImmutableArray<InsideSlurScript>>? insideScripts = null)
-        => LayoutSlurs(_slurDetector.DetectSlurs(score), score, systems, staffIndex, staff,
+    /// <param name="fonts">The SCORE's text metrics — a tab slur clears fret digits whose em
+    /// is the plan's; a per-staff <c>Score</c> carries no plan, so the caller passes the
+    /// enclosing score's.</param>
+    public ImmutableArray<SlurLayout> LayoutSlurs(Rendering.ScoreTextMetrics fonts, Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1, Model.Staff? staff = null, ImmutableArray<GraceNoteItem> graceNotes = default, ImmutableArray<BeamLayout> beamLayouts = default, Func<ImmutableArray<InsideSlurScript>>? insideScripts = null)
+        => LayoutSlurs(fonts, _slurDetector.DetectSlurs(score), score, systems, staffIndex, staff,
             graceNotes, beamLayouts, insideScripts);
 
     /// <summary>The same, on slurs the caller has ALREADY detected — the slur twin of
-    /// <see cref="LayoutTies(ImmutableArray{TieItem}, Score, ImmutableArray{SystemLayout}, int, Model.Staff?)"/>,
+    /// <see cref="LayoutTies(Rendering.ScoreTextMetrics, ImmutableArray{TieItem}, Score, ImmutableArray{SystemLayout}, int, Model.Staff?)"/>,
     /// and for the same reason.</summary>
     /// <param name="insideScripts">This staff's <c>avoid-slur = #'inside</c> marks, already
     /// placed in the staff's own frame — see
@@ -3150,6 +3158,7 @@ internal sealed class ElementCoordinator
     /// so that the extra script walk is paid only by a staff that has slurs at all: a
     /// script-heavy but slur-free book must not buy it once per staff per system.</param>
     internal ImmutableArray<SlurLayout> LayoutSlurs(
+        Rendering.ScoreTextMetrics fonts,
         ImmutableArray<SlurItem> slurs, Score score, ImmutableArray<SystemLayout> systems,
         int staffIndex = -1, Model.Staff? staff = null,
         ImmutableArray<GraceNoteItem> graceNotes = default,
@@ -3264,7 +3273,7 @@ internal sealed class ElementCoordinator
                 ? ImmutableArray<BeamGroup>.Empty
                 : beamLayouts.Select(bl => bl.Group).ToImmutableArray();
             tupletNumberLayouts = TupletBracketEngraver.Calculate(
-                score.TupletBrackets, mlArr.ToImmutableArray(),
+                fonts, score.TupletBrackets, mlArr.ToImmutableArray(),
                 score.Voices[0].Measures, beamGroups, beamLayouts);
         }
 
@@ -3332,7 +3341,7 @@ internal sealed class ElementCoordinator
                 if (staff is { IsTab: true })
                 {
                     var tabLayout = BuildTabSlurLayout(
-                        score, slur, segment.IsFirst, segment.IsLast, segSystem,
+                        fonts, score, slur, segment.IsFirst, segment.IsLast, segSystem,
                         staffIndex, staff, segStartX, segEndX, graceNotes,
                         graceByMeasure, graceGeomCache, slurLayouts);
                     if (tabLayout != null)
@@ -3578,6 +3587,7 @@ internal sealed class ElementCoordinator
     /// </para>
     /// </remarks>
     private SlurLayout? BuildTabSlurLayout(
+        Rendering.ScoreTextMetrics fonts,
         Score score, SlurItem slur, bool isFirst, bool isLast, SystemLayout segSystem,
         int staffIndex, Model.Staff staff, double segStartX, double segEndX,
         ImmutableArray<GraceNoteItem> graceNotes,
@@ -3593,10 +3603,10 @@ internal sealed class ElementCoordinator
         // TabStaffGeometry is additive in staffY (StringY = StaffY + n·space), so this is
         // a pure origin shift that leaves the device string frame intact (island 2).
         double staffY = LayoutUtilities.StaffOffsetInSystemDown(segSystem, staffIndex);
-        var geom = new TabStaffGeometry(staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef, staff.Transposition);
+        var geom = new TabStaffGeometry(fonts, staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef, staff.Transposition);
         double space = geom.StringSpace;
         double staffMiddleDown = staffY + (geom.StringCount - 1) * space / 2.0;
-        double halfDigit = TabConstants.FretDigitHeight / 2.0;
+        double halfDigit = TabConstants.FretDigitHeight(fonts) / 2.0;
 
         // The note columns this segment encompasses, in X order — LilyPond's
         // note_columns_. A grace column joins below, at its own (smaller) digit size.
@@ -3744,7 +3754,7 @@ internal sealed class ElementCoordinator
         if (graceByMeasure is null || graceGeomCache is null || graceNotes.IsDefaultOrEmpty)
             return;
         const double eps = 0.001;
-        double halfGrace = TabConstants.FretDigitHeight * TabConstants.GraceFretScale / 2.0;
+        double halfGrace = TabConstants.FretDigitHeight(geom.Fonts) * TabConstants.GraceFretScale / 2.0;
 
         foreach (var ml in segSystem.Measures)
         {

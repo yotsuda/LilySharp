@@ -211,6 +211,7 @@ internal static partial class SpacingRules
     /// </para>
     /// </remarks>
     internal static ImmutableArray<Spring> EmptyBarSprings(
+        Rendering.ScoreTextMetrics fonts,
         int columnCount, BarlineType leftBound, IEnumerable<MusicItem>? leadingItems,
         bool bothBreakable, Fraction measureLength, Fraction dt, double globalShortest,
         double leftDoublePercentHalfWidth = 0, double rightDoublePercentHalfWidth = 0)
@@ -226,7 +227,7 @@ internal static partial class SpacingRules
         //   extra-spacing-width). In Lily#'s bar-line frame the left half of the sign lands
         //   in the FIRST bar and the right half in the SECOND: 7.57 / 7.38 bar line to bar
         //   line, LilyPond's own PROBEBAR figures.
-        double minimumDistance = MmrRodMinimumDistance(
+        double minimumDistance = MmrRodMinimumDistance(fonts,
             leftBound, leadingItems, leftDoublePercentHalfWidth, rightDoublePercentHalfWidth);
         var pair = StandardBreakableColumnSpacing(
             minimumDistance, bothBreakable, measureLength, dt, globalShortest);
@@ -287,10 +288,11 @@ internal static partial class SpacingRules
     /// three digits each.
     /// </remarks>
     internal static Spring SkipOpenedBarFirstSpring(
+        Rendering.ScoreTextMetrics fonts,
         BarlineType leftBound, ImmutableArray<MusicItem> measureItems,
         IReadOnlyList<MusicItem>? firstItems, Fraction dt, double globalShortest)
     {
-        var leftColumnRight = BoundaryColumn.Build(leftBound, measureItems).RightSkylineFromBarLine();
+        var leftColumnRight = BoundaryColumn.Build(fonts, leftBound, measureItems).RightSkylineFromBarLine();
         // The note column's left reach: its leftmost ink plus its extra-spacing-width, the
         // right-hand term of minimum_distance (MusicalColumnLeftReach), over every voice.
         double reach = 0;

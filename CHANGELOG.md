@@ -17,8 +17,12 @@ workflow attaches that section to the GitHub Release verbatim.
   entry, then its group's, then the engraving — for the roles whose drawing and reserved
   space both read the plan: `title composer instrument lyricText stanza chordName fretFrame
   tempo mark pedal navigation text dynamics partCombine barNumber tuplet volta ottava bend
-  tabTechnique`; on the others (Emmentaler digit runs — `figuredBass fingering tabFret` — and
-  the notation roles `clefOctave meter`) they warn (LYS8018) and the face still binds. A chord symbol's accidental and a metronome mark's note step with their text.
+  tabTechnique clefOctave tabFret meter`; `fingering` and `figuredBass` are Emmentaler digit
+  runs and take a size (the glyph's own font-size steps — design, em and box together) but no
+  style (LYS8018); `tabFret step` moves the fret digit and what is measured from it (its
+  column, the string-line bite, the stem's near end, a tie's clearance), not the string
+  spacing; `meter` is the compound numerator's `+` alone and widens the signature's column
+  with it. A chord symbol's accidental and a metronome mark's note step with their text.
   The twin writes a `step` as `\override Grob.font-size = #n` (and a style as `font-series`
   / `font-shape`) in the `\Score` context, the header roles as `\markup \fontsize`; a `size`
   has no LilyPond spelling and is warned about. **The redirect is spelled `chordName as sans`**

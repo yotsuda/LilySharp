@@ -447,14 +447,31 @@ public static class TextRoles
     /// to WARN (LYS8018) on an attribute the page would ignore — the worst outcome, decided
     /// when this was designed (2026-09-07), is a role that silently disregards its plan.
     /// <para>
-    /// The roles outside the table (2026-09-08, third leg) draw their digits from a glyph run
-    /// in the MUSIC font, where a text em has no meaning — figured bass and fingering
-    /// (FiguredBassGlyphRun / FingeringGlyphRun, whose em and design are static and read
-    /// through DigitRun's memo and a dozen layout sites without a plan in reach), tab fret
-    /// numbers (the tab staff's own geometry) — or are notation drawn as text (the clef's
-    /// octave digit, a compound meter's «+»), whose broad-binding exclusion has to be decided
-    /// for size and style too before they follow. Each one that moves into the table needs
-    /// every reader of its em rerouted first; the test above is what says when it has.
+    /// Fingering and figured bass are Emmentaler digit runs and follow through their run's
+    /// STEP (FingeringGlyphRun.Step / FiguredBassGlyphRun.Step — the grob's own font-size
+    /// plus the plan's), so the glyph design, the em and the box move as one; a written
+    /// STYLE has no meaning for a music-font digit and is warned about.
+    /// </para>
+    /// <para>
+    /// USER DECISION 2026-09-09 (fifth leg): the NOTATION roles follow too, named out loud —
+    /// there is no family layer for a size or a style, so <c>tabFret step +1</c> or
+    /// <c>notation bold</c> is the only door and it is already the narrow one the face rule
+    /// asked for. The tab fret digit moves with everything measured FROM the digit (its
+    /// column width, the bite out of the string line, the skyline box, the stem's near end,
+    /// the tie's clearance — TabConstants.FretEm) and the string spacing does not, as
+    /// LilyPond's <c>TabNoteHead.font-size</c> leaves <c>staff-space</c> alone. The clef's
+    /// octave digit is drawn and reserved nowhere else (SharedRenderer.ClefModifierEm).
+    /// </para>
+    /// <para>
+    /// <c>meter</c> — the «+» of a compound meter's numerator, a Lily#-own fallback character
+    /// inside a feta glyph run (MeterGlyphRun.Pieces) — was the last to follow (2026-09-09,
+    /// sixth leg): its ADVANCE is the TimeSignature's X extent, which the spacing core reads
+    /// through <c>SpacingRules.CalculateNoteheadRightExtent</c>, the change-column walks
+    /// (<c>GetTimeSignatureChangeWidth</c>, <c>BoundaryColumn.Build</c>) and every spring
+    /// built over them, so the plan is threaded through that arithmetic
+    /// (<c>CreateSpring</c>, <c>CalculateSkylineDistance</c>, <c>MeasureLayouter</c>,
+    /// <c>SystemBreaker</c>) rather than read from a static — a stepped «+» must not outgrow
+    /// the slot the columns booked for it, which is the silent split this table forbids.
     /// </para>
     /// </remarks>
     public static PlanReach PlanReachOf(TextRole role) => role switch
@@ -466,7 +483,10 @@ public static class TextRoles
             or TextRole.Text or TextRole.Dynamics or TextRole.PartCombine
             or TextRole.BarNumber or TextRole.Tuplet or TextRole.Volta or TextRole.Ottava
             or TextRole.Bend or TextRole.TabTechnique
+            or TextRole.ClefOctave or TextRole.TabFret or TextRole.Meter
             => PlanReach.Size | PlanReach.Style,
+        // Music-font digit runs: the size steps the glyph, a style has nothing to act on.
+        TextRole.Fingering or TextRole.FiguredBass => PlanReach.Size,
         _ => PlanReach.None,
     };
 }

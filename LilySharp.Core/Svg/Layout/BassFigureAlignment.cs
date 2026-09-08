@@ -114,7 +114,7 @@ internal static class BassFigureAlignment
     /// </list>
     /// </para>
     /// </remarks>
-    internal static ImmutableArray<double> RowOffsets(IReadOnlyList<Column> columns)
+    internal static ImmutableArray<double> RowOffsets(Rendering.ScoreTextMetrics fonts, IReadOnlyList<Column> columns)
     {
         int rows = 0;
         foreach (var c in columns)
@@ -141,8 +141,8 @@ internal static class BassFigureAlignment
             foreach (var c in columns)
             {
                 if (c.Texts.IsDefault || r >= c.Texts.Length) continue;
-                up.Merge(FiguredBassEngraver.ColumnUpSkyline(c.X, c.Texts[r]));
-                down.Merge(FiguredBassEngraver.ColumnDownSkyline(c.X, c.Texts[r]));
+                up.Merge(FiguredBassEngraver.ColumnUpSkyline(fonts, c.X, c.Texts[r]));
+                down.Merge(FiguredBassEngraver.ColumnDownSkyline(fonts, c.X, c.Texts[r]));
             }
             up.EndBatch();
             down.EndBatch();
@@ -185,12 +185,12 @@ internal static class BassFigureAlignment
     /// ⚠️ It is asked per COLUMN because that is what the callers reserve and draw: a column
     /// with fewer figures than the tallest one stops at its own last row.
     /// </remarks>
-    internal static double ColumnDepth(ImmutableArray<double> rowOffsets, ImmutableArray<string> texts)
+    internal static double ColumnDepth(Rendering.ScoreTextMetrics fonts, ImmutableArray<double> rowOffsets, ImmutableArray<string> texts)
     {
         if (texts.IsDefaultOrEmpty || rowOffsets.IsDefaultOrEmpty) return 0;
         int last = Math.Min(texts.Length, rowOffsets.Length) - 1;
         if (last < 0) return 0;
-        return rowOffsets[last] - FiguredBassGlyphRun.InkBottom(texts[last]);
+        return rowOffsets[last] - FiguredBassGlyphRun.InkBottom(fonts, texts[last]);
     }
 
     private static VerticalSkyline Shifted(VerticalSkyline sky, double dy)

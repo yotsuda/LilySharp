@@ -83,7 +83,7 @@ public class TimeSignaturePangoWidthTests
     [InlineData("12", 2.731465)]
     [InlineData("16", 2.526605)]
     public void TwoDigitRow_KernsInsideTheSnap(string row, double expected)
-        => Assert.Equal(expected, LilySharp.Core.Svg.Layout.MeterGlyphRun.Width(row), 6);
+        => Assert.Equal(expected, LilySharp.Core.Svg.Layout.MeterGlyphRun.Width(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, row), 6);
 
     /// <summary>
     /// The default 4/4 and 2/2 print the <c>timesig.C44</c>/<c>timesig.C22</c> GLYPHS —
@@ -99,9 +99,9 @@ public class TimeSignaturePangoWidthTests
     [Fact]
     public void FourFourAndTwoTwo_AreTheCGlyphInk_NotQuantisedDigits()
     {
-        Assert.Equal(1.700000, GlyphMetrics.GetTimeSigWidth(4, 4), 6); // timesig.C44 LILC
-        Assert.Equal(1.700000, GlyphMetrics.GetTimeSigWidth(2, 2), 6); // timesig.C22 LILC
-        Assert.Equal(1.604735, GlyphMetrics.GetTimeSigWidth(3, 4), 6); // digit path, unchanged
+        Assert.Equal(1.700000, GlyphMetrics.GetTimeSigWidth(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, 4, 4), 6); // timesig.C44 LILC
+        Assert.Equal(1.700000, GlyphMetrics.GetTimeSigWidth(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, 2, 2), 6); // timesig.C22 LILC
+        Assert.Equal(1.604735, GlyphMetrics.GetTimeSigWidth(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, 3, 4), 6); // digit path, unchanged
     }
 
     /// <summary>

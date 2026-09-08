@@ -87,7 +87,7 @@ public class EmptyBarSpacingTests
     {
         var (timings, allMeasures, primary, score) = Collect(src, measureIndex);
         var springs = new MeasureLayouter()
-            .CreateTimingSprings(primary, timings, globalShortest, allMeasures);
+            .CreateTimingSprings(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, timings, globalShortest, allMeasures);
         return MultiStaffLayouter.ApplySharedColumnReservations(
             score, measureIndex, springs, primary, timings, allMeasures, globalShortest);
     }
@@ -98,7 +98,7 @@ public class EmptyBarSpacingTests
     /// LILYPOND-REF: lily/spacing-basic.cc:44-56 standard_breakable_column_spacing.
     /// </summary>
     private static double LilyPondBarToBar(double globalShortest, Fraction measureLength)
-        => SpacingRules.MmrRodMinimumDistance(BarlineType.Single, null)
+        => SpacingRules.MmrRodMinimumDistance(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, BarlineType.Single, null)
            + EngravingDefaults.SpacingIncrement * (measureLength.ToDouble() / globalShortest) * 0.8;
 
     [Fact]
@@ -123,7 +123,7 @@ public class EmptyBarSpacingTests
         var last = springs[^1];
         double space = EngravingDefaults.SpacingIncrement * (1.0 / GlobalShortest) * 0.8;
         Assert.Equal(LilyPondBarToBar(GlobalShortest, new Fraction(1, 1)) - bw, last.IdealDistance, 9);
-        Assert.Equal(SpacingRules.MmrRodMinimumDistance(BarlineType.Single, null) - bw, last.MinDistance, 9);
+        Assert.Equal(SpacingRules.MmrRodMinimumDistance(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, BarlineType.Single, null) - bw, last.MinDistance, 9);
         // set_inverse_stretch_strength (space), and the default compress strength is
         // ideal − min = space too (lily/spring.cc:204-210).
         Assert.Equal(space, last.InverseStretchStrength, 9);
@@ -159,7 +159,7 @@ public class EmptyBarSpacingTests
     {
         var (_, _, primary, _) = Collect(SkipBars, 1);
         var column = ColumnSprings(SkipBars, 1, GlobalShortest);
-        var item = SpacingRules.CreateSpringsForMeasure(primary, GlobalShortest);
+        var item = SpacingRules.CreateSpringsForMeasure(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, GlobalShortest);
 
         // The item estimate has one leg per item slot, the column system one per onset;
         // for a lone skip both are one, and the chains agree in every sum.
@@ -288,14 +288,14 @@ public class EmptyBarSpacingTests
         {
             var springs = ColumnSprings(SlashBody, bar, gs);
             Assert.Equal(0.0, springs[0].IdealDistance);
-            double expected = SpacingRules.MmrRodMinimumDistance(BarlineType.Single, null)
+            double expected = SpacingRules.MmrRodMinimumDistance(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, BarlineType.Single, null)
                               + SpacingRules.CalculateDurationSpace(new Fraction(1, 1), gs);
             Assert.Equal(expected - bw, springs[^1].IdealDistance, 9);
             Assert.Equal(6.39, springs[^1].IdealDistance + bw, 2);
             // The default strengths of Spring (ideal, min_dist): stretch = ideal (LilyPond's
             // column-to-column ideal, not the re-framed one), compress = ideal − min.
             Assert.Equal(expected, springs[^1].InverseStretchStrength, 9);
-            Assert.Equal(expected - SpacingRules.MmrRodMinimumDistance(BarlineType.Single, null),
+            Assert.Equal(expected - SpacingRules.MmrRodMinimumDistance(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, BarlineType.Single, null),
                 springs[^1].InverseCompressStrength, 9);
         }
 
@@ -344,7 +344,7 @@ public class EmptyBarSpacingTests
 
         double bw = SpacingRules.GetBarlineWidth(BarlineType.Single);
         double half = PercentRepeatEngraver.DoublePercentInkWidth(1.0) / 2;
-        double min0 = SpacingRules.MmrRodMinimumDistance(BarlineType.Single, null);
+        double min0 = SpacingRules.MmrRodMinimumDistance(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, BarlineType.Single, null);
         double space = SpacingRules.CalculateDurationSpace(new Fraction(1, 1), GlobalShortest);
         var first = ColumnSprings(pair, 3, GlobalShortest);
         var second = ColumnSprings(pair, 4, GlobalShortest);

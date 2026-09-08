@@ -219,13 +219,13 @@ internal static partial class SharedRenderer
                 DrawTrillSpanners(layout, measureToSystemTopYUp, os, gc);
                 DrawGlissandos(layout, measureToSystemTopYUp, os, gc);
                 DrawArpeggios(layout, measureToSystemTopYUp, os, gc);
-                DrawGraceNotes(layout, measureToSystemTopYUp, os, gc, page.Height);
+                DrawGraceNotes(score.TextMetrics, layout, measureToSystemTopYUp, os, gc, page.Height);
                 DrawChordNames(score.TextMetrics, layout, measureToSystemTopYUp, gc);
-                DrawFiguredBass(layout, measureToSystemTopYUp, os, gc);
+                DrawFiguredBass(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
                 DrawPercentRepeats(layout, measureToSystemTopYUp, os, gc);
                 DrawBarNumbers(score.TextMetrics, layout, measureToSystemTopYUp, gc);
                 DrawStanzaNumbers(score.TextMetrics, layout, measureToSystemTopYUp, gc);
-                DrawFingerings(fingeringsByPage?[pageIndex], os, gc,
+                DrawFingerings(score.TextMetrics, fingeringsByPage?[pageIndex], os, gc,
                     fragHost, fragments, pageIndex, page);
                 DrawMusicMarks(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
                 DrawCustomTexts(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
@@ -441,9 +441,9 @@ internal static partial class SharedRenderer
             if (eolTime is { } eolMeter)
             {
                 notationStaffRight += SpacingRules.TimeCourtesySuffixWidth(
-                    eolMeter, afterCourtesyKey: eolCourtesy is not null);
+                    score.TextMetrics, eolMeter, afterCourtesyKey: eolCourtesy is not null);
                 tabStaffRight += SpacingRules.TimeCourtesySuffixWidth(
-                    eolMeter, afterCourtesyKey: false);
+                    score.TextMetrics, eolMeter, afterCourtesyKey: false);
             }
         }
 
@@ -546,13 +546,13 @@ internal static partial class SharedRenderer
                     if (isFirstSystem && !score.TimeSignature.SenzaMisura)
                     {
                         var pc = BreakAlignSpacing.SolvePrefixColumns(
-                            SpacingRules.MaxClefWidth(score),
+                            score.TextMetrics, SpacingRules.MaxClefWidth(score),
                             SpacingRules.WidestActiveKeyInk(
                                 score, system.Measures.Length > 0 ? system.Measures[0].MeasureIndex : 0),
                             includeTimeSignature: true,
                             score.TimeSignature.NumeratorText, score.TimeSignature.DenominatorText);
                         using (SourceScope(gc, score.Header.Time))
-                            DrawTimeSignature(
+                            DrawTimeSignature(score.TextMetrics,
                                 score.TimeSignature, systemStartX + pc.TimeX,
                                 rowTopY - h / 2 + StaffMiddleLineDrop, gc);
                     }
@@ -678,7 +678,7 @@ internal static partial class SharedRenderer
                     // guard — that a later line shows a CHANGE, not the declaration — is
                     // answered by resolving rather than by dropping the tag.
                     using (SourceScope(sgc, clefPos))
-                        prefixEndX = DrawClef(clef, systemStartX, localStaffY, maxClefWidth,
+                        prefixEndX = DrawClef(score.TextMetrics, clef, systemStartX, localStaffY, maxClefWidth,
                             clefGroupInkLeft, sgc);
                 }
                 // Break-align gaps between prefix items, from the SAME space-alists
@@ -728,13 +728,13 @@ internal static partial class SharedRenderer
                     {
                         if (!score.TimeSignature.SenzaMisura)
                             using (SourceScope(sgc, score.Header.Time))
-                                DrawTimeSignature(score.TimeSignature, sharedTimeX, localStaffY, sgc);
+                                DrawTimeSignature(score.TextMetrics, score.TimeSignature, sharedTimeX, localStaffY, sgc);
                     }
                     else if (GetSystemStartTimeChange(staff, system) is { } startTimeChange)
                     {
                         // A meter change at the line break is part of the prefix.
                         if (!startTimeChange.NewTime.SenzaMisura)
-                            DrawTimeSignature(startTimeChange.NewTime, sharedTimeX, localStaffY, sgc);
+                            DrawTimeSignature(score.TextMetrics, startTimeChange.NewTime, sharedTimeX, localStaffY, sgc);
                     }
                 }
 
@@ -764,7 +764,7 @@ internal static partial class SharedRenderer
                         ? GrobPropertyResolver.ForStaffVoice(
                             score.GrobOverrides, score.GrobReverts, globalIdx, voiceNumber)
                         : resolver;
-                    DrawStaffMeasures(voices[vi], voiceNumber, voices,
+                    DrawStaffMeasures(score.TextMetrics, voices[vi], voiceNumber, voices,
                         system, layout, globalIdx, localStaffY, clef, voiceResolver, beamedItems, sgc,
                         pageHeight, fragFrom, fragTo, percentCovered);
                 }
@@ -832,7 +832,7 @@ internal static partial class SharedRenderer
 
                     if (GetSystemEndTimeChange(staff, system) is { } eolTimeChange)
                         using (sgc.Source(eolTimeChange.SourcePosition))
-                            DrawTimeSignature(
+                            DrawTimeSignature(score.TextMetrics,
                                 eolTimeChange.NewTime,
                                 // Alone, the meter takes its OWN entry off the bar line — not the
                                 // key's. LilyPond's two are 0.750000 and 1.150000, so one number

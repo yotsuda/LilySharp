@@ -120,15 +120,16 @@ internal static partial class SharedRenderer
     /// <see cref="BassFigureAlignment.RowOffsets"/> through the layout, i.e. from the grob
     /// that does the stacking (scm/define-grobs.scm:366-385).
     /// </remarks>
-    private static void DrawFiguredBass(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
-        in OssiaShrink os, IDrawingContext gc)
+    private static void DrawFiguredBass(ScoreTextMetrics fonts, ScoreLayout layout,
+        Dictionary<int, double> sysTopYUp, in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.FiguredBassLayouts.IsDefaultOrEmpty) return;
-        double size = FiguredBassGlyphRun.Em;
+        double size = FiguredBassGlyphRun.Em(fonts);
         // The design the metrics came out of, opened once for the whole pass — a figure's
         // 11.2246 pt lands on emmentaler-11 and the two halves of that claim must not be
-        // decided separately (IDrawingContext.MusicFace).
-        using var face = gc.MusicFace(FiguredBassGlyphRun.Design);
+        // decided separately (IDrawingContext.MusicFace). Both at the SCORE's step
+        // (FiguredBassGlyphRun.Step), which a `fonts { figuredBass step … }` moves.
+        using var face = gc.MusicFace(FiguredBassGlyphRun.Design(fonts));
         foreach (var fb in layout.FiguredBassLayouts)
         {
             if (!sysTopYUp.ContainsKey(fb.MeasureIndex)) continue;
@@ -173,7 +174,7 @@ internal static partial class SharedRenderer
                     // LILYPOND-REF: lily/modified-font-metric.cc:125-143 text_stencil — the
                     // glyphs of the run at their own advances, which FiguredBassGlyphRun has
                     // already accumulated; the reservation reads the same house.
-                    foreach (var piece in FiguredBassGlyphRun.Pieces(text))
+                    foreach (var piece in FiguredBassGlyphRun.Pieces(fonts, text))
                     {
                         if (piece.IsGlyph)
                             gc.DrawGlyph(piece.Ch, x0 + piece.X, y, size, Color.Black);
@@ -422,9 +423,13 @@ internal static partial class SharedRenderer
     /// each item's MeasureIndex/Number/X/YUp/StaffIndex.
     /// </summary>
     private static (long Hash, int[] Anchors) FoldFingeringPage(
-        List<FingeringLayout> pageItems, PageLayout page)
+        ScoreTextMetrics fonts, List<FingeringLayout> pageItems, PageLayout page)
     {
         var hc = new MeasureContentKey.Hash64();
+        // The plan is in the fold: a `fonts { fingering step … }` edit changes the glyph's em
+        // and design while every layout number above stays put, and a replayed fragment would
+        // draw the old size.
+        hc.Add(fonts.Plan.Signature);
         hc.Add(page.Height);
         foreach (var system in page.Systems)
         {
@@ -462,31 +467,33 @@ internal static partial class SharedRenderer
     /// largest page-level drawer; the rest measured ≈ 0 and stay live). Replays the
     /// recorded page output when the value fold and anchors match, else draws live
     /// under a capture. Non-SVG backends draw the page's bucket directly.</summary>
-    private static void DrawFingerings(List<FingeringLayout>? pageItems, in OssiaShrink os,
-        IDrawingContext gc, SvgDocumentContext? fragHost,
+    private static void DrawFingerings(ScoreTextMetrics fonts, List<FingeringLayout>? pageItems,
+        in OssiaShrink os, IDrawingContext gc, SvgDocumentContext? fragHost,
         SvgSystemFragmentCache? fragments, int pageIndex, PageLayout page)
     {
         if (pageItems == null)
             return;
         if (fragHost == null)
         {
-            DrawFingeringsLive(pageItems, os, gc);
+            DrawFingeringsLive(fonts, pageItems, os, gc);
             return;
         }
-        var (hash, anchors) = FoldFingeringPage(pageItems, page);
+        var (hash, anchors) = FoldFingeringPage(fonts, pageItems, page);
         if (fragments!.TryReplayOverlay(OverlayDrawerId.Fingerings, pageIndex, hash, anchors, fragHost))
             return;
         using (fragments.BeginOverlayCapture(OverlayDrawerId.Fingerings, pageIndex, hash, anchors, fragHost))
-            DrawFingeringsLive(pageItems, os, gc);
+            DrawFingeringsLive(fonts, pageItems, os, gc);
     }
 
-    private static void DrawFingeringsLive(List<FingeringLayout> pageItems,
+    private static void DrawFingeringsLive(ScoreTextMetrics fonts, List<FingeringLayout> pageItems,
         in OssiaShrink os, IDrawingContext gc)
     {
-        double size = FingeringGlyphRun.Em;
+        // The em and the design at the SCORE's step (FingeringGlyphRun.Step — the grob's −5
+        // plus the plan's `fingering step`), the same two the metric home measured with.
+        double size = FingeringGlyphRun.Em(fonts);
         // The design the metrics came out of, opened once for the whole pass: every
         // fingering in a score is at the same font-size, so this scope never nests.
-        using var face = gc.MusicFace(FingeringGlyphRun.Design);
+        using var face = gc.MusicFace(FingeringGlyphRun.Design(fonts));
         foreach (var f in pageItems)
         {
             // Frame B -> device: reflect the Y-up baseline against this fingering's
@@ -496,14 +503,14 @@ internal static partial class SharedRenderer
             // The metric home is DigitRun (memoized for the ten single digits — the
             // preview redraws this every frame); a single-glyph run draws without
             // building a pieces array, the multi-glyph rarity walks the run.
-            var (glyphs, _, width) = FingeringEngraver.DigitRun(f.Number);
+            var (glyphs, _, width) = FingeringEngraver.DigitRun(fonts, f.Number);
             double x0 = f.X - width / 2.0;
             using (gc.Source(f.SourcePosition))
             {
                 if (glyphs.Length == 1)
                     gc.DrawGlyph(glyphs[0], x0, y, size, Color.Black);
                 else
-                    foreach (var piece in FingeringGlyphRun.Pieces(f.Number.ToString()))
+                    foreach (var piece in FingeringGlyphRun.Pieces(fonts, f.Number.ToString()))
                     {
                         if (piece.IsGlyph)
                             gc.DrawGlyph(piece.Ch, x0 + piece.X, y, size, Color.Black);

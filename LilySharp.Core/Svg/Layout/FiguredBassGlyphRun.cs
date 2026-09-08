@@ -73,7 +73,8 @@ internal static class FiguredBassGlyphRun
     /// <remarks>LILYPOND-REF: lily/font-select.cc:99-117 select_font over
     /// scm/translation-functions.scm:468-470 format-bass-figure — see
     /// <see cref="EngravingDefaults.FiguredBassFontSize"/>, where the derivation lives.</remarks>
-    internal static double Em => EngravingDefaults.FiguredBassFontSize;
+    internal static double Em(ScoreTextMetrics fonts)
+        => fonts.Size(TextRole.FiguredBass, EngravingDefaults.FiguredBassFontSize);
 
     /// <summary>The <c>font-size</c> a figure is set at, in LilyPond's sixths of an octave.</summary>
     /// <remarks>LILYPOND-REF: scm/translation-functions.scm:468-470 format-bass-figure —
@@ -81,11 +82,27 @@ internal static class FiguredBassGlyphRun
     internal const double FontSizeStep = -5.0;
 
     /// <summary>
+    /// The step a figure is set at for THIS score: the markup's own −5 plus whatever the
+    /// score's <c>fonts { }</c> wrote for <c>figuredBass</c>. ONE HOME with <see cref="Em"/>:
+    /// the em, the design and the glyph metrics are this step's together, so a plan that
+    /// moves the figure moves its glyph, its em and the box it is reserved in as one — the
+    /// shape <c>FingeringGlyphRun.Step</c> and <c>ChordNameGlyphRun.AccidentalStep</c> share.
+    /// </summary>
+    internal static double Step(ScoreTextMetrics fonts)
+        => FontSizeStep + fonts.StepOf(TextRole.FiguredBass, EngravingDefaults.FiguredBassFontSize);
+
+    /// <summary>
     /// The Emmentaler design a figure is drawn from — the PEN needs it as well as the metrics.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/font-select.cc:41-70 best_rounded_design_size — 20·magstep(−5)
     /// = 11.2246 pt lands on <c>emmentaler-11</c>.</remarks>
-    internal static int Design => EmmentalerDesignSize.ForFontSizeStep(FontSizeStep).Rounded;
+    internal static int Design(ScoreTextMetrics fonts) => EmmentalerDesignSize.ForFontSizeStep(Step(fonts)).Rounded;
+
+    /// <summary>The glyph lookup at one step — a closure, because <see cref="FetaTextRun"/>
+    /// takes a delegate and the design it reads is the step's.</summary>
+    private static FetaTextRun.GlyphLookup Lookup(double step)
+        => (char c, out char glyph, out GlyphMetrics.BBox outline, out double advance)
+            => TryGetFigure(step, c, out glyph, out outline, out advance);
 
     /// <summary>That design's table, already in the PAGE's staff spaces.</summary>
     /// <remarks>
@@ -102,7 +119,7 @@ internal static class FiguredBassGlyphRun
     /// residual it leaves is the ~9e-5 Pango hinting the whole fetaText family has.
     /// </para>
     /// </remarks>
-    private static GlyphMetrics.DesignMetrics Font => GlyphMetrics.AtFontSize(FontSizeStep);
+    private static GlyphMetrics.DesignMetrics Font(double step) => GlyphMetrics.AtFontSize(step);
 
     /// <summary>The run's pieces, left to right, with X relative to the run's left edge.</summary>
     /// <remarks>
@@ -128,9 +145,9 @@ internal static class FiguredBassGlyphRun
     /// it would be the invention.
     /// </para>
     /// </remarks>
-    internal static ImmutableArray<Piece> Pieces(string text)
+    internal static ImmutableArray<Piece> Pieces(ScoreTextMetrics fonts, string text)
     {
-        var run = FetaTextRun.Pieces(text, TryGetFigure, Em);
+        var run = FetaTextRun.Pieces(text, Lookup(Step(fonts)), Em(fonts));
         var pieces = ImmutableArray.CreateBuilder<Piece>(run.Length);
         foreach (var p in run) pieces.Add(new Piece(p.Ch, p.X, p.Advance, p.IsGlyph));
         return pieces.ToImmutable();
@@ -140,10 +157,10 @@ internal static class FiguredBassGlyphRun
     /// The glyph, its outline box and its UNHINTED advance for one figure character, all in
     /// the page's staff spaces out of the figure's own design.
     /// </summary>
-    private static bool TryGetFigure(char c, out char glyph, out GlyphMetrics.BBox outline,
+    private static bool TryGetFigure(double step, char c, out char glyph, out GlyphMetrics.BBox outline,
         out double advance)
     {
-        var f = Font;
+        var f = Font(step);
         (glyph, outline, advance) = c switch
         {
             '0' => (EmmentalerGlyphs.FigBassDigit0, f.FigBassDigit0Outline, f.FigBassDigit0Advance),
@@ -165,7 +182,8 @@ internal static class FiguredBassGlyphRun
     }
 
     /// <summary>The run's advance width in staff spaces.</summary>
-    internal static double Width(string text) => FetaTextRun.Width(text, TryGetFigure, Em);
+    internal static double Width(ScoreTextMetrics fonts, string text)
+        => FetaTextRun.Width(text, Lookup(Step(fonts)), Em(fonts));
 
     /// <summary>
     /// The run's ink above its baseline — the union of its glyphs' outline tops, which is
@@ -182,7 +200,8 @@ internal static class FiguredBassGlyphRun
     /// </remarks>
     // No feta glyph: the same face and size the drawing falls back to, so that path keeps
     // the two halves together as well (FetaTextRun does the fallback).
-    internal static double InkTop(string text) => FetaTextRun.InkTop(text, TryGetFigure, Em);
+    internal static double InkTop(ScoreTextMetrics fonts, string text)
+        => FetaTextRun.InkTop(text, Lookup(Step(fonts)), Em(fonts));
 
     /// <summary>
     /// The run's ink BELOW its baseline (≤ 0) — the other end of the same
@@ -201,6 +220,6 @@ internal static class FiguredBassGlyphRun
     /// lowest figure carries one both reserves deeper and pushes the next row further down.
     /// </para>
     /// </remarks>
-    internal static double InkBottom(string text)
-        => FetaTextRun.InkBottom(text, TryGetFigure, Em);
+    internal static double InkBottom(ScoreTextMetrics fonts, string text)
+        => FetaTextRun.InkBottom(text, Lookup(Step(fonts)), Em(fonts));
 }

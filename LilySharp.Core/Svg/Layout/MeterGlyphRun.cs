@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Rendering;
 
 namespace LilySharp.Core.Svg.Layout;
 
@@ -56,7 +57,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// </para>
 /// <para>
 /// ⚠️ ONE HOME, for the reason the fingering and the figured bass each have one: the
-/// reservation (<see cref="GlyphMetrics.GetTimeSigWidth(string, string)"/> — the PRINTED
+/// reservation (<see cref="GlyphMetrics.GetTimeSigWidth(ScoreTextMetrics, string, string)"/> — the PRINTED
 /// spelling and not a beat count, which is why the additive "3+2" row measures right — which
 /// <see cref="BreakAlignSpacing"/> and <see cref="SpacingRules"/> book the prefix column
 /// from) and the drawing (<c>SharedRenderer.DrawTimeSignature</c>) must read one run. Before
@@ -103,6 +104,38 @@ internal static class MeterGlyphRun
     /// <summary>That design's table, already in the PAGE's staff spaces.</summary>
     private static GlyphMetrics.DesignMetrics Font => GlyphMetrics.AtFontSize(FontSizeStep);
 
+    /// <summary>The em the compound meter's <c>+</c> is DRAWN at by the engraving —
+    /// LILYSHARP-OWN, a text character LilyPond spells with markup.</summary>
+    internal const double PlusEngravingEm = 2.4;
+
+    /// <summary>The em the <c>+</c> is drawn at for THIS score: the engraving's
+    /// <see cref="PlusEngravingEm"/> stepped by what <c>fonts { }</c> wrote for <c>meter</c>
+    /// (or <c>notation</c>). USER DECISION 2026-09-09: the notation roles follow a written
+    /// size and style, named out loud.</summary>
+    internal static double PlusEm(ScoreTextMetrics fonts)
+        => fonts.Size(TextRole.Meter, PlusEngravingEm);
+
+    /// <summary>The style the <c>+</c> is drawn in — the engraving's bold unless the plan
+    /// wrote one.</summary>
+    internal static FontStyle PlusStyle(ScoreTextMetrics fonts)
+        => fonts.Style(TextRole.Meter, FontStyle.Bold);
+
+    /// <summary>
+    /// The em the fallback ADVANCE of the <c>+</c> is measured at: the run's own em, stepped
+    /// by the same step the drawn <c>+</c> takes, so the slot the columns book for it grows
+    /// with the glyph they book it for.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ TWO EMS FOR ONE CHARACTER, and knowingly kept: the advance has always been the serif
+    /// face's at the RUN's em (4.0, regular) while the glyph is drawn at 2.4 bold centred in
+    /// it — a Lily#-own slot, not a LilyPond quantity (LilyPond's compound meter is a markup
+    /// column). Folding the two into one em moves every compound-meter book; it is left as
+    /// the same-quantity-twice it is (docs/HANDOFF.md §1 第354 第 6 便) rather than moved
+    /// under a fonts leg, and only the STEP is shared here so a no-directive book is unchanged.
+    /// </remarks>
+    private static double FallbackEm(ScoreTextMetrics fonts)
+        => Em * EmmentalerDesignSize.Magstep(fonts.StepOf(TextRole.Meter, PlusEngravingEm));
+
     /// <summary>
     /// The row's pieces, left to right, with X relative to the row's left edge.
     /// </summary>
@@ -111,19 +144,20 @@ internal static class MeterGlyphRun
     /// <c>+</c> of a compound meter's numerator (<c>TimeSignatureInfo.BeatsText</c>), which
     /// LilyPond spells with its own markup rather than a feta glyph; it keeps the serif
     /// fallback the drawing already used, so its size and its metric still come from one
-    /// place.
+    /// place — and, since 2026-09-09, the same plan (<paramref name="fonts"/>): the pen and
+    /// every reservation of a meter row read one run.
     /// </remarks>
-    internal static ImmutableArray<Piece> Pieces(string text)
+    internal static ImmutableArray<Piece> Pieces(ScoreTextMetrics fonts, string text)
     {
-        var run = FetaTextRun.Pieces(text, TryGetDigit, Em, GlyphMetrics.MeterDigitKern);
+        var run = FetaTextRun.Pieces(text, TryGetDigit, FallbackEm(fonts), GlyphMetrics.MeterDigitKern);
         var pieces = ImmutableArray.CreateBuilder<Piece>(run.Length);
         foreach (var p in run) pieces.Add(new Piece(p.Ch, p.X, p.Advance, p.IsGlyph));
         return pieces.ToImmutable();
     }
 
     /// <summary>The row's advance width in staff spaces.</summary>
-    internal static double Width(string text)
-        => FetaTextRun.Width(text, TryGetDigit, Em, GlyphMetrics.MeterDigitKern);
+    internal static double Width(ScoreTextMetrics fonts, string text)
+        => FetaTextRun.Width(text, TryGetDigit, FallbackEm(fonts), GlyphMetrics.MeterDigitKern);
 
     /// <summary>
     /// The glyph, its outline box and its UNHINTED advance for one meter digit.

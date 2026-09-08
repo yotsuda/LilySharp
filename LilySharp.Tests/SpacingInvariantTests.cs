@@ -104,7 +104,7 @@ public class SpacingInvariantTests
         double clefWidth = SpacingRules.MaxClefWidth(score);
         double activeKeyInk = SpacingRules.WidestActiveKeyInk(score, 0);
         double layout = BreakAlignSpacing.CalculatePrefixWidth(
-            clefWidth, activeKeyInk, includeTimeSignature: true,
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, clefWidth, activeKeyInk, includeTimeSignature: true,
             score.TimeSignature.NumeratorText, score.TimeSignature.DenominatorText);
 
         // The line start LilyPond gives this score, to the digit.
@@ -120,7 +120,7 @@ public class SpacingInvariantTests
         // the key's 2.200000 plus the Clef→Key and Key→Time gaps, which only open when a
         // signature is engraved.
         double scoreKeyModel = SpacingRules.CalculatePrefixWidth(
-            clefWidth, score.LeadingKey, includeTimeSignature: true,
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, clefWidth, score.LeadingKey, includeTimeSignature: true,
             score.TimeSignature.NumeratorText, score.TimeSignature.DenominatorText);
         Assert.Equal(2.650000, layout - scoreKeyModel, precision: 6);
     }
@@ -237,14 +237,14 @@ public class SpacingInvariantTests
 
         double clefWidth = SpacingRules.MaxClefWidth(score);
         double layout = BreakAlignSpacing.CalculatePrefixWidth(
-            clefWidth, SpacingRules.WidestActiveKeyInk(score, 0), includeTimeSignature: true,
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, clefWidth, SpacingRules.WidestActiveKeyInk(score, 0), includeTimeSignature: true,
             score.TimeSignature.NumeratorText, score.TimeSignature.DenominatorText);
 
         Assert.Equal(layout, SystemBreaker.GateFirstPrefixWidth(score, clefWidth), precision: 6);
         Assert.Equal(
             layout,
             SpacingRules.CalculatePrefixWidth(
-                clefWidth, score.LeadingKey, includeTimeSignature: true,
+                LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, clefWidth, score.LeadingKey, includeTimeSignature: true,
                 score.TimeSignature.NumeratorText, score.TimeSignature.DenominatorText),
             precision: 6);
     }
@@ -268,8 +268,8 @@ public class SpacingInvariantTests
         // LILYPOND-REF: lily/note-spacing.cc:111 + :243-264.
         var (timings, allMeasures, primary, _) = Collect(OneMeasure);
         var columnSprings = new MeasureLayouter()
-            .CreateTimingSprings(primary, timings, 0.125, allMeasures);
-        var itemSprings = SpacingRules.CreateSpringsForMeasure(primary, 0.125);
+            .CreateTimingSprings(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, timings, 0.125, allMeasures);
+        var itemSprings = SpacingRules.CreateSpringsForMeasure(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, 0.125);
 
         Assert.Equal(columnSprings.Length, itemSprings.Length);
 
@@ -322,8 +322,8 @@ public class SpacingInvariantTests
             score main "x" { staff melody }
             """);
         var columnSprings = new MeasureLayouter()
-            .CreateTimingSprings(primary, timings, 0.125, allMeasures);
-        var itemSprings = SpacingRules.CreateSpringsForMeasure(primary, 0.125);
+            .CreateTimingSprings(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, timings, 0.125, allMeasures);
+        var itemSprings = SpacingRules.CreateSpringsForMeasure(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, 0.125);
 
         // One extra item slot for the clef, and no extra column for it.
         Assert.Equal(columnSprings.Length + 1, itemSprings.Length);
@@ -336,7 +336,7 @@ public class SpacingInvariantTests
         // — see audit/lp-geometry midmeasure.clef.clef-to-next-note.
         var clefColumn = primary.Items.Skip(2).ToList();
         Assert.Equal(GlyphMetrics.FClefChangeWidth + 1.0,
-                     SpacingRules.MidMeasureChangeRightGap(clefColumn), 9);
+                     SpacingRules.MidMeasureChangeRightGap(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, clefColumn), 9);
     }
 
     [Fact]
@@ -380,7 +380,7 @@ public class SpacingInvariantTests
                 m => m.Items.Any(it => it is RestItem { IsMultiMeasure: true }));
             Assert.True(runIdx > 0, "fixture must open with a note bar before the run");
             var leftBound = SpacingRules.RunLeftBoundBarline(measures, runIdx);
-            return SpacingRules.MmrRodMinimumDistance(leftBound, measures[runIdx].Items);
+            return SpacingRules.MmrRodMinimumDistance(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, leftBound, measures[runIdx].Items);
         }
 
         // Bar-line-only bound is unchanged from the old closed form (the plain-run path).
@@ -406,7 +406,7 @@ public class SpacingInvariantTests
         // increment wider than a quarter-note gap, never equal).
         var (timings, allMeasures, primary, _) = Collect(OneMeasure);
         double bsd = 0.125;
-        var springs = new MeasureLayouter().CreateTimingSprings(primary, timings, bsd, allMeasures);
+        var springs = new MeasureLayouter().CreateTimingSprings(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, timings, bsd, allMeasures);
 
         // springs: [barline→c2] [c2→d4 (half)] [d4→e4 (quarter)] [e4→end (quarter)]
         Assert.Equal(4, springs.Length);
@@ -466,7 +466,7 @@ public class SpacingInvariantTests
         // LILYPOND-REF: lily/staff-spacing.cc:164-180 (semi-fixed-space) and :200
         //   (stretchability = ideal - fixed), :218 set_inverse_stretch_strength.
         var (timings, allMeasures, primary, _) = Collect(OneMeasure);
-        var springs = new MeasureLayouter().CreateTimingSprings(primary, timings, 0.125, allMeasures);
+        var springs = new MeasureLayouter().CreateTimingSprings(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, timings, 0.125, allMeasures);
         Assert.Equal(EngravingDefaults.BarLineToNextNoteSpace / 2,
                      springs[0].InverseStretchStrength, precision: 9);
         Assert.Equal(EngravingDefaults.BarLineToNextNoteSpace, springs[0].IdealDistance, precision: 9);
@@ -484,8 +484,8 @@ public class SpacingInvariantTests
         // now disproved against LilyPond.
         var (timings, allMeasures, primary, _) = Collect(OneMeasure);
         var layouter = new MeasureLayouter();
-        var narrow = layouter.LayoutColumns(primary, 16, timings, 0.125, allMeasures);
-        var wide = layouter.LayoutColumns(primary, 32, timings, 0.125, allMeasures);
+        var narrow = layouter.LayoutColumns(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, 16, timings, 0.125, allMeasures);
+        var wide = layouter.LayoutColumns(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, 32, timings, 0.125, allMeasures);
         double firstShift = wide[0].X - narrow[0].X;
         double secondShift = wide[1].X - narrow[1].X;
         Assert.True(firstShift > 0,
@@ -523,9 +523,9 @@ public class SpacingInvariantTests
             score main "x" { staff melody }
             """;
         var (timings, allMeasures, primary, _) = Collect(src, measureIndex: 0);
-        var springs = new MeasureLayouter().CreateTimingSprings(primary, timings, 0.125, allMeasures);
+        var springs = new MeasureLayouter().CreateTimingSprings(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, timings, 0.125, allMeasures);
         var (timings1, allMeasures1, primary1, _) = Collect(src, measureIndex: 1);
-        var noteSprings = new MeasureLayouter().CreateTimingSprings(primary1, timings1, 0.125, allMeasures1);
+        var noteSprings = new MeasureLayouter().CreateTimingSprings(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary1, timings1, 0.125, allMeasures1);
 
         double restWidth = springs.Sum(s => s.IdealDistance);
         double noteWidth = noteSprings.Sum(s => s.IdealDistance);
@@ -554,8 +554,8 @@ public class SpacingInvariantTests
         var (timings0, all0, primary0, _) = Collect(src, measureIndex: 0);
         var (timings1, all1, primary1, _) = Collect(src, measureIndex: 1);
         var layouter = new MeasureLayouter();
-        double densePriced = layouter.CreateTimingSprings(primary0, timings0, 0.125, all0).Sum(s => s.IdealDistance);
-        double restPriced = layouter.CreateTimingSprings(primary1, timings1, 0.125, all1).Sum(s => s.IdealDistance);
+        double densePriced = layouter.CreateTimingSprings(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary0, timings0, 0.125, all0).Sum(s => s.IdealDistance);
+        double restPriced = layouter.CreateTimingSprings(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary1, timings1, 0.125, all1).Sum(s => s.IdealDistance);
         Assert.True(densePriced > restPriced * 2,
             $"rest-against-8ths measure ({densePriced:F2}) must price like its dense staff, not its resting one ({restPriced:F2})");
     }
@@ -587,7 +587,7 @@ public class SpacingInvariantTests
             """);
 
         var next = score.PrimaryContentStaff.PrimaryVoice.Measures[1];
-        var bare = new MeasureLayouter().CreateTimingSprings(primary, timings, 0.125, allMeasures, next);
+        var bare = new MeasureLayouter().CreateTimingSprings(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, timings, 0.125, allMeasures, next);
         var reserved = MultiStaffLayouter.ApplySharedColumnReservations(
             score, 0, bare, primary, timings, allMeasures);
 
@@ -749,7 +749,7 @@ public class SpacingInvariantTests
     {
         var (timings, allMeasures, primary, score) = Collect(DottedThirdVoice);
 
-        var bare = new MeasureLayouter().CreateTimingSprings(primary, timings, 0.125, allMeasures);
+        var bare = new MeasureLayouter().CreateTimingSprings(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, timings, 0.125, allMeasures);
         var reserved = MultiStaffLayouter.ApplySharedColumnReservations(
             score, 0, bare, primary, timings, allMeasures);
 
@@ -815,7 +815,7 @@ public class SpacingInvariantTests
     {
         var (timings, allMeasures, primary, _) = Collect(src, measureIndex);
         return new MeasureLayouter()
-            .CreateTimingSprings(primary, timings, 0.125, allMeasures)
+            .CreateTimingSprings(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, timings, 0.125, allMeasures)
             .Select(s => s.IdealDistance)
             .ToArray();
     }

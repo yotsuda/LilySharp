@@ -1017,7 +1017,7 @@ internal sealed class MultiStaffLayouter
         return LineStartColumn.LineStartSpring(
             score, prefix.Columns, SpacingRules.ClefGroupInkLeft(score),
             prefix.HasTime
-                ? GlyphMetrics.GetTimeSigWidth(prefix.Numerator, prefix.Denominator)
+                ? GlyphMetrics.GetTimeSigWidth(score.TextMetrics, prefix.Numerator, prefix.Denominator)
                 : 0.0,
             startMeasureIndex, ownFixedFloor, measureStartBarWidth);
     }
@@ -1141,7 +1141,7 @@ internal sealed class MultiStaffLayouter
         // The break-align table itself, not just its right edge: the min_dist needs every
         // column's X to place the prefatory boxes (staff-spacing.cc:210).
         var prefixColumns = BreakAlignSpacing.SolvePrefixColumns(
-            maxClefWidth, activeKeyInk, prefixHasTime, prefixNumerator, prefixDenominator,
+            score.TextMetrics, maxClefWidth, activeKeyInk, prefixHasTime, prefixNumerator, prefixDenominator,
             staffBarWidth);
         return new LineStartPrefix(
             prefixColumns, leadingTimeChange, prefixHasTime, prefixNumerator, prefixDenominator,
@@ -1201,7 +1201,7 @@ internal sealed class MultiStaffLayouter
                     score, startMeasureIndex, endMeasureIndex, meterFollows: leadTime is not null);
             if (leadTime is { } t)
                 availableWidth -= SpacingRules.TimeCourtesySuffixWidth(
-                    t, afterCourtesyKey: leadKey is not null);
+                    score.TextMetrics, t, afterCourtesyKey: leadKey is not null);
         }
 
         // LILYPOND-REF: lily/spacing-spanner.cc — collect springs from ALL columns across
@@ -1273,7 +1273,7 @@ internal sealed class MultiStaffLayouter
             var nextMeasure = i + 1 < primaryVoice.Measures.Length
                 ? primaryVoice.Measures[i + 1] : null;
             var springs = _measureLayouter.CreateTimingSprings(
-                primaryMeasure, allTimings, baseShortestDuration, allMeasures, nextMeasure,
+                score.TextMetrics, primaryMeasure, allTimings, baseShortestDuration, allMeasures, nextMeasure,
                 CollectStaffIndicesAtIndex(score, i),
                 SpacingRules.RunLeftBoundBarline(primaryVoice.Measures, i));
 
@@ -1343,7 +1343,7 @@ internal sealed class MultiStaffLayouter
             // …and so does the MUSICAL ink on the column, which is the rest of
             // col->extent (col, X_AXIS).
             var (musicalLeft, musicalRight) =
-                SpacingRules.MusicalInkOverhangsPerColumn(allMeasures, allTimings);
+                SpacingRules.MusicalInkOverhangsPerColumn(score.TextMetrics, allMeasures, allTimings);
             for (int c = 0; c < leftOverhangs.Length; c++)
             {
                 leftOverhangs[c] = Math.Max(leftOverhangs[c], musicalLeft[c]);
@@ -1461,6 +1461,7 @@ internal sealed class MultiStaffLayouter
                 // inflated every run (an R1*5 run by ~3.4 ss).
                 var runStartMeasure = primaryVoice.Measures[measureIndex];
                 double minimumDistance = SpacingRules.MmrRodMinimumDistance(
+                    score.TextMetrics,
                     SpacingRules.RunLeftBoundBarline(primaryVoice.Measures, measureIndex),
                     runStartMeasure.Items);
 
@@ -1596,7 +1597,7 @@ internal sealed class MultiStaffLayouter
             }
 
             var columnLayouts = _measureLayouter.LayoutColumns(
-                primaryMeasure, measureWidth, measureTimings[i],
+                score.TextMetrics, primaryMeasure, measureWidth, measureTimings[i],
                 baseShortestDuration, measureAllMeasures[i],
                 measureSprings[i], force);
 
@@ -1608,12 +1609,12 @@ internal sealed class MultiStaffLayouter
             // with no timing columns (all zero-duration items).
             var itemLayouts = MeasureLayouter.LayoutItemsFromColumns(primaryMeasure, columnLayouts, measureWidth);
             if (itemLayouts.IsDefaultOrEmpty && primaryMeasure.Items.Length > 0)
-                itemLayouts = _measureLayouter.LayoutItems(primaryMeasure, measureWidth);
+                itemLayouts = _measureLayouter.LayoutItems(score.TextMetrics, primaryMeasure, measureWidth);
 
             var measureLayout = new MeasureLayout(measureIndex, currentX, measureWidth, itemLayouts, columnLayouts)
             {
                 LooseChangeHangs = ComputeLooseChangeHangs(
-                    measureAllMeasures[i], measureTimings[i],
+                    score.TextMetrics, measureAllMeasures[i], measureTimings[i],
                     measureColumnOverhangs[i].Right, columnLayouts),
             };
             layouts.Add(measureLayout);
@@ -1637,6 +1638,7 @@ internal sealed class MultiStaffLayouter
     ///   are draped around the columns in between-cols after the line is solved.
     /// </remarks>
     private static ImmutableDictionary<Fraction, double>? ComputeLooseChangeHangs(
+        Rendering.ScoreTextMetrics fonts,
         List<Measure> allMeasures, List<Fraction> allTimings,
         double[] columnInkRight, ImmutableArray<ColumnLayout> columns)
     {
@@ -1682,7 +1684,7 @@ internal sealed class MultiStaffLayouter
                 continue;
 
             var ownLeft = SpacingRules.LooseChangeLeftNeighborTiming(allMeasures, columnItems);
-            if (!SpacingRules.IsLooseChangeColumn(allTimings, ownLeft, changeTiming, columnItems))
+            if (!SpacingRules.IsLooseChangeColumn(fonts, allTimings, ownLeft, changeTiming, columnItems))
                 continue;
 
             int leftIndex = allTimings.IndexOf(ownLeft!.Value);
@@ -1695,7 +1697,7 @@ internal sealed class MultiStaffLayouter
             double permissible = columns[c].X
                                  - (columns[leftIndex].X + columnInkRight[leftIndex]);
             hangs ??= ImmutableDictionary.CreateBuilder<Fraction, double>();
-            hangs[changeTiming] = SpacingRules.LooseChangeColumnHangDistance(
+            hangs[changeTiming] = SpacingRules.LooseChangeColumnHangDistance(fonts,
                 columnItems, permissible);
         }
         return hangs?.ToImmutable();
@@ -1764,6 +1766,7 @@ internal sealed class MultiStaffLayouter
             // A double percent sign on either bounding bar line reaches into this bar.
             var signHalf = ScoreSideTables.DoublePercentHalfWidths(score);
             var empty = SpacingRules.EmptyBarSprings(
+                score.TextMetrics,
                 allTimings.Count,
                 SpacingRules.RunLeftBoundBarline(primaryMeasures, measureIndex),
                 primaryMeasure.Items,
@@ -1850,7 +1853,7 @@ internal sealed class MultiStaffLayouter
                 if (tStaff.IsTab && tStaff.Tuning is { } tabTuning
                     && measureIndex < tStaff.PrimaryVoice.Measures.Length)
                     springs = SpacingRules.ApplyTabChordSpacing(
-                        springs, allTimings, tStaff.PrimaryVoice.Measures[measureIndex],
+                        score.TextMetrics, springs, allTimings, tStaff.PrimaryVoice.Measures[measureIndex],
                         Tunings.GetTuning(tabTuning),
                         Tunings.SoundingShift(tStaff.TabSourceClef, tStaff.Transposition));
 
@@ -3067,7 +3070,7 @@ internal sealed class MultiStaffLayouter
                 if (!score.FiguredBasses.IsDefaultOrEmpty)
                 {
                     var fbInk = FiguredBassEngraver.RowInkBelowStaff(
-                        score.FiguredBasses, measureLayouts, thisStaff,
+                        score.TextMetrics, score.FiguredBasses, measureLayouts, thisStaff,
                         staff.PrimaryVoice.Measures, sky.Down);
                     if (!fbInk.IsEmpty)
                         sky.Down.Merge(fbInk);
@@ -3189,7 +3192,7 @@ internal sealed class MultiStaffLayouter
                 b1.MemberXPositions, staffIndex, b1.SystemIndex,
                 b1.MemberStaffIndices, b1.RestXPositions)).ToImmutableArray();
         return TupletBracketEngraver.Calculate(
-            staffTuplets, measureLayouts, staff.PrimaryVoice.Measures,
+            score.TextMetrics, staffTuplets, measureLayouts, staff.PrimaryVoice.Measures,
             beamGroups, beamLayouts: staffBeams,
             forceStemUp: staff.IsMultiVoice,
             measuresByStaff: new Dictionary<int, ImmutableArray<Measure>>
@@ -3308,7 +3311,8 @@ internal sealed class MultiStaffLayouter
                 b.Group, b.LeftY, b.RightY, b.LeftX, b.RightX, b.LeftStemX, b.RightStemX,
                 b.MemberXPositions, staffIndex, b.SystemIndex,
                 b.MemberStaffIndices, b.RestXPositions)).ToImmutableArray();
-        return FingeringEngraver.Calculate(staffScore, measureLayouts, staffIndex, localBeams);
+        // The plan is the SCORE's, not the one-voice staffScore's (which carries none).
+        return FingeringEngraver.Calculate(score.TextMetrics, staffScore, measureLayouts, staffIndex, localBeams);
     }
 
     private ImmutableArray<ArticulationLayout> StaffArticulationLayouts(
@@ -3355,7 +3359,7 @@ internal sealed class MultiStaffLayouter
             staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
             LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer);
         return ArticulationEngraver.Calculate(
-            staffScore, staffArticulations, measureLayouts,
+            score.TextMetrics, staffScore, staffArticulations, measureLayouts,
             measuresByStaff: new Dictionary<int, ImmutableArray<Measure>>
                 { [staffIndex] = staff.PrimaryVoice.Measures },
             staffYAt: null,
@@ -3460,7 +3464,7 @@ internal sealed class MultiStaffLayouter
     /// (<c>StaffOffsetInSystemDown</c> of the sole staff is 0), and every returned
     /// <c>*YUp</c> is measured from the staff's top line, exactly the per-staff skyline's
     /// own origin — the same frame <see cref="StaffTupletBracketLayouts"/> produces. This
-    /// reuses <see cref="ElementCoordinator.LayoutSlurs(ImmutableArray{Model.SlurItem},
+    /// reuses <see cref="ElementCoordinator.LayoutSlurs(Rendering.ScoreTextMetrics, ImmutableArray{Model.SlurItem},
     /// Model.Score, ImmutableArray{SystemLayout}, int, Model.Staff, ImmutableArray{Model.GraceNoteItem},
     /// ImmutableArray{Model.BeamLayout}, System.Func{ImmutableArray{InsideSlurScript}})"/>
     /// whole rather than a second copy
@@ -3516,11 +3520,11 @@ internal sealed class MultiStaffLayouter
             ? tieLayouts
             : tieLayouts.Select(t => t with { StaffIndex = staffIndex }).ToImmutableArray();
         return _elementCoordinator.LayoutSlurs(
-            items.Slurs, items.LocalScore, ImmutableArray.Create(system),
+            score.TextMetrics, items.Slurs, items.LocalScore, ImmutableArray.Create(system),
             staffIndex: 0, staff, score.GraceNotes,
             insideScripts: staffScripts.IsEmpty ? null : () =>
                 ArticulationEngraver.InsideSlurScriptLayouts(
-                    items.LocalScore, staffScripts, measureLayouts,
+                    score.TextMetrics, items.LocalScore, staffScripts, measureLayouts,
                     measuresByStaff: new Dictionary<int, ImmutableArray<Measure>>
                         { [staffIndex] = staff.PrimaryVoice.Measures },
                     staffYAt: null,
@@ -3533,7 +3537,7 @@ internal sealed class MultiStaffLayouter
     /// This staff's own ties, laid out in the staff's own frame so the skyline can reserve
     /// their bows — the tie analogue of <see cref="StaffSlurLayouts"/>. Same trivial
     /// one-staff-at-offset-0 system, reusing
-    /// <see cref="ElementCoordinator.LayoutTies(ImmutableArray{Model.TieItem}, Model.Score,
+    /// <see cref="ElementCoordinator.LayoutTies(Rendering.ScoreTextMetrics, ImmutableArray{Model.TieItem}, Model.Score,
     /// ImmutableArray{SystemLayout}, int, Model.Staff)"/>
     /// whole; tie geometry is fixed by note X and pitch, so it is sound to compute before
     /// the inter-staff spacing is decided.
@@ -3555,7 +3559,7 @@ internal sealed class MultiStaffLayouter
             Indent: 0);
         var items = StaffSpannerItemsOf(score, staff);
         return _elementCoordinator.LayoutTies(
-            items.Ties, items.LocalScore, ImmutableArray.Create(system),
+            score.TextMetrics, items.Ties, items.LocalScore, ImmutableArray.Create(system),
             staffIndex: 0, staff);
     }
 

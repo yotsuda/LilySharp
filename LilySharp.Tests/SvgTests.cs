@@ -220,7 +220,7 @@ form main {
             // a note head — a collision test that cannot see half the collisions.
             // CalculateRightExtent had no other caller and is gone.
             var leftExtent = SpacingRules.CalculateLeftExtent(musicItem);
-            var rightExtent = SpacingRules.CalculateNoteheadRightExtent(musicItem);
+            var rightExtent = SpacingRules.CalculateNoteheadRightExtent(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, musicItem);
 
             string accidental = musicItem switch
             {
@@ -239,7 +239,7 @@ form main {
             {
                 var prevItem = measure.Items[i - 1];
                 var prevMusicItem = score.Voice.Measures[0].Items[i - 1];
-                var prevRightExtent = SpacingRules.CalculateNoteheadRightExtent(prevMusicItem);
+                var prevRightExtent = SpacingRules.CalculateNoteheadRightExtent(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, prevMusicItem);
                 double prevRightEdge = prevItem.X + prevRightExtent;
                 double gap = leftEdge - prevRightEdge;
                 Console.WriteLine($"          Gap from prev: {gap:F1}");

@@ -102,7 +102,7 @@ public class GreedyBreakPermissionTests
 
     private static List<int> GreedySizes(params Measure[] measures)
     {
-        double w = SpacingRules.CalculateMeasureIdealWidth(measures[0]);
+        double w = SpacingRules.CalculateMeasureIdealWidth(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, measures[0]);
         var options = new LayoutOptions
         {
             PageWidth = w * 2.5,
@@ -111,7 +111,7 @@ public class GreedyBreakPermissionTests
             UseOptimalLineBreaking = false,
         };
         var systems = new SystemBreaker(options).BreakIntoSystemsGreedy(
-            ImmutableArray.Create(measures), firstPrefixWidth: 0, continuationPrefixWidth: 0);
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, ImmutableArray.Create(measures), firstPrefixWidth: 0, continuationPrefixWidth: 0);
         return systems.Select(s => s.Count).ToList();
     }
 

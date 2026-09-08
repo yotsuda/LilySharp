@@ -560,7 +560,7 @@ internal static partial class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: lily/clef.cc:29-52 — calc_glyph_name appends "_change" suffix
     /// </remarks>
-    private static void DrawClefChange(ClefChangeItem clefChange, double x, double staffY, IDrawingContext gc)
+    private static void DrawClefChange(ScoreTextMetrics fonts, ClefChangeItem clefChange, double x, double staffY, IDrawingContext gc)
     {
         // A CUE clef is the PLAIN glyph shrunk, not the "_change" variant: MEASURED
         // (audit/lp-geometry/probes/cue-span.ly D-WITH) LilyPond's CueClef reads
@@ -601,9 +601,9 @@ internal static partial class SharedRenderer
             gc.DrawGlyph(glyph, x, clefY,
                 clefChange.IsCue ? FontSize * EngravingDefaults.CueScale : FontSize);
             if (clefChange.NewClef is ClefType.Treble8Below or ClefType.Bass8Below)
-                DrawClefModifier8(x, staffY, change: true, gc);
+                DrawClefModifier8(fonts, x, staffY, change: true, gc);
             else if (clefChange.NewClef == ClefType.Treble8Above)
-                DrawClefModifier8(x, staffY, change: true, gc, above: true);
+                DrawClefModifier8(fonts, x, staffY, change: true, gc, above: true);
         }
     }
 
@@ -760,10 +760,10 @@ internal static partial class SharedRenderer
     /// (unlike clef changes, which use reduced _change glyphs).
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/time-signature-engraver.cc</remarks>
-    private static void DrawTimeSignatureChange(TimeSignatureChangeItem timeChange, double x, double staffY, IDrawingContext gc)
+    private static void DrawTimeSignatureChange(ScoreTextMetrics fonts, TimeSignatureChangeItem timeChange, double x, double staffY, IDrawingContext gc)
     {
         using (gc.Source(timeChange.SourcePosition))
-            DrawTimeSignature(timeChange.NewTime, x, staffY, gc);
+            DrawTimeSignature(fonts, timeChange.NewTime, x, staffY, gc);
     }
 
     /// <summary>

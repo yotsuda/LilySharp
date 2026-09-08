@@ -458,8 +458,8 @@ internal static partial class GlyphMetrics
     /// <remarks>LILYPOND-REF: scm/time-signature-settings.scm:954-964
     /// make-c-time-signature-markup — the glyph branch is exactly (n=2 ∧ d=2) ∨ (n=4 ∧
     /// d=4); :981-982 the default style is that procedure.</remarks>
-    public static double GetTimeSigWidth(int beats, int beatType)
-        => GetTimeSigWidth(
+    public static double GetTimeSigWidth(Rendering.ScoreTextMetrics fonts, int beats, int beatType)
+        => GetTimeSigWidth(fonts,
             beats.ToString(System.Globalization.CultureInfo.InvariantCulture),
             beatType.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
@@ -485,7 +485,10 @@ internal static partial class GlyphMetrics
     /// falls back to the serif face for it, which is what the drawing already did.
     /// </para>
     /// </remarks>
-    public static double GetTimeSigWidth(string beats, string beatType)
+    /// <param name="fonts">The score's text metrics — a compound numerator's <c>+</c> is a
+    /// text fallback whose advance follows <c>fonts { meter … }</c> (MeterGlyphRun); the
+    /// digits themselves read nothing from it.</param>
+    public static double GetTimeSigWidth(Rendering.ScoreTextMetrics fonts, string beats, string beatType)
     {
         // ⚠️ THE C GLYPHS COME FIRST, and this branch belongs HERE rather than in the int
         // overload: every reservation site now passes the printed rows, so a glyph test that
@@ -496,7 +499,7 @@ internal static partial class GlyphMetrics
             return TimeSigCommon.Width;
         if (beats == "2" && beatType == "2")
             return TimeSigCutCommon.Width;
-        return System.Math.Max(MeterGlyphRun.Width(beats), MeterGlyphRun.Width(beatType));
+        return System.Math.Max(MeterGlyphRun.Width(fonts, beats), MeterGlyphRun.Width(fonts, beatType));
     }
 
     /// <summary>

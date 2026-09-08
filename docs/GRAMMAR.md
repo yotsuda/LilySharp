@@ -302,7 +302,8 @@ Role           = 'title' | 'composer' | 'instrument'          (* header  *)
    ⚠️ NOTATION IS OUTSIDE STEPS 3 AND 4. The octave digit under `treble_8`, a compound
    meter's '+', and tab fret numbers are notation that happens to be drawn as text, so a
    `serif`/`sans` binding does NOT restyle them; they follow a face only when `notation`
-   or the leaf itself is named.
+   or the leaf itself is named. (A size or a style has no family layer at all, so for those
+   the named entry is the only door there is — see the reach list below.)
 
    SEVERAL NAMES ARE A FALLBACK CHAIN, most preferred first — a Latin face for the words
    and a CJK face for the syllables it has no glyph for. SVG hands the whole list to the
@@ -349,10 +350,18 @@ Role           = 'title' | 'composer' | 'instrument'          (* header  *)
    reserved for it, the collision skyline — asks the plan (TextRoles.PlanReachOf, held to
    the page by a test): title, composer, instrument, lyricText, stanza, chordName, fretFrame,
    tempo, mark, pedal, navigation, text, dynamics, partCombine, barNumber, tuplet, volta,
-   ottava, bend, tabTechnique. The rest — figuredBass, fingering, tabFret (Emmentaler digits,
-   where a text em has no meaning), clefOctave, meter (notation) — do not yet. An attribute on such a role is a
-   WARNING (LYS8018) rather than a silent no-op — the face on the same entry still binds.
-   A group warns only when none of its roles follows.
+   ottava, bend, tabTechnique, clefOctave, tabFret, meter — size and style both; fingering
+   and figuredBass — size only: they are Emmentaler digit runs, so a `step` moves the
+   glyph's own font-size (design, em and box together, as LilyPond's font-size does) and a
+   style has nothing to act on. `tabFret` moves the fret digit and everything measured from
+   it (the column it is given, the bite out of its string line, the stem's near end, a tie's
+   clearance) and NOT the string spacing, as LilyPond's `TabNoteHead.font-size` leaves the
+   TabStaff's `staff-space` alone; `clefOctave` moves the drawn digit, which is reserved
+   nowhere; `meter` moves the compound numerator's '+' (the one piece of a time signature
+   drawn as text — its digits are Emmentaler glyphs and do not step) together with the
+   column width the signature is booked at. A style on a size-only role is a WARNING
+   (LYS8018) rather than a silent no-op — the face on the same entry still binds. A group
+   warns only when none of its roles follows.
 
    A chord symbol's accidental (an Emmentaler glyph one step under the name) and the
    metronome mark's note glyph (\smaller of the mark) step with their text, as they do

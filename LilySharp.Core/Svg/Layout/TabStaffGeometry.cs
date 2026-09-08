@@ -53,6 +53,31 @@ internal static class TabConstants
     /// </remarks>
     public const double FretFontSize = 3.0;
 
+    /// <summary>The weight the engraving sets a fret number in — bold, so the digits read
+    /// over the string lines they sit on.</summary>
+    public const Rendering.FontStyle FretFontStyle = Rendering.FontStyle.Bold;
+
+    /// <summary>
+    /// The em a fret number is set at for THIS score: <see cref="FretFontSize"/> stepped by
+    /// what its <c>fonts { }</c> wrote for <c>tabFret</c> (or <c>notation</c>).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ EVERY READER OF THE DIGIT'S SIZE ASKS HERE — the pen, the width the columns
+    /// reserve, the bite out of the string line, the skyline box, the stem's near end, the
+    /// tie's clearance. Only the digit and what is measured from the digit move; the STRING
+    /// SPACING does not (<c>EngravingDefaults.TabStringSpace</c> is the staff's, as
+    /// LilyPond's <c>TabNoteHead.font-size</c> leaves <c>StaffSymbol.staff-space</c> alone).
+    /// USER DECISION 2026-09-09: the notation roles follow a written size and style, named
+    /// out loud (<c>tabFret</c> or <c>notation</c>) — a family binding never reaches them.
+    /// </remarks>
+    public static double FretEm(Rendering.ScoreTextMetrics fonts)
+        => fonts.Size(Rendering.TextRole.TabFret, FretFontSize);
+
+    /// <summary>The style a fret number is set in for THIS score — the engraving's bold
+    /// unless the plan wrote one.</summary>
+    public static Rendering.FontStyle FretStyle(Rendering.ScoreTextMetrics fonts)
+        => fonts.Style(Rendering.TextRole.TabFret, FretFontStyle);
+
     /// <summary>Grace fret digits relative to the main fret size.</summary>
     /// <remarks>
     /// LilyPond's ratio, applied to Lily#'s own (larger) base size: a normal
@@ -117,16 +142,14 @@ internal static class TabConstants
     /// (<c>TextRoles.IsNotation</c>): a broad <c>font "Georgia"</c> or <c>fonts { serif … }</c>
     /// does not reach it, by decision, because a fret number is not prose. Only a score
     /// that names <c>notation</c> or <c>tabFret</c> outright binds it, and this and its two
-    /// neighbours below still take the bundled face when it does.
-    /// <para>
-    /// The reason is this member: it is a <c>static readonly</c> initialised by the TYPE,
-    /// which cannot be handed a score. Closing it means turning three shared quantities
-    /// into per-score calls, and it is left named and counted rather than half-done.
-    /// </para>
+    /// neighbours below still take the bundled face when it does — the FACE. The SIZE and
+    /// the STYLE are the score's since 2026-09-09 (<see cref="FretEm"/>,
+    /// <see cref="FretStyle"/>), which is why this stopped being a <c>static readonly</c>
+    /// initialised by the type and became a call handed the score's metrics.
     /// </remarks>
-    public static readonly double FretDigitHeight =
-        Rendering.TextFontMetrics.InkHeight("0", FretFontSize, sans: false,
-            style: Rendering.FontStyle.Bold);
+    public static double FretDigitHeight(Rendering.ScoreTextMetrics fonts)
+        => Rendering.TextFontMetrics.InkHeight("0", FretEm(fonts), sans: false,
+            style: FretStyle(fonts));
 
     /// <summary>
     /// How far BELOW its string line a fret glyph's baseline sits, so the glyph's INK is
@@ -145,10 +168,10 @@ internal static class TabConstants
     /// the LILC ink for exactly this reason).
     /// </para>
     /// </remarks>
-    public static double FretBaselineDrop(string glyph, double fontSize)
+    public static double FretBaselineDrop(Rendering.ScoreTextMetrics fonts, string glyph, double fontSize)
     {
         var (bottom, top) = Rendering.TextFontMetrics.Ink(
-            glyph, fontSize, sans: false, style: Rendering.FontStyle.Bold);
+            glyph, fontSize, sans: false, style: FretStyle(fonts));
         return (top + bottom) / 2;
     }
 
@@ -166,9 +189,9 @@ internal static class TabConstants
     /// are exactly twice one; nothing about that was derivable from the count alone.
     /// </para>
     /// </remarks>
-    public static double FretGlyphWidth(string glyph, double fontSize)
+    public static double FretGlyphWidth(Rendering.ScoreTextMetrics fonts, string glyph, double fontSize)
         => Rendering.TextFontMetrics.Advance(
-            glyph, fontSize, sans: false, style: Rendering.FontStyle.Bold);
+            glyph, fontSize, sans: false, style: FretStyle(fonts));
 
     /// <summary>
     /// Clear air the spacing engine keeps BETWEEN one column's fret digits and the next
@@ -221,7 +244,8 @@ internal static class TabConstants
     /// than LilyPond's (HANDOFF §1 第337 ⑺).
     /// </para>
     /// </remarks>
-    public static double StemBeginOffset() => 1.35 * FretDigitHeight / 2;
+    public static double StemBeginOffset(Rendering.ScoreTextMetrics fonts)
+        => 1.35 * FretDigitHeight(fonts) / 2;
 
     /// <summary>
     /// A tab beam's <c>length-fraction</c>: 0.62, the one number LilyPond states rather than
@@ -382,10 +406,17 @@ internal readonly struct TabStaffGeometry
     public double StringSpace { get; }
     /// <summary>Number of strings for this tuning.</summary>
     public int StringCount { get; }
+    /// <summary>The score's text metrics — what the fret digit's em and style are read
+    /// from (<see cref="TabConstants.FretEm"/>), so a digit's drawn width here is the
+    /// score's and not the bundled default's.</summary>
+    public Rendering.ScoreTextMetrics Fonts { get; }
 
-    public TabStaffGeometry(TuningType tuning, double staffY, ClefType clef = ClefType.Treble,
-        int transposition = 0)
+    /// <param name="fonts">The SCORE's metrics — a per-staff <c>Score</c> carries no plan, so
+    /// a caller holding one passes the enclosing score's <c>TextMetrics</c>.</param>
+    public TabStaffGeometry(Rendering.ScoreTextMetrics fonts, TuningType tuning, double staffY,
+        ClefType clef = ClefType.Treble, int transposition = 0)
     {
+        Fonts = fonts;
         StaffY = staffY;
         _tuning = Tunings.GetTuning(tuning);
         _octaveShift = Tunings.SoundingShift(clef, transposition);
@@ -457,8 +488,8 @@ internal readonly struct TabStaffGeometry
             if (k < 0)
                 break;
             return (alloc[i].stringNum,
-                    TabChordColumns.Offsets(ordered)[k],
-                    TabChordColumns.FretWidth(ordered[k].fret) / 2);
+                    TabChordColumns.Offsets(Fonts, ordered)[k],
+                    TabChordColumns.FretWidth(Fonts, ordered[k].fret) / 2);
         }
         return (1, 0, 0);
     }
@@ -494,8 +525,8 @@ internal readonly struct TabStaffGeometry
                 if (k < 0 || ordered[k].str < 1)
                     return (1, 0, 0);
                 return (ordered[k].str,
-                        TabChordColumns.Offsets(ordered)[k],
-                        TabChordColumns.FretWidth(ordered[k].fret) / 2);
+                        TabChordColumns.Offsets(Fonts, ordered)[k],
+                        TabChordColumns.FretWidth(Fonts, ordered[k].fret) / 2);
             }
             default:
                 return (1, 0, 0);
@@ -510,7 +541,7 @@ internal readonly struct TabStaffGeometry
         int writtenMidi, int? preferredString)
     {
         var (stringNum, fret) = Fret(writtenMidi, preferredString);
-        return (stringNum, 0, TabChordColumns.FretWidth(fret) / 2);
+        return (stringNum, 0, TabChordColumns.FretWidth(Fonts, fret) / 2);
     }
 
     /// <summary>

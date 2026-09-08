@@ -4485,7 +4485,7 @@ internal sealed class RenderedGeometry
                 + "Drawn geometry:\n" + Describe());
         }
         string text = FingeringDigitChar(digits[0].Glyph)!.Value.ToString();
-        return digits[0].X + FingeringGlyphRun.Width(text) / 2.0 - NoteheadAnchor(0);
+        return digits[0].X + FingeringGlyphRun.Width(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, text) / 2.0 - NoteheadAnchor(0);
     }
 
     /// <summary>
@@ -4561,8 +4561,8 @@ internal sealed class RenderedGeometry
         }
         string text = digit.ToString();
         double edge = above
-            ? FingeringGlyphRun.InkBottom(text)
-            : FingeringGlyphRun.InkTop(text);
+            ? FingeringGlyphRun.InkBottom(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, text)
+            : FingeringGlyphRun.InkTop(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, text);
         // Device-down: an edge `e` staff-spaces up from the drawn origin sits at Y - e.
         return refs[0] - (hits[0].Y - edge);
     }
@@ -4624,7 +4624,7 @@ internal sealed class RenderedGeometry
     {
         for (char c = '0'; c <= '9'; c++)
         {
-            var pieces = FingeringGlyphRun.Pieces(c.ToString());
+            var pieces = FingeringGlyphRun.Pieces(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, c.ToString());
             if (pieces.Length == 1 && pieces[0].IsGlyph && pieces[0].Ch == glyph)
                 return c;
         }

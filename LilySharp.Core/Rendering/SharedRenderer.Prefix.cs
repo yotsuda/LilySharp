@@ -340,8 +340,8 @@ internal static partial class SharedRenderer
         return false;
     }
 
-    private static double DrawClef(ClefType clef, double x, double staffY, double clefColumnWidth,
-        double clefGroupInkLeft, IDrawingContext gc)
+    private static double DrawClef(ScoreTextMetrics fonts, ClefType clef, double x, double staffY,
+        double clefColumnWidth, double clefGroupInkLeft, IDrawingContext gc)
     {
         char glyph = clef switch
         {
@@ -379,9 +379,9 @@ internal static partial class SharedRenderer
         double glyphX = x + EngravingDefaults.ClefGlyphXOffset - clefGroupInkLeft;
         gc.DrawGlyph(glyph, glyphX, clefY, FontSize);
         if (clef is ClefType.Treble8Below or ClefType.Bass8Below)
-            DrawClefModifier8(glyphX, staffY, change: false, gc);
+            DrawClefModifier8(fonts, glyphX, staffY, change: false, gc);
         else if (clef == ClefType.Treble8Above)
-            DrawClefModifier8(glyphX, staffY, change: false, gc, above: true);
+            DrawClefModifier8(fonts, glyphX, staffY, change: false, gc, above: true);
         // Where the NEXT prefix item (key/time) starts: the LeftEdge->Clef offset plus the
         // SHARED clef-column width (the widest clef in the system, GlyphMetrics.MaxClefWidth),
         // so every staff's key/time break-aligns to one column and a grand staff's signatures
@@ -410,17 +410,36 @@ internal static partial class SharedRenderer
     /// _change clef uses a smaller glyph, so the digit and its offset shrink to
     /// match (LP applies a font-size dampening for change clefs).
     /// </remarks>
-    private static void DrawClefModifier8(double clefGlyphX, double staffY, bool change, IDrawingContext gc, bool above = false)
+    private static void DrawClefModifier8(ScoreTextMetrics fonts, double clefGlyphX, double staffY, bool change, IDrawingContext gc, bool above = false)
     {
         double scale = change ? 0.85 : 1.0;
         double centerX = clefGlyphX + 1.1 * scale; // under the clef's descender (slightly left of the stem)
         // Below: clears the clef's lower curl. Above (treble^8): clears the
         // G clef's upper hook symmetrically.
         double centerY = above ? staffY + 3.2 : staffY - 5.6;
-        double size = FontSize * 0.80 * scale;     // digit ~2 ss tall, matching LP
-        gc.DrawText("8", centerX, centerY, size, TextRole.ClefOctave,
-            FontStyle.Italic, TextAnchor.Middle, Color.Black, VerticalAnchor.Middle);
+        gc.DrawText("8", centerX, centerY, ClefModifierEm(fonts, change), TextRole.ClefOctave,
+            ClefModifierStyle(fonts), TextAnchor.Middle, Color.Black, VerticalAnchor.Middle);
     }
+
+    /// <summary>The em the octavation digit is drawn at — 0.8 of the staff height (a digit
+    /// ~2 ss tall, matching LilyPond's ClefModifier), damped for a mid-piece change clef —
+    /// stepped by what the score's <c>fonts { }</c> wrote for <c>clefOctave</c>.</summary>
+    /// <remarks>
+    /// The one reader of this size is the pen: the digit is reserved nowhere (its column is
+    /// the clef's, and the clef seeds the skyline — <c>SkylineBuilder.SeedClef</c>), so
+    /// following the plan here is the whole reach. USER DECISION 2026-09-09: the notation
+    /// roles follow a written size and style when named (<c>clefOctave</c> / <c>notation</c>).
+    /// LILYPOND-REF: scm/define-grobs.scm:944-975 ClefModifier (clef-modifier-interface) — a
+    ///   text grob with its own <c>font-size</c> and <c>font-shape italic</c>, so a step on it
+    ///   is what a <c>\override ClefModifier.font-size</c> is in the twin (TwinGrobsOf).
+    /// </remarks>
+    internal static double ClefModifierEm(ScoreTextMetrics fonts, bool change)
+        => fonts.Size(TextRole.ClefOctave, FontSize * 0.80) * (change ? 0.85 : 1.0);
+
+    /// <summary>The style of the octavation digit — italic, as LilyPond's, unless the plan
+    /// wrote one.</summary>
+    internal static FontStyle ClefModifierStyle(ScoreTextMetrics fonts)
+        => fonts.Style(TextRole.ClefOctave, FontStyle.Italic);
 
     // ---------- Time signature ----------
 
@@ -438,7 +457,7 @@ internal static partial class SharedRenderer
     /// </remarks>
     internal const double StaffMiddleLineDrop = StaffHeight / 2;
 
-    private static double DrawTimeSignature(TimeSignature ts, double x, double staffY, IDrawingContext gc)
+    private static double DrawTimeSignature(ScoreTextMetrics fonts, TimeSignature ts, double x, double staffY, IDrawingContext gc)
     {
         // Senza misura: unmeasured music prints NO signature.
         if (ts.SenzaMisura)
@@ -479,8 +498,8 @@ internal static partial class SharedRenderer
         // snap, and GetTimeSigWidth is the max of the two rows it produces.
         var num = ts.BeatsText ?? ts.Beats.ToString();
         var den = ts.BeatType.ToString();
-        var numPieces = MeterGlyphRun.Pieces(num);
-        var denPieces = MeterGlyphRun.Pieces(den);
+        var numPieces = MeterGlyphRun.Pieces(fonts, num);
+        var denPieces = MeterGlyphRun.Pieces(fonts, den);
         double numWidth = 0, denWidth = 0;
         foreach (var p in numPieces) numWidth += p.Advance;
         foreach (var p in denPieces) denWidth += p.Advance;
@@ -496,10 +515,14 @@ internal static partial class SharedRenderer
             {
                 // LILYSHARP-OWN: the '+' of a compound meter's numerator, which LilyPond
                 // spells with its own markup rather than a feta glyph. Drawn centred on its
-                // own advance, which is the serif face's at the run's em.
+                // own advance, which is the serif face's at the run's em. Its em and style
+                // are the plan's (fonts { meter … }, MeterGlyphRun.PlusEm) — the same plan
+                // the advance above was measured with — and the lift that centres the glyph
+                // on the numerator row scales with the em (0.55 at the engraving's 2.4).
+                double plusEm = MeterGlyphRun.PlusEm(fonts);
                 gc.DrawText(p.Ch.ToString(), nx + p.X + p.Advance / 2,
-                    staffY - 1 - digitHalfHeight + 0.55,
-                    2.4, TextRole.Meter, FontStyle.Bold, TextAnchor.Middle, Color.Black);
+                    staffY - 1 - digitHalfHeight + 0.55 * plusEm / MeterGlyphRun.PlusEngravingEm,
+                    plusEm, TextRole.Meter, MeterGlyphRun.PlusStyle(fonts), TextAnchor.Middle, Color.Black);
             }
         }
         double dnx = x + (total - denWidth) / 2;

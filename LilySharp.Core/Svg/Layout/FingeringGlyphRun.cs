@@ -72,7 +72,7 @@ internal static class FingeringGlyphRun
     /// grob, declares <c>(font-size . -5)</c> at :1549.</remarks>
     internal const double FontSizeStep = -5.0;
 
-    /// <summary>The em a fingering is drawn at, in staff spaces.</summary>
+    /// <summary>The em a fingering is drawn at with no directive, in staff spaces.</summary>
     /// <remarks>
     /// LILYPOND-REF: lily/font-select.cc:99-117 select_font — for fetaText the base size is
     ///   the staff height (4 staff spaces), stepped by <c>2^(font-size/6)</c>.
@@ -80,7 +80,21 @@ internal static class FingeringGlyphRun
     /// because both grobs declare −5; they are two declarations of one RULE at one step, not
     /// one quantity with two spellings, and each carries its own grob's citation.
     /// </remarks>
-    internal static double Em => 4.0 * EmmentalerDesignSize.Magstep(FontSizeStep);
+    internal static readonly double EngravingEm = 4.0 * EmmentalerDesignSize.Magstep(FontSizeStep);
+
+    /// <summary>
+    /// The font-size step a fingering is set at for THIS score: the grob's own −5 plus
+    /// whatever the score's <c>fonts { }</c> wrote for <c>fingering</c> (a <c>step</c>
+    /// directly; a <c>size</c> as the step that em works out to). ONE HOME: the em, the
+    /// design and the metrics below are all this step's, so a plan that moves the digit
+    /// moves the glyph it is drawn from and the box it is reserved in together — the same
+    /// shape a chord name's accidental takes (ChordNameGlyphRun.AccidentalStep).
+    /// </summary>
+    internal static double Step(ScoreTextMetrics fonts)
+        => FontSizeStep + fonts.StepOf(TextRole.Fingering, EngravingEm);
+
+    /// <summary>The em a fingering is drawn at for THIS score.</summary>
+    internal static double Em(ScoreTextMetrics fonts) => 4.0 * EmmentalerDesignSize.Magstep(Step(fonts));
 
     /// <summary>
     /// The Emmentaler design a fingering is drawn from — the PEN needs it as well as the
@@ -88,10 +102,16 @@ internal static class FingeringGlyphRun
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/font-select.cc:41-70 best_rounded_design_size — 20·magstep(−5)
     /// = 11.2246 pt lands on <c>emmentaler-11</c>.</remarks>
-    internal static int Design => EmmentalerDesignSize.ForFontSizeStep(FontSizeStep).Rounded;
+    internal static int Design(ScoreTextMetrics fonts) => EmmentalerDesignSize.ForFontSizeStep(Step(fonts)).Rounded;
 
     /// <summary>That design's table, already in the PAGE's staff spaces.</summary>
-    private static GlyphMetrics.DesignMetrics Font => GlyphMetrics.AtFontSize(FontSizeStep);
+    private static GlyphMetrics.DesignMetrics Font(double step) => GlyphMetrics.AtFontSize(step);
+
+    /// <summary>The glyph lookup at one step — a closure, because <see cref="FetaTextRun"/>
+    /// takes a delegate and the design it reads is the step's.</summary>
+    private static FetaTextRun.GlyphLookup Lookup(double step)
+        => (char c, out char glyph, out GlyphMetrics.BBox outline, out double advance)
+            => TryGetDigit(step, c, out glyph, out outline, out advance);
 
     /// <summary>A drawn piece of the run: a music glyph, or a character the music font has no
     /// fingering glyph for, drawn as text.</summary>
@@ -114,9 +134,9 @@ internal static class FingeringGlyphRun
     /// non-digit reaches here is a negative number's sign; it is drawn in the serif face at
     /// this em so that a nonsense input still has one metric home rather than none.
     /// </remarks>
-    internal static ImmutableArray<Piece> Pieces(string text)
+    internal static ImmutableArray<Piece> Pieces(ScoreTextMetrics fonts, string text)
     {
-        var run = FetaTextRun.Pieces(text, TryGetDigit, Em);
+        var run = FetaTextRun.Pieces(text, Lookup(Step(fonts)), Em(fonts));
         var pieces = ImmutableArray.CreateBuilder<Piece>(run.Length);
         foreach (var p in run) pieces.Add(new Piece(p.Ch, p.X, p.Advance, p.IsGlyph));
         return pieces.ToImmutable();
@@ -127,7 +147,8 @@ internal static class FingeringGlyphRun
     /// <remarks>LILYPOND-REF: lily/pango-font.cc:358-360 Pango_font::pango_item_string_stencil
     /// — <c>Interval (PANGO_LBEARING
     /// (logical_rect), PANGO_RBEARING (logical_rect))</c>.</remarks>
-    internal static double Width(string text) => FetaTextRun.Width(text, TryGetDigit, Em);
+    internal static double Width(ScoreTextMetrics fonts, string text)
+        => FetaTextRun.Width(text, Lookup(Step(fonts)), Em(fonts));
 
     /// <summary>The run's ink above its baseline — the union of its glyphs' outline tops.</summary>
     /// <remarks>
@@ -140,7 +161,8 @@ internal static class FingeringGlyphRun
     ///   (lily/modified-font-metric.cc:125-143 Modified_font_metric::text_stencil — the same argument
     ///   <see cref="GlyphMetrics.TryGetDynamicInk"/> carries).
     /// </remarks>
-    internal static double InkTop(string text) => FetaTextRun.InkTop(text, TryGetDigit, Em);
+    internal static double InkTop(ScoreTextMetrics fonts, string text)
+        => FetaTextRun.InkTop(text, Lookup(Step(fonts)), Em(fonts));
 
     /// <summary>The run's ink BELOW its baseline (≤ 0) — the other end of the same box.</summary>
     /// <remarks>
@@ -148,17 +170,17 @@ internal static class FingeringGlyphRun
     /// sit ON the baseline and the seven hangs 0.004 design-ss below it, which LilyPond dumps
     /// as <c>yext = (-0.002234 . 1.122528)</c> on a fingering "7".
     /// </remarks>
-    internal static double InkBottom(string text)
-        => FetaTextRun.InkBottom(text, TryGetDigit, Em);
+    internal static double InkBottom(ScoreTextMetrics fonts, string text)
+        => FetaTextRun.InkBottom(text, Lookup(Step(fonts)), Em(fonts));
 
     /// <summary>
     /// The glyph, its outline box and its UNHINTED advance for one digit, all in the page's
-    /// staff spaces out of the fingering's own design.
+    /// staff spaces out of the fingering's own design at <paramref name="step"/>.
     /// </summary>
-    private static bool TryGetDigit(char c, out char glyph, out GlyphMetrics.BBox outline,
+    private static bool TryGetDigit(double step, char c, out char glyph, out GlyphMetrics.BBox outline,
         out double advance)
     {
-        var f = Font;
+        var f = Font(step);
         (glyph, outline, advance) = c switch
         {
             '0' => (EmmentalerGlyphs.FingeringDigit0, f.FingeringDigit0Outline, f.FingeringDigit0Advance),

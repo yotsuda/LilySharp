@@ -47,14 +47,14 @@ internal sealed class SystemBreaker
     /// </remarks>
     internal static double GateFirstPrefixWidth(MultiStaffScore score, double maxClefWidth) =>
         SpacingRules.CalculatePrefixWidth(
-            maxClefWidth, SpacingRules.WidestActiveKeyInk(score, 0),
+            score.TextMetrics, maxClefWidth, SpacingRules.WidestActiveKeyInk(score, 0),
             includeTimeSignature: SpacingRules.AnyStaffEngravesTime(score),
             score.TimeSignature.NumeratorText, score.TimeSignature.DenominatorText);
 
     /// <summary>The same for a CONTINUATION line, which carries clef and key but no meter.</summary>
     internal static double GateContinuationPrefixWidth(MultiStaffScore score, double maxClefWidth) =>
         SpacingRules.CalculatePrefixWidth(
-            maxClefWidth, SpacingRules.WidestActiveKeyInk(score, 0),
+            score.TextMetrics, maxClefWidth, SpacingRules.WidestActiveKeyInk(score, 0),
             includeTimeSignature: false);
 
     /// <summary>
@@ -136,7 +136,7 @@ internal sealed class SystemBreaker
             return KnuthPlassBreaker.CreateMeasureGroups(measures, lineBreaks.IdealBreaks);
         }
 
-        var greedy = BreakIntoSystemsGreedy(measures, firstPrefixWidth, continuationPrefixWidth, baseShortestDuration);
+        var greedy = BreakIntoSystemsGreedy(score.TextMetrics, measures, firstPrefixWidth, continuationPrefixWidth, baseShortestDuration);
         var greedyBreaks = new List<int>(greedy.Count);
         int end = 0;
         foreach (var group in greedy)
@@ -220,7 +220,7 @@ internal sealed class SystemBreaker
             // Mirror of MultiStaffLayouter: a clef change opening the next measure is
             // drawn before this bar line, so the break gate must price it here too.
             var springs = layouter.CreateTimingSprings(
-                primaryMeasure, allTimings, baseShortestDuration, allMeasures,
+                score.TextMetrics, primaryMeasure, allTimings, baseShortestDuration, allMeasures,
                 i + 1 < measures.Length ? measures[i + 1] : null,
                 MultiStaffLayouter.CollectStaffIndicesAtIndex(score, i),
                 SpacingRules.RunLeftBoundBarline(measures, i));
@@ -301,6 +301,7 @@ internal sealed class SystemBreaker
                 double rod = SpacingRules.MmrRodDistance(
                     run.Count, measureLength,
                     SpacingRules.MmrRodMinimumDistance(
+                        score.TextMetrics,
                         SpacingRules.RunLeftBoundBarline(measures, i),
                         primaryMeasure.Items),
                     runBarlineWidth);
@@ -355,6 +356,7 @@ internal sealed class SystemBreaker
     /// constraint, not a preference weight.
     /// </remarks>
     internal List<List<Measure>> BreakIntoSystemsGreedy(
+        Rendering.ScoreTextMetrics fonts,
         ImmutableArray<Measure> measures,
         double firstPrefixWidth,
         double continuationPrefixWidth,
@@ -382,7 +384,7 @@ internal sealed class SystemBreaker
         var cumIdeal = new double[n + 1];
         for (int i = 0; i < n; i++)
         {
-            double w = SpacingRules.CalculateMeasureIdealWidth(measures[i], baseShortestDuration);
+            double w = SpacingRules.CalculateMeasureIdealWidth(fonts, measures[i], baseShortestDuration);
             springData[i] = new MeasureSpringData(w, w, 0, 0, measures[i].LineBreakPermission);
             cumIdeal[i + 1] = cumIdeal[i] + w;
         }

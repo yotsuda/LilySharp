@@ -140,39 +140,48 @@ internal static class FingeringEngraver
     /// The ledger reads it as <c>fingering.digit-*</c>, five points at five distinct widths.
     /// </para>
     /// </remarks>
-    internal static (string Glyphs, GlyphMetrics.BBox Ink, double Width) DigitRun(int number)
+    internal static (string Glyphs, GlyphMetrics.BBox Ink, double Width) DigitRun(
+        Rendering.ScoreTextMetrics fonts, int number)
     {
         // The ten single digits — every fingering in practice — are answered from a
         // table built once: DigitRun runs per fingering in the island pass, the
         // column flush AND every preview redraw, and each uncached call walks the
-        // glyph run three times (pieces, width, ink). A pure function of the number,
-        // so the memo is exact.
-        if (number is >= 0 and <= 9)
-            return SingleDigitRuns[number] ??= BuildDigitRun(number);
-        return BuildDigitRun(number);
+        // glyph run three times (pieces, width, ink). A pure function of the number AT
+        // THE ENGRAVING STEP, so the memo is exact there; a score whose plan steps the
+        // digits (the rare book) builds its runs per call rather than growing the table
+        // a key.
+        if (number is >= 0 and <= 9 && FingeringGlyphRun.Step(fonts) == FingeringGlyphRun.FontSizeStep)
+            return SingleDigitRuns[number] ??= BuildDigitRun(fonts, number);
+        return BuildDigitRun(fonts, number);
     }
 
     private static readonly (string, GlyphMetrics.BBox, double)?[] SingleDigitRuns =
         new (string, GlyphMetrics.BBox, double)?[10];
 
-    private static (string Glyphs, GlyphMetrics.BBox Ink, double Width) BuildDigitRun(int number)
+    private static (string Glyphs, GlyphMetrics.BBox Ink, double Width) BuildDigitRun(
+        Rendering.ScoreTextMetrics fonts, int number)
     {
         string text = number.ToString(System.Globalization.CultureInfo.InvariantCulture);
         var glyphs = new System.Text.StringBuilder(text.Length);
-        foreach (var piece in FingeringGlyphRun.Pieces(text))
+        foreach (var piece in FingeringGlyphRun.Pieces(fonts, text))
             if (piece.IsGlyph)
                 glyphs.Append(piece.Ch);
-        double width = FingeringGlyphRun.Width(text);
+        double width = FingeringGlyphRun.Width(fonts, text);
         return (glyphs.ToString(),
-            new GlyphMetrics.BBox(0.0, FingeringGlyphRun.InkBottom(text),
-                width, FingeringGlyphRun.InkTop(text)),
+            new GlyphMetrics.BBox(0.0, FingeringGlyphRun.InkBottom(fonts, text),
+                width, FingeringGlyphRun.InkTop(fonts, text)),
             width);
     }
 
     /// <summary>
     /// Calculates layouts for all fingerings in a single-staff score.
     /// </summary>
+    /// <param name="fonts">The SCORE's text metrics — passed in rather than read off
+    /// <paramref name="score"/>, because every caller hands this engraver a one-voice
+    /// <see cref="Score"/> built for the walk, which carries no <c>fonts</c> plan of its
+    /// own; the plan the digits follow (<c>fonts { fingering step … }</c>) is the page's.</param>
     public static ImmutableArray<FingeringLayout> Calculate(
+        Rendering.ScoreTextMetrics fonts,
         Score score,
         ImmutableArray<SystemLayout> systems,
         int staffIndex = -1,
@@ -183,11 +192,11 @@ internal static class FingeringEngraver
 
         var measureMap = LayoutUtilities.BuildMeasureLayoutMap(systems);
         var systemMap = LayoutUtilities.BuildMeasureMap(systems);
-        return Calculate(score, measureMap, systemMap.ContainsKey, staffIndex, beamLayouts);
+        return Calculate(fonts, score, measureMap, systemMap.ContainsKey, staffIndex, beamLayouts);
     }
 
     /// <summary>
-    /// <see cref="Calculate(Score, ImmutableArray{SystemLayout}, int, ImmutableArray{BeamLayout})"/>
+    /// <see cref="Calculate(Rendering.ScoreTextMetrics, Score, ImmutableArray{SystemLayout}, int, ImmutableArray{BeamLayout})"/>
     /// for a caller that
     /// holds ONE system's measure layouts rather than the placed systems — the shape the
     /// per-staff skyline pass runs in.
@@ -202,6 +211,7 @@ internal static class FingeringEngraver
     /// own frame with nothing to translate.
     /// </remarks>
     public static ImmutableArray<FingeringLayout> Calculate(
+        Rendering.ScoreTextMetrics fonts,
         Score score,
         ImmutableArray<MeasureLayout> measureLayouts,
         int staffIndex,
@@ -212,11 +222,11 @@ internal static class FingeringEngraver
         var map = new Dictionary<int, MeasureLayout>();
         foreach (var ml in measureLayouts)
             map[ml.MeasureIndex] = ml;
-        return Calculate(score, map, _ => true, staffIndex, beamLayouts);
+        return Calculate(fonts, score, map, _ => true, staffIndex, beamLayouts);
     }
 
     /// <summary>
-    /// <see cref="Calculate(Score, ImmutableArray{MeasureLayout}, int, ImmutableArray{BeamLayout})"/>
+    /// <see cref="Calculate(Rendering.ScoreTextMetrics, Score, ImmutableArray{MeasureLayout}, int, ImmutableArray{BeamLayout})"/>
     /// for a caller that runs this body MANY TIMES over one score and has therefore already
     /// built the beamed-stem-tip map ONCE — the per-(staff, system) shape
     /// <see cref="FingScriptMemo"/> runs in.
@@ -229,6 +239,7 @@ internal static class FingeringEngraver
     /// engraver's own measure-walk remark was written to avoid.
     /// </remarks>
     internal static ImmutableArray<FingeringLayout> CalculateWithTips(
+        Rendering.ScoreTextMetrics fonts,
         Score score,
         ImmutableArray<MeasureLayout> measureLayouts,
         int staffIndex,
@@ -239,7 +250,7 @@ internal static class FingeringEngraver
         var map = new Dictionary<int, MeasureLayout>(measureLayouts.Length);
         foreach (var ml in measureLayouts)
             map[ml.MeasureIndex] = ml;
-        return Calculate(score, map, _ => true, staffIndex, default, beamedTips);
+        return Calculate(fonts, score, map, _ => true, staffIndex, default, beamedTips);
     }
 
     /// <remarks>
@@ -253,6 +264,7 @@ internal static class FingeringEngraver
     /// measures do, which is the order the renderer draws them in.
     /// </remarks>
     private static ImmutableArray<FingeringLayout> Calculate(
+        Rendering.ScoreTextMetrics fonts,
         Score score,
         Dictionary<int, MeasureLayout> measureMap,
         System.Func<int, bool> isPlaced,
@@ -297,7 +309,7 @@ internal static class FingeringEngraver
 
                 if (item is NoteItem note && note.Fingering.HasValue)
                 {
-                    BuildLayouts(
+                    BuildLayouts(fonts,
                         new[] { (note.StaffPosition, note.Fingering.Value) },
                         new[] { note.StaffPosition },
                         note.BaseDuration, note.SourcePosition,
@@ -311,7 +323,7 @@ internal static class FingeringEngraver
                         .ToArray();
                     if (fingered.Length == 0)
                         continue;
-                    BuildLayouts(
+                    BuildLayouts(fonts,
                         fingered,
                         chord.Notes.Select(n => n.StaffPosition).ToArray(),
                         chord.BaseDuration, chord.SourcePosition,
@@ -391,6 +403,7 @@ internal static class FingeringEngraver
     /// not exist (an accidental is centred on its head and is barely taller).
     /// </remarks>
     private static void BuildLayouts(
+        Rendering.ScoreTextMetrics fonts,
         (int Position, int Number)[] fingered,
         int[] headPositions,
         Fraction baseDuration,
@@ -452,7 +465,7 @@ internal static class FingeringEngraver
         double support = System.Math.Max(System.Math.Max(StaffInk, headsTop), stemUpReach);
         for (int i = center; i < sorted.Length; i++)
         {
-            var ink = DigitRun(sorted[i].Number).Ink;
+            var ink = DigitRun(fonts, sorted[i].Number).Ink;
             double yUp = support + Padding - ink.Bottom;
             layouts.Add(new FingeringLayout(
                 MeasureIndex: measureIndex,
@@ -479,7 +492,7 @@ internal static class FingeringEngraver
         support = System.Math.Min(System.Math.Min(-StaffInk, headsBottom), stemDownReach);
         for (int i = center - 1; i >= 0; i--)
         {
-            var ink = DigitRun(sorted[i].Number).Ink;
+            var ink = DigitRun(fonts, sorted[i].Number).Ink;
             double yUp = support - Padding - ink.Top;
             layouts.Add(new FingeringLayout(
                 MeasureIndex: measureIndex,

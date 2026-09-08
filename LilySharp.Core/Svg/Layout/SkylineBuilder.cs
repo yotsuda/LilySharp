@@ -693,7 +693,7 @@ internal sealed class SkylineBuilder
                     // ink stands where the glyphs print — seeded at the raw column x it sat
                     // a whole spring right of the sharps and the section label never met it.
                     double seedX = item is KeySignatureChangeItem
-                        ? KeyChangeSeedX(measure, itemIndex, measureLayout, itemX,
+                        ? KeyChangeSeedX(_fonts, measure, itemIndex, measureLayout, itemX,
                             firstMeasureOfLine: measureLayouts[0].MeasureIndex)
                         : itemX;
                     if (double.IsNaN(seedX))
@@ -728,6 +728,7 @@ internal sealed class SkylineBuilder
     /// <c>useColumnTiming</c> guard via <c>MeasureLayout.Columns</c>.
     /// </remarks>
     private static double KeyChangeSeedX(
+        Rendering.ScoreTextMetrics fonts,
         Measure measure, int itemIndex, MeasureLayout ml, double itemX, int firstMeasureOfLine)
     {
         var timing = Fraction.Zero;
@@ -764,7 +765,7 @@ internal sealed class SkylineBuilder
                     && measure.Items[i + 1] is ClefChangeItem or KeySignatureChangeItem
                         or TimeSignatureChangeItem
                     ? measure.Items[i + 1] : null;
-                x += SpacingRules.ChangeColumnGlyphAdvance(earlier, next);
+                x += SpacingRules.ChangeColumnGlyphAdvance(fonts, earlier, next);
             }
             if (first)
                 x += SpacingRules.GetBarlineToItemSpace(measure.Items[itemIndex]);
@@ -776,8 +777,8 @@ internal sealed class SkylineBuilder
         hung -= ml.LooseChangeHangs != null
                 && ml.LooseChangeHangs.TryGetValue(timing, out var hang)
             ? hang
-            : SpacingRules.MidMeasureChangeRightGap(columnItems);
-        hung += SpacingRules.MidMeasureChangeOffsetWithin(columnItems, measure.Items[itemIndex]);
+            : SpacingRules.MidMeasureChangeRightGap(fonts, columnItems);
+        hung += SpacingRules.MidMeasureChangeOffsetWithin(fonts, columnItems, measure.Items[itemIndex]);
         return hung;
     }
 
@@ -799,7 +800,7 @@ internal sealed class SkylineBuilder
     /// two-digit fret really is wider, and the chord row above it should know.
     /// </para>
     /// </remarks>
-    private static void AddTabStaffToSkylines(
+    private void AddTabStaffToSkylines(
         Staff staff, ImmutableArray<MeasureLayout> measureLayouts, double staffMiddleUp,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline)
     {
@@ -810,7 +811,10 @@ internal sealed class SkylineBuilder
         // String 1 is the TOP line; the middle of the span is this staff's reference point.
         double topLineUp = staffMiddleUp + (tuning.Length - 1) * space / 2.0;
         int shift = Tunings.SoundingShift(staff.TabSourceClef, staff.Transposition);
-        double half = TabConstants.FretDigitHeight / 2.0;
+        // The digit's box is the score's (fonts { tabFret step … }), the same em the pen
+        // and the column reservation read (TabConstants.FretEm).
+        double fretEm = TabConstants.FretEm(_fonts);
+        double half = TabConstants.FretDigitHeight(_fonts) / 2.0;
 
         foreach (var voice in staff.Voices)
         {
@@ -837,8 +841,8 @@ internal sealed class SkylineBuilder
                     {
                         var (stringNum, fret) = Tunings.CalculateFret(midi + shift, tuning, preferred);
                         double lineUp = topLineUp - (stringNum - 1) * space;
-                        double width = TabConstants.FretGlyphWidth(
-                            fret.ToString(CultureInfo.InvariantCulture), TabConstants.FretFontSize);
+                        double width = TabConstants.FretGlyphWidth(_fonts,
+                            fret.ToString(CultureInfo.InvariantCulture), fretEm);
                         upSkyline.Merge(VerticalSkyline.FromBox(
                             x - width / 2, x + width / 2, lineUp - half, lineUp + half,
                             VerticalDirection.Up));
@@ -886,7 +890,7 @@ internal sealed class SkylineBuilder
     /// hung from that tip.
     /// </para>
     /// </remarks>
-    private static void AddTabStemsAndBeamsToSkylines(
+    private void AddTabStemsAndBeamsToSkylines(
         Staff staff, ImmutableArray<MeasureLayout> measureLayouts, double staffMiddleUp,
         ImmutableArray<BeamLayout> beams,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline)
@@ -898,7 +902,7 @@ internal sealed class SkylineBuilder
             return;
         double space = EngravingDefaults.TabStringSpace(strings);
         double tabHeight = (strings - 1) * space;
-        var geom = new TabStaffGeometry(tuning, -tabHeight / 2.0, staff.TabSourceClef, staff.Transposition);
+        var geom = new TabStaffGeometry(_fonts, tuning, -tabHeight / 2.0, staff.TabSourceClef, staff.Transposition);
         double YUp(double deviceY) => staffMiddleUp - deviceY;
 
         var beamed = BeamedItemsToSuppress(beams);
@@ -1700,7 +1704,7 @@ internal sealed class SkylineBuilder
     /// one grob together, and the divergence stays one thing rather than two.
     /// </para>
     /// </remarks>
-    private static void AddFingeringsToSkyline(
+    private void AddFingeringsToSkyline(
         ImmutableArray<FingeringLayout> fingerings,
         double staffMiddleUp, StaffSize size,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline)
@@ -1709,7 +1713,7 @@ internal sealed class SkylineBuilder
             return;
         foreach (var f in fingerings)
         {
-            var (_, ink, width) = FingeringEngraver.DigitRun(f.Number);
+            var (_, ink, width) = FingeringEngraver.DigitRun(_fonts, f.Number);
             double baseline = size.Span(f.YUp) + staffMiddleUp;
             double bottom = baseline + ink.Bottom;
             double top = baseline + ink.Top;

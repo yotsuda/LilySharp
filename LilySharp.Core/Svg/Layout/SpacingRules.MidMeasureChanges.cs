@@ -46,11 +46,11 @@ internal static partial class SpacingRules
     /// so this is simply the glyph's width.
     /// LILYPOND-REF: lily/spacing-interface.cc:217 — <c>ext = break_item->extent (col, X_AXIS)</c>.
     /// </remarks>
-    private static double ChangeItemColumnWidth(MusicItem item) => item switch
+    private static double ChangeItemColumnWidth(Rendering.ScoreTextMetrics fonts, MusicItem item) => item switch
     {
         ClefChangeItem cc => GetClefChangeWidth(cc.NewClef),
         KeySignatureChangeItem kc => GetKeySignatureChangeWidth(kc),
-        TimeSignatureChangeItem tc => GetTimeSignatureChangeWidth(tc),
+        TimeSignatureChangeItem tc => GetTimeSignatureChangeWidth(fonts, tc),
         _ => 0
     };
 
@@ -173,7 +173,7 @@ internal static partial class SpacingRules
     /// </para>
     /// </remarks>
     internal static (double Prefix, MusicItem LastChange)? BoundaryChangePrefix(
-        IReadOnlyList<MusicItem>? firstItems)
+        Rendering.ScoreTextMetrics fonts, IReadOnlyList<MusicItem>? firstItems)
     {
         if (firstItems == null)
             return null;
@@ -197,7 +197,7 @@ internal static partial class SpacingRules
             prefix += last == null
                 ? GetBarlineToItemSpace(item)
                 : BetweenChangeItemsSpace(last, item);
-            prefix += WidestChangeOfKind(firstItems, ChangeItemKind(item));
+            prefix += WidestChangeOfKind(fonts, firstItems, ChangeItemKind(item));
             last = item;
         }
         return last == null ? null : (prefix, last);
@@ -260,14 +260,14 @@ internal static partial class SpacingRules
     /// column is as wide as the widest staff's grob, which also covers staves whose signatures
     /// differ from each other. See <see cref="IsFirstChangeOfItsKind"/>.
     /// </summary>
-    private static double WidestChangeOfKind(IReadOnlyList<MusicItem> columnItems, int kind)
+    private static double WidestChangeOfKind(Rendering.ScoreTextMetrics fonts, IReadOnlyList<MusicItem> columnItems, int kind)
     {
         double widest = 0;
         foreach (var item in columnItems)
         {
             if (!IsChangeItem(item) || !ChangeItemHasInk(item) || ChangeItemKind(item) != kind)
                 continue;
-            double w = ChangeItemColumnWidth(item);
+            double w = ChangeItemColumnWidth(fonts, item);
             if (w > widest)
                 widest = w;
         }
@@ -355,10 +355,11 @@ internal static partial class SpacingRules
     /// </para>
     /// </remarks>
     internal static MidMeasureChangeSpacing? MidMeasureChangeGaps(
+        Rendering.ScoreTextMetrics fonts,
         IReadOnlyList<MusicItem>? columnItems, IReadOnlyList<MusicItem>? prevItems,
         double durationIdeal)
     {
-        var (columnWidth, firstChange, lastChange) = MeasureChangeColumn(columnItems);
+        var (columnWidth, firstChange, lastChange) = MeasureChangeColumn(fonts, columnItems);
         if (firstChange == null)
             return null;
 
@@ -369,7 +370,7 @@ internal static partial class SpacingRules
         if (prevItems != null)
             foreach (var item in prevItems)
                 if (!IsChangeItem(item))
-                    prevReach = Math.Max(prevReach, CalculateNoteheadRightExtent(item));
+                    prevReach = Math.Max(prevReach, CalculateNoteheadRightExtent(fonts, item));
         double leftRod = prevReach
                          + DefaultExtraSpacingWidth
                          + ChangeItemExtraSpacingWidth(firstChange).Left;
@@ -394,9 +395,9 @@ internal static partial class SpacingRules
     /// also what keeps a change glyph clear of a wide accidental at any line width — the
     /// accidental enters through the rod, exactly as in LilyPond.
     /// </remarks>
-    internal static double MidMeasureChangeRightGap(IReadOnlyList<MusicItem>? columnItems)
+    internal static double MidMeasureChangeRightGap(Rendering.ScoreTextMetrics fonts, IReadOnlyList<MusicItem>? columnItems)
     {
-        var (columnWidth, first, last) = MeasureChangeColumn(columnItems);
+        var (columnWidth, first, last) = MeasureChangeColumn(fonts, columnItems);
         if (first == null)
             return 0;
         return RightGap(columnWidth, last!, RightRod(columnItems!, columnWidth, last!));
@@ -411,10 +412,10 @@ internal static partial class SpacingRules
     /// (<see cref="ChangeItemHasInk"/>): break alignment steps over an empty extent, so the
     /// gap runs from the previous PRESENT grob to the next PRESENT one.
     /// </remarks>
-    internal static double ChangeColumnGlyphAdvance(MusicItem change, MusicItem? next) =>
+    internal static double ChangeColumnGlyphAdvance(Rendering.ScoreTextMetrics fonts, MusicItem change, MusicItem? next) =>
         !ChangeItemHasInk(change)
             ? 0
-            : ChangeItemColumnWidth(change)
+            : ChangeItemColumnWidth(fonts, change)
               + (next != null && ChangeItemHasInk(next)
                   ? BetweenChangeItemsSpace(change, next) : 0);
 
@@ -424,7 +425,7 @@ internal static partial class SpacingRules
     /// widths and the break-align gap between them.
     /// </summary>
     internal static double MidMeasureChangeOffsetWithin(
-        IReadOnlyList<MusicItem>? columnItems, MusicItem change)
+        Rendering.ScoreTextMetrics fonts, IReadOnlyList<MusicItem>? columnItems, MusicItem change)
     {
         if (columnItems == null)
             return 0;
@@ -444,7 +445,7 @@ internal static partial class SpacingRules
                 offset += BetweenChangeItemsSpace(previous, item);
             if (ReferenceEquals(item, change))
                 return offset;
-            offset += ChangeItemColumnWidth(item);
+            offset += ChangeItemColumnWidth(fonts, item);
             previous = item;
         }
         return 0;
@@ -458,7 +459,7 @@ internal static partial class SpacingRules
     /// LILYPOND-REF: scm/define-grobs.scm:650-664 break-align-orders.
     /// </summary>
     private static (double Width, MusicItem? First, MusicItem? Last) MeasureChangeColumn(
-        IReadOnlyList<MusicItem>? columnItems)
+        Rendering.ScoreTextMetrics fonts, IReadOnlyList<MusicItem>? columnItems)
     {
         if (columnItems == null)
             return (0, null, null);
@@ -486,7 +487,7 @@ internal static partial class SpacingRules
             else
                 width += BetweenChangeItemsSpace(last!, item);
             last = item;
-            width += WidestChangeOfKind(columnItems, ChangeItemKind(item));
+            width += WidestChangeOfKind(fonts, columnItems, ChangeItemKind(item));
         }
         return (width, first, last);
     }
@@ -638,13 +639,14 @@ internal static partial class SpacingRules
     /// </list>
     /// </remarks>
     internal static bool IsLooseChangeColumn(
+        Rendering.ScoreTextMetrics fonts,
         IReadOnlyList<Fraction> allTimings, Fraction? ownLeftNeighborTiming,
         Fraction changeTiming, IReadOnlyList<MusicItem>? columnItems)
     {
         if (ownLeftNeighborTiming is not { } left)
             return false;
 
-        var (columnWidth, first, _) = MeasureChangeColumn(columnItems);
+        var (columnWidth, first, _) = MeasureChangeColumn(fonts, columnItems);
         if (first == null)
             return false;
 
@@ -697,9 +699,10 @@ internal static partial class SpacingRules
     /// </para>
     /// </remarks>
     internal static double LooseChangeColumnHangDistance(
+        Rendering.ScoreTextMetrics fonts,
         IReadOnlyList<MusicItem>? columnItems, double permissibleDistance)
     {
-        var (columnWidth, first, last) = MeasureChangeColumn(columnItems);
+        var (columnWidth, first, last) = MeasureChangeColumn(fonts, columnItems);
         if (first == null)
             return 0;
 
@@ -856,7 +859,7 @@ internal static partial class SpacingRules
     ///   measure AFTER the bar line, so the caller decides and passes it in.
     /// </remarks>
     internal static Spring BarlineToFirstColumnSpring(
-        IReadOnlyList<MusicItem>? firstItems, bool fillsMeasure)
+        Rendering.ScoreTextMetrics fonts, IReadOnlyList<MusicItem>? firstItems, bool fillsMeasure)
     {
         // `last_grob` is the RIGHTMOST break-aligned grob in the boundary column, which is
         // the bar line only when nothing else opens the measure. A key or time change shares
@@ -864,7 +867,7 @@ internal static partial class SpacingRules
         // right edge instead of the bar line's — COORDINATE_AUDIT.md §4.7.3.
         // LILYPOND-REF: lily/staff-spacing.cc:125-126
         //   Spacing_interface::extremal_break_aligned_grob (me, LEFT, ...).
-        var boundary = BoundaryChangePrefix(firstItems);
+        var boundary = BoundaryChangePrefix(fonts, firstItems);
 
         double distance;
         double fixedDistance;
@@ -945,7 +948,7 @@ internal static partial class SpacingRules
                     if (IsChangeItem(item))
                         continue;
                     minDistance = Math.Max(minDistance,
-                        CalculateSkylineDistance(null, item, staffY: 0));
+                        CalculateSkylineDistance(fonts, null, item, staffY: 0));
                 }
             }
 
@@ -1034,6 +1037,7 @@ internal static partial class SpacingRules
     /// </para>
     /// </remarks>
     private static Spring? ChangeColumnItemSpring(
+        Rendering.ScoreTextMetrics fonts,
         IReadOnlyList<MusicItem> spacingItems, int leftIndex, double durationIdeal)
     {
         var left = spacingItems[leftIndex];
@@ -1045,21 +1049,21 @@ internal static partial class SpacingRules
 
         // change → change: the left one's own width plus their break-align gap.
         if (leftIsChange && rightIsChange)
-            return Rigid(ChangeItemColumnWidth(left) + BetweenChangeItemsSpace(left, right));
+            return Rigid(ChangeItemColumnWidth(fonts, left) + BetweenChangeItemsSpace(left, right));
 
         var columnItems = ChangeColumnAt(spacingItems, leftIsChange ? leftIndex : leftIndex + 1);
 
         // note → the column's origin.
         if (!leftIsChange)
         {
-            var gaps = MidMeasureChangeGaps(columnItems, new[] { left }, durationIdeal);
+            var gaps = MidMeasureChangeGaps(fonts, columnItems, new[] { left }, durationIdeal);
             return gaps is { } g ? Rigid(g.LeftGap) : null;
         }
 
         // last change → the note: what is left of the right gap once the column's own
         // glyphs are subtracted, since the right gap is measured from the column ORIGIN.
-        return Rigid(MidMeasureChangeRightGap(columnItems)
-                     - MidMeasureChangeOffsetWithin(columnItems, left));
+        return Rigid(MidMeasureChangeRightGap(fonts, columnItems)
+                     - MidMeasureChangeOffsetWithin(fonts, columnItems, left));
 
         static Spring Rigid(double d) => new(Math.Max(0, d), Math.Max(0, d), 0);
     }

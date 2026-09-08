@@ -120,17 +120,17 @@ public class TabOnlyMeterColumnTests
         var engraved = MeasureItems(Collect(AtBarLine("staff gt  tab gt as numbers")), 2);
 
         Assert.IsType<TimeSignatureChangeItem>(blanked[0]);   // the change IS in the measure
-        Assert.Null(SpacingRules.BoundaryChangePrefix(blanked));
-        Assert.NotNull(SpacingRules.BoundaryChangePrefix(engraved));
+        Assert.Null(SpacingRules.BoundaryChangePrefix(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, blanked));
+        Assert.NotNull(SpacingRules.BoundaryChangePrefix(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, engraved));
 
         // ⇒ and the spring the caller builds from it is the plain one. The falsifier is the
         // engraved twin, whose spring is wider by the column it does book.
         var plainBar = MeasureItems(Collect(AtBarLine("tab gt as numbers")), 1);
-        Assert.Equal(SpacingRules.BarlineToFirstColumnSpring(plainBar, fillsMeasure: false).IdealDistance,
-                     SpacingRules.BarlineToFirstColumnSpring(blanked, fillsMeasure: false).IdealDistance,
+        Assert.Equal(SpacingRules.BarlineToFirstColumnSpring(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, plainBar, fillsMeasure: false).IdealDistance,
+                     SpacingRules.BarlineToFirstColumnSpring(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, blanked, fillsMeasure: false).IdealDistance,
                      9);
-        Assert.True(SpacingRules.BarlineToFirstColumnSpring(engraved, fillsMeasure: false).IdealDistance
-                  > SpacingRules.BarlineToFirstColumnSpring(blanked, fillsMeasure: false).IdealDistance);
+        Assert.True(SpacingRules.BarlineToFirstColumnSpring(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, engraved, fillsMeasure: false).IdealDistance
+                  > SpacingRules.BarlineToFirstColumnSpring(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, blanked, fillsMeasure: false).IdealDistance);
     }
 
     [Fact]
@@ -151,13 +151,13 @@ public class TabOnlyMeterColumnTests
         Assert.IsType<TimeSignatureChangeItem>(engravedColumn[0]);
 
         var prev = new[] { blanked[1] };
-        Assert.Null(SpacingRules.MidMeasureChangeGaps(blankedColumn, prev, durationIdeal: 3.0));
-        Assert.NotNull(SpacingRules.MidMeasureChangeGaps(engravedColumn, prev, durationIdeal: 3.0));
+        Assert.Null(SpacingRules.MidMeasureChangeGaps(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, blankedColumn, prev, durationIdeal: 3.0));
+        Assert.NotNull(SpacingRules.MidMeasureChangeGaps(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, engravedColumn, prev, durationIdeal: 3.0));
 
         // The drawn-position home agrees with the priced one, which is the invariant that
         // keeps a glyph on the space paid for it.
-        Assert.Equal(0.0, SpacingRules.MidMeasureChangeRightGap(blankedColumn), 9);
-        Assert.True(SpacingRules.MidMeasureChangeRightGap(engravedColumn) > 0);
+        Assert.Equal(0.0, SpacingRules.MidMeasureChangeRightGap(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, blankedColumn), 9);
+        Assert.True(SpacingRules.MidMeasureChangeRightGap(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, engravedColumn) > 0);
     }
 
     [Fact]

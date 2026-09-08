@@ -102,7 +102,7 @@ public class SkipColumnSpacingTests
         var (timings, allMeasures, primary, score) = Collect(src, measureIndex);
         var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
         var springs = new MeasureLayouter().CreateTimingSprings(
-            primary, timings, GlobalShortest, allMeasures,
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, timings, GlobalShortest, allMeasures,
             measureIndex + 1 < measures.Length ? measures[measureIndex + 1] : null,
             MultiStaffLayouter.CollectStaffIndicesAtIndex(score, measureIndex),
             SpacingRules.RunLeftBoundBarline(measures, measureIndex));
@@ -191,7 +191,7 @@ public class SkipColumnSpacingTests
         {
             var (_, _, primary, _) = Collect(src, bar);
             var column = ColumnSprings(src, bar);
-            var item = SpacingRules.CreateSpringsForMeasure(primary, GlobalShortest);
+            var item = SpacingRules.CreateSpringsForMeasure(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, GlobalShortest);
             Assert.Equal(column.Length, item.Length);
             for (int i = 0; i < column.Length; i++)
                 Assert.Equal(column[i].IdealDistance, item[i].IdealDistance, 9);

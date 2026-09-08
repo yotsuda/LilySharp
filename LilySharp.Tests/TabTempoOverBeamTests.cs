@@ -74,7 +74,7 @@ public sealed class TabTempoOverBeamTests
         var beam = layout.BeamLayouts.First(b => b.Group.MeasureIndex == 0);
         int strings = Tunings.GetStringCount(staff.Tuning!.Value);
         double tabHeight = (strings - 1) * EngravingDefaults.TabStringSpace(strings);
-        var geom = new TabStaffGeometry(staff.Tuning.Value, -tabHeight / 2.0,
+        var geom = new TabStaffGeometry(score.TextMetrics, staff.Tuning.Value, -tabHeight / 2.0,
             staff.TabSourceClef, staff.Transposition);
         Assert.True(geom.GroupStemUp(beam.Group.Members.Select(m => m.Item)),
             "the fixture's first bar must beam UP (low strings) for the test to mean anything");

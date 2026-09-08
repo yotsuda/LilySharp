@@ -306,6 +306,7 @@ score main { staff m }
         var systems = ImmutableArray.Create(new SystemLayout(0, 10.0, 100.0, 5.0, measures));
 
         var result = TupletBracketEngraver.Calculate(
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled,
             ImmutableArray.Create(tuplet), measures,
             ImmutableArray<Measure>.Empty, ImmutableArray<BeamGroup>.Empty);
 
@@ -329,6 +330,7 @@ score main { staff m }
         var beam = new BeamGroup(members, 0, 0, true);
 
         var result = TupletBracketEngraver.Calculate(
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled,
             ImmutableArray.Create(tuplet), measures,
             ImmutableArray<Measure>.Empty, ImmutableArray.Create(beam));
 
@@ -351,6 +353,7 @@ score main { staff m }
         var beam = new BeamGroup(members, 0, 0, true);
 
         var result = TupletBracketEngraver.Calculate(
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled,
             ImmutableArray.Create(tuplet), measures,
             ImmutableArray<Measure>.Empty, ImmutableArray.Create(beam));
 
@@ -373,6 +376,7 @@ score main { staff m }
         var musicMeasures = ImmutableArray.Create(new Measure(noteItems, BarlineType.None, BarlineType.Single, null, 0, 0));
 
         var result = TupletBracketEngraver.Calculate(
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled,
             ImmutableArray.Create(tuplet), measures, musicMeasures);
 
         Assert.Single(result);

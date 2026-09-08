@@ -510,10 +510,15 @@ or a style on it is an error.
 
 **Size and style reach these roles**: `title composer instrument lyricText stanza chordName
 fretFrame tempo mark pedal navigation text dynamics partCombine barNumber tuplet volta ottava
-bend tabTechnique` — the ones whose drawing and reserved space both read the plan. On the
-others (`figuredBass fingering tabFret` are Emmentaler digit runs; `clefOctave meter` are
-notation) the attribute is a **warning** (LYS8018) and only the face binds; a group warns
-only when none of its roles follows.
+bend tabTechnique clefOctave tabFret meter` — every role, and for each one the drawing and the
+reserved space read the plan together. `fingering` and `figuredBass` are Emmentaler digit
+runs: a `step` moves the glyph's font-size (its design, em and box together), and a style has
+nothing to act on and **warns** (LYS8018). `tabFret step` moves the fret digit and everything
+measured from it — its column, the bite out of the string line, the stem's near end, a tie's
+clearance — and not the string spacing (as LilyPond's `TabNoteHead.font-size` leaves
+`staff-space` alone). `meter` is the compound numerator's `+` alone — the signature's digits
+are Emmentaler glyphs — and its step widens the column the signature is booked at. A group
+warns only when none of its roles follows.
 
 **The narrower spelling wins**, in either source order and for each attribute on its own:
 `role` beats `group` beats `serif`/`sans` beats the bundled face (size and style have no
@@ -535,6 +540,8 @@ The keys, by group:
 octave digit under a `treble_8` clef, a compound meter's `+`, and tab fret numbers are
 notation that happens to be drawn as text — restyling them changes the notation rather
 than the words — so they follow a face only when you name `notation` or the role itself.
+A size or a style has no family layer, so for those the named entry is the only door:
+`notation step +1` or `tabFret bold` is always deliberate.
 
 **A named face is measured, not only drawn** (since 2026-08-18). The layout reserves space
 with the same file the string is drawn in, so a title in a wide face gets a wide box.

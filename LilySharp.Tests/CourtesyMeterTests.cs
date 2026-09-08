@@ -159,7 +159,7 @@ public sealed class CourtesyMeterTests
     {
         double margin = LineEndMargin(
             Book(openingMeter, restA, header),
-            LilySharp.Core.Svg.Layout.GlyphMetrics.GetTimeSigWidth(beats, beatType));
+            LilySharp.Core.Svg.Layout.GlyphMetrics.GetTimeSigWidth(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, beats, beatType));
 
         Assert.Equal(0.5, margin, 3);
     }

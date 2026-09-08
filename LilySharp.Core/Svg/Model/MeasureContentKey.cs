@@ -190,6 +190,7 @@ public readonly record struct MeasureContentKey(long Hash)
                 // LILYPOND-REF: scm/define-grobs.scm:650-664 break-align-orders — the
                 // unbroken order puts `clef` before `staff-bar`.
                 acc[i].Add(Layout.SpacingRules.BoundaryClefAllowance(
+                    score.TextMetrics,
                     measures[i].EndBarline,
                     i + 1 < measures.Length ? measures[i + 1] : null));
             }

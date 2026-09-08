@@ -44,7 +44,7 @@ public class GraceSpacingTests
     public void CreateGraceSpring_TighterThanRegular()
     {
         var graceSpring = SpacingRules.CreateGraceSpring(Fraction.Eighth);
-        var regularSpring = SpacingRules.CreateSpring(null, null, Fraction.Eighth);
+        var regularSpring = SpacingRules.CreateSpring(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, null, null, Fraction.Eighth);
 
         // Grace notes should have tighter spacing
         Assert.True(graceSpring.IdealDistance < regularSpring.IdealDistance,

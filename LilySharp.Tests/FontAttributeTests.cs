@@ -79,7 +79,7 @@ public class FontAttributeTests
         part melody "Vln." { pedal text }
         section A {
           chords prog { D | }
-          melody { c'4@mf d@sostenuto e@mark("Q") f@!sostenuto | }
+          melody { c'4@mf d@sostenuto@finger(3) e@mark("Q") f@!sostenuto | }
           lyrics words { lyr la la la | }
         }
         section B {
@@ -89,7 +89,7 @@ public class FontAttributeTests
         }
         section C {
           chords prog { D | }
-          melody { c''4@ottava d e f@!ottava | }
+          melody { c''4@ottava d@fig(6) e f@!ottava | }
           lyrics words { la la la la | }
         }
         section Z {
@@ -117,18 +117,30 @@ public class FontAttributeTests
         score main { combinedStaff { fl ob } }
         """;
 
-    /// <summary>A guitar book for the three tab-family labels the main book has no place
-    /// for: a technique letter ("H"), a bend amount ("full") and a fret frame above the
-    /// fourth fret ("5fr").</summary>
+    /// <summary>A guitar book for the notation-side labels the main book has no place for:
+    /// a technique letter ("H"), a bend amount ("full"), a fret frame above the fourth fret
+    /// ("5fr"), the octave digit under the guitar's <c>treble_8</c> clef ("8"), and — on the
+    /// tab staff beside it — a fret number pinned to the open second string ("0").</summary>
     private const string GuitarBook = """
         octave absolute
         time 4/4
-        part gtr { clef treble }
+        part gtr { clef treble_8 }
         section S {
-          gtr { c4@hammeron e@bend(full) g@frame(x57565) b | }
+          gtr { c4@hammeron e@bend(full) g@frame(x57565) b'\2 | }
         }
         form main { S }
-        score main { staff gtr }
+        score main { staff gtr  tab gtr }
+        """;
+
+    /// <summary>A book in a compound meter, for the one string a time signature draws as
+    /// TEXT: the numerator's "+" (its digits are Emmentaler glyphs and read no plan).</summary>
+    private const string MeterBook = """
+        time 3+2/8
+        section A {
+          melody { c'8 d e f g | }
+        }
+        form main { A }
+        score main { staff melody }
         """;
 
     /// <summary>A third book for the stanza number: three verses, no volta — every stanza
@@ -172,6 +184,16 @@ public class FontAttributeTests
         [TextRole.TabTechnique] = "H",
         [TextRole.Bend] = "full",
         [TextRole.FretFrame] = "5fr",
+        // The notation roles (2026-09-09): the guitar's treble_8 octave digit, and the fret
+        // number of the open second string (`b'\2` sounds B3 under the octave clef).
+        [TextRole.ClefOctave] = "8",
+        [TextRole.TabFret] = "0",
+        [TextRole.Meter] = "+",
+        // The two Emmentaler digit runs: a fingering "3" and a bass figure "6" are drawn as
+        // music glyphs (<text class="music">), whose content is the glyph's own code point —
+        // unique on the page by construction.
+        [TextRole.Fingering] = EmmentalerGlyphs.FingeringDigit3.ToString(),
+        [TextRole.FiguredBass] = EmmentalerGlyphs.FigBassDigit6.ToString(),
     };
 
     /// <summary>The book a role's sample is read from — <see cref="CombineBook"/> for the
@@ -182,7 +204,9 @@ public class FontAttributeTests
     {
         TextRole.PartCombine => CombineBook,
         TextRole.Stanza => StanzaBook,
-        TextRole.TabTechnique or TextRole.Bend or TextRole.FretFrame => GuitarBook,
+        TextRole.TabTechnique or TextRole.Bend or TextRole.FretFrame
+            or TextRole.ClefOctave or TextRole.TabFret => GuitarBook,
+        TextRole.Meter => MeterBook,
         _ => Book,
     };
 
@@ -365,9 +389,8 @@ public class FontAttributeTests
             .Where(x => x.Code.StartsWith("LYS80", StringComparison.Ordinal)));
 
     [Theory]
-    [InlineData("fonts { fingering step +1 }")]
-    [InlineData("fonts { tabFret bold }")]
-    [InlineData("fonts { notation bold }")]      // no leaf of the group follows
+    [InlineData("fonts { fingering bold }")]      // a glyph run has a size but no style
+    [InlineData("fonts { figuredBass italic }")]
     public void AnAttributeThePageWouldIgnore_Warns(string block)
     {
         var d = Assert.Single(Check(block + "\n" + Book), x => x.Code == DiagnosticCodes.FontAttributeNotFollowed);
@@ -378,6 +401,12 @@ public class FontAttributeTests
     [InlineData("fonts { numbers step +1 }")]    // barNumber, tuplet, volta follow
     [InlineData("fonts { marks italic }")]
     [InlineData("fonts { barNumber step +1 }")]
+    [InlineData("fonts { fingering step +1 }")]  // the digit run follows the size, not the style
+    [InlineData("fonts { figuredBass size 3 }")]
+    [InlineData("fonts { tabFret step +1 }")]    // the notation roles, named out loud
+    [InlineData("fonts { clefOctave bold }")]
+    [InlineData("fonts { meter step +1 }")]      // the compound «+», advance and pen alike
+    [InlineData("fonts { notation bold }")]
     public void AnAttributeSomeRoleReads_DoesNotWarn(string block)
         => Assert.DoesNotContain(Check(block + "\n" + Book), x => x.Code == DiagnosticCodes.FontAttributeNotFollowed);
 
@@ -385,13 +414,18 @@ public class FontAttributeTests
     public void TheNotFollowedWarning_IsAboutTheTable()
     {
         // The validator and the page read ONE table (TextRoles.PlanReachOf); this pins the
-        // validator's half to it so the two cannot drift.
+        // validator's half to it so the two cannot drift — for the size and for the style
+        // separately, since a music-font digit run follows one and not the other.
         foreach (var role in TextRoles.All.Where(r => r != TextRole.SystemBrace))
         {
-            bool warned = Check($"fonts {{ {TextRoles.Spelling(role)} step +1 }}\n" + Book)
+            bool warnedSize = Check($"fonts {{ {TextRoles.Spelling(role)} step +1 }}\n" + Book)
                 .Any(x => x.Code == DiagnosticCodes.FontAttributeNotFollowed);
-            bool follows = (TextRoles.PlanReachOf(role) & PlanReach.Size) != 0;
-            Assert.True(warned == !follows, $"{TextRoles.Spelling(role)}: warned={warned} follows={follows}");
+            bool followsSize = (TextRoles.PlanReachOf(role) & PlanReach.Size) != 0;
+            Assert.True(warnedSize == !followsSize, $"{TextRoles.Spelling(role)} size: warned={warnedSize} follows={followsSize}");
+            bool warnedStyle = Check($"fonts {{ {TextRoles.Spelling(role)} bold }}\n" + Book)
+                .Any(x => x.Code == DiagnosticCodes.FontAttributeNotFollowed);
+            bool followsStyle = (TextRoles.PlanReachOf(role) & PlanReach.Style) != 0;
+            Assert.True(warnedStyle == !followsStyle, $"{TextRoles.Spelling(role)} style: warned={warnedStyle} follows={followsStyle}");
         }
     }
 
@@ -452,6 +486,8 @@ public class FontAttributeTests
         bool follows = (TextRoles.PlanReachOf(role) & PlanReach.Style) != 0;
         if (!follows)
         {
+            // Not in the table for STYLE — the music-font digit runs are here too: a
+            // `fingering bold` has nothing to act on and moves nothing.
             Assert.Equal(Mask(control), Mask(styled));
             Assert.Equal(Mask(control), Mask(plain));
             return;

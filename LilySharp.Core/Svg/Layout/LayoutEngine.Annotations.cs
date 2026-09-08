@@ -762,7 +762,7 @@ internal sealed partial class LayoutEngine
         }
 
         var figuredBassLayouts = FiguredBassEngraver.Calculate(
-            fbItems, systems, ml, measures,
+            ctx.Fonts, fbItems, systems, ml, measures,
             measuresByStaff, scriptedSkylines, figuredBassStaffDown);
 
         var chordNameLayouts = LayoutChordNames(
@@ -960,7 +960,7 @@ internal sealed partial class LayoutEngine
             tupletScripts = sb.ToImmutable();
         }
         var tupletBracketLayouts = TupletBracketEngraver.Calculate(
-            tupletBrackets, ml, measures, beamGroups ?? default, beamLayouts ?? default,
+            ctx.Fonts, tupletBrackets, ml, measures, beamGroups ?? default, beamLayouts ?? default,
             forceStemUp: tupletForceStemUp,
             measuresByStaff: measuresByStaff, voicesByStaff: voicesByStaff, staffYAt: staffYAt,
             staffByIndex: staffByIndex, scripts: tupletScripts,

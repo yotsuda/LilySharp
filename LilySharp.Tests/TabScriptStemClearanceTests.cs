@@ -165,12 +165,13 @@ public sealed class TabScriptStemClearanceTests
         var tabStaff = score.EnumerateStaves().Select(t => t.Staff).First(s => s.IsTab);
         var note = tabStaff.Voices[0].Measures[0].Items
             .First(it => it is NoteItem or ChordItem);
-        var geom = new TabStaffGeometry(
+        var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
+        var geom = new TabStaffGeometry(fonts,
             tabStaff.Tuning!.Value, staffY: 0.0, tabStaff.TabSourceClef, tabStaff.Transposition);
         bool up = geom.TabStemUp(note);
         int headString = geom.StemHeadString(note, up);
         double near = geom.StringY(headString)
-            + (up ? -TabConstants.StemBeginOffset() : TabConstants.StemBeginOffset());
+            + (up ? -TabConstants.StemBeginOffset(fonts) : TabConstants.StemBeginOffset(fonts));
         double tip = geom.UnbeamedStemTipY(note, up, headString)!.Value;
         Assert.Equal(System.Math.Abs(near - tip), drawnLength, 6);
     }

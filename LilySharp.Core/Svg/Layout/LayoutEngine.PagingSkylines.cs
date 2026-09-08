@@ -429,9 +429,9 @@ internal sealed partial class LayoutEngine
                 : 0;
             double fbY = fbOff + (2.0 - fb.YUp);
             Add(fb.MeasureIndex,
-                fbY - FiguredBassEngraver.FigureInkTop(
+                fbY - FiguredBassEngraver.FigureInkTop(fonts,
                     fb.FigureTexts.Length > 0 ? fb.FigureTexts[0] : string.Empty),
-                fbY + BassFigureAlignment.ColumnDepth(fb.RowOffsets, fb.FigureTexts));
+                fbY + BassFigureAlignment.ColumnDepth(fonts, fb.RowOffsets, fb.FigureTexts));
         }
         // The pedal bracket under a staff — the SAME box the staff's down profile was solved
         // with and the X-aware arm below merges (PedalEngraver.BracketStencilBox), for the
@@ -885,9 +885,9 @@ internal sealed partial class LayoutEngine
             // subtraction; the figure column then extends downward (smaller Y-up).
             double fbStaffOffsetUp = LayoutUtilities.StaffOffsetInSystemUp(systems[s], fb.StaffIndex);
             double fbY = fb.YUp - EngravingDefaults.StaffMiddle + fbStaffOffsetUp;
-            double top = fbY + FiguredBassEngraver.FigureInkTop(
+            double top = fbY + FiguredBassEngraver.FigureInkTop(fonts,
                 fb.FigureTexts.Length > 0 ? fb.FigureTexts[0] : string.Empty);
-            double bottom = fbY - BassFigureAlignment.ColumnDepth(fb.RowOffsets, fb.FigureTexts);
+            double bottom = fbY - BassFigureAlignment.ColumnDepth(fonts, fb.RowOffsets, fb.FigureTexts);
             BuilderAt(s).AddFiguredBassBox(fb.X - half, fb.X + half, bottom, top);
         }
 

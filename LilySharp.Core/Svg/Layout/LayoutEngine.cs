@@ -798,7 +798,7 @@ internal sealed partial class LayoutEngine
                 // `system.PrefixWidth + BoundPadding`, so this is where a trill line begins
                 // after a line break — it must be the prefix the renderer actually draws, not
                 // the score key's. TabOnlyKeyPrefixTests asserts the same value directly.
-                PrefixWidth: SpacingRules.CalculatePrefixWidth(SpacingRules.MaxClefWidth(score),
+                PrefixWidth: SpacingRules.CalculatePrefixWidth(score.TextMetrics, SpacingRules.MaxClefWidth(score),
                     SpacingRules.WidestActiveKeyInk(score, firstMeasureIndex),
                     isFirstSystem && SpacingRules.AnyStaffEngravesTime(score),
                     score.TimeSignature.NumeratorText, score.TimeSignature.DenominatorText),

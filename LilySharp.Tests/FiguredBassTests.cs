@@ -172,6 +172,7 @@ public class FiguredBassTests
     public void FiguredBassEngraver_Calculate_EmptyInput()
     {
         var result = FiguredBassEngraver.Calculate(
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled,
             ImmutableArray<FiguredBassItem>.Empty,
             ImmutableArray<SystemLayout>.Empty,
             ImmutableArray<MeasureLayout>.Empty);
@@ -191,6 +192,7 @@ public class FiguredBassTests
         var systemLayout = new SystemLayout(0, 20.0, 50.0, 5.0, ImmutableArray.Create(measureLayout));
 
         var result = FiguredBassEngraver.Calculate(
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled,
             figuredBasses,
             ImmutableArray.Create(systemLayout),
             ImmutableArray.Create(measureLayout));
@@ -217,6 +219,7 @@ public class FiguredBassTests
         var systemLayout = new SystemLayout(0, 20.0, 50.0, 5.0, ImmutableArray.Create(measureLayout));
 
         var result = FiguredBassEngraver.Calculate(
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled,
             figuredBasses,
             ImmutableArray.Create(systemLayout),
             ImmutableArray.Create(measureLayout));
@@ -346,7 +349,7 @@ public class FiguredBassTests
     [Fact]
     public void BassFigureAlignment_DigitRows_StepByTheSpecMinimum()
     {
-        var offsets = BassFigureAlignment.RowOffsets(new[]
+        var offsets = BassFigureAlignment.RowOffsets(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, new[]
         {
             new BassFigureAlignment.Column(10.0, ImmutableArray.Create("5", "3")),
         });
@@ -371,13 +374,13 @@ public class FiguredBassTests
     public void BassFigureAlignment_AlteredRows_StepByTheirInk()
     {
         var sharp = "5♯";
-        var offsets = BassFigureAlignment.RowOffsets(new[]
+        var offsets = BassFigureAlignment.RowOffsets(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, new[]
         {
             new BassFigureAlignment.Column(10.0, ImmutableArray.Create(sharp, sharp)),
         });
 
-        double byInk = FiguredBassGlyphRun.InkTop(sharp)
-                       - FiguredBassGlyphRun.InkBottom(sharp)
+        double byInk = FiguredBassGlyphRun.InkTop(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, sharp)
+                       - FiguredBassGlyphRun.InkBottom(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, sharp)
                        + BassFigureAlignment.LinePadding;
         Assert.True(byInk > BassFigureAlignment.LineMinimumDistance,
             $"the ink branch must be the larger one for this pair, was {byInk}");
@@ -398,13 +401,14 @@ public class FiguredBassTests
             new BassFigureAlignment.Column(10.0, ImmutableArray.Create("5", "3")),
             new BassFigureAlignment.Column(20.0, ImmutableArray.Create("6")),
         };
-        var offsets = BassFigureAlignment.RowOffsets(columns);
+        var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
+        var offsets = BassFigureAlignment.RowOffsets(fonts, columns);
 
         // The digits sit ON their baseline, so a one-row column is zero deep and a two-row
         // one is exactly the step — no 0.5 tail under either (the debt this port paid).
-        Assert.Equal(0.0, BassFigureAlignment.ColumnDepth(offsets, columns[1].Texts), 9);
+        Assert.Equal(0.0, BassFigureAlignment.ColumnDepth(fonts, offsets, columns[1].Texts), 9);
         Assert.Equal(BassFigureAlignment.LineMinimumDistance,
-            BassFigureAlignment.ColumnDepth(offsets, columns[0].Texts), 9);
+            BassFigureAlignment.ColumnDepth(fonts, offsets, columns[0].Texts), 9);
     }
 
     // The topmost figure's baseline on a staff whose SECOND voice holds the given item —

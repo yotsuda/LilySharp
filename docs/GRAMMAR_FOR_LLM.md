@@ -640,9 +640,12 @@ Rules worth knowing before emitting one:
   `chordName as serif`. A bare word after a key is the next key.
 - Size and style reach these roles: `title composer instrument lyricText stanza chordName
   fretFrame tempo mark pedal navigation text dynamics partCombine barNumber tuplet volta
-  ottava bend tabTechnique`; on the others (`figuredBass fingering tabFret clefOctave meter`)
-  they are a warning (LYS8018) and only the face binds. A generic family (`serif`/`sans`)
-  takes faces only.
+  ottava bend tabTechnique clefOctave tabFret meter`; `fingering` and `figuredBass`
+  (Emmentaler digits) take a size and no style (a style on them warns, LYS8018). `tabFret
+  step` moves the digit and what is measured from it, not the string spacing; `meter` is
+  only the compound numerator's `+` (the digits are Emmentaler glyphs). A generic family
+  (`serif`/`sans`) takes faces only, so a notation role's size or style is always named out
+  loud (`tabFret …` or `notation …`).
 - `mono` is not a key. Unknown keys are an error; a key bound twice is a warning (last wins).
 - **Named blocks, per score**: `fonts NAME { … }` at the top level declares a reusable
   block (it binds nothing by itself); a score references it as `fonts NAME`, or overrides

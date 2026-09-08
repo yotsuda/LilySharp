@@ -29,6 +29,7 @@ internal static partial class SharedRenderer
     // ---------- Notes & rests per staff ----------
 
     private static void DrawStaffMeasures(
+        ScoreTextMetrics fonts,
         Voice voice, int voiceNumber, ImmutableArray<Voice> staffVoices,
         SystemLayout system, ScoreLayout layout, int staffIndex,
         double staffY, ClefType clef, GrobPropertyResolver resolver,
@@ -50,7 +51,7 @@ internal static partial class SharedRenderer
         // LILYPOND-REF: scm/define-grobs.scm LedgerLineSpanner (layer . 0);
         // NoteHead uses the default layer 1.
         var ledgerPlan = new List<LedgerRequest>();
-        foreach (var (item, ledgerMl, _, itemX, _) in EnumerateStaffItems(voice, voiceNumber, system, layout, staffIndex, fragmentFrom, fragmentTo))
+        foreach (var (item, ledgerMl, _, itemX, _) in EnumerateStaffItems(fonts, voice, voiceNumber, system, layout, staffIndex, fragmentFrom, fragmentTo))
         {
             // Percent-covered measures draw no notes — and no ledgers either.
             if (percentCovered != null && percentCovered.Contains(ledgerMl.MeasureIndex))
@@ -59,7 +60,7 @@ internal static partial class SharedRenderer
         }
         DrawPlannedLedgers(ledgerPlan, gc);
 
-        foreach (var (item, ml, itemIdx, itemX, voiceX) in EnumerateStaffItems(voice, voiceNumber, system, layout, staffIndex, fragmentFrom, fragmentTo))
+        foreach (var (item, ml, itemIdx, itemX, voiceX) in EnumerateStaffItems(fonts, voice, voiceNumber, system, layout, staffIndex, fragmentFrom, fragmentTo))
         {
             // Head-wipe when this voice's notehead merges with another's.
             bool headWiped = layout.IsHeadWiped(ml.MeasureIndex, voiceNumber, itemIdx);
@@ -141,7 +142,7 @@ internal static partial class SharedRenderer
                     // system-start clef (ResolveClef folds it) — drawing it here too
                     // would double-print the clef.
                     if (!IsSystemStartClefChange(voice, system, ml.MeasureIndex, clefChange))
-                        DrawClefChange(clefChange, itemX, staffY, gc);
+                        DrawClefChange(fonts, clefChange, itemX, staffY, gc);
                     break;
                 case KeySignatureChangeItem keyChange:
                     // A change that OPENS a later system is folded into that
@@ -158,7 +159,7 @@ internal static partial class SharedRenderer
                 // the same from whichever staff walks it, and so a future staff kind cannot
                 // draw ink the spacing model has already declined to reserve.
                 case TimeSignatureChangeItem { Blanked: false } timeChange:
-                    DrawTimeSignatureChange(timeChange, itemX, staffY, gc);
+                    DrawTimeSignatureChange(fonts, timeChange, itemX, staffY, gc);
                     break;
             }
         }
@@ -171,7 +172,7 @@ internal static partial class SharedRenderer
     /// </summary>
     private static IEnumerable<(MusicItem Item, MeasureLayout Ml, int ItemIdx, double ItemX,
                                 double VoiceX)>
-        EnumerateStaffItems(Voice voice, int voiceNumber, SystemLayout system, ScoreLayout layout,
+        EnumerateStaffItems(ScoreTextMetrics fonts, Voice voice, int voiceNumber, SystemLayout system, ScoreLayout layout,
             int staffIndex,
             int fragmentFrom = int.MinValue, int fragmentTo = int.MaxValue)
     {
@@ -275,7 +276,7 @@ internal static partial class SharedRenderer
                     && currentTiming == Fraction.Zero
                     && ml.MeasureIndex > 0
                     && ml.MeasureIndex != system.Measures[0].MeasureIndex
-                    && BoundaryClefX(voice, ml, measure) is { } clefX)
+                    && BoundaryClefX(fonts, voice, ml, measure) is { } clefX)
                 {
                     // A clef change OPENING the measure is engraved BEFORE the bar line,
                     // unlike a key or time change: LilyPond's unbroken break-align order is
@@ -312,7 +313,7 @@ internal static partial class SharedRenderer
                         openChangeX = ml.X + afterBar + SpacingRules.GetBarlineToItemSpace(item);
                     }
                     itemX = openChangeX;
-                    openChangeX += SpacingRules.ChangeColumnGlyphAdvance(item, NextChangeIn(measure, itemIdx));
+                    openChangeX += SpacingRules.ChangeColumnGlyphAdvance(fonts, item, NextChangeIn(measure, itemIdx));
                 }
                 else if (useColumnTiming && isChange)
                 {
@@ -331,8 +332,8 @@ internal static partial class SharedRenderer
                     itemX -= ml.LooseChangeHangs != null
                              && ml.LooseChangeHangs.TryGetValue(currentTiming, out var hang)
                         ? hang
-                        : SpacingRules.MidMeasureChangeRightGap(columnItems);
-                    itemX += SpacingRules.MidMeasureChangeOffsetWithin(columnItems, item);
+                        : SpacingRules.MidMeasureChangeRightGap(fonts, columnItems);
+                    itemX += SpacingRules.MidMeasureChangeOffsetWithin(fonts, columnItems, item);
                 }
 
                 // Horizontal collision offset for multi-voice columns. Yielded alongside the
@@ -360,13 +361,13 @@ internal static partial class SharedRenderer
     /// sits <see cref="BoundaryColumn.BarLineLeft"/> further left, and the clef's own ink
     /// starts at its column-internal <c>Left</c>.
     /// </remarks>
-    private static double? BoundaryClefX(Voice voice, MeasureLayout ml, Measure measure)
+    private static double? BoundaryClefX(ScoreTextMetrics fonts, Voice voice, MeasureLayout ml, Measure measure)
     {
         var prev = voice.Measures[ml.MeasureIndex - 1];
         if (prev.EndBarline == BarlineType.None)
             return null;
 
-        var column = BoundaryColumn.Build(prev.EndBarline, measure.Items);
+        var column = BoundaryColumn.Build(fonts, prev.EndBarline, measure.Items);
         if (column.BarLineLeft is not { } barLineLeft)
             return null;
 

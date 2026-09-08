@@ -45,18 +45,19 @@ namespace LilySharp.Core.Svg.Layout;
 /// </remarks>
 internal static class TabChordColumns
 {
-    /// <summary>Drawn width of a fret number at <see cref="TabConstants.FretFontSize"/>.</summary>
-    public static double FretWidth(int fret) =>
-        TabConstants.FretGlyphWidth(
-            fret.ToString(CultureInfo.InvariantCulture), TabConstants.FretFontSize);
+    /// <summary>Drawn width of a fret number at the score's fret em
+    /// (<see cref="TabConstants.FretEm"/>).</summary>
+    public static double FretWidth(Rendering.ScoreTextMetrics fonts, int fret) =>
+        TabConstants.FretGlyphWidth(fonts,
+            fret.ToString(CultureInfo.InvariantCulture), TabConstants.FretEm(fonts));
 
     /// <summary>
     /// Half the distance between the zigzag's two columns: half the widest digit plus a
     /// small gap, so even two-digit frets in the two columns clear each other. A note's
     /// offset is exactly ±this, or 0 when it has no string-adjacent neighbour.
     /// </summary>
-    private static double ColumnDelta(IReadOnlyList<(int str, int fret)> notes)
-        => notes.Max(p => FretWidth(p.fret)) / 2 + 0.1;
+    private static double ColumnDelta(Rendering.ScoreTextMetrics fonts, IReadOnlyList<(int str, int fret)> notes)
+        => notes.Max(p => FretWidth(fonts, p.fret)) / 2 + 0.1;
 
     /// <summary>
     /// Horizontal offset for each chord note (notes ordered top string → bottom) so
@@ -74,13 +75,13 @@ internal static class TabChordColumns
     /// follows from what it is stacked against: 0/4/5 top-down puts 4 alone on the left
     /// (its column loses to the {5,0} column's 5), 0/5/4 puts {0,4} left ({5} wins).
     /// </remarks>
-    public static double[] Offsets(IReadOnlyList<(int str, int fret)> notes)
+    public static double[] Offsets(Rendering.ScoreTextMetrics fonts, IReadOnlyList<(int str, int fret)> notes)
     {
         int n = notes.Count;
         var off = new double[n];
         if (n < 2) return off;
 
-        double delta = ColumnDelta(notes);
+        double delta = ColumnDelta(fonts, notes);
 
         // Walk the maximal runs of string-adjacent notes; each run zigzags on its own.
         // The column buffers live OUTSIDE the loop (stackalloc in a loop grows the

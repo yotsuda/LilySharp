@@ -333,13 +333,13 @@ public class SpringRodModelTests
         var noteUp = new NoteItem(-2, Fraction.Quarter, 0, null, false, 0);
         var noteDown = new NoteItem(2, Fraction.Quarter, 0, null, false, 0);
 
-        var springOpposite = SpacingRules.CreateSpring(noteUp, noteDown, Fraction.Quarter);
+        var springOpposite = SpacingRules.CreateSpring(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, noteUp, noteDown, Fraction.Quarter);
 
         // Same direction → less space
         var noteUp2 = new NoteItem(-2, Fraction.Quarter, 0, null, false, 0);
         var noteUp3 = new NoteItem(-4, Fraction.Quarter, 0, null, false, 0);
 
-        var springSame = SpacingRules.CreateSpring(noteUp2, noteUp3, Fraction.Quarter);
+        var springSame = SpacingRules.CreateSpring(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, noteUp2, noteUp3, Fraction.Quarter);
 
         Assert.True(springOpposite.IdealDistance > springSame.IdealDistance,
             $"Opposite stems ({springOpposite.IdealDistance:F3}) should need more space than same ({springSame.IdealDistance:F3})");
@@ -351,9 +351,9 @@ public class SpringRodModelTests
         var note = new NoteItem(0, Fraction.Quarter, 0, null, false, 0);
         var rest = new RestItem(Fraction.Quarter, 0, 0);
 
-        var springNoParams = SpacingRules.CreateSpring(note, rest, Fraction.Quarter,
+        var springNoParams = SpacingRules.CreateSpring(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, note, rest, Fraction.Quarter,
             new NoteSpacingParameters { StemSpacingCorrection = 0, SameDirectionCorrection = 0 });
-        var springWithParams = SpacingRules.CreateSpring(note, rest, Fraction.Quarter);
+        var springWithParams = SpacingRules.CreateSpring(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, note, rest, Fraction.Quarter);
 
         // Rest has no stem direction → no correction
         Assert.Equal(springNoParams.IdealDistance, springWithParams.IdealDistance, 3);

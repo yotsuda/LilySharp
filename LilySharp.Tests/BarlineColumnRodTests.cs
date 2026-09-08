@@ -73,7 +73,7 @@ public sealed class BarlineColumnRodTests
         var score = ScoreOf(bar);
         var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
         var springs = new MeasureLayouter().CreateTimingSprings(
-            measures[0], MultiStaffLayouter.CollectAllTimingsForMeasure(score, 0),
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, measures[0], MultiStaffLayouter.CollectAllTimingsForMeasure(score, 0),
             SpacingRules.CalculateCommonShortestDuration(score),
             MultiStaffLayouter.CollectAllMeasuresAtIndex(score, 0), measures[1],
             MultiStaffLayouter.CollectStaffIndicesAtIndex(score, 0));
@@ -90,7 +90,7 @@ public sealed class BarlineColumnRodTests
         var bar = FirstBar(ScoreOf("fis,,2 fis,,8 fis,, r cis,"));
         var last = (NoteItem)bar.Items[^1];
         Assert.True(last.StemUp && !last.IsBeamed);
-        var (skyMin, rod) = SpacingRules.NoteColumnToBarlineFloorPair(last);
+        var (skyMin, rod) = SpacingRules.NoteColumnToBarlineFloorPair(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, last);
         Assert.Equal(2.3674, rod, 4);
         Assert.Equal(2.2674, skyMin, 4);
     }
@@ -104,7 +104,7 @@ public sealed class BarlineColumnRodTests
         var bar = FirstBar(ScoreOf("fis,,2 fis,,8 fis,, r gis,"));
         var last = (NoteItem)bar.Items[^1];
         Assert.True(!last.StemUp && !last.IsBeamed);
-        Assert.Equal(1.6042, SpacingRules.NoteColumnToBarlineFloorPair(last).Rod, 4);
+        Assert.Equal(1.6042, SpacingRules.NoteColumnToBarlineFloorPair(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, last).Rod, 4);
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public sealed class BarlineColumnRodTests
     {
         // m-q.ly: no flag, no dot — 1.3042 + 0.3.
         var bar = FirstBar(ScoreOf("fis,,2 fis,,8 fis,, cis,4"));
-        Assert.Equal(1.6042, SpacingRules.NoteColumnToBarlineFloorPair(bar.Items[^1]).Rod, 4);
+        Assert.Equal(1.6042, SpacingRules.NoteColumnToBarlineFloorPair(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, bar.Items[^1]).Rod, 4);
     }
 
     [Fact]
@@ -123,8 +123,8 @@ public sealed class BarlineColumnRodTests
         var bar = FirstBar(ScoreOf("fis,,2 fis,,8 fis,, r cis,"));
         var rest = bar.Items[3];
         Assert.IsType<RestItem>(rest);
-        Assert.Equal(1.3, SpacingRules.SeparationRodDistance(rest, bar.Items[4], 0), 4);
-        Assert.Equal(1.2, SpacingRules.CalculateSkylineDistance(rest, bar.Items[4], 0), 4);
+        Assert.Equal(1.3, SpacingRules.SeparationRodDistance(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, rest, bar.Items[4], 0), 4);
+        Assert.Equal(1.2, SpacingRules.CalculateSkylineDistance(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, rest, bar.Items[4], 0), 4);
     }
 
     [Fact]
@@ -133,8 +133,8 @@ public sealed class BarlineColumnRodTests
         // m-base.ly: half → eighth rod 1.6774 = the half head's 1.3774 + 0.3. Between the
         // two heads' CENTRES it read 1.6408 — half of each width, not the left head's whole.
         var bar = FirstBar(ScoreOf("fis,,2 fis,,8 fis,, r cis,"));
-        Assert.Equal(1.6774, SpacingRules.SeparationRodDistance(bar.Items[0], bar.Items[1], 0), 4);
-        Assert.Equal(1.6042, SpacingRules.SeparationRodDistance(bar.Items[1], bar.Items[2], 0), 4);
+        Assert.Equal(1.6774, SpacingRules.SeparationRodDistance(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, bar.Items[0], bar.Items[1], 0), 4);
+        Assert.Equal(1.6042, SpacingRules.SeparationRodDistance(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, bar.Items[1], bar.Items[2], 0), 4);
     }
 
     [Fact]
@@ -143,7 +143,7 @@ public sealed class BarlineColumnRodTests
         // m-base.ly: bar line origin → next column 0.49 = 0.19 of ink + 0.3; the spring
         // starts at the ink's right edge.
         var bar = FirstBar(ScoreOf("fis,,2 fis,,8 fis,, r cis,"));
-        var spring0 = SpacingRules.BarlineToFirstColumnSpring(new[] { bar.Items[0] }, fillsMeasure: false);
+        var spring0 = SpacingRules.BarlineToFirstColumnSpring(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, new[] { bar.Items[0] }, fillsMeasure: false);
         Assert.Equal(0.3, spring0.MinDistance, 9);
         // The ideal and the strengths are Staff_spacing's, untouched by the rod.
         Assert.Equal(EngravingDefaults.BarLineToNextNoteSpace, spring0.IdealDistance, 9);

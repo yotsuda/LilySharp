@@ -73,7 +73,7 @@ public class LineStartColumnTests
         double clefInk = GlyphMetrics.LineStartClefWidth(ClefType.Treble);
         double keyInk = SpacingRules.KeySignatureInkWidth(key);
         var columns = BreakAlignSpacing.SolvePrefixColumns(
-            clefGroupWidth ?? clefInk, keyInk, includeTimeSignature: true, beats.ToString(), beatType.ToString());
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, clefGroupWidth ?? clefInk, keyInk, includeTimeSignature: true, beats.ToString(), beatType.ToString());
 
         var boxes = new List<ColumnBox>();
         var clefBox = GlyphMetrics.ClefG;
@@ -95,7 +95,7 @@ public class LineStartColumnTests
                 0.0, LineStartColumn.KeySignatureEswRight,
                 StaffBottom, StaffTop, neighbourBottom, neighbourTop));
 
-        double timeInk = GlyphMetrics.GetTimeSigWidth(beats, beatType);
+        double timeInk = GlyphMetrics.GetTimeSigWidth(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, beats, beatType);
         var timeBox = GlyphMetrics.TimeSigCommon;
         boxes.Add(LineStartColumn.PrefatoryBox(
             columns.TimeX, columns.TimeX + timeInk,
@@ -351,7 +351,7 @@ public class LineStartColumnTests
         Assert.Equal(0.0, empty.Right, 6);
 
         var cols = BreakAlignSpacing.SolvePrefixColumns(
-            clefWidth: 0.0, keyInkWidth: 0.0, includeTimeSignature: false);
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, clefWidth: 0.0, keyInkWidth: 0.0, includeTimeSignature: false);
         Assert.Equal(0.0, cols.Right, 6);
         Assert.Equal(0.0, cols.ClefX, 6);
         Assert.False(cols.HasKey);
@@ -477,9 +477,9 @@ public class LineStartColumnTests
         };
 
         var (plainLeft, plainRight) = SpacingRules.MusicalInkOverhangsPerColumn(
-            new[] { plain }, timings);
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, new[] { plain }, timings);
         var (accLeft, _) = SpacingRules.MusicalInkOverhangsPerColumn(
-            new[] { withAccidental }, timings);
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, new[] { withAccidental }, timings);
 
         // A plain head hangs nothing left of its column…
         Assert.Equal(0.0, plainLeft[0], 6);
@@ -521,7 +521,7 @@ public class LineStartColumnTests
     /// <summary>The prefix ink right edge — LilyPond's <c>last_ext[RIGHT]</c>.</summary>
     private static double PrefixRight(KeySignature key, bool hasTime)
         => BreakAlignSpacing.SolvePrefixColumns(
-            GlyphMetrics.LineStartClefWidth(ClefType.Treble),
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, GlyphMetrics.LineStartClefWidth(ClefType.Treble),
             SpacingRules.KeySignatureInkWidth(key), hasTime, "4", "4").Right;
 
     /// <summary>
@@ -544,7 +544,7 @@ public class LineStartColumnTests
         var (fixed_, ideal, stretchability) = BreakAlignSpacing.SpaceAlistDistances(
             BreakAlignSpacing.GetSpacing(
                 BreakAlignSymbol.TimeSignature, BreakAlignSymbol.FirstNote),
-            prefixRight - GlyphMetrics.GetTimeSigWidth(4, 4), prefixRight);
+            prefixRight - GlyphMetrics.GetTimeSigWidth(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, 4, 4), prefixRight);
         Assert.Equal(7.585000, fixed_, 6);
         Assert.Equal(8.585000, ideal, 6);
         Assert.Equal(0.0, stretchability, 6);
@@ -642,7 +642,7 @@ public class LineStartColumnTests
         Assert.Equal(1.840000, barInk, 6);
 
         var columns = BreakAlignSpacing.SolvePrefixColumns(
-            GlyphMetrics.LineStartClefWidth(ClefType.Treble), 0.0, includeTimeSignature: true,
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, GlyphMetrics.LineStartClefWidth(ClefType.Treble), 0.0, includeTimeSignature: true,
             "4", "4", staffBarWidth: barInk);
         // The prefix proper still ends on the meter; the bar is its own column after it.
         Assert.Equal(6.585000, columns.Right, 6);
@@ -698,21 +698,21 @@ public class LineStartColumnTests
         double barInk = EngravingDefaults.BarlineDrawnWidth(BarlineType.RepeatStart);
 
         var clefOnly = BreakAlignSpacing.SolvePrefixColumns(
-            clefInk, 0.0, includeTimeSignature: false, staffBarWidth: barInk);
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, clefInk, 0.0, includeTimeSignature: false, staffBarWidth: barInk);
         Assert.Equal(3.365000, clefOnly.Right, 6);
         Assert.Equal(0.700000, clefOnly.BarGap, 6);
         Assert.Equal(4.065000, clefOnly.BarX, 6);
 
         double keyInk = SpacingRules.KeySignatureInkWidth(new KeySignature(2));
         var withKey = BreakAlignSpacing.SolvePrefixColumns(
-            clefInk, keyInk, includeTimeSignature: false, staffBarWidth: barInk);
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, clefInk, keyInk, includeTimeSignature: false, staffBarWidth: barInk);
         Assert.Equal(withKey.KeyX + keyInk, withKey.Right, 6);
         Assert.Equal(1.100000, withKey.BarGap, 6);
 
         // …and the prefix proper is what it was without the bar: the bar is priced through
         // the line-start spring, not booked as prefix width (see PrefixColumns).
         Assert.Equal(
-            BreakAlignSpacing.SolvePrefixColumns(clefInk, keyInk, includeTimeSignature: false).Right,
+            BreakAlignSpacing.SolvePrefixColumns(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, clefInk, keyInk, includeTimeSignature: false).Right,
             withKey.Right, 9);
     }
 
@@ -726,7 +726,7 @@ public class LineStartColumnTests
     public void OpeningRepeat_WithNoPrefix_SitsOnTheLeftEdge()
     {
         var columns = BreakAlignSpacing.SolvePrefixColumns(
-            clefWidth: 0.0, keyInkWidth: 0.0, includeTimeSignature: false,
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, clefWidth: 0.0, keyInkWidth: 0.0, includeTimeSignature: false,
             staffBarWidth: EngravingDefaults.BarlineDrawnWidth(BarlineType.RepeatStart));
         Assert.Equal(0.0, columns.Right, 6);
         Assert.Equal(0.0, columns.BarX, 6);

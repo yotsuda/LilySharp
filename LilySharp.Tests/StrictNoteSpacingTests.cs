@@ -52,7 +52,7 @@ public class StrictNoteSpacingTests
         var strictParams = new NoteSpacingParameters { StrictNoteSpacing = true };
         var quarter = new Fraction(1, 4);
 
-        var spring = SpacingRules.CreateSpring(null, null, quarter, noteParams: strictParams);
+        var spring = SpacingRules.CreateSpring(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, null, null, quarter, noteParams: strictParams);
 
         // In strict mode, min >= ideal
         Assert.True(spring.MinDistance >= spring.IdealDistance,
@@ -65,7 +65,7 @@ public class StrictNoteSpacingTests
         var normalParams = new NoteSpacingParameters { StrictNoteSpacing = false };
         var quarter = new Fraction(1, 4);
 
-        var spring = SpacingRules.CreateSpring(null, null, quarter, noteParams: normalParams);
+        var spring = SpacingRules.CreateSpring(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, null, null, quarter, noteParams: normalParams);
 
         // In normal mode, min < ideal (collision-based min is typically smaller than duration-based ideal)
         Assert.True(spring.MinDistance < spring.IdealDistance,

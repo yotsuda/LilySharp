@@ -37,7 +37,7 @@ internal static partial class SpacingRules
     /// gets space proportional to its length (logarithmic scaling).
     /// This is the width that produces visually pleasing spacing.
     /// </remarks>
-    public static double CalculateMeasureIdealWidth(Measure measure,
+    public static double CalculateMeasureIdealWidth(Rendering.ScoreTextMetrics fonts, Measure measure,
                                                     double? baseShortestDuration = null)
     {
         // The trailing clef column takes no width of its own — its clef lives in the
@@ -54,7 +54,7 @@ internal static partial class SpacingRules
         // Spring ideal distances (content area) - includes duration space
         if (measure.Items.Length > 0)
         {
-            var springs = CreateSpringsForMeasure(measure, baseShortestDuration);
+            var springs = CreateSpringsForMeasure(fonts, measure, baseShortestDuration);
             foreach (var spring in springs)
             {
                 width += spring.IdealDistance;
@@ -205,10 +205,10 @@ internal static partial class SpacingRules
         return width;
     }
 
-    public static double CalculatePrefixWidth(KeySignature key, bool includeTimeSignature,
+    public static double CalculatePrefixWidth(Rendering.ScoreTextMetrics fonts, KeySignature key, bool includeTimeSignature,
         string timeSigNumerator = "4", string timeSigDenominator = "4")
     {
-        return BreakAlignSpacing.CalculatePrefixWidth(
+        return BreakAlignSpacing.CalculatePrefixWidth(fonts,
             GlyphMetrics.LineStartClefWidth(ClefType.Treble),
             KeySignatureInkWidth(key),
             includeTimeSignature, timeSigNumerator, timeSigDenominator);
@@ -221,10 +221,10 @@ internal static partial class SpacingRules
     /// LILYPOND-REF: lily/break-alignment-interface.cc
     /// Use this overload when the clef type is known for accurate spacing.
     /// </remarks>
-    public static double CalculatePrefixWidth(double clefWidth, KeySignature key,
+    public static double CalculatePrefixWidth(Rendering.ScoreTextMetrics fonts, double clefWidth, KeySignature key,
         bool includeTimeSignature, string timeSigNumerator = "4", string timeSigDenominator = "4")
     {
-        return BreakAlignSpacing.CalculatePrefixWidth(
+        return BreakAlignSpacing.CalculatePrefixWidth(fonts,
             clefWidth,
             KeySignatureInkWidth(key),
             includeTimeSignature, timeSigNumerator, timeSigDenominator);
@@ -236,10 +236,10 @@ internal static partial class SpacingRules
     /// multi-staff system reserves: a union across staves is a width, not one staff's key.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/break-alignment-interface.cc:141-142,242 calc_positioning_done.</remarks>
-    public static double CalculatePrefixWidth(double clefWidth, double keyInkWidth,
+    public static double CalculatePrefixWidth(Rendering.ScoreTextMetrics fonts, double clefWidth, double keyInkWidth,
         bool includeTimeSignature, string timeSigNumerator = "4", string timeSigDenominator = "4")
     {
-        return BreakAlignSpacing.CalculatePrefixWidth(
+        return BreakAlignSpacing.CalculatePrefixWidth(fonts,
             clefWidth, keyInkWidth, includeTimeSignature, timeSigNumerator, timeSigDenominator);
     }
 
@@ -780,14 +780,14 @@ internal static partial class SpacingRules
     ///   changed one does.
     /// </remarks>
     public static double TimeCourtesySuffixWidth(
-        TimeSignatureChangeItem change, bool afterCourtesyKey)
+        Rendering.ScoreTextMetrics fonts, TimeSignatureChangeItem change, bool afterCourtesyKey)
         // The meter's gap is measured off whatever stands to its LEFT in the group — the key
         // when one is there, otherwise the bar line — and those are different alist entries
         // (1.15 against 0.75), which is why one "space after the bar line" cannot cover both.
         => BreakAlignGap(
                afterCourtesyKey ? BreakAlignSymbol.KeySignature : BreakAlignSymbol.StaffBar,
                BreakAlignSymbol.TimeSignature)
-           + GlyphMetrics.GetTimeSigWidth(
+           + GlyphMetrics.GetTimeSigWidth(fonts,
                change.NewTime.NumeratorText, change.NewTime.DenominatorText)
            // ⚠️ AND THE GAP TO THE EDGE ITSELF. A break-align group has a member to the RIGHT
            // of its last grob — `right-edge` — and the meter declares 0.5 for it. Without this
@@ -1039,8 +1039,8 @@ internal static partial class SpacingRules
     /// LILYPOND-REF: lily/time-signature-engraver.cc — width is the wider of the
     /// numerator / denominator digit stacks.
     /// </remarks>
-    internal static double GetTimeSignatureChangeWidth(TimeSignatureChangeItem timeChange) =>
-        GlyphMetrics.GetTimeSigWidth(
+    internal static double GetTimeSignatureChangeWidth(Rendering.ScoreTextMetrics fonts, TimeSignatureChangeItem timeChange) =>
+        GlyphMetrics.GetTimeSigWidth(fonts,
             timeChange.NewTime.NumeratorText, timeChange.NewTime.DenominatorText);
 
     /// <summary>

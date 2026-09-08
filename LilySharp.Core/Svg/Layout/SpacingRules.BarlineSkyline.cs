@@ -165,7 +165,7 @@ internal static partial class SpacingRules
     /// COLUMN's frame, so a shifted voice's ink (and its dots) reaches further right; the
     /// default 0 keeps every existing caller on the unshifted frame.</param>
     /// <param name="nextShift">Same for the RIGHT item.</param>
-    public static double CalculateSkylineDistance(MusicItem? prevItem, MusicItem? nextItem,
+    public static double CalculateSkylineDistance(Rendering.ScoreTextMetrics fonts, MusicItem? prevItem, MusicItem? nextItem,
                                                    double staffY,
                                                    NoteSpacingParameters? noteParams = null,
                                                    double prevShift = 0, double nextShift = 0)
@@ -192,7 +192,7 @@ internal static partial class SpacingRules
             {
                 // Item → barline: the column's skyline against the bar line's box — the
                 // spring minimum of the two constraints NoteColumnToBarlineFloorPair prices.
-                return NoteColumnToBarlineFloorPair(prevItem).SkyMin;
+                return NoteColumnToBarlineFloorPair(fonts, prevItem).SkyMin;
             }
             else
             {
@@ -272,7 +272,8 @@ internal static partial class SpacingRules
     /// LILYPOND-REF: lily/spacing-spanner.cc:315-316 generate_springs — the padding passed to
     ///   set_column_rods is the last column's `padding`, defaulting to 0.1.
     /// </remarks>
-    public static double SeparationRodDistance(MusicItem? prevItem, MusicItem? nextItem,
+    public static double SeparationRodDistance(Rendering.ScoreTextMetrics fonts,
+                                               MusicItem? prevItem, MusicItem? nextItem,
                                                double staffY,
                                                NoteSpacingParameters? noteParams = null,
                                                double prevShift = 0, double nextShift = 0)
@@ -281,9 +282,9 @@ internal static partial class SpacingRules
         // column pair, breakable columns included, and the rod is the spanner's padding over
         // the same skyline distance the spring minimum is.
         if (prevItem != null && nextItem == null)
-            return NoteColumnToBarlineFloorPair(prevItem).Rod;
+            return NoteColumnToBarlineFloorPair(fonts, prevItem).Rod;
         if (prevItem == null || nextItem == null)
-            return CalculateSkylineDistance(prevItem, nextItem, staffY, noteParams)
+            return CalculateSkylineDistance(fonts, prevItem, nextItem, staffY, noteParams)
                    + SeparationRodPadding;
 
         return SkylineFloorPair(
@@ -348,14 +349,14 @@ internal static partial class SpacingRules
     ///   its neighbours, horizontal-skylines from its stencil.
     /// </remarks>
     internal static (double SkyMin, double Rod) NoteColumnToBarlineFloorPair(
-        MusicItem item, IEnumerable<MusicItem>? rightNeighbours = null)
+        Rendering.ScoreTextMetrics fonts, MusicItem item, IEnumerable<MusicItem>? rightNeighbours = null)
     {
         // A change item shares no column with a bar line in LilyPond (a mid-measure change
         // is its own non-musical column); a spacer engraves nothing. Both keep the type
         // arms they had — see GetItemToBarlineSpace's note.
         if (!IsMusicalColumn(item))
         {
-            double d = CalculateNoteheadRightExtent(item) + GetItemToBarlineSpace(item);
+            double d = CalculateNoteheadRightExtent(fonts, item) + GetItemToBarlineSpace(item);
             return (d, d);
         }
 
@@ -410,12 +411,12 @@ internal static partial class SpacingRules
     /// <c>il-&gt;extent (pc, X_AXIS)</c>, the grob's extent in its PAPER COLUMN's frame.
     /// LILYPOND-REF: lily/rest.cc Rest::width — the rest branch below uses the same frame.
     /// </remarks>
-    internal static double CalculateNoteheadRightExtent(MusicItem item)
+    internal static double CalculateNoteheadRightExtent(Rendering.ScoreTextMetrics fonts, MusicItem item)
     {
         // Mirror of CalculateLeftExtent: the origin is the change glyph's ink left edge, so
         // its rightward reach is its full width — not half of it plus a padding.
         if (IsChangeItem(item))
-            return ChangeItemColumnWidth(item);
+            return ChangeItemColumnWidth(fonts, item);
 
         int noteValue = GetNoteValue(item);
 

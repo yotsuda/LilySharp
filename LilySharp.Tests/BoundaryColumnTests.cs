@@ -46,7 +46,7 @@ public class BoundaryColumnTests
         // key or time change. Verified on LilyPond 2.24.4: with `\clef bass R1*5` the
         // boundary column's origin is the clef's left edge and the bar line sits 2.84668
         // inside it, while the bar line's ABSOLUTE position does not move at all.
-        var col = BoundaryColumn.Build(BarlineType.Single, new MusicItem[] { Clef() });
+        var col = BoundaryColumn.Build(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, BarlineType.Single, new MusicItem[] { Clef() });
 
         Assert.Equal(BreakAlignSymbol.Clef, col.Grobs[0].Symbol);
         Assert.Equal(BreakAlignSymbol.StaffBar, col.Grobs[1].Symbol);
@@ -59,7 +59,7 @@ public class BoundaryColumnTests
     [Fact]
     public void WithoutAClefChange_TheBarLineIsTheColumnOrigin()
     {
-        var col = BoundaryColumn.Build(BarlineType.Single, new MusicItem[] { Key() });
+        var col = BoundaryColumn.Build(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, BarlineType.Single, new MusicItem[] { Key() });
         Assert.Equal(BreakAlignSymbol.StaffBar, col.Grobs[0].Symbol);
         Assert.Equal(0.0, Assert.NotNull(col.BarLineLeft), 6);
     }
@@ -68,7 +68,7 @@ public class BoundaryColumnTests
     public void KeyAndTimeSitAfterTheBarLine_AtTheirSpaceAlistGaps()
     {
         var col = BoundaryColumn.Build(
-            BarlineType.Single, new MusicItem[] { Key(), Time() });
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, BarlineType.Single, new MusicItem[] { Key(), Time() });
 
         double bw = EngravingDefaults.BarlineDrawnWidth(BarlineType.Single);
         var key = Grob(col, BreakAlignSymbol.KeySignature);
@@ -86,7 +86,7 @@ public class BoundaryColumnTests
         // BarLine.space-alist (time-signature . (extra-space . 0.75)) —
         // define-grobs.scm:293. BreakAlignSpacing had no explicit staff-bar -> time
         // entry and fell through to a 1.0 default, which is a different number.
-        var col = BoundaryColumn.Build(BarlineType.Single, new MusicItem[] { Time() });
+        var col = BoundaryColumn.Build(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, BarlineType.Single, new MusicItem[] { Time() });
         double bw = EngravingDefaults.BarlineDrawnWidth(BarlineType.Single);
         Assert.Equal(bw + 0.75, Grob(col, BreakAlignSymbol.TimeSignature).Left, 6);
     }
@@ -99,7 +99,7 @@ public class BoundaryColumnTests
         // null for them — so a bar line that draws nothing must neither consume a
         // space-alist gap nor anchor the grob after it. Placing it anyway put the key
         // signature a full staff-bar->key 1.0 further right than LilyPond does.
-        var col = BoundaryColumn.Build(BarlineType.None, new MusicItem[] { Key() });
+        var col = BoundaryColumn.Build(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, BarlineType.None, new MusicItem[] { Key() });
 
         Assert.DoesNotContain(col.Grobs, g => g.Symbol == BreakAlignSymbol.StaffBar);
         Assert.Null(col.BarLineLeft);
@@ -114,9 +114,9 @@ public class BoundaryColumnTests
         // correct: measured on LilyPond 2.24.4, bar line to bar line across `R1*5` is
         // 14.133856 both with and without a leading clef — only the column origin moves.
         var withClef = BoundaryColumn.Build(
-            BarlineType.Single, new MusicItem[] { Clef() }).RightSkylineFromBarLine();
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, BarlineType.Single, new MusicItem[] { Clef() }).RightSkylineFromBarLine();
         var without = BoundaryColumn.Build(
-            BarlineType.Single, System.Array.Empty<MusicItem>()).RightSkylineFromBarLine();
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, BarlineType.Single, System.Array.Empty<MusicItem>()).RightSkylineFromBarLine();
 
         var probe = HorizontalSkyline.FromBox(
             -2.0, 2.0, xLeft: -0.1, xRight: 0.1, HorizontalDirection.Left);
@@ -135,13 +135,13 @@ public class BoundaryColumnTests
 
         Assert.Equal(
             SpacingRules.GetClefChangeWidth(ClefType.Bass) + 0.7,
-            SpacingRules.BoundaryClefAllowance(BarlineType.Single, opensWithClef), 6);
+            SpacingRules.BoundaryClefAllowance(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, BarlineType.Single, opensWithClef), 6);
 
         // A key change rides the spring AFTER the bar line, so it costs nothing here.
         Assert.Equal(0.0,
-            SpacingRules.BoundaryClefAllowance(BarlineType.Single, opensWithKey), 6);
+            SpacingRules.BoundaryClefAllowance(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, BarlineType.Single, opensWithKey), 6);
         Assert.Equal(0.0,
-            SpacingRules.BoundaryClefAllowance(BarlineType.Single, null), 6);
+            SpacingRules.BoundaryClefAllowance(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, BarlineType.Single, null), 6);
     }
 
     private static RestItem Rest() => new(new Fraction(1, 1), dots: 0, sourcePosition: 0);
@@ -157,7 +157,7 @@ public class BoundaryColumnTests
         // after the first sounding item belongs to a later column.
         var rest = new RestItem(new Fraction(1, 1), dots: 0, sourcePosition: 0);
         var col = BoundaryColumn.Build(
-            BarlineType.Single, new MusicItem[] { rest, Key() });
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, BarlineType.Single, new MusicItem[] { rest, Key() });
 
         Assert.DoesNotContain(col.Grobs, g => g.Symbol == BreakAlignSymbol.KeySignature);
     }
@@ -204,12 +204,12 @@ public class BoundaryColumnTests
             bool shortCut = BoundaryColumn.OpensWithClefChange(items);
             foreach (var barline in barlines)
             {
-                double built = BoundaryColumn.Build(barline, shape).BarLineLeft ?? 0;
+                double built = BoundaryColumn.Build(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, barline, shape).BarLineLeft ?? 0;
                 if (built != 0) nonZero++;
 
                 // ⑴ The claim the caller makes: what it answers IS the column's answer.
                 Assert.Equal(built,
-                    SpacingRules.BoundaryClefAllowance(barline, MeasureOf(shape)), 12);
+                    SpacingRules.BoundaryClefAllowance(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, barline, MeasureOf(shape)), 12);
 
                 // ⑵ ...and the short-cut only ever skips a column that answers 0. It is
                 // allowed to be conservative the other way (a clef against a bar line that

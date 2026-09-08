@@ -96,8 +96,10 @@ internal sealed class BoundaryColumn
     /// the bar line drawn there, <paramref name="leadingItems"/> the RIGHT measure's
     /// items (scanned only as far as its leading zero-duration changes).
     /// </summary>
+    /// <param name="fonts">The score's text metrics — a meter change's width reads the plan for
+    /// a compound numerator's <c>+</c> (<see cref="SpacingRules.GetTimeSignatureChangeWidth"/>).</param>
     public static BoundaryColumn Build(
-        BarlineType barline, IEnumerable<MusicItem>? leadingItems)
+        Rendering.ScoreTextMetrics fonts, BarlineType barline, IEnumerable<MusicItem>? leadingItems)
     {
         ClefChangeItem? clef = null;
         KeySignatureChangeItem? key = null;
@@ -134,7 +136,7 @@ internal sealed class BoundaryColumn
         if (time != null)
             // scm/define-grobs.scm TimeSignature extra-spacing-width (0.0 . 0.8).
             candidates.Add((BreakAlignSymbol.TimeSignature,
-                SpacingRules.GetTimeSignatureChangeWidth(time), 0.0, 0.8));
+                SpacingRules.GetTimeSignatureChangeWidth(fonts, time), 0.0, 0.8));
 
         // The SAME break-align walk the line-start prefix uses (BreakAlignSpacing.SolveColumns):
         // each present grob is placed at the previous grob's ink right + the space-alist distance,

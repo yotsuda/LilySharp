@@ -67,7 +67,7 @@ public class SeparatingPaddingTests
     {
         var prev = MakeNote(0);
         var next = MakeNote(0);
-        double dist = SpacingRules.CalculateSkylineDistance(prev, next, staffY: 0);
+        double dist = SpacingRules.CalculateSkylineDistance(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, prev, next, staffY: 0);
         Assert.Equal(LpSpringMinimum, dist, precision: 6);
     }
 
@@ -76,9 +76,9 @@ public class SeparatingPaddingTests
     {
         var prev = MakeNote(0);
         var next = MakeNote(0);
-        double rod = SpacingRules.SeparationRodDistance(prev, next, staffY: 0);
+        double rod = SpacingRules.SeparationRodDistance(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, prev, next, staffY: 0);
         Assert.Equal(LpRod, rod, precision: 6);
-        Assert.Equal(SpacingRules.CalculateSkylineDistance(prev, next, staffY: 0)
+        Assert.Equal(SpacingRules.CalculateSkylineDistance(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, prev, next, staffY: 0)
                      + SpacingRules.SeparationRodPadding, rod, precision: 9);
     }
 
@@ -94,11 +94,11 @@ public class SeparatingPaddingTests
         var prev = MakeNote(0);
         var next = MakeNote(0);
         double withDefault = SpacingRules.CalculateSkylineDistance(
-            prev, next, staffY: 0, NoteSpacingParameters.Default);
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, prev, next, staffY: 0, NoteSpacingParameters.Default);
         double withTight = SpacingRules.CalculateSkylineDistance(
-            prev, next, staffY: 0, NoteSpacingParameters.Default with { MinItemGap = 0.1 });
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, prev, next, staffY: 0, NoteSpacingParameters.Default with { MinItemGap = 0.1 });
         double withWide = SpacingRules.CalculateSkylineDistance(
-            prev, next, staffY: 0, NoteSpacingParameters.Default with { MinItemGap = 3.0 });
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, prev, next, staffY: 0, NoteSpacingParameters.Default with { MinItemGap = 3.0 });
 
         Assert.Equal(withDefault, withTight, precision: 9);
         Assert.Equal(withDefault, withWide, precision: 9);

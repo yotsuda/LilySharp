@@ -216,7 +216,11 @@ internal static class TupletBracketEngraver
     ///
     /// Slope: bracket follows the contour of the first and last note's staff position.
     /// </remarks>
+    /// <param name="fonts">The score's text metrics — a tab bracket clears the tab beam,
+    /// whose geometry stands on fret digits of the plan's em
+    /// (<see cref="TabStaffGeometry"/>).</param>
     public static ImmutableArray<TupletBracketLayout> Calculate(
+        Rendering.ScoreTextMetrics fonts,
         ImmutableArray<TupletBracketItem> tuplets,
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<Measure> measures,
@@ -377,7 +381,7 @@ internal static class TupletBracketEngraver
                         // notation fallback drops to the plain placement below.
                         && beam.StaffIndex == tuplet.StaffIndex)
                     {
-                        var geom = new TabStaffGeometry(
+                        var geom = new TabStaffGeometry(fonts,
                             tstaff.Tuning.Value, staffOffset, tstaff.TabSourceClef, tstaff.Transposition);
                         // A tab beam's direction is string-based, not the notation
                         // Group.StemUp — so the number sits on the tab beam's OWN side.
@@ -469,11 +473,12 @@ internal static class TupletBracketEngraver
     /// Overload with measures but no beam info.
     /// </summary>
     public static ImmutableArray<TupletBracketLayout> Calculate(
+        Rendering.ScoreTextMetrics fonts,
         ImmutableArray<TupletBracketItem> tuplets,
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<Measure> measures)
     {
-        return Calculate(tuplets, measureLayouts, measures, default);
+        return Calculate(fonts, tuplets, measureLayouts, measures, default);
     }
 
     /// <summary>

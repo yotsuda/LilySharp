@@ -49,7 +49,12 @@ internal static partial class SpacingRules
     /// LILYPOND-REF: lily/spacing-basic.cc:147-162 Spacing_spanner::note_spacing —
     ///   <c>Spring (fraction * len, fraction * min)</c> with
     ///   <c>set_inverse_stretch_strength (fraction * max (0.1, len - min))</c>.</param>
-    public static Spring CreateSpring(MusicItem? prevItem, MusicItem? nextItem, Fraction prevDuration,
+    /// <param name="fonts">The score's text metrics — a mid-measure meter change's column
+    /// width reads the plan for a compound numerator's <c>+</c>
+    /// (<see cref="GetTimeSignatureChangeWidth"/>), and that width is in the skyline the
+    /// bar-line pair is priced from.</param>
+    public static Spring CreateSpring(Rendering.ScoreTextMetrics fonts,
+                                      MusicItem? prevItem, MusicItem? nextItem, Fraction prevDuration,
                                       NoteSpacingParameters? noteParams = null,
                                       double? baseShortestDuration = null,
                                       Fraction? shortestPlaying = null)
@@ -60,7 +65,7 @@ internal static partial class SpacingRules
         double defaultMin = EngravingDefaults.SpacingIncrement;
 
         // Skyline-based collision distance (rod)
-        double skylineDistance = CalculateSkylineDistance(prevItem, nextItem, staffY: 0);
+        double skylineDistance = CalculateSkylineDistance(fonts, prevItem, nextItem, staffY: 0);
 
         // The controlling duration and the share of its spring this leg takes.
         // LILYPOND-REF: lily/spacing-basic.cc:151-157 note_spacing — len from the

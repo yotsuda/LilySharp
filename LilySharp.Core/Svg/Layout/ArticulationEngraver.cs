@@ -206,7 +206,11 @@ internal static class ArticulationEngraver
         return order;
     }
 
+    /// <param name="fonts">The SCORE's text metrics — the fingering digits' plan. Passed
+    /// beside <paramref name="score"/> because callers hand this engraver a one-voice
+    /// <see cref="Score"/> built for the walk, which carries no <c>fonts</c> plan of its own.</param>
     public static ImmutableArray<ArticulationLayout> Calculate(
+        ScoreTextMetrics fonts,
         Score score,
         ImmutableArray<ArticulationItem> articulations,
         ImmutableArray<MeasureLayout> measureLayouts,
@@ -216,7 +220,7 @@ internal static class ArticulationEngraver
         ImmutableArray<BeamLayout> beamLayouts = default,
         ImmutableArray<TieLayout> tieLayouts = default,
         ImmutableArray<SlurLayout> slurLayouts = default)
-        => CalculateWithFingerings(score, articulations, measureLayouts, measuresByStaff,
+        => CalculateWithFingerings(fonts, score, articulations, measureLayouts, measuresByStaff,
             staffYAt, staffByIndex, beamLayouts, tieLayouts, slurLayouts, default, out _);
 
     /// <summary>Whether a mark is one the SLUR has to be scored around rather than one the
@@ -272,6 +276,7 @@ internal static class ArticulationEngraver
     /// </para>
     /// </remarks>
     internal static ImmutableArray<InsideSlurScript> InsideSlurScriptLayouts(
+        ScoreTextMetrics fonts,
         Score score,
         ImmutableArray<ArticulationItem> articulations,
         ImmutableArray<MeasureLayout> measureLayouts,
@@ -289,7 +294,7 @@ internal static class ArticulationEngraver
         if (!anyInside)
             return ImmutableArray<InsideSlurScript>.Empty;
 
-        var placed = Calculate(score, articulations, measureLayouts, measuresByStaff,
+        var placed = Calculate(fonts, score, articulations, measureLayouts, measuresByStaff,
             staffYAt, staffByIndex, beamLayouts, tieLayouts, slurLayouts: default);
         var inside = ImmutableArray.CreateBuilder<InsideSlurScript>();
         foreach (var l in placed)
@@ -329,6 +334,7 @@ internal static class ArticulationEngraver
     /// a fingered note); when one does, that call site needs the same fingerings.
     /// </remarks>
     internal static ImmutableArray<ArticulationLayout> CalculateWithFingerings(
+        ScoreTextMetrics fonts,
         Score score,
         ImmutableArray<ArticulationItem> articulations,
         ImmutableArray<MeasureLayout> measureLayouts,
@@ -509,7 +515,7 @@ internal static class ArticulationEngraver
                 int fi = queue[0];
                 queue.RemoveAt(0);
                 var fg = adjFingerings[fi];
-                var synth = FingeringScriptLayout(fg);
+                var synth = FingeringScriptLayout(fonts, fg);
                 if (supportScripts.TryGetValue(key, out var sup) && sup.Count > 0)
                 {
                     var myDown = ScriptSkyline(synth, fg.YUp, VerticalDirection.Down);
@@ -790,7 +796,7 @@ internal static class ArticulationEngraver
                         articulation.MeasureIndex, articulation.ItemIndex, measureLayout)
                     + EngravingDefaults.TabHeadCenterOffset;
                 const double tabGap = 1.0;
-                var geom = new TabStaffGeometry(
+                var geom = new TabStaffGeometry(fonts,
                     tabStaff.Tuning.Value, staffOffset, tabStaff.TabSourceClef, tabStaff.Transposition);
                 bool isTabBeamed = beamGroups.TryGetValue(
                     (articulation.StaffIndex, articulation.VoiceIndex,
@@ -819,7 +825,7 @@ internal static class ArticulationEngraver
                 // OUTER string protrudes half its height past the outer line. Clear
                 // that too, or an above-script (accent/staccato/fermata) lands on the
                 // number instead of above it.
-                double fretHalf = TabConstants.FretDigitHeight / 2.0;
+                double fretHalf = TabConstants.FretDigitHeight(fonts) / 2.0;
                 double topLine = staffOffset;
                 double bottomLine = staffOffset + (strings - 1) * space;
                 // A stem-coupled mark (staccato/accent/tenuto/…) may sit INSIDE the
@@ -1163,9 +1169,9 @@ internal static class ArticulationEngraver
     ///   vertical-skylines.
     /// Never added to the returned layouts: the drawn pass is SharedRenderer.DrawFingerings.
     /// </summary>
-    private static ArticulationLayout FingeringScriptLayout(in FingeringLayout fg)
+    private static ArticulationLayout FingeringScriptLayout(ScoreTextMetrics fonts, in FingeringLayout fg)
     {
-        var (_, ink, width) = FingeringEngraver.DigitRun(fg.Number);
+        var (_, ink, width) = FingeringEngraver.DigitRun(fonts, fg.Number);
         return new ArticulationLayout(
             fg.MeasureIndex, fg.ItemIndex,
             X: fg.X - width / 2.0,

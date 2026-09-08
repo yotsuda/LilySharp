@@ -483,7 +483,10 @@ internal static class BreakAlignSpacing
     /// <param name="staffBarWidth">The drawn width of the bar line the system OPENS with
     /// (<see cref="EngravingDefaults.BarlineDrawnWidth"/> of a <c>|:</c>), or 0 when the
     /// opening measure draws none — which is every ordinary line start.</param>
+    /// <param name="fonts">The score's text metrics — the meter row's width reads the plan
+    /// for a compound numerator's <c>+</c> (<see cref="GlyphMetrics.GetTimeSigWidth(Rendering.ScoreTextMetrics, string, string)"/>).</param>
     public static PrefixColumns SolvePrefixColumns(
+        Rendering.ScoreTextMetrics fonts,
         double clefWidth,
         double keyInkWidth,
         bool includeTimeSignature,
@@ -504,7 +507,7 @@ internal static class BreakAlignSpacing
             items.Add((BreakAlignSymbol.KeySignature, keyInkWidth));
         if (includeTimeSignature)
             items.Add((BreakAlignSymbol.TimeSignature,
-                GlyphMetrics.GetTimeSigWidth(timeSigNumerator, timeSigDenominator)));
+                GlyphMetrics.GetTimeSigWidth(fonts, timeSigNumerator, timeSigDenominator)));
         // The bar line a system OPENS with comes LAST at a line start — after the meter —
         // LILYPOND-REF: scm/define-grobs.scm:668-683 break-align-orders, begin of line
         //   (… key-signature time-signature staff-bar …); MEASURED on 2.26.0,
@@ -558,11 +561,12 @@ internal static class BreakAlignSpacing
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/break-alignment-interface.cc.</remarks>
     public static double CalculatePrefixWidth(
+        Rendering.ScoreTextMetrics fonts,
         double clefWidth,
         double keyInkWidth,
         bool includeTimeSignature,
         string timeSigNumerator = "4", string timeSigDenominator = "4")
-        => SolvePrefixColumns(clefWidth, keyInkWidth,
+        => SolvePrefixColumns(fonts, clefWidth, keyInkWidth,
             includeTimeSignature, timeSigNumerator, timeSigDenominator).Right;
 
     /// <summary>

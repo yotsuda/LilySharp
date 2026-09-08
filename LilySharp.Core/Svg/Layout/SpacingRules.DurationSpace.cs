@@ -199,10 +199,10 @@ internal static partial class SpacingRules
     /// immutable builder each — to read one nullable that was going to be 0.
     /// MEASURED (session 193): 0.93 MB of a 46.1 MB perf-plain1k keystroke.
     /// </remarks>
-    internal static double BoundaryClefAllowance(BarlineType barline, Measure? nextMeasure)
+    internal static double BoundaryClefAllowance(Rendering.ScoreTextMetrics fonts, BarlineType barline, Measure? nextMeasure)
         => nextMeasure == null || !BoundaryColumn.OpensWithClefChange(nextMeasure.Items)
             ? 0
-            : BoundaryColumn.Build(barline, nextMeasure.Items).BarLineLeft ?? 0;
+            : BoundaryColumn.Build(fonts, barline, nextMeasure.Items).BarLineLeft ?? 0;
 
     /// <summary>
     /// <c>Paper_column::minimum_distance</c> between the two paper columns bounding a
@@ -266,11 +266,12 @@ internal static partial class SpacingRules
     /// <param name="rightDoublePercentHalfWidth">The same for a sign centred on the RIGHT
     /// bounding bar line, whose left half reaches back into the span.</param>
     internal static double MmrRodMinimumDistance(
+        Rendering.ScoreTextMetrics fonts,
         BarlineType leftBound, IEnumerable<MusicItem>? runStartItems,
         double leftDoublePercentHalfWidth = 0, double rightDoublePercentHalfWidth = 0)
     {
         HorizontalSkyline leftColumnRight =
-            BoundaryColumn.Build(leftBound, runStartItems)
+            BoundaryColumn.Build(fonts, leftBound, runStartItems)
                 .RightSkylineFromBarLine(leftDoublePercentHalfWidth);
         // The right bounding column carries its bar line and, straddling it, a double
         // percent sign when one stands there: whatever sits there, the column origin

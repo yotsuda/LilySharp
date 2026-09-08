@@ -112,8 +112,8 @@ internal static class FiguredBassEngraver
     /// point as +0.375204764 and printed the digits 0.112 through the stem above them.
     /// </para>
     /// </remarks>
-    internal static double FigureInkTop(string topFigureText)
-        => FiguredBassGlyphRun.InkTop(topFigureText);
+    internal static double FigureInkTop(Rendering.ScoreTextMetrics fonts, string topFigureText)
+        => FiguredBassGlyphRun.InkTop(fonts, topFigureText);
 
     // LILYSHARP-OWN: the WIDTH of the box a figure offers the skyline. LilyPond has no such
     // number — a BassFigure's X-extent is its stencil's, i.e. the same run
@@ -155,10 +155,10 @@ internal static class FiguredBassEngraver
     /// which is <see cref="FiguredBassGlyphRun.Width"/>, left-aligned in its line.
     /// </para>
     /// </remarks>
-    internal static VerticalSkyline ColumnUpSkyline(double x, string topFigureText)
+    internal static VerticalSkyline ColumnUpSkyline(Rendering.ScoreTextMetrics fonts, double x, string topFigureText)
         => VerticalSkyline.FromBox(
             x - MinFigureBoxWidth / 2.0, x + MinFigureBoxWidth / 2.0,
-            0, FigureInkTop(topFigureText), VerticalDirection.Up);
+            0, FigureInkTop(fonts, topFigureText), VerticalDirection.Up);
 
     /// <summary>
     /// The down-skyline one figure offers the row BELOW it, about its own baseline — the
@@ -171,10 +171,10 @@ internal static class FiguredBassEngraver
     /// stacks against. Zero-deep for a digit and not for an accidental (see
     /// <see cref="FiguredBassGlyphRun.InkBottom"/>).
     /// </remarks>
-    internal static VerticalSkyline ColumnDownSkyline(double x, string figureText)
+    internal static VerticalSkyline ColumnDownSkyline(Rendering.ScoreTextMetrics fonts, double x, string figureText)
         => VerticalSkyline.FromBox(
             x - MinFigureBoxWidth / 2.0, x + MinFigureBoxWidth / 2.0,
-            FiguredBassGlyphRun.InkBottom(figureText), 0, VerticalDirection.Down);
+            FiguredBassGlyphRun.InkBottom(fonts, figureText), 0, VerticalDirection.Down);
 
     /// <summary>
     /// The ink a staff's figure row occupies, as a DOWN skyline about that staff's MIDDLE
@@ -206,6 +206,7 @@ internal static class FiguredBassEngraver
     /// <param name="downSoFar">The staff's accumulated inside-staff DOWN profile — what the
     /// row is placed against. Not mutated.</param>
     internal static VerticalSkyline RowInkBelowStaff(
+        Rendering.ScoreTextMetrics fonts,
         ImmutableArray<FiguredBassItem> figuredBasses,
         ImmutableArray<MeasureLayout> measureLayouts,
         int staffIndex,
@@ -234,7 +235,7 @@ internal static class FiguredBassEngraver
             var texts = fb.Figures.Select(f => f.DisplayText).ToImmutableArray();
             string topText = texts.Length > 0 ? texts[0] : string.Empty;
             columns.Add(new BassFigureAlignment.Column(x, texts));
-            rowUp.Merge(ColumnUpSkyline(x, topText));
+            rowUp.Merge(ColumnUpSkyline(fonts, x, topText));
         }
         if (columns.Count == 0) return ink;
 
@@ -247,7 +248,7 @@ internal static class FiguredBassEngraver
         // membership test above is a per-system filter and matches StackRows' (system, staff)
         // grouping. If it ever became the whole score's, this would stack a different
         // alignment from the one that is drawn, and no digit texture could tell.
-        var rowOffsets = BassFigureAlignment.RowOffsets(columns);
+        var rowOffsets = BassFigureAlignment.RowOffsets(fonts, columns);
 
         // The drop, by the same two steps the placement takes. The frame here is the staff's
         // MIDDLE line, so the basic floor is that Y-up read downward.
@@ -263,14 +264,15 @@ internal static class FiguredBassEngraver
             string topText = col.Texts.Length > 0 ? col.Texts[0] : string.Empty;
             ink.Merge(VerticalSkyline.FromBox(
                 col.X - MinFigureBoxWidth / 2.0, col.X + MinFigureBoxWidth / 2.0,
-                placedYUp - BassFigureAlignment.ColumnDepth(rowOffsets, col.Texts),
-                placedYUp + FigureInkTop(topText),
+                placedYUp - BassFigureAlignment.ColumnDepth(fonts, rowOffsets, col.Texts),
+                placedYUp + FigureInkTop(fonts, topText),
                 VerticalDirection.Down));
         }
         return ink;
     }
 
     public static ImmutableArray<FiguredBassLayout> Calculate(
+        Rendering.ScoreTextMetrics fonts,
         ImmutableArray<FiguredBassItem> figuredBasses,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
@@ -322,9 +324,9 @@ internal static class FiguredBassEngraver
                 StaffIndex: fb.StaffIndex));
         }
 
-        var result = StackRows(layouts.ToImmutable(), systems);
+        var result = StackRows(fonts, layouts.ToImmutable(), systems);
         if (systemSkylines != null && !systems.IsDefaultOrEmpty)
-            result = ApplySkylineDrop(result, systems, systemSkylines, staffDownSkyline);
+            result = ApplySkylineDrop(fonts, result, systems, systemSkylines, staffDownSkyline);
         return result;
     }
 
@@ -345,6 +347,7 @@ internal static class FiguredBassEngraver
     /// </para>
     /// </remarks>
     private static ImmutableArray<FiguredBassLayout> StackRows(
+        Rendering.ScoreTextMetrics fonts,
         ImmutableArray<FiguredBassLayout> layouts, ImmutableArray<SystemLayout> systems)
     {
         if (layouts.IsDefaultOrEmpty) return layouts;
@@ -364,7 +367,7 @@ internal static class FiguredBassEngraver
 
         var offsetsByAlignment = new Dictionary<(int Sys, int Staff), ImmutableArray<double>>();
         foreach (var (key, cols) in columnsByAlignment)
-            offsetsByAlignment[key] = BassFigureAlignment.RowOffsets(cols);
+            offsetsByAlignment[key] = BassFigureAlignment.RowOffsets(fonts, cols);
 
         return layouts
             .Select(lay => lay with { RowOffsets = offsetsByAlignment[(SystemOf(lay), lay.StaffIndex)] })
@@ -398,6 +401,7 @@ internal static class FiguredBassEngraver
     /// </para>
     /// </remarks>
     private static ImmutableArray<FiguredBassLayout> ApplySkylineDrop(
+        Rendering.ScoreTextMetrics fonts,
         ImmutableArray<FiguredBassLayout> layouts, ImmutableArray<SystemLayout> systems,
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)> systemSkylines,
         Func<int, int, VerticalSkyline?>? staffDownSkyline)
@@ -410,7 +414,7 @@ internal static class FiguredBassEngraver
         {
             if (!measureToSystem.TryGetValue(lay.MeasureIndex, out int s)) continue;
             var key = (s, lay.StaffIndex);
-            var box = ColumnUpSkyline(
+            var box = ColumnUpSkyline(fonts,
                 lay.X, lay.FigureTexts.Length > 0 ? lay.FigureTexts[0] : string.Empty);
             if (fbUp.TryGetValue(key, out var sky)) sky.Merge(box);
             else fbUp[key] = box;

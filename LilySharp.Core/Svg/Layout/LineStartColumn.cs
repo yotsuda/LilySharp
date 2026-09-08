@@ -238,7 +238,7 @@ internal static class LineStartColumn
             if (staff.IsTextRow)
                 continue;
 
-            var notes = FirstNoteBoxes(staff, startMeasureIndex);
+            var notes = FirstNoteBoxes(score.TextMetrics, staff, startMeasureIndex);
             if (notes.Count == 0)
                 continue;
 
@@ -376,7 +376,7 @@ internal static class LineStartColumn
     /// first note moves min_dist by 1.45 + 0.1 = 1.55. Every voice of the staff is walked and
     /// the furthest-reaching wins, a paper column being shared by all of them.
     /// </remarks>
-    private static List<ColumnBox> FirstNoteBoxes(Model.Staff staff, int measureIndex)
+    private static List<ColumnBox> FirstNoteBoxes(Rendering.ScoreTextMetrics fonts, Model.Staff staff, int measureIndex)
     {
         double reachLeft = double.NegativeInfinity;
         double reachRight = 0.0;
@@ -390,7 +390,7 @@ internal static class LineStartColumn
                     continue;
                 reachLeft = Math.Max(reachLeft, SpacingRules.MusicalColumnLeftReach(item));
                 reachRight = Math.Max(reachRight,
-                    SpacingRules.CalculateNoteheadRightExtent(item)
+                    SpacingRules.CalculateNoteheadRightExtent(fonts, item)
                     + SpacingRules.DefaultExtraSpacingWidth);
                 break;   // the FIRST column of this voice, not every column
             }

@@ -56,6 +56,9 @@ internal static partial class SharedRenderer
         // Written→sounding recovery: the clef octave (treble_8) plus the part's
         // resolved transposition (bass = −12) — one value shared with MIDI.
         int octaveShift = Tunings.SoundingShift(staff.TabSourceClef, staff.Transposition);
+        // The fret digits' em and style are the score's (fonts { tabFret … }) — the same
+        // accessor the layout's reservations read (TabConstants.FretEm / FretStyle).
+        var fonts = score.TextMetrics;
 
         // ⚠️ THE STRING LINES ARE DRAWN AT THE END OF THIS METHOD, not here, because each
         // fret digit takes a BITE out of the line it sits on rather than being painted over.
@@ -120,7 +123,7 @@ internal static partial class SharedRenderer
             {
                 if (!score.TimeSignature.SenzaMisura)
                     using (SourceScope(gc, score.Header.Time))
-                        DrawTimeSignature(score.TimeSignature, sharedTimeX, meterStaffY, gc);
+                        DrawTimeSignature(fonts, score.TimeSignature, sharedTimeX, meterStaffY, gc);
             }
             else if (GetSystemStartTimeChange(staff, system) is { } startTimeChange
                      && !startTimeChange.NewTime.SenzaMisura)
@@ -128,7 +131,7 @@ internal static partial class SharedRenderer
                 // A meter change at the line break is part of the prefix, exactly as on a
                 // notation staff (SharedRenderer.DrawSystem) — no source scope there either,
                 // the change owns its own position through the measure item it also has.
-                DrawTimeSignature(startTimeChange.NewTime, sharedTimeX, meterStaffY, gc);
+                DrawTimeSignature(fonts, startTimeChange.NewTime, sharedTimeX, meterStaffY, gc);
             }
         }
 
@@ -190,7 +193,7 @@ internal static partial class SharedRenderer
             {
                 var voice = staff.Voices[vi];
                 if (ml.MeasureIndex < voice.Measures.Length)
-                    DrawTabMeasure(voice.Measures[ml.MeasureIndex], ml, staffY,
+                    DrawTabMeasure(fonts, voice.Measures[ml.MeasureIndex], ml, staffY,
                         tuning, stringCount, octaveShift, staff, staffIndex, vi + 1, beamedItems,
                         gc, digitGaps, pageHeight, atMeasuresLineStart);
             }
@@ -207,10 +210,10 @@ internal static partial class SharedRenderer
         // every voice would otherwise be overprinted once per voice.
         if (engravesMeter)
             foreach (var (item, _, _, itemX, _) in
-                     EnumerateStaffItems(primaryVoice, 1, system, layout, staffIndex))
+                     EnumerateStaffItems(fonts, primaryVoice, 1, system, layout, staffIndex))
                 if (item is TimeSignatureChangeItem timeChange
                     && !timeChange.NewTime.SenzaMisura)
-                    DrawTimeSignatureChange(timeChange, itemX, meterStaffY, gc);
+                    DrawTimeSignatureChange(fonts, timeChange, itemX, meterStaffY, gc);
 
         // ⚠️ GRACE DIGITS ARE DRAWN IN A LATER PASS (SharedRenderer.cs, DrawGraceNotes), so
         // their bites have to be booked here or the line would run straight through them.
@@ -222,7 +225,7 @@ internal static partial class SharedRenderer
                 continue;
             if (!system.Measures.Any(m => m.MeasureIndex == g.MeasureIndex))
                 continue;
-            foreach (var d in TabGraceDigits(g, graceTuning, g.TabClef, g.TabTransposition))
+            foreach (var d in TabGraceDigits(fonts, g, graceTuning, g.TabClef, g.TabTransposition))
                 digitGaps.Add((d.StringNum - 1, d.CenterX - d.Width / 2, d.CenterX + d.Width / 2));
         }
 
@@ -241,7 +244,7 @@ internal static partial class SharedRenderer
         {
             var lastMl = system.Measures[^1];
             using (gc.Source(eolTimeChange.SourcePosition))
-                DrawTimeSignature(eolTimeChange.NewTime,
+                DrawTimeSignature(fonts, eolTimeChange.NewTime,
                     lastMl.X + lastMl.Width + SpacingRules.BreakAlignGap(
                         BreakAlignSymbol.StaffBar, BreakAlignSymbol.TimeSignature),
                     meterStaffY, gc);
@@ -287,7 +290,7 @@ internal static partial class SharedRenderer
             gc.DrawLine(x, y, right, y, Color.Black, EngravingDefaults.StaffLineThickness);
     }
 
-    private static void DrawTabMeasure(Measure measure, MeasureLayout ml,
+    private static void DrawTabMeasure(ScoreTextMetrics fonts, Measure measure, MeasureLayout ml,
         double staffY, int[] tuning, int stringCount, int octaveShift,
         Staff staff, int staffIndex, int voiceNumber,
         HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems, IDrawingContext gc,
@@ -310,7 +313,7 @@ internal static partial class SharedRenderer
         double stringSpace = EngravingDefaults.TabStringSpace(stringCount);
         // A tab stem's direction comes from the STRING (the tab head), not the notated
         // pitch, so a bass run on the bottom strings points up like LilyPond.
-        var dirGeom = new TabStaffGeometry(
+        var dirGeom = new TabStaffGeometry(fonts,
             staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef, staff.Transposition);
         // `tab … as numbers`: fret digits only — no stems, dots or rests (beams and
         // tuplet brackets are suppressed at their own draw sites). Ties are suppressed in
@@ -354,16 +357,16 @@ internal static partial class SharedRenderer
                     //   plain tied → 'transparent. (The span-start branch — a slur or
                     //   glissando starting at the tie's end — is not wired here.)
                     if (!note.IsTieTarget && !note.HasRepeatTie)
-                        DrawTabNote(note.Midi, itemX, staffY,
+                        DrawTabNote(fonts, note.Midi, itemX, staffY,
                             tuning, note.StringNumber, octaveShift, stringSpace, note.SourcePosition,
                             numbersOnly ? 0 : note.Dots, gc, digitGaps, note.IsDead);
                     else if (note.HasRepeatTie || (note.IsTieTarget && i == firstSoundingIndex))
-                        DrawTabNote(note.Midi, itemX, staffY,
+                        DrawTabNote(fonts, note.Midi, itemX, staffY,
                             tuning, note.StringNumber, octaveShift, stringSpace, note.SourcePosition,
                             numbersOnly ? 0 : note.Dots, gc, digitGaps, note.IsDead,
                             parenthesized: true);
                     if (!numbersOnly)
-                        DrawUnbeamedTabStem(note, note.BaseDuration, dirGeom.TabStemUp(note),
+                        DrawUnbeamedTabStem(fonts, note, note.BaseDuration, dirGeom.TabStemUp(note),
                             columnX, staffY, staff, isBeamed, gc, pageHeight);
                     break;
                 case ChordItem chord:
@@ -371,10 +374,10 @@ internal static partial class SharedRenderer
                     // numbers` draws fret digits and nothing of the rhythm. ⚠️ THIS ARM PASSED
                     // NO GATE until 2026-09-02 and a dotted chord drew its dots on a numbers
                     // tab (owner report, tab-dot.lys — `<c e g>4.` printed "0·").
-                    DrawTabChord(chord, itemX, staffY, tuning, octaveShift, stringSpace,
+                    DrawTabChord(fonts, chord, itemX, staffY, tuning, octaveShift, stringSpace,
                         numbersOnly ? 0 : chord.Dots, gc, digitGaps);
                     if (!numbersOnly)
-                        DrawUnbeamedTabStem(chord, chord.BaseDuration, dirGeom.TabStemUp(chord),
+                        DrawUnbeamedTabStem(fonts, chord, chord.BaseDuration, dirGeom.TabStemUp(chord),
                             columnX, staffY, staff, isBeamed, gc, pageHeight);
                     break;
                 // A SPACER draws nothing here either: the notation arm has read
@@ -433,7 +436,7 @@ internal static partial class SharedRenderer
     /// <see cref="EngravingDefaults.TabHeadCenterOffset"/> to the right of the
     /// column, still catches the stem. Whole notes carry no stem.
     /// </summary>
-    private static void DrawUnbeamedTabStem(MusicItem item, Fraction baseDuration,
+    private static void DrawUnbeamedTabStem(ScoreTextMetrics fonts, MusicItem item, Fraction baseDuration,
         bool stemUp, double columnX, double staffY, Staff staff,
         bool isBeamed, IDrawingContext gc, double pageHeight)
     {
@@ -455,11 +458,11 @@ internal static partial class SharedRenderer
         double stemX = TabStemX(columnX);
         // Device frame (Y down, top string at pageHeight − staffY) for both ends, then lift
         // to the page Y-up frame.
-        var geom = new TabStaffGeometry(staff.Tuning ?? TuningType.Guitar, pageHeight - staffY,
+        var geom = new TabStaffGeometry(fonts, staff.Tuning ?? TuningType.Guitar, pageHeight - staffY,
             staff.TabSourceClef, staff.Transposition);
         int headString = geom.StemHeadString(item, stemUp);
-        double nearYDev = geom.StringY(headString)
-            + (stemUp ? -TabConstants.StemBeginOffset() : TabConstants.StemBeginOffset());
+        double stemBegin = TabConstants.StemBeginOffset(fonts);
+        double nearYDev = geom.StringY(headString) + (stemUp ? -stemBegin : stemBegin);
         if (geom.UnbeamedStemTipY(item, stemUp, headString) is not { } farYDev)
             return;
         double nearY = pageHeight - nearYDev;
@@ -516,8 +519,9 @@ internal static partial class SharedRenderer
     // Tab fret numbers are drawn a notch larger than the historical 1.6 so they
     // read clearly; the chord-collision shifts below keep the bigger digits from
     // overlapping. Background/clearance dimensions scale with this.
-    // Single source: TabConstants (shared with the tie/grace layout so they can't desync).
-    private const double TabFretFontSize = TabConstants.FretFontSize;
+    // Single source: TabConstants (shared with the tie/grace layout so they can't desync),
+    // read through the score's plan since 2026-09-09 (fonts { tabFret step … }).
+    private static double TabFretEm(ScoreTextMetrics fonts) => TabConstants.FretEm(fonts);
 
     /// <summary>Grace fret digits relative to the normal fret size — just slightly
     /// smaller, so the grace reads as a grace without becoming illegible.</summary>
@@ -541,7 +545,7 @@ internal static partial class SharedRenderer
     /// </para>
     /// </summary>
     internal static (double Left, double Right) TabItemHalfExtent(
-        MusicItem item, int[] tuning, int octaveShift)
+        ScoreTextMetrics fonts, MusicItem item, int[] tuning, int octaveShift)
     {
         switch (item)
         {
@@ -549,7 +553,7 @@ internal static partial class SharedRenderer
             {
                 var (_, fret) = Tunings.CalculateFret(
                     n.Midi + octaveShift, tuning, n.StringNumber ?? 0);
-                double half = TabChordColumns.FretWidth(fret) / 2;
+                double half = TabChordColumns.FretWidth(fonts, fret) / 2;
                 return (half, half);
             }
             case ChordItem c when c.Notes.Length > 0:
@@ -559,11 +563,11 @@ internal static partial class SharedRenderer
                     .Select(p => (str: p.stringNum, fret: p.fret))
                     .OrderBy(p => p.str)
                     .ToList();
-                double[] dx = TabChordColumns.Offsets(notes);
+                double[] dx = TabChordColumns.Offsets(fonts, notes);
                 double left = 0, right = 0;
                 for (int i = 0; i < notes.Count; i++)
                 {
-                    double half = TabChordColumns.FretWidth(notes[i].fret) / 2;
+                    double half = TabChordColumns.FretWidth(fonts, notes[i].fret) / 2;
                     left = Math.Max(left, -dx[i] + half);
                     right = Math.Max(right, dx[i] + half);
                 }
@@ -574,7 +578,7 @@ internal static partial class SharedRenderer
         }
     }
 
-    private static void DrawTabNote(int midi,
+    private static void DrawTabNote(ScoreTextMetrics fonts, int midi,
         double x, double staffY, int[] tuning, int? stringNumber, int octaveShift,
         double stringSpace, int sourcePosition, int dots, IDrawingContext gc,
         List<(int StringIndex, double Left, double Right)> digitGaps, bool isDead = false,
@@ -582,12 +586,12 @@ internal static partial class SharedRenderer
     {
         int midiPitch = midi + octaveShift;
         var (stringNum, fret) = Tunings.CalculateFret(midiPitch, tuning, stringNumber ?? 0);
-        DrawTabFret(fret, stringNum, x, staffY, stringSpace, sourcePosition, gc, digitGaps, isDead,
+        DrawTabFret(fonts, fret, stringNum, x, staffY, stringSpace, sourcePosition, gc, digitGaps, isDead,
             parenthesized);
         double noteY = staffY - (stringNum - 1) * stringSpace;
-        double digitWidth = LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(
+        double digitWidth = LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(fonts,
             isDead ? "×" : fret.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            TabFretFontSize);
+            TabFretEm(fonts));
         DrawTabAugmentationDots(dots, x, digitWidth, noteY, stringSpace, sourcePosition, gc);
     }
 
@@ -622,7 +626,7 @@ internal static partial class SharedRenderer
     /// Draws one fret number (with its string-line-occluding background) at the
     /// given string line and x. Chord notes share this after their x is shifted.
     /// </summary>
-    private static void DrawTabFret(int fret, int stringNum, double x, double staffY,
+    private static void DrawTabFret(ScoreTextMetrics fonts, int fret, int stringNum, double x, double staffY,
         double stringSpace, int sourcePosition, IDrawingContext gc,
         List<(int StringIndex, double Left, double Right)> digitGaps, bool isDead = false,
         bool parenthesized = false)
@@ -632,9 +636,10 @@ internal static partial class SharedRenderer
         double noteY = staffY - (stringNum - 1) * stringSpace;
         // A dead (muted) note shows an "×" in place of the fret number.
         string fretText = isDead ? "×" : fret.ToString();
-        double bgWidth = LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(
+        double fretEm = TabFretEm(fonts);
+        double bgWidth = LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(fonts,
             isDead ? "×" : fret.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            TabFretFontSize);
+            fretEm);
 
         // The string line is BROKEN around the digit rather than painted over: the span is
         // booked here and DrawTabStringLines emits the segments either side of it.
@@ -656,11 +661,11 @@ internal static partial class SharedRenderer
             // dead note's × are different shapes and a shared fraction cannot centre both.
             gc.DrawText(fretText, x,
                 noteY - LilySharp.Core.Svg.Layout.TabConstants.FretBaselineDrop(
-                    fretText, TabFretFontSize),
-                TabFretFontSize, TextRole.TabFret,
-                FontStyle.Bold, TextAnchor.Middle, Color.Black);
+                    fonts, fretText, fretEm),
+                fretEm, TextRole.TabFret,
+                LilySharp.Core.Svg.Layout.TabConstants.FretStyle(fonts), TextAnchor.Middle, Color.Black);
             if (parenthesized)
-                DrawTabFretParens(x, noteY, bgWidth, gc);
+                DrawTabFretParens(fonts, x, noteY, bgWidth, gc);
         }
     }
 
@@ -696,10 +701,10 @@ internal static partial class SharedRenderer
     private const double TabTieParenClearance =
         TabTieParenLineWidth + 4.0 / 3 * TabTieParenWidth + TabTieParenLineWidth / 2;
 
-    private static void DrawTabFretParens(double x, double noteY, double digitWidth,
+    private static void DrawTabFretParens(ScoreTextMetrics fonts, double x, double noteY, double digitWidth,
         IDrawingContext gc)
     {
-        double h = LilySharp.Core.Svg.Layout.TabConstants.FretDigitHeight / 2;
+        double h = LilySharp.Core.Svg.Layout.TabConstants.FretDigitHeight(fonts) / 2;
         double control = 0.1 + 0.3 * TabTieParenAngularity;      // 0.22
         double outer = 4.0 / 3 * TabTieParenWidth;               // 0.3333
         double inner = outer - TabTieParenHalfThickness;         // 0.2583
@@ -728,7 +733,7 @@ internal static partial class SharedRenderer
     /// <param name="dots">The augmentation dots to draw — the chord's own, or 0 on an
     /// <c>as numbers</c> tab, decided by the caller the way <see cref="DrawTabNote"/>'s
     /// caller decides it (one gate, two item kinds).</param>
-    private static void DrawTabChord(ChordItem chord, double itemX, double staffY,
+    private static void DrawTabChord(ScoreTextMetrics fonts, ChordItem chord, double itemX, double staffY,
         int[] tuning, int octaveShift, double stringSpace, int dots, IDrawingContext gc,
         List<(int StringIndex, double Left, double Right)> digitGaps)
     {
@@ -743,9 +748,9 @@ internal static partial class SharedRenderer
             .OrderBy(p => p.str)
             .ToList();
 
-        double[] dx = TabChordColumns.Offsets(notes);
+        double[] dx = TabChordColumns.Offsets(fonts, notes);
         for (int i = 0; i < notes.Count; i++)
-            DrawTabFret(notes[i].fret, notes[i].str, itemX + dx[i], staffY, stringSpace,
+            DrawTabFret(fonts, notes[i].fret, notes[i].str, itemX + dx[i], staffY, stringSpace,
                 chord.SourcePosition, gc, digitGaps);
 
         // Augmentation dots sit to the right of the whole chord (its rightmost digit
@@ -757,7 +762,7 @@ internal static partial class SharedRenderer
         {
             double rightEdge = itemX;
             for (int i = 0; i < notes.Count; i++)
-                rightEdge = Math.Max(rightEdge, itemX + dx[i] + TabChordColumns.FretWidth(notes[i].fret) / 2);
+                rightEdge = Math.Max(rightEdge, itemX + dx[i] + TabChordColumns.FretWidth(fonts, notes[i].fret) / 2);
             double alignWidth = 2 * (rightEdge - itemX);
             foreach (var (str, _) in notes)
                 DrawTabAugmentationDots(dots, itemX, alignWidth,

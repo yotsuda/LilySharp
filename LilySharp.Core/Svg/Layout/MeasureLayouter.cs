@@ -57,6 +57,7 @@ internal sealed class MeasureLayouter
     /// 3. A solver finds the force that achieves the target width while respecting constraints
     /// </remarks>
     public ImmutableArray<ItemLayout> LayoutItems(
+        Rendering.ScoreTextMetrics fonts,
         Measure measure,
         double totalWidth,
         ImmutableArray<Spring>? precomputedSprings = null,
@@ -70,7 +71,7 @@ internal sealed class MeasureLayouter
         double endBarlineWidth = SpacingRules.GetBarlineWidth(measure.EndBarline);
 
         // Use precomputed springs if available, otherwise calculate
-        var springs = precomputedSprings ?? SpacingRules.CreateSpringsForMeasure(measure);
+        var springs = precomputedSprings ?? SpacingRules.CreateSpringsForMeasure(fonts, measure);
 
         // Use precomputed force if available, otherwise solve for it
         double force;
@@ -173,7 +174,10 @@ internal sealed class MeasureLayouter
     /// start bar line, or the previous bar's end when it declares none
     /// (<see cref="SpacingRules.RunLeftBoundBarline"/>). Null reads the measure's own start
     /// line, a single line standing in where it declares none — the single-measure callers.</param>
+    /// <param name="fonts">The score's text metrics — a mid-measure meter change's column
+    /// reads the plan for a compound numerator's <c>+</c> (SpacingRules.GetTimeSignatureChangeWidth).</param>
     public ImmutableArray<Spring> CreateTimingSprings(
+        Rendering.ScoreTextMetrics fonts,
         Measure measure, List<Fraction> timings,
         double? baseShortestDuration = null,
         IReadOnlyList<Measure>? allMeasures = null,
@@ -247,18 +251,18 @@ internal sealed class MeasureLayouter
 
         // Spring 0: barline → first column (see CreateBarlineToFirstSpring).
         springs.Add(CreateBarlineToFirstSpring(
-            timings, timingToItems, measure,
+            fonts, timings, timingToItems, measure,
             leftBound ?? (measure.StartBarline == BarlineType.None ? BarlineType.Single : measure.StartBarline),
             droppedOnsetFollows, baseShortestDuration));
 
         // Springs between adjacent timing columns (see CreateInterColumnSpring).
         for (int i = 1; i < timings.Count; i++)
-            springs.Add(CreateInterColumnSpring(i, timings, timingToItems, measuresToScan,
+            springs.Add(CreateInterColumnSpring(fonts, i, timings, timingToItems, measuresToScan,
                 baseShortestDuration, looseRods, staffOfMeasures));
 
         // End spring: last column → barline (see CreateLastToBarlineSpring).
-        springs.Add(CreateLastToBarlineSpring(timings, timingToItems, measuresToScan, totalDuration,
-            baseShortestDuration, SpacingRules.BoundaryClefAllowance(measure.EndBarline, nextMeasure),
+        springs.Add(CreateLastToBarlineSpring(fonts, timings, timingToItems, measuresToScan, totalDuration,
+            baseShortestDuration, SpacingRules.BoundaryClefAllowance(fonts, measure.EndBarline, nextMeasure),
             SpacingRules.LeadingMusicalItems(nextMeasure)));
 
         return looseRods.Count > 0
@@ -363,6 +367,7 @@ internal sealed class MeasureLayouter
     /// <param name="baseShortestDuration">The common shortest, for a skip-opened bar's
     /// duration-space spring.</param>
     private static Spring CreateBarlineToFirstSpring(
+        Rendering.ScoreTextMetrics fonts,
         List<Fraction> timings, Dictionary<Fraction, List<MusicItem>> timingToItems,
         Measure measure, BarlineType leftBound, bool droppedOnsetFollows,
         double? baseShortestDuration)
@@ -371,7 +376,7 @@ internal sealed class MeasureLayouter
         // A bar that opens with a skip: the bar line's neighbour is a column at a later
         // moment — the duration-space branch, not Staff_spacing.
         if (timings[0] > Fraction.Zero)
-            return SpacingRules.SkipOpenedBarFirstSpring(
+            return SpacingRules.SkipOpenedBarFirstSpring(fonts,
                 leftBound, measure.Items, firstItems, timings[0],
                 baseShortestDuration ?? EngravingDefaults.BaseShortestDuration);
         bool fillsMeasure =
@@ -379,7 +384,7 @@ internal sealed class MeasureLayouter
             && !droppedOnsetFollows
             && firstItems != null
             && firstItems.Any(SpacingRules.IsMusicalColumn);
-        return SpacingRules.BarlineToFirstColumnSpring(firstItems, fillsMeasure);
+        return SpacingRules.BarlineToFirstColumnSpring(fonts, firstItems, fillsMeasure);
     }
 
     /// <summary>
@@ -394,6 +399,7 @@ internal sealed class MeasureLayouter
     ///   + lily/spring.cc:104 merge_springs.
     /// </remarks>
     private Spring CreateInterColumnSpring(
+        Rendering.ScoreTextMetrics fonts,
         int i, List<Fraction> timings,
         Dictionary<Fraction, List<MusicItem>> timingToItems,
         IReadOnlyList<Measure> measuresToScan, double? baseShortestDuration,
@@ -474,12 +480,12 @@ internal sealed class MeasureLayouter
             //   spring's own minimum, taken with the right column's skyline-vertical-padding
             //   and with NO spanner padding.
             maxSkyDist = Math.Max(maxSkyDist,
-                SpacingRules.CalculateSkylineDistance(prev, next, staffY: 0));
+                SpacingRules.CalculateSkylineDistance(fonts, prev, next, staffY: 0));
             // LILYPOND-REF: lily/spacing-spanner.cc:229-296 Spacing_spanner::set_column_rods
             //   raises a rod over every pair of columns that can reach each other, via
             //   lily/separation-item.cc:47-68 Separation_item::set_distance.
             maxRod = Math.Max(maxRod,
-                SpacingRules.SeparationRodDistance(prev, next, staffY: 0));
+                SpacingRules.SeparationRodDistance(fonts, prev, next, staffY: 0));
             // A whole-display tremolo pair with accidentals on its right half spans
             // the Beam's minimum-length as a rod (6.0) — the spacing side of the
             // gapped floating beam. Same house as the measure-estimate system's.
@@ -542,7 +548,7 @@ internal sealed class MeasureLayouter
         // mid-measure clef of probe MC 0.188 too far right, because the low notes after
         // it earn a correction that LilyPond charges to a pair this one is not.
         var changeGaps = SpacingRules.MidMeasureChangeGaps(
-            nextItems, prevItems, spring.IdealDistance);
+            fonts, nextItems, prevItems, spring.IdealDistance);
 
         // A LOOSE change column — another staff's column stands between it and its own
         // staff's previous note — is PRUNED from the spring chain: this pair is priced
@@ -555,7 +561,7 @@ internal sealed class MeasureLayouter
         if (changeGaps is { } pruned && nextItems != null)
         {
             var ownLeft = SpacingRules.LooseChangeLeftNeighborTiming(measuresToScan, nextItems);
-            if (SpacingRules.IsLooseChangeColumn(timings, ownLeft, timings[i], nextItems))
+            if (SpacingRules.IsLooseChangeColumn(fonts, timings, ownLeft, timings[i], nextItems))
             {
                 // The rod's two arms are the same wish minimums the change gaps carry:
                 // Note_spacing's skyline minimum on the left, Staff_spacing's
@@ -572,7 +578,7 @@ internal sealed class MeasureLayouter
                 {
                     var ownPrev = SpacingRules.LooseChangeOwnPrevItem(measuresToScan, nextItems);
                     var ownArms = SpacingRules.MidMeasureChangeGaps(
-                        nextItems, ownPrev != null ? new[] { ownPrev } : null,
+                        fonts, nextItems, ownPrev != null ? new[] { ownPrev } : null,
                         spring.IdealDistance);
                     looseRods.Add((leftIndex + 1, i + 1, (ownArms ?? pruned).MinDistance));
                 }
@@ -670,6 +676,7 @@ internal sealed class MeasureLayouter
     /// <param name="rightNeighbours">What opens the next measure, when known — the bar
     /// line's other neighbours (SpacingRules.NoteColumnToBarlineFloorPair).</param>
     private static Spring CreateLastToBarlineSpring(
+        Rendering.ScoreTextMetrics fonts,
         List<Fraction> timings, Dictionary<Fraction, List<MusicItem>> timingToItems,
         IReadOnlyList<Measure> measuresToScan, Fraction totalDuration, double? baseShortestDuration,
         double boundaryClefAllowance = 0, IReadOnlyList<MusicItem>? rightNeighbours = null)
@@ -705,7 +712,7 @@ internal sealed class MeasureLayouter
             double maxSkyDist = 0;
             foreach (var item in lastItems)
             {
-                var (skyDist, rod) = SpacingRules.NoteColumnToBarlineFloorPair(item, rightNeighbours);
+                var (skyDist, rod) = SpacingRules.NoteColumnToBarlineFloorPair(fonts, item, rightNeighbours);
                 maxSkyDist = Math.Max(maxSkyDist, skyDist);
                 maxRod = Math.Max(maxRod, rod);
             }
@@ -768,7 +775,8 @@ internal sealed class MeasureLayouter
     /// When precomputedSprings and precomputedForce are provided (from system-level solving),
     /// uses those directly. Otherwise creates springs and solves internally.
     /// </remarks>
-    public ImmutableArray<ColumnLayout> LayoutColumns(Measure measure, double totalWidth, List<Fraction> timings,
+    public ImmutableArray<ColumnLayout> LayoutColumns(Rendering.ScoreTextMetrics fonts,
+                                                      Measure measure, double totalWidth, List<Fraction> timings,
                                                       double? baseShortestDuration = null,
                                                       IReadOnlyList<Measure>? allMeasures = null,
                                                       ImmutableArray<Spring>? precomputedSprings = null,
@@ -783,7 +791,7 @@ internal sealed class MeasureLayouter
         double endBarlineWidth = SpacingRules.GetBarlineWidth(measure.EndBarline);
 
         // Use precomputed springs or create them
-        var springs = precomputedSprings ?? CreateTimingSprings(measure, timings, baseShortestDuration, allMeasures);
+        var springs = precomputedSprings ?? CreateTimingSprings(fonts, measure, timings, baseShortestDuration, allMeasures);
         if (springs.Length == 0)
             return ImmutableArray<ColumnLayout>.Empty;
 

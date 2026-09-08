@@ -94,7 +94,10 @@ internal static partial class SpacingRules
     /// measure's closing spring (<see cref="BoundaryClefAllowance"/>). Must mirror
     /// MeasureLayouter.CreateTimingSprings, which does the same on the column side.</param>
     /// <returns>Array of springs (one between each pair of adjacent reference points)</returns>
-    public static ImmutableArray<Spring> CreateSpringsForMeasure(Measure measure,
+    /// <param name="fonts">The score's text metrics — a mid-measure meter change's width reads
+    /// the plan for a compound numerator's <c>+</c>.</param>
+    public static ImmutableArray<Spring> CreateSpringsForMeasure(Rendering.ScoreTextMetrics fonts,
+                                                                 Measure measure,
                                                                  double? baseShortestDuration = null,
                                                                  Measure? nextMeasure = null)
     {
@@ -137,7 +140,7 @@ internal static partial class SpacingRules
         // pair is read as breakable on that side and this measure's own permission decides.
         // LILYPOND-REF: lily/paper-column.cc:115-136 Paper_column::is_used.
         if (BarHoldsOnlySkips(measure.Items))
-            return EmptyBarSprings(
+            return EmptyBarSprings(fonts,
                 spacingItems.Count,
                 measure.StartBarline == BarlineType.None ? BarlineType.Single : measure.StartBarline,
                 measure.Items,
@@ -201,11 +204,11 @@ internal static partial class SpacingRules
         // previous bar's end line is not in this estimate's sight.
         var (firstItem, firstOnset) = kept[0];
         var firstSpring = firstOnset > Fraction.Zero
-            ? SkipOpenedBarFirstSpring(
+            ? SkipOpenedBarFirstSpring(fonts,
                 measure.StartBarline == BarlineType.None ? BarlineType.Single : measure.StartBarline,
                 measure.Items, new[] { firstItem }, firstOnset,
                 baseShortestDuration ?? EngravingDefaults.BaseShortestDuration)
-            : BarlineToFirstColumnSpring(new[] { firstItem }, FillsMeasure(measure));
+            : BarlineToFirstColumnSpring(fonts, new[] { firstItem }, FillsMeasure(measure));
         springs.Add(firstSpring);
 
         // Springs between items (the spring into a grace-bearing note reserves its grace;
@@ -217,7 +220,7 @@ internal static partial class SpacingRules
         {
             var (prevItem, prevOnset) = kept[i];
             var (nextItem, nextOnset) = kept[i + 1];
-            var spring = CreateSpring(prevItem, nextItem, nextOnset - prevOnset,
+            var spring = CreateSpring(fonts, prevItem, nextItem, nextOnset - prevOnset,
                 baseShortestDuration: baseShortestDuration,
                 shortestPlaying: prevItem.Duration);
             // Swap the generic spacing-increment for the LEFT column's real head
@@ -230,7 +233,7 @@ internal static partial class SpacingRules
             // A pair touching a mid-measure change column is priced by the change column,
             // not by duration — and NOT by merge_springs' headroom afterwards, which would
             // add 0.3 to a gap LilyPond has already fixed.
-            if (ChangeColumnItemSpring(keptItems, i, spring.IdealDistance) is { } changeSpring)
+            if (ChangeColumnItemSpring(fonts, keptItems, i, spring.IdealDistance) is { } changeSpring)
             {
                 springs.Add(changeSpring);
                 continue;
@@ -245,14 +248,14 @@ internal static partial class SpacingRules
         // the LEADING spring above, mirroring LilyPond's attribution. The leg runs from
         // the last KEPT item to the bar over any skip that follows it.
         var (lastItem, lastOnset) = kept[^1];
-        var lastSpring = CreateSpring(lastItem, null, totalDuration - lastOnset,
+        var lastSpring = CreateSpring(fonts, lastItem, null, totalDuration - lastOnset,
             baseShortestDuration: baseShortestDuration,
             shortestPlaying: lastItem.Duration);
         // The column's skyline against the bar line's box, the bar line's box grown toward
         // BOTH its neighbours — the same pair the timing-column system prices
         // (MeasureLayouter.CreateLastToBarlineSpring). CreateSpring saw the left neighbour
         // only; the rod is applied after the headroom below.
-        var barPair = NoteColumnToBarlineFloorPair(lastItem, LeadingMusicalItems(nextMeasure));
+        var barPair = NoteColumnToBarlineFloorPair(fonts, lastItem, LeadingMusicalItems(nextMeasure));
         lastSpring = lastSpring.EnsureMinDistance(barPair.SkyMin);
         lastSpring = ApplyLeftHeadWidth(lastSpring, One(lastItem));
 
@@ -272,7 +275,7 @@ internal static partial class SpacingRules
         // Mirror of MeasureLayouter.CreateLastToBarlineSpring: a clef change opening the
         // NEXT measure is drawn before this bar line, so it widens the MINIMUM here. The
         // duration-based ideal is already bar-line framed and stays put.
-        double clefAllowance = BoundaryClefAllowance(measure.EndBarline, nextMeasure);
+        double clefAllowance = BoundaryClefAllowance(fonts, measure.EndBarline, nextMeasure);
         if (clefAllowance > 0)
             // LILYPOND-REF: lily/spring.cc:143-153 set_min_distance — the minimum moves,
             // the strengths do not.
@@ -518,6 +521,7 @@ internal static partial class SpacingRules
     /// </para>
     /// </remarks>
     internal static (double[] Left, double[] Right) MusicalInkOverhangsPerColumn(
+        Rendering.ScoreTextMetrics fonts,
         IReadOnlyList<Model.Measure> measures, IReadOnlyList<Fraction> timings)
     {
         var left = new double[timings.Count];
@@ -532,7 +536,7 @@ internal static partial class SpacingRules
                         if (timings[t] == onset)
                         {
                             left[t] = Math.Max(left[t], CalculateLeftExtent(item));
-                            right[t] = Math.Max(right[t], CalculateNoteheadRightExtent(item));
+                            right[t] = Math.Max(right[t], CalculateNoteheadRightExtent(fonts, item));
                             break;
                         }
                 onset += item.Duration;
@@ -782,6 +786,7 @@ internal static partial class SpacingRules
     /// of the left column plus the left extent of the right column.
     /// </summary>
     public static ImmutableArray<Spring> ApplyTabChordSpacing(
+        Rendering.ScoreTextMetrics fonts,
         ImmutableArray<Spring> springs,
         IReadOnlyList<Fraction> timings,
         Model.Measure tabMeasure,
@@ -806,7 +811,7 @@ internal static partial class SpacingRules
                     if (timings[t] == onset)
                     {
                         var (l, r) = LilySharp.Core.Rendering.SharedRenderer.TabItemHalfExtent(
-                            item, tuning, octaveShift);
+                            fonts, item, tuning, octaveShift);
                         left[t] = Math.Max(left[t], l);
                         right[t] = Math.Max(right[t], r);
                         any = true;

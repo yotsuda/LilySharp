@@ -119,7 +119,7 @@ internal static partial class SharedRenderer
             bool tabDir = false;
             if (allTab && MemberStaffOf(0) is { } tabDirStaff)
             {
-                var g = new TabStaffGeometry(tabDirStaff.Tuning ?? TuningType.Guitar,
+                var g = new TabStaffGeometry(score.TextMetrics, tabDirStaff.Tuning ?? TuningType.Guitar,
                     pageHeight - LayoutUtilities.FindStaffYInSystem(system, MemberStaffIdx(0)),
                     tabDirStaff.TabSourceClef, tabDirStaff.Transposition);
                 tabDirGeom = g;
@@ -383,7 +383,7 @@ internal static partial class SharedRenderer
                     // never overlaps the number.
                     // TabStemHeadY returns device Y; lift to page Y-up (tab beams
                     // are never ossia).
-                    headY = pageHeight - TabStemHeadY(member.Item, up,
+                    headY = pageHeight - TabStemHeadY(score.TextMetrics, member.Item, up,
                         pageHeight - LayoutUtilities.FindStaffYInSystem(system, memberStaffIdx), memberStaff);
                 }
                 else
@@ -446,7 +446,7 @@ internal static partial class SharedRenderer
     /// the number without overlapping it. The stem's X stays aligned with the
     /// notation staff's stem (handled by the caller).
     /// </summary>
-    private static double TabStemHeadY(MusicItem item, bool stemUp, double tabStaffTopY, Staff staff)
+    private static double TabStemHeadY(ScoreTextMetrics fonts, MusicItem item, bool stemUp, double tabStaffTopY, Staff staff)
     {
         var tuningType = staff.Tuning ?? TuningType.Guitar;
         int octaveShift = Tunings.SoundingShift(staff.TabSourceClef, staff.Transposition);
@@ -487,7 +487,7 @@ internal static partial class SharedRenderer
         // The stem starts on the far side of the digit, where LilyPond's stem-begin-position
         // puts it (TabConstants.StemBeginOffset) — the one house for that offset, shared with
         // the unbeamed stem so the two kinds of stem leave their digits alike.
-        double begin = TabConstants.StemBeginOffset();
+        double begin = TabConstants.StemBeginOffset(fonts);
         return digitY + (stemUp ? -begin : begin);
     }
 

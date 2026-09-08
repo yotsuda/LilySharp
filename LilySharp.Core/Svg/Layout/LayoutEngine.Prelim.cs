@@ -140,7 +140,7 @@ internal sealed partial class LayoutEngine
             prelimBeamsByStaff[staffIndex] = staffPrelimBeams;
             prelimBeams.AddRange(staffPrelimBeams);
             var staffPrelimTies = LayoutPreliminaryStaffTies(
-                staffSpannerScore, prelimSystems, staffIndex, staff,
+                score.TextMetrics, staffSpannerScore, prelimSystems, staffIndex, staff,
                 systemCache, commonShortestDuration);
             prelimTiesByStaff[staffIndex] = staffPrelimTies;
             prelimTies.AddRange(staffPrelimTies);
@@ -150,7 +150,7 @@ internal sealed partial class LayoutEngine
             var prelimStaffScripts = ArticulationEngraver.SidePositionedScriptsOf(
                 score.Articulations, staffIndex);
             var staffPrelimSlurs = LayoutPreliminaryStaffSlurs(
-                staffSpannerScore, prelimSystems, staffIndex, staff, score.GraceNotes,
+                score.TextMetrics, staffSpannerScore, prelimSystems, staffIndex, staff, score.GraceNotes,
                 staffPrelimBeams, staffPrelimTies, prelimStaffScripts,
                 systemCache, commonShortestDuration);
             prelimSlursByStaff[staffIndex] = staffPrelimSlurs;
@@ -447,18 +447,19 @@ internal sealed partial class LayoutEngine
     /// column falls back to the plain call for the whole staff.
     /// </remarks>
     private ImmutableArray<TieLayout> LayoutPreliminaryStaffTies(
+        Rendering.ScoreTextMetrics fonts,
         Score staffSpannerScore, ImmutableArray<SystemLayout> prelimSystems, int staffIndex,
         Staff staff, SystemLayoutCache? systemCache, double commonShortestDuration)
     {
         if (systemCache is null || prelimSystems.Length == 0)
             return _elementCoordinator.LayoutTies(
-                staffSpannerScore, prelimSystems, staffIndex, staff);
+                fonts, staffSpannerScore, prelimSystems, staffIndex, staff);
         var ties = _elementCoordinator.DetectTies(staffSpannerScore);
         if (ties.IsEmpty)
             return ImmutableArray<TieLayout>.Empty;
 
         ImmutableArray<TieLayout> Fallback() => _elementCoordinator.LayoutTies(
-            ties, staffSpannerScore, prelimSystems, staffIndex, staff);
+            fonts, ties, staffSpannerScore, prelimSystems, staffIndex, staff);
 
         var measureToSystem = MeasureToSystemOf(prelimSystems);
 
@@ -512,7 +513,7 @@ internal sealed partial class LayoutEngine
                 isFirstSystem: k == 0, isLastSystem: k == prelimSystems.Length - 1,
                 sys.Indent, commonShortestDuration,
                 () => _elementCoordinator.LayoutTies(
-                    sysTies.ToImmutableArray(), staffSpannerScore,
+                    fonts, sysTies.ToImmutableArray(), staffSpannerScore,
                     ImmutableArray.Create(sys), staffIndex, staff));
         }
 
@@ -546,6 +547,7 @@ internal sealed partial class LayoutEngine
     /// coverage claim covers what the value read.
     /// </summary>
     private ImmutableArray<SlurLayout> LayoutPreliminaryStaffSlurs(
+        Rendering.ScoreTextMetrics fonts,
         Score staffSpannerScore, ImmutableArray<SystemLayout> prelimSystems, int staffIndex,
         Staff staff, ImmutableArray<GraceNoteItem> graceNotes,
         ImmutableArray<BeamLayout> staffBeams, ImmutableArray<TieLayout> staffTies,
@@ -557,7 +559,7 @@ internal sealed partial class LayoutEngine
             ImmutableArray<BeamLayout> beams, ImmutableArray<TieLayout> tieLayouts)
             => staffScripts.IsEmpty ? null : () =>
                 ArticulationEngraver.InsideSlurScriptLayouts(
-                    staffSpannerScore, staffScripts,
+                    fonts, staffSpannerScore, staffScripts,
                     systems.SelectMany(s => s.Measures).ToImmutableArray(),
                     measuresByStaff: new Dictionary<int, ImmutableArray<Measure>>
                         { [staffIndex] = staff.PrimaryVoice.Measures },
@@ -568,14 +570,14 @@ internal sealed partial class LayoutEngine
 
         if (systemCache is null || prelimSystems.Length == 0)
             return _elementCoordinator.LayoutSlurs(
-                staffSpannerScore, prelimSystems, staffIndex, staff, graceNotes,
+                fonts, staffSpannerScore, prelimSystems, staffIndex, staff, graceNotes,
                 staffBeams, FactoryOver(prelimSystems, staffBeams, staffTies));
         var slurs = _elementCoordinator.DetectSlurs(staffSpannerScore);
         if (slurs.IsEmpty)
             return ImmutableArray<SlurLayout>.Empty;
 
         ImmutableArray<SlurLayout> Fallback() => _elementCoordinator.LayoutSlurs(
-            slurs, staffSpannerScore, prelimSystems, staffIndex, staff, graceNotes,
+            fonts, slurs, staffSpannerScore, prelimSystems, staffIndex, staff, graceNotes,
             staffBeams, FactoryOver(prelimSystems, staffBeams, staffTies));
 
         var measureToSystem = MeasureToSystemOf(prelimSystems);
@@ -616,7 +618,7 @@ internal sealed partial class LayoutEngine
                 isFirstSystem: k == 0, isLastSystem: k == prelimSystems.Length - 1,
                 sys.Indent, commonShortestDuration,
                 () => _elementCoordinator.LayoutSlurs(
-                    sysSlurs.ToImmutableArray(), staffSpannerScore, single, staffIndex,
+                    fonts, sysSlurs.ToImmutableArray(), staffSpannerScore, single, staffIndex,
                     staff, graceNotes, sysBeams, FactoryOver(single, sysBeams, sysTies)));
         }
 
@@ -859,7 +861,7 @@ internal sealed partial class LayoutEngine
             bool carrySafe = StaffOffsetsUnmoved(prelimSystems, systemsArray, staffIndex);
             var staffTies = carrySafe
                 ? prelimTiesByStaff[staffIndex]
-                : _elementCoordinator.LayoutTies(staffSpannerScore, systemsArray, staffIndex, staff);
+                : _elementCoordinator.LayoutTies(score.TextMetrics, staffSpannerScore, systemsArray, staffIndex, staff);
             allTieLayouts.AddRange(staffTies);
             ImmutableArray<SlurLayout> staffSlurs;
             if (carrySafe)
@@ -876,10 +878,10 @@ internal sealed partial class LayoutEngine
                 var staffScripts = ArticulationEngraver.SidePositionedScriptsOf(
                     score.Articulations, staffIndex);
                 staffSlurs = _elementCoordinator.LayoutSlurs(
-                    staffSpannerScore, systemsArray, staffIndex, staff, score.GraceNotes, staffFinalBeams,
+                    score.TextMetrics, staffSpannerScore, systemsArray, staffIndex, staff, score.GraceNotes, staffFinalBeams,
                     insideScripts: staffScripts.IsEmpty ? null : () =>
                         ArticulationEngraver.InsideSlurScriptLayouts(
-                            staffSpannerScore, staffScripts,
+                            score.TextMetrics, staffSpannerScore, staffScripts,
                             systemsArray.SelectMany(s => s.Measures).ToImmutableArray(),
                             measuresByStaff: new Dictionary<int, ImmutableArray<Measure>>
                                 { [staffIndex] = staff.PrimaryVoice.Measures },
