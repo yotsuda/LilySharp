@@ -251,7 +251,9 @@ internal static class StaffAccidentalColumns
                     pageTurnPermission: measure.PageTurnPermission,
                     sectionLabelPosition: measure.SectionLabelPosition,
                     isPickup: measure.IsPickup,
-                    unmetered: measure.Unmetered);
+                    unmetered: measure.Unmetered,
+                    breaksMidBar: measure.BreaksMidBar,
+                    continuesBar: measure.ContinuesBar);
                 voiceChanged = true;
             }
 

@@ -390,6 +390,22 @@ form main { |: A [1. ~B] :| [2. ~C] }
 score main { staff melody }
 ```
 
+- A bar may be split by a SECTION boundary: end one section on a short bar and open the
+  next (every section the form plays next) with exactly the rest of it — how a repeat sign
+  or a volta ending lands mid-bar, `|: A [1. B] :| [2. C]` with A ending `g4 a |` and both
+  endings opening `b4 c' |` in 4/4. The two halves are one bar to the bar check (no LYS2001,
+  no LYS2006), provided every neighbour completes it exactly, and one bar to the numbering
+  (the written bar line between them is still drawn). A later ending continues the body's
+  bar the same way, but its number keeps counting from the ending before it, as in LilyPond.
+- Line breaks: `break` / `noBreak` force / forbid a system break after the bar they stand
+  in; `pageBreak` / `noPageBreak` do the same for the page. **A `break` written INSIDE a bar
+  with notes on both sides — `c4 d break e f |` — breaks the bar there**: the first half ends
+  the system with no bar line, the second opens the next with no bar line and no bar number,
+  and every part and row is cut at that beat. Where another part holds a note sounding across
+  the break, or a beam / tuplet / percent repeat runs across it, the bar stays whole, the
+  break falls to the next bar line and LYS1037 says why — tie the note (`c2~ break c2`) or
+  move the break to a beat nothing crosses. `e2 break |` (a bar line right after) is the
+  ordinary bar-line break.
 - Percent repeat (repeat the previous measure): `repeat percent 2 { c4 d e f | }`.
 - NOT supported: `repeat volta` / `alternative` keywords (the parser rejects them — use
   the symbolic `|: ... :|` form above). `repeat` is only for `percent` / `unfold` / `tremolo`.

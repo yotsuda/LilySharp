@@ -181,7 +181,10 @@ internal static class BarNumberEngraver
     /// The number each measure DISPLAYS, indexed by measure: one more than the count of
     /// counted measures before it, plus <paramref name="numberOffset"/> (a leading pickup's
     /// −1). A measure closed under <c>time none</c> (<see cref="Measure.Unmetered"/>) is not
-    /// counted, so the measure after it carries the same number.
+    /// counted, so the measure after it carries the same number — and neither is a measure
+    /// whose successor CONTINUES its bar (<see cref="Measure.ContinuesBar"/>): the first half
+    /// of a bar a line break splits, or the last bar of a section the next section's first
+    /// bar completes.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/timing-translator.cc:478-507 Timing_translator::start_translation_timestep
@@ -197,10 +200,20 @@ internal static class BarNumberEngraver
             return ImmutableArray<int>.Empty;
         var numbers = ImmutableArray.CreateBuilder<int>(measures.Length);
         int counted = 0;
-        foreach (var m in measures)
+        for (int i = 0; i < measures.Length; i++)
         {
             numbers.Add(counted + 1 + numberOffset);
-            if (!m.Unmetered)
+            // A measure continuing the one before it (a mid-bar break, a section opening
+            // with the rest of the bar) does not advance the count; a later volta ending
+            // continuing the bar the repeat's BODY left short (ContinuedFromMeasure set)
+            // does, because the ending before it closed on a bar line. LILYPOND-REF
+            // ly/engraver-init.ly alternativeRestores = (measurePosition measureLength
+            // measureStartNow lastChord): the position is restored at each alternative,
+            // currentBarNumber is not — "bar numbers continue through alternatives"
+            // (define-context-properties.scm, alternativeNumberingStyle unset).
+            bool nextContinues = i + 1 < measures.Length && measures[i + 1].ContinuesBar
+                && measures[i + 1].ContinuedFromMeasure < 0;
+            if (!measures[i].Unmetered && !nextContinues)
                 counted++;
         }
         return numbers.MoveToImmutable();
@@ -220,7 +233,8 @@ internal static class BarNumberEngraver
         bool numberFirstMeasure = false,
         int numberOffset = 0,
         int gridBarlineRowIndex = -1,
-        ImmutableArray<int> displayedNumbers = default)
+        ImmutableArray<int> displayedNumbers = default,
+        ImmutableArray<Measure> measures = default)
     {
         if (systems.IsDefaultOrEmpty)
             return ImmutableArray<BarNumberLayout>.Empty;
@@ -295,6 +309,16 @@ internal static class BarNumberEngraver
                     (isFirstInSystem && !isFirstSystem) ||
                     (isFirstOfScore && numberFirstMeasure) ||
                     (period > 0 && measureIndex > 0 && (measureIndex % period == 0));
+
+                // A system that opens MID-BAR — the second half of a bar a line break split
+                // (Measure.ContinuesBar) — opens with no bar line and so with no number:
+                // LilyPond's BarNumber is made with the BarLine, and there is none at the
+                // break's moment. MEASURED (2.26.0, scratch/p357/lp/mb1.ly against mb8.ly):
+                // `c4 d \break e f |` prints no PROBEBN on its second system, where
+                // `c4 d e f \break |` prints "2".
+                if (isFirstInSystem && !measures.IsDefault && measureIndex < measures.Length
+                    && measures[measureIndex].ContinuesBar)
+                    show = false;
 
                 if (!show)
                     continue;

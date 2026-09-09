@@ -108,6 +108,36 @@ internal sealed class MeasureBuilder
     // line pair above (a `pageBreak` also raises _pendingBreak: the line break it implies).
     private bool _pendingPageBreak = false;
     private bool _pendingNoPageBreak = false;
+
+    // ---- a line break INSIDE a bar (Measure.BreaksMidBar / Measure.ContinuesBar) ----
+    // The score-settled table of bars to split, and the sink for the breaks THIS walk meets
+    // mid-bar — see MidBarBreakTable's remarks: the collector collects twice, the first pass
+    // discovers (every builder records a request), the second splits (every builder cuts the
+    // bar where the table says). Both are the collector's; null in a bare builder.
+    internal MidBarBreakTable? MidBarBreaks { get; set; }
+    internal List<MidBarBreakRequest>? MidBarBreakRequests { get; set; }
+    // …and the breaks this walk can tell at once are NOT splittable — inside a tuplet (the
+    // clock has not been told the members' time yet, so there is no offset to ask for) or
+    // under `time none` (the clock stands still). Reported like the table's refusals (LYS1037).
+    internal List<MidBarBreakConflict>? MidBarBreakRefusals { get; set; }
+    // The BAR this builder's first measure stands in: 0 for a part's own stream, the span's
+    // opening bar for a `voice { }` sub-voice collected on its own (BuildExtraVoiceTracks).
+    internal int LogicalIndexBase { get; set; }
+    // Bars BEGUN by the measures emitted so far: every emitted measure but a split's head
+    // (its tail is the same bar). The table is keyed in bars, and so is the bar number.
+    private int _logicalCount;
+    // A `break` met mid-bar, waiting to learn whether MUSIC follows it in the same bar (then
+    // it is a request to split there) or a bar line does (then it is the bar-line break it
+    // always was — the corpus's `e2 break |` sites ask for nothing new).
+    private (Fraction Offset, bool Page, int Position, string? Refusal)? _pendingMidBar;
+    // True while the measure under construction is the second half of a split bar.
+    private bool _continuesBar;
+
+    /// <summary>The bar under construction, counted in bars (a split's second half is the
+    /// same bar as its first) from <see cref="LogicalIndexBase"/> — the key
+    /// <see cref="MidBarBreaks"/> reads and the number <c>BarNumberEngraver</c> prints.</summary>
+    public int LogicalMeasureIndex => LogicalIndexBase + _logicalCount;
+
     private string? _sectionLabel;
     private int _sectionLabelPosition;
     private int _measureSourceStart;
@@ -432,6 +462,23 @@ internal sealed class MeasureBuilder
         }
 
         var itemDuration = GetItemDuration(item);
+
+        // A SPACER sounding across the bar's split is cut in two — it draws nothing, so
+        // the cut is invisible, and it is how an empty `| |` bar of another part, a row's
+        // slot or a `voice { }` sub-voice's lead-in pad gets split with the music
+        // (MidBarBreakTable's remarks). A sounding item across the split was refused by the
+        // table's builder before the table existed, so none can reach here.
+        if (itemDuration > Fraction.Zero && !_senzaMisura
+            && item is RestItem { IsSpacer: true } spacer
+            && MidBarBreaks?.At(LogicalMeasureIndex) is { } cut
+            && _currentDuration < cut.Offset && _currentDuration + itemDuration > cut.Offset)
+        {
+            var head = cut.Offset - _currentDuration;
+            AddItem(new RestItem(head, 0, spacer.SourcePosition) { IsSpacer = true });
+            AddItem(new RestItem(itemDuration - head, 0, spacer.SourcePosition) { IsSpacer = true });
+            return;
+        }
+
         _currentItems.Add(item);
 
         // Real content fills this span, so a following barline closes IT, not an empty
@@ -443,6 +490,8 @@ internal sealed class MeasureBuilder
         {
             _confirmableBoundary = false;
             _hasMeasureContent = true;
+            // Music after a mid-bar `break` in the same bar: the break is a request to split.
+            RequestPendingMidBar();
         }
 
         // UNMETERED: the clock stands still and nothing auto-completes — LilyPond's
@@ -458,7 +507,129 @@ internal sealed class MeasureBuilder
         if (_currentDuration >= _timeSignature)
         {
             AutoCompleteMeasure(item.SourcePosition + 1);
+            return;
         }
+
+        TrySplitAtMidBar(item.SourcePosition + 1);
+    }
+
+    /// <summary>
+    /// Records the mid-bar <c>break</c> waiting in <see cref="_pendingMidBar"/> as a
+    /// <see cref="MidBarBreakRequest"/>, now that a sounding item has followed it in the
+    /// same bar. A break the bar line follows instead is cleared by the measure's emit and
+    /// asks for nothing — it is the bar-line break every `break` was before session 356.
+    /// </summary>
+    private void RequestPendingMidBar()
+    {
+        if (_pendingMidBar is not { } p)
+            return;
+        _pendingMidBar = null;
+        if (p.Refusal is { } why)
+            MidBarBreakRefusals?.Add(new MidBarBreakConflict(p.Position, why));
+        else
+            MidBarBreakRequests?.Add(new MidBarBreakRequest(LogicalMeasureIndex, p.Offset, p.Page, p.Position));
+    }
+
+    /// <summary>
+    /// Remembers a <c>break</c> written INSIDE the bar under construction, so that the next
+    /// sounding item in the same bar can turn it into a request (<see cref="RequestPendingMidBar"/>)
+    /// — or into a refusal, where this builder can already tell the bar cannot be cut there:
+    /// under <c>time none</c> the clock stands still, and inside a tuplet the members' time
+    /// has not reached the clock yet (AddDuration follows the last member), so neither has an
+    /// offset to ask for. The offset otherwise is the clock's reading at the break.
+    /// </summary>
+    private void NoteMidBarCandidate(bool page, int sourcePosition)
+    {
+        if (MidBarBreakRequests == null || _currentItems.Count == 0)
+        {
+            _pendingMidBar = null;
+            return;
+        }
+        bool pageToo = page || (_pendingMidBar?.Page ?? false);
+        if (_senzaMisura)
+        {
+            _pendingMidBar = (Fraction.Zero, pageToo, sourcePosition,
+                "the bar is unmetered (time none), so it has no beat to break at");
+            return;
+        }
+        var written = Fraction.Zero;
+        foreach (var item in _currentItems)
+            written += GetItemDuration(item);
+        if (written != _currentDuration)
+        {
+            _pendingMidBar = (Fraction.Zero, pageToo, sourcePosition,
+                "the break stands inside a tuplet");
+            return;
+        }
+        if (!_hasMeasureContent || _currentDuration <= Fraction.Zero || _currentDuration >= _timeSignature)
+        {
+            _pendingMidBar = null;
+            return;
+        }
+        _pendingMidBar = (_currentDuration, pageToo, sourcePosition, null);
+    }
+
+    /// <summary>
+    /// Cuts the bar under construction at the offset the score's table gives it, when the
+    /// clock has just reached that offset: the items so far become the bar's first half
+    /// (<see cref="EmitSplitHead"/>) and the clock carries on into its second.
+    /// </summary>
+    private void TrySplitAtMidBar(int sourceEnd)
+    {
+        if (MidBarBreaks?.At(LogicalMeasureIndex) is not { } split)
+            return;
+        if (_currentItems.Count == 0 || _continuesBar || _currentDuration != split.Offset)
+            return;
+        EmitSplitHead(split, sourceEnd);
+    }
+
+    /// <summary>
+    /// Emits the FIRST HALF of a bar a line break splits (<see cref="Measure.BreaksMidBar"/>):
+    /// no end bar line, the line break forced, the bar count not advanced. The clock, the
+    /// content flag and the meter carry on — the measure that follows is the same bar's
+    /// second half (<see cref="Measure.ContinuesBar"/>) — while the per-measure decorations
+    /// (section label, start bar line, pending breaks) were the head's.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="MeasureCompleted"/> is deliberately NOT raised: it resets the collector's
+    /// accidental memory, and LilyPond forgets accidentals at the bar line, not at a
+    /// system's edge — a sharp before the break still governs the same pitch after it.
+    /// LILYPOND-REF: lily/accidental-engraver.cc — the memory is keyed by measurePosition's
+    /// bar, which a mid-bar break does not advance.
+    /// </remarks>
+    private void EmitSplitHead(MidBarSplit split, int sourceEnd, bool isEmptyPlaceholder = false)
+    {
+        var pagePermission = split.PageBreak
+            ? Layout.BreakPermission.Force
+            : TakePendingPagePermission();
+        _measures.Add(new Measure(
+            _currentItems.ToImmutableArray(),
+            _pendingStartBarline,
+            BarlineType.None,
+            _sectionLabel,
+            _measureSourceStart,
+            sourceEnd,
+            hasBreakAfter: true,
+            pageBreakPermission: pagePermission,
+            sectionLabelPosition: _sectionLabelPosition,
+            isPickup: _partialRestore != null,
+            breaksMidBar: true)
+        {
+            IsEmptyPlaceholder = isEmptyPlaceholder,
+        });
+        _currentItems.Clear();
+        _sectionLabel = null;
+        _sectionLabelPosition = 0;
+        _pendingStartBarline = BarlineType.None;
+        _pendingBreak = false; // the head carries it
+        _pendingNoBreak = false;
+        _pendingMidBar = null;
+        _measureSourceStart = sourceEnd;
+        _confirmableBoundary = false;
+        _boundaryRetargetable = false;
+        _lastEndAutoFill = false;
+        _atScopeStart = false;
+        _continuesBar = true;
     }
 
     /// <summary>
@@ -477,6 +648,10 @@ internal sealed class MeasureBuilder
     {
         _currentItems.Add(_graceDepth > 0 ? NarrowToGraceTime(item) : item);
         _confirmableBoundary = false;
+        // A tuplet's member is sounding music after a mid-bar `break` too (its duration
+        // arrives later through AddDuration); grace time is not — it takes no bar time.
+        if (_graceDepth == 0 && GetItemDuration(item) > Fraction.Zero)
+            RequestPendingMidBar();
     }
 
     /// <summary>
@@ -504,7 +679,10 @@ internal sealed class MeasureBuilder
         if (_currentDuration >= _timeSignature)
         {
             AutoCompleteMeasure(sourcePosition);
+            return;
         }
+
+        TrySplitAtMidBar(sourcePosition);
     }
 
     private Fraction GetItemDuration(MusicItem item)
@@ -560,7 +738,8 @@ internal sealed class MeasureBuilder
             pageBreakPermission: pagePermission,
             sectionLabelPosition: _sectionLabelPosition,
             isPickup: _partialRestore != null,
-            unmetered: _senzaMisura));
+            unmetered: _senzaMisura,
+            continuesBar: _continuesBar));
 
         // An auto-filled close leaves an UNCONFIRMED boundary (a following written barline
         // just confirms it); a written-barline close consumed the boundary, so a following
@@ -633,11 +812,21 @@ internal sealed class MeasureBuilder
         _measureSourceStart = sourceEnd;
         _currentDuration = Fraction.Zero;
         _hasMeasureContent = false;
+        // The bar is over: a split's second half closed it, or a whole bar did. Either way
+        // the next measure begins a new bar, and no mid-bar break is still waiting.
+        _continuesBar = false;
+        _pendingMidBar = null;
+        _logicalCount++;
         RestorePartialIfPending();
         MeasureCompleted?.Invoke();
     }
 
-    public void SetBreak()
+    /// <summary>Forces a line break here (<c>break</c>, LP's <c>\break</c>). At a bar
+    /// boundary it flags the measure just closed; INSIDE a bar it flags the measure the bar
+    /// closes into — unless music follows it in the same bar, in which case the score splits
+    /// the bar there on its second collect (<see cref="MidBarBreaks"/>; the request is made
+    /// by <see cref="RequestPendingMidBar"/>, the cut by <see cref="TrySplitAtMidBar"/>).</summary>
+    public void SetBreak(int sourcePosition = -1)
     {
         if (_currentItems.Count == 0 && _measures.Count > 0)
         {
@@ -649,8 +838,10 @@ internal sealed class MeasureBuilder
         }
         else
         {
-            // Mid-measure break - defer to next measure boundary
+            // Mid-measure break - defer to next measure boundary, and remember it as a
+            // candidate for splitting the bar should music follow it (NoteMidBarCandidate).
             _pendingBreak = true;
+            NoteMidBarCandidate(page: false, sourcePosition);
         }
     }
 
@@ -670,7 +861,7 @@ internal sealed class MeasureBuilder
     /// <remarks>
     /// LILYPOND-REF: ly/music-functions-init.ly:1411-1418 pageBreak — line-break-permission 'force AND page-break-permission 'force
     /// </remarks>
-    public void SetPageBreak()
+    public void SetPageBreak(int sourcePosition = -1)
     {
         if (_currentItems.Count == 0 && _measures.Count > 0)
             _measures[^1] = _measures[^1] with
@@ -682,6 +873,7 @@ internal sealed class MeasureBuilder
         {
             _pendingBreak = true;
             _pendingPageBreak = true;
+            NoteMidBarCandidate(page: true, sourcePosition);
         }
     }
 
@@ -701,14 +893,17 @@ internal sealed class MeasureBuilder
     /// <summary>Applies one break directive — the one dispatch every collector site
     /// calls, so the four keywords have one meaning wherever they stand (a section's
     /// music, a form, a repeat block).</summary>
-    public void ApplyBreak(BreakKind kind)
+    /// <param name="kind">Which of the four keywords.</param>
+    /// <param name="sourcePosition">Where it was written — what a mid-bar break's request
+    /// (and LYS1037, should the bar refuse to split there) points at.</param>
+    public void ApplyBreak(BreakKind kind, int sourcePosition = -1)
     {
         switch (kind)
         {
             case BreakKind.NoLine: SetNoBreak(); break;
-            case BreakKind.Page: SetPageBreak(); break;
+            case BreakKind.Page: SetPageBreak(sourcePosition); break;
             case BreakKind.NoPage: SetNoPageBreak(); break;
-            default: SetBreak(); break;
+            default: SetBreak(sourcePosition); break;
         }
     }
 
@@ -867,7 +1062,20 @@ internal sealed class MeasureBuilder
         // Under `time none` there is no meter to fill; the spacer keeps the last METERED
         // length (the clock is frozen, so it advances nothing here either way), which is
         // what keeps every reader of a spacer's duration off zero.
-        var spacer = new RestItem(_timeSignature, 0, _measureSourceStart) { IsSpacer = true };
+        var spacerLength = _timeSignature;
+        // An empty bar of THIS part at a bar the score breaks inside: the placeholder is
+        // cut where the music is — a head spacer up to the break, then the tail — so this
+        // part's measure indices keep step with the split (MidBarBreakTable's remarks).
+        if (!_senzaMisura && !_continuesBar && _currentItems.Count == 0
+            && MidBarBreaks?.At(LogicalMeasureIndex) is { } split
+            && split.Offset > Fraction.Zero && split.Offset < _timeSignature)
+        {
+            _currentItems.Add(new RestItem(split.Offset, 0, _measureSourceStart) { IsSpacer = true });
+            _currentDuration = split.Offset;
+            EmitSplitHead(split, sourceEnd, isEmptyPlaceholder: true);
+            spacerLength = _timeSignature - split.Offset;
+        }
+        var spacer = new RestItem(spacerLength, 0, _measureSourceStart) { IsSpacer = true };
         _measures.Add(new Measure(
             _currentItems.Count == 0
                 ? ImmutableArray.Create<MusicItem>(spacer)
@@ -882,7 +1090,8 @@ internal sealed class MeasureBuilder
             pageBreakPermission: pagePermission,
             sectionLabelPosition: _sectionLabelPosition,
             isPickup: _partialRestore != null,
-            unmetered: _senzaMisura)
+            unmetered: _senzaMisura,
+            continuesBar: _continuesBar)
         {
             IsEmptyPlaceholder = true,
         });
@@ -914,7 +1123,8 @@ internal sealed class MeasureBuilder
                 _measureSourceStart,  // End position same as start for incomplete
                 sectionLabelPosition: _sectionLabelPosition,
                 isPickup: _partialRestore != null,
-                unmetered: _senzaMisura));
+                unmetered: _senzaMisura,
+                continuesBar: _continuesBar));
         }
 
         // Back-to-back repeats collapse: a measure that ENDS with a repeat (`:|` or
@@ -1044,12 +1254,14 @@ internal sealed class MeasureBuilder
         string? SectionLabel,
         int SectionLabelPosition,
         int MeasureSourceStart,
-        Measure? LastMeasure);
+        Measure? LastMeasure,
+        int LogicalCount);
 
     /// <summary>True at a checkpointable boundary: nothing pending in the
-    /// current measure, not even a zero-duration directive.</summary>
+    /// current measure, not even a zero-duration directive — and not inside a split bar
+    /// (its second half is under construction from the head's emit to its own close).</summary>
     internal bool AtCleanBoundary
-        => _currentItems.Count == 0 && _currentDuration == Fraction.Zero;
+        => _currentItems.Count == 0 && _currentDuration == Fraction.Zero && !_continuesBar;
 
     internal BuilderCheckpoint Capture() => new(
         _confirmableBoundary, _boundaryRetargetable, _lastEndAutoFill,
@@ -1057,7 +1269,8 @@ internal sealed class MeasureBuilder
         _pendingStartBarline, _pendingEndBarline,
         _pendingBreak, _pendingNoBreak, _pendingPageBreak, _pendingNoPageBreak,
         _sectionLabel, _sectionLabelPosition, _measureSourceStart,
-        _measures.Count > 0 ? _measures[^1] : null);
+        _measures.Count > 0 ? _measures[^1] : null,
+        _logicalCount);
 
     /// <summary>Restores a captured boundary state, adopting <paramref name="prefix"/>
     /// as the measures emitted before it. The <see cref="MeasureCompleted"/> hook
@@ -1071,6 +1284,9 @@ internal sealed class MeasureBuilder
         _currentItems.Clear();
         _currentDuration = Fraction.Zero;
         _hasMeasureContent = false;
+        _continuesBar = false;
+        _pendingMidBar = null;
+        _logicalCount = ck.LogicalCount;
         _confirmableBoundary = ck.ConfirmableBoundary;
         _boundaryRetargetable = ck.BoundaryRetargetable;
         _lastEndAutoFill = ck.LastEndAutoFill;

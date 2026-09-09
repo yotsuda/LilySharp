@@ -1304,10 +1304,25 @@ MidMusicCommand = 'clef' , ClefName
                | 'partial' , DurationToken         (* this bar is that long — at the bar's
                                                       start, per part; see PartialDecl §2 *)
                | 'break' | 'noBreak'                (* force / forbid a system break after
-                                                      this measure *)
+                                                      this measure. A 'break' written INSIDE
+                                                      a bar, with music on both sides of it,
+                                                      breaks the bar there: its first half
+                                                      ends the system with no bar line, its
+                                                      second opens the next with no bar line
+                                                      and no bar number, and every voice, row
+                                                      and empty `| |` gap of the score is cut
+                                                      at the same beat (LilyPond's \break).
+                                                      Where some voice holds a note sounding
+                                                      across that beat, or a beam, tuplet or
+                                                      percent repeat runs across it, the bar
+                                                      is not split — the break falls to the
+                                                      next bar line, LYS1037 names the voice
+                                                      and the reason (tie the note, or move
+                                                      the break). One break per bar. *)
                | 'pageBreak' | 'noPageBreak' ;      (* force / forbid a page break after this
                                                       measure — the forced one breaks the
-                                                      system too (LilyPond's \pageBreak) *)
+                                                      system too (LilyPond's \pageBreak), and
+                                                      splits a bar exactly as 'break' does *)
 
 ### 8.2 Notes, Rests, Chords
 

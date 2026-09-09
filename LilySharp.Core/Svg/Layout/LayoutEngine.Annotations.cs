@@ -1004,7 +1004,8 @@ internal sealed partial class LayoutEngine
         var barNumberLayouts = BarNumberEngraver.Calculate(ctx.Fonts, systems,
             numberOffset: barNumberOffset,
             gridBarlineRowIndex: ctx.GridBarlineRowIndex,
-            displayedNumbers: BarNumberEngraver.NumberMeasures(measures, barNumberOffset));
+            displayedNumbers: BarNumberEngraver.NumberMeasures(measures, barNumberOffset),
+            measures: measures);
         // Forced-above dynamics (@f.up) join the above-staff pass so they clear, and are
         // cleared by, the other above-staff grobs. Below dynamics were already placed by
         // StackBelowStaff and pass through untouched.

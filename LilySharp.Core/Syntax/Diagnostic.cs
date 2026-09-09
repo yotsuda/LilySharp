@@ -833,6 +833,28 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string SectionPlaysNothing = "LYS1036";
 
+    /// <summary>Layout warning: a <c>break</c> / <c>pageBreak</c> written INSIDE a bar (music
+    /// on both sides of it) that the page could not break the bar at, so the break fell to
+    /// the next bar line — the reading every mid-bar break had before session 356.</summary>
+    /// <remarks>
+    /// <para>
+    /// A mid-bar break splits the bar into two model measures in EVERY voice of the score
+    /// (<see cref="Svg.Collector.MidBarBreakTable"/>), and that is refused where some voice
+    /// holds a note, chord or rest SOUNDING across the break's moment (LilyPond breaks under
+    /// it and draws the remainder empty — MEASURED, 2.26.0, scratch/p357/lp/mb2.ly — Lily#
+    /// has no measure holding an item longer than itself; the divergence is declared as the
+    /// table's own — see <see cref="Svg.Collector.MidBarBreakTable"/>), where a beam, a tuplet
+    /// or a percent repeat runs across it, in an unmetered bar, or for a second break in one
+    /// bar. The message names the voice and the reason.
+    /// </para>
+    /// <para>
+    /// The <c>.ly</c> twin writes the <c>\break</c> where it stands and LilyPond honours it,
+    /// so a book carrying this warning breaks differently in the two — the warning is the
+    /// only place that says so. HANDOFF §3 2026-09-09.
+    /// </para>
+    /// </remarks>
+    public const string MidBarBreakNotSplit = "LYS1037";
+
     // Measure errors (LYS2xxx)
 
     /// <summary>Measure error: a measure has fewer beats than the time signature requires.</summary>

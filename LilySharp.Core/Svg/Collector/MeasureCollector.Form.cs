@@ -107,7 +107,7 @@ public sealed partial class MeasureCollector
                     // (MeasureBuilder.ApplyBreak — the same dispatch as outside the block).
                     // Resume: the flag is baked into the adopted measures (both sides).
                     if (live)
-                        builder.ApplyBreak(brk.Directive);
+                        builder.ApplyBreak(brk.Directive, brk.SourceStart);
                 }
                 else if (child is SectionReferenceSyntax reference)
                 {

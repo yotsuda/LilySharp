@@ -183,6 +183,55 @@ public sealed record Measure
     public bool Unmetered { get; init; }
 
     /// <summary>
+    /// True when this measure is the FIRST HALF of a bar that a line break splits — the music
+    /// written before a mid-bar <c>break</c>. It ends in no bar line (<see cref="EndBarline"/>
+    /// is <see cref="BarlineType.None"/>), it forces the line break, and it does not advance
+    /// the bar number: the measure after it (<see cref="ContinuesBar"/>) is the rest of the
+    /// same bar and opens the next system with no bar line and no bar number.
+    /// <para>
+    /// LILYPOND-REF: lily/paper-column-engraver.cc — a <c>\break</c> forces
+    /// <c>line-break-permission</c> on the paper column at its moment, whatever the measure
+    /// position; the Bar_engraver makes no BarLine there (there is no bar to end), and
+    /// LILYPOND-REF: lily/bar-number-engraver.cc — the BarNumber is created with a BarLine,
+    /// so the next line, opening mid-bar, carries none.
+    /// MEASURED (2.26.0, scratch/p357/lp/mb1.ly, <c>c4 d \break e f | g1 | a1 |</c>): the
+    /// first system ends at the break column with no BarLine grob (the staff stops at
+    /// x 14.54, the last column), the second opens at moment 1/2 with the clef alone (first
+    /// note at x 5.8, exactly where a bar-line break puts it — mb8.ly) and prints NO
+    /// BarNumber, where the same book broken at the bar line prints "2" (PROBEBN). A tie and
+    /// a slur run across the break (mb6.ly); a lower staff holding a whole note across it
+    /// is broken there too (mb2.ly) — Lily# does not split a sounding item and reports the
+    /// break instead (LYS1037, <c>MeasureCollector</c>'s mid-bar break table).
+    /// </para>
+    /// </summary>
+    public bool BreaksMidBar { get; init; }
+
+    /// <summary>
+    /// True when this measure CONTINUES the bar the measure before it began — the second
+    /// half of a bar a line break split (see <see cref="BreaksMidBar"/>: no start bar line,
+    /// the bar's written end bar line), or the first measure of a section that completes the
+    /// short last bar of the section played before it (a repeat sign or a volta bracket
+    /// standing mid-bar; <c>MeasureCollector.MarkBarsSplitBySectionBoundaries</c> — here the
+    /// author's bar line between the halves stays drawn). Either way the bar number does not
+    /// advance across it and a system opening with it carries no number.
+    /// </summary>
+    public bool ContinuesBar { get; init; }
+
+    /// <summary>
+    /// The index of the measure this one continues (see <see cref="ContinuesBar"/>) when it
+    /// is NOT the measure before it: a second, third… volta ending that opens with the rest
+    /// of the bar the repeat BODY left short continues the body's last measure, not the
+    /// previous ending's last. −1 (the default) means the measure before this one. Such a
+    /// measure is a short bar in neither check, and a system opening with it carries no
+    /// number — but it DOES take a new bar number, because the ending before it closed on
+    /// a bar line: LilyPond's <c>alternativeRestores</c> (ly/engraver-init.ly) restores
+    /// measurePosition at each alternative and not currentBarNumber, so "bar numbers
+    /// continue through alternatives" (define-context-properties.scm,
+    /// alternativeNumberingStyle unset).
+    /// </summary>
+    public int ContinuedFromMeasure { get; init; } = -1;
+
+    /// <summary>
     /// True when this measure is an empty placeholder written as a bare barline gap —
     /// a leading <c>|</c>, a <c>| |</c> gap, or a trailing <c>| |</c> — with no music.
     /// It occupies a measure slot (so parts stay aligned) and renders as an empty bar.
@@ -235,7 +284,9 @@ public sealed record Measure
         BreakPermission pageTurnPermission = BreakPermission.Allow,
         int sectionLabelPosition = 0,
         bool isPickup = false,
-        bool unmetered = false)
+        bool unmetered = false,
+        bool breaksMidBar = false,
+        bool continuesBar = false)
     {
         Items = items;
         StartBarline = startBarline;
@@ -246,6 +297,8 @@ public sealed record Measure
         SectionLabelPosition = sectionLabelPosition;
         IsPickup = isPickup;
         Unmetered = unmetered;
+        BreaksMidBar = breaksMidBar;
+        ContinuesBar = continuesBar;
         // Derive permission: hasBreakAfter implies Force for backward
         // compatibility. HasBreakAfter is a computed property off this value.
         LineBreakPermission = hasBreakAfter ? BreakPermission.Force : lineBreakPermission;

@@ -662,6 +662,13 @@ public class SvgSnapshotTests
         // \cadenzaOn/\cadenzaOff twin (scratch/p354/lp, session 353); until then the page
         // filled 4/4 bars under it (7 bars where the twin has 5).
         yield return new object[] { "test/senza-misura" };
+        // A `break` INSIDE a bar (session 356): the bar is two measures — the first ends its
+        // system with no bar line, the second opens the next with no bar line and no number —
+        // in every voice, the chord row, the lyrics row and the bass's `| |` gap alike.
+        // LilyPond 2.26.0 on the twin: the second system's bar lines 11.568 / 19.718 / 27.868
+        // (Lily# 11.57 / 19.72 / 27.87), no BarNumber on it, the first system ending at the
+        // break's column with no BarLine grob (scratch/p357/lp).
+        yield return new object[] { "test/mid-bar-break" };
         // ...and the same changes on a staff that draws NONE of them: a score built only of
         // `tab … as numbers` is LilyPond's bare TabStaff, whose TimeSignature stencil is
         // BLANKED, so it reserves no column for a mid-piece meter either. The corpus's only

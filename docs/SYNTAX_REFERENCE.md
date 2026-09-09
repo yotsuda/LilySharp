@@ -401,6 +401,28 @@ c4( d) e( f)      // Two separate slurs
 The three repeat barlines change the order the music plays in, so they are written where
 the order is — see [Volta Repeats](#volta-repeats).
 
+### Line and Page Breaks
+
+| Syntax | Effect | Where |
+|--------|--------|-------|
+| `break` | Force a system break here | music, form |
+| `noBreak` | Forbid a system break here | music, form |
+| `pageBreak` | Force a page break here (and the system break with it) | music, form |
+| `noPageBreak` | Forbid a page break here | music, form |
+
+At a bar line — `c4 d e f break | …` or `… | break g1` — the break ends the system with that
+bar. **Inside a bar, with notes on both sides of it** — `c4 d break e f |` — the bar itself is
+broken across the two systems, as LilyPond's `\break` does: the first half ends the system
+with no bar line, the second half opens the next with no bar line and no bar number (the bar
+number counts bars, so the next full bar is numbered as if nothing had happened), and every
+part, chord row, lyrics row and empty `| |` gap of the score is cut at the same beat. The bar
+stays whole — and the break falls to the next bar line — where some part holds a note, chord
+or rest **sounding across** the break, or a beam, tuplet or percent repeat runs across it, or
+the bar is unmetered (`time none`), or it is a second break in the same bar; LYS1037 names the
+part and the reason. Tie the note across the break (`c2~ break c2`) or move the break to a beat
+nothing crosses. The `.ly` twin writes `\break` where it stands either way, so a book carrying
+LYS1037 breaks differently in LilyPond.
+
 ## Key Signature
 
 ```

@@ -3822,7 +3822,9 @@ public sealed class LilyPondExporter
                 }
                 if (at < length)
                     AppendToken(line, "s" + ChordModeDuration(length - at), "  ");
-                _sb.Append(line).Append(" |\n");
+                // The two halves of a bar a line break splits (Measure.BreaksMidBar) are ONE
+                // bar in LilyPond: no bar check between them.
+                _sb.Append(line).Append(measures[m].BreaksMidBar ? "\n" : " |\n");
             }
             // Symbols the walk placed past the part's last bar (none in practice) are dropped.
             _sb.Append("}\n\n");
@@ -3922,7 +3924,9 @@ public sealed class LilyPondExporter
                 }
                 if (at < length)
                     AppendToken(text, "\\skip " + ChordModeDuration(length - at), "  ");
-                _sb.Append(text).Append(" |\n");
+                // The two halves of a bar a line break splits (Measure.BreaksMidBar) are ONE
+                // bar in LilyPond: no bar check between them.
+                _sb.Append(text).Append(measures[m].BreaksMidBar ? "\n" : " |\n");
             }
             _sb.Append("}\n\n");
         }

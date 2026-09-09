@@ -8,6 +8,33 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Language
 
+- **A `break` inside a bar breaks the bar across two systems.** `c4 d break e f |` ends the
+  first system after `d` with no bar line and opens the next with `e`, with no bar line and no
+  bar number — LilyPond's `\break` at that moment (measured on 2.26.0: the second system's bar
+  lines and its first note land where LilyPond's do). Every part, chord row, lyrics row and
+  empty `| |` gap of the score is cut at the same beat, `pageBreak` does the same for the page,
+  a repeated section breaks at every play, and bar numbers keep counting bars. A `break` right
+  before a bar line (`e2 break |`) is the bar-line break it always was. Where some part holds a
+  note sounding across the break, or a beam, tuplet or percent repeat runs across it, or the
+  bar is unmetered, the bar stays whole, the break falls to the next bar line and LYS1037 names
+  the part and the reason (LilyPond splits under a sounding note and draws the rest of the bar
+  empty; Lily# declares that divergence rather than draw it). Until now every mid-bar `break`
+  silently fell to the next bar line.
+
+- **A bar split by a section boundary is one bar to the bar check.** When a section ends on a
+  short bar and every section the form plays after it opens with exactly the rest of that bar
+  — a repeat sign or a volta bracket standing mid-bar, `|: A [1. B] :| [2. C]` with A ending on
+  the half bar and both endings opening with the other half — neither half warns: no LYS2001 on
+  the last bar, no LYS2006 pickup nudge on the first. The exemption is read off the form's play
+  order per part and holds only when every neighbour completes the bar exactly; one that does
+  not brings both warnings back. The page counts the two halves as one bar too — the bar
+  number does not advance across the boundary and a system opening with the second half
+  carries no number, as LilyPond's currentBarNumber does not advance at a mid-bar repeat sign
+  — while the author's bar line between them stays drawn. A second or later ending is read
+  against the repeat's body, not the ending before it, so it is exempt the same way; its
+  number, though, keeps counting, as LilyPond's does (bar numbers continue through
+  alternatives; only the position in the bar is restored at each one).
+
 - **`marks stacked | beside` arranges a section label and the tempo mark at the same bar.**
   `stacked` is the default and LilyPond's: the boxed label break-aligns to the key/clef
   column, the metronome mark to the meter column, and where their inks meet the label stacks

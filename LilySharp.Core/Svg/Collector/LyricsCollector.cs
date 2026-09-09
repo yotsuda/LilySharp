@@ -39,6 +39,12 @@ internal sealed class LyricsCollector
     private readonly List<LyricSyllableWarning> _warnings = new();
     private readonly List<ShadowedPlainLyricWarning> _shadowedPlain = new();
 
+    /// <summary>The bars the score's line breaks split (MidBarBreakTable's remarks): a
+    /// words-only row's grid is written in BARS, and a bar the table splits fills two
+    /// measures (<see cref="CollectRow"/>). Null when no bar is split. The note-bound paths
+    /// need nothing — they align to measures already split.</summary>
+    internal MidBarBreakTable? MidBarBreaks { get; set; }
+
     /// <summary>All collected lyric syllables (note-bound and row).</summary>
     public IReadOnlyList<LyricItem> Lyrics => _lyrics;
 
@@ -380,6 +386,14 @@ internal sealed class LyricsCollector
         int maxIndex = -1;
         var measureLen = new Fraction(timeBeats, timeBeatType);
 
+        // The row's grid is written in BARS; the measures it fills are the model's, and a bar
+        // the score's line breaks split is two of them (MidBarBreakTable's remarks). The
+        // section starts arrive as model indices — `totalBars` already as bars — so every
+        // bar arithmetic below goes through these two.
+        var splits = MidBarBreaks is { IsEmpty: false } t ? t : null;
+        int Bar(int measure) => splits?.ToLogical(measure) ?? measure;
+        int MeasureOf(int bar) => splits?.ToPhysical(bar) ?? bar;
+
         // The row bars' WRITTEN barline types: the end type per target measure, and the
         // measures a `|:` opens as a repeat. Spellings map through the music path's own
         // table (MeasureCollector.ParseBarlineType — one table, never two), and stacked
@@ -396,6 +410,7 @@ internal sealed class LyricsCollector
             bool hideStanza = false)
         {
             int j = 0; // run-local bar index
+            int startBar = Bar(startMeasure);
             foreach (var measureNode in barNodes)
             {
                 // ⚠️ A lone '|' OPENING the run is a BAR like any other (owner's decision,
@@ -405,7 +420,13 @@ internal sealed class LyricsCollector
                 // onto bar (j % wrapBars). wrapBars <= 0 → no wrap (one verse).
                 int barInVerse = wrapBars > 0 ? j % wrapBars : j;
                 int v = verseBase + (wrapBars > 0 ? j / wrapBars : 0);
-                int mi = startMeasure + barInVerse;
+                int bar = startBar + barInVerse;
+                int mi = MeasureOf(bar);
+                // A bar the score breaks inside fills TWO measures: the syllables before the
+                // break in the first, the rest — timed from the break — in the second; the
+                // written end bar line is the second half's.
+                var split = splits?.At(bar);
+                int endMeasure = split != null ? mi + 1 : mi;
 
                 if (LyricSyllableReader.ClosingBarToken(measureNode) is { } barTok)
                 {
@@ -415,13 +436,13 @@ internal sealed class LyricsCollector
                         // `|:` closes THIS bar plain and opens the NEXT one — the music
                         // path's HandleBarline semantic, mirrored.
                         barEnd = BarlineType.Single;
-                        repeatOpens.Add(mi + 1);
+                        repeatOpens.Add(MeasureOf(bar + 1));
                     }
                     else
                     {
                         barEnd = MeasureCollector.ParseBarlineType(barTok);
                     }
-                    barEnds[mi] = barEnds.TryGetValue(mi, out var prevEnd)
+                    barEnds[endMeasure] = barEnds.TryGetValue(endMeasure, out var prevEnd)
                         ? MeasureCollector.Stronger(prevEnd, barEnd)
                         : barEnd;
                 }
@@ -432,25 +453,38 @@ internal sealed class LyricsCollector
                     var slotDur = measureLen * new Fraction(1, sylls.Count);
                     var spacers = ImmutableArray.CreateBuilder<MusicItem>(sylls.Count);
                     var timing = Fraction.Zero;
+                    int tailFrom = -1; // the first syllable at or past the split
                     // ItemIndex = the syllable's slot (one spacer per syllable), so the
                     // bar gets widened for the lyric widths (SpacingRules.ApplyLyricSpacing).
                     // The engraver still takes X from Timing (IsLyricsRow path).
                     for (int k = 0; k < sylls.Count; k++)
                     {
                         var (text, conn, pos) = sylls[k];
+                        bool inTail = split is { } s && timing >= s.Offset;
+                        if (inTail && tailFrom < 0)
+                            tailFrom = k;
                         _lyrics.Add(new LyricItem(
-                            Text: text, MeasureIndex: mi, ItemIndex: k,
+                            Text: text, MeasureIndex: inTail ? mi + 1 : mi,
+                            ItemIndex: inTail ? k - tailFrom : k,
                             ConnectorType: conn, VoiceId: staffIndex, VerseNumber: v,
-                            Timing: timing, SourcePosition: pos,
+                            Timing: inTail ? timing - split!.Value.Offset : timing, SourcePosition: pos,
                             StaffIndex: staffIndex, IsLyricsRow: true,
                             HideStanza: hideStanza));
                         spacers.Add(new RestItem(slotDur, 0, pos) { IsSpacer = true });
                         timing += slotDur;
                     }
+                    if (split is { } cut)
+                    {
+                        var (head, tail) = ChordNameCollector.SplitSpacers(spacers.MoveToImmutable(), cut.Offset);
+                        if (!measureItems.TryGetValue(mi, out var existingHead) || existingHead.Length < head.Length)
+                            measureItems[mi] = head;
+                        if (!measureItems.TryGetValue(mi + 1, out var existingTail) || existingTail.Length < tail.Length)
+                            measureItems[mi + 1] = tail;
+                    }
                     // Keep the widest verse's slot count at this bar (verses usually match).
-                    if (!measureItems.TryGetValue(mi, out var existing) || existing.Length < sylls.Count)
+                    else if (!measureItems.TryGetValue(mi, out var existing) || existing.Length < sylls.Count)
                         measureItems[mi] = spacers.MoveToImmutable();
-                    maxIndex = Math.Max(maxIndex, mi);
+                    maxIndex = Math.Max(maxIndex, endMeasure);
                 }
                 j++;
             }
@@ -462,11 +496,16 @@ internal sealed class LyricsCollector
         // wraps at the whole piece's length.
         int SectionWrap(int startMeasure)
         {
+            // In BARS: the starts are model indices, totalBars already a bar count.
+            int startBar = Bar(startMeasure);
             int sectionEnd = totalBars;
             foreach (var st in sectionStartMeasure.Values)
-                if (st > startMeasure && st < sectionEnd)
-                    sectionEnd = st;
-            return sectionEnd - startMeasure;
+            {
+                int stBar = Bar(st);
+                if (stBar > startBar && stBar < sectionEnd)
+                    sectionEnd = stBar;
+            }
+            return sectionEnd - startBar;
         }
         static int VersesFrom(int bars, int wrapBars) =>
             wrapBars > 0 && bars > 0 ? (bars + wrapBars - 1) / wrapBars : 1;
@@ -545,14 +584,21 @@ internal sealed class LyricsCollector
         var measures = ImmutableArray.CreateBuilder<Measure>(maxIndex + 1);
         for (int i = 0; i <= maxIndex; i++)
         {
-            var items = measureItems.TryGetValue(i, out var it) ? it : emptyBar;
+            // A measure that is one half of a split bar says so — whether or not this row
+            // wrote that bar: its bar lines and its length must agree with the music's.
+            var (isHead, isTail, cut) = ChordNameCollector.SplitHalfAt(splits, i);
+            var items = measureItems.TryGetValue(i, out var it) ? it
+                : isHead ? ImmutableArray.Create<MusicItem>(new RestItem(cut, 0, 0) { IsSpacer = true })
+                : isTail ? ImmutableArray.Create<MusicItem>(new RestItem(measureLen - cut, 0, 0) { IsSpacer = true })
+                : emptyBar;
             // A row bar keeps its WRITTEN barline type (plain `|` = Single, so a
             // standalone lyrics-only lead sheet still shows its measure grid). The
             // score-wide barline sync merges these harmlessly with any music staff
             // (Stronger picks the significant one at each boundary).
             // ⚠️ The last measure used to get BarlineType.Final here — removed with the
             // same rule in MeasureCollector.FinalizeMeasures: `|.` is written, not inferred.
-            var end = barEnds.TryGetValue(i, out var typed) ? typed : BarlineType.Single;
+            var end = isHead ? BarlineType.None
+                : barEnds.TryGetValue(i, out var typed) ? typed : BarlineType.Single;
             var start = repeatOpens.Contains(i) ? BarlineType.RepeatStart : BarlineType.None;
             // `:|` meeting `|:` at one boundary is ONE combined glyph — the same
             // back-to-back fold the music path applies in FinalizeMeasures
@@ -565,7 +611,8 @@ internal sealed class LyricsCollector
                     measures[i - 1] = measures[i - 1] with { EndBarline = BarlineType.RepeatBoth };
                 start = BarlineType.None;
             }
-            measures.Add(new Measure(items, start, end, null, 0, 0));
+            measures.Add(new Measure(items, start, end, null, 0, 0,
+                hasBreakAfter: isHead, breaksMidBar: isHead, continuesBar: isTail));
         }
         return measures.MoveToImmutable();
     }

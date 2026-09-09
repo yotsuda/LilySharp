@@ -93,6 +93,7 @@ public static class SemanticValidation
         new RepeatStructureScopeValidator(),// a repeat barline / volta ending written in music
         new RepeatPairingValidator(),       // a '|:' that no ':|' closes (score-expanded)
         new ExpansionBudgetValidator(),     // expansion truncated at the collector's site budget
+        new MidBarBreakValidator(),         // a mid-bar break the page could not split the bar at
         new TabRangeValidator(),            // notes clamped outside the tab range
         new DuplicateScoreNameValidator(),  // two score blocks with the same name
         new EmptyScoreValidator(),          // a score block with no staff to engrave

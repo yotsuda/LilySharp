@@ -75,8 +75,10 @@ public sealed record ChordNameItem
     /// degree, or both stacked. Set from the placement's <c>as roman|both|names</c>.</summary>
     public ChordDisplayMode DisplayMode { get; init; } = ChordDisplayMode.Names;
 
-    /// <summary>Measure index containing this chord name.</summary>
-    public int MeasureIndex { get; }
+    /// <summary>Measure index containing this chord name. Init-able so a row bar a line
+    /// break splits can move the symbols after the break into the bar's second half
+    /// (<c>ChordNameCollector</c>, MidBarBreakTable's remarks).</summary>
+    public int MeasureIndex { get; init; }
 
     /// <summary>Item index of the note within the measure.</summary>
     public int ItemIndex { get; }
@@ -100,8 +102,9 @@ public sealed record ChordNameItem
     /// is PLACED by it (<see cref="UseTiming"/>); a note-attached <c>@chord</c> carries its
     /// note's onset here and is placed by <see cref="ItemIndex"/>, but the spacing prices
     /// its width on the timing column at this moment either way
-    /// (<c>SpacingRules.ApplyChordRowSpacing</c>).</summary>
-    public Fraction Timing { get; }
+    /// (<c>SpacingRules.ApplyChordRowSpacing</c>). Init-able with <see cref="MeasureIndex"/>
+    /// for the same split-bar move.</summary>
+    public Fraction Timing { get; init; }
 
     /// <summary>
     /// The resolved chord structure (root, quality interval set, bass) when entered

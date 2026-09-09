@@ -1502,8 +1502,10 @@ public sealed partial class MeasureCollector
 
             case BreakSyntax brk:
                 // `break` / `noBreak` force / forbid a line break here, `pageBreak` /
-                // `noPageBreak` a page break — one dispatch (MeasureBuilder.ApplyBreak).
-                builder.ApplyBreak(brk.Directive);
+                // `noPageBreak` a page break — one dispatch (MeasureBuilder.ApplyBreak). Written
+                // INSIDE a bar with music after it, a `break` / `pageBreak` splits the bar there
+                // (the builder records the request; MidBarBreakTable's remarks).
+                builder.ApplyBreak(brk.Directive, brk.SourceStart);
                 break;
 
             case MusicMarkSyntax mark:
@@ -1842,6 +1844,16 @@ public sealed partial class MeasureCollector
         for (int j = 0; j < tupletItems.Count; j++)
         {
             var item = tupletItems[j];
+
+            // A `break` written inside the tuplet reaches the builder like one written
+            // between bars: it cannot split the bar here (the members' time has not reached
+            // the clock — MeasureBuilder.NoteMidBarCandidate refuses it, LYS1037), so it
+            // breaks the line at the next bar line. It used to be dropped without a word.
+            if (item is BreakSyntax brk)
+            {
+                builder.ApplyBreak(brk.Directive, brk.SourceStart);
+                continue;
+            }
 
             // Lookahead over the RUN of tie/slur/beam markers that annotate the
             // preceding note — the same rule ProcessMusicNodeSequence applies to

@@ -179,7 +179,9 @@ public sealed partial class MeasureCollector
                     pageTurnPermission: measure.PageTurnPermission,
                     sectionLabelPosition: measure.SectionLabelPosition,
                     isPickup: measure.IsPickup,
-                    unmetered: measure.Unmetered);
+                    unmetered: measure.Unmetered,
+                    breaksMidBar: measure.BreaksMidBar,
+                    continuesBar: measure.ContinuesBar);
                 changed = true;
             }
 
@@ -399,7 +401,9 @@ public sealed partial class MeasureCollector
                 pageTurnPermission: m.PageTurnPermission,
                 sectionLabelPosition: m.SectionLabelPosition,
                 isPickup: m.IsPickup,
-                unmetered: m.Unmetered);
+                unmetered: m.Unmetered,
+                breaksMidBar: m.BreaksMidBar,
+                continuesBar: m.ContinuesBar);
         }
     }
 

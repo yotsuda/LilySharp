@@ -65,6 +65,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         _structured = root.DescendantNodes().Any(n =>
             n is PartDeclarationSyntax or SectionDeclarationSyntax or FormDeclarationSyntax);
         _phraseBodies = CollectPhraseBodies(root);
+        _boundaries = new SectionBoundaryBars(root, _phraseBodies);
         ValidateNode(root);
         // (An empty `| |` placeholder is NOT reported. It was, over every defined scope,
         // until 2026-08-28: the owner asked for `| |` to be written without a complaint
@@ -125,6 +126,10 @@ internal sealed class MeasureValidator : ISemanticValidator
     }
 
     private Dictionary<string, SyntaxNode> _phraseBodies = new();
+    // The bars a section boundary splits — a short last bar the next section's short first
+    // bar completes (a repeat sign or a volta bracket standing mid-bar). Asked of the form's
+    // play order, per part; see SectionBoundaryBars.
+    private SectionBoundaryBars? _boundaries;
 
     private static Dictionary<string, SyntaxNode> CollectPhraseBodies(SyntaxNode root)
     {
@@ -305,6 +310,13 @@ internal sealed class MeasureValidator : ISemanticValidator
     {
         var measures = SplitIntoMeasures(items, startPos, out var voiceSpans, out var repeatSpans,
             out bool tailUnclosed);
+
+        // The (section, part) cell this stream IS — only a section's own top-level stream
+        // (not a repeat body, not a span's later voice) has neighbours in the form whose
+        // edge bars can complete its own (SectionBoundaryBars).
+        var cell = leadIn is null && !openTail && _boundaries != null
+            ? SectionBoundaryBars.CellOf(items.FirstOrDefault())
+            : null;
 
         // ONE forward pass: each bar adopts its meter, then its duration is counted in
         // segments around the voice-span / repeat addresses, then it is checked. (This
@@ -549,13 +561,26 @@ internal sealed class MeasureValidator : ISemanticValidator
                     bool isBarePickup = isFirst && renderedBarsClosed == 0
                         && partialLength == null && leadIn is null;
 
+                    // A bar the SECTION BOUNDARY splits is one bar of the music, not two
+                    // short ones: a first bar that is the rest of what every predecessor in
+                    // the form left open, or a last bar that every successor finishes (a
+                    // repeat sign or a volta bracket standing mid-bar — SectionBoundaryBars).
+                    // ⚠️ "Last" here means the last bar that SOUNDS: a `| break` closing the
+                    // section leaves a trailing chunk holding the break alone, worth nothing,
+                    // and that chunk is what `isLast` names.
+                    bool splitByBoundary = cell is { } c && partialLength == null
+                        && renderedBarsClosed == 0
+                        && ((isFirst && _boundaries!.FirstBarCompletesEveryPredecessor(c, duration, expected))
+                            || ((isLast || TrailingMeasuresAreSilent(measures, i + 1, defaultDuration))
+                                && _boundaries!.LastBarCompletedByEverySuccessor(c, duration, expected)));
+
                     // A repeat body's trailing chunk (openTail) is not closed where the
                     // body ends — its shortness is no claim about any rendered bar, so
                     // only its interior/leading bars are held to the meter here. Its
                     // length can still be wrong the other way: a chunk LONGER than the
                     // meter can never fit any rendered bar, so the overfull arm below
                     // still applies to it.
-                    if (!(openTail && tailUnclosed && isLast))
+                    if (!(openTail && tailUnclosed && isLast) && !splitByBoundary)
                         EmitUnderfull(measure, duration, expected, partialLength, completesOpeningPickup,
                             isBarePickup, i == 0 ? leadInSpan : null);
                 }
@@ -651,6 +676,17 @@ internal sealed class MeasureValidator : ISemanticValidator
             if (item.GetChild(i) is TieSyntax or SlurSyntax or BeamMarkerSyntax)
                 return true;
         return false;
+    }
+
+    /// <summary>True when every measure from <paramref name="from"/> on holds no sounding
+    /// music — the trailing chunk a closing <c>| break</c> (or a bare directive) leaves.</summary>
+    private static bool TrailingMeasuresAreSilent(List<MeasureContent> measures, int from, Fraction defaultDuration)
+    {
+        var running = defaultDuration;
+        for (int k = from; k < measures.Count; k++)
+            if (MeasureDurations.CalculateMeasureDuration(measures[k].Items, ref running) != Fraction.Zero)
+                return false;
+        return true;
     }
 
     /// <summary>The music items of one voice block of a span.</summary>

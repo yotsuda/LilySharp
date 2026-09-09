@@ -336,6 +336,26 @@ public sealed partial class MeasureCollector
     /// <summary>Repeat bars — a <c>|:</c> that no <c>:|</c> closes — whose span has no end.
     /// Populated as a side effect of Collect.</summary>
     public IReadOnlyList<UnpairedRepeatWarning> UnpairedRepeatWarnings => _unpairedRepeatWarnings.ToList();
+    // ---- line breaks INSIDE a bar (MidBarBreakTable's remarks: two collects) ----
+    // The table this collector splits bars by. Owned: settled by SettleMidBarBreaks from the
+    // first pass's requests, then applied by the second. Seeded: a NESTED collect (the
+    // omitted-part harvest, a row's melody) inherits the outer table so it cuts the same bars
+    // and never discovers on its own — Empty while the outer collect is still discovering.
+    internal MidBarBreakTable? MidBarBreaks { get; private set; }
+    internal MidBarBreakTable? SeededMidBarBreaks { get; init; }
+    // The mid-bar breaks the builders met in THIS pass (cleared by Reset), and the ones they
+    // could refuse on the spot (inside a tuplet, under `time none`).
+    private readonly List<MidBarBreakRequest> _midBarBreakRequests = new();
+    private readonly List<MidBarBreakConflict> _midBarBreakRefusals = new();
+    // The breaks the score could not split its bars at — settled with the table after the
+    // first pass, put back after the second pass's Reset, read by MidBarBreakValidator (LYS1037).
+    private readonly List<MidBarBreakConflict> _midBarBreakConflicts = new();
+    /// <summary>Mid-bar <c>break</c>s the page could not break their bar at (the break fell to
+    /// the next bar line), each with its reason. Populated as a side effect of Collect.</summary>
+    public IReadOnlyList<MidBarBreakConflict> MidBarBreakConflicts => _midBarBreakConflicts;
+    // The omitted parts' voices the last pass harvested (HarvestOmittedStructure): they are
+    // synchronised by index with the drawn voices, so the table must be feasible for them too.
+    private readonly List<Voice> _harvestedVoices = new();
     // Figured bass
     private readonly List<FiguredBassItem> _figuredBasses = new();
     // Chord names (inline c:m marks, chordnames {} streams, chords-name rows) —
@@ -701,6 +721,26 @@ public sealed partial class MeasureCollector
         IReadOnlyList<string>? attachedLyricParts = null,
         RenderSpec? renderSpec = null)
     {
+        // One collect, or two — see CollectMultiStaff and MidBarBreakTable's remarks.
+        MidBarBreaks = SeededMidBarBreaks;
+        var score = CollectPass(tree, voiceName, localForm, attachedChordPart, attachedChordDisplay,
+            attachedLyricParts, renderSpec);
+        if (SettleMidBarBreaks(score.Voices, out var conflicts))
+        {
+            score = CollectPass(tree, voiceName, localForm, attachedChordPart, attachedChordDisplay,
+                attachedLyricParts, renderSpec);
+            FinishSplitCollect(conflicts);
+        }
+        return score;
+    }
+
+    private Score CollectPass(SyntaxTree tree, string? voiceName,
+        FormDeclarationSyntax? localForm,
+        string? attachedChordPart,
+        ChordDisplayMode attachedChordDisplay,
+        IReadOnlyList<string>? attachedLyricParts,
+        RenderSpec? renderSpec)
+    {
         _voiceName = voiceName;
         Reset();
 
@@ -804,6 +844,11 @@ public sealed partial class MeasureCollector
             _meta.InitialKeyCustom = openingKey.Custom;
         }
 
+        // A bar a section boundary splits continues for the numbering — the same rule the
+        // multi-staff road applies (MarkBarsSplitBySectionBoundaries), on this one stream.
+        foreach (var (i, from) in SectionBoundaryContinuations(measures))
+            measures[i] = measures[i] with { ContinuesBar = true, ContinuedFromMeasure = from == i - 1 ? -1 : from };
+
         // If any parallel span was seen, reconstruct the additional voices.
         // Pass the attached chord part through: BuildMultiVoiceScore collects it
         // itself (this method's CollectAttached below is never reached for the
@@ -846,6 +891,164 @@ public sealed partial class MeasureCollector
     /// <summary>
     /// Collects a MultiStaffScore from a syntax tree based on a render specification.
     /// </summary>
+
+    /// <summary>
+    /// Marks the second half of every bar a SECTION BOUNDARY splits (<see cref="Measure.ContinuesBar"/>)
+    /// in every voice of the score: at each measure index a section opens at, when the
+    /// measure before it is short and the two together are exactly one bar of the meter in
+    /// force there. The first music voice decides, the flag goes on every voice.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Owner's request 2026-09-09 (Disco Inferno): section A ends on the half bar, every
+    /// volta ending opens with the other half, and the bar number was one ahead of LilyPond's
+    /// from there on. LilyPond has no section, so a bar running from a <c>\repeat</c> body into
+    /// its <c>\alternative</c> is one bar and one number (LILYPOND-REF:
+    /// lily/timing-translator.cc:478-507 — currentBarNumber advances with measurePosition,
+    /// which a volta bracket or a repeat sign standing mid-bar does not reset). Lily#'s
+    /// section is a bar-line boundary, so the same bar is two model measures; the flag is how
+    /// the numbering (BarNumberEngraver.NumberMeasures), the system-head number
+    /// (BarNumberEngraver.Calculate) and the layout report count it as one — exactly the
+    /// second half of a mid-bar <c>break</c> (MidBarBreakTable), which is the same fact
+    /// arrived at from the other side. The drawn bar line is the author's <c>|</c> and stays.
+    /// </para>
+    /// <para>
+    /// The same halves are what <c>Semantics.SectionBoundaryBars</c> exempts from LYS2001 /
+    /// LYS2006; that pass asks every neighbour in the form, this one the neighbour the play
+    /// actually put before the section — one bar in the score is one bar in the numbering.
+    /// </para>
+    /// </remarks>
+    private void MarkBarsSplitBySectionBoundaries(
+        Dictionary<string, ImmutableArray<Voice>> staffVoices, IReadOnlySet<string> rowNames)
+    {
+        // The deciding voice: the first music voice (not a row) with measures.
+        ImmutableArray<Measure> decider = default;
+        foreach (var (name, voices) in staffVoices)
+        {
+            if (rowNames.Contains(name) || voices.Length == 0 || voices[0].Measures.IsDefaultOrEmpty)
+                continue;
+            decider = voices[0].Measures;
+            break;
+        }
+        if (decider.IsDefault)
+            return;
+        var marks = SectionBoundaryContinuations(decider);
+        if (marks.Count == 0)
+            return;
+        foreach (var key in staffVoices.Keys.ToArray())
+        {
+            staffVoices[key] = staffVoices[key].Select(v =>
+            {
+                var ms = v.Measures;
+                ImmutableArray<Measure>.Builder? b = null;
+                foreach (var (i, from) in marks)
+                {
+                    if (i >= ms.Length || ms[i].ContinuesBar)
+                        continue;
+                    b ??= ms.ToBuilder();
+                    b[i] = ms[i] with { ContinuesBar = true, ContinuedFromMeasure = from == i - 1 ? -1 : from };
+                }
+                return b == null ? v : v with { Measures = b.ToImmutable() };
+            }).ToImmutableArray();
+        }
+    }
+
+    /// <summary>
+    /// The measure indices at which a section opens with the rest of the bar its
+    /// predecessor left short — the two together exactly one bar of the meter in force (a
+    /// mid-piece <c>time</c> is read from the change items, as everywhere else) — each with
+    /// that predecessor's index. The predecessor is the measure before, except for the
+    /// second and later volta endings of one repeat, whose predecessor is the bar the
+    /// BODY left short (the measure before the first ending) — the play puts the body
+    /// before every ending, and LilyPond's <c>alternativeRestores</c> puts measurePosition
+    /// back there at each alternative. A pickup (<c>partial</c>), an unmetered bar, an empty
+    /// placeholder and a bar already split by a mid-bar break complete nothing.
+    /// </summary>
+    private List<(int Index, int From)> SectionBoundaryContinuations(IReadOnlyList<Measure> measures)
+    {
+        var result = new List<(int, int)>();
+        if (measures.Count < 2 || _sectionState.AllStarts.Count == 0)
+            return result;
+        var starts = new SortedSet<int>();
+        foreach (var list in _sectionState.AllStarts.Values)
+            foreach (int s in list)
+                if (s > 0 && s < measures.Count)
+                    starts.Add(s);
+        if (starts.Count == 0)
+            return result;
+        var endingPredecessors = LaterEndingPredecessors();
+
+        // The meter in force at each measure — the score's, re-armed by every metered `time`
+        // change item met on the way (an unmetered change keeps the last metered length).
+        var meter = TimeSignatureFraction;
+        var meters = new Fraction[measures.Count];
+        for (int i = 0; i < measures.Count; i++)
+        {
+            foreach (var item in measures[i].Items)
+                if (item is TimeSignatureChangeItem tsc && !tsc.NewTime.SenzaMisura)
+                    meter = new Fraction(tsc.NewTime.Beats, tsc.NewTime.BeatType);
+            meters[i] = meter;
+        }
+
+        foreach (int i in starts)
+        {
+            int from = endingPredecessors.TryGetValue(i, out int bodyEnd) ? bodyEnd : i - 1;
+            if (from < 0 || from >= i)
+                continue;
+            var prev = measures[from];
+            var cur = measures[i];
+            if (prev.Unmetered || cur.Unmetered || cur.IsPickup || prev.IsPickup
+                || prev.IsEmptyPlaceholder || cur.IsEmptyPlaceholder
+                || prev.BreaksMidBar || cur.ContinuesBar || cur.BreaksMidBar)
+                continue;
+            var head = prev.TotalDuration;
+            var tail = cur.TotalDuration;
+            if (head <= Fraction.Zero || tail <= Fraction.Zero || head >= meters[i] || head + tail != meters[i])
+                continue;
+            result.Add((i, from));
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// For every second-and-later volta ending of a repeat, the index of the measure before
+    /// the repeat's FIRST ending — the body's last measure, which every ending follows in the
+    /// play. Read off the volta brackets (a cumulative side table, so a resumed collect sees
+    /// the adopted ones): a repeat's endings are contiguous measures with rising numbers.
+    /// </summary>
+    private Dictionary<int, int> LaterEndingPredecessors()
+    {
+        var result = new Dictionary<int, int>();
+        if (_voltaBrackets.Count < 2)
+            return result;
+        var brackets = _voltaBrackets.OrderBy(b => b.StartMeasureIndex).ToList();
+        int groupFirstStart = brackets[0].StartMeasureIndex;
+        for (int k = 1; k < brackets.Count; k++)
+        {
+            var prev = brackets[k - 1];
+            var b = brackets[k];
+            bool sameRepeat = b.StartMeasureIndex == prev.EndMeasureIndex + 1
+                && FirstEndingNumber(b.VoltaText) > FirstEndingNumber(prev.VoltaText);
+            if (!sameRepeat)
+            {
+                groupFirstStart = b.StartMeasureIndex;
+                continue;
+            }
+            result[b.StartMeasureIndex] = groupFirstStart - 1;
+        }
+        return result;
+
+        static int FirstEndingNumber(string voltaText)
+        {
+            int n = 0;
+            foreach (char ch in voltaText)
+            {
+                if (ch < '0' || ch > '9') break;
+                n = n * 10 + (ch - '0');
+            }
+            return n;
+        }
+    }
 
     /// <summary>
     /// Propagates the strongest start/end barline at each measure index to
@@ -895,7 +1098,9 @@ public sealed partial class MeasureCollector
                     pageTurnPermission: m.PageTurnPermission,
                     sectionLabelPosition: m.SectionLabelPosition,
                     isPickup: m.IsPickup,
-                    unmetered: m.Unmetered);
+                    unmetered: m.Unmetered,
+                    breaksMidBar: m.BreaksMidBar,
+                    continuesBar: m.ContinuesBar);
             }
             if (builder != null)
                 voiceDict[name] = new Voice(voice.Name, builder.ToImmutable());
@@ -952,6 +1157,83 @@ public sealed partial class MeasureCollector
     // <paramref name="harvestStructureMarks"/> is false on the isolated recursion that harvests
     // unrendered parts' score-level marks, so that pass never re-enters the harvest.
     private MultiStaffScore CollectMultiStaff(SyntaxTree tree, RenderSpec renderSpec, bool harvestStructureMarks)
+    {
+        // ONE collect, or TWO: a `break` written inside a bar with music after it asks the
+        // score to split that bar in every voice, which only a second pass with the settled
+        // table can do (MidBarBreakTable's remarks). Every book without one collects once.
+        MidBarBreaks = SeededMidBarBreaks;
+        var score = CollectMultiStaffPass(tree, renderSpec, harvestStructureMarks);
+        if (SettleMidBarBreaks(score.AllVoices, out var conflicts))
+        {
+            score = CollectMultiStaffPass(tree, renderSpec, harvestStructureMarks);
+            FinishSplitCollect(conflicts);
+        }
+        return score;
+    }
+
+    /// <summary>After the second pass: the settled refusals go back (Reset cleared them) and
+    /// every walk this collect recorded is marked ineligible for resume — a book with a split
+    /// bar always collects in full (<see cref="SettleMidBarBreaks"/>'s remarks).</summary>
+    private void FinishSplitCollect(List<MidBarBreakConflict> conflicts)
+    {
+        _midBarBreakConflicts.Clear();
+        _midBarBreakConflicts.AddRange(conflicts);
+        MarkWalkRecordingsIneligible();
+    }
+
+    /// <summary>
+    /// Settles the mid-bar break table from the requests the pass just run recorded:
+    /// true when a second pass with the table is due. A collect with a seeded table (a nested
+    /// one) or with no request settles to "no split" at once.
+    /// </summary>
+    /// <remarks>
+    /// A RESUMED collect cannot settle the table — its adopted prefix recorded nothing — so
+    /// a request met mid-resume aborts to the full collect (IncrementalCompiler catches
+    /// <see cref="CollectResumeAbortException"/> and re-collects from scratch), and a book
+    /// holding a split marks every walk recording ineligible (<see cref="MarkWalkRecordingsIneligible"/>),
+    /// so no later edit resumes a collect whose bars were cut under an older table. That is
+    /// the whole of this feature's price on the keystroke path, and only books with a mid-bar
+    /// break pay it.
+    /// </remarks>
+    private bool SettleMidBarBreaks(IEnumerable<Voice> voices, out List<MidBarBreakConflict> conflicts)
+    {
+        conflicts = new List<MidBarBreakConflict>(_midBarBreakRefusals);
+        if (SeededMidBarBreaks != null || MidBarBreaks != null)
+            return false;
+        if (_midBarBreakRequests.Count == 0)
+        {
+            _midBarBreakConflicts.Clear();
+            _midBarBreakConflicts.AddRange(conflicts);
+            return false;
+        }
+        if (WalkProbe is { IsRecording: false })
+            throw new CollectResumeAbortException(
+                "a mid-bar line break was met mid-resume; replaying the collect in full");
+
+        var table = MidBarBreakTable.Build(
+            _midBarBreakRequests,
+            voices.Concat(_harvestedVoices),
+            new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura),
+            _tupletBrackets, _percentRepeats, conflicts);
+        _midBarBreakConflicts.Clear();
+        _midBarBreakConflicts.AddRange(conflicts);
+        MarkWalkRecordingsIneligible();
+        if (table.IsEmpty)
+            return false;
+        MidBarBreaks = table;
+        return true;
+    }
+
+    /// <summary>Marks every walk this collect recorded ineligible for resume — a book with a
+    /// mid-bar break always collects in full (see <see cref="SettleMidBarBreaks"/>).</summary>
+    private void MarkWalkRecordingsIneligible()
+    {
+        if (WalkProbe is { IsRecording: true } probe)
+            foreach (var rec in probe.Recordings.Values)
+                rec.MarkIneligible("mid-bar-break");
+    }
+
+    private MultiStaffScore CollectMultiStaffPass(SyntaxTree tree, RenderSpec renderSpec, bool harvestStructureMarks)
     {
         Reset();
 
@@ -1152,6 +1434,9 @@ public sealed partial class MeasureCollector
                 if (!_lyricsRowNames.Contains(kv.Key))
                     foreach (var v in kv.Value)
                         wrapBars = Math.Max(wrapBars, v.Measures.Length);
+            // The row's grid is written in BARS; a bar a line break split is two measures.
+            if (MidBarBreaks is { IsEmpty: false } splits)
+                wrapBars = splits.ToLogical(wrapBars);
             foreach (var (name, idx, rowSings) in pendingLyricsRows)
             {
                 // A row that SINGS a part places its syllables at that part's
@@ -1276,6 +1561,11 @@ public sealed partial class MeasureCollector
         foreach (var key in staffVoices.Keys.ToArray())
             staffVoices[key] = staffVoices[key]
                 .Select(v => _tabResolver.ResolveVoiceTabTies(flatVoices[v.Name])).ToImmutableArray();
+
+        // A bar a SECTION BOUNDARY splits — a section ending short, the next opening with
+        // the rest of that bar — is one bar of the music: its second half continues the bar
+        // for the numbering (Measure.ContinuesBar), as the second half of a mid-bar break does.
+        MarkBarsSplitBySectionBoundaries(staffVoices, rowNames);
 
         // Note-bound lyrics attach EXPLICITLY via `staff NAME with lyrics L` — there is
         // NO implicit auto-attach (an unreferenced `lyrics {}` block is a LYS4006 error).
@@ -1485,7 +1775,11 @@ public sealed partial class MeasureCollector
             _voltaBrackets.Add(volta);
         }
 
-        return harvested.StaffGroups.SelectMany(g => g.Staves).SelectMany(s => s.Voices).ToList();
+        var harvestedVoices = harvested.StaffGroups.SelectMany(g => g.Staves).SelectMany(s => s.Voices).ToList();
+        // Kept for the mid-bar break table: these voices are synchronised by measure index
+        // with the drawn ones, so a bar the score splits must be splittable here too.
+        _harvestedVoices.AddRange(harvestedVoices);
+        return harvestedVoices;
     }
 
     /// <summary>Runs one NESTED collect (finding 3-5): in the incremental session it
@@ -1500,15 +1794,20 @@ public sealed partial class MeasureCollector
     {
         MultiStaffScore Finish(MultiStaffScore s) => blankMeter ? MeterStencil.Blank(s) : s;
 
+        // The nested collect cuts the bars the OUTER one does, and never discovers its own:
+        // Empty while the outer collect is still discovering (its first pass), the settled
+        // table on its second (MidBarBreakTable's remarks).
+        var seeded = MidBarBreaks ?? MidBarBreakTable.Empty;
+
         if (NestedResume?.Begin(channelKey) is not { } begun)
-            return Finish(new MeasureCollector { BeamMemo = BeamMemo }
+            return Finish(new MeasureCollector { BeamMemo = BeamMemo, SeededMidBarBreaks = seeded }
                 .CollectMultiStaff(tree, spec, harvestStructureMarks));
 
         if (begun.IsResume)
         {
             try
             {
-                return Finish(new MeasureCollector { WalkProbe = begun.Probe, BeamMemo = BeamMemo }
+                return Finish(new MeasureCollector { WalkProbe = begun.Probe, BeamMemo = BeamMemo, SeededMidBarBreaks = seeded }
                     .CollectMultiStaff(tree, spec, harvestStructureMarks));
             }
             catch (CollectResumeAbortException)
@@ -1519,8 +1818,11 @@ public sealed partial class MeasureCollector
             begun = (CollectWalkProbe.Recorder(), false);
         }
 
-        var sub = new MeasureCollector { WalkProbe = begun.Probe, BeamMemo = BeamMemo };
+        var sub = new MeasureCollector { WalkProbe = begun.Probe, BeamMemo = BeamMemo, SeededMidBarBreaks = seeded };
         var result = sub.CollectMultiStaff(tree, spec, harvestStructureMarks);
+        // A nested collect cut under a settled table must not be resumed under a later one.
+        if (!seeded.IsEmpty)
+            sub.MarkWalkRecordingsIneligible();
         NestedResume!.Complete(channelKey, begun.Probe, sub);
         return Finish(result);
     }
@@ -1790,7 +2092,8 @@ public sealed partial class MeasureCollector
                 }))
                 {
                     sub = CollectMeasuresFromNode(blocks[t], applyFilePartial: start == 0,
-                        leadingOffset: startOffset);
+                        leadingOffset: startOffset,
+                        logicalIndexBase: MidBarBreaks?.ToLogical(start) ?? start);
                     ResolveBeamStemDirections(sub);
                 }
 
@@ -1988,7 +2291,13 @@ public sealed partial class MeasureCollector
             reference.SourceStart,
             reference.SourceEnd,
             isPickup: reference.IsPickup,
-            unmetered: reference.Unmetered);
+            unmetered: reference.Unmetered,
+            breaksMidBar: reference.BreaksMidBar,
+            continuesBar: reference.ContinuesBar)
+        {
+            // The mirror of a split head forces the same line break the head does.
+            LineBreakPermission = reference.BreaksMidBar ? Layout.BreakPermission.Force : Layout.BreakPermission.Allow,
+        };
 
     /// <summary>
     /// Gathers a voice block's music nodes (variable refs expanded), used to
@@ -2005,9 +2314,17 @@ public sealed partial class MeasureCollector
     // ⚠️ The `autoFinalBarline: false` parameter this used to carry is GONE with the rule
     // it suppressed (see FinalizeMeasures). Do not reintroduce either.
     private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode,
-        bool applyFilePartial = true, Fraction? leadingOffset = null)
+        bool applyFilePartial = true, Fraction? leadingOffset = null, int logicalIndexBase = 0)
     {
-        var builder = new MeasureBuilder(TimeSignatureFraction, voiceNode.SourceStart, _meta.TimeSenzaMisura);
+        var builder = new MeasureBuilder(TimeSignatureFraction, voiceNode.SourceStart, _meta.TimeSenzaMisura)
+        {
+            MidBarBreaks = MidBarBreaks,
+            MidBarBreakRequests = _midBarBreakRequests,
+            MidBarBreakRefusals = _midBarBreakRefusals,
+            // The BAR this sub-voice's first measure stands in (a span's opening bar), so
+            // its builder reads the split table at the same keys the primary stream does.
+            LogicalIndexBase = logicalIndexBase,
+        };
         // The file-level pickup arms a sub-collection only when it really sits
         // at the piece's start (a mid-piece voice{} span must not shorten its
         // own first bar).
@@ -2147,6 +2464,14 @@ public sealed partial class MeasureCollector
         _cursor.VoiceScope = null;
         _chordNameCollector.Clear(); // grid warnings; its item list is registry-cleared
         _lyricsCollector.Clear();
+        // The rows cut their bars by the same table the builders do (set for THIS pass by
+        // the driver before Reset runs); the requests are this pass's own.
+        _chordNameCollector.MidBarBreaks = MidBarBreaks;
+        _lyricsCollector.MidBarBreaks = MidBarBreaks;
+        _midBarBreakRequests.Clear();
+        _midBarBreakRefusals.Clear();
+        _midBarBreakConflicts.Clear();
+        _harvestedVoices.Clear();
         _sectionResetOverrides.Clear();
         _sectionActiveGrobProps.Clear();
         _keyByMeasure.Clear();
@@ -2360,7 +2685,12 @@ public sealed partial class MeasureCollector
         _phraseAnchorSaves.Clear();
         _phraseAbsoluteBaseSaves.Clear();
 
-        var builder = new MeasureBuilder(TimeSignatureFraction, senzaMisura: _meta.TimeSenzaMisura);
+        var builder = new MeasureBuilder(TimeSignatureFraction, senzaMisura: _meta.TimeSenzaMisura)
+        {
+            MidBarBreaks = MidBarBreaks,
+            MidBarBreakRequests = _midBarBreakRequests,
+            MidBarBreakRefusals = _midBarBreakRefusals,
+        };
         if (_filePartial is { } filePickup)
             builder.SetPartial(filePickup); // top-level partial N arms every voice
         _measureAccidentals.Clear();
@@ -2878,7 +3208,7 @@ public sealed partial class MeasureCollector
                     // and, post-splice, into the adopted tail measures.
                     if (_resumePending != null || _suffixSpliced)
                         break;
-                    builder.ApplyBreak(brk.Directive);
+                    builder.ApplyBreak(brk.Directive, brk.SourceStart);
                     break;
 
                 // A ':|' written in the form itself, outside any '|: … :|' block. It is
@@ -3607,8 +3937,11 @@ public sealed partial class MeasureCollector
 
         if (type == "percent")
         {
-            // First iteration: process body normally
-            int startMeasure = builder.CurrentMeasureIndex;
+            // First iteration: process body normally. The count below is in BARS
+            // (LogicalMeasureIndex), not model measures: a bar the written play breaks
+            // across a line is two measures and one bar, and the repetition must be as
+            // long as the body, not as long as its measure list.
+            int startMeasure = builder.LogicalMeasureIndex;
             // …and measure the body's LENGTH while doing it, because that — not the number
             // of measure objects it happened to produce — is what chooses the sign.
             // LILYPOND-REF: lily/percent-repeat-iterator.cc:75-92 next_element — the test is
@@ -3626,7 +3959,7 @@ public sealed partial class MeasureCollector
             // first pass, which advances it.
             var defaultAtBody = _defaultDuration.Dotted(_defaultDots);
             ProcessBodyOnce();
-            int bodyMeasureCount = builder.CurrentMeasureIndex - startMeasure;
+            int bodyMeasureCount = builder.LogicalMeasureIndex - startMeasure;
             var bodyLength = builder.CurrentDuration - openAtStart;
             for (int m = 0; m < bodyMeasureCount; m++)
                 bodyLength += meterAtBody;

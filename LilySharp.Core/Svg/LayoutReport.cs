@@ -81,7 +81,10 @@ public static class LayoutReport
         var staves = score.EnumerateStaves()
             .Select(t => StaffLabel(t.Staff))
             .ToList();
-        int totalBars = layout.AllSystems.Sum(s => s.Measures.Length);
+        // BARS, not model measures: a bar a line break splits is two measures
+        // (Measure.BreaksMidBar / ContinuesBar) and one bar.
+        var modelMeasures = score.PrimaryContentStaff.PrimaryVoice.Measures;
+        int totalBars = layout.AllSystems.Sum(s => BarCount(s, modelMeasures));
 
         sb.Append("  staves: ")
             .Append(staves.Count > 0 ? string.Join(", ", staves) : "(none)")
@@ -110,21 +113,23 @@ public static class LayoutReport
         // a line break, so the run lines are the break map. Irregular systems (a different
         // bar count, e.g. a short final line) fall out as their own line.
         var systems = layout.AllSystems;
+        // The bar each model measure is labelled with: the count of bars begun before it,
+        // plus one — a split bar's two halves share a label.
+        var barLabels = BarLabels(modelMeasures);
         int s = 0;
         while (s < systems.Length)
         {
-            int barCount = BarCount(systems[s]);
+            int barCount = BarCount(systems[s], modelMeasures);
             int e = s;
-            while (e + 1 < systems.Length && BarCount(systems[e + 1]) == barCount)
+            while (e + 1 < systems.Length && BarCount(systems[e + 1], modelMeasures) == barCount)
                 e++;
-            AppendRun(sb, systems, s, e, barCount);
+            AppendRun(sb, systems, s, e, barCount, barLabels);
             s = e + 1;
         }
 
         // Forced breaks (explicit `break`) only — there are usually a handful, so this
         // stays short even for a long score and confirms the author's breaks landed.
         // Auto breaks are the run boundaries above; listing them all was the wall.
-        var modelMeasures = score.PrimaryContentStaff.PrimaryVoice.Measures;
         var forced = new List<int>();
         for (int k = 0; k < systems.Length - 1; k++)
         {
@@ -133,7 +138,7 @@ public static class LayoutReport
                 continue;
             int idx = ms[^1].MeasureIndex;
             if (idx >= 0 && idx < modelMeasures.Length && modelMeasures[idx].HasBreakAfter)
-                forced.Add(idx + 1);
+                forced.Add(barLabels[idx]);
         }
         int boundaries = 0;
         for (int k = 0; k < systems.Length - 1; k++)
@@ -161,12 +166,50 @@ public static class LayoutReport
             sb.Append("  hidden (empty) staves: ").AppendLine(string.Join("; ", hidden));
     }
 
-    private static int BarCount(SystemLayout sys) =>
-        sys.Measures.IsDefaultOrEmpty ? 0 : sys.Measures.Length;
+    /// <summary>The BARS a system holds: its model measures, less the second half of a bar a
+    /// line break split (<see cref="Measure.ContinuesBar"/>) — that half is the bar the
+    /// previous system began, and the report counts bars, not model measures. The same
+    /// rule as <see cref="BarLabels"/>: a later volta ending continuing the body's bar
+    /// (<see cref="Measure.ContinuedFromMeasure"/>) is a bar of its own.</summary>
+    private static int BarCount(SystemLayout sys, ImmutableArray<Measure> model)
+    {
+        if (sys.Measures.IsDefaultOrEmpty)
+            return 0;
+        int count = 0;
+        foreach (var ml in sys.Measures)
+            if (ml.MeasureIndex < 0 || ml.MeasureIndex >= model.Length
+                || !model[ml.MeasureIndex].ContinuesBar || model[ml.MeasureIndex].ContinuedFromMeasure >= 0)
+                count++;
+        return count;
+    }
+
+    /// <summary>The 1-based bar label of each model measure: one more than the bars begun
+    /// before it, so the two halves of a split bar (<see cref="Measure.ContinuesBar"/>) share
+    /// one label and every other measure counts as before.</summary>
+    private static int[] BarLabels(ImmutableArray<Measure> model)
+    {
+        var labels = new int[model.Length];
+        int begun = 0;
+        for (int i = 0; i < model.Length; i++)
+        {
+            // A later volta ending continuing the bar the body left short still begins a
+            // numbered bar — the ending before it closed on a bar line (LilyPond's count
+            // continues through alternatives); only continuing the measure BEFORE it
+            // shares that measure's number.
+            if (!model[i].ContinuesBar || model[i].ContinuedFromMeasure >= 0)
+                begun++;
+            labels[i] = begun;
+        }
+        return labels;
+    }
+
+    private static int BarLabel(int[] labels, int measureIndex)
+        => measureIndex >= 0 && measureIndex < labels.Length ? labels[measureIndex] : measureIndex + 1;
 
     /// <summary>Prints one system, or a run of consecutive equal-bar-count systems.</summary>
     private static void AppendRun(
-        StringBuilder sb, ImmutableArray<SystemLayout> systems, int start, int end, int barCount)
+        StringBuilder sb, ImmutableArray<SystemLayout> systems, int start, int end, int barCount,
+        int[] barLabels)
     {
         var firstSys = systems[start];
         if (firstSys.Measures.IsDefaultOrEmpty)
@@ -174,8 +217,8 @@ public static class LayoutReport
             sb.Append("  system ").Append(firstSys.SystemIndex + 1).AppendLine(": (empty)");
             return;
         }
-        int firstBar = firstSys.Measures[0].MeasureIndex + 1;
-        int lastBar = systems[end].Measures[^1].MeasureIndex + 1;
+        int firstBar = BarLabel(barLabels, firstSys.Measures[0].MeasureIndex);
+        int lastBar = BarLabel(barLabels, systems[end].Measures[^1].MeasureIndex);
 
         if (start == end)
         {

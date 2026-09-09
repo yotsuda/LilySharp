@@ -1,0 +1,46 @@
+// A line break INSIDE a bar. A `break` written between the notes of a bar, with music on
+// both sides of it, breaks the line there: the bar's first half ends the first system with
+// no bar line, its second half opens the next with no bar line and no bar number, and every
+// other voice, the chord row and the lyrics row cut the same bar at the same beat (the
+// bass's `| |` gap is cut in two spacers). Bar numbers count bars, not model measures: the
+// second system's first full bar is 2.
+// LilyPond twin (2.26.0, 2026-09-09, scratch/p357/lp/pair357.ps1 — ragged-right on both
+// sides, on the melody alone, scratch/p357/lys/mb1.lys): the second system's bar lines at
+// 11.568 / 19.718 / 27.868 against Lily#'s 11.57 / 19.72 / 27.87, the first note of that
+// system at 5.8 on both, no BarNumber grob on it (PROBEBN prints none where the same book
+// broken AT the bar line prints "2"), and the first system ends at the break's column with
+// no BarLine grob. This fixture is justified, so its own numbers are the snapshot's.
+title "Mid-bar break"
+composer "Lily#"
+
+time 4/4
+key c major
+
+part melody {
+  clef treble
+}
+part bass {
+  clef bass
+}
+
+section Main {
+  melody { c'4 d break e f | g1 | a1 | b1 | }
+  bass { c2 c2 | | c1 | c1 | }
+}
+
+chords prog {
+  section Main { C G | C | F | G | }
+}
+
+lyrics words {
+  section Main { a b c d | e | f | g | }
+}
+
+form main { Main }
+
+score main "mid-bar-break" {
+  chords prog
+  staff melody
+  lyrics words
+  staff bass
+}

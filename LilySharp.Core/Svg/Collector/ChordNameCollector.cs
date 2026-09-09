@@ -79,6 +79,78 @@ internal sealed class ChordNameCollector
     /// Null falls back to the single first-occurrence start.</summary>
     public IReadOnlyDictionary<string, List<int>>? SectionStarts { get; set; }
 
+    /// <summary>The bars the score's line breaks split (MidBarBreakTable's remarks). A chord
+    /// grid is written in BARS while the measures it fills are the model's, so a bar the
+    /// table splits fills TWO measures: its symbols before the break in the first, the rest
+    /// — timed from the break — in the second. Null when no bar is split.</summary>
+    internal MidBarBreakTable? MidBarBreaks { get; set; }
+
+    /// <summary>The model measure a grid bar fills: bar <paramref name="localBar"/> of a run
+    /// opening at measure <paramref name="startMeasure"/>, and the split that bar carries
+    /// (null for an unsplit bar).</summary>
+    private int MeasureOfBar(int startMeasure, int localBar, out MidBarSplit? split)
+    {
+        if (MidBarBreaks is not { IsEmpty: false } table)
+        {
+            split = null;
+            return startMeasure + localBar;
+        }
+        int logical = table.ToLogical(startMeasure) + localBar;
+        split = table.At(logical);
+        return table.ToPhysical(logical);
+    }
+
+    /// <summary>Moves the symbols emitted since <paramref name="from"/> that stand at or
+    /// after <paramref name="offset"/> into the bar's second half: the next measure, timed
+    /// from the break.</summary>
+    private void MoveSymbolsAfterSplit(int from, int headMeasure, Fraction offset)
+    {
+        for (int k = from; k < _items.Count; k++)
+        {
+            var it = _items[k];
+            if (it.MeasureIndex == headMeasure && it.Timing >= offset)
+                _items[k] = it with { MeasureIndex = headMeasure + 1, Timing = it.Timing - offset };
+        }
+    }
+
+    /// <summary>Which half of a split bar model measure <paramref name="physical"/> is, and
+    /// the split's offset: (head, tail, offset). Both false for an unsplit bar.</summary>
+    internal static (bool IsHead, bool IsTail, Fraction Offset) SplitHalfAt(MidBarBreakTable? table, int physical)
+    {
+        if (table is not { IsEmpty: false })
+            return (false, false, Fraction.Zero);
+        int logical = table.ToLogical(physical);
+        if (table.At(logical) is not { } split)
+            return (false, false, Fraction.Zero);
+        bool isHead = table.ToPhysical(logical) == physical;
+        return (isHead, !isHead, split.Offset);
+    }
+
+    /// <summary>Cuts one bar's spacers at <paramref name="offset"/> into the two halves'
+    /// spacers (a spacer sounding across the cut becomes two).</summary>
+    internal static (ImmutableArray<MusicItem> Head, ImmutableArray<MusicItem> Tail) SplitSpacers(
+        ImmutableArray<MusicItem> rests, Fraction offset)
+    {
+        var head = ImmutableArray.CreateBuilder<MusicItem>();
+        var tail = ImmutableArray.CreateBuilder<MusicItem>();
+        var onset = Fraction.Zero;
+        foreach (var r in rests)
+        {
+            var end = onset + r.Duration;
+            if (end <= offset)
+                head.Add(r);
+            else if (onset >= offset)
+                tail.Add(r);
+            else
+            {
+                head.Add(new RestItem(offset - onset, 0, r.SourcePosition) { IsSpacer = true });
+                tail.Add(new RestItem(end - offset, 0, r.SourcePosition) { IsSpacer = true });
+            }
+            onset = end;
+        }
+        return (head.ToImmutable(), tail.ToImmutable());
+    }
+
     /// <summary>All collected chord-name items.</summary>
     public IReadOnlyList<ChordNameItem> Items => _items;
 
@@ -210,7 +282,8 @@ internal sealed class ChordNameCollector
         {
             if (pending.Count == 0)
                 return;
-            int mi = startMeasure + localMeasure;
+            int mi = MeasureOfBar(startMeasure, localMeasure, out var split);
+            int emittedFrom = _items.Count;
             ForEachSlotGroup(pending, timeBeats, timeBeatType, (node, timing, _) =>
             {
                 if (node is RestSyntax rest)
@@ -231,6 +304,10 @@ internal sealed class ChordNameCollector
                     });
                 }
             });
+            // A bar the score breaks inside: the symbols after the break stand in its
+            // second half, timed from the break (MidBarBreakTable's remarks).
+            if (split is { } cut)
+                MoveSymbolsAfterSplit(emittedFrom, mi, cut.Offset);
             pending.Clear();
         }
 
@@ -417,16 +494,28 @@ internal sealed class ChordNameCollector
             // measure, no written closer → defaults to Single in the build below).
             void Commit(BarlineType endBar)
             {
-                int mi = startMeasure + localMeasure;
+                int mi = MeasureOfBar(startMeasure, localMeasure, out var split);
+                // A bar the score breaks inside fills TWO measures: the slots before the
+                // break, then the rest timed from it; its written end bar line is the
+                // second half's (MidBarBreakTable's remarks).
+                int endMeasure = split != null ? mi + 1 : mi;
                 if (pending.Count > 0)
                 {
-                    measureItems[mi] = EmitChordPartMeasure(pending, mi, staffIndex, timeBeats, timeBeatType, mode);
-                    maxIndex = Math.Max(maxIndex, mi);
+                    int emittedFrom = _items.Count;
+                    var rests = EmitChordPartMeasure(pending, mi, staffIndex, timeBeats, timeBeatType, mode);
+                    if (split is { } cut)
+                    {
+                        MoveSymbolsAfterSplit(emittedFrom, mi, cut.Offset);
+                        (measureItems[mi], measureItems[mi + 1]) = SplitSpacers(rests, cut.Offset);
+                    }
+                    else
+                        measureItems[mi] = rests;
+                    maxIndex = Math.Max(maxIndex, endMeasure);
                 }
                 if (pendingStart != BarlineType.None)
                     measureStartBar[mi] = pendingStart;
                 if (endBar != BarlineType.None)
-                    measureEndBar[mi] = endBar;
+                    measureEndBar[endMeasure] = endBar;
                 pendingStart = BarlineType.None;
                 localMeasure++;
                 pending.Clear();
@@ -497,10 +586,19 @@ internal sealed class ChordNameCollector
         var measures = ImmutableArray.CreateBuilder<Measure>(maxIndex + 1);
         for (int i = 0; i <= maxIndex; i++)
         {
-            var items = measureItems.TryGetValue(i, out var it) ? it : emptyBar;
+            // A measure that is one half of a split bar says so — whether or not this row
+            // wrote that bar: its bar lines and its length must agree with the music's
+            // (the score-wide bar-line sync merges the two by index).
+            var (isHead, isTail, cut) = SplitHalfAt(MidBarBreaks, i);
+            var barLength = new Fraction(timeBeats, timeBeatType);
+            var items = measureItems.TryGetValue(i, out var it) ? it
+                : isHead ? ImmutableArray.Create<MusicItem>(new RestItem(cut, 0, 0) { IsSpacer = true })
+                : isTail ? ImmutableArray.Create<MusicItem>(new RestItem(barLength - cut, 0, 0) { IsSpacer = true })
+                : emptyBar;
             var start = measureStartBar.GetValueOrDefault(i, BarlineType.None);
-            var end = measureEndBar.GetValueOrDefault(i, BarlineType.Single);
-            measures.Add(new Measure(items, start, end, null, 0, 0));
+            var end = isHead ? BarlineType.None : measureEndBar.GetValueOrDefault(i, BarlineType.Single);
+            measures.Add(new Measure(items, start, end, null, 0, 0,
+                hasBreakAfter: isHead, breaksMidBar: isHead, continuesBar: isTail));
         }
         // ⚠️ NO AUTOMATIC FINAL BARLINE — the same rule (and the same removal) as
         // MeasureCollector.FinalizeMeasures: `|.` is written, never inferred. A chord row
