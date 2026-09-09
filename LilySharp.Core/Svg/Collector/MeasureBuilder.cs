@@ -96,7 +96,7 @@ internal sealed class MeasureBuilder
 
     // When a 'partial N' shortens the next measure to a pickup, the meter to
     // restore once that measure closes is parked here. LILYPOND-REF:
-    // ly/music-functions-init.ly:1670-1678 — \partial sets measurePosition for one
+    // ly/music-functions-init.ly:1697-1705 — \partial sets measurePosition for one
     // measure; the normal measureLength resumes afterwards.
     private Fraction? _partialRestore;
 
@@ -268,7 +268,7 @@ internal sealed class MeasureBuilder
     /// <summary>
     /// Declares the current (in-progress) measure a pickup of <paramref name="length"/>:
     /// it auto-completes after only that much music, then the real meter resumes.
-    /// LILYPOND-REF: ly/music-functions-init.ly:1670-1678 — \partial adjusts the
+    /// LILYPOND-REF: ly/music-functions-init.ly:1697-1705 partial = context-spec-music 'Timing — \partial adjusts the
     /// Timing measurePosition so the current measure ends <paramref name="length"/>
     /// past the point of use; normal measureLength applies thereafter.
     /// </summary>

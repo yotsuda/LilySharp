@@ -1166,7 +1166,7 @@ public sealed class MusicXmlExporter
                 // Anacrusis: the measure currently being built is a pickup. Mark it
                 // implicit and number it 0, so the first FULL measure becomes 1, and
                 // arm the duration-based auto-close (no written barline required).
-                // LILYPOND-REF: ly/music-functions-init.ly:1670-1678 \partial.
+                // LILYPOND-REF: ly/music-functions-init.ly:1697-1705 partial = context-spec-music 'Timing
                 if (_currentMeasure != null && _currentMeasure.Notes.Count == 0)
                 {
                     _currentMeasure.Implicit = true;

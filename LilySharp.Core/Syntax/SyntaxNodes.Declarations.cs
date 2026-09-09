@@ -267,8 +267,8 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
 
 /// <summary>
 /// Partial (anacrusis) declaration: partial 4 — declares the following measure a
-/// pickup of the given duration. LILYPOND-REF: ly/music-functions-init.ly:1670-1678
-/// 'partial' music function (PartialSet on the Timing context).
+/// pickup of the given duration. LILYPOND-REF: ly/music-functions-init.ly:1697-1705 partial = context-spec-music 'Timing
+/// (the 'partial' music function: a PartialSet on the Timing context).
 /// </summary>
 public sealed class PartialDeclarationSyntax : SyntaxNode
 {

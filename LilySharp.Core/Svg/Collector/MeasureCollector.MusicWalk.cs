@@ -1712,7 +1712,7 @@ public sealed partial class MeasureCollector
             case PartialDeclarationSyntax partial:
                 // Anacrusis: shorten the current measure to the declared pickup
                 // length so it auto-completes early; the meter resumes after.
-                // LILYPOND-REF: ly/music-functions-init.ly:1670-1678 \partial.
+                // LILYPOND-REF: ly/music-functions-init.ly:1697-1705 partial = context-spec-music 'Timing
                 builder.SetPartial(partial.ToFraction());
                 break;
 

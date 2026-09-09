@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 52 | 観測者がゼロだと自認しているもの |
-| `OWN` | 136 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **248** | |
+| `OWN` | 138 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **250** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -30,9 +30,9 @@
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 7 |
 | `LilySharp.Core/Rendering/SharedRenderer.Marks.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 6 |
+| `LilySharp.Core/Svg/Layout/LyricSpacing.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs` | 5 |
-| `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 5 |
 
 ## APPROX — LP に対応物はあるが、形が違うと自認しているもの（60 件）
 
@@ -225,7 +225,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（136 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（138 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2100** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -361,6 +361,8 @@
 - **:176** ⚠️ LILYSHARP-OWN, what remains: (a) the LEAD-SHEET halves (keepEdgeHalves — user
 - **:193** Leading extent: LILYSHARP-OWN, keepEdgeHalves only — on a LEAD SHEET the line's
 - **:408** leading/trailing halves (LILYSHARP-OWN, a user decision — see
+- **:649** (inkL + MinItemGap over spring 0). So this quantity is LILYSHARP-OWN with no LilyPond
+- **:678** (0.19, the patch above). So this quantity is LILYSHARP-OWN with no LilyPond
 ### `LilySharp.Core/Svg/Layout/MeterGlyphRun.cs`
 - **:108** LILYSHARP-OWN, a text character LilyPond spells with markup.
 - **:143** ⚠️ LILYSHARP-OWN: the fallback branch. The only non-digit that reaches here is the
