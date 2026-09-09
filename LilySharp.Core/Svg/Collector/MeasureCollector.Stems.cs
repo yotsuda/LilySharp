@@ -93,6 +93,23 @@ public sealed partial class MeasureCollector
             _ => Fraction.Zero,
         };
 
+        static Measure WithItems(Measure measure, ImmutableArray<MusicItem> items) =>
+            new Measure(
+                items,
+                measure.StartBarline, measure.EndBarline, measure.SectionLabel,
+                measure.SourceStart, measure.SourceEnd,
+                hasBreakAfter: measure.HasBreakAfter,
+                lineBreakPermission: measure.LineBreakPermission,
+                breakPenalty: measure.BreakPenalty,
+                pageBreakPermission: measure.PageBreakPermission,
+                pageTurnPermission: measure.PageTurnPermission,
+                sectionLabelPosition: measure.SectionLabelPosition,
+                isPickup: measure.IsPickup,
+                unmetered: measure.Unmetered,
+                breaksMidBar: measure.BreaksMidBar,
+                continuesBar: measure.ContinuesBar,
+                unmeteredPosition: measure.UnmeteredPosition);
+
         var rebuilt = voices.ToBuilder();
         for (int vi = 0; vi < voices.Length; vi++)
         {
@@ -101,6 +118,9 @@ public sealed partial class MeasureCollector
 
             var measures = voices[vi].Measures.ToBuilder();
             bool changed = false;
+            // The beams whose members this pass turns round — their pure tips are baked
+            // again below, at the direction they now carry.
+            var turnedBeams = new HashSet<int>();
             for (int mi = 0; mi < measures.Count; mi++)
             {
                 if (!VoiceDefaults.IsPolyphonicAt(voices, mi))
@@ -162,34 +182,116 @@ public sealed partial class MeasureCollector
                     };
                     if (updated == null)
                         continue;
+                    switch (updated)
+                    {
+                        case NoteItem { BeamId: { } nb }: turnedBeams.Add(nb); break;
+                        case ChordItem { BeamId: { } cb }: turnedBeams.Add(cb); break;
+                    }
                     items[ii] = updated;
                     measureChanged = true;
                 }
                 if (!measureChanged)
                     continue;
 
-                measures[mi] = new Measure(
-                    items.ToImmutable(),
-                    measure.StartBarline, measure.EndBarline, measure.SectionLabel,
-                    measure.SourceStart, measure.SourceEnd,
-                    hasBreakAfter: measure.HasBreakAfter,
-                    lineBreakPermission: measure.LineBreakPermission,
-                    breakPenalty: measure.BreakPenalty,
-                    pageBreakPermission: measure.PageBreakPermission,
-                    pageTurnPermission: measure.PageTurnPermission,
-                    sectionLabelPosition: measure.SectionLabelPosition,
-                    isPickup: measure.IsPickup,
-                    unmetered: measure.Unmetered,
-                    breaksMidBar: measure.BreaksMidBar,
-                    continuesBar: measure.ContinuesBar,
-                    unmeteredPosition: measure.UnmeteredPosition);
+                measures[mi] = WithItems(measure, items.ToImmutable());
                 changed = true;
             }
+
+            if (turnedBeams.Count > 0)
+                RebakePureBeamedTips(measures, turnedBeams, forced, WithItems);
 
             if (changed)
                 rebuilt[vi] = voices[vi] with { Measures = measures.ToImmutable() };
         }
         return rebuilt.ToImmutable();
+    }
+
+    /// <summary>
+    /// Bakes <see cref="NoteItem.PureBeamedStemTip"/> again for the beams the voice props
+    /// just turned round, from the direction their stems now carry.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="ResolveBeamStemDirections"/> baked every member's tip at the direction the
+    /// beam took from its pitches; <see cref="ResolveVoiceStemDirections"/> then wrote the
+    /// voice's direction over the members and left the tip where it was, so a beam that
+    /// pitches would hang DOWN and <c>\voiceOne</c> turns UP kept a down tip under an up stem
+    /// — its whole pure band on the wrong side of the head. MEASURED (2.26.0,
+    /// test/beam-over-stem = scratch/p361/lp/bos.lys): voice 1's <c>b8 b</c> on the middle line
+    /// read a band of (−6.75 .. 0.37) staff positions, and the stem correction into the bar
+    /// line came out 0.1562 where the up band (0.37 .. 7) gives LilyPond's 0.1296 — the
+    /// +0.026 every bar of that book carried; the same band is the stem's spacing box
+    /// (ItemSkylineFactory.AddStem), drawn below the head instead of above it.
+    /// LilyPond's pure height is read off the stem's ACTUAL direction — the calc_beam branch
+    /// unites the heights of the beam's stems whose direction equals this stem's — so the tip
+    /// is the extreme of the same-direction members' unbeamed bands at THAT direction, the
+    /// bake ResolveBeamStemDirections makes, repeated with the forced direction.
+    /// LILYPOND-REF: lily/stem.cc:399-418 Stem::internal_pure_height — <c>dir =
+    ///   get_grob_direction (me)</c>; <c>get_grob_direction (normal_stems[i]) == dir</c>.
+    /// LILYPOND-REF: lily/stem.cc:449-458 Stem::cache_pure_height.
+    /// </remarks>
+    private static void RebakePureBeamedTips(
+        ImmutableArray<Measure>.Builder measures, HashSet<int> beams, bool forced,
+        Func<Measure, ImmutableArray<MusicItem>, Measure> withItems)
+    {
+        static int? BeamOf(MusicItem item) => item switch
+        {
+            NoteItem n => n.BeamId,
+            ChordItem c => c.BeamId,
+            _ => null,
+        };
+        static bool StemUpOf(MusicItem item) => item switch
+        {
+            NoteItem n => n.StemUp,
+            ChordItem c => c.StemUp,
+            _ => false,
+        };
+        // The UNBEAMED band is read with the baked tip cleared — the tip is what this pass
+        // is about to write, and StemSpacingInfo would otherwise hand it straight back.
+        static MusicItem Bare(MusicItem item) => item switch
+        {
+            NoteItem n => n with { PureBeamedStemTip = null },
+            ChordItem c => c with { PureBeamedStemTip = null },
+            _ => item,
+        };
+
+        var tips = new Dictionary<int, double>();
+        foreach (var measure in measures)
+            foreach (var item in measure.Items)
+            {
+                if (BeamOf(item) is not { } id || !beams.Contains(id) || StemUpOf(item) != forced)
+                    continue;
+                if (Layout.SpacingRules.StemSpacingInfo(Bare(item), forced) is not { } band)
+                    continue;
+                double tip = forced ? band.StemMax : band.StemMin;
+                tips[id] = tips.TryGetValue(id, out var seen)
+                    ? (forced ? Math.Max(seen, tip) : Math.Min(seen, tip))
+                    : tip;
+            }
+
+        for (int mi = 0; mi < measures.Count; mi++)
+        {
+            var measure = measures[mi];
+            ImmutableArray<MusicItem>.Builder? items = null;
+            for (int ii = 0; ii < measure.Items.Length; ii++)
+            {
+                var item = measure.Items[ii];
+                if (BeamOf(item) is not { } id || !tips.TryGetValue(id, out var tip)
+                    || StemUpOf(item) != forced)
+                    continue;
+                MusicItem? updated = item switch
+                {
+                    NoteItem n when n.PureBeamedStemTip != tip => n with { PureBeamedStemTip = tip },
+                    ChordItem c when c.PureBeamedStemTip != tip => c with { PureBeamedStemTip = tip },
+                    _ => null,
+                };
+                if (updated == null)
+                    continue;
+                items ??= measure.Items.ToBuilder();
+                items[ii] = updated;
+            }
+            if (items != null)
+                measures[mi] = withItems(measure, items.ToImmutable());
+        }
     }
 
     /// <summary>

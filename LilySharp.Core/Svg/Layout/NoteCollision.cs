@@ -376,9 +376,15 @@ internal sealed class NoteCollision
         // Detect collision types
         var (closeHalf, distantHalf, fullCollide) = DetectCollisionTypes(ups, downs, threshold, ref mergePossible);
 
-        // LILYPOND-REF: note-collision.cc:191-193
+        // LILYPOND-REF: note-collision.cc:191-193 — `distant_half_collide && (up_ball_type
+        //   <= 0 || down_ball_type <= 0)`, "like full_ for wholes and longer". up_ball_type
+        //   is a duration LOG (0 = whole, −1 = breve); Lily#'s noteValue is the denominator
+        //   (1 = whole, 0 = breve), so the whole-or-longer test is `<= 1` here. Until
+        //   2026-09-10 this read `<= 0`, so a whole-note second took the 0.4 distant-half
+        //   shift (1.5696) where LilyPond's full-collide 0.5 gives 1.962 — MEASURED, ledger
+        //   book TSU (`a1` under `b1`): LilyPond moves the up voice one whole head, 1.962.
         fullCollide = fullCollide || (closeHalf && distantHalf) ||
-                     (distantHalf && (upNoteValue <= 0 || downNoteValue <= 0));
+                     (distantHalf && (upNoteValue <= 1 || downNoteValue <= 1));
 
         // The dot rules (direction and side supports) read the SIGN of the finished
         // shift, so they are computed at the bottom of this method, after the width
@@ -640,14 +646,20 @@ internal sealed class NoteCollision
         if (ups[0] < downs[0] || ups.Last() < downs.Last())
             return false;
 
-        // Cannot merge whole notes or longer
-        if (upNoteValue <= 0 || downNoteValue <= 0)
+        // LILYPOND-REF: lily/note-collision.cc:102-104 check_meshing_chords — up_ball_type <= 0,
+        //   "Do not merge whole notes (or longer)": a duration LOG, i.e. noteValue <= 1 here
+        //   (1 = whole, 0 = breve). `<= 0` until 2026-09-10 let two whole notes merge.
+        if (upNoteValue <= 1 || downNoteValue <= 1)
             return false;
 
-        // LILYPOND-REF: lily/note-collision.cc:116-126
-        // Whole+half cannot merge (both open noteheads, only stem distinguishes)
-        if ((upNoteValue == 1 && downNoteValue == 2) ||
-            (upNoteValue == 2 && downNoteValue == 1))
+        // LILYPOND-REF: lily/note-collision.cc:116-126 check_meshing_chords — Stem::duration_log
+        //   1 (half) against 2 (quarter): "Should never merge quarter and half notes, as this
+        //   would make them indistinguishable", i.e. noteValue 2 against 4. Until 2026-09-10 this was
+        //   spelt (1, 2) — whole against half — which the whole-note rule above already
+        //   refuses, so the half/quarter pair it is about went unrefused (reachable only
+        //   under merge-differently-headed).
+        if ((upNoteValue == 2 && downNoteValue == 4) ||
+            (upNoteValue == 4 && downNoteValue == 2))
             return false;
 
         // Check dot compatibility

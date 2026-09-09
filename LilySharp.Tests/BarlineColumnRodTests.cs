@@ -75,8 +75,7 @@ public sealed class BarlineColumnRodTests
         var springs = new MeasureLayouter().CreateTimingSprings(
             LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, measures[0], MultiStaffLayouter.CollectAllTimingsForMeasure(score, 0),
             SpacingRules.CalculateCommonShortestDuration(score),
-            MultiStaffLayouter.CollectAllMeasuresAtIndex(score, 0), measures[1],
-            MultiStaffLayouter.CollectStaffIndicesAtIndex(score, 0));
+            MultiStaffLayouter.CollectAllMeasuresAtIndex(score, 0), measures[1]);
         return (new ImmutableSprings(springs), measures[0]);
     }
 

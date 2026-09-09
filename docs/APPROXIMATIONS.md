@@ -86,19 +86,19 @@
 - **:460** ⚠️ NOT PORTED — the bound extent: the barline's ink width is taken
 - **:476** ⚠️ NOT PORTED — the boundary-column regime: the left bound is the
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:2519** ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
-- **:2571** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
-- **:3346** same approximation the scripts' own remark records for the movers; the books that
+- **:2489** ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
+- **:2541** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
+- **:3316** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:1043** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
 - **:1733** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:180** non-default merge-differently-* switches. dot_wipe_head is NOT ported (no channel).
-- **:558** ⚠️ NOT PORTED — dot_wipe_head: LilyPond also kills the down head's DOT on
-- **:753** see . ⚠️ STILL NOT PORTED: :578-586 (an up
-- **:980** ⚠️ NOT PORTED: stem/flag boxes and rest supports (see DotColumnSupportMinX);
-- **:1078** ⚠️ NOT PORTED: the FLAG boxes of the support heads' stems (dot-column.cc:135-141
-- **:1172** whole note reads [0, 0.375] — is not ported: Lily# has no producer for a
+- **:564** ⚠️ NOT PORTED — dot_wipe_head: LilyPond also kills the down head's DOT on
+- **:765** see . ⚠️ STILL NOT PORTED: :578-586 (an up
+- **:992** ⚠️ NOT PORTED: stem/flag boxes and rest supports (see DotColumnSupportMinX);
+- **:1090** ⚠️ NOT PORTED: the FLAG boxes of the support heads' stems (dot-column.cc:135-141
+- **:1184** whole note reads [0, 0.375] — is not ported: Lily# has no producer for a
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
 - **:493** ⚠️⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED OTTAVA IS **NOT PORTED HERE**, deliberately.
 ### `LilySharp.Core/Svg/Layout/PartCombineAnalyzer.cs`
@@ -191,12 +191,12 @@
 ### `LilySharp.Core/Svg/Layout/LyricSpacing.cs`
 - **:152** is measured-exact there, and no ledger point prices replacing it.
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:4193** company on a row whose symbols sit closer than its spec's 1.0. No point measures
+- **:4163** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:729** does not spell a per-type padding — no point observes a segno/coda over a
 - **:1255** pinned there), no ledger point.
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
-- **:454** no observer distinguishes the two until a merge-differently-* producer lands.
+- **:460** no observer distinguishes the two until a merge-differently-* producer lands.
 ### `LilySharp.Core/Svg/Layout/NoteColumnLayout.cs`
 - **:106** and no point measures it yet. Scaling it here would be the half of a port that looks
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
@@ -371,8 +371,8 @@
 - **:323** ⚠️ LILYSHARP-OWN, AND IT HAS ONE HOME ON PURPOSE. LilyPond has no band: a Lyrics or
 - **:424** ⚠️ LILYSHARP-OWN, AND IT IS NOW THE LAST FLAT VERSE STEP LEFT. Where the row is an
 - **:1015** LILYSHARP-OWN (MusicMarkEngraver.StafflessLabelLineStartReach has the measurement).
-- **:1424** LILYSHARP-OWN, the lead-sheet grid's line-start bar (user request
-- **:1967** timing-placed chord symbol and a beat slash do. LILYSHARP-OWN: the filler-slot keep.
+- **:1423** LILYSHARP-OWN, the lead-sheet grid's line-start bar (user request
+- **:1966** timing-placed chord symbol and a beat slash do. LILYSHARP-OWN: the filler-slot keep.
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:140** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **:166** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN

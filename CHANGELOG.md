@@ -166,6 +166,42 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A whole-note second is a full collision, and a shifted head refines the closing spring
+  too.** LilyPond's `check_meshing_chords` treats a distant half-collide of wholes (or longer)
+  as a full collide — the 0.5 shift, the UP voice moving one whole head (1.962) — where Lily#
+  tested "whole or longer" against its own note value with LilyPond's duration-log threshold
+  and took the 0.4 distant-half shift (1.5696) instead; the same slip spelt LilyPond's "never
+  merge quarter and half" as whole-against-half, so half and quarter heads could merge under
+  `merge-differently-headed` (the regression book says only 8th or shorter merge with an open
+  head). And the wish's head-width refinement of the last column into the bar line now reads
+  the shifted head as the column pairs do: two voices of half-note seconds (`e2 f` over
+  `d2 e`) close their bar at LilyPond's 11.086 (was 10.40), and the ledger book of whole-note
+  seconds under a tuplet at 23.44 against 23.443. Measured on 2.26.0 (scratch/p361/lp/coll,
+  tsu). Eight of 924 books move (seven tracked, two snapshots re-based).
+- **A column pair two voices share is held open by its rod alone, a skip is no spacing wish,
+  and a beam a voice turns round carries its pure stem on the stem's side.** Three findings on
+  one bar — `test/beam-over-stem` bar 2, `b8 b s2.` under `s16 d''4 s8. s2`, measured on
+  LilyPond 2.26.0 with its NoteSpacing wishes and column skylines dumped — which stood 21.26
+  wide against LilyPond's 20.928. LilyPond files a spacing wish per VOICE, from the rhythmic
+  grobs that voice engraved, so the pair from voice one's `b8` into voice two's `d''4` a
+  sixteenth later is spanned by no wish: it takes the bare duration ideal (1.2) with minimum 0
+  and is held open only by the column rod, 1.6042. Lily# treated two voices of one staff as one
+  wish (the skyline minimum plus merge_springs' 0.3 headroom: 1.8042), and let voice two's skip
+  count as a wish endpoint besides (the head-width refinement: 1.3042 where LilyPond's next gap
+  is the bare 1.2). And voice one's beam — down by its pitches, turned up by the voice — kept the
+  down beam's pure tip under its up stems, so the stem's spacing band lay below the head and
+  its correction into the bar line read 0.1562 for LilyPond's 0.1296, the +0.026 every bar of
+  that book carried. The bar reads 20.93 / 20.63 now against 20.928 / 20.628. The dotted-half
+  cross-voice book (`test/dot-cross-voice-spacing`) is priced by the same rod: 3.18 against
+  LilyPond's 3.33, the 0.15 being the head-to-dot gap (Lily#'s 0.3 against LilyPond's one dot
+  width, 0.45 — recorded at `EngravingDefaults.DotGap`, not moved); the Dots grob's own
+  `extra-spacing-width` (0 . 0.2) enters its spacing box. And the head-width refinement of a
+  wish reads the head where the column FRAME has it — collision shift included — averaged over
+  the pair's wishes, as LilyPond's `left_head_end` is the head's extent in the column (a bar of
+  `a1` under `b1` a second apart opens 7.042 in LilyPond, the mean of one shifted and one
+  unshifted whole head; shift-blind it opened 6.058). Seventy of 924 books move: 29 by the
+  wish, skip and beam-tip readings alone, 41 when the dot's box reaches its 0.2, the rest by the
+  shifted-head refinement; seventeen snapshots re-base.
 - **A note column's spacing skyline is padded as LilyPond pads it, and a head outside the
   staff reaches to its first ledger line.** LilyPond thickens every note column's horizontal
   skyline by 0.15 staff spaces when it builds it (`NoteColumn.skyline-vertical-padding`,

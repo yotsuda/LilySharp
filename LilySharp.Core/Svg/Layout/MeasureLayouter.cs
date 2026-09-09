@@ -182,7 +182,6 @@ internal sealed class MeasureLayouter
         double? baseShortestDuration = null,
         IReadOnlyList<Measure>? allMeasures = null,
         Measure? nextMeasure = null,
-        IReadOnlyList<int>? staffOfMeasures = null,
         BarlineType? leftBound = null)
     {
         if (timings.Count == 0)
@@ -258,7 +257,7 @@ internal sealed class MeasureLayouter
         // Springs between adjacent timing columns (see CreateInterColumnSpring).
         for (int i = 1; i < timings.Count; i++)
             springs.Add(CreateInterColumnSpring(fonts, i, timings, timingToItems, measuresToScan,
-                baseShortestDuration, looseRods, staffOfMeasures));
+                baseShortestDuration, looseRods));
 
         // End spring: last column → barline (see CreateLastToBarlineSpring).
         springs.Add(CreateLastToBarlineSpring(fonts, timings, timingToItems, measuresToScan, totalDuration,
@@ -321,6 +320,21 @@ internal sealed class MeasureLayouter
     /// change item here measured the gap from a glyph that is not in either column being
     /// spaced — and through the change-item branch of the extent helpers, which was still on
     /// the centre basis.
+    /// <para>
+    /// ⚠️ A SPACER IS NOT AN ENDPOINT EITHER. A skip engraves no grob, so LilyPond's
+    /// Note_spacing_engraver — which files a wish from every rhythmic grob it acknowledges —
+    /// files nothing for it: a voice that reads <c>s16 d''4</c> has no wish spanning the
+    /// column its skip stands on and the column its note stands on. Returning the spacer here
+    /// made that pair a "wish" (anyWish), so it took the wish pipeline — the skyline minimum,
+    /// merge_springs' +0.3 headroom, the left-head refinement — where LilyPond gives the pair
+    /// the wishless spring (min 0, the bare duration ideal) and a rod. MEASURED (2.26.0,
+    /// scratch/p361/lp/bos.lys = test/beam-over-stem bar 2, the NoteSpacing left-/right-items
+    /// dumped): voice 1's wish at the b8 names ONLY its own next column, and the d''4's names
+    /// only the bar lines; the b8→d''4 gap is 1.6042 = the rod (1.3042 + 0.1 + 0.1 + 0.1), not
+    /// the 1.8042 the headroom gave, and d''4→b8 is the bare 1.2, not the refined 1.3042.
+    /// LILYPOND-REF: lily/note-spacing-engraver.cc:81-91 acknowledge_note_column /
+    ///   acknowledge_rhythmic_grob — a wish's items are the grobs the voice engraved.
+    /// </para>
     /// </remarks>
     private static MusicItem? ItemStartingAt(Measure m, Fraction t)
     {
@@ -333,7 +347,7 @@ internal sealed class MeasureLayouter
             // the main one. Skipped for the same reason a mid-measure change is: neither is
             // the musical column being spaced.
             if (acc == t && !item.GraceTime && !SpacingRules.IsMidMeasureChangeColumn(item))
-                return item;
+                return item is RestItem { IsSpacer: true } ? null : item;
             if (acc > t) break;
             acc += item.Duration;
         }
@@ -403,8 +417,7 @@ internal sealed class MeasureLayouter
         int i, List<Fraction> timings,
         Dictionary<Fraction, List<MusicItem>> timingToItems,
         IReadOnlyList<Measure> measuresToScan, double? baseShortestDuration,
-        List<(int Left, int Right, double Distance)> looseRods,
-        IReadOnlyList<int>? staffOfMeasures)
+        List<(int Left, int Right, double Distance)> looseRods)
     {
         // This spring connects timings[i-1] → timings[i]; its duration is
         // THAT segment. (A previous off-by-one used the FOLLOWING segment's
@@ -493,30 +506,18 @@ internal sealed class MeasureLayouter
             maxRod = Math.Max(maxRod, SpacingRules.TremoloPairRod(prev, next));
         }
 
-        // The wish map is per STAFF, not per voice: two voices of ONE staff occupying
-        // the two columns carry a NoteSpacing wish between them (the engraver keys its
-        // last-spacing map by the voice's parent Staff — see
-        // MultiStaffLayouter.CollectStaffIndicesAtIndex), so such a pair takes the wish
-        // pipeline, not the hemiola branch. Their skyline minimum and separation rod
-        // still come only from same-voice pairs above; the cross-voice floors live in
-        // ApplyCrossVoiceColumnSpacing, which prices them WITH the renderer's collision
-        // shifts — a shift-blind rod here could overreach it.
-        if (!anyWish && staffOfMeasures != null
-            && staffOfMeasures.Count == measuresToScan.Count)
-        {
-            var prevStaves = new HashSet<int>();
-            for (int m = 0; m < measuresToScan.Count; m++)
-                if (ItemStartingAt(measuresToScan[m], timings[i - 1]) != null)
-                    prevStaves.Add(staffOfMeasures[m]);
-            if (prevStaves.Count > 0)
-                for (int m = 0; m < measuresToScan.Count; m++)
-                    if (prevStaves.Contains(staffOfMeasures[m])
-                        && ItemStartingAt(measuresToScan[m], timings[i]) != null)
-                    {
-                        anyWish = true;
-                        break;
-                    }
-        }
+        // ⚠️ THE WISH CHAIN IS PER VOICE, NOT PER STAFF. Until 2026-09-10 a branch here made
+        // any pair whose two columns were occupied by two voices of ONE staff a "wish",
+        // reasoning that Note_spacing_engraver keys its last-spacing map by the voice's parent
+        // Staff. The map is a member of each Voice's own engraver instance (keyed by parent
+        // only so a \change Staff can find its way back), so voice 1's wish never names a
+        // column only voice 2 stands on. MEASURED (2.26.0, scratch/p361/lp/bos.lys =
+        // test/beam-over-stem bar 2, NoteSpacing left-/right-items dumped): the b8's wish
+        // names its own b8 at 9/8 and nothing else, and the pair into voice 2's d''4 at 17/16
+        // is priced wishless — the bare 1.2 ideal, min 0, and the column rod. Such a pair is
+        // floored by its ROD alone, in ApplyCrossVoiceColumnSpacing.
+        // LILYPOND-REF: lily/note-spacing-engraver.cc:31-37 — last_spacings_ and
+        //   last_spacing_ are per-engraver members; :109-128 stop_translation_timestep.
 
         // Refine the duration-based ideal to the LEFT column's actual head width
         // (LilyPond's note-spacing.cc:77), BEFORE the stem correction — but ONLY when the
@@ -526,17 +527,16 @@ internal sealed class MeasureLayouter
         // anyway held the two cross-staff gaps of spacing-loose-polyphony.ly at 1.20/1.70
         // where LilyPond's bare ideals are 0.80/1.60. The cue check stays on top of this:
         // see SpacingRules.CrossesVoiceBoundary (spacing-spanner.cc:352-358).
-        if (anyWish && prevItems != null)
+        if (wishLefts != null)
             spring = SpacingRules.ApplyLeftHeadWidth(
                 spring,
-                // Per-voice wish lefts when the per-voice scan found the wishes;
-                // the staff-level branch above can set anyWish with none collected
-                // (a same-staff cross-voice pair) — that regime is UNMEASURED and
-                // keeps the pre-port aggregate reading.
-                wishLefts ?? (IEnumerable<MusicItem>)prevItems, nextItems,
+                // One left item per WISH — per voice occupying both columns with a
+                // rhythmic grob at each (ItemStartingAt); anyWish and wishLefts are the
+                // same fact, so a pair no voice spans keeps its raw duration ideal.
+                wishLefts, nextItems,
                 // Several wishes merge as LilyPond merges them — by AVERAGING the
                 // ideals (merge_springs) — not by taking the widest head.
-                mergeWishAverage: wishLefts != null);
+                mergeWishAverage: true);
 
         // A mid-measure clef/key/time change (zero duration, so it shares the NEXT
         // column's timing) gets its own non-musical column in LilyPond, and the gaps
@@ -605,10 +605,10 @@ internal sealed class MeasureLayouter
         // pairs price bare at 0.80/1.60 and the loose-column rod's blocking force
         // stretches them to LilyPond's exact 1.25/2.50.
         // ⚠️ Lily#'s no-wish set is still wider than LilyPond's where no staff frame
-        // exists at all (a staffless chords/lyrics row), and a SAME-staff cross-voice
-        // pair — where LilyPond's per-staff neighbor map does carry a wish — reads as
-        // no-wish here because this scan is per voice-measure; both named below the
-        // loose-column walk with the same disclosure.
+        // exists at all (a staffless chords/lyrics row). A SAME-staff cross-voice pair
+        // is no-wish on BOTH sides — LilyPond's wish chain is per voice (see the note
+        // above the left-head refinement) — and its floor is the column rod alone,
+        // raised in ApplyCrossVoiceColumnSpacing.
         // Both strengths stay where the duration spring put them (the compressibility
         // stays fraction * (duration_space - increment) and does not become
         // ideal - skyline). Measured against LilyPond's own compressed line: 1.698045 for

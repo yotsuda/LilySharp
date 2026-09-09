@@ -104,7 +104,6 @@ public class SkipColumnSpacingTests
         var springs = new MeasureLayouter().CreateTimingSprings(
             LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, timings, GlobalShortest, allMeasures,
             measureIndex + 1 < measures.Length ? measures[measureIndex + 1] : null,
-            MultiStaffLayouter.CollectStaffIndicesAtIndex(score, measureIndex),
             SpacingRules.RunLeftBoundBarline(measures, measureIndex));
         return MultiStaffLayouter.ApplySharedColumnReservations(
             score, measureIndex, springs, primary, timings, allMeasures, GlobalShortest);

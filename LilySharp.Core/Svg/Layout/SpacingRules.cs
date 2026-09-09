@@ -921,6 +921,21 @@ internal static partial class SpacingRules
     internal const double AccidentalExtraSpacingWidthLeft = 0.2;
 
     /// <summary>
+    /// The RIGHT side of the Dots grob's <c>extra-spacing-width</c>: an augmentation dot
+    /// reserves 0.2 to its right and nothing to its left, where every undeclared grob takes
+    /// ±0.1.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, scratch/p361/lp/dcv.lys = test/dot-cross-voice-spacing, the column
+    /// skylines dumped): the dotted cis's dot has X-extent (2.4795 . 2.9295) in its column and
+    /// its box in the column's right skyline reaches 3.1295, i.e. 0.2 past the ink; the rod to
+    /// the next column is 3.3295 = 0.1 + 3.1295 + 0.1, the first eighth gap of that book.
+    /// LILYPOND-REF: scm/define-grobs.scm:1278 Dots
+    ///   <c>(extra-spacing-width . (0.0 . 0.2))</c>.
+    /// </remarks>
+    internal const double DotsExtraSpacingWidthRight = 0.2;
+
+    /// <summary>
     /// The headroom <c>merge_springs</c> leaves above a spring's minimum distance.
     /// </summary>
     /// <remarks>

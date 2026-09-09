@@ -658,7 +658,11 @@ public class PercentRepeatTests
         slashes.Sort((p, q) => p.X0.CompareTo(q.X0));
         // wid = 2.0/1.7 = 1.17647, height = wid·1.7 = 2.0,
         // x_width = hypot (0.48, 0.48/1.7) = 0.556887.
-        Assert.Equal(1.1765, slashes[0].W, 2);
+        // ONE decimal on the width too: it is the difference of two X coordinates the SVG
+        // prints to two decimals, so it reads 1.17 or 1.18 depending on where the bar's
+        // spacing happens to put the slash (session 360 moved it by 0.1 and flipped it).
+        // The percent family's wid is 2.0/1.0 = 2.0, a whole decimal away.
+        Assert.Equal(1.1765, slashes[0].W, 1);
         Assert.Equal(2.0, slashes[0].Height, 2);
         // ONE decimal on the terms built from two rounded coordinates — the SVG prints X to
         // two, so a difference carries up to 0.01. It still separates what matters: the

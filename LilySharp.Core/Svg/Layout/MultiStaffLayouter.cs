@@ -1286,7 +1286,6 @@ internal sealed class MultiStaffLayouter
                 ? primaryVoice.Measures[i + 1] : null;
             var springs = _measureLayouter.CreateTimingSprings(
                 score.TextMetrics, primaryMeasure, allTimings, baseShortestDuration, allMeasures, nextMeasure,
-                CollectStaffIndicesAtIndex(score, i),
                 SpacingRules.RunLeftBoundBarline(primaryVoice.Measures, i));
 
             // An empty placeholder measure (`| |`) has no timing springs at all —
@@ -2104,35 +2103,6 @@ internal sealed class MultiStaffLayouter
         }
 
         return measures;
-    }
-
-    /// <summary>
-    /// Which STAFF each entry of <see cref="CollectAllMeasuresAtIndex"/> belongs to, as a
-    /// parallel list of global staff ordinals — the two walks are the same loop, so the
-    /// indices line up. The spacing-wish scan needs this because LilyPond's neighbor map is
-    /// per staff, not per voice: two voices of ONE staff occupying adjacent columns carry a
-    /// NoteSpacing wish between them (Note_spacing_engraver keys its last-spacing map by the
-    /// voice's parent context), where two different staves do not.
-    /// LILYPOND-REF: lily/note-spacing-engraver.cc:109-128 stop_translation_timestep —
-    ///   <c>last_spacings_[parent]</c>, the parent being the Staff.
-    /// </summary>
-    internal static List<int> CollectStaffIndicesAtIndex(MultiStaffScore score, int measureIndex)
-    {
-        var staffIds = new List<int>();
-        int staffId = 0;
-        foreach (var staffGroup in score.StaffGroups)
-        {
-            foreach (var staff in staffGroup.Staves)
-            {
-                foreach (var voice in staff.Voices)
-                {
-                    if (measureIndex < voice.Measures.Length)
-                        staffIds.Add(staffId);
-                }
-                staffId++;
-            }
-        }
-        return staffIds;
     }
 
     // --- Skyline-based staff spacing ---

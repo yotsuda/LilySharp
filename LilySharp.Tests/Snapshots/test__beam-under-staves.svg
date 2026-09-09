@@ -9,12 +9,12 @@
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <text x="-0.30" y="24.01" font-size="4.00" font-family="Emmentaler-Brace" text-anchor="end"></text>
   <line x1="0.00" y1="16.96" x2="0.00" y2="31.06" stroke="#000000" stroke-width="0.160"/>
-  <rect x="28.59" y="20.96" width="0.19" height="6.10"/>
-  <line x1="0.00" y1="16.96" x2="28.78" y2="16.96" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.96" x2="28.78" y2="17.96" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="18.96" x2="28.78" y2="18.96" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="19.96" x2="28.78" y2="19.96" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="20.96" x2="28.78" y2="20.96" stroke="#000000" stroke-width="0.100"/>
+  <rect x="28.74" y="20.96" width="0.19" height="6.10"/>
+  <line x1="0.00" y1="16.96" x2="28.93" y2="16.96" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.96" x2="28.93" y2="17.96" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="18.96" x2="28.93" y2="18.96" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="19.96" x2="28.93" y2="19.96" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="20.96" x2="28.93" y2="20.96" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="19.96" font-size="4.00" data-pos="1387"></text>
   <text class="music" x="5.00" y="18.96" font-size="4.00" data-pos="1306"></text>
   <text class="music" x="8.70" y="18.96" font-size="4.00" data-pos="1445"></text>
@@ -42,16 +42,16 @@
   <text class="music" x="21.22" y="23.46" font-size="4.00" data-pos="1468"></text>
   <text class="music" x="23.73" y="23.46" font-size="4.00" data-pos="1471"></text>
   <text class="music" x="26.23" y="23.46" font-size="4.00" data-pos="1474"></text>
-  <rect x="28.59" y="16.96" width="0.19" height="4.00" data-pos="1479"/>
-  <line x1="0.00" y1="27.06" x2="28.78" y2="27.06" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="28.06" x2="28.78" y2="28.06" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="29.06" x2="28.78" y2="29.06" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="30.06" x2="28.78" y2="30.06" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="31.06" x2="28.78" y2="31.06" stroke="#000000" stroke-width="0.100"/>
+  <rect x="28.74" y="16.96" width="0.19" height="4.00" data-pos="1479"/>
+  <line x1="0.00" y1="27.06" x2="28.93" y2="27.06" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="28.06" x2="28.93" y2="28.06" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="29.06" x2="28.93" y2="29.06" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="30.06" x2="28.93" y2="30.06" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="31.06" x2="28.93" y2="31.06" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="28.06" font-size="4.00" data-pos="1411"></text>
   <text class="music" x="5.00" y="29.06" font-size="4.00" data-pos="1306"></text>
   <text class="music" x="8.70" y="29.06" font-size="4.00" data-pos="1490"></text>
-  <rect x="28.59" y="27.06" width="0.19" height="4.00" data-pos="1494"/>
+  <rect x="28.74" y="27.06" width="0.19" height="4.00" data-pos="1494"/>
   <polygon points="8.70,25.53 16.35,25.53 16.35,26.01 8.70,26.01"/>
   <line x1="8.77" y1="23.61" x2="8.77" y2="25.77" stroke="#000000" stroke-width="0.130"/>
   <line x1="11.27" y1="23.61" x2="11.27" y2="25.77" stroke="#000000" stroke-width="0.130"/>

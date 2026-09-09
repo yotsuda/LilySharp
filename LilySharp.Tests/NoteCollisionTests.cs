@@ -944,11 +944,13 @@ public class NoteCollisionTests
     // --- LILYPOND-REF half+eighth merge formula tests ---
 
     [Fact]
-    public void DifferentlyHeadedMerge_HalfAndQuarter_KeepsOpenNotehead()
+    public void DifferentlyHeadedMerge_HalfAndEighth_KeepsOpenNotehead()
     {
-        // LILYPOND-REF: lily/note-collision.cc:252-261
-        // When merge-differently-headed is true, half+quarter at same pitch merge.
-        // The open (half) notehead is kept visible.
+        // LILYPOND-REF: lily/note-collision.cc:111-114 (merge-differently-headed admits
+        //   different ball types), :291-299 (the shorter head is wiped).
+        // input/regression/collision-merge-differently-headed.ly: "open note heads may be
+        // merged with black noteheads, but only if the black note heads are from 8th or
+        // shorter notes" — so half + EIGHTH merges and the open (half) head stays visible.
         var collision = new NoteCollision(new NoteCollisionParameters
         {
             MergeDifferentlyHeaded = true
@@ -957,19 +959,25 @@ public class NoteCollisionTests
         var downs = new[] { 4 };
 
         var result = collision.AnalyzeCollision(ups, downs,
-            upNoteValue: 2, downNoteValue: 4, upDots: 0, downDots: 0);
+            upNoteValue: 2, downNoteValue: 8, upDots: 0, downDots: 0);
 
         Assert.Equal(CollisionType.Merge, result.Type);
         Assert.True(result.ShouldMerge);
-        // Up-stem is half (open) → keep visible; Down-stem is quarter (filled) → hide
+        // Up-stem is half (open) → keep visible; Down-stem is eighth (filled) → hide
         Assert.False(result.UpHeadTransparent, "Open notehead (half) should be kept visible");
-        Assert.True(result.DownHeadTransparent, "Filled notehead (quarter) should be hidden");
+        Assert.True(result.DownHeadTransparent, "Filled notehead (eighth) should be hidden");
     }
 
-    [Fact]
-    public void DifferentlyHeadedMerge_QuarterUp_HalfDown_HidesQuarter()
+    [Theory]
+    [InlineData(2, 4)]
+    [InlineData(4, 2)]
+    public void DifferentlyHeadedMerge_HalfAndQuarter_NeverMerge(int upNoteValue, int downNoteValue)
     {
-        // When up=quarter, down=half at same pitch, hide the filled (quarter) head
+        // LILYPOND-REF: lily/note-collision.cc:116-126 — "Should never merge quarter and half
+        //   notes, as this would make them indistinguishable": stem duration_log 1 against 2,
+        //   refused even under merge-differently-headed. Until 2026-09-10 this pair was spelt
+        //   on Lily#'s denominator as (1, 2) — whole against half — so it MERGED, and these two
+        //   tests asserted the merge; the regression book's texidoc (above) says otherwise.
         var collision = new NoteCollision(new NoteCollisionParameters
         {
             MergeDifferentlyHeaded = true
@@ -978,13 +986,10 @@ public class NoteCollisionTests
         var downs = new[] { 4 };
 
         var result = collision.AnalyzeCollision(ups, downs,
-            upNoteValue: 4, downNoteValue: 2, upDots: 0, downDots: 0);
+            upNoteValue, downNoteValue, upDots: 0, downDots: 0);
 
-        Assert.Equal(CollisionType.Merge, result.Type);
-        Assert.True(result.ShouldMerge);
-        // Up-stem is quarter (filled) → hide; Down-stem is half (open) → keep
-        Assert.True(result.UpHeadTransparent, "Filled notehead (quarter) should be hidden");
-        Assert.False(result.DownHeadTransparent, "Open notehead (half) should be kept visible");
+        Assert.NotEqual(CollisionType.Merge, result.Type);
+        Assert.False(result.ShouldMerge);
     }
 
     [Fact]

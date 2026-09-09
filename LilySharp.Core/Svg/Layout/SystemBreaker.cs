@@ -222,7 +222,6 @@ internal sealed class SystemBreaker
             var springs = layouter.CreateTimingSprings(
                 score.TextMetrics, primaryMeasure, allTimings, baseShortestDuration, allMeasures,
                 i + 1 < measures.Length ? measures[i + 1] : null,
-                MultiStaffLayouter.CollectStaffIndicesAtIndex(score, i),
                 SpacingRules.RunLeftBoundBarline(measures, i));
 
             // The shared-column reservations (lyrics, chords, tab digits, wide

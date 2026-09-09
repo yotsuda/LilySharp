@@ -735,13 +735,19 @@ public class SpacingInvariantTests
     /// eighth column, which belongs to voice two alone — no single voice occupies both
     /// columns, so the per-voice rod loop cannot see the pair and the dot used to print
     /// straight through the d's head (same Y row, overlapping X). The floor is the
-    /// staff-frame skyline distance with the collision shifts applied
-    /// (SpacingRules.ApplyCrossVoiceColumnSpacing), and merge_springs' headroom rides
-    /// on top of the raised minimum.
+    /// column ROD over the staff-frame skylines with the collision shifts applied
+    /// (SpacingRules.ApplyCrossVoiceColumnSpacing) — and ONLY the rod: no voice's wish
+    /// spans a cross-voice pair, so neither the wish's skyline minimum nor merge_springs'
+    /// +0.3 headroom enters, and the ideal stays the eighth's own.
     /// LILYPOND-REF: lily/separation-item.cc:120-190 (boxes carry the shifts);
-    ///   lily/note-spacing.cc:78-83 (the spring minimum); lily/spring.cc:122 (min + 0.3).
-    /// MEASURED (2.26.0 twin): the first eighth gap is 3.33 against the measure's plain
-    /// 2.50, and removing the dot (cis2) collapses it to 2.51 — the push is the dot's.
+    ///   lily/spacing-spanner.cc:228-297 set_column_rods (the rod over the whole columns);
+    ///   lily/spacing-interface.cc:36-97 (a wish's skylines are its own voice's columns).
+    /// MEASURED (2.26.0 twin, scratch/p361/lp/dcv.lys): the first eighth gap is 3.3295 =
+    /// 0.1 + (0.6521 + 1.3774 + 0.45 + 0.45 + 0.2) + 0.1 — the rod over the shifted half
+    /// head, LilyPond's one-dot-width gap, the dot and its extra-spacing-width — against
+    /// the measure's plain 2.50, and removing the dot (cis2) collapses it to 2.51. Lily#'s
+    /// head-to-dot gap is EngravingDefaults.DotGap (0.3, recorded there against the 0.45),
+    /// so its rod is that 0.15 short of LilyPond's and the test says so.
     /// </summary>
     [Fact]
     public void CrossVoiceDotReach_FloorsTheNextColumnsSpring()
@@ -753,19 +759,25 @@ public class SpacingInvariantTests
             score, 0, bare, primary, timings, allMeasures);
 
         // Spring 1 is the t=0 → t=1/8 pair the dot crosses. The floor must BITE — this
-        // is not two equal numbers agreeing — and the ideal must carry the headroom
-        // above the raised minimum, so the drawn gap clears the dot by LilyPond's 0.3.
+        // is not two equal numbers agreeing.
         Assert.True(reserved[1].MinDistance > bare[1].MinDistance,
             $"the dot's cross-voice reach must floor the spring: "
             + $"bare={bare[1].MinDistance:F3}, reserved={reserved[1].MinDistance:F3}");
-        // Both of LilyPond's constraints, in their order: the ideal is the SKYLINE
-        // distance + 0.3 (merge_springs' headroom) and the final minimum is the ROD,
-        // the same distance + 0.1 — so a bound pair always shows ideal − min = 0.2.
-        Assert.True(reserved[1].IdealDistance > bare[1].IdealDistance,
-            $"the headroom must ride the raised minimum into the ideal: "
-            + $"bare={bare[1].IdealDistance:F3}, reserved={reserved[1].IdealDistance:F3}");
-        Assert.Equal(SpacingRules.SpringHeadroom - SpacingRules.SeparationRodPadding,
-            reserved[1].IdealDistance - reserved[1].MinDistance, precision: 9);
+        // The ideal is untouched: a cross-voice pair carries no wish, so no headroom.
+        Assert.Equal(bare[1].IdealDistance, reserved[1].IdealDistance, precision: 9);
+        // The minimum is the ROD: shift + half head + dot gap + dot + Dots' esw 0.2, then
+        // the d's own −0.1 reach and the spanner's 0.1 padding.
+        double dotWidth = GlyphMetrics.AugmentationDot.Width;
+        double rod = 0.5 * GlyphMetrics.GetNoteheadBBox(8).Width
+                     + GlyphMetrics.GetNoteheadBBox(2).Right
+                     + EngravingDefaults.DotGap + dotWidth + SpacingRules.DotsExtraSpacingWidthRight
+                     + SpacingRules.DefaultExtraSpacingWidth + SpacingRules.SeparationRodPadding;
+        Assert.Equal(rod, reserved[1].MinDistance, precision: 6);
+        // …which is LilyPond's 3.3295 less the DotGap shortfall, and nothing else.
+        Assert.Equal(3.3295, reserved[1].MinDistance + (dotWidth - EngravingDefaults.DotGap), precision: 3);
+        // The drawn gap is the rod, above the ideal: LilyPond holds a wishless pair at
+        // its rod through the blocking force.
+        Assert.True(reserved[1].MinDistance > reserved[1].IdealDistance);
 
         // Control: the same measure's later eighth-to-eighth pairs carry no cross-voice
         // reach, so the floor leaves them exactly as the per-voice loop priced them.

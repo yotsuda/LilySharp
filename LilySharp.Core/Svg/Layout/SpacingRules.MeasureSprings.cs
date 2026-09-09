@@ -870,18 +870,35 @@ internal static partial class SpacingRules
     ///   boxes; Lily# applies shifts at render time, so this pass asks the same
     ///   computation the renderer's offsets come from
     ///   (<see cref="ElementCoordinator.ComputeVoiceOffsets"/>).
-    /// LILYPOND-REF: lily/note-spacing.cc:78-83 — the spring minimum is the skyline
-    ///   distance over those boxes; lily/spring.cc:122 merge_springs then floors the
-    ///   ideal at min + 0.3, which is why the headroom is re-applied after the raise.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods — the ROD over every
+    ///   adjacent pair is measured between the paper columns' whole skylines, every voice's
+    ///   boxes in them, plus the spanner's padding (lily/separation-item.cc:47-68).
+    /// LILYPOND-REF: lily/spacing-interface.cc:36-97 Spacing_interface::skylines — a WISH's
+    ///   skylines are the Separation_items among its own left-/right-items, i.e. the note
+    ///   columns of the voice that filed it; lily/note-spacing.cc:78-83 makes that the spring
+    ///   minimum and lily/spring.cc:122 merge_springs floors the ideal at min + 0.3.
     /// <para>
-    /// MEASURED (2.26.0, the book above): with the dot, LilyPond's first eighth gap is
-    /// 3.33 against the measure's plain 2.50; remove the dot (<c>cis2</c> for
-    /// <c>cis2.</c>) and it collapses to 2.51 even though the shifted head stays. So the
-    /// push is the DOT's skyline, not the head's, and a dot-blind gate cannot price it.
-    /// (The absolute gap will differ from LilyPond's while the voice-three cascade shift
-    /// differs — Lily# draws this cis at +1.30, LilyPond at +0.65 — a separate,
-    /// pre-existing note-collision question; this pass prices the geometry Lily#
-    /// actually draws.)
+    /// ⚠️ SO THE TWO KINDS OF PAIR PRICE DIFFERENTLY, and until 2026-09-10 this pass priced
+    /// both as wishes. A SAME-voice pair (shifted, or the per-voice loop would have had it)
+    /// is spanned by its voice's wish: skyline minimum, headroom, rod. A CROSS-voice pair is
+    /// spanned by no wish — Note_spacing_engraver chains each voice's own rhythmic grobs —
+    /// so the other voice's ink reaches it only as the rod: the ideal stays what the
+    /// duration gave, the minimum becomes the rod, and a pair whose ideal is under the rod
+    /// is drawn AT the rod (LilyPond's blocking force), not at rod − 0.1 + 0.3.
+    /// MEASURED (2.26.0, scratch/p361/lp/bos.lys = test/beam-over-stem bar 2, NoteSpacing
+    /// items and column skylines dumped): voice 1's beamed <c>b8</c> to voice 2's
+    /// <c>d''4</c> a sixteenth later is 1.604200 = 0.1 + (1.3042 + 0.1) − (−0.1), the rod
+    /// over the b8's head and the d''4's down stem, where the wish pricing gave 1.8042 —
+    /// the +0.20 of that bar's +0.33; the d''4 to the next b8 is the bare 1.2 (+0.10 was
+    /// the refinement a spacer-as-wish smuggled in, MeasureLayouter.ItemStartingAt).
+    /// MEASURED (2.26.0, test/dot-cross-voice-spacing = scratch/p361/lp/dcv.lys): the
+    /// dotted cis in voice three against voice two's next eighth is 3.3295 = 0.1 +
+    /// (0.6521 + 1.3774 + 0.45 + 0.45 + 0.2) − (−0.1): shift, half head, LilyPond's
+    /// one-dot-width gap, the dot, the Dots grob's own extra-spacing-width (0 . 0.2) —
+    /// a rod, again, and the plain 2.50 of the measure's other eighths; removing the dot
+    /// (<c>cis2</c> for <c>cis2.</c>) collapses it to 2.51 though the shifted head stays.
+    /// Lily# prices that pair 0.15 under LilyPond while the head-to-dot gap is
+    /// EngravingDefaults.DotGap (0.3 against LilyPond's 0.45 — recorded there, not moved).
     /// </para>
     /// <para>
     /// ⚠️ Same-voice pairs with no shift are SKIPPED: the per-voice loop has already
@@ -998,11 +1015,29 @@ internal static partial class SpacingRules
             if (columns[t - 1] is not { } left || columns[t] is not { } right)
                 continue;
             double maxSky = 0, maxRod = 0;
+            // The wish's left-head refinement reads the head's extent IN THE COLUMN FRAME,
+            // i.e. with its collision shift, and merge_springs AVERAGES the wishes' ideals;
+            // the per-voice loop refined every wish shift-blind, so a same-voice pair whose
+            // left head is shifted still owes the ideal its shift over the pair's wishes.
+            // MEASURED (2.26.0, ledger book TSU = scratch/p361/lp/tsu.lys, `a1` under `b1` a
+            // second apart, whole notes): the first gap is 7.042 = ((5.298 − 1.2 + 1.96) +
+            // (5.298 − 1.2 + 1.968 + 1.96)) / 2 — one voice's whole head shifted a head
+            // width, the other's not, the two wishes averaged; shift-blind it is 6.058.
+            // LILYPOND-REF: lily/note-spacing.cc:46-77 Note_spacing::get_spacing —
+            //   left_head_end = g->extent (col, X_AXIS)[RIGHT], the column's frame;
+            // LILYPOND-REF: lily/spring.cc:101-129 merge_springs — avg_distance.
+            double shiftSum = 0;
+            int wishes = 0;
             for (int li = 0; li < left.Count; li++)
                 for (int ri = 0; ri < right.Count; ri++)
                 {
                     var l = left[li];
                     var r = right[ri];
+                    if (l.Voice == r.Voice)
+                    {
+                        wishes++;
+                        shiftSum += l.Shift;
+                    }
                     if (l.Voice == r.Voice && l.Shift == 0 && r.Shift == 0)
                         continue;
                     // Column-origin frame, each item's head-left at its collision shift —
@@ -1014,18 +1049,53 @@ internal static partial class SpacingRules
                         leftSkyOf[(t, ri)] = ls =
                             ItemSkylineFactory.CreateLeftSkylineAtColumn(r.Item, r.Shift, 0);
                     var (sky, rod) = SkylineFloorPair(rs, ls);
-                    maxSky = Math.Max(maxSky, sky);
+                    // A SAME-voice pair is spanned by that voice's wish, and the wish's
+                    // skyline minimum is measured between the voice's OWN note columns in
+                    // the column frame — shifts included — so a shifted pair re-prices the
+                    // minimum here. A CROSS-voice pair is spanned by no wish at all: the
+                    // other voice's ink reaches this pair only through the column ROD.
+                    if (l.Voice == r.Voice)
+                        maxSky = Math.Max(maxSky, sky);
                     maxRod = Math.Max(maxRod, rod);
                 }
-            if (maxSky <= result[t].MinDistance && maxRod <= result[t].MinDistance)
+            if (shiftSum == 0 && maxSky <= result[t].MinDistance && maxRod <= result[t].MinDistance)
                 continue;
-            // The same three steps the per-voice loop takes, in the same order: raise
-            // the spring minimum, re-floor the ideal at min + 0.3 (merge_springs'
-            // headroom), then the rod, which binds only under compression.
-            var s = result[t].EnsureMinDistance(maxSky);
-            s = ApplyMergeSpringsHeadroom(s);
+            var s = result[t];
+            if (shiftSum != 0)
+                s = s.WithIdealDistance(Math.Max(0.0, s.IdealDistance + shiftSum / wishes));
+            if (maxSky > s.MinDistance)
+            {
+                // The same steps the per-voice loop takes, in the same order: raise the
+                // spring minimum, then re-floor the ideal at min + 0.3 (merge_springs'
+                // headroom) — a wish's minimum, and only a wish's, carries the headroom.
+                s = ApplyMergeSpringsHeadroom(s.EnsureMinDistance(maxSky));
+            }
+            // …and the rod, which binds only under compression — or, for a wishless pair
+            // whose bare ideal is shorter than it, at every force: LilyPond's blocking
+            // force holds such a pair open at exactly the rod (Simple_spacer::add_rod).
             result[t] = s.EnsureMinDistance(maxRod);
             widened = true;
+        }
+
+        // The CLOSING spring, last column → bar line, carries the same refinement: every
+        // voice with a note on the last column files a wish naming the bar-line column
+        // (note-spacing-engraver.cc:109-120, currentCommandColumn joins the wish), and each
+        // wish's left_head_end is that voice's head in the column frame. MEASURED (2.26.0,
+        // scratch/p361/lp/coll.lys, `e2 f` over `d2 e`, the down voice a head width right):
+        // the last column to the bar line is 5.080 where the first pair is 4.964 — both carry
+        // the averaged 0.689, and the bar read 10.40 against LilyPond's 11.086 without it.
+        if (columns[timings.Count - 1] is { } last && last.Count > 0)
+        {
+            double shiftSum = 0;
+            foreach (var l in last)
+                shiftSum += l.Shift;
+            if (shiftSum != 0)
+            {
+                int closing = timings.Count;
+                result[closing] = result[closing].WithIdealDistance(
+                    Math.Max(0.0, result[closing].IdealDistance + shiftSum / last.Count));
+                widened = true;
+            }
         }
         return widened ? result.ToImmutable() : springs;
     }

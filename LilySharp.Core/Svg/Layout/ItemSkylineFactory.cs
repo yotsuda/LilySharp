@@ -679,8 +679,12 @@ internal static class ItemSkylineFactory
             for (int d = 0; d < dots; d++)
             {
                 double dotX = maxNoteheadRightX + dotGap + d * (dotWidth + dotGap);
-                parts.Add(ColumnPart.Ink(
-                    dotYCenter - dotRadius, dotYCenter + dotRadius, dotX, dotX + dotWidth));
+                // A dot declares its own extra-spacing-width: nothing to the left, 0.2 to
+                // the right (SpacingRules.DotsExtraSpacingWidthRight) — not the ±0.1 default.
+                // LILYPOND-REF: scm/define-grobs.scm:1278 Dots extra-spacing-width.
+                parts.Add(new ColumnPart(
+                    dotYCenter - dotRadius, dotYCenter + dotRadius, dotX, dotX + dotWidth,
+                    0.0, SpacingRules.DotsExtraSpacingWidthRight, Conditional: false));
             }
         }
     }
