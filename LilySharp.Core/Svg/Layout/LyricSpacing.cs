@@ -173,11 +173,15 @@ internal static class LyricSpacing
     /// closed on that rod), and a line's FIRST/LAST syllable simply overhangs its bar.
     /// Until session 351 the halves stood in for that first/last regime ("unmeasured, so
     /// the invented 0.4 stays until a point exists") — the point now exists.
-    /// ⚠️ LILYSHARP-OWN, what remains: (a) the LEAD-SHEET halves (keepEdgeHalves — user
-    /// decision 2026-08-20, below), and (b) the same quantities re-supplied at a SYSTEM's
-    /// edges for a line that continues across the break (LineStartLyricFloor /
-    /// LineEndLyricReservation — LilyPond's own line-end hyphen reservation at a break is
-    /// still unmeasured, so the pre-port numbers are kept there rather than guessed).
+    /// ⚠️ LILYSHARP-OWN, what remains: the LEAD-SHEET halves (keepEdgeHalves — user
+    /// decision 2026-08-20, below). The same quantities used to be re-supplied at a
+    /// SYSTEM's edges for a line that continues across the break (LineStartLyricFloor /
+    /// LineEndLyricReservation, "kept until measured"); MEASURED 2026-09-09 (session 357,
+    /// scratch/p358/lehyph, LilyPond 2.26.0): LilyPond reserves nothing at either edge —
+    /// a line ending on "bright-" and one ending on "bright" give the same last bar
+    /// (18.686), and a next system opening under "lyrically" or "Lyrically" keeps its first
+    /// note at 5.8 — so both were retired; the keep-inside-line rods (MultiStaffLayouter)
+    /// are all that holds a system's first and last syllable, as in LilyPond.
     /// </remarks>
     private static void ReserveLyricLine(
         ImmutableArray<Spring>.Builder result,
@@ -627,59 +631,6 @@ internal static class LyricSpacing
         in LyricLineEdge prev, in LyricLineEdge next, double interBarlineInk)
         => CrossBarLyricRodDistance(
             prev.RightExtent, prev.HyphenAfterLast, next.LeftExtent, interBarlineInk);
-
-    /// <summary>
-    /// The line-start FIXED-distance floor a system-opening measure needs when its lyric
-    /// lines continue from the previous measure: their column-0 leading halves were
-    /// dropped from spring 0 (the cross-bar rod owns that side mid-line), so the same
-    /// inkL + <see cref="GlyphMetrics.MinItemGap"/> is re-supplied to
-    /// LineStartSpringForLine's ownFixedFloor — the pre-port line-start quantity, kept
-    /// verbatim (HANDOFF 2H's ⑴ paper-column item owns replacing it with a real column).
-    /// </summary>
-    /// <remarks>
-    /// MEASURED 2026-09-09 (session 357, scratch/p358/lehyph hy2 / wd2, LilyPond 2.26.0
-    /// ragged-right, twins from <c>lysc ly</c>): LilyPond reserves NOTHING here. A continuing
-    /// line whose second system opens with "lyrically" (ink 9.287, hyphenated from "bright-"
-    /// on the line before) or "Lyrically" (10.141, after a word end) keeps its first note at
-    /// 5.8 — the plain clef-and-meter first-note distance — and the syllable starts at
-    /// 1.809 / 1.382, under the clef; only the keep-inside-line rod from the line's left edge
-    /// holds it, and that rod is slack (reach 3.99 against a column at 5.8). The hyphen's
-    /// own after-break rod (lily/lyric-hyphen.cc:180-193, length 0.5 + 2 × padding 0.1 +
-    /// bounds protrusion) does not bind either. Lily# put the note at 7.72 / 8.15: this floor
-    /// (inkL + MinItemGap over spring 0). So this quantity is LILYSHARP-OWN with no LilyPond
-    /// counterpart, and its retirement — with the line-end twin below and the rod frame in
-    /// scratch/p358/keep-inside-line-frame.patch — moves every book whose lyric line breaks
-    /// under a wide syllable; not applied here (output moves, owner's gate).
-    /// </remarks>
-    internal static double LineStartLyricFloor(ImmutableArray<LyricLineEdge> edges)
-    {
-        double floor = 0;
-        foreach (var e in edges)
-            if (e.ContinuesFromPrev && e.FirstCol == 0)
-                floor = Math.Max(floor, e.LeftExtent + GlyphMetrics.MinItemGap);
-        return floor;
-    }
-
-    /// <summary>
-    /// The trailing reservation a line-ENDING measure re-supplies for a lyric line whose
-    /// half was dropped (it continues into the next measure, which a break put on the
-    /// next system): inkR + <see cref="GlyphMetrics.MinItemGap"/>, the pre-port trailing
-    /// quantity verbatim — LilyPond's own line-end behaviour there (hyphen reservation at
-    /// a break) was unmeasured until session 357, so nothing was guessed.
-    /// </summary>
-    /// <remarks>
-    /// MEASURED 2026-09-09 (session 357, scratch/p358/lehyph hy / wd, LilyPond 2.26.0
-    /// ragged-right): LilyPond reserves NOTHING for the break. A line ending on "bright-"
-    /// (ink 7.034, hyphenated into the next system) and the same line ending on "bright"
-    /// (a word end) give the SAME last bar, 18.686 wide (25.487 → 44.173), with the
-    /// syllable's right edge on the end bar line's right edge (44.363) — the keep-inside-line
-    /// rod alone, as at any line end (MultiStaffLayouter's rods). Lily# drew that bar
-    /// 19.28 wide: this reservation's MinItemGap (0.4) plus the rod frame's bar-line ink
-    /// (0.19, the patch above). So this quantity is LILYSHARP-OWN with no LilyPond
-    /// counterpart; see LineStartLyricFloor's remark for the retirement it shares.
-    /// </remarks>
-    internal static double LineEndLyricReservation(in LyricLineEdge e)
-        => e.RightExtent + GlyphMetrics.MinItemGap;
 
     /// <summary>
     /// One sung measure's HALF of the cross-bar pair pricing, as the break gate carries

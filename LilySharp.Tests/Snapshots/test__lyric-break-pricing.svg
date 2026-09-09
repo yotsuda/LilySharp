@@ -14,17 +14,17 @@
   <line x1="0.00" y1="20.94" x2="102.43" y2="20.94" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="19.94" font-size="4.00"></text>
   <text class="music" x="4.88" y="18.94" font-size="4.00" data-pos="488"></text>
-  <line x1="13.02" y1="21.94" x2="15.96" y2="21.94" stroke="#000000" stroke-width="0.200"/>
-  <line x1="36.09" y1="21.94" x2="39.04" y2="21.94" stroke="#000000" stroke-width="0.200"/>
-  <line x1="59.17" y1="21.94" x2="62.11" y2="21.94" stroke="#000000" stroke-width="0.200"/>
-  <line x1="82.24" y1="21.94" x2="85.18" y2="21.94" stroke="#000000" stroke-width="0.200"/>
-  <text class="music" x="13.51" y="21.94" font-size="4.00" data-pos="534"></text>
-  <text class="music" x="36.58" y="21.94" font-size="4.00" data-pos="539"></text>
-  <text class="music" x="59.66" y="21.94" font-size="4.00" data-pos="544"></text>
-  <text class="music" x="82.73" y="21.94" font-size="4.00" data-pos="549"></text>
-  <rect x="33.02" y="16.94" width="0.19" height="4.00" data-pos="537"/>
-  <rect x="56.09" y="16.94" width="0.19" height="4.00" data-pos="542"/>
-  <rect x="79.17" y="16.94" width="0.19" height="4.00" data-pos="547"/>
+  <line x1="8.09" y1="21.94" x2="11.04" y2="21.94" stroke="#000000" stroke-width="0.200"/>
+  <line x1="32.43" y1="21.94" x2="35.37" y2="21.94" stroke="#000000" stroke-width="0.200"/>
+  <line x1="56.77" y1="21.94" x2="59.71" y2="21.94" stroke="#000000" stroke-width="0.200"/>
+  <line x1="81.10" y1="21.94" x2="84.05" y2="21.94" stroke="#000000" stroke-width="0.200"/>
+  <text class="music" x="8.59" y="21.94" font-size="4.00" data-pos="534"></text>
+  <text class="music" x="32.92" y="21.94" font-size="4.00" data-pos="539"></text>
+  <text class="music" x="57.26" y="21.94" font-size="4.00" data-pos="544"></text>
+  <text class="music" x="81.59" y="21.94" font-size="4.00" data-pos="549"></text>
+  <rect x="29.23" y="16.94" width="0.19" height="4.00" data-pos="537"/>
+  <rect x="53.57" y="16.94" width="0.19" height="4.00" data-pos="542"/>
+  <rect x="77.90" y="16.94" width="0.19" height="4.00" data-pos="547"/>
   <rect x="102.24" y="16.94" width="0.19" height="4.00" data-pos="552"/>
   <line x1="0.00" y1="28.94" x2="102.43" y2="28.94" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="29.94" x2="102.43" y2="29.94" stroke="#000000" stroke-width="0.100"/>
@@ -32,26 +32,26 @@
   <line x1="0.00" y1="31.94" x2="102.43" y2="31.94" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="32.94" x2="102.43" y2="32.94" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="31.94" font-size="4.00"></text>
-  <line x1="12.08" y1="33.94" x2="15.02" y2="33.94" stroke="#000000" stroke-width="0.200"/>
-  <line x1="35.39" y1="33.94" x2="38.33" y2="33.94" stroke="#000000" stroke-width="0.200"/>
-  <line x1="58.71" y1="33.94" x2="61.65" y2="33.94" stroke="#000000" stroke-width="0.200"/>
-  <line x1="82.02" y1="33.94" x2="84.97" y2="33.94" stroke="#000000" stroke-width="0.200"/>
-  <text class="music" x="12.57" y="33.94" font-size="4.00" data-pos="554"></text>
-  <text class="music" x="35.88" y="33.94" font-size="4.00" data-pos="559"></text>
-  <text class="music" x="59.20" y="33.94" font-size="4.00" data-pos="564"></text>
-  <text class="music" x="82.51" y="33.94" font-size="4.00" data-pos="569"></text>
-  <rect x="32.29" y="28.94" width="0.19" height="4.00" data-pos="557"/>
-  <rect x="55.61" y="28.94" width="0.19" height="4.00" data-pos="562"/>
-  <rect x="78.92" y="28.94" width="0.19" height="4.00" data-pos="567"/>
+  <line x1="8.31" y1="33.94" x2="11.25" y2="33.94" stroke="#000000" stroke-width="0.200"/>
+  <line x1="32.59" y1="33.94" x2="35.53" y2="33.94" stroke="#000000" stroke-width="0.200"/>
+  <line x1="56.87" y1="33.94" x2="59.82" y2="33.94" stroke="#000000" stroke-width="0.200"/>
+  <line x1="81.15" y1="33.94" x2="84.10" y2="33.94" stroke="#000000" stroke-width="0.200"/>
+  <text class="music" x="8.80" y="33.94" font-size="4.00" data-pos="554"></text>
+  <text class="music" x="33.08" y="33.94" font-size="4.00" data-pos="559"></text>
+  <text class="music" x="57.36" y="33.94" font-size="4.00" data-pos="564"></text>
+  <text class="music" x="81.64" y="33.94" font-size="4.00" data-pos="569"></text>
+  <rect x="29.40" y="28.94" width="0.19" height="4.00" data-pos="557"/>
+  <rect x="53.68" y="28.94" width="0.19" height="4.00" data-pos="562"/>
+  <rect x="77.96" y="28.94" width="0.19" height="4.00" data-pos="567"/>
   <rect x="102.24" y="28.94" width="0.19" height="4.00" data-pos="572"/>
-  <text x="14.49" y="24.80" font-size="2.47" text-anchor="middle" data-pos="612">supercalifragi</text>
-  <text x="37.56" y="24.80" font-size="2.47" text-anchor="middle" data-pos="633">expialidocious</text>
-  <text x="60.64" y="24.80" font-size="2.47" text-anchor="middle" data-pos="654">antidisestablish</text>
-  <text x="83.71" y="24.80" font-size="2.47" text-anchor="middle" data-pos="677">mentarianismword</text>
-  <text x="13.55" y="36.79" font-size="2.47" text-anchor="middle" data-pos="700">incomprehensibil</text>
-  <text x="36.86" y="36.79" font-size="2.47" text-anchor="middle" data-pos="723">pneumonoultramic</text>
-  <text x="60.18" y="36.79" font-size="2.47" text-anchor="middle" data-pos="746">floccinaucinihili</text>
-  <text x="83.50" y="36.79" font-size="2.47" text-anchor="middle" data-pos="770">pseudopseudohypo</text>
+  <text x="9.57" y="24.80" font-size="2.47" text-anchor="middle" data-pos="612">supercalifragi</text>
+  <text x="33.90" y="24.80" font-size="2.47" text-anchor="middle" data-pos="633">expialidocious</text>
+  <text x="58.24" y="24.80" font-size="2.47" text-anchor="middle" data-pos="654">antidisestablish</text>
+  <text x="82.58" y="24.80" font-size="2.47" text-anchor="middle" data-pos="677">mentarianismword</text>
+  <text x="9.78" y="36.79" font-size="2.47" text-anchor="middle" data-pos="700">incomprehensibil</text>
+  <text x="34.06" y="36.79" font-size="2.47" text-anchor="middle" data-pos="723">pneumonoultramic</text>
+  <text x="58.34" y="36.79" font-size="2.47" text-anchor="middle" data-pos="746">floccinaucinihili</text>
+  <text x="82.63" y="36.79" font-size="2.47" text-anchor="middle" data-pos="770">pseudopseudohypo</text>
   <text x="0.00" y="27.86" font-size="1.75" font-weight="bold" text-anchor="end">5</text>
   <rect x="3.37" y="13.48" width="7.57" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="504"/>
   <text x="7.15" y="15.71" font-size="2.62" font-weight="bold" text-anchor="middle" data-pos="504">Main</text>

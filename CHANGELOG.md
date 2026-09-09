@@ -142,6 +142,31 @@ workflow attaches that section to the GitHub Release verbatim.
   19.67 staff spaces wide against LilyPond's 18.147 (+1.52, the reservation's deficit to the
   digit), the bar where a second verse begins +1.6. A lead sheet keeps its clearance: there the
   grid's bar lines run through the lyric band (user decision, 2026-08-20).
+- **Ink at either end of a line is kept inside the line the way LilyPond keeps it.** The rod
+  that keeps a column's ink inside the line runs, in LilyPond, between the line's two end
+  columns: the start column at the line's left edge, with the clef, key and meter hanging to
+  its right, and the end column at the end bar line's RIGHT edge, the bar line hanging to its
+  left. Lily# measured from the prefix's right edge and to the bar line's left edge. At the
+  start, a wide first syllable pushed the first note: "Twas" under the first note of
+  test/lyrics-verses moved it from LilyPond's 8.585 to 8.97 (the syllable may run under the
+  meter, as LilyPond lets it), and test/lyrics' whole first line stood 0.3 to the right. At
+  the end, a wide last syllable or chord symbol left one bar-line ink (0.19) too much: the
+  last bar of test/lyrics-verses, a whole note under "saved", was 8.44 wide against
+  LilyPond's 8.251. Inert wherever the springs already clear the ink — every column but a
+  line's first and last, and those only when something on them is wider than its spring. A
+  lead sheet keeps its own line-start edge (the grid's opening bar plus its gap, user
+  decision 2026-08-20).
+- **A lyric line broken across two systems reserves nothing at the break, as LilyPond's
+  does.** Where a word or phrase ran on past a system's end, Lily# held the last syllable
+  clear of the end bar line by 0.4 staff spaces, and held the next system's first note clear
+  of its first syllable by the same 0.4 — two pre-port quantities kept "until measured".
+  Measured on LilyPond 2.26.0: a line ending on "bright-" (hyphenated onward) and one ending
+  on "bright" (a word's end) give the same last bar, 18.686 staff spaces, the syllable's ink
+  ending on the bar line's right edge; and a next system opening under "lyrically" or
+  "Lyrically" keeps its first note at the plain 5.8 from the clef, the syllable running back
+  under the clef. Lily# drew that bar 19.28 wide and that note at 7.72 / 8.15. Only the rod
+  that keeps ink inside the line holds a system's first and last syllable now. Moves every
+  book whose lyric line breaks under a syllable wider than its note's spring.
 - **A narrow syllable after a wide one no longer pushes its note.** The rod between two
   syllables is LilyPond's arithmetic on their reaches, and a syllable narrower than the note
   head's alignment extent — "I" centred on a quarter — reaches a negative distance left of its

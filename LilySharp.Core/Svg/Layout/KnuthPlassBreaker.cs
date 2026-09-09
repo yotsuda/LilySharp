@@ -60,11 +60,11 @@ internal readonly record struct MeasureSpringData(
     // (LyricSpacing.CrossBarPairMinExcess) into the extra line minimum the rod across
     // their shared bar demands. Carried split so each entry reads only its own measure's
     // springs — see the class's remarks and IncrementalCompiler.SpringReusable...
+    // Null on every unsung measure, so it is inert wherever it was before the port. (A
+    // second face — the trailing reservation re-supplied when this measure ENDED a line
+    // while a lyric line continued past it — was retired once measured: LilyPond reserves
+    // nothing at a line's end, session 357, MultiStaffLayouter's cross-bar rods.)
     LyricSpacing.LyricBarPricing? CrossBarLyricPricing = null,
-    // ...and when this measure ENDS the line while a lyric line continues past it (the
-    // re-supplied trailing reservation, less the suffix springs' minima). Zero on every
-    // unsung measure, so both are inert wherever they were before the port.
-    double LineEndLyricMinExcess = 0,
     // The measure's springs THEMSELVES — the vector the sums above were taken from, bar
     // lines excluded — so the breaker can SOLVE a candidate line with the layout's own
     // SpringSolver (LilyPond's range_solve, blocking springs walked one by one) instead
@@ -95,7 +95,6 @@ internal readonly record struct MeasureSpringData(
            && Spring0Compress == other.Spring0Compress
            && Equals(LineStartSpring, other.LineStartSpring)
            && Equals(CrossBarLyricPricing, other.CrossBarLyricPricing)
-           && LineEndLyricMinExcess == other.LineEndLyricMinExcess
            && RigidWidth == other.RigidWidth
            && SpringsEqual(Springs, other.Springs);
 
@@ -377,16 +376,15 @@ internal sealed class KnuthPlassBreaker
                 double availableWidth = _lineWidth - prefixWidth;
 
                 // Compute line spring totals via cumulative sums. The minimum also pays
-                // the cross-bar lyric rods this line's interior bars carry, plus the
-                // re-supplied trailing reservation when a lyric line runs past its end —
-                // the same two quantities the layout's ApplyRods will enforce, so a sung
-                // bar is priced for breaking exactly as it will be laid out.
+                // the cross-bar lyric rods this line's interior bars carry — the same
+                // quantity the layout's ApplyRods will enforce, so a sung bar is priced for
+                // breaking exactly as it will be laid out. (A lyric line running past the
+                // line's end adds nothing: LilyPond reserves nothing there, session 357.)
                 double idealSum = cumIdeal[j] - cumIdeal[i];
                 double invStretchSum = cumInvStretch[j] - cumInvStretch[i];
                 double invCompressSum = cumInvCompress[j] - cumInvCompress[i];
                 double minSum = cumMin[j] - cumMin[i]
-                    + (cumPairMin[j - 1] - cumPairMin[i])
-                    + springData[j - 1].LineEndLyricMinExcess;
+                    + (cumPairMin[j - 1] - cumPairMin[i]);
 
                 // The line's FIRST measure is priced with the prefix→first-note spring the
                 // layout will actually give it, not with the bar-line spring it carries as
@@ -423,8 +421,7 @@ internal sealed class KnuthPlassBreaker
                 // LILYPOND-REF: lily/simple-spacer.cc:181-204 range_solve.
                 double force;
                 bool solvedFits = true;
-                double lyricExtra = (cumPairMin[j - 1] - cumPairMin[i])
-                                    + springData[j - 1].LineEndLyricMinExcess;
+                double lyricExtra = cumPairMin[j - 1] - cumPairMin[i];
                 if (minSum <= availableWidth
                     && TryBuildLineSprings(springData, i, j, lyricExtra, lineSprings,
                                            out double rigidWidth, out double maxBlockingForce,

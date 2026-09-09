@@ -235,18 +235,17 @@ internal sealed class SystemBreaker
                 score, i, springs, primaryMeasure, allTimings, allMeasures, baseShortestDuration);
 
             // The measure's lyric line edges — the same function the layout reads, off the
-            // same reserved springs — for three prices: its half of the cross-bar PAIR
-            // pricing (combined with the neighbour's half at break time), the line-start
-            // lyric floor, and the line-END excess: when a continuing line's trailing half
-            // was dropped, the layout re-supplies it as a rod at a system's end
-            // (LineEndLyricReservation), so a candidate line ending here must be priced
-            // for the part of that rod the suffix springs' minima do not already cover.
-            var edges = ImmutableArray<LyricSpacing.LyricLineEdge>.Empty;
+            // same reserved springs — for one price: its half of the cross-bar PAIR pricing
+            // (combined with the neighbour's half at break time). A line's END and START
+            // carry no lyric price of their own: the line-end trailing reservation and the
+            // line-start floor the gate used to price here were retired once measured
+            // (LilyPond reserves nothing at either edge — session 357, MultiStaffLayouter's
+            // cross-bar rods and LyricSpacing.ReserveLyricLine's remarks); the keep-inside-line
+            // rods a candidate line's edges would bind are not priced by the gate, as before.
             LyricSpacing.LyricBarPricing? barPricing = null;
-            double lineEndLyricMinExcess = 0;
             if (sung)
             {
-                edges = LyricSpacing.MeasureLineEdges(
+                var edges = LyricSpacing.MeasureLineEdges(
                     score.TextMetrics, springs, allTimings, i, ScoreSideTables.Lyrics(score),
                     score.IsLeadSheet,
                     SpacingRules.ParentAlignmentEdgesPerColumn(allMeasures, allTimings),
@@ -255,16 +254,6 @@ internal sealed class SystemBreaker
                 barPricing = LyricSpacing.BuildBarPricing(edges, springs,
                     SpacingRules.GetBarlineWidth(primaryMeasure.StartBarline),
                     SpacingRules.GetBarlineWidth(primaryMeasure.EndBarline));
-                if (barPricing != null)
-                {
-                    // Lines[k] is built from edges[k] (BuildBarPricing preserves order).
-                    for (int k = 0; k < edges.Length; k++)
-                        if (edges[k].ContinuesIntoNext)
-                            lineEndLyricMinExcess = Math.Max(lineEndLyricMinExcess,
-                                LyricSpacing.LineEndLyricReservation(edges[k])
-                                - barPricing.Lines[k].SuffixMin);
-                    lineEndLyricMinExcess = Math.Max(0, lineEndLyricMinExcess);
-                }
             }
 
             double ideal = 0, min = 0, invStretch = 0, invCompress = 0;
@@ -321,8 +310,7 @@ internal sealed class SystemBreaker
             // continuation — built by the SAME implementation the layout uses, so the gate
             // prices a candidate line start exactly as it will be laid out (section 5.4).
             var lineStartSpring = s0 is { } spring0
-                ? MultiStaffLayouter.LineStartSpringForLine(score, i, isFirstSystem: i == 0, spring0,
-                    LyricSpacing.LineStartLyricFloor(edges))
+                ? MultiStaffLayouter.LineStartSpringForLine(score, i, isFirstSystem: i == 0, spring0)
                 : null;
             springData[i] = new MeasureSpringData(ideal + barlines, min + barlines, invStretch,
                 primaryMeasure.BreakPenalty,
@@ -333,7 +321,6 @@ internal sealed class SystemBreaker
                 s0?.InverseStretchStrength ?? 0, s0?.InverseCompressStrength ?? 0,
                 lineStartSpring,
                 barPricing,
-                lineEndLyricMinExcess,
                 // The springs the sums above were taken from, so the breaker can SOLVE a
                 // candidate line instead of estimating its force from the sums; and the
                 // rigid width beside them (the two bar lines).

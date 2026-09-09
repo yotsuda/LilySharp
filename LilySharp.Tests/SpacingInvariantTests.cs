@@ -659,10 +659,9 @@ public class SpacingInvariantTests
             gate[0].CrossBarLyricPricing, gate[1].CrossBarLyricPricing);
         Assert.True(excess > 1.0,
             $"the cross-bar rod must exceed the bare bar-boundary minima here (excess={excess:F3})");
-        // ...and the line-END face: measure 0's line continues, so a break after it must
-        // price the re-supplied trailing reservation's deficit.
-        Assert.True(gate[0].LineEndLyricMinExcess > 0,
-            $"a continuing line's end must carry the trailing deficit (got {gate[0].LineEndLyricMinExcess:F3})");
+        // (The line-END face the gate used to carry — a trailing reservation re-supplied
+        // when a continuing line broke — was retired once measured: LilyPond reserves
+        // nothing at a line's end, session 357, LineEdgeLyricReservationTests.)
 
         // The one-line candidate's sums as the DP sees them (line-start spring swapped in).
         double ideal = gate[0].IdealWidth + gate[1].IdealWidth;
@@ -672,7 +671,7 @@ public class SpacingInvariantTests
             ideal += lineStart.IdealDistance - gate[0].Spring0Ideal;
             min += lineStart.MinDistance - gate[0].Spring0Min;
         }
-        double minWithRod = min + excess + gate[1].LineEndLyricMinExcess;
+        double minWithRod = min + excess;
         Assert.True(minWithRod > ideal,
             $"precondition: the rod must exceed the pair's natural width (min+excess={minWithRod:F3}, ideal={ideal:F3})");
 
