@@ -20,8 +20,10 @@ time 4/4                // optional (default 4/4); 4/4 engraves as the C
                         // (common time) glyph and 2/2 as cut-C, like LilyPond.
                         // 'time none' = senza misura (LilyPond \cadenzaOn): until the next
                         // 'time N/M' a measure ends only at a written '|' (drawn, breakable),
-                        // no meter is drawn, no automatic beams (write c8[ d e f]), no
-                        // length checks, and the bar number does not advance across it
+                        // no meter is drawn, no automatic beams from a span opened at a bar
+                        // line (write c8[ d e f]; a beam already building when 'time none'
+                        // arrives mid-bar runs on), no length checks, a 'partial' inside it
+                        // does nothing (LYS2015), and the bar number does not advance across it
 key c major             // optional (default c major); all church modes work:
                         // major minor ionian dorian phrygian lydian mixolydian aeolian locrian
                         // (key d dorian = no accidentals, key e dorian = 2 sharps)

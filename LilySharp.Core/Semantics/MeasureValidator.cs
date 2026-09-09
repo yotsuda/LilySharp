@@ -350,10 +350,24 @@ internal sealed class MeasureValidator : ISemanticValidator
             // A 'partial N' in the bar declares it a pickup of length 1/N, which
             // is then the expected fill for THIS measure only.
             Fraction? partialLength = null;
+            // Read in item order against the running meter: a `partial` under `time none`
+            // shortens nothing — the clock stands still there (MeasureBuilder's frozen clock)
+            // — and is reported rather than silently dropped (LYS2015, see DiagnosticCodes).
+            bool senzaHere = _senzaMisura;
             foreach (var item in barItems)
             {
-                if (item is PartialDeclarationSyntax pd)
-                    partialLength = pd.ToFraction();
+                if (item is TimeSignatureSyntax tsx)
+                    senzaHere = tsx.IsSenzaMisura;
+                else if (item is PartialDeclarationSyntax pd)
+                {
+                    if (!senzaHere)
+                        partialLength = pd.ToFraction();
+                    else if (_warnedSpans.Add((pd.Span.Start, pd.Span.Length)))
+                        _diagnostics.Warning(pd.Span, DiagnosticCodes.PartialUnderTimeNone,
+                            "'partial' has no effect under 'time none': the clock stands still in an "
+                            + "unmetered span, so there is no bar length to shorten. Write it after the "
+                            + "returning 'time N/M', or drop it.");
+                }
             }
             // ⚠️ The meter is adopted IN ITEM ORDER, segment by segment around the repeat
             // cuts below — not for the whole written bar up front. A `repeat percent`

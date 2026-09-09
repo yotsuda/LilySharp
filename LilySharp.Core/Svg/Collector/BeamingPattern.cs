@@ -179,11 +179,13 @@ internal static class BeamingPattern
             // LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
             // beat grid at all. LilyPond falls back to the measure length for the PERIOD
             // (:570-571) and would then walk an empty beat structure; Lily# gives it one beat
-            // of a whole note so the walk terminates. Nothing observes this: under `time none`
-            // BeamDetector.DetectBeamGroupsInMeasure stops after the WRITTEN beams (LilyPond
-            // makes no automatic beam in a cadenza — measured, see that site), so this grid
-            // only ever prices a manual group's subdivision there; a malformed meter has no
-            // observer. It disappears when Lily# carries a real beat structure per meter.
+            // of a whole note so the walk terminates. Nothing observes this: for `time none`
+            // BeamDetector reads the grid of the last METERED meter (LilyPond's \cadenzaOn
+            // leaves timeSignature / beatStructure alone and only freezes measurePosition —
+            // measured, see DetectBeamGroupsInMeasure), so this arm is reached only by the
+            // tuplet-span walk of an unmetered measure, where it prices a manual group's
+            // subdivision; a malformed meter has no observer. It disappears when Lily#
+            // carries a real beat structure per meter.
             if (timeSig.SenzaMisura || timeSig.Beats <= 0 || timeSig.BeatType <= 0)
                 return new Options(Fraction.Whole, [1], Fraction.Whole);
 

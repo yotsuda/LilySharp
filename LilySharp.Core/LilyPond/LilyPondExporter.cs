@@ -156,6 +156,22 @@ public sealed class LilyPondExporter
     // with plain `|` the cadenza drew no bar line and the bars after \time 4/4 none either.
     private bool _timeSenza;
     private bool _homeTimeSenza;
+    // True while the cadenza in force opened INSIDE a bar — music had sounded since the last
+    // bar line when `time none` arrived. LilyPond's measurePosition froze at that reading and
+    // nothing in the cadenza resets it (not its `\bar "|"`, not \cadenzaOff), so the returning
+    // \time is "mid-measure" to LilyPond: the twin writes `\partial <bar>` after it, which
+    // sets measurePosition = measureLength − dur = 0 (lily/timing-translator.cc:149-160
+    // pre_process_music, the mid-piece branch) and is exactly the page's rule — a written `|`
+    // closed the cadenza's bar, and the next bar starts fresh. MEASURED (2.26.0,
+    // scratch/p359/lp/midbar-8th.ly against midbar-8th-fix.ly, 2026-09-09): without it,
+    // "mid-measure time signature without \partial", "bar check failed at: 1/4" and an
+    // automatic bar line INSIDE the `c1` (bars 40.893 / 50.795); with `\partial 1` after
+    // `\time 4/4`, no warning and bars 40.893 / 52.295 — the same for a 3/4 return with
+    // `\partial 2.` (midbar-8th-34-fixA.ly), in either order of \time and \partial (fixB).
+    private bool _cadenzaOpenedMidBar;
+    // EmitMusicStream's clock for the `| |` rule — has music sounded since the last bar line?
+    // A field rather than a local so EmitTime can read it when `time none` arrives.
+    private bool _timeSinceBoundary;
     // The pickup in force — a `partial` read and not yet closed by a bar — for the one
     // reader that needs it here: the spacer an empty `| |` bar stands for
     // (EmitMusicStream). MeasureBuilder._partialRestore's twin, spent the way
@@ -1618,7 +1634,7 @@ public sealed class LilyPondExporter
         // bar; a typed bar line (`||`, `:|`, `|.`) decorates a boundary and opens none; the
         // scope start counts as a boundary. ONE rule in four spellings, kept honest by
         // EmptyBarExportTests' identity pairs (`| |` against the spelled `s1 |`).
-        bool timeSinceBoundary = false;
+        _timeSinceBoundary = false;
         bool atScopeStart = true;
         while (i < items.Count)
         {
@@ -1628,27 +1644,36 @@ public sealed class LilyPondExporter
             {
                 // A section boundary: the next section's music opens a fresh scope, as the
                 // MIDI walk's per-section sequence does.
-                timeSinceBoundary = false;
+                _timeSinceBoundary = false;
                 atScopeStart = true;
             }
             else if (item is BarlineSyntax gapBar && !_chordTrack)
             {
                 var kind = gapBar.BarToken.Kind;
+                // A form's `|:` stands at a section boundary — the section-play marker follows
+                // it — and is the structural bar line the page never pairs with the bar before
+                // it (MeasureBuilder.ArmBoundaryForStructuralBarline's remark: "a structural
+                // barline is not the second of any such pair"). MEASURED (2.26.0,
+                // scratch/p359/lp/formrep-plain.ly, 2026-09-09): read as a pair it wrote `s1`
+                // between A's `|` and `\repeat volta`, and LilyPond drew five bars — one 5.51
+                // wide and empty — for the page's four.
+                bool opensASectionPlay = kind == SyntaxKind.RepeatStartBar
+                    && i + 1 < items.Count && items[i + 1] is { Green: SectionPlayGreen };
                 bool pairsHere = kind == SyntaxKind.Bar
-                    || (kind == SyntaxKind.RepeatStartBar && !atScopeStart);
-                if (pairsHere && !timeSinceBoundary)
+                    || (kind == SyntaxKind.RepeatStartBar && !atScopeStart && !opensASectionPlay);
+                if (pairsHere && !_timeSinceBoundary)
                     AppendToken(line, "s" + ChordModeDuration(
                         _twinPartial ?? new Fraction(_timeBeats, _timeBeatType)), indent);
                 // The bar behind this bar line closed (or was the empty bar just written), so
                 // a pending pickup is spent — MeasureBuilder.RestorePartialIfPending.
-                if (pairsHere || timeSinceBoundary)
+                if (pairsHere || _timeSinceBoundary)
                     _twinPartial = null;
-                timeSinceBoundary = false;
+                _timeSinceBoundary = false;
                 atScopeStart = false;
             }
             else if (TakesMeasureTime(item))
             {
-                timeSinceBoundary = true;
+                _timeSinceBoundary = true;
             }
 
             // Inline |: … :| repeat span → \repeat volta N { … } \alternative { … }
@@ -1657,7 +1682,7 @@ public sealed class LilyPondExporter
                 FlushLine(line, indent);
                 i = EmitInlineRepeat(items, i, indent);
                 // The `:|` that closed the span is a boundary too.
-                timeSinceBoundary = false;
+                _timeSinceBoundary = false;
                 atScopeStart = false;
                 continue;
             }
@@ -2599,7 +2624,9 @@ public sealed class LilyPondExporter
             }
             else
             {
-                parts.Add(_timeSenza ? "\\cadenzaOff \\time 4/4" : "\\time 4/4");
+                parts.Add(_timeSenza
+                    ? "\\cadenzaOff \\time 4/4" + CadenzaReturnPartial(Fraction.Whole)
+                    : "\\time 4/4");
                 _timeBeats = 4;
                 _timeBeatType = 4;
                 _timeSenza = false;
@@ -2835,10 +2862,29 @@ public sealed class LilyPondExporter
         bool wasSenza = _timeSenza;
         _timeSenza = ts.IsSenzaMisura;
         if (ts.IsSenzaMisura)
+        {
+            // Opened mid-bar: LilyPond's clock freezes there and the return will need a
+            // \partial (see _cadenzaOpenedMidBar). A second `time none` changes nothing.
+            if (!wasSenza)
+                _cadenzaOpenedMidBar = _timeSinceBoundary;
             return "\\cadenzaOn";
+        }
         _timeBeats = ts.Beats;
         _timeBeatType = ts.BeatType;
-        return (wasSenza ? "\\cadenzaOff " : "") + TimeText(ts);
+        return wasSenza
+            ? "\\cadenzaOff " + TimeText(ts) + CadenzaReturnPartial(new Fraction(ts.Beats, ts.BeatType))
+            : TimeText(ts);
+    }
+
+    /// <summary>The <c>\partial</c> a return from a cadenza opened mid-bar needs after its
+    /// <c>\time</c> — the whole of the returning meter, so measurePosition lands on 0 (see
+    /// <see cref="_cadenzaOpenedMidBar"/>); empty when the cadenza opened at a bar line.</summary>
+    private string CadenzaReturnPartial(Fraction measureLength)
+    {
+        if (!_cadenzaOpenedMidBar)
+            return "";
+        _cadenzaOpenedMidBar = false;
+        return " \\partial " + ChordModeDuration(measureLength);
     }
 
     private static string TimeText(TimeSignatureSyntax ts)
@@ -2867,6 +2913,20 @@ public sealed class LilyPondExporter
     /// inside the pickup (<see cref="_twinPartial"/>).</summary>
     private string ArmPartial(PartialDeclarationSyntax p)
     {
+        // Under `time none` the page's clock stands still and the pickup shortens nothing
+        // (LYS2015). LilyPond's \partial under \cadenzaOn would MOVE its frozen measurePosition
+        // (mid-piece: measureLength − dur) and the next \cadenzaOff \time then returns
+        // mid-measure — a different book (MEASURED 2.26.0, scratch/p359/lp/partial-senza.ly:
+        // bar check failed at 3/4, an automatic bar inside the following whole note). Not
+        // written, and said so.
+        if (_timeSenza)
+        {
+            _warnings.Add(
+                "a 'partial' inside 'time none' is not exported: the clock stands still there "
+                + "and the page ignores it (LYS2015), where LilyPond's \\partial would move its "
+                + "frozen measurePosition");
+            return "";
+        }
         if (p.Duration != null)
             _twinPartial = p.ToFraction();
         return EmitPartial(p);

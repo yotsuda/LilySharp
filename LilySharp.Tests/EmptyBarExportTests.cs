@@ -96,6 +96,29 @@ public class EmptyBarExportTests
             Twin(string.Format(OneStaff, "c'1 | s1 |: c'4 d e f :|")),
             Twin(string.Format(OneStaff, "c'1 | |: c'4 d e f :|")));
 
+    /// <summary>
+    /// A FORM's <c>|:</c> stands at a section boundary and pairs with nothing — the page
+    /// draws four bars for <c>A |: B :| C</c>. MEASURED (2.26.0, scratch/p359/lp/formrep-plain.ly,
+    /// 2026-09-09): the first cut of the rule read it as the second of a pair and wrote
+    /// <c>s1</c> before <c>\repeat volta</c>, and LilyPond drew five bars, one 5.51 wide and
+    /// empty. The <c>:|:</c> form is two bar lines, and its <c>|:</c> opens a section too.
+    /// </summary>
+    [Theory]
+    [InlineData("A |: B :| C")]
+    [InlineData("A |: B :|: C :| D")]
+    [InlineData("A |: B :| C |: D :|")]
+    public void TheTwin_AFormRepeatAfterAClosedBar_OpensNoEmptyBar(string form)
+    {
+        string source =
+            "octave absolute\ntime 4/4\npart m { }\n"
+            + "section A { m { c'4 d' e' f' | } }\nsection B { m { g'1 | } }\n"
+            + "section C { m { a'1 | } }\nsection D { m { b'1 | } }\n"
+            + $"form main {{ {form} }}\nscore main {{ staff m }}";
+        string twin = Twin(source);
+        Assert.DoesNotContain("s1", twin);
+        Assert.Contains("\\repeat volta 2 {", twin);
+    }
+
     // ===================== MusicXML =====================
 
     [Theory]

@@ -258,14 +258,23 @@ TimeDecl       = 'time' , Integer , '/' , Integer
                     From it to the next 'time N/M' the engine builds no automatic measure
                     boundary: a measure ends only at a WRITTEN '|', which still draws the
                     bar line and still lets the line break there; no time signature is
-                    drawn for it; no automatic beam is made (write them: c8[ d e f]); the
-                    measure-length checks are off; and the bar number does not advance
+                    drawn for it; the beat clock is FROZEN at the reading it had when
+                    'time none' arrived, so automatic beams come only where LilyPond's
+                    would — a span opened at a bar line (or at a beat the meter ends
+                    beams on) makes none (write them: c8[ d e f]), while a beam already
+                    building when 'time none' arrived mid-bar runs on to the next rest,
+                    longer note or written bar line, and so does every run after it
+                    (measured on 2.26.0, session 358); the measure-length checks are
+                    off; a 'partial' inside the span shortens nothing and is reported
+                    (LYS2015); and the bar number does not advance
                     across the span — the measure after the unmetered ones is numbered as
                     they are (LilyPond's Timing.timing = ##f freezes currentBarNumber;
                     measured on 2.26.0, session 353). Written here it is the file default,
                     in a section header the section's meter, in the music a mid-piece
                     change — per part, like any 'time'. The twin writes \cadenzaOn, a
-                    '|' inside it as \bar "|", and \cadenzaOff before the returning \time. *)
+                    '|' inside it as \bar "|", and \cadenzaOff before the returning \time
+                    — followed by \partial <bar> when the span opened mid-bar, since
+                    LilyPond's frozen measurePosition is not reset by \cadenzaOff. *)
 KeyDecl        = 'key' , PitchBase , [ Accidental-text ] , Mode ;
 
 Mode           = 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian'

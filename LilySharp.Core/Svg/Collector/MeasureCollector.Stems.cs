@@ -181,7 +181,8 @@ public sealed partial class MeasureCollector
                     isPickup: measure.IsPickup,
                     unmetered: measure.Unmetered,
                     breaksMidBar: measure.BreaksMidBar,
-                    continuesBar: measure.ContinuesBar);
+                    continuesBar: measure.ContinuesBar,
+                    unmeteredPosition: measure.UnmeteredPosition);
                 changed = true;
             }
 
@@ -403,7 +404,8 @@ public sealed partial class MeasureCollector
                 isPickup: m.IsPickup,
                 unmetered: m.Unmetered,
                 breaksMidBar: m.BreaksMidBar,
-                continuesBar: m.ContinuesBar);
+                continuesBar: m.ContinuesBar,
+                unmeteredPosition: m.UnmeteredPosition);
         }
     }
 

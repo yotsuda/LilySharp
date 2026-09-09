@@ -310,6 +310,155 @@ public class SenzaMisuraTests
         Assert.NotEmpty(Render(source));
     }
 
+    // ---- the frozen clock (session 358) ----------------------------------------------
+    // LilyPond's \cadenzaOn freezes measurePosition at the reading it had; the auto-beam
+    // check asks that reading at every stem (auto-beam-engraver.cc consider_end reads
+    // measure_position_at_start_of_timestep_). Measured on 2.26.0, scratch/p359/lp/pair.ps1.
+
+    private const string MidBarEighths = """
+        time 4/4
+        part melody { clef treble }
+        section Main { melody { c'8 d time none e8 f g a b c d e f4 g | time 4/4 c1 | } }
+        form main { Main }
+        score main { staff melody }
+        """;
+
+    private const string MidBarQuarters = """
+        time 4/4
+        part melody { clef treble }
+        section Main { melody { c'4 d time none e8 f g a b c d e f4 g | time 4/4 c1 | } }
+        form main { Main }
+        score main { staff melody }
+        """;
+
+    /// <summary>
+    /// midbar-8th.ly: ONE Beam grob from the c'8 at 8.585 to the e at 31.253 — the two
+    /// eighths before <c>time none</c> and the eight after it. The clock froze at 1/4, and 1/4
+    /// ends no eighth beam in 4/4, so the beam building at the c'8 never ends until the f4.
+    /// midbar-4th (session 353's probe-midbar.ly): frozen at 1/2 — a beam end — no Beam grob.
+    /// </summary>
+    [Fact]
+    public void ABeamAlreadyBuilding_WhenTimeNoneArrivesMidBar_RunsOn()
+    {
+        var groups = new BeamDetector().DetectBeamGroups(Collect(MidBarEighths));
+        var one = Assert.Single(groups);
+        Assert.Equal(0, one.MeasureIndex);
+        Assert.Equal(10, one.Members.Length);
+
+        Assert.Empty(new BeamDetector().DetectBeamGroups(Collect(MidBarQuarters)));
+    }
+
+    /// <summary>
+    /// midbar-8th-2bars.ly: the frozen 1/4 carries across the cadenza's written <c>|</c>
+    /// (LilyPond's <c>\bar "|"</c> starts no measure), so the next unmetered bar's eighths beam
+    /// as one too — Beam grobs 8.585–16.228 (c'8 d e f) and 23.325–30.967 (a8 b c d).
+    /// midbar-4th-2bars.ly, frozen at 1/2: neither bar has a Beam grob.
+    /// </summary>
+    [Fact]
+    public void TheFrozenPosition_CarriesAcrossTheCadenzasWrittenBar()
+    {
+        const string source = """
+            time 4/4
+            part melody { clef treble }
+            section Main { melody { c'8 d time none e8 f g4 | a8 b c d e4 | time 4/4 c1 | } }
+            form main { Main }
+            score main { staff melody }
+            """;
+        var score = Collect(source);
+        Assert.Equal(new Fraction(1, 4), score.Voice.Measures[0].UnmeteredPosition);
+        Assert.Equal(new Fraction(1, 4), score.Voice.Measures[1].UnmeteredPosition);
+        Assert.Equal(Fraction.Zero, score.Voice.Measures[2].UnmeteredPosition);
+
+        var groups = new BeamDetector().DetectBeamGroups(score).OrderBy(g => g.MeasureIndex).ToList();
+        Assert.Equal(2, groups.Count);
+        Assert.Equal(0, groups[0].MeasureIndex);
+        Assert.Equal(4, groups[0].Members.Length);
+        Assert.Equal(1, groups[1].MeasureIndex);
+        Assert.Equal(4, groups[1].Members.Length);
+
+        const string control = """
+            time 4/4
+            part melody { clef treble }
+            section Main { melody { c'4 d time none e8 f g4 | a8 b c d e4 | time 4/4 c1 | } }
+            form main { Main }
+            score main { staff melody }
+            """;
+        Assert.Empty(new BeamDetector().DetectBeamGroups(Collect(control)));
+    }
+
+    /// <summary>
+    /// midbar-8th.ly against midbar-8th-fix.ly: without the <c>\partial</c> LilyPond warns
+    /// "mid-measure time signature without \partial" and "bar check failed at: 1/4" and draws
+    /// an automatic bar line inside the <c>c1</c> (bars 40.893 / 50.795); with
+    /// <c>\partial 1</c> after <c>\time 4/4</c>, no warning and bars 40.893 / 52.295. A 3/4
+    /// return takes <c>\partial 2.</c> (midbar-8th-34-fixA.ly, no warning either). A cadenza
+    /// opened at a bar line needs nothing (the fixture's <c>\cadenzaOff \time 4/4 c1 |</c>).
+    /// </summary>
+    [Fact]
+    public void TheTwin_ReturnsFromAMidBarCadenza_WithAPartialOfTheWholeBar()
+    {
+        Assert.Contains("\\cadenzaOff \\time 4/4 \\partial 1 c1 |",
+            new LilyPondExporter().Export(SyntaxTree.Parse(MidBarEighths)));
+
+        const string threeFour = """
+            time 4/4
+            part melody { clef treble }
+            section Main { melody { c'8 d time none e8 f g a b c d e f4 g | time 3/4 c2. | d2. | } }
+            form main { Main }
+            score main { staff melody }
+            """;
+        Assert.Contains("\\cadenzaOff \\time 3/4 \\partial 2. c2. |",
+            new LilyPondExporter().Export(SyntaxTree.Parse(threeFour)));
+
+        string atBar = new LilyPondExporter().Export(SyntaxTree.Parse(Fixture));
+        Assert.Contains("\\cadenzaOff \\time 4/4 c1 |", atBar);
+        Assert.DoesNotContain("\\partial", atBar);
+    }
+
+    /// <summary>
+    /// partial-senza.ly: LilyPond's <c>\partial 4</c> under <c>\cadenzaOn</c> moves its frozen
+    /// measurePosition to 3/4, so the bar after the cadenza fails its bar check at 3/4 and an
+    /// automatic bar line lands inside the <c>a'1</c>. The page's clock stands still, so the
+    /// pickup shortens nothing: it is reported (LYS2015) and the twin leaves it out.
+    /// </summary>
+    [Fact]
+    public void APartialUnderTimeNone_IsReported_AndNotExported()
+    {
+        const string source = """
+            time 4/4
+            part melody { clef treble }
+            section Main { melody { c'4 d e f | time none g8 a b partial 4 c'4 | d'4 e' f' g' | time 4/4 a'1 | } }
+            form main { Main }
+            score main { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors);
+        var validator = new MeasureValidator();
+        validator.Validate(tree);
+        var warning = Assert.Single(validator.Diagnostics, d => d.Code == DiagnosticCodes.PartialUnderTimeNone);
+        Assert.Contains("time none", warning.Message);
+        // …and no fill diagnostic rides on it: the unmetered bars are not measured.
+        Assert.DoesNotContain(validator.Diagnostics, d => d.Code is "LYS2001" or "LYS2002");
+
+        var exporter = new LilyPondExporter();
+        string ly = exporter.Export(tree);
+        Assert.DoesNotContain("\\partial", ly);
+        Assert.Contains(exporter.Warnings, w => w.Contains("'partial' inside 'time none'"));
+
+        // Metered again: the same pickup is read (positive control — no LYS2015).
+        const string metered = """
+            time 4/4
+            part melody { clef treble }
+            section Main { melody { c'4 d e f | partial 4 c'4 | d'4 e' f' g' | } }
+            form main { Main }
+            score main { staff melody }
+            """;
+        var v2 = new MeasureValidator();
+        v2.Validate(SyntaxTree.Parse(metered));
+        Assert.DoesNotContain(v2.Diagnostics, d => d.Code == DiagnosticCodes.PartialUnderTimeNone);
+        Assert.Contains("\\partial 4", new LilyPondExporter().Export(SyntaxTree.Parse(metered)));
+    }
+
     private static Score Collect(string source)
     {
         var tree = SyntaxTree.Parse(source);

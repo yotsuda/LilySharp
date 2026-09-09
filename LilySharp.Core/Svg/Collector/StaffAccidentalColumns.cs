@@ -253,7 +253,8 @@ internal static class StaffAccidentalColumns
                     isPickup: measure.IsPickup,
                     unmetered: measure.Unmetered,
                     breaksMidBar: measure.BreaksMidBar,
-                    continuesBar: measure.ContinuesBar);
+                    continuesBar: measure.ContinuesBar,
+                    unmeteredPosition: measure.UnmeteredPosition);
                 voiceChanged = true;
             }
 

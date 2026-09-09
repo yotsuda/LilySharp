@@ -872,6 +872,16 @@ public static class DiagnosticCodes
     // reports the ordinary underfull warning (LYS2001, MeasureIncomplete) over the
     // region between the barlines — zero duration is just the extreme underfull case.
 
+    /// <summary>Measure warning: a <c>partial</c> written inside <c>time none</c>. The clock
+    /// stands still in an unmetered span (MeasureBuilder's frozen clock), so there is no bar
+    /// length for the pickup to shorten: the page ignores it, and the LilyPond twin does not
+    /// write it. LilyPond's <c>\partial</c> under <c>\cadenzaOn</c> would set the frozen
+    /// measurePosition instead (mid-piece: measureLength − dur, lily/timing-translator.cc:149-160
+    /// pre_process_music), so its next <c>\cadenzaOff \time</c> returns mid-measure — a different
+    /// book. MEASURED (2.26.0, scratch/p359/lp/partial-senza.ly): the bar check after the
+    /// cadenza fails at 3/4 and an automatic bar line lands inside the following whole note.</summary>
+    public const string PartialUnderTimeNone = "LYS2015";
+
     /// <summary>Measure warning: a rendered score holds NO BARS AT ALL — every part it
     /// draws is empty, so the file compiles to a blank page.
     /// <para>

@@ -183,6 +183,26 @@ public sealed record Measure
     public bool Unmetered { get; init; }
 
     /// <summary>
+    /// The clock's reading when <c>time none</c> froze it — LilyPond's measurePosition, which
+    /// <c>Timing.timing = ##f</c> stops advancing and which NOTHING in the cadenza resets: not
+    /// its written <c>\bar "|"</c> ("the \bar command alone does not start a new measure",
+    /// NR 1.2.3 Unmetered music) and not <c>\cadenzaOff</c>. Zero for a metered measure and for
+    /// a span opened at a bar line; the beats already sounded in the bar when it opened
+    /// mid-bar. Read by the automatic beaming (<c>BeamDetector</c>): LilyPond's auto-beam
+    /// check asks that frozen position at every stem, so a span opened at a beat the meter
+    /// ends beams on makes none, and one opened elsewhere never ends a beam it is building.
+    /// LILYPOND-REF: lily/timing-translator.cc:478-507 Timing_translator::start_translation_timestep
+    ///   — measurePosition is left alone while `timing` is off;
+    /// LILYPOND-REF: lily/auto-beam-engraver.cc:115-118 Auto_beam_engraver::start_translation_timestep
+    ///   — measure_position_at_start_of_timestep_ is what consider_end reads.
+    /// MEASURED (2.26.0, scratch/p359/lp/midbar-8th-2bars.ly): <c>c'8 d \cadenzaOn e8 f g4
+    /// \bar "|" a8 b c d e4</c> — the second bar's four eighths are one Beam grob (23.325–30.967)
+    /// as the first bar's are (8.585–16.228); with the cadenza opened at 1/2
+    /// (midbar-4th-2bars.ly) neither bar has a Beam.
+    /// </summary>
+    public Fraction UnmeteredPosition { get; init; } = Fraction.Zero;
+
+    /// <summary>
     /// True when this measure is the FIRST HALF of a bar that a line break splits — the music
     /// written before a mid-bar <c>break</c>. It ends in no bar line (<see cref="EndBarline"/>
     /// is <see cref="BarlineType.None"/>), it forces the line break, and it does not advance
@@ -286,7 +306,8 @@ public sealed record Measure
         bool isPickup = false,
         bool unmetered = false,
         bool breaksMidBar = false,
-        bool continuesBar = false)
+        bool continuesBar = false,
+        Fraction? unmeteredPosition = null)
     {
         Items = items;
         StartBarline = startBarline;
@@ -297,6 +318,7 @@ public sealed record Measure
         SectionLabelPosition = sectionLabelPosition;
         IsPickup = isPickup;
         Unmetered = unmetered;
+        UnmeteredPosition = unmeteredPosition ?? Fraction.Zero;
         BreaksMidBar = breaksMidBar;
         ContinuesBar = continuesBar;
         // Derive permission: hasBreakAfter implies Force for backward

@@ -1100,7 +1100,8 @@ public sealed partial class MeasureCollector
                     isPickup: m.IsPickup,
                     unmetered: m.Unmetered,
                     breaksMidBar: m.BreaksMidBar,
-                    continuesBar: m.ContinuesBar);
+                    continuesBar: m.ContinuesBar,
+                    unmeteredPosition: m.UnmeteredPosition);
             }
             if (builder != null)
                 voiceDict[name] = new Voice(voice.Name, builder.ToImmutable());
@@ -2293,7 +2294,8 @@ public sealed partial class MeasureCollector
             isPickup: reference.IsPickup,
             unmetered: reference.Unmetered,
             breaksMidBar: reference.BreaksMidBar,
-            continuesBar: reference.ContinuesBar)
+            continuesBar: reference.ContinuesBar,
+            unmeteredPosition: reference.UnmeteredPosition)
         {
             // The mirror of a split head forces the same line break the head does.
             LineBreakPermission = reference.BreaksMidBar ? Layout.BreakPermission.Force : Layout.BreakPermission.Allow,

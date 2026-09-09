@@ -171,27 +171,36 @@ internal sealed class BeamDetector
                 crossMeasureTouched.Add(mi);
         }
 
-        var effectiveTimeSig = timeSignature;
+        // The meter the BEAT GRID is read from: the last METERED signature. `time none`
+        // keeps the grid of the meter before it — LilyPond's \cadenzaOn sets only
+        // Timing.timing, so timeSignature / beatStructure / beamExceptions stay the metered
+        // ones and the FROZEN measurePosition is checked against them (the walk inside
+        // DetectBeamGroupsInMeasure; a piece opening with `time none` checks against
+        // LilyPond's default 4/4, which is the 4/4 the syntax falls back to).
+        // LILYPOND-REF: scm/auto-beam.scm:82-90 default-auto-beam-check — beatBase,
+        //   beatStructure and beamExceptions are read from the context, untouched by
+        //   ly/property-init.ly cadenzaOn.
+        var beamingMeter = MeteredMeter(timeSignature);
         for (int measureIndex = 0; measureIndex < voice.Measures.Length; measureIndex++)
         {
             var measure = voice.Measures[measureIndex];
             foreach (var item in measure.Items)
-                if (item is TimeSignatureChangeItem tsc)
-                    effectiveTimeSig = tsc.NewTime;
+                if (item is TimeSignatureChangeItem { NewTime: { SenzaMisura: false } newTime })
+                    beamingMeter = newTime;
 
             if (memoEligible
                 && (crossMeasureTouched == null || !crossMeasureTouched.Contains(measureIndex)))
             {
                 long bracketsHash = 0;
                 bracketHashes?.TryGetValue(measureIndex, out bracketsHash);
-                long key = MeasureMemoKey(measure, effectiveTimeSig, bracketsHash);
+                long key = MeasureMemoKey(measure, beamingMeter, bracketsHash);
                 if (memo!.TryGet(key, out var stored))
                 {
 #if DEBUG
                     // Every Debug hit re-detects live and compares — the drift net over
                     // AddDetectionInputs' hand-rolled read set (see its remarks).
                     VerifyReplayAgainstLiveDetection(stored, measure, measureIndex,
-                        effectiveTimeSig, consumed, tupletSpans, voiceIndex, forceStemUpAt);
+                        beamingMeter, consumed, tupletSpans, voiceIndex, forceStemUpAt);
 #endif
                     // Re-base to the live measure index; everything else in a stored
                     // per-measure group is measure-local (members carry the −1 sentinel).
@@ -202,7 +211,7 @@ internal sealed class BeamDetector
                     continue;
                 }
                 int before = beamGroups.Count;
-                DetectBeamGroupsInMeasure(measure, measureIndex, effectiveTimeSig, beamGroups,
+                DetectBeamGroupsInMeasure(measure, measureIndex, beamingMeter, beamGroups,
                     consumed, tupletSpans, voiceIndex, forceStemUpAt);
                 var slice = ImmutableArray.CreateBuilder<BeamGroup>(beamGroups.Count - before);
                 for (int g = before; g < beamGroups.Count; g++)
@@ -211,10 +220,28 @@ internal sealed class BeamDetector
                 continue;
             }
 
-            DetectBeamGroupsInMeasure(measure, measureIndex, effectiveTimeSig, beamGroups, consumed, tupletSpans, voiceIndex, forceStemUpAt);
+            DetectBeamGroupsInMeasure(measure, measureIndex, beamingMeter, beamGroups, consumed, tupletSpans, voiceIndex, forceStemUpAt);
         }
 
         return beamGroups.ToImmutableArray();
+    }
+
+    /// <summary>The metered signature a beat grid is read from: <paramref name="timeSig"/>
+    /// itself, or for <c>time none</c> the 4/4 its syntax falls back to — LilyPond's default
+    /// <c>timeSignature</c>, which \cadenzaOn leaves in place (see the remark at the
+    /// per-measure walk in <see cref="DetectBeamGroups(Voice, TimeSignature, ImmutableArray{TupletBracketItem}, int, Func{int, bool?}?, BeamDetectionMemo?)"/>).</summary>
+    private static TimeSignature MeteredMeter(TimeSignature timeSig)
+        => timeSig.SenzaMisura ? new TimeSignature(timeSig.Beats, timeSig.BeatType, timeSig.BeatsText) : timeSig;
+
+    /// <summary>Whether <paramref name="measure"/> holds the <c>time none</c> that froze the
+    /// clock — then the walk freezes at that item; otherwise an unmetered measure is frozen
+    /// from its first item, at <see cref="Measure.UnmeteredPosition"/>.</summary>
+    private static bool HoldsTheFreeze(Measure measure)
+    {
+        foreach (var item in measure.Items)
+            if (item is TimeSignatureChangeItem { NewTime.SenzaMisura: true })
+                return true;
+        return false;
     }
 
     /// <summary>The memo key of one measure's detection input (see the memo remarks on
@@ -239,7 +266,8 @@ internal sealed class BeamDetector
     /// </summary>
     /// <remarks>
     /// The read set, field by field (each line names its reader in this class):
-    /// <c>IsPickup</c> (<see cref="MeasureStartPosition"/>); per item, in sequence: the
+    /// <c>IsPickup</c> (<see cref="MeasureStartPosition"/>), <c>Unmetered</c> and
+    /// <c>UnmeteredPosition</c> (the frozen clock of the walk); per item, in sequence: the
     /// item's KIND (a non-beamable item ends the beam and holds an index), sounding
     /// <c>Duration</c> (<see cref="GetDuration"/> — the position walk), <c>BaseDuration</c>
     /// (<see cref="IsBeamable"/>/<see cref="GetBeamCount"/>/<see cref="IsBeamedRest"/>),
@@ -267,6 +295,7 @@ internal sealed class BeamDetector
     {
         hc.Add(measure.IsPickup);
         hc.Add(measure.Unmetered);
+        AddFraction(ref hc, measure.UnmeteredPosition);
         hc.Add(measure.Items.Length);
         foreach (var item in measure.Items)
         {
@@ -691,18 +720,6 @@ internal sealed class BeamDetector
         var manualRanges = DetectManualBeamGroups(measure, measureIndex, beamOptions, beamGroups,
             tupletSpans, voiceIndex, forceStemUpAt);
 
-        // UNMETERED (`time none`): no automatic beams at all — only the ones written.
-        // LILYPOND-REF: scm/auto-beam.scm:82-90 default-auto-beam-check — the end rule is
-        //   `(zero? pos)` on measurePosition modulo the beaming period, and under \cadenzaOn
-        //   (Timing.timing = ##f) measurePosition never advances (lily/timing-translator.cc
-        //   Timing_translator::start_translation_timestep), so it is zero at every stem and
-        //   every beam is required to end where it began:
-        // LILYPOND-REF: lily/auto-beam-engraver.cc:171-182 Auto_beam_engraver::consider_end.
-        // MEASURED (2.26.0, scratch/p354/lp/senza-fixed.ly against senza-control.ly): eight
-        // eighths under \cadenzaOn make no Beam grob; the same eighths in 4/4 make two.
-        if (timeSig.SenzaMisura)
-            return;
-
         var stems = new List<(MusicItem item, int index, Fraction startPos)>();
         // LILYPOND-REF: lily/auto-beam-engraver.cc:241 junk_beam / :278 end_beam — shortest_dur_
         // is a quarter whenever no beam is being built, which is why the first stem of a beam
@@ -710,6 +727,38 @@ internal sealed class BeamDetector
         // lookup real, and recheck_beam is what goes back for the boundary the first one passed.
         var shortest = Fraction.Quarter;
         Fraction position = MeasureStartPosition(measure, beamOptions);
+
+        // UNMETERED (`time none`): the clock is FROZEN, not stopped. Under \cadenzaOn
+        // (Timing.timing = ##f) measurePosition keeps the reading it had when the cadenza
+        // opened, and the auto-beam engraver asks THAT reading at every stem — so the beat
+        // check gives one answer for the whole span: a span opened at a beat the meter ends
+        // beams on (a bar line, 1/2 in 4/4) ends every beam at once and makes none; a span
+        // opened elsewhere (1/4 in 4/4) never ends a beam, and one already building when
+        // `time none` arrived runs on to the next rest, longer note or written bar line.
+        // `position` keeps running for the pattern's own moments (BeamletCounts, the
+        // recheck); `Clock()` is what the beat check reads.
+        // LILYPOND-REF: scm/auto-beam.scm:82-90 default-auto-beam-check — the end rule is
+        //   `(zero? pos)` / the exception endings on measurePosition modulo the beaming period;
+        // LILYPOND-REF: lily/timing-translator.cc:478-507 Timing_translator::start_translation_timestep
+        //   — measurePosition is not advanced while `timing` is off;
+        // LILYPOND-REF: lily/auto-beam-engraver.cc:115-118 Auto_beam_engraver::start_translation_timestep
+        //   — measure_position_at_start_of_timestep_ is the reading consider_end tests;
+        // LILYPOND-REF: lily/auto-beam-engraver.cc:171-182 Auto_beam_engraver::consider_end.
+        // MEASURED (2.26.0): scratch/p354/lp/senza-fixed.ly — eight eighths in a cadenza opened
+        // at a bar line make no Beam grob (the same eighths in 4/4 make two, senza-control.ly);
+        // scratch/p359/lp/midbar-8th.ly — `c'8 d \cadenzaOn e8 f g a b c d e f4 g` is ONE Beam
+        // grob over the ten eighths (8.585–31.253); midbar-8th-2bars.ly — the frozen 1/4 carries
+        // across the cadenza's `\bar "|"` (Beams 8.585–16.228 and 23.325–30.967);
+        // midbar-4th-2bars.ly — opened at 1/2, neither bar beams.
+        bool frozen = measure.Unmetered && !HoldsTheFreeze(measure);
+        Fraction frozenPosition = frozen ? measure.UnmeteredPosition : Fraction.Zero;
+        Fraction Clock() => frozen ? frozenPosition : position;
+        // The reading the beam being built began at, and the running position then — the
+        // pair LilyPond's recheck adds: `end_moment (i) - start_moment (0) + measure_offset_`
+        // (lily/auto-beam-engraver.cc:421-425 recheck_beam), where measure_offset_ is the
+        // (possibly frozen) reading at begin_beam.
+        Fraction beamOrigin = Fraction.Zero;
+        Fraction beamOriginReal = Fraction.Zero;
 
         // LILYPOND-REF: lily/auto-beam-engraver.cc:252-279 end_beam — a beam of fewer than two
         // stems is junked, not typeset. This is the ONLY place that decides a lone note is a
@@ -733,7 +782,8 @@ internal sealed class BeamDetector
         {
             for (int i = 0; i + 1 < stems.Count; )
             {
-                var endOfStem = stems[i].startPos + GetDuration(stems[i].item);
+                var endOfStem = beamOrigin
+                    + (stems[i].startPos + GetDuration(stems[i].item) - beamOriginReal);
                 if (!AutoBeamCheck.EndsBeam(endOfStem, shortest, beamOptions))
                 {
                     i++;
@@ -747,6 +797,13 @@ internal sealed class BeamDetector
                         tupletSpans, voiceIndex, forceStemUpAt));
                 stems.Clear();
                 stems.AddRange(tail);
+                // The tail's pattern starts at the split (lily/beaming-pattern.cc:546-550
+                // split_pattern — its measure_offset_ is the reading there).
+                if (stems.Count > 0)
+                {
+                    beamOrigin += stems[0].startPos - beamOriginReal;
+                    beamOriginReal = stems[0].startPos;
+                }
                 i = 0;
             }
         }
@@ -766,6 +823,20 @@ internal sealed class BeamDetector
             // Auto_beam_engraver is not offered it at all. Stepping over is that.
             if (item.GraceTime)
                 continue;
+
+            // `time none` arriving mid-bar: \cadenzaOn is a property set, not a grob — nothing
+            // the auto-beam engraver is offered — so the beam being built runs on; only the
+            // clock freezes here (see Clock()). A metered `time` falls through to the
+            // not-beamable arm below and ends the beam, as it always did.
+            if (item is TimeSignatureChangeItem { NewTime.SenzaMisura: true })
+            {
+                if (!frozen)
+                {
+                    frozen = true;
+                    frozenPosition = position;
+                }
+                continue;
+            }
 
             // A rest, a note too long to be beamed, and a stem that already carries a beam of
             // its own (manual, or a cross-measure pair claimed by the first pass) all end the
@@ -792,15 +863,20 @@ internal sealed class BeamDetector
 
             // LILYPOND-REF: lily/auto-beam-engraver.cc:392-395 consider_end / consider_begin —
             // "end should be based on shortest_dur_, begin should be based on current duration".
-            if (stems.Count > 0 && AutoBeamCheck.EndsBeam(position, shortest, beamOptions))
+            if (stems.Count > 0 && AutoBeamCheck.EndsBeam(Clock(), shortest, beamOptions))
                 EndBeam();
 
-            if (stems.Count == 0 && !AutoBeamCheck.StartsBeam(position, duration, beamOptions))
+            if (stems.Count == 0 && !AutoBeamCheck.StartsBeam(Clock(), duration, beamOptions))
             {
                 position = position + duration;
                 continue;
             }
 
+            if (stems.Count == 0)
+            {
+                beamOrigin = Clock();
+                beamOriginReal = position;
+            }
             stems.Add((item, i, position));
             if (recheckNeeded)
                 RecheckBeam();

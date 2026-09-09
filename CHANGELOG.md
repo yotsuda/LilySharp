@@ -134,6 +134,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A beam already building when `time none` arrives mid-bar runs on, as LilyPond's does.**
+  Lily# stopped every automatic beam in a bar that turned unmetered. LilyPond's `\cadenzaOn`
+  only freezes the measure position, and its auto-beam check reads that frozen reading at every
+  stem: a span opened at a bar line (or at a beat the meter ends beams on) still makes no beam,
+  but `c'8 d time none e8 f g a b c d e f4 g |` is one beam over the ten eighths in LilyPond
+  2.26.0 and was ten flags in Lily#; the frozen reading also carries across the cadenza's
+  written `|`, so the eighths of the next unmetered bar beam the same way. Measured on the
+  twins (scratch/p359/lp); nothing changes for a `time none` written at a bar line.
 - **A line's first or last syllable overhangs its bar line, as LilyPond's does.** Lily# used
   to hold a lyric line's first syllable clear of the bar line before it (and its last clear of
   the bar after it) by half the word plus 0.4 staff spaces — a reservation LilyPond does not
@@ -203,6 +211,11 @@ workflow attaches that section to the GitHub Release verbatim.
 - **LYS1005 names the glued custom text.** `form main { A _ "shown" }` is a reference to a section
   named `_` with a display label (a legal name, so the space cannot be forgiven); the custom
   text is the glued `_"shown"`. When nothing declares `_`, the error says to glue the quote.
+- **LYS2015: a `partial` inside `time none` does nothing, and says so.** The clock stands still
+  in an unmetered span, so there is no bar length for a pickup to shorten; the page silently
+  ignored it. It is a warning now, and the LilyPond twin leaves the `\partial` out (LilyPond's
+  would move its frozen measure position and the bar after the cadenza would then fail its bar
+  check).
 
 ### MIDI, MusicXML and the LilyPond twin
 
@@ -215,7 +228,17 @@ workflow attaches that section to the GitHub Release verbatim.
   writes the spacer the author would have typed (`s1 |`, `s2. |` in 3/4, `s4 |` under
   `partial 4`), the MusicXML a whole-bar rest of the same length, both under the page's own
   rule: a bare `|` (or a `|:` that does not open the scope) with no music since the last bar
-  line is an empty bar; `||`, `:|` and `|.` on an empty span decorate and open none.
+  line is an empty bar; `||`, `:|` and `|.` on an empty span decorate and open none. A form's
+  `|:` (`form main { A |: B :| C }`) opens the repeated section's scope and pairs with nothing:
+  the first cut of this rule read it as an empty bar and wrote `s1` before every
+  `\repeat volta`, so LilyPond drew one more bar than the page (measured, session 358).
+- **`lysc ly` returns from a cadenza opened mid-bar with `\partial`.** `c'8 d time none … |
+  time 4/4 c1 |` closes the cadenza's bar at the written `|` and starts the next bar fresh;
+  LilyPond's measure position froze at the `time none` and `\cadenzaOff` does not reset it, so
+  the twin's returning `\time 4/4` was a mid-measure meter change, the `c1 |` failed its bar
+  check and an automatic bar line landed inside the whole note. The twin now writes
+  `\cadenzaOff \time 4/4 \partial 1` (`\partial 2.` for a 3/4 return) — measurePosition 0, no
+  warning, the page's bars. A span opened at a bar line needs nothing and gets nothing.
 - **An empty bar inside a pickup sounds as long as the pickup.** `partial 4 | c4 d e f |` — an
   empty pickup written as a bare bar — draws one beat of space on the page and now sounds one
   beat in the MIDI, at the piece's opening, after a mid-piece `partial`, and from a section

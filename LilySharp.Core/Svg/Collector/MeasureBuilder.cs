@@ -93,6 +93,16 @@ internal sealed class MeasureBuilder
     // \break \cadenzaOff \time 4/4 c'1 |` draws the two written bars, breaks where told, and
     // numbers the next line 2 — the cadenza and the bar after it share one number.
     private bool _senzaMisura;
+    // The clock's reading when `time none` froze it — LilyPond's measurePosition, which
+    // start_translation_timestep leaves alone while `timing` is off and which nothing in the
+    // cadenza resets (not its written `\bar "|"`, not \cadenzaOff). Zero when the span opened
+    // at a bar line. Stamped on every unmetered measure (Measure.UnmeteredPosition) for the
+    // one reader that asks the clock inside a cadenza: the auto-beam check. Cleared by the
+    // next metered `time`. MEASURED (2.26.0, scratch/p359/lp/midbar-8th.ly): `c'8 d \cadenzaOn
+    // e8 f g a b c d e f4 g` is ONE Beam grob over the ten eighths — the beat check reads 1/4
+    // at every stem and 1/4 ends no eighth beam in 4/4 — where `c'4 d \cadenzaOn e8 …` (frozen
+    // at 1/2, a beam end) makes none.
+    private Fraction _frozenPosition = Fraction.Zero;
 
     // When a 'partial N' shortens the next measure to a pickup, the meter to
     // restore once that measure closes is parked here. LILYPOND-REF:
@@ -245,6 +255,18 @@ internal sealed class MeasureBuilder
     public void SetMeasureLength(Fraction length, bool senzaMisura = false)
     {
         _timeSignature = length;
+        FreezeOrThaw(senzaMisura);
+    }
+
+    /// <summary>The one place the clock freezes and thaws (see <c>_frozenPosition</c>): a
+    /// <c>time none</c> arriving on a metered clock freezes it at its current reading; a
+    /// metered <c>time</c> thaws it. A second <c>time none</c> inside a cadenza changes nothing.</summary>
+    private void FreezeOrThaw(bool senzaMisura)
+    {
+        if (senzaMisura && !_senzaMisura)
+            _frozenPosition = _currentDuration;
+        else if (!senzaMisura)
+            _frozenPosition = Fraction.Zero;
         _senzaMisura = senzaMisura;
     }
 
@@ -431,9 +453,9 @@ internal sealed class MeasureBuilder
         // change point), so it never advances timing or completes a measure.
         if (item is TimeSignatureChangeItem tsc)
         {
-            // `time none` freezes the clock (see _senzaMisura) and keeps the last metered
-            // length; a metered `time` after it thaws the clock and re-arms.
-            _senzaMisura = tsc.NewTime.SenzaMisura;
+            // `time none` freezes the clock (see _senzaMisura, _frozenPosition) and keeps the
+            // last metered length; a metered `time` after it thaws the clock and re-arms.
+            FreezeOrThaw(tsc.NewTime.SenzaMisura);
             if (!tsc.NewTime.SenzaMisura)
                 _timeSignature = new Fraction(tsc.NewTime.Beats, tsc.NewTime.BeatType);
             // Collapse a section reset immediately followed by the section's own
@@ -739,7 +761,8 @@ internal sealed class MeasureBuilder
             sectionLabelPosition: _sectionLabelPosition,
             isPickup: _partialRestore != null,
             unmetered: _senzaMisura,
-            continuesBar: _continuesBar));
+            continuesBar: _continuesBar,
+            unmeteredPosition: _frozenPosition));
 
         // An auto-filled close leaves an UNCONFIRMED boundary (a following written barline
         // just confirms it); a written-barline close consumed the boundary, so a following
@@ -1091,7 +1114,8 @@ internal sealed class MeasureBuilder
             sectionLabelPosition: _sectionLabelPosition,
             isPickup: _partialRestore != null,
             unmetered: _senzaMisura,
-            continuesBar: _continuesBar)
+            continuesBar: _continuesBar,
+            unmeteredPosition: _frozenPosition)
         {
             IsEmptyPlaceholder = true,
         });
@@ -1124,7 +1148,8 @@ internal sealed class MeasureBuilder
                 sectionLabelPosition: _sectionLabelPosition,
                 isPickup: _partialRestore != null,
                 unmetered: _senzaMisura,
-                continuesBar: _continuesBar));
+                continuesBar: _continuesBar,
+                unmeteredPosition: _frozenPosition));
         }
 
         // Back-to-back repeats collapse: a measure that ENDS with a repeat (`:|` or
@@ -1244,6 +1269,7 @@ internal sealed class MeasureBuilder
         bool LastEndAutoFill,
         Fraction TimeSignature,
         bool SenzaMisura,
+        Fraction FrozenPosition,
         Fraction? PartialRestore,
         BarlineType PendingStartBarline,
         BarlineType PendingEndBarline,
@@ -1265,7 +1291,7 @@ internal sealed class MeasureBuilder
 
     internal BuilderCheckpoint Capture() => new(
         _confirmableBoundary, _boundaryRetargetable, _lastEndAutoFill,
-        _timeSignature, _senzaMisura, _partialRestore,
+        _timeSignature, _senzaMisura, _frozenPosition, _partialRestore,
         _pendingStartBarline, _pendingEndBarline,
         _pendingBreak, _pendingNoBreak, _pendingPageBreak, _pendingNoPageBreak,
         _sectionLabel, _sectionLabelPosition, _measureSourceStart,
@@ -1292,6 +1318,7 @@ internal sealed class MeasureBuilder
         _lastEndAutoFill = ck.LastEndAutoFill;
         _timeSignature = ck.TimeSignature;
         _senzaMisura = ck.SenzaMisura;
+        _frozenPosition = ck.FrozenPosition;
         _partialRestore = ck.PartialRestore;
         _pendingStartBarline = ck.PendingStartBarline;
         _pendingEndBarline = ck.PendingEndBarline;
