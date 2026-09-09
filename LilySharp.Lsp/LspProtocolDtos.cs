@@ -324,11 +324,11 @@ public class RenderTextParams
     /// host that only shows it (a Markdown preview's lys fence): the same layout, the
     /// fonts still left to the host page (OmitFontFace), none of the click targets.</summary>
     public bool Interactive { get; set; } = true;
-    /// <summary>True for a Markdown lys fence, which draws ONE picture (owner decision
-    /// 2026-09-09): no <c>score { }</c> → every part as a staff in declaration order
-    /// playing the one form (two or more forms are refused); one score → that score;
-    /// two or more scores → refused. False (the default, the AI panel) keeps the file's
-    /// rules: the first score, or the first part alone when there is none.</summary>
+    /// <summary>True for a Markdown lys fence, which draws ONE picture and says which
+    /// (owner decisions 2026-09-09 and 2026-09-10): exactly one <c>score { }</c> → that
+    /// score; none, or two or more → refused with the reason. False (the default, the AI
+    /// panel) keeps the file's rules: the first score, or the first part alone when there
+    /// is none.</summary>
     public bool Fence { get; set; }
 }
 

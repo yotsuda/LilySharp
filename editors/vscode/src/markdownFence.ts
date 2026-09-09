@@ -81,8 +81,9 @@ export function createMarkdownFencePlugin(deps: MarkdownFenceDeps): (md: Markdow
             const response = await client.sendRequest<SvgResponse>('lilysharp/renderText', {
                 text: code,
                 interactive: false,
-                // A fence draws one picture: no score → every part as a staff; two
-                // scores or (with none) two forms → an error under the source.
+                // A fence draws one picture and writes its score: exactly one score { };
+                // none, or two or more → an error under the source (session 360; the
+                // implied-score reading of session 359 is gone).
                 fence: true,
             });
             if (response.Svg) {

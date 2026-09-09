@@ -65,7 +65,7 @@ public class RenderTextRequestTests
         Assert.Equal(ViewBox(interactive.Svg!), ViewBox(response.Svg!));
     }
 
-    // Two parts, one form, NO score — what a Markdown fence is expected to write.
+    // Two parts, one form, NO score — a fence that has not yet said what to draw.
     private const string TwoPartsNoScore = """
         time 4/4
         key c major
@@ -75,44 +75,36 @@ public class RenderTextRequestTests
         form tune { Main }
         """;
 
+    /// <summary>
+    /// A fence writes its score (owner decision 2026-09-10, replacing the implied score of
+    /// 2026-09-09): with none it is refused, naming <c>score { }</c>, and draws nothing —
+    /// the implied score silently dropped whatever a score names (lyrics, chord rows, tab)
+    /// and was a second spelling of "what to draw with no score" beside the file road's.
+    /// The same text OUTSIDE a fence keeps the file's fallback and still draws.
+    /// </summary>
     [Fact]
-    public void Fence_WithNoScore_DrawsEveryPart_AsTheExplicitScoreWould()
+    public void Fence_WithNoScore_IsRefused_NamingScore()
     {
-        var implied = Server().RenderText(new RenderTextParams { Text = TwoPartsNoScore, Interactive = false, Fence = true });
-        var explicitScore = Server().RenderText(new RenderTextParams
-        {
-            Text = TwoPartsNoScore + "\nscore tune { staff melody staff bass }",
-            Interactive = false, Fence = true,
-        });
-
-        Assert.Null(implied.Error);
-        Assert.Null(explicitScore.Error);
-        Assert.Equal(explicitScore.Svg, implied.Svg);
-        // Two staves, not the first part alone (what the same text draws OUTSIDE a fence).
+        var fence = Server().RenderText(new RenderTextParams { Text = TwoPartsNoScore, Interactive = false, Fence = true });
         var plain = Server().RenderText(new RenderTextParams { Text = TwoPartsNoScore, Interactive = false });
-        Assert.NotEqual(plain.Svg, implied.Svg);
+
+        Assert.Null(fence.Svg);
+        Assert.Contains("declares none", fence.Error);
+        Assert.Contains("score {", fence.Error);
+        Assert.Null(plain.Error);
+        Assert.Contains("<svg", plain.Svg);
     }
 
     [Fact]
-    public void Fence_WithNoScore_AndNoForm_StillDraws()
+    public void Fence_WithOneScore_DrawsIt_WhateverTheFormCount()
     {
-        var text = TwoPartsNoScore.Replace("form tune { Main }", "");
+        // Two forms are no longer a question the fence has to answer: the score names its form.
+        var text = TwoPartsNoScore + "\nform other { Main Main }\nscore tune { staff melody staff bass }";
 
         var response = Server().RenderText(new RenderTextParams { Text = text, Interactive = false, Fence = true });
 
         Assert.Null(response.Error);
         Assert.Contains("<svg", response.Svg);
-    }
-
-    [Fact]
-    public void Fence_WithNoScore_AndTwoForms_IsRefused()
-    {
-        var text = TwoPartsNoScore + "\nform other { Main Main }";
-
-        var response = Server().RenderText(new RenderTextParams { Text = text, Interactive = false, Fence = true });
-
-        Assert.Null(response.Svg);
-        Assert.Contains("tune, other", response.Error);
     }
 
     [Fact]

@@ -61,19 +61,6 @@ public static class SvgGenerator
         => options.Snippet ? LayoutOptions.Snippet : LayoutOptions.Default;
 
     /// <summary>
-    /// Renders the GIVEN spec rather than one of the file's — the score a Markdown fence
-    /// implies when it writes none (<see cref="RenderSpecParser.ImpliedScore"/>). The
-    /// same road as <see cref="Generate(SyntaxTree, SvgRenderOptions, string)"/> after
-    /// its choice.
-    /// </summary>
-    public static string GenerateForSpec(SyntaxTree tree, RenderSpec spec, SvgRenderOptions? options = null)
-    {
-        options ??= SvgRenderOptions.Default;
-        var (multiScore, layout) = BuildLayout(tree, spec, PaperBaseOf(options));
-        return RenderToSvg(multiScore, layout, options);
-    }
-
-    /// <summary>
     /// Generates all render blocks as separate SVG files.
     /// Returns a list of (filename, svgContent) tuples.
     /// If only one render block exists, returns a single item with that filename.

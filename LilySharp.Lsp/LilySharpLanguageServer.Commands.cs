@@ -1048,27 +1048,23 @@ public sealed partial class LilySharpLanguageServer
             string svg;
             if (@params.Fence)
             {
-                // A fence draws ONE picture: anything that would have to choose is refused,
-                // and a fence that writes no score gets the one its parts imply.
+                // A fence draws ONE picture, and says which: exactly one score { }. Two or
+                // more would have to be chosen between; none used to be filled in from the
+                // parts (owner decision 2026-09-09) and is refused since 2026-09-10 (owner
+                // decision): the implied score silently dropped whatever a score names —
+                // lyrics and chord rows, tab, ensembles — and was a second spelling of "what
+                // to draw with no score" beside the file road's own fallback.
                 var scores = RenderSpecParser.FindAll(tree);
-                if (scores.Count > 1)
+                if (scores.Count != 1)
                     return new SvgResponse
                     {
                         Svg = null,
-                        Error = $"A fence draws one score; this one declares {scores.Count}. Keep one score {{ }}.",
+                        Error = scores.Count == 0
+                            ? "A fence draws one score; this one declares none. Write score { … } to say what to draw."
+                            : $"A fence draws one score; this one declares {scores.Count}. Keep one score {{ }}.",
                         Renders = renders, SelectedRender = drawn,
                     };
-                if (scores.Count == 1)
-                {
-                    svg = LilySharp.Core.Svg.SvgGenerator.Generate(tree, options, null);
-                }
-                else
-                {
-                    var (implied, error) = RenderSpecParser.ImpliedScore(tree);
-                    if (implied == null)
-                        return new SvgResponse { Svg = null, Error = error, Renders = renders, SelectedRender = drawn };
-                    svg = LilySharp.Core.Svg.SvgGenerator.GenerateForSpec(tree, implied, options);
-                }
+                svg = LilySharp.Core.Svg.SvgGenerator.Generate(tree, options, null);
             }
             else
             {

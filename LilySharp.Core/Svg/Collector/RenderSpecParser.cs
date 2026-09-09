@@ -874,8 +874,9 @@ public static class RenderSpecParser
     /// Ensemble default: with two or more plain staves, each unlabeled staff shows its
     /// part name (capitalized) on the first line — writers opt out per staff with
     /// <c>staff ~flute</c> or rename with <c>staff flute "…"</c>. Solo scores, grand
-    /// staves and tabs stay clean. ONE HOME: a written score (<see cref="Parse"/>) and
-    /// the score a fence implies (<see cref="ImpliedScore"/>) label the same way.
+    /// staves and tabs stay clean. ONE HOME, cut out of <see cref="Parse"/> on 2026-09-09
+    /// for the score a Markdown fence used to imply; that implied score is gone (a fence
+    /// writes its score since 2026-09-10) and this stays the one place the default is spelt.
     /// </summary>
     private static void ApplyEnsembleDefault(List<RenderItemSpec> items)
     {
@@ -896,50 +897,6 @@ public static class RenderSpecParser
                 items[ii] = sss with { Staff = st with { InstrumentName = defaultName } };
             }
         }
-    }
-
-    /// <summary>
-    /// The score a Markdown lys fence draws when it writes no <c>score { }</c> (HANDOFF
-    /// §2F F-mdfence, owner decision 2026-09-09 "a fence draws one picture"): every
-    /// <c>part</c> as a staff, in declaration order, each with the clef and the label
-    /// <c>score { staff NAME }</c> would give it, playing the file's one <c>form</c> — or,
-    /// with none declared, the sections in declaration order. Refused, with the reason,
-    /// when the fence declares two or more forms: nothing is there to choose with. A
-    /// fence WITH a score never comes here; two or more scores are the caller's refusal.
-    /// </summary>
-    public static (RenderSpec? Spec, string? Error) ImpliedScore(SyntaxTree tree)
-    {
-        var root = tree.GetRoot();
-        var forms = Semantics.ScoreForms.All(root);
-        if (forms.Count > 1)
-            return (null, $"A fence with no score {{ }} may declare one form; this one declares "
-                + $"{forms.Count} ({string.Join(", ", forms.Select(f => f.NameText))}). "
-                + "Keep one, or write score { … } to say which to draw.");
-        var parts = root.ChildNodes().OfType<PartDeclarationSyntax>()
-            .Select(p => p.Name.Text)
-            .Where(n => n.Length > 0)
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-        if (parts.Count == 0)
-            return (null, "Nothing to draw: the fence declares no part.");
-
-        var items = new List<RenderItemSpec>(parts.Count);
-        foreach (var name in parts)
-        {
-            // What ParseStaffItem gives `staff NAME` with no clef, no label and no
-            // selectors: the part's own clef, its display name or instrument as the
-            // label, its pedal style.
-            var clef = GetPartClef(root, name) ?? ClefType.Treble;
-            var instrumentName = GetPartDisplayName(root, name) ?? GetInstrument(root, name)?.DisplayName;
-            var pedalStyle = Staff.ParsePedalStyle(GetPartProperty(root, name, "pedal")?.ToLowerInvariant());
-            items.Add(new SingleStaffSpec(new StaffSpec(clef, name, instrumentName,
-                WithLyrics: ImmutableArray<string>.Empty, PedalStyle: pedalStyle)));
-        }
-        ApplyEnsembleDefault(items);
-
-        var form = forms.Count == 1 ? forms[0] : null;
-        return (new RenderSpec(form?.NameText ?? "score", "", [.. items], null, form,
-            ImmutableArray<MetadataDeclarationSyntax>.Empty), null);
     }
 
     /// <summary>

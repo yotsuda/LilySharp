@@ -122,10 +122,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 - **A ```` ```lys ```` fence in a Markdown file renders as the score in VS Code's built-in
   Markdown preview**, the way a ```` ```mermaid ```` fence renders as a diagram (```` ```lily# ````
-  is accepted too). A fence draws one picture, so it needs no `score { }`: without one, every
-  `part` becomes a staff in declaration order and the fence's one `form` plays (none declared:
-  the sections in order); with one, that score is drawn; two scores, or two forms and no
-  score, are refused with the reason. The fence is drawn by the language server and inlined as SVG; while it
+  is accepted too). A fence draws one picture and says which: it writes exactly one
+  `score { }`, as a file does, and is refused with the reason when it writes none or two (a
+  first cut let a fence imply its score from its parts; that quietly dropped everything a
+  score names — lyrics, chord rows, tab — so it went). The fence is drawn by the language server and inlined as SVG; while it
   renders, the source stays in view, and a syntax error is shown with its line above the
   source. The picture takes the column's width and follows the dark theme. In the editor the
   fence is coloured as Lily#. Opening a Markdown file no longer costs anything: the language
