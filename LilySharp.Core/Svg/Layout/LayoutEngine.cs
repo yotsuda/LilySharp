@@ -196,7 +196,7 @@ internal sealed partial class LayoutEngine
         double systemHeight = pass.FirstSystemHeight;
 
         var (pages, systemsArray) = CreatePages(
-            systems.ToImmutableArray(), header, perSystemExtents, systemHeight,
+            score, systems.ToImmutableArray(), header, perSystemExtents, systemHeight,
             prelim.PagingSkylines, perSystemHeights, perSystemBandUps, placed.CropDown,
             PagePermissionsAfterSystems(score, systems));
 

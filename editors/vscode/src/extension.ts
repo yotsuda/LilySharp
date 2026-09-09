@@ -28,6 +28,8 @@ import {
 import { registerAiTransform } from './aiTransform';
 import { registerAiComplete } from './aiComplete';
 import { registerSmartTyping } from './smartTyping';
+import { registerExportBatch } from './exportBatch';
+import { markdownItExtensionApi } from './markdownFence';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -43,6 +45,15 @@ function commandExists(cmd: string): boolean {
 let client: LanguageClient;
 let clientReady = false;
 let clientReadyPromise: Promise<void>;
+// Starts the language client ONCE, on the first need for it — a .lys opened, a lys
+// fence in a Markdown preview to draw, an export — see activate(). The extension
+// activates on Markdown too (for the fence), and a .md with no score in it must
+// not cost a .NET process.
+let startClient: () => void = () => { /* set in activate */ };
+function ensureClientReady(): Promise<void> {
+    startClient();
+    return clientReadyPromise;
+}
 const previewPanels = new Map<string, vscode.WebviewPanel>();
 // A message posted before the webview has finished loading its HTML is
 // DROPPED by VS Code. The webview script posts 'webviewReady' as its last
@@ -319,8 +330,16 @@ export function activate(context: vscode.ExtensionContext) {
         clientOptions
     );
 
-    outputChannel.appendLine('Starting language client...');
-    clientReadyPromise = client.start().then(() => {
+    let clientStartRequested = false;
+    let resolveClientReady: () => void = () => { /* replaced below */ };
+    clientReadyPromise = new Promise<void>(resolve => { resolveClientReady = resolve; });
+    startClient = () => {
+        if (clientStartRequested) {
+            return;
+        }
+        clientStartRequested = true;
+        outputChannel.appendLine('Starting language client...');
+        client.start().then(() => {
         clientReady = true;
         outputChannel.appendLine('Language client started successfully');
 
@@ -343,13 +362,30 @@ export function activate(context: vscode.ExtensionContext) {
                 }
             });
         });
+        resolveClientReady();
     }).catch((error) => {
         outputChannel.appendLine(`Failed to start language client: ${error}`);
         vscode.window.showErrorMessage(
             'Lily#: the language server failed to start — live diagnostics and preview are unavailable.',
             'Show Log'
         ).then(pick => { if (pick === 'Show Log') { outputChannel.show(); } });
+        // Resolved, not rejected: the waiters check clientReady and say so themselves.
+        resolveClientReady();
     });
+    };
+
+    // A score already open (the usual activation, onLanguage:lilysharp) starts the
+    // client now; a Markdown activation waits for the first .lys or lys fence.
+    if (vscode.workspace.textDocuments.some(d => d.languageId === 'lilysharp')) {
+        startClient();
+    }
+    context.subscriptions.push(
+        vscode.workspace.onDidOpenTextDocument(d => {
+            if (d.languageId === 'lilysharp') {
+                startClient();
+            }
+        })
+    );
 
     // Push completion.flatSpelling changes to the server so they apply LIVE. The
     // server seeds the value from initializationOptions at start; without this a
@@ -471,6 +507,18 @@ export function activate(context: vscode.ExtensionContext) {
     registerAiTransform(context, aiDeps);
     // Second mode: validated ghost-text "next measure" completion (opt-in).
     registerAiComplete(context, aiDeps);
+
+    // The Explorer's batch export: right-click one or more .lys → the format
+    // submenu → a folder → every score of every file, named as `lysc --all` names
+    // them. The preview's Export button (exportPreview below) stays the one-score door.
+    registerExportBatch(context, {
+        getClient: () => client,
+        isReady: () => clientReady,
+        whenReady: ensureClientReady,
+        log: (msg: string) => outputChannel.appendLine(msg),
+        showLog: () => outputChannel.show(true),
+        openFolder: (dir: string) => openInDefaultApp(dir),
+    });
 
     // Smart typing: the brackets it started with (`<` before c4 -> `<c>4`, and a
     // chord's '>' promoted to '>>' when its '<' is doubled into an arpeggio) plus
@@ -600,6 +648,15 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     outputChannel.appendLine('Lily# extension activated');
+
+    // The Markdown lys fence: VS Code's Markdown preview asks for this object
+    // (contributes.markdown.markdownItPlugins) and wires the plugin into its engine.
+    return markdownItExtensionApi({
+        getClient: () => client,
+        isReady: () => clientReady,
+        whenReady: ensureClientReady,
+        log: (msg: string) => outputChannel.appendLine(msg),
+    });
 }
 
 // The clock time of the last play-note fire, so the webview can tell a fresh

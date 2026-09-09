@@ -223,6 +223,44 @@ internal sealed record LayoutOptions
     /// <summary>Available width for music content in staff spaces.</summary>
     public double ContentWidth => PageWidth - MarginLeft - MarginRight;
 
+    // === Snippet (a picture of the music, not a page) ===
+
+    /// <summary>
+    /// The page is as wide as its widest system (plus the two margins) instead of
+    /// <see cref="PageWidth"/>. Line breaking still runs against <see cref="ContentWidth"/>;
+    /// only the paper the result is drawn on shrinks — so a one-system score (ragged by
+    /// LilyPond's own rule, constrained-breaking.cc:142-148) comes out as wide as its music
+    /// and a justified multi-system score keeps the line width.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/lilypond-book-preamble.ly:47 use-paper-size-for-page — lilypond-book
+    /// draws a snippet without a paper size, so the picture's box is the music's (its EPS
+    /// bounding box; python/book_snippets.py:139-141 says why a millimetre is added to
+    /// line-width). The margins are kept here so the drawn edge is not the picture's edge.
+    /// </remarks>
+    public bool CropWidth { get; init; } = false;
+
+    /// <summary>
+    /// The layout of a music snippet embedded in a document (a Markdown lys fence): ONE
+    /// page whose height is the music's, no automatic page breaks, <c>pageBreak</c> a
+    /// forced line break and nothing more, the systems stacked at their springs' natural
+    /// lengths — and the page cropped to the widest system. Everything else is
+    /// <see cref="Default"/>, and a <c>paper { }</c> the snippet writes overlays this.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/one-page-breaking.cc:64-183 One_page_breaking::solve — set the
+    /// paper height to a very large value, break lines, space the systems on ONE page
+    /// (which at that height is the springs' natural length: nothing to fill), then set the
+    /// paper height to the lowest system's lower bound plus the margins. Here that is what
+    /// <see cref="PageHeight"/> = 0 has always meant (LayoutEngine.CreatePages' content-driven
+    /// page: the count search, the forced-page route and the overflow check all sit behind
+    /// <c>PageHeight &gt; 0</c>), so the snippet is the page LilyPond would give a book of
+    /// one page with no paper. LILYPOND-REF: scm/define-paper-variables.scm:401-405
+    /// page-breaking — ly:one-page-breaking is one of the six page breakers a paper block
+    /// may choose.
+    /// </remarks>
+    public static LayoutOptions Snippet { get; } = new() { PageHeight = 0, CropWidth = true };
+
     /// <summary>Default options for standard layout.</summary>
     public static LayoutOptions Default { get; } = new();
 }

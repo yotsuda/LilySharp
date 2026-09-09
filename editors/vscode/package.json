@@ -24,7 +24,8 @@
     "engraving"
   ],
   "activationEvents": [
-    "onLanguage:lilysharp"
+    "onLanguage:lilysharp",
+    "onLanguage:markdown"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -46,7 +47,21 @@
         "language": "lilysharp",
         "scopeName": "source.lilysharp",
         "path": "./syntaxes/lilysharp.tmLanguage.json"
+      },
+      {
+        "scopeName": "markdown.lilysharp.codeblock",
+        "path": "./syntaxes/lilysharp.markdown.injection.json",
+        "injectTo": [
+          "text.html.markdown"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.block.lilysharp": "lilysharp"
+        }
       }
+    ],
+    "markdown.markdownItPlugins": true,
+    "markdown.previewStyles": [
+      "./media/markdown-lys.css"
     ],
     "semanticTokenTypes": [
       {
@@ -269,9 +284,80 @@
         "command": "lilysharp.previewResetZoom",
         "category": "Lily#",
         "title": "Reset Zoom (100%)"
+      },
+      {
+        "command": "lilysharp.exportPdf",
+        "category": "Lily#",
+        "title": "Export as PDF"
+      },
+      {
+        "command": "lilysharp.exportSvg",
+        "category": "Lily#",
+        "title": "Export as SVG"
+      },
+      {
+        "command": "lilysharp.exportPng",
+        "category": "Lily#",
+        "title": "Export as PNG"
+      },
+      {
+        "command": "lilysharp.exportLy",
+        "category": "Lily#",
+        "title": "Export as LilyPond (.ly)"
+      },
+      {
+        "command": "lilysharp.exportMusicXml",
+        "category": "Lily#",
+        "title": "Export as MusicXML"
+      },
+      {
+        "command": "lilysharp.exportMidi",
+        "category": "Lily#",
+        "title": "Export as MIDI"
+      },
+      {
+        "command": "lilysharp.exportVsqx",
+        "category": "Lily#",
+        "title": "Export as VOCALOID sequence (.vsqx)"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "lilysharp.export",
+        "label": "Lily#: Export"
       }
     ],
     "menus": {
+      "lilysharp.export": [
+        {
+          "command": "lilysharp.exportPdf",
+          "group": "1_page@1"
+        },
+        {
+          "command": "lilysharp.exportSvg",
+          "group": "1_page@2"
+        },
+        {
+          "command": "lilysharp.exportPng",
+          "group": "1_page@3"
+        },
+        {
+          "command": "lilysharp.exportLy",
+          "group": "2_source@1"
+        },
+        {
+          "command": "lilysharp.exportMusicXml",
+          "group": "2_source@2"
+        },
+        {
+          "command": "lilysharp.exportMidi",
+          "group": "3_sound@1"
+        },
+        {
+          "command": "lilysharp.exportVsqx",
+          "group": "3_sound@2"
+        }
+      ],
       "file/newFile": [
         {
           "command": "lilysharp.newScore",
@@ -332,6 +418,34 @@
         {
           "command": "lilysharp.previewResetZoom",
           "when": "activeWebviewPanelId == 'lilysharpPreview'"
+        },
+        {
+          "command": "lilysharp.exportPdf",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.exportSvg",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.exportPng",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.exportLy",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.exportMusicXml",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.exportMidi",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.exportVsqx",
+          "when": "resourceLangId == lilysharp"
         }
       ],
       "webview/context": [
@@ -360,6 +474,11 @@
         {
           "command": "lilysharp.importMusicXml",
           "when": "resourceExtname == .xml || resourceExtname == .musicxml || resourceExtname == .mxl",
+          "group": "7_modification"
+        },
+        {
+          "submenu": "lilysharp.export",
+          "when": "resourceExtname == .lys",
           "group": "7_modification"
         }
       ],

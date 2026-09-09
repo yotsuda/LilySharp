@@ -51,7 +51,25 @@ public static class SvgGenerator
         // resolve the same spec this full compile would to stay byte-identical.
         var renderSpec = RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), renderName);
 
-        var (multiScore, layout) = BuildLayout(tree, renderSpec);
+        var (multiScore, layout) = BuildLayout(tree, renderSpec, PaperBaseOf(options));
+        return RenderToSvg(multiScore, layout, options);
+    }
+
+    /// <summary>The paper a book without a <c>paper { }</c> lays out on, from the
+    /// caller's options: the snippet layout for a Markdown fence, else the defaults.</summary>
+    private static LayoutOptions PaperBaseOf(SvgRenderOptions options)
+        => options.Snippet ? LayoutOptions.Snippet : LayoutOptions.Default;
+
+    /// <summary>
+    /// Renders the GIVEN spec rather than one of the file's — the score a Markdown fence
+    /// implies when it writes none (<see cref="RenderSpecParser.ImpliedScore"/>). The
+    /// same road as <see cref="Generate(SyntaxTree, SvgRenderOptions, string)"/> after
+    /// its choice.
+    /// </summary>
+    public static string GenerateForSpec(SyntaxTree tree, RenderSpec spec, SvgRenderOptions? options = null)
+    {
+        options ??= SvgRenderOptions.Default;
+        var (multiScore, layout) = BuildLayout(tree, spec, PaperBaseOf(options));
         return RenderToSvg(multiScore, layout, options);
     }
 
@@ -122,11 +140,11 @@ public static class SvgGenerator
     }
 
     private static (MultiStaffScore Score, ScoreLayout Layout) BuildLayout(
-        SyntaxTree tree, RenderSpec? renderSpec)
+        SyntaxTree tree, RenderSpec? renderSpec, LayoutOptions? paperBase = null)
     {
-        var multiScore = CollectScore(tree, renderSpec);
-        // score.Paper is LayoutOptions.Default unless the book wrote `paper { … }`,
-        // so a book without one lays out exactly as before.
+        var multiScore = CollectScore(tree, renderSpec, paperBase);
+        // score.Paper is the base (LayoutOptions.Default, or the snippet layout) unless
+        // the book wrote `paper { … }`, so a book without one lays out exactly as before.
         return (multiScore, new LayoutEngine(multiScore.Paper).Layout(multiScore));
     }
 
@@ -135,12 +153,16 @@ public static class SvgGenerator
     /// render path does (single-staff scores are wrapped uniformly). Shared with
     /// <see cref="IncrementalCompiler"/> so its full and incremental paths match
     /// <see cref="Generate(SyntaxTree, SvgRenderOptions, string)"/> byte for byte.
+    /// <paramref name="paperBase"/> is the paper a book without a <c>paper { }</c> lays out
+    /// on (null = <see cref="LayoutOptions.Default"/>; the snippet layout for a fence).
     /// </summary>
-    internal static MultiStaffScore CollectScore(SyntaxTree tree, RenderSpec? renderSpec)
+    internal static MultiStaffScore CollectScore(SyntaxTree tree, RenderSpec? renderSpec,
+        LayoutOptions? paperBase = null)
         => CollectScore(new MeasureCollector
             {
                 ScoreTranspose = renderSpec?.ScoreTranspose,
                 ScoreConcert = renderSpec?.ScoreConcert ?? false,
+                PaperBase = paperBase ?? LayoutOptions.Default,
             },
             tree, renderSpec);
 

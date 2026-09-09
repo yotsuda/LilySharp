@@ -1,0 +1,48 @@
+/* Lily# — the lys fence in VS Code's built-in Markdown preview (markdownFence.ts).
+   Contributed through `markdown.previewStyles`, so it is loaded into the preview
+   after the built-in styles. The score SVGs come from the server WITHOUT their
+   @font-face (OmitFontFace) and take the two faces from here, exactly as the
+   extension's own preview webview supplies them; the URLs are relative to this file
+   and resolve inside the extension, which the preview lists as a resource root. */
+
+@font-face {
+    font-family: 'Emmentaler';
+    src: url('fonts/emmentaler-20.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Emmentaler-Brace';
+    src: url('fonts/emmentaler-brace.woff2') format('woff2');
+}
+
+.lys-fence {
+    margin: 1em 0;
+}
+
+/* The picture is placed at its natural size (markdownFenceCore's pixels per staff
+   space, set on the root's width/height); a wider one scales down to the column
+   (the viewBox keeps the aspect) and a short one never scales up. */
+.lys-fence svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+/* The page carries an opaque white rect (the paper — see SvgDocumentContext's
+   remark on why it must stay), so a dark preview inverts the whole picture, as the
+   extension's own preview does; the paper and every box on it invert together. */
+.vscode-dark .lys-fence svg,
+.vscode-high-contrast:not(.vscode-high-contrast-light) .lys-fence svg {
+    filter: invert(1) hue-rotate(180deg);
+}
+
+.lys-fence-note {
+    font-style: italic;
+    opacity: 0.85;
+    margin-bottom: 0.25em;
+}
+
+.lys-fence-error .lys-fence-note {
+    color: var(--vscode-errorForeground, #f14c4c);
+    white-space: pre-wrap;
+}

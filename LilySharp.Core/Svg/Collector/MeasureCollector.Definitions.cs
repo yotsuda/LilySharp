@@ -175,6 +175,9 @@ public sealed partial class MeasureCollector
     {
         _root = root;
         List<DrummapDeclarationSyntax>? drummaps = null;
+        // The paper a book without a `paper { }` lays out on: the defaults, or the snippet
+        // layout a Markdown fence starts from (PaperBase). A written block overlays it below.
+        _meta.Paper = PaperBase;
 
         // A top-level `clef`/`key`/`time`/`tempo` is unconditionally the FILE DEFAULT.
         // It used to depend on whether bare music had already streamed past (the whole
@@ -223,7 +226,7 @@ public sealed partial class MeasureCollector
                     // are that validator's job, and a refused entry is simply absent
                     // from the overlay. Same named/reference guard as fonts.
                     if (paper.NameToken == null && !IsInsideRenderDeclaration(paper))
-                        _meta.Paper = Semantics.PaperPlanReader.Read(paper, out _);
+                        _meta.Paper = Semantics.PaperPlanReader.Read(paper, PaperBase, out _);
                     break;
 
                 case TempoDeclarationSyntax tempoDecl:
@@ -394,7 +397,7 @@ public sealed partial class MeasureCollector
         if (FontsOverride is { } fontsRef)
             _meta.Fonts = Semantics.FontPlanReader.ReadReference(root, fontsRef, _meta.Fonts);
         if (PaperOverride is { } paperRef)
-            _meta.Paper = Semantics.PaperPlanReader.ReadReference(root, paperRef, _meta.Paper);
+            _meta.Paper = Semantics.PaperPlanReader.ReadReference(root, paperRef, _meta.Paper, PaperBase);
         // `marks stacked|beside`: the score's own item, else the file's top-level default —
         // the same two tiers, resolved to the one bit the mark engraver reads and landed in
         // _meta for the same incremental reason (MetaMatchesShifted compares it).

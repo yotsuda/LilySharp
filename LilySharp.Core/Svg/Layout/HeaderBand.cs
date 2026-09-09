@@ -48,10 +48,14 @@ namespace LilySharp.Core.Svg.Layout;
 /// the header has no title.</param>
 /// <param name="ComposerBaseline">The composer row's baseline below the column's top, or null
 /// when the header has no composer.</param>
+/// <param name="Width">The wider of the rows' advance widths, in staff spaces — what the
+/// snippet page (<see cref="LayoutOptions.CropWidth"/>) must be at least as wide as, the
+/// title being centred on the page and the composer set against its right margin.</param>
 internal sealed record HeaderBand(
     double Depth,
     double? TitleBaseline,
-    double? ComposerBaseline)
+    double? ComposerBaseline,
+    double Width = 0)
 {
     /// <summary>The column's minimum baseline-to-baseline step.</summary>
     /// <remarks>LILYPOND-REF: ly/titling-init.ly bookTitleMarkup, line 69 —
@@ -102,6 +106,7 @@ internal sealed record HeaderBand(
 
         double? previousBaseline = null;
         double depth = 0;
+        double width = 0;
 
         // LILYPOND-REF: scm/stencil.scm stack-lines (lines 153-168) — ly:stencil-stack: the row's
         // reference point is its baseline; it is placed at least BaselineSkip below the
@@ -114,6 +119,8 @@ internal sealed record HeaderBand(
                 : inkTop;
             previousBaseline = baseline;
             depth = Math.Max(depth, baseline - inkBottom);
+            // The same size and style the draw sets the row in (SharedRenderer.DrawHeader).
+            width = Math.Max(width, fonts.Advance(text, size, role, style));
             return baseline;
         }
 
@@ -124,6 +131,6 @@ internal sealed record HeaderBand(
             ? null
             : Stack(composer, ComposerEm(fonts), TextRole.Composer, ComposerStyle(fonts));
 
-        return new HeaderBand(depth, titleBaseline, composerBaseline);
+        return new HeaderBand(depth, titleBaseline, composerBaseline, width);
     }
 }

@@ -114,6 +114,16 @@ internal static class PaperPlanReader
     /// still gets the dimensions it spelled correctly.
     /// </returns>
     internal static LayoutOptions Read(PaperDeclarationSyntax paper, out IReadOnlyList<Problem> problems)
+        => Read(paper, LayoutOptions.Default, out problems);
+
+    /// <summary>
+    /// <see cref="Read(PaperDeclarationSyntax, out IReadOnlyList{Problem})"/> over a base
+    /// other than <see cref="LayoutOptions.Default"/> — the snippet layout a Markdown fence
+    /// starts from (<see cref="LayoutOptions.Snippet"/>), which the fence's own
+    /// <c>paper { }</c> then overlays exactly as a book's overlays the defaults.
+    /// </summary>
+    internal static LayoutOptions Read(PaperDeclarationSyntax paper, LayoutOptions @base,
+        out IReadOnlyList<Problem> problems)
     {
         var found = new List<Problem>();
         problems = found;
@@ -125,10 +135,10 @@ internal static class PaperPlanReader
             // directive has to be refused all the way through (the fonts one-liner's
             // reasoning, verbatim). A blockless NAMED node — a score's pure reference —
             // reads through ReadReference instead, never here.
-            return LayoutOptions.Default;
+            return @base;
         }
 
-        return ReadEntriesInto(LayoutOptions.Default, paper, found);
+        return ReadEntriesInto(@base, paper, found);
     }
 
     /// <summary>Every named top-level paper declaration, in document order.</summary>
@@ -176,19 +186,20 @@ internal static class PaperPlanReader
     /// deliberately not a warning: overriding a key is the override block's purpose.
     /// </remarks>
     internal static LayoutOptions ReadReference(SyntaxNode root, PaperDeclarationSyntax reference,
-        LayoutOptions fallback)
+        LayoutOptions fallback, LayoutOptions? @base = null)
     {
         if (!TryResolve(root, reference, out var declaration, out _))
             return fallback;
         var discard = new List<Problem>();
-        var options = ReadEntriesInto(LayoutOptions.Default, declaration!, discard);
+        var options = ReadEntriesInto(@base ?? LayoutOptions.Default, declaration!, discard);
         if (reference.IsBlock)
             options = ReadEntriesInto(options, reference, discard);
         return options;
     }
 
     /// <summary>Overlays one block's entries onto <paramref name="options"/> — the loop
-    /// <see cref="Read"/> and <see cref="ReadReference"/> share, so a directive and a
+    /// <see cref="Read(PaperDeclarationSyntax, LayoutOptions, out IReadOnlyList{Problem})"/> and
+    /// <see cref="ReadReference"/> share, so a directive and a
     /// merged reference cannot disagree about what an entry means. Duplicate-key
     /// detection is scoped to the one block: a repeat across blocks is an override.</summary>
     private static LayoutOptions ReadEntriesInto(

@@ -45,6 +45,15 @@ public sealed class SvgRenderOptions
     public bool Interactive { get; init; }
 
     /// <summary>
+    /// Lay the music out as a SNIPPET — a picture in a document rather than a page
+    /// (<see cref="Layout.LayoutOptions.Snippet"/>: one page as tall as the music, no
+    /// automatic page breaks, cropped to the widest system). Set by the Markdown lys
+    /// fence; a <c>paper { }</c> in the source overlays it. Off for every other caller,
+    /// whose output stays what it was.
+    /// </summary>
+    public bool Snippet { get; init; }
+
+    /// <summary>
     /// Default options (reference font by name, requires font installed on system).
     /// </summary>
     public static SvgRenderOptions Default => new();

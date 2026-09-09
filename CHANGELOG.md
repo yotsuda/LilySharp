@@ -118,6 +118,38 @@ workflow attaches that section to the GitHub Release verbatim.
   regardless); a tab item takes neither. The editor offers `as removeEmpty` after a staff name
   and its values after it.
 
+### Editor
+
+- **A ```` ```lys ```` fence in a Markdown file renders as the score in VS Code's built-in
+  Markdown preview**, the way a ```` ```mermaid ```` fence renders as a diagram (```` ```lily# ````
+  is accepted too). A fence draws one picture, so it needs no `score { }`: without one, every
+  `part` becomes a staff in declaration order and the fence's one `form` plays (none declared:
+  the sections in order); with one, that score is drawn; two scores, or two forms and no
+  score, are refused with the reason. The fence is drawn by the language server and inlined as SVG; while it
+  renders, the source stays in view, and a syntax error is shown with its line above the
+  source. The picture takes the column's width and follows the dark theme. In the editor the
+  fence is coloured as Lily#. Opening a Markdown file no longer costs anything: the language
+  server starts only when a score is opened or a fence needs drawing. A fence is laid out as a
+  snippet, LilyPond's `ly:one-page-breaking`: one page as tall as the music, no automatic page
+  break, a `pageBreak` a plain line break, the systems at their natural spacing — and the page
+  as wide as its widest system (or its title, when that is wider), so a two-bar example is a
+  two-bar picture, not a sheet of A4 with two bars in its corner. A `paper { }` inside the
+  fence overlays that.
+- **Right-click one or more `.lys` files in the Explorer to export them all at once.** The
+  context menu gains a *Lily#: Export* submenu — PDF, SVG, PNG, LilyPond, MusicXML, MIDI,
+  VOCALOID — that asks for a folder and writes every score of every selected file there, named
+  as `lysc --all` names them (the `main` score takes the file's name, every other score appends
+  its own: `song.pdf`, `song-sub.pdf`; a `.vsqx` holds one arrangement, so it takes the first
+  score and the log says which were left out). A file open in an editor is exported as it
+  stands, unsaved edits included, as the preview shows it. Two selected files that would share a
+  name are pointed out before anything is written; an existing file is overwritten, as the CLI
+  does. The same commands sit in the Command Palette for the score being edited. Until now the
+  preview's Export button was the only way out, one file and one score at a time.
+- **`lilysharp/export` takes a file by path and `all`.** The request the preview's button
+  sends now also accepts `path` (a `.lys` that is not open, read with its `using` includes),
+  `all` with `outputDirectory` (every score, the CLI's names), and answers with `outputPaths`
+  and `warnings`; the one-score call is unchanged.
+
 ### Fixed
 
 - **The MusicXML carried no string number and no fingering, on any note.** `c4\3`,

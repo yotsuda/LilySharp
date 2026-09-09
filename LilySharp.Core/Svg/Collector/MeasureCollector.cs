@@ -76,6 +76,12 @@ public sealed partial class MeasureCollector
     /// <see cref="FontsOverride"/>.</summary>
     public PaperDeclarationSyntax? PaperOverride { get; set; }
 
+    /// <summary>The paper a book lays out on when it writes no <c>paper { }</c>, and the
+    /// base a written one overlays: <see cref="Layout.LayoutOptions.Default"/>, or
+    /// <see cref="Layout.LayoutOptions.Snippet"/> for a Markdown fence (SvgGenerator
+    /// sets it from the render options). Read once by <see cref="CollectDefinitions"/>.</summary>
+    internal Layout.LayoutOptions PaperBase { get; init; } = Layout.LayoutOptions.Default;
+
     /// <summary>The score's own <c>marks stacked|beside</c> item (true = beside), or null
     /// when it writes none and the file's top-level default applies — resolved by
     /// <see cref="CollectDefinitions"/> into <c>MetadataState.MarksBeside</c>, the same road

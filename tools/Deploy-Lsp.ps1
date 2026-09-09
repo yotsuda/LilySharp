@@ -400,3 +400,9 @@ $fileCount = (Get-TreeHashes $dest).Count
 Write-Host "Deployed $deployedVersion to $($extDir.Name)" -ForegroundColor Green
 Write-Host "  $fileCount server files verified byte for byte (swap round $rounds)" -ForegroundColor Green
 Write-Host 'Now run "Developer: Reload Window" in VS Code.'
+# MEASURED 2026-09-09 (session 359): when package.json CHANGED (a new command, menu or
+# setting), the first reload only DETECTS it -- the renderer logs "Invalidating Cache"
+# with the old and the new manifest side by side, keeps running on the cached old one,
+# and offers "Extensions have been modified on disk. Please reload the window." The
+# contribution appears on the SECOND reload. A server-only deploy needs one.
+Write-Host '  If the manifest (package.json) changed, reload TWICE: the first reload only notices the change.'

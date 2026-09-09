@@ -144,13 +144,29 @@ public class ChordTrackEdit
 /// </summary>
 public class ExportParams
 {
-    public TextDocumentIdentifier TextDocument { get; set; } = null!;
-    /// <summary>Output format: svg, png, pdf, midi, or musicxml.</summary>
+    /// <summary>The open document to export. Null for a file that is not open in the
+    /// editor — then <see cref="Path"/> names it. When both are given the document wins,
+    /// so an unsaved edit is what gets written, as the preview shows it.</summary>
+    public TextDocumentIdentifier? TextDocument { get; set; }
+    /// <summary>Absolute path of a <c>.lys</c> on disk to export when it is not open
+    /// (the Explorer's batch export). Read as the CLI reads it, <c>using</c> includes
+    /// resolved against its own folder.</summary>
+    public string? Path { get; set; }
+    /// <summary>Output format: svg, png, pdf, midi, musicxml, vsqx, or ly.</summary>
     public string? Format { get; set; }
-    /// <summary>Absolute path to write the exported file to.</summary>
+    /// <summary>Absolute path to write the exported file to (one score). Ignored when
+    /// <see cref="All"/> is set.</summary>
     public string OutputPath { get; set; } = "";
-    /// <summary>Score to export (visual formats); null = first/default score.</summary>
+    /// <summary>Score to export (visual formats); null = first/default score. Ignored
+    /// when <see cref="All"/> is set.</summary>
     public string? RenderName { get; set; }
+    /// <summary>Write EVERY score the file declares into <see cref="OutputDirectory"/>,
+    /// named the way <c>lysc --all</c> names them (<c>RenderSpec.ResolveOutputStem</c>:
+    /// the <c>main</c> score takes the file's stem, every other appends its own name).</summary>
+    public bool All { get; set; }
+    /// <summary>The folder every file goes to under <see cref="All"/>; created if
+    /// missing.</summary>
+    public string? OutputDirectory { get; set; }
 }
 
 /// <summary>
@@ -159,7 +175,15 @@ public class ExportParams
 public class ExportResponse
 {
     public bool Success { get; set; }
+    /// <summary>What was written: the one file (or, for a multi-page PNG, the folder
+    /// joined with every page's name), or the output folder under <c>All</c>.</summary>
     public string? OutputPath { get; set; }
+    /// <summary>Every file written, one path each — the batch export counts and
+    /// logs these.</summary>
+    public string[]? OutputPaths { get; set; }
+    /// <summary>What the export left out or doubled, in words (a <c>.vsqx</c> holds
+    /// one arrangement; two scores resolving to one file name).</summary>
+    public string[]? Warnings { get; set; }
     public string? Error { get; set; }
 }
 
@@ -295,6 +319,17 @@ public class RenderTextParams
     public string Text { get; set; } = "";
     /// <summary>Optional render/score name; null = first score / default preview.</summary>
     public string? RenderName { get; set; }
+    /// <summary>True (the default, the AI panel's) draws the preview's interactive SVG —
+    /// notehead hit-rects, labeled system groups. False draws a STATIC picture for a
+    /// host that only shows it (a Markdown preview's lys fence): the same layout, the
+    /// fonts still left to the host page (OmitFontFace), none of the click targets.</summary>
+    public bool Interactive { get; set; } = true;
+    /// <summary>True for a Markdown lys fence, which draws ONE picture (owner decision
+    /// 2026-09-09): no <c>score { }</c> → every part as a staff in declaration order
+    /// playing the one form (two or more forms are refused); one score → that score;
+    /// two or more scores → refused. False (the default, the AI panel) keeps the file's
+    /// rules: the first score, or the first part alone when there is none.</summary>
+    public bool Fence { get; set; }
 }
 
 /// <summary>Parameters for lilysharp/factsForRange: the resolved musical facts of a

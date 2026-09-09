@@ -256,6 +256,51 @@ internal static partial class SharedRenderer
     // the top margin and the composer sat TitleFontSize under it in italics; LilyPond's
     // column starts 4 ss below the margin and its composer is not italic
     // (audit/lp-geometry titled-page.ly, page.titled.first-staff-refpoint).
+    /// <summary>
+    /// Where a system's staff lines END, in the content frame (the margin translate is
+    /// outside it): the final barline's right edge, and past it the end-of-line courtesy
+    /// suffix — key and meter on a notation staff, the meter alone on a tab staff.
+    /// </summary>
+    /// <remarks>
+    /// Staff lines end exactly at the final barline (the last measure's right edge), so
+    /// the staff never overshoots a ragged system nor falls short of a justified one
+    /// (<c>system.Width</c> is the target width, not the drawn content). An end-of-line
+    /// courtesy key signature — and the courtesy meter after it — sit ON the staff after
+    /// the final barline, so the staff lines extend over the reserved suffix. A tab staff
+    /// prints no courtesy KEY (it has no Key_engraver in either mode) but does print the
+    /// courtesy METER when it engraves one, so its string lines extend over that alone —
+    /// measured off the bar line, not off a key that is not there.
+    /// ONE HOME: the draw reads it for the lines, and the snippet page
+    /// (<see cref="LilySharp.Core.Svg.Layout.LayoutOptions.CropWidth"/>) reads it for its width, so the
+    /// paper cannot end short of the ink.
+    /// </remarks>
+    internal static (double BarlineRight, double NotationRight, double TabRight) StaffRightEdges(
+        MultiStaffScore score, SystemLayout system)
+    {
+        double staffRight = system.Measures.Length > 0
+            ? system.Measures[^1].X + system.Measures[^1].Width
+            : system.Width;
+        double notationStaffRight = staffRight;
+        double tabStaffRight = staffRight;
+        if (system.Measures.Length > 0)
+        {
+            var eolCourtesy = GetSystemEndKeyChange(score.PrimaryContentStaff, system);
+            var eolTime = GetSystemEndTimeChange(score.PrimaryContentStaff, system);
+            if (eolCourtesy is not null)
+                notationStaffRight += SpacingRules.KeyCourtesySuffixWidth(
+                    score, system.Measures[0].MeasureIndex,
+                    system.Measures[^1].MeasureIndex + 1, meterFollows: eolTime is not null);
+            if (eolTime is { } eolMeter)
+            {
+                notationStaffRight += SpacingRules.TimeCourtesySuffixWidth(
+                    score.TextMetrics, eolMeter, afterCourtesyKey: eolCourtesy is not null);
+                tabStaffRight += SpacingRules.TimeCourtesySuffixWidth(
+                    score.TextMetrics, eolMeter, afterCourtesyKey: false);
+            }
+        }
+        return (staffRight, notationStaffRight, tabStaffRight);
+    }
+
     private static void DrawHeader(
         MultiStaffScore score, PageLayout page, LayoutOptions options, IDrawingContext gc)
     {
@@ -416,36 +461,7 @@ internal static partial class SharedRenderer
         // overlap correctly when names are wider than the indent).
         DrawInstrumentNames(score, system, systemStartX, gc);
 
-        // Staff lines end exactly at the final barline (the last measure's right
-        // edge), so the staff never overshoots a ragged system nor falls short of a
-        // justified one. (system.Width is the target width, not the drawn content.)
-        double staffRight = system.Measures.Length > 0
-            ? system.Measures[^1].X + system.Measures[^1].Width
-            : system.Width;
-
-        // An end-of-line courtesy key signature — and the courtesy meter after it — sit ON
-        // the staff after the final barline, so the staff lines extend over the reserved
-        // suffix. A tab staff prints no courtesy KEY (it has no Key_engraver in either mode)
-        // but does print the courtesy METER when it engraves one, so its string lines extend
-        // over that alone — measured off the bar line, not off a key that is not there.
-        double notationStaffRight = staffRight;
-        double tabStaffRight = staffRight;
-        if (system.Measures.Length > 0)
-        {
-            var eolCourtesy = GetSystemEndKeyChange(score.PrimaryContentStaff, system);
-            var eolTime = GetSystemEndTimeChange(score.PrimaryContentStaff, system);
-            if (eolCourtesy is not null)
-                notationStaffRight += SpacingRules.KeyCourtesySuffixWidth(
-                    score, system.Measures[0].MeasureIndex,
-                    system.Measures[^1].MeasureIndex + 1, meterFollows: eolTime is not null);
-            if (eolTime is { } eolMeter)
-            {
-                notationStaffRight += SpacingRules.TimeCourtesySuffixWidth(
-                    score.TextMetrics, eolMeter, afterCourtesyKey: eolCourtesy is not null);
-                tabStaffRight += SpacingRules.TimeCourtesySuffixWidth(
-                    score.TextMetrics, eolMeter, afterCourtesyKey: false);
-            }
-        }
+        var (staffRight, notationStaffRight, tabStaffRight) = StaffRightEdges(score, system);
 
         // Left-edge system bar + span bars through grand-staff gaps.
         DrawStaffConnectors(score, layout, system, systemStartX, gc);

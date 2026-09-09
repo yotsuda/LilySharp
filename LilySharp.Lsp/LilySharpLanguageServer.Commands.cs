@@ -578,22 +578,56 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// Exports the current document to a file in the requested format. The
-    /// extension drives this from the preview's Export button: it shows the
-    /// format/save dialog and passes the chosen path here. SVG/PNG/PDF honour the
-    /// selected score (RenderName); MIDI and MusicXML export the whole piece.
+    /// Exports a score file in the requested format. Two callers: the preview's Export
+    /// button (the open document, ONE score named by RenderName, the save dialog's path
+    /// in OutputPath) and the Explorer's batch export (any <c>.lys</c>, open or not — an
+    /// open one by TextDocument so its unsaved edits are what gets written, as the
+    /// preview shows them, else by Path from disk — with <c>All</c> writing EVERY score
+    /// into OutputDirectory under the CLI's <c>--all</c> names). SVG/PNG/PDF honour the
+    /// score; MIDI, MusicXML and the LilyPond twin export a form — the score's own under
+    /// <c>All</c> (the CLI's RunFormOutput), the primary otherwise.
     /// </summary>
     [JsonRpcMethod("lilysharp/export", UseSingleObjectParameterDeserialization = true)]
     public Task<ExportResponse> ExportAsync(ExportParams @params, CancellationToken token)
         => OffDispatch(() => Export(@params), token);
 
+    /// <summary>The file extension each export format writes — the CLI's defaults
+    /// (<c>lysc xml</c> writes <c>.xml</c>, <c>lysc midi</c> <c>.mid</c>).</summary>
+    private static readonly Dictionary<string, string> ExportExtensions = new()
+    {
+        ["svg"] = ".svg", ["png"] = ".png", ["pdf"] = ".pdf",
+        ["midi"] = ".mid", ["musicxml"] = ".xml", ["vsqx"] = ".vsqx", ["ly"] = ".ly",
+    };
+
     public ExportResponse Export(ExportParams @params)
     {
-        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
-        if (doc == null)
-            return new ExportResponse { Success = false, Error = "Document not found" };
+        SyntaxTree tree;
+        string stem;
+        if (@params.TextDocument != null)
+        {
+            var uri = @params.TextDocument.Uri;
+            var doc = _documentManager.GetDocument(uri);
+            if (doc == null)
+                return new ExportResponse { Success = false, Error = "Document not found" };
+            (tree, _) = ExpandUsings(doc, uri);
+            stem = Path.GetFileNameWithoutExtension(uri.IsFile ? uri.LocalPath : uri.ToString());
+        }
+        else if (!string.IsNullOrEmpty(@params.Path))
+        {
+            if (!File.Exists(@params.Path))
+                return new ExportResponse { Success = false, Error = $"File not found: {@params.Path}" };
+            // Not open in the editor: read it the way the CLI does, `using` includes
+            // resolved against the file's own folder.
+            var text = File.ReadAllText(@params.Path);
+            (tree, _) = ExpandUsings(text, SyntaxTree.Parse(text), @params.Path,
+                p => File.Exists(p) ? File.ReadAllText(p) : null);
+            stem = Path.GetFileNameWithoutExtension(@params.Path);
+        }
+        else
+        {
+            return new ExportResponse { Success = false, Error = "Nothing to export: no document and no path was given" };
+        }
 
-        var (tree, _) = ExpandUsings(doc, @params.TextDocument.Uri);
         if (tree.HasErrors)
         {
             var errors = string.Join("\n", tree.Diagnostics
@@ -608,76 +642,145 @@ public sealed partial class LilySharpLanguageServer
             return new ExportResponse { Success = false, Error = errors };
         }
 
+        var format = (@params.Format ?? "svg").ToLowerInvariant();
+        if (!ExportExtensions.TryGetValue(format, out var ext))
+            return new ExportResponse { Success = false, Error = $"Unknown format: {format}" };
+
         try
         {
-            var format = (@params.Format ?? "svg").ToLowerInvariant();
-            var outputPath = @params.OutputPath;
-            var renderName = @params.RenderName;
-            switch (format)
+            if (!@params.All)
             {
-                case "svg":
-                    var fontDir = LilySharp.Core.Rendering.FontLocator.Find();
-                    // Embed the font so the exported SVG is self-contained; fall back
-                    // to a reference if the bundled font can't be located.
-                    var svgOpts = fontDir != null
-                        ? LilySharp.Core.Svg.Renderer.SvgRenderOptions.Export(fontDir)
-                        : LilySharp.Core.Svg.Renderer.SvgRenderOptions.Default;
-                    File.WriteAllText(outputPath,
-                        LilySharp.Core.Svg.SvgGenerator.Generate(tree, svgOpts, renderName));
-                    break;
-                case "png":
-                {
-                    // One file per page, LilyPond naming: single page keeps the
-                    // chosen name; multiple pages save as BASE-page1.png,
-                    // BASE-page2.png, … (scm/ps-to-png.scm).
-                    var pages = LilySharp.Core.Png.PngGenerator.GeneratePages(tree, null, renderName);
-                    if (pages.Count == 1)
-                    {
-                        File.WriteAllBytes(outputPath, pages[0]);
-                    }
-                    else
-                    {
-                        var dir = Path.GetDirectoryName(outputPath) ?? "";
-                        var baseName = Path.GetFileNameWithoutExtension(outputPath);
-                        var pngExt = Path.GetExtension(outputPath);
-                        var names = new List<string>(pages.Count);
-                        for (int p = 0; p < pages.Count; p++)
-                        {
-                            var pagePath = Path.Combine(dir, $"{baseName}-page{p + 1}{pngExt}");
-                            File.WriteAllBytes(pagePath, pages[p]);
-                            names.Add(Path.GetFileName(pagePath));
-                        }
-                        // The dialog's path names ONE file; report what was
-                        // actually written so the toast isn't a lie.
-                        outputPath = Path.Combine(dir, string.Join(", ", names));
-                    }
-                    break;
-                }
-                case "pdf":
-                    File.WriteAllBytes(outputPath,
-                        LilySharp.Core.Pdf.PdfGenerator.Generate(tree, null, renderName));
-                    break;
-                case "midi":
-                    new LilySharp.Core.Midi.MidiExporter().Export(tree).Save(outputPath);
-                    break;
-                case "musicxml":
-                    new LilySharp.Core.MusicXml.MusicXmlExporter().ExportToFile(tree, outputPath);
-                    break;
-                case "vsqx":
-                    new LilySharp.Core.Vocaloid.VsqxExporter().Export(tree).Save(outputPath);
-                    break;
-                case "ly":
-                    File.WriteAllText(outputPath,
-                        new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree));
-                    break;
-                default:
-                    return new ExportResponse { Success = false, Error = $"Unknown format: {format}" };
+                var written = WriteExport(tree, format, @params.OutputPath, @params.RenderName, form: null);
+                // The dialog's path names ONE file; a multi-page PNG writes several, so
+                // report what was actually written so the toast isn't a lie.
+                var reported = written.Count == 1
+                    ? written[0]
+                    : Path.Combine(Path.GetDirectoryName(@params.OutputPath) ?? "",
+                        string.Join(", ", written.Select(Path.GetFileName)));
+                return new ExportResponse { Success = true, OutputPath = reported, OutputPaths = written.ToArray() };
             }
-            return new ExportResponse { Success = true, OutputPath = outputPath };
+
+            if (string.IsNullOrEmpty(@params.OutputDirectory))
+                return new ExportResponse { Success = false, Error = "Exporting every score needs an output directory" };
+            var dir = @params.OutputDirectory;
+            Directory.CreateDirectory(dir);
+
+            var outputs = new List<string>();
+            var warnings = new List<string>();
+            var specs = RenderSpecParser.FindAll(tree);
+            if (specs.Count == 0)
+            {
+                // A file with no `score` block has exactly one thing to write (the CLI's
+                // RunFormOutput says the same), under the file's own name.
+                outputs.AddRange(WriteExport(tree, format, Path.Combine(dir, stem + ext), null, null));
+            }
+            else if (format == "vsqx")
+            {
+                // A .vsqx holds one arrangement and the exporter takes no form, so the
+                // first score is what the CLI writes too — say what was left out
+                // ("If you drop something, say so in Warnings", HANDOFF §2F).
+                outputs.AddRange(WriteExport(tree, format, Path.Combine(dir, stem + ext), null, null));
+                if (specs.Count > 1)
+                    warnings.Add($"{stem}: a .vsqx holds one arrangement — wrote the first score, left out "
+                        + string.Join(", ", specs.Skip(1).Select(s => s.Name)));
+            }
+            else
+            {
+                foreach (var spec in specs)
+                {
+                    var target = Path.Combine(dir, spec.ResolveOutputStem(stem) + ext);
+                    if (outputs.Contains(target, StringComparer.OrdinalIgnoreCase))
+                    {
+                        // Two scores on one form and no basename resolve to one file; the
+                        // second would silently replace the first's picture.
+                        warnings.Add($"{stem}: score '{spec.Name}' resolves to {Path.GetFileName(target)}, "
+                            + "already written by an earlier score of this file — skipped");
+                        continue;
+                    }
+                    // The selector the generators resolve with (RenderSpecParser.Choose):
+                    // the basename when the score has one, else its form name.
+                    var selector = string.IsNullOrEmpty(spec.OutputFile) ? spec.Name : spec.OutputFile;
+                    outputs.AddRange(WriteExport(tree, format, target, selector, spec.Form));
+                }
+            }
+            return new ExportResponse
+            {
+                Success = true,
+                OutputPath = dir,
+                OutputPaths = outputs.ToArray(),
+                Warnings = warnings.ToArray(),
+            };
         }
         catch (Exception ex)
         {
             return new ExportResponse { Success = false, Error = ex.Message };
+        }
+    }
+
+    /// <summary>
+    /// Writes one export and returns every file it produced — one, except a multi-page
+    /// PNG. <paramref name="renderName"/> picks the score for the visual formats;
+    /// <paramref name="form"/> picks the arrangement for MIDI, MusicXML and the twin
+    /// (null = the primary form, what the preview's button has always exported).
+    /// </summary>
+    private static List<string> WriteExport(
+        SyntaxTree tree, string format, string outputPath, string? renderName,
+        LilySharp.Core.Syntax.FormDeclarationSyntax? form)
+    {
+        switch (format)
+        {
+            case "svg":
+                var fontDir = LilySharp.Core.Rendering.FontLocator.Find();
+                // Embed the font so the exported SVG is self-contained; fall back
+                // to a reference if the bundled font can't be located.
+                var svgOpts = fontDir != null
+                    ? LilySharp.Core.Svg.Renderer.SvgRenderOptions.Export(fontDir)
+                    : LilySharp.Core.Svg.Renderer.SvgRenderOptions.Default;
+                File.WriteAllText(outputPath,
+                    LilySharp.Core.Svg.SvgGenerator.Generate(tree, svgOpts, renderName));
+                return [outputPath];
+            case "png":
+            {
+                // One file per page, LilyPond naming: single page keeps the
+                // chosen name; multiple pages save as BASE-page1.png,
+                // BASE-page2.png, … (scm/ps-to-png.scm).
+                var pages = LilySharp.Core.Png.PngGenerator.GeneratePages(tree, null, renderName);
+                if (pages.Count == 1)
+                {
+                    File.WriteAllBytes(outputPath, pages[0]);
+                    return [outputPath];
+                }
+                var dir = Path.GetDirectoryName(outputPath) ?? "";
+                var baseName = Path.GetFileNameWithoutExtension(outputPath);
+                var pngExt = Path.GetExtension(outputPath);
+                var names = new List<string>(pages.Count);
+                for (int p = 0; p < pages.Count; p++)
+                {
+                    var pagePath = Path.Combine(dir, $"{baseName}-page{p + 1}{pngExt}");
+                    File.WriteAllBytes(pagePath, pages[p]);
+                    names.Add(pagePath);
+                }
+                return names;
+            }
+            case "pdf":
+                File.WriteAllBytes(outputPath,
+                    LilySharp.Core.Pdf.PdfGenerator.Generate(tree, null, renderName));
+                return [outputPath];
+            case "midi":
+                new LilySharp.Core.Midi.MidiExporter { Form = form }.Export(tree).Save(outputPath);
+                return [outputPath];
+            case "musicxml":
+                new LilySharp.Core.MusicXml.MusicXmlExporter { Form = form }.ExportToFile(tree, outputPath);
+                return [outputPath];
+            case "vsqx":
+                new LilySharp.Core.Vocaloid.VsqxExporter().Export(tree).Save(outputPath);
+                return [outputPath];
+            case "ly":
+                File.WriteAllText(outputPath,
+                    new LilySharp.Core.LilyPond.LilyPondExporter { Form = form }.Export(tree));
+                return [outputPath];
+            default:
+                throw new ArgumentException($"Unknown format: {format}");
         }
     }
 
@@ -934,8 +1037,43 @@ public sealed partial class LilySharpLanguageServer
 
         try
         {
-            var svg = LilySharp.Core.Svg.SvgGenerator.Generate(
-                tree, LilySharp.Core.Svg.Renderer.SvgRenderOptions.Preview(), @params.RenderName);
+            // Preview() for the AI panel (it clicks on notes); the Markdown fence asks for
+            // the same drawing without the hit-rects — the host page supplies the fonts
+            // either way (OmitFontFace).
+            // A fence is a picture in a document, not a page: the snippet layout (one page
+            // as tall as the music, cropped to its widest system).
+            var options = @params.Interactive
+                ? LilySharp.Core.Svg.Renderer.SvgRenderOptions.Preview()
+                : new LilySharp.Core.Svg.Renderer.SvgRenderOptions { OmitFontFace = true, Snippet = @params.Fence };
+            string svg;
+            if (@params.Fence)
+            {
+                // A fence draws ONE picture: anything that would have to choose is refused,
+                // and a fence that writes no score gets the one its parts imply.
+                var scores = RenderSpecParser.FindAll(tree);
+                if (scores.Count > 1)
+                    return new SvgResponse
+                    {
+                        Svg = null,
+                        Error = $"A fence draws one score; this one declares {scores.Count}. Keep one score {{ }}.",
+                        Renders = renders, SelectedRender = drawn,
+                    };
+                if (scores.Count == 1)
+                {
+                    svg = LilySharp.Core.Svg.SvgGenerator.Generate(tree, options, null);
+                }
+                else
+                {
+                    var (implied, error) = RenderSpecParser.ImpliedScore(tree);
+                    if (implied == null)
+                        return new SvgResponse { Svg = null, Error = error, Renders = renders, SelectedRender = drawn };
+                    svg = LilySharp.Core.Svg.SvgGenerator.GenerateForSpec(tree, implied, options);
+                }
+            }
+            else
+            {
+                svg = LilySharp.Core.Svg.SvgGenerator.Generate(tree, options, @params.RenderName);
+            }
             return new SvgResponse { Svg = svg, Error = null, Renders = renders, SelectedRender = drawn };
         }
         catch (Exception ex)

@@ -260,7 +260,7 @@ internal sealed partial class LayoutEngine
     }
 
     private (ImmutableArray<PageLayout> pages, ImmutableArray<SystemLayout> systems) CreatePages(
-        ImmutableArray<SystemLayout> systems, HeaderBand? header,
+        MultiStaffScore score, ImmutableArray<SystemLayout> systems, HeaderBand? header,
         List<(double upExtent, double downExtent)> perSystemExtents, double systemHeight,
         List<(VerticalSkyline up, VerticalSkyline down)>? perSystemSkylines = null,
         List<double>? perSystemHeights = null,
@@ -562,9 +562,26 @@ internal sealed partial class LayoutEngine
         var systemsArray = updatedSystems
             .Select(s => s with { Y = totalHeight - s.Y })
             .ToImmutableArray();
+        // The snippet page (LayoutOptions.CropWidth) is as wide as its widest system's
+        // drawn staff — the final barline or the courtesy suffix past it, the ONE reading
+        // the renderer ends the lines at — or its title / composer row when that is wider
+        // (HeaderBand.Width: the title is centred on the page, the composer set against
+        // the right margin, so either needs the page at least its own width), plus the
+        // two margins; every other page is the paper's width.
+        double pageWidth = _options.PageWidth;
+        if (_options.CropWidth)
+        {
+            double widest = header?.Width ?? 0;
+            foreach (var s in systemsArray)
+            {
+                var (_, notationRight, tabRight) = Rendering.SharedRenderer.StaffRightEdges(score, s);
+                widest = Math.Max(widest, Math.Max(notationRight, tabRight));
+            }
+            pageWidth = _options.MarginLeft + widest + _options.MarginRight;
+        }
         // A single page runs at force 0, so the title column's top is the top-markup
         // spring's own length below the margin (4 at rest — LayoutUtilities.TitleTopSpring).
-        var page = new PageLayout(0, _options.PageWidth, totalHeight, header?.Depth ?? 0, systemsArray,
+        var page = new PageLayout(0, pageWidth, totalHeight, header?.Depth ?? 0, systemsArray,
             Header: header,
             HeaderTop: header is null
                 ? 0
