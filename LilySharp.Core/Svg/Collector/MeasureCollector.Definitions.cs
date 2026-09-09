@@ -395,6 +395,10 @@ public sealed partial class MeasureCollector
             _meta.Fonts = Semantics.FontPlanReader.ReadReference(root, fontsRef, _meta.Fonts);
         if (PaperOverride is { } paperRef)
             _meta.Paper = Semantics.PaperPlanReader.ReadReference(root, paperRef, _meta.Paper);
+        // `marks stacked|beside`: the score's own item, else the file's top-level default —
+        // the same two tiers, resolved to the one bit the mark engraver reads and landed in
+        // _meta for the same incremental reason (MetaMatchesShifted compares it).
+        _meta.MarksBeside = MarksOverride ?? Semantics.MarkArrangement.FileIsBeside(root);
     }
 
     /// <summary>True for exactly the node kinds <see cref="CollectDefinitions"/>'s

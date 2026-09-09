@@ -522,6 +522,7 @@ internal sealed partial class Parser
             SyntaxKind.OctaveKeyword => ParseOctaveDirective(),
             SyntaxKind.TransposeKeyword => ParseTopLevelTranspose(),
             SyntaxKind.PitchKeyword => ParsePitchDirective(),
+            SyntaxKind.MarksKeyword => ParseMarksDirective(),
 
             SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or
             SyntaxKind.AppoggiaturaKeyword => ParseGraceExpression(),

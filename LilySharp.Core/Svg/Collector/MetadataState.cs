@@ -38,6 +38,11 @@ internal sealed class MetadataState
     // as Fonts: a score without one gets LayoutOptions.Default.
     public Layout.LayoutOptions Paper = Layout.LayoutOptions.Default;
 
+    // How a section label and the tempo at the same bar are arranged — `marks beside`
+    // (true) or the stacked default (false) — resolved from the score's own item or the
+    // file's top-level directive (Semantics.MarkArrangement).
+    public bool MarksBeside;
+
     // Source offsets of the header grobs (0 = none), emitted as data-pos so the
     // preview can click-to-jump to the title/composer/time/key/clef declarations.
     public int TitlePosition;
@@ -84,6 +89,7 @@ internal sealed class MetadataState
         Composer = other.Composer;
         Fonts = other.Fonts;
         Paper = other.Paper;
+        MarksBeside = other.MarksBeside;
         TitlePosition = other.TitlePosition;
         ComposerPosition = other.ComposerPosition;
         TimePosition = other.TimePosition;
@@ -119,6 +125,9 @@ internal sealed class MetadataState
     {
         Title = null;
         Composer = null;
+        // (Fonts, Paper and MarksBeside are deliberately NOT reset: they are resolved once
+        // by CollectDefinitions and read at capture, and a per-pass reset here would drop
+        // them before the score is assembled — measured 2026-09-09 on MarksBeside.)
         TitlePosition = 0;
         ComposerPosition = 0;
         TimePosition = 0;

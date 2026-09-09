@@ -57,7 +57,10 @@ internal sealed record ScoreContent(
     int TempoBeatUnit,
     int TempoDots,
     Rendering.TextFontPlan Fonts,
-    Layout.LayoutOptions Paper);
+    Layout.LayoutOptions Paper,
+    // `marks beside` — the label-and-tempo arrangement the score resolved to
+    // (Semantics.MarkArrangement); false is the stacked default.
+    bool MarksBeside);
 
 /// <summary>
 /// Turns a <see cref="ScoreContent"/> snapshot plus a set of voices / staff groups
@@ -109,6 +112,7 @@ internal static class ScoreAssembler
             TempoDots = c.TempoDots,
             Fonts = c.Fonts,
             Paper = c.Paper,
+            MarksBeside = c.MarksBeside,
         };
 
     /// <summary>Single-voice convenience overload.</summary>
@@ -152,6 +156,7 @@ internal static class ScoreAssembler
             TempoDots = c.TempoDots,
             Fonts = c.Fonts,
             Paper = c.Paper,
+            MarksBeside = c.MarksBeside,
         };
 
     // ⚠️ THERE IS NO INITIAL-REPEAT GATE HERE ANY MORE, and that is a decision, not an

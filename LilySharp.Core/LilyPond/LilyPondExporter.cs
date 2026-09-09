@@ -411,6 +411,14 @@ public sealed class LilyPondExporter
 
         EmitChordTracks(root, render, form, sections);
         EmitScore(render, parts, partVars);
+        // `marks beside` is a Lily#-own arrangement (Semantics.MarkArrangement): LilyPond
+        // stacks a RehearsalMark over a MetronomeMark and has no chart pair, so the twin
+        // keeps LilyPond's picture and says so — the `fonts … size` rule, not a silent drop.
+        // Read the way the page reads it (the score's own item, else the file's default).
+        if (Semantics.MarkArrangement.ScoreArrangement(render)
+            ?? Semantics.MarkArrangement.FileIsBeside(root))
+            _warnings.Add("marks beside is not exported: the twin stacks the section label over "
+                          + "the tempo mark, as LilyPond does — the arrangement has no LilyPond spelling");
         return _sb.ToString();
     }
 

@@ -169,6 +169,13 @@ public sealed record Score
     internal Layout.LayoutOptions Paper { get; init; } = Layout.LayoutOptions.Default;
 
     /// <summary>
+    /// <c>marks beside</c> — see <see cref="MultiStaffScore.MarksBeside"/>, the same bit
+    /// on the shape the layout usually holds; carried here so a single-staff collect
+    /// answers it too.
+    /// </summary>
+    public bool MarksBeside { get; init; }
+
+    /// <summary>
     /// The text measurements this score's <see cref="Fonts"/> imply — see
     /// <see cref="MultiStaffScore.TextMetrics"/>, which is the same property on the shape
     /// the layout usually holds. Both carry it because both are handed to engravers.

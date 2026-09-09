@@ -1115,6 +1115,11 @@ score parts { paper wide { topMargin 12mm }  staff melody }  // same paper, wide
 The reference replaces the file's unnamed default for that score alone; the override
 block reads as if its entries were written at the end of the named block.
 
+A score may also state its own `marks` arrangement — `marks beside` puts its section
+labels at the line start with the bar's tempo to their right (see *Section labels and the
+tempo mark* under Music Marks); `marks stacked` is LilyPond's default. Written at the top
+level the same two words are the file's default.
+
 ### Multiple forms (excerpts)
 
 Declare several named forms and bind each `score` to one by name — for example a
@@ -1207,6 +1212,27 @@ coda c4 d e f | ds al coda
 
 The same words are how a `form` names the route: `form main { A segno B to coda C ds al
 coda coda D }`.
+
+### Section labels and the tempo mark — `marks`
+
+```
+marks stacked            // the default: LilyPond's arrangement
+marks beside             // the chart's: "[Chorus] ♩ = 132" on one line
+```
+
+A boxed section label (a `form` section's name, a `@mark`) and the metronome mark standing
+at the **same bar** are arranged one of two ways. `stacked` is LilyPond's: the label
+break-aligns to the key/clef column and the tempo to the meter column, each on its own
+anchor, and where their inks meet the label stacks over the tempo. `beside` is the chart's
+one line: the label's box stands at the line-start edge and the tempo sits to its right,
+its digits on the label's own baseline — a Lily#-own arrangement, chosen as an option
+(2026-09-02). A mid-line label is centred on its bar and a mid-measure `tempo` keeps its
+note column under either.
+
+Written at the top level it is the file's default; written inside a `score { }` body it is
+that score's own, replacing the default for that score alone (the two tiers `fonts` /
+`paper` take). It is a display option, not an `override` and not a `paper` key. The `.ly`
+twin has no spelling for `beside` and warns; the page is the reference.
 
 ### Text Spanners
 
@@ -1344,7 +1370,7 @@ be declared and referenced).
 | Group | Words |
 |-------|-------|
 | Structure | `section` `form` `using` `tab` `ossia` `transpose` `octave` `pitch` `instrument` `percussion` `drummap` |
-| Score / layout | `score` `part` `staff` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff` `voice` `phrase` `repeat` `volta` `alternative` `break` `noBreak` `pageBreak` `noPageBreak` `partial` `embedded` `fonts` `paper` |
+| Score / layout | `score` `part` `staff` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff` `voice` `phrase` `repeat` `volta` `alternative` `break` `noBreak` `pageBreak` `noPageBreak` `partial` `embedded` `fonts` `paper` `marks` |
 | Metadata | `title` `composer` `tempo` `time` `key` `clef` |
 | Modes | `major` `minor` `ionian` `dorian` `phrygian` `lydian` `mixolydian` `aeolian` `locrian` |
 | Clef names | `treble` `bass` `alto` `tenor` `treble_8` `bass_8` `soprano` `mezzosoprano` `baritone` |

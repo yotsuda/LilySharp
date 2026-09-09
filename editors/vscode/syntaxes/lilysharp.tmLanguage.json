@@ -385,6 +385,14 @@
                         "1": { "name": "keyword.control.lilysharp" },
                         "2": { "name": "support.constant.repeat-kind.lilysharp" }
                     }
+                },
+                {
+                    "comment": "`marks stacked|beside` — how a section label and the tempo at the same bar are arranged (LilySharp.Core MarkArrangement.Modes). A top-level directive and a score item, the same pair in both.",
+                    "match": "\\b(marks)\\s+(stacked|beside)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.other.lilysharp" },
+                        "2": { "name": "support.constant.marks-arrangement.lilysharp" }
+                    }
                 }
             ]
         },
@@ -402,7 +410,7 @@
                 },
                 {
                     "name": "keyword.other.lilysharp",
-                    "match": "\\b(title|composer|tempo|time|partial|key|clef|fonts|paper|embedded|volta|major|minor|ionian|dorian|phrygian|lydian|mixolydian|aeolian|locrian|instrument|octave|pitch|tuning|noPageBreak|pageBreak|noBreak|break|treble_8|treble|bass_8|bass|alto|tenor|soprano|mezzosoprano|baritone|percussion)\\b"
+                    "match": "\\b(title|composer|tempo|time|partial|key|clef|fonts|paper|marks|embedded|volta|major|minor|ionian|dorian|phrygian|lydian|mixolydian|aeolian|locrian|instrument|octave|pitch|tuning|noPageBreak|pageBreak|noBreak|break|treble_8|treble|bass_8|bass|alto|tenor|soprano|mezzosoprano|baritone|percussion)\\b"
                 }
             ]
         },

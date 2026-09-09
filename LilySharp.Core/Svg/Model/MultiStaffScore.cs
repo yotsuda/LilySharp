@@ -109,6 +109,16 @@ public sealed record MultiStaffScore
     internal Layout.LayoutOptions Paper { get; init; } = Layout.LayoutOptions.Default;
 
     /// <summary>
+    /// <c>marks beside</c>: a boxed section label stands at the line-start edge with the
+    /// bar's tempo mark to its right on one line (the chart's arrangement), instead of the
+    /// stacked default that is LilyPond's. Resolved by the collector from the score's own
+    /// item or the file's top-level directive (Semantics.MarkArrangement); the mark engraver
+    /// and the outside-staff pass read it, and IncrementalCompiler sheds its caches when it
+    /// changes, as it does for <see cref="Paper"/>.
+    /// </summary>
+    public bool MarksBeside { get; init; }
+
+    /// <summary>
     /// The text measurements this score's <see cref="Fonts"/> imply — what the LAYOUT asks,
     /// in the same words the drawing asks (<c>role</c> and <c>style</c>).
     /// </summary>
@@ -331,6 +341,10 @@ public sealed record MultiStaffScore
             TempoDots = score.TempoDots,
             Fonts = score.Fonts,
             Paper = score.Paper,
+            // The wrap a SINGLE-staff score always takes: a score-global bit left out here
+            // is silently the default on every solo book (measured 2026-09-09 — the first
+            // draft of `marks beside` reached the multi-staff path only).
+            MarksBeside = score.MarksBeside,
         };
     }
 

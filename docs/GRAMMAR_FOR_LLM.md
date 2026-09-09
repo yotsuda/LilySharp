@@ -35,6 +35,11 @@ paper {                  // optional; page dimensions (defaults = LilyPond's a4)
   paperWidth 210mm      // bare numbers are staff spaces; units mm/cm/in GLUED (210mm)
   paperHeight 297mm     // see the paper section below for margins/indents/spacing
 }
+marks stacked            // optional; how a section label and the tempo at the same bar are
+                        // arranged: 'stacked' (LilyPond's, the default — label over tempo) or
+                        // 'beside' (the chart's one line — label at the line start, tempo to
+                        // its right). File default here; 'marks beside' inside a score body
+                        // is that score's own. Display only; the .ly twin warns for 'beside'.
 
 part rightHand { clef treble }  // declare each part; clef lives here
 part leftHand  { clef bass }    // part names are identifiers, NOT reserved words
@@ -122,6 +127,17 @@ score winds "winds" {
   title "Woodwinds"    // this score only
   click                // played, never engraved
 }
+```
+
+**A score's own `marks` arrangement** — `marks beside` inside a score body puts that
+score's section labels at the line start with the bar's tempo to their right on one line
+(the chart's "[Chorus] ♩ = 132"); `marks stacked` is LilyPond's default (label over tempo).
+The same two words at the top level are the file's default:
+
+```
+marks beside                                   // the file default
+score main  { staff melody }                   // chart layout
+score parts { marks stacked  staff melody }    // this score keeps LilyPond's
 ```
 
 A staff's display name is a quoted string (`staff flute "Piccolo"`) — a bare word after
@@ -723,7 +739,7 @@ part is fine). Keywords:
 ```text
 section form using tab ossia transpose octave pitch instrument percussion drummap
 score part staff grandStaff staffGroup choirStaff condensedStaff combinedStaff
-voice phrase repeat volta alternative break noBreak pageBreak noPageBreak partial cue embedded fonts paper
+voice phrase repeat volta alternative break noBreak pageBreak noPageBreak partial cue embedded fonts paper marks
 title composer tempo time key clef
 major minor ionian dorian phrygian lydian mixolydian aeolian locrian
 treble bass alto tenor treble_8 bass_8 soprano mezzosoprano baritone

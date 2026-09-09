@@ -757,6 +757,31 @@ public class EditorColouringTests
             Assert.True(Regex.IsMatch($"repeat {kind} 2 {{", pattern), $"`repeat {kind}` is left plain");
     }
 
+    /// <summary>The <c>marks ARRANGEMENT</c> rule paints exactly the two words the compiler
+    /// names (<c>MarkArrangement.Modes</c>) — the same device as the repeat rule: the value
+    /// words are not reserved, so they are coloured WITH the keyword they belong to.</summary>
+    [Fact]
+    public void TheMarksRule_ColoursExactlyTheCompilersArrangements()
+    {
+        string pattern = MatchPatternOf("directive-value", 2);
+        var alternation = Regex.Match(pattern, @"\(marks\)\\s\+\(([^)]+)\)");
+        Assert.True(alternation.Success, $"the marks rule has moved or changed shape: {pattern}");
+
+        var painted = alternation.Groups[1].Value.Split('|').OrderBy(k => k, StringComparer.Ordinal);
+        var known = LanguageVocabulary.MarkArrangements.OrderBy(k => k, StringComparer.Ordinal);
+        Assert.Equal(known, painted);
+
+        foreach (string word in LanguageVocabulary.MarkArrangements)
+        {
+            Assert.True(Regex.IsMatch($"marks {word}", pattern), $"`marks {word}` is left plain");
+            Assert.True(IsColoured($"marks {word}"), $"`marks {word}` is left plain by the grammar");
+        }
+        // The value words alone are a writer's own: `part beside { … }` compiles.
+        Assert.Equal(SyntaxKind.Identifier, KindOf("beside"));
+        Assert.Equal(SyntaxKind.Identifier, KindOf("stacked"));
+        Assert.NotEqual(SyntaxKind.Identifier, KindOf("marks"));
+    }
+
     [Fact]
     public void ASectionInsideAPart_IsColouredLikeOneAtTheTopLevel()
     {

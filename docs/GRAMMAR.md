@@ -98,7 +98,7 @@ Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
         | 'lyrics' | 'chords' | 'tuning' | 'instrument' | 'percussion' | 'drummap'
         | 'transpose' | 'octave' | 'pitch' | 'using' | 'break' | 'noBreak' | 'pageBreak' | 'noPageBreak' | 'partial'
         | 'tuplet' | 'grace' | 'acciaccatura' | 'appoggiatura' | 'cue'
-        | 'repeat' | 'volta' | 'alternative' | 'embedded' | 'fonts' | 'paper'
+        | 'repeat' | 'volta' | 'alternative' | 'embedded' | 'fonts' | 'paper' | 'marks'
         | 'override' | 'revert' | 'once'
         | 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian' | 'lydian' | 'mixolydian'
         | 'aeolian' | 'locrian'
@@ -177,7 +177,29 @@ MetadataKey    = 'title' | 'composer' ;
 ### 2.3 Global Settings
 
 GlobalSetting  = TempoDecl | TimeDecl | KeyDecl | PartialDecl | OctaveDecl | PitchDecl
-               | TransposeDecl ;
+               | TransposeDecl | MarksDecl ;
+
+MarksDecl      = 'marks' , MarkArrangement ;
+MarkArrangement = 'stacked' | 'beside' ;
+                 (* How a boxed section label and the tempo mark standing at the SAME bar
+                    are arranged — a display option, not a property of the music.
+                    'stacked' (the default) is LilyPond's: the label break-aligns to the
+                    key/clef column and the metronome mark to the meter column, each on its
+                    own anchor, and where their inks meet the label stacks over the tempo.
+                    'beside' is the chart's one line: the label's box stands at the
+                    line-start edge (indent + 0.3; after the '|:' when the line opens
+                    on a drawn repeat bar) and the tempo sits to its right, the
+                    digits on the label's own baseline — "[Chorus] ♩ = 132" (Lily#-OWN;
+                    user decision 2026-09-02, HANDOFF §3; LilyPond has no such pair). A
+                    mid-line label is centred on its bar either way, and a mid-measure
+                    'tempo' keeps its note column either way. Written here it is the
+                    file's default; as a score item ('marks beside' inside a score body,
+                    ScoreItem §7) it is that score's own — the two tiers 'fonts' / 'paper'
+                    take, and a score body's LAST wins. A third word is refused at the
+                    word; a second top-level 'marks' warns like every repeated global.
+                    NOT an 'override' (a once/section scope a whole-page quantity would
+                    silently ignore) and NOT a 'paper' key (the page's dimensions). The
+                    .ly twin cannot spell 'beside' and warns; the picture is the page's. *)
 
 PartialDecl    = 'partial' , DurationToken ;
                  (* "the bar this stands in is this long". As a SECTION directive it is
@@ -986,6 +1008,10 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                         named top-level block, the optional
                                                         block overriding part of it *)
                | 'paper' , Identifier , [ PaperBlock ] (* THIS score's page, same shape *)
+               | 'marks' , MarkArrangement           (* THIS score's label-and-tempo
+                                                        arrangement, replacing the file's
+                                                        top-level default (§2.3 MarksDecl)
+                                                        for this score alone *)
                | PartRef                            (* a bare part name: MIDI only — see below *)
                ;
 

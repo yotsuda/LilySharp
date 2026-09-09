@@ -652,6 +652,10 @@ internal sealed partial class Parser
             // reading it gets), with the in-score flag choosing the shape errors.
             SyntaxKind.FontsKeyword => ParseFontDeclaration(inScore: true),
             SyntaxKind.PaperKeyword => ParsePaperDeclaration(inScore: true),
+            // `marks stacked|beside` — THIS score's arrangement of a section label and the
+            // tempo at the same bar, replacing the file's top-level default for this score
+            // alone (Semantics.MarkArrangement). The same node the top level parses.
+            SyntaxKind.MarksKeyword => ParseMarksDirective(),
             // The same drop this comment names, for the one keyword that reads most like it
             // belongs here: `using` includes a FILE, not a staff (LYS0029).
             SyntaxKind.UsingKeyword => ParseMisplacedUsing("a score"),
@@ -667,8 +671,8 @@ internal sealed partial class Parser
                     + "'grandStaff { … }', 'staffGroup { … }', 'choirStaff { … }', "
                     + "'condensedStaff { … }', 'combinedStaff { … }', 'ossia NAME', "
                     + "'chords NAME', 'lyrics NAME' — its own 'title'/'composer', a "
-                    + "'fonts NAME' / 'paper NAME' reference, and a bare part name to "
-                    + "render that part to MIDI only.")
+                    + "'fonts NAME' / 'paper NAME' reference, 'marks stacked|beside', and a "
+                    + "bare part name to render that part to MIDI only.")
         };
     }
 

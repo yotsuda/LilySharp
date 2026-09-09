@@ -2416,14 +2416,35 @@ internal static class OutsideStaffStacker
         foreach (var (sign, label) in toCodaPairs)
             signOfLabel[label] = sign;
         var pairedSigns = new HashSet<int>(signOfLabel.Values);
+        // `marks beside`: a tempo the engraver stood beside its label
+        // (MusicMarkLayout.BesideOfSourceIndex) is the same arrangement — priced as the
+        // label's union (the box widened to the tempo's ink right and raised to its note
+        // top) and moved with it. Paired by the label's SourceIndex, which survives the
+        // memoized pass's per-system filtering where an array index would not.
+        var besideTempoOfLabel = new Dictionary<int, int>(); // label index -> its tempo's index
+        for (int t = 0; t < musicMarks.Length; t++)
+        {
+            int of = musicMarks[t].BesideOfSourceIndex;
+            if (of < 0)
+                continue;
+            for (int l = 0; l < musicMarks.Length; l++)
+                if (musicMarks[l].SourceIndex == of
+                    && musicMarks[l].MeasureIndex == musicMarks[t].MeasureIndex)
+                {
+                    besideTempoOfLabel[l] = t;
+                    break;
+                }
+        }
+        var ridingTempos = new HashSet<int>(besideTempoOfLabel.Values);
         var b = musicMarks.ToBuilder();
         for (int i = 0; i < b.Count; i++)
         {
             var m = b[i];
             if (!measureToSystem.TryGetValue(m.MeasureIndex, out int sysIdx))
                 continue;
-            // A paired sign rides its label: the union placement below moves both.
-            if (pairedSigns.Contains(i))
+            // A paired sign rides its label: the union placement below moves both. So does
+            // a tempo standing beside one.
+            if (pairedSigns.Contains(i) || ridingTempos.Contains(i))
                 continue;
             // Spanner-handled marks (cresc./rit./ottava ...) are never
             // drawn by DrawMusicMarks — registering them would reserve
@@ -2600,15 +2621,33 @@ internal static class OutsideStaffStacker
                 double signHalfW = (textW + glyphW) / 2;
                 x0 = Math.Min(x0, sign.X - signHalfW - m.X);
             }
+            // A label with a tempo beside it (`marks beside`) is priced as that union too:
+            // the tempo's stencil box — its ink about ITS baseline, which stands d below the
+            // label's centre — folded into the label's box on the right. A box rather than
+            // the tempo's piecewise outline pair, the shape the to-coda union takes: the
+            // pair moves as one and the pointwise split under the tempo alone is not what
+            // decides where one line lands.
+            if (besideTempoOfLabel.TryGetValue(i, out int tempoIdx))
+            {
+                var t = b[tempoIdx];
+                var tInk = MetronomeMarkGeometry.Ink(fonts, t.Text, t.TempoText,
+                    t.TempoBeatUnit, t.TempoDots, t.SwingSubdivision);
+                double d = t.YUp - m.YUp;
+                x1 = Math.Max(x1, t.X + tInk.Width - m.X);
+                top = Math.Max(top, d + tInk.Top);
+                bottom = Math.Max(bottom, -(d + tInk.Bottom));
+            }
             // The whole mark family declares the horizontal 0.2 (see the constant).
             double newRel = Place(trackers(sysIdx, m.StaffIndex), m.X + x0, m.X + x1,
                 m.YUp + midUp, topOffset: top, bottomOffset: bottom,
                 horizonPadding: OutsideStaffHorizontalPadding, extraSupport: RowOf(sysIdx));
             b[i] = m with { YUp = newRel - midUp };
             // The pair moves as one: the sign keeps its tucked offset under the
-            // label's line wherever the union landed.
+            // label's line wherever the union landed — and the tempo beside it its baseline.
             if (signOfLabel.TryGetValue(i, out int si2))
                 b[si2] = b[si2] with { YUp = b[si2].YUp + (newRel - midUp - m.YUp) };
+            if (besideTempoOfLabel.TryGetValue(i, out int ti2))
+                b[ti2] = b[ti2] with { YUp = b[ti2].YUp + (newRel - midUp - m.YUp) };
         }
         return b.ToImmutable();
     }

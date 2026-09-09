@@ -626,6 +626,7 @@ public sealed partial class MeasureCollector
             && _meta.Composer == rec.Composer
             && _meta.Fonts.Equals(rec.Fonts)
             && _meta.Paper.Equals(rec.Paper)
+            && _meta.MarksBeside == rec.MarksBeside
             && _meta.Tempo == rec.Tempo
             && _meta.TempoText == rec.TempoText
             && _meta.TempoBeatUnit == rec.TempoBeatUnit

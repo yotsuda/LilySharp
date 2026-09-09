@@ -200,6 +200,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterInstrument => GetInstrumentCompletions(doc.Text, offset, position),
             CompletionContext.AfterRemoveEmpty => GetRemoveEmptyCompletions(),
             CompletionContext.AfterPitch => GetPitchModeCompletions(),
+            CompletionContext.AfterMarks => GetMarkArrangementCompletions(),
             CompletionContext.AfterRepeat => GetRepeatKindCompletions(),
             // The bare-@chord item is offered only when the group before the '@'
             // will actually auto-name; an unrecognizable one falls back to the

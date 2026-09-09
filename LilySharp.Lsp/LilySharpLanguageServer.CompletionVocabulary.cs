@@ -351,6 +351,31 @@ public sealed partial class LilySharpLanguageServer
         };
     }
 
+    // Prose per `marks` arrangement. Membership decides nothing — the words come from the
+    // compiler (LanguageVocabulary.MarkArrangements); a word this table has not been told
+    // about ships with no description, which CompletionVocabularyTests turns red.
+    private static readonly System.Collections.Generic.Dictionary<string, string> MarkArrangementDetails = new()
+    {
+        ["stacked"] = "The section label stacked over the tempo mark, each on its own anchor (LilyPond's; the default)",
+        ["beside"] = "The section label at the line start with the tempo mark to its right on one line (the chart's)",
+    };
+
+    /// <summary>After <c>marks</c>: the two arrangements, from the compiler, in its order
+    /// (the default first).</summary>
+    internal static CompletionList GetMarkArrangementCompletions()
+    {
+        return new CompletionList
+        {
+            Items = LanguageVocabulary.MarkArrangements.Select((name, i) => new CompletionItem
+            {
+                Label = name,
+                Kind = CompletionItemKind.EnumMember,
+                Detail = MarkArrangementDetails.TryGetValue(name, out var d) ? d : null,
+                SortText = i.ToString(),
+            }).ToArray()
+        };
+    }
+
     // Prose and the default count per repeat kind. A tremolo's count is the number of
     // strokes the body is played in (repeat tremolo 4 { c16 e } = one beat), so its default
     // is a beat's worth rather than the "twice" the other two mean. Membership decides
@@ -1227,6 +1252,7 @@ public sealed partial class LilySharpLanguageServer
             ("composer", "composer \"$0\"", "This score's own composer, overriding the file's", false),
             ("fonts", "fonts $0", "This score's faces: reference a named top-level fonts block", true),
             ("paper", "paper $0", "This score's page: reference a named top-level paper block", true),
+            ("marks", "marks $0", "This score's arrangement of a section label and the tempo at the same bar: stacked (default) | beside", true),
         };
         return new CompletionList
         {
@@ -2430,6 +2456,9 @@ public sealed partial class LilySharpLanguageServer
                 // snippet choice, which was a second copy of the two words and one the
                 // part-header item never had (fixed 2026-09-03).
                 new CompletionItem { Label = "pitch", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "pitch $0", Detail = "Pitch convention for transposing instruments: written (default) | concert", Command = new Command { Title = "Suggest pitch mode", CommandIdentifier = "editor.action.triggerSuggest" } },
+                // The same motion as `pitch`: the bare keyword, then the popup lists the two
+                // arrangements (GetMarkArrangementCompletions) — no private copy of the pair.
+                new CompletionItem { Label = "marks", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "marks $0", Detail = "How a section label and the tempo at the same bar are arranged: stacked (default) | beside", Command = new Command { Title = "Suggest marks arrangement", CommandIdentifier = "editor.action.triggerSuggest" } },
                 // `override` is a valid global default; `revert` / `once` are NOT offered at
                 // the top level — they only work in a music stream (LYS1023 otherwise).
                 // `partial` is likewise NOT offered here — a pickup belongs to a section, not
@@ -2492,7 +2521,7 @@ public sealed partial class LilySharpLanguageServer
     /// (title/composer/font/paper) and the piece-wide defaults (time/key/tempo/octave).
     /// Completion drops them once present; duplicable keywords are NOT listed here.</summary>
     private static readonly System.Collections.Generic.HashSet<string> GlobalSingletonKeywords =
-        new(StringComparer.Ordinal) { "title", "composer", "fonts", "paper", "tempo", "time", "key", "octave", "pitch" };
+        new(StringComparer.Ordinal) { "title", "composer", "fonts", "paper", "tempo", "time", "key", "octave", "pitch", "marks" };
 
     /// <summary>True when <paramref name="keyword"/> appears as a whole word at the GLOBAL
     /// scope (brace depth 0) in live code — not inside a block, a string, or a comment.</summary>

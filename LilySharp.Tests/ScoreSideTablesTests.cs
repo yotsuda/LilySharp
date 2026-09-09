@@ -175,7 +175,8 @@ public class ScoreSideTablesTests
             TempoBeatUnit: 0,
             TempoDots: 0,
             Fonts: LilySharp.Core.Rendering.TextFontPlan.Default,
-            Paper: LayoutOptions.Default);
+            Paper: LayoutOptions.Default,
+            MarksBeside: false);
         return LilySharp.Core.Svg.Collector.ScoreAssembler.BuildMultiStaffScore(groups, content);
     }
 }

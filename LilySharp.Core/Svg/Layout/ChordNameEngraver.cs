@@ -469,6 +469,11 @@ internal static class ChordNameEngraver
         // ⚠️ THE LABEL LOOP RUNS FIRST so the neighbour cascade below sees the moved symbol
         // and re-clears everything after it. Running it afterwards would push one symbol onto
         // the next.
+        // ⚠️⚠️ AND IT ONLY MOVES: nothing in the row's SPACING reads these windows
+        // (ApplyChordRowSpacing prices the symbols alone), so a label wider than the bar's
+        // slack pushes the symbol past its own bar line — measured 2026-09-09, the note on
+        // MusicMarkEngraver.BoxedLabelXWindows has the numbers. "Reserves" above means this
+        // shift, not a spring; the spring is the open half (HANDOFF §2 A).
         if (labelWindows is { Count: > 0 })
         {
             for (int i = 0; i < prepared.Count; i++)
@@ -746,7 +751,10 @@ internal static class ChordNameEngraver
     /// two that collide simply collide. This is Lily#'s own overlap resolution for
     /// proportionally-timed symbols; see <see cref="ClearOfPrevious"/>.
     /// </remarks>
-    private const double SymbolGap = 0.6;
+    // internal: the line-start reservation of a staffless label
+    // (MusicMarkEngraver.StafflessLabelLineStartReach) clears the first symbol by this same
+    // gap, so the spring and the shift agree — one number, two readers.
+    internal const double SymbolGap = 0.6;
 
     /// <summary>
     /// A symbol's X: chordnames entries carry their own rhythm, so they are placed by

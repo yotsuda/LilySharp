@@ -95,6 +95,10 @@ public static class LanguageVocabulary
     /// score header alike (<see cref="ConcertPitch"/>).</summary>
     public static IReadOnlyCollection<string> PitchModes => ConcertPitch.Modes;
 
+    /// <summary>The two words <c>marks</c> takes — at the top level and as a score item
+    /// alike (<see cref="MarkArrangement"/>), the default first.</summary>
+    public static IReadOnlyCollection<string> MarkArrangements => MarkArrangement.Modes;
+
     /// <summary>The three kinds <c>repeat</c> takes in music (<c>repeat unfold 2 { … }</c>),
     /// in the order the parser's own message names them.</summary>
     public static IReadOnlyCollection<string> RepeatKinds => Syntax.SyntaxFacts.RepeatKindVocabulary;

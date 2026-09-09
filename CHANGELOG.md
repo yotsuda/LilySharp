@@ -8,6 +8,18 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Language
 
+- **`marks stacked | beside` arranges a section label and the tempo mark at the same bar.**
+  `stacked` is the default and LilyPond's: the boxed label break-aligns to the key/clef
+  column, the metronome mark to the meter column, and where their inks meet the label stacks
+  over the tempo. `beside` is the chart's one line — the label's box at the line-start edge
+  with the tempo to its right, the digits on the label's baseline ("[Chorus] ♩ = 132"); the
+  pair is reserved and moved as one, so a chord symbol or a high note under either lifts
+  both. A mid-line label stays centred on its bar and a mid-measure `tempo` keeps its note
+  column either way. Written at the top level it is the file's default; `marks beside`
+  inside a `score { }` body is that score's own, the two tiers `fonts` / `paper` take. The
+  editor completes and colours the two words; the `.ly` twin has no spelling for `beside`
+  and warns (LilyPond has no such pair). A book that writes neither is unchanged.
+
 - **A `fonts { }` entry carries a size and a style, not only a face.** After a key, in any
   order: quoted faces, `as serif|sans` (follow a generic family), `step ±n` (LilyPond
   `font-size` steps relative to the role's default — six steps double), `size n` (an absolute

@@ -268,6 +268,43 @@ public class ValueContextCompletionTests
         Assert.Equal(new[] { "written", "concert" }, modes);
     }
 
+    [Fact]
+    public void MarksKeyword_IsOfferedAtTopLevel_AndInAScore_AndAutoTriggersTheArrangementList()
+    {
+        // `marks` completes at global scope and inside a score body, inserts the bare
+        // keyword and re-opens the popup so stacked / beside appear immediately — the
+        // `pitch` motion, with no private copy of the pair.
+        var top = LilySharpLanguageServer.GetTopLevelCompletions().Items
+            .Single(i => i.Label == "marks");
+        Assert.Equal("marks $0", top.InsertText);
+        Assert.Equal("editor.action.triggerSuggest", top.Command?.CommandIdentifier);
+
+        var inScore = LilySharpLanguageServer.GetScoreBlockCompletions().Items
+            .Single(i => i.Label == "marks");
+        Assert.Equal("marks $0", inScore.InsertText);
+        Assert.Equal("editor.action.triggerSuggest", inScore.Command?.CommandIdentifier);
+
+        var modes = LilySharpLanguageServer.GetMarkArrangementCompletions().Items
+            .Select(i => i.Label).ToArray();
+        Assert.Equal(new[] { "stacked", "beside" }, modes);
+    }
+
+    [Theory]
+    [InlineData("marks ")]
+    [InlineData("tempo 120\nmarks ")]
+    [InlineData("score main { marks ")]
+    [InlineData("score main { staff m  marks be")]
+    public void AfterMarks_OffersTheArrangements_InItsTwoHomes(string text)
+        => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterMarks, ContextOf(text));
+
+    [Theory]
+    // Not a part header, not a music body, not a string: `marks` is refused or is a word there.
+    [InlineData("part m { marks ")]
+    [InlineData("section A { m { marks ")]
+    [InlineData("title \"rehearsal marks ")]
+    public void MarksArrangements_AreNotOfferedWhereTheWordIsNotTheDirective(string text)
+        => Assert.NotEqual(LilySharpLanguageServer.CompletionContext.AfterMarks, ContextOf(text));
+
     [Theory]
     // `repeat` is an English word: as a LYRIC (a top-level track's inner section, and a
     // note-bound lyrics cell), as a stray in a part header, and at the top level it is not

@@ -108,6 +108,7 @@ public static class RenderSpecParser
         var headerOverrides = new List<MetadataDeclarationSyntax>();
         FontDeclarationSyntax? fontsRef = null;
         PaperDeclarationSyntax? paperRef = null;
+        bool? marksBeside = null;
 
         // Header: `score <FormName> ["basename"] [transpose …]`. The form name says
         // WHICH form to render; the basename names the OUTPUT file.
@@ -190,6 +191,15 @@ public static class RenderSpecParser
                 case PaperDeclarationSyntax paper:
                     paperRef = paper;
                     break;
+
+                // `marks stacked|beside` — this score's own arrangement. ReadProperty
+                // answers null for every OTHER property node this walk meets (the header's
+                // `transpose` / `pitch` are property nodes too), so only the marks item
+                // lands here; the LAST wins like the references above.
+                case PropertyAssignmentSyntax prop
+                    when LilySharp.Core.Semantics.MarkArrangement.ReadProperty(prop) is { } beside:
+                    marksBeside = beside;
+                    break;
             }
         }
 
@@ -243,7 +253,8 @@ public static class RenderSpecParser
 
         return new RenderSpec(name, outputFile, [.. items], scoreTranspose, form,
             [.. headerOverrides], fontsRef, paperRef,
-            ScoreConcert: LilySharp.Core.Semantics.ConcertPitch.ScoreIsConcert(render));
+            ScoreConcert: LilySharp.Core.Semantics.ConcertPitch.ScoreIsConcert(render),
+            MarksBeside: marksBeside);
     }
 
     /// <summary>

@@ -460,6 +460,9 @@ public sealed partial class LilySharpLanguageServer
         AfterInstrument,
         AfterRemoveEmpty,
         AfterPitch,
+        /// <summary><c>marks |</c> — its two arrangements (stacked / beside), at the top
+        /// level and inside a score body.</summary>
+        AfterMarks,
         AfterRepeat,
         AfterAt,
         AfterBackslash,
@@ -737,6 +740,17 @@ public sealed partial class LilySharpLanguageServer
             && !IsInsideStringLiteral(text, offset)
             && (InnermostOpenBlock(scan.Stack) == null || IsInsidePartBlock(scan.Stack)))
             return CompletionContext.AfterPitch;
+
+        // Right after `marks ` only its two arrangements are valid (stacked / beside —
+        // Semantics.MarkArrangement). The word has TWO homes and both take the same two
+        // words: the top-level directive (`marks beside`) and a score item (`score main {
+        // marks beside … }`). Gated to those — not a part header or a music body, where
+        // `marks` is refused, and not a string, so a title like "Rehearsal marks" is not
+        // hijacked.
+        if (prevWord == "marks"
+            && !IsInsideStringLiteral(text, offset)
+            && (InnermostOpenBlock(scan.Stack) == null || IsInsideScoreBlock(scan.Stack)))
+            return CompletionContext.AfterMarks;
 
         // Right after `repeat ` in MUSIC only its three kinds fit (unfold / percent /
         // tremolo — SyntaxFacts.RepeatKindVocabulary). `repeat` is an ordinary English word,

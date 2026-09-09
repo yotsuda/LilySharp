@@ -45,7 +45,12 @@ public readonly record struct MusicMarkLayout(
     string? TempoText = null, // Tempo marks only: bold marking text ("Grave").
     int TempoBeatUnit = 4,    // Tempo marks only: metronome beat unit.
     int TempoDots = 0,        // Tempo marks only: dots on the beat unit.
-    int StaffIndex = -1       // owning staff (-1 = top staff); the draw resolves its middle
+    int StaffIndex = -1,      // owning staff (-1 = top staff); the draw resolves its middle
+    int BesideOfSourceIndex = -1 // Tempo marks only: under `marks beside`, the SourceIndex of
+                              //   the boxed label this tempo stands to the right of. The
+                              //   outside-staff pass prices the two as ONE union and moves
+                              //   them together (OutsideStaffStacker.PlaceMusicMarks); −1
+                              //   for every mark placed on its own anchor.
 );
 
 /// <summary>
@@ -464,7 +469,11 @@ internal static class MusicMarkEngraver
         // line. Null (or a null answer) keeps the legacy below-the-system stack — the
         // bracket/mixed styles, an ossia's scale, and callers without per-staff
         // skylines.
-        Func<int, int, int, double?>? solvedPedalRowUp = null)
+        Func<int, int, int, double?>? solvedPedalRowUp = null,
+        // `marks beside` (Semantics.MarkArrangement, MultiStaffScore.MarksBeside): a boxed
+        // label keeps the line-start edge and the bar's measure-start tempo stands to its
+        // right on one line — see BesidePair. False is the stacked default, LilyPond's.
+        bool marksBeside = false)
     {
         // Merge section labels and tempo marking into the mark list
         var allMarks = BuildAllMarks(musicMarks, measures, score?.Tempo, score?.SwingSubdivision ?? 0,
@@ -488,7 +497,7 @@ internal static class MusicMarkEngraver
             var measureLayout = measureLayouts[mark.MeasureIndex];
             double x = CalculateXPosition(
                 fonts, mark, measureLayout, systems, prefixTimeSignatureX, lineStartBarlineX,
-                prefixMarkAnchorX, measures);
+                prefixMarkAnchorX, measures, marksBeside);
             markEntries.Add((mark, x, si));
         }
 
@@ -828,8 +837,23 @@ internal static class MusicMarkEngraver
             var placedAbove = new List<(double X0, double X1, double TopYUp)>();
             double stackTopYUp = baseAboveYUp;
             bool chainStarted = false;
+
+            // `marks beside`: the bar's measure-start tempo rides its boxed label instead of
+            // taking its own anchor — placed WITH the label below (the label's arm decides
+            // the line, the tempo's own chord ceiling may lift the pair) and skipped here.
+            // The pair is the one BesidePair names, so the chord-row reservation
+            // (BoxedLabelXWindows) widens the same label the tempo lands beside.
+            int besideTempo = -1, besideLabel = -1;
+            if (marksBeside && BesidePair(aboveMarks.Select(e => e.Mark).ToList()) is { } pair)
+            {
+                besideTempo = aboveMarks.FindIndex(e => ReferenceEquals(e.Mark, pair.Tempo));
+                besideLabel = aboveMarks.FindIndex(e => ReferenceEquals(e.Mark, pair.Label));
+            }
+
             for (int i = 0; i < aboveMarks.Count; i++)
             {
+                if (i == besideTempo)
+                    continue;
                 var (mark, x, si) = aboveMarks[i];
                 double halfExtent = GetMarkHalfExtent(fonts, mark.Type, mark.Text);
                 var (chainX0, chainX1) = MarkXExtent(fonts, mark, x);
@@ -918,7 +942,39 @@ internal static class MusicMarkEngraver
                     stackTopYUp = yUp + halfExtent;
                 }
 
-                placedAbove.Add((chainX0, chainX1, yUp + halfExtent));
+                double placedTopYUp = yUp + halfExtent;
+                if (i == besideLabel)
+                {
+                    // THE PAIR'S LINE IS THE LABEL'S (decided above, chord ceiling included);
+                    // the tempo's baseline sits on the label text's baseline to its right, and
+                    // its OWN chord ceiling — under its own X, which the label's did not cover
+                    // — lifts the two together. The pair is one placed extent: the chain and
+                    // the stacker both read one union, so a later mark clears the tempo's note
+                    // top and not just the box (BesideTempoX / BesideTempoBaselineUp are the
+                    // one home the reservation reads too).
+                    var (tMark, _, tSi) = aboveMarks[besideTempo];
+                    double tX = BesideTempoX(fonts, mark, x);
+                    double tBaseUp = BesideTempoBaselineUp(fonts, mark, yUp);
+                    var tInk = MetronomeMarkGeometry.Ink(fonts, tMark.Text, tMark.TempoText,
+                        tMark.TempoBeatUnit, tMark.TempoDots, tMark.SwingSubdivision);
+                    double tCeilingUp = MarkCeilingUp(tMark, tX);
+                    if (!double.IsNegativeInfinity(tCeilingUp) && tBaseUp + tInk.Bottom < tCeilingUp)
+                    {
+                        double lift = tCeilingUp - (tBaseUp + tInk.Bottom);
+                        yUp += lift;
+                        tBaseUp += lift;
+                    }
+                    placedTopYUp = Math.Max(yUp + halfExtent, tBaseUp + tInk.Top);
+                    stackTopYUp = placedTopYUp;
+                    chainX1 = Math.Max(chainX1, MarkXExtent(fonts, tMark, tX).x1);
+                    layouts.Add(new MusicMarkLayout(
+                        tMark.MeasureIndex, tX, tBaseUp, tMark.Type, tMark.Text,
+                        tMark.IsSymbol, tMark.SourcePosition, tSi, tMark.SwingSubdivision,
+                        tMark.TempoText, tMark.TempoBeatUnit, tMark.TempoDots,
+                        BesideOfSourceIndex: si));
+                }
+
+                placedAbove.Add((chainX0, chainX1, placedTopYUp));
 
                 layouts.Add(new MusicMarkLayout(
                     mark.MeasureIndex, x, yUp, mark.Type, mark.Text,
@@ -1141,7 +1197,63 @@ internal static class MusicMarkEngraver
     // break-align to their own anchor and the outside-staff pass stacks them by
     // priority (1300 first, 1450 clears it pointwise where their inks meet), which is
     // both the letter and what keeps the label's clef clearance intact without
-    // re-deriving it by hand.)
+    // re-deriving it by hand. The arrangement came BACK as an option the owner asked for —
+    // `marks beside`, 2026-09-02 — and lives in BesidePair / BesideTempoX /
+    // BesideTempoBaselineUp below: placed BEFORE the stacker as one union this time, the
+    // shape the to-coda pair took for the reasons CoPlaceToCodaWithLabels' remarks give.)
+
+    /// <summary>
+    /// Under <c>marks beside</c>, the (tempo, label) pair one anchor's marks make: the
+    /// bar's measure-start metronome mark and the first boxed label in priority order —
+    /// or null when either is missing. ONE HOME, read by <see cref="Calculate"/> (the
+    /// placement) and <see cref="BoxedLabelXWindows"/> (the chord row's reservation) so
+    /// the tempo is reserved beside the label it is drawn beside.
+    /// </summary>
+    /// <remarks>
+    /// The tempo is the one <see cref="CalculateXPosition"/>'s break-align arm would place
+    /// (Beginning, no note anchor): a mid-measure <c>tempo</c> keeps its note column under
+    /// either arrangement. The label is the SectionLabel before the RehearsalMark (1450
+    /// before 1500), which is the order the stack builds in.
+    /// </remarks>
+    internal static (MusicMarkItem Tempo, MusicMarkItem Label)? BesidePair(
+        IReadOnlyList<MusicMarkItem> marksAtOneAnchorByPriority)
+    {
+        MusicMarkItem? tempo = null, label = null;
+        foreach (var m in marksAtOneAnchorByPriority)
+        {
+            if (m.Vertical != MusicMarkVertical.Above)
+                continue;
+            if (tempo == null && m.Type == MusicMarkType.Tempo
+                && m.Position == MusicMarkPosition.Beginning && m.AnchorItemIndex <= 0)
+                tempo = m;
+            else if (label == null && IsBoxedLabel(m.Type))
+                label = m;
+        }
+        return tempo != null && label != null ? (tempo, label) : null;
+    }
+
+    /// <summary>
+    /// Under <c>marks beside</c>, the tempo's ink left: the label box's right edge plus
+    /// the pair's gap.
+    /// </summary>
+    internal static double BesideTempoX(ScoreTextMetrics fonts, MusicMarkItem label, double labelX)
+        => labelX + LabelBoxHalfWidth(fonts, label.Type, label.Text) + BesideTempoGap;
+
+    /// <summary>
+    /// Under <c>marks beside</c>, the tempo's baseline: the label TEXT's baseline, so the
+    /// metronome digits and the boxed letter stand on one line.
+    /// </summary>
+    internal static double BesideTempoBaselineUp(ScoreTextMetrics fonts, MusicMarkItem label, double labelYUp)
+        => labelYUp - LabelBaselineBelowCentre(fonts, label.Type, label.Text);
+
+    // The air between a boxed label's frame and the tempo standing beside it.
+    // LILYSHARP-OWN: `marks beside` is a Lily#-own arrangement (user decision 2026-09-02,
+    // HANDOFF §3) — LilyPond has no chart pair and stacks the two grobs — so the gap has no
+    // LilyPond line to cite. It is the gap the retired chart pair used (2026-07-03,
+    // TempoLabelGap), kept so the option reproduces the arrangement the owner asked to have
+    // back. Goes away when: the option does. Observed by: MarkArrangementTests (the gap is
+    // pinned there), no ledger point.
+    internal const double BesideTempoGap = 0.8;
 
     /// <summary>
     /// Pairs each boundary "To Coda" with the section label it shares a barline with
@@ -1650,6 +1762,19 @@ internal static class MusicMarkEngraver
     /// ⚠️ ABOVE-STAFF LABELS ONLY. A below-staff mark is not one of these types, and an
     /// <c>End</c>-positioned one (fine, D.S.) is not a boxed label either.
     /// </para>
+    /// <para>
+    /// ⚠️⚠️ THE WINDOW MOVES THE SYMBOLS; IT DOES NOT WIDEN THE ROW. <c>ChordNameEngraver</c>
+    /// shifts a symbol right until its box clears the window, but no spring reads the window
+    /// — <c>SpacingRules.ApplyChordRowSpacing</c> prices the symbols alone — so a label wider
+    /// than its bar's slack pushes the first symbol PAST its own bar line. MEASURED 2026-09-09
+    /// (scratch/p356/mk9.lys, a staffless <c>chords</c> row, section <c>IntroductionLong</c>):
+    /// bar 1 stays 13.90 wide with no label, with <c>Intro</c> and with the long one, while
+    /// the `C' moves 4.50 → 8.61 → 25.92, i.e. into bar 3. Under <c>marks beside</c> the
+    /// window grows by the tempo (mk6: `C' at 16.82 past the bar line at 13.90, the tempo's
+    /// ink across it), so the option makes the same hole visible on a short label. The
+    /// repair is a line-start wish in the row's spacing (LineStartColumn's shape), which
+    /// moves every staffless book with a label — HANDOFF §2 A, session 355; not done here.
+    /// </para>
     /// </remarks>
     internal static IReadOnlyList<(int MeasureIndex, double X0, double X1)> BoxedLabelXWindows(
         ScoreTextMetrics fonts,
@@ -1660,7 +1785,12 @@ internal static class MusicMarkEngraver
         ImmutableArray<MeasureLayout> measureLayouts,
         Func<int, double>? prefixTimeSignatureX = null,
         Func<int, double>? lineStartBarlineX = null,
-        Func<int, double>? prefixMarkAnchorX = null)
+        Func<int, double>? prefixMarkAnchorX = null,
+        // `marks beside`: the label's window widens to the tempo drawn beside it, so the
+        // score's tempo (the same arguments Calculate hands BuildAllMarks) is needed here
+        // too; null and false leave the window the label's own box.
+        Score? score = null,
+        bool marksBeside = false)
     {
         var windows = new List<(int, double, double)>();
         if (measureLayouts.IsDefaultOrEmpty)
@@ -1668,10 +1798,25 @@ internal static class MusicMarkEngraver
         // ⚠️ THROUGH BuildAllMarks, NOT THE RAW LIST. A `form' section name is not a
         // MusicMarkItem in the score — MergeSectionLabels manufactures it from the MEASURES —
         // so reading musicMarks alone finds no label at all, which is exactly how the first
-        // draft of this reservation did nothing. The tempo arguments are neutral on purpose:
-        // MergeTempoMark only ever adds a Tempo, and a Tempo is not a boxed label, so the one
-        // mark this list would gain is filtered out on the next line either way.
-        var marks = BuildAllMarks(musicMarks, measures, tempo: null);
+        // draft of this reservation did nothing. The tempo arguments are neutral on purpose
+        // in the stacked arrangement: MergeTempoMark only ever adds a Tempo, and a Tempo is
+        // not a boxed label, so the one mark this list would gain is filtered out on the next
+        // line either way. Under `marks beside` the tempo IS part of the label's window, so
+        // there the list is built exactly as Calculate builds it.
+        var marks = marksBeside
+            ? BuildAllMarks(musicMarks, measures, score?.Tempo, score?.SwingSubdivision ?? 0,
+                score?.TempoText, score?.TempoBeatUnit ?? 4, score?.TempoDots ?? 0,
+                score?.Header.Tempo ?? 0)
+            : BuildAllMarks(musicMarks, measures, tempo: null);
+        // The label each measure-start tempo stands beside (BesidePair, the placement's
+        // rule), keyed by the label so the window below finds its tempo.
+        var besideTempoOf = new Dictionary<MusicMarkItem, MusicMarkItem>();
+        if (marksBeside)
+            foreach (var group in marks
+                         .Where(m => m.Vertical == MusicMarkVertical.Above)
+                         .GroupBy(m => (m.MeasureIndex, m.Position, m.AnchorTiming)))
+                if (BesidePair(group.OrderBy(m => GetOutsideStaffPriority(m.Type)).ToList()) is { } pair)
+                    besideTempoOf[pair.Label] = pair.Tempo;
         // Only the systems that HAVE NO STAFF: everywhere else the label keeps its own band
         // above the row and nothing has to move for it. Asked through the same property the
         // placement asks (StaffAffinity.TopSpaceableStaff), so the two arms cannot disagree
@@ -1702,11 +1847,78 @@ internal static class MusicMarkEngraver
                 continue;
             double x = CalculateXPosition(
                 fonts, mark, measureLayouts[mark.MeasureIndex], systems,
-                prefixTimeSignatureX, lineStartBarlineX, prefixMarkAnchorX, measures);
+                prefixTimeSignatureX, lineStartBarlineX, prefixMarkAnchorX, measures, marksBeside);
             var (x0, x1) = MarkXExtent(fonts, mark, x);
+            // The tempo standing beside this label is drawn on the same line, so the
+            // symbols keep out of its ink too — read through the placement's own X.
+            if (besideTempoOf.TryGetValue(mark, out var tempo))
+                x1 = Math.Max(x1, MarkXExtent(fonts, tempo, BesideTempoX(fonts, mark, x)).x1);
             windows.Add((mark.MeasureIndex, x0, x1));
         }
         return windows;
+    }
+
+    /// <summary>
+    /// On a staffless sheet whose top row carries chord-row symbols, how far RIGHT of the
+    /// line start the boxed labels that open <paramref name="measureIndex"/> reach — the box's
+    /// right edge (under <c>marks beside</c>, the tempo's ink right beside it) plus the
+    /// chord row's symbol gap — or 0 when nothing of the kind stands there. The SPRING half
+    /// of the label window: <see cref="BoxedLabelXWindows"/> moves a symbol clear of the box
+    /// after spacing; this floors the line-start spring so the row is wide enough for it.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN, the same decision's third step (2026-08-24: the label sits ON the chord
+    /// line; 2026-08-25: the symbols move clear of it; this: the bar makes room). LilyPond
+    /// never has a label on a ChordNames line, so there is no rod to cite. Measured before
+    /// this existed (2026-09-09, scratch/p356/mk9): bar 1 stayed 13.90 wide under every label
+    /// and `IntroductionLong' pushed the first `C' to 25.92, into bar 3.
+    /// <para>
+    /// The box's left edge is <paramref name="labelLeft"/>: the line-start edge (0.3 past
+    /// the indent), which is what <see cref="CalculateXPosition"/> gives a staffless label
+    /// with no prefix anchor, or the DRAWN opening bar's X when the line opens on a
+    /// <c>|:</c> (the caller reads it off the prefix's <c>BarX</c>, the same column
+    /// <c>lineStartBarlineX</c> answers from the placed system — measured equal on
+    /// scratch/p356/mk10: bar and box both at 3.50).
+    /// </para>
+    /// </remarks>
+    internal static double StafflessLabelLineStartReach(
+        MultiStaffScore score, int measureIndex, double labelLeft)
+    {
+        if (!score.IsLeadSheet || score.ChordNames.IsDefaultOrEmpty)
+            return 0.0;
+        // The anchor row is the top row (the staffless TopScoreGrobStaff), and it has to
+        // carry chord-row symbols — the placement's one condition, spelled the same way.
+        int topRow = -1;
+        foreach (var (_, _, index) in score.EnumerateStaves()) { topRow = index; break; }
+        if (topRow < 0 || !score.ChordNames.Any(c => c.IsChordRow && c.StaffIndex == topRow))
+            return 0.0;
+
+        var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
+        if (measureIndex < 0 || measureIndex >= measures.Length)
+            return 0.0;
+        var fonts = score.TextMetrics;
+        var marks = BuildAllMarks(score.MusicMarks, measures, score.Tempo, score.SwingSubdivision,
+            score.TempoText, score.TempoBeatUnit, score.TempoDots, score.Header.Tempo);
+        double reach = 0.0;
+        foreach (var group in marks
+                     .Where(m => m.MeasureIndex == measureIndex && m.Vertical == MusicMarkVertical.Above
+                                 && m.Position == MusicMarkPosition.Beginning)
+                     .GroupBy(m => m.AnchorTiming))
+        {
+            var byPriority = group.OrderBy(m => GetOutsideStaffPriority(m.Type)).ToList();
+            var pair = score.MarksBeside ? BesidePair(byPriority) : null;
+            foreach (var label in byPriority)
+            {
+                if (!IsBoxedLabel(label.Type))
+                    continue;
+                double labelX = labelLeft + LabelBoxHalfWidth(fonts, label.Type, label.Text);
+                double right = MarkXExtent(fonts, label, labelX).x1;
+                if (pair is { } p && ReferenceEquals(p.Label, label))
+                    right = Math.Max(right, MarkXExtent(fonts, p.Tempo, BesideTempoX(fonts, label, labelX)).x1);
+                reach = Math.Max(reach, right);
+            }
+        }
+        return reach > 0.0 ? reach + ChordNameEngraver.SymbolGap : 0.0;
     }
 
     /// <summary>
@@ -1792,7 +2004,10 @@ internal static class MusicMarkEngraver
         Func<int, double>? prefixTimeSignatureX = null,
         Func<int, double>? lineStartBarlineX = null,
         Func<int, double>? prefixMarkAnchorX = null,
-        ImmutableArray<Measure> measures = default)
+        ImmutableArray<Measure> measures = default,
+        // `marks beside`: a boxed label at a line start keeps the line-start edge (see the
+        // boxed-label arm) instead of the key/clef anchor.
+        bool marksBeside = false)
     {
         if (mark.Position == MusicMarkPosition.End)
             return measureLayout.X + measureLayout.Width - 0.5; // Before end barline
@@ -1931,14 +2146,22 @@ internal static class MusicMarkEngraver
             //   way: the box stands at the meter column with the tempo stacked under it.
             //   The ledger point mark.section-label.line-start.box-left-from-clef-left is
             //   therefore refereed against the RehearsalMark's number (MKQ), not MKB's.
-            //   The line-start edge (Indent + 0.3) is not lost: `marks beside' (§3, not yet
-            //   built) is the display option that brings it back.
+            //   The line-start edge (Indent + 0.3) is not lost: `marks beside' (§3, built
+            //   2026-09-09) is the display option that brings it back — under it a line-start
+            //   label keeps the edge below and the bar's tempo stands to its right
+            //   (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
+            //   arm it switches off; a mid-line label is centred on its bar either way.
+            //   ⚠️ A DRAWN opening bar (`|:`) wins under BOTH arrangements: `marks beside`
+            //   skips only the key/clef anchor. On a staffless sheet the label sits ON the row
+            //   line where that bar is drawn, so a box at the edge would print over the
+            //   repeat sign (measured 2026-09-09, scratch/p356/mk10: the `|:` stands at 3.50,
+            //   the box at the edge would span 0.30..8.01).
             if (lineStartSystem >= 0)
             {
                 if (lineStartBarlineX?.Invoke(measureLayout.MeasureIndex) is { } barX
                     && !double.IsNaN(barX))
                     anchor = barX;
-                else if (prefixMarkAnchorX?.Invoke(lineStartSystem) is { } prefX
+                else if (!marksBeside && prefixMarkAnchorX?.Invoke(lineStartSystem) is { } prefX
                          && !double.IsNaN(prefX))
                     anchor = prefX;
             }

@@ -75,7 +75,8 @@ public class ScoreAssemblerTests
             TempoBeatUnit: 2,
             TempoDots: 1,
             Fonts: new TextFontPlan.Builder().Everything(["Comic Sans MS"]).Build(),
-            Paper: LayoutOptions.Default with { PageWidth = 96 });
+            Paper: LayoutOptions.Default with { PageWidth = 96 },
+            MarksBeside: true);
 
     private static ImmutableArray<ChordNameItem> OneChord() =>
         ImmutableArray.Create(new ChordNameItem("C", 0, 0, 0));
@@ -116,6 +117,8 @@ public class ScoreAssemblerTests
         // The paper overlay rides the same init-only channel as the tempo trio and
         // Fonts; MakeContent sets a non-default PageWidth so a dropped flow is visible.
         Assert.Equal(96, s.Paper.PageWidth);
+        // ...and the `marks` arrangement, the same channel (MakeContent sets beside).
+        Assert.True(s.MarksBeside);
     }
 
     [Fact]
@@ -183,6 +186,7 @@ public class ScoreAssemblerTests
         Assert.Equal("Allegro", ms.TempoText);
         Assert.Equal(2, ms.TempoBeatUnit);
         Assert.Equal(96, ms.Paper.PageWidth);
+        Assert.True(ms.MarksBeside);
     }
 
     [Fact]

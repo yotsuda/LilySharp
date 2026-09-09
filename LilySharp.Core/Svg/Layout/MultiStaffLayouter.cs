@@ -1009,6 +1009,20 @@ internal sealed class MultiStaffLayouter
                 ? SpacingRules.GetBarlineWidth(measures[startMeasureIndex].StartBarline)
                 : 0.0;
 
+        // A STAFFLESS sheet's section label sits ON the chord line (owner's decision
+        // 2026-08-24), so the row's first symbol has to start clear of its box — and of the
+        // tempo beside it under `marks beside`. That reach is stated from the line start;
+        // the floor speaks the measure frame (prefix right + the opening bar), so the frame
+        // comes off. Joins by max like the lyric floor; a sheet with no such label adds 0.
+        // LILYSHARP-OWN (MusicMarkEngraver.StafflessLabelLineStartReach has the measurement).
+        // The box stands at the line-start edge, or on the drawn opening bar when the line
+        // opens on a `|:` — the same choice CalculateXPosition makes from the placed system.
+        double labelFloor = MusicMarkEngraver.StafflessLabelLineStartReach(score, startMeasureIndex,
+                prefix.Columns.HasBar ? prefix.Columns.BarX : 0.3)
+            - (prefix.Columns.Right + measureStartBarWidth);
+        if (labelFloor > 0.0)
+            ownFixedFloor = Math.Max(ownFixedFloor ?? double.NegativeInfinity, labelFloor);
+
         // ONE Staff_spacing wish per staff, merged — spacing-spanner.cc:492-517. The staves
         // need NOT agree: a NUMBERS-ONLY tab staff ends its prefix on the TAB clef
         // (minimum-fixed-space 5.0) where its notation neighbour ends on the meter

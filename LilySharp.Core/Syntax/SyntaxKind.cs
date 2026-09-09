@@ -131,6 +131,10 @@ public enum SyntaxKind : ushort
     FontsKeyword,
     /// <summary>The <c>paper</c> keyword — the block that sets the page's dimensions.</summary>
     PaperKeyword,
+    /// <summary>The <c>marks</c> keyword — how a section label and the tempo mark at the
+    /// same bar are arranged: <c>marks stacked</c> (LilyPond's, the default) or
+    /// <c>marks beside</c> (the chart's one line). A file default, or a score's own item.</summary>
+    MarksKeyword,
     /// <summary>The <c>embedded</c> keyword.</summary>
     EmbeddedKeyword,
     /// <summary>The <c>tempo</c> keyword.</summary>

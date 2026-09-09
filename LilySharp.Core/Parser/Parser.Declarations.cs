@@ -362,6 +362,41 @@ internal sealed partial class Parser
         return new PropertyAssignmentGreen(keyword, null, [mode]);
     }
 
+    // `marks stacked` / `marks beside` — at the top level the file's default for how a
+    // section label and the tempo at the same bar are arranged, as a score item that
+    // score's own (Semantics.MarkArrangement is the reader). The same property-node shape
+    // as `pitch`, for the same reason: the readers that walk property nodes need no new
+    // node kind, and the value is checked HERE, at the word, with the node keeping it so
+    // the round trip holds.
+    private PropertyAssignmentGreen ParseMarksDirective()
+    {
+        var keyword = Advance(); // marks
+        SyntaxToken mode;
+        if (Check(SyntaxKind.Identifier)
+            && Semantics.MarkArrangement.Modes.Contains(Current.Text))
+        {
+            mode = Advance();
+        }
+        else if (Check(SyntaxKind.Identifier))
+        {
+            var span = new TextSpan(_textPosition, Current.FullWidth);
+            _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
+                $"'{Current.Text}' is not a marks arrangement. 'marks' takes "
+                + $"{string.Join(" or ", Semantics.MarkArrangement.Modes)} — e.g. 'marks beside'.");
+            mode = Advance();
+        }
+        else
+        {
+            var span = new TextSpan(_textPosition, Current.FullWidth);
+            _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
+                $"Expected a marks arrangement ({string.Join(" or ", Semantics.MarkArrangement.Modes)})");
+            // Zero-width missing token, as ParsePitchDirective recovers: an empty mode reads
+            // as neither word, i.e. the stacked default.
+            mode = new SyntaxToken(SyntaxKind.Identifier, "", null, null);
+        }
+        return new PropertyAssignmentGreen(keyword, null, [mode]);
+    }
+
     private MetadataDeclarationGreen ParseMetadataDeclaration()
     {
         var keyword = Advance();

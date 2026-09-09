@@ -676,6 +676,11 @@ internal sealed class Lexer
             // have spelled — every `paper` in the tracked corpus sits inside a comment
             // (measured 2026-08-23), and Lily# has never been released.
             "paper" => SyntaxKind.PaperKeyword,
+            // `marks stacked|beside` — a display option (Semantics.MarkArrangement): a file
+            // default at the top level and a score's own item, the two-tier shape `fonts` /
+            // `paper` take (user decision 2026-09-02). Reserved 2026-09-09: measured first,
+            // no tracked or reader book writes the word outside a string or a comment.
+            "marks" => SyntaxKind.MarksKeyword,
             "embedded" => SyntaxKind.EmbeddedKeyword,
             "tempo" => SyntaxKind.TempoKeyword,
             "time" => SyntaxKind.TimeKeyword,

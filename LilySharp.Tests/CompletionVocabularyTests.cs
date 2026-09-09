@@ -193,6 +193,9 @@ public class CompletionVocabularyTests
         undescribed.AddRange(LilySharpLanguageServer.GetPitchModeCompletions().Items
             .Where(i => i.Detail is null).Select(i => $"pitch {i.Label}"));
 
+        undescribed.AddRange(LilySharpLanguageServer.GetMarkArrangementCompletions().Items
+            .Where(i => i.Detail is null).Select(i => $"marks {i.Label}"));
+
         undescribed.AddRange(LilySharpLanguageServer.GetPartPropertyCompletions().Items
             .Where(i => i.Detail is null).Select(i => $"property {i.Label}"));
 
@@ -221,6 +224,22 @@ public class CompletionVocabularyTests
         Assert.Equal(
             LanguageVocabulary.PitchModes,
             LilySharpLanguageServer.GetPitchModeCompletions().Items.Select(i => i.Label));
+    }
+
+    /// <summary>The two words after <c>marks</c> come from the compiler, in the compiler's
+    /// order (the default first), and each compiles in both of the word's homes.</summary>
+    [Fact]
+    public void MarkArrangementCompletions_AreExactlyTheAcceptedValues_AndEachCompilesInBothHomes()
+    {
+        var offered = LilySharpLanguageServer.GetMarkArrangementCompletions().Items
+            .Select(i => i.Label).ToList();
+        Assert.Equal(LanguageVocabulary.MarkArrangements, offered);
+        foreach (string word in offered)
+        {
+            Assert.Empty(Errors($"marks {word}\n{PartHeaderDoc("clef treble")}"));
+            Assert.Empty(Errors(PartHeaderDoc("clef treble")
+                .Replace("score main { staff vln }", $"score main {{ marks {word}  staff vln }}")));
+        }
     }
 
     /// <summary>The kinds offered after <c>repeat</c> are the compiler's, in its order, each

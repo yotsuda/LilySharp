@@ -52,6 +52,10 @@ internal sealed class DuplicateGlobalSettingValidator : ISemanticValidator
                 FontDeclarationSyntax { NameToken: null } => "font",
                 PaperDeclarationSyntax { NameToken: null } => "paper",
                 MetadataDeclarationSyntax m => m.Keyword.ToLowerInvariant(), // title / composer
+                // `marks stacked|beside` at the top level is the file's one arrangement;
+                // inside a score body it is that score's own and IsInMusic keeps it out.
+                PropertyAssignmentSyntax p when p.NameToken.Text == MarkArrangement.Property
+                    => MarkArrangement.Property,
                 _ => null,
             };
             if (kind == null)

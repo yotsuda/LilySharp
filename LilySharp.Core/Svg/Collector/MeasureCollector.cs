@@ -76,6 +76,12 @@ public sealed partial class MeasureCollector
     /// <see cref="FontsOverride"/>.</summary>
     public PaperDeclarationSyntax? PaperOverride { get; set; }
 
+    /// <summary>The score's own <c>marks stacked|beside</c> item (true = beside), or null
+    /// when it writes none and the file's top-level default applies — resolved by
+    /// <see cref="CollectDefinitions"/> into <c>MetadataState.MarksBeside</c>, the same road
+    /// as <see cref="PaperOverride"/> (Semantics.MarkArrangement).</summary>
+    public bool? MarksOverride { get; set; }
+
     // The relative-octave chain plus the part transpose that composes on top of
     // it, bundled into one named collaborator (see OctaveContext). The main walk
     // drives this in place on every note / chord / grace / tuplet.
@@ -682,7 +688,8 @@ public sealed partial class MeasureCollector
         _meta.TempoBeatUnit,
         _meta.TempoDots,
         _meta.Fonts,
-        _meta.Paper);
+        _meta.Paper,
+        _meta.MarksBeside);
 
     /// <summary>
     /// Collects a Score from a syntax tree.
