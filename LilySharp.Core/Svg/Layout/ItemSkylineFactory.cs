@@ -89,13 +89,15 @@ internal static class ItemSkylineFactory
     /// </summary>
     /// <remarks>
     /// ⚠️ <c>extra-spacing-height</c> (lily/separation-item.cc:168-169, default (0 . 0)) is
-    /// NOT ported: no part here declares one, and the grobs that do in LilyPond — the ones
-    /// using (-inf . +inf) to say "never share a Y with a note column" — have no Lily#
-    /// counterpart yet. When one arrives it belongs on this record, not in the caller.
+    /// ported for ONE part: a note head's <see cref="LedgerReach"/> (LilyPond's
+    /// <c>ly:note-head::include-ledger-line-height</c>, applied in <see cref="Boxes"/>). The
+    /// other grobs that declare one in LilyPond — the (-inf . +inf) "never share a Y with a
+    /// note column" ones — have no Lily# counterpart yet; when one arrives it belongs on this
+    /// record, not in the caller.
     /// </remarks>
     private readonly record struct ColumnPart(
         double YBottom, double YTop, double XLeft, double XRight,
-        double ExtraLeft, double ExtraRight, bool Conditional)
+        double ExtraLeft, double ExtraRight, bool Conditional, bool LedgerReach = false)
     {
         /// <summary>A part taking the default <c>extra-spacing-width</c> (-0.1 . 0.1).</summary>
         public static ColumnPart Ink(double yBottom, double yTop, double xLeft, double xRight)
@@ -103,6 +105,50 @@ internal static class ItemSkylineFactory
                    -SpacingRules.DefaultExtraSpacingWidth,
                    SpacingRules.DefaultExtraSpacingWidth,
                    Conditional: false);
+
+        /// <summary>A NOTE HEAD: <see cref="Ink"/> plus the ledger-line reach of its spacing
+        /// box (<see cref="LedgerReach"/>).</summary>
+        public static ColumnPart Head(double yBottom, double yTop, double xLeft, double xRight)
+            => Ink(yBottom, yTop, xLeft, xRight) with { LedgerReach = true };
+    }
+
+    /// <summary>
+    /// A head outside the staff carries its spacing box from the head to the FIRST LEDGER
+    /// LINE — one staff space beyond the outer staff line — so a neighbouring column's stem or
+    /// flag standing in that band is priced against it. Nothing changes for a head inside the
+    /// staff or on the first ledger line; the box is widened toward the staff only.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:2600 NoteHead extra-spacing-height =
+    ///   ly:note-head::include-ledger-line-height;
+    /// LILYPOND-REF: lily/note-head.cc:124-148 Note_head::include_ledger_line_height — the
+    ///   interval is <c>(min (0, lines[UP] − ext[DOWN] + 1), max (0, lines[DOWN] − ext[UP] − 1))</c>,
+    ///   "we only want to add the interval between the note and the first ledger line, not the
+    ///   whole interval between the note and the staff";
+    /// LILYPOND-REF: lily/separation-item.cc:168-183 Separation_item::boxes — the interval is
+    ///   added to the part's pure Y extent before the box is made.
+    /// MEASURED (2.26.0, scratch/p359/lp/flag-low.ly against flag-high.ly, 2026-09-09): eight
+    /// flagged eighths below the staff, rising then falling, are 2.567 apart in every pair
+    /// (bar 21.629), where the same figure inside the staff prices the falling pairs 2.104
+    /// (bar 19.313, exact before this); the rising pairs met the up-stem flag's own band
+    /// already — the falling ones meet it only through this reach (a descending head one
+    /// step lower sits under the flag's bottom, and its box now climbs to the first ledger
+    /// line where the flag hangs). Switching off the ledger-line spacing rods
+    /// (flag-low-norod.ly) moved nothing, so the rod is not what holds them apart. Beamed
+    /// eighths on ledger lines (ledger-beamed.ly, 21.303 / 21.56 / 20.891) are priced by the
+    /// duration space either way and do not move.
+    /// The frame here is the device's (y down): the staff's outer lines are <c>staffY ± 2</c>
+    /// and the first ledger lines <c>staffY ± 3</c>.
+    /// </remarks>
+    private static (double YBottom, double YTop) WithLedgerReach(double yBottom, double yTop, double staffY)
+    {
+        // Below the staff (larger y): the box climbs to the first ledger line below.
+        if (yBottom > staffY + 3.0)
+            yBottom = staffY + 3.0;
+        // Above the staff (smaller y): the box drops to the first ledger line above.
+        if (yTop < staffY - 3.0)
+            yTop = staffY - 3.0;
+        return (yBottom, yTop);
     }
 
     /// <summary>
@@ -114,8 +160,12 @@ internal static class ItemSkylineFactory
     /// <param name="staffY">Y coordinate of the staff's middle line</param>
     public static HorizontalSkyline CreateRightSkyline(MusicItem item, double referenceX, double staffY)
         => HorizontalSkyline.FromBoxes(
-            Boxes(item, referenceX, staffY, ColumnElements.Elements),
-            HorizontalDirection.Right);
+                Boxes(item, referenceX, staffY, ColumnElements.Elements),
+                HorizontalDirection.Right)
+            // The column's skyline is padded when it is BUILT (LilyPond's intrinsic
+            // skyline-vertical-padding — SpacingRules.NoteColumnSkylineVerticalPadding), and
+            // the distance padding (0.08) is added on top by the readers.
+            .PaddedCopy(SpacingRules.NoteColumnSkylineVerticalPadding);
 
     /// <summary>
     /// The right skyline with the COLUMN ORIGIN — the head's left edge, LilyPond's paper
@@ -166,8 +216,10 @@ internal static class ItemSkylineFactory
     /// </remarks>
     public static HorizontalSkyline CreateLeftSkyline(MusicItem item, double referenceX, double staffY)
         => HorizontalSkyline.FromBoxes(
-            Boxes(item, referenceX, staffY, ColumnElements.All),
-            HorizontalDirection.Left);
+                Boxes(item, referenceX, staffY, ColumnElements.All),
+                HorizontalDirection.Left)
+            // Padded when built, as the right one is (see CreateRightSkyline).
+            .PaddedCopy(SpacingRules.NoteColumnSkylineVerticalPadding);
 
     /// <summary>
     /// The Y band the column's parts occupy — conditional parts included — in the
@@ -210,7 +262,11 @@ internal static class ItemSkylineFactory
         {
             if (p.Conditional && which != ColumnElements.All)
                 continue;
-            boxes.Add((p.YBottom, p.YTop, p.XLeft + p.ExtraLeft, p.XRight + p.ExtraRight));
+            // extra-spacing-height, for the one part that declares it (see WithLedgerReach).
+            var (yBottom, yTop) = p.LedgerReach
+                ? WithLedgerReach(p.YBottom, p.YTop, staffY)
+                : (p.YBottom, p.YTop);
+            boxes.Add((yBottom, yTop, p.XLeft + p.ExtraLeft, p.XRight + p.ExtraRight));
         }
         return boxes;
     }
@@ -245,7 +301,7 @@ internal static class ItemSkylineFactory
                 double noteY = staffY - chord.Notes[i].StaffPosition / 2.0;
                 double thisLeftX = noteheadLeftX + headOffsets[i];
                 double thisRightX = thisLeftX + noteheadWidth;
-                parts.Add(ColumnPart.Ink(
+                parts.Add(ColumnPart.Head(
                     noteY - noteheadBBox.Top, noteY - noteheadBBox.Bottom, thisLeftX, thisRightX));
                 maxNoteheadRightX = Math.Max(maxNoteheadRightX, thisRightX);
             }
@@ -337,9 +393,16 @@ internal static class ItemSkylineFactory
                 NoteItem n => staffY - n.StaffPosition / 2.0,
                 _ => staffY
             };
-            parts.Add(ColumnPart.Ink(
-                noteY - noteheadBBox.Top, noteY - noteheadBBox.Bottom,
-                noteheadLeftX, noteheadLeftX + noteheadWidth));
+            // A NOTE HEAD reaches to its first ledger line (WithLedgerReach); the placeholder
+            // box of a spacer or multi-measure rest sits on the middle line, where the reach
+            // is nothing.
+            parts.Add(item is NoteItem
+                ? ColumnPart.Head(
+                    noteY - noteheadBBox.Top, noteY - noteheadBBox.Bottom,
+                    noteheadLeftX, noteheadLeftX + noteheadWidth)
+                : ColumnPart.Ink(
+                    noteY - noteheadBBox.Top, noteY - noteheadBBox.Bottom,
+                    noteheadLeftX, noteheadLeftX + noteheadWidth));
 
             if (item is NoteItem note)
                 AddAccidental(parts, note, noteheadLeftX, staffY);
@@ -501,11 +564,15 @@ internal static class ItemSkylineFactory
         if (flagBBox == default)
             return;
 
-        double noteY = staffY - tipPos / 2.0;
-
-        // Flag is attached to the stem end
-        double stemHeight = EngravingDefaults.IdealStemLength;
-        double stemEndY = stemUp ? noteY - stemHeight : noteY + stemHeight;
+        // The flag hangs from the stem's REAL end — the same pure height AddStem boxes
+        // (a stem far below the staff is lengthened to the middle line, and its flag goes
+        // with it). It used to hang from the head at the ideal 3.5, which put a ledgered
+        // note's flag a whole space too low: MEASURED (2.26.0, scratch/p359/lp/flag-low.ly,
+        // Flag Y extents dumped) the flag of a head at −4.5 spans −3.09 … +0.025, hung from
+        // the stem's end at 0.0, where 3.5 from the head had hung it from −1.0.
+        if (SpacingRules.StemSpacingInfo(item) is not { } stem)
+            return;
+        double stemEndY = staffY - (stemUp ? stem.StemMax : stem.StemMin) / 2.0;
 
         // Flag position: a flag hangs on the STEM, so its ink is reserved in the
         // STEM's frame and not the head's — LayoutUtilities.StemX is the one
@@ -556,23 +623,32 @@ internal static class ItemSkylineFactory
         double stemX = LayoutUtilities.StemX(noteheadLeftX, stemUp, noteValue,
             LayoutUtilities.NoteheadStyleOf(item));
 
-        double flagYBottom, flagYTop;
-        if (stemUp)
-        {
-            // Flag extends downward from stem end
-            flagYBottom = stemEndY;
-            flagYTop = stemEndY - flagBBox.Bottom - flagBBox.Top;
-        }
-        else
-        {
-            // Flag extends upward from stem end
-            flagYTop = stemEndY;
-            flagYBottom = stemEndY + flagBBox.Top - flagBBox.Bottom;
-        }
+        var (flagYMin, flagYMax) = FlagInkBand(stemEndY, stemUp, flagBBox);
+        parts.Add(ColumnPart.Ink(flagYMin, flagYMax, stemX, stemX + flagBBox.Width));
+    }
 
-        parts.Add(ColumnPart.Ink(
-            Math.Min(flagYBottom, flagYTop), Math.Max(flagYBottom, flagYTop),
-            stemX, stemX + flagBBox.Width));
+    /// <summary>
+    /// The Y band (device frame, y down) a flag's ink occupies: the glyph's own box, placed
+    /// half a blot diameter INSIDE the stem's end. One spelling for the spacing box here and
+    /// the slur-edge extent (<c>ElementCoordinator</c>), which read the same ink.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/flag.cc:183-196 Flag::internal_calc_y_offset — the flag's Y-offset
+    ///   is <c>stem_extent[d] - d * blot / 2</c>;
+    /// LILYPOND-REF: scm/define-grobs.scm:1636 Flag Y-extent = grob::always-Y-extent-from-stencil
+    ///   — the glyph's box, whole, about that offset.
+    /// MEASURED (2.26.0, scratch/p359/lp/flag-low.ly): an eighth flag on a stem ending at +1.0
+    /// spans −2.09 … +1.025 = the glyph box (−3.0502 … +0.065) at +0.96. Until session 358
+    /// the band here was <c>[end, end + (−Bottom − Top)]</c> = 2.985 tall from the end itself,
+    /// 0.105 short at the foot, which is where a flag meets the next lower head.
+    /// </remarks>
+    internal static (double YMin, double YMax) FlagInkBand(double stemEndY, bool stemUp, GlyphMetrics.BBox flagBBox)
+    {
+        double half = EngravingDefaults.BlotDiameter / 2;
+        // Device y grows downward: an up-stem's flag sits half a blot BELOW the end, a
+        // down-stem's half a blot ABOVE it.
+        double placement = stemUp ? stemEndY + half : stemEndY - half;
+        return (placement - flagBBox.Top, placement - flagBBox.Bottom);
     }
 
     /// <summary>Augmentation DOTS, placed after the column's rightmost head.</summary>

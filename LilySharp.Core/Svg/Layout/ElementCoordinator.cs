@@ -2551,11 +2551,10 @@ internal sealed class ElementCoordinator
             if (flag != default)
             {
                 stemXHi = Math.Max(stemXHi, stemX + flag.Width);
-                // The flag's reach from the tip toward the head (device Y),
-                // spelled the way ItemSkylineFactory reserves the same ink.
-                double flagInnerY = stemUp
-                    ? stemTipY - flag.Bottom - flag.Top
-                    : stemTipY + flag.Top - flag.Bottom;
+                // The flag's reach from the tip toward the head (device Y) — the one
+                // spelling ItemSkylineFactory reserves the same ink by.
+                var (flagYMin, flagYMax) = ItemSkylineFactory.FlagInkBand(stemTipY, stemUp, flag);
+                double flagInnerY = stemUp ? flagYMax : flagYMin;
                 stemBeginY = stemUp
                     ? Math.Max(stemBeginY, flagInnerY)
                     : Math.Min(stemBeginY, flagInnerY);

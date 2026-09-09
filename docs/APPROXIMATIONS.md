@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 59 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 53 | 観測者がゼロだと自認しているもの |
 | `OWN` | 136 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **249** | |
+| **計** | **248** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -34,7 +34,7 @@
 | `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs` | 5 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 5 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（60 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（59 件）
 
 ### `LilySharp.Core/Rendering/Pdf/PdfDrawingContext.cs`
 - **:310** ⚠️ NOT PORTED — backend-blocked: CHARACTERS AT THE CLUSTERS' POSITIONS, not glyphs at
@@ -53,8 +53,8 @@
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
 - **:172** ⚠️ WHAT IS NOT PORTED, and why it cannot be reached rather than was skipped:
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
-- **:406** ⚠️ What is NOT ported is the semibreve exception: the beam covered-grob booking
-- **:829** ⚠️ NOT PORTED: the fold-and-search itself. `dist` is a per-staff search over
+- **:420** ⚠️ What is NOT ported is the semibreve exception: the beam covered-grob booking
+- **:843** ⚠️ NOT PORTED: the fold-and-search itself. `dist` is a per-staff search over
 ### `LilySharp.Core/Svg/Layout/AlignmentWalk.cs`
 - **:140** ⚠️ THE ONE LINE OF THAT BRANCH NOT PORTED is its dy,
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
@@ -81,8 +81,7 @@
 ### `LilySharp.Core/Svg/Layout/FingScriptMemo.cs`
 - **:79** same order, with the same source indices). Stated rather than silently approximated:
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
-- **:92** NOT ported: no part here declares one, and the grobs that do in LilyPond — the ones
-- **:369** (-0.5 . 0.5) widens the Y band, not X (not ported — see the
+- **:432** (-0.5 . 0.5) widens the Y band, not X (not ported — see the
 ### `LilySharp.Core/Svg/Layout/LyricHyphen.cs`
 - **:460** ⚠️ NOT PORTED — the bound extent: the barline's ink width is taken
 - **:476** ⚠️ NOT PORTED — the boundary-column regime: the left bound is the
@@ -153,8 +152,8 @@
 - **:456** this is unobserved rather than known-good; it closes when the labels travel with
 - **:1617** accidental, ledgers and fingering only. ⚠️ No point observes it: the corpus has no
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
-- **:129** snapshot and no ledger point. What remains is the BEAM quanter's use below, which is a
-- **:721** would be fitting inside a formula that is not yet LilyPond's. No point observes it.
+- **:143** snapshot and no ledger point. What remains is the BEAM quanter's use below, which is a
+- **:735** would be fitting inside a formula that is not yet LilyPond's. No point observes it.
 ### `LilySharp.Core/Svg/Layout/ArpeggioEngraver.cs`
 - **:186** fixture carries one, so there is no ledger point and no twin — it is ported literally
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
@@ -179,7 +178,7 @@
 ### `LilySharp.Core/Svg/Layout/GraceNoteEngraver.cs`
 - **:499** observed by: NO OBSERVER — every book in the corpus quants, so nothing reaches the
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
-- **:540** NOT MEASURED — no ledger point reads a flag's draw x, and the last
+- **:607** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
 - **:2120** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
 - **:2142** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
@@ -288,14 +287,14 @@
 ### `LilySharp.Core/Svg/Collector/TabResolver.cs`
 - **:287** is built on ( — LILYSHARP-OWN and deliberately
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
-- **:122** LILYSHARP-OWN: a 5-half-space floor with no single named LP constant behind it.
-- **:427** ⚠️ LILYSHARP-OWN: A NOMINAL BOX, AND LILYPOND HAS NO COUNTERPART TO IT. A Flag's
-- **:622** LILYSHARP-OWN: hand-tuned, and the only width on this list that is. ⚠️ NOT because
-- **:692** LILYSHARP-OWN: a frame, not a quantity. LilyPond has no counterpart to look up
-- **:703** ⚠️ LILYSHARP-OWN: A NOMINAL HALF-HEAD, NOT THE GLYPH'S. LilyPond has no such constant —
-- **:734** ⚠️ LILYSHARP-OWN: ONE NOMINAL BOX FOR EVERY REST, WHICH LILYPOND DOES NOT HAVE. There a
-- **:787** ⚠️ LILYSHARP-OWN, AND LILYPOND'S ANSWER IS MEASURABLE THOUGH NOT DECLARED. There is no
-- **:848** a LILYSHARP-OWN divergence that had been measured and left because closing it redraws
+- **:136** LILYSHARP-OWN: a 5-half-space floor with no single named LP constant behind it.
+- **:441** ⚠️ LILYSHARP-OWN: A NOMINAL BOX, AND LILYPOND HAS NO COUNTERPART TO IT. A Flag's
+- **:636** LILYSHARP-OWN: hand-tuned, and the only width on this list that is. ⚠️ NOT because
+- **:706** LILYSHARP-OWN: a frame, not a quantity. LilyPond has no counterpart to look up
+- **:717** ⚠️ LILYSHARP-OWN: A NOMINAL HALF-HEAD, NOT THE GLYPH'S. LilyPond has no such constant —
+- **:748** ⚠️ LILYSHARP-OWN: ONE NOMINAL BOX FOR EVERY REST, WHICH LILYPOND DOES NOT HAVE. There a
+- **:801** ⚠️ LILYSHARP-OWN, AND LILYPOND'S ANSWER IS MEASURABLE THOUGH NOT DECLARED. There is no
+- **:862** a LILYSHARP-OWN divergence that had been measured and left because closing it redraws
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`
 - **:270** ⚠️ LILYSHARP-OWN, AND IT IS THE BAND TOP, NOT LILYPOND'S REFPOINT.
 - **:286** Lily#'s own object, hence LILYSHARP-OWN rather than a REF.

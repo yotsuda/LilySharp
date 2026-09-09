@@ -874,6 +874,26 @@ internal static partial class SpacingRules
     internal const double MusicalColumnSkylineVerticalPadding = 0.08;
 
     /// <summary>
+    /// The padding a NOTE COLUMN's own spacing skyline is thickened by along the horizon (Y)
+    /// when it is built — intrinsic to the stored skyline, on top of the distance padding
+    /// above — so a part that misses a neighbour by less than this in Y still prices it, on
+    /// a 45° fall-off.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:2577 NoteColumn <c>(skyline-vertical-padding . 0.15)</c>;
+    /// LILYPOND-REF: lily/separation-item.cc:92-110 Separation_item::calc_skylines — the boxes
+    ///   become a Skyline_pair and both halves are <c>padded (vp)</c> before being stored:
+    ///   "we make it intrinsic, which copies the behavior from the old code".
+    /// MEASURED (2.26.0, scratch/p359/lp/flag-low.ly, the NoteColumn's horizontal-skylines
+    /// dumped with ly:skyline->points, 2026-09-09): a ledgered eighth's head box reads
+    /// 1.404 from −5.345 to −3.39 and its flag 2.167 from −3.24 to 0.175 with 0.15 ramps
+    /// between; the falling pairs of that bar (d→c, c→b) are 2.567 apart like the rising
+    /// ones because the flag's padded foot meets the next head's padded roof, where the
+    /// bare boxes miss by 0.3 (Lily# priced them 2.11).
+    /// </remarks>
+    internal const double NoteColumnSkylineVerticalPadding = 0.15;
+
+    /// <summary>
     /// The padding the spacing spanner adds on top of a skyline distance to make a ROD.
     /// </summary>
     /// <remarks>

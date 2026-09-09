@@ -116,6 +116,20 @@ internal static class EngravingDefaults
     /// <summary>Stem thickness: 1.3 × line-thickness = 0.13 staff space.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm (Stem (thickness . 1.3)).</remarks>
     public const double StemThickness = 1.3 * LineThickness;
+
+    /// <summary>
+    /// The paper's blot diameter — the rounding of every drawn corner — in staff spaces:
+    /// 0.4 pt at the 20 pt staff (5 pt per space). A flag hangs half of it inside the stem's
+    /// end (<c>Flag::calc_y_offset</c>).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/paper.scm:87 layout-set-absolute-staff-size — <c>(setm! 'blot-diameter (* 0.4 pt))</c>;
+    /// LILYPOND-REF: lily/flag.cc:183-196 Flag::internal_calc_y_offset — <c>stem_extent[d] - d * blot / 2</c>.
+    /// MEASURED (2.26.0, scratch/p359/lp/flag-low.ly, Flag / Stem Y extents dumped): a stem
+    /// ending at +1.0 carries its flag's extent at −2.09 … +1.025 — the glyph box (−3.0502 …
+    /// +0.065) 0.04 below the end.
+    /// </remarks>
+    public const double BlotDiameter = 0.08;
     // LILYPOND-REF: scm/define-grobs.scm:3448 Stem (lengths . (3.5 3.5 3.5 4.25 5.0 ...)) —
     // the first three entries (whole/half/quarter) are 3.5, LP's ideal single-note stem.
     public const double IdealStemLength = 3.5;

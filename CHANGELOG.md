@@ -134,6 +134,24 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A note column's spacing skyline is padded as LilyPond pads it, and a head outside the
+  staff reaches to its first ledger line.** LilyPond thickens every note column's horizontal
+  skyline by 0.15 staff spaces when it builds it (`NoteColumn.skyline-vertical-padding`,
+  intrinsic — on top of the 0.08 the distance adds), and a note head beyond the staff carries
+  its spacing box to the first ledger line (`NoteHead.extra-spacing-height =
+  include-ledger-line-height`). Lily# built the skyline from the bare boxes, so a part that
+  missed its neighbour by less than 0.3 in Y — an up-stem flag over a head a step lower, on
+  ledger lines — priced nothing: eight flagged eighths below the staff (`time none g8 a b c d
+  c b a`) stood 20.24 wide against LilyPond's 21.629 and stand 21.45 now; the same figure
+  inside the staff, beamed ledger runs and flagged eighths in metered bars were exact before
+  and stay exact. Sixty-five of 923 books move (14 tracked, four snapshots re-based).
+- **A flag's spacing box is the glyph's, hung from the stem's real end.** LilyPond places the
+  flag half a blot diameter (0.04) inside the stem's end and reserves the whole glyph box
+  (3.115 tall for an eighth); Lily# hung a 2.985-tall box from the head plus the ideal 3.5,
+  so a lengthened stem's flag was reserved a whole space too low and every flag stopped 0.105
+  short at the foot. That foot is what meets the next lower head: the cadenza bar above goes
+  from 21.45 to LilyPond's 21.629, and a metered `c'4. b8 a4. g8` bar from 14.97 to 15.037.
+  Thirty-nine more books move (2 tracked); the slur-edge extent reads the same band.
 - **A beam already building when `time none` arrives mid-bar runs on, as LilyPond's does.**
   Lily# stopped every automatic beam in a bar that turned unmetered. LilyPond's `\cadenzaOn`
   only freezes the measure position, and its auto-beam check reads that frozen reading at every
