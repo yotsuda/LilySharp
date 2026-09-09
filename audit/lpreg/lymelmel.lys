@@ -1,11 +1,14 @@
 // lyric-melisma-melisma.ly twin — melisma に当たる音節 (looong) は左揃え。
 // 綴り: LP relative c'=C4 → Lily# 絶対 c。両側置換: \melisma → slur。
+// 第357: `sings v` を足した。第216 の文法で `sings` の無い lyrics は独立行になり、
+// `__ ~ ~` が extender に畳まれて "looong" が中央寄せ (svg x=19.68) に変わっていた＝対が壊れていた
+// (第352 ⑷⒜ 起票)。melody に束ねると LP (\addlyrics) と同じ左寄せに戻る。
 octave absolute
 time 4/4
 
 part v { }
 
-lyrics w { section Main { ha ha looong __ ~ ~ ho | } }
+lyrics w sings v { section Main { ha ha looong __ ~ ~ ho | } }
 
 section Main {
   v { c4 c c16( d e f) g4 | }

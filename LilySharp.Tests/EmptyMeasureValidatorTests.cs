@@ -325,6 +325,44 @@ public class EmptyMeasureValidatorTests
             Notes(string.Format(ThreeFour, "c'2. | | e'2.")));
     }
 
+    // An empty bar inside a PICKUP is worth the pickup. The page always said so
+    // (MeasureBuilder.EmitEmptyMeasure fills the bar with `_timeSignature`, which a `partial`
+    // has shortened); the MIDI walk had no `partial` arm at all until session 357, so
+    // `partial 4 | c'4 …` drew one beat of spacer and sounded a whole bar of silence —
+    // MEASURED: the first note at tick 1920 against 480 for the `s4` spelling, at the
+    // piece's opening and after a mid-piece `partial` alike (scratch/p358/midi). The pairs
+    // are the same identity as above, asserted spelling against spelling; the third is the
+    // positive control — once the pickup has closed, a gap is the meter again.
+    [Theory]
+    [InlineData("partial 4 s4 | c'4 c' g' g' | a'1", "partial 4 | c'4 c' g' g' | a'1")]
+    [InlineData("c'1 | partial 4 s4 | c'4 c' g' g' | a'1", "c'1 | partial 4 | c'4 c' g' g' | a'1")]
+    [InlineData("partial 4 g'4 | s1 | c'1", "partial 4 g'4 | | c'1")]
+    public void EmptyPickup_SoundsLikeTheSpacerItStandsFor(string spelledOut, string bare)
+        => Assert.Equal(Notes(string.Format(OneStaff, spelledOut)), Notes(string.Format(OneStaff, bare)));
+
+    [Fact]
+    public void EmptyPickup_IsShorterThanAFullBar()
+    {
+        // The identity above would also pass if BOTH spellings sounded a full bar, so pin the
+        // direction: the note after an empty one-beat pickup sounds one BEAT in, not one bar.
+        var notes = Notes(string.Format(OneStaff, "partial 4 | c'4 c' g' g' | a'1"));
+        var quarter = Notes(string.Format(OneStaff, "s4 c'4"))[0].Tick;
+        Assert.Equal(quarter, notes[0].Tick);
+    }
+
+    [Fact]
+    public void EmptyPickup_InASectionHeader_SoundsLikeTheSpacerItStandsFor()
+    {
+        // The section-header spelling arms every part's first bar on the page
+        // (MeasureCollector.Form.cs); the exporter reads the same header.
+        const string Header =
+            "octave absolute\ntime 4/4\npart m {{ }}\nsection A {{ partial 4  m {{ {0} }} }}\n"
+            + "form main {{ ~A }}\nscore main {{ staff m }}";
+        Assert.Equal(
+            Notes(string.Format(Header, "s4 | c'4 c' g' g' | a'1")),
+            Notes(string.Format(Header, "| c'4 c' g' g' | a'1")));
+    }
+
     [Fact]
     public void EmptyMeasure_KeepsTheOTHERPartsInTime_NotJustOnThePage()
     {

@@ -181,6 +181,22 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### MIDI, MusicXML and the LilyPond twin
 
+- **An empty `| |` bar reaches the MusicXML and the LilyPond twin as the bar of silence it
+  is.** The page and the MIDI have filled it with a full-measure spacer since 0.6.0; the
+  twin copied the bare bar lines — bar checks to LilyPond, which take no time — so
+  `c'1 | | e'1` was two bars in the twin and three on the page, and an empty pickup
+  `partial 4 | c'4 …` failed LilyPond's bar check and pulled the `c'4` into the pickup; the
+  MusicXML wrote no measure for the gap and pulled the note the same way. The twin now
+  writes the spacer the author would have typed (`s1 |`, `s2. |` in 3/4, `s4 |` under
+  `partial 4`), the MusicXML a whole-bar rest of the same length, both under the page's own
+  rule: a bare `|` (or a `|:` that does not open the scope) with no music since the last bar
+  line is an empty bar; `||`, `:|` and `|.` on an empty span decorate and open none.
+- **An empty bar inside a pickup sounds as long as the pickup.** `partial 4 | c4 d e f |` — an
+  empty pickup written as a bare bar — draws one beat of space on the page and now sounds one
+  beat in the MIDI, at the piece's opening, after a mid-piece `partial`, and from a section
+  header's `partial`. The exporter had no `partial` arm at all, so the gap was priced at the
+  whole meter and the first note sounded a full bar late (tick 1920 against 480 for the `s4`
+  spelling). Written-out pickups (`partial 4 g4 |`) were never affected.
 - **`lysc ly` left-aligns a melisma syllable as the page does.** A syllable held over a melisma
   (`saved~`, `star __`) stands with its left edge on the note on the page (LilyPond's
   `lyricMelismaAlignment`); the twin's `\lyricmode` line, carrying durations instead of

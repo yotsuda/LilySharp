@@ -123,6 +123,22 @@ public sealed class MidiExporter
     private int _timeNumerator = 4;
     private int _timeDenominator = 4;
 
+    // The pickup in force: set by a `partial` and spent at the first bar that closes after
+    // it, exactly as MeasureBuilder.SetPartial / RestorePartialIfPending keep the page's
+    // copy. This walk counts durations, so the notes of a pickup need nothing from it —
+    // the ONE reader is MeasureTicks, what an empty `| |` bar is worth. MEASURED before the
+    // repair (session 357, scratch/p358/midi): `partial 4 | c'4 …` drew a one-beat spacer
+    // on the page and sounded a FULL bar of silence here (first note at tick 1920 against
+    // 480 for the `partial 4 s4 |` an author would type), both at the piece's opening and
+    // after a mid-piece `partial` — the exporter had no `partial` arm at all, so the node
+    // fell to ProcessChildren and vanished. No book on disk writes `partial N |`
+    // (13825 counted); the pair is kept honest by EmptyMeasureValidatorTests.
+    private Fraction? _partial;
+    // …and the section-header pickup (`section A { partial 4  melody { … } }`), the twin of
+    // _sectionHeaderTimes: the page arms every part's first bar with it at the section
+    // boundary (MeasureCollector.Form.cs), so this walk arms the same bar the same way.
+    private readonly Dictionary<string, PartialDeclarationSyntax> _sectionHeaderPartials = new();
+
     // Tie handling: a tie (~) merges the next same-pitch note into the previous
     // one (one sustained note) instead of re-articulating it.
     // ⚠️ The previous ONSET, not the previous NOTE. A chord is one onset with several
@@ -322,6 +338,8 @@ public sealed class MidiExporter
                     _sectionHeaderKeys.TryAdd(sd.Name.Text, hk);
                 if (!SectionHasInlineMusic(sd) && FirstDirectTime(sd) is { } ht)
                     _sectionHeaderTimes.TryAdd(sd.Name.Text, ht);
+                if (!SectionHasInlineMusic(sd) && FirstDirectPartial(sd) is { } hp)
+                    _sectionHeaderPartials.TryAdd(sd.Name.Text, hp);
             }
             else if (n is PartDeclarationSyntax pd)
                 _partDecls.TryAdd(pd.Name.Text, pd); // first-wins, matching the old first-match scans
@@ -333,6 +351,7 @@ public sealed class MidiExporter
         _homeKeySharps = ScoreHomeKey.Sharps(_root);
         _keySharps = _homeKeySharps;
         (_homeTimeBeats, _homeTimeBeatType) = ScoreHomeMeter.Read(_root);
+        _partial = null;
         _formDriven = _root.DescendantNodes().OfType<FormDeclarationSyntax>().Any();
         _formPlayed = false;
         _bareSectionOwner = RenderSpecParser.SingleEngravedPart(tree, Score, Form);
@@ -473,6 +492,16 @@ public sealed class MidiExporter
 
             case TimeSignatureSyntax timeSig:
                 ProcessTimeSignature(timeSig, conductorTrack);
+                break;
+
+            case PartialDeclarationSyntax partial:
+                // Anacrusis: the bar in progress is a pickup of this length until it closes.
+                // The clock needs nothing from it — notes take their written time either way —
+                // but an empty `| |` bar inside the pickup is worth the pickup, not the meter
+                // (MeasureBuilder.SetPartial is the page's copy of this arm).
+                // LILYPOND-REF: ly/music-functions-init.ly:1697-1705 partial = context-spec-music 'Timing
+                //   — "adjust the measure position to end the current measure at dur past the point of use".
+                _partial = partial.ToFraction();
                 break;
 
             case KeySignatureSyntax keySig:
@@ -699,6 +728,17 @@ public sealed class MidiExporter
         return null;
     }
 
+    /// <summary>The first <c>partial</c> that is a DIRECT child of the section, or null —
+    /// the third of the family (<see cref="FirstDirectKey"/>, <see cref="FirstDirectTime"/>),
+    /// read the way the collector reads its <c>_sectionHeaderPartials</c>.</summary>
+    private static PartialDeclarationSyntax? FirstDirectPartial(SectionDeclarationSyntax section)
+    {
+        for (int i = 0; i < section.SlotCount; i++)
+            if (section.GetChild(i) is PartialDeclarationSyntax p)
+                return p;
+        return null;
+    }
+
     /// <summary>True when the section has a direct-child MUSIC node (note / phrase / …),
     /// as opposed to only directives and part / chord / lyric blocks — i.e. its own
     /// <c>key</c> is walked as music, not a header. THE one spelling lives with the
@@ -757,6 +797,15 @@ public sealed class MidiExporter
             conductorTrack.TimeSignatures.Add(
                 new TimeSignatureChange(_currentTick, _timeNumerator, _timeDenominator));
         }
+
+        // A section can begin with a pickup (`section A { partial 4  melody { … } }`): the
+        // page shortens every part's first bar with it, applied after the section meter so
+        // the pickup restores to the section's own time (MeasureCollector.Form.cs). The same
+        // registry arms this walk's pickup here, and a pickup the previous section left
+        // pending ends with that section, as its bars did.
+        _partial = _sectionHeaderPartials.TryGetValue(section.SectionName, out var headerPartial)
+            ? headerPartial.ToFraction()
+            : null;
 
         // Part-major layout: the section lives INSIDE its part — arm that
         // part's anchor and play the children sequentially.
@@ -1212,10 +1261,18 @@ public sealed class MidiExporter
                 bool pairsHere = bar.BarToken.Kind is SyntaxKind.Bar
                     || (bar.BarToken.Kind is SyntaxKind.RepeatStartBar && !atScopeStart);
                 atScopeStart = false;
+                bool timePassed = _currentTick > boundaryTick;
                 if (pairsHere && _currentTick <= boundaryTick && boundaryClaimed)
                 {
                     _currentTick += MeasureTicks();  // the second of a `| |` pair
                 }
+                // The bar behind this barline is closed (time passed) or was the empty bar
+                // just paid for: either way a pending pickup is SPENT and the meter is back
+                // in force — MeasureBuilder.RestorePartialIfPending at every measure close.
+                // A typed barline on an empty span decorates and closes nothing, so it leaves
+                // the pickup pending, as it leaves the bar open on the page.
+                if (pairsHere || timePassed)
+                    _partial = null;
                 boundaryTick = _currentTick;
                 boundaryClaimed = true;
                 // …and fall through: the repeat spans below key on the repeat barlines,
@@ -1335,9 +1392,11 @@ public sealed class MidiExporter
 
     /// <summary>One measure of the meter in force, in ticks — what an empty <c>| |</c> bar
     /// costs. The same length <c>MeasureBuilder.EmitEmptyMeasure</c> gives that bar's
-    /// spacer, so the two walks agree on what the gap is worth.</summary>
+    /// spacer, so the two walks agree on what the gap is worth — and, as there, a pending
+    /// <c>partial</c> IS the meter in force: the empty pickup <c>partial 4 |</c> is worth
+    /// the one beat the page draws, not the whole bar it drew nothing of.</summary>
     private int MeasureTicks()
-        => FractionToTicks(new Fraction(_timeNumerator, _timeDenominator));
+        => FractionToTicks(_partial ?? new Fraction(_timeNumerator, _timeDenominator));
 
     private static int FindMatchingRepeatEnd(List<SyntaxNode> items, int start)
     {

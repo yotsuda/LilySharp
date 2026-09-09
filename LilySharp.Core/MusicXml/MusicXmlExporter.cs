@@ -63,6 +63,10 @@ public sealed class MusicXmlExporter
     private Fraction _pickupLength = Fraction.Zero;
     private Fraction _pickupAccumulated = Fraction.Zero;
     private bool _justAutoClosedPickup;
+    // Whether a bar line has been met since this scope (part / section) opened — a `|:`
+    // that opens the scope closes nothing, one met later pairs like a bare `|`
+    // (MidiExporter.ProcessSequence's atScopeStart, MeasureBuilder._atScopeStart).
+    private bool _barSeenInScope;
     private MusicXmlMeasure? _currentMeasure;
     private MusicXmlPart? _currentPart;
     private MusicXmlDocument? _document;
@@ -897,6 +901,7 @@ public sealed class MusicXmlExporter
 
     private void EnsurePart(string name)
     {
+        _barSeenInScope = false;
         if (_partsByName.TryGetValue(name, out var existing))
         {
             _currentPart = existing;
@@ -920,6 +925,39 @@ public sealed class MusicXmlExporter
         _currentMeasure = null;
         _pendingPickup = false;
         _justAutoClosedPickup = false;
+        _barSeenInScope = false;
+    }
+
+    /// <summary>
+    /// The bar an empty <c>| |</c> stands for: one bar of silence — the pickup's length while
+    /// a <c>partial</c> is pending, the meter's otherwise — written as the rest the author's
+    /// own <c>s1</c> would have produced (<see cref="ProcessRest"/>), so the two spellings
+    /// stay one document (EmptyBarExportTests).
+    /// </summary>
+    /// <remarks>
+    /// Owner's decision 2026-08-28: the page fills the bar with a full-measure spacer
+    /// (MeasureBuilder.EmitEmptyMeasure) and the MIDI counts it (MidiExporter.MeasureTicks);
+    /// this walk reused the empty measure and wrote NO bar, so <c>c1 | | e1</c> exported two
+    /// measures where the page draws three, and an empty pickup <c>partial 4 | c4 …</c> pulled
+    /// the <c>c4</c> into measure 0 (MEASURED 2026-09-09, scratch/p358/midi). Under
+    /// <c>time none</c> the last metered length stands, as it does on the page.
+    /// </remarks>
+    private void AddSilentBar()
+    {
+        if (_currentMeasure == null) return;
+        var length = _pendingPickup ? _pickupLength : new Fraction(_timeNumerator, _timeDenominator);
+        var (type, dots) = GetNoteType(length);
+        _currentMeasure.Notes.Add(new MusicXmlNote
+        {
+            IsRest = true,
+            Duration = FractionToTicks(length),
+            Type = type,
+            Dots = dots
+        });
+        _lastPitchedNote = null;
+        _lastEmittedNotes.Clear();
+        // The pickup, if one was pending, is this bar: spent.
+        _pendingPickup = false;
     }
 
     /// <summary>
@@ -1150,6 +1188,26 @@ public sealed class MusicXmlExporter
                         break;
                     }
                     string barText = (barline.GetChild(0) as SyntaxTokenNode)?.Text ?? "|";
+                    // A bare `|` — or a `|:` that does not open the scope — with no time
+                    // since the last boundary is an EMPTY BAR, not a redundant bar line:
+                    // write the bar of silence it stands for before closing it (the rule
+                    // MidiExporter.ProcessSequence and MeasureBuilder.HandleBarline share).
+                    // ⚠️ A chord ROW's bar lines reach here too — the walk has no arm for
+                    // ChordPartBlockSyntax, so the default arm visits its children — and
+                    // they are the ROW's grid, not this part's bars: `Am | |` over a two-bar
+                    // melody would have written two silent bars INTO the melody (measured on
+                    // test/volta-chord-row the day this landed). The row's bars are read by
+                    // nobody here; only its `|:` / `:|` flags below were ever reached.
+                    bool inChordRow = false;
+                    for (var anc = barline.Parent; anc != null; anc = anc.Parent)
+                        if (anc is ChordPartBlockSyntax) { inChordRow = true; break; }
+                    bool pairsHere = !inChordRow
+                        && (barText == "|" || (barText == "|:" && _barSeenInScope));
+                    if (!inChordRow)
+                        _barSeenInScope = true;
+                    if (pairsHere && _currentMeasure != null && _currentPart != null
+                        && _currentMeasure.Notes.Count == 0)
+                        AddSilentBar();
                     if (_currentMeasure != null)
                     {
                         // Closing side: repeat sign / double / final / dashed.

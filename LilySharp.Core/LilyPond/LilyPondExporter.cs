@@ -156,6 +156,11 @@ public sealed class LilyPondExporter
     // with plain `|` the cadenza drew no bar line and the bars after \time 4/4 none either.
     private bool _timeSenza;
     private bool _homeTimeSenza;
+    // The pickup in force — a `partial` read and not yet closed by a bar — for the one
+    // reader that needs it here: the spacer an empty `| |` bar stands for
+    // (EmitMusicStream). MeasureBuilder._partialRestore's twin, spent the way
+    // RestorePartialIfPending spends it: at the first bar that closes after it.
+    private Fraction? _twinPartial;
 
     /// <summary>
     /// The relative-octave frame, TWICE: where Lily# stands, and where the text this exporter
@@ -1106,7 +1111,7 @@ public sealed class LilyPondExporter
                 case TempoDeclarationSyntax t: _sb.Append("  ").Append(EmitTempo(t)).Append('\n'); break;
                 case KeySignatureSyntax k: _sb.Append("  ").Append(EmitKey(k)).Append('\n'); break;
                 case TimeSignatureSyntax ts: _sb.Append("  ").Append(EmitTime(ts)).Append('\n'); break;
-                case PartialDeclarationSyntax p: _sb.Append("  ").Append(EmitPartial(p)).Append('\n'); break;
+                case PartialDeclarationSyntax p: _sb.Append("  ").Append(ArmPartial(p)).Append('\n'); break;
             }
         }
     }
@@ -1599,15 +1604,61 @@ public sealed class LilyPondExporter
     {
         var line = new StringBuilder(indent);
         int i = 0;
+        // AN EMPTY `| |` BAR IS ONE BAR OF SILENCE (owner's decision 2026-08-28): the page
+        // fills it with a full-measure spacer (MeasureBuilder.EmitEmptyMeasure) and the MIDI
+        // walk counts it (MidiExporter.ProcessSequence). LilyPond's `|` is a bar CHECK that
+        // takes no time, so a twin that copied the bare bars drew `c1 | | e1` as TWO bars
+        // where the page draws three — the twin was silently different music (MEASURED
+        // 2026-09-09, scratch/p358/midi/gap.lys: two bars in the twin, three on the page),
+        // and an empty pickup `partial 4 | c4 …` failed LilyPond's bar check and pulled the
+        // c4 into the pickup. The twin now writes the spacer the author would have typed —
+        // `s1 |` in 4/4, `s2. |` in 3/4, `s4 |` under `partial 4` — with the walk's own
+        // rule: a bare `|` (or a `|:` that does not open the scope) closes the bar behind it
+        // when time has passed since the last boundary, and otherwise stands for an empty
+        // bar; a typed bar line (`||`, `:|`, `|.`) decorates a boundary and opens none; the
+        // scope start counts as a boundary. ONE rule in four spellings, kept honest by
+        // EmptyBarExportTests' identity pairs (`| |` against the spelled `s1 |`).
+        bool timeSinceBoundary = false;
+        bool atScopeStart = true;
         while (i < items.Count)
         {
             var item = items[i];
+
+            if (item is { Green: SectionPlayGreen })
+            {
+                // A section boundary: the next section's music opens a fresh scope, as the
+                // MIDI walk's per-section sequence does.
+                timeSinceBoundary = false;
+                atScopeStart = true;
+            }
+            else if (item is BarlineSyntax gapBar && !_chordTrack)
+            {
+                var kind = gapBar.BarToken.Kind;
+                bool pairsHere = kind == SyntaxKind.Bar
+                    || (kind == SyntaxKind.RepeatStartBar && !atScopeStart);
+                if (pairsHere && !timeSinceBoundary)
+                    AppendToken(line, "s" + ChordModeDuration(
+                        _twinPartial ?? new Fraction(_timeBeats, _timeBeatType)), indent);
+                // The bar behind this bar line closed (or was the empty bar just written), so
+                // a pending pickup is spent — MeasureBuilder.RestorePartialIfPending.
+                if (pairsHere || timeSinceBoundary)
+                    _twinPartial = null;
+                timeSinceBoundary = false;
+                atScopeStart = false;
+            }
+            else if (TakesMeasureTime(item))
+            {
+                timeSinceBoundary = true;
+            }
 
             // Inline |: … :| repeat span → \repeat volta N { … } \alternative { … }
             if (item is BarlineSyntax { BarToken.Kind: SyntaxKind.RepeatStartBar or SyntaxKind.RepeatBothBar })
             {
                 FlushLine(line, indent);
                 i = EmitInlineRepeat(items, i, indent);
+                // The `:|` that closed the span is a boundary too.
+                timeSinceBoundary = false;
+                atScopeStart = false;
                 continue;
             }
 
@@ -1635,6 +1686,27 @@ public sealed class LilyPondExporter
         }
         FlushLine(line, indent);
     }
+
+    /// <summary>
+    /// Whether <paramref name="item"/> takes measure time — the question the `| |` rule in
+    /// <see cref="EmitMusicStream"/> asks. Spelled as the list of what does NOT (bar lines,
+    /// marks, spanner ends, directives, a grace body), so that a node type this list has
+    /// never met counts as music and never earns a spurious spacer: the only mistake this
+    /// can then make is to leave a gap unwritten, which is the twin as it always was.
+    /// </summary>
+    private static bool TakesMeasureTime(SyntaxNode item) => item switch
+    {
+        BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
+            or DynamicSyntax or KeySignatureSyntax or TimeSignatureSyntax
+            or TempoDeclarationSyntax or ClefDeclarationSyntax or PartialDeclarationSyntax
+            or MusicMarkSyntax or NavigationMarkSyntax or GraceExpressionSyntax
+            or StringNumberAnnotationSyntax or ArticulationSyntax
+            or OctaveDirectiveSyntax or MetadataDeclarationSyntax
+            or SectionDeclarationSyntax or FormDeclarationSyntax
+            or PartDeclarationSyntax or RenderDeclarationSyntax => false,
+        { Green: SectionPlayGreen } => false,
+        _ => true,
+    };
 
     /// <summary>
     /// Whether anything after <paramref name="index"/> in this stream carries a pitch —
@@ -1757,7 +1829,7 @@ public sealed class LilyPondExporter
         TimeSignatureSyntax ts => EmitTime(ts),
         TempoDeclarationSyntax t => EmitTempo(t),
         ClefDeclarationSyntax cl => EmitClef(cl),
-        PartialDeclarationSyntax p => EmitPartial(p),
+        PartialDeclarationSyntax p => ArmPartial(p),
         TupletExpressionSyntax tup => EmitTuplet(tup),
         ArpeggioSyntax arp => CloseImprovisation() + EmitArpeggio(arp),
         ParallelExpressionSyntax par => EmitParallel(par),
@@ -2789,6 +2861,15 @@ public sealed class LilyPondExporter
     {
         var d = p.Duration;
         return d == null ? "" : "\\partial " + d.NumberToken.Text + new string('.', d.DotCount);
+    }
+
+    /// <summary>Writes the <c>\partial</c> and remembers its length for an empty bar written
+    /// inside the pickup (<see cref="_twinPartial"/>).</summary>
+    private string ArmPartial(PartialDeclarationSyntax p)
+    {
+        if (p.Duration != null)
+            _twinPartial = p.ToFraction();
+        return EmitPartial(p);
     }
 
     private string EmitTuplet(TupletExpressionSyntax tup)
