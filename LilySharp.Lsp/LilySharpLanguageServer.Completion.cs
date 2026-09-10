@@ -130,10 +130,12 @@ public sealed partial class LilySharpLanguageServer
             // The key's tonic travels with its signature: the pitch rows are spelled for the
             // signature and the diatonic chord rows are built on the tonic (`C` → `<c e g>`,
             // `IIm7` → `<d f a c>`), from the same declaration.
+            // The document's phrase names ride along: a phrase reference is a music item
+            // (GRAMMAR PhraseRef), and until 2026-09-10 the popup never named one.
             CompletionContext.MusicBlock => IsInsidePercussionPartMusic(doc.Text, offset, out bool inVoice)
                 ? GetDrumCompletions(inVoice)
                 : GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset), _flatSpellingContracted, inVoice,
-                    CurrentKey(doc.Text, offset).Tonic),
+                    CurrentKey(doc.Text, offset).Tonic, DeclaredNamesOf(doc.Text, "phrase")),
             // The position goes with the text here too: a repeat barline typed as far as
             // `|` or `:` is REPLACED by the item, not appended to (see GetFormCompletions).
             CompletionContext.FormBlock => GetFormCompletions(doc.Text, offset, position),
@@ -179,9 +181,28 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterFontAs => GetFontAsCompletions(),
             CompletionContext.AfterFontNumber => GetFontNumberCompletions(),
             CompletionContext.FontEntryOpen => GetFontEntryContinuationCompletions(),
-            CompletionContext.ScoreBlock => GetScoreBlockCompletions(),
+            // The render items, then the declared parts as bare MIDI-only items (GRAMMAR §7:
+            // "a bare part name renders that part to MIDI only").
+            CompletionContext.ScoreBlock => WithMidiOnlyParts(GetScoreBlockCompletions(), doc.Text),
             CompletionContext.StaffGroupBlock => GetStaffGroupBlockCompletions(),
-            CompletionContext.AfterStaffRef => GetDeclaredNameCompletions(doc.Text, "part", "Part"),
+            // `staff |` / `ossia |`: the parts, and the five clefs that may precede one.
+            CompletionContext.AfterStaffRef => GetStaffRefCompletions(doc.Text),
+            // `staff CLEF |`: the parts, and — the clef word being a legal part name too —
+            // the selectors.
+            CompletionContext.AfterStaffClefRef => GetStaffClefRefCompletions(doc.Text),
+            // `tab |` / `tab TUNING |`: the parts, and the tunings that may precede one.
+            CompletionContext.AfterTabRef => GetTabRefCompletions(doc.Text),
+            // `tab TUNING |`: the parts, and — the tuning word being a legal part name too —
+            // the style selector.
+            CompletionContext.AfterTabTuningRef => GetTabTuningRefCompletions(doc.Text),
+            // condensedStaff { } / combinedStaff { }: bare part names only.
+            CompletionContext.BarePartNameList => GetDeclaredNameCompletions(doc.Text, "part", "Part"),
+            // `score NAME |`: the header options and the body's braces.
+            CompletionContext.AfterScoreHeader => GetScoreHeaderCompletions(),
+            // `transpose |`: a pitch is typed; nothing to list.
+            CompletionContext.AfterTransposePitch => GetTransposePitchCompletions(),
+            // A lyrics body: the verse headers.
+            CompletionContext.LyricsBody => GetLyricVoltaCompletions(),
             CompletionContext.AfterChordsRef => GetDeclaredNameCompletions(doc.Text, "chords", "Chord part"),
             CompletionContext.AfterLyricsRef => GetDeclaredNameCompletions(doc.Text, "lyrics", "Lyrics part"),
             CompletionContext.AfterLyricsName => GetVoiceBindingNameCompletions(doc.Text),
@@ -190,6 +211,7 @@ public sealed partial class LilySharpLanguageServer
                 "The part - or named voice - this lyrics track sings"),
             CompletionContext.AfterChordAttachName => GetChordAttachNameCompletions(),
             CompletionContext.AfterStaffAttachName => GetStaffAttachNameCompletions(),
+            CompletionContext.AfterTabAttachName => GetTabAttachNameCompletions(),
             CompletionContext.AfterGroupStaffAttachName => GetGroupStaffAttachNameCompletions(),
             CompletionContext.AfterLyricsRowAttachName => GetLyricsRowAttachNameCompletions(),
             CompletionContext.AfterGroupLyricsRowAttachName => GetGroupLyricsRowAttachNameCompletions(),

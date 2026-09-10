@@ -115,7 +115,8 @@ Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
    (tempo value words). Articulation, ornament, dynamic-text and mark NAMES
    (staccato, tr, sfz, cresc, dim, …) are resolved from the '@name' text and are
    NOT reserved. 'alternative' is reserved only to reject the removed LilyPond-style
-   form; 'using' is reserved for multi-file support.
+   form; 'using' is the multi-file include ('using "other.lys"', UsingDecl below —
+   implemented, top level only: LYS0029 elsewhere).
 
    ⚠️ 'volta' was in that sentence too, and stopped belonging there when the fonts
    block landed: 'repeat volta 2 { … }' is removed (LYS0006) but
@@ -157,6 +158,7 @@ TopLevelItem   = MetadataDecl                     (* title, composer *)
                | StructureDecl                    (* song form - optional *)
                | ScoreDecl                        (* output definitions - REQUIRED *)
                | OverrideDecl                     (* engraving overrides *)
+               | UsingDecl                        (* multi-file include - top level only *)
                ;
 
 (* MUSIC IS NOT A TopLevelItem, and is rejected with LYS0020: a note stream, a bare
@@ -173,6 +175,11 @@ TopLevelItem   = MetadataDecl                     (* title, composer *)
 
 MetadataDecl   = MetadataKey , String ;
 MetadataKey    = 'title' | 'composer' ;
+
+UsingDecl      = 'using' , String ;
+                 (* 'using "other.lys"': the named file's declarations join this file's
+                    before validation (UsingExpander). Top level only — inside a section
+                    or a score it is LYS0029. *)
 
 ### 2.3 Global Settings
 
@@ -734,6 +741,7 @@ SectionDecl    = 'section' , [ '~' ] , Identifier , '{' , { SectionItem } , '}' 
    written on a play that prints none is LYS0012. *)
 
 SectionItem    = SectionSetting
+               | OverrideDecl                     (* section-scoped: a default for this section on every staff *)
                | PartBlock                        (* partName MusicBlock *)
                | VoiceBlock                       (* multi-voice on one staff *)
                | LyricsBlock                      (* named lyrics track; a score places it as a 'lyrics NAME' row *)

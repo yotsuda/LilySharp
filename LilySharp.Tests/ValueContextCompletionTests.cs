@@ -83,7 +83,8 @@ public class ValueContextCompletionTests
     [InlineData("score main \"s\" { ", "ScoreBlock")]
     [InlineData("score main { ", "ScoreBlock")]
     [InlineData("score main \"s\" { staff ", "AfterStaffRef")]
-    [InlineData("score main \"s\" { tab ", "AfterStaffRef")]
+    // `tab` has its own list since 2026-09-10: the parts AND the tunings that may precede one.
+    [InlineData("score main \"s\" { tab ", "AfterTabRef")]
     [InlineData("score main { grandStaff { staff ", "AfterStaffRef")]
     [InlineData("score main { grandStaff { staff m  lyrics ", "AfterLyricsRef")]
     [InlineData("score main \"s\" { chords ", "AfterChordsRef")]

@@ -149,22 +149,9 @@ public sealed partial class LilySharpLanguageServer
         items.Add(Snippet("[3. ]", "[3. $0]", "3rd ending (volta bracket)", "3c"));
         items.Add(Snippet("[1-2. ]", "[${1:1-2}. $0]", "Multi-pass ending, e.g. [1-2. …] or [1,3. …]", "3d"));
 
-        // Navigation marks placed between sections — BARE words (the '@' form is LYS1022).
-        var navs = new (string Label, string Detail)[]
-        {
-            ("segno", "Segno (jump target)"),
-            ("coda", "Coda (jump target)"),
-            ("to coda", "Jump to the coda"),
-            ("fine", "End here"),
-            ("dc", "Da Capo — repeat from the top"),
-            ("ds", "Dal Segno — repeat from the segno"),
-            ("dc al fine", "Da Capo al Fine"),
-            ("dc al coda", "Da Capo al Coda"),
-            ("ds al fine", "Dal Segno al Fine"),
-            ("ds al coda", "Dal Segno al Coda"),
-        };
-        for (int i = 0; i < navs.Length; i++)
-            items.Add(Item(navs[i].Label, navs[i].Detail, CompletionItemKind.Keyword, $"4{i:D2}"));
+        // Navigation marks placed between sections — BARE words (the '@' form is LYS1022),
+        // read from the compiler's list (the music popup offers the same ten).
+        items.AddRange(NavigationMarkItems("4"));
 
         // The engraved barlines a form may write between sections (a plain `|` is an inert
         // divider and is not offered), then the system-break directives, then custom text.
@@ -733,14 +720,16 @@ public sealed partial class LilySharpLanguageServer
             Items =
             [
                 // `size` first: the one-word way to a whole page. Re-triggers so the
-                // size-name list opens at the value position.
+                // size-name list opens at the value position. The spelling is the reader's
+                // (LanguageVocabulary.PaperSizeKey) — it was the last hand-written paper key
+                // here until 2026-09-10.
                 new CompletionItem
                 {
-                    Label = "size",
+                    Label = LanguageVocabulary.PaperSizeKey,
                     Kind = CompletionItemKind.Property,
                     InsertTextFormat = InsertTextFormat.Snippet,
-                    InsertText = "size $0",
-                    Detail = PaperKeyDetail("size"),
+                    InsertText = LanguageVocabulary.PaperSizeKey + " $0",
+                    Detail = PaperKeyDetail(LanguageVocabulary.PaperSizeKey),
                     Command = new Command
                     {
                         Title = "Suggest paper size",
@@ -1148,25 +1137,29 @@ public sealed partial class LilySharpLanguageServer
         return new CompletionList { Items = items.ToArray() };
     }
 
-    // The written tempo forms — a bare BPM, a marking text, a beat-unit equation, or a
-    // swing feel. Completing the `tempo` keyword re-opens suggestions (Command) so these
-    // forms enumerate right after it; the Insert holds each form's placeholder snippet.
-    private static readonly (string Label, string Insert, string Detail)[] TempoForms =
+    // The written tempo forms — a bare BPM, a marking text, a beat-unit equation, then one
+    // row per FEEL WORD the compiler reads (TempoValue.FeelWords: swing, shuffle; the list
+    // had a hand-written `swing` row and no `shuffle` row until 2026-09-10). Completing the
+    // `tempo` keyword re-opens suggestions (Command) so these forms enumerate right after
+    // it; the Insert holds each form's placeholder snippet.
+    private static IEnumerable<(string Label, string Insert, string Detail)> TempoForms()
     {
-        ("120", "${1:120}", "Metronome mark: ♩ = 120"),
-        ("\"Allegro\" 132", "\"${1:Allegro}\" ${2:132}", "Marking text + BPM: Allegro (♩ = 132)"),
-        ("\"Grave\" 4 = 54", "\"${1:Grave}\" ${2:4} = ${3:54}", "Marking + beat unit = BPM (4. = dotted unit)"),
-        ("120 swing", "${1:120} swing", "Swing feel (eighths; 'swing 16' for sixteenths)"),
-    };
+        yield return ("120", "${1:120}", "Metronome mark: ♩ = 120");
+        yield return ("\"Allegro\" 132", "\"${1:Allegro}\" ${2:132}", "Marking text + BPM: Allegro (♩ = 132)");
+        yield return ("\"Grave\" 4 = 54", "\"${1:Grave}\" ${2:4} = ${3:54}", "Marking + beat unit = BPM (4. = dotted unit)");
+        foreach (string feel in LanguageVocabulary.TempoFeelWords)
+            yield return ($"120 {feel}", "${1:120} " + feel,
+                $"{char.ToUpperInvariant(feel[0])}{feel[1..]} feel (eighths; '{feel} 16' for sixteenths)");
+    }
 
     /// <summary>The written tempo forms, as fill-in snippets — after <c>tempo</c>
     /// nothing else fits (a bare BPM, a marking text, a beat-unit equation, or
-    /// a swing feel).</summary>
+    /// a swing / shuffle feel).</summary>
     internal static CompletionList GetTempoCompletions()
     {
         return new CompletionList
         {
-            Items = TempoForms.Select((t, i) => new CompletionItem
+            Items = TempoForms().Select((t, i) => new CompletionItem
             {
                 Label = t.Label,
                 Kind = CompletionItemKind.Snippet,
@@ -1193,6 +1186,9 @@ public sealed partial class LilySharpLanguageServer
             ("3/8", "Fast triple"),
             ("5/4", "Quintuple"),
             ("7/8", "Septuple"),
+            // Senza misura (GRAMMAR TimeDecl: `time none`) — unmetered until the next
+            // `time N/M`; a measure ends only at a written `|`. Absent until 2026-09-10.
+            ("none", "Senza misura: unmetered until the next time N/M (a bar ends only at a written |; LilyPond \\cadenzaOn)"),
         };
         return new CompletionList
         {
@@ -1231,49 +1227,63 @@ public sealed partial class LilySharpLanguageServer
         };
     }
 
-    /// <summary>The render-spec keywords valid inside a score / grandStaff body.</summary>
+    // Insert, prose and retrigger per score-item keyword. Membership decides NOTHING — the
+    // keywords and their order come from the compiler (LanguageVocabulary.ScoreItemKeywords =
+    // SyntaxFacts.ScoreItemKeywordVocabulary, held to ParseRenderItem by DocKeywordListTests).
+    // A keyword the compiler grows and this table has not heard of is still offered, inserting
+    // itself with a value slot and a generic description. Until 2026-09-10 this table WAS the
+    // list — the shape that drifted for the clefs and the part properties, and that had
+    // already dropped the four staff groups once.
+    //
+    // Retrigger = the item takes a part-name reference next, so re-open the completion popup
+    // after inserting the keyword and list the declared parts. A keyword that opens a BRACE
+    // body does not retrigger — the caret lands inside the block, where the next completion
+    // request answers on its own.
+    private static readonly Dictionary<string, (string Insert, string Detail, bool Retrigger)>
+        ScoreItemDetails = new(StringComparer.Ordinal)
+        {
+            ["staff"] = ("staff $0", "A staff rendering the named part", true),
+            ["grandStaff"] = ("grandStaff {\n\t$0\n}", "Braced staff group (piano)", false),
+            ["staffGroup"] = ("staffGroup {\n\t$0\n}", "Bracketed staff group (orchestral family)", false),
+            ["choirStaff"] = ("choirStaff {\n\t$0\n}", "Choir staff group (vocal ensemble)", false),
+            ["condensedStaff"] = ("condensedStaff {\n\t$0\n}",
+                "One staff carrying several parts as voices — bare part names inside", false),
+            ["combinedStaff"] = ("combinedStaff {\n\t$0\n}",
+                "Two parts merged onto one staff, a2 where they agree — bare part names inside", false),
+            ["tab"] = ("tab $0", "A tablature staff for the named part", true),
+            ["ossia"] = ("ossia $0", "An ossia staff (small alternative reading) for the named part", true),
+            ["chords"] = ("chords $0", "Chord row (no staff) for the named chord part", true),
+            ["lyrics"] = ("lyrics $0", "Lyrics row (no staff) for the named lyrics part", true),
+            ["title"] = ("title \"$0\"", "This score's own title, overriding the file's", false),
+            ["composer"] = ("composer \"$0\"", "This score's own composer, overriding the file's", false),
+            ["fonts"] = ("fonts $0", "This score's faces: reference a named top-level fonts block", true),
+            ["paper"] = ("paper $0", "This score's page: reference a named top-level paper block", true),
+            ["marks"] = ("marks $0", "This score's arrangement of a section label and the tempo at the same bar: stacked (default) | beside", true),
+        };
+
+    /// <summary>The render-spec keywords valid inside a score / grandStaff body — READ FROM
+    /// THE COMPILER (<see cref="LanguageVocabulary.ScoreItemKeywords"/>, in its order); this
+    /// file supplies only each keyword's insert, prose and retrigger.</summary>
     internal static CompletionList GetScoreBlockCompletions()
     {
-        // Retrigger = the item takes a part-name reference next, so re-open the
-        // completion popup after inserting the keyword and list the declared parts.
-        // A keyword that opens a BRACE body does not retrigger — the caret lands
-        // inside the block, where the next completion request answers on its own.
-        // ⚠️ Every keyword ParseRenderItem accepts belongs here. The four staff
-        // GROUPS were missing, so the one list the writer sees inside `score { }`
-        // did not mention the constructs the parser has always taken.
-        var specs = new (string Label, string Insert, string Detail, bool Retrigger)[]
-        {
-            ("staff", "staff $0", "A staff rendering the named part", true),
-            ("grandStaff", "grandStaff {\n\t$0\n}", "Braced staff group (piano)", false),
-            ("staffGroup", "staffGroup {\n\t$0\n}", "Bracketed staff group (orchestral family)", false),
-            ("choirStaff", "choirStaff {\n\t$0\n}", "Choir staff group (vocal ensemble)", false),
-            ("condensedStaff", "condensedStaff {\n\t$0\n}",
-                "One staff carrying several parts as voices — bare part names inside", false),
-            ("combinedStaff", "combinedStaff {\n\t$0\n}",
-                "Two parts merged onto one staff, a2 where they agree — bare part names inside", false),
-            ("tab", "tab $0", "A tablature staff for the named part", true),
-            ("ossia", "ossia $0", "An ossia staff (small alternative reading) for the named part", true),
-            ("chords", "chords $0", "Chord row (no staff) for the named chord part", true),
-            ("lyrics", "lyrics $0", "Lyrics row (no staff) for the named lyrics part", true),
-            ("title", "title \"$0\"", "This score's own title, overriding the file's", false),
-            ("composer", "composer \"$0\"", "This score's own composer, overriding the file's", false),
-            ("fonts", "fonts $0", "This score's faces: reference a named top-level fonts block", true),
-            ("paper", "paper $0", "This score's page: reference a named top-level paper block", true),
-            ("marks", "marks $0", "This score's arrangement of a section label and the tempo at the same bar: stacked (default) | beside", true),
-        };
         return new CompletionList
         {
-            Items = specs.Select((t, i) => new CompletionItem
+            Items = LanguageVocabulary.ScoreItemKeywords.Select((keyword, i) =>
             {
-                Label = t.Label,
-                Kind = CompletionItemKind.Keyword,
-                InsertTextFormat = InsertTextFormat.Snippet,
-                InsertText = t.Insert,
-                Detail = t.Detail,
-                SortText = i.ToString(),
-                Command = t.Retrigger
-                    ? new Command { Title = "Suggest part name", CommandIdentifier = "editor.action.triggerSuggest" }
-                    : null,
+                (string Insert, string Detail, bool Retrigger) d = ScoreItemDetails.TryGetValue(keyword, out var found)
+                    ? found : (keyword + " $0", "Render item", false);
+                return new CompletionItem
+                {
+                    Label = keyword,
+                    Kind = CompletionItemKind.Keyword,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = d.Insert,
+                    Detail = d.Detail,
+                    SortText = i.ToString("D2"),
+                    Command = d.Retrigger
+                        ? new Command { Title = "Suggest part name", CommandIdentifier = "editor.action.triggerSuggest" }
+                        : null,
+                };
             }).ToArray()
         };
     }
@@ -1521,6 +1531,15 @@ public sealed partial class LilySharpLanguageServer
         };
     }
 
+    // Prose per tab style. Membership decides nothing — the words come from the compiler
+    // (LanguageVocabulary.TabStyles); read by the value list after `as` and by the `as …`
+    // selector rows after a tab row's part name.
+    private static readonly Dictionary<string, string> TabStyleDetails = new(StringComparer.Ordinal)
+    {
+        ["numbers"] = "Fret digits only — no stems, dots or rests",
+        ["full"] = "Full tablature staff with stems, dots and rests (the default)",
+    };
+
     /// <summary>After <c>tab … as</c>: the two tab display styles.</summary>
     /// <remarks>
     /// ⚠️ THE LABELS COME FROM THE COMPILER (<c>LanguageVocabulary.TabStyles</c>) and only the
@@ -1532,11 +1551,6 @@ public sealed partial class LilySharpLanguageServer
     /// </remarks>
     internal static CompletionList GetTabDisplayModeCompletions()
     {
-        var detail = new Dictionary<string, string>
-        {
-            ["numbers"] = "Fret digits only — no stems, dots or rests",
-            ["full"] = "Full tablature staff with stems, dots and rests (the default)",
-        };
         return new CompletionList
         {
             Items = LilySharp.Core.Semantics.LanguageVocabulary.TabStyles
@@ -1544,10 +1558,55 @@ public sealed partial class LilySharpLanguageServer
                 {
                     Label = label,
                     Kind = CompletionItemKind.Keyword,
-                    Detail = detail.TryGetValue(label, out var d) ? d : null,
+                    Detail = TabStyleDetails.TryGetValue(label, out var d) ? d : null,
                     SortText = i.ToString(),
                 }).ToArray()
         };
+    }
+
+    /// <summary>The tab style selector as <c>as …</c> items, one per word of
+    /// <see cref="LanguageVocabulary.TabStyles"/> — the tab sibling of
+    /// <see cref="StaffSelectorItems"/>.</summary>
+    private static IEnumerable<CompletionItem> TabStyleSelectorItems(string prefix)
+        => LanguageVocabulary.TabStyles.Select((style, i) => new CompletionItem
+        {
+            Label = prefix + style,
+            Kind = CompletionItemKind.Keyword,
+            InsertText = prefix + style,
+            Detail = TabStyleDetails.TryGetValue(style, out var d) ? d : "Tab style",
+            SortText = i.ToString(),
+        });
+
+    /// <summary>After <c>tab NAME</c> / <c>tab TUNING NAME</c>: the <c>as numbers|full</c>
+    /// style selector, then the ordinary render-item continuations — the tab sibling of
+    /// <see cref="GetStaffAttachNameCompletions"/> and
+    /// <see cref="GetChordAttachNameCompletions"/>. Until 2026-09-10 the staff and chords rows
+    /// had their <c>as</c> continuation and the tab row fell to the plain score list.</summary>
+    internal static CompletionList GetTabAttachNameCompletions()
+    {
+        var items = new System.Collections.Generic.List<CompletionItem>(TabStyleSelectorItems("as "));
+        foreach (var it in GetScoreBlockCompletions().Items)
+        {
+            it.SortText = "9" + (it.SortText ?? "");
+            items.Add(it);
+        }
+        return new CompletionList { Items = items.ToArray() };
+    }
+
+    /// <summary>After <c>tab TUNING</c>: the parts (the tuning was the override), then the
+    /// style selector — because a tuning word may be a part name too (<c>bass</c> is both),
+    /// so <c>tab bass</c> may already be complete. The tab sibling of
+    /// <see cref="GetStaffClefRefCompletions"/>.</summary>
+    internal static CompletionList GetTabTuningRefCompletions(string text)
+    {
+        var items = new System.Collections.Generic.List<CompletionItem>(
+            GetDeclaredNameCompletions(text, "part", "Part").Items);
+        foreach (var it in TabStyleSelectorItems("as "))
+        {
+            it.SortText = "9" + (it.SortText ?? "");
+            items.Add(it);
+        }
+        return new CompletionList { Items = items.ToArray() };
     }
 
     /// <summary>Names declared as <c>KEYWORD name {</c> anywhere in the document
@@ -1823,26 +1882,79 @@ public sealed partial class LilySharpLanguageServer
             InsertText = Body(n),
             SortText = i.ToString("D2"),
         });
+        // The two TRACK cells a section-major section also holds (GRAMMAR SectionItem:
+        // LyricsBlock / ChordsBlock) — a named lyrics track that sings a part, a named chord
+        // track. Both scaffolds are the sectioned body's dual of the top-level track items;
+        // the names are placeholders (a track's name is required: LYS0032). Absent from this
+        // list until 2026-09-10, so a section-major writer had to know the spelling.
+        string firstPart = parts.Count > 0 ? parts[0] : "melody";
+        var tracks = new[]
+        {
+            new CompletionItem
+            {
+                Label = "lyrics",
+                Kind = CompletionItemKind.Snippet,
+                Detail = "Lyrics cell — a named track singing a part of this section (a score places it as a `lyrics NAME` row)",
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = Body("lyrics ${1:words} sings ${2:" + firstPart + "}"),
+                SortText = "8a",
+            },
+            new CompletionItem
+            {
+                Label = "chords",
+                Kind = CompletionItemKind.Snippet,
+                Detail = "Chord cell — a named chord track for this section (a score places it as a `chords NAME` row)",
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = Body("chords ${1:prog}"),
+                SortText = "8b",
+            },
+        };
         return new CompletionList
         {
-            Items = cells.Concat(SectionHeaderDirectiveItems("9")).ToArray()
+            Items = cells.Concat(tracks).Concat(SectionHeaderDirectiveItems("9")).ToArray()
         };
     }
+
+    // Prose and the value popup per section directive. Membership decides NOTHING — the words
+    // and their order come from the compiler (LanguageVocabulary.SectionSettings =
+    // SyntaxFacts.SectionSettingVocabulary, the list the parser's stray-item message names).
+    // A directive the compiler grows and this table has not heard of is still offered, with a
+    // generic description and no value popup. Until 2026-09-10 this table WAS the list.
+    private static readonly Dictionary<string, (string Detail, string? Suggest)>
+        SectionSettingDetails = new(StringComparer.Ordinal)
+        {
+            ["partial"] = ("Pickup — shorten this section's first bar (applies to every part)", null),
+            ["key"] = ("This section's key signature", "Suggest key tonic"),
+            ["time"] = ("This section's time signature", "Suggest time signature"),
+            ["tempo"] = ("This section's tempo (BPM)", null),
+            ["override"] = ("Grob override — a default for this section on every staff", "Suggest grob property"),
+        };
 
     /// <summary>The directives a top-level section may carry beside (or instead of) its part
     /// cells — the part-major HEADER's whole body, and the section-major section's opening:
     /// a pickup and the section-wide key / time / tempo, plus a section-scoped grob override.
-    /// They apply to every part of the section; clef is deliberately absent (it is per-part).</summary>
+    /// They apply to every part of the section; clef is deliberately absent (it is per-part).
+    /// READ FROM THE COMPILER (<see cref="LanguageVocabulary.SectionSettings"/>).</summary>
     /// <param name="sortPrefix">Where the block sorts in the caller's list — after the part
     /// cells in a section-major section, first (empty) in a part-major header.</param>
-    private static CompletionItem[] SectionHeaderDirectiveItems(string sortPrefix = "") => new[]
-    {
-        new CompletionItem { Label = "partial", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "partial $0", Detail = "Pickup — shorten this section's first bar (applies to every part)", SortText = sortPrefix + "0partial" },
-        new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "key $0", Detail = "This section's key signature", SortText = sortPrefix + "1key", Command = new Command { Title = "Suggest key tonic", CommandIdentifier = "editor.action.triggerSuggest" } },
-        new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "This section's time signature", SortText = sortPrefix + "2time", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
-        new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tempo $0", Detail = "This section's tempo (BPM)", SortText = sortPrefix + "3tempo" },
-        new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "override $0", Detail = "Grob override — a default for this section on every staff", SortText = sortPrefix + "4override", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } },
-    };
+    private static CompletionItem[] SectionHeaderDirectiveItems(string sortPrefix = "")
+        => LanguageVocabulary.SectionSettings.Select((keyword, i) =>
+        {
+            (string Detail, string? Suggest) d = SectionSettingDetails.TryGetValue(keyword, out var found)
+                ? found : ("Section directive — applies to every part of the section", null);
+            return new CompletionItem
+            {
+                Label = keyword,
+                Kind = CompletionItemKind.Keyword,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = keyword + " $0",
+                Detail = d.Detail,
+                SortText = sortPrefix + i + keyword,
+                Command = d.Suggest is null
+                    ? null
+                    : new Command { Title = d.Suggest, CommandIdentifier = "editor.action.triggerSuggest" },
+            };
+        }).ToArray();
 
     /// <summary>
     /// The section names already declared in the <c>part { }</c> / <c>lyrics { }</c>
@@ -1990,21 +2102,54 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>
     /// The grob-property targets the renderer actually CONSUMES: colouring and hiding
-    /// note heads / stems — the same four rows as <c>SupportedGrobOverrides</c>, which
-    /// LYS1029 enforces. Anything else parses and stores but is refused, so it is
-    /// deliberately NOT offered — that would mislead (NoteColumn.force-hshift left this
-    /// list 2026-08-23 together with its vocabulary row: its reader is disabled, see
-    /// ElementCoordinator.ForceHshiftEnabled). Shared by
+    /// note heads / stems — READ FROM <c>SupportedGrobOverrides</c> (via
+    /// <see cref="LanguageVocabulary.GrobOverrideSpellings"/>), the list LYS1029 enforces.
+    /// Anything else parses and stores but is refused, so it is not offered — that would
+    /// mislead (NoteColumn.force-hshift left the vocabulary 2026-08-23: its reader is
+    /// disabled, see ElementCoordinator.ForceHshiftEnabled). Shared by
     /// <see cref="GetOverrideCompletions"/> (which appends <c>= value</c>) and
     /// <see cref="GetRevertCompletions"/> (which does not).
     /// </summary>
-    private static readonly (string Grob, string Property, string Kind, string Detail)[] RenderedGrobProperties =
+    /// <remarks>
+    /// ⚠️ Until 2026-09-10 this was a four-row COPY of the vocabulary — the shape that
+    /// drifted for the clefs and the part properties. The rows now come from the compiler;
+    /// this file keeps only the PROSE and the value KIND per property (colour / bool, which
+    /// decides whether picking the row re-opens the popup on a value list). A pair the
+    /// compiler grows and this table has not heard of is still offered, with a generic
+    /// description and no retrigger. The order is by property, then grob — colours first,
+    /// as the list has always read.
+    /// </remarks>
+    private static readonly (string Property, string Kind, string Detail)[] GrobPropertyDetails =
     {
-        ("NoteHead", "color", "color", "Colour the note heads"),
-        ("Stem", "color", "color", "Colour the stems"),
-        ("NoteHead", "transparent", "bool", "Show or hide the note head"),
-        ("Stem", "transparent", "bool", "Show or hide the stem"),
+        ("color", "color", "Colour the {0}"),
+        ("transparent", "bool", "Show or hide the {0}"),
     };
+
+    private static string GrobNoun(string grob) => grob switch
+    {
+        "NoteHead" => "note heads",
+        "Stem" => "stems",
+        _ => grob,
+    };
+
+    private static IEnumerable<(string Grob, string Property, string Kind, string Detail)> RenderedGrobProperties()
+    {
+        static int Rank(string property)
+            => System.Array.FindIndex(GrobPropertyDetails, x => x.Property == property) is var i && i >= 0
+                ? i : int.MaxValue;
+
+        foreach (string spelling in LanguageVocabulary.GrobOverrideSpellings
+                     .Where(s => s.IndexOf('.') > 0)
+                     .OrderBy(s => Rank(s[(s.IndexOf('.') + 1)..]))
+                     .ThenBy(s => s, StringComparer.Ordinal))
+        {
+            int dot = spelling.IndexOf('.');
+            string grob = spelling[..dot], property = spelling[(dot + 1)..];
+            var known = System.Array.Find(GrobPropertyDetails, x => x.Property == property);
+            yield return (grob, property, known.Kind ?? "",
+                known.Detail is null ? $"Override {spelling}" : string.Format(known.Detail, GrobNoun(grob)));
+        }
+    }
 
     /// <summary>
     /// The grob-property overrides offered right after <c>override</c> (and
@@ -2017,7 +2162,7 @@ public sealed partial class LilySharpLanguageServer
     {
         return new CompletionList
         {
-            Items = RenderedGrobProperties.Select((o, i) => new CompletionItem
+            Items = RenderedGrobProperties().Select((o, i) => new CompletionItem
             {
                 Label = $"{o.Grob}.{o.Property}",
                 Kind = CompletionItemKind.Property,
@@ -2096,7 +2241,7 @@ public sealed partial class LilySharpLanguageServer
     {
         return new CompletionList
         {
-            Items = RenderedGrobProperties.Select((o, i) => new CompletionItem
+            Items = RenderedGrobProperties().Select((o, i) => new CompletionItem
             {
                 Label = $"{o.Grob}.{o.Property}",
                 Kind = CompletionItemKind.Property,
@@ -2109,57 +2254,75 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>Tonic pitches offered right after <c>key</c>, in circle-of-fifths
     /// order (sharps up, then flats down) so related keys sit together.</summary>
+    /// <remarks>
+    /// The fifteen are a deliberate SELECTION — the circle's signatures from seven flats to
+    /// seven sharps — not the grammar's vocabulary: <c>key</c> takes any pitch base
+    /// (<c>key gis major</c> compiles and prints double sharps), and a list of every spelling
+    /// would bury the fifteen a book is actually in. What is NOT written here is the
+    /// signature each row describes: it is asked of the compiler
+    /// (<see cref="LilySharp.Core.Music.KeySpelling.SharpsFor"/>, the count the key engraver
+    /// prints), where until 2026-09-10 it was a hand-typed column beside the names.
+    /// </remarks>
     internal static CompletionList GetKeyTonicCompletions()
     {
-        var tonics = new (string Label, string Detail)[]
+        var tonics = new[]
         {
-            ("c", "0 ♯/♭ (major)"), ("g", "1 ♯"), ("d", "2 ♯"), ("a", "3 ♯"),
-            ("e", "4 ♯"), ("b", "5 ♯"), ("fis", "6 ♯"), ("cis", "7 ♯"),
-            ("f", "1 ♭"), ("bes", "2 ♭"), ("ees", "3 ♭"), ("aes", "4 ♭"),
-            ("des", "5 ♭"), ("ges", "6 ♭"), ("ces", "7 ♭"),
+            "c", "g", "d", "a", "e", "b", "fis", "cis",
+            "f", "bes", "ees", "aes", "des", "ges", "ces",
         };
         return new CompletionList
         {
-            Items = tonics.Select((t, i) => new CompletionItem
+            Items = tonics.Select((tonic, i) =>
             {
-                Label = t.Label,
-                Kind = CompletionItemKind.EnumMember,
-                Detail = $"Tonic — {t.Detail} signature",
-                // Insert the tonic + a space and re-open suggestions, so picking a tonic
-                // lands on `key TONIC ` with the scale list ENUMERATED (nothing pre-filled).
-                InsertTextFormat = InsertTextFormat.Snippet,
-                InsertText = $"{t.Label} $0",
-                Command = new Command { Title = "Suggest scale", CommandIdentifier = "editor.action.triggerSuggest" },
-                SortText = i.ToString("D2"),
+                int sharps = LilySharp.Core.Music.KeySpelling.SharpsFor(tonic, "major") ?? 0;
+                string signature = sharps == 0 ? "0 ♯/♭ (major)"
+                    : $"{Math.Abs(sharps)} {(sharps > 0 ? "♯" : "♭")}";
+                return new CompletionItem
+                {
+                    Label = tonic,
+                    Kind = CompletionItemKind.EnumMember,
+                    Detail = $"Tonic — {signature} signature",
+                    // Insert the tonic + a space and re-open suggestions, so picking a tonic
+                    // lands on `key TONIC ` with the scale list ENUMERATED (nothing pre-filled).
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = $"{tonic} $0",
+                    Command = new Command { Title = "Suggest scale", CommandIdentifier = "editor.action.triggerSuggest" },
+                    SortText = i.ToString("D2"),
+                };
             }).ToArray()
         };
     }
 
-    // The key modes. Picking a tonic re-opens suggestions (Command) so these modes
-    // enumerate right after `key TONIC ` — nothing is pre-filled.
-    private static readonly (string Label, string Detail)[] KeyModes =
+    // Prose per key mode. Membership decides NOTHING — the words and their order come from
+    // the compiler (LanguageVocabulary.KeyModes = SyntaxFacts.KeyModeVocabulary, the list
+    // the parser tests and its "Unknown mode" message spells). Until 2026-09-10 this table
+    // WAS the list, the third copy of the nine after the parser's kind checks and its
+    // message. Picking a tonic re-opens suggestions (Command) so the modes enumerate right
+    // after `key TONIC ` — nothing is pre-filled.
+    private static readonly System.Collections.Generic.Dictionary<string, string> KeyModeDetails = new()
     {
-        ("major", "Major (ionian)"),
-        ("minor", "Natural minor (aeolian): major − 3 sharps"),
-        ("ionian", "Ionian (= major)"),
-        ("dorian", "Dorian: major − 2 sharps"),
-        ("phrygian", "Phrygian: major − 4 sharps"),
-        ("lydian", "Lydian: major + 1 sharp"),
-        ("mixolydian", "Mixolydian: major − 1 sharp"),
-        ("aeolian", "Aeolian (= minor)"),
-        ("locrian", "Locrian: major − 5 sharps"),
+        ["major"] = "Major (ionian)",
+        ["minor"] = "Natural minor (aeolian): major − 3 sharps",
+        ["ionian"] = "Ionian (= major)",
+        ["dorian"] = "Dorian: major − 2 sharps",
+        ["phrygian"] = "Phrygian: major − 4 sharps",
+        ["lydian"] = "Lydian: major + 1 sharp",
+        ["mixolydian"] = "Mixolydian: major − 1 sharp",
+        ["aeolian"] = "Aeolian (= minor)",
+        ["locrian"] = "Locrian: major − 5 sharps",
     };
 
-    /// <summary>The modes valid after <c>key TONIC</c> — nothing else fits there.</summary>
+    /// <summary>The modes valid after <c>key TONIC</c> — nothing else fits there — read
+    /// from the compiler, in its order.</summary>
     internal static CompletionList GetKeyModeCompletions()
     {
         return new CompletionList
         {
-            Items = KeyModes.Select((m, i) => new CompletionItem
+            Items = LanguageVocabulary.KeyModes.Select((m, i) => new CompletionItem
             {
-                Label = m.Label,
+                Label = m,
                 Kind = CompletionItemKind.EnumMember,
-                Detail = m.Detail,
+                Detail = KeyModeDetails.TryGetValue(m, out var d) ? d : null,
                 SortText = i.ToString(),
             }).ToArray()
         };
@@ -2471,6 +2634,14 @@ public sealed partial class LilySharpLanguageServer
                 // `partial` is likewise NOT offered here — a pickup belongs to a section, not
                 // the piece (LYS1024); it appears in the section-level list instead.
                 new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "override $0", Detail = "Override grob property (global default)", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } },
+                // Three top-level items the list had no row for until 2026-09-10 (the
+                // completion audit): the file-default transpose (GRAMMAR TransposeDecl,
+                // ParseTopLevelTranspose), the multi-file include (ParseUsingDirective /
+                // UsingExpander) and the drum-table overrides (ParseDrummapDeclaration).
+                // `transpose` is a singleton like `octave`; the other two may recur.
+                new CompletionItem { Label = "transpose", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "transpose $0", Detail = "File-default transpose target pitch, e.g. `transpose d` — every part that sets no transpose of its own" },
+                new CompletionItem { Label = "using", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "using \"$0\"", Detail = "Include another .lys file: its parts, sections and tracks join this file's (top level only)" },
+                new CompletionItem { Label = "drummap", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "drummap {\n\t${1:hh}: position ${2:6} notehead ${3:x}\n}", Detail = "Override the drum table for a kit name: position (staff line), notehead, midi, mark" },
                 ScoreTemplateItem(
                     "template-twinkle",
                     "template scoretemplate score twinkle new",
@@ -2528,7 +2699,7 @@ public sealed partial class LilySharpLanguageServer
     /// (title/composer/font/paper) and the piece-wide defaults (time/key/tempo/octave).
     /// Completion drops them once present; duplicable keywords are NOT listed here.</summary>
     private static readonly System.Collections.Generic.HashSet<string> GlobalSingletonKeywords =
-        new(StringComparer.Ordinal) { "title", "composer", "fonts", "paper", "tempo", "time", "key", "octave", "pitch", "marks" };
+        new(StringComparer.Ordinal) { "title", "composer", "fonts", "paper", "tempo", "time", "key", "octave", "pitch", "marks", "transpose" };
 
     /// <summary>True when <paramref name="keyword"/> appears as a whole word at the GLOBAL
     /// scope (brace depth 0) in live code — not inside a block, a string, or a comment.</summary>
@@ -2669,6 +2840,8 @@ public sealed partial class LilySharpLanguageServer
             new CompletionItem { Label = "pageBreak", Kind = CompletionItemKind.Keyword, InsertText = "pageBreak", Detail = "Force a page break here (LilyPond \\pageBreak; breaks the line too)", SortText = "4pagebreak" },
             new CompletionItem { Label = "noPageBreak", Kind = CompletionItemKind.Keyword, InsertText = "noPageBreak", Detail = "Forbid a page break here (LilyPond \\noPageBreak)", SortText = "4nopagebreak" },
         });
+        // The navigation marks are music items in drum music as in pitched music.
+        items.AddRange(NavigationMarkItems("5"));
         // voice { } is only meaningful directly in the part's music —
         // NESTED voice blocks silently become parallel siblings (verified),
         // so the snippet is withheld inside a voice wrapper.
@@ -2681,7 +2854,10 @@ public sealed partial class LilySharpLanguageServer
     /// <paramref name="keySharps"/>, the key the diatonic chord rows are built on —
     /// <see cref="CurrentKey"/>). Defaults to C so a caller that only knows the
     /// signature still gets the rows of that signature's C-rooted scale.</param>
-    internal static CompletionList GetMusicCompletions(string word, int keySharps, bool contracted = false, bool insideVoice = false, char keyTonic = 'c')
+    /// <param name="phraseNames">The document's declared <c>phrase NAME</c>s, offered as
+    /// references (GRAMMAR PhraseRef); none when the caller has no document.</param>
+    internal static CompletionList GetMusicCompletions(string word, int keySharps, bool contracted = false, bool insideVoice = false, char keyTonic = 'c',
+        IEnumerable<string>? phraseNames = null)
     {
         var items = new System.Collections.Generic.List<CompletionItem>();
 
@@ -2786,12 +2962,31 @@ public sealed partial class LilySharpLanguageServer
         }
         items.AddRange(degreeRows);
 
+        // The document's phrases, as references — a phrase reference is a music item
+        // (GRAMMAR PhraseRef: the bare name, `'` / `,` shifting whole octaves). Right after
+        // the chord rows, in declaration order. Absent until 2026-09-10.
+        if (phraseNames is not null)
+        {
+            int p = 0;
+            foreach (string name in phraseNames)
+                items.Add(new CompletionItem
+                {
+                    Label = name,
+                    Kind = CompletionItemKind.Reference,
+                    Detail = "Phrase reference — plays the phrase here (' / , shift it an octave)",
+                    SortText = "0zp" + (p++).ToString("D2"),
+                });
+        }
+
         items.AddRange(new[]
         {
                 // Rests
                 new CompletionItem { Label = "r", Kind = CompletionItemKind.Value, Detail = "Rest", SortText = "1r" },
                 new CompletionItem { Label = "s", Kind = CompletionItemKind.Value, Detail = "Spacer rest (invisible)", SortText = "1s" },
                 new CompletionItem { Label = "R", Kind = CompletionItemKind.Value, Detail = "Full-measure rest", SortText = "1R" },
+                // `q` repeats the previous chord (Parser.Music ParseChordRepetition; LilyPond's
+                // q). Offered beside the rests as the other pitchless item a bar is built of.
+                new CompletionItem { Label = "q", Kind = CompletionItemKind.Value, Detail = "Repeat the previous chord (q4; q' an octave up)", SortText = "1q" },
 
                 // Structures. ⚠️ NO `|: :|` and NO `[1. …]` here: repeat structure is written
                 // in a `form { … }` and nowhere else since 2026-08-31 (LYS1034 — a `|:` in
@@ -2807,6 +3002,9 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "grace", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "grace { $0 }", Detail = "Grace notes", SortText = "2grace" },
                 new CompletionItem { Label = "acciaccatura", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "acciaccatura { $0 }", Detail = "Slashed grace note", SortText = "2acciaccatura" },
                 new CompletionItem { Label = "appoggiatura", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "appoggiatura { $0 }", Detail = "Unslashed grace note", SortText = "2appoggiatura" },
+                // A cue is a REGION (GRAMMAR Cue: `cue [CLEF] { … }`), not a note
+                // annotation — the popup had no row for it until 2026-09-10.
+                new CompletionItem { Label = "cue", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "cue { $0 }", Detail = "Cue notes (small; LilyPond CueVoice) — `cue bass { … }` writes them in the quoted instrument's clef", SortText = "2cue" },
                 new CompletionItem { Label = "break", Kind = CompletionItemKind.Keyword, InsertText = "break", Detail = "Force a line/system break here", SortText = "2break" },
                 new CompletionItem { Label = "noBreak", Kind = CompletionItemKind.Keyword, InsertText = "noBreak", Detail = "Forbid a line break here (LilyPond \\noBreak)", SortText = "2nobreak" },
                 new CompletionItem { Label = "pageBreak", Kind = CompletionItemKind.Keyword, InsertText = "pageBreak", Detail = "Force a page break here (LilyPond \\pageBreak; breaks the line too)", SortText = "2pagebreak" },
@@ -2830,6 +3028,12 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "revert", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "revert $0", Detail = "Revert grob property", SortText = "4revert", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "once override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "once override $0", Detail = "One-time override", SortText = "4once", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } }
         });
+
+        // The navigation marks — the same bare words a form takes (GRAMMAR §8.1: "NavMark is
+        // the SAME bare token in a section's music as in a form"). GetArticulationCompletions
+        // has said since the '@' form was refused that they "come from the music / form
+        // completions", and the form's list had them; this one did not, until 2026-09-10.
+        items.AddRange(NavigationMarkItems("5"));
 
         // Parallel voices (voice { } voice { }): only meaningful directly in the
         // part's music — nested voice blocks silently become siblings — so the
@@ -3157,6 +3361,15 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "ottava(bassa)", Kind = CompletionItemKind.Value, Detail = "Ottava bracket down (8vb) - ends at @!ottava", SortText = "4ottava.bassa" },
                 new CompletionItem { Label = "quindicesima", Kind = CompletionItemKind.Value, Detail = "Quindicesima bracket up (15ma) - ends at @!ottava", SortText = "4quindicesima" },
                 new CompletionItem { Label = "quindicesima(bassa)", Kind = CompletionItemKind.Value, Detail = "Quindicesima bracket down (15mb) - ends at @!ottava", SortText = "4quindicesima.bassa" },
+                // The printed spellings, which the compiler reads as the same four marks
+                // (MusicMarkItem.ParseMarkName; `8va` lexes as ONE identifier —
+                // Lexer.GluedOttavaSuffixLength). Offered beside the long names as `ho` stands
+                // beside `hammerOn`. Until 2026-09-10 "8va" was only a search term that
+                // reached `ottava`: typing it found the row and nothing inserted it.
+                new CompletionItem { Label = "8va", Kind = CompletionItemKind.Value, Detail = "Ottava bracket up - the printed spelling of @ottava; ends at @!8va", SortText = "4ottava.8va" },
+                new CompletionItem { Label = "8vb", Kind = CompletionItemKind.Value, Detail = "Ottava bracket down - the printed spelling of @ottava(bassa); ends at @!8vb", SortText = "4ottava.bassa.8vb" },
+                new CompletionItem { Label = "15ma", Kind = CompletionItemKind.Value, Detail = "Quindicesima bracket up - the printed spelling of @quindicesima; ends at @!15ma", SortText = "4quindicesima.15ma" },
+                new CompletionItem { Label = "15mb", Kind = CompletionItemKind.Value, Detail = "Quindicesima bracket down - the printed spelling of @quindicesima(bassa); ends at @!15mb", SortText = "4quindicesima.bassa.15mb" },
                 // One word per end, as in LilyPond. (The '@trillSpan(start)'
                 // spelling was a second way to say the same thing; it is gone.)
                 new CompletionItem { Label = "startTrillSpan", Kind = CompletionItemKind.Value, Detail = "Start trill spanner", SortText = "4startTrillSpan" },
@@ -3176,6 +3389,10 @@ public sealed partial class LilySharpLanguageServer
                 // Notation marks
                 new CompletionItem { Label = "glissando", Kind = CompletionItemKind.Value, Detail = "Glissando to next note", SortText = "6glissando" },
                 new CompletionItem { Label = "arpeggio", Kind = CompletionItemKind.Value, Detail = "Arpeggiate chord", SortText = "6arpeggio" },
+                // The non-arpeggiated bracket (AnnotationValues.IsArpeggioBracket; the twin's
+                // \nonArpeggiato). The one argument the family takes, so a row rather than
+                // a stub — the `ottava(bassa)` shape.
+                new CompletionItem { Label = "arpeggio(bracket)", Kind = CompletionItemKind.Value, Detail = "Chord bracket — play the notes together, not arpeggiated (LilyPond \\nonArpeggiato)", SortText = "6arpeggio.bracket" },
                 new CompletionItem { Label = "courtesy", Kind = CompletionItemKind.Value, Detail = "Force courtesy accidental", SortText = "6courtesy" },
                 new CompletionItem { Label = "editorial", Kind = CompletionItemKind.Value, Detail = "Editorial (suggestion) accidental above the note", SortText = "6editorial" },
                 new CompletionItem { Label = "cross", Kind = CompletionItemKind.Value, Detail = "Cross-staff note (moves to the other staff of the pair)", SortText = "6cross" },
@@ -3305,13 +3522,17 @@ public sealed partial class LilySharpLanguageServer
         ]
     };
 
-    /// <summary>String bend amounts, inside <c>@bend(…)</c>.</summary>
+    /// <summary>String bend amounts, inside <c>@bend(…)</c>: the two words, then the
+    /// semitone count the reader also takes (<c>AnnotationValues.Bend</c>: 1..12) for the
+    /// wider bends the words cannot spell.</summary>
     internal static CompletionList GetBendCompletions() => new()
     {
         Items =
         [
             Argument("half", "Bend up a semitone", 0),
             Argument("full", "Bend up a whole tone", 1),
+            Argument("3", "Bend up three semitones (any count 1..12 is taken)", 2),
+            Argument("4", "Bend up two whole tones", 3),
         ]
     };
 
@@ -3344,7 +3565,9 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>
     /// Feathered-beam directions, inside <c>@feather(…)</c>. The beam opens
-    /// toward the side named, so right = getting faster.
+    /// toward the side named, so right = getting faster; the reader takes the tempo
+    /// words as synonyms (<c>AnnotationValues.Feather</c>: accel = right, rit = left),
+    /// offered second.
     /// </summary>
     internal static CompletionList GetFeatherCompletions() => new()
     {
@@ -3352,6 +3575,8 @@ public sealed partial class LilySharpLanguageServer
         [
             Argument("right", "Opening right — accelerando", 0),
             Argument("left", "Opening left — ritardando", 1),
+            Argument("accel", "Accelerando — the same beam as right", 2),
+            Argument("rit", "Ritardando — the same beam as left", 3),
         ]
     };
 
@@ -3381,6 +3606,230 @@ public sealed partial class LilySharpLanguageServer
                 : $"Tab string {n}" + (n == 4 ? " — a 4-string bass's lowest" : n == 6 ? " — a guitar's lowest" : ""),
             SortText = n.ToString(),
         }).ToArray()
+    };
+
+    // ========== The rows the 2026-09-10 completion audit added ==========
+    // (session 363 audited the popup against GRAMMAR.md, the lexer and the reader tables;
+    // session 364 filled the gaps it named. Each list below is compiled in its position by
+    // CompletionAuditTests.)
+
+    // Prose per navigation mark. Membership decides nothing — the spellings come from the
+    // compiler (LanguageVocabulary.NavigationMarks); one this table has not heard of ships
+    // with a generic description.
+    private static readonly System.Collections.Generic.Dictionary<string, string> NavigationMarkDetails = new(StringComparer.Ordinal)
+    {
+        ["segno"] = "Segno (jump target)",
+        ["coda"] = "Coda (jump target)",
+        ["to coda"] = "Jump to the coda",
+        ["fine"] = "End here",
+        ["dc"] = "Da Capo — repeat from the top",
+        ["ds"] = "Dal Segno — repeat from the segno",
+        ["dc al fine"] = "Da Capo al Fine",
+        ["dc al coda"] = "Da Capo al Coda",
+        ["ds al fine"] = "Dal Segno al Fine",
+        ["ds al coda"] = "Dal Segno al Coda",
+    };
+
+    /// <summary>The navigation marks as keyword items, in the compiler's order, sorted
+    /// under <paramref name="sortPrefix"/> — one list for the form popup and the two music
+    /// popups (GRAMMAR §8.1: the same bare token in both).</summary>
+    private static IEnumerable<CompletionItem> NavigationMarkItems(string sortPrefix)
+        => LanguageVocabulary.NavigationMarks.Select((mark, i) => new CompletionItem
+        {
+            Label = mark,
+            InsertText = mark,
+            FilterText = mark,
+            Kind = CompletionItemKind.Keyword,
+            Detail = NavigationMarkDetails.TryGetValue(mark, out var d) ? d : "Navigation mark",
+            SortText = $"{sortPrefix}{i:D2}",
+        });
+
+    /// <summary>The names declared as <c>KEYWORD name {</c> in the document, in order,
+    /// deduplicated — the same scan <see cref="GetDeclaredNameCompletions"/> makes, as
+    /// names.</summary>
+    internal static IReadOnlyList<string> DeclaredNamesOf(string text, string keyword)
+    {
+        var names = new System.Collections.Generic.List<string>();
+        var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+        foreach (Match m in DeclaredNameRegex().Matches(text))
+            if (m.Groups[1].Value == keyword && seen.Add(m.Groups[2].Value))
+                names.Add(m.Groups[2].Value);
+        return names;
+    }
+
+    /// <summary>
+    /// The render items, then the document's parts as BARE items — "a bare part name renders
+    /// that part to MIDI only: played and not engraved" (GRAMMAR §7; ParseMidiPartRender).
+    /// The one score item that starts with no keyword, so no keyword row could reach it.
+    /// </summary>
+    internal static CompletionList WithMidiOnlyParts(CompletionList renderItems, string text)
+    {
+        var items = new System.Collections.Generic.List<CompletionItem>(renderItems.Items);
+        int i = 0;
+        foreach (string part in DeclaredNamesOf(text, "part"))
+            items.Add(new CompletionItem
+            {
+                Label = part,
+                Kind = CompletionItemKind.Reference,
+                Detail = "MIDI only — this part is played, never engraved (a click or cue track beside the staves)",
+                SortText = "9z" + (i++).ToString("D2"),
+            });
+        return new CompletionList { Items = items.ToArray() };
+    }
+
+    /// <summary>
+    /// After <c>staff</c> / <c>ossia</c>: the declared parts, then the five clefs that may
+    /// stand before one (<c>staff bass melody</c> — ParseStaffRender: "a clef keyword
+    /// followed by a part name is an override"). A clef row inserts the word and re-opens
+    /// the popup on the parts.
+    /// </summary>
+    internal static CompletionList GetStaffRefCompletions(string text)
+    {
+        var items = new System.Collections.Generic.List<CompletionItem>(
+            GetDeclaredNameCompletions(text, "part", "Part").Items);
+        items.AddRange(ClefBeforePartItems());
+        return new CompletionList { Items = items.ToArray() };
+    }
+
+    private static IEnumerable<CompletionItem> ClefBeforePartItems()
+        => GetClefCompletions(inPartHeader: false).Items.Select(c => new CompletionItem
+        {
+            Label = c.Label,
+            Kind = CompletionItemKind.EnumMember,
+            InsertTextFormat = InsertTextFormat.Snippet,
+            InsertText = c.Label + " $0",
+            Detail = "Clef for this staff, before the part name — " + c.Detail,
+            SortText = "5" + c.SortText,
+            Command = new Command { Title = "Suggest part name", CommandIdentifier = "editor.action.triggerSuggest" },
+        });
+
+    /// <summary>
+    /// After <c>staff CLEF</c> / <c>ossia CLEF</c>: the parts (the clef was the override),
+    /// then the selectors — because four of the five clef words are legal part names, and
+    /// <c>staff bass</c> may already be complete.
+    /// </summary>
+    internal static CompletionList GetStaffClefRefCompletions(string text)
+    {
+        var items = new System.Collections.Generic.List<CompletionItem>(
+            GetDeclaredNameCompletions(text, "part", "Part").Items);
+        foreach (var it in StaffSelectorItems("as "))
+        {
+            it.SortText = "9" + (it.SortText ?? "");
+            items.Add(it);
+        }
+        return new CompletionList { Items = items.ToArray() };
+    }
+
+    /// <summary>
+    /// After <c>tab</c>: the declared parts, then the tunings that may stand before one
+    /// (<c>tab drop-d melody</c> — ParseTabRender; the names are
+    /// <see cref="LanguageVocabulary.TuningNames"/>, the part header's <c>tuning</c>
+    /// vocabulary). A tuning row inserts the word and re-opens the popup on the parts.
+    /// </summary>
+    internal static CompletionList GetTabRefCompletions(string text)
+    {
+        var items = new System.Collections.Generic.List<CompletionItem>(
+            GetDeclaredNameCompletions(text, "part", "Part").Items);
+        int i = 0;
+        foreach (string tuning in LanguageVocabulary.TuningNames)
+            items.Add(new CompletionItem
+            {
+                Label = tuning,
+                Kind = CompletionItemKind.EnumMember,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = tuning + " $0",
+                Detail = "Tuning for this tab, before the part name (overrides the part's own)",
+                SortText = "5" + (i++).ToString("D2"),
+                Command = new Command { Title = "Suggest part name", CommandIdentifier = "editor.action.triggerSuggest" },
+            });
+        return new CompletionList { Items = items.ToArray() };
+    }
+
+    /// <summary>
+    /// At <c>score NAME |</c>, before the brace: the header's options
+    /// (ParseRenderDeclaration — a quoted output basename, <c>transpose PITCH</c>,
+    /// <c>pitch MODE</c>) and the body's braces. Until 2026-09-10 the caret there fell to the
+    /// top-level list.
+    /// </summary>
+    internal static CompletionList GetScoreHeaderCompletions() => new()
+    {
+        Items =
+        [
+            new CompletionItem
+            {
+                Label = "{ }",
+                FilterText = "{",
+                Kind = CompletionItemKind.Snippet,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = "{\n\t$0\n}",
+                Detail = "The score body — staff / chords / lyrics rows and staff groups",
+                SortText = "0",
+                Preselect = true,
+                Command = new Command { Title = "Suggest render item", CommandIdentifier = "editor.action.triggerSuggest" },
+            },
+            new CompletionItem
+            {
+                Label = "\"\"",
+                FilterText = "basename",
+                Kind = CompletionItemKind.Snippet,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = "\"$0\"",
+                Detail = "Output basename for this score's files (the extension is the CLI's)",
+                SortText = "1",
+            },
+            new CompletionItem
+            {
+                Label = "transpose",
+                Kind = CompletionItemKind.Keyword,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = "transpose $0",
+                Detail = "This score's transpose target pitch, composed on each part's own (e.g. `transpose bes`)",
+                SortText = "2",
+            },
+            new CompletionItem
+            {
+                Label = "pitch",
+                Kind = CompletionItemKind.Keyword,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = "pitch $0",
+                Detail = $"How THIS score prints transposing parts ({string.Join(" | ", LanguageVocabulary.PitchModes)}) — a conductor's concert score",
+                SortText = "3",
+                Command = new Command { Title = "Suggest pitch mode", CommandIdentifier = "editor.action.triggerSuggest" },
+            },
+        ]
+    };
+
+    /// <summary>At <c>transpose |</c>: a pitch belongs there, which no list can offer — an
+    /// empty list, so the popup does not propose the position's keywords.</summary>
+    private static readonly CompletionList _transposePitchCompletions = new() { Items = [] };
+
+    internal static CompletionList GetTransposePitchCompletions() => _transposePitchCompletions;
+
+    /// <summary>
+    /// Inside a lyrics BODY: the verse headers (ParseLyricVolta — <c>[N. … ]</c>,
+    /// <c>[N-M. … ]</c>, <c>[N,M. … ]</c>, and <c>[~N. … ]</c> hiding the stanza number).
+    /// Syllables are typed, not completed, so this is the whole list.
+    /// </summary>
+    internal static CompletionList GetLyricVoltaCompletions() => new()
+    {
+        Items =
+        [
+            Verse("[1. ]", "[1. $0]", "Words for the 1st time through (a verse header; the number prints)", "0"),
+            Verse("[2. ]", "[2. $0]", "Words for the 2nd time through", "1"),
+            Verse("[1-2. ]", "[${1:1-2}. $0]", "Words for a range of passes, e.g. [1-2. …] or [1,3. …]", "2"),
+            Verse("[~1. ]", "[~${1:1}. $0]", "Words for the Nth pass with the stanza number hidden", "3"),
+        ]
+    };
+
+    private static CompletionItem Verse(string label, string insert, string detail, string sort) => new()
+    {
+        Label = label,
+        Kind = CompletionItemKind.Snippet,
+        InsertTextFormat = InsertTextFormat.Snippet,
+        InsertText = insert,
+        Detail = detail,
+        SortText = sort,
+        FilterText = label,
     };
 
 }

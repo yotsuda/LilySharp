@@ -103,10 +103,16 @@ internal static class PaperPlanReader
 
     private static readonly string[] Units = ["mm", "cm", "in"];
 
+    /// <summary>The one key that names a whole page (<c>size jisb5</c> / <c>size "…"</c>):
+    /// neither a scalar, a flag nor a spacing block, so it stands outside the three tables.
+    /// Spelled here once — the reader's comparisons, the message and the completion all read
+    /// it (the editor's <c>size</c> row was the last hand-written paper key, 2026-09-10).</summary>
+    internal const string SizeKey = "size";
+
     /// <summary>Every key a <c>paper { }</c> entry can be spelled with, for messages
     /// and for completion.</summary>
     internal static IReadOnlyList<string> AllKeySpellings() =>
-        ["size", .. ScalarKeys, .. FlagKeys, .. SpecKeys];
+        [SizeKey, .. ScalarKeys, .. FlagKeys, .. SpecKeys];
 
     /// <summary>The scalar length keys alone — the completion inserts these with a
     /// number position, unlike a flag or a spacing block.</summary>
@@ -230,7 +236,7 @@ internal static class PaperPlanReader
             string? key = Canonical(entry.Key, ScalarKeys)
                 ?? Canonical(entry.Key, SpecKeys)
                 ?? Canonical(entry.Key, FlagKeys)
-                ?? (entry.Key.Equals("size", StringComparison.OrdinalIgnoreCase) ? "size" : null);
+                ?? (entry.Key.Equals(SizeKey, StringComparison.OrdinalIgnoreCase) ? SizeKey : null);
             if (key == null)
             {
                 found.Add(new Problem(span, DiagnosticCodes.UnknownPaperKey,
@@ -253,7 +259,7 @@ internal static class PaperPlanReader
             }
             boundKeys[key] = span;
 
-            if (key == "size")
+            if (key == SizeKey)
             {
                 options = ApplySize(options, entry, span, found);
                 continue;

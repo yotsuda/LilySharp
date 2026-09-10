@@ -186,6 +186,82 @@ internal static class SyntaxFacts
     /// (LYS0006) in favour of the form's <c>|: … :|</c>.</remarks>
     public static IReadOnlyList<string> RepeatKindVocabulary { get; } = ["unfold", "percent", "tremolo"];
 
+    /// <summary>The nine modes a <c>key</c> takes (GRAMMAR.md: Mode), in the order the
+    /// parser's "Unknown mode" message names them and the editor offers them after the
+    /// tonic. Published 2026-09-10: the parser tested the nine kinds one by one, the
+    /// message spelled the nine words, and the editor's completion held a third copy.</summary>
+    /// <remarks>
+    /// ⚠️ Declared BEFORE <see cref="KeyModeKinds"/>, which is built from it — static
+    /// initializers run in textual order.
+    /// </remarks>
+    public static IReadOnlyList<string> KeyModeVocabulary { get; } =
+        ["major", "minor", "ionian", "dorian", "phrygian", "lydian", "mixolydian", "aeolian", "locrian"];
+
+    /// <summary>The token kinds the nine mode words lex to — derived, so the predicate below
+    /// can neither accept a kind the list has no word for nor refuse one it names.</summary>
+    private static readonly HashSet<SyntaxKind> KeyModeKinds =
+        [.. KeyModeVocabulary.Select(Parser.Lexer.GetKeywordKind)];
+
+    /// <summary>True for the keyword kind of one of the nine modes — what
+    /// <c>ParseKeySignature</c> accepts after the tonic.</summary>
+    public static bool IsKeyModeKeyword(SyntaxKind kind) => KeyModeKinds.Contains(kind);
+
+    /// <summary>
+    /// The navigation marks (GRAMMAR.md: NavMark) as the writer spells them — the same bare
+    /// words in a <c>form</c> and in a music stream: the two jump targets, the four
+    /// instructions, and the four <c>al</c> forms. Published 2026-09-10 so the two
+    /// completion lists that offer them read one list; until then the form's popup held
+    /// the ten by hand and the music popup, whose grammar takes the same ten, offered none.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A LIST of spellings, not a derivation: <c>ParseNavigationMark</c> is structural
+    /// (a first keyword, then optionally <c>al</c> and a target), so the ten are what that
+    /// structure admits, written out once. NavigationMarkCompletionTests compiles every
+    /// spelling in both positions.
+    /// </remarks>
+    public static IReadOnlyList<string> NavigationMarkVocabulary { get; } =
+        ["segno", "coda", "to coda", "fine", "dc", "ds", "dc al fine", "dc al coda", "ds al fine", "ds al coda"];
+
+    /// <summary>
+    /// The keywords that open a render item in a <c>score { }</c> body (GRAMMAR.md:
+    /// ScoreItem) — every branch of <c>ParseRenderItem</c> but the bare MIDI-only part name,
+    /// which has no keyword. In the order the editor offers them: the staff and its groups,
+    /// the other rows, then the score's own header and references.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A LIST of spellings, like <see cref="NavigationMarkVocabulary"/>: the parser
+    /// dispatches on token kinds and cannot be asked for its branches. What holds the list to
+    /// the parser is DocKeywordListTests, which asks every reserved word one at a time whether
+    /// a score body gives it a branch and compares the answer with this list in both
+    /// directions. Published 2026-09-10 (session 365): the editor's score-body popup was a
+    /// hand-written copy of the fifteen, the shape that had drifted for the clefs and the part
+    /// properties.
+    /// </remarks>
+    public static IReadOnlyList<string> ScoreItemKeywordVocabulary { get; } =
+    [
+        "staff", "grandStaff", "staffGroup", "choirStaff", "condensedStaff", "combinedStaff",
+        "tab", "ossia", "chords", "lyrics",
+        "title", "composer", "fonts", "paper", "marks",
+    ];
+
+    /// <summary>
+    /// The directives a <c>section { }</c> may carry beside (or instead of) its part cells
+    /// (GRAMMAR.md: SectionSetting, plus the section-scoped OverrideDecl) — the words the
+    /// parser's stray-item message names and the editor offers in a section header. In the
+    /// order a writer reaches for them: the pickup, then the section-wide key / time / tempo,
+    /// then the grob override.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE FIVE ARE THE WHOLE LIST (GRAMMAR.md §SectionItem): a setting that belongs to ONE
+    /// part — clef, instrument, transpose, octave — is refused here (LYS1035 / LYS0030).
+    /// <c>revert</c> and <c>once</c> parse in a section and are then refused by a validator
+    /// (they belong in a music stream), so they are not in this list. Published 2026-09-10
+    /// (session 365): the parser's message and the editor's section-header list each spelled
+    /// the five by hand.
+    /// </remarks>
+    public static IReadOnlyList<string> SectionSettingVocabulary { get; } =
+        ["partial", "key", "time", "tempo", "override"];
+
     /// <summary>
     /// The token kinds that can spell a PART NAME: a plain identifier, or one of the four
     /// clef words, which are legal part names (<c>part bass { … }</c>).

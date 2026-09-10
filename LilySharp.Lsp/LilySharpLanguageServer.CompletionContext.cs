@@ -394,6 +394,69 @@ public sealed partial class LilySharpLanguageServer
     private static bool IsInsideTopLevelLyricsBlock(List<OpenBlock> stack)
         => stack.Count == 1 && FrameKeyword(stack[0].Frame) == "lyrics";
 
+    /// <summary>A frame opened by a lyrics track: <c>lyrics {</c> / <c>lyrics w {</c>
+    /// (the keyword is the frame's Name or Prefix), or <c>lyrics w sings m {</c> — where the
+    /// two words before the brace are the <c>sings</c> clause, the track's other spelling
+    /// (the same reading the <c>repeat</c> guard uses).</summary>
+    private static bool IsLyricsFrame(BlockFrame f)
+        => FrameKeyword(f) == "lyrics" || f.Prefix == "sings";
+
+    /// <summary>
+    /// True inside a lyrics BODY at any depth but the top-level track's own: the innermost
+    /// frame is a lyrics block nested in something (<c>section A { lyrics w { |</c>), or it
+    /// is a <c>section</c> whose enclosing frame is a lyrics track (<c>lyrics w { section A
+    /// { |</c>). The one-frame case is the top-level track, which holds sections rather
+    /// than syllables and has its own context.
+    /// </summary>
+    private static bool IsInsideLyricsBody(List<OpenBlock> stack)
+    {
+        if (stack.Count < 2)
+            return false;
+        if (IsLyricsFrame(stack[^1].Frame))
+            return true;
+        return FrameKeyword(stack[^1].Frame) == "section" && IsLyricsFrame(stack[^2].Frame);
+    }
+
+    /// <summary>
+    /// True when the caret sits in a score HEADER — on a line that opens with <c>score</c>
+    /// and a form name and has not reached its <c>{</c>: <c>score main |</c>,
+    /// <c>score main "out" |</c>, <c>score main transpose d |</c>. Line-scoped, like the
+    /// override-value scan: a header is one line in every book in the tree.
+    /// </summary>
+    internal static bool IsScoreHeaderPosition(string text, int offset)
+    {
+        int lineStart = Math.Min(offset, text.Length);
+        while (lineStart > 0 && text[lineStart - 1] != '\n') lineStart--;
+        // Everything before the partial word under the caret.
+        int end = Math.Min(offset, text.Length);
+        while (end > lineStart && (char.IsLetterOrDigit(text[end - 1]) || text[end - 1] is '_' or '-')) end--;
+        string line = text[lineStart..end];
+        if (line.Contains('{') || line.Contains('}'))
+            return false;
+        // Tokens: bare words and whole "quoted" strings.
+        var tokens = new List<string>();
+        for (int i = 0; i < line.Length;)
+        {
+            char c = line[i];
+            if (char.IsWhiteSpace(c)) { i++; continue; }
+            int start = i;
+            if (c == '"')
+            {
+                i++;
+                while (i < line.Length && line[i] != '"') i++;
+                if (i < line.Length) i++;
+            }
+            else
+            {
+                while (i < line.Length && !char.IsWhiteSpace(line[i])) i++;
+            }
+            tokens.Add(line[start..i]);
+        }
+        // An option's own value slot (`pitch |`, `transpose |`) is answered by that option's
+        // context, not by the header list.
+        return tokens.Count >= 2 && tokens[0] == "score" && tokens[^1] is not ("pitch" or "transpose");
+    }
+
     private static bool IsInsideTopLevelSectionBody(List<OpenBlock> stack)
         => stack.Count == 1 && FrameKeyword(stack[0].Frame) == "section";
 
@@ -466,7 +529,34 @@ public sealed partial class LilySharpLanguageServer
         AfterRepeat,
         AfterAt,
         AfterBackslash,
-        AfterArticulationPlacement
+        AfterArticulationPlacement,
+        /// <summary><c>score NAME |</c> — before the brace: the header's options (a quoted
+        /// basename, <c>transpose</c>, <c>pitch</c>) and the body's braces.</summary>
+        AfterScoreHeader,
+        /// <summary><c>transpose |</c> — a pitch is typed there, which no list serves.</summary>
+        AfterTransposePitch,
+        /// <summary><c>tab |</c> in a score: the declared parts, and the tunings that may
+        /// stand before one (<c>tab bass5 melody</c>).</summary>
+        AfterTabRef,
+        /// <summary><c>tab TUNING |</c>: a tuning was written, so the part name comes next
+        /// (or, the word being a legal part name itself — <c>bass</c> is both — the style
+        /// selector).</summary>
+        AfterTabTuningRef,
+        /// <summary><c>tab NAME |</c> / <c>tab TUNING NAME |</c>: after the part name, the
+        /// <c>as numbers|full</c> style selector, then the score's continuations — the tab
+        /// sibling of <see cref="AfterStaffAttachName"/>.</summary>
+        AfterTabAttachName,
+        /// <summary><c>staff CLEF |</c> / <c>ossia CLEF |</c>: a clef was written, so the
+        /// part name comes next (or, the word being a legal part name itself, the
+        /// selectors).</summary>
+        AfterStaffClefRef,
+        /// <summary>Inside <c>condensedStaff { }</c> / <c>combinedStaff { }</c>: bare part
+        /// names and nothing else (a clef or a <c>staff</c> item is LYS6004 / LYS6006).</summary>
+        BarePartNameList,
+        /// <summary>Inside a lyrics BODY — a section-major <c>lyrics NAME { | }</c> cell or a
+        /// part-major track's inner <c>section A { | }</c>: syllables are typed, and the one
+        /// construct worth completing is the verse header <c>[N. … ]</c>.</summary>
+        LyricsBody
     }
 
     /// <summary>
@@ -631,6 +721,10 @@ public sealed partial class LilySharpLanguageServer
                 case "override": return CompletionContext.AfterOverride;
                 // `revert |`: the same targets, without a value (revert Grob.property).
                 case "revert": return CompletionContext.AfterRevert;
+                // `transpose |` — at the top level, in a part header and on a score header
+                // alike a PITCH follows (`transpose bes,`), which no list can offer; an
+                // empty list keeps the popup from proposing the position's keywords there.
+                case "transpose": return CompletionContext.AfterTransposePitch;
             }
 
             // `override [once] Grob.property = |` → the values that fit the property
@@ -714,6 +808,14 @@ public sealed partial class LilySharpLanguageServer
 
         if (IsPitchName(prevWord) && SecondWordBeforeCursor(text, offset) == "key")
             return CompletionContext.AfterKeyTonic;
+
+        // `score NAME |` — the header, before its brace: the caret is at the top level
+        // (the block stack is empty) on a line that opens with `score` and has not yet
+        // reached `{`. The options are a quoted basename, `transpose PITCH` and
+        // `pitch MODE` (ParseRenderDeclaration); `pitch |` itself was answered above.
+        if (scan.Stack.Count == 0 && !IsInsideStringLiteral(text, offset)
+            && IsScoreHeaderPosition(text, offset))
+            return CompletionContext.AfterScoreHeader;
 
         // Right after the `instrument` part property only the known instrument presets
         // are valid — offer those alone (they set clef/octave/tuning defaults). Unlike
@@ -801,9 +903,9 @@ public sealed partial class LilySharpLanguageServer
             switch (prevWord)
             {
                 case "staff": return CompletionContext.AfterStaffRef;
-                // `tab` references a part too (an optional tuning may precede the
-                // name, but the part is the useful suggestion right after `tab`).
-                case "tab": return CompletionContext.AfterStaffRef;
+                // `tab` references a part too, and an optional tuning may precede the
+                // name (`tab drop-d melody`) — its own list, parts and tunings.
+                case "tab": return CompletionContext.AfterTabRef;
                 // `ossia NAME` references a part directly, like `staff`.
                 case "ossia": return CompletionContext.AfterStaffRef;
                 case "chords": return CompletionContext.AfterChordsRef;
@@ -834,6 +936,12 @@ public sealed partial class LilySharpLanguageServer
                         return CompletionContext.AfterRemoveEmpty;
                     break;
             }
+            // `tab TUNING ▮` — a tuning was written (ParseTabRender takes one before the
+            // part), so the part name is what comes next — or, the tuning word being a
+            // legal part name too (`tab bass`), the style selector.
+            if (SecondWordBeforeCursor(text, offset) == "tab"
+                && LanguageVocabulary.TuningNames.Contains(prevWord))
+                return CompletionContext.AfterTabTuningRef;
             // What a staff GROUP's body accepts is narrower than the score's, and the
             // parser says so with its own diagnostics — so the popup must not offer the
             // wider list inside one:
@@ -842,13 +950,19 @@ public sealed partial class LilySharpLanguageServer
             if (scan.Stack.Count > 0)
             {
                 string block = scan.Stack[^1].Frame.Name;
-                // condensedStaff / combinedStaff take BARE PART NAMES only.
+                // condensedStaff / combinedStaff take BARE PART NAMES only — no clef
+                // word before a name, so not the `staff` list.
                 if (IsBarePartNameGroup(block))
-                    return CompletionContext.AfterStaffRef;
+                    return CompletionContext.BarePartNameList;
                 // grandStaff / staffGroup / choirStaff take `staff` items and
                 // `lyrics NAME` verse rows (ParseGrandStaffRender; else LYS6011).
                 if (IsStaffGroupKeyword(block))
                 {
+                    // `staff CLEF ▮` inside the group: the clef was written and the
+                    // part name is next (ParseStaffRender's optional clef).
+                    if (SecondWordBeforeCursor(text, offset) == "staff"
+                        && LanguageVocabulary.ClefNames.Contains(prevWord))
+                        return CompletionContext.AfterStaffClefRef;
                     // `staff NAME ▮` inside the group: a member takes the
                     // `as lines N` selector too, so offer it beside the group's
                     // own NARROW continuations (never the score-wide list —
@@ -863,6 +977,15 @@ public sealed partial class LilySharpLanguageServer
                     return CompletionContext.StaffGroupBlock;
                 }
             }
+            // `tab NAME |` / `tab TUNING NAME |`: after the part name, offer the
+            // `as numbers|full` style selector (plus the normal continuations) — the tab
+            // sibling of the chords and staff rows below. The staff and chords rows had
+            // their `as` continuation and the tab row fell to the plain score list until
+            // 2026-09-10. (`tab TUNING |` was answered above.)
+            if (SecondWordBeforeCursor(text, offset) == "tab"
+                || (ThirdWordBeforeCursor(text, offset) == "tab"
+                    && LanguageVocabulary.TuningNames.Contains(SecondWordBeforeCursor(text, offset))))
+                return CompletionContext.AfterTabAttachName;
             // `chords NAME |`: after the chord row's name, offer the
             // `as roman|names` display selector (plus the normal
             // continuations, so a following render item is not blocked).
@@ -873,6 +996,15 @@ public sealed partial class LilySharpLanguageServer
             // binding the definition does.
             if (SecondWordBeforeCursor(text, offset) == "lyrics")
                 return CompletionContext.AfterLyricsRowAttachName;
+            // `staff CLEF |` / `ossia CLEF |`: a music clef word right after the
+            // keyword is the optional clef override (ParseStaffRender / ParseOssiaRender:
+            // "a clef keyword followed by a part name is an override"), so the part name
+            // is what belongs next. ⚠️ Four of the five are also legal part NAMES
+            // (`staff bass` renders a part called bass), so the selectors stay offered
+            // beside the parts rather than being withheld.
+            if (SecondWordBeforeCursor(text, offset) is "staff" or "ossia"
+                && LanguageVocabulary.ClefNames.Contains(prevWord))
+                return CompletionContext.AfterStaffClefRef;
             // `staff NAME |` / `ossia NAME |`: after the part name, offer the
             // `as lines N` selector (plus the normal continuations), the same
             // shape as the chords row's `as` above.
@@ -904,6 +1036,15 @@ public sealed partial class LilySharpLanguageServer
             && ThirdWordBeforeCursor(text, offset) == "lyrics"
             && !IsInsideStringLiteral(text, offset))
             return CompletionContext.AfterSingsTarget;
+
+        // Inside a lyrics BODY — a section-major `lyrics w { | }` cell, a part-major track's
+        // inner `section A { | }`, a note-bound `lyrics { | }` — syllables are typed, not
+        // completed; the verse header `[N. … ]` is what the popup can offer. Without this
+        // the body fell through to the MusicBlock list and proposed pitches and
+        // articulations at every syllable (2026-09-10). The one-frame case — the top-level
+        // track itself — keeps its section-scaffold list below.
+        if (IsInsideLyricsBody(scan.Stack) && !IsInsideStringLiteral(text, offset))
+            return CompletionContext.LyricsBody;
 
         // Directly inside a top-level `lyrics [name] { }` track (NOT a note-bound section
         // cell like `section A { melody {} lyrics {} }`, and NOT an inner section's syllable

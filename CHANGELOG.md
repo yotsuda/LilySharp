@@ -128,6 +128,38 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **The completion popup names every construct the grammar takes.** An audit of the popup
+  against the grammar found sixteen spellings a book could write that no list offered; they are
+  offered now, each compiled where it is offered. In music: `cue { }`, `q` (repeat the chord),
+  the document's phrase names as references, and the navigation marks (`segno`, `to coda`,
+  `ds al fine`, …) the form list already had. In a section-major section: the `lyrics NAME sings
+  PART { }` and `chords NAME { }` cells. At the top level: `transpose`, `using "file.lys"` and
+  `drummap { }`. On a score header, before its brace: the quoted basename, `transpose` and
+  `pitch`. In a score body: the declared parts as bare MIDI-only items, the five clefs before a
+  `staff` / `ossia` part, the tunings before a `tab` part. In a lyrics body (a section's
+  `lyrics` cell, a track's inner section) the verse headers `[1. ]` `[2. ]` `[1-2. ]` `[~1. ]` —
+  and nothing else: that body fell through to the music list and proposed pitches at every
+  syllable. After `time`: `none`. After `tempo`: the `shuffle` feel beside `swing`. Inside
+  `@feather( )`: `accel` / `rit`; inside `@bend( )`: a semitone count; `@arpeggio(bracket)`.
+  Two lists that were hand-written copies of the compiler's now read it: the nine key modes
+  (`SyntaxFacts.KeyModeVocabulary`, which the parser and its "Unknown mode" message read too)
+  and the override targets (`SupportedGrobOverrides`, the list LYS1029 enforces); the
+  navigation marks and the tempo feel words are published the same way.
+
+- **The tab row completes its style, and the last hand-written completion tables read the
+  compiler.** After `tab NAME` (and `tab TUNING NAME`) the popup offers `as numbers` / `as full`
+  before the next render item, as `staff NAME` offers `as lines` and `chords NAME` offers `as
+  roman`; after `tab bass` — a tuning word that is a legal part name too — the parts and the
+  selector both. The printed ottava spellings `8va` `8vb` `15ma` `15mb`, which the compiler has
+  always read, are rows in the `@` list beside `ottava` / `quindicesima` (before, "8va" only
+  found the `ottava` row). Three lists that were copies now read one vocabulary each: the score
+  body's fifteen render items (`SyntaxFacts.ScoreItemKeywordVocabulary`, held to the parser by
+  the same measurement that checks the grammar's ScoreItem), a section header's five directives
+  (`SyntaxFacts.SectionSettingVocabulary`, which the parser's stray-item message now spells
+  from), and the paper block's `size` key; the signature each `key` tonic row describes is asked
+  of `KeySpelling` rather than typed. GRAMMAR.md gains the `UsingDecl` production it had called
+  "reserved for multi-file support" and lists the section-scoped `override` under SectionItem.
+
 - **The paper block's flags are completed from the reader's own table.** `raggedRight` was the
   one paper spelling the completion listed by hand instead of reading from the vocabulary, so a
   flag added to the reader (`raggedBottom`) would not have reached the popup; both now come from

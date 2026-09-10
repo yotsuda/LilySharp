@@ -173,11 +173,13 @@ public class ChordDisplayCompletionTests
 
     [Theory]
     // …but condensedStaff / combinedStaff take BARE PART NAMES: a `staff` inside one
-    // is a parse error, so the parts are what belongs in the popup.
+    // is a parse error, so the parts are what belongs in the popup — their own context
+    // since 2026-09-10, when the `staff` list grew the clef words a bare-name group
+    // does not take.
     [InlineData("score main { condensedStaff { ")]
     [InlineData("score main { combinedStaff { ")]
     public void InsideABarePartNameGroup_OffersTheParts(string text)
-        => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterStaffRef, Ctx(text));
+        => Assert.Equal(LilySharpLanguageServer.CompletionContext.BarePartNameList, Ctx(text));
 
     [Fact]
     public void AfterOssia_OffersTheParts()

@@ -333,11 +333,9 @@ internal sealed partial class Parser
         var pitch = ParsePitch();
 
         SyntaxToken mode;
-        if (Check(SyntaxKind.MajorKeyword) || Check(SyntaxKind.MinorKeyword)
-            || Check(SyntaxKind.IonianKeyword)
-            || Check(SyntaxKind.DorianKeyword) || Check(SyntaxKind.PhrygianKeyword)
-            || Check(SyntaxKind.LydianKeyword) || Check(SyntaxKind.MixolydianKeyword)
-            || Check(SyntaxKind.AeolianKeyword) || Check(SyntaxKind.LocrianKeyword))
+        // The nine mode kinds, read from SyntaxFacts.KeyModeVocabulary (one list; the
+        // message below and the editor's completion read the same one).
+        if (SyntaxFacts.IsKeyModeKeyword(Current.Kind))
         {
             mode = Advance();
         }
@@ -349,8 +347,8 @@ internal sealed partial class Parser
             // reference — but flag it clearly instead of the generic "use $Major".
             var span = new TextSpan(_textPosition, Current.FullWidth);
             _diagnostics.Error(span, DiagnosticCodes.UnknownSymbolCase,
-                $"Unknown mode '{Current.Text}'. Modes are case-sensitive: major, minor, " +
-                "ionian, dorian, phrygian, lydian, mixolydian, aeolian, locrian.");
+                $"Unknown mode '{Current.Text}'. Modes are case-sensitive: " +
+                string.Join(", ", SyntaxFacts.KeyModeVocabulary) + ".");
             mode = Advance();
         }
         else

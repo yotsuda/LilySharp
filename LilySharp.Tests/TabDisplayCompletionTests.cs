@@ -33,7 +33,7 @@ public class TabDisplayCompletionTests
 
     [Theory]
     [InlineData("score main { tab melody as ")]
-    [InlineData("score main { tab drop-d melody as ")]   // an explicit tuning precedes the part
+    [InlineData("score main { tab bass5 melody as ")]    // an explicit tuning precedes the part (`drop-d` stood here — a spelling no tuning has)
     [InlineData("score main { tab melody as nu")]        // partial word keeps the list
     [InlineData("score main { staff melody  tab bass as ")] // a staff item ahead of the tab
     public void AfterTabAs_OffersTheTabStyles(string text)

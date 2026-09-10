@@ -103,6 +103,38 @@ public static class LanguageVocabulary
     /// in the order the parser's own message names them.</summary>
     public static IReadOnlyCollection<string> RepeatKinds => Syntax.SyntaxFacts.RepeatKindVocabulary;
 
+    /// <summary>The nine modes a <c>key</c> takes after its tonic, in the parser's order
+    /// (<see cref="SyntaxFacts.KeyModeVocabulary"/> — the list the parser tests and its
+    /// "Unknown mode" message spells).</summary>
+    public static IReadOnlyCollection<string> KeyModes => SyntaxFacts.KeyModeVocabulary;
+
+    /// <summary>The navigation marks a <c>form</c> and a music stream take, as written
+    /// (<see cref="SyntaxFacts.NavigationMarkVocabulary"/>): <c>segno</c>, <c>to coda</c>,
+    /// <c>ds al fine</c>, …</summary>
+    public static IReadOnlyCollection<string> NavigationMarks => SyntaxFacts.NavigationMarkVocabulary;
+
+    /// <summary>The feel words a <c>tempo</c> run may end with (<c>tempo 120 swing</c>) —
+    /// <see cref="TempoValue.FeelWords"/>, which <c>TempoValue.IsFeelWord</c> tests.</summary>
+    public static IReadOnlyCollection<string> TempoFeelWords => TempoValue.FeelWords;
+
+    /// <summary>The keywords that open a render item in a <c>score { }</c> body
+    /// (<see cref="SyntaxFacts.ScoreItemKeywordVocabulary"/>) — every <c>ParseRenderItem</c>
+    /// branch but the bare MIDI-only part name, in the editor's order. Published 2026-09-10
+    /// (session 365); the score-body completion held its own fifteen-row copy.</summary>
+    public static IReadOnlyCollection<string> ScoreItemKeywords => SyntaxFacts.ScoreItemKeywordVocabulary;
+
+    /// <summary>The directives a <c>section { }</c> carries beside its part cells
+    /// (<see cref="SyntaxFacts.SectionSettingVocabulary"/>): <c>partial</c>, <c>key</c>,
+    /// <c>time</c>, <c>tempo</c>, <c>override</c> — the words the parser's stray-item message
+    /// names. Published 2026-09-10 (session 365); the section-header completion held its own
+    /// copy.</summary>
+    public static IReadOnlyCollection<string> SectionSettings => SyntaxFacts.SectionSettingVocabulary;
+
+    /// <summary>The <c>Grob.property</c> pairs an <c>override</c> / <c>revert</c> may name —
+    /// <see cref="Svg.Model.SupportedGrobOverrides.Spellings"/>, the list LYS1029 enforces.
+    /// Published 2026-09-10; the editor's override completion held its own four-row copy.</summary>
+    public static IReadOnlyCollection<string> GrobOverrideSpellings => [.. Svg.Model.SupportedGrobOverrides.Spellings];
+
     /// <summary>Every ottava marker <c>transposition</c> accepts.</summary>
     public static IReadOnlyCollection<string> TranspositionMarkers => InstrumentDefaults.TranspositionMarkers;
 
@@ -117,6 +149,10 @@ public static class LanguageVocabulary
     public static int MaxStaffLines => Svg.Collector.StaffSpec.MaxLines;
 
     // ===== The PAPER BLOCK's vocabularies (GRAMMAR.md: PaperDecl) =====
+
+    /// <summary>The one paper key that names a whole page (<c>size jisb5</c>) —
+    /// <see cref="PaperPlanReader.SizeKey"/>, outside the three tables below.</summary>
+    public static string PaperSizeKey => PaperPlanReader.SizeKey;
 
     /// <summary>The scalar length keys a <c>paper { }</c> entry takes
     /// (<c>paperWidth 210mm</c>).</summary>

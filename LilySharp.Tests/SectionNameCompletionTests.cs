@@ -324,10 +324,12 @@ public class SectionNameCompletionTests
         Assert.Equal(LilySharpLanguageServer.CompletionContext.SectionBlock,
             LilySharpLanguageServer.GetCompletionContext(text, text.Length));
         var items = LilySharpLanguageServer.GetSectionBlockCompletions(text, text.Length).Items;
-        // The part cells first, then the section-wide directives the header position takes
-        // (2026-09-02: a section-major section is a header too — `partial` is writable HERE
-        // and nowhere in the music, and this list had no row for it).
-        Assert.Equal(new[] { "melody", "bass", "partial", "key", "time", "tempo", "override" },
+        // The part cells first, then the two TRACK cells a section also holds (lyrics /
+        // chords — added 2026-09-10, the completion audit), then the section-wide directives
+        // the header position takes (2026-09-02: a section-major section is a header too —
+        // `partial` is writable HERE and nowhere in the music, and this list had no row for
+        // it).
+        Assert.Equal(new[] { "melody", "bass", "lyrics", "chords", "partial", "key", "time", "tempo", "override" },
             items.Select(i => i.Label).ToArray());
         Assert.Equal(items.Select(i => i.Label).ToArray(),
             items.OrderBy(i => i.SortText, System.StringComparer.Ordinal).Select(i => i.Label).ToArray());

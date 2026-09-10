@@ -297,6 +297,18 @@ public class DocKeywordListTests
     }
 
     [Fact]
+    public void TheScoreItemVocabulary_IsWhatTheParserAccepts()
+    {
+        // ★ SyntaxFacts.ScoreItemKeywordVocabulary is a LIST — the parser dispatches on token
+        // kinds and cannot be asked for its branches — and this is what holds the list to the
+        // parser: the same measurement the two tests above make, in both directions. The
+        // editor's score-body popup reads the list (2026-09-10), so a keyword the parser grows
+        // without adding it here goes red rather than invisible.
+        Assert.Equal(KeywordScoreItems(),
+            SyntaxFacts.ScoreItemKeywordVocabulary.OrderBy(w => w, StringComparer.Ordinal).ToArray());
+    }
+
+    [Fact]
     public void TheBarePartNameItem_IsInTheProduction()
     {
         // A bare part name renders that part to MIDI only, so a score of nothing but bare

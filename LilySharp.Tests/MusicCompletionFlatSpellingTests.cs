@@ -144,8 +144,13 @@ public class MusicCompletionFlatSpellingTests
                 "acciaccatura" => "acciaccatura { g16 } a4 b c' d' |",
                 "appoggiatura" => "appoggiatura { g16 } a4 b c' d' |",
                 "voice" => "voice { g4 a b c' | } { e4 f g a | }",   // one keyword, N blocks
+                "cue" => "cue { g4 a } b4 c' |",                       // a region inside the bar
+                "q" => "<g b d'>4 q q q |",                            // repeats the chord before it
                 "R" => "R1 |",
                 "r" or "s" => word + "4 a b c' |",
+                // A navigation mark is a bare landmark at the bar's edge (2026-09-10).
+                _ when LilySharp.Core.Semantics.LanguageVocabulary.NavigationMarks.Contains(insert)
+                    => insert + " g4 a b c' |",
                 _ when insert.StartsWith('<') => insert + "4 a4 b c' |",
                 _ when insert.Length <= 4 && char.IsLower(insert[0]) && !insert.Contains(' ')
                     => insert + "4 a b c' |",            // a pitch row: c, fis, bes …

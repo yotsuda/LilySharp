@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Generic;
+using System.Linq;
 
 namespace LilySharp.Core.Syntax;
 
@@ -144,5 +145,10 @@ public sealed record TempoValue(
     /// usable as part names and markings everywhere else, which is why every reading of
     /// the run has to know them rather than the lexer.
     /// </summary>
-    public static bool IsFeelWord(string text) => text is "swing" or "shuffle";
+    public static bool IsFeelWord(string text) => FeelWords.Contains(text);
+
+    /// <summary>The two feel words, as a list — what <see cref="IsFeelWord"/> tests and the
+    /// editor's tempo completion offers (published 2026-09-10; the completion had a
+    /// <c>swing</c> row and no <c>shuffle</c> row).</summary>
+    public static IReadOnlyList<string> FeelWords { get; } = ["swing", "shuffle"];
 }

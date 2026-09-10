@@ -96,9 +96,11 @@ internal sealed partial class Parser
             // them with nowhere to be. The other two (`clef`, `octave`) never reach this arm
             // — they are music items, so the arm above claims them, and LYS1035 is what says
             // the same thing about them.
+            // The directive words are SyntaxFacts.SectionSettingVocabulary — the list the
+            // editor's section-header popup reads too, so the two cannot name different sets.
             _ => ReportStrayItem("a section",
                     "A section body holds per-part cells ('melody { … }'), its own directives "
-                    + "(key, time, tempo, partial, override), a named 'lyrics NAME { … }' or "
+                    + "(" + string.Join(", ", SyntaxFacts.SectionSettingVocabulary) + "), a named 'lyrics NAME { … }' or "
                     + "'chords NAME { … }' track, or bare music for a single-part piece. A "
                     + "setting that belongs to ONE part - clef, instrument, transpose, octave "
                     + "- goes on the part ('part NAME { … }'), not here.")
