@@ -93,7 +93,7 @@ internal sealed class MeasureValidator : ISemanticValidator
     /// at all (MEASURED, 2.27.3). A warning, not an error, because a template waiting to
     /// be filled in is a legitimate thing to compile.
     /// <para>
-    /// The music bar count comes from <see cref="Svg.Collector.MeasureCollector.CountBarsInScope"/>
+    /// The music bar count comes from <see cref="Svg.Collector.MeasureCollector.CountBarsInScope(SyntaxNode)"/>
     /// — the collector's OWN answer, so this cannot drift from what gets drawn — and it is
     /// taken over the whole tree at once rather than per score block: a <c>score</c> names
     /// a form and a layout, and working out which parts each one reaches is the collector's

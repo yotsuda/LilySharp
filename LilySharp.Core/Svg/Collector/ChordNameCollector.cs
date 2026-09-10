@@ -428,15 +428,26 @@ internal sealed class ChordNameCollector
     /// trailing bar when entries follow the last barline (the same
     /// segmentation CollectPart commits by).</summary>
     public static int CountBars(ChordPartBlockSyntax block)
-        => CountBars(block.Items);
+        => CountBars(block.Items, out _);
+
+    /// <summary>As <see cref="CountBars(ChordPartBlockSyntax)"/>, and whether the last bar
+    /// is still OPEN (entries after the last bar line) — see
+    /// <see cref="SectionBarCounts.SemanticVoice.TrailingOpen"/>.</summary>
+    public static int CountBars(ChordPartBlockSyntax block, out bool trailingOpen)
+        => CountBars(block.Items, out trailingOpen);
 
     /// <summary>Bar count of a part-major chord-track inner section
     /// (<c>chords X { section NAME { … } }</c>): its chords sit directly in the section, so
     /// count them there rather than in a nested chord block.</summary>
     public static int CountSectionBars(SectionDeclarationSyntax section)
-        => CountBars(SectionItems(section));
+        => CountBars(SectionItems(section), out _);
 
-    private static int CountBars(IEnumerable<SyntaxNode> items)
+    /// <summary>As <see cref="CountSectionBars(SectionDeclarationSyntax)"/>, with the
+    /// open-last-bar flag.</summary>
+    public static int CountSectionBars(SectionDeclarationSyntax section, out bool trailingOpen)
+        => CountBars(SectionItems(section), out trailingOpen);
+
+    private static int CountBars(IEnumerable<SyntaxNode> items, out bool trailingOpen)
     {
         int bars = 0;
         bool pendingEntries = false;
@@ -454,6 +465,7 @@ internal sealed class ChordNameCollector
                 pendingEntries = true;
             }
         }
+        trailingOpen = pendingEntries;
         return bars + (pendingEntries ? 1 : 0);
     }
 

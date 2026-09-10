@@ -331,6 +331,28 @@ public sealed partial class LilySharpLanguageServer
             }
         }
 
+        // Semantic diagnostics (the same set the Problems panel shows — see
+        // PublishDiagnosticsCore) carry their own quick fixes. Matched by OVERLAP with the
+        // requested range, not by span start: the caret usually sits INSIDE the squiggle
+        // (on a letter of the section name), where a start-only test finds nothing.
+        // Guarded like the publish path: a validator crash must not take the lightbulb down.
+        try
+        {
+            foreach (var diagnostic in DocumentDiagnostics(doc.Text, doc.Tree,
+                         uri.IsFile ? uri.LocalPath : string.Empty,
+                         p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null))
+            {
+                if (diagnostic.Span.Start > endOffset || diagnostic.Span.End < startOffset)
+                    continue;
+                if (BarCountPadding(doc.Tree, doc.Text, diagnostic) is { } pad)
+                    actions.Add(PadBarsAction(doc, uri, diagnostic, pad));
+            }
+        }
+        catch
+        {
+            // Swallow: the syntax quick fixes above still answer.
+        }
+
         // Add refactoring actions for valid selections
         var node = doc.Tree.FindNode(startOffset);
         if (node != null)
@@ -340,6 +362,35 @@ public sealed partial class LilySharpLanguageServer
         }
 
         return actions.ToArray();
+    }
+
+    /// <summary>The quick fix for one LYS2007: insert the bare bar lines
+    /// <see cref="BarCountPadding"/> settled on, at the end of the short voice's body.</summary>
+    private static CodeAction PadBarsAction(
+        Document doc, Uri uri, CoreDiagnostic diagnostic, (int Offset, string Text, int Bars, string Voice) pad)
+    {
+        var (line, character) = GetLineAndCharacter(doc.Text, pad.Offset);
+        var at = new Position { Line = line, Character = character };
+        return new CodeAction
+        {
+            // Counted in BAR LINES, not bars: over an open last bar the first `|` only
+            // closes it, and the title must say what the edit writes.
+            Title = pad.Bars == 1
+                ? $"Add 1 bar line to {pad.Voice} (|)"
+                : $"Add {pad.Bars} bar lines to {pad.Voice} ({string.Join(" ", Enumerable.Repeat("|", pad.Bars))})",
+            Kind = CodeActionKind.QuickFix,
+            Diagnostics = [ConvertDiagnostic(diagnostic, doc.Text)],
+            Edit = new WorkspaceEdit
+            {
+                Changes = new Dictionary<string, TextEdit[]>
+                {
+                    [uri.ToString()] =
+                    [
+                        new TextEdit { Range = new LspRange { Start = at, End = at }, NewText = pad.Text },
+                    ],
+                },
+            },
+        };
     }
 
     private IEnumerable<CodeAction> GenerateQuickFixes(Document doc, CoreDiagnostic diagnostic, Uri uri)

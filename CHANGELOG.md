@@ -120,6 +120,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **A quick fix pads a short section voice with bar lines.** On an LYS2007 squiggle — a
+  `section A` that writes fewer bars in this part or chord row than in another voice of the
+  section — the lightbulb offers "Add N bar line(s) to section A (| |)": bare `|` appended after
+  the voice's last item, one per missing bar, plus one to close a bar the voice left open
+  (`{ g2 g }`). The edit is re-validated before it is offered, so it is only shown when it
+  makes the warning go. Quick fixes now read the same diagnostics the Problems panel shows
+  (until now only parse errors reached the lightbulb) and match the caret anywhere inside a
+  squiggle, not only at its first character.
 - **A ```` ```lys ```` fence in a Markdown file renders as the score in VS Code's built-in
   Markdown preview**, the way a ```` ```mermaid ```` fence renders as a diagram (```` ```lily# ````
   is accepted too). A fence draws one picture and says which: it writes exactly one
@@ -152,6 +160,15 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixed
 
+- **A part written as phrases, a multi-measure rest or a repeat is measured at its played
+  length when the page decides how long a section is.** The page counted one bar per written
+  token — `R1*4` was one bar, `repeat unfold 13 { … }` its body once, a phrase reference
+  nothing — so a section whose longest voice was written that way (`lh { p_bass p_bass p_bass }`
+  beside a shorter `rh`) never padded the short part, and every part after it drifted a bar or
+  more out of alignment while LYS2007 claimed the part was "padded with rests to align". The
+  count now reads all three off the source, with the same edge rule as the engraver (a `|`
+  right after a phrase or a repeat confirms its close; a `|` opening a phrase's body is an empty
+  bar), and agrees with the validator's count on every fixture and sample.
 - **The MusicXML carried no string number and no fingering, on any note.** `c4\3`,
   `<e dis'>4\5\4` and `c4@finger(1)` reached the page and the twin but left the note's
   `<technical>` empty; they are written now as `<string>` and `<fingering>`. A chord's outside
@@ -330,6 +347,18 @@ workflow attaches that section to the GitHub Release verbatim.
 - **LYS1005 names the glued custom text.** `form main { A _ "shown" }` is a reference to a section
   named `_` with a display label (a legal name, so the space cannot be forgiven); the custom
   text is the glued `_"shown"`. When nothing declares `_`, the error says to glue the quote.
+- **A chord track's section counts toward the section's length, and LYS2007 reads it.**
+  `chords prog { section A { Dm7 | G7 } }` over a melody whose `section A` writes one bar used
+  to pass `lysc check` silently, and the page put G7 on B's first bar beside B's own chord.
+  A section spans as many bars as its longest voice, and a named chord row is one of its
+  voices: the melody's A is now warned as the short one (LYS2007, anchored on its section
+  name, naming the track as the longer voice) and padded to two bars, so G7 stands in A's
+  second bar and B begins after it. The other direction warns too — a row that writes fewer
+  bars than the part says the remaining bars carry no chord. Both spellings are read: the
+  part-major track (`chords prog { section A { … } }`) and a named chords block inside a
+  section-major section, where one part beside a chord row used to end the pass before the
+  count was compared. Lyrics tracks are left out on purpose: a lyrics section longer than its
+  music is a stacked verse.
 - **LYS2015: a `partial` inside `time none` does nothing, and says so.** The clock stands still
   in an unmetered span, so there is no bar length for a pickup to shorten; the page silently
   ignored it. It is a warning now, and the LilyPond twin leaves the `\partial` out (LilyPond's
@@ -338,6 +367,16 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### MIDI, MusicXML and the LilyPond twin
 
+- **A section voice shorter than its section-mates is padded in every export, as it is on the
+  page.** A section spans as many bars as its longest voice — a part or a named chord row — and
+  the page has always padded a shorter part's staff with silent bars; the LilyPond twin, the
+  MusicXML and (where only a chord row made the section longer) the MIDI did not. A one-bar
+  melody A beside a two-bar bass A put melody's B under bass's A in the twin and gave the
+  MusicXML one part a measure fewer than the other; beside a two-bar chord row A the MIDI
+  played B a bar early. All four readers now take the count from one place: the twin writes
+  `s1 |` per missing bar (a silent `\chordmode` bar for a short row), the MusicXML a whole-bar
+  rest measure, the MIDI the bar's silence — with one extra bar line when the voice's last bar
+  was left open, since that one only closes it.
 - **An empty `| |` bar reaches the MusicXML and the LilyPond twin as the bar of silence it
   is.** The page and the MIDI have filled it with a full-measure spacer since 0.6.0; the
   twin copied the bare bar lines — bar checks to LilyPond, which take no time — so

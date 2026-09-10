@@ -320,6 +320,10 @@ public sealed class MidiExporter
 
         var mainTrack = new MidiTrack { Name = "Track 1", Channel = 0 };
         _root = tree.GetRoot();
+        // Every section's voices and canonical bar count (SectionBarCounts, the semantic
+        // counter): a part voice that writes fewer bars than its section-mates is padded
+        // with silence when its play ends (PaddingTicks), as the page pads its staff.
+        _sectionBars = Svg.Collector.SectionBarCounts.BuildSemanticIndex(_root);
         _phraseBodies = new Dictionary<string, SyntaxNode>();
         _sections = new Dictionary<string, List<SectionDeclarationSyntax>>();
         _partDecls = new Dictionary<string, PartDeclarationSyntax>();
@@ -859,6 +863,7 @@ public sealed class MidiExporter
                 _currentTimbre = PartTimbre(pname);
                 ProcessNode(sectionPart, track, conductorTrack);
                 _partPitchLanes[pname] = (_currentNoteName, _currentOctave, _defaultDuration);
+                _currentTick += PaddingTicks(sectionPart);
                 tickLanes[pname] = _currentTick;
                 sectionEnd = Math.Max(sectionEnd, _currentTick);
                 (_partOctaveAnchor, _partAbsoluteBase) = (4, 4);
@@ -888,10 +893,33 @@ public sealed class MidiExporter
         {
             _currentTick = start;
             PlaySection(section, track, conductorTrack, octaveOffset);
+            // A part-major cell (or a bare section the score attributes to one part) is one
+            // part's voice: pad it to the section's canonical bar count. A section-major
+            // declaration pads each of its part blocks inside PlaySection; a chord-track
+            // cell sounds nothing and pads nothing — its bars still count toward the
+            // canonical length, which is what the parts are padded to.
+            if (section.Parent is PartDeclarationSyntax
+                || (_bareSectionOwner != null && !SectionHasPartBlock(section)))
+                _currentTick += PaddingTicks(section);
             end = Math.Max(end, _currentTick);
         }
         _currentTick = end;
     }
+
+    // The book's section voices (SectionBarCounts.BuildSemanticIndex), read once per Export.
+    private Svg.Collector.SectionBarCounts.SemanticIndex _sectionBars = new();
+
+    /// <summary>
+    /// The silence that brings one part voice's play of a section up to the section's
+    /// canonical bar count, in ticks: one bar of the meter in force per missing bar — the
+    /// full-measure spacers the page pads the short staff with (MeasureCollector's section
+    /// padding). Without it a one-bar melody A beside a two-bar chord row A played B a bar
+    /// early (scratch/ベースタブLy/tooLongChords.lys: B at bar 2, the page at bar 3; MEASURED
+    /// 2026-09-10). Part-against-part already aligned through the lanes (the section's end is
+    /// the longest lane) — this is what a chord row, which has no lane, adds.
+    /// </summary>
+    private int PaddingTicks(SyntaxNode voice)
+        => _sectionBars.Missing(voice, out _) * FractionToTicks(new Fraction(_timeNumerator, _timeDenominator));
 
     /// <summary>
     /// Plays sections in structure order. `|: … :|` bodies play twice (or

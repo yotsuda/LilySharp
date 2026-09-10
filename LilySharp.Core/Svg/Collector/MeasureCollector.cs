@@ -2487,6 +2487,7 @@ public sealed partial class MeasureCollector
         _sectionStartLog.Clear();
         _voiceMeasuresByName.Clear();
         _canonicalSectionBars.Clear();
+        _canonicalByName = null;
         _courtesySourcePositions.Clear();
         _measureAccidentals.Clear();
         _fingeringByPosition.Clear();
@@ -3289,6 +3290,19 @@ public sealed partial class MeasureCollector
         for (var p = node.Parent; p != null; p = p.Parent)
             if (p is PartDeclarationSyntax part)
                 return part.Name.Text;
+        return null;
+    }
+
+    /// <summary>
+    /// The name of the <c>chords</c> track a node lives inside, or null if it is not inside
+    /// a NAMED chord block. Binds a part-major chord-track inner <c>section</c> to its track
+    /// (<see cref="SectionState.ChordTrackCells"/>).
+    /// </summary>
+    private static string? EnclosingChordTrackName(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is ChordPartBlockSyntax block)
+                return block.PartName;
         return null;
     }
 

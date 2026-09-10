@@ -74,48 +74,76 @@ internal sealed class CrossPartMeasureValidator
     }
 
     /// <summary>
-    /// Flags a section whose bar count differs between the parts that define it
-    /// part-major (the same `section S` written inside more than one `part`). The
-    /// collector pads the shorter parts with spacer rests to keep staves aligned,
-    /// so this renders — but a differing count is usually a miscount worth surfacing.
+    /// Flags a section whose bar count differs between the voices that define it
+    /// part-major: the same `section S` written inside more than one `part`, or inside a
+    /// `part` and a named `chords` track (<c>chords prog { section S { … } }</c>). The
+    /// collector pads the shorter parts with spacer rests up to the section's canonical
+    /// bar count (the greatest over parts AND chord tracks — MeasureCollector's
+    /// GetCanonicalSectionBars) to keep staves aligned, so this renders — but a differing
+    /// count is usually a miscount worth surfacing. A chord track's section is counted by
+    /// the row's own rule (every written barline closes a bar); a lyrics track's is not
+    /// counted at all — a lyrics section longer than its music is a stacked verse by design.
     /// </summary>
+    /// <remarks>
+    /// ★ Chord tracks joined this pass on 2026-09-10 (scratch/ベースタブLy/tooLongChords.lys):
+    /// <c>chords prog { section A { Dm7 | G7 } }</c> over a ONE-bar melody A said nothing —
+    /// only `part`-nested sections were gathered — and the page put G7 on B's first bar
+    /// beside B's own Cmaj7. Now melody's A is the short one (warned here, anchored on
+    /// its section name) and the collector pads it to two bars.
+    /// </remarks>
     private void ValidatePartMajorSections(SyntaxNode root)
     {
-        // section name -> each defining part's (name, bar count, section-name span)
-        var byName = new Dictionary<string, List<(string Part, int Bars, TextSpan Span)>>();
-        // The running SCORE-level meter in document order (a `time` outside any
-        // part/section body arms everything after it) — it steers the repeat-flow
-        // auto-complete inside MeasureModel.Split, so a part-major section's bar
-        // count agrees with the collector under a non-4/4 score meter too.
-        var time = DurationCalculator.ParseTimeSignature(4, 4);
-        foreach (var section in root.DescendantNodes())
+        // The voices and their bar counts come from THE ONE HOUSE (SectionBarCounts —
+        // the semantic counter, MeasureModel.Split with the score-level meter in force),
+        // the same index the LilyPond / MIDI / MusicXML exporters pad by, so what this
+        // warning says is short is what those pad. Section name -> its part-major voices.
+        var byName = new Dictionary<string, List<SectionVoice>>();
+        foreach (var voice in Svg.Collector.SectionBarCounts.SemanticVoices(root))
         {
-            if (section is TimeSignatureSyntax ts && !ts.IsSenzaMisura && IsScoreLevel(ts))
-                time = DurationCalculator.ParseTimeSignature(ts.Beats, ts.BeatType);
-            if (section is not SectionDeclarationSyntax sec || sec.Parent is not PartDeclarationSyntax part)
-                continue; // only sections nested directly in a `part` (part-major)
-            int bars = BuildPartMeasures(sec, time).Count;
-            if (!byName.TryGetValue(sec.SectionName, out var list))
-                byName[sec.SectionName] = list = new();
-            list.Add((part.Name.Text, bars, sec.Name.Span));
+            if (!voice.PartMajor)
+                continue; // section-major voices: ValidateSectionCrossPart, which also compares beats
+            if (!byName.TryGetValue(voice.SectionName, out var list))
+                byName[voice.SectionName] = list = new();
+            list.Add(new SectionVoice(voice.Label, voice.IsChords, voice.Bars, voice.Anchor));
         }
 
         foreach (var (name, list) in byName)
+            ReportBarCountMismatch(name, list);
+    }
+
+    /// <summary>One voice of a section as the bar-count pass sees it: a part, or a named
+    /// chord track. <see cref="Label"/> is how the message names it (the spelling
+    /// SectionBarCounts.SemanticVoice.Label uses: <c>part 'x'</c> / <c>chords 'x'</c>).</summary>
+    private readonly record struct SectionVoice(string Label, bool IsChords, int Bars, TextSpan Span)
+    {
+        public static SectionVoice Part(string name, int bars, TextSpan span) => new($"part '{name}'", false, bars, span);
+        public static SectionVoice Chords(string name, int bars, TextSpan span) => new($"chords '{name}'", true, bars, span);
+    }
+
+    /// <summary>
+    /// The bar-count comparison shared by both layouts: every voice that writes fewer bars
+    /// than the section's longest voice is reported on its own span. The tail of the message
+    /// says what the page does with the shortfall — a part is padded with spacer rests, a
+    /// chord row simply has no chord over the bars it does not write.
+    /// </summary>
+    private void ReportBarCountMismatch(string sectionName, List<SectionVoice> voices)
+    {
+        if (voices.Count < 2)
+            return;
+        int maxBars = voices.Max(v => v.Bars);
+        if (voices.All(v => v.Bars == maxBars))
+            return; // all voices agree
+        var reference = voices.First(v => v.Bars == maxBars);
+        foreach (var voice in voices)
         {
-            if (list.Count < 2)
+            if (voice.Bars == maxBars)
                 continue;
-            int maxBars = list.Max(x => x.Bars);
-            if (list.All(x => x.Bars == maxBars))
-                continue; // all parts agree
-            var reference = list.First(x => x.Bars == maxBars);
-            foreach (var (part, bars, span) in list)
-            {
-                if (bars == maxBars)
-                    continue;
-                _diagnostics.Warning(span, DiagnosticCodes.SectionBarCountMismatch,
-                    $"Section '{name}' spans {bars} bar(s) in part '{part}' but {maxBars} in part "
-                    + $"'{reference.Part}' — the shorter part is padded with rests to align");
-            }
+            string tail = voice.IsChords
+                ? "the row writes no chord over the remaining bar(s)"
+                : "the shorter part is padded with rests to align";
+            _diagnostics.Warning(voice.Span, DiagnosticCodes.SectionBarCountMismatch,
+                $"Section '{sectionName}' spans {voice.Bars} bar(s) in {voice.Label} but {maxBars} in "
+                + $"{reference.Label} — {tail}");
         }
     }
 
@@ -150,6 +178,9 @@ internal sealed class CrossPartMeasureValidator
         // applies to the part blocks that follow it. Each part records the
         // time in force at its own position.
         var parts = new List<(string Name, Fraction Time, TextSpan TimeSpan, List<MeasureModel.Bar> Measures)>();
+        // Named chord blocks of the section: voices of the bar-count check only (a chord
+        // row has bars but no beats to compare per measure).
+        var chordVoices = new List<SectionVoice>();
         for (int i = 0; i < section.SlotCount; i++)
         {
             var child = section.GetChild(i);
@@ -161,11 +192,20 @@ internal sealed class CrossPartMeasureValidator
                 case PartBlockSyntax pb:
                     parts.Add((pb.Name, time, pb.PartName.Span, BuildPartMeasures(pb, time)));
                     break;
+                case ChordPartBlockSyntax { PartName: { } track, NameToken: { } nameToken } cb:
+                    chordVoices.Add(SectionVoice.Chords(track, Svg.Collector.ChordNameCollector.CountBars(cb), nameToken.Span));
+                    break;
             }
         }
 
-        if (parts.Count < 2)
+        if (parts.Count + chordVoices.Count < 2)
             return time;
+        if (parts.Count < 2)
+        {
+            // One part beside chord rows: nothing to compare per measure, only the count.
+            ReportSectionMajorBarCount(section, parts, chordVoices);
+            return time;
+        }
 
         // A time declared BETWEEN part blocks would put the parts of one
         // section in different meters — flag it; alignment is undefined.
@@ -215,22 +255,21 @@ internal sealed class CrossPartMeasureValidator
 
         // Bar-count mismatch: a part with fewer bars than its section-mates is padded
         // to align (the per-measure loop above only compares indices both parts reach).
-        int maxCount = parts.Max(p => p.Measures.Count);
-        if (parts.Any(p => p.Measures.Count != maxCount))
-        {
-            var longest = parts.First(p => p.Measures.Count == maxCount);
-            foreach (var part in parts)
-            {
-                if (part.Measures.Count == maxCount)
-                    continue;
-                _diagnostics.Warning(part.TimeSpan, DiagnosticCodes.SectionBarCountMismatch,
-                    $"Section '{section.SectionName}' spans {part.Measures.Count} bar(s) in part "
-                    + $"'{part.Name}' but {maxCount} in part '{longest.Name}' — the shorter part is "
-                    + "padded with rests to align");
-            }
-        }
+        ReportSectionMajorBarCount(section, parts, chordVoices);
 
         return time;
+    }
+
+    /// <summary>The bar-count check of a section-major section over its part blocks AND
+    /// its named chord blocks (a part-block voice is anchored on its part name).</summary>
+    private void ReportSectionMajorBarCount(
+        SectionDeclarationSyntax section,
+        List<(string Name, Fraction Time, TextSpan TimeSpan, List<MeasureModel.Bar> Measures)> parts,
+        List<SectionVoice> chordVoices)
+    {
+        var voices = parts.Select(p => SectionVoice.Part(p.Name, p.Measures.Count, p.TimeSpan)).ToList();
+        voices.AddRange(chordVoices);
+        ReportBarCountMismatch(section.SectionName, voices);
     }
 
     /// <summary>
@@ -245,14 +284,4 @@ internal sealed class CrossPartMeasureValidator
     private List<MeasureModel.Bar> BuildPartMeasures(SyntaxNode scope, Fraction time)
         => MeasureModel.Split(scope, _phraseBodies!, time);
 
-    /// <summary>True for a node outside every part/section/music body — the score level,
-    /// where a <c>time</c> declaration arms the whole document after it (LP's Timing is
-    /// Score-level; Lily# part-local changes are restated per part and stay local).</summary>
-    private static bool IsScoreLevel(SyntaxNode node)
-    {
-        for (var p = node.Parent; p != null; p = p.Parent)
-            if (p is PartDeclarationSyntax or PartBlockSyntax or SectionDeclarationSyntax or MusicBlockSyntax)
-                return false;
-        return true;
-    }
 }

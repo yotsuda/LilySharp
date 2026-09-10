@@ -33,6 +33,16 @@ internal sealed class SectionState
     /// <summary>Part-major cells: <c>(section, part)</c> → its declaration.</summary>
     public Dictionary<(string section, string part), SectionDeclarationSyntax> PartMajorCells { get; } = new();
 
+    /// <summary>Part-major CHORD-TRACK cells: <c>(section, track)</c> → the inner section of
+    /// <c>chords track { section NAME { … } }</c>. Kept apart from <see cref="PartMajorCells"/>
+    /// (whose bodies are music) because a chord cell's bars are counted by the row's own
+    /// rule (<see cref="ChordNameCollector.CountSectionBars(SectionDeclarationSyntax)"/>). A chord track is a voice of
+    /// the section like any part: its bar count joins the section's canonical bar count, so
+    /// a part that writes fewer bars than the chord row is padded up to it — not the row
+    /// spilling into the next section. Lyrics tracks are NOT recorded: a lyrics section
+    /// longer than its music is a stacked verse by design (LyricsCollector's auto-wrap).</summary>
+    public Dictionary<(string section, string track), SectionDeclarationSyntax> ChordTrackCells { get; } = new();
+
     /// <summary>First measure index of each section, by name.</summary>
     public Dictionary<string, int> StartMeasure { get; } = new();
 
@@ -47,6 +57,7 @@ internal sealed class SectionState
     {
         Sections.Clear();
         PartMajorCells.Clear();
+        ChordTrackCells.Clear();
         StartMeasure.Clear();
         AllStarts.Clear();
         RowLabels.Clear();

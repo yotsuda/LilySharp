@@ -305,8 +305,17 @@ public sealed partial class MeasureCollector
                     // ordering/label rep or a part cell (its body is chord entries or
                     // syllables, not music). The chord/lyric collectors read it via
                     // ChordPartBlockSyntax.Sections / LyricsBlockSyntax.Sections.
+                    // A CHORD track's cell is still recorded by (section, track): its bar
+                    // count is one of the section's voices (GetCanonicalSectionBars), so
+                    // `chords prog { section A { Dm7 | G7 } }` over a one-bar melody A makes
+                    // A two bars and pads the melody — rather than G7 landing on B's first
+                    // bar beside B's own chord (scratch/ベースタブLy/tooLongChords.lys, 2026-09-10).
                     if (IsInsidePartMajorTrack(section))
+                    {
+                        if (EnclosingChordTrackName(section) is { } track)
+                            _sectionState.ChordTrackCells[(section.SectionName, track)] = section;
                         break;
+                    }
                     // First declaration of a name wins as the order/label
                     // representative (source order), so a name appearing in both
                     // forms stays stable.

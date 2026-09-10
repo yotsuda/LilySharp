@@ -331,6 +331,11 @@ public sealed class LilyPondExporter
     {
         var root = tree.GetRoot();
 
+        // Every section's voices and canonical bar count (SectionBarCounts, the semantic
+        // counter): a voice that writes fewer bars than its section-mates is padded with
+        // silent bars when its play is appended (PaddingBars), as the page pads its staff.
+        _sectionBars = Svg.Collector.SectionBarCounts.BuildSemanticIndex(root);
+
         // Octave mode is a file-level directive; default is relative (Lily#'s default).
         var octaveDir = root.DescendantNodes<OctaveDirectiveSyntax>().FirstOrDefault();
         _octaveAbsolute = octaveDir?.IsAbsolute ?? false;
@@ -1234,6 +1239,7 @@ public sealed class LilyPondExporter
                     headerMusic.Any(h => h is TimeSignatureSyntax)));
                 result.AddRange(headerMusic);
                 result.AddRange(ContainerMusic(entry.Container));
+                result.AddRange(PaddingBars(entry.Container));
             }
         }
 
@@ -1481,6 +1487,7 @@ public sealed class LilyPondExporter
         if (_chordTrack)
         {
             result.AddRange(ChordBars(entry.Container, ChordKeyFor(name), ChordPickupFor(name)));
+            result.AddRange(PaddingBars(entry.Container));
             return;
         }
         _sectionHeaders.TryGetValue(name, out var headers);
@@ -1498,6 +1505,50 @@ public sealed class LilyPondExporter
         if (headers != null)
             result.AddRange(headers);
         result.AddRange(ContainerMusic(entry.Container));
+        result.AddRange(PaddingBars(entry.Container));
+    }
+
+    // The book's section voices (SectionBarCounts.BuildSemanticIndex), read once per Export.
+    private Svg.Collector.SectionBarCounts.SemanticIndex _sectionBars = new();
+
+    /// <summary>
+    /// The silent bars that bring one voice's play of a section up to the section's
+    /// canonical bar count — what the page pads the short staff with (MeasureCollector's
+    /// section padding, spacer rests), so the twin's voices stay side by side: without it a
+    /// one-bar melody A beside a two-bar chord row A put B's notes under A's second chord
+    /// (scratch/ベースタブLy/tooLongChords.lys), and a one-bar melody A beside a two-bar bass
+    /// A put melody's B under bass's A (scratch/p363/pm-two-parts.lys; MEASURED 2026-09-10).
+    /// </summary>
+    /// <remarks>
+    /// Music voices: bare <c>|</c> nodes, which <see cref="EmitMusicStream"/>'s empty-bar rule
+    /// writes as <c>s1 |</c> each — the spelling an author's own <c>| |</c> gets — with one
+    /// extra when the voice's last bar is still open (that first <c>|</c> only closes it;
+    /// the index says). Chord rows: a silent <c>\chordmode</c> bar per missing bar, the
+    /// spelling <see cref="ChordBars"/> gives an empty bar, after closing an open one. The
+    /// count is the SEMANTIC one (<c>R1*4</c> is four bars, a repeat its played length) —
+    /// the first cut used the page's syntactic count and wrote 48 spurious bars after
+    /// canon-in-d's <c>repeat unfold 13</c>.
+    /// </remarks>
+    private IEnumerable<SyntaxNode> PaddingBars(SyntaxNode container)
+    {
+        int missing = _sectionBars.Missing(container, out bool open);
+        if (missing <= 0)
+            yield break;
+        int position = container.Position;
+        if (_chordTrack)
+        {
+            if (open)
+                yield return CreateBarline(SyntaxKind.Bar, "|", position, 0);
+            var meter = new Fraction(_homeTimeBeats, _homeTimeBeatType);
+            for (int i = 0; i < missing; i++)
+            {
+                yield return new ChordBarMarker("s" + ChordModeDuration(meter));
+                yield return CreateBarline(SyntaxKind.Bar, "|", position, 0);
+            }
+            yield break;
+        }
+        for (int i = 0; i < missing + (open ? 1 : 0); i++)
+            yield return CreateBarline(SyntaxKind.Bar, "|", position, 0);
     }
 
     /// <summary>
@@ -4179,7 +4230,10 @@ public sealed class LilyPondExporter
             AppendFormItems(FormWalk.Read(form), byName, result);
         else
             foreach (var entry in inOrder)
+            {
                 result.AddRange(ChordBars(entry.Container, ChordKeyFor(entry.Section.SectionName)));
+                result.AddRange(PaddingBars(entry.Container));
+            }
         _chordTrack = false;
         return result;
     }

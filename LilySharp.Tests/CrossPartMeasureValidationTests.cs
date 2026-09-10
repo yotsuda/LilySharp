@@ -177,6 +177,91 @@ public class CrossPartMeasureValidationTests
     }
 
     [Fact]
+    public void PartMajor_ChordTrackLongerThanPart_WarnsOnThePart()
+    {
+        // ★ scratch/ベースタブLy/tooLongChords.lys (2026-09-10): the chord track's A is two
+        // bars, the melody's A one. The section spans two bars — the melody is the short
+        // voice, so the warning is anchored on ITS section name and names the track as the
+        // longer voice. Before, only `part`-nested sections were gathered and `lysc check`
+        // said "No errors found." while G7 was drawn on B's first bar beside Cmaj7.
+        const string source = """
+            part melody {
+              section A { g2 g | }
+              section B { c2 c | }
+            }
+            chords prog {
+              section A { Dm7 | G7 }
+              section B { Cmaj7 | }
+            }
+            form main { A | B | }
+            score main { chords prog  staff melody }
+            """;
+        var diags = Validate(source);
+        var m = diags.Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
+        Assert.Single(m);
+        Assert.Contains("Section 'A' spans 1 bar(s) in part 'melody' but 2 in chords 'prog'", m[0].Message);
+        // Anchored on the melody's `A` (the first `section A` in the source), not the track's.
+        Assert.Equal(source.IndexOf("section A") + "section ".Length, m[0].Span.Start);
+    }
+
+    [Fact]
+    public void PartMajor_ChordTrackMatchesPart_Silent()
+    {
+        // Two bars in both — no mismatch.
+        var diags = Validate("""
+            part melody {
+              section A { g2 g | g2 g | }
+              section B { c2 c | }
+            }
+            chords prog {
+              section A { Dm7 | G7 | }
+              section B { Cmaj7 | }
+            }
+            form main { A | B | }
+            score main { chords prog  staff melody }
+            """);
+        Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
+    }
+
+    [Fact]
+    public void PartMajor_ChordTrackShorterThanPart_WarnsOnTheTrack()
+    {
+        // The other direction: the row writes one bar of a two-bar section. It is a
+        // miscount all the same (the second bar carries no chord), anchored on the
+        // track's section name.
+        var diags = Validate("""
+            part melody {
+              section A { g2 g | g2 g | }
+            }
+            chords prog {
+              section A { Dm7 | }
+            }
+            form main { A | }
+            score main { chords prog  staff melody }
+            """);
+        var m = diags.Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
+        Assert.Single(m);
+        Assert.Contains("in chords 'prog' but 2 in part 'melody'", m[0].Message);
+        Assert.Contains("no chord", m[0].Message);
+    }
+
+    [Fact]
+    public void SectionMajor_ChordBlockLongerThanPart_Warns()
+    {
+        // The section-major spelling of the same miscount: a named chords block beside a
+        // single part block. One part alone used to end the pass before the count check.
+        var diags = Validate("""
+            section A { melody { g2 g | } chords prog { Dm7 | G7 } }
+            section B { melody { c2 c | } chords prog { Cmaj7 | } }
+            form main { A | B | }
+            score main { chords prog  staff melody }
+            """);
+        var m = diags.Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
+        Assert.Single(m);
+        Assert.Contains("Section 'A' spans 1 bar(s) in part 'melody' but 2 in chords 'prog'", m[0].Message);
+    }
+
+    [Fact]
     public void SectionMajor_ShorterPart_WarnsBarCountMismatch()
     {
         // lh runs one bar short of rh inside a section-major section: the per-measure

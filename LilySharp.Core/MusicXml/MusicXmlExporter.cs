@@ -227,6 +227,10 @@ public sealed class MusicXmlExporter
 
         var root = tree.GetRoot();
         _root = root;
+        // Every section's voices and canonical bar count (SectionBarCounts, the semantic
+        // counter): a part voice that writes fewer bars than its section-mates is padded
+        // with silent measures when its span ends (PadVoice), as the page pads its staff.
+        _sectionBars = Svg.Collector.SectionBarCounts.BuildSemanticIndex(root);
         _bareSectionOwner = RenderSpecParser.SingleEngravedPart(tree, Score, Form);
         _homeTonic = ScoreHomeKey.Read(root);
         _ambientTonic = _homeTonic;
@@ -720,7 +724,38 @@ public sealed class MusicXmlExporter
     }
 
     private void ProcessPartBlock(PartBlockSyntax partBlock)
-        => EmitPartMusic(partBlock.Name, DirectChildren(partBlock));
+    {
+        EmitPartMusic(partBlock.Name, DirectChildren(partBlock));
+        PadVoice(partBlock);
+    }
+
+    // The book's section voices (SectionBarCounts.BuildSemanticIndex), read once per Export.
+    private Svg.Collector.SectionBarCounts.SemanticIndex _sectionBars = new();
+
+    /// <summary>
+    /// The silent measures that bring one part voice's span of a section up to the section's
+    /// canonical bar count — what the page pads the short staff with (MeasureCollector's
+    /// section padding), so every part's measure N is the same bar: without it a one-bar
+    /// melody A beside a two-bar bass A exported melody with one measure fewer and its B
+    /// beside bass's A (scratch/p363/pm-two-parts.lys: P1 2 measures, P2 3; MEASURED
+    /// 2026-09-10). Written as the bare bar lines the author's own <c>| |</c> would be —
+    /// <see cref="ProcessNode"/>'s empty-bar rule gives each a bar of silence
+    /// (<see cref="AddSilentBar"/>) — with one extra when the voice's last bar is still open
+    /// (that first bar line only closes it; the index says). The count is the SEMANTIC one
+    /// (<c>R1*4</c> is four bars, a repeat its played length).
+    /// </summary>
+    private void PadVoice(SyntaxNode voice)
+    {
+        int missing = _sectionBars.Missing(voice, out bool open);
+        if (missing <= 0)
+            return;
+        if (_currentMeasure == null)
+            StartNewMeasure();
+        var bar = new BarlineSyntax(new Syntax.InternalSyntax.BarlineGreen(
+            new Syntax.InternalSyntax.SyntaxToken(SyntaxKind.Bar, "|"), null, null), null, voice.Position);
+        for (int i = 0; i < missing + (open ? 1 : 0); i++)
+            ProcessNode(bar);
+    }
 
     /// <summary>A part-major section (<c>part m { section A { … } }</c>) holds its music
     /// INLINE — not in a nested part block — so it is emitted here under the ENCLOSING
@@ -735,9 +770,12 @@ public sealed class MusicXmlExporter
     /// (see <see cref="_bareSectionOwner"/>); "Part 1" remains for a file that names nobody.
     /// </remarks>
     private void EmitPartMajorSection(SectionDeclarationSyntax section)
-        => EmitPartMusic(
+    {
+        EmitPartMusic(
             EnclosingPartName(section) ?? _bareSectionOwner ?? "Part 1",
             DirectChildren(section));
+        PadVoice(section);
+    }
 
     /// <summary>The non-token child nodes of a container, in order.</summary>
     private static IEnumerable<SyntaxNode> DirectChildren(SyntaxNode node)

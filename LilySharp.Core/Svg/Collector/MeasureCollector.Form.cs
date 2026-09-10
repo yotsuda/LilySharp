@@ -550,9 +550,15 @@ public sealed partial class MeasureCollector
                 foreach (var kv in _sectionState.PartMajorCells)
                     if (kv.Key.section == section.SectionName)
                         _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, kv.Value.FullSpan.End);
+                foreach (var kv in _sectionState.ChordTrackCells)
+                    if (kv.Key.section == section.SectionName)
+                        _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, kv.Value.FullSpan.End);
             }
             int produced = builder.CurrentMeasureIndex - startMeasure;
-            int canonical = GetCanonicalSectionBars(section);
+            // A collect that overran its expansion budget is truncated music: what it drew
+            // is shorter than any count of the source (`R1*1000` under a cap of 10 draws 11
+            // bars), so padding it up to the count would draw the truncation as silence.
+            int canonical = ExpansionBudgetExceededAt == null ? GetCanonicalSectionBars(section) : 0;
             for (int i = produced; i < canonical; i++)
                 builder.AddItem(new RestItem(TimeSignatureFraction, 0, section.SourceStart) { IsSpacer = true });
         }
@@ -664,8 +670,13 @@ public sealed partial class MeasureCollector
     /// <summary>
     /// The canonical bar count of a section: the greatest bar count among every part
     /// that defines it (part-major cells across parts, or the sibling part blocks of a
-    /// section-major section). A section spans as many bars as its longest part, so
-    /// shorter parts pad up to this to stay aligned.
+    /// section-major section) AND every named chord track that writes it (a part-major
+    /// chord-track cell, or a named chord block inside a section-major section). A
+    /// section spans as many bars as its longest voice, so shorter parts pad up to this
+    /// to stay aligned. A chord row is a voice of the section too: were it left out, a
+    /// row longer than its melody would spill its trailing chords onto the next section's
+    /// first bars, beside that section's own chords. The cross-part validator
+    /// (<c>CrossPartMeasureValidator</c>, LYS2007) counts the same voices.
     /// </summary>
     private int GetCanonicalSectionBars(SectionDeclarationSyntax section)
     {
@@ -676,26 +687,22 @@ public sealed partial class MeasureCollector
         if (_canonicalSectionBars.TryGetValue(section, out int cached))
             return cached;
 
-        int max = 0;
-
-        // Part-major: every `part <p> { section <name> { ... } }` cell for this name.
-        foreach (var kv in _sectionState.PartMajorCells)
-            if (kv.Key.section == section.SectionName)
-                max = Math.Max(max, CountBarsInScope(kv.Value));
-
-        // Section-major: the sibling part blocks inside the section declaration
-        // (direct children — see ProcessSection's discovery loop for the grammar
-        // guarantee; the descendant walk here re-read the whole section body).
-        foreach (var part in section.ChildNodes().OfType<PartBlockSyntax>())
-            max = Math.Max(max, CountBarsInScope(part));
-
-        // Fallback: a standalone section whose own descendants are the music.
-        if (max == 0)
-            max = CountBarsInScope(section);
+        // THE ONE HOUSE (SectionBarCounts): every voice of the name — part-major cells,
+        // chord-track cells, a section-major declaration's part blocks and named chord
+        // blocks, the single-part shorthand — folded by name, once per collect (one green
+        // walk over the section declarations). The page keeps the SYNTACTIC counter (its
+        // remarks say what it undercounts and why the exporters use the semantic one).
+        // Until 2026-09-10 this method folded the collector's own cell registry (parts only).
+        _canonicalByName ??= SectionBarCounts.CanonicalByNameSyntactic(SectionBarCounts.RootOf(section));
+        int max = _canonicalByName.TryGetValue(section.SectionName, out int bars) ? bars : 0;
 
         _canonicalSectionBars[section] = max;
         return max;
     }
+
+    // section name -> canonical bar count for the whole book (SectionBarCounts.CanonicalByNameSyntactic);
+    // computed on first use per collect, cleared with _canonicalSectionBars (Reset).
+    private Dictionary<string, int>? _canonicalByName;
 
     /// <summary>
     /// Bar count of a music scope (a part block or a part-major section cell),
@@ -711,12 +718,68 @@ public sealed partial class MeasureCollector
     /// measures, so counting every voice's barlines would multiply the bar count.
     /// </summary>
     internal static int CountBarsInScope(SyntaxNode scope)
+        => CountBarsInScope(scope, out _, phrases: null);
+
+    /// <summary>As <see cref="CountBarsInScope(SyntaxNode)"/>, and whether the last bar is
+    /// still OPEN — music after the last bar line, counted as a bar of its own; a reader
+    /// that appends bar lines to pad the scope closes it with its first one.</summary>
+    internal static int CountBarsInScope(SyntaxNode scope, out bool trailingOpen)
+        => CountBarsInScope(scope, out trailingOpen, phrases: null);
+
+    /// <summary>
+    /// As above, with the book's PHRASE table (name → the phrase's body green, or a
+    /// variable's expression green): a phrase reference counts its body's bars, in a fresh
+    /// bar frame (a phrase's edge closes an open bar, as the collector's phrase boundary
+    /// does). Without the table a reference counts nothing — the shape the equivalence net
+    /// (green ≡ red) still runs on. <c>R1*N</c> counts N bars and a <c>repeat</c> its
+    /// body's bars COUNT times either way (2026-09-10; the count used to be one token, one
+    /// bar, so a section written as three phrases read as ZERO bars — measured on 97
+    /// sections of the fixture net, SectionVoicePaddingExportTests'
+    /// SyntacticCanonical_MatchesSemantic_OnEveryNetBook).
+    /// </summary>
+    internal static int CountBarsInScope(SyntaxNode scope, out bool trailingOpen, PhraseBarTable? phrases)
     {
         int bars = 0;
         bool pendingMusic = false;
         bool confirmable = false; // the scope-start boundary is CONSUMED: a `|` there is a bar
-        WalkBars(scope.Green, ref bars, ref pendingMusic, ref confirmable);
-        return bars + (pendingMusic ? 1 : 0);
+        // The walk's own budget, the collector's cap (DefaultExpansionBudgetCap): phrase
+        // ENTRIES it will still follow, and the bar count's ceiling. A phrase DAG doubling
+        // per level (ExpansionBudgetTests' DagBook) or `R1*2000000000` must neither hang
+        // this walk nor hand the page a count to pad up to — a collect that overran its
+        // budget pads nothing (ProcessSection), so the ceiling only has to keep the sum sane.
+        int budget = DefaultExpansionBudgetCap;
+        WalkBars(scope.Green, ref bars, ref pendingMusic, ref confirmable, phrases, activeRefs: null, ref budget);
+        trailingOpen = pendingMusic;
+        return Math.Min(DefaultExpansionBudgetCap, bars + (pendingMusic ? 1 : 0));
+    }
+
+    /// <summary>
+    /// The phrase table the bar-counting walk reads: every <c>phrase NAME { … }</c> body and
+    /// <c>NAME = …</c> expression under the root as greens (last declaration wins, the
+    /// collector's <c>_variables</c> rule), plus the walk's memo of what each body counted.
+    /// A body's count is a pure function of the body and the ONE bit of walk state that
+    /// reaches into it (whether a leading <c>|</c> would confirm a close made just before
+    /// the reference), so a phrase referenced from a hundred sections is walked once or
+    /// twice per collect, not a hundred times — MEASURED before the memo (Release, 120
+    /// sections × 2 parts × 3 references over 40 eight-bar phrases): +8.4% / +3.9% on the
+    /// whole compile in the two orders, against a ±4% control (scratch/p363/perf-phrases.txt).
+    /// </summary>
+    internal sealed class PhraseBarTable
+    {
+        public Dictionary<string, InternalSyntax.GreenNode> Greens { get; } = new(StringComparer.Ordinal);
+        /// <summary>(name, confirmable at entry) → (bars the body adds, whether it leaves a bar open).</summary>
+        public Dictionary<(string Name, bool Confirmable), (int Bars, bool Pending)> Memo { get; } = new();
+    }
+
+    /// <inheritdoc cref="PhraseBarTable"/>
+    internal static PhraseBarTable PhraseGreens(SyntaxNode root)
+    {
+        var table = new PhraseBarTable();
+        foreach (var ph in root.KindSites(SyntaxKind.PhraseDeclaration).OfType<PhraseDeclarationSyntax>())
+            table.Greens[ph.Name.Text] = ph.Body.Green;
+        foreach (var vd in root.KindSites(SyntaxKind.VariableDeclaration).OfType<VariableDeclarationSyntax>())
+            table.Greens[vd.Name.Text] = vd.Expression.Green;
+        return table;
     }
 
     /// <summary>
@@ -731,7 +794,8 @@ public sealed partial class MeasureCollector
     /// on every scope of every fixture book) — the old red walk stays below
     /// as its oracle.
     /// </summary>
-    private static void WalkBars(InternalSyntax.GreenNode node, ref int bars, ref bool pendingMusic, ref bool confirmable)
+    private static void WalkBars(InternalSyntax.GreenNode node, ref int bars, ref bool pendingMusic, ref bool confirmable,
+        PhraseBarTable? phrases, HashSet<string>? activeRefs, ref int budget)
     {
         for (int i = 0; i < node.SlotCount; i++)
         {
@@ -740,6 +804,94 @@ public sealed partial class MeasureCollector
                 continue; // the old walk recursed into tokens as a no-op (no slots)
             switch (child.Kind)
             {
+                case SyntaxKind.Rest:
+                    // `R1*N` is N bars written as one token (RestGreen's slot 3 is the count):
+                    // N−1 here, the last one when the bar closes or stays pending.
+                    pendingMusic = true;
+                    if (child.GetSlot(3) is InternalSyntax.SyntaxToken count
+                        && int.TryParse(count.Text, out int n) && n > 1)
+                        bars = (int)Math.Min(DefaultExpansionBudgetCap, (long)bars + n - 1);
+                    break;
+                case SyntaxKind.RepeatExpression:
+                    // Played length, MeasureModel's reading (its class remarks): the body's
+                    // bars COUNT times for every type but tremolo, which is one metric item
+                    // (the page expands an in-music `repeat volta 2` into two bars too:
+                    // audit/lpreg/voltagrace-probe.lys draws 2). Without durations this walk
+                    // can only multiply the body's CLOSED bars: a body with no bar line at all
+                    // is music like a note (`repeat percent 2 { c16 d e f }` is a beat, not a
+                    // bar — audit/lpreg/slashprobe.lys drew 4 bars for 1 when a turn counted
+                    // as a bar), an open tail carries over ONCE, and music pending at the
+                    // entry is absorbed by the body's first close (`grace { f8 } repeat volta
+                    // 2 { b1 | }` is 2 bars, not 3). Under, never over: the page pads other
+                    // voices up to this count, so an overcount pads them wrongly.
+                    {
+                        var type = (InternalSyntax.SyntaxToken)child.GetSlot(1)!;
+                        if (type.Text == "tremolo")
+                        {
+                            pendingMusic = true;
+                            break;
+                        }
+                        int turns = child.GetSlot(2) is InternalSyntax.SyntaxToken c && int.TryParse(c.Text, out int k) ? Math.Max(1, k) : 1;
+                        int bodyBars = 0; bool bodyPending = false; bool bodyConfirmable = false;
+                        if (child.GetSlot(3) is { } body)
+                            WalkBars(body, ref bodyBars, ref bodyPending, ref bodyConfirmable, phrases, activeRefs, ref budget);
+                        if (bodyBars == 0)
+                        {
+                            pendingMusic = true;
+                            break;
+                        }
+                        bars = (int)Math.Min(DefaultExpansionBudgetCap, (long)bars + (long)turns * bodyBars);
+                        pendingMusic = bodyPending;
+                        // The alternative clause's endings are written bars of their own.
+                        if (child.GetSlot(4) is { } alternative)
+                            WalkBars(alternative, ref bars, ref pendingMusic, ref confirmable, phrases, activeRefs, ref budget);
+                        // A closed body's exit is a bar boundary: a `|` right after it confirms
+                        // the close (`repeat percent 2 { c4 e g e | } |` is two bars, not three).
+                        confirmable = !pendingMusic;
+                    }
+                    break;
+                case SyntaxKind.VariableReference:
+                    // A phrase reference is its body's bars, walked where it stands (the
+                    // collector expands it there, ExpandVariable). Nothing without the table;
+                    // a cycle is walked once; past the budget nothing (a DAG doubling per
+                    // level is 2^19 entries from twenty lines — ExpansionBudgetTests).
+                    if (phrases != null
+                        && child.GetSlot(0) is InternalSyntax.SyntaxToken nameTok
+                        && phrases.Greens.TryGetValue(nameTok.Text, out var phraseBody)
+                        && budget > 0)
+                    {
+                        budget--;
+                        // The body's count depends on the walk's state only through
+                        // `confirmable` (a leading `|` confirms or counts); pending music at
+                        // the entry is closed by the body's first bar line exactly as a
+                        // leading empty bar would count, so the memo is keyed on that one bit.
+                        var key = (nameTok.Text, confirmable);
+                        if (!phrases.Memo.TryGetValue(key, out var counted))
+                        {
+                            activeRefs ??= new HashSet<string>(StringComparer.Ordinal);
+                            if (!activeRefs.Add(nameTok.Text))
+                                break; // a cycle: walked once, nothing on re-entry
+                            int bodyBars = 0; bool bodyPending = false; bool bodyConfirmable = confirmable;
+                            WalkBars(phraseBody, ref bodyBars, ref bodyPending, ref bodyConfirmable, phrases, activeRefs, ref budget);
+                            activeRefs.Remove(nameTok.Text);
+                            counted = (bodyBars, bodyPending);
+                            phrases.Memo[key] = counted;
+                        }
+                        if (counted.Bars == 0 && !counted.Pending)
+                            break; // an empty body touches nothing
+                        bars = Math.Min(DefaultExpansionBudgetCap, bars + counted.Bars);
+                        pendingMusic = counted.Pending;
+                        // LEAVING a body that closed its last bar makes the next `|` a
+                        // confirmation of that close: `x | x` is two bars
+                        // (EmptyMeasureValidatorTests PhraseBoundary_RendersTwoBars). An
+                        // OPEN tail stays open — a phrase can be a beat (`phrase p1 { c4 }`,
+                        // ExpansionBudgetTests' DagBook: 32 of them are eight bars, not 32)
+                        // and this walk has no durations to close it by; under, never over.
+                        // ENTERING changes nothing: a leading `|` inside the body closes an
+                        // empty bar, as a section's own.
+                        confirmable = !pendingMusic;
+                    }
+                    break;
                 case SyntaxKind.Barline:
                     if (pendingMusic)
                     {
@@ -762,7 +914,6 @@ public sealed partial class MeasureCollector
                     }
                     break;
                 case SyntaxKind.Note:
-                case SyntaxKind.Rest:
                 case SyntaxKind.Chord:
                 case SyntaxKind.ChordRepetition:
                 case SyntaxKind.SlashNote:
@@ -778,13 +929,13 @@ public sealed partial class MeasureCollector
                     {
                         if (child.GetSlot(v) is { Kind: SyntaxKind.MusicBlock } firstVoice)
                         {
-                            WalkBars(firstVoice, ref bars, ref pendingMusic, ref confirmable);
+                            WalkBars(firstVoice, ref bars, ref pendingMusic, ref confirmable, phrases, activeRefs, ref budget);
                             break;
                         }
                     }
                     break;
                 default:
-                    WalkBars(child, ref bars, ref pendingMusic, ref confirmable);
+                    WalkBars(child, ref bars, ref pendingMusic, ref confirmable, phrases, activeRefs, ref budget);
                     break;
             }
         }
@@ -836,8 +987,34 @@ public sealed partial class MeasureCollector
                         bars++;
                     }
                     break;
+                case RestSyntax rest:
+                    pendingMusic = true;
+                    if (rest.MeasureCount > 1)
+                        bars = (int)Math.Min(DefaultExpansionBudgetCap, (long)bars + rest.MeasureCount - 1);
+                    break;
+                case RepeatExpressionSyntax rep:
+                    if (rep.RepeatType.Text == "tremolo")
+                    {
+                        pendingMusic = true;
+                        break;
+                    }
+                    {
+                        int turns = int.TryParse(rep.Count.Text, out int k) ? Math.Max(1, k) : 1;
+                        int bodyBars = 0; bool bodyPending = false; bool bodyConfirmable = false;
+                        WalkBarsRed(rep.Body, ref bodyBars, ref bodyPending, ref bodyConfirmable);
+                        if (bodyBars == 0)
+                        {
+                            pendingMusic = true;
+                            break;
+                        }
+                        bars = (int)Math.Min(DefaultExpansionBudgetCap, (long)bars + (long)turns * bodyBars);
+                        pendingMusic = bodyPending;
+                        if (rep.Alternative is { } alternative)
+                            WalkBarsRed(alternative, ref bars, ref pendingMusic, ref confirmable);
+                        confirmable = !pendingMusic;
+                    }
+                    break;
                 case NoteSyntax:
-                case RestSyntax:
                 case ChordSyntax:
                 case ChordRepetitionSyntax:
                 case SlashNoteSyntax:

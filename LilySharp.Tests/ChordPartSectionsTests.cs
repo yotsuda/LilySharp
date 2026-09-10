@@ -101,6 +101,53 @@ public class ChordPartSectionsTests
         Assert.Equal(new[] { "0:C", "1:F", "2:G7", "3:C", "4:F" }, byMeasure);
     }
 
+    [Fact]
+    public void ChordTrackLongerThanItsMelody_StretchesTheSection()
+    {
+        // ★ scratch/ベースタブLy/tooLongChords.lys (2026-09-10): the chord track's A is two
+        // bars, the melody's A one. The section is as long as its longest voice — the chord
+        // row included — so the melody's A is padded to two bars and B starts at bar 2:
+        // Dm7 (m0) G7 (m1) | Cmaj7 (m2). Before, the canonical count read parts only, A was
+        // one bar, and G7 landed on m1 = B's first bar beside Cmaj7.
+        var tree = SyntaxTree.Parse("""
+            part melody {
+              section A { g2 g | }
+              section B { c2 c | }
+            }
+            chords prog {
+              section A { Dm7 | G7 }
+              section B { Cmaj7 | }
+            }
+            form main { A | B | }
+            score main { chords prog  staff melody }
+            """);
+        var score = new MeasureCollector().Collect(tree, "melody", null, "prog");
+        var byMeasure = score.ChordNames
+            .OrderBy(c => c.MeasureIndex).ThenBy(c => c.Timing.ToDouble())
+            .Select(c => $"{c.MeasureIndex}:{c.ChordText}").ToArray();
+        Assert.Equal(new[] { "0:Dm7", "1:G7", "2:Cmaj7" }, byMeasure);
+        // A (2, the second a spacer bar) + B (1).
+        Assert.Equal(3, score.Voice.Measures.Length);
+    }
+
+    [Fact]
+    public void SectionMajorChordBlockLongerThanItsMelody_StretchesTheSection()
+    {
+        // The section-major spelling of the same book collects the same row.
+        var tree = SyntaxTree.Parse("""
+            section A { melody { g2 g | } chords prog { Dm7 | G7 } }
+            section B { melody { c2 c | } chords prog { Cmaj7 | } }
+            form main { A | B | }
+            score main { chords prog  staff melody }
+            """);
+        var score = new MeasureCollector().Collect(tree, "melody", null, "prog");
+        var byMeasure = score.ChordNames
+            .OrderBy(c => c.MeasureIndex).ThenBy(c => c.Timing.ToDouble())
+            .Select(c => $"{c.MeasureIndex}:{c.ChordText}").ToArray();
+        Assert.Equal(new[] { "0:Dm7", "1:G7", "2:Cmaj7" }, byMeasure);
+        Assert.Equal(3, score.Voice.Measures.Length);
+    }
+
     private static string ChordSignature(string src)
     {
         var score = new MeasureCollector()
