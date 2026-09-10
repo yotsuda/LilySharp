@@ -88,6 +88,29 @@ internal static class TieVariantEngraver
     private const double BowRatio = 0.333;
     private const double BowHeightLimit = 1.0;
 
+    /// <summary>
+    /// The half-tie's LINE thickness: its <c>line-thickness</c> (0.8) in staff-line units.
+    /// The stencil is the curve widened by half of this on every edge, and that stencil is
+    /// the grob's extent — so the spacing box reaches 0.04 past the curve at both ends.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:2039 LaissezVibrerTie line-thickness 0.8, and
+    ///   :2934 RepeatTie line-thickness 0.8;
+    /// LILYPOND-REF: lily/tie.cc:225-253 Tie::print — line_thick = staff_thick × line-thickness,
+    ///   handed to Lookup::slur;
+    /// LILYPOND-REF: lily/lookup.cc:483-516 Lookup::bezier_sandwich — b.widen (0.5 * thickness)
+    ///   on both axes, the box the stencil carries.
+    /// MEASURED (2.26.0, audit/lp-geometry/probes/semi-tie-spacing.ly book LVA): the l.v.
+    /// tie's X-extent is head right + 0.16 .. + 1.34 for a curve spanning + 0.2 .. + 1.3.
+    /// </remarks>
+    internal const double LineThickness = 0.8 * EngravingDefaults.LineThickness;
+
+    /// <summary>The half-tie's <c>extra-spacing-height</c>: its spacing box reaches half a
+    /// staff space above and below its stencil.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2037 LaissezVibrerTie extra-spacing-height
+    /// (-0.5 . 0.5), and :2932 RepeatTie the same.</remarks>
+    internal const double ExtraSpacingHeight = 0.5;
+
     /// <summary>Y offset from notehead center to the tie's flat baseline. Lily# placement
     /// approximation (~notehead half-height, no single LP constant); LP anchors the semi-tie
     /// at the note-head edge via Semi_tie_column.</summary>

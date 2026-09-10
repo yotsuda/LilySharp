@@ -166,6 +166,39 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A dotted column reserves its dots where it draws them.** Lily# has drawn an augmentation
+  dot at the head's ink right plus one dot width (0.45), pushed right by a flag standing on
+  its row, since session 314 — but the column's spacing box, the keep-inside-line reach and
+  the tie outline still put the reserved dot 0.3 after the head, with no push: two spellings
+  of one quantity, 0.15 apart on every dotted note and 0.76 apart on a flagged one whose dot
+  is lifted into the flag's band. In one voice a dotted note's own spacing wish outranks the
+  rod through its dot at every natural density, which is why no book showed it; a column
+  pair two voices share is held by that rod alone, and there the dotted-quarter-against-
+  quarter bar of `test/dot-force-down` stood 16.55 against LilyPond's 16.702. The three
+  reservation houses now read `DotColumn.Reserved` — the renderer's own rule, fed from the
+  spacing side's stem and flag — and the constant is retired. Measured on 2.26.0
+  (audit/lp-geometry/probes/dot-column-spacing.ly): four ledger points, opened at
+  −0.150000 / 0 / 0 / −0.913200 and closed at zero by this port.
+- **A half-tie's spacing box is its stencil's, half a line thickness past the curve.** A
+  laissez-vibrer or repeat tie reserved the bare curve span; LilyPond's grob extent is the
+  stencil `Lookup::bezier_sandwich` builds, the curve's box widened by half the tie's line
+  thickness (0.8 × 0.1 / 2 = 0.04) on every edge, and the grob declares
+  `extra-spacing-height (-0.5 . 0.5)` on top. The rod from an l.v. tie to the next column's
+  arpeggio is 4.244 in LilyPond and read 4.204 here — the regression book
+  `laissez-vibrer-arpeggio` was 0.08 a bar short. Ledger point `semi-tie.lv-to-arpeggio-gap`,
+  opened at −0.040000 and closed at zero. Measured on 2.26.0
+  (audit/lp-geometry/probes/semi-tie-spacing.ly).
+- **A spacing wish's minimum runs head to head; only the rod carries the dots.** The port
+  above turned up its own second defect: two dotted cluster chords in one voice (bar 2 of
+  the regression book `dots`) came out 0.15 WIDER once the reserved dot stood where the drawn
+  one does. LilyPond keeps two separation items on a column — the note column's, whose
+  elements are the heads, the stem and the flag, and the paper column's, which every item
+  joins — and Note_spacing's minimum reads the first, the column rod the second. Lily# built
+  one skyline for both, so a dot that LilyPond lets a neighbour's reversed head tuck under
+  (the rod through it: 3.843) had the wish floor the ideal above it (4.043). The wish's
+  skylines now hold the note column's elements only; dots and half-ties reach a neighbour
+  through the rod alone. Ledger point `dots.wish.cluster-pair`, opened at +0.200 and closed at
+  zero. Measured on 2.26.0 (probe book DCW).
 - **A whole-note second is a full collision, and a shifted head refines the closing spring
   too.** LilyPond's `check_meshing_chords` treats a distant half-collide of wholes (or longer)
   as a full collide — the 0.5 shift, the UP voice moving one whole head (1.962) — where Lily#

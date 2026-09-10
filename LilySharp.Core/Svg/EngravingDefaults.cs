@@ -798,27 +798,13 @@ internal static class EngravingDefaults
     public const double PaperColumnXAlignmentExtentWidth = 1.35;
 
     // === Dots ===
-    // ⚠️ LILYSHARP-OWN, AND LILYPOND'S ANSWER IS MEASURABLE THOUGH NOT DECLARED. There is no
-    //   dot-gap constant to cite because both gaps are the DOT'S OWN WIDTH, computed:
-    //     scm/output-lib.scm:686-690 ly:dots::print stacks a note's dots with
-    //       `padding = (interval-length (ly:stencil-extent dot-stencil X))` — the gap BETWEEN
-    //       consecutive dots;
-    //     scm/output-lib.scm:692-704 dot-column-interface::pad-by-one-dot-width returns the
-    //       max dot width as DotColumn's side-position padding (scm/define-grobs.scm:1263) —
-    //       the gap from the SUPPORT.
-    //   One quantity in two roles, which is exactly how Lily# uses this constant
-    //   (ElementCoordinator lays the dots out as `DotGap + d * (width + DotGap)`).
-    // ⚠️ MEASURED: that width is 0.450000 on 2.26.0 — asked of LilyPond directly
-    //   (`dots.dot` X extent (0 . 0.45)) and matching our own extraction
-    //   (GlyphMetrics.AugmentationDot). So the LilyPond padding term is 0.45 and this is 0.3,
-    //   0.15 short in both roles.
-    // ⚠️ NOT CHANGED HERE. The number feeds the drawn dot X, the column's horizontal skyline
-    //   (ItemSkylineFactory) and the spacing rules, so moving it changes ink AND spacing on
-    //   every dotted note in the corpus — an island with snapshot approval, and one that
-    //   wants a ledger point rather than a bare re-base. Recorded, not done.
-    /// <summary>Gap from the notehead to its first augmentation dot, and between dots
-    /// (staff spaces). Lily#'s own; see the measurement above.</summary>
-    public const double DotGap = 0.3;
+    // There is no dot-gap constant here, and there is none to cite: both gaps are the DOT'S
+    // OWN WIDTH, computed — scm/output-lib.scm:686-690 ly:dots::print stacks a note's dots one
+    // dot width apart, and scm/output-lib.scm:692-704 dot-column-interface::pad-by-one-dot-width
+    // is the DotColumn's padding from its support. `DotGap = 0.3` stood here until 2026-09-10,
+    // read by the RESERVATION side only (the renderer had drawn 0.45 through DotColumn.OffsetX
+    // since session 314); Svg/Layout/DotColumn.cs `Reserved` is the one house now, and its
+    // remarks carry the ledger points that retired the constant.
 
     // === Repeat dots ===
     // LILYPOND-REF: scm/bar-line.scm:296-368 make-colon-bar-line — LilyPond does not

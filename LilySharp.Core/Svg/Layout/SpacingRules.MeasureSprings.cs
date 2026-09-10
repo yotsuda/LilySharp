@@ -897,8 +897,8 @@ internal static partial class SpacingRules
     /// one-dot-width gap, the dot, the Dots grob's own extra-spacing-width (0 . 0.2) —
     /// a rod, again, and the plain 2.50 of the measure's other eighths; removing the dot
     /// (<c>cis2</c> for <c>cis2.</c>) collapses it to 2.51 though the shifted head stays.
-    /// Lily# prices that pair 0.15 under LilyPond while the head-to-dot gap is
-    /// EngravingDefaults.DotGap (0.3 against LilyPond's 0.45 — recorded there, not moved).
+    /// Lily# priced that pair 0.15 under LilyPond until 2026-09-10, when the reserved dot
+    /// column became the drawn one (DotColumn.Reserved; ledger dots.cross-voice.*).
     /// </para>
     /// <para>
     /// ⚠️ Same-voice pairs with no shift are SKIPPED: the per-voice loop has already
@@ -1010,6 +1010,9 @@ internal static partial class SpacingRules
         // SkylineFloorPair keeps both clamps in the one home the item-pair helpers use.
         var rightSkyOf = new Dictionary<(int Col, int Entry), HorizontalSkyline>();
         var leftSkyOf = new Dictionary<(int Col, int Entry), HorizontalSkyline>();
+        // The wish's skylines (note-column elements only), for the same-voice pairs.
+        var wishRightOf = new Dictionary<(int Col, int Entry), HorizontalSkyline>();
+        var wishLeftOf = new Dictionary<(int Col, int Entry), HorizontalSkyline>();
         for (int t = 1; t < timings.Count; t++)
         {
             if (columns[t - 1] is not { } left || columns[t] is not { } right)
@@ -1048,14 +1051,24 @@ internal static partial class SpacingRules
                     if (!leftSkyOf.TryGetValue((t, ri), out var ls))
                         leftSkyOf[(t, ri)] = ls =
                             ItemSkylineFactory.CreateLeftSkylineAtColumn(r.Item, r.Shift, 0);
-                    var (sky, rod) = SkylineFloorPair(rs, ls);
+                    var (_, rod) = SkylineFloorPair(rs, ls);
                     // A SAME-voice pair is spanned by that voice's wish, and the wish's
                     // skyline minimum is measured between the voice's OWN note columns in
                     // the column frame — shifts included — so a shifted pair re-prices the
                     // minimum here. A CROSS-voice pair is spanned by no wish at all: the
                     // other voice's ink reaches this pair only through the column ROD.
+                    // The wish reads the NOTE columns' skylines (no dots, no half-tie), the
+                    // rod the paper columns' — ItemSkylineFactory.ColumnElements.
                     if (l.Voice == r.Voice)
-                        maxSky = Math.Max(maxSky, sky);
+                    {
+                        if (!wishRightOf.TryGetValue((t - 1, li), out var wrs))
+                            wishRightOf[(t - 1, li)] = wrs =
+                                ItemSkylineFactory.CreateWishRightSkylineAtColumn(l.Item, l.Shift, 0);
+                        if (!wishLeftOf.TryGetValue((t, ri), out var wls))
+                            wishLeftOf[(t, ri)] = wls =
+                                ItemSkylineFactory.CreateWishLeftSkylineAtColumn(r.Item, r.Shift, 0);
+                        maxSky = Math.Max(maxSky, SkylineFloorPair(wrs, wls).SkyMin);
+                    }
                     maxRod = Math.Max(maxRod, rod);
                 }
             if (shiftSum == 0 && maxSky <= result[t].MinDistance && maxRod <= result[t].MinDistance)

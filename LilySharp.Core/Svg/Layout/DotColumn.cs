@@ -16,6 +16,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
 
@@ -208,5 +210,97 @@ internal static class DotColumn
                 if (s.PositionBottom < p && p < s.PositionTop)
                     off = Math.Max(off, s.XRight);
         return off + dotWidth;
+    }
+
+    /// <summary>
+    /// The RESERVED dot column of a rhythmic item — where the column's spacing box, the
+    /// keep-inside-line reach and the tie and slur outlines put its first dot — and the rows
+    /// its dots sit on. The same <see cref="OffsetX"/> the renderer draws by, fed from the
+    /// spacing side's own houses for the stem and the flag, so a dot is reserved where it is
+    /// drawn.
+    /// </summary>
+    /// <param name="item">A note, a chord, or a drawn rest.</param>
+    /// <param name="noteValue">The NOTATED value (<c>SpacingRules.GetNoteValue</c>).</param>
+    /// <param name="headInkRight">The column's rightmost head INK right (a rest's glyph
+    /// right), in the column's frame — its origin the undisplaced head's LEFT edge.</param>
+    /// <returns>The first dot's left edge in that frame, and the staff positions (+up) of the
+    /// dot rows, one per head (one row for a rest). Successive dots stand two dot widths
+    /// apart.</returns>
+    /// <remarks>
+    /// LILYPOND-REF: lily/separation-item.cc:163-164 Separation_item::boxes — the Dots item's
+    ///   extent in its paper column joins the column's spacing box, so what a column reserves
+    ///   is where Dot_column::calc_positioning_done put its dots.
+    /// LILYPOND-REF: lily/dot-column.cc:81-84 Dot_column::calc_positioning_done — base_x is
+    ///   Stem::first_head's extent; :103-109 the stem is a support; :130-141 the flag is one, at
+    ///   its glyph's extent; :252-257 a rest's dots translate by the rest's extent plus one dot
+    ///   width.
+    /// <para>
+    /// ⚠️ UNTIL 2026-09-10 THE RESERVATION WAS ITS OWN RULE: a constant 0.3 after the head
+    /// (<c>EngravingDefaults.DotGap</c>, retired) and no support read, spelt in three houses —
+    /// the column's spacing box, the keep-inside-line reach, the tie outline — while the
+    /// renderer drew 0.45 and the push. MEASURED on 2.26.0
+    /// (audit/lp-geometry/probes/dot-column-spacing.ly): a dotted quarter's cross-voice rod
+    /// read 3.7584 for LilyPond's 3.9084 (dots.cross-voice.dotted-quarter-to-quarter, −0.15 =
+    /// 0.45 − 0.3) and a flag-pushed <c>g'8.</c>'s 2.4542 for 3.3674
+    /// (dots.flag-pushed.dotted-eighth-to-sixteenth, −0.9132 — the reserved dot 1.2 short of
+    /// the drawn one). In one voice the dot's own wish outranks the rod through it at every
+    /// natural density, which is why the corpus never showed it.
+    /// </para>
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN: the dots' preferred DIRECTION is not read here. LilyPond's
+    /// <c>Dots.direction</c> is the VOICE's (\voiceTwo dips a line-note's dot below its
+    /// line), the renderer takes it from <c>VoiceDefaults</c>, and the item alone does not
+    /// carry it. The X differs only when a dot dipped one row lands in a DOWN flag's band,
+    /// and only toward under-reserving that column.
+    ///   departs from: scm/music-functions.scm:616-631 direction-polyphonic-grobs (Dots).
+    ///   goes away when: the voice's dot direction is baked on the item as its stem's is.
+    ///   observed by: none.
+    /// </para>
+    /// </remarks>
+    internal static (double OffsetX, int[] Rows) Reserved(
+        MusicItem item, int noteValue, double headInkRight)
+    {
+        double dotWidth = GlyphMetrics.AugmentationDot.Width;
+        int[] headPositions = item switch
+        {
+            NoteItem n => new[] { n.StaffPosition },
+            ChordItem c when c.Notes.Length > 0 => c.Notes.Select(x => x.StaffPosition).ToArray(),
+            _ => Array.Empty<int>(),
+        };
+        if (headPositions.Length == 0)
+            // A rest's dots: one dot width past its glyph, in the space above the middle line
+            // (a whole rest hangs one space up and its dot one row DOWN off that — the same
+            // row; SharedRenderer.DrawRest, ElementCoordinator.RestDotDefaultOffset).
+            return (headInkRight + dotWidth, new[] { 1 });
+
+        var supports = new List<Support>();
+        // Null is exactly "no Stem grob": a whole note has no stem and no flag.
+        if (SpacingRules.StemSpacingInfo(item) is { } stem)
+        {
+            // The stem the spacing side reserves is the stem the renderer draws
+            // (SpacingRules.StemSpacingInfo's remarks); its X is LayoutUtilities.StemX's, the
+            // one house, in the column's frame.
+            double stemX = LayoutUtilities.StemX(
+                0, stem.StemUp, noteValue, LayoutUtilities.NoteheadStyleOf(item));
+            supports.Add(StemSupport(
+                (int)(stem.StemUp ? stem.HeadMin : stem.HeadMax), stem.StemUp,
+                stemX + EngravingDefaults.StemThickness / 2));
+            // A beamed stem's Flag has suicided by spacing time (ItemSkylineFactory.AddFlag).
+            bool beamed = item is NoteItem { IsBeamed: true } or ChordItem { IsBeamed: true };
+            if (noteValue >= 8 && !beamed)
+            {
+                var flagBox = GlyphMetrics.GetFlagBBox(noteValue, stem.StemUp);
+                if (flagBox != default)
+                {
+                    // The stem's tip in staff spaces from the middle line; the flag's ink
+                    // hangs off it, and FlagSupport converts spaces to positions.
+                    double tip = (stem.StemUp ? stem.StemMax : stem.StemMin) / 2.0;
+                    supports.Add(FlagSupport(
+                        tip + flagBox.Bottom, tip + flagBox.Top, stemX + flagBox.Right));
+                }
+            }
+        }
+        int[] rows = DotConfiguration.Resolve(headPositions);
+        return (OffsetX(headInkRight, supports, rows, dotWidth), rows);
     }
 }

@@ -847,6 +847,106 @@ internal static class LpGeometryProbes
     private static readonly string DHC = DottedHeadScore("DHC", "c'2 c'4 c'4");
 
     /// <summary>
+    /// THE DOT COLUMN IN THE SPACING BOX (probes/dot-column-spacing.ly, opened 2026-09-10,
+    /// session 361, for HANDOFF §1 session 360 ⑺⒞②): Lily# DRAWS a dot at the head's ink
+    /// right plus one dot width through <c>DotColumn.OffsetX</c> — the rule
+    /// dots.whole.column-to-dot-ink-left pins — but RESERVED it 0.15 nearer
+    /// (<c>EngravingDefaults.DotGap</c> 0.3) and never where a flag had pushed it. The
+    /// reservation is only observable where a ROD binds, and a single voice's wish never
+    /// lets it: so the books are two-voice, the pair a wish-less rod (session 361 ⑵).
+    /// </summary>
+    /// <remarks>
+    /// The frame is test/dot-force-down's bar (session 361's dfd): voice 1's quarters, voice
+    /// 2's dotted quarter a second below the first — a collision shift of one head, and the
+    /// dot after the SHIFTED head. LilyPond twins: books DCX/DCC/DPF in
+    /// probes/dot-column-spacing.ly.
+    /// </remarks>
+    private static string DotColumnScore(string name, string meter, string upper, string lower) => $$"""
+        octave absolute
+        time {{meter}}
+        key c major
+
+        part m { clef treble }
+
+        section A {
+          m {
+            voice { {{upper}} | }
+            { {{lower}} | }
+          }
+        }
+
+        form main { ~A }
+
+        score main "{{name}}" {
+          staff m
+        }
+        """;
+
+    /// <summary>The dotted cross-voice book: the rod col0 → col1/4 runs through the dot.</summary>
+    private static readonly string DCX = DotColumnScore("DCX", "2/4", "c'4 c'4", "b4. b8");
+
+    /// <summary>The same second with no dot: col0 → col1/4 is voice 1's own wish.</summary>
+    private static readonly string DCC = DotColumnScore("DCC", "2/4", "c'4 c'4", "b2");
+
+    /// <summary>The dot pushed by its flag (g on a line, lifted, under the up flag), the
+    /// other voice's sixteenth one sixteenth later so the wish-less rod binds over the
+    /// shortest's own ideal.</summary>
+    private static readonly string DPF = DotColumnScore("DPF", "4/16", "g8. s16", "s16 g16 s8");
+
+    /// <summary>
+    /// A HALF-TIE'S SPACING BOX (book LVA, probes/semi-tie-spacing.ly, opened 2026-09-10,
+    /// session 361 leg 3): the regression book laissez-vibrer-arpeggio as it stands —
+    /// an l.v. quarter, then an arpeggiated chord, four times. The pair is the ROD from
+    /// the tie's box to the arpeggio; LilyPond's tie X-extent is the curve widened by half
+    /// its line thickness (0.04) at both ends, and Lily#'s box was the bare curve span.
+    /// </summary>
+    private static readonly string LVA = """
+        octave absolute
+        time 4/4
+
+        part v { }
+
+        section Main {
+          v {
+            <e>4@laissezVibrer <f, f>4@arpeggio <e>4@laissezVibrer <g, f>4@arpeggio |
+            <e>4@laissezVibrer <a, f>4@arpeggio <e>4@laissezVibrer <b, f>4@arpeggio |
+          }
+        }
+
+        form main { ~Main }
+
+        score main "LVA" { staff ~v }
+        """;
+
+    /// <summary>
+    /// THE DOTS ARE NOT IN THE WISH (book DCW, the second defect the port above turned up):
+    /// bar 2 of audit/lp-regression/lys/dots.lys alone — two dotted cluster chords, stems
+    /// down, one voice. LilyPond's wish minimum reads the NOTE column's separation item
+    /// (heads, stem, flag) and the Dots are the PAPER column's only, so the pair is held by
+    /// the rod through the dot to the reversed head (3.8434) where a wish that held the dot
+    /// would floor the ideal at 4.0434 — which Lily# drew once the reserved dot stood at
+    /// 0.45 (and 3.89 while it stood at 0.3). Pitches absolute: LilyPond's b'' c''' d''' e'''
+    /// and f'' g'' a'' b''.
+    /// </summary>
+    private static readonly string DCW = $$"""
+        octave absolute
+        time 6/8
+        key c major
+
+        part m { clef treble }
+
+        section A {
+          m { <b' c'' d'' e''>4.@stemDown <f' g' a' b'>4.@stemDown | }
+        }
+
+        form main { ~A }
+
+        score main "DCW" {
+          staff m
+        }
+        """;
+
+    /// <summary>
     /// One slurred bar for the MELISMA-SPAN RESERVATION — the shared shape of books
     /// LMS / LMN in probes/lyric-melisma-span.ly (HANDOFF 1's residual item ⒥, named
     /// when the bound-voice skip-gap refused to close past +1.507845). The books differ
@@ -13433,6 +13533,28 @@ internal static class LpGeometryProbes
         new("dotted.natural.dotted-half-gap", DHD, g => g.NoteheadAnchorStep(0)),
         new("dotted.natural.half-gap", DHC, g => g.NoteheadAnchorStep(0)),
         new("dotted.natural.quarter-gap", DHC, g => g.NoteheadAnchorStep(1)),
+
+        // THE DOT COLUMN IN THE SPACING BOX (books DCX/DCC/DPF, dot-column-spacing.ly).
+        // The drawn dot stands at head ink + one dot width (DotColumn.OffsetX, pushed
+        // right by a flag on its row); the RESERVED dot read EngravingDefaults.DotGap 0.3
+        // and no push. Only a wish-less rod exposes the reservation, so the pair is
+        // cross-voice in every book. Heads sort by X: the shifted head is anchor 1 of its
+        // column, so the column step is anchor 2 − anchor 0.
+        new("dots.cross-voice.dotted-quarter-to-quarter", DCX,
+            g => g.NoteheadAnchor(2) - g.NoteheadAnchor(0)),
+        new("dots.cross-voice.eighth-control", DCX,
+            g => g.NoteheadAnchor(3) - g.NoteheadAnchor(2)),
+        new("dots.cross-voice.undotted-control", DCC,
+            g => g.NoteheadAnchor(2) - g.NoteheadAnchor(0)),
+        new("dots.flag-pushed.dotted-eighth-to-sixteenth", DPF, g => g.NoteheadAnchorStep(0)),
+        // The dots are the PAPER column's and not the NOTE column's, so the WISH's minimum
+        // runs head to head under them and only the ROD carries the dot (book DCW). Heads by
+        // X: two reversed (−1.2392), two main (0), then the next column's two reversed and
+        // two main — the column step is anchor 6 − anchor 2.
+        new("dots.wish.cluster-pair", DCW, g => g.NoteheadAnchor(6) - g.NoteheadAnchor(2)),
+        // The l.v. tie's box against the next column's arpeggio (book LVA): the tie's
+        // X-extent is the stencil's, half a line thickness past the curve at both ends.
+        new("semi-tie.lv-to-arpeggio-gap", LVA, g => g.NoteheadAnchorStep(0)),
 
         // ★ THE ROW'S OWN DISTANCE FROM ITS STAFF, a ledger point since 2026-07-27, when it
         // stopped being a decision. Lily# used to place an independent lyrics row as a

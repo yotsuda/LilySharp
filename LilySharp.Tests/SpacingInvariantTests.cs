@@ -746,8 +746,9 @@ public class SpacingInvariantTests
     /// 0.1 + (0.6521 + 1.3774 + 0.45 + 0.45 + 0.2) + 0.1 — the rod over the shifted half
     /// head, LilyPond's one-dot-width gap, the dot and its extra-spacing-width — against
     /// the measure's plain 2.50, and removing the dot (cis2) collapses it to 2.51. Lily#'s
-    /// head-to-dot gap is EngravingDefaults.DotGap (0.3, recorded there against the 0.45),
-    /// so its rod is that 0.15 short of LilyPond's and the test says so.
+    /// reserved dot column is the drawn one since 2026-09-10 (DotColumn.Reserved; the
+    /// head-to-dot gap was a constant 0.3 before, and this test pinned the 0.15 shortfall),
+    /// so the rod is LilyPond's to the digit — ledger dots.cross-voice.* are the points.
     /// </summary>
     [Fact]
     public void CrossVoiceDotReach_FloorsTheNextColumnsSpring()
@@ -765,16 +766,16 @@ public class SpacingInvariantTests
             + $"bare={bare[1].MinDistance:F3}, reserved={reserved[1].MinDistance:F3}");
         // The ideal is untouched: a cross-voice pair carries no wish, so no headroom.
         Assert.Equal(bare[1].IdealDistance, reserved[1].IdealDistance, precision: 9);
-        // The minimum is the ROD: shift + half head + dot gap + dot + Dots' esw 0.2, then
-        // the d's own −0.1 reach and the spanner's 0.1 padding.
+        // The minimum is the ROD: shift + half head + one dot width (the gap) + the dot +
+        // Dots' esw 0.2, then the d's own −0.1 reach and the spanner's 0.1 padding.
         double dotWidth = GlyphMetrics.AugmentationDot.Width;
         double rod = 0.5 * GlyphMetrics.GetNoteheadBBox(8).Width
                      + GlyphMetrics.GetNoteheadBBox(2).Right
-                     + EngravingDefaults.DotGap + dotWidth + SpacingRules.DotsExtraSpacingWidthRight
+                     + dotWidth + dotWidth + SpacingRules.DotsExtraSpacingWidthRight
                      + SpacingRules.DefaultExtraSpacingWidth + SpacingRules.SeparationRodPadding;
         Assert.Equal(rod, reserved[1].MinDistance, precision: 6);
-        // …which is LilyPond's 3.3295 less the DotGap shortfall, and nothing else.
-        Assert.Equal(3.3295, reserved[1].MinDistance + (dotWidth - EngravingDefaults.DotGap), precision: 3);
+        // …which is LilyPond's 3.3295, and nothing else.
+        Assert.Equal(3.3295, reserved[1].MinDistance, precision: 4);
         // The drawn gap is the rod, above the ideal: LilyPond holds a wishless pair at
         // its rod through the blocking force.
         Assert.True(reserved[1].MinDistance > reserved[1].IdealDistance);

@@ -2696,6 +2696,48 @@
       "residual": 0.0,
       "why": "EXACT: the family digit, in-book."
     },
+    "dots.cross-voice.dotted-quarter-to-quarter": {
+      "probe": "dot-column-spacing.ly",
+      "score": "DCX",
+      "lilypond": 3.908400000000000,
+      "residual": 0,
+      "why": "CLOSED the same day by the port it was opened for (session 361): -0.150000000 -> 0.000000000 to the digit. The three reservation houses (ItemSkylineFactory.AddDots, SpacingRules.CalculateNoteheadRightExtent, the tie outline in ElementCoordinator) now read DotColumn.Reserved -- the renderer's own OffsetX fed from the spacing side's stem and flag -- and EngravingDefaults.DotGap is retired; the ledger's other 810 points did not move. Original account follows. OPENED 2026-09-10 (session 361) at exactly the predicted -0.150000000: the pair col0 -> col1/4 is CROSS-voice (voice 1's quarters, voice 2's dotted quarter a second below the first), so no wish spans it and the other voice's ink reaches it as the ROD alone -- LilyPond 3.908400 = 0.1 + (1.3042 shift + 1.3042 head + 0.45 gap + 0.45 dot + 0.2 Dots extra-spacing-width) + 0.1, the Dots grob's own extent in the column skyline. LILYPOND-REF scm/output-lib.scm:692-704 dot-column-interface::pad-by-one-dot-width (the gap is ONE DOT WIDTH, 0.45), lily/dot-column.cc:229-232 calc_positioning_done (translate by x_offset + padding), lily/separation-item.cc:163-164 boxes (the Dots item joins the column's spacing box). Lily# DRAWS the dot there (dots.whole.column-to-dot-ink-left is exact) but RESERVED it through EngravingDefaults.DotGap = 0.3 in ItemSkylineFactory.AddDots -- two spellings of one quantity, 0.15 apart, invisible in a single voice because a dotted note's own wish always outranks the rod through its dot (a dotted quarter to an eighth: rod 2.60 under an ideal near 3.7). Session 360 saw this -0.15 twice (test/dot-force-down, test/dot-cross-voice-spacing) and left it in the pickup box; this is the point it asked for. ★ THE IN-BOOK CONTROL dots.cross-voice.eighth-control reads the bare eighth exact, and the no-dot twin dots.cross-voice.undotted-control reads voice 1's wish exact, so the 0.15 is the dot's and nothing else's."
+    },
+    "dots.cross-voice.eighth-control": {
+      "probe": "dot-column-spacing.ly",
+      "score": "DCX",
+      "lilypond": 1.800000000000000,
+      "residual": 0,
+      "why": "EXACT on the first reading: the same book's col1/4 -> col3/8 (voice 1's second quarter to voice 2's eighth) is the other wish-less pair, priced by the bare eighth's duration space alone -- the dot cannot reach it, so it is the frame control that makes the -0.15 next to it attributable to the dot."
+    },
+    "dots.cross-voice.undotted-control": {
+      "probe": "dot-column-spacing.ly",
+      "score": "DCC",
+      "lilypond": 3.002244999134612,
+      "residual": 0,
+      "why": "EXACT on the first reading: the same second with the dot removed (b'2 for b'4. b'8) prices col0 -> col1/4 by voice 1's own wish (c''4 -> c''4, the family's quarter digit 3.002245, the same number dotted-head-spacing.ly's quarter-gap reads) -- the shifted half's rod 0.1 + 1.3042 + 1.3774 + 0.1 + 0.1 = 2.98 sits under it. So the collision shift and its refinement (session 361 ⑸⒝) are not in the dotted book's residual; only the dot is."
+    },
+    "dots.wish.cluster-pair": {
+      "probe": "dot-column-spacing.ly",
+      "score": "DCW",
+      "lilypond": 3.843400000000000,
+      "residual": 0,
+      "why": "CLOSED 2026-09-10 (session 361), the SECOND defect the reserved-dot port turned up (RULES 5.0 step 4): with the reserved dot moved to 0.45, bar 2 of audit/lp-regression/lys/dots.lys -- this very pair -- went from +0.05 to +0.20 over LilyPond (column step 4.04 for 3.844, read off the port-only build's SVG against the LP dump; the point itself was opened only after the cause was read). CAUSE: two separation items stand on one column and hold different things. Note_spacing's minimum (the WISH) reads the NOTE column's item, whose elements are the heads, the stem and the flag; the column ROD reads the PAPER column's, which every item joins -- the Dots and a half-tie among them. LILYPOND-REF lily/spacing-interface.cc:36-97 Spacing_interface::skylines (the wish's skylines are its left-/right-items' own horizontal-skylines), lily/note-column.cc:120-156 Note_column::set_stem / add_head, lily/rhythmic-column-engraver.cc:102 (the flag joins the note column), lily/dot-column-engraver.cc:52-60 Dot_column_engraver::acknowledge_rhythmic_head (the dots join the DotColumn only), lily/paper-column-engraver.cc:246-261 Paper_column_engraver::stop_translation_timestep (every item joins the paper column). LP READING: the wish's minimum runs main head to reversed head under the dots (1.4042 + 1.3392 = 2.7434, floor 3.0434 under the 3.7042 ideal) and the rod through the dot to the reversed head binds: (1.7542 + 0.45 + 0.2) + (1.2392 + 0.1) + 0.1 = 3.843400. Lily# built ONE skyline for both (ItemSkylineFactory.ColumnElements.Elements), so the wish's minimum held the dot (3.7434) and merge_springs floored the ideal at 4.0434. The wish now reads the note column's elements only (CreateWishRight/LeftSkylineAtColumn); the rod is unchanged. Landed 0.000000000 to the digit, and the book's other four bars, which had carried +0.00/+0.04/0/+0.06, read LilyPond's 9.227 / 8.448 / 8.372 / 9.123 to two digits with it. ⚠️ THE FIRST CUT OF THIS BOOK WAS THE WRONG MUSIC: `octave absolute` with the relative-mode chord spelling `<b c d e>''` put b'' a seventh above the cluster, and LilyPond read 3.4542 for a pair that was no longer dots.lys bar 2 -- the twin's pitches were checked against the LP dump's staff positions (7..10 / 4..7) before the number was recorded."
+    },
+    "semi-tie.lv-to-arpeggio-gap": {
+      "probe": "semi-tie-spacing.ly",
+      "score": "LVA",
+      "lilypond": 4.244200000000000,
+      "residual": 0,
+      "why": "OPENED 2026-09-10 (session 361 leg 3) at -0.040000000 and CLOSED the same leg: the pair is the ROD from the l.v. tie's spacing box to the next column's arpeggio (a conditional element), 4.2442 = tie right + 0.1 (its esw) + 0.1 (the rod padding) + 0.1 (the arpeggio's esw) + 1.3 (arpeggio width plus its padding to the head) exactly, and LilyPond's tie right is head ink right + 1.34 where Lily#'s SemiTieGeometry spans the curve to + 1.3: the grob's extent is its STENCIL's, and Lookup::bezier_sandwich widens the curve's box by half the line thickness (0.8 x 0.1 / 2 = 0.04) on every edge. LILYPOND-REF lily/lookup.cc:483-516 Lookup::bezier_sandwich (b.widen (0.5 * thickness)), lily/tie.cc:225-253 Tie::print (line_thick = staff_thick x line-thickness), scm/define-grobs.scm:2039 LaissezVibrerTie line-thickness 0.8. The box now reaches half a line thickness past the curve on every edge and the declared extra-spacing-height (-0.5 . 0.5) above and below (scm/define-grobs.scm:2037) -- this book cannot see the Y term (the tie's band (-6.61 . -6.24) already sits inside the arpeggio's (-9.28 . -5.28)), and no point observes it yet. ⚠️ THE PREDICTION NAMED THE WRONG TERM AND ITS FALSIFIER CAUGHT IT: the probe header guessed the unported extra-spacing-height (the Y band) and named 'a residual that stays after the band is widened is the X reach' as the fork; the dump showed the X reach before any port ran. The book is the regression book laissez-vibrer-arpeggio as it stands, whose bars read 23.25 / 39.00 against 23.328 / 39.161 after session 361's second port (the wish no longer holding the half-tie) -- two l.v.->arpeggio rods a bar, 0.04 each."
+    },
+    "dots.flag-pushed.dotted-eighth-to-sixteenth": {
+      "probe": "dot-column-spacing.ly",
+      "score": "DPF",
+      "lilypond": 3.367400000000000,
+      "residual": 0,
+      "why": "CLOSED the same day by the port it was opened for (session 361): -0.913200000 -> 0.000000000 to the digit -- the reserved dot column now carries the flag's push, because DotColumn.Reserved builds the same stem and flag supports the renderer hands OffsetX, out of SpacingRules.StemSpacingInfo and GlyphMetrics.GetFlagBBox. Original account follows. OPENED 2026-09-10 (session 361) at the predicted sign and size: LilyPond's Dot_column stands g'8.'s dot at 2.5174 from the head's left (1.2392 stem + 0.8282 flag right + 0.45 -- the dot is lifted off its line onto the row the up flag's ink covers, DotColumn's remarks carry the 2.26.0 dump), so the wish-less rod to the other voice's sixteenth one sixteenth later is 0.1 + (2.5174 + 0.45 + 0.2) + 0.1 = 3.367400, binding over the shortest's own 2.4 ideal. Lily# DRAWS the dot at 2.5174 (DotColumn.OffsetX, session 314) but RESERVED it at 1.3042 + 0.3 with no push, a rod of 2.454200 that beat the 2.4 ideal by its own 0.0542 -- 2.454200 - 3.367400 = -0.913200 to the digit. LILYPOND-REF lily/dot-configuration.cc:129-137 x_offset (max over the dots' rows of the support skyline's height), lily/dot-column.cc:130-141 (the flag is a support at its glyph's extent). ⚠️ THE FIRST CUT OF THIS BOOK OBSERVED NOTHING AND ITS FALSIFIER SAID SO: with the sixteenth at 3/16 LilyPond read 4.301955 = 2.4 + 1.2*log2(3), the bare ideal, above the rod -- a dotted note followed by half its value is that ratio at any shortest, so the pair had to be as short as the shortest for the rod to bind (probe header)."
+    },
     "lyrics.melisma-span.no-bind.first-gap": {
       "probe": "lyric-melisma-span.ly",
       "score": "LMN",

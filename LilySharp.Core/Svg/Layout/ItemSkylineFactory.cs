@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using LilySharp.Core.Svg.Model;
@@ -63,7 +64,8 @@ internal static class ItemSkylineFactory
 {
     /// <summary>
     /// Which of a column's parts a skyline is built from — LilyPond's <c>elements</c> vs
-    /// <c>conditional-elements</c> split.
+    /// <c>conditional-elements</c> split, and the split between the NOTE column's
+    /// elements (the wish's skyline) and the PAPER column's (the rod's).
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/separation-item.cc:112-148 Separation_item::boxes — it returns the
@@ -73,14 +75,52 @@ internal static class ItemSkylineFactory
     ///   column's stored right skyline and merges the right column's CONDITIONAL skyline
     ///   into its left one. So a conditional part only ever faces LEFT, which is why
     ///   <see cref="CreateRightSkyline"/> never asks for one.
+    /// <para>
+    /// ⚠️ TWO SEPARATION ITEMS STAND ON ONE COLUMN, AND THEY HOLD DIFFERENT THINGS. The
+    /// spacing WISH (Note_spacing's minimum) reads the NOTE column's separation item, whose
+    /// elements are the heads, the stem and the flag; the ROD reads the PAPER column's, which
+    /// every item joins — the Dots and a half-tie among them. So a dot reaches a neighbour
+    /// through the rod alone, and a wish's minimum runs head to head under it.
+    /// LILYPOND-REF: lily/spacing-interface.cc:36-97 Spacing_interface::skylines — the wish's
+    ///   skylines are the <c>horizontal-skylines</c> of the Separation_items among its
+    ///   left-/right-items (the NoteColumns), plus the right one's conditional skyline;
+    /// LILYPOND-REF: lily/note-column.cc:120-156 Note_column::set_stem / Note_column::add_head
+    ///   — what a NoteColumn's elements are;
+    /// LILYPOND-REF: lily/rhythmic-column-engraver.cc:102 Rhythmic_column_engraver — the
+    ///   flag joins the note column too;
+    /// LILYPOND-REF: lily/dot-column-engraver.cc:52-60 Dot_column_engraver::acknowledge_rhythmic_head
+    ///   — the dots join the DotColumn and nothing else;
+    /// LILYPOND-REF: lily/paper-column-engraver.cc:246-261 Paper_column_engraver::stop_translation_timestep
+    ///   — every item joins the paper column's separation item.
+    /// MEASURED (2.26.0, audit/lp-geometry/probes/dot-column-spacing.ly book DCW = two dotted
+    /// cluster chords, stems down): the pair reads 3.8434 = the rod through the dot to the
+    /// reversed head (1.7542 + 0.45 + 0.2 + 1.2392 + 0.1 + 0.1), where a wish minimum that
+    /// held the dot (3.7434) would have floored the ideal at 4.0434 — which is what Lily#
+    /// drew until 2026-09-10 (4.04, and 3.89 while the reserved dot stood at 0.3).
+    /// </para>
     /// </remarks>
+    [Flags]
     private enum ColumnElements
     {
-        /// <summary>The column's ordinary elements: heads, stem, dots, flag.</summary>
-        Elements,
+        /// <summary>The NOTE column's own elements — heads, stem, flag: the wish's skyline.</summary>
+        NoteColumn = 1,
+
+        /// <summary>What only the PAPER column holds — dots, half-ties.</summary>
+        ColumnOnly = 2,
+
+        /// <summary>The conditional elements — accidentals, arpeggio.</summary>
+        Conditional = 4,
+
+        /// <summary>The column's ordinary elements: heads, stem, flag, dots, half-ties — the
+        /// rod's view of the left-hand column.</summary>
+        Elements = NoteColumn | ColumnOnly,
 
         /// <summary>Both sets — the rod's view of the right-hand column.</summary>
-        All,
+        All = Elements | Conditional,
+
+        /// <summary>The wish's view of the right-hand column: the note column's elements and
+        /// the conditionals the left column makes relevant.</summary>
+        WishLeft = NoteColumn | Conditional,
     }
 
     /// <summary>
@@ -97,7 +137,8 @@ internal static class ItemSkylineFactory
     /// </remarks>
     private readonly record struct ColumnPart(
         double YBottom, double YTop, double XLeft, double XRight,
-        double ExtraLeft, double ExtraRight, bool Conditional, bool LedgerReach = false)
+        double ExtraLeft, double ExtraRight, bool Conditional, bool LedgerReach = false,
+        bool NoteColumnMember = true)
     {
         /// <summary>A part taking the default <c>extra-spacing-width</c> (-0.1 . 0.1).</summary>
         public static ColumnPart Ink(double yBottom, double yTop, double xLeft, double xRight)
@@ -159,13 +200,39 @@ internal static class ItemSkylineFactory
     /// <param name="referenceX">X coordinate of the reference point (notehead center)</param>
     /// <param name="staffY">Y coordinate of the staff's middle line</param>
     public static HorizontalSkyline CreateRightSkyline(MusicItem item, double referenceX, double staffY)
-        => HorizontalSkyline.FromBoxes(
-                Boxes(item, referenceX, staffY, ColumnElements.Elements),
-                HorizontalDirection.Right)
-            // The column's skyline is padded when it is BUILT (LilyPond's intrinsic
-            // skyline-vertical-padding — SpacingRules.NoteColumnSkylineVerticalPadding), and
-            // the distance padding (0.08) is added on top by the readers.
+        => Build(item, referenceX, staffY, ColumnElements.Elements, HorizontalDirection.Right);
+
+    /// <summary>
+    /// A skyline over the chosen parts, padded when it is BUILT (LilyPond's intrinsic
+    /// skyline-vertical-padding — SpacingRules.NoteColumnSkylineVerticalPadding); the
+    /// distance padding (0.08) is added on top by the readers.
+    /// </summary>
+    private static HorizontalSkyline Build(MusicItem item, double referenceX, double staffY,
+                                           ColumnElements which, HorizontalDirection direction)
+        => HorizontalSkyline.FromBoxes(Boxes(item, referenceX, staffY, which), direction)
             .PaddedCopy(SpacingRules.NoteColumnSkylineVerticalPadding);
+
+    /// <summary>
+    /// The WISH's view of a column's right side, origin at <paramref name="columnX"/>: the
+    /// NOTE column's own elements — heads, stem, flag — and nothing the paper column alone
+    /// holds. Its dots and half-ties reach a neighbour through the rod
+    /// (<see cref="CreateRightSkylineAtColumn"/>), never through the spring's minimum.
+    /// </summary>
+    /// <remarks>See <see cref="ColumnElements"/> for the two separation items and the
+    /// measurement.</remarks>
+    public static HorizontalSkyline CreateWishRightSkylineAtColumn(MusicItem item, double columnX, double staffY)
+        => Build(item, columnX + ColumnReferenceOffset(item), staffY,
+                 ColumnElements.NoteColumn, HorizontalDirection.Right);
+
+    /// <summary>
+    /// The WISH's view of a column's left side: the note column's elements plus the
+    /// conditional ones the left column makes relevant
+    /// (lily/spacing-interface.cc:87-89 merges <c>conditional_skyline</c> for the right items).
+    /// </summary>
+    /// <inheritdoc cref="CreateWishRightSkylineAtColumn"/>
+    public static HorizontalSkyline CreateWishLeftSkylineAtColumn(MusicItem item, double columnX, double staffY)
+        => Build(item, columnX + ColumnReferenceOffset(item), staffY,
+                 ColumnElements.WishLeft, HorizontalDirection.Left);
 
     /// <summary>
     /// The right skyline with the COLUMN ORIGIN — the head's left edge, LilyPond's paper
@@ -215,11 +282,7 @@ internal static class ItemSkylineFactory
     /// otherwise output-preserving.
     /// </remarks>
     public static HorizontalSkyline CreateLeftSkyline(MusicItem item, double referenceX, double staffY)
-        => HorizontalSkyline.FromBoxes(
-                Boxes(item, referenceX, staffY, ColumnElements.All),
-                HorizontalDirection.Left)
-            // Padded when built, as the right one is (see CreateRightSkyline).
-            .PaddedCopy(SpacingRules.NoteColumnSkylineVerticalPadding);
+        => Build(item, referenceX, staffY, ColumnElements.All, HorizontalDirection.Left);
 
     /// <summary>
     /// The Y band the column's parts occupy — conditional parts included — in the
@@ -260,7 +323,10 @@ internal static class ItemSkylineFactory
         var boxes = new List<(double, double, double, double)>();
         foreach (var p in ColumnParts(item, referenceX, staffY))
         {
-            if (p.Conditional && which != ColumnElements.All)
+            var set = p.Conditional ? ColumnElements.Conditional
+                    : p.NoteColumnMember ? ColumnElements.NoteColumn
+                    : ColumnElements.ColumnOnly;
+            if ((which & set) == 0)
                 continue;
             // extra-spacing-height, for the one part that declares it (see WithLedgerReach).
             var (yBottom, yTop) = p.LedgerReach
@@ -410,27 +476,34 @@ internal static class ItemSkylineFactory
 
         AddStem(parts, item, noteheadLeftX, staffY);
         AddFlag(parts, item, noteheadLeftX, staffY, noteValue);
-        AddDots(parts, item, maxNoteheadRightX, staffY);
+        AddDots(parts, item, noteheadLeftX, maxNoteheadRightX, staffY, noteValue);
         AddSemiTies(parts, item, noteheadLeftX, staffY, noteValue);
 
         return parts;
     }
 
     /// <summary>
-    /// Half-ties (laissez-vibrer / repeat-tie): ORDINARY elements of their column —
+    /// Half-ties (laissez-vibrer / repeat-tie): ORDINARY elements of their PAPER column —
     /// LilyPond's paper-column engraver diverts only AccidentalPlacement and Arpeggio
-    /// to conditional-elements — so their ink joins the spacing boxes, and the NEXT
+    /// to conditional-elements — so their ink joins the rod's spacing boxes, and the NEXT
     /// column's arpeggio stands clear of an l.v. (laissez-vibrer-arpeggio.ly; without
-    /// this the arpeggio ran straight through the tie). Geometry is the ONE spelling
-    /// in <see cref="TieVariantEngraver.SemiTieGeometry"/>.
+    /// this the arpeggio ran straight through the tie). They are not the NOTE column's
+    /// elements, so the wish's minimum does not see them (<see cref="ColumnElements"/>).
+    /// Geometry is the ONE spelling in <see cref="TieVariantEngraver.SemiTieGeometry"/>.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/paper-column-engraver.cc:246-261 stop_translation_timestep —
     ///   every acknowledged Item enters its column's <c>elements</c>;
     ///   LaissezVibrerTie/RepeatTie are not diverted.
-    /// LILYPOND-REF: scm/define-grobs.scm:2030-2051 LaissezVibrerTie extra-spacing-height
-    ///   (-0.5 . 0.5) widens the Y band, not X (not ported — see the
-    ///   <see cref="ColumnPart"/> remark); width takes the default (-0.1 . 0.1).
+    /// The box is the STENCIL's — the curve widened by half the tie's line thickness on
+    /// every edge (<see cref="TieVariantEngraver.LineThickness"/>) — then the declared
+    /// extra-spacing-height (<see cref="TieVariantEngraver.ExtraSpacingHeight"/>) above and
+    /// below; width takes the default (-0.1 . 0.1). MEASURED (2.26.0,
+    /// audit/lp-geometry/probes/semi-tie-spacing.ly): the rod from the l.v. tie to the next
+    /// column's arpeggio is 4.2442 = tie right (curve + 0.04) + 0.1 + 0.1 + 0.1 + 1.3, and
+    /// the bare curve span priced it 4.2042 (ledger semi-tie.lv-to-arpeggio-gap).
+    /// LILYPOND-REF: lily/lookup.cc:483-516 Lookup::bezier_sandwich — b.widen (0.5 * thickness);
+    /// LILYPOND-REF: scm/define-grobs.scm:2037 LaissezVibrerTie extra-spacing-height (-0.5 . 0.5).
     /// </remarks>
     private static void AddSemiTies(List<ColumnPart> parts, MusicItem item,
         double noteheadLeftX, double staffY, int noteValue)
@@ -459,9 +532,12 @@ internal static class ItemSkylineFactory
             {
                 var (xl, xr, baseY, arc) = TieVariantEngraver.SemiTieGeometry(
                     noteValue, tie.StaffPosition, tie.CurveUp, kind);
+                double halfLine = 0.5 * TieVariantEngraver.LineThickness;
                 double yA = staffY + baseY, yB = staffY + baseY + arc;
-                parts.Add(ColumnPart.Ink(Math.Min(yA, yB), Math.Max(yA, yB),
-                    noteheadLeftX + xl, noteheadLeftX + xr));
+                double reach = halfLine + TieVariantEngraver.ExtraSpacingHeight;
+                parts.Add(ColumnPart.Ink(Math.Min(yA, yB) - reach, Math.Max(yA, yB) + reach,
+                    noteheadLeftX + xl - halfLine, noteheadLeftX + xr + halfLine)
+                    with { NoteColumnMember = false });
             }
     }
 
@@ -651,40 +727,54 @@ internal static class ItemSkylineFactory
         return (placement - flagBBox.Top, placement - flagBBox.Bottom);
     }
 
-    /// <summary>Augmentation DOTS, placed after the column's rightmost head.</summary>
+    /// <summary>
+    /// Augmentation DOTS, reserved where the renderer draws them: the column's dot column
+    /// (<see cref="DotColumn.Reserved"/> — head ink, one dot width, a flag's push) on the rows
+    /// DotConfiguration settles, successive dots two dot widths apart.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/separation-item.cc:163-164 Separation_item::boxes — the Dots item's
+    ///   own extent in the paper column joins the spacing box;
+    /// LILYPOND-REF: scm/define-grobs.scm:1278 Dots extra-spacing-width (0 . 0.2).
+    /// Until 2026-09-10 this box stood 0.3 after the head with no push (the retired
+    /// <c>EngravingDefaults.DotGap</c>) — DotColumn.Reserved's remarks carry the measurement.
+    /// A SPACER's dots reserve nothing, as a spacer engraves no Dots grob (it used to reserve
+    /// a phantom dot after its placeholder box); a multi-measure rest's likewise.
+    /// </remarks>
     private static void AddDots(List<ColumnPart> parts, MusicItem item,
-                                double maxNoteheadRightX, double staffY)
+                                double noteheadLeftX, double maxNoteheadRightX, double staffY,
+                                int noteValue)
     {
         int dots = SpacingRules.GetDots(item);
-        if (dots == 0)
+        if (dots == 0 || item is RestItem { IsSpacer: true } or RestItem { IsMultiMeasure: true })
             return;
 
         var dotBBox = GlyphMetrics.AugmentationDot;
         double dotWidth = dotBBox.Width;
-        double dotGap = EngravingDefaults.DotGap;
         double dotRadius = dotBBox.Height / 2;
 
-        // Dots must avoid staff lines - if note is on a line, shift dot up
-        IEnumerable<int> positions = item switch
-        {
-            ChordItem chord => chord.Notes.Select(n => n.StaffPosition),
-            NoteItem note => new[] { note.StaffPosition },
-            _ => new[] { 1 }  // Default to odd (not on line)
-        };
+        // In the column's frame: a rest's glyph right (the rest branch of ColumnParts boxes
+        // the rest at noteheadLeftX + its glyph box), else the rightmost head's ink right.
+        double headInkRight = item is RestItem
+            ? GlyphMetrics.GetRestBBox(noteValue).Right
+            : maxNoteheadRightX - noteheadLeftX;
+        var (offset, rows) = DotColumn.Reserved(item, noteValue, headInkRight);
 
-        foreach (int staffPosition in positions)
+        foreach (int row in rows)
         {
-            double noteY = item is NoteItem or ChordItem ? staffY - staffPosition / 2.0 : staffY;
-            double dotYCenter = noteY + ((staffPosition % 2 == 0) ? -0.5 : 0);
+            double dotYCenter = staffY - row / 2.0;
             for (int d = 0; d < dots; d++)
             {
-                double dotX = maxNoteheadRightX + dotGap + d * (dotWidth + dotGap);
+                double dotX = noteheadLeftX + offset + d * 2 * dotWidth;
                 // A dot declares its own extra-spacing-width: nothing to the left, 0.2 to
                 // the right (SpacingRules.DotsExtraSpacingWidthRight) — not the ±0.1 default.
                 // LILYPOND-REF: scm/define-grobs.scm:1278 Dots extra-spacing-width.
+                // The Dots are the PAPER column's, not the note column's: the rod sees them,
+                // the wish does not (ColumnElements).
                 parts.Add(new ColumnPart(
                     dotYCenter - dotRadius, dotYCenter + dotRadius, dotX, dotX + dotWidth,
-                    0.0, SpacingRules.DotsExtraSpacingWidthRight, Conditional: false));
+                    0.0, SpacingRules.DotsExtraSpacingWidthRight, Conditional: false,
+                    NoteColumnMember: false));
             }
         }
     }

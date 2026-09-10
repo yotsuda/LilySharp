@@ -71,18 +71,23 @@ describe('the targets of a selection', () => {
 });
 
 describe('name collisions in one output folder', () => {
+    // The stem is path.basename's, which splits on the HOST's separator only: a
+    // backslash is a legal file-name character on Linux, so these paths are joined
+    // for the host — CI's ubuntu leg read 'C:\a\song.lys' as one stem, no duplicate.
+    const p = (...parts: string[]) => path.join(...parts);
+
     it('are the stems two or more targets share', () => {
-        const dups = duplicateStems(['C:\\a\\song.lys', 'C:\\b\\song.lys', 'C:\\a\\other.lys'], true);
-        assert.deepEqual([...dups.entries()], [['song', ['C:\\a\\song.lys', 'C:\\b\\song.lys']]]);
+        const dups = duplicateStems([p('a', 'song.lys'), p('b', 'song.lys'), p('a', 'other.lys')], true);
+        assert.deepEqual([...dups.entries()], [['song', [p('a', 'song.lys'), p('b', 'song.lys')]]]);
     });
 
     it('fold letter case the way the destination does', () => {
-        assert.equal(duplicateStems(['C:\\a\\Song.lys', 'C:\\b\\song.lys'], true).size, 1);
-        assert.equal(duplicateStems(['/a/Song.lys', '/b/song.lys'], false).size, 0);
+        assert.equal(duplicateStems([p('a', 'Song.lys'), p('b', 'song.lys')], true).size, 1);
+        assert.equal(duplicateStems([p('a', 'Song.lys'), p('b', 'song.lys')], false).size, 0);
     });
 
     it('are none for distinct stems', () => {
-        assert.equal(duplicateStems(['C:\\a\\x.lys', 'C:\\a\\y.lys']).size, 0);
+        assert.equal(duplicateStems([p('a', 'x.lys'), p('a', 'y.lys')]).size, 0);
     });
 });
 

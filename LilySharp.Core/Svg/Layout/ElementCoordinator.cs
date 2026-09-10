@@ -1811,21 +1811,22 @@ internal sealed class ElementCoordinator
             SupportHeadCentreX: supportLeft + (headLeftInk + headRightInk) / 2.0);
 
         // The dots hang off the column's rightmost head, and only the LEFT bound meets them.
+        // Where they stand is the reserved dot column — DotColumn.Reserved, the house the
+        // renderer draws by and the spacing box reserves by: head ink, one dot width, a flag's
+        // push, on DotConfiguration's rows (a line-note's dot lifted into the space).
         var dots = new List<TieOutlineBox>();
         int dotCount = SpacingRules.GetDots(item);
         if (isLeftBound && dotCount > 0)
         {
-            double maxRight = columnX + offsets.Max() + headRightInk;
             var dotBBox = GlyphMetrics.AugmentationDot;
             double dotRadius = dotBBox.Height / 2;
-            foreach (int p in positions)
+            var (dotOffset, rows) = DotColumn.Reserved(item, noteValue, offsets.Max() + headRightInk);
+            foreach (int p in rows)
             {
-                // A dot on a staff line is pushed up half a space (dots-engraver.cc:62-80).
-                double dotY = p * 0.5 + (p % 2 == 0 ? 0.5 : 0);
+                double dotY = p * 0.5;
                 for (int d = 0; d < dotCount; d++)
                 {
-                    double dotX = maxRight + EngravingDefaults.DotGap
-                                  + d * (dotBBox.Width + EngravingDefaults.DotGap);
+                    double dotX = columnX + dotOffset + d * 2 * dotBBox.Width;
                     dots.Add(new TieOutlineBox(
                         dotY - dotRadius, dotY + dotRadius, dotX, dotX + dotBBox.Width));
                 }
@@ -2973,13 +2974,16 @@ internal sealed class ElementCoordinator
 
                 switch (items[i])
                 {
+                    // Where a column's dots stand is DotColumn.Reserved's — the house the
+                    // renderer draws by (head ink, one dot width, a flag's push) — on
+                    // DotConfiguration's rows.
                     case NoteItem { Dots: > 0 } note:
                     {
                         int value = GlyphMetrics.NoteValueOf(note.BaseDuration);
-                        double dotX = x + GlyphMetrics.GetNoteheadBBox(value).Right
-                            + GlyphMetrics.AugmentationDot.Width;
-                        int pos = DotConfiguration.Resolve(new[] { note.StaffPosition })[0];
-                        AddDotRow(note.Dots, dotX, staffMiddleDown - pos / 2.0);
+                        var (dotOffset, rows) = DotColumn.Reserved(
+                            note, value, GlyphMetrics.GetNoteheadBBox(value).Right);
+                        foreach (int p in rows)
+                            AddDotRow(note.Dots, x + dotOffset, staffMiddleDown - p / 2.0);
                         break;
                     }
                     case ChordItem { Dots: > 0 } chord when chord.Notes.Length > 0:
@@ -2988,23 +2992,21 @@ internal sealed class ElementCoordinator
                         // The staff's own font, matching the box on the line below.
                         var headOffsets = ChordHeadPositioning.CalculateOffsets(
                             chord.Notes, chord.StemUp, value);
-                        double dotX = x + GlyphMetrics.GetNoteheadBBox(value).Right
-                            + Math.Max(0, headOffsets.Max())
-                            + GlyphMetrics.AugmentationDot.Width;
-                        var positions = DotConfiguration.Resolve(
-                            chord.Notes.Select(n => n.StaffPosition).ToArray());
-                        foreach (int p in positions)
-                            AddDotRow(chord.Dots, dotX, staffMiddleDown - p / 2.0);
+                        var (dotOffset, rows) = DotColumn.Reserved(
+                            chord, value,
+                            GlyphMetrics.GetNoteheadBBox(value).Right + Math.Max(0, headOffsets.Max()));
+                        foreach (int p in rows)
+                            AddDotRow(chord.Dots, x + dotOffset, staffMiddleDown - p / 2.0);
                         break;
                     }
-                    case RestItem { Dots: > 0 } rest:
+                    case RestItem { Dots: > 0, IsSpacer: false, IsMultiMeasure: false } rest:
                     {
                         int value = GlyphMetrics.NoteValueOf(rest.BaseDuration);
-                        double dotX = x + GlyphMetrics.GetRestBBox(value).Right
-                            + GlyphMetrics.AugmentationDot.Width;
-                        // A rest's dots sit in the space above the middle line
-                        // (position 1), as the renderer draws them.
-                        AddDotRow(rest.Dots, dotX, staffMiddleDown - 0.5);
+                        // A rest's dots sit one dot width past its glyph, in the space
+                        // above the middle line (row 1), as the renderer draws them.
+                        var (dotOffset, rows) = DotColumn.Reserved(
+                            rest, value, GlyphMetrics.GetRestBBox(value).Right);
+                        AddDotRow(rest.Dots, x + dotOffset, staffMiddleDown - rows[0] / 2.0);
                         break;
                     }
                 }

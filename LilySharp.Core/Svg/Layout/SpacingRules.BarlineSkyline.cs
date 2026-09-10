@@ -219,9 +219,12 @@ internal static partial class SpacingRules
         // a pair of unequal heads is measured as LilyPond measures it — the left column's
         // whole reach — and not between the two heads' centres, which is what handing both
         // the same centre reference did (ItemSkylineFactory.CreateRightSkylineAtColumn).
+        // The WISH's skylines: the NOTE columns' own elements (heads, stem, flag) — a dot or
+        // a half-tie is the paper column's and reaches the pair through the rod alone
+        // (ItemSkylineFactory.ColumnElements carries the sources and the measurement).
         return SkylineFloorPair(
-            ItemSkylineFactory.CreateRightSkylineAtColumn(prevItem, prevShift, staffY),
-            ItemSkylineFactory.CreateLeftSkylineAtColumn(nextItem, nextShift, staffY)).SkyMin;
+            ItemSkylineFactory.CreateWishRightSkylineAtColumn(prevItem, prevShift, staffY),
+            ItemSkylineFactory.CreateWishLeftSkylineAtColumn(nextItem, nextShift, staffY)).SkyMin;
     }
 
     /// <summary>
@@ -360,8 +363,11 @@ internal static partial class SpacingRules
             return (d, d);
         }
 
-        // The column's parts in the COLUMN's frame — its origin, the head's left edge, at 0.
+        // The column's parts in the COLUMN's frame — its origin, the head's left edge, at 0:
+        // the paper column's for the ROD, the note column's (no dots, no half-tie) for the
+        // wish's minimum — ItemSkylineFactory.ColumnElements names the two separation items.
         var itemRight = ItemSkylineFactory.CreateRightSkylineAtColumn(item, 0, staffY: 0);
+        var wishRight = ItemSkylineFactory.CreateWishRightSkylineAtColumn(item, 0, staffY: 0);
 
         var (yMin, yMax) = ItemSkylineFactory.ColumnYExtent(item, 0);
         if (rightNeighbours != null)
@@ -381,7 +387,8 @@ internal static partial class SpacingRules
             -DefaultExtraSpacingWidth, DefaultExtraSpacingWidth, HorizontalDirection.Left);
 
         double distance = itemRight.Distance(barLeft);
-        return (Math.Max(0.0, distance), Math.Max(0.0, SeparationRodPadding + distance));
+        return (Math.Max(0.0, wishRight.Distance(barLeft)),
+                Math.Max(0.0, SeparationRodPadding + distance));
     }
 
     /// <summary>
@@ -444,14 +451,17 @@ internal static partial class SpacingRules
             extent = noteheadBBox.Right;
         }
 
-        // Add dots if present
+        // The dots, where the renderer draws them — the reserved dot column
+        // (DotColumn.Reserved: head ink, one dot width, a flag's push) to the LAST dot's right
+        // edge, successive dots two dot widths apart. A spacer engraves no Dots grob.
+        // LILYPOND-REF: lily/dot-column.cc:229-232 Dot_column::calc_positioning_done — the
+        //   column translates by x_offset + padding; scm/output-lib.scm:686-690 ly:dots::print
+        //   stacks the dots one dot width apart.
         int dots = GetDots(item);
-        if (dots > 0)
+        if (dots > 0 && item is not (RestItem { IsSpacer: true } or RestItem { IsMultiMeasure: true }))
         {
-            var dotBBox = GlyphMetrics.AugmentationDot;
-            double dotWidth = dotBBox.Width;
-            double dotGap = EngravingDefaults.DotGap;
-            extent += dotGap + dots * dotWidth + (dots - 1) * dotGap;
+            double dotWidth = GlyphMetrics.AugmentationDot.Width;
+            extent = DotColumn.Reserved(item, noteValue, extent).OffsetX + (2 * dots - 1) * dotWidth;
         }
 
         // A laissez-vibrer half-tie hangs off the head's right ink edge, and its
