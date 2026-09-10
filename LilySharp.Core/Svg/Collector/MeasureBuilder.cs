@@ -496,7 +496,13 @@ internal sealed class MeasureBuilder
             && _currentDuration < cut.Offset && _currentDuration + itemDuration > cut.Offset)
         {
             var head = cut.Offset - _currentDuration;
-            AddItem(new RestItem(head, 0, spacer.SourcePosition) { IsSpacer = true });
+            // A beat slash's grob stands in the column the spacer OPENS, so the head piece
+            // keeps the mark and the tail is the event still sounding (RestItem.RepeatSlashCount).
+            AddItem(new RestItem(head, 0, spacer.SourcePosition)
+            {
+                IsSpacer = true,
+                RepeatSlashCount = spacer.RepeatSlashCount,
+            });
             AddItem(new RestItem(itemDuration - head, 0, spacer.SourcePosition) { IsSpacer = true });
             return;
         }

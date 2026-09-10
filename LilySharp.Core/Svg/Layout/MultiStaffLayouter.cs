@@ -2053,7 +2053,11 @@ internal sealed class MultiStaffLayouter
                         var currentTiming = Fraction.Zero;
                         foreach (var item in voice.Measures[measureIndex].Items)
                         {
-                            if (staff.IsTextRow || item is not RestItem { IsSpacer: true })
+                            // A beat slash is a RepeatSlash grob in the musical column at
+                            // its moment, and the spacer that opens there carries it
+                            // (RestItem.RepeatSlashCount) — a used column, anchored.
+                            // LILYPOND-REF: scm/define-grobs.scm:2909-2918 RepeatSlash rhythmic-grob-interface.
+                            if (staff.IsTextRow || item is not RestItem { IsSpacer: true, RepeatSlashCount: null })
                                 anchoredOnsets.Add(currentTiming);
                             currentTiming += item.Duration;
                         }
@@ -2066,12 +2070,6 @@ internal sealed class MultiStaffLayouter
             foreach (var cn in ScoreSideTables.ChordNames(score).At(measureIndex))
                 if (cn.UseTiming)
                     anchoredOnsets.Add(cn.Timing);
-        // A beat slash is a RepeatSlash grob in the musical column at its moment.
-        // LILYPOND-REF: scm/define-grobs.scm:2909-2918 RepeatSlash rhythmic-grob-interface.
-        if (!score.PercentRepeats.IsDefaultOrEmpty)
-            foreach (var pr in score.PercentRepeats)
-                if (pr.IsBeatSlash && pr.MeasureIndex == measureIndex)
-                    anchoredOnsets.Add(pr.BeatTiming!.Value);
 
         var pruned = timings.Where(anchoredOnsets.Contains).ToList();
         return pruned.Count == 0 ? timings.ToList() : pruned;

@@ -3790,6 +3790,42 @@ internal sealed class RenderedGeometry
     /// <summary>The <paramref name="index"/>-th bar line's LEFT edge. See <see cref="Barline"/>.</summary>
     public double BarlineLeft(int index) => Barline(index).X;
 
+    /// <summary>
+    /// The LEFT edge of the <paramref name="index"/>-th BEAT SLASH group, left to right —
+    /// which is the column its RepeatSlash / DoubleRepeatSlash grob stands in, since
+    /// <c>beat_slash</c> hangs the stencil off the grob's origin without re-aligning it
+    /// (lily/percent-repeat-interface.cc:107-121; PercentRepeatEngraver's IsBeatSlash remark).
+    /// </summary>
+    /// <remarks>
+    /// A slash is a parallelogram with HORIZONTAL ends exactly one slash height tall
+    /// (2.0 × staff space — lily/lookup.cc:519-539 repeat_slash, height = wid · slope with
+    /// wid = 2.0 / slope), which is what tells it from a beam among the drawn quads: a beam is
+    /// a thin ribbon (0.48 thick) whose ends are VERTICAL. Copies of one group overlap
+    /// (slash-negative-kern), so slashes less than a slash width apart are one group.
+    /// </remarks>
+    public double BeatSlashGroupLeft(int index, int page = 0)
+    {
+        var slashes = _pages[page].Quads
+            .Where(q => Math.Abs(q.Y0 - q.Y1) < 1e-9 && Math.Abs(q.Y2 - q.Y3) < 1e-9
+                        && Math.Abs(q.Y2 - q.Y0) > 1.5)
+            .Select(q => Math.Min(Math.Min(q.X0, q.X1), Math.Min(q.X2, q.X3)))
+            .OrderBy(x => x)
+            .ToList();
+        var groups = new List<double>();
+        double lastLeft = double.NegativeInfinity;
+        foreach (double left in slashes)
+        {
+            if (left - lastLeft > 2.0)
+                groups.Add(left);
+            lastLeft = left;
+        }
+        if (index < 0 || index >= groups.Count)
+            throw new InvalidOperationException(
+                $"wanted beat slash group #{index} but the probe drew {groups.Count} "
+                + $"(from {slashes.Count} slash(es)).\nDrawn geometry:\n" + Describe());
+        return groups[index];
+    }
+
     /// <summary>The <paramref name="index"/>-th bar line's RIGHT (ink) edge.</summary>
     public double BarlineRight(int index)
     {

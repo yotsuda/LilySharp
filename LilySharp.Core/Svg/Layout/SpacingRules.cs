@@ -125,7 +125,12 @@ internal static partial class SpacingRules
     /// </remarks>
     internal static bool IsMusicalColumn(MusicItem? item) =>
         item is not { GraceTime: true }
-        && item is NoteItem or ChordItem or RestItem { IsSpacer: false };
+        // A BEAT SLASH's spacer is the column its RepeatSlash / DoubleRepeatSlash grob
+        // stands in — a rhythmic grob, so a used musical column — where every other spacer
+        // is a skip's unused one (RestItem.RepeatSlashCount).
+        // LILYPOND-REF: scm/define-grobs.scm:2909-2918 RepeatSlash rhythmic-grob-interface;
+        // LILYPOND-REF: lily/paper-column.cc:115-136 Paper_column::is_used.
+        && item is NoteItem or ChordItem or RestItem { IsSpacer: false } or RestItem { RepeatSlashCount: not null };
 
     /// <summary>
     /// True when a single musical column fills the whole measure (whole note in 4/4,
@@ -1135,8 +1140,14 @@ internal static partial class SpacingRules
         // rendered near the measure centre instead of at its rhythmic moment. Mirror
         // CalculateNoteheadRightExtent, which already uses the rest glyph's right edge.
         // LILYPOND-REF: lily/rest.cc Rest::width — the rest stencil's own X-extent.
-        if (item is RestItem)
+        if (item is RestItem rest)
         {
+            // A beat slash's group hangs off its column to the RIGHT, so its ink starts at
+            // the column and reaches nothing to the left.
+            // LILYPOND-REF: lily/percent-repeat-interface.cc:107-121 Percent_repeat_interface::beat_slash
+            //   — brew_slash's stencil returned as it stands, no align_to on X.
+            if (rest.IsRepeatSlash)
+                return 0;
             return -GlyphMetrics.GetRestBBox(noteValue).Left;
         }
 

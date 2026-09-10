@@ -795,6 +795,41 @@
       "residual": 0.0,
       "why": "EXACT. The closing side of the same measure, against barline.prev.whole-rest (5.598045) as the control: the two differ by exactly the rests' own ink, so the pair says the item-to-bar-line path reads the REST STENCIL's width and not a nominal box. GlyphMetrics.RestWidth / RestHeight are two of the unsourced nominal constants LpProvenanceTests still carries (handoff section 5.2.1 item 1), so this is the point that would catch them if the half rest's box were the nominal one."
     },
+    "percent.beat-slash.note-to-slash": {
+      "probe": "beat-slash-spacing.ly",
+      "score": "BSL",
+      "lilypond": 2.504200,
+      "residual": 0.0,
+      "why": "SEEDED 2026-09-11 (session 367). THE CONTROL of the beat-slash trio: the written f16's own wish names the slash column as its right column, so this is the ordinary sixteenth spring — duration space 2.4 less the increment 1.2 plus the black head 1.304200 = 2.504200 (lily/note-spacing.cc:77) — and it reads exact on both sides BEFORE the port as well as after. It is here so that the two readings beside it, which moved, cannot be mistaken for a shift of the whole bar."
+    },
+    "percent.beat-slash.slash-to-next-note": {
+      "probe": "beat-slash-spacing.ly",
+      "score": "BSL",
+      "lilypond": 3.600000,
+      "residual": 0.0,
+      "why": "SEEDED 2026-09-11 (session 367) at +1.200000 and CLOSED the same day. THE WISH WITH NO HEAD: the RepeatSlash is a rhythmic grob, Note_spacing_engraver files a NoteSpacing wish for it (lily/note-spacing-engraver.cc:87-91 acknowledge_rhythmic_grob), and Note_spacing::get_spacing reads left_head_end off the wish's left NOTE COLUMNS (lily/note-spacing.cc:46-70), of which a slash is none — so the ideal is base 4.8 (a quarter at global_shortest 1/16, increment 1.2, shortest-duration-space 2) LESS the increment: 3.600000. Lily# priced the slash's spacer as a skip's wishless column (the hemiola branch, lily/spacing-spanner.cc:380-391: the raw 4.8, min 0) and read 4.800000 — the head of the +1.1 audit/lpreg/slashprobe.lys carried (HANDOFF §1 第361 ⑺⒞⑤). Closed by marking the spacer that opens a beat slash's column as the column of a rhythmic grob (RestItem.RepeatSlashCount): it is a wish endpoint (MeasureLayouter.ItemStartingAt), its head term is 0 (SpacingRules.ApplyLeftHeadWidth), and its duration is a real playing one (ComputeShortestPlayingAt)."
+    },
+    "percent.beat-slash.slash-to-barline": {
+      "probe": "beat-slash-spacing.ly",
+      "score": "BSL",
+      "lilypond": 4.057645,
+      "residual": 0.0,
+      "why": "SEEDED 2026-09-11 (session 367) at +0.742355 and CLOSED the same day. THE ROD OVER THE SLASH'S INK: the DoubleRepeatSlash's stencil (two slashes at slope 1.0 with slash-negative-kern 1.6: group width 3.757645, the same PercentRepeatEngraver.Geometry the sign is drawn by) is an ordinary element of its paper column, so its separation box is the ink widened by the default extra-spacing-width 0.1 (lily/separation-item.cc:152-187), the bar line's box is its ink less 0.1, and the rod is padding 0.1 over their distance (lily/separation-item.cc:47-68) — group 3.757645 + 0.3 = 4.057645, which BINDS over the wish's 3.6 ideal even at force 0. Lily# boxed the spacer with a notehead-shaped placeholder (1.304200 of ink) and, keeping the raw 4.8 ideal, read 4.800000: too wide by 0.742355 for the wrong reason twice. Closed by boxing the slash column with the sign's own group (ItemSkylineFactory.ColumnParts, a paper-column part like a dot — the wish's minimum does not see it, the rod does) and by the wish above. ⚠️ Priced in the notation staff's space: a TabStaff's sign is 1.5× and reaches 1.5× further; no point observes a tab-only beat slash."
+    },
+    "percent.beat-slash.tab-pair.slash-to-barline": {
+      "probe": "beat-slash-spacing.ly",
+      "score": "BST",
+      "lilypond": 5.936468,
+      "residual": 0.0,
+      "why": "SEEDED 2026-09-11 (session 367, leg 3) at -1.878822 and CLOSED the same day. THE TAB'S SIGN DECIDES THE ROD: a TabStaff's staff-space is 1.5 and brew_slash scales every length by it (lily/percent-repeat-interface.cc:37-49), so the dotted group is 5.636468 on the tab against 3.757645 on the staff; each staff's separation item boxes its own group on the one column, and set_column_rods takes the widest (lily/spacing-spanner.cc:228-297), so the bar line stands 5.636468 + 0.1 + 0.1 + 0.1 = 5.936468 from the column on a staff+tab system. Lily# boxed the slash in the notation frame only (ItemSkylineFactory.ColumnParts, 4.057645) and read that. Closed by pricing the tab group's rod into the SHARED columns beside the fret-digit reservation (SpacingRules.ApplyTabChordSpacing) — the list both the layout and the line-break gate read."
+    },
+    "percent.beat-slash.tab-only.slash-to-barline": {
+      "probe": "beat-slash-spacing.ly",
+      "score": "BTT",
+      "lilypond": 5.936468,
+      "residual": 0.0,
+      "why": "SEEDED 2026-09-11 (session 367, leg 3) at -1.878822 and CLOSED the same day with its pair percent.beat-slash.tab-pair.slash-to-barline: the tab alone reads the same 5.936468, which is the control that says the pair's number is the tab's own and not an average or a max the notation staff took part in."
+    },
     "justified.first-system.heads": {
       "probe": "line-start-mindist.ly",
       "score": "JN",

@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 58 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 53 | 観測者がゼロだと自認しているもの |
+| `UNWATCHED` | 54 | 観測者がゼロだと自認しているもの |
 | `OWN` | 136 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **247** | |
+| **計** | **248** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -84,9 +84,9 @@
 - **:460** ⚠️ NOT PORTED — the bound extent: the barline's ink width is taken
 - **:476** ⚠️ NOT PORTED — the boundary-column regime: the left bound is the
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:2489** ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
-- **:2541** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
-- **:3316** same approximation the scripts' own remark records for the movers; the books that
+- **:2487** ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
+- **:2539** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
+- **:3314** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:1043** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
 - **:1733** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
@@ -131,7 +131,7 @@
 ### `LilySharp.Core/Svg/Model/LyricItem.cs`
 - **:100** ⚠️ NOT PORTED — the voice's melismaBusy state: the trigger here is the
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（53 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（54 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2326** container, and the value stops being unobserved with the line above.
@@ -176,7 +176,8 @@
 ### `LilySharp.Core/Svg/Layout/GraceNoteEngraver.cs`
 - **:499** observed by: NO OBSERVER — every book in the corpus quants, so nothing reaches the
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
-- **:683** NOT MEASURED — no ledger point reads a flag's draw x, and the last
+- **:442** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
+- **:712** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
 - **:2120** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
 - **:2142** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
@@ -189,7 +190,7 @@
 ### `LilySharp.Core/Svg/Layout/LyricSpacing.cs`
 - **:152** is measured-exact there, and no ledger point prices replacing it.
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:4163** company on a row whose symbols sit closer than its spec's 1.0. No point measures
+- **:4161** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:729** does not spell a per-type padding — no point observes a segno/coda over a
 - **:1255** pinned there), no ledger point.
@@ -206,7 +207,7 @@
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
 - **:56** the distance is taken at — and NO ledger point moves with it. An output change no point
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
-- **:768** constant with a name, and no ledger point reached it.
+- **:773** constant with a name, and no ledger point reached it.
 ### `LilySharp.Core/Svg/Layout/SpacingRules.Grace.cs`
 - **:240** observed by: NOTHING. No ledger point covers a grace spacer, and the drawn
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
@@ -273,7 +274,7 @@
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
 - **:2381** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:4415** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:4424** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
@@ -397,11 +398,11 @@
 - **:272** ⚠️ LILYSHARP-OWN: THE SELECTION IS DELIBERATELY THE OLD ONE, and it is a KNOWN
 - **:335** ⚠️ LILYSHARP-OWN: THE FALLBACK TO THE DERIVED VALUE IS A SECOND ANSWER FOR ONE
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
-- **:454** LILYSHARP-OWN, a DECIDED divergence (user decision 2026-08-20, HANDOFF §3):
+- **:459** LILYSHARP-OWN, a DECIDED divergence (user decision 2026-08-20, HANDOFF §3):
 ### `LilySharp.Core/Svg/Layout/SpacingRules.EmptyBar.cs`
 - **:241** LILYSHARP-OWN: LilyPond has no such spring because it has no such column — the
 ### `LilySharp.Core/Svg/Layout/SpacingRules.MeasureSprings.cs`
-- **:744** LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
+- **:753** LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
 ### `LilySharp.Core/Svg/Layout/StaffSize.cs`
 - **:62** ⚠️ LILYSHARP-OWN: THIS LINE IS A TYPE ENUMERATION, and it is the one part of this file
 ### `LilySharp.Core/Svg/Layout/TabChordColumns.cs`

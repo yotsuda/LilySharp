@@ -123,6 +123,37 @@ internal static class LpGeometryProbes
     // LilyPond twin: c'2 c'2 | c'2 c'2
     private static readonly string G = Score("c2 c2 | c2 c2 |", "G");
 
+    // LilyPond twin (probes/beat-slash-spacing.ly BSL):
+    //   \repeat percent 2 { c'16 d' e' f' } \repeat percent 2 { g'8. c'16 } | c'1
+    // Two BEAT slashes in one bar — a plain two-slash RepeatSlash after four sixteenths and a
+    // dotted DoubleRepeatSlash (mixed durations) after `g8. c16` — then an interior bar line.
+    private static readonly string BSL = Score(
+        "repeat percent 2 { c16 d e f } repeat percent 2 { g8. c16 } | c1 |", "BSL");
+
+    // LilyPond twins (probes/beat-slash-spacing.ly BST / BTT): the same slashes under \clef
+    // bass on a Staff + TabStaff (bass tuning, \tabFullNotation) and on the TabStaff alone.
+    // Lily# `c,` is LilyPond `c` in the bass clef.
+    private static string BeatSlashTabScore(string name, string staves) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part bl { clef bass tuning bass }
+
+        section Main {
+          bl { repeat percent 2 { c,16 d, e, f, } repeat percent 2 { g,8. c,16 } | c,1 | }
+        }
+
+        form main { Main }
+
+        score main "{{name}}" {
+          {{staves}}
+        }
+        """;
+
+    private static readonly string BST = BeatSlashTabScore("BST", "staff bl\n  tab bl");
+    private static readonly string BTT = BeatSlashTabScore("BTT", "tab bl");
+
     // LilyPond twin: c'4 d' e' f' | cis'4 d' e' f'     (accidental opening the measure)
     private static readonly string X = Score("c4 d e f | cis d e f |", "X");
 
@@ -12718,6 +12749,28 @@ internal static class LpGeometryProbes
         new("barline.prev.whole-note", E, g => g.LastGlyphToBarlineLeft(MidLineBarline)),
         new("barline.prev.whole-rest", F, g => g.LastGlyphToBarlineLeft(MidLineBarline)),
         new("barline.prev.half-note", G, g => g.LastGlyphToBarlineLeft(MidLineBarline)),
+
+        // --- the BEAT SLASH's column (session 367) ---
+        // A `repeat percent` whose body is shorter than a bar engraves ONE rhythmic grob per
+        // repetition and no notes, and LilyPond's Note_spacing_engraver files a wish for that
+        // grob like for a note column — a wish with NO head. Three anchor differences on one
+        // bar: the control (a note's ordinary spring INTO the slash column), the headless
+        // wish's ideal (4.8 − 1.2), and the rod the slash group's ink raises against the bar
+        // line. Heads 0-3 are the sixteenths, 4 the g8., 5 its c16; group 0 is the two-slash
+        // RepeatSlash, group 1 the dotted DoubleRepeatSlash.
+        new("percent.beat-slash.note-to-slash", BSL,
+            g => g.BeatSlashGroupLeft(0) - g.NoteheadAnchor(3)),
+        new("percent.beat-slash.slash-to-next-note", BSL,
+            g => g.NoteheadAnchor(4) - g.BeatSlashGroupLeft(0)),
+        new("percent.beat-slash.slash-to-barline", BSL,
+            g => g.BarlineLeft(MidLineBarline) - g.BeatSlashGroupLeft(1)),
+        // The tab's one-and-a-half-sized sign decides the same leg on a staff+tab system and
+        // on a tab alone (the group's left is the column on both staves, so the reading is
+        // the same whichever staff's quads the group is read off).
+        new("percent.beat-slash.tab-pair.slash-to-barline", BST,
+            g => g.BarlineLeft(MidLineBarline) - g.BeatSlashGroupLeft(1)),
+        new("percent.beat-slash.tab-only.slash-to-barline", BTT,
+            g => g.BarlineLeft(MidLineBarline) - g.BeatSlashGroupLeft(1)),
 
         // --- the PAGE vertical ---
         // The first Y entries in a corpus that was X-only. The paper pair are constants and

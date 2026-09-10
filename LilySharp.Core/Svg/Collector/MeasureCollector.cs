@@ -4125,7 +4125,11 @@ public sealed partial class MeasureCollector
             //   — forbidBreak at the pair's middle bar line;
             // LILYPOND-REF: lily/paper-column-engraver.cc:264-271 Paper_column_engraver::stop_translation_timestep
             //   — the command column loses its line-break-permission where a break is not allowed.
-            void WriteRepetitionAsSpacers(Fraction length)
+            // `repeatSlashCount`: a BEAT slash's LilyPond slash-count, stamped on the FIRST
+            // piece — the column the RepeatSlash / DoubleRepeatSlash grob stands in, which
+            // the spacing prices as a used column with a wish and the group's ink
+            // (RestItem.RepeatSlashCount); the later pieces are the event still sounding.
+            void WriteRepetitionAsSpacers(Fraction length, int? repeatSlashCount = null)
             {
                 var remaining = length;
                 while (remaining > Fraction.Zero)
@@ -4140,7 +4144,12 @@ public sealed partial class MeasureCollector
                         room = bar;
                     var piece = remaining < room ? remaining : room;
                     builder.AddItem(
-                        new RestItem(piece, 0, repeat.SourceStart) { IsSpacer = true });
+                        new RestItem(piece, 0, repeat.SourceStart)
+                        {
+                            IsSpacer = true,
+                            RepeatSlashCount = repeatSlashCount,
+                        });
+                    repeatSlashCount = null;
                     remaining -= piece;
                     // The piece filled its bar and the event goes on: the bar line just
                     // closed lies STRICTLY INSIDE the repetition, where the event still
@@ -4163,7 +4172,7 @@ public sealed partial class MeasureCollector
                     int slashMeasure = builder.CurrentMeasureIndex;
                     var slashTiming = builder.CurrentDuration;
                     int slashItemIndex = builder.CurrentItemCount;
-                    WriteRepetitionAsSpacers(bodyLength);
+                    WriteRepetitionAsSpacers(bodyLength, slashCount);
                     _percentRepeats.Add(new PercentRepeatItem(
                         slashMeasure,
                         repeat.SourceStart,

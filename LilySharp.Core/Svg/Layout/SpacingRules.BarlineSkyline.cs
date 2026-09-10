@@ -434,7 +434,17 @@ internal static partial class SpacingRules
         // Rest::width / generic_extent_callback — the rest stencil's own X-extent feeds
         // the column skyline / separation.
         double extent;
-        if (item is RestItem)
+        if (item is RestItem { RepeatSlashCount: { } slashCount })
+        {
+            // A beat slash's stencil is the slash GROUP, hung off the column's origin (the
+            // stencil is never re-aligned — lily/percent-repeat-interface.cc:107-121
+            // beat_slash), so its rightward reach is the group's whole ink width. The same
+            // geometry the renderer draws and the column skyline boxes
+            // (ItemSkylineFactory.ColumnParts) — ONE home, PercentRepeatEngraver.Geometry.
+            extent = PercentRepeatEngraver.Geometry(
+                isBeatSlash: true, slashCount, isDouble: false, staffSpace: 1.0).GroupWidth;
+        }
+        else if (item is RestItem)
         {
             extent = GlyphMetrics.GetRestBBox(noteValue).Right;
         }

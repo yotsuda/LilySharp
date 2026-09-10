@@ -61,7 +61,13 @@ internal static partial class SpacingRules
                 // The note "plays" at `timing` iff t <= timing < end.
                 if (t <= timing && timing < end && item.Duration > Fraction.Zero)
                 {
-                    if (item is RestItem { IsSpacer: true })
+                    // A beat slash's spacer is a REAL playing duration: the RepeatSlashEvent
+                    // is a rhythmic event carrying the body's length, and the spacing
+                    // engraver's playing_durations_ holds it like a note's
+                    // (RestItem.RepeatSlashCount).
+                    // LILYPOND-REF: lily/spacing-engraver.cc:176-198 Spacing_engraver::add_starter_duration
+                    //   — every rhythmic-event on an acknowledged grob.
+                    if (item is RestItem { IsSpacer: true, RepeatSlashCount: null })
                     {
                         if (!foundSpacer || item.Duration < shortestSpacer)
                         {
@@ -174,7 +180,10 @@ internal static partial class SpacingRules
                 keep.Add(item);
             foreach (var item in measure.Items)
             {
-                if (keep.Contains(item) && item is not RestItem { IsSpacer: true })
+                // A beat slash's spacer is a USED column (its RepeatSlash grob) and stays.
+                // LILYPOND-REF: lily/paper-column.cc:115-136 Paper_column::is_used — a column
+                //   with an element in it stays in the spacing problem.
+                if (keep.Contains(item) && item is not RestItem { IsSpacer: true, RepeatSlashCount: null })
                     kept.Add((item, onset));
                 onset += item.Duration;
             }
@@ -798,7 +807,26 @@ internal static partial class SpacingRules
 
         var left = new double[timings.Count];
         var right = new double[timings.Count];
+        // A BEAT SLASH's group on the tab staff: one-and-a-half-sized (the TabStaff's
+        // staff-space is 1.5), hung off its column to the right, an ordinary element of the
+        // column's separation box like its notation-staff twin — so the rod out of the slash
+        // column is the TAB group's, the wider of the two, and the notation-frame box
+        // ItemSkylineFactory.ColumnParts prices (staff space 1) is short by half a group here.
+        // MEASURED (2.26.0, audit/lp-geometry/probes/beat-slash-spacing.ly BST / BTT): the
+        // dotted slash to the bar line is 5.936467 = tab group 5.636468 + 0.3 on a
+        // staff+tab system AND on a tab alone (percent.beat-slash.tab-pair.slash-to-barline,
+        // percent.beat-slash.tab-only.slash-to-barline), where the notation frame's 4.057645
+        // is what the column chain carried before this arm.
+        // LILYPOND-REF: lily/percent-repeat-interface.cc:37-49 brew_slash — every length
+        //   scaled by Staff_symbol_referencer::staff_space;
+        // LILYPOND-REF: lily/separation-item.cc:152-187 Separation_item::boxes — the group's
+        //   extent widened by the default extra-spacing-width, per staff, on one column;
+        // LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods — the rod over a column
+        //   pair is the widest of the staves' separation items.
+        var slashRight = new double[timings.Count];
         bool any = false;
+        bool anySlash = false;
+        double tabSpace = EngravingDefaults.TabStringSpace(tuning.Length);
         Fraction onset = Fraction.Zero;
         foreach (var item in tabMeasure.Items)
         {
@@ -807,6 +835,7 @@ internal static partial class SpacingRules
             // measured, pricing one here widened a bass tab's first spring by 0.66, a whole
             // digit, and shoved the bar along with it.
             if (item is (Model.NoteItem or Model.ChordItem) and not { GraceTime: true })
+            {
                 for (int t = 0; t < timings.Count; t++)
                     if (timings[t] == onset)
                     {
@@ -817,9 +846,22 @@ internal static partial class SpacingRules
                         any = true;
                         break;
                     }
+            }
+            else if (item is Model.RestItem { RepeatSlashCount: { } slashCount })
+            {
+                for (int t = 0; t < timings.Count; t++)
+                    if (timings[t] == onset)
+                    {
+                        // The same geometry the tab sign is drawn by (SharedRenderer.DrawPercentRepeats).
+                        slashRight[t] = Math.Max(slashRight[t], PercentRepeatEngraver.Geometry(
+                            isBeatSlash: true, slashCount, isDouble: false, tabSpace).GroupWidth);
+                        anySlash = true;
+                        break;
+                    }
+            }
             onset += item.Duration;
         }
-        if (!any)
+        if (!any && !anySlash)
             return springs;
 
         double tabGap = TabConstants.FretColumnGap; // clearance between adjacent digit columns
@@ -849,6 +891,24 @@ internal static partial class SpacingRules
         for (int t = 0; t < timings.Count - 1; t++)
             Widen(t + 1, right[t] + left[t + 1] + tabGap);
         Widen(timings.Count, right[^1]);
+        if (anySlash)
+        {
+            // The slash group's ROD, LilyPond's own: the group's ink widened by its
+            // extra-spacing-width, the next column's box (a bar line's ink less 0.1; a
+            // digit's own reach — Lily#'s digit, the regime the arm above prices in) and
+            // the spanner's padding.
+            // LILYPOND-REF: lily/separation-item.cc:47-68 Separation_item::set_distance —
+            //   padding + the boxes' distance.
+            double clearance = 2 * DefaultExtraSpacingWidth + SeparationRodPadding;
+            for (int t = 0; t < timings.Count; t++)
+            {
+                if (slashRight[t] <= 0)
+                    continue;
+                Widen(t + 1, t + 1 < timings.Count
+                    ? slashRight[t] + clearance + left[t + 1]
+                    : slashRight[t] + clearance);
+            }
+        }
         return result.ToImmutable();
     }
 

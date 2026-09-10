@@ -748,6 +748,34 @@ public sealed record RestItem : MusicItem
     /// See <see cref="HasSlurStart"/>.</summary>
     public bool HasSlurEnd { get; init; }
 
+    /// <summary>
+    /// LilyPond's <c>slash-count</c> when this spacer is the column a BEAT SLASH stands in —
+    /// the RepeatSlash (N ≥ 1) or DoubleRepeatSlash (0, mixed durations) grob that each
+    /// repetition of a <c>repeat percent</c> with a body shorter than a bar engraves in place
+    /// of the body — and null for every other spacer.
+    /// </summary>
+    /// <remarks>
+    /// A skip engraves NO grob and its column is unused; this spacer's column is USED and
+    /// holds a rhythmic grob with no note head, and the spacing must read it as LilyPond
+    /// does: a NoteSpacing wish whose <c>left_head_end</c> is 0 (the ideal is the duration
+    /// space LESS the increment) and a separation box of the slash group's ink (the rod to
+    /// the next column and to the bar line). Until session 367 the column was priced as a
+    /// wishless skip and audit/lpreg/slashprobe.lys read +1.1 ss too wide a bar.
+    /// The moment and the picture stay on <c>PercentRepeatItem</c> (BeatTiming, SlashCount);
+    /// both are written in the same collector step, so this flag and that item name the
+    /// same column by construction.
+    /// LILYPOND-REF: lily/slash-repeat-engraver.cc:56-66 Slash_repeat_engraver::process_music
+    ///   — the item is made from the RepeatSlashEvent;
+    /// LILYPOND-REF: scm/define-grobs.scm:2909-2918 RepeatSlash — rhythmic-grob-interface;
+    /// LILYPOND-REF: lily/note-spacing-engraver.cc:87-91 Note_spacing_engraver::acknowledge_rhythmic_grob
+    ///   — the wish is filed for every rhythmic grob, note column or not.
+    /// </remarks>
+    public int? RepeatSlashCount { get; init; }
+
+    /// <summary>True iff this spacer is the column a beat slash stands in — see
+    /// <see cref="RepeatSlashCount"/>.</summary>
+    public bool IsRepeatSlash => RepeatSlashCount is not null;
+
     /// <summary>The sounding duration with dots and tuplet <see cref="TimeScale"/> applied, as a fraction of a whole note.</summary>
     protected override Fraction SoundingDuration =>
         (Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration) * TimeScale;

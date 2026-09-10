@@ -430,7 +430,21 @@ internal static partial class SpacingRules
                 // MEASURED, probe chord-symbol-width.ly CAL2, a staff-less row's
                 // columns carry NO spacing wishes at all, so LilyPond's ideal there
                 // is the bare duration spring).
-                RestItem r => r.IsSpacer ? double.NaN : GlyphMetrics.GetRestBBox(GetNoteValue(p)).Right,
+                // ⚠️ A BEAT SLASH'S SPACER IS THE EXCEPTION: its column holds a RepeatSlash /
+                // DoubleRepeatSlash grob, a rhythmic grob LilyPond's Note_spacing_engraver
+                // files a wish for — and the wish's left_head_end is read off its left NOTE
+                // COLUMNS, which a slash is not, so the term is 0 and the ideal is the bare
+                // duration space LESS the increment. MEASURED (2.26.0,
+                // audit/lp-geometry/probes/beat-slash-spacing.ly BSL): the slash column's
+                // quarter to the next note is 3.600000 = 4.8 − 1.2, where the wishless
+                // skip branch (NaN here, the raw ideal kept) gave 4.800000 — the +1.1 of
+                // audit/lpreg/slashprobe.lys (percent.beat-slash.slash-to-next-note).
+                // LILYPOND-REF: lily/note-spacing-engraver.cc:87-91 acknowledge_rhythmic_grob;
+                // LILYPOND-REF: lily/note-spacing.cc:46-77 Note_spacing::get_spacing —
+                //   left_note_columns, and the ideal at :77.
+                RestItem r => r.IsSpacer
+                    ? (r.IsRepeatSlash ? 0.0 : double.NaN)
+                    : GlyphMetrics.GetRestBBox(GetNoteValue(p)).Right,
                 _ => double.NaN
             };
             if (double.IsNaN(w))

@@ -423,6 +423,35 @@ internal static class ItemSkylineFactory
                 restY - restBox.Top, restY - restBox.Bottom,
                 noteheadLeftX + restBox.Left, noteheadLeftX + restBox.Right));
         }
+        else if (item is RestItem { RepeatSlashCount: { } slashCount })
+        {
+            // THE BEAT SLASH — the RepeatSlash / DoubleRepeatSlash grob's stencil, hung off
+            // the column's origin (beat_slash never re-aligns it) and centred on the staff
+            // middle (brew_slash align_to Y CENTER; the grob has no Y-offset of its own). Its
+            // ink is an ordinary element of the PAPER column, not of a note column — there is
+            // none — so it reaches a neighbour through the ROD alone and never through a
+            // wish's minimum: NoteColumnMember false, like a dot or a half-tie. The box takes
+            // the default extra-spacing-width (neither grob declares one). ONE geometry with
+            // the draw (SharedRenderer.DrawPercentRepeats) and the closing-rod reach
+            // (SpacingRules.CalculateNoteheadRightExtent): PercentRepeatEngraver.Geometry.
+            // MEASURED (2.26.0, audit/lp-geometry/probes/beat-slash-spacing.ly BSL): the
+            // DoubleRepeatSlash to the bar line is 4.057645 = group 3.757645 + 0.1 + 0.1 +
+            // 0.1 — the rod binding over the 3.6 ideal — where the notehead-shaped
+            // placeholder box below priced 1.3042 of ink there (percent.beat-slash.slash-to-barline).
+            // ⚠️ Priced in the NOTATION staff's space: a TabStaff's sign is 1.5× the size
+            // (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
+            // yet, and the notation frame is what every other part here is boxed in.
+            // LILYPOND-REF: lily/percent-repeat-interface.cc:37-61 brew_slash — the group,
+            //   align_to (Y_AXIS, CENTER); :107-121 beat_slash — no X re-alignment;
+            // LILYPOND-REF: lily/paper-column-engraver.cc:246-261 stop_translation_timestep —
+            //   every acknowledged Item enters its column's separation item;
+            // LILYPOND-REF: lily/separation-item.cc:166-167 extra-spacing-width default (-0.1 . 0.1).
+            var sign = PercentRepeatEngraver.Geometry(
+                isBeatSlash: true, slashCount, isDouble: false, staffSpace: 1.0);
+            parts.Add(ColumnPart.Ink(
+                staffY - sign.SlashHeight / 2, staffY + sign.SlashHeight / 2,
+                noteheadLeftX, noteheadLeftX + sign.GroupWidth) with { NoteColumnMember = false });
+        }
         else if (item is RestItem { IsSpacer: false, IsMultiMeasure: false })
         {
             // A plain DRAWN rest — unbeamed, unvoiced — at its resting place: the middle

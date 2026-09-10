@@ -335,6 +335,14 @@ internal sealed class MeasureLayouter
     /// LILYPOND-REF: lily/note-spacing-engraver.cc:81-91 acknowledge_note_column /
     ///   acknowledge_rhythmic_grob — a wish's items are the grobs the voice engraved.
     /// </para>
+    /// <para>
+    /// ⚠️ EXCEPT THE BEAT SLASH'S SPACER, which IS a grob: the RepeatSlash / DoubleRepeatSlash
+    /// item is rhythmic, the engraver acknowledges it, and the voice's wish spans from it to
+    /// its next column exactly as from a note (RestItem.RepeatSlashCount). MEASURED (2.26.0,
+    /// audit/lp-geometry/probes/beat-slash-spacing.ly): the slash column's quarter to the
+    /// next note is 3.600000 — the wish's ideal with no head, 4.8 − 1.2 — where the wishless
+    /// branch keeps 4.800000.
+    /// </para>
     /// </remarks>
     private static MusicItem? ItemStartingAt(Measure m, Fraction t)
     {
@@ -347,7 +355,7 @@ internal sealed class MeasureLayouter
             // the main one. Skipped for the same reason a mid-measure change is: neither is
             // the musical column being spaced.
             if (acc == t && !item.GraceTime && !SpacingRules.IsMidMeasureChangeColumn(item))
-                return item is RestItem { IsSpacer: true } ? null : item;
+                return item is RestItem { IsSpacer: true, RepeatSlashCount: null } ? null : item;
             if (acc > t) break;
             acc += item.Duration;
         }

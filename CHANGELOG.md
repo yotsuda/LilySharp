@@ -214,6 +214,18 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixed
 
+- **A beat slash is spaced as LilyPond spaces it.** A `repeat percent` whose body is shorter
+  than a bar draws a slash for each repetition and, until now, left too much room after it —
+  a whole notehead's width of space before the next note, and as much again before the bar
+  line, so a bar of `repeat percent 2 { c16 d e f } repeat percent 2 { g8. c16 }` came out 1.7
+  spaces wider than LilyPond's. LilyPond treats the slash's column as a column with a grob but
+  no note head: the spring out of it is the plain duration space less the notehead increment,
+  and the bar line stands off the slash group's own ink. Both are now read that way (measured on
+  2.26.0: slash to next note 3.600000, dotted slash to bar line 4.057645, exact on both sides —
+  `audit/lp-geometry` `percent.beat-slash.*`). On a tab staff the sign is one-and-a-half-sized
+  and the bar line stands off THAT group, on a staff-plus-tab system as on a tab alone
+  (5.936467, exact).
+
 - **A `score { }` pasted into the file now appears in the preview's score picker at once.**
   The preview host skips sending the webview a picture identical to the one it already
   shows, and the key it compared was the picture and the error banner alone. A second

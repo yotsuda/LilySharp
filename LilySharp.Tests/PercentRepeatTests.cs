@@ -578,6 +578,152 @@ public class PercentRepeatTests
     }
 
     /// <summary>
+    /// The spacer that OPENS a beat slash's column carries the slash count, and only that
+    /// one: the column holds the RepeatSlash / DoubleRepeatSlash grob, which the spacing
+    /// must price as a used column with a wish and the group's ink
+    /// (<see cref="RestItem.RepeatSlashCount"/>); a repetition that outlives its bar goes on
+    /// as plain spacers, the event still sounding.
+    /// LILYPOND-REF: lily/slash-repeat-engraver.cc:56-66 process_music.
+    /// </summary>
+    [Fact]
+    public void Collector_BeatSlashSpacer_CarriesTheSlashCountOnItsOpeningPiece()
+    {
+        var score = new MeasureCollector().Collect(
+            SyntaxTree.Parse("repeat percent 2 { c16 d e f } repeat percent 2 { g8. c16 } |"));
+
+        var measure = Assert.Single(score.Voice.Measures);
+        var spacers = measure.Items.OfType<RestItem>().Where(r => r.IsSpacer).ToList();
+        Assert.Equal(2, spacers.Count);
+        Assert.Equal(2, spacers[0].RepeatSlashCount);   // sixteenths → two plain slashes
+        Assert.Equal(0, spacers[1].RepeatSlashCount);   // mixed → the dotted DoubleRepeatSlash
+        Assert.All(spacers, s => Assert.True(s.IsRepeatSlash));
+
+        // A repetition that crosses the bar line (the body `c4 d` is played from beat 2, so
+        // its repeat runs from beat 4 into the next bar): the slash's column is the FIRST
+        // piece, the rest of the event is plain spacers.
+        var crossing = new MeasureCollector().Collect(
+            SyntaxTree.Parse("r4 repeat percent 2 { c4 d } e2. |"));
+        Assert.Equal(2, crossing.Voice.Measures.Length);
+        var pieces = crossing.Voice.Measures
+            .SelectMany(m => m.Items).OfType<RestItem>().Where(r => r.IsSpacer).ToList();
+        Assert.Equal(2, pieces.Count);                 // quarter before the bar, quarter after
+        Assert.Equal(1, pieces[0].RepeatSlashCount);
+        Assert.Null(pieces[1].RepeatSlashCount);
+    }
+
+    /// <summary>
+    /// Lily#'s two spring systems agree over a beat slash's column — the timing-column chain
+    /// the layout reads and the single-measure estimate the breaker reads — and both price
+    /// it as LilyPond does: the wish INTO the slash is a note's ordinary spring, the wish
+    /// OUT of it has no head (the duration space less the increment), and the closing leg
+    /// is the rod the slash group's ink raises against the bar line. The LP figures are
+    /// pinned by the ledger (percent.beat-slash.*, probes/beat-slash-spacing.ly BSL); this
+    /// pins the two systems to each other and the shape of the three legs.
+    /// </summary>
+    [Fact]
+    public void BothSpringSystems_AgreeOverABeatSlashColumn()
+    {
+        const string src = """
+            octave absolute
+            paper { raggedRight }
+            part melody {
+              section A {
+                repeat percent 2 { c16 d e f } repeat percent 2 { g8. c16 } | c1 |
+              }
+            }
+            form main { A }
+            score main { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var spec = RenderSpecParser.FindFirst(tree);
+        var multi = new MeasureCollector().CollectMultiStaff(tree, spec!);
+        var timings = MultiStaffLayouter.CollectAllTimingsForMeasure(multi, 0);
+        var allMeasures = MultiStaffLayouter.CollectAllMeasuresAtIndex(multi, 0);
+        var measures = multi.PrimaryContentStaff.PrimaryVoice.Measures;
+        var primary = measures[0];
+        // The score's own global shortest, as the layout finds it (a sixteenth bar and a
+        // whole-note bar: 1/16, so a sixteenth's duration space is the full 2.4).
+        double shortest = SpacingRules.CalculateCommonShortestDuration(multi);
+        var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
+
+        // Both slash columns are kept: the sixteenths, the slash at 4/16, g8. at 8/16, its
+        // c16 at 11/16 and the dotted slash at 12/16 — eight columns, none dropped.
+        Assert.Equal(
+            new[] { 0, 1, 2, 3, 4, 8, 11, 12 }.Select(i => new Fraction(i, 16)).ToList(),
+            timings);
+
+        var column = new MeasureLayouter().CreateTimingSprings(
+            fonts, primary, timings, shortest, allMeasures, measures[1],
+            SpacingRules.RunLeftBoundBarline(measures, 0));
+        column = MultiStaffLayouter.ApplySharedColumnReservations(
+            multi, 0, column, primary, timings, allMeasures, shortest);
+        var item = SpacingRules.CreateSpringsForMeasure(fonts, primary, shortest, nextMeasure: measures[1]);
+
+        // The IDEALS agree leg for leg (the two systems have always kept their minimums in
+        // different frames — the column chain's carries the rod, the estimate's the skyline
+        // minimum — so those are read off the column chain below, as the layout does).
+        Assert.Equal(column.Length, item.Length);
+        for (int i = 0; i < column.Length; i++)
+            Assert.Equal(column[i].IdealDistance, item[i].IdealDistance, 9);
+
+        // Spring i connects column i-1 → i (spring 0 is bar line → first column); the
+        // slash columns are 4 (after f16) and 6 (after c16), the closing leg is the last.
+        double sixteenth = column[4].IdealDistance;             // f16 → slash: a note's spring
+        double headless = column[5].IdealDistance;              // slash → g8.: no head
+        Assert.Equal(2.504200, sixteenth, 6);
+        Assert.Equal(3.600000, headless, 6);
+        // The closing leg's IDEAL is the headless 3.6 too; what LilyPond draws there is the
+        // rod (4.057645 = group 3.757645 + 0.3), a floor the spring carries as its minimum.
+        Assert.Equal(3.600000, column[^1].IdealDistance, 6);
+        Assert.Equal(4.057645, column[^1].MinDistance, 6);
+    }
+
+    /// <summary>
+    /// On a TAB staff the sign is one-and-a-half-sized, and its rod to the bar line is the
+    /// tab group's (5.636468 + 0.3), priced into the shared columns beside the fret digits so
+    /// the layout and the line-break gate read one number — the same 5.936467 whether a
+    /// notation staff stands over the tab or not (ledger percent.beat-slash.tab-*).
+    /// </summary>
+    [Theory]
+    [InlineData("staff bl\n  tab bl")]
+    [InlineData("tab bl")]
+    public void TabBeatSlash_ClosesOnTheTabGroupsRod(string staves)
+    {
+        string src = $$"""
+            octave absolute
+            paper { raggedRight }
+            part bl {
+              clef bass
+              tuning bass
+              section A {
+                repeat percent 2 { c,16 d, e, f, } repeat percent 2 { g,8. c,16 } | c,1 |
+              }
+            }
+            form main { A }
+            score main { {{staves}} }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var spec = RenderSpecParser.FindFirst(tree);
+        var multi = new MeasureCollector().CollectMultiStaff(tree, spec!);
+        var timings = MultiStaffLayouter.CollectAllTimingsForMeasure(multi, 0);
+        var allMeasures = MultiStaffLayouter.CollectAllMeasuresAtIndex(multi, 0);
+        var measures = multi.PrimaryContentStaff.PrimaryVoice.Measures;
+        double shortest = SpacingRules.CalculateCommonShortestDuration(multi);
+        var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
+        var column = new MeasureLayouter().CreateTimingSprings(
+            fonts, measures[0], timings, shortest, allMeasures, measures[1],
+            SpacingRules.RunLeftBoundBarline(measures, 0));
+        column = MultiStaffLayouter.ApplySharedColumnReservations(
+            multi, 0, column, measures[0], timings, allMeasures, shortest);
+
+        double tabGroup = PercentRepeatEngraver.Geometry(
+            isBeatSlash: true, slashCount: 0, isDouble: false,
+            staffSpace: LilySharp.Core.Svg.EngravingDefaults.TabStringSpace(4)).GroupWidth;
+        Assert.Equal(5.636468, tabGroup, 6);
+        Assert.Equal(5.936468, column[^1].MinDistance, 6);
+    }
+
+    /// <summary>
     /// The slash COUNT comes from the body's written durations: all equal gives
     /// <c>max (duration-log − 2) 1</c>, and anything mixed gives 0, which is not "no slashes"
     /// but the OTHER grob — the dotted <c>DoubleRepeatSlash</c>.
