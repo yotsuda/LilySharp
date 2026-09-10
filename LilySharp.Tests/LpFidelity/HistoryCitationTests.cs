@@ -224,8 +224,20 @@ public class HistoryCitationTests
     /// verified group by group, and the diff between the old tip and the new one is empty;
     /// the LIVE ratchet did not fall (753, floor 564).
     /// </para>
+    /// <para>
+    /// ⚠️ RAISED 600 → 621, THE SAME WAY, ON 2026-09-10 (after session 360). The fifty-three
+    /// unpushed commits of sessions 355-360 were regrouped into ten before pushing — this
+    /// time outside any session's view: no backup tag was left and the reflog holds only
+    /// the ten new commits, so the group-by-group tree check the paragraphs above describe
+    /// could not be repeated here; what was measured is the census itself, 600 → 621 on the
+    /// first run after the push, every one of the twenty-one in §1 of the handoff and the
+    /// archive's top block (each session's "these commits", the commit an approval was
+    /// given on, the tip a leg started from). Not re-pointed, for the reason the paragraphs
+    /// above give: the sentences are the record of what those sessions committed. The LIVE
+    /// ratchet did not fall (754, floor 564).
+    /// </para>
     /// </remarks>
-    private const int DeadCitationsWhenWritten = 600;
+    private const int DeadCitationsWhenWritten = 621;
 
     /// <summary>
     /// Extensions scanned for citations. Chosen because they are where citations are actually
