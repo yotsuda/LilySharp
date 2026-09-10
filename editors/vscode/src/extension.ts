@@ -30,6 +30,7 @@ import { registerAiComplete } from './aiComplete';
 import { registerSmartTyping } from './smartTyping';
 import { registerExportBatch } from './exportBatch';
 import { markdownItExtensionApi } from './markdownFence';
+import { svgPostKey } from './previewCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -1051,8 +1052,15 @@ async function updatePreviewContent(
             // Skip the post when both are identical to what the webview already
             // shows — this is what spares a rapid edit/toggle/save burst from
             // re-shipping the same large SVG. A different render selection
-            // compiles to a different SVG, so equality already implies the render.
-            const key = response.Svg + '\n\n' + (response.Error ?? '');
+            // compiles to a different SVG, so equality already implies the render
+            // — but NOT the picker's list: a `score { }` pasted below the one being
+            // drawn changes nothing in the picture, and the picker only learns of
+            // it from this message (user report 2026-09-11: a pasted score did not
+            // appear in the preview until some later edit moved the picture). The
+            // list and the drawn name are folded into the key; a post whose SVG is
+            // unchanged is cheap on the webview side (the page markup compares
+            // equal and every page is kept).
+            const key = svgPostKey(response.Svg, response.Error, response.Renders, drawnRender);
             if (lastPostedSvg.get(uri) === key) {
                 outputChannel.appendLine(`SVG unchanged (length=${response.Svg.length}), skipping post`);
             } else {

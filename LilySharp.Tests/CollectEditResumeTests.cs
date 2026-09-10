@@ -734,6 +734,210 @@ section S {
         Assert.Equal(SvgGenerator.Generate(SyntaxTree.Parse(edited), options), incremental);
     }
 
+    /// <summary>THE BOUNDARY-INSERTION HOLE (2026-09-10, session 366, user report on
+    /// scratch/ベースタブLy/tooLongChords.lys): a note typed into an EMPTY bar of a
+    /// <c>| | |</c> run is an insertion whose point is exactly the old empty bar's
+    /// closing bar line — its SourceEnd. The straddle guard read that measure as
+    /// untouched (strict <c>SourceEnd &gt; Prefix</c>), the splice from the first
+    /// boundary adopted the whole old tail, and the preview drew the bar empty with
+    /// the note gone — the bar count unchanged, so nothing else moved — until the
+    /// next edit shifted the window. The user saw it as "typing an e into bar 3 made
+    /// the c appear; deleting it made the c vanish". Both directions of the toggle,
+    /// and the note typed one keystroke at a time, must match the full compile.</summary>
+    [Fact]
+    public void InsertionAtAMeasuresClosingBarLine_DoesNotSpliceThatMeasure()
+    {
+        const string source = """
+            part melody {
+              section A { g'2 g | | | | d1 | c |  }
+              section B { c2 c | }
+            }
+            chords prog {
+              section A { Dm7 | G7 | | |   }
+              section B { Cmaj7 | }
+            }
+            lyrics verse {
+              section A { hey | | | | hey | |  }
+            }
+            form main { A | B |  }
+            score main {
+              chords prog
+              staff melody
+              lyrics verse sings melody
+            }
+            """;
+        var options = new SvgRenderOptions { EmbedFont = false };
+        var text = source.Replace("\r\n", "\n");
+        var tree = SyntaxTree.Parse(text);
+        var compiler = new IncrementalCompiler(tree, options);
+        compiler.RenderIncremental(tree);
+
+        int at = text.IndexOf("g'2 g | | | |", StringComparison.Ordinal) + "g'2 g | | ".Length;
+        // The note, then its space, as an editor sends them; then the pair deleted again.
+        foreach (var (start, len, rep) in new[] { (at, 0, "e"), (at + 1, 0, " "), (at, 2, "") })
+        {
+            tree = tree.WithChange(new TextChange(new TextSpan(start, len), rep));
+            text = text.Substring(0, start) + rep + text.Substring(start + len);
+            Assert.Equal(text, tree.Text);
+            var incremental = compiler.RenderIncremental(tree);
+            Assert.Equal(SvgGenerator.Generate(SyntaxTree.Parse(text), options), incremental);
+        }
+    }
+
+    // ---------- the 2026-09-10 audit (session 366): edits at container edges ----------
+
+    /// <summary>One keystroke through the production wiring, asserted equal to a full
+    /// recompile; the shapes below are the audit sweep's distilled divergences.</summary>
+    private static void AssertKeystrokeMatchesFull(string source, string find, string replacement, int occurrence = 0)
+    {
+        var options = new SvgRenderOptions { EmbedFont = false };
+        var text = source.Replace("\r\n", "\n");
+        var tree = SyntaxTree.Parse(text);
+        var compiler = new IncrementalCompiler(tree, options);
+        compiler.RenderIncremental(tree);
+        int at = -1;
+        for (int i = 0; i <= occurrence; i++)
+            at = text.IndexOf(find, at + 1, StringComparison.Ordinal);
+        Assert.True(at >= 0, "edit anchor not found");
+        tree = tree.WithChange(new TextChange(new TextSpan(at, find.Length), replacement));
+        text = text.Substring(0, at) + replacement + text.Substring(at + find.Length);
+        Assert.Equal(text, tree.Text);
+        Assert.Equal(SvgGenerator.Generate(SyntaxTree.Parse(text), options), compiler.RenderIncremental(tree));
+    }
+
+    /// <summary>THE TRAILING-GAP HOLE: a note typed after a body's last item, before the
+    /// `}`, lands past the last measure's SourceEnd — the item-span straddle test read the
+    /// measure as untouched and the whole-walk splice from the first boundary adopted the
+    /// old one-measure tail (clef-positions.lys in the sweep). A candidate standing before
+    /// the window now declines unless the edit changed no token.</summary>
+    [Fact]
+    public void NoteTypedAfterABodysLastItem_IsNotSplicedAway()
+    {
+        const string source = """
+            octave absolute
+            part sop { clef treble }
+            part alt { clef treble }
+            section M {
+              sop { c'1 }
+              alt { c'1 }
+            }
+            form main { M }
+            score main { staff sop  staff alt }
+            """;
+        AssertKeystrokeMatchesFull(source, "c'1 }", "c'1 c'1 }");
+    }
+
+    /// <summary>THE PHRASE-EXPANSION HOLE: a bar line typed at the start of a body written
+    /// as phrase references (01-expressions.lys). The expansion's markers sat at position 0,
+    /// so a checkpoint after two expanded phrases had an address the inserted node could not
+    /// disturb and a read extent inside the bodies declared above — the walk resumed one
+    /// node late. Markers are now positioned at their reference and the reference is a
+    /// value read; the resume bails or matches, never drifts.</summary>
+    [Fact]
+    public void BarLineTypedBeforePhraseReferences_DoesNotResumeInsideTheExpansion()
+    {
+        const string source = """
+            octave absolute
+            part melody { clef treble }
+            phrase intro { c'4 d' e' f' | g'4 a' b' c'' | }
+            phrase theme { e'4 d' c' d' | e'2 e' | }
+            phrase finale { c'4 c' c' c' | c'1 | }
+            section Main {
+              melody { intro theme finale }
+            }
+            form main { Main }
+            score main { staff melody }
+            """;
+        AssertKeystrokeMatchesFull(source, "{ intro", "{ | intro");
+        AssertKeystrokeMatchesFull(source, "{ intro", "{ c'4 intro");
+    }
+
+    /// <summary>THE JOURNAL-REPLAY HOLE (rit-across-systems.lys in the sweep): a resumed
+    /// walk rebuilt the section-start journal from the RECORDING from index 0, putting an
+    /// earlier part's OLD section starts back after the edit had moved them — the chord
+    /// row then placed every cell at both the old and the new start (16 names for 10).
+    /// The entries below the walk's entry count are the live collect's now.</summary>
+    [Fact]
+    public void AnEmptyBarTypedIntoTheChordRow_DoesNotReplayAnEarlierPartsOldSectionStarts()
+    {
+        const string source = """
+            part melody {
+              section A { d'4 e' f' g' | e'4 f' g' a' | f'4 g' a' b' | a'1 | }
+              section B { g'2 f' | e'1 | }
+            }
+            part bass {
+              section A { d2 e | e2 f | f2 g | a1 | }
+              section B { g2 f | e1 | }
+            }
+            chords prog {
+              section A { Dmaj7 | Em7 | Gmaj7 | A7 }
+              section B { Gm7 F#maj7 | }
+            }
+            form main { A B A B }
+            score main { chords prog  staff melody  staff bass }
+            """;
+        AssertKeystrokeMatchesFull(source, "Dmaj7 | Em7", "Dmaj7 | | Em7");
+        AssertKeystrokeMatchesFull(source, "{ Dmaj7", "{ | Dmaj7");
+    }
+
+    /// <summary>THE SECTION-SHAPE HOLE (the `partial` books in the sweep): a bar line
+    /// typed at SECTION level after the last part block turns the section inline, which
+    /// changes what the prologue does for every block — and no span the walk had read
+    /// covered it, so the checkpoints inside the block were adopted with the old pickup
+    /// flag. The section's child shape is now a structure read.</summary>
+    [Fact]
+    public void ABarLineTypedAtSectionLevel_ChangesTheSectionsShape()
+    {
+        const string source = """
+            time 4/4
+            part m { clef treble }
+            section Main {
+              partial 2
+              m { a'8 a' a' a' | }
+            }
+            form main { ~Main }
+            score main { staff m }
+            """;
+        AssertKeystrokeMatchesFull(source, "a' | }\n}", "a' | }\n | }");
+        AssertKeystrokeMatchesFull(source, "a' | }\n}", "a' | }\n c'4 }");
+    }
+
+    /// <summary>The edge the audit's reading named and its sweep could not reach: a
+    /// form whose play order is not the file order (B before A, A written first), A
+    /// written as phrase references, and an edit in A's reference text. A candidate in
+    /// B stands AFTER the window in the file but BEFORE it in walk order, so the
+    /// "candidate before the window" rule does not fire; what holds the line is that a
+    /// reference is a value read (a swapped or marked reference is unstable for every
+    /// earlier candidate) and that a note typed into a reference gap always opens a bar
+    /// (the phrase edge closes bars), which CanonicalBarsMatch declines. Measured
+    /// 2026-09-10: every shape below reuses nothing and matches the full compile.</summary>
+    [Theory]
+    [InlineData("{ pa pb pa pb }", "{ pa c'4 pb pa pb }")]
+    [InlineData("{ pa pb pa pb }", "{ pa pb pa pb c'4 }")]
+    [InlineData("{ pa pb pa pb }", "{ c'4 pa pb pa pb }")]
+    [InlineData("{ pa pb pa pb }", "{ pa  pb pa pb }")]
+    [InlineData("{ pa pb pa pb }", "{ pa pb pb pb }")]
+    [InlineData("{ pa pb pa pb }", "{ pa pb pa' pb }")]
+    [InlineData("{ pa pb pa pb }", "{ pa pb pa pb pa }")]
+    public void ReversedFormOrder_EditsInAPhraseReferenceSection_MatchFull(string find, string replacement)
+    {
+        const string source = """
+            octave absolute
+            part m { clef treble }
+            phrase pa { c'4 d' e' f' | }
+            phrase pb { g'4 a' b' c'' | }
+            section A {
+              m { pa pb pa pb }
+            }
+            section B {
+              m { e'4 e' e' e' | e'4 e' e' e' | e'4 e' e' e' | }
+            }
+            form main { B A }
+            score main { staff m }
+            """;
+        AssertKeystrokeMatchesFull(source, find, replacement);
+    }
+
     // ---------- finding 3-5: the nested collects ride resume channels ----------
 
     /// <summary>A lead-sheet shape: the score draws two staves while the undrawn
@@ -923,14 +1127,49 @@ section S {
 
         // A lone mid-file `|` deleted (not `|:` `:|` `||` — those would change
         // the barline TYPE rather than the measure structure).
+        int bar = -1;
         for (int i = text.Length / 2; i < text.Length; i++)
         {
             if (text[i] == '|'
                 && (i == 0 || (text[i - 1] != '|' && text[i - 1] != ':'))
                 && (i + 1 >= text.Length || (text[i + 1] != '|' && text[i + 1] != ':' && text[i + 1] != '.')))
             {
+                bar = i;
                 yield return text.Remove(i, 1);
                 break;
+            }
+        }
+
+        // A note inserted at that bar line's two edges (2026-09-10, session 366): RIGHT
+        // BEFORE it — the insertion point is the measure's SourceEnd, so the text joins
+        // the measure the bar line closes (the hole the tooLongChords report found: the
+        // splice's straddle guard read that measure as untouched and adopted the old
+        // one) — and RIGHT AFTER it, the next measure's SourceStart, where the guard's
+        // strict side must keep the measure that opens with the unchanged bar line
+        // adoptable. Δ=+3 each. A book whose row cannot take `c4` there (a chord row, a
+        // form line) does not collect cleanly and is skipped, as every edit here is.
+        if (bar > 0)
+        {
+            yield return text.Insert(bar, " c4");
+            yield return text.Insert(bar + 1, " c4 ");
+        }
+
+        // A note at the two edges of a body: right after a mid-file `{` and right before
+        // the `}` that closes it — the gaps no measure's item span covers (the audit
+        // sweep of 2026-09-10: 54 of its 88 divergences were these two edges).
+        int open = text.IndexOf('{', text.Length / 2);
+        if (open > 0)
+        {
+            yield return text.Insert(open + 1, " c4 ");
+            int depth = 0;
+            for (int i = open; i < text.Length; i++)
+            {
+                if (text[i] == '{') depth++;
+                else if (text[i] == '}' && --depth == 0)
+                {
+                    yield return text.Insert(i, " c4 ");
+                    break;
+                }
             }
         }
     }

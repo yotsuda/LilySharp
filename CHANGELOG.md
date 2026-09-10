@@ -214,6 +214,44 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixed
 
+- **A `score { }` pasted into the file now appears in the preview's score picker at once.**
+  The preview host skips sending the webview a picture identical to the one it already
+  shows, and the key it compared was the picture and the error banner alone. A second
+  score pasted below the one being drawn changes nothing in the picture, so the message
+  that carries the picker's list was skipped and the new score did not appear until some
+  later edit happened to move the picture. The picker's list and the drawn score's name are
+  part of the key now (an unchanged picture still posts, cheaply: the webview compares the
+  page markup and keeps every page).
+
+- **A note typed into an empty bar no longer vanishes from the preview.** With `g2 g | | | | d1 | c |`
+  open in the editor, typing an `e` into one of the empty bars drew that bar still empty — the
+  bar count unchanged, one note gone — and, depending on the edit history, a note elsewhere
+  in the section could disappear or reappear with each keystroke (reported on
+  tooLongChords.lys: "typing an e into bar 3 made the c appear; deleting it made the c
+  vanish"). The preview's collect resume reuses the previous keystroke's measures past the
+  edit; a measure whose closing bar line stood exactly at the insertion point was read as
+  untouched, although text inserted there lands before that bar line, inside the measure, so
+  the old empty bar was adopted over the one just typed. The measure ending at the edit is
+  now walked live. `lysc` and every export were unaffected (they compile from scratch); only
+  the live preview reused a stale bar. The net that guards this reuse now also types a note
+  at both edges of a bar line in every fixture, which found one more stale reuse: after an
+  edit above the form line, a `segno` / `coda` / `to coda` / `fine` / `_"text"` written on the
+  form line kept its pre-edit source position in the preview (a click on the sign jumped to
+  the wrong column); the form-line mark is now a header read the resume verifies.
+
+- **The preview's reuse of the previous keystroke was audited edge by edge, and four more
+  stale reuses were closed.** A sweep of 36 edit shapes over every fixture and sample (a note
+  or bar line at either edge of every body, a duplicated or deleted note, an annotation added
+  or removed, edits in phrase bodies, the form line and the file ends) found 88 keystrokes in
+  258 books where the preview differed from a full compile; after the fixes it finds none.
+  The shapes: a note typed after a body's last item (before the `}`) or before its first,
+  which the previous keystroke's measures were reused across; a bar line or note typed at the
+  start of a body written as phrase references, where the reuse resumed one node late; an
+  empty bar typed into a chord row of a two-part piece, after which the chord names of every
+  section were placed at both their old and their new bar (16 names for 10); and a bar line
+  typed at section level, outside the part blocks of a `partial` piece, which the reuse did
+  not see as a change to the section. `lysc` and the exports were never affected.
+
 - **A part written as phrases, a multi-measure rest or a repeat is measured at its played
   length when the page decides how long a section is.** The page counted one bar per written
   token — `R1*4` was one bar, `repeat unfold 13 { … }` its body once, a phrase reference

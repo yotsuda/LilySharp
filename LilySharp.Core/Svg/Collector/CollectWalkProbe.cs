@@ -147,6 +147,10 @@ internal sealed class CollectWalkProbe
     public Syntax.SyntaxNode? NewRoot;
     /// <inheritdoc cref="BaselineRoot"/>
     public bool? ParseAgreementsVerified;
+    /// <summary>Memo of <see cref="CollectResumePlanner.WindowIsTriviaOnly"/>: the edit
+    /// changed no token (whitespace / comments only), so a recorded tail that SPANS the
+    /// window is still the walk of the same node stream, positions shifted.</summary>
+    public bool? WindowTriviaOnly;
 
     public static CollectWalkProbe Recorder() => new(recording: true);
 
@@ -181,6 +185,17 @@ internal sealed class VoiceWalkRecording
     /// walk's item count, the watermark slices would land at shifted offsets.</summary>
     public int[]? StartTableCounts;
 
+    /// <summary>The key-modulation / section-start journal lengths at this walk's
+    /// entry — the entries below them belong to the collect's EARLIER walks. A
+    /// restore replays the recording's journal from HERE to the checkpoint's watermark
+    /// and keeps the live entries below (2026-09-10, session 366: it used to clear and
+    /// replay from 0, putting an earlier part's OLD section starts back after an edit
+    /// had moved them — a chord row then placed every cell at both the old and the new
+    /// start, 16 names for 10).</summary>
+    public int StartKeyLogCount;
+    /// <inheritdoc cref="StartKeyLogCount"/>
+    public int StartSectionStartLogCount;
+
     /// <summary>The header spans this walk read, in walk order: the part's
     /// name/config children at entry, then each visited section's name and
     /// header directives. These reads burn label/data-pos positions and seed
@@ -189,7 +204,7 @@ internal sealed class VoiceWalkRecording
     /// max would reject everything); instead each checkpoint records how many
     /// were read (<see cref="WalkCheckpoint.HeaderReadCount"/>) and the planner
     /// verifies that prefix span-by-span — content AND position stable.</summary>
-    public List<Syntax.TextSpan>? HeaderReads;
+    public List<HeaderRead>? HeaderReads;
 
     public List<WalkCheckpoint> Checkpoints { get; } = new();
 
@@ -242,6 +257,27 @@ internal sealed class VoiceWalkRecording
 
     public void MarkIneligible(string reason) => IneligibleReason ??= reason;
 }
+
+/// <summary>One header read of a walk (<see cref="VoiceWalkRecording.HeaderReads"/>): the
+/// span read, and whether only its VALUE feeds the walk. A position-sensitive read (a
+/// section name, a header directive, a form-line mark — they burn their positions into
+/// adopted state) must be content- AND position-stable across the edit; a value-only
+/// read (a phrase reference's own text, which only chooses the body — its position
+/// lives in the marker's address alone, revalidated through the window map at the
+/// restore) needs its content unchanged, and may have shifted. 2026-09-10 (session
+/// 366): the call site used to be no read at all, so a checkpoint inside or after an
+/// expanded phrase resumed for an edit AT the reference (or at the body's start, which
+/// shifted every expanded node by one under the markers' shared address 0).</summary>
+/// <param name="Structure">A STRUCTURE read: the section node (baseline tree) whose
+/// direct-child shape the prologue consumed — which directive and block kinds it holds,
+/// and whether it carries inline music. Verified structurally against the node standing
+/// at the same (shifted) place in the new tree, never by span: an edit inside one of its
+/// blocks is the music walk's business, but a node typed at SECTION level — a stray bar
+/// line after the last part block, a `key` between two blocks — changes what the prologue
+/// does for every block of the section, and no span the walk read covers it (2026-09-10,
+/// session 366: the audit sweep's `partial` books kept the pickup flag the full collect
+/// no longer set, because a `|` at section level had turned the section inline).</param>
+internal readonly record struct HeaderRead(Syntax.TextSpan Span, bool ValueOnly, Syntax.SyntaxNode? Structure = null);
 
 /// <summary>A resume instruction for one primary walk: skip to
 /// <see cref="Checkpoint"/> (the PREFIX side; null when no prefix checkpoint
@@ -349,6 +385,13 @@ internal sealed class WalkCheckpoint
     /// unchanged, so an unchanged address holds a node with the same start —
     /// anything else is structural drift and the resume bails.</summary>
     public required int NodeStart { get; init; }
+    /// <summary>The kind of the node at <see cref="NodeIndex"/>, and — for a synthetic
+    /// phrase marker (kind None) — whether it is the expansion's END marker. Revalidated
+    /// with <see cref="NodeStart"/>: a node inserted at a body's start shifts every later
+    /// index by one, and a neighbour of the same kind at the same shifted address must
+    /// not pass for the recorded node.</summary>
+    public required Syntax.SyntaxKind NodeKind { get; init; }
+    public required bool NodeIsPhraseEnd { get; init; }
     /// <summary>How many of the walk's <see cref="VoiceWalkRecording.HeaderReads"/>
     /// had been read at this boundary — the planner validates exactly that prefix,
     /// so a shifted LATER section header does not reject an EARLIER checkpoint.</summary>

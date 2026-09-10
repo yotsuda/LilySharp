@@ -38,7 +38,7 @@ public sealed partial class MeasureCollector
         if (site.Kind == SyntaxKind.VariableReference)
         {
             var varRef = (VariableReferenceSyntax)site.Node;
-            ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, musicNodes);
+            ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, musicNodes, varRef);
         }
         // NOTE: unlike the other walks, the per-voice path does NOT treat a
         // << \\ >> span as one wrapper. Its caller does not skip parallel

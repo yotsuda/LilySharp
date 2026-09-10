@@ -89,6 +89,8 @@ internal static class CollectResumePlanner
         resumer.WindowPrefix = prefix;
         resumer.WindowSuffixStart = suffixStart;
         resumer.WindowDelta = delta;
+        var newRoot = newTree.GetRoot();
+        var structureWindow = new CollectTailShifter.Window(prefix, suffixStart, delta);
 
         // SUFFIX-side collect-level guard: a phrase/variable body is read at its
         // CALL SITES, and a tail call site re-reads the declaration text. Reads
@@ -118,15 +120,22 @@ internal static class CollectResumePlanner
             // walk: scan forward, keep the last passing checkpoint, stop at the
             // first that reads past the prefix.
             WalkCheckpoint? best = null;
+            var addressWindow = new CollectTailShifter.Window(prefix, suffixStart, delta);
             foreach (var ck in rec.Checkpoints)
             {
                 if (ck.MaxSourceRead > prefix)
                     break;
-                if (ck.NodeStart > prefix)
+                // The address must be revalidatable on the new tree: a node standing
+                // INSIDE the window has no counterpart. One before the window keeps its
+                // start; one at/after the suffix has shifted by the delta — which is
+                // what a phrase reference's marker looks like when the phrase is
+                // declared above the edit and referenced below it (the walk read the
+                // body, not the window). The restore checks the shifted start.
+                if (!addressWindow.TryShift(ck.NodeStart, out _))
                     continue;
                 while (stableHeaderReads < ck.HeaderReadCount
                        && headerReads != null && stableHeaderReads < headerReads.Count
-                       && SpanStable(headerReads[stableHeaderReads], prefix, suffixStart, delta))
+                       && ReadStable(headerReads[stableHeaderReads], prefix, suffixStart, delta, newRoot, structureWindow))
                     stableHeaderReads++;
                 if (stableHeaderReads < ck.HeaderReadCount)
                     break; // an unstable header read; every later checkpoint reads it too
@@ -154,7 +163,10 @@ internal static class CollectResumePlanner
                 {
                     for (int i = reads.Count - 1; i >= 0; i--)
                     {
-                        if (!(reads[i].End <= prefix || reads[i].Start >= suffixStart))
+                        bool unstable = reads[i].Structure is { } shape
+                            ? !StructureStable(shape, newRoot, structureWindow)
+                            : !(reads[i].Span.End <= prefix || reads[i].Span.Start >= suffixStart);
+                        if (unstable)
                         {
                             headerFloor = i + 1;
                             break;
@@ -240,6 +252,95 @@ internal static class CollectResumePlanner
             && ParseSuffixAgrees(probe.BaselineRoot, probe.NewRoot,
                 probe.WindowSuffixStart, probe.WindowDelta);
         return probe.ParseAgreementsVerified == true;
+    }
+
+    /// <summary>The edit changed no TOKEN: the baseline's and the new tree's token
+    /// streams (kind and text, trivia excluded) are identical, so the window holds
+    /// whitespace / comment changes only. Memoized on the probe (one token walk per
+    /// keystroke, and only when a splice from a candidate BEFORE the window asks). An
+    /// identity window (Δ=0, empty) is trivially trivia-only.</summary>
+    /// <remarks>
+    /// ★ Why the splice needs it (2026-09-10, session 366, the audit sweep): a recorded
+    /// tail adopted from a candidate that stands BEFORE the window is the walk of the
+    /// OLD node stream across the window. The parse agreements compare the trees only
+    /// below the prefix and at/after the suffix — a node inserted INSIDE the window is
+    /// seen by neither — and the measure straddle test only sees a window that falls
+    /// within a measure's item span: a note typed into the gap after a measure's last
+    /// item (before the `}`), before a body's first item, or between two phrase
+    /// references (whose measures cite the bodies elsewhere in the file) was adopted
+    /// away. 88 of the sweep's 258 books × 30 edit classes diverged that way. Token
+    /// equality is the exact statement of "the tail's stream did not change".
+    /// </remarks>
+    internal static bool WindowIsTriviaOnly(CollectWalkProbe probe)
+    {
+        if (probe.WindowDelta == 0 && probe.WindowPrefix >= probe.WindowSuffixStart)
+            return true;
+        probe.WindowTriviaOnly ??=
+            probe.BaselineRoot != null && probe.NewRoot != null
+            && TokensAgree(probe.BaselineRoot.Green, probe.NewRoot.Green);
+        return probe.WindowTriviaOnly == true;
+    }
+
+    private static bool TokensAgree(GreenNode a, GreenNode b)
+    {
+        var sa = new Stack<GreenNode>();
+        var sb = new Stack<GreenNode>();
+        sa.Push(a);
+        sb.Push(b);
+        while (true)
+        {
+            var ta = NextToken(sa);
+            var tb = NextToken(sb);
+            if (ta == null || tb == null)
+                return ta == null && tb == null;
+            if (ta.Kind != tb.Kind || !string.Equals(ta.Text, tb.Text, StringComparison.Ordinal))
+                return false;
+        }
+
+        static GreenNode? NextToken(Stack<GreenNode> stack)
+        {
+            while (stack.Count > 0)
+            {
+                var g = stack.Pop();
+                if (g.IsToken)
+                    return g;
+                for (int i = g.SlotCount - 1; i >= 0; i--)
+                {
+                    var c = g.GetSlot(i);
+                    if (c != null)
+                        stack.Push(c);
+                }
+            }
+            return null;
+        }
+    }
+
+    /// <summary>The window lies wholly inside an EXTRA voice (the second or later
+    /// block) of a parallel span the recording walked: the primary walk's measures come
+    /// from the first voice only, and the extra voices are re-walked live after a splice
+    /// (see <see cref="VoiceWalkRecording.ParallelSpans"/>), so a tail spanning such a
+    /// window is still sound — the shape perf-v2bow1k's whole-walk splice stands on.</summary>
+    internal static bool WindowInsideParallelExtraVoice(
+        VoiceWalkRecording rec, int prefix, int suffixStart)
+    {
+        if (rec.ParallelSpans == null)
+            return false;
+        foreach (var (node, _, _, _) in rec.ParallelSpans)
+        {
+            bool first = true;
+            foreach (var voice in node.Voices)
+            {
+                if (first)
+                {
+                    first = false;
+                    continue;
+                }
+                var s = voice.Span;
+                if (s.Start <= prefix && suffixStart <= s.End)
+                    return true;
+            }
+        }
+        return false;
     }
 
     /// <summary>True when the dirty window intersects any phrase/variable
@@ -445,6 +546,68 @@ internal static class CollectResumePlanner
     /// state); value-only readers take the weaker suffix test at their call site.</summary>
     private static bool SpanStable(TextSpan span, int prefix, int suffixStart, int delta)
         => span.End <= prefix || (delta == 0 && span.Start >= suffixStart);
+
+    /// <summary>A header read's stability for the PREFIX side: position-sensitive reads
+    /// take <see cref="SpanStable"/>; value-only reads (see <see cref="HeaderRead"/>) need
+    /// their content unchanged — wholly before the window or wholly at/after the suffix,
+    /// shifted or not.</summary>
+    private static bool ReadStable(HeaderRead read, int prefix, int suffixStart, int delta,
+        SyntaxNode newRoot, in CollectTailShifter.Window window)
+        => read.Structure is { } shape
+            ? StructureStable(shape, newRoot, window)
+            : read.ValueOnly
+                ? read.Span.End <= prefix || read.Span.Start >= suffixStart
+                : SpanStable(read.Span, prefix, suffixStart, delta);
+
+    /// <summary>A structure read holds (<see cref="HeaderRead.Structure"/>): the node
+    /// standing at the baseline node's (shifted) start in the new tree has the same
+    /// kind and the same <see cref="Shape"/>. The width is NOT compared — an edit inside
+    /// one of the section's blocks changes it and is the music walk's business.</summary>
+    private static bool StructureStable(SyntaxNode old, SyntaxNode newRoot, in CollectTailShifter.Window w)
+    {
+        if (!w.TryShift(old.FullSpan.Start, out int start))
+            return false;
+        var node = newRoot;
+        while (node.Kind != old.Kind || node.FullSpan.Start != start)
+        {
+            SyntaxNode? next = null;
+            foreach (var child in node.ChildNodes())
+            {
+                if (child.FullSpan.Start <= start && start < child.FullSpan.End)
+                {
+                    next = child;
+                    break;
+                }
+            }
+            if (next == null)
+                return false;
+            node = next;
+        }
+        return Shape(old).SequenceEqual(Shape(node));
+    }
+
+    /// <summary>The direct-child kinds of a node in order, every run of collectable
+    /// music nodes collapsed to one <see cref="SyntaxKind.Note"/> — so a note or bar
+    /// line added INSIDE an existing music run is not a shape change (the walk owns it),
+    /// while one typed where the section had none is.</summary>
+    private static List<SyntaxKind> Shape(SyntaxNode node)
+    {
+        var kinds = new List<SyntaxKind>();
+        bool inMusic = false;
+        foreach (var child in node.ChildNodes())
+        {
+            if (MeasureCollector.IsCollectableMusicNode(child))
+            {
+                if (!inMusic)
+                    kinds.Add(SyntaxKind.Note);
+                inMusic = true;
+                continue;
+            }
+            inMusic = false;
+            kinds.Add(child.Kind);
+        }
+        return kinds;
+    }
 
     /// <summary>
     /// The collect-level guard (layer 2 of the soundness argument above), over the

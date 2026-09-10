@@ -669,7 +669,7 @@ public sealed partial class MeasureCollector
     // Record mode only: the header spans this walk read, in walk order (part
     // name/config at entry, then each visited section's name + header directives).
     // See VoiceWalkRecording.HeaderReads.
-    private readonly List<TextSpan> _walkHeaderReads = new();
+    private readonly List<HeaderRead> _walkHeaderReads = new();
 
     /// <summary>
     /// Gets the time signature as a Fraction.
@@ -2738,6 +2738,8 @@ public sealed partial class MeasureCollector
                 {
                     VoiceName = _voiceName,
                     StartTableCounts = startCounts,
+                    StartKeyLogCount = _keyByMeasureLog.Count,
+                    StartSectionStartLogCount = _sectionStartLog.Count,
                 };
                 probe.Recordings[walkOrdinal] = _probeRecording;
                 // The part-level config reads that seeded this walk's entry state —
@@ -2751,10 +2753,10 @@ public sealed partial class MeasureCollector
                     {
                         if (partDecl.Name.Text != _voiceName)
                             continue;
-                        _walkHeaderReads.Add(partDecl.Name.Span);
+                        _walkHeaderReads.Add(new HeaderRead(partDecl.Name.Span, ValueOnly: false));
                         foreach (var child in partDecl.ChildNodes())
                             if (child is not SectionDeclarationSyntax)
-                                _walkHeaderReads.Add(child.FullSpan);
+                                _walkHeaderReads.Add(new HeaderRead(child.FullSpan, ValueOnly: false));
                     }
                 }
             }
@@ -2776,6 +2778,13 @@ public sealed partial class MeasureCollector
                     if (tables[t].Count != startCounts[t])
                         throw new CollectResumeAbortException(
                             $"collect resume: side table {t} has {tables[t].Count} entries at walk entry, recorded {startCounts[t]}");
+                // The journals the same way: their prefixes are the earlier walks'
+                // (kept live — see VoiceWalkRecording.StartKeyLogCount), so the
+                // watermarks only line up when those walks journaled as many events.
+                if (_keyByMeasureLog.Count != resume.Recording.StartKeyLogCount
+                    || _sectionStartLog.Count != resume.Recording.StartSectionStartLogCount)
+                    throw new CollectResumeAbortException(
+                        $"collect resume: journals at walk entry ({_keyByMeasureLog.Count} keys, {_sectionStartLog.Count} section starts) differ from the recording's ({resume.Recording.StartKeyLogCount}, {resume.Recording.StartSectionStartLogCount})");
                 if (resume.Checkpoint != null)
                     _resumePending = resume;
                 if (resume.SuffixCandidates is { } candidates)
@@ -2841,10 +2850,20 @@ public sealed partial class MeasureCollector
                         $"collect resume overshot its target invocation ({invocation} > {target.Invocation})");
                 // Cross-edit address revalidation: the prefix text is unchanged, so
                 // an unchanged walk-order address holds a node with an unchanged
-                // start. Anything else is structural drift — bail to a full collect.
-                // (Site.SourceStart == Node.FullSpan.Start, no red materialized.)
+                // start — or, for a node standing at/after the suffix (a phrase
+                // reference's marker whose body lies above the edit), the start
+                // shifted by the window's delta. Anything else is structural drift —
+                // bail to a full collect. (Site.SourceStart == Node.FullSpan.Start, no
+                // red materialized.)
+                var addressProbe = WalkProbe!;
+                var addressWindow = new CollectTailShifter.Window(
+                    addressProbe.WindowPrefix, addressProbe.WindowSuffixStart, addressProbe.WindowDelta);
                 if (target.NodeIndex >= nodeList.Count
-                    || nodeList[target.NodeIndex].Position != target.NodeStart)
+                    || !addressWindow.TryShift(target.NodeStart, out int expectedStart)
+                    || nodeList[target.NodeIndex].Position != expectedStart
+                    || nodeList[target.NodeIndex].Kind != target.NodeKind
+                    || (target.NodeKind == SyntaxKind.None
+                        && (nodeList[target.NodeIndex].Node is PhraseEndMarker) != target.NodeIsPhraseEnd))
                     throw new CollectResumeAbortException(
                         $"collect resume address drifted (node {target.NodeIndex} of invocation {invocation})");
                 RestoreWalkCheckpoint(plan, builder);
@@ -2857,7 +2876,8 @@ public sealed partial class MeasureCollector
                 // Record mode: an eligible measure boundary right before node i is a
                 // resume point. Cheap when off (_probeRecording null in production).
                 if (_probeRecording is { IneligibleReason: null } rec && builder.AtCleanBoundary)
-                    TryCaptureWalkCheckpoint(rec, builder, invocation, i, site.Position);
+                    TryCaptureWalkCheckpoint(rec, builder, invocation, i, site.Position, site.Kind,
+                        site.Kind == SyntaxKind.None && site.Node is PhraseEndMarker);
 
                 // Resume mode, suffix side: at a clean boundary whose shifted
                 // walk-order address matches a recorded checkpoint, try to splice
@@ -2883,6 +2903,16 @@ public sealed partial class MeasureCollector
                 {
                     if (site.Node is RelativeResetMarker reset)
                     {
+                        // Record mode: the reference's own text is a READ of this walk
+                        // (the body it expands is chosen by it) — a VALUE read: its
+                        // content must be unchanged for every boundary inside or after
+                        // the expansion, its position may shift (a scalar MaxSourceRead
+                        // fold would reject every checkpoint of a book whose phrases are
+                        // declared above their references — the common shape). See
+                        // HeaderRead and RelativeResetMarker.For.
+                        if (_probeRecording != null && reset.CallSiteEnd > site.Position)
+                            _walkHeaderReads.Add(new HeaderRead(
+                                new TextSpan(site.Position, reset.CallSiteEnd - site.Position), ValueOnly: true));
                         EnterDefaultFrame(reset.OctaveOffset);
                         EnterPhraseTranspose(reset.AnchorStep, reset.OctaveOffset);
                         continue;
@@ -2907,7 +2937,11 @@ public sealed partial class MeasureCollector
                 // Nested walks need no such fold: no checkpoint is captured inside
                 // them, and every peeked node is processed (and folded) before the
                 // enclosing top-level node completes.
-                if (_probeRecording != null && furthestPeeked != null)
+                // A peeked synthetic marker (a phrase expansion's edge, positioned at its
+                // reference) is no text read: its kind is not the text's, and folding
+                // its call site here would be the scalar fold the value read avoids.
+                if (_probeRecording != null && furthestPeeked != null
+                    && furthestPeeked.Kind != SyntaxKind.None)
                     _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, furthestPeeked.FullSpan.End);
                 ProcessMusicNode(site.Node, builder, flags);
             }
@@ -3055,11 +3089,17 @@ public sealed partial class MeasureCollector
     /// <summary>Rebuilds <c>_keyByMeasure</c> (and this collect's journal) as the
     /// materialization of <paramref name="source"/>'s journal prefix [0..count) —
     /// the checkpoint state the old per-boundary map copy used to carry.</summary>
-    private void RestoreKeyLog(MeasureCollector source, int count)
+    private void RestoreKeyLog(MeasureCollector source, int keepLive, int count)
     {
+        // Entries below keepLive are THIS collect's earlier walks' — the live truth
+        // (an edit may have moved them; the recording's copies are stale). Rebuild the
+        // map from those, then replay the recording's range for this walk.
+        var live = _keyByMeasureLog.GetRange(0, Math.Min(keepLive, _keyByMeasureLog.Count));
         _keyByMeasure.Clear();
         _keyByMeasureLog.Clear();
-        for (int i = 0; i < count; i++)
+        foreach (var (m, step, sharps) in live)
+            RecordKeyAtMeasure(m, step, sharps);
+        for (int i = keepLive; i < count; i++)
         {
             var (m, step, sharps) = source._keyByMeasureLog[i];
             RecordKeyAtMeasure(m, step, sharps);
@@ -3070,12 +3110,19 @@ public sealed partial class MeasureCollector
     /// replaying <paramref name="source"/>'s journal prefix [0..count) through
     /// <see cref="RecordSectionStart"/> — first-wins and dedup reproduced by the
     /// one spelling of the bookkeeping.</summary>
-    private void RestoreSectionStartLog(MeasureCollector source, int count)
+    private void RestoreSectionStartLog(MeasureCollector source, int keepLive, int count)
     {
+        // As RestoreKeyLog: the earlier walks' entries stay live (2026-09-10, session
+        // 366: replaying them from the recording put an earlier part's OLD section
+        // starts back after an edit had moved them, and the chord / lyrics rows placed
+        // every cell twice).
+        var live = _sectionStartLog.GetRange(0, Math.Min(keepLive, _sectionStartLog.Count));
         _sectionState.StartMeasure.Clear();
         _sectionState.AllStarts.Clear();
         _sectionStartLog.Clear();
-        for (int i = 0; i < count; i++)
+        foreach (var (name, start) in live)
+            RecordSectionStart(name, start);
+        for (int i = keepLive; i < count; i++)
         {
             var (name, start) = source._sectionStartLog[i];
             RecordSectionStart(name, start);
@@ -3147,6 +3194,18 @@ public sealed partial class MeasureCollector
                 // D.C. / D.S. al fine|coda) — engraved like the inline @-marks, at the
                 // boundary of the section just played.
                 case NavigationMarkSyntax nav when !IsInsideRepeatBlock(nav):
+                    // Record mode: the mark BURNS the form line's position (its data-pos)
+                    // into the cumulative table a prefix resume adopts unshifted, and the
+                    // form line sits below the music — so, like a section header, it is
+                    // a HEADER READ the planner checks span-by-span (content AND position
+                    // stable), not a MaxSourceRead fold (which would reject every
+                    // checkpoint of a book that opens with `segno`). Found 2026-09-10
+                    // (session 366) by the synthetic-edit net's boundary insertion on
+                    // tocoda-volta-clearance.lys: a note appended after section A's last
+                    // bar line (Δ=+4, before the form line) resumed at m1 and adopted
+                    // `Segno@973` — the OLD position — while the full collect said 977.
+                    if (_probeRecording != null)
+                        _walkHeaderReads.Add(new HeaderRead(nav.FullSpan, ValueOnly: false));
                     // Resume: prefix marks are in the adopted _musicMarks, and the
                     // pre-restore builder would give this one a garbage measure index.
                     // Post-splice the mirror holds: tail marks are in the adopted
@@ -3176,6 +3235,10 @@ public sealed partial class MeasureCollector
                 // collector never produced the item, so it parsed but silently
                 // printed nothing.
                 case CustomTextSyntax custom when !IsInsideRepeatBlock(custom):
+                    // Same header read as the navigation mark above (a burned position
+                    // from the form line).
+                    if (_probeRecording != null)
+                        _walkHeaderReads.Add(new HeaderRead(custom.FullSpan, ValueOnly: false));
                     // Resume: same reasoning as the navigation-mark arm above
                     // (both directions — prefix pending and post-splice).
                     if (_resumePending != null || _suffixSpliced)
@@ -3939,7 +4002,7 @@ public sealed partial class MeasureCollector
         foreach (var item in repeat.Body.Items)
         {
             if (item is VariableReferenceSyntax varRef)
-                ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, bodyNodes);
+                ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, bodyNodes, varRef);
             else
                 bodyNodes.Add(new GreenSite(item));
         }

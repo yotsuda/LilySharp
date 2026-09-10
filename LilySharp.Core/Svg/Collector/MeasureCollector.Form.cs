@@ -236,12 +236,16 @@ public sealed partial class MeasureCollector
         // a SECOND source this does not see; today Sections maps one node per name.
         if (_probeRecording != null)
         {
-            _walkHeaderReads.Add(section.Name.Span);
+            _walkHeaderReads.Add(new HeaderRead(section.Name.Span, ValueOnly: false));
+            // The section's SHAPE (see HeaderRead.Structure): which kinds of children it
+            // holds, in order, music runs collapsed — a node typed at section level is
+            // a change every block's prologue sees, and no span below covers it.
+            _walkHeaderReads.Add(new HeaderRead(section.FullSpan, ValueOnly: true, Structure: section));
             foreach (var child in section.ChildNodes())
                 if (child is KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax
                     or PartialDeclarationSyntax or ClefDeclarationSyntax or OctaveDirectiveSyntax
                     or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax)
-                    _walkHeaderReads.Add(child.FullSpan);
+                    _walkHeaderReads.Add(new HeaderRead(child.FullSpan, ValueOnly: false));
         }
         if (_resumePending is { } plan)
         {
@@ -513,7 +517,7 @@ public sealed partial class MeasureCollector
             {
                 var child = section.GetChild(i);
                 if (child is VariableReferenceSyntax varRef)
-                    ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, inline);
+                    ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, inline, varRef);
                 else if (child != null && IsCollectableMusicNode(child))
                     inline.Add(new GreenSite(child));
             }
@@ -1056,7 +1060,7 @@ public sealed partial class MeasureCollector
             if (site.Kind == SyntaxKind.VariableReference)
             {
                 var varRef = (VariableReferenceSyntax)site.Node;
-                ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, musicNodes);
+                ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, musicNodes, varRef);
             }
             else if (IsCollectableMusicKind(site.Kind))
                 musicNodes.Add(site);
@@ -1065,11 +1069,15 @@ public sealed partial class MeasureCollector
         processNodes(musicNodes);
     }
 
-    private void ExpandVariable(string name, int octaveOffset, List<GreenSite> musicNodes)
-        => ExpandVariable(name, octaveOffset, musicNodes, new HashSet<string>());
-
     private void ExpandVariable(string name, int octaveOffset, List<GreenSite> musicNodes,
-        HashSet<string> activeRefs)
+        SyntaxNode? callSite = null)
+        => ExpandVariable(name, octaveOffset, musicNodes, new HashSet<string>(), callSite);
+
+    /// <param name="callSite">The reference node being expanded (its full span is the
+    /// address the expansion's markers carry — see <see cref="RelativeResetMarker.For"/>);
+    /// null for an expansion with no reference of its own.</param>
+    private void ExpandVariable(string name, int octaveOffset, List<GreenSite> musicNodes,
+        HashSet<string> activeRefs, SyntaxNode? callSite = null)
     {
         if (!_variables.TryGetValue(name, out var expression))
             return;
@@ -1105,7 +1113,8 @@ public sealed partial class MeasureCollector
         // frame, and shift the outgoing anchor with them.
         musicNodes.Add(new GreenSite(RelativeResetMarker.For(octaveOffset,
             Music.PhraseAnchor.AnchorStep(expression,
-                n => _variables.TryGetValue(n, out var nested) ? nested : null))));
+                n => _variables.TryGetValue(n, out var nested) ? nested : null),
+            callSite?.Span)));
 
         // A phrase body may itself reference other phrases (phrase x { y }): expand a
         // nested reference IN PLACE — recursing into its own fresh frame — instead of
@@ -1118,7 +1127,7 @@ public sealed partial class MeasureCollector
             {
                 var nestedRef = (VariableReferenceSyntax)s.Node;
                 ExpandVariable(nestedRef.Name.Text, nestedRef.OctaveOffset, musicNodes,
-                    activeRefs);
+                    activeRefs, nestedRef);
             }
             else if (IsCollectableMusicKind(s.Kind)
                 && ChargeExpansion(1, expression.SourceStart))
@@ -1133,7 +1142,10 @@ public sealed partial class MeasureCollector
 
         // Close the phrase so its auto-transpose is dropped before any inline
         // notes that follow the reference (paired with the reset marker above).
-        musicNodes.Add(new GreenSite(PhraseEndMarker.Instance));
+        // The reference's SPAN (trivia excluded), so the end marker and the next
+        // reference's reset marker never share a position — two zero-width markers at
+        // one address would satisfy the resume's address check for each other.
+        musicNodes.Add(new GreenSite(PhraseEndMarker.At(callSite?.Span.End ?? 0)));
         activeRefs.Remove(name);
     }
 

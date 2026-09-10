@@ -33,7 +33,7 @@ public sealed partial class MeasureCollector
     /// </summary>
     private void TryCaptureWalkCheckpoint(
         VoiceWalkRecording rec, MeasureBuilder builder, int invocation, int nodeIndex,
-        int nodeStart)
+        int nodeStart, SyntaxKind nodeKind, bool nodeIsPhraseEnd)
     {
         if (!WalkCarriesNothing())
             return;
@@ -49,7 +49,7 @@ public sealed partial class MeasureCollector
         if (_formRepeatDepth > 0)
             return;
         rec.Checkpoints.Add(BuildWalkCheckpoint(
-            builder, _sectionVisit - 1, invocation, nodeIndex, nodeStart));
+            builder, _sectionVisit - 1, invocation, nodeIndex, nodeStart, nodeKind, nodeIsPhraseEnd));
     }
 
     /// <summary>True when no cross-measure carry is in flight — the shared
@@ -70,7 +70,8 @@ public sealed partial class MeasureCollector
     /// inventory remarks); the end-of-walk capture passes sentinel address
     /// fields (-2/-1) — a splice consumes its value state, never its address.</summary>
     private WalkCheckpoint BuildWalkCheckpoint(
-        MeasureBuilder builder, int sectionVisit, int invocation, int nodeIndex, int nodeStart)
+        MeasureBuilder builder, int sectionVisit, int invocation, int nodeIndex, int nodeStart,
+        SyntaxKind nodeKind = SyntaxKind.None, bool nodeIsPhraseEnd = false)
     {
         var tables = CumulativeSideTables();
         var counts = new int[tables.Length];
@@ -85,6 +86,8 @@ public sealed partial class MeasureCollector
             SectionStartMeasure = _sectionStartMeasureForResume,
             MaxSourceRead = _walkMaxSourceRead,
             NodeStart = nodeStart,
+            NodeKind = nodeKind,
+            NodeIsPhraseEnd = nodeIsPhraseEnd,
             HeaderReadCount = _walkHeaderReads.Count,
             Builder = builder.Capture(),
             Octave = OctaveCheckpoint.Capture(_octave),
@@ -141,8 +144,8 @@ public sealed partial class MeasureCollector
         // The two journaled maps: rebuilt from the SOURCE's journal prefixes (the
         // journals are append-only across the collect, so entries [0..count) are
         // the checkpoint's state — the same argument the side tables make below).
-        RestoreKeyLog(plan.Source, ck.KeyLogCount);
-        RestoreSectionStartLog(plan.Source, ck.SectionStartLogCount);
+        RestoreKeyLog(plan.Source, rec.StartKeyLogCount, ck.KeyLogCount);
+        RestoreSectionStartLog(plan.Source, rec.StartSectionStartLogCount, ck.SectionStartLogCount);
         _measureAccidentals.Clear();
         _pendingGrace = null;
         _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
@@ -270,11 +273,63 @@ public sealed partial class MeasureCollector
         // content here, so a straddled measure always declines and is walked
         // live; candidates PAST the point keep splicing. Only the identity
         // window (Δ=0, empty) adopts a straddler — the texts are equal.
+        // ⚠️ A MEASURE ENDING EXACTLY AT THE WINDOW IS A STRADDLER (2026-09-10,
+        // session 366, user report on scratch/ベースタブLy/tooLongChords.lys): a
+        // measure's SourceEnd is the position of its CLOSING bar line, and text
+        // inserted at that very position lands BEFORE the bar line — inside this
+        // measure. `| | |` with an `e` typed into the middle bar: the old empty
+        // bar [61,63) ended at the insertion point 63, this test read it as
+        // untouched (`SourceEnd > Prefix` was false), the splice from the FIRST
+        // boundary adopted the whole old tail (7 of 7 measures), and the page
+        // drew the bar empty — same bar count, one note gone — until the next
+        // edit moved the window elsewhere (the report: "typing an e made the c
+        // appear; deleting it made the c vanish"). Hence `>=`. The mirror on the
+        // suffix side stays strict: a measure STARTING at the suffix's first
+        // character opens with that unchanged bar line, and the window's text
+        // precedes it. Pinned by CollectEditResumeTests'
+        // InsertionAtAMeasuresClosingBarLine_DoesNotSpliceThatMeasure.
         if (w.Prefix < w.SuffixStart || w.Delta != 0)
         {
+            // ⚠️ A CANDIDATE STANDING BEFORE THE WINDOW adopts a tail that WALKS ACROSS
+            // it (2026-09-10, session 366, the audit sweep — 88 divergences in 258
+            // books, all at container edges the item-span test below cannot see: a
+            // note typed after a body's last item, before its first, or between two
+            // phrase references). Such a tail is the old node stream; it is still
+            // right only when the edit changed no token (trivia: positions shift and
+            // nothing else), or when it lies inside an extra voice of a parallel span
+            // (re-walked live after the splice — the v2bow whole-walk shape). Anything
+            // else declines; candidates PAST the window are unaffected.
+            bool extraVoiceWindow = CollectResumePlanner.WindowInsideParallelExtraVoice(rec, w.Prefix, w.SuffixStart);
+            if (ck.NodeStart < w.Prefix
+                && !extraVoiceWindow
+                && !CollectResumePlanner.WindowIsTriviaOnly(WalkProbe!))
+                return false;
+
             for (int i = ck.MeasureCount; i < pre.Count; i++)
             {
-                if (pre[i].SourceStart < w.SuffixStart && pre[i].SourceEnd > w.Prefix)
+                // The measure's TEXT REGION, gaps included: from the previous measure's
+                // closing bar line (the text after it, up to this measure's first item,
+                // is this measure's) to its own closing bar line — or, for a measure
+                // with no bar line of its own (the walk's last, a body's trailing
+                // bar), to the next measure's start / the walk's furthest read. A
+                // neighbour that lies elsewhere in the file (a phrase body) bounds
+                // nothing, and the item span stands.
+                int left = i > 0 && pre[i - 1].SourceEnd <= pre[i].SourceStart
+                    ? pre[i - 1].SourceEnd : pre[i].SourceStart;
+                int right = pre[i].SourceEnd;
+                if (i + 1 < pre.Count)
+                {
+                    if (pre[i + 1].SourceStart >= right)
+                        right = pre[i + 1].SourceStart;
+                }
+                else if (!extraVoiceWindow)
+                {
+                    // The walk's furthest read bounds the last measure's trailing gap —
+                    // unless the window sits in an extra voice, whose text that read
+                    // extent covers but the primary measures never own.
+                    right = Math.Max(right, endCk.MaxSourceRead);
+                }
+                if (left < w.SuffixStart && right >= w.Prefix)
                     return false;
             }
         }
@@ -459,8 +514,8 @@ public sealed partial class MeasureCollector
             _sectionActiveGrobProps.Add(prop);
         // Jump the journaled maps to the recorded end of the walk (names and
         // measure indices carry no source positions — nothing to shift).
-        RestoreKeyLog(plan.Source, endCk.KeyLogCount);
-        RestoreSectionStartLog(plan.Source, endCk.SectionStartLogCount);
+        RestoreKeyLog(plan.Source, rec.StartKeyLogCount, endCk.KeyLogCount);
+        RestoreSectionStartLog(plan.Source, rec.StartSectionStartLogCount, endCk.SectionStartLogCount);
         _measureAccidentals.Clear();
 
         for (int t = 0; t < dst.Length; t++)
@@ -549,15 +604,19 @@ public sealed partial class MeasureCollector
         // (the checkpoint holds watermarks, not copies). Same-event-sequence implies
         // same map state; the very rare converse (equal maps from a different event
         // order) declines, which costs reuse, never correctness.
+        // Below this walk's entry counts the journals are the live collect's earlier
+        // walks' (VoiceWalkRecording.StartKeyLogCount) — the recording's copies are
+        // not the reference; the walk-entry validation pinned their lengths.
         var srcCollector = _suffixPlan!.Source;
+        var srcRec = _suffixPlan.Recording;
         if (_keyByMeasureLog.Count != ck.KeyLogCount)
             return false;
-        for (int i = 0; i < ck.KeyLogCount; i++)
+        for (int i = srcRec.StartKeyLogCount; i < ck.KeyLogCount; i++)
             if (_keyByMeasureLog[i] != srcCollector._keyByMeasureLog[i])
                 return false;
         if (_sectionStartLog.Count != ck.SectionStartLogCount)
             return false;
-        for (int i = 0; i < ck.SectionStartLogCount; i++)
+        for (int i = srcRec.StartSectionStartLogCount; i < ck.SectionStartLogCount; i++)
         {
             var (liveName, liveStart) = _sectionStartLog[i];
             var (recName, recStart) = srcCollector._sectionStartLog[i];

@@ -43,17 +43,32 @@ internal sealed class RelativeResetMarker : SyntaxNode
     /// reference); null = pitchless body, nothing to hand off.</summary>
     public int? AnchorStep { get; }
 
-    /// <summary>Reuses <see cref="Instance"/> for the (common) bare anchorless case.</summary>
-    public static RelativeResetMarker For(int octaveOffset, int? anchorStep = null)
-        => octaveOffset == 0 && anchorStep == null
-            ? Instance
-            : new RelativeResetMarker(octaveOffset, anchorStep);
+    /// <summary>The end of the reference's own text (its full span) — the CALL SITE the
+    /// expansion stands for. 0 for a marker without one (<see cref="Instance"/>). Folded
+    /// into the walk's read extent when the marker is processed, so a checkpoint inside
+    /// or after the expanded body is invalidated by an edit at the reference itself.</summary>
+    public int CallSiteEnd { get; }
 
-    private RelativeResetMarker(int octaveOffset, int? anchorStep)
-        : base(MarkerGreen.Shared, parent: null, position: 0)
+    /// <summary>A phrase reference's reset marker, positioned AT the reference (its full
+    /// span start): the flattened node stream then carries the call site's address —
+    /// the checkpoint captured before it, and the address a resume revalidates, name
+    /// the reference, not position 0. (2026-09-10, session 366: markers at position 0
+    /// let a checkpoint AFTER a reference resume for an edit BEFORE it — every marker's
+    /// address was 0, so a node inserted at the body's start shifted the whole list by
+    /// one and the address check could not tell; the walk resumed one node late and a
+    /// measure was lost.) Reuses <see cref="Instance"/> for a bare anchorless marker
+    /// without a call site.</summary>
+    public static RelativeResetMarker For(int octaveOffset, int? anchorStep = null, TextSpan? callSite = null)
+        => callSite == null && octaveOffset == 0 && anchorStep == null
+            ? Instance
+            : new RelativeResetMarker(octaveOffset, anchorStep, callSite);
+
+    private RelativeResetMarker(int octaveOffset, int? anchorStep, TextSpan? callSite = null)
+        : base(MarkerGreen.Shared, parent: null, position: callSite?.Start ?? 0)
     {
         OctaveOffset = octaveOffset;
         AnchorStep = anchorStep;
+        CallSiteEnd = callSite?.End ?? 0;
     }
 
     private sealed class MarkerGreen : GreenNode
@@ -71,10 +86,15 @@ internal sealed class RelativeResetMarker : SyntaxNode
 /// </summary>
 internal sealed class PhraseEndMarker : SyntaxNode
 {
-    public static readonly PhraseEndMarker Instance = new();
+    public static readonly PhraseEndMarker Instance = new(0);
 
-    private PhraseEndMarker()
-        : base(MarkerGreen.Shared, parent: null, position: 0)
+    /// <summary>An end marker positioned at the END of the reference's text (see
+    /// <see cref="RelativeResetMarker.For"/>): the boundary after an expansion carries
+    /// the call site's end as its address. <see cref="Instance"/> for none.</summary>
+    public static PhraseEndMarker At(int position) => position <= 0 ? Instance : new(position);
+
+    private PhraseEndMarker(int position)
+        : base(MarkerGreen.Shared, parent: null, position: position)
     {
     }
 
