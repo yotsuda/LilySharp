@@ -262,6 +262,102 @@ public class CrossPartMeasureValidationTests
     }
 
     [Fact]
+    public void PartMajor_LyricsCellShorterThanPart_WarnsOnTheCell()
+    {
+        // A lyrics track's cell writes one bar of a two-bar section (user request,
+        // 2026-09-10: the words stop before the section does). The cell is anchored on ITS
+        // section name and the message names the part as the longer voice.
+        const string source = """
+            part melody {
+              section A { g2 g | g2 g | }
+            }
+            lyrics words {
+              section A { la la | }
+            }
+            form main { A | }
+            score main { staff melody with lyrics words }
+            """;
+        var diags = Validate(source);
+        var m = diags.Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
+        Assert.Single(m);
+        Assert.Contains("Section 'A' spans 1 bar(s) in lyrics 'words' but 2 in part 'melody'", m[0].Message);
+        Assert.Contains("sings nothing", m[0].Message);
+        Assert.Equal(source.LastIndexOf("section A") + "section ".Length, m[0].Span.Start);
+    }
+
+    [Fact]
+    public void PartMajor_LyricsCellLongerThanPart_Silent()
+    {
+        // The other direction is a stacked verse by design (LyricsCollector's auto-wrap):
+        // four bars of words over a two-bar melody are verses 1 and 2. No warning on the
+        // cell — and none on the part, which is not short of a lyrics cell.
+        var diags = Validate("""
+            part melody {
+              section A { g2 g | g2 g | }
+            }
+            lyrics words {
+              section A { la la | la la | li li | li li | }
+            }
+            form main { A | }
+            score main { staff melody with lyrics words }
+            """);
+        Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
+    }
+
+    [Fact]
+    public void PartMajor_LyricsCellsAlone_Silent()
+    {
+        // Two lyrics tracks and no voice: nothing sets the section's length, so a shorter
+        // cell has nothing to be short of.
+        var diags = Validate("""
+            lyrics ja { section A { la | } }
+            lyrics en { section A { la | la | } }
+            form main { A | }
+            score main { lyrics ja  lyrics en }
+            """);
+        Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
+    }
+
+    [Fact]
+    public void SectionMajor_LyricsBlockShorterThanPart_WarnsOnTheBlock()
+    {
+        // The section-major spelling: `lyrics w sings p { … }` beside a part block, one bar
+        // short. Anchored on the block's track name.
+        const string source = """
+            part vocal { }
+            section A {
+              vocal { g2 g | g2 g | }
+              lyrics words sings vocal { la la | }
+            }
+            form main { A | }
+            score main { lyrics words }
+            """;
+        var diags = Validate(source);
+        var m = diags.Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
+        Assert.Single(m);
+        Assert.Contains("Section 'A' spans 1 bar(s) in lyrics 'words' but 2 in part 'vocal'", m[0].Message);
+        Assert.Equal(source.IndexOf("lyrics words") + "lyrics ".Length, m[0].Span.Start);
+    }
+
+    [Fact]
+    public void SectionMajor_LyricsBlockMatchesPart_Silent()
+    {
+        // ★ Fixtures/test/sings-chorus-row.lys in miniature: two tracks, both as long as
+        // the vocal — silent.
+        var diags = Validate("""
+            part vocal { }
+            section A {
+              vocal { g2 g | g2 g | }
+              lyrics ja sings vocal { la la | la la | }
+              lyrics en sings vocal { sing it | loud | }
+            }
+            form main { A | }
+            score main { lyrics ja  lyrics en }
+            """);
+        Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
+    }
+
+    [Fact]
     public void SectionMajor_ShorterPart_WarnsBarCountMismatch()
     {
         // lh runs one bar short of rh inside a section-major section: the per-measure

@@ -27,12 +27,13 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>
     /// The edit that silences one LYS2007 (<see cref="DiagnosticCodes.SectionBarCountMismatch"/>):
-    /// the voice the warning is anchored on — a part-major <c>section</c> (of a part or a
-    /// chords track), or a section-major part block / named chords block — gets as many
-    /// bare <c>|</c> appended after its last item as it is short of the section's longest
-    /// voice. An empty <c>| |</c> bar is a full measure to every counter (the bare-barline
-    /// rule; MEASURED 2026-09-10 on scratch/p363/pad-probe.lys: no LYS2001 either), so the
-    /// section aligns and the warning goes.
+    /// the voice the warning is anchored on — a part-major <c>section</c> (of a part, a
+    /// chords track or a lyrics track), or a section-major part block / named chords block /
+    /// lyrics block — gets as many bare <c>|</c> appended after its last item as it is short
+    /// of the section's longest voice. An empty <c>| |</c> bar is a full measure to every
+    /// counter (the bare-barline rule; MEASURED 2026-09-10 on scratch/p363/pad-probe.lys: no
+    /// LYS2001 either; a bare <c>|</c> in a lyrics body is an empty lyric measure the row
+    /// skips), so the section aligns and the warning goes.
     /// </summary>
     /// <remarks>
     /// The number of bars is read off the message ("spans N bar(s) in … but M in …"), but the
@@ -83,9 +84,11 @@ public sealed partial class LilySharpLanguageServer
     /// Returns the insertion offset and the voice's label for the action title.</summary>
     private static (int Offset, string Voice)? ScopeAnchoredAt(SyntaxTree tree, TextSpan anchor)
     {
-        // Part-major: `part p { section A { … } }` / `chords t { section A { … } }` — anchored
-        // on the section name. Section-major: `section A { p { … } chords t { … } }` — anchored
-        // on the part block's name / the chords block's name.
+        // Part-major: `part p { section A { … } }` / `chords t { section A { … } }` /
+        // `lyrics w { section A { … } }` — anchored on the section name. Section-major:
+        // `section A { p { … } chords t { … } lyrics w { … } }` — anchored on the part block's
+        // name / the chords block's name / the lyrics block's name (its keyword when nameless,
+        // SectionBarCounts.LyricsAnchor).
         foreach (var sec in tree.GetNodes<SectionDeclarationSyntax>())
             if (sec.Name.Span == anchor)
                 return (EndOfBody(sec), $"section {sec.SectionName}");
@@ -99,6 +102,9 @@ public sealed partial class LilySharpLanguageServer
         foreach (var cb in tree.GetNodes<ChordPartBlockSyntax>())
             if (cb.NameToken is { } name && name.Span == anchor)
                 return (EndOfBody(cb), $"chords {cb.PartName}");
+        foreach (var lb in tree.GetNodes<LyricsBlockSyntax>())
+            if ((lb.NameToken ?? lb.LyricsKeyword).Span == anchor)
+                return (EndOfBody(lb), lb.VoiceName is { } n ? $"lyrics {n}" : "lyrics");
         return null;
     }
 

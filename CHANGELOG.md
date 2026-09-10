@@ -173,6 +173,15 @@ workflow attaches that section to the GitHub Release verbatim.
   makes the warning go. Quick fixes now read the same diagnostics the Problems panel shows
   (until now only parse errors reached the lightbulb) and match the caret anywhere inside a
   squiggle, not only at its first character.
+- **A lyrics cell shorter than its section is an LYS2007 too, with the same quick fix.**
+  `lyrics words { section A { la la | } }` under a two-bar melody A — or `lyrics words sings
+  vocal { la la | }` beside a two-bar part block — warns on the cell's name ("spans 1 bar(s) in
+  lyrics 'words' but 2 in part 'melody' — the track sings nothing over the remaining bar(s)"),
+  and the lightbulb offers "Add 1 bar line to section A (|)" / "… to lyrics words". The other
+  direction stays silent: a lyrics cell longer than its music is a stacked verse (verse 2 over
+  the same bars), never a claim about the section's length, and lyrics cells alone (no part,
+  no chord row) have nothing to be short of. Until now a lyrics track was left out of the
+  comparison entirely.
 - **A ```` ```lys ```` fence in a Markdown file renders as the score in VS Code's built-in
   Markdown preview**, the way a ```` ```mermaid ```` fence renders as a diagram (```` ```lily# ````
   is accepted too). A fence draws one picture and says which: it writes exactly one

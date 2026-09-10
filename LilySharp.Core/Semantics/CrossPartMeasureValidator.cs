@@ -81,15 +81,19 @@ internal sealed class CrossPartMeasureValidator
     /// bar count (the greatest over parts AND chord tracks — MeasureCollector's
     /// GetCanonicalSectionBars) to keep staves aligned, so this renders — but a differing
     /// count is usually a miscount worth surfacing. A chord track's section is counted by
-    /// the row's own rule (every written barline closes a bar); a lyrics track's is not
-    /// counted at all — a lyrics section longer than its music is a stacked verse by design.
+    /// the row's own rule (every written barline closes a bar). A lyrics track's cell
+    /// (<c>lyrics w { section S { … } }</c>) never lengthens the section — a lyrics section
+    /// longer than its music is a stacked verse by design — but one SHORTER than the
+    /// section's voices is reported the same way (the words stop before the section does).
     /// </summary>
     /// <remarks>
     /// ★ Chord tracks joined this pass on 2026-09-10 (scratch/ベースタブLy/tooLongChords.lys):
     /// <c>chords prog { section A { Dm7 | G7 } }</c> over a ONE-bar melody A said nothing —
     /// only `part`-nested sections were gathered — and the page put G7 on B's first bar
     /// beside B's own Cmaj7. Now melody's A is the short one (warned here, anchored on
-    /// its section name) and the collector pads it to two bars.
+    /// its section name) and the collector pads it to two bars. Lyrics cells joined the
+    /// same day, short side only (user request: the editor's quick fix should pad a lyrics
+    /// cell as it pads a part or a chord row).
     /// </remarks>
     private void ValidatePartMajorSections(SyntaxNode root)
     {
@@ -106,39 +110,62 @@ internal sealed class CrossPartMeasureValidator
                 byName[voice.SectionName] = list = new();
             list.Add(new SectionVoice(voice.Label, voice.IsChords, voice.Bars, voice.Anchor));
         }
+        // The lyrics cells, after the voices: compared as the short side only.
+        foreach (var cell in Svg.Collector.SectionBarCounts.LyricsCells(root))
+        {
+            if (!cell.PartMajor)
+                continue;
+            if (!byName.TryGetValue(cell.SectionName, out var list))
+                byName[cell.SectionName] = list = new();
+            list.Add(new SectionVoice(cell.Label, false, cell.Bars, cell.Anchor, IsLyrics: true));
+        }
 
         foreach (var (name, list) in byName)
             ReportBarCountMismatch(name, list);
     }
 
-    /// <summary>One voice of a section as the bar-count pass sees it: a part, or a named
-    /// chord track. <see cref="Label"/> is how the message names it (the spelling
-    /// SectionBarCounts.SemanticVoice.Label uses: <c>part 'x'</c> / <c>chords 'x'</c>).</summary>
-    private readonly record struct SectionVoice(string Label, bool IsChords, int Bars, TextSpan Span)
+    /// <summary>One voice of a section as the bar-count pass sees it: a part, a named
+    /// chord track — or a lyrics cell, which is not a voice of the count (it never sets the
+    /// section's length) but is reported when short. <see cref="Label"/> is how the message
+    /// names it (the spelling SectionBarCounts.SemanticVoice.Label uses: <c>part 'x'</c> /
+    /// <c>chords 'x'</c> / <c>lyrics 'x'</c>).</summary>
+    private readonly record struct SectionVoice(string Label, bool IsChords, int Bars, TextSpan Span, bool IsLyrics = false)
     {
         public static SectionVoice Part(string name, int bars, TextSpan span) => new($"part '{name}'", false, bars, span);
         public static SectionVoice Chords(string name, int bars, TextSpan span) => new($"chords '{name}'", true, bars, span);
+        public static SectionVoice Lyrics(LyricsBlockSyntax block)
+            => new(Svg.Collector.SectionBarCounts.LyricsLabel(block), false,
+                Svg.Collector.LyricSyllableReader.CountBars(block),
+                Svg.Collector.SectionBarCounts.LyricsAnchor(block), IsLyrics: true);
     }
 
     /// <summary>
     /// The bar-count comparison shared by both layouts: every voice that writes fewer bars
     /// than the section's longest voice is reported on its own span. The tail of the message
     /// says what the page does with the shortfall — a part is padded with spacer rests, a
-    /// chord row simply has no chord over the bars it does not write.
+    /// chord row simply has no chord over the bars it does not write, a lyrics cell sings
+    /// nothing over them. The section's length is the longest VOICE (part or chord row); a
+    /// lyrics cell is only ever the short side of the comparison — a longer one is a stacked
+    /// verse, and lyrics cells alone (no voice) have nothing to be short of.
     /// </summary>
     private void ReportBarCountMismatch(string sectionName, List<SectionVoice> voices)
     {
         if (voices.Count < 2)
             return;
-        int maxBars = voices.Max(v => v.Bars);
-        if (voices.All(v => v.Bars == maxBars))
-            return; // all voices agree
-        var reference = voices.First(v => v.Bars == maxBars);
+        var counted = voices.Where(v => !v.IsLyrics).ToList();
+        if (counted.Count == 0)
+            return; // lyrics cells only: no voice sets the section's length
+        int maxBars = counted.Max(v => v.Bars);
+        if (voices.All(v => v.Bars >= maxBars))
+            return; // all voices agree (a lyrics cell may run longer: stacked verses)
+        var reference = counted.First(v => v.Bars == maxBars);
         foreach (var voice in voices)
         {
-            if (voice.Bars == maxBars)
+            if (voice.Bars >= maxBars)
                 continue;
-            string tail = voice.IsChords
+            string tail = voice.IsLyrics
+                ? "the track sings nothing over the remaining bar(s)"
+                : voice.IsChords
                 ? "the row writes no chord over the remaining bar(s)"
                 : "the shorter part is padded with rests to align";
             _diagnostics.Warning(voice.Span, DiagnosticCodes.SectionBarCountMismatch,
@@ -179,7 +206,8 @@ internal sealed class CrossPartMeasureValidator
         // time in force at its own position.
         var parts = new List<(string Name, Fraction Time, TextSpan TimeSpan, List<MeasureModel.Bar> Measures)>();
         // Named chord blocks of the section: voices of the bar-count check only (a chord
-        // row has bars but no beats to compare per measure).
+        // row has bars but no beats to compare per measure). Its lyrics cells (`lyrics w
+        // [sings p] { … }`) join the same list, as the short side only.
         var chordVoices = new List<SectionVoice>();
         for (int i = 0; i < section.SlotCount; i++)
         {
@@ -194,6 +222,9 @@ internal sealed class CrossPartMeasureValidator
                     break;
                 case ChordPartBlockSyntax { PartName: { } track, NameToken: { } nameToken } cb:
                     chordVoices.Add(SectionVoice.Chords(track, Svg.Collector.ChordNameCollector.CountBars(cb), nameToken.Span));
+                    break;
+                case LyricsBlockSyntax lb when !lb.HasSections:
+                    chordVoices.Add(SectionVoice.Lyrics(lb));
                     break;
             }
         }

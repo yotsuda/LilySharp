@@ -124,8 +124,18 @@ internal static class LyricSyllableReader
     /// is the caller that sizes the grid from this).
     /// </remarks>
     public static int CountBars(SyntaxNode container)
+        => CountBars(container, out _);
+
+    /// <summary>As <see cref="CountBars(SyntaxNode)"/>, and whether the container's last
+    /// plain bar is still OPEN — syllables after the last written bar line (the parser closes
+    /// such a bar with a zero-width synthetic token), so a reader appending bar lines to pad
+    /// the cell closes it with its first one. Mirrors
+    /// <see cref="SectionBarCounts.SemanticVoice.TrailingOpen"/> for the chord row and the
+    /// music scope; the cross-part validator (LYS2007) reads it for a short lyrics cell.</summary>
+    public static int CountBars(SyntaxNode container, out bool trailingOpen)
     {
         int plain = 0, widestVerse = 0;
+        SyntaxNode? lastPlain = null;
         for (int i = 0; i < container.SlotCount; i++)
         {
             if (container.GetChild(i) is not SyntaxNode m)
@@ -138,13 +148,15 @@ internal static class LyricSyllableReader
             if (m.Kind != SyntaxKind.LyricMeasure)
                 continue;
             plain++;
+            lastPlain = m;
         }
+        trailingOpen = lastPlain != null && ClosingBarToken(lastPlain) == null;
         return Math.Max(plain, widestVerse);
     }
 
     /// <summary>Bars in one already-extracted run of lyric measures — every parsed
     /// <c>LyricMeasure</c> is one bar, the lone <c>|</c> that opens a run included
-    /// (<see cref="CountBars"/> counts a container's own run the same way).</summary>
+    /// (<see cref="CountBars(SyntaxNode)"/> counts a container's own run the same way).</summary>
     private static int CountRun(IEnumerable<SyntaxNode> measures)
     {
         int bars = 0;

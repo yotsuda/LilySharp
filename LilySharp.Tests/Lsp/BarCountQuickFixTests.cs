@@ -188,6 +188,52 @@ public class BarCountQuickFixTests
     }
 
     [Fact]
+    public void PartMajor_ShortLyricsCell_GetsBarLine()
+    {
+        // A lyrics track's cell one bar short of the melody (user request, 2026-09-10):
+        // anchored on the cell's section name, padded with one empty lyric bar.
+        const string text = """
+            part melody {
+              section A { g2 g | g2 g | }
+            }
+            lyrics words {
+              section A { la la | }
+            }
+            form main { A | }
+            score main { staff melody with lyrics words }
+            """;
+        Assert.Equal(1, Lys2007Count(text));
+        var action = PadAction(text, text.LastIndexOf("section A") + "section ".Length);
+        Assert.NotNull(action);
+        Assert.Equal("Add 1 bar line to section A (|)", action!.Title);
+        var fixedText = Apply(text, action);
+        Assert.Contains("section A { la la | | }", fixedText);
+        Assert.Equal(0, Lys2007Count(fixedText));
+    }
+
+    [Fact]
+    public void SectionMajor_ShortLyricsBlock_GetsBarLines()
+    {
+        // Anchored on the block's track name. `la la` leaves its bar open (the parser closes
+        // it with a zero-width bar line): one `|` closes it, one more is the empty bar.
+        const string text = """
+            part vocal { }
+            section A {
+              vocal { g2 g | g2 g | }
+              lyrics words sings vocal { la la }
+            }
+            form main { A | }
+            score main { lyrics words }
+            """;
+        var action = PadAction(text, text.IndexOf("lyrics words") + "lyrics ".Length + 1);
+        Assert.NotNull(action);
+        Assert.Equal("Add 2 bar lines to lyrics words (| |)", action!.Title);
+        var fixedText = Apply(text, action);
+        Assert.Contains("lyrics words sings vocal { la la | | }", fixedText);
+        Assert.Equal(0, Lys2007Count(fixedText));
+    }
+
+    [Fact]
     public void NothingShort_NoAction()
     {
         const string text = """

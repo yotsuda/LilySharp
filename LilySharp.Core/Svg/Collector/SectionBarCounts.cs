@@ -34,7 +34,10 @@ namespace LilySharp.Core.Svg.Collector;
 /// top-level declaration's own inline music (the single-part shorthand, counted only when
 /// the declaration holds no part or chord block). A lyrics track's cell is NOT a voice: a
 /// lyrics section longer than its music is a stacked verse by design (LyricsCollector's
-/// auto-wrap). A header-only declaration (<c>section A { key g major }</c>) writes 0 bars.
+/// auto-wrap), so it never lengthens the section and no reader pads by it — but the
+/// validator does compare it the other way (<see cref="LyricsCells"/>: a cell SHORTER than
+/// the section's voices is a LYS2007 too, since 2026-09-10; the words simply stop before
+/// the section does). A header-only declaration (<c>section A { key g major }</c>) writes 0 bars.
 /// <para>
 /// ⚠️ TWO COUNTERS, named here on purpose, that must AGREE. <b>Semantic</b>
 /// (<see cref="SemanticVoices"/>): a music voice's bars are <see cref="MeasureModel.Split"/>'s
@@ -78,9 +81,12 @@ internal static class SectionBarCounts
     /// <param name="PartMajor">Written inside a <c>part</c> or a <c>chords</c> track (the
     /// cross-part validator's part-major pass), as opposed to inside a section-major
     /// declaration.</param>
+    /// <param name="IsLyrics">A lyrics cell (<see cref="LyricsCells"/>) — compared by the
+    /// validator only, and only as the SHORT side; never a voice of
+    /// <see cref="SemanticVoices"/>, never in <see cref="SemanticIndex"/>.</param>
     public sealed record SemanticVoice(
         string SectionName, string Label, bool IsChords, SyntaxNode Container, TextSpan Anchor,
-        int Bars, bool TrailingOpen, bool PartMajor);
+        int Bars, bool TrailingOpen, bool PartMajor, bool IsLyrics = false);
 
     /// <summary>The semantic voices of every section under <paramref name="root"/>, in
     /// document order, with the meter rule the validator applies: a score-level <c>time</c>
@@ -161,6 +167,45 @@ internal static class SectionBarCounts
             : ChordNameCollector.CountSectionBars((SectionDeclarationSyntax)container, out open);
         return new SemanticVoice(section, label, true, container, anchor, bars, open, partMajor);
     }
+
+    /// <summary>The part-major lyrics CELLS of every section under <paramref name="root"/>
+    /// (<c>lyrics w { section A { … } }</c>), in document order, each with its bar count —
+    /// <see cref="LyricSyllableReader.CountBars(SyntaxNode, out bool)"/>: one bar per lyric
+    /// measure, the widest <c>[N. …]</c> verse. Not voices (see the class remarks): the
+    /// cross-part validator reads these beside <see cref="SemanticVoices"/> and names a cell
+    /// that writes FEWER bars than the section's voices (LYS2007); a longer one is a stacked
+    /// verse and says nothing. The section-major cell (<c>section A { lyrics w [sings p]
+    /// { … } }</c>) is read by the validator where it reads the section's part blocks, with
+    /// <see cref="LyricsCell"/>.</summary>
+    public static List<SemanticVoice> LyricsCells(SyntaxNode root)
+    {
+        var cells = new List<SemanticVoice>();
+        foreach (var n in root.DescendantNodes())
+            if (n is SectionDeclarationSyntax { Parent: LyricsBlockSyntax track } sec)
+                cells.Add(LyricsCell(sec.SectionName, track, sec, sec.Name.Span, partMajor: true));
+        return cells;
+    }
+
+    /// <summary>One lyrics cell of <paramref name="section"/>, written in
+    /// <paramref name="track"/>: the part-major inner section (container = the section,
+    /// anchored on its name) or the section-major block itself (container = the block,
+    /// anchored on its track name — the keyword when it writes none).</summary>
+    public static SemanticVoice LyricsCell(string section, LyricsBlockSyntax track, SyntaxNode container, TextSpan anchor, bool partMajor)
+    {
+        int bars = LyricSyllableReader.CountBars(container, out bool open);
+        return new SemanticVoice(section, LyricsLabel(track), false, container, anchor, bars, open, partMajor, IsLyrics: true);
+    }
+
+    /// <summary>How a message names a lyrics track: <c>lyrics 'w'</c>, or <c>lyrics</c> for
+    /// the nameless (first-voice) block.</summary>
+    public static string LyricsLabel(LyricsBlockSyntax track)
+        => track.VoiceName is { } name ? $"lyrics '{name}'" : "lyrics";
+
+    /// <summary>The span a section-major lyrics block's warning is anchored on: its track
+    /// name token, or the <c>lyrics</c> keyword when it writes none. The editor's quick fix
+    /// resolves the block back from this span.</summary>
+    public static TextSpan LyricsAnchor(LyricsBlockSyntax track)
+        => (track.NameToken ?? track.LyricsKeyword).Span;
 
     /// <summary>The semantic voices folded for the exporters: the canonical bar count per
     /// section name (the greatest voice) and each voice by its container node, so a reader
