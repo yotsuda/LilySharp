@@ -622,6 +622,8 @@ paper {
   topMargin 10mm  bottomMargin 10mm
   indent 15mm  shortIndent 0
   raggedRight                  // bare flag: lines keep their ideal width
+  raggedBottom                 // bare flag: every page keeps its natural system spacing
+                               // (default: only the last page does, as in LilyPond)
   spacingIncrement 1.2         // horizontal note-spacing unit
   systemSystemSpacing { basicDistance 12  minimumDistance 8  padding 1  stretchability 60 }
   staffStaffSpacing   { basicDistance 9 }

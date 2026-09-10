@@ -134,7 +134,7 @@
 ## UNWATCHED — 観測者がゼロだと自認しているもの（53 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:2181** container, and the value stops being unobserved with the line above.
+- **:2326** container, and the value stops being unobserved with the line above.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:507** no observer; add the paren widths when a book brings one. The unpacked
 - **:509** bare glyph width, which is exact for one and unobserved for many.
@@ -227,10 +227,10 @@
 ## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（136 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:2176** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:4902** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:2321** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
+- **:5055** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/MidiExporter.cs`
-- **:2234** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+- **:2258** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
 - **:68** LILYSHARP-OWN: LilyPond's q takes no marks, so there is nothing to port.
 ### `LilySharp.Core/Parser/Parser.Music.cs`

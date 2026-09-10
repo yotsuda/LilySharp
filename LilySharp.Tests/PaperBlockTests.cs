@@ -95,6 +95,59 @@ public class PaperBlockTests
         Assert.True(ReadClean("paper { raggedRight }").RaggedRight);
     }
 
+    /// <summary>
+    /// <c>raggedBottom</c> reaches the page breaker's flag (LilyPond's <c>ragged-bottom</c>),
+    /// and only that flag: <c>ragged-last-bottom</c> keeps its LilyPond default (true) and the
+    /// line-breaking flag is untouched.
+    /// </summary>
+    [Fact]
+    public void RaggedBottomIsABareFlag_ThatReachesThePageBreaker()
+    {
+        Assert.False(LayoutOptions.Default.PageBreaking.RaggedBottom);
+        var p = ReadClean("paper { raggedBottom }");
+        Assert.True(p.PageBreaking.RaggedBottom);
+        Assert.True(p.PageBreaking.RaggedLastBottom);
+        Assert.False(p.RaggedRight);
+        // The two flags are independent entries, not one switch.
+        var both = ReadClean("paper { raggedRight raggedBottom }");
+        Assert.True(both.RaggedRight);
+        Assert.True(both.PageBreaking.RaggedBottom);
+    }
+
+    /// <summary>
+    /// The flag is the answer to the case it was added for: a <c>pageBreak</c> makes a
+    /// two-page book, and the first page's one system used to be justified to the page bottom
+    /// (LilyPond's own default — measured 2026-09-10 on scratch/ベースタブLy/pageBreak.lys, the
+    /// staff at 91.12 of a 169.01 page in both engines). With <c>raggedBottom</c> the first
+    /// page sits like the last one.
+    /// </summary>
+    [Fact]
+    public void RaggedBottom_KeepsTheFirstPageOfATwoPageBookAtNaturalSpacing()
+    {
+        const string book = "title \"T\"\npart melody { section A { g2 g | pageBreak } "
+            + "section B { c2 c | } }\nform main { A B }\nscore main { staff melody }\n";
+        static string Svg(string src)
+        {
+            var tree = SyntaxTree.Parse(src);
+            Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
+            return SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
+        }
+        string justified = Svg(book);
+        string ragged = Svg("paper { raggedBottom }\n" + book);
+        // The first staff line of the first page: the pages are written in order, and a
+        // staff line is the one <line> that starts at x 0.
+        static double FirstStaffLineY(string svg)
+        {
+            var m = System.Text.RegularExpressions.Regex.Match(svg, "<line x1=\"0\\.00\" y1=\"([0-9.]+)\"");
+            Assert.True(m.Success, "no staff line found");
+            return double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+        }
+        double before = FirstStaffLineY(justified);
+        double after = FirstStaffLineY(ragged);
+        Assert.True(before > 60, $"the control's first staff sits at {before}: page 1 is not being justified");
+        Assert.True(after < 40, $"raggedBottom left the first staff at {after}");
+    }
+
     [Fact]
     public void ASpacingBlockOverlaysOnlyTheLinesItWrites()
     {
@@ -328,6 +381,7 @@ public class PaperBlockTests
     [InlineData("paper { systemSystemSpacing 3 }")]      // a spec key wants a block
     [InlineData("paper { paperWidth { } }")]             // a scalar key wants a number
     [InlineData("paper { raggedRight 1 }")]              // a flag takes nothing
+    [InlineData("paper { raggedBottom 1 }")]             // …neither flag does
     [InlineData("paper { paperWidth }")]                 // a scalar key with nothing after it
     public void AWrongShape_IsLYS9003(string block)
     {
@@ -374,7 +428,7 @@ public class PaperBlockTests
             + "  leftMargin 15mm  rightMargin 15mm  topMargin 10mm  bottomMargin 10mm\n"
             + "  indent 8.535827  shortIndent 0\n"
             + "  topSystemPadding 1  spacingIncrement 1.2\n"
-            + "  raggedRight\n"
+            + "  raggedRight  raggedBottom\n"
             + "  systemSystemSpacing { basicDistance 12  minimumDistance 8  padding 1  stretchability 60 }\n"
             + "  scoreSystemSpacing { basicDistance 14 }\n"
             + "  markupSystemSpacing { basicDistance 5 }\n"

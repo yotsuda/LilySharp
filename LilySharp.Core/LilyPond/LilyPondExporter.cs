@@ -292,6 +292,11 @@ public sealed class LilyPondExporter
     /// writes <c>\chordmode</c> bars (see <see cref="EmitChordTracks"/>).</summary>
     private bool _chordTrack;
 
+    /// <summary>True once a stream was found to open with a REWIND — a repeat body with no
+    /// written <c>|:</c> at moment 0 (<see cref="EmitRewindRepeat"/>) — so the score's
+    /// <c>printInitialRepeatBar</c> is written off, as the page draws no opener there.</summary>
+    private bool _rewindOpensThePiece;
+
     /// <summary>The <c>\chordmode</c> variable written for each chord part a row names
     /// (part name → variable), filled by <see cref="EmitChordTracks"/> and read by
     /// <see cref="EmitScore"/>.</summary>
@@ -1444,7 +1449,12 @@ public sealed class LilyPondExporter
             // waterline, which is the whole defect this method was rewritten for.
             // ⚠️ In a CHORD track only the breaks go through: a `\mark` or a navigation
             // mark written into the chord stream as well as the music would stand twice
-            // at one moment, and the music stream already carries them.
+            // at one moment, and the music stream already carries them; a form-level
+            // `||` / `|.` is drawn by the staff, and writing it into \chordmode too changes
+            // the chord variable of every book that ends its form with `|.` (two, in the
+            // p364 sweep) for nothing. A form-level ':|:' never arrives here: FormWalk
+            // reads it as a LoneRepeatEnd plus a Repeat (GroupDividerRepeats), which the
+            // arms above carry into the chord track too.
             case FormWalk.Other o:
                 if (!_chordTrack || o.Node is BreakSyntax)
                     result.Add(o.Node);
@@ -1669,6 +1679,26 @@ public sealed class LilyPondExporter
 
     private void EmitMusicStream(List<SyntaxNode> items, string indent)
     {
+        // A ':|' that closes no '|:' REWINDS — it repeats the piece from its beginning
+        // (FormWalk.LoneRepeatEnd; user decision 2026-08-15), and the ':|' half of a
+        // form-level ':|:' is the same bar (GRAMMAR §8: ':|:' is ':|' then '|:'). LilyPond
+        // has no rewinding bar line — `\bar ":|."` is a glyph and only `\repeat volta`
+        // repeats — so the stretch BEFORE the bar is the repeat's body:
+        //   form { A B :| }      ->  \repeat volta 2 { A B }
+        //   form { A :|: B :| }  ->  \repeat volta 2 { A }  \repeat volta 2 { B }
+        // MEASURED 2026-09-10 (scratch/ベースタブLy/pageBreak.lys, form `A :|: B :|`): the
+        // page draws ':|' after A, '|:' before B and ':|' after B, while the twin left A
+        // outside every repeat and drew no bar after it at all — the one reader of four
+        // that did not draw the first ':|'. The last rewind in the stream is the OUTERMOST
+        // body (`A :| B :|` nests: the second rewinds over the first's stretch), so it is
+        // found first and the prefix is emitted through this same method again.
+        int rewind = LastRewind(items);
+        if (rewind > 0)
+        {
+            EmitRewindRepeat(items, rewind, indent);
+            return;
+        }
+
         var line = new StringBuilder(indent);
         int i = 0;
         // AN EMPTY `| |` BAR IS ONE BAR OF SILENCE (owner's decision 2026-08-28): the page
@@ -1764,6 +1794,113 @@ public sealed class LilyPondExporter
     }
 
     /// <summary>
+    /// The index of the last bar line in <paramref name="items"/> that REWINDS — a <c>:|</c>
+    /// (or the <c>:|</c> half of a <c>:|:</c>) standing at this stream's top level with no
+    /// <c>|:</c> open before it — or -1 when none does.
+    /// </summary>
+    /// <remarks>
+    /// The pairing is the collector's (MeasureBuilder, read back by RepeatPairingValidator):
+    /// a <c>:|</c> closes the nearest open <c>|:</c>, and a <c>:|:</c> closes one and opens one
+    /// — so inside an open repeat it is a divider (<see cref="EmitInlineRepeat"/> hands it back
+    /// to open the next block), and at depth 0 its first half is the rewind and its second
+    /// half opens a block the rest of the stream closes. A stream with no rewind is unchanged
+    /// by this scan, which is every stream in the tree before 2026-09-10 but the one-sided
+    /// ones (the sweep's control).
+    /// </remarks>
+    private static int LastRewind(List<SyntaxNode> items)
+    {
+        int depth = 0, last = -1;
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (items[i] is not BarlineSyntax bar)
+                continue;
+            switch (bar.BarToken.Kind)
+            {
+                case SyntaxKind.RepeatStartBar:
+                    depth++;
+                    break;
+                case SyntaxKind.RepeatEndBar:
+                    if (depth > 0) depth--;
+                    else if (!IsEndingDivider(items, i)) last = i;
+                    break;
+                case SyntaxKind.RepeatBothBar:
+                    // Inside a repeat: closes one, opens one, depth unchanged.
+                    if (depth == 0) { last = i; depth = 1; }
+                    break;
+            }
+        }
+        return last;
+    }
+
+    /// <summary>
+    /// Whether the <c>:|</c> at <paramref name="i"/> stands between two endings of one repeat
+    /// (<c>[1. B] :| [2. C] :| [3. D]</c>) — a divider the repeat owns, read the way the parser
+    /// reads it (Parser.Form.cs ParseFormRepeatBlock's furtherAlternatives: a <c>:|</c> right
+    /// before another ending). Not a close and not a rewind.
+    /// </summary>
+    private static bool IsEndingDivider(List<SyntaxNode> items, int i)
+        => i + 1 < items.Count && items[i + 1] is InlineVoltaSyntax;
+
+    /// <summary>
+    /// Writes <paramref name="items"/> with the stretch before the rewinding bar at
+    /// <paramref name="rewind"/> as a <c>\repeat volta N { … }</c> body, then the rest of the
+    /// stream — for a <c>:|:</c>, opened by the <c>|:</c> it also is.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ printInitialRepeatBar: LilyPond prints <c>.|:</c> at moment 0 for the body that
+    /// opens the piece only when the twin's <c>\layout</c> says so, and the twin says so for
+    /// every book (<see cref="EmitScore"/>'s remark: a WRITTEN <c>|:</c> is printed, owner
+    /// decision session 328). A rewind's body has no written <c>|:</c> — the page draws
+    /// none at the start (measured on pageBreak.lys: the first system opens with a plain
+    /// clef) — so a book that opens with a rewind turns the setting off. A rewind over a
+    /// written <c>|: … :|</c> (<c>form { |: A :| B :| }</c>) keeps it on: the opener is
+    /// written.
+    /// ⚠️ Two rewinds nest (<c>A :| B :|</c> → <c>\repeat { \repeat { A } B }</c>), and there
+    /// LilyPond REPLAYS THE INNER REPEAT on the outer pass, while Lily# replays the WRITTEN
+    /// stretch once (MidiExporter.RepeatFromTheBeginning: A B A B C A B C, not A B A B C
+    /// A B A B C). Same page, one more pass — said in the warning channel, since no
+    /// <c>\repeat</c> spelling plays the written order.
+    /// </remarks>
+    private void EmitRewindRepeat(List<SyntaxNode> items, int rewind, string indent)
+    {
+        var bar = (BarlineSyntax)items[rewind];
+        var body = items.GetRange(0, rewind);
+
+        if (!OpensWithAWrittenRepeatStart(body))
+            _rewindOpensThePiece = true;
+        if (LastRewind(body) > 0 && !_chordTrack)
+            _warnings.Add(
+                "two one-sided ':|' nest in the twin (\\repeat volta inside \\repeat volta), "
+                + "so LilyPond replays the inner repeat on the outer pass where Lily# replays "
+                + "the written stretch once — same page, one more pass");
+
+        int count = bar.HasExplicitRepeatCount ? bar.RepeatCount : 2;
+        _sb.Append(indent).Append("\\repeat volta ").Append(count).Append(" {\n");
+        EmitMusicStream(body, indent + "  ");
+        _sb.Append(indent).Append("}\n");
+
+        var rest = items.GetRange(rewind + 1, items.Count - rewind - 1);
+        if (bar.BarToken.Kind == SyntaxKind.RepeatBothBar)
+            rest.Insert(0, CreateBarline(SyntaxKind.RepeatStartBar, "|:", bar.Position, 0));
+        if (rest.Count > 0)
+            EmitMusicStream(rest, indent);
+    }
+
+    /// <summary>Whether the first thing in <paramref name="items"/> that draws or sounds is
+    /// a written <c>|:</c> — header directives and section markers before it do not count.</summary>
+    private static bool OpensWithAWrittenRepeatStart(List<SyntaxNode> items)
+    {
+        foreach (var item in items)
+        {
+            if (item is BarlineSyntax bar)
+                return bar.BarToken.Kind == SyntaxKind.RepeatStartBar;
+            if (TakesMeasureTime(item))
+                return false;
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Whether <paramref name="item"/> takes measure time — the question the `| |` rule in
     /// <see cref="EmitMusicStream"/> asks. Spelled as the list of what does NOT (bar lines,
     /// marks, spanner ends, directives, a grace body), so that a node type this list has
@@ -1826,6 +1963,14 @@ public sealed class LilyPondExporter
             {
                 if (it is InlineVoltaSyntax trailing) { alternatives.Add(trailing); continue; }
                 if (it is BreakSyntax) { /* absorb a break right after :| */ continue; }
+                // The ':|' BETWEEN two endings (`[1. B] :| [2. C] :| [3. D]` — the parser's
+                // furtherAlternatives, Parser.Form.cs) is this repeat's own divider: the
+                // body plays once more and the next ending follows. It closes nothing new
+                // and rewinds nothing, so it is absorbed here and the ending count sets the
+                // play count below. MEASURED 2026-09-10 (sweep of 925 books, p364): it used
+                // to fall out of this scan as a stray bar, written `\bar ":|."` after the
+                // \alternative, with the third ending outside the repeat.
+                if (IsEndingDivider(items, i)) continue;
                 break;
             }
 
@@ -2853,13 +2998,14 @@ public sealed class LilyPondExporter
     {
         // A ':|' that EmitInlineRepeat did not consume is a ONE-SIDED end-repeat, and in
         // Lily# that means "repeat from the beginning of the piece" — which `\bar ":|."`
-        // does NOT say. LilyPond's `\bar` is a glyph; only `\repeat volta` repeats. So the
-        // twin draws the right barline and plays the music once, and that is a twin that
-        // COMPILES AND IS DIFFERENT MUSIC — the defect class this exporter's warning channel
-        // exists for (see the remark on Fingering_BecomesAnAttachedPostEvent). Say so rather
-        // than let it pass: wrapping the whole preceding stream in `\repeat volta 2 { … }`
-        // is the fix, and it is a restructure of the emitted file, not a token swap.
-        // (Said once, from the music stream — a chord track meets the same bar line.)
+        // does NOT say. LilyPond's `\bar` is a glyph; only `\repeat volta` repeats. Since
+        // 2026-09-10 EmitRewindRepeat wraps the preceding stream in `\repeat volta N { … }`
+        // before the bar can get here, so this arm is reached only by a ':|' with NOTHING
+        // before it (`form { :| A }` — nothing to repeat), where the twin draws the glyph
+        // and plays the music once: a twin that COMPILES AND IS DIFFERENT MUSIC, the defect
+        // class this exporter's warning channel exists for (see the remark on
+        // Fingering_BecomesAnAttachedPostEvent). (Said once, from the music stream — a
+        // chord track meets the same bar line.)
         if (b.BarToken.Kind == SyntaxKind.RepeatEndBar && !_chordTrack)
             _warnings.Add(
                 "a one-sided ':|' repeats from the beginning of the piece in Lily#, but "
@@ -3824,18 +3970,25 @@ public sealed class LilyPondExporter
         // bars"). The twin says so in LilyPond's own words so the two pages agree; on a piece
         // that does not open with a repeat the setting changes nothing.
         // LILYPOND-REF: Documentation/en/notation/repeats.itely:160-172 printInitialRepeatBar.
+        // ⚠️ …EXCEPT when the piece opens with a REWIND (`form { A :| }`): the repeat body
+        // EmitRewindRepeat wraps the opening stretch in has no written `|:`, the page draws
+        // none, and `##t` would make LilyPond draw one — so that book writes `##f`
+        // (LilyPond's own default). Decided per book, from the streams already emitted.
         // …and, after it, the plan's size and style attributes as grob overrides in the
         // same \Score context (FontOverrideLines) — the one reason a fonts directive
         // reaches the twin at all: a `step` IS LilyPond's font-size, so writing it keeps
         // the twin a control for a score that uses one, where the faces (unwritten, see
         // EmitHeader) would only add a difference that exists in the comparison.
         string overrides = FontOverrideLines();
+        string initialRepeatBar = _rewindOpensThePiece ? "##f" : "##t";
         _sb.Append("  \\layout { indent = ")
            .Append(_instrumentNames.Count > 0 ? "15\\mm" : "0\\mm");
         if (overrides.Length == 0)
-            _sb.Append(" \\context { \\Score printInitialRepeatBar = ##t } }\n}\n");
+            _sb.Append(" \\context { \\Score printInitialRepeatBar = ").Append(initialRepeatBar)
+               .Append(" } }\n}\n");
         else
-            _sb.Append("\n    \\context {\n      \\Score\n      printInitialRepeatBar = ##t\n")
+            _sb.Append("\n    \\context {\n      \\Score\n      printInitialRepeatBar = ")
+               .Append(initialRepeatBar).Append('\n')
                .Append(overrides)
                .Append("    }\n  }\n}\n");
     }

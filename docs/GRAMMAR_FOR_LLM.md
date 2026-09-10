@@ -705,6 +705,7 @@ paper {
   leftMargin 15mm  rightMargin 15mm  topMargin 10mm  bottomMargin 10mm
   indent 15mm  shortIndent 0
   raggedRight              // bare flag: do not justify lines
+  raggedBottom             // bare flag: do not justify pages (default: only the last page is ragged)
   spacingIncrement 1.2     // horizontal note-spacing unit (staff spaces)
   systemSystemSpacing { basicDistance 12  minimumDistance 8  padding 1  stretchability 60 }
   staffStaffSpacing   { basicDistance 9 }   // staves of a group
@@ -713,7 +714,7 @@ paper {
 
 Rules worth knowing before emitting one:
 - Scalar keys: `paperWidth paperHeight leftMargin rightMargin topMargin bottomMargin
-  indent shortIndent topSystemPadding spacingIncrement`. Flag: `raggedRight`. Spacing
+  indent shortIndent topSystemPadding spacingIncrement`. Flags: `raggedRight raggedBottom`. Spacing
   blocks: `systemSystemSpacing scoreSystemSpacing markupSystemSpacing scoreMarkupSpacing
   markupMarkupSpacing topSystemSpacing lastBottomSpacing staffStaffSpacing
   staffGroupStaffSpacing defaultStaffStaffSpacing nonStaffRelatedStaffSpacing

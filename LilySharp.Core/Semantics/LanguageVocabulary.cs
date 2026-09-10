@@ -122,6 +122,10 @@ public static class LanguageVocabulary
     /// (<c>paperWidth 210mm</c>).</summary>
     public static IReadOnlyCollection<string> PaperScalarKeys => PaperPlanReader.ScalarKeySpellings();
 
+    /// <summary>The bare flags a <c>paper { }</c> entry takes (<c>raggedRight</c>,
+    /// <c>raggedBottom</c>) — writing one turns it on, and it takes no value.</summary>
+    public static IReadOnlyCollection<string> PaperFlagKeys => PaperPlanReader.FlagKeySpellings();
+
     /// <summary>The nested spacing-block keys a <c>paper { }</c> entry takes
     /// (<c>systemSystemSpacing { … }</c>).</summary>
     public static IReadOnlyCollection<string> PaperSpacingKeys => PaperPlanReader.SpecKeySpellings();

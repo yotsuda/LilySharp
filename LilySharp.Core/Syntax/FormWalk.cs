@@ -50,6 +50,8 @@ namespace LilySharp.Core.Syntax;
 /// with them and the reader only classifies.</item>
 /// <item>A one-sided <c>:|</c> written at form level (repeat from the beginning
 /// of the piece — user decision, 2026-08-15) is <see cref="LoneRepeatEnd"/>;
+/// a form-level <c>:|:</c> is that AND a <see cref="Repeat"/> the next form-level
+/// <c>:|</c> closes (<see cref="GroupDividerRepeats"/>, 2026-09-10);
 /// tokens are never yielded, and anything else is <see cref="Other"/> so a
 /// consumer that warns on unknown items (the LilyPond twin) still sees it.</item>
 /// </list>
@@ -82,8 +84,10 @@ internal static class FormWalk
     /// read neither and hard-coded <c>Math.Max(2, endings)</c>, so <c>form { |: ~X :|*3 }</c>
     /// sounded twice while the same music written <c>|: … :|*3</c> sounded three times.
     /// </remarks>
+    /// <param name="Node">The written block, or null for a block a form-level <c>:|:</c>
+    /// opened (see <see cref="GroupDividerRepeats"/>) — no consumer reads it today.</param>
     internal sealed record Repeat(
-        FormRepeatBlockSyntax Node, int PlayCount, IReadOnlyList<Item> Children,
+        FormRepeatBlockSyntax? Node, int PlayCount, IReadOnlyList<Item> Children,
         int? ExplicitPlayCount = null) : Item;
 
     /// <summary>A volta ending <c>[1. Name]</c>, inside a repeat block or lone. The
@@ -108,14 +112,111 @@ internal static class FormWalk
     /// so that a consumer's catch-all (warn, pass through, ignore) still runs.</summary>
     internal sealed record Other(SyntaxNode Node) : Item;
 
+    /// <summary>A <c>:|:</c> standing at FORM level, outside any block — read by
+    /// <see cref="GroupDividerRepeats"/> and never yielded.</summary>
+    private sealed record DividerBar(BarlineSyntax Node) : Item;
+
     /// <summary>The form's items in document order (tokens are never yielded).</summary>
     internal static IReadOnlyList<Item> Read(SyntaxNode container)
     {
         var items = new List<Item>();
         for (int i = 0; i < container.SlotCount; i++)
             Classify(container.GetChild(i), items, insideRepeat: false);
-        return items;
+        return GroupDividerRepeats(items);
     }
+
+    /// <summary>
+    /// A form-level <c>:|:</c> is TWO bars — <c>:|</c> then <c>|:</c> (GRAMMAR §8, and
+    /// MeasureCollector.Form.cs's reading of the same token inside a block) — so it is read
+    /// as the one-sided <c>:|</c> it starts with (<see cref="LoneRepeatEnd"/>: repeat the
+    /// piece from its beginning) followed by a <see cref="Repeat"/> that runs to the next
+    /// form-level <c>:|</c>, whose <c>:|*N</c> is the count and whose trailing endings
+    /// (<c>[2. Y]</c>, <c>:| [3. Z]</c> — the parser's finalAlternative / furtherAlternatives
+    /// shapes) belong to it. A second <c>:|:</c> closes that block and opens the next, as it
+    /// does inside a written block (<c>|: B :|: C :|</c> is <c>|: B :| |: C :|</c>), so it
+    /// rewinds nothing. A <c>:|:</c> the form never closes leaves the block without a
+    /// <see cref="RepeatEnd"/>; that is LYS4017's case and the page decides it.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED 2026-09-10 (scratch/ベースタブLy/pageBreak.lys, <c>form main { A :|: B :| }</c>):
+    /// the token fell into <see cref="Other"/>, so MIDI ignored it and rewound at the closing
+    /// <c>:|</c> (A B A B), MusicXML wrote one backward repeat on the last bar (the same
+    /// reading), while the page drew <c>:|</c> after A, <c>|:</c> before B and <c>:|</c> after
+    /// B (A A B B) — four readers, three answers. The LilyPond twin was aligned to the page
+    /// first (LilyPondExporter.EmitRewindRepeat); this reader is where the other two get the
+    /// same answer, since it is the one reader of a form's spellings.
+    /// </remarks>
+    private static List<Item> GroupDividerRepeats(List<Item> items)
+    {
+        bool any = false;
+        foreach (var item in items)
+            if (item is DividerBar) { any = true; break; }
+        if (!any)
+            return items;
+
+        var output = new List<Item>(items.Count);
+        bool openerOnly = false; // the divider that just CLOSED a block only opens the next
+        int i = 0;
+        while (i < items.Count)
+        {
+            if (items[i] is not DividerBar divider)
+            {
+                output.Add(items[i]);
+                i++;
+                continue;
+            }
+            if (!openerOnly)
+                output.Add(new LoneRepeatEnd(RewindBar(divider.Node)));
+            openerOnly = false;
+
+            var children = new List<Item> { new RepeatStart(divider.Node.BarToken) };
+            int? explicitCount = null;
+            i++;
+            while (i < items.Count)
+            {
+                var it = items[i];
+                if (it is LoneRepeatEnd close)
+                {
+                    children.Add(new RepeatEnd(close.Node.BarToken));
+                    explicitCount = close.Node.HasExplicitRepeatCount ? close.Node.RepeatCount : null;
+                    i++;
+                    // The endings after the ':|' are this block's.
+                    while (i < items.Count)
+                    {
+                        if (items[i] is Ending e) { children.Add(e); i++; continue; }
+                        if (items[i] is LoneRepeatEnd more && i + 1 < items.Count && items[i + 1] is Ending e2)
+                        {
+                            children.Add(new RepeatEnd(more.Node.BarToken));
+                            children.Add(e2);
+                            i += 2;
+                            continue;
+                        }
+                        break;
+                    }
+                    break;
+                }
+                if (it is DividerBar next)
+                {
+                    // Closes this block; the outer loop reads it again as the next one's opener.
+                    children.Add(new RepeatEnd(next.Node.BarToken));
+                    openerOnly = true;
+                    break;
+                }
+                children.Add(it);
+                i++;
+            }
+            output.Add(new Repeat(null, explicitCount ?? 2, children, explicitCount));
+        }
+        return output;
+    }
+
+    /// <summary>The <c>:|</c> half of a form-level <c>:|:</c>, as the bar-line node a
+    /// consumer that re-emits bar lines (the LilyPond twin) expects a
+    /// <see cref="LoneRepeatEnd"/> to carry — at the divider's own position.</summary>
+    private static BarlineSyntax RewindBar(BarlineSyntax divider)
+        => new(new InternalSyntax.BarlineGreen(
+                new InternalSyntax.SyntaxToken(SyntaxKind.RepeatEndBar, ":|")),
+            null, divider.Position);
 
     private static void Classify(SyntaxNode? child, List<Item> items, bool insideRepeat)
     {
@@ -160,6 +261,11 @@ internal static class FormWalk
             // and stays Other, which every consumer already handled as such.
             case BarlineSyntax { BarToken.Kind: SyntaxKind.RepeatEndBar } bar when !insideRepeat:
                 items.Add(new LoneRepeatEnd(bar));
+                break;
+            // A form-level ':|:' (a BARLINE node too — Parser.Form.cs ParseFormBarline): two
+            // bars, grouped by GroupDividerRepeats once the whole list is read.
+            case BarlineSyntax { BarToken.Kind: SyntaxKind.RepeatBothBar } both when !insideRepeat:
+                items.Add(new DividerBar(both));
                 break;
             case null or SyntaxTokenNode: // keywords, braces, the consumed :|*N pair
                 break;

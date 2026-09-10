@@ -475,7 +475,7 @@ PaperDecl      = 'paper' , [ Identifier ] , PaperBlock ;
 PaperBlock     = '{' , { PaperEntry } , '}' ;
 PaperEntry     = 'size' , ( SizeName | String ) (* a whole page by name - see below *)
                | PaperScalarKey , Length
-               | 'raggedRight'
+               | 'raggedRight' | 'raggedBottom'      (* bare flags - see below *)
                | SpacingKey , SpacingBlock ;
 SizeName       = Word-run ;                     (* the GLUED tokens after 'size' read
                                                    as one word - b5 lexes as a pitch
@@ -556,7 +556,12 @@ SignedNumber   = [ '-' ] , ( Integer | Decimal ) ;
    NOT HERE, deliberately: a staff-size knob (the staff space is the unit itself —
    scaling it is a different feature, LilyPond's set-global-staff-size), and the
    line/page-breaking algorithm switches (engine tuning, not a dimension of the
-   picture). `raggedRight` is a bare flag — writing it turns it on.
+   picture). `raggedRight` and `raggedBottom` are bare flags — writing one turns it on.
+   `raggedRight` keeps every line at its ideal width (LilyPond's ragged-right);
+   `raggedBottom` keeps every PAGE's systems at their natural spacing (LilyPond's
+   ragged-bottom). Without it only the LAST page is ragged (LilyPond's ragged-last-bottom
+   default), so a `pageBreak` that leaves one system on a first page justifies that system
+   to the page bottom, half a page below the title — both engines do, by default.
 
    `stretchability` is unitless (a spring flexibility), so a physical unit on it is
    refused. paperHeight 0 keeps the single content-driven page.

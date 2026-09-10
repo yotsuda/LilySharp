@@ -86,16 +86,34 @@ internal static class PaperPlanReader
     private static readonly string[] SubKeys =
         ["basicDistance", "minimumDistance", "padding", "stretchability"];
 
+    /// <summary>
+    /// The bare flags, canonical spellings: writing one turns it on, and it takes no
+    /// value. LilyPond's <c>ragged-right</c> / <c>ragged-bottom</c> booleans.
+    /// </summary>
+    /// <remarks>
+    /// NOT here: <c>ragged-last-bottom</c>. Its LilyPond default is TRUE
+    /// (ly/paper-defaults-init.ly:56, "best for shorter scores"), so a bare flag could only
+    /// restate the default; turning it OFF needs a valued spelling this block has no shape
+    /// for yet. <c>raggedBottom</c> alone answers the case that was asked for (2026-09-10,
+    /// scratch/ベースタブLy/pageBreak.lys): a <c>pageBreak</c> makes a two-page book, and the
+    /// first page — no longer the last — has its one system justified to the page bottom by
+    /// LilyPond's own default, so the title sits half a page above the staff.
+    /// </remarks>
+    private static readonly string[] FlagKeys = ["raggedRight", "raggedBottom"];
+
     private static readonly string[] Units = ["mm", "cm", "in"];
 
     /// <summary>Every key a <c>paper { }</c> entry can be spelled with, for messages
     /// and for completion.</summary>
     internal static IReadOnlyList<string> AllKeySpellings() =>
-        ["size", .. ScalarKeys, "raggedRight", .. SpecKeys];
+        ["size", .. ScalarKeys, .. FlagKeys, .. SpecKeys];
 
     /// <summary>The scalar length keys alone — the completion inserts these with a
     /// number position, unlike a flag or a spacing block.</summary>
     internal static IReadOnlyList<string> ScalarKeySpellings() => ScalarKeys;
+
+    /// <summary>The bare flags alone — the completion inserts these with nothing after.</summary>
+    internal static IReadOnlyList<string> FlagKeySpellings() => FlagKeys;
 
     /// <summary>The nested spacing-block keys alone.</summary>
     internal static IReadOnlyList<string> SpecKeySpellings() => SpecKeys;
@@ -211,7 +229,7 @@ internal static class PaperPlanReader
             var span = entry.KeyToken.Span;
             string? key = Canonical(entry.Key, ScalarKeys)
                 ?? Canonical(entry.Key, SpecKeys)
-                ?? (entry.Key.Equals("raggedRight", StringComparison.OrdinalIgnoreCase) ? "raggedRight" : null)
+                ?? Canonical(entry.Key, FlagKeys)
                 ?? (entry.Key.Equals("size", StringComparison.OrdinalIgnoreCase) ? "size" : null);
             if (key == null)
             {
@@ -262,16 +280,27 @@ internal static class PaperPlanReader
                 continue;
             }
 
-            if (key == "raggedRight")
+            if (Canonical(key, FlagKeys) != null)
             {
                 if (entry.NumberToken != null || entry.MinusToken != null)
                 {
                     found.Add(new Problem(span, DiagnosticCodes.PaperEntryMissingValue,
-                        "'raggedRight' is a bare flag; writing it turns it on.",
+                        $"'{key}' is a bare flag; writing it turns it on.",
                         IsError: true));
                     continue;
                 }
-                options = options with { RaggedRight = true };
+                options = key switch
+                {
+                    "raggedRight" => options with { RaggedRight = true },
+                    // LILYPOND-REF: ly/paper-defaults-init.ly — ragged-bottom; read by
+                    // PageLayouter (every page keeps its systems at natural spacing) and
+                    // PageBreaker (the same flag in the breaker's own scoring).
+                    "raggedBottom" => options with
+                    {
+                        PageBreaking = options.PageBreaking with { RaggedBottom = true },
+                    },
+                    _ => options,
+                };
                 continue;
             }
 

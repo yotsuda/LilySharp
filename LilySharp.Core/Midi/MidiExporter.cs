@@ -1030,6 +1030,13 @@ public sealed class MidiExporter
     {
         // The body carries each reference's OWN octave shift, not just its name: `|: ~A ~A' :|`
         // is two different plays of one section and the list has to keep them apart.
+        // A ':|:' INSIDE the block closes one repeat and opens the next (`|: B :|: C :|` is
+        // `|: B :| |: C :|` — the page's ProcessRepeatBlock, the twin's AppendRepeatBlock and
+        // MusicXML's EmitPlainRepeatBlock all split there), so the children are RUNS, each
+        // played as its own repeat with its own endings. MEASURED 2026-09-10 (session 363):
+        // this walk read the block as one body and sounded B C B C where the other three
+        // readers give B B C C — no book on disk writes the divider inside a block (925
+        // scanned), so the observers are FormRepeatBarlineTests' own.
         var body = new List<(string Name, int OctaveOffset)>();
         var alternatives = new List<(string Name, int OctaveOffset)>();
         foreach (var child in repeatBlock.Children)
@@ -1043,8 +1050,25 @@ public sealed class MidiExporter
                 case FormWalk.Ending e:
                     alternatives.Add((e.Node.SectionName.Text, e.Node.OctaveOffset));
                     break;
+                case FormWalk.BothBar:
+                    PlayRepeatRun(repeatBlock, body, alternatives, track, conductorTrack);
+                    body = new List<(string Name, int OctaveOffset)>();
+                    alternatives = new List<(string Name, int OctaveOffset)>();
+                    break;
             }
         }
+        PlayRepeatRun(repeatBlock, body, alternatives, track, conductorTrack);
+    }
+
+    /// <summary>One <c>|: body [endings] :|</c> run of a form repeat block — the whole block
+    /// when it holds no <c>:|:</c>. The written <c>:|*N</c> is the block's and applies to
+    /// every run, as the LilyPond twin writes it on each run's close.</summary>
+    private void PlayRepeatRun(FormWalk.Repeat repeatBlock,
+        List<(string Name, int OctaveOffset)> body, List<(string Name, int OctaveOffset)> alternatives,
+        MidiTrack track, MidiTrack conductorTrack)
+    {
+        if (body.Count == 0 && alternatives.Count == 0)
+            return;
         // The SAME three-way rule the music stream plays by (ProcessRepeatSpan): an explicit
         // `:|*N` wins, else the number of endings, else 2.
         // ⚠️ THIS ARM USED TO READ NEITHER — it was `Math.Max(2, alternatives.Count)`, so a

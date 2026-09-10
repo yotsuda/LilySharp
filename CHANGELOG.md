@@ -8,6 +8,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Language
 
+- **`paper { raggedBottom }` keeps every page's systems at their natural spacing.** LilyPond's
+  `ragged-bottom`, as a bare flag beside `raggedRight`. Without it only the last page is ragged
+  (LilyPond's `ragged-last-bottom` default, which Lily# shares), so a `pageBreak` that leaves one
+  system on a first page justifies that system to the page bottom — the title half a page above
+  the staff, in both engines (measured on 2.26.0: the staff at 91.12 of a 169.01-space page in
+  each). The editor completes and colours the word; the `.ly` twin does not write it, as it does
+  not write `raggedRight`.
+
 - **A `break` inside a bar breaks the bar across two systems.** `c4 d break e f |` ends the
   first system after `d` with no bar line and opens the next with `e`, with no bar line and no
   bar number — LilyPond's `\break` at that moment (measured on 2.26.0: the second system's bar
@@ -119,6 +127,11 @@ workflow attaches that section to the GitHub Release verbatim.
   and its values after it.
 
 ### Editor
+
+- **The paper block's flags are completed from the reader's own table.** `raggedRight` was the
+  one paper spelling the completion listed by hand instead of reading from the vocabulary, so a
+  flag added to the reader (`raggedBottom`) would not have reached the popup; both now come from
+  the same list the reader validates against, each with its one-line help.
 
 - **A quick fix pads a short section voice with bar lines.** On an LYS2007 squiggle — a
   `section A` that writes fewer bars in this part or chord row than in another voice of the
@@ -366,6 +379,31 @@ workflow attaches that section to the GitHub Release verbatim.
   check).
 
 ### MIDI, MusicXML and the LilyPond twin
+
+- **A `:|:` inside a form's `|: … :|` splits it into two repeats for the MIDI.** `|: B :|: C :|`
+  is `|: B :| |: C :|` on the page, in the twin and in the MusicXML; the MIDI played the whole
+  body per pass (B C B C). It now plays each run as its own repeat (B B C C), the block's
+  `:|*N` on every run and an ending with the run it follows.
+
+- **A form-level `:|:` is two bars to the MIDI and the MusicXML too.** `form main { A :|: B :| }`
+  draws `:|` after A, `|:` before B and `:|` after B, and the LilyPond twin writes the two
+  repeats; the MIDI sounded A B A B and the MusicXML wrote one backward repeat on the last bar,
+  both skipping the divider and rewinding at the closing `:|`. The form reader now reads the
+  divider as the one-sided `:|` it starts with (repeat from the beginning) followed by a block
+  the next form-level `:|` closes — its `:|*N` the count, its trailing endings the block's — so
+  the MIDI sounds A A B B and the MusicXML carries all three repeat bars. A second `:|:` closes
+  that block and opens the next, as it does inside a written `|: … :|`.
+
+- **The LilyPond twin plays a form-level `:|`.** A `:|` written in the form outside any
+  `|: … :|` block repeats the piece from its beginning, and the `:|` half of a form-level `:|:`
+  is the same bar. The twin used to write LilyPond's `\bar ":|."` — a glyph that repeats
+  nothing — and warn; for `A :|: B :|` it drew no bar after A at all and repeated only B. It now
+  writes the stretch before the bar as a `\repeat volta N { … }` body (`:|*N` is N), so
+  `A :|: B :|` is `\repeat volta 2 { A } \repeat volta 2 { B }` and the page's three repeat
+  bars are all in the twin; a chord row is split at the same bars. A book that opens with such
+  a body writes `printInitialRepeatBar = ##f`, since no `|:` was written at the start and the
+  page draws none. Two rewinds (`A :| B :|`) nest, and the twin warns that LilyPond then replays
+  the inner repeat on the outer pass where Lily# replays the written stretch once.
 
 - **A section voice shorter than its section-mates is padded in every export, as it is on the
   page.** A section spans as many bars as its longest voice — a part or a named chord row — and

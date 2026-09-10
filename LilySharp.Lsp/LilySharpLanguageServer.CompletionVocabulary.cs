@@ -716,11 +716,12 @@ public sealed partial class LilySharpLanguageServer
         };
 
     /// <summary>
-    /// The keys a <c>paper { }</c> body takes: the scalar lengths, the raggedRight
-    /// flag, and the nested spacing blocks.
+    /// The keys a <c>paper { }</c> body takes: the scalar lengths, the bare flags
+    /// (raggedRight, raggedBottom), and the nested spacing blocks.
     /// </summary>
     /// <remarks>
     /// ⚠️ The vocabulary is read from <see cref="LanguageVocabulary.PaperScalarKeys"/> /
+    /// <see cref="LanguageVocabulary.PaperFlagKeys"/> /
     /// <see cref="LanguageVocabulary.PaperSpacingKeys"/> — the reader's own table,
     /// published — and never listed here, for the reason the font key list is not.
     /// </remarks>
@@ -754,12 +755,16 @@ public sealed partial class LilySharpLanguageServer
                     InsertText = key + " $0",
                     Detail = PaperKeyDetail(key),
                 }),
-                new CompletionItem
+                // The bare flags, read from the reader's table like the keys above — a
+                // hand-listed `raggedRight` here was the one paper spelling the completion
+                // did not read from the vocabulary, and `raggedBottom` arrived without it
+                // (2026-09-10).
+                .. LanguageVocabulary.PaperFlagKeys.Select(key => new CompletionItem
                 {
-                    Label = "raggedRight",
+                    Label = key,
                     Kind = CompletionItemKind.Keyword,
-                    Detail = "Do not justify lines; measures sit at their ideal width",
-                },
+                    Detail = PaperKeyDetail(key),
+                }),
                 .. LanguageVocabulary.PaperSpacingKeys.Select(key => new CompletionItem
                 {
                     Label = key,
@@ -842,6 +847,8 @@ public sealed partial class LilySharpLanguageServer
         "shortIndent" => "Later systems' indent (default 0)",
         "topSystemPadding" => "Padding between the title and the first system",
         "spacingIncrement" => "Horizontal note-spacing unit (default 1.2 staff spaces)",
+        "raggedRight" => "Do not justify lines; measures sit at their ideal width",
+        "raggedBottom" => "Do not justify pages; systems keep their natural spacing on every page, not only the last",
         "systemSystemSpacing" => "Between two consecutive systems",
         "scoreSystemSpacing" => "After a score boundary, before the next system",
         "markupSystemSpacing" => "After a title or markup, before the next system",
