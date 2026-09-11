@@ -868,6 +868,77 @@ public class LayoutBlockTests
         }
     }
 
+    /// <summary>
+    /// ★ THE DRAWN SYMBOL, piece by piece, against LilyPond's own numbers — which size each
+    /// piece is set at and whether it stands on the root's baseline.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS THE OBSERVER A DEFECT LIVED WITHOUT. Under <c>chordQualities symbols</c>
+    /// with <c>minorChords lower</c> the degree sign went into the SUPERSCRIPT — drawn
+    /// 0.707× and lifted — from the day the vocabulary shipped until 2026-09-12, and nothing
+    /// saw it: no tracked book writes <c>symbols</c>, so no snapshot covered it, and the
+    /// text-level tests above compare STRINGS, which were right all along. A picture nobody
+    /// draws is a picture nobody checks.
+    /// <para>
+    /// MEASURED on LilyPond 2.26.0 (scratch/p372/lpnames.svg, lp-words.svg): a default
+    /// ChordName sets its root at font-size 2.6165 and the raised pieces at 1.8500, lifted
+    /// 1.1892; the degree sign sits on the ROOT's baseline at 3.2965, which is
+    /// <c>whiteCircleMarkup</c>'s <c>\fontsize #2</c>. The tolerance is three decimals
+    /// because LilyPond's SVG quotes four and the last one is its own rounding.
+    /// </para>
+    /// <para>
+    /// ★ POISONED with the defect it was written for (2026-09-12): <c>PrintedSymbol</c>'s
+    /// baseline count was put back to zero whenever the root is lowercased — the line that
+    /// carried the defect — and the two degree-sign cases went red naming the size the
+    /// circle lost:
+    ///   Assert.Equal() … Expected: 3.2965  Actual: 2.331
+    /// 2.331 is the em at the superscript's font-size plus the circle's own +2, i.e. the
+    /// circle drawn inside the <c>\super</c> it must never enter.
+    /// </para>
+    /// </remarks>
+    /// <param name="entry">The chord as the row writes it.</param>
+    /// <param name="expected">The pieces the page must draw, left to right, as
+    /// <c>text:em:up</c> triples — the em being the font-size LilyPond sets that piece at
+    /// and <c>up</c> whether it stands in the superscript.</param>
+    [Theory]
+    // symbols + lower: LilyPond's own picture for these chords.
+    [InlineData("Cdim", "c:2.6165:down|°:3.2965:down")]
+    [InlineData("Cm7-5", "c:2.6165:down|ø:1.8500:up")]
+    [InlineData("Cdim7", "c:2.6165:down|°:3.2965:down|7:1.8500:up")]
+    // …the augmented triad's third is MAJOR, so the root keeps its capital and the whole
+    // symbol stands on the baseline (LilyPond prints "C+" flat).
+    [InlineData("Caug", "C+:2.6165:down")]
+    // …and a minor seventh, where the modifier goes with the lowercase root and only the
+    // digit is raised.
+    [InlineData("Am7", "a:2.6165:down|7:1.8500:up")]
+    public void TheDrawnPieces_AreSetTheSizeLilyPondSetsThem(string entry, string expected)
+    {
+        string book = "layout { chordQualities symbols  minorChords lower }\n"
+            + "time 4/4\npart m { clef treble }\n"
+            + "section A { m { c4 d e f | } chords prog { " + entry + " | } }\n"
+            + "form main { ~A }\nscore main { chords prog  staff m }\n";
+        var tree = SyntaxTree.Parse(book);
+        Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var item = Assert.Single(score.ChordNames);
+
+        var pieces = ChordNameGlyphRun.Pieces(score.TextMetrics, item.ChordText, item.SuperFrom);
+        var want = expected.Split('|');
+        Assert.Equal(want.Length, pieces.Length);
+
+        double superRaise = ChordNameGlyphRun.SuperRaise(score.TextMetrics);
+        for (int k = 0; k < want.Length; k++)
+        {
+            var parts = want[k].Split(':');
+            Assert.Equal(parts[0], pieces[k].Text);
+            Assert.Equal(
+                double.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture),
+                ChordNameGlyphRun.EmAt(pieces[k].FontSize), 3);
+            // Raised, or on the ROOT's baseline — the question the defect got wrong.
+            Assert.Equal(parts[2] == "up" ? superRaise : 0.0, pieces[k].Raise, 9);
+        }
+    }
+
     [Fact]
     public void MinorChords_Lower_IsLilyPondsOwnPropertyInTheTwin()
     {

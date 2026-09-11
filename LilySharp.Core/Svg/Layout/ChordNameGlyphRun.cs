@@ -94,6 +94,20 @@ namespace LilySharp.Core.Svg.Layout;
 ///   raised pieces are joined with it.
 /// </para>
 /// <para>
+/// ⚠️ AND ONE MORE LILYPOND PROPERTY IS ABSENT BECAUSE IT IS ZERO, which is a reason to
+/// NAME it rather than to leave it out silently: <c>chordPrefixSpacer</c> is a kern
+/// LilyPond puts between the root and the prefix modifiers, but ONLY when the root carries
+/// no accidental, and its value for english chord names is 0 — so the default picture is
+/// the same either way. It is 0.4 for the italian and french families, which Lily# has no
+/// spelling for at all (<see cref="Semantics.ChordQualityStyle"/> covers the quality, not
+/// the root's language), so there is nothing yet for the kern to apply to.
+/// LILYPOND-REF: scm/chord-ignatzek-names.scm:203-206 conditional-kern-before — the kern is
+///   applied to the joined prefixes when the prefixes are non-empty and the root's
+///   alteration is NATURAL;
+/// LILYPOND-REF: ly/property-init.ly:289-313 englishChords — the four chord families and
+///   the chordPrefixSpacer each sets (0 for english and german, 0.4 for italian and french).
+/// </para>
+/// <para>
 /// ⚠️ ⒝ (HANDOFF §7.6): LilyPond chooses the glyph from the ALTERATION NUMBER, which it still
 /// has when it builds the markup. Lily#'s chord name has already been rendered to a STRING by
 /// <c>ChordStructure.SpellPitch</c>, so the alteration is recovered from the spelling — and
@@ -138,6 +152,29 @@ internal static class ChordNameGlyphRun
     /// <remarks>LILYPOND-REF: scm/define-markup-commands.scm smaller-markup (lines 3635-3655)
     ///   — the body is <c>(fontsize-markup -1 arg)</c>.</remarks>
     internal const double SmallerFontSizeOffset = -1.0;
+
+    /// <summary>
+    /// The degree sign the diminished qualities are spelled with, and the one character in a
+    /// chord symbol that LilyPond draws LARGER than the symbol.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/chord-modifiers-init.ly whiteCircleMarkup (lines 42-45) — the markup
+    ///   is <c>\fontsize #2 #(ly:wide-char->utf-8 #x00b0)</c>, and the comment on the line
+    ///   above it says why it is not raised: <c>%% U+00B0 is the degree sign. No need for
+    ///   \super here.</c>
+    /// MEASURED on LilyPond 2.26.0 (scratch/p372/lpnames.svg): a default ChordName's <c>°</c>
+    /// prints at font-size 3.2965 where its root prints at 2.6165 — a ratio of 1.25988
+    /// against magstep(2) = 1.259921.
+    /// ⚠️ It applies wherever Lily# prints the character, the Roman degrees included: it is
+    /// the same symbol standing for the same quality, and LilyPond's reason — a degree sign
+    /// is unreadable at the size the digits take — does not care which notation asked for
+    /// it. Lily# has no LilyPond counterpart for a degree, so that half is Lily#'s own
+    /// reading of LilyPond's rule rather than a port of it.
+    /// </remarks>
+    internal const char WhiteCircle = '°';
+
+    /// <inheritdoc cref="WhiteCircle"/>
+    internal const double WhiteCircleFontSizeOffset = 2.0;
 
     /// <summary>…and what <c>whiteTriangleMarkup</c> takes off it, on top of the
     /// <c>\super</c> it stands in.</summary>
@@ -209,6 +246,31 @@ internal static class ChordNameGlyphRun
     /// <remarks>LILYPOND-REF: scm/define-markup-commands.scm triangle-markup (lines 519-561) — the
     ///   apex is <c>(cons (* 0.5 ex) (* 0.86 ex))</c>.</remarks>
     internal const double TriangleHeightRatio = 0.86;
+
+    /// <summary>The polygon's <c>thickness</c> property, which the triangle leaves alone.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-markup-commands.scm polygon-markup (lines 478-517) — the
+    ///   blot handed to <c>ly:round-polygon</c> is
+    ///   <c>(* thickness (ly:output-def-lookup layout 'line-thickness))</c>, and
+    ///   <c>thickness</c> is a markup property whose default this block declares as 1;
+    /// LILYPOND-REF: scm/define-markup-commands.scm triangle-markup (lines 519-561) — it
+    ///   lists <c>thickness</c> among the properties it reads and passes it through
+    ///   untouched, so a chord-name triangle takes that default.
+    /// ⚠️ IT IS 1, AND IT IS STILL WRITTEN. Folding it away leaves LilyPond's product a bare
+    /// <c>line-thickness</c>, and then nothing in the code says the blot is a THICKNESS
+    /// TIMES a line width — which is what a reader has to know to find the property again
+    /// (RULES §5.2: "equivalent" is not a reason to spell it differently).
+    /// </remarks>
+    internal const double PolygonThickness = 1.0;
+
+    /// <summary>Half the blot the polygon's outline is grown by on each side.</summary>
+    /// <remarks>
+    /// The stencil extent <c>ly:round-polygon</c> reports for an <c>extroversion 0</c>
+    /// outline: the points, grown by half the blot all round. MEASURED against LilyPond's
+    /// own advance for <c>C△9</c> — see the triangle piece in <see cref="Pieces"/>.
+    /// </remarks>
+    internal static double PolygonBlotHalf
+        => PolygonThickness * EngravingDefaults.LineThickness / 2.0;
 
     /// <summary>The unscaled kern LilyPond puts before a narrow accidental glyph.</summary>
     /// <remarks>
@@ -467,6 +529,30 @@ internal static class ChordNameGlyphRun
                 FlushText(i);
                 runStart = i;
             }
+            if (text[i] == WhiteCircle)
+            {
+                // whiteCircleMarkup: the degree sign at `\fontsize #2` off whatever font-size
+                // it stands in, and NOT raised of itself — LilyPond's own comment says so.
+                // (It can still sit inside the \super, as `Cø`'s sibling `C°7` does not but a
+                // future exception might; the arm reads the span rather than assuming.)
+                FlushText(i);
+                bool upCircle = Raised(i);
+                double circleFontSize =
+                    (upCircle ? superFontSize : fontSize) + WhiteCircleFontSizeOffset;
+                double circleEm = EmAt(circleFontSize);
+                double circleRaise = upCircle ? superRaise : 0;
+                string circle = text.Substring(i, 1);
+                double circleAdvance = fonts.Advance(circle, circleEm, TextRole.ChordName, style);
+                var (circleBottom, circleTop) =
+                    fonts.Ink(circle, circleEm, TextRole.ChordName, style);
+                pieces.Add(new Piece(circle, '\0', ChordPieceKind.Text, x, circleAdvance, x,
+                    circleRaise, circleBottom + circleRaise, circleTop + circleRaise,
+                    circleFontSize));
+                x += circleAdvance;
+                i++;
+                runStart = i;
+                continue;
+            }
             if (text[i] == TriangleCarrier)
             {
                 FlushText(i);
@@ -480,7 +566,7 @@ internal static class ChordNameGlyphRun
                     (upTri ? superFontSize : fontSize) + TriangleFontSizeOffset;
                 double triBase = TriangleBase(triFontSize);
                 double triRaise = upTri ? superRaise : 0;
-                double half = EngravingDefaults.LineThickness / 2;
+                double half = PolygonBlotHalf;
                 pieces.Add(new Piece(
                     Text: "", '\0', ChordPieceKind.Triangle,
                     X: x,
@@ -562,7 +648,8 @@ internal static class ChordNameGlyphRun
     private static bool IsPlainText(string text, int superFrom) =>
         superFrom == Music.ChordSymbolText.NoSuperscript
         && text.IndexOf('♯') < 0 && text.IndexOf('♭') < 0
-        && text.IndexOf(TriangleCarrier) < 0;
+        && text.IndexOf(TriangleCarrier) < 0
+        && text.IndexOf(WhiteCircle) < 0;
 
     /// <summary>
     /// A triangle piece's BASE, read back off its advance — the one place that inverts the
@@ -577,7 +664,7 @@ internal static class ChordNameGlyphRun
     ///   words.)
     /// </remarks>
     internal static double TriangleBaseOf(in Piece piece)
-        => piece.Advance - EngravingDefaults.LineThickness;
+        => piece.Advance - 2.0 * PolygonBlotHalf;
 
     /// <summary>The symbol's whole X extent, whose left edge is its reference point.</summary>
     internal static double Width(

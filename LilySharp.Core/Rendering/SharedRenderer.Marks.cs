@@ -132,7 +132,10 @@ internal static partial class SharedRenderer
         IDrawingContext gc, double x, double baselineY, double baseWidth)
     {
         double h = baseWidth * LilySharp.Core.Svg.Layout.ChordNameGlyphRun.TriangleHeightRatio;
-        double t = EngravingDefaults.LineThickness;
+        // The blot ly:round-polygon strokes with: `thickness × line-thickness`, both words
+        // (ChordNameGlyphRun.PolygonThickness says why the 1 is written rather than folded).
+        double t = LilySharp.Core.Svg.Layout.ChordNameGlyphRun.PolygonThickness
+                   * EngravingDefaults.LineThickness;
         (double X, double Y) a = (x, baselineY);
         (double X, double Y) b = (x + baseWidth, baselineY);
         (double X, double Y) apex = (x + baseWidth / 2, baselineY + h);

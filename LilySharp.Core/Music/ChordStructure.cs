@@ -635,13 +635,22 @@ public sealed record ChordStructure(
         sb.Append(SpellPitch(RootStep, RootAlter, lower));
 
         string suffix = RawSuffix ?? ChordQualityRegistry.GetSuffix(Quality, spelling.Qualities);
-        // How much of the suffix stays DOWN with the root. LilyPond's minor modifier is a
-        // prefix on the baseline, and the exception table's `+` and `°` are drawn there too
-        // (the circle at its own size); a lowercased root has already eaten the modifier.
-        int down = lower || RawSuffix != null
-            ? 0
-            : ChordQualityRegistry.BaselineSuffixLength(Quality, spelling.Qualities);
         string printed = lower ? DropMinorModifier(suffix) : suffix;
+        // How much of the PRINTED suffix stays DOWN with the root. LilyPond's minor modifier
+        // is a prefix on the baseline, and the exception table's `+` and `°` are drawn there
+        // too (the circle at its own larger size).
+        // ⚠️ A LOWERCASED ROOT REMOVES THE MODIFIER, NOT THE BASELINE. The `m` that went is
+        // one of those baseline characters, so the count comes down by exactly the one that
+        // was dropped — it does not go to zero. Setting it to zero put `c°`'s degree sign in
+        // the SUPERSCRIPT, drawn 0.707× and lifted, where LilyPond keeps it on the root's
+        // line at fontsize +2: LilyPond reaches the exception table BEFORE it asks about the
+        // case (scm/chord-ignatzek-names.scm:245-246 — the `if exception` arm takes
+        // lowercase-root? as an argument and formats root + exception + bass, with no super
+        // at all), so the case cannot move it.
+        int down = RawSuffix != null
+            ? 0
+            : ChordQualityRegistry.BaselineSuffixLength(Quality, spelling.Qualities)
+              - (printed.Length == suffix.Length ? 0 : 1);
         sb.Append(printed);
 
         // The superscript runs from the end of that baseline part to the slash (or the end).
