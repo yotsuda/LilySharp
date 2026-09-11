@@ -81,7 +81,9 @@ public class MarkReserveVersusDrawTests
     public void MarkXExtent_SpansTheDrawnAdvance(MusicMarkType type)
     {
         var mark = new MusicMarkItem(type, measureIndex: 0, sourcePosition: 0);
-        var (x0, x1) = MusicMarkEngraver.MarkXExtent(Fonts, mark, x: 0.0);
+        // These are the PLAIN-text marks, which carry no frame either way; the flag matters
+        // only to the two boxed labels (MusicMarkEngraver.IsBoxDrawn).
+        var (x0, x1) = MusicMarkEngraver.MarkXExtent(Fonts, mark, x: 0.0, boxed: true);
 
         // ⚠️ Through PlainMarkWidth, not TextFontMetrics: the family stopped being answered
         // by one call on 2026-08-18, when the sustain pedal's word became a run of MUSIC

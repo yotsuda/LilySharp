@@ -81,8 +81,11 @@ public sealed partial class MeasureCollector
             dots = pairDisp.Dots;
         }
 
-        var accidental = GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
-        bool isCourtesy = false;
+        var (accidental, styleCourtesy) =
+            GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
+        // A cautionary STYLE parenthesises what it asked for, as @courtesy does below
+        // (Semantics.AccidentalStyles.ModernCautionary).
+        bool isCourtesy = styleCourtesy;
 
         // Quarter tones always print their own accidental (they are never in
         // the key). LILYPOND-REF: quarter-tone note names ih/eh/isih/eseh.
@@ -416,7 +419,8 @@ public sealed partial class MeasureCollector
             }
             int staffPosition = rp.StaffPosition;
 
-            var accidental = GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
+            var (accidental, styleCourtesy) =
+                GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
 
             // Quarter tones always print their own accidental (never in the key).
             if (pitch.QuarterOffset != 0)
@@ -459,7 +463,7 @@ public sealed partial class MeasureCollector
 
             notes.Add(new ChordNoteInfo(
                 staffPosition, accidental, needsLedger,
-                IsCourtesy: memberCourtesy,
+                IsCourtesy: memberCourtesy || styleCourtesy,
                 Fingering: pitchFingering,
                 StringNumber: pitch.Articulations.OfType<StringNumberAnnotationSyntax>().FirstOrDefault()?.StringNumber,
                 Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
@@ -535,11 +539,12 @@ public sealed partial class MeasureCollector
                 rootStep, firstOctave, degree.Number, degree.Alteration,
                 degree.OctaveOffset, writtenKeySharps);
             var rp = ResolveAbsolutePitch(step, alteration, octave, degree.SourceStart);
-            var accidental = GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
+            var (accidental, styleCourtesy) =
+                GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
             notes.Add(new ChordNoteInfo(
                 rp.StaffPosition, accidental,
                 rp.StaffPosition is <= -6 or >= 6,
-                IsCourtesy: false,
+                IsCourtesy: styleCourtesy,
                 Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
                 SourcePosition: degree.SourceStart,
                 HasLaissezVibrer: chordLv,
@@ -700,13 +705,13 @@ public sealed partial class MeasureCollector
         foreach (var written in members)
         {
             var m = written.DisplacedBy(displacement);
-            string? accidental = m.Step is { } step
+            var (accidental, styleCourtesy) = m.Step is { } step
                 ? GetDisplayAccidental(step, m.Alter!.Value, m.Octave!.Value)
-                : null;
+                : (null, false);
             notes.Add(new ChordNoteInfo(
                 m.StaffPosition, accidental,
                 m.StaffPosition is <= -6 or >= 6,
-                IsCourtesy: false,
+                IsCourtesy: styleCourtesy,
                 Notehead: m.Notehead,
                 Midi: m.Midi,
                 SourcePosition: rep.SourceStart));
@@ -834,13 +839,13 @@ public sealed partial class MeasureCollector
                 foreach (var writtenMember in members)
                 {
                     var m = writtenMember.DisplacedBy(bareDisplacement);
-                    string? accidental = m.Step is { } step
+                    var (accidental, styleCourtesy) = m.Step is { } step
                         ? GetDisplayAccidental(step, m.Alter!.Value, m.Octave!.Value)
-                        : null;
+                        : (null, false);
                     notes.Add(new ChordNoteInfo(
                         m.StaffPosition, accidental,
                         m.StaffPosition is <= -6 or >= 6,
-                        IsCourtesy: false,
+                        IsCourtesy: styleCourtesy,
                         Notehead: m.Notehead,
                         Midi: m.Midi,
                         SourcePosition: bare.SourceStart));
@@ -853,17 +858,22 @@ public sealed partial class MeasureCollector
             }
 
             case NoteSyntax note when _resolvedNotes.TryGetValue(note, out var m):
+            {
+                var (bareAccidental, bareStyleCourtesy) = m.Step is { } noteStep
+                    ? GetDisplayAccidental(noteStep, m.Alter!.Value, m.Octave!.Value)
+                    : (null, false);
                 return new NoteItem(
                     m.StaffPosition,
                     Fraction.FromNoteValue(noteValue),
                     dots,
-                    m.Step is { } noteStep ? GetDisplayAccidental(noteStep, m.Alter!.Value, m.Octave!.Value) : null,
+                    bareAccidental,
                     needsLedgerLines: m.StaffPosition is <= -6 or >= 6,
                     bare.SourceStart,
                     tremoloBeams,
                     hasTieStart: hasTieAfter,
                     hasSlurStart: hasSlurStartAfter,
                     hasSlurEnd: hasSlurEndAfter,
+                    isCourtesy: bareStyleCourtesy,
                     hasBeamStart: hasBeamStartAfter,
                     hasBeamEnd: hasBeamEndAfter,
                     hasGlissando: HasGlissandoArticulation(bare),
@@ -872,6 +882,7 @@ public sealed partial class MeasureCollector
                     Midi = m.Midi,
                     ForcedStemUp = GetStemDirectionOverride(bare),
                 };
+            }
 
             case DrumNoteSyntax drum:
             {

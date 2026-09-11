@@ -76,7 +76,8 @@ public class StafflessLabelSpacingTests
         {
             // The box's left edge is the opening bar's X, not the line-start edge.
             var boxed = layout.MusicMarkLayouts.Single(m => m.MarkType == MusicMarkType.SectionLabel);
-            double left = boxed.X - MusicMarkEngraver.LabelBoxHalfWidth(fonts0(score), boxed.MarkType, boxed.Text);
+            double left = boxed.X - MusicMarkEngraver.LabelBoxHalfWidth(
+                fonts0(score), boxed.MarkType, boxed.Text, boxed.Boxed);
             Assert.True(left > 0.3 + 1.0, $"the box's left edge ({left:F2}) should stand on the drawn `|:`, past the edge");
         }
         var fonts = score.TextMetrics;
@@ -89,7 +90,8 @@ public class StafflessLabelSpacingTests
         Assert.True(first.X < bar2, $"`C' at {first.X:F2} should stand left of bar 2 at {bar2:F2}");
 
         // Clear of the label's box — and of the tempo beside it under `marks beside`.
-        double window = box.X + MusicMarkEngraver.LabelBoxHalfWidth(fonts, box.MarkType, box.Text);
+        double window = box.X + MusicMarkEngraver.LabelBoxHalfWidth(
+            fonts, box.MarkType, box.Text, box.Boxed);
         var tempo = layout.MusicMarkLayouts.Single(m => m.MarkType == MusicMarkType.Tempo);
         if (tempo.BesideOfSourceIndex >= 0)
         {

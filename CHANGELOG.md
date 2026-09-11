@@ -73,6 +73,36 @@ workflow attaches that section to the GitHub Release verbatim.
     with `BarNumber.break-visibility = #end-of-line-invisible`), so the two pages number
     the same bars.
 
+  - **`accidentals default | modern | modernCautionary | forget | noReset`** says which
+    notes carry a printed accidental — LilyPond's `\accidentalStyle` table, transcribed for
+    the styles whose context is the staff. `default` is the 18th-century style Lily# has
+    always drawn (an alteration holds to the bar line, in its own octave). `modern` is Kurt
+    Stone's: cancelled in other octaves and in the next measure too, and with no
+    restore-natural. `modernCautionary` prints the accidentals `modern` adds in parentheses.
+    `forget` remembers nothing, so every note is read against the key signature alone;
+    `noReset` never forgets. LilyPond's voice / piano / choral families name a context a
+    score-wide switch cannot name, and its neo-modern, teaching and dodecaphonic families
+    need rules of another kind: those are absent, and a style the table does not hold is
+    refused at the word. The `.ly` twin writes `\accidentalStyle modern` at the head of each
+    part's music. ⚠️ Under a style that remembers past the bar line (`modern`,
+    `modernCautionary`, `noReset`) the preview recompiles a changed section whole instead of
+    resuming mid-walk — the accidental memory is what the resume gate watches.
+
+  - **`sectionLabels boxed | plain | none`** says how a `form` section's name is drawn.
+    `boxed` is the default and the frame Lily# has always drawn — a Lily#-own picture, since
+    LilyPond's `SectionLabel` draws the bare string. `plain` drops the frame and engraves the
+    name alone, which *is* LilyPond's own picture, and the twin writes `\mark \markup` with
+    no `\box`. `none` engraves no section names at all, which is what a part sheet wants, and
+    the `.ly` twin then writes no `\mark` either, so the two pictures stay one picture. It is
+    a display switch: the form still plays the section, and MIDI and MusicXML are untouched.
+    ⚠️ The frame's size is priced at nine sites, so `plain` rides the MARK as a required
+    argument rather than being read from the score — a site that forgets it does not compile,
+    which is how the drawn box and the reserved box are kept from answering differently.
+  - **`partCombineText on | off`** says whether a `combinedStaff` prints `a2` / `Solo` /
+    `Solo II`. `on` is the default and LilyPond's; `off` is its `printPartCombineTexts =
+    ##f`, which the twin writes. With the words off no text item is made at all, so nothing
+    is drawn and nothing is reserved — the combining itself is unchanged.
+
   The editor completes the block pre-filled with the defaults, the keys, and each key's
   words, and colours them inside the block; an unknown key is an error and a bad word is
   refused on the word. A book that writes no `layout` block is unchanged.

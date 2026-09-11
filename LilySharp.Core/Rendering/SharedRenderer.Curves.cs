@@ -437,7 +437,7 @@ internal static partial class SharedRenderer
                 MusicMarkEngraver.BuildAllMarks(score.MusicMarks,
                     score.PrimaryContentStaff.PrimaryVoice.Measures, score.Tempo,
                     score.SwingSubdivision, score.TempoText, score.TempoBeatUnit, score.TempoDots,
-                    score.Header.Tempo),
+                    score.Header.Tempo, score.LayoutPlan.SectionLabels),
                 static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
             // Lyrics carry the source offset on their nested LyricItem (the renderer draws
             // data-pos from Item.SourcePosition); re-derive that from the live Lyrics table.

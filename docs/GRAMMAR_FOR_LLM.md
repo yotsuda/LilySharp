@@ -39,8 +39,9 @@ paper {                  // optional; page dimensions (defaults = LilyPond's a4)
 }
 layout {                 // optional; the score-wide display switches (see the layout section
   marks stacked         // below): how a section label and the tempo at the same bar are
-  barNumbers lines      // arranged (stacked | beside), and which bars carry a number
-}                       // (lines | none | every N). Both shown at their defaults.
+  barNumbers lines      // arranged, which bars carry a number, and which notes carry a
+  accidentals default   // printed accidental. All three shown at their defaults.
+}
 
 part rightHand { clef treble }  // declare each part; clef lives here
 part leftHand  { clef bass }    // part names are identifiers, NOT reserved words
@@ -750,7 +751,10 @@ score references as `layout NAME` (or overrides in part with `layout NAME { … 
 layout {
   marks beside             // section label + tempo at the same bar: stacked (default) | beside
   barNumbers every 4       // which bars carry a number: lines (default) | none | every N
-}
+  accidentals modern       // which notes carry one: default | modern | modernCautionary
+  sectionLabels plain      //                        | forget | noReset
+  partCombineText off      // section names: boxed (default) | plain | none
+}                          // a2 / Solo words: on (default) | off
 ```
 
 - `marks stacked` is LilyPond's: the boxed label over the tempo, each on its own anchor.
@@ -763,6 +767,23 @@ layout {
   whose number is a multiple of N wherever it stands, and ONLY those — a line opening on
   bar 3 under `every 2` opens with no number, as LilyPond's `every-nth-bar-number-visible`
   prints it. N is a whole number of at least 1. The twin writes the same LilyPond words.
+- `accidentals default` is the 18th-century style Lily# has always drawn: an alteration
+  holds to the bar line, in its own octave. `modern` is Kurt Stone's — cancelled in other
+  octaves and in the next measure too, and with no restore-natural. `modernCautionary`
+  prints the accidentals `modern` ADDS in parentheses. `forget` remembers nothing (every
+  note is read against the key signature). `noReset` never forgets. LilyPond's
+  `\accidentalStyle` table, for the styles whose context is the staff; its voice / piano /
+  choral families name a context a score-wide switch cannot, and are not offered. The twin
+  writes `\accidentalStyle modern` at the head of each part's music.
+- `sectionLabels boxed` is the frame Lily# has always drawn (Lily#-own: LilyPond's
+  SectionLabel grob draws the bare string). `plain` drops the frame and engraves the name
+  alone, which is LilyPond's own picture, and the twin writes `\mark \markup` with no
+  `\box`. `none` engraves no section names at all — the part sheet's answer — and the twin
+  writes no `\mark` either. The form still plays the section; MIDI and MusicXML are
+  untouched.
+- `partCombineText on` prints `a2` / `Solo` / `Solo II` on a `combinedStaff` (LilyPond's
+  default); `off` is its `printPartCombineTexts = ##f`, which the twin writes. The merging
+  itself is unchanged — this is the words, not the combining.
 - ⚠️ **The keyword is `layout` and it takes a BLOCK.** A bare `marks beside` or
   `barNumbers none` at the top level is an error (the words are not directives); write
   `layout { marks beside }`. The keys and their words are not reserved (`part marks { }`

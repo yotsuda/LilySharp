@@ -55,6 +55,9 @@ internal static class LayoutPlanReader
     {
         MarkArrangement.Property => MarkArrangement.Modes,
         BarNumberPolicy.Key => BarNumberPolicy.Words,
+        AccidentalStyles.Key => AccidentalStyles.Words,
+        SectionLabels.Key => SectionLabels.Words,
+        PartCombineTexts.Key => PartCombineTexts.Words,
         _ => [],
     };
 
@@ -203,6 +206,18 @@ internal static class LayoutPlanReader
             {
                 MarkArrangement.Property => ReadMarks(plan, entry, span, found),
                 BarNumberPolicy.Key => ReadBarNumbers(plan, entry, span, found),
+                AccidentalStyles.Key => ReadAccidentals(plan, entry, span, found),
+                SectionLabels.Key => ReadOneWord(plan, entry, span, found, SectionLabels.Key,
+                    SectionLabels.Words, w => SectionLabels.Find(w) is { } s
+                        ? plan with { SectionLabels = s } : null),
+                PartCombineTexts.Key => ReadOneWord(plan, entry, span, found, PartCombineTexts.Key,
+                    PartCombineTexts.Words, w => PartCombineTexts.Find(w) is { } b
+                        ? plan with { PartCombineText = b } : null),
+                // ⚠️ A key published in SyntaxFacts.LayoutKeyVocabulary with no arm here
+                // lands on the default below and binds NOTHING, in silence — "a switch
+                // nobody reads looks exactly like one that works", the sentence the
+                // unknown-key error exists for, one level in. LayoutBlockTests'
+                // EveryPublishedKey_IsBoundByTheReader is the machine that says so.
                 _ => plan,
             };
         }
@@ -292,6 +307,69 @@ internal static class LayoutPlanReader
             return plan;
         }
         return plan with { BarNumbers = policy };
+    }
+
+    // accidentals default | modern | modernCautionary | forget | noReset — exactly one word.
+    private static LayoutPlan ReadAccidentals(
+        LayoutPlan plan, LayoutDeclarationSyntax.Entry entry, TextSpan keySpan, List<Problem> found)
+    {
+        string takes = $"'{AccidentalStyles.Key}' takes "
+            + string.Join(", ", AccidentalStyles.Words.Take(AccidentalStyles.Words.Count - 1))
+            + " or " + AccidentalStyles.Words[AccidentalStyles.Words.Count - 1];
+        if (entry.Values.Count == 0)
+        {
+            found.Add(new Problem(keySpan, DiagnosticCodes.LayoutEntryBadValue,
+                takes + $" — e.g. '{AccidentalStyles.Key} modern'.", IsError: true));
+            return plan;
+        }
+        var word = entry.Values[0];
+        if (AccidentalStyles.Find(word.Text) is not { } style)
+        {
+            found.Add(new Problem(word.Span, DiagnosticCodes.LayoutEntryBadValue,
+                $"'{word.Text}' is not an accidental style. " + takes + ".", IsError: true));
+            return plan;
+        }
+        if (entry.Values.Count > 1)
+        {
+            found.Add(new Problem(entry.Values[1].Span, DiagnosticCodes.LayoutEntryBadValue,
+                takes + $" — one word; '{entry.Values[1].Text}' is extra.", IsError: true));
+            return plan;
+        }
+        return plan with { Accidentals = style };
+    }
+
+    /// <summary>
+    /// The shape a key with ONE word out of a closed list takes: exactly one word, from the
+    /// list, and nothing after it. <paramref name="bind"/> answers the new plan for a word
+    /// it knows and null for one it does not, so the vocabulary and the binding stay in the
+    /// key's own home rather than being spelled twice here.
+    /// </summary>
+    private static LayoutPlan ReadOneWord(
+        LayoutPlan plan, LayoutDeclarationSyntax.Entry entry, TextSpan keySpan, List<Problem> found,
+        string key, IReadOnlyList<string> words, Func<string, LayoutPlan?> bind)
+    {
+        string takes = $"'{key}' takes "
+            + string.Join(", ", words.Take(words.Count - 1)) + " or " + words[words.Count - 1];
+        if (entry.Values.Count == 0)
+        {
+            found.Add(new Problem(keySpan, DiagnosticCodes.LayoutEntryBadValue,
+                takes + $" — e.g. '{key} {words[1]}'.", IsError: true));
+            return plan;
+        }
+        var word = entry.Values[0];
+        if (bind(word.Text) is not { } bound)
+        {
+            found.Add(new Problem(word.Span, DiagnosticCodes.LayoutEntryBadValue,
+                $"'{word.Text}' is not a value of '{key}'. " + takes + ".", IsError: true));
+            return plan;
+        }
+        if (entry.Values.Count > 1)
+        {
+            found.Add(new Problem(entry.Values[1].Span, DiagnosticCodes.LayoutEntryBadValue,
+                takes + $" — one word; '{entry.Values[1].Text}' is extra.", IsError: true));
+            return plan;
+        }
+        return bound;
     }
 
     /// <summary>The canonical spelling <paramref name="word"/> matches among the keys, or

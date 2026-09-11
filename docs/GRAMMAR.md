@@ -573,9 +573,15 @@ SignedNumber   = [ '-' ] , ( Integer | Decimal ) ;
 LayoutDecl     = 'layout' , [ Identifier ] , LayoutBlock ;
 LayoutBlock    = '{' , { LayoutEntry } , '}' ;
 LayoutEntry    = 'marks' , MarkArrangement
-               | 'barNumbers' , BarNumberPolicy ;
+               | 'barNumbers' , BarNumberPolicy
+               | 'accidentals' , AccidentalStyle
+               | 'sectionLabels' , SectionLabelStyle
+               | 'partCombineText' , OnOff ;
 MarkArrangement = 'stacked' | 'beside' ;
 BarNumberPolicy = 'lines' | 'none' | 'every' , Integer ;
+AccidentalStyle = 'default' | 'modern' | 'modernCautionary' | 'forget' | 'noReset' ;
+SectionLabelStyle = 'boxed' | 'plain' | 'none' ;
+OnOff          = 'on' | 'off' ;
 
 (* THE SCORE-WIDE DISPLAY SWITCHES — closed vocabularies that say how a class of symbol
    is drawn or arranged: no unit, no grob scope, one answer for the whole page. The
@@ -620,6 +626,44 @@ BarNumberPolicy = 'lines' | 'none' | 'every' , Integer ;
    count is a whole number of at least 1 ('every 1' numbers every bar, the first
    included). The .ly twin writes the same LilyPond words into its \layout block.
 
+   accidentals — which notes carry a printed accidental, LilyPond's \accidentalStyle
+   table transcribed for the styles whose context is the staff. 'default' (the default)
+   is the 18th-century one Lily# has always drawn: an alteration holds to the bar line,
+   in its own octave. 'modern' is Kurt Stone's — the same, plus cancellation in other
+   octaves and in the next measure (autoAccidentals = same-octave 0, any-octave 0,
+   same-octave 1), and no restore-natural (extraNatural #f). 'modernCautionary' is
+   'modern' with the accidentals Stone ADDS printed in parentheses (they are its
+   autoCautionaries). 'forget' remembers nothing, so every note is read against the key
+   signature alone (laziness -1). 'noReset' never forgets: an accidental holds until
+   something overrides it, possibly many measures later (laziness #t).
+
+   NOT HERE, and as absences rather than approximations: LilyPond's voice / piano /
+   choral families name a Voice / GrandStaff / ChoirStaff CONTEXT, and a layout switch
+   is score-wide with no context to name; its neo-modern, teaching and dodecaphonic
+   families need rules that are not make-accidental-rule. A style this table does not
+   hold is refused at the word. The .ly twin writes `\accidentalStyle <name>` (LilyPond's
+   hyphenated spelling) at the head of each part's music, where the function's own
+   default context is the Staff — a book that writes no style writes nothing there.
+
+   sectionLabels — how a form section's name is drawn. 'boxed' (the default) is the
+   frame Lily# has always drawn, and it is Lily#-OWN: LilyPond's SectionLabel grob draws
+   the bare string, and the twin reaches Lily#'s picture by writing \mark \markup \box.
+   'plain' drops the frame and engraves the name alone, which IS LilyPond's own picture,
+   and the twin then writes \mark \markup without the \box. 'none' engraves no name at
+   all — the part sheet's answer — and the twin then writes no \mark either, so the two
+   pictures stay one picture. It is a DISPLAY switch: the form still plays the section,
+   and MIDI / MusicXML are untouched.
+   NOT here yet: 'plain' (the name with no frame, which is LilyPond's own picture). The
+   frame's size is priced at nine sites, so the switch has to ride the MARK rather than be
+   read from the score — its own leg, stated rather than half-threaded
+   (MusicMarkEngraver.LabelBoxMargin's remark lists the nine).
+
+   partCombineText — whether a combinedStaff prints the 'a2' / 'Solo' / 'Solo II' words.
+   'on' is the default and LilyPond's; 'off' is its printPartCombineTexts = ##f, which the
+   twin writes. With the words off the engraver makes no text item at all, so nothing is
+   drawn and nothing is reserved. The COMBINING itself is unchanged — this switch is the
+   words, not the merge.
+
    The keys are matched case-insensitively (a paper key's rule); the value words are
    the language's closed vocabulary, canonical case only. Neither the keys nor the
    words are reserved — 'part marks { … }' compiles. An unknown key is an ERROR, the
@@ -631,6 +675,9 @@ BarNumberPolicy = 'lines' | 'none' | 'every' , Integer ;
    layout {
      marks beside
      barNumbers every 4
+     accidentals modern
+     sectionLabels none
+     partCombineText off
    }
 *)
 

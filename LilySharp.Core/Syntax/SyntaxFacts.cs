@@ -250,7 +250,8 @@ internal static class SyntaxFacts
     /// (<see cref="LayoutDeclarationSyntax.Entries"/>) needs to know a key from a value to
     /// cut the entries; the reader (<c>LayoutPlanReader</c>) reads the same list.
     /// </summary>
-    public static IReadOnlyList<string> LayoutKeyVocabulary { get; } = ["marks", "barNumbers"];
+    public static IReadOnlyList<string> LayoutKeyVocabulary { get; } =
+        ["marks", "barNumbers", "accidentals", "sectionLabels", "partCombineText"];
 
     /// <summary>True when <paramref name="word"/> is a layout key, case-insensitively —
     /// the block's keys are matched like a paper key's.</summary>

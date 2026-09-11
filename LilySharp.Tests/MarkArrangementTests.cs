@@ -185,7 +185,8 @@ public class MarkArrangementTests
         var fonts = score.TextMetrics;
         var (label, tempo) = Pair(layout);
         var item = new MusicMarkItem(MusicMarkType.SectionLabel, label.Text, label.MeasureIndex, 0);
-        double halfW = MusicMarkEngraver.LabelBoxHalfWidth(fonts, MusicMarkType.SectionLabel, label.Text);
+        double halfW = MusicMarkEngraver.LabelBoxHalfWidth(
+            fonts, MusicMarkType.SectionLabel, label.Text, label.Boxed);
 
         // The label's LEFT edge is the line-start edge (indent + 0.3) — the placement
         // session 324 retired from the default and this option brings back.
@@ -193,9 +194,11 @@ public class MarkArrangementTests
         Assert.Equal(indent + 0.3 + halfW, label.X, 9);
 
         // The tempo's ink left is one gap past the box, its baseline on the label text's.
-        Assert.Equal(MusicMarkEngraver.BesideTempoX(fonts, item, label.X), tempo.X, 9);
+        Assert.Equal(MusicMarkEngraver.BesideTempoX(fonts, item, label.X, label.Boxed), tempo.X, 9);
         Assert.Equal(label.X + halfW + MusicMarkEngraver.BesideTempoGap, tempo.X, 9);
-        Assert.Equal(MusicMarkEngraver.BesideTempoBaselineUp(fonts, item, label.YUp), tempo.YUp, 9);
+        Assert.Equal(
+            MusicMarkEngraver.BesideTempoBaselineUp(fonts, item, label.YUp, label.Boxed),
+            tempo.YUp, 9);
         Assert.True(tempo.YUp < label.YUp, "the digits stand on the label's baseline, below its centre");
 
         // The pair is one union for the outside-staff pass: the tempo names its label.
@@ -218,7 +221,8 @@ public class MarkArrangementTests
             $"stacked label {sLabel.X:F3} should stand right of the beside label {bLabel.X:F3}");
         // Stacked: the tempo self-aligns on the METER column, not on the label's box, and
         // the two are on different lines (label over tempo) rather than one.
-        double halfW = MusicMarkEngraver.LabelBoxHalfWidth(fonts, MusicMarkType.SectionLabel, sLabel.Text);
+        double halfW = MusicMarkEngraver.LabelBoxHalfWidth(
+            fonts, MusicMarkType.SectionLabel, sLabel.Text, sLabel.Boxed);
         Assert.NotEqual(sLabel.X + halfW + MusicMarkEngraver.BesideTempoGap, sTempo.X, 6);
         Assert.Equal(-1, sTempo.BesideOfSourceIndex);
         Assert.True(sLabel.YUp > sTempo.YUp + 1.0,
@@ -270,7 +274,9 @@ public class MarkArrangementTests
         Assert.True(hTempo.YUp > qTempo.YUp + 0.5,
             $"the high note should lift the tempo ({qTempo.YUp:F3} -> {hTempo.YUp:F3})");
         Assert.Equal(hLabel.YUp - qLabel.YUp, hTempo.YUp - qTempo.YUp, 9);
-        Assert.Equal(MusicMarkEngraver.BesideTempoBaselineUp(fonts, item, hLabel.YUp), hTempo.YUp, 9);
+        Assert.Equal(
+            MusicMarkEngraver.BesideTempoBaselineUp(fonts, item, hLabel.YUp, hLabel.Boxed),
+            hTempo.YUp, 9);
     }
 
     // ---------------------------------------------------------------- the readers

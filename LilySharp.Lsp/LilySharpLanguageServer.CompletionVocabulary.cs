@@ -389,6 +389,70 @@ public sealed partial class LilySharpLanguageServer
         };
     }
 
+    // Prose per accidental style — the same contract as the tables above.
+    private static readonly System.Collections.Generic.Dictionary<string, string> AccidentalStyleDetails = new()
+    {
+        ["default"] = "18th-century: an accidental holds to the bar line, in its own octave (LilyPond's; the default)",
+        ["modern"] = "Kurt Stone's: also cancelled in other octaves and in the next measure",
+        ["modernCautionary"] = "Modern, with the accidentals it ADDS to the old standard printed in parentheses",
+        ["forget"] = "Nothing is remembered: every note is read against the key signature alone",
+        ["noReset"] = "The bar line resets nothing: an accidental holds until it is overridden",
+    };
+
+    // Prose per sectionLabels word and per partCombineText word — the same contract again.
+    private static readonly System.Collections.Generic.Dictionary<string, string> SectionLabelDetails = new()
+    {
+        ["boxed"] = "The section's name in a frame above the staff (the default)",
+        ["plain"] = "The name alone, no frame — what LilyPond's own SectionLabel draws",
+        ["none"] = "No section names at all — the part sheet's answer (the form still plays them)",
+    };
+
+    private static readonly System.Collections.Generic.Dictionary<string, string> PartCombineTextDetails = new()
+    {
+        ["on"] = "A combinedStaff prints a2 / Solo / Solo II (LilyPond's; the default)",
+        ["off"] = "A combinedStaff prints no a2 / Solo words",
+    };
+
+    /// <summary>After <c>layout { sectionLabels</c>.</summary>
+    internal static CompletionList GetSectionLabelCompletions()
+        => WordList(LanguageVocabulary.SectionLabelStyles, SectionLabelDetails);
+
+    /// <summary>After <c>layout { partCombineText</c>.</summary>
+    internal static CompletionList GetPartCombineTextCompletions()
+        => WordList(LanguageVocabulary.PartCombineTextWords, PartCombineTextDetails);
+
+    /// <summary>A closed word list from the compiler, in its order, each row's prose from
+    /// the table beside it — the shape every <c>layout { }</c> value list takes.</summary>
+    private static CompletionList WordList(
+        System.Collections.Generic.IReadOnlyCollection<string> words,
+        System.Collections.Generic.Dictionary<string, string> details)
+        => new()
+        {
+            Items = words.Select((name, i) => new CompletionItem
+            {
+                Label = name,
+                Kind = CompletionItemKind.EnumMember,
+                Detail = details.TryGetValue(name, out var d) ? d : null,
+                SortText = i.ToString(),
+            }).ToArray()
+        };
+
+    /// <summary>After <c>layout { accidentals</c>: the styles, from the compiler, in its
+    /// order (the default first).</summary>
+    internal static CompletionList GetAccidentalStyleCompletions()
+    {
+        return new CompletionList
+        {
+            Items = LanguageVocabulary.AccidentalStyleWords.Select((name, i) => new CompletionItem
+            {
+                Label = name,
+                Kind = CompletionItemKind.EnumMember,
+                Detail = AccidentalStyleDetails.TryGetValue(name, out var d) ? d : null,
+                SortText = i.ToString(),
+            }).ToArray()
+        };
+    }
+
     /// <summary>
     /// At <c>layout |</c> (the keyword typed, nothing after it): the block forms, the same
     /// motion as <c>paper</c>. ★ THE PRE-FILLED VALUES ARE THE DEFAULTS (stacked, lines),
@@ -405,7 +469,8 @@ public sealed partial class LilySharpLanguageServer
                     FilterText = "layout",
                     Kind = CompletionItemKind.Snippet,
                     InsertTextFormat = InsertTextFormat.Snippet,
-                    InsertText = "{\n  marks ${1:stacked}\n  barNumbers ${2:lines}$0\n}",
+                    InsertText = "{\n  marks ${1:stacked}\n  barNumbers ${2:lines}\n  accidentals ${3:default}"
+                        + "\n  sectionLabels ${4:boxed}\n  partCombineText ${5:on}$0\n}",
                     Preselect = true,
                     SortText = "0",
                     Detail = "Set the score's display switches (pre-filled with LilyPond's defaults)",
@@ -449,6 +514,9 @@ public sealed partial class LilySharpLanguageServer
     {
         "marks" => "How a section label and the tempo at the same bar are arranged: stacked (default) | beside",
         "barNumbers" => "Which bars carry a number: lines (default) | none | every N",
+        "accidentals" => "Which notes carry a printed accidental: default | modern | modernCautionary | forget | noReset",
+        "sectionLabels" => "How a form section's name is drawn: boxed (default) | plain | none",
+        "partCombineText" => "Whether a combinedStaff prints a2 / Solo: on (default) | off",
         _ => "Layout key",
     };
 
@@ -2717,7 +2785,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "pitch", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "pitch $0", Detail = "Pitch convention for transposing instruments: written (default) | concert", Command = new Command { Title = "Suggest pitch mode", CommandIdentifier = "editor.action.triggerSuggest" } },
                 // ⚠️ Pre-filled with the DEFAULTS (stacked, lines), the paper snippet's rule:
                 // accepting the completion and changing nothing does not move the page.
-                new CompletionItem { Label = "layout", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "layout {\n\tmarks ${1:stacked}\n\tbarNumbers ${2:lines}$0\n}", Detail = "Display switches (marks stacked|beside, barNumbers lines|none|every N), pre-filled with LilyPond's defaults" },
+                new CompletionItem { Label = "layout", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "layout {\n\tmarks ${1:stacked}\n\tbarNumbers ${2:lines}\n\taccidentals ${3:default}\n\tsectionLabels ${4:boxed}\n\tpartCombineText ${5:on}$0\n}", Detail = "Display switches (marks, barNumbers, accidentals, sectionLabels, partCombineText), pre-filled with LilyPond's defaults" },
                 // `override` is a valid global default; `revert` / `once` are NOT offered at
                 // the top level — they only work in a music stream (LYS1023 otherwise).
                 // `partial` is likewise NOT offered here — a pickup belongs to a section, not

@@ -520,6 +520,12 @@ public sealed partial class LilySharpLanguageServer
         AfterLayoutMarks,
         /// <summary><c>layout { barNumbers |</c> — the three policies.</summary>
         AfterLayoutBarNumbers,
+        /// <summary><c>layout { accidentals |</c> — the accidental styles.</summary>
+        AfterLayoutAccidentals,
+        /// <summary><c>layout { sectionLabels |</c> — boxed / plain / none.</summary>
+        AfterLayoutSectionLabels,
+        /// <summary><c>layout { partCombineText |</c> — on / off.</summary>
+        AfterLayoutPartCombineText,
         ScoreBlock,
         StaffGroupBlock,
         AfterStaffRef,
@@ -825,6 +831,12 @@ public sealed partial class LilySharpLanguageServer
                 return CompletionContext.AfterLayoutMarks;
             if (prevWord.Equals(BarNumberPolicy.Key, StringComparison.OrdinalIgnoreCase))
                 return CompletionContext.AfterLayoutBarNumbers;
+            if (prevWord.Equals(AccidentalStyles.Key, StringComparison.OrdinalIgnoreCase))
+                return CompletionContext.AfterLayoutAccidentals;
+            if (prevWord.Equals(SectionLabels.Key, StringComparison.OrdinalIgnoreCase))
+                return CompletionContext.AfterLayoutSectionLabels;
+            if (prevWord.Equals(PartCombineTexts.Key, StringComparison.OrdinalIgnoreCase))
+                return CompletionContext.AfterLayoutPartCombineText;
             return CompletionContext.LayoutBlock;
         }
 

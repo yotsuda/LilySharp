@@ -178,6 +178,9 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterLayoutBlockRef => GetDeclaredNameCompletions(doc.Text, "layout", "Layout block"),
             CompletionContext.AfterLayoutMarks => GetMarkArrangementCompletions(),
             CompletionContext.AfterLayoutBarNumbers => GetBarNumberPolicyCompletions(),
+            CompletionContext.AfterLayoutAccidentals => GetAccidentalStyleCompletions(),
+            CompletionContext.AfterLayoutSectionLabels => GetSectionLabelCompletions(),
+            CompletionContext.AfterLayoutPartCombineText => GetPartCombineTextCompletions(),
             // The key the caret sits after decides which values fit: a generic family takes
             // only quoted names, a role or group may also redirect to a family.
             CompletionContext.AfterFontRoleKey =>

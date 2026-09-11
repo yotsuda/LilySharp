@@ -104,6 +104,18 @@ public static class LanguageVocabulary
     /// count after it.</summary>
     public static IReadOnlyCollection<string> BarNumberPolicies => BarNumberPolicy.Words;
 
+    /// <summary>The accidental styles the <c>accidentals</c> key of a <c>layout { }</c>
+    /// block takes (<see cref="AccidentalStyles"/>), the default first.</summary>
+    public static IReadOnlyCollection<string> AccidentalStyleWords => AccidentalStyles.Words;
+
+    /// <summary>The words the <c>sectionLabels</c> key of a <c>layout { }</c> block takes
+    /// (<see cref="Semantics.SectionLabels"/>), the default first.</summary>
+    public static IReadOnlyCollection<string> SectionLabelStyles => SectionLabels.Words;
+
+    /// <summary>The words the <c>partCombineText</c> key of a <c>layout { }</c> block takes
+    /// (<see cref="PartCombineTexts"/>), the default first.</summary>
+    public static IReadOnlyCollection<string> PartCombineTextWords => PartCombineTexts.Words;
+
     /// <summary>The keys a <c>layout { }</c> block takes (<c>marks</c>, <c>barNumbers</c>) —
     /// <see cref="SyntaxFacts.LayoutKeyVocabulary"/>, the list the block's entry walker and
     /// its reader share.</summary>

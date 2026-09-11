@@ -1199,6 +1199,25 @@ public sealed class LilyPondExporter
 
     private void EmitScoreSettings(CompilationUnitSyntax root)
     {
+        // The accidental style, when the score asks for one that is not LilyPond's own
+        // default. It stands at the head of the part's music because `\accidentalStyle` is
+        // MUSIC (a context-spec music function, not a context mod), and its own default
+        // context is the Staff this variable becomes — which is the scope Lily# keeps its
+        // accidental memory in (Semantics.AccidentalStyles' remark).
+        // LILYPOND-REF: scm/music-functions.scm:2074-2097 set-accidental-style — the
+        //   function \accidentalStyle calls, whose context argument defaults to 'Staff.
+        // A book that writes no style writes nothing here, so its twin is unchanged.
+        if (_layoutPlan.AccidentalStyle is { } style && style != Semantics.AccidentalStyles.Default)
+            _sb.Append("  \\accidentalStyle ").Append(style.LilyPondName).Append('\n');
+
+        // `layout { partCombineText off }` is LilyPond's own property, and a Staff one, so
+        // it is set in the music like the style above. A score that keeps the words writes
+        // nothing (##t is LilyPond's default).
+        // LILYPOND-REF: ly/engraver-init.ly printPartCombineTexts — the Staff property
+        //   lily/part-combine-engraver.cc reads before it makes the "a2" / "Solo" text.
+        if (!_layoutPlan.PartCombineText)
+            _sb.Append("  \\set Staff.printPartCombineTexts = ##f\n");
+
         // Only the file-level (top-level) settings, in source order.
         foreach (var m in root.Members)
         {
@@ -2911,8 +2930,16 @@ public sealed class LilyPondExporter
                 _tonic = KeyTonic.CMajor;
             }
         }
-        if (sp.MarkLabel is { Length: > 0 } label)
-            parts.Add("\\mark \\markup \\box \"" + Escape(label) + "\"");
+        // `layout { sectionLabels … }`: the page engraves no section name under `none`, so the
+        // twin writes none either — the two pictures are the same picture or the twin is not
+        // one. Under `plain` the twin drops the `\box` and writes the bare string, which is
+        // what LilyPond's own SectionLabel grob draws; the frame is the Lily#-own part and
+        // `\box` is only how the twin reaches it.
+        if (sp.MarkLabel is { Length: > 0 } label
+            && _layoutPlan.SectionLabels != Semantics.SectionLabelStyle.None)
+            parts.Add(_layoutPlan.SectionLabels == Semantics.SectionLabelStyle.Plain
+                ? "\\mark \\markup \"" + Escape(label) + "\""
+                : "\\mark \\markup \\box \"" + Escape(label) + "\"");
         return string.Join(" ", parts);
     }
 

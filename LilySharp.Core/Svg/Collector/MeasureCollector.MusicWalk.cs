@@ -594,7 +594,8 @@ public sealed partial class MeasureCollector
             _octave.CurrentOctave = anchor;
         }
         int staffPosition = rp.StaffPosition;
-        var accidental = GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
+        var (accidental, styleCourtesy) =
+            GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
         if (pitch.QuarterOffset != 0)
             accidental = QuarterToneAccidental(pitch, accidental);
         bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
@@ -616,7 +617,9 @@ public sealed partial class MeasureCollector
                 hasTieStart: tieStart,
                 hasSlurStart: first && marks.SlurStart,
                 hasSlurEnd: last && marks.SlurEnd,
-                isCourtesy: false,
+                // A cautionary STYLE parenthesises the accidental it asked for, exactly as
+                // an explicit @courtesy does (Semantics.AccidentalStyles.ModernCautionary).
+                isCourtesy: first && styleCourtesy,
                 fingering: first ? fingering : null,
                 hasLaissezVibrer: last && hasLv,
                 hasRepeatTie: first && hasRepeatTie)
@@ -645,7 +648,8 @@ public sealed partial class MeasureCollector
         var (step, alteration, octave) = ChordDegrees.Resolve(
             rootStep, anchorOctave, degree.Number, degree.Alteration, degree.OctaveOffset, writtenKeySharps);
         var rp = ResolveAbsolutePitch(step, alteration, octave, degree.SourceStart);
-        var accidental = GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
+        var (accidental, styleCourtesy) =
+            GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
         bool needsLedger = rp.StaffPosition is <= -6 or >= 6;
         int midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
         for (int k = 0; k < parts.Count; k++)
@@ -657,7 +661,7 @@ public sealed partial class MeasureCollector
                 hasTieStart: tieStart,
                 hasSlurStart: first && marks.SlurStart,
                 hasSlurEnd: last && marks.SlurEnd,
-                isCourtesy: false)
+                isCourtesy: first && styleCourtesy)
             {
                 Midi = midi,
                 StringNumber = groupString,

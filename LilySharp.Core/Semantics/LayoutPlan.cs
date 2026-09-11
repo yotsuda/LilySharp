@@ -45,12 +45,93 @@ public sealed record LayoutPlan(
     // false is `marks stacked`, LilyPond's arrangement and the default (MarkArrangement).
     bool MarksBeside,
     // `barNumbers lines|none|every N` — where the bar numbers stand (BarNumberPolicy).
-    BarNumberPolicy BarNumbers)
+    BarNumberPolicy BarNumbers,
+    // `accidentals default|modern|…` — which notes carry a printed accidental
+    // (AccidentalStyles). Null is the default style, so LayoutPlan.Default compares equal
+    // to a plan that states it.
+    AccidentalStyleSpec? Accidentals = null,
+    // `sectionLabels boxed|plain|none` — how a form section's name is drawn.
+    SectionLabelStyle SectionLabels = SectionLabelStyle.Boxed,
+    // `partCombineText on|off` — whether a combinedStaff prints "a2" / "Solo" / "Solo II".
+    bool PartCombineText = true)
 {
     /// <summary>What a book with no <c>layout { }</c> gets: LilyPond's picture on every
     /// switch — labels stacked over the tempo, a number at the start of every line but the
-    /// first.</summary>
+    /// first, and the 18th-century accidental style.</summary>
     public static readonly LayoutPlan Default = new(MarksBeside: false, BarNumberPolicy.Lines);
+
+    /// <summary>The accidental style this plan asks for, never null.</summary>
+    public AccidentalStyleSpec AccidentalStyle => Accidentals ?? AccidentalStyles.Default;
+}
+
+/// <summary>How a form section's name is drawn above the staff.</summary>
+/// <remarks>
+/// ⚠️ The BOX is Lily#-own: LilyPond's SectionLabel grob draws the bare string, and the
+/// twin reaches Lily#'s picture by writing <c>\mark \markup \box</c>. So <c>plain</c> is
+/// the arrangement that agrees with LilyPond's own grob, and <c>boxed</c> — the default,
+/// and what every book on disk prints — is the divergence Lily# chose (session 324 /
+/// 368's ledger points say so in the same words).
+/// </remarks>
+public enum SectionLabelStyle
+{
+    /// <summary>A frame around the name (the default; Lily#-own).</summary>
+    Boxed,
+    /// <summary>The name alone, with no frame — LilyPond's own SectionLabel picture.</summary>
+    /// <remarks>
+    /// The frame's size is priced at nine sites, so this arm reaches them as a bit ON THE
+    /// MARK (<c>MusicMarkLayout.Boxed</c>), handed to every one of them as a REQUIRED
+    /// argument: a site that forgets does not compile. Half-threading it is how two places
+    /// come to price one box differently, which this box has already taught once (§5.2.1②).
+    /// </remarks>
+    Plain,
+
+    /// <summary>No label at all: the section's name is not engraved (the part sheet's
+    /// answer). The form still plays it, and MIDI / MusicXML are untouched — this is a
+    /// display switch.</summary>
+    None,
+}
+
+/// <summary>The <c>sectionLabels</c> key's words.</summary>
+public static class SectionLabels
+{
+    /// <summary>The key as written in the block.</summary>
+    public const string Key = "sectionLabels";
+
+    /// <summary>The words, the default first.</summary>
+    public static readonly IReadOnlyList<string> Words = ["boxed", "plain", "none"];
+
+    /// <summary>The style <paramref name="word"/> names, or null.</summary>
+    public static SectionLabelStyle? Find(string word) => word switch
+    {
+        "boxed" => SectionLabelStyle.Boxed,
+        "plain" => SectionLabelStyle.Plain,
+        "none" => SectionLabelStyle.None,
+        _ => null,
+    };
+
+    /// <summary>The word for <paramref name="style"/>.</summary>
+    public static string WordOf(SectionLabelStyle style) => Words[(int)style];
+}
+
+/// <summary>The <c>partCombineText</c> key's words — LilyPond's
+/// <c>printPartCombineTexts</c>, which is a boolean there too.</summary>
+/// <remarks>LILYPOND-REF: ly/engraver-init.ly printPartCombineTexts — the Staff property
+/// the part-combine engraver asks before it makes the text item.</remarks>
+public static class PartCombineTexts
+{
+    /// <summary>The key as written in the block.</summary>
+    public const string Key = "partCombineText";
+
+    /// <summary>The two words, the default first.</summary>
+    public static readonly IReadOnlyList<string> Words = ["on", "off"];
+
+    /// <summary>True for <c>on</c>, false for <c>off</c>, null for anything else.</summary>
+    public static bool? Find(string word) => word switch
+    {
+        "on" => true,
+        "off" => false,
+        _ => null,
+    };
 }
 
 /// <summary>Which bars carry a printed number.</summary>

@@ -778,6 +778,9 @@ public class EditorColouringTests
         {
             ("marks", LanguageVocabulary.MarkArrangements),
             ("barNumbers", LanguageVocabulary.BarNumberPolicies),
+            ("accidentals", LanguageVocabulary.AccidentalStyleWords),
+            ("sectionLabels", LanguageVocabulary.SectionLabelStyles),
+            ("partCombineText", LanguageVocabulary.PartCombineTextWords),
         })
         {
             string pattern = Assert.Single(rules, r => r.Contains($"({key})\\s+(", StringComparison.Ordinal));
@@ -802,11 +805,19 @@ public class EditorColouringTests
             Assert.True(IsColoured($"marks {word}"), $"`marks {word}` is left plain by the grammar");
         foreach (string word in LanguageVocabulary.BarNumberPolicies)
             Assert.True(IsColoured($"barNumbers {word}"), $"`barNumbers {word}` is left plain by the grammar");
+        foreach (string word in LanguageVocabulary.AccidentalStyleWords)
+            Assert.True(IsColoured($"accidentals {word}"), $"`accidentals {word}` is left plain by the grammar");
+        foreach (string word in LanguageVocabulary.SectionLabelStyles)
+            Assert.True(IsColoured($"sectionLabels {word}"), $"`sectionLabels {word}` is left plain");
+        foreach (string word in LanguageVocabulary.PartCombineTextWords)
+            Assert.True(IsColoured($"partCombineText {word}"), $"`partCombineText {word}` is left plain");
 
         // The block's word is reserved; its keys and words are a writer's own elsewhere.
         Assert.NotEqual(SyntaxKind.Identifier, KindOf("layout"));
         foreach (string word in LanguageVocabulary.LayoutKeys
-                     .Concat(LanguageVocabulary.MarkArrangements).Concat(LanguageVocabulary.BarNumberPolicies))
+                     .Concat(LanguageVocabulary.MarkArrangements).Concat(LanguageVocabulary.BarNumberPolicies)
+                     .Concat(LanguageVocabulary.AccidentalStyleWords)
+                     .Concat(LanguageVocabulary.SectionLabelStyles))
             Assert.Equal(SyntaxKind.Identifier, KindOf(word));
     }
 

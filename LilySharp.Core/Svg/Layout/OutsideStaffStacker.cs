@@ -2696,8 +2696,11 @@ internal static class OutsideStaffStacker
                 // ink and lays its rule outside that, so `A' and `x' get 2.744098 and 1.995679
                 // where one em-derived constant gave both 2.800000. The dimensions have one
                 // home in MusicMarkEngraver — this method is the adapter onto it.
-                double halfW = MusicMarkEngraver.LabelBoxHalfWidth(fonts, m.MarkType, m.Text);
-                double halfH = MusicMarkEngraver.LabelBoxHalfHeight(fonts, m.MarkType, m.Text);
+                // ⚠️ `m.Boxed` is false for a section label under `layout { sectionLabels
+                // plain }` — the frame's bit rides the MARK so this adapter and the draw
+                // cannot answer differently (MusicMarkEngraver.IsBoxDrawn).
+                double halfW = MusicMarkEngraver.LabelBoxHalfWidth(fonts, m.MarkType, m.Text, m.Boxed);
+                double halfH = MusicMarkEngraver.LabelBoxHalfHeight(fonts, m.MarkType, m.Text, m.Boxed);
                 return (-halfW, halfW, halfH, halfH);
             }
             case MusicMarkType.Tempo:

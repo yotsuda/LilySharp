@@ -46,11 +46,20 @@ public readonly record struct MusicMarkLayout(
     int TempoBeatUnit = 4,    // Tempo marks only: metronome beat unit.
     int TempoDots = 0,        // Tempo marks only: dots on the beat unit.
     int StaffIndex = -1,      // owning staff (-1 = top staff); the draw resolves its middle
-    int BesideOfSourceIndex = -1 // Tempo marks only: under `marks beside`, the SourceIndex of
+    int BesideOfSourceIndex = -1, // Tempo marks only: under `marks beside`, the SourceIndex of
                               //   the boxed label this tempo stands to the right of. The
                               //   outside-staff pass prices the two as ONE union and moves
                               //   them together (OutsideStaffStacker.PlaceMusicMarks); −1
                               //   for every mark placed on its own anchor.
+    bool Boxed = true         // Labels only: whether the frame is DRAWN and RESERVED. False
+                              //   for a section label under `layout { sectionLabels plain }`,
+                              //   which is LilyPond's own SectionLabel picture (the frame is
+                              //   Lily#-own). A `@mark` rehearsal box is unaffected — the
+                              //   switch is named for section labels and means them.
+                              //   ⚠️ It rides the LAYOUT so every reader downstream of the
+                              //   engraver — the draw, the stacker's extents, the paging
+                              //   silhouette — asks the same bit instead of re-deriving it
+                              //   from the score, which is the only place that knows it.
 );
 
 /// <summary>
@@ -473,12 +482,21 @@ internal static class MusicMarkEngraver
         // `marks beside` (Semantics.MarkArrangement, MultiStaffScore.MarksBeside): a boxed
         // label keeps the line-start edge and the bar's measure-start tempo stands to its
         // right on one line — see BesidePair. False is the stacked default, LilyPond's.
-        bool marksBeside = false)
+        bool marksBeside = false,
+        // `layout { sectionLabels … }` — passed the way `marksBeside` is, and for the same
+        // reason: on a MULTI-staff score `score` is null here, so reading the plan off it
+        // would silently answer the default for every book with more than one staff.
+        Semantics.SectionLabelStyle sectionLabels = Semantics.SectionLabelStyle.Boxed)
     {
+        // Does THIS mark carry a frame? Only a SECTION label loses one, and only under
+        // `plain`: a `@mark` rehearsal box is a different spelling with its own meaning,
+        // and the switch is named for section labels.
+        bool BoxedOf(MusicMarkType t) => IsBoxDrawn(t, sectionLabels);
+
         // Merge section labels and tempo marking into the mark list
         var allMarks = BuildAllMarks(musicMarks, measures, score?.Tempo, score?.SwingSubdivision ?? 0,
             score?.TempoText, score?.TempoBeatUnit ?? 4, score?.TempoDots ?? 0,
-            score?.Header.Tempo ?? 0);
+            score?.Header.Tempo ?? 0, sectionLabels);
 
         if (allMarks.Length == 0)
             return ImmutableArray<MusicMarkLayout>.Empty;
@@ -795,7 +813,7 @@ internal static class MusicMarkEngraver
                 if (chordNames.IsDefaultOrEmpty) return double.NegativeInfinity;
                 if (ChordBandUp(mark.MeasureIndex) is not { } bandUp || bandUp.IsEmpty)
                     return double.NegativeInfinity;
-                var (mx0, mx1) = MarkXExtent(fonts, mark, markX);
+                var (mx0, mx1) = MarkXExtent(fonts, mark, markX, BoxedOf(mark.Type));
                 var foot = VerticalSkyline.FromBox(
                     mx0, mx1, 0.0, 0.0, VerticalDirection.Down);
                 // LILYPOND-REF: lily/axis-group-interface.cc:663-664 avoid_outside_staff_collisions
@@ -855,8 +873,8 @@ internal static class MusicMarkEngraver
                 if (i == besideTempo)
                     continue;
                 var (mark, x, si) = aboveMarks[i];
-                double halfExtent = GetMarkHalfExtent(fonts, mark.Type, mark.Text);
-                var (chainX0, chainX1) = MarkXExtent(fonts, mark, x);
+                double halfExtent = GetMarkHalfExtent(fonts, mark.Type, mark.Text, BoxedOf(mark.Type));
+                var (chainX0, chainX1) = MarkXExtent(fonts, mark, x, BoxedOf(mark.Type));
                 // The highest already-placed neighbour whose ink meets this one's, or the
                 // base when there is none. The reach is the mark family's own
                 // outside-staff-horizontal-padding (see the constant), the same gap the
@@ -911,7 +929,8 @@ internal static class MusicMarkEngraver
                         // the two are meant to share a line. The overlap is resolved in X
                         // instead (ChordNameEngraver reserves the box), so lifting as well
                         // would undo the placement the decision asks for.
-                        yUp = 2.0 - below + LabelBaselineBelowCentre(fonts, mark.Type, mark.Text);
+                        yUp = 2.0 - below
+                              + LabelBaselineBelowCentre(fonts, mark.Type, mark.Text, BoxedOf(mark.Type));
                     }
                     else
                     {
@@ -953,8 +972,8 @@ internal static class MusicMarkEngraver
                     // top and not just the box (BesideTempoX / BesideTempoBaselineUp are the
                     // one home the reservation reads too).
                     var (tMark, _, tSi) = aboveMarks[besideTempo];
-                    double tX = BesideTempoX(fonts, mark, x);
-                    double tBaseUp = BesideTempoBaselineUp(fonts, mark, yUp);
+                    double tX = BesideTempoX(fonts, mark, x, BoxedOf(mark.Type));
+                    double tBaseUp = BesideTempoBaselineUp(fonts, mark, yUp, BoxedOf(mark.Type));
                     var tInk = MetronomeMarkGeometry.Ink(fonts, tMark.Text, tMark.TempoText,
                         tMark.TempoBeatUnit, tMark.TempoDots, tMark.SwingSubdivision);
                     double tCeilingUp = MarkCeilingUp(tMark, tX);
@@ -966,12 +985,12 @@ internal static class MusicMarkEngraver
                     }
                     placedTopYUp = Math.Max(yUp + halfExtent, tBaseUp + tInk.Top);
                     stackTopYUp = placedTopYUp;
-                    chainX1 = Math.Max(chainX1, MarkXExtent(fonts, tMark, tX).x1);
+                    chainX1 = Math.Max(chainX1, MarkXExtent(fonts, tMark, tX, BoxedOf(tMark.Type)).x1);
                     layouts.Add(new MusicMarkLayout(
                         tMark.MeasureIndex, tX, tBaseUp, tMark.Type, tMark.Text,
                         tMark.IsSymbol, tMark.SourcePosition, tSi, tMark.SwingSubdivision,
                         tMark.TempoText, tMark.TempoBeatUnit, tMark.TempoDots,
-                        BesideOfSourceIndex: si));
+                        BesideOfSourceIndex: si, Boxed: BoxedOf(tMark.Type)));
                 }
 
                 placedAbove.Add((chainX0, chainX1, placedTopYUp));
@@ -979,7 +998,8 @@ internal static class MusicMarkEngraver
                 layouts.Add(new MusicMarkLayout(
                     mark.MeasureIndex, x, yUp, mark.Type, mark.Text,
                     mark.IsSymbol, mark.SourcePosition, si, mark.SwingSubdivision,
-                    mark.TempoText, mark.TempoBeatUnit, mark.TempoDots));
+                    mark.TempoText, mark.TempoBeatUnit, mark.TempoDots,
+                    Boxed: BoxedOf(mark.Type)));
             }
 
             // Stack below-staff marks (lower priority = closer to staff).
@@ -1059,7 +1079,7 @@ internal static class MusicMarkEngraver
                 {
                     double half = belowMarks
                         .Where(e => IsPedal(e.Mark.Type) && PedalFamilyRank(e.Mark.Type) == rank)
-                        .Max(e => GetMarkHalfExtent(fonts, e.Mark.Type, e.Mark.Text));
+                        .Max(e => GetMarkHalfExtent(fonts, e.Mark.Type, e.Mark.Text, BoxedOf(e.Mark.Type)));
                     if (!firstRow)
                         rowYUp -= prevHalf + StackGap + half;
                     pedalRowYUp[rank] = rowYUp;
@@ -1085,7 +1105,7 @@ internal static class MusicMarkEngraver
                 // instead; skip the text layout (its SourceIndex si is already fixed).
                 if (keepMarkText != null && !keepMarkText(mark))
                     continue;
-                double halfExtent = GetMarkHalfExtent(fonts, mark.Type, mark.Text);
+                double halfExtent = GetMarkHalfExtent(fonts, mark.Type, mark.Text, BoxedOf(mark.Type));
 
                 double yUp;
                 bool solvedPedalRow = false;
@@ -1161,7 +1181,7 @@ internal static class MusicMarkEngraver
                 // the 3.2 ss lyric face, as in the spacing extents).
                 if (!lyrics.IsDefaultOrEmpty && !IsPedal(mark.Type))
                 {
-                    var (mx0, mx1) = MarkXExtent(fonts, mark, x);
+                    var (mx0, mx1) = MarkXExtent(fonts, mark, x, BoxedOf(mark.Type));
                     foreach (var ly in lyrics)
                     {
                         if (!SameSystem(ly.Item.MeasureIndex, mark.MeasureIndex))
@@ -1184,7 +1204,8 @@ internal static class MusicMarkEngraver
                     mark.TempoText, mark.TempoBeatUnit, mark.TempoDots,
                     // A solved pedal row's yUp is about ITS OWN staff's middle; the
                     // legacy stack stays in the top-staff frame (StaffIndex −1).
-                    StaffIndex: solvedPedalRow ? mark.StaffIndex : -1));
+                    StaffIndex: solvedPedalRow ? mark.StaffIndex : -1,
+                    Boxed: BoxedOf(mark.Type)));
             }
         }
 
@@ -1236,15 +1257,17 @@ internal static class MusicMarkEngraver
     /// Under <c>marks beside</c>, the tempo's ink left: the label box's right edge plus
     /// the pair's gap.
     /// </summary>
-    internal static double BesideTempoX(ScoreTextMetrics fonts, MusicMarkItem label, double labelX)
-        => labelX + LabelBoxHalfWidth(fonts, label.Type, label.Text) + BesideTempoGap;
+    internal static double BesideTempoX(
+        ScoreTextMetrics fonts, MusicMarkItem label, double labelX, bool boxed)
+        => labelX + LabelBoxHalfWidth(fonts, label.Type, label.Text, boxed) + BesideTempoGap;
 
     /// <summary>
     /// Under <c>marks beside</c>, the tempo's baseline: the label TEXT's baseline, so the
     /// metronome digits and the boxed letter stand on one line.
     /// </summary>
-    internal static double BesideTempoBaselineUp(ScoreTextMetrics fonts, MusicMarkItem label, double labelYUp)
-        => labelYUp - LabelBaselineBelowCentre(fonts, label.Type, label.Text);
+    internal static double BesideTempoBaselineUp(
+        ScoreTextMetrics fonts, MusicMarkItem label, double labelYUp, bool boxed)
+        => labelYUp - LabelBaselineBelowCentre(fonts, label.Type, label.Text, boxed);
 
     // The air between a boxed label's frame and the tempo standing beside it.
     // LILYSHARP-OWN: `marks beside` is a Lily#-own arrangement (user decision 2026-09-02,
@@ -1351,6 +1374,15 @@ internal static class MusicMarkEngraver
     /// co-placement sits the sign's baseline this far below the label's centre line,
     /// i.e. at the label box's bottom edge.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ NOT one of the nine frame-pricing sites, and deliberately not threaded with
+    /// <c>layout { sectionLabels plain }</c>'s bit: this is an OLD constant estimate of the
+    /// box (a hand-picked em times 0.55, not the string's ink — the approximation inventory
+    /// carries it), so subtracting the padding from it would make one wrong number into two.
+    /// The cost under <c>plain</c> is that a boundary "To Coda" tucks 0.2 lower than the
+    /// vanished frame's bottom — on the Lily#-own arrangement already declared at
+    /// <see cref="CoPlaceToCodaWithLabels"/>, which LilyPond does not have at all.
+    /// </remarks>
     private static double LabelBoxHalf(MusicMarkType labelType)
     {
         double labelFs = labelType == MusicMarkType.Rehearsal ? 4.0 * 0.6 : 4.0 * 0.55;
@@ -1397,9 +1429,19 @@ internal static class MusicMarkEngraver
         string? tempoText = null,
         int tempoBeatUnit = 4,
         int tempoDots = 0,
-        int tempoPosition = 0)
+        int tempoPosition = 0,
+        Semantics.SectionLabelStyle sectionLabels = Semantics.SectionLabelStyle.Boxed)
     {
-        var allMarks = MergeSectionLabels(musicMarks, measures);
+        // `layout { sectionLabels none }`: the names are not engraved at all. Gated HERE,
+        // in the one home that merges them in, so every reader follows — the placement, the
+        // staffless spring floor, the beside pair, and the renderer's rebuild of this very
+        // list for data-pos. ⚠️ THAT LAST ONE IS WHY THE GATE CANNOT LIVE DOWNSTREAM:
+        // MusicMarkLayout.SourceIndex is an index INTO this list, so a caller that filtered
+        // and one that did not would resolve every click target after the first label to the
+        // wrong mark. Every caller passes the score's own style for that reason.
+        var allMarks = sectionLabels == Semantics.SectionLabelStyle.None
+            ? (musicMarks.IsDefaultOrEmpty ? ImmutableArray<MusicMarkItem>.Empty : musicMarks)
+            : MergeSectionLabels(musicMarks, measures);
         return MergeTempoMark(allMarks, tempo, swingSubdivision, tempoText, tempoBeatUnit,
             tempoDots, tempoPosition);
     }
@@ -1547,9 +1589,9 @@ internal static class MusicMarkEngraver
     // navigation/pedal mark with the inline chord symbols or lyrics the two overlap tests
     // compare against. The observer therefore has to call it (MusicMarkSpanTests).
     internal static (double x0, double x1) MarkXExtent(ScoreTextMetrics fonts,
-        MusicMarkItem mark, double x)
+        MusicMarkItem mark, double x, bool boxed)
         => MarkXExtent(fonts, mark.Type, mark.Text, mark.TempoText, mark.TempoBeatUnit,
-            mark.TempoDots, mark.SwingSubdivision, x);
+            mark.TempoDots, mark.SwingSubdivision, x, boxed);
 
     /// <summary>
     /// The same extent read off a PLACED mark rather than a collected one.
@@ -1566,12 +1608,14 @@ internal static class MusicMarkEngraver
     /// </remarks>
     internal static (double x0, double x1) MarkXExtent(ScoreTextMetrics fonts,
         MusicMarkLayout mark, double x)
+        // The placed mark carries its own frame bit, so every reader downstream of the
+        // engraver (the paging silhouette, the overlap tests) gets it without asking again.
         => MarkXExtent(fonts, mark.MarkType, mark.Text, mark.TempoText, mark.TempoBeatUnit,
-            mark.TempoDots, mark.SwingSubdivision, x);
+            mark.TempoDots, mark.SwingSubdivision, x, mark.Boxed);
 
     private static (double x0, double x1) MarkXExtent(ScoreTextMetrics fonts,
         MusicMarkType type, string text, string? tempoText, int tempoBeatUnit, int tempoDots,
-        int swingSubdivision, double x)
+        int swingSubdivision, double x, bool boxed)
     {
         switch (type)
         {
@@ -1585,7 +1629,7 @@ internal static class MusicMarkEngraver
             case MusicMarkType.Rehearsal:
             case MusicMarkType.SectionLabel:
             {
-                double half = LabelBoxHalfWidth(fonts, type, text);
+                double half = LabelBoxHalfWidth(fonts, type, text, boxed);
                 return (x - half, x + half);
             }
             case MusicMarkType.Segno:
@@ -1612,6 +1656,22 @@ internal static class MusicMarkEngraver
     /// <summary>The two marks Lily# draws as a framed box around bold text.</summary>
     internal static bool IsBoxedLabel(MusicMarkType type)
         => type is MusicMarkType.Rehearsal or MusicMarkType.SectionLabel;
+
+    /// <summary>
+    /// Whether a mark of <paramref name="type"/> is drawn WITH its frame under
+    /// <paramref name="style"/> — false only for a section label under
+    /// <c>layout { sectionLabels plain }</c>. The one reading of the switch: every site that
+    /// prices, draws or reserves the frame asks this and nothing else, so the drawn box and
+    /// the reserved box cannot answer differently.
+    /// </summary>
+    /// <remarks>
+    /// A <c>Rehearsal</c> mark keeps its frame under every style — the key is spelled
+    /// <c>sectionLabels</c> and says nothing about rehearsal marks, which LilyPond boxes too
+    /// (scm/define-grobs.scm RehearsalMark, whose <c>stencil</c> is <c>ly:text-interface::print</c>
+    /// over a <c>\box</c> markup in the default <c>markFormatter</c>).
+    /// </remarks>
+    internal static bool IsBoxDrawn(MusicMarkType type, Semantics.SectionLabelStyle style)
+        => type != MusicMarkType.SectionLabel || style != Semantics.SectionLabelStyle.Plain;
 
     // ------------------------------------------------------------------------------------
     // THE BOXED LABEL'S DIMENSIONS — ONE HOME (session 344).
@@ -1706,8 +1766,15 @@ internal static class MusicMarkEngraver
     /// scales the box padding with the text, so the padding follows the plan here too.
     /// </para>
     /// </remarks>
-    internal static double LabelBoxMargin(ScoreTextMetrics fonts, MusicMarkType type)
-        => LabelBoxPadding
+    /// <param name="boxed">False for a section label under
+    /// <c>layout { sectionLabels plain }</c>: with no frame there is no padding and no rule,
+    /// so the label's extent IS its string's ink — which is what LilyPond's own SectionLabel
+    /// grob draws. ⚠️ REQUIRED, with no default, on purpose: the frame is priced at nine
+    /// sites and they must agree, so a site that forgets the bit does not compile
+    /// (§5.2.1②, which this box has already taught once).</param>
+    internal static double LabelBoxMargin(ScoreTextMetrics fonts, MusicMarkType type, bool boxed)
+        => !boxed ? 0
+           : LabelBoxPadding
            * Magstep(LabelFontSizeStep(type) + fonts.StepOf(TextRole.Mark, LabelEngravingEm(type)))
            + EngravingDefaults.LineThickness;
 
@@ -1721,17 +1788,17 @@ internal static class MusicMarkEngraver
     /// that <see cref="MusicMarkLayout.YUp"/> carries.
     /// </summary>
     internal static double LabelBoxHalfHeight(
-        ScoreTextMetrics fonts, MusicMarkType type, string text)
+        ScoreTextMetrics fonts, MusicMarkType type, string text, bool boxed)
     {
         var ink = LabelInk(fonts, type, text);
-        return (ink.Top - ink.Bottom) / 2 + LabelBoxMargin(fonts, type);
+        return (ink.Top - ink.Bottom) / 2 + LabelBoxMargin(fonts, type, boxed);
     }
 
     /// <summary>Half the drawn frame's width.</summary>
     internal static double LabelBoxHalfWidth(
-        ScoreTextMetrics fonts, MusicMarkType type, string text)
+        ScoreTextMetrics fonts, MusicMarkType type, string text, bool boxed)
         => fonts.Advance(text, LabelEm(fonts, type), TextRole.Mark, LabelStyle(fonts)) / 2
-           + LabelBoxMargin(fonts, type);
+           + LabelBoxMargin(fonts, type, boxed);
 
     /// <summary>
     /// How far above the anchor staff's MIDDLE line a boxed label's frame bottom stands when
@@ -1804,7 +1871,9 @@ internal static class MusicMarkEngraver
         // score's tempo (the same arguments Calculate hands BuildAllMarks) is needed here
         // too; null and false leave the window the label's own box.
         Score? score = null,
-        bool marksBeside = false)
+        bool marksBeside = false,
+        // …and the label style, for the reason Calculate's own parameter gives.
+        Semantics.SectionLabelStyle sectionLabels = Semantics.SectionLabelStyle.Boxed)
     {
         var windows = new List<(int, double, double)>();
         if (measureLayouts.IsDefaultOrEmpty)
@@ -1817,11 +1886,12 @@ internal static class MusicMarkEngraver
         // not a boxed label, so the one mark this list would gain is filtered out on the next
         // line either way. Under `marks beside` the tempo IS part of the label's window, so
         // there the list is built exactly as Calculate builds it.
+        var labelStyle = sectionLabels;
         var marks = marksBeside
             ? BuildAllMarks(musicMarks, measures, score?.Tempo, score?.SwingSubdivision ?? 0,
                 score?.TempoText, score?.TempoBeatUnit ?? 4, score?.TempoDots ?? 0,
-                score?.Header.Tempo ?? 0)
-            : BuildAllMarks(musicMarks, measures, tempo: null);
+                score?.Header.Tempo ?? 0, labelStyle)
+            : BuildAllMarks(musicMarks, measures, tempo: null, sectionLabels: labelStyle);
         // The label each measure-start tempo stands beside (BesidePair, the placement's
         // rule), keyed by the label so the window below finds its tempo.
         var besideTempoOf = new Dictionary<MusicMarkItem, MusicMarkItem>();
@@ -1861,12 +1931,16 @@ internal static class MusicMarkEngraver
                 continue;
             double x = CalculateXPosition(
                 fonts, mark, measureLayouts[mark.MeasureIndex], systems,
-                prefixTimeSignatureX, lineStartBarlineX, prefixMarkAnchorX, measures, marksBeside);
-            var (x0, x1) = MarkXExtent(fonts, mark, x);
+                prefixTimeSignatureX, lineStartBarlineX, prefixMarkAnchorX, measures, marksBeside,
+                IsBoxDrawn(mark.Type, labelStyle));
+            var (x0, x1) = MarkXExtent(fonts, mark, x, IsBoxDrawn(mark.Type, labelStyle));
             // The tempo standing beside this label is drawn on the same line, so the
             // symbols keep out of its ink too — read through the placement's own X.
             if (besideTempoOf.TryGetValue(mark, out var tempo))
-                x1 = Math.Max(x1, MarkXExtent(fonts, tempo, BesideTempoX(fonts, mark, x)).x1);
+                x1 = Math.Max(x1, MarkXExtent(
+                    fonts, tempo,
+                    BesideTempoX(fonts, mark, x, IsBoxDrawn(mark.Type, labelStyle)),
+                    IsBoxDrawn(tempo.Type, labelStyle)).x1);
             windows.Add((mark.MeasureIndex, x0, x1));
         }
         return windows;
@@ -1911,8 +1985,12 @@ internal static class MusicMarkEngraver
         if (measureIndex < 0 || measureIndex >= measures.Length)
             return 0.0;
         var fonts = score.TextMetrics;
+        // Here the score IS the multi-staff one, so the plan can be read off it directly —
+        // unlike Calculate, whose `score` is null on every book with more than one staff.
+        var labelStyle = score.LayoutPlan.SectionLabels;
         var marks = BuildAllMarks(score.MusicMarks, measures, score.Tempo, score.SwingSubdivision,
-            score.TempoText, score.TempoBeatUnit, score.TempoDots, score.Header.Tempo);
+            score.TempoText, score.TempoBeatUnit, score.TempoDots, score.Header.Tempo,
+            labelStyle);
         double reach = 0.0;
         foreach (var group in marks
                      .Where(m => m.MeasureIndex == measureIndex && m.Vertical == MusicMarkVertical.Above
@@ -1925,10 +2003,13 @@ internal static class MusicMarkEngraver
             {
                 if (!IsBoxedLabel(label.Type))
                     continue;
-                double labelX = labelLeft + LabelBoxHalfWidth(fonts, label.Type, label.Text);
-                double right = MarkXExtent(fonts, label, labelX).x1;
+                bool boxed = IsBoxDrawn(label.Type, labelStyle);
+                double labelX = labelLeft + LabelBoxHalfWidth(fonts, label.Type, label.Text, boxed);
+                double right = MarkXExtent(fonts, label, labelX, boxed).x1;
                 if (pair is { } p && ReferenceEquals(p.Label, label))
-                    right = Math.Max(right, MarkXExtent(fonts, p.Tempo, BesideTempoX(fonts, label, labelX)).x1);
+                    right = Math.Max(right, MarkXExtent(
+                        fonts, p.Tempo, BesideTempoX(fonts, label, labelX, boxed),
+                        IsBoxDrawn(p.Tempo.Type, labelStyle)).x1);
                 reach = Math.Max(reach, right);
             }
         }
@@ -1961,8 +2042,8 @@ internal static class MusicMarkEngraver
     /// <c>SharedRenderer.DrawSingleMusicMark</c> draws at exactly this offset.
     /// </remarks>
     internal static double LabelBaselineBelowCentre(
-        ScoreTextMetrics fonts, MusicMarkType type, string text)
-        => LabelBoxHalfHeight(fonts, type, text) - LabelBoxMargin(fonts, type)
+        ScoreTextMetrics fonts, MusicMarkType type, string text, bool boxed)
+        => LabelBoxHalfHeight(fonts, type, text, boxed) - LabelBoxMargin(fonts, type, boxed)
            + LabelInk(fonts, type, text).Bottom;
 
     /// <summary>
@@ -1975,14 +2056,14 @@ internal static class MusicMarkEngraver
     /// The other arms are still per-type shapes.
     /// </remarks>
     private static double GetMarkHalfExtent(
-        ScoreTextMetrics fonts, MusicMarkType type, string text) => type switch
+        ScoreTextMetrics fonts, MusicMarkType type, string text, bool boxed) => type switch
     {
         // Tempo is NOT priced here any more: its ink is baseline-anchored and asymmetric
         // (note top ~3.16, digit overshoot below), read from MetronomeMarkGeometry by
         // every consumer. The arm remains only for the generic fallback shape.
         MusicMarkType.Tempo => 1.8,
         MusicMarkType.Rehearsal or MusicMarkType.SectionLabel
-            => LabelBoxHalfHeight(fonts, type, text),
+            => LabelBoxHalfHeight(fonts, type, text, boxed),
         MusicMarkType.Segno or MusicMarkType.Coda => 2.0,
         _ => 1.0
     };
@@ -2021,7 +2102,13 @@ internal static class MusicMarkEngraver
         ImmutableArray<Measure> measures = default,
         // `marks beside`: a boxed label at a line start keeps the line-start edge (see the
         // boxed-label arm) instead of the key/clef anchor.
-        bool marksBeside = false)
+        bool marksBeside = false,
+        // Whether THIS mark carries a frame (`layout { sectionLabels plain }` drops it):
+        // the line-start arm returns the box CENTRE, so it spends the half-width.
+        // ⚠️ Optional only because C# puts required parameters first and this method's
+        // options came earlier: BOTH call sites pass it (they are in this file, five lines
+        // apart), and the leaf that actually prices the frame takes it as required.
+        bool boxed = true)
     {
         if (mark.Position == MusicMarkPosition.End)
             return measureLayout.X + measureLayout.Width - 0.5; // Before end barline
@@ -2192,7 +2279,7 @@ internal static class MusicMarkEngraver
             // supposed to pin walks left by the difference. It did, by 0.305629 (ledger
             // mark.rehearsal.line-start.box-left-from-clef-left, recorded exact). The home is
             // LabelBoxHalfWidth; §5.2.1② is about exactly this.
-            return anchor + LabelBoxHalfWidth(fonts, mark.Type, mark.Text);
+            return anchor + LabelBoxHalfWidth(fonts, mark.Type, mark.Text, boxed);
         }
 
         // Segno/Coda glyphs have a symmetric bbox (origin = horizontal centre), so

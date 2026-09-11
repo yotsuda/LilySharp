@@ -734,14 +734,20 @@ internal static partial class SharedRenderer
             // label on a chord row's own line.
             // ⚠️ THE FRAME WRAPS THE STRING'S INK AT LilyPond's OWN em (session 344), not the
             // font's em box at a hand-picked 2.4 / 2.2 — see LabelEm / LabelBoxMargin.
+            // ⚠️ Under `layout { sectionLabels plain }` this label has NO frame. The bit rides
+            // the mark (MusicMarkLayout.Boxed) rather than being read from the score, because
+            // the frame is priced at nine sites and they must all read the ONE answer — see
+            // MusicMarkEngraver.IsBoxDrawn. The text itself is unchanged: LilyPond's own
+            // SectionLabel is this bare string.
             double fs = MusicMarkEngraver.LabelEm(fonts, m.MarkType);
-            double halfW = MusicMarkEngraver.LabelBoxHalfWidth(fonts, m.MarkType, m.Text);
-            double halfH = MusicMarkEngraver.LabelBoxHalfHeight(fonts, m.MarkType, m.Text);
+            double halfW = MusicMarkEngraver.LabelBoxHalfWidth(fonts, m.MarkType, m.Text, m.Boxed);
+            double halfH = MusicMarkEngraver.LabelBoxHalfHeight(fonts, m.MarkType, m.Text, m.Boxed);
             // DrawRectangle's y is the visual-top edge (Y-up): anchor + half the box.
-            gc.DrawRectangle(m.X - halfW, absY + halfH, halfW * 2, halfH * 2,
-                fill: Color.White, stroke: Color.Black, strokeWidth: EngravingDefaults.LineThickness);
+            if (m.Boxed)
+                gc.DrawRectangle(m.X - halfW, absY + halfH, halfW * 2, halfH * 2,
+                    fill: Color.White, stroke: Color.Black, strokeWidth: EngravingDefaults.LineThickness);
             gc.DrawText(m.Text, m.X,
-                absY - MusicMarkEngraver.LabelBaselineBelowCentre(fonts, m.MarkType, m.Text),
+                absY - MusicMarkEngraver.LabelBaselineBelowCentre(fonts, m.MarkType, m.Text, m.Boxed),
                 fs, TextRole.Mark, MusicMarkEngraver.LabelStyle(fonts), TextAnchor.Middle, Color.Black);
             return;
         }

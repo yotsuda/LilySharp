@@ -993,7 +993,9 @@ internal sealed partial class LayoutEngine
             lineStartBarlineX: ctx.LineStartBarlineX,
             prefixMarkAnchorX: ctx.PrefixMarkAnchorX,
             solvedPedalRowUp: solvedPedalRowUp,
-            marksBeside: ctx.MultiScore?.MarksBeside ?? false);
+            marksBeside: ctx.MultiScore?.MarksBeside ?? false,
+            sectionLabels: ctx.MultiScore?.LayoutPlan.SectionLabels
+                ?? ctx.Score?.LayoutPlan.SectionLabels ?? Semantics.SectionLabelStyle.Boxed);
         var customTextLayouts = CustomTextEngraver.Calculate(customTexts, ml);
         // A leading \partial pickup is bar 0: shift displayed numbers down by one
         // so the first FULL measure is numbered 1, not 2.
@@ -1202,7 +1204,9 @@ internal sealed partial class LayoutEngine
             lineStartBarlineX: ctx.LineStartBarlineX,
             prefixMarkAnchorX: ctx.PrefixMarkAnchorX,
             score: ctx.Score,
-            marksBeside: ctx.MultiScore?.MarksBeside ?? false);
+            marksBeside: ctx.MultiScore?.MarksBeside ?? false,
+            sectionLabels: ctx.MultiScore?.LayoutPlan.SectionLabels
+                ?? ctx.Score?.LayoutPlan.SectionLabels ?? Semantics.SectionLabelStyle.Boxed);
 
         // An attached chord line that is a RUN ELEMENT is drawn at the run's own answer —
         // the walk's closing step over the pair that brackets it — instead of the

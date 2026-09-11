@@ -1243,10 +1243,16 @@ coda coda D }`.
 layout {
   marks stacked            // the default: LilyPond's arrangement
   barNumbers lines         // the default: a number at the start of every line but the first
+  accidentals default      // the default: the 18th-century style
+  sectionLabels boxed      // the default: the section's name in a frame
+  partCombineText on       // the default: a combinedStaff prints a2 / Solo
 }
 layout chart {
   marks beside             // the chart's: "[Chorus] ♩ = 132" on one line
   barNumbers every 4       // a number on every fourth bar, wherever it stands
+  accidentals modern       // Kurt Stone's: cancelled in other octaves and the next measure
+  sectionLabels plain      // the name with no frame (LilyPond's own picture)
+  partCombineText off      // no a2 / Solo words
 }
 score main  { staff melody }                 // the file's default
 score parts { layout chart  staff melody }   // this score's own
@@ -1279,6 +1285,39 @@ line opening on bar 3 opens with no number, exactly as LilyPond's
 `every-nth-bar-number-visible` prints it. N is a whole number of at least 1 (`every 1`
 numbers every bar, the first included). The twin writes the same LilyPond words into its
 `\layout` block.
+
+**`accidentals`** — which notes carry a printed accidental: LilyPond's `\accidentalStyle`
+table, for the styles whose context is the staff.
+
+| word | LilyPond | what it does |
+|---|---|---|
+| `default` | `default` | 18th-century: an alteration holds to the bar line, in its own octave |
+| `modern` | `modern` | Kurt Stone's: also cancelled in other octaves and in the next measure, and no restore-natural |
+| `modernCautionary` | `modern-cautionary` | `modern`, with the accidentals it **adds** printed in parentheses |
+| `forget` | `forget` | nothing is remembered — every note is read against the key signature |
+| `noReset` | `no-reset` | the bar line resets nothing; an accidental holds until overridden |
+
+LilyPond's `voice`, `piano` and `choral` families name a Voice / GrandStaff / ChoirStaff
+**context**, which a score-wide switch has no way to name, and its `neo-modern`,
+`teaching` and dodecaphonic families need rules of a different kind — they are absent
+rather than approximated, and a style the table does not hold is refused at the word. The
+`.ly` twin writes `\accidentalStyle modern` at the head of each part's music, where the
+function's own default context is the staff.
+
+**`sectionLabels`** — how a `form` section's name is drawn. `boxed` (the default) is the
+frame Lily# has always drawn, and it is Lily#-own: LilyPond's `SectionLabel` grob draws the
+bare string, and the twin reaches Lily#'s picture by writing `\mark \markup \box`. `plain`
+drops the frame and engraves the name alone — which **is** LilyPond's own picture — and the
+twin then writes `\mark \markup` with no `\box`; the label narrows by the frame's padding on
+both sides and sits on its own baseline, so a neighbouring symbol moves in with it. `none`
+engraves no section names at all — the part sheet's answer — and the twin then writes no
+`\mark` either. It is a **display** switch: the form still plays the section, and MIDI /
+MusicXML are untouched.
+
+**`partCombineText`** — whether a `combinedStaff` prints `a2` / `Solo` / `Solo II`. `on` is
+the default and LilyPond's; `off` is its `printPartCombineTexts = ##f`, which the twin
+writes. With the words off no text item is made at all, so nothing is drawn and nothing is
+reserved. The **combining** is unchanged — this switch is the words, not the merge.
 
 The keys are matched case-insensitively; the value words are canonical case only. Neither
 is a reserved word (`part marks { … }` compiles). An unknown key is an error, a key set

@@ -21,8 +21,10 @@ using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Svg.Renderer;
 using LilySharp.Core.Syntax;
+using LilySharp.Lsp;
 using Xunit;
 
 namespace LilySharp.Tests;
@@ -113,14 +115,95 @@ public class LayoutBlockTests
         Assert.Equal(DiagnosticCodes.LayoutEntryBadValue, p.Code);
     }
 
+    /// <summary>
+    /// Every key the language PUBLISHES is one the reader actually binds, and one the
+    /// editor serves its own words for.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE CHECK BESIDE THIS ONE CANNOT SEE THAT.
+    /// <see cref="TheVocabularyIsPublished_AndTheReaderReadsIt"/> compares the vocabulary
+    /// with <c>LayoutPlanReader.AllKeySpellings()</c>, which RETURNS that same vocabulary —
+    /// it is an identity, and it stays green for a key that has no arm in
+    /// <c>ReadEntriesInto</c>'s switch. Such a key parses, passes the unknown-key test,
+    /// falls to <c>_ =&gt; plan</c> and binds nothing, in silence: "a switch nobody reads
+    /// looks exactly like one that works", which is the sentence the unknown-key ERROR
+    /// exists for, one level in.
+    /// <para>
+    /// The question is asked of BEHAVIOUR rather than of a list: for each published key,
+    /// at least one of its own words must MOVE the plan away from the default. Derived,
+    /// not recalled (RULES §5.0) — a key added to the vocabulary is asked the same
+    /// question the day it appears.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void EveryPublishedKey_IsBoundByTheReader_AndServedByTheEditor()
+    {
+        Assert.NotEmpty(LanguageVocabulary.LayoutKeys);
+        foreach (string key in LanguageVocabulary.LayoutKeys)
+        {
+            var words = LayoutPlanReader.ValueWords(key);
+            Assert.True(words.Count > 0,
+                $"'{key}' is published as a layout key and the reader offers no words for it");
+
+            // A word may need an argument (`every N`); try the bare form, then the counted
+            // one, so the question stays generic over the keys.
+            bool moved = false;
+            foreach (string word in words)
+                foreach (string written in new[] { word, word + " 4" })
+                {
+                    var plan = Read($"layout {{ {key} {written} }}", out var problems);
+                    if (problems.Length == 0 && plan != LayoutPlan.Default)
+                        moved = true;
+                }
+            Assert.True(moved,
+                $"'{key}' is published as a layout key and NO value of it changes the plan — "
+                + "its arm in LayoutPlanReader.ReadEntriesInto is missing, so the key binds "
+                + "nothing and says nothing.");
+
+            // …and the editor serves that key's own words rather than the key list again.
+            Assert.NotEqual(LilySharpLanguageServer.CompletionContext.LayoutBlock,
+                LilySharpLanguageServer.GetCompletionContext($"layout {{ {key} ", $"layout {{ {key} ".Length));
+        }
+
+        // The pre-filled block the top level offers names every key, so accepting it and
+        // changing nothing shows the whole switchboard (and still writes the defaults).
+        string snippet = LilySharpLanguageServer.GetTopLevelCompletions().Items
+            .Single(i => i.Label == "layout").InsertText!;
+        foreach (string key in LanguageVocabulary.LayoutKeys)
+            Assert.Contains(key, snippet, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TheCheckThatEveryKeyBinds_CanFail()
+    {
+        // ★ The ratchet above is today's behaviour written down, so it was green the moment
+        // it was written — which says nothing (RULES §5.4). It was POISONED to see it bite
+        // (2026-09-11): a `poisonKey` added to SyntaxFacts.LayoutKeyVocabulary with words in
+        // LayoutPlanReader.ValueWords and no arm in ReadEntriesInto — exactly the shape a
+        // half-added key has — turned it red, naming the key and the missing arm:
+        //   'poisonKey' is published as a layout key and NO value of it changes the plan
+        // What stays here is the half the test can carry on its own: a key the vocabulary
+        // does NOT publish offers no words and binds nothing, so the arithmetic the ratchet
+        // runs on is real in both directions.
+        Assert.Empty(LayoutPlanReader.ValueWords("bogus"));
+        var plan = Read("layout { bogus modern }", out var problems);
+        Assert.Equal(LayoutPlan.Default, plan);
+        Assert.Contains(problems, p => p.Code == DiagnosticCodes.UnknownLayoutKey);
+    }
+
     [Fact]
     public void TheVocabularyIsPublished_AndTheReaderReadsIt()
     {
-        Assert.Equal(new[] { "marks", "barNumbers" }, LanguageVocabulary.LayoutKeys);
+        Assert.Equal(
+            new[] { "marks", "barNumbers", "accidentals", "sectionLabels", "partCombineText" },
+            LanguageVocabulary.LayoutKeys);
         Assert.Equal(LanguageVocabulary.LayoutKeys, LayoutPlanReader.AllKeySpellings());
         Assert.Equal(new[] { "lines", "none", "every" }, LanguageVocabulary.BarNumberPolicies);
         Assert.Equal(LanguageVocabulary.MarkArrangements, LayoutPlanReader.ValueWords("marks"));
         Assert.Equal(LanguageVocabulary.BarNumberPolicies, LayoutPlanReader.ValueWords("barNumbers"));
+        Assert.Equal(LanguageVocabulary.AccidentalStyleWords, LayoutPlanReader.ValueWords("accidentals"));
+        Assert.Equal(new[] { "boxed", "plain", "none" }, LanguageVocabulary.SectionLabelStyles);
+        Assert.Equal(new[] { "on", "off" }, LanguageVocabulary.PartCombineTextWords);
     }
 
     // ================================================================================
@@ -325,6 +408,186 @@ public class LayoutBlockTests
             string full = SvgGenerator.Generate(SyntaxTree.Parse(text), Opt);
             Assert.True(full == incremental, $"{label}: incremental != full");
         }
+    }
+
+    // ================================================================================
+    // sectionLabels — the name above the staff
+    // ================================================================================
+
+    /// <summary>A two-section book whose form names both, so both print a label.</summary>
+    private const string TwoSections =
+        "part m { clef treble }\n"
+        + "section A { m { c1 | } }\nsection B { m { c1 | } }\n"
+        + "form main { A B }\nscore main { staff m }\n";
+
+    private static string MaskDataPos(string svg)
+        => System.Text.RegularExpressions.Regex.Replace(svg, @"data-pos=""\d+""", "data-pos=\"\"");
+
+    private static string?[] Labels(string top)
+    {
+        var tree = SyntaxTree.Parse(top + TwoSections);
+        Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var layout = new LayoutEngine(score.Paper).Layout(score);
+        return [.. layout.MusicMarkLayouts
+            .Where(m => m.MarkType == MusicMarkType.SectionLabel)
+            .Select(m => (string?)m.Text)];
+    }
+
+    [Fact]
+    public void SectionLabels_Boxed_IsTheDefault_AndNoneEngravesNothing()
+    {
+        Assert.Equal(new string?[] { "A", "B" }, Labels(""));
+        Assert.Equal(new string?[] { "A", "B" }, Labels("layout { sectionLabels boxed }\n"));
+        Assert.Empty(Labels("layout { sectionLabels none }\n"));
+
+        // …and writing the default is the same page, byte for byte.
+        Assert.Equal(
+            MaskDataPos(SvgGenerator.Generate(SyntaxTree.Parse(TwoSections), Opt)),
+            MaskDataPos(SvgGenerator.Generate(
+                SyntaxTree.Parse("layout { sectionLabels boxed }\n" + TwoSections), Opt)));
+    }
+
+    [Fact]
+    public void SectionLabels_None_TakesTheLabelOutOfTheTwinToo_AndLeavesTheMusicAlone()
+    {
+        // The page engraves no name, so the twin writes none: the two pictures are the same
+        // picture or the twin is not one.
+        string ly = new LilyPondExporter().Export(
+            SyntaxTree.Parse("layout { sectionLabels none }\n" + TwoSections));
+        Assert.DoesNotContain("\\mark", ly, StringComparison.Ordinal);
+        Assert.Contains("\\mark \\markup \\box \"A\"",
+            new LilyPondExporter().Export(SyntaxTree.Parse(TwoSections)), StringComparison.Ordinal);
+
+        // It is a DISPLAY switch: the form still plays both sections, so the bar count holds.
+        Assert.Equal(
+            Labels("").Length > 0 ? 2 : 0,
+            SvgGenerator.CollectScore(SyntaxTree.Parse(TwoSections),
+                RenderSpecParser.FindFirst(SyntaxTree.Parse(TwoSections)))
+                .StaffGroups[0].Staves[0].Voices[0].Measures.Length);
+        var hidden = SyntaxTree.Parse("layout { sectionLabels none }\n" + TwoSections);
+        Assert.Equal(2, SvgGenerator.CollectScore(hidden, RenderSpecParser.FindFirst(hidden))
+            .StaffGroups[0].Staves[0].Voices[0].Measures.Length);
+    }
+
+    /// <summary>The SectionLabel layouts of a book, each with the frame bit it was placed
+    /// with — the flag the draw and every reservation read.</summary>
+    private static MusicMarkLayout[] LabelLayouts(string top)
+    {
+        var tree = SyntaxTree.Parse(top + TwoSections);
+        Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var layout = new LayoutEngine(score.Paper).Layout(score);
+        return [.. layout.MusicMarkLayouts.Where(m => m.MarkType == MusicMarkType.SectionLabel)];
+    }
+
+    [Fact]
+    public void SectionLabels_Plain_KeepsTheNameAndDropsTheFrame_EverywhereItIsPriced()
+    {
+        var boxed = LabelLayouts("layout { sectionLabels boxed }\n");
+        var plain = LabelLayouts("layout { sectionLabels plain }\n");
+
+        // The names are still engraved — `plain` is the FRAME's switch, not the label's.
+        Assert.Equal(new[] { "A", "B" }, plain.Select(m => m.Text));
+        Assert.All(boxed, m => Assert.True(m.Boxed));
+        Assert.All(plain, m => Assert.False(m.Boxed));
+
+        // ⚠️ The bit reaches the pricing, not just the draw: the label's extent narrows by
+        // exactly the frame's two margins, and its height by the same on each side. This is
+        // the assertion that fails if a site keeps reading the boxed geometry.
+        var fonts = SvgGenerator.CollectScore(
+            SyntaxTree.Parse(TwoSections),
+            RenderSpecParser.FindFirst(SyntaxTree.Parse(TwoSections))).TextMetrics;
+        double margin = MusicMarkEngraver.LabelBoxMargin(fonts, MusicMarkType.SectionLabel, boxed: true);
+        Assert.True(margin > 0.0, "the boxed margin should be a real width");
+        Assert.Equal(0.0, MusicMarkEngraver.LabelBoxMargin(fonts, MusicMarkType.SectionLabel, boxed: false), 9);
+        foreach (string text in new[] { "A", "B" })
+        {
+            Assert.Equal(
+                MusicMarkEngraver.LabelBoxHalfWidth(fonts, MusicMarkType.SectionLabel, text, boxed: true) - margin,
+                MusicMarkEngraver.LabelBoxHalfWidth(fonts, MusicMarkType.SectionLabel, text, boxed: false), 9);
+            Assert.Equal(
+                MusicMarkEngraver.LabelBoxHalfHeight(fonts, MusicMarkType.SectionLabel, text, boxed: true) - margin,
+                MusicMarkEngraver.LabelBoxHalfHeight(fonts, MusicMarkType.SectionLabel, text, boxed: false), 9);
+            // The baseline keeps its place INSIDE the ink, so the text does not move on the
+            // page when the frame goes away — only the frame's own air is gone.
+            Assert.Equal(
+                MusicMarkEngraver.LabelBaselineBelowCentre(fonts, MusicMarkType.SectionLabel, text, boxed: true),
+                MusicMarkEngraver.LabelBaselineBelowCentre(fonts, MusicMarkType.SectionLabel, text, boxed: false), 9);
+        }
+
+        // ⚠️ A rehearsal mark is NOT a section label: the key says nothing about it, so its
+        // frame survives `plain` — which is also LilyPond's own picture for RehearsalMark.
+        Assert.True(MusicMarkEngraver.IsBoxDrawn(MusicMarkType.Rehearsal, SectionLabelStyle.Plain));
+        Assert.False(MusicMarkEngraver.IsBoxDrawn(MusicMarkType.SectionLabel, SectionLabelStyle.Plain));
+        Assert.True(MusicMarkEngraver.IsBoxDrawn(MusicMarkType.SectionLabel, SectionLabelStyle.Boxed));
+    }
+
+    [Fact]
+    public void SectionLabels_Plain_DrawsTheNameWithNoRectangle_AndTheTwinDropsTheBox()
+    {
+        // The page: the two names are still there, the two frames are not. Drawn once —
+        // this is the picture, counted rather than described.
+        string boxedSvg = SvgGenerator.Generate(
+            SyntaxTree.Parse("layout { sectionLabels boxed }\n" + TwoSections), Opt);
+        string plainSvg = SvgGenerator.Generate(
+            SyntaxTree.Parse("layout { sectionLabels plain }\n" + TwoSections), Opt);
+        static int Count(string svg, string tag)
+            => System.Text.RegularExpressions.Regex.Matches(svg, "<" + tag + "\\b").Count;
+        Assert.Equal(Count(boxedSvg, "text"), Count(plainSvg, "text"));
+        Assert.Equal(Count(boxedSvg, "rect") - 2, Count(plainSvg, "rect"));
+        Assert.Contains(">A<", plainSvg, StringComparison.Ordinal);
+
+        // The twin writes the same picture: the bare markup, with no `\box`.
+        string ly = new LilyPondExporter().Export(
+            SyntaxTree.Parse("layout { sectionLabels plain }\n" + TwoSections));
+        Assert.Contains("\\mark \\markup \"A\"", ly, StringComparison.Ordinal);
+        Assert.DoesNotContain("\\box", ly, StringComparison.Ordinal);
+    }
+
+    // ================================================================================
+    // partCombineText — the a2 / Solo words
+    // ================================================================================
+
+    /// <summary>Two parts on one staff: bar 1 in unison ("a2"), bar 2 only part one
+    /// ("Solo").</summary>
+    private const string Combined =
+        "part one { clef treble }\npart two { clef treble }\n"
+        + "section A { one { c'1 | d'1 | } two { c'1 | r1 | } }\n"
+        + "form main { A }\nscore main { combinedStaff { one two } }\n";
+
+    private static string[] CombineWords(string top)
+    {
+        var tree = SyntaxTree.Parse(top + Combined);
+        Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var layout = new LayoutEngine(score.Paper).Layout(score);
+        return [.. layout.PartCombineLayouts.Select(p => p.Text)];
+    }
+
+    [Fact]
+    public void PartCombineText_On_IsTheDefault_AndOffPrintsNoWords()
+    {
+        var words = CombineWords("");
+        Assert.NotEmpty(words);
+        Assert.Equal(words, CombineWords("layout { partCombineText on }\n"));
+        Assert.Empty(CombineWords("layout { partCombineText off }\n"));
+
+        // Writing the default is the same page.
+        Assert.Equal(
+            MaskDataPos(SvgGenerator.Generate(SyntaxTree.Parse(Combined), Opt)),
+            MaskDataPos(SvgGenerator.Generate(
+                SyntaxTree.Parse("layout { partCombineText on }\n" + Combined), Opt)));
+    }
+
+    [Fact]
+    public void PartCombineText_Off_IsLilyPondsOwnPropertyInTheTwin()
+    {
+        string off = new LilyPondExporter().Export(
+            SyntaxTree.Parse("layout { partCombineText off }\n" + Combined));
+        Assert.Contains("\\set Staff.printPartCombineTexts = ##f", off, StringComparison.Ordinal);
+        Assert.DoesNotContain("printPartCombineTexts",
+            new LilyPondExporter().Export(SyntaxTree.Parse(Combined)), StringComparison.Ordinal);
     }
 
     // ================================================================================

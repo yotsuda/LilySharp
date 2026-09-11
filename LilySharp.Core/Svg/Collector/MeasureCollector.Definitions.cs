@@ -419,6 +419,10 @@ public sealed partial class MeasureCollector
         // incremental reason (MetaMatchesShifted compares it).
         if (LayoutOverride is { } layoutRef)
             _meta.LayoutPlan = Semantics.LayoutPlanReader.ReadReference(root, layoutRef, _meta.LayoutPlan);
+        // …and the one switch the MUSIC WALK reads rather than the layout: which notes
+        // carry a printed accidental. Every walk runs after this, so reading it once here
+        // is reading it before the first note.
+        _accidentalStyle = _meta.LayoutPlan.AccidentalStyle;
     }
 
     /// <summary>True for exactly the node kinds <see cref="CollectDefinitions"/>'s
@@ -590,55 +594,149 @@ public sealed partial class MeasureCollector
         >= 2 => "doubleSharp", 1 => "sharp", <= -2 => "doubleFlat", -1 => "flat", _ => "natural"
     };
 
+    /// <summary>Starts a music walk's accidental memory: empty, at its first bar.</summary>
+    private void ResetAccidentalMemory()
+    {
+        _measureAccidentals.Clear();
+        _accidentalBar = 0;
+        _accidentalOrder = 0;
+    }
+
     /// <summary>
-    /// Determines the displayed accidental for a pitch using LilyPond's default
-    /// accidental style: an accidental is printed when the pitch's alteration
-    /// differs from the one currently IN EFFECT for that (step, octave) within
-    /// the measure. The in-effect value starts at the key signature each measure
-    /// and is updated by every engraved note, so a sharp/flat persists to the
-    /// barline (a later same-pitch note in the measure needs no repeat, and a
-    /// return to the key value prints a cancelling natural). Memory is
-    /// octave-specific and resets at the barline (MeasureBuilder.MeasureCompleted).
-    /// Explicit @courtesy is layered on at the call site. Verified against
-    /// LilyPond 2.24.4.
+    /// A bar line passed: the walk's bar number advances, and under a style that remembers
+    /// nothing past it the memory is emptied (<see cref="Semantics.AccidentalStyleSpec.ForgetsAtBar"/>).
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/accidental-engraver.cc — default style.</remarks>
+    private void AdvanceAccidentalBar()
+    {
+        _accidentalBar++;
+        if (_accidentalStyle.ForgetsAtBar)
+            _measureAccidentals.Clear();
+    }
+
+    /// <summary>What one rule says about a pitch: whether an accidental is needed, and
+    /// whether a "restore" natural precedes it.</summary>
+    /// <remarks>LILYPOND-REF: lily/accidental-engraver.cc:130-150 Accidental_result — the
+    /// pair, and <c>score()</c>, which is how a cautionary rule outranks an ordinary one.</remarks>
+    private readonly record struct AccidentalNeed(bool NeedRestore, bool NeedAcc)
+    {
+        public int Score => (NeedAcc ? 1 : 0) + (NeedRestore ? 1 : 0);
+    }
+
+    /// <summary>
+    /// LilyPond's <c>check-pitch-against-signature</c> for ONE rule: what the memory (or,
+    /// failing it, the key signature) says was last in effect for this pitch, and what
+    /// this note therefore needs.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/music-functions.scm:1678-1754 check-pitch-against-signature —
+    ///   from-same-octave / from-other-octaves / from-key-sig, the cond that picks the
+    ///   previous alteration, and the need-accidental / need-restore pair at :1740-1752.
+    /// ⚠️ <c>all-naturals</c> is not a parameter here: it belongs to the dodecaphonic
+    /// rules, which this table does not hold (Semantics.AccidentalStyles' remark).
+    /// ⚠️ A mid-measure key change reaches the fallback live (GetKeySignatureAlteration
+    /// reads the current key) without disturbing remembered alterations — the behaviour
+    /// the default style had before the styles existed.
+    /// </remarks>
+    private AccidentalNeed CheckPitchAgainstSignature(
+        int step, int actual, int octave, Semantics.AccidentalRule rule)
+    {
+        bool ignoreOctave = rule.Octaveness == Semantics.AccidentalOctaveness.AnyOctave;
+
+        int previous;
+        if (!ignoreOctave
+            && _measureAccidentals.TryGetValue((step, octave), out var sameOctave)
+            && rule.RecentEnough(sameOctave.Bar, _accidentalBar))
+        {
+            previous = sameOctave.Alter;
+        }
+        else if (ignoreOctave
+                 && MostRecentInAnyOctave(step) is { } other
+                 && rule.RecentEnough(other.Bar, _accidentalBar))
+        {
+            previous = other.Alter;
+        }
+        else
+        {
+            previous = GetKeySignatureAlteration(step);
+        }
+
+        if (actual == previous)
+            return default;
+        // need-restore: this note steps DOWN inside one sign (𝄪→♯, 𝄫→♭).
+        return new AccidentalNeed(
+            NeedRestore: actual != 0 && Math.Abs(actual) < Math.Abs(previous) && previous * actual > 0,
+            NeedAcc: true);
+    }
+
+    /// <summary>
+    /// The most recently engraved alteration of <paramref name="step"/> in ANY octave —
+    /// LilyPond's scan of <c>localAlterations</c> for the first entry whose note name
+    /// matches, the list being prepended to.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/music-functions.scm:1713-1720 from-other-octaves — the loop that
+    /// sets it; LILYPOND-REF: lily/accidental-engraver.cc:413-420 ly_assoc_prepend_x, which
+    /// makes "first" mean "most recent".
+    /// A scan rather than a second index: the map holds one entry per sounding
+    /// (step, octave) of one walk — a few dozen at most — and only the any-octave styles
+    /// ask at all.
+    /// </remarks>
+    private (int Alter, int Bar, int Order)? MostRecentInAnyOctave(int step)
+    {
+        (int Alter, int Bar, int Order)? best = null;
+        foreach (var (key, entry) in _measureAccidentals)
+            if (key.step == step && (best is not { } b || entry.Order > b.Order))
+                best = entry;
+        return best;
+    }
+
+    /// <summary>
+    /// The accidental a pitch displays under the score's style, and whether it is a
+    /// CAUTIONARY one — LilyPond's <c>autoAccidentals</c> / <c>autoCautionaries</c> pair,
+    /// asked of every rule and OR-ed, with the cautionary answer winning when it claims
+    /// more (Semantics.AccidentalStyles holds the rules; the default style is the
+    /// 18th-century one Lily# always had).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/accidental-engraver.cc:152-195 check_pitch_against_rules — the
+    ///   fold that ORs every rule's answer; :219-231 — the two lists asked separately and
+    ///   <c>caut.score () &gt; acc.score ()</c> making the accidental cautionary.
+    /// LILYPOND-REF: lily/accidental-engraver.cc:272-275 create_accidental — the
+    ///   restore-first natural is set only when <c>extraNatural</c> holds, which is the
+    ///   flag each style carries.
+    /// The composite travels as a NAME ("naturalSharp"/"naturalFlat") so every box,
+    /// skyline and draw consumer reads the composed stencil through the same pipes a
+    /// plain glyph takes — see GlyphMetrics.RestoreMainOf.
+    /// Explicit <c>@courtesy</c> is layered on at the call site, and a cautionary STYLE
+    /// reaches the same flag. Verified against LilyPond 2.24.4 (the default style).
+    /// </remarks>
     // Takes the DISPLAY pitch (post-transpose): diatonic step (0–6), its
     // accidental in semitones, and octave.
-    private string? GetDisplayAccidental(int step, int actual, int octave)
+    private (string? Name, bool Cautionary) GetDisplayAccidental(int step, int actual, int octave)
     {
-        var key = (step, octave);
-        // In effect: a prior accidental on this exact pitch this measure, else
-        // the key signature. A mid-measure key change updates the latter for
-        // pitches not yet altered this measure (GetKeySignatureAlteration reads
-        // the live key) without disturbing remembered alterations.
-        int inEffect = _measureAccidentals.TryGetValue(key, out int remembered)
-            ? remembered
-            : GetKeySignatureAlteration(step);
+        var style = _accidentalStyle;
+        var need = Fold(style.Accidentals);
+        bool cautionary = false;
+        if (style.Cautionaries.Count > 0)
+        {
+            var caut = Fold(style.Cautionaries);
+            if (caut.Score > need.Score)
+            {
+                need = new AccidentalNeed(
+                    need.NeedRestore | caut.NeedRestore, need.NeedAcc | caut.NeedAcc);
+                cautionary = true;
+            }
+        }
 
-        // Remember this pitch's alteration for the rest of the measure.
-        _measureAccidentals[key] = actual;
+        // Remember this pitch's alteration — after every rule has read the memory, so a
+        // rule never sees the note it is deciding about.
+        _measureAccidentals[(step, octave)] = (actual, _accidentalBar, _accidentalOrder++);
 
-        if (actual == inEffect)
-            return null;
+        if (!need.NeedAcc)
+            return (null, false);
 
-        // RESTORE-FIRST: stepping DOWN within the same sign (𝄪→♯, 𝄫→♭) prepends a
-        // natural to the printed accidental. The default accidental style reads
-        // extraNatural = #t, which is what gates the restore onto the grob — Lily#
-        // ports only that default style, so the gate is constant here.
-        // LILYPOND-REF: scm/music-functions.scm:1746-1752 check-pitch-against-signature —
-        //   need-restore = this-alt ≠ 0 ∧ |this-alt| < |prev-alt| ∧ prev-alt·this-alt > 0;
-        // LILYPOND-REF: scm/music-functions.scm:1909-1911 accidental-styles `default`
-        //   (extraNatural #t); lily/accidental-engraver.cc:272-275 — restore-first is set
-        //   only when extraNatural holds.
-        // The composite travels as a NAME ("naturalSharp"/"naturalFlat") so every box,
-        // skyline and draw consumer reads the composed stencil through the same pipes a
-        // plain glyph takes — see GlyphMetrics.RestoreMainOf.
-        bool restore = actual != 0
-            && Math.Abs(actual) < Math.Abs(inEffect)
-            && inEffect * actual > 0;
-
-        return actual switch
+        bool restore = need.NeedRestore && style.ExtraNatural;
+        string? name = actual switch
         {
             2 => "doubleSharp",
             1 => restore ? "naturalSharp" : "sharp",
@@ -647,6 +745,19 @@ public sealed partial class MeasureCollector
             -2 => "doubleFlat",
             _ => null
         };
+        return (name, cautionary && name != null);
+
+        AccidentalNeed Fold(IReadOnlyList<Semantics.AccidentalRule> rules)
+        {
+            bool acc = false, res = false;
+            foreach (var rule in rules)
+            {
+                var one = CheckPitchAgainstSignature(step, actual, octave, rule);
+                acc |= one.NeedAcc;
+                res |= one.NeedRestore;
+            }
+            return new AccidentalNeed(res, acc);
+        }
     }
 
 }

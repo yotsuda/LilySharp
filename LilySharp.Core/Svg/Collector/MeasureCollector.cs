@@ -375,13 +375,31 @@ public sealed partial class MeasureCollector
     private readonly List<GrobRevert> _grobReverts = new();
     // Trill spanner start/stop events (paired into TrillSpannerItems after collection)
     private readonly List<(bool isStart, int measureIndex, int itemIndex, int sourcePosition, int staffIndex, int voiceIndex, int forcedDir)> _trillSpannerEvents = new();
-    // Within-measure accidental memory: (diatonic step, octave) → the alteration
-    // currently in effect for that pitch in the CURRENT measure. Seeded from the
-    // key signature and updated as notes are engraved; reset at every measure
-    // boundary (via MeasureBuilder.MeasureCompleted). A note prints an accidental
-    // only when its alteration differs from the in-effect value — LilyPond's
-    // default style. LILYPOND-REF: lily/accidental-engraver.cc.
-    private readonly Dictionary<(int step, int octave), int> _measureAccidentals = new();
+    // The accidental memory — LilyPond's `localAlterations`: (diatonic step, octave) →
+    // the alteration last engraved for that pitch, the BAR it was engraved in, and the
+    // ORDER it was written in. A note prints an accidental when its alteration differs
+    // from what the score's style remembers (GetDisplayAccidental).
+    // LILYPOND-REF: lily/accidental-engraver.cc:396-420 stop_translation_timestep —
+    //   localAlterations entries are ((octave . notename) alter barnum . end-mom), and a
+    //   new one is PREPENDED (ly_assoc_prepend_x), which is what Order reproduces: the
+    //   any-octave rule reads the FIRST entry with a matching note name, i.e. the most
+    //   recently engraved octave (scm/music-functions.scm:1713-1720).
+    // Under a style that forgets at the bar line (AccidentalStyleSpec.ForgetsAtBar — the
+    // default's, and every style whose laziness is 0) the map is CLEARED there instead of
+    // carrying stamps, which is observationally the same and keeps the resume gate
+    // (WalkCarriesNothing) satisfiable.
+    private readonly Dictionary<(int step, int octave), (int Alter, int Bar, int Order)>
+        _measureAccidentals = new();
+
+    // The bar the walk is in, counted from its start, and the order counter above. Only
+    // DIFFERENCES of the bar number are read (AccidentalRule.RecentEnough), so counting
+    // from 0 per walk answers exactly what LilyPond's absolute measure number answers.
+    private int _accidentalBar;
+    private int _accidentalOrder;
+
+    // The style the score asks for, read once from the resolved layout plan (the music
+    // walks all run after CollectDefinitions).
+    private Semantics.AccidentalStyleSpec _accidentalStyle = Semantics.AccidentalStyles.Default;
     // Notes explicitly marked with @courtesy annotation
     private readonly HashSet<int> _courtesySourcePositions = new();
     /// <summary>
@@ -2343,8 +2361,8 @@ public sealed partial class MeasureCollector
         // PartCombiner uses to pad a part up to an onset.
         if (leadingOffset is { } offset && offset != Fraction.Zero)
             builder.AddItem(new RestItem(offset, 0, voiceNode.SourceStart) { IsSpacer = true });
-        _measureAccidentals.Clear();
-        builder.MeasureCompleted = _measureAccidentals.Clear;
+        ResetAccidentalMemory();
+        builder.MeasureCompleted = AdvanceAccidentalBar;
 
         _pendingInlineVoltas.Clear();
 
@@ -2701,8 +2719,8 @@ public sealed partial class MeasureCollector
         };
         if (_filePartial is { } filePickup)
             builder.SetPartial(filePickup); // top-level partial N arms every voice
-        _measureAccidentals.Clear();
-        builder.MeasureCompleted = _measureAccidentals.Clear;
+        ResetAccidentalMemory();
+        builder.MeasureCompleted = AdvanceAccidentalBar;
 
         _pendingInlineVoltas.Clear();
 

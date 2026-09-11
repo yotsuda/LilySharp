@@ -383,7 +383,13 @@ internal sealed partial class LayoutEngine
         // Closing it is one field (the staff index) plus the height coming from the staff
         // instead of the system, which is the same move that would put the label on the
         // outside-staff stacker where LilyPond has it (priority 475).
-        foreach (var (_, staff, _) in score.EnumerateStaves())
+        // …unless the score turned the words off (`layout { partCombineText off }` =
+        // LilyPond's printPartCombineTexts = ##f): with no text item there is nothing to
+        // place, nothing to draw and nothing to reserve.
+        // LILYPOND-REF: lily/part-combine-engraver.cc:69-100 create_item — the engraver asks
+        //   printPartCombineTexts before it makes the text, so the grob never exists.
+        foreach (var (_, staff, _) in score.LayoutPlan.PartCombineText
+                     ? score.EnumerateStaves() : [])
         {
             if (staff.PartCombineMarks.IsDefaultOrEmpty)
                 continue;
