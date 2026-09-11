@@ -44,6 +44,12 @@ internal sealed class ChordNameCollector
     /// walk that recorded it).</summary>
     public IReadOnlyList<ChordRowGridWarning> GridWarnings => _gridWarnings;
 
+    /// <summary>How this score spells a chord symbol — <c>layout { chordNames …
+    /// minorChords … }</c>, set by the collector once the plan is resolved (before any
+    /// row is walked). <see cref="Semantics.ChordSpelling.Default"/> until then, which is
+    /// what a book that writes neither key gets.</summary>
+    public Semantics.ChordSpelling Spelling { get; set; } = Semantics.ChordSpelling.Default;
+
     /// <summary>The key timeline for Roman-numeral degrees: (start measure, tonic step
     /// 0=C..6=B, signature ±sharps) sorted ascending, so a chord's degree follows the
     /// key in force at its bar (a mid-piece modulation re-bases the degrees). Set by
@@ -677,7 +683,7 @@ internal sealed class ChordNameCollector
     {
         string symbol = entry.SymbolText;
         if (LilySharp.Core.Music.ChordStructure.TryParseChordEntry(symbol, out var parsed))
-            return (parsed.DisplayName, parsed);
+            return (parsed.DisplayName(Spelling), parsed);
 
         // A ROMAN degree of the key in force at this bar (Imaj7, V7, bVII, V7/VII). It
         // resolves to the SAME structure an absolute symbol would give, so everything
@@ -689,7 +695,7 @@ internal sealed class ChordNameCollector
         // root is A-G, a numeral is I or V.
         var (tonicStep, sharps) = KeyAt(measure);
         if (LilySharp.Core.Music.ChordStructure.TryParseRomanEntry(symbol, tonicStep, sharps, out var degree))
-            return (degree.DisplayName, degree);
+            return (degree.DisplayName(Spelling), degree);
 
         int slash = symbol.IndexOf('/');
         string main = slash >= 0 ? symbol[..slash] : symbol;
@@ -708,7 +714,7 @@ internal sealed class ChordNameCollector
             var raw = new LilySharp.Core.Music.ChordStructure(
                 step, alter, LilySharp.Core.Music.ChordQuality.Major,
                 bassStep, bassAlter, RawSuffix: qual);
-            return (raw.DisplayName, raw);
+            return (raw.DisplayName(Spelling), raw);
         }
 
         // Unparseable root — show the raw run with no structure at all.

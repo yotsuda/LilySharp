@@ -3994,7 +3994,7 @@ public sealed class LilyPondExporter
                     case ChordRowRenderSyntax chords:
                         if (_chordVars.TryGetValue(chords.PartName, out var chordVar))
                         {
-                            rows.Add("    \\new ChordNames \\" + chordVar + "\n");
+                            rows.Add("    \\new ChordNames " + ChordNamesWith() + "\\" + chordVar + "\n");
                             // The page can show the row as degrees of the key; LilyPond
                             // prints the names it realizes, so say so once.
                             if (string.Equals(chords.DisplayModeText, "roman", StringComparison.OrdinalIgnoreCase))
@@ -4148,8 +4148,31 @@ public sealed class LilyPondExporter
     {
         if (partName != null && _inlineChordVars.TryGetValue(partName, out var v)
             && _inlineChordPlaced.Add(partName))
-            rows.Add(indent + "\\new ChordNames \\" + v + "\n");
+            rows.Add(indent + "\\new ChordNames " + ChordNamesWith() + "\\" + v + "\n");
     }
+
+    /// <summary>
+    /// The <c>\with { }</c> a ChordNames context carries when the score spelled its chords
+    /// differently — today only <c>minorChords lower</c>, which is LilyPond's own property.
+    /// Empty (and no braces at all) for a score that wrote nothing, so every existing twin
+    /// is unchanged.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly chordNameLowercaseMinor (line 948) — the ChordNames
+    ///   property, <c>##f</c> by default, that lowercases a minor chord's root and drops its
+    ///   minorChordModifier. (The line is in prose: see Semantics.ChordQualityStyle's remark.)
+    /// ⚠️ <c>layout { chordQualities … }</c> reaches NOTHING here, and that is the 2026-09-08
+    /// owner decision rather than a gap: the twin hands LilyPond <c>\chordmode</c> entries
+    /// and LilyPond names them by its OWN rules, which are already the symbols — so under
+    /// <c>chordQualities symbols</c> the page and the twin agree about those four qualities for
+    /// the first time, and under the default <c>words</c> they diverge exactly as they
+    /// always have (<see cref="Semantics.ChordQualityStyle"/>'s remark, and
+    /// <c>ChordNameGlyphRun</c>'s).
+    /// </remarks>
+    private string ChordNamesWith()
+        => _layoutPlan.Chords.LowercaseMinor
+            ? "\\with { chordNameLowercaseMinor = ##t } "
+            : "";
 
     /// <summary>
     /// One <c>\chordmode</c> variable per part carrying INLINE <c>@chord</c> marks — read off

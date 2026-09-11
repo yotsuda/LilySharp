@@ -198,7 +198,8 @@ public class LpFidelityFaceGuardTests
     /// alphabet is a second spelling of the language (HANDOFF §5.2.1②) and would keep
     /// reading green on the day a quality suffix grows a character the face has not got —
     /// which is exactly the shape this test exists for. The sweep runs
-    /// <see cref="ChordStructure.DisplayName"/> and
+    /// <see cref="ChordStructure.DisplayName"/> — in EVERY spelling the layout block can
+    /// ask for (<see cref="AllChordSpellings"/>) — and
     /// <see cref="ChordStructure.ToRomanNumeral"/> over every root, alteration, quality and
     /// both bass forms, and adds the one literal the collector prints without a structure
     /// (<c>ly/engraver-init.ly:952 noChordSymbol</c> = "N.C.").
@@ -218,6 +219,13 @@ public class LpFidelityFaceGuardTests
     /// recognising a spelling.
     /// </para>
     /// </remarks>
+    /// <summary>Every spelling a <c>layout { }</c> block can ask a chord symbol for — the
+    /// cross product of the two switches, derived from their own vocabularies.</summary>
+    private static IEnumerable<LilySharp.Core.Semantics.ChordSpelling> AllChordSpellings
+        => from names in System.Enum.GetValues<LilySharp.Core.Semantics.ChordQualityStyle>()
+           from lower in new[] { false, true }
+           select new LilySharp.Core.Semantics.ChordSpelling(names, lower);
+
     [Fact]
     public void NoCharacterAChordSymbolCanPrint_IsMeasuredAsTextInAFaceThatCannotDrawIt()
     {
@@ -241,9 +249,15 @@ public class LpFidelityFaceGuardTests
             for (int rootStep = 0; rootStep < 7; rootStep++)
                 for (int rootAlter = -2; rootAlter <= 2; rootAlter++)
                 {
-                    Take(new ChordStructure(rootStep, rootAlter, quality).DisplayName);
-                    Take(new ChordStructure(rootStep, rootAlter, quality,
-                        BassStep: (rootStep + 4) % 7, BassAlter: rootAlter).DisplayName);
+                    // EVERY spelling `layout { chordQualities … minorChords … }` can ask for,
+                    // enumerated from the switch rather than listed: the day a vocabulary
+                    // grows a word, its characters are swept the same day.
+                    foreach (var spelling in AllChordSpellings)
+                    {
+                        Take(new ChordStructure(rootStep, rootAlter, quality).DisplayName(spelling));
+                        Take(new ChordStructure(rootStep, rootAlter, quality,
+                            BassStep: (rootStep + 4) % 7, BassAlter: rootAlter).DisplayName(spelling));
+                    }
                     // Every key, so a root's degree is reached both diatonic and chromatic
                     // — the ♯/♭ prefix of a roman degree is written by the SAME sweep.
                     for (int tonicStep = 0; tonicStep < 7; tonicStep++)

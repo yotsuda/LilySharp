@@ -53,7 +53,11 @@ public sealed record LayoutPlan(
     // `sectionLabels boxed|plain|none` — how a form section's name is drawn.
     SectionLabelStyle SectionLabels = SectionLabelStyle.Boxed,
     // `partCombineText on|off` — whether a combinedStaff prints "a2" / "Solo" / "Solo II".
-    bool PartCombineText = true)
+    bool PartCombineText = true,
+    // `chordQualities words|symbols` and `minorChords upper|lower` — how a chord SYMBOL is
+    // spelled (ChordSpelling). The struct's own default is today's spelling, so
+    // LayoutPlan.Default compares equal to a plan that writes both keys out.
+    ChordSpelling Chords = default)
 {
     /// <summary>What a book with no <c>layout { }</c> gets: LilyPond's picture on every
     /// switch — labels stacked over the tempo, a number at the start of every line but the
@@ -62,6 +66,135 @@ public sealed record LayoutPlan(
 
     /// <summary>The accidental style this plan asks for, never null.</summary>
     public AccidentalStyleSpec AccidentalStyle => Accidentals ?? AccidentalStyles.Default;
+}
+
+/// <summary>
+/// How a chord SYMBOL is spelled: the quality's vocabulary, and whether a chord with a
+/// minor third writes an uppercase root with an <c>m</c> or a lowercase root without one.
+/// The two axes are LilyPond's two, and they are independent there as well — the exception
+/// table and <c>chordNameLowercaseMinor</c> are separate properties.
+/// </summary>
+/// <remarks>
+/// ⚠️ ONE VALUE, PASSED AS A REQUIRED ARGUMENT to every namer, rather than read from a
+/// context each namer finds for itself: the symbol is spelled in four places (a chord row,
+/// an attached track, an inline <c>@chord</c>, the editor's completion) and a place that
+/// missed the switch would print the OTHER vocabulary beside the one the score asked for,
+/// in silence. Same discipline as <c>MusicMarkLayout.Boxed</c> (§5.2.1②).
+/// <para>
+/// ⚠️ NOT THE SAME QUESTION AS <c>chords NAME as names|roman</c>, which is why the two live
+/// in different places and neither absorbs the other. That clause says WHICH QUANTITY the
+/// row shows — the absolute chord, or its degree in the key — and it is written per ROW
+/// because one score writes BOTH at once (<c>chords prog as roman</c> above
+/// <c>chords prog as names</c> is how a track is shown two ways, since <c>as both</c> was
+/// retired). A <c>layout { }</c> key is score-wide by admission, so it could not carry a
+/// setting a single score needs two values of. This is the SPELLING of whatever that clause
+/// chose — and the two compose: a roman row is byte-identical under either vocabulary,
+/// because <see cref="Music.ChordStructure"/>'s roman table already spells the same four
+/// qualities and overrides them.
+/// </para>
+/// <para>
+/// ⚠️ IT DOES NOT REACH MusicXML. A <c>&lt;harmony&gt;</c> element carries the chord as
+/// DATA — root, kind, degrees — and the exporter reads Lily#'s canonical spelling back to
+/// build it, so the exporter asks for <see cref="Default"/> on purpose (a <c>C°</c> would
+/// parse as nothing). The same rule <c>sectionLabels</c> and <c>partCombineText</c> keep:
+/// a display switch moves the page, not the data.
+/// </para>
+/// </remarks>
+/// <param name="Qualities">The quality's vocabulary.</param>
+/// <param name="LowercaseMinor">LilyPond's <c>chordNameLowercaseMinor</c>: a minor-third
+/// chord prints a lowercase root and drops the <c>m</c>.</param>
+public readonly record struct ChordSpelling(ChordQualityStyle Qualities, bool LowercaseMinor)
+{
+    /// <summary>Today's spelling, which is also the struct's <c>default</c>: words, and an
+    /// uppercase root with its <c>m</c>.</summary>
+    public static readonly ChordSpelling Default = default;
+}
+
+/// <summary>How a chord's QUALITY is spelled after the root.</summary>
+/// <remarks>
+/// LILYPOND-REF: ly/chord-modifiers-init.ly ignatzekExceptionMusic (lines 47-59) — the table
+/// whose entries give LilyPond its symbols: <c>&lt;c e gis&gt;</c> is "+",
+/// <c>&lt;c es ges&gt;</c> is whiteCircleMarkup, <c>&lt;c es ges bes&gt;</c> is a superscript
+/// U+00F8 and <c>&lt;c es ges beses&gt;</c> is the circle with a superscript 7.
+/// ⚠️ THE ADDRESSES IN THIS FILE CARRY NO LINE RANGE ON PURPOSE: every name here is
+/// camelCase or a two-part hyphen word, and <c>LpReferenceCitationTests</c>' symbol pattern
+/// reads only underscored names and three-part hyphen ones — so a ranged citation would
+/// count as naming nothing whatever is written after it. The line is given in prose instead,
+/// the spelling <c>ChordNameGlyphRun.ShortGlyph</c> already uses.
+/// <para>
+/// ⚠️ WHAT <c>symbols</c> DOES NOT REACH, so it is not read as a full port of that table:
+/// LilyPond RAISES everything after the root (make-super-markup, at
+/// scm/chord-ignatzek-names.scm line 207) and spells a major seventh with a DRAWN TRIANGLE
+/// (LILYPOND-REF: ly/chord-modifiers-init.ly whiteTriangleMarkup, lines 23-33 — a
+/// <c>\fontsize #-3 \triangle ##f</c> polygon stencil). Lily# draws a chord name as one
+/// baseline text run with the accidentals as glyphs (<c>ChordNameGlyphRun</c>), so neither
+/// the superscript nor the triangle has a home yet, and <c>maj7</c> stays <c>maj7</c> under
+/// both words. That is the Phase-1 simplification this enum switches INSIDE, not the one it
+/// closes.
+/// </para>
+/// </remarks>
+public enum ChordQualityStyle
+{
+    /// <summary>Words — <c>Cdim</c>, <c>Caug</c>, <c>Cm7♭5</c>, <c>Cdim7</c>. The default,
+    /// and what every book on disk prints.</summary>
+    Words,
+
+    /// <summary>LilyPond's own symbols for the four qualities its exception table names —
+    /// <c>C°</c>, <c>C+</c>, <c>Cø</c>, <c>C°7</c>. Every other quality keeps its word,
+    /// because LilyPond spells those with digits too.</summary>
+    Symbols,
+}
+
+/// <summary>The <c>chordQualities</c> key's words.</summary>
+public static class ChordQualityStyles
+{
+    /// <summary>The key as written in the block.</summary>
+    public const string Key = "chordQualities";
+
+    /// <summary>The words, the default first.</summary>
+    public static readonly IReadOnlyList<string> Words = ["words", "symbols"];
+
+    /// <summary>The style <paramref name="word"/> names, or null.</summary>
+    public static ChordQualityStyle? Find(string word) => word switch
+    {
+        "words" => ChordQualityStyle.Words,
+        "symbols" => ChordQualityStyle.Symbols,
+        _ => null,
+    };
+}
+
+/// <summary>The <c>minorChords</c> key's words — LilyPond's
+/// <c>chordNameLowercaseMinor</c>, which is a boolean there too.</summary>
+/// <remarks>
+/// LILYPOND-REF: ly/engraver-init.ly chordNameLowercaseMinor (line 948) — <c>##f</c> by
+///   default;
+/// LILYPOND-REF: scm/chord-ignatzek-names.scm chordNameLowercaseMinor (lines 229-232) — the
+///   flag is read together with the chord's third and holds only when that third is FLAT,
+///   which is why a diminished chord lowercases too and a <c>sus</c> chord (no third at all)
+///   never does;
+/// LILYPOND-REF: scm/chord-ignatzek-names.scm prefix-modifier->markup (lines 136-142) — the
+///   minorChordModifier ("m") is replaced by empty-markup when the root is lowercased, so
+///   the two always travel together.
+/// ⚠️ The BASS keeps its capital.
+/// LILYPOND-REF: scm/chord-name.scm chordNoteNamer (lines 147-153) — the callback is called
+///   with <c>lowercase?</c> always <c>#f</c>, the <c>#f</c> the slash bass is named with.
+/// (The ranges are in prose for the reason the enum above gives.)
+/// </remarks>
+public static class MinorChords
+{
+    /// <summary>The key as written in the block.</summary>
+    public const string Key = "minorChords";
+
+    /// <summary>The two words, the default first.</summary>
+    public static readonly IReadOnlyList<string> Words = ["upper", "lower"];
+
+    /// <summary>True for <c>lower</c>, false for <c>upper</c>, null for anything else.</summary>
+    public static bool? Find(string word) => word switch
+    {
+        "upper" => false,
+        "lower" => true,
+        _ => null,
+    };
 }
 
 /// <summary>How a form section's name is drawn above the staff.</summary>

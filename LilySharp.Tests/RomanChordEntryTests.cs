@@ -16,6 +16,7 @@
 
 using System.Linq;
 using LilySharp.Core.Music;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
@@ -161,7 +162,8 @@ public class RomanChordEntryTests
 
             Assert.True(ChordStructure.TryParseRomanEntry(roman, tonicStep: 0, keySharps: 0, out var back),
                 $"'{roman}' did not read back");
-            Assert.Equal(original.DisplayName, back.DisplayName);
+            Assert.Equal(original.DisplayName(ChordSpelling.Default),
+                back.DisplayName(ChordSpelling.Default));
         }
     }
 
@@ -184,7 +186,7 @@ public class RomanChordEntryTests
     public void ThePrintedGlyphsParseAsStrings_ButDoNotLex()
     {
         Assert.True(ChordStructure.TryParseRomanEntry("♭VII", 0, 0, out var flat));
-        Assert.Equal("B♭", flat.DisplayName);
+        Assert.Equal("B♭", flat.DisplayName(ChordSpelling.Default));
 
         var tree = SyntaxTree.Parse("""
             time 4/4

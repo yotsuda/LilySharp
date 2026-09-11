@@ -116,6 +116,14 @@ public static class LanguageVocabulary
     /// (<see cref="PartCombineTexts"/>), the default first.</summary>
     public static IReadOnlyCollection<string> PartCombineTextWords => PartCombineTexts.Words;
 
+    /// <summary>The words the <c>chordQualities</c> key of a <c>layout { }</c> block takes
+    /// (<see cref="ChordQualityStyles"/>), the default first.</summary>
+    public static IReadOnlyCollection<string> ChordQualityStyleWords => ChordQualityStyles.Words;
+
+    /// <summary>The words the <c>minorChords</c> key of a <c>layout { }</c> block takes
+    /// (<see cref="MinorChords"/>), the default first.</summary>
+    public static IReadOnlyCollection<string> MinorChordWords => MinorChords.Words;
+
     /// <summary>The keys a <c>layout { }</c> block takes (<c>marks</c>, <c>barNumbers</c>) —
     /// <see cref="SyntaxFacts.LayoutKeyVocabulary"/>, the list the block's entry walker and
     /// its reader share.</summary>

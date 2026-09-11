@@ -58,6 +58,8 @@ internal static class LayoutPlanReader
         AccidentalStyles.Key => AccidentalStyles.Words,
         SectionLabels.Key => SectionLabels.Words,
         PartCombineTexts.Key => PartCombineTexts.Words,
+        ChordQualityStyles.Key => ChordQualityStyles.Words,
+        MinorChords.Key => MinorChords.Words,
         _ => [],
     };
 
@@ -213,6 +215,15 @@ internal static class LayoutPlanReader
                 PartCombineTexts.Key => ReadOneWord(plan, entry, span, found, PartCombineTexts.Key,
                     PartCombineTexts.Words, w => PartCombineTexts.Find(w) is { } b
                         ? plan with { PartCombineText = b } : null),
+                // The two halves of one chord symbol's spelling. Separate keys because they
+                // are separate in LilyPond too (an exception table and a boolean property),
+                // and because a chart can want either without the other.
+                ChordQualityStyles.Key => ReadOneWord(plan, entry, span, found, ChordQualityStyles.Key,
+                    ChordQualityStyles.Words, w => ChordQualityStyles.Find(w) is { } s
+                        ? plan with { Chords = plan.Chords with { Qualities = s } } : null),
+                MinorChords.Key => ReadOneWord(plan, entry, span, found, MinorChords.Key,
+                    MinorChords.Words, w => MinorChords.Find(w) is { } b
+                        ? plan with { Chords = plan.Chords with { LowercaseMinor = b } } : null),
                 // ⚠️ A key published in SyntaxFacts.LayoutKeyVocabulary with no arm here
                 // lands on the default below and binds NOTHING, in silence — "a switch
                 // nobody reads looks exactly like one that works", the sentence the

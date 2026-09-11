@@ -576,11 +576,15 @@ LayoutEntry    = 'marks' , MarkArrangement
                | 'barNumbers' , BarNumberPolicy
                | 'accidentals' , AccidentalStyle
                | 'sectionLabels' , SectionLabelStyle
-               | 'partCombineText' , OnOff ;
+               | 'partCombineText' , OnOff
+               | 'chordQualities' , ChordQualityStyle
+               | 'minorChords' , MinorChordCase ;
 MarkArrangement = 'stacked' | 'beside' ;
 BarNumberPolicy = 'lines' | 'none' | 'every' , Integer ;
 AccidentalStyle = 'default' | 'modern' | 'modernCautionary' | 'forget' | 'noReset' ;
 SectionLabelStyle = 'boxed' | 'plain' | 'none' ;
+ChordQualityStyle = 'words' | 'symbols' ;
+MinorChordCase = 'upper' | 'lower' ;
 OnOff          = 'on' | 'off' ;
 
 (* THE SCORE-WIDE DISPLAY SWITCHES — closed vocabularies that say how a class of symbol
@@ -653,16 +657,41 @@ OnOff          = 'on' | 'off' ;
    all — the part sheet's answer — and the twin then writes no \mark either, so the two
    pictures stay one picture. It is a DISPLAY switch: the form still plays the section,
    and MIDI / MusicXML are untouched.
-   NOT here yet: 'plain' (the name with no frame, which is LilyPond's own picture). The
-   frame's size is priced at nine sites, so the switch has to ride the MARK rather than be
-   read from the score — its own leg, stated rather than half-threaded
-   (MusicMarkEngraver.LabelBoxMargin's remark lists the nine).
 
    partCombineText — whether a combinedStaff prints the 'a2' / 'Solo' / 'Solo II' words.
    'on' is the default and LilyPond's; 'off' is its printPartCombineTexts = ##f, which the
    twin writes. With the words off the engraver makes no text item at all, so nothing is
    drawn and nothing is reserved. The COMBINING itself is unchanged — this switch is the
    words, not the merge.
+
+   chordQualities — NOT the same question as 'chords NAME as names|roman', and the two
+   cannot be merged either way. That clause says WHICH QUANTITY a row shows — the absolute
+   chord, or its degree in the key — and it is written per ROW because one score writes
+   both at once (see SHOWING ONE TRACK TWO WAYS); a layout key is score-wide by admission,
+   so it could not carry a setting one score needs two values of. This key says how the
+   QUALITY of whatever that clause chose is spelled. They compose: a degrees row is
+   byte-identical under either vocabulary, because a Roman degree already spells the same
+   four qualities its own way (° ø7 + °7) and overrides them.
+
+   How a chord's QUALITY is spelled after the root. 'words' is the default
+   and what every book on disk prints: Cdim, Caug, Cm7♭5, Cdim7. 'symbols' spells those
+   four the way LilyPond's own exception table does — C°, C+, Cø, C°7 — and leaves every
+   other quality alone, because LilyPond spells the rest with digits too
+   (ly/chord-modifiers-init.ly ignatzekExceptionMusic).
+
+   minorChords — whether a chord with a MINOR THIRD prints an uppercase root with its 'm'
+   ('upper', the default and LilyPond's ##f) or a lowercase root with the 'm' dropped
+   ('lower' = LilyPond's chordNameLowercaseMinor, which the twin writes on the ChordNames
+   context). The test is the THIRD, so a diminished chord lowercases too and a 'sus' chord
+   never does; the slash BASS keeps its capital, as LilyPond's chordNoteNamer does.
+
+   MEASURED (2026-09-11, LilyPond 2.26.0, scratch/p372/probe-symbols): with both keys set
+   Lily# spells c° / C+ / cø / c°7 / a7/C — character for character what LilyPond prints
+   for the same chords. NOT here, and stated rather than implied: LilyPond RAISES
+   everything after the root and draws a major seventh as a \triangle polygon, so 'maj7'
+   stays 'maj7' under both words. That is the Phase-1 chord-name simplification these keys
+   switch INSIDE, not the one they close. Neither key reaches MIDI or MusicXML: a
+   <harmony> carries the chord as data.
 
    The keys are matched case-insensitively (a paper key's rule); the value words are
    the language's closed vocabulary, canonical case only. Neither the keys nor the
@@ -678,6 +707,8 @@ OnOff          = 'on' | 'off' ;
      accidentals modern
      sectionLabels none
      partCombineText off
+     chordQualities symbols
+     minorChords lower
    }
 *)
 

@@ -218,7 +218,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                         "@chord can't name this arpeggio — its notes match no known chord quality; "
                         + "use the explicit form, e.g. @chord(Cmaj7).");
                 else if (OnArpeggioGroup(mark)
-                         && name != "chord" && AnnotationValues.Chord(mark, out _) == null)
+                         && name != "chord"
+                         && AnnotationValues.Chord(mark, ChordSpelling.Default, out _) == null)
                     // Chord names work on the group; other marks belong on a member.
                     WarnArpeggioUnsupported(mark, name);
                 break;
@@ -261,7 +262,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             || AnnotationValues.Feather(mark) != 0
             || AnnotationValues.IsArpeggioBracket(mark)
             || AnnotationValues.Frame(mark) is not null
-            || AnnotationValues.Chord(mark, out _) is not null
+            // The spelling cannot change WHETHER a mark names a chord, only how it prints.
+            || AnnotationValues.Chord(mark, ChordSpelling.Default, out _) is not null
             || AnnotationValues.Rehearsal(mark, out _) is not null
             || AnnotationValues.Figures(mark) is not null)
             return true;

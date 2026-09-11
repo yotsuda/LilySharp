@@ -526,6 +526,10 @@ public sealed partial class LilySharpLanguageServer
         AfterLayoutSectionLabels,
         /// <summary><c>layout { partCombineText |</c> — on / off.</summary>
         AfterLayoutPartCombineText,
+        /// <summary><c>layout { chordQualities |</c> — words / symbols.</summary>
+        AfterLayoutChordQualities,
+        /// <summary><c>layout { minorChords |</c> — upper / lower.</summary>
+        AfterLayoutMinorChords,
         ScoreBlock,
         StaffGroupBlock,
         AfterStaffRef,
@@ -837,6 +841,10 @@ public sealed partial class LilySharpLanguageServer
                 return CompletionContext.AfterLayoutSectionLabels;
             if (prevWord.Equals(PartCombineTexts.Key, StringComparison.OrdinalIgnoreCase))
                 return CompletionContext.AfterLayoutPartCombineText;
+            if (prevWord.Equals(ChordQualityStyles.Key, StringComparison.OrdinalIgnoreCase))
+                return CompletionContext.AfterLayoutChordQualities;
+            if (prevWord.Equals(MinorChords.Key, StringComparison.OrdinalIgnoreCase))
+                return CompletionContext.AfterLayoutMinorChords;
             return CompletionContext.LayoutBlock;
         }
 

@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -3291,8 +3291,14 @@ public sealed class MusicXmlExporter
         // symbol it derives from its notes is the collector's, not the exporter's —
         // and the empty string it answers with keeps it out of the <harmony> below,
         // exactly as `StartsWith("chord.")` did.
+        // ⚠️ ChordSpelling.Default, deliberately: a <harmony> carries the chord as DATA and
+        // BuildHarmony reads Lily#'s CANONICAL symbol back to build it, so a score that set
+        // `layout { chordQualities symbols }` must not hand this a "C°" — which spells no
+        // quality the parser knows. The rule `sectionLabels` and `partCombineText` keep: a
+        // display switch moves the page, never MIDI and never MusicXML.
         if (_currentMeasure != null
-            && LilySharp.Core.Semantics.AnnotationValues.Chord(mark, out _) is { Length: > 0 } chordText)
+            && LilySharp.Core.Semantics.AnnotationValues.Chord(
+                mark, LilySharp.Core.Semantics.ChordSpelling.Default, out _) is { Length: > 0 } chordText)
         {
             if (BuildHarmony(chordText) is { } harmony)
             {

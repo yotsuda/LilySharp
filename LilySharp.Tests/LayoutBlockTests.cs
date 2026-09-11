@@ -17,6 +17,7 @@
 using System;
 using System.Linq;
 using LilySharp.Core.LilyPond;
+using LilySharp.Core.Music;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
@@ -195,7 +196,8 @@ public class LayoutBlockTests
     public void TheVocabularyIsPublished_AndTheReaderReadsIt()
     {
         Assert.Equal(
-            new[] { "marks", "barNumbers", "accidentals", "sectionLabels", "partCombineText" },
+            new[] { "marks", "barNumbers", "accidentals", "sectionLabels", "partCombineText",
+                    "chordQualities", "minorChords" },
             LanguageVocabulary.LayoutKeys);
         Assert.Equal(LanguageVocabulary.LayoutKeys, LayoutPlanReader.AllKeySpellings());
         Assert.Equal(new[] { "lines", "none", "every" }, LanguageVocabulary.BarNumberPolicies);
@@ -204,6 +206,8 @@ public class LayoutBlockTests
         Assert.Equal(LanguageVocabulary.AccidentalStyleWords, LayoutPlanReader.ValueWords("accidentals"));
         Assert.Equal(new[] { "boxed", "plain", "none" }, LanguageVocabulary.SectionLabelStyles);
         Assert.Equal(new[] { "on", "off" }, LanguageVocabulary.PartCombineTextWords);
+        Assert.Equal(new[] { "words", "symbols" }, LanguageVocabulary.ChordQualityStyleWords);
+        Assert.Equal(new[] { "upper", "lower" }, LanguageVocabulary.MinorChordWords);
     }
 
     // ================================================================================
@@ -588,6 +592,273 @@ public class LayoutBlockTests
         Assert.Contains("\\set Staff.printPartCombineTexts = ##f", off, StringComparison.Ordinal);
         Assert.DoesNotContain("printPartCombineTexts",
             new LilyPondExporter().Export(SyntaxTree.Parse(Combined)), StringComparison.Ordinal);
+    }
+
+    // ================================================================================
+    // chordQualities / minorChords — how a chord symbol is spelled
+    // ================================================================================
+
+    /// <summary>A chord row of the four qualities LilyPond names with a symbol, plus a
+    /// minor seventh with a slash bass (so the bass's own case is observed).</summary>
+    private const string Chords =
+        "time 4/4\npart m { clef treble }\n"
+        + "section A { m { c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | }\n"
+        + "  chords prog { Cdim | Caug | Cm7-5 | Cdim7 | Am7/C | } }\n"
+        + "form main { ~A }\nscore main { chords prog  staff m }\n";
+
+    private static string[] ChordTexts(string top)
+    {
+        var tree = SyntaxTree.Parse(top + Chords);
+        Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        return [.. score.ChordNames.Select(c => c.ChordText)];
+    }
+
+    [Fact]
+    public void ChordNames_Words_IsTheDefault_AndSymbolsSpellsLilyPondsFour()
+    {
+        var words = new[] { "Cdim", "Caug", "Cm7♭5", "Cdim7", "Am7/C" };
+        Assert.Equal(words, ChordTexts(""));
+        Assert.Equal(words, ChordTexts("layout { chordQualities words }\n"));
+
+        // LilyPond's ignatzekExceptionMusic, in the characters it names the four with.
+        // Every other quality is spelled the same in both — the minor seventh is here to
+        // say so rather than to be assumed.
+        Assert.Equal(
+            new[] { "C°", "C+", "Cø", "C°7", "Am7/C" },
+            ChordTexts("layout { chordQualities symbols }\n"));
+    }
+
+    [Fact]
+    public void MinorChords_Lower_LowercasesTheRoot_DropsTheM_AndLeavesTheBassAlone()
+    {
+        var lower = ChordTexts("layout { minorChords lower }\n");
+
+        // The minor seventh: root down, the m gone with it, the BASS still a capital —
+        // LilyPond calls chordNoteNamer with lowercase? = #f (MinorChords' remark).
+        Assert.Equal("a7/C", lower[4]);
+        // A diminished chord has a minor third too, so LilyPond lowercases it as well; its
+        // quality word carries no leading "m" to drop.
+        Assert.Equal("cdim", lower[0]);
+        // The AUGMENTED triad's third is MAJOR: never lowercased, under either vocabulary.
+        Assert.Equal("Caug", lower[1]);
+    }
+
+    /// <summary>
+    /// The two switches together reach LilyPond's own chord names for these chords — the
+    /// one claim worth making about the pair, and the reason they are separate keys rather
+    /// than one bundled style.
+    /// </summary>
+    /// <remarks>
+    /// ★ MEASURED against LilyPond 2.26.0, not argued (scratch/p372/probe-symbols.ly, whose
+    /// twin carries <c>chordNameLowercaseMinor = ##t</c>): LilyPond's own SVG spells the same
+    /// five chords <c>c°</c>, <c>C+</c>, <c>cø</c>, <c>c°7</c>, <c>a7/C</c> — character for
+    /// character what this asserts. The same probe with neither switch shows the divergence
+    /// the keys exist for: LilyPond prints <c>C°</c> / <c>C+</c> / <c>Cø</c> / <c>C°7</c>
+    /// there too, because ITS exception table is always on, while Lily# prints the words.
+    /// <para>
+    /// ⚠️ NOT a claim about the whole vocabulary: LilyPond raises everything after the root
+    /// and draws a major seventh as a triangle, neither of which Lily# has (see
+    /// <see cref="LilySharp.Core.Semantics.ChordQualityStyle"/>). What agrees here is the
+    /// SPELLING — which characters stand for which quality, and which case the root is in.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void BothSwitchesTogether_SpellTheseChordsAsLilyPondDoes()
+    {
+        Assert.Equal(
+            new[] { "c°", "C+", "cø", "c°7", "a7/C" },
+            ChordTexts("layout { chordQualities symbols  minorChords lower }\n"));
+    }
+
+    [Fact]
+    public void WritingTheChordDefaults_IsTheSamePageAsWritingNothing()
+    {
+        Assert.Equal(
+            MaskDataPos(SvgGenerator.Generate(SyntaxTree.Parse(Chords), Opt)),
+            MaskDataPos(SvgGenerator.Generate(
+                SyntaxTree.Parse("layout { chordQualities words  minorChords upper }\n" + Chords), Opt)));
+    }
+
+    /// <summary>
+    /// ★ THE ONE WAY <c>minorChords lower</c> CAN CORRUPT A SYMBOL: it drops the suffix's
+    /// leading <c>m</c> as the minor modifier, so a minor-third quality whose suffix opened
+    /// with <c>ma…</c> would silently lose the <c>m</c> of <c>maj</c> and print a major
+    /// seventh as a minor one. Asked of the whole registry, in both vocabularies, so a
+    /// quality registered tomorrow is asked the same day — and asked of the SUFFIX rather
+    /// than of a list of qualities, which is what makes it a question and not a restatement.
+    /// </summary>
+    [Fact]
+    public void NoMinorThirdQuality_SpellsItsSuffixSoTheMinorModifierEatsAWord()
+    {
+        int asked = 0;
+        foreach (ChordQuality q in System.Enum.GetValues<ChordQuality>())
+        {
+            if (!ChordQualityRegistry.HasMinorThird(q))
+                continue;
+            foreach (var style in System.Enum.GetValues<ChordQualityStyle>())
+            {
+                asked++;
+                string suffix = ChordQualityRegistry.GetSuffix(q, style);
+                Assert.False(suffix.StartsWith("ma", System.StringComparison.Ordinal),
+                    $"{q} spells its minor-third suffix '{suffix}': dropping the minor "
+                    + "modifier would eat the head of a word.");
+            }
+        }
+        Assert.True(asked >= 10, $"only {asked} minor-third spellings were reached");
+    }
+
+    /// <summary>
+    /// A Roman degree does not move with <c>chordQualities</c>, and the reason is an identity
+    /// rather than a preference: every quality the vocabulary MOVES is one the roman table
+    /// has already replaced the word for.
+    /// </summary>
+    /// <remarks>
+    /// Derived in both directions — which qualities move comes from the two tables, and what
+    /// roman prints comes from <c>ToRomanNumeral</c> — so neither half is a list this file
+    /// keeps up to date.
+    /// </remarks>
+    [Fact]
+    public void TheRomanDegreeCannotFollowTheChordVocabulary()
+    {
+        int moved = 0;
+        foreach (ChordQuality q in System.Enum.GetValues<ChordQuality>())
+        {
+            string words = ChordQualityRegistry.GetSuffix(q, ChordQualityStyle.Words);
+            if (words == ChordQualityRegistry.GetSuffix(q, ChordQualityStyle.Symbols))
+                continue;   // the two vocabularies agree: nothing for roman to follow
+            moved++;
+            // Degree I of C major, so whatever follows the "I" is the roman suffix.
+            string roman = new ChordStructure(0, 0, q).ToRomanNumeral(0, 0)["I".Length..];
+            Assert.NotEqual(words, roman);
+        }
+        Assert.Equal(4, moved);   // LilyPond's exception table names four of Lily#'s qualities
+    }
+
+    /// <summary>
+    /// ★ AND THE TWO AXES COMPOSE ON THE PAGE. <c>chords NAME as names|roman</c> says WHICH
+    /// QUANTITY a row shows; <c>layout { chordQualities }</c> says how the quality of
+    /// whatever it shows is SPELLED. They are separate settings at separate scopes — the
+    /// clause is per ROW because one score writes both at once, which a score-wide key could
+    /// not carry — and the identity above means a roman row cannot move under the
+    /// vocabulary. Asked here of a score that writes BOTH rows, which is the arrangement
+    /// that replaced the retired <c>as both</c>: the names row changes, the degrees row is
+    /// byte-identical, on the one page.
+    /// </summary>
+    [Fact]
+    public void TheDegreesRowIsUnmovedByTheVocabulary_WhileTheNamesRowBesideItChanges()
+    {
+        const string TwoRows =
+            "time 4/4\nkey c major\npart m { clef treble }\n"
+            + "section A { m { c4 d e f | } chords prog { Cdim | } }\n"
+            + "form main { ~A }\n"
+            + "score main { chords prog as roman  chords prog as names  staff m }\n";
+
+        static string[] Shown(string top)
+        {
+            var tree = SyntaxTree.Parse(top + TwoRows);
+            Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
+            var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+            // What each band actually engraves: a roman band prints its degree, a names band
+            // its symbol (ChordNameEngraver's DisplayMode arm).
+            return [.. score.ChordNames.Select(c =>
+                c.DisplayMode == ChordDisplayMode.Roman ? c.RomanText ?? c.ChordText : c.ChordText)];
+        }
+
+        Assert.Equal(new[] { "I°", "Cdim" }, Shown(""));
+        Assert.Equal(new[] { "I°", "C°" }, Shown("layout { chordQualities symbols }\n"));
+    }
+
+    /// <summary>
+    /// ★ THE OTHER TWO NAMERS ON THE PAGE. A chord symbol is spelled in four places, and
+    /// the two above cover one of them (a `chords` ROW). These are the other two: an inline
+    /// <c>@chord</c> on a note, which the main music walk collects, and a chord part
+    /// ATTACHED to a staff, which the row's collector reaches by a different door. A namer
+    /// that missed the switch would print the other vocabulary beside the one the score
+    /// asked for, on the same page — the failure the required argument exists to stop, asked
+    /// here of the finished page rather than of the compiler's types.
+    /// </summary>
+    /// <remarks>
+    /// ★ POISONED to see it bite (2026-09-11), since it was green the hour it was written
+    /// and that says nothing (RULES §5.4): <c>CollectChordAnnotations</c> was made to pass
+    /// <c>ChordSpelling.Default</c> instead of the score's — exactly the shape a namer that
+    /// missed the switch has — and it turned red naming the odd one out:
+    ///   Assert.All() Failure: 1 out of 3 items … Expected: "c°"  Actual: "Cdim"
+    /// </remarks>
+    [Fact]
+    public void TheInlineChordAndTheAttachedTrack_SpellItTheSameWayTheRowDoes()
+    {
+        const string Inline =
+            "time 4/4\npart m { clef treble }\n"
+            + "section A { m { c4@chord(Cdim) d e f | } chords prog { Cdim | } }\n"
+            + "form main { ~A }\nscore main { chords prog  staff m with chords prog }\n";
+
+        static string[] Texts(string source)
+        {
+            var tree = SyntaxTree.Parse(source);
+            Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
+            var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+            return [.. score.ChordNames.Select(c => c.ChordText)];
+        }
+
+        // The row, the attached track and the inline mark are three symbols for the one
+        // chord, and under each spelling all three read the same.
+        var words = Texts(Inline);
+        Assert.Equal(3, words.Length);
+        Assert.All(words, t => Assert.Equal("Cdim", t));
+
+        var symbols = Texts("layout { chordQualities symbols  minorChords lower }\n" + Inline);
+        Assert.Equal(3, symbols.Length);
+        Assert.All(symbols, t => Assert.Equal("c°", t));
+    }
+
+    /// <summary>
+    /// An edit that changes the spelling renders exactly what a full recompile renders, in
+    /// both directions — the gate every score-wide switch has to pass, because the spelling
+    /// lives outside each measure's own reuse key and only the session-level comparison of
+    /// the resolved plan can shed the caches (the accidental style's guard, same shape).
+    /// </summary>
+    /// <remarks>
+    /// What carries it, named so the guard is not mistaken for luck: the spelling is a field
+    /// OF <c>LayoutPlan</c>, which is a record, and the resume gate compares the resolved
+    /// plan by value (<c>MeasureCollector.MetaMatchesShifted</c>). A spelling kept anywhere
+    /// else — on the collector, on the chord collector alone — would resume stale, and that
+    /// is the shape this asks about. NOT poisoned: the poison for a spelling that does not
+    /// reach a namer is on the test above, and there is no half-state of "in the record but
+    /// not compared" to introduce here without inventing one.
+    /// </remarks>
+    [Fact]
+    public void ASpellingEdit_RendersIdenticalToFullRecompile_BothWays()
+    {
+        string plain = Chords;
+        string spelled = "layout { chordQualities symbols  minorChords lower }\n" + Chords;
+        var compiler = new IncrementalCompiler(SyntaxTree.Parse(plain), Opt);
+        compiler.Render();
+        foreach (var (text, label) in new[] { (spelled, "to symbols"), (plain, "back to words") })
+        {
+            string incremental = compiler.RenderIncremental(SyntaxTree.Parse(text));
+            string full = SvgGenerator.Generate(SyntaxTree.Parse(text), Opt);
+            Assert.True(full == incremental, $"{label}: incremental != full");
+        }
+    }
+
+    [Fact]
+    public void MinorChords_Lower_IsLilyPondsOwnPropertyInTheTwin()
+    {
+        string lower = new LilyPondExporter().Export(
+            SyntaxTree.Parse("layout { minorChords lower }\n" + Chords));
+        Assert.Contains("\\new ChordNames \\with { chordNameLowercaseMinor = ##t }",
+            lower, StringComparison.Ordinal);
+
+        // A book that writes nothing gets no \with at all, so every existing twin stands.
+        Assert.DoesNotContain("chordNameLowercaseMinor",
+            new LilyPondExporter().Export(SyntaxTree.Parse(Chords)), StringComparison.Ordinal);
+        // …and the VOCABULARY key reaches the twin not at all: LilyPond names the chords it
+        // realizes by its own rules (the 2026-09-08 owner decision).
+        Assert.Equal(
+            new LilyPondExporter().Export(SyntaxTree.Parse(Chords)),
+            new LilyPondExporter().Export(
+                SyntaxTree.Parse("layout { chordQualities symbols }\n" + Chords)));
     }
 
     // ================================================================================

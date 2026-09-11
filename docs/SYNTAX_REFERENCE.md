@@ -1246,6 +1246,8 @@ layout {
   accidentals default      // the default: the 18th-century style
   sectionLabels boxed      // the default: the section's name in a frame
   partCombineText on       // the default: a combinedStaff prints a2 / Solo
+  chordQualities words         // the default: Cdim, Caug, Cm7♭5, Cdim7
+  minorChords upper        // the default: Am, Am7
 }
 layout chart {
   marks beside             // the chart's: "[Chorus] ♩ = 132" on one line
@@ -1253,6 +1255,8 @@ layout chart {
   accidentals modern       // Kurt Stone's: cancelled in other octaves and the next measure
   sectionLabels plain      // the name with no frame (LilyPond's own picture)
   partCombineText off      // no a2 / Solo words
+  chordQualities symbols       // C°, C+, Cø, C°7 — LilyPond's own
+  minorChords lower        // a, a7 — a lowercase root, no m
 }
 score main  { staff melody }                 // the file's default
 score parts { layout chart  staff melody }   // this score's own
@@ -1318,6 +1322,29 @@ MusicXML are untouched.
 the default and LilyPond's; `off` is its `printPartCombineTexts = ##f`, which the twin
 writes. With the words off no text item is made at all, so nothing is drawn and nothing is
 reserved. The **combining** is unchanged — this switch is the words, not the merge.
+
+**`chordQualities`** — *not* the same question as `chords NAME as names|roman`. That clause
+says **which quantity** a row shows (the absolute chord, or its degree in the key) and is
+written per row, because one score writes both at once — `chords prog as roman` above
+`chords prog as names` is how a track is shown two ways. This key says how the **quality**
+of whatever the row shows is spelled, for the whole score. The two compose: a degrees row
+is unchanged by it, since a Roman degree already spells those qualities its own way.
+
+How a chord's **quality** is spelled after the root. `words` (the
+default, and what every book on disk prints) spells them out: `Cdim`, `Caug`, `Cm7♭5`,
+`Cdim7`. `symbols` spells those four as LilyPond's own exception table does — `C°`, `C+`,
+`Cø`, `C°7` — and leaves every other quality alone, because LilyPond spells the rest with
+digits too.
+
+**`minorChords`** — whether a chord with a **minor third** prints an uppercase root with
+its `m` (`upper`, the default and LilyPond's) or a lowercase root with the `m` dropped
+(`lower` = LilyPond's `chordNameLowercaseMinor`, which the twin writes on the `ChordNames`
+context). The test is the third, so `Cdim` lowercases too and a `sus` chord never does; the
+slash **bass** keeps its capital, as LilyPond's does. Measured with both keys set, Lily#
+spells `c°` `C+` `cø` `c°7` `a7/C` — character for character what LilyPond prints for the
+same chords. What is **not** switchable: LilyPond raises everything after the root and
+draws a major seventh as a triangle, so `maj7` stays `maj7` under both words. Neither key
+reaches MIDI or MusicXML — a `<harmony>` carries the chord as data.
 
 The keys are matched case-insensitively; the value words are canonical case only. Neither
 is a reserved word (`part marks { … }` compiles). An unknown key is an error, a key set

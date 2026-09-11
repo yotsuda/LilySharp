@@ -296,15 +296,64 @@ public static class ChordQualityRegistry
         [ChordQuality.Major13] = ":maj13",
     };
 
+    // The four qualities LilyPond names with a SYMBOL rather than with digits and words.
+    // Every other quality is spelled the same in both vocabularies, because LilyPond spells
+    // those with digits too — so this table is short by construction, not by omission.
+    // LILYPOND-REF: ly/chord-modifiers-init.ly ignatzekExceptionMusic (lines 47-59) —
+    //   <c e gis> is "+", <c es ges> is whiteCircleMarkup (the degree sign at \fontsize #2),
+    //   <c es ges bes> is a superscript U+00F8 and <c es ges beses> is the circle with a
+    //   superscript 7. The range is in prose: a camelCase name with a ranged address counts
+    //   as naming nothing (Semantics.ChordQualityStyle's remark).
+    // ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
+    // run (ChordNameGlyphRun's remark) — so these are the CHARACTERS LilyPond names the four
+    // chords with, set on the baseline at the name's own size. The same four characters
+    // RomanSuffix has always used for the same four qualities.
+    private static readonly Dictionary<ChordQuality, string> SymbolSuffix = new()
+    {
+        [ChordQuality.Diminished] = "°",
+        [ChordQuality.Augmented] = "+",
+        [ChordQuality.HalfDiminished7] = "ø",
+        [ChordQuality.Diminished7] = "°7",
+    };
+
     /// <summary>The tones (diatonic step + semitone above root) of a quality.</summary>
     public static IReadOnlyList<ChordToneSpec> GetTones(ChordQuality quality) => Tones[quality];
+
+    /// <summary>
+    /// True when the quality's THIRD is minor — LilyPond's test for a lowercase root, asked
+    /// of the tone set rather than of the spelling so a new quality answers it the day it is
+    /// registered.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/chord-ignatzek-names.scm chordNameLowercaseMinor (lines 229-232) —
+    ///   the condition is <c>(= (ly:pitch-alteration third) FLAT)</c> on the chord's step-3
+    ///   pitch, so a diminished chord answers yes (its third is minor) and a <c>sus</c>
+    ///   chord, which has no third at all, answers no.
+    /// </remarks>
+    public static bool HasMinorThird(ChordQuality quality)
+    {
+        foreach (var t in Tones[quality])
+            if (t.DiatonicStep == 2 && ((t.Semitone % 12) + 12) % 12 == 3)
+                return true;
+        return false;
+    }
 
     /// <summary>The quality as a <c>\chordmode</c> modifier (<c>:m7</c>, <c>:7.5-</c>,
     /// empty for a major triad) — see the table's remark.</summary>
     public static string LilyPondModifier(ChordQuality quality) => LilyPondModifiers[quality];
 
-    /// <summary>The printed suffix after the root (e.g. "m7", "maj7", "").</summary>
-    public static string GetSuffix(ChordQuality quality) => Suffix[quality];
+    /// <summary>
+    /// The printed suffix after the root (e.g. "m7", "maj7", "") in
+    /// <paramref name="style"/>'s vocabulary.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE STYLE IS A REQUIRED ARGUMENT and there is no one-argument overload: the symbol
+    /// is spelled in four places, and one that kept the old call would print the other
+    /// vocabulary beside the one the score asked for, in silence (<see cref="Semantics.ChordSpelling"/>).
+    /// </remarks>
+    public static string GetSuffix(ChordQuality quality, Semantics.ChordQualityStyle style)
+        => style == Semantics.ChordQualityStyle.Symbols && SymbolSuffix.TryGetValue(quality, out var s)
+            ? s : Suffix[quality];
 
     /// <summary>
     /// Resolves a quality token (text after the <c>:</c>, e.g. "m7"); returns false
@@ -431,22 +480,67 @@ public sealed record ChordStructure(
         }
     }
 
-    /// <summary>The printed chord symbol, e.g. "C", "Am7", "G7", "B♭maj7", "C/G".</summary>
-    public string DisplayName
+    /// <summary>
+    /// The printed chord symbol, e.g. "C", "Am7", "G7", "B♭maj7", "C/G", spelled the way
+    /// <paramref name="spelling"/> asks (<c>layout { chordQualities … minorChords … }</c>).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ A METHOD WITH A REQUIRED ARGUMENT, not a property: see
+    /// <see cref="ChordQualityRegistry.GetSuffix"/>. <see cref="Semantics.ChordSpelling.Default"/>
+    /// is what a caller that must not follow the switch passes — MusicXML, and the editor's
+    /// completion, which shows the canonical spelling whatever a score sets.
+    /// </para>
+    /// <para>
+    /// The lowercase arm is LilyPond's, in its own order: the ROOT is lowercased and the
+    /// minor modifier — the leading <c>m</c> of the suffix — goes with it, because LilyPond
+    /// replaces <c>minorChordModifier</c> with <c>empty-markup</c> in exactly that case. The
+    /// BASS keeps its capital (<see cref="Semantics.MinorChords"/>'s remark). A
+    /// <see cref="RawSuffix"/> chord is never lowercased: its tone set is unknown, so
+    /// whether it has a minor third is unknown too, and guessing from the letters would make
+    /// <c>CM7</c> — a MAJOR seventh — read as a minor chord.
+    /// </para>
+    /// <para>
+    /// ⚠️ <c>minorChords lower</c> with <c>chordQualities words</c> spells a half-diminished
+    /// <c>c7♭5</c>, which in that convention means what <c>Cm7♭5</c> means — mechanically
+    /// right, and readable only to someone who knows the convention. LilyPond never shows
+    /// it because ITS exception table is always on: under <c>chordQualities symbols</c> the two
+    /// agree again and the chord is <c>cø</c>. Stated rather than special-cased: the reader
+    /// chose both switches.
+    /// </para>
+    /// </remarks>
+    public string DisplayName(Semantics.ChordSpelling spelling)
     {
-        get
+        bool lower = spelling.LowercaseMinor && RawSuffix == null
+                     && ChordQualityRegistry.HasMinorThird(Quality);
+        var sb = new StringBuilder();
+        sb.Append(SpellPitch(RootStep, RootAlter, lower));
+        string suffix = RawSuffix ?? ChordQualityRegistry.GetSuffix(Quality, spelling.Qualities);
+        sb.Append(lower ? DropMinorModifier(suffix) : suffix);
+        if (BassStep is int bs)
         {
-            var sb = new StringBuilder();
-            sb.Append(SpellPitch(RootStep, RootAlter));
-            sb.Append(RawSuffix ?? ChordQualityRegistry.GetSuffix(Quality));
-            if (BassStep is int bs)
-            {
-                sb.Append('/');
-                sb.Append(SpellPitch(bs, BassAlter ?? 0));
-            }
-            return sb.ToString();
+            sb.Append('/');
+            // Never lowercased: LilyPond's chordNoteNamer is called with lowercase? = #f.
+            sb.Append(SpellPitch(bs, BassAlter ?? 0));
         }
+        return sb.ToString();
     }
+
+    /// <summary>
+    /// The suffix with its leading minor modifier removed — the <c>m</c> the lowercase root
+    /// replaces, and the space that followed it in <c>m maj7</c>.
+    /// </summary>
+    /// <remarks>
+    /// Only called for a quality that HAS a minor third, so the leading <c>m</c> it finds is
+    /// that third's modifier and never the head of another word: <c>dim</c> and <c>dim7</c>
+    /// are the two minor-third suffixes that do not start with one (their third is spelled
+    /// inside the word), and they come through untouched. <c>EveryMinorThirdQuality_…</c> in
+    /// the tests asks that of the whole registry rather than trusting the list here.
+    /// </remarks>
+    private static string DropMinorModifier(string suffix)
+        => suffix.StartsWith("m", System.StringComparison.Ordinal)
+            ? suffix.Substring(1).TrimStart(' ')
+            : suffix;
 
     /// <summary>
     /// Recognizes a chord from its ROOT (first member) and the pitch classes of all
@@ -554,13 +648,23 @@ public sealed record ChordStructure(
     /// diminished ° / augmented + / half-diminished ø are more idiomatic there than
     /// the name-style "dim"/"aug"/"m7♭5"; every other quality keeps the printed
     /// suffix (m, maj7, m7, 7, …), so IIm7 / V7 / Imaj7 read as expected.</summary>
+    /// <remarks>
+    /// ⚠️ A ROMAN DEGREE DOES NOT FOLLOW <c>layout { chordQualities }</c>, and the reason is an
+    /// identity rather than a preference: this table already spells the four qualities that
+    /// vocabulary moves, and it overrides them — so asking for
+    /// <see cref="Semantics.ChordQualityStyle.Symbols"/> below would change nothing at all.
+    /// Passing <see cref="Semantics.ChordQualityStyle.Words"/> says which of the two equal
+    /// answers is meant. <c>TheRomanDegreeIsTheSameInBothVocabularies</c> holds it.
+    /// The CASE is fixed for a different reason: a numeral is not a note name, so
+    /// <c>minorChords lower</c> has nothing to lowercase here.
+    /// </remarks>
     private static string RomanSuffix(ChordQuality quality) => quality switch
     {
         ChordQuality.Diminished => "°",       // °
         ChordQuality.Diminished7 => "°7",     // °7
         ChordQuality.HalfDiminished7 => "ø7",  // ø7
         ChordQuality.Augmented => "+",
-        _ => ChordQualityRegistry.GetSuffix(quality),
+        _ => ChordQualityRegistry.GetSuffix(quality, Semantics.ChordQualityStyle.Words),
     };
 
     /// <summary>The seven numerals, LONGEST FIRST so a prefix never wins over the word
@@ -846,9 +950,15 @@ public sealed record ChordStructure(
 
     /// <summary>Spells a diatonic step + alteration as a note name with a Unicode
     /// accidental (e.g. 0/+1 → "C♯", 6/-1 → "B♭"). Shared by the chord-name fallback.</summary>
-    public static string SpellPitch(int step, int alter)
+    /// <param name="step">The diatonic step, 0=C..6=B.</param>
+    /// <param name="alter">The alteration in half steps, −2..+2.</param>
+    /// <param name="lowercase">LilyPond's <c>lowercase?</c> — a minor chord's ROOT under
+    /// <c>minorChords lower</c>. Defaults to false, which is what every other caller wants:
+    /// a slash bass is named with <c>#f</c> in LilyPond too, and the Roman degrees and the
+    /// ledger's spellings are not note names at all.</param>
+    public static string SpellPitch(int step, int alter, bool lowercase = false)
     {
-        char letter = "CDEFGAB"[((step % 7) + 7) % 7];
+        char letter = (lowercase ? "cdefgab" : "CDEFGAB")[((step % 7) + 7) % 7];
         string acc = alter switch
         {
             -2 => "♭♭",

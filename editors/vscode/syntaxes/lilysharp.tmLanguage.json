@@ -293,9 +293,23 @@
                     }
                 },
                 {
+                    "match": "\\b(chordQualities)\\s+(words|symbols)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.other.layout-key.lilysharp" },
+                        "2": { "name": "support.constant.layout-value.lilysharp" }
+                    }
+                },
+                {
+                    "match": "\\b(minorChords)\\s+(upper|lower)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.other.layout-key.lilysharp" },
+                        "2": { "name": "support.constant.layout-value.lilysharp" }
+                    }
+                },
+                {
                     "comment": "A key still gets its colour while the writer has typed it and not yet its word — the two-word rules above take over the moment the word lands.",
                     "name": "keyword.other.layout-key.lilysharp",
-                    "match": "\\b(marks|barNumbers|accidentals|sectionLabels|partCombineText)\\b"
+                    "match": "\\b(marks|barNumbers|accidentals|sectionLabels|partCombineText|chordQualities|minorChords)\\b"
                 },
                 {
                     "comment": "`every`'s count.",

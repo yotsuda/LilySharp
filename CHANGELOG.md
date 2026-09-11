@@ -102,6 +102,26 @@ workflow attaches that section to the GitHub Release verbatim.
     `Solo II`. `on` is the default and LilyPond's; `off` is its `printPartCombineTexts =
     ##f`, which the twin writes. With the words off no text item is made at all, so nothing
     is drawn and nothing is reserved — the combining itself is unchanged.
+  - **`chordQualities words | symbols`** says how a chord's quality is spelled after the root.
+    It is a different question from `chords NAME as names | roman`, which says which
+    *quantity* a row shows and stays on the row — one score writes both at once, so it
+    could never be a score-wide key. The two compose: a degrees row is unchanged by this
+    one, because a Roman degree already spells those qualities its own way.
+    `words` is the default and what every book on disk prints — `Cdim`, `Caug`, `Cm7♭5`,
+    `Cdim7`. `symbols` spells those four the way LilyPond's own exception table does —
+    `C°`, `C+`, `Cø`, `C°7` — and leaves every other quality alone, because LilyPond spells
+    the rest with digits too. ⚠️ `maj7` stays `maj7` under both: LilyPond draws a major
+    seventh as a *raised triangle*, and Lily# builds a chord name as one baseline run, so
+    neither the superscript nor the triangle has a home yet. These words switch inside that
+    simplification rather than closing it.
+  - **`minorChords upper | lower`** says whether a chord with a MINOR THIRD prints an
+    uppercase root with its `m` (`upper`, the default and LilyPond's) or a lowercase root
+    with the `m` dropped (`lower` — LilyPond's `chordNameLowercaseMinor`, which the twin
+    writes on the `ChordNames` context). The test is the third, so `Cdim` lowercases too
+    and a `sus` chord never does; the slash bass keeps its capital, as LilyPond's
+    `chordNoteNamer` does. Measured on LilyPond 2.26.0: with both keys set Lily# spells
+    `c°` `C+` `cø` `c°7` `a7/C` — character for character what LilyPond prints for the same
+    chords. Neither key reaches MIDI or MusicXML, where a chord is data.
 
   The editor completes the block pre-filled with the defaults, the keys, and each key's
   words, and colours them inside the block; an unknown key is an error and a bad word is

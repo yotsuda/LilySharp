@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 58 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 59 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 54 | 観測者がゼロだと自認しているもの |
 | `OWN` | 136 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **248** | |
+| **計** | **249** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -34,8 +34,10 @@
 | `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs` | 5 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 5 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（58 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（59 件）
 
+### `LilySharp.Core/Music/ChordStructure.cs`
+- **:307** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
 ### `LilySharp.Core/Rendering/Pdf/PdfDrawingContext.cs`
 - **:310** ⚠️ NOT PORTED — backend-blocked: CHARACTERS AT THE CLUSTERS' POSITIONS, not glyphs at
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
@@ -229,7 +231,7 @@
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2410** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:5168** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:5191** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:2258** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
@@ -262,7 +264,7 @@
 ### `LilySharp.Core/Rendering/TextFontMetrics.cs`
 - **:543** LILYSHARP-OWN: LilyPond has no equivalent refusal, and cannot — it resolves through
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
-- **:439** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
+- **:441** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Semantics/FontPlanReader.cs`
 - **:270** LILYSHARP-OWN: a limit of the LANGUAGE, not a geometry — LilyPond's font-size
 - **:278** The range a size may take, in staff spaces. LILYSHARP-OWN, as
@@ -273,8 +275,8 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:2398** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:4441** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:2403** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:4446** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`

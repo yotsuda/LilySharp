@@ -781,6 +781,8 @@ public class EditorColouringTests
             ("accidentals", LanguageVocabulary.AccidentalStyleWords),
             ("sectionLabels", LanguageVocabulary.SectionLabelStyles),
             ("partCombineText", LanguageVocabulary.PartCombineTextWords),
+            ("chordQualities", LanguageVocabulary.ChordQualityStyleWords),
+            ("minorChords", LanguageVocabulary.MinorChordWords),
         })
         {
             string pattern = Assert.Single(rules, r => r.Contains($"({key})\\s+(", StringComparison.Ordinal));

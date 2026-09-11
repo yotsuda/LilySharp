@@ -751,10 +751,13 @@ score references as `layout NAME` (or overrides in part with `layout NAME { … 
 layout {
   marks beside             // section label + tempo at the same bar: stacked (default) | beside
   barNumbers every 4       // which bars carry a number: lines (default) | none | every N
-  accidentals modern       // which notes carry one: default | modern | modernCautionary
-  sectionLabels plain      //                        | forget | noReset
-  partCombineText off      // section names: boxed (default) | plain | none
-}                          // a2 / Solo words: on (default) | off
+  accidentals modern       // which notes carry one: default (d.) | modern | modernCautionary
+                           //                        | forget | noReset
+  sectionLabels plain      // section names: boxed (default) | plain | none
+  partCombineText off      // a2 / Solo words: on (default) | off
+  chordQualities symbols       // chord quality: words (default) | symbols
+  minorChords lower        // a minor chord's root: upper (default) | lower
+}
 ```
 
 - `marks stacked` is LilyPond's: the boxed label over the tempo, each on its own anchor.
@@ -784,6 +787,16 @@ layout {
 - `partCombineText on` prints `a2` / `Solo` / `Solo II` on a `combinedStaff` (LilyPond's
   default); `off` is its `printPartCombineTexts = ##f`, which the twin writes. The merging
   itself is unchanged — this is the words, not the combining.
+- `chordQualities words` spells a chord's quality out — `Cdim`, `Caug`, `Cm7♭5`, `Cdim7` — and
+  is the default. `symbols` spells those four as LilyPond's own exception table does
+  (`C°`, `C+`, `Cø`, `C°7`); every other quality is the same word either way.
+- `minorChords upper` is LilyPond's default: `Am`, `Am7`. `lower` lowercases the root of a
+  chord with a MINOR THIRD and drops its `m` — `a`, `a7` — which is LilyPond's
+  `chordNameLowercaseMinor`, written by the twin. The slash BASS keeps its capital
+  (`a7/C`), as LilyPond's does, and `Caug` (a major third) never lowercases. With both keys
+  set Lily# spells these chords exactly as LilyPond prints them. `maj7` is NOT switchable:
+  LilyPond draws it as a raised triangle, which Lily#'s one-line chord name has no home for.
+- Neither chord key reaches MIDI or MusicXML — a `<harmony>` carries the chord as data.
 - ⚠️ **The keyword is `layout` and it takes a BLOCK.** A bare `marks beside` or
   `barNumbers none` at the top level is an error (the words are not directives); write
   `layout { marks beside }`. The keys and their words are not reserved (`part marks { }`

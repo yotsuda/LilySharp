@@ -46,16 +46,21 @@ public sealed class ChordNamesTests
     [InlineData(0, 0, ChordQuality.Diminished, "Cdim")]
     public void DisplayName_FromStructure(int step, int alter, ChordQuality q, string expected)
     {
-        Assert.Equal(expected, new ChordStructure(step, alter, q).DisplayName);
+        Assert.Equal(expected, new ChordStructure(step, alter, q).DisplayName(Plain));
     }
+
+    /// <summary>The spelling a book that writes no <c>layout { chordQualities … }</c> gets, and
+    /// what every case below names unless it is about the switch itself.</summary>
+    private static readonly LilySharp.Core.Semantics.ChordSpelling Plain =
+        LilySharp.Core.Semantics.ChordSpelling.Default;
 
     [Fact]
     public void DisplayName_RendersAccidentalsAndBass()
     {
-        Assert.Equal("C" + Sharp, new ChordStructure(0, 1, ChordQuality.Major).DisplayName);
-        Assert.Equal("B" + Flat + "7", new ChordStructure(6, -1, ChordQuality.Dominant7).DisplayName);
+        Assert.Equal("C" + Sharp, new ChordStructure(0, 1, ChordQuality.Major).DisplayName(Plain));
+        Assert.Equal("B" + Flat + "7", new ChordStructure(6, -1, ChordQuality.Dominant7).DisplayName(Plain));
         // C/G slash bass.
-        Assert.Equal("C/G", new ChordStructure(0, 0, ChordQuality.Major, BassStep: 4).DisplayName);
+        Assert.Equal("C/G", new ChordStructure(0, 0, ChordQuality.Major, BassStep: 4).DisplayName(Plain));
     }
 
     [Theory]
@@ -272,7 +277,7 @@ public sealed class ChordNamesTests
         // importer, but no Lily# spelling sets it.
         Assert.True(ChordStructure.TryParseChordEntry("Fmaj7/E", out var inv));
         Assert.False(inv.BassIsAdded);
-        Assert.Equal("Fmaj7/E", inv.DisplayName);
+        Assert.Equal("Fmaj7/E", inv.DisplayName(Plain));
         Assert.False(ChordStructure.TryParseChordEntry("Fmaj7/+E", out _));
         // '/' with no pitch after it is not an entry either.
         Assert.False(ChordStructure.TryParseChordEntry("Fmaj7/", out _));
@@ -404,7 +409,7 @@ public sealed class ChordNamesTests
         // suffix and converts the root to a Roman degree: "CM7" → "IM7", not "CM7".
         var s = new LilySharp.Core.Music.ChordStructure(
             0, 0, LilySharp.Core.Music.ChordQuality.Major, RawSuffix: "M7");
-        Assert.Equal("CM7", s.DisplayName);
+        Assert.Equal("CM7", s.DisplayName(Plain));
         Assert.Equal("IM7", s.ToRomanNumeral(0, 0)); // C in C major → I, suffix verbatim
     }
 }

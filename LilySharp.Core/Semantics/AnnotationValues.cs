@@ -353,7 +353,19 @@ public static class AnnotationValues
         _ => string.Concat(mark.Arguments.Select(a => a.Text)),
     };
 
-    public static string? Chord(MusicMarkSyntax mark, out Music.ChordStructure? structure)
+    /// <summary>
+    /// The symbol an <c>@chord</c> mark prints, spelled the way <paramref name="spelling"/>
+    /// asks, and the structure behind it; null when the mark is not an <c>@chord</c> or
+    /// names nothing Lily# can print.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The spelling is a REQUIRED argument (<see cref="ChordSpelling"/>). A caller that
+    /// only asks "is this a chord at all?" — the annotation-name validator — passes
+    /// <see cref="ChordSpelling.Default"/> because the answer is the same under every
+    /// spelling, and MusicXML passes it because a <c>&lt;harmony&gt;</c> is data.
+    /// </remarks>
+    public static string? Chord(MusicMarkSyntax mark, ChordSpelling spelling,
+        out Music.ChordStructure? structure)
     {
         structure = null;
         if (!string.Equals(mark.Name, "chord", StringComparison.Ordinal))
@@ -381,7 +393,7 @@ public static class AnnotationValues
         if (Music.ChordStructure.TryParseChordEntry(written, out var parsed))
         {
             structure = parsed;
-            return parsed.DisplayName;
+            return parsed.DisplayName(spelling);
         }
         return null;
     }

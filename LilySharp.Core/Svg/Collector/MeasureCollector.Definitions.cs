@@ -423,6 +423,10 @@ public sealed partial class MeasureCollector
         // carry a printed accidental. Every walk runs after this, so reading it once here
         // is reading it before the first note.
         _accidentalStyle = _meta.LayoutPlan.AccidentalStyle;
+        // …and the one the CHORD NAMERS read, for the same reason: every chord row and
+        // every inline @chord is collected after this.
+        _chordSpelling = _meta.LayoutPlan.Chords;
+        _chordNameCollector.Spelling = _chordSpelling;
     }
 
     /// <summary>True for exactly the node kinds <see cref="CollectDefinitions"/>'s

@@ -43,7 +43,8 @@ public class ChordNameTests
             .GetRoot().DescendantNodes().OfType<MusicMarkSyntax>().First();
 
     private static string? Chord(string music)
-        => LilySharp.Core.Semantics.AnnotationValues.Chord(Mark(music), out _);
+        => LilySharp.Core.Semantics.AnnotationValues.Chord(
+            Mark(music), LilySharp.Core.Semantics.ChordSpelling.Default, out _);
 
     [Fact]
     public void ParseChordName_SimpleChord()

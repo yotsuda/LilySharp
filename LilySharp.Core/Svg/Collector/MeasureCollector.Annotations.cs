@@ -122,7 +122,8 @@ public sealed partial class MeasureCollector
             if (child is not MusicMarkSyntax markSyntax)
                 continue;
 
-            var chordText = Semantics.AnnotationValues.Chord(markSyntax, out var structure);
+            var chordText = Semantics.AnnotationValues.Chord(
+                markSyntax, _chordSpelling, out var structure);
             if (chordText is null)
                 continue;
 
@@ -146,7 +147,7 @@ public sealed partial class MeasureCollector
                 };
                 if (structure == null)
                     continue;
-                chordText = structure.DisplayName;
+                chordText = structure.DisplayName(_chordSpelling);
             }
 
             _chordNameCollector.AddInline(

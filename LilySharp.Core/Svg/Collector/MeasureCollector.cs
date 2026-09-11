@@ -400,6 +400,11 @@ public sealed partial class MeasureCollector
     // The style the score asks for, read once from the resolved layout plan (the music
     // walks all run after CollectDefinitions).
     private Semantics.AccidentalStyleSpec _accidentalStyle = Semantics.AccidentalStyles.Default;
+    // …and how a chord SYMBOL is spelled, read from the same resolved plan at the same
+    // moment. It reaches the chord rows through ChordNameCollector.Spelling and the inline
+    // @chord marks through CollectChordAnnotations, which are the only two namers on the
+    // page (Semantics.ChordSpelling's remark says why it is handed over rather than looked up).
+    private Semantics.ChordSpelling _chordSpelling = Semantics.ChordSpelling.Default;
     // Notes explicitly marked with @courtesy annotation
     private readonly HashSet<int> _courtesySourcePositions = new();
     /// <summary>
