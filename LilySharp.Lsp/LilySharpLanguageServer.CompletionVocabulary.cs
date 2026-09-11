@@ -347,8 +347,8 @@ public sealed partial class LilySharpLanguageServer
         ["beside"] = "The section label at the line start with the tempo mark to its right on one line (the chart's)",
     };
 
-    /// <summary>After <c>marks</c>: the two arrangements, from the compiler, in its order
-    /// (the default first).</summary>
+    /// <summary>After <c>layout { marks</c>: the two arrangements, from the compiler, in
+    /// its order (the default first).</summary>
     internal static CompletionList GetMarkArrangementCompletions()
     {
         return new CompletionList
@@ -362,6 +362,95 @@ public sealed partial class LilySharpLanguageServer
             }).ToArray()
         };
     }
+
+    // Prose per `barNumbers` policy — the same contract as the arrangements above.
+    private static readonly System.Collections.Generic.Dictionary<string, string> BarNumberPolicyDetails = new()
+    {
+        ["lines"] = "A number at the start of every line after the first (LilyPond's; the default)",
+        ["none"] = "No bar numbers at all",
+        ["every"] = "A number on every Nth bar, wherever it stands: barNumbers every 4",
+    };
+
+    /// <summary>After <c>layout { barNumbers</c>: the three policies, from the compiler, in
+    /// its order (the default first). <c>every</c> inserts with a count slot.</summary>
+    internal static CompletionList GetBarNumberPolicyCompletions()
+    {
+        return new CompletionList
+        {
+            Items = LanguageVocabulary.BarNumberPolicies.Select((name, i) => new CompletionItem
+            {
+                Label = name,
+                Kind = CompletionItemKind.EnumMember,
+                Detail = BarNumberPolicyDetails.TryGetValue(name, out var d) ? d : null,
+                SortText = i.ToString(),
+                InsertTextFormat = name == BarNumberPolicy.EveryWord ? InsertTextFormat.Snippet : null,
+                InsertText = name == BarNumberPolicy.EveryWord ? name + " ${1:4}" : null,
+            }).ToArray()
+        };
+    }
+
+    /// <summary>
+    /// At <c>layout |</c> (the keyword typed, nothing after it): the block forms, the same
+    /// motion as <c>paper</c>. ★ THE PRE-FILLED VALUES ARE THE DEFAULTS (stacked, lines),
+    /// so accepting the completion and changing nothing does not move the page.
+    /// </summary>
+    internal static CompletionList GetLayoutDeclarationCompletions()
+        => new()
+        {
+            Items =
+            [
+                new CompletionItem
+                {
+                    Label = "{ … }",
+                    FilterText = "layout",
+                    Kind = CompletionItemKind.Snippet,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = "{\n  marks ${1:stacked}\n  barNumbers ${2:lines}$0\n}",
+                    Preselect = true,
+                    SortText = "0",
+                    Detail = "Set the score's display switches (pre-filled with LilyPond's defaults)",
+                },
+                new CompletionItem
+                {
+                    Label = "{ }",
+                    FilterText = "layout",
+                    Kind = CompletionItemKind.Snippet,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = "{\n  $0\n}",
+                    SortText = "1",
+                    Detail = "Set display switches key by key",
+                    Command = new Command { Title = "Suggest layout key", CommandIdentifier = "editor.action.triggerSuggest" },
+                },
+            ]
+        };
+
+    /// <summary>The keys a <c>layout { }</c> body takes, READ FROM THE COMPILER
+    /// (<see cref="LanguageVocabulary.LayoutKeys"/>); each re-opens the popup on its own
+    /// words. This file supplies only the prose.</summary>
+    private static CompletionList? _layoutBlockCompletions;
+
+    internal static CompletionList GetLayoutBlockCompletions()
+        => _layoutBlockCompletions ??= new CompletionList
+        {
+            Items = LanguageVocabulary.LayoutKeys.Select((key, i) => new CompletionItem
+            {
+                Label = key,
+                Kind = CompletionItemKind.Property,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = key + " $0",
+                Detail = LayoutKeyDetail(key),
+                SortText = i.ToString(),
+                Command = new Command { Title = "Suggest layout value", CommandIdentifier = "editor.action.triggerSuggest" },
+            }).ToArray()
+        };
+
+    /// <summary>One line of help per layout key — what the key switches, and its default.</summary>
+    private static string LayoutKeyDetail(string key) => key switch
+    {
+        "marks" => "How a section label and the tempo at the same bar are arranged: stacked (default) | beside",
+        "barNumbers" => "Which bars carry a number: lines (default) | none | every N",
+        _ => "Layout key",
+    };
 
     // Prose and the default count per repeat kind. A tremolo's count is the number of
     // strokes the body is played in (repeat tremolo 4 { c16 e } = one beat), so its default
@@ -1258,7 +1347,7 @@ public sealed partial class LilySharpLanguageServer
             ["composer"] = ("composer \"$0\"", "This score's own composer, overriding the file's", false),
             ["fonts"] = ("fonts $0", "This score's faces: reference a named top-level fonts block", true),
             ["paper"] = ("paper $0", "This score's page: reference a named top-level paper block", true),
-            ["marks"] = ("marks $0", "This score's arrangement of a section label and the tempo at the same bar: stacked (default) | beside", true),
+            ["layout"] = ("layout $0", "This score's display switches (marks, barNumbers): reference a named top-level layout block", true),
         };
 
     /// <summary>The render-spec keywords valid inside a score / grandStaff body — READ FROM
@@ -2626,9 +2715,9 @@ public sealed partial class LilySharpLanguageServer
                 // snippet choice, which was a second copy of the two words and one the
                 // part-header item never had (fixed 2026-09-03).
                 new CompletionItem { Label = "pitch", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "pitch $0", Detail = "Pitch convention for transposing instruments: written (default) | concert", Command = new Command { Title = "Suggest pitch mode", CommandIdentifier = "editor.action.triggerSuggest" } },
-                // The same motion as `pitch`: the bare keyword, then the popup lists the two
-                // arrangements (GetMarkArrangementCompletions) — no private copy of the pair.
-                new CompletionItem { Label = "marks", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "marks $0", Detail = "How a section label and the tempo at the same bar are arranged: stacked (default) | beside", Command = new Command { Title = "Suggest marks arrangement", CommandIdentifier = "editor.action.triggerSuggest" } },
+                // ⚠️ Pre-filled with the DEFAULTS (stacked, lines), the paper snippet's rule:
+                // accepting the completion and changing nothing does not move the page.
+                new CompletionItem { Label = "layout", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "layout {\n\tmarks ${1:stacked}\n\tbarNumbers ${2:lines}$0\n}", Detail = "Display switches (marks stacked|beside, barNumbers lines|none|every N), pre-filled with LilyPond's defaults" },
                 // `override` is a valid global default; `revert` / `once` are NOT offered at
                 // the top level — they only work in a music stream (LYS1023 otherwise).
                 // `partial` is likewise NOT offered here — a pickup belongs to a section, not
@@ -2696,10 +2785,10 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>Top-level keywords that may appear only ONCE at the global scope — metadata
-    /// (title/composer/font/paper) and the piece-wide defaults (time/key/tempo/octave).
+    /// (title/composer/font/paper/layout) and the piece-wide defaults (time/key/tempo/octave).
     /// Completion drops them once present; duplicable keywords are NOT listed here.</summary>
     private static readonly System.Collections.Generic.HashSet<string> GlobalSingletonKeywords =
-        new(StringComparer.Ordinal) { "title", "composer", "fonts", "paper", "tempo", "time", "key", "octave", "pitch", "marks", "transpose" };
+        new(StringComparer.Ordinal) { "title", "composer", "fonts", "paper", "layout", "tempo", "time", "key", "octave", "pitch", "transpose" };
 
     /// <summary>True when <paramref name="keyword"/> appears as a whole word at the GLOBAL
     /// scope (brace depth 0) in live code — not inside a block, a string, or a comment.</summary>

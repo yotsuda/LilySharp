@@ -270,41 +270,58 @@ public class ValueContextCompletionTests
     }
 
     [Fact]
-    public void MarksKeyword_IsOfferedAtTopLevel_AndInAScore_AndAutoTriggersTheArrangementList()
+    public void LayoutKeyword_IsOfferedAtTopLevel_PrefilledWithTheDefaults_AndInAScoreAsAReference()
     {
-        // `marks` completes at global scope and inside a score body, inserts the bare
-        // keyword and re-opens the popup so stacked / beside appear immediately — the
-        // `pitch` motion, with no private copy of the pair.
+        // `layout` completes at global scope as the block pre-filled with LilyPond's
+        // defaults (the paper snippet's rule: accepting it and changing nothing does not
+        // move the page), and inside a score body as the bare keyword that re-opens the
+        // popup on the declared block names.
         var top = LilySharpLanguageServer.GetTopLevelCompletions().Items
-            .Single(i => i.Label == "marks");
-        Assert.Equal("marks $0", top.InsertText);
-        Assert.Equal("editor.action.triggerSuggest", top.Command?.CommandIdentifier);
+            .Single(i => i.Label == "layout");
+        Assert.Contains("marks ${1:stacked}", top.InsertText, StringComparison.Ordinal);
+        Assert.Contains("barNumbers ${2:lines}", top.InsertText, StringComparison.Ordinal);
 
         var inScore = LilySharpLanguageServer.GetScoreBlockCompletions().Items
-            .Single(i => i.Label == "marks");
-        Assert.Equal("marks $0", inScore.InsertText);
+            .Single(i => i.Label == "layout");
+        Assert.Equal("layout $0", inScore.InsertText);
         Assert.Equal("editor.action.triggerSuggest", inScore.Command?.CommandIdentifier);
 
-        var modes = LilySharpLanguageServer.GetMarkArrangementCompletions().Items
-            .Select(i => i.Label).ToArray();
-        Assert.Equal(new[] { "stacked", "beside" }, modes);
+        // The keys re-open the popup on their own words, which come from the compiler.
+        var keys = LilySharpLanguageServer.GetLayoutBlockCompletions().Items;
+        Assert.All(keys, k => Assert.Equal("editor.action.triggerSuggest", k.Command?.CommandIdentifier));
+        Assert.Equal(new[] { "stacked", "beside" },
+            LilySharpLanguageServer.GetMarkArrangementCompletions().Items.Select(i => i.Label));
+        Assert.Equal(new[] { "lines", "none", "every" },
+            LilySharpLanguageServer.GetBarNumberPolicyCompletions().Items.Select(i => i.Label));
     }
 
     [Theory]
-    [InlineData("marks ")]
-    [InlineData("tempo 120\nmarks ")]
-    [InlineData("score main { marks ")]
-    [InlineData("score main { staff m  marks be")]
-    public void AfterMarks_OffersTheArrangements_InItsTwoHomes(string text)
-        => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterMarks, ContextOf(text));
+    [InlineData("layout ", "AfterLayoutKeyword")]
+    [InlineData("tempo 120\nlayout ", "AfterLayoutKeyword")]
+    [InlineData("score main { layout ", "AfterLayoutBlockRef")]
+    [InlineData("score main { staff m  layout ch", "AfterLayoutBlockRef")]
+    [InlineData("layout {", "LayoutBlock")]
+    [InlineData("layout { ", "LayoutBlock")]
+    [InlineData("layout { marks beside\n  ", "LayoutBlock")]
+    [InlineData("layout chart { ", "LayoutBlock")]
+    [InlineData("score main { layout chart { ", "LayoutBlock")]
+    [InlineData("layout { marks ", "AfterLayoutMarks")]
+    [InlineData("layout { marks be", "AfterLayoutMarks")]
+    [InlineData("layout { barNumbers ", "AfterLayoutBarNumbers")]
+    [InlineData("layout { marks beside  barNumbers ev", "AfterLayoutBarNumbers")]
+    public void TheLayoutBlock_ServesItsKeysAndTheirWords(string text, string expected)
+        => Assert.Equal(expected, ContextOf(text).ToString());
 
     [Theory]
-    // Not a part header, not a music body, not a string: `marks` is refused or is a word there.
+    // Not a part header, not a music body, not a string: `marks` is a plain word there,
+    // and the arrangements are not offered.
     [InlineData("part m { marks ")]
     [InlineData("section A { m { marks ")]
     [InlineData("title \"rehearsal marks ")]
-    public void MarksArrangements_AreNotOfferedWhereTheWordIsNotTheDirective(string text)
-        => Assert.NotEqual(LilySharpLanguageServer.CompletionContext.AfterMarks, ContextOf(text));
+    [InlineData("marks ")]
+    [InlineData("score main { marks ")]
+    public void MarksArrangements_AreNotOfferedOutsideTheLayoutBlock(string text)
+        => Assert.NotEqual(LilySharpLanguageServer.CompletionContext.AfterLayoutMarks, ContextOf(text));
 
     [Theory]
     // `repeat` is an English word: as a LYRIC (a top-level track's inner section, and a

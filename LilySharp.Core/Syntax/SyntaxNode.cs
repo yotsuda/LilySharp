@@ -189,6 +189,7 @@ public abstract class SyntaxNode
             SyntaxKind.MetadataDeclaration => new MetadataDeclarationSyntax((MetadataDeclarationGreen)green, this, position),
             SyntaxKind.FontDeclaration => new FontDeclarationSyntax((FontDeclarationGreen)green, this, position),
             SyntaxKind.PaperDeclaration => new PaperDeclarationSyntax((PaperDeclarationGreen)green, this, position),
+            SyntaxKind.LayoutDeclaration => new LayoutDeclarationSyntax((LayoutDeclarationGreen)green, this, position),
             SyntaxKind.TimeSignature => new TimeSignatureSyntax((TimeSignatureGreen)green, this, position),
             SyntaxKind.TempoDeclaration => new TempoDeclarationSyntax((TempoDeclarationGreen)green, this, position),
             SyntaxKind.PartialDeclaration => new PartialDeclarationSyntax((PartialDeclarationGreen)green, this, position),

@@ -514,6 +514,7 @@ internal sealed partial class Parser
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword => ParseMetadataDeclaration(),
             SyntaxKind.FontsKeyword => ParseFontDeclaration(),
             SyntaxKind.PaperKeyword => ParsePaperDeclaration(),
+            SyntaxKind.LayoutKeyword => ParseLayoutDeclaration(),
             SyntaxKind.TimeKeyword => ParseTimeSignature(),
             SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
             SyntaxKind.PartialKeyword => ParsePartialDeclaration(),
@@ -522,7 +523,6 @@ internal sealed partial class Parser
             SyntaxKind.OctaveKeyword => ParseOctaveDirective(),
             SyntaxKind.TransposeKeyword => ParseTopLevelTranspose(),
             SyntaxKind.PitchKeyword => ParsePitchDirective(),
-            SyntaxKind.MarksKeyword => ParseMarksDirective(),
 
             SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or
             SyntaxKind.AppoggiaturaKeyword => ParseGraceExpression(),

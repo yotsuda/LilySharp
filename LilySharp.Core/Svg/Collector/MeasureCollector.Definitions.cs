@@ -229,6 +229,14 @@ public sealed partial class MeasureCollector
                         _meta.Paper = Semantics.PaperPlanReader.Read(paper, PaperBase, out _);
                     break;
 
+                case LayoutDeclarationSyntax layout:
+                    // `layout { KEY VALUE… }` sets the score-wide display switches. Same
+                    // contract as paper: the reading is shared with LayoutValidator, and
+                    // only the UNNAMED top-level block is the file default.
+                    if (layout.NameToken == null && !IsInsideRenderDeclaration(layout))
+                        _meta.LayoutPlan = Semantics.LayoutPlanReader.Read(layout, out _);
+                    break;
+
                 case TempoDeclarationSyntax tempoDecl:
                     // Only the top-level (initial) tempo sets the score default;
                     // mid-music tempo changes are handled in the music stream
@@ -407,10 +415,10 @@ public sealed partial class MeasureCollector
             _meta.Fonts = Semantics.FontPlanReader.ReadReference(root, fontsRef, _meta.Fonts);
         if (PaperOverride is { } paperRef)
             _meta.Paper = Semantics.PaperPlanReader.ReadReference(root, paperRef, _meta.Paper, PaperBase);
-        // `marks stacked|beside`: the score's own item, else the file's top-level default —
-        // the same two tiers, resolved to the one bit the mark engraver reads and landed in
-        // _meta for the same incremental reason (MetaMatchesShifted compares it).
-        _meta.MarksBeside = MarksOverride ?? Semantics.MarkArrangement.FileIsBeside(root);
+        // `layout NAME`: the third reference of that shape, landed in _meta for the same
+        // incremental reason (MetaMatchesShifted compares it).
+        if (LayoutOverride is { } layoutRef)
+            _meta.LayoutPlan = Semantics.LayoutPlanReader.ReadReference(root, layoutRef, _meta.LayoutPlan);
     }
 
     /// <summary>True for exactly the node kinds <see cref="CollectDefinitions"/>'s
@@ -419,7 +427,7 @@ public sealed partial class MeasureCollector
     /// every fixture book exercises the file defaults).</summary>
     private static bool IsDefinitionKind(SyntaxKind kind) => kind is
         SyntaxKind.MetadataDeclaration or SyntaxKind.FontDeclaration
-        or SyntaxKind.PaperDeclaration
+        or SyntaxKind.PaperDeclaration or SyntaxKind.LayoutDeclaration
         or SyntaxKind.TempoDeclaration or SyntaxKind.TimeSignature
         or SyntaxKind.KeySignature or SyntaxKind.ClefDeclaration
         or SyntaxKind.OctaveDirective or SyntaxKind.PartialDeclaration

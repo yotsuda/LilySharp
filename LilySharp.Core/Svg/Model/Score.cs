@@ -169,11 +169,15 @@ public sealed record Score
     internal Layout.LayoutOptions Paper { get; init; } = Layout.LayoutOptions.Default;
 
     /// <summary>
-    /// <c>marks beside</c> — see <see cref="MultiStaffScore.MarksBeside"/>, the same bit
-    /// on the shape the layout usually holds; carried here so a single-staff collect
-    /// answers it too.
+    /// The <c>layout { }</c> switches — see <see cref="MultiStaffScore.LayoutPlan"/>, the
+    /// same plan on the shape the layout usually holds; carried here so a single-staff
+    /// collect answers it too. (Not named <c>Layout</c>: that is the namespace
+    /// <see cref="Paper"/>'s type is reached through — CS0236.)
     /// </summary>
-    public bool MarksBeside { get; init; }
+    public Semantics.LayoutPlan LayoutPlan { get; init; } = Semantics.LayoutPlan.Default;
+
+    /// <summary><c>marks beside</c> — <see cref="LayoutPlan"/>'s bit, named for its readers.</summary>
+    public bool MarksBeside => LayoutPlan.MarksBeside;
 
     /// <summary>
     /// The text measurements this score's <see cref="Fonts"/> imply — see

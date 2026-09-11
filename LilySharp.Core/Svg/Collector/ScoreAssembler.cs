@@ -58,9 +58,10 @@ internal sealed record ScoreContent(
     int TempoDots,
     Rendering.TextFontPlan Fonts,
     Layout.LayoutOptions Paper,
-    // `marks beside` — the label-and-tempo arrangement the score resolved to
-    // (Semantics.MarkArrangement); false is the stacked default.
-    bool MarksBeside);
+    // The `layout { }` switches the score resolved to (Semantics.LayoutPlanReader);
+    // LayoutPlan.Default when it wrote none. ⚠️ Not named `Layout` — that is the namespace
+    // the `Paper` line above reaches its own type through (CS0236).
+    Semantics.LayoutPlan LayoutPlan);
 
 /// <summary>
 /// Turns a <see cref="ScoreContent"/> snapshot plus a set of voices / staff groups
@@ -112,7 +113,7 @@ internal static class ScoreAssembler
             TempoDots = c.TempoDots,
             Fonts = c.Fonts,
             Paper = c.Paper,
-            MarksBeside = c.MarksBeside,
+            LayoutPlan = c.LayoutPlan,
         };
 
     /// <summary>Single-voice convenience overload.</summary>
@@ -156,7 +157,7 @@ internal static class ScoreAssembler
             TempoDots = c.TempoDots,
             Fonts = c.Fonts,
             Paper = c.Paper,
-            MarksBeside = c.MarksBeside,
+            LayoutPlan = c.LayoutPlan,
         };
 
     // ⚠️ THERE IS NO INITIAL-REPEAT GATE HERE ANY MORE, and that is a decision, not an

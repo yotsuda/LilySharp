@@ -220,23 +220,37 @@ internal static class BarNumberEngraver
     }
 
     /// <summary>
-    /// Calculates bar number layouts. When <paramref name="period"/> is greater
-    /// than 1, also numbers every Nth measure within a system; default 0 means
-    /// system starts only. <paramref name="numberFirstMeasure"/> set to false (LP
-    /// default) suppresses the score's very first measure number.
+    /// Calculates bar number layouts under <paramref name="policy"/> — the score's
+    /// <c>layout { barNumbers … }</c> switch (<see cref="Semantics.BarNumberPolicy"/>):
+    /// <c>lines</c> numbers the first bar of every system after the first (LilyPond's
+    /// default), <c>none</c> numbers nothing, <c>every N</c> numbers every bar whose
+    /// displayed number is a multiple of N wherever it stands.
     /// Collision handling lives in OutsideStaffStacker.StackAboveStaff.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/translation-functions.scm:1005-1007 first-bar-number-invisible-and-no-parenthesized-bar-numbers
+    ///   — the default barNumberVisibility (engraver-init.ly:858): barnum > 1 at a bar's
+    ///   start; LILYPOND-REF: scm/define-grobs.scm:324 begin-of-line-visible — BarNumber's
+    ///   break-visibility, which then keeps only the line-start ones. Together: the
+    ///   <c>lines</c> arm.
+    /// LILYPOND-REF: scm/translation-functions.scm:987-988 every-nth-bar-number-visible —
+    ///   (= 0 (modulo barnum n)), the <c>every</c> arm; the number stands mid-line because
+    ///   the writer overrides break-visibility to end-of-line-invisible (#(#f #t #t)), which
+    ///   is what the twin writes beside it. A line-start bar that is not a multiple carries
+    ///   NO number under it — the visibility function is asked first and answers no.
+    /// LILYPOND-REF: ly/engraver-init.ly:774 — \consists Bar_number_engraver in Score;
+    ///   \remove Bar_number_engraver is the <c>none</c> arm (no grob is ever made).
+    /// </remarks>
     public static ImmutableArray<BarNumberLayout> Calculate(
         Rendering.ScoreTextMetrics fonts,
         ImmutableArray<SystemLayout> systems,
-        int period = 0,
-        bool numberFirstMeasure = false,
+        Semantics.BarNumberPolicy policy = default,
         int numberOffset = 0,
         int gridBarlineRowIndex = -1,
         ImmutableArray<int> displayedNumbers = default,
         ImmutableArray<Measure> measures = default)
     {
-        if (systems.IsDefaultOrEmpty)
+        if (systems.IsDefaultOrEmpty || policy.Mode == Semantics.BarNumberMode.None)
             return ImmutableArray<BarNumberLayout>.Empty;
 
         var builder = ImmutableArray.CreateBuilder<BarNumberLayout>();
@@ -294,21 +308,31 @@ internal static class BarNumberEngraver
                 // number keeps the system. Unchanged from before this branch existed.
                 : EngravingDefaults.StaffLineThickness / 2;
 
-            // First measure of every system after the first is always numbered.
-            // LILYPOND-REF: scm/translation-functions.scm — barNumberVisibility default
-            // (first-bar-number-invisible-and-no-parenthesized-bar-numbers).
             for (int i = 0; i < system.Measures.Length; i++)
             {
                 var ml = system.Measures[i];
                 int measureIndex = ml.MeasureIndex;
                 bool isFirstSystem = sysIdx == 0;
                 bool isFirstInSystem = i == 0;
-                bool isFirstOfScore = measureIndex == 0 || ml.MeasureIndex == 0;
 
-                bool show =
-                    (isFirstInSystem && !isFirstSystem) ||
-                    (isFirstOfScore && numberFirstMeasure) ||
-                    (period > 0 && measureIndex > 0 && (measureIndex % period == 0));
+                // LP shows 1-based numbers. measureIndex is 0-based. A leading
+                // \partial pickup shifts everything down by one (numberOffset = -1)
+                // so the pickup is bar 0 and the first full measure is bar 1 — and a
+                // measure closed under `time none` advances nothing, which is what the
+                // per-measure table from NumberMeasures says when the caller has one.
+                int displayedNumber = !displayedNumbers.IsDefault && measureIndex < displayedNumbers.Length
+                    ? displayedNumbers[measureIndex]
+                    : measureIndex + 1 + numberOffset;
+
+                // `lines`: the first measure of every system after the first (the default
+                // visibility function's barnum > 1, kept to line starts by the grob's
+                // begin-of-line-visible). `every N`: the visibility function alone —
+                // (= 0 (modulo barnum n)) — with break-visibility opened up, so a mid-line
+                // multiple is numbered and a line-start non-multiple is not (the remarks
+                // on this method cite both).
+                bool show = policy.Mode == Semantics.BarNumberMode.Every
+                    ? policy.Period > 0 && displayedNumber % policy.Period == 0
+                    : isFirstInSystem && !isFirstSystem;
 
                 // A system that opens MID-BAR — the second half of a bar a line break split
                 // (Measure.ContinuesBar) — opens with no bar line and so with no number:
@@ -322,15 +346,6 @@ internal static class BarNumberEngraver
 
                 if (!show)
                     continue;
-
-                // LP shows 1-based numbers. measureIndex is 0-based. A leading
-                // \partial pickup shifts everything down by one (numberOffset = -1)
-                // so the pickup is bar 0 and the first full measure is bar 1 — and a
-                // measure closed under `time none` advances nothing, which is what the
-                // per-measure table from NumberMeasures says when the caller has one.
-                int displayedNumber = !displayedNumbers.IsDefault && measureIndex < displayedNumbers.Length
-                    ? displayedNumbers[measureIndex]
-                    : measureIndex + 1 + numberOffset;
 
                 // Line-start numbers break-align to the LEFT EDGE — the staff-line
                 // origin, BEFORE the clef, as LilyPond's own comment on

@@ -242,12 +242,10 @@ public sealed record RenderSpec(
     // (Semantics.ConcertPitch). False = written pitch, the default and what every score
     // printed before the option existed.
     bool ScoreConcert = false,
-    // `marks stacked|beside` written INSIDE this score block — this score's arrangement of
-    // a section label and the tempo at the same bar (Semantics.MarkArrangement): true for
-    // beside, false for stacked, null when the score writes none and the file's top-level
-    // default applies. Resolved by MeasureCollector.CollectDefinitions, the road the
-    // fonts/paper references take.
-    bool? MarksBeside = null
+    // `layout NAME [{ … }]`, same contract as PaperRef: this score's display switches
+    // (Semantics.LayoutPlanReader), null when the score references none and the file's
+    // unnamed default applies.
+    LayoutDeclarationSyntax? LayoutRef = null
 )
 {
     /// <summary>

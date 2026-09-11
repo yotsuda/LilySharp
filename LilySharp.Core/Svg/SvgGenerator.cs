@@ -169,7 +169,7 @@ public static class SvgGenerator
         // CollectDefinitions after the file-level walk).
         collector.FontsOverride = renderSpec?.FontsRef;
         collector.PaperOverride = renderSpec?.PaperRef;
-        collector.MarksOverride = renderSpec?.MarksBeside;
+        collector.LayoutOverride = renderSpec?.LayoutRef;
 
         // CollectMultiStaff blanks its own result (MeterStencil, applied there so a caller
         // that reaches for the collector directly gets the same model the render path does).

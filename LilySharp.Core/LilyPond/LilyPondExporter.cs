@@ -384,6 +384,9 @@ public sealed class LilyPondExporter
         // The score's resolved fonts plan — for the SIZE and STYLE attributes the twin
         // writes as overrides (EmitFontOverrides); the faces stay unwritten (EmitHeader).
         _fontPlan = ResolveFontPlan(tree, root, render);
+        // The score's resolved layout plan — the bar-number policy the twin writes into
+        // its \layout block, and the `marks beside` it can only warn about.
+        _layoutPlan = ResolveLayoutPlan(root, render);
 
         EmitHeader(root);
 
@@ -465,9 +468,8 @@ public sealed class LilyPondExporter
         // `marks beside` is a Lily#-own arrangement (Semantics.MarkArrangement): LilyPond
         // stacks a RehearsalMark over a MetronomeMark and has no chart pair, so the twin
         // keeps LilyPond's picture and says so — the `fonts … size` rule, not a silent drop.
-        // Read the way the page reads it (the score's own item, else the file's default).
-        if (Semantics.MarkArrangement.ScoreArrangement(render)
-            ?? Semantics.MarkArrangement.FileIsBeside(root))
+        // Read the way the page reads it (the score's own reference, else the file's default).
+        if (_layoutPlan.MarksBeside)
             _warnings.Add("marks beside is not exported: the twin stacks the section label over "
                           + "the tempo mark, as LilyPond does — the arrangement has no LilyPond spelling");
         return _sb.ToString();
@@ -479,6 +481,44 @@ public sealed class LilyPondExporter
     /// (<see cref="PageModel"/>, so the twin and the page cannot read two plans), or the
     /// file's unnamed default when the file has no score block.</summary>
     private Rendering.TextFontPlan _fontPlan = Rendering.TextFontPlan.Default;
+
+    /// <summary>The <c>layout { }</c> plan the exported score resolves to.</summary>
+    /// <remarks>
+    /// Read from the SOURCE (<see cref="Semantics.LayoutPlanReader.Resolve"/>) rather than
+    /// from <see cref="PageModel"/> as the fonts plan is, because it needs no collect: the
+    /// reader IS the collector's reading (the collector calls the same one), so the two
+    /// cannot disagree either way.
+    /// ⚠️ It had to be this way while <c>PageModel</c> collected without the per-score
+    /// references — a hole the same session closed (see PageModel's own remark), and the
+    /// reason a score's <c>fonts NAME</c> had been invisible to the twin.
+    /// </remarks>
+    private Semantics.LayoutPlan _layoutPlan = Semantics.LayoutPlan.Default;
+
+    private static Semantics.LayoutPlan ResolveLayoutPlan(SyntaxNode root, RenderDeclarationSyntax? render)
+        => Semantics.LayoutPlanReader.Resolve(root, render);
+
+    /// <summary>
+    /// The <c>\Score</c> context lines the plan's <c>barNumbers</c> policy spells in
+    /// LilyPond — empty for <c>lines</c>, LilyPond's own default.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:774 <c>\consists Bar_number_engraver</c> (Score) —
+    ///   removed for <c>none</c>, so no BarNumber grob is ever made.
+    /// LILYPOND-REF: scm/translation-functions.scm:987-988 every-nth-bar-number-visible,
+    ///   set as <c>barNumberVisibility</c> for <c>every N</c>; and scm/define-grobs.scm:324
+    ///   BarNumber break-visibility = begin-of-line-visible, overridden to
+    ///   end-of-line-invisible so a mid-line multiple is printed — the pair
+    ///   BarNumberEngraver.Calculate ports.
+    /// </remarks>
+    private string BarNumberContextLines() => _layoutPlan.BarNumbers.Mode switch
+    {
+        Semantics.BarNumberMode.None => "      \\remove Bar_number_engraver\n",
+        Semantics.BarNumberMode.Every =>
+            "      barNumberVisibility = #(every-nth-bar-number-visible "
+            + _layoutPlan.BarNumbers.Period.ToString(System.Globalization.CultureInfo.InvariantCulture) + ")\n"
+            + "      \\override BarNumber.break-visibility = #end-of-line-invisible\n",
+        _ => "",
+    };
 
     private Rendering.TextFontPlan ResolveFontPlan(SyntaxTree tree, SyntaxNode root, RenderDeclarationSyntax? render)
     {
@@ -4009,7 +4049,11 @@ public sealed class LilyPondExporter
         // reaches the twin at all: a `step` IS LilyPond's font-size, so writing it keeps
         // the twin a control for a score that uses one, where the faces (unwritten, see
         // EmitHeader) would only add a difference that exists in the comparison.
-        string overrides = FontOverrideLines();
+        // …and the `layout { barNumbers … }` policy in LilyPond's own words
+        // (BarNumberContextLines): `none` removes the engraver, `every N` sets the
+        // visibility function — the same context, so the twin's numbers stand where the
+        // page's do. `lines` is LilyPond's default and writes nothing.
+        string overrides = BarNumberContextLines() + FontOverrideLines();
         string initialRepeatBar = _rewindOpensThePiece ? "##f" : "##t";
         _sb.Append("  \\layout { indent = ")
            .Append(_instrumentNames.Count > 0 ? "15\\mm" : "0\\mm");
@@ -4111,7 +4155,19 @@ public sealed class LilyPondExporter
             var spec = Svg.Collector.RenderSpecParser.Parse(render);
             _pageSpec = spec;
             if (spec != null)
-                _page = new Svg.Collector.MeasureCollector().CollectMultiStaff(tree, spec);
+                // ⚠️ THE PER-SCORE REFERENCES ARE SET HERE, the way the render pipeline sets
+                // them (SvgGenerator.CollectFor). Until 2026-09-11 this collect was a bare
+                // `new MeasureCollector()`, so `score main { fonts house }` was invisible to
+                // the twin and it wrote the FILE's plan — the page and its twin read two
+                // different plans, which is the one thing PageModel exists to prevent. Found
+                // while wiring `layout NAME`; measured at the same time: no tracked book
+                // writes a named fonts or paper block, so no `.ly` in the corpus moves.
+                _page = new Svg.Collector.MeasureCollector
+                {
+                    FontsOverride = spec.FontsRef,
+                    PaperOverride = spec.PaperRef,
+                    LayoutOverride = spec.LayoutRef,
+                }.CollectMultiStaff(tree, spec);
         }
         catch (Exception e)
         {

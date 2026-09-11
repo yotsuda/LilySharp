@@ -1139,10 +1139,10 @@ score parts { paper wide { topMargin 12mm }  staff melody }  // same paper, wide
 The reference replaces the file's unnamed default for that score alone; the override
 block reads as if its entries were written at the end of the named block.
 
-A score may also state its own `marks` arrangement — `marks beside` puts its section
-labels at the line start with the bar's tempo to their right (see *Section labels and the
-tempo mark* under Music Marks); `marks stacked` is LilyPond's default. Written at the top
-level the same two words are the file's default.
+A score references its own display switches the same way — `layout chart` names a
+top-level `layout chart { marks beside  barNumbers every 4 }` block (see *Display
+switches* under Music Marks), replacing the file's unnamed `layout { }` default for that
+score alone.
 
 ### Multiple forms (excerpts)
 
@@ -1237,26 +1237,52 @@ coda c4 d e f | ds al coda
 The same words are how a `form` names the route: `form main { A segno B to coda C ds al
 coda coda D }`.
 
-### Section labels and the tempo mark — `marks`
+### Display switches — `layout { }`
 
 ```
-marks stacked            // the default: LilyPond's arrangement
-marks beside             // the chart's: "[Chorus] ♩ = 132" on one line
+layout {
+  marks stacked            // the default: LilyPond's arrangement
+  barNumbers lines         // the default: a number at the start of every line but the first
+}
+layout chart {
+  marks beside             // the chart's: "[Chorus] ♩ = 132" on one line
+  barNumbers every 4       // a number on every fourth bar, wherever it stands
+}
+score main  { staff melody }                 // the file's default
+score parts { layout chart  staff melody }   // this score's own
 ```
 
-A boxed section label (a `form` section's name, a `@mark`) and the metronome mark standing
-at the **same bar** are arranged one of two ways. `stacked` is LilyPond's: the label
-break-aligns to the key/clef column and the tempo to the meter column, each on its own
-anchor, and where their inks meet the label stacks over the tempo. `beside` is the chart's
-one line: the label's box stands at the line-start edge and the tempo sits to its right,
-its digits on the label's own baseline — a Lily#-own arrangement, chosen as an option
-(2026-09-02). A mid-line label is centred on its bar and a mid-measure `tempo` keeps its
-note column under either.
+The score-wide **display switches**: closed vocabularies that pick one of a few drawings,
+with no unit and no grob scope. The block takes the two tiers `fonts` / `paper` take — one
+unnamed block per file is the default, a named block is a per-score declaration a score
+references (and may override in part: `layout chart { barNumbers none }` inside the score).
+It is not an `override` (which reads a `once` / section scope a whole-score switch would
+silently ignore) and not `paper` (a quantity with a unit — a length, `raggedRight` — is the
+page's and stays there).
 
-Written at the top level it is the file's default; written inside a `score { }` body it is
-that score's own, replacing the default for that score alone (the two tiers `fonts` /
-`paper` take). It is a display option, not an `override` and not a `paper` key. The `.ly`
-twin has no spelling for `beside` and warns; the page is the reference.
+**`marks`** — a boxed section label (a `form` section's name, a `@mark`) and the metronome
+mark standing at the **same bar** are arranged one of two ways. `stacked` is LilyPond's:
+the label break-aligns to the key/clef column and the tempo to the meter column, each on
+its own anchor, and where their inks meet the label stacks over the tempo. `beside` is the
+chart's one line: the label's box stands at the line-start edge and the tempo sits to its
+right, its digits on the label's own baseline — a Lily#-own arrangement, chosen as an
+option (2026-09-02). A mid-line label is centred on its bar and a mid-measure `tempo` keeps
+its note column under either. The `.ly` twin has no spelling for `beside` and warns; the
+page is the reference. (The same word names a font *group* in `fonts { marks "Georgia" }`;
+the block says which aspect of the marks is meant.)
+
+**`barNumbers`** — which bars carry a printed number, in LilyPond's own vocabulary.
+`lines` (the default) is LilyPond's: the first bar of every line after the first. `none`
+prints no numbers (`\remove Bar_number_engraver`). `every N` prints every bar whose number
+is a multiple of N wherever it stands in the line, and **only** those — under `every 2` a
+line opening on bar 3 opens with no number, exactly as LilyPond's
+`every-nth-bar-number-visible` prints it. N is a whole number of at least 1 (`every 1`
+numbers every bar, the first included). The twin writes the same LilyPond words into its
+`\layout` block.
+
+The keys are matched case-insensitively; the value words are canonical case only. Neither
+is a reserved word (`part marks { … }` compiles). An unknown key is an error, a key set
+twice warns (the last wins), and a brace inside the block is refused.
 
 ### Text Spanners
 
@@ -1394,7 +1420,7 @@ be declared and referenced).
 | Group | Words |
 |-------|-------|
 | Structure | `section` `form` `using` `tab` `ossia` `transpose` `octave` `pitch` `instrument` `percussion` `drummap` |
-| Score / layout | `score` `part` `staff` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff` `voice` `phrase` `repeat` `volta` `alternative` `break` `noBreak` `pageBreak` `noPageBreak` `partial` `embedded` `fonts` `paper` `marks` |
+| Score / layout | `score` `part` `staff` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff` `voice` `phrase` `repeat` `volta` `alternative` `break` `noBreak` `pageBreak` `noPageBreak` `partial` `embedded` `fonts` `paper` `layout` |
 | Metadata | `title` `composer` `tempo` `time` `key` `clef` |
 | Modes | `major` `minor` `ionian` `dorian` `phrygian` `lydian` `mixolydian` `aeolian` `locrian` |
 | Clef names | `treble` `bass` `alto` `tenor` `treble_8` `bass_8` `soprano` `mezzosoprano` `baritone` |

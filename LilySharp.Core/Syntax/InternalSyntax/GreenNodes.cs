@@ -446,6 +446,17 @@ internal sealed class PaperDeclarationGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// Layout directive: layout { KEY VALUE… }, tokens kept flat like the paper block's.
+/// </summary>
+internal sealed class LayoutDeclarationGreen : GreenSyntaxNode
+{
+    public LayoutDeclarationGreen(SyntaxToken keyword, GreenNode?[] tokens)
+        : base(SyntaxKind.LayoutDeclaration, [keyword, .. tokens])
+    {
+    }
+}
+
+/// <summary>
 /// Variable declaration: name = expr (new style) or let name = expr (legacy)
 /// </summary>
 internal sealed class VariableDeclarationGreen : GreenSyntaxNode

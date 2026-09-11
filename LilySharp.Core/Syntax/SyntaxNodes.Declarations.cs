@@ -796,6 +796,122 @@ public sealed class PaperDeclarationSyntax : SyntaxNode
 }
 
 /// <summary>
+/// Layout directive — <c>layout { KEY VALUE… }</c>, the score-wide display switches
+/// (<c>marks stacked|beside</c>, <c>barNumbers lines|none|every N</c>). ⚠️ A node whose
+/// <c>IsBlock</c> is false is the refused blockless form, kept in the tree (with its
+/// diagnostic) so no source position slides — it sets nothing.
+/// </summary>
+/// <remarks>
+/// The green node holds the block's tokens FLAT, like the paper block's: the entries are
+/// read back here, so a growing layout vocabulary grows <c>LayoutPlanReader</c>'s table
+/// and nothing in the syntax tree. There is no nested block — the parser refuses a brace
+/// inside — so the walker is one level deep. An entry runs from its key to the next KEY,
+/// and a word is a key when it opens the block or is one of the known keys
+/// (<see cref="SyntaxFacts.LayoutKeyVocabulary"/>): the value words are a closed vocabulary
+/// disjoint from the keys, so <c>marks sideways</c> keeps <c>sideways</c> as the value the
+/// reader refuses, and <c>mark beside</c> refuses <c>mark</c> as the key it is.
+/// </remarks>
+public sealed class LayoutDeclarationSyntax : SyntaxNode
+{
+    internal LayoutDeclarationSyntax(LayoutDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The <c>layout</c> keyword token.</summary>
+    public SyntaxTokenNode KeywordToken => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>
+    /// The block's name — <c>chart</c> in <c>layout chart { … }</c> — or null for the
+    /// unnamed file default (and for the refused bare-value form, whose stray tokens are
+    /// numbers or strings, never a word). A named node is a DECLARATION at the top level
+    /// and a REFERENCE inside a score, like the paper one.
+    /// </summary>
+    public SyntaxTokenNode? NameToken
+    {
+        get
+        {
+            if (SlotCount > 1 && GetChild(1) is SyntaxTokenNode t
+                && t.Kind != SyntaxKind.OpenBrace
+                && t.Kind != SyntaxKind.StringLiteral
+                && t.Text.Length > 0 && char.IsLetter(t.Text[0]))
+                return t;
+            return null;
+        }
+    }
+
+    /// <summary>True when this directive carries a <c>{ … }</c> block (after its name,
+    /// when it has one).</summary>
+    public bool IsBlock
+    {
+        get
+        {
+            int i = NameToken != null ? 2 : 1;
+            return SlotCount > i && GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.OpenBrace };
+        }
+    }
+
+    /// <summary>
+    /// One entry of the block: a key and the value tokens that follow it up to the next
+    /// key (<c>marks beside</c> — one word; <c>barNumbers every 4</c> — a word and a number).
+    /// </summary>
+    /// <param name="Key">The key as written.</param>
+    /// <param name="KeyToken">The key's token, for a diagnostic's span.</param>
+    /// <param name="Values">The value tokens, in source order; empty when none followed.</param>
+    public readonly record struct Entry(
+        string Key,
+        SyntaxTokenNode KeyToken,
+        IReadOnlyList<SyntaxTokenNode> Values);
+
+    /// <summary>The block's entries. Empty for the blockless form.</summary>
+    public IReadOnlyList<Entry> Entries
+    {
+        get
+        {
+            if (!IsBlock)
+                return [];
+            var entries = new List<Entry>();
+            SyntaxTokenNode? keyToken = null;
+            var values = new List<SyntaxTokenNode>();
+
+            void Flush()
+            {
+                if (keyToken != null)
+                    entries.Add(new Entry(keyToken.Text, keyToken, [.. values]));
+                keyToken = null;
+                values.Clear();
+            }
+
+            for (int i = NameToken != null ? 3 : 2; i < SlotCount; i++)
+            {
+                if (GetChild(i) is not SyntaxTokenNode token)
+                    continue;
+                if (token.Kind is SyntaxKind.OpenBrace or SyntaxKind.CloseBrace)
+                    continue; // the block's own braces (a nested one was refused and skipped)
+
+                bool isWord = token.Text.Length > 0 && char.IsLetter(token.Text[0]);
+                if (isWord && (keyToken == null || SyntaxFacts.IsLayoutKey(token.Text)))
+                {
+                    Flush();
+                    keyToken = token;
+                    continue;
+                }
+                if (keyToken != null)
+                    values.Add(token);
+                else
+                {
+                    // A number or a string before any key: an entry with no key to hang
+                    // on, refused by the reader as a key that is not one.
+                    keyToken = token;
+                }
+            }
+            Flush();
+            return entries;
+        }
+    }
+}
+
+/// <summary>
 /// Variable declaration: name = expr
 /// </summary>
 public sealed class VariableDeclarationSyntax : SyntaxNode

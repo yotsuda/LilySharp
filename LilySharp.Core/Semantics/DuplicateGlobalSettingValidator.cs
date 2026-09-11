@@ -22,7 +22,7 @@ namespace LilySharp.Core.Semantics;
 
 /// <summary>
 /// Warns when a top-level single-value global setting (tempo / time / key / octave /
-/// title / composer / font / paper) is written more than once. Each sets ONE value, so
+/// title / composer / font / paper / layout) is written more than once. Each sets ONE value, so
 /// the collector keeps only the LAST occurrence — every earlier one is silently
 /// overwritten and has no effect. A directive inside music (a section / part / phrase /
 /// voice) is a mid-piece change, not a global default, so it is excluded.
@@ -51,11 +51,8 @@ internal sealed class DuplicateGlobalSettingValidator : ISemanticValidator
                 // FontBinding/Paper validators' job), so only the unnamed form groups.
                 FontDeclarationSyntax { NameToken: null } => "font",
                 PaperDeclarationSyntax { NameToken: null } => "paper",
+                LayoutDeclarationSyntax { NameToken: null } => "layout",
                 MetadataDeclarationSyntax m => m.Keyword.ToLowerInvariant(), // title / composer
-                // `marks stacked|beside` at the top level is the file's one arrangement;
-                // inside a score body it is that score's own and IsInMusic keeps it out.
-                PropertyAssignmentSyntax p when p.NameToken.Text == MarkArrangement.Property
-                    => MarkArrangement.Property,
                 _ => null,
             };
             if (kind == null)

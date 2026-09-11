@@ -95,9 +95,19 @@ public static class LanguageVocabulary
     /// score header alike (<see cref="ConcertPitch"/>).</summary>
     public static IReadOnlyCollection<string> PitchModes => ConcertPitch.Modes;
 
-    /// <summary>The two words <c>marks</c> takes — at the top level and as a score item
-    /// alike (<see cref="MarkArrangement"/>), the default first.</summary>
+    /// <summary>The two words the <c>marks</c> key of a <c>layout { }</c> block takes
+    /// (<see cref="MarkArrangement"/>), the default first.</summary>
     public static IReadOnlyCollection<string> MarkArrangements => MarkArrangement.Modes;
+
+    /// <summary>The three words the <c>barNumbers</c> key of a <c>layout { }</c> block
+    /// takes (<see cref="BarNumberPolicy"/>), the default first; <c>every</c> takes a
+    /// count after it.</summary>
+    public static IReadOnlyCollection<string> BarNumberPolicies => BarNumberPolicy.Words;
+
+    /// <summary>The keys a <c>layout { }</c> block takes (<c>marks</c>, <c>barNumbers</c>) —
+    /// <see cref="SyntaxFacts.LayoutKeyVocabulary"/>, the list the block's entry walker and
+    /// its reader share.</summary>
+    public static IReadOnlyCollection<string> LayoutKeys => SyntaxFacts.LayoutKeyVocabulary;
 
     /// <summary>The three kinds <c>repeat</c> takes in music (<c>repeat unfold 2 { … }</c>),
     /// in the order the parser's own message names them.</summary>

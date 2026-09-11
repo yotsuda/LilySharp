@@ -98,7 +98,7 @@ Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
         | 'lyrics' | 'chords' | 'tuning' | 'instrument' | 'percussion' | 'drummap'
         | 'transpose' | 'octave' | 'pitch' | 'using' | 'break' | 'noBreak' | 'pageBreak' | 'noPageBreak' | 'partial'
         | 'tuplet' | 'grace' | 'acciaccatura' | 'appoggiatura' | 'cue'
-        | 'repeat' | 'volta' | 'alternative' | 'embedded' | 'fonts' | 'paper' | 'marks'
+        | 'repeat' | 'volta' | 'alternative' | 'embedded' | 'fonts' | 'paper' | 'layout'
         | 'override' | 'revert' | 'once'
         | 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian' | 'lydian' | 'mixolydian'
         | 'aeolian' | 'locrian'
@@ -151,6 +151,7 @@ File           = { TopLevelItem } ;
 TopLevelItem   = MetadataDecl                     (* title, composer *)
                | FontDecl                         (* text fonts, per role *)
                | PaperDecl                        (* page dimensions *)
+               | LayoutDecl                       (* display switches *)
                | GlobalSetting                    (* tempo, time, key *)
                | PartDecl                         (* part definitions *)
                | PhraseDecl                       (* reusable music fragments *)
@@ -184,29 +185,9 @@ UsingDecl      = 'using' , String ;
 ### 2.3 Global Settings
 
 GlobalSetting  = TempoDecl | TimeDecl | KeyDecl | PartialDecl | OctaveDecl | PitchDecl
-               | TransposeDecl | MarksDecl ;
-
-MarksDecl      = 'marks' , MarkArrangement ;
-MarkArrangement = 'stacked' | 'beside' ;
-                 (* How a boxed section label and the tempo mark standing at the SAME bar
-                    are arranged — a display option, not a property of the music.
-                    'stacked' (the default) is LilyPond's: the label break-aligns to the
-                    key/clef column and the metronome mark to the meter column, each on its
-                    own anchor, and where their inks meet the label stacks over the tempo.
-                    'beside' is the chart's one line: the label's box stands at the
-                    line-start edge (indent + 0.3; after the '|:' when the line opens
-                    on a drawn repeat bar) and the tempo sits to its right, the
-                    digits on the label's own baseline — "[Chorus] ♩ = 132" (Lily#-OWN;
-                    user decision 2026-09-02, HANDOFF §3; LilyPond has no such pair). A
-                    mid-line label is centred on its bar either way, and a mid-measure
-                    'tempo' keeps its note column either way. Written here it is the
-                    file's default; as a score item ('marks beside' inside a score body,
-                    ScoreItem §7) it is that score's own — the two tiers 'fonts' / 'paper'
-                    take, and a score body's LAST wins. A third word is refused at the
-                    word; a second top-level 'marks' warns like every repeated global.
-                    NOT an 'override' (a once/section scope a whole-page quantity would
-                    silently ignore) and NOT a 'paper' key (the page's dimensions). The
-                    .ly twin cannot spell 'beside' and warns; the picture is the page's. *)
+               | TransposeDecl ;
+                 (* The display switches — how the marks are arranged, which bars carry a
+                    number — are NOT here: they are the 'layout { }' block, §2.6. *)
 
 PartialDecl    = 'partial' , DurationToken ;
                  (* "the bar this stands in is this long". As a SECTION directive it is
@@ -584,6 +565,72 @@ SignedNumber   = [ '-' ] , ( Integer | Decimal ) ;
      leftMargin 15mm
      raggedRight
      systemSystemSpacing { basicDistance 12  stretchability 60 }
+   }
+*)
+
+### 2.6 Layout
+
+LayoutDecl     = 'layout' , [ Identifier ] , LayoutBlock ;
+LayoutBlock    = '{' , { LayoutEntry } , '}' ;
+LayoutEntry    = 'marks' , MarkArrangement
+               | 'barNumbers' , BarNumberPolicy ;
+MarkArrangement = 'stacked' | 'beside' ;
+BarNumberPolicy = 'lines' | 'none' | 'every' , Integer ;
+
+(* THE SCORE-WIDE DISPLAY SWITCHES — closed vocabularies that say how a class of symbol
+   is drawn or arranged: no unit, no grob scope, one answer for the whole page. The
+   third block of the 'fonts' / 'paper' shape, with the same two tiers: one UNNAMED block
+   per file is the default (a second one warns and the last wins, like every repeated
+   global), a NAMED block is a per-score declaration a score references — the reference
+   REPLACES the file's default, and an override block on the reference reads as if
+   written at the end of the named block (the note at the end of 2.4):
+
+     layout chart { marks beside  barNumbers every 4 }
+     score main  { layout chart  staff melody }
+     score parts { layout chart { barNumbers lines }  staff melody }
+
+   THE LINE AGAINST 'paper' (user decision 2026-09-11): a quantity with a UNIT — a
+   length, a justification flag — is the page's and lives in paper; a switch among a few
+   drawings lives here. indent / raggedRight / spacingIncrement stay in paper on that
+   rule (LilyPond accepts them in \paper too). NOT an 'override': an override reads a
+   once / section scope that a whole-score switch would silently ignore.
+
+   marks — how a boxed section label and the tempo mark standing at the SAME bar are
+   arranged. 'stacked' (the default) is LilyPond's: the label break-aligns to the
+   key/clef column and the metronome mark to the meter column, each on its own anchor,
+   and where their inks meet the label stacks over the tempo. 'beside' is the chart's
+   one line: the label's box stands at the line-start edge (indent + 0.3; after the
+   '|:' when the line opens on a drawn repeat bar) and the tempo sits to its right, the
+   digits on the label's own baseline — "[Chorus] ♩ = 132" (Lily#-OWN; user decision
+   2026-09-02, HANDOFF §3; LilyPond has no such pair). A mid-line label is centred on
+   its bar either way, and a mid-measure 'tempo' keeps its note column either way. The
+   .ly twin cannot spell 'beside' and warns; the picture is the page's. (The same word
+   names a font GROUP in 'fonts { marks "Georgia" }' — the block says which aspect of
+   the marks is meant, their face or their arrangement; that is why the switch is a
+   key of a block and not a bare directive, which it was from 2026-09-09 to 2026-09-11.)
+
+   barNumbers — which bars carry a printed number, in LilyPond's own vocabulary.
+   'lines' (the default) is LilyPond's: the first bar of every line after the first
+   (barNumberVisibility = first-bar-number-invisible-and-no-parenthesized-bar-numbers,
+   kept to line starts by BarNumber's break-visibility = begin-of-line-visible).
+   'none' is \remove Bar_number_engraver. 'every N' is every-nth-bar-number-visible
+   with break-visibility opened to end-of-line-invisible: every bar whose number is a
+   multiple of N, wherever it stands in the line — and ONLY those, so under 'every 2' a
+   line that opens on bar 3 opens with no number, exactly as LilyPond prints it. The
+   count is a whole number of at least 1 ('every 1' numbers every bar, the first
+   included). The .ly twin writes the same LilyPond words into its \layout block.
+
+   The keys are matched case-insensitively (a paper key's rule); the value words are
+   the language's closed vocabulary, canonical case only. Neither the keys nor the
+   words are reserved — 'part marks { … }' compiles. An unknown key is an ERROR, the
+   fonts block's reasoning: a switch nobody reads looks exactly like one that works. A
+   key set twice in one block warns and the last one wins. A brace inside the block is
+   refused where it stands: no layout key opens a block. *)
+
+(* Example:
+   layout {
+     marks beside
+     barNumbers every 4
    }
 *)
 
@@ -1030,9 +1077,9 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                         named top-level block, the optional
                                                         block overriding part of it *)
                | 'paper' , Identifier , [ PaperBlock ] (* THIS score's page, same shape *)
-               | 'marks' , MarkArrangement           (* THIS score's label-and-tempo
-                                                        arrangement, replacing the file's
-                                                        top-level default (§2.3 MarksDecl)
+               | 'layout' , Identifier , [ LayoutBlock ] (* THIS score's display switches
+                                                        (§2.6), same shape: the reference
+                                                        replaces the file's unnamed default
                                                         for this score alone *)
                | PartRef                            (* a bare part name: MIDI only — see below *)
                ;

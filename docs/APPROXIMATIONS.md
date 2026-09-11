@@ -134,7 +134,7 @@
 ## UNWATCHED — 観測者がゼロだと自認しているもの（54 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:2356** container, and the value stops being unobserved with the line above.
+- **:2396** container, and the value stops being unobserved with the line above.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:507** no observer; add the paren widths when a book brings one. The unpacked
 - **:509** bare glyph width, which is exact for one and unobserved for many.
@@ -179,8 +179,8 @@
 - **:442** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
 - **:712** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
-- **:2120** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
-- **:2142** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
+- **:2121** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
+- **:2143** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
 - **:497** ⚠️ NO POINT OBSERVES THE FOLD: audit/lp-geometry hairpin.page.quiet reads the
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
@@ -228,8 +228,8 @@
 ## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（136 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:2351** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:5085** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:2391** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
+- **:5141** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:2258** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
@@ -273,14 +273,14 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:2381** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:4424** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:2380** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:4423** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
 - **:67** LILYSHARP-OWN: the DEFAULT five is LilyPond's (scm/define-grobs.scm:3396,
 ### `LilySharp.Core/Svg/Collector/ScoreAssembler.cs`
-- **:163** omission. LILYSHARP-OWN: a `|:` that opens the piece IS printed. LilyPond's default
+- **:164** omission. LILYSHARP-OWN: a `|:` that opens the piece IS printed. LilyPond's default
 ### `LilySharp.Core/Svg/Collector/StaffAccidentalColumns.cs`
 - **:84** ⚠️ LILYSHARP-OWN GATE, and a DIVERGENCE: LilyPond packs a cue accidental into
 ### `LilySharp.Core/Svg/Collector/TabResolver.cs`
@@ -294,8 +294,8 @@
 - **:748** ⚠️ LILYSHARP-OWN: ONE NOMINAL BOX FOR EVERY REST, WHICH LILYPOND DOES NOT HAVE. There a
 - **:848** a LILYSHARP-OWN divergence that had been measured and left because closing it redraws
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`
-- **:270** ⚠️ LILYSHARP-OWN, AND IT IS THE BAND TOP, NOT LILYPOND'S REFPOINT.
-- **:286** Lily#'s own object, hence LILYSHARP-OWN rather than a REF.
+- **:284** ⚠️ LILYSHARP-OWN, AND IT IS THE BAND TOP, NOT LILYPOND'S REFPOINT.
+- **:300** Lily#'s own object, hence LILYSHARP-OWN rather than a REF.
 ### `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs`
 - **:163** LILYSHARP-OWN: a TAB string position carries no pitch default-direction.
 - **:411** LILYSHARP-OWN: LilyPond's charge there is 0/0 = NaN (dist/gap.length()
@@ -332,8 +332,8 @@
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
 - **:443** ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's mark aligns to the BreakAlignGroup,
 - **:858** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
-- **:1565** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
-- **:1860** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
+- **:1566** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
+- **:1861** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
 - **:741** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`

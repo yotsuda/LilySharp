@@ -261,4 +261,52 @@ public class NamedBlockReferenceTests
         Assert.True(m.Success, "no svg width attribute");
         return m.Groups[1].Value;
     }
+
+    /// <summary>
+    /// The <c>.ly</c> twin reads the SCORE's references, not the file's defaults.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ REGRESSION, found 2026-09-11 while wiring <c>layout NAME</c>: the twin collects
+    /// its page through <c>LilyPondExporter.PageModel</c>, which built a bare
+    /// <c>MeasureCollector</c> and set none of the per-score references the render pipeline
+    /// sets — so a score's own <c>fonts NAME</c> reached the page and not its twin, and the
+    /// twin wrote the FILE's font-size overrides. The page and its twin reading two
+    /// different plans is the one thing PageModel exists to prevent. Measured the same day:
+    /// no tracked book writes a named block, so the corpus's <c>.ly</c> did not move.
+    /// <para>
+    /// The claim is made on a <c>step</c>, because that is the one font attribute the twin
+    /// writes at all (a face is deliberately unwritten — EmitHeader's remark).
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void TheTwinReadsTheScoresOwnFontsReference_NotTheFilesDefault()
+    {
+        string src = "fonts { mark step -2 }\n"
+            + "fonts house { mark step +3 }\n" + Music
+            + "score main { fonts house  staff melody }\n";
+        var ly = new LilySharp.Core.LilyPond.LilyPondExporter();
+        string text = ly.Export(SyntaxTree.Parse(src));
+
+        Assert.Contains("\\override RehearsalMark.font-size = #3", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("\\override RehearsalMark.font-size = #-2", text, StringComparison.Ordinal);
+
+        // The control: with no reference the file's own default is what the twin writes.
+        var bare = new LilySharp.Core.LilyPond.LilyPondExporter();
+        string plain = bare.Export(SyntaxTree.Parse(
+            "fonts { mark step -2 }\n" + Music + "score main { staff melody }\n"));
+        Assert.Contains("\\override RehearsalMark.font-size = #-2", plain, StringComparison.Ordinal);
+    }
+
+    /// <summary>A score's <c>layout NAME</c> reaches the twin the same way — the reference
+    /// it reads is the score's, not the file's.</summary>
+    [Fact]
+    public void TheTwinReadsTheScoresOwnLayoutReference()
+    {
+        string src = "layout { barNumbers none }\n"
+            + "layout chart { barNumbers every 3 }\n" + Music
+            + "score main { layout chart  staff melody }\n";
+        string text = new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(src));
+        Assert.Contains("every-nth-bar-number-visible 3", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("\\remove Bar_number_engraver", text, StringComparison.Ordinal);
+    }
 }

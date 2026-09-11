@@ -59,12 +59,12 @@ public class StafflessLabelSpacingTests
     [Theory]
     [InlineData("", "Intro", false)]
     [InlineData("", "IntroductionLong", false)]
-    [InlineData("marks beside\n", "Intro", false)]
+    [InlineData("layout { marks beside }\n", "Intro", false)]
     // A line opening on a drawn `|:` puts the box ON that bar (the label cannot sit on the
     // repeat sign, which is drawn on the row line), under both arrangements; the reach
     // starts there too (measured 2026-09-09, scratch/p356/mk10: bar and box at 3.50).
     [InlineData("", "Intro", true)]
-    [InlineData("marks beside\n", "Intro", true)]
+    [InlineData("layout { marks beside }\n", "Intro", true)]
     public void TheFirstSymbol_StaysInsideItsBar_ClearOfTheLabel(string top, string label, bool openingRepeat)
     {
         string Form(bool hidden) => openingRepeat

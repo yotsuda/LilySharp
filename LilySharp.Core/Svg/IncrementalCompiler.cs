@@ -100,7 +100,7 @@ public sealed class IncrementalCompiler
     // score-global input outside every reuse key (a label's X and the tempo's line move
     // with it and nothing per measure changes), guarded the same way. Null until the
     // first compile.
-    private bool? _marksBeside;
+    private Semantics.LayoutPlan? _layout;
 
     // Cached line-break gate and its solution — the line DP's whole table, which is a
     // pure function of the gate and which the page-scored system-count loop reads too
@@ -401,15 +401,15 @@ public sealed class IncrementalCompiler
         // the full recompile's 2,372,674 — the old width's layout served as a hit.
         // LayoutOptions is a record of scalars and nested records, so the value
         // comparison is sound and two collects of the SAME paper block compare equal.
-        // A `marks stacked|beside` edit is the same shape once more: the label's X and the
-        // tempo's line are laid out from it, and no per-measure key sees it.
+        // A `layout { }` edit is the same shape once more: the label's X, the tempo's line
+        // and which bars carry a number are laid out from it, and no per-measure key sees it.
         if (_fontPlan is null || !_fontPlan.Equals(score.Fonts)
             || _paper is null || !_paper.Equals(score.Paper)
-            || _marksBeside != score.MarksBeside)
+            || _layout is null || !_layout.Equals(score.LayoutPlan))
         {
             _fontPlan = score.Fonts;
             _paper = score.Paper;
-            _marksBeside = score.MarksBeside;
+            _layout = score.LayoutPlan;
             _springs = null;
             _lineBreaks = null;
             _shortest = null;

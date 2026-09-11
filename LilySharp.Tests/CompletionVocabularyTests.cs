@@ -196,6 +196,12 @@ public class CompletionVocabularyTests
         undescribed.AddRange(LilySharpLanguageServer.GetMarkArrangementCompletions().Items
             .Where(i => i.Detail is null).Select(i => $"marks {i.Label}"));
 
+        undescribed.AddRange(LilySharpLanguageServer.GetBarNumberPolicyCompletions().Items
+            .Where(i => i.Detail is null).Select(i => $"barNumbers {i.Label}"));
+
+        undescribed.AddRange(LilySharpLanguageServer.GetLayoutBlockCompletions().Items
+            .Where(i => i.Detail is null).Select(i => $"layout key {i.Label}"));
+
         undescribed.AddRange(LilySharpLanguageServer.GetPartPropertyCompletions().Items
             .Where(i => i.Detail is null).Select(i => $"property {i.Label}"));
 
@@ -226,20 +232,38 @@ public class CompletionVocabularyTests
             LilySharpLanguageServer.GetPitchModeCompletions().Items.Select(i => i.Label));
     }
 
-    /// <summary>The two words after <c>marks</c> come from the compiler, in the compiler's
-    /// order (the default first), and each compiles in both of the word's homes.</summary>
+    /// <summary>The two words after <c>layout { marks</c> come from the compiler, in the
+    /// compiler's order (the default first), and each compiles in both of the block's
+    /// tiers — the file's unnamed block and a named block a score references.</summary>
     [Fact]
-    public void MarkArrangementCompletions_AreExactlyTheAcceptedValues_AndEachCompilesInBothHomes()
+    public void MarkArrangementCompletions_AreExactlyTheAcceptedValues_AndEachCompilesInBothTiers()
     {
         var offered = LilySharpLanguageServer.GetMarkArrangementCompletions().Items
             .Select(i => i.Label).ToList();
         Assert.Equal(LanguageVocabulary.MarkArrangements, offered);
         foreach (string word in offered)
         {
-            Assert.Empty(Errors($"marks {word}\n{PartHeaderDoc("clef treble")}"));
-            Assert.Empty(Errors(PartHeaderDoc("clef treble")
-                .Replace("score main { staff vln }", $"score main {{ marks {word}  staff vln }}")));
+            Assert.Empty(Errors($"layout {{ marks {word} }}\n{PartHeaderDoc("clef treble")}"));
+            Assert.Empty(Errors($"layout house {{ marks {word} }}\n" + PartHeaderDoc("clef treble")
+                .Replace("score main { staff vln }", "score main { layout house  staff vln }")));
         }
+    }
+
+    /// <summary>The three words after <c>layout { barNumbers</c>, the same contract; the
+    /// <c>every</c> snippet's resolved text compiles too.</summary>
+    [Fact]
+    public void BarNumberPolicyCompletions_AreExactlyTheAcceptedValues_AndEachCompiles()
+    {
+        var items = LilySharpLanguageServer.GetBarNumberPolicyCompletions().Items;
+        Assert.Equal(LanguageVocabulary.BarNumberPolicies, items.Select(i => i.Label));
+        foreach (var item in items)
+        {
+            string written = (item.InsertText ?? item.Label!).Replace("${1:4}", "4");
+            Assert.Empty(Errors($"layout {{ barNumbers {written} }}\n{PartHeaderDoc("clef treble")}"));
+        }
+        // …and the key list itself is the compiler's.
+        Assert.Equal(LanguageVocabulary.LayoutKeys,
+            LilySharpLanguageServer.GetLayoutBlockCompletions().Items.Select(i => i.Label));
     }
 
     /// <summary>The kinds offered after <c>repeat</c> are the compiler's, in its order, each

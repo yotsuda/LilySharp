@@ -10,6 +10,7 @@
         { "include": "#lyrics-block" },
         { "include": "#fonts-block" },
         { "include": "#paper-block" },
+        { "include": "#layout-block" },
         { "include": "#part-body" },
         { "include": "#instrument-value" },
         { "include": "#directive-value" },
@@ -240,6 +241,47 @@
                 { "include": "#paper-length" }
             ]
         },
+        "layout-block": {
+            "comment": "`layout { marks beside  barNumbers every 4 }`. Same device as #paper-block and for the same reason: the KEYS (LilySharp.Core LanguageVocabulary.LayoutKeys) and their VALUE WORDS (MarkArrangements, BarNumberPolicies) are NOT reserved — `part marks { … }` and `part beside { … }` compile — so only a rule that knows it is INSIDE the block may colour them. Each value is read WITH its key (captures), the #directive-value device, so `marks lines` does not come out looking right. EditorColouringTests holds these lists to LanguageVocabulary in both directions.",
+            "begin": "\\b(layout)(?:\\s+([A-Za-z][A-Za-z0-9_-]*))?\\s*(\\{)",
+            "beginCaptures": {
+                "1": { "name": "keyword.other.lilysharp" },
+                "2": { "name": "entity.name.section.lilysharp" },
+                "3": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "end": "\\}",
+            "endCaptures": {
+                "0": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "patterns": [
+                { "include": "#comments" },
+                { "include": "#strings" },
+                {
+                    "match": "\\b(marks)\\s+(stacked|beside)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.other.layout-key.lilysharp" },
+                        "2": { "name": "support.constant.layout-value.lilysharp" }
+                    }
+                },
+                {
+                    "match": "\\b(barNumbers)\\s+(lines|none|every)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.other.layout-key.lilysharp" },
+                        "2": { "name": "support.constant.layout-value.lilysharp" }
+                    }
+                },
+                {
+                    "comment": "A key still gets its colour while the writer has typed it and not yet its word — the two-word rules above take over the moment the word lands.",
+                    "name": "keyword.other.layout-key.lilysharp",
+                    "match": "\\b(marks|barNumbers)\\b"
+                },
+                {
+                    "comment": "`every`'s count.",
+                    "name": "constant.numeric.lilysharp",
+                    "match": "\\b\\d+\\b"
+                }
+            ]
+        },
         "paper-length": {
             "comment": "A paper value: a number with its optional GLUED unit — `210mm` is one quantity, so the unit is coloured with its number (captures, like a directive value, never a bare alternation: mm/cm/in are free words everywhere else).",
             "match": "(-?\\d+(?:\\.\\d+)?)(mm|cm|in)?\\b",
@@ -385,14 +427,6 @@
                         "1": { "name": "keyword.control.lilysharp" },
                         "2": { "name": "support.constant.repeat-kind.lilysharp" }
                     }
-                },
-                {
-                    "comment": "`marks stacked|beside` — how a section label and the tempo at the same bar are arranged (LilySharp.Core MarkArrangement.Modes). A top-level directive and a score item, the same pair in both.",
-                    "match": "\\b(marks)\\s+(stacked|beside)\\b",
-                    "captures": {
-                        "1": { "name": "keyword.other.lilysharp" },
-                        "2": { "name": "support.constant.marks-arrangement.lilysharp" }
-                    }
                 }
             ]
         },
@@ -410,7 +444,7 @@
                 },
                 {
                     "name": "keyword.other.lilysharp",
-                    "match": "\\b(title|composer|tempo|time|partial|key|clef|fonts|paper|marks|embedded|volta|major|minor|ionian|dorian|phrygian|lydian|mixolydian|aeolian|locrian|instrument|octave|pitch|tuning|noPageBreak|pageBreak|noBreak|break|treble_8|treble|bass_8|bass|alto|tenor|soprano|mezzosoprano|baritone|percussion)\\b"
+                    "match": "\\b(title|composer|tempo|time|partial|key|clef|fonts|paper|layout|embedded|volta|major|minor|ionian|dorian|phrygian|lydian|mixolydian|aeolian|locrian|instrument|octave|pitch|tuning|noPageBreak|pageBreak|noBreak|break|treble_8|treble|bass_8|bass|alto|tenor|soprano|mezzosoprano|baritone|percussion)\\b"
                 }
             ]
         },

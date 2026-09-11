@@ -172,6 +172,12 @@ public sealed partial class LilySharpLanguageServer
             // `size |` / `size "…"` — the paper-size table, spelled for its position.
             CompletionContext.AfterPaperSizeName => GetPaperSizeNameCompletions(insideString: false),
             CompletionContext.AfterPaperSizeNameQuoted => GetPaperSizeNameCompletions(insideString: true),
+            // `layout |` / inside `layout { … }` / `score { layout |` / after a layout key.
+            CompletionContext.AfterLayoutKeyword => GetLayoutDeclarationCompletions(),
+            CompletionContext.LayoutBlock => GetLayoutBlockCompletions(),
+            CompletionContext.AfterLayoutBlockRef => GetDeclaredNameCompletions(doc.Text, "layout", "Layout block"),
+            CompletionContext.AfterLayoutMarks => GetMarkArrangementCompletions(),
+            CompletionContext.AfterLayoutBarNumbers => GetBarNumberPolicyCompletions(),
             // The key the caret sits after decides which values fit: a generic family takes
             // only quoted names, a role or group may also redirect to a family.
             CompletionContext.AfterFontRoleKey =>
@@ -222,7 +228,6 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterInstrument => GetInstrumentCompletions(doc.Text, offset, position),
             CompletionContext.AfterRemoveEmpty => GetRemoveEmptyCompletions(),
             CompletionContext.AfterPitch => GetPitchModeCompletions(),
-            CompletionContext.AfterMarks => GetMarkArrangementCompletions(),
             CompletionContext.AfterRepeat => GetRepeatKindCompletions(),
             // The bare-@chord item is offered only when the group before the '@'
             // will actually auto-name; an unrecognizable one falls back to the

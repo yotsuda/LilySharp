@@ -37,11 +37,10 @@ paper {                  // optional; page dimensions (defaults = LilyPond's a4)
   paperWidth 210mm      // bare numbers are staff spaces; units mm/cm/in GLUED (210mm)
   paperHeight 297mm     // see the paper section below for margins/indents/spacing
 }
-marks stacked            // optional; how a section label and the tempo at the same bar are
-                        // arranged: 'stacked' (LilyPond's, the default — label over tempo) or
-                        // 'beside' (the chart's one line — label at the line start, tempo to
-                        // its right). File default here; 'marks beside' inside a score body
-                        // is that score's own. Display only; the .ly twin warns for 'beside'.
+layout {                 // optional; the score-wide display switches (see the layout section
+  marks stacked         // below): how a section label and the tempo at the same bar are
+  barNumbers lines      // arranged (stacked | beside), and which bars carry a number
+}                       // (lines | none | every N). Both shown at their defaults.
 
 part rightHand { clef treble }  // declare each part; clef lives here
 part leftHand  { clef bass }    // part names are identifiers, NOT reserved words
@@ -131,15 +130,17 @@ score winds "winds" {
 }
 ```
 
-**A score's own `marks` arrangement** — `marks beside` inside a score body puts that
-score's section labels at the line start with the bar's tempo to their right on one line
-(the chart's "[Chorus] ♩ = 132"); `marks stacked` is LilyPond's default (label over tempo).
-The same two words at the top level are the file's default:
+**A score's own display switches** — `layout NAME` inside a score body references a named
+top-level `layout NAME { … }` block (the `fonts` / `paper` shape), replacing the file's
+unnamed `layout { … }` default for that score alone; an override block on the reference
+restates part of it:
 
 ```
-marks beside                                   // the file default
-score main  { staff melody }                   // chart layout
-score parts { marks stacked  staff melody }    // this score keeps LilyPond's
+layout { marks beside }                              // the file default: chart layout
+layout lp { marks stacked  barNumbers every 4 }      // a named block
+score main  { staff melody }                         // chart layout
+score parts { layout lp  staff melody }              // this score keeps LilyPond's stacking
+score study { layout lp { barNumbers none }  staff melody }
 ```
 
 A staff's display name is a quoted string (`staff flute "Piccolo"`) — a bare word after
@@ -738,6 +739,42 @@ Rules worth knowing before emitting one:
   reference replaces the file's unnamed default; a spacing block's unwritten lines
   keep the named block's values.
 
+## Layout (`layout { … }`)
+
+The score-wide DISPLAY SWITCHES — closed vocabularies that pick one of a few drawings,
+with no unit and no grob scope. The third block of the `fonts` / `paper` shape: one
+unnamed block per file is the default, `layout NAME { … }` is a per-score declaration a
+score references as `layout NAME` (or overrides in part with `layout NAME { … }`).
+
+```
+layout {
+  marks beside             // section label + tempo at the same bar: stacked (default) | beside
+  barNumbers every 4       // which bars carry a number: lines (default) | none | every N
+}
+```
+
+- `marks stacked` is LilyPond's: the boxed label over the tempo, each on its own anchor.
+  `marks beside` is the chart's one line, "[Chorus] ♩ = 132" — the label's box at the
+  line-start edge, the tempo to its right on the label's baseline. Lily#-own; the `.ly`
+  twin has no spelling for it and warns. A mid-line label and a mid-measure `tempo` are
+  unmoved either way.
+- `barNumbers lines` is LilyPond's default: the first bar of every line after the first.
+  `none` prints no numbers (`\remove Bar_number_engraver`). `every N` prints every bar
+  whose number is a multiple of N wherever it stands, and ONLY those — a line opening on
+  bar 3 under `every 2` opens with no number, as LilyPond's `every-nth-bar-number-visible`
+  prints it. N is a whole number of at least 1. The twin writes the same LilyPond words.
+- ⚠️ **The keyword is `layout` and it takes a BLOCK.** A bare `marks beside` or
+  `barNumbers none` at the top level is an error (the words are not directives); write
+  `layout { marks beside }`. The keys and their words are not reserved (`part marks { }`
+  compiles) — `marks` is also a font GROUP in `fonts { marks "Georgia" }`, and the block
+  says which aspect of the marks is meant.
+- The line against `paper`: a quantity with a unit (a length, `raggedRight`) is the
+  page's and stays in `paper`; a switch among drawings lives here. Neither is an
+  `override` (which reads a `once` / section scope a whole-score switch would ignore).
+- Keys are matched case-insensitively (a paper key's rule); the value words are
+  canonical case only. Unknown keys are an error; a key set twice warns (last wins); a
+  brace inside the block is refused (no layout key opens a block).
+
 - Comments: `// line` and `/* block */`.
 - `@name` is the canonical annotation prefix. `\name` annotations are rejected (use `@`);
   backslash is reserved for tablature only (`\3` string numbers, `\tuning`). Lily# is NOT
@@ -758,7 +795,7 @@ part is fine). Keywords:
 ```text
 section form using tab ossia transpose octave pitch instrument percussion drummap
 score part staff grandStaff staffGroup choirStaff condensedStaff combinedStaff
-voice phrase repeat volta alternative break noBreak pageBreak noPageBreak partial cue embedded fonts paper marks
+voice phrase repeat volta alternative break noBreak pageBreak noPageBreak partial cue embedded fonts paper layout
 title composer tempo time key clef
 major minor ionian dorian phrygian lydian mixolydian aeolian locrian
 treble bass alto tenor treble_8 bass_8 soprano mezzosoprano baritone

@@ -1002,6 +1002,7 @@ internal sealed partial class LayoutEngine
         // row whose ink reaches the number's column. One home for that choice, shared with
         // the renderer that draws them (MultiStaffScore.GridBarlineRowIndex).
         var barNumberLayouts = BarNumberEngraver.Calculate(ctx.Fonts, systems,
+            policy: ctx.MultiScore?.LayoutPlan.BarNumbers ?? Semantics.BarNumberPolicy.Lines,
             numberOffset: barNumberOffset,
             gridBarlineRowIndex: ctx.GridBarlineRowIndex,
             displayedNumbers: BarNumberEngraver.NumberMeasures(measures, barNumberOffset),

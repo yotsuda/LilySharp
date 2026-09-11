@@ -241,8 +241,26 @@ internal static class SyntaxFacts
     [
         "staff", "grandStaff", "staffGroup", "choirStaff", "condensedStaff", "combinedStaff",
         "tab", "ossia", "chords", "lyrics",
-        "title", "composer", "fonts", "paper", "marks",
+        "title", "composer", "fonts", "paper", "layout",
     ];
+
+    /// <summary>
+    /// The keys a <c>layout { }</c> block takes (GRAMMAR.md: LayoutEntry) — <c>marks</c>
+    /// and <c>barNumbers</c>. Spelled here, in Syntax, because the block's entry walker
+    /// (<see cref="LayoutDeclarationSyntax.Entries"/>) needs to know a key from a value to
+    /// cut the entries; the reader (<c>LayoutPlanReader</c>) reads the same list.
+    /// </summary>
+    public static IReadOnlyList<string> LayoutKeyVocabulary { get; } = ["marks", "barNumbers"];
+
+    /// <summary>True when <paramref name="word"/> is a layout key, case-insensitively —
+    /// the block's keys are matched like a paper key's.</summary>
+    public static bool IsLayoutKey(string word)
+    {
+        foreach (var key in LayoutKeyVocabulary)
+            if (string.Equals(word, key, StringComparison.OrdinalIgnoreCase))
+                return true;
+        return false;
+    }
 
     /// <summary>
     /// The directives a <c>section { }</c> may carry beside (or instead of) its part cells

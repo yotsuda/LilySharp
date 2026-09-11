@@ -757,29 +757,57 @@ public class EditorColouringTests
             Assert.True(Regex.IsMatch($"repeat {kind} 2 {{", pattern), $"`repeat {kind}` is left plain");
     }
 
-    /// <summary>The <c>marks ARRANGEMENT</c> rule paints exactly the two words the compiler
-    /// names (<c>MarkArrangement.Modes</c>) — the same device as the repeat rule: the value
-    /// words are not reserved, so they are coloured WITH the keyword they belong to.</summary>
+    /// <summary>The <c>layout-block</c> context paints exactly the keys the compiler names
+    /// (<c>LanguageVocabulary.LayoutKeys</c>) and, WITH each key, exactly its words
+    /// (<c>MarkArrangements</c>, <c>BarNumberPolicies</c>) — the paper-block device for the
+    /// keys and the repeat-rule device for the values: none of these words is reserved
+    /// (<c>part marks { … }</c> and <c>part beside { … }</c> compile), so only a rule that
+    /// knows it is inside the block may colour them.</summary>
     [Fact]
-    public void TheMarksRule_ColoursExactlyTheCompilersArrangements()
+    public void TheLayoutBlock_ColoursExactlyTheCompilersKeysAndWords()
     {
-        string pattern = MatchPatternOf("directive-value", 2);
-        var alternation = Regex.Match(pattern, @"\(marks\)\\s\+\(([^)]+)\)");
-        Assert.True(alternation.Success, $"the marks rule has moved or changed shape: {pattern}");
+        using var doc = JsonDocument.Parse(File.ReadAllText(GrammarPath));
+        var block = doc.RootElement.GetProperty("repository").GetProperty("layout-block");
+        var rules = block.GetProperty("patterns").EnumerateArray()
+            .Where(p => p.TryGetProperty("match", out _))
+            .Select(p => p.GetProperty("match").GetString()!)
+            .ToList();
 
-        var painted = alternation.Groups[1].Value.Split('|').OrderBy(k => k, StringComparer.Ordinal);
-        var known = LanguageVocabulary.MarkArrangements.OrderBy(k => k, StringComparer.Ordinal);
-        Assert.Equal(known, painted);
-
-        foreach (string word in LanguageVocabulary.MarkArrangements)
+        // Each key's rule paints its own words, and only those.
+        foreach (var (key, words) in new (string, IEnumerable<string>)[]
         {
-            Assert.True(Regex.IsMatch($"marks {word}", pattern), $"`marks {word}` is left plain");
-            Assert.True(IsColoured($"marks {word}"), $"`marks {word}` is left plain by the grammar");
+            ("marks", LanguageVocabulary.MarkArrangements),
+            ("barNumbers", LanguageVocabulary.BarNumberPolicies),
+        })
+        {
+            string pattern = Assert.Single(rules, r => r.Contains($"({key})\\s+(", StringComparison.Ordinal));
+            var alternation = Regex.Match(pattern, $@"\({key}\)\\s\+\(([^)]+)\)");
+            Assert.True(alternation.Success, $"the {key} rule has changed shape: {pattern}");
+            Assert.Equal(words.OrderBy(k => k, StringComparer.Ordinal),
+                alternation.Groups[1].Value.Split('|').OrderBy(k => k, StringComparer.Ordinal));
+            foreach (string word in words)
+                Assert.True(Regex.IsMatch($"{key} {word}", pattern), $"`{key} {word}` is left plain");
         }
-        // The value words alone are a writer's own: `part beside { … }` compiles.
-        Assert.Equal(SyntaxKind.Identifier, KindOf("beside"));
-        Assert.Equal(SyntaxKind.Identifier, KindOf("stacked"));
-        Assert.NotEqual(SyntaxKind.Identifier, KindOf("marks"));
+
+        // The bare-key rule names exactly the compiler's keys.
+        string keyRule = Assert.Single(rules, r => r.StartsWith("\\b(", StringComparison.Ordinal)
+            && !r.Contains("\\s+", StringComparison.Ordinal) && r.Contains("marks", StringComparison.Ordinal));
+        Assert.Equal(LanguageVocabulary.LayoutKeys.OrderBy(k => k, StringComparer.Ordinal),
+            Regex.Match(keyRule, @"\(([^)]+)\)").Groups[1].Value.Split('|').OrderBy(k => k, StringComparer.Ordinal));
+
+        // …and the whole block is painted, keys alone and keys with their words.
+        foreach (string key in LanguageVocabulary.LayoutKeys)
+            Assert.True(IsColoured(key), $"`{key}` is left plain inside layout {{ }}");
+        foreach (string word in LanguageVocabulary.MarkArrangements)
+            Assert.True(IsColoured($"marks {word}"), $"`marks {word}` is left plain by the grammar");
+        foreach (string word in LanguageVocabulary.BarNumberPolicies)
+            Assert.True(IsColoured($"barNumbers {word}"), $"`barNumbers {word}` is left plain by the grammar");
+
+        // The block's word is reserved; its keys and words are a writer's own elsewhere.
+        Assert.NotEqual(SyntaxKind.Identifier, KindOf("layout"));
+        foreach (string word in LanguageVocabulary.LayoutKeys
+                     .Concat(LanguageVocabulary.MarkArrangements).Concat(LanguageVocabulary.BarNumberPolicies))
+            Assert.Equal(SyntaxKind.Identifier, KindOf(word));
     }
 
     [Fact]

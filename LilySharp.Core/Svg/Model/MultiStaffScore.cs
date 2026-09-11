@@ -109,14 +109,28 @@ public sealed record MultiStaffScore
     internal Layout.LayoutOptions Paper { get; init; } = Layout.LayoutOptions.Default;
 
     /// <summary>
-    /// <c>marks beside</c>: a boxed section label stands at the line-start edge with the
-    /// bar's tempo mark to its right on one line (the chart's arrangement), instead of the
-    /// stacked default that is LilyPond's. Resolved by the collector from the score's own
-    /// item or the file's top-level directive (Semantics.MarkArrangement); the mark engraver
-    /// and the outside-staff pass read it, and IncrementalCompiler sheds its caches when it
+    /// The score-wide display switches from the <c>layout { }</c> block — the label-and-
+    /// tempo arrangement, the bar-number policy. Never null, the <see cref="Paper"/>
+    /// convention: a score without one carries <c>LayoutPlan.Default</c>. Resolved by the
+    /// collector from the score's own reference or the file's unnamed block
+    /// (Semantics.LayoutPlanReader); the mark engraver, the bar-number engraver and the
+    /// outside-staff pass read it, and IncrementalCompiler sheds its caches when it
     /// changes, as it does for <see cref="Paper"/>.
     /// </summary>
-    public bool MarksBeside { get; init; }
+    /// <remarks>
+    /// ⚠️ NOT named <c>Layout</c>: this type sits under <c>LilySharp.Core.Svg</c>, where
+    /// <c>Layout</c> is the NAMESPACE <see cref="Paper"/>'s own type is reached through, and
+    /// a member of that name shadows it inside the class (CS0236).
+    /// </remarks>
+    public Semantics.LayoutPlan LayoutPlan { get; init; } = Semantics.LayoutPlan.Default;
+
+    /// <summary>
+    /// <c>marks beside</c>: a boxed section label stands at the line-start edge with the
+    /// bar's tempo mark to its right on one line (the chart's arrangement), instead of the
+    /// stacked default that is LilyPond's — <see cref="LayoutPlan"/>'s bit, named for its
+    /// readers (Semantics.MarkArrangement).
+    /// </summary>
+    public bool MarksBeside => LayoutPlan.MarksBeside;
 
     /// <summary>
     /// The text measurements this score's <see cref="Fonts"/> imply — what the LAYOUT asks,
@@ -344,7 +358,7 @@ public sealed record MultiStaffScore
             // The wrap a SINGLE-staff score always takes: a score-global bit left out here
             // is silently the default on every solo book (measured 2026-09-09 — the first
             // draft of `marks beside` reached the multi-staff path only).
-            MarksBeside = score.MarksBeside,
+            LayoutPlan = score.LayoutPlan,
         };
     }
 

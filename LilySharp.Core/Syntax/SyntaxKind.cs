@@ -131,10 +131,10 @@ public enum SyntaxKind : ushort
     FontsKeyword,
     /// <summary>The <c>paper</c> keyword — the block that sets the page's dimensions.</summary>
     PaperKeyword,
-    /// <summary>The <c>marks</c> keyword — how a section label and the tempo mark at the
-    /// same bar are arranged: <c>marks stacked</c> (LilyPond's, the default) or
-    /// <c>marks beside</c> (the chart's one line). A file default, or a score's own item.</summary>
-    MarksKeyword,
+    /// <summary>The <c>layout</c> keyword — the block of score-wide display switches
+    /// (<c>marks stacked|beside</c>, <c>barNumbers lines|none|every N</c>): a file default
+    /// at the top level, a named declaration a score references, like <c>paper</c>.</summary>
+    LayoutKeyword,
     /// <summary>The <c>embedded</c> keyword.</summary>
     EmbeddedKeyword,
     /// <summary>The <c>tempo</c> keyword.</summary>
@@ -377,6 +377,8 @@ public enum SyntaxKind : ushort
     FontDeclaration,
     /// <summary>A paper directive declaration node (<c>paper { KEY VALUE… }</c>).</summary>
     PaperDeclaration,
+    /// <summary>A layout directive declaration node (<c>layout { KEY VALUE… }</c>).</summary>
+    LayoutDeclaration,
     /// <summary>A variable declaration node (legacy, <c>name = { ... }</c>).</summary>
     VariableDeclaration,
     /// <summary>A phrase declaration node (<c>phrase name { ... }</c>).</summary>

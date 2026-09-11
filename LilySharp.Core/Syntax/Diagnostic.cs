@@ -1490,4 +1490,49 @@ public static class DiagnosticCodes
     /// table (LilyPond's documented-paper-alist, plus the Lily#-own jisb5). The
     /// message lists every name, so the fix is one read.</summary>
     public const string UnknownPaperSizeName = "LYS9013";
+
+    // Layout diagnostics (LYS91xx) — the `layout { }` block, mirroring the paper ones.
+
+    /// <summary>Layout error: a <c>layout { }</c> entry names a key that is not in the
+    /// layout vocabulary (<c>marks</c>, <c>barNumbers</c>). Refused rather than ignored,
+    /// <see cref="UnknownPaperKey"/>'s reasoning.</summary>
+    public const string UnknownLayoutKey = "LYS9101";
+
+    /// <summary>Layout warning: one <c>layout { }</c> block sets the same key twice; the
+    /// LAST one takes effect.</summary>
+    public const string DuplicateLayoutKey = "LYS9102";
+
+    /// <summary>Layout error: a <c>layout { }</c> entry's value is not one the key takes —
+    /// a key with nothing after it, a word outside the key's vocabulary, an <c>every</c>
+    /// with no count (or one below 1), or a stray token after a complete value.</summary>
+    public const string LayoutEntryBadValue = "LYS9103";
+
+    /// <summary>Layout error: <c>layout</c> written without a block. Mirrors
+    /// <see cref="PaperNeedsABlock"/>.</summary>
+    public const string LayoutNeedsABlock = "LYS9104";
+
+    /// <summary>Layout error: a score references a layout block name no top-level
+    /// <c>layout NAME { }</c> declares. Mirrors <see cref="UnknownPaperBlockName"/>.</summary>
+    public const string UnknownLayoutBlockName = "LYS9105";
+
+    /// <summary>Layout error: two top-level <c>layout NAME { }</c> declarations share a
+    /// name. Mirrors <see cref="DuplicatePaperBlockName"/>.</summary>
+    public const string DuplicateLayoutBlockName = "LYS9106";
+
+    /// <summary>Layout warning: a named <c>layout NAME { }</c> block no score references.
+    /// Mirrors <see cref="UnreferencedNamedPaper"/>.</summary>
+    public const string UnreferencedNamedLayout = "LYS9107";
+
+    /// <summary>Layout error: a top-level <c>layout NAME</c> without a block. Mirrors
+    /// <see cref="NamedPaperNeedsABlock"/>.</summary>
+    public const string NamedLayoutNeedsABlock = "LYS9108";
+
+    /// <summary>Layout error: an unnamed <c>layout { }</c> inside a score — a score's
+    /// layout item references a named top-level block. Mirrors
+    /// <see cref="ScorePaperNeedsAName"/>.</summary>
+    public const string ScoreLayoutNeedsAName = "LYS9109";
+
+    /// <summary>Layout warning: one score references layout twice; the LAST one wins.
+    /// Mirrors <see cref="DuplicatePaperReference"/>.</summary>
+    public const string DuplicateLayoutReference = "LYS9110";
 }

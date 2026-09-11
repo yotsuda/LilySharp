@@ -38,10 +38,14 @@ internal sealed class MetadataState
     // as Fonts: a score without one gets LayoutOptions.Default.
     public Layout.LayoutOptions Paper = Layout.LayoutOptions.Default;
 
-    // How a section label and the tempo at the same bar are arranged — `marks beside`
-    // (true) or the stacked default (false) — resolved from the score's own item or the
-    // file's top-level directive (Semantics.MarkArrangement).
-    public bool MarksBeside;
+    // The score-wide display switches from the `layout { … }` block — the label-and-tempo
+    // arrangement, the bar-number policy — resolved from the score's own reference or the
+    // file's unnamed block (Semantics.LayoutPlanReader). Never null, the Fonts/Paper
+    // convention: a score without one gets LayoutPlan.Default.
+    // ⚠️ NOT named `Layout`: this type sits under LilySharp.Core.Svg, where `Layout` is the
+    // NAMESPACE the line above resolves `Layout.LayoutOptions` through — a member of that
+    // name shadows it inside the class and the file stops compiling (CS0236).
+    public Semantics.LayoutPlan LayoutPlan = Semantics.LayoutPlan.Default;
 
     // Source offsets of the header grobs (0 = none), emitted as data-pos so the
     // preview can click-to-jump to the title/composer/time/key/clef declarations.
@@ -89,7 +93,7 @@ internal sealed class MetadataState
         Composer = other.Composer;
         Fonts = other.Fonts;
         Paper = other.Paper;
-        MarksBeside = other.MarksBeside;
+        LayoutPlan = other.LayoutPlan;
         TitlePosition = other.TitlePosition;
         ComposerPosition = other.ComposerPosition;
         TimePosition = other.TimePosition;
@@ -125,9 +129,9 @@ internal sealed class MetadataState
     {
         Title = null;
         Composer = null;
-        // (Fonts, Paper and MarksBeside are deliberately NOT reset: they are resolved once
-        // by CollectDefinitions and read at capture, and a per-pass reset here would drop
-        // them before the score is assembled — measured 2026-09-09 on MarksBeside.)
+        // (Fonts, Paper and LayoutPlan are deliberately NOT reset: they are resolved once by
+        // CollectDefinitions and read at capture, and a per-pass reset here would drop
+        // them before the score is assembled — measured 2026-09-09 on `marks beside`.)
         TitlePosition = 0;
         ComposerPosition = 0;
         TimePosition = 0;

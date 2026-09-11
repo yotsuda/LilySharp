@@ -76,7 +76,8 @@ public class ScoreAssemblerTests
             TempoDots: 1,
             Fonts: new TextFontPlan.Builder().Everything(["Comic Sans MS"]).Build(),
             Paper: LayoutOptions.Default with { PageWidth = 96 },
-            MarksBeside: true);
+            LayoutPlan: new LilySharp.Core.Semantics.LayoutPlan(MarksBeside: true,
+                LilySharp.Core.Semantics.BarNumberPolicy.Every(4)));
 
     private static ImmutableArray<ChordNameItem> OneChord() =>
         ImmutableArray.Create(new ChordNameItem("C", 0, 0, 0));
@@ -117,8 +118,9 @@ public class ScoreAssemblerTests
         // The paper overlay rides the same init-only channel as the tempo trio and
         // Fonts; MakeContent sets a non-default PageWidth so a dropped flow is visible.
         Assert.Equal(96, s.Paper.PageWidth);
-        // ...and the `marks` arrangement, the same channel (MakeContent sets beside).
+        // ...and the `layout { }` plan, the same channel (MakeContent sets beside, every 4).
         Assert.True(s.MarksBeside);
+        Assert.Equal(4, s.LayoutPlan.BarNumbers.Period);
     }
 
     [Fact]
@@ -187,6 +189,7 @@ public class ScoreAssemblerTests
         Assert.Equal(2, ms.TempoBeatUnit);
         Assert.Equal(96, ms.Paper.PageWidth);
         Assert.True(ms.MarksBeside);
+        Assert.Equal(4, ms.LayoutPlan.BarNumbers.Period);
     }
 
     [Fact]

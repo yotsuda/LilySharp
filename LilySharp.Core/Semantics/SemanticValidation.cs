@@ -116,6 +116,7 @@ public static class SemanticValidation
         new FontEmbedWarningValidator(),    // an embedded font with a restricted/unverified license
         new FontBindingValidator(),         // a fonts { } entry naming no such role, or one twice
         new PaperValidator(),               // a paper { } entry naming no such key, or a bad unit
+        new LayoutValidator(),              // a layout { } entry naming no such key, or a bad word
     };
 
     /// <summary>

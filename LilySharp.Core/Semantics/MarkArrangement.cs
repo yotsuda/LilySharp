@@ -14,16 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-using System;
 using System.Collections.Generic;
-using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// The <c>marks</c> display option — how a boxed section label and the metronome mark
-/// standing at the same bar are arranged — read from its two positions and answered as
-/// the one bit the layout wants.
+/// The <c>marks</c> key of a <c>layout { }</c> block — how a boxed section label and the
+/// metronome mark standing at the same bar are arranged — and its two words. The reading
+/// is <see cref="LayoutPlanReader"/>'s; the bit it produces is <see cref="LayoutPlan.MarksBeside"/>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -38,23 +36,16 @@ namespace LilySharp.Core.Semantics;
 /// after the label's default placement was brought to LilyPond's (session 324).
 /// </para>
 /// <para>
-/// Two positions, the shape <c>fonts</c> and <c>paper</c> take: written at the top level it
-/// is the file's default; written as a score item (<c>score main { marks beside … }</c>) it
-/// is that score's own and replaces the default for that score alone. There is no part or
-/// section position — the arrangement is a property of the page, and a page prints one
-/// way. The words are a closed vocabulary and bare, like <c>octave absolute</c>; a third
-/// word is refused where it stands (Parser.ParseMarksDirective).
-/// </para>
-/// <para>
-/// ⚠️ NOT an <c>override</c> and NOT a <c>paper</c> key, deliberately (user decision
-/// 2026-09-02): <c>override</c> reads a <c>once</c> / section scope that a whole-score
-/// quantity would silently ignore, and <c>paper { }</c> is the page's DIMENSIONS and says
-/// so ("the line/page-breaking algorithm switches" are excluded there for the same reason).
+/// It was a bare top-level directive (and a bare score item) from 2026-09-09 to 2026-09-11,
+/// when the owner moved it into <c>layout { }</c>: a bare word was the only display-only
+/// global among the music settings, and the same word names a FONT GROUP in
+/// <c>fonts { marks "Georgia" }</c> — inside a block the block says which aspect of the
+/// marks is meant (their face, their arrangement), which the bare form could not.
 /// </para>
 /// </remarks>
 public static class MarkArrangement
 {
-    /// <summary>The keyword, in both positions.</summary>
+    /// <summary>The key, as written in the block.</summary>
     public const string Property = "marks";
 
     /// <summary>LilyPond's arrangement — the label stacked over the tempo — the default.</summary>
@@ -63,61 +54,6 @@ public static class MarkArrangement
     /// <summary>The chart's — the label at the line start with the tempo to its right.</summary>
     public const string Beside = "beside";
 
-    /// <summary>The two words <c>marks</c> takes, the default first, beside the parser
-    /// that refuses a third.</summary>
+    /// <summary>The two words <c>marks</c> takes, the default first.</summary>
     public static readonly IReadOnlyList<string> Modes = [Stacked, Beside];
-
-    /// <summary>
-    /// Reads a <c>marks</c> property: true for <c>beside</c>, false for <c>stacked</c>, null
-    /// when the node is not a marks property or carries a word outside the two (the parser
-    /// has reported that one already).
-    /// </summary>
-    public static bool? ReadProperty(PropertyAssignmentSyntax prop)
-    {
-        if (!string.Equals(prop.NameToken.Text, Property, StringComparison.Ordinal))
-            return null;
-        return prop.ValueText switch
-        {
-            Beside => true,
-            Stacked => false,
-            _ => null,
-        };
-    }
-
-    /// <summary>
-    /// Whether the file's default arrangement is <c>beside</c>: the LAST top-level
-    /// <c>marks</c> directive says so (the last wins, like every repeated global; the
-    /// duplicate is warned about). A directive inside a score body is that score's own
-    /// (<see cref="ScoreArrangement"/>) and is not the file's.
-    /// </summary>
-    /// <remarks>
-    /// Green finder rather than a red walk, the reason <see cref="ConcertPitch.FileIsConcert"/>
-    /// gives: this is asked per collect, per keystroke.
-    /// </remarks>
-    public static bool FileIsBeside(SyntaxNode root)
-    {
-        bool? last = null;
-        foreach (var prop in root.GreenSites(
-                     static g => (g.Kind == SyntaxKind.PropertyAssignment, Descend: true)))
-            if (prop is PropertyAssignmentSyntax pa
-                && !pa.IsInside<PartDeclarationSyntax>() && !pa.IsInside<RenderDeclarationSyntax>()
-                && ReadProperty(pa) is { } mode)
-                last = mode;
-        return last ?? false;
-    }
-
-    /// <summary>
-    /// The arrangement <paramref name="render"/> asks for itself — true for <c>beside</c>,
-    /// false for <c>stacked</c>, null when the score body writes no <c>marks</c> item and the
-    /// file's default applies. The LAST item wins, like every repeated single-value setting.
-    /// </summary>
-    public static bool? ScoreArrangement(RenderDeclarationSyntax? render)
-    {
-        if (render == null) return null;
-        bool? last = null;
-        foreach (var node in render.DescendantNodes())
-            if (node is PropertyAssignmentSyntax pa && ReadProperty(pa) is { } mode)
-                last = mode;
-        return last;
-    }
 }

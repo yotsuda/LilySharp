@@ -385,6 +385,13 @@ public sealed partial class LilySharpLanguageServer
         return false;
     }
 
+    /// <summary>True when the innermost open block is a <c>layout { }</c> — unnamed
+    /// (<c>layout {</c>, the frame's Name) or named (<c>layout chart {</c>, its Prefix).
+    /// The block has no nested level, so one frame answers.</summary>
+    private static bool IsInsideLayoutBlock(List<OpenBlock> stack)
+        => stack.Count > 0
+            && (stack[^1].Frame.Name == "layout" || stack[^1].Frame.Prefix == "layout");
+
     private static bool IsInsidePartBlock(List<OpenBlock> stack)
         => stack.Count > 0 && stack[^1].Frame.Prefix == "part";
 
@@ -503,6 +510,16 @@ public sealed partial class LilySharpLanguageServer
         AfterPaperBlockRef,
         AfterPaperSizeName,
         AfterPaperSizeNameQuoted,
+        /// <summary><c>layout |</c> at the top level — the block forms.</summary>
+        AfterLayoutKeyword,
+        /// <summary>Inside <c>layout { … }</c> — the keys (<c>marks</c>, <c>barNumbers</c>).</summary>
+        LayoutBlock,
+        /// <summary><c>score { layout |</c> — the declared block names.</summary>
+        AfterLayoutBlockRef,
+        /// <summary><c>layout { marks |</c> — the two arrangements.</summary>
+        AfterLayoutMarks,
+        /// <summary><c>layout { barNumbers |</c> — the three policies.</summary>
+        AfterLayoutBarNumbers,
         ScoreBlock,
         StaffGroupBlock,
         AfterStaffRef,
@@ -715,6 +732,11 @@ public sealed partial class LilySharpLanguageServer
                     return IsInsideScoreBlock(scan.Stack)
                         ? CompletionContext.AfterPaperBlockRef
                         : CompletionContext.AfterPaperKeyword;
+                // `layout |` with no block yet: same motion, the third block of the shape.
+                case "layout":
+                    return IsInsideScoreBlock(scan.Stack)
+                        ? CompletionContext.AfterLayoutBlockRef
+                        : CompletionContext.AfterLayoutKeyword;
                 // `override |` (and `once override |`, whose previous word is also
                 // `override`): offer the grob properties that actually affect the
                 // rendered output as `Grob.property = value` fill-ins.
@@ -792,6 +814,20 @@ public sealed partial class LilySharpLanguageServer
             return inSpacingBlock ? CompletionContext.PaperSpecBlock : CompletionContext.PaperBlock;
         }
 
+        // Inside `layout { … }` a KEY is what belongs, and after a key its own words
+        // (Semantics.MarkArrangement, Semantics.BarNumberPolicy): the two-key block has no
+        // nested level and no quoted value. Intercepted before the fallthroughs for the
+        // reason the fonts and paper blocks are: without this the popup offers pitches and
+        // articulations at every caret inside the block.
+        if (IsInsideLayoutBlock(scan.Stack) && !IsInsideStringLiteral(text, offset))
+        {
+            if (prevWord.Equals(MarkArrangement.Property, StringComparison.OrdinalIgnoreCase))
+                return CompletionContext.AfterLayoutMarks;
+            if (prevWord.Equals(BarNumberPolicy.Key, StringComparison.OrdinalIgnoreCase))
+                return CompletionContext.AfterLayoutBarNumbers;
+            return CompletionContext.LayoutBlock;
+        }
+
         // Inside a "…" string value, the directive that OWNS the string decides the
         // completion. A `title`/`composer` string keeps its snippet (so the caret is served
         // whether it sits just before the opening quote or already inside it). Every other
@@ -843,16 +879,8 @@ public sealed partial class LilySharpLanguageServer
             && (InnermostOpenBlock(scan.Stack) == null || IsInsidePartBlock(scan.Stack)))
             return CompletionContext.AfterPitch;
 
-        // Right after `marks ` only its two arrangements are valid (stacked / beside —
-        // Semantics.MarkArrangement). The word has TWO homes and both take the same two
-        // words: the top-level directive (`marks beside`) and a score item (`score main {
-        // marks beside … }`). Gated to those — not a part header or a music body, where
-        // `marks` is refused, and not a string, so a title like "Rehearsal marks" is not
-        // hijacked.
-        if (prevWord == "marks"
-            && !IsInsideStringLiteral(text, offset)
-            && (InnermostOpenBlock(scan.Stack) == null || IsInsideScoreBlock(scan.Stack)))
-            return CompletionContext.AfterMarks;
+        // (`marks` left the top level and the score body on 2026-09-11 — it is a key of
+        // `layout { }` now, served inside the layout branch above.)
 
         // Right after `repeat ` in MUSIC only its three kinds fit (unfold / percent /
         // tremolo — SyntaxFacts.RepeatKindVocabulary). `repeat` is an ordinary English word,

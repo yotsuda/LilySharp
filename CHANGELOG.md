@@ -43,17 +43,39 @@ workflow attaches that section to the GitHub Release verbatim.
   number, though, keeps counting, as LilyPond's does (bar numbers continue through
   alternatives; only the position in the bar is restored at each one).
 
-- **`marks stacked | beside` arranges a section label and the tempo mark at the same bar.**
-  `stacked` is the default and LilyPond's: the boxed label break-aligns to the key/clef
-  column, the metronome mark to the meter column, and where their inks meet the label stacks
-  over the tempo. `beside` is the chart's one line — the label's box at the line-start edge
-  with the tempo to its right, the digits on the label's baseline ("[Chorus] ♩ = 132"); the
-  pair is reserved and moved as one, so a chord symbol or a high note under either lifts
-  both. A mid-line label stays centred on its bar and a mid-measure `tempo` keeps its note
-  column either way. Written at the top level it is the file's default; `marks beside`
-  inside a `score { }` body is that score's own, the two tiers `fonts` / `paper` take. The
-  editor completes and colours the two words; the `.ly` twin has no spelling for `beside`
-  and warns (LilyPond has no such pair). A book that writes neither is unchanged.
+- **`layout { }` gathers the score-wide display switches.** The third block of the `fonts`
+  / `paper` shape: an unnamed `layout { … }` at the top level is the file's default, a
+  named `layout chart { … }` is a per-score declaration a score references as `layout
+  chart` (or overrides in part with `layout chart { barNumbers none }`), and the reference
+  replaces the default for that score alone. What belongs here and not in `paper`: a switch
+  among a few drawings, with no unit and no grob scope — a length or a justification flag
+  stays in `paper`. Two keys, each a closed vocabulary, neither reserved:
+  - **`marks stacked | beside`** arranges a section label and the tempo mark at the same
+    bar. `stacked` is the default and LilyPond's: the boxed label break-aligns to the
+    key/clef column, the metronome mark to the meter column, and where their inks meet the
+    label stacks over the tempo. `beside` is the chart's one line — the label's box at the
+    line-start edge with the tempo to its right, the digits on the label's baseline
+    ("[Chorus] ♩ = 132"); the pair is reserved and moved as one, so a chord symbol or a high
+    note under either lifts both. A mid-line label stays centred on its bar and a
+    mid-measure `tempo` keeps its note column either way. The `.ly` twin has no spelling
+    for `beside` and warns (LilyPond has no such pair). (Shipped as a bare `marks`
+    directive earlier in this version; the bare form is gone — it was the one display-only
+    word among the music settings, and the same word names a font group in `fonts { marks
+    "…" }`, which the block now disambiguates.)
+  - **`barNumbers lines | none | every N`** says which bars carry a printed number, in
+    LilyPond's vocabulary. `lines` is the default and LilyPond's: the first bar of every
+    line after the first. `none` prints no numbers. `every N` prints every bar whose number
+    is a multiple of N wherever it stands in the line, and only those — under `every 2` a
+    line opening on bar 3 opens with no number, as LilyPond's `every-nth-bar-number-visible`
+    prints it (the visibility function answers before the line-start rule). A pickup is bar
+    0, so the multiples are of the displayed number. The `.ly` twin writes the same LilyPond
+    words into its `\layout` block (`\remove Bar_number_engraver`; `barNumberVisibility`
+    with `BarNumber.break-visibility = #end-of-line-invisible`), so the two pages number
+    the same bars.
+
+  The editor completes the block pre-filled with the defaults, the keys, and each key's
+  words, and colours them inside the block; an unknown key is an error and a bad word is
+  refused on the word. A book that writes no `layout` block is unchanged.
 
 - **A `fonts { }` entry carries a size and a style, not only a face.** After a key, in any
   order: quoted faces, `as serif|sans` (follow a generic family), `step ±n` (LilyPond

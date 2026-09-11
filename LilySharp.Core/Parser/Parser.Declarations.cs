@@ -362,40 +362,6 @@ internal sealed partial class Parser
         return new PropertyAssignmentGreen(keyword, null, [mode]);
     }
 
-    // `marks stacked` / `marks beside` — at the top level the file's default for how a
-    // section label and the tempo at the same bar are arranged, as a score item that
-    // score's own (Semantics.MarkArrangement is the reader). The same property-node shape
-    // as `pitch`, for the same reason: the readers that walk property nodes need no new
-    // node kind, and the value is checked HERE, at the word, with the node keeping it so
-    // the round trip holds.
-    private PropertyAssignmentGreen ParseMarksDirective()
-    {
-        var keyword = Advance(); // marks
-        SyntaxToken mode;
-        if (Check(SyntaxKind.Identifier)
-            && Semantics.MarkArrangement.Modes.Contains(Current.Text))
-        {
-            mode = Advance();
-        }
-        else if (Check(SyntaxKind.Identifier))
-        {
-            var span = new TextSpan(_textPosition, Current.FullWidth);
-            _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
-                $"'{Current.Text}' is not a marks arrangement. 'marks' takes "
-                + $"{string.Join(" or ", Semantics.MarkArrangement.Modes)} — e.g. 'marks beside'.");
-            mode = Advance();
-        }
-        else
-        {
-            var span = new TextSpan(_textPosition, Current.FullWidth);
-            _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
-                $"Expected a marks arrangement ({string.Join(" or ", Semantics.MarkArrangement.Modes)})");
-            // Zero-width missing token, as ParsePitchDirective recovers: an empty mode reads
-            // as neither word, i.e. the stacked default.
-            mode = new SyntaxToken(SyntaxKind.Identifier, "", null, null);
-        }
-        return new PropertyAssignmentGreen(keyword, null, [mode]);
-    }
 
     private MetadataDeclarationGreen ParseMetadataDeclaration()
     {
@@ -725,6 +691,134 @@ internal sealed partial class Parser
         _diagnostics.Error(new TextSpan(_textPosition, 1), DiagnosticCodes.ExpectedToken,
             "This 'paper {' has no closing '}'.");
         return new PaperDeclarationGreen(keyword, [.. tokens]);
+    }
+
+    /// <summary>
+    /// <c>layout { KEY VALUE… }</c>, optionally named — the third block of the
+    /// <c>fonts</c> / <c>paper</c> shape: <c>layout NAME { … }</c> declares a reusable
+    /// block at the top level, and inside a score <c>layout NAME</c> references one (with
+    /// an optional override block). The positional errors anchor where the paper ones do.
+    /// </summary>
+    /// <remarks>
+    /// The block's tokens are kept FLAT, like the paper block's: the entries are read back
+    /// by <c>LayoutDeclarationSyntax.Entries</c> and judged by <c>LayoutPlanReader</c>. The
+    /// parser's only jobs are the block's extent and refusing a token that could never be a
+    /// key or a value — there is no nested block in this vocabulary, so a brace inside is
+    /// refused where it stands.
+    /// </remarks>
+    private LayoutDeclarationGreen ParseLayoutDeclaration(bool inScore = false)
+    {
+        var keyword = Advance(); // layout
+
+        // `layout NAME` — a declaration's name at the top level, a reference in a score.
+        SyntaxToken? name = null;
+        if (!Check(SyntaxKind.OpenBrace) && IsWordLikeToken(Current))
+            name = Advance();
+
+        if (Check(SyntaxKind.OpenBrace))
+        {
+            if (inScore && name == null)
+            {
+                var braceSpan = new TextSpan(_textPosition + Current.LeadingTriviaWidth, 1);
+                _diagnostics.Error(braceSpan, DiagnosticCodes.ScoreLayoutNeedsAName,
+                    "A score's layout item references a named top-level block: layout NAME, "
+                    + "or layout NAME { marks beside } to override part of it here.");
+            }
+            return ParseLayoutBlock(keyword, name);
+        }
+
+        if (name != null)
+        {
+            if (inScore)
+                return new LayoutDeclarationGreen(keyword, [name]); // a pure reference
+
+            var nameSpan = new TextSpan(_textPosition - name.FullWidth + name.LeadingTriviaWidth,
+                Math.Max(1, name.Text.Length));
+            _diagnostics.Error(nameSpan, DiagnosticCodes.NamedLayoutNeedsABlock,
+                $"A named layout block is a declaration, so it takes a block: layout "
+                + $"{name.Text} {{ marks beside }} — a score then references it as "
+                + $"'layout {name.Text}'.");
+            return new LayoutDeclarationGreen(keyword, [name]);
+        }
+
+        // The tokens are KEPT, not dropped, for the reason the paper one-liner keeps its
+        // own: a declaration that loses them slides every later `data-pos` (RULES §5.1).
+        var tokens = new List<GreenNode?>();
+        var span = new TextSpan(_textPosition + Current.LeadingTriviaWidth,
+            Math.Max(1, Current.Text.Length));
+        if (inScore)
+            _diagnostics.Error(span, DiagnosticCodes.ScoreLayoutNeedsAName,
+                "A score's layout item references a named top-level block: layout NAME, "
+                + "or layout NAME { marks beside } to override part of it here.");
+        else
+            _diagnostics.Error(span, DiagnosticCodes.LayoutNeedsABlock,
+                "'layout' sets the score's display switches, so it takes a block: "
+                + "layout { marks beside  barNumbers every 4 }.");
+
+        // Consume the stray value so one mistake does not cascade into the rest of the file.
+        while (Check(SyntaxKind.StringLiteral) ||
+               Check(SyntaxKind.IntegerLiteral) ||
+               Check(SyntaxKind.DecimalLiteral) ||
+               Check(SyntaxKind.Identifier))
+        {
+            tokens.Add(Advance());
+        }
+
+        return new LayoutDeclarationGreen(keyword, [.. tokens]);
+    }
+
+    // layout { marks beside  barNumbers every 4 }
+    //
+    // House style, the same as the paper block: bare KEY, bare VALUEs, no colons and no
+    // commas, entries separated by nothing but whitespace. The values are closed
+    // vocabularies (Semantics.MarkArrangement, Semantics.BarNumberPolicy) and an integer;
+    // which word is a key and which a value is the reader's question, so here a word is a
+    // word.
+    private LayoutDeclarationGreen ParseLayoutBlock(SyntaxToken keyword, SyntaxToken? name = null)
+    {
+        var tokens = new List<GreenNode?>();
+        if (name != null)
+            tokens.Add(name);
+        tokens.Add(Advance()); // {
+        while (!Check(SyntaxKind.EndOfFile))
+        {
+            if (Check(SyntaxKind.CloseBrace))
+            {
+                tokens.Add(Advance());
+                return new LayoutDeclarationGreen(keyword, [.. tokens]);
+            }
+            if (Check(SyntaxKind.OpenBrace))
+            {
+                // No layout key opens a block; refused where it stands and skipped so the
+                // walker upstairs stays one level deep. Its closer is consumed with it.
+                var braceSpan = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
+                _diagnostics.Error(braceSpan, DiagnosticCodes.LayoutEntryBadValue,
+                    "A 'layout { }' entry is a key followed by its word (marks beside, "
+                    + "barNumbers every 4) — it does not open a block.");
+                tokens.Add(Advance());
+                while (!Check(SyntaxKind.EndOfFile) && !Check(SyntaxKind.CloseBrace))
+                    tokens.Add(Advance());
+                if (Check(SyntaxKind.CloseBrace))
+                    tokens.Add(Advance());
+                continue;
+            }
+            if (Check(SyntaxKind.IntegerLiteral) || Check(SyntaxKind.DecimalLiteral) ||
+                Check(SyntaxKind.StringLiteral) || IsWordLikeToken(Current))
+            {
+                tokens.Add(Advance());
+                continue;
+            }
+            // Anything else is refused where it stands, and skipped, so one stray token
+            // does not swallow the rest of the score.
+            var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
+            _diagnostics.Error(span, DiagnosticCodes.LayoutEntryBadValue,
+                "A 'layout { }' entry is a key followed by its word — marks stacked|beside, "
+                + "barNumbers lines|none|every N — and '" + Current.Text + "' is neither.");
+            tokens.Add(Advance());
+        }
+        _diagnostics.Error(new TextSpan(_textPosition, 1), DiagnosticCodes.ExpectedToken,
+            "This 'layout {' has no closing '}'.");
+        return new LayoutDeclarationGreen(keyword, [.. tokens]);
     }
 
     // A token that reads as a bare WORD, judged by its text rather than by its kind:
