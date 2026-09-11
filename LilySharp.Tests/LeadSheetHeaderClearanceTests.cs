@@ -120,7 +120,15 @@ public class LeadSheetHeaderClearanceTests
         Assert.NotEmpty(chords);
         foreach (var c in chords)
         {
-            double inkTop = c.Y - ChordNameEngraver.SymbolInk(ScoreTextMetrics.Bundled, c.Text).Top;
+            // ⚠️ PER DRAWN PIECE, at THAT PIECE'S OWN SIZE. Since the superscript was ported
+            // a symbol is several runs — the root on its baseline, the quality raised and
+            // reduced — so `c` is a piece, its `Y` is already the piece's own baseline, and
+            // pricing it at the symbol's em would over-state a raised run's height and
+            // under-state nothing. The union over the pieces is the symbol's ink, which is
+            // what this loop asks about one piece at a time.
+            double inkTop = c.Y - ScoreTextMetrics.Bundled
+                .Ink(c.Text, c.FontSize, TextRole.ChordName,
+                     LilySharp.Core.Svg.EngravingDefaults.ChordNameFontStyle).Top;
             Assert.True(
                 inkTop >= headerBottom,
                 $"chord symbol \"{c.Text}\" reaches {inkTop:F6} — above the header's bottom "

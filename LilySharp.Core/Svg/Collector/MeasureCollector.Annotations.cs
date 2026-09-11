@@ -122,10 +122,12 @@ public sealed partial class MeasureCollector
             if (child is not MusicMarkSyntax markSyntax)
                 continue;
 
-            var chordText = Semantics.AnnotationValues.Chord(
+            var chordSymbol = Semantics.AnnotationValues.Chord(
                 markSyntax, _chordSpelling, out var structure);
-            if (chordText is null)
+            if (chordSymbol is not { } sym)
                 continue;
+            string chordText = sym.Text;
+            int superFrom = sym.SuperFrom;
 
             // Bare '@chord' auto-derives the symbol from the notes it's on. On a
             // chord (or a << >> arpeggio — a broken chord names the same way) we
@@ -147,12 +149,14 @@ public sealed partial class MeasureCollector
                 };
                 if (structure == null)
                     continue;
-                chordText = structure.DisplayName(_chordSpelling);
+                var derived = structure.PrintedSymbol(_chordSpelling);
+                chordText = derived.Text;
+                superFrom = derived.SuperFrom;
             }
 
             _chordNameCollector.AddInline(
                 chordText, measureIndex, itemIndex, anchorTiming, markSyntax.SourceStart,
-                _cursor.StaffIndex, structure);
+                _cursor.StaffIndex, structure, superFrom);
         }
     }
 

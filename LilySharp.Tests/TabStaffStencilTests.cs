@@ -404,8 +404,15 @@ public sealed class TabStaffStencilTests
         var (score, _) = LayoutOf(book);
         var page = RenderFirstPage(book);
 
-        var symbol = page.Texts.FirstOrDefault(t => t.Text == "Dmaj7");
-        Assert.False(symbol.Text is null, "the chord symbol was not engraved at all.");
+        // ⚠️ THE SYMBOL IS SEVERAL RUNS since the superscript was ported: `D` on its own
+        // baseline and `maj7` raised and reduced. Its INK TOP is therefore the union over
+        // the pieces, each priced at its OWN size — which is also the smallest number the
+        // claim below can be made about, so taking one run would understate the reach.
+        var symbolPieces = page.Texts
+            .Where(t => t.Role == TextRole.ChordName && t.X < 20.0)
+            .ToList();
+        Assert.NotEmpty(symbolPieces);
+        var symbol = symbolPieces.OrderByDescending(t => t.Y).First();   // the root's baseline
 
         // The notation staff's noteheads — the tab draws digits as TEXT, not glyphs, so the
         // black heads on this page are the upper staff's and nothing else.
@@ -431,10 +438,11 @@ public sealed class TabStaffStencilTests
             $"the lowest notehead ({lowest.Y:F6}) does not hang below the staff "
             + $"({bottomNotationLine:F6}) — this book no longer tests anything.");
 
-        // The symbol's ink about its baseline, from the engraver's own home. Device Y is
-        // DOWN and SymbolInk is Y-up about the baseline, so the ink top is baseline − Top.
-        var (_, inkTop) = ChordNameEngraver.SymbolInk(score.TextMetrics, "Dmaj7");
-        double symbolInkTop = symbol.Y - inkTop;
+        // The symbol's ink top: the HIGHEST of its pieces', each priced at its own size and
+        // already sitting on its own baseline. Device Y is DOWN, so "highest" is the least.
+        double symbolInkTop = symbolPieces.Min(p =>
+            p.Y - score.TextMetrics.Ink(p.Text, p.FontSize, TextRole.ChordName,
+                LilySharp.Core.Svg.EngravingDefaults.ChordNameFontStyle).Top);
         double headInkBottom = lowest.Y + (staffLines[1] - staffLines[0]) / 2.0;
 
         // THE CLAIM. Before the fix this read 19.83 against a head bottom of 21.02.

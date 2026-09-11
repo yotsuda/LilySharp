@@ -43,7 +43,12 @@ public readonly record struct ChordNameLayout(
     // QUESTION EVERY DOWNSTREAM PASS ASKS — "is this ink on the row's line?" — because
     // once an @chord prints at the row's baseline it moves with the row's solve and it
     // stops being the staff's own above-staff ink.
-    int RowStaffIndex = -1
+    int RowStaffIndex = -1,
+    // Where ChordText's superscript begins, or ChordSymbolText.NoSuperscript. The pair
+    // (text, index) is what the drawing takes, and it is the SAME pair the reservation
+    // above was computed from (ChordNameEngraver.DisplaySymbol) — the contract this file
+    // already keeps for the accidental glyphs, extended to the raised run.
+    int SuperFrom = Music.ChordSymbolText.NoSuperscript
 );
 
 /// <summary>
@@ -300,14 +305,16 @@ internal static class ChordNameEngraver
         foreach (var (x, c) in rowSyms)
         {
             double w = SymbolWidth(fonts, c);
-            double bottom = SymbolInk(fonts, DisplayText(c)).Bottom;
+            var cs = DisplaySymbol(c);
+        double bottom = SymbolInk(fonts, cs.Text, cs.SuperFrom).Bottom;
             foreach (var (ix, ic) in inline)
             {
                 if (!Meets(x, w, ix, SymbolWidth(fonts, ic)))
                     continue;
                 lifted.Add(c);
                 blocked.Add(ic);
-                step = Math.Max(step, SymbolInk(fonts, DisplayText(ic)).Top + SymbolGap - bottom);
+                var ics = DisplaySymbol(ic);
+                step = Math.Max(step, SymbolInk(fonts, ics.Text, ics.SuperFrom).Top + SymbolGap - bottom);
             }
         }
 
@@ -570,7 +577,8 @@ internal static class ChordNameEngraver
                 // device baseline); no staff offset is baked.
                 results.Add(new ChordNameLayout(
                     p.chord.MeasureIndex, p.x, -(p.staffOffset + rowBaseline) + lift,
-                    rowText, p.chord.SourcePosition, p.idx, p.chord.StaffIndex));
+                    rowText, p.chord.SourcePosition, p.idx, p.chord.StaffIndex,
+                    DisplaySymbol(p.chord).SuperFrom));
                 continue;
             }
 
@@ -583,7 +591,8 @@ internal static class ChordNameEngraver
                 results.Add(new ChordNameLayout(
                     p.chord.MeasureIndex, p.x,
                     -(join.RowStaffOffset + RowTextBaseline(chordGridSheet)),
-                    DisplayText(p.chord), p.chord.SourcePosition, p.idx, join.RowStaffIndex));
+                    DisplaySymbol(p.chord).Text, p.chord.SourcePosition, p.idx, join.RowStaffIndex,
+                    DisplaySymbol(p.chord).SuperFrom));
                 continue;
             }
 
@@ -609,7 +618,8 @@ internal static class ChordNameEngraver
             string text = DisplayText(p.chord);
             // Store Y-up from the system top (= -y); no staff offset is baked.
             results.Add(new ChordNameLayout(
-                p.chord.MeasureIndex, p.x, -y, text, p.chord.SourcePosition, p.idx));
+                p.chord.MeasureIndex, p.x, -y, text, p.chord.SourcePosition, p.idx,
+                    RowStaffIndex: -1, SuperFrom: DisplaySymbol(p.chord).SuperFrom));
         }
 
         return results.ToImmutable();
@@ -796,8 +806,9 @@ internal static class ChordNameEngraver
     /// keeps out of the measuring path had arrived through the drawing path.
     /// </para>
     /// </remarks>
-    internal static double SymbolInkWidth(Rendering.ScoreTextMetrics fonts, string text) =>
-        ChordNameGlyphRun.Width(fonts, text);
+    internal static double SymbolInkWidth(Rendering.ScoreTextMetrics fonts, string text,
+        int superFrom = Music.ChordSymbolText.NoSuperscript) =>
+        ChordNameGlyphRun.Width(fonts, text, superFrom);
 
     /// <summary>
     /// A chord symbol's ink about its baseline — the union of its text runs' and its
@@ -812,8 +823,9 @@ internal static class ChordNameEngraver
     /// address and for the 2.26.0 measurements this reproduces.
     /// </remarks>
     internal static (double Bottom, double Top) SymbolInk(
-        Rendering.ScoreTextMetrics fonts, string text) =>
-        ChordNameGlyphRun.Ink(fonts, text);
+        Rendering.ScoreTextMetrics fonts, string text,
+        int superFrom = Music.ChordSymbolText.NoSuperscript) =>
+        ChordNameGlyphRun.Ink(fonts, text, superFrom);
 
     /// <summary>
     /// The reserved width of a chord symbol — its ink (<see cref="SymbolInkWidth"/>) under
@@ -830,7 +842,7 @@ internal static class ChordNameEngraver
     /// with the other named inventions in docs/HANDOFF.md section 2H.
     /// </remarks>
     private static double SymbolWidth(Rendering.ScoreTextMetrics fonts, ChordNameItem c) =>
-        Math.Max(2.0, SymbolInkWidth(fonts, DisplayText(c)));
+        Math.Max(2.0, SymbolInkWidth(fonts, DisplaySymbol(c).Text, DisplaySymbol(c).SuperFrom));
 
     /// <summary>
     /// <paramref name="curX"/> shifted right, if it has to be, so its box clears the
@@ -955,7 +967,8 @@ internal static class ChordNameEngraver
             // where `Am' is (0 . 1.907250)). Asking the text face for the whole string used to
             // return the letters' box alone, because the face has no accidental glyph — see
             // SymbolInk and ChordNameGlyphRun.
-            var (bottom, top) = SymbolInk(fonts, DisplayText(chord));
+            var ds = DisplaySymbol(chord);
+        var (bottom, top) = SymbolInk(fonts, ds.Text, ds.SuperFrom);
             double right = x + SymbolWidth(fonts, chord);
             up.Merge(VerticalSkyline.FromBox(x, right, bottom + lift, top + lift, VerticalDirection.Up));
             down.Merge(VerticalSkyline.FromBox(x, right, bottom + lift, top + lift, VerticalDirection.Down));
@@ -972,9 +985,24 @@ internal static class ChordNameEngraver
     /// prints such a slot once per row. That is each row saying what it can, not a
     /// duplicate, and it is the one thing the retired <c>Both</c> mode did differently.
     /// </remarks>
-    private static string DisplayText(ChordNameItem c) => c.DisplayMode switch
+    private static string DisplayText(ChordNameItem c) => DisplaySymbol(c).Text;
+
+    /// <summary>
+    /// What this symbol prints AND where its superscript begins — the pair every measuring
+    /// and drawing pass takes, so the reserved box and the drawn one cannot be built from
+    /// different halves.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A ROMAN DEGREE HAS NO SUPERSCRIPT. The raised run is LilyPond's chord-name
+    /// typography; a degree is Lily#'s own notation and LilyPond has no degrees at all, so
+    /// there is nothing to follow and the index a names-mode symbol carries would point
+    /// into the WRONG STRING (<c>RomanText</c> is not <c>ChordText</c>). The fallback arm —
+    /// a degreeless slot printing its name on a roman row — is flat for the same reason:
+    /// the row's line is one baseline.
+    /// </remarks>
+    private static (string Text, int SuperFrom) DisplaySymbol(ChordNameItem c) => c.DisplayMode switch
     {
-        ChordDisplayMode.Roman => c.RomanText ?? c.ChordText,
-        _ => c.ChordText,
+        ChordDisplayMode.Roman => (c.RomanText ?? c.ChordText, Music.ChordSymbolText.NoSuperscript),
+        _ => (c.ChordText, c.SuperFrom),
     };
 }

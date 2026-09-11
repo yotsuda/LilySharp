@@ -46,7 +46,8 @@
   <rect x="54.94" y="15.66" width="0.19" height="4.00" data-pos="449"/>
   <text class="music" x="43.82" y="13.88" font-size="4.00" data-pos="428"></text>
   <text x="8.59" y="12.38" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="471">C</text>
-  <text x="14.59" y="12.38" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="473">G7</text>
+  <text x="14.59" y="12.38" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="473">G</text>
+  <text x="16.64" y="11.19" font-size="1.85" font-family="TeX Gyre Heros, sans-serif" data-pos="473">7</text>
   <text x="21.92" y="12.38" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="478">Am</text>
   <text x="35.87" y="12.38" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="483">C</text>
   <text x="43.17" y="12.38" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="487">F</text>

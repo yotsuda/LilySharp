@@ -47,8 +47,10 @@
   <text class="music" x="31.13" y="27.06" font-size="4.00" data-pos="468"></text>
   <rect x="29.04" y="26.56" width="0.19" height="4.00" data-pos="466"/>
   <rect x="37.19" y="26.56" width="0.19" height="4.00" data-pos="481"/>
-  <text x="17.24" y="24.96" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="432">Cm7</text>
-  <text x="31.13" y="24.96" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="470">G7</text>
+  <text x="17.24" y="24.96" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="432">Cm</text>
+  <text x="21.30" y="23.78" font-size="1.85" font-family="TeX Gyre Heros, sans-serif" data-pos="432">7</text>
+  <text x="31.13" y="24.96" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="470">G</text>
+  <text x="33.18" y="23.78" font-size="1.85" font-family="TeX Gyre Heros, sans-serif" data-pos="470">7</text>
   <text class="music" font-family="Emmentaler-11, Emmentaler, serif" x="20.25" y="33.52" font-size="2.24" data-pos="445"></text>
   <text class="music" font-family="Emmentaler-11, Emmentaler, serif" x="23.25" y="33.52" font-size="2.24" data-pos="454"></text>
   <text class="music" font-family="Emmentaler-11, Emmentaler, serif" x="23.25" y="35.02" font-size="2.24" data-pos="454"></text>

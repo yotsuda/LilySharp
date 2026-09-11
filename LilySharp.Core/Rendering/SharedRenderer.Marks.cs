@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -74,7 +74,8 @@ internal static partial class SharedRenderer
         // ⚠️ ONE HOME WITH THE RESERVATION: the pieces here are the pieces
         // ChordNameEngraver.SymbolInkWidth and SymbolInk price, so the drawn symbol and the
         // reserved one cannot drift (the failure this file already carries a note about).
-        double glyphEm = LilySharp.Core.Svg.Layout.ChordNameGlyphRun.AccidentalGlyphEm(FontSize, fonts);
+        // (The accidental's em is per PIECE now — a raised one reads the \super's font-size —
+        // so it is taken inside the loop from the piece's own font-size.)
         // ONE line per symbol. `as both` used to draw a second one 2.2 ss above this
         // baseline — a distance that lived here while the ink was reserved for in
         // ChordNameEngraver, so the row under-reserved by exactly it. Retired 2026-08-23:
@@ -86,17 +87,57 @@ internal static partial class SharedRenderer
             double cy = syUp + c.YUp;
             using (gc.Source(c.SourcePosition))
             {
-                foreach (var piece in
-                         LilySharp.Core.Svg.Layout.ChordNameGlyphRun.Pieces(fonts, c.ChordText))
+                // ⚠️ EVERY PIECE CARRIES ITS OWN SIZE AND LIFT, and neither is read from the
+                // symbol: LilyPond raises and reduces everything between the root and the
+                // slash bass (\super — ChordNameGlyphRun.SuperEmFactor / SuperRaise), so a
+                // loop that drew at one size would print the chord on one line again while
+                // the row reserved for two. The factor multiplies each kind's own em.
+                foreach (var piece in LilySharp.Core.Svg.Layout.ChordNameGlyphRun.Pieces(
+                             fonts, c.ChordText, c.SuperFrom))
                 {
-                    if (piece.IsGlyph)
-                        gc.DrawGlyph(piece.Glyph, c.X + piece.DrawX, cy + piece.Raise, glyphEm);
+                    if (piece.IsTriangle)
+                        DrawMajorSevenTriangle(gc, c.X + piece.DrawX, cy + piece.Raise,
+                            LilySharp.Core.Svg.Layout.ChordNameGlyphRun.TriangleBaseOf(piece));
+                    else if (piece.IsGlyph)
+                        gc.DrawGlyph(piece.Glyph, c.X + piece.DrawX, cy + piece.Raise,
+                            LilySharp.Core.Svg.Layout.ChordNameGlyphRun.AccidentalGlyphEm(
+                                FontSize, piece.FontSize));
                     else
-                        gc.DrawText(piece.Text, c.X + piece.X, cy, size, TextRole.ChordName,
-                            style, TextAnchor.Start, Color.Black);
+                        gc.DrawText(piece.Text, c.X + piece.X, cy + piece.Raise,
+                            LilySharp.Core.Svg.Layout.ChordNameGlyphRun.EmAt(piece.FontSize),
+                            TextRole.ChordName, style, TextAnchor.Start, Color.Black);
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// The major-seventh symbol: an UNFILLED triangle standing on
+    /// <paramref name="baselineY"/> with its lower-left corner at <paramref name="x"/>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-markup-commands.scm triangle-markup (lines 519-561) — the polygon is
+    ///   <c>(0,0) (ex,0) (0.5ex, 0.86ex)</c>;
+    /// LILYPOND-REF: scm/define-markup-commands.scm polygon-markup (lines 478-517) — with
+    ///   <c>filled</c> false it is <c>ly:round-polygon</c> at
+    ///   <c>thickness × line-thickness</c>, traced as-is (extroversion 0).
+    /// ⚠️ THREE LINES, NOT A PATH, and that is the round polygon rather than a shortcut:
+    /// <c>ly:round-polygon</c> rounds every corner by the blot, which three segments with
+    /// ROUND CAPS reproduce exactly — the cap at a shared corner is the join. MEASURED
+    /// against LilyPond 2.26.0 (scratch/p372/lptri.svg), whose own SVG emits
+    /// <c>stroke-linejoin="round" stroke-linecap="round" stroke-width="0.1000"</c> on the
+    /// polygon: the same three numbers this draws with.
+    /// </remarks>
+    private static void DrawMajorSevenTriangle(
+        IDrawingContext gc, double x, double baselineY, double baseWidth)
+    {
+        double h = baseWidth * LilySharp.Core.Svg.Layout.ChordNameGlyphRun.TriangleHeightRatio;
+        double t = EngravingDefaults.LineThickness;
+        (double X, double Y) a = (x, baselineY);
+        (double X, double Y) b = (x + baseWidth, baselineY);
+        (double X, double Y) apex = (x + baseWidth / 2, baselineY + h);
+        foreach (var (p, q) in new[] { (a, b), (b, apex), (apex, a) })
+            gc.DrawLine(p.X, p.Y, q.X, q.Y, Color.Black, t, null, LineCap.Round);
     }
 
     // ---------- Figured bass ----------

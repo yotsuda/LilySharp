@@ -3296,9 +3296,14 @@ public sealed class MusicXmlExporter
         // `layout { chordQualities symbols }` must not hand this a "C°" — which spells no
         // quality the parser knows. The rule `sectionLabels` and `partCombineText` keep: a
         // display switch moves the page, never MIDI and never MusicXML.
+        // ⚠️ Only the TEXT is taken: a <harmony> has no typography to carry, so the raised
+        // run the symbol would print with on the page (ChordSymbolText.SuperFrom) is the
+        // page's and stops here, exactly as the spelling does.
         if (_currentMeasure != null
             && LilySharp.Core.Semantics.AnnotationValues.Chord(
-                mark, LilySharp.Core.Semantics.ChordSpelling.Default, out _) is { Length: > 0 } chordText)
+                mark, LilySharp.Core.Semantics.ChordSpelling.Default, out _)
+                is { Text.Length: > 0 } chordSymbol
+            && chordSymbol.Text is var chordText)
         {
             if (BuildHarmony(chordText) is { } harmony)
             {

@@ -364,7 +364,7 @@ public static class AnnotationValues
     /// <see cref="ChordSpelling.Default"/> because the answer is the same under every
     /// spelling, and MusicXML passes it because a <c>&lt;harmony&gt;</c> is data.
     /// </remarks>
-    public static string? Chord(MusicMarkSyntax mark, ChordSpelling spelling,
+    public static Music.ChordSymbolText? Chord(MusicMarkSyntax mark, ChordSpelling spelling,
         out Music.ChordStructure? structure)
     {
         structure = null;
@@ -376,7 +376,7 @@ public static class AnnotationValues
         // annotations that name nothing here, which is what the empty string says.
         var written = WrittenArgument(mark);
         if (written.Length == 0)
-            return "";
+            return Music.ChordSymbolText.Flat("");
 
         // Quoted free text — @chord("N.C.") — prints verbatim, dots and all. Read from
         // the TEXT (which keeps the quotes) rather than the value, so that an unbalanced
@@ -384,7 +384,9 @@ public static class AnnotationValues
         if (written[0] == '"')
         {
             int close = written.LastIndexOf('"');
-            return close >= 1 ? written.Substring(1, close - 1) : null;
+            return close >= 1
+                ? Music.ChordSymbolText.Flat(written.Substring(1, close - 1))
+                : null;
         }
 
         // A real chord entry (the chords{} form) prints as its canonical symbol;
@@ -393,7 +395,7 @@ public static class AnnotationValues
         if (Music.ChordStructure.TryParseChordEntry(written, out var parsed))
         {
             structure = parsed;
-            return parsed.DisplayName(spelling);
+            return parsed.PrintedSymbol(spelling);
         }
         return null;
     }

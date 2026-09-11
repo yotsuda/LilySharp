@@ -44,7 +44,7 @@ public class ChordNameTests
 
     private static string? Chord(string music)
         => LilySharp.Core.Semantics.AnnotationValues.Chord(
-            Mark(music), LilySharp.Core.Semantics.ChordSpelling.Default, out _);
+            Mark(music), LilySharp.Core.Semantics.ChordSpelling.Default, out _)?.Text;
 
     [Fact]
     public void ParseChordName_SimpleChord()

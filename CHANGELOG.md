@@ -102,6 +102,24 @@ workflow attaches that section to the GitHub Release verbatim.
     `Solo II`. `on` is the default and LilyPond's; `off` is its `printPartCombineTexts =
     ##f`, which the twin writes. With the words off no text item is made at all, so nothing
     is drawn and nothing is reserved — the combining itself is unchanged.
+- **A chord symbol is raised where LilyPond raises it, and a major seventh can be its
+  triangle.** Everything between the root and the slash bass — the digits, the `sus` / `add`
+  words, an altered tension's ♭/♯ — is now set in a raised, reduced run, which is LilyPond's
+  `super-markup`: three font-size steps down (1.8500 against the root's 2.6165) lifted by
+  `magstep` of the symbol's own step (1.1892). The root, the minor `m`, the `+` and `°` of
+  the symbol vocabulary and the slash bass stay on the baseline, as LilyPond leaves them, so
+  a plain triad and a bare `Cm` are unchanged. Under `layout { chordQualities symbols }` a
+  major seventh is LilyPond's `majorSevenSymbol`: a drawn triangle, 1.0703 wide and 0.9204
+  tall at stroke 0.1, traced as three round-capped segments the way `ly:round-polygon` traces
+  it — never a character, since no text face carries one. Every number was read off LilyPond
+  2.26.0's own output rather than derived. The symbol is narrower (a digit at 71%) and taller
+  (the lift), so a chord row reserves a different band and a tight line can break elsewhere.
+  ★ The measurement that says it is right: Lily#'s `Dmaj7` ink is now `(0.000000 . 2.497137)`
+  where LilyPond dumps `(0.0 . 2.5008)` — the `j` descender Lily# used to hang below the
+  baseline is gone, because LilyPond never had one there. Nine snapshots and seven
+  LP-fidelity ledger points moved; one of those points, whose recorded cause had named this
+  exact port as what would close it, fell from −0.593669 to −0.003782.
+
   - **`chordQualities words | symbols`** says how a chord's quality is spelled after the root.
     It is a different question from `chords NAME as names | roman`, which says which
     *quantity* a row shows and stays on the row — one score writes both at once, so it

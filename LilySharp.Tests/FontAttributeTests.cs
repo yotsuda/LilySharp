@@ -653,4 +653,83 @@ public class FontAttributeTests
     public void AfterAs_TheTwoFamiliesAreOffered()
         => Assert.Equal(["serif", "sans"],
             LilySharpLanguageServer.GetFontAsCompletions().Items.Select(i => i.Label).ToArray());
+
+    /// <summary>
+    /// A STEPPED chord name steps its SUPERSCRIPT with it: the raised run keeps the same
+    /// ratio to the symbol at every step the score can write.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS A CLAIM THE CODE MAKES, and until now nothing watched it.
+    /// <c>ChordNameGlyphRun.SuperRaise</c>'s remark says the lift follows the symbol's own
+    /// step "so a score that writes <c>fonts { chordName step … }</c> moves it with
+    /// everything else" — which is LilyPond's rule (<c>super-markup</c> lifts by
+    /// <c>magstep</c> of the ORIGINAL font-size, and takes three steps off whatever that
+    /// was), but Lily# computes the em and the lift in two different places and nothing
+    /// asserted that they move together. MEASURED when this was written: the default em
+    /// 2.616256 with lift 1.189207; at <c>step +2</c> 3.296276 and 1.498307; at
+    /// <c>step -2</c> 2.076523 and 0.943874 — both multiplied by magstep(±2) exactly.
+    /// <para>
+    /// The REDUCTION is asserted as LilyPond's arithmetic on the property — the piece's
+    /// <c>font-size</c> is the symbol's plus <c>SuperFontSizeOffset</c> — rather than as a
+    /// factor, because the offset is what LilyPond writes and the factor is something a
+    /// reader would have to derive (owner, 2026-09-12: port the code literally, do not
+    /// invent from "they move together").
+    /// </para>
+    /// <para>
+    /// ★ POISONED to see it bite (2026-09-12), since it was green the hour it was written:
+    /// <c>SuperRaise</c> was made to drop the score's own step — <c>Magstep(FontSizeStep)</c>
+    /// alone, exactly the shape a lift computed from the DEFAULT rather than from this
+    /// score's — and it went red on both stepped arms naming the ratio it lost:
+    ///   Assert.Equal() … Expected: 1.25992105  Actual: 1
+    /// </para>
+    /// </remarks>
+    /// <summary>The chord book this pair is measured on, minus its fonts line.</summary>
+    private const string Book0Body =
+        "part m { clef treble }\n"
+        + "section A { m { c4 d e f | } chords prog { Am7 | } }\n"
+        + "form main { ~A }\n"
+        + "score main { chords prog  staff m }\n";
+
+    /// <summary>…and the same book writing no fonts block at all — the control.</summary>
+    private const string Book0 = "time 4/4\n" + Book0Body;
+
+    [Theory]
+    [InlineData("", 0)]
+    [InlineData("fonts { chordName step +2 }", 2)]
+    [InlineData("fonts { chordName step -2 }", -2)]
+    [InlineData("fonts { chordName step +5 }", 5)]
+    public void ASteppedChordName_StepsItsSuperscriptWithIt(string fonts, double step)
+    {
+        string book = "time 4/4\n" + fonts + "\n" + Book0Body;
+        var tree = SyntaxTree.Parse(book);
+        Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
+        var metrics = SvgGenerator.CollectScore(
+            tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree)).TextMetrics;
+
+        // ⚠️ ASKED AS A RATIO AGAINST THE DEFAULT, not against recalled constants: the
+        // default em is 2.6162561… and a six-digit copy of it multiplied by magstep misses
+        // the real product in the last place — measured, on the step −2 arm. The claim is
+        // that the two move TOGETHER, and a ratio is that claim.
+        var plain = SvgGenerator.CollectScore(
+            SyntaxTree.Parse(Book0), LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(
+                SyntaxTree.Parse(Book0))).TextMetrics;
+        Assert.Equal(Magstep(step),
+            ChordNameGlyphRun.Em(metrics) / ChordNameGlyphRun.Em(plain), 9);
+        Assert.Equal(Magstep(step),
+            ChordNameGlyphRun.SuperRaise(metrics) / ChordNameGlyphRun.SuperRaise(plain), 9);
+        // …which is the same as saying the lift keeps its proportion to the symbol.
+        Assert.Equal(
+            ChordNameGlyphRun.SuperRaise(plain) / ChordNameGlyphRun.Em(plain),
+            ChordNameGlyphRun.SuperRaise(metrics) / ChordNameGlyphRun.Em(metrics), 9);
+
+        // …and the raised piece of `Am7` is interpreted at LilyPond's own arithmetic on the
+        // property: the symbol's font-size with \super's offset taken off it.
+        var raised = ChordNameGlyphRun.Pieces(metrics, "Am7", superFrom: 2)
+            .Single(p => p.Raise > 0);
+        Assert.Equal("7", raised.Text);
+        Assert.Equal(
+            ChordNameGlyphRun.FontSize(metrics) + ChordNameGlyphRun.SuperFontSizeOffset,
+            raised.FontSize, 9);
+        Assert.Equal(ChordNameGlyphRun.SuperRaise(metrics), raised.Raise, 9);
+    }
 }

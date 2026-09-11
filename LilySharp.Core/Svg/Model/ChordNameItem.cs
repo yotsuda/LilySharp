@@ -66,6 +66,21 @@ public sealed record ChordNameItem
     /// <summary>The chord symbol text for display (e.g., "Cm7", "B♭maj7").</summary>
     public string ChordText { get; }
 
+    /// <summary>
+    /// Where <see cref="ChordText"/>'s SUPERSCRIPT begins, or
+    /// <see cref="Music.ChordSymbolText.NoSuperscript"/> when the symbol stands on one
+    /// baseline (a plain triad, a bare <c>Cm</c>, free text, "N.C.").
+    /// </summary>
+    /// <remarks>
+    /// Carried from the namer rather than parsed back out of the string: <c>Cmaj7</c>
+    /// raises from its <c>m</c> and <c>Cm7</c> from its <c>7</c>, and no rule over the
+    /// letters tells those apart (<see cref="Music.ChordStructure.PrintedSymbol"/>).
+    /// ⚠️ It indexes <see cref="ChordText"/> only. A Roman degree is drawn on one baseline
+    /// — <see cref="RomanText"/> is a different string and Lily#'s own notation, with no
+    /// LilyPond superscript behind it.
+    /// </remarks>
+    public int SuperFrom { get; init; } = Music.ChordSymbolText.NoSuperscript;
+
     /// <summary>The Roman-numeral degree for the current key (e.g. "IIm7", "V7"), or
     /// null when the chord has no resolved structure. Computed at collection time (the
     /// key is known there); shown when <see cref="DisplayMode"/> is Roman or Both.</summary>

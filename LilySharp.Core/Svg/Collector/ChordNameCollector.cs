@@ -181,9 +181,10 @@ internal sealed class ChordNameCollector
     /// <paramref name="timing"/> is the note's onset, the column the spacing prices the
     /// symbol on (see <c>MeasureCollector.CollectChordNames</c>).</summary>
     public void AddInline(string text, int measureIndex, int itemIndex, Fraction timing,
-        int position, int staffIndex, LilySharp.Core.Music.ChordStructure? structure = null)
+        int position, int staffIndex, LilySharp.Core.Music.ChordStructure? structure = null,
+        int superFrom = LilySharp.Core.Music.ChordSymbolText.NoSuperscript)
         => _items.Add(new ChordNameItem(text, measureIndex, itemIndex, position, staffIndex,
-            timing: timing, structure: structure));
+            timing: timing, structure: structure) { SuperFrom = superFrom });
 
     /// <summary>Applies a display mode to the INLINE <c>@chord</c> symbols already
     /// collected on a staff (aligned/row items already carry their own mode). Called
@@ -300,11 +301,12 @@ internal sealed class ChordNameCollector
                 }
                 else if (node is ChordEntrySyntax entry)
                 {
-                    var (text, structure) = ResolveChordEntry(entry, mi);
+                    var (sym, structure) = ResolveChordEntry(entry, mi);
                     _items.Add(new ChordNameItem(
-                        text, mi, itemIndex: -1, entry.SourceStart, staffIndex,
+                        sym.Text, mi, itemIndex: -1, entry.SourceStart, staffIndex,
                         useTiming: true, timing: timing, structure: structure)
                     {
+                        SuperFrom = sym.SuperFrom,
                         RomanText = Roman(structure, mi),
                         DisplayMode = mode,
                     });
@@ -643,12 +645,13 @@ internal sealed class ChordNameCollector
             int position = PositionOf(node);
             if (node is ChordEntrySyntax entry)
             {
-                var (text, structure) = ResolveChordEntry(entry, measureIndex);
+                var (sym, structure) = ResolveChordEntry(entry, measureIndex);
                 _items.Add(new ChordNameItem(
-                    text, measureIndex, itemIndex: -1, position,
+                    sym.Text, measureIndex, itemIndex: -1, position,
                     staffIndex: staffIndex, useTiming: true, timing: timing, structure: structure,
                     isChordRow: true)
                 {
+                    SuperFrom = sym.SuperFrom,
                     RomanText = Roman(structure, measureIndex),
                     DisplayMode = mode,
                 });
@@ -678,12 +681,12 @@ internal sealed class ChordNameCollector
     /// (no note expansion), but the root resolves to a Roman degree, so
     /// <c>Cm13</c> shows "Cm13" / "Im13" instead of an un-converted literal.
     /// </summary>
-    private (string Text, LilySharp.Core.Music.ChordStructure? Structure) ResolveChordEntry(
+    private (LilySharp.Core.Music.ChordSymbolText Symbol, LilySharp.Core.Music.ChordStructure? Structure) ResolveChordEntry(
         ChordEntrySyntax entry, int measure)
     {
         string symbol = entry.SymbolText;
         if (LilySharp.Core.Music.ChordStructure.TryParseChordEntry(symbol, out var parsed))
-            return (parsed.DisplayName(Spelling), parsed);
+            return (parsed.PrintedSymbol(Spelling), parsed);
 
         // A ROMAN degree of the key in force at this bar (Imaj7, V7, bVII, V7/VII). It
         // resolves to the SAME structure an absolute symbol would give, so everything
@@ -695,7 +698,7 @@ internal sealed class ChordNameCollector
         // root is A-G, a numeral is I or V.
         var (tonicStep, sharps) = KeyAt(measure);
         if (LilySharp.Core.Music.ChordStructure.TryParseRomanEntry(symbol, tonicStep, sharps, out var degree))
-            return (degree.DisplayName(Spelling), degree);
+            return (degree.PrintedSymbol(Spelling), degree);
 
         int slash = symbol.IndexOf('/');
         string main = slash >= 0 ? symbol[..slash] : symbol;
@@ -714,11 +717,11 @@ internal sealed class ChordNameCollector
             var raw = new LilySharp.Core.Music.ChordStructure(
                 step, alter, LilySharp.Core.Music.ChordQuality.Major,
                 bassStep, bassAlter, RawSuffix: qual);
-            return (raw.DisplayName(Spelling), raw);
+            return (raw.PrintedSymbol(Spelling), raw);
         }
 
         // Unparseable root — show the raw run with no structure at all.
-        return (symbol, null);
+        return (LilySharp.Core.Music.ChordSymbolText.Flat(symbol), null);
     }
 }
 

@@ -186,7 +186,14 @@ public class LpFidelityFaceGuardTests
     /// about ROUTING rather than about coverage.
     /// </para>
     /// </remarks>
-    private static readonly char[] ChordCharactersTheFaceCannotDraw = ['♭', '♯'];
+    /// <remarks>
+    /// ⚠️ U+25B3 joined the two accidentals when <c>chordQualities symbols</c> arrived, and it
+    /// is the strongest case this guard has: LilyPond's <c>majorSevenSymbol</c> is a POLYGON
+    /// and no text face was ever going to carry the character. It rides in the printed string
+    /// only as a carrier (<c>ChordNameGlyphRun.TriangleCarrier</c>), and the routing check
+    /// below is what says the run turns it into the drawn triangle instead of handing it over.
+    /// </remarks>
+    private static readonly char[] ChordCharactersTheFaceCannotDraw = ['△', '♭', '♯'];
 
     /// <summary>
     /// No character the chord namer can print is MEASURED as text in a face that cannot
@@ -291,14 +298,18 @@ public class LpFidelityFaceGuardTests
 
         Assert.Equal(ChordCharactersTheFaceCannotDraw, missing.ToArray());
 
-        // ...and none of them is ever handed to that face: the chord run has to turn each
-        // one into a music glyph. Asked of the run rather than of a spelling, so a character
-        // the run stops recognising fails here even though the face has not changed.
+        // ...and none of them is ever handed to that face: the chord run has to turn each one
+        // into something DRAWN — an Emmentaler glyph, or (for the major-seventh triangle) a
+        // polygon. Asked of the run rather than of a spelling, so a character the run stops
+        // recognising fails here even though the face has not changed.
         foreach (char c in missing)
         {
-            var pieces = ChordNameGlyphRun.Pieces(fonts, $"C{c}");
+            // `C{c}` with the character raised, which is where every one of them stands: the
+            // triangle is only ever reached inside \super, and an accidental is measured the
+            // same either way.
+            var pieces = ChordNameGlyphRun.Pieces(fonts, $"C{c}", superFrom: 1);
             Assert.True(
-                pieces.Any(p => p.IsGlyph),
+                pieces.Any(p => p.IsGlyph || p.IsTriangle),
                 $"U+{(int)c:X4} is a character the ChordName face cannot draw, and "
                 + $"ChordNameGlyphRun measures `C{c}' entirely as TEXT. Whatever appears in "
                 + "the picture then comes from the platform's own font fallback, and the "

@@ -110,6 +110,38 @@ public enum ChordQuality
     Major13,
 }
 
+/// <summary>
+/// A printed chord symbol: the characters, and the index in them where the SUPERSCRIPT
+/// begins. The superscript runs from there to the slash bass (or to the end).
+/// </summary>
+/// <param name="Text">The symbol as it prints, e.g. <c>Cm7♭5</c>, <c>C°7</c>, <c>Am7/C</c>.</param>
+/// <param name="SuperFrom">Where the raised run starts, or <see cref="NoSuperscript"/> when
+/// the whole symbol stands on one baseline (a plain triad, <c>Cm</c>, <c>C°</c>, a Roman
+/// degree, free text).</param>
+/// <remarks>
+/// LILYPOND-REF: scm/chord-ignatzek-names.scm:179-209 ignatzek-format-chord-name — the
+///   four things a printed name is made of, in this order: <c>root-markup</c>, the prefix
+///   modifiers (the minor <c>m</c>, kerned by chordPrefixSpacer), the ONE raised group
+///   <c>(make-super-markup to-be-raised-stuff)</c>, and the slash separator with the bass.
+///   The raised group is a single contiguous span between the other three, which is the
+///   fact this one index records.
+/// <para>
+/// ⚠️ ONE INDEX, NOT TWO. The raised run always ENDS at the slash or at the end of the
+/// string — LilyPond puts nothing on the baseline between the quality and the bass — so a
+/// second index would be a second spelling of a fact the string already carries, and the
+/// two could disagree. The renderer and the reservation both find the end the same way
+/// (<c>ChordNameGlyphRun</c>).
+/// </para>
+/// </remarks>
+public readonly record struct ChordSymbolText(string Text, int SuperFrom)
+{
+    /// <summary>The symbol stands on one baseline.</summary>
+    public const int NoSuperscript = -1;
+
+    /// <summary>A symbol drawn on one baseline — free text, a Roman degree, "N.C.".</summary>
+    public static ChordSymbolText Flat(string text) => new(text, NoSuperscript);
+}
+
 /// <summary>One chord tone: a diatonic step above the root (0=root, 2=third,
 /// 4=fifth, 6=seventh, 8=ninth) and its semitone offset above the root. The step
 /// gives the spelled LETTER; the semitone gives the actual pitch (hence the
@@ -314,10 +346,70 @@ public static class ChordQualityRegistry
         [ChordQuality.Augmented] = "+",
         [ChordQuality.HalfDiminished7] = "ø",
         [ChordQuality.Diminished7] = "°7",
+        // The major seventh: LilyPond's majorSevenSymbol, which is a DRAWN TRIANGLE and is a
+        // separate property from the exception table above — its default is the triangle, so
+        // both belong to the same "LilyPond's own picture" word. The character here only
+        // CARRIES it; Svg.Layout.ChordNameGlyphRun.TriangleCarrier is where it is drawn, and
+        // says why it is never set as text.
+        // LILYPOND-REF: ly/engraver-init.ly majorSevenSymbol (line 947) — the ChordNames
+        //   property, whiteTriangleMarkup by default;
+        // LILYPOND-REF: scm/chord-ignatzek-names.scm name-step (lines 162-177) — the symbol
+        //   replaces the number when the step is 7 and its alteration is 0, which is what
+        //   makes it the `maj` of every one of these four and of nothing else.
+        [ChordQuality.Major7] = "△",
+        [ChordQuality.Major9] = "△9",
+        [ChordQuality.Major13] = "△13",
+        [ChordQuality.MinorMajor7] = "m△",
     };
 
     /// <summary>The tones (diatonic step + semitone above root) of a quality.</summary>
     public static IReadOnlyList<ChordToneSpec> GetTones(ChordQuality quality) => Tones[quality];
+
+    /// <summary>
+    /// How many characters at the head of the quality's suffix stand on the ROOT's baseline
+    /// rather than in the superscript.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// LILYPOND-REF: scm/chord-ignatzek-names.scm:179-209 ignatzek-format-chord-name — the
+    ///   assembled list puts <c>root-markup</c> and the PREFIX modifiers on the line before
+    ///   <c>(make-super-markup to-be-raised-stuff)</c>, so what the prefixes hold is on the
+    ///   root's baseline and everything in the super group is not;
+    /// LILYPOND-REF: scm/chord-ignatzek-names.scm prefix-modifier->markup (lines 136-142) —
+    ///   the prefix a minor third contributes is the minorChordModifier, i.e. the <c>m</c>;
+    /// LILYPOND-REF: ly/chord-modifiers-init.ly ignatzekExceptionMusic (lines 47-59) — the
+    ///   <c>+</c> and the whiteCircleMarkup <c>°</c> are plain (and <c>\fontsize #2</c>)
+    ///   markups, NOT wrapped in <c>\super</c>, while the half-diminished <c>ø</c> is.
+    /// ⚠️ Not literal in ONE respect, and named for it (§7.6 ⒝): LilyPond decides this by
+    /// BUILDING the two lists, where Lily#'s quality is a word and this answers how much of
+    /// the word belongs to the first list. The three cases are LilyPond's; the "how many
+    /// characters" is the shape Lily#'s model forces. Confirmed over every registered
+    /// quality (scratch/p372/lpnames, LilyPond 2.26.0).
+    /// </para>
+    /// <para>
+    /// ⚠️ <c>ø</c> is NOT one of them — LilyPond's half-diminished exception is
+    /// <c>\super ø</c>, so the symbol is raised like a digit. Measured, not assumed: it
+    /// prints at 1.85 on the raised baseline where <c>°</c> prints at 3.30 on the root's.
+    /// </para>
+    /// <para>
+    /// ⚠️ Under <c>words</c> the qualities LilyPond spells with a symbol have no LilyPond
+    /// answer at all — it never prints <c>Cdim</c> — so they are raised whole, which is what
+    /// LilyPond does with every quality its exception table does NOT name. Lily#-own, and
+    /// the only part of this table that is.
+    /// </para>
+    /// </remarks>
+    public static int BaselineSuffixLength(ChordQuality quality, Semantics.ChordQualityStyle style)
+    {
+        string suffix = GetSuffix(quality, style);
+        if (suffix.Length == 0)
+            return 0;
+        // The exception table's two baseline symbols, whole or followed by a raised digit.
+        if (suffix[0] is '°' or '+')
+            return 1;
+        // The minor modifier — the same leading `m` DropMinorModifier removes, so the two
+        // cannot disagree about which character it is.
+        return HasMinorThird(quality) && suffix[0] == 'm' ? 1 : 0;
+    }
 
     /// <summary>
     /// True when the quality's THIRD is minor — LilyPond's test for a lowercase root, asked
@@ -509,21 +601,64 @@ public sealed record ChordStructure(
     /// chose both switches.
     /// </para>
     /// </remarks>
-    public string DisplayName(Semantics.ChordSpelling spelling)
+    public string DisplayName(Semantics.ChordSpelling spelling) => PrintedSymbol(spelling).Text;
+
+    /// <summary>
+    /// The printed symbol AND where its superscript begins — the one thing the namer knows
+    /// that the printed string alone cannot say.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// LilyPond does not print a chord name on one line: the root, the minor modifier and
+    /// the slash bass stand on the baseline and EVERYTHING BETWEEN THEM is raised and
+    /// reduced (<c>make-super-markup</c>). Which characters those are is a fact about the
+    /// chord, not about the string — <c>Cmaj7</c> raises from the <c>m</c> while
+    /// <c>Cm7</c> raises from the <c>7</c>, and no rule over the letters tells the two
+    /// apart without knowing the quality. So the namer says it, and every reader of the
+    /// symbol carries the pair (<see cref="ChordSymbolText"/>) rather than parsing the
+    /// spelling back — the compromise <c>ChordNameGlyphRun</c>'s ⒝ remark names for the
+    /// accidentals, not repeated here.
+    /// </para>
+    /// <para>
+    /// MEASURED on LilyPond 2.26.0 (scratch/p372/lpnames): over all 29 registered
+    /// qualities, the pieces on the ROOT's baseline are the root, the minor <c>m</c>, the
+    /// <c>+</c> and <c>°</c> of the exception table, and the <c>/bass</c>; the digits, the
+    /// <c>ø</c>, the <c>sus</c> / <c>add</c> words and the major-seventh symbol are all
+    /// raised.
+    /// </para>
+    /// </remarks>
+    public ChordSymbolText PrintedSymbol(Semantics.ChordSpelling spelling)
     {
         bool lower = spelling.LowercaseMinor && RawSuffix == null
                      && ChordQualityRegistry.HasMinorThird(Quality);
         var sb = new StringBuilder();
         sb.Append(SpellPitch(RootStep, RootAlter, lower));
+
         string suffix = RawSuffix ?? ChordQualityRegistry.GetSuffix(Quality, spelling.Qualities);
-        sb.Append(lower ? DropMinorModifier(suffix) : suffix);
+        // How much of the suffix stays DOWN with the root. LilyPond's minor modifier is a
+        // prefix on the baseline, and the exception table's `+` and `°` are drawn there too
+        // (the circle at its own size); a lowercased root has already eaten the modifier.
+        int down = lower || RawSuffix != null
+            ? 0
+            : ChordQualityRegistry.BaselineSuffixLength(Quality, spelling.Qualities);
+        string printed = lower ? DropMinorModifier(suffix) : suffix;
+        sb.Append(printed);
+
+        // The superscript runs from the end of that baseline part to the slash (or the end).
+        // A symbol with nothing raised — a plain triad, a bare `Cm`, a `C°` — says so with
+        // NoSuperscript, so the renderer's ordinary one-line path is the one it takes.
+        int rootLength = sb.Length - printed.Length;
+        int superFrom = down >= printed.Length
+            ? ChordSymbolText.NoSuperscript
+            : rootLength + down;
+
         if (BassStep is int bs)
         {
             sb.Append('/');
             // Never lowercased: LilyPond's chordNoteNamer is called with lowercase? = #f.
             sb.Append(SpellPitch(bs, BassAlter ?? 0));
         }
-        return sb.ToString();
+        return new ChordSymbolText(sb.ToString(), superFrom);
     }
 
     /// <summary>
@@ -531,6 +666,10 @@ public sealed record ChordStructure(
     /// replaces, and the space that followed it in <c>m maj7</c>.
     /// </summary>
     /// <remarks>
+    /// LILYPOND-REF: scm/chord-ignatzek-names.scm prefix-modifier->markup (lines 136-142) — with a
+    ///   lowercased root the minorChordModifier is replaced by <c>empty-markup</c>, which is
+    ///   this removal: LilyPond drops the modifier rather than printing it small or moving
+    ///   it, and it drops exactly the one the lowercase stands for.
     /// Only called for a quality that HAS a minor third, so the leading <c>m</c> it finds is
     /// that third's modifier and never the head of another word: <c>dim</c> and <c>dim7</c>
     /// are the two minor-third suffixes that do not start with one (their third is spelled
@@ -956,6 +1095,13 @@ public sealed record ChordStructure(
     /// <c>minorChords lower</c>. Defaults to false, which is what every other caller wants:
     /// a slash bass is named with <c>#f</c> in LilyPond too, and the Roman degrees and the
     /// ledger's spellings are not note names at all.</param>
+    /// <remarks>
+    /// LILYPOND-REF: scm/chord-name.scm:28-32 conditional-string-capitalize — the helper
+    ///   every root namer ends in: the name is capitalized UNLESS the flag holds, which is
+    ///   why "lowercase" is a flag on the spelling here rather than a second spelling of it.
+    ///   Its callers are the namers at :171, :216 and :241 — the flag is the same one
+    ///   chordRootNamer is handed and chordNoteNamer never is.
+    /// </remarks>
     public static string SpellPitch(int step, int alter, bool lowercase = false)
     {
         char letter = (lowercase ? "cdefgab" : "CDEFGAB")[((step % 7) + 7) % 7];

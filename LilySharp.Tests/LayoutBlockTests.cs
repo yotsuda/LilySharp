@@ -709,30 +709,56 @@ public class LayoutBlockTests
     }
 
     /// <summary>
-    /// A Roman degree does not move with <c>chordQualities</c>, and the reason is an identity
-    /// rather than a preference: every quality the vocabulary MOVES is one the roman table
-    /// has already replaced the word for.
+    /// A Roman degree does not move with <c>chordQualities</c>, and every quality the
+    /// vocabulary DOES move is accounted for: either the roman table already replaced the
+    /// word for it, or what the vocabulary gives is the major-seventh TRIANGLE, which a
+    /// degree cannot carry.
     /// </summary>
     /// <remarks>
+    /// <para>
+    /// ⚠️ THE SECOND ARM IS NOT AN EXCUSE, it is the geometry: the triangle is a polygon
+    /// sized and placed by <c>\super</c> (<c>ChordNameGlyphRun.TriangleBase</c> takes the
+    /// step three notches under the raised one), and a Roman degree is drawn on ONE
+    /// baseline — <c>ChordNameEngraver.DisplaySymbol</c> gives it no superscript, because
+    /// LilyPond has no degrees and there is nothing to follow. A baseline triangle would be
+    /// a size with no source. So <c>Imaj7</c> stays <c>Imaj7</c> under both words, exactly
+    /// as <c>IIm7</c> does.
+    /// </para>
+    /// <para>
     /// Derived in both directions — which qualities move comes from the two tables, and what
     /// roman prints comes from <c>ToRomanNumeral</c> — so neither half is a list this file
-    /// keeps up to date.
+    /// keeps up to date. The COUNT is asserted so a quality quietly leaving either table is
+    /// a failure rather than a smaller sweep.
+    /// </para>
     /// </remarks>
     [Fact]
     public void TheRomanDegreeCannotFollowTheChordVocabulary()
     {
-        int moved = 0;
+        int overridden = 0, triangles = 0;
         foreach (ChordQuality q in System.Enum.GetValues<ChordQuality>())
         {
             string words = ChordQualityRegistry.GetSuffix(q, ChordQualityStyle.Words);
-            if (words == ChordQualityRegistry.GetSuffix(q, ChordQualityStyle.Symbols))
+            string symbols = ChordQualityRegistry.GetSuffix(q, ChordQualityStyle.Symbols);
+            if (words == symbols)
                 continue;   // the two vocabularies agree: nothing for roman to follow
-            moved++;
             // Degree I of C major, so whatever follows the "I" is the roman suffix.
             string roman = new ChordStructure(0, 0, q).ToRomanNumeral(0, 0)["I".Length..];
-            Assert.NotEqual(words, roman);
+            if (symbols.Contains(ChordNameGlyphRun.TriangleCarrier))
+            {
+                triangles++;
+                // The degree keeps the WORD — it has no superscript to put a triangle in.
+                Assert.Equal(words, roman);
+            }
+            else
+            {
+                overridden++;
+                Assert.NotEqual(words, roman);
+            }
         }
-        Assert.Equal(4, moved);   // LilyPond's exception table names four of Lily#'s qualities
+        // LilyPond's exception table names four of Lily#'s qualities, and majorSevenSymbol
+        // reaches the four whose seventh is a natural major one.
+        Assert.Equal(4, overridden);
+        Assert.Equal(4, triangles);
     }
 
     /// <summary>

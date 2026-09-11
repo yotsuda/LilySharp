@@ -52,10 +52,15 @@ score main ""x"" { chords riff  staff melody }
         var svg = Render(source);
         _output.WriteLine(svg);
 
-        Assert.Contains(">G7</text>", svg);
-        // Two C chords (m1 whole + m2 second half) + the G7.
+        // ⚠️ TWO text runs, not one: the root stands on the baseline and the 7 is RAISED and
+        // reduced, the way LilyPond builds a chord name (ChordNameGlyphRun.SuperRaise). A
+        // symbol asserted as ONE run is asserting the picture Lily# drew before the
+        // superscript was ported.
+        Assert.Contains(">G</text>", svg);
+        Assert.Contains(">7</text>", svg);
+        // Two C chords (m1 whole + m2 second half); the G7's pieces are G and 7.
         Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(svg, ">C</text>").Count);
-        Assert.Single(System.Text.RegularExpressions.Regex.Matches(svg, ">G7</text>"));
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(svg, ">7</text>"));
     }
 
     [Fact]
@@ -75,7 +80,9 @@ score main ""x"" { chords riff }
         _output.WriteLine(svg);
 
         Assert.Contains(">Am</text>", svg);
-        Assert.Contains(">G7</text>", svg);
+        // The 7 is a raised run of its own (see ChordPart_RendersChordSymbols).
+        Assert.Contains(">G</text>", svg);
+        Assert.Contains(">7</text>", svg);
 
         double X(string text)
         {
@@ -84,8 +91,10 @@ score main ""x"" { chords riff }
             Assert.True(m.Success, $"chord '{text}' not found");
             return double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
         }
-        // C (bar 1) < Am (bar 2) < F (bar 3) < G7 (bar 4): the bars have real width.
-        Assert.True(X("C") < X("Am") && X("Am") < X("F") && X("F") < X("G7"),
+        // C (bar 1) < Am (bar 2) < F (bar 3) < G7 (bar 4): the bars have real width. The
+        // G7's ROOT carries its X — the raised 7 stands to the right of it, so either piece
+        // answers the question, and the root is the symbol's own reference point.
+        Assert.True(X("C") < X("Am") && X("Am") < X("F") && X("F") < X("G"),
             "chords collapsed instead of spreading across bars");
     }
 
@@ -126,7 +135,9 @@ score main ""x"" { chords riff  staff melody }
         var svg = Render(source);
         _output.WriteLine(svg);
 
-        Assert.Contains(">Gm7</text>", svg);
+        // `Gm` on the baseline (the minor modifier stays down) and `7` raised.
+        Assert.Contains(">Gm</text>", svg);
+        Assert.Contains(">7</text>", svg);
         Assert.Contains(">Am</text>", svg);
         Assert.Contains(">Dm</text>", svg);
     }
