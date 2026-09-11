@@ -77,7 +77,7 @@
   <line x1="36.10" y1="30.58" x2="36.10" y2="28.30" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="23.77" y="17.04" font-size="4.00" data-pos="511"></text>
   <text class="music" x="23.77" y="25.10" font-size="4.00" data-pos="511"></text>
-  <rect x="12.14" y="15.40" width="2.66" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="487"/>
-  <text x="13.46" y="17.66" font-size="2.62" font-weight="bold" text-anchor="middle" data-pos="487">A</text>
+  <rect x="12.14" y="15.26" width="2.82" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="487"/>
+  <text x="13.55" y="17.65" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="487">A</text>
   </g>
 </svg>

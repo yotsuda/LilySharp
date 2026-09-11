@@ -1,52 +1,52 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="332.8" viewBox="0 0 119.50 33.28" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="334.2" viewBox="0 0 119.50 33.42" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="33.28" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="33.42" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="791">Chord names</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="22.04" x2="36.18" y2="22.04" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="23.04" x2="36.18" y2="23.04" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="24.04" x2="36.18" y2="24.04" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="25.04" x2="36.18" y2="25.04" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="26.04" x2="36.18" y2="26.04" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="0.80" y="25.04" font-size="4.00" data-pos="831"></text>
-  <text class="music" x="4.88" y="24.04" font-size="4.00"></text>
-  <line x1="8.26" y1="27.04" x2="10.22" y2="27.04" stroke="#000000" stroke-width="0.200"/>
-  <line x1="32.97" y1="21.04" x2="34.77" y2="21.04" stroke="#000000" stroke-width="0.200"/>
-  <text class="music" x="8.59" y="27.04" font-size="4.00" data-pos="878"></text>
-  <line x1="9.82" y1="26.89" x2="9.82" y2="23.54" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="11.59" y="26.54" font-size="4.00" data-pos="881"></text>
-  <line x1="12.83" y1="26.39" x2="12.83" y2="23.04" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="14.59" y="26.04" font-size="4.00" data-pos="883"></text>
-  <line x1="15.83" y1="25.89" x2="15.83" y2="22.54" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="17.59" y="25.54" font-size="4.00" data-pos="885"></text>
-  <line x1="18.83" y1="25.39" x2="18.83" y2="22.04" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="21.92" y="25.04" font-size="4.00" data-pos="889"></text>
-  <line x1="23.16" y1="24.89" x2="23.16" y2="21.54" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="24.92" y="24.54" font-size="4.00" data-pos="891"></text>
-  <line x1="26.16" y1="24.39" x2="26.16" y2="21.04" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="27.94" y="24.04" font-size="4.00" data-pos="893"></text>
-  <line x1="28.01" y1="24.19" x2="28.01" y2="27.38" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="31.99" y="20.54" font-size="4.00" data-pos="906"></text>
-  <text class="music" x="31.03" y="21.54" font-size="4.00" data-pos="902"></text>
-  <text class="music" x="30.06" y="22.54" font-size="4.00" data-pos="898"></text>
-  <text class="music" x="33.14" y="23.54" font-size="4.00" data-pos="896"></text>
-  <text class="music" x="33.14" y="22.54" font-size="4.00" data-pos="898"></text>
-  <text class="music" x="33.14" y="21.54" font-size="4.00" data-pos="902"></text>
-  <text class="music" x="33.14" y="20.54" font-size="4.00" data-pos="906"></text>
-  <line x1="33.21" y1="20.69" x2="33.21" y2="27.04" stroke="#000000" stroke-width="0.130"/>
-  <rect x="20.83" y="22.04" width="0.19" height="4.00" data-pos="887"/>
-  <rect x="35.99" y="22.04" width="0.19" height="4.00" data-pos="911"/>
-  <text x="8.59" y="17.83" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="937">C</text>
-  <text x="14.59" y="17.83" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="939">Am</text>
-  <text x="21.92" y="17.83" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="944">F</text>
-  <text x="27.94" y="17.83" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="946">Gm7</text>
-  <text class="music" x="33.87" y="17.52" font-size="4.24" data-pos="946"></text>
-  <text x="34.71" y="17.83" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="946">5</text>
-  <rect x="3.37" y="12.82" width="7.57" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="840"/>
-  <text x="7.15" y="15.04" font-size="2.62" font-weight="bold" text-anchor="middle" data-pos="840">Main</text>
+  <line x1="0.00" y1="22.19" x2="36.18" y2="22.19" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="23.19" x2="36.18" y2="23.19" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="24.19" x2="36.18" y2="24.19" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="25.19" x2="36.18" y2="25.19" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="26.19" x2="36.18" y2="26.19" stroke="#000000" stroke-width="0.100"/>
+  <text class="music" x="0.80" y="25.19" font-size="4.00" data-pos="831"></text>
+  <text class="music" x="4.88" y="24.19" font-size="4.00"></text>
+  <line x1="8.26" y1="27.19" x2="10.22" y2="27.19" stroke="#000000" stroke-width="0.200"/>
+  <line x1="32.97" y1="21.19" x2="34.77" y2="21.19" stroke="#000000" stroke-width="0.200"/>
+  <text class="music" x="8.59" y="27.19" font-size="4.00" data-pos="878"></text>
+  <line x1="9.82" y1="27.04" x2="9.82" y2="23.69" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="11.59" y="26.69" font-size="4.00" data-pos="881"></text>
+  <line x1="12.83" y1="26.54" x2="12.83" y2="23.19" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="14.59" y="26.19" font-size="4.00" data-pos="883"></text>
+  <line x1="15.83" y1="26.04" x2="15.83" y2="22.69" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="17.59" y="25.69" font-size="4.00" data-pos="885"></text>
+  <line x1="18.83" y1="25.54" x2="18.83" y2="22.19" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="21.92" y="25.19" font-size="4.00" data-pos="889"></text>
+  <line x1="23.16" y1="25.04" x2="23.16" y2="21.69" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="24.92" y="24.69" font-size="4.00" data-pos="891"></text>
+  <line x1="26.16" y1="24.54" x2="26.16" y2="21.19" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="27.94" y="24.19" font-size="4.00" data-pos="893"></text>
+  <line x1="28.01" y1="24.34" x2="28.01" y2="27.52" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="31.99" y="20.69" font-size="4.00" data-pos="906"></text>
+  <text class="music" x="31.03" y="21.69" font-size="4.00" data-pos="902"></text>
+  <text class="music" x="30.06" y="22.69" font-size="4.00" data-pos="898"></text>
+  <text class="music" x="33.14" y="23.69" font-size="4.00" data-pos="896"></text>
+  <text class="music" x="33.14" y="22.69" font-size="4.00" data-pos="898"></text>
+  <text class="music" x="33.14" y="21.69" font-size="4.00" data-pos="902"></text>
+  <text class="music" x="33.14" y="20.69" font-size="4.00" data-pos="906"></text>
+  <line x1="33.21" y1="20.84" x2="33.21" y2="27.19" stroke="#000000" stroke-width="0.130"/>
+  <rect x="20.83" y="22.19" width="0.19" height="4.00" data-pos="887"/>
+  <rect x="35.99" y="22.19" width="0.19" height="4.00" data-pos="911"/>
+  <text x="8.59" y="17.98" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="937">C</text>
+  <text x="14.59" y="17.98" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="939">Am</text>
+  <text x="21.92" y="17.98" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="944">F</text>
+  <text x="27.94" y="17.98" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="946">Gm7</text>
+  <text class="music" x="33.87" y="17.66" font-size="4.24" data-pos="946"></text>
+  <text x="34.71" y="17.98" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="946">5</text>
+  <rect x="3.37" y="12.82" width="8.08" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="840"/>
+  <text x="7.40" y="15.17" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="840">Main</text>
   </g>
 </svg>

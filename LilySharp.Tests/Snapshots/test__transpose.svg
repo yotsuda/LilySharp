@@ -74,7 +74,7 @@
   <rect x="23.03" y="30.71" width="0.19" height="4.00" data-pos="506"/>
   <rect x="36.38" y="30.71" width="0.19" height="4.00" data-pos="518"/>
   <rect x="49.27" y="30.71" width="0.19" height="4.00" data-pos="532"/>
-  <rect x="6.38" y="27.25" width="7.57" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="466"/>
-  <text x="10.17" y="29.48" font-size="2.62" font-weight="bold" text-anchor="middle" data-pos="466">Main</text>
+  <rect x="6.38" y="27.11" width="8.08" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="466"/>
+  <text x="10.42" y="29.46" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="466">Main</text>
   </g>
 </svg>

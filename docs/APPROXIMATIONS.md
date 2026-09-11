@@ -14,14 +14,14 @@
 |---|---:|---|
 | `APPROX` | 58 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 54 | 観測者がゼロだと自認しているもの |
-| `OWN` | 136 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **248** | |
+| `OWN` | 137 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **249** | |
 
 ## 密度の高いファイル（上位 12）
 
 | ファイル | 件数 |
 |---|---:|
-| `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 14 |
+| `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 15 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 11 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 7 |
@@ -89,7 +89,7 @@
 - **:3314** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:1043** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
-- **:1733** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
+- **:1747** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:180** non-default merge-differently-* switches. dot_wipe_head is NOT ported (no channel).
 - **:564** ⚠️ NOT PORTED — dot_wipe_head: LilyPond also kills the down head's DOT on
@@ -134,7 +134,7 @@
 ## UNWATCHED — 観測者がゼロだと自認しているもの（54 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:2326** container, and the value stops being unobserved with the line above.
+- **:2356** container, and the value stops being unobserved with the line above.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:507** no observer; add the paren widths when a book brings one. The unpacked
 - **:509** bare glyph width, which is exact for one and unobserved for many.
@@ -225,11 +225,11 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（136 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（137 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:2321** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:5055** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:2351** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
+- **:5085** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:2258** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
@@ -379,11 +379,12 @@
 - **:556** ⚠️ LILYSHARP-OWN, AND IT IS A USER DECISION (2026-08-24), NOT A PORT. LilyPond puts
 - **:1250** LILYSHARP-OWN: `marks beside` is a Lily#-own arrangement (user decision 2026-09-02,
 - **:1285** side-by-side shared line itself is LILYSHARP-OWN: LilyPond prints a boundary
-- **:1870** LILYSHARP-OWN, the same decision's third step (2026-08-24: the label sits ON the chord
-- **:2046** ⚠️ LILYSHARP-OWN limit: a mid-line meter CHANGE is not a break-align column in
-- **:2141** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
-- **:2152** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
-- **:2198** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
+- **:1654** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-11, session 368): a Lily# `form'
+- **:1884** LILYSHARP-OWN, the same decision's third step (2026-08-24: the label sits ON the chord
+- **:2060** ⚠️ LILYSHARP-OWN limit: a mid-line meter CHANGE is not a break-align column in
+- **:2155** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
+- **:2166** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
+- **:2212** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
 ### `LilySharp.Core/Svg/Layout/NoteSpacingParameters.cs`
 - **:82** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`

@@ -213,8 +213,8 @@
   <text class="music" x="5.00" y="24.89" font-size="3.56" data-pos="134"></text>
   <line x1="6.11" y1="24.73" x2="6.11" y2="22.22" stroke="#000000" stroke-width="0.116" data-pos="134"/>
   <text x="6.78" y="25.38" font-size="2.20" data-pos="134">= 108</text>
-  <rect x="3.48" y="19.16" width="7.57" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="626"/>
-  <text x="7.27" y="21.38" font-size="2.62" font-weight="bold" text-anchor="middle" data-pos="626">Main</text>
+  <rect x="3.48" y="19.01" width="8.08" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="626"/>
+  <text x="7.52" y="21.37" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="626">Main</text>
   <line x1="59.64" y1="43.18" x2="72.42" y2="43.18" stroke="#000000" stroke-width="0.100" data-pos="512"/>
   <line x1="72.42" y1="43.18" x2="72.92" y2="42.18" stroke="#000000" stroke-width="0.100" data-pos="512"/>
   <line x1="59.64" y1="43.18" x2="59.64" y2="42.18" stroke="#000000" stroke-width="0.100" data-pos="512"/>

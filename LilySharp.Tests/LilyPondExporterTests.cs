@@ -45,6 +45,42 @@ public class LilyPondExporterTests
         """;
 
     /// <summary>
+    /// The twin writes no <c>\paper</c> by default — a probe compares it against what
+    /// LilyPond does with the same music on LilyPond's own paper, and the corpus's 599
+    /// twins must not all move for a measuring convenience.
+    /// </summary>
+    [Fact]
+    public void Default_WritesNoPaperBlock()
+    {
+        var ly = Export(Score("a,4 e,8 gis,8"));
+        Assert.DoesNotContain("\\paper", ly);
+        Assert.DoesNotContain("property-defaults", ly);
+    }
+
+    /// <summary>
+    /// LilyPond 2.26 drops <c>fonts.serif/sans</c> to generic names under its svg backend
+    /// only (ly/paper-defaults-init.ly), so a twin measured through svg reads
+    /// machine-dependent text widths — the trap sessions 350 and 367 both fell into.
+    /// <c>PinFonts</c> (the CLI's <c>--pin-fonts</c>, owner's decision 2026-09-11) writes
+    /// the two lines the probes carry, right after <c>\version</c> and before any
+    /// <c>\header</c>, so the block is where a hand would put it.
+    /// </summary>
+    [Fact]
+    public void PinFonts_WritesTheProbesPaperBlockAfterVersion()
+    {
+        var ly = new LilyPondExporter { PinFonts = true }
+            .Export(SyntaxTree.Parse(Score("a,4 e,8 gis,8", headers: "octave absolute\ntitle \"T\"")));
+        int version = ly.IndexOf("\\version", StringComparison.Ordinal);
+        int paper = ly.IndexOf("\\paper {", StringComparison.Ordinal);
+        int header = ly.IndexOf("\\header {", StringComparison.Ordinal);
+        Assert.True(version >= 0 && paper > version && header > paper,
+            $"version {version} / paper {paper} / header {header}");
+        Assert.Contains("property-defaults.fonts.serif = \"LilyPond Serif\"", ly);
+        Assert.Contains("property-defaults.fonts.sans = \"LilyPond Sans Serif\"", ly);
+        Assert.Equal(1, ly.Split("\\paper {").Length - 1);
+    }
+
+    /// <summary>
     /// <c>a4@rest</c> is LilyPond's own <c>a4\rest</c> and the twin has to write it as
     /// one. Dropped — which is what an unmapped annotation does — the twin says
     /// <c>a4</c>, and LilyPond engraves a NOTE where the book prints a rest: the twin

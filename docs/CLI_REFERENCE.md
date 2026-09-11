@@ -248,15 +248,23 @@ the pitches stay identical in LilyPond.
 | `-o, --output <file>` | Output file path |
 | `--score <name>` | Write the named score's form (default: the first) |
 | `--all` | Write every score to its own `.ly` file |
+| `--pin-fonts` | Write a `\paper` block pinning `property-defaults.fonts.serif` / `.sans` to LilyPond's bundled faces |
 | `-h, --help` | Show help |
 
 The same one-file-one-form rule as `midi` above.
+
+The twin writes no `\paper` block by default. LilyPond 2.26 replaces the serif and sans
+faces with generic names under its **svg backend only**, and fontconfig then picks a
+machine-dependent font, so text widths measured from a twin's svg drift from its pdf.
+`--pin-fonts` writes the two lines the LP-fidelity probes carry for that reason — use it
+when you measure a twin through `lilypond -dbackend=svg`, not when you print it.
 
 **Examples:**
 ```bash
 lysc ly score.lys                     # Creates score.ly
 lysc ly -o export.ly score.lys        # With -o flag
 lysc ly --all multi-movement.lys      # Every movement, one file each
+lysc ly --pin-fonts score.lys         # A twin to measure through the svg backend
 ```
 
 ### vsqx - Export to VOCALOID

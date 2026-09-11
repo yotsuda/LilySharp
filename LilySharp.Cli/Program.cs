@@ -679,7 +679,13 @@ static int RunLy(string[] args)
         return 0;
     }
 
-    return RunFormOutput(args, "ly", ".ly", WriteLy);
+    // `--pin-fonts` belongs to the twin alone, not to the one-form-per-file shape the
+    // three exporters share, so it is taken here before RunFormOutput's strict parser —
+    // the same reason --verbose and --batch are stripped before the per-command parsers.
+    bool pinFonts = args.Contains("--pin-fonts");
+    var rest = pinFonts ? args.Where(a => a != "--pin-fonts").ToArray() : args;
+    return RunFormOutput(rest, "ly", ".ly",
+        (tree, form, path) => WriteLy(tree, form, path, pinFonts));
 }
 
 static void ShowLyHelp()
@@ -697,11 +703,22 @@ static void ShowLyHelp()
           -o, --output <file>    Output file path
           --score <name>         Write the named score's form (default: the first)
           --all                  Write every score to its own .ly file
+          --pin-fonts            Write a \paper block that pins the text faces
+                                 (property-defaults.fonts.serif / .sans) so that
+                                 a `lilypond -dbackend=svg` run of the twin uses
+                                 the same faces as its pdf/png would
           -h, --help             Show this help
 
         The octave marks you wrote in the .lys are preserved verbatim: an
         `octave absolute` source is wrapped in \fixed c', a relative one in
         \relative c', so the pitches stay identical in real LilyPond.
+
+        The twin writes no \paper block by default. LilyPond 2.26 replaces the
+        serif and sans faces with generic names under its svg backend only, and
+        fontconfig then picks a machine-dependent font, so text widths measured
+        from a twin's svg drift from its pdf. --pin-fonts writes the two lines the
+        LP-fidelity probes carry for that reason; use it when you measure a twin
+        through svg, not when you print it.
 
         The twin writes one \score, so a file of several movements needs one .ly
         each. Without --score or --all the first form is written and the rest are
@@ -717,9 +734,9 @@ static void ShowLyHelp()
 }
 
 static int WriteLy(SyntaxTree tree, LilySharp.Core.Syntax.FormDeclarationSyntax? form,
-                   string outputPath)
+                   string outputPath, bool pinFonts)
 {
-    var exporter = new LilySharp.Core.LilyPond.LilyPondExporter { Form = form };
+    var exporter = new LilySharp.Core.LilyPond.LilyPondExporter { Form = form, PinFonts = pinFonts };
     var ly = exporter.Export(tree);
     File.WriteAllText(outputPath, ly);
     Console.WriteLine($"Created: {outputPath}");

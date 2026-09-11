@@ -331,6 +331,26 @@ public sealed class LilyPondExporter
     /// </remarks>
     public FormDeclarationSyntax? Form { get; init; }
 
+    /// <summary>
+    /// Write a <c>\paper</c> block pinning the twin's serif and sans faces to LilyPond's
+    /// bundled ones (<c>lysc ly --pin-fonts</c>). Off by default: the twin is a control
+    /// laid out on LilyPond's own paper, and the corpus's twins must not all move for a
+    /// measuring convenience.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/paper-defaults-init.ly — property-defaults.fonts.serif and
+    /// property-defaults.fonts.sans (the Fonts block, ly:get-option 'backend): under the
+    /// svg backend ONLY, LilyPond 2.26 sets them
+    /// to the generic names "serif" / "sans", which fontconfig resolves to whatever the
+    /// machine prefers (Noto, DejaVu, Verdana …); every other backend gets "LilyPond Serif"
+    /// / "LilyPond Sans Serif". A twin measured through <c>-dbackend=svg</c> therefore
+    /// reads machine-dependent text widths (a chord "Am" 4.336 against the canonical 3.926,
+    /// a title baseline 0.21 off — sessions 350 and 367 both mistook that for a residual)
+    /// unless the two lines the LP-fidelity probes carry are written. Owner's decision
+    /// 2026-09-11 (session 368): opt-in on the CLI, never the default.
+    /// </remarks>
+    public bool PinFonts { get; init; }
+
     /// <summary>Exports the tree and returns the complete <c>.ly</c> text.</summary>
     public string Export(SyntaxTree tree)
     {
@@ -943,6 +963,16 @@ public sealed class LilyPondExporter
     private void EmitHeader(CompilationUnitSyntax root)
     {
         _sb.Append("\\version \"").Append(LilyPondVersion).Append("\"\n\n");
+
+        // The pin (see PinFonts) goes where a hand puts it in a probe: right after
+        // \version, before \header, as the first two lines of the only \paper the twin has.
+        if (PinFonts)
+            _sb.Append("% Pinned so a -dbackend=svg run measures the faces pdf/png would use;\n")
+               .Append("% LilyPond 2.26 drops fonts.serif/sans to generic names under svg only.\n")
+               .Append("\\paper {\n")
+               .Append("  property-defaults.fonts.serif = \"LilyPond Serif\"\n")
+               .Append("  property-defaults.fonts.sans = \"LilyPond Sans Serif\"\n")
+               .Append("}\n\n");
 
         // ⚠️ `paper { }` is NOT exported, and unlike the font omission above this one is
         // a drummap-shaped hole, not a knowing equivalence: paper DOES move Lily#'s

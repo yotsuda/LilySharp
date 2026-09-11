@@ -287,6 +287,19 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A section name's box is the size of LilyPond's rehearsal mark.** The label's em followed
+  LilyPond's `\sectionLabel` grob (`font-size` 1.5, 2.616 staff spaces) while its position
+  already followed the rehearsal mark's — and the `.ly` twin spells a `form` section name
+  `\mark \markup \box`, a rehearsal mark, at `font-size` 2 (2.772). The box now takes that em
+  and the frame padding that goes with it, so an `A` boxes 2.744 tall as the twin's does
+  instead of 2.60. Measured on a titled page against the pinned twin: the first staff's top
+  line stood 0.14 above LilyPond's and now stands on it (the ledger's
+  `page.section-label.first-staff-refpoint` goes −0.140 → +0.003, and the `form`-spelled and
+  `@mark`-spelled twins of one book read one number at last). Every book with a section name
+  moves by the box's growth — 234 snapshots, and a sweep of the 599 tracked books plus 323
+  bass-tab books moves 460 — with no system or page count changing; four bass-tab books whose
+  first page was full to the last space carry one system over to the next page. LilyPond's
+  own `\sectionLabel` size stays a declared Lily#-own deviation, like its left-edge position.
 - **A dotted column reserves its dots where it draws them.** Lily# has drawn an augmentation
   dot at the head's ink right plus one dot width (0.45), pushed right by a flag standing on
   its row, since session 314 — but the column's spacing box, the keep-inside-line reach and
@@ -471,6 +484,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### MIDI, MusicXML and the LilyPond twin
 
+- **`lysc ly --pin-fonts` writes a `\paper` block that pins the twin's text faces.** LilyPond
+  2.26 replaces `fonts.serif` and `fonts.sans` with the generic names `serif` and `sans` under
+  its svg backend only, and fontconfig then picks whatever the machine prefers, so a twin
+  measured through `lilypond -dbackend=svg` reads machine-dependent text widths (a chord `Am`
+  4.34 against the canonical 3.93; a title baseline 0.21 off) while its pdf does not. The flag
+  writes the two `property-defaults.fonts.serif / .sans` lines the LP-fidelity probes carry,
+  right after `\version`. Off by default: the twin is a control on LilyPond's own paper, and
+  the corpus's twins do not move for a measuring convenience.
 - **A `:|:` inside a form's `|: … :|` splits it into two repeats for the MIDI.** `|: B :|: C :|`
   is `|: B :| |: C :|` on the page, in the twin and in the MusicXML; the MIDI played the whole
   body per pass (B C B C). It now plays each run as its own repeat (B B C C), the block's

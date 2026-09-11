@@ -1646,17 +1646,31 @@ internal static class MusicMarkEngraver
     /// <remarks>LILYPOND-REF: scm/lily-library.scm <c>magstep</c> = <c>2^(n/6)</c>.</remarks>
     internal static double Magstep(double fontSize) => Math.Pow(2.0, fontSize / 6.0);
 
-    /// <summary>A boxed label's own <c>font-size</c> step.</summary>
+    /// <summary>A boxed label's own <c>font-size</c> step — 2 for BOTH boxed labels.</summary>
     /// <remarks>
     /// LILYPOND-REF: scm/define-grobs.scm:2885-2888 outside-staff-priority — RehearsalMark's
-    /// block, whose font-size is 2 — and
-    /// scm/define-grobs.scm:3053 SectionLabel font-size = 1.5 ("Larger than MetronomeMark;
-    /// smaller than RehearsalMark").
+    /// block, whose font-size is 2.
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-11, session 368): a Lily# `form'
+    /// section name takes the REHEARSAL MARK's font-size, not LilyPond's own SectionLabel
+    /// grob's (scm/define-grobs.scm:3053 font-size = 1.5, "Larger than MetronomeMark; smaller
+    /// than RehearsalMark"). The LilyPond twin spells the label `\mark \markup \box`
+    /// (LilyPondExporter), i.e. a RehearsalMark, so the em that LilyPond draws for it is
+    /// 2.2 x magstep(2) = 2.771822 — the same reason its X already takes the Rehearsal arm
+    /// (CalculateXPosition, F2). Until session 368 the label kept SectionLabel's 1.5
+    /// (2.616256), which stood the first staff of a titled page 0.14 short of the twin
+    /// (HANDOFF §1 第367 ⑴, scratch/p368/pageBreakRB-pin.ly) and left the ledger's
+    /// page.section-label.first-staff-refpoint at -0.140235.
+    /// </para>
     /// </remarks>
     internal static double LabelFontSizeStep(MusicMarkType type)
-        => type == MusicMarkType.Rehearsal ? 2.0 : 1.5;
+    {
+        System.Diagnostics.Debug.Assert(
+            IsBoxedLabel(type), "only the two boxed labels have a font-size step here");
+        return 2.0;
+    }
 
-    /// <summary>A boxed label's ENGRAVING em, in staff spaces — 2.771822 / 2.616256.</summary>
+    /// <summary>A boxed label's ENGRAVING em, in staff spaces — 2.771822.</summary>
     internal static double LabelEngravingEm(MusicMarkType type)
         => TextFontEm * Magstep(LabelFontSizeStep(type));
 
