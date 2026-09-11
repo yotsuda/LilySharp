@@ -287,6 +287,20 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **Tab fret digits keep LilyPond's clearance between columns, not a readability gap.** The
+  room a tab staff reserves between one column's fret digits and the next's was 0.6 staff
+  spaces of clear air, a Lily# choice made so single- and two-digit frets read at one density.
+  It is now LilyPond's own rod: each digit's box widened by the default `extra-spacing-width`
+  (0.1 a side) and the spacing spanner's padding (0.1) — 0.3 between the inks. The digits
+  themselves are still Lily#'s enlargement of LilyPond's tiny fret numbers. Measured on a
+  16th-note bass line (2.26.0): with 0.6 every 16th-to-16th spring's reservation reached the
+  spring's ideal and the line could not be compressed at all, so a system LilyPond squeezes to
+  73% (Never Stop bars 29-32) was split in two; with LilyPond's clearance the four bars sit on
+  one system as LilyPond's do, and 瞳をとじて lays out in LilyPond's 23 systems. Every tab book
+  with adjacent digit columns draws a little tighter (284 of 925 in the sweep, 13 snapshots).
+  To compare a book with its `.ly` twin, write `fonts { tabFret size 2 }` first so both pages
+  carry near-equal digits.
+
 - **A section name's box is the size of LilyPond's rehearsal mark.** The label's em followed
   LilyPond's `\sectionLabel` grob (`font-size` 1.5, 2.616 staff spaces) while its position
   already followed the rehearsal mark's — and the `.ly` twin spells a `form` section name

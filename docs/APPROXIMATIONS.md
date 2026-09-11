@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 58 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 54 | 観測者がゼロだと自認しているもの |
-| `OWN` | 137 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **249** | |
+| `OWN` | 136 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **248** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -225,7 +225,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（137 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（136 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2351** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -411,7 +411,6 @@
 - **:69** LILYSHARP-OWN, tuned on request (2026-08-06): each run's zigzag PHASE puts the
 ### `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs`
 - **:34** LILYSHARP-OWN: deliberately LARGER than LilyPond's, whose tab digits are small
-- **:201** LILYSHARP-OWN. Reserving the glyph WIDTH alone only promises the digits will not
 ### `LilySharp.Core/Svg/Layout/TabStaffStencils.cs`
 - **:122** note on the staff above and over the same note on the tab — but it is LILYSHARP-OWN
 - **:221** ★ LILYSHARP-OWN, and it has to be: LilyPond names chords only through a

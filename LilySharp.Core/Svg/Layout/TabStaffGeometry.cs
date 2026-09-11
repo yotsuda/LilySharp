@@ -198,13 +198,29 @@ internal static class TabConstants
     /// column's.
     /// </summary>
     /// <remarks>
-    /// LILYSHARP-OWN. Reserving the glyph WIDTH alone only promises the digits will not
-    /// overprint, and "not overprinting" is not the same as legible: MEASURED on a chromatic
-    /// run at font size 3.3, single digits fell 0.606–0.866 apart because the musical spacing
-    /// was already wider than they needed, while two-digit frets — where the reservation is
-    /// what binds — closed to exactly this gap. The same rhythm of numbers read at two
-    /// different densities depending on the fret. Raised 0.2 → 0.6 so the binding case reads
-    /// like the loose one; measured after, the run comes out 0.796–0.866 throughout.
+    /// The clearance is LilyPond's own ROD construction between two columns' boxes: each
+    /// box widened by the default <c>extra-spacing-width</c> (0.1 a side, a TabNoteHead
+    /// declares none of its own) and the spacing spanner's padding (0.1) on top — 0.3 of
+    /// clear air between the digits' ink. The DIGIT is still Lily#'s (its enlargement of
+    /// LilyPond's tiny fret numbers, decision F9), so what is reserved is LilyPond's rod
+    /// around Lily#'s glyph.
+    /// LILYPOND-REF: lily/separation-item.cc:166-167 extra-spacing-width — the box each
+    ///   side of the pair carries into the rod;
+    /// LILYPOND-REF: lily/spacing-spanner.cc:315-316 set_column_rods — the padding added
+    ///   over the boxes' distance (spent in lily/separation-item.cc:56).
+    /// <para>
+    /// USER DECISION 2026-09-11 (session 369): this used to be 0.6, a LILYSHARP-OWN
+    /// readability gap (a chromatic run at font size 3.3 read at two densities — single
+    /// digits 0.606–0.866 apart, two-digit frets closed to the gap — so 0.2 was raised to
+    /// 0.6 to even it out). MEASURED against LilyPond (scratch/p370/ns, Never Stop bars
+    /// 29-32, 16ths on a bass tab): with 0.6 every 16th-to-16th spring's reservation
+    /// (0.8536 + 0.8536 + 0.6 = 2.3072) reached the spring's ideal, the spring lost its
+    /// compress strength, and a line LilyPond squeezes to 73% (its 16th gaps 2.2153 →
+    /// 1.6911, rods 0.81–1.60 never binding) could not be squeezed at all — T7's
+    /// "Lily# splits the line LilyPond keeps" for 16th-dense tab. The gap now follows
+    /// LilyPond's rod; the digit size stays. To compare a book with its twin, write
+    /// <c>fonts { tabFret size 2 }</c> first so the two pages carry near-equal digits.
+    /// </para>
     /// <para>
     /// ⚠️ IT BELONGS BETWEEN COLUMNS, NOT IN A COLUMN'S EXTENT. Folding it into
     /// <c>TabItemHalfExtent</c> also pushed the FIRST note of a line, which is placed from
@@ -213,7 +229,7 @@ internal static class TabConstants
     /// between two things; an extent is a property of one.
     /// </para>
     /// </remarks>
-    public const double FretColumnGap = 0.6;
+    public const double FretColumnGap = 2 * SpacingRules.DefaultExtraSpacingWidth + SpacingRules.SeparationRodPadding;
 
     /// <summary>
     /// How far from its string line a tab stem's NEAR end is drawn — where LilyPond's
