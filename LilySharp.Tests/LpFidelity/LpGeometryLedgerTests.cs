@@ -230,11 +230,17 @@ public class LpGeometryLedgerTests
     /// ⚠️ WHAT IT COST TO NOT HAVE IT: the superscript port (2026-09-11) draws a chord symbol
     /// as a root run plus a raised run one <c>ChordNameGlyphRun.SuperRaise</c> higher, and
     /// <c>RenderedGeometry.ChordSymbols</c> returned the RUNS. <c>ChordBaselineBelowStaff</c>
-    /// takes the smallest Y below the staff — the RAISED run — so <c>Dmaj7</c>'s row read
+    /// takes the smallest Y below the staff — the RAISED run — so the row of this book read
     /// 4.807930284 under the staff refpoint where it is drawn at 5.997137399, and the whole
     /// 1.189207115 was recorded in the ledger as a spring under-shooting by 0.85 and handed on
     /// as the next island to repair. A residual the instrument invents cannot be found by
     /// staring at the engine.
+    /// <para>
+    /// ⚠️ THE BOOK USES SEVENTHS, NOT A MAJOR SEVENTH: under the default vocabulary a major
+    /// seventh's raised piece is the drawn TRIANGLE, which is a polygon and not a text run at
+    /// all, so `Dmaj7' would leave nothing for this to group. A minor or dominant seventh
+    /// raises the digit, which is what this is about.
+    /// </para>
     /// <para>
     /// ⚠️ THE FIRST ASSERT IS THE POSITIVE CONTROL: without it this passes on a picture that
     /// has no superscript at all, which is the state it was written to rule out.
@@ -252,7 +258,7 @@ public class LpGeometryLedgerTests
 
             section A {
               melody { c'4 c' g' g' | a' a' g'2 | }
-              chords prog { Dmaj7 | Em7 }
+              chords prog { Em7 | A7 }
             }
 
             form main { ~A }
@@ -270,7 +276,7 @@ public class LpGeometryLedgerTests
         // ⑴ The draw really does split a symbol — otherwise the rest of this proves nothing.
         Assert.Equal(4, runs.Count);
         Assert.Equal(2, symbols.Count);
-        Assert.Equal(new[] { "Dmaj7", "Em7" }, symbols.Select(t => t.Text));
+        Assert.Equal(new[] { "Em7", "A7" }, symbols.Select(t => t.Text));
 
         // ⑵ Each symbol reads its ROOT's baseline, and the run it was confused with sits
         //    exactly one super-raise above it.

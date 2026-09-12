@@ -40,9 +40,13 @@ public sealed class ChordAutoNameTests
     [Theory]
     [InlineData("<c e g>", "C")]
     [InlineData("<d f a>", "Dm")]
-    [InlineData("<b d f>", "Bdim")]
-    [InlineData("<c e gis>", "Caug")]
-    [InlineData("<c e g b>", "Cmaj7")]
+    // ⚠️ THE DRAWN NAMES, which since 2026-09-12 are LilyPond's own vocabulary by default:
+    // the diminished and augmented triads take its exception-table characters and a major
+    // seventh takes its triangle (`layout { chordQualities words }' spells them out again).
+    // What is under test is which QUALITY the notes name, and the character says it.
+    [InlineData("<b d f>", "B°")]
+    [InlineData("<c e gis>", "C+")]
+    [InlineData("<c e g b>", "C△")]
     [InlineData("<g b d f>", "G7")]
     [InlineData("<d f a c>", "Dm7")]
     [InlineData("<c e g a>", "C6")]
@@ -83,7 +87,7 @@ public sealed class ChordAutoNameTests
         Assert.Equal("Am7", AutoName("<a c e g>"));
         // And a four-pitch-class set cannot read as a three-note triad at all: C-E-G-B
         // has no Em reading to lose to.
-        Assert.Equal("Cmaj7", AutoName("<c e g b>"));
+        Assert.Equal("C△", AutoName("<c e g b>"));
     }
 
     [Fact]

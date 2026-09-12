@@ -3291,9 +3291,10 @@ public sealed class MusicXmlExporter
         // symbol it derives from its notes is the collector's, not the exporter's —
         // and the empty string it answers with keeps it out of the <harmony> below,
         // exactly as `StartsWith("chord.")` did.
-        // ⚠️ ChordSpelling.Default, deliberately: a <harmony> carries the chord as DATA and
-        // BuildHarmony reads Lily#'s CANONICAL symbol back to build it, so a score that set
-        // `layout { chordQualities symbols }` must not hand this a "C°" — which spells no
+        // ⚠️ ChordSpelling.Canonical, deliberately: a <harmony> carries the chord as DATA and
+        // BuildHarmony reads Lily#'s CANONICAL symbol back to build it, so a score that wrote
+        // nothing at all — the default is LilyPond's symbols since 2026-09-12 — must not hand
+        // this a "C°", which spells no
         // quality the parser knows. The rule `sectionLabels` and `partCombineText` keep: a
         // display switch moves the page, never MIDI and never MusicXML.
         // ⚠️ Only the TEXT is taken: a <harmony> has no typography to carry, so the raised
@@ -3301,7 +3302,7 @@ public sealed class MusicXmlExporter
         // page's and stops here, exactly as the spelling does.
         if (_currentMeasure != null
             && LilySharp.Core.Semantics.AnnotationValues.Chord(
-                mark, LilySharp.Core.Semantics.ChordSpelling.Default, out _)
+                mark, LilySharp.Core.Semantics.ChordSpelling.Canonical, out _)
                 is { Text.Length: > 0 } chordSymbol
             && chordSymbol.Text is var chordText)
         {

@@ -60,6 +60,11 @@ public class RomanChordEntryTests
         return new MeasureCollector().CollectMultiStaff(tree, spec!);
     }
 
+    /// <summary>The names a score PRINTS, in bar order. ⚠️ These are the drawn symbols, and
+    /// since 2026-09-12 the default vocabulary is LilyPond's — a major seventh is its
+    /// triangle, a diminished triad its degree sign — so <c>Imaj7</c> resolves to a chord
+    /// that prints <c>C△</c>. What these cases are about is WHICH CHORD a degree names; the
+    /// vocabulary is <c>LayoutBlockTests</c>'.</summary>
     private static string[] Names(MultiStaffScore s)
         => s.ChordNames.OrderBy(c => c.MeasureIndex).Select(c => c.ChordText).ToArray();
 
@@ -69,7 +74,7 @@ public class RomanChordEntryTests
     [Fact]
     public void ADegreeResolvesToTheKeysChord()
     {
-        Assert.Equal(new[] { "Cmaj7", "G7", "Dm7" },
+        Assert.Equal(new[] { "C△", "G7", "Dm7" },
             Names(Collect("c major", "Imaj7 | V7 | IIm7 |")));
     }
 
@@ -80,15 +85,15 @@ public class RomanChordEntryTests
     public void TheSameDegreesFollowTheKey()
     {
         const string entries = "Imaj7 | V7 | IIm7 | bVII |";
-        Assert.Equal(new[] { "Cmaj7", "G7", "Dm7", "B♭" }, Names(Collect("c major", entries)));
-        Assert.Equal(new[] { "E♭maj7", "B♭7", "Fm7", "D♭" }, Names(Collect("ees major", entries)));
+        Assert.Equal(new[] { "C△", "G7", "Dm7", "B♭" }, Names(Collect("c major", entries)));
+        Assert.Equal(new[] { "E♭△", "B♭7", "Fm7", "D♭" }, Names(Collect("ees major", entries)));
     }
 
     [Fact]
     public void ADegreeChartStillPrintsNamesByDefault_AndDegreesUnderAsRoman()
     {
         // Written one way, shown either way — the display selector is unchanged by this.
-        Assert.Equal(new[] { "Cmaj7", "G7" }, Names(Collect("c major", "Imaj7 | V7 |")));
+        Assert.Equal(new[] { "C△", "G7" }, Names(Collect("c major", "Imaj7 | V7 |")));
         Assert.Equal(new[] { "Imaj7", "V7" },
             Degrees(Collect("c major", "Imaj7 | V7 |", " as roman")));
     }
@@ -105,11 +110,11 @@ public class RomanChordEntryTests
     }
 
     [Theory]
-    [InlineData("#IVm7-5 |", "F♯m7♭5")]   // chromatic degree, altered tension
+    [InlineData("#IVm7-5 |", "F♯ø")]      // chromatic degree, altered tension
     [InlineData("bVII |", "B♭")]           // flat degree, typed ASCII
     [InlineData("V7/VII |", "G7/B")]       // slash bass, itself a degree
-    [InlineData("VIIdim |", "Bdim")]
-    [InlineData("Vaug |", "Gaug")]
+    [InlineData("VIIdim |", "B°")]
+    [InlineData("Vaug |", "G+")]
     public void TheDegreeGrammarCoversTheOrdinaryShapes(string entry, string expected)
         => Assert.Equal(new[] { expected }, Names(Collect("c major", entry)));
 

@@ -579,9 +579,10 @@ public sealed record ChordStructure(
     /// <remarks>
     /// <para>
     /// ⚠️ A METHOD WITH A REQUIRED ARGUMENT, not a property: see
-    /// <see cref="ChordQualityRegistry.GetSuffix"/>. <see cref="Semantics.ChordSpelling.Default"/>
+    /// <see cref="ChordQualityRegistry.GetSuffix"/>. <see cref="Semantics.ChordSpelling.Canonical"/>
     /// is what a caller that must not follow the switch passes — MusicXML, and the editor's
-    /// completion, which shows the canonical spelling whatever a score sets.
+    /// completion, which shows the spelling that PARSES whatever a score sets. (It was
+    /// <c>Default</c> until the default became LilyPond's symbols; see that field's remark.)
     /// </para>
     /// <para>
     /// The lowercase arm is LilyPond's, in its own order: the ROOT is lowercased and the
@@ -797,12 +798,16 @@ public sealed record ChordStructure(
     /// the name-style "dim"/"aug"/"m7♭5"; every other quality keeps the printed
     /// suffix (m, maj7, m7, 7, …), so IIm7 / V7 / Imaj7 read as expected.</summary>
     /// <remarks>
-    /// ⚠️ A ROMAN DEGREE DOES NOT FOLLOW <c>layout { chordQualities }</c>, and the reason is an
-    /// identity rather than a preference: this table already spells the four qualities that
-    /// vocabulary moves, and it overrides them — so asking for
-    /// <see cref="Semantics.ChordQualityStyle.Symbols"/> below would change nothing at all.
-    /// Passing <see cref="Semantics.ChordQualityStyle.Words"/> says which of the two equal
-    /// answers is meant. <c>TheRomanDegreeIsTheSameInBothVocabularies</c> holds it.
+    /// ⚠️ A ROMAN DEGREE DOES NOT FOLLOW <c>layout { chordQualities }</c>, and for two reasons
+    /// rather than one. THE FOUR TRIADS: this table already spells the qualities that
+    /// vocabulary moves and overrides them, so for those the two answers are equal and
+    /// passing <see cref="Semantics.ChordQualityStyle.Words"/> below says which equal answer
+    /// is meant. THE MAJOR SEVENTHS: there the vocabularies do NOT agree — <c>symbols</c>
+    /// gives the drawn TRIANGLE, which is a polygon sized and placed by <c>\super</c>, and a
+    /// degree is drawn on one baseline with no superscript to put it in
+    /// (<c>ChordNameEngraver.DisplaySymbol</c> gives a degree none, since LilyPond has no
+    /// degrees at all). So <c>Imaj7</c> keeps the word.
+    /// <c>TheRomanDegreeCannotFollowTheChordVocabulary</c> holds both arms, and counts them.
     /// The CASE is fixed for a different reason: a numeral is not a note name, so
     /// <c>minorChords lower</c> has nothing to lowercase here.
     /// </remarks>

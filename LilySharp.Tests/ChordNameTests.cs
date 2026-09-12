@@ -42,9 +42,18 @@ public class ChordNameTests
         => SyntaxTree.Parse("melody { " + music + " }")
             .GetRoot().DescendantNodes().OfType<MusicMarkSyntax>().First();
 
+    // Canonical, not the default: these cases ask whether the WRITTEN text parses and comes
+    // back, which is a question about the spelling the parser reads (the default vocabulary
+    // has been LilyPond's symbols since 2026-09-12 and would answer "C°" to "Cdim").
     private static string? Chord(string music)
         => LilySharp.Core.Semantics.AnnotationValues.Chord(
-            Mark(music), LilySharp.Core.Semantics.ChordSpelling.Default, out _)?.Text;
+            Mark(music), LilySharp.Core.Semantics.ChordSpelling.Canonical, out _)?.Text;
+
+    /// <summary>What <c>@chord(Cmaj7)</c> PRINTS: LilyPond's <c>majorSevenSymbol</c> is a
+    /// drawn triangle and Lily#'s default vocabulary is LilyPond's, so the symbol the page
+    /// carries is the root plus the triangle's carrier character. Written from
+    /// <c>ChordNameGlyphRun.TriangleCarrier</c> so the two cannot drift.</summary>
+    private static readonly string DrawnCmaj7 = "C" + ChordNameGlyphRun.TriangleCarrier;
 
     [Fact]
     public void ParseChordName_SimpleChord()
@@ -543,7 +552,8 @@ score main {{ chords prog  staff m }}
             var layout = new LayoutEngine().Layout(score);
             double tabY = layout.Systems[0].StaffGroups.SelectMany(g => g.Staves)
                 .OrderBy(s => s.StaffIndex).Last().Y;
-            return (layout.ChordNameLayouts.Count(c => c.ChordText == "Cmaj7"), tabY);
+            // ⚠️ THE DRAWN TEXT, not the written one (see DrawnCmaj7).
+            return (layout.ChordNameLayouts.Count(c => c.ChordText == DrawnCmaj7), tabY);
         }
 
         var numbers = Read("score main { staff melody  tab melody }");
@@ -613,17 +623,17 @@ score main {{ chords prog  staff m }}
             var owner = score.ChordNames.Single(c => c.ChordText == text);
             return chord.YUp - staves[owner.StaffIndex].Y;
         }
-
-        double onNotation = OverItsTopLine("Dm7");   // staff back, the control
-        double onTab = OverItsTopLine("Cmaj7");      // tab melody
+        double onNotation = OverItsTopLine("Dm7");      // staff back, the control
+        double onTab = OverItsTopLine(DrawnCmaj7);      // tab melody
 
         Assert.Equal(onNotation, onTab, 9);
 
         // ...and therefore the consequence: the tab's symbol is BELOW the bottom line of the
         // staff above it. The ink is the engraver's own measurement of this very string.
         var above = staves[0];
-        double inkTop = layout.ChordNameLayouts.Single(c => c.ChordText == "Cmaj7").YUp
-            + ChordNameEngraver.SymbolInk(score.TextMetrics, "Cmaj7").Top;
+        var tabChord = layout.ChordNameLayouts.Single(c => c.ChordText == DrawnCmaj7);
+        double inkTop = tabChord.YUp
+            + ChordNameEngraver.SymbolInk(score.TextMetrics, tabChord).Top;
         Assert.True(inkTop < above.Y - above.Height,
             $"the tab's chord ink reaches {inkTop:F6}, the staff above ends at "
             + $"{above.Y - above.Height:F6} (up-positive: smaller is lower)");

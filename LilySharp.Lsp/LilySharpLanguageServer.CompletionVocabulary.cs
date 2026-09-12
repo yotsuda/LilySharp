@@ -415,8 +415,8 @@ public sealed partial class LilySharpLanguageServer
 
     private static readonly System.Collections.Generic.Dictionary<string, string> ChordQualityStyleDetails = new()
     {
-        ["words"] = "Cdim, Caug, Cm7♭5, Cdim7 — words for every quality (the default)",
-        ["symbols"] = "C°, C+, Cø, C°7 — LilyPond's own symbols for those four qualities",
+        ["symbols"] = "C°, C+, Cø, C°7 and the maj7 triangle — LilyPond's own (the default)",
+        ["words"] = "Cdim, Caug, Cm7♭5, Cdim7, Cmaj7 — the quality spelled out",
     };
 
     private static readonly System.Collections.Generic.Dictionary<string, string> MinorChordDetails = new()
@@ -3240,7 +3240,7 @@ public sealed partial class LilySharpLanguageServer
                 InsertText = notes,
                 // The canonical spelling: the popup describes the notes it is about to
                 // insert, and those do not change with `layout { chordQualities }`.
-                Detail = $"{chord.DisplayName(ChordSpelling.Default)} chord notes",
+                Detail = $"{chord.DisplayName(ChordSpelling.Canonical)} chord notes",
                 SortText = "00chord",
             });
         }

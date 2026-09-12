@@ -49,10 +49,12 @@ public sealed class ChordNamesTests
         Assert.Equal(expected, new ChordStructure(step, alter, q).DisplayName(Plain));
     }
 
-    /// <summary>The spelling a book that writes no <c>layout { chordQualities … }</c> gets, and
-    /// what every case below names unless it is about the switch itself.</summary>
+    /// <summary>The WORDS vocabulary, asked for by name: these cases are about how a namer
+    /// assembles a symbol out of root, quality and bass, not about which vocabulary a book
+    /// gets by default — <c>LayoutBlockTests</c> owns that, and since 2026-09-12 the default
+    /// is LilyPond's symbols.</summary>
     private static readonly LilySharp.Core.Semantics.ChordSpelling Plain =
-        LilySharp.Core.Semantics.ChordSpelling.Default;
+        LilySharp.Core.Semantics.ChordSpelling.Canonical;
 
     [Fact]
     public void DisplayName_RendersAccidentalsAndBass()
@@ -265,7 +267,9 @@ public sealed class ChordNamesTests
         var score = CollectWithRow(tree);
         var chords = score.ChordNames.OrderBy(c => c.Timing.ToDouble()).ToList();
         Assert.Equal(2, chords.Count);
-        Assert.Equal(new[] { "Fmaj7/E", "Fmaj7/G" }, chords.Select(c => c.ChordText));
+        // The DRAWN symbols: a major seventh is LilyPond's triangle under the default
+        // vocabulary, and the bass keeps its own letter after the slash.
+        Assert.Equal(new[] { "F△/E", "F△/G" }, chords.Select(c => c.ChordText));
     }
 
     [Fact]
@@ -373,9 +377,13 @@ public sealed class ChordNamesTests
     // A symbol that lexes as several tokens (identifier + minus + number, or a
     // '#' BadToken in the middle) must be captured WHOLE as one glued run, not
     // truncated to its first token (the "Gm7" bug, in its symbol-format form).
-    [InlineData("Gm7-5", "Gm7♭5")]     // half-diminished, minus+number → resolves
+    // ⚠️ The expectations are the DRAWN symbols: a half-diminished is LilyPond's `ø' under
+    // the default vocabulary (`layout { chordQualities words }' spells it `m7♭5' again).
+    // What is under test is that the ENTRY was captured whole, and the resolved quality
+    // says it was.
+    [InlineData("Gm7-5", "Gø")]        // half-diminished, minus+number → resolves
     [InlineData("G7sus4", "G7sus4")]   // number + word, one identifier → resolves
-    [InlineData("F#m7-5", "F♯m7♭5")]   // '#' splits the run and is re-joined
+    [InlineData("F#m7-5", "F♯ø")]      // '#' splits the run and is re-joined
     [InlineData("Gm7-5-7", "Gm7-5-7")] // unknown extended chord → full text, not "Gm7"
     public void MultiTokenSymbol_IsCapturedWhole(string entry, string expected)
     {

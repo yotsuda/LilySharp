@@ -206,7 +206,7 @@ public class LayoutBlockTests
         Assert.Equal(LanguageVocabulary.AccidentalStyleWords, LayoutPlanReader.ValueWords("accidentals"));
         Assert.Equal(new[] { "boxed", "plain", "none" }, LanguageVocabulary.SectionLabelStyles);
         Assert.Equal(new[] { "on", "off" }, LanguageVocabulary.PartCombineTextWords);
-        Assert.Equal(new[] { "words", "symbols" }, LanguageVocabulary.ChordQualityStyleWords);
+        Assert.Equal(new[] { "symbols", "words" }, LanguageVocabulary.ChordQualityStyleWords);
         Assert.Equal(new[] { "upper", "lower" }, LanguageVocabulary.MinorChordWords);
     }
 
@@ -614,25 +614,43 @@ public class LayoutBlockTests
         return [.. score.ChordNames.Select(c => c.ChordText)];
     }
 
+    /// <summary>
+    /// ★ THE DEFAULT IS LILYPOND'S VOCABULARY (owner decision, 2026-09-12), and
+    /// <c>words</c> is the lead-sheet convention a score now asks for by name.
+    /// </summary>
+    /// <remarks>
+    /// It was the other way round from the key's first day (2026-09-11) until the next
+    /// session: <c>words</c> was the default because it was what every book on disk already
+    /// printed. What changed the decision is that the two halves LilyPond adds beyond its
+    /// exception table — the raised run and the major-seventh triangle — were ported in
+    /// between, so <c>symbols</c> stopped being a partial port of the table and became
+    /// LilyPond's picture entire. MEASURED with it (audit/lp-geometry CHL1/CHL2): the chord
+    /// row lands on LilyPond's own 5.659653422 under the staff refpoint, where the words
+    /// picture stood 0.337483977 lower.
+    /// </remarks>
     [Fact]
-    public void ChordNames_Words_IsTheDefault_AndSymbolsSpellsLilyPondsFour()
+    public void ChordNames_Symbols_IsTheDefault_AndWordsSpellsThemOut()
     {
-        var words = new[] { "Cdim", "Caug", "Cm7♭5", "Cdim7", "Am7/C" };
-        Assert.Equal(words, ChordTexts(""));
-        Assert.Equal(words, ChordTexts("layout { chordQualities words }\n"));
-
         // LilyPond's ignatzekExceptionMusic, in the characters it names the four with.
-        // Every other quality is spelled the same in both — the minor seventh is here to
-        // say so rather than to be assumed.
+        var symbols = new[] { "C°", "C+", "Cø", "C°7", "Am7/C" };
+        Assert.Equal(symbols, ChordTexts(""));
+        Assert.Equal(symbols, ChordTexts("layout { chordQualities symbols }\n"));
+
+        // ...and the words, which every book on disk printed until 2026-09-12. Every other
+        // quality is spelled the same in both — the minor seventh is here to say so rather
+        // than to be assumed.
         Assert.Equal(
-            new[] { "C°", "C+", "Cø", "C°7", "Am7/C" },
-            ChordTexts("layout { chordQualities symbols }\n"));
+            new[] { "Cdim", "Caug", "Cm7♭5", "Cdim7", "Am7/C" },
+            ChordTexts("layout { chordQualities words }\n"));
     }
 
     [Fact]
     public void MinorChords_Lower_LowercasesTheRoot_DropsTheM_AndLeavesTheBassAlone()
     {
-        var lower = ChordTexts("layout { minorChords lower }\n");
+        // ⚠️ THE OTHER AXIS IS PINNED TO `words' on purpose: what this reads is the CASE of
+        // the root and the fate of the `m', and a quality word shows both (a `°' carries no
+        // m to drop). The two axes TOGETHER are BothSwitchesTogether_SpellTheseChordsAsLilyPondDoes.
+        var lower = ChordTexts("layout { minorChords lower  chordQualities words }\n");
 
         // The minor seventh: root down, the m gone with it, the BASS still a capital —
         // LilyPond calls chordNoteNamer with lowercase? = #f (MinorChords' remark).
@@ -657,10 +675,11 @@ public class LayoutBlockTests
     /// the keys exist for: LilyPond prints <c>C°</c> / <c>C+</c> / <c>Cø</c> / <c>C°7</c>
     /// there too, because ITS exception table is always on, while Lily# prints the words.
     /// <para>
-    /// ⚠️ NOT a claim about the whole vocabulary: LilyPond raises everything after the root
-    /// and draws a major seventh as a triangle, neither of which Lily# has (see
-    /// <see cref="LilySharp.Core.Semantics.ChordQualityStyle"/>). What agrees here is the
-    /// SPELLING — which characters stand for which quality, and which case the root is in.
+    /// ★ IT IS NOW A CLAIM ABOUT THE WHOLE PICTURE, not only about which characters stand
+    /// for which quality: the two halves LilyPond adds beyond its exception table — the
+    /// raised run and the major-seventh triangle — are ported too (see
+    /// <see cref="LilySharp.Core.Semantics.ChordQualityStyle"/>), and since 2026-09-12 this
+    /// pair of switches is what a book gets without writing either.
     /// </para>
     /// </remarks>
     [Fact]
@@ -677,7 +696,7 @@ public class LayoutBlockTests
         Assert.Equal(
             MaskDataPos(SvgGenerator.Generate(SyntaxTree.Parse(Chords), Opt)),
             MaskDataPos(SvgGenerator.Generate(
-                SyntaxTree.Parse("layout { chordQualities words  minorChords upper }\n" + Chords), Opt)));
+                SyntaxTree.Parse("layout { chordQualities symbols  minorChords upper }\n" + Chords), Opt)));
     }
 
     /// <summary>
@@ -791,8 +810,8 @@ public class LayoutBlockTests
                 c.DisplayMode == ChordDisplayMode.Roman ? c.RomanText ?? c.ChordText : c.ChordText)];
         }
 
-        Assert.Equal(new[] { "I°", "Cdim" }, Shown(""));
-        Assert.Equal(new[] { "I°", "C°" }, Shown("layout { chordQualities symbols }\n"));
+        Assert.Equal(new[] { "I°", "C°" }, Shown(""));
+        Assert.Equal(new[] { "I°", "Cdim" }, Shown("layout { chordQualities words }\n"));
     }
 
     /// <summary>
@@ -828,8 +847,13 @@ public class LayoutBlockTests
         }
 
         // The row, the attached track and the inline mark are three symbols for the one
-        // chord, and under each spelling all three read the same.
-        var words = Texts(Inline);
+        // chord, and under each spelling all three read the same. The book writes no
+        // `layout' at all, so the first reading is the default — LilyPond's vocabulary.
+        var plain = Texts(Inline);
+        Assert.Equal(3, plain.Length);
+        Assert.All(plain, t => Assert.Equal("C°", t));
+
+        var words = Texts("layout { chordQualities words }\n" + Inline);
         Assert.Equal(3, words.Length);
         Assert.All(words, t => Assert.Equal("Cdim", t));
 

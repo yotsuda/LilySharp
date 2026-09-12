@@ -673,11 +673,13 @@ OnOff          = 'on' | 'off' ;
    byte-identical under either vocabulary, because a Roman degree already spells the same
    four qualities its own way (° ø7 + °7) and overrides them.
 
-   How a chord's QUALITY is spelled after the root. 'words' is the default
-   and what every book on disk prints: Cdim, Caug, Cm7♭5, Cdim7. 'symbols' spells those
-   four the way LilyPond's own exception table does — C°, C+, Cø, C°7 — and leaves every
-   other quality alone, because LilyPond spells the rest with digits too
-   (ly/chord-modifiers-init.ly ignatzekExceptionMusic).
+   How a chord's QUALITY is spelled after the root. 'symbols' is the DEFAULT and is
+   LilyPond's own picture: the four qualities its exception table names print C°, C+, Cø,
+   C°7 (ly/chord-modifiers-init.ly ignatzekExceptionMusic) and a major seventh prints its
+   drawn triangle (whiteTriangleMarkup), while every other quality keeps its word, because
+   LilyPond spells the rest with digits too. 'words' spells the qualities out instead —
+   Cdim, Caug, Cm7♭5, Cdim7, Cmaj7 — which is the lead-sheet convention, and what every
+   Lily# book printed before 2026-09-12.
 
    minorChords — whether a chord with a MINOR THIRD prints an uppercase root with its 'm'
    ('upper', the default and LilyPond's ##f) or a lowercase root with the 'm' dropped
@@ -687,11 +689,11 @@ OnOff          = 'on' | 'off' ;
 
    MEASURED (2026-09-11, LilyPond 2.26.0, scratch/p372/probe-symbols): with both keys set
    Lily# spells c° / C+ / cø / c°7 / a7/C — character for character what LilyPond prints
-   for the same chords. NOT here, and stated rather than implied: LilyPond RAISES
-   everything after the root and draws a major seventh as a \triangle polygon, so 'maj7'
-   stays 'maj7' under both words. That is the Phase-1 chord-name simplification these keys
-   switch INSIDE, not the one they close. Neither key reaches MIDI or MusicXML: a
-   <harmony> carries the chord as data.
+   for the same chords. The rest of LilyPond's picture is in the default too: everything
+   after the root is RAISED and a major seventh is the triangle polygon, both ported
+   2026-09-11, and the chord row then lands on LilyPond's own 5.659653422 under the staff
+   refpoint (audit/lp-geometry lyrics.chord-run.staff-to-chord, exact). Neither key reaches
+   MIDI or MusicXML: a <harmony> carries the chord as data, and asks for the words.
 
    The keys are matched case-insensitively (a paper key's rule); the value words are
    the language's closed vocabulary, canonical case only. Neither the keys nor the
@@ -707,7 +709,7 @@ OnOff          = 'on' | 'off' ;
      accidentals modern
      sectionLabels none
      partCombineText off
-     chordQualities symbols
+     chordQualities words
      minorChords lower
    }
 *)

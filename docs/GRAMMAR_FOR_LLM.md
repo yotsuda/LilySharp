@@ -755,7 +755,7 @@ layout {
                            //                        | forget | noReset
   sectionLabels plain      // section names: boxed (default) | plain | none
   partCombineText off      // a2 / Solo words: on (default) | off
-  chordQualities symbols       // chord quality: words (default) | symbols
+  chordQualities words     // chord quality: symbols (default) | words
   minorChords lower        // a minor chord's root: upper (default) | lower
 }
 ```
@@ -787,9 +787,10 @@ layout {
 - `partCombineText on` prints `a2` / `Solo` / `Solo II` on a `combinedStaff` (LilyPond's
   default); `off` is its `printPartCombineTexts = ##f`, which the twin writes. The merging
   itself is unchanged — this is the words, not the combining.
-- `chordQualities words` spells a chord's quality out — `Cdim`, `Caug`, `Cm7♭5`, `Cdim7` — and
-  is the default. `symbols` spells those four as LilyPond's own exception table does
-  (`C°`, `C+`, `Cø`, `C°7`); every other quality is the same word either way.
+- `chordQualities symbols` is the default and LilyPond's own picture: the four qualities its
+  exception table names print `C°`, `C+`, `Cø`, `C°7`, and a major seventh prints its drawn
+  triangle. `words` spells them out instead — `Cdim`, `Caug`, `Cm7♭5`, `Cdim7`, `Cmaj7` — the
+  lead-sheet convention. Every other quality is the same word either way.
 - `minorChords upper` is LilyPond's default: `Am`, `Am7`. `lower` lowercases the root of a
   chord with a MINOR THIRD and drops its `m` — `a`, `a7` — which is LilyPond's
   `chordNameLowercaseMinor`, written by the twin. The slash BASS keeps its capital

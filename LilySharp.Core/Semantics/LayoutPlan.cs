@@ -54,8 +54,8 @@ public sealed record LayoutPlan(
     SectionLabelStyle SectionLabels = SectionLabelStyle.Boxed,
     // `partCombineText on|off` — whether a combinedStaff prints "a2" / "Solo" / "Solo II".
     bool PartCombineText = true,
-    // `chordQualities words|symbols` and `minorChords upper|lower` — how a chord SYMBOL is
-    // spelled (ChordSpelling). The struct's own default is today's spelling, so
+    // `chordQualities symbols|words` and `minorChords upper|lower` — how a chord SYMBOL is
+    // spelled (ChordSpelling). The struct's own default is LilyPond's spelling, so
     // LayoutPlan.Default compares equal to a plan that writes both keys out.
     ChordSpelling Chords = default)
 {
@@ -95,9 +95,9 @@ public sealed record LayoutPlan(
 /// <para>
 /// ⚠️ IT DOES NOT REACH MusicXML. A <c>&lt;harmony&gt;</c> element carries the chord as
 /// DATA — root, kind, degrees — and the exporter reads Lily#'s canonical spelling back to
-/// build it, so the exporter asks for <see cref="Default"/> on purpose (a <c>C°</c> would
-/// parse as nothing). The same rule <c>sectionLabels</c> and <c>partCombineText</c> keep:
-/// a display switch moves the page, not the data.
+/// build it, so the exporter asks for <see cref="Canonical"/> (a <c>C°</c> would parse as
+/// nothing). The same rule <c>sectionLabels</c> and <c>partCombineText</c> keep: a display
+/// switch moves the page, not the data.
 /// </para>
 /// </remarks>
 /// <param name="Qualities">The quality's vocabulary.</param>
@@ -105,9 +105,25 @@ public sealed record LayoutPlan(
 /// chord prints a lowercase root and drops the <c>m</c>.</param>
 public readonly record struct ChordSpelling(ChordQualityStyle Qualities, bool LowercaseMinor)
 {
-    /// <summary>Today's spelling, which is also the struct's <c>default</c>: words, and an
-    /// uppercase root with its <c>m</c>.</summary>
+    /// <summary>What a book with no <c>layout { }</c> gets, which is also the struct's
+    /// <c>default</c>: LilyPond's own symbols, and an uppercase root with its <c>m</c>.</summary>
     public static readonly ChordSpelling Default = default;
+
+    /// <summary>
+    /// The spelling Lily#'s OWN PARSER reads back — words, uppercase root — for the readers
+    /// that carry the chord as DATA rather than as a picture: the MusicXML
+    /// <c>&lt;harmony&gt;</c> and the editor's completion detail.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ IT WAS <see cref="Default"/> UNTIL 2026-09-12, and the two were the same value by
+    /// accident: the display default was the words vocabulary, so a reader that meant "the
+    /// spelling that parses" and a reader that meant "what a book with no switch prints"
+    /// could share one name. The owner moved the default to LilyPond's symbols and the two
+    /// meanings came apart — a <c>&lt;harmony&gt;</c> asking for the default would now be
+    /// handed <c>C°</c>, which spells no quality the parser knows. One name, two quantities
+    /// (§5.2.1②); this is the second one, named.
+    /// </remarks>
+    public static readonly ChordSpelling Canonical = new(ChordQualityStyle.Words, false);
 }
 
 /// <summary>How a chord's QUALITY is spelled after the root.</summary>
@@ -122,27 +138,35 @@ public readonly record struct ChordSpelling(ChordQualityStyle Qualities, bool Lo
 /// count as naming nothing whatever is written after it. The line is given in prose instead,
 /// the spelling <c>ChordNameGlyphRun.ShortGlyph</c> already uses.
 /// <para>
-/// ⚠️ WHAT <c>symbols</c> DOES NOT REACH, so it is not read as a full port of that table:
-/// LilyPond RAISES everything after the root (make-super-markup, at
-/// scm/chord-ignatzek-names.scm line 207) and spells a major seventh with a DRAWN TRIANGLE
+/// ★ <c>symbols</c> IS LILYPOND'S PICTURE, and since 2026-09-12 it is the default. The two
+/// halves LilyPond adds beyond the table are ported too: everything after the root is RAISED
+/// (make-super-markup, at scm/chord-ignatzek-names.scm line 207 — <c>ChordNameGlyphRun</c>)
+/// and a major seventh is a DRAWN TRIANGLE
 /// (LILYPOND-REF: ly/chord-modifiers-init.ly whiteTriangleMarkup, lines 23-33 — a
-/// <c>\fontsize #-3 \triangle ##f</c> polygon stencil). Lily# draws a chord name as one
-/// baseline text run with the accidentals as glyphs (<c>ChordNameGlyphRun</c>), so neither
-/// the superscript nor the triangle has a home yet, and <c>maj7</c> stays <c>maj7</c> under
-/// both words. That is the Phase-1 simplification this enum switches INSIDE, not the one it
-/// closes.
+/// <c>\fontsize #-3 \triangle ##f</c> polygon stencil), which
+/// <c>ChordQualityRegistry.SymbolSuffix</c> carries for the four major-seventh qualities.
+/// MEASURED (audit/lp-geometry, books CHL1/CHL2): with the triangle the chord row stands
+/// 5.659653422 under the staff refpoint, which is LilyPond's own number; with the word
+/// <c>maj7</c> it stands 0.337483977 lower, because the letters ink taller than the polygon.
+/// </para>
+/// <para>
+/// ⚠️ <c>words</c> IS NOT A FALLBACK, it is the other convention — the lead-sheet spelling a
+/// reader may want and LilyPond has no switch for. It was the default until 2026-09-12, and
+/// what changed is which picture a book gets for free, not what either word means.
 /// </para>
 /// </remarks>
 public enum ChordQualityStyle
 {
-    /// <summary>Words — <c>Cdim</c>, <c>Caug</c>, <c>Cm7♭5</c>, <c>Cdim7</c>. The default,
-    /// and what every book on disk prints.</summary>
-    Words,
-
     /// <summary>LilyPond's own symbols for the four qualities its exception table names —
-    /// <c>C°</c>, <c>C+</c>, <c>Cø</c>, <c>C°7</c>. Every other quality keeps its word,
-    /// because LilyPond spells those with digits too.</summary>
+    /// <c>C°</c>, <c>C+</c>, <c>Cø</c>, <c>C°7</c> — and its triangle for a major seventh.
+    /// Every other quality keeps its word, because LilyPond spells those with digits too.
+    /// THE DEFAULT, and the enum's zero so that <c>default(ChordSpelling)</c> is it.</summary>
     Symbols,
+
+    /// <summary>Words — <c>Cdim</c>, <c>Caug</c>, <c>Cm7♭5</c>, <c>Cdim7</c>, <c>Cmaj7</c>:
+    /// the lead-sheet convention, and what <see cref="ChordSpelling.Canonical"/> holds for
+    /// the readers that carry a chord as data.</summary>
+    Words,
 }
 
 /// <summary>The <c>chordQualities</c> key's words.</summary>
@@ -152,7 +176,7 @@ public static class ChordQualityStyles
     public const string Key = "chordQualities";
 
     /// <summary>The words, the default first.</summary>
-    public static readonly IReadOnlyList<string> Words = ["words", "symbols"];
+    public static readonly IReadOnlyList<string> Words = ["symbols", "words"];
 
     /// <summary>The style <paramref name="word"/> names, or null.</summary>
     public static ChordQualityStyle? Find(string word) => word switch

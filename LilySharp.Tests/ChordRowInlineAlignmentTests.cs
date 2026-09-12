@@ -46,6 +46,15 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class ChordRowInlineAlignmentTests
 {
+    /// <summary>The DRAWN names of the two major sevenths these books write. LilyPond's
+    /// <c>majorSevenSymbol</c> is a triangle and its vocabulary is Lily#'s default since
+    /// 2026-09-12, so the symbol a page carries is the root plus the triangle's carrier —
+    /// the string every lookup here keys on. The books still WRITE <c>Cmaj7</c>.</summary>
+    private static readonly string DrawnCmaj7 = "C" + ChordNameGlyphRun.TriangleCarrier;
+
+    /// <inheritdoc cref="DrawnCmaj7"/>
+    private static readonly string DrawnFmaj7 = "F" + ChordNameGlyphRun.TriangleCarrier;
+
     /// <summary>Every chord symbol of a rendered two-bar score, by its printed text.</summary>
     private static Dictionary<string, ChordNameLayout> Chords(string source)
     {
@@ -81,7 +90,7 @@ public class ChordRowInlineAlignmentTests
     {
         // The row speaks in bar 1, the @chord is in bar 2: nothing to argue about, one line.
         var c = Chords(Book("Cmaj7 |  |  |", "e'1@chord(Am7)"));
-        Assert.Equal(c["Cmaj7"].YUp, c["Am7"].YUp, precision: 6);
+        Assert.Equal(c[DrawnCmaj7].YUp, c["Am7"].YUp, precision: 6);
     }
 
     [Fact]
@@ -94,8 +103,8 @@ public class ChordRowInlineAlignmentTests
         var c = Chords(Book("Cmaj7 | G7 |  |", "e'1@chord(Am7)", bar3: "g'1@chord(Fmaj7)"));
 
         // The two @chord symbols and the clear row symbol are all on one line...
-        Assert.Equal(c["Cmaj7"].YUp, c["Am7"].YUp, precision: 6);
-        Assert.Equal(c["Cmaj7"].YUp, c["Fmaj7"].YUp, precision: 6);
+        Assert.Equal(c[DrawnCmaj7].YUp, c["Am7"].YUp, precision: 6);
+        Assert.Equal(c[DrawnCmaj7].YUp, c[DrawnFmaj7].YUp, precision: 6);
         // ...and the row symbol that shares a column is the one above it (Y-up is up-positive).
         Assert.True(c["G7"].YUp > c["Am7"].YUp + 1.0,
             $"expected the row's G7 lifted off the line, got {c["G7"].YUp} vs {c["Am7"].YUp}");
@@ -115,12 +124,12 @@ public class ChordRowInlineAlignmentTests
         var c = Chords(Book("Cmaj7 | G7 | Am7 |", "e'1@chord(Dm7)", bar3: "g'1@chord(Fmaj7)"));
 
         // Every row symbol keeps the row's line...
-        Assert.Equal(c["Cmaj7"].YUp, c["G7"].YUp, precision: 6);
-        Assert.Equal(c["Cmaj7"].YUp, c["Am7"].YUp, precision: 6);
+        Assert.Equal(c[DrawnCmaj7].YUp, c["G7"].YUp, precision: 6);
+        Assert.Equal(c[DrawnCmaj7].YUp, c["Am7"].YUp, precision: 6);
         // ...and both @chords keep theirs, below it, level with each other.
-        Assert.Equal(c["Dm7"].YUp, c["Fmaj7"].YUp, precision: 6);
-        Assert.True(c["Dm7"].YUp < c["Cmaj7"].YUp - 1.0,
-            $"expected the @chord line under the row, got {c["Dm7"].YUp} vs {c["Cmaj7"].YUp}");
+        Assert.Equal(c["Dm7"].YUp, c[DrawnFmaj7].YUp, precision: 6);
+        Assert.True(c["Dm7"].YUp < c[DrawnCmaj7].YUp - 1.0,
+            $"expected the @chord line under the row, got {c["Dm7"].YUp} vs {c[DrawnCmaj7].YUp}");
     }
 
     [Fact]
@@ -148,7 +157,7 @@ public class ChordRowInlineAlignmentTests
         var c = Chords(Book("Cmaj7 |  |  |", "e'1@chord(Am7)",
                             placement: "chords prog as roman  chords prog  staff m"));
 
-        double roman = c["Imaj7"].YUp, names = c["Cmaj7"].YUp, inline = c["Am7"].YUp;
+        double roman = c["Imaj7"].YUp, names = c[DrawnCmaj7].YUp, inline = c["Am7"].YUp;
         Assert.True(roman > names + 1e-6,
             $"expected the roman row above the names row, got {roman} vs {names}");
         Assert.Equal(names, inline, precision: 6);   // the LOWER of the two: nearest its staff

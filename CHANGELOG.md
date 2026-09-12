@@ -7,6 +7,22 @@ workflow attaches that section to the GitHub Release verbatim.
 ## 0.7.0
 
 ### Language
+- **A chord's quality is spelled the way LilyPond spells it, without asking.** `layout
+  { chordQualities }` shipped with `words` as its default — `Cdim`, `Caug`, `Cm7♭5`,
+  `Cdim7`, `Cmaj7` — because that is what every Lily# book printed. The default is now
+  `symbols`: the four qualities LilyPond's exception table names print `C°`, `C+`, `Cø`,
+  `C°7`, and a major seventh prints its drawn triangle. Write `layout { chordQualities
+  words }` for the lead-sheet spelling; every other quality is the same word either way,
+  and a Roman degree row is unmoved (it already spells those qualities its own way).
+  The switch is a picture and nothing else: MIDI and a MusicXML `<harmony>` carry the chord
+  as data and are untouched. What made the default worth moving is that the rest of
+  LilyPond's picture arrived first — the raised run and the triangle polygon — so the
+  vocabulary stopped being a partial port of one table: measured against LilyPond 2.26.0,
+  the chord row now stands 5.659653422 under the staff reference point, which is LilyPond's
+  own number to nine digits, where the words picture stood 0.337483977 lower
+  (audit/lp-geometry `lyrics.chord-run.staff-to-chord`, exact for the first time since it
+  was opened in 2026-08-26).
+
 
 - **`paper { raggedBottom }` keeps every page's systems at their natural spacing.** LilyPond's
   `ragged-bottom`, as a bare flag beside `raggedRight`. Without it only the last page is ragged
