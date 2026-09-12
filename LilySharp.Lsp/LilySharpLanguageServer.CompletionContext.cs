@@ -1342,10 +1342,22 @@ public sealed partial class LilySharpLanguageServer
             or "lyrics" or "voice" or "tuplet" or "grace" or "acciaccatura"
             or "appoggiatura" or "repeat" or "ossia" or "tab")
             return false;
-        // Otherwise w1 was a bare name or a quoted basename (w1 == ""). A score
-        // header is `score <form> ["basename"] {`, so up to two tokens precede the
-        // keyword; walk back over the remaining ones looking for `score`.
-        for (int skip = 0; skip < 2; skip++)
+        // Otherwise w1 was a bare name or a quoted basename (w1 == ""): walk back over the
+        // rest of the header looking for `score`.
+        //
+        // ⚠️ THE BUDGET IS THE GRAMMAR'S, not a guess. ScoreDecl is
+        // `'score' , Identifier , [ String ] , { ScoreOption } , '{'` with
+        // `ScoreOption = 'transpose' PitchToken | 'pitch' PitchMode` — so the longest header
+        // is `score main "out" transpose d pitch concert {`: SEVEN tokens, six of them
+        // behind the one already read. It walked back TWO until 2026-09-12, which covered
+        // `score main {` and `score main "out" {` and nothing else — so a score with ANY
+        // option was not recognized as a score at all and its body fell through to the MUSIC
+        // completions (measured: 98 items opening `c d e f g a b` at `score main transpose d
+        // { |`, where a score offers its 17 render items). The walk still stops dead at a
+        // token that is not part of a header — punctuation, a brace, or a block keyword —
+        // so a longer budget cannot reach past the construct it is reading.
+        const int HeaderTokensBehindTheName = 6;
+        for (int skip = 0; skip < HeaderTokensBehindTheName; skip++)
         {
             while (j >= 0 && char.IsWhiteSpace(text[j])) j--;
             if (j < 0) return false;
@@ -1359,6 +1371,11 @@ public sealed partial class LilySharpLanguageServer
             int e2 = j + 1;
             while (j >= 0 && IsWordChar(text[j])) j--;
             string w = text.Substring(j + 1, e2 - (j + 1));
+            // A non-word character (a brace, a slash, the `~` of a silent section): the
+            // header ended here and it never said `score`. Also the loop's floor — the
+            // scan index does not move on an empty token.
+            if (w.Length == 0)
+                return false;
             if (w == "score" || IsStaffGroupKeyword(w))
                 return true;
             if (w is "section" or "part" or "phrase" or "form" or "chords"
