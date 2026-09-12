@@ -80,6 +80,69 @@ public class FontBlockCompletionTests
     public void InsideABlockString_OffersTheInstalledFaces(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterFontName, Ctx(text));
 
+    /// <summary>
+    /// What an entry offers after its key, in the order the popup shows it: the SIZE words
+    /// first, then the style words, then the redirect, and the face LAST.
+    /// </summary>
+    /// <remarks>
+    /// ★ Owner decision 2026-09-12: "font faces are listed right away, but being able to
+    /// pick size or step first is more useful". It read the other way — face first AND
+    /// preselected — and nothing asserted that, so the ordering could be reversed by
+    /// accident as easily as on purpose. It is pinned now, in both senses that matter: the
+    /// sort key AND the emit order, because a client that ignores <c>sortText</c> must see
+    /// the same list (the rule the diatonic chord list keeps).
+    /// </remarks>
+    [Theory]
+    [InlineData("mark")]
+    [InlineData("chordName")]
+    [InlineData("lyrics")]
+    public void AfterARoleKey_TheSizeWordsComeFirst_AndTheFaceLast(string key)
+    {
+        var items = LilySharpLanguageServer.GetFontRoleValueCompletions(key).Items;
+
+        Assert.Equal(new[] { "step", "size", "bold", "italic", "regular", "as", "\"…\"" },
+            items.Select(i => i.Label).ToArray());
+        // The emit order IS the sort order.
+        Assert.Equal(
+            items.Select(i => i.Label).ToArray(),
+            items.OrderBy(i => i.SortText, System.StringComparer.Ordinal).Select(i => i.Label).ToArray());
+        // Nothing is preselected, so the editor lands on the first row rather than the face.
+        Assert.DoesNotContain(items, i => i.Preselect == true);
+    }
+
+    [Theory]
+    [InlineData("serif")]
+    [InlineData("sans")]
+    public void AGenericFamilyStillTakesAFaceAndNothingElse(string family)
+    {
+        // The narrowing stays: `serif step +1` is LYS8015 ("a face table … has no size of
+        // its own"), so the size words must NOT follow a family however they are sorted.
+        var items = LilySharpLanguageServer.GetFontRoleValueCompletions(family).Items;
+        Assert.Equal(new[] { "\"…\"" }, items.Select(i => i.Label).ToArray());
+    }
+
+    [Fact]
+    public void AnOpenEntry_OffersTheNextFaceOfItsFallbackChain()
+    {
+        // `FontAttribute = String` repeats — several faces in one entry ARE the fallback
+        // chain (GRAMMAR §2.4) — and the continuation list offered no way to write the
+        // second one until 2026-09-12.
+        var items = LilySharpLanguageServer.GetFontEntryContinuationCompletions().Items;
+        var face = Assert.Single(items, i => i.Label == "\"…\"");
+        Assert.Contains("fallback", face.Detail!, System.StringComparison.OrdinalIgnoreCase);
+
+        // The attributes still lead, and the next entry's keys still follow the face.
+        Assert.Equal(new[] { "step", "size", "bold", "italic", "regular", "as", "\"…\"" },
+            items.Take(7).Select(i => i.Label).ToArray());
+
+        // …and what it writes compiles: the chain is a real spelling, not a guess.
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(
+            "fonts { lyricText \"Charis SIL\" \"Noto Sans\" }\n");
+        Assert.False(tree.HasErrors);
+        Assert.Empty(LilySharp.Core.Semantics.SemanticValidation.Run(tree)
+            .Where(d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error));
+    }
+
     [Fact]
     public void TheKeyListIsTheReadersVocabulary_NotACopyOfIt()
     {

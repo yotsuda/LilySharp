@@ -1075,8 +1075,14 @@ public sealed partial class LilySharpLanguageServer
     /// a line the reader refuses.
     /// </para>
     /// <para>
-    /// The quoted item comes first and is preselected, so the common motion (name a face)
-    /// stays one keystroke; the attributes are the deliberate second choices.
+    /// ★ THE ATTRIBUTES COME FIRST AND THE FACE LAST (owner decision, 2026-09-12: "font
+    /// faces are listed right away, but being able to pick size or step first is more
+    /// useful"). It read the other way until then — quoted face first AND preselected,
+    /// on the reasoning that naming a face is the common motion. Reversed: a face is
+    /// TYPED (the 78-name list is a second popup behind the quotes, and the writer usually
+    /// knows the name), while <c>step</c> / <c>size</c> are chosen from a vocabulary and
+    /// are the reason a role gets an entry of its own at all. Nothing is preselected now,
+    /// so the editor lands on the first row — <c>step</c>.
     /// </para>
     /// </remarks>
     private static CompletionList? _fontValuesForRole;
@@ -1090,8 +1096,9 @@ public sealed partial class LilySharpLanguageServer
             Kind = CompletionItemKind.Snippet,
             InsertTextFormat = InsertTextFormat.Snippet,
             InsertText = "\"$0\"",
-            Preselect = true,
-            SortText = "0",
+            // Last, and NOT preselected: the attributes are the list worth opening
+            // (see the remarks — owner decision 2026-09-12).
+            SortText = "5",
             Detail = "Pick a bundled or installed, embeddable font",
             Command = new Command
             {
@@ -1108,7 +1115,7 @@ public sealed partial class LilySharpLanguageServer
 
         return _fontValuesForRole ??= new CompletionList
         {
-            Items = [quoted, .. FontAttributeItems()],
+            Items = [.. FontAttributeItems(), quoted],
         };
     }
 
@@ -1116,7 +1123,22 @@ public sealed partial class LilySharpLanguageServer
     /// The attribute items an open entry may still take — one per word of
     /// <see cref="TextRoles.AttributeWords"/>, spelled with its operand where it has one.
     /// </summary>
+    /// <remarks>
+    /// ★ THE ORDER IS THE SIZE WORDS, THE STYLE WORDS, THEN THE REDIRECT (owner decision,
+    /// 2026-09-12) — and it is the same wherever attributes are offered, so the entry reads
+    /// the same on the key (<c>mark ▮</c>) and after a value (<c>mark "X" ▮</c>).
+    /// <c>step</c> leads <c>size</c> because it is the one the LilyPond twin reproduces
+    /// (<c>size</c> is an absolute em with no twin — its own Detail says so).
+    /// ⚠️ THE EMIT ORDER MATCHES THE SORT KEY, the same rule the diatonic chord list keeps:
+    /// a client that honours <c>sortText</c> (VS Code) and one that falls back to list order
+    /// must see the SAME list. The words arrive in <see cref="TextRoles.AttributeWords"/>
+    /// order — the vocabulary's, not this list's — so they are sorted here; the sort is
+    /// stable, so the three style words keep that one home's order among themselves.
+    /// </remarks>
     private static IEnumerable<CompletionItem> FontAttributeItems()
+        => AttributeItemsInVocabularyOrder().OrderBy(i => i.SortText, StringComparer.Ordinal);
+
+    private static IEnumerable<CompletionItem> AttributeItemsInVocabularyOrder()
     {
         foreach (string word in TextRoles.AttributeWords)
         {
@@ -1128,7 +1150,7 @@ public sealed partial class LilySharpLanguageServer
                     Kind = CompletionItemKind.Keyword,
                     InsertTextFormat = InsertTextFormat.Snippet,
                     InsertText = "as ${1|serif,sans|}",
-                    SortText = "1",
+                    SortText = "4",
                     Detail = "Follow a generic family instead of naming a face (as serif / as sans)",
                 },
                 "step" => new CompletionItem
@@ -1137,7 +1159,7 @@ public sealed partial class LilySharpLanguageServer
                     Kind = CompletionItemKind.Keyword,
                     InsertTextFormat = InsertTextFormat.Snippet,
                     InsertText = "step ${1:+1}",
-                    SortText = "2",
+                    SortText = "1",
                     Detail = "Size relative to the role's default, in LilyPond font-size steps (six to a doubling); the twin writes it as font-size",
                 },
                 "size" => new CompletionItem
@@ -1146,28 +1168,28 @@ public sealed partial class LilySharpLanguageServer
                     Kind = CompletionItemKind.Keyword,
                     InsertTextFormat = InsertTextFormat.Snippet,
                     InsertText = "size ${1:2.2}",
-                    SortText = "3",
+                    SortText = "2",
                     Detail = "Absolute em in staff spaces (0.5..20); not reproduced by the LilyPond twin - prefer step",
                 },
                 "bold" => new CompletionItem
                 {
                     Label = "bold",
                     Kind = CompletionItemKind.Keyword,
-                    SortText = "4",
+                    SortText = "3",
                     Detail = "Bold; replaces the engraving's weight and slant (bold italic combine)",
                 },
                 "italic" => new CompletionItem
                 {
                     Label = "italic",
                     Kind = CompletionItemKind.Keyword,
-                    SortText = "4",
+                    SortText = "3",
                     Detail = "Italic; replaces the engraving's weight and slant (bold italic combine)",
                 },
                 _ => new CompletionItem
                 {
                     Label = word,
                     Kind = CompletionItemKind.Keyword,
-                    SortText = "4",
+                    SortText = "3",
                     Detail = "Upright, normal weight - turns the engraving's default style off",
                 },
             };
@@ -1217,6 +1239,25 @@ public sealed partial class LilySharpLanguageServer
             Items =
             [
                 .. FontAttributeItems(),
+                // ⚠️ ANOTHER face may follow: `FontAttribute = String` repeats, and several
+                // faces in one entry ARE the fallback chain (GRAMMAR §2.4: "several = a
+                // fallback chain"). The list offered no way to write the second one until
+                // 2026-09-12 — the attributes and the next entry's keys were the whole
+                // continuation, so the chain was reachable only by knowing it exists.
+                new CompletionItem
+                {
+                    Label = "\"…\"",
+                    Kind = CompletionItemKind.Snippet,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = "\"$0\"",
+                    SortText = "5",
+                    Detail = "Another face — the next link of this entry's fallback chain, used where the one before it has no glyph",
+                    Command = new Command
+                    {
+                        Title = "Suggest font name",
+                        CommandIdentifier = "editor.action.triggerSuggest",
+                    },
+                },
                 .. GetFontBlockCompletions().Items.Select(k => new CompletionItem
                 {
                     Label = k.Label,
@@ -1225,7 +1266,7 @@ public sealed partial class LilySharpLanguageServer
                     InsertText = k.InsertText,
                     Detail = k.Detail,
                     Command = k.Command,
-                    SortText = "5" + k.Label,
+                    SortText = "6" + k.Label,
                 }),
             ],
         };
