@@ -377,6 +377,18 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A system no longer settles onto the raised part of the chord symbols below it.** A chord
+  symbol's quality is drawn raised and reduced (LilyPond's `\super`), and the raised run — not
+  the root's capital — is the top of the symbol's ink. Ten measuring passes still priced the
+  symbol as one unraised run, among them the one that reserves the room a chord row leading a
+  later system stands in, so the page reserved a box 0.59 staff spaces shorter than the symbol
+  it drew and the system above came down by that much; the same stale box also made every
+  symbol 1.71 too wide to the horizontal springs, so bars with chord names were spaced a little
+  loose. Measured against LilyPond 2.26.0 (probe `chord-superscript-row.ly`): with a raised
+  digit in the row LilyPond holds two systems 10.775757854 apart against 10.182224744 without,
+  a difference of 0.593533110 which is the raised run's own ink, and Lily# now reads the pair
+  to face bits. Three snapshots move.
+
 - **Tab fret digits keep LilyPond's clearance between columns, not a readability gap.** The
   room a tab staff reserves between one column's fret digits and the next's was 0.6 staff
   spaces of clear air, a Lily# choice made so single- and two-digit frets read at one density.
