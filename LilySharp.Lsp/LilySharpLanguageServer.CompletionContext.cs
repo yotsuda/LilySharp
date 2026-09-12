@@ -408,11 +408,15 @@ public sealed partial class LilySharpLanguageServer
     private static bool IsInsidePartBlock(List<OpenBlock> stack)
         => stack.Count > 0 && stack[^1].Frame.Prefix == "part";
 
+    // ⚠️ A lyrics track is asked for by IsLyricsFrame, never by the keyword alone: the
+    // `sings` spelling puts the keyword FOUR words before the brace, out of the frame's
+    // reach. See IsLyricsFrame.
     private static bool IsInsideSectionContainer(List<OpenBlock> stack)
-        => stack.Count > 0 && FrameKeyword(stack[^1].Frame) is "part" or "lyrics" or "chords";
+        => stack.Count > 0
+            && (FrameKeyword(stack[^1].Frame) is "part" or "chords" || IsLyricsFrame(stack[^1].Frame));
 
     private static bool IsInsideTopLevelLyricsBlock(List<OpenBlock> stack)
-        => stack.Count == 1 && FrameKeyword(stack[0].Frame) == "lyrics";
+        => stack.Count == 1 && IsLyricsFrame(stack[0].Frame);
 
     /// <summary>
     /// True when <paramref name="offset"/> sits DIRECTLY inside a top-level
@@ -428,7 +432,20 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>A frame opened by a lyrics track: <c>lyrics {</c> / <c>lyrics w {</c>
     /// (the keyword is the frame's Name or Prefix), or <c>lyrics w sings m {</c> — where the
     /// two words before the brace are the <c>sings</c> clause, the track's other spelling
-    /// (the same reading the <c>repeat</c> guard uses).</summary>
+    /// (GRAMMAR LyricsBlock: <c>'lyrics' , Identifier , [ 'sings' , PartRef ] , '{'</c>).</summary>
+    /// <remarks>
+    /// ⚠️⚠️ THIS IS THE ONLY READER OF "is this frame a lyrics track", and it has to be: in
+    /// the <c>sings</c> spelling the <c>lyrics</c> keyword stands FOUR words before the
+    /// brace, and a <see cref="BlockFrame"/> reads two — so the frame of
+    /// <c>lyrics w sings melody {</c> is (Prefix=sings, Name=melody) and NO amount of
+    /// keyword-matching finds the track in it. Until 2026-09-12 only this helper and the
+    /// <c>repeat</c> guard knew that: <see cref="IsInsideTopLevelLyricsBlock"/> and
+    /// <see cref="IsInsideSectionContainer"/> asked for the keyword, so a bound track's body
+    /// fell through to the MUSIC completions and offered PITCH LETTERS at every syllable
+    /// (measured: 98 items at <c>lyrics w sings melody { |</c>, the same shape as the chords
+    /// track's — one construct, several readers, and not all of them knowing a spelling).
+    /// A new reader of a lyrics frame calls THIS, never the keyword.
+    /// </remarks>
     private static bool IsLyricsFrame(BlockFrame f)
         => FrameKeyword(f) == "lyrics" || f.Prefix == "sings";
 
@@ -940,12 +957,12 @@ public sealed partial class LilySharpLanguageServer
         // `lyrics` frame — a syllable body is unquoted words, and "repeat after me" is a
         // lyric, not a directive. ⚠️ A frame reads the TWO words before its brace, so
         // `lyrics v sings m {` shows as Prefix=sings, Name=m — the `sings` clause is the
-        // lyrics track's other spelling and is checked by name.
+        // lyrics track's other spelling, which IsLyricsFrame is the one reader of.
         if (prevWord == "repeat"
             && scan.Stack.Count > 0
             && !IsInsidePartBlock(scan.Stack)
             && !IsInsideStringLiteral(text, offset)
-            && !scan.Stack.Any(b => FrameKeyword(b.Frame) == "lyrics" || b.Frame.Prefix == "sings"))
+            && !scan.Stack.Any(b => IsLyricsFrame(b.Frame)))
             return CompletionContext.AfterRepeat;
 
         // Right after `section `: offer the section names known to the piece but not yet
