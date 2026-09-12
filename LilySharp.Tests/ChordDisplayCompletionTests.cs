@@ -135,18 +135,92 @@ public class ChordDisplayCompletionTests
     [Fact]
     public void TheLyricsTrackSnippet_IsWhatTheCompilerAccepts()
     {
-        var snippet = LilySharpLanguageServer.GetTopLevelCompletions()
-            .Items.Single(i => i.Label == "lyrics").InsertText!;
-
         // Unlike a chord track, a lyrics track DOES take `sings` — the difference the
-        // chords test pins from its side.
-        Assert.Contains("sings", snippet);
+        // chords test pins from its side — and its target names a part THIS DOCUMENT
+        // declares. With one part there is nothing to choose, so the name is written out.
+        const string oneStaff = "part melody { section A { c'4 d e f } }\n";
+        var item = LyricsItem(oneStaff);
+        Assert.Contains("sings melody", item.InsertText!);
+        Assert.DoesNotContain("${", item.InsertText!.Replace("${1:verse}", "").Replace("${2:A}", ""));
 
+        // …and what it leaves in the document compiles — tab stops resolved to their
+        // defaults and the final caret filled, which is the file a writer has after
+        // accepting the item and typing a syllable.
+        // ⚠️ NOTHING IS REPAIRED HERE. Until 2026-09-12 this test had to rewrite the
+        // snippet's own output (`expanded.Replace("sings part", "sings melody")`) to get a
+        // book that compiles — the repair WAS the defect the user reported, sitting in the
+        // net that was supposed to catch it.
+        AssertCompiles(oneStaff, item, "score main { staff melody  lyrics verse }");
+    }
+
+    [Fact]
+    public void WithSeveralParts_TheSnippetLeavesTheTargetToThePicker()
+    {
+        // Nothing to guess between: the target is an empty stop 1 — where the editor puts
+        // the caret when it runs the item's command — and the command re-opens the popup,
+        // whose context there (AfterSingsTarget) is the declared parts and voices.
+        const string twoStaves = "part melody { section A { c'4 } }\npart alto { section A { a4 } }\n";
+        var item = LyricsItem(twoStaves);
+
+        Assert.Contains("sings $1 {", item.InsertText!);
+        Assert.Equal("editor.action.triggerSuggest", item.Command?.CommandIdentifier);
+        // The name is stop 2 so stop 1 can be the slot that needs the popup.
+        Assert.Contains("lyrics ${2:verse}", item.InsertText!);
+        // The picked name is typed by the writer, so the compile check picks one for them.
+        AssertCompiles(twoStaves, item, "score main { staff melody  staff alto  lyrics verse }",
+            pick: "melody");
+    }
+
+    [Fact]
+    public void ThePopupThatOpensOnTheTarget_ListsThisDocumentsParts()
+    {
+        // The other end of the retrigger: the document as the EDITOR leaves it — the item's
+        // own text with its placeholders resolved and the caret in the empty stop — has to
+        // be a position the popup answers with the parts. Built from the item rather than
+        // hand-copied: a snippet that stopped leaving the caret right after `sings` (one
+        // space away, which a hand copy loses to trailing-whitespace trimming) fails here.
+        const string parts = "part melody { section A { c'4 } }\npart alto { section A { a4 } }\n";
+        string resolved = System.Text.RegularExpressions.Regex
+            .Replace(LyricsItem(parts).InsertText!, @"\$\{\d+:([^}]*)\}", "$1").Replace("$0", "");
+        int stop = resolved.IndexOf("$1", System.StringComparison.Ordinal);
+        Assert.True(stop >= 0, "the snippet no longer leaves an empty stop: " + resolved);
+        string doc = parts + resolved.Remove(stop, "$1".Length);
+        int caret = parts.Length + stop;
+
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterSingsTarget,
+            LilySharpLanguageServer.GetCompletionContext(doc, caret));
+        Assert.Equal(new[] { "melody", "alto" },
+            LilySharpLanguageServer.GetVoiceBindingNameCompletions(doc)
+                .Items.Select(i => i.Label).ToArray());
+    }
+
+    [Fact]
+    public void WithNoPartToSing_TheSnippetWritesNoSingsClause()
+    {
+        // The clause is optional (GRAMMAR LyricsBlock) and there is nothing it could name,
+        // so it is left out entirely rather than filled with a word that looks like a name.
+        var item = LyricsItem("");
+        Assert.DoesNotContain("sings", item.InsertText!);
+        Assert.Contains("lyrics ${1:verse} {", item.InsertText!);
+        Assert.Null(item.Command);
+    }
+
+    /// <summary>The top-level <c>lyrics</c> item as offered in a document.</summary>
+    private static LilySharp.Lsp.Protocol.CompletionItem LyricsItem(string text)
+        => LilySharpLanguageServer.GetTopLevelCompletions(text, text.Length)
+            .Items.Single(i => i.Label == "lyrics");
+
+    /// <summary>Accepts the item the way a writer does — tab stops resolved to their
+    /// defaults, an empty stop filled with <paramref name="pick"/>, a syllable typed at the
+    /// final caret — and asserts the resulting book parses and validates clean.</summary>
+    private static void AssertCompiles(string parts, LilySharp.Lsp.Protocol.CompletionItem item,
+        string score, string pick = "")
+    {
         var expanded = System.Text.RegularExpressions.Regex
-            .Replace(snippet, @"\$\{\d+:([^}]*)\}", "$1").Replace("$0", "la");
-        var book = "part melody { section A { c'4 d e f } }\n"
-                 + expanded.Replace("sings part", "sings melody")
-                 + "\nform main { A }\nscore main { staff melody  lyrics verse }\n";
+            .Replace(item.InsertText!, @"\$\{\d+:([^}]*)\}", "$1")
+            .Replace("$0", "la");
+        expanded = System.Text.RegularExpressions.Regex.Replace(expanded, @"\$\d+", pick);
+        var book = parts + expanded + "\nform main { A }\n" + score + "\n";
 
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(book);
         Assert.False(tree.HasErrors,

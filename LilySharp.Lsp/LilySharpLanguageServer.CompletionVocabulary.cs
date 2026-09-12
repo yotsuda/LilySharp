@@ -1869,6 +1869,78 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
+    /// The <c>sings PART</c> clause a lyrics-track SNIPPET writes, decided by what the
+    /// document actually declares (<see cref="GetVoiceBindingNameCompletions"/> — the same
+    /// reader the <c>sings ▮</c> popup uses, so the snippet and the dialog cannot name
+    /// different universes):
+    /// <list type="bullet">
+    /// <item>no part declared → NO clause at all. The clause is optional (GRAMMAR
+    /// LyricsBlock) and there is nothing it could legally name.</item>
+    /// <item>exactly one → that name, written out. Nothing to choose.</item>
+    /// <item>several → an empty slot at <paramref name="pickStop"/>, and
+    /// <see cref="PartPickerCommand"/> on the item opens the part list there.</item>
+    /// </list>
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ It wrote the literal word <c>part</c> as a placeholder until 2026-09-12
+    /// (<c>lyrics ${1:verse} sings ${2:part} { … }</c>) — user report: "the part of `sings
+    /// part` is invalid; a real part name has to go there". A placeholder that looks like a
+    /// keyword is worse than an empty slot: <c>sings part</c> parses, and names a part
+    /// called <c>part</c> that does not exist.
+    /// ⚠️ The picker is the RETRIGGER, not a snippet choice — the same decision as the
+    /// <c>pitch</c> item (2026-09-03): a choice would be a second copy of a vocabulary that
+    /// already has a home, and the copy is the one that goes stale.
+    /// </remarks>
+    /// <param name="pickStop">The snippet stop number to leave the empty slot at when the
+    /// writer has to choose. Make it the FIRST stop of the snippet: the editor runs the
+    /// item's command with the caret at stop 1, so that is where the popup opens.</param>
+    private static (string Clause, bool NeedsPicker) SingsClauseSnippet(string? text, int pickStop)
+    {
+        var parts = text is null
+            ? []
+            : GetVoiceBindingNameCompletions(text).Items.Select(i => i.Label!).ToArray();
+        return parts.Length switch
+        {
+            0 => ("", false),
+            1 => (" sings " + parts[0], false),
+            _ => (" sings $" + pickStop, true),
+        };
+    }
+
+    /// <summary>
+    /// The top-level <c>lyrics</c> track scaffold: a named track that sings a part of this
+    /// document, with a <c>section</c> cell inside (a flat top-level track is LYS4002 in
+    /// part-major layout, and right in neither layout — see the note at the call site).
+    /// </summary>
+    private static CompletionItem LyricsTrackItem(string? text)
+    {
+        var (clause, needsPicker) = SingsClauseSnippet(text, pickStop: 1);
+        // With a picker the target takes stop 1 (where the command opens the popup) and the
+        // names shift up; with none, the stops read left to right.
+        string body = needsPicker
+            ? "lyrics ${2:verse}" + clause + " {\n\tsection ${3:A} {\n\t\t$0\n\t}\n}"
+            : "lyrics ${1:verse}" + clause + " {\n\tsection ${2:A} {\n\t\t$0\n\t}\n}";
+        return new CompletionItem
+        {
+            Label = "lyrics",
+            Kind = CompletionItemKind.Snippet,
+            InsertTextFormat = InsertTextFormat.Snippet,
+            InsertText = body,
+            Detail = "Named lyrics track (sings its melody; a score places it with a `lyrics NAME` row)",
+            Command = needsPicker ? PartPickerCommand() : null,
+        };
+    }
+
+    /// <summary>Re-opens the completion popup after the item is inserted. With the caret in
+    /// a snippet's first stop right after <c>sings</c>, the context there is
+    /// <see cref="CompletionContext.AfterSingsTarget"/> — the declared parts and voices.</summary>
+    private static Command PartPickerCommand() => new()
+    {
+        Title = "Suggest part name",
+        CommandIdentifier = "editor.action.triggerSuggest",
+    };
+
+    /// <summary>
     /// After <c>section </c>, the section names known to the piece but not yet declared
     /// in this scope — so a section can be filled in with what is still missing. In a
     /// <c>part { }</c> / <c>lyrics { }</c> container the missing set is measured against
@@ -2095,9 +2167,14 @@ public sealed partial class LilySharpLanguageServer
         // The two TRACK cells a section-major section also holds (GRAMMAR SectionItem:
         // LyricsBlock / ChordsBlock) — a named lyrics track that sings a part, a named chord
         // track. Both scaffolds are the sectioned body's dual of the top-level track items;
-        // the names are placeholders (a track's name is required: LYS0032). Absent from this
-        // list until 2026-09-10, so a section-major writer had to know the spelling.
-        string firstPart = parts.Count > 0 ? parts[0] : "melody";
+        // the track NAMES are placeholders (a track's name is required: LYS0032). Absent
+        // from this list until 2026-09-10, so a section-major writer had to know the
+        // spelling.
+        // ⚠️ The `sings` TARGET is not a placeholder — it names a part that must exist, so
+        // it comes from SingsClauseSnippet, the same reader the top-level item uses. It
+        // wrote `${2:melody}` when the document declared no part at all, which reads like a
+        // real name and is not one.
+        var (singsClause, singsNeedsPicker) = SingsClauseSnippet(text, pickStop: 1);
         var tracks = new[]
         {
             new CompletionItem
@@ -2106,7 +2183,10 @@ public sealed partial class LilySharpLanguageServer
                 Kind = CompletionItemKind.Snippet,
                 Detail = "Lyrics cell — a named track singing a part of this section (a score places it as a `lyrics NAME` row)",
                 InsertTextFormat = InsertTextFormat.Snippet,
-                InsertText = Body("lyrics ${1:words} sings ${2:" + firstPart + "}"),
+                InsertText = Body(singsNeedsPicker
+                    ? "lyrics ${2:words}" + singsClause
+                    : "lyrics ${1:words}" + singsClause),
+                Command = singsNeedsPicker ? PartPickerCommand() : null,
                 SortText = "8a",
             },
             new CompletionItem
@@ -2872,7 +2952,14 @@ public sealed partial class LilySharpLanguageServer
                 // ⚠️ Only the CHORDS half had a net (TheChordTrackSnippet_IsWhatTheCompilerAccepts).
                 // The lyrics item had been offering the flat body since LYS4002 shipped, and the
                 // twin test was written in the same commit as this fix.
-                new CompletionItem { Label = "lyrics", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "lyrics ${1:verse} sings ${2:part} {\n\tsection ${3:A} {\n\t\t$0\n\t}\n}", Detail = "Named lyrics track (sings its melody; a score places it with a `lyrics NAME` row)" },
+                // ⚠️ The `sings` target is the document's own part — filled in when there is
+                // only one, picked from a popup when there are several, and omitted when
+                // there is no part to sing (SingsClauseSnippet). It wrote the literal word
+                // `part` until 2026-09-12, which parses and names a part nobody declared.
+                // The stops read left to right EXCEPT when a pick is needed: then the empty
+                // target is stop 1, because that is where the editor puts the caret when it
+                // runs the item's command — so the part list opens on the slot that needs it.
+                LyricsTrackItem(text),
                 // ⚠️ The two track kinds are a pair and only one of them was here (reported
                 // 2026-08-23): `chords` was offered in a SCORE body — the `chords NAME` row —
                 // so it read as a known word, and the declaration that gives that row

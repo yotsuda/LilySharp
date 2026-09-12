@@ -70,15 +70,17 @@ public class CompletionAuditTests
     }
 
     /// <summary>A snippet as the editor leaves it: <c>${1:x}</c> → <c>x</c>, <c>$0</c> →
-    /// <paramref name="caret"/> (what the writer types at the caret).</summary>
-    private static string Resolved(CompletionItem item, string caret = "")
+    /// <paramref name="caret"/> (what the writer types at the caret), and an EMPTY stop
+    /// (<c>$1</c> — a slot whose value the writer picks from the popup the item re-opens) →
+    /// <paramref name="pick"/>.</summary>
+    private static string Resolved(CompletionItem item, string caret = "", string pick = "")
     {
         string text = item.InsertText ?? item.Label ?? "";
         if (item.InsertTextFormat != InsertTextFormat.Snippet)
             return text;
         text = Regex.Replace(text, @"\$\{\d+:([^}]*)\}", "$1");
         text = text.Replace("$0", caret);
-        return Regex.Replace(text, @"\$\{\d+\}|\$\d+", "");
+        return Regex.Replace(text, @"\$\{\d+\}|\$\d+", pick);
     }
 
     /// <summary>A whole book: <paramref name="top"/> ahead of a one-part section-major piece,
@@ -233,13 +235,18 @@ public class CompletionAuditTests
         var items = LilySharpLanguageServer.GetSectionBlockCompletions(text, text.Length).Items;
         var lyrics = items.Single(i => i.Label == "lyrics");
         var chords = items.Single(i => i.Label == "chords");
-        // The lyrics scaffold binds to the first declared part.
-        Assert.Contains("sings melody", Resolved(lyrics), StringComparison.Ordinal);
+        // TWO parts are declared, so the scaffold does not guess between them: the `sings`
+        // target is an empty stop and the item re-opens the popup on it (the part list).
+        // ⚠️ It filled in the FIRST declared part until 2026-09-12 — a real name, but one
+        // the writer never chose, and the twin item at the top level wrote the literal word
+        // `part` (user report). One reader answers both now: SingsClauseSnippet.
+        Assert.Contains("sings $1", lyrics.InsertText!, StringComparison.Ordinal);
+        Assert.Equal("editor.action.triggerSuggest", lyrics.Command?.CommandIdentifier);
 
         string book = $$"""
             part melody { clef treble }
             part bass { clef bass }
-            section A { {{Resolved(lyrics, "Twin- kle twin- kle |")}}
+            section A { {{Resolved(lyrics, "Twin- kle twin- kle |", pick: "melody")}}
               {{Resolved(chords, "C G7 |")}}
               melody { c4 c g g | }
               bass { c2 g | }
