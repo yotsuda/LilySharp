@@ -163,6 +163,50 @@ public class ScoreRowSpellingMatrixTests
             Assert.Contains(item, labels);
     }
 
+    /// <summary>
+    /// The bare MIDI-only row's options are READ BY NOBODY, so the popup says nothing in
+    /// their value slot — and above all does not offer the two <c>octave</c> MODE words,
+    /// which belong to the top-level directive and cannot be read here at all.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Measured 2026-09-12, three ways, before deciding what the popup should do:
+    /// <c>MidiPartRenderSyntax</c> exposes only its part name (nothing reads the options);
+    /// <c>MidiExporter</c> takes the instrument and octave from the PART's properties; and
+    /// six spellings (<c>m</c>, <c>m instrument violin</c>, <c>m instrument tuba</c>,
+    /// <c>m octave 1</c>, <c>m octave 5</c>, both together) export the same notes, timbres
+    /// and channels. GRAMMAR §7 spells the row as <c>PartRef</c> alone.
+    /// ⇒ Offering the options would teach a spelling that does nothing — the rule this
+    /// session set when a snippet wrote `sings part` — so the silence is the answer, and
+    /// the question of whether the PARSER should keep accepting them is the owner's.
+    /// ⚠️ What the popup did instead was worse than silence: it answered with the score's
+    /// render keywords, and accepting one wrote <c>m instrument staff</c> — where the
+    /// option's own <c>Advance()</c> eats that <c>staff</c>, so the next row loses its
+    /// keyword.
+    /// </remarks>
+    [Theory]
+    [InlineData("m instrument ")]
+    [InlineData("m octave ")]
+    public void TheMidiRowsOptionValue_OffersNothing(string row)
+    {
+        var labels = LabelsAfter(row);
+        Assert.Empty(labels);
+    }
+
+    [Fact]
+    public void TheOctaveModeWordsStayOutOfAScoreBody()
+    {
+        // The directive's two words (`octave absolute` at the top level) reached this slot
+        // because the rule that offers them asked only "not in a part header".
+        string text = Book + "score main { staff melody  bass octave ";
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterMidiRowOptionValue,
+            LilySharpLanguageServer.GetCompletionContext(text, text.Length));
+
+        // …and they are still the answer where they ARE read.
+        const string top = "octave ";
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterOctave,
+            LilySharpLanguageServer.GetCompletionContext(top, top.Length));
+    }
+
     [Theory]
     [MemberData(nameof(Spellings))]
     public void AWordTheRowDoesNotTake_StartsANewRow(string row, string[] _)

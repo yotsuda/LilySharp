@@ -600,6 +600,18 @@ public sealed partial class LilySharpLanguageServer
         AfterGroupLyricsRowAttachName,
         AfterStaffLinesAs,
         AfterStaffLinesValue,
+        /// <summary>The value slot of the bare MIDI-only row's option
+        /// (<c>m instrument |</c> / <c>m octave |</c>): nothing is offered.
+        /// ⚠️⚠️ NOT because a list would be hard to build — because the option is READ BY
+        /// NOBODY. Measured 2026-09-12: `MidiPartRenderSyntax` exposes only its part name,
+        /// the exporter takes the instrument and the octave from the PART's own properties
+        /// (MidiExporter:1130), and six spellings — <c>instrument violin</c> vs
+        /// <c>instrument tuba</c>, <c>octave 1</c> vs <c>octave 5</c> — export byte-identical
+        /// notes, timbres and channels. GRAMMAR §7 spells this row as <c>PartRef</c> with no
+        /// options at all. So the popup stays SILENT here rather than teaching a spelling
+        /// that does nothing; whether the parser should keep accepting it is the owner's
+        /// call, recorded in HANDOFF §1.</summary>
+        AfterMidiRowOptionValue,
         /// <summary><c>staff m as lines 1 |</c> — a selector is complete and the chain may
         /// continue (<c>{ StaffSelector }</c>, sharing the one <c>as</c>) or the row may end.
         /// So: the selectors NOT yet written, bare, then the score's continuations.</summary>
@@ -786,7 +798,14 @@ public sealed partial class LilySharpLanguageServer
         // position — so offering them there is offering an error. They were legal-looking for
         // a long time because GRAMMAR.md listed them as part-property alternatives; a part
         // header ignored them outright (measured, MIDI byte-identical to no octave at all).
-        if (prevWord == "octave" && !IsInsidePartBlock(scan.Stack))
+        // ⚠️ NOR inside a SCORE body. `octave` there is the bare MIDI-only row's option
+        // (ParseMidiPartRender), which takes a NUMBER — so the two mode words were being
+        // offered in the one position that cannot read them. Measured 2026-09-12: the popup
+        // answered `n octave |` with `absolute|relative`, and the row's value slot is served
+        // below (AfterMidiRowOptionValue) instead.
+        if (prevWord == "octave"
+            && !IsInsidePartBlock(scan.Stack)
+            && !IsInsideScoreBlock(scan.Stack))
             return CompletionContext.AfterOctave;
 
         // Value positions after the metadata/meter keywords: only their own
@@ -1073,6 +1092,14 @@ public sealed partial class LilySharpLanguageServer
                     break;
                 // (`lines` / `removeEmpty` value slots were read here by walking back for a
                 // governing `as`; ScanStaffRow above answers them from the row's own shape.)
+
+                // The bare MIDI-only row's two options (`m instrument piano`, `m octave 1` —
+                // ParseMidiPartRender). A value is typed there and NO list fits: the popup
+                // used to answer with the score's render keywords, so accepting one wrote
+                // `m instrument staff` — and the option's `Advance()` swallows that `staff`,
+                // costing the next row its keyword.
+                case "instrument" or "octave":
+                    return CompletionContext.AfterMidiRowOptionValue;
             }
             // `tab TUNING ▮` — a tuning was written (ParseTabRender takes one before the
             // part), so the part name is what comes next — or, the tuning word being a
