@@ -19,8 +19,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using LilySharp.Core.Midi;
+using LilySharp.Core.Music;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Renderer;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Tablature;
@@ -544,6 +546,135 @@ public class VocabularyPerturbationTests
                 "hisidestick=sidestick", "ridecymbal=ridecymbala",
             },
             collisions);
+    }
+
+    // ===================== the chord-quality table =====================
+
+    /// <summary>A chord row of one symbol, beside the staff that carries the beat.</summary>
+    private static string ChordBook(string symbol, string style = "") =>
+        style
+        + "time 4/4\noctave absolute\npart m { clef treble }\n"
+        + $"section A {{ m {{ c'4 d' e' f' | }}\n  chords prog {{ {symbol} | }} }}\n"
+        + "form main { ~A }\nscore main { chords prog  staff m }\n";
+
+    /// <summary>
+    /// The two chord vocabularies, as the books that select them. BOTH have to be swept.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️⚠️ MEASURED THE HARD WAY (2026-09-13). This net first read the default style only,
+    /// and a poison that gave <c>Major9</c> the minor ninth's spelling in
+    /// <c>ChordQualityRegistry.Suffix</c> left all 1,047 chord and layout tests green — this
+    /// guard included. The reason is that <c>Suffix</c> is the <c>words</c> table and the
+    /// DEFAULT is <c>symbols</c>, which answers out of <c>SymbolSuffix</c>: the poison sat in
+    /// a branch the book never reached. Two tables of 29 spellings each, and one of them was
+    /// invisible to the page.
+    /// </remarks>
+    public static TheoryData<string, string> ChordStyles() => new()
+    {
+        { "symbols", "" },
+        { "words", "layout { chordQualities words }\n" },
+    };
+
+    public static TheoryData<string> ChordQualityTokens()
+    {
+        var data = new TheoryData<string>();
+        foreach (string token in ChordQualityRegistry.Tokens) data.Add(token);
+        return data;
+    }
+
+    /// <summary>
+    /// Every quality token the chord table accepts must reach the page as something other
+    /// than the plain triad.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS VOCABULARY HAS NO POPUP. The chord completion offers four forms per root
+    /// (triad, maj7, sus4, sus2), so the other thirty-odd spellings in
+    /// <see cref="ChordQualityRegistry.Tokens"/> are reachable only by typing — and nothing
+    /// asked the page about them until 2026-09-13. They are a name table with a display
+    /// suffix, a tone set and a LilyPond modifier, which is the shape the drum table had when
+    /// <c>hhs</c> was found in it: a spelling that draws another quality's symbol would look
+    /// right in every table test.
+    /// </remarks>
+    [Theory]
+    [MemberData(nameof(ChordQualityTokens))]
+    public void EveryChordQualityTokenReachesThePage(string token)
+    {
+        AssertMoves(ChordBook("C"), ChordBook("C" + token), "chord C" + token);
+        // ...and under the OTHER vocabulary too, which is a second table of 29 spellings.
+        AssertMoves(ChordBook("C", WordsStyle), ChordBook("C" + token, WordsStyle),
+            "chord C" + token + " (words)");
+    }
+
+    private const string WordsStyle = "layout { chordQualities words }\n";
+
+    /// <summary>
+    /// ★★ THE POSITIVE CONTROLS. Several tokens are the same quality under two spellings
+    /// (<c>min</c> for <c>m</c>, <c>+</c> for <c>aug</c>, <c>sus</c> for <c>sus4</c>), and
+    /// those must draw IDENTICALLY — a second spelling that reaches a different quality is
+    /// the one defect the sweep above cannot see, because it would move the page too.
+    /// </summary>
+    [Fact]
+    public void EverySecondSpellingDrawsTheSameQuality()
+    {
+        var groups = ChordQualityRegistry.Tokens
+            .GroupBy(t => ChordQualityRegistry.TryResolve(t, out var q) ? q : default)
+            .Where(g => g.Count() > 1)
+            .ToArray();
+
+        Assert.NotEmpty(groups);
+        foreach (var group in groups)
+        {
+            string[] spellings = [.. group.OrderBy(t => t, StringComparer.Ordinal)];
+            string first = Signature(ChordBook("C" + spellings[0]));
+            foreach (string other in spellings.Skip(1))
+                Assert.True(first == Signature(ChordBook("C" + other)),
+                    $"'C{spellings[0]}' and 'C{other}' are the same quality "
+                    + $"({group.Key}) and must draw the same symbol.");
+        }
+    }
+
+    /// <summary>The chord SYMBOL as it is drawn — the text, with nothing else about the
+    /// page and nothing at all about the sound.</summary>
+    /// <remarks>
+    /// ⚠️⚠️ <see cref="Signature"/> IS THE WRONG INSTRUMENT FOR THIS ONE QUESTION, and the
+    /// poison said so (2026-09-13): giving <c>Major9</c> the minor ninth's suffix left every
+    /// test in the repository green — 1,047 chord and layout tests, this file's own collision
+    /// guard included — because the signature carries the MIDI too, and the two chords still
+    /// SOUND different. A wrong label over a right chord is exactly the defect worth catching
+    /// here, so the picture has to be read on its own.
+    /// </remarks>
+    private static string[] ChordPictures(string symbol, string style)
+    {
+        var tree = SyntaxTree.Parse(ChordBook(symbol, style));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        return [.. score.ChordNames.Select(c => c.ChordText)];
+    }
+
+    /// <summary>
+    /// No two DIFFERENT qualities may be DRAWN the same, under EITHER vocabulary. Two that
+    /// are cannot be told apart on the page whatever they play — and unlike the drum table's
+    /// doubles, LilyPond licenses none of them here, so the set is empty.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(ChordStyles))]
+    public void NoTwoChordQualitiesDrawAlike(string styleName, string style)
+    {
+        string FirstToken(ChordQuality q) => ChordQualityRegistry.Tokens.First(
+            t => ChordQualityRegistry.TryResolve(t, out var r) && r == q);
+
+        var drawnAlike = System.Enum.GetValues<ChordQuality>()
+            .Where(q => ChordQualityRegistry.Tokens.Any(
+                t => ChordQualityRegistry.TryResolve(t, out var r) && r == q))
+            .GroupBy(q => string.Join("|", ChordPictures("C" + FirstToken(q), style)),
+                     StringComparer.Ordinal)
+            .Where(g => g.Count() > 1)
+            .Select(g => string.Join("=", g.Select(q => q.ToString())))
+            .OrderBy(s => s, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.True(drawnAlike.Length == 0,
+            $"under '{styleName}' these qualities draw the same symbol: "
+            + string.Join(", ", drawnAlike));
     }
 
     // ===================== the tuning table =====================
