@@ -1326,8 +1326,50 @@ public sealed partial class LilySharpLanguageServer
         w is "condensedStaff" or "combinedStaff";
 
     /// <summary>
+    /// ★ WHEN A ROW NEEDS THIS READER, AND WHEN COUNTING WORDS IS STILL ENOUGH.
+    /// </summary>
+    /// <remarks>
+    /// The score body's rows are read two ways and that is deliberate, not drift. A row is
+    /// WORD-COUNTABLE — <c>SecondWordBeforeCursor</c> / <c>ThirdWordBeforeCursor</c> answer
+    /// it — exactly while every optional clause is
+    /// <list type="number">
+    /// <item>BOUNDED (no <c>{ … }</c> repetition in the grammar), and</item>
+    /// <item>made of BARE WORDS only — no sigil, no quoted string.</item>
+    /// </list>
+    /// ⚠️ Condition 2 is not about length: the word walkers stop dead at a non-word
+    /// character, so ONE <c>~</c> or one <c>"…"</c> anywhere in the row hides everything
+    /// before it, at any distance. That is why <c>staff ~m |</c> and
+    /// <c>staff m "Violin I" |</c> failed the same day as the unbounded
+    /// <c>as lines 1 |</c> chain.
+    /// <para>Measured 2026-09-12 (session 374) — the state of every row:</para>
+    /// <list type="bullet">
+    /// <item><c>staff</c>: <c>['~'] [Clef] Name [String] ['as' Sel {Sel}]</c> — fails 1 AND
+    /// 2 ⇒ THIS READER.</item>
+    /// <item><c>ossia</c>: <c>[Clef] Name ['as' Sel {Sel}]</c> — fails 1 (the same chain)
+    /// ⇒ THIS READER.</item>
+    /// <item><c>tab</c>: <c>[Tuning] Name ['as' Style]</c> — two clauses, both bare and
+    /// bounded ⇒ word count is enough.</item>
+    /// <item><c>chords</c>: <c>Name ['as' Mode]</c> ⇒ word count.</item>
+    /// <item><c>lyrics</c>: <c>Name ['sings' Part]</c> ⇒ word count.</item>
+    /// <item>the bare MIDI-only row: <c>Name {'instrument' X | 'octave' N}</c> — REPEATABLE
+    /// (ParseMidiPartRender's <c>while</c>), so it fails 1. It is not read by anything
+    /// today: measured, the popup offers neither option after the part name, and
+    /// <c>n octave |</c> falls to the part header's <c>absolute|relative</c> where this row
+    /// takes a NUMBER. Open — see ScoreRowSpellingMatrixTests.</item>
+    /// </list>
+    /// ⇒ <b>A row joins this reader when its clause list stops satisfying 1 and 2</b>, not
+    /// before: the rows above are correct as they stand, and rewriting a correct reader buys
+    /// nothing but risk. What makes that safe is that the day cannot pass unnoticed —
+    /// ScoreRowSpellingMatrixTests pins every legal spelling of every row AND asserts that a
+    /// word the row does not take starts a NEW row, so a clause added to the parser turns it
+    /// red and sends the writer here.
+    /// </remarks>
+    private static class RowReadingRule { }
+
+    /// <summary>
     /// How far through a <c>staff</c> / <c>ossia</c> row the caret is — read by REPLAYING
     /// THE GRAMMAR over the row's tokens, not by counting words back from the caret.
+    /// See <see cref="RowReadingRule"/> for which rows need this and which do not.
     /// </summary>
     /// <remarks>
     /// ⚠️⚠️ THE WORD COUNTING IS WHAT KEPT BREAKING. The row is
