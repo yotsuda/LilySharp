@@ -74,8 +74,13 @@ internal readonly record struct DrawnBezier(
 /// self-alignment-interface); a lyric syllable is still centred, which is not LyricText's
 /// placement and is the next thing to port.
 /// </summary>
+/// <param name="SourcePosition">The source offset the engine drew this run UNDER — what
+/// <c>IDocumentContext.Source</c> was scoped to. It is the run's SYMBOL: a chord symbol is
+/// drawn as several runs (the root, then the raised ones) inside ONE such scope, so this is
+/// what says which runs are one symbol. −1 where the engine drew outside any scope.</param>
 internal readonly record struct DrawnText(
-    string Text, double X, double Y, double FontSize, TextRole Role, TextAnchor Anchor);
+    string Text, double X, double Y, double FontSize, TextRole Role, TextAnchor Anchor,
+    int SourcePosition = -1);
 
 /// <summary>
 /// An <see cref="IDocumentContext"/> that records what was drawn instead of writing a file,
@@ -222,9 +227,32 @@ internal sealed class RecordingDrawingContext : IDrawingContext
     public void DrawText(string text, double x, double y, double fontSize, TextRole role,
                          FontStyle style = FontStyle.Regular, TextAnchor anchor = TextAnchor.Start,
                          Color? fill = null, VerticalAnchor verticalAnchor = VerticalAnchor.Baseline)
-        => _texts.Add(new DrawnText(text, Tx(x), Ty(y), Sy(fontSize), role, anchor));
+        => _texts.Add(new DrawnText(text, Tx(x), Ty(y), Sy(fontSize), role, anchor, _source));
 
-    public IDisposable Source(int sourcePosition) => NullScope.Instance;
+    /// <summary>
+    /// The source scope every primitive drawn inside it is stamped with — the engine's own
+    /// identity for the thing being drawn (it is what the picture's click-back reads).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ IT USED TO BE DROPPED (<c>NullScope</c>), and that is how one drawn chord SYMBOL
+    /// became indistinguishable from its several RUNS: the superscript port draws a root run
+    /// and a raised run under one scope, and a reader that took "the chord baseline nearest
+    /// below the staff" then read the RAISED run's baseline — one whole
+    /// <c>ChordNameGlyphRun.SuperRaise</c> (1.189207) above the symbol's own.
+    /// </remarks>
+    public IDisposable Source(int sourcePosition)
+    {
+        int previous = _source;
+        _source = sourcePosition;
+        return new SourceScope(this, previous);
+    }
+
+    private int _source = -1;
+
+    private sealed class SourceScope(RecordingDrawingContext owner, int previous) : IDisposable
+    {
+        public void Dispose() => owner._source = previous;
+    }
 
     public IDisposable BeginGroup(DrawingTransform transform)
     {

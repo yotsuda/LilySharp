@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Linq;
+using System.Text;
 using LilySharp.Core.Rendering;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
@@ -3230,8 +3231,60 @@ internal sealed class RenderedGeometry
     /// symmetric error in it. <c>ChordSymbolsAreAnchoredAtTheirInkLeft</c> is what asserts the
     /// convention itself.
     /// </para>
+    /// <para>
+    /// ⚠️⚠️ ONE ENTRY PER SYMBOL, NOT PER DRAWN RUN. Since the superscript port (2026-09-11)
+    /// LilyPond's <c>\super</c> is drawn as it is written — the root on the baseline and the
+    /// raised group in its own run one <c>ChordNameGlyphRun.SuperRaise</c> higher — so
+    /// <c>Dmaj7</c> is TWO <c>DrawnText</c>s, and the list this returned was a list of runs
+    /// wearing a symbol's name. What that cost is measured:
+    /// <see cref="ChordBaselineBelowStaff"/> takes the SMALLEST Y below the staff, which is
+    /// the raised run's baseline, so <c>lyrics.chord-run.staff-to-chord</c> read 4.807930284
+    /// where the symbol's own baseline stands at 5.997137399 — the whole 1.189207115 of the
+    /// raise, recorded for a session as a spacing residual against LilyPond.
+    /// The runs of one symbol are the ones the engine drew under ONE
+    /// <c>IDocumentContext.Source</c> scope (see <c>DrawnText.SourcePosition</c>), which is
+    /// its own identity for the symbol and needs no geometry to guess at; the entry keeps the
+    /// ROOT's anchor and baseline (the leftmost run standing on the symbol's own line) and
+    /// the runs' text joined, so a reader sees the symbol it names.
+    /// <c>ChordSymbolRuns</c> is the raw list, for a reader that wants the pieces.
+    /// </para>
     /// </remarks>
-    public IReadOnlyList<DrawnText> ChordSymbols =>
+    public IReadOnlyList<DrawnText> ChordSymbols
+    {
+        get
+        {
+            var runs = ChordSymbolRuns;
+            var symbols = new List<DrawnText>();
+            for (int i = 0; i < runs.Count;)
+            {
+                // ⚠️ CONSECUTIVE IN X, not merely equal: a section played twice draws the same
+                // source symbol at two places, and those are two symbols with other symbols
+                // between them.
+                int j = i;
+                while (runs[i].SourcePosition >= 0 && j + 1 < runs.Count
+                       && runs[j + 1].SourcePosition == runs[i].SourcePosition)
+                    j++;
+                double baseline = double.NegativeInfinity;
+                for (int k = i; k <= j; k++)
+                    baseline = Math.Max(baseline, runs[k].Y);
+                var root = runs[i];
+                var text = new StringBuilder();
+                for (int k = i; k <= j; k++)
+                {
+                    text.Append(runs[k].Text);
+                    if (runs[k].Y == baseline && root.Y != baseline)
+                        root = runs[k];
+                }
+                symbols.Add(root with { Text = text.ToString() });
+                i = j + 1;
+            }
+            return symbols;
+        }
+    }
+
+    /// <summary>Every drawn chord-symbol RUN, left to right — the pieces
+    /// <see cref="ChordSymbols"/> groups into symbols.</summary>
+    public IReadOnlyList<DrawnText> ChordSymbolRuns =>
         Texts.Where(t => t.Role == TextRole.ChordName).ToList();
 
     /// <summary>

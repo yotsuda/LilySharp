@@ -223,6 +223,77 @@ public class LpGeometryLedgerTests
     }
 
     /// <summary>
+    /// ONE READING PER DRAWN SYMBOL, whatever the symbol is made of — the instrument guard the
+    /// four <c>*.staff-to-chord</c> / <c>*-to-chord</c> ledger points needed and did not have.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ WHAT IT COST TO NOT HAVE IT: the superscript port (2026-09-11) draws a chord symbol
+    /// as a root run plus a raised run one <c>ChordNameGlyphRun.SuperRaise</c> higher, and
+    /// <c>RenderedGeometry.ChordSymbols</c> returned the RUNS. <c>ChordBaselineBelowStaff</c>
+    /// takes the smallest Y below the staff — the RAISED run — so <c>Dmaj7</c>'s row read
+    /// 4.807930284 under the staff refpoint where it is drawn at 5.997137399, and the whole
+    /// 1.189207115 was recorded in the ledger as a spring under-shooting by 0.85 and handed on
+    /// as the next island to repair. A residual the instrument invents cannot be found by
+    /// staring at the engine.
+    /// <para>
+    /// ⚠️ THE FIRST ASSERT IS THE POSITIVE CONTROL: without it this passes on a picture that
+    /// has no superscript at all, which is the state it was written to rule out.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void AChordSymbolIsOneReading_ThoughItIsDrawnAsSeveralRuns()
+    {
+        var geometry = RenderedGeometry.Render("""
+            octave absolute
+            time 4/4
+            key c major
+
+            part melody { clef treble }
+
+            section A {
+              melody { c'4 c' g' g' | a' a' g'2 | }
+              chords prog { Dmaj7 | Em7 }
+            }
+
+            form main { ~A }
+
+            score main "runs" {
+              staff ~melody
+              chords prog as names
+              staff ~melody
+            }
+            """);
+
+        var runs = geometry.ChordSymbolRuns;
+        var symbols = geometry.ChordSymbols;
+
+        // ⑴ The draw really does split a symbol — otherwise the rest of this proves nothing.
+        Assert.Equal(4, runs.Count);
+        Assert.Equal(2, symbols.Count);
+        Assert.Equal(new[] { "Dmaj7", "Em7" }, symbols.Select(t => t.Text));
+
+        // ⑵ Each symbol reads its ROOT's baseline, and the run it was confused with sits
+        //    exactly one super-raise above it.
+        double raise = LilySharp.Core.Svg.Layout.ChordNameGlyphRun.SuperRaise(
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled);
+        foreach (var symbol in symbols)
+        {
+            var group = runs.Where(r => r.SourcePosition == symbol.SourcePosition).ToList();
+            Assert.Equal(2, group.Count);
+            Assert.Equal(group.Max(r => r.Y), symbol.Y, 9);
+            Assert.Equal(symbol.Y - raise, group.Min(r => r.Y), 9);
+        }
+
+        // ⑶ ...and the reading the ledger takes is the SYMBOL's. Read from the staff below,
+        //    the same baseline is found with Max (the raised run is never the largest Y), so
+        //    the two readings of one line must add up to the distance between the staves.
+        //    A reading that came back one raise high leaves this sum short by exactly that.
+        Assert.Equal(geometry.StaffGap(),
+            geometry.ChordBaselineBelowStaff(0) + geometry.ChordBaselineAboveStaff(1), 9);
+    }
+
+
+    /// <summary>
     /// Every grob that <c>self-alignment-X = CENTER</c>s on a note column stands on ONE
     /// centre — the head's own INK centre — so a script and the dynamic beneath it are drawn
     /// at the same X to twelve digits.
