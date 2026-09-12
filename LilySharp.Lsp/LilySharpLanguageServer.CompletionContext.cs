@@ -45,6 +45,13 @@ public sealed partial class LilySharpLanguageServer
     /// (<c>chords harmony {</c>, whose word before the brace is the name). Used to
     /// offer chord entries: the diatonic chords, and quality tokens after ':'.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ It claims a SECTIONED track's own body too, where the entries do not belong —
+    /// <see cref="CompletionContext.ChordsTrackBody"/> and
+    /// <see cref="CompletionContext.AfterSection"/> outrank it at the call site. It stays
+    /// this wide on purpose: the question it answers is "could a chord be written under
+    /// here", which a flat track's body still answers yes to.
+    /// </remarks>
     internal static bool IsInsideChordsBlock(string text, int offset)
     {
         // The INTRODUCING keyword of each still-open block (for `chords harmony {` and
@@ -107,11 +114,17 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>
     /// True when <paramref name="offset"/> sits directly inside a container that holds
-    /// part-major inner sections — a <c>part</c> or <c>lyrics</c> block. (A chords track
-    /// has the same shape, but its body completes the chord vocabulary, intercepted
-    /// earlier.) Used to offer the document's not-yet-used section names after
-    /// <c>section</c>.
+    /// part-major inner sections — a <c>part</c>, <c>lyrics</c> or <c>chords</c> block.
+    /// Used to offer the document's not-yet-used section names after <c>section</c>.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ The <c>chords</c> track was EXCLUDED until 2026-09-12, on the grounds that its
+    /// body completes the chord vocabulary and is intercepted before this ever runs. That
+    /// was true of the CELL and false of the track: a sectioned <c>chords prog { section A
+    /// { … } ▮ }</c> holds cells, so <c>section ▮</c> there belongs to the section names —
+    /// see <see cref="CompletionContext.ChordsTrackBody"/> for the other half of the same
+    /// user report.
+    /// </remarks>
     internal static bool IsInsideSectionContainer(string text, int offset)
         // The introducing keyword is the Prefix for a NAMED block (`lyrics words {`) but
         // the Name for an UNNAMED one (`lyrics {`, whose name is optional): FrameKeyword
@@ -396,10 +409,21 @@ public sealed partial class LilySharpLanguageServer
         => stack.Count > 0 && stack[^1].Frame.Prefix == "part";
 
     private static bool IsInsideSectionContainer(List<OpenBlock> stack)
-        => stack.Count > 0 && FrameKeyword(stack[^1].Frame) is "part" or "lyrics";
+        => stack.Count > 0 && FrameKeyword(stack[^1].Frame) is "part" or "lyrics" or "chords";
 
     private static bool IsInsideTopLevelLyricsBlock(List<OpenBlock> stack)
         => stack.Count == 1 && FrameKeyword(stack[0].Frame) == "lyrics";
+
+    /// <summary>
+    /// True when <paramref name="offset"/> sits DIRECTLY inside a top-level
+    /// <c>chords NAME { }</c> TRACK — the chords frame is the only open one. The sibling of
+    /// <see cref="IsInsideTopLevelLyricsBlock"/>: a chords block nested in a section
+    /// (<c>section A { chords prog { | } }</c>) is a CELL of symbols, and the track's own
+    /// inner <c>section A { | }</c> is one too, so both are excluded — this is the level
+    /// that holds the cells.
+    /// </summary>
+    private static bool IsInsideTopLevelChordsTrack(List<OpenBlock> stack)
+        => stack.Count == 1 && FrameKeyword(stack[0].Frame) == "chords";
 
     /// <summary>A frame opened by a lyrics track: <c>lyrics {</c> / <c>lyrics w {</c>
     /// (the keyword is the frame's Name or Prefix), or <c>lyrics w sings m {</c> — where the
@@ -583,7 +607,14 @@ public sealed partial class LilySharpLanguageServer
         /// <summary>Inside a lyrics BODY — a section-major <c>lyrics NAME { | }</c> cell or a
         /// part-major track's inner <c>section A { | }</c>: syllables are typed, and the one
         /// construct worth completing is the verse header <c>[N. … ]</c>.</summary>
-        LyricsBody
+        LyricsBody,
+        /// <summary>Directly inside a top-level <c>chords NAME { | }</c> TRACK — the level
+        /// that holds <c>section NAME { … }</c> cells, the chords dual of
+        /// <see cref="LyricsBlock"/>. Which list fits depends on the FORM the document is
+        /// written in, which the vocabulary layer reads (GetChordsTrackCompletions): a
+        /// sectioned or part-major track takes the cells, a flat lead-sheet track takes the
+        /// chord entries it has always taken.</summary>
+        ChordsTrackBody
     }
 
     /// <summary>
@@ -1100,6 +1131,15 @@ public sealed partial class LilySharpLanguageServer
         // names as `section NAME { }` scaffolds instead of note names.
         if (IsInsideTopLevelLyricsBlock(scan.Stack) && !IsInsideStringLiteral(text, offset))
             return CompletionContext.LyricsBlock;
+
+        // Directly inside a top-level `chords NAME { }` track — the chords dual of the line
+        // above. In the part-major form this level holds `section NAME { … }` cells, and a
+        // chord entry written BESIDE them never renders (ChordNameCollector reads the
+        // sections once HasSections; in a part-major file a flat track is LYS2011 outright).
+        // The context is structural only: whether the cells or the chord vocabulary fit here
+        // depends on the form, which GetChordsTrackCompletions reads.
+        if (IsInsideTopLevelChordsTrack(scan.Stack) && !IsInsideStringLiteral(text, offset))
+            return CompletionContext.ChordsTrackBody;
 
         // Directly inside a top-level `section { }` in a doc WITH parts: the body holds PART
         // BLOCKS (`melody { … }`), not notes — so offer the declared parts as cell scaffolds,

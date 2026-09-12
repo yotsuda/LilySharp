@@ -115,9 +115,16 @@ public sealed partial class LilySharpLanguageServer
         // ⚠️ The ROMAN degrees are offered only in the BLOCK. The annotation reads
         // TryParseChordEntry alone, so `@chord(V7)` is refused — measured, and the reason
         // this is one call with a flag rather than one list for both contexts.
+        // ⚠️ The chords intercept claims the TRACK body as well as its cells, and it runs
+        // before the switch — so the two contexts that outrank it there are named here.
+        // A top-level `chords prog { section A { … } ▮ }` holds CELLS (ChordsTrackBody,
+        // which still answers with the chord list when the track is flat), and `section ▮`
+        // in one holds the section NAMES. Until 2026-09-12 both got the chord vocabulary:
+        // user report, `here` in `chords prog { section A { Fm } /* here */ }`.
         if (IsInsideChordAnnotation(doc.Text, offset))
             return GetDiatonicChordCompletions(doc.Text, offset);
-        if (IsInsideChordsBlock(doc.Text, offset))
+        if (IsInsideChordsBlock(doc.Text, offset)
+            && context is not (CompletionContext.ChordsTrackBody or CompletionContext.AfterSection))
             return GetDiatonicChordCompletions(doc.Text, offset, degreesToo: true);
 
         return context switch
@@ -141,6 +148,9 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.FormBlock => GetFormCompletions(doc.Text, offset, position),
             CompletionContext.PartBlock => GetPartBlockCompletions(doc.Text, offset),
             CompletionContext.LyricsBlock => GetLyricsSectionCompletions(doc.Text, offset),
+            // A top-level chords TRACK body: its cells, or — a flat lead-sheet track — the
+            // chord entries (the list decides, see GetChordsTrackCompletions).
+            CompletionContext.ChordsTrackBody => GetChordsTrackCompletions(doc.Text, offset),
             CompletionContext.SectionBlock => GetSectionBlockCompletions(doc.Text, offset),
             CompletionContext.AfterSection => GetMissingSectionNameCompletions(doc.Text, offset),
             // AfterClef stands in two positions and they take different vocabularies, so the

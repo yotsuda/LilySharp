@@ -1931,6 +1931,36 @@ public sealed partial class LilySharpLanguageServer
         => new() { Items = SectionScaffoldItems(text, offset, "Lyrics for this section").ToArray() };
 
     /// <summary>
+    /// Completions offered DIRECTLY inside a top-level <c>chords NAME { }</c> track. The
+    /// track has TWO forms and they take different vocabularies, so the form decides:
+    /// a SECTIONED track (or any track in a part-major file, where a flat one is LYS2011)
+    /// holds <c>section NAME { … }</c> cells — the chords dual of
+    /// <see cref="GetLyricsSectionCompletions"/> — and a flat lead-sheet track
+    /// (<c>chords prog { C G7 | }</c>) holds the chord entries themselves.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The chord entries were offered at BOTH levels until 2026-09-12 (user report:
+    /// <c>chords prog { section A { Fm } ▮ }</c> listed chord names and never named
+    /// <c>section</c>). Beside cells they are not merely noise — <c>ChordNameCollector</c>
+    /// reads the sections once <c>HasSections</c>, so a symbol written there is dropped on
+    /// the floor. The judgement is the SAME PAIR <c>TrackNeedsSectionsValidator</c> makes
+    /// (<c>HasSections</c> ∥ part-major); only the answer differs — the popup falls back to
+    /// the chord list where the validator says nothing.
+    /// </remarks>
+    internal static CompletionList GetChordsTrackCompletions(string text, int offset)
+    {
+        // Written as cells already? (The sections of the block the caret is in — the same
+        // reading the scaffolds subtract, so the two cannot disagree.)
+        bool sectioned = SectionsDeclaredInCurrentBlock(text, offset).Count > 0
+            || LilySharp.Core.Editing.PartSectionLayoutConverter.Detect(SyntaxTree.Parse(text).GetRoot())
+                == LilySharp.Core.Editing.LayoutForm.PartMajor;
+
+        return sectioned
+            ? new CompletionList { Items = SectionScaffoldItems(text, offset, "Chords for this section").ToArray() }
+            : GetDiatonicChordCompletions(text, offset, degreesToo: true);
+    }
+
+    /// <summary>
     /// Section-name scaffold items — label <c>section NAME</c>, insert <c>section NAME { }</c>
     /// with the caret in the body — for the document's sections not yet present in the block
     /// at <paramref name="offset"/>. Shared by a top-level <c>lyrics { }</c> track and a
