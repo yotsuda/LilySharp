@@ -397,6 +397,102 @@ public class VocabularyPerturbationTests
         => AssertMoves(DrumBook(drum), $"drummap {{\n  {drum}: {field}\n}}\n" + DrumBook(drum),
             $"drummap {drum} {field}");
 
+    public static TheoryData<string> CanonicalDrums()
+    {
+        var data = new TheoryData<string>();
+        foreach (var (name, _) in DrumNameRegistry.CanonicalEntries) data.Add(name);
+        return data;
+    }
+
+    public static TheoryData<string, string> DrumAliases()
+    {
+        var data = new TheoryData<string, string>();
+        foreach (var (alias, full) in DrumNameRegistry.AliasEntries) data.Add(alias, full);
+        return data;
+    }
+
+    /// <summary>
+    /// Every drum the table carries reaches the page or the .mid as something other than the
+    /// bass drum — the sweep the TABLE guard below cannot do, because it reads the rows
+    /// rather than asking what they draw.
+    /// </summary>
+    /// <remarks>
+    /// ★ Added 2026-09-13, the leg after the table went from 30 names to LilyPond's 63. The
+    /// new rows brought two things no row had before — a hi/lo pair placed by a table other
+    /// than <c>drums-style</c>, and the <c>staccato</c>/<c>tenuto</c> marks the guiro needs —
+    /// and a mark the renderer does not draw would have been invisible to every other test:
+    /// <c>DrumNameRegistry</c> would carry the word, <c>DrumTableMatchesLilyPondTests</c>
+    /// would agree it is LilyPond's, and the page would show nothing.
+    /// </remarks>
+    [Theory]
+    [MemberData(nameof(CanonicalDrums))]
+    public void EveryDrumInTheTableReachesThePage(string drum)
+    {
+        if (drum is "bassdrum") return;      // the baseline itself
+        AssertMoves(DrumBook("bassdrum"), DrumBook(drum), "drum " + drum);
+    }
+
+    /// <summary>
+    /// ★★ 63 POSITIVE CONTROLS. An abbreviation is the same instrument as its full name, so
+    /// the two must draw and sound IDENTICALLY — an alias pointing at the wrong row is the
+    /// one defect the sweep above cannot see (it would move the page, just to the wrong
+    /// place), and it is exactly the shape of the <c>hhs</c> that had to be removed.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(DrumAliases))]
+    public void EveryAbbreviationDrawsItsOwnInstrument(string alias, string full)
+        => Assert.Equal(Signature(DrumBook(full)), Signature(DrumBook(alias)));
+
+    /// <summary>
+    /// Where the MARK is the only thing that tells two instruments apart, it must actually be
+    /// drawn — the claim the sweep above cannot make, because it compares each drum to the
+    /// bass drum and a mark nobody draws still leaves the two far apart.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️⚠️ THIS IS THE GAP THE MARK WORDS LIVE IN. <c>guiro</c> and <c>longguiro</c> carry the
+    /// same line, the same notehead AND the same GM key 74; LilyPond separates them by
+    /// <c>tenuto</c> alone. If <c>DrumNameRegistry.MarkArticulation</c> stopped drawing that
+    /// word, the registry would still carry it, <c>DrumTableMatchesLilyPondTests</c> would
+    /// still agree it is LilyPond's, the collision guard below reads the TABLE and would see
+    /// two different rows — and the page would show one instrument twice. Nothing else in the
+    /// repository asks the PAGE this question.
+    /// <para>
+    /// Two entries sharing a row AND a mark are the doubles LilyPond itself spells twice;
+    /// those are the collision guard's business, and are skipped here.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void WhereTheMarkIsTheOnlyDifference_ItIsDrawn()
+    {
+        var byRow = DrumNameRegistry.CanonicalEntries.GroupBy(
+            e => $"{e.Value.StaffPosition}/{e.Value.Notehead}/{e.Value.GmKey}", StringComparer.Ordinal);
+
+        int pairs = 0;
+        foreach (var row in byRow)
+        {
+            var members = row.ToArray();
+            for (int i = 0; i < members.Length; i++)
+                for (int j = i + 1; j < members.Length; j++)
+                {
+                    if (members[i].Value.Mark == members[j].Value.Mark)
+                        continue;   // LilyPond's own double — the collision guard's business
+                    pairs++;
+                    Assert.True(
+                        Signature(DrumBook(members[i].Key)) != Signature(DrumBook(members[j].Key)),
+                        $"'{members[i].Key}' and '{members[j].Key}' share a row and differ only "
+                        + $"by mark ('{members[i].Value.Mark}' vs '{members[j].Value.Mark}'), and "
+                        + "the page cannot tell them apart — the mark is not drawn.");
+                }
+        }
+
+        // A count, so that the day a mark word stops being anybody's only difference this
+        // test says so instead of passing over an empty loop. The eleven: the hi and lo
+        // bongo each contribute three (muted / plain / open on one row and one GM key), the
+        // hi and lo conga one each (open vs plain), and one apiece for guiro/longguiro,
+        // triangle/opentriangle and hihat/closedhihat.
+        Assert.Equal(11, pairs);
+    }
+
     /// <summary>
     /// Two drum names that draw and sound EXACTLY alike are the same instrument under two
     /// spellings — which LilyPond does have (<c>crashcymbal</c> / <c>crashcymbala</c>) — so
