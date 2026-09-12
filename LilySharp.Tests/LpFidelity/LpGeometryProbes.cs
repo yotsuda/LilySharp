@@ -925,6 +925,69 @@ internal static class LpGeometryProbes
     private static readonly string DPF = DotColumnScore("DPF", "4/16", "g8. s16", "s16 g16 s8");
 
     /// <summary>
+    /// THE SAME-DIRECTION OPTICAL CORRECTION (books SDN/SDU/SDD/SDG/SDL,
+    /// probes/same-direction-correction.ly, opened 2026-09-12, session 373, from a user
+    /// ticket on scratch/ベースタブLy/accidental.lys): when two adjacent columns carry stems
+    /// pointing the SAME way, LilyPond moves the spring by ±<c>same-direction-correction</c>
+    /// (0.25) — but only where the head positions are disjoint by MORE THAN ONE staff
+    /// position, and never when the RIGHT column carries an accidental. Ascending widens,
+    /// descending tightens; an accidental on the LEFT column gates nothing.
+    /// LILYPOND-REF: lily/note-spacing.cc:162-197 same_direction_correction (the arms), and
+    /// :305-308 (the accidental gate). The port is
+    /// <c>Svg/Layout/SpacingRules.Springs.cs CalculateStemCorrection</c>; every arm below
+    /// reproduced on first measurement, so these eleven points are a GUARD, not a repair —
+    /// the branch had no dedicated coverage (audit/lp-regression/status.json still carries
+    /// upstream's spacing-stem-same-direction.ly as "pending").
+    /// </summary>
+    /// <remarks>
+    /// Treble, C major, halves throughout: every head is on or below G4, so every stem is up
+    /// with no <c>@stemUp</c> anywhere, and a half carries no flag (a flag on the LEFT stem
+    /// kills every arm, note-spacing.cc:260-266). Two halves fill a bar, so the measured step
+    /// is the one INSIDE a bar and an accidental never reaches the next — which is what lets
+    /// the gate books stand beside their controls. The natural half step is the ledger's own
+    /// <c>dotted.natural.half-gap</c>, 4.275444999134611.
+    /// </remarks>
+    private static string SameDirectionScore(string name, string bars) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody
+
+        section A {
+          melody { {{bars}} }
+        }
+
+        form main { ~A }
+
+        score main "{{name}}" {
+          staff melody
+        }
+        """;
+
+    /// <summary>The three NEGATIVE CONTROLS: a unison and both seconds — head positions one
+    /// apart or coincident, so no arm fires and all three steps are the natural half.</summary>
+    private static readonly string SDN = SameDirectionScore("SDN", "e2 e | e2 f | f2 e |");
+
+    /// <summary>Ascending a third and a fourth: the spring WIDENS by 0.25, the same flat
+    /// amount for both intervals.</summary>
+    private static readonly string SDU = SameDirectionScore("SDU", "e2 g | e2 a |");
+
+    /// <summary>Descending a third and a fourth: the spring TIGHTENS by 0.25. This is the
+    /// arm the ticket's eighth run hit.</summary>
+    private static readonly string SDD = SameDirectionScore("SDD", "g2 e | a2 e |");
+
+    /// <summary>The ACCIDENTAL GATE: the SDU ascents with an accidental on the RIGHT column,
+    /// which switches the correction off. Not a rod — the accidental rod here (half head
+    /// 1.3774 + 0.4 + sharp 1.1 + 0.35 = 3.2274) sits well under the spring.</summary>
+    private static readonly string SDG = SameDirectionScore("SDG", "e2 ais | e2 ges |");
+
+    /// <summary>The gate's OTHER SIDE (the README's "add both sides" rule): the SDD descents
+    /// with the accidental on the LEFT column, where it gates nothing. A port that read
+    /// "either column" would pass SDG and fail here.</summary>
+    private static readonly string SDL = SameDirectionScore("SDL", "ais2 e | ges2 e |");
+
+    /// <summary>
     /// A HALF-TIE'S SPACING BOX (book LVA, probes/semi-tie-spacing.ly, opened 2026-09-10,
     /// session 361 leg 3): the regression book laissez-vibrer-arpeggio as it stands —
     /// an l.v. quarter, then an arpeggiated chord, four times. The pair is the ROD from
@@ -13676,6 +13739,31 @@ internal static class LpGeometryProbes
         // The l.v. tie's box against the next column's arpeggio (book LVA): the tie's
         // X-extent is the stencil's, half a line thickness past the curve at both ends.
         new("semi-tie.lv-to-arpeggio-gap", LVA, g => g.NoteheadAnchorStep(0)),
+
+        // THE SAME-DIRECTION OPTICAL CORRECTION (books SDN/SDU/SDD/SDG/SDL,
+        // same-direction-correction.ly). Every stem is up and every note a half, so the
+        // only thing that changes between the eleven steps is the head positions and
+        // whether a column carries an accidental. Two halves per bar, so bar i's step is
+        // NoteheadAnchorStep(2i). LilyPond: the natural half 4.275444999134611 under the
+        // controls and the gated arms, ±0.25 under the live ones — a FLAT amount, the same
+        // for a third as for a fourth.
+        new("note-spacing.same-direction.unison", SDN, g => g.NoteheadAnchorStep(0)),
+        new("note-spacing.same-direction.second-up", SDN, g => g.NoteheadAnchorStep(2)),
+        new("note-spacing.same-direction.second-down", SDN, g => g.NoteheadAnchorStep(4)),
+        new("note-spacing.same-direction.third-up", SDU, g => g.NoteheadAnchorStep(0)),
+        new("note-spacing.same-direction.fourth-up", SDU, g => g.NoteheadAnchorStep(2)),
+        new("note-spacing.same-direction.third-down", SDD, g => g.NoteheadAnchorStep(0)),
+        new("note-spacing.same-direction.fourth-down", SDD, g => g.NoteheadAnchorStep(2)),
+        // The gate reads the RIGHT column only — SDG and SDL are one rule seen from both
+        // sides, and a port that tested "either column" would pass SDG and fail SDL.
+        new("note-spacing.same-direction.fourth-up.right-accidental", SDG,
+            g => g.NoteheadAnchorStep(0)),
+        new("note-spacing.same-direction.third-up.right-accidental", SDG,
+            g => g.NoteheadAnchorStep(2)),
+        new("note-spacing.same-direction.fourth-down.left-accidental", SDL,
+            g => g.NoteheadAnchorStep(0)),
+        new("note-spacing.same-direction.third-down.left-accidental", SDL,
+            g => g.NoteheadAnchorStep(2)),
 
         // ★ THE ROW'S OWN DISTANCE FROM ITS STAFF, a ledger point since 2026-07-27, when it
         // stopped being a decision. Lily# used to place an independent lyrics row as a

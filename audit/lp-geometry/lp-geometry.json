@@ -5756,6 +5756,83 @@
       "lilypond": 2,
       "why": "The count guard for the two floor readings above: StaffGap() reads THE gap on the page, so the reading only means what it is named if both systems are on one page (HANDOFF 5.0 trap 8).",
       "residual": 0.0
+    },
+    "note-spacing.same-direction.unison": {
+      "probe": "same-direction-correction.ly",
+      "score": "SDN",
+      "lilypond": 4.275444999134612,
+      "residual": 0.0,
+      "why": ""
+    },
+    "note-spacing.same-direction.second-up": {
+      "probe": "same-direction-correction.ly",
+      "score": "SDN",
+      "lilypond": 4.275444999134613,
+      "residual": 0.0,
+      "why": ""
+    },
+    "note-spacing.same-direction.second-down": {
+      "probe": "same-direction-correction.ly",
+      "score": "SDN",
+      "lilypond": 4.275444999134610,
+      "residual": 0.0,
+      "why": ""
+    },
+    "note-spacing.same-direction.third-up": {
+      "probe": "same-direction-correction.ly",
+      "score": "SDU",
+      "lilypond": 4.525444999134612,
+      "residual": 0.0,
+      "why": ""
+    },
+    "note-spacing.same-direction.fourth-up": {
+      "probe": "same-direction-correction.ly",
+      "score": "SDU",
+      "lilypond": 4.525444999134613,
+      "residual": 0.0,
+      "why": ""
+    },
+    "note-spacing.same-direction.third-down": {
+      "probe": "same-direction-correction.ly",
+      "score": "SDD",
+      "lilypond": 4.025444999134612,
+      "residual": 0.0,
+      "why": ""
+    },
+    "note-spacing.same-direction.fourth-down": {
+      "probe": "same-direction-correction.ly",
+      "score": "SDD",
+      "lilypond": 4.025444999134613,
+      "residual": 0.0,
+      "why": ""
+    },
+    "note-spacing.same-direction.fourth-up.right-accidental": {
+      "probe": "same-direction-correction.ly",
+      "score": "SDG",
+      "lilypond": 4.275444999134612,
+      "residual": 0.0,
+      "why": ""
+    },
+    "note-spacing.same-direction.third-up.right-accidental": {
+      "probe": "same-direction-correction.ly",
+      "score": "SDG",
+      "lilypond": 4.275444999134613,
+      "residual": 0.0,
+      "why": ""
+    },
+    "note-spacing.same-direction.fourth-down.left-accidental": {
+      "probe": "same-direction-correction.ly",
+      "score": "SDL",
+      "lilypond": 4.025444999134612,
+      "residual": 0.0,
+      "why": ""
+    },
+    "note-spacing.same-direction.third-down.left-accidental": {
+      "probe": "same-direction-correction.ly",
+      "score": "SDL",
+      "lilypond": 4.025444999134613,
+      "residual": 0.0,
+      "why": ""
     }
   }
 }
