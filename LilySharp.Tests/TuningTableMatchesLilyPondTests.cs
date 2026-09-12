@@ -79,7 +79,52 @@ public class TuningTableMatchesLilyPondTests
         Assert.Equal(type, Tunings.Parse(word));         // the word reaches this tuning
         Assert.Equal(strings, Tunings.GetTuning(type));
         Assert.Equal(strings.Length, Tunings.GetStringCount(type));
-        Assert.False(string.IsNullOrEmpty(lilyPond));    // the citation travels with the row
+
+        // ★★ THE CITATION IS READ, NOT DECORATED. Until 2026-09-13 this line only asserted
+        // the string was non-empty — which made the whole theory circular: the numbers in the
+        // InlineData and the numbers in Tunings.cs came out of the SAME generator
+        // (scratchpad/gen-tunings.ps1), so a bug in that one pitch parser would have written
+        // the same wrong array into both and this test would have been green about it.
+        // Parsing LilyPond's own chord text here breaks the circle: the only thing still
+        // trusted is the short chord string copied from ly/string-tunings-init.ly, which a
+        // reader can check against the file by eye.
+        Assert.Equal(strings, ChordToMidi(lilyPond));
+    }
+
+    /// <summary>
+    /// LilyPond's absolute-pitch chord text → MIDI, independently of the script that built
+    /// the table. <c>c</c> is 48, <c>'</c> is up an octave and <c>,</c> down one, and the
+    /// chord is left in LilyPond's own order (highest string number first).
+    /// </summary>
+    private static int[] ChordToMidi(string citation)
+    {
+        int open = citation.IndexOf('<'), close = citation.IndexOf('>');
+        Assert.True(open >= 0 && close > open, "the citation carries no chord: " + citation);
+        return citation[(open + 1)..close]
+            .Split(' ', System.StringSplitOptions.RemoveEmptyEntries)
+            .Select(PitchToMidi)
+            .ToArray();
+    }
+
+    private static int PitchToMidi(string pitch)
+    {
+        // a b c d e f g, with c = 48 (LilyPond's unmarked octave).
+        int[] semitonesFromC = [9, 11, 0, 2, 4, 5, 7];
+        Assert.InRange(pitch[0], 'a', 'g');
+        int midi = 48 + semitonesFromC[pitch[0] - 'a'];
+
+        int i = 1;
+        while (i + 1 < pitch.Length && pitch.Substring(i, 2) is "is" or "es")
+        {
+            midi += pitch[i] == 'i' ? 1 : -1;
+            i += 2;
+        }
+        for (; i < pitch.Length; i++)
+        {
+            Assert.True(pitch[i] is '\'' or ',', "unreadable octave mark in " + pitch);
+            midi += pitch[i] == '\'' ? 12 : -12;
+        }
+        return midi;
     }
 
     [Theory]

@@ -23,6 +23,7 @@ using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Renderer;
 using LilySharp.Core.Syntax;
+using LilySharp.Core.Tablature;
 using LilySharp.Lsp;
 using Xunit;
 
@@ -74,7 +75,19 @@ public class VocabularyPerturbationTests
         Assert.True(errors.Length == 0,
             "the fixture does not compile: " + string.Join(" | ", errors) + "\n" + source);
 
-        string svg = SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
+        // ⚠️⚠️ data-pos IS MASKED, and masking it is the whole validity of this file.
+        // It carries each annotation's SOURCE OFFSET, so ANY perturbation written before the
+        // music — every part property, every `layout { }` block, every `drummap { }` — shifts
+        // every later data-pos merely by being a different NUMBER OF CHARACTERS. Unmasked,
+        // `AssertMoves` passes for such a word whether or not the word does anything, and a
+        // dead one reads alive. Found 2026-09-13 by a positive control: `tuning standard` and
+        // `tuning guitar` are the SAME tuning, and their pages differed — at `data-pos`, by
+        // the two characters of the longer word. The rest of the repository has masked this
+        // attribute since 2026-08-15 whenever it compares two books (Diagnostic.cs's remarks
+        // say so in four places); this file was the one comparer that did not.
+        string svg = Regex.Replace(
+            SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false }),
+            @"\sdata-pos=""[^""]*""", "");
         string midi = string.Join(",", new MidiExporter().Export(tree).Tracks
             .SelectMany(t => t.Notes)
             .Select(n => $"{n.Pitch}:{n.StartTick}:{n.Channel}:{n.Timbre}"));
@@ -144,59 +157,176 @@ public class VocabularyPerturbationTests
 
     // ===================== the layout switches =====================
 
-    public static TheoryData<string, string> LayoutValues()
+    // ⚠️⚠️ A LAYOUT KEY NEEDS A BOOK THAT CAN SHOW IT. `Plain` has two bars on ONE system,
+    // no accidentals, no chord row, no second part and no section label — so it can express
+    // almost none of these keys, and twelve of the sixteen values read inert against it for
+    // the fixture's reason. That was invisible until data-pos was masked (2026-09-13): the
+    // `layout { }` block is written BEFORE the music, so it moved every later source offset
+    // and the sweep called every value alive. One book per key, each chosen to contain the
+    // thing the key governs.
+    private const string ManySystems =
+        "octave absolute\npart m { clef treble\n"
+        + "  section A { c'4 d' e' f' | break g'4 a' b' c'' | break d''4 e'' f'' g'' | }\n}\n"
+        + "form main { A }\nscore main { staff m }\n";
+
+    /// <summary>
+    /// The three situations the styles actually differ about, in one book — read from
+    /// <see cref="LilySharp.Core.Semantics.AccidentalStyles"/>'s own rule sets rather than
+    /// guessed: <c>default</c> is <c>extraNatural</c> + same-octave-0, <c>modern</c> drops
+    /// the extra natural and adds any-octave-0 and same-octave-1, and
+    /// <c>modernCautionary</c> prints those two additions as CAUTIONARY instead.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A book of plain repeated sharps shows NONE of this — every style prints the same
+    /// picture — which is why the first fixture here read two styles as dead words.
+    /// <list type="number">
+    /// <item><c>cisis'</c> then <c>cis'</c>: the extra natural (<c>♮♯</c> under default,
+    /// <c>♯</c> under both modern styles).</item>
+    /// <item><c>cis'</c> then <c>c''</c>: any-octave 0 — the other octave is cancelled under
+    /// modern, silent under default.</item>
+    /// <item><c>cis'</c> in bar 1, <c>c'</c> in bar 2: same-octave 1 — cancelled in the NEXT
+    /// measure under modern, silent under default.</item>
+    /// </list>
+    /// </remarks>
+    private const string WithAccidentals =
+        "octave absolute\npart m { clef treble\n"
+        + "  section A { cisis'4 cis' c'' d' | c'4 d' e' f' | }\n}\n"
+        + "form main { A }\nscore main { staff m }\n";
+
+    private const string TwoLabelledSections =
+        "octave absolute\npart m { clef treble\n"
+        + "  section A { c'4 d' e' f' | }\n  section B { g'4 a' b' c'' | }\n}\n"
+        + "form main { A B }\nscore main { staff m }\n";
+
+    /// <summary>Two parts on ONE staff, the second silent in the second bar — which is what
+    /// makes the combiner print its texts at all.</summary>
+    private const string CombinedParts =
+        "octave absolute\npart one { clef treble }\npart two { clef treble }\n"
+        + "section A { one { c'1 | d'1 | } two { c'1 | r1 | } }\n"
+        + "form main { A }\nscore main { combinedStaff { one two } }\n";
+
+    /// <summary>A chord row of the qualities LilyPond names with a symbol, plus a minor
+    /// seventh over a slash bass — so both chord keys have something to spell.</summary>
+    private const string ChordRow =
+        "time 4/4\noctave absolute\npart m { clef treble }\n"
+        + "section A { m { c'4 d' e' f' | c'4 d' e' f' | c'4 d' e' f' | }\n"
+        + "  chords prog { Cdim | Cm7-5 | Am7/C | } }\n"
+        + "form main { ~A }\nscore main { chords prog  staff m }\n";
+
+    private static string BookFor(string key) => key switch
     {
-        var data = new TheoryData<string, string>();
-        void Add(string key, IEnumerable<LilySharp.Lsp.Protocol.CompletionItem> items)
+        "barNumbers" => ManySystems,
+        "accidentals" => WithAccidentals,
+        "sectionLabels" or "marks" => TwoLabelledSections,
+        "partCombineText" => CombinedParts,
+        "chordQualities" or "minorChords" => ChordRow,
+        _ => Plain,
+    };
+
+    public static TheoryData<string, string, bool> LayoutValues()
+    {
+        var data = new TheoryData<string, string, bool>();
+        void Add(string key, IReadOnlyCollection<string> vocabulary,
+                 IEnumerable<LilySharp.Lsp.Protocol.CompletionItem> items)
         {
-            foreach (var i in items) data.Add(key, Resolved(i));
+            // ★ THE DEFAULT IS THE VOCABULARY'S FIRST WORD — LanguageVocabulary says so for
+            // every one of these keys ("the default first"), so the net reads it instead of
+            // carrying a hand-kept list that could drift from the compiler.
+            string @default = vocabulary.First();
+            foreach (var i in items)
+            {
+                string value = Resolved(i);
+                data.Add(key, value, value.Split(' ')[0] == @default);
+            }
         }
-        Add("marks", LilySharpLanguageServer.GetMarkArrangementCompletions().Items);
-        Add("barNumbers", LilySharpLanguageServer.GetBarNumberPolicyCompletions().Items);
-        Add("accidentals", LilySharpLanguageServer.GetAccidentalStyleCompletions().Items);
-        Add("sectionLabels", LilySharpLanguageServer.GetSectionLabelCompletions().Items);
-        Add("partCombineText", LilySharpLanguageServer.GetPartCombineTextCompletions().Items);
-        Add("chordQualities", LilySharpLanguageServer.GetChordQualityStyleCompletions().Items);
-        Add("minorChords", LilySharpLanguageServer.GetMinorChordCompletions().Items);
+        Add("marks", LanguageVocabulary.MarkArrangements,
+            LilySharpLanguageServer.GetMarkArrangementCompletions().Items);
+        Add("barNumbers", LanguageVocabulary.BarNumberPolicies,
+            LilySharpLanguageServer.GetBarNumberPolicyCompletions().Items);
+        Add("accidentals", LanguageVocabulary.AccidentalStyleWords,
+            LilySharpLanguageServer.GetAccidentalStyleCompletions().Items);
+        Add("sectionLabels", LanguageVocabulary.SectionLabelStyles,
+            LilySharpLanguageServer.GetSectionLabelCompletions().Items);
+        Add("partCombineText", LanguageVocabulary.PartCombineTextWords,
+            LilySharpLanguageServer.GetPartCombineTextCompletions().Items);
+        Add("chordQualities", LanguageVocabulary.ChordQualityStyleWords,
+            LilySharpLanguageServer.GetChordQualityStyleCompletions().Items);
+        Add("minorChords", LanguageVocabulary.MinorChordWords,
+            LilySharpLanguageServer.GetMinorChordCompletions().Items);
         return data;
     }
 
     [Theory]
     [MemberData(nameof(LayoutValues))]
-    public void EveryLayoutValueMovesThePage(string key, string value)
+    public void EveryLayoutValueMovesThePage(string key, string value, bool isDefault)
     {
         // ⚠️ The VALUE is the item's insert text, not its label: `barNumbers every` is
         // LYS9103 on its own — the popup writes `every 4`, and perturbing with the label
         // reads as "refused" for a reason that is the harness's, not the language's.
-        AssertMoves(Plain, $"layout {{ {key} {value} }}\n" + Plain, $"layout {key} {value}");
+        string book = BookFor(key);
+        string written = $"layout {{ {key} {value} }}\n" + book;
+
+        // ★ Writing the DEFAULT out is the one kind of inert this file accepts, and it is
+        // asserted rather than skipped (as `as removeEmpty false` is): the day a default
+        // changes, this says so instead of the sweep reading a dead word.
+        if (isDefault)
+        {
+            Assert.Equal(Signature(book), Signature(written));
+            return;
+        }
+        AssertMoves(book, written, $"layout {key} {value}");
     }
 
     // ===================== the part header =====================
 
+    /// <remarks>
+    /// ⚠️ <c>pitch</c> needs a TRANSPOSING part — it says whether the letters are sounding or
+    /// written, and on a part that does not transpose the two readings are the same page and
+    /// the same notes. <c>alsoInTheHeader</c> is what the baseline must already carry for the
+    /// property under test to have anything to say (2026-09-13; before that `pitch concert`
+    /// was measured against a plain treble part and read alive only because the layout block
+    /// shifted every data-pos).
+    /// ⚠️ <c>tuning</c> is NOT here: <c>Plain</c> is engraved as a STAFF, and a tuning shows
+    /// itself only in fret numbers. It has its own sweep over the whole vocabulary against a
+    /// tab book — <see cref="EveryTuningFretsDifferentlyFromTheGuitar"/>.
+    /// </remarks>
     [Theory]
-    [InlineData("instrument violin")]
-    [InlineData("tuning guitar")]
-    [InlineData("transpose d")]
-    [InlineData("octave 3")]
-    [InlineData("pitch concert")]
-    public void EveryPartPropertyMovesSomething(string property)
-        => AssertMoves(Plain, Plain.Replace("part m { clef treble", "part m { clef treble " + property),
+    [InlineData("instrument violin", "")]
+    [InlineData("transpose d", "")]
+    [InlineData("octave 3", "")]
+    // ⚠️ `instrument clarinet`, not `transposition 8vb`: ConcertPitch reads the PRESET's
+    // chromatic shift (InstrumentDefaults.GetTransposition, −2 for the B♭ clarinet), and an
+    // octave marker is a different channel that leaves it with nothing to negate.
+    [InlineData("pitch concert", "instrument clarinet")]
+    public void EveryPartPropertyMovesSomething(string property, string alsoInTheHeader)
+    {
+        string baseline = Plain.Replace("part m { clef treble", "part m { clef treble " + alsoInTheHeader);
+        AssertMoves(baseline,
+            baseline.Replace("part m { clef treble", "part m { clef treble " + property),
             "part " + property);
+    }
+
+    /// <summary>A part with NO clef of its own — a clef tested against a part that already
+    /// had one reads inert for the obvious wrong reason (this file's first lesson).</summary>
+    private const string NoClef =
+        "octave absolute\npart m {\n  section A { c'4 d' e' f' | }\n}\n"
+        + "form main { A }\nscore main { staff m }\n";
 
     [Theory]
     [InlineData("alto")]
     [InlineData("bass")]
     [InlineData("tenor")]
-    [InlineData("treble")]
     [InlineData("treble_8")]
     public void EveryClefMovesThePage(string clef)
-    {
-        // ⚠️ Against a part with NO clef of its own — tested against a part that already
-        // had `clef treble`, `treble` reads inert for the obvious wrong reason.
-        const string noClef = "octave absolute\npart m {\n  section A { c'4 d' e' f' | }\n}\n"
-                            + "form main { A }\nscore main { staff m }\n";
-        AssertMoves(noClef, noClef.Replace("part m {", "part m { clef " + clef), "clef " + clef);
-    }
+        => AssertMoves(NoClef, NoClef.Replace("part m {", "part m { clef " + clef), "clef " + clef);
+
+    [Fact]
+    public void TheTrebleClef_IsTheDefault_AndThereforeChangesNothing()
+        // ★ The second documented inert value, asserted rather than skipped for the same
+        // reason as `as removeEmpty false`: writing a default out must not move the page, and
+        // the day treble stops being the default this says so instead of the sweep calling
+        // `clef treble` a dead word.
+        => Assert.Equal(Signature(NoClef), Signature(NoClef.Replace("part m {", "part m { clef treble")));
 
     // ===================== the score row's selectors =====================
 
@@ -246,17 +376,26 @@ public class VocabularyPerturbationTests
 
     // ===================== the drum table =====================
 
-    private const string DrumBook =
-        "octave absolute\npart m { clef percussion\n  section A { sn4 sn4 sn4 sn4 | }\n}\n"
+    private static string DrumBook(string drum) =>
+        "octave absolute\npart m { clef percussion\n"
+        + $"  section A {{ {drum}4 {drum}4 {drum}4 {drum}4 | }}\n}}\n"
         + "form main { A }\nscore main { staff m }\n";
 
+    /// <remarks>
+    /// ⚠️ THE DRUM HAS TO BE ONE THE FIELD CAN CHANGE. <c>mark accent</c> was measured
+    /// against <c>sn</c>, which carries NO mark, and "an unknown word clears the mark"
+    /// clears nothing there — it read alive only because the <c>drummap</c> block shifted
+    /// every data-pos (2026-09-13). It is the closed hi-hat that has a mark to lose.
+    /// </remarks>
     [Theory]
-    [InlineData("position 6")]
-    [InlineData("notehead x")]
-    [InlineData("midi 40")]
-    [InlineData("mark accent")]
-    public void EveryDrummapFieldMovesTheDrumItNames(string field)
-        => AssertMoves(DrumBook, $"drummap {{\n  sn: {field}\n}}\n" + DrumBook, "drummap sn " + field);
+    [InlineData("sn", "position 6")]
+    [InlineData("sn", "notehead x")]
+    [InlineData("sn", "midi 40")]
+    [InlineData("sn", "mark open")]        // a mark word: the snare gains a ○
+    [InlineData("hhc", "mark accent")]     // NOT a mark word: the closed hi-hat loses its +
+    public void EveryDrummapFieldMovesTheDrumItNames(string drum, string field)
+        => AssertMoves(DrumBook(drum), $"drummap {{\n  {drum}: {field}\n}}\n" + DrumBook(drum),
+            $"drummap {drum} {field}");
 
     /// <summary>
     /// Two drum names that draw and sound EXACTLY alike are the same instrument under two
@@ -309,5 +448,100 @@ public class VocabularyPerturbationTests
                 "hisidestick=sidestick", "ridecymbal=ridecymbala",
             },
             collisions);
+    }
+
+    // ===================== the tuning table =====================
+
+    /// <summary>A one-part book shown as TAB, so the fret numbers are on the page.</summary>
+    /// <remarks>
+    /// ⚠️ The pitches span two octaves and START LOW on purpose: a tuning only shows itself in
+    /// the FRET numbers, and two tunings that differ on one string alone are told apart only
+    /// by a note that lands on that string. The lowest note here is <c>e,</c> — 40, the
+    /// guitar's open sixth string and the only string <c>guitardropd</c> retunes.
+    /// ⚠️ MEASURED, not reasoned (2026-09-13): the first shape of this book started at
+    /// <c>e</c> and its frets came out <c>2 0 1 0 3 8 3 5</c> for BOTH tunings — nothing
+    /// reached string six, so drop-D read as a dead word. The notes are where they are
+    /// because <c>lysc svg</c> was asked what they fret to.
+    /// </remarks>
+    private static string TabBook(string tuning) =>
+        "octave absolute\npart m { clef treble_8 tuning " + tuning + "\n"
+        + "  section A { e,4 a, d g | c' e' g' c'' | }\n}\n"
+        + "form main { A }\nscore main { tab m }\n";
+
+    public static TheoryData<string> TuningWords()
+    {
+        var data = new TheoryData<string>();
+        foreach (string word in LanguageVocabulary.TuningNames) data.Add(word);
+        return data;
+    }
+
+    /// <summary>
+    /// Every tuning the language accepts must fret DIFFERENTLY from the plain guitar — the
+    /// only check that reads the strings rather than repeating them.
+    /// </summary>
+    /// <remarks>
+    /// ★ Session 374's 18th leg put LilyPond's whole table in (7 words → 32), and its own
+    /// theory could not have caught a mis-transcribed array: the pinned numbers and the
+    /// shipped numbers came from one generator. This asks the page instead. The guitar's own
+    /// three spellings are the control — they MUST be inert, and are asserted equal below
+    /// rather than skipped, exactly as <c>removeEmpty false</c> is.
+    /// </remarks>
+    /// <summary>The two words that ARE the guitar, written out rather than derived.</summary>
+    /// <remarks>
+    /// ⚠️⚠️ THE CONTROL MUST NOT BE CHOSEN BY THE THING UNDER TEST. This branch first read
+    /// <c>Tunings.Parse(word) == TuningType.Guitar</c> — so poisoning <c>Parse</c> to answer
+    /// "guitar" for <c>guitardropd</c> moved that word into the INERT branch and the theory
+    /// stayed green (measured 2026-09-13, the poison this tripwire failed the first time).
+    /// A tripwire whose two sides are picked by the code it watches cannot fire.
+    /// </remarks>
+    private static readonly string[] SpellingsOfTheGuitar = ["guitar", "standard"];
+
+    [Theory]
+    [MemberData(nameof(TuningWords))]
+    public void EveryTuningFretsDifferentlyFromTheGuitar(string word)
+    {
+        if (SpellingsOfTheGuitar.Contains(word))
+        {
+            Assert.Equal(Signature(TabBook("guitar")), Signature(TabBook(word)));
+            return;
+        }
+        AssertMoves(TabBook("guitar"), TabBook(word), "tuning " + word);
+    }
+
+    /// <summary>
+    /// Two tuning WORDS that fret alike are one tuning under two names — which LilyPond does
+    /// have, and which is therefore listed rather than forbidden, the way the drum table's
+    /// doubles are.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A NEW LINE HERE IS A CLAIM ABOUT LILYPOND — check ly/string-tunings-init.ly before
+    /// adding one. The five below are the whole set and every one is in that file (or older
+    /// than it here): <c>guitar</c>/<c>standard</c> and <c>ukulele</c>/<c>uke</c> are Lily#'s
+    /// own second spellings; <c>bass</c>/<c>bass4</c>/<c>doublebass</c> and
+    /// <c>violin</c>/<c>mandolin</c> are LilyPond's, which defines each pair with identical
+    /// chords a few lines apart.
+    /// </remarks>
+    [Fact]
+    public void NoTwoTuningWordsFretAlike_ExceptWhereLilyPondSpellsOneTuningTwice()
+    {
+        var doubles = LanguageVocabulary.TuningNames
+            .GroupBy(Tunings.Parse)
+            .Where(g => g.Count() > 1)
+            .Select(g => string.Join("=", g.OrderBy(w => w, StringComparer.Ordinal)))
+            .OrderBy(s => s, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(
+            new[] { "bass=bass4=doublebass", "guitar=standard", "mandolin=violin", "uke=ukulele" },
+            doubles);
+
+        // And the tunings themselves — one member per distinct set of strings, so two members
+        // carrying the same strings would be a name that cannot be told from another.
+        var sameStrings = Enum.GetValues<TuningType>()
+            .GroupBy(t => string.Join(",", Tunings.GetTuning(t)), StringComparer.Ordinal)
+            .Where(g => g.Count() > 1)
+            .Select(g => string.Join("=", g.Select(t => t.ToString())))
+            .ToArray();
+        Assert.Empty(sameStrings);
     }
 }
