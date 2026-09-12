@@ -5833,6 +5833,55 @@
       "lilypond": 4.025444999134613,
       "residual": 0.0,
       "why": ""
+    },
+    "note-spacing.knee.natural.up-to-down": {
+      "probe": "beam-column-spacing.ly",
+      "score": "A knee",
+      "lilypond": 3.6784,
+      "residual": 0.0,
+      "why": ""
+    },
+    "note-spacing.knee.natural.same-direction-control": {
+      "probe": "beam-column-spacing.ly",
+      "score": "A knee",
+      "lilypond": 2.504199999999999,
+      "residual": 0.0,
+      "why": ""
+    },
+    "note-spacing.knee.ledger-control": {
+      "probe": "beam-column-spacing.ly",
+      "score": "B noknee",
+      "lilypond": 2.504199999999999,
+      "residual": 0.0,
+      "why": ""
+    },
+    "note-spacing.knee.plain-control": {
+      "probe": "beam-column-spacing.ly",
+      "score": "C plain",
+      "lilypond": 2.504199999999999,
+      "residual": 0.0,
+      "why": ""
+    },
+    "note-spacing.knee.forced.up-to-down": {
+      "probe": "beam-column-spacing.ly",
+      "score": "D mixeddir",
+      "lilypond": 3.6784,
+      "residual": 0.0,
+      "why": ""
+    },
+    "note-spacing.knee.forced.down-to-up.floored": {
+      "probe": "beam-column-spacing.ly",
+      "score": "D mixeddir",
+      "lilypond": 1.8042000000000016,
+      "residual": 0.0,
+      "why": ""
+    },
+    "note-spacing.knee.forced.up-to-down.late": {
+      "probe": "beam-column-spacing.ly",
+      "score": "D mixeddir",
+      "lilypond": 3.6784000000000017,
+      "residual": 0.0,
+      "why": ""
     }
   }
 }

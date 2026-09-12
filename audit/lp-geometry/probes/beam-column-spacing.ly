@@ -73,12 +73,24 @@
 % The dump also pins the frame numbers this file's sibling (beam-stem-x.ly) reports:
 % headExt is always colX + 1.3042 wide, and stemX - colX is 1.2392 up / 0.0650 down.
 %
-% ⚠️ Lily# ports the OTHER TWO branches and not this one. SpacingRules.CalculateStemCorrection
-% says so in its own remarks ("the knee special case (:289-292) is not applied"), and
-% NoteSpacingParameters.KneeSpacingCorrection is declared, asserted at 1.0 by
-% SpringRodModelTests, and read by NOTHING in production — audit/property_coverage.csv
-% classifies it "Mention". A declaration with zero observers, and it is exactly the term
-% that would make these columns uneven.
+% ⚠️ THE NOTE THAT STOOD HERE IS STALE, and it is kept named rather than deleted because the
+% shape repeats: it read "Lily# ports the OTHER TWO branches and not this one ... 
+% NoteSpacingParameters.KneeSpacingCorrection is declared ... and read by NOTHING in
+% production". SpacingRules.KneeCorrection exists now, cites note-spacing.cc:120 / :131 and
+% stem.cc:909-913 line for line, and reproduces books A-D exactly. What the note got right
+% is that the term had no observer: a probe is not a guard, and this file measured all of
+% the above in 2026-08 while the ledger held none of it.
+%
+% ✅ PINNED 2026-09-12 (session 373, leg 2) — seven entries, all exact:
+%   note-spacing.knee.natural.up-to-down / .same-direction-control        (book A)
+%   note-spacing.knee.ledger-control                                      (book B)
+%   note-spacing.knee.plain-control                                       (book C)
+%   note-spacing.knee.forced.up-to-down / .down-to-up.floored / .late     (book D)
+% The .lys twins are KNA/KNB/KNC/KND in LpGeometryProbes.cs. Books E/F/G stay unpinned on
+% purpose: they perturb knee-spacing-correction, which the Lily# language has no spelling
+% for, so they are the falsifier and cannot be a pair.
+%
+% ⚠️ The twins engrave ABSOLUTE LilyPond as this file does, so Lily# `c` is `c'` here.
 \paper { indent = 0 ragged-right = ##t }
 
 #(define (dump name)

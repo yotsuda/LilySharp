@@ -988,6 +988,70 @@ internal static class LpGeometryProbes
     private static readonly string SDL = SameDirectionScore("SDL", "ais2 e | ges2 e |");
 
     /// <summary>
+    /// THE KNEE ARM of the same method (books KNA/KNB/KNC/KND, the twins of
+    /// probes/beam-column-spacing.ly, pinned 2026-09-12, session 373, leg 2): when two
+    /// adjacent columns carry stems pointing OPPOSITE ways AND both stems hang from ONE
+    /// beam, the knee correction REPLACES the different-directions one — LilyPond writes
+    /// the fork as an if/else, not as a sum.
+    /// LILYPOND-REF: lily/note-spacing.cc:117-137 knee_correction, selected at :288-293.
+    /// The term is <c>−note_head_width · direction(right stem) · knee-spacing-correction</c>,
+    /// and <c>note_head_width</c> is the right stem's support head extent LESS the stem's own
+    /// thickness (note-spacing.cc:131) — 1.304200 − 0.130000 = 1.174200, which is the whole
+    /// difference the probe measures between a kneed pair and its control.
+    /// </summary>
+    /// <remarks>
+    /// beam-column-spacing.ly measured all of this in 2026-08 and pinned NONE of it: it was
+    /// written to answer why a kneed beam's columns are uneven, and its answer went into the
+    /// beam quanter rather than into this corpus. Its own closing note ("Lily# ports the OTHER
+    /// TWO branches and not this one") is stale — <c>KneeCorrection</c> exists, cites
+    /// note-spacing.cc line for line, and reproduces every book here — which is exactly the
+    /// reason to hold it: a ported rule whose only record is a comment saying it is NOT
+    /// ported has nothing watching it.
+    /// <para>
+    /// The probe engraves absolute LilyPond, so KNA's <c>c8 c c c''</c> is its
+    /// <c>c'8 c' c' c'''</c> and KNC's <c>b</c> is its <c>b'</c>. KNA knees on its own (the
+    /// last note is two octaves up, so its stem turns); KND forces both signs inside one beam
+    /// on one pitch, which is what separates the stem DIRECTION from the pitch — and its
+    /// middle gap is NOT a correction at all but the spring's minimum distance (head 1.3042 +
+    /// 0.5), the floor the down→up term saturates against.
+    /// </para>
+    /// </remarks>
+    private static string KneeColumnScore(string name, string bar) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody
+
+        section A {
+          melody { {{bar}} }
+        }
+
+        form main { ~A }
+
+        score main "{{name}}" {
+          staff melody
+        }
+        """;
+
+    /// <summary>The natural knee: three up-stems and a fourth note two octaves above, whose
+    /// stem turns down — the term fires on that last pair only.</summary>
+    private static readonly string KNA = KneeColumnScore("KNA", "c8 c c c'' r2");
+
+    /// <summary>Heavy ledgers on EVERY column, one stem direction: the control that falsifies
+    /// "ledger lines widen a column" — its three gaps are the plain gap.</summary>
+    private static readonly string KNB = KneeColumnScore("KNB", "c''8 c'' c'' c'' r2");
+
+    /// <summary>Inside the staff, one direction, no ledger anywhere: the plain control both
+    /// of the others are read against.</summary>
+    private static readonly string KNC = KneeColumnScore("KNC", "b8 b b b r2");
+
+    /// <summary>One pitch, directions forced to alternate inside the beam: both signs of the
+    /// term in one book, and a middle gap sitting on the rod.</summary>
+    private static readonly string KND = KneeColumnScore(
+        "KND", "b8@stemUp b@stemDown b@stemUp b@stemDown r2");
+
+    /// <summary>
     /// A HALF-TIE'S SPACING BOX (book LVA, probes/semi-tie-spacing.ly, opened 2026-09-10,
     /// session 361 leg 3): the regression book laissez-vibrer-arpeggio as it stands —
     /// an l.v. quarter, then an arpeggiated chord, four times. The pair is the ROD from
@@ -13764,6 +13828,23 @@ internal static class LpGeometryProbes
             g => g.NoteheadAnchorStep(0)),
         new("note-spacing.same-direction.third-down.left-accidental", SDL,
             g => g.NoteheadAnchorStep(2)),
+
+        // THE KNEE ARM (books KNA/KNB/KNC/KND, beam-column-spacing.ly). Opposite stem
+        // directions INSIDE one beam take the knee term and not the different-directions
+        // one; it is −(head extent − stem thickness) · right stem direction, so a kneed
+        // up→down pair stands 1.174200 wider than the plain gap 2.504200. KND's middle gap
+        // is the other sign SATURATED on the spring's minimum distance (head 1.3042 + 0.5),
+        // which is why it reads 1.804200 rather than 2.504200 − 1.174200.
+        new("note-spacing.knee.natural.up-to-down", KNA, g => g.NoteheadAnchorStep(2)),
+        new("note-spacing.knee.natural.same-direction-control", KNA,
+            g => g.NoteheadAnchorStep(0)),
+        // The two controls the probe used to kill the ledger hypothesis: KNB has ledgers on
+        // every column and KNC none, and LilyPond reads the two books gap for gap.
+        new("note-spacing.knee.ledger-control", KNB, g => g.NoteheadAnchorStep(0)),
+        new("note-spacing.knee.plain-control", KNC, g => g.NoteheadAnchorStep(0)),
+        new("note-spacing.knee.forced.up-to-down", KND, g => g.NoteheadAnchorStep(0)),
+        new("note-spacing.knee.forced.down-to-up.floored", KND, g => g.NoteheadAnchorStep(1)),
+        new("note-spacing.knee.forced.up-to-down.late", KND, g => g.NoteheadAnchorStep(2)),
 
         // ★ THE ROW'S OWN DISTANCE FROM ITS STAFF, a ledger point since 2026-07-27, when it
         // stopped being a decision. Lily# used to place an independent lyrics row as a
