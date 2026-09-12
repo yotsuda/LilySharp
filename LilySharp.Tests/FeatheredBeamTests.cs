@@ -138,42 +138,23 @@ public class FeatheredBeamTests
     }
 
     // --- Feathered beam rendering behavior ---
-    // The key property: for feathered beams, secondary beam levels converge
-    // at one end and diverge at the other
-
-    [Fact]
-    public void FeatheredBeam_RightGrow_ConvergesAtLeft()
-    {
-        // With grow-direction=RIGHT, all secondary beams converge at the left
-        // and fan out at the right. This means at the left end, the level offset
-        // is multiplied by 0.0, and at the right end by 1.0.
-        int growDir = 1;
-        double leftFeather = growDir > 0 ? 0.0 : 1.0;
-        double rightFeather = growDir > 0 ? 1.0 : 0.0;
-
-        Assert.Equal(0.0, leftFeather);
-        Assert.Equal(1.0, rightFeather);
-    }
-
-    [Fact]
-    public void FeatheredBeam_LeftGrow_ConvergesAtRight()
-    {
-        int growDir = -1;
-        double leftFeather = growDir > 0 ? 0.0 : 1.0;
-        double rightFeather = growDir > 0 ? 1.0 : 0.0;
-
-        Assert.Equal(1.0, leftFeather);
-        Assert.Equal(0.0, rightFeather);
-    }
-
-    [Fact]
-    public void NormalBeam_NoFeathering()
-    {
-        int growDir = 0;
-        double leftFeather = growDir == 0 ? 1.0 : (growDir > 0 ? 0.0 : 1.0);
-        double rightFeather = growDir == 0 ? 1.0 : (growDir > 0 ? 1.0 : 0.0);
-
-        Assert.Equal(1.0, leftFeather);
-        Assert.Equal(1.0, rightFeather);
-    }
+    //
+    // ⚠️⚠️⚠️ THREE TESTS STOOD HERE AND ASSERTED NOTHING (removed 2026-09-13).
+    // They were named FeatheredBeam_RightGrow_ConvergesAtLeft,
+    // FeatheredBeam_LeftGrow_ConvergesAtRight and NormalBeam_NoFeathering, and each one
+    // computed `growDir > 0 ? 0.0 : 1.0` INSIDE THE TEST and asserted the answer. No
+    // production code was called; the arithmetic was the test's own. They are why nobody
+    // noticed what the perturbation sweep found the day it was pointed at annotation
+    // operands: the feather is not drawn at all. The intended geometry they described is
+    // kept here because it is the specification whoever implements this will need —
+    //
+    //   grow-direction RIGHT: the secondary beam levels converge at the LEFT end (level
+    //   offset × 0.0) and fan out at the RIGHT (× 1.0); LEFT is the mirror; a normal beam
+    //   holds every level parallel (× 1.0 at both ends).
+    //   LILYPOND-REF: beam.cc:1039-1082 grow-direction  (the same citation BeamDetector
+    //   carries at the line that reads FeatherDirection).
+    //
+    // What replaces them is the one honest question, in
+    // VocabularyPerturbationTests.TheFeatheredBeamIsNotDrawn_AndThatIsTheDefect: does the
+    // page change? It does not, and that test will go red the day it does.
 }

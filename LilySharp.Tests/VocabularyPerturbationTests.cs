@@ -157,6 +157,135 @@ public class VocabularyPerturbationTests
         AssertMoves(Plain, Plain.Replace("c'4 d' e' f' | c'4 d' e' f' |", music), "@" + name);
     }
 
+    // ===================== the `@` forms that take an OPERAND =====================
+
+    /// <summary>
+    /// An annotation that takes an argument must read it: two books differing ONLY in the
+    /// operand have to draw or play differently.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️⚠️ THE LABEL SWEEP ABOVE CANNOT ASK THIS. It perturbs <c>@name</c> against a book
+    /// without it, so an annotation whose argument is parsed and then dropped still moves the
+    /// page — by the annotation's own ink — and reads alive. The operand is a dead word
+    /// INSIDE a live word, which is the MIDI row's defect (session 374's 12th leg) one level
+    /// down, and nothing had asked about it: this file's own remark records that the first
+    /// runs perturbed by the popup's LABEL where the insert text carries an operand.
+    /// <para>
+    /// The pairs are two legal values of the same argument, so anything that differs is the
+    /// argument and not the annotation.
+    /// </para>
+    /// </remarks>
+    [Theory]
+    [InlineData("@fig(6)", "@fig(6 4)")]
+    [InlineData("@chord(C)", "@chord(Dm)")]
+    [InlineData("@finger(1)", "@finger(3)")]
+    [InlineData("@mark(\"A\")", "@mark(\"B\")")]
+    [InlineData("@text(\"dolce\")", "@text(\"pizz.\")")]
+    public void EveryAnnotationOperandReachesThePage(string written, string other)
+        => AssertMoves(OnFirstNote(written), OnFirstNote(other), written + " vs " + other);
+
+    private static string OnFirstNote(string annotation) =>
+        Plain.Replace("c'4 d' e' f' | c'4 d' e' f' |",
+                      $"c'4{annotation} d' e' f' | c'4 d' e' f' |");
+
+    /// <summary>Sixteenths under one beam — what a feathered beam needs to be a beam.</summary>
+    private static string BeamedBook(string annotation) =>
+        Plain.Replace("c'4 d' e' f' | c'4 d' e' f' |",
+                      $"c'16{annotation} d' e' f' g' a' b' c'' | c'4 d' e' f' |");
+
+    public static TheoryData<string> ArgumentValues(
+        System.Func<LilySharp.Lsp.Protocol.CompletionList> list)
+    {
+        var data = new TheoryData<string>();
+        foreach (var i in list().Items) data.Add(Resolved(i));
+        return data;
+    }
+
+    public static TheoryData<string> FeatherDirections()
+        => ArgumentValues(LilySharpLanguageServer.GetFeatherCompletions);
+
+    public static TheoryData<string> BendAmounts()
+        => ArgumentValues(LilySharpLanguageServer.GetBendCompletions);
+
+    public static TheoryData<string> PluckFingers()
+        => ArgumentValues(LilySharpLanguageServer.GetPluckCompletions);
+
+    public static TheoryData<string> FiguredBassFigures()
+        => ArgumentValues(LilySharpLanguageServer.GetFiguredBassCompletions);
+
+    /// <summary>
+    /// ⚠️⚠️⚠️ A DEFECT, PINNED AS IT IS UNTIL THE OWNER DECIDES — <c>@feather</c> draws
+    /// NOTHING, and 33 books on this machine write it, the shipped showcase
+    /// <c>05-special-techniques.lys</c> among them.
+    /// </summary>
+    /// <remarks>
+    /// Found 2026-09-13 by pointing this file's sweep at annotation OPERANDS. Measured three
+    /// ways:
+    /// <list type="number">
+    /// <item>The page. <c>@feather(right)</c>, <c>@feather(left)</c> and no feather at all
+    /// render BYTE-IDENTICAL SVG once data-pos is masked (137,849 bytes each). ⚠️ Unmasked
+    /// they differ — by the length of the annotation's own text — which is this file's own
+    /// trap, and the first probe of this defect fell into it.</item>
+    /// <item>The readers. <c>BeamGroup.GrowDirection</c> is SET by the beam detector, copied
+    /// by <c>BeamGroup.With</c>, passed through <c>ElementCoordinator</c> twice and through
+    /// <c>TabStaffGeometry</c> once, folded into the beam memo key — and read by no engraver
+    /// and no renderer. Every occurrence in the repository is a constructor argument.</item>
+    /// <item>The tests that should have said so were three tautologies in
+    /// <c>FeatheredBeamTests</c> that did their own arithmetic and called nothing. They are
+    /// gone, and that file now carries the intended geometry as the specification.</item>
+    /// </list>
+    /// ⇒ The decision is the owner's, and it is NOT the MIDI row's (session 374's 12th leg):
+    /// that spelling was written in 0 of 27,095 books, so removing it migrated nobody. This
+    /// one is written in 33 — so the choice is between implementing the geometry and telling
+    /// 33 books to stop asking for it.
+    /// ★ Asserted as EQUAL rather than skipped, exactly as <c>as removeEmpty false</c> is:
+    /// the day the feather is drawn, this test goes red and says the defect is closed.
+    /// ⚠️ Everything ABOVE the renderer is sound and stays pinned elsewhere —
+    /// <c>AnnotationValuesTests.AFeatherArgument_IsItsGrowDirection</c> holds the argument's
+    /// reading (<c>accel</c> = <c>right</c> = 1, <c>rit</c> = <c>left</c> = −1, an unknown
+    /// word = 0) and the plumbing tests in <c>FeatheredBeamTests</c> hold the carry. It is
+    /// only the last step, the ink, that is missing.
+    /// </remarks>
+    [Fact]
+    public void TheFeatheredBeamIsNotDrawn_AndThatIsTheDefect()
+    {
+        string plain = Signature(BeamedBook(""));
+        foreach (var item in LilySharpLanguageServer.GetFeatherCompletions().Items)
+            Assert.True(plain == Signature(BeamedBook($"@feather({Resolved(item)})")),
+                $"@feather({Resolved(item)}) now moves the page — the defect this test pins "
+                + "is fixed, so replace it with the real assertion (the intended geometry is "
+                + "in FeatheredBeamTests).");
+    }
+
+    [Theory]
+    [MemberData(nameof(PluckFingers))]
+    public void EveryPluckFingerReachesThePage(string value)
+        => AssertMoves(OnFirstNote(""), OnFirstNote($"@pluck({value})"), "@pluck(" + value + ")");
+
+    [Theory]
+    [MemberData(nameof(FiguredBassFigures))]
+    public void EveryFiguredBassFigureReachesThePage(string value)
+        => AssertMoves(OnFirstNote(""), OnFirstNote($"@fig({value})"), "@fig(" + value + ")");
+
+    /// <summary>Every bend amount is a DIFFERENT height, so no two may draw alike.</summary>
+    [Fact]
+    public void NoTwoBendAmountsDrawAlike()
+    {
+        string[] values = [.. LilySharpLanguageServer.GetBendCompletions().Items.Select(Resolved)];
+        var alike = values
+            .GroupBy(v => Signature(TabBendBook(v)), StringComparer.Ordinal)
+            .Where(g => g.Count() > 1)
+            .Select(g => string.Join("=", g))
+            .ToArray();
+        Assert.Empty(alike);
+    }
+
+    /// <summary>A tab staff, which is where a string bend is drawn.</summary>
+    private static string TabBendBook(string amount) =>
+        "octave absolute\npart m { clef treble_8 tuning guitar\n"
+        + $"  section A {{ e,4@bend({amount}) a, d g | }}\n}}\n"
+        + "form main { A }\nscore main { tab m }\n";
+
     // ===================== the layout switches =====================
 
     // ⚠️⚠️ A LAYOUT KEY NEEDS A BOOK THAT CAN SHOW IT. `Plain` has two bars on ONE system,
