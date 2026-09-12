@@ -105,12 +105,8 @@ public class ScoreRowSpellingMatrixTests
         // lyrics — Name ['sings' Part]
         { "lyrics w", ["sings"] },
         { "lyrics w sings melody", [] },
-        // the bare MIDI-only row — Name {'instrument' X | 'octave' N}: parse only (see the
-        // remarks; its completion is an open gap and is not asserted here).
+        // the bare MIDI-only row — a part name and NOTHING else (GRAMMAR §7 `PartRef`).
         { "bass", [] },
-        { "bass instrument piano", [] },
-        { "bass octave 1", [] },
-        { "bass instrument piano octave 1", [] },
     };
 
     private static string[] LabelsAfter(string row)
@@ -164,42 +160,41 @@ public class ScoreRowSpellingMatrixTests
     }
 
     /// <summary>
-    /// The bare MIDI-only row's options are READ BY NOBODY, so the popup says nothing in
-    /// their value slot — and above all does not offer the two <c>octave</c> MODE words,
-    /// which belong to the top-level directive and cannot be read here at all.
+    /// The bare MIDI-only row takes a part name and NOTHING else. Its <c>instrument</c> /
+    /// <c>octave</c> options were removed from the language on 2026-09-12 (owner's call);
+    /// the words are stray items in a score body now.
     /// </summary>
     /// <remarks>
-    /// ⚠️ Measured 2026-09-12, three ways, before deciding what the popup should do:
-    /// <c>MidiPartRenderSyntax</c> exposes only its part name (nothing reads the options);
-    /// <c>MidiExporter</c> takes the instrument and octave from the PART's properties; and
-    /// six spellings (<c>m</c>, <c>m instrument violin</c>, <c>m instrument tuba</c>,
-    /// <c>m octave 1</c>, <c>m octave 5</c>, both together) export the same notes, timbres
-    /// and channels. GRAMMAR §7 spells the row as <c>PartRef</c> alone.
-    /// ⇒ Offering the options would teach a spelling that does nothing — the rule this
-    /// session set when a snippet wrote `sings part` — so the silence is the answer, and
-    /// the question of whether the PARSER should keep accepting them is the owner's.
-    /// ⚠️ What the popup did instead was worse than silence: it answered with the score's
-    /// render keywords, and accepting one wrote <c>m instrument staff</c> — where the
-    /// option's own <c>Advance()</c> eats that <c>staff</c>, so the next row loses its
-    /// keyword.
+    /// ⚠️ They had been parsed and READ BY NOBODY: <c>MidiPartRenderSyntax</c> exposes only
+    /// its part name, <c>MidiExporter</c> takes both from the PART's properties, and six
+    /// spellings exported identical notes, timbres and channels. GRAMMAR §7 never listed
+    /// them. Scope before removing: all 27,095 <c>.lys</c> on this machine were parsed and
+    /// NOT ONE of the 128 MIDI-only rows in them carried an option.
     /// </remarks>
     [Theory]
-    [InlineData("m instrument ")]
-    [InlineData("m octave ")]
-    public void TheMidiRowsOptionValue_OffersNothing(string row)
+    [InlineData("bass instrument piano")]
+    [InlineData("bass octave 1")]
+    public void TheMidiRowsRetiredOptions_AreRefused(string row)
     {
-        var labels = LabelsAfter(row);
-        Assert.Empty(labels);
+        var errors = Errors(Book + "score main { staff melody  " + row + " }\n");
+        Assert.NotEmpty(errors);
+        // The report names what a score body DOES hold — the one list a writer reads at the
+        // moment of the mistake.
+        Assert.Contains(errors, e => e.Contains("A score body holds render items"));
     }
 
     [Fact]
     public void TheOctaveModeWordsStayOutOfAScoreBody()
     {
-        // The directive's two words (`octave absolute` at the top level) reached this slot
-        // because the rule that offers them asked only "not in a part header".
+        // ⚠️ `octave` in a score body reached the TOP-LEVEL directive's list (`absolute` /
+        // `relative`) because the rule that offers those asked only "not in a part header".
+        // The word is a stray item here now, so the score's own list is the answer — and the
+        // mode words are not in it.
         string text = Book + "score main { staff melody  bass octave ";
-        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterMidiRowOptionValue,
-            LilySharpLanguageServer.GetCompletionContext(text, text.Length));
+        var labels = LabelsAfter("bass octave");
+        Assert.DoesNotContain("absolute", labels);
+        Assert.DoesNotContain("relative", labels);
+        Assert.Contains("staff", labels);
 
         // …and they are still the answer where they ARE read.
         const string top = "octave ";

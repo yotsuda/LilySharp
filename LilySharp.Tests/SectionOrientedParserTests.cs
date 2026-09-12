@@ -108,16 +108,31 @@ score main ""guitar"" {
         Assert.False(tree.HasErrors);
     }
 
+    /// <summary>
+    /// The MIDI-only rows of a score body: bare part names, nothing else (GRAMMAR §7).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The twin of SectionOrientedTests.ParseRenderMidi, and it carried the same retired
+    /// spelling — <c>guitar octave 1 instrument 25</c>, a MIDI program number from the
+    /// <c>instrument:25</c> era. The options were dead (nothing read them), unwritten (no
+    /// <c>.lys</c> on this machine used one) and ungrammatical (GRAMMAR lists none), and
+    /// were removed on 2026-09-12.
+    /// </remarks>
     [Fact]
     public void ParseRenderDeclaration_Midi()
     {
         var source = @"
 score main ""song"" {
-    guitar octave 1 instrument 25
-    bass octave 2 instrument 33
+    guitar
+    bass
 }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
+
+        Assert.True(SyntaxTree.Parse(@"
+score main ""song"" {
+    guitar octave 1 instrument 25
+}").HasErrors);
     }
 
     [Fact]

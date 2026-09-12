@@ -1043,22 +1043,24 @@ internal sealed partial class Parser
     }
 
     /// <summary>
-    /// Parse MIDI part render: partName [instrument:N] [octave:N]
+    /// Parse MIDI part render: a BARE PART NAME and nothing else — GRAMMAR §7's
+    /// <c>ScoreItem = … | PartRef</c>, the part played to MIDI and never engraved.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ It also consumed <c>instrument X</c> / <c>octave N</c> pairs, repeatedly, until
+    /// 2026-09-12 — a leftover of the retired <c>instrument:25</c> colon era (the shape the
+    /// node's own comment still described, and the reason <see cref="ConsumeRejectedColon"/>
+    /// was called from here). They were DEAD, measured three ways: nothing read them
+    /// (<c>MidiPartRenderSyntax</c> exposes only its name), <c>MidiExporter</c> takes both
+    /// from the PART's properties, and six spellings exported identical notes, timbres and
+    /// channels. GRAMMAR §7 never listed them.
+    /// ⚠️ Removing them is safe to the letter: all 27,095 <c>.lys</c> files on this machine
+    /// were parsed — the tracked corpus, the audit books and the owner's own scratch corpus
+    /// — and of the 128 MIDI-only rows in them, NOT ONE carries an option (2026-09-12).
+    /// Owner's call, on the standing rule that a pre-release language owes no compatibility
+    /// to a spelling nobody writes. The words now fall to the score body's stray-item
+    /// report (LYS0030), which names what a score body does hold.
+    /// </remarks>
     private MidiPartRenderGreen ParseMidiPartRender()
-    {
-        var partName = ExpectPartName();
-
-        var options = new List<GreenNode?>();
-        while (Current.Kind is SyntaxKind.InstrumentKeyword
-            or SyntaxKind.OctaveKeyword)
-        {
-            var optKeyword = Advance();
-            var colon = ConsumeRejectedColon();
-            var value = Advance();
-            options.Add(new PropertyAssignmentGreen(optKeyword, colon, [value]));
-        }
-
-        return new MidiPartRenderGreen(partName, [.. options]);
-    }
+        => new(ExpectPartName(), []);
 }

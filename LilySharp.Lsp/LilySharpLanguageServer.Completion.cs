@@ -244,9 +244,6 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterLyricsRowAttachName => GetLyricsRowAttachNameCompletions(),
             CompletionContext.AfterGroupLyricsRowAttachName => GetGroupLyricsRowAttachNameCompletions(),
             CompletionContext.AfterStaffLinesAs => GetStaffLinesSelectorCompletions(),
-            // `m instrument |` / `m octave |` on a bare MIDI-only row: deliberately empty —
-            // the option is read by nobody (see the context's own note).
-            CompletionContext.AfterMidiRowOptionValue => new CompletionList { Items = [] },
             // `as lines 1 |` — the chain may go on (bare, sharing the one `as`) or the row
             // may end; the selectors already written are dropped.
             CompletionContext.AfterStaffSelectorChain =>

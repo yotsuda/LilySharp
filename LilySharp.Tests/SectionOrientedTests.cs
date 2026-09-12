@@ -129,6 +129,19 @@ public class SectionOrientedTests
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
 
+    /// <summary>
+    /// A bare part name in a score body is the MIDI-only row: that part is played and never
+    /// engraved (GRAMMAR §7 <c>ScoreItem = … | PartRef</c>).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ This test read <c>guitar octave 1 instrument 25</c> until 2026-09-12 and asserted
+    /// only that it PARSED — it was the retired <c>instrument:25</c> era's own net, and the
+    /// MIDI program number in it is the giveaway. Nothing ever read those options
+    /// (<c>MidiExporter</c> takes both from the part's properties; six spellings exported
+    /// identical notes), no <c>.lys</c> on this machine wrote one, and the grammar never
+    /// listed them, so they were removed from the parser. Both halves are asserted here now:
+    /// the row parses, and the retired options are refused.
+    /// </remarks>
     [Fact]
     public void ParseRenderMidi()
     {
@@ -136,11 +149,23 @@ public class SectionOrientedTests
             section A { guitar { c4 } }
             form main { A }
             score main "song" {
-                guitar octave 1 instrument 25
+                guitar
             }
             """;
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+
+        // ⚠️ Written out, not patched into `source` with a Replace: the raw literal carries
+        // this file's CRLF, so a `\n` needle silently misses and the assertion below passes
+        // on the UNCHANGED text (measured — it went green against the wrong input once).
+        var retired = SyntaxTree.Parse("""
+            section A { guitar { c4 } }
+            form main { A }
+            score main "song" {
+                guitar octave 1 instrument 25
+            }
+            """);
+        Assert.True(retired.HasErrors);
     }
 
     [Fact]
