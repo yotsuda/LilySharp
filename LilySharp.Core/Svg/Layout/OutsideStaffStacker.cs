@@ -1798,14 +1798,14 @@ internal static class OutsideStaffStacker
                     continue;
                 double staffTopUp = LayoutUtilities.StaffOffsetInSystemUp(
                     systems[sysIdx], item.StaffIndex);
-                var ink = ChordNameEngraver.SymbolInk(fonts, cn.ChordText);
+                var ink = ChordNameEngraver.SymbolInk(fonts, cn);
                 if (cn.YUp + ink.Top <= staffTopUp)
                     continue;   // not above this staff's top line — nothing to clear
                 // cn.X IS THE SYMBOL'S LEFT EDGE, not its centre: a chord name is drawn with
                 // TextAnchor.Start (SharedRenderer.DrawChordNames), and the width is the same
                 // SymbolInkWidth the draw and the reservation read — one house.
                 trackers(sysIdx, item.StaffIndex).MergeSupport(up: VerticalSkyline.FromBox(
-                    cn.X, cn.X + ChordNameEngraver.SymbolInkWidth(fonts, cn.ChordText),
+                    cn.X, cn.X + ChordNameEngraver.SymbolInkWidth(fonts, cn),
                     cn.YUp + ink.Bottom, cn.YUp + ink.Top, VerticalDirection.Up));
             }
         }
@@ -1869,14 +1869,14 @@ internal static class OutsideStaffStacker
                 continue;
             if (StaffAffinity.TopSpaceableStaff(systems[sysIdx]) is null)
                 continue;   // staffless: the row is the anchor, and its line is the label's
-            var ink = ChordNameEngraver.SymbolInk(fonts, cn.ChordText);
+            var ink = ChordNameEngraver.SymbolInk(fonts, cn);
             if (!support.TryGetValue(sysIdx, out var pair))
                 support[sysIdx] = pair = (
                     new VerticalSkyline(VerticalDirection.Up), new VerticalSkyline(VerticalDirection.Down));
             // cn.X IS THE SYMBOL'S LEFT EDGE (TextAnchor.Start), the width the one
             // SymbolInkWidth the draw and the reservation read — the same box the inline
             // seed above merges, in the same frame (cn.YUp is above the system top).
-            double x1 = cn.X + ChordNameEngraver.SymbolInkWidth(fonts, cn.ChordText);
+            double x1 = cn.X + ChordNameEngraver.SymbolInkWidth(fonts, cn);
             pair.Up.Merge(VerticalSkyline.FromBox(
                 cn.X, x1, cn.YUp + ink.Bottom, cn.YUp + ink.Top, VerticalDirection.Up));
             pair.Down.Merge(VerticalSkyline.FromBox(

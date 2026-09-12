@@ -2149,6 +2149,74 @@ internal static class LpGeometryProbes
     private static readonly string DUN = DynamicUnderRowScore("DUN", loud: false);
 
     /// <summary>
+    /// A ROW OF SYMBOLS WITH A RAISED RUN, LEADING SYSTEM 2 — books CSR/CSN (probe
+    /// chord-superscript-row.ly), read on the floor paper so the skyline is what holds the
+    /// two systems apart.
+    /// </summary>
+    /// <remarks>
+    /// WHAT THE PAIR EXISTS FOR (2026-09-12, session 372). LilyPond raises a chord's quality
+    /// with <c>\super</c>, so the raised digit — not the root's cap — is the TOP of the
+    /// symbol's ink, and the room a row leading a LATER system needs is measured from it.
+    /// Lily# ported the DRAW on 2026-09-11 and left ten measuring passes on the old spelling
+    /// (the symbol priced as one unraised run), among them the page's per-measure annotation
+    /// extents. The picture then had a symbol whose top nothing had reserved for.
+    /// <para>
+    /// ⚠️ THE QUALITY IS THE ONE VARIABLE, and it is a SEVENTH rather than a major seventh on
+    /// purpose: LilyPond's <c>majorSevenSymbol</c> draws a triangle where Lily#'s default
+    /// vocabulary spells <c>maj7</c> with letters, so a <c>maj7</c> book would carry that
+    /// divergence (the open +0.337483977 on <c>lyrics.chord-run.staff-to-chord</c>) inside a
+    /// spacing reading. <c>Em7</c> and <c>A7</c> are the digit <c>7</c> in both engines.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE FLOOR PAPER IS THE WHOLE READING. MEASURED on 2.26.0 before the paper was cut
+    /// that way: with the shipping spacing both books read 12.000000 exactly — the
+    /// <c>system-system-spacing</c> basic-distance — and the pair said nothing (HANDOFF 5.0
+    /// trap 7). With the ideal and the minimum taken away LilyPond reads CSR 10.775757854 and
+    /// CSN 10.182224744, and their difference 0.593533110 IS the raised run's own height
+    /// (the ChordName ext is (0 . 2.500823590) against the control's (0 . 1.907290480)).
+    /// </para>
+    /// <para>
+    /// ⚠️ THE LYRICS LINE IS LOAD-BEARING for the same reason <c>RowOverStaffInkScore</c>
+    /// gives: <c>BuildLooseChainEnds</c> declines a score with no lyric line at all.
+    /// </para>
+    /// </remarks>
+    /// <param name="raised">Whether the row's symbols carry a raised run at all — the ONE
+    /// variable. What is under test is the RAISED RUN and not the word "seventh".</param>
+    private static string SuperscriptRowScore(string name, bool raised) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section A {
+          melody { c'4 c' c' c' | c'4 c' c' c' | }
+          chords prog { {{(raised ? "Em7 | A7" : "E | A")}} | }
+          lyrics one sings melody { no no no no | no no no no | }
+        }
+
+        section B {
+          melody { c'4 c' c' c' | c'4 c' c' c' | }
+          chords prog { {{(raised ? "Em7 | A7" : "E | A")}} | }
+          lyrics one sings melody { no no no no | no no no no | }
+        }
+
+        form main { ~A break ~B }
+
+        score main "{{name}}" {
+          chords prog
+          staff melody  lyrics one
+        }
+        """;
+
+    /// <summary>The pair's book — every symbol carries a raised digit.</summary>
+    private static readonly string CSR = SuperscriptRowScore("CSR", raised: true);
+
+    /// <summary>The control — the same book with no raised run anywhere.</summary>
+    private static readonly string CSN = SuperscriptRowScore("CSN", raised: false);
+
+
+    /// <summary>
     /// The same two-staff system with a SECOND verse — the mirror of book LYRMV.
     /// </summary>
     /// <remarks>
@@ -14024,6 +14092,29 @@ internal static class LpGeometryProbes
             g => g.StavesOnPage(0), RaggedBottomPaper),
         new("lyrics.chord-row.between-systems.dynamic.control.staves-on-first-page", DUN,
             g => g.StavesOnPage(0), RaggedBottomPaper),
+
+        // --- WHAT A RAISED RUN RESERVES ABOVE ITSELF (books CSR/CSN, probe
+        //     chord-superscript-row.ly, measured 2026-09-12) ---
+        // The room a row LEADING system 2 needs is measured from the symbol's ink TOP, and
+        // since LilyPond raises a chord's quality with \super that top is the raised digit.
+        // ⚠️ THE FLOOR PAPER IS WHAT MAKES THE PAIR SAY ANYTHING: on the shipping spacing both
+        // books read 12.000000, the system-system basic-distance, and the skyline is nowhere
+        // in the number (HANDOFF 5.0 trap 7). See SuperscriptRowScore.
+        // ⚠️ THE CONTROL CARRIES THE WHOLE ARGUMENT: the two books differ in one thing, and
+        // LilyPond's difference 0.593533110 IS the raised run's own ink. A reading that
+        // prices the symbol as one unraised run matches the CONTROL and misses CSR by exactly
+        // that — which is the state Lily# shipped between 2026-09-11 and 2026-09-12.
+        new("lyrics.chord-row.leading.superscript.system-floor", CSR,
+            g => g.StaffGap(), ClefFloorPaper),
+        new("lyrics.chord-row.leading.superscript.control.system-floor", CSN,
+            g => g.StaffGap(), ClefFloorPaper),
+        // ...and the count, because StaffGap() is a reading of "the one gap on the page"
+        // (HANDOFF 5.0 trap 8): two staves means the two systems are on one page.
+        new("lyrics.chord-row.leading.superscript.staves-on-first-page", CSR,
+            g => g.StavesOnPage(0), ClefFloorPaper),
+        new("lyrics.chord-row.leading.superscript.control.staves-on-first-page", CSN,
+            g => g.StavesOnPage(0), ClefFloorPaper),
+
 
         // THE ROW THAT IS NOT ON EVERY SYSTEM — the user's fifth report, and the arrangement
         // the entry above cannot speak for BECAUSE it is exact: LYRMC's row is on every

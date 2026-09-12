@@ -795,9 +795,9 @@ internal static class MusicMarkEngraver
                     // the box is the symbol's INK, the same SymbolInkWidth/SymbolInk pair
                     // the reservation and the draw read (one house).
                     sky ??= new VerticalSkyline(VerticalDirection.Up);
-                    var ink = ChordNameEngraver.SymbolInk(fonts, cn.ChordText);
+                    var ink = ChordNameEngraver.SymbolInk(fonts, cn);
                     sky.Merge(VerticalSkyline.FromBox(
-                        cn.X, cn.X + ChordNameEngraver.SymbolInkWidth(fonts, cn.ChordText),
+                        cn.X, cn.X + ChordNameEngraver.SymbolInkWidth(fonts, cn),
                         chordUp + ink.Bottom, chordUp + ink.Top,
                         VerticalDirection.Up));
                 }

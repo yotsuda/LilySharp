@@ -348,7 +348,7 @@ internal sealed partial class LayoutEngine
             // cn.YUp is Y-up from the system top; the system-relative device Y (old
             // cn.Y) is its negation.
             double cnY = -cn.YUp;
-            var (cnBottom, cnTop) = ChordNameEngraver.SymbolInk(fonts, cn.ChordText);
+            var (cnBottom, cnTop) = ChordNameEngraver.SymbolInk(fonts, cn);
             Add(cn.MeasureIndex, cnY - cnTop, cnY - cnBottom);
         }
         // Lyric text (staff-bound AND row): the ascender rises ~2.11 ss above
@@ -1097,7 +1097,7 @@ internal sealed partial class LayoutEngine
         {
             foreach (var cn in chordNames)
             {
-                double halfW = ChordNameEngraver.SymbolInkWidth(fonts, cn.ChordText) / 2 + 0.3;
+                double halfW = ChordNameEngraver.SymbolInkWidth(fonts, cn) / 2 + 0.3;
                 double cnY = cn.YUp; // cn.YUp is Y-up from the system top (skyline frame)
                 AddMarkBox(cn.MeasureIndex, cn.X - halfW, cn.X + halfW, cnY + 1.9, cnY - 0.3);
             }

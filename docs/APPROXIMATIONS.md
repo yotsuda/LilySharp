@@ -311,7 +311,7 @@
 - **:215** ⚠️ LILYSHARP-OWN, all of it. LilyPond cannot spell the configuration: a
 - **:472** ⚠️ LILYSHARP-OWN, and it is the SAME shift ClearOfPrevious makes — a symbol whose
 - **:759** LILYSHARP-OWN: LilyPond does not shift a ChordName off its column at all — a
-- **:837** LILYSHARP-OWN: the 2.0 floor has no LilyPond source. It is inherited (it was a 1.0
+- **:882** LILYSHARP-OWN: the 2.0 floor has no LilyPond source. It is inherited (it was a 1.0
 ### `LilySharp.Core/Svg/Layout/CustomTextEngraver.cs`
 - **:107** LILYSHARP-OWN, two declared bridges inside that rule (HANDOFF 5.2):
 ### `LilySharp.Core/Svg/Layout/DotColumn.cs`

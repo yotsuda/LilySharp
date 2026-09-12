@@ -813,7 +813,7 @@ internal static class ChordNameEngraver
     /// <summary>
     /// A chord symbol's ink about its baseline — the union of its text runs' and its
     /// accidental glyphs'. The one home for the symbol's HEIGHT, as
-    /// <see cref="SymbolInkWidth"/> is for its width.
+    /// <see cref="SymbolInkWidth(Rendering.ScoreTextMetrics, string, int)"/> is for its width.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: scm/define-grobs.scm:837-855 — the ChordName block, which declares chord-name-interface
@@ -828,7 +828,52 @@ internal static class ChordNameEngraver
         ChordNameGlyphRun.Ink(fonts, text, superFrom);
 
     /// <summary>
-    /// The reserved width of a chord symbol — its ink (<see cref="SymbolInkWidth"/>) under
+    /// …and the same two readings taken OFF A SYMBOL, which is what every pass outside this
+    /// file has: the ink and the width of the symbol AS IT WILL BE DRAWN.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE PAIR (text, superscript index) IS ONE VALUE AND MUST NOT BE SPLIT. A caller that
+    /// spells only the text prices the symbol as LilyPond drew it before <c>\super</c> was
+    /// ported — the raised run at full size, on the baseline — which is a box the picture no
+    /// longer contains: for <c>Dmaj7</c> it is 1.71 too WIDE and its top 0.59 too LOW. Ten
+    /// call sites did exactly that between the port (2026-09-11) and 2026-09-12, and they are
+    /// the passes that reserve the room the symbol is drawn into: the page's annotation
+    /// extents, the X-aware inter-system distance, the mark family's clearance, the
+    /// outside-staff stack and the horizontal springs. The overloads exist so the pair cannot
+    /// be taken apart again — <see cref="DisplaySymbol"/> is the ONE answer to what a symbol
+    /// prints, and it is behind both of these.
+    /// </remarks>
+    internal static (double Bottom, double Top) SymbolInk(
+        Rendering.ScoreTextMetrics fonts, ChordNameItem chord)
+    {
+        var ds = DisplaySymbol(chord);
+        return SymbolInk(fonts, ds.Text, ds.SuperFrom);
+    }
+
+    /// <inheritdoc cref="SymbolInk(Rendering.ScoreTextMetrics, ChordNameItem)"/>
+    internal static double SymbolInkWidth(
+        Rendering.ScoreTextMetrics fonts, ChordNameItem chord)
+    {
+        var ds = DisplaySymbol(chord);
+        return SymbolInkWidth(fonts, ds.Text, ds.SuperFrom);
+    }
+
+    /// <summary>The same two readings off a PLACED symbol, whose display text and raised run
+    /// the placement already resolved.</summary>
+    /// <inheritdoc cref="SymbolInk(Rendering.ScoreTextMetrics, ChordNameItem)"/>
+    internal static (double Bottom, double Top) SymbolInk(
+        Rendering.ScoreTextMetrics fonts, ChordNameLayout placed) =>
+        SymbolInk(fonts, placed.ChordText, placed.SuperFrom);
+
+    /// <inheritdoc cref="SymbolInk(Rendering.ScoreTextMetrics, ChordNameLayout)"/>
+    internal static double SymbolInkWidth(
+        Rendering.ScoreTextMetrics fonts, ChordNameLayout placed) =>
+        SymbolInkWidth(fonts, placed.ChordText, placed.SuperFrom);
+
+
+    /// <summary>
+    /// The reserved width of a chord symbol — its ink
+    /// (<see cref="SymbolInkWidth(Rendering.ScoreTextMetrics, string, int)"/>) under
     /// a floor. The symbol occupies <c>(x . x + width)</c>: LilyPond's ChordName declares
     /// no X-offset and no self-alignment-interface (scm/define-grobs.scm:837-855), so its
     /// reference point is its ink LEFT and it stands ON its column.

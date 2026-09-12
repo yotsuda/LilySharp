@@ -392,7 +392,7 @@ internal static partial class SpacingRules
                 if (timings[t] == cn.Timing)
                 {
                     width[t] = Math.Max(width[t],
-                        ChordNameEngraver.SymbolInkWidth(fonts, cn.ChordText));
+                        ChordNameEngraver.SymbolInkWidth(fonts, cn));
                     any = true;
                     break;
                 }
@@ -498,7 +498,7 @@ internal static partial class SpacingRules
                 if (timings[t] == cn.Timing)
                 {
                     width[t] = Math.Max(width[t],
-                        ChordNameEngraver.SymbolInkWidth(fonts, cn.ChordText));
+                        ChordNameEngraver.SymbolInkWidth(fonts, cn));
                     break;
                 }
         }

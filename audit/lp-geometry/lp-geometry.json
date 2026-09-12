@@ -5726,6 +5726,36 @@
       "lilypond": 2,
       "why": "The control's own count guard, carried for the same reason as the book's above: the pair is only one variable apart while both books put the same staves on the page.",
       "residual": 0.0
+    },
+    "lyrics.chord-row.leading.superscript.system-floor": {
+      "probe": "chord-superscript-row.ly",
+      "score": "CSR",
+      "lilypond": 10.775757854,
+      "why": "MEASURED 2026-09-12 (session 372) as the pair that watches what a RAISED RUN reserves above itself. LilyPond raises a chord quality with super-markup, so the raised digit is the TOP of the symbol ink, and the room a row leading a LATER system needs is measured from it. The floor paper (system-system basic-distance and minimum both 0) is what makes this reading the SKYLINE: on the shipping spacing both books read 12.000000, the basic-distance, and neither engine is saying anything about ink (HANDOFF 5.0 trap 7). LilyPond CSR 10.775757854 against the control CSN 10.182224744, a difference of 0.593533110 which IS the raised run own ink (ChordName ext (0 . 2.500823590) against (0 . 1.907290480)). BOTH ENGINES PUT THE ROW BASELINE 2.550000000 ABOVE THE STAFF in both books, so nothing but the ink TOP can move this floor. THE RESIDUAL IS THE FACE, AND IT IS THE WHOLE OF IT. Lily# inks Em7 at (0 . 2.473087762) where LilyPond inks it (0 . 2.500823590): the raised digit is 0.027735828 taller in Nimbus Sans than in TeX Gyre Heros, and this floor is short by 0.027839505 - the same number to within the control own face term (-0.000143786). Same island as page.chord-row.staff-to-chord-baseline and the same decision (which sans face Lily# ships); no spacing term is left open here. THIS BOOK IS ALSO THE ONE A PASS THAT PRICES THE SYMBOL AS ONE UNRAISED RUN GETS WRONG - such a pass matches the CONTROL and misses this by the whole raise, which is the state Lily# shipped between the draw port (2026-09-11) and the reading repair (2026-09-12), and it is the point that justifies re-basing test/lead-sheet, test/chordnames and test/chordrow-rit-second-system, whose systems had come down onto their chord rows by that 0.59.",
+      "residual": -0.027839505
+    },
+    "lyrics.chord-row.leading.superscript.control.system-floor": {
+      "probe": "chord-superscript-row.ly",
+      "score": "CSN",
+      "lilypond": 10.182224744,
+      "why": "MEASURED 2026-09-12 (session 372) as the pair that watches what a RAISED RUN reserves above itself. LilyPond raises a chord quality with super-markup, so the raised digit is the TOP of the symbol ink, and the room a row leading a LATER system needs is measured from it. The floor paper (system-system basic-distance and minimum both 0) is what makes this reading the SKYLINE: on the shipping spacing both books read 12.000000, the basic-distance, and neither engine is saying anything about ink (HANDOFF 5.0 trap 7). LilyPond CSR 10.775757854 against the control CSN 10.182224744, a difference of 0.593533110 which IS the raised run own ink (ChordName ext (0 . 2.500823590) against (0 . 1.907290480)). BOTH ENGINES PUT THE ROW BASELINE 2.550000000 ABOVE THE STAFF in both books, so nothing but the ink TOP can move this floor. The CONTROL is the arrangement Lily# already got right, so its residual says whether a repair moved only the arm it should - and it is EXACT to face bits (-1.4e-4, the order every lyric-adjacent step in this corpus reads). With no raised run in the book there is nothing for the chord face to carry, which is what makes the book above a reading of the raised run alone.",
+      "residual": -0.000143786
+    },
+    "lyrics.chord-row.leading.superscript.staves-on-first-page": {
+      "probe": "chord-superscript-row.ly",
+      "score": "CSR",
+      "unit": "count",
+      "lilypond": 2,
+      "why": "The count guard for the two floor readings above: StaffGap() reads THE gap on the page, so the reading only means what it is named if both systems are on one page (HANDOFF 5.0 trap 8).",
+      "residual": 0.0
+    },
+    "lyrics.chord-row.leading.superscript.control.staves-on-first-page": {
+      "probe": "chord-superscript-row.ly",
+      "score": "CSN",
+      "unit": "count",
+      "lilypond": 2,
+      "why": "The count guard for the two floor readings above: StaffGap() reads THE gap on the page, so the reading only means what it is named if both systems are on one page (HANDOFF 5.0 trap 8).",
+      "residual": 0.0
     }
   }
 }
