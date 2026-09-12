@@ -1,4 +1,15 @@
 
+## 第374 の chords/lyrics 脚（逐語）← §1 の 20,000 字の門を超えたので出した
+
+> 第374 の第 1 便（ユーザー起票＝`chords prog { section A { Fm } ▮ }` で和音が出て `section` が出ない）の
+> 再現・病名・裏取り。**結論と修理は §1 の ⑷⑸ に残してある**。
+
+★★★ **先に赤を作った**（記憶 `feedback_lilysharp_reproduce_ticket_before_fixing`）。**実物の `Completion()` を端から端まで回す test**（`LilySharp.Tests/Lsp/ChordsTrackBodyCompletionTests.cs`・`PartBodyCompletionTests` の型）で起票の位置を叩くと、出たのは **`["C","Cmaj7","Csus4","Csus2","Dm",…]` で `section` は 1 つも無い**＝**起票は字句どおり当たっていた**。⚠️ **対照 2 本（セル・flat なリードシート）は最初から緑**＝**直す前に「どこまでが正しい今の挙動か」が確定していた**。
+
+★★★ **病名＝*1 つの語彙が 2 階層に出ていた*（台帳でも engine でもなく出口の順序）**。`IsInsideChordsBlock` は **section の枠を読み飛ばして true を返す**設計で、**トラック本体とセルを区別しない**。しかも `Completion()` は**この intercept を context の switch より*前*に見る**ので、`GetCompletionContext` が何を答えても和音が勝つ。⇒ **`section ▮` まで和音が出ていた**（起票の後半＝「section が出てこない」のもう半分）。
+
+★★★ **ここに和音を書いても*描かれない*——だから「うるさい」ではなく「通らない綴りを教えていた」**。`ChordNameCollector` は `HasSections` になった瞬間 **section しか読まない**（`ChordNameCollector.cs:247`・`:588`）ので、セルの隣に書いた記号は床に落ちる。**part-major なら flat トラックそのものが LYS2011**（`TrackNeedsSectionsValidator`）。
+
 ## 第374セッションの「判定の記録」逐語 ← §1 の 20,000 字の門を超えたので出した
 
 > 第374（scratch p375）は 14 便。§1 には**規則と、着手／不着手の結論と、次の一手**だけを残し、
