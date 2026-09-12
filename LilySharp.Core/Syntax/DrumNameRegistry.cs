@@ -73,7 +73,14 @@ public static class DrumNameRegistry
         ["hihat"] = new("hihat", 3, NoteheadStyle.Cross, 42),
         ["highfloortom"] = new("highfloortom", -2, NoteheadStyle.Default, 43),
         ["pedalhihat"] = new("pedalhihat", -5, NoteheadStyle.Cross, 44),
-        ["splashhihat"] = new("splashhihat", -5, NoteheadStyle.Cross, 44),
+        // ⚠️ `splashhihat` / `hhs` stood here until 2026-09-12 — a name LilyPond does not
+        // have (ly/drumpitch-init.ly knows `splashcymbal` / `cyms`, a CYMBAL, and no splash
+        // hi-hat), carrying a row byte-identical to pedalhihat's: same staff position, same
+        // notehead, same GM key 44, which IS Pedal Hi-Hat. So the popup offered `hhs` for a
+        // splash and the page drew — and the .mid played — a pedal hi-hat. The real splash
+        // is two rows down (`splashcymbal`, position 5, Diamond, GM 55), so nothing was lost
+        // by removing it: found by the perturbation net (two names, one signature), and
+        // written in 0 of the 27,095 .lys on this machine.
         ["lowtom"] = new("lowtom", -1, NoteheadStyle.Default, 45),
         ["openhihat"] = new("openhihat", 3, NoteheadStyle.Cross, 46, "open"),
         ["halfopenhihat"] = new("halfopenhihat", 3, NoteheadStyle.XCircle, 46),
@@ -110,7 +117,6 @@ public static class DrumNameRegistry
         ["hh"] = "hihat",
         ["tomfh"] = "highfloortom",
         ["hhp"] = "pedalhihat",
-        ["hhs"] = "splashhihat",
         ["toml"] = "lowtom",
         ["hho"] = "openhihat",
         ["hhho"] = "halfopenhihat",

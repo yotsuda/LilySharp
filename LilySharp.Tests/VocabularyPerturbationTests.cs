@@ -257,4 +257,48 @@ public class VocabularyPerturbationTests
     [InlineData("mark accent")]
     public void EveryDrummapFieldMovesTheDrumItNames(string field)
         => AssertMoves(DrumBook, $"drummap {{\n  sn: {field}\n}}\n" + DrumBook, "drummap sn " + field);
+
+    /// <summary>
+    /// Two drum names that draw and sound EXACTLY alike are the same instrument under two
+    /// spellings — which LilyPond does have (<c>crashcymbal</c> / <c>crashcymbala</c>) — so
+    /// the collisions are listed rather than forbidden. What must not happen is a name
+    /// colliding with an instrument it is not: the list below is the whole set, and every
+    /// pair in it is one LilyPond itself spells twice.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS HOW <c>splashhihat</c> / <c>hhs</c> WAS FOUND (2026-09-12). It was not
+    /// LilyPond's — <c>ly/drumpitch-init.ly</c> knows <c>splashcymbal</c> / <c>cyms</c>, a
+    /// cymbal, and no splash hi-hat — and it carried <c>pedalhihat</c>'s row exactly, so the
+    /// popup offered a splash and the page drew a pedal hi-hat. Removed; the real splash was
+    /// already reachable two rows away.
+    /// </remarks>
+    [Fact]
+    public void NoTwoDrumsShareARow_ExceptWhereLilyPondSpellsOneInstrumentTwice()
+    {
+        // A CANONICAL entry is one instrument. Two of them carrying the same staff position,
+        // notehead, GM key and mark cannot be told apart on the page or in the .mid — so one
+        // of the two names is lying about what it plays.
+        var collisions = DrumNameRegistry.CanonicalEntries
+            .GroupBy(e => $"{e.Value.StaffPosition}/{e.Value.Notehead}/{e.Value.GmKey}/{e.Value.Mark}",
+                     StringComparer.Ordinal)
+            .Where(g => g.Count() > 1)
+            .Select(g => string.Join("=", g.Select(e => e.Key).OrderBy(s => s, StringComparer.Ordinal)))
+            .OrderBy(s => s, StringComparer.Ordinal)
+            .ToArray();
+
+        // LilyPond's own doubles, each verified in ly/drumpitch-init.ly (2.24.4):
+        //   acousticsnare / snare  — two canonical names there too, same drums-style row
+        //                            `() #f 1` and the same GM key (D3 = 38, spelled
+        //                            NATURAL on one and DOUBLE-FLAT on the other);
+        //   crashcymbal / crashcymbala, ridecymbal / ridecymbala — one instrument under two
+        //                            names, same GM key.
+        // This table keeps both spellings because a writer may have either in hand.
+        // ⚠️ A NEW LINE HERE IS A CLAIM ABOUT LILYPOND — check ly/drumpitch-init.ly before
+        // adding one. `splashhihat`=`pedalhihat` was such a line waiting to happen: a name
+        // LilyPond does not have, carrying pedalhihat's row, so `hhs` drew and played a
+        // pedal hi-hat while the popup called it a splash (removed 2026-09-12).
+        Assert.Equal(
+            new[] { "acousticsnare=snare", "crashcymbal=crashcymbala", "ridecymbal=ridecymbala" },
+            collisions);
+    }
 }
