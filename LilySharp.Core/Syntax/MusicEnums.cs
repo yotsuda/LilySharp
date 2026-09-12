@@ -171,20 +171,78 @@ public enum DynamicLevel
 }
 
 /// <summary>
-/// Predefined instrument tunings for tablature.
+/// Predefined instrument tunings for tablature — one member per distinct SET OF STRINGS
+/// in LilyPond's <c>ly/string-tunings-init.ly</c>, never one per spelling.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: ly/string-tunings-init.ly — the thirty <c>\makeDefaultStringTuning</c>
+/// symbols. Three pairs of those symbols are the SAME four or six strings, so they share a
+/// member here and the member is named for the instrument LilyPond lists first:
+/// <c>bass-four-string-tuning</c> and <c>double-bass-tuning</c> are <see cref="Bass"/>, and
+/// <c>mandolin-tuning</c> is <see cref="Violin"/> (both g d' a' e''). <see cref="Tablature.Tunings"/>
+/// holds the strings, the Lily# spellings and the LilyPond symbol each member writes back.
+/// <para>
+/// ⚠️ A sixth member, <c>Custom</c>, stood here until 2026-09-13 and NOTHING read it — no
+/// switch arm, no parser, no exporter, not one test. It advertised a feature the language
+/// does not have (there is no way to write a tuning of your own), which is the same kind of
+/// lie <c>splashhihat</c> told in the drum table: a name whose existence is the only thing
+/// it does. Removed on the pre-release rule.
+/// </para>
+/// </remarks>
 public enum TuningType
 {
     /// <summary>Standard guitar tuning: E A D G B E</summary>
     Guitar,
-    /// <summary>4-string bass tuning: E A D G</summary>
+    /// <summary>7-string guitar: B E A D G B E</summary>
+    Guitar7,
+    /// <summary>Guitar, dropped D: D A D G B E</summary>
+    GuitarDropD,
+    /// <summary>Guitar, dropped C: C G C F A D</summary>
+    GuitarDropC,
+    /// <summary>Guitar, open G: D G D G B D</summary>
+    GuitarOpenG,
+    /// <summary>Guitar, open D: D A D F♯ A D</summary>
+    GuitarOpenD,
+    /// <summary>Guitar, DADGAD: D A D G A D</summary>
+    GuitarDadgad,
+    /// <summary>Guitar, lute tuning: E A D F♯ B E</summary>
+    GuitarLute,
+    /// <summary>Guitar, Asus4: E A D E A E</summary>
+    GuitarAsus4,
+    /// <summary>4-string bass tuning: E A D G — also the double bass.</summary>
     Bass,
+    /// <summary>4-string bass, dropped D: D A D G</summary>
+    BassDropD,
     /// <summary>5-string bass tuning: B E A D G</summary>
     Bass5,
     /// <summary>6-string bass tuning: B E A D G C</summary>
     Bass6,
-    /// <summary>Ukulele tuning: G C E A</summary>
+    /// <summary>Violin: G D A E — also the mandolin.</summary>
+    Violin,
+    /// <summary>Viola: C G D A</summary>
+    Viola,
+    /// <summary>Cello: C G D A, an octave below the viola.</summary>
+    Cello,
+    /// <summary>5-string banjo, open G: g D G B D (the g is the high drone string).</summary>
+    BanjoOpenG,
+    /// <summary>5-string banjo, C tuning: g C G B D</summary>
+    BanjoC,
+    /// <summary>5-string banjo, modal (sawmill): g D G C D</summary>
+    BanjoModal,
+    /// <summary>5-string banjo, open D: a D F♯ A D</summary>
+    BanjoOpenD,
+    /// <summary>5-string banjo, open Dm: a D F A D</summary>
+    BanjoOpenDm,
+    /// <summary>5-string banjo, double C: g C G C D</summary>
+    BanjoDoubleC,
+    /// <summary>5-string banjo, double D: a D G D E</summary>
+    BanjoDoubleD,
+    /// <summary>Ukulele tuning: G C E A (re-entrant — the G is the HIGHEST string).</summary>
     Ukulele,
-    /// <summary>Custom tuning</summary>
-    Custom
+    /// <summary>Ukulele in D: A D F♯ B (re-entrant).</summary>
+    UkuleleD,
+    /// <summary>Tenor ukulele: G C E A, with the G an octave down (not re-entrant).</summary>
+    TenorUkulele,
+    /// <summary>Baritone ukulele: D G B E</summary>
+    BaritoneUkulele,
 }

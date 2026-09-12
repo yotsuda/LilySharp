@@ -350,7 +350,7 @@
                     }
                 },
                 {
-                    "match": "\\b(tuning)\\s+(standard|guitar|bass5|bass6|bass|ukulele|uke)\\b",
+                    "match": "\\b(tuning)\\s+(baritoneukulele|banjodoublec|banjodoubled|guitardadgad|tenorukulele|banjoopendm|guitarasus4|guitardropc|guitardropd|guitaropend|guitaropeng|banjomodal|banjoopend|banjoopeng|doublebass|guitarlute|bassdropd|mandolin|standard|ukuleled|guitar7|ukulele|banjoc|guitar|violin|bass4|bass5|bass6|viola|cello|bass|uke)\\b",
                     "captures": {
                         "1": { "name": "keyword.other.lilysharp" },
                         "2": { "name": "support.constant.tuning.lilysharp" }
@@ -424,10 +424,10 @@
             ]
         },
         "tab-tuning": {
-            "comment": "`score main { tab guitar melody }`. The ONE position a tuning name reaches outside a part body (measured 2026-08-19: all seven are accepted after `tab`, and `staff`/`ossia` take clef names, not tunings). Without this the vocabulary would be coloured in the header and plain in the score — the same half-coloured shape the user reported for `fonts { }`.",
+            "comment": "`score main { tab guitar melody }`. The ONE position a tuning name reaches outside a part body (measured 2026-08-19: every tuning word is accepted after `tab`, and `staff`/`ossia` take clef names, not tunings). Without this the vocabulary would be coloured in the header and plain in the score — the same half-coloured shape the user reported for `fonts { }`. ⚠️ The list is LilyPond's whole string-tunings-init.ly since 2026-09-13 — thirty-two words — and EditorColouringTests holds it to LanguageVocabulary.TuningNames in both directions, so do not edit one without the other.",
             "patterns": [
                 {
-                    "match": "\\b(tab)\\s+(standard|guitar|bass5|bass6|bass|ukulele|uke)\\b",
+                    "match": "\\b(tab)\\s+(baritoneukulele|banjodoublec|banjodoubled|guitardadgad|tenorukulele|banjoopendm|guitarasus4|guitardropc|guitardropd|guitaropend|guitaropeng|banjomodal|banjoopend|banjoopeng|doublebass|guitarlute|bassdropd|mandolin|standard|ukuleled|guitar7|ukulele|banjoc|guitar|violin|bass4|bass5|bass6|viola|cello|bass|uke)\\b",
                     "captures": {
                         "1": { "name": "keyword.control.lilysharp" },
                         "2": { "name": "support.constant.tuning.lilysharp" }

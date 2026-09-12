@@ -761,8 +761,23 @@ PartClefName   = ClefName
                | 'treble^8' | 'bass_8'
                | 'soprano' | 'mezzosoprano' | 'baritone' | 'percussion' ;
 
-TuningName     = 'standard' | 'guitar' | 'bass' | 'bass5' | 'bass6'
-               | 'ukulele' | 'uke' ;
+TuningName     = 'guitar' | 'guitar7' | 'guitardropd' | 'guitardropc'
+               | 'guitaropeng' | 'guitaropend' | 'guitardadgad' | 'guitarlute'
+               | 'guitarasus4'
+               | 'bass' | 'bass4' | 'bassdropd' | 'bass5' | 'bass6'
+               | 'violin' | 'viola' | 'cello' | 'doublebass' | 'mandolin'
+               | 'banjoopeng' | 'banjoc' | 'banjomodal' | 'banjoopend'
+               | 'banjoopendm' | 'banjodoublec' | 'banjodoubled'
+               | 'ukulele' | 'ukuleled' | 'tenorukulele' | 'baritoneukulele'
+               | 'standard' | 'uke' ;
+                   (* LilyPond's whole ly/string-tunings-init.ly (2026-09-13): its symbol
+                      without the `-tuning` suffix, with `<n>-string` written as the digit
+                      and the hyphens dropped — so `bass-five-string-tuning` is `bass5` and
+                      `guitar-drop-d-tuning` is `guitardropd`. `standard` and `uke` are
+                      Lily#'s own second spellings of `guitar` and `ukulele`; `bass4`,
+                      `doublebass` and `mandolin` are LilyPond's own second spellings of
+                      tunings it also lists as `bass` and `violin`. Tablature.Tunings holds
+                      the strings and is the one reader of these words. *)
 
 RemoveEmptyValue = 'true' | 'all' | 'false' ;
 

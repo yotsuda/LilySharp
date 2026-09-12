@@ -291,14 +291,23 @@ public class VocabularyPerturbationTests
         //                            `() #f 1` and the same GM key (D3 = 38, spelled
         //                            NATURAL on one and DOUBLE-FLAT on the other);
         //   crashcymbal / crashcymbala, ridecymbal / ridecymbala — one instrument under two
-        //                            names, same GM key.
+        //                            names, same GM key;
+        //   hisidestick / sidestick — LilyPond gives the kit's side stick (drums-style,
+        //                            `cross #f 1`) and the timbale player's high rim
+        //                            (timbales-style, `cross #f 1`) the same line, the same
+        //                            head and the same GM key 37. `losidestick` is the pair's
+        //                            other hand and sits a row lower, so it is not here.
         // This table keeps both spellings because a writer may have either in hand.
         // ⚠️ A NEW LINE HERE IS A CLAIM ABOUT LILYPOND — check ly/drumpitch-init.ly before
         // adding one. `splashhihat`=`pedalhihat` was such a line waiting to happen: a name
         // LilyPond does not have, carrying pedalhihat's row, so `hhs` drew and played a
         // pedal hi-hat while the popup called it a splash (removed 2026-09-12).
         Assert.Equal(
-            new[] { "acousticsnare=snare", "crashcymbal=crashcymbala", "ridecymbal=ridecymbala" },
+            new[]
+            {
+                "acousticsnare=snare", "crashcymbal=crashcymbala",
+                "hisidestick=sidestick", "ridecymbal=ridecymbala",
+            },
             collisions);
     }
 }

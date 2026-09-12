@@ -373,10 +373,13 @@ public class ValueContextCompletionTests
         Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterBackslash, ContextOf(text));
         var labels = LilySharpLanguageServer.GetStringNumberCompletions().Items
             .Select(i => i.Label!).ToArray();
-        Assert.Equal(new[] { "1", "2", "3", "4", "5", "6" }, labels);
+        // Seven since LilyPond's whole tuning table landed (2026-09-13): the offer is 1..N
+        // for the WIDEST tuning, so the part below is that tuning and not the plain guitar —
+        // otherwise `\7` would be offered and compiled against six strings.
+        Assert.Equal(new[] { "1", "2", "3", "4", "5", "6", "7" }, labels);
         foreach (string n in labels)
         {
-            string doc = $"part gtr {{ clef treble_8 tuning guitar }}\nsection A {{ gtr {{ c4\\{n} d e f | }} }}\n"
+            string doc = $"part gtr {{ clef treble_8 tuning guitar7 }}\nsection A {{ gtr {{ c4\\{n} d e f | }} }}\n"
                 + "form main { A }\nscore main { tab gtr }";
             var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(doc);
             var errors = tree.Diagnostics.Concat(LilySharp.Core.Semantics.SemanticValidation.Run(tree))

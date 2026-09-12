@@ -825,14 +825,9 @@ public static class RenderSpecParser
         string? tuningName = tuningToken?.Text.ToLowerInvariant()
             ?? GetPartProperty(tab, voiceName, "tuning")?.ToLowerInvariant()
             ?? InstrumentDefaults.GetTuning(GetInstrument(tab, voiceName)?.Preset);
-        TuningType tuning = tuningName switch
-        {
-            "bass" => TuningType.Bass,
-            "bass5" => TuningType.Bass5,
-            "bass6" => TuningType.Bass6,
-            "ukulele" or "uke" => TuningType.Ukulele,
-            _ => TuningType.Guitar, // "standard"/"guitar"/unknown/none
-        };
+        // "standard"/"guitar"/unknown/none all come back as the guitar — Tablature.Tunings
+        // is the one reader of these words.
+        TuningType tuning = Tablature.Tunings.Parse(tuningName);
 
         // Carry the part's NOTATION clef: treble_8 marks written-8va
         // (guitar) parts, which the fret calculation shifts down an octave.

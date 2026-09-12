@@ -1030,13 +1030,13 @@ public sealed partial class MeasureCollector
                     Fraction drumAnchorTiming = builder.CurrentDuration;
                     var drumItem = CreateDrumNoteItem(drumNote);
                     builder.AddItem(drumItem);
-                    // The drums-style table marks the closed hi-hat "+" and
-                    // the open hi-hat "○" automatically.
-                    if (DrumOverrides.Resolve(_drumOverrides, drumNote.DrumName) is { Mark: not null } dInfoMark)
+                    // LilyPond's style tables mark the closed hi-hat and the muted hand drums
+                    // "+", the open ones "○", and the short/long guiro staccato/tenuto —
+                    // automatically. DrumNameRegistry.MarkArticulation is the one reading.
+                    if (DrumOverrides.Resolve(_drumOverrides, drumNote.DrumName) is { Mark: not null } dInfoMark
+                        && DrumNameRegistry.MarkArticulation(dInfoMark.Mark) is not ArticulationType.None)
                         _articulations.Add(new ArticulationItem(
-                            dInfoMark.Mark == "stopped"
-                                ? ArticulationType.Stopped
-                                : ArticulationType.Flageolet,
+                            DrumNameRegistry.MarkArticulation(dInfoMark.Mark),
                             drumMeasureIndex, drumItemIndex, true,
                             drumNote.SourceStart, _cursor.StaffIndex)
                         { VoiceIndex = _cursor.VoiceIndex });

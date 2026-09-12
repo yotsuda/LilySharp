@@ -25,59 +25,147 @@ namespace LilySharp.Core.Tablature;
 /// </summary>
 public static class Tunings
 {
-    // LILYPOND-REF: ly/string-tunings-init.ly — open-string pitches per tuning:
-    // guitar-tuning <e, a, d g b e'>, bass-tuning <e,, a,, d, g,>,
-    // bass-five-string-tuning <b,,, e,, a,, d, g,>,
-    // bass-six-string-tuning <b,,, e,, a,, d, g, c>, ukulele-tuning <g' c' e' a'>.
-    // Guitar: E2=40, A2=45, D3=50, G3=55, B3=59, E4=64 (6弦→1弦)
+    /// <summary>One tuning: the symbol LilyPond knows it by, and its open strings as MIDI
+    /// numbers ordered from the HIGHEST STRING NUMBER — which on a guitar is the lowest
+    /// pitch, and on a ukulele or a banjo is not.</summary>
+    private readonly record struct Spec(string LilyPondName, int[] Strings);
+
+    // LILYPOND-REF: ly/string-tunings-init.ly — every \makeDefaultStringTuning in the file,
+    // transcribed by reading it (tools: scratchpad/gen-tunings.ps1, 2026-09-13), not typed.
+    // LilyPond writes each chord "from the highest string number (generally the lowest
+    // pitch) first", which is exactly this array's order, so a tuning is copied across
+    // WITHOUT reversing — and the re-entrant ones (ukulele, ukulele-d, every banjo) are
+    // therefore NOT ascending and must never be "fixed" into ascending order.
+    // c = 48, so e, = 40 and g' = 67.
+    private static readonly Dictionary<TuningType, Spec> Table = new()
+    {
+        // guitars
+        [TuningType.Guitar] = new("guitar-tuning", [40, 45, 50, 55, 59, 64]),
+        [TuningType.Guitar7] = new("guitar-seven-string-tuning", [35, 40, 45, 50, 55, 59, 64]),
+        [TuningType.GuitarDropD] = new("guitar-drop-d-tuning", [38, 45, 50, 55, 59, 64]),
+        [TuningType.GuitarDropC] = new("guitar-drop-c-tuning", [36, 43, 48, 53, 57, 62]),
+        [TuningType.GuitarOpenG] = new("guitar-open-g-tuning", [38, 43, 50, 55, 59, 62]),
+        [TuningType.GuitarOpenD] = new("guitar-open-d-tuning", [38, 45, 50, 54, 57, 62]),
+        [TuningType.GuitarDadgad] = new("guitar-dadgad-tuning", [38, 45, 50, 55, 57, 62]),
+        [TuningType.GuitarLute] = new("guitar-lute-tuning", [40, 45, 50, 54, 59, 64]),
+        [TuningType.GuitarAsus4] = new("guitar-asus4-tuning", [40, 45, 50, 52, 57, 64]),
+        // basses. LilyPond spells this first one three times — bass-tuning,
+        // bass-four-string-tuning and double-bass-tuning are the same four strings — and
+        // writes back the four-string spelling, which is the one its own tab examples use.
+        [TuningType.Bass] = new("bass-four-string-tuning", [28, 33, 38, 43]),
+        [TuningType.BassDropD] = new("bass-drop-d-tuning", [26, 33, 38, 43]),
+        [TuningType.Bass5] = new("bass-five-string-tuning", [23, 28, 33, 38, 43]),
+        [TuningType.Bass6] = new("bass-six-string-tuning", [23, 28, 33, 38, 43, 48]),
+        // orchestral strings. violin-tuning and mandolin-tuning are the same g d' a' e''.
+        [TuningType.Violin] = new("violin-tuning", [55, 62, 69, 76]),
+        [TuningType.Viola] = new("viola-tuning", [48, 55, 62, 69]),
+        [TuningType.Cello] = new("cello-tuning", [36, 43, 50, 57]),
+        // 5-string banjos — the 5th string is a high drone, so index 0 is the HIGHEST pitch.
+        [TuningType.BanjoOpenG] = new("banjo-open-g-tuning", [67, 50, 55, 59, 62]),
+        [TuningType.BanjoC] = new("banjo-c-tuning", [67, 48, 55, 59, 62]),
+        [TuningType.BanjoModal] = new("banjo-modal-tuning", [67, 50, 55, 60, 62]),
+        [TuningType.BanjoOpenD] = new("banjo-open-d-tuning", [69, 50, 54, 57, 62]),
+        [TuningType.BanjoOpenDm] = new("banjo-open-dm-tuning", [69, 50, 53, 57, 62]),
+        [TuningType.BanjoDoubleC] = new("banjo-double-c-tuning", [67, 48, 55, 60, 62]),
+        [TuningType.BanjoDoubleD] = new("banjo-double-d-tuning", [69, 50, 55, 62, 64]),
+        // ukuleles — the first two re-entrant, the last two not.
+        [TuningType.Ukulele] = new("ukulele-tuning", [67, 60, 64, 69]),
+        [TuningType.UkuleleD] = new("ukulele-d-tuning", [69, 62, 66, 71]),
+        [TuningType.TenorUkulele] = new("tenor-ukulele-tuning", [55, 60, 64, 69]),
+        [TuningType.BaritoneUkulele] = new("baritone-ukulele-tuning", [50, 55, 59, 64]),
+    };
+
+    /// <summary>
+    /// The word a <c>.lys</c> writes → the tuning it names. THE one reading of these words:
+    /// the part header (<c>PartHeaderDefaults</c>), the score row (<c>RenderSpecParser</c>)
+    /// and the LilyPond twin (<c>LilyPondExporter</c>) all ask here.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Those three held a COPY EACH of a five-arm switch until 2026-09-13, which is three
+    /// copies of any future defect in it — the same shape the tab STYLE word was pulled out
+    /// of (<c>TabRenderVocabularyValidator.IsNumbersOnly</c>), and it would have been three
+    /// places to add twenty-five tunings to, with nothing to notice if one was missed.
+    /// <para>
+    /// The spelling rule: LilyPond's symbol without its <c>-tuning</c> suffix, with
+    /// <c>&lt;n&gt;-string</c> written as the digit and the hyphens dropped — so
+    /// <c>bass-five-string-tuning</c> is <c>bass5</c> (which is what it already was) and
+    /// <c>guitar-drop-d-tuning</c> is <c>guitardropd</c>. Two words are Lily#'s own and not
+    /// LilyPond's: <c>standard</c> and <c>uke</c>, both older than this table.
+    /// </para>
+    /// </remarks>
+    private static readonly Dictionary<string, TuningType> ByName = new(StringComparer.Ordinal)
+    {
+        ["guitar"] = TuningType.Guitar,
+        ["standard"] = TuningType.Guitar,               // Lily#'s own word for it
+        ["guitar7"] = TuningType.Guitar7,
+        ["guitardropd"] = TuningType.GuitarDropD,
+        ["guitardropc"] = TuningType.GuitarDropC,
+        ["guitaropeng"] = TuningType.GuitarOpenG,
+        ["guitaropend"] = TuningType.GuitarOpenD,
+        ["guitardadgad"] = TuningType.GuitarDadgad,
+        ["guitarlute"] = TuningType.GuitarLute,
+        ["guitarasus4"] = TuningType.GuitarAsus4,
+        ["bass"] = TuningType.Bass,
+        ["bass4"] = TuningType.Bass,                    // LP's bass-four-string-tuning
+        ["doublebass"] = TuningType.Bass,               // LP's double-bass-tuning
+        ["bassdropd"] = TuningType.BassDropD,
+        ["bass5"] = TuningType.Bass5,
+        ["bass6"] = TuningType.Bass6,
+        ["violin"] = TuningType.Violin,
+        ["mandolin"] = TuningType.Violin,               // LP's mandolin-tuning, same strings
+        ["viola"] = TuningType.Viola,
+        ["cello"] = TuningType.Cello,
+        ["banjoopeng"] = TuningType.BanjoOpenG,
+        ["banjoc"] = TuningType.BanjoC,
+        ["banjomodal"] = TuningType.BanjoModal,
+        ["banjoopend"] = TuningType.BanjoOpenD,
+        ["banjoopendm"] = TuningType.BanjoOpenDm,
+        ["banjodoublec"] = TuningType.BanjoDoubleC,
+        ["banjodoubled"] = TuningType.BanjoDoubleD,
+        ["ukulele"] = TuningType.Ukulele,
+        ["uke"] = TuningType.Ukulele,                   // Lily#'s own word for it
+        ["ukuleled"] = TuningType.UkuleleD,
+        ["tenorukulele"] = TuningType.TenorUkulele,
+        ["baritoneukulele"] = TuningType.BaritoneUkulele,
+    };
+
+    /// <summary>Every tuning word the language takes, sorted. The ONE home of the list —
+    /// the part-header validator, the score-row validator, the editor's completion and the
+    /// grammar's <c>TuningName</c> are all readers of it.</summary>
+    public static IReadOnlyCollection<string> Names { get; } =
+        [.. ByName.Keys.OrderBy(n => n, StringComparer.Ordinal)];
+
+    /// <summary>A tuning word → its tuning; an unknown, differently-cased or absent word →
+    /// the guitar, which is what a tab with nothing said falls back to.</summary>
+    public static TuningType Parse(string? name) =>
+        name != null && ByName.TryGetValue(name, out var type) ? type : TuningType.Guitar;
+
+    /// <summary>The LilyPond predefined-tuning symbol the twin writes for a tuning.</summary>
+    public static string LilyPondName(TuningType type) => Table[type].LilyPondName;
+
     /// <summary>Standard 6-string guitar tuning (MIDI notes, index 0 = lowest string).</summary>
-    public static readonly int[] Guitar = [40, 45, 50, 55, 59, 64];
+    public static int[] Guitar => Table[TuningType.Guitar].Strings;
 
-    // Bass (4-string): E1=28, A1=33, D2=38, G2=43 (4弦→1弦)
     /// <summary>Standard 4-string bass tuning (MIDI notes, index 0 = lowest string).</summary>
-    public static readonly int[] Bass = [28, 33, 38, 43];
-
-    // Bass (5-string): B0=23, E1=28, A1=33, D2=38, G2=43 (5弦→1弦)
-    /// <summary>Standard 5-string bass tuning with low B (MIDI notes, index 0 = lowest string).</summary>
-    public static readonly int[] Bass5 = [23, 28, 33, 38, 43];
-
-    // Bass (6-string): B0=23, E1=28, A1=33, D2=38, G2=43, C3=48 (6弦→1弦, low B + high C)
-    /// <summary>Standard 6-string bass tuning with low B and high C (MIDI notes, index 0 = lowest string).</summary>
-    public static readonly int[] Bass6 = [23, 28, 33, 38, 43, 48];
-
-    // Ukulele: G4=67, C4=60, E4=64, A4=69 (4弦→1弦, re-entrant tuning)
-    /// <summary>Standard re-entrant ukulele tuning (MIDI notes, index 0 = lowest string).</summary>
-    public static readonly int[] Ukulele = [67, 60, 64, 69];
+    public static int[] Bass => Table[TuningType.Bass].Strings;
 
     /// <summary>Returns the tuning array (index 0 = lowest string) for the given tuning type.</summary>
-    public static int[] GetTuning(TuningType type) => type switch
-    {
-        TuningType.Guitar => Guitar,
-        TuningType.Bass => Bass,
-        TuningType.Bass5 => Bass5,
-        TuningType.Bass6 => Bass6,
-        TuningType.Ukulele => Ukulele,
-        _ => Guitar
-    };
+    public static int[] GetTuning(TuningType type) =>
+        Table.TryGetValue(type, out var spec) ? spec.Strings : Guitar;
 
     /// <summary>Returns the number of strings for the given tuning type.</summary>
-    public static int GetStringCount(TuningType type) => type switch
-    {
-        TuningType.Guitar => 6,
-        TuningType.Bass => 4,
-        TuningType.Bass5 => 5,
-        TuningType.Bass6 => 6,
-        TuningType.Ukulele => 4,
-        _ => 6
-    };
+    public static int GetStringCount(TuningType type) => GetTuning(type).Length;
 
     /// <summary>
     /// True for bass tunings, which sound an octave BELOW where they are written
     /// in bass clef (the bass guitar is a transposing instrument). Tab frets are
     /// therefore computed from the written pitch shifted down one octave.
+    /// ⚠️ <see cref="TuningType.Bass"/> is the double bass's tuning too, and the double bass
+    /// reads bass clef 8va for the same reason — so the one answer serves both.
     /// </summary>
     public static bool IsBass(TuningType type) =>
-        type is TuningType.Bass or TuningType.Bass5 or TuningType.Bass6;
+        type is TuningType.Bass or TuningType.BassDropD
+             or TuningType.Bass5 or TuningType.Bass6;
 
     /// <summary>The DEFAULT sounding transposition (semitones) a tuning implies when a
     /// part gives no explicit <c>transposition</c> and no instrument preset: −12 for

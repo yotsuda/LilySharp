@@ -4025,8 +4025,9 @@ public sealed partial class LilySharpLanguageServer
         ]
     };
 
-    /// <summary>The most strings any tuning has (<c>Tunings.GetStringCount</c>: guitar and
-    /// 6-string bass), so the list after <c>\</c> reaches every string a book can name.</summary>
+    /// <summary>The most strings any tuning has (<c>Tunings.GetStringCount</c>: seven, the
+    /// seven-string guitar, since LilyPond's whole tuning table landed 2026-09-13 — it was
+    /// six), so the list after <c>\</c> reaches every string a book can name.</summary>
     private static readonly int MaxTabStrings =
         Enum.GetValues<TuningType>().Max(t => LilySharp.Core.Tablature.Tunings.GetStringCount(t));
 

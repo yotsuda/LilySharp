@@ -110,14 +110,14 @@ internal sealed class DrummapValidator : ISemanticValidator
                                 $"'notehead {value.Text}' is ignored — the notehead styles are: "
                                 + $"{string.Join(", ", KnownNoteheads)}.");
                             break;
-                        case "mark" when value.Text.ToLowerInvariant() is not ("stopped" or "open"):
+                        case "mark" when !DrumNameRegistry.MarkWords.Contains(value.Text.ToLowerInvariant()):
                             // ⚠️ Not merely ignored: an unrecognised word CLEARS the mark
                             // this drum already had, so the message says so. Kept as it is,
                             // because nothing was decided about changing it — see the net
                             // DrummapTests.AnUnknownMarkWord_ClearsTheMark.
                             _diagnostics.Warning(value.ValueSpan, DiagnosticCodes.DrummapEntryIgnored,
                                 $"'mark {value.Text}' is not a drum mark, so the drum is left with "
-                                + "no mark at all. The marks are: stopped, open.");
+                                + $"no mark at all. The marks are: {string.Join(", ", DrumNameRegistry.MarkWords)}.");
                             break;
                     }
                 }

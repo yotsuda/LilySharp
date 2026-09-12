@@ -5006,25 +5006,14 @@ public sealed class LilyPondExporter
     /// it is a known gate, not an oversight.
     /// </remarks>
     private static Syntax.TuningType TabTuningType(PartDeclarationSyntax? part)
-        => ((part != null ? PartProperty(part, "tuning")?.ToLowerInvariant() : null)
-            ?? InstrumentDefaults.GetTuning(InstrumentPresetOf(part))) switch
-        {
-            "bass" => Syntax.TuningType.Bass,
-            "bass5" => Syntax.TuningType.Bass5,
-            "bass6" => Syntax.TuningType.Bass6,
-            "ukulele" or "uke" => Syntax.TuningType.Ukulele,
-            _ => Syntax.TuningType.Guitar,
-        };
+        => Tablature.Tunings.Parse(
+            (part != null ? PartProperty(part, "tuning")?.ToLowerInvariant() : null)
+            ?? InstrumentDefaults.GetTuning(InstrumentPresetOf(part)));
 
-    // The LilyPond predefined tuning name for that tuning.
-    private static string TabTuning(PartDeclarationSyntax? part) => TabTuningType(part) switch
-    {
-        Syntax.TuningType.Bass5 => "bass-five-string-tuning",
-        Syntax.TuningType.Bass6 => "bass-six-string-tuning",
-        Syntax.TuningType.Guitar => "guitar-tuning",
-        Syntax.TuningType.Ukulele => "ukulele-tuning",
-        _ => "bass-four-string-tuning",
-    };
+    // The LilyPond predefined tuning name for that tuning — read from the same table that
+    // holds the strings, so the twin cannot name one tuning and fret another.
+    private static string TabTuning(PartDeclarationSyntax? part)
+        => Tablature.Tunings.LilyPondName(TabTuningType(part));
 
     /// <summary>
     /// Writes the written→sounding transposition the tab frets against, so the twin's fret

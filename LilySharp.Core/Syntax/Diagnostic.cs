@@ -684,7 +684,9 @@ public static class DiagnosticCodes
     public const string BareDurationAcrossBarline = "LYS1031";
 
     /// <summary>Semantic error: a <c>tab</c> render item names a style that is not
-    /// <c>numbers</c>/<c>full</c>, or a tuning outside the seven. Both used to fall through a
+    /// <c>numbers</c>/<c>full</c>, or a tuning outside <c>LanguageVocabulary.TuningNames</c>
+    /// (seven words when this was written, thirty-two since LilyPond's whole
+    /// string-tunings-init.ly landed 2026-09-13). Both used to fall through a
     /// <c>_ =&gt;</c> arm — the style to full notation, the tuning to guitar — so a typo
     /// re-fretted the music and said nothing.</summary>
     public const string UnknownTabRenderWord = "LYS1032";

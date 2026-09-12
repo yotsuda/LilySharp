@@ -61,10 +61,11 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
         "soprano", "mezzosoprano", "baritone", "bass_8", "percussion",
     };
 
-    private static readonly HashSet<string> TuningValues = new(StringComparer.Ordinal)
-    {
-        "standard", "guitar", "bass", "bass5", "bass6", "ukulele", "uke",
-    };
+    /// <summary>The tuning words, read from their one home — the table that also holds the
+    /// strings each names (<see cref="Tablature.Tunings"/>), so a tuning cannot be spellable
+    /// without being playable or the other way round.</summary>
+    private static readonly HashSet<string> TuningValues =
+        new(Tablature.Tunings.Names, StringComparer.Ordinal);
 
     private static readonly HashSet<string> InstrumentPresets =
         new(InstrumentDefaults.KnownInstruments, StringComparer.Ordinal);
@@ -140,7 +141,8 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
         [.. PedalValues.OrderBy(s => s, StringComparer.Ordinal)];
 
     /// <summary>Every tuning name — also the vocabulary of <c>tab NAME</c> in a score
-    /// (measured 2026-08-19: all seven are accepted in both positions).</summary>
+    /// (measured 2026-08-19: all seven of the day's names were accepted in both positions;
+    /// there are thirty-two since LilyPond's whole table landed, 2026-09-13).</summary>
     internal static IReadOnlyCollection<string> TuningValueVocabulary { get; } =
         [.. TuningValues.OrderBy(s => s, StringComparer.Ordinal)];
 

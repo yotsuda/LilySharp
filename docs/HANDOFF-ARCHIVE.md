@@ -16,6 +16,25 @@
 
 ★★★ **どちらの語彙かは*形*が決める**（`GetChordsTrackCompletions`）: **section が既に在る**か**part-major** なら **cell の足場**（`section A { }` スニペット＝lyrics と同じ `SectionScaffoldItems`）、それ以外＝**flat なリードシート `chords prog { C G7 | }` は今までどおり和音**。★ **判定は `TrackNeedsSectionsValidator` と同じ対**（`HasSections` ∥ part-major）——**validator が黙る所では popup も和音に落ちる**ので、2 つが食い違う綴りが無い。
 
+## 第374 の補完 3 脚（tilde・全数の掃き・スニペットの名前）逐語 ← §1 の 20,000 字の門を超えたので出した
+
+> 第374 の第 3・4・5 便。**結論は §1 の ⑺〜⑼ の 1 行に圧縮して在る**。
+
+★★★ **⑺ 第 3 便＝族の 3 人目は*掃いて*見つけた**（commit `9e96174d`・起票ではない）。**「枠が生き延びなければならない綴り」を数え直した**ら、**沈黙 section `section ~B {`** が残っていた——**`~` は語文字ではない**ので枠は (Prefix=`""`, Name=`B`) と読み、**`FrameKeyword` に "section" を訊く読み手全員が見落とす**。**実測: `section ~B { ▮ }` は音楽 98 件・`section B { ▮ }` は header の指示 5 件**（`partial key time tempo override`）＝**同じ宣言なのに本体の意味が違って見えていた**。⇒ **`ReadFrame` が tilde を跨ぐ**（**part の引用表示名を跨ぐのと同じ場所**）＝**読み手全員が一度に覚える**。⚠️ **セル側は 3 つとも tilde の有無で同一**（`melody {`／`lyrics w {`／`chords prog {` を対で実測）＝**動いたのは top-level の 1 行だけ**。
+
+★★★★ **⑻ 第 4 便＝*全数の掃き*（commit `0fb4b9e0`）——1 回の dump で 25 綴りを対で読み、当たったのは*日常の綴り*だった**。**`{` を開く構文をすべて並べた**（score 5 綴り／staff group 4／part 2／phrase・form／fonts・paper・layout の無名と有名／paper の入れ子／音楽の容れ物 5）。**外れたのは 1 つだけ**: **`score main transpose d { ▮ }` が音楽 98 件**（正しくは render 17 件）。⇒ **`ScoreDecl = 'score' , Identifier , [ String ] , { ScoreOption } , '{'`＝最長は `score main "out" transpose d pitch concert {` の 7 語**なのに、**ヘッダを読む walk は 2 語しか戻っていなかった**（＝`score main {` と `score main "out" {` だけが score に見えていた）。⇒ **予算を文法の数にした**（名前の後ろ 6 語）＋**ヘッダに成り得ない token（括弧・`/`・`~`・ブロック語）で必ず止まる**ので、**長くしても前の構文へは踏み込めない**（負の対照 3 本で主張）。★ **`transpose` を書いた score は普通にある**——この 4 人目は**起票を待っていたら次に踏むのはユーザー**だった。
+
+★★★ **⑼ 第 5 便＝*スニペットが書く名前は文法ではなく「この本が宣言した名前」***（ユーザー起票・commit `33681a4b`）。トップレベルの `lyrics` 補完は **`lyrics ${1:verse} sings ${2:part} { … }`** を挿していた——**`part` は*キーワードの綴り*であって part 名ではない**ので、**構文は通り、誰も宣言していない part に束ねる**。⇒ **clause を本から決める**（`SingsClauseSnippet`＝**`sings ▮` の popup と同じ読み手**を使うので、スニペットとダイアログが別の宇宙を名乗れない）: **part が 0 なら clause 自体を書かない**／**1 つならその名前を書き込む**／**複数なら空の stop 1 ＋ `editor.action.triggerSuggest`**＝**エディタは item の command を stop 1 にカーソルを置いて走らせる**ので、**必要な枠でパート一覧が開く**。★ **picker は retrigger であって snippet choice ではない**。⚠️ **同じ clause を section-major のセル項目も書いていた**（**最初の part を勝手に埋め**、part がゼロなら literal `melody`）＝**1 つの helper に寄せた**。⚠️⚠️ ★ **網が欠陥を*内側に抱えていた***: `TheLyricsTrackSnippet_IsWhatTheCompilerAccepts` は**スニペットの出力を自分で修理してから**コンパイルさせていた（`expanded.Replace("sings part", "sings melody")`）——**その修理こそがユーザーの起票**。**修理を消し、3 通り（0／1／複数）をそれぞれ「受け入れた直後の本」としてコンパイルさせる**ようにした。
+
+## 第374 の ⑿（分かれ道）と ⒀（`fonts { }` の並び順）逐語 ← §1 の 20,000 字の門を超えたので出した
+
+> **⑿ の基準はコードに在る**（`RowReadingRule`・`ScanStaffRow` の隣）・**⒀ は閉じた UX の脚**。
+> §1 には 1 行ずつ残した。
+
+★★★ **⑿ 第 8 便＝*分かれ道に決着をつけた*（ユーザー指示「分かれ道は、どのように実装すべきだろうか」→「実装してみて」・commit `ff40fdf8`）＝統一しない。書き下して、網を張る**。★★★ **基準（`RowReadingRule`・`ScanStaffRow` の隣）**: **行が語数で読めるのは、省略可能な節が*全部*⑴有界 かつ ⑵裸の語だけ のときに限る**。⚠️ **⑵ は長さの話ではない**——語の walker は**非語文字で即止まる**ので、**`~` 1 つ・`"…"` 1 つで、どんな距離でもそれ以前が全部見えなくなる**。**tilde も表示名も無限連鎖も同じ日に落ちた理由がこれ**。⇒ **この基準で仕分けると**: `tab`（節 2・裸・有界）・`chords`（1）・`lyrics`（1）は**今のままで正しい**／**裸の MIDI 行だけが基準を外れる**（`NAME {instrument X | octave N}`＝`ParseMidiPartRender` の `while`）。★ **`ScoreRowSpellingMatrixTests`＝26 綴り（全行の節の全組み合わせ）× 3 主張**: ⒜ コンパイルが通る ⒝ 末尾で*その行の継続*が出る ⒞ **行が繋げられない語で*新しい行*が始まる**（stray 名に LYS1007）。**⒞ が仕掛け線**——**行の parser に節が 1 つ足されると その error が出なくなり、その行だけが赤くなる**。⚠️⚠️ ★ **毒を入れて発火を見た**: `ParseChordRowRender` に節を 1 つ足す（`if (Current.Text == "label") Advance();`）と **`chords` の 3 綴りだけが赤・残り 23 は緑**。**毒は戻した**（`git diff --stat` で Core に差分が無いことを確認）。⚠️ **裸の MIDI 行の穴 2 つは*記録*で、固定していない**: **2 つの option はどちらも補完に出ない**／**`n octave ▮` は part header の `absolute|relative` を出す（この行は*数*を取る）**——**どちらもコンパイルは通る**ので誰も断らない。**今日の答えを assert すると穴が固まる**ので、この行は**parse だけ**を pin した。（⚠️ **この 2 つの穴は第 12 便で消えた**＝option 自体が言語から外れた。）
+
+★★★ **⒀ 第 9 便＝`fonts { }` の並び順（ユーザー起票「size とか steps を先に選べる方が便利」・commit `0ede7658`）**。**鍵の後ろの値リストは `"…"`（preselect 付き）→ as → step → size → 字体語**だった。⇒ **step → size → bold/italic/regular → as → `"…"`**、**preselect は外した**（popup が `step` に着地し、face は「まず消す物」でなくなる）。★ **置き換えた根拠は*書いてあったのに誰も測っていなかった***（「face を名指すのが常道だから 1 打鍵に」）——**face はどうせ*打つ***（78 件の一覧は引用符の内側の第 2 popup）のに対し、**step/size は語彙から*選ぶ***。⚠️ **同じ順を 2 箇所に**（`mark ▮` と `mark "X" ▮`）／**emit 順を sort キーに合わせた**（`sortText` を見ない client も同じ列＝和音リストと同じ規則）。⚠️ **generic family の狭さは維持**: `serif step +1` は `FontPlanReader` が断る（「face table に自分の寸法は無い」）ので**family の後ろに寸法語を出さない**——主張で固定した。⚠️⚠️ ★ **並べ替え中に見つけた穴**: **`FontAttribute = String` は*繰り返す***＝**1 エントリの複数 face が fallback 連鎖**（GRAMMAR §2.4）なのに、**継続リストに 2 つ目を書く手段が無かった**。⇒ **追加**（属性の後ろ・Detail に「連鎖の次の環」と明記・**書かれる綴りがコンパイルできることを主張**）。
+
 ## 第374セッションの「判定の記録」逐語 ← §1 の 20,000 字の門を超えたので出した
 
 > 第374（scratch p375）は 14 便。§1 には**規則と、着手／不着手の結論と、次の一手**だけを残し、

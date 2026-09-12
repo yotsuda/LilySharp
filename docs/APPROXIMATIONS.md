@@ -233,7 +233,7 @@
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2410** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:5191** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:5180** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:2258** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
@@ -438,7 +438,7 @@
 ### `LilySharp.Core/Syntax/SyntaxNodes.cs`
 - **:826** LILYSHARP-OWN: LilyPond's q repeats the previous chord and cannot be
 ### `LilySharp.Core/Tablature/Tunings.cs`
-- **:196** LILYSHARP-OWN. Four is the guitarist's one-finger-per-fret span and also the number
-- **:208** LILYSHARP-OWN. Without it the hand never comes down on its own — "do not move" beats
-- **:234** LILYSHARP-OWN, and deliberately not LilyPond's. LilyPond takes the first string from
+- **:284** LILYSHARP-OWN. Four is the guitarist's one-finger-per-fret span and also the number
+- **:296** LILYSHARP-OWN. Without it the hand never comes down on its own — "do not move" beats
+- **:322** LILYSHARP-OWN, and deliberately not LilyPond's. LilyPond takes the first string from
 

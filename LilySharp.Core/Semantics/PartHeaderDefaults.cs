@@ -173,7 +173,7 @@ public sealed class PartHeaderDefaults
         else if (preset != null)
             transposition = InstrumentDefaults.GetTransposition(preset);
         else if (tuningText != null)
-            transposition = Tunings.TuningTransposition(ParseTuningWord(tuningText));
+            transposition = Tunings.TuningTransposition(Tunings.Parse(tuningText));
         else
             transposition = 0;
 
@@ -200,15 +200,5 @@ public sealed class PartHeaderDefaults
         "treble^8" => ClefType.Treble8Above,
         "bass_8" => ClefType.Bass8Below,
         _ => ClefType.Treble,
-    };
-
-    /// <summary>A <c>.lys</c> tuning word → the tuning it names.</summary>
-    private static TuningType ParseTuningWord(string tuning) => tuning switch
-    {
-        "bass" => TuningType.Bass,
-        "bass5" => TuningType.Bass5,
-        "bass6" => TuningType.Bass6,
-        "ukulele" or "uke" => TuningType.Ukulele,
-        _ => TuningType.Guitar,
     };
 }
