@@ -10,6 +10,12 @@
 
 ★★★ **ここに和音を書いても*描かれない*——だから「うるさい」ではなく「通らない綴りを教えていた」**。`ChordNameCollector` は `HasSections` になった瞬間 **section しか読まない**（`ChordNameCollector.cs:247`・`:588`）ので、セルの隣に書いた記号は床に落ちる。**part-major なら flat トラックそのものが LYS2011**（`TrackNeedsSectionsValidator`）。
 
+★★★ **修理の内訳**（commit `fc5edc83`）: **⒜ `CompletionContext.ChordsTrackBody`**＝`IsInsideTopLevelChordsTrack`（枠が 1 枚・keyword が `chords`）＝**`LyricsBlock` の双子**（lyrics 側は 2026-09-10 に同じ形で割れている＝**移植元が家にあった**。⚠️ **ただしその双子は片側が穴だった**＝第 2 便で直した `sings` 綴り）／**⒝ `IsInsideSectionContainer` に `chords` を足した**（`section ▮` が**このトラックにまだ無い section 名**を出す。読み手は `GetMissingSectionNameCompletions` の scope 選択と `AfterSection` の 2 つだけ）／**⒞ intercept をこの 2 つの context に譲らせた**（`IsInsideChordsBlock` は**広いまま残す**——あれが答えているのは「ここに和音を書けるか」で、flat トラックでは今も yes）。
+
+★★★ **第 2 便＝lyrics 側の逐語**（commit `fb1893de`）: **枠は `{` の前の 2 語しか読まない**ので、**束ねる綴り `lyrics w sings melody {` は (Prefix=`sings`, Name=`melody`) と読まれ、`lyrics` の語は 4 語前＝手が届かない**（GRAMMAR `LyricsBlock = 'lyrics' , Identifier , [ 'sings' , PartRef ] , '{'`）。**`IsLyricsFrame` はそれを知っていて、`IsInsideTopLevelLyricsBlock` と `IsInsideSectionContainer` は語で訊いていた**⇒ **束ねたトラックの本体は音楽の補完に落ちていた＝実測 98 件・`c d e f g a b` から始まる並びが*歌詞トラックの中*に出る**（`section ▮` の後ろも同じ）。⇒ **`IsLyricsFrame` を「この枠は歌詞トラックか」の*唯一の読み手*にした**（`repeat` ガードが持っていた同じ判定の写しも畳んだ）。
+
+★★★ **どちらの語彙かは*形*が決める**（`GetChordsTrackCompletions`）: **section が既に在る**か**part-major** なら **cell の足場**（`section A { }` スニペット＝lyrics と同じ `SectionScaffoldItems`）、それ以外＝**flat なリードシート `chords prog { C G7 | }` は今までどおり和音**。★ **判定は `TrackNeedsSectionsValidator` と同じ対**（`HasSections` ∥ part-major）——**validator が黙る所では popup も和音に落ちる**ので、2 つが食い違う綴りが無い。
+
 ## 第374セッションの「判定の記録」逐語 ← §1 の 20,000 字の門を超えたので出した
 
 > 第374（scratch p375）は 14 便。§1 には**規則と、着手／不着手の結論と、次の一手**だけを残し、
