@@ -1564,6 +1564,40 @@ public sealed partial class LilySharpLanguageServer
         return new CompletionList { Items = items.ToArray() };
     }
 
+    /// <summary>
+    /// After a COMPLETE selector in a staff row (<c>staff m as lines 1 ▮</c>): the chain may
+    /// go on — <c>{ StaffSelector }</c> shares the one <c>as</c>, so the next selector is
+    /// written BARE — or the row may end, so the ordinary continuations follow.
+    /// </summary>
+    /// <remarks>
+    /// The selectors already written are dropped: writing one twice is consumed by
+    /// ConsumeStaffSelectors and means nothing, and a popup that offers it is proposing a
+    /// spelling with no effect. ⚠️ This position fell to the plain score list until
+    /// 2026-09-12 — the row's readers counted words and the chain is the one clause whose
+    /// length has no bound.
+    /// </remarks>
+    internal static CompletionList GetStaffSelectorChainCompletions(string text, int offset)
+        => SelectorChainList(text, offset, GetScoreBlockCompletions().Items);
+
+    /// <summary>The same position inside a staff group: the group's narrow continuations
+    /// (a chords row in there is LYS6011), never the score-wide list.</summary>
+    internal static CompletionList GetGroupStaffSelectorChainCompletions(string text, int offset)
+        => SelectorChainList(text, offset, GetStaffGroupBlockCompletions().Items);
+
+    private static CompletionList SelectorChainList(string text, int offset, CompletionItem[] continuations)
+    {
+        var written = StaffSelectorsWritten(text, offset);
+        var items = StaffSelectorItems("")
+            .Where(s => !written.Contains(s.Label!, StringComparer.Ordinal))
+            .ToList();
+        foreach (var it in continuations)
+        {
+            it.SortText = "9" + (it.SortText ?? "");
+            items.Add(it);
+        }
+        return new CompletionList { Items = items.ToArray() };
+    }
+
     /// <summary>After <c>staff NAME</c> INSIDE a staff group: the
     /// <c>as …</c> selectors, then the group's own narrow continuations
     /// (<c>staff</c> / <c>lyrics</c> — a group refuses the wider score list,

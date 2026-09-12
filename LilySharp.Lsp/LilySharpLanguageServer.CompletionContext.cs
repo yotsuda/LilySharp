@@ -321,9 +321,11 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>One still-open block for <see cref="BlockContextScan"/>: the two-word
-    /// <see cref="BlockFrame"/> AND the score-opener judgement, both read at the same
-    /// <c>{</c> so one pass serves every consumer.</summary>
-    private readonly record struct OpenBlock(BlockFrame Frame, bool IsScoreOpener);
+    /// <see cref="BlockFrame"/>, the score-opener judgement, AND the index of the <c>{</c>
+    /// itself — all read at the same brace so one pass serves every consumer. The index is
+    /// where a body's own contents begin, which <see cref="ScanStaffRow"/> reads the row
+    /// from.</summary>
+    private readonly record struct OpenBlock(int OpenIndex, BlockFrame Frame, bool IsScoreOpener);
 
     /// <summary>
     /// The one block-context scan of a completion request. <see cref="GetCompletionContext"/>
@@ -374,7 +376,7 @@ public sealed partial class LilySharpLanguageServer
                 if (_text[i] == '{')
                 {
                     depth++;
-                    stack.Add(new OpenBlock(ReadFrame(_text, i), IsScoreBlockOpener(_text, i)));
+                    stack.Add(new OpenBlock(i, ReadFrame(_text, i), IsScoreBlockOpener(_text, i)));
                 }
                 else if (_text[i] == '}')
                 {
@@ -598,6 +600,13 @@ public sealed partial class LilySharpLanguageServer
         AfterGroupLyricsRowAttachName,
         AfterStaffLinesAs,
         AfterStaffLinesValue,
+        /// <summary><c>staff m as lines 1 |</c> — a selector is complete and the chain may
+        /// continue (<c>{ StaffSelector }</c>, sharing the one <c>as</c>) or the row may end.
+        /// So: the selectors NOT yet written, bare, then the score's continuations.</summary>
+        AfterStaffSelectorChain,
+        /// <summary>The same position inside a staff group, whose continuations are the
+        /// group's narrow pair rather than the score-wide list (LYS6011).</summary>
+        AfterGroupStaffSelectorChain,
         AfterChordDisplayAs,
         AfterTabDisplayAs,
         AfterInstrument,
@@ -1008,14 +1017,50 @@ public sealed partial class LilySharpLanguageServer
             // roman|names.
             if (prevWord == "as")
                 return AsSelectorContext(text, offset);
+
+            // ⚠️ THE STAFF / OSSIA ROW IS READ BY THE GRAMMAR, not by counting words back
+            // from the caret: it carries FOUR optional clauses (`staff [~] [CLEF] NAME
+            // ["display"] [as SELECTOR …]`) and every word-count rule answered only the
+            // spellings someone had thought to add. ScanStaffRow replays the body's tokens
+            // and says where in the row the caret is; these five returns are the whole row.
+            // (A bare-part-name group refuses `staff` outright, so it keeps its own list.)
+            if (scan.Stack.Count > 0
+                && !IsBarePartNameGroup(scan.Stack[^1].Frame.Name)
+                && !IsInsideStringLiteral(text, offset))
+            {
+                var row = ScanStaffRow(text, scan.Stack[^1].OpenIndex + 1, offset);
+                if (row.IsRow)
+                {
+                    bool inGroup = IsStaffGroupKeyword(scan.Stack[^1].Frame.Name);
+                    // A selector keyword with its value still missing.
+                    if (row.OpenSelector == "lines")
+                        return CompletionContext.AfterStaffLinesValue;
+                    if (row.OpenSelector == "removeEmpty")
+                        return CompletionContext.AfterRemoveEmpty;
+                    // Inside the `as` clause: the FIRST selector must follow the `as` (the
+                    // row cannot end there — ConsumeStaffSelectors reports a bare `as`),
+                    // while after a complete one the chain may continue OR the row may end.
+                    if (row.AfterAs)
+                        return row.Selectors.Count == 0
+                            ? CompletionContext.AfterStaffLinesAs
+                            : inGroup
+                                ? CompletionContext.AfterGroupStaffSelectorChain
+                                : CompletionContext.AfterStaffSelectorChain;
+                    if (!row.HasName)
+                        return row.HasClef
+                            ? CompletionContext.AfterStaffClefRef
+                            : CompletionContext.AfterStaffRef;
+                    return inGroup
+                        ? CompletionContext.AfterGroupStaffAttachName
+                        : CompletionContext.AfterStaffAttachName;
+                }
+            }
+
             switch (prevWord)
             {
-                case "staff": return CompletionContext.AfterStaffRef;
                 // `tab` references a part too, and an optional tuning may precede the
                 // name (`tab drop-d melody`) — its own list, parts and tunings.
                 case "tab": return CompletionContext.AfterTabRef;
-                // `ossia NAME` references a part directly, like `staff`.
-                case "ossia": return CompletionContext.AfterStaffRef;
                 case "chords": return CompletionContext.AfterChordsRef;
                 case "lyrics": return CompletionContext.AfterLyricsRef;
                 // `lyrics NAME sings ▮` on a score row — the binding target, the
@@ -1026,23 +1071,8 @@ public sealed partial class LilySharpLanguageServer
                     if (ThirdWordBeforeCursor(text, offset) == "lyrics")
                         return CompletionContext.AfterSingsTarget;
                     break;
-                case "lines":
-                    // `staff m as lines |` — the selector's value slot. A
-                    // `lines` that no `as` governs falls through to the
-                    // general score list. The selectors chain after one `as`
-                    // (`as removeEmpty all lines |`), so the `as` may stand
-                    // further back than the second word.
-                    if (StaffAsGoverns(text, offset))
-                        return CompletionContext.AfterStaffLinesValue;
-                    break;
-                case "removeEmpty":
-                    // `staff m as removeEmpty |` — hara-kiri's value slot
-                    // (true / all / false — LP RemoveEmptyStaves / RemoveAllEmptyStaves).
-                    // A score selector since 2026-09-08; the part header no longer
-                    // knows the word.
-                    if (StaffAsGoverns(text, offset))
-                        return CompletionContext.AfterRemoveEmpty;
-                    break;
+                // (`lines` / `removeEmpty` value slots were read here by walking back for a
+                // governing `as`; ScanStaffRow above answers them from the row's own shape.)
             }
             // `tab TUNING ▮` — a tuning was written (ParseTabRender takes one before the
             // part), so the part name is what comes next — or, the tuning word being a
@@ -1066,20 +1096,8 @@ public sealed partial class LilySharpLanguageServer
                 // `lyrics NAME` verse rows (ParseGrandStaffRender; else LYS6011).
                 if (IsStaffGroupKeyword(block))
                 {
-                    // `staff CLEF ▮` inside the group: the clef was written and the
-                    // part name is next (ParseStaffRender's optional clef).
-                    if (SecondWordBeforeCursor(text, offset) == "staff"
-                        && LanguageVocabulary.ClefNames.Contains(prevWord))
-                        return CompletionContext.AfterStaffClefRef;
-                    // `staff NAME ▮` inside the group — and `staff CLEF NAME ▮`,
-                    // the same three-word form the score body reads below: a
-                    // member takes the `as lines N` selector either way, offered
-                    // beside the group's own NARROW continuations (never the
-                    // score-wide list — a chords row in here is LYS6011).
-                    if (SecondWordBeforeCursor(text, offset) == "staff"
-                        || (ThirdWordBeforeCursor(text, offset) == "staff"
-                            && LanguageVocabulary.ClefNames.Contains(SecondWordBeforeCursor(text, offset))))
-                        return CompletionContext.AfterGroupStaffAttachName;
+                    // (A `staff` row inside the group — at any of its lengths — was answered
+                    // by ScanStaffRow above, which knows it is in a group.)
                     // `lyrics NAME ▮` inside the group: a verse row states its
                     // binding here too (`sings PART`), then the group's own
                     // narrow continuations.
@@ -1107,28 +1125,10 @@ public sealed partial class LilySharpLanguageServer
             // binding the definition does.
             if (SecondWordBeforeCursor(text, offset) == "lyrics")
                 return CompletionContext.AfterLyricsRowAttachName;
-            // `staff CLEF |` / `ossia CLEF |`: a music clef word right after the
-            // keyword is the optional clef override (ParseStaffRender / ParseOssiaRender:
-            // "a clef keyword followed by a part name is an override"), so the part name
-            // is what belongs next. ⚠️ Four of the five are also legal part NAMES
-            // (`staff bass` renders a part called bass), so the selectors stay offered
-            // beside the parts rather than being withheld.
-            if (SecondWordBeforeCursor(text, offset) is "staff" or "ossia"
-                && LanguageVocabulary.ClefNames.Contains(prevWord))
-                return CompletionContext.AfterStaffClefRef;
-            // `staff NAME |` / `ossia NAME |` — AND the three-word form the optional clef
-            // makes, `staff CLEF NAME |`: the part name has been written either way, so the
-            // `as lines N` / `as removeEmpty V` selectors follow it either way. ⚠️ Only the
-            // TWO-word form was read until 2026-09-12 (user report), so writing the clef —
-            // the very thing the row above offers — silently cost the row its selectors and
-            // dropped the caret into the plain score list. The tab row had already grown
-            // this second reading (`tab TUNING NAME |`, above); the staff and ossia rows had
-            // not, which is the same one-construct-several-readers shape as the rest of this
-            // session.
-            if (SecondWordBeforeCursor(text, offset) is "staff" or "ossia"
-                || (ThirdWordBeforeCursor(text, offset) is "staff" or "ossia"
-                    && LanguageVocabulary.ClefNames.Contains(SecondWordBeforeCursor(text, offset))))
-                return CompletionContext.AfterStaffAttachName;
+            // (Every position of a `staff` / `ossia` row — the bare keyword, after a clef,
+            // after the name, inside the `as` chain — was answered by ScanStaffRow above.
+            // The word-count rules that used to stand here read three of those positions and
+            // missed four spellings; the row is read by its grammar now.)
             return CompletionContext.ScoreBlock;
         }
 
@@ -1324,6 +1324,134 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>The two groups whose body is a list of bare part names.</summary>
     internal static bool IsBarePartNameGroup(string w) =>
         w is "condensedStaff" or "combinedStaff";
+
+    /// <summary>
+    /// How far through a <c>staff</c> / <c>ossia</c> row the caret is — read by REPLAYING
+    /// THE GRAMMAR over the row's tokens, not by counting words back from the caret.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️⚠️ THE WORD COUNTING IS WHAT KEPT BREAKING. The row is
+    /// <c>'staff' , ['~'] , [ClefName] , PartRef , [String] , [ 'as' , StaffSelector ,
+    /// { StaffSelector } ]</c> (ParseStaffRender / ConsumeStaffSelectors) — FOUR optional
+    /// clauses — so "the word two back is <c>staff</c>" answers only the shortest spelling.
+    /// Measured 2026-09-12, every one of these fell through to the plain score list:
+    /// <c>staff ~m |</c>, <c>staff m "Violin I" |</c>, <c>staff m as lines 1 |</c> (the
+    /// chain the grammar spells with <c>{ … }</c>), and — until the leg before —
+    /// <c>staff treble m |</c>. Each was one more special case to bolt on; the row is
+    /// small enough to just read.
+    /// </remarks>
+    private readonly record struct StaffRow(
+        /// <summary>The caret is inside a <c>staff</c>/<c>ossia</c> row (not a tab/chords/
+        /// lyrics row, a group, or a bare MIDI-only part name).</summary>
+        bool IsRow,
+        /// <summary>A clef word has been written before the name.</summary>
+        bool HasClef,
+        /// <summary>The part name has been written.</summary>
+        bool HasName,
+        /// <summary>The single <c>as</c> has been written.</summary>
+        bool AfterAs,
+        /// <summary>A selector keyword whose value is still missing (<c>lines</c> /
+        /// <c>removeEmpty</c>), else null.</summary>
+        string? OpenSelector,
+        /// <summary>The selectors already complete in this row's chain.</summary>
+        List<string> Selectors);
+
+    /// <summary>The selector keywords of a staff row (<c>as lines 1 removeEmpty all</c> —
+    /// one <c>as</c>, then any of these in any order, ConsumeStaffSelectors).</summary>
+    private static bool IsStaffSelectorWord(string w) => w is "lines" or "removeEmpty";
+
+    /// <summary>
+    /// Replays the score body from its <c>{</c> to the caret and reports the state of the
+    /// row the caret is in. The partial word being typed is NOT part of the row (it is what
+    /// the popup is completing), so the replay stops where that word starts.
+    /// </summary>
+    private static StaffRow ScanStaffRow(string text, int bodyStart, int offset)
+    {
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '-';
+        int limit = Math.Min(offset, text.Length);
+        while (limit > bodyStart && IsWordChar(text[limit - 1])) limit--;   // drop the partial word
+
+        var row = new StaffRow(false, false, false, false, null, []);
+        bool inLine = false, inBlock = false;
+        for (int i = bodyStart; i < limit; i++)
+        {
+            char c = text[i];
+            if (inLine) { if (c == '\n') inLine = false; continue; }
+            if (inBlock) { if (c == '/' && i > bodyStart && text[i - 1] == '*') inBlock = false; continue; }
+            if (c == '/' && i + 1 < limit && text[i + 1] == '/') { inLine = true; continue; }
+            if (c == '/' && i + 1 < limit && text[i + 1] == '*') { inBlock = true; continue; }
+            if (char.IsWhiteSpace(c)) continue;
+            if (c == '"')
+            {
+                // A quoted display name closes nothing: `staff m "Violin I"` may still take
+                // the `as` clause. Any other string in here is not a row of ours anyway.
+                i++;
+                while (i < limit && text[i] != '"') i++;
+                continue;
+            }
+            if (c == '~')
+                continue;                                   // `staff ~m` — the label suppressor
+            if (!IsWordChar(c))
+            {
+                // A brace opens a group body, whose rows are scanned from ITS own start.
+                row = new StaffRow(false, false, false, false, null, []);
+                continue;
+            }
+            int start = i;
+            while (i < limit && IsWordChar(text[i])) i++;
+            string w = text[start..i];
+            i--;                                            // the loop's ++ steps past the word
+
+            if (row.IsRow)
+            {
+                if (row.OpenSelector is { } open)           // the value of `lines` / `removeEmpty`
+                {
+                    row.Selectors.Add(open);
+                    row = row with { OpenSelector = null };
+                    continue;
+                }
+                if (row.AfterAs)
+                {
+                    if (IsStaffSelectorWord(w)) { row = row with { OpenSelector = w }; continue; }
+                    // Anything else ends the row (the selector list is closed).
+                }
+                else if (!row.HasName)
+                {
+                    // A clef may stand before the name — but a clef word is a legal part NAME
+                    // too, so the FIRST clef word is recorded as the clef and a following word
+                    // becomes the name. (`staff bass` alone stays "no name yet": which reading
+                    // it is depends on the document, which GetStaffClefRefCompletions asks.)
+                    if (!row.HasClef && LanguageVocabulary.ClefNames.Contains(w))
+                    {
+                        row = row with { HasClef = true };
+                        continue;
+                    }
+                    row = row with { HasName = true };
+                    continue;
+                }
+                else if (w == "as") { row = row with { AfterAs = true }; continue; }
+                // else: the row ended and this word opens the next one — fall through.
+            }
+            // Not in a row (or the row just ended): a `staff`/`ossia` keyword opens one; any
+            // other word is some other row (a keyword's, or a bare MIDI-only part name) and
+            // the caret is not in a staff row until the next keyword.
+            row = w is "staff" or "ossia"
+                ? new StaffRow(true, false, false, false, null, [])
+                : new StaffRow(false, false, false, false, null, []);
+        }
+        return row;
+    }
+
+    /// <summary>The selectors already written in the staff row at <paramref name="offset"/>
+    /// — what the chain position must NOT offer a second time. Empty anywhere else.</summary>
+    internal static IReadOnlyList<string> StaffSelectorsWritten(string text, int offset)
+    {
+        var scan = new BlockContextScan(text, offset);
+        if (scan.Stack.Count == 0)
+            return [];
+        var row = ScanStaffRow(text, scan.Stack[^1].OpenIndex + 1, offset);
+        return row.IsRow ? row.Selectors : [];
+    }
 
     private static bool IsScoreBlockOpener(string text, int braceIndex)
     {

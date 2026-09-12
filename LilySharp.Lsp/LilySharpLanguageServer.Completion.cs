@@ -241,6 +241,12 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterLyricsRowAttachName => GetLyricsRowAttachNameCompletions(),
             CompletionContext.AfterGroupLyricsRowAttachName => GetGroupLyricsRowAttachNameCompletions(),
             CompletionContext.AfterStaffLinesAs => GetStaffLinesSelectorCompletions(),
+            // `as lines 1 |` — the chain may go on (bare, sharing the one `as`) or the row
+            // may end; the selectors already written are dropped.
+            CompletionContext.AfterStaffSelectorChain =>
+                GetStaffSelectorChainCompletions(doc.Text, offset),
+            CompletionContext.AfterGroupStaffSelectorChain =>
+                GetGroupStaffSelectorChainCompletions(doc.Text, offset),
             CompletionContext.AfterStaffLinesValue => GetStaffLinesValueCompletions(),
             CompletionContext.AfterChordDisplayAs => GetChordDisplayModeCompletions(),
             CompletionContext.AfterTabDisplayAs => GetTabDisplayModeCompletions(),

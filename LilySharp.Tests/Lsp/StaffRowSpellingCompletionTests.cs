@@ -138,6 +138,104 @@ public class StaffRowSpellingCompletionTests
         Assert.Contains("as full", withName);
     }
 
+    // ===== the `as` chain: `[ 'as' , StaffSelector , { StaffSelector } ]` =====
+
+    [Theory]
+    [InlineData("score main { staff m as lines 1 ▮ }", "removeEmpty", "lines")]
+    [InlineData("score main { staff m as removeEmpty all ▮ }", "lines", "removeEmpty")]
+    [InlineData("score main { ossia m as lines 1 ▮ }", "removeEmpty", "lines")]
+    public void AfterACompleteSelector_TheChainGoesOnWithTheOtherOne(
+        string row, string expected, string written)
+    {
+        var labels = LabelsAt(OnePart, row);
+        // BARE — the chain shares the one `as` (ConsumeStaffSelectors), so a second `as`
+        // would not parse.
+        Assert.Contains(expected, labels);
+        Assert.DoesNotContain("as " + expected, labels);
+        // The selector already written is not offered again: it is consumed and means
+        // nothing the second time.
+        Assert.DoesNotContain(written, labels);
+        // …and the row may simply end here, so the continuations are still offered.
+        Assert.Contains("staff", labels);
+    }
+
+    [Fact]
+    public void WhenBothSelectorsAreWritten_OnlyTheContinuationsRemain()
+    {
+        var labels = LabelsAt(OnePart, "score main { staff m as lines 1 removeEmpty all ▮ }");
+        Assert.DoesNotContain("lines", labels);
+        Assert.DoesNotContain("removeEmpty", labels);
+        Assert.Contains("staff", labels);
+    }
+
+    [Fact]
+    public void TheChainInsideAGroup_KeepsTheGroupsNarrowContinuations()
+        => Assert.Equal(new[] { "removeEmpty", "staff", "lyrics" },
+            LabelsAt(OnePart, "score main { grandStaff { staff m as lines 1 ▮ } }"));
+
+    [Theory]
+    [InlineData("score main { staff m as ▮ }", "lines")]          // a selector MUST follow `as`
+    [InlineData("score main { staff m as lines ▮ }", "1")]        // the line count
+    [InlineData("score main { staff m as removeEmpty ▮ }", "true")]
+    public void TheValueSlotsInsideTheClauseAreUnchanged(string row, string expected)
+    {
+        var labels = LabelsAt(OnePart, row);
+        Assert.Contains(expected, labels);
+        Assert.DoesNotContain("staff", labels);   // no row may start in a value slot
+    }
+
+    [Fact]
+    public void TheChainTheCompilerAccepts_IsWhatTheItemsSpell()
+    {
+        // The net under the two items above: the spelling they build parses and validates.
+        string book = OnePart + "score main { staff melody as lines 1 removeEmpty all }\n";
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(book);
+        Assert.False(tree.HasErrors,
+            "the chained selectors do not parse: "
+            + string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
+        Assert.Empty(LilySharp.Core.Semantics.SemanticValidation.Run(tree)
+            .Where(d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error));
+    }
+
+    // ===== the row's other optional clauses =====
+
+    [Theory]
+    [InlineData("score main { staff ~m ▮ }")]                       // the label suppressor
+    [InlineData("score main { staff m \"Violin I\" ▮ }")]           // the display name
+    [InlineData("score main { staff ~treble m \"Violin I\" ▮ }")]   // all of them at once
+    public void EveryOptionalClauseKeepsTheRowsSelectors(string row)
+    {
+        var labels = LabelsAt(OnePart, row);
+        Assert.Contains("as lines", labels);
+        Assert.Contains("as removeEmpty", labels);
+    }
+
+    [Theory]
+    [InlineData("score main { chords prog as roman ▮ }")]
+    [InlineData("score main { tab m as numbers ▮ }")]
+    public void ARowWhoseSelectorDoesNotChain_EndsThere(string row)
+    {
+        // Control on the other rows: `ConsumeAsSelector` takes exactly ONE word, so there is
+        // no chain to offer — the score's continuations are the whole answer.
+        string doc = "part m { section A { c'4 } }\nchords prog { section A { C } }\nform main { A }\n";
+        var labels = LabelsAt(doc, row);
+        Assert.Contains("staff", labels);
+        Assert.DoesNotContain("numbers", labels);
+        Assert.DoesNotContain("roman", labels);
+        Assert.DoesNotContain("lines", labels);
+    }
+
+    [Fact]
+    public void ABarePartNameAfterAStaffRow_IsItsOwnRow()
+    {
+        // The row reader has to END the staff row at a word the grammar cannot attach:
+        // `staff m  n` is a staff row AND a MIDI-only part row, so the caret after `n` is
+        // not inside the staff row and must not be offered its selectors.
+        var labels = LabelsAt(OnePart + "part n { section A { c4 } }\n", "score main { staff m  n ▮ }");
+        Assert.DoesNotContain("as lines", labels);
+        Assert.Contains("staff", labels);
+    }
+
     [Fact]
     public void TheClefListItselfIsStillOfferedBeforeAName()
     {
