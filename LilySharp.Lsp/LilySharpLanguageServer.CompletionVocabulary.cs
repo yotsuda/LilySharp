@@ -1773,19 +1773,22 @@ public sealed partial class LilySharpLanguageServer
         return new CompletionList { Items = items.ToArray() };
     }
 
-    /// <summary>After <c>tab TUNING</c>: the parts (the tuning was the override), then the
-    /// style selector — because a tuning word may be a part name too (<c>bass</c> is both),
-    /// so <c>tab bass</c> may already be complete. The tab sibling of
-    /// <see cref="GetStaffClefRefCompletions"/>.</summary>
-    internal static CompletionList GetTabTuningRefCompletions(string text)
+    /// <summary>After <c>tab TUNING</c>: the parts (the tuning was the override), plus the
+    /// style selector ONLY when this document declares a part named <paramref name="word"/>
+    /// — <c>bass</c> is both a tuning and a plausible part name, so <c>tab bass</c> may
+    /// already be complete, but only in a book that HAS one. The tab sibling of
+    /// <see cref="GetStaffClefRefCompletions"/>, fixed with it: the two read the same
+    /// question off the same list.</summary>
+    internal static CompletionList GetTabTuningRefCompletions(string text, string word = "")
     {
-        var items = new System.Collections.Generic.List<CompletionItem>(
-            GetDeclaredNameCompletions(text, "part", "Part").Items);
-        foreach (var it in TabStyleSelectorItems("as "))
-        {
-            it.SortText = "9" + (it.SortText ?? "");
-            items.Add(it);
-        }
+        var parts = GetDeclaredNameCompletions(text, "part", "Part").Items;
+        var items = new System.Collections.Generic.List<CompletionItem>(parts);
+        if (parts.Any(p => string.Equals(p.Label, word, StringComparison.Ordinal)))
+            foreach (var it in TabStyleSelectorItems("as "))
+            {
+                it.SortText = "9" + (it.SortText ?? "");
+                items.Add(it);
+            }
         return new CompletionList { Items = items.ToArray() };
     }
 
@@ -4003,19 +4006,30 @@ public sealed partial class LilySharpLanguageServer
         });
 
     /// <summary>
-    /// After <c>staff CLEF</c> / <c>ossia CLEF</c>: the parts (the clef was the override),
-    /// then the selectors — because four of the five clef words are legal part names, and
-    /// <c>staff bass</c> may already be complete.
+    /// After <c>staff CLEF</c> / <c>ossia CLEF</c>: the parts — the clef was the override,
+    /// so a part NAME is what belongs next — plus the selectors ONLY when
+    /// <paramref name="word"/> could have been the part name itself, i.e. this document
+    /// declares a part by that name (<c>staff bass</c> beside <c>part bass { … }</c> may
+    /// already be complete).
     /// </summary>
-    internal static CompletionList GetStaffClefRefCompletions(string text)
+    /// <remarks>
+    /// ⚠️ The selectors were offered after EVERY clef word until 2026-09-12 (user report:
+    /// "only part names belong at `staff treble ▮`"). The reasoning in this comment —
+    /// "four of the five clef words are legal part names" — was true of the LANGUAGE and
+    /// asked of nothing: whether the word names a part of THIS book is a question the book
+    /// answers. With no <c>part treble</c> in it, <c>staff treble as lines 1</c> is not an
+    /// ambiguous row, it is a row with no part, and the popup was proposing to finish it.
+    /// </remarks>
+    internal static CompletionList GetStaffClefRefCompletions(string text, string word = "")
     {
-        var items = new System.Collections.Generic.List<CompletionItem>(
-            GetDeclaredNameCompletions(text, "part", "Part").Items);
-        foreach (var it in StaffSelectorItems("as "))
-        {
-            it.SortText = "9" + (it.SortText ?? "");
-            items.Add(it);
-        }
+        var parts = GetDeclaredNameCompletions(text, "part", "Part").Items;
+        var items = new System.Collections.Generic.List<CompletionItem>(parts);
+        if (parts.Any(p => string.Equals(p.Label, word, StringComparison.Ordinal)))
+            foreach (var it in StaffSelectorItems("as "))
+            {
+                it.SortText = "9" + (it.SortText ?? "");
+                items.Add(it);
+            }
         return new CompletionList { Items = items.ToArray() };
     }
 

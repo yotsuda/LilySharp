@@ -286,10 +286,21 @@ public class CompletionAuditTests
             AssertCompiles(Book(items: $"staff {clef} m"), $"`staff {clef} m`");
             AssertCompiles(Book(items: $"staff m  ossia {clef} m"), $"`ossia {clef} m`");
         }
-        // After the clef: the parts, then the selectors (the clef word may be the part).
-        var after = LilySharpLanguageServer.GetStaffClefRefCompletions(text).Items.Select(i => i.Label).ToList();
-        Assert.Equal("m", after[0]);
-        Assert.Contains("as lines", after);
+        // After the clef: the parts — and the selectors ONLY where the clef word also names
+        // a part of THIS book. ⚠️ They rode along after every clef until 2026-09-12 (user
+        // report): "four of the five clef words are legal part names" is a fact about the
+        // language, and the question is about the document.
+        var after = LilySharpLanguageServer.GetStaffClefRefCompletions(text, "treble")
+            .Items.Select(i => i.Label).ToList();
+        Assert.Equal(["m"], after);
+
+        string withBass = Book(items: "staff m  staff bass")
+                        + "part bass { clef bass }\nsection A { bass { r1 | } }\n";
+        var ambiguous = LilySharpLanguageServer.GetStaffClefRefCompletions(withBass, "bass")
+            .Items.Select(i => i.Label).ToList();
+        Assert.Contains("bass", ambiguous);
+        Assert.Contains("as lines", ambiguous);
+        AssertCompiles(withBass, "`staff bass` naming a part called bass");
     }
 
     [Fact]
@@ -416,13 +427,20 @@ public class CompletionAuditTests
             AssertCompiles(Book(items: $"staff m  tab m {selector}"), $"`tab m {selector}`");
             AssertCompiles(Book(items: $"staff m  tab bass5 m {selector}"), $"`tab bass5 m {selector}`");
         }
-        // After a tuning: the parts, then the same selectors (the tuning word may be the part).
-        var afterTuning = LilySharpLanguageServer.GetTabTuningRefCompletions(text).Items.Select(i => i.Label).ToList();
-        Assert.Equal("m", afterTuning[0]);
+        // After a tuning: the parts — and the same selectors only where the tuning word also
+        // names a part of this book, the clef row's rule read off the same list.
+        var afterTuning = LilySharpLanguageServer.GetTabTuningRefCompletions(text, "bass5")
+            .Items.Select(i => i.Label).ToList();
+        Assert.Equal(["m"], afterTuning);
+
+        string withBass = Book(items: "staff m  tab bass")
+                        + "part bass { instrument bass }\nsection A { bass { r1 | } }\n";
+        var ambiguous = LilySharpLanguageServer.GetTabTuningRefCompletions(withBass, "bass")
+            .Items.Select(i => i.Label).ToList();
+        Assert.Contains("bass", ambiguous);
         foreach (string selector in selectors)
-            Assert.Contains(selector, afterTuning);
-        AssertCompiles(Book(items: "staff m  tab bass") + "part bass { instrument bass }\nsection A { bass { r1 | } }\n",
-            "`tab bass` naming a part called bass");
+            Assert.Contains(selector, ambiguous);
+        AssertCompiles(withBass, "`tab bass` naming a part called bass");
     }
 
     [Theory]

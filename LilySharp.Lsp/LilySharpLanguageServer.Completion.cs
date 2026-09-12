@@ -210,12 +210,16 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterStaffRef => GetStaffRefCompletions(doc.Text),
             // `staff CLEF |`: the parts, and — the clef word being a legal part name too —
             // the selectors.
-            CompletionContext.AfterStaffClefRef => GetStaffClefRefCompletions(doc.Text),
+            // The clef word itself decides whether the selectors belong beside the parts:
+            // they do only where the document declares a part by that name.
+            CompletionContext.AfterStaffClefRef =>
+                GetStaffClefRefCompletions(doc.Text, WordBeforeCursor(doc.Text, offset)),
             // `tab |` / `tab TUNING |`: the parts, and the tunings that may precede one.
             CompletionContext.AfterTabRef => GetTabRefCompletions(doc.Text),
             // `tab TUNING |`: the parts, and — the tuning word being a legal part name too —
             // the style selector.
-            CompletionContext.AfterTabTuningRef => GetTabTuningRefCompletions(doc.Text),
+            CompletionContext.AfterTabTuningRef =>
+                GetTabTuningRefCompletions(doc.Text, WordBeforeCursor(doc.Text, offset)),
             // condensedStaff { } / combinedStaff { }: bare part names only.
             CompletionContext.BarePartNameList => GetDeclaredNameCompletions(doc.Text, "part", "Part"),
             // `score NAME |`: the header options and the body's braces.

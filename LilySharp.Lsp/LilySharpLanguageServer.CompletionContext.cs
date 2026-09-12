@@ -1071,11 +1071,14 @@ public sealed partial class LilySharpLanguageServer
                     if (SecondWordBeforeCursor(text, offset) == "staff"
                         && LanguageVocabulary.ClefNames.Contains(prevWord))
                         return CompletionContext.AfterStaffClefRef;
-                    // `staff NAME ▮` inside the group: a member takes the
-                    // `as lines N` selector too, so offer it beside the group's
-                    // own NARROW continuations (never the score-wide list —
-                    // a chords row in here is LYS6011).
-                    if (SecondWordBeforeCursor(text, offset) == "staff")
+                    // `staff NAME ▮` inside the group — and `staff CLEF NAME ▮`,
+                    // the same three-word form the score body reads below: a
+                    // member takes the `as lines N` selector either way, offered
+                    // beside the group's own NARROW continuations (never the
+                    // score-wide list — a chords row in here is LYS6011).
+                    if (SecondWordBeforeCursor(text, offset) == "staff"
+                        || (ThirdWordBeforeCursor(text, offset) == "staff"
+                            && LanguageVocabulary.ClefNames.Contains(SecondWordBeforeCursor(text, offset))))
                         return CompletionContext.AfterGroupStaffAttachName;
                     // `lyrics NAME ▮` inside the group: a verse row states its
                     // binding here too (`sings PART`), then the group's own
@@ -1113,10 +1116,18 @@ public sealed partial class LilySharpLanguageServer
             if (SecondWordBeforeCursor(text, offset) is "staff" or "ossia"
                 && LanguageVocabulary.ClefNames.Contains(prevWord))
                 return CompletionContext.AfterStaffClefRef;
-            // `staff NAME |` / `ossia NAME |`: after the part name, offer the
-            // `as lines N` selector (plus the normal continuations), the same
-            // shape as the chords row's `as` above.
-            if (SecondWordBeforeCursor(text, offset) is "staff" or "ossia")
+            // `staff NAME |` / `ossia NAME |` — AND the three-word form the optional clef
+            // makes, `staff CLEF NAME |`: the part name has been written either way, so the
+            // `as lines N` / `as removeEmpty V` selectors follow it either way. ⚠️ Only the
+            // TWO-word form was read until 2026-09-12 (user report), so writing the clef —
+            // the very thing the row above offers — silently cost the row its selectors and
+            // dropped the caret into the plain score list. The tab row had already grown
+            // this second reading (`tab TUNING NAME |`, above); the staff and ossia rows had
+            // not, which is the same one-construct-several-readers shape as the rest of this
+            // session.
+            if (SecondWordBeforeCursor(text, offset) is "staff" or "ossia"
+                || (ThirdWordBeforeCursor(text, offset) is "staff" or "ossia"
+                    && LanguageVocabulary.ClefNames.Contains(SecondWordBeforeCursor(text, offset))))
                 return CompletionContext.AfterStaffAttachName;
             return CompletionContext.ScoreBlock;
         }
