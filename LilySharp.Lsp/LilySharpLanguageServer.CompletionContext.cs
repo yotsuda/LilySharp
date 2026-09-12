@@ -634,6 +634,9 @@ public sealed partial class LilySharpLanguageServer
         /// <summary><c>score NAME |</c> — before the brace: the header's options (a quoted
         /// basename, <c>transpose</c>, <c>pitch</c>) and the body's braces.</summary>
         AfterScoreHeader,
+        /// <summary><c>score |</c> — the form this score renders, which must already be
+        /// declared (LYS1018 otherwise).</summary>
+        AfterScoreKeyword,
         /// <summary><c>transpose |</c> — a pitch is typed there, which no list serves.</summary>
         AfterTransposePitch,
         /// <summary><c>tab |</c> in a score: the declared parts, and the tunings that may
@@ -952,6 +955,13 @@ public sealed partial class LilySharpLanguageServer
 
         if (IsPitchName(prevWord) && SecondWordBeforeCursor(text, offset) == "key")
             return CompletionContext.AfterKeyTonic;
+
+        // `score |` — the FORM this score renders. ScoreDecl's Identifier "NAMES THE FORM
+        // this score renders and is REQUIRED" (GRAMMAR §7), so the declared form names are
+        // what belongs; the caret got the top-level KEYWORD list until 2026-09-12, which is
+        // also why the item that writes this name could not hand the choice to a popup.
+        if (prevWord == "score" && scan.Stack.Count == 0 && !IsInsideStringLiteral(text, offset))
+            return CompletionContext.AfterScoreKeyword;
 
         // `score NAME |` — the header, before its brace: the caret is at the top level
         // (the block stack is empty) on a line that opens with `score` and has not yet

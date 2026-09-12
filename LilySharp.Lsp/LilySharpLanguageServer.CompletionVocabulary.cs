@@ -1985,6 +1985,24 @@ public sealed partial class LilySharpLanguageServer
         };
     }
 
+    /// <summary>The top-level <c>score</c> scaffold, whose identifier names the form it
+    /// renders (<see cref="ScoreFormName"/>).</summary>
+    private static CompletionItem ScoreScaffoldItem(string? text)
+    {
+        var (name, needsPicker) = ScoreFormName(text);
+        return new CompletionItem
+        {
+            Label = "score",
+            Kind = CompletionItemKind.Keyword,
+            InsertTextFormat = InsertTextFormat.Snippet,
+            // With a picker the form name is stop 1 — where the editor puts the caret when
+            // it runs the item's command — and the body's caret stays last.
+            InsertText = "score " + name + " {\n\t$0\n}",
+            Detail = "Printable score (visual layout)",
+            Command = needsPicker ? PartPickerCommand() : null,
+        };
+    }
+
     /// <summary>
     /// The top-level <c>lyrics</c> track scaffold: a named track that sings a part of this
     /// document, with a <c>section</c> cell inside (a flat top-level track is LYS4002 in
@@ -2007,6 +2025,51 @@ public sealed partial class LilySharpLanguageServer
             Detail = "Named lyrics track (sings its melody; a score places it with a `lyrics NAME` row)",
             Command = needsPicker ? PartPickerCommand() : null,
         };
+    }
+
+    /// <summary>
+    /// The form name a top-level <c>score</c> scaffold writes. A score's identifier NAMES A
+    /// FORM THAT MUST ALREADY EXIST (GRAMMAR §7; LYS1018 otherwise), so it is read from the
+    /// document exactly as the <c>sings</c> target is: the only form when there is one, an
+    /// empty stop 1 plus <see cref="PartPickerCommand"/> when there are several (the popup
+    /// at <c>score ▮</c> lists them), and — when the document has no form yet — the
+    /// placeholder <c>main</c>, which is the name the <c>form</c> item writes beside it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ It wrote the literal <c>main</c> until 2026-09-12: measured, accepting the item in
+    /// a book whose form is called <c>verse</c> types "Unknown form 'main'". Same shape as
+    /// the <c>sings part</c> the owner reported — a name that must refer to something,
+    /// written as though it were a keyword.
+    /// </remarks>
+    private static (string Name, bool NeedsPicker) ScoreFormName(string? text)
+    {
+        var forms = text is null
+            ? []
+            : GetDeclaredNameCompletions(text, "form", "").Items.Select(i => i.Label!).ToArray();
+        return forms.Length switch
+        {
+            0 => ("${1:main}", false),
+            1 => (forms[0], false),
+            _ => ("$1", true),
+        };
+    }
+
+    /// <summary>
+    /// The form name a top-level <c>form</c> scaffold writes — the MIRROR question: this one
+    /// CREATES the name, so it must not be taken (LYS1017 "Duplicate form name"). <c>main</c>
+    /// while it is free; otherwise the first free <c>mainN</c>, left as a selected
+    /// placeholder because a derived name is a suggestion, not a decision.
+    /// </summary>
+    private static string FreeFormName(string? text)
+    {
+        var taken = text is null
+            ? new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal)
+            : [.. GetDeclaredNameCompletions(text, "form", "").Items.Select(i => i.Label!)];
+        if (!taken.Contains("main"))
+            return "main";
+        for (int n = 2; ; n++)
+            if (!taken.Contains("main" + n))
+                return "${1:main" + n + "}";
     }
 
     /// <summary>Re-opens the completion popup after the item is inserted. With the caret in
@@ -2971,8 +3034,13 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "part", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "part $1 {\n\t$0\n}", Detail = "Part declaration" },
                 new CompletionItem { Label = "section", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "section $1 {\n\t$0\n}", Detail = "Section declaration" },
                 new CompletionItem { Label = "phrase", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "phrase $1 {\n\t$0\n}", Detail = "Reusable phrase" },
-                new CompletionItem { Label = "form", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "form main { $0 }", Detail = "Piece form (section play order)" },
-                new CompletionItem { Label = "score", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "score main {\n\t$0\n}", Detail = "Printable score (visual layout)" },
+                // ⚠️ These two write the SAME KIND of name and answer OPPOSITE questions:
+                // `form` CREATES one (it must be free — LYS1017) and `score` REFERS to one
+                // (it must exist — LYS1018). Both asked the document for it since
+                // 2026-09-12; both wrote the literal `main` before that, so in a book whose
+                // form is called anything else, accepting `score` typed an error.
+                new CompletionItem { Label = "form", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "form " + FreeFormName(text) + " { $0 }", Detail = "Piece form (section play order)" },
+                ScoreScaffoldItem(text),
                 new CompletionItem { Label = "title", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "title \"$0\"", Detail = "Title metadata" },
                 new CompletionItem { Label = "composer", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "composer \"$0\"", Detail = "Composer metadata" },
                 // ⚠️ This inserted `font "$0"` until 2026-08-18 — the removed one-liner —
