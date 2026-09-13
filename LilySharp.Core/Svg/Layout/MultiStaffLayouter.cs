@@ -170,9 +170,19 @@ internal sealed class MultiStaffLayouter
         if (upper.Staves.IsDefaultOrEmpty || lower.Staves.IsDefaultOrEmpty)
             return sp.StaffGroupStaff;
 
-        var spaceable = upper.Type == StaffGroupType.Single
+        // The GROUPER each side stands in: its own delimited group, else the outer bracket it
+        // is a direct child of (StaffGroup.Outer), else none. With no grouper above, the
+        // staff's own default; with the SAME grouper below, that grouper's staff-staff-spacing;
+        // otherwise its staffgroup-staff-spacing. For a book with no nested group this is the
+        // old rule exactly (a delimited group is never another group's grouper). MEASURED
+        // (scratch/p377/nest, LilyPond 2.26.0): flat Staff→GrandStaff 9, GrandStaff→Staff 10.5,
+        // GrandStaff→GrandStaff 10.5; inside a StaffGroup, Staff→nested GrandStaff 10.5,
+        // nested GrandStaff→Staff 10.5, Staff→Staff 9.
+        object? upperGrouper = upper.HasDelimiter ? upper : upper.Outer;
+        object? lowerGrouper = lower.HasDelimiter ? lower : lower.Outer;
+        var spaceable = upperGrouper is null
             ? sp.DefaultStaffStaff
-            : sp.StaffGroupStaff;
+            : ReferenceEquals(upperGrouper, lowerGrouper) ? sp.StaffStaff : sp.StaffGroupStaff;
         var before = upper.Staves[^1];
         var after = lower.Staves[0];
 
@@ -539,6 +549,41 @@ internal sealed class MultiStaffLayouter
         => SystemStartBarLeftEdge(indent) - SystemStartBracketPadding
            - EngravingDefaults.SystemStartBracketThickness / 2.0;
 
+    /// <summary>
+    /// The right edge of a brace that stands INSIDE a bracket: the bracket's ink left less the
+    /// brace's own 0.3 = indent − 1.61.
+    /// </summary>
+    /// <remarks>
+    /// The delimiters chain outward: bar, then the outer bracket against the bar, then the
+    /// nested brace against the bracket. MEASURED, LilyPond 2.26.0 -dbackend=null
+    /// (scratch/p377/nest/nest.ly, StaffGroup and ChoirStaff each holding a GrandStaff): the
+    /// bracket at 7.225827 .. 7.675827 — unchanged by the nesting — and the brace's right edge
+    /// at 6.925827 = 7.225827 − 0.3, at indent 8.535827.
+    /// </remarks>
+    internal static double SystemStartNestedBraceRightEdge(double indent)
+        => SystemStartBracketCentre(indent) - EngravingDefaults.SystemStartBracketThickness / 2.0
+           - SystemStartBracePadding;
+
+    /// <summary>
+    /// The runs of consecutive leaf groups on a system that stand in one outer bracket.
+    /// </summary>
+    internal static List<(OuterStaffGroup Outer, List<StaffGroupLayout> Leaves)> OuterRuns(SystemLayout system)
+    {
+        var runs = new List<(OuterStaffGroup Outer, List<StaffGroupLayout> Leaves)>();
+        if (system.StaffGroups.IsDefaultOrEmpty)
+            return runs;
+        foreach (var g in system.StaffGroups)
+        {
+            if (g.Outer is not { } outer)
+                continue;
+            if (runs.Count > 0 && ReferenceEquals(runs[^1].Outer, outer))
+                runs[^1].Leaves.Add(g);
+            else
+                runs.Add((outer, new List<StaffGroupLayout> { g }));
+        }
+        return runs;
+    }
+
     /// <summary>How far left of the staff a system-start BRACKET sits.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm SystemStartBracket (padding . 0.8)</remarks>
     private const double SystemStartBracketPadding = 0.8;
@@ -565,19 +610,19 @@ internal sealed class MultiStaffLayouter
             if (group.IsGrandStaff)
             {
                 var layout = LayoutGrandStaffGroup(score, group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex);
-                builder.Add(layout);
+                builder.Add(layout with { Outer = group.Outer });
                 currentY -= layout.Height;
             }
             else if (group.HasDelimiter)
             {
                 var layout = LayoutBracketGroup(score, group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex);
-                builder.Add(layout);
+                builder.Add(layout with { Outer = group.Outer });
                 currentY -= layout.Height;
             }
             else
             {
                 var layout = LayoutSingleStaffGroup(score, group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex);
-                builder.Add(layout);
+                builder.Add(layout with { Outer = group.Outer });
                 currentY -= layout.Height;
             }
 
@@ -798,7 +843,9 @@ internal sealed class MultiStaffLayouter
         }
 
         double totalHeight = y - currentY + LastVisibleStaffHeight(staffLayouts);
-        double braceX = SystemStartBraceRightEdge(CurrentIndent);
+        double braceX = group.Outer is null
+            ? SystemStartBraceRightEdge(CurrentIndent)
+            : SystemStartNestedBraceRightEdge(CurrentIndent);
 
         var grandStaffLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
@@ -904,7 +951,9 @@ internal sealed class MultiStaffLayouter
         }
 
         double totalHeight = y - currentY + staffHeight;
-        double braceX = SystemStartBraceRightEdge(CurrentIndent);
+        double braceX = group.Outer is null
+            ? SystemStartBraceRightEdge(CurrentIndent)
+            : SystemStartNestedBraceRightEdge(CurrentIndent);
 
         var grandStaffLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
@@ -2391,6 +2440,7 @@ internal sealed class MultiStaffLayouter
                     : LayoutSingleStaffGroupWithSkylines(
                         score, group, currentY, sp.StaffStaff, globalStaffIndex, staffSkylines, isDead,
                         runSources);
+            layout = layout with { Outer = group.Outer };
             builder.Add(layout);
 
             // A group with no survivor takes no room and no gap: it is not in the alignment.

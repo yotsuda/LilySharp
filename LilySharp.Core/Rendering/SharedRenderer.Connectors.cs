@@ -106,6 +106,10 @@ internal static partial class SharedRenderer
                 if (g.GrandStaffLayout is { } d
                     && SystemStartDelimiterInkLeft(d, d.BraceTop - d.BraceBottom) is { } left)
                     Take(left);
+        // An outer bracket is a delimiter too, and the one furthest out after a nested brace.
+        foreach (var o in OuterDelimiters(system))
+            if (SystemStartDelimiterInkLeft(o.Delimiter, o.Delimiter.BraceTop - o.Delimiter.BraceBottom) is { } outerLeft)
+                Take(outerLeft);
 
         // ⚠️ THE WIDTH COMES FROM THE METRICS THE TEXT IS DRAWN WITH, which is the whole
         // point of the change: the pair this replaced sized the indent from an estimate and
@@ -219,21 +223,10 @@ internal static partial class SharedRenderer
         // Span bars inside delimited groups. Barline types come from a content
         // voice — they are score-synchronized at collection time.
         var voice = score.PrimaryContentStaff.PrimaryVoice;
-        foreach (var group in system.StaffGroups)
-        {
-            // A ChoirStaff is bracketed but its barlines are NOT spanned across the
-            // gap — each staff keeps its own. LILYPOND-REF: ly/engraver-init.ly —
-            // ChoirStaff has no Span_bar_engraver (unlike GrandStaff/StaffGroup).
-            if (!group.HasDelimiter || group.Type == StaffGroupType.ChoirStaff)
-                continue;
-            var staves = group.Staves
-                .Where(s => !s.IsHidden && !s.IsOssia)
-                // staff.Y is Y-up, so top-to-bottom order is DESCENDING.
-                .OrderByDescending(s => s.Y)
-                .ToList();
-            if (staves.Count < 2)
-                continue;
 
+        // The bar-line segments drawn through each listed gap, measure by measure.
+        void DrawSpanGaps(List<(StaffLayout Upper, StaffLayout Lower)> gaps)
+        {
             // The line-start bar line's column gap — the same derivation the staff's own
             // DrawBarlines reads, so the span bar stands on the staff bar it extends.
             double lineStartBarGap = MultiStaffLayouter.LineStartBarGap(score, system);
@@ -258,10 +251,10 @@ internal static partial class SharedRenderer
                 // which stand in the line-start staff-bar column past the prefix.
                 double startX = atLineStart ? ml.X + lineStartBarGap : ml.X;
 
-                for (int i = 0; i + 1 < staves.Count; i++)
+                foreach (var (upper, lower) in gaps)
                 {
-                    double gapTop = systemYUp + staves[i].Y - staves[i].Height;
-                    double gapBottom = systemYUp + staves[i + 1].Y;
+                    double gapTop = systemYUp + upper.Y - upper.Height;
+                    double gapBottom = systemYUp + lower.Y;
                     double gapHeight = gapTop - gapBottom;
                     if (gapHeight <= 0)
                         continue;
@@ -275,6 +268,87 @@ internal static partial class SharedRenderer
                 }
             }
         }
+
+        foreach (var group in system.StaffGroups)
+        {
+            // A ChoirStaff is bracketed but its barlines are NOT spanned across the
+            // gap — each staff keeps its own. LILYPOND-REF: ly/engraver-init.ly —
+            // ChoirStaff has no Span_bar_engraver (unlike GrandStaff/StaffGroup).
+            if (!group.HasDelimiter || group.Type == StaffGroupType.ChoirStaff)
+                continue;
+            var staves = group.Staves
+                .Where(s => !s.IsHidden && !s.IsOssia)
+                // staff.Y is Y-up, so top-to-bottom order is DESCENDING.
+                .OrderByDescending(s => s.Y)
+                .ToList();
+            if (staves.Count < 2)
+                continue;
+            var gaps = new List<(StaffLayout Upper, StaffLayout Lower)>(staves.Count - 1);
+            for (int i = 0; i + 1 < staves.Count; i++)
+                gaps.Add((staves[i], staves[i + 1]));
+            DrawSpanGaps(gaps);
+        }
+
+        // An OUTER staffGroup spans the gaps between its DIRECT children — a plain staff and
+        // the nested grand staff beside it — and leaves the gaps inside a nested delimited
+        // group to that group, which drew them above. An outer choirStaff spans none.
+        // MEASURED (scratch/p377/nest, LilyPond 2.26.0 -dbackend=svg): StaffGroup > (Staff,
+        // GrandStaff) draws span bars through both gaps; ChoirStaff > (Staff, GrandStaff)
+        // through the grand staff's own gap only.
+        foreach (var o in OuterDelimiters(system))
+        {
+            if (o.Outer.Type == StaffGroupType.ChoirStaff)
+                continue;
+            var gaps = new List<(StaffLayout Upper, StaffLayout Lower)>();
+            for (int i = 0; i + 1 < o.Staves.Count; i++)
+            {
+                var upper = o.Staves[i];
+                var lower = o.Staves[i + 1];
+                var upperLeaf = o.Leaves.First(l => l.Staves.Any(s => s.StaffIndex == upper.StaffIndex));
+                bool insideOneDelimitedLeaf = upperLeaf.HasDelimiter
+                    && upperLeaf.Staves.Any(s => s.StaffIndex == lower.StaffIndex);
+                if (!insideOneDelimitedLeaf)
+                    gaps.Add((upper, lower));
+            }
+            if (gaps.Count > 0)
+                DrawSpanGaps(gaps);
+        }
+    }
+
+    /// <summary>
+    /// Each outer bracket on a system (StaffGroup.Outer), as the delimiter layout it draws —
+    /// spanning the visible staves of its run, at the bracket's usual X.
+    /// </summary>
+    /// <remarks>
+    /// Derived from the PLACED staves at draw time rather than stored by the layouter, so a
+    /// page respacing (PageLayouter.RespaceStaves) or a row move cannot leave it stale. It
+    /// goes through the same <see cref="SystemStartDelimiterInkLeft"/> and
+    /// <see cref="DrawSystemStartBracket"/> as a leaf bracket.
+    /// </remarks>
+    private static List<(LilySharp.Core.Svg.Model.OuterStaffGroup Outer, GrandStaffLayout Delimiter,
+        List<StaffLayout> Staves, List<StaffGroupLayout> Leaves)> OuterDelimiters(SystemLayout system)
+    {
+        var result = new List<(LilySharp.Core.Svg.Model.OuterStaffGroup, GrandStaffLayout,
+            List<StaffLayout>, List<StaffGroupLayout>)>();
+        foreach (var (outer, leaves) in MultiStaffLayouter.OuterRuns(system))
+        {
+            var staves = leaves.SelectMany(l => l.Staves)
+                .Where(s => !s.IsHidden && !s.IsOssia)
+                .OrderByDescending(s => s.Y)
+                .ToList();
+            if (staves.Count == 0)
+                continue;
+            double top = staves[0].Y;
+            double bottom = staves[^1].Y - staves[^1].Height;
+            var delimiter = new GrandStaffLayout(
+                Staves: [.. staves],
+                BraceX: MultiStaffLayouter.SystemStartBracketCentre(system.Indent),
+                BraceTop: top,
+                BraceBottom: bottom,
+                DelimiterType: SystemStartDelimiterType.Bracket);
+            result.Add((outer, delimiter, staves, leaves));
+        }
+        return result;
     }
 
     /// <summary>LILYPOND-REF: scm/define-grobs.scm:1853-1858 system-start-text::calc-x-offset
@@ -495,6 +569,13 @@ internal static partial class SharedRenderer
                         DrawSystemStartBrace(delim.BraceX, top, bottom, gc);
                     break;
             }
+        }
+        foreach (var o in OuterDelimiters(system))
+        {
+            double top = systemYUp + o.Delimiter.BraceTop;
+            double bottom = systemYUp + o.Delimiter.BraceBottom;
+            if (top - bottom >= SystemStartCollapseHeight)
+                DrawSystemStartBracket(o.Delimiter.BraceX, top, bottom, gc);
         }
     }
 

@@ -850,7 +850,9 @@ internal sealed partial class Parser
     /// is LYS6011, reported at the member for the reason recorded on
     /// ParseBarePartNameMembers, and its tokens are KEPT (width-preserving).
     /// </summary>
-    private GrandStaffRenderGreen ParseGrandStaffRender()
+    /// <param name="nested">True for a group already inside another: it may not hold a group
+    /// of its own, so nesting is exactly one level deep.</param>
+    private GrandStaffRenderGreen ParseGrandStaffRender(bool nested = false)
     {
         var grandStaffKeyword = Advance(); // grandStaff | staffGroup | choirStaff
         var openBrace = Expect(SyntaxKind.OpenBrace);
@@ -883,13 +885,25 @@ internal sealed partial class Parser
                 members.Add(ParseCombinedStaffRender());
                 continue;
             }
+            // A grandStaff ONE level inside a BRACKET — the piano or harp inside an orchestral
+            // staffGroup, the accompaniment inside a choirStaff (user decision, session 376).
+            // Not inside a grandStaff (a brace in a brace means nothing) and not deeper: the
+            // layout models exactly one outer bracket over a run of leaf groups
+            // (StaffGroup.Outer), and a second level would need a delimiter chain it does not have.
+            if (Check(SyntaxKind.GrandStaffKeyword) && !nested
+                && grandStaffKeyword.Kind is SyntaxKind.StaffGroupKeyword or SyntaxKind.ChoirStaffKeyword)
+            {
+                members.Add(ParseGrandStaffRender(nested: true));
+                continue;
+            }
 
             _diagnostics.Error(
                 new TextSpan(_textPosition, Current.FullWidth),
                 DiagnosticCodes.StaffGroupBadMember,
                 $"'{grandStaffKeyword.Text}' cannot contain '{Current.Text}' — a staff group "
                 + "holds 'staff NAME', 'condensedStaff { … }' and 'combinedStaff { … }' items "
-                + "and, between them, 'lyrics NAME' rows. "
+                + "and, between them, 'lyrics NAME' rows; a 'grandStaff { … }' may stand one "
+                + "level inside a 'staffGroup' or 'choirStaff'. "
                 + "A chords row stands above the group, outside the braces.");
 
             // Keep the offending tokens (the whole ITEM — its bare tokens, then a

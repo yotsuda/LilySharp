@@ -591,6 +591,12 @@ public static class RenderSpecParser
                 case CombinedStaffRenderSyntax combined:
                     members.Add(ParseCombinedStaff(combined));
                     break;
+                // A grandStaff one level inside a bracket (the parser admits it only there).
+                // A nested group of fewer than two staves is dropped, as a top-level one is.
+                case GrandStaffRenderSyntax inner:
+                    if (ParseGrandStaff(inner) is { } innerSpec)
+                        members.Add(new GrandStaffRenderSpec(innerSpec));
+                    break;
                 case LyricsRowRenderSyntax row when members.Count > 0
                     && members[^1] is SingleStaffSpec above
                     && RowBindsToPart(grandStaff, row.PartName, row.SingsTarget, above.Staff.VoiceName):

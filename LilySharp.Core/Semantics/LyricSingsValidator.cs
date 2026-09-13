@@ -117,6 +117,7 @@ internal sealed class LyricSingsValidator : ISemanticValidator
         {
             string? partAbove = null;
             bool sharedStaffAbove = false;
+            bool nestedGroupAbove = false;
             foreach (var member in group.ChildNodes())
             {
                 switch (member)
@@ -124,6 +125,15 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                     case StaffRenderSyntax st:
                         partAbove = RenderSpecParser.ParseStaffSpec(st)?.VoiceName;
                         sharedStaffAbove = false;
+                        nestedGroupAbove = false;
+                        break;
+                    // A nested grandStaff: its own rows are checked when this loop reaches it as
+                    // a group, and a row standing AFTER it, outside its braces, has no staff of
+                    // this bracket directly above it (ParseGrandStaff folds under plain staves only).
+                    case GrandStaffRenderSyntax:
+                        partAbove = null;
+                        sharedStaffAbove = false;
+                        nestedGroupAbove = true;
                         break;
                     // A condensed or combined staff carries several parts, so no row can be
                     // ITS verse — RenderSpecParser.ParseGrandStaff folds only under a plain
@@ -131,6 +141,7 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                     case CondensedStaffRenderSyntax or CombinedStaffRenderSyntax:
                         partAbove = null;
                         sharedStaffAbove = true;
+                        nestedGroupAbove = false;
                         break;
                     case LyricsRowRenderSyntax row
                         when partAbove == null
@@ -138,7 +149,11 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                         _diagnostics.Error(
                             row.LyricsKeyword.Span,
                             DiagnosticCodes.GroupRowNotBoundToStaffAbove,
-                            sharedStaffAbove
+                            nestedGroupAbove
+                                ? $"lyrics '{row.PartName}' stands under a nested group - inside a bracket "
+                                  + "a row is the verse of the plain staff directly above it; write the row "
+                                  + "inside that group, under the staff it sings."
+                            : sharedStaffAbove
                                 ? $"lyrics '{row.PartName}' stands under a condensed or combined staff - "
                                   + "inside a group a row is the verse of the ONE part on the staff above it, "
                                   + "and that staff carries several; move the row outside the braces."

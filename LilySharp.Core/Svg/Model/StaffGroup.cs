@@ -40,6 +40,27 @@ public enum StaffGroupType
 }
 
 /// <summary>
+/// The outer bracket over a run of leaf <see cref="StaffGroup"/>s — a <c>staffGroup</c> or
+/// <c>choirStaff</c> that holds a nested <c>grandStaff</c>.
+/// </summary>
+/// <remarks>
+/// A CLASS, compared by reference: two adjacent brackets of the same type are two brackets,
+/// and the leaves say which one they belong to by holding the same instance.
+/// <para>
+/// MEASURED on LilyPond 2.26.0 (scratch/p377/nest): the outer bracket stands where a
+/// bracket always stands (against the SystemStartBar), the nested brace clears the bracket's
+/// left edge by its own 0.3, a staff crossing into or out of the nested group sits 10.5 from
+/// its neighbour where two staves of one grouper sit 9, and a staffGroup spans bar lines
+/// across the gaps between its direct children while a choirStaff spans none.
+/// </para>
+/// </remarks>
+public sealed class OuterStaffGroup(StaffGroupType type)
+{
+    /// <summary><see cref="StaffGroupType.StaffGroup"/> or <see cref="StaffGroupType.ChoirStaff"/>.</summary>
+    public StaffGroupType Type { get; } = type;
+}
+
+/// <summary>
 /// A group of staves rendered together.
 /// </summary>
 /// <remarks>
@@ -66,6 +87,17 @@ public sealed record StaffGroup(
 
     /// <summary>Number of staves in this group.</summary>
     public int StaffCount => Staves.Length;
+
+    /// <summary>
+    /// The outer bracket this group stands in, or null — set on every leaf of a
+    /// <c>staffGroup</c> / <c>choirStaff</c> that holds a nested <c>grandStaff</c>.
+    /// </summary>
+    /// <remarks>
+    /// Leaves that share one instance are one bracket's run (consecutive by construction,
+    /// RenderSpec.BuildStaffGroups). The bracket is drawn, spans its bar lines and chooses its
+    /// boundary spacing from this, so no reader has to reconstruct a tree.
+    /// </remarks>
+    public OuterStaffGroup? Outer { get; init; }
 
     /// <summary>Whether this is a grand staff (brace-connected).</summary>
     public bool IsGrandStaff => Type == StaffGroupType.GrandStaff;

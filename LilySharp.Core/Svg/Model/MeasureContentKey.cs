@@ -384,6 +384,9 @@ public readonly record struct MeasureContentKey(long Hash)
     {
         hc.Add((int)group.Type);
         hc.Add(group.StaffCount);
+        // …and the outer bracket it stands in, which changes the boundary spacing specs and
+        // the span bars drawn through it (StaffGroup.Outer). -1 = none.
+        hc.Add(group.Outer is null ? -1 : (int)group.Outer.Type);
     }
 
     private static void AddStaffIdentity(ref Hash64 hc, Staff staff)

@@ -445,8 +445,20 @@ internal static class HairpinEngraver
                 for (int j = i + 1; j < staves.Length; j++)
                     if (!staves[j].IsHidden)
                         return true;
-                return false;
+                break;
             }
+        }
+        // An outer staffGroup's span bar runs below a staff that has a visible staff after it
+        // anywhere in the bracket's run, not only in its own leaf group
+        // (SharedRenderer.DrawStaffConnectors draws it there).
+        foreach (var run in MultiStaffLayouter.OuterRuns(system))
+        {
+            if (run.Outer.Type != StaffGroupType.StaffGroup)
+                continue;
+            var runStaves = run.Leaves.SelectMany(l => l.Staves).ToList();
+            int at = runStaves.FindIndex(s => s.StaffIndex == staffIdx && !s.IsHidden);
+            if (at >= 0 && runStaves.Skip(at + 1).Any(s => !s.IsHidden))
+                return true;
         }
         return false;
     }

@@ -778,8 +778,14 @@ internal sealed class SvgSystemFragmentCache
         }
         if (!system.StaffGroups.IsDefaultOrEmpty)
         {
+            // The outer bracket a group stands in and whether it continues the previous
+            // group's: the bracket, its span bars and its ink are drawn from these.
+            LilySharp.Core.Svg.Model.OuterStaffGroup? previousOuter = null;
             foreach (var g in system.StaffGroups)
             {
+                hc.Add(g.Outer is null ? -1 : (int)g.Outer.Type);
+                hc.Add(g.Outer is not null && ReferenceEquals(g.Outer, previousOuter));
+                previousOuter = g.Outer;
                 hc.Add((int)g.Type);
                 hc.Add(g.Y);
                 hc.Add(g.Height);

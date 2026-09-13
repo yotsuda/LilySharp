@@ -802,7 +802,8 @@ public sealed partial class GrandStaffRenderSyntax : SyntaxNode
 
     /// <summary>
     /// The group's members in written order: the items that each engrave ONE staff —
-    /// <c>staff</c>, <c>condensedStaff { … }</c> and <c>combinedStaff { … }</c> (at least 2
+    /// <c>staff</c>, <c>condensedStaff { … }</c> and <c>combinedStaff { … }</c> — and, in a
+    /// <c>staffGroup</c> / <c>choirStaff</c>, a nested <c>grandStaff { … }</c> (at least 2
     /// required, validated semantically). A <c>lyrics</c> row is not a member (it folds into
     /// the staff above), nor is a token the parser rejected and kept for its width.
     /// </summary>
@@ -818,7 +819,8 @@ public sealed partial class GrandStaffRenderSyntax : SyntaxNode
         {
             for (int i = 0; i < SlotCount; i++)
             {
-                if (GetChild(i) is StaffRenderSyntax or CondensedStaffRenderSyntax or CombinedStaffRenderSyntax)
+                if (GetChild(i) is StaffRenderSyntax or CondensedStaffRenderSyntax or CombinedStaffRenderSyntax
+                    or GrandStaffRenderSyntax)
                     yield return GetChild(i)!;
             }
         }

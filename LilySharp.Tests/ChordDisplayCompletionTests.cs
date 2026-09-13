@@ -236,14 +236,26 @@ public class ChordDisplayCompletionTests
     // session 376 `condensedStaff { … }` / `combinedStaff { … }` — and `lyrics NAME`
     // verse rows, nothing else — anything else is LYS6011 "cannot contain".
     [InlineData("score main { grandStaff { ")]
-    [InlineData("score main { staffGroup { ")]
-    [InlineData("score main { choirStaff { ")]
+    [InlineData("score main { staffGroup { grandStaff { ")]
     public void InsideAStaffGroup_OffersStaffAndLyricsRows(string text)
     {
         Assert.Equal(LilySharpLanguageServer.CompletionContext.StaffGroupBlock, Ctx(text));
         var labels = LilySharpLanguageServer.GetStaffGroupBlockCompletions()
             .Items.Select(i => i.Label).ToArray();
         Assert.Equal(new[] { "staff", "condensedStaff", "combinedStaff", "lyrics" }, labels);
+    }
+
+    [Theory]
+    // …and a BRACKET's body takes a nested grandStaff too (one level — the grandStaff body
+    // above does not offer it).
+    [InlineData("score main { staffGroup { ")]
+    [InlineData("score main { choirStaff { ")]
+    public void InsideABracket_AlsoOffersANestedGrandStaff(string text)
+    {
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.BracketGroupBlock, Ctx(text));
+        var labels = LilySharpLanguageServer.GetStaffGroupBlockCompletions(allowGrandStaff: true)
+            .Items.Select(i => i.Label).ToArray();
+        Assert.Equal(new[] { "staff", "condensedStaff", "combinedStaff", "grandStaff", "lyrics" }, labels);
     }
 
     [Theory]

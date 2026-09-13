@@ -82,9 +82,10 @@ public sealed record StaffSpec(
 /// grandStaff (brace, spanning barlines), staffGroup (bracket, spanning barlines)
 /// and choirStaff (bracket, disconnected barlines).
 /// </summary>
-/// <param name="Members">The group's members in stacking order, each of which engraves ONE
-/// staff: a <see cref="SingleStaffSpec"/>, a <see cref="CondensedStaffSpec"/> or a
-/// <see cref="CombinedStaffSpec"/>.</param>
+/// <param name="Members">The group's members in stacking order: a <see cref="SingleStaffSpec"/>,
+/// a <see cref="CondensedStaffSpec"/> or a <see cref="CombinedStaffSpec"/>, each of which
+/// engraves ONE staff — and, inside a staffGroup or choirStaff, a nested
+/// <see cref="GrandStaffRenderSpec"/> (one level; the parser admits no deeper).</param>
 /// <remarks>
 /// ⚠️ MEMBERS, NOT STAVES. Until session 376 a group held <c>StaffSpec</c>s only; a condensed
 /// or combined staff inside a bracket is one staff with several parts, so the group lists
@@ -98,8 +99,8 @@ public sealed record GrandStaffSpec(
     StaffGroupType Type = StaffGroupType.GrandStaff
 )
 {
-    /// <summary>Number of staves in this group — one per member.</summary>
-    public int StaffCount => Members.Length;
+    /// <summary>Number of staves in this group — one per member, a nested group's own count.</summary>
+    public int StaffCount => Members.Sum(m => m is GrandStaffRenderSpec g ? g.GrandStaff.StaffCount : 1);
 }
 
 /// <summary>
@@ -607,6 +608,20 @@ public sealed record RenderSpec(
             }
         }
 
+        // A group whose members each engrave one staff, as the delimited group of its type.
+        StaffGroup LeafGroup(GrandStaffSpec spec)
+        {
+            var staves = spec.Members
+                .Select((member, i) => OneStaff(member, i))
+                .ToArray();
+            return spec.Type switch
+            {
+                StaffGroupType.StaffGroup => StaffGroup.CreateBracketGroup(staves),
+                StaffGroupType.ChoirStaff => StaffGroup.CreateChoirStaff(staves),
+                _ => StaffGroup.CreateGrandStaff(staves),
+            };
+        }
+
         foreach (var item in OrderedItems())
         {
             switch (item)
@@ -615,16 +630,24 @@ public sealed record RenderSpec(
                     yield return StaffGroup.CreateSingle(OneStaff(item, 0));
                     break;
 
+                // ⚠️ A BRACKET HOLDING A GRANDSTAFF STAYS FLAT: its members become LEAF groups —
+                // each plain/condensed/combined member its own single group, the nested grand
+                // staff its own braced group — and every leaf carries the SAME OuterStaffGroup.
+                // That keeps "the groups are a disjoint run of staves" true for every reader
+                // that assumes it, and puts the bracket's own facts (where it is drawn, which
+                // gaps it spans, which spacing spec a boundary takes) where they are read:
+                // StaffGroup.Outer. A bracket with no nested group is built exactly as before.
+                case GrandStaffRenderSpec grand when grand.GrandStaff.Members.Any(m => m is GrandStaffRenderSpec):
+                    var outer = new OuterStaffGroup(grand.GrandStaff.Type);
+                    foreach (var member in grand.GrandStaff.Members)
+                        yield return (member is GrandStaffRenderSpec inner
+                                ? LeafGroup(inner.GrandStaff)
+                                : StaffGroup.CreateSingle(OneStaff(member, 0)))
+                            with { Outer = outer };
+                    break;
+
                 case GrandStaffRenderSpec grand:
-                    var staves = grand.GrandStaff.Members
-                        .Select((member, i) => OneStaff(member, i))
-                        .ToArray();
-                    yield return grand.GrandStaff.Type switch
-                    {
-                        StaffGroupType.StaffGroup => StaffGroup.CreateBracketGroup(staves),
-                        StaffGroupType.ChoirStaff => StaffGroup.CreateChoirStaff(staves),
-                        _ => StaffGroup.CreateGrandStaff(staves),
-                    };
+                    yield return LeafGroup(grand.GrandStaff);
                     break;
 
                 // A tab staff carries EVERY voice of its part, like the notation staff:

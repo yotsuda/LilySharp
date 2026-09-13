@@ -587,6 +587,9 @@ public sealed partial class LilySharpLanguageServer
         AfterLayoutMinorChords,
         ScoreBlock,
         StaffGroupBlock,
+        /// <summary>Inside a <c>staffGroup</c> / <c>choirStaff</c>: the group list plus a nested
+        /// <c>grandStaff</c>, which a <c>grandStaff</c> body does not take.</summary>
+        BracketGroupBlock,
         AfterStaffRef,
         AfterChordsRef,
         AfterLyricsRef,
@@ -1126,7 +1129,9 @@ public sealed partial class LilySharpLanguageServer
                     // narrow continuations.
                     if (SecondWordBeforeCursor(text, offset) == "lyrics")
                         return CompletionContext.AfterGroupLyricsRowAttachName;
-                    return CompletionContext.StaffGroupBlock;
+                    return block is "staffGroup" or "choirStaff"
+                        ? CompletionContext.BracketGroupBlock
+                        : CompletionContext.StaffGroupBlock;
                 }
             }
             // `tab NAME |` / `tab TUNING NAME |`: after the part name, offer the

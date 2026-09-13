@@ -147,6 +147,10 @@ public sealed record StaffGroupLayout(
     /// <summary>Whether this group has a delimiter.</summary>
     public bool HasDelimiter => GrandStaffLayout != null;
 
+    /// <summary>The outer bracket this group's model stands in (StaffGroup.Outer), carried
+    /// onto the layout so the renderer can draw it from the placed staves.</summary>
+    public LilySharp.Core.Svg.Model.OuterStaffGroup? Outer { get; init; }
+
     /// <summary>
     /// Creates a single staff layout.
     /// </summary>

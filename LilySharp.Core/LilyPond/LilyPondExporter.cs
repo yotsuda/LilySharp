@@ -733,7 +733,12 @@ public sealed class LilyPondExporter
     {
         // A condensed or combined member is not exported at the top level either (RenderRows
         // yields neither), so inside a group only the plain staves put music on a twin staff.
-        GrandStaffRenderSyntax group => group.Members.OfType<StaffRenderSyntax>().Select(RenderPartName),
+        GrandStaffRenderSyntax group => group.Members.SelectMany(m => m switch
+        {
+            StaffRenderSyntax staff => new[] { RenderPartName(staff) },
+            GrandStaffRenderSyntax inner => RowPartNames(inner),
+            _ => Enumerable.Empty<string?>(),
+        }),
         OssiaRenderSyntax ossia => new[] { OssiaPartName(ossia) },
         StaffRenderSyntax or TabRenderSyntax => new[] { RenderPartName(item) },
         _ => Enumerable.Empty<string?>(),
@@ -758,7 +763,10 @@ public sealed class LilyPondExporter
         {
             switch (child)
             {
-                case GrandStaffRenderSyntax:
+                // ⚠️ A NESTED grandStaff is emitted by the bracket that holds it (EmitStaffGroup
+                // recurses), so it drops out here as a nested staff does — without this guard
+                // the twin would write the grand staff twice, the second time loose.
+                case GrandStaffRenderSyntax when !IsInsideGrandStaff(child):
                 case TabRenderSyntax:
                 case OssiaRenderSyntax:
                 case ChordRowRenderSyntax:
@@ -3977,8 +3985,7 @@ public sealed class LilyPondExporter
                         rows.Add(EmitStaffGroup(group, parts, partVars));
                         // LilyPond aligns above a STAFF, so a group is named by its first
                         // staff — the row Lily# would insert the ossia in front of.
-                        lastMainStaffPart = group.Members.OfType<StaffRenderSyntax>()
-                            .Select(RenderPartName).FirstOrDefault(n => n != null)
+                        lastMainStaffPart = RowPartNames(group).FirstOrDefault(n => n != null)
                             ?? lastMainStaffPart;
                         break;
                     case StaffRenderSyntax st:
@@ -4742,8 +4749,10 @@ public sealed class LilyPondExporter
     /// </para>
     /// </remarks>
     private string EmitStaffGroup(GrandStaffRenderSyntax group,
-        List<PartDeclarationSyntax> parts, Dictionary<string, string> partVars)
+        List<PartDeclarationSyntax> parts, Dictionary<string, string> partVars,
+        string indent = "    ")
     {
+        string memberIndent = indent + "  ";
         string context = group.GrandStaffKeyword.Kind switch
         {
             SyntaxKind.StaffGroupKeyword => "StaffGroup",
@@ -4751,9 +4760,16 @@ public sealed class LilyPondExporter
             _ => "GrandStaff",
         };
         var sb = new StringBuilder();
-        sb.Append("    \\new ").Append(context).Append(" <<\n");
+        sb.Append(indent).Append("\\new ").Append(context).Append(" <<\n");
         foreach (var member in group.Members)
         {
+            // A nested grandStaff is its own context inside this one — LilyPond's own spelling
+            // of the piano inside the orchestra's bracket.
+            if (member is GrandStaffRenderSyntax inner)
+            {
+                sb.Append(EmitStaffGroup(inner, parts, partVars, memberIndent));
+                continue;
+            }
             // A condensed or combined member is reported, as it is at the top level (where
             // RenderRows never yields one): the twin writer has no spelling for either yet.
             if (member is not StaffRenderSyntax staff)
@@ -4762,14 +4778,14 @@ public sealed class LilyPondExporter
                 continue;
             }
             var groupRows = new List<string>(1);
-            AddInlineChordRow(groupRows, RenderPartName(staff), "      ");
+            AddInlineChordRow(groupRows, RenderPartName(staff), memberIndent);
             foreach (var r in groupRows) sb.Append(r);
-            sb.Append(EmitStaff(RenderPartName(staff), parts, partVars, tab: false, "      "));
+            sb.Append(EmitStaff(RenderPartName(staff), parts, partVars, tab: false, memberIndent));
             groupRows.Clear();
-            AddLyricRows(groupRows, RenderPartName(staff), "      ", asRow: false);
+            AddLyricRows(groupRows, RenderPartName(staff), memberIndent, asRow: false);
             foreach (var r in groupRows) sb.Append(r);
         }
-        sb.Append("    >>\n");
+        sb.Append(indent).Append(">>\n");
         return sb.ToString();
     }
 
@@ -4919,13 +4935,21 @@ public sealed class LilyPondExporter
                 _instrumentNames[st.VoiceName] = st.InstrumentName!;
         }
 
+        void TakeGroup(GrandStaffSpec group)
+        {
+            foreach (var m in group.Members)
+            {
+                if (m is SingleStaffSpec st) Take(st.Staff);
+                else if (m is GrandStaffRenderSpec inner) TakeGroup(inner.GrandStaff);
+            }
+        }
+
         foreach (var item in spec.Items)
             switch (item)
             {
                 case SingleStaffSpec s: Take(s.Staff); break;
                 case GrandStaffRenderSpec g:
-                    foreach (var m in g.GrandStaff.Members)
-                        if (m is SingleStaffSpec st) Take(st.Staff);
+                    TakeGroup(g.GrandStaff);
                     break;
                 case OssiaStaffSpec o: Take(o.Staff); break;
                 case TabStaffSpec t when staffItems > 1: Take(t.Staff); break;
