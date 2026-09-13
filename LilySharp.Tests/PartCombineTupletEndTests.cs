@@ -82,14 +82,26 @@ public class PartCombineTupletEndTests
             .ToArray();
 
     /// <summary>The tuplet numbers, as (text, x, staff spaces above the centre line).</summary>
-    private static List<(string Text, double X, double Y)> TupletNumbers(string svg) =>
-        Regex.Matches(svg, "<text (?![^>]*class=\"music\")[^>]*x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*>([^<]+)</text>")
+    /// <remarks>The centre line is READ from the drawing (the middle of the five staff lines),
+    /// not written as a page constant: where the system starts on the page depends on what
+    /// stands above it — the "Solo" label's reservation among them — and this book's claim is
+    /// about the number against its own staff.</remarks>
+    private static List<(string Text, double X, double Y)> TupletNumbers(string svg)
+    {
+        double centre = Regex.Matches(svg, "<line x1=\"([-\\d.]+)\" y1=\"([-\\d.]+)\" x2=\"([-\\d.]+)\" y2=\"[-\\d.]+\"")
+            .Where(m => double.Parse(m.Groups[3].Value) - double.Parse(m.Groups[1].Value) > 30)
+            .Select(m => double.Parse(m.Groups[2].Value))
+            .Take(5)
+            .OrderBy(y => y)
+            .ElementAt(2);
+        return Regex.Matches(svg, "<text (?![^>]*class=\"music\")[^>]*x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*>([^<]+)</text>")
             .Select(m => (Text: m.Groups[3].Value,
                           X: double.Parse(m.Groups[1].Value),
-                          Y: Math.Round(11.69 - double.Parse(m.Groups[2].Value), 3)))
+                          Y: Math.Round(centre - double.Parse(m.Groups[2].Value), 3)))
             .Where(t => t.Text is "3")
             .OrderBy(t => t.X)
             .ToList();
+    }
 
     [Fact]
     public void BothTupletsCloseAndNeitherReachesTheBarWhereTheVoicesSwitch()

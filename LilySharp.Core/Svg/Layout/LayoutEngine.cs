@@ -529,7 +529,7 @@ internal sealed partial class LayoutEngine
         (systemsArray, annotations) = ApplySolvedRowPositions(
             score, systemsArray, annotations, annotationContext.SolvedRowBaselines);
 
-        var (voiceOffsets, headWipes, dotAdjustments, partCombineLayouts) =
+        var (voiceOffsets, headWipes, dotAdjustments) =
             CalculateVoiceCollisions(score, systemsArray);
 
         // The dot-column answer for every dotted rest, through the static memo so the
@@ -547,8 +547,7 @@ internal sealed partial class LayoutEngine
             voiceOffsets,
             headWipes,
             dotAdjustments,
-            restShifts,
-            partCombineLayouts) with
+            restShifts) with
         {
             RestDotOffsets = restDotOffsetsBuilder.ToImmutable(),
             LineBreaks = lineBreaks,

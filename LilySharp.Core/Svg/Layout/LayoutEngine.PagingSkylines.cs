@@ -331,6 +331,17 @@ internal sealed partial class LayoutEngine
                 TextRole.Text, CustomTextEngraver.Style(fonts));
             Add(ct.MeasureIndex, ctY - ctTop, ctY - ctBottom);
         }
+        // The combined staff's "a2" / "Solo" labels: the same ink-about-the-baseline pair,
+        // at the size and style DrawPartCombine draws with. Their YUp is already
+        // system-relative Y-up (the outside-staff pass stores it that way), so the device
+        // baseline is its reflection — no staff middle to translate through.
+        if (!ann.PartCombineTexts.IsDefaultOrEmpty)
+            foreach (var pc in ann.PartCombineTexts)
+            {
+                var (pcBottom, pcTop) = fonts.Ink(pc.Text, PartCombineAnalyzer.LabelEm(fonts),
+                    TextRole.PartCombine, PartCombineAnalyzer.LabelStyle(fonts));
+                Add(pc.MeasureIndex, -pc.YUp - pcTop, -pc.YUp - pcBottom);
+            }
         // Chord names ride above the staff and rise (ChordNameEngraver skyline) to
         // clear high notes; their REAL text top must join the system up-extent or a
         // lifted chord line pokes into the header/title.

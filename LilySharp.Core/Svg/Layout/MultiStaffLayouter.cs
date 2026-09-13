@@ -3156,6 +3156,17 @@ internal sealed class MultiStaffLayouter
                     if (!spannerInk.IsEmpty)
                         sky.Up.Merge(spannerInk);
                 }
+                // …and a combined staff's "a2" / "Solo" labels (priority 475, after the
+                // spanner's 350), for the same reason: a chord row above the staff has to
+                // clear them (PartCombineAnalyzer.InkAboveStaff).
+                if (!staff.PartCombineMarks.IsDefaultOrEmpty && score.LayoutPlan.PartCombineText)
+                {
+                    var labelInk = PartCombineAnalyzer.InkAboveStaff(
+                        score.TextMetrics, staff.PartCombineMarks, staff.Voices[0].Measures,
+                        measureLayouts, sky.Up);
+                    if (!labelInk.IsEmpty)
+                        sky.Up.Merge(labelInk);
+                }
 
                 // A staff carrying associated chord names (`staff X with chords ...`)
                 // shows a chord-symbol row just above it. The row shares one baseline

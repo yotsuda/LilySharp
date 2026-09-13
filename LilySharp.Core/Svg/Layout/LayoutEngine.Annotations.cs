@@ -1014,7 +1014,7 @@ internal sealed partial class LayoutEngine
         // StackBelowStaff and pass through untouched.
         var (stackedTrills, stackedBarNumbers, stackedOttavas, stackedCustomTexts,
              stackedVoltas, stackedMarks, stackedDynamicsAbove, stackedTextSpanners,
-             stackedArticulationsAbove) = OutsideStaffStacker.StackAboveStaff(
+             stackedArticulationsAbove, stackedPartCombine) = OutsideStaffStacker.StackAboveStaff(
             ctx.Fonts,
             systems, systemSkylines, tupletBracketLayouts,
             belowStackedTrills, barNumberLayouts, ottavaLayouts,
@@ -1030,7 +1030,10 @@ internal sealed partial class LayoutEngine
             chordNames: chordNameLayouts,
             chordItems: ctx.ChordNames ?? ImmutableArray<ChordNameItem>.Empty,
             staffProfile: staffProfile,
-            memo: ctx.AboveStackMemo, profileIdentity: profileIdentity);
+            memo: ctx.AboveStackMemo, profileIdentity: profileIdentity,
+            // The combined staff's a2 / Solo labels (priority 475) — in BOTH passes, so the
+            // preliminary extents reserve what the final pass draws.
+            partCombineTexts: PartCombineLayoutsOf(ctx.MultiScore, ml));
         stackedDynamics = stackedDynamicsAbove;
         stackedArticulations = stackedArticulationsAbove;
         // (No To-Coda/label co-placement here any more: the pass above owns it. A
@@ -1088,7 +1091,9 @@ internal sealed partial class LayoutEngine
             BarNumbers: stackedBarNumbers,
             // LILYPOND-REF: lily/stanza-number-engraver.cc — StanzaNumber grob.
             StanzaNumbers: StanzaNumberEngraver.Calculate(lyricLayouts, systems,
-                leadSheet: ctx.IsLeadSheet));
+                leadSheet: ctx.IsLeadSheet),
+            // LILYPOND-REF: lily/part-combine-engraver.cc — CombineTextScript grob.
+            PartCombineTexts: stackedPartCombine);
     }
 
     /// <summary>

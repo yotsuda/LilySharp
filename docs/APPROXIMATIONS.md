@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 54 | 観測者がゼロだと自認しているもの |
-| `OWN` | 136 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **252** | |
+| `OWN` | 138 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **254** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -91,7 +91,7 @@
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
 - **:2639** ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
 - **:2691** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
-- **:3466** same approximation the scripts' own remark records for the movers; the books that
+- **:3477** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:1063** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
 - **:1814** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
@@ -104,8 +104,8 @@
 - **:1184** whole note reads [0, 0.375] — is not ported: Lily# has no producer for a
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
 - **:493** ⚠️⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED OTTAVA IS **NOT PORTED HERE**, deliberately.
-### `LilySharp.Core/Svg/Layout/PartCombineAnalyzer.cs`
-- **:83** ⚠️ NOT PORTED — the outside-staff placement: a flat 1.5 staff-spaces above the
+### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
+- **:2290** lily/part-combine-engraver.cc:102-112 acknowledge_note_head). That support pass is not ported; the heads
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
 - **:472** ⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED PEDAL IS **NOT PORTED HERE** either:
 ### `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs`
@@ -184,10 +184,10 @@
 - **:442** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
 - **:712** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
-- **:2125** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
-- **:2147** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
+- **:2130** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
+- **:2152** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
-- **:497** ⚠️ NO POINT OBSERVES THE FOLD: audit/lp-geometry hairpin.page.quiet reads the
+- **:508** ⚠️ NO POINT OBSERVES THE FOLD: audit/lp-geometry hairpin.page.quiet reads the
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
 - **:828** paging augment families. Unreachable today, so no observer CAN be built; the
 ### `LilySharp.Core/Svg/Layout/LyricHyphen.cs`
@@ -195,7 +195,7 @@
 ### `LilySharp.Core/Svg/Layout/LyricSpacing.cs`
 - **:152** is measured-exact there, and no ledger point prices replacing it.
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:4313** company on a row whose symbols sit closer than its spec's 1.0. No point measures
+- **:4324** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:747** does not spell a per-type padding — no point observes a segno/coda over a
 - **:1278** pinned there), no ledger point.
@@ -206,7 +206,7 @@
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
 - **:130** staff_extent[DOWN], which is the ink edge too. ⚠️ No ledger point measures
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
-- **:1596** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
+- **:1612** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
 - **:485** same part (leftHand). No book reaches the configuration, so no ledger point and
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
@@ -230,7 +230,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（136 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（138 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2420** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -337,18 +337,18 @@
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
 - **:443** ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's mark aligns to the BreakAlignGroup,
 - **:858** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
-- **:1570** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
-- **:1865** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
+- **:1575** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
+- **:1870** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
-- **:741** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
+- **:740** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
 - **:526** LILYSHARP-OWN, DECLARED: the CROP. LilyPond always engraves onto the paper; a
 - **:752** ⚠️ LILYSHARP-OWN: THE FALLBACK. A system with no spaceable staff at all — a chords-only
 - **:764** ⚠️ LILYSHARP-OWN: THE SECOND PAIR HAS NO LILYPOND COUNTERPART, and it exists because a
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
-- **:373** ⚠️ A LYRICS ROW KEEPS ITS DRAWN EXTENT, AND THAT IS LILYSHARP-OWN, not a second
-- **:490** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
-- **:912** LILYSHARP-OWN: the SILHOUETTE margin, not ink. It widens a mark's box before the
+- **:384** ⚠️ A LYRICS ROW KEEPS ITS DRAWN EXTENT, AND THAT IS LILYSHARP-OWN, not a second
+- **:501** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
+- **:923** LILYSHARP-OWN: the SILHOUETTE margin, not ink. It widens a mark's box before the
 ### `LilySharp.Core/Svg/Layout/LayoutOptions.cs`
 - **:122** ⚠️ LILYSHARP-OWN, AND INERT IN EVERY BOOK MEASURED. The distance between two systems
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
@@ -393,7 +393,9 @@
 ### `LilySharp.Core/Svg/Layout/NoteSpacingParameters.cs`
 - **:82** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
-- **:2888** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
+- **:1041** system would hand back marks placed without the labels under them. LILYSHARP-OWN
+- **:2288** ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's side-position pass also pays the grob's
+- **:2948** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
 ### `LilySharp.Core/Svg/Layout/PageBreaker.cs`
 - **:100** ⚠️ LILYSHARP-OWN: THE NULLABILITY. LilyPond's Line_details ALWAYS carries a shape —
 - **:154** LILYSHARP-OWN: the number itself has no LilyPond counterpart, because LilyPond's

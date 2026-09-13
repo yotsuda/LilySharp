@@ -105,7 +105,7 @@ public class OutsideStaffStackerTests
             .Select(t => new CustomTextLayout(MeasureIndex: 0, X: 20, YUp: -4.0, Text: t,
                 SourcePosition: 0))
             .ToImmutableArray();
-        var (_, _, _, adjTexts, _, _, _, _, _) = OutsideStaffStacker.StackAboveStaff(ScoreTextMetrics.Bundled, 
+        var (_, _, _, adjTexts, _, _, _, _, _, _) = OutsideStaffStacker.StackAboveStaff(ScoreTextMetrics.Bundled, 
             systems, systemSkylines: null,
             ImmutableArray<TupletBracketLayout>.Empty,
             ImmutableArray<TrillSpannerLayout>.Empty,

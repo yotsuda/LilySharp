@@ -342,21 +342,20 @@ internal sealed partial class LayoutEngine
 
     /// <summary>
     /// Voice collision offsets / head-wipes / dot-force-down for multi-voice staves
-    /// (so the renderer can nudge opposing voices apart), plus opt-in part-combine
-    /// layouts. Keys are (measureIndex, voiceId, itemIndex) — correct for the common
-    /// single-multi-voice-staff case. Extracted verbatim from the multi-staff
-    /// <c>Layout</c> body.
+    /// (so the renderer can nudge opposing voices apart). Keys are (measureIndex, voiceId,
+    /// itemIndex) — correct for the common single-multi-voice-staff case. Extracted verbatim
+    /// from the multi-staff <c>Layout</c> body. (The part-combine labels left this method in
+    /// session 378: they are placed by the outside-staff pass — see
+    /// <see cref="PartCombineLayoutsOf"/>.)
     /// </summary>
     private (ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
              ImmutableHashSet<VoiceItemKey> HeadWipes,
-             ImmutableDictionary<VoiceItemKey, DotAdjustment> DotAdjustments,
-             ImmutableArray<PartCombineLayout> PartCombine)
+             ImmutableDictionary<VoiceItemKey, DotAdjustment> DotAdjustments)
         CalculateVoiceCollisions(MultiStaffScore score, ImmutableArray<SystemLayout> systemsArray)
     {
         var voiceOffsetsBuilder = ImmutableDictionary.CreateBuilder<VoiceItemKey, double>();
         var headWipeBuilder = ImmutableHashSet.CreateBuilder<VoiceItemKey>();
         var dotAdjustBuilder = ImmutableDictionary.CreateBuilder<VoiceItemKey, DotAdjustment>();
-        var partCombineLayouts = ImmutableArray<PartCombineLayout>.Empty;
         foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
         {
             if (staff.Voices.Length < 2)
@@ -370,36 +369,42 @@ internal sealed partial class LayoutEngine
             foreach (var kv in da) dotAdjustBuilder[kv.Key] = kv.Value;
         }
 
-        // The a2/Solo labels belong to a combinedStaff and come off the model with the
-        // voices they were computed alongside (Staff.PartCombineMarks). Placement is the
-        // only part of them that is layout's business.
-        //
-        // ⚠️ ONLY THE FIRST COMBINED STAFF'S LABELS ARE PLACED, and a score may now hold two
-        // (`score s { combinedStaff { a b } combinedStaff { c d } }`). This is a gap, stated
-        // rather than hidden: PartCombineLayout carries a measure index and no STAFF index,
-        // and the renderer hangs every label off the SYSTEM top (DrawPartCombine), so a
-        // second staff's labels have nowhere correct to go — carrying them anyway would draw
-        // "Solo" for the lower pair above the upper one, which is worse than not drawing it.
-        // Closing it is one field (the staff index) plus the height coming from the staff
-        // instead of the system, which is the same move that would put the label on the
-        // outside-staff stacker where LilyPond has it (priority 475).
-        // …unless the score turned the words off (`layout { partCombineText off }` =
-        // LilyPond's printPartCombineTexts = ##f): with no text item there is nothing to
-        // place, nothing to draw and nothing to reserve.
-        // LILYPOND-REF: lily/part-combine-engraver.cc:69-100 create_item — the engraver asks
-        //   printPartCombineTexts before it makes the text, so the grob never exists.
-        foreach (var (_, staff, _) in score.LayoutPlan.PartCombineText
-                     ? score.EnumerateStaves() : [])
+        return (voiceOffsetsBuilder.ToImmutable(), headWipeBuilder.ToImmutable(),
+                dotAdjustBuilder.ToImmutable());
+    }
+
+    /// <summary>
+    /// The "a2" / "Solo" / "Solo II" labels of every combined staff, at their X and not yet
+    /// at their height — the outside-staff pass places them (priority 475), which is why both
+    /// annotation passes call this rather than the finishing step.
+    /// </summary>
+    /// <remarks>
+    /// The labels come off the model with the voices they were computed alongside
+    /// (Staff.PartCombineMarks). Each carries its OWN staff index, so a score holding two
+    /// combined staves places each pair against its own staff. (Until session 378 only the
+    /// first staff's were placed: the layout had no staff index and the draw hung every
+    /// label off the system top.)
+    /// …unless the score turned the words off (`layout { partCombineText off }` =
+    /// LilyPond's printPartCombineTexts = ##f): with no text item there is nothing to
+    /// place, nothing to draw and nothing to reserve.
+    /// LILYPOND-REF: lily/part-combine-engraver.cc:69-100 create_item — the engraver asks
+    ///   printPartCombineTexts before it makes the text, so the grob never exists.
+    /// </remarks>
+    private static ImmutableArray<PartCombineLayout> PartCombineLayoutsOf(
+        MultiStaffScore? score, ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        if (score is null || !score.LayoutPlan.PartCombineText)
+            return ImmutableArray<PartCombineLayout>.Empty;
+        ImmutableArray<PartCombineLayout>.Builder? all = null;
+        foreach (var (_, staff, staffIndex) in score.EnumerateStaves())
         {
             if (staff.PartCombineMarks.IsDefaultOrEmpty)
                 continue;
-            var ml = systemsArray.SelectMany(s => s.Measures).ToImmutableArray();
-            partCombineLayouts = PartCombineAnalyzer.Calculate(
-                staff.PartCombineMarks, ml, staff.Voices[0].Measures);
-            break;
+            (all ??= ImmutableArray.CreateBuilder<PartCombineLayout>()).AddRange(
+                PartCombineAnalyzer.Calculate(
+                    staff.PartCombineMarks, measureLayouts, staff.Voices[0].Measures, staffIndex));
         }
-        return (voiceOffsetsBuilder.ToImmutable(), headWipeBuilder.ToImmutable(),
-                dotAdjustBuilder.ToImmutable(), partCombineLayouts);
+        return all?.ToImmutable() ?? ImmutableArray<PartCombineLayout>.Empty;
     }
 
     /// <summary>
@@ -455,8 +460,7 @@ internal sealed partial class LayoutEngine
         ImmutableDictionary<VoiceItemKey, double> voiceOffsets,
         ImmutableHashSet<VoiceItemKey> headWipeEntries,
         ImmutableDictionary<VoiceItemKey, DotAdjustment> dotAdjustments,
-        ImmutableDictionary<RestShiftKey, double> restShifts,
-        ImmutableArray<PartCombineLayout> partCombineLayouts = default)
+        ImmutableDictionary<RestShiftKey, double> restShifts)
     {
         return new ScoreLayout(pages, systems, beams, ties, slurs,
             a.Dynamics, a.Articulations, a.GraceNotes,
@@ -466,7 +470,7 @@ internal sealed partial class LayoutEngine
             glissandos, a.Arpeggios, a.PedalBrackets,
             a.FiguredBasses, a.ChordNames, a.PercentRepeats,
             a.CrossStaffs,
-            partCombineLayouts.IsDefault ? ImmutableArray<PartCombineLayout>.Empty : partCombineLayouts,
+            a.PartCombineTexts.IsDefault ? ImmutableArray<PartCombineLayout>.Empty : a.PartCombineTexts,
             a.TrillSpanners,
             a.Fingerings,
             a.TieVariants,
@@ -626,5 +630,6 @@ internal sealed partial class LayoutEngine
         ImmutableArray<MultiMeasureRestLayout> MultiMeasureRests,
         ImmutableArray<LedgerLineSpan> LedgerLineSpans,
         ImmutableArray<BarNumberLayout> BarNumbers,
-        ImmutableArray<StanzaNumberLayout> StanzaNumbers);
+        ImmutableArray<StanzaNumberLayout> StanzaNumbers,
+        ImmutableArray<PartCombineLayout> PartCombineTexts);
 }

@@ -1003,6 +1003,8 @@ internal static class OutsideStaffStacker
     /// (and the same arguments) <see cref="StackBelowStaff"/> takes. Fresh skylines per call:
     /// the tracker raises them into its own frame. Without it the support falls back to the
     /// system silhouette, which is what a harness that builds no staff has.</param>
+    /// <param name="partCombineTexts">A combined staff's "a2" / "Solo" / "Solo II" labels,
+    /// placed at their own priority 475 (<see cref="PlacePartCombineTexts"/>).</param>
     public static (ImmutableArray<TrillSpannerLayout> Trills,
                    ImmutableArray<BarNumberLayout> BarNumbers,
                    ImmutableArray<OttavaBracketLayout> Ottavas,
@@ -1011,7 +1013,8 @@ internal static class OutsideStaffStacker
                    ImmutableArray<MusicMarkLayout> MusicMarks,
                    ImmutableArray<DynamicLayout> Dynamics,
                    ImmutableArray<TextSpannerLayout> TextSpanners,
-                   ImmutableArray<ArticulationLayout> Articulations)
+                   ImmutableArray<ArticulationLayout> Articulations,
+                   ImmutableArray<PartCombineLayout> PartCombineTexts)
         StackAboveStaff(
             ScoreTextMetrics fonts,
             ImmutableArray<SystemLayout> systems,
@@ -1030,16 +1033,25 @@ internal static class OutsideStaffStacker
             ImmutableArray<ChordNameItem> chordItems = default,
             Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile = null,
             AboveStackMemo? memo = null,
-            Func<int, int, (object Up, object Down)?>? profileIdentity = null)
+            Func<int, int, (object Up, object Down)?>? profileIdentity = null,
+            ImmutableArray<PartCombineLayout> partCombineTexts = default)
     {
-        if (memo is null || profileIdentity is null || systems.IsDefaultOrEmpty)
+        // ⚠️ A BOOK WITH PART-COMBINE LABELS STACKS LIVE: the memo's program does not carry
+        // them (AboveStackMemo.SystemEntry has no field for the family), and a replayed
+        // system would hand back marks placed without the labels under them. LILYSHARP-OWN
+        // cost, declared: only a combinedStaff that prints its words pays it.
+        if (memo is null || profileIdentity is null || systems.IsDefaultOrEmpty
+            || !partCombineTexts.IsDefaultOrEmpty)
             return StackAboveStaffCore(fonts, systems, systemSkylines, tupletBrackets, trills,
                 barNumbers, ottavas, customTexts, voltas, musicMarks, articulations,
-                aboveDynamics, textSpanners, chordNames, chordItems, staffProfile);
-        return StackAboveStaffMemoized(fonts, systems, systemSkylines, tupletBrackets, trills,
+                aboveDynamics, textSpanners, chordNames, chordItems, staffProfile,
+                partCombineTexts);
+        var m = StackAboveStaffMemoized(fonts, systems, systemSkylines, tupletBrackets, trills,
             barNumbers, ottavas, customTexts, voltas, musicMarks, articulations,
             aboveDynamics, textSpanners, chordNames, chordItems, staffProfile, memo,
             profileIdentity);
+        return (m.Trills, m.BarNumbers, m.Ottavas, m.CustomTexts, m.Voltas, m.MusicMarks,
+            m.Dynamics, m.TextSpanners, m.Articulations, partCombineTexts);
     }
 
     /// <summary>Per-system index lists into the pass's ten input arrays — one system's
@@ -1352,7 +1364,8 @@ internal static class OutsideStaffStacker
                    ImmutableArray<MusicMarkLayout> MusicMarks,
                    ImmutableArray<DynamicLayout> Dynamics,
                    ImmutableArray<TextSpannerLayout> TextSpanners,
-                   ImmutableArray<ArticulationLayout> Articulations)
+                   ImmutableArray<ArticulationLayout> Articulations,
+                   ImmutableArray<PartCombineLayout> PartCombineTexts)
         StackAboveStaffCore(
             ScoreTextMetrics fonts,
             ImmutableArray<SystemLayout> systems,
@@ -1369,11 +1382,12 @@ internal static class OutsideStaffStacker
             ImmutableArray<TextSpannerLayout> textSpanners,
             ImmutableArray<ChordNameLayout> chordNames,
             ImmutableArray<ChordNameItem> chordItems,
-            Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile)
+            Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile,
+            ImmutableArray<PartCombineLayout> partCombineTexts = default)
     {
         if (systems.IsDefaultOrEmpty)
             return (trills, barNumbers, ottavas, customTexts, voltas, musicMarks,
-                aboveDynamics, textSpanners, articulations);
+                aboveDynamics, textSpanners, articulations, partCombineTexts);
 
         var measureToSystem = new Dictionary<int, int>();
         for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
@@ -1395,13 +1409,15 @@ internal static class OutsideStaffStacker
         var adjTextSpanners = PlaceTextSpanners(fonts, textSpanners, trackers, measureToSystem, systems);
         var adjOttavas = PlaceOttavas(fonts, ottavas, trackers, measureToSystem);
         var adjCustomTexts = PlaceCustomTexts(fonts, customTexts, trackers, measureToSystem, systems);
+        var adjPartCombine = PlacePartCombineTexts(
+            fonts, partCombineTexts, trackers, measureToSystem, systems);
         // The Score-level movers' extra support: a chord ROW's symbols (ChordRowSupport).
         var rowSupport = ChordRowSupport(fonts, systems, chordNames, chordItems, measureToSystem);
         var adjVoltas = PlaceVoltas(fonts, voltas, trackers, measureToSystem, topStaff, rowSupport);
         var adjMarks = PlaceMusicMarks(fonts, musicMarks, trackers, measureToSystem, systems, rowSupport);
 
         return (adjTrills, adjBarNumbers, adjOttavas, adjCustomTexts, adjVoltas, adjMarks,
-            adjDynamics, adjTextSpanners, adjArticulations);
+            adjDynamics, adjTextSpanners, adjArticulations, adjPartCombine);
     }
 
     /// <summary>
@@ -2255,6 +2271,50 @@ internal static class OutsideStaffStacker
             double move = trackers(sysIdx, ct.StaffIndex).Place(ctUp, ctDown, OutsideStaffPadding,
                 OutsideStaffHorizontalPadding);
             b[i] = ct with { YUp = anchor + move - midUp };
+        }
+        return b.ToImmutable();
+    }
+
+    // ---- 475: CombineTextScript ("a2" / "Solo" / "Solo II") ----
+    // LILYPOND-REF: scm/define-grobs.scm:1077-1094 CombineTextScript outside-staff-priority —
+    //   475, direction UP, padding 0.5, staff-padding 0.5, Y-extent and skyline from
+    //   the stencil, and NO outside-staff-horizontal-padding (so the 0.0 default).
+    // The same shape as TextScript's 450 just above: the staff-padding floor puts the
+    // BASELINE at the staff's own ink edge + 0.5 before the collision pass, and the pass
+    // then clears the staff's accumulated ink with the string's own outline at
+    // outside-staff-padding. Because it runs BEFORE the marks (1500), a section label over
+    // a combined staff clears the label instead of drawing through it (user report,
+    // scratch/ベースタブLy/bench.lys — "Intro" over "a2").
+    // ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's side-position pass also pays the grob's
+    // own padding 0.5 against its supports (the note heads the engraver acknowledged,
+    // lily/part-combine-engraver.cc:102-112 acknowledge_note_head). That support pass is not ported; the heads
+    // are in the staff profile the collision pass clears at 0.46, which is 0.04 short of it
+    // wherever a head rather than the staff-padding floor is what decides the height.
+    private const double CombineTextStaffPadding = PartCombineAnalyzer.CombineTextStaffPadding;
+
+    private static ImmutableArray<PartCombineLayout> PlacePartCombineTexts(
+        ScoreTextMetrics fonts,
+        ImmutableArray<PartCombineLayout> labels, Func<int, int, OutsideStaffSkylines> trackers,
+        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+    {
+        if (labels.IsDefaultOrEmpty)
+            return labels;
+        // The size and style DrawPartCombine draws with — one house (PartCombineAnalyzer).
+        double em = PartCombineAnalyzer.LabelEm(fonts);
+        var face = fonts.Face(TextRole.PartCombine, PartCombineAnalyzer.LabelStyle(fonts));
+        var b = labels.ToBuilder();
+        for (int i = 0; i < b.Count; i++)
+        {
+            var pc = b[i];
+            if (!measureToSystem.TryGetValue(pc.MeasureIndex, out int sysIdx))
+                continue;
+            // System-relative Y-up, the tracker frame and the frame the layout stores.
+            double midUp = LayoutUtilities.StaffMiddleUpInSystem(systems[sysIdx], pc.StaffIndex);
+            double anchor = midUp
+                + (2.0 + EngravingDefaults.StaffLineThickness / 2.0) + CombineTextStaffPadding;
+            var (up, down) = TextOutlineSkylines.Place(pc.Text, em, face, pc.X, anchor);
+            double move = trackers(sysIdx, pc.StaffIndex).Place(up, down, OutsideStaffPadding);
+            b[i] = pc with { YUp = anchor + move };
         }
         return b.ToImmutable();
     }
