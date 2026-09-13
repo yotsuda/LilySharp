@@ -634,6 +634,17 @@ public class LilyPondExporterTests
         Assert.Contains("stringTunings = #bass-four-string-tuning", ly);
     }
 
+    [Fact]
+    public void Score_TabOfABowedPreset_WritesItsOwnTuning()
+    {
+        // Session 375: `instrument violin` gives a tab the violin's four strings, and the twin
+        // asks the same table the page frets against — so it names violin-tuning, not the
+        // guitar's.
+        var ly = Export("part vln { instrument violin }\nsection A { vln { g4 d' a' e'' | } }\nform main { A }\nscore { tab vln }\n");
+        Assert.Contains("stringTunings = #violin-tuning", ly);
+        Assert.DoesNotContain("guitar-tuning", ly);
+    }
+
     /// <summary>
     /// A <c>\N</c> string number steers the TAB's string choice and is drawn nowhere on
     /// Lily#'s notation staff; LilyPond's Staff prints a circled digit for every one. The

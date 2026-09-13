@@ -68,8 +68,13 @@ public static class InstrumentDefaults
             "piano-right" or "piano-treble" => (ClefType.Treble, 4),
             "piano-left" or "piano-bass" => (ClefType.Bass, 3),
             
-            // Guitar (written octave higher than sounds)
-            "guitar" or "acoustic-guitar" or "electric-guitar" => (ClefType.Treble8Below, 4),
+            // Guitar (written octave higher than sounds). The banjo reads the same clef for the
+            // same reason: MuseScore's instruments.xml gives it G8vb, exactly as the guitar.
+            "guitar" or "acoustic-guitar" or "electric-guitar" or "banjo" => (ClefType.Treble8Below, 4),
+
+            // Mandolin: treble at sounding pitch (MuseScore: clef G and no transposition). Its
+            // four strings are the violin's.
+            "mandolin" => (ClefType.Treble, 4),
             
             // Woodwinds
             "flute" or "piccolo" => (ClefType.Treble, 5),
@@ -200,10 +205,11 @@ public static class InstrumentDefaults
     };
 
     /// <summary>
-    /// The default tablature tuning for a fretted/bass instrument, as a tuning name
-    /// (the same names a <c>tab</c> render accepts), or null for instruments that are
-    /// not played from tab. Lets <c>instrument bass</c> imply <c>tuning bass</c> when a
-    /// part is shown as a tab and gives no explicit tuning.
+    /// The default tablature tuning for a string instrument, as a tuning name (the same
+    /// names a <c>tab</c> render accepts), or null for an instrument that has no strings to
+    /// fret. Lets <c>instrument bass</c> imply <c>tuning bass</c> — and <c>instrument
+    /// violin</c> imply <c>tuning violin</c> — when a part is shown as a tab and gives no
+    /// explicit tuning.
     /// </summary>
     /// <remarks>
     /// Part of the <c>instrument</c>-as-preset role: <c>instrument</c> supplies clef,
@@ -217,6 +223,19 @@ public static class InstrumentDefaults
         "bass6" or "6-string-bass" => "bass6",
         "guitar" or "acoustic-guitar" or "electric-guitar" => "guitar",
         "ukulele" or "uke" => "ukulele",
+        // The bowed strings: LilyPond tunes each of them (ly/string-tunings-init.ly), so a tab of
+        // one frets against its own four strings instead of falling back to a guitar's six. The
+        // contrabass already did, through "bass". Until session 375 these three answered null
+        // ("bowed: not a tab instrument"), written when the tuning table had no violin to name.
+        // Counted before connecting them: no .lys on the machine wrote one beside a tab.
+        "violin" => "violin",
+        "viola" => "viola",
+        "cello" => "cello",
+        // Mandolin and banjo became presets in session 375 (user decision). A bare "banjo" is the
+        // five-string in open G: LilyPond has no plain banjo tuning, and open G is the one
+        // MuseScore's banjo carries.
+        "mandolin" => "mandolin",
+        "banjo" => "banjoopeng",
         _ => null,
     };
 
@@ -318,7 +337,7 @@ public static class InstrumentDefaults
         // Guitar / fretted (incl. the tab-tuning presets from GetTuning)
         "guitar", "acoustic-guitar", "electric-guitar",
         "bass-guitar", "electric-bass", "bass5", "5-string-bass", "bass6", "6-string-bass",
-        "ukulele", "uke",
+        "ukulele", "uke", "mandolin", "banjo",
         // Woodwinds
         "flute", "piccolo", "oboe", "clarinet", "clarinet-a", "bassoon",
         // Saxophones — their own names, because "alto" and "tenor" are voices

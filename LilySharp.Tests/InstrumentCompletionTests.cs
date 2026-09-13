@@ -81,7 +81,8 @@ public class InstrumentCompletionTests
         // default), so they must be in KnownInstruments — which is also exactly what
         // the completion offers.
         foreach (var name in new[] { "ukulele", "uke", "bass-guitar", "electric-bass",
-                                     "bass5", "5-string-bass", "bass6", "6-string-bass" })
+                                     "bass5", "5-string-bass", "bass6", "6-string-bass",
+                                     "violin", "viola", "cello", "mandolin", "banjo" })
         {
             Assert.True(InstrumentDefaults.IsKnownInstrument(name), $"{name} not known");
             Assert.NotNull(InstrumentDefaults.GetTuning(name));

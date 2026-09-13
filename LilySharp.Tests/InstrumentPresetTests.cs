@@ -46,6 +46,31 @@ public sealed class InstrumentPresetTests
         Assert.Equal(TuningType.Bass, tuning);
     }
 
+    [Theory]
+    [InlineData("violin", TuningType.Violin)]
+    [InlineData("viola", TuningType.Viola)]
+    [InlineData("cello", TuningType.Cello)]
+    [InlineData("mandolin", TuningType.Violin)]     // LilyPond's mandolin-tuning is the violin's strings
+    [InlineData("banjo", TuningType.BanjoOpenG)]
+    public void StringPreset_SuppliesItsOwnTabTuning(string instrument, TuningType expected)
+    {
+        // Session 375: these five fell back to the guitar's six strings on a tab, although
+        // the tuning table already held each of them.
+        var tuning = TabTuningOf(
+            $"part str {{ instrument {instrument} }}\nsection A {{ str {{ g4 | }} }}\nform main {{ A }}\nscore {{ tab str }}\n");
+        Assert.Equal(expected, tuning);
+    }
+
+    [Theory]
+    [InlineData("mandolin", ClefType.Treble)]       // MuseScore: clef G, sounds as written
+    [InlineData("banjo", ClefType.Treble8Below)]    // MuseScore: clef G8vb, as the guitar
+    public void MandolinAndBanjo_ReadTheClefTheirInstrumentReads(string instrument, ClefType clef)
+    {
+        Assert.True(InstrumentDefaults.IsKnownInstrument(instrument));
+        Assert.Equal((clef, 4), InstrumentDefaults.GetDefaults(instrument));
+        Assert.Equal(0, InstrumentDefaults.GetTransposition(instrument));
+    }
+
     [Fact]
     public void ExplicitTuning_OverridesInstrumentPreset()
     {
@@ -77,7 +102,16 @@ public sealed class InstrumentPresetTests
     [InlineData("electric-bass", "bass")]
     [InlineData("guitar", "guitar")]
     [InlineData("ukulele", "ukulele")]
-    [InlineData("violin", null)]   // bowed: not a tab instrument
+    // Every string instrument LilyPond has a tuning for answers with it — the bowed ones too,
+    // since session 375 (they answered null, "bowed: not a tab instrument", from before the
+    // tuning table could name a violin). A preset with no strings is the control.
+    [InlineData("violin", "violin")]
+    [InlineData("viola", "viola")]
+    [InlineData("cello", "cello")]
+    [InlineData("contrabass", "bass")]
+    [InlineData("mandolin", "mandolin")]
+    [InlineData("banjo", "banjoopeng")]
+    [InlineData("flute", null)]
     [InlineData(null, null)]
     public void GetTuning_MapsFrettedInstruments(string? instrument, string? expected)
     {
