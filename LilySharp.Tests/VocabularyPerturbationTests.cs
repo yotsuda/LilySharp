@@ -546,8 +546,12 @@ public class VocabularyPerturbationTests
     /// <see cref="PaperBook"/>, LilyPond 2.26.0 draws the same page for <c>basic-distance</c> 2
     /// and 30 of <c>nonstaff-unrelatedstaff-spacing</c> and <c>nonstaff-nonstaff-spacing</c>
     /// (and of <c>nonstaff-relatedstaff-spacing</c>), while their <c>padding</c> /
-    /// <c>minimum-distance</c> move it — and Lily# agrees on all four readings. WHY LilyPond's
-    /// loose-line spring ideal does not show here has not been read.
+    /// <c>minimum-distance</c> move it — and Lily# agrees on all four readings. ★ NOT A
+    /// RAGGED-PAGE ARTEFACT: the same pairs on a JUSTIFIED book (two staves with two lyrics
+    /// lines between, 24 systems on 4 A4 pages in both engines — scratch/p378/paper/justified.ps1)
+    /// leave all three <c>basic-distance</c>s inert in BOTH engines, while the
+    /// <c>minimum-distance</c> and <c>padding</c> controls move both. WHY LilyPond's loose-line
+    /// spring ideal does not show has not been read.
     /// ⚠️ <c>nonStaffRelatedStaffSpacing</c> stays on the plain sweep, but what moves there is
     /// only the content-sized page's HEIGHT (129.02 → 145.22; no drawn element moves) — a
     /// Lily#-only quantity, since LilyPond's page has a fixed size (HANDOFF §2 E).
