@@ -66,6 +66,15 @@ tools\Session-Check.ps1 -Build -Test -Scratch pNNN    # git・数・CI・build�
 
 ⇒ ★★★ **⑸ 次の一手**: ✅ **⒡（第373 ⑼⒜）は上 ⑵ で閉じた**。**残りは第375 ⑹ の並びそのまま**＝**⒝ 摂動網の残り**（paper 8 鍵の engine 読解・chord quality 35・`@` の引数つき形）／**⒠ drummap の `${1:hh}`＝UX 案件**／**⒢ 第369 ⑸⒝・第368 ⑺⒝ の並び**。**新しく §2 E に 1 件**＝**brace の `SystemStartBar` 基準（要承認）**。★ **判定の記録**（ユーザーの常設指示「次便は、このセッションでやる方が有利なら着手して…」）: **第 1 便はユーザー指示「着手して」＋第375 の名指し**。**次便の候補で `p377` の道具が効くのは brace の件だけ**（LP の dump が 2 backend 分 `scratch/p377/probes` に在る）が、**着手の最初の一歩が「点を置く＝台帳を足す」ではなく*出力を動かす承認*に行き着く**ので**この便では着手しない**＝**ユーザーに訊くのが先**。
 
+★★★★ **⑹ 第 2 便＝判定で着手＝⑶ で割った罠（svg の generic serif）を*族全体*に当てた**（commit は下 ⑺）。**着手の根拠は「直前の的をどうやって見つけたか」**（第374 ㉕ の基準）＝**同じ本を `-dbackend=null` と `svg` で回して dump を突き合わせる**計器が `scratch/p377/probes` で温まっていた。⚠️ **最初の pin 判定が間違っていた**: 正規表現がコメントも読み、**第 1 便が書いたヘッダの「fonts.serif」で `instrument-name-x` を「pin 済み」と数えた**⇒ **コメントを落としてから数え直した**。**pin していない probe 62 冊を全部 2 backend で回した**（`scratch/p377/dual/summary.csv`）＝**dump が違ったのは 11 冊**:
+- **人工物 1**: `same-direction-correction`＝`sys=` の**オブジェクト番地**だけ。
+- **テキスト幅に依存するが、台帳・test の数は動かない 7**: `barline-spacing`・`staffless-system`（**runner は null＝正典**）／`beat-slash-spacing`（**slash と bar が同じだけずれるので slash-to-barline 5.936468 は両 backend で一致**）／`line-start-mindist`（違うのは `BarNumber` と tab の fret 数字だけ＝JN の head も clef/key/time も同一＝`LineStartColumnTests` 無事）／`coda-line-start`（CB4 の label *幅*だけ・test は x）／`tab-stem`（`begin` だけ・点は `end`）／`tab-numbers-meter`（点は恒等式 0）。
+- **既知 2**: `instrument-name-x`・`brace-name-clear`（⑶）。
+- ⚠️⚠️ **本物 1＝`tab-slur` の台帳 5 点 `slur.tab.*` が svg の値だった**（**fret 数字はテキスト**）: LP の値が **1.043326／1.031225／5.349087**（svg と全桁一致）⇒ **null は 1.220223／1.057429／5.574433**。**ledger test に Lily# の側を言わせて残差を記録し直した**＝**0.328674→0.151777・0.073124→0.046919・0.655403→0.430057**（±対）。★ **`why` の分解は形として正しかった**（「残差は全部 Lily# の大きい数字」＝**0.722000 − 0.570223 ＝ 0.151777 が 9 桁一致**）が、**引いていた LP の数字がフォールバック書体のものだった**。⚠️ **span 由来の高さの分解（8.023631 page 等）は再導出していない**＝`why` にそう書いた。`TabSlurDirectionTests` の remark の数・probe ヘッダも直した。
+- ★ **再発防止を runner に置いた**: `Measure-LilyPondProbe.ps1`（svg）が**コード行に font pin の無い probe で警告を出す**（**コメント中の言及は pin と数えない**＝上の自分の罠）。**`tab-slur.ly` で警告・pin 済みの `tempo-mark.ly` で 0 件を確かめた**。
+
+★★ **⑺ 第 2 便の数**（`Session-Check -Build -Test -Scratch p377 -DiffBase fc2733d9`）: 開始 HEAD `fc2733d9`（第 1 便）・**台帳 843 点／ss 非ゼロ 210／総和 23.216135909 → 22.584587806**（−0.631548＝5 点の残差の縮みの和ちょうど）／count 点 180 うち非ゼロ 0／exact 668／OPEN 0・**snapshot 249・追跡 `.lys` 599 は不変**（出力は不変）・Core 0 警告・**full `scratch/p377/run3.trx` 8469 / 0 / 4 / 8473**（本数不変）・§7.5: Core `+` 0 行／REF 0／OWN 0（Core は触っていない）・未 push 67（この commit 込み）。★ **第 3 便の判定＝着手しない**: **この族は全数を掃き終えた**（pin の無い 62 冊・残る違いは全部仕分け済み）うえ、**残る並び（§2 E の brace＝要承認／⒝ 摂動網＝別 regime／⒠ UX 判断／⒢ 設計級）のどれにも `p377/dual` の計器が効かない**＝**次のセッションでやっても損しない**。⚠️ **`slur.tab.*` の span 由来の高さの分解を canonical の span で再導出する**のは `p377` の dump が要るが**数字を 1 つ解くだけの読み物**＝急がない（`why` に「未測定」と名指し済み）。
+
 ## 以下は第375セッションの経緯
 
 最終更新 第375セッション（2026-09-13）＝**入り方は第298〜第372 の型**（ユーザーは `docs/HANDOFF.md` を読ませて「作業に着手して」だけ）。**§0 の裏取りを走らせた**（`Session-Check -Build -Test -Scratch p376`）。道具は記憶どおり pwsh MCP。**骨は 6**:

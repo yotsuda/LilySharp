@@ -45,8 +45,10 @@ namespace LilySharp.Tests;
 /// </para>
 /// <para>
 /// MEASURED against LilyPond 2.26.0 (audit/lp-geometry/probes/tab-slur.ly), in the tab
-/// staff's own spaces above its middle: up <c>P0 1.043326 C1 2.074551</c>, down
-/// <c>P0 −1.043326 C1 −2.074551</c> — exact negatives, because bar 2 is bar 1 with its
+/// staff's own spaces above its middle: up <c>P0 1.220223 C1 2.277652</c>, down
+/// <c>P0 −1.220223 C1 −2.277652</c> (<c>-dbackend=null</c>; until session 376 this quoted
+/// 1.043326 / 2.074551 from an unpinned <c>-dbackend=svg</c> run, whose fallback serif face
+/// has smaller fret digits) — exact negatives, because bar 2 is bar 1 with its
 /// strings reflected. The five ledger points <c>slur.tab.*</c> hold those numbers; this
 /// holds the SHAPE of the relation between them, which survives the fret digits being
 /// resized (and they ARE resized: that is the whole of those residuals).

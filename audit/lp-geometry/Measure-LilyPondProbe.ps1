@@ -40,6 +40,17 @@
     (lily/paper-book.cc:775-788). A probe that only reads grobs does not need it and is not
     slowed down measurably by it.
 
+    ⚠️⚠️ BUT svg COSTS TEXT ITS FONT. Under -dbackend=svg LilyPond 2.26 sets fonts.serif/sans/
+    typewriter to the generic "serif"/"sans"/"monospace" (ly/paper-defaults-init.ly:169-181),
+    and fontconfig resolves those to whatever this machine has. Any TEXT width — instrument
+    names, chord names, section labels, bar numbers, TAB FRET DIGITS — and anything positioned
+    from one then belongs to the machine, not to LilyPond. Session 376 ran every unpinned probe
+    under both backends and found five ledger points (slur.tab.*) and one test's widths
+    (InstrumentNamePlacementTests) recorded from that fallback face. A probe that dumps text
+    must pin `\paper { property-defaults.fonts.serif = "LilyPond Serif"
+    property-defaults.fonts.sans = "LilyPond Sans Serif" }`, or be read with -dbackend=null.
+    The script warns when the probe's code carries no pin.
+
 .EXAMPLE
     pwsh audit/lp-geometry/Measure-LilyPondProbe.ps1 -Probe skyline-binding.ly
 #>
@@ -57,6 +68,14 @@ $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $probePath = if (Test-Path $Probe) { (Resolve-Path $Probe).Path } else { Join-Path $here 'probes' $Probe }
 if (-not (Test-Path $probePath)) { throw "probe not found: $probePath" }
 if (-not (Test-Path $LilyPond)) { throw "lilypond.exe not found: $LilyPond — pass -LilyPond" }
+
+# Comments do not count as a pin: a header that merely MENTIONS fonts.serif pins nothing.
+$code = Get-Content $probePath | Where-Object { $_ -notmatch '^\s*%' } | ForEach-Object { ($_ -split '(?<!\\)%', 2)[0] }
+if (-not ($code | Select-String -Pattern 'fonts\.(serif|sans)' -Quiet)) {
+    Write-Warning ("$Probe pins no text font. Under -dbackend=svg every TEXT extent (names, chord " +
+        "names, labels, bar numbers, fret digits) is this machine's fallback face, not LilyPond Serif — " +
+        "see .NOTES. Glyph-only numbers are unaffected.")
+}
 
 $work = Join-Path ([System.IO.Path]::GetTempPath()) ("lp-probe-" + [System.IO.Path]::GetRandomFileName())
 New-Item -ItemType Directory -Path $work | Out-Null

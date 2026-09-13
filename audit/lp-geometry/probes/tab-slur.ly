@@ -47,6 +47,13 @@
 % what BezierBow's height is a function of, so a rise that differs can be told apart from
 % a rise that differs BECAUSE the two engines spaced the columns differently.
 %   PROBET TABSLUR dir=<1|-1> ss=<staff-space> span=<len> y0=<P0> y1=<C1> y2=<C2> y3=<P3>
+%
+% ⚠️⚠️ RUN IT WITH -dbackend=null. Fret digits are TEXT (the serif face), and under
+% -dbackend=svg LilyPond 2.26 drops fonts.serif to the generic "serif" so fontconfig picks a
+% machine face (ly/paper-defaults-init.ly:169-181). Session 376 ran both, this file unmodified:
+%   null  span=5.574433  y0=1.220223  y1=2.277652     <- LilyPond Serif, what the ledger holds
+%   svg   span=5.349087  y0=1.043326  y1=2.074551     <- the fallback face; the ledger held
+%                                                        these until session 376
 
 \paper { indent = 0 ragged-right = ##t }
 
