@@ -492,9 +492,10 @@ internal sealed class MultiStaffLayouter
     /// <c>indent - 0.3</c>, 0.06 right of LilyPond.
     /// </para>
     /// <para>
-    /// ⚠️ NOT THE BAR LILY# DRAWS. SharedRenderer centres its SystemStartBar on the indent
-    /// (ink indent ± 0.08, LilyPond's is indent - 0.06 .. + 0.10), so chaining to Lily#'s own
-    /// bar would land 0.02 too far left. The bar's divergence is recorded, not fixed here.
+    /// ⚠️ UNTIL SESSION 376 LILY# DREW ITS OWN BAR ELSEWHERE — centred on the indent, ink
+    /// indent ± 0.08 against LilyPond's indent - 0.06 .. + 0.10. The renderer now draws the bar
+    /// from <see cref="SystemStartBarLeftEdge"/> too, so the brace, the bracket, the bar and
+    /// the instrument names placed against the bar all read one formula.
     /// </para>
     /// </remarks>
     internal static double SystemStartBraceRightEdge(double indent)

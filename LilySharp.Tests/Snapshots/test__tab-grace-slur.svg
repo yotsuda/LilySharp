@@ -9,7 +9,7 @@
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="406">Tab Grace Slur</text>
   <text x="110.97" y="15.76" font-size="2.20" text-anchor="end" data-pos="432">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="20.31" x2="0.00" y2="33.56" stroke="#000000" stroke-width="0.160"/>
+  <line x1="0.02" y1="20.31" x2="0.02" y2="33.56" stroke="#000000" stroke-width="0.160"/>
   <line x1="0.00" y1="20.31" x2="23.06" y2="20.31" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="21.31" x2="23.06" y2="21.31" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="22.31" x2="23.06" y2="22.31" stroke="#000000" stroke-width="0.100"/>

@@ -8,11 +8,11 @@
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="327">Clef Positions</text>
   <text x="110.97" y="15.76" font-size="2.20" text-anchor="end" data-pos="353">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <text x="6.43" y="25.92" font-size="3.00" text-anchor="end" dominant-baseline="central">Sop</text>
-  <text x="6.02" y="34.92" font-size="3.00" text-anchor="end" dominant-baseline="central">Alt</text>
-  <text x="6.52" y="43.92" font-size="3.00" text-anchor="end" dominant-baseline="central">Ten</text>
-  <text x="6.50" y="52.92" font-size="3.00" text-anchor="end" dominant-baseline="central">Bas</text>
-  <line x1="8.54" y1="23.92" x2="8.54" y2="54.92" stroke="#000000" stroke-width="0.160"/>
+  <text x="6.45" y="25.92" font-size="3.00" text-anchor="end" dominant-baseline="central">Sop</text>
+  <text x="6.04" y="34.92" font-size="3.00" text-anchor="end" dominant-baseline="central">Alt</text>
+  <text x="6.54" y="43.92" font-size="3.00" text-anchor="end" dominant-baseline="central">Ten</text>
+  <text x="6.52" y="52.92" font-size="3.00" text-anchor="end" dominant-baseline="central">Bas</text>
+  <line x1="8.56" y1="23.92" x2="8.56" y2="54.92" stroke="#000000" stroke-width="0.160"/>
   <line x1="8.54" y1="23.92" x2="23.53" y2="23.92" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.54" y1="24.92" x2="23.53" y2="24.92" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.54" y1="25.92" x2="23.53" y2="25.92" stroke="#000000" stroke-width="0.100"/>

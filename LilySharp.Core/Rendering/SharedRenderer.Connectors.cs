@@ -99,7 +99,7 @@ internal static partial class SharedRenderer
         // missed it, and on a plain multi-staff score the name was then placed against the
         // indent instead of against the bar.
         if (SystemStartBarStaves(score, system).Count >= 2)
-            Take(systemStartX - SystemStartBarThickness / 2.0);
+            Take(MultiStaffLayouter.SystemStartBarLeftEdge(systemStartX));
 
         if (!system.StaffGroups.IsDefaultOrEmpty)
             foreach (var g in system.StaffGroups)
@@ -209,7 +209,11 @@ internal static partial class SharedRenderer
         {
             double top = systemYUp + allStaves[0].Y;
             double bottom = systemYUp + allStaves[^1].Y - allStaves[^1].Height;
-            DrawSystemStartBarLine(systemStartX, top, bottom, gc);
+            // LilyPond's bar sits LEFT of the staff start, indent - 0.06 .. indent + 0.10, not
+            // centred on it; the stroke is drawn on its centre.
+            DrawSystemStartBarLine(
+                MultiStaffLayouter.SystemStartBarLeftEdge(systemStartX) + SystemStartBarThickness / 2.0,
+                top, bottom, gc);
         }
 
         // Span bars inside delimited groups. Barline types come from a content

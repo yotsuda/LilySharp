@@ -7,10 +7,10 @@
   <rect x="0" y="0" width="119.50" height="45.31" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="297">Rhythm slashes</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <text x="7.85" y="19.08" font-size="3.00" text-anchor="end" dominant-baseline="central">Comp</text>
-  <text x="6.30" y="28.08" font-size="3.00" text-anchor="end" dominant-baseline="central">Gtr</text>
-  <text x="7.20" y="37.08" font-size="3.00" text-anchor="end" dominant-baseline="central">Bass</text>
-  <line x1="8.54" y1="17.08" x2="8.54" y2="39.08" stroke="#000000" stroke-width="0.160"/>
+  <text x="7.87" y="19.08" font-size="3.00" text-anchor="end" dominant-baseline="central">Comp</text>
+  <text x="6.32" y="28.08" font-size="3.00" text-anchor="end" dominant-baseline="central">Gtr</text>
+  <text x="7.22" y="37.08" font-size="3.00" text-anchor="end" dominant-baseline="central">Bass</text>
+  <line x1="8.56" y1="17.08" x2="8.56" y2="39.08" stroke="#000000" stroke-width="0.160"/>
   <line x1="8.54" y1="19.08" x2="88.89" y2="19.08" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="13.54" y="19.08" font-size="4.00" data-pos="319"></text>
   <line x1="71.90" y1="16.08" x2="73.85" y2="16.08" stroke="#000000" stroke-width="0.200"/>

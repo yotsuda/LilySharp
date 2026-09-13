@@ -13,7 +13,7 @@
   <text x="6.93" y="19.05" font-size="3.00" text-anchor="end" dominant-baseline="central">Soprano</text>
   <text x="5.56" y="28.74" font-size="3.00" text-anchor="end" dominant-baseline="central">Alto</text>
   <text x="5.97" y="37.74" font-size="3.00" text-anchor="end" dominant-baseline="central">Bass</text>
-  <line x1="8.54" y1="17.05" x2="8.54" y2="39.74" stroke="#000000" stroke-width="0.160"/>
+  <line x1="8.56" y1="17.05" x2="8.56" y2="39.74" stroke="#000000" stroke-width="0.160"/>
   <line x1="8.54" y1="17.05" x2="59.44" y2="17.05" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.54" y1="18.05" x2="59.44" y2="18.05" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.54" y1="19.05" x2="59.44" y2="19.05" stroke="#000000" stroke-width="0.100"/>
