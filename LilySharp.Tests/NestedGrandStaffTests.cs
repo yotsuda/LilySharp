@@ -180,7 +180,8 @@ public class NestedGrandStaffTests
         Assert.True(stroke.Success, "no bracket stroke was drawn");
         Assert.InRange(double.Parse(stroke.Groups[1].Value), -1.096, -1.074);
 
-        Assert.Equal(-1.61, LilySharp.Core.Svg.Layout.MultiStaffLayouter.SystemStartNestedBraceRightEdge(0.0), 9);
+        Assert.Equal(-1.61, LilySharp.Core.Svg.Layout.MultiStaffLayouter.SystemStartBraceRightEdgeAgainst(
+            LilySharp.Core.Svg.Layout.MultiStaffLayouter.SystemStartBracketCentre(0.0) - 0.225), 9);
     }
 
     [Fact]

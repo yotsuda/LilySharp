@@ -233,29 +233,22 @@ public class ChordDisplayCompletionTests
 
     [Theory]
     // grandStaff / staffGroup / choirStaff take one-staff items — `staff`, and since
-    // session 376 `condensedStaff { … }` / `combinedStaff { … }` — and `lyrics NAME`
-    // verse rows, nothing else — anything else is LYS6011 "cannot contain".
+    // session 376 `condensedStaff { … }` / `combinedStaff { … }` — groups of all three types
+    // at any depth (session 376), and `lyrics NAME` verse rows, nothing else — anything else
+    // is LYS6011 "cannot contain".
     [InlineData("score main { grandStaff { ")]
+    [InlineData("score main { staffGroup { ")]
+    [InlineData("score main { choirStaff { ")]
     [InlineData("score main { staffGroup { grandStaff { ")]
-    public void InsideAStaffGroup_OffersStaffAndLyricsRows(string text)
+    [InlineData("score main { grandStaff { staffGroup { choirStaff { ")]
+    public void InsideAStaffGroup_OffersStaffItemsGroupsAndLyricsRows(string text)
     {
         Assert.Equal(LilySharpLanguageServer.CompletionContext.StaffGroupBlock, Ctx(text));
         var labels = LilySharpLanguageServer.GetStaffGroupBlockCompletions()
             .Items.Select(i => i.Label).ToArray();
-        Assert.Equal(new[] { "staff", "condensedStaff", "combinedStaff", "lyrics" }, labels);
-    }
-
-    [Theory]
-    // …and a BRACKET's body takes a nested grandStaff too (one level — the grandStaff body
-    // above does not offer it).
-    [InlineData("score main { staffGroup { ")]
-    [InlineData("score main { choirStaff { ")]
-    public void InsideABracket_AlsoOffersANestedGrandStaff(string text)
-    {
-        Assert.Equal(LilySharpLanguageServer.CompletionContext.BracketGroupBlock, Ctx(text));
-        var labels = LilySharpLanguageServer.GetStaffGroupBlockCompletions(allowGrandStaff: true)
-            .Items.Select(i => i.Label).ToArray();
-        Assert.Equal(new[] { "staff", "condensedStaff", "combinedStaff", "grandStaff", "lyrics" }, labels);
+        Assert.Equal(
+            new[] { "staff", "condensedStaff", "combinedStaff", "grandStaff", "staffGroup", "choirStaff", "lyrics" },
+            labels);
     }
 
     [Theory]

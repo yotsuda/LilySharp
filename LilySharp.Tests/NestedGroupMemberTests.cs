@@ -166,18 +166,18 @@ public class NestedGroupMemberTests
     }
 
     /// <summary>
-    /// A grandStaff may stand one level inside a staffGroup / choirStaff (NestedGrandStaffTests);
-    /// every other group-in-group is still refused.
+    /// Every group may stand inside every group, at any depth (NestedGroupDepthTests) — none of
+    /// these is a bad member any more.
     /// </summary>
     [Theory]
     [InlineData("grandStaff { staff ob  grandStaff { staff fl1  staff fl2 } }")]
     [InlineData("staffGroup { staff ob  staffGroup { staff fl1  staff fl2 } }")]
     [InlineData("choirStaff { staff ob  choirStaff { staff fl1  staff fl2 } }")]
     [InlineData("staffGroup { staff ob  grandStaff { staff fl1  grandStaff { staff fl2  staff cl } } }")]
-    public void EveryOtherGroupInsideAGroup_IsStillRefused(string render)
+    public void EveryGroupInsideAGroup_IsAMember(string render)
     {
         var tree = Parse(render);
 
-        Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.StaffGroupBadMember);
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.StaffGroupBadMember);
     }
 }

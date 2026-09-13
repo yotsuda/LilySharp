@@ -110,7 +110,7 @@ public class StaffRowSpellingCompletionTests
     {
         // A group refuses the score-wide list (LYS6011), so the three-word row must land in
         // the GROUP's continuation set, not the score's.
-        Assert.Equal(new[] { "as lines", "as removeEmpty", "staff", "condensedStaff", "combinedStaff", "lyrics" },
+        Assert.Equal(new[] { "as lines", "as removeEmpty", "staff", "condensedStaff", "combinedStaff", "grandStaff", "staffGroup", "choirStaff", "lyrics" },
             LabelsAt(OnePart, "score main { grandStaff { staff treble melody ▮ } }"));
     }
 
@@ -170,7 +170,7 @@ public class StaffRowSpellingCompletionTests
 
     [Fact]
     public void TheChainInsideAGroup_KeepsTheGroupsNarrowContinuations()
-        => Assert.Equal(new[] { "removeEmpty", "staff", "condensedStaff", "combinedStaff", "lyrics" },
+        => Assert.Equal(new[] { "removeEmpty", "staff", "condensedStaff", "combinedStaff", "grandStaff", "staffGroup", "choirStaff", "lyrics" },
             LabelsAt(OnePart, "score main { grandStaff { staff m as lines 1 ▮ } }"));
 
     [Theory]

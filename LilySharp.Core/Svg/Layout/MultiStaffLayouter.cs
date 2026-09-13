@@ -170,14 +170,16 @@ internal sealed class MultiStaffLayouter
         if (upper.Staves.IsDefaultOrEmpty || lower.Staves.IsDefaultOrEmpty)
             return sp.StaffGroupStaff;
 
-        // The GROUPER each side stands in: its own delimited group, else the outer bracket it
+        // The GROUPER each side stands in: its own delimited group, else the innermost group it
         // is a direct child of (StaffGroup.Outer), else none. With no grouper above, the
         // staff's own default; with the SAME grouper below, that grouper's staff-staff-spacing;
         // otherwise its staffgroup-staff-spacing. For a book with no nested group this is the
         // old rule exactly (a delimited group is never another group's grouper). MEASURED
         // (scratch/p377/nest, LilyPond 2.26.0): flat Staff→GrandStaff 9, GrandStaff→Staff 10.5,
         // GrandStaff→GrandStaff 10.5; inside a StaffGroup, Staff→nested GrandStaff 10.5,
-        // nested GrandStaff→Staff 10.5, Staff→Staff 9.
+        // nested GrandStaff→Staff 10.5, Staff→Staff 9. Deeper (scratch/p377/nest/deep.ly): the
+        // same rule, with the INNERMOST group as the grouper, at every depth and for every
+        // parent type — StaffGroup{Staff StaffGroup{b c} d} is 10.5 / 9 / 10.5.
         object? upperGrouper = upper.HasDelimiter ? upper : upper.Outer;
         object? lowerGrouper = lower.HasDelimiter ? lower : lower.Outer;
         var spaceable = upperGrouper is null
@@ -546,40 +548,63 @@ internal sealed class MultiStaffLayouter
     /// </para>
     /// </remarks>
     internal static double SystemStartBracketCentre(double indent)
-        => SystemStartBarLeftEdge(indent) - SystemStartBracketPadding
-           - EngravingDefaults.SystemStartBracketThickness / 2.0;
+        => SystemStartBracketCentreAgainst(SystemStartBarLeftEdge(indent));
 
     /// <summary>
-    /// The right edge of a brace that stands INSIDE a bracket: the bracket's ink left less the
-    /// brace's own 0.3 = indent − 1.61.
+    /// Where a bracket's stroke is centred when it stands against the ink whose left edge is
+    /// <paramref name="anchorLeft"/> — the bar for a top-level bracket, the delimiter of the group
+    /// around it for a nested one.
     /// </summary>
     /// <remarks>
-    /// The delimiters chain outward: bar, then the outer bracket against the bar, then the
-    /// nested brace against the bracket. MEASURED, LilyPond 2.26.0 -dbackend=null
-    /// (scratch/p377/nest/nest.ly, StaffGroup and ChoirStaff each holding a GrandStaff): the
-    /// bracket at 7.225827 .. 7.675827 — unchanged by the nesting — and the brace's right edge
-    /// at 6.925827 = 7.225827 − 0.3, at indent 8.535827.
+    /// The delimiters chain outward: every delimiter is side-positioned against its PARENT's.
+    /// MEASURED, LilyPond 2.26.0 (scratch/p377/nest/deep.ly, indent 0): a bracket inside a
+    /// top-level bracket at -2.56 .. -2.11 = -1.31 − 0.8; a bracket inside a top-level BRACE of
+    /// height 23.6 at -2.74 .. -2.29 = -1.49 − 0.8; siblings at one depth are not aligned — each
+    /// is placed against its own parent only.
     /// </remarks>
-    internal static double SystemStartNestedBraceRightEdge(double indent)
-        => SystemStartBracketCentre(indent) - EngravingDefaults.SystemStartBracketThickness / 2.0
-           - SystemStartBracePadding;
+    internal static double SystemStartBracketCentreAgainst(double anchorLeft)
+        => anchorLeft - SystemStartBracketPadding - EngravingDefaults.SystemStartBracketThickness / 2.0;
 
     /// <summary>
-    /// The runs of consecutive leaf groups on a system that stand in one outer bracket.
+    /// The right edge of a brace that stands against the ink whose left edge is
+    /// <paramref name="anchorLeft"/>: that edge less the brace's own 0.3.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED, LilyPond 2.26.0 (scratch/p377/nest/nest.ly and deep.ly): a brace inside a
+    /// bracket ends at the bracket's ink left − 0.3 (indent − 1.61 one level down, − 2.86 two
+    /// levels down); a brace inside a brace at the outer brace's ink left − 0.3 (-1.79 against
+    /// -1.49).
+    /// </remarks>
+    internal static double SystemStartBraceRightEdgeAgainst(double anchorLeft)
+        => anchorLeft - SystemStartBracePadding;
+
+    /// <summary>
+    /// Every group that holds another group on a system, with the leaves standing in it,
+    /// OUTERMOST FIRST — a group is listed before any group inside it, so a reader placing
+    /// delimiters against their parents finds each parent already placed.
     /// </summary>
     internal static List<(OuterStaffGroup Outer, List<StaffGroupLayout> Leaves)> OuterRuns(SystemLayout system)
     {
         var runs = new List<(OuterStaffGroup Outer, List<StaffGroupLayout> Leaves)>();
         if (system.StaffGroups.IsDefaultOrEmpty)
             return runs;
+        var at = new Dictionary<OuterStaffGroup, int>();
         foreach (var g in system.StaffGroups)
         {
-            if (g.Outer is not { } outer)
+            if (g.Outer is null)
                 continue;
-            if (runs.Count > 0 && ReferenceEquals(runs[^1].Outer, outer))
-                runs[^1].Leaves.Add(g);
-            else
-                runs.Add((outer, new List<StaffGroupLayout> { g }));
+            foreach (var outer in g.Outer.SelfAndOuters().Reverse())
+            {
+                if (at.TryGetValue(outer, out int i))
+                {
+                    runs[i].Leaves.Add(g);
+                }
+                else
+                {
+                    at[outer] = runs.Count;
+                    runs.Add((outer, new List<StaffGroupLayout> { g }));
+                }
+            }
         }
         return runs;
     }
@@ -843,9 +868,10 @@ internal sealed class MultiStaffLayouter
         }
 
         double totalHeight = y - currentY + LastVisibleStaffHeight(staffLayouts);
-        double braceX = group.Outer is null
-            ? SystemStartBraceRightEdge(CurrentIndent)
-            : SystemStartNestedBraceRightEdge(CurrentIndent);
+        // A top-level brace's X. A brace inside another group is placed against that group's
+        // delimiter by the renderer (SharedRenderer.PlacedDelimiters), because a parent brace's
+        // width depends on its height, which is only final once the page has placed the staves.
+        double braceX = SystemStartBraceRightEdge(CurrentIndent);
 
         var grandStaffLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
@@ -951,9 +977,8 @@ internal sealed class MultiStaffLayouter
         }
 
         double totalHeight = y - currentY + staffHeight;
-        double braceX = group.Outer is null
-            ? SystemStartBraceRightEdge(CurrentIndent)
-            : SystemStartNestedBraceRightEdge(CurrentIndent);
+        // A nested brace is re-placed by the renderer (SharedRenderer.PlacedDelimiters).
+        double braceX = SystemStartBraceRightEdge(CurrentIndent);
 
         var grandStaffLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),

@@ -1512,31 +1512,11 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>
     /// Inside <c>grandStaff</c> / <c>staffGroup</c> / <c>choirStaff</c>: the body is a
     /// run of one-staff items — <c>staff</c>, <c>condensedStaff { … }</c>,
-    /// <c>combinedStaff { … }</c> — with <c>lyrics NAME</c> rows between them (a bound row
-    /// is the plain staff above's verse — LYS6012 refuses any other), so that is the whole
-    /// list. Anything else is LYS6011.
+    /// <c>combinedStaff { … }</c> — and nested groups of any of the three types, with
+    /// <c>lyrics NAME</c> rows between them (a bound row is the plain staff above's verse —
+    /// LYS6012 refuses any other), so that is the whole list. Anything else is LYS6011.
     /// </summary>
-    internal static CompletionList GetStaffGroupBlockCompletions(bool allowGrandStaff = false)
-    {
-        var list = StaffGroupBlockItems();
-        if (!allowGrandStaff)
-            return list;
-        // A staffGroup / choirStaff body also takes a nested grandStaff, placed after the
-        // one-staff items and before the verse row.
-        var items = list.Items.ToList();
-        items.Insert(3, new CompletionItem
-        {
-            Label = "grandStaff",
-            Kind = CompletionItemKind.Keyword,
-            InsertTextFormat = InsertTextFormat.Snippet,
-            InsertText = "grandStaff { $0 }",
-            Detail = "A braced group of staves inside this bracket (the piano in the orchestra)",
-            SortText = "2a",
-        });
-        return new CompletionList { Items = [.. items] };
-    }
-
-    private static CompletionList StaffGroupBlockItems() => new()
+    internal static CompletionList GetStaffGroupBlockCompletions() => new()
     {
         Items =
         [
@@ -1584,12 +1564,39 @@ public sealed partial class LilySharpLanguageServer
             },
             new CompletionItem
             {
+                Label = "grandStaff",
+                Kind = CompletionItemKind.Keyword,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = "grandStaff { $0 }",
+                Detail = "A braced group inside this group (the piano in the orchestra)",
+                SortText = "3",
+            },
+            new CompletionItem
+            {
+                Label = "staffGroup",
+                Kind = CompletionItemKind.Keyword,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = "staffGroup { $0 }",
+                Detail = "A bracketed group inside this group, bar lines drawn through (a sub-bracket)",
+                SortText = "4",
+            },
+            new CompletionItem
+            {
+                Label = "choirStaff",
+                Kind = CompletionItemKind.Keyword,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = "choirStaff { $0 }",
+                Detail = "A bracketed group inside this group, bar lines kept per staff",
+                SortText = "5",
+            },
+            new CompletionItem
+            {
                 Label = "lyrics",
                 Kind = CompletionItemKind.Keyword,
                 InsertTextFormat = InsertTextFormat.Snippet,
                 InsertText = "lyrics $0",
                 Detail = "A verse row under the staff above (the track must sing that staff's part)",
-                SortText = "3",
+                SortText = "6",
                 Command = new Command
                 {
                     Title = "Suggest lyrics name",

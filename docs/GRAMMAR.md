@@ -1201,8 +1201,9 @@ TabStyle       = 'numbers' | 'full' ;
 
 
 StaffGroupBody = '{' , { StaffRender | CondensedStaff | CombinedStaff
-                        | 'grandStaff' , StaffGroupBody   (* only in a staffGroup / choirStaff,
-                                                             and only one level deep *)
+                        | 'grandStaff' , StaffGroupBody   (* any group in any group, *)
+                        | 'staffGroup' , StaffGroupBody   (* at any depth, drawn as   *)
+                        | 'choirStaff' , StaffGroupBody   (* written                  *)
                         | 'lyrics' PartRef [ 'sings' PartRef ] } , '}' ;
                  (* Several staves engraved as ONE GROUP. All three take one-staff items —
                     `staff`, and a `condensedStaff { … }` / `combinedStaff { … }`, each of
@@ -1215,12 +1216,16 @@ StaffGroupBody = '{' , { StaffRender | CondensedStaff | CombinedStaff
                     melody: `staff alt  lyrics verse sings alt`), and a row that
                     sings no adjacent staff is LYS6012 (so is a row under a condensed or
                     combined member: that staff carries several parts, and a verse is ONE
-                    part's), anything else LYS6011. A `grandStaff { … }` may stand ONE level
-                    inside a `staffGroup` or `choirStaff` — the piano inside the orchestra's
-                    bracket: the brace stands left of the bracket, a staff crossing into or
-                    out of it keeps the wider group distance, and a `staffGroup` draws bar
-                    lines through the gaps on either side of it. No other group goes inside a
-                    group (LYS6011). They differ only in what is drawn down the left edge, and
+                    part's), anything else LYS6011. A group may stand inside a group — the
+                    piano inside the orchestra's bracket, the violins' sub-bracket inside the
+                    strings — of any type and at any depth, and it is drawn AS WRITTEN: each
+                    group's brace or bracket stands just left of the one around it, so
+                    `staffGroup { grandStaff { … } }` puts the brace outside the bracket and
+                    `grandStaff { staffGroup { … } }` the bracket outside the brace (LilyPond
+                    draws both the same way). A staff crossing into or out of a nested group
+                    keeps the wider group distance, and bar lines are drawn through a gap
+                    when any group holding both staves is a `grandStaff` or `staffGroup`.
+                    They differ only in what is drawn down the left edge, and
                     each is the LilyPond context of the same name (engraver-init.ly):
 
                       grandStaff    a BRACE, and bar lines drawn through the gap between

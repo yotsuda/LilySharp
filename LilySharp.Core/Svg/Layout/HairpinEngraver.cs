@@ -448,12 +448,12 @@ internal static class HairpinEngraver
                 break;
             }
         }
-        // An outer staffGroup's span bar runs below a staff that has a visible staff after it
-        // anywhere in the bracket's run, not only in its own leaf group
-        // (SharedRenderer.DrawStaffConnectors draws it there).
+        // An outer group's span bar runs below a staff that has a visible staff after it
+        // anywhere in the group's run, not only in its own leaf group — when that group, or any
+        // group around it, draws bar lines through (SharedRenderer.DrawStaffConnectors).
         foreach (var run in MultiStaffLayouter.OuterRuns(system))
         {
-            if (run.Outer.Type != StaffGroupType.StaffGroup)
+            if (!run.Outer.SelfAndOuters().Any(o => o.Type != StaffGroupType.ChoirStaff))
                 continue;
             var runStaves = run.Leaves.SelectMany(l => l.Staves).ToList();
             int at = runStaves.FindIndex(s => s.StaffIndex == staffIdx && !s.IsHidden);

@@ -101,13 +101,13 @@ internal static partial class SharedRenderer
         if (SystemStartBarStaves(score, system).Count >= 2)
             Take(MultiStaffLayouter.SystemStartBarLeftEdge(systemStartX));
 
-        if (!system.StaffGroups.IsDefaultOrEmpty)
-            foreach (var g in system.StaffGroups)
-                if (g.GrandStaffLayout is { } d
-                    && SystemStartDelimiterInkLeft(d, d.BraceTop - d.BraceBottom) is { } left)
-                    Take(left);
-        // An outer bracket is a delimiter too, and the one furthest out after a nested brace.
-        foreach (var o in OuterDelimiters(system))
+        // Every delimiter at the X it is drawn at — a nested group's is further out than any
+        // leaf's, and is where a name has to stop.
+        var placed = PlacedDelimiters(system, out var outers);
+        foreach (var d in placed)
+            if (SystemStartDelimiterInkLeft(d, d.BraceTop - d.BraceBottom) is { } left)
+                Take(left);
+        foreach (var o in outers)
             if (SystemStartDelimiterInkLeft(o.Delimiter, o.Delimiter.BraceTop - o.Delimiter.BraceBottom) is { } outerLeft)
                 Take(outerLeft);
 
@@ -274,7 +274,11 @@ internal static partial class SharedRenderer
             // A ChoirStaff is bracketed but its barlines are NOT spanned across the
             // gap — each staff keeps its own. LILYPOND-REF: ly/engraver-init.ly —
             // ChoirStaff has no Span_bar_engraver (unlike GrandStaff/StaffGroup).
-            if (!group.HasDelimiter || group.Type == StaffGroupType.ChoirStaff)
+            // …unless a group AROUND it has one: the outer engraver acknowledges every bar line
+            // below it, so a choirStaff inside a grandStaff has its gaps spanned
+            // (MEASURED, scratch/p377/nest/sd6.ly).
+            if (!group.HasDelimiter
+                || (group.Type == StaffGroupType.ChoirStaff && !SpansThrough(group.Outer)))
                 continue;
             var staves = group.Staves
                 .Where(s => !s.IsHidden && !s.IsOssia)
@@ -289,15 +293,18 @@ internal static partial class SharedRenderer
             DrawSpanGaps(gaps);
         }
 
-        // An OUTER staffGroup spans the gaps between its DIRECT children — a plain staff and
-        // the nested grand staff beside it — and leaves the gaps inside a nested delimited
-        // group to that group, which drew them above. An outer choirStaff spans none.
+        // A gap between two leaves is drawn ONCE, by the innermost group holding both — when
+        // that group or any group around it draws bar lines through. A gap inside one
+        // delimited leaf was drawn by the leaf loop above.
         // MEASURED (scratch/p377/nest, LilyPond 2.26.0 -dbackend=svg): StaffGroup > (Staff,
         // GrandStaff) draws span bars through both gaps; ChoirStaff > (Staff, GrandStaff)
-        // through the grand staff's own gap only.
-        foreach (var o in OuterDelimiters(system))
+        // through the grand staff's own gap only; StaffGroup > ChoirStaff > (GrandStaff, Staff)
+        // through every gap, the choir's included (sd7.ly); ChoirStaff > (Staff,
+        // GrandStaff > (StaffGroup, Staff), Staff) through the grand staff's gaps only (sd9.ly).
+        PlacedDelimiters(system, out var outers);
+        foreach (var o in outers)
         {
-            if (o.Outer.Type == StaffGroupType.ChoirStaff)
+            if (!SpansThrough(o.Group))
                 continue;
             var gaps = new List<(StaffLayout Upper, StaffLayout Lower)>();
             for (int i = 0; i + 1 < o.Staves.Count; i++)
@@ -305,9 +312,12 @@ internal static partial class SharedRenderer
                 var upper = o.Staves[i];
                 var lower = o.Staves[i + 1];
                 var upperLeaf = o.Leaves.First(l => l.Staves.Any(s => s.StaffIndex == upper.StaffIndex));
-                bool insideOneDelimitedLeaf = upperLeaf.HasDelimiter
-                    && upperLeaf.Staves.Any(s => s.StaffIndex == lower.StaffIndex);
-                if (!insideOneDelimitedLeaf)
+                var lowerLeaf = o.Leaves.First(l => l.Staves.Any(s => s.StaffIndex == lower.StaffIndex));
+                if (ReferenceEquals(upperLeaf, lowerLeaf) && upperLeaf.HasDelimiter)
+                    continue;
+                var lowerChain = lowerLeaf.Outer!.SelfAndOuters().ToHashSet();
+                var innermost = upperLeaf.Outer!.SelfAndOuters().First(lowerChain.Contains);
+                if (ReferenceEquals(innermost, o.Group))
                     gaps.Add((upper, lower));
             }
             if (gaps.Count > 0)
@@ -315,22 +325,61 @@ internal static partial class SharedRenderer
         }
     }
 
+    /// <summary>Whether a group, or any group around it, draws bar lines through its gaps —
+    /// a grandStaff or staffGroup does, a choirStaff does not. Null (no group) does not.</summary>
+    private static bool SpansThrough(LilySharp.Core.Svg.Model.OuterStaffGroup? group)
+        => group is not null && group.SelfAndOuters().Any(g => g.Type != StaffGroupType.ChoirStaff);
+
+    /// <summary>A group that holds another group, as the delimiter it draws over the visible
+    /// staves of its leaves.</summary>
+    private sealed record OuterDelimiter(
+        LilySharp.Core.Svg.Model.OuterStaffGroup Group, GrandStaffLayout Delimiter,
+        List<StaffLayout> Staves, List<StaffGroupLayout> Leaves);
+
     /// <summary>
-    /// Each outer bracket on a system (StaffGroup.Outer), as the delimiter layout it draws —
-    /// spanning the visible staves of its run, at the bracket's usual X.
+    /// Every system-start delimiter at the X it is drawn at: each leaf group's (returned) and
+    /// each group's that holds another group (<paramref name="outers"/>, outermost first).
     /// </summary>
     /// <remarks>
+    /// ONE HOME for the delimiter chain: each delimiter stands against its PARENT's ink — a
+    /// bracket 0.8 left of it, a brace 0.3 — and a top-level one against the SystemStartBar
+    /// (<see cref="MultiStaffLayouter.SystemStartBracketCentreAgainst"/>). A top-level leaf keeps
+    /// the X the layouter gave it, which is the same chain with the bar as parent.
+    /// <para>
     /// Derived from the PLACED staves at draw time rather than stored by the layouter, so a
-    /// page respacing (PageLayouter.RespaceStaves) or a row move cannot leave it stale. It
-    /// goes through the same <see cref="SystemStartDelimiterInkLeft"/> and
-    /// <see cref="DrawSystemStartBracket"/> as a leaf bracket.
+    /// page respacing (PageLayouter.RespaceStaves) or a row move cannot leave it stale — which
+    /// matters here more than anywhere: a parent BRACE's width steps with its height
+    /// (BraceLadder), and its children stand against that width. A parent whose delimiter
+    /// collapses draws no ink, and its children stand against what is around it, as LilyPond's
+    /// side-positioning skips an empty extent.
+    /// </para>
     /// </remarks>
-    private static List<(LilySharp.Core.Svg.Model.OuterStaffGroup Outer, GrandStaffLayout Delimiter,
-        List<StaffLayout> Staves, List<StaffGroupLayout> Leaves)> OuterDelimiters(SystemLayout system)
+    private static List<GrandStaffLayout> PlacedDelimiters(SystemLayout system, out List<OuterDelimiter> outers)
     {
-        var result = new List<(LilySharp.Core.Svg.Model.OuterStaffGroup, GrandStaffLayout,
-            List<StaffLayout>, List<StaffGroupLayout>)>();
-        foreach (var (outer, leaves) in MultiStaffLayouter.OuterRuns(system))
+        outers = new List<OuterDelimiter>();
+        var placed = new List<GrandStaffLayout>();
+        if (system.StaffGroups.IsDefaultOrEmpty)
+            return placed;
+
+        double bar = MultiStaffLayouter.SystemStartBarLeftEdge(system.Indent);
+        var inkLeft = new Dictionary<LilySharp.Core.Svg.Model.OuterStaffGroup, double>();
+        double AnchorFor(LilySharp.Core.Svg.Model.OuterStaffGroup? around)
+        {
+            for (var g = around; g != null; g = g.Outer)
+                if (inkLeft.TryGetValue(g, out double left))
+                    return left;
+            return bar;
+        }
+        GrandStaffLayout AgainstAnchor(GrandStaffLayout d, double anchor) => d.DelimiterType switch
+        {
+            SystemStartDelimiterType.Bracket
+                => d with { BraceX = MultiStaffLayouter.SystemStartBracketCentreAgainst(anchor) },
+            SystemStartDelimiterType.Brace
+                => d with { BraceX = MultiStaffLayouter.SystemStartBraceRightEdgeAgainst(anchor) },
+            _ => d,
+        };
+
+        foreach (var (group, leaves) in MultiStaffLayouter.OuterRuns(system))
         {
             var staves = leaves.SelectMany(l => l.Staves)
                 .Where(s => !s.IsHidden && !s.IsOssia)
@@ -340,15 +389,27 @@ internal static partial class SharedRenderer
                 continue;
             double top = staves[0].Y;
             double bottom = staves[^1].Y - staves[^1].Height;
-            var delimiter = new GrandStaffLayout(
+            double anchor = AnchorFor(group.Outer);
+            var delimiter = AgainstAnchor(new GrandStaffLayout(
                 Staves: [.. staves],
-                BraceX: MultiStaffLayouter.SystemStartBracketCentre(system.Indent),
+                BraceX: 0,
                 BraceTop: top,
                 BraceBottom: bottom,
-                DelimiterType: SystemStartDelimiterType.Bracket);
-            result.Add((outer, delimiter, staves, leaves));
+                DelimiterType: group.Type == StaffGroupType.GrandStaff
+                    ? SystemStartDelimiterType.Brace
+                    : SystemStartDelimiterType.Bracket), anchor);
+            if (SystemStartDelimiterInkLeft(delimiter, top - bottom) is { } left)
+                inkLeft[group] = left;
+            outers.Add(new OuterDelimiter(group, delimiter, staves, leaves));
         }
-        return result;
+
+        foreach (var g in system.StaffGroups)
+        {
+            if (g.GrandStaffLayout is not { } d)
+                continue;
+            placed.Add(g.Outer is null ? d : AgainstAnchor(d, AnchorFor(g.Outer)));
+        }
+        return placed;
     }
 
     /// <summary>LILYPOND-REF: scm/define-grobs.scm:1853-1858 system-start-text::calc-x-offset
@@ -544,9 +605,9 @@ internal static partial class SharedRenderer
     {
         if (system.StaffGroups.IsDefaultOrEmpty) return;
         double systemYUp = LayoutUtilities.SystemTopYUp(system);
-        foreach (var group in system.StaffGroups)
+        var placed = PlacedDelimiters(system, out var outers);
+        foreach (var delim in placed)
         {
-            if (group.GrandStaffLayout is not { } delim) continue;
             double top = systemYUp + delim.BraceTop;
             double bottom = systemYUp + delim.BraceBottom;
             double height = top - bottom;
@@ -570,11 +631,15 @@ internal static partial class SharedRenderer
                     break;
             }
         }
-        foreach (var o in OuterDelimiters(system))
+        foreach (var o in outers)
         {
             double top = systemYUp + o.Delimiter.BraceTop;
             double bottom = systemYUp + o.Delimiter.BraceBottom;
-            if (top - bottom >= SystemStartCollapseHeight)
+            if (top - bottom < SystemStartCollapseHeight)
+                continue;
+            if (o.Delimiter.DelimiterType == SystemStartDelimiterType.Brace)
+                DrawSystemStartBrace(o.Delimiter.BraceX, top, bottom, gc);
+            else
                 DrawSystemStartBracket(o.Delimiter.BraceX, top, bottom, gc);
         }
     }

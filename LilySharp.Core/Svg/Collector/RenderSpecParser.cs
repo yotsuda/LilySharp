@@ -610,8 +610,11 @@ public static class RenderSpecParser
             }
         }
 
-        if (members.Count < 2)
-            return null; // a staff group requires at least 2 staves
+        // A staff group requires at least 2 STAVES — counted through its nested groups, so
+        // `staffGroup { grandStaff { staff a  staff b } }` is two groups over the same two
+        // staves, drawn as written (LilyPond draws both), not an empty bracket.
+        if (members.Sum(m => m is GrandStaffRenderSpec g ? g.GrandStaff.StaffCount : 1) < 2)
+            return null;
 
         var type = grandStaff.GrandStaffKeyword.Kind switch
         {

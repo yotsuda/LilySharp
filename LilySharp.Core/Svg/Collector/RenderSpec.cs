@@ -84,8 +84,8 @@ public sealed record StaffSpec(
 /// </summary>
 /// <param name="Members">The group's members in stacking order: a <see cref="SingleStaffSpec"/>,
 /// a <see cref="CondensedStaffSpec"/> or a <see cref="CombinedStaffSpec"/>, each of which
-/// engraves ONE staff — and, inside a staffGroup or choirStaff, a nested
-/// <see cref="GrandStaffRenderSpec"/> (one level; the parser admits no deeper).</param>
+/// engraves ONE staff — or a nested <see cref="GrandStaffRenderSpec"/>, any group type at any
+/// depth, as written.</param>
 /// <remarks>
 /// ⚠️ MEMBERS, NOT STAVES. Until session 376 a group held <c>StaffSpec</c>s only; a condensed
 /// or combined staff inside a bracket is one staff with several parts, so the group lists
@@ -622,6 +622,35 @@ public sealed record RenderSpec(
             };
         }
 
+        // ⚠️ A GROUP HOLDING A GROUP STAYS FLAT: its members become LEAF groups — each
+        // plain/condensed/combined member its own single group, each nested group its own leaves
+        // — and every leaf carries the innermost OuterStaffGroup around it, whose chain names
+        // the rest. That keeps "the groups are a disjoint run of staves" true for every reader
+        // that assumes it, and puts each group's own facts (where it is drawn, which gaps it
+        // spans, which spacing spec a boundary takes) where they are read: StaffGroup.Outer.
+        // A group with no nested group is one leaf, built exactly as before.
+        IEnumerable<StaffGroup> Leaves(GrandStaffSpec spec, OuterStaffGroup? around)
+        {
+            if (!spec.Members.Any(m => m is GrandStaffRenderSpec))
+            {
+                yield return LeafGroup(spec) with { Outer = around };
+                yield break;
+            }
+            var self = new OuterStaffGroup(spec.Type, around);
+            foreach (var member in spec.Members)
+            {
+                if (member is GrandStaffRenderSpec inner)
+                {
+                    foreach (var leaf in Leaves(inner.GrandStaff, self))
+                        yield return leaf;
+                }
+                else
+                {
+                    yield return StaffGroup.CreateSingle(OneStaff(member, 0)) with { Outer = self };
+                }
+            }
+        }
+
         foreach (var item in OrderedItems())
         {
             switch (item)
@@ -630,24 +659,9 @@ public sealed record RenderSpec(
                     yield return StaffGroup.CreateSingle(OneStaff(item, 0));
                     break;
 
-                // ⚠️ A BRACKET HOLDING A GRANDSTAFF STAYS FLAT: its members become LEAF groups —
-                // each plain/condensed/combined member its own single group, the nested grand
-                // staff its own braced group — and every leaf carries the SAME OuterStaffGroup.
-                // That keeps "the groups are a disjoint run of staves" true for every reader
-                // that assumes it, and puts the bracket's own facts (where it is drawn, which
-                // gaps it spans, which spacing spec a boundary takes) where they are read:
-                // StaffGroup.Outer. A bracket with no nested group is built exactly as before.
-                case GrandStaffRenderSpec grand when grand.GrandStaff.Members.Any(m => m is GrandStaffRenderSpec):
-                    var outer = new OuterStaffGroup(grand.GrandStaff.Type);
-                    foreach (var member in grand.GrandStaff.Members)
-                        yield return (member is GrandStaffRenderSpec inner
-                                ? LeafGroup(inner.GrandStaff)
-                                : StaffGroup.CreateSingle(OneStaff(member, 0)))
-                            with { Outer = outer };
-                    break;
-
                 case GrandStaffRenderSpec grand:
-                    yield return LeafGroup(grand.GrandStaff);
+                    foreach (var leaf in Leaves(grand.GrandStaff, null))
+                        yield return leaf;
                     break;
 
                 // A tab staff carries EVERY voice of its part, like the notation staff:

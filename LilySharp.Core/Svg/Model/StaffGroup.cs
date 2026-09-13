@@ -40,24 +40,46 @@ public enum StaffGroupType
 }
 
 /// <summary>
-/// The outer bracket over a run of leaf <see cref="StaffGroup"/>s — a <c>staffGroup</c> or
-/// <c>choirStaff</c> that holds a nested <c>grandStaff</c>.
+/// A group over a run of leaf <see cref="StaffGroup"/>s — a <c>grandStaff</c>,
+/// <c>staffGroup</c> or <c>choirStaff</c> that holds another group — itself standing in the
+/// group <see cref="Outer"/>, as the user wrote it (session 376: any group in any group, at
+/// any depth).
 /// </summary>
 /// <remarks>
-/// A CLASS, compared by reference: two adjacent brackets of the same type are two brackets,
-/// and the leaves say which one they belong to by holding the same instance.
+/// A CLASS, compared by reference: two adjacent groups of the same type are two groups, and
+/// the leaves say which one they belong to by holding the same instance in their chain.
 /// <para>
-/// MEASURED on LilyPond 2.26.0 (scratch/p377/nest): the outer bracket stands where a
-/// bracket always stands (against the SystemStartBar), the nested brace clears the bracket's
-/// left edge by its own 0.3, a staff crossing into or out of the nested group sits 10.5 from
-/// its neighbour where two staves of one grouper sit 9, and a staffGroup spans bar lines
-/// across the gaps between its direct children while a choirStaff spans none.
+/// MEASURED on LilyPond 2.26.0 (scratch/p377/nest/deep.ly, sd*.ly):
+/// <list type="bullet">
+/// <item>every delimiter is side-positioned against its PARENT's ink — a bracket 0.8 left of
+/// it, a brace 0.3 — and a top-level one against the SystemStartBar; siblings at the same depth
+/// are not aligned in a column;</item>
+/// <item>a staff sits 9 below the staff above when both stand in the same innermost group,
+/// 10.5 when they do not;</item>
+/// <item>bar lines are drawn through the gap between two staves when ANY group holding both is
+/// a staffGroup or grandStaff — a choirStaff inside a grandStaff has its gaps spanned by the
+/// grandStaff.</item>
+/// </list>
 /// </para>
 /// </remarks>
-public sealed class OuterStaffGroup(StaffGroupType type)
+public sealed class OuterStaffGroup(StaffGroupType type, OuterStaffGroup? outer = null)
 {
-    /// <summary><see cref="StaffGroupType.StaffGroup"/> or <see cref="StaffGroupType.ChoirStaff"/>.</summary>
+    /// <summary><see cref="StaffGroupType.GrandStaff"/>, <see cref="StaffGroupType.StaffGroup"/> or
+    /// <see cref="StaffGroupType.ChoirStaff"/>.</summary>
     public StaffGroupType Type { get; } = type;
+
+    /// <summary>The group this one stands in, or null at the top of the score.</summary>
+    public OuterStaffGroup? Outer { get; } = outer;
+
+    /// <summary>How many groups stand around this one (0 at the top).</summary>
+    public int Depth => Outer is null ? 0 : Outer.Depth + 1;
+
+    /// <summary>This group, then every group around it, innermost first.</summary>
+    public IEnumerable<OuterStaffGroup> SelfAndOuters()
+    {
+        for (var g = this; g != null; g = g.Outer)
+            yield return g;
+    }
 }
 
 /// <summary>
@@ -89,13 +111,13 @@ public sealed record StaffGroup(
     public int StaffCount => Staves.Length;
 
     /// <summary>
-    /// The outer bracket this group stands in, or null — set on every leaf of a
-    /// <c>staffGroup</c> / <c>choirStaff</c> that holds a nested <c>grandStaff</c>.
+    /// The innermost group this leaf stands in, or null — set on every leaf of a group that
+    /// holds another group (its chain of <see cref="OuterStaffGroup.Outer"/> reaches the top).
     /// </summary>
     /// <remarks>
-    /// Leaves that share one instance are one bracket's run (consecutive by construction,
-    /// RenderSpec.BuildStaffGroups). The bracket is drawn, spans its bar lines and chooses its
-    /// boundary spacing from this, so no reader has to reconstruct a tree.
+    /// Leaves whose chains share one instance are that group's run (consecutive by
+    /// construction, RenderSpec.BuildStaffGroups). The group is drawn, spans its bar lines and
+    /// chooses its boundary spacing from this, so no reader has to reconstruct a tree.
     /// </remarks>
     public OuterStaffGroup? Outer { get; init; }
 

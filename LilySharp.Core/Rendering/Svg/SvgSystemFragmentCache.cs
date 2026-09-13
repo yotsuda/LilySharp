@@ -778,14 +778,27 @@ internal sealed class SvgSystemFragmentCache
         }
         if (!system.StaffGroups.IsDefaultOrEmpty)
         {
-            // The outer bracket a group stands in and whether it continues the previous
-            // group's: the bracket, its span bars and its ink are drawn from these.
-            LilySharp.Core.Svg.Model.OuterStaffGroup? previousOuter = null;
+            // The groups a leaf stands in, innermost first, each as its type and its order of
+            // first appearance on the system — which says both what each group is and which
+            // leaves share it: the delimiters, their X chain, span bars and ink are drawn from these.
+            var outerIds = new Dictionary<LilySharp.Core.Svg.Model.OuterStaffGroup, int>();
             foreach (var g in system.StaffGroups)
             {
-                hc.Add(g.Outer is null ? -1 : (int)g.Outer.Type);
-                hc.Add(g.Outer is not null && ReferenceEquals(g.Outer, previousOuter));
-                previousOuter = g.Outer;
+                if (g.Outer is null)
+                {
+                    hc.Add(-1);
+                }
+                else
+                {
+                    foreach (var o in g.Outer.SelfAndOuters())
+                    {
+                        if (!outerIds.TryGetValue(o, out int id))
+                            outerIds[o] = id = outerIds.Count;
+                        hc.Add((int)o.Type);
+                        hc.Add(id);
+                    }
+                    hc.Add(-2);
+                }
                 hc.Add((int)g.Type);
                 hc.Add(g.Y);
                 hc.Add(g.Height);

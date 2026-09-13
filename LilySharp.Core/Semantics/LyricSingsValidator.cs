@@ -127,9 +127,9 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                         sharedStaffAbove = false;
                         nestedGroupAbove = false;
                         break;
-                    // A nested grandStaff: its own rows are checked when this loop reaches it as
-                    // a group, and a row standing AFTER it, outside its braces, has no staff of
-                    // this bracket directly above it (ParseGrandStaff folds under plain staves only).
+                    // A nested group: its own rows are checked when this loop reaches it as a
+                    // group, and a row standing AFTER it, outside its braces, has no staff of
+                    // this group directly above it (ParseGrandStaff folds under plain staves only).
                     case GrandStaffRenderSyntax:
                         partAbove = null;
                         sharedStaffAbove = false;
@@ -150,7 +150,7 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                             row.LyricsKeyword.Span,
                             DiagnosticCodes.GroupRowNotBoundToStaffAbove,
                             nestedGroupAbove
-                                ? $"lyrics '{row.PartName}' stands under a nested group - inside a bracket "
+                                ? $"lyrics '{row.PartName}' stands under a nested group - inside a group "
                                   + "a row is the verse of the plain staff directly above it; write the row "
                                   + "inside that group, under the staff it sings."
                             : sharedStaffAbove

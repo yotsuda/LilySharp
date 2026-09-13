@@ -206,7 +206,6 @@ public sealed partial class LilySharpLanguageServer
             // "a bare part name renders that part to MIDI only").
             CompletionContext.ScoreBlock => WithMidiOnlyParts(GetScoreBlockCompletions(), doc.Text),
             CompletionContext.StaffGroupBlock => GetStaffGroupBlockCompletions(),
-            CompletionContext.BracketGroupBlock => GetStaffGroupBlockCompletions(allowGrandStaff: true),
             // `staff |` / `ossia |`: the parts, and the five clefs that may precede one.
             CompletionContext.AfterStaffRef => GetStaffRefCompletions(doc.Text),
             // `staff CLEF |`: the parts, and — the clef word being a legal part name too —
