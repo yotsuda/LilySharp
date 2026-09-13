@@ -461,9 +461,17 @@ internal static partial class SpacingRules
         if (mergeWishAverage)
             leftHeadEnd = headSum / headCount;
 
-        // LILYPOND-REF: lily/note-spacing.cc:77 — ideal = base.ideal_distance () - increment
-        //   + left_head_end, the increment get_spacing is handed (options->increment_).
-        double ideal = Math.Max(increment, spring.IdealDistance + leftHeadEnd - increment);
+        // LILYPOND-REF: lily/note-spacing.cc:77 Note_spacing::get_spacing — ideal = base.ideal_distance () - increment
+        //   + left_head_end, the increment get_spacing is handed (options->increment_). NO FLOOR
+        //   there: the only clamp is :113 set_ideal_distance (std::max (0.0, ideal)), after
+        //   stem_dir_correction, which the callers apply next with the same zero clamp
+        //   (MergeVoiceStemWishes / MergeVoiceStemWishesToBarline).
+        // ⚠️ THIS WAS Math.Max (increment, …) UNTIL SESSION 379 — a floor LilyPond does not have.
+        //   It binds only where duration space − increment + head < increment (a short note
+        //   under a large increment): MEASURED, LilyPond 2.26.0 on scratch/p380/incr/floor2.lys
+        //   (one bar with 32nds among bars of eighths, spacing-increment 3) draws 157.85, the
+        //   floored Lily# 161.64, the unfloored one 157.85.
+        double ideal = Math.Max(0.0, spring.IdealDistance + leftHeadEnd - increment);
         // LILYPOND-REF: lily/note-spacing.cc:113 base.set_ideal_distance (…) — the SETTER,
         // which leaves the duration-built compressibility alone (lily/spring.cc:131-141).
         return spring.WithIdealDistance(ideal);

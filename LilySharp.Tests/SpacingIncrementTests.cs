@@ -83,6 +83,36 @@ public class SpacingIncrementTests
                      Masked(Svg("paper { raggedRight  spacingIncrement 1.2 }")));
     }
 
+    /// <summary>
+    /// A short note under a large increment: the left-head refinement has NO floor at the
+    /// increment (lily/note-spacing.cc:77, clamped only at zero at :113).
+    /// </summary>
+    /// <remarks>
+    /// One bar of 32nds among bars of eighths keeps the common shortest at an eighth, so the
+    /// 32nds sit in get_duration_space's linear branch and their refined ideal (duration space
+    /// − increment + head) falls under the increment at 3. MEASURED, LilyPond 2.26.0
+    /// (scratch/p380/incr/floor2.lys, incr.ps1): 96.84 at 1.2 and 157.85 at 3 over two systems;
+    /// Lily# drew 161.64 at 3 while ApplyLeftHeadWidth floored the ideal at the increment
+    /// (session 379). ⚠️ The 1.2 book is still 0.45 short of LilyPond — a separate, unowned gap
+    /// the floor does not touch (it cannot bind there), so it is not asserted here.
+    /// </remarks>
+    [Fact]
+    public void AShortNoteUnderALargeIncrement_IsNotFlooredAtTheIncrement()
+    {
+        const string book = """
+            paper { raggedRight  spacingIncrement 3 }
+            octave absolute
+            part m { clef treble
+              section A { c'8 d' e' f' g' a' b' c'' | d''8 c'' b' a' g' f' e' d' | c'8 d' e' f' g'32 a' b' c'' d''8 e'' f'' | e''8 d'' c'' b' a' g' f' e' | }
+            }
+            form main { A }
+            score main { staff m }
+            """;
+        var (length, systems) = Staff(SvgGenerator.Generate(SyntaxTree.Parse(book), new SvgRenderOptions { EmbedFont = false }));
+        Assert.Equal(2, systems);
+        Assert.Equal(157.85, length, 2);
+    }
+
     [Theory]
     [InlineData("1.2", 74.95)]
     [InlineData("1.5", 86.89)]
