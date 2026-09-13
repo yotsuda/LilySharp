@@ -484,10 +484,11 @@ public class VocabularyPerturbationTests
     /// <c>RaggedLastBottom</c> defaults to TRUE — LilyPond's own default, "best for shorter
     /// scores" (ly/paper-defaults-init.ly:56) — so the LAST page keeps its natural spacing.
     /// A one-page book IS its last page, so nothing ever spreads on it, and
-    /// <c>raggedBottom</c>, <c>lastBottomSpacing</c>, <c>topSystemSpacing</c>,
-    /// <c>topSystemPadding</c> and <c>stretchability</c> all have nothing to do. That is a
-    /// property of the FIXTURE, not of those five keys, and it is why they sat on the
-    /// can't-speak-for list for one leg (2026-09-13).
+    /// <c>raggedBottom</c>, <c>lastBottomSpacing</c> and <c>topSystemSpacing</c> all have
+    /// nothing to do. That is a property of the FIXTURE, not of those three keys, and it is why
+    /// they sat on the can't-speak-for list for one leg (2026-09-13). ⚠️ The same leg also
+    /// named <c>topSystemPadding</c> and <c>stretchability</c> as fixture-bound; both stay
+    /// inert here, for other reasons — no reader, and agreement with LilyPond (session 377).
     /// </remarks>
     private static string FilledPageBook(string entry)
     {
@@ -501,58 +502,74 @@ public class VocabularyPerturbationTests
     }
 
     /// <summary>
-    /// Every paper key must reach the page — asked as "two DIFFERENT values of the same key
-    /// draw differently", which needs no knowledge of the key's default and cannot be fooled
-    /// by writing one.
+    /// ⚠️⚠️ THE PAPER KEYS NO READER TAKES: the paper block parses them into the layout
+    /// options and nothing in the layout ever reads the property back — DEAD WORDS.
     /// </summary>
     /// <remarks>
-    /// ★ THE SHAPE IS THE POINT. The other sweeps in this file compare a spelling against a
-    /// book WITHOUT it, which forces a separate decision about every value that happens to be
-    /// the default (four of them are asserted inert above). A dimension has no such problem:
-    /// if <c>indent 5</c> and <c>indent 20</c> draw the same page, the key is dead whatever
-    /// its default is.
+    /// Settled 2026-09-13 (session 377, scratch/p378/paper) by reading the readers, after the
+    /// sweep had held them as "unsettled" for a session. <c>LayoutOptions.TopSystemPadding</c>
+    /// and <c>LayoutOptions.SpacingIncrement</c> are written by <c>PaperPlanReader</c> and read
+    /// by nothing: every spacing rule reads the constant <c>EngravingDefaults.SpacingIncrement</c>.
+    /// ⚠️ The two have different LilyPond stories. <c>spacing-increment</c> is a real
+    /// SpacingSpanner grob property (scm/define-grobs.scm:3246) that moves a LilyPond page, so
+    /// the documented key is a broken promise. <c>top-system-padding</c> is not a LilyPond
+    /// paper variable at all — the header padding is <c>top-system-spacing</c>'s own padding
+    /// (lily/page-layout-problem.cc:478), which <c>topSystemSpacing { padding }</c> already
+    /// spells. Written in 0 of the .lys on disk. Wiring or retiring them is the owner's call;
+    /// until then this pins the fact, so the day one of them is wired it says so.
     /// </remarks>
+    private static readonly string[] PaperKeysWithNoReader = ["spacingIncrement", "topSystemPadding"];
+
     /// <summary>
-    /// ⚠️⚠️ THE ELEVEN THIS SWEEP CANNOT YET SPEAK FOR, and the reason is NOT settled — which
-    /// is why they are listed here rather than called dead words.
+    /// The paper keys LilyPond ITSELF ignores in a one-score book — measured, not assumed.
     /// </summary>
     /// <remarks>
-    /// Measured 2026-09-13 with the sweep below. Two values of each of these keys render the
-    /// SAME page against <see cref="PaperBook"/>, which has a title, a composer, a bracketed
-    /// pair, a staff outside the group, two lyrics rows and three systems. Two things were
-    /// tried and NEITHER decided it:
-    /// <list type="bullet">
-    /// <item>A richer fixture. Adding the composer, the third staff and the second lyrics row
-    /// moved exactly one key out of this list (<c>staffGroupStaffSpacing</c>, which needed a
-    /// staff AFTER the group), and left the rest where they were.</item>
-    /// <item>Counting readers. Grepping the layout for each property answers 0 for
-    /// <c>staffStaffSpacing</c> and <c>markupSystemSpacing</c> too — and those two DO move the
-    /// page — so the consumers reach these values by some indirection the grep cannot see, and
-    /// a zero there proves nothing.</item>
-    /// </list>
-    /// ⇒ What is left is a per-key read of the page and staff spacing engines, which is
-    /// another regime entirely. Until someone does it, this test pins today's answer so the
-    /// day one of them starts working, it says so rather than passing quietly.
-    /// <para>
-    /// ★★ THE THIRD THING TRIED DID WORK, and it is worth copying: the page-level cluster
-    /// wanted a page that is JUSTIFIED, and a one-page book can never be one, because
-    /// <c>RaggedLastBottom</c> defaults to true and a one-page book IS its last page. Against
-    /// <see cref="FilledPageBook"/> — two pages, so the first is justified —
-    /// <c>topSystemSpacing</c>, <c>lastBottomSpacing</c> and <c>raggedBottom</c> all started
-    /// moving, and came off this list (2026-09-13). ⇒ WHEN A SPRING READS INERT, ASK FIRST
-    /// WHETHER THE FIXTURE EVER COMPRESSES IT.
-    /// </para>
-    /// <para>
-    /// ⚠️ <c>topSystemPadding</c> did NOT come off with them: it is inert on a ragged page and
-    /// on a justified one alike, so its reason is not the one that covered the other three.
-    /// </para>
+    /// LilyPond 2.26.0 on the <c>lysc ly --pin-fonts</c> twin of <see cref="PaperBook"/>
+    /// (session 377, scratch/p378/paper/lp-pairs.ps1: two values each, svg hashes) draws the
+    /// same page for <c>score-system-spacing</c>, <c>score-markup-spacing</c> and
+    /// <c>markup-markup-spacing</c>, while the positive control <c>markup-system-spacing</c>
+    /// moves it. The selection says why (lily/page-layout-problem.cc:503-525): the score spec
+    /// wants a system that opens a SECOND score, the score-markup spec a markup after a system,
+    /// the markup-markup spec two markups in a row — a book with one score and one header has
+    /// none. Lily#'s <c>VerticalSpacingParameters.SelectSpec</c> makes the same selection, so
+    /// inert here is the port being faithful, not a dead word.
     /// </remarks>
-    private static readonly string[] PaperKeysThisSweepCannotSpeakFor =
-    [
-        "spacingIncrement", "topSystemPadding",
-        "scoreSystemSpacing", "scoreMarkupSpacing", "markupMarkupSpacing",
-        "defaultStaffStaffSpacing", "nonStaffUnrelatedStaffSpacing", "nonStaffNonStaffSpacing",
-    ];
+    private static readonly string[] PaperKeysLilyPondAlsoIgnoresInOneScore =
+        ["scoreSystemSpacing", "scoreMarkupSpacing", "markupMarkupSpacing"];
+
+    /// <summary>
+    /// The two non-staff specs whose <c>basicDistance</c> LilyPond also ignores on this book —
+    /// so their reach is asked with <c>padding</c> instead.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED 2026-09-13 (session 377, scratch/p378/paper): on the twin of
+    /// <see cref="PaperBook"/>, LilyPond 2.26.0 draws the same page for <c>basic-distance</c> 2
+    /// and 30 of <c>nonstaff-unrelatedstaff-spacing</c> and <c>nonstaff-nonstaff-spacing</c>
+    /// (and of <c>nonstaff-relatedstaff-spacing</c>), while their <c>padding</c> /
+    /// <c>minimum-distance</c> move it — and Lily# agrees on all four readings. WHY LilyPond's
+    /// loose-line spring ideal does not show here has not been read.
+    /// ⚠️ <c>nonStaffRelatedStaffSpacing</c> stays on the plain sweep, but what moves there is
+    /// only the content-sized page's HEIGHT (129.02 → 145.22; no drawn element moves) — a
+    /// Lily#-only quantity, since LilyPond's page has a fixed size (HANDOFF §2 E).
+    /// </remarks>
+    private static readonly string[] PaperKeysAskedByPadding =
+        ["nonStaffUnrelatedStaffSpacing", "nonStaffNonStaffSpacing"];
+
+    /// <summary>
+    /// <see cref="PaperBook"/> with three UNGROUPED staves — what
+    /// <c>defaultStaffStaffSpacing</c> needs to have anything to space.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="PaperBook"/> opens with a bracketed group, so every pair it spaces has a
+    /// grouper above it and <c>MultiStaffLayouter.SelectInterGroupSpec</c> never reaches the
+    /// default spec — the key sat on the "unsettled" list for that reason alone. Against three
+    /// ungrouped staves it moves, and so does LilyPond 2.26.0's
+    /// <c>default-staff-staff-spacing.basic-distance</c> 2 / 30 (session 377, scratch/p378/paper).
+    /// </remarks>
+    private static string UngroupedPaperBookWith(string entry) =>
+        PaperBookWith(entry).Replace(
+            "score main { staffGroup { staff m  staff n }  lyrics w  lyrics v  staff o }",
+            "score main { staff m  staff n  staff o }");
 
     /// <summary>
     /// The keys that want a page which must SPREAD — measured against a two-page book, where
@@ -574,6 +591,29 @@ public class VocabularyPerturbationTests
         return data;
     }
 
+    /// <summary>
+    /// Every paper key must reach the page — asked as "two DIFFERENT values of the same key
+    /// draw differently", which needs no knowledge of the key's default and cannot be fooled
+    /// by writing one.
+    /// </summary>
+    /// <remarks>
+    /// ★ THE SHAPE IS THE POINT. The other sweeps in this file compare a spelling against a
+    /// book WITHOUT it, which forces a separate decision about every value that happens to be
+    /// the default (four of them are asserted inert above). A dimension has no such problem:
+    /// if <c>indent 5</c> and <c>indent 20</c> draw the same page, the key is dead whatever
+    /// its default is.
+    /// <para>
+    /// ★★ NO KEY IS "UNSETTLED" ANY MORE (session 377). The eight the sweep once could not speak
+    /// for split four ways, and each way is a different claim: a fixture that could not express
+    /// the key (<see cref="FilledPageBook"/>, <see cref="UngroupedPaperBookWith"/>), a sub-value
+    /// LilyPond ignores too (<see cref="PaperKeysAskedByPadding"/>), a key LilyPond ignores in a
+    /// one-score book (<see cref="PaperKeysLilyPondAlsoIgnoresInOneScore"/>), and dead words
+    /// (<see cref="PaperKeysWithNoReader"/>). ⇒ AN INERT READING IS SETTLED ONLY BY ASKING
+    /// LILYPOND THE SAME QUESTION — two of the three earlier attempts (a richer fixture,
+    /// counting readers by grep) could not tell "the fixture cannot say it" from "LilyPond
+    /// does not do it either" from "nothing reads it".
+    /// </para>
+    /// </remarks>
     [Theory]
     [MemberData(nameof(PaperEntries))]
     public void EveryPaperKeyMovesThePage(string key, string small, string large)
@@ -583,21 +623,42 @@ public class VocabularyPerturbationTests
             AssertMoves(FilledPageBook(small), FilledPageBook(large), "paper " + key);
             return;
         }
-        if (PaperKeysThisSweepCannotSpeakFor.Contains(key))
+        if (key == "defaultStaffStaffSpacing")
         {
-            // Pinned as it is — see the list's remark. NOT a claim that the key is dead.
+            AssertMoves(UngroupedPaperBookWith(small), UngroupedPaperBookWith(large), "paper " + key);
+            return;
+        }
+        if (PaperKeysAskedByPadding.Contains(key))
+        {
+            // basicDistance is inert in LilyPond too on this book — see the list's remark.
             Assert.True(Signature(PaperBookWith(small)) == Signature(PaperBookWith(large)),
-                $"'{key}' now moves the page: take it off "
-                + "PaperKeysThisSweepCannotSpeakFor — the open question closed.");
+                $"'{key}' basicDistance now moves the page, where LilyPond 2.26.0's did not "
+                + "(session 377, scratch/p378/paper) — re-measure the twin before believing it.");
+            AssertMoves(PaperBookWith(key + " { padding 2 }"), PaperBookWith(key + " { padding 30 }"),
+                "paper " + key + " padding");
+            return;
+        }
+        if (PaperKeysLilyPondAlsoIgnoresInOneScore.Contains(key))
+        {
+            Assert.True(Signature(PaperBookWith(small)) == Signature(PaperBookWith(large)),
+                $"'{key}' now moves a one-score book, where LilyPond 2.26.0 does not "
+                + "(session 377, scratch/p378/paper) — a divergence, not a fix.");
+            return;
+        }
+        if (PaperKeysWithNoReader.Contains(key))
+        {
+            // Pinned as it is — see the list's remark. A dead word awaiting the owner's call.
+            Assert.True(Signature(PaperBookWith(small)) == Signature(PaperBookWith(large)),
+                $"'{key}' now moves the page: it has a reader — take it off PaperKeysWithNoReader.");
             return;
         }
         AssertMoves(PaperBookWith(small), PaperBookWith(large), "paper " + key);
     }
 
     /// <summary>The two bare flags, which have no second value — on against absent.</summary>
-    /// <remarks>⚠️ <c>raggedBottom</c> is inert against this book for the same unsettled
-    /// reason as the ten scalars and blocks above: three systems on an A4 leave nothing to
-    /// spread. Pinned, not judged.</remarks>
+    /// <remarks>⚠️ <c>raggedBottom</c> is inert against <see cref="PaperBook"/> — a one-page
+    /// book is its own last page, which ragged-last-bottom already leaves ragged — so it is
+    /// asked against <see cref="FilledPageBook"/>, where it moves.</remarks>
     [Theory]
     [MemberData(nameof(PaperFlags))]
     public void EveryPaperFlagMovesThePage(string flag)
@@ -630,13 +691,12 @@ public class VocabularyPerturbationTests
 
     /// <summary>Every spacing sub-key inside one block, the same way.</summary>
     /// <remarks>
-    /// ⚠️ <c>stretchability</c> belongs to the same unsettled cluster as the keys in
-    /// <see cref="PaperKeysThisSweepCannotSpeakFor"/>, and it is the one that names the
-    /// cluster: a spring's stretchability shows only when the page STRETCHES its systems, and
-    /// three systems on an A4 do not. That is the same condition <c>raggedBottom</c>,
-    /// <c>lastBottomSpacing</c>, <c>topSystemSpacing</c> and <c>topSystemPadding</c> all want.
-    /// ⇒ ONE fixture — a page that must spread — may well close five of the eleven at once,
-    /// and it is the first thing the next reader should try.
+    /// ⚠️ <c>stretchability</c> of <c>systemSystemSpacing</c> is inert on both books, and
+    /// LilyPond's is too: MEASURED 2026-09-13 (session 377, scratch/p378/paper/lp2) on the
+    /// <c>lysc ly --pin-fonts</c> twin of <see cref="FilledPageBook"/>, LilyPond 2.26.0 draws
+    /// the same two pages for <c>system-system-spacing.stretchability</c> 2 and 30, while the
+    /// positive control <c>last-bottom-spacing.basic-distance</c> moves them. Why neither
+    /// engine's pages show it has not been read; the claim pinned is the agreement.
     /// </remarks>
     [Theory]
     [MemberData(nameof(PaperSubKeys))]
@@ -646,14 +706,10 @@ public class VocabularyPerturbationTests
         string entryLarge = $"systemSystemSpacing {{ {subKey} 30 }}";
         if (subKey == "stretchability")
         {
-            // ⚠️ STILL UNSETTLED, and now narrower: a spring's stretchability should show
-            // where the page STRETCHES its systems, and a justified page (FilledPageBook)
-            // does stretch — `topSystemSpacing` and `lastBottomSpacing` both start moving
-            // there. This one does not, on EITHER book. So it is not the "last page is
-            // ragged" reason that covered the other five; whether the spacer reads the
-            // stretchability at all is the next question, and it is an engine read.
+            // Inert in LilyPond 2.26.0 too on this book (see the remark) — pinned as agreement.
             Assert.True(Signature(FilledPageBook(entrySmall)) == Signature(FilledPageBook(entryLarge)),
-                "'stretchability' now moves a justified page — the open question closed.");
+                "'stretchability' now moves the justified page, where LilyPond 2.26.0's did not "
+                + "(session 377, scratch/p378/paper/lp2) — re-measure the twin before believing it.");
             return;
         }
         AssertMoves(PaperBookWith(entrySmall), PaperBookWith(entryLarge),
