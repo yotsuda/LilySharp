@@ -237,6 +237,10 @@ internal static partial class SpacingRules
             // this is LilyPond's ideal, and leaving it out made every spring here
             // ~0.104 ss narrow for a black head.
             spring = ApplyLeftHeadWidth(spring, One(prevItem), (spacing ?? SpacingOptions.Default).Increment, One(nextItem));
+            // LILYPOND-REF: lily/note-spacing.cc:113 Note_spacing::get_spacing — set_ideal_distance (std::max (0.0, ideal)).
+            // CreateSpring has already added this pair's stem_dir_correction (:111), so this
+            // is the point LilyPond clamps at; ApplyLeftHeadWidth (:77) does not clamp.
+            spring = spring.WithIdealDistance(Math.Max(0.0, spring.IdealDistance));
             spring = AdjustSpringForGraceNotes(
                 spring, GraceNotesOf(nextItem), graceParams: null, mainItem: nextItem);
             // A pair touching a mid-measure change column is priced by the change column,

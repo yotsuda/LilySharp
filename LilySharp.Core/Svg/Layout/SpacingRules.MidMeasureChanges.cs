@@ -376,6 +376,10 @@ internal static partial class SpacingRules
                          + ChangeItemExtraSpacingWidth(firstChange).Left;
         double leftGap = Math.Max(durationIdeal - columnWidth,
                                   (durationIdeal + leftRod) / 2.0);
+        // LILYPOND-REF: lily/note-spacing.cc:113 Note_spacing::get_spacing — set_ideal_distance (std::max (0.0, ideal)).
+        // stem_dir_correction (:111) adds nothing toward a NonMusical column, and the ideal
+        // handed in is :77's unclamped one (ApplyLeftHeadWidth), so the clamp lands here.
+        leftGap = Math.Max(0.0, leftGap);
 
         // --- RIGHT: staff-spacing.cc:166-215 ---
         double rightRod = RightRod(columnItems!, columnWidth, lastChange!);

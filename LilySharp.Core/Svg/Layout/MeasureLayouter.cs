@@ -633,9 +633,17 @@ internal sealed class MeasureLayouter
         // skyline minimum — get_spacing sets it on each wish BEFORE merge_springs, so
         // the merge's +0.3 floor stands on the skyline, not on the increment.
         if (changeGaps is null)
+        {
             spring = SpacingRules.MergeVoiceStemWishes(
                 spring, measuresToScan, timings[i - 1], timings[i],
                 NoteSpacingParameters.Default, spacing.Increment);
+            // LILYPOND-REF: lily/note-spacing.cc:113 Note_spacing::get_spacing — set_ideal_distance (std::max (0.0, ideal)),
+            // for every wish. MergeVoiceStemWishes clamps the NOTE wishes it sees; a wish
+            // whose left column is a rest never reaches it, and ApplyLeftHeadWidth (:77)
+            // no longer clamps, so the pair's wish is clamped here too.
+            if (wishLefts != null)
+                spring = spring.WithIdealDistance(Math.Max(0.0, spring.IdealDistance));
+        }
 
         // The change column's two gaps, computed above, become this one spring — see
         // SpacingRules.MidMeasureChangeGaps for the derivation, the measurements, and what
@@ -712,6 +720,10 @@ internal sealed class MeasureLayouter
             // lily/spacing-spanner.cc:183-199 + :322-393.
             endSpring = SpacingRules.MergeVoiceStemWishesToBarline(
                 endSpring, measuresToScan, timings[^1], NoteSpacingParameters.Default);
+            // LILYPOND-REF: lily/note-spacing.cc:113 Note_spacing::get_spacing — set_ideal_distance (std::max (0.0, ideal)).
+            // The merge clamps the NOTE wishes; a rest's wish never reaches it, and
+            // ApplyLeftHeadWidth (:77) does not clamp, so the spring is clamped here too.
+            endSpring = endSpring.WithIdealDistance(Math.Max(0.0, endSpring.IdealDistance));
 
             // The column's whole skyline — flag included — against the bar line's box:
             // the spring minimum now, the rod after the headroom.

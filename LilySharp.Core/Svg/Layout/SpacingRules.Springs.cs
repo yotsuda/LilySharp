@@ -400,7 +400,7 @@ internal static partial class SpacingRules
                 continue;
 
             double corr = CalculateStemCorrection(left, ApproachColumn(right), noteParams, increment);
-            // LILYPOND-REF: lily/note-spacing.cc:111-113 — stem_dir_correction adjusts the
+            // LILYPOND-REF: lily/note-spacing.cc:111-113 Note_spacing::get_spacing — stem_dir_correction adjusts the
             // ideal and hands it to base.set_ideal_distance, which does not touch either
             // strength (lily/spring.cc:131-141). The clamp is at ZERO, not at the minimum
             // (:113 max (0.0, ideal)) — the caller has already replaced the base spring's
@@ -408,10 +408,9 @@ internal static partial class SpacingRules
             // the ideal below the old increment floor (spacing-correction-accidentals.ly:
             // the down→up pair's ideal is 1.330, under the 1.2 + 0.3 headroom the old
             // min-clamped spelling froze it at).
-            wishes.Add(corr != 0
-                ? baseSpring.WithIdealDistance(
-                    Math.Max(0.0, baseSpring.IdealDistance + corr))
-                : baseSpring);
+            // ⚠️ UNCONDITIONAL since session 379: :113 clamps every wish, a zero correction
+            // included, and the ideal handed in is :77's unclamped one (ApplyLeftHeadWidth).
+            wishes.Add(baseSpring.WithIdealDistance(Math.Max(0.0, baseSpring.IdealDistance + corr)));
         }
         return wishes.Count > 0 ? Spring.MergeSprings(wishes) : baseSpring;
     }
@@ -457,10 +456,9 @@ internal static partial class SpacingRules
                 continue;
 
             double corr = CalculateStemCorrectionToBarline(left, noteParams);
-            // LILYPOND-REF: lily/note-spacing.cc:111-113, as in MergeVoiceStemWishes.
-            wishes.Add(corr != 0
-                ? baseSpring.WithIdealDistance(Math.Max(0, baseSpring.IdealDistance + corr))
-                : baseSpring);
+            // LILYPOND-REF: lily/note-spacing.cc:111-113 Note_spacing::get_spacing, as in MergeVoiceStemWishes — clamped
+            // for every wish, a zero correction included (session 379).
+            wishes.Add(baseSpring.WithIdealDistance(Math.Max(0.0, baseSpring.IdealDistance + corr)));
         }
         return wishes.Count > 0 ? Spring.MergeSprings(wishes) : baseSpring;
     }
