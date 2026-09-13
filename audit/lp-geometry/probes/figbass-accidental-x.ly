@@ -9,6 +9,14 @@
 %%   図形が符頭に揃う  -> 図形の x は NoteHead の x と一致する
 %%   図形が列に揃う    -> 図形の x は Accidental の x と一致する（符頭より左）
 %% 一発で割れる。
+%%
+%% 答え（第376セッションに -dbackend=null で再実行して確かめ、記録をここに足した）: 図形は符頭に揃う。
+%%   NoteHead / Stem / NoteColumn / BassFigure  boxleft = 9.453400
+%%   Accidental / AccidentalPlacement           boxleft = 8.003400
+%% ＝BassFigure は臨時記号に付いて行かない。臨時記号は AccidentalPlacement 群として列の X extent の
+%% 外に居るので、NoteColumn の左端は符頭の左端のまま。読み手は
+%% LilySharp.Core/Rendering/SharedRenderer.Marks.cs の図形の描画コメント（fb.X＝音符の anchor で描く理由）。
+%% 台帳の点は無い——同じ恒等式を figbass.alone.head-anchor-to-box-left が既に持っている。
 
 #(define (probe-dump-pages layout pages)
    (let loop ((ps pages) (n 1))

@@ -29,6 +29,13 @@ namespace LilySharp.Tests;
 /// the X extent LilyPond gave the grob comes out. The widths are LILYPOND's, not this build's,
 /// which is what makes this a test of the RULE and not of our font.
 /// <para>
+/// ⚠️ THE WIDTHS ARE FROM AN <c>-dbackend=svg</c> RUN, which drops LilyPond's serif to the
+/// generic "serif" and lets fontconfig pick a machine face: <c>-dbackend=null</c> keeps
+/// "LilyPond Serif" and gives Soprano 8.365110, not 7.306668 (re-run 2026-09-13, session 376).
+/// The rows still test the rule — it is linear in the width, and the null run's right edges
+/// move by exactly half of each width change — but no width here is LilyPond Serif's.
+/// </para>
+/// <para>
 /// ⚠️ THREE BOOKS BECAUSE THE RULE HAS THREE REGIMES, and one book can only ever show one:
 /// a name narrower than the indent (centred in an indent-wide box), a name wider than it
 /// (pinned to the delimiter and overflowing left), and a system with no delimiter at all.

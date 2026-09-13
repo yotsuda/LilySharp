@@ -9,6 +9,17 @@
 % scores" is not the same input.
 %
 % Output: PROBEQ <name> bar=<n> positions=<Beam.positions>
+%
+% WHAT IT SAYS (commit 8bf5bb1a; re-run with -dbackend=null in session 376, when this record
+% was added — the header had never carried it):
+%   (-2.0 . -2.0)   voice 2's sixteenth beam in bar 1 (not the question)
+%   (5.81 . 5.81)   bar 1, the b8 b beam over a BEAMED stem
+%   (5.81 . 5.81)   bar 2, over an UNBEAMED stem
+%   (3.0  . 3.0)    bar 3, nothing to clear
+% ⇒ the same three answers the separate scores of beam-over-stem.ly give, so one line and one
+%   spacing solution do not change the quanter's answer here. No ledger point on purpose: the
+%   quantity is already beam.quant.over-stem.*; what this book added is that the snapshot
+%   test/beam-over-stem steps on it.
 \paper { indent = 0 ragged-right = ##t }
 
 #(define (dump-positions name)

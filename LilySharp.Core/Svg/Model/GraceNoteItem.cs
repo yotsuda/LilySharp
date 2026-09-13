@@ -381,7 +381,8 @@ public sealed record GraceNoteItem
     /// MEASURED, not read off alone: LilyPond prints a grace sharp 0.692957 wide =
     /// 1.100000 × magstep(−4), where the head of the same grace is 0.917939 = the 14 design's
     /// 1.298161 × magstep(−3) (audit/lp-geometry/probes/grace-column-width.ly book GCWA, and
-    /// scratch acc-size.ly asks the Accidental grob its own <c>font-size</c> and gets −4).
+    /// audit/lp-geometry/probes/grace-accidental-font-size.ly asks the Accidental grob its own
+    /// <c>font-size</c> and gets −4).
     /// So a grace's accidental reads the THIRTEEN design and its head the FOURTEEN — the two
     /// grobs of one note are two faces, which is why the placement takes two fonts.
     /// </para>

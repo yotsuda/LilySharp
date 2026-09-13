@@ -18,6 +18,16 @@
 %% Four names of different widths so the port can be checked against a SPREAD and
 %% not one book: with indent at its 15\mm default only Contrabassoon is wider than
 %% the indent, which is the branch where `padding` goes to zero.
+%%
+%% ⚠️⚠️ RUN IT WITH -dbackend=null FOR LILYPOND'S WIDTHS. Under -dbackend=svg LilyPond 2.26
+%% drops fonts.serif to the generic "serif" and fontconfig picks a machine face
+%% (ly/paper-defaults-init.ly:169-181), so every name comes out a different width: Soprano
+%% 7.306668 (svg) against 8.365110 (null), Contrabassoon 13.042743 against 15.057198
+%% (re-run 2026-09-13, session 376, scratch/p377/probes). The rows in
+%% LilySharp.Tests/InstrumentNamePlacementTests are the SVG widths. That does not weaken
+%% them — the rule is linear in the width, and the null run's right edges move by exactly
+%% half of each width change (Soprano +0.529221 for +1.058442; Contrabassoon, past the
+%% indent, not at all) — but the widths are one machine's fallback face, not LilyPond Serif.
 
 #(define (dump-name grob)
    (let* ((sys (ly:grob-system grob))
@@ -70,6 +80,9 @@
 %% 0.08 right of LilyPond's, and moving it also moves every instrument name (the
 %% name is placed against the leftmost delimiter, which is the brace). Both are
 %% drawn-output changes and belong with their own approval.
+%% ⚠️ STILL NOT PORTED on 2026-09-13 (session 376): MultiStaffLayouter places
+%% braceX = CurrentIndent - SystemStartBracePadding. No ledger point holds the 0.06
+%% either — it is named in HANDOFF §2 E so it is not lost with this header.
 #(define (dump-staff grob)
    (let ((x (ly:grob-extent grob (ly:grob-system grob) X)))
      (format (current-error-port) "PROBE staffsym sys=~a..~a\n" (car x) (cdr x)))

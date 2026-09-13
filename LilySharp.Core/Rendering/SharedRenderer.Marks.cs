@@ -198,7 +198,7 @@ internal static partial class SharedRenderer
                     // same edge — the first wording here was an over-claim read off a book
                     // where the NoteHead, the Stem and the NoteColumn all reported ONE box
                     // left, so it could not tell which of them the figure was on. MEASURED on
-                    // the case that separates them (scratch/figbass-accidental-x.ly, a bass
+                    // the case that separates them (audit/lp-geometry/probes/figbass-accidental-x.ly, a bass
                     // cis with figures): the Accidental sits 1.450000 further left (8.003400
                     // against 9.453400) and the BassFigure does NOT follow it. An accidental
                     // is in an AccidentalPlacement group beside the column, not inside its X

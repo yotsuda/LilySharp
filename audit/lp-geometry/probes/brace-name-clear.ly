@@ -10,25 +10,33 @@
 %%    corrects by the indent (scm/output-lib.scm:2108-2142
 %%    system-start-text::calc-x-offset), so it structurally cannot overlap.
 %%
-%%    ⚠️ RE-MEASURED 2026-08-04, and the figures that used to stand here did not
-%%    reproduce. This file, unmodified, through C:\bin\lilypond-2.26.0 gives
+%%    ⚠️⚠️ THE NAME'S FIGURES DEPEND ON THE BACKEND, and the 2026-08-04
+%%    "re-measurement" that once retracted the older ones was the unpinned-font
+%%    trap. Re-run 2026-09-13 (session 376, scratch/p377/probes), this file
+%%    unmodified, through C:\bin\lilypond-2.26.0:
 %%
-%%        SystemStartBrace   6.8024267716535425 .. 8.175826771653544
-%%        InstrumentName     -1.4188204724409452 .. 5.887847244094488   (Soprano)
-%%        clearance          0.914580
+%%        -dbackend=null  InstrumentName    -1.948042 .. 6.417069   (Soprano, 8.365110 wide)
+%%        -dbackend=svg   InstrumentName    -1.418820 .. 5.887847   (Soprano, 7.306668 wide)
+%%        both            SystemStartBrace   6.8024267716535425 .. 8.175826771653544
+%%        clearance       0.385358 (null)  /  0.914580 (svg)
 %%
-%%    The brace agrees with the old note to fifteen digits; the name does not
-%%    agree in POSITION OR WIDTH (old 8.365 wide, measured 7.307), so the old
-%%    "0.385 clear" is not this book's number and was most likely carried over
-%%    from an earlier draft of the probe. Do not port 0.385 as a constant in any
-%%    case: read calc-x-offset — the clearance is `indent - total-left` plus the
-%%    0.3 padding plus a right-padding term that is zero only while the name is
-%%    narrower than the indent. It is a placement rule, not a gap.
+%%    Under svg LilyPond 2.26 drops fonts.serif to the generic "serif" and
+%%    fontconfig picks a machine face (ly/paper-defaults-init.ly:169-181); the null
+%%    backend keeps "LilyPond Serif". So the OLD "8.365 wide / 0.385 clear" were
+%%    LilyPond's numbers and the 7.307 / 0.915 that replaced them were this
+%%    machine's fallback face. The brace is Emmentaler and agrees under both. Do
+%%    not port either clearance as a constant in any case: read calc-x-offset —
+%%    the clearance is `indent - total-left` plus the 0.3 padding plus a
+%%    right-padding term that is zero only while the name is narrower than the
+%%    indent. It is a placement rule, not a gap.
 %%
-%%    ⚠️ AND THE TWO ENGINES' INDENTS DIFFER, so no figure here may be compared
-%%    with a Lily# figure until a twin fixes it: LilyPond's default indent is
-%%    15\mm = 8.503937 ss, Lily#'s is 12.0 ss. Measured the same day, Lily#'s
-%%    brace right edge is 11.70 = its indent - 0.3.
+%%    ⚠️ THE INDENT IS 8.535827 ss — LilyPond's own `(ly:output-def-lookup layout
+%%    'indent)`, dumped by instrument-name-x.ly — not the 8.503937 this note used
+%%    to derive from 15\mm (that conversion took 1.763889 mm per staff space;
+%%    LilyPond's is 1.757299). Lily#'s default indent now reads the same constant
+%%    (LayoutEngine.Finishing.cs DefaultIndent), so the old "Lily#'s is 12.0" no
+%%    longer holds either; Lily# puts the brace's right edge at indent - 0.3
+%%    (MultiStaffLayouter braceX).
 %%
 %% 2. THE BRACE'S OWN WIDTH, which is the cross-check on the ladder port: the
 %%    brace picked for this four-staff span is 8.1758 - 6.8024 = 1.3734 wide,
@@ -49,9 +57,14 @@
 %%    INK still lands at (support edge - padding). Lily# already puts the right
 %%    edge at indent - 0.3. This is the flag's offset/extent pair again: reading
 %%    one half of a self-cancelling pair and calling it a defect.
-%%    ⚠️ WHAT IS NOT YET EXPLAINED, and is the only live question left here:
-%%    LilyPond's brace right edge is 8.175827 while its indent - 0.3 is
-%%    8.203937, a residual of 0.028110. Whatever that is, it is not the -0.2.
+%%    ✅ THE RESIDUAL THIS NOTE LEFT OPEN IS EXPLAINED (session 376). It read
+%%    0.028110 only because of the wrong 8.503937 indent above. Against LilyPond's
+%%    own 8.535827 the brace's right edge 8.175827 sits 0.060000 inside
+%%    indent - 0.3, and 0.060000 is exactly indent - SystemStartBar left
+%%    (8.535827 - 8.475827): instrument-name-x.ly shows the brace is
+%%    side-positioned against the SystemStartBar LilyPond adds to every
+%%    multi-staff system, not against the indent. Lily# still anchors it on the
+%%    indent — unported, HANDOFF §2 E.
 
 #(define (dump-x name)
    (lambda (grob)
