@@ -32,7 +32,13 @@ public sealed class InstrumentPresetTests
 {
     private static TuningType TabTuningOf(string source)
     {
-        var spec = RenderSpecParser.FindFirst(SyntaxTree.Parse(source))!;
+        var tree = SyntaxTree.Parse(source);
+        // A book that does not parse still yields a spec, from the part of it that did — and a
+        // part named with a reserved word (`p`, a dynamic) then carries no preset to the tab,
+        // which reads exactly like "the preset falls back to the guitar" (session 375 wrote that
+        // book by accident and chased it). Refuse the book before reading its tuning.
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
+        var spec = RenderSpecParser.FindFirst(tree)!;
         return spec.Items.OfType<TabStaffSpec>().Single().Tuning;
     }
 
