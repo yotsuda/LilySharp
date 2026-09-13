@@ -129,6 +129,22 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第377セッションの経緯
+
+最終更新 第377セッション（2026-09-13）＝**入り方は第298〜第376 の型**（ユーザーは `docs/HANDOFF.md` を読ませて「作業に着手して」だけ）。**§0 の裏取りを走らせた**（`Session-Check -Build -Test -Scratch p378`）。道具は記憶どおり pwsh MCP。**着手したのは第376 ⑸ の並びの ⒝ のうち「paper 8 鍵の engine 読解」**＝第374 ㉔ が「原因未確定」で `VocabularyPerturbationTests.PaperKeysThisSweepCannotSpeakFor` に pin した 8 鍵。**骨は 5**:
+
+★★ **⑴ 開始時の数は第376 末の記録と全部一致**: HEAD `661a9503`・未 push 78・木 clean・未追跡 0・**台帳 843 点／ss 非ゼロ 210／総和 22.584587806／count 点 180 うち非ゼロ 0／exact 668／OPEN 0・snapshot 249・追跡 `.lys` 599**・lysc は net10.0 だけ・build 0 エラー・**full `scratch/p378/run1.trx` 8519 / 0 / 4 / 8523**（第376 ⒀ の run15 と同数・RunInfos は SKIP 4 だけ）。
+
+★★★ **⑵ 8 鍵は「未確定」ではなく 4 通りの別の主張だった＝LP に同じ問いを出して全部決めた**（詳細と数は **§2 E の「paper の 8 鍵」**・計器は `scratch/p378/paper`）: **フィクスチャの穴 1**（`defaultStaffStaffSpacing`）／**LP も一冊本では不動 3**（score-system・score-markup・markup-markup）／**`basicDistance` は LP も不動 2**（nonstaff-unrelated・nonstaff-nonstaff＝到達は `padding` で問う）／**死語 2**（`spacingIncrement`・`topSystemPadding`＝読み手 0）。`systemSystemSpacing { stretchability }` も LP 不動を確かめた。⇒ **網を 4 つの一覧に書き換えた**（test だけ・出力不変）。★ **規則: 不動の読みは LP に同じ問いを出すまで決まらない**——第374 の 2 つの試み（フィクスチャを厚く／grep で読み手を数える）は「フィクスチャが言えない」「LP もしない」「誰も読まない」を区別できなかった（**test の remark に書いた**）。⚠️ **LP 側の陽性対照が要った**: `nonstaff-relatedstaff-spacing.basic-distance` を対照に置いたら **LP で不動**＝対照にならず、`padding` を足して override が効くことを確かめた。**Lily# 側で同じ鍵が「動く」のは内容で決まる頁の高さだけ**（§2 E の副産物）。
+
+⚠️⚠️ **⑶ 要ユーザー判断 2 件（§2 E ⒠）**: ① **`spacingIncrement`**＝`SYNTAX_REFERENCE.md` が「horizontal note-spacing unit」と約束し、LP の `spacing-increment` は紙面を動かすのに、**`LayoutOptions.SpacingIncrement` を誰も読まない**（spacing は定数 `EngravingDefaults.SpacingIncrement`）⇒ **配線するか退役か**。② **`topSystemPadding`**＝読み手 0・**LP に無い paper 変数**（`topSystemSpacing { padding }` と同じ量）⇒ **退役が自然**。**どちらもディスクの `.lys` に 0 冊**＝既存の絵は動かない。
+
+★★ **⑷ 数**: **開始時**は上 ⑴。**終了時**: HEAD＝この §1 を書く commit（親 `661a9503`・**test 1 ファイル＋HANDOFF＋ARCHIVE**＝**Core 無変更・出力不変**）・未 push 79・**台帳・snapshot・追跡 `.lys` は全部不変**・`VocabularyPerturbationTests` 392 / 0・**full `scratch/p378/run2.trx` 8519 / 0 / 4 / 8523**（**本数不変**＝case は同じで主張だけが変わった・RunInfos は SKIP 4 だけ）。§7.5（`-DiffBase 661a9503`）: **Core `+` 0 行／REF 0／OWN 0**（Core を触っていない）。§7 9: 計算は足していない。⚠️ scratch は **`p378`**。⚠️ §7 3.5: 第375 を `-Archive 375` で ARCHIVE へ（済）。⚠️⚠️ **`origin/master`（`18efc322`）の CI は今も赤**（run 34663615384）＝**push はユーザー**。**LSP は配布しない**（Core・Lsp 無変更）。
+
+⇒ ★★★ **⑸ 次の一手**: **⑶ の 2 件はユーザーの決定待ち**。残りは第376 ⑸ の並び＝**⒝ 摂動網の残り**（chord quality 35・`@` の引数つき形）／**⒠ drummap の `${1:hh}`＝UX 案件**／**⒢ 第369 ⑸⒝・第368 ⑺⒝ の並び**／§2 E の副産物（内容で決まる頁の高さが loose-line の ideal を数える＝own の判断）。★ **判定の記録**（ユーザーの常設指示「次便は、このセッションでやる方が有利なら着手して…」）: **第 1 便はユーザー指示「着手して」＋第376 ⑸ の名指し**。**`p378/paper` の計器（Lily# と LP の 2 値ハッシュ・双子への override 挿入）が効くのは ⑶ の決定後の実装と「LP で basic-distance が不動の理由」の読解**＝前者はユーザー待ち、後者は読むだけで急がない。
+
+★★ **⑹ 第 2 便＝判定で着手＝⑵ の pin の*穴*を `p378/paper` の計器で閉じた（測るだけ・製品 0）**。**着手の根拠**: ⑵ の「nonstaff の `basicDistance` は LP も不動」は **ragged な 1 頁本 1 冊だけ**で測った主張で、**loose line を抱える段間が引き伸ばされる justified 頁では LP の ideal が効く可能性が未測**だった——**Lily# と LP の 2 値ハッシュ・双子への override 挿入がそのまま乗る**。**着手しなかったもの**: ⑶ はユーザー待ち／⒝ chord quality・`@` 引数・⒠・⒢ は別 regime。**結果**（`scratch/p378/paper/justified.ps1`・2 譜の間に歌詞 2 行・24 段＝**両エンジンとも A4 で 4 頁**）: **related／unrelated／nonstaff の `basic-distance` 2 対 30 は Lily# も LP も 3 つとも不動**・**対照 `minimum-distance`／`padding` は両側で動く**（LP は 4 → 8／12 頁）⇒ **一致は ragged の人工物ではない**＝test の remark に追記。⚠️ **計器の罠 1**: **baseline を両エンジンとも同じ名前 `base` で出したら、LP の後始末（`base*.svg` を消す）が Lily# の `base.svg` を消し、LP の `base-1..4.svg` を Lily# の baseline として数えた**＝baseline 行だけ無効（case は `.lys.*`／`.lp.*` で名前が分かれていて無事）。⚠️ **罠 2**: **`lysc svg` の多頁は 1 ファイルに縦積み**（高さ 676.04＝A4 4 枚）で、「1p」は頁数ではない＝**頁数は `lysc layout` で読む**。**数**（`Session-Check -Test -Scratch p378 -DiffBase cbf4b6b6`）: **full `scratch/p378/run3.trx` 8519 / 0 / 4 / 8523**（本数不変・RunInfos は SKIP 4 だけ）・Core `+` 0／REF 0／OWN 0・台帳 843 点／総和 22.584587806・snapshot 249・追跡 `.lys` 599 は全部不変・test は remark だけ・未 push 80（この commit 込み）。★ **第 3 便の判定＝着手しない**: **この族で `p378` の計器が答えられる問いは尽きた**（ragged と justified の両方で両エンジン一致）。残る「LP で ideal が効かない理由」は `page-layout-problem.cc` の `distribute_loose_lines` を**読むだけ**＝計器の温度は要らず、一致している以上**直すものが出ない読み物**／⑶ はユーザー待ち／⒝⒠⒢ は別 regime＝**次のセッションでやっても損しない**。
+
 ## 以下は第376セッションの経緯
 
 最終更新 第376セッション（2026-09-13）＝**入り方は第298〜第375 の型**（ユーザーは `docs/HANDOFF.md` を読ませて「作業に着手して」だけ）。**§0 の裏取りを走らせた**（`Session-Check -Build -Test -Scratch p377`）。道具は記憶どおり pwsh MCP。**着手したのは第375 ⑹ が「次便は ⒡ から」と名指した 1 件＝第373 ⑼⒜（台帳点ゼロの probe 24 冊の仕分け）**。**骨は 5**:
