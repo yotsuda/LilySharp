@@ -47,7 +47,7 @@ public class RestPitchedBeamTests
     private static List<(string Glyph, double Position, double X)> Rests(string svg)
     {
         var lineYs = Regex.Matches(svg,
-                "<line x1=\"0\\.00\" y1=\"([-\\d.]+)\" x2=\"[-\\d.]+\" y2=\"\\1\"")
+                "<line x1=\"0\\.05\" y1=\"([-\\d.]+)\" x2=\"[-\\d.]+\" y2=\"\\1\"")
             .Select(m => double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture))
             .OrderBy(y => y).ToList();
         Assert.Equal(5, lineYs.Count);

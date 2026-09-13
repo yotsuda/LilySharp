@@ -256,7 +256,8 @@ internal static partial class SharedRenderer
         // (systemStartX) like the notation staff — not the page margin, or on the first
         // (indented) system they overrun to the left.
         for (int i = 0; i < stringCount; i++)
-            DrawTabStringLine(systemStartX, lineRight, staffY - i * stringSpace, i, digitGaps, gc);
+            DrawTabStringLine(StaffLineInkLeft(systemStartX, EngravingDefaults.StaffLineThickness),
+                lineRight, staffY - i * stringSpace, i, digitGaps, gc);
     }
 
     /// <summary>

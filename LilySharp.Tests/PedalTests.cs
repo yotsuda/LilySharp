@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -443,7 +443,7 @@ public class PedalTests
     {
         string svg = LiveRender.SvgFromRenderSpec(ThreePedalsAtOnce);
         double staffBottom = System.Text.RegularExpressions.Regex
-            .Matches(svg, @"<line x1=""0\.00"" y1=""([\d.]+)"" x2=""[\d.]+"" y2=""\1""")
+            .Matches(svg, @"<line x1=""0\.05"" y1=""([\d.]+)"" x2=""[\d.]+"" y2=""\1""")
             .Select(m => double.Parse(m.Groups[1].Value)).Distinct().Max();
 
         double RowOf(string pattern) => System.Text.RegularExpressions.Regex

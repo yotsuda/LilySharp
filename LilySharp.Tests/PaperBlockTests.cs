@@ -138,7 +138,7 @@ public class PaperBlockTests
         // staff line is the one <line> that starts at x 0.
         static double FirstStaffLineY(string svg)
         {
-            var m = System.Text.RegularExpressions.Regex.Match(svg, "<line x1=\"0\\.00\" y1=\"([0-9.]+)\"");
+            var m = System.Text.RegularExpressions.Regex.Match(svg, "<line x1=\"0\\.05\" y1=\"([0-9.]+)\"");
             Assert.True(m.Success, "no staff line found");
             return double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
         }

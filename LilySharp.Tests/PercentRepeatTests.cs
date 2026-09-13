@@ -218,9 +218,10 @@ public class PercentRepeatTests
         {
             var a = m.Groups[1].Value;
             double x1 = Attr(a, "x1"), x2 = Attr(a, "x2"), y1 = Attr(a, "y1"), y2 = Attr(a, "y2");
-            // Staff/string rows all START at the system's left edge; ledger
-            // lines and the fret-digit-split later segments of a string do not.
-            if (y1 == y2 && x2 > x1 && x1 < 0.05)
+            // Staff/string rows all START at the system's left edge — their ink half a line
+            // thickness after it (lily/staff-symbol.cc:84); ledger lines and the fret-digit-split
+            // later segments of a string do not.
+            if (y1 == y2 && x2 > x1 && x1 < LilySharp.Core.Svg.EngravingDefaults.StaffLineThickness)
                 horizontals.Add(y1);
         }
         horizontals.Sort();

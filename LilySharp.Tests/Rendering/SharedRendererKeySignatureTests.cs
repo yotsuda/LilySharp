@@ -57,9 +57,12 @@ public sealed class SharedRendererKeySignatureTests
                                .OrderBy(g => g.X).ToList();
         Assert.Equal(2, sharps.Count);
 
-        // Top staff line: the highest (min-Y) full-width horizontal line (x1 ≈ 0).
+        // Top staff line: the highest (min-Y) full-width horizontal line, whose ink starts half
+        // its thickness after the span start at x 0 (lily/staff-symbol.cc:84 Staff_symbol::print).
+        double staffInkLeft = SharedRenderer.StaffLineInkLeft(
+            0.0, LilySharp.Core.Svg.EngravingDefaults.StaffLineThickness);
         double topLineY = rec.Lines
-            .Where(l => Math.Abs(l.X1) < 1e-6 && Math.Abs(l.Y1 - l.Y2) < 1e-6)
+            .Where(l => Math.Abs(l.X1 - staffInkLeft) < 1e-6 && Math.Abs(l.Y1 - l.Y2) < 1e-6)
             .Min(l => l.Y1);
 
         Assert.True(Math.Abs(sharps[0].Y - topLineY) < 0.05,

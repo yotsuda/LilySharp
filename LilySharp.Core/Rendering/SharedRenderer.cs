@@ -606,7 +606,8 @@ internal static partial class SharedRenderer
             // Staff lines start at the system indent (instrument names sit
             // in the clean space left of it — LP: the StaffSymbol spans the
             // system, whose left edge IS the indent).
-            double lineStartX = systemStartX, lineEndX = notationStaffRight;
+            double lineStartX = StaffLineInkLeft(systemStartX, EngravingDefaults.StaffLineThickness),
+                lineEndX = notationStaffRight;
             if (isOssia)
             {
                 (fragFrom, fragTo) = OssiaFragment(staff, system);
@@ -617,7 +618,10 @@ internal static partial class SharedRenderer
                 }
                 foreach (var ml in system.Measures)
                 {
-                    if (ml.MeasureIndex == fragFrom) lineStartX = ml.X;
+                    // Half the line's OWN thickness: an ossia draws its lines at OssiaScale, and
+                    // sgc takes page-unit X, so the page offset is scaled with the line.
+                    if (ml.MeasureIndex == fragFrom)
+                        lineStartX = StaffLineInkLeft(ml.X, EngravingDefaults.StaffLineThickness * OssiaScale);
                     if (ml.MeasureIndex == fragTo) lineEndX = ml.X + ml.Width;
                 }
             }
@@ -875,6 +879,25 @@ internal static partial class SharedRenderer
         // Span_bar_engraver, and it ignored the hidden/ossia and MMR-inner
         // suppressions that the connector pass applies.
     }
+
+    /// <summary>
+    /// Where a staff line's ink begins, given the X its staff symbol spans from.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/staff-symbol.cc:84 Staff_symbol::print — <c>span_points[d] -= d * t / 2</c>
+    /// pulls both ends of every line in by half its own thickness, so on the LEFT the ink starts
+    /// <c>t / 2</c> after the span start. MEASURED, LilyPond 2.26.0 -dbackend=null
+    /// (scratch/p377/staffline/staffline.ly): StaffSymbol X extent starts at 0.05 on a Staff and a
+    /// TabStaff at indent 0, at 8.585827 at the default indent 8.535827, and at 0.10 with
+    /// thickness doubled — so it is half the line's own thickness, not a constant. Until
+    /// session 376 Lily# started the ink at the span start, 0.05 left.
+    /// <para>
+    /// ⚠️ ONLY THE LEFT END. LilyPond pulls the right end in by the same half thickness, but
+    /// Lily#'s right end has not been measured against LilyPond, so it is left alone.
+    /// </para>
+    /// </remarks>
+    internal static double StaffLineInkLeft(double spanStart, double thickness)
+        => spanStart + thickness / 2.0;
 
     private static void DrawStaffLines(double staffY, double width, IDrawingContext gc, double startX = 0,
         int lines = 5)

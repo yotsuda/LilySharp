@@ -7,11 +7,11 @@
   <rect x="0" y="0" width="119.50" height="30.08" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="1563">rit. in a repeated section</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="18.85" x2="85.93" y2="18.85" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="19.85" x2="85.93" y2="19.85" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="20.85" x2="85.93" y2="20.85" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="21.85" x2="85.93" y2="21.85" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="22.85" x2="85.93" y2="22.85" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="18.85" x2="85.93" y2="18.85" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="19.85" x2="85.93" y2="19.85" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="20.85" x2="85.93" y2="20.85" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="21.85" x2="85.93" y2="21.85" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="22.85" x2="85.93" y2="22.85" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="21.85" font-size="4.00" data-pos="1607"></text>
   <text class="music" x="4.88" y="20.85" font-size="4.00"></text>
   <text class="music" x="8.59" y="20.35" font-size="4.00" data-pos="1633"></text>

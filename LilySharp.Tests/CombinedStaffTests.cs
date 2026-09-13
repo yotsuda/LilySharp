@@ -110,7 +110,7 @@ public class CombinedStaffTests
             .ToList();
 
     private static int StaffCount(string svg) =>
-        Regex.Matches(svg, "<line x1=\"0.00\"[^>]*stroke-width=\"0.100\"").Count / 5;
+        Regex.Matches(svg, "<line x1=\"0.05\"[^>]*stroke-width=\"0.100\"").Count / 5;
 
     [Fact]
     public void TwoPartsShareOneStaff()

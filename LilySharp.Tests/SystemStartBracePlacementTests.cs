@@ -69,6 +69,19 @@ public class SystemStartBracePlacementTests
         Assert.Equal(lilyPondRight, centre + half, 9);
     }
 
+    /// <summary>
+    /// A staff line's ink starts half its thickness after the span start — LilyPond 2.26.0
+    /// (scratch/p377/staffline/staffline.ly): 0.05 on a Staff and a TabStaff at indent 0,
+    /// 8.585827 at the default indent, 0.10 with the thickness doubled.
+    /// </summary>
+    [Theory]
+    [InlineData(0.0, 0.1, 0.05)]
+    [InlineData(8.535826771653543, 0.1, 8.585826771653544)]
+    [InlineData(0.0, 0.2, 0.1)]
+    public void StaffLineInkLeft_MatchesLilyPond(double spanStart, double thickness, double expected)
+        => Assert.Equal(expected,
+            LilySharp.Core.Rendering.SharedRenderer.StaffLineInkLeft(spanStart, thickness), 9);
+
     /// <summary>LilyPond's SystemStartBar, which every other delimiter chains from.</summary>
     [Fact]
     public void SystemStartBarLeftEdge_MatchesLilyPond()

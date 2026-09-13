@@ -7,11 +7,11 @@
   <rect x="0" y="0" width="119.50" height="32.12" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="791">Chord names</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="20.88" x2="35.99" y2="20.88" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="21.88" x2="35.99" y2="21.88" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="22.88" x2="35.99" y2="22.88" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="23.88" x2="35.99" y2="23.88" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="24.88" x2="35.99" y2="24.88" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="20.88" x2="35.99" y2="20.88" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="21.88" x2="35.99" y2="21.88" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="22.88" x2="35.99" y2="22.88" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="23.88" x2="35.99" y2="23.88" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="24.88" x2="35.99" y2="24.88" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="23.88" font-size="4.00" data-pos="831"></text>
   <text class="music" x="4.88" y="22.88" font-size="4.00"></text>
   <line x1="8.26" y1="25.88" x2="10.22" y2="25.88" stroke="#000000" stroke-width="0.200"/>

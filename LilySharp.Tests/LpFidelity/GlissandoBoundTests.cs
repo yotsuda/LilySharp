@@ -66,11 +66,12 @@ public class GlissandoBoundTests
         var page = RenderedGeometry.Render(Src);
         double middle = Assert.Single(page.StaffRefpoints());
 
-        // The staff frame's X origin: where the staff lines start (the page carries
-        // a margin the LP staff-relative literals below do not).
+        // The staff frame's X origin: where the staff symbol's SPAN starts (the page carries
+        // a margin the LP staff-relative literals below do not). The line's INK starts half
+        // its thickness later (lily/staff-symbol.cc:84 Staff_symbol::print), so take that back off.
         double staffLeft = page.Lines
             .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9 && Math.Abs(l.X2 - l.X1) > 20)
-            .Min(l => Math.Min(l.X1, l.X2));
+            .Min(l => Math.Min(l.X1, l.X2)) - LilySharp.Core.Svg.EngravingDefaults.StaffLineThickness / 2.0;
 
         // The glissando lines: slanted, at staff-line thickness. Staff and ledger
         // lines are horizontal, stems vertical and thicker.

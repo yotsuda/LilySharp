@@ -199,7 +199,7 @@ public class FormNavigationTests
         // The LAST staff-line group is the final system's; its thick repeat stroke (0.60) is
         // the |: the sign must align to.
         var staffTops = System.Text.RegularExpressions.Regex
-            .Matches(svg, @"<line x1=""0\.00"" y1=""([\d.]+)"" x2=""[\d.]+"" y2=""\1""")
+            .Matches(svg, @"<line x1=""0\.05"" y1=""([\d.]+)"" x2=""[\d.]+"" y2=""\1""")
             .Select(m => double.Parse(m.Groups[1].Value)).Distinct().OrderBy(v => v).ToList();
         double staffTop = staffTops[^5];   // five lines per staff, last system's topmost
 
