@@ -476,6 +476,31 @@ public class VocabularyPerturbationTests
         "paper { " + entry + " }\n" + PaperBook;
 
     /// <summary>
+    /// A book that runs onto a SECOND page, so the first one is not the last and is justified
+    /// vertically.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️⚠️ WITHOUT THIS, EVERY SPRING QUANTITY IS INERT AND FOR ONE REASON:
+    /// <c>RaggedLastBottom</c> defaults to TRUE — LilyPond's own default, "best for shorter
+    /// scores" (ly/paper-defaults-init.ly:56) — so the LAST page keeps its natural spacing.
+    /// A one-page book IS its last page, so nothing ever spreads on it, and
+    /// <c>raggedBottom</c>, <c>lastBottomSpacing</c>, <c>topSystemSpacing</c>,
+    /// <c>topSystemPadding</c> and <c>stretchability</c> all have nothing to do. That is a
+    /// property of the FIXTURE, not of those five keys, and it is why they sat on the
+    /// can't-speak-for list for one leg (2026-09-13).
+    /// </remarks>
+    private static string FilledPageBook(string entry)
+    {
+        var music = new System.Text.StringBuilder();
+        for (int i = 0; i < 24; i++)
+            music.Append("c'4 d' e' f' | break ");
+        return "paper { " + entry + " }\n"
+            + "octave absolute\ntitle \"T\"\npart m { clef treble\n"
+            + "  section A { " + music + "}\n}\n"
+            + "form main { A }\nscore main { staff m }\n";
+    }
+
+    /// <summary>
     /// Every paper key must reach the page — asked as "two DIFFERENT values of the same key
     /// draw differently", which needs no knowledge of the key's default and cannot be fooled
     /// by writing one.
@@ -508,17 +533,35 @@ public class VocabularyPerturbationTests
     /// ⇒ What is left is a per-key read of the page and staff spacing engines, which is
     /// another regime entirely. Until someone does it, this test pins today's answer so the
     /// day one of them starts working, it says so rather than passing quietly.
-    /// ★ The three that ARE page-level (<c>topSystemPadding</c>, <c>topSystemSpacing</c>,
-    /// <c>lastBottomSpacing</c>, plus <c>raggedBottom</c>) may all want a page that is FULL
-    /// rather than three systems on an A4 — that is the first thing to try.
+    /// <para>
+    /// ★★ THE THIRD THING TRIED DID WORK, and it is worth copying: the page-level cluster
+    /// wanted a page that is JUSTIFIED, and a one-page book can never be one, because
+    /// <c>RaggedLastBottom</c> defaults to true and a one-page book IS its last page. Against
+    /// <see cref="FilledPageBook"/> — two pages, so the first is justified —
+    /// <c>topSystemSpacing</c>, <c>lastBottomSpacing</c> and <c>raggedBottom</c> all started
+    /// moving, and came off this list (2026-09-13). ⇒ WHEN A SPRING READS INERT, ASK FIRST
+    /// WHETHER THE FIXTURE EVER COMPRESSES IT.
+    /// </para>
+    /// <para>
+    /// ⚠️ <c>topSystemPadding</c> did NOT come off with them: it is inert on a ragged page and
+    /// on a justified one alike, so its reason is not the one that covered the other three.
+    /// </para>
     /// </remarks>
     private static readonly string[] PaperKeysThisSweepCannotSpeakFor =
     [
-        "topSystemPadding", "spacingIncrement",
+        "spacingIncrement", "topSystemPadding",
         "scoreSystemSpacing", "scoreMarkupSpacing", "markupMarkupSpacing",
-        "topSystemSpacing", "lastBottomSpacing",
         "defaultStaffStaffSpacing", "nonStaffUnrelatedStaffSpacing", "nonStaffNonStaffSpacing",
     ];
+
+    /// <summary>
+    /// The keys that want a page which must SPREAD — measured against a two-page book, where
+    /// the first page is justified because it is not the last.
+    /// </summary>
+    /// <remarks>See <see cref="FilledPageBook"/> for why a one-page fixture can say nothing
+    /// about any of them.</remarks>
+    private static readonly string[] PaperKeysThatNeedAJustifiedPage =
+        ["topSystemSpacing", "lastBottomSpacing"];
 
     public static TheoryData<string, string, string> PaperEntries()
     {
@@ -535,6 +578,11 @@ public class VocabularyPerturbationTests
     [MemberData(nameof(PaperEntries))]
     public void EveryPaperKeyMovesThePage(string key, string small, string large)
     {
+        if (PaperKeysThatNeedAJustifiedPage.Contains(key))
+        {
+            AssertMoves(FilledPageBook(small), FilledPageBook(large), "paper " + key);
+            return;
+        }
         if (PaperKeysThisSweepCannotSpeakFor.Contains(key))
         {
             // Pinned as it is — see the list's remark. NOT a claim that the key is dead.
@@ -556,8 +604,9 @@ public class VocabularyPerturbationTests
     {
         if (flag == "raggedBottom")
         {
-            Assert.True(Signature(PaperBook) == Signature(PaperBookWith(flag)),
-                "'raggedBottom' now moves this book — the open question closed.");
+            // Against a book that must SPREAD: on a one-page book `raggedBottom` is a no-op
+            // because ragged-last-bottom has already made that page ragged.
+            AssertMoves(FilledPageBook(""), FilledPageBook(flag), "paper " + flag);
             return;
         }
         AssertMoves(PaperBook, PaperBookWith(flag), "paper " + flag);
@@ -593,15 +642,22 @@ public class VocabularyPerturbationTests
     [MemberData(nameof(PaperSubKeys))]
     public void EverySpacingSubKeyMovesThePage(string subKey)
     {
-        string small = PaperBookWith($"systemSystemSpacing {{ {subKey} 2 }}");
-        string large = PaperBookWith($"systemSystemSpacing {{ {subKey} 30 }}");
+        string entrySmall = $"systemSystemSpacing {{ {subKey} 2 }}";
+        string entryLarge = $"systemSystemSpacing {{ {subKey} 30 }}";
         if (subKey == "stretchability")
         {
-            Assert.True(Signature(small) == Signature(large),
-                "'stretchability' now moves this book — the open question closed.");
+            // ⚠️ STILL UNSETTLED, and now narrower: a spring's stretchability should show
+            // where the page STRETCHES its systems, and a justified page (FilledPageBook)
+            // does stretch — `topSystemSpacing` and `lastBottomSpacing` both start moving
+            // there. This one does not, on EITHER book. So it is not the "last page is
+            // ragged" reason that covered the other five; whether the spacer reads the
+            // stretchability at all is the next question, and it is an engine read.
+            Assert.True(Signature(FilledPageBook(entrySmall)) == Signature(FilledPageBook(entryLarge)),
+                "'stretchability' now moves a justified page — the open question closed.");
             return;
         }
-        AssertMoves(small, large, "systemSystemSpacing " + subKey);
+        AssertMoves(PaperBookWith(entrySmall), PaperBookWith(entryLarge),
+            "systemSystemSpacing " + subKey);
     }
 
     public static TheoryData<string> PaperSubKeys()
