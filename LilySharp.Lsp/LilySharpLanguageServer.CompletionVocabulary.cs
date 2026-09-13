@@ -1511,8 +1511,9 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>
     /// Inside <c>grandStaff</c> / <c>staffGroup</c> / <c>choirStaff</c>: the body is a
-    /// run of <c>staff</c> items with <c>lyrics NAME</c> rows between them (a bound row
-    /// is the staff above's verse — LYS6012 refuses any other), so that is the whole
+    /// run of one-staff items — <c>staff</c>, <c>condensedStaff { … }</c>,
+    /// <c>combinedStaff { … }</c> — with <c>lyrics NAME</c> rows between them (a bound row
+    /// is the plain staff above's verse — LYS6012 refuses any other), so that is the whole
     /// list. Anything else is LYS6011.
     /// </summary>
     internal static CompletionList GetStaffGroupBlockCompletions() => new()
@@ -1535,12 +1536,40 @@ public sealed partial class LilySharpLanguageServer
             },
             new CompletionItem
             {
+                Label = "condensedStaff",
+                Kind = CompletionItemKind.Keyword,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = "condensedStaff { $0 }",
+                Detail = "One staff of this group carrying several parts as voices",
+                SortText = "1",
+                Command = new Command
+                {
+                    Title = "Suggest part name",
+                    CommandIdentifier = "editor.action.triggerSuggest",
+                },
+            },
+            new CompletionItem
+            {
+                Label = "combinedStaff",
+                Kind = CompletionItemKind.Keyword,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = "combinedStaff { $0 }",
+                Detail = "One staff of this group merging two parts (a2 / Solo)",
+                SortText = "2",
+                Command = new Command
+                {
+                    Title = "Suggest part name",
+                    CommandIdentifier = "editor.action.triggerSuggest",
+                },
+            },
+            new CompletionItem
+            {
                 Label = "lyrics",
                 Kind = CompletionItemKind.Keyword,
                 InsertTextFormat = InsertTextFormat.Snippet,
                 InsertText = "lyrics $0",
                 Detail = "A verse row under the staff above (the track must sing that staff's part)",
-                SortText = "1",
+                SortText = "3",
                 Command = new Command
                 {
                     Title = "Suggest lyrics name",

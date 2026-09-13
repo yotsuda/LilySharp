@@ -95,7 +95,8 @@ public class ScoreHeaderSpellingCompletionTests
         string text = Parts + header;
         Assert.Equal(LilySharpLanguageServer.CompletionContext.StaffGroupBlock,
             LilySharpLanguageServer.GetCompletionContext(text, text.Length));
-        Assert.Equal(new[] { "staff", "lyrics" }, CompletionLabelsAt(text, text.Length));
+        Assert.Equal(new[] { "staff", "condensedStaff", "combinedStaff", "lyrics" },
+            CompletionLabelsAt(text, text.Length));
     }
 
     [Theory]

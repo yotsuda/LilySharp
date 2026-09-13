@@ -63,10 +63,12 @@ public class RenderSpecTests
         var grandStaffItem = renderSpec.Items[0] as GrandStaffRenderSpec;
         Assert.NotNull(grandStaffItem);
         Assert.Equal(2, grandStaffItem.GrandStaff.StaffCount);
-        Assert.Equal(ClefType.Treble, grandStaffItem.GrandStaff.Staves[0].Clef);
-        Assert.Equal("melody", grandStaffItem.GrandStaff.Staves[0].VoiceName);
-        Assert.Equal(ClefType.Bass, grandStaffItem.GrandStaff.Staves[1].Clef);
-        Assert.Equal("bass", grandStaffItem.GrandStaff.Staves[1].VoiceName);
+        var upper = Assert.IsType<SingleStaffSpec>(grandStaffItem.GrandStaff.Members[0]).Staff;
+        var lower = Assert.IsType<SingleStaffSpec>(grandStaffItem.GrandStaff.Members[1]).Staff;
+        Assert.Equal(ClefType.Treble, upper.Clef);
+        Assert.Equal("melody", upper.VoiceName);
+        Assert.Equal(ClefType.Bass, lower.Clef);
+        Assert.Equal("bass", lower.VoiceName);
     }
 
     // A part score restates the header for itself: `score main "vln" { title "Violin I" … }`.
@@ -467,7 +469,7 @@ public class RenderSpecTests
         }
         var slotsStr = string.Join(", ", slots);
 
-        var staves = grandStaff.Staves.ToList();
+        var staves = grandStaff.Members.ToList();
         Assert.True(staves.Count >= 2, $"Expected 2+ staves but got {staves.Count}. SlotCount={slotCount}, Slots: {slotsStr}");
     }
 }

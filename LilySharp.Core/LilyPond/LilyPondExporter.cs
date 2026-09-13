@@ -731,7 +731,9 @@ public sealed class LilyPondExporter
     /// </remarks>
     private static IEnumerable<string?> RowPartNames(SyntaxNode item) => item switch
     {
-        GrandStaffRenderSyntax group => group.Staves.Select(RenderPartName),
+        // A condensed or combined member is not exported at the top level either (RenderRows
+        // yields neither), so inside a group only the plain staves put music on a twin staff.
+        GrandStaffRenderSyntax group => group.Members.OfType<StaffRenderSyntax>().Select(RenderPartName),
         OssiaRenderSyntax ossia => new[] { OssiaPartName(ossia) },
         StaffRenderSyntax or TabRenderSyntax => new[] { RenderPartName(item) },
         _ => Enumerable.Empty<string?>(),
@@ -3975,7 +3977,7 @@ public sealed class LilyPondExporter
                         rows.Add(EmitStaffGroup(group, parts, partVars));
                         // LilyPond aligns above a STAFF, so a group is named by its first
                         // staff — the row Lily# would insert the ossia in front of.
-                        lastMainStaffPart = group.Staves
+                        lastMainStaffPart = group.Members.OfType<StaffRenderSyntax>()
                             .Select(RenderPartName).FirstOrDefault(n => n != null)
                             ?? lastMainStaffPart;
                         break;
@@ -4750,8 +4752,15 @@ public sealed class LilyPondExporter
         };
         var sb = new StringBuilder();
         sb.Append("    \\new ").Append(context).Append(" <<\n");
-        foreach (var staff in group.Staves)
+        foreach (var member in group.Members)
         {
+            // A condensed or combined member is reported, as it is at the top level (where
+            // RenderRows never yields one): the twin writer has no spelling for either yet.
+            if (member is not StaffRenderSyntax staff)
+            {
+                Skip(member);
+                continue;
+            }
             var groupRows = new List<string>(1);
             AddInlineChordRow(groupRows, RenderPartName(staff), "      ");
             foreach (var r in groupRows) sb.Append(r);
@@ -4915,7 +4924,8 @@ public sealed class LilyPondExporter
             {
                 case SingleStaffSpec s: Take(s.Staff); break;
                 case GrandStaffRenderSpec g:
-                    foreach (var st in g.GrandStaff.Staves) Take(st);
+                    foreach (var m in g.GrandStaff.Members)
+                        if (m is SingleStaffSpec st) Take(st.Staff);
                     break;
                 case OssiaStaffSpec o: Take(o.Staff); break;
                 case TabStaffSpec t when staffItems > 1: Take(t.Staff); break;

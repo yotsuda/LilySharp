@@ -232,7 +232,8 @@ public class ChordDisplayCompletionTests
     }
 
     [Theory]
-    // grandStaff / staffGroup / choirStaff take `staff` items and `lyrics NAME`
+    // grandStaff / staffGroup / choirStaff take one-staff items — `staff`, and since
+    // session 376 `condensedStaff { … }` / `combinedStaff { … }` — and `lyrics NAME`
     // verse rows, nothing else — anything else is LYS6011 "cannot contain".
     [InlineData("score main { grandStaff { ")]
     [InlineData("score main { staffGroup { ")]
@@ -242,7 +243,7 @@ public class ChordDisplayCompletionTests
         Assert.Equal(LilySharpLanguageServer.CompletionContext.StaffGroupBlock, Ctx(text));
         var labels = LilySharpLanguageServer.GetStaffGroupBlockCompletions()
             .Items.Select(i => i.Label).ToArray();
-        Assert.Equal(new[] { "staff", "lyrics" }, labels);
+        Assert.Equal(new[] { "staff", "condensedStaff", "combinedStaff", "lyrics" }, labels);
     }
 
     [Theory]

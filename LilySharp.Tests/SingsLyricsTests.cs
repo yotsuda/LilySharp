@@ -323,8 +323,9 @@ public class SingsLyricsTests
 
         var spec = RenderSpecParser.FindFirst(tree);
         var group = Assert.IsType<GrandStaffRenderSpec>(Assert.Single(spec!.Items));
-        Assert.Equal(3, group.GrandStaff.Staves.Length);
-        Assert.All(group.GrandStaff.Staves, s => Assert.Equal(new[] { "verse" }, s.WithLyrics));
+        Assert.Equal(3, group.GrandStaff.Members.Length);
+        Assert.All(group.GrandStaff.Members,
+            m => Assert.Equal(new[] { "verse" }, Assert.IsType<SingleStaffSpec>(m).Staff.WithLyrics));
 
         // …and each staff's copy of the words sits at THAT staff's onsets: the
         // alto's dotted first bar (0, 3/8, 1/2, 3/4) and the bass's eighth-note

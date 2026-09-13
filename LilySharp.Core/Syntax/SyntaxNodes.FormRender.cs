@@ -801,16 +801,25 @@ public sealed partial class GrandStaffRenderSyntax : SyntaxNode
     public SyntaxTokenNode GrandStaffKeyword => (SyntaxTokenNode)GetChild(0)!;
 
     /// <summary>
-    /// Gets the staff render items (at least 2 required, validated semantically).
+    /// The group's members in written order: the items that each engrave ONE staff —
+    /// <c>staff</c>, <c>condensedStaff { … }</c> and <c>combinedStaff { … }</c> (at least 2
+    /// required, validated semantically). A <c>lyrics</c> row is not a member (it folds into
+    /// the staff above), nor is a token the parser rejected and kept for its width.
     /// </summary>
-    public IEnumerable<StaffRenderSyntax> Staves
+    /// <remarks>
+    /// ⚠️ THERE IS NO STAFF-ONLY ACCESSOR ON PURPOSE. Until session 376 this was <c>Staves</c>,
+    /// and a reader that asks for "the staves" of a group holding a condensed staff counts one
+    /// staff short and shifts every staff index after it. A caller that really wants the
+    /// plain staves filters with <c>OfType&lt;StaffRenderSyntax&gt;()</c> where it can be seen.
+    /// </remarks>
+    public IEnumerable<SyntaxNode> Members
     {
         get
         {
             for (int i = 0; i < SlotCount; i++)
             {
-                if (GetChild(i) is StaffRenderSyntax staff)
-                    yield return staff;
+                if (GetChild(i) is StaffRenderSyntax or CondensedStaffRenderSyntax or CombinedStaffRenderSyntax)
+                    yield return GetChild(i)!;
             }
         }
     }

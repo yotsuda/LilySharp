@@ -198,8 +198,8 @@ public class ScoreRowFoldingTests
             """);
 
         var group = Assert.IsType<GrandStaffRenderSpec>(Assert.Single(spec.Items)).GrandStaff;
-        Assert.Empty(group.Staves[0].WithLyrics);
-        Assert.Equal(new[] { "words" }, group.Staves[1].WithLyrics);
+        Assert.Empty(Assert.IsType<SingleStaffSpec>(group.Members[0]).Staff.WithLyrics);
+        Assert.Equal(new[] { "words" }, Assert.IsType<SingleStaffSpec>(group.Members[1]).Staff.WithLyrics);
     }
 
     private const string ChoraleBody = """
@@ -225,8 +225,8 @@ public class ScoreRowFoldingTests
 
         var group = Assert.IsType<GrandStaffRenderSpec>(Assert.Single(spec.Items)).GrandStaff;
         Assert.Equal(2, group.StaffCount);
-        Assert.Equal(new[] { "words" }, group.Staves[0].WithLyrics);
-        Assert.Empty(group.Staves[1].WithLyrics);
+        Assert.Equal(new[] { "words" }, Assert.IsType<SingleStaffSpec>(group.Members[0]).Staff.WithLyrics);
+        Assert.Empty(Assert.IsType<SingleStaffSpec>(group.Members[1]).Staff.WithLyrics);
     }
 
     [Fact]

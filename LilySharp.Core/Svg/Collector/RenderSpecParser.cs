@@ -129,21 +129,28 @@ public static class RenderSpecParser
         var staffParts = StaffRenderedParts(render);
 
         // Parse render items
+        // ⚠️ DESCENDANTS, SO EVERY ITEM A GROUP HOLDS IS REACHED TWICE: once here and once by
+        // ParseGrandStaff, which builds the group from its members. Every case that can be a
+        // group member therefore carries the IsInsideGrandStaff guard. Without it a
+        // `staffGroup { condensedStaff { fl1 fl2 } staff ob }` engraves the condensed staff
+        // twice — inside the bracket and again as a loose staff — with no error. Pinned by
+        // NestedGroupMemberTests: stripping the condensed and combined guards reddens five of
+        // its tests (session 376, poisoned and restored).
         foreach (var child in render.DescendantNodes())
         {
             switch (child)
             {
-                case GrandStaffRenderSyntax grandStaff:
+                case GrandStaffRenderSyntax grandStaff when !IsInsideGrandStaff(grandStaff):
                     var grandSpec = ParseGrandStaff(grandStaff);
                     if (grandSpec != null)
                         items.Add(new GrandStaffRenderSpec(grandSpec));
                     break;
 
-                case CondensedStaffRenderSyntax condensed:
+                case CondensedStaffRenderSyntax condensed when !IsInsideGrandStaff(condensed):
                     items.Add(ParseCondensedStaff(condensed));
                     break;
 
-                case CombinedStaffRenderSyntax combined:
+                case CombinedStaffRenderSyntax combined when !IsInsideGrandStaff(combined):
                     items.Add(ParseCombinedStaff(combined));
                     break;
 
@@ -334,7 +341,10 @@ public static class RenderSpecParser
     private static string? PartOfFoldTarget(RenderItemSpec item) => item switch
     {
         SingleStaffSpec s => s.Staff.VoiceName,
-        GrandStaffRenderSpec { GrandStaff.Staves: { Length: > 0 } staves } => staves[^1].VoiceName,
+        // A group whose last member is a condensed or combined staff is NOT a target, for
+        // the reason a loose condensed staff is not one: that staff carries several parts.
+        GrandStaffRenderSpec g when g.GrandStaff.Members is { Length: > 0 } ms
+            && ms[^1] is SingleStaffSpec last => last.Staff.VoiceName,
         _ => null,
     };
 
@@ -365,11 +375,11 @@ public static class RenderSpecParser
         {
             SingleStaffSpec s => new SingleStaffSpec(
                 s.Staff with { WithLyrics = Append(s.Staff.WithLyrics, track) }),
-            GrandStaffRenderSpec g => new GrandStaffRenderSpec(g.GrandStaff with
+            GrandStaffRenderSpec g when g.GrandStaff.Members is { Length: > 0 } ms
+                && ms[^1] is SingleStaffSpec last => new GrandStaffRenderSpec(g.GrandStaff with
             {
-                Staves = g.GrandStaff.Staves.SetItem(g.GrandStaff.Staves.Length - 1,
-                    g.GrandStaff.Staves[^1] with
-                    { WithLyrics = Append(g.GrandStaff.Staves[^1].WithLyrics, track) }),
+                Members = ms.SetItem(ms.Length - 1, new SingleStaffSpec(
+                    last.Staff with { WithLyrics = Append(last.Staff.WithLyrics, track) })),
             }),
             _ => item,
         };
@@ -557,13 +567,14 @@ public static class RenderSpecParser
 
     private static GrandStaffSpec? ParseGrandStaff(GrandStaffRenderSyntax grandStaff)
     {
-        var staves = new List<StaffSpec>();
+        var members = new List<RenderItemSpec>();
 
-        // Members in written order: `staff` items open staves, and a bound
-        // `lyrics NAME` row directly below the staff it sings folds into that
+        // Members in written order: `staff`, `condensedStaff` and `combinedStaff` items
+        // each open one staff (the same specs the top level builds), and a bound
+        // `lyrics NAME` row directly below the PLAIN staff it sings folds into that
         // staff's verses — the same fold FoldAdjacentRows applies outside the
         // braces, which is how a chorale writes words between the staves.
-        // A row that sings no adjacent staff is dropped here and reported by the
+        // A row that sings no adjacent plain staff is dropped here and reported by the
         // validator (LYS6012): a group has no independent band to give it.
         foreach (var member in grandStaff.ChildNodes())
         {
@@ -572,21 +583,28 @@ public static class RenderSpecParser
                 case StaffRenderSyntax staff:
                     var staffSpec = ParseStaff(staff);
                     if (staffSpec != null)
-                        staves.Add(staffSpec);
+                        members.Add(new SingleStaffSpec(staffSpec));
                     break;
-                case LyricsRowRenderSyntax row when staves.Count > 0
-                    && RowBindsToPart(grandStaff, row.PartName, row.SingsTarget, staves[^1].VoiceName):
-                    staves[^1] = staves[^1] with
+                case CondensedStaffRenderSyntax condensed:
+                    members.Add(ParseCondensedStaff(condensed));
+                    break;
+                case CombinedStaffRenderSyntax combined:
+                    members.Add(ParseCombinedStaff(combined));
+                    break;
+                case LyricsRowRenderSyntax row when members.Count > 0
+                    && members[^1] is SingleStaffSpec above
+                    && RowBindsToPart(grandStaff, row.PartName, row.SingsTarget, above.Staff.VoiceName):
+                    members[^1] = new SingleStaffSpec(above.Staff with
                     {
-                        WithLyrics = (staves[^1].WithLyrics.IsDefault
+                        WithLyrics = (above.Staff.WithLyrics.IsDefault
                             ? ImmutableArray<string>.Empty
-                            : staves[^1].WithLyrics).Add(row.PartName),
-                    };
+                            : above.Staff.WithLyrics).Add(row.PartName),
+                    });
                     break;
             }
         }
 
-        if (staves.Count < 2)
+        if (members.Count < 2)
             return null; // a staff group requires at least 2 staves
 
         var type = grandStaff.GrandStaffKeyword.Kind switch
@@ -595,7 +613,7 @@ public static class RenderSpecParser
             SyntaxKind.ChoirStaffKeyword => StaffGroupType.ChoirStaff,
             _ => StaffGroupType.GrandStaff,
         };
-        return new GrandStaffSpec([.. staves], type);
+        return new GrandStaffSpec([.. members], type);
     }
 
     /// <summary>The presentation selectors a staff or ossia item wrote after its one

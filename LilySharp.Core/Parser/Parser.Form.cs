@@ -841,7 +841,8 @@ internal sealed partial class Parser
     /// Parse a bracket/brace staff-group render: grandStaff / staffGroup /
     /// choirStaff { staff staff ... }. The leading keyword (already the current
     /// token) is kept on the green node so the collector can pick the group type.
-    /// A `lyrics NAME` row is a member too (score = a vertical stack of bands,
+    /// A `condensedStaff { … }` / `combinedStaff { … }` is a member too: each
+    /// engraves one staff. A `lyrics NAME` row is a member too (score = a vertical stack of bands,
     /// inside a group as outside): a bound row under the staff it sings folds
     /// into that staff's verses (RenderSpecParser.FoldAdjacentRows), which is
     /// how a chorale writes the words between the sopranos and the altos.
@@ -867,12 +868,28 @@ internal sealed partial class Parser
                 members.Add(ParseLyricsRowRender());
                 continue;
             }
+            // A condensed or combined staff ENGRAVES ONE STAFF, however many parts it
+            // carries, so it is a member of a group exactly as a `staff` item is — the
+            // woodwind bracket over `condensedStaff { fl1 fl2 }` and `staff ob`
+            // (user decision, session 376). The group's model reads it as one staff
+            // (GrandStaffSpec.Members), so nothing below the parser learns about nesting.
+            if (Check(SyntaxKind.CondensedStaffKeyword))
+            {
+                members.Add(ParseCondensedStaffRender());
+                continue;
+            }
+            if (Check(SyntaxKind.CombinedStaffKeyword))
+            {
+                members.Add(ParseCombinedStaffRender());
+                continue;
+            }
 
             _diagnostics.Error(
                 new TextSpan(_textPosition, Current.FullWidth),
                 DiagnosticCodes.StaffGroupBadMember,
                 $"'{grandStaffKeyword.Text}' cannot contain '{Current.Text}' — a staff group "
-                + "holds 'staff NAME' items and, between them, 'lyrics NAME' rows. "
+                + "holds 'staff NAME', 'condensedStaff { … }' and 'combinedStaff { … }' items "
+                + "and, between them, 'lyrics NAME' rows. "
                 + "A chords row stands above the group, outside the braces.");
 
             // Keep the offending tokens (the whole ITEM — its bare tokens, then a
@@ -881,6 +898,7 @@ internal sealed partial class Parser
             // every later source offset (see ParseBarePartNameMembers).
             members.Add(Advance());
             while (!Check(SyntaxKind.StaffKeyword) && !Check(SyntaxKind.LyricsKeyword)
+                && !Check(SyntaxKind.CondensedStaffKeyword) && !Check(SyntaxKind.CombinedStaffKeyword)
                 && !Check(SyntaxKind.OpenBrace) && !Check(SyntaxKind.CloseBrace)
                 && !Check(SyntaxKind.EndOfFile))
             {

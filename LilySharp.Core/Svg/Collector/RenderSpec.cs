@@ -82,13 +82,24 @@ public sealed record StaffSpec(
 /// grandStaff (brace, spanning barlines), staffGroup (bracket, spanning barlines)
 /// and choirStaff (bracket, disconnected barlines).
 /// </summary>
+/// <param name="Members">The group's members in stacking order, each of which engraves ONE
+/// staff: a <see cref="SingleStaffSpec"/>, a <see cref="CondensedStaffSpec"/> or a
+/// <see cref="CombinedStaffSpec"/>.</param>
+/// <remarks>
+/// ⚠️ MEMBERS, NOT STAVES. Until session 376 a group held <c>StaffSpec</c>s only; a condensed
+/// or combined staff inside a bracket is one staff with several parts, so the group lists
+/// the ITEM and every reader walks it with the same case it uses at the top level
+/// (<see cref="RenderSpec.GetVoiceBindings"/>, <c>BuildStaffGroups</c>). There is no
+/// staff-only view: one would count a condensed member as nothing and shift every staff
+/// index below it.
+/// </remarks>
 public sealed record GrandStaffSpec(
-    ImmutableArray<StaffSpec> Staves,
+    ImmutableArray<RenderItemSpec> Members,
     StaffGroupType Type = StaffGroupType.GrandStaff
 )
 {
-    /// <summary>Number of staves in this grand staff.</summary>
-    public int StaffCount => Staves.Length;
+    /// <summary>Number of staves in this group — one per member.</summary>
+    public int StaffCount => Members.Length;
 }
 
 /// <summary>
@@ -283,14 +294,15 @@ public sealed record RenderSpec(
             {
                 if (!string.IsNullOrEmpty(n) && !names.Contains(n!)) names.Add(n!);
             }
-            foreach (var item in Items)
+            void AddItem(RenderItemSpec item)
+            {
                 switch (item)
                 {
                     case SingleStaffSpec s: Add(s.Staff.VoiceName); break;
                     case TabStaffSpec t: Add(t.Staff.VoiceName); break;
                     case OssiaStaffSpec o: Add(o.Staff.VoiceName); break;
                     case GrandStaffRenderSpec g:
-                        foreach (var s in g.GrandStaff.Staves) Add(s.VoiceName);
+                        foreach (var m in g.GrandStaff.Members) AddItem(m);
                         break;
                     case CondensedStaffSpec c:
                         foreach (var n in c.PartNames) Add(n);
@@ -299,6 +311,9 @@ public sealed record RenderSpec(
                         foreach (var n in cb.PartNames) Add(n);
                         break;
                 }
+            }
+            foreach (var item in Items)
+                AddItem(item);
             return names.ToImmutable();
         }
     }
@@ -361,17 +376,28 @@ public sealed record RenderSpec(
     /// </remarks>
     public IEnumerable<(string VoiceName, string? WithChords, ChordDisplayMode ChordDisplay, ImmutableArray<string> WithLyrics, VoiceSlotting Slotting)> GetVoiceBindings()
     {
-        static ImmutableArray<string> Ly(ImmutableArray<string> a) => a.IsDefault ? ImmutableArray<string>.Empty : a;
         foreach (var item in OrderedItems())
-        {
+            foreach (var binding in BindingsOf(item))
+                yield return binding;
+    }
+
+    private static ImmutableArray<string> Ly(ImmutableArray<string> a) => a.IsDefault ? ImmutableArray<string>.Empty : a;
+
+    /// <summary>One item's bindings, in the order its staves are built. A group yields its
+    /// members' bindings through this same switch, so a condensed staff inside a bracket is
+    /// bound exactly as one at the top level (and <c>BuildStaffGroups</c> builds it with the
+    /// same code).</summary>
+    private static IEnumerable<(string VoiceName, string? WithChords, ChordDisplayMode ChordDisplay, ImmutableArray<string> WithLyrics, VoiceSlotting Slotting)> BindingsOf(RenderItemSpec item)
+    {
             switch (item)
             {
                 case SingleStaffSpec single:
                     yield return (single.Staff.VoiceName, single.Staff.WithChords, single.Staff.ChordDisplay, Ly(single.Staff.WithLyrics), VoiceSlotting.OwnStaff);
                     break;
                 case GrandStaffRenderSpec grand:
-                    foreach (var staff in grand.GrandStaff.Staves)
-                        yield return (staff.VoiceName, staff.WithChords, staff.ChordDisplay, Ly(staff.WithLyrics), VoiceSlotting.OwnStaff);
+                    foreach (var member in grand.GrandStaff.Members)
+                        foreach (var binding in BindingsOf(member))
+                            yield return binding;
                     break;
                 // Every condensed part is COLLECTED even though they share one staff — the
                 // binding list is what tells the collector whose music to gather — but only
@@ -407,7 +433,6 @@ public sealed record RenderSpec(
                     yield return (lyricsRow.PartName, null, ChordDisplayMode.Names, ImmutableArray<string>.Empty, VoiceSlotting.OwnStaff);
                     break;
             }
-        }
     }
 
     /// <summary>
@@ -464,8 +489,11 @@ public sealed record RenderSpec(
         {
             if (pending is { Count: > 0 })
             {
+                // A pending addressing carries its staff's OFFSET inside the group it was
+                // built in (0 for a top-level combined staff, the member's position for one
+                // inside a bracket), so the global index is the group's first plus that.
                 foreach (var a in pending)
-                    addressings!.Add(a with { StaffIndex = staffIndex });
+                    addressings!.Add(a with { StaffIndex = staffIndex + a.StaffIndex });
                 pending.Clear();
             }
             staffIndex += group.Staves.Length;
@@ -486,12 +514,16 @@ public sealed record RenderSpec(
             return vs.Length > 0 ? vs[0] : new Voice(name, ImmutableArray<Measure>.Empty);
         }
 
-        foreach (var item in OrderedItems())
+        // The ONE staff a single, condensed or combined item engraves — the same construction
+        // at the top level and as a member of a group. `localIndex` is the staff's offset in
+        // the group being built (0 at the top level), which is what a combined staff's
+        // addressing records; ToStaffGroups adds the group's first index.
+        Staff OneStaff(RenderItemSpec item, int localIndex)
         {
             switch (item)
             {
                 case SingleStaffSpec single:
-                    var singleStaff = Staff.Create(
+                    return Staff.Create(
                         single.Staff.Clef,
                         getVoices(single.Staff.VoiceName),
                         single.Staff.InstrumentName) with
@@ -501,8 +533,6 @@ public sealed record RenderSpec(
                         Lines = single.Staff.Lines,
                         PedalStyle = single.Staff.PedalStyle,
                     };
-                    yield return StaffGroup.CreateSingle(singleStaff);
-                    break;
 
                 // N parts -> ONE staff. A Staff already holds N voices and the whole
                 // polyphony path (stem directions by voice order, collision resolution,
@@ -528,9 +558,7 @@ public sealed record RenderSpec(
                         condensed.PartNames
                             .SelectMany(name => (IEnumerable<Voice>)getVoices(name))
                             .ToImmutableArray());
-                    yield return StaffGroup.CreateSingle(
-                        Staff.Create(condensed.Clef, condensedVoices, condensed.InstrumentName));
-                    break;
+                    return Staff.Create(condensed.Clef, condensedVoices, condensed.InstrumentName);
 
                 // TWO parts -> ONE staff, MERGED. Unlike the condensed staff above, the
                 // voices that come out are not the voices that went in: the combiner
@@ -559,33 +587,37 @@ public sealed record RenderSpec(
                         .ToImmutableArray();
                     // …and what the collector stamped on those parts' items has to be
                     // translated, because none of the three coordinates survives the
-                    // rewrite. The staff index is filled in by the caller, which is the one
-                    // that knows how many staves stand above this one.
+                    // rewrite. The staff index recorded here is the OFFSET in the group being
+                    // built; ToStaffGroups, the one that knows how many staves stand above
+                    // this group, turns it into the global index.
                     addressings?.Add(new CombinedStaffAddressing(
-                        StaffIndex: 0,
+                        StaffIndex: localIndex,
                         FirstPartVoiceCount: combineParts.Length > 0 ? combineParts[0].Length : 0,
                         CombinedVoiceCount: result.Voices.Length,
                         PartItems: result.ItemAddresses));
-                    yield return StaffGroup.CreateSingle(
-                        Staff.Create(combined.Clef,
+                    return Staff.Create(combined.Clef,
                             result.Voices.AddRange(extraVoices),
                             combined.InstrumentName)
                         with
-                        { PartCombineMarks = result.Marks });
+                        { PartCombineMarks = result.Marks };
+
+                default:
+                    throw new InvalidOperationException(
+                        $"{item.GetType().Name} does not engrave one staff and cannot be a group member");
+            }
+        }
+
+        foreach (var item in OrderedItems())
+        {
+            switch (item)
+            {
+                case SingleStaffSpec or CondensedStaffSpec or CombinedStaffSpec:
+                    yield return StaffGroup.CreateSingle(OneStaff(item, 0));
                     break;
 
                 case GrandStaffRenderSpec grand:
-                    var staves = grand.GrandStaff.Staves
-                        .Select(s => Staff.Create(
-                            s.Clef,
-                            getVoices(s.VoiceName),
-                            s.InstrumentName) with
-                        {
-                            RemoveEmpty = s.RemoveEmpty,
-                            RemoveFirst = s.RemoveFirst,
-                            Lines = s.Lines,
-                            PedalStyle = s.PedalStyle,
-                        })
+                    var staves = grand.GrandStaff.Members
+                        .Select((member, i) => OneStaff(member, i))
                         .ToArray();
                     yield return grand.GrandStaff.Type switch
                     {

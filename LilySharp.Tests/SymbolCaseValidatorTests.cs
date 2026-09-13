@@ -229,13 +229,14 @@ public class SymbolCaseValidatorTests
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
         var grand = RenderSpecParser.FindFirst(tree)!
             .Items.OfType<GrandStaffRenderSpec>().Single();
-        Assert.Collection(grand.GrandStaff.Staves,
+        Assert.Collection(grand.GrandStaff.Members,
             top =>
             {
-                Assert.Equal(1, top.Lines);
-                Assert.Equal(new[] { "w" }, top.WithLyrics);
+                var staff = Assert.IsType<SingleStaffSpec>(top).Staff;
+                Assert.Equal(1, staff.Lines);
+                Assert.Equal(new[] { "w" }, staff.WithLyrics);
             },
-            bottom => Assert.Equal(5, bottom.Lines));
+            bottom => Assert.Equal(5, Assert.IsType<SingleStaffSpec>(bottom).Staff.Lines));
     }
 
     // The selector variants wrap the SCORE item instead of the part header.

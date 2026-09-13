@@ -1200,14 +1200,21 @@ TabStyle       = 'numbers' | 'full' ;
                     signature and ties are all there. *)
 
 
-StaffGroupBody = '{' , { StaffRender | 'lyrics' PartRef [ 'sings' PartRef ] } , '}' ;
-                 (* Several staves engraved as ONE GROUP. All three take `staff` items
+StaffGroupBody = '{' , { StaffRender | CondensedStaff | CombinedStaff
+                        | 'lyrics' PartRef [ 'sings' PartRef ] } , '}' ;
+                 (* Several staves engraved as ONE GROUP. All three take one-staff items —
+                    `staff`, and a `condensedStaff { … }` / `combinedStaff { … }`, each of
+                    which engraves ONE staff however many parts it carries, so the woodwind
+                    bracket reads `staffGroup { condensedStaff { fl1 fl2 }  staff ob }` —
                     with `lyrics NAME` rows between them — inside the braces as outside,
                     a bound row directly below the staff it sings is that staff's verse
                     (the chorale writes its words between the sopranos and the altos,
                     and ONE verse serves every staff when each row names its own
                     melody: `staff alt  lyrics verse sings alt`), and a row that
-                    sings no adjacent staff is LYS6012, anything else LYS6011. They differ only in what is drawn down the left edge, and
+                    sings no adjacent staff is LYS6012 (so is a row under a condensed or
+                    combined member: that staff carries several parts, and a verse is ONE
+                    part's), anything else LYS6011. A group inside a group is not in the
+                    grammar. They differ only in what is drawn down the left edge, and
                     each is the LilyPond context of the same name (engraver-init.ly):
 
                       grandStaff    a BRACE, and bar lines drawn through the gap between

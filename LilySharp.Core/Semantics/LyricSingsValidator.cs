@@ -116,12 +116,21 @@ internal sealed class LyricSingsValidator : ISemanticValidator
         foreach (var group in root.DescendantNodes().OfType<GrandStaffRenderSyntax>())
         {
             string? partAbove = null;
+            bool sharedStaffAbove = false;
             foreach (var member in group.ChildNodes())
             {
                 switch (member)
                 {
                     case StaffRenderSyntax st:
                         partAbove = RenderSpecParser.ParseStaffSpec(st)?.VoiceName;
+                        sharedStaffAbove = false;
+                        break;
+                    // A condensed or combined staff carries several parts, so no row can be
+                    // ITS verse — RenderSpecParser.ParseGrandStaff folds only under a plain
+                    // staff, and this is the refusal half of that.
+                    case CondensedStaffRenderSyntax or CombinedStaffRenderSyntax:
+                        partAbove = null;
+                        sharedStaffAbove = true;
                         break;
                     case LyricsRowRenderSyntax row
                         when partAbove == null
@@ -129,7 +138,11 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                         _diagnostics.Error(
                             row.LyricsKeyword.Span,
                             DiagnosticCodes.GroupRowNotBoundToStaffAbove,
-                            partAbove == null
+                            sharedStaffAbove
+                                ? $"lyrics '{row.PartName}' stands under a condensed or combined staff - "
+                                  + "inside a group a row is the verse of the ONE part on the staff above it, "
+                                  + "and that staff carries several; move the row outside the braces."
+                            : partAbove == null
                                 ? $"lyrics '{row.PartName}' stands before any staff in this group - "
                                   + "inside a group a row is the verse of the staff directly above it."
                                 : $"lyrics '{row.PartName}' does not sing '{partAbove}', the staff "
