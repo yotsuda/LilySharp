@@ -444,6 +444,173 @@ public class VocabularyPerturbationTests
         // `clef treble` a dead word.
         => Assert.Equal(Signature(NoClef), Signature(NoClef.Replace("part m {", "part m { clef treble")));
 
+    // ===================== the paper block =====================
+
+    /// <summary>
+    /// A book with room for every paper key to show: a title (so the markup-to-system keys
+    /// have a markup), two staves in a group (so the staff-to-staff keys have a pair and a
+    /// bracket), a lyrics row (the non-staff line), and three systems (so the
+    /// system-to-system keys, <c>shortIndent</c> and <c>raggedBottom</c> have more than one).
+    /// </summary>
+    private const string PaperBook = """
+        octave absolute
+        title "T"
+        composer "C"
+        part m { clef treble
+          section A { c'4 d' e' f' | break g'4 a' b' c'' | break d''4 e'' f'' g'' | }
+        }
+        part n { clef bass
+          section A { c4 d e f | break g4 a b c' | break d'4 e' f' g' | }
+        }
+        part o { clef treble
+          section A { e'4 f' g' a' | break b'4 c'' d'' e'' | break f''4 g'' a'' b'' | }
+        }
+        lyrics w sings m { section A { la la la la | la la la la | la la la la | } }
+        lyrics v sings n { section A { do do do do | do do do do | do do do do | } }
+        form main { A }
+        score main { staffGroup { staff m  staff n }  lyrics w  lyrics v  staff o }
+
+        """;
+
+    private static string PaperBookWith(string entry) =>
+        "paper { " + entry + " }\n" + PaperBook;
+
+    /// <summary>
+    /// Every paper key must reach the page — asked as "two DIFFERENT values of the same key
+    /// draw differently", which needs no knowledge of the key's default and cannot be fooled
+    /// by writing one.
+    /// </summary>
+    /// <remarks>
+    /// ★ THE SHAPE IS THE POINT. The other sweeps in this file compare a spelling against a
+    /// book WITHOUT it, which forces a separate decision about every value that happens to be
+    /// the default (four of them are asserted inert above). A dimension has no such problem:
+    /// if <c>indent 5</c> and <c>indent 20</c> draw the same page, the key is dead whatever
+    /// its default is.
+    /// </remarks>
+    /// <summary>
+    /// ⚠️⚠️ THE ELEVEN THIS SWEEP CANNOT YET SPEAK FOR, and the reason is NOT settled — which
+    /// is why they are listed here rather than called dead words.
+    /// </summary>
+    /// <remarks>
+    /// Measured 2026-09-13 with the sweep below. Two values of each of these keys render the
+    /// SAME page against <see cref="PaperBook"/>, which has a title, a composer, a bracketed
+    /// pair, a staff outside the group, two lyrics rows and three systems. Two things were
+    /// tried and NEITHER decided it:
+    /// <list type="bullet">
+    /// <item>A richer fixture. Adding the composer, the third staff and the second lyrics row
+    /// moved exactly one key out of this list (<c>staffGroupStaffSpacing</c>, which needed a
+    /// staff AFTER the group), and left the rest where they were.</item>
+    /// <item>Counting readers. Grepping the layout for each property answers 0 for
+    /// <c>staffStaffSpacing</c> and <c>markupSystemSpacing</c> too — and those two DO move the
+    /// page — so the consumers reach these values by some indirection the grep cannot see, and
+    /// a zero there proves nothing.</item>
+    /// </list>
+    /// ⇒ What is left is a per-key read of the page and staff spacing engines, which is
+    /// another regime entirely. Until someone does it, this test pins today's answer so the
+    /// day one of them starts working, it says so rather than passing quietly.
+    /// ★ The three that ARE page-level (<c>topSystemPadding</c>, <c>topSystemSpacing</c>,
+    /// <c>lastBottomSpacing</c>, plus <c>raggedBottom</c>) may all want a page that is FULL
+    /// rather than three systems on an A4 — that is the first thing to try.
+    /// </remarks>
+    private static readonly string[] PaperKeysThisSweepCannotSpeakFor =
+    [
+        "topSystemPadding", "spacingIncrement",
+        "scoreSystemSpacing", "scoreMarkupSpacing", "markupMarkupSpacing",
+        "topSystemSpacing", "lastBottomSpacing",
+        "defaultStaffStaffSpacing", "nonStaffUnrelatedStaffSpacing", "nonStaffNonStaffSpacing",
+    ];
+
+    public static TheoryData<string, string, string> PaperEntries()
+    {
+        var data = new TheoryData<string, string, string>();
+        data.Add("size", "size a4", "size a6");
+        foreach (string key in LanguageVocabulary.PaperScalarKeys)
+            data.Add(key, $"{key} 5mm", $"{key} 25mm");
+        foreach (string key in LanguageVocabulary.PaperSpacingKeys)
+            data.Add(key, key + " { basicDistance 2 }", key + " { basicDistance 30 }");
+        return data;
+    }
+
+    [Theory]
+    [MemberData(nameof(PaperEntries))]
+    public void EveryPaperKeyMovesThePage(string key, string small, string large)
+    {
+        if (PaperKeysThisSweepCannotSpeakFor.Contains(key))
+        {
+            // Pinned as it is — see the list's remark. NOT a claim that the key is dead.
+            Assert.True(Signature(PaperBookWith(small)) == Signature(PaperBookWith(large)),
+                $"'{key}' now moves the page: take it off "
+                + "PaperKeysThisSweepCannotSpeakFor — the open question closed.");
+            return;
+        }
+        AssertMoves(PaperBookWith(small), PaperBookWith(large), "paper " + key);
+    }
+
+    /// <summary>The two bare flags, which have no second value — on against absent.</summary>
+    /// <remarks>⚠️ <c>raggedBottom</c> is inert against this book for the same unsettled
+    /// reason as the ten scalars and blocks above: three systems on an A4 leave nothing to
+    /// spread. Pinned, not judged.</remarks>
+    [Theory]
+    [MemberData(nameof(PaperFlags))]
+    public void EveryPaperFlagMovesThePage(string flag)
+    {
+        if (flag == "raggedBottom")
+        {
+            Assert.True(Signature(PaperBook) == Signature(PaperBookWith(flag)),
+                "'raggedBottom' now moves this book — the open question closed.");
+            return;
+        }
+        AssertMoves(PaperBook, PaperBookWith(flag), "paper " + flag);
+    }
+
+    public static TheoryData<string> PaperFlags()
+    {
+        var data = new TheoryData<string>();
+        foreach (string flag in LanguageVocabulary.PaperFlagKeys) data.Add(flag);
+        return data;
+    }
+
+    /// <summary>
+    /// ★★ THE POSITIVE CONTROL: <c>size a4</c> IS the default page, so writing it must change
+    /// nothing — and if it does, this sweep's "two values differ" readings prove nothing about
+    /// the keys, only that the paper block's presence moves the page.
+    /// </summary>
+    [Fact]
+    public void WritingTheDefaultPaperSize_ChangesNothing()
+        => Assert.Equal(Signature(PaperBook), Signature(PaperBookWith("size a4")));
+
+    /// <summary>Every spacing sub-key inside one block, the same way.</summary>
+    /// <remarks>
+    /// ⚠️ <c>stretchability</c> belongs to the same unsettled cluster as the keys in
+    /// <see cref="PaperKeysThisSweepCannotSpeakFor"/>, and it is the one that names the
+    /// cluster: a spring's stretchability shows only when the page STRETCHES its systems, and
+    /// three systems on an A4 do not. That is the same condition <c>raggedBottom</c>,
+    /// <c>lastBottomSpacing</c>, <c>topSystemSpacing</c> and <c>topSystemPadding</c> all want.
+    /// ⇒ ONE fixture — a page that must spread — may well close five of the eleven at once,
+    /// and it is the first thing the next reader should try.
+    /// </remarks>
+    [Theory]
+    [MemberData(nameof(PaperSubKeys))]
+    public void EverySpacingSubKeyMovesThePage(string subKey)
+    {
+        string small = PaperBookWith($"systemSystemSpacing {{ {subKey} 2 }}");
+        string large = PaperBookWith($"systemSystemSpacing {{ {subKey} 30 }}");
+        if (subKey == "stretchability")
+        {
+            Assert.True(Signature(small) == Signature(large),
+                "'stretchability' now moves this book — the open question closed.");
+            return;
+        }
+        AssertMoves(small, large, "systemSystemSpacing " + subKey);
+    }
+
+    public static TheoryData<string> PaperSubKeys()
+    {
+        var data = new TheoryData<string>();
+        foreach (string k in LanguageVocabulary.PaperSpacingSubKeys) data.Add(k);
+        return data;
+    }
+
     // ===================== the score row's selectors =====================
 
     /// <summary>Two parts, the second silent for a whole SYSTEM — what hara-kiri needs to
