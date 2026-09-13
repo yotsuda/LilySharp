@@ -26,8 +26,8 @@
   <text x="43.58" y="19.35" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="720">4</text>
   <text x="46.09" y="20.83" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="727">7</text>
   <text x="48.59" y="19.35" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="733">4</text>
-  <line x1="0.05" y1="15.29" x2="50.80" y2="15.29" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="16.79" x2="50.80" y2="16.79" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="15.29" x2="50.75" y2="15.29" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="16.79" x2="50.75" y2="16.79" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.05" y1="18.29" x2="11.17" y2="18.29" stroke="#000000" stroke-width="0.100"/>
   <line x1="12.88" y1="18.29" x2="13.93" y2="18.29" stroke="#000000" stroke-width="0.100"/>
   <line x1="15.63" y1="18.29" x2="16.43" y2="18.29" stroke="#000000" stroke-width="0.100"/>
@@ -40,12 +40,12 @@
   <line x1="39.68" y1="18.29" x2="40.47" y2="18.29" stroke="#000000" stroke-width="0.100"/>
   <line x1="42.18" y1="18.29" x2="42.73" y2="18.29" stroke="#000000" stroke-width="0.100"/>
   <line x1="44.44" y1="18.29" x2="47.74" y2="18.29" stroke="#000000" stroke-width="0.100"/>
-  <line x1="49.44" y1="18.29" x2="50.80" y2="18.29" stroke="#000000" stroke-width="0.100"/>
+  <line x1="49.44" y1="18.29" x2="50.75" y2="18.29" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.05" y1="19.79" x2="8.42" y2="19.79" stroke="#000000" stroke-width="0.100"/>
   <line x1="10.13" y1="19.79" x2="23.69" y2="19.79" stroke="#000000" stroke-width="0.100"/>
   <line x1="25.40" y1="19.79" x2="29.96" y2="19.79" stroke="#000000" stroke-width="0.100"/>
   <line x1="31.66" y1="19.79" x2="45.23" y2="19.79" stroke="#000000" stroke-width="0.100"/>
-  <line x1="46.94" y1="19.79" x2="50.80" y2="19.79" stroke="#000000" stroke-width="0.100"/>
+  <line x1="46.94" y1="19.79" x2="50.75" y2="19.79" stroke="#000000" stroke-width="0.100"/>
   <polygon points="9.21,13.55 17.35,13.55 17.35,14.03 9.21,14.03"/>
   <line x1="9.27" y1="18.32" x2="9.27" y2="13.79" stroke="#000000" stroke-width="0.130"/>
   <line x1="12.03" y1="16.82" x2="12.03" y2="13.79" stroke="#000000" stroke-width="0.130"/>

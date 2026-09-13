@@ -8,11 +8,11 @@
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="777">Dashed Barline</text>
   <text x="110.97" y="15.76" font-size="2.20" text-anchor="end" data-pos="803">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.05" y1="23.96" x2="74.78" y2="23.96" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="24.96" x2="74.78" y2="24.96" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="25.96" x2="74.78" y2="25.96" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="26.96" x2="74.78" y2="26.96" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="27.96" x2="74.78" y2="27.96" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="23.96" x2="74.73" y2="23.96" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="24.96" x2="74.73" y2="24.96" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="25.96" x2="74.73" y2="25.96" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="26.96" x2="74.73" y2="26.96" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="27.96" x2="74.73" y2="27.96" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="26.96" font-size="4.00"></text>
   <text class="music" x="4.88" y="25.96" font-size="4.00" data-pos="827"></text>
   <line x1="8.26" y1="28.96" x2="10.22" y2="28.96" stroke="#000000" stroke-width="0.200"/>

@@ -8,11 +8,11 @@
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="589">Ossia Key</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <g transform="translate(0.00,17.08) scale(0.7071,0.7071)">
-  <line x1="13.11" y1="0.00" x2="33.13" y2="0.00" stroke="#000000" stroke-width="0.100"/>
-  <line x1="13.11" y1="1.00" x2="33.13" y2="1.00" stroke="#000000" stroke-width="0.100"/>
-  <line x1="13.11" y1="2.00" x2="33.13" y2="2.00" stroke="#000000" stroke-width="0.100"/>
-  <line x1="13.11" y1="3.00" x2="33.13" y2="3.00" stroke="#000000" stroke-width="0.100"/>
-  <line x1="13.11" y1="4.00" x2="33.13" y2="4.00" stroke="#000000" stroke-width="0.100"/>
+  <line x1="13.11" y1="0.00" x2="33.08" y2="0.00" stroke="#000000" stroke-width="0.100"/>
+  <line x1="13.11" y1="1.00" x2="33.08" y2="1.00" stroke="#000000" stroke-width="0.100"/>
+  <line x1="13.11" y1="2.00" x2="33.08" y2="2.00" stroke="#000000" stroke-width="0.100"/>
+  <line x1="13.11" y1="3.00" x2="33.08" y2="3.00" stroke="#000000" stroke-width="0.100"/>
+  <line x1="13.11" y1="4.00" x2="33.08" y2="4.00" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="5.92" y="0.00" font-size="4.00" data-pos="631"></text>
   <text class="music" x="7.02" y="1.50" font-size="4.00" data-pos="631"></text>
   <text class="music" x="15.89" y="1.00" font-size="4.00" data-pos="737"></text>
@@ -25,11 +25,11 @@
   <line x1="28.72" y1="-0.35" x2="28.72" y2="3.00" stroke="#000000" stroke-width="0.130"/>
   <rect x="32.86" y="0.00" width="0.27" height="4.00" data-pos="752"/>
   </g>
-  <line x1="0.05" y1="25.49" x2="36.34" y2="25.49" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="26.49" x2="36.34" y2="26.49" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="27.49" x2="36.34" y2="27.49" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="28.49" x2="36.34" y2="28.49" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="29.49" x2="36.34" y2="29.49" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="25.49" x2="36.29" y2="25.49" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="26.49" x2="36.29" y2="26.49" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="27.49" x2="36.29" y2="27.49" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="28.49" x2="36.29" y2="28.49" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="29.49" x2="36.29" y2="29.49" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="28.49" font-size="4.00"></text>
   <text class="music" x="4.19" y="25.49" font-size="4.00" data-pos="631"></text>
   <text class="music" x="5.29" y="26.99" font-size="4.00" data-pos="631"></text>

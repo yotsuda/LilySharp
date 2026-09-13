@@ -8,11 +8,11 @@
   <rect x="0" y="0" width="119.50" height="30.59" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="522">Fingering + articulation</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.05" y1="19.36" x2="20.43" y2="19.36" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="20.36" x2="20.43" y2="20.36" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="21.36" x2="20.43" y2="21.36" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="22.36" x2="20.43" y2="22.36" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="23.36" x2="20.43" y2="23.36" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="19.36" x2="20.38" y2="19.36" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="20.36" x2="20.38" y2="20.36" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="21.36" x2="20.38" y2="21.36" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="22.36" x2="20.38" y2="22.36" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="23.36" x2="20.38" y2="23.36" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="22.36" font-size="4.00"></text>
   <text class="music" x="4.88" y="21.36" font-size="4.00" data-pos="570"></text>
   <line x1="11.51" y1="18.36" x2="13.47" y2="18.36" stroke="#000000" stroke-width="0.200"/>

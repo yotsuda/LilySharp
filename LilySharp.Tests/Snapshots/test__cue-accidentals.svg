@@ -8,11 +8,11 @@
   <rect x="0" y="0" width="119.50" height="30.71" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="476">Cue Accidentals</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.05" y1="16.52" x2="38.61" y2="16.52" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="17.52" x2="38.61" y2="17.52" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="18.52" x2="38.61" y2="18.52" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="19.52" x2="38.61" y2="19.52" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="20.52" x2="38.61" y2="20.52" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="16.52" x2="38.56" y2="16.52" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="17.52" x2="38.56" y2="17.52" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="18.52" x2="38.56" y2="18.52" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="19.52" x2="38.56" y2="19.52" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="20.52" x2="38.56" y2="20.52" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="19.52" font-size="4.00"></text>
   <text class="music" x="4.88" y="18.52" font-size="4.00" data-pos="499"></text>
   <line x1="10.22" y1="21.52" x2="12.03" y2="21.52" stroke="#000000" stroke-width="0.200"/>

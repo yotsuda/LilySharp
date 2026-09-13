@@ -7,11 +7,11 @@
   <rect x="0" y="0" width="119.50" height="31.71" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="532">Script stacking</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.05" y1="20.48" x2="20.43" y2="20.48" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="21.48" x2="20.43" y2="21.48" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="22.48" x2="20.43" y2="22.48" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="23.48" x2="20.43" y2="23.48" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="24.48" x2="20.43" y2="24.48" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="20.48" x2="20.38" y2="20.48" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="21.48" x2="20.38" y2="21.48" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="22.48" x2="20.38" y2="22.48" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="23.48" x2="20.38" y2="23.48" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="24.48" x2="20.38" y2="24.48" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="23.48" font-size="4.00"></text>
   <text class="music" x="4.88" y="22.48" font-size="4.00" data-pos="571"></text>
   <line x1="11.51" y1="19.48" x2="13.47" y2="19.48" stroke="#000000" stroke-width="0.200"/>

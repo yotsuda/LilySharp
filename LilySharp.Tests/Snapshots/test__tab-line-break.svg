@@ -35,8 +35,8 @@
   <text x="91.43" y="14.58" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1107">0</text>
   <text x="95.17" y="14.58" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1109">0</text>
   <text x="98.91" y="14.58" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1111">0</text>
-  <line x1="0.05" y1="10.54" x2="102.43" y2="10.54" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="12.04" x2="102.43" y2="12.04" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="10.54" x2="102.38" y2="10.54" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="12.04" x2="102.38" y2="12.04" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.05" y1="13.54" x2="8.42" y2="13.54" stroke="#000000" stroke-width="0.100"/>
   <line x1="10.13" y1="13.54" x2="12.16" y2="13.54" stroke="#000000" stroke-width="0.100"/>
   <line x1="13.87" y1="13.54" x2="15.90" y2="13.54" stroke="#000000" stroke-width="0.100"/>
@@ -61,8 +61,8 @@
   <line x1="88.54" y1="13.54" x2="90.58" y2="13.54" stroke="#000000" stroke-width="0.100"/>
   <line x1="92.28" y1="13.54" x2="94.32" y2="13.54" stroke="#000000" stroke-width="0.100"/>
   <line x1="96.03" y1="13.54" x2="98.06" y2="13.54" stroke="#000000" stroke-width="0.100"/>
-  <line x1="99.77" y1="13.54" x2="102.43" y2="13.54" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="15.04" x2="102.43" y2="15.04" stroke="#000000" stroke-width="0.100"/>
+  <line x1="99.77" y1="13.54" x2="102.38" y2="13.54" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="15.04" x2="102.38" y2="15.04" stroke="#000000" stroke-width="0.100"/>
   <polygon points="9.21,8.80 20.56,8.80 20.56,9.28 9.21,9.28"/>
   <line x1="9.27" y1="12.08" x2="9.27" y2="9.04" stroke="#000000" stroke-width="0.130"/>
   <line x1="13.01" y1="12.08" x2="13.01" y2="9.04" stroke="#000000" stroke-width="0.130"/>
@@ -121,8 +121,8 @@
   <text x="91.09" y="26.58" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1161">0</text>
   <text x="94.94" y="26.58" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1163">0</text>
   <text x="98.80" y="26.58" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1165">0</text>
-  <line x1="0.05" y1="22.54" x2="102.43" y2="22.54" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="24.04" x2="102.43" y2="24.04" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="22.54" x2="102.38" y2="22.54" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="24.04" x2="102.38" y2="24.04" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.05" y1="25.54" x2="5.60" y2="25.54" stroke="#000000" stroke-width="0.100"/>
   <line x1="7.31" y1="25.54" x2="9.45" y2="25.54" stroke="#000000" stroke-width="0.100"/>
   <line x1="11.16" y1="25.54" x2="13.31" y2="25.54" stroke="#000000" stroke-width="0.100"/>
@@ -147,8 +147,8 @@
   <line x1="88.09" y1="25.54" x2="90.23" y2="25.54" stroke="#000000" stroke-width="0.100"/>
   <line x1="91.94" y1="25.54" x2="94.09" y2="25.54" stroke="#000000" stroke-width="0.100"/>
   <line x1="95.80" y1="25.54" x2="97.95" y2="25.54" stroke="#000000" stroke-width="0.100"/>
-  <line x1="99.65" y1="25.54" x2="102.43" y2="25.54" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="27.04" x2="102.43" y2="27.04" stroke="#000000" stroke-width="0.100"/>
+  <line x1="99.65" y1="25.54" x2="102.38" y2="25.54" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="27.04" x2="102.38" y2="27.04" stroke="#000000" stroke-width="0.100"/>
   <polygon points="6.39,20.80 18.08,20.80 18.08,21.28 6.39,21.28"/>
   <line x1="6.45" y1="24.08" x2="6.45" y2="21.04" stroke="#000000" stroke-width="0.130"/>
   <line x1="10.31" y1="24.08" x2="10.31" y2="21.04" stroke="#000000" stroke-width="0.130"/>

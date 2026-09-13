@@ -7,11 +7,11 @@
   <rect x="0" y="0" width="119.50" height="33.95" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="979">To Coda beside a segno target</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.05" y1="21.22" x2="55.85" y2="21.22" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="22.22" x2="55.85" y2="22.22" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="23.22" x2="55.85" y2="23.22" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="24.22" x2="55.85" y2="24.22" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="25.22" x2="55.85" y2="25.22" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="21.22" x2="55.80" y2="21.22" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="22.22" x2="55.80" y2="22.22" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="23.22" x2="55.80" y2="23.22" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="24.22" x2="55.80" y2="24.22" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="25.22" x2="55.80" y2="25.22" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="24.22" font-size="4.00" data-pos="1035"></text>
   <text class="music" x="4.88" y="23.22" font-size="4.00" data-pos="1016"></text>
   <line x1="8.26" y1="26.22" x2="10.22" y2="26.22" stroke="#000000" stroke-width="0.200"/>

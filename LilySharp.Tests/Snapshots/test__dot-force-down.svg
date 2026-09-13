@@ -6,11 +6,11 @@
 </style>
   <rect x="0" y="0" width="119.50" height="22.79" fill="#FFFFFF"/>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.05" y1="11.56" x2="16.89" y2="11.56" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="12.56" x2="16.89" y2="12.56" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="13.56" x2="16.89" y2="13.56" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="14.56" x2="16.89" y2="14.56" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="15.56" x2="16.89" y2="15.56" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="11.56" x2="16.84" y2="11.56" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="12.56" x2="16.84" y2="12.56" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="13.56" x2="16.84" y2="13.56" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="14.56" x2="16.84" y2="14.56" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="15.56" x2="16.84" y2="15.56" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="14.56" font-size="4.00" data-pos="1167"></text>
   <text class="music" x="4.95" y="13.56" font-size="4.00" data-pos="1149">2</text>
   <text class="music" x="4.88" y="15.56" font-size="4.00" data-pos="1149">4</text>

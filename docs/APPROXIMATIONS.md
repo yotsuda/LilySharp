@@ -263,7 +263,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Prefix.cs`
 - **:516** LILYSHARP-OWN: the '+' of a compound meter's numerator, which LilyPond
 ### `LilySharp.Core/Rendering/SharedRenderer.Tab.cs`
-- **:829** ⚠️ LILYSHARP-OWN, the other half: which x IS the centre when the digits do not
+- **:830** ⚠️ LILYSHARP-OWN, the other half: which x IS the centre when the digits do not
 ### `LilySharp.Core/Rendering/TextFontMetrics.cs`
 - **:543** LILYSHARP-OWN: LilyPond has no equivalent refusal, and cannot — it resolves through
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`

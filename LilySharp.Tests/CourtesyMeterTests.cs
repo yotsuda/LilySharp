@@ -133,10 +133,23 @@ public sealed class CourtesyMeterTests
         // own x would measure from the centred row and come out short.
         double inkLeft = courtesy.Min(x => x.X);
         double glyphY = courtesy[0].Y;
-        double staffRight = g.Lines
+        double staffRight = LineEdge(g, glyphY);
+        return staffRight - (inkLeft + lastInkWidth);
+    }
+
+    /// <summary>
+    /// The LINE EDGE the right-edge padding is measured from: the drawn staff line's end plus
+    /// half its thickness, because the ink stops t/2 short of the span it belongs to
+    /// (lily/staff-symbol.cc:84 Staff_symbol::print, <c>SharedRenderer.StaffLineInkRight</c>).
+    /// Read against the drawn ink the same 0.5 would come out 0.45, in LilyPond as here —
+    /// probes/courtesy-meter.ly measures both.
+    /// </summary>
+    private static double LineEdge(RenderedGeometry g, double glyphY)
+    {
+        double inkRight = g.Lines
             .Where(l => System.Math.Abs(l.Y1 - l.Y2) < 1e-9 && System.Math.Abs(l.Y1 - glyphY) < 6.0)
             .Max(l => System.Math.Max(l.X1, l.X2));
-        return staffRight - (inkLeft + lastInkWidth);
+        return inkRight + LilySharp.Core.Svg.EngravingDefaults.StaffLineThickness / 2.0;
     }
 
     /// <summary>
@@ -212,9 +225,7 @@ public sealed class CourtesyMeterTests
         double barRight = g.BarlineRight(0);
         var courtesy = g.Glyphs.Where(x => x.X > barRight + 1e-9).ToList();
         double glyphY = courtesy[0].Y;
-        double staffRight = g.Lines
-            .Where(l => System.Math.Abs(l.Y1 - l.Y2) < 1e-9 && System.Math.Abs(l.Y1 - glyphY) < 6.0)
-            .Max(l => System.Math.Max(l.X1, l.X2));
+        double staffRight = LineEdge(g, glyphY);
         return staffRight - courtesy.Max(x => x.X);
     }
 
@@ -229,9 +240,7 @@ public sealed class CourtesyMeterTests
         double barRight = g.BarlineRight(0);
         var courtesy = g.Glyphs.Where(x => x.X > barRight + 1e-9).ToList();
         double glyphY = courtesy[0].Y;
-        double staffRight = g.Lines
-            .Where(l => System.Math.Abs(l.Y1 - l.Y2) < 1e-9 && System.Math.Abs(l.Y1 - glyphY) < 6.0)
-            .Max(l => System.Math.Max(l.X1, l.X2));
+        double staffRight = LineEdge(g, glyphY);
         return staffRight
              - (courtesy.Max(x => x.X)
                 + LilySharp.Core.Svg.Layout.GlyphMetrics.GetKeySignatureAccidentalWidth(true));

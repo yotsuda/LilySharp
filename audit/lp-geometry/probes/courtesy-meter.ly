@@ -110,8 +110,10 @@ sweep =
 % ⚠️ THE STAFF SYMBOL IS NOT THE LINE EDGE. StaffSymbol's X-extent is (0.05 . W-0.05) — inset
 % by half the 0.1 line thickness at BOTH ends — so the margin read against the drawn staff
 % line is 0.450000 and against the line edge is 0.500000. The alist entry is the second one.
-% (Lily# draws its staff line to the edge, without the inset. That ±0.05 is a real difference
-% and is NOT this one; it is noted here so the next reader does not close it as this.)
+% (Until session 376 Lily# drew its staff line to the edge, without the inset, and the three
+% courtesy line-end ledger points added the 0.05 back to match. Session 376 ported the inset at
+% both ends — SharedRenderer.StaffLineInkLeft / StaffLineInkRight, lily/staff-symbol.cc:84 — and
+% the points now hold LilyPond's staff-line reading as measured. It was never the right-edge gap.)
 %
 % Output: PROBELE <name> <what> x=<x in system> ext=<X-extent> breakdir=<-1 end | 1 begin>
 
@@ -206,7 +208,8 @@ edgesweep =
 % -----------------------------------------------------------------------------------------
 % WHAT THIS SECTION FOUND (2026-08-18, session 206)
 %
-% Line edge = STAFF right + 0.05 (the inset above). Every score below has line-width 60
+% Line edge = STAFF right + 0.05 (the inset above; Lily# draws the same inset since session 376,
+% so a margin read against its drawn staff line is 0.45 as well). Every score below has line-width 60
 % unless named otherwise, so its line edge is 34.143307.
 %
 %   score    last grob at line end   its ink right edge   line edge    margin

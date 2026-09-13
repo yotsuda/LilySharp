@@ -82,6 +82,18 @@ public class SystemStartBracePlacementTests
         => Assert.Equal(expected,
             LilySharp.Core.Rendering.SharedRenderer.StaffLineInkLeft(spanStart, thickness), 9);
 
+    /// <summary>
+    /// And its ink ends half its thickness before the span end — LilyPond 2.26.0
+    /// (scratch/p377/staffright, the twin of test/break): the last BarLine's right edge is
+    /// 102.429921 and the StaffSymbol ends at 102.379921.
+    /// </summary>
+    [Theory]
+    [InlineData(102.42992125984249, 0.1, 102.37992125984249)]
+    [InlineData(10.0, 0.2, 9.9)]
+    public void StaffLineInkRight_MatchesLilyPond(double spanEnd, double thickness, double expected)
+        => Assert.Equal(expected,
+            LilySharp.Core.Rendering.SharedRenderer.StaffLineInkRight(spanEnd, thickness), 9);
+
     /// <summary>LilyPond's SystemStartBar, which every other delimiter chains from.</summary>
     [Fact]
     public void SystemStartBarLeftEdge_MatchesLilyPond()

@@ -7,11 +7,11 @@
   <rect x="0" y="0" width="119.50" height="34.95" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="231">Lyrics below marcato</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.05" y1="20.73" x2="38.69" y2="20.73" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="21.73" x2="38.69" y2="21.73" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="22.73" x2="38.69" y2="22.73" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="23.73" x2="38.69" y2="23.73" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="24.73" x2="38.69" y2="24.73" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="20.73" x2="38.64" y2="20.73" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="21.73" x2="38.64" y2="21.73" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="22.73" x2="38.64" y2="22.73" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="23.73" x2="38.64" y2="23.73" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="24.73" x2="38.64" y2="24.73" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="23.73" font-size="4.00" data-pos="305"></text>
   <text class="music" x="4.88" y="22.73" font-size="4.00" data-pos="269"></text>
   <line x1="8.26" y1="25.73" x2="10.22" y2="25.73" stroke="#000000" stroke-width="0.200"/>

@@ -607,7 +607,7 @@ internal static partial class SharedRenderer
             // in the clean space left of it — LP: the StaffSymbol spans the
             // system, whose left edge IS the indent).
             double lineStartX = StaffLineInkLeft(systemStartX, EngravingDefaults.StaffLineThickness),
-                lineEndX = notationStaffRight;
+                lineEndX = StaffLineInkRight(notationStaffRight, EngravingDefaults.StaffLineThickness);
             if (isOssia)
             {
                 (fragFrom, fragTo) = OssiaFragment(staff, system);
@@ -622,7 +622,8 @@ internal static partial class SharedRenderer
                     // sgc takes page-unit X, so the page offset is scaled with the line.
                     if (ml.MeasureIndex == fragFrom)
                         lineStartX = StaffLineInkLeft(ml.X, EngravingDefaults.StaffLineThickness * OssiaScale);
-                    if (ml.MeasureIndex == fragTo) lineEndX = ml.X + ml.Width;
+                    if (ml.MeasureIndex == fragTo)
+                        lineEndX = StaffLineInkRight(ml.X + ml.Width, EngravingDefaults.StaffLineThickness * OssiaScale);
                 }
             }
 
@@ -892,12 +893,27 @@ internal static partial class SharedRenderer
     /// thickness doubled — so it is half the line's own thickness, not a constant. Until
     /// session 376 Lily# started the ink at the span start, 0.05 left.
     /// <para>
-    /// ⚠️ ONLY THE LEFT END. LilyPond pulls the right end in by the same half thickness, but
-    /// Lily#'s right end has not been measured against LilyPond, so it is left alone.
+    /// The right end is <see cref="StaffLineInkRight"/>, the same line of LilyPond.
     /// </para>
     /// </remarks>
     internal static double StaffLineInkLeft(double spanStart, double thickness)
         => spanStart + thickness / 2.0;
+
+    /// <summary>
+    /// Where a staff line's ink ends, given the X its staff symbol spans to.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/staff-symbol.cc:84 Staff_symbol::print — <c>span_points[d] -= d * t / 2</c>
+    /// on the RIGHT pulls the end in by half the line's own thickness. MEASURED, LilyPond 2.26.0
+    /// -dbackend=null (scratch/p377/staffright, the lysc-ly twins of test/break,
+    /// test/timesig-change-linebreak, test/dashed-barline and test/tab-string-pinned): on all six
+    /// systems the StaffSymbol X extent ends exactly 0.05 before the last BarLine's right edge,
+    /// which is where the span ends. Until session 376 Lily# drew the ink to the span's end. On
+    /// an ordinary line end the 0.05 lies inside the bar line's own ink; it shows only where a
+    /// courtesy signature ends the line.
+    /// </remarks>
+    internal static double StaffLineInkRight(double spanEnd, double thickness)
+        => spanEnd - thickness / 2.0;
 
     private static void DrawStaffLines(double staffY, double width, IDrawingContext gc, double startX = 0,
         int lines = 5)

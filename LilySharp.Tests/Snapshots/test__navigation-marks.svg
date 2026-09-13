@@ -7,11 +7,11 @@
   <rect x="0" y="0" width="119.50" height="32.74" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="393">Navigation marks</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.05" y1="19.51" x2="72.10" y2="19.51" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="20.51" x2="72.10" y2="20.51" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="21.51" x2="72.10" y2="21.51" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="22.51" x2="72.10" y2="22.51" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="23.51" x2="72.10" y2="23.51" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="19.51" x2="72.05" y2="19.51" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="20.51" x2="72.05" y2="20.51" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="21.51" x2="72.05" y2="21.51" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="22.51" x2="72.05" y2="22.51" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="23.51" x2="72.05" y2="23.51" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="22.51" font-size="4.00" data-pos="437"></text>
   <text class="music" x="4.88" y="21.51" font-size="4.00" data-pos="417"></text>
   <line x1="8.26" y1="24.51" x2="10.22" y2="24.51" stroke="#000000" stroke-width="0.200"/>

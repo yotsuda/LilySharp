@@ -257,7 +257,8 @@ internal static partial class SharedRenderer
         // (indented) system they overrun to the left.
         for (int i = 0; i < stringCount; i++)
             DrawTabStringLine(StaffLineInkLeft(systemStartX, EngravingDefaults.StaffLineThickness),
-                lineRight, staffY - i * stringSpace, i, digitGaps, gc);
+                StaffLineInkRight(lineRight, EngravingDefaults.StaffLineThickness),
+                staffY - i * stringSpace, i, digitGaps, gc);
     }
 
     /// <summary>

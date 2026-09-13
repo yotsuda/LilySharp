@@ -8,11 +8,11 @@
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="98">Expressions &amp; Dynamics</text>
   <text x="110.97" y="15.76" font-size="2.20" text-anchor="end" data-pos="132">Lily# Showcase</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.05" y1="27.17" x2="102.43" y2="27.17" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="28.17" x2="102.43" y2="28.17" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="29.17" x2="102.43" y2="29.17" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="30.17" x2="102.43" y2="30.17" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="31.17" x2="102.43" y2="31.17" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="27.17" x2="102.38" y2="27.17" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="28.17" x2="102.38" y2="28.17" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="29.17" x2="102.38" y2="29.17" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="30.17" x2="102.38" y2="30.17" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="31.17" x2="102.38" y2="31.17" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="30.17" font-size="4.00"></text>
   <text class="music" x="4.19" y="27.17" font-size="4.00" data-pos="173"></text>
   <text class="music" x="5.29" y="28.67" font-size="4.00" data-pos="173"></text>

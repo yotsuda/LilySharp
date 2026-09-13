@@ -8,11 +8,11 @@
   <text x="59.75" y="12.21" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="55">Beaming</text>
   <text x="110.97" y="15.71" font-size="2.20" text-anchor="end" data-pos="74">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.05" y1="23.91" x2="102.43" y2="23.91" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="24.91" x2="102.43" y2="24.91" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="25.91" x2="102.43" y2="25.91" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="26.91" x2="102.43" y2="26.91" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="27.91" x2="102.43" y2="27.91" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="23.91" x2="102.38" y2="23.91" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="24.91" x2="102.38" y2="24.91" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="25.91" x2="102.38" y2="25.91" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="26.91" x2="102.38" y2="26.91" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.05" y1="27.91" x2="102.38" y2="27.91" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="26.91" font-size="4.00"></text>
   <text class="music" x="4.88" y="25.91" font-size="4.00" data-pos="98"></text>
   <line x1="7.92" y1="28.91" x2="9.88" y2="28.91" stroke="#000000" stroke-width="0.200"/>
