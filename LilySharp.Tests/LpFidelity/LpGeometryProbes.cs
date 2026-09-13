@@ -12407,6 +12407,38 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// The CROSS-VOICE column rod, which reads the PAPER column's skylines: padded 0.08, not 0.15.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/separation-item.cc:92-110 Separation_item::calc_skylines — each separation item pads by its own
+    /// skyline-vertical-padding: NoteColumn 0.15 (scm/define-grobs.scm:2577) for the wish, PaperColumn 0.08
+    /// (:2747) for the rod. Voice 2's f'' at 1/8 and voice 1's ledgered triplet c''' at 1/6 are a
+    /// pair no voice spans, so only the rod floors them; padded 0.08 their skylines miss each other
+    /// in Y and the pair keeps its bare duration ideal. Lily# padded 0.15 until session 379 and held it
+    /// at 1.4492. One pitch per voice, so <see cref="RenderedGeometry.NoteheadAnchorsOnSystem"/>'s
+    /// Y groups are the two voices (index 0 the higher, c''').
+    /// <remarks>LilyPond twin: probe score CVR in cross-voice-rod.ly (Lily# <c>c''</c> = LilyPond
+    /// <c>c'''</c>, <c>f'</c> = <c>f''</c>).</remarks>
+    /// </remarks>
+    private static readonly string CVR = """
+        octave absolute
+        time 4/4
+
+        part mel { clef treble }
+
+        section S {
+          mel {
+            voice { tuplet 3/2 { c''4 c'' c'' } c''2 | }
+            { f'8 f' f' f' f' f' f' f' | }
+          }
+        }
+
+        form main { S }
+
+        score main "CVR" { staff mel }
+        """;
+
+    /// <summary>
     /// The line start of a COMPRESSED line — the one regime every other
     /// <c>line-start.*</c> point is blind to.
     /// </summary>
@@ -16058,6 +16090,10 @@ internal static class LpGeometryProbes
             g => g.NoteheadAnchorsOnSystem(0)[14] - g.NoteheadAnchorsOnSystem(0)[13]),
         new("ledger.rod.thirty-second.no-ledger", LN,
             g => g.NoteheadAnchorsOnSystem(0)[14] - g.NoteheadAnchorsOnSystem(0)[13]),
+        // The cross-voice column rod reads the PAPER column's skylines, padded 0.08 (session 379):
+        // voice 1's second triplet c''' (1/6, Y group 0) less voice 2's second f'' (1/8, group 1).
+        new("cross-voice.rod.paper-column-padding", CVR,
+            g => g.NoteheadAnchorsOnSystem(0)[1] - g.NoteheadAnchorsOnSystem(1)[1]),
         // …and the regime the two above turned out NOT to reach: a line squeezed until every
         // note-to-note spring sits on its MINIMUM. This is the only place a spring minimum is
         // observable, so it is the ledger key for GlyphMetrics.MinItemGap 0.4 — the knob

@@ -181,8 +181,8 @@
 ### `LilySharp.Core/Svg/Layout/GraceNoteEngraver.cs`
 - **:499** observed by: NO OBSERVER — every book in the corpus quants, so nothing reaches the
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
-- **:442** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
-- **:712** NOT MEASURED — no ledger point reads a flag's draw x, and the last
+- **:459** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
+- **:729** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
 - **:2130** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
 - **:2152** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT

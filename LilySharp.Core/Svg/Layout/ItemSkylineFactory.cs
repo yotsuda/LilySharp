@@ -200,17 +200,31 @@ internal static class ItemSkylineFactory
     /// <param name="referenceX">X coordinate of the reference point (notehead center)</param>
     /// <param name="staffY">Y coordinate of the staff's middle line</param>
     public static HorizontalSkyline CreateRightSkyline(MusicItem item, double referenceX, double staffY)
-        => Build(item, referenceX, staffY, ColumnElements.Elements, HorizontalDirection.Right);
+        => Build(item, referenceX, staffY, ColumnElements.Elements, HorizontalDirection.Right,
+                 SpacingRules.MusicalColumnSkylineVerticalPadding);
 
     /// <summary>
-    /// A skyline over the chosen parts, padded when it is BUILT (LilyPond's intrinsic
-    /// skyline-vertical-padding — SpacingRules.NoteColumnSkylineVerticalPadding); the
-    /// distance padding (0.08) is added on top by the readers.
+    /// A skyline over the chosen parts, padded when it is BUILT with the padding of the
+    /// separation item it stands for — LilyPond's intrinsic skyline-vertical-padding.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/separation-item.cc:92-110 Separation_item::calc_skylines — each separation item pads its
+    ///   own skyline pair by ITS OWN skyline-vertical-padding before storing it.
+    /// LILYPOND-REF: scm/define-grobs.scm:2577 NoteColumn skyline-vertical-padding — 0.15, the WISH's view
+    ///   (<see cref="SpacingRules.NoteColumnSkylineVerticalPadding"/>).
+    /// LILYPOND-REF: scm/define-grobs.scm:2747 PaperColumn skyline-vertical-padding — 0.08, the ROD's view
+    ///   (<see cref="SpacingRules.MusicalColumnSkylineVerticalPadding"/>).
+    /// ⚠️ UNTIL SESSION 379 EVERY VIEW WAS PADDED 0.15, the rod's included. MEASURED (2.26.0,
+    /// scratch/p380/incr, test/multivoice-tuplet-beams bar 1): voice 2's f'' and voice 1's ledgered
+    /// c''' stand 0.80 apart in LilyPond, whose paper-column skylines miss each other by 0.135 in
+    /// Y; padded 0.15 they overlapped by 0.14 and the cross-voice rod held the pair at 1.4492 —
+    /// rebuilt from the same boxes at 0.08 the rod is 0.
+    /// </remarks>
     private static HorizontalSkyline Build(MusicItem item, double referenceX, double staffY,
-                                           ColumnElements which, HorizontalDirection direction)
+                                           ColumnElements which, HorizontalDirection direction,
+                                           double verticalPadding)
         => HorizontalSkyline.FromBoxes(Boxes(item, referenceX, staffY, which), direction)
-            .PaddedCopy(SpacingRules.NoteColumnSkylineVerticalPadding);
+            .PaddedCopy(verticalPadding);
 
     /// <summary>
     /// The WISH's view of a column's right side, origin at <paramref name="columnX"/>: the
@@ -222,7 +236,8 @@ internal static class ItemSkylineFactory
     /// measurement.</remarks>
     public static HorizontalSkyline CreateWishRightSkylineAtColumn(MusicItem item, double columnX, double staffY)
         => Build(item, columnX + ColumnReferenceOffset(item), staffY,
-                 ColumnElements.NoteColumn, HorizontalDirection.Right);
+                 ColumnElements.NoteColumn, HorizontalDirection.Right,
+                 SpacingRules.NoteColumnSkylineVerticalPadding);
 
     /// <summary>
     /// The WISH's view of a column's left side: the note column's elements plus the
@@ -232,7 +247,8 @@ internal static class ItemSkylineFactory
     /// <inheritdoc cref="CreateWishRightSkylineAtColumn"/>
     public static HorizontalSkyline CreateWishLeftSkylineAtColumn(MusicItem item, double columnX, double staffY)
         => Build(item, columnX + ColumnReferenceOffset(item), staffY,
-                 ColumnElements.WishLeft, HorizontalDirection.Left);
+                 ColumnElements.WishLeft, HorizontalDirection.Left,
+                 SpacingRules.NoteColumnSkylineVerticalPadding);
 
     /// <summary>
     /// The right skyline with the COLUMN ORIGIN — the head's left edge, LilyPond's paper
@@ -282,7 +298,8 @@ internal static class ItemSkylineFactory
     /// otherwise output-preserving.
     /// </remarks>
     public static HorizontalSkyline CreateLeftSkyline(MusicItem item, double referenceX, double staffY)
-        => Build(item, referenceX, staffY, ColumnElements.All, HorizontalDirection.Left);
+        => Build(item, referenceX, staffY, ColumnElements.All, HorizontalDirection.Left,
+                 SpacingRules.MusicalColumnSkylineVerticalPadding);
 
     /// <summary>
     /// The Y band the column's parts occupy — conditional parts included — in the

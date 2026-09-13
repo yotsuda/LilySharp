@@ -845,6 +845,13 @@
       "residual": 0.000000053,
       "why": "SEEDED 2026-07-25, the moment justified.first-system.heads went exact and the two engravers finally put the same five bars on this system. The quarter gap on a JUSTIFIED line, read from the same JN dump that gives the head count: `bar= 1 n=30 first= 8.585000 quarter 3.765697 eighth 2.534949`. Its ragged twin note-to-note.quarter is exact at 3.704200, so this point sees only what justification adds. It opened EXACT (+5.3e-8, with the eighth at -4.7e-7 — Pango-quantisation scale), which is a result worth recording for what it REFUTES. ⚠️ PREDICTION WRITTEN BEFORE THE RUN AND WRONG: that this pair would be the ledger key for removing GlyphMetrics.MinItemGap 0.4, on the reasoning that a justified line shares slack in proportion to inverse_stretch_strength = ideal - min and so is the first point here that can see a spring's MINIMUM. It cannot. LilyPond's own note_spacing sets `inverse_stretch_strength = fraction * max (0.1, len - min)` with min = the spacing INCREMENT, not the skyline minimum (lily/spacing-basic.cc; SpacingRules.CreateSpring carries the same REF), so a stretched line never consults the skyline minimum at all and MinItemGap is invisible in this regime. The knob binds only where a spring is compressed ONTO its minimum, so the key that removal needs is a COMPRESSED note-to-note point, which this corpus still does not have. What this pair does pin is that justification itself is exact once both sides break alike."
     },
+    "cross-voice.rod.paper-column-padding": {
+      "probe": "cross-voice-rod.ly",
+      "score": "CVR",
+      "lilypond": 0.800000,
+      "residual": 0,
+      "why": "EXACT since session 379 (2026-09-14), owner-approved fix: the ROD reads the PAPER column's horizontal skylines, which LilyPond pads by PaperColumn's skyline-vertical-padding 0.08 (scm/define-grobs.scm:2747), while the spacing WISH's minimum reads the NOTE column's, padded 0.15 (:2577) -- lily/separation-item.cc:92-110 calc_skylines pads each separation item by its own value. Lily#'s ItemSkylineFactory.Build padded every view 0.15, the rod's included. Here voice 2's f'' (an eighth at 1/8) and voice 1's ledgered triplet c''' (at 1/6) are a pair no voice spans, so only the cross-voice rod floors them: at 0.08 their skylines miss each other in Y and the pair keeps its bare duration ideal 0.80 (shortest playing 1/8, fraction 1/3, len 2.4); at 0.15 they overlapped and Lily# drew 1.4492. Found on test/multivoice-tuplet-beams (scratch/p380/incr: the probe dump, skydump2.ily, and the same boxes rebuilt at both paddings)."
+    },
     "ledger.rod.thirty-second": {
       "probe": "ledger-rod.ly",
       "score": "LR",
