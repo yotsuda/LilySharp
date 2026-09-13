@@ -2767,6 +2767,25 @@ public sealed class LilyPondExporter
                 case MusicMarkSyntax mk when Fingering(mk) is { } fg:
                     suffix.Append(fg);
                     break;
+                // A FEATHERED BEAM is a property of the Beam grob, not a post-event, so it is
+                // written before the note that opens the beam — the grob is created at that
+                // moment and takes the `\once` value. The same shape as the stem-direction
+                // override four cases down, and the same reason it is `\once`: it belongs to
+                // THIS beam and must not leak into the next one.
+                // LILYPOND-REF: beam.cc:1200-1201 calc_stem_positions — the Beam grob reads
+                //   grow-direction off itself, which is why overriding it at the beam's first
+                //   moment is what reaches it;
+                // LILYPOND-REF: beam.cc:1134-1145 calc_stem_y — the fan the property produces,
+                //   ported to the page in SharedRenderer.Beams.
+                // ⚠️ `\featherDurations` is DELIBERATELY NOT written: it scales the printed
+                // durations, which Lily# does not do — `@feather` fans the drawing and leaves
+                // the rhythm alone, so writing it would make the twin play music the page
+                // does not.
+                case MusicMarkSyntax fm when Semantics.AnnotationValues.Feather(fm) is not 0 and var dir:
+                    prefix.Append("\\once \\override Beam.grow-direction = #")
+                          .Append(dir > 0 ? "RIGHT" : "LEFT")
+                          .Append(' ');
+                    break;
                 case MusicMarkSyntax mk:
                     string m = EmitMark(mk);
                     if (m.Length > 0) prefix.Append(m).Append(' ');

@@ -235,11 +235,15 @@ internal static partial class SharedRenderer
             //      there says what it costs to omit). ElementCoordinator splits per system and each piece
             //      normalises over its OWN span, so a feathered beam that crosses a line break
             //      fans twice. Not ported; no book in the corpus has one.
-            //   ⑵ The LilyPond twin and the MusicXML export do not know `@feather` at all —
-            //      grep the word: it reaches this renderer and nothing else. Before the
-            //      geometry landed the page drew nothing either, so the three agreed by being
-            //      equally silent; now the PAGE is right and the two exports are not.
-            //      LilyPond spells it `\override Beam.grow-direction = #RIGHT`.
+            //   ⑵ The MUSICXML export cannot carry this, and the reason is one level deeper
+            //      than the feather: that exporter writes no `<beam>` elements at all (grep it
+            //      for "beam") — it leaves beaming to the consumer, so there is no element for
+            //      MusicXML's `fan` attribute to sit on. Exporting beams is its own job.
+            //      ⇒ The LilyPond twin DOES carry it, since 2026-09-13:
+            //      `\once \override Beam.grow-direction = #RIGHT` on the note that opens the
+            //      beam (LilyPondExporter.SplitAttachments), verified by running LilyPond
+            //      2.24.4 on the twin — its beam's far end moves exactly one beam translation
+            //      and its near end does not, which is this same fan.
             int featherDir = grp.GrowDirection;
             double FeatherFactorAt(double x)
             {

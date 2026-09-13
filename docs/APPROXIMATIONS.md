@@ -42,7 +42,7 @@
 - **:310** ⚠️ NOT PORTED — backend-blocked: CHARACTERS AT THE CLUSTERS' POSITIONS, not glyphs at
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:237** fans twice. Not ported; no book in the corpus has one.
-- **:550** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
+- **:554** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:393** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
@@ -141,8 +141,8 @@
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2415** container, and the value stops being unobserved with the line above.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
-- **:553** no observer; add the paren widths when a book brings one. The unpacked
-- **:555** bare glyph width, which is exact for one and unobserved for many.
+- **:557** no observer; add the paren widths when a book brings one. The unpacked
+- **:559** bare glyph width, which is exact for one and unobserved for many.
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:1325** no observer reaches that branch yet.
 ### `LilySharp.Core/Rendering/SharedRenderer.Noteheads.cs`
@@ -234,7 +234,7 @@
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2410** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:5180** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:5199** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:2258** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
@@ -248,7 +248,7 @@
 ### `LilySharp.Core/Rendering/Pdf/PdfDrawingContext.cs`
 - **:227** LILYSHARP-OWN: the stand-in case has no LilyPond counterpart, and cannot have one.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
-- **:372** LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
+- **:376** LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
 ### `LilySharp.Core/Rendering/SharedRenderer.cs`
 - **:65** LILYSHARP-OWN: the swing feel-equation's small note size. The equation is Lily#'s
 - **:539** prefix — LILYSHARP-OWN, a decided divergence (user decision

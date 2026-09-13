@@ -17,9 +17,11 @@
 using System.Collections.Immutable;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
+using System;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
+using LilySharp.Core.LilyPond;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Renderer;
 using LilySharp.Core.Svg.Model;
@@ -223,6 +225,47 @@ public class FeatheredBeamTests
                 Assert.Equal(plain[i], fanned[i], 3);
         }
     }
+
+    /// <summary>
+    /// The LilyPond twin carries the feather, so the two pictures cannot disagree about it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE SPELLING WAS VERIFIED BY RUNNING LILYPOND, not chosen from memory (2026-09-13,
+    /// LilyPond 2.24.4 on the exported twin): with the override the beam's FAR end moves
+    /// −1.01 → −1.82, one beam translation further from the primary, while its near end stays
+    /// at 0.2 — the same fan, the same size, as the page draws.
+    /// <para>
+    /// ⚠️ <c>\once</c> is the right scope: the Beam grob is created at the beam's first
+    /// moment, so the override reaches THIS beam and cannot leak into the next. And
+    /// <c>\featherDurations</c> is deliberately absent — it scales the printed durations,
+    /// which <c>@feather</c> does not do.
+    /// </para>
+    /// <para>
+    /// ⚠️ MusicXML carries nothing here and cannot yet: that exporter writes no
+    /// <c>&lt;beam&gt;</c> elements at all, so MusicXML's own <c>fan</c> attribute has no
+    /// element to sit on. Named in SharedRenderer.Beams beside the geometry.
+    /// </para>
+    /// </remarks>
+    [Theory]
+    [InlineData("@feather(right)", "#RIGHT")]
+    [InlineData("@feather(accel)", "#RIGHT")]
+    [InlineData("@feather(left)", "#LEFT")]
+    [InlineData("@feather(rit)", "#LEFT")]
+    public void TheTwinWritesTheGrowDirection(string annotation, string expected)
+    {
+        string ly = new LilyPondExporter().Export(
+            SyntaxTree.Parse(Book.Replace("MUSIC", UpStemMusic).Replace("ANNOTATION", annotation)));
+        Assert.Contains("\\once \\override Beam.grow-direction = " + expected, ly, StringComparison.Ordinal);
+        // ...and the rhythm is untouched: the feather fans the drawing, nothing else.
+        Assert.DoesNotContain("featherDurations", ly, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void APlainBeamsTwinSaysNothingAboutGrowing()
+        => Assert.DoesNotContain("grow-direction",
+            new LilyPondExporter().Export(
+                SyntaxTree.Parse(Book.Replace("MUSIC", UpStemMusic).Replace("ANNOTATION", ""))),
+            StringComparison.Ordinal);
 
     // ---------- reading the drawn page ----------
 
