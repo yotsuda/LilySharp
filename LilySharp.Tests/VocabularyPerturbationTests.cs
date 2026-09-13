@@ -214,47 +214,32 @@ public class VocabularyPerturbationTests
         => ArgumentValues(LilySharpLanguageServer.GetFiguredBassCompletions);
 
     /// <summary>
-    /// ⚠️⚠️⚠️ A DEFECT, PINNED AS IT IS UNTIL THE OWNER DECIDES — <c>@feather</c> draws
-    /// NOTHING, and 33 books on this machine write it, the shipped showcase
-    /// <c>05-special-techniques.lys</c> among them.
+    /// Every feather direction reaches the page, and the two DIRECTIONS differ from each
+    /// other — so the operand is read, not merely accepted.
     /// </summary>
     /// <remarks>
-    /// Found 2026-09-13 by pointing this file's sweep at annotation OPERANDS. Measured three
-    /// ways:
-    /// <list type="number">
-    /// <item>The page. <c>@feather(right)</c>, <c>@feather(left)</c> and no feather at all
-    /// render BYTE-IDENTICAL SVG once data-pos is masked (137,849 bytes each). ⚠️ Unmasked
-    /// they differ — by the length of the annotation's own text — which is this file's own
-    /// trap, and the first probe of this defect fell into it.</item>
-    /// <item>The readers. <c>BeamGroup.GrowDirection</c> is SET by the beam detector, copied
-    /// by <c>BeamGroup.With</c>, passed through <c>ElementCoordinator</c> twice and through
-    /// <c>TabStaffGeometry</c> once, folded into the beam memo key — and read by no engraver
-    /// and no renderer. Every occurrence in the repository is a constructor argument.</item>
-    /// <item>The tests that should have said so were three tautologies in
-    /// <c>FeatheredBeamTests</c> that did their own arithmetic and called nothing. They are
-    /// gone, and that file now carries the intended geometry as the specification.</item>
-    /// </list>
-    /// ⇒ The decision is the owner's, and it is NOT the MIDI row's (session 374's 12th leg):
-    /// that spelling was written in 0 of 27,095 books, so removing it migrated nobody. This
-    /// one is written in 33 — so the choice is between implementing the geometry and telling
-    /// 33 books to stop asking for it.
-    /// ★ Asserted as EQUAL rather than skipped, exactly as <c>as removeEmpty false</c> is:
-    /// the day the feather is drawn, this test goes red and says the defect is closed.
-    /// ⚠️ Everything ABOVE the renderer is sound and stays pinned elsewhere —
-    /// <c>AnnotationValuesTests.AFeatherArgument_IsItsGrowDirection</c> holds the argument's
-    /// reading (<c>accel</c> = <c>right</c> = 1, <c>rit</c> = <c>left</c> = −1, an unknown
-    /// word = 0) and the plumbing tests in <c>FeatheredBeamTests</c> hold the carry. It is
-    /// only the last step, the ink, that is missing.
+    /// ⚠️ THIS IS THE SWEEP THAT FOUND THE FEATHER UNDRAWN (2026-09-13), and it is kept in
+    /// the "must move" form rather than as the equality that pinned the defect for one leg.
+    /// What it cost to find is worth the two lines: the annotation was parsed, validated,
+    /// carried into <c>BeamGroup.GrowDirection</c>, copied, passed through two coordinators
+    /// and folded into the beam memo key — and read by no renderer, while three tautologies
+    /// in <c>FeatheredBeamTests</c> stood in for the question by doing their own arithmetic.
+    /// ⚠️ The synonyms are the positive control the popup itself declares: <c>accel</c> IS
+    /// <c>right</c> and <c>rit</c> IS <c>left</c>, so those must be byte-identical; if they
+    /// ever differ, the popup's Detail is wrong or the reader has drifted from it.
     /// </remarks>
     [Fact]
-    public void TheFeatheredBeamIsNotDrawn_AndThatIsTheDefect()
+    public void EveryFeatherDirectionReachesThePage()
     {
         string plain = Signature(BeamedBook(""));
         foreach (var item in LilySharpLanguageServer.GetFeatherCompletions().Items)
-            Assert.True(plain == Signature(BeamedBook($"@feather({Resolved(item)})")),
-                $"@feather({Resolved(item)}) now moves the page — the defect this test pins "
-                + "is fixed, so replace it with the real assertion (the intended geometry is "
-                + "in FeatheredBeamTests).");
+            Assert.True(plain != Signature(BeamedBook($"@feather({Resolved(item)})")),
+                $"@feather({Resolved(item)}) changes nothing on the page.");
+
+        Assert.Equal(Signature(BeamedBook("@feather(right)")), Signature(BeamedBook("@feather(accel)")));
+        Assert.Equal(Signature(BeamedBook("@feather(left)")), Signature(BeamedBook("@feather(rit)")));
+        AssertMoves(BeamedBook("@feather(right)"), BeamedBook("@feather(left)"),
+            "@feather right vs left");
     }
 
     [Theory]

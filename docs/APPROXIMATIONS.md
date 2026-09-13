@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 54 | 観測者がゼロだと自認しているもの |
 | `OWN` | 136 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **251** | |
+| **計** | **252** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -31,17 +31,18 @@
 | `LilySharp.Core/Rendering/SharedRenderer.Marks.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
+| `LilySharp.Core/Rendering/SharedRenderer.Beams.cs` | 5 |
 | `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs` | 5 |
-| `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 5 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（61 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（62 件）
 
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **:339** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
 ### `LilySharp.Core/Rendering/Pdf/PdfDrawingContext.cs`
 - **:310** ⚠️ NOT PORTED — backend-blocked: CHARACTERS AT THE CLUSTERS' POSITIONS, not glyphs at
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
-- **:504** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
+- **:237** fans twice. Not ported; no book in the corpus has one.
+- **:550** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:393** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
@@ -140,8 +141,8 @@
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2415** container, and the value stops being unobserved with the line above.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
-- **:507** no observer; add the paren widths when a book brings one. The unpacked
-- **:509** bare glyph width, which is exact for one and unobserved for many.
+- **:553** no observer; add the paren widths when a book brings one. The unpacked
+- **:555** bare glyph width, which is exact for one and unobserved for many.
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:1325** no observer reaches that branch yet.
 ### `LilySharp.Core/Rendering/SharedRenderer.Noteheads.cs`
@@ -247,7 +248,7 @@
 ### `LilySharp.Core/Rendering/Pdf/PdfDrawingContext.cs`
 - **:227** LILYSHARP-OWN: the stand-in case has no LilyPond counterpart, and cannot have one.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
-- **:336** LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
+- **:372** LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
 ### `LilySharp.Core/Rendering/SharedRenderer.cs`
 - **:65** LILYSHARP-OWN: the swing feel-equation's small note size. The equation is Lily#'s
 - **:539** prefix — LILYSHARP-OWN, a decided divergence (user decision

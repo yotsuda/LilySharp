@@ -214,6 +214,42 @@ internal static partial class SharedRenderer
             double PrimaryBeamYAt(double x) => leftBeamY +
                 (beamSpanX > 0.001 ? (x - leftStemX) / beamSpanX : 0) * (rightBeamY - leftBeamY);
 
+            // A FEATHERED beam (`@feather(right|left)`): the secondary ranks converge at one
+            // end of the beam and fan out at the other, so every rank's distance from the
+            // primary is multiplied by a factor that walks along the span. LilyPond states
+            // the rule in a comment beside the factor itself:
+            //     feather dir = 1 , relx 0->1 : factor 0 -> 1
+            //     feather dir = 0 , relx 0->1 : factor 1 -> 1
+            //     feather dir = -1, relx 0->1 : factor 1 -> 0
+            // LILYPOND-REF: lily/beam.cc:1134-1145 calc_stem_y — that comment, and
+            //   stem_y += feather_factor * beam_translation * beam_multiplicity[stem_dir],
+            //   with relx the stem's position along the beam's x span;
+            // LILYPOND-REF: lily/beam.cc:785-792 print's local_slope — the DRAWN lines get the
+            //   same fan as an extra slope per rank, feather_dir * vertical_count_ * beam_dy /
+            //   span, which over a whole-span segment is this factor evaluated at its two ends.
+            // ⚠️ TWO GAPS, NAMED SO THEY ARE NOT MISTAKEN FOR THE RULE (both 2026-09-13, the
+            //   day the geometry landed):
+            //   ⑴ LILYPOND-REF: beam.cc:775-839 print's weighted_average — the
+            //      `normalized-endpoints` weighting that keeps a feathered beam BROKEN ACROSS
+            //      A SYSTEM from restarting its fan on the second piece (LilyPond's own comment
+            //      there says what it costs to omit). ElementCoordinator splits per system and each piece
+            //      normalises over its OWN span, so a feathered beam that crosses a line break
+            //      fans twice. Not ported; no book in the corpus has one.
+            //   ⑵ The LilyPond twin and the MusicXML export do not know `@feather` at all —
+            //      grep the word: it reaches this renderer and nothing else. Before the
+            //      geometry landed the page drew nothing either, so the three agreed by being
+            //      equally silent; now the PAGE is right and the two exports are not.
+            //      LilyPond spells it `\override Beam.grow-direction = #RIGHT`.
+            int featherDir = grp.GrowDirection;
+            double FeatherFactorAt(double x)
+            {
+                if (featherDir == 0) return 1.0;
+                double relx = beamSpanX > 0.001
+                    ? Math.Clamp((x - leftStemX) / beamSpanX, 0.0, 1.0)
+                    : 0.0;
+                return featherDir > 0 ? relx : 1.0 - relx;
+            }
+
             // Beam lines via LilyPond's subdivision maths: assign each beam a vertical
             // rank per stem, then collect the ranks into drawable spans. Rank 0 is the
             // primary line; +1 sits BeamTranslation above it, −1 below. This is what
@@ -342,9 +378,13 @@ internal static partial class SharedRenderer
                             continue;
                     }
                 }
-                double yOff = beamTranslation * seg.Rank;
-                DrawBeamSegment(xl, PrimaryBeamYAt(xl) + yOff,
-                    xr, PrimaryBeamYAt(xr) + yOff, bgc);
+                // The rank's distance from the primary line is the feather factor AT EACH
+                // END, so a fanned rank is a line of its own slope rather than a parallel
+                // offset. Without a feather the factor is 1 at both ends and this is the
+                // parallel offset it has always been.
+                double YOfRankAt(double x) =>
+                    PrimaryBeamYAt(x) + beamTranslation * seg.Rank * FeatherFactorAt(x);
+                DrawBeamSegment(xl, YOfRankAt(xl), xr, YOfRankAt(xr), bgc);
             }
 
             // Stems for beam members (replace any individual stems). For knees
@@ -411,8 +451,14 @@ internal static partial class SharedRenderer
                 // LILYPOND-REF: lily/beam.cc:1113-1157 Beam::calc_stem_y —
                 //   stem_y = beam_line + beam_translation × beam_multiplicity[stem_dir]
                 //   (lily/stem.cc:1269 unites the stem's left+right ranks, indexed by dir).
+                // …scaled by the feather factor at THIS stem's x, which is LilyPond's own
+                // calc_stem_y line: stem_y += feather_factor * beam_translation *
+                // beam_multiplicity[stem_dir]. A feathered beam's stems therefore lengthen
+                // (or shorten) across the group exactly as far as the outermost rank moves.
+                // LILYPOND-REF: lily/beam.cc:1139-1145 calc_stem_y.
                 int stemRank = beamRanks[memberWalkIndex[i]].Multiplicity(up ? 1 : -1);
-                double beamY = primaryBeamY + beamTranslation * stemRank;
+                double beamY = primaryBeamY
+                    + beamTranslation * stemRank * FeatherFactorAt(stemX);
                 bgc.DrawLine(stemX, headY, stemX, beamY,
                     Color.Black, EngravingDefaults.StemThickness);
             }
