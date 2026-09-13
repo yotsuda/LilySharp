@@ -557,6 +557,8 @@ internal sealed class MultiStaffLayouter
     /// </summary>
     /// <remarks>
     /// The delimiters chain outward: every delimiter is side-positioned against its PARENT's.
+    /// LILYPOND-REF: lily/system-start-delimiter-engraver.cc:108-114 Bracket_nesting_group::set_nesting_support
+    /// — each child group's delimiter gets its parent's delimiter as its side-position support.
     /// MEASURED, LilyPond 2.26.0 (scratch/p377/nest/deep.ly, indent 0): a bracket inside a
     /// top-level bracket at -2.56 .. -2.11 = -1.31 − 0.8; a bracket inside a top-level BRACE of
     /// height 23.6 at -2.74 .. -2.29 = -1.49 − 0.8; siblings at one depth are not aligned — each

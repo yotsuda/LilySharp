@@ -296,6 +296,10 @@ internal static partial class SharedRenderer
         // A gap between two leaves is drawn ONCE, by the innermost group holding both — when
         // that group or any group around it draws bar lines through. A gap inside one
         // delimited leaf was drawn by the leaf loop above.
+        // LILYPOND-REF: lily/span-bar-engraver.cc:61-66 Span_bar_engraver::acknowledge_bar_line
+        // — an engraver acknowledges the bar lines of every context below it, so an outer
+        // group's span bar crosses its descendants' gaps too, a choirStaff's included.
+        // LILYPOND-REF: ly/engraver-init.ly:546-549 ChoirStaff removes Span_bar_engraver
         // MEASURED (scratch/p377/nest, LilyPond 2.26.0 -dbackend=svg): StaffGroup > (Staff,
         // GrandStaff) draws span bars through both gaps; ChoirStaff > (Staff, GrandStaff)
         // through the grand staff's own gap only; StaffGroup > ChoirStaff > (GrandStaff, Staff)
@@ -341,6 +345,7 @@ internal static partial class SharedRenderer
     /// each group's that holds another group (<paramref name="outers"/>, outermost first).
     /// </summary>
     /// <remarks>
+    /// LILYPOND-REF: lily/system-start-delimiter-engraver.cc:108-114 Bracket_nesting_group::set_nesting_support
     /// ONE HOME for the delimiter chain: each delimiter stands against its PARENT's ink — a
     /// bracket 0.8 left of it, a brace 0.3 — and a top-level one against the SystemStartBar
     /// (<see cref="MultiStaffLayouter.SystemStartBracketCentreAgainst"/>). A top-level leaf keeps
