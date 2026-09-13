@@ -1748,6 +1748,54 @@ internal sealed class MultiStaffLayouter
             }
         }
 
+        // CROSS-BAR LEDGER-LINE RODS: the last ledgered column of a staff in one measure and its
+        // next ledgered column in a later measure of the same line are rodded straight across the
+        // bar lines between them — LilyPond's LedgerLineSpanner is one spanner per Staff, not per
+        // bar. The pairs inside a measure were raised in ApplySharedColumnReservations.
+        // LILYPOND-REF: lily/ledger-line-spanner.cc:39-61 set_rods — rod.add_to_cols () over the two columns.
+        // The drawn distance re-adds the bar-line ink between the two chains, so the spring-space
+        // rod sheds it (the cross-bar lyric rods' convention above).
+        // ⚠️ The line-break gate does not price these (it reads ApplySharedColumnReservations, one
+        // measure at a time); a bar line's own springs almost always clear 1.96 already.
+        foreach (var ledgerGroup in score.StaffGroups)
+            foreach (var ledgerStaff in ledgerGroup.Staves)
+            {
+                SpacingRules.LedgerColumn? lastColumn = null;
+                int lastOffset = 0, lastMeasure = -1;
+                int ledgerOffset = 0;
+                for (int m = 0; m < measureSprings.Count; m++)
+                {
+                    int springCount = measureSprings[m].Length;
+                    if (springCount == 0 || springCount != measureTimings[m].Count + 1)
+                    {
+                        ledgerOffset += springCount;
+                        continue;
+                    }
+                    var columns = SpacingRules.LedgerColumnsOf(
+                        ledgerStaff, startMeasureIndex + m, measureTimings[m]);
+                    if (columns.Count > 0)
+                    {
+                        if (lastColumn is { } left && lastMeasure >= 0 && lastMeasure < m)
+                        {
+                            double ink = SpacingRules.GetBarlineWidth(
+                                    primaryVoice.Measures[startMeasureIndex + lastMeasure].EndBarline)
+                                + SpacingRules.GetBarlineWidth(
+                                    primaryVoice.Measures[startMeasureIndex + m].StartBarline);
+                            for (int k = lastMeasure + 1; k < m; k++)
+                                ink += measureBarlineWidths[k];
+                            double distance = SpacingRules.LedgerRodDistance(left, columns[0]) - ink;
+                            if (distance > 0)
+                                rods.Add((lastOffset + left.Column + 1,
+                                    ledgerOffset + columns[0].Column + 1, distance));
+                        }
+                        lastColumn = columns[^1];
+                        lastOffset = ledgerOffset;
+                        lastMeasure = m;
+                    }
+                    ledgerOffset += springCount;
+                }
+            }
+
         if (rods.Count > 0)
         {
             allSprings = SpringSolver.ApplyRods(allSprings, rods);
@@ -1996,6 +2044,13 @@ internal sealed class MultiStaffLayouter
                 if (!vStaff.IsTab && vStaff.Voices.Length >= 2)
                     springs = SpacingRules.ApplyCrossVoiceColumnSpacing(
                         springs, allTimings, vStaff, measureIndex);
+
+        // Ledger-line rods between the consecutive ledgered columns of each staff, inside
+        // this measure (the pairs across a bar line are the system's rods, in LayoutMeasures).
+        // LILYPOND-REF: lily/ledger-line-spanner.cc:63-140 Ledger_line_spanner::set_spacing_rods.
+        foreach (var lGroup in score.StaffGroups)
+            foreach (var lStaff in lGroup.Staves)
+                springs = SpacingRules.ApplyLedgerLineRods(springs, allTimings, lStaff, measureIndex);
 
         // Reserve room for lyric syllables so they don't collide. Only acts
         // on single-voice measures (timing columns == note items); a no-lyric

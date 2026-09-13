@@ -12346,6 +12346,67 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// The LEDGER-LINE spacing rod: 32nds on a ledgered pitch under a common shortest of an eighth.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/ledger-line-spanner.cc:39-61 set_rods — two consecutive columns whose heads carry
+    /// ledger lines on the same side stand at least 2 × head width × 0.25 + head width apart:
+    /// 1.9563 for black heads. The 32nds' own spring would set them at 1.80 (skyline minimum
+    /// 1.5042 + merge_springs' 0.3; the ideal 1.4042 is under both), so the rod is what binds.
+    /// Bar 2 holds the 32nds; bars 1 and 3 keep the per-bar shortest an eighth, so the common
+    /// shortest (their mode) is an eighth and the 32nds sit in get_duration_space's linear branch.
+    /// One pitch throughout, so <see cref="RenderedGeometry.NoteheadAnchorsOnSystem"/> reads one chain.
+    /// <remarks>LilyPond twin: probe score LR in ledger-rod.ly — <c>a''</c>, staff position 6, one
+    /// ledger line (Lily# <c>a'</c> under octave absolute).</remarks>
+    /// </remarks>
+    private static readonly string LR = """
+        octave absolute
+        time 4/4
+
+        part melody
+
+        section Main {
+          melody {
+            a'8 a' a' a' a' a' a' a' |
+            a'8 a' a' a' a'32 a' a' a' a'8 a' a' |
+            a'8 a' a' a' a' a' a' a' |
+          }
+        }
+
+        form main { Main }
+
+        score main "LR" { staff melody }
+        """;
+
+    /// <summary>
+    /// The CONTROL for <see cref="LR"/>: the same music a step lower, on a pitch with no ledger line.
+    /// </summary>
+    /// <remarks>
+    /// <c>g''</c> sits in the space above the top line (staff position 5): outside the staff but
+    /// without a ledger line, so LilyPond raises no rod and the 32nds stay at the spring's 1.80.
+    /// A ledger point without it could not tell the rod from any other widening of short notes.
+    /// <remarks>LilyPond twin: probe score LN in ledger-rod.ly (Lily# <c>g'</c>).</remarks>
+    /// </remarks>
+    private static readonly string LN = """
+        octave absolute
+        time 4/4
+
+        part melody
+
+        section Main {
+          melody {
+            g'8 g' g' g' g' g' g' g' |
+            g'8 g' g' g' g'32 g' g' g' g'8 g' g' |
+            g'8 g' g' g' g' g' g' g' |
+          }
+        }
+
+        form main { Main }
+
+        score main "LN" { staff melody }
+        """;
+
+    /// <summary>
     /// The line start of a COMPRESSED line — the one regime every other
     /// <c>line-start.*</c> point is blind to.
     /// </summary>
@@ -15989,6 +16050,14 @@ internal static class LpGeometryProbes
             g => g.NoteheadAnchorsOnSystem(0)[1] - g.NoteheadAnchorsOnSystem(0)[0]),
         new("justified.note-to-note.eighth", JN,
             g => g.NoteheadAnchorsOnSystem(0)[2] - g.NoteheadAnchorsOnSystem(0)[1]),
+        // The ledger-line spacing rod (session 379): 32nds on a ledgered a'' are held at the rod
+        // 2 × 1.3042 × 0.25 + 1.3042 = 1.9563 where their spring alone sets 1.80, and the same
+        // 32nds a step lower, on g'' with no ledger line, are the control that stays at 1.80.
+        // Gap 13 → 14 is between two 32nds with a 32nd on each side (heads 12..15 of bar 2).
+        new("ledger.rod.thirty-second", LR,
+            g => g.NoteheadAnchorsOnSystem(0)[14] - g.NoteheadAnchorsOnSystem(0)[13]),
+        new("ledger.rod.thirty-second.no-ledger", LN,
+            g => g.NoteheadAnchorsOnSystem(0)[14] - g.NoteheadAnchorsOnSystem(0)[13]),
         // …and the regime the two above turned out NOT to reach: a line squeezed until every
         // note-to-note spring sits on its MINIMUM. This is the only place a spring minimum is
         // observable, so it is the ledger key for GlyphMetrics.MinItemGap 0.4 — the knob

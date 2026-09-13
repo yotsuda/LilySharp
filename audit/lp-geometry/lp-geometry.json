@@ -845,6 +845,20 @@
       "residual": 0.000000053,
       "why": "SEEDED 2026-07-25, the moment justified.first-system.heads went exact and the two engravers finally put the same five bars on this system. The quarter gap on a JUSTIFIED line, read from the same JN dump that gives the head count: `bar= 1 n=30 first= 8.585000 quarter 3.765697 eighth 2.534949`. Its ragged twin note-to-note.quarter is exact at 3.704200, so this point sees only what justification adds. It opened EXACT (+5.3e-8, with the eighth at -4.7e-7 — Pango-quantisation scale), which is a result worth recording for what it REFUTES. ⚠️ PREDICTION WRITTEN BEFORE THE RUN AND WRONG: that this pair would be the ledger key for removing GlyphMetrics.MinItemGap 0.4, on the reasoning that a justified line shares slack in proportion to inverse_stretch_strength = ideal - min and so is the first point here that can see a spring's MINIMUM. It cannot. LilyPond's own note_spacing sets `inverse_stretch_strength = fraction * max (0.1, len - min)` with min = the spacing INCREMENT, not the skyline minimum (lily/spacing-basic.cc; SpacingRules.CreateSpring carries the same REF), so a stretched line never consults the skyline minimum at all and MinItemGap is invisible in this regime. The knob binds only where a spring is compressed ONTO its minimum, so the key that removal needs is a COMPRESSED note-to-note point, which this corpus still does not have. What this pair does pin is that justification itself is exact once both sides break alike."
     },
+    "ledger.rod.thirty-second": {
+      "probe": "ledger-rod.ly",
+      "score": "LR",
+      "lilypond": 1.956300,
+      "residual": 0,
+      "why": "EXACT since session 379 (2026-09-13), owner-approved port of lily/ledger-line-spanner.cc:39-61 set_rods (SpacingRules.LedgerRods): two consecutive columns whose heads carry ledger lines on the same side of the staff stand at least 2 * head width * minimum-length-fraction (0.25, scm/define-grobs.scm:2069) - the right head's left extent + the left head's right extent = 2 * 1.3042 * 0.25 + 1.3042 = 1.9563 for black heads. It binds here because the 32nds sit in get_duration_space's linear branch (common shortest an eighth): ideal 1.4042 and skyline minimum 1.5042 + merge_springs' 0.3 = 1.80 both fall under the rod. Before the port Lily# drew 1.804200 -- found by scratch/p380/incr/cols.ps1 on floor2.lys, where the whole 0.45 line-length gap sat on three ledgered 32nd gaps, constant over increments 1.0-1.5. The control is ledger.rod.thirty-second.no-ledger. Snapshots rebased by this port: showcase/02-ornaments, test/beam-over-stem, test/beam-rest-extreme, test/multivoice-tuplet-beams, test/notes."
+    },
+    "ledger.rod.thirty-second.no-ledger": {
+      "probe": "ledger-rod.ly",
+      "score": "LN",
+      "lilypond": 1.804200,
+      "residual": 0,
+      "why": "The CONTROL for ledger.rod.thirty-second: the same 32nds on g'' (staff position 5, the space above the top line) -- outside the staff but with NO ledger line, so LilyPond raises no rod and the gap is the spring's own 1.5042 skyline minimum + merge_springs' 0.3. Without it the rod point could not tell the ledger rod from any other widening of short notes."
+    },
     "justified.note-to-note.eighth": {
       "probe": "line-start-mindist.ly",
       "score": "JN",
