@@ -52,4 +52,25 @@ public class SystemStartBracePlacementTests
         Assert.Equal(lilyPondBarLeft - 0.3, MultiStaffLayouter.SystemStartBraceRightEdge(Indent), 9);
         Assert.Equal(12.0 - 0.36, MultiStaffLayouter.SystemStartBraceRightEdge(12.0), 9);
     }
+
+    /// <summary>
+    /// A bracket's stroke clears the same bar by the bracket's 0.8, and its X extent is the
+    /// stroke alone. LilyPond 2.26.0 (brace-chain.ly, StaffGroup and ChoirStaff):
+    /// SystemStartBracket 7.225827 .. 7.675827, so the stroke Lily# draws on its centre is
+    /// centred at 7.450827. Until session 376 Lily# centred it on indent - 0.8 = 7.735827.
+    /// </summary>
+    [Fact]
+    public void BracketStroke_MatchesLilyPondsExtent()
+    {
+        const double lilyPondLeft = 7.225826771653543, lilyPondRight = 7.6758267716535435;
+        double centre = MultiStaffLayouter.SystemStartBracketCentre(Indent);
+        double half = LilySharp.Core.Svg.EngravingDefaults.SystemStartBracketThickness / 2.0;
+        Assert.Equal(lilyPondLeft, centre - half, 9);
+        Assert.Equal(lilyPondRight, centre + half, 9);
+    }
+
+    /// <summary>LilyPond's SystemStartBar, which every other delimiter chains from.</summary>
+    [Fact]
+    public void SystemStartBarLeftEdge_MatchesLilyPond()
+        => Assert.Equal(8.475826771653542, MultiStaffLayouter.SystemStartBarLeftEdge(Indent), 9);
 }

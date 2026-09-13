@@ -74,6 +74,15 @@ internal static class EngravingDefaults
     /// </remarks>
     public const double StaffLineThickness = 1.0 * LineThickness;
 
+    /// <summary>The width of a system-start BRACKET's vertical stroke.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:3685-3699 ly:system-start-delimiter::print — SystemStartBracket's (thickness . 0.45), read by
+    /// lily/system-start-delimiter.cc:36-66 System_start_delimiter::staff_bracket as the width of
+    /// the stroke, <c>Interval (0, thickness)</c>, NOT in line-thickness units. Shared by the
+    /// layout, which places the stroke, and the renderer, which draws it.
+    /// </remarks>
+    public const double SystemStartBracketThickness = 0.45;
+
     /// <summary>
     /// Horizon padding applied when measuring the X-aware distance between two
     /// SYSTEMS (page stacking): each roof gets 45° shoulders this wide, so

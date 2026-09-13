@@ -403,7 +403,7 @@ internal static partial class SharedRenderer
     /// an instrument name has to clear is the ink this renderer puts on the page.
     /// </para>
     /// </remarks>
-    private const double SystemStartBracketThickness = 0.45;
+    private const double SystemStartBracketThickness = EngravingDefaults.SystemStartBracketThickness;
 
     /// <summary>LILYPOND-REF: lily/system-start-delimiter.cc:89-95 simple_bar — a single
     /// vertical line of <c>line-thickness x thickness</c>, and the 1.6 is the SystemStartBar

@@ -498,11 +498,45 @@ internal sealed class MultiStaffLayouter
     /// </para>
     /// </remarks>
     internal static double SystemStartBraceRightEdge(double indent)
-    {
-        double barRight = indent - SystemStartBarPadding;
-        double barLeft = barRight - EngravingDefaults.StaffLineThickness * 1.6;
-        return barLeft - SystemStartBracePadding;
-    }
+        => SystemStartBarLeftEdge(indent) - SystemStartBracePadding;
+
+    /// <summary>The width of the SystemStartBar's ink.</summary>
+    /// <remarks>LILYPOND-REF: lily/system-start-delimiter.cc:89-95 System_start_delimiter::simple_bar
+    /// — <c>line-thickness × thickness</c>, and SystemStartBar declares (thickness . 1.6).</remarks>
+    internal static double SystemStartBarWidth => EngravingDefaults.StaffLineThickness * 1.6;
+
+    /// <summary>
+    /// The left edge of LilyPond's SystemStartBar: <c>indent - padding - width</c> = indent - 0.06.
+    /// </summary>
+    /// <remarks>
+    /// The bar is side-positioned LEFT of the staff start (the indent) with padding -0.1, so its
+    /// RIGHT edge is <c>indent + 0.1</c> and its ink runs <c>indent - 0.06 .. indent + 0.10</c> —
+    /// MEASURED on LilyPond 2.26.0 -dbackend=null, 8.475827 .. 8.635827 at indent 8.535827, on
+    /// every multi-staff book of scratch/p377/brace/brace-chain.ly. Every other system-start
+    /// delimiter chains outward from this edge.
+    /// </remarks>
+    internal static double SystemStartBarLeftEdge(double indent)
+        => indent - SystemStartBarPadding - SystemStartBarWidth;
+
+    /// <summary>
+    /// Where a system-start BRACKET's stroke is centred — Lily# draws the stroke on its centre.
+    /// </summary>
+    /// <remarks>
+    /// The bracket is side-positioned against the bar with its padding 0.8, and its X extent
+    /// is the stroke alone (lily/system-start-delimiter.cc:54-61 staff_bracket takes X from the
+    /// bracket line, not the tips), so the stroke's RIGHT edge is <c>bar left - 0.8</c> and its
+    /// centre half a thickness further left: indent - 1.085. The -0.8 staff_bracket translates
+    /// by internally cancels against x-aligned-side, as the brace's -0.2 does.
+    /// <para>
+    /// MEASURED, LilyPond 2.26.0 -dbackend=null (scratch/p377/brace/brace-chain.ly, StaffGroup
+    /// and ChoirStaff, with and without a name): SystemStartBracket 7.225827 .. 7.675827 at
+    /// indent 8.535827. Until session 376 Lily# centred the stroke on <c>indent - 0.8</c>, its ink
+    /// 0.285 right of LilyPond's.
+    /// </para>
+    /// </remarks>
+    internal static double SystemStartBracketCentre(double indent)
+        => SystemStartBarLeftEdge(indent) - SystemStartBracketPadding
+           - EngravingDefaults.SystemStartBracketThickness / 2.0;
 
     /// <summary>How far left of the staff a system-start BRACKET sits.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm SystemStartBracket (padding . 0.8)</remarks>
@@ -821,7 +855,7 @@ internal sealed class MultiStaffLayouter
         }
 
         double totalHeight = y - currentY + LastVisibleStaffHeight(staffLayouts);
-        double bracketX = CurrentIndent - SystemStartBracketPadding;
+        double bracketX = SystemStartBracketCentre(CurrentIndent);
 
         var delimiterLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
@@ -966,7 +1000,7 @@ internal sealed class MultiStaffLayouter
 
         double lastStaffHeight = GetStaffHeight(group.Staves[^1]);
         double totalHeight = y - currentY + lastStaffHeight;
-        double bracketX = CurrentIndent - SystemStartBracketPadding;
+        double bracketX = SystemStartBracketCentre(CurrentIndent);
 
         var delimiterLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
