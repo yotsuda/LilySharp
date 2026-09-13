@@ -67,7 +67,7 @@ public class SpringRodModelTests
 
         double corr = SpacingRules.CalculateStemCorrection(
             BeamedEighth(-6, leftUp, 1), BeamedEighth(6, rightUp, 1),
-            NoteSpacingParameters.Default);
+            NoteSpacingParameters.Default, LilySharp.Core.Svg.EngravingDefaults.SpacingIncrement);
 
         Assert.Equal(expected, corr, 9);
         // …and that is LilyPond's measured 1.1742, which is NOT the head width 1.3042.
@@ -88,10 +88,10 @@ public class SpringRodModelTests
         // (BarlineColumnRodTests.FlaggedNoteOnTheLeft_TakesNoStemCorrection).
         double twoBeams = SpacingRules.CalculateStemCorrection(
             BeamedEighth(-6, true, 1), BeamedEighth(6, false, 2),
-            NoteSpacingParameters.Default);
+            NoteSpacingParameters.Default, LilySharp.Core.Svg.EngravingDefaults.SpacingIncrement);
         double unbeamed = SpacingRules.CalculateStemCorrection(
             UnbeamedQuarter(-6, true), UnbeamedQuarter(6, false),
-            NoteSpacingParameters.Default);
+            NoteSpacingParameters.Default, LilySharp.Core.Svg.EngravingDefaults.SpacingIncrement);
 
         Assert.Equal(unbeamed, twoBeams, 9);
         Assert.NotEqual(0.0, twoBeams);
@@ -104,7 +104,7 @@ public class SpringRodModelTests
     {
         NoteItem left = BeamedEighth(-6, true, 1), right = BeamedEighth(6, false, 1);
         double Corr(double knee) => SpacingRules.CalculateStemCorrection(
-            left, right, NoteSpacingParameters.Default with { KneeSpacingCorrection = knee });
+            left, right, NoteSpacingParameters.Default with { KneeSpacingCorrection = knee }, LilySharp.Core.Svg.EngravingDefaults.SpacingIncrement);
 
         double full = Corr(1.0);
         // The shape of LilyPond's E / F / G books. A literal would ignore all three.
@@ -508,7 +508,7 @@ public class SpringRodModelTests
         // Calling with the default value should produce the same result
         var quarter = Fraction.Quarter;
         double defaultResult = SpacingRules.CalculateDurationSpace(quarter);
-        double explicitResult = SpacingRules.CalculateDurationSpace(quarter, 0.1875);
+        double explicitResult = SpacingRules.CalculateDurationSpace(quarter, SpacingOptions.Default.WithShortest(0.1875));
 
         Assert.Equal(defaultResult, explicitResult, 6);
     }
@@ -522,8 +522,8 @@ public class SpringRodModelTests
         // A 16th note with base=1/8 gets ratio=0.5 (linear, less space).
         var sixteenth = Fraction.Sixteenth;
 
-        double spaceWithEighthBase = SpacingRules.CalculateDurationSpace(sixteenth, 0.125);
-        double spaceWithSixteenthBase = SpacingRules.CalculateDurationSpace(sixteenth, 0.0625);
+        double spaceWithEighthBase = SpacingRules.CalculateDurationSpace(sixteenth, SpacingOptions.Default.WithShortest(0.125));
+        double spaceWithSixteenthBase = SpacingRules.CalculateDurationSpace(sixteenth, SpacingOptions.Default.WithShortest(0.0625));
 
         // With sixteenth base, the 16th note is the reference and gets more space
         Assert.True(spaceWithSixteenthBase > spaceWithEighthBase,
@@ -538,7 +538,7 @@ public class SpringRodModelTests
         // When quarter note is the shortest, ratio = 0.25/0.25 = 1.0
         // space = (ShortestDurationSpace + log2(1)) * increment = 2.0 * 1.2 = 2.4
         var quarter = Fraction.Quarter;
-        double space = SpacingRules.CalculateDurationSpace(quarter, 0.25);
+        double space = SpacingRules.CalculateDurationSpace(quarter, SpacingOptions.Default.WithShortest(0.25));
 
         double expected = LilySharp.Core.Svg.EngravingDefaults.ShortestDurationSpace
                         * LilySharp.Core.Svg.EngravingDefaults.SpacingIncrement;

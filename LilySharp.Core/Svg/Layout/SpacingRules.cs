@@ -38,7 +38,7 @@ internal static partial class SpacingRules
     /// This is the width that produces visually pleasing spacing.
     /// </remarks>
     public static double CalculateMeasureIdealWidth(Rendering.ScoreTextMetrics fonts, Measure measure,
-                                                    double? baseShortestDuration = null)
+                                                    SpacingOptions? spacing = null)
     {
         // The trailing clef column takes no width of its own — its clef lives in the
         // PREVIOUS measure's closing gap (see Measure.IsTrailingClefColumn).
@@ -54,7 +54,7 @@ internal static partial class SpacingRules
         // Spring ideal distances (content area) - includes duration space
         if (measure.Items.Length > 0)
         {
-            var springs = CreateSpringsForMeasure(fonts, measure, baseShortestDuration);
+            var springs = CreateSpringsForMeasure(fonts, measure, spacing);
             foreach (var spring in springs)
             {
                 width += spring.IdealDistance;

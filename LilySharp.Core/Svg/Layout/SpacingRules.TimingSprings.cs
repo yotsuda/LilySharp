@@ -31,15 +31,16 @@ internal static partial class SpacingRules
     /// Uses duration-based spacing for ideal distance.
     /// </remarks>
     public static Spring CreateTimingSpring(Fraction duration,
-                                            double? baseShortestDuration = null,
+                                            SpacingOptions? spacing = null,
                                             NoteSpacingParameters? noteParams = null)
     {
-        // LILYPOND-REF: lily/spacing-basic.cc:109 note_spacing() - increment
-        double defaultMin = EngravingDefaults.SpacingIncrement;
+        var so = spacing ?? SpacingOptions.Default;
 
-        // LILYPOND-REF: lily/spacing-basic.cc:107 note_spacing() - duration space
-        double idealDistance = CalculateDurationSpace(duration,
-            baseShortestDuration ?? EngravingDefaults.BaseShortestDuration);
+        // LILYPOND-REF: lily/spacing-basic.cc:152 note_spacing() - min = options->increment_
+        double defaultMin = so.Increment;
+
+        // LILYPOND-REF: lily/spacing-basic.cc:151 note_spacing() - duration space
+        double idealDistance = CalculateDurationSpace(duration, so);
 
         // Ensure minimum distance
         idealDistance = Math.Max(idealDistance, defaultMin);
@@ -75,14 +76,14 @@ internal static partial class SpacingRules
     /// where <c>shortest_playing</c> is the min duration over all voices' notes that are
     /// playing at the left column of the spring (NOT just the time delta to the next column).
     /// In monophonic music <c>shortest_playing == delta_t</c> and this collapses to the
-    /// existing <see cref="CreateTimingSpring(Fraction, double?, NoteSpacingParameters?)"/>;
+    /// existing <see cref="CreateTimingSpring(Fraction, SpacingOptions?, NoteSpacingParameters?)"/>;
     /// in polyphonic music it produces tighter springs when a faster voice is sounding
     /// underneath a slower voice.
     /// </remarks>
     public static Spring CreateTimingSpringMultiVoice(
         Fraction segmentDuration,
         Fraction shortestPlayingDuration,
-        double? baseShortestDuration = null,
+        SpacingOptions? spacing = null,
         NoteSpacingParameters? noteParams = null,
         Fraction? measureLength = null)
     {
@@ -96,7 +97,7 @@ internal static partial class SpacingRules
         if (shortestPlayingDuration <= Fraction.Zero)
             shortestPlayingDuration = segmentDuration;
         if (shortestPlayingDuration <= Fraction.Zero)
-            return CreateTimingSpring(segmentDuration, baseShortestDuration, noteParams);
+            return CreateTimingSpring(segmentDuration, spacing, noteParams);
 
         // LILYPOND-REF: lily/spacing-basic.cc:144 — clamp shortest_playing to the MEASURE LENGTH
         // (a multi-measure-rest guard), NOT to this segment's delta_t. Clamping to delta_t was a
@@ -109,11 +110,12 @@ internal static partial class SpacingRules
         if (measureLength is { } mlen && mlen > Fraction.Zero && mlen < effectivePlaying)
             effectivePlaying = mlen;
 
-        double defaultMin = EngravingDefaults.SpacingIncrement;
-        double bsd = baseShortestDuration ?? EngravingDefaults.BaseShortestDuration;
+        var so = spacing ?? SpacingOptions.Default;
+        // LILYPOND-REF: lily/spacing-basic.cc:152 — min = options->increment_
+        double defaultMin = so.Increment;
 
         // LILYPOND-REF: lily/spacing-basic.cc:151 — len = get_duration_space(shortest_playing)
-        double len = CalculateDurationSpace(effectivePlaying, bsd);
+        double len = CalculateDurationSpace(effectivePlaying, so);
         // LILYPOND-REF: lily/spacing-basic.cc:155-156 — fraction = delta_t / shortest_playing
         double fraction = segmentDuration.ToDouble() / effectivePlaying.ToDouble();
 
@@ -379,8 +381,8 @@ internal static partial class SpacingRules
     }
 
     internal static Spring ApplyLeftHeadWidth(
-        Spring spring, IEnumerable<MusicItem> leftItems, IEnumerable<MusicItem>? rightItems = null,
-        bool mergeWishAverage = false)
+        Spring spring, IEnumerable<MusicItem> leftItems, double increment,
+        IEnumerable<MusicItem>? rightItems = null, bool mergeWishAverage = false)
     {
         if (CrossesVoiceBoundary(leftItems, rightItems))
             return spring;
@@ -459,8 +461,9 @@ internal static partial class SpacingRules
         if (mergeWishAverage)
             leftHeadEnd = headSum / headCount;
 
-        double ideal = Math.Max(EngravingDefaults.SpacingIncrement,
-            spring.IdealDistance + leftHeadEnd - EngravingDefaults.SpacingIncrement);
+        // LILYPOND-REF: lily/note-spacing.cc:77 — ideal = base.ideal_distance () - increment
+        //   + left_head_end, the increment get_spacing is handed (options->increment_).
+        double ideal = Math.Max(increment, spring.IdealDistance + leftHeadEnd - increment);
         // LILYPOND-REF: lily/note-spacing.cc:113 base.set_ideal_distance (…) — the SETTER,
         // which leaves the duration-built compressibility alone (lily/spring.cc:131-141).
         return spring.WithIdealDistance(ideal);

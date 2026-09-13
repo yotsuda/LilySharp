@@ -654,11 +654,11 @@ public class PercentRepeatTests
             timings);
 
         var column = new MeasureLayouter().CreateTimingSprings(
-            fonts, primary, timings, shortest, allMeasures, measures[1],
+            fonts, primary, timings, SpacingOptions.Default.WithShortest(shortest), allMeasures, measures[1],
             SpacingRules.RunLeftBoundBarline(measures, 0));
         column = MultiStaffLayouter.ApplySharedColumnReservations(
-            multi, 0, column, primary, timings, allMeasures, shortest);
-        var item = SpacingRules.CreateSpringsForMeasure(fonts, primary, shortest, nextMeasure: measures[1]);
+            multi, 0, column, primary, timings, allMeasures, SpacingOptions.Default.WithShortest(shortest));
+        var item = SpacingRules.CreateSpringsForMeasure(fonts, primary, SpacingOptions.Default.WithShortest(shortest), nextMeasure: measures[1]);
 
         // The IDEALS agree leg for leg (the two systems have always kept their minimums in
         // different frames — the column chain's carries the rod, the estimate's the skyline
@@ -712,10 +712,10 @@ public class PercentRepeatTests
         double shortest = SpacingRules.CalculateCommonShortestDuration(multi);
         var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
         var column = new MeasureLayouter().CreateTimingSprings(
-            fonts, measures[0], timings, shortest, allMeasures, measures[1],
+            fonts, measures[0], timings, SpacingOptions.Default.WithShortest(shortest), allMeasures, measures[1],
             SpacingRules.RunLeftBoundBarline(measures, 0));
         column = MultiStaffLayouter.ApplySharedColumnReservations(
-            multi, 0, column, measures[0], timings, allMeasures, shortest);
+            multi, 0, column, measures[0], timings, allMeasures, SpacingOptions.Default.WithShortest(shortest));
 
         double tabGroup = PercentRepeatEngraver.Geometry(
             isBeatSlash: true, slashCount: 0, isDouble: false,

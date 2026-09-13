@@ -93,11 +93,11 @@ public class CrossVoiceColumnSpacingTests
         var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
         double gs = SpacingRules.CalculateCommonShortestDuration(score);
         var springs = new MeasureLayouter().CreateTimingSprings(
-            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, timings, gs, allMeasures,
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, timings, SpacingOptions.Default.WithShortest(gs), allMeasures,
             measureIndex + 1 < measures.Length ? measures[measureIndex + 1] : null,
             SpacingRules.RunLeftBoundBarline(measures, measureIndex));
         return MultiStaffLayouter.ApplySharedColumnReservations(
-            score, measureIndex, springs, primary, timings, allMeasures, gs);
+            score, measureIndex, springs, primary, timings, allMeasures, SpacingOptions.Default.WithShortest(gs));
     }
 
     /// <summary>Bar line to bar line at force 0, as the ragged probe reads it.</summary>
@@ -123,7 +123,7 @@ public class CrossVoiceColumnSpacingTests
         // bar line → b8 → d''4 → b8 → bar line
         Assert.Equal(4, springs.Length);
 
-        double eighthSpace = SpacingRules.CalculateDurationSpace(new Fraction(1, 8), 0.125);
+        double eighthSpace = SpacingRules.CalculateDurationSpace(new Fraction(1, 8), SpacingOptions.Default.WithShortest(0.125));
         Assert.Equal(0.5 * eighthSpace, springs[1].IdealDistance, precision: 9);
         double rod = BlackHeadRight + 2 * SpacingRules.DefaultExtraSpacingWidth
                      + SpacingRules.SeparationRodPadding;
@@ -140,7 +140,7 @@ public class CrossVoiceColumnSpacingTests
     public void CrossVoicePair_TakesNoLeftHeadRefinement()
     {
         var springs = ColumnSprings(BeamOverStem, 1);
-        double eighthSpace = SpacingRules.CalculateDurationSpace(new Fraction(1, 8), 0.125);
+        double eighthSpace = SpacingRules.CalculateDurationSpace(new Fraction(1, 8), SpacingOptions.Default.WithShortest(0.125));
         Assert.Equal(0.5 * eighthSpace, springs[2].IdealDistance, precision: 9);
         Assert.Equal(1.200000, springs[2].Length(0), precision: 6);
     }
@@ -155,7 +155,7 @@ public class CrossVoiceColumnSpacingTests
         var springs = ColumnSprings(SkipBesideNote, 0);
         var (_, _, _, score) = Collect(SkipBesideNote, 0);
         double gs = SpacingRules.CalculateCommonShortestDuration(score);
-        double quarterSpace = SpacingRules.CalculateDurationSpace(new Fraction(1, 4), gs);
+        double quarterSpace = SpacingRules.CalculateDurationSpace(new Fraction(1, 4), SpacingOptions.Default.WithShortest(gs));
         Assert.Equal(quarterSpace, springs[1].IdealDistance, precision: 9);
     }
 

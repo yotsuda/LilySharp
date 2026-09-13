@@ -93,8 +93,8 @@ internal static partial class SpacingRules
     /// Creates all springs for a measure.
     /// </summary>
     /// <param name="measure">The measure to create springs for</param>
-    /// <param name="baseShortestDuration">Optional spacing base-shortest-duration override;
-    /// null uses the score default.</param>
+    /// <param name="spacing">The score's spacing options (common shortest and increment);
+    /// null uses LilyPond's defaults.</param>
     /// <param name="nextMeasure">The measure FOLLOWING this one, when known — a clef change
     /// opening it is drawn before the shared bar line, so its width is charged to this
     /// measure's closing spring (<see cref="BoundaryClefAllowance"/>). Must mirror
@@ -104,7 +104,7 @@ internal static partial class SpacingRules
     /// the plan for a compound numerator's <c>+</c>.</param>
     public static ImmutableArray<Spring> CreateSpringsForMeasure(Rendering.ScoreTextMetrics fonts,
                                                                  Measure measure,
-                                                                 double? baseShortestDuration = null,
+                                                                 SpacingOptions? spacing = null,
                                                                  Measure? nextMeasure = null)
     {
         if (measure.Items.Length == 0)
@@ -153,7 +153,7 @@ internal static partial class SpacingRules
                 measure.LineBreakPermission != BreakPermission.Forbid,
                 measure.TotalDuration,
                 measure.TotalDuration,
-                baseShortestDuration ?? EngravingDefaults.BaseShortestDuration);
+                spacing ?? SpacingOptions.Default);
 
         // NOTE: a full-measure rest gets ORDINARY springs here. LilyPond does the
         // same — a rested bar is spaced like any other bar, and the compaction of a
@@ -216,7 +216,7 @@ internal static partial class SpacingRules
             ? SkipOpenedBarFirstSpring(fonts,
                 measure.StartBarline == BarlineType.None ? BarlineType.Single : measure.StartBarline,
                 measure.Items, new[] { firstItem }, firstOnset,
-                baseShortestDuration ?? EngravingDefaults.BaseShortestDuration)
+                spacing ?? SpacingOptions.Default)
             : BarlineToFirstColumnSpring(fonts, new[] { firstItem }, FillsMeasure(measure));
         springs.Add(firstSpring);
 
@@ -230,13 +230,13 @@ internal static partial class SpacingRules
             var (prevItem, prevOnset) = kept[i];
             var (nextItem, nextOnset) = kept[i + 1];
             var spring = CreateSpring(fonts, prevItem, nextItem, nextOnset - prevOnset,
-                baseShortestDuration: baseShortestDuration,
+                spacing: spacing,
                 shortestPlaying: prevItem.Duration);
             // Swap the generic spacing-increment for the LEFT column's real head
             // width, exactly as the timing-column system does (MeasureLayouter) —
             // this is LilyPond's ideal, and leaving it out made every spring here
             // ~0.104 ss narrow for a black head.
-            spring = ApplyLeftHeadWidth(spring, One(prevItem), One(nextItem));
+            spring = ApplyLeftHeadWidth(spring, One(prevItem), (spacing ?? SpacingOptions.Default).Increment, One(nextItem));
             spring = AdjustSpringForGraceNotes(
                 spring, GraceNotesOf(nextItem), graceParams: null, mainItem: nextItem);
             // A pair touching a mid-measure change column is priced by the change column,
@@ -258,7 +258,7 @@ internal static partial class SpacingRules
         // the last KEPT item to the bar over any skip that follows it.
         var (lastItem, lastOnset) = kept[^1];
         var lastSpring = CreateSpring(fonts, lastItem, null, totalDuration - lastOnset,
-            baseShortestDuration: baseShortestDuration,
+            spacing: spacing,
             shortestPlaying: lastItem.Duration);
         // The column's skyline against the bar line's box, the bar line's box grown toward
         // BOTH its neighbours — the same pair the timing-column system prices
@@ -266,7 +266,7 @@ internal static partial class SpacingRules
         // only; the rod is applied after the headroom below.
         var barPair = NoteColumnToBarlineFloorPair(fonts, lastItem, LeadingMusicalItems(nextMeasure));
         lastSpring = lastSpring.EnsureMinDistance(barPair.SkyMin);
-        lastSpring = ApplyLeftHeadWidth(lastSpring, One(lastItem));
+        lastSpring = ApplyLeftHeadWidth(lastSpring, One(lastItem), (spacing ?? SpacingOptions.Default).Increment);
 
         // The bar line stands in for the right-hand stem, so LilyPond runs
         // stem_dir_correction on THIS spring too. CreateSpring's own

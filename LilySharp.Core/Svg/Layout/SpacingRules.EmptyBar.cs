@@ -94,8 +94,9 @@ internal static partial class SpacingRules
     /// — <c>set_property (column, "measure-length", to_scm (mlen))</c>.</param>
     /// <param name="dt">The time between the two columns, <c>when_mom (r) − when_mom (l)</c>
     /// — the bar's own duration, which is the meter's length unless the bar is a pickup.</param>
-    /// <param name="globalShortest">The piece's common shortest duration in whole notes —
-    /// <c>Spacing_options::global_shortest_</c>, <see cref="CalculateCommonShortestDuration(MultiStaffScore)"/>.</param>
+    /// <param name="spacing">The score's <c>Spacing_options</c> — <c>global_shortest_</c>
+    /// (<see cref="CalculateCommonShortestDuration(MultiStaffScore)"/>) and the increment the
+    /// breakable branch reads as <c>spacing-increment</c>.</param>
     /// <remarks>
     /// <para>
     /// LILYPOND-REF: lily/spacing-basic.cc:40-83 Spacing_spanner::standard_breakable_column_spacing
@@ -129,7 +130,7 @@ internal static partial class SpacingRules
     /// </remarks>
     internal static Spring StandardBreakableColumnSpacing(
         double minimumDistance, bool bothBreakable, Fraction measureLength, Fraction dt,
-        double globalShortest)
+        SpacingOptions spacing)
     {
         // LILYPOND-REF: lily/spacing-basic.cc:44 standard_breakable_column_spacing —
         //   min_dist = std::max (0.0, Paper_column::minimum_distance (l, r)).
@@ -140,8 +141,8 @@ internal static partial class SpacingRules
             // LILYPOND-REF: lily/spacing-basic.cc:46-55 standard_breakable_column_spacing —
             //   is_breakable (l) && is_breakable (r): mlen = measure-length of l (default 1);
             //   incr = spacing-increment; space = incr * (mlen.main_part_ / global_shortest_) * 0.8.
-            double space = EngravingDefaults.SpacingIncrement
-                           * (measureLength.ToDouble() / globalShortest) * 0.8;
+            double space = spacing.Increment
+                           * (measureLength.ToDouble() / spacing.GlobalShortest) * 0.8;
 
             // LILYPOND-REF: lily/spacing-basic.cc:56 — Spring spring = Spring (min_dist + space, min_dist);
             // LILYPOND-REF: lily/spacing-basic.cc:64 — spring.set_inverse_stretch_strength (space).
@@ -157,7 +158,7 @@ internal static partial class SpacingRules
         //   return Spring (ideal, min_dist).
         double ideal = dt == Fraction.Zero
             ? minDist + 0.5
-            : minDist + CalculateDurationSpace(dt, globalShortest);
+            : minDist + CalculateDurationSpace(dt, spacing);
         // LILYPOND-REF: lily/spring.cc:212-216 Spring::set_default_stretch_strength —
         //   inverse_stretch_strength_ = ideal_distance_; the compress strength is the
         //   three-argument constructor's ideal − min, as set_default_compress_strength has it.
@@ -181,7 +182,7 @@ internal static partial class SpacingRules
     /// <param name="measureLength">The meter's bar length (see
     /// <see cref="StandardBreakableColumnSpacing"/>).</param>
     /// <param name="dt">The bar's own duration, the time between its two bar lines.</param>
-    /// <param name="globalShortest">The piece's common shortest duration in whole notes.</param>
+    /// <param name="spacing">The score's spacing options (common shortest and increment).</param>
     /// <remarks>
     /// <para>
     /// FRAME: LilyPond's <c>minimum_distance</c> runs from the LEFT column's origin — the left
@@ -213,7 +214,7 @@ internal static partial class SpacingRules
     internal static ImmutableArray<Spring> EmptyBarSprings(
         Rendering.ScoreTextMetrics fonts,
         int columnCount, BarlineType leftBound, IEnumerable<MusicItem>? leadingItems,
-        bool bothBreakable, Fraction measureLength, Fraction dt, double globalShortest,
+        bool bothBreakable, Fraction measureLength, Fraction dt, SpacingOptions spacing,
         double leftDoublePercentHalfWidth = 0, double rightDoublePercentHalfWidth = 0)
     {
         // LILYPOND-REF: lily/paper-column.cc:144-164 Paper_column::minimum_distance — the
@@ -230,7 +231,7 @@ internal static partial class SpacingRules
         double minimumDistance = MmrRodMinimumDistance(fonts,
             leftBound, leadingItems, leftDoublePercentHalfWidth, rightDoublePercentHalfWidth);
         var pair = StandardBreakableColumnSpacing(
-            minimumDistance, bothBreakable, measureLength, dt, globalShortest);
+            minimumDistance, bothBreakable, measureLength, dt, spacing);
 
         // Re-frame: the left bar line's drawn width is the layout's, not this chain's.
         double leftBarlineWidth = GetBarlineWidth(leftBound);
@@ -273,7 +274,7 @@ internal static partial class SpacingRules
     /// the bounding column (the scan stops at the skip, the first sounding item).</param>
     /// <param name="firstItems">Everything at the first KEPT onset, across voices.</param>
     /// <param name="dt">The first kept onset — the time from the bar line to the column.</param>
-    /// <param name="globalShortest">The piece's common shortest duration in whole notes.</param>
+    /// <param name="spacing">The score's spacing options (common shortest and increment).</param>
     /// <remarks>
     /// LILYPOND-REF: lily/spacing-spanner.cc:478-515 Spacing_spanner::breakable_column_spacing
     ///   — <c>if (dt == Moment (0, 0))</c> is the only branch that reads spacing-wishes, so
@@ -290,7 +291,7 @@ internal static partial class SpacingRules
     internal static Spring SkipOpenedBarFirstSpring(
         Rendering.ScoreTextMetrics fonts,
         BarlineType leftBound, ImmutableArray<MusicItem> measureItems,
-        IReadOnlyList<MusicItem>? firstItems, Fraction dt, double globalShortest)
+        IReadOnlyList<MusicItem>? firstItems, Fraction dt, SpacingOptions spacing)
     {
         var leftColumnRight = BoundaryColumn.Build(fonts, leftBound, measureItems).RightSkylineFromBarLine();
         // The note column's left reach: its leftmost ink plus its extra-spacing-width, the
@@ -313,7 +314,7 @@ internal static partial class SpacingRules
         // layout's, exactly as EmptyBarSprings re-frames its pair.
         double leftBarlineWidth = GetBarlineWidth(leftBound);
         var pair = StandardBreakableColumnSpacing(
-            minimumDistance, bothBreakable: false, measureLength: dt, dt: dt, globalShortest);
+            minimumDistance, bothBreakable: false, measureLength: dt, dt: dt, spacing);
         return new Spring(
             pair.IdealDistance - leftBarlineWidth,
             pair.MinDistance - leftBarlineWidth,

@@ -102,11 +102,11 @@ public class SkipColumnSpacingTests
         var (timings, allMeasures, primary, score) = Collect(src, measureIndex);
         var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
         var springs = new MeasureLayouter().CreateTimingSprings(
-            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, timings, GlobalShortest, allMeasures,
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, timings, SpacingOptions.Default.WithShortest(GlobalShortest), allMeasures,
             measureIndex + 1 < measures.Length ? measures[measureIndex + 1] : null,
             SpacingRules.RunLeftBoundBarline(measures, measureIndex));
         return MultiStaffLayouter.ApplySharedColumnReservations(
-            score, measureIndex, springs, primary, timings, allMeasures, GlobalShortest);
+            score, measureIndex, springs, primary, timings, allMeasures, SpacingOptions.Default.WithShortest(GlobalShortest));
     }
 
     /// <summary>Bar line to bar line, as the ragged probes read it: the content chain plus
@@ -144,7 +144,7 @@ public class SkipColumnSpacingTests
         // Lily# read 9.03 while the skip kept a column.
         var springs = ColumnSprings(OneVoice, 1);
         Assert.Equal(2, springs.Length);
-        double quarter = SpacingRules.CalculateDurationSpace(Fraction.Quarter, GlobalShortest);
+        double quarter = SpacingRules.CalculateDurationSpace(Fraction.Quarter, SpacingOptions.Default.WithShortest(GlobalShortest));
         // The base of the last leg is four quarters' space; the refinement adds the head
         // width term and the stem correction on top, so the leg lies within a head of it.
         Assert.InRange(springs[^1].IdealDistance, 4 * quarter - 1.5, 4 * quarter + 1.5);
@@ -190,7 +190,7 @@ public class SkipColumnSpacingTests
         {
             var (_, _, primary, _) = Collect(src, bar);
             var column = ColumnSprings(src, bar);
-            var item = SpacingRules.CreateSpringsForMeasure(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, GlobalShortest);
+            var item = SpacingRules.CreateSpringsForMeasure(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, SpacingOptions.Default.WithShortest(GlobalShortest));
             Assert.Equal(column.Length, item.Length);
             for (int i = 0; i < column.Length; i++)
                 Assert.Equal(column[i].IdealDistance, item[i].IdealDistance, 9);

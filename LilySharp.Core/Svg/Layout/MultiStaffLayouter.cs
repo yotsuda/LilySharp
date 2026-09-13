@@ -1322,6 +1322,8 @@ internal sealed class MultiStaffLayouter
         bool isLastSystem = false,
         double? baseShortestDuration = null)
     {
+        // The shortest and the paper's increment travel as one value below (SpacingOptions).
+        var spacing = SpacingOptions.For(score, baseShortestDuration);
         var primaryVoice = score.PrimaryContentStaff.PrimaryVoice;
         int endMeasureIndex = measureCount.HasValue
             ? startMeasureIndex + measureCount.Value
@@ -1436,7 +1438,7 @@ internal sealed class MultiStaffLayouter
             var nextMeasure = i + 1 < primaryVoice.Measures.Length
                 ? primaryVoice.Measures[i + 1] : null;
             var springs = _measureLayouter.CreateTimingSprings(
-                score.TextMetrics, primaryMeasure, allTimings, baseShortestDuration, allMeasures, nextMeasure,
+                score.TextMetrics, primaryMeasure, allTimings, spacing, allMeasures, nextMeasure,
                 SpacingRules.RunLeftBoundBarline(primaryVoice.Measures, i));
 
             // An empty placeholder measure (`| |`) has no timing springs at all —
@@ -1456,7 +1458,7 @@ internal sealed class MultiStaffLayouter
             // exactly as it will be laid out. Applied before the FirstNoteSpring
             // tweak below, which Math.Max-preserves any widened minimum.
             springs = ApplySharedColumnReservations(
-                score, i, springs, primaryMeasure, allTimings, allMeasures, baseShortestDuration);
+                score, i, springs, primaryMeasure, allTimings, allMeasures, spacing);
 
             // LINE-START measure: spring 0 is the prefix→first-note spacing
             // (space-alist of the last prefix item), not the mid-line
@@ -1801,7 +1803,7 @@ internal sealed class MultiStaffLayouter
 
             var columnLayouts = _measureLayouter.LayoutColumns(
                 score.TextMetrics, primaryMeasure, measureWidth, measureTimings[i],
-                baseShortestDuration, measureAllMeasures[i],
+                spacing, measureAllMeasures[i],
                 measureSprings[i], force);
 
             // Derive the item slots FROM the solved columns so Items[i].X == the
@@ -1920,9 +1922,8 @@ internal sealed class MultiStaffLayouter
     /// shape as the container-skip predicates (docs/HANDOFF.md §1 第98): a
     /// per-caller copy of a whitelist is where drift grows, so there is no copy.
     /// </summary>
-    /// <param name="baseShortestDuration">The piece's common shortest duration — the
-    /// <c>global_shortest</c> an EMPTY bar's one spring is linear in; null for the score
-    /// default, as the timing springs take it.</param>
+    /// <param name="spacing">The score's spacing options — the <c>global_shortest</c> and
+    /// the increment an EMPTY bar's one spring is linear in (SpacingOptions.For the score).</param>
     internal static ImmutableArray<Spring> ApplySharedColumnReservations(
         MultiStaffScore score,
         int measureIndex,
@@ -1930,7 +1931,7 @@ internal sealed class MultiStaffLayouter
         Measure primaryMeasure,
         List<Fraction> allTimings,
         List<Measure> allMeasures,
-        double? baseShortestDuration = null)
+        SpacingOptions spacing)
     {
         // AN EMPTY BAR — no grob in any of its columns, in any staff or row — is not
         // reserved on at all: LilyPond drops every unused column from the spacing problem
@@ -1976,7 +1977,7 @@ internal sealed class MultiStaffLayouter
                 leftBreakable && rightBreakable,
                 ScoreSideTables.PrevailingMeters(score)[measureIndex],
                 dt,
-                baseShortestDuration ?? EngravingDefaults.BaseShortestDuration,
+                spacing,
                 leftDoublePercentHalfWidth: measureIndex < signHalf.Count ? signHalf[measureIndex] : 0,
                 rightDoublePercentHalfWidth: measureIndex + 1 < signHalf.Count ? signHalf[measureIndex + 1] : 0);
             // A lead sheet's grid floor is Lily#'s own and applies to every bar of the

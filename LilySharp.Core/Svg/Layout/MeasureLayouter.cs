@@ -179,13 +179,14 @@ internal sealed class MeasureLayouter
     public ImmutableArray<Spring> CreateTimingSprings(
         Rendering.ScoreTextMetrics fonts,
         Measure measure, List<Fraction> timings,
-        double? baseShortestDuration = null,
+        SpacingOptions? spacing = null,
         IReadOnlyList<Measure>? allMeasures = null,
         Measure? nextMeasure = null,
         BarlineType? leftBound = null)
     {
         if (timings.Count == 0)
             return ImmutableArray<Spring>.Empty;
+        var so = spacing ?? SpacingOptions.Default;
 
         // LILYPOND-REF: lily/spacing-spanner.cc:musical_column_spacing()
         // Build a map from timing → items for skyline-based rod calculation.
@@ -252,16 +253,16 @@ internal sealed class MeasureLayouter
         springs.Add(CreateBarlineToFirstSpring(
             fonts, timings, timingToItems, measure,
             leftBound ?? (measure.StartBarline == BarlineType.None ? BarlineType.Single : measure.StartBarline),
-            droppedOnsetFollows, baseShortestDuration));
+            droppedOnsetFollows, so));
 
         // Springs between adjacent timing columns (see CreateInterColumnSpring).
         for (int i = 1; i < timings.Count; i++)
             springs.Add(CreateInterColumnSpring(fonts, i, timings, timingToItems, measuresToScan,
-                baseShortestDuration, looseRods));
+                so, looseRods));
 
         // End spring: last column → barline (see CreateLastToBarlineSpring).
         springs.Add(CreateLastToBarlineSpring(fonts, timings, timingToItems, measuresToScan, totalDuration,
-            baseShortestDuration, SpacingRules.BoundaryClefAllowance(fonts, measure.EndBarline, nextMeasure),
+            so, SpacingRules.BoundaryClefAllowance(fonts, measure.EndBarline, nextMeasure),
             SpacingRules.LeadingMusicalItems(nextMeasure)));
 
         return looseRods.Count > 0
@@ -386,21 +387,20 @@ internal sealed class MeasureLayouter
     /// which for <c>c4 s2.</c> is the skip's unused column: <c>!is_used (next)</c> and no
     /// full-measure-extra-space — MEASURED, ps1's bar line → c4 is 1.23, not 2.23.
     /// LILYPOND-REF: lily/spacing-spanner.cc:446-472 Spacing_spanner::fills_measure.</param>
-    /// <param name="baseShortestDuration">The common shortest, for a skip-opened bar's
+    /// <param name="spacing">The score's spacing options, for a skip-opened bar's
     /// duration-space spring.</param>
     private static Spring CreateBarlineToFirstSpring(
         Rendering.ScoreTextMetrics fonts,
         List<Fraction> timings, Dictionary<Fraction, List<MusicItem>> timingToItems,
         Measure measure, BarlineType leftBound, bool droppedOnsetFollows,
-        double? baseShortestDuration)
+        SpacingOptions spacing)
     {
         timingToItems.TryGetValue(timings[0], out var firstItems);
         // A bar that opens with a skip: the bar line's neighbour is a column at a later
         // moment — the duration-space branch, not Staff_spacing.
         if (timings[0] > Fraction.Zero)
             return SpacingRules.SkipOpenedBarFirstSpring(fonts,
-                leftBound, measure.Items, firstItems, timings[0],
-                baseShortestDuration ?? EngravingDefaults.BaseShortestDuration);
+                leftBound, measure.Items, firstItems, timings[0], spacing);
         bool fillsMeasure =
             timings.Count == 1
             && !droppedOnsetFollows
@@ -424,7 +424,7 @@ internal sealed class MeasureLayouter
         Rendering.ScoreTextMetrics fonts,
         int i, List<Fraction> timings,
         Dictionary<Fraction, List<MusicItem>> timingToItems,
-        IReadOnlyList<Measure> measuresToScan, double? baseShortestDuration,
+        IReadOnlyList<Measure> measuresToScan, SpacingOptions spacing,
         List<(int Left, int Right, double Distance)> looseRods)
     {
         // This spring connects timings[i-1] → timings[i]; its duration is
@@ -444,7 +444,7 @@ internal sealed class MeasureLayouter
                 measureLength = total;
         }
         var spring = SpacingRules.CreateTimingSpringMultiVoice(
-            segmentDuration, shortestPlaying, baseShortestDuration,
+            segmentDuration, shortestPlaying, spacing,
             measureLength: measureLength > Fraction.Zero ? measureLength : null);
 
         timingToItems.TryGetValue(timings[i - 1], out var prevItems);
@@ -541,7 +541,7 @@ internal sealed class MeasureLayouter
                 // One left item per WISH — per voice occupying both columns with a
                 // rhythmic grob at each (ItemStartingAt); anyWish and wishLefts are the
                 // same fact, so a pair no voice spans keeps its raw duration ideal.
-                wishLefts, nextItems,
+                wishLefts, spacing.Increment, nextItems,
                 // Several wishes merge as LilyPond merges them — by AVERAGING the
                 // ideals (merge_springs) — not by taking the widest head.
                 mergeWishAverage: true);
@@ -635,7 +635,7 @@ internal sealed class MeasureLayouter
         if (changeGaps is null)
             spring = SpacingRules.MergeVoiceStemWishes(
                 spring, measuresToScan, timings[i - 1], timings[i],
-                NoteSpacingParameters.Default);
+                NoteSpacingParameters.Default, spacing.Increment);
 
         // The change column's two gaps, computed above, become this one spring — see
         // SpacingRules.MidMeasureChangeGaps for the derivation, the measurements, and what
@@ -686,20 +686,20 @@ internal sealed class MeasureLayouter
     private static Spring CreateLastToBarlineSpring(
         Rendering.ScoreTextMetrics fonts,
         List<Fraction> timings, Dictionary<Fraction, List<MusicItem>> timingToItems,
-        IReadOnlyList<Measure> measuresToScan, Fraction totalDuration, double? baseShortestDuration,
+        IReadOnlyList<Measure> measuresToScan, Fraction totalDuration, SpacingOptions spacing,
         double boundaryClefAllowance = 0, IReadOnlyList<MusicItem>? rightNeighbours = null)
     {
         var endDuration = totalDuration - timings[^1];
         var endShortestPlaying = SpacingRules.ComputeShortestPlayingAt(timings[^1], measuresToScan);
         var endSpring = SpacingRules.CreateTimingSpringMultiVoice(
-            endDuration, endShortestPlaying, baseShortestDuration);
+            endDuration, endShortestPlaying, spacing);
 
         // The column ROD toward the bar line, applied last (below) — a floor on the
         // compressed length alone, as on every inter-column spring.
         double maxRod = 0;
         if (timingToItems.TryGetValue(timings[^1], out var lastItems))
         {
-            endSpring = SpacingRules.ApplyLeftHeadWidth(endSpring, lastItems);
+            endSpring = SpacingRules.ApplyLeftHeadWidth(endSpring, lastItems, spacing.Increment);
 
             // Stem-direction optical correction, with the bar line standing in for the
             // right-hand stem. LilyPond runs stem_dir_correction on THIS spring too,
@@ -785,7 +785,7 @@ internal sealed class MeasureLayouter
     /// </remarks>
     public ImmutableArray<ColumnLayout> LayoutColumns(Rendering.ScoreTextMetrics fonts,
                                                       Measure measure, double totalWidth, List<Fraction> timings,
-                                                      double? baseShortestDuration = null,
+                                                      SpacingOptions? spacing = null,
                                                       IReadOnlyList<Measure>? allMeasures = null,
                                                       ImmutableArray<Spring>? precomputedSprings = null,
                                                       double? precomputedForce = null)
@@ -799,7 +799,7 @@ internal sealed class MeasureLayouter
         double endBarlineWidth = SpacingRules.GetBarlineWidth(measure.EndBarline);
 
         // Use precomputed springs or create them
-        var springs = precomputedSprings ?? CreateTimingSprings(fonts, measure, timings, baseShortestDuration, allMeasures);
+        var springs = precomputedSprings ?? CreateTimingSprings(fonts, measure, timings, spacing, allMeasures);
         if (springs.Length == 0)
             return ImmutableArray<ColumnLayout>.Empty;
 

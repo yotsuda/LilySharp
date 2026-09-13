@@ -74,7 +74,7 @@ public sealed class BarlineColumnRodTests
         var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
         var springs = new MeasureLayouter().CreateTimingSprings(
             LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, measures[0], MultiStaffLayouter.CollectAllTimingsForMeasure(score, 0),
-            SpacingRules.CalculateCommonShortestDuration(score),
+            SpacingOptions.Default.WithShortest(SpacingRules.CalculateCommonShortestDuration(score)),
             MultiStaffLayouter.CollectAllMeasuresAtIndex(score, 0), measures[1]);
         return (new ImmutableSprings(springs), measures[0]);
     }
@@ -174,7 +174,7 @@ public sealed class BarlineColumnRodTests
         var flagged = FirstBar(ScoreOf("fis,,2 fis,,8 fis,, r cis,"));
         var cis8 = flagged.Items[^1];
         Assert.Equal(0.0, SpacingRules.CalculateStemCorrectionToBarline(cis8, NoteSpacingParameters.Default), 9);
-        Assert.Equal(0.0, SpacingRules.CalculateStemCorrection(cis8, flagged.Items[0], NoteSpacingParameters.Default), 9);
+        Assert.Equal(0.0, SpacingRules.CalculateStemCorrection(cis8, flagged.Items[0], NoteSpacingParameters.Default, LilySharp.Core.Svg.EngravingDefaults.SpacingIncrement), 9);
 
         var quarter = FirstBar(ScoreOf("fis,,2 fis,,8 fis,, cis,4"));
         Assert.NotEqual(0.0, SpacingRules.CalculateStemCorrectionToBarline(quarter.Items[^1], NoteSpacingParameters.Default));

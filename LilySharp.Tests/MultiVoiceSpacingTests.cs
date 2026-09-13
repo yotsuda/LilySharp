@@ -111,8 +111,8 @@ public class MultiVoiceSpacingTests
         // When shortest_playing == segment_duration, the multi-voice formula must collapse
         // to the original CreateTimingSpring behaviour to preserve all single-voice snapshots.
         var d = new Fraction(1, 4);
-        var legacy = SpacingRules.CreateTimingSpring(d, baseShortestDuration: 0.125);
-        var mv = SpacingRules.CreateTimingSpringMultiVoice(d, d, baseShortestDuration: 0.125);
+        var legacy = SpacingRules.CreateTimingSpring(d, spacing: SpacingOptions.Default.WithShortest(0.125));
+        var mv = SpacingRules.CreateTimingSpringMultiVoice(d, d, spacing: SpacingOptions.Default.WithShortest(0.125));
 
         Assert.Equal(legacy.IdealDistance, mv.IdealDistance, precision: 6);
         Assert.Equal(legacy.MinDistance, mv.MinDistance, precision: 6);
@@ -134,10 +134,10 @@ public class MultiVoiceSpacingTests
         // packed in by the eighth-note voice between slow boundaries.
         var delta = new Fraction(1, 4);
         var shortestPlaying = new Fraction(1, 8);
-        var spring = SpacingRules.CreateTimingSpringMultiVoice(delta, shortestPlaying, baseShortestDuration: 0.125);
+        var spring = SpacingRules.CreateTimingSpringMultiVoice(delta, shortestPlaying, spacing: SpacingOptions.Default.WithShortest(0.125));
 
         // Verify the LP-faithful formula: fraction * duration_space(shortest_playing)
-        double expectedLen = (0.25 / 0.125) * SpacingRules.CalculateDurationSpace(shortestPlaying, 0.125);
+        double expectedLen = (0.25 / 0.125) * SpacingRules.CalculateDurationSpace(shortestPlaying, SpacingOptions.Default.WithShortest(0.125));
         Assert.Equal(expectedLen, spring.IdealDistance, precision: 6);
     }
 
@@ -145,8 +145,8 @@ public class MultiVoiceSpacingTests
     public void CreateTimingSpringMultiVoice_ZeroShortestPlaying_FallsBackToLegacy()
     {
         var d = new Fraction(1, 4);
-        var legacy = SpacingRules.CreateTimingSpring(d, baseShortestDuration: 0.125);
-        var mv = SpacingRules.CreateTimingSpringMultiVoice(d, Fraction.Zero, baseShortestDuration: 0.125);
+        var legacy = SpacingRules.CreateTimingSpring(d, spacing: SpacingOptions.Default.WithShortest(0.125));
+        var mv = SpacingRules.CreateTimingSpringMultiVoice(d, Fraction.Zero, spacing: SpacingOptions.Default.WithShortest(0.125));
 
         Assert.Equal(legacy.IdealDistance, mv.IdealDistance, precision: 6);
     }
@@ -163,8 +163,8 @@ public class MultiVoiceSpacingTests
         // notes evenly spaced).
         var quarter = new Fraction(1, 4);
         var halfOfQuarter = new Fraction(1, 8);
-        var slice = SpacingRules.CreateTimingSpringMultiVoice(halfOfQuarter, quarter, baseShortestDuration: 0.125);
-        var full = SpacingRules.CreateTimingSpringMultiVoice(quarter, quarter, baseShortestDuration: 0.125);
+        var slice = SpacingRules.CreateTimingSpringMultiVoice(halfOfQuarter, quarter, spacing: SpacingOptions.Default.WithShortest(0.125));
+        var full = SpacingRules.CreateTimingSpringMultiVoice(quarter, quarter, spacing: SpacingOptions.Default.WithShortest(0.125));
 
         // delta 1/8 is exactly half of shortest_playing 1/4 -> half the ideal distance.
         Assert.Equal(full.IdealDistance / 2.0, slice.IdealDistance, precision: 6);

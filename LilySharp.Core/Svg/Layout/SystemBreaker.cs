@@ -136,7 +136,8 @@ internal sealed class SystemBreaker
             return KnuthPlassBreaker.CreateMeasureGroups(measures, lineBreaks.IdealBreaks);
         }
 
-        var greedy = BreakIntoSystemsGreedy(score.TextMetrics, measures, firstPrefixWidth, continuationPrefixWidth, baseShortestDuration);
+        var greedy = BreakIntoSystemsGreedy(score.TextMetrics, measures, firstPrefixWidth, continuationPrefixWidth,
+            SpacingOptions.For(score, baseShortestDuration));
         var greedyBreaks = new List<int>(greedy.Count);
         int end = 0;
         foreach (var group in greedy)
@@ -186,6 +187,8 @@ internal sealed class SystemBreaker
         var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
         var layouter = new MeasureLayouter();
         var springData = new MeasureSpringData[measures.Length];
+        // The shortest and the paper's increment travel as one value below (SpacingOptions).
+        var spacing = SpacingOptions.For(score, baseShortestDuration);
 
         // Mirror the system layout: a multi-measure rest run is ONE bar, so the
         // measures it swallows are priced at zero and the run-opening measure carries
@@ -220,7 +223,7 @@ internal sealed class SystemBreaker
             // Mirror of MultiStaffLayouter: a clef change opening the next measure is
             // drawn before this bar line, so the break gate must price it here too.
             var springs = layouter.CreateTimingSprings(
-                score.TextMetrics, primaryMeasure, allTimings, baseShortestDuration, allMeasures,
+                score.TextMetrics, primaryMeasure, allTimings, spacing, allMeasures,
                 i + 1 < measures.Length ? measures[i + 1] : null,
                 SpacingRules.RunLeftBoundBarline(measures, i));
 
@@ -231,7 +234,7 @@ internal sealed class SystemBreaker
             // digits were never priced here, so an all-tab book packed onto one
             // system and ran past the page edge.
             springs = MultiStaffLayouter.ApplySharedColumnReservations(
-                score, i, springs, primaryMeasure, allTimings, allMeasures, baseShortestDuration);
+                score, i, springs, primaryMeasure, allTimings, allMeasures, spacing);
 
             // The measure's lyric line edges — the same function the layout reads, off the
             // same reserved springs — for one price: its half of the cross-bar PAIR pricing
@@ -346,7 +349,7 @@ internal sealed class SystemBreaker
         ImmutableArray<Measure> measures,
         double firstPrefixWidth,
         double continuationPrefixWidth,
-        double? baseShortestDuration = null)
+        SpacingOptions? spacing = null)
     {
         if (measures.Length == 0)
             return new List<List<Measure>>();
@@ -370,7 +373,7 @@ internal sealed class SystemBreaker
         var cumIdeal = new double[n + 1];
         for (int i = 0; i < n; i++)
         {
-            double w = SpacingRules.CalculateMeasureIdealWidth(fonts, measures[i], baseShortestDuration);
+            double w = SpacingRules.CalculateMeasureIdealWidth(fonts, measures[i], spacing);
             springData[i] = new MeasureSpringData(w, w, 0, 0, measures[i].LineBreakPermission);
             cumIdeal[i + 1] = cumIdeal[i] + w;
         }

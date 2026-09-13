@@ -33,31 +33,32 @@ internal static partial class SpacingRules
     /// </remarks>
     public static double CalculateDurationSpace(Fraction duration)
     {
-        return CalculateDurationSpace(duration, EngravingDefaults.BaseShortestDuration);
+        return CalculateDurationSpace(duration, SpacingOptions.Default);
     }
 
     /// <summary>
-    /// Calculates the duration-based space with a specific base shortest duration.
+    /// Calculates the duration-based space with a score's spacing options.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/spacing-options.cc:72-107 get_duration_space()
     /// LILYPOND-REF: lily/spacing-spanner.cc
-    /// - ratio = duration / base_shortest_duration
+    /// - ratio = duration / global_shortest
     /// - if ratio less than 1: space = (shortest_duration_space + ratio - 1) * increment
     /// - if ratio >= 1: space = (shortest_duration_space + log2(ratio)) * increment
     ///
-    /// The baseShortestDuration should come from CalculateCommonShortestDuration()
-    /// which scans all voices to find the actual shortest note in the score.
+    /// The shortest should come from CalculateCommonShortestDuration(), which scans all
+    /// voices to find the actual shortest note in the score; the increment is the paper's
+    /// (<see cref="SpacingOptions"/>).
     /// </remarks>
-    public static double CalculateDurationSpace(Fraction duration, double baseShortestDuration)
+    public static double CalculateDurationSpace(Fraction duration, SpacingOptions spacing)
     {
         double durationValue = duration.ToDouble();
 
         if (durationValue <= 0)
-            return EngravingDefaults.SpacingIncrement;
+            return spacing.Increment;
 
         // Ratio of this duration to base shortest
-        double ratio = durationValue / baseShortestDuration;
+        double ratio = durationValue / spacing.GlobalShortest;
 
         // LILYPOND-REF: lily/spacing-options.cc:72-107 get_duration_space()
         double spaceFactor;
@@ -73,7 +74,7 @@ internal static partial class SpacingRules
         }
 
         // Result in staff spaces: spaceFactor * increment
-        return spaceFactor * EngravingDefaults.SpacingIncrement;
+        return spaceFactor * spacing.Increment;
     }
 
     // ---------- Multi-measure rest: LilyPond's run-level spacing rod ----------

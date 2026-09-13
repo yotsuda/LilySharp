@@ -38,7 +38,8 @@ internal static partial class SpacingRules
     /// <param name="prevDuration">The time between the two columns — <c>delta_t</c>. For a
     /// single voice with no skip between the items this is the left item's own duration.</param>
     /// <param name="noteParams">Note spacing parameters.</param>
-    /// <param name="baseShortestDuration">The common shortest duration.</param>
+    /// <param name="spacing">The score's spacing options — the common shortest duration and
+    /// the increment (<see cref="SpacingOptions"/>); null uses LilyPond's defaults.</param>
     /// <param name="shortestPlaying">The shortest duration sounding at the left column —
     /// the left item's own, in a single voice — when it is SHORTER than
     /// <paramref name="prevDuration"/>: a note followed by a skip whose unused column is
@@ -56,13 +57,14 @@ internal static partial class SpacingRules
     public static Spring CreateSpring(Rendering.ScoreTextMetrics fonts,
                                       MusicItem? prevItem, MusicItem? nextItem, Fraction prevDuration,
                                       NoteSpacingParameters? noteParams = null,
-                                      double? baseShortestDuration = null,
+                                      SpacingOptions? spacing = null,
                                       Fraction? shortestPlaying = null)
     {
         var np = noteParams ?? NoteSpacingParameters.Default;
+        var so = spacing ?? SpacingOptions.Default;
 
-        // LILYPOND-REF: lily/spacing-basic.cc:109 note_spacing() - increment
-        double defaultMin = EngravingDefaults.SpacingIncrement;
+        // LILYPOND-REF: lily/spacing-basic.cc:152 note_spacing() - min = options->increment_
+        double defaultMin = so.Increment;
 
         // Skyline-based collision distance (rod)
         double skylineDistance = CalculateSkylineDistance(fonts, prevItem, nextItem, staffY: 0);
@@ -79,12 +81,11 @@ internal static partial class SpacingRules
         double minDistance = Math.Max(fraction * defaultMin, skylineDistance);
 
         // LILYPOND-REF: lily/spacing-basic.cc:107 note_spacing() - duration space
-        double idealDistance = fraction * CalculateDurationSpace(controlling,
-            baseShortestDuration ?? EngravingDefaults.BaseShortestDuration);
+        double idealDistance = fraction * CalculateDurationSpace(controlling, so);
 
         // --- Stem direction optical correction ---
         // LILYPOND-REF: lily/note-spacing.cc:204-315 stem_dir_correction
-        idealDistance += CalculateStemCorrection(prevItem, nextItem, np);
+        idealDistance += CalculateStemCorrection(prevItem, nextItem, np, so.Increment);
 
         // LILYPOND-REF: lily/note-spacing.cc:229-264 strict_note_spacing
         // In strict mode, enforce minimum distance = duration-based ideal distance.
@@ -181,7 +182,8 @@ internal static partial class SpacingRules
     /// direction, and its identity (<see cref="NoteItem.BeamId"/>), into the items.
     /// </remarks>
     internal static double CalculateStemCorrection(MusicItem? prevItem, MusicItem? nextItem,
-                                                   NoteSpacingParameters noteParams)
+                                                   NoteSpacingParameters noteParams,
+                                                   double increment)
     {
         if (StemSpacingInfo(prevItem) is not { } l || StemSpacingInfo(nextItem) is not { } r)
             return 0;
@@ -200,7 +202,7 @@ internal static partial class SpacingRules
             // different_directions_correction — inside ONE beam the knee branch takes over
             // entirely (LilyPond writes it as an if/else, not as a sum).
             if (l.BeamId is { } leftBeam && leftBeam == r.BeamId)
-                return KneeCorrection(nextItem, rightDir, noteParams);
+                return KneeCorrection(nextItem, rightDir, noteParams, increment);
 
             // LILYPOND-REF: note-spacing.cc:140-160 different_directions_correction
             double lo = Math.Max(l.StemMin, r.StemMin);
@@ -266,14 +268,14 @@ internal static partial class SpacingRules
     /// </para>
     /// </remarks>
     private static double KneeCorrection(MusicItem? rightItem, int rightDir,
-                                         NoteSpacingParameters noteParams)
+                                         NoteSpacingParameters noteParams, double increment)
     {
         // LILYPOND-REF: note-spacing.cc:120 knee_correction's note_head_width seed — the
         // spacing increment (Spacing_options::increment_) when the stem carries
         // no head. Written as LilyPond writes it. Nothing head-less reaches here today
         // (StemSpacingInfo already returned null for it), but that is a property of this
         // caller, not of the rule.
-        double noteHeadWidth = EngravingDefaults.SpacingIncrement;
+        double noteHeadWidth = increment;
 
         if (SupportHeadRightExtent(rightItem) is { } headRight)
         {
@@ -387,7 +389,7 @@ internal static partial class SpacingRules
     /// </remarks>
     internal static Spring MergeVoiceStemWishes(
         Spring baseSpring, IReadOnlyList<Measure> voices,
-        Fraction tLeft, Fraction tRight, NoteSpacingParameters noteParams)
+        Fraction tLeft, Fraction tRight, NoteSpacingParameters noteParams, double increment)
     {
         var wishes = new List<Spring>();
         foreach (var voice in voices)
@@ -397,7 +399,7 @@ internal static partial class SpacingRules
             if (left is null || right is null)
                 continue;
 
-            double corr = CalculateStemCorrection(left, ApproachColumn(right), noteParams);
+            double corr = CalculateStemCorrection(left, ApproachColumn(right), noteParams, increment);
             // LILYPOND-REF: lily/note-spacing.cc:111-113 — stem_dir_correction adjusts the
             // ideal and hands it to base.set_ideal_distance, which does not touch either
             // strength (lily/spring.cc:131-141). The clamp is at ZERO, not at the minimum

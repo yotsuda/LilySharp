@@ -502,25 +502,6 @@ public class VocabularyPerturbationTests
     }
 
     /// <summary>
-    /// ⚠️⚠️ THE PAPER KEYS NO READER TAKES: the paper block parses them into the layout
-    /// options and nothing in the layout ever reads the property back — DEAD WORDS.
-    /// </summary>
-    /// <remarks>
-    /// Settled 2026-09-13 (session 377, scratch/p378/paper) by reading the readers, after the
-    /// sweep had held them as "unsettled" for a session. <c>LayoutOptions.SpacingIncrement</c>
-    /// is written by <c>PaperPlanReader</c> and read by nothing: every spacing rule reads the
-    /// constant <c>EngravingDefaults.SpacingIncrement</c>. <c>spacing-increment</c> is a real
-    /// SpacingSpanner grob property (scm/define-grobs.scm:3246) that moves a LilyPond page, so
-    /// the documented key is a broken promise — the owner decided to WIRE it (session 379).
-    /// ⚠️ Its sibling <c>topSystemPadding</c> stood here too and is RETIRED (session 379, owner
-    /// decision): it is not a LilyPond paper variable — the header padding is
-    /// <c>top-system-spacing</c>'s own padding (lily/page-layout-problem.cc:478), which
-    /// <c>topSystemSpacing { padding }</c> already spells — and it was written in 0 of the .lys
-    /// on disk.
-    /// </remarks>
-    private static readonly string[] PaperKeysWithNoReader = ["spacingIncrement"];
-
-    /// <summary>
     /// The paper keys LilyPond ITSELF ignores in a one-score book — measured, not assumed.
     /// </summary>
     /// <remarks>
@@ -584,6 +565,20 @@ public class VocabularyPerturbationTests
     private static readonly string[] PaperKeysThatNeedAJustifiedPage =
         ["topSystemSpacing", "lastBottomSpacing"];
 
+    /// <summary>
+    /// The keys that want a line which is NOT stretched — asked on <see cref="PaperBook"/> with
+    /// <c>raggedRight</c>.
+    /// </summary>
+    /// <remarks>
+    /// <c>spacingIncrement</c> scales every duration spring of <see cref="PaperBook"/>'s lines
+    /// alike (each is one bar of equal quarters), and a justified line stretched to the same
+    /// width puts equal springs back where they were: MEASURED on this book (session 379,
+    /// scratch/p380/incr/vp), 5mm and 25mm draw the same justified page and different ragged
+    /// ones. That is the fixture, not a dead word — the key is wired and reaches LilyPond's
+    /// lengths (<see cref="SpacingIncrementTests"/>).
+    /// </remarks>
+    private static readonly string[] PaperKeysThatNeedARaggedLine = ["spacingIncrement"];
+
     public static TheoryData<string, string, string> PaperEntries()
     {
         var data = new TheoryData<string, string, string>();
@@ -612,7 +607,8 @@ public class VocabularyPerturbationTests
     /// the key (<see cref="FilledPageBook"/>, <see cref="UngroupedPaperBookWith"/>), a sub-value
     /// LilyPond ignores too (<see cref="PaperKeysAskedByPadding"/>), a key LilyPond ignores in a
     /// one-score book (<see cref="PaperKeysLilyPondAlsoIgnoresInOneScore"/>), and dead words
-    /// (<see cref="PaperKeysWithNoReader"/>). ⇒ AN INERT READING IS SETTLED ONLY BY ASKING
+    /// (spacingIncrement, since wired, and topSystemPadding, since retired — session 379).
+    /// ⇒ AN INERT READING IS SETTLED ONLY BY ASKING
     /// LILYPOND THE SAME QUESTION — two of the three earlier attempts (a richer fixture,
     /// counting readers by grep) could not tell "the fixture cannot say it" from "LilyPond
     /// does not do it either" from "nothing reads it".
@@ -622,6 +618,12 @@ public class VocabularyPerturbationTests
     [MemberData(nameof(PaperEntries))]
     public void EveryPaperKeyMovesThePage(string key, string small, string large)
     {
+        if (PaperKeysThatNeedARaggedLine.Contains(key))
+        {
+            AssertMoves(PaperBookWith("raggedRight  " + small), PaperBookWith("raggedRight  " + large),
+                "paper " + key);
+            return;
+        }
         if (PaperKeysThatNeedAJustifiedPage.Contains(key))
         {
             AssertMoves(FilledPageBook(small), FilledPageBook(large), "paper " + key);
@@ -647,13 +649,6 @@ public class VocabularyPerturbationTests
             Assert.True(Signature(PaperBookWith(small)) == Signature(PaperBookWith(large)),
                 $"'{key}' now moves a one-score book, where LilyPond 2.26.0 does not "
                 + "(session 377, scratch/p378/paper) — a divergence, not a fix.");
-            return;
-        }
-        if (PaperKeysWithNoReader.Contains(key))
-        {
-            // Pinned as it is — see the list's remark. A dead word awaiting the owner's call.
-            Assert.True(Signature(PaperBookWith(small)) == Signature(PaperBookWith(large)),
-                $"'{key}' now moves the page: it has a reader — take it off PaperKeysWithNoReader.");
             return;
         }
         AssertMoves(PaperBookWith(small), PaperBookWith(large), "paper " + key);

@@ -185,8 +185,11 @@ internal sealed record LayoutOptions
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: scm/define-grobs.scm:3239-3256 SpacingSpanner.spacing-increment
-    /// Configurable per-score. Default 1.2 staff spaces matches LilyPond.
-    /// When set, overrides EngravingDefaults.SpacingIncrement for all spacing calculations.
+    /// Configurable per-score (<c>paper { spacingIncrement }</c>). Default 1.2 staff spaces
+    /// matches LilyPond. Read through <see cref="SpacingOptions.For"/>, which carries it with the
+    /// common shortest duration into every duration spring. ⚠️ Until session 379 nothing read it
+    /// (the rules read the constant); LilyPond 2.26.0 and Lily# now give the same ragged line
+    /// for 1.2 / 1.5 / 1.8 (74.95 / 86.89 / 98.83 — scratch/p380/incr, SpacingIncrementTests).
     /// </remarks>
     public double SpacingIncrement { get; init; } = EngravingDefaults.SpacingIncrement;
 

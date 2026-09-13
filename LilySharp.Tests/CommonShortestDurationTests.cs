@@ -286,8 +286,8 @@ public class CommonShortestDurationTests
         // With base=1/8 (eighth), a quarter note gets ratio=2 → spaceFactor = 2.0 + log2(2) = 3.0
         var quarter = new Fraction(1, 4);
 
-        double spaceWithQuarterBase = SpacingRules.CalculateDurationSpace(quarter, 0.25);
-        double spaceWithEighthBase = SpacingRules.CalculateDurationSpace(quarter, 0.125);
+        double spaceWithQuarterBase = SpacingRules.CalculateDurationSpace(quarter, SpacingOptions.Default.WithShortest(0.25));
+        double spaceWithEighthBase = SpacingRules.CalculateDurationSpace(quarter, SpacingOptions.Default.WithShortest(0.125));
 
         // Quarter base: (2.0 + log2(1)) * 1.2 = 2.0 * 1.2 = 2.4
         Assert.Equal(2.4, spaceWithQuarterBase, 2);
@@ -307,7 +307,7 @@ public class CommonShortestDurationTests
 
         var springDefault = SpacingRules.CreateSpring(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, null, null, quarter);
         var springQuarterBase = SpacingRules.CreateSpring(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, null, null, quarter,
-            baseShortestDuration: 0.25);
+            spacing: SpacingOptions.Default.WithShortest(0.25));
 
         // Default uses BaseShortestDuration = 0.125, so ideal is larger
         Assert.True(springDefault.IdealDistance > springQuarterBase.IdealDistance,
@@ -323,7 +323,7 @@ public class CommonShortestDurationTests
 
         var springDefault = SpacingRules.CreateTimingSpring(quarter);
         var springQuarterBase = SpacingRules.CreateTimingSpring(quarter,
-            baseShortestDuration: 0.25);
+            spacing: SpacingOptions.Default.WithShortest(0.25));
 
         Assert.True(springDefault.IdealDistance > springQuarterBase.IdealDistance,
             $"Default timing spring (ideal={springDefault.IdealDistance:F2}) should be wider " +
@@ -341,7 +341,7 @@ public class CommonShortestDurationTests
 
         double widthDefault = SpacingRules.CalculateMeasureIdealWidth(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, measure);
         double widthQuarterBase = SpacingRules.CalculateMeasureIdealWidth(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, measure,
-            baseShortestDuration: 0.25);
+            spacing: SpacingOptions.Default.WithShortest(0.25));
 
         // With base=1/4, quarter notes are the shortest, so spacing is tighter
         Assert.True(widthDefault > widthQuarterBase,
