@@ -340,6 +340,19 @@ public class PaperBlockTests
     }
 
     [Fact]
+    public void TheRetiredTopSystemPadding_NamesTheSpecThatSpellsIt()
+    {
+        // Retired in session 379: no reader, and not a LilyPond paper variable. The refusal
+        // hands over the spelling that does reach the page, not the whole key list.
+        Read("paper { topSystemPadding 1 }", out var problems);
+        var problem = Assert.Single(problems);
+        Assert.Equal(DiagnosticCodes.UnknownPaperKey, problem.Code);
+        Assert.True(problem.IsError);
+        Assert.Contains("topSystemSpacing { padding", problem.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("topSystemPadding", PaperPlanReader.AllKeySpellings());
+    }
+
+    [Fact]
     public void ASpacedUnitIsNamedAsTheGluedSpelling()
     {
         // `210 mm` reads as a key named mm — the trap gets the fix, not the key list.
@@ -427,7 +440,7 @@ public class PaperBlockTests
             + "  paperWidth 210mm  paperHeight 29.7cm\n"
             + "  leftMargin 15mm  rightMargin 15mm  topMargin 10mm  bottomMargin 10mm\n"
             + "  indent 8.535827  shortIndent 0\n"
-            + "  topSystemPadding 1  spacingIncrement 1.2\n"
+            + "  spacingIncrement 1.2\n"
             + "  raggedRight  raggedBottom\n"
             + "  systemSystemSpacing { basicDistance 12  minimumDistance 8  padding 1  stretchability 60 }\n"
             + "  scoreSystemSpacing { basicDistance 14 }\n"

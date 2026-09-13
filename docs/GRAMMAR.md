@@ -473,7 +473,7 @@ SizeName       = Word-run ;                     (* the GLUED tokens after 'size'
 PaperScalarKey = 'paperWidth' | 'paperHeight'
                | 'leftMargin' | 'rightMargin' | 'topMargin' | 'bottomMargin'
                | 'indent' | 'shortIndent'
-               | 'topSystemPadding' | 'spacingIncrement' ;
+               | 'spacingIncrement' ;
 SpacingKey     = 'systemSystemSpacing' | 'scoreSystemSpacing' | 'markupSystemSpacing'
                | 'scoreMarkupSpacing' | 'markupMarkupSpacing' | 'topSystemSpacing'
                | 'lastBottomSpacing'

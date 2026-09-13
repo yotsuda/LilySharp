@@ -136,12 +136,6 @@ internal sealed record LayoutOptions
     /// </remarks>
     public double SystemSpacing { get; init; } = 8;
 
-    /// <summary>
-    /// LILYPOND-REF: lily/page-layout-problem.cc:477-478
-    /// Padding between header (title) bottom and first system's topmost element.
-    /// </summary>
-    public double TopSystemPadding { get; init; } = 1;
-
     // === Layout Algorithm Options ===
 
     /// <summary>

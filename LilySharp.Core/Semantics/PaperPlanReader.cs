@@ -69,8 +69,11 @@ internal static class PaperPlanReader
         "paperWidth", "paperHeight",
         "leftMargin", "rightMargin", "topMargin", "bottomMargin",
         "indent", "shortIndent",
-        "topSystemPadding", "spacingIncrement",
+        "spacingIncrement",
     ];
+
+    /// <summary>A retired scalar key, refused with the spelling that replaced it.</summary>
+    private const string RetiredTopSystemPadding = "topSystemPadding";
 
     /// <summary>The nested spacing-block keys, canonical spellings.</summary>
     private static readonly string[] SpecKeys =
@@ -245,6 +248,12 @@ internal static class PaperPlanReader
                         // mm, and the fix is the glued spelling, not the vocabulary list.
                         ? $"'{entry.Key}' is a unit, and a unit is spelled glued to its "
                           + $"number: 210{entry.Key.ToLowerInvariant()}, one word."
+                        // Retired 2026-09-13 (session 379, owner decision): it had no reader
+                        // and LilyPond has no such paper variable — the padding under the
+                        // header is top-system-spacing's own (lily/page-layout-problem.cc:478).
+                        : entry.Key.Equals(RetiredTopSystemPadding, StringComparison.OrdinalIgnoreCase)
+                        ? $"'{entry.Key}' is retired: the padding between the header and the "
+                          + "first system is topSystemSpacing { padding 1 }."
                         : $"'{entry.Key}' is not a paper key. Known keys: "
                           + string.Join(", ", AllKeySpellings()) + ".",
                     IsError: true));
@@ -323,7 +332,6 @@ internal static class PaperPlanReader
                 "bottomMargin" => options with { MarginBottom = v },
                 "indent" => options with { Indent = v },
                 "shortIndent" => options with { ShortIndent = v },
-                "topSystemPadding" => options with { TopSystemPadding = v },
                 "spacingIncrement" => options with { SpacingIncrement = v },
                 _ => options,
             };

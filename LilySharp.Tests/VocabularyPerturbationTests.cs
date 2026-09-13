@@ -507,18 +507,18 @@ public class VocabularyPerturbationTests
     /// </summary>
     /// <remarks>
     /// Settled 2026-09-13 (session 377, scratch/p378/paper) by reading the readers, after the
-    /// sweep had held them as "unsettled" for a session. <c>LayoutOptions.TopSystemPadding</c>
-    /// and <c>LayoutOptions.SpacingIncrement</c> are written by <c>PaperPlanReader</c> and read
-    /// by nothing: every spacing rule reads the constant <c>EngravingDefaults.SpacingIncrement</c>.
-    /// ⚠️ The two have different LilyPond stories. <c>spacing-increment</c> is a real
+    /// sweep had held them as "unsettled" for a session. <c>LayoutOptions.SpacingIncrement</c>
+    /// is written by <c>PaperPlanReader</c> and read by nothing: every spacing rule reads the
+    /// constant <c>EngravingDefaults.SpacingIncrement</c>. <c>spacing-increment</c> is a real
     /// SpacingSpanner grob property (scm/define-grobs.scm:3246) that moves a LilyPond page, so
-    /// the documented key is a broken promise. <c>top-system-padding</c> is not a LilyPond
-    /// paper variable at all — the header padding is <c>top-system-spacing</c>'s own padding
-    /// (lily/page-layout-problem.cc:478), which <c>topSystemSpacing { padding }</c> already
-    /// spells. Written in 0 of the .lys on disk. Wiring or retiring them is the owner's call;
-    /// until then this pins the fact, so the day one of them is wired it says so.
+    /// the documented key is a broken promise — the owner decided to WIRE it (session 379).
+    /// ⚠️ Its sibling <c>topSystemPadding</c> stood here too and is RETIRED (session 379, owner
+    /// decision): it is not a LilyPond paper variable — the header padding is
+    /// <c>top-system-spacing</c>'s own padding (lily/page-layout-problem.cc:478), which
+    /// <c>topSystemSpacing { padding }</c> already spells — and it was written in 0 of the .lys
+    /// on disk.
     /// </remarks>
-    private static readonly string[] PaperKeysWithNoReader = ["spacingIncrement", "topSystemPadding"];
+    private static readonly string[] PaperKeysWithNoReader = ["spacingIncrement"];
 
     /// <summary>
     /// The paper keys LilyPond ITSELF ignores in a one-score book — measured, not assumed.

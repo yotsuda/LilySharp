@@ -716,7 +716,7 @@ paper {
 
 Rules worth knowing before emitting one:
 - Scalar keys: `paperWidth paperHeight leftMargin rightMargin topMargin bottomMargin
-  indent shortIndent topSystemPadding spacingIncrement`. Flags: `raggedRight raggedBottom`. Spacing
+  indent shortIndent spacingIncrement`. Flags: `raggedRight raggedBottom`. Spacing
   blocks: `systemSystemSpacing scoreSystemSpacing markupSystemSpacing scoreMarkupSpacing
   markupMarkupSpacing topSystemSpacing lastBottomSpacing staffStaffSpacing
   staffGroupStaffSpacing defaultStaffStaffSpacing nonStaffRelatedStaffSpacing

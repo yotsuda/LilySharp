@@ -29,8 +29,7 @@ public class PageLayouterTests
         double marginTop = 5,
         double marginBottom = 5,
         double staffHeight = 4,
-        double systemSpacing = 8,
-        double topSystemPadding = 1)
+        double systemSpacing = 8)
     {
         return new LayoutOptions
         {
@@ -40,7 +39,6 @@ public class PageLayouterTests
             MarginBottom = marginBottom,
             StaffHeight = staffHeight,
             SystemSpacing = systemSpacing,
-            TopSystemPadding = topSystemPadding,
             UseOptimalPageBreaking = true
         };
     }

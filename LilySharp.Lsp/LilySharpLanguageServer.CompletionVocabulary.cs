@@ -1014,7 +1014,6 @@ public sealed partial class LilySharpLanguageServer
         "bottomMargin" => "Bottom margin (default 10mm)",
         "indent" => "First system's indent (default 0 = from instrument names)",
         "shortIndent" => "Later systems' indent (default 0)",
-        "topSystemPadding" => "Padding between the title and the first system",
         "spacingIncrement" => "Horizontal note-spacing unit (default 1.2 staff spaces)",
         "raggedRight" => "Do not justify lines; measures sit at their ideal width",
         "raggedBottom" => "Do not justify pages; systems keep their natural spacing on every page, not only the last",
