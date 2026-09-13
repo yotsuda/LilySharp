@@ -75,6 +75,8 @@ tools\Session-Check.ps1 -Build -Test -Scratch pNNN    # git・数・CI・build�
 
 ★★ **⑺ 第 2 便の数**（`Session-Check -Build -Test -Scratch p377 -DiffBase fc2733d9`）: 開始 HEAD `fc2733d9`（第 1 便）・**台帳 843 点／ss 非ゼロ 210／総和 23.216135909 → 22.584587806**（−0.631548＝5 点の残差の縮みの和ちょうど）／count 点 180 うち非ゼロ 0／exact 668／OPEN 0・**snapshot 249・追跡 `.lys` 599 は不変**（出力は不変）・Core 0 警告・**full `scratch/p377/run3.trx` 8469 / 0 / 4 / 8473**（本数不変）・§7.5: Core `+` 0 行／REF 0／OWN 0（Core は触っていない）・未 push 67（この commit 込み）。★ **第 3 便の判定＝着手しない**: **この族は全数を掃き終えた**（pin の無い 62 冊・残る違いは全部仕分け済み）うえ、**残る並び（§2 E の brace＝要承認／⒝ 摂動網＝別 regime／⒠ UX 判断／⒢ 設計級）のどれにも `p377/dual` の計器が効かない**＝**次のセッションでやっても損しない**。⚠️ **`slur.tab.*` の span 由来の高さの分解を canonical の span で再導出する**のは `p377` の dump が要るが**数字を 1 つ解くだけの読み物**＝急がない（`why` に「未測定」と名指し済み）。
 
+★★★ **⑻ 第 3 便＝ユーザー承認「承認する」で brace を LP の位置へ動かした**（出力が動いた便）。**承認の前に出していた未確定 3 点は着手の最初に測った**（`scratch/p377/brace/brace-chain.ly`・`-dbackend=null`・font pin 付き）: **GrandStaff／PianoStaff・名前の有無で brace 右端は同じ 8.175827**。**式は原典から**＝縦線は **indent を支えに padding −0.1**（`define-grobs.scm:3658`「bar must cover rounded ending of staff line」）で右端 indent+0.1・幅 0.16（`simple_bar`）⇒ 左端 indent−0.06、**brace はその縦線に padding 0.3**（`staff_brace` の中心寄せと −0.2 は `x-aligned-side` で相殺）⇒ **indent − 0.36**。⚠️ **Lily# が描いている縦線（indent±0.08）に鎖を繋ぐと 0.02 行き過ぎる**ので、**LP の縦線の式で書いた**（`MultiStaffLayouter.SystemStartBraceRightEdge`・呼び出し 2 箇所）。**射程は実測**: snapshot **16 枚**・**変わった行は 20 行＝brace 18・楽器名 2、全部 x が −0.06 だけ・他の属性も他の行も不変**（全行を対にして機械で確かめた）。⚠️ **計器を 2 度間違えた**: ⑴ **`LilySharp.sln` と書いて build が失敗し、古い DLL で 277 本緑を読みかけた**（正しくは `LilySharp.slnx`）／⑵ **`git diff` の色コードで行頭の `-`／`+` が取れず「変化 0 行」と出た**（`--no-color` で解決）。★ **bracket・縦線・譜線始点の 3 件は測って §2 E に起票し、触っていない**（承認の範囲は brace）。**最初の full は赤 6 本で、全部この便の変更が起こしたもの**＝⑴ programmatic baseline 2 枚（`hara-kiri`／`hara-kiri-paged`・**同じく brace の 1 行が −0.06 だけ**を確かめて承認）／⑵ 新 test に GPL ヘッダが無い／⑶⑷ 生成物 `audit/magic_constants.csv`・`docs/APPROXIMATIONS.md` の行ずれ（`LILYSHARP_UPDATE_DOCS=1` で再生成・**生成物は LF で出るので CRLF に戻した**）／⑸ `CitationsThatNameNothing_DoNotGrow` 681→683＝**REF に行番号を足したら*同じ行*に `_`／`-` 入りの名前が要る**（`SystemStartBrace` の CamelCase は名前と数えない・名前を次の行に置いても数えない）⇒ `ly:side-position-interface::x-aligned-side` を住所の行へ（**天井は上げていない**）。**数**（`Session-Check -Build -Test -Scratch p377 -DiffBase 5597a77d`）: **full `scratch/p377/run5.trx` 8471 / 0 / 4 / 8473+2 ＝ 8475**（+2＝`SystemStartBracePlacementTests`）・Core 0 警告・**台帳 843 点／ss 非ゼロ 210／総和 22.584587806（不変＝台帳に brace の点は無い）**・**snapshot 249 のうち 18 ファイルが動いた（SVG 16＋programmatic 2・全部 brace か楽器名の 1 行が −0.06）**・追跡 `.lys` 599 不変・§7.5 は未 commit の差分を見ないので 0 と出る（**Core の `+` は helper 1 本・定数 1 本 `SystemStartBarPadding = -0.1`（REF 付き）・呼び出し 2 行**）・未 push 68（この commit 込み）。★ **LSP は配布する**（Core が動いた）⇒ **ユーザーは Reload Window が 1 回要る**。
+
 ## 以下は第375セッションの経緯
 
 最終更新 第375セッション（2026-09-13）＝**入り方は第298〜第372 の型**（ユーザーは `docs/HANDOFF.md` を読ませて「作業に着手して」だけ）。**§0 の裏取りを走らせた**（`Session-Check -Build -Test -Scratch p376`）。道具は記憶どおり pwsh MCP。**骨は 6**:
@@ -1230,12 +1232,17 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 - **未移植 LP 計算**: tuplet on-line / volta shorten / hairpin niente / ~~ledger~~ / brace /
   開 chord / Ignatzek。出典 `HANDOFF-lp-calc-incorporation.md`（§8）。
   **伝聞なので着手前に実コードで裏取り。**
-- **brace は `SystemStartBar` に対して置かれる（未移植・出力が動く＝要承認）**（第376 が probe の
-  仕分けで拾った・**実測済み**）: LP の brace 右端 8.175827 ＝ `SystemStartBar` 左端 8.475827 − 0.3
-  （LP は多譜の系に必ず Score レベルの bar を足し、brace はその bar を自分の padding で避ける）。
-  **Lily# は `MultiStaffLayouter` の `braceX = CurrentIndent − SystemStartBracePadding`**＝indent 8.535827
-  基準で **LP より 0.06 右**。**台帳に点は無い**（読み手は `probes/instrument-name-x.ly` のヘッダだけ）。
-  ⚠️ **直すと brace の本と楽器名が全部動く**（名前は最左 delimiter に対して置く）＝**先に点を置き射程を数えてから承認**。
+- ~~**brace は `SystemStartBar` に対して置かれる**~~ — **閉じた（第376 第 3 便・ユーザー承認）**＝
+  `MultiStaffLayouter.SystemStartBraceRightEdge`（indent − (−0.1) − 0.16 − 0.3 ＝ indent − 0.36）・
+  網は `SystemStartBracePlacementTests`（LP の 8.175827）・snapshot 16 枚（brace 18 行・名前 2 行が各 −0.06 だけ）。
+- **同じ測定が名指した残り 3 件（未移植・出力が動く＝要承認・`scratch/p377/brace/brace-chain.ly` に LP の dump）**:
+  ⑴ **bracket（StaffGroup／ChoirStaff）が約 0.285 右**: LP の extent は indent−1.31 〜 −0.86（右端 ＝ 縦線左端 − 0.8）、
+  Lily# は `bracketX = indent − 0.8` を**中心**に太さ 0.45 で描く（ink indent−1.025 〜 −0.575）。
+  ⑵ **左端の縦線 `SystemStartBar` が 0.02 左**: LP は indent−0.06 〜 +0.10（padding −0.1 で支え＝indent の*左*に置く）、
+  Lily# は indent を中心に ±0.08。**複数譜の楽器名はこの縦線に対して置くので一緒に動く**。
+  ⑶ **譜線の左端が 0.05 左**: LP の StaffSymbol は indent+0.05 から（`staff-symbol.cc:84` の `span_points[d] -= d * t / 2`）、
+  Lily# は indent から描く。⚠️ ⑶ は**全ての本**に効く（射程は ⑴⑵ の比ではない）。
+  ★ **入れ子（StaffGroup の中の GrandStaff）では brace は bracket の左端 − 0.3**（LP 実測）だが、**Lily# の model に入れ子は無い**（未確認の範囲では）。
   ★ **その裏取りを 1 件やった（2026-07-30・第39セッション）——「ledger」は半分 stale だった**:
   **加線インクは最初から staff skyline に入っている**（`SkylineBuilder.AddNoteBoxToSkylines`・
   `LedgerLengthFraction * headWidth` で左右に広げ厚みは `LegerLineThickness`）。

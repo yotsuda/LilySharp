@@ -460,9 +460,49 @@ internal sealed class MultiStaffLayouter
     /// names above a staff — not a whole staff-distance away.</summary>
     private const double TextRowPairGap = 0.6;
 
-    /// <summary>How far left of the staff a system-start BRACE sits.</summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm SystemStartBrace (padding . 0.3)</remarks>
+    /// <summary>How far left of the SystemStartBar a system-start BRACE sits.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3669-3683 ly:side-position-interface::x-aligned-side
+    /// places SystemStartBrace with its (padding . 0.3)</remarks>
     private const double SystemStartBracePadding = 0.3;
+
+    /// <summary>The SystemStartBar's side-position padding against the staff start.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3653-3667 ly:side-position-interface::x-aligned-side
+    /// places SystemStartBar with its (padding . -0.1) — "bar must cover rounded ending of
+    /// staff line"</remarks>
+    private const double SystemStartBarPadding = -0.1;
+
+    /// <summary>
+    /// The right edge of a system-start brace's ink.
+    /// </summary>
+    /// <remarks>
+    /// The delimiters CHAIN. LilyPond adds a Score-level SystemStartBar to every multi-staff
+    /// system and side-positions it LEFT of the staff start (the indent) by its padding:
+    /// its right edge is <c>indent - padding</c> and its left edge that less its width
+    /// <c>line-thickness × 1.6</c> (lily/system-start-delimiter.cc:89-95 simple_bar). The brace
+    /// is side-positioned against THAT bar, not against the indent, so its right edge is the
+    /// bar's left edge less the brace's own 0.3 — X-offset is
+    /// ly:side-position-interface::x-aligned-side, which places the grob by its extent, so
+    /// staff_brace's internal centring and -0.2 cancel out of it
+    /// (lily/system-start-delimiter.cc:150-160 System_start_delimiter::staff_brace).
+    /// <para>
+    /// MEASURED, LilyPond 2.26.0 -dbackend=null (scratch/p377/brace/brace-chain.ly, and book 1
+    /// of audit/lp-geometry/probes/instrument-name-x.ly): indent 8.535827, SystemStartBar
+    /// 8.475827 .. 8.635827, SystemStartBrace right edge 8.175827, the same on a GrandStaff and a
+    /// PianoStaff, with and without an instrument name. Until session 376 Lily# put the edge at
+    /// <c>indent - 0.3</c>, 0.06 right of LilyPond.
+    /// </para>
+    /// <para>
+    /// ⚠️ NOT THE BAR LILY# DRAWS. SharedRenderer centres its SystemStartBar on the indent
+    /// (ink indent ± 0.08, LilyPond's is indent - 0.06 .. + 0.10), so chaining to Lily#'s own
+    /// bar would land 0.02 too far left. The bar's divergence is recorded, not fixed here.
+    /// </para>
+    /// </remarks>
+    internal static double SystemStartBraceRightEdge(double indent)
+    {
+        double barRight = indent - SystemStartBarPadding;
+        double barLeft = barRight - EngravingDefaults.StaffLineThickness * 1.6;
+        return barLeft - SystemStartBracePadding;
+    }
 
     /// <summary>How far left of the staff a system-start BRACKET sits.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm SystemStartBracket (padding . 0.8)</remarks>
@@ -723,7 +763,7 @@ internal sealed class MultiStaffLayouter
         }
 
         double totalHeight = y - currentY + LastVisibleStaffHeight(staffLayouts);
-        double braceX = CurrentIndent - SystemStartBracePadding;
+        double braceX = SystemStartBraceRightEdge(CurrentIndent);
 
         var grandStaffLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
@@ -829,7 +869,7 @@ internal sealed class MultiStaffLayouter
         }
 
         double totalHeight = y - currentY + staffHeight;
-        double braceX = CurrentIndent - SystemStartBracePadding;
+        double braceX = SystemStartBraceRightEdge(CurrentIndent);
 
         var grandStaffLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
