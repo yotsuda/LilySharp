@@ -87,6 +87,8 @@ internal static class PartCombineAnalyzer
         ImmutableArray<Collector.PartCombineMark> marks,
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<Voice> voices,
+        IReadOnlyDictionary<(int Staff, int Voice, int Measure, int Item),
+            (BeamLayout Beam, double StemX, bool StemUp)>? beamMembers,
         int staffIndex = 0)
     {
         var measures = voices.IsDefaultOrEmpty ? default : voices[0].Measures;
@@ -111,7 +113,7 @@ internal static class PartCombineAnalyzer
             }
 
             layouts.Add(new PartCombineLayout(mark.Text, x, 0, mark.MeasureIndex, staffIndex,
-                AlignedSideBaselineUp(fonts, voices, mark, x)));
+                AlignedSideBaselineUp(fonts, voices, mark, x, beamMembers, staffIndex)));
         }
 
         return layouts.ToImmutable();
@@ -135,21 +137,35 @@ internal static class PartCombineAnalyzer
     ///   the extent box, since CombineTextScript declares no vertical-skylines
     ///   (scm/define-grobs.scm:1077-1105): the box's flat bottom is the string's ink bottom over
     ///   the whole advance, so the distance is the supports' highest point under the advance.
-    /// ⚠️ Two inputs are narrower than LilyPond's, both declared: the supports are the FIRST
-    ///   voice's column (the voice the marks index into — the shared or solo voice that carries
-    ///   the notes the label names), and a beamed stem is taken at its unbeamed length (no beam
-    ///   layout exists yet when the label is made). The beam's own ink is in the staff profile the
-    ///   outside-staff pass clears right after, at 0.46. Observed by no ledger point.
+    /// A BEAMED stem enters at its drawn length, ending on the quanted beam face (the beam map
+    ///   the dynamics read). MEASURED (scratch/p384/a2/E-beam, C3 eighths under one beam): LilyPond's
+    ///   dumped Stem support reaches 3.05 over the staff middle, the label 1.583010 over the top
+    ///   line; taken at the unbeamed 3.0 the label stood 0.033 low.
+    /// The supports are ONE voice's column, and that is LilyPond's own model rather than a
+    ///   narrowing: Part_combine_engraver is consisted in the Voice context, so it acknowledges only
+    ///   the heads and stems of the voice the text is made in.
+    /// LILYPOND-REF: ly/engraver-init.ly:406 Part_combine_engraver — inside \name Voice (:359).
+    ///   The voice read is the right one because a label is only ever made for solo1 / solo2 /
+    ///   unisono, whose notes PartCombiner routes to the Solo or Shared voice — always slot 0, the
+    ///   voice the marks index into (slot 1 holds only voice Two, an apart passage, which prints no
+    ///   text). Another voice's ink reaches the label through the outside-staff pass at 0.46.
+    ///   Watched by ledger part-combine.text.own-voice-support (a voice-Two head inside the "Solo"
+    ///   label's advance: all voices unioned would read 0.04 higher).
     /// </remarks>
     internal static double AlignedSideBaselineUp(Rendering.ScoreTextMetrics fonts,
-        ImmutableArray<Voice> voices, Collector.PartCombineMark mark, double x)
+        ImmutableArray<Voice> voices, Collector.PartCombineMark mark, double x,
+        IReadOnlyDictionary<(int Staff, int Voice, int Measure, int Item),
+            (BeamLayout Beam, double StemX, bool StemUp)>? beamMembers, int staffIndex)
     {
         double em = LabelEm(fonts);
         var style = LabelStyle(fonts);
         double advance = fonts.Advance(mark.Text, em, Rendering.TextRole.PartCombine, style);
         var (bottom, _) = fonts.Ink(mark.Text, em, Rendering.TextRole.PartCombine, style);
         var support = DynamicEngraver.ColumnSupportSkylines(
-            voices, 0, mark.MeasureIndex, mark.ItemIndex, x, beamOf: null);
+            voices, 0, mark.MeasureIndex, mark.ItemIndex, x,
+            beamMembers is null ? null
+                : vi => beamMembers.TryGetValue((staffIndex, vi, mark.MeasureIndex, mark.ItemIndex),
+                    out var b) ? b : null);
         // :354-358 + :370 — the box bottom (baseline + bottom) stands padding over the supports.
         double totalOff = support.Up.MaxProtrusionInRange(x, x + advance) - bottom
             + CombineTextPadding;
@@ -199,6 +215,7 @@ internal static class PartCombineAnalyzer
         Rendering.ScoreTextMetrics fonts,
         ImmutableArray<Collector.PartCombineMark> marks,
         ImmutableArray<Voice> voices,
+        ImmutableArray<BeamLayout> beams,
         ImmutableArray<MeasureLayout> systemMeasureLayouts,
         VerticalSkyline accumulatedUp)
     {
@@ -208,6 +225,9 @@ internal static class PartCombineAnalyzer
         var measures = voices[0].Measures;
         double em = LabelEm(fonts);
         var style = LabelStyle(fonts);
+        // The staff's own beams, laid out on its trivial one-staff system: stamped staff 0
+        // (MultiStaffLayouter.StaffBeamLayouts), so that is the key the members are read at.
+        var beamMembers = DynamicEngraver.BuildBeamMembers(beams);
         foreach (var mark in marks)
         {
             MeasureLayout? ml = null;
@@ -219,7 +239,8 @@ internal static class PartCombineAnalyzer
                 measures, mark.MeasureIndex, mark.ItemIndex, ml);
             double x1 = x0 + fonts.Advance(mark.Text, em, Rendering.TextRole.PartCombine, style);
             var (bottom, top) = fonts.Ink(mark.Text, em, Rendering.TextRole.PartCombine, style);
-            double baseline = Math.Max(AlignedSideBaselineUp(fonts, voices, mark, x0),
+            double baseline = Math.Max(
+                AlignedSideBaselineUp(fonts, voices, mark, x0, beamMembers, staffIndex: 0),
                 accumulatedUp.MaxProtrusionInRange(x0, x1)
                     + OutsideStaffStacker.OutsideStaffPadding - bottom);
             ink.Merge(VerticalSkyline.FromBox(

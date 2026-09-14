@@ -13020,6 +13020,57 @@ internal static class LpGeometryProbes
         score main "PCS" { combinedStaff { bass bass } }
         """;
 
+    /// <summary>
+    /// A part-combine "a2" decided by BEAMED up stems (C3 eighths under one beam).
+    /// </summary>
+    /// <remarks>
+    /// The beamed stem is the support at its drawn length, ending on the beam: LilyPond's dumped
+    /// Stem skyline reaches 3.05 over the middle line, so the label stands 1.05 + 0.5 + 0.033010.
+    /// Taken at the unbeamed 3.0 it stood 0.033 low (the beam itself was cleared at 0.46 after).
+    /// <remarks>LilyPond twin: probe score PCB in part-combine-text.ly.</remarks>
+    /// </remarks>
+    private static readonly string PCB = """
+        octave absolute
+        part bass {
+          clef bass
+          section Intro {
+            c,8 c, c, c, c, c, c, c, |
+          }
+        }
+
+        form main { Intro }
+
+        score main "PCB" { combinedStaff { bass bass } }
+        """;
+
+    /// <summary>
+    /// A part-combine "Solo" whose advance covers ANOTHER voice's high head: the support is the
+    /// label's own voice only.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:406 Part_combine_engraver — consisted in the Voice context
+    /// (\name Voice at :359), so the text acknowledges only its own voice's heads and stems. At 0 part
+    /// one sounds alone ("Solo" on its c); at 1/8 its d against part two's g' is apart, and g' (voice
+    /// Two, head far above the staff) stands inside the label's advance. It reaches the label only
+    /// through the outside-staff pass at 0.46 — a support unioned over every voice would clear it at
+    /// padding 0.5 and read 0.04 higher.
+    /// <remarks>LilyPond twin: probe score PCV in part-combine-text.ly.</remarks>
+    /// </remarks>
+    private static readonly string PCV = """
+        octave absolute
+        part vone { clef bass }
+        part vtwo { clef bass }
+
+        section Intro {
+          vone { c8 d8 r4 r2 | }
+          vtwo { r8 g'8 r4 r2 | }
+        }
+
+        form main { Intro }
+
+        score main "PCV" { combinedStaff { vone vtwo } }
+        """;
+
     public static IReadOnlyList<LpProbe> All { get; } = new List<LpProbe>
     {
         // --- the part-combine "a2" over a combined staff, one regime per book (session 383):
@@ -13028,6 +13079,8 @@ internal static class LpGeometryProbes
         new("part-combine.text.staff-floor", PCF, g => g.PartCombineTextUpFromStaffTop()),
         new("part-combine.text.head", PCH, g => g.PartCombineTextUpFromStaffTop()),
         new("part-combine.text.stem", PCS, g => g.PartCombineTextUpFromStaffTop()),
+        new("part-combine.text.beamed-stem", PCB, g => g.PartCombineTextUpFromStaffTop()),
+        new("part-combine.text.own-voice-support", PCV, g => g.PartCombineTextUpFromStaffTop()),
         // --- bar line -> the column after it (Staff_spacing::get_spacing) ---
         new("barline.next.up-stems", A, g => g.BarlineRightToNextGlyph(MidLineBarline)),
         new("barline.next.up-stems-after-clef", D, g => g.BarlineRightToNextGlyph(MidLineBarline)),

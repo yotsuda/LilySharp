@@ -5061,6 +5061,20 @@
       "residual": -0.000010,
       "why": "EXACT to the ink bottom's digits since session 383's port: the stem is a support of PartCombineAnalyzer.AlignedSideBaselineUp and the label is the extent BOX (PartCombineAnalyzer.LabelBox), so the flat ink bottom clears the stem tip at padding 0.5; the -0.000010 left is the ink-bottom digit of part-combine.text.staff-floor. The owner's bench book (scratch/ベースタブLy/bench.lys) moved with it, a2 1.43 -> 1.54 in its SVG. Before the port the residual was -0.109502, OPEN with its cause named: an OUTLINE where LilyPond has a BOX, plus the 0.04 padding of part-combine.text.head. The up stem of the C3 half notes ends 1.0 over the top line in both engines; it is a support (lily/part-combine-engraver.cc:114-119 acknowledge_stem), and LilyPond keeps the text's extent box (flat bottom -0.033010, lily/grob.cc:81-85 simple_vertical_skylines_from_extents, since scm/define-grobs.scm:1077-1105 declares no vertical-skylines) 0.5 over it: 1.533010. Lily# places the string's glyph OUTLINE (TextOutlineSkylines.Place, the TextScript model — TextScript does declare the stencil outline at :3818) against the staff profile at 0.46; under the stem (1.25 .. 1.38 from the text origin: the 'a' tail and the gap to the '2') that outline's bottom stands above the baseline, so the text sinks 0.0695 further. This is the bench book's shape (scratch/ベースタブLy/bench.lys, a2 -0.11 against the folded twin). PREDICTION for the aligned_side port: 0."
     },
+    "part-combine.text.own-voice-support": {
+      "probe": "part-combine-text.ly",
+      "score": "PCV",
+      "lilypond": 7.5381,
+      "residual": -0.000100,
+      "why": "EXACT to the reading's digits since session 383 leg 5, filed as a GUARD: the support of a part-combine text is its OWN VOICE only (Part_combine_engraver is consisted in Voice, ly/engraver-init.ly:406), which is what PartCombineAnalyzer.AlignedSideBaselineUp reads (the Solo/Shared voice, always slot 0). Here a voice-Two head far above the staff stands inside the \"Solo\" label's advance; it reaches the label only through the outside-staff pass at 0.46, and a support unioned over every voice would clear it at padding 0.5 and read 0.04 higher (derived from the paddings, not run). ⚠️ THE LILYPOND VALUE IS READ FROM THE SVG, NOT THE DUMP: the probe's after-line-breaking dump prints 2.078010 here, the aligned_side value before the collision pass lifts the text; the svg's text translate minus the top staff line's is 7.5381, a difference of two 4-digit coordinates (±0.0001). The -0.000100 is that reading's digits: by the ink-bottom digit of the other part-combine points LilyPond's value is 7.538010 to within the svg, and Lily# draws 7.538000."
+    },
+    "part-combine.text.beamed-stem": {
+      "probe": "part-combine-text.ly",
+      "score": "PCB",
+      "lilypond": 1.583010,
+      "residual": -0.000010,
+      "why": "EXACT to the ink bottom's digits since session 383 leg 4: a BEAMED up stem is a support at its drawn length, ending on the quanted beam face (PartCombineAnalyzer.AlignedSideBaselineUp reads DynamicEngraver.BuildBeamMembers, the map the dynamics, trill and ottava read). LilyPond's dumped Stem support skyline reaches 3.05 over the staff middle (scratch/p384/a2/E-beam-dump.ly) where an unbeamed half note's reaches 3.0, so the label's box bottom stands 0.5 over 1.05 above the top line: 1.583010. The -0.000010 left is the ink-bottom digit of part-combine.text.staff-floor. Before this leg the stem entered at its unbeamed length (declared narrower in 8d09cab2) and the label read 1.55 in the SVG — 0.5 over the unbeamed tip, then pushed up only as far as the beam itself at outside-staff-padding 0.46."
+    },
     "courtesy.meter.meter-to-line-end": {
       "probe": "courtesy-meter.ly",
       "score": "CMT",

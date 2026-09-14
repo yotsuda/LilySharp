@@ -3218,7 +3218,7 @@ internal sealed class MultiStaffLayouter
                 if (!staff.PartCombineMarks.IsDefaultOrEmpty && score.LayoutPlan.PartCombineText)
                 {
                     var labelInk = PartCombineAnalyzer.InkAboveStaff(
-                        score.TextMetrics, staff.PartCombineMarks, staff.Voices,
+                        score.TextMetrics, staff.PartCombineMarks, staff.Voices, beams,
                         measureLayouts, sky.Up);
                     if (!labelInk.IsEmpty)
                         sky.Up.Merge(labelInk);

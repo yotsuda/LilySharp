@@ -1033,7 +1033,7 @@ internal sealed partial class LayoutEngine
             memo: ctx.AboveStackMemo, profileIdentity: profileIdentity,
             // The combined staff's a2 / Solo labels (priority 475) — in BOTH passes, so the
             // preliminary extents reserve what the final pass draws.
-            partCombineTexts: PartCombineLayoutsOf(ctx.MultiScore, ml));
+            partCombineTexts: PartCombineLayoutsOf(ctx.MultiScore, ml, beamLayouts ?? default));
         stackedDynamics = stackedDynamicsAbove;
         stackedArticulations = stackedArticulationsAbove;
         // (No To-Coda/label co-placement here any more: the pass above owns it. A

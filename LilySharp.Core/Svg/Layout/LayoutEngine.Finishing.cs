@@ -391,18 +391,24 @@ internal sealed partial class LayoutEngine
     ///   printPartCombineTexts before it makes the text, so the grob never exists.
     /// </remarks>
     private static ImmutableArray<PartCombineLayout> PartCombineLayoutsOf(
-        MultiStaffScore? score, ImmutableArray<MeasureLayout> measureLayouts)
+        MultiStaffScore? score, ImmutableArray<MeasureLayout> measureLayouts,
+        ImmutableArray<BeamLayout> beamLayouts)
     {
         if (score is null || !score.LayoutPlan.PartCombineText)
             return ImmutableArray<PartCombineLayout>.Empty;
         ImmutableArray<PartCombineLayout>.Builder? all = null;
+        Dictionary<(int Staff, int Voice, int Measure, int Item),
+            (BeamLayout Beam, double StemX, bool StemUp)>? beamMembers = null;
         foreach (var (_, staff, staffIndex) in score.EnumerateStaves())
         {
             if (staff.PartCombineMarks.IsDefaultOrEmpty)
                 continue;
+            // A beamed support stem ends on the quanted beam face — the map the dynamics, the
+            // trill and the ottava read.
+            beamMembers ??= DynamicEngraver.BuildBeamMembers(beamLayouts);
             (all ??= ImmutableArray.CreateBuilder<PartCombineLayout>()).AddRange(
                 PartCombineAnalyzer.Calculate(score.TextMetrics,
-                    staff.PartCombineMarks, measureLayouts, staff.Voices, staffIndex));
+                    staff.PartCombineMarks, measureLayouts, staff.Voices, beamMembers, staffIndex));
         }
         return all?.ToImmutable() ?? ImmutableArray<PartCombineLayout>.Empty;
     }

@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 55 | 観測者がゼロだと自認しているもの |
+| `UNWATCHED` | 54 | 観測者がゼロだと自認しているもの |
 | `OWN` | 137 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **253** | |
+| **計** | **252** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -134,7 +134,7 @@
 ### `LilySharp.Core/Svg/Model/LyricItem.cs`
 - **:100** ⚠️ NOT PORTED — the voice's melismaBusy state: the trigger here is the
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（55 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（54 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2430** container, and the value stops being unobserved with the line above.
@@ -205,8 +205,6 @@
 - **:130** staff_extent[DOWN], which is the ink edge too. ⚠️ No ledger point measures
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
 - **:1612** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
-### `LilySharp.Core/Svg/Layout/PartCombineAnalyzer.cs`
-- **:142** outside-staff pass clears right after, at 0.46. Observed by no ledger point.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
 - **:485** same part (leftHand). No book reaches the configuration, so no ledger point and
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
