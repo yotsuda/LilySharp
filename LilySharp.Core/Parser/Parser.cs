@@ -236,15 +236,15 @@ internal sealed partial class Parser
     }
 
     // Header attributes and top-level directives are written bare ('clef treble',
-    // 'time 4/4'); the colon form was removed. If a colon is present, flag it as an
-    // error but consume it so the rest of the header still parses.
+    // 'time 4/4'). If a colon is present, flag it as an error but consume it so the rest
+    // of the header still parses.
     private SyntaxToken? ConsumeRejectedColon()
     {
         if (!Check(SyntaxKind.Colon))
             return null;
         var span = new TextSpan(_textPosition, Current.FullWidth);
         _diagnostics.Error(span, DiagnosticCodes.LegacyDeclarationForm,
-            "Attributes are written bare (e.g. 'clef treble'); the ':' form has been removed.");
+            "Attributes are written bare, with no ':' (e.g. 'clef treble').");
         return Advance();
     }
 

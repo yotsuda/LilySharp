@@ -298,30 +298,17 @@ internal sealed partial class Parser
         string text = Current.Text;
         int ink = _textPosition + Current.LeadingTriviaWidth;
         var span = new TextSpan(ink, text.Length);
-        // One report per GLUED run: the retired entry format ('a:m', 'g2:7')
-        // strays as several adjacent tokens, and three errors for one chord
-        // would bury the one message that matters.
+        // One report per GLUED run: a stray like 'a:m' is several adjacent tokens, and
+        // three errors for one chord would bury the one message that matters.
         bool continuesRun = ink == _strayChordRunEnd;
         _strayChordRunEnd = ink + text.Length;
         if (continuesRun)
             return Advance();
-        // By far the likeliest mistake: the RETIRED lowercase entry format (the
-        // LilyPond-shaped 'a:m' / 'g2:7' that Lily# used until 2026-08-23), or a
-        // bare lowercase root by analogy with it.
-        bool looksLikeRetiredEntry = SyntaxFacts.IsPitchKind(Current.Kind);
-        // The spacer was accepted until 2026-09-04; its two jobs already had spellings.
-        bool isRetiredSpacer = Current.Kind == SyntaxKind.RestS;
+        // One message for every stray: a retired spelling has no message of its own
+        // (pre-release, no migration hints — owner decision 2026-09-15).
         _diagnostics.Error(span, DiagnosticCodes.ChordBlockBadMember,
-            looksLikeRetiredEntry
-                ? $"A chord is written the way it PRINTS: an UPPERCASE root with '#'/'b' "
-                  + $"and a bare quality ('Am', 'G7', 'F#m', 'Bb'). The lowercase ':' entry "
-                  + $"('a:m', 'g2:7') and its durations were replaced: a bar's entries divide "
-                  + $"it on the beat grid, and '.' holds the previous chord one more beat."
-                : isRetiredSpacer
-                ? $"'s' is not a chord-row slot any more: write '.' for a slot with no chord "
-                  + $"('| . C |'), '| |' for an empty bar, and 'r' to print N.C."
-                : $"'chords' takes chord symbols ('Am', 'G7'), '.', 'r'/'R' (N.C.) and barlines; "
-                  + $"'{text}' is none of these.");
+            $"'chords' takes chord symbols ('Am', 'G7'), '.', 'r'/'R' (N.C.) and barlines; "
+            + $"'{text}' is none of these.");
         return Advance();
     }
 

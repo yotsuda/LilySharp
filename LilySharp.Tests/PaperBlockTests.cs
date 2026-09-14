@@ -340,15 +340,16 @@ public class PaperBlockTests
     }
 
     [Fact]
-    public void TheRetiredTopSystemPadding_NamesTheSpecThatSpellsIt()
+    public void TheRetiredTopSystemPadding_IsAnUnknownKeyLikeAnyOther()
     {
-        // Retired in session 379: no reader, and not a LilyPond paper variable. The refusal
-        // hands over the spelling that does reach the page, not the whole key list.
+        // Retired in session 379: no reader, and not a LilyPond paper variable. It is refused
+        // with the same message as any word that is not a paper key (no migration hints,
+        // 2026-09-15).
         Read("paper { topSystemPadding 1 }", out var problems);
         var problem = Assert.Single(problems);
         Assert.Equal(DiagnosticCodes.UnknownPaperKey, problem.Code);
         Assert.True(problem.IsError);
-        Assert.Contains("topSystemSpacing { padding", problem.Message, StringComparison.Ordinal);
+        Assert.StartsWith("'topSystemPadding' is not a paper key. Known keys: ", problem.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("topSystemPadding", PaperPlanReader.AllKeySpellings());
     }
 

@@ -21,11 +21,12 @@ refused; they come first, each with what the compiler says.
   removeEmpty all }` is refused ("Unknown part property 'removeEmpty'"); write `staff lh as
   removeEmpty all` in the score instead, so a full score can hide a staff its part sheet keeps.
 - **A `fonts { }` entry follows a generic family with `as`.** `fonts { chordName serif }` is
-  refused, and the error spells `chordName as serif` for you: a bare word after a key is now
-  the next key, which is what lets an entry carry a size and a style.
+  refused ("'serif' is a generic family and takes quoted face names"); write
+  `chordName as serif`. A bare word after a key is now the next key, which is what lets an
+  entry carry a size and a style.
 - **`paper { topSystemPadding }` is retired.** Nothing read it and LilyPond has no such
-  variable; a book that writes it is refused with the spelling that does the job,
-  `topSystemSpacing { padding N }`.
+  variable; a book that writes it is refused as an unknown paper key. The padding under the
+  header is `topSystemSpacing { padding N }`.
 - **A MIDI-only score row is a part name and nothing else.** `score main { staff rh  lh
   instrument violin }` is refused ("'instrument' is not something a score can hold"). The row's
   `instrument` / `octave` options were never read — the MIDI takes both from the part — so no
@@ -192,9 +193,8 @@ refused; they come first, each with what the compiler says.
   The twin writes a `step` as `\override Grob.font-size = #n` (and a style as `font-series`
   / `font-shape`) in the `\Score` context, the header roles as `\markup \fontsize`; a `size`
   has no LilyPond spelling and is warned about. **The redirect is spelled `chordName as sans`**
-  — a bare word after a key is now the next key, so the old `chordName serif` opens an empty
-  `serif` entry and is refused with the `as` form to write (no other book wrote it: 0 of the
-  3493 `.lys` on disk hold a `fonts` block). `step`/`size` on a generic family is refused
+  — a bare word after a key is now the next key, so `chordName serif` opens an empty `serif`
+  entry and is refused. `step`/`size` on a generic family is refused
   (LYS8015), a value out of range (`step` ±12, `size` 0.5..20) is LYS8016, both sizes in one
   entry is LYS8017. The editor completes the attributes after a key and inside an open entry,
   and colours them in the block.

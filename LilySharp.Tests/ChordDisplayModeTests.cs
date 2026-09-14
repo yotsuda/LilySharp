@@ -59,11 +59,11 @@ public class ChordDisplayModeTests
     /// <summary>
     /// There are TWO displays. <c>both</c> — the degree stacked above the name as one
     /// symbol — was retired 2026-08-23 (user decision): a track shown both ways is placed
-    /// twice, which is two rows the writer can see and order (<c>StackedTrackRowTests</c>).
-    /// The word is now rejected by name, not silently read as <c>names</c>.
+    /// twice (<c>StackedTrackRowTests</c>). The word is rejected like any other word that is
+    /// not a display, with no message of its own (no migration hints, 2026-09-15).
     /// </summary>
     [Fact]
-    public void Both_IsRetired_AndSaysWhatToWriteInstead()
+    public void Both_IsRejectedLikeAnyUnknownDisplay()
     {
         var tree = SyntaxTree.Parse(Doc.Replace(
             "score main \"row\"   { chords harmony as roman }",
@@ -72,8 +72,8 @@ public class ChordDisplayModeTests
             .Single(x => x.Code == DiagnosticCodes.UnknownChordDisplayMode);
 
         Assert.Equal(DiagnosticSeverity.Error, d.Severity);
-        Assert.Contains("chords harmony as roman", d.Message);
-        Assert.Contains("chords harmony as names", d.Message);
+        Assert.Equal("'both' is not a chord display. Write 'as roman' or 'as names' (omit 'as' for names).",
+            d.Message);
     }
 
     [Fact]

@@ -264,8 +264,6 @@ public class FontAttributeTests
             .Where(x => x.Code == DiagnosticCodes.FontBindingMissingValue).ToList();
         Assert.Equal(2, all.Count);
         Assert.All(all, x => Assert.Equal(DiagnosticSeverity.Error, x.Severity));
-        Assert.Contains(all, x => x.Message.Contains(
-            "To point 'chordName' at the serif family write: chordName as serif", StringComparison.Ordinal));
     }
 
     [Fact]

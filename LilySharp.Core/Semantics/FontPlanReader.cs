@@ -214,15 +214,9 @@ internal static class FontPlanReader
             {
                 if (!hasNames)
                 {
-                    // The old redirect spelling — `chordName serif` — lands here as a bare
-                    // `serif` right after a role or group: answer with the spelling that
-                    // replaced it rather than with "names no face".
-                    string hint = previousRoleOrGroup is { } prev && !hasAttributes
-                        ? $" To point '{prev}' at the {canonical} family write: {prev} as {canonical}."
-                        : "";
                     found.Add(new Problem(span, DiagnosticCodes.FontBindingMissingValue,
                         $"'{canonical}' is a generic family and takes quoted face names, " +
-                        $"e.g. {canonical} \"Georgia\"." + hint, IsError: true));
+                        $"e.g. {canonical} \"Georgia\".", IsError: true));
                     boundKeys.Remove(canonical);
                     previousRoleOrGroup = null;
                     continue;

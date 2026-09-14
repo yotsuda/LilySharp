@@ -27,10 +27,9 @@ namespace LilySharp.Core.Semantics;
 /// <c>RenderSpecParser.ParseChordMode</c> ends in a <c>_ =&gt;</c> arm, so before this
 /// validator existed an unrecognised word was read as <c>names</c> with nothing said —
 /// `chords prog as romn` drew absolute names and reported no problem. That is the
-/// "fallback swallows it" shape (HANDOFF §7.7), and it is also what made RETIRING a
-/// display unsafe: `as both` would have kept parsing and quietly become `as names`.
-/// So the silence had to close before <c>both</c> could go, and the message names the
-/// replacement for it rather than leaving the writer to guess.
+/// "fallback swallows it" shape (HANDOFF §7.7). Every word that is not a display gets the
+/// same message; a retired spelling has no message of its own (pre-release, no migration
+/// hints — owner decision 2026-09-15).
 /// </remarks>
 internal sealed class ChordDisplayModeValidator : ISemanticValidator
 {
@@ -48,19 +47,9 @@ internal sealed class ChordDisplayModeValidator : ISemanticValidator
             if (text is "roman" or "names")
                 continue;
 
-            // `both` retired 2026-08-23 (user decision): it stacked the degree above the
-            // name as ONE symbol, and placing the track twice says the same thing with the
-            // rows the writer can see and order. The two are not identical — a symbol with
-            // no degree (an `r` slot's N.C.) prints once under `both` and once per row when
-            // stacked — which is why the retirement message says what to write instead
-            // rather than pretending the spellings were interchangeable.
-            string hint = text == "both"
-                ? " 'both' was removed: place the track twice instead — 'chords "
-                    + row.PartName + " as roman' above 'chords " + row.PartName + " as names'."
-                : "";
             _diagnostics.Error(token.Span, DiagnosticCodes.UnknownChordDisplayMode,
                 $"'{text}' is not a chord display. Write 'as roman' or 'as names' "
-                + "(omit 'as' for names)." + hint);
+                + "(omit 'as' for names).");
         }
     }
 }

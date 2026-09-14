@@ -100,7 +100,10 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         // 'sostenutoOn' / 'sostenutoOff' are RETIRED and cannot be candidates: every entry
         // in this list must compile (EverySuggestionCandidate_CompilesAsWritten).
         "sustain", "sostenuto", "unaCorda", "treCorde",
-        "mark.A", "finger.1", "feather.right", "feather.left",
+        // ⚠️ No feather.* candidate: the words a writer mistypes inside '@feather( )' are the
+        // retired tempo synonyms, and edit distance points 'rit' at 'right' — the opposite
+        // direction. An unknown '@feather(…)' gets the plain message.
+        "mark.A", "finger.1",
         "notehead.x", "notehead.diamond", "notehead.slash",
         "fig.6", "chord.C",
     ];

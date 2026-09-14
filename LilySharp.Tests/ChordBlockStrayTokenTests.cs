@@ -60,7 +60,7 @@ public class ChordBlockStrayTokenTests
     }
 
     [Fact]
-    public void StrayChordToken_IsReported_NamingTheRetiredSpelling()
+    public void StrayChordToken_IsReported_WithTheOneMessage()
     {
         var tree = SyntaxTree.Parse(Source);
         var reported = tree.Diagnostics
@@ -68,7 +68,7 @@ public class ChordBlockStrayTokenTests
             .ToList();
         // One per lowercase root: c, f, g, c.
         Assert.Equal(4, reported.Count);
-        Assert.All(reported, d => Assert.Contains("UPPERCASE", d.Message));
+        Assert.All(reported, d => Assert.Contains("'chords' takes chord symbols", d.Message));
     }
 
     [Fact]
@@ -101,17 +101,17 @@ public class ChordBlockStrayTokenTests
     /// <summary>
     /// The <c>s</c> spacer left the chord row on 2026-09-04 (owner decision, HANDOFF §3): a
     /// slot with no chord is <c>.</c> and an empty bar is <c>| |</c>, so it said nothing of
-    /// its own. It strays now, and the report names the two spellings that replace it.
+    /// its own. It strays now, with the one message every stray gets (no migration hints,
+    /// 2026-09-15).
     /// </summary>
     [Fact]
-    public void ARetiredSpacer_IsReported_NamingTheDotAndTheEmptyBar()
+    public void ARetiredSpacer_IsReportedLikeAnyStray()
     {
         var tree = SyntaxTree.Parse(Source.Replace("{ c | f | g | c }", "{ C | s | G | C }"));
         var d = Assert.Single(tree.Diagnostics,
             d => d.Code == LilySharp.Core.Syntax.DiagnosticCodes.ChordBlockBadMember);
-        Assert.Contains("'s' is not a chord-row slot", d.Message);
-        Assert.Contains("'| . C |'", d.Message);
-        Assert.Contains("'| |'", d.Message);
+        Assert.Equal("'chords' takes chord symbols ('Am', 'G7'), '.', 'r'/'R' (N.C.) and barlines; "
+            + "'s' is none of these.", d.Message);
     }
 
     [Fact]

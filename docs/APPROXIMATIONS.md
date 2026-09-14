@@ -265,10 +265,10 @@
 ### `LilySharp.Core/Rendering/TextFontMetrics.cs`
 - **:543** LILYSHARP-OWN: LilyPond has no equivalent refusal, and cannot — it resolves through
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
-- **:441** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
+- **:444** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Semantics/FontPlanReader.cs`
-- **:270** LILYSHARP-OWN: a limit of the LANGUAGE, not a geometry — LilyPond's font-size
-- **:278** The range a size may take, in staff spaces. LILYSHARP-OWN, as
+- **:264** LILYSHARP-OWN: a limit of the LANGUAGE, not a geometry — LilyPond's font-size
+- **:272** The range a size may take, in staff spaces. LILYSHARP-OWN, as
 ### `LilySharp.Core/Svg/Collector/BeamDetector.cs`
 - **:1110** LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
 - **:1140** LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's
