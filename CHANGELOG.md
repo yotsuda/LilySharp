@@ -6,7 +6,36 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## 0.7.0
 
+A chord symbol is spelled and raised the way LilyPond draws it, a `layout { }` block gathers
+the score-wide display switches, staff groups nest, and the drum and tuning tables are
+LilyPond's whole ones. Six things a 0.6.0 book could write now print differently or are
+refused; they come first, each with what the compiler says.
+
+### Breaking changes
+
+- **A chord's quality prints LilyPond's symbols by default.** A book compiles unchanged but
+  prints `C°`, `C+`, `Cø`, `C°7` and a drawn triangle for a major seventh where 0.6.0 printed
+  `Cdim`, `Caug`, `Cm7♭5`, `Cdim7` and `Cmaj7`. `layout { chordQualities words }` restores the
+  lead-sheet spelling (see Language below).
+- **`removeEmpty` leaves the part header for the score's staff item.** `part lh { clef bass
+  removeEmpty all }` is refused ("Unknown part property 'removeEmpty'"); write `staff lh as
+  removeEmpty all` in the score instead, so a full score can hide a staff its part sheet keeps.
+- **A `fonts { }` entry follows a generic family with `as`.** `fonts { chordName serif }` is
+  refused, and the error spells `chordName as serif` for you: a bare word after a key is now
+  the next key, which is what lets an entry carry a size and a style.
+- **`paper { topSystemPadding }` is retired.** Nothing read it and LilyPond has no such
+  variable; a book that writes it is refused with the spelling that does the job,
+  `topSystemSpacing { padding N }`.
+- **A MIDI-only score row is a part name and nothing else.** `score main { staff rh  lh
+  instrument violin }` is refused ("'instrument' is not something a score can hold"). The row's
+  `instrument` / `octave` options were never read — the MIDI takes both from the part — so no
+  output changes.
+- **The drum name `hhs` is gone.** It claimed a splash hi-hat, which LilyPond does not have,
+  and drew and played a pedal hi-hat. It now reads as an undefined phrase; write `hhp` for the
+  pedal hi-hat or `cyms` for LilyPond's splash cymbal.
+
 ### Language
+
 - **A chord's quality is spelled the way LilyPond spells it, without asking.** `layout
   { chordQualities }` shipped with `words` as its default — `Cdim`, `Caug`, `Cm7♭5`,
   `Cdim7`, `Cmaj7` — because that is what every Lily# book printed. The default is now
@@ -141,13 +170,12 @@ workflow attaches that section to the GitHub Release verbatim.
     *quantity* a row shows and stays on the row — one score writes both at once, so it
     could never be a score-wide key. The two compose: a degrees row is unchanged by this
     one, because a Roman degree already spells those qualities its own way.
-    `words` is the default and what every book on disk prints — `Cdim`, `Caug`, `Cm7♭5`,
-    `Cdim7`. `symbols` spells those four the way LilyPond's own exception table does —
-    `C°`, `C+`, `Cø`, `C°7` — and leaves every other quality alone, because LilyPond spells
-    the rest with digits too. ⚠️ `maj7` stays `maj7` under both: LilyPond draws a major
-    seventh as a *raised triangle*, and Lily# builds a chord name as one baseline run, so
-    neither the superscript nor the triangle has a home yet. These words switch inside that
-    simplification rather than closing it.
+    `symbols` is the default and LilyPond's: the four qualities LilyPond's own exception
+    table names print `C°`, `C+`, `Cø`, `C°7`, and a major seventh prints LilyPond's drawn
+    triangle (see the first entry of this section). `words` prints `Cdim`, `Caug`, `Cm7♭5`,
+    `Cdim7` and `Cmaj7`, the lead-sheet spelling every book printed before this version.
+    Every other quality is the same either way, because LilyPond spells the rest with digits
+    too.
   - **`minorChords upper | lower`** says whether a chord with a MINOR THIRD prints an
     uppercase root with its `m` (`upper`, the default and LilyPond's) or a lowercase root
     with the `m` dropped (`lower` — LilyPond's `chordNameLowercaseMinor`, which the twin
@@ -231,6 +259,30 @@ workflow attaches that section to the GitHub Release verbatim.
   `lines` since 0.3.0; `pedal` stays on the part. Ossia takes the selector (and is hara-kiri
   regardless); a tab item takes neither. The editor offers `as removeEmpty` after a staff name
   and its values after it.
+
+- **LilyPond's whole drum and tuning tables.** The drum vocabulary grows from 30 names to
+  LilyPond's 63 — the Latin and accessory percussion: `hibongo` (`boh`), `hiconga` (`cgh`),
+  `hitimbale` (`timh`), `claves`, `maracas` (`mar`), `cabasa` (`cab`), `guiro`, `triangle`,
+  `hiwoodblock`, `sidestick` (`ss`), `splashcymbal` (`cyms`) and the rest — each at the staff
+  position, notehead and GM key of the LilyPond table that places it. `shortguiro`, `longguiro`
+  and `guiro` share a line and a head, and LilyPond tells them apart by a staccato or tenuto
+  mark, which the page draws. The tunings grow from 7 words to 32, every
+  `\makeDefaultStringTuning` of LilyPond's named as its symbol without `-tuning`:
+  `guitardropd`, `guitardadgad`, `guitar7`, `bassdropd`, `violin`, `viola`, `cello`,
+  `mandolin`, `banjoopeng`, `tenorukulele` and more. A string number goes up to `\7` for the
+  seven-string guitar. Both tables are pinned to LilyPond's, row by row and string by string.
+- **A bowed or plucked preset frets its tab on its own strings.** `instrument violin`, `viola`
+  and `cello` shown as a `tab` fell back to the guitar's six strings; they take LilyPond's
+  violin, viola and cello tunings. `mandolin` (treble clef at sounding pitch, the violin's
+  strings) and `banjo` (the guitar's octave-down treble clef, LilyPond's open-G banjo tuning)
+  are new presets.
+- **Staff groups nest.** A `grandStaff`, `staffGroup` or `choirStaff` holds `condensedStaff
+  { … }` and `combinedStaff { … }` members beside its staves — `staffGroup { condensedStaff
+  { fl1 fl2 } staff ob }` is the woodwind bracket — and any group may stand inside any other,
+  at any depth, drawn as written: the piano's brace inside the orchestra's bracket. As in
+  LilyPond 2.26.0, measured: each delimiter clears its parent's ink (a bracket by 0.8, a brace
+  by 0.3), the space between two staves follows the innermost group they share, and a span bar
+  crosses a gap when a `grandStaff` or `staffGroup` holds both staves, never a `choirStaff`.
 
 ### Editor
 
@@ -317,6 +369,21 @@ workflow attaches that section to the GitHub Release verbatim.
   sends now also accepts `path` (a `.lys` that is not open, read with its `using` includes),
   `all` with `outputDirectory` (every score, the CLI's names), and answers with `outputPaths`
   and `warnings`; the one-score call is unchanged.
+- **Completion reads the construct it is in, whatever its header spells.** A chords track's own
+  body offers `section` and the section names, not chord names (a chord written beside a
+  track's sections is dropped); a lyrics track completes the same with `sings PART` in its
+  header as without it; a silent `section ~B { }` completes like `section B { }`; a score with
+  any header option (`score main "out" transpose d pitch concert {`) offers its render items
+  where it offered the music list; and the staff row is read by its grammar, so `staff treble
+  melody |`, `staff ~m |`, `staff m "Violin I" |` and `staff m as lines 1 |` each offer what
+  can follow. Every legal spelling of every score row is pinned by a test.
+- **A scaffold names what must exist, and leaves free what it creates.** `lyrics … sings`
+  writes the only declared part, opens the part list when there are several, and writes no
+  clause when there is none — it used to type the keyword `part` there. `score` takes the
+  book's only form (it typed `main` into a book whose form is `verse`, LYS1018), and `form`
+  takes `main` while it is free, else the first free `mainN` (it typed a duplicate, LYS1017).
+- **A `fonts` entry offers `step` and `size` first**, then the styles, `as` and a quoted face,
+  and offers a second face after the first, which is how a fallback chain is written.
 
 ### Fixed
 
@@ -390,6 +457,15 @@ workflow attaches that section to the GitHub Release verbatim.
   printed no strings and raised no diagnostic; it is applied now.
 - **A slur mark after `>>` was dropped from the page and then blamed on the `)`.** `<< c e g >>4( d)`
   drew no bow and warned that the `)` had no `(` (LYS4010); the MusicXML had the slur all along.
+- **`paper { spacingIncrement }` did nothing.** It was parsed and read by no spacing rule, so
+  every page spaced its notes on the built-in 1.2. It reaches the springs now, carried with the
+  shortest duration as LilyPond's `Spacing_options` carries them: a ragged line of quarters,
+  eighths and sixteenths is 74.95 / 86.89 / 98.83 staff spaces long at 1.2 / 1.5 / 1.8 in both
+  engines, where Lily# drew 74.95 for all three.
+- **A unisono after a part-two solo lost its "a2".** On a `combinedStaff` the label looked for
+  its note in part one, which LilyPond does not engrave there, found nothing, and the next
+  label overwrote it. It hangs on part two's engraved head now, and such a passage prints
+  LilyPond's Solo II / a2 / Solo / a2.
 
 ### Engraving
 
@@ -585,6 +661,39 @@ workflow attaches that section to the GitHub Release verbatim.
   three in a quarter are eighths under 3:2, five sixteenths under 5:4, as before. The MIDI
   is unchanged (the shares were always equal); the MusicXML carries the note type and
   time-modification.
+- **A system-start brace, bracket and bar stand where LilyPond puts them, and a staff line's ink
+  stops short of its span.** LilyPond places the `SystemStartBar` left of the staff start
+  (padding −0.1) and each delimiter against that bar — a brace by 0.3, a bracket's stroke by
+  0.8 — where Lily# measured from the indent: the brace stood 0.06 to the right, the bracket
+  0.285 and the bar 0.02 to the left. Every staff line, tab string line and ossia line now
+  begins and ends half its thickness inside the staff's span, as `staff-symbol.cc` draws it
+  (Lily# drew to the edges, which showed as a 0.05 overhang after a courtesy signature). All
+  measured on LilyPond 2.26.0; almost every snapshot moves by these amounts and nothing else.
+- **Two ledgered notes are held apart by LilyPond's ledger-line rod.** Consecutive columns whose
+  heads carry ledger lines on the same side stand 2 × head width × 0.25 plus the heads' extents
+  apart (1.9563 staff spaces for black heads), a rod LilyPond's `Ledger_line_spanner` raises and
+  Lily# did not: a run of 32nds on `a''` is 1.9563 per step as in LilyPond (1.8042 before), and
+  `samples/canon-in-d`'s ragged length went from 17.66 staff spaces short of LilyPond's to 1.72.
+  The rod reads its column outlines padded 0.08, LilyPond's `PaperColumn` value, not the note
+  column's 0.15, which had pushed apart two voices whose notes never meet.
+- **A part-combine `a2` / `Solo` label is placed as LilyPond places it.** It is an outside-staff
+  item stacked after the text scripts and before the marks, so a chord row or a section label
+  above clears it — it stood at a flat 1.5 over the system and could be drawn through the
+  `Intro` label — and its baseline is LilyPond's `aligned_side`: the label's extent box kept 0.5
+  over the heads and stems of its own voice (a beamed stem at its drawn length) or over the
+  staff. Five ledger points agree with LilyPond to the last digit of the reading.
+- **A feathered beam fans.** `@feather(right)` and `@feather(left)` were read and carried to the
+  renderer, which drew a plain beam; the secondary beams now meet the primary at one end and
+  open to a full beam spacing at the other, by LilyPond's feather factor (`beam.cc`).
+- **A tab's strings are chosen by planning the fingering of the whole voice.** The chooser
+  weighed one note at a time and could not see a shift a phrase needs later. It now chooses,
+  for all the notes at once, the string, fret and hand position that cost least: a shift is
+  cheaper the more time the hand has (a rest, a leap, an open string), and stretches, string
+  skips (the octave shape excepted), slurs across strings and leaving low position are charged.
+  The weights were fitted to fingerings agreed passage by passage in real books and held
+  against every tab fixture, where a bar that fits in the first position stays there. A written
+  `\N` is never overridden. This is Lily#'s own model, deliberately not LilyPond's; a tab with no
+  `\N` may show different fret numbers than 0.6.0 did.
 
 ### Diagnostics
 
@@ -732,6 +841,20 @@ workflow attaches that section to the GitHub Release verbatim.
 - **The note after a dotted one carries the dot in the twin too.** `c4. d` has been a dotted
   quarter followed by a dotted quarter on the page since 0.4.0; the twin still wrote `d4`,
   five eighths where the page has six. It writes `d4.` now.
+- **`lysc ly` writes a condensed or combined staff.** A top-level `condensedStaff` or
+  `combinedStaff` was left out of the twin with no warning; it is written as `\new Staff {
+  \clef … << \a \\ \b >> }` and `\new Staff { \clef … \partCombine \a \b }`, with the first
+  part's clef as on the page, and inside a group it is no longer reported as not exported. A
+  `grandStaff` inside a `staffGroup` is written as a nested context.
+- **Parts named apart only by a digit keep their own music in the twin.** `part fl1` and `part
+  fl2` both became `\fl`, so LilyPond kept the last definition and every staff played it; the
+  digits are spelled as words now (`\flOne`, `\flTwo`), and a name that still collides takes a
+  suffix. Between this and the entry above, the twins of 35 of the 599 tracked books change, and
+  all 35 compile in LilyPond 2.26.0.
+- **`lysc ly` writes a feathered beam** as `\once \override Beam.grow-direction = #RIGHT` (or
+  `#LEFT`) on the note that opens it, and LilyPond draws the same fan. `\featherDurations` is not
+  written: it changes the played durations, which `@feather` does not. The MusicXML carries no
+  feather, because that exporter writes no `<beam>` elements at all.
 
 ## 0.6.0
 

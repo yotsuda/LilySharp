@@ -4,8 +4,37 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## 0.7.0
 
+### Breaking changes
+
+The extension bundles the compiler, so these change what a `.lys` file means. Each is refused
+with the spelling to write instead (the first compiles and prints differently), and the
+repository's [CHANGELOG](https://github.com/yotsuda/LilySharp/blob/master/CHANGELOG.md) carries
+the reasoning.
+
+- **Chord qualities print LilyPond's symbols by default** — `C°`, `C+`, `Cø`, `C°7` and a drawn
+  triangle for a major seventh; `layout { chordQualities words }` brings back `Cdim`, `Caug`,
+  `Cm7♭5`, `Cdim7`, `Cmaj7`.
+- **`removeEmpty` moves from the part header to the score's staff item** —
+  `staff lh as removeEmpty all`.
+- **A font entry follows a generic family with `as`** — `fonts { chordName as serif }`.
+- **`paper { topSystemPadding }` is retired** — `topSystemSpacing { padding N }` does the job.
+- **A MIDI-only score row is a bare part name**; its `instrument` / `octave` options did nothing.
+- **The drum name `hhs` is gone** — it drew and played a pedal hi-hat; write `hhp`, or `cyms`
+  for a splash cymbal.
+
 ### Language
 
+- **`layout { }` gathers the score-wide display switches** — `marks`, `barNumbers`,
+  `accidentals`, `sectionLabels`, `partCombineText`, `chordQualities`, `minorChords` — as a
+  file default or a named block a score references. Completed and coloured inside the block.
+- **A `fonts { }` entry carries a size and a style** — `mark "Charis SIL" step +1 bold`.
+- **A `break` inside a bar splits the bar across two systems**, `paper { raggedBottom }` keeps
+  every page at its natural spacing, `time none` is engraved, and `partial` may stand at a bar's
+  start in a part's music.
+- **LilyPond's whole drum and tuning tables** — the Latin percussion, and tunings such as
+  `guitardropd`, `guitardadgad`, `guitar7`, `violin`, `mandolin`, `banjoopeng`; `mandolin` and
+  `banjo` presets, and a bowed preset frets its tab on its own strings.
+- **Staff groups nest**, at any depth, and hold `condensedStaff` / `combinedStaff` members.
 - **A spaced dot inside `<< … >>` holds the member before it one more share** — `<< c . d >>4`
   is the swing figure (`tuplet 3/2 { c4 d8 }`), `<< c . . d >>4` is `c8. d16`. Written as its
   own token, never glued.
@@ -14,8 +43,33 @@ All notable changes to the Lily# VS Code extension are documented here.
   slur mark after `>>` hangs on the last member. String numbers on a group used to be dropped
   in silence.
 
+### Added
+
+- **A ```` ```lys ```` or ```` ```lily# ```` fence in a Markdown file draws its score** in VS
+  Code's built-in Markdown preview, the way a ```` ```mermaid ```` fence draws a diagram. A
+  fence writes exactly one `score { }` and is laid out as a snippet — one page as tall as the
+  music and as wide as its widest system. Opening a Markdown file costs nothing: the language
+  server starts only when a score is opened or a fence needs drawing.
+- **Right-click `.lys` files in the Explorer to export them** — a *Lily#: Export* submenu (PDF,
+  SVG, PNG, LilyPond, MusicXML, MIDI, VOCALOID) writes every score of every selected file into
+  one folder, named as `lysc --all` names them.
+- **A quick fix pads a short section voice, chord row or lyrics cell with bar lines** on its
+  LYS2007 warning; quick fixes now read every diagnostic the Problems panel shows.
+- **The completion popup names every construct the grammar takes** — sixteen spellings no list
+  offered, each compiled where it is offered — and reads the construct it is in: a chords or
+  lyrics track's body, a silent section, a score header with options and a staff row at any
+  length each get their own list. A scaffold that writes a part or form name takes one that
+  exists (or, for `form`, one that is free), and a `fonts` entry offers `step` and `size` first.
+
 ### Engraving
 
+- **A chord symbol is raised and sized where LilyPond sets it**, and under the default
+  `symbols` a major seventh is LilyPond's drawn triangle.
+- **A feathered beam fans** — `@feather(right)` / `@feather(left)` used to draw a plain beam.
+- **A tab's strings are chosen by planning the whole phrase's fingering**, not one note at a
+  time; a written `\N` always wins.
+- **Braces, brackets, the system-start bar and the staff lines' ends stand where LilyPond puts
+  them**, and a part-combine `a2` / `Solo` label is placed as LilyPond places it.
 - **An arpeggio in a dotted total is spelled as compound metre spells it** — `<< c e >>4.`
   is a 2:3 duplet of eighths, `<< c e g a >>4.` a 4:3 quadruplet, instead of dotted
   members. See the repository's
