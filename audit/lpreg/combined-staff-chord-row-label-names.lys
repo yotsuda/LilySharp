@@ -1,0 +1,40 @@
+// THE COMPARABLE VARIANT of combined-staff-chord-row-label.lys (owner decision 2026-09-14: a book
+// holding a form LilyPond cannot spell is fixed into a spellable form before it is compared).
+// ONE change: `chords prog as roman` → `chords prog` (names). LilyPond has no roman-degree chord
+// names, so the twin of the original prints C/D where the page prints Imaj7/IImaj7 in another
+// face, and every height above the staff differs by the glyphs (session 382 measured the page:
+// chord line 4.13 roman vs 3.59 names).
+// ⚠️ NOT CHANGED, because this tree needs no fix for it: the row's D does NOT lift off the line.
+// ChordNameEngraver.ChordLineOfSystem lifts a row symbol only where its box meets an @chord's box
+// plus SymbolGap, and on this book the D (bar 2 beat 3) is clear of F♯sus4 — the page draws
+// C D F♯sus4 E all on one baseline (session 382, lysc svg). The Dmaj7 lift quoted in that
+// function's remarks is the owner's 2026-09-06 picture, not this tree's rendering of this book.
+// TWIN: `lysc ly --pin-fonts` of this book, then fold the two `\new ChordNames` into
+// `\new ChordNames << \progChords \basslineInlineChords >>` (no note is rewritten) — one line, like
+// the page. LilyPond 2.26.0 on that fold (up from the staff's top line, ss): Intro 6.66 / chord
+// line 3.65 / a2 1.53; the page: 6.61 / 3.59 / 1.42 (SVG, 2 digits).
+octave absolute
+part bassline {
+  clef bass
+  tuning bass
+
+  section Intro {
+    <<c g b>>,1 | <b cis' fis>,@chord | <e gis b dis'>,1@chord |
+  }
+}
+
+chords prog {
+  section Intro {
+    Cmaj7 | . IImaj7 | |
+  }
+}
+
+form main { Intro }
+
+score main {
+  chords prog
+  combinedStaff {
+    bassline
+    bassline
+  }
+}

@@ -129,6 +129,42 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第380セッションの経緯
+
+最終更新 第380セッション（2026-09-14）＝**入り方は第298〜第379 の型**（ユーザーは `docs/HANDOFF.md` を読ませて「作業に着手して」だけ）。**§0 の裏取りを走らせた**（`Session-Check -Build -Test -Scratch p381`）。道具は記憶どおり pwsh MCP。**着手したのは第379 ⑺ の筆頭＝§2 E「section label と和音行の上下」**（要ユーザー判断のまま置かれていた項の、製品に触らない最初の一手）。**結果＝「逆転」は第378 の計器の作り物で、要ユーザー判断は消えた（製品 0）**。**骨は 5**:
+
+★★ **⑴ 開始時の数は第379 第 6 便末と一致**: HEAD `cc16687a`・**未 push 0（ユーザーが push 済み＝`origin/master` も `cc16687a`）**・木 clean・未追跡 0・**台帳 846 点／ss 非ゼロ 210／総和 22.584587806／count 点 180 うち非ゼロ 0／exact 671／OPEN 0・snapshot 249・追跡 `.lys` 599**・lysc は net10.0 だけ・build 0 エラー・**full `scratch/p381/run1.trx` 8528 / 0 / 4 / 8532**（RunInfos は SKIP 4 だけ）。✅ **`cc16687a` の CI は success**（開始時は in_progress・完走を確認）＝**`origin/master` の赤は解消**。
+
+★★★ **⑵ 逆転は無かった＝第378 の `bench-a2.ly` は `RehearsalMark.after-line-breaking` を dump で override しており、既定の `move-to-extremal-staff`（`define-grobs.scm:2879`）が消えていた**＝mark が和音行へ re-parent されず、譜に残って和音行の下に描かれた。**LP 2.26.0**（`scratch/p381/label`・font pin・`svgtext.ps1`＝svg の `<text>` の baseline を譜の最上線から上へ）:
+  | 本 | dump | 譜 | 和音行 | Intro | a2 |
+  |---|---|---|---|---|---|
+  | `bench-a2`（第378 の probe） | 有 | `\partCombine` | 9.30 | **3.40** | 1.53 |
+  | **`bench-a2-nodump`** | 無 | `\partCombine` | **3.65** | **6.66** | 1.53 |
+  | `vd-plain-textscript` | 有 | plain＋`^\markup "a2"` | 9.14 | **3.40** | 1.46 |
+  | `vd-nodump` | 無 | 同 | 3.57 | 6.58 | 1.46 |
+  | `vb-dump` | 有 | plain | 5.12 | **3.40** | — |
+  | `vb-mark-plain`（第378・dump 無） | 無 | plain | 1.56 | 4.57 | — |
+  | `ve-combined-notext` | 有 | `\partCombine`＋`printPartCombineTexts = ##f` | 5.12 | **3.40** | — |
+  | `ve-nodump` | 無 | 同 | 1.56 | 4.57 | — |
+  **決め手**: dump 付きの 4 冊は **Intro が全部 3.40 で動かず、和音行だけが動く**（＝mark は譜に居る）。dump 無しの 4 冊は**どれも label が和音行の上**＝**Lily#（第378 の記録: Intro 6.89／和音行 4.13／a2 1.43）と同じ上下**。`\partCombine` の有無は上下に効かない（ve-nodump と vb-mark-plain が同じ値）。**台帳はすでに正しい機構を書いていた**: `lp-geometry.json` の `mark.over-chord.*` の why＝「X で重なる行へ `move_to_extremal_staff` で re-parent して持ち上げる・Lily# は X を見て持ち上げ済み」＝**§2 E の起票はこれと矛盾していた**。⚠️ **`audit/lp-geometry/probes/mark-chord-row.ly:44` の「RehearsalMark は move-to-extremal-staff を持たない」は 2.26.0 の `:2879` に反する**＝訂正の注記を足した（その probe は page から dump し override を使わない＝値は無傷）。
+
+★★ **⑶ 同じ罠の監査**: 既定の after-line-breaking を持つ grob（mark 族・ChordName／FretBoard・臨時記号 3 種・`kill-zero-spanned-time` の spanner 7 種・TabNoteHead・Footnote／BalloonText＝一覧は記憶 `reference_lilypond_dump_override_replaces_default_callback`）を override する repo 内（scratch 外）の probe は **4 冊**＝`coda-line-start`（CodaMark・SectionLabel）・`staffless-system`／`chord-symbol-width`（ChordName・`chordChanges` 無し）・`tab-numbers-meter`（TabNoteHead・タイ無し）＝**4 冊とも X だけを読む**＝`move-to-extremal-staff` の消失は X に効かない＝**台帳は汚れていない**。
+
+★ **⑷ 残った差（数だけ・未着手）**: bench の Lily# − LP ＝ **和音行 +0.48・Intro +0.23・a2 −0.10**（Lily# 側は第378 の記録値・この便は描き直していない）＝上下の問題ではなく縦の量の問題＝§2 E に移した。計器（`scratch/p381/label` の nodump 双子 3 冊・`svgtext.ps1`）はディスクに残る。
+
+★★ **⑸ 数と次の一手**: **終了時**: HEAD＝この §1 を書く commit（docs・probe コメント・製品 0）・§7 3.5: 第378 を `-Archive 378` で ARCHIVE へ（済）・**full `scratch/p381/run2.trx` 8528 / 0 / 4 / 8532（不変・RunInfos は SKIP 4 だけ）**・§7.5（`-DiffBase cc16687a`）: **Core `+` 0 行／REF 0／OWN 0**・台帳／snapshot／追跡 `.lys` は不変・HANDOFF 約 444KB（門 450KB）。⚠️ **LP を pwsh MCP から直接起動すると Guile で固まる**（記憶「Guile死」・この便も 1 度踏んだ）＝`cmd.exe /d /s /c "… < NUL > log 2>&1"` の形で。⇒ **次の一手**: 第379 ⑺／⑿ の並び＝**⒝ 摂動網の残り**（chord quality 35・`@` の引数つき形）／**⒠ drummap の `${1:hh}`＝UX 案件**／**⒢ 第369 ⑸⒝・第368 ⑺⒝**／§2 E の副産物（内容で決まる頁の高さ）／⑻ ② `CreateTimingSpring` の床（観測 0 の縁）／⑽ の範囲外（gate が cross-bar の加線対を値付けしない）／**新: ⑷ の縦の残差 3 つ**。
+
+★★ **⑹ 第 2 便＝判定「着手しない」**（常設指示「次便は、このセッションでやる方が有利なら着手して…」）。この便の `scratch/p381/label` と噛み合う候補は ⑷ の縦の残差だけだったので、そこを測った。**分かったことは 2 つ**:
+- ① **比べていた双子は別の音楽だった**。
+  - Lily# の和音行は `chords prog as roman`（`Imaj7`／`IImaj7`・TeX Gyre Heros 2.62）で、inline の `@chord` の和音名（F sus4・E…）も同じ行（y 11.80）に描く。
+  - 第378 の手書き `bench-a2.ly` は `\chordmode` の C／D の和音名で、inline 和音が無い。
+  - ⇒ **和音行 +0.48 は文字の違いを含み、まだ残差として読めない**。Lily# は今の木で描き直して 6.89／4.13／1.43（記録どおり・`lysharp-bench.svg`）。
+- ② ⚠️ **`lysc ly` は最上位の `combinedStaff` を黙って落とす**。
+  - `lysc ly --pin-fonts bench.lys` の双子（`twin/bench-twin.ly`）は `\new ChordNames` だけで、譜が 0 本。warning は roman の 1 つだけ。
+  - 原因: `LilyPondExporter.RenderRows`（`:760-781`）が combined を yield しない。`:4773` の「reported」は group の中の member だけ。
+
+**着手しない理由**: 次の一歩は**新しい計器**（`\partCombine`・roman の字面・inline 和音を運ぶ双子）で、exporter に綴りを足すか、override 付きの手書き（記憶が禁じる型）になる。この便の道具の延長ではないので、次のセッションで始めても損しない。修正の側は出力が動くので承認が要る。
+
 ## 以下は第379セッションの経緯
 
 最終更新 第379セッション（2026-09-13）＝**入り方は第298〜第377 の型**（ユーザーは `docs/HANDOFF.md` を読ませて「作業に着手して」だけ）。**§0 の裏取りを走らせた**（`Session-Check -Build -Test -Scratch p380`＝規約どおり第379＝`p380`）。道具は記憶どおり pwsh MCP。**着手したのは第377 ⑶ の要ユーザー判断 2 件**＝最初にユーザーに訊いた。**骨は 6**:
