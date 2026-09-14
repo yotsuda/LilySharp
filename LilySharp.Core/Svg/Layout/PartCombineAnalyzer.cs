@@ -31,12 +31,16 @@ namespace LilySharp.Core.Svg.Layout;
 /// <param name="MeasureIndex">Measure index</param>
 /// <param name="StaffIndex">The global index of the combined staff the label belongs to —
 /// its Y-parent, whose tracker the outside-staff pass places it against.</param>
+/// <param name="AlignedBaselineUp">The baseline <c>aligned_side</c> gives the label BEFORE the
+/// outside-staff pass, in staff-spaces above the staff's MIDDLE line
+/// (<see cref="PartCombineAnalyzer.AlignedSideBaselineUp"/>).</param>
 public sealed record PartCombineLayout(
     string Text,
     double X,
     double YUp,
     int MeasureIndex,
-    int StaffIndex);
+    int StaffIndex,
+    double AlignedBaselineUp);
 
 /// <summary>
 /// Places the part combiner's labels. The ANALYSIS is not here — it belongs to the music
@@ -60,10 +64,12 @@ internal static class PartCombineAnalyzer
     /// <summary>
     /// Turns the marks a <c>combinedStaff</c> produced into placed labels.
     /// </summary>
+    /// <param name="fonts">The score's text metrics: the label's advance and ink decide its
+    /// aligned_side height (<see cref="AlignedSideBaselineUp"/>).</param>
     /// <param name="marks">The marks, each naming the item it belongs to.</param>
     /// <param name="measureLayouts">Measure layouts for X position lookup.</param>
-    /// <param name="measures">Measures of the combined staff's first voice, which is the
-    /// voice the marks index into.</param>
+    /// <param name="voices">The combined staff's voices. The marks index into the FIRST, and
+    /// its column is the label's support.</param>
     /// <param name="staffIndex">The combined staff's global index.</param>
     /// <remarks>
     /// LILYPOND-REF: scm/define-grobs.scm:1086-1092 CombineTextScript, side-position-interface:
@@ -77,11 +83,13 @@ internal static class PartCombineAnalyzer
     /// first note head's X to the printed digit.
     /// </remarks>
     public static ImmutableArray<PartCombineLayout> Calculate(
+        Rendering.ScoreTextMetrics fonts,
         ImmutableArray<Collector.PartCombineMark> marks,
         ImmutableArray<MeasureLayout> measureLayouts,
-        ImmutableArray<Measure> measures = default,
+        ImmutableArray<Voice> voices,
         int staffIndex = 0)
     {
+        var measures = voices.IsDefaultOrEmpty ? default : voices[0].Measures;
         if (marks.IsDefaultOrEmpty)
             return ImmutableArray<PartCombineLayout>.Empty;
 
@@ -102,10 +110,69 @@ internal static class PartCombineAnalyzer
                     measures, mark.MeasureIndex, mark.ItemIndex, ml);
             }
 
-            layouts.Add(new PartCombineLayout(mark.Text, x, 0, mark.MeasureIndex, staffIndex));
+            layouts.Add(new PartCombineLayout(mark.Text, x, 0, mark.MeasureIndex, staffIndex,
+                AlignedSideBaselineUp(fonts, voices, mark, x)));
         }
 
         return layouts.ToImmutable();
+    }
+
+    /// <summary>
+    /// The label's baseline after <c>aligned_side</c> and BEFORE the outside-staff pass, in
+    /// staff-spaces above the staff's MIDDLE line: its extent box kept <c>padding</c> 0.5 over
+    /// the heads and stems of its moment, floored by the staff extent, then the staff-padding
+    /// floor on the refpoint.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/side-position-interface.cc:188-455 aligned_side — :323-330 the staff
+    ///   extent as the support's minimum, :354-358 the distance to the grob's own facing skyline,
+    ///   :370 + padding, :433-453 the staff-padding floor on the refpoint.
+    /// LILYPOND-REF: lily/part-combine-engraver.cc:102-119 acknowledge_note_head — the heads and
+    ///   (acknowledge_stem) the stems of the moment are the supports; DynamicEngraver's
+    ///   ColumnSupportSkylines builds exactly that pair (head extent box, the real stem, the
+    ///   staff floor), so it is read here rather than spelt a second time.
+    /// LILYPOND-REF: lily/grob.cc:81-85 Grob::simple_vertical_skylines_from_extents_proc — the facing skyline is
+    ///   the extent box, since CombineTextScript declares no vertical-skylines
+    ///   (scm/define-grobs.scm:1077-1105): the box's flat bottom is the string's ink bottom over
+    ///   the whole advance, so the distance is the supports' highest point under the advance.
+    /// ⚠️ Two inputs are narrower than LilyPond's, both declared: the supports are the FIRST
+    ///   voice's column (the voice the marks index into — the shared or solo voice that carries
+    ///   the notes the label names), and a beamed stem is taken at its unbeamed length (no beam
+    ///   layout exists yet when the label is made). The beam's own ink is in the staff profile the
+    ///   outside-staff pass clears right after, at 0.46. Observed by no ledger point.
+    /// </remarks>
+    internal static double AlignedSideBaselineUp(Rendering.ScoreTextMetrics fonts,
+        ImmutableArray<Voice> voices, Collector.PartCombineMark mark, double x)
+    {
+        double em = LabelEm(fonts);
+        var style = LabelStyle(fonts);
+        double advance = fonts.Advance(mark.Text, em, Rendering.TextRole.PartCombine, style);
+        var (bottom, _) = fonts.Ink(mark.Text, em, Rendering.TextRole.PartCombine, style);
+        var support = DynamicEngraver.ColumnSupportSkylines(
+            voices, 0, mark.MeasureIndex, mark.ItemIndex, x, beamOf: null);
+        // :354-358 + :370 — the box bottom (baseline + bottom) stands padding over the supports.
+        double totalOff = support.Up.MaxProtrusionInRange(x, x + advance) - bottom
+            + CombineTextPadding;
+        // :433-453 — the refpoint floor.
+        return Math.Max(totalOff, DynamicEngraver.StaffExtent + CombineTextStaffPadding);
+    }
+
+    /// <summary>
+    /// The label's skyline pair as LilyPond gives it: the extent BOX — [x, x + advance] ×
+    /// [baseline + ink bottom, baseline + ink top] — in the caller's Y-up frame.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/grob.cc:81-85 Grob::simple_vertical_skylines_from_extents_proc — the default a grob
+    /// that declares no vertical-skylines gets (CombineTextScript, scm/define-grobs.scm:1077-1105).</remarks>
+    internal static (VerticalSkyline Up, VerticalSkyline Down) LabelBox(
+        Rendering.ScoreTextMetrics fonts, string text, double em, Rendering.FontStyle style,
+        double x, double baseline)
+    {
+        double advance = fonts.Advance(text, em, Rendering.TextRole.PartCombine, style);
+        var (bottom, top) = fonts.Ink(text, em, Rendering.TextRole.PartCombine, style);
+        return (VerticalSkyline.FromBox(x, x + advance, baseline + bottom, baseline + top,
+                    VerticalDirection.Up),
+                VerticalSkyline.FromBox(x, x + advance, baseline + bottom, baseline + top,
+                    VerticalDirection.Down));
     }
 
     /// <summary>
@@ -123,26 +190,24 @@ internal static class PartCombineAnalyzer
     /// the ChordNames line stands above the "a2", 3.65 over the staff top against the label's
     /// 1.53. Without this the row was spaced for the notes alone and its first symbol printed
     /// over the label once the label stood where LilyPond puts it.
-    /// The two terms are <c>OutsideStaffStacker.PlacePartCombineTexts</c>'s — the staff-padding
-    /// floor and outside-staff-padding over the accumulated profile — spelt here because this
-    /// pass runs before the systems exist. ⚠️ The profile is the label's ink BOX over its
-    /// advance, where the stacker places its outline: the harmless direction (a box is never
-    /// lower than the outline under it).
+    /// The two terms are <c>OutsideStaffStacker.PlacePartCombineTexts</c>'s — the
+    /// <see cref="AlignedSideBaselineUp"/> start and the extent box over the accumulated profile
+    /// at outside-staff-padding — spelt here because this pass runs before the systems exist.
+    /// The profile is the same box the stacker places (<see cref="LabelBox"/>).
     /// </remarks>
     internal static VerticalSkyline InkAboveStaff(
         Rendering.ScoreTextMetrics fonts,
         ImmutableArray<Collector.PartCombineMark> marks,
-        ImmutableArray<Measure> measures,
+        ImmutableArray<Voice> voices,
         ImmutableArray<MeasureLayout> systemMeasureLayouts,
         VerticalSkyline accumulatedUp)
     {
         var ink = new VerticalSkyline(VerticalDirection.Up);
-        if (marks.IsDefaultOrEmpty || systemMeasureLayouts.IsDefaultOrEmpty)
+        if (marks.IsDefaultOrEmpty || systemMeasureLayouts.IsDefaultOrEmpty || voices.IsDefaultOrEmpty)
             return ink;
+        var measures = voices[0].Measures;
         double em = LabelEm(fonts);
         var style = LabelStyle(fonts);
-        double floor = EngravingDefaults.StaffMiddle + EngravingDefaults.StaffLineThickness / 2.0
-            + CombineTextStaffPadding;
         foreach (var mark in marks)
         {
             MeasureLayout? ml = null;
@@ -154,7 +219,7 @@ internal static class PartCombineAnalyzer
                 measures, mark.MeasureIndex, mark.ItemIndex, ml);
             double x1 = x0 + fonts.Advance(mark.Text, em, Rendering.TextRole.PartCombine, style);
             var (bottom, top) = fonts.Ink(mark.Text, em, Rendering.TextRole.PartCombine, style);
-            double baseline = Math.Max(floor,
+            double baseline = Math.Max(AlignedSideBaselineUp(fonts, voices, mark, x0),
                 accumulatedUp.MaxProtrusionInRange(x0, x1)
                     + OutsideStaffStacker.OutsideStaffPadding - bottom);
             ink.Merge(VerticalSkyline.FromBox(
@@ -166,4 +231,9 @@ internal static class PartCombineAnalyzer
     /// <summary>CombineTextScript's staff-padding.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm:1077-1094 CombineTextScript — beside its outside-staff-priority 475.</remarks>
     internal const double CombineTextStaffPadding = 0.5;
+
+    /// <summary>CombineTextScript's padding — what aligned_side keeps between the label's box and
+    /// its supports.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:1077-1094 CombineTextScript — (padding . 0.5), beside its outside-staff-priority 475.</remarks>
+    internal const double CombineTextPadding = 0.5;
 }

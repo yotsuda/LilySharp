@@ -12948,8 +12948,86 @@ internal static class LpGeometryProbes
     /// </summary>
     private const int MidLineBarline = 0;
 
+    /// <summary>
+    /// A part-combine "a2" decided by the STAFF EXTENT: an F3 whole note inside the bass staff.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/side-position-interface.cc:323-330 aligned_side — the staff extent is the
+    /// support's floor, and the grob's own facing skyline is kept `padding` 0.5 over it (:354-370).
+    /// CombineTextScript's skyline is its EXTENT BOX (it declares no vertical-skylines,
+    /// scm/define-grobs.scm:1077-1105, so lily/grob.cc:81-85 installs
+    /// Grob::simple_vertical_skylines_from_extents): the box bottom is the ink bottom −0.033010, so
+    /// the baseline stands 0.05 + 0.5 + 0.033010 over the top line.
+    /// <remarks>LilyPond twin: probe score PCF in part-combine-text.ly.</remarks>
+    /// </remarks>
+    private static readonly string PCF = """
+        octave absolute
+        part bass {
+          clef bass
+          section Intro {
+            f,1 |
+          }
+        }
+
+        form main { Intro }
+
+        score main "PCF" { combinedStaff { bass bass } }
+        """;
+
+    /// <summary>
+    /// A part-combine "a2" decided by a NOTE HEAD above the staff (C4, one ledger line).
+    /// </summary>
+    /// <remarks>
+    /// The head is one of the supports lily/part-combine-engraver.cc:102-112 acknowledge_note_head
+    /// hands the text, and the box bottom stands `padding` 0.5 over its top.
+    /// <remarks>LilyPond twin: probe score PCH in part-combine-text.ly.</remarks>
+    /// </remarks>
+    private static readonly string PCH = """
+        octave absolute
+        part bass {
+          clef bass
+          section Intro {
+            c2 c2 |
+          }
+        }
+
+        form main { Intro }
+
+        score main "PCH" { combinedStaff { bass bass } }
+        """;
+
+    /// <summary>
+    /// A part-combine "a2" decided by an UP STEM ending 1.0 over the top line (C3 half notes) — the
+    /// shape of the owner's bench book.
+    /// </summary>
+    /// <remarks>
+    /// The stem is a support too (lily/part-combine-engraver.cc:114-119 acknowledge_stem), and under
+    /// the box the stem is cleared by the flat ink bottom: 1.0 + 0.5 + 0.033010. An OUTLINE would
+    /// clear it where the 'a' tail and the gap to the '2' stand above the baseline.
+    /// <remarks>LilyPond twin: probe score PCS in part-combine-text.ly.</remarks>
+    /// </remarks>
+    private static readonly string PCS = """
+        octave absolute
+        part bass {
+          clef bass
+          section Intro {
+            c,2 c,2 |
+          }
+        }
+
+        form main { Intro }
+
+        score main "PCS" { combinedStaff { bass bass } }
+        """;
+
     public static IReadOnlyList<LpProbe> All { get; } = new List<LpProbe>
     {
+        // --- the part-combine "a2" over a combined staff, one regime per book (session 383):
+        // what decides the height is the staff extent, a head, or a stem, and they open three
+        // different residuals.
+        new("part-combine.text.staff-floor", PCF, g => g.PartCombineTextUpFromStaffTop()),
+        new("part-combine.text.head", PCH, g => g.PartCombineTextUpFromStaffTop()),
+        new("part-combine.text.stem", PCS, g => g.PartCombineTextUpFromStaffTop()),
         // --- bar line -> the column after it (Staff_spacing::get_spacing) ---
         new("barline.next.up-stems", A, g => g.BarlineRightToNextGlyph(MidLineBarline)),
         new("barline.next.up-stems-after-clef", D, g => g.BarlineRightToNextGlyph(MidLineBarline)),

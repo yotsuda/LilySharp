@@ -401,8 +401,8 @@ internal sealed partial class LayoutEngine
             if (staff.PartCombineMarks.IsDefaultOrEmpty)
                 continue;
             (all ??= ImmutableArray.CreateBuilder<PartCombineLayout>()).AddRange(
-                PartCombineAnalyzer.Calculate(
-                    staff.PartCombineMarks, measureLayouts, staff.Voices[0].Measures, staffIndex));
+                PartCombineAnalyzer.Calculate(score.TextMetrics,
+                    staff.PartCombineMarks, measureLayouts, staff.Voices, staffIndex));
         }
         return all?.ToImmutable() ?? ImmutableArray<PartCombineLayout>.Empty;
     }

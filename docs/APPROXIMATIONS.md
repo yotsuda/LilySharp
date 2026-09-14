@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 54 | 観測者がゼロだと自認しているもの |
-| `OWN` | 138 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **254** | |
+| `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
+| `UNWATCHED` | 55 | 観測者がゼロだと自認しているもの |
+| `OWN` | 137 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **253** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -34,7 +34,7 @@
 | `LilySharp.Core/Rendering/SharedRenderer.Beams.cs` | 5 |
 | `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs` | 5 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（62 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（61 件）
 
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **:339** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
@@ -104,8 +104,6 @@
 - **:1184** whole note reads [0, 0.375] — is not ported: Lily# has no producer for a
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
 - **:493** ⚠️⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED OTTAVA IS **NOT PORTED HERE**, deliberately.
-### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
-- **:2290** lily/part-combine-engraver.cc:102-112 acknowledge_note_head). That support pass is not ported; the heads
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
 - **:472** ⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED PEDAL IS **NOT PORTED HERE** either:
 ### `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs`
@@ -136,7 +134,7 @@
 ### `LilySharp.Core/Svg/Model/LyricItem.cs`
 - **:100** ⚠️ NOT PORTED — the voice's melismaBusy state: the trigger here is the
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（54 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（55 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2430** container, and the value stops being unobserved with the line above.
@@ -207,6 +205,8 @@
 - **:130** staff_extent[DOWN], which is the ink edge too. ⚠️ No ledger point measures
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
 - **:1612** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
+### `LilySharp.Core/Svg/Layout/PartCombineAnalyzer.cs`
+- **:142** outside-staff pass clears right after, at 0.46. Observed by no ledger point.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
 - **:485** same part (leftHand). No book reaches the configuration, so no ledger point and
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
@@ -230,7 +230,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（138 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（137 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2425** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -394,8 +394,7 @@
 - **:82** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
 - **:1041** system would hand back marks placed without the labels under them. LILYSHARP-OWN
-- **:2288** ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's side-position pass also pays the grob's
-- **:2948** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
+- **:2947** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
 ### `LilySharp.Core/Svg/Layout/PageBreaker.cs`
 - **:100** ⚠️ LILYSHARP-OWN: THE NULLABILITY. LilyPond's Line_details ALWAYS carries a shape —
 - **:154** LILYSHARP-OWN: the number itself has no LilyPond counterpart, because LilyPond's

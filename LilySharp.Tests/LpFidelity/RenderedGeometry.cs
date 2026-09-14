@@ -3215,6 +3215,21 @@ internal sealed class RenderedGeometry
         _page.Texts.OrderBy(t => t.X).ToList();
 
     /// <summary>
+    /// The single part-combine text's ("a2" / "Solo" / "Solo II") BASELINE, up from the top
+    /// staff line of the page — LilyPond's text Y − (StaffSymbol Y + 2) in
+    /// audit/lp-geometry/probes/part-combine-text.ly.
+    /// </summary>
+    public double PartCombineTextUpFromStaffTop()
+    {
+        var texts = _page.Texts.Where(t => t.Role == TextRole.PartCombine).ToList();
+        if (texts.Count != 1)
+            throw new InvalidOperationException(
+                $"found {texts.Count} part-combine text(s); this reading is about exactly one."
+                + "\nDrawn geometry:\n" + Describe());
+        return StaffLineYs(0).Min() - texts[0].Y;
+    }
+
+    /// <summary>
     /// Chord symbols, left to right — the sans-serif text runs. Everything else Lily# draws
     /// as text (title, composer, lyrics, dynamics, rehearsal marks) takes the document's
     /// serif face, so the family is what tells them apart; matching on the STRING would not,

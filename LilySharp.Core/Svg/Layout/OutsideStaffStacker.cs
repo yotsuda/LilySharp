@@ -2277,21 +2277,21 @@ internal static class OutsideStaffStacker
 
     // ---- 475: CombineTextScript ("a2" / "Solo" / "Solo II") ----
     // LILYPOND-REF: scm/define-grobs.scm:1077-1094 CombineTextScript outside-staff-priority —
-    //   475, direction UP, padding 0.5, staff-padding 0.5, Y-extent and skyline from
-    //   the stencil, and NO outside-staff-horizontal-padding (so the 0.0 default).
-    // The same shape as TextScript's 450 just above: the staff-padding floor puts the
-    // BASELINE at the staff's own ink edge + 0.5 before the collision pass, and the pass
-    // then clears the staff's accumulated ink with the string's own outline at
-    // outside-staff-padding. Because it runs BEFORE the marks (1500), a section label over
-    // a combined staff clears the label instead of drawing through it (user report,
-    // scratch/ベースタブLy/bench.lys — "Intro" over "a2").
-    // ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's side-position pass also pays the grob's
-    // own padding 0.5 against its supports (the note heads the engraver acknowledged,
-    // lily/part-combine-engraver.cc:102-112 acknowledge_note_head). That support pass is not ported; the heads
-    // are in the staff profile the collision pass clears at 0.46, which is 0.04 short of it
-    // wherever a head rather than the staff-padding floor is what decides the height.
-    private const double CombineTextStaffPadding = PartCombineAnalyzer.CombineTextStaffPadding;
-
+    //   475, direction UP, padding 0.5, staff-padding 0.5, Y-extent from the stencil, NO
+    //   vertical-skylines and NO outside-staff-horizontal-padding (so the 0.0 default).
+    // Two steps, in LilyPond's order. ⑴ aligned_side (PartCombineAnalyzer.AlignedSideBaselineUp,
+    // computed with the voices when the label is made): the extent box kept padding 0.5 over
+    // the heads and stems the engraver acknowledged, floored by the staff extent. ⑵ the
+    // outside-staff pass: that same BOX clears the staff's accumulated ink at
+    // outside-staff-padding. The box, not the glyph outline: a grob that declares no
+    // vertical-skylines gets its extents as its skyline.
+    // LILYPOND-REF: lily/grob.cc:81-85 Grob::simple_vertical_skylines_from_extents_proc — the default.
+    // MEASURED (audit/lp-geometry part-combine.text.*, session 383): LilyPond's dumped DOWN
+    // skyline of "a2" is flat at the ink bottom −0.033010 over the whole advance; the outline
+    // Lily# placed until then sank the label 0.0695 onto an up stem under the 'a' tail.
+    // Because it runs BEFORE the marks (1500), a section label over a combined staff clears the
+    // label instead of drawing through it (user report, scratch/ベースタブLy/bench.lys —
+    // "Intro" over "a2").
     private static ImmutableArray<PartCombineLayout> PlacePartCombineTexts(
         ScoreTextMetrics fonts,
         ImmutableArray<PartCombineLayout> labels, Func<int, int, OutsideStaffSkylines> trackers,
@@ -2301,7 +2301,7 @@ internal static class OutsideStaffStacker
             return labels;
         // The size and style DrawPartCombine draws with — one house (PartCombineAnalyzer).
         double em = PartCombineAnalyzer.LabelEm(fonts);
-        var face = fonts.Face(TextRole.PartCombine, PartCombineAnalyzer.LabelStyle(fonts));
+        var style = PartCombineAnalyzer.LabelStyle(fonts);
         var b = labels.ToBuilder();
         for (int i = 0; i < b.Count; i++)
         {
@@ -2310,9 +2310,8 @@ internal static class OutsideStaffStacker
                 continue;
             // System-relative Y-up, the tracker frame and the frame the layout stores.
             double midUp = LayoutUtilities.StaffMiddleUpInSystem(systems[sysIdx], pc.StaffIndex);
-            double anchor = midUp
-                + (2.0 + EngravingDefaults.StaffLineThickness / 2.0) + CombineTextStaffPadding;
-            var (up, down) = TextOutlineSkylines.Place(pc.Text, em, face, pc.X, anchor);
+            double anchor = midUp + pc.AlignedBaselineUp;
+            var (up, down) = PartCombineAnalyzer.LabelBox(fonts, pc.Text, em, style, pc.X, anchor);
             double move = trackers(sysIdx, pc.StaffIndex).Place(up, down, OutsideStaffPadding);
             b[i] = pc with { YUp = anchor + move };
         }
