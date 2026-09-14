@@ -409,8 +409,8 @@ public sealed partial class LilySharpLanguageServer
 
     private static readonly System.Collections.Generic.Dictionary<string, string> PartCombineTextDetails = new()
     {
-        ["on"] = "A combinedStaff prints a2 / Solo / Solo II (LilyPond's; the default)",
-        ["off"] = "A combinedStaff prints no a2 / Solo words",
+        ["true"] = "A combinedStaff prints a2 / Solo / Solo II (LilyPond's; the default)",
+        ["false"] = "A combinedStaff prints no a2 / Solo words",
     };
 
     private static readonly System.Collections.Generic.Dictionary<string, string> ChordQualityStyleDetails = new()
@@ -490,8 +490,8 @@ public sealed partial class LilySharpLanguageServer
                     Kind = CompletionItemKind.Snippet,
                     InsertTextFormat = InsertTextFormat.Snippet,
                     InsertText = "{\n  marks ${1:stacked}\n  barNumbers ${2:lines}\n  accidentals ${3:default}"
-                        + "\n  sectionLabels ${4:boxed}\n  partCombineText ${5:on}"
-                        + "\n  chordQualities ${6:words}\n  minorChords ${7:upper}$0\n}",
+                        + "\n  sectionLabels ${4:boxed}\n  partCombineText ${5:true}"
+                        + "\n  chordQualities ${6:symbols}\n  minorChords ${7:upper}$0\n}",
                     Preselect = true,
                     SortText = "0",
                     Detail = "Set the score's display switches (pre-filled with LilyPond's defaults)",
@@ -537,8 +537,8 @@ public sealed partial class LilySharpLanguageServer
         "barNumbers" => "Which bars carry a number: lines (default) | none | every N",
         "accidentals" => "Which notes carry a printed accidental: default | modern | modernCautionary | forget | noReset",
         "sectionLabels" => "How a form section's name is drawn: boxed (default) | plain | none",
-        "partCombineText" => "Whether a combinedStaff prints a2 / Solo: on (default) | off",
-        "chordQualities" => "How a chord's quality is spelled: words (default) | symbols",
+        "partCombineText" => "Whether a combinedStaff prints a2 / Solo: true (default) | false",
+        "chordQualities" => "How a chord's quality is spelled: symbols (default) | words",
         "minorChords" => "How a minor chord's root is spelled: upper (default) | lower",
         _ => "Layout key",
     };
@@ -3119,7 +3119,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "pitch", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "pitch $0", Detail = "Pitch convention for transposing instruments: written (default) | concert", Command = new Command { Title = "Suggest pitch mode", CommandIdentifier = "editor.action.triggerSuggest" } },
                 // ⚠️ Pre-filled with the DEFAULTS (stacked, lines), the paper snippet's rule:
                 // accepting the completion and changing nothing does not move the page.
-                new CompletionItem { Label = "layout", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "layout {\n\tmarks ${1:stacked}\n\tbarNumbers ${2:lines}\n\taccidentals ${3:default}\n\tsectionLabels ${4:boxed}\n\tpartCombineText ${5:on}\n\tchordQualities ${6:words}\n\tminorChords ${7:upper}$0\n}", Detail = "Display switches (marks, barNumbers, accidentals, sectionLabels, partCombineText, chordQualities, minorChords), pre-filled with LilyPond's defaults" },
+                new CompletionItem { Label = "layout", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "layout {\n\tmarks ${1:stacked}\n\tbarNumbers ${2:lines}\n\taccidentals ${3:default}\n\tsectionLabels ${4:boxed}\n\tpartCombineText ${5:true}\n\tchordQualities ${6:symbols}\n\tminorChords ${7:upper}$0\n}", Detail = "Display switches (marks, barNumbers, accidentals, sectionLabels, partCombineText, chordQualities, minorChords), pre-filled with LilyPond's defaults" },
                 // `override` is a valid global default; `revert` / `once` are NOT offered at
                 // the top level — they only work in a music stream (LYS1023 otherwise).
                 // `partial` is likewise NOT offered here — a pickup belongs to a section, not

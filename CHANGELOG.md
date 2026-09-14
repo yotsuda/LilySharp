@@ -134,8 +134,8 @@ refused; they come first, each with what the compiler says.
     no `\box`. `none` engraves no section names at all, which is what a part sheet wants, and
     the `.ly` twin then writes no `\mark` either, so the two pictures stay one picture. It is
     a display switch: the form still plays the section, and MIDI and MusicXML are untouched.
-  - **`partCombineText on | off`** says whether a `combinedStaff` prints `a2` / `Solo` /
-    `Solo II`. `on` is the default and LilyPond's; `off` is its `printPartCombineTexts =
+  - **`partCombineText true | false`** says whether a `combinedStaff` prints `a2` / `Solo` /
+    `Solo II`. `true` is the default and LilyPond's; `false` is its `printPartCombineTexts =
     ##f`, which the twin writes. With the words off no text item is made at all, so nothing
     is drawn and nothing is reserved — the combining itself is unchanged.
   - **`chordQualities symbols | words`** says how a chord's quality is spelled after the root.

@@ -580,16 +580,16 @@ LayoutEntry    = 'marks' , MarkArrangement
                | 'barNumbers' , BarNumberPolicy
                | 'accidentals' , AccidentalStyle
                | 'sectionLabels' , SectionLabelStyle
-               | 'partCombineText' , OnOff
+               | 'partCombineText' , Boolean
                | 'chordQualities' , ChordQualityStyle
                | 'minorChords' , MinorChordCase ;
 MarkArrangement = 'stacked' | 'beside' ;
 BarNumberPolicy = 'lines' | 'none' | 'every' , Integer ;
 AccidentalStyle = 'default' | 'modern' | 'modernCautionary' | 'forget' | 'noReset' ;
 SectionLabelStyle = 'boxed' | 'plain' | 'none' ;
-ChordQualityStyle = 'words' | 'symbols' ;
+ChordQualityStyle = 'symbols' | 'words' ;
 MinorChordCase = 'upper' | 'lower' ;
-OnOff          = 'on' | 'off' ;
+Boolean        = 'true' | 'false' ;   (* the language's one boolean spelling, as removeEmpty *)
 
 (* THE SCORE-WIDE DISPLAY SWITCHES — closed vocabularies that say how a class of symbol
    is drawn or arranged: no unit, no grob scope, one answer for the whole page. The
@@ -663,8 +663,8 @@ OnOff          = 'on' | 'off' ;
    and MIDI / MusicXML are untouched.
 
    partCombineText — whether a combinedStaff prints the 'a2' / 'Solo' / 'Solo II' words.
-   'on' is the default and LilyPond's; 'off' is its printPartCombineTexts = ##f, which the
-   twin writes. With the words off the engraver makes no text item at all, so nothing is
+   'true' is the default and LilyPond's; 'false' is its printPartCombineTexts = ##f, which
+   the twin writes. With the words off the engraver makes no text item at all, so nothing is
    drawn and nothing is reserved. The COMBINING itself is unchanged — this switch is the
    words, not the merge.
 
@@ -712,7 +712,7 @@ OnOff          = 'on' | 'off' ;
      barNumbers every 4
      accidentals modern
      sectionLabels none
-     partCombineText off
+     partCombineText false
      chordQualities words
      minorChords lower
    }

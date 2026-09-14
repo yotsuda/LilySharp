@@ -52,7 +52,7 @@ public sealed record LayoutPlan(
     AccidentalStyleSpec? Accidentals = null,
     // `sectionLabels boxed|plain|none` — how a form section's name is drawn.
     SectionLabelStyle SectionLabels = SectionLabelStyle.Boxed,
-    // `partCombineText on|off` — whether a combinedStaff prints "a2" / "Solo" / "Solo II".
+    // `partCombineText true|false` — whether a combinedStaff prints "a2" / "Solo" / "Solo II".
     bool PartCombineText = true,
     // `chordQualities symbols|words` and `minorChords upper|lower` — how a chord SYMBOL is
     // spelled (ChordSpelling). The struct's own default is LilyPond's spelling, so
@@ -279,14 +279,16 @@ public static class PartCombineTexts
     /// <summary>The key as written in the block.</summary>
     public const string Key = "partCombineText";
 
-    /// <summary>The two words, the default first.</summary>
-    public static readonly IReadOnlyList<string> Words = ["on", "off"];
+    /// <summary>The two words, the default first — <c>true</c> / <c>false</c>, the language's
+    /// one boolean spelling (as <c>removeEmpty</c>; owner decision 2026-09-15, which retired
+    /// <c>on</c> / <c>off</c> before 0.7.0 shipped).</summary>
+    public static readonly IReadOnlyList<string> Words = ["true", "false"];
 
-    /// <summary>True for <c>on</c>, false for <c>off</c>, null for anything else.</summary>
+    /// <summary>True for <c>true</c>, false for <c>false</c>, null for anything else.</summary>
     public static bool? Find(string word) => word switch
     {
-        "on" => true,
-        "off" => false,
+        "true" => true,
+        "false" => false,
         _ => null,
     };
 }

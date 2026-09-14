@@ -1245,7 +1245,7 @@ layout {
   barNumbers lines         // the default: a number at the start of every line but the first
   accidentals default      // the default: the 18th-century style
   sectionLabels boxed      // the default: the section's name in a frame
-  partCombineText on       // the default: a combinedStaff prints a2 / Solo
+  partCombineText true     // the default: a combinedStaff prints a2 / Solo
   chordQualities symbols   // the default: C°, C+, Cø, C°7 — LilyPond's own
   minorChords upper        // the default: Am, Am7
 }
@@ -1254,7 +1254,7 @@ layout chart {
   barNumbers every 4       // a number on every fourth bar, wherever it stands
   accidentals modern       // Kurt Stone's: cancelled in other octaves and the next measure
   sectionLabels plain      // the name with no frame (LilyPond's own picture)
-  partCombineText off      // no a2 / Solo words
+  partCombineText false    // no a2 / Solo words
   chordQualities words     // Cdim, Caug, Cm7♭5, Cdim7 — spelled out
   minorChords lower        // a, a7 — a lowercase root, no m
 }
@@ -1318,8 +1318,8 @@ engraves no section names at all — the part sheet's answer — and the twin th
 `\mark` either. It is a **display** switch: the form still plays the section, and MIDI /
 MusicXML are untouched.
 
-**`partCombineText`** — whether a `combinedStaff` prints `a2` / `Solo` / `Solo II`. `on` is
-the default and LilyPond's; `off` is its `printPartCombineTexts = ##f`, which the twin
+**`partCombineText`** — whether a `combinedStaff` prints `a2` / `Solo` / `Solo II`. `true`
+is the default and LilyPond's; `false` is its `printPartCombineTexts = ##f`, which the twin
 writes. With the words off no text item is made at all, so nothing is drawn and nothing is
 reserved. The **combining** is unchanged — this switch is the words, not the merge.
 

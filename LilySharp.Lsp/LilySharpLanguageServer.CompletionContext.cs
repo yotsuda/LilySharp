@@ -579,7 +579,7 @@ public sealed partial class LilySharpLanguageServer
         AfterLayoutAccidentals,
         /// <summary><c>layout { sectionLabels |</c> — boxed / plain / none.</summary>
         AfterLayoutSectionLabels,
-        /// <summary><c>layout { partCombineText |</c> — on / off.</summary>
+        /// <summary><c>layout { partCombineText |</c> — true / false.</summary>
         AfterLayoutPartCombineText,
         /// <summary><c>layout { chordQualities |</c> — words / symbols.</summary>
         AfterLayoutChordQualities,

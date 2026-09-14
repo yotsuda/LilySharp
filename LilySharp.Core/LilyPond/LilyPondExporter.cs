@@ -1225,7 +1225,7 @@ public sealed class LilyPondExporter
         if (_layoutPlan.AccidentalStyle is { } style && style != Semantics.AccidentalStyles.Default)
             _sb.Append("  \\accidentalStyle ").Append(style.LilyPondName).Append('\n');
 
-        // `layout { partCombineText off }` is LilyPond's own property, and a Staff one, so
+        // `layout { partCombineText false }` is LilyPond's own property, and a Staff one, so
         // it is set in the music like the style above. A score that keeps the words writes
         // nothing (##t is LilyPond's default).
         // LILYPOND-REF: ly/engraver-init.ly printPartCombineTexts — the Staff property

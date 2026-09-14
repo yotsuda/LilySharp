@@ -205,7 +205,7 @@ public class LayoutBlockTests
         Assert.Equal(LanguageVocabulary.BarNumberPolicies, LayoutPlanReader.ValueWords("barNumbers"));
         Assert.Equal(LanguageVocabulary.AccidentalStyleWords, LayoutPlanReader.ValueWords("accidentals"));
         Assert.Equal(new[] { "boxed", "plain", "none" }, LanguageVocabulary.SectionLabelStyles);
-        Assert.Equal(new[] { "on", "off" }, LanguageVocabulary.PartCombineTextWords);
+        Assert.Equal(new[] { "true", "false" }, LanguageVocabulary.PartCombineTextWords);
         Assert.Equal(new[] { "symbols", "words" }, LanguageVocabulary.ChordQualityStyleWords);
         Assert.Equal(new[] { "upper", "lower" }, LanguageVocabulary.MinorChordWords);
     }
@@ -570,25 +570,35 @@ public class LayoutBlockTests
     }
 
     [Fact]
-    public void PartCombineText_On_IsTheDefault_AndOffPrintsNoWords()
+    public void PartCombineText_True_IsTheDefault_AndFalsePrintsNoWords()
     {
         var words = CombineWords("");
         Assert.NotEmpty(words);
-        Assert.Equal(words, CombineWords("layout { partCombineText on }\n"));
-        Assert.Empty(CombineWords("layout { partCombineText off }\n"));
+        Assert.Equal(words, CombineWords("layout { partCombineText true }\n"));
+        Assert.Empty(CombineWords("layout { partCombineText false }\n"));
 
         // Writing the default is the same page.
         Assert.Equal(
             MaskDataPos(SvgGenerator.Generate(SyntaxTree.Parse(Combined), Opt)),
             MaskDataPos(SvgGenerator.Generate(
-                SyntaxTree.Parse("layout { partCombineText on }\n" + Combined), Opt)));
+                SyntaxTree.Parse("layout { partCombineText true }\n" + Combined), Opt)));
     }
 
     [Fact]
-    public void PartCombineText_Off_IsLilyPondsOwnPropertyInTheTwin()
+    public void PartCombineText_On_And_Off_AreNotWords()
+    {
+        // `on` / `off` were the key's words until 2026-09-15; true / false is the language's
+        // one boolean spelling now, and the old words are refused like any other word.
+        Assert.True(SyntaxTree.Parse("layout { partCombineText on }\n" + Combined).HasErrors
+            || SemanticValidation.Run(SyntaxTree.Parse("layout { partCombineText on }\n" + Combined))
+                .Any(d => d.Severity == DiagnosticSeverity.Error));
+    }
+
+    [Fact]
+    public void PartCombineText_False_IsLilyPondsOwnPropertyInTheTwin()
     {
         string off = new LilyPondExporter().Export(
-            SyntaxTree.Parse("layout { partCombineText off }\n" + Combined));
+            SyntaxTree.Parse("layout { partCombineText false }\n" + Combined));
         Assert.Contains("\\set Staff.printPartCombineTexts = ##f", off, StringComparison.Ordinal);
         Assert.DoesNotContain("printPartCombineTexts",
             new LilyPondExporter().Export(SyntaxTree.Parse(Combined)), StringComparison.Ordinal);

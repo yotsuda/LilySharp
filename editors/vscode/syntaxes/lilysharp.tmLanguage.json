@@ -286,7 +286,7 @@
                     }
                 },
                 {
-                    "match": "\\b(partCombineText)\\s+(on|off)\\b",
+                    "match": "\\b(partCombineText)\\s+(true|false)\\b",
                     "captures": {
                         "1": { "name": "keyword.other.layout-key.lilysharp" },
                         "2": { "name": "support.constant.layout-value.lilysharp" }

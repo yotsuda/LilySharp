@@ -384,7 +384,7 @@ internal sealed partial class LayoutEngine
     /// combined staves places each pair against its own staff. (Until session 378 only the
     /// first staff's were placed: the layout had no staff index and the draw hung every
     /// label off the system top.)
-    /// …unless the score turned the words off (`layout { partCombineText off }` =
+    /// …unless the score turned the words off (`layout { partCombineText false }` =
     /// LilyPond's printPartCombineTexts = ##f): with no text item there is nothing to
     /// place, nothing to draw and nothing to reserve.
     /// LILYPOND-REF: lily/part-combine-engraver.cc:69-100 create_item — the engraver asks

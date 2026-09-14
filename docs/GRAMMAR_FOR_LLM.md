@@ -756,7 +756,7 @@ layout {
   accidentals modern       // which notes carry one: default (d.) | modern | modernCautionary
                            //                        | forget | noReset
   sectionLabels plain      // section names: boxed (default) | plain | none
-  partCombineText off      // a2 / Solo words: on (default) | off
+  partCombineText false    // a2 / Solo words: true (default) | false
   chordQualities words     // chord quality: symbols (default) | words
   minorChords lower        // a minor chord's root: upper (default) | lower
 }
@@ -786,8 +786,8 @@ layout {
   `\box`. `none` engraves no section names at all — the part sheet's answer — and the twin
   writes no `\mark` either. The form still plays the section; MIDI and MusicXML are
   untouched.
-- `partCombineText on` prints `a2` / `Solo` / `Solo II` on a `combinedStaff` (LilyPond's
-  default); `off` is its `printPartCombineTexts = ##f`, which the twin writes. The merging
+- `partCombineText true` prints `a2` / `Solo` / `Solo II` on a `combinedStaff` (LilyPond's
+  default); `false` is its `printPartCombineTexts = ##f`, which the twin writes. The merging
   itself is unchanged — this is the words, not the combining.
 - `chordQualities symbols` is the default and LilyPond's own picture: the four qualities its
   exception table names print `C°`, `C+`, `Cø`, `C°7`, and a major seventh prints its drawn
