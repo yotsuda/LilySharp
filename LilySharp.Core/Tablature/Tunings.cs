@@ -23,23 +23,6 @@ namespace LilySharp.Core.Tablature;
 /// MIDI note numbers for standard tunings (index 0 = lowest string).
 /// String numbers in tablature: 1 = highest pitch, 6 = lowest pitch (for guitar).
 /// </summary>
-/// <summary>
-/// Where the left hand is: the lowest and highest stopped frets it holds.
-/// </summary>
-/// <remarks>
-/// LILYSHARP-OWN, USER SPECIFIED (2026-09-14). The range carries no strings: whether a stretch
-/// skips a string is a question about two notes IN A ROW (<see cref="Tunings.SkipCost"/>), not
-/// about the two ends of the range — an end may be a note played bars ago that the hand no
-/// longer holds (さよならエレジー section C bar 3: f,, after bes,, and a rest is the fourth
-/// string's 1st, not a "stretch" to a second-string 4th two notes earlier).
-/// </remarks>
-public readonly record struct HandPosition(int Low, int High)
-{
-    /// <summary>A bare fret range.</summary>
-    public static implicit operator HandPosition((int Low, int High) range) =>
-        new(range.Low, range.High);
-}
-
 public static class Tunings
 {
     /// <summary>One tuning: the symbol LilyPond knows it by, and its open strings as MIDI
@@ -335,11 +318,7 @@ public static class Tunings
 
     /// <summary>
     /// A leap of this many semitones or more from the previous note frees the hand: the
-    /// position is forgotten and the note is placed as a first note is — as low as it can be.
-    /// The previous note's STRING is still known, so an octave played in the octave shape
-    /// (index finger on the root, little finger two strings up — <see cref="SkipCost"/>) is
-    /// still recognised: Amanda section A3 bar 1, g on the fourth string's 3rd and g' on the
-    /// second string's 5th, not the open first string (USER SPECIFIED, 2026-09-14).
+    /// fingering planner charges the shift after it as it charges one after a rest.
     /// </summary>
     /// <remarks>
     /// LILYSHARP-OWN, USER APPROVED (2026-09-14). Without it nothing brought the hand down
@@ -347,107 +326,24 @@ public static class Tunings
     /// <c>test/tab-technique-letters</c> played <c>e a b e'</c> at the 19th–21st frets right
     /// after a b' at the 19th. An octave is the leap a player shifts for anyway.
     /// </remarks>
-    public const int LeapResetInterval = 12;    /// <summary>
-    /// What a fingering costs when it leaves the hand above low position: as much as moving the
-    /// hand two frets, so staying up the neck ties with coming down, and a tie comes down.
-    /// </summary>
-    /// <remarks>
-    /// LILYSHARP-OWN, USER APPROVED (2026-09-14). At 1 the hand stayed a position too high after
-    /// a passage up the neck — Arthur's Theme Outro bar 1 took d at the fourth string's 10th
-    /// (inside 7..10, 0 + 1) over the third string's 5th (a move, 2).
-    /// </remarks>
-    public const int AboveLowPositionCost = 2;
+    public const int LeapResetInterval = 12;
 
     /// <summary>
-    /// What leaving the string costs for the note a slur ends on: as much as moving the hand two
-    /// frets. A slur on a fretted instrument is a slide, hammer-on or pull-off — played on the
-    /// string the slur started on.
-    /// </summary>
-    /// <remarks>
-    /// LILYSHARP-OWN, USER SPECIFIED (2026-09-14, Real Gone Intro bars 12–13:
-    /// <c>e,4\3( | b,,8)</c> — the b,, is the third string's 2nd, where the e on the third
-    /// string's 7th slides to, not the fourth string's 7th inside the hand).
-    /// <para>
-    /// ⚠️ Not across a leap of an octave or more (<see cref="LeapResetInterval"/>): that is no
-    /// slide, and with the hand freed the same string pulled the octave up to the 16th fret
-    /// (さよならエレジー section D <c>aes,,( aes,)</c>, Amanda Interlude2 <c>e,4( fis8.)</c>).
-    /// </para>
-    /// </remarks>
-    public const int SlurAcrossStringsCost = 2;
-
-    /// <summary>What an open string costs while the hand is NOT in low position: more than any
-    /// real move, so it is used only when no string can stop the note.</summary>
-    private const int OpenOutOfPositionCost = 100;
-
-    /// <summary>
-    /// Calculates the best string and fret for a given MIDI pitch.
+    /// Calculates the string and fret for a given MIDI pitch: the preferred string when it can
+    /// play the pitch, otherwise the lowest fret any string offers.
     /// </summary>
     /// <param name="midiPitch">The MIDI note number to place.</param>
     /// <param name="tuning">The tuning array (index 0 = lowest string).</param>
     /// <param name="preferredString">Preferred string (1 = highest, 0 = auto).</param>
-    /// <param name="position">The lowest and highest STOPPED frets the hand holds in the
-    /// current position, or null when none has been played yet.</param>
-    /// <param name="next">The next note's sounding pitch and its fixed string (0 = free), or
-    /// null for the last note. Each candidate costs <see cref="MoveCost"/> for this note plus
-    /// the cheapest <see cref="MoveCost"/> of the next note from where this one leaves the
-    /// hand, plus <see cref="SkipCost"/> for skipping a string from the previous note and to the
-    /// next; the cheapest wins, and a tie goes to the lower fret.</param>
-    /// <param name="previousString">The string the previous note was played on (open strings
-    /// included), or 0 when there is none.</param>
-    /// <param name="previousFret">The previous note's fret (0 = open, -1 = none).</param>
-    /// <param name="slurFromString">The string the slur this note ends started on, or 0 when
-    /// this note ends no slur (<see cref="SlurAcrossStringsCost"/>).</param>
     /// <returns>A tuple of (stringNumber, fret) where stringNumber 1 = highest pitch string.</returns>
     /// <remarks>
-    /// LILYSHARP-OWN, and deliberately not LilyPond's. LilyPond takes the first string from
-    /// the top with a non-negative integer fret (scm/translation-functions.scm:591-796
-    /// determine-frets-and-strings), so an open string always wins and the hand is never
-    /// considered — playable, but awkward to read. What this wants instead, in the words it
-    /// was specified in: track where the left hand IS and pick the fret that moves it least;
-    /// and do not pay much for the answer, because no automatic chooser gets fingering right
-    /// anyway.
-    /// <para>
-    /// So (USER SPECIFIED, 2026-09-14): a position is the range of frets its stopped notes
-    /// hold; a candidate costs how far it would stretch that range past
-    /// <see cref="HandSpan"/> frets (a stretch of one fret costs 1, a move of two costs 2),
-    /// plus <see cref="SkipCost"/>, <see cref="AboveLowPositionCost"/> and
-    /// <see cref="SlurAcrossStringsCost"/>, PLUS the same for the next note played the easiest
-    /// way from there; an open string is free in low position and avoided elsewhere; and a tie
-    /// goes to the lower fret. One note of lookahead, no backtracking.
-    /// </para>
-    /// <para>
-    /// ⚠️ Why the next note: the user's words were "move toward where the next note is easy to
-    /// play". Scoring the current note alone let a stretch lose to a lower two-fret move.
-    /// </para>
-    /// <para>
-    /// ⚠️ KNOWN LIMIT (2026-09-14): one note of lookahead cannot see a move a phrase needs
-    /// several notes later (9 to 5 (Morning Train) (Xanadu) section A bar 6, Amanda section B1
-    /// bar 6), and no cost weights served both high melodic runs and coming back down: a
-    /// lookahead of four notes, and a cost for the jump between notes in a row, were tried and
-    /// each broke passages the user had approved. The planned replacement is a dynamic
-    /// programme over the whole phrase with the hand position as its state.
-    /// </para>
-    /// <para>
-    /// ⚠️ The position is a RANGE and not the index finger's fret, and that is the point.
-    /// After <c>f</c> alone on the second string's third fret nothing yet says whether the
-    /// index or the little finger holds it; the <c>ees</c> after it decides — the second
-    /// string's first fret keeps the range 1..3 (index on 1, little finger on 3). A rule that
-    /// put the index finger on every note it moved to fixed the hand at 3..6 there and sent
-    /// that <c>ees</c> to the third string's sixth fret (user report, 2026-09-14,
-    /// <c>tab-fret.lys</c>).
-    /// </para>
-    /// <para>
-    /// ⚠️ This replaced a rule that scored |fret − previous fret| and nothing else, which
-    /// kept the hand still by walking one string all the way up: <c>test/tab-indent</c> came
-    /// out 3 5 7 8 10 12 on a single string, and <c>test/tab-beam-script</c> took an A at the
-    /// fifth fret with the open string right there. Distance alone has no reason to come back
-    /// down.
-    /// </para>
+    /// This is not how a tab note's string is chosen: that is <see cref="TabFingeringPlanner"/>,
+    /// which plans the whole voice from where the hand is (LILYSHARP-OWN, and deliberately not
+    /// LilyPond's first-string-from-the-top rule). This gives the fret of a known string, and
+    /// places a pitch with nothing else to go on. Equal frets (a re-entrant tuning) go to the
+    /// higher string, which is searched first.
     /// </remarks>
-    public static (int stringNum, int fret) CalculateFret(int midiPitch, int[] tuning,
-        int preferredString = 0, HandPosition? position = null,
-        (int Midi, int PreferredString)? next = null, int handSpan = HandSpan,
-        int previousString = 0, int previousFret = -1, int slurFromString = 0)
+    public static (int stringNum, int fret) CalculateFret(int midiPitch, int[] tuning, int preferredString = 0)
     {
         int stringCount = tuning.Length;
 
@@ -469,47 +365,16 @@ public static class Tunings
             }
         }
 
-        // Auto: one number per string — what this note costs the hand, plus what the next note
-        // then costs at its easiest. Cheapest wins; a tie goes to the lower fret.
         int bestString = stringCount; // lowest string as fallback
         int bestFret = 99;
-        int bestCost = int.MaxValue;
-        // A next note that leaps an octave or more will forget the position anyway, so it has
-        // no say in where this one goes.
-        if (next is { } leap && System.Math.Abs(leap.Midi - midiPitch) >= LeapResetInterval)
-            next = null;
 
         // Search from highest to lowest string
         for (int idx = stringCount - 1; idx >= 0; idx--)
         {
-            int openPitch = tuning[idx];
-            int fret = midiPitch - openPitch;
+            int fret = midiPitch - tuning[idx];
             if (fret < 0 || fret > 24) continue;
-
-            int str = ToStringNum(idx);
-            int cost = MoveCost(position, fret, handSpan)
-                       + SkipCost(previousString, previousFret, str, fret);
-            // The note a slur ends on stays on the slur's string (a slide or legato).
-            if (slurFromString > 0 && str != slurFromString)
-                cost += SlurAcrossStringsCost;
-            // One point for a fingering that leaves the hand above low position: the same shape
-            // one string lower and five frets higher otherwise costs exactly as much, and the
-            // hand never came back down (USER SPECIFIED, 2026-09-14: "if the music does not go
-            // up, go back as low as possible" — さよならエレジー played whole sections at the
-            // 6th-9th frets of the fifth and fourth strings; Arthur's Theme Outro bar 2 took f#
-            // at the third string's 9th instead of the second string's 4th).
-            if (fret > 0 && Place(position, fret, fret, handSpan).Low > LowPositionTop)
-                cost += AboveLowPositionCost;
-            // The same pitch again costs nothing wherever this one goes.
-            if (next is { } n && n.Midi != midiPitch)
-                cost += NextMoveCost(
-                    fret > 0 ? Place(position, fret, fret, handSpan) : position,
-                    n, tuning, handSpan, str, fret);
-
-            // A tie goes to the lower fret — one rule, whatever the melody does next.
-            if (cost < bestCost || (cost == bestCost && fret < bestFret))
+            if (fret < bestFret)
             {
-                bestCost = cost;
                 bestString = ToStringNum(idx);
                 bestFret = fret;
             }
@@ -523,129 +388,5 @@ public static class Tunings
         }
 
         return (bestString, bestFret);
-    }
-
-    /// <summary>What playing <paramref name="fret"/> costs the hand: how many frets it would
-    /// widen the position past what the hand already spans — never less than
-    /// <paramref name="handSpan"/> — so 0 anywhere inside it, 1 for a stretch of one fret, 2 or
-    /// more for moving the hand. A first note with no position yet costs nothing; an open
-    /// string costs nothing in low position (<see cref="LowPositionTop"/>) and more than any
-    /// move elsewhere.</summary>
-    /// <remarks>
-    /// ⚠️ "Past what the hand already spans", not "past <paramref name="handSpan"/>": once a
-    /// stretch has been paid for, the hand IS stretched, and the notes inside it are free.
-    /// Charging the stretch again on every note inside it let an open string win over a fret
-    /// the stretched hand was already covering (<c>tab-fret.lys</c> section B bar 6: the g
-    /// under a 3..6 hand is the second string's 5th, not the open first string — user,
-    /// 2026-09-14).
-    /// </remarks>
-    public static int MoveCost(HandPosition? position, int fret, int handSpan = HandSpan)
-    {
-        if (position is not { } p)
-            return 0;
-        if (fret == 0)
-            return p.Low <= LowPositionTop ? 0 : OpenOutOfPositionCost;
-        int spans = System.Math.Max(handSpan, p.High - p.Low + 1);
-        return System.Math.Max(0,
-            System.Math.Max(p.High, fret) - System.Math.Min(p.Low, fret) + 1 - spans);
-    }
-
-    /// <summary>
-    /// What skipping a string between two notes in a row costs: as much as moving the hand two
-    /// frets.
-    /// </summary>
-    public const int StringSkipCost = 2;
-
-    /// <summary>
-    /// What going from the previous note to this one costs across the strings:
-    /// <see cref="StringSkipCost"/> when the two notes skip a string — except the octave shape,
-    /// which is free.
-    /// </summary>
-    /// <remarks>
-    /// LILYSHARP-OWN, USER SPECIFIED (2026-09-14):
-    /// <list type="bullet">
-    /// <item>A SKIP (the strings two or more apart) costs, open strings included: "I don't want
-    /// a skip between the second and fourth strings" — Arthur's Theme section E bar 2,
-    /// <c>g,\2 d, g,,</c>, the d is the third string's 5th, not the open second string.</item>
-    /// <item>THE OCTAVE SHAPE is not a skip: two strings apart and two frets further along
-    /// toward the higher string (the fourth string's 3rd and the second string's 5th, either
-    /// way round) — "in bass octaves the index finger plays the root and the little finger the
-    /// octave, very often".</item>
-    /// </list>
-    /// <para>
-    /// ⚠️ Kept deliberately to these two (USER DECISION, 2026-09-14): a point for an open string
-    /// straight after the neighbouring open string, and one more for a stretch across a skip,
-    /// were tried and taken out as too fine a distinction to keep stable.
-    /// </para>
-    /// </remarks>
-    public static int SkipCost(int previousString, int previousFret, int stringNum, int fret)
-    {
-        if (previousString <= 0 || stringNum <= 0)
-            return 0;
-        int apart = System.Math.Abs(previousString - stringNum);
-        bool octaveShape = apart == 2 && previousFret > 0 && fret > 0
-                           && (stringNum < previousString ? fret - previousFret : previousFret - fret) == 2;
-        return apart > 1 && !octaveShape ? StringSkipCost : 0;
-    }
-
-    /// <summary>The cheapest <see cref="MoveCost"/> (plus <see cref="SkipCost"/> from the
-    /// current candidate) of the next note from <paramref name="position"/>: over every string,
-    /// or only its fixed one.</summary>
-    private static int NextMoveCost(HandPosition? position,
-        (int Midi, int PreferredString) next, int[] tuning, int handSpan, int fromString, int fromFret)
-    {
-        int stringCount = tuning.Length;
-        int best = int.MaxValue;
-        for (int idx = 0; idx < stringCount; idx++)
-        {
-            if (next.PreferredString >= 1 && next.PreferredString <= stringCount
-                && stringCount - idx != next.PreferredString)
-                continue;
-            int fret = next.Midi - tuning[idx];
-            if (fret < 0 || fret > 24) continue;
-            best = System.Math.Min(best, MoveCost(position, fret, handSpan)
-                                         + SkipCost(fromString, fromFret, stringCount - idx, fret));
-        }
-        return best == int.MaxValue ? 0 : best;
-    }
-
-    /// <summary>
-    /// The position after stopped frets <paramref name="low"/>..<paramref name="high"/> are
-    /// played. Within <see cref="HandSpan"/> + 1 frets (a comfortable reach or a stretch) they
-    /// widen it; further, the hand slides only AS FAR AS IT MUST — the part of the old range
-    /// still within <see cref="HandSpan"/> of the new frets stays in the position.
-    /// </summary>
-    /// <remarks>
-    /// USER SPECIFIED (2026-09-14, <c>tab-fret.lys</c> section B): a g on the fourth string's
-    /// 3rd fret after bes at its 6th slides the hand from 4..6 to 3..6 — index on 3, little
-    /// finger stretched to 6 — and does not restart it at 3..3.
-    /// </remarks>
-    public static HandPosition Place(HandPosition? position, int low, int high,
-        int handSpan = HandSpan)
-    {
-        if (position is not { } p)
-            return new(low, high);
-        int newLow, newHigh;
-        int keep = handSpan;
-        if (System.Math.Max(p.High, high) - System.Math.Min(p.Low, low) <= keep)
-        {
-            newLow = System.Math.Min(p.Low, low);
-            newHigh = System.Math.Max(p.High, high);
-        }
-        else
-        {
-            // The hand slides only as far as it must, and it may land stretched: what stays is
-            // the old range within a STRETCH of the new frets. Keeping only a comfortable reach
-            // dropped too much — Arthur's Theme section D bar 10: from 2..4, a on the second
-            // string's 7th left the hand at 7..7 instead of 4..7, and the c# after it went to the
-            // fourth string's 9th (a skip across the third string) instead of the third
-            // string's 4th.
-            int keptLow = System.Math.Max(p.Low, high - keep);
-            int keptHigh = System.Math.Min(p.High, low + keep);
-            (newLow, newHigh) = keptLow <= keptHigh
-                ? (System.Math.Min(low, keptLow), System.Math.Max(high, keptHigh))
-                : (low, high);
-        }
-        return new(newLow, newHigh);
     }
 }

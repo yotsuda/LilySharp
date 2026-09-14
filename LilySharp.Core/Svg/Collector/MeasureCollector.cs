@@ -1693,8 +1693,8 @@ public sealed partial class MeasureCollector
         }
 
         // Resolve tab string numbers per tab staff (tuning-dependent): explicit
-        // \N kept, repeated pitches in a bar reuse the first string, the rest
-        // auto-pick the nearest-fret string. Done here so the layout and every
+        // \N kept, a pitch written with \N earlier in the bar keeps that string, the
+        // rest are planned over the whole voice (TabFingeringPlanner). Done here so the layout and every
         // render pass (fret number, stem, beam) read one consistent string.
         // A tablature context ALSO has no Accidental_engraver (ly/engraver-init.ly:1189,
         // :1213), so the same per-tab-staff copy of the voice drops every accidental —

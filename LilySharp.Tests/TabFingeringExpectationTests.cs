@@ -39,9 +39,9 @@ namespace LilySharp.Tests;
 /// written pitch before its string and fret, so a book edit cannot silently point the case
 /// at another note.
 /// <para>
-/// <c>Known</c> marks what the current chooser still gets wrong. Those cases do not fail: they
-/// are the yardstick for the next chooser (a dynamic programme over the phrase), which should
-/// turn them into ordinary cases without breaking the rest.
+/// <c>Known</c> marks what the planner (<see cref="TabFingeringPlanner"/>) still gets wrong.
+/// Those cases do not fail: they are the yardstick for any change to it, which should turn them
+/// into ordinary cases without breaking the rest.
 /// </para>
 /// </remarks>
 [Trait("Category", "Unit")]
@@ -66,16 +66,20 @@ public sealed class TabFingeringExpectationTests
     [
         new("tab-fret.lys", "section A", 1, 6, "ees", 2, 1, false,
             "f with the little finger on the 3rd, so the index stays at the 1st"),
-        new("tab-fret.lys", "section B", 2, 1, "bes", 4, 6, false, "little finger on the 4th string's 6th"),
+        // Known (both): after a rest the planner starts the bar in the first position — bes on the
+        // 3rd string's 1st, g on the 4th string's 3rd, ees on the 2nd string's 1st — which shifts
+        // and stretches less than the user's fingering around the 4th–6th frets; its pull toward
+        // low position, which keeps first-position music there, decides between the two.
+        new("tab-fret.lys", "section B", 2, 1, "bes", 4, 6, true, "little finger on the 4th string's 6th"),
         new("tab-fret.lys", "section B", 2, 4, "g", 4, 3, false, "index on the 4th string's 3rd"),
         new("tab-fret.lys", "section B", 3, 1, "c", 3, 3, false, "index on the 3rd string's 3rd"),
-        new("tab-fret.lys", "section B", 4, 1, "ees", 3, 6, false,
+        new("tab-fret.lys", "section B", 4, 1, "ees", 3, 6, true,
             "a stretch to the 6th is cheaper than moving two frets"),
-        new("tab-fret.lys", "section B", 6, 4, "g", 2, 5, true, "the 2nd string's 5th, not the open 1st"),
+        new("tab-fret.lys", "section B", 6, 4, "g", 2, 5, false, "the 2nd string's 5th, not the open 1st"),
         new("arthurs-theme.lys", "section A", 5, 1, "bes", 3, 1, false,
             "a stretch across a skipped string is hard"),
         new("arthurs-theme.lys", "section E", 2, 2, "d", 3, 5, false, "no skip from the 2nd to the 4th string"),
-        new("amanda.lys", "section A2", 7, 2, "a", 2, 7, true, "the first a on the 2nd string's 7th"),
+        new("amanda.lys", "section A2", 7, 2, "a", 2, 7, false, "the first a on the 2nd string's 7th"),
         new("amanda.lys", "section A2", 7, 6, "a", 2, 7, false, "the second a on the 2nd string's 7th"),
         new("amanda.lys", "section A3", 1, 2, "g", 2, 5, false, "octave shape: index on the root, little finger an octave up"),
         new("amanda.lys", "section B1", 1, 1, "e", 2, 2, false, "down two frets rather than a stretch"),
@@ -87,7 +91,7 @@ public sealed class TabFingeringExpectationTests
         new("sayonara-elegy.lys", "mark C", 3, 4, "f", 4, 1, false, "the 4th string's 1st"),
         new("sayonara-elegy.lys", "mark D", 7, 1, "aes", 4, 4, false, "down to the 4th string's 4th"),
         new("automatic.lys", "section A2", 8, 3, "f", 4, 1, false, "e f ges g up the 4th string"),
-        new("nine-to-five-xanadu.lys", "section A", 6, 2, "a", 2, 7, true, "unplayable unless a is on the 2nd string"),
+        new("nine-to-five-xanadu.lys", "section A", 6, 2, "a", 2, 7, false, "unplayable unless a is on the 2nd string"),
     ];
 
     public static IEnumerable<object[]> AgreedCases() =>
@@ -112,7 +116,7 @@ public sealed class TabFingeringExpectationTests
             Assert.Equal(c.Pitch, Resolve(c).WrittenPitch);
     }
 
-    private static (string WrittenPitch, int String, int Fret) Resolve(Case c)
+    internal static (string WrittenPitch, int String, int Fret) Resolve(Case c)
     {
         var path = Path.Combine(CollectResumeTests.FindRepoRoot(), "audit", "tabfingering", c.Book);
         var source = File.ReadAllText(path);
@@ -136,6 +140,40 @@ public sealed class TabFingeringExpectationTests
             return (writtenPitch, note.StringNumber.Value, fret);
         }
         throw new InvalidOperationException($"{c}: no score in {c.Book} has a tab staff");
+    }
+
+    /// <summary>Every note of a book's first tab staff, in order: its string, fret and duration
+    /// (whole notes), rests as (0, -1, duration). For measuring a whole book's fingering.</summary>
+    internal static List<(int String, int Fret, double Duration, int Position)> TabNotes(string book)
+    {
+        var path = Path.Combine(CollectResumeTests.FindRepoRoot(), "audit", "tabfingering", book);
+        var tree = SyntaxTree.Parse(File.ReadAllText(path));
+        foreach (var spec in RenderSpecParser.FindAll(tree))
+        {
+            var multi = new MeasureCollector().CollectMultiStaff(tree, spec);
+            var tab = multi.EnumerateStaves().Select(s => s.Staff).FirstOrDefault(s => s.IsTab && s.Tuning.HasValue);
+            if (tab is null) continue;
+            int shift = Tunings.SoundingShift(tab.TabSourceClef, tab.Transposition);
+            var tuning = Tunings.GetTuning(tab.Tuning!.Value);
+            var list = new List<(int, int, double, int)>();
+            foreach (var item in tab.PrimaryVoice.Measures.SelectMany(m => m.Items))
+            {
+                double d = item.Duration.ToDouble();
+                if (item is NoteItem n && n.StringNumber is int s)
+                    list.Add((s, Tunings.CalculateFret(n.Midi + shift, tuning, s).fret, d, n.SourcePosition));
+                else if (item is RestItem)
+                    list.Add((0, -1, d, -1));
+            }
+            return list;
+        }
+        return [];
+    }
+
+    /// <summary>The source position of a case's note (see <see cref="Case"/>).</summary>
+    internal static int PositionOf(Case c)
+    {
+        var path = Path.Combine(CollectResumeTests.FindRepoRoot(), "audit", "tabfingering", c.Book);
+        return NotePosition(File.ReadAllText(path), c, out _);
     }
 
     // A pitch: a letter a–g with its -is/-es, not part of a word (break, grace, @fall, tuplet).

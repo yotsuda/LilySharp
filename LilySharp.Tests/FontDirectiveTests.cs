@@ -261,11 +261,13 @@ public class FontDirectiveTests
         Assert.True(leaf.Resolve(TextRole.ClefOctave).IsBundled);
     }
 
-    /// <summary>A guitar book: staff plus tab, so the page really holds fret digits.</summary>
+    /// <summary>A guitar book: staff plus tab, so the page really holds fret digits. The c is
+    /// pinned to the sixth string so its fret is the 8th whatever the fingering planner would
+    /// choose.</summary>
     private const string TabBook = """
         title "T"
         part g { clef treble_8 tuning guitar }
-        section A { c'4 d e f | }
+        section A { c'4\6 d e f | }
         score main { staff g  tab g }
         form main { A }
         """;

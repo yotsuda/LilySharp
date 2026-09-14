@@ -267,26 +267,32 @@ internal sealed class TabResolver
     /// <summary>
     /// Assigns every tab note a concrete string for a staff's tuning so the fret
     /// number, the stem and the beam all read one consistent value. Explicit <c>\N</c>
-    /// (or tie-adopted) strings are kept; a pitch already seen earlier in the SAME bar
-    /// reuses that string when it was written, or when reusing it costs the hand nothing
-    /// (reset at the bar line); otherwise <see cref="Tunings.CalculateFret"/> chooses from the
-    /// hand's position. Tuning-dependent, so it runs per tab staff after the score is assembled.
+    /// (or tie-adopted) strings are kept, and a pitch written with <c>\N</c> earlier in the SAME
+    /// bar keeps that string (reset at the bar line); every other note's string is chosen by
+    /// <see cref="TabFingeringPlanner"/>, which plans the whole voice at once.
+    /// Tuning-dependent, so it runs per tab staff after the score is assembled.
     /// </summary>
     /// <remarks>
     /// ⚠️ THE BAR-LONG REUSE IS A DECISION, NOT AN OVERSIGHT, and it is the one place a
     /// reader is most likely to mistake for a bug — so it is written down here, where
-    /// the "fix" would be made. It applies to an EXPLICIT string always: after
-    /// <c>c( g'\2) g g4</c> on a bass, all three g's print the fifth fret of the second
-    /// string. LilyPond puts the two unmarked ones back on the open first string
-    /// (measured on 2.26.0, 2026-08-16, on the twin of that book) — its chooser takes
-    /// the first string from the top with a playable fret and remembers nothing.
+    /// the "fix" would be made: after <c>c( g'\2) g g4</c> on a bass, all three g's print the
+    /// fifth fret of the second string. LilyPond puts the two unmarked ones back on the open
+    /// first string (measured on 2.26.0, 2026-08-16, on the twin of that book) — its chooser
+    /// takes the first string from the top with a playable fret and remembers nothing.
     /// <para>
     /// USER DECISION (2026-08-16, session 179): keep the reuse. One pitch keeps one
     /// fingering through a bar, which is what a player reads; the difference from
-    /// LilyPond is accepted, as it already is for the hand-position model this resolver
-    /// is built on (<see cref="Tunings.CalculateFret"/> — LILYSHARP-OWN and deliberately
-    /// not LilyPond's). REFINED 2026-09-14: a string that was only CHOSEN is reused just while
-    /// it costs the hand nothing (Amanda section A2 bar 7).
+    /// LilyPond is accepted, as it already is for the fingering planner this resolver is
+    /// built on (LILYSHARP-OWN and deliberately not LilyPond's). REFINED 2026-09-14: only a
+    /// WRITTEN string carries through the bar; a chosen one is the planner's to choose again
+    /// (Amanda section A2 bar 7).
+    /// </para>
+    /// <para>
+    /// What the planner is told about each note: its sounding pitch; the string it must be on (a
+    /// written <c>\N</c>, the same pitch written with <c>\N</c> earlier in the bar, or a chord's
+    /// assignment); how long the hand has to get there from the previous note (rests included);
+    /// whether the hand is free before it (a rest, a fall on the previous note, a leap of an
+    /// octave or more); and whether a slur or a tie joins it to the previous note.
     /// </para>
     /// </remarks>
     public Voice ResolveTabStrings(Voice voice, TuningType tuning, ClefType clef = ClefType.Treble,
@@ -295,219 +301,129 @@ internal sealed class TabResolver
         int[] tun = Tunings.GetTuning(tuning);
         int shift = Tunings.SoundingShift(clef, transposition);
         int lowestOpen = tun.Min();
-
-        // The current position: the range of stopped frets the hand holds, carried across bar
-        // lines and updated by Tunings.Place (a stretch widens it, a move slides it only as far
-        // as it must). An OPEN string leaves it as it is — it uses no finger (USER DECISION,
-        // 2026-09-14; this replaced the rule that an open string FORGOT the position) — except
-        // that it frees a hand that was stretched (see where the note is placed below).
-        HandPosition? position = null;
-        // The bar the hand last stopped a string in. A whole bar with nothing stopped — only open
-        // strings and rests — frees the hand (USER SPECIFIED, 2026-09-14, Real Gone section F
-        // bar 1: after a bar of open e,, and a rest, the b,, is the third string's 2nd, not the
-        // fourth string's 7th inside a hand last placed by \4 / \3 notes two bars earlier).
-        // ⚠️ Narrowing the range to the frets of the previous bar at EVERY bar line was tried and
-        // rejected: tab-fret.lys section B bar 4 wants the range kept (ees on the third string's
-        // 6th after a bar that stopped only c at the 3rd), Automatic section A2 bar 8 wants it
-        // dropped — the same shape asking for opposite answers.
-        int lastStoppedMeasure = -1;
-        int measureIndex = -1;    // the bar being resolved
-        int? previousMidi = null; // the last note's sounding pitch (a chord's lowest)
-        int previousString = 0;   // the string it was played on, open strings included
-        int previousFret = -1;    // and the fret (0 = open, -1 = none)
-        bool previousSlurStart = false; // the previous note starts a slur (Tunings.SlurAcrossStringsCost)
-        // A leap of an octave or more frees the hand (Tunings.LeapResetInterval): the position is
-        // forgotten, but not the string and fret it leapt from — that is what lets an octave be
-        // seen as the octave shape (Tunings.SkipCost) instead of a fresh first note.
-        bool ForgetOnLeap(int midi)
-        {
-            bool leapt = previousMidi is { } prev
-                         && System.Math.Abs(midi - prev) >= Tunings.LeapResetInterval;
-            if (leapt)
-                position = null;
-            previousMidi = midi;
-            return leapt;
-        }
         int handSpan = Tunings.HandSpanFor(tuning);
 
-        // A pitch seen earlier in the bar keeps its string — when a string was WRITTEN (\N)
-        // always, and when it was chosen only while it costs the hand nothing from where it is
-        // now (USER SPECIFIED, 2026-09-14, refining the 2026-08-16 decision: Amanda section A2
-        // bar 7, `a, b, c d a,` — the second a, right after d on the first string's 7th is the
-        // second string's 7th, not the first string's 2nd the first a, was played on).
-        bool ReuseBarString(int soundingMidi, int stringNum, bool written)
-        {
-            if (written) return true;
-            int f = Tunings.CalculateFret(soundingMidi, tun, stringNum).fret;
-            return Tunings.MoveCost(position, f, handSpan)
-                   + Tunings.SkipCost(previousString, previousFret, stringNum, f) == 0;
-        }
-        void PlaceFrets(int low, int high)
-        {
-            position = Tunings.Place(position, low, high, handSpan);
-            lastStoppedMeasure = measureIndex;
-        }
-        void PlaceHand(int fret)
-        {
-            if (fret > 0) PlaceFrets(fret, fret);
-        }
+        var items = voice.Measures.Select(m => m.Items.ToArray()).ToArray();
+        var changed = new bool[items.Length];
+        int itemCount = 0;
+        foreach (var bar in items) itemCount += bar.Length;
+        var events = new List<TabEvent>(itemCount);
+        var refs = new List<(int Measure, int Item)>(itemCount);
 
-        // Every note or chord in order, so a note can see the one after it — across bar lines
-        // and rests (Tunings.CalculateFret scores the next note too).
-        // A note after a REST is not "the next note": the hand is free to go anywhere while the
-        // rest lasts, so what follows it has no say (USER SPECIFIED, 2026-09-14, Real Gone
-        // section C bar 4 — `d, d, a,,4 r4 |`: the a,, is the open third string, not the fourth
-        // string's 5th that a higher note after the rest and the section break pulled it to).
-        var sounding = new List<(int Measure, MusicItem Item, bool AfterRest)>();
-        var indexOf = new Dictionary<MusicItem, int>(ReferenceEqualityComparer.Instance);
-        bool restSince = false;
-        for (int mi = 0; mi < voice.Measures.Length; mi++)
-            foreach (var it in voice.Measures[mi].Items)
+        double time = 0, previousOnset = double.NaN;
+        int? previousMidi = null;
+        bool restSince = false, previousSlurStart = false, previousFall = false;
+
+        var barWritten = new Dictionary<int, int>(); // written MIDI -> its written string, this bar
+        for (int mi = 0; mi < items.Length; mi++)
+        {
+            barWritten.Clear();
+            for (int ii = 0; ii < items[mi].Length; ii++)
             {
-                if (it is RestItem)
+                var item = items[mi][ii];
+                double onset = time;
+                time += item.Duration.ToDouble();
+
+                if (item is RestItem)
                 {
                     restSince = true;
+                    continue;
                 }
-                else if (it is NoteItem or ChordItem)
-                {
-                    indexOf[it] = sounding.Count;
-                    sounding.Add((mi, it, restSince));
-                    restSince = false;
-                }
-            }
 
-        var rebuilt = ImmutableArray.CreateBuilder<Measure>(voice.Measures.Length);
-        foreach (var measure in voice.Measures)
-        {
-            measureIndex++;
-            if (position.HasValue && measureIndex - lastStoppedMeasure >= 2)
-                position = null;
-            var barString = new Dictionary<int, int>(); // written MIDI -> string, reset each bar
-            var barWritten = new HashSet<int>();         // ...of which the string was an explicit \N
-
-            // The next note as CalculateFret wants it: its sounding pitch and the string it is
-            // bound to — written, or inherited from earlier in this bar.
-            (int Midi, int PreferredString)? NextOf(MusicItem current)
-            {
-                int k = indexOf[current] + 1;
-                if (k >= sounding.Count) return null;
-                var (nm, item, afterRest) = sounding[k];
-                if (afterRest) return null;
-                switch (item)
+                int midi, fixedString, chordLow = 0, chordHigh = 0;
+                bool slurEnd, slurStart, tied = false;
+                if (item is ChordItem chord)
                 {
-                    case NoteItem n:
-                        int pref = n.StringNumber ?? 0;
-                        if (pref == 0 && nm == measureIndex && barString.TryGetValue(n.Midi, out var s))
-                            pref = s;
-                        return (n.Midi + shift, pref);
-                    case ChordItem c when c.Notes.Length > 0:
-                        var low = c.Notes[0];
-                        foreach (var cn in c.Notes) if (cn.Midi < low.Midi) low = cn;
-                        return (low.Midi + shift, low.StringNumber ?? 0);
-                    default:
-                        return null;
-                }
-            }
-            var items = measure.Items.ToArray();
-            bool changed = false;
-            for (int i = 0; i < items.Length; i++)
-            {
-                if (items[i] is ChordItem chord)
-                {
-                    // Each chord note needs its OWN string, else two fret numbers
-                    // land on the same line and overlap into one.
+                    // Each chord note needs its OWN string, else two fret numbers land on the
+                    // same line and overlap into one; the chord's shape is then fixed, and the
+                    // planner only places the hand around it.
                     var newNotes = AssignChordStrings(chord.Notes, tun, shift);
-                    items[i] = chord with { Notes = newNotes };
-                    changed = true;
+                    items[mi][ii] = chord with { Notes = newNotes };
+                    changed[mi] = true;
                     foreach (var cn in newNotes)
                         if (!IsTabPlaceable(cn.Midi + shift, tun))
                             _rangeWarnings.Add(new TabRangeWarning(chord.SourcePosition, cn.Midi + shift < lowestOpen));
-                    // A chord's stopped frets are all held at once: they join the position
-                    // when every one of them fits it, and otherwise ARE the new position,
-                    // however wide the chord's own shape is.
-                    if (newNotes.Length > 0)
-                        ForgetOnLeap(newNotes.Min(cn => cn.Midi) + shift);
-                    int chordLow = int.MaxValue, chordHigh = int.MinValue;
-                    foreach (var c in newNotes)
+                    if (newNotes.Length == 0) continue;
+                    var low = newNotes.MinBy(cn => cn.Midi)!;
+                    midi = low.Midi + shift;
+                    fixedString = low.StringNumber ?? 0;
+                    chordLow = int.MaxValue; chordHigh = 0;
+                    foreach (var cn in newNotes)
                     {
-                        int f = Tunings.CalculateFret(c.Midi + shift, tun, c.StringNumber ?? 0).fret;
+                        int f = Tunings.CalculateFret(cn.Midi + shift, tun, cn.StringNumber ?? 0).fret;
                         if (f <= 0) continue;
                         chordLow = System.Math.Min(chordLow, f);
                         chordHigh = System.Math.Max(chordHigh, f);
                     }
-                    if (chordLow != int.MaxValue)
-                        PlaceFrets(chordLow, chordHigh);
-                    if (newNotes.Length > 0)
+                    if (chordLow == int.MaxValue) chordLow = 0;
+                    slurEnd = chord.HasSlurEnd;
+                    slurStart = chord.HasSlurStart;
+                }
+                else if (item is NoteItem note)
+                {
+                    midi = note.Midi + shift;
+                    if (!IsTabPlaceable(midi, tun))
                     {
-                        var lowNote = newNotes.MinBy(cn => cn.Midi)!;
-                        previousString = lowNote.StringNumber ?? 0;
-                        previousFret = Tunings.CalculateFret(lowNote.Midi + shift, tun, previousString).fret;
+                        bool below = midi < lowestOpen;
+                        _rangeWarnings.Add(new TabRangeWarning(note.SourcePosition, below));
+                        // Below the lowest string it would clamp to a wrong open string
+                        // (fret 0) — hide it on the tab entirely instead (see NoteItem).
+                        if (below && !note.TabBelowRange)
+                        {
+                            items[mi][ii] = note with { TabBelowRange = true };
+                            changed[mi] = true;
+                        }
                     }
-                    previousSlurStart = chord.HasSlurStart;
-                    continue;
-                }
-                if (items[i] is not NoteItem note) continue;
-                int midi = note.Midi + shift;
-                if (!IsTabPlaceable(midi, tun))
-                {
-                    bool below = midi < lowestOpen;
-                    _rangeWarnings.Add(new TabRangeWarning(note.SourcePosition, below));
-                    // Below the lowest string it would clamp to a wrong open string
-                    // (fret 0) — hide it on the tab entirely instead (see NoteItem).
-                    if (below && !note.TabBelowRange)
+                    if (note.StringNumber is int written)
                     {
-                        note = note with { TabBelowRange = true };
-                        items[i] = note;
-                        changed = true;
+                        fixedString = written;
+                        barWritten[note.Midi] = written;
                     }
-                }
-                bool leapt = ForgetOnLeap(midi);
-                int strNum, fret;
-                if (note.StringNumber.HasValue)
-                {
-                    (strNum, fret) = Tunings.CalculateFret(midi, tun, note.StringNumber.Value);
-                    barString[note.Midi] = strNum;
-                    barWritten.Add(note.Midi);
-                }
-                else if (barString.TryGetValue(note.Midi, out var inherited)
-                         && ReuseBarString(midi, inherited, barWritten.Contains(note.Midi)))
-                {
-                    (strNum, fret) = Tunings.CalculateFret(midi, tun, inherited);
-                    items[i] = note with { StringNumber = strNum };
-                    changed = true;
+                    else
+                    {
+                        fixedString = barWritten.TryGetValue(note.Midi, out var inherited) ? inherited : 0;
+                    }
+                    slurEnd = note.HasSlurEnd;
+                    slurStart = note.HasSlurStart;
+                    tied = note.IsTieTarget;
                 }
                 else
                 {
-                    (strNum, fret) = Tunings.CalculateFret(midi, tun, 0, position,
-                        NextOf(measure.Items[i]), handSpan, previousString, previousFret,
-                        previousSlurStart && note.HasSlurEnd && !leapt ? previousString : 0);
-                    items[i] = note with { StringNumber = strNum };
-                    barString[note.Midi] = strNum;
-                    barWritten.Remove(note.Midi);
-                    changed = true;
+                    continue;
                 }
-                PlaceHand(fret);
-                // An open string frees a hand that was stretched: the stretch was held for the
-                // notes before it, and nothing holds it through the open note (USER SPECIFIED,
-                // 2026-09-14, Amanda section B1 bar 3 — after the open d, the e, is the second
-                // string's 2nd, not the third string's 7th at the end of a 4..7 stretch; also
-                // Automatic section A2 bar 8, f,, after the open e,, on the fourth string's 1st).
-                if (fret == 0 && position is { } stretched && stretched.High - stretched.Low + 1 > handSpan)
-                    position = null;
-                previousString = strNum;
-                previousFret = fret;
-                previousSlurStart = note.HasSlurStart;
-                // A fall slides the finger down and off the string: the hand is free after it
-                // (USER SPECIFIED, 2026-09-14, Real Gone Intro bar 13 — after e,\3@fall on the
-                // third string's 7th, the b,, is the third string's 2nd, not the fourth's 7th).
-                // The string it slid on is still the previous string.
-                if (falls != null && falls.Contains((measureIndex, i)))
-                {
-                    position = null;
-                    previousFret = -1;
-                }            }
-            rebuilt.Add(changed ? measure with { Items = ImmutableArray.Create(items) } : measure);
+
+                bool leapt = previousMidi is { } prev && System.Math.Abs(midi - prev) >= Tunings.LeapResetInterval;
+                events.Add(new TabEvent(
+                    midi, fixedString,
+                    double.IsNaN(previousOnset) ? 1.0 : onset - previousOnset,
+                    HandFree: restSince || previousFall || leapt,
+                    SlurFromPrevious: previousSlurStart && slurEnd && !leapt,
+                    ChordLow: chordLow, ChordHigh: chordHigh,
+                    TiedFromPrevious: tied));
+                refs.Add((mi, ii));
+
+                previousOnset = onset;
+                previousMidi = midi;
+                previousSlurStart = slurStart;
+                previousFall = falls != null && falls.Contains((mi, ii));
+                restSince = false;
+            }
         }
+
+        var strings = TabFingeringPlanner.Plan(events, tun, handSpan);
+        for (int k = 0; k < refs.Count; k++)
+        {
+            var (mi, ii) = refs[k];
+            if (items[mi][ii] is NoteItem note && !note.StringNumber.HasValue && strings[k] > 0)
+            {
+                items[mi][ii] = note with { StringNumber = strings[k] };
+                changed[mi] = true;
+            }
+        }
+
+        var rebuilt = ImmutableArray.CreateBuilder<Measure>(voice.Measures.Length);
+        for (int mi = 0; mi < items.Length; mi++)
+            rebuilt.Add(changed[mi] ? voice.Measures[mi] with { Items = ImmutableArray.Create(items[mi]) } : voice.Measures[mi]);
         return voice with { Measures = rebuilt.MoveToImmutable() };
     }
 }

@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 54 | 観測者がゼロだと自認しているもの |
-| `OWN` | 143 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **258** | |
+| `OWN` | 140 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **255** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -24,7 +24,6 @@
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 15 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 11 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 9 |
-| `LilySharp.Core/Tablature/Tunings.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
@@ -33,6 +32,7 @@
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
 | `LilySharp.Core/Rendering/SharedRenderer.Beams.cs` | 5 |
+| `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs` | 5 |
 
 ## APPROX — LP に対応物はあるが、形が違うと自認しているもの（61 件）
 
@@ -228,7 +228,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（143 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（140 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2425** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -287,7 +287,7 @@
 ### `LilySharp.Core/Svg/Collector/StaffAccidentalColumns.cs`
 - **:84** ⚠️ LILYSHARP-OWN GATE, and a DIVERGENCE: LilyPond packs a cue accidental into
 ### `LilySharp.Core/Svg/Collector/TabResolver.cs`
-- **:287** is built on ( — LILYSHARP-OWN and deliberately
+- **:286** built on (LILYSHARP-OWN and deliberately not LilyPond's). REFINED 2026-09-14: only a
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
 - **:145** LILYSHARP-OWN: a 5-half-space floor with no single named LP constant behind it.
 - **:450** ⚠️ LILYSHARP-OWN: A NOMINAL BOX, AND LILYPOND HAS NO COUNTERPART TO IT. A Flag's
@@ -437,14 +437,12 @@
 - **:278** ⚠️ LILYSHARP-OWN: THE FLAGGED ZERO-WIDTH MEASURE IS A TRANSLATION DEVICE. LilyPond
 ### `LilySharp.Core/Syntax/SyntaxNodes.cs`
 - **:826** LILYSHARP-OWN: LilyPond's q repeats the previous chord and cannot be
+### `LilySharp.Core/Tablature/TabFingeringPlanner.cs`
+- **:120** LILYSHARP-OWN, USER APPROVED (2026-09-14). A dynamic programme (Viterbi) over states
 ### `LilySharp.Core/Tablature/Tunings.cs`
-- **:30** LILYSHARP-OWN, USER SPECIFIED (2026-09-14). The range carries no strings: whether a stretch
-- **:302** LILYSHARP-OWN, USER SPECIFIED (2026-09-14). A bass — electric or double — is fingered
-- **:315** LILYSHARP-OWN, USER SPECIFIED (2026-09-14): "on a guitar the four fingers play four
-- **:330** LILYSHARP-OWN, USER SPECIFIED (2026-09-14): "low position is the open string up to about
-- **:345** LILYSHARP-OWN, USER APPROVED (2026-09-14). Without it nothing brought the hand down
-- **:355** LILYSHARP-OWN, USER APPROVED (2026-09-14). At 1 the hand stayed a position too high after
-- **:367** LILYSHARP-OWN, USER SPECIFIED (2026-09-14, Real Gone Intro bars 12–13:
-- **:402** LILYSHARP-OWN, and deliberately not LilyPond's. LilyPond takes the first string from
-- **:565** LILYSHARP-OWN, USER SPECIFIED (2026-09-14):
+- **:285** LILYSHARP-OWN, USER SPECIFIED (2026-09-14). A bass — electric or double — is fingered
+- **:298** LILYSHARP-OWN, USER SPECIFIED (2026-09-14): "on a guitar the four fingers play four
+- **:313** LILYSHARP-OWN, USER SPECIFIED (2026-09-14): "low position is the open string up to about
+- **:324** LILYSHARP-OWN, USER APPROVED (2026-09-14). Without it nothing brought the hand down
+- **:341** which plans the whole voice from where the hand is (LILYSHARP-OWN, and deliberately not
 
