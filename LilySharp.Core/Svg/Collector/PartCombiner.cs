@@ -1480,8 +1480,7 @@ internal static class PartCombiner
             if (pendingText is not { } text)
                 continue;
 
-            var anchor = AnchorAt(ss);
-            if (anchor == null || !landed.TryGetValue(anchor, out var where))
+            if (LandedAnchorAt(ss, landed) is not { } where)
                 continue;
             marks.Add(new PartCombineMark(where.Measure, where.Index, text));
             pendingText = null;
@@ -1489,12 +1488,23 @@ internal static class PartCombiner
         return marks.ToImmutable();
     }
 
-    /// <summary>The voice state a label hangs on: the moment's part that actually has a
-    /// note there.</summary>
-    private static VoiceState? AnchorAt(SplitState ss)
+    /// <summary>Where a label hangs: the moment's part that has a note there AND whose note
+    /// was engraved — a part routed to the null voice has the note but no head for the text.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/part-combine-engraver.cc:87-112 process_music / acknowledge_note_head — the
+    ///   text waits for a heard note and takes the head that is engraved as its support and X
+    ///   parent. In a unisono after a part-two solo (scm/part-combiner.scm:994-1013, the
+    ///   Promoted state) part two feeds the shared voice and part one goes to the null voice,
+    ///   so the head is part TWO's. MEASURED (audit/lpreg/pcsil-b.log): bar 1 prints "a2" on
+    ///   part two's f at x 13.385, part one's f there is NOINK. Asking part one first dropped
+    ///   the label, and the next label change overwrote it.
+    /// </remarks>
+    private static (int Slot, int Measure, int Index)? LandedAnchorAt(
+        SplitState ss, Dictionary<VoiceState, (int Slot, int Measure, int Index)> landed)
     {
-        if (HasNotes(ss.Vs1) && ss.Vs1!.Moment == ss.Moment) return ss.Vs1;
-        if (HasNotes(ss.Vs2) && ss.Vs2!.Moment == ss.Moment) return ss.Vs2;
+        foreach (var vs in new[] { ss.Vs1, ss.Vs2 })
+            if (HasNotes(vs) && vs!.Moment == ss.Moment && landed.TryGetValue(vs, out var where))
+                return where;
         return null;
     }
 

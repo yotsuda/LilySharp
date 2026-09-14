@@ -200,6 +200,20 @@ public class PartCombineSilenceTests
     }
 
     [Fact]
+    public void AUnisonoAfterAPartTwoSoloHangsItsLabelOnPartTwosHead()
+    {
+        // Score 2 of the book. LilyPond's own dump (audit/lpreg/pcsil-b.log, TEXT records):
+        //   bar 1: "Solo II" on part two's d, then "a2" on part two's f — part two carries the
+        //          ink after its solo (the Promoted state), part one's f is NOINK;
+        //   bar 2: "Solo" on part one's f, then "a2" on part one's e.
+        // Lily# asked part one first for the unisono's anchor, found its null-voice note, could
+        // not place the text on it, and the bar-2 "Solo" then overwrote the waiting "a2".
+        var svg = Svg(Combined("r4 f2. | r8 f e2. |", "r8 d f2. | r4 e2. |"));
+
+        Assert.Equal(["Solo II", "a2", "Solo", "a2"], Labels(svg));
+    }
+
+    [Fact]
     public void NotCombiningKeepsBothHalfRests()
     {
         // The control for the merge: the same music on a condensed staff — two voices on one
