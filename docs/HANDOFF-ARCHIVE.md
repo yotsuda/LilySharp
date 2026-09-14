@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第378セッションの経緯
+
+最終更新 第378セッション（2026-09-13）＝**入り方はユーザー報告**（`docs/HANDOFF.md` と `scratch\ベースタブLy\bench.lys` を読ませて「セクションマーク Intro の上部に a2 というテキストが重なっている…出ないように修正して」）。道具は記憶どおり pwsh MCP。⚠️ **§0 の開始時裏取りは走らせていない**（最初の full は変更後の run4）。⚠️ **scratch は規約なら `p379` のところ `p378/a2` を使った**（コードのコメントと commit message がこのパスを引くので移していない）。**骨は 5**:
+
+★★★ **⑴ `a2` は不正な文字ではなく part combiner の「2 人とも弾く」＝LP も出す**（`combinedStaff { bassline bassline }` は全部同音）。ユーザーに訊いて「LP が出すなら出す・Intro と重ならず LP と同じレンダに」と決まった。**原因は未移植**: `PartCombineAnalyzer` の注記は「NOT PORTED — flat 1.5 above the SYSTEM top」＝stacker の外で system の上端から描き、和音行の帯の上に乗り、後から置く mark にも見えなかった。
+
+★★★ **⑵ 移植（commit `f913ba60`）**: ⒜ **`OutsideStaffStacker.PlacePartCombineTexts`＝priority 475**（TextScript 450 の後・marks 1500 の前）・staff-padding 0.5 の床＋outside-staff-padding 0.46・自分の譜の tracker（`define-grobs.scm:1077-1094`）。**両方の annotation pass が運ぶ**（`PartCombineLayoutsOf`・`CalculateVoiceCollisions` から外した）・頁の extents が ink を予約。⚠️ **label のある本は above-stack の memo を使わず live**（SystemEntry に family が無い・LILYSHARP-OWN 宣言）。⒝ **`PartCombineAnalyzer.InkAboveStaff`＝置いた label を譜の up skyline に足す**（rit. spanner と同じ手）＝**上の和音行が a2 を越える**（⒜ だけでは a2 が `Imaj7` と重なった）。⒞ `PartCombineLayout` に staff index ＝**2 本目の combinedStaff の label も置く**（従来は 1 本目だけ）。**LP 実測**（`scratch/p378/a2`）: bench の a2 は譜上端から **1.43（LP 1.53）**・和音行 **4.13（LP 3.65）**。`audit/lpreg/pctend.ly` の **Solo 4.46（LP 4.435）・a2 2.55（LP 2.564）**（中央線から）・連符番号 3.34 不変。⚠️ **`pctend.log` の TEXT y（Solo 2.774）は衝突 pass の前の side-position 値**＝LP の最終は svg で読むこと（Solo は連符番号の上へ上がる）。
+
+★★ **⑶ 赤は 4 本、全部 test／門の側**: ⑴ `PartCombineTupletEndTests` が中央線を頁定数 11.69 で持っていた（system が label の予約で 1.08 下がった）⇒ SVG の 5 線の中央から読む ⑵⑶ 生成物 2 本（再生成・LF で出るので CRLF に戻した）⑷ `CitationsThatNameNothing_DoNotGrow` 681→683＝**ハイフン名は 3 部必要**（`staff-padding`・`loose-line` は名前と数えない）⇒ `outside-staff-priority`・`acknowledge_note_head`・`distribute_loose_lines`（この機械に LP の C++ ソースは無い＝`:948-990` の名前は読めないので、既存コードが名指す `:936-939 distribute_loose_lines` を引いた）。**天井は上げていない**。
+
+★★ **⑷ 数**: 開始 HEAD `fe9e94b7`・未 push 80。**終了時**: HEAD＝この §1 を書く commit（親 `f913ba60`）・未 push 82・**full `scratch/p378/run5.trx` 8519 / 0 / 4 / 8523**（本数不変・RunInfos は SKIP 4 だけ）・**台帳 843 点／ss 非ゼロ 210／総和 22.584587806・snapshot 249・追跡 `.lys` 599 は全部不変**（追跡コーパスに combinedStaff の本は 0＝`audit/lpreg` の probe `.lys` 22 冊と bench だけ）。§7.5（`-DiffBase fe9e94b7`）: **Core `+` 221 行／REF 5／OWN 2**。§7 3.5: 第376 を `-Archive 376` で ARCHIVE へ（済）。⚠️⚠️ **`origin/master`（`18efc322`）の CI は今も赤**＝push はユーザー。★ **LSP の配布はユーザーが行う**（Core が動いた）。
+
+⇒ ★★★ **⑸ 次の一手**: **§2 E「section label と和音行の上下」＝要ユーザー判断**（LP は a2 のある譜で和音行を label の上に置き、plain な譜では label を和音行の上に上げる＝Lily# は後者の形だけ）。残りは第377 ⑸ の並びそのまま（⑶ の 2 件はユーザー待ち・⒝⒠⒢）。★ **判定の記録**（常設指示「次便は、このセッションでやる方が有利なら着手して…」）: **第 2 便は着手しない**＝最初の一歩が**オーナー決定済みの mark の規則（RehearsalMark 位置・MKW の lift）を動かす承認**に行き着く／**LP の計器（`scratch/p378/a2` の 4 冊）はディスクに残る**ので次のセッションでも同じ所から始められる＝今やる利が無い。**測った数は §2 E に全部書いた**。
+
 ## 以下は第377セッションの経緯
 
 最終更新 第377セッション（2026-09-13）＝**入り方は第298〜第376 の型**（ユーザーは `docs/HANDOFF.md` を読ませて「作業に着手して」だけ）。**§0 の裏取りを走らせた**（`Session-Check -Build -Test -Scratch p378`）。道具は記憶どおり pwsh MCP。**着手したのは第376 ⑸ の並びの ⒝ のうち「paper 8 鍵の engine 読解」**＝第374 ㉔ が「原因未確定」で `VocabularyPerturbationTests.PaperKeysThisSweepCannotSpeakFor` に pin した 8 鍵。**骨は 5**:

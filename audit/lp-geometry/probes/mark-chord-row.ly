@@ -44,6 +44,14 @@
 %% it. (Unlike the bar number it carries no move-to-extremal-staff re-parenting; there is
 %% nothing to re-parent it ONTO, which is why this probe reads the staff refpoint
 %% directly.)
+%% ⚠️ CORRECTED 2026-09-14 (session 380): that parenthesis is wrong for 2.26.0.
+%% scm/lily/define-grobs.scm:2879 gives RehearsalMark (after-line-breaking .
+%% ly:side-position-interface::move-to-extremal-staff), and get_extremal_staff takes any
+%% live row whose X extent meets the mark's, chord rows included (barnumber-staffless.ly).
+%% The lift that mark.over-chord.* records IS that re-parenting, and their ledger `why`
+%% says so. The readings in this file are unaffected, because it dumps from the page and
+%% never overrides after-line-breaking. An override there REPLACES move-to-extremal-staff:
+%% session 378's scratch probe did that and read the mark UNDER the chord row.
 %%
 %% PREDICTION, written before running (HANDOFF 5.0-2), mechanism first: the mark's ink
 %% bottom should sit at its ordinary above-staff distance over the staff refpoint — the
