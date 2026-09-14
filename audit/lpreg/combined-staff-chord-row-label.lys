@@ -1,0 +1,34 @@
+// A section label ("Intro") over ONE chord row that carries both a `chords` track shown as
+// roman degrees and the inline `@chord` names, above a combined staff whose unison prints "a2".
+// The book behind HANDOFF §2 E "bench の縦の残差" (sessions 378-381): label / chord row / a2
+// heights measured against LilyPond 2.26.0.
+// Copied 2026-09-14 from the owner's corpus (scratch/ベースタブLy/bench.lys), which the owner
+// edits — measure THIS tracked copy, never the original.
+// ⚠️ Owner decision 2026-09-14: the `chords { }` names and the inline `@chord` names stand at
+// ONE height, by design (chord names at uneven heights read badly). A LilyPond twin must put
+// both on one ChordNames line to be the same score as the page.
+octave absolute
+part bassline {
+  clef bass
+  tuning bass
+
+  section Intro {
+    <<c g b>>,1 | <b cis' fis>,@chord | <e gis b dis'>,1@chord | 
+  }
+}
+
+chords prog {
+  section Intro {
+    Cmaj7 | . IImaj7 | |
+  }
+}
+
+form main { Intro }
+
+score main {
+  chords prog as roman
+  combinedStaff {
+    bassline
+    bassline
+  }
+}

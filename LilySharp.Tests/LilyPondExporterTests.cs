@@ -57,6 +57,89 @@ public class LilyPondExporterTests
         Assert.DoesNotContain("property-defaults", ly);
     }
 
+    // Several parts on one staff, section-major as the corpus writes it (CombinedStaffTests'
+    // shape). The first part's clef is bass so the twin's clef is visible.
+    private static string SharedStaffScore(string render) => """
+        octave absolute
+        time 4/4
+        part fl1 { clef bass }
+        part fl2 { clef treble }
+        part fl3 { clef treble }
+        section A {
+          fl1 { c4 d e f | }
+          fl2 { e4 f g a | }
+          fl3 { g4 a b c' | }
+        }
+        form main { ~A }
+        """ + "\nscore main { " + render + " }\n";
+
+    /// <summary>
+    /// A top-level <c>combinedStaff</c> is LilyPond's <c>\partCombine</c> on ONE staff with the
+    /// first part's clef — the spelling of the hand-written probe
+    /// <c>audit/lpreg/pcombine-lp.ly</c>.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ It used to vanish without a word: <c>RenderRows</c> yielded no condensed or combined
+    /// item, so the twin of <c>combinedStaff { a b }</c> held no staff and no warning, and a
+    /// session-380 measurement compared a chord row against a page that had a staff under it.
+    /// </remarks>
+    [Fact]
+    public void TopLevelCombinedStaff_IsWrittenAsPartCombineOnOneStaff()
+    {
+        var (ly, warnings) = ExportWithWarnings(SharedStaffScore("combinedStaff { fl1 fl2 }"));
+        Assert.Equal(1, Occurrences(ly, "\\new Staff"));
+        Assert.Matches(@"\\new Staff \{ \\clef ""bass"" \\partCombine \\\w+ \\\w+ \}", ly);
+        Assert.DoesNotContain(warnings, w => w.Contains("not exported"));
+    }
+
+    /// <summary>
+    /// A top-level <c>condensedStaff</c> is <c>&lt;&lt; \a \\ \b \\ \c &gt;&gt;</c> on one staff —
+    /// each part its own voice in written order (<c>audit/lpreg/pcombine-ctl.ly</c>).
+    /// </summary>
+    [Fact]
+    public void TopLevelCondensedStaff_IsWrittenAsOneVoicePerPart()
+    {
+        var (ly, warnings) = ExportWithWarnings(SharedStaffScore("condensedStaff { fl1 fl2 fl3 }"));
+        Assert.Equal(1, Occurrences(ly, "\\new Staff"));
+        Assert.Matches(@"\\new Staff \{ \\clef ""bass"" << \\\w+ \\\\ \\\w+ \\\\ \\\w+ >> \}", ly);
+        Assert.DoesNotContain(warnings, w => w.Contains("not exported"));
+    }
+
+    /// <summary>
+    /// Two parts whose names differ only in a digit get two variables. They used to share
+    /// one (<c>fl1</c> and <c>fl2</c> both <c>\fl</c>, digits dropped), so LilyPond kept the
+    /// last definition and both staves played the second part's music.
+    /// </summary>
+    [Fact]
+    public void PartsWhoseNamesDifferOnlyInADigit_GetTheirOwnVariables()
+    {
+        var ly = Export(SharedStaffScore("staff fl1 staff fl2"));
+        var staffVars = System.Text.RegularExpressions.Regex.Matches(ly, @"\\new Staff[^\n]*\\(\w+) \}")
+            .Select(m => m.Groups[1].Value).ToList();
+        Assert.Equal(2, staffVars.Count);
+        Assert.NotEqual(staffVars[0], staffVars[1]);
+        foreach (var v in staffVars)
+            Assert.Equal(1, Occurrences(ly, "\n" + v + " = "));
+        Assert.Contains("c4 d e f", ly);
+        Assert.Contains("e4 f g a", ly);
+    }
+
+    /// <summary>
+    /// Inside a group the same spelling stands among the group's staves (it used to be
+    /// reported as "not exported" there, and the group lost that staff).
+    /// </summary>
+    [Fact]
+    public void CombinedStaffInsideAGroup_IsWrittenInsideTheGroup()
+    {
+        var (ly, warnings) = ExportWithWarnings(SharedStaffScore("staffGroup { staff fl3 combinedStaff { fl1 fl2 } }"));
+        int group = ly.IndexOf("\\new StaffGroup <<", StringComparison.Ordinal);
+        int combine = ly.IndexOf("\\partCombine", StringComparison.Ordinal);
+        int close = ly.IndexOf(">>", combine < 0 ? 0 : combine, StringComparison.Ordinal);
+        Assert.True(group >= 0 && combine > group && close > combine, $"group {group} / combine {combine} / close {close}\n{ly}");
+        Assert.Equal(2, Occurrences(ly, "\\new Staff "));
+        Assert.DoesNotContain(warnings, w => w.Contains("not exported"));
+    }
+
     /// <summary>
     /// LilyPond 2.26 drops <c>fonts.serif/sans</c> to generic names under its svg backend
     /// only (ly/paper-defaults-init.ly), so a twin measured through svg reads

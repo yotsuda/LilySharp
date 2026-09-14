@@ -409,7 +409,7 @@ public sealed class LilyPondExporter
             {
                 _currentPartName = name;
                 var part = parts.FirstOrDefault(p => p.Name.Text == name);
-                string varName = SanitizeVar(name);
+                string varName = VarName(name);
                 partVars[name] = varName;
                 // An undeclared part has no clef property to anchor to, so it takes the
                 // same default the collector gives it (RenderSpecParser.GetPartClef returns
@@ -731,18 +731,18 @@ public sealed class LilyPondExporter
     /// </remarks>
     private static IEnumerable<string?> RowPartNames(SyntaxNode item) => item switch
     {
-        // A condensed or combined member is not exported at the top level either (RenderRows
-        // yields neither), so inside a group only the plain staves put music on a twin staff.
-        GrandStaffRenderSyntax group => group.Members.SelectMany(m => m switch
-        {
-            StaffRenderSyntax staff => new[] { RenderPartName(staff) },
-            GrandStaffRenderSyntax inner => RowPartNames(inner),
-            _ => Enumerable.Empty<string?>(),
-        }),
+        GrandStaffRenderSyntax group => group.Members.SelectMany(RowPartNames),
+        CondensedStaffRenderSyntax condensed => SharedStaffPartNames(condensed.PartNames),
+        CombinedStaffRenderSyntax combined => SharedStaffPartNames(combined.PartNames),
         OssiaRenderSyntax ossia => new[] { OssiaPartName(ossia) },
         StaffRenderSyntax or TabRenderSyntax => new[] { RenderPartName(item) },
         _ => Enumerable.Empty<string?>(),
     };
+
+    /// <summary>The written part names of a condensed or combined staff, empty tokens
+    /// (a missing name the parser recovered from) left out — RenderSpecParser's filter.</summary>
+    private static IEnumerable<string?> SharedStaffPartNames(IEnumerable<string> names) =>
+        names.Where(n => n.Length > 0);
 
     /// <summary>
     /// The score's render items, in source order — the same walk
@@ -767,6 +767,11 @@ public sealed class LilyPondExporter
                 // recurses), so it drops out here as a nested staff does — without this guard
                 // the twin would write the grand staff twice, the second time loose.
                 case GrandStaffRenderSyntax when !IsInsideGrandStaff(child):
+                // ⚠️ A condensed or combined staff at the top level used to fall through here
+                // and vanish WITHOUT a warning — the twin of a `combinedStaff { a b }` score
+                // held its chord row and no staff at all (session 380, bench.lys).
+                case CondensedStaffRenderSyntax when !IsInsideGrandStaff(child):
+                case CombinedStaffRenderSyntax when !IsInsideGrandStaff(child):
                 case TabRenderSyntax:
                 case OssiaRenderSyntax:
                 case ChordRowRenderSyntax:
@@ -3994,6 +3999,10 @@ public sealed class LilyPondExporter
                         AddLyricRows(rows, RenderPartName(st), "    ", asRow: false);
                         lastMainStaffPart = RenderPartName(st) ?? lastMainStaffPart;
                         break;
+                    case CondensedStaffRenderSyntax or CombinedStaffRenderSyntax:
+                        if (EmitSharedStaff(item, rows, parts, partVars, "    ") is { } firstPart)
+                            lastMainStaffPart = firstPart;
+                        break;
                     case TabRenderSyntax tb:
                         {
                             bool numbersOnly = TabIsNumbersOnly(tb, render);
@@ -4158,7 +4167,7 @@ public sealed class LilyPondExporter
             var items = OrderedChordItems(blocks, form, allSections);
             if (items.Count == 0)
                 continue;
-            string varName = SanitizeVar(row.PartName + "Chords");
+            string varName = VarName(row.PartName + "Chords");
             _chordVars[row.PartName] = varName;
             _sb.Append(varName).Append(" = \\chordmode {\n");
             _chordTrack = true;
@@ -4301,7 +4310,7 @@ public sealed class LilyPondExporter
             if (items.Count == 0)
                 continue;
 
-            string varName = SanitizeVar(partName + "InlineChords");
+            string varName = VarName(partName + "InlineChords");
             _inlineChordVars[partName] = varName;
             _sb.Append(varName).Append(" = \\chordmode {\n");
             var measures = staff.PrimaryVoice.Measures;
@@ -4386,7 +4395,7 @@ public sealed class LilyPondExporter
             var measures = staff.PrimaryVoice.Measures;
 
             // A LilyPond identifier is letters only, so the verse (and voice) is a word.
-            string varName = SanitizeVar(partName
+            string varName = VarName(partName
                 + (line.Key.VoiceId > 0 && !line.Key.IsLyricsRow ? "Voice" + NumberWord(line.Key.VoiceId) : "")
                 + "Lyrics" + NumberWord(line.Key.VerseNumber));
             var target = line.Key.IsLyricsRow ? _lyricRowVars : _lyricVars;
@@ -4770,8 +4779,13 @@ public sealed class LilyPondExporter
                 sb.Append(EmitStaffGroup(inner, parts, partVars, memberIndent));
                 continue;
             }
-            // A condensed or combined member is reported, as it is at the top level (where
-            // RenderRows never yields one): the twin writer has no spelling for either yet.
+            if (member is CondensedStaffRenderSyntax or CombinedStaffRenderSyntax)
+            {
+                var sharedRows = new List<string>(1);
+                EmitSharedStaff(member, sharedRows, parts, partVars, memberIndent);
+                foreach (var r in sharedRows) sb.Append(r);
+                continue;
+            }
             if (member is not StaffRenderSyntax staff)
             {
                 Skip(member);
@@ -4954,6 +4968,67 @@ public sealed class LilyPondExporter
                 case OssiaStaffSpec o: Take(o.Staff); break;
                 case TabStaffSpec t when staffItems > 1: Take(t.Staff); break;
             }
+    }
+
+    /// <summary>
+    /// A <c>condensedStaff</c> / <c>combinedStaff</c> row: several parts on ONE staff, written
+    /// the way the probes that measured the page's port wrote it by hand
+    /// (<c>audit/lpreg/pcombine-ctl.ly</c> and <c>pcombine-lp.ly</c>). Returns the first
+    /// part's name — the staff an ossia written next would sit above — or null when nothing
+    /// was written.
+    /// </summary>
+    /// <remarks>
+    /// Condensed is <c>&lt;&lt; \a \\ \b &gt;&gt;</c>: each part its own voice in written
+    /// order, which is Lily#'s own reading (the first part gets voice 1, stems up — see
+    /// <c>CondensedStaffRenderSyntax.PartNameTokens</c>). Combined is
+    /// <c>\partCombine \a \b</c>, LilyPond's own combiner, whose a2 / Solo / Solo II texts
+    /// the page prints too (CombinedStaffTests).
+    /// The clef is the FIRST part's, as <c>RenderSpecParser.ParseCombinedStaff</c> reads it;
+    /// it stands before the voices in the staff's own braces (LilyPond 2.26.0 draws one staff
+    /// with that clef for both spellings — scratch/p382/shared/clef-pc.ly).
+    /// No instrument name: the page names single staves only (RenderSpecParser's default
+    /// name fills <c>SingleStaffSpec</c> alone).
+    /// A combined staff whose arity the validator already refused (CombinedStaffNeedsTwoParts)
+    /// is reported rather than written: <c>\partCombine</c> takes exactly two.
+    /// ⚠️ A tab or drum part named here is written as ordinary staff music: the page reads
+    /// every member as a plain staff (<c>CondensedStaffSpec</c> / <c>CombinedStaffSpec</c>
+    /// carry one clef and no tuning).
+    /// </remarks>
+    private string? EmitSharedStaff(SyntaxNode item, List<string> rows,
+        List<PartDeclarationSyntax> parts, Dictionary<string, string> partVars, string indent)
+    {
+        bool combined = item is CombinedStaffRenderSyntax;
+        var names = (item switch
+        {
+            CombinedStaffRenderSyntax c => SharedStaffPartNames(c.PartNames),
+            CondensedStaffRenderSyntax c => SharedStaffPartNames(c.PartNames),
+            _ => Enumerable.Empty<string?>(),
+        }).OfType<string>().ToList();
+        var vars = names.Select(n => partVars.TryGetValue(n, out var v) ? v : null).ToList();
+        if (names.Count < 2 || (combined && names.Count != 2) || vars.Any(v => v == null))
+        {
+            Skip(item);
+            return null;
+        }
+
+        foreach (var name in names)
+            AddInlineChordRow(rows, name, indent);
+
+        var sb = new StringBuilder();
+        sb.Append(indent).Append("\\new Staff { ");
+        var part = parts.FirstOrDefault(p => p.Name.Text == names[0]);
+        if (PartClefWord(part) is { } clef)
+            sb.Append("\\clef ").Append(LyClefName(clef)).Append(' ');
+        if (combined)
+            sb.Append("\\partCombine \\").Append(vars[0]).Append(" \\").Append(vars[1]);
+        else
+            sb.Append("<< ").Append(string.Join(" \\\\ ", vars.Select(v => "\\" + v))).Append(" >>");
+        sb.Append(" }\n");
+        rows.Add(sb.ToString());
+
+        foreach (var name in names)
+            AddLyricRows(rows, name, indent, asRow: false);
+        return names[0];
     }
 
     /// <summary>The <c>\with { instrumentName = … }</c> clause a staff carries, or null.</summary>
@@ -5301,14 +5376,39 @@ public sealed class LilyPondExporter
         line.Append(indent);
     }
 
-    private static string SanitizeVar(string name)
+    /// <summary>
+    /// A LilyPond variable name for <paramref name="name"/>, unique within this export.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond variable names are letters only, so each digit is spelled as a word
+    /// (<c>fl1</c> → <c>flOne</c>) and any other character is dropped.
+    /// ⚠️ Digits used to be DROPPED, so <c>part fl1</c> and <c>part fl2</c> both became
+    /// <c>\fl</c>: the twin defined the variable twice, LilyPond kept the last definition,
+    /// and every staff played the last part's music — with no warning. 14 of the 599 tracked
+    /// books had such a pair (<c>test/instrument-names</c>' violin1/violin2, the part-combine
+    /// probes' fl1/fl2…; session 381). The used-name set catches what spelling alone cannot
+    /// (<c>a_b</c> and <c>ab</c>, or a part really named <c>flOne</c> beside <c>fl1</c>).
+    /// </remarks>
+    private string VarName(string name)
     {
-        // LilyPond variable names are letters only (no digits/underscores).
         var sb = new StringBuilder();
         foreach (char c in name)
+        {
             if (char.IsLetter(c)) sb.Append(c);
-        return sb.Length == 0 ? "music" : sb.ToString();
+            else if (c is >= '0' and <= '9') sb.Append(DigitWords[c - '0']);
+        }
+        string baseName = sb.Length == 0 ? "music" : sb.ToString();
+        string candidate = baseName;
+        for (int n = 2; !_usedVarNames.Add(candidate); n++)
+            candidate = baseName + "Var" + NumberWord(n);
+        return candidate;
     }
+
+    private static readonly string[] DigitWords =
+        ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
+
+    /// <summary>Every variable name this export has handed out (<see cref="VarName"/>).</summary>
+    private readonly HashSet<string> _usedVarNames = new(StringComparer.Ordinal);
 
     private static string Escape(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 }
