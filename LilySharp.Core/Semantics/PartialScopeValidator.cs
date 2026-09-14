@@ -20,13 +20,16 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// Flags a <c>partial</c> (pickup) written where no bar can take it. A <c>partial</c> says
-/// "the bar it stands in is this long", and it is legal wherever a bar is: a section
-/// directive (<c>section A { partial 4  melody {…} bass {…} }</c> — every part's opening bar),
-/// a single-voice section body, and — since 2026-09-08 (owner's decision) — anywhere in a
-/// part's or voice's music, mid-piece included (<c>… | partial 2. r2. | …</c>). Two places
-/// remain errors because they hold no bar: the top level of a structured file (the piece-wide
-/// <c>partial</c> is a section directive there) and a <c>part {}</c> header.
+/// Flags a <c>partial</c> (pickup) written where it may not stand. A <c>partial</c> says
+/// "the bar it stands in is this long". A section's OPENING bar is the section's: its pickup is
+/// a section directive (<c>section A { partial 4  melody {…} bass {…} }</c>, or a standalone
+/// <c>section A { partial 4 }</c> beside part-major cells), for every part at once — so a
+/// <c>partial</c> written in a part's music within that first bar is refused and pointed at the
+/// header (owner's decision 2026-09-15). After the first bar it is legal in a part's or voice's
+/// music (<c>… | partial 2. r2. | …</c>, since 2026-09-08), written in every part that shares
+/// the bar. The section's own single-voice body is the section's music, so a leading
+/// <c>partial</c> there is the directive. Two more places are errors because they hold no bar:
+/// the top level of a structured file and a <c>part {}</c> header.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -78,13 +81,56 @@ internal sealed class PartialScopeValidator : ISemanticValidator
                 _ when partial.Parent == root => "the top level",
                 _ => null,   // a section directive, a section body, a part block, a voice: a bar is there
             };
-            if (where == null)
+            if (where != null)
+            {
+                _diagnostics.Error(partial.Span, DiagnosticCodes.PartialOutsideSection,
+                    $"'partial' cannot go in {where} — there is no bar there for it to shorten. "
+                    + "Declare the opening pickup as a section directive (section A { partial 4  … }), "
+                    + "or write it in the music at the start of a later bar it shortens, in every "
+                    + "part that shares that bar.");
                 continue;
-            _diagnostics.Error(partial.Span, DiagnosticCodes.PartialOutsideSection,
-                $"'partial' cannot go in {where} — there is no bar there for it to shorten. "
-                + "Declare the opening pickup as a section directive (section A { partial 4  … }), "
-                + "or write it in the music at the start of the bar it shortens, in every part "
-                + "that shares that bar.");
+            }
+
+            if (OpeningBarOfPartMusic(partial) is { } section)
+            {
+                string name = section.Name.Text;
+                string header = section.Parent is PartDeclarationSyntax
+                    ? $"a standalone 'section {name} {{ partial … }}' beside the part cells"
+                    : $"'section {name} {{ partial …  … }}', before the part blocks";
+                _diagnostics.Error(partial.Span, DiagnosticCodes.PartialOutsideSection,
+                    $"A pickup at the start of section {name} belongs to the section header, which "
+                    + $"shortens the opening bar for every part at once: write {header}. In a part's "
+                    + "music, 'partial' shortens a later bar, written in every part that shares it.");
+            }
         }
     }
+
+    /// <summary>
+    /// The section whose opening bar <paramref name="partial"/> stands in, when it is written in
+    /// a PART's music — a section-major part block (<c>section A { melody { partial 4 … } }</c>)
+    /// or a part-major cell (<c>part melody { section A { partial 4 … } }</c>) — and no bar line
+    /// of that music comes before it. Null anywhere else: a section directive, the section's own
+    /// single-voice body, a phrase body (reusable music, not a section's head), or a later bar.
+    /// </summary>
+    private static SectionDeclarationSyntax? OpeningBarOfPartMusic(PartialDeclarationSyntax partial)
+    {
+        for (SyntaxNode? p = partial.Parent; p != null; p = p.Parent)
+        {
+            switch (p)
+            {
+                case PhraseDeclarationSyntax:
+                    return null;
+                case MusicBlockSyntax block when block.Parent is PartBlockSyntax { Parent: SectionDeclarationSyntax sec }:
+                    return StandsInOpeningBar(block, partial) ? sec : null;
+                case SectionDeclarationSyntax sec:
+                    return sec.Parent is PartDeclarationSyntax && StandsInOpeningBar(sec, partial) ? sec : null;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>True when no bar line of <paramref name="music"/> precedes the partial — voices
+    /// and repeat bodies nested in it included, so a bar line anywhere earlier ends the first bar.</summary>
+    private static bool StandsInOpeningBar(SyntaxNode music, PartialDeclarationSyntax partial)
+        => !music.DescendantNodes().OfType<BarlineSyntax>().Any(b => b.Span.Start < partial.Span.Start);
 }

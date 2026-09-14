@@ -8,7 +8,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 A chord symbol is spelled and raised the way LilyPond draws it, a `layout { }` block gathers
 the score-wide display switches, staff groups nest, and the drum and tuning tables are
-LilyPond's whole ones. Six things a 0.6.0 book could write now print differently or are
+LilyPond's whole ones. Nine things a 0.6.0 book could write now print differently or are
 refused; they come first, each with what the compiler says.
 
 ### Breaking changes
@@ -33,25 +33,23 @@ refused; they come first, each with what the compiler says.
 - **The drum name `hhs` is gone.** It claimed a splash hi-hat, which LilyPond does not have,
   and drew and played a pedal hi-hat. It now reads as an undefined phrase; write `hhp` for the
   pedal hi-hat or `cyms` for LilyPond's splash cymbal.
+- **`@feather` takes `right` or `left`, nothing else.** The tempo words `accel` and `rit` were a
+  second spelling of the same two directions, and the same words name the `@accel` / `@rit`
+  text spanners. `@feather(accel)` is now ignored with a warning ("Unknown annotation
+  '@feather(accel)'"); write `@feather(right)` for accelerando and `@feather(left)` for
+  ritardando.
+- **The tunings `standard` and `uke` are gone.** They were Lily#'s own second names for
+  `guitar` and `ukulele`; every tuning word is now LilyPond's. `tuning standard` is refused
+  ("Unknown tuning 'standard'", with the list of names); write `tuning guitar` or
+  `tuning ukulele`.
+- **A section's opening pickup is written in the section header, and only there.**
+  `section A { partial 4  rh { … } lh { … } }` shortens the opening bar for every part at once,
+  and beside part-major cells a standalone `section A { partial 4 }` does the same. A `partial`
+  written in a part's music within the section's first bar is refused ("A pickup at the start of
+  section A belongs to the section header"). Later in a section, `partial` in the music still
+  shortens the bar it stands in, written in every part that shares that bar.
 
 ### Language
-
-- **A chord's quality is spelled the way LilyPond spells it, without asking.** `layout
-  { chordQualities }` shipped with `words` as its default — `Cdim`, `Caug`, `Cm7♭5`,
-  `Cdim7`, `Cmaj7` — because that is what every Lily# book printed. The default is now
-  `symbols`: the four qualities LilyPond's exception table names print `C°`, `C+`, `Cø`,
-  `C°7`, and a major seventh prints its drawn triangle. Write `layout { chordQualities
-  words }` for the lead-sheet spelling; every other quality is the same word either way,
-  and a Roman degree row is unmoved (it already spells those qualities its own way).
-  The switch is a picture and nothing else: MIDI and a MusicXML `<harmony>` carry the chord
-  as data and are untouched. What made the default worth moving is that the rest of
-  LilyPond's picture arrived first — the raised run and the triangle polygon — so the
-  vocabulary stopped being a partial port of one table: measured against LilyPond 2.26.0,
-  the chord row now stands 5.659653422 under the staff reference point, which is LilyPond's
-  own number to nine digits, where the words picture stood 0.337483977 lower
-  (audit/lp-geometry `lyrics.chord-run.staff-to-chord`, exact for the first time since it
-  was opened in 2026-08-26).
-
 
 - **`paper { raggedBottom }` keeps every page's systems at their natural spacing.** LilyPond's
   `ragged-bottom`, as a bare flag beside `raggedRight`. Without it only the last page is ragged
@@ -94,7 +92,7 @@ refused; they come first, each with what the compiler says.
   chart` (or overrides in part with `layout chart { barNumbers none }`), and the reference
   replaces the default for that score alone. What belongs here and not in `paper`: a switch
   among a few drawings, with no unit and no grob scope — a length or a justification flag
-  stays in `paper`. Two keys, each a closed vocabulary, neither reserved:
+  stays in `paper`. Seven keys, each a closed vocabulary, none reserved:
   - **`marks stacked | beside`** arranges a section label and the tempo mark at the same
     bar. `stacked` is the default and LilyPond's: the boxed label break-aligns to the
     key/clef column, the metronome mark to the meter column, and where their inks meet the
@@ -103,10 +101,7 @@ refused; they come first, each with what the compiler says.
     ("[Chorus] ♩ = 132"); the pair is reserved and moved as one, so a chord symbol or a high
     note under either lifts both. A mid-line label stays centred on its bar and a
     mid-measure `tempo` keeps its note column either way. The `.ly` twin has no spelling
-    for `beside` and warns (LilyPond has no such pair). (Shipped as a bare `marks`
-    directive earlier in this version; the bare form is gone — it was the one display-only
-    word among the music settings, and the same word names a font group in `fonts { marks
-    "…" }`, which the block now disambiguates.)
+    for `beside` and warns (LilyPond has no such pair).
   - **`barNumbers lines | none | every N`** says which bars carry a printed number, in
     LilyPond's vocabulary. `lines` is the default and LilyPond's: the first bar of every
     line after the first. `none` prints no numbers. `every N` prints every bar whose number
@@ -117,7 +112,6 @@ refused; they come first, each with what the compiler says.
     words into its `\layout` block (`\remove Bar_number_engraver`; `barNumberVisibility`
     with `BarNumber.break-visibility = #end-of-line-invisible`), so the two pages number
     the same bars.
-
   - **`accidentals default | modern | modernCautionary | forget | noReset`** says which
     notes carry a printed accidental — LilyPond's `\accidentalStyle` table, transcribed for
     the styles whose context is the staff. `default` is the 18th-century style Lily# has
@@ -129,10 +123,9 @@ refused; they come first, each with what the compiler says.
     score-wide switch cannot name, and its neo-modern, teaching and dodecaphonic families
     need rules of another kind: those are absent, and a style the table does not hold is
     refused at the word. The `.ly` twin writes `\accidentalStyle modern` at the head of each
-    part's music. ⚠️ Under a style that remembers past the bar line (`modern`,
-    `modernCautionary`, `noReset`) the preview recompiles a changed section whole instead of
-    resuming mid-walk — the accidental memory is what the resume gate watches.
-
+    part's music. Under a style that remembers past the bar line (`modern`,
+    `modernCautionary`, `noReset`) the preview recompiles an edited section whole, so it
+    answers a keystroke a little more slowly.
   - **`sectionLabels boxed | plain | none`** says how a `form` section's name is drawn.
     `boxed` is the default and the frame Lily# has always drawn — a Lily#-own picture, since
     LilyPond's `SectionLabel` draws the bare string. `plain` drops the frame and engraves the
@@ -140,42 +133,19 @@ refused; they come first, each with what the compiler says.
     no `\box`. `none` engraves no section names at all, which is what a part sheet wants, and
     the `.ly` twin then writes no `\mark` either, so the two pictures stay one picture. It is
     a display switch: the form still plays the section, and MIDI and MusicXML are untouched.
-    ⚠️ The frame's size is priced at nine sites, so `plain` rides the MARK as a required
-    argument rather than being read from the score — a site that forgets it does not compile,
-    which is how the drawn box and the reserved box are kept from answering differently.
   - **`partCombineText on | off`** says whether a `combinedStaff` prints `a2` / `Solo` /
     `Solo II`. `on` is the default and LilyPond's; `off` is its `printPartCombineTexts =
     ##f`, which the twin writes. With the words off no text item is made at all, so nothing
     is drawn and nothing is reserved — the combining itself is unchanged.
-- **A chord symbol is raised where LilyPond raises it, and a major seventh can be its
-  triangle.** Everything between the root and the slash bass — the digits, the `sus` / `add`
-  words, an altered tension's ♭/♯ — is now set in a raised, reduced run, which is LilyPond's
-  `super-markup`: three font-size steps down (1.8500 against the root's 2.6165) lifted by
-  `magstep` of the symbol's own step (1.1892). The root, the minor `m`, the `+` and `°` of
-  the symbol vocabulary and the slash bass stay on the baseline, as LilyPond leaves them, so
-  a plain triad and a bare `Cm` are unchanged. Under `layout { chordQualities symbols }` a
-  major seventh is LilyPond's `majorSevenSymbol`: a drawn triangle, 1.0703 wide and 0.9204
-  tall at stroke 0.1, traced as three round-capped segments the way `ly:round-polygon` traces
-  it — never a character, since no text face carries one. Every number was read off LilyPond
-  2.26.0's own output rather than derived. The symbol is narrower (a digit at 71%) and taller
-  (the lift), so a chord row reserves a different band and a tight line can break elsewhere.
-  ★ The measurement that says it is right: Lily#'s `Dmaj7` ink is now `(0.000000 . 2.497137)`
-  where LilyPond dumps `(0.0 . 2.5008)` — the `j` descender Lily# used to hang below the
-  baseline is gone, because LilyPond never had one there. Nine snapshots and seven
-  LP-fidelity ledger points moved; one of those points, whose recorded cause had named this
-  exact port as what would close it, fell from −0.593669 to −0.003782.
-
-  - **`chordQualities words | symbols`** says how a chord's quality is spelled after the root.
-    It is a different question from `chords NAME as names | roman`, which says which
-    *quantity* a row shows and stays on the row — one score writes both at once, so it
-    could never be a score-wide key. The two compose: a degrees row is unchanged by this
-    one, because a Roman degree already spells those qualities its own way.
-    `symbols` is the default and LilyPond's: the four qualities LilyPond's own exception
-    table names print `C°`, `C+`, `Cø`, `C°7`, and a major seventh prints LilyPond's drawn
-    triangle (see the first entry of this section). `words` prints `Cdim`, `Caug`, `Cm7♭5`,
-    `Cdim7` and `Cmaj7`, the lead-sheet spelling every book printed before this version.
-    Every other quality is the same either way, because LilyPond spells the rest with digits
-    too.
+  - **`chordQualities symbols | words`** says how a chord's quality is spelled after the root.
+    `symbols` is the default and LilyPond's: the four qualities LilyPond's own exception table
+    names print `C°`, `C+`, `Cø`, `C°7`, and a major seventh prints LilyPond's drawn triangle
+    (see the next entry). `words` prints `Cdim`, `Caug`, `Cm7♭5`, `Cdim7` and `Cmaj7`, the
+    lead-sheet spelling every book printed before this version. Every other quality is the
+    same either way, because LilyPond spells the rest with digits too. It is a different
+    question from `chords NAME as names | roman`, which says which *quantity* a row shows and
+    stays on the row; the two compose, and a Roman degree row is unchanged by this key. With
+    the default, the chord row stands where LilyPond 2.26.0 puts it, to nine digits.
   - **`minorChords upper | lower`** says whether a chord with a MINOR THIRD prints an
     uppercase root with its `m` (`upper`, the default and LilyPond's) or a lowercase root
     with the `m` dropped (`lower` — LilyPond's `chordNameLowercaseMinor`, which the twin
@@ -188,6 +158,21 @@ refused; they come first, each with what the compiler says.
   The editor completes the block pre-filled with the defaults, the keys, and each key's
   words, and colours them inside the block; an unknown key is an error and a bad word is
   refused on the word. A book that writes no `layout` block is unchanged.
+- **A chord symbol is raised where LilyPond raises it, and a major seventh can be its
+  triangle.** Everything between the root and the slash bass — the digits, the `sus` / `add`
+  words, an altered tension's ♭/♯ — is now set in a raised, reduced run, which is LilyPond's
+  `super-markup`: three font-size steps down (1.8500 against the root's 2.6165) lifted by
+  `magstep` of the symbol's own step (1.1892). The root, the minor `m`, the `+` and `°` of
+  the symbol vocabulary and the slash bass stay on the baseline, as LilyPond leaves them, so
+  a plain triad and a bare `Cm` are unchanged. Under `layout { chordQualities symbols }` (the
+  default) a major seventh is LilyPond's `majorSevenSymbol`: a drawn triangle, 1.0703 wide and
+  0.9204 tall at stroke 0.1, traced as three round-capped segments the way `ly:round-polygon`
+  traces it — never a character, since no text face carries one. Every number was read off
+  LilyPond 2.26.0's own output rather than derived. The symbol is narrower (a digit at 71%) and
+  taller (the lift), so a chord row reserves a different band and a tight line can break
+  elsewhere. Lily#'s `Dmaj7` ink is now `(0.000000 . 2.497137)` where LilyPond's is
+  `(0.0 . 2.5008)` — the `j` descender Lily# used to hang below the baseline is gone, because
+  LilyPond never had one there.
 
 - **A `fonts { }` entry carries a size and a style, not only a face.** After a key, in any
   order: quoted faces, `as serif|sans` (follow a generic family), `step ±n` (LilyPond
@@ -240,12 +225,12 @@ refused; they come first, each with what the compiler says.
   MIDI conductor track writes no meter event for it and keeps the last one, as LilyPond's
   performer does.
 
-- **A pickup can be declared in the music, mid-piece.** `partial` says "the bar it stands in
-  is this long", and it is taken wherever a bar is: a section directive as before, and now a
-  part's or voice's music at the bar's start — `… | partial 2. r2. | …` closes a three-beat bar
-  and the meter resumes after it. It is per part, like a mid-music `time`: every part sharing
-  the bar writes it, and a part that omits it keeps a full bar, which the cross-part check
-  reports. (LilyPond's `\partial` moves one clock for all staves; Lily# keeps a bar length per
+- **A pickup can be declared mid-section, in the music.** `partial` says "the bar it stands in
+  is this long". A section's opening pickup stays in the section header, for every part at
+  once (see Breaking changes); after the section's first bar, a part's or voice's music takes
+  it at the bar's start — `… | partial 2. r2. | …` closes a three-beat bar and the meter
+  resumes after it. It is per part, like a mid-music `time`: every part sharing the bar writes
+  it, and a part that omits it keeps a full bar, which the cross-part check reports. (LilyPond's `\partial` moves one clock for all staves; Lily# keeps a bar length per
   voice.) The top level of a structured file and a part header hold no bar and still refuse it
   (LYS1024). The completion offers `partial` in music again.
 
@@ -298,7 +283,7 @@ refused; they come first, each with what the compiler says.
   `lyrics` cell, a track's inner section) the verse headers `[1. ]` `[2. ]` `[1-2. ]` `[~1. ]` —
   and nothing else: that body fell through to the music list and proposed pitches at every
   syllable. After `time`: `none`. After `tempo`: the `shuffle` feel beside `swing`. Inside
-  `@feather( )`: `accel` / `rit`; inside `@bend( )`: a semitone count; `@arpeggio(bracket)`.
+  `@feather( )`: `right` / `left`; inside `@bend( )`: a semitone count; `@arpeggio(bracket)`.
   Two lists that were hand-written copies of the compiler's now read it: the nine key modes
   (`SyntaxFacts.KeyModeVocabulary`, which the parser and its "Unknown mode" message read too)
   and the override targets (`SupportedGrobOverrides`, the list LYS1029 enforces); the
@@ -411,9 +396,7 @@ refused; they come first, each with what the compiler says.
 - **A note typed into an empty bar no longer vanishes from the preview.** With `g2 g | | | | d1 | c |`
   open in the editor, typing an `e` into one of the empty bars drew that bar still empty — the
   bar count unchanged, one note gone — and, depending on the edit history, a note elsewhere
-  in the section could disappear or reappear with each keystroke (reported on
-  tooLongChords.lys: "typing an e into bar 3 made the c appear; deleting it made the c
-  vanish"). The preview's collect resume reuses the previous keystroke's measures past the
+  in the section could disappear or reappear with each keystroke. The preview's collect resume reuses the previous keystroke's measures past the
   edit; a measure whose closing bar line stood exactly at the insertion point was read as
   untouched, although text inserted there lands before that bar line, inside the measure, so
   the old empty bar was adopted over the one just typed. The measure ending at the edit is
@@ -488,9 +471,9 @@ refused; they come first, each with what the compiler says.
   (0.1 a side) and the spacing spanner's padding (0.1) — 0.3 between the inks. The digits
   themselves are still Lily#'s enlargement of LilyPond's tiny fret numbers. Measured on a
   16th-note bass line (2.26.0): with 0.6 every 16th-to-16th spring's reservation reached the
-  spring's ideal and the line could not be compressed at all, so a system LilyPond squeezes to
-  73% (Never Stop bars 29-32) was split in two; with LilyPond's clearance the four bars sit on
-  one system as LilyPond's do, and 瞳をとじて lays out in LilyPond's 23 systems. Every tab book
+  spring's ideal and the line could not be compressed at all, so a four-bar system LilyPond
+  squeezes to 73% was split in two; with LilyPond's clearance the four bars sit on one system as
+  LilyPond's do, and a whole bass-tab book lays out in LilyPond's number of systems. Every tab book
   with adjacent digit columns draws a little tighter (284 of 925 in the sweep, 13 snapshots).
   To compare a book with its `.ly` twin, write `fonts { tabFret size 2 }` first so both pages
   carry near-equal digits.
@@ -510,7 +493,7 @@ refused; they come first, each with what the compiler says.
   own `\sectionLabel` size stays a declared Lily#-own deviation, like its left-edge position.
 - **A dotted column reserves its dots where it draws them.** Lily# has drawn an augmentation
   dot at the head's ink right plus one dot width (0.45), pushed right by a flag standing on
-  its row, since session 314 — but the column's spacing box, the keep-inside-line reach and
+  its row — but the column's spacing box, the keep-inside-line reach and
   the tie outline still put the reserved dot 0.3 after the head, with no push: two spellings
   of one quantity, 0.15 apart on every dotted note and 0.76 apart on a flagged one whose dot
   is lifted into the flag's band. In one voice a dotted note's own spacing wish outranks the
@@ -551,8 +534,7 @@ refused; they come first, each with what the compiler says.
   head). And the wish's head-width refinement of the last column into the bar line now reads
   the shifted head as the column pairs do: two voices of half-note seconds (`e2 f` over
   `d2 e`) close their bar at LilyPond's 11.086 (was 10.40), and the ledger book of whole-note
-  seconds under a tuplet at 23.44 against 23.443. Measured on 2.26.0 (scratch/p361/lp/coll,
-  tsu). Eight of 924 books move (seven tracked, two snapshots re-based).
+  seconds under a tuplet at 23.44 against 23.443. Measured on 2.26.0. Eight of 924 books move (seven tracked, two snapshots re-based).
 - **A column pair two voices share is held open by its rod alone, a skip is no spacing wish,
   and a beam a voice turns round carries its pure stem on the stem's side.** Three findings on
   one bar — `test/beam-over-stem` bar 2, `b8 b s2.` under `s16 d''4 s8. s2`, measured on
@@ -602,7 +584,7 @@ refused; they come first, each with what the compiler says.
   but `c'8 d time none e8 f g a b c d e f4 g |` is one beam over the ten eighths in LilyPond
   2.26.0 and was ten flags in Lily#; the frozen reading also carries across the cadenza's
   written `|`, so the eighths of the next unmetered bar beam the same way. Measured on the
-  twins (scratch/p359/lp); nothing changes for a `time none` written at a bar line.
+  twins; nothing changes for a `time none` written at a bar line.
 - **A line's first or last syllable overhangs its bar line, as LilyPond's does.** Lily# used
   to hold a lyric line's first syllable clear of the bar line before it (and its last clear of
   the bar after it) by half the word plus 0.4 staff spaces — a reservation LilyPond does not
@@ -780,7 +762,7 @@ refused; they come first, each with what the compiler says.
   line is an empty bar; `||`, `:|` and `|.` on an empty span decorate and open none. A form's
   `|:` (`form main { A |: B :| C }`) opens the repeated section's scope and pairs with nothing:
   the first cut of this rule read it as an empty bar and wrote `s1` before every
-  `\repeat volta`, so LilyPond drew one more bar than the page (measured, session 358).
+  `\repeat volta`, so LilyPond drew one more bar than the page.
 - **`lysc ly` returns from a cadenza opened mid-bar with `\partial`.** `c'8 d time none … |
   time 4/4 c1 |` closes the cadenza's bar at the written `|` and starts the next bar fresh;
   LilyPond's measure position froze at the `time none` and `\cadenzaOff` does not reset it, so

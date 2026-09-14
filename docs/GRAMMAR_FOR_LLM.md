@@ -27,8 +27,9 @@ time 4/4                // optional (default 4/4); 4/4 engraves as the C
 key c major             // optional (default c major); all church modes work:
                         // major minor ionian dorian phrygian lydian mixolydian aeolian locrian
                         // (key d dorian = no accidentals, key e dorian = 2 sharps)
-                        // (a pickup is 'partial': a SECTION directive, or in the music at a
-                        //  bar's start — see below; the top level rejects it)
+                        // (a pickup is 'partial': the SECTION header for a section's opening
+                        //  bar, or in the music at a LATER bar's start — see below; the top
+                        //  level rejects it)
 fonts {                  // optional; binds text faces. The two generic families together
   serif "Georgia"       // are "the whole document's text"; bind roles separately below
   sans  "Georgia"       // 'embedded' subsets every named face into the PDF
@@ -51,9 +52,10 @@ phrase motif { c4 d e f | }     // optional reusable music, referenced by bare n
 
 section Main {                  // a section binds music to each part by name
   partial 8                     // optional pickup: shortens THIS section's opening bar
-                                // for every part at once (top level rejects it). In a
-                                // part's music, `| partial 2. r2. |` makes THAT bar 3 beats
-                                // long, mid-piece — written in every part sharing the bar
+                                // for every part at once — the ONLY place for it (the top
+                                // level, a part header and a part's first bar reject it).
+                                // Later in a part's music, `| partial 2. r2. |` makes THAT
+                                // bar 3 beats long — written in every part sharing the bar
   rightHand { motif g2 g | }
   leftHand  { c2 c | g2 g | }
 }

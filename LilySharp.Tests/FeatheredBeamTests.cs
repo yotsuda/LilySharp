@@ -248,9 +248,7 @@ public class FeatheredBeamTests
     /// </remarks>
     [Theory]
     [InlineData("@feather(right)", "#RIGHT")]
-    [InlineData("@feather(accel)", "#RIGHT")]
     [InlineData("@feather(left)", "#LEFT")]
-    [InlineData("@feather(rit)", "#LEFT")]
     public void TheTwinWritesTheGrowDirection(string annotation, string expected)
     {
         string ly = new LilyPondExporter().Export(

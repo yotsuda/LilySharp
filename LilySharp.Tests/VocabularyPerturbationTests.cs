@@ -224,9 +224,8 @@ public class VocabularyPerturbationTests
     /// carried into <c>BeamGroup.GrowDirection</c>, copied, passed through two coordinators
     /// and folded into the beam memo key — and read by no renderer, while three tautologies
     /// in <c>FeatheredBeamTests</c> stood in for the question by doing their own arithmetic.
-    /// ⚠️ The synonyms are the positive control the popup itself declares: <c>accel</c> IS
-    /// <c>right</c> and <c>rit</c> IS <c>left</c>, so those must be byte-identical; if they
-    /// ever differ, the popup's Detail is wrong or the reader has drifted from it.
+    /// The synonyms <c>accel</c> / <c>rit</c> were retired on 2026-09-15 (one word per
+    /// direction), so the popup offers the two directions and nothing else.
     /// </remarks>
     [Fact]
     public void EveryFeatherDirectionReachesThePage()
@@ -236,8 +235,6 @@ public class VocabularyPerturbationTests
             Assert.True(plain != Signature(BeamedBook($"@feather({Resolved(item)})")),
                 $"@feather({Resolved(item)}) changes nothing on the page.");
 
-        Assert.Equal(Signature(BeamedBook("@feather(right)")), Signature(BeamedBook("@feather(accel)")));
-        Assert.Equal(Signature(BeamedBook("@feather(left)")), Signature(BeamedBook("@feather(rit)")));
         AssertMoves(BeamedBook("@feather(right)"), BeamedBook("@feather(left)"),
             "@feather right vs left");
     }
@@ -1113,7 +1110,7 @@ public class VocabularyPerturbationTests
     /// stayed green (measured 2026-09-13, the poison this tripwire failed the first time).
     /// A tripwire whose two sides are picked by the code it watches cannot fire.
     /// </remarks>
-    private static readonly string[] SpellingsOfTheGuitar = ["guitar", "standard"];
+    private static readonly string[] SpellingsOfTheGuitar = ["guitar"];
 
     [Theory]
     [MemberData(nameof(TuningWords))]
@@ -1134,11 +1131,11 @@ public class VocabularyPerturbationTests
     /// </summary>
     /// <remarks>
     /// ⚠️ A NEW LINE HERE IS A CLAIM ABOUT LILYPOND — check ly/string-tunings-init.ly before
-    /// adding one. The five below are the whole set and every one is in that file (or older
-    /// than it here): <c>guitar</c>/<c>standard</c> and <c>ukulele</c>/<c>uke</c> are Lily#'s
-    /// own second spellings; <c>bass</c>/<c>bass4</c>/<c>doublebass</c> and
-    /// <c>violin</c>/<c>mandolin</c> are LilyPond's, which defines each pair with identical
-    /// chords a few lines apart.
+    /// adding one. The two below are the whole set and both are in that file:
+    /// <c>bass</c>/<c>bass4</c>/<c>doublebass</c> and <c>violin</c>/<c>mandolin</c>, which
+    /// LilyPond defines with identical chords a few lines apart. Lily#'s own second spellings
+    /// <c>guitar</c>/<c>standard</c> and <c>ukulele</c>/<c>uke</c> stood here too until they
+    /// were retired on 2026-09-15.
     /// </remarks>
     [Fact]
     public void NoTwoTuningWordsFretAlike_ExceptWhereLilyPondSpellsOneTuningTwice()
@@ -1151,7 +1148,7 @@ public class VocabularyPerturbationTests
             .ToArray();
 
         Assert.Equal(
-            new[] { "bass=bass4=doublebass", "guitar=standard", "mandolin=violin", "uke=ukulele" },
+            new[] { "bass=bass4=doublebass", "mandolin=violin" },
             doubles);
 
         // And the tunings themselves — one member per distinct set of strings, so two members

@@ -852,7 +852,7 @@ public static class RenderSpecParser
         string? tuningName = tuningToken?.Text.ToLowerInvariant()
             ?? GetPartProperty(tab, voiceName, "tuning")?.ToLowerInvariant()
             ?? InstrumentDefaults.GetTuning(GetInstrument(tab, voiceName)?.Preset);
-        // "standard"/"guitar"/unknown/none all come back as the guitar — Tablature.Tunings
+        // "guitar"/unknown/none all come back as the guitar — Tablature.Tunings
         // is the one reader of these words.
         TuningType tuning = Tablature.Tunings.Parse(tuningName);
 

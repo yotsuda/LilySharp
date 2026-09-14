@@ -54,13 +54,15 @@ public class PartialPickupValidationTests
     [Fact]
     public void PickupHint_Structured_PointsToSectionDirective_NotTopLevelOrVoice()
     {
-        // A short first bar with no declared pickup nudges toward a section directive —
-        // NOT "top level or in the voice", which `partial` may not occupy (LYS1024).
+        // A short first bar with no declared pickup nudges toward the section header —
+        // NOT "top level", "in the voice" or a part's music, which may not hold an opening
+        // pickup (LYS1024; the part's first bar since 2026-09-15).
         var msg = Diags("part melody\nsection A { melody { c2 | a1 } }" + Tail)
             .Single(x => x.Code == DiagnosticCodes.PickupWithoutPartial).Message;
-        Assert.Contains("section directive", msg);
+        Assert.Contains("section header", msg);
         Assert.DoesNotContain("top level", msg);
         Assert.DoesNotContain("in the voice", msg);
+        Assert.DoesNotContain("part's music", msg);
     }
 
     [Fact]

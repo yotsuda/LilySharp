@@ -641,7 +641,7 @@ the default, byte for byte.
 margins, scaled the way LilyPond's `set-paper-size` scales them — each margin default by
 the size's ratio to a4, rounded to whole millimetres, so `size a4` is the identity and
 `size b5` gives 13mm sides and 8mm top/bottom. The name is **bare**, like every closed
-vocabulary's values (`clef treble`, `tuning standard`); quote only a name that carries a
+vocabulary's values (`clef treble`, `tuning guitar`); quote only a name that carries a
 space (`size "ansi a"`) — the lyric syllable's rule. The names are LilyPond's paper
 table — `a0`…`a10`, `b0`…`b10`, `c0`…`c10`, `letter`, `legal`, `tabloid`, `ledger`, and
 the rest — plus **`jisb5`** (182 × 257 mm), which is Lily#-own: ISO `b5` (176 × 250) is

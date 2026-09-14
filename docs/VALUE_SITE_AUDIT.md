@@ -597,7 +597,7 @@ lexer の 2 つ目の綴りになる**（§5.2.1②）——**実測でそこは
 
 **移した 10 家族**——読み手は全部 `Semantics.AnnotationValues` の 1 コピーになった:
 `@finger(N)`／`@pluck(p|i|m|a)`／`@bend(half|full|N)`／`@notehead(style)`／`@text("…")`／
-`@feather(right|left|accel|rit)`／`@arpeggio(bracket)`／**`@frame(032010)`**／
+`@feather(right|left)`／`@arpeggio(bracket)`／**`@frame(032010)`**／
 **`@chord(c:m7)`**（第170第2便）／**`@mark("A")`**（第171第1便）。
 
 ★★ **`@frame` は引数ノードが*そのために*設計された家族**（§9.2）＝**`Text` から読み、

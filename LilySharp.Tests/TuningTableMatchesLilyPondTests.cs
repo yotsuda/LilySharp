@@ -128,11 +128,9 @@ public class TuningTableMatchesLilyPondTests
     }
 
     [Theory]
-    // The four words that name a tuning some other word already names. Two are Lily#'s own
-    // and older than this table; two are LilyPond's, and they are duplicates in LilyPond too.
-    [InlineData("standard", TuningType.Guitar)]          // Lily#'s own word
-    [InlineData("uke", TuningType.Ukulele)]              // Lily#'s own word
-    [InlineData("bass4", TuningType.Bass)]               // LP's bass-four-string-tuning ≡ bass-tuning
+    // The words that name a tuning some other word already names — all LilyPond's, and
+    // duplicates in LilyPond too. Lily#'s own `standard` and `uke` were retired 2026-09-15.
+    [InlineData("bass4", TuningType.Bass)]              // LP's bass-four-string-tuning ≡ bass-tuning
     [InlineData("doublebass", TuningType.Bass)]          // LP's double-bass-tuning ≡ bass-tuning
     [InlineData("mandolin", TuningType.Violin)]          // LP's mandolin-tuning ≡ violin-tuning
     public void TheSecondSpellingsReachTheSameTuning(string word, TuningType type)
@@ -153,7 +151,7 @@ public class TuningTableMatchesLilyPondTests
                 "bass", "bass4", "bass5", "bass6",
                 "bassdropd", "cello", "doublebass", "guitar", "guitar7", "guitarasus4",
                 "guitardadgad", "guitardropc", "guitardropd", "guitarlute", "guitaropend",
-                "guitaropeng", "mandolin", "standard", "tenorukulele", "uke", "ukulele",
+                "guitaropeng", "mandolin", "tenorukulele", "ukulele",
                 "ukuleled", "viola", "violin",
             },
             LanguageVocabulary.TuningNames.OrderBy(n => n, System.StringComparer.Ordinal).ToArray());

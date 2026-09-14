@@ -44,7 +44,7 @@ namespace LilySharp.Tests;
 /// <c>transpose</c> / <c>using</c> / <c>drummap</c>, a score header's basename /
 /// <c>transpose</c> / <c>pitch</c>, the clef before a <c>staff</c> part and the tuning before
 /// a <c>tab</c> part, a bare MIDI-only part, a lyrics body's <c>[N. …]</c>,
-/// <c>@feather(accel|rit)</c>, <c>@arpeggio(bracket)</c>, <c>@bend(N)</c>; and two
+/// <c>@feather(right|left)</c>, <c>@arpeggio(bracket)</c>, <c>@bend(N)</c>; and two
 /// hand-written tables (the key modes, the override targets) that now read the compiler's
 /// vocabulary.
 /// </remarks>
@@ -394,8 +394,8 @@ public class CompletionAuditTests
     // ================= the annotation arguments =================
 
     [Theory]
-    [InlineData("feather", "accel")]
-    [InlineData("feather", "rit")]
+    [InlineData("feather", "right")]
+    [InlineData("feather", "left")]
     [InlineData("bend", "3")]
     public void TheWiderArgumentRows_AreOffered(string family, string argument)
         => Assert.Contains(LilySharpLanguageServer.GetAnnotationArgumentCompletions(family)!.Items,

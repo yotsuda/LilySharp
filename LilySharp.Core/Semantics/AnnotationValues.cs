@@ -231,9 +231,15 @@ public static class AnnotationValues
     }
 
     /// <summary>
-    /// The beam's grow direction from <c>@feather(right|accel)</c> (+1, accelerando) or
-    /// <c>@feather(left|rit)</c> (−1, ritardando); 0 for anything else.
+    /// The beam's grow direction from <c>@feather(right)</c> (+1, accelerando) or
+    /// <c>@feather(left)</c> (−1, ritardando); 0 for anything else.
     /// </summary>
+    /// <remarks>
+    /// One word per direction, LilyPond's own (<c>Beam.grow-direction = #RIGHT</c> /
+    /// <c>#LEFT</c>). The tempo words <c>accel</c> / <c>rit</c> were read as synonyms until
+    /// 2026-09-15 and are retired (owner decision, before 0.7.0 shipped): two spellings of one
+    /// instruction, and the same words name the <c>@accel</c> / <c>@rit</c> text spanners.
+    /// </remarks>
     /// <remarks>
     /// The LilyPond addresses for the grow-direction property — where it is declared and
     /// where it reaches stem length — are on <c>MeasureCollector.GetFeatherDirection</c>,
@@ -246,8 +252,8 @@ public static class AnnotationValues
         => Named(mark, "feather")
             ? Sole(mark)?.Text.ToLowerInvariant() switch
             {
-                "right" or "accel" => 1,
-                "left" or "rit" => -1,
+                "right" => 1,
+                "left" => -1,
                 _ => 0,
             }
             : 0;

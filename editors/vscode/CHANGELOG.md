@@ -21,6 +21,11 @@ the reasoning.
 - **A MIDI-only score row is a bare part name**; its `instrument` / `octave` options did nothing.
 - **The drum name `hhs` is gone** — it drew and played a pedal hi-hat; write `hhp`, or `cyms`
   for a splash cymbal.
+- **`@feather` takes `right` or `left` only** — `accel` / `rit` inside it are retired.
+- **The tunings `standard` and `uke` are gone** — write `guitar` and `ukulele`.
+- **A section's opening pickup is written in the section header only** —
+  `section A { partial 4 … }`; a `partial` in a part's first bar is refused. Later in the
+  music it still shortens the bar it stands in, written in every part.
 
 ### Language
 
@@ -30,7 +35,7 @@ the reasoning.
 - **A `fonts { }` entry carries a size and a style** — `mark "Charis SIL" step +1 bold`.
 - **A `break` inside a bar splits the bar across two systems**, `paper { raggedBottom }` keeps
   every page at its natural spacing, `time none` is engraved, and `partial` may stand at a bar's
-  start in a part's music.
+  start in a part's music mid-section (a section's opening pickup stays in its header).
 - **LilyPond's whole drum and tuning tables** — the Latin percussion, and tunings such as
   `guitardropd`, `guitardadgad`, `guitar7`, `violin`, `mandolin`, `banjoopeng`; `mandolin` and
   `banjo` presets, and a bowed preset frets its tab on its own strings.

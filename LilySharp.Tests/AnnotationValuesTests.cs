@@ -153,9 +153,9 @@ public class AnnotationValuesTests
 
     [Theory]
     [InlineData("c4@feather(right) |", 1)]
-    [InlineData("c4@feather(accel) |", 1)]
     [InlineData("c4@feather(left) |", -1)]
-    [InlineData("c4@feather(rit) |", -1)]
+    [InlineData("c4@feather(accel) |", 0)]   // retired synonym of right (2026-09-15)
+    [InlineData("c4@feather(rit) |", 0)]     // retired synonym of left
     [InlineData("c4@feather(sideways) |", 0)]
     [InlineData("c4@finger(3) |", 0)]
     public void AFeatherArgument_IsItsGrowDirection(string music, int direction)

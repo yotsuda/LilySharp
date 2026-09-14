@@ -4065,9 +4065,9 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>
     /// Feathered-beam directions, inside <c>@feather(…)</c>. The beam opens
-    /// toward the side named, so right = getting faster; the reader takes the tempo
-    /// words as synonyms (<c>AnnotationValues.Feather</c>: accel = right, rit = left),
-    /// offered second.
+    /// toward the side named, so right = getting faster. One word per direction: the tempo
+    /// words <c>accel</c> / <c>rit</c> were read as synonyms until 2026-09-15 and are retired
+    /// (<c>AnnotationValues.Feather</c>).
     /// </summary>
     internal static CompletionList GetFeatherCompletions() => new()
     {
@@ -4075,8 +4075,6 @@ public sealed partial class LilySharpLanguageServer
         [
             Argument("right", "Opening right — accelerando", 0),
             Argument("left", "Opening left — ritardando", 1),
-            Argument("accel", "Accelerando — the same beam as right", 2),
-            Argument("rit", "Ritardando — the same beam as left", 3),
         ]
     };
 

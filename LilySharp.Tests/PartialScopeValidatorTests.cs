@@ -23,11 +23,13 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// A <c>partial</c> (pickup) says "the bar it stands in is this long", so it is legal wherever
-/// a bar is: a section directive, a section body, and — owner's decision 2026-09-08 — a part's
-/// or voice's music mid-piece, written per part like a mid-music <c>time</c>. The top level of
-/// a structured file and a part header hold no bar and stay errors. Bare music (no sections)
-/// is exempt: a leading partial is just that note stream's pickup.
+/// A <c>partial</c> (pickup) says "the bar it stands in is this long". A section's opening
+/// pickup is its header's (a section directive), for every part at once — written in a part's
+/// music within the section's first bar it is refused (owner's decision 2026-09-15). After the
+/// first bar it is legal in a part's or voice's music, written per part like a mid-music
+/// <c>time</c> (2026-09-08). The top level of a structured file and a part header hold no bar
+/// and stay errors. Bare music (no sections) is exempt: a leading partial is just that note
+/// stream's pickup.
 /// </summary>
 [Trait("Category", "Unit")]
 public class PartialScopeValidatorTests
@@ -53,19 +55,32 @@ public class PartialScopeValidatorTests
         => Assert.Equal(0, ErrCount(
             "time 4/4\nsection A { partial 4  g4 | c' d' e' f' | }\nform main { A }\nscore main { staff melody }"));
 
-    // --- Allowed since 2026-09-08: in the music, at the head or mid-piece, per part ---
+    // --- Refused since 2026-09-15: a section's opening pickup is its header's ---
 
     [Fact]
-    public void PartialInPartMajorCell_IsThatPartsPickup_Ok()
-        // One part's cell, one part's pickup — the per-part rule; a second part that shares
-        // the bar writes its own (or CrossPartMeasureValidator says the bars disagree).
-        => Assert.Equal(0, ErrCount(
+    public void PartialAtTheHeadOfAPartMajorCell_Errors()
+        // The opening bar is the section's: `section A { partial 4 }` beside the cell says it once
+        // for every part.
+        => Assert.Equal(1, ErrCount(
             "part melody { section A { partial 4  g4 | c' d' e' f' | } }\nform main { A }\nscore main { staff melody }"));
 
     [Fact]
-    public void PartialInsideAPartBlock_Ok()
-        => Assert.Equal(0, ErrCount(
+    public void PartialAtTheHeadOfAPartBlock_Errors()
+        => Assert.Equal(1, ErrCount(
             "section A { melody { partial 4  g4 | c' d' e' f' | } }\nform main { A }\nscore main { staff melody }"));
+
+    [Fact]
+    public void PartialLaterInAPartBlocksFirstBar_Errors()
+        // Still the opening bar — no bar line comes before it.
+        => Assert.Equal(1, ErrCount(
+            "section A { melody { g4 partial 4 | c' d' e' f' | } }\nform main { A }\nscore main { staff melody }"));
+
+    // --- Allowed since 2026-09-08: in a part's music after the first bar, per part ---
+
+    [Fact]
+    public void MidSectionPartialInAPartMajorCell_Ok()
+        => Assert.Equal(0, ErrCount(
+            "part melody { section A { c'4 d' e' f' | partial 4  g4 | c' d' e' f' | } }\nform main { A }\nscore main { staff melody }"));
 
     [Fact]
     public void MidPiecePartial_ShortensTheBarItStandsIn_OnThePage()

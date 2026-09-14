@@ -89,14 +89,15 @@ public static class Tunings
     /// The spelling rule: LilyPond's symbol without its <c>-tuning</c> suffix, with
     /// <c>&lt;n&gt;-string</c> written as the digit and the hyphens dropped — so
     /// <c>bass-five-string-tuning</c> is <c>bass5</c> (which is what it already was) and
-    /// <c>guitar-drop-d-tuning</c> is <c>guitardropd</c>. Two words are Lily#'s own and not
-    /// LilyPond's: <c>standard</c> and <c>uke</c>, both older than this table.
+    /// <c>guitar-drop-d-tuning</c> is <c>guitardropd</c>. Every word is LilyPond's: the two
+    /// Lily#-own second spellings, <c>standard</c> (= <c>guitar</c>) and <c>uke</c>
+    /// (= <c>ukulele</c>), were retired on 2026-09-15 before 0.7.0 shipped (owner decision —
+    /// one spelling per tuning; the only doubles left are LilyPond's own).
     /// </para>
     /// </remarks>
     private static readonly Dictionary<string, TuningType> ByName = new(StringComparer.Ordinal)
     {
         ["guitar"] = TuningType.Guitar,
-        ["standard"] = TuningType.Guitar,               // Lily#'s own word for it
         ["guitar7"] = TuningType.Guitar7,
         ["guitardropd"] = TuningType.GuitarDropD,
         ["guitardropc"] = TuningType.GuitarDropC,
@@ -123,7 +124,6 @@ public static class Tunings
         ["banjodoublec"] = TuningType.BanjoDoubleC,
         ["banjodoubled"] = TuningType.BanjoDoubleD,
         ["ukulele"] = TuningType.Ukulele,
-        ["uke"] = TuningType.Ukulele,                   // Lily#'s own word for it
         ["ukuleled"] = TuningType.UkuleleD,
         ["tenorukulele"] = TuningType.TenorUkulele,
         ["baritoneukulele"] = TuningType.BaritoneUkulele,

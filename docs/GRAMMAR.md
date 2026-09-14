@@ -190,17 +190,21 @@ GlobalSetting  = TempoDecl | TimeDecl | KeyDecl | PartialDecl | OctaveDecl | Pit
                     number — are NOT here: they are the 'layout { }' block, §2.6. *)
 
 PartialDecl    = 'partial' , DurationToken ;
-                 (* "the bar this stands in is this long". As a SECTION directive it is
-                    the section's opening pickup for every part at once (§6); in a
-                    part's or voice's music (§8.1) it is that part's bar, at the head or
-                    mid-piece (`… | partial 2. r2. | …`), written at the bar's start and
-                    in EVERY part sharing the bar — LilyPond's \partial moves one clock
-                    for all staves (Timing = Score), Lily# keeps a bar length per voice,
-                    as it does for a mid-music `time` (owner's decision 2026-09-08). At
-                    the top level of a structured file, or in a part header, there is no
-                    bar for it and it is refused (LYS1024); in a bare note stream a
-                    leading `partial` is that music's pickup. A bare underfull first bar
-                    gets a warning suggesting this. *)
+                 (* "the bar this stands in is this long". A section's opening pickup is
+                    a SECTION directive, for every part at once (§6) — `section A {
+                    partial 4 … }`, or a standalone `section A { partial 4 }` beside
+                    part-major cells — and only there: written in a part's or voice's
+                    music within the section's first bar it is refused (LYS1024) with the
+                    header spelling (owner's decision 2026-09-15). Later in the music
+                    (§8.1) it shortens the bar it stands in, mid-section
+                    (`… | partial 2. r2. | …`), written at the bar's start and in EVERY
+                    part sharing the bar — LilyPond's \partial moves one clock for all
+                    staves (Timing = Score), Lily# keeps a bar length per voice, as it
+                    does for a mid-music `time` (owner's decision 2026-09-08). At the top
+                    level of a structured file, or in a part header, there is no bar for
+                    it and it is refused (LYS1024); in a bare note stream a leading
+                    `partial` is that music's pickup. A bare underfull first bar gets a
+                    warning suggesting this. *)
 OctaveDecl     = 'octave' , ( 'absolute' | 'relative' ) ;
 PitchDecl      = 'pitch' , PitchMode ;
 PitchMode      = 'written' | 'concert' ;
@@ -768,13 +772,12 @@ TuningName     = 'guitar' | 'guitar7' | 'guitardropd' | 'guitardropc'
                | 'violin' | 'viola' | 'cello' | 'doublebass' | 'mandolin'
                | 'banjoopeng' | 'banjoc' | 'banjomodal' | 'banjoopend'
                | 'banjoopendm' | 'banjodoublec' | 'banjodoubled'
-               | 'ukulele' | 'ukuleled' | 'tenorukulele' | 'baritoneukulele'
-               | 'standard' | 'uke' ;
+               | 'ukulele' | 'ukuleled' | 'tenorukulele' | 'baritoneukulele' ;
                    (* LilyPond's whole ly/string-tunings-init.ly (2026-09-13): its symbol
                       without the `-tuning` suffix, with `<n>-string` written as the digit
                       and the hyphens dropped — so `bass-five-string-tuning` is `bass5` and
-                      `guitar-drop-d-tuning` is `guitardropd`. `standard` and `uke` are
-                      Lily#'s own second spellings of `guitar` and `ukulele`; `bass4`,
+                      `guitar-drop-d-tuning` is `guitardropd`. Lily#'s own second spellings
+                      `standard` and `uke` were retired before 0.7.0 shipped; `bass4`,
                       `doublebass` and `mandolin` are LilyPond's own second spellings of
                       tunings it also lists as `bass` and `violin`. Tablature.Tunings holds
                       the strings and is the one reader of these words. *)
@@ -1483,8 +1486,9 @@ MidMusicCommand = 'clef' , ClefName
                | 'time' , Integer , '/' , Integer
                | 'time' , 'none'                    (* unmetered from here to the next
                                                       'time N/M' — see TimeDecl §2 *)
-               | 'partial' , DurationToken         (* this bar is that long — at the bar's
-                                                      start, per part; see PartialDecl §2 *)
+               | 'partial' , DurationToken         (* this bar is that long — at a bar's
+                                                      start after the section's first bar,
+                                                      per part; see PartialDecl §2 *)
                | 'break' | 'noBreak'                (* force / forbid a system break after
                                                       this measure. A 'break' written INSIDE
                                                       a bar, with music on both sides of it,

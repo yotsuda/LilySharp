@@ -327,7 +327,7 @@
             }
         },
         "part-body": {
-            "comment": "`part vln1 \"Violin I\" { clef treble^8  tuning standard  pedal text }`. (`removeEmpty` left the header 2026-09-08 — it is the score's `staff m as removeEmpty all`, like `as lines N`, and is not coloured there.) ⚠️ These are the part header's OWN vocabulary (LilySharp.Core SymbolCaseValidator) and almost none of them is a reserved word — `part lines { … }`, `part bracket { … }` and `part standard { … }` all compile (measured 2026-08-19) — so nothing outside this block may colour them and only a rule that knows it is INSIDE one can. Same device as #fonts-block and for the same reason: begin/end carries CONTEXT, which is a claim about what a word IS, not licence to claim a word is WRONG. ⚠️ The vocabulary is the PART BODY's, not the language's everywhere: a body takes all eleven clef names while `clef` in music and `staff` in a score take five and refuse the other six (measured). Each value is read WITH the key it belongs to, so `tuning treble` does not come out looking like a tuning — wrongness is the diagnostics'. EditorColouringTests holds every list here to its Core set in both directions.",
+            "comment": "`part vln1 \"Violin I\" { clef treble^8  tuning guitar  pedal text }`. (`removeEmpty` left the header 2026-09-08 — it is the score's `staff m as removeEmpty all`, like `as lines N`, and is not coloured there.) ⚠️ These are the part header's OWN vocabulary (LilySharp.Core SymbolCaseValidator) and almost none of them is a reserved word — `part lines { … }`, `part bracket { … }` and `part guitar { … }` all compile (measured 2026-08-19) — so nothing outside this block may colour them and only a rule that knows it is INSIDE one can. Same device as #fonts-block and for the same reason: begin/end carries CONTEXT, which is a claim about what a word IS, not licence to claim a word is WRONG. ⚠️ The vocabulary is the PART BODY's, not the language's everywhere: a body takes all eleven clef names while `clef` in music and `staff` in a score take five and refuse the other six (measured). Each value is read WITH the key it belongs to, so `tuning treble` does not come out looking like a tuning — wrongness is the diagnostics'. EditorColouringTests holds every list here to its Core set in both directions.",
             "begin": "\\b(part)\\s+(?:[A-Za-z_][A-Za-z0-9_]*)\\s*(?:\"[^\"]*\"\\s*)?(\\{)",
             "beginCaptures": {
                 "1": { "name": "keyword.control.lilysharp" },
@@ -350,7 +350,7 @@
                     }
                 },
                 {
-                    "match": "\\b(tuning)\\s+(baritoneukulele|banjodoublec|banjodoubled|guitardadgad|tenorukulele|banjoopendm|guitarasus4|guitardropc|guitardropd|guitaropend|guitaropeng|banjomodal|banjoopend|banjoopeng|doublebass|guitarlute|bassdropd|mandolin|standard|ukuleled|guitar7|ukulele|banjoc|guitar|violin|bass4|bass5|bass6|viola|cello|bass|uke)\\b",
+                    "match": "\\b(tuning)\\s+(baritoneukulele|banjodoublec|banjodoubled|guitardadgad|tenorukulele|banjoopendm|guitarasus4|guitardropc|guitardropd|guitaropend|guitaropeng|banjomodal|banjoopend|banjoopeng|doublebass|guitarlute|bassdropd|mandolin|ukuleled|guitar7|ukulele|banjoc|guitar|violin|bass4|bass5|bass6|viola|cello|bass)\\b",
                     "captures": {
                         "1": { "name": "keyword.other.lilysharp" },
                         "2": { "name": "support.constant.tuning.lilysharp" }
@@ -427,7 +427,7 @@
             "comment": "`score main { tab guitar melody }`. The ONE position a tuning name reaches outside a part body (measured 2026-08-19: every tuning word is accepted after `tab`, and `staff`/`ossia` take clef names, not tunings). Without this the vocabulary would be coloured in the header and plain in the score — the same half-coloured shape the user reported for `fonts { }`. ⚠️ The list is LilyPond's whole string-tunings-init.ly since 2026-09-13 — thirty-two words — and EditorColouringTests holds it to LanguageVocabulary.TuningNames in both directions, so do not edit one without the other.",
             "patterns": [
                 {
-                    "match": "\\b(tab)\\s+(baritoneukulele|banjodoublec|banjodoubled|guitardadgad|tenorukulele|banjoopendm|guitarasus4|guitardropc|guitardropd|guitaropend|guitaropeng|banjomodal|banjoopend|banjoopeng|doublebass|guitarlute|bassdropd|mandolin|standard|ukuleled|guitar7|ukulele|banjoc|guitar|violin|bass4|bass5|bass6|viola|cello|bass|uke)\\b",
+                    "match": "\\b(tab)\\s+(baritoneukulele|banjodoublec|banjodoubled|guitardadgad|tenorukulele|banjoopendm|guitarasus4|guitardropc|guitardropd|guitaropend|guitaropeng|banjomodal|banjoopend|banjoopeng|doublebass|guitarlute|bassdropd|mandolin|ukuleled|guitar7|ukulele|banjoc|guitar|violin|bass4|bass5|bass6|viola|cello|bass)\\b",
                     "captures": {
                         "1": { "name": "keyword.control.lilysharp" },
                         "2": { "name": "support.constant.tuning.lilysharp" }

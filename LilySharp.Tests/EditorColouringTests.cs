@@ -965,7 +965,7 @@ public class EditorColouringTests
                  {
                      "transposition", "pedal",
                      "bracket", "text", "mixed",
-                     "standard", "guitar", "bass5", "bass6", "ukulele", "uke",
+                     "guitar", "bass5", "bass6", "ukulele",
                  })
         {
             Assert.False(SyntaxTree.Parse($"part {free} {{ clef treble }}\nsection A {{ {free} {{ c'1 }} }}\nform main {{ A }}\nscore main {{ staff {free} }}").HasErrors,

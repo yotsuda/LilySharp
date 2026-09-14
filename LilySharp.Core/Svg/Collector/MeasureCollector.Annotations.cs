@@ -375,7 +375,7 @@ public sealed partial class MeasureCollector
 
     /// <summary>
     /// Gets the feathered beam direction from a note's articulations.
-    /// Returns 0 (none), 1 (right/accel), or -1 (left/rit).
+    /// Returns 0 (none), 1 (right), or -1 (left).
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/beam.cc:773 get_property (me, "grow-direction") — that read is
@@ -384,7 +384,7 @@ public sealed partial class MeasureCollector
     ///   acts on stem length; the read that reaches it is the second one, at :1201 in
     ///   set_stem_lengths, handed over at :1221.
     ///   Beam grow-direction property @ define-grobs.scm; feather doc @ beam.cc:1597
-    /// Syntax: @feather.right (accelerando) or @feather.left (ritardando)
+    /// Syntax: @feather(right) (accelerando) or @feather(left) (ritardando)
     /// </remarks>
     private static int GetFeatherDirection(SyntaxNode node)
     {
