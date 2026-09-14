@@ -321,10 +321,10 @@ public class RenderTextParams
     public string? RenderName { get; set; }
     /// <summary>True (the default, the AI panel's) draws the preview's interactive SVG —
     /// notehead hit-rects, labeled system groups. False draws a STATIC picture for a
-    /// host that only shows it (a Markdown preview's lys fence): the same layout, the
+    /// host that only shows it (a Markdown preview's lily# fence): the same layout, the
     /// fonts still left to the host page (OmitFontFace), none of the click targets.</summary>
     public bool Interactive { get; set; } = true;
-    /// <summary>True for a Markdown lys fence, which draws ONE picture and says which
+    /// <summary>True for a Markdown lily# fence, which draws ONE picture and says which
     /// (owner decisions 2026-09-09 and 2026-09-10): exactly one <c>score { }</c> → that
     /// score; none, or two or more → refused with the reason. False (the default, the AI
     /// panel) keeps the file's rules: the first score, or the first part alone when there

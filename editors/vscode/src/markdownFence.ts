@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// The lys fence in VS Code's built-in Markdown preview (HANDOFF §2F F-mdfence):
-// ```lys … ``` in a .md renders as the score, the way a ```mermaid fence renders
+// The lily# fence in VS Code's built-in Markdown preview (HANDOFF §2F F-mdfence):
+// ```lily# … ``` in a .md renders as the score, the way a ```mermaid fence renders
 // as a diagram. This is the markdown-it plugin VS Code asks for through
 // `contributes.markdown.markdownItPlugins` and the `extendMarkdownIt` export.
 //
@@ -36,7 +36,7 @@ export interface MarkdownFenceDeps {
     getClient: () => LanguageClient | undefined;
     isReady: () => boolean;
     /** Starts the language client if it is not running yet and resolves once it is
-     * (never rejects). A .md with a lys fence is the first thing that needs it. */
+     * (never rejects). A .md with a lily# fence is the first thing that needs it. */
     whenReady: () => Promise<void>;
     log: (msg: string) => void;
 }

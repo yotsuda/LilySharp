@@ -45,7 +45,7 @@ the reasoning.
 
 ### Added
 
-- **A ```` ```lys ```` or ```` ```lily# ```` fence in a Markdown file draws its score** in VS
+- **A ```` ```lily# ```` fence in a Markdown file draws its score** in VS
   Code's built-in Markdown preview, the way a ```` ```mermaid ```` fence draws a diagram. A
   fence writes exactly one `score { }` and is laid out as a snippet — one page as tall as the
   music and as wide as its widest system. Opening a Markdown file costs nothing: the language

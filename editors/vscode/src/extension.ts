@@ -376,7 +376,7 @@ export function activate(context: vscode.ExtensionContext) {
     };
 
     // A score already open (the usual activation, onLanguage:lilysharp) starts the
-    // client now; a Markdown activation waits for the first .lys or lys fence.
+    // client now; a Markdown activation waits for the first .lys or lily# fence.
     if (vscode.workspace.textDocuments.some(d => d.languageId === 'lilysharp')) {
         startClient();
     }
@@ -650,7 +650,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     outputChannel.appendLine('Lily# extension activated');
 
-    // The Markdown lys fence: VS Code's Markdown preview asks for this object
+    // The Markdown lily# fence: VS Code's Markdown preview asks for this object
     // (contributes.markdown.markdownItPlugins) and wires the plugin into its engine.
     return markdownItExtensionApi({
         getClient: () => client,

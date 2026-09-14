@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// The editor-free half of the Markdown lys fence. Run with `npm test`.
+// The editor-free half of the Markdown lily# fence. Run with `npm test`.
 
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
@@ -32,16 +32,18 @@ describe('the core is editor-free', () => {
 });
 
 describe('which fences are scores', () => {
-    it('are ```lys and ```lily#, whatever the case and whatever follows', () => {
-        assert.ok(isLysFence('lys'));
-        assert.ok(isLysFence('LYS'));
+    it('are ```lily#, whatever the case and whatever follows', () => {
         assert.ok(isLysFence('lily#'));
         assert.ok(isLysFence('Lily#'));
-        assert.ok(isLysFence('  lys title="x" '));
-        assert.equal(fenceLanguage(' lys  extra'), 'lys');
+        assert.ok(isLysFence('LILY#'));
+        assert.ok(isLysFence('  lily# title="x" '));
+        assert.equal(fenceLanguage(' lily#  extra'), 'lily#');
     });
 
-    it('are not lilysharp, ly, or a fence with no language', () => {
+    it('are not lys, lilysharp, ly, or a fence with no language', () => {
+        // `lys` was a second spelling until 2026-09-15, retired before it shipped.
+        assert.ok(!isLysFence('lys'));
+        assert.ok(!isLysFence('LYS'));
         assert.ok(!isLysFence('lilysharp'));
         assert.ok(!isLysFence('ly'));
         assert.ok(!isLysFence('lilypond'));
@@ -131,9 +133,8 @@ describe('the manifest', () => {
         const injection = manifest.contributes.grammars.find((g: { injectTo?: string[] }) => g.injectTo?.includes('text.html.markdown'));
         const grammar = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', injection.path), 'utf8'));
         const begin: string = grammar.repository['lys-code-block'].begin;
-        for (const word of ['lys', 'lily#']) {
-            assert.ok(begin.includes(word), `${word} in the fence grammar`);
-        }
+        assert.ok(begin.includes('(lily#)'), 'lily# is the fence grammar\'s one word');
         assert.ok(!begin.includes('lilysharp'), 'the retired alias is gone from the grammar');
+        assert.ok(!begin.includes('lys'), 'the retired lys spelling is gone from the grammar');
     });
 });

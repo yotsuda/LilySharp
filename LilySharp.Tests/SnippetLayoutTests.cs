@@ -27,7 +27,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// The snippet layout a Markdown lys fence draws with (HANDOFF §2F F-mdfence ⑵,
+/// The snippet layout a Markdown lily# fence draws with (HANDOFF §2F F-mdfence ⑵,
 /// <see cref="LayoutOptions.Snippet"/>): LilyPond's ly:one-page-breaking — one page as
 /// tall as the music, no automatic page break, <c>pageBreak</c> a line break — plus the
 /// page cropped to the widest system. The defaults are the positive control: the same

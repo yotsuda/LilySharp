@@ -340,9 +340,9 @@ refused; they come first, each with what the compiler says.
   the same bars), never a claim about the section's length, and lyrics cells alone (no part,
   no chord row) have nothing to be short of. Until now a lyrics track was left out of the
   comparison entirely.
-- **A ```` ```lys ```` fence in a Markdown file renders as the score in VS Code's built-in
-  Markdown preview**, the way a ```` ```mermaid ```` fence renders as a diagram (```` ```lily# ````
-  is accepted too). A fence draws one picture and says which: it writes exactly one
+- **A ```` ```lily# ```` fence in a Markdown file renders as the score in VS Code's built-in
+  Markdown preview**, the way a ```` ```mermaid ```` fence renders as a diagram; the language's
+  name is the one fence word. A fence draws one picture and says which: it writes exactly one
   `score { }`, as a file does, and is refused with the reason when it writes none or two (a
   first cut let a fence imply its score from its parts; that quietly dropped everything a
   score names — lyrics, chord rows, tab — so it went). The fence is drawn by the language server and inlined as SVG; while it

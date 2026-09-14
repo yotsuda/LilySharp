@@ -14,23 +14,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// The editor-free half of the Markdown lys fence (markdownFence.ts holds the
+// The editor-free half of the Markdown lily# fence (markdownFence.ts holds the
 // markdown-it plugin and the language-server round trip): which fences are
 // scores, how a fence is keyed in the render cache, and the HTML each state of
 // a fence turns into. Nothing here imports vscode, so `npm test` runs it.
 
 import { createHash } from 'crypto';
 
-/** The fence info words that mean "this is a Lily# score": `lys` (the file
- * extension) and `lily#` (the language's own name — the owner's choice over
- * `lilysharp`, 2026-09-09; markdown-it puts no limit on an info string's
- * characters, so the `#` is fine). */
-export const FENCE_LANGUAGES: readonly string[] = ['lys', 'lily#'];
+/** The fence info word that means "this is a Lily# score": `lily#`, the
+ * language's own name and its only spelling. Owner decisions: `lily#` over
+ * `lilysharp` (2026-09-09), and `lys` retired before 0.7.0 shipped (2026-09-15)
+ * — one spelling per construct. markdown-it puts no limit on an info string's
+ * characters, so the `#` is fine. */
+export const FENCE_LANGUAGES: readonly string[] = ['lily#'];
 
 /**
  * The language word of a fence's info string — the first word, lower-cased —
- * so ```` ```lys ````, ```` ```LYS ````, ```` ```Lily# ```` and
- * ```` ```lys title="…" ```` all read as their word. Empty for a fence with no info.
+ * so ```` ```lily# ````, ```` ```Lily# ```` and
+ * ```` ```lily# title="…" ```` all read as their word. Empty for a fence with no info.
  */
 export function fenceLanguage(info: string): string {
     return (info.trim().split(/\s+/)[0] || '').toLowerCase();
