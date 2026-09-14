@@ -1,0 +1,18 @@
+
+part melody {
+  instrument bass
+  section A {
+    aes'4 g8 g f f ees4 | bes c8 c d f ees4 | c4. c8~ c2 | ees4. ees8~ ees ees ees4 | break
+    aes4. aes8~ aes2 | bes4. bes8~ bes4 g8 bes | c4. c8~ c2 | ees4. ees8~ ees ees ees4 | break
+  }
+  section B {
+    aes4. aes8~ aes aes r4 | bes4. bes8~ bes4 g8 bes | c4. c8~ c c r4 | ees4. ees8~ ees ees r4 | break
+    aes4. aes8~ aes aes r4 | bes4. bes8~ bes4 g8 bes | c4. c8~ c c r4 | ees4. ees8~ ees4 g4 | break
+  }
+}
+
+form main { A B }
+
+score main {
+  tab melody
+}

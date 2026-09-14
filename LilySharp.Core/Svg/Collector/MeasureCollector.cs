@@ -1699,16 +1699,33 @@ public sealed partial class MeasureCollector
         // A tablature context ALSO has no Accidental_engraver (ly/engraver-init.ly:1189,
         // :1213), so the same per-tab-staff copy of the voice drops every accidental —
         // see TabResolver.RemoveAccidentals for what they were reserving.
-        staffGroups = staffGroups
-            .Select(sg => sg with
-            {
-                Staves = sg.Staves
-                    .Select(st => st.IsTab && st.Tuning.HasValue
-                        ? st with { Voices = st.Voices.SetItem(0, TabResolver.RemoveAccidentals(_tabResolver.ResolveTabStrings(st.PrimaryVoice, st.Tuning.Value, st.TabSourceClef, st.Transposition))) }
-                        : st)
-                    .ToImmutableArray()
-            })
-            .ToImmutableArray();
+        // The global staff index is walked in the order the staves were collected (the same
+        // walk as the ottava pass below), so each tab staff finds the falls written on its
+        // own primary voice: a fall slides the finger off, and the hand is free after it.
+        {
+            int tabStaffIndex = 0;
+            staffGroups = staffGroups
+                .Select(sg => sg with
+                {
+                    Staves = sg.Staves
+                        .Select(st =>
+                        {
+                            int staffIndex = tabStaffIndex++;
+                            if (!st.IsTab || !st.Tuning.HasValue)
+                                return st;
+                            var falls = _articulations
+                                .Where(a => a.Type == ArticulationType.Fall
+                                            && a.StaffIndex == staffIndex && a.VoiceIndex == 0)
+                                .Select(a => (a.MeasureIndex, a.ItemIndex))
+                                .ToHashSet();
+                            return st with { Voices = st.Voices.SetItem(0, TabResolver.RemoveAccidentals(
+                                _tabResolver.ResolveTabStrings(st.PrimaryVoice, st.Tuning.Value,
+                                    st.TabSourceClef, st.Transposition, falls))) };
+                        })
+                        .ToImmutableArray()
+                })
+                .ToImmutableArray();
+        }
 
         // Ottava DISPLAY transposition per staff (see OttavaTransposer): notes
         // under an 8va draw an octave lower (etc.) while sounding at the written

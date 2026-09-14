@@ -1,0 +1,30 @@
+octave absolute
+title "さよならエレジー"
+composer "菅田将暉"
+tempo 155
+key des major
+time 4/4
+
+part bassline {
+  clef bass
+  tuning bass5
+
+  section Body {
+    repeat percent 7 { r1@mark("Intro1") } | r2 r8 aes,,16@mark("Intro1") bes,, f,4@fall | break bes,,4@mark("Intro2") bes,, bes,,8 c, des, aes,,~ | aes,, aes,, aes,, f,~ f, f, f,4 | ges,, ges,, ges,,8 ges,, des, ges,~ | ges, ges, des, ges,~ ges, ges, ges,4 | break bes,,4 bes,, bes,,8 c, des, aes,,~ | aes,, bes,, c, des,~ des, des, des, aes,, | ges,,4 ges,, ges,,8 ges,, des, ges,~ | ges, ges, ges, ges,~ ges, des, ges,4 | break repeat percent 7 { r1 } | r2 r8 des,@mark("A") f,, r8 | break repeat percent 7 { r1 } | r4. f,,8@mark("B") bes,, bes,, des, d, | break ees,4@mark("C") r8 bes,,8 bes,, bes,, des, d, | ees,4 r8 f, f, f, ges,4 | bes,,4 r8 f,, f,, f,, aes,, a,, | bes,, bes,, r aes,, bes,, des, bes,,4 | break b,,4 r8 b,, b,, ges, ees, b,, | a,,4 a,,8 a,, ges,, ges,, ges,, ges,, | f,,4( f,8) f, f, f, f, c, | f,, f,, r f,, f,, r f,, f,, | r1 | break bes,,4@mark("D") bes,,8 bes,, bes,, bes,, bes,, bes,, | f,,4 f,,8 f,, f,, f,, f,, f,, | ges,,4 ges,,8 ges,, aes,,4 aes,,8 aes,, | des,4 des,8 des,~ des, des, des,4 | break bes,,8 bes,, bes,, bes,, bes,, bes,, bes,, bes,, | ges,,4 ges,,8 ges,, ges,, ges,, ges,, ges,, | aes,, aes,, aes,, aes,, aes,, aes,, aes,, aes,, | des, des, des, des, c, c, c, c, | break bes,, bes,, bes,, bes,, bes,, bes,, bes,, bes,, | f,, f,, f,, f,, f,, f,, f,, f,, | ges,, ges,, ges,, ges,, aes,, aes,, aes,, aes,, | des, des, des, des, des, des, des, des, | break bes,, bes,, bes,, bes,, bes,, bes,, bes,, bes,, | ges,, ges,, ges,, ges,, ges,, ges,, ges, g, | aes, aes, aes, r ees, ees, aes, r | des,8 aes, des des des aes, des,4 | break bes,,4@mark("Intro2") bes,, bes,,8 c, des, aes,,~ | aes,, aes,, aes,, f,~ f, f, f,4 | ges,,4 ges,, b,,16( des,) ges,8 aes, ges,~ | ges, ges, ges, ges,~ ges, ges, ges,4 | break bes,,4 bes,,8 bes,, bes,, c, des, aes,,~ | aes,, aes,, c, des,~ des, des, des,4 | ges,, ges,,8 ges,, ges,, ges,, des, ges,~ | ges, ges, ges, ges,~ ges, ges, ges,4 | break bes,,@mark("E") bes,,8 bes,, bes,, bes,, bes,, bes,, | f,,4 f,,8 f,,~ f,, f,, f,,4 | ges,,8 ges,, r ges,, aes,, aes,, r aes,, | des, des, r des, des, des, des, f,, | break bes,, bes,, bes,, bes,, bes,, bes,, bes,, bes,, | f,, f,, f,, f,, f,, c, f, e, | ees, bes,, ees, e, f, f, f, f, | bes,,4 bes,,8 f,( bes,) bes, bes, f, | break ees,4.@fall@mark("F") bes,,8 bes,, bes,, des, d, | ees, ees, r ees, ees, ees,, ges,, aes,, | bes,,4 r8 f,, f,, f,, aes,, a,, | bes,,4 bes,,8 c,( des,) f, bes, f, | break b,4. b,8~ b, ges, b, bes, | a, ges, a,4 ges, ges, | f,, f, f,8 c, f,4 | f,,16 f,, f,, f,, r8 f,,16 f,, f,, f,, r8 f,,16 f,, f,, f,, | r1 | break bes,,8@mark("D") bes,, bes,, bes,, bes,, bes,, bes,, bes,, | f,, f,, f,, f,, f,, f,, f,, f,, | ges,, ges,, ges,, ges,, aes,, aes,, aes,, aes,, | des, des, des, des, des, des, des, des, | break bes,,8 bes,, bes,, bes,, bes,, bes,, bes,, bes,, | ges,, ges,, ges,, ges,, ges,, ges,, ges,, ges,, | aes,, aes,, aes,, aes,,( aes,) aes, aes, aes, | des, des, des, des, c, c, c, c, | break bes,,8 bes,, bes,, bes,, bes,, bes,, bes,, bes,, | f,, f,, f,, f,, f,, f,, f,, f,, | ges,, ges,, ges,, ges,, aes,, aes,, aes,, aes,, | des, des, des, des, des, des, des, aes,, | break bes,,8 bes,, bes,, bes,, bes,, bes,, bes,, bes,, | ges,, ges,, ges,, ges,, ges,, ges,, ges,, ges,, | aes,, aes,, aes,, aes,, aes,, c, ees, c, | des, des, des, des, des, des, aes, aes, | break ges,,@mark("G") ges,, ges,, ges,, ges,, ges,, b,,16( des,) ges,8 | aes, aes, aes, ees, ees, ees, aes,, aes,, | a,,4 a,, a,,8 a,, a,,4 | break bes,,8 bes,, bes,, bes,, bes,, bes,, des, d, | ees, ees, ees, ees, ees, ees, bes,,4 | f,,1 | break bes,,4@mark("H") bes,,8 bes,, bes,, c, des, aes,, | aes,, aes,, aes,, f,~ f, f, f,4 | ges,4 ges, ges,8 f, des, ges,,~ | ges,, ges,, ges,, ges,, ges,, ges,, aes,, a,, | break bes,,4 bes,,8 bes,, bes,, des, bes,, aes,,~ | aes,, bes,, c, des,~ des, des, des, aes,, | ges,,4 ges,,8 ges,, ges,, ges,, des, ges,~ | ges, des, ges, des, ges, ges, des,4 | break f,,4. f,,8 f, f, f, c, | ees,16( f,) f,8 f, c, f,,2 | f,, f, | r1 | break repeat percent 7 { r1 } | break des,8@mark("I") des, des, des, des, des, des, des, | f,, f,, r f,, f,, r f,, f,, | r4 f,,2. | break bes,,8@mark("J") bes,, bes,, bes,, bes,, bes,, bes,, bes,, | f,, f,, f,, f,, f,, f,, f,, f,, | ges,, ges,, ges,, ges,, aes,, aes,, aes,, aes,, | des, des, des, des, des, des, des, aes,, | break bes,, bes,, bes,, bes,, bes,, c, des, f, | ges, ges, ges, ges, ges, des, ges, g, | aes, aes, aes, aes, aes, aes, aes, aes, | ges, ges, ges, ges, ges, ges, ges, ges, | break bes,, bes,, bes,, bes,, bes,, bes,, bes,, bes,, | f, f, f, f, f, f, f, f, | ges,, ges,, ges,, ges,, aes,, aes,, aes,, aes,, | des, des, des, des, des, des, des, aes,, | break bes,, bes,, bes,, bes,, bes,, bes,, bes,, aes,, | ges,, ges,, ges,, ges,, ges,, ges,, des, bes,, | aes,, ees, aes, aes, aes, aes, aes, c, | des, des, des, aes, r aes, des,4 | break ges,,8@mark("K") ges,, ges,, ges,, ges,, ges,, ges,, ges,, | aes,, aes,, aes,, aes,, aes,, aes,, ees, aes, | a, a, a, ees,~ ees, ees, a, a, | bes, bes, bes, bes, bes, bes, bes, f, | break ees, ees, ees, ees, ees, ees, ees, bes,, | f,1 | r1 | break bes,,4@mark("L") bes,,8 bes,, bes,, c, des, aes,, | aes,, aes,, des, f,~ f, f, des,4 | ges,,4 ges,,8 ges,, ges,, ges,, des, ges,~ | ges, ges, des, ges,~ ges, ges, ges, des, | break bes,,4 bes,, bes,,8 f, bes,, aes,,~ | aes,, bes,, c, des,~ des, des, des, aes,, | ges,,4 ges,, ges,,8( des,) ees, ges, | ges, ges, des ges ges des ges,4@fall | break r1 | r1 | r1
+  }
+}
+
+form main { ~Body }
+
+score main {
+  staff bassline
+}
+
+score main "both" {
+  staff bassline
+  tab bassline
+}
+
+score main "tab" {
+  tab bassline
+}

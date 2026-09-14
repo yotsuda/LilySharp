@@ -1,0 +1,64 @@
+octave absolute
+title "Amanda"
+composer "Boston"
+tempo 63
+key d major
+time 4/4
+
+part bassline {
+  instrument bass5 "bass"
+
+  section Intro {
+    r1 | r1
+  }
+  section A1 {
+    g,4 g, g,4.. d,16 | g,4 g, e,4. a,,8 | b,,4.. fis,,16 b,,2 | c,4.. c,16 b,,2 | break
+    a,4.. a,16 g,4. b,,16 c, | d,2.. g,,16 a,, | d,2. a,16 b, c8 | break
+  }
+  section A2 {
+    g,4 g g4. c,16 d, | g,4 g, e,4. a,,8 | b,,4.. fis,,16 b,,2 | c,4.. c,16 b,,8 b,,4. | break
+    a,,2 g,,4. b,,16 c, | d,4.. c,16 d,8 d,4 d,16( e,) | d,4 r16 a, b, c d a, d,8 b,, d, | break
+  }
+  section B1 {
+    e,8. b,,16 e,8. g,,16 a,,8 a,,4 b,,16 c, | d,8. a,,16 d,8. a,16 b, c d8~ d16 g, fis, d, | e,8. b,,16 e,8 fis,16 g, a, e, a,8~ a, b,16 c | d,8. a,,16 d,8. d,16 e,16 d,8 c,16~ c, d, fis, g, | break
+    e,,8. e,,16 fis,, g,,8 e,,16 a,,8 a,,4 b,,16 c, | d,8. a,,16 d,8. a,16 b,16 c d8~ d16 e fis g | c,1~ | c,2 r2 | break
+  }
+  section A3 {
+    g,,4 g, g,4.. d,16 | g,,4 g,8. d,,16 e,,2 | b,,4.. fis,,16 b,,4 fis,16 e, d, fis, | break
+    c,4.. c,16 b,,8 b,,8~ b,,8. b,,16 | a,,4.. a,,16 g,,4. b,,16 c, | d,4.. d,16 d,,4~ d,,16 e,, fis,, d,, | break
+  }
+  section A4 {
+    g,,4.. d,,16 g,,4~ g,,16 c, d, g, | g,,2 e,,4. d,,8 | b,,4.. fis,,16 b,,2 | c,4.. c,16 b,,8 b,,8~ b,,8. b,,16 | break
+    a,,4.. a,,16 g,,4. b,,16 c, | d,,4.. a,,16 d,8 d,4 d,16( e,) | d,4~ d,16 g, a, b, c a, d8 b,,8 d, | break
+  }
+  section Interlude {
+    e,,8. d,,16 e,,8 fis,,16 g,, a,, e,, a,,8~ a,, b,,16 c, | d,8. a,,16 d,4 b,16 c d8~ d16 d, g, fis, | e,8. b,,16 e,8 fis,16 g, a, e, a,8~ a, b,16 c | d,8. a,,16 d,8. a,,16 d,32 a,, d,8 b,16 c cis d8 | break
+  }
+  section B2 {
+    e,,8. e,,16 fis,,8 g,,16 e,, a,,8 a,,16 a,, b,,8 c,16 d, | d,,8. a,,16 d,32 a,, d,8 a,16 d,8 d,32 d, a,,16 d,32 a,, d,,8. | e,8. b,,16 e,8 fis,16 g, a, e, a,8~ a, b,16 c | break
+    d8. d16 d,8. e,16 d,8. a,16 b, c d8 | e,,8. e,,16 fis,, g,,8 d,,16 a,,8 a,, b,, c,16 d, | d,,8. a,,16 d, d,8 a,,16 d, d, d, d, d, d, d,8 | break
+  }
+  section Interlude2 {
+    e,,4.. b,,16 e,8. b,16~ b,32 e, b,16 cis16 d | b,,4.. fis,16 b,8. cis16~ cis32 b, cis16 d fis | e,4( fis8.) e16 cis b, gis,8~ gis,16 a, b, e, | break
+    b,,8. fis,,16\5 b,,8. a,,16 b,,16 b,,8 cis,16~ cis, d,8. | c,8. c,16 b,,8 a,,16 g,, d,8 d, c,16 b,, a,,8 | g,4 fis, e, d,16 e, d,8 | c,8. c,16 b,,4 a,, g,,8 b,,16 c, | d,8. d,16 d,8.( e,16) d,16 d, d,8~ d,8 d,16 e, | d,4~ d,16( a,) b, c d,8 d, d,16 c, d,8 | break 
+  }
+  section Outro {
+    g,,4 g, g,8 g,4. | g,,4 g, e,,2 | b,,4.. fis,,16 b,,8 b,,4 b,,8 | break
+    a,,4. a,,8 g,,4 g,,16 a,, g,,8 | d,,1~ | d,,
+  }
+}
+
+form main { Intro A1 A2 B1 A3 A4 Interlude B2 Interlude2 Outro }
+
+score main {
+  staff bassline
+}
+
+score main "both" {
+  staff bassline
+  tab bassline
+}
+
+score main "tab" {
+  tab bassline
+}

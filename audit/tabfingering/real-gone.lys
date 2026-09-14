@@ -1,0 +1,70 @@
+octave absolute
+title "Real Gone"
+composer "Sheryl Crow"
+tempo 118
+key a major
+time 4/4
+
+part bassline {
+  clef bass
+  tuning bass
+
+  section Intro {
+    repeat percent 5 { r1 | r1 } r1 | r2. grace { cis,16 } e,4\3( |
+        b,,8) b,, b,, b,, b,, b,, b,, b,, | b,, b,, b,, b,, b,, b,, b,, b,, | break
+  }
+  section A {
+    b,,8 b,, b,, b,, b,, b,, b,, b,, | b,, b,, b,, b,, b,, b,, b,, b,, | b,, b,, b,, b,, b,, b,, b,, b,, | b,, b,, b,, b,, b,, b,, b,, b,, | break
+    b,, b,, b,, b,, b,, b,, b,, b,, | b,, b,, b,, b,, b,, b,, b,, b,, | b,, b,, b,, b,, b,, b,, b,, b,, | b,, b,, b,, b,, b,, b,, b,, b,, | break
+  }
+  section B {
+    b,,8 b,, b,, b,, b,, b,, b,, b,, | d, d, d, d, d, d, d, d, | a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 | e,, e,, e,, e,, e,, e,, e,, e,, | break
+    b,, b,, b,, b,, b,, b,, b,, b,, | d, d, d, d, d, grace { a,16\2( } b,8\2) a,\2 d, | a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 | e,, e,, e,, e,, e,,4 r | break
+  }
+  section C {
+    b,,8\3 b,, d, d, e, e, r b,, | b,, b,, d, d, a,, a,, r b,, | b,, b,, d, d, e, e, r b,, | b,, b,, d, d, a,,4 r4 | break
+  }
+  section D {
+    r1 | r | r | r2. grace { cis,16( } e,4\3@fall) | break
+    b,,8 b,, b,, b,, b,, b,, b,, b,, | b,, b,, b,, b,, b,, b,, b,, b,, | b,, b,, b,, b,, b,, b,, b,, b,, | b,, b,, b,, b,, b,, b,,( e,4\3@fall) | break
+  }
+  section E {
+    b,,8 b,, b,, b,, b,, b,, b,, b,, | d, d, d, d, a,16\2 b,\2 a,8\2 fis,\3 a,,\4 | a,,8\4 a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 | e,\3 e,\3 e,\3 e,\3 e,\3 d,\3 b,,4\4@fall | break
+    b,,8 b,, b,, b,, b,, b,, b,, b,, | d, d, d, d, a,16\2 b,\2 a,8\2 fis,\3 a,,\4 | a,,8\4 a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 | e,\3 e,\3~ e,4\3 d,8\3 d,\3~ d,4\3 | break
+    a,,8\4 gis,, a,,\4 b,,\4~ b,,\4 b,,\4 b,,\4 b,,\4 | e,\3 e,\3~ e,4\3 d,8\3 d,\3~ d,4\3 | a,,8\4 gis,, a,,\4 b,,\4~ b,,\4 b,,\4 b,,4\4 | e,8\3 e,\3~ e,4\3 d,8\3 d,\3~ d,4\3 | break
+    a,,8\4 gis,, a,,\4 b,,\4~ b,,\4 b,,\4 b,,4\4 | e,8\3 e,\3~ e,4\3 d,8\3 d,\3~ d,4\3 | a,,8\4 gis,, a,,\4 e,,~ e,, e,, e,, e,, | e,, e,, e,, e,, e,,4 r | break
+  }
+  section F {
+    b,,8 b,, d, d, e, e, r b,, | b,, b,, d, d, a,, a,, r b,, | b,, b,, d, d, e, e, r b,, | b,, b,, d, d, a,, a,, r b,, | break
+    b,,8 b,, d, d, e, e, r b,, | b,, b,, d, d, a,, a,, r b,, | b,, b,, d, d, e, e, r b,, | b,, b,, d, d, a,, a,, b, fis, | break
+  }
+  section G {
+    b,,8 b,, d, d, e, e, r b,, | b,, b,, d, d, a,, a,, r b,, | b,, b,, d, d, e, e, r b,, | b,, b,, d, d, a,,4 a,,8 ais,, | break
+    b,,8 b,, d, d, e, e, r b,, | b,, b,, d, d, a,, a,, r b,, | b,, b,, d, d, a,, a,, r4 | time 3/4 r2. | break
+  }
+  section H {
+    time 4/4 b,,8 b,, b,, b,, b,, b,, b,, b,, | d, d, d, d, b,\2 a,\2 fis,\3 a,, | a,, a,, a,, a,, a,, a,, a,, e,, | e,, e,, e,, e,, e,, e,, e,, e,, | break
+    b,, b,, b,, b,, b,, b,, b,, b,, | d, d, d, grace { a,16\2( } b,8\2) r a,\2 fis,\3 a,,\4 | a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 e,, | e,, e,, e,, e,, e,, e,, e,, e,, | break
+    b,, b,, b,, b,, b,, b,, b,, b,, | d, d, d, d, d, a,\2 fis,\3 a,,\4 | a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 e,, | e,, e,, e,, e,, e,, e,, e,, e,, | break
+    b,, b,, b,, b,, b,, b,, b,, b,, | d, d, d, d, b,\2 a,\2 fis,\3 a,,\4 | a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 a,,\4 e,, | e,, e,, e,, e,, e,, e,, e,, e,, | break
+  }
+  section I {
+    b,,8 b,, d, d, e, e, r b,, | b,, b,, d, d, a,, a,, r b,, | b,, b,, d, d, e, e, r b,, | b,, b,, d, d, a,,4 r | break
+    b,,8 b,, d, d, e, e, r b,, | b,, b,, d, d, a,, a,, r b,, | b,, b,, d, d, e, e, r b,, | b,, b,, d, d, a,,4 r | break
+  }
+}
+
+form main { Intro A B C D E F G H I }
+
+score main {
+  staff bassline
+}
+
+score main "both" {
+  staff bassline
+  tab bassline
+}
+
+score main "tab" {
+  tab bassline
+}

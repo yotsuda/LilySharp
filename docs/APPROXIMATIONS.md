@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 54 | 観測者がゼロだと自認しているもの |
-| `OWN` | 137 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **252** | |
+| `OWN` | 143 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **258** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -24,6 +24,7 @@
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 15 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 11 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 9 |
+| `LilySharp.Core/Tablature/Tunings.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
@@ -32,7 +33,6 @@
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
 | `LilySharp.Core/Rendering/SharedRenderer.Beams.cs` | 5 |
-| `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs` | 5 |
 
 ## APPROX — LP に対応物はあるが、形が違うと自認しているもの（61 件）
 
@@ -228,7 +228,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（137 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（143 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2425** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -276,8 +276,8 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:2403** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:4446** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:2420** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:4463** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
@@ -438,7 +438,13 @@
 ### `LilySharp.Core/Syntax/SyntaxNodes.cs`
 - **:826** LILYSHARP-OWN: LilyPond's q repeats the previous chord and cannot be
 ### `LilySharp.Core/Tablature/Tunings.cs`
-- **:284** LILYSHARP-OWN. Four is the guitarist's one-finger-per-fret span and also the number
-- **:296** LILYSHARP-OWN. Without it the hand never comes down on its own — "do not move" beats
-- **:322** LILYSHARP-OWN, and deliberately not LilyPond's. LilyPond takes the first string from
+- **:30** LILYSHARP-OWN, USER SPECIFIED (2026-09-14). The range carries no strings: whether a stretch
+- **:302** LILYSHARP-OWN, USER SPECIFIED (2026-09-14). A bass — electric or double — is fingered
+- **:315** LILYSHARP-OWN, USER SPECIFIED (2026-09-14): "on a guitar the four fingers play four
+- **:330** LILYSHARP-OWN, USER SPECIFIED (2026-09-14): "low position is the open string up to about
+- **:345** LILYSHARP-OWN, USER APPROVED (2026-09-14). Without it nothing brought the hand down
+- **:355** LILYSHARP-OWN, USER APPROVED (2026-09-14). At 1 the hand stayed a position too high after
+- **:367** LILYSHARP-OWN, USER SPECIFIED (2026-09-14, Real Gone Intro bars 12–13:
+- **:402** LILYSHARP-OWN, and deliberately not LilyPond's. LilyPond takes the first string from
+- **:565** LILYSHARP-OWN, USER SPECIFIED (2026-09-14):
 

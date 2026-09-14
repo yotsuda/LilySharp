@@ -1,0 +1,77 @@
+octave absolute
+title "Arthur's Theme"
+composer "Christopher Cross"
+tempo 136
+key f major
+time 4/4
+
+part bassline {
+  clef bass
+  tuning bass
+
+  section Intro {
+    repeat percent 8 { r1 } break
+    repeat percent 8 { r1 } break
+  }
+  section A {
+    d,4. d,8 a,,4. d,8 | g,2.\2 d,4 | c,4. c,8 g,4.\2 c,8 | f,2 c, | break
+    bes,, f, | e, b,, | a,,4. a,,8~ a,,2 | r8 a,,8~ a,,4 a,, cis, | break
+  }
+  section B {
+    d,4. d,8 a,,2 | d,4. d,8 fis,4 a, | a,,4. a,,8 e,4. e,8 | a,,4. a,,8 e,4. r8 | break
+    b,,4. b,,8 fis,4 b,, | b,,4. b,,8 d,4 fis, | a,,4. a,,8 e,4. a,,8 | cis,4. cis,8 cis,4 a,, | break
+    d,4. d,8 a,,4. a,,8 | d,4. d,8 fis,4 a,\2 | cis,4. cis,8 gis,4.\2 gis,8\2 | fis,4. cis,8 fis,,4 cis, | break
+    b,,4. b,,8~ b,,4. fis,,8 | b,,4. b,,8 fis,,4 b,,8 fis,, | b,,4. b,,8~ b,,4. fis,,8 | b,,4. b,,8 d,4 fis, | break
+    a,,4. a,,8~ a,,8 a,,4 e,,8 | a,,4. a,,8 cis,2 | break
+  }
+  section C {
+    d,4. d,8 a,,4. d,8 | g,2\2 d,4. d,8 | c,4. c,8 g,,2 | f,2 c, | break
+    bes,,1 | e,2 b,,4 e, | a,,2~ a,,8 a,,4 e,,8 | r8 a,,8~ a,,4 a,, cis, | break
+    d,4. d,8 a,,2 | g,4.\2 g,8\2 d,4 g,\2 | c,4. c,8 g,,4 c, | f,2 c,4 f, | break
+    ais,1 | e,2 b,,4 e, | a,4. a,8~ a,4 e,8 a, | r8 a,8~ a,4 a, cis, | break
+  }
+  section D {
+    d,4. d,8 a,,4. a,,8 | d,4. d,8 fis,4 a, | a,,4. a,,8 e,4. e,8 | a,4. a,8 e,4. e,8 | break
+    b,,4. b,,8 fis,,4. r8 | b,,8 b,,~ b,,4 d, fis, | a,,4. a,,8 e,4. r8 | cis,4. r8 cis,4 a,, | break
+    d,4. d,8 a,,4. r8 | d,4. d,8 fis,4 a,\2 | cis,4. cis,8 gis,4\2 cis8 gis,\2 | fis,4. cis,8 fis,,4 cis, | break
+    b,,4. b,,8 b,,4. fis,,8 | b,,4. b,,8 b,, fis, b, fis, | b,,4. b,,8 b,,4. fis,,8 | b,,4. b,,8 d,4 fis, | break
+    a,,4. a,8~ a, a,4. | a,,2 cis, | break
+  }
+  section E {
+    d,4. e,8 r f,8~ f,4 | g,4.\2 d,8 g,,2 | c,4. d,8 r8 e,8~ e,4 | f,4. c,8 f,,2 | break
+    bes,,4. f,,8 bes,,2 | e,4. b,,8 e,,2 | a,,4. a,,8~ a,, e,, a,,4~ | a,,8 a,,~ a,,2 a,,16 a,, a,,8 | break
+    d,4. e,8 r f,8~ f,4 | g,4.\2 d,8 g,,4 d,8 g,, | c,4. d,8 r8 e,4. | f,4. c,8 f,,4 c,8 f,, | break
+    bes,,4. f,8\2 bes,2 | e,4. b,,8 e,,2 | a,,4. a,,8~ a,,2 | r8 a,,8~ a,,4 a,, des, | break
+  }
+  section F {
+    d,4. d,8 a,,4. r8 | d,4. d,8 fis,4 a, | a,,4. a,,8 e,4. r8 | a,,4. a,,8 cis,4 e, | break
+    b,,4 r8 b,, fis,,4. r8 | b,,4 r8 b,, d,4 fis, | a,,4 r8 a,,8 e,2 | cis,2 a,,4 cis,8 a,, | break
+    d,4. d,8 a,,4. a,,8 | d,4. d,8 fis,4 a,\2 | cis,4. cis,8 gis,4.\2 cis,8 | fis,4. fis,8 cis,8 fis, cis,4 | break
+    b,,4. b,,8 b,,4. fis,,8 | b,,4. b,,8 b,, d, fis,4 | b,8 b, b, b, cis4 fis,8 cis | r fis, d, b,, b,,2 | break
+  }
+  section G {
+    d,4. d,8 a,4. a,8 | d,2 d,4 a, | a,,4. a,,8 e,2 | a,,4. a,,8 cis,4 e, | break
+    b,,4. b,,8 fis,,4. r8 | r b,,~ b,,4 d, fis, | a,,4. a,,8~ a,, ais,, b,, c, | cis,4. cis,8 cis,4 e, | break
+    d,4. d,8 a,,2 | d,4. d,8 fis,4 a, | cis,4. gis,8 r fis( e4) | fis4. cis8\2 fis2 | break
+    b,4\2 b,8\2 b,\2 r4. fis,8 | b,, b,, b,, b,, d,4 fis, | b,8 b, b, b, cis4 fis,8 cis | r fis, d, b,, b,,2 | break
+  }
+  section Outro {
+    d,4. d,8 a,,4. a,,8 | d,4. d,8 fis,4 a, | a,,4. a,,8 e,4. e,8 | a,,4. a,,8 cis,4 e, | break
+    b,,4 r8 b,, fis,,4. fis,,8 | b,,1 | s1 | s1 | break
+  }
+}
+
+form main { Intro A B C D E F G Outro }
+
+score main {
+  staff bassline
+}
+
+score main "both" {
+  staff bassline
+  tab bassline
+}
+
+score main "tab" {
+  tab bassline
+}

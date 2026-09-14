@@ -1,0 +1,77 @@
+octave absolute
+title "Automatic"
+composer "宇多田ヒカル"
+tempo 95
+key aes major
+time 4/4
+
+part bassline {
+  clef bass
+  tuning bass5
+
+  section Intro {
+    repeat percent 8 { r1 } break
+  }
+  section A1 {
+    f,4 r8. f,16 f,8 f, r aes,\2 | ees,4\3 r8. ees,16\3 ees,8\3 ees,\3 r4 | des,4 r8. des,16 des,8 des, r8 aes,\2 | c,4 r8. c,16 c,8 c, r4 | break
+    bes,,4\4 r8. bes,,16\4 bes,,8\4 bes,,\4 r8 c, | des,4 r8. des,16 des,8 des, r aes,, | c,4 r8. c,16 c,8 c, r4 | c,, r8. c,,16 c,,8 c,, r4 | break
+  }
+  section A2 {
+    f,4 r8. f,16 f,8 f, r aes,\2 | ees,4\3 r8. ees,16\3 ees,8\3 ees,\3 r4 | des,4 r8. des,16 des,8 des, r aes,\2 | c,4 r8. c,16@dead c, c, aes,,8 ees,,4 | break
+    bes,,4\4 r8. bes,,16\4 bes,,8\4 bes,,4\4 c,8 | des,4 r8. des,16 des,8 des, r aes,, | c,4 r8. c,16 c,8 c, r4 | c, e,,8. f,,16 f,,8 ges,, g,, c, | break
+  }
+  section B {
+    des,4 r8. c,16 c,8 c, bes,,4 | aes,,4 r8. ees,,16 aes,,8 aes,, r4 | des,4 r8. c,16 c,8 c, bes,,4 | aes,,4 r4 aes,,16 ees,, aes,,8 r c, | break
+    des,4 r8. c,16 c,8 c, bes,,4 | aes,,4 r8. aes,,16 aes,,8 aes,, r4 | ges,,1 | break
+    ges,2.. ges,,8 | aes,,4 r8. aes,,16 aes,,8 aes,,4 c,8 | des,4 des,, c,,8 c,, d,, ees,, | break
+  }
+  section C1 {
+    f,,4 r8. c,,16 c,,8 c,, r ees,, | f,,4 r8. c,16 c,8 c, r ees,, | f,,4 r8. ees,,16 ees,,8 ees,, r ees,, | aes,,4 r8. aes,,16 a,, a,, f,,8 c,,4 | break
+    bes,,4 r8. c,16 c,8 c, r ees,, | f,,4 r8. ees,,16 ees,,8 ees,, r aes,, | d,4\3 r8. des,16 des,8 des, r des, | c,4 r8. c,16 c, c, c,,8 ees,, e,, | break
+  }
+  section C2 {
+    f,,4 r8. c,,16 c,,8 c,, r ees,, | f,,4 r8. c,16 c,8 c, r ees,, | f,,4 r8. ees,,16 ees,,8 ees,, r ees,, | aes,,4 r8. aes,,16 a,, a,, f,,8 c,,4 | break
+    bes,,4 r4 c,16 g,, c,8 r c, | f,4 ees, d, aes,, |
+  }
+  // One section per ending, because a volta takes one section: LilyPond's first bracket
+  // holds two bars AND the whole Intro2 strain (Automatic.ly:87-91), so the Intro2 letter
+  // is a mark inside this ending rather than a section of its own.
+  section ~Intro2_1 {
+    des,1 | r1 | break
+    des,4@mark("Intro2") r8. c,16 c,8 c, r4 | bes,,4\4 r8. ees,16\3 ees,8\3 ees,\3 ees,,4 | f,,4\5 r8. c,16 c,8 c, r bes,,\4~ | bes,,2\4 r | break
+  }
+  section ~Intro2_2 {
+    des,4 r8. des,16 des,8 des, r4 | c, r8. c,,16 c,,8 c,, ees,, e,, | break
+  }
+  section C3 {
+    f,,4 r8. c,,16 c,,8 c,, r8 ees,, | f,,4 r8. c,16 c,8 c, r ees,, | f,,4 r8. ees,,16 ees,,8 ees,, r ees,, | aes,,4 r8. aes,,16 a,, a,, f,,8 c,,4 | break
+    bes,,4 r8. c,16 c,8 c, r e,, | f,,4 r8. ees,,16 ees,,8 ees,, r aes,, | d,4\3 r8. des,16 des,8 des, r des, | c,4 r r ees,,8 e,, | break
+  }
+  section C4 {
+    f,,4 r8. c,,16 c,,8 c,, r ees,, | f,,4 r8. c,16 c,8 c, r ees,, | f,,4 r8. ees,,16 ees,,8 ees,, r ees,, | aes,,4 r8. aes,,16 a,, a,, f,,8 c,,4 | break
+    bes,,4 r c,16 g,, c,8 r c, | f,4 ees, d, aes,, | des,4 r8. des,16 des,8 des, r4 | c, r8. c,,16 c,,8 c,, ees,, e,, | break
+  }
+  section C5 {
+    f,,4 r8. c,,16 c,,8 c,, r ees,, | f,,4 r8. c,16 c,8 c, r ees,, | f,,4 r8. ees,,16 ees,,8 ees,, r ees,, | aes,,4 r8. aes,,16 a,, a,, f,,8 c,,4 | break
+    bes,,4 r8. c,16 c,8 c, r e,, | f,,4 r8. ees,,16 ees,,8 ees,, r aes,, | d,4\3 r8. des,16 des,8 des, r des, | c,4 r8. c,16 c, c, c,,8 ees,, e,, | break
+  }
+  section C6 {
+    f,,4 r8. c,,16 c,,8 c,, r ees,, | f,,4 r8. c,16 c,8 c, r ees,, | f,,4 r8. ees,,16 ees,,8 ees,, r ees,, | aes,,4 r8. aes,,16 a,, a,, f,,8 c,,4 | break
+    bes,,4 r c,16 g,, c,8 r c, | f,4 ees, d, aes,, | des,1 |
+  }
+}
+
+form main { Intro A1 |: A2 B C1 C2 [1. Intro2_1] :| [2. Intro2_2] C3 C4 C5 C6 }
+
+score main {
+  staff bassline
+}
+
+score main "both" {
+  staff bassline
+  tab bassline
+}
+
+score main "tab" {
+  tab bassline
+}

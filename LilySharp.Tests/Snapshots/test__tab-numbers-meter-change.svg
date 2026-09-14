@@ -28,7 +28,7 @@
   <text x="44.46" y="22.63" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="2050">2</text>
   <text x="48.79" y="24.12" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="2067">3</text>
   <text x="51.14" y="22.63" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="2070">2</text>
-  <text x="53.49" y="21.12" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="2072">0</text>
+  <text x="53.49" y="22.62" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="2072">5</text>
   <text x="56.89" y="24.12" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="2076">3</text>
   <text x="59.24" y="22.63" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="2079">2</text>
   <text x="61.60" y="21.12" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="2081">0</text>
@@ -36,8 +36,7 @@
   <line x1="0.05" y1="18.58" x2="63.39" y2="18.58" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.05" y1="20.08" x2="12.10" y2="20.08" stroke="#000000" stroke-width="0.100"/>
   <line x1="13.81" y1="20.08" x2="25.69" y2="20.08" stroke="#000000" stroke-width="0.100"/>
-  <line x1="27.40" y1="20.08" x2="52.64" y2="20.08" stroke="#000000" stroke-width="0.100"/>
-  <line x1="54.35" y1="20.08" x2="60.74" y2="20.08" stroke="#000000" stroke-width="0.100"/>
+  <line x1="27.40" y1="20.08" x2="60.74" y2="20.08" stroke="#000000" stroke-width="0.100"/>
   <line x1="62.45" y1="20.08" x2="63.39" y2="20.08" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.05" y1="21.58" x2="8.85" y2="21.58" stroke="#000000" stroke-width="0.100"/>
   <line x1="10.56" y1="21.58" x2="14.86" y2="21.58" stroke="#000000" stroke-width="0.100"/>
@@ -46,7 +45,8 @@
   <line x1="30.15" y1="21.58" x2="36.02" y2="21.58" stroke="#000000" stroke-width="0.100"/>
   <line x1="37.73" y1="21.58" x2="43.60" y2="21.58" stroke="#000000" stroke-width="0.100"/>
   <line x1="45.31" y1="21.58" x2="50.29" y2="21.58" stroke="#000000" stroke-width="0.100"/>
-  <line x1="51.99" y1="21.58" x2="58.39" y2="21.58" stroke="#000000" stroke-width="0.100"/>
+  <line x1="51.99" y1="21.58" x2="52.64" y2="21.58" stroke="#000000" stroke-width="0.100"/>
+  <line x1="54.35" y1="21.58" x2="58.39" y2="21.58" stroke="#000000" stroke-width="0.100"/>
   <line x1="60.10" y1="21.58" x2="63.39" y2="21.58" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.05" y1="23.08" x2="5.60" y2="23.08" stroke="#000000" stroke-width="0.100"/>
   <line x1="7.31" y1="23.08" x2="19.18" y2="23.08" stroke="#000000" stroke-width="0.100"/>
