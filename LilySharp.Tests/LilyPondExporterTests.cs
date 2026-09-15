@@ -105,6 +105,54 @@ public class LilyPondExporterTests
         Assert.DoesNotContain(warnings, w => w.Contains("not exported"));
     }
 
+    // A voice span in fl1, the part both shared staves below play.
+    private static string SpanScore(string render) => """
+        octave absolute
+        time 4/4
+        part fl1 { clef bass }
+        part fl2 { clef treble }
+        section A {
+          fl1 { voice { r1 } { s2 s4 } { s4 } | }
+          fl2 { r1 | }
+        }
+        form main { ~A }
+        """ + "\nscore main { " + render + " }\n";
+
+    /// <summary>
+    /// In a part only a <c>combinedStaff</c> plays, a <c>voice { } { }</c> span is ONE Voice's
+    /// simultaneous music — <c>&lt;&lt; { r1 } { s2 s4 } { s4 } &gt;&gt;</c>, no <c>\\</c> — which is
+    /// how the page reads it there (<c>PartCombiner.ChooseSilenceWithinPart</c>); on a condensed
+    /// staff the same span keeps <c>\\</c>, the voiceOne/voiceTwo reading.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond 2.26.0 on the twin of audit/lpreg/pcsm-probe.lys: the <c>\\</c> spelling inside
+    /// <c>\partCombine</c> warns "too many colliding rests", the one-Voice spelling does not
+    /// (scratch/p387/voice).
+    /// </remarks>
+    [Fact]
+    public void VoiceSpanInACombinedPart_IsOneVoicesSimultaneousMusic()
+    {
+        var (combined, combinedWarnings) = ExportWithWarnings(SpanScore("combinedStaff { fl1 fl2 }"));
+        Assert.Contains("<< { r1 } { s2 s4 } { s4 } >>", combined);
+        Assert.DoesNotContain("\\\\ {", combined);
+        Assert.DoesNotContain(combinedWarnings, w => w.Contains("voice { }"));
+
+        var condensed = Export(SpanScore("condensedStaff { fl1 fl2 }"));
+        Assert.Contains("<< { r1 } \\\\ { s2 s4 } \\\\ { s4 } >>", condensed);
+    }
+
+    /// <summary>
+    /// A part played by a <c>combinedStaff</c> AND another staff has one variable, so its span
+    /// keeps the <c>\\</c> spelling and the twin says which reading it could not write.
+    /// </summary>
+    [Fact]
+    public void VoiceSpanInAPartAlsoPlayedElsewhere_KeepsTheVoicesAndIsReported()
+    {
+        var (ly, warnings) = ExportWithWarnings(SpanScore("combinedStaff { fl1 fl2 } staff fl1"));
+        Assert.Contains("<< { r1 } \\\\ { s2 s4 } \\\\ { s4 } >>", ly);
+        Assert.Contains(warnings, w => w.Contains("fl1") && w.Contains("voice { }"));
+    }
+
     /// <summary>
     /// Two parts whose names differ only in a digit get two variables. They used to share
     /// one (<c>fl1</c> and <c>fl2</c> both <c>\fl</c>, digits dropped), so LilyPond kept the

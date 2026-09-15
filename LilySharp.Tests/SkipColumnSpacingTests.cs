@@ -81,6 +81,34 @@ public class SkipColumnSpacingTests
         score main { staff bassline }
         """;
 
+    /// <summary>scratch/p388/fm/end.lys — the other voice's skip starts with the bar and ENDS
+    /// inside it; a lone r1 on either side.</summary>
+    private const string SkipEndsInside = """
+        octave absolute
+        time 4/4
+        part m { clef treble }
+        section A {
+          m { r1 | voice { r1 } { s2 } | voice { r1 } { s4 } | r1 | }
+        }
+        form main { ~A }
+        score main { staff m }
+        """;
+
+    /// <summary>A combined part's <c>&lt;&lt; r1 s2 s4 &gt;&gt;</c> — bar 5 of LilyPond's
+    /// part-combine-silence-mixed.ly (audit/lpreg/pcsm-probe.lys) — between lone r1 bars.</summary>
+    private const string CombinedSpan = """
+        octave absolute
+        time 4/4
+        part vone { clef treble }
+        part vtwo { clef treble }
+        section A {
+          vone { r1 | voice { r1 } { s2 } { s4 } | r1 | }
+          vtwo { r1 | voice { s4 } { s2 } { r1 } | r1 | }
+        }
+        form main { ~A }
+        score main { combinedStaff { vone vtwo } }
+        """;
+
     private static (System.Collections.Generic.List<Fraction> Timings,
                     System.Collections.Generic.List<Measure> AllMeasures,
                     Measure Primary, MultiStaffScore Score)
@@ -210,5 +238,21 @@ public class SkipColumnSpacingTests
         var whole = ColumnSprings(OneVoice.Replace("| c4 s2. |", "| c1 |"), 1);
         Assert.True(whole[0].IdealDistance > EngravingDefaults.BarLineToNextNoteSpace + 0.9,
             $"a whole note's bar keeps it: {whole[0].IdealDistance}");
+    }
+
+    [Fact]
+    public void ASkipEndingInsideTheBar_DefeatsFullMeasureExtraSpace()
+    {
+        // LilyPond stands a column where an event ENDS as well as where one starts, so a skip
+        // that opens the bar beside the rest still leaves an unused column where it stops,
+        // and fills_measure fails on it. MEASURED, 2.26.0, scratch/p388/fm/end.ly: bar line
+        // → r1 1.09 and a 6.688 bar for `<< { r1 } \\ { s2 } >>` and `<< { r1 } \\ { s4 } >>`,
+        // 2.09 and 7.688 for a lone r1. Lily# gave both span bars the lone rest's figures.
+        foreach (int bar in new[] { 1, 2 })
+            Assert.Equal(1.0, BarToBar(SkipEndsInside, 3) - BarToBar(SkipEndsInside, bar), 2);
+        // A combined part's `<< r1 s2 s4 >>`: the skips stay in the part's second and third
+        // voices on the staff, and their ends are the same dropped columns (LP's own book
+        // measures the bar 6.688, audit/lpreg/pcsm.log).
+        Assert.Equal(1.0, BarToBar(CombinedSpan, 2) - BarToBar(CombinedSpan, 1), 2);
     }
 }

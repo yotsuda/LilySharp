@@ -35,6 +35,25 @@ workflow attaches that section to the GitHub Release verbatim.
   the editor's preview plays its timbre from the same sound (which also stops it reading
   `piano-bass` as a bass guitar).
 
+### Engraving
+
+- **A bar whose only rest or note shares it with a skip ending inside the bar is spaced as
+  LilyPond spaces it.** `voice { r1 } { s2 }`, and a combined part's `voice { r1 } { s2 } { s4 }`,
+  took the 1.0 staff space of extra room LilyPond gives a note or rest that fills its bar alone,
+  so the bar came out one staff space wider than LilyPond's. LilyPond places a column where the
+  skip ends, and that column means the rest no longer fills the bar; the page now does the same
+  (bar line to rest 1.09 instead of 2.09).
+
+### MIDI, MusicXML and the LilyPond twin
+
+- **A `voice { } { }` span in a combined part reaches the twin as one voice.** Inside a
+  `combinedStaff` the page reads a span's blocks as one voice's simultaneous music — the
+  combiner chooses between the silences they hold — but `lysc ly` wrote them as separate voices
+  (`<< { R1 } \\ { s1 } >>`), which LilyPond voicifies inside `\partCombine`, drawing its rests
+  apart and warning "too many colliding rests". The twin now writes `<< { R1 } { s1 } >>`. A
+  span on a plain or condensed staff keeps `\\`, the page's voice-one / voice-two reading, and a
+  part played both by a combined staff and by another staff keeps `\\` with a warning.
+
 ## 0.7.0
 
 A chord symbol is spelled and raised the way LilyPond draws it, a `layout { }` block gathers

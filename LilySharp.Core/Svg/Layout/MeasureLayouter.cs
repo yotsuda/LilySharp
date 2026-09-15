@@ -230,16 +230,26 @@ internal sealed class MeasureLayouter
         //   set_distances_for_loose_col — r.item_drul_ = next_door; r.add_to_cols ().
         var looseRods = new List<(int Left, int Right, double Distance)>();
 
-        // Whether an onset AFTER the first kept one was dropped as unused (a skip's column):
-        // the union of every voice's onsets against the kept list. Only a measure holding a
-        // notation-staff spacer can have one, and only then is the union walked.
+        // Whether a column AFTER the first kept one was dropped as unused: the union of every
+        // voice's moments against the kept list. A skip's onset is one such column, and so is
+        // the moment any event ENDS where nothing starts — a skip that opens the bar beside a
+        // rest still leaves a column where it stops. MEASURED, 2.26.0, scratch/p388/fm/end.ly:
+        // `<< { r1 } \\ { s2 } >>` and `<< { r1 } \\ { s4 } >>` read bar line → rest 1.09 and
+        // a 6.688 bar, a lone r1 2.09 and 7.688; a combined part's `<< r1 s2 s4 >>` is the
+        // same bar (audit/lpreg/pcsm.log, and scratch/p388/fm/span-fm0.ly zeroes
+        // full-measure-extra-space to show the 1.0 is that quantity).
+        // LILYPOND-REF: lily/simultaneous-music-iterator.cc:136-146 Simultaneous_music_iterator::pending_moment — the next timestep is the EARLIEST child's pending moment, a skip's end among them.
+        // LILYPOND-REF: lily/spacing-spanner.cc:446-472 Spacing_spanner::fills_measure — !is_used (next) on that column.
         bool droppedOnsetFollows = false;
         foreach (var m in measuresToScan)
         {
             var t = Fraction.Zero;
             foreach (var item in m.Items)
             {
-                if (item is RestItem { IsSpacer: true } && t > timings[0] && !timings.Contains(t))
+                var end = t + item.Duration;
+                if ((item is RestItem { IsSpacer: true } && t > timings[0] && !timings.Contains(t))
+                    || (item.Duration > Fraction.Zero && end > timings[0] && end < totalDuration
+                        && !timings.Contains(end)))
                 {
                     droppedOnsetFollows = true;
                     break;

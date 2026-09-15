@@ -222,6 +222,25 @@ public sealed class LilyPondExporter
     private bool _drumMode;
 
     /// <summary>
+    /// The part being written is played ONLY by a <c>combinedStaff</c>, so a <c>voice { } { }</c>
+    /// span in it is one Voice's simultaneous music (<see cref="EmitParallel"/>).
+    /// </summary>
+    /// <remarks>
+    /// The page reads a span two ways, by the staff that plays it: on a plain or condensed staff
+    /// each block is a voice with <c>\voiceOne</c>/<c>\voiceTwo</c>
+    /// (<c>MeasureCollector.ResolveVoiceStemDirections</c>), and in a combined part the blocks are
+    /// one Voice's events, among which the combiner chooses a silence
+    /// (<c>PartCombiner.ChooseSilenceWithinPart</c>, the port of
+    /// <c>input/regression/part-combine-silence-mixed.ly</c>'s <c>&lt;&lt; R1 s1 s4 &gt;&gt;</c>).
+    /// MEASURED (LilyPond 2.26.0, scratch/p387/voice): the twin of audit/lpreg/pcsm-probe.lys
+    /// written with <c>\\</c> inside <c>\partCombine</c> warns "too many colliding rests"; the
+    /// one-Voice spelling does not.
+    /// A part a score ALSO plays on another staff keeps <c>\\</c> and is reported: one variable
+    /// cannot be both spellings.
+    /// </remarks>
+    private bool _combinedPart;
+
+    /// <summary>
     /// The parts whose music carries a <c>\N</c> string number. LilyPond's Staff prints a
     /// StringNumber grob for every one of them — a circled digit beside the note — and
     /// Lily#'s notation staff draws none: the number steers the TAB's string choice
@@ -403,11 +422,40 @@ public sealed class LilyPondExporter
         // the part block; the form orders them.
         var partVars = new Dictionary<string, string>(StringComparer.Ordinal);
         var names = PartNames(parts, render);
+        // Which parts a combinedStaff plays, and which any other staff does: a span in a part
+        // only the former plays is written as one Voice's music (_combinedPart).
+        var combinedNames = new HashSet<string>(StringComparer.Ordinal);
+        var otherNames = new HashSet<string>(StringComparer.Ordinal);
+        if (render != null)
+        {
+            foreach (var node in render.DescendantNodes())
+            {
+                switch (node)
+                {
+                    case CombinedStaffRenderSyntax c:
+                        combinedNames.UnionWith(SharedStaffPartNames(c.PartNames).OfType<string>());
+                        break;
+                    case CondensedStaffRenderSyntax c:
+                        otherNames.UnionWith(SharedStaffPartNames(c.PartNames).OfType<string>());
+                        break;
+                    case StaffRenderSyntax or TabRenderSyntax:
+                        if (RenderPartName(node) is { } n)
+                            otherNames.Add(n);
+                        break;
+                }
+            }
+        }
         if (names.Count > 0)
         {
             foreach (string name in names)
             {
                 _currentPartName = name;
+                _combinedPart = combinedNames.Contains(name) && !otherNames.Contains(name);
+                if (combinedNames.Contains(name) && otherNames.Contains(name))
+                    _warnings.Add(
+                        $"part '{name}' is played by a combinedStaff and by another staff — a voice {{ }}"
+                        + " span in it is written with \\\\ (separate voices), while the combined staff"
+                        + " reads it as one voice's simultaneous music");
                 var part = parts.FirstOrDefault(p => p.Name.Text == name);
                 string varName = VarName(name);
                 partVars[name] = varName;
@@ -2433,6 +2481,7 @@ public sealed class LilyPondExporter
         // body written inside a `~B'` play sounds where the play sounds.
         buf._sectionOctaveOffset = _sectionOctaveOffset;
         buf._drumMode = _drumMode;
+        buf._combinedPart = _combinedPart;
         buf._improvisationOpen = _improvisationOpen;
         buf._lysClef = _lysClef;
         buf._lysStep = _lysStep;
@@ -3680,6 +3729,11 @@ public sealed class LilyPondExporter
             return "";
         if (bodies.Count == 1)
             return bodies[0];
+        // ⚠️ In a part only a combinedStaff plays, the blocks are ONE Voice's simultaneous music
+        // on the page (PartCombiner.ChooseSilenceWithinPart), and LilyPond spells that without
+        // the separator — `\\` would voicify them inside \partCombine (_combinedPart).
+        if (_combinedPart)
+            return "<< { " + string.Join(" } { ", bodies) + " } >>";
         return "<< { " + string.Join(" } \\\\ { ", bodies) + " } >>";
     }
 
