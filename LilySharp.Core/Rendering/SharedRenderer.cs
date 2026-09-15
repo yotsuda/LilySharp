@@ -843,10 +843,10 @@ internal static partial class SharedRenderer
                         // (SpacingRules.KeyCourtesyOpeningGap), so the two sides cannot
                         // disagree about the opener — custom keys included.
                         double groupLeft = barlineRight + SpacingRules.KeyCourtesyOpeningGap(
-                            KeyChangeGeometry(eolKeyChange, clef).Glyphs);
+                            KeyChangeGeometry(eolKeyChange).Glyphs);
                         // A meter after a key stands off the KEY's real right edge, which is
                         // what the draw returns — not off a width computed a second time.
-                        meterX = DrawKeySignatureChange(eolKeyChange, groupLeft, localStaffY, clef, sgc)
+                        meterX = DrawKeySignatureChange(eolKeyChange, groupLeft, localStaffY, sgc)
                             + SpacingRules.BreakAlignGap(
                                 BreakAlignSymbol.KeySignature, BreakAlignSymbol.TimeSignature);
                     }

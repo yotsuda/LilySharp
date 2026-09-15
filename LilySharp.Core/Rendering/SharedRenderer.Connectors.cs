@@ -778,9 +778,9 @@ internal static partial class SharedRenderer
     /// the widths would be the same quantity spelled twice, and the two spellings drift.
     /// </returns>
     private static double DrawKeySignatureChange(KeySignatureChangeItem change, double x, double staffY,
-        ClefType clef, IDrawingContext gc)
+        IDrawingContext gc)
     {
-        var (glyphs, width) = KeyChangeGeometry(change, clef);
+        var (glyphs, width) = KeyChangeGeometry(change);
         foreach (var (kind, dx, staffPosition) in glyphs)
         {
             double y = (staffY - StaffHeight / 2) + staffPosition / 2.0;
@@ -804,8 +804,11 @@ internal static partial class SharedRenderer
     ///   Accidental.
     /// </summary>
     internal static (List<(string Kind, double Dx, int StaffPosition)> Glyphs, double Width)
-        KeyChangeGeometry(KeySignatureChangeItem change, ClefType clef)
+        KeyChangeGeometry(KeySignatureChangeItem change)
     {
+        // The clef the change carries — the one in effect at its moment, stamped by the
+        // collector — so the draw, the reservation and the skyline read one clef.
+        var clef = change.Clef;
         var glyphs = new List<(string Kind, double Dx, int StaffPosition)>();
         int prev = change.PreviousKey.Sharps;
         int next = change.NewKey.Sharps;

@@ -467,6 +467,21 @@ internal sealed class MeasureBuilder
             return;
         }
 
+        // A clef change RESTAMPS a key change already standing at its moment: break alignment
+        // prints the clef before the signature, and the signature's accidentals take their
+        // staff positions from the clef in effect, whichever of the two the source wrote first.
+        // LILYPOND-REF: scm/output-lib.scm:1056 key-signature-interface::alteration-positions — reads the staff's c0-position
+        if (item is ClefChangeItem clefChange)
+        {
+            for (int i = _currentItems.Count - 1;
+                 i >= 0 && _currentItems[i] is ClefChangeItem or KeySignatureChangeItem or TimeSignatureChangeItem;
+                 i--)
+            {
+                if (_currentItems[i] is KeySignatureChangeItem standing)
+                    _currentItems[i] = standing with { Clef = clefChange.NewClef };
+            }
+        }
+
         // Collapse consecutive key changes at the same measure start — a section
         // boundary reset (revert to the score key) immediately followed by the
         // section's own `key`. Draw ONE change from the ORIGINAL previous key to the
@@ -475,7 +490,10 @@ internal sealed class MeasureBuilder
         if (item is KeySignatureChangeItem kc
             && _currentItems.Count > 0 && _currentItems[^1] is KeySignatureChangeItem prevKc)
         {
-            var merged = new KeySignatureChangeItem(kc.NewKey, prevKc.PreviousKey, kc.SourcePosition);
+            var merged = new KeySignatureChangeItem(kc.NewKey, prevKc.PreviousKey, kc.SourcePosition)
+            {
+                Clef = kc.Clef,
+            };
             if (merged.NewKey == merged.PreviousKey)
                 _currentItems.RemoveAt(_currentItems.Count - 1); // net no change
             else

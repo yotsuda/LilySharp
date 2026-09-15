@@ -674,8 +674,7 @@ internal static partial class SpacingRules
         if (change is null)
             return 0.0;
 
-        var clef = Rendering.SharedRenderer.ResolveClefAt(staff, startMeasureIndex);
-        var (glyphs, ink) = Rendering.SharedRenderer.KeyChangeGeometry(change, clef);
+        var (glyphs, ink) = Rendering.SharedRenderer.KeyChangeGeometry(change);
         if (glyphs.Count == 0)
             return 0.0;
         double w = KeyCourtesyOpeningGap(glyphs) + ink;
@@ -1035,41 +1034,43 @@ internal static partial class SpacingRules
     public static double AccidentalNoteGap => GlyphMetrics.AccidentalNoteGap;
 
     /// <summary>
-    /// Gets the width of a mid-measure key signature change.
+    /// Gets the width of a key signature change: the ink extent of the grobs it prints —
+    /// the cancellation naturals with their kerning, the gap to the new signature and the
+    /// signature — read off the drawn walk.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/key-engraver.cc — key signature width depends on accidental count.
-    /// Includes cancellation naturals from previous key.
+    /// LILYPOND-REF: lily/key-signature-interface.cc:44-127 Key_signature_interface::print — naturals kern by padding-pairs
+    /// This was a second spelling that summed glyph widths and dropped the kerning and the
+    /// cancellation → signature gap: 1.10 short on four flats → five sharps (scratch/p390
+    /// keysigspace), up to 1.85 short over the standard changes in treble.
     /// </remarks>
     internal static double GetKeySignatureChangeWidth(KeySignatureChangeItem keyChange)
+        => KeyChangeGrobWidths(keyChange).Extent;
+
+    /// <summary>
+    /// The two break-aligned grobs a key change prints, as ink widths — the KeyCancellation's
+    /// naturals and the KeySignature's accidentals, 0 for one that prints nothing — and the
+    /// ink extent of the pair, the gap between them included.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:1930-1964 KeyCancellation — its own break-align-symbol key-cancellation
+    /// Read off <see cref="Rendering.SharedRenderer.KeyChangeGeometry"/> with the clef the change
+    /// carries: the naturals come first, and the new signature's first glyph opens the
+    /// KeySignature. The walk's advance for a change that prints only naturals includes the
+    /// trailing gap its drawer uses; the ink extent stops at the last natural.
+    /// </remarks>
+    internal static (double Cancellation, double Signature, double Extent) KeyChangeGrobWidths(
+        KeySignatureChangeItem keyChange)
     {
-        double width = 0;
-
-        // Cancellation naturals (from previous key)
-        int prevCount = keyChange.PreviousKey.Count;
-        int newCount = keyChange.NewKey.Count;
-        bool sameType = (keyChange.PreviousKey.IsSharps == keyChange.NewKey.IsSharps) ||
-                        keyChange.PreviousKey.Sharps == 0 || keyChange.NewKey.Sharps == 0;
-
-        // LILYPOND-REF: lily/key-engraver.cc:67-125 create_key — cancellation logic
-        if (!sameType && prevCount > 0)
-        {
-            // Different type (sharps→flats or flats→sharps): cancel all previous
-            width += prevCount * GlyphMetrics.KeySignatureNaturalWidth;
-        }
-        else if (sameType && prevCount > newCount && keyChange.PreviousKey.Sharps != 0)
-        {
-            // Same type but fewer: cancel the difference
-            width += (prevCount - newCount) * GlyphMetrics.KeySignatureNaturalWidth;
-        }
-
-        // New key accidentals
-        if (newCount > 0)
-        {
-            width += newCount * GlyphMetrics.GetKeySignatureAccidentalWidth(keyChange.NewKey.IsSharps);
-        }
-
-        return Math.Max(width, GlyphMetrics.KeySignatureNaturalWidth); // minimum width
+        var (glyphs, advance) = Rendering.SharedRenderer.KeyChangeGeometry(keyChange);
+        int first = glyphs.FindIndex(static g => g.Kind != "natural");
+        int lastNatural = first < 0 ? glyphs.Count - 1 : first - 1;
+        double cancellation = lastNatural < 0
+            ? 0.0
+            : glyphs[lastNatural].Dx + GlyphMetrics.AccidentalNatural.Width;
+        if (first < 0)
+            return (cancellation, 0.0, cancellation);
+        return (cancellation, advance - glyphs[first].Dx, advance);
     }
 
     /// <summary>

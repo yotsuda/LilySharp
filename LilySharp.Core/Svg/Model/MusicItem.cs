@@ -1053,6 +1053,19 @@ public sealed record KeySignatureChangeItem : MusicItem
     /// <summary>The previous key signature (for cancellation naturals).</summary>
     public KeySignature PreviousKey { get; }
 
+    /// <summary>
+    /// The clef in effect on this staff at the change's moment — after any clef change of the
+    /// same moment. The accidentals' staff positions read it, and so do the naturals' kerning
+    /// and the change's width.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/output-lib.scm:1056 key-signature-interface::alteration-positions — positions from the staff's c0-position
+    /// Stamped by the collector, the one walk that knows the running clef, so every reader —
+    /// the draw, the break-align column, the mid-measure change column, the skyline — prices
+    /// and draws one geometry without resolving the clef for itself.
+    /// </remarks>
+    public ClefType Clef { get; init; } = ClefType.Treble;
+
     /// <summary>Always <c>Fraction.Zero</c> — the key change occupies horizontal space but no time.</summary>
     protected override Fraction SoundingDuration => Fraction.Zero;
 

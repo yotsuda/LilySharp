@@ -81,6 +81,55 @@ public class BoundaryColumnTests
     }
 
     [Fact]
+    public void AKeyChangeThatCancels_IsTwoGrobs_AndSpansTheInkItDraws()
+    {
+        // LilyPond prints the naturals as a KeyCancellation and the new accidentals as a
+        // KeySignature, two break-aligned grobs: bar line → cancellation 1.0 (BarLine
+        // space-alist), cancellation → signature 0.5 (KeyCancellation space-alist :1944).
+        // Their widths are the drawn walk's, kerning included. Measured on 2.26.0
+        // (scratch/p390/keyw kn-a.ly, 4 flats → 5 sharps at a bar start): naturals at
+        // 1.00 / 1.82 / 2.78 / 3.60 and sharps from 4.77 off the bar line's ink right — the
+        // reservation used to sum glyph widths and stopped 1.10 short of that ink.
+        // LILYPOND-REF: scm/define-grobs.scm:1930-1964 KeyCancellation — break-align-symbol key-cancellation
+        var change = new KeySignatureChangeItem(new KeySignature(5), new KeySignature(-4), 0);
+        var col = BoundaryColumn.Build(
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, BarlineType.Single, new MusicItem[] { change });
+
+        Assert.Equal(
+            new[] { BreakAlignSymbol.StaffBar, BreakAlignSymbol.KeyCancellation, BreakAlignSymbol.KeySignature },
+            col.Grobs.Select(g => g.Symbol).ToArray());
+        double bw = EngravingDefaults.BarlineDrawnWidth(BarlineType.Single);
+        var cancellation = Grob(col, BreakAlignSymbol.KeyCancellation);
+        var signature = Grob(col, BreakAlignSymbol.KeySignature);
+        Assert.Equal(bw + 1.0, cancellation.Left, 6);
+        Assert.Equal(cancellation.Right + 0.5, signature.Left, 6);
+
+        double drawn = LilySharp.Core.Rendering.SharedRenderer.KeyChangeGeometry(change).Width;
+        Assert.Equal(drawn, signature.Right - cancellation.Left, 6);
+        Assert.Equal(drawn, SpacingRules.GetKeySignatureChangeWidth(change), 6);
+    }
+
+    [Fact]
+    public void AKeyChangesWidth_ReadsTheClefItCarries()
+    {
+        // The naturals kern by the vertical overlap of their neighbours, so their staff
+        // positions — the clef's c0-position — decide the width. Across the 210 standard
+        // changes, Soprano, Mezzo-soprano, Tenor and Baritone differ from treble by 0.15 or 0.3
+        // in 102 (scratch/p390). Same change, two clefs: two widths, each its own draw.
+        // LILYPOND-REF: scm/output-lib.scm:1056 key-signature-interface::alteration-positions — reads the staff's c0-position
+        var treble = new KeySignatureChangeItem(new KeySignature(0), new KeySignature(-7), 0);
+        var baritone = treble with { Clef = ClefType.Baritone };
+
+        double trebleWidth = SpacingRules.GetKeySignatureChangeWidth(treble);
+        double baritoneWidth = SpacingRules.GetKeySignatureChangeWidth(baritone);
+        Assert.NotEqual(trebleWidth, baritoneWidth, 6);
+        Assert.Equal(LilySharp.Core.Rendering.SharedRenderer.KeyChangeGeometry(treble).Glyphs.Last().Dx
+            + GlyphMetrics.AccidentalNatural.Width, trebleWidth, 6);
+        Assert.Equal(LilySharp.Core.Rendering.SharedRenderer.KeyChangeGeometry(baritone).Glyphs.Last().Dx
+            + GlyphMetrics.AccidentalNatural.Width, baritoneWidth, 6);
+    }
+
+    [Fact]
     public void TimeAloneUsesTheBarLineToTimeGap_NotTheGenericDefault()
     {
         // BarLine.space-alist (time-signature . (extra-space . 0.75)) —

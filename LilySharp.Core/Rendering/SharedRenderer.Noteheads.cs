@@ -149,7 +149,7 @@ internal static partial class SharedRenderer
                     // system's prefix (new key only, like LilyPond) — drawing
                     // it here too overprinted the prefix with naturals.
                     if (!IsSystemStartKeyChange(voice, system, ml.MeasureIndex, keyChange))
-                        DrawKeySignatureChange(keyChange, itemX, staffY, clef, gc);
+                        DrawKeySignatureChange(keyChange, itemX, staffY, gc);
                     break;
                 // A BLANKED meter is drawn nowhere — that is what blanked means
                 // (TimeSignatureChangeItem.Blanked, the port of LilyPond's

@@ -1983,16 +1983,16 @@ internal sealed class SkylineBuilder
             // KeySigStaffPosition's output and invented an "(8 − position)" flip; it was
             // right ONLY at position 4, seeded the c♯ 3 ss high, and the section label
             // cleared thin air 1.2 ss above the real sharps (the follow-up report).
-            // ⚠️ `clef` is the LINE's clef: a clef change earlier in the same line would
-            // shift the seeded positions — the same running-state approximation SeedClef
-            // already documents for its X anchor.
+            // The positions read the clef the change CARRIES (KeySignatureChangeItem.Clef), not
+            // the line's, so a clef change earlier in the line moves them exactly as it moves
+            // the draw.
             // LILYPOND-REF: scm/output-lib.scm:1056 key-signature-interface::alteration-positions
             //   — staff positions about the middle line.
             // LILYPOND-REF: lily/axis-group-interface.cc:914-935 skyline_spacing —
             //   KeySignature/KeyCancellation carry no outside-staff-priority.
             case KeySignatureChangeItem keyChange when clef != ClefType.Tab:
                 foreach (var (kind, dx, pos) in
-                    Rendering.SharedRenderer.KeyChangeGeometry(keyChange, clef).Glyphs)
+                    Rendering.SharedRenderer.KeyChangeGeometry(keyChange).Glyphs)
                 {
                     double originX = x + size.Span(dx);
                     double glyphY = staffMiddleUp + size.Span(pos * 0.5);

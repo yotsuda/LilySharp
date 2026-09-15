@@ -455,7 +455,11 @@ public sealed partial class MeasureCollector
             _meta.KeySharps = _sectionResetKeySharps;
             _meta.KeyCustom = _sectionResetKeyCustom;
             builder.AddItem(new KeySignatureChangeItem(
-                new KeySignature(_meta.KeySharps, _meta.KeyCustom), previousKey, sectionPos));
+                new KeySignature(_meta.KeySharps, _meta.KeyCustom), previousKey, sectionPos)
+            {
+                // The section's clef revert above has already run, so this is the new clef.
+                Clef = ParseClefType(_meta.Clef),
+            });
         }
 
         // A section can begin with a pickup (`section A { partial 4  melody { … } }`):
@@ -621,7 +625,10 @@ public sealed partial class MeasureCollector
         }
 
         // The TONIC's token, not the declaration's Position — see KeyDataPos.
-        builder.AddItem(new KeySignatureChangeItem(newKey, previousKey, KeyDataPos(keySig)));
+        builder.AddItem(new KeySignatureChangeItem(newKey, previousKey, KeyDataPos(keySig))
+        {
+            Clef = ParseClefType(_meta.Clef),
+        });
     }
 
     /// <summary>The first direct-child directive of type <typeparamref name="T"/> (the

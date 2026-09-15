@@ -307,7 +307,13 @@ internal static partial class SpacingRules
         {
             (ClefChangeItem, KeySignatureChangeItem) => 0.82,
             (ClefChangeItem, TimeSignatureChangeItem) => 1.52,
-            (KeySignatureChangeItem, TimeSignatureChangeItem) => 1.15,
+            // The key change's LAST grob owns the entry: a change to no accidentals ends on its
+            // KeyCancellation, any other on its KeySignature.
+            (KeySignatureChangeItem key, TimeSignatureChangeItem) => BreakAlignGap(
+                KeyChangeGrobWidths(key).Signature > 0
+                    ? BreakAlignSymbol.KeySignature
+                    : BreakAlignSymbol.KeyCancellation,
+                BreakAlignSymbol.TimeSignature),
             _ => 0
         };
 
@@ -982,7 +988,15 @@ internal static partial class SpacingRules
         // to BOTH fixed and ideal — and AFTER stretchability was taken, so it widens the
         // gap without making the spring any more stretchable.
         // LILYPOND-REF: lily/staff-spacing.cc:206-208.
-        double opticalCorrection = BarlineToNextNotesCorrection(firstItems);
+        // Only when the BAR LINE is the column's last grob: a key or time change standing
+        // after it takes the stem's place beside the note, and the correction reads the
+        // last grob's bar extent, which only a bar line has.
+        // LILYPOND-REF: lily/staff-spacing.cc:72-93 Staff_spacing::bar_y_positions — empty unless bar-line-interface
+        // MEASURED (2.26.0, scratch/p390/keyw kn-b.ly / kn-u.ly, `\key b \major` opening a bar):
+        // a down-stem first note 9.00 off the bar line's ink right, the same as an up-stem one;
+        // the page drew the down-stem note 0.19 further right. LineStartColumn already gates
+        // the same correction on the staff bar being last.
+        double opticalCorrection = boundary.HasValue ? 0.0 : BarlineToNextNotesCorrection(firstItems);
         fixedDistance += opticalCorrection;
         ideal += opticalCorrection;
 

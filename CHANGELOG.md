@@ -62,6 +62,19 @@ workflow attaches that section to the GitHub Release verbatim.
   also when the change stands on another staff. The rest used to centre between the bar lines
   alone and sat too far left after a new signature (by half its width: 2.6 staff spaces after
   five sharps) and too far right before a clef.
+- **A key change takes the room it draws.** A change whose cancellation naturals precede the
+  new signature reserved only the glyphs' widths, without the kerning between the naturals or
+  the gap LilyPond leaves between the naturals and the new signature, so the note after it was
+  crowded in: up to 1.85 staff spaces short (four flats to five sharps: 0.92). The naturals and
+  the new signature are now spaced as LilyPond spaces them, and the page reserves exactly what
+  it draws. A key change also reads the clef in effect at its own moment — a clef change
+  earlier in the line, or at the same bar written after the `key`, now places the accidentals
+  (and so the naturals' kerning) for that clef rather than the one the line opened with.
+- **A note with its stem down after a key or time change at the start of a bar is no longer
+  pushed right.** The small extra gap a bar line leaves before a down stem was also given after
+  a new key or time signature, where LilyPond gives none, so that note sat 0.1 to 0.2 staff
+  spaces too far right and the bar came out that much wider. Bars opening on a key or time
+  change now match LilyPond's; the gap after a plain bar line is unchanged.
 
 ### MIDI, MusicXML and the LilyPond twin
 

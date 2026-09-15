@@ -37303,3 +37303,26 @@ Lily# はそれを **4 か所**で外していた。
   ⚠️⚠️ ★★★ **重いのは文法ではなく 30 か所の付け替え**（`ScoreTextMetrics.Size(role)` / `Style(role)` 経由にする）。**段階的に**: ⑴ plan が値を運び、**既に 1 つの家を持つ role だけ従う**（mark・lyricText・chordName・title・composer・tempo・barNumber・volta・tuplet）／⑵ 描画点に裸のリテラルが残る role（movement title・`Nfr`・bend・compound meter の `+`）は次段／**⑶ 「どの role が plan に従うか」を列挙するテストを置く**——**従わない role が*黙って*無視されるのが一番悪い**。
   ⚠️ **台帳との関係**: 全 800 点は**既定サイズでの数**なので、サイズを変えた本は台帳の外に出る。**`step` ならその本の `.ly` 双子も同じ override を持つので比較可能なまま**——ここでも `step` が効く。
 
+#### [E] ✅ 閉じた（第379 第 4 便・ユーザー承認・commit `c6f716e8`・§1 ⑽）＝加線の spacing rod（`Ledger_line_spanner::set_spacing_rods`）を移植＝`S…
+
+<!-- ledger: ledger.rod.thirty-second = 0 -->
+
+#### [E] ✅ 閉じた（第379 第 6 便・ユーザー承認・commit `6ccbd3e8`・§1 ⑿）＝rod の view だけ縦 padding 0.08＝台帳 `cross-voice.rod.paper-column-p…
+
+<!-- ledger: cross-voice.rod.paper-column-padding = 0 -->
+
+#### [E] ★★ paper の「摂動網が言えない 8 鍵」（第374 ㉔⒝）は第377 で全部仕分けた＝LP 2.26.0 に同じ問いを出して（`scratch/p378/paper`＝`pairs.ps1` が Lily# 側・…
+
+  **`spacingIncrement`**＝`LayoutOptions.SpacingIncrement` を誰も読まない（spacing は全部定数 `EngravingDefaults.SpacingIncrement`）。**LP の `spacing-increment` は SpacingSpanner の grob 属性で紙面を動かす**＝**`SYNTAX_REFERENCE.md` が「horizontal note-spacing unit」と約束して効かない**。直すなら読み手を options に繋ぐ（出力が動くのは書いた本だけ）か、綴りを退役。／**`topSystemPadding`**＝同じく読み手 0、**LP にこの paper 変数は無い**（header の padding は `top-system-spacing` 自身の padding＝`:478`・`topSystemSpacing { padding }` と同じ量）＝**退役が自然**（`LayoutOptions.TopSystemPadding` の REF は :477-478 を指している）。**ディスクの `.lys` 27,110 冊に両方とも 0 冊**。
+  ★ **副産物（未起票の判断）**: `nonStaffRelatedStaffSpacing { basicDistance 30 }` は Lily# の**内容で決まる 1 頁の高さだけ**を 129.02 → 145.22 に伸ばし、**描かれた要素は 1 つも動かない**（LP は不動・紙面が固定なので対応物なし）＝頁の高さが loose-line の ideal を数えて、置かれない空白を下に足している。
+
+#### [E] ✅ 閉じた（第380・製品 0・§1 ⑵）＝「逆転」は第378 の計器の作り物: `bench-a2.ly` の `RehearsalMark.after-line-breaking` dump が、既定の `move-…
+
+  | 本 | label の綴り | 譜 | 和音行 | label | a2 |
+  |---|---|---|---|---|---|
+  | `bench-a2.ly`（原典の形） | `\mark \markup \box` | `\partCombine` | **9.30** | **3.40** | 1.53 |
+  | `vb-mark-plain.ly` | `\mark \markup \box` | plain | 1.56 | **4.58**（和音行の上） | — |
+  | `va-label-combined.ly` | `\sectionLabel` | `\partCombine` | 3.65 | 0.89（a2 の横） | 1.53 |
+  | `vc-label-plain.ly` | `\sectionLabel` | plain | 1.56 | 0.89 | — |
+  **Lily#（`bench.lys`・修正後）**: a2 1.43・和音行 4.13・**Intro の箱 6.89＝和音行の上**。**Lily# の section 名は RehearsalMark の位置**（オーナー決定・F2・双子は `\mark \markup \box`）なので**比べる相手は上 2 行**。⇒ **plain な譜（vb）では LP も label を和音行の上に上げる＝Lily# と同じ形**だが、**a2 が譜の skyline を上げた本（bench-a2）では LP は和音行を label の上へ押し上げる**（和音行 9.30＝label と a2 の上）。**LP がどちらを選ぶかの機構は未特定**（`move-to-extremal-staff` と ChordNames の loose-line 配置の順序が候補・未読）。Lily# は MusicMarkEngraver の lift（MKW/MKX の書の腕）で**常に label を和音行の上に置く**。⚠️ **直すと mark-over-chord の台帳の書（MKW/MKX）と F2 の決定に触る**＝着手前にユーザーに訊く。**最初の一手の候補**: vb と bench-a2 の間を 1 変数ずつ詰める（`\partCombine` の有無 vs 譜の skyline の高さ＝`^\markup` を足した plain 譜で同じ反転が起きるか）。
+

@@ -78,6 +78,82 @@ public class KeySignatureChangeTests
             $"expected D major ({afterChange}) wider than G major ({atMidChangeMeasure})");
     }
 
+    /// <summary>
+    /// A key change carries the clef in effect at its moment, and a clef change of the SAME
+    /// moment counts whichever the source wrote first: break alignment prints the clef
+    /// before the signature, and the accidentals take their positions from it.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, scratch/p390/keyw order-a.ly / order-b.ly): `\key d \major \clef tenor`
+    /// and `\clef tenor \key d \major` render byte-identical SVG, the accidentals at tenor
+    /// positions (naturals +1 / +4, sharps −2 / +2) — the page matches to 0.01.
+    /// LILYPOND-REF: scm/output-lib.scm:1056 key-signature-interface::alteration-positions — reads the staff's c0-position
+    /// </remarks>
+    [Theory]
+    [InlineData("key d major clef tenor")]
+    [InlineData("clef tenor key d major")]
+    public void AKeyChange_CarriesTheClefOfItsMoment_WhicheverIsWrittenFirst(string changes)
+    {
+        var source = $$"""
+            time 4/4
+            key bes major
+            part melody { clef treble }
+            phrase mel { c'4 d' e' f' | {{changes}} c'4 d' e' f' | }
+            section Main { melody { mel } }
+            form main { Main }
+            score main "x" { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(source);
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var change = Assert.Single(score.PrimaryContentStaff.PrimaryVoice.Measures[1].Items
+            .OfType<KeySignatureChangeItem>());
+
+        Assert.Equal(ClefType.Tenor, change.Clef);
+        // The change before it in the piece had no clef change beside it: the running clef.
+        var opening = new KeySignatureChangeItem(change.NewKey, change.PreviousKey, 0);
+        Assert.Equal(ClefType.Treble, opening.Clef);
+    }
+
+    /// <summary>
+    /// The bar line's optical correction for a DOWN stem just after it applies only when the
+    /// bar line is the column's last grob: a key change opening the bar stands between them,
+    /// and the down-stem first note sits where an up-stem one does.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, scratch/p390/keyw kn-b.ly / kn-u.ly, `\key b \major` opening the bar):
+    /// the first note 9.00 off the bar line's ink right with its stem down and with it up; the
+    /// page drew the down-stem note at 9.19. After a bare bar line the correction stays, so the
+    /// control pair below must still differ.
+    /// LILYPOND-REF: lily/staff-spacing.cc:72-93 Staff_spacing::bar_y_positions — empty unless bar-line-interface
+    /// </remarks>
+    [Fact]
+    public void ADownStemAfterAKeyChange_GetsNoBarLineOpticalCorrection()
+    {
+        static double FirstColumnX(string pitch, bool withKey)
+        {
+            string key = withKey ? "key b major " : "";
+            var source = $$"""
+                octave absolute
+                time 4/4
+                key c major
+                part m
+                section A { m { f4 f f f | {{key}}{{pitch}}8 {{pitch}} {{pitch}}4 {{pitch}}2 | } }
+                form main { ~A }
+                score main "x" { staff m }
+                """;
+            var tree = SyntaxTree.Parse(source);
+            var multi = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+            var layout = new LayoutEngine(new LayoutOptions()).Layout(multi);
+            var bar = Assert.Single(layout.Systems).Measures.Single(m => m.MeasureIndex == 1);
+            return bar.GetXForTiming(Fraction.Zero);
+        }
+
+        // e' (E5) stems down, e (E4) stems up.
+        Assert.Equal(FirstColumnX("e", withKey: true), FirstColumnX("e'", withKey: true), 6);
+        double down = FirstColumnX("e'", withKey: false), up = FirstColumnX("e", withKey: false);
+        Assert.True(down > up + 0.1, $"control: after a bare bar line the down stem keeps its correction ({down} vs {up})");
+    }
+
     [Fact]
     public void KeySignatureChangeItem_ZeroDuration()
     {

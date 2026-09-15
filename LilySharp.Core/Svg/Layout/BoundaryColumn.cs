@@ -63,10 +63,9 @@ internal readonly record struct BoundaryColumnGrob(
 /// <c>(staff-bar . (extra-space . 0.7))</c>), staff-bar→key 1.000,
 /// staff-bar→time 0.750, key→time 1.150.
 ///
-/// Key CANCELLATION is not a separate grob here: Lily# folds it into
-/// <see cref="SpacingRules.GetKeySignatureChangeWidth"/>. That is a documented
-/// approximation (LilyPond puts a real inter-grob gap between the cancellation
-/// and the new signature), not a modelling claim of this type.
+/// Key CANCELLATION is its own grob, as in LilyPond: the naturals and the new signature
+/// stand apart by the cancellation's space-alist entry, and both widths are read off the
+/// drawn walk (<see cref="SpacingRules.KeyChangeGrobWidths"/>).
 /// </remarks>
 internal sealed class BoundaryColumn
 {
@@ -130,9 +129,17 @@ internal sealed class BoundaryColumn
         candidates.Add((BreakAlignSymbol.StaffBar,
             EngravingDefaults.BarlineDrawnWidth(barline), EswDefaultLeft, EswDefaultRight));
         if (key != null)
-            // scm/define-grobs.scm KeySignature extra-spacing-width (0.0 . 1.0).
-            candidates.Add((BreakAlignSymbol.KeySignature,
-                SpacingRules.GetKeySignatureChangeWidth(key), 0.0, 1.0));
+        {
+            // A key change prints TWO break-aligned grobs, KeyCancellation then KeySignature, each
+            // with extra-spacing-width (0.0 . 1.0); the walk below places them apart by the
+            // cancellation's space-alist entry like any other pair.
+            // LILYPOND-REF: scm/define-grobs.scm:1930-1964 KeyCancellation — break-align-symbol key-cancellation
+            var (cancellation, signature, _) = SpacingRules.KeyChangeGrobWidths(key);
+            if (cancellation > 0)
+                candidates.Add((BreakAlignSymbol.KeyCancellation, cancellation, 0.0, 1.0));
+            if (signature > 0)
+                candidates.Add((BreakAlignSymbol.KeySignature, signature, 0.0, 1.0));
+        }
         if (time != null)
             // scm/define-grobs.scm TimeSignature extra-spacing-width (0.0 . 0.8).
             candidates.Add((BreakAlignSymbol.TimeSignature,
