@@ -1,6 +1,6 @@
 // Dead (muted) notes: @dead renders an "×" notehead in notation and an "×" in
 // place of the fret number in tab. Normal notes are unaffected; stems/beams stay.
-part bl { clef bass tuning bass }
+part bl { clef bass octave 3 tuning bass }
 section A { c4 e@dead g e@dead | c8 c@dead g@dead c g@dead g c c@dead | }
 form main { A }
 score main { staff bl  tab bl }

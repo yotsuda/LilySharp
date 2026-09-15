@@ -33,7 +33,7 @@ public sealed class TabRangeValidatorTests
     {
         var v = new TabRangeValidator();
         v.Validate(SyntaxTree.Parse(
-            "part bl { clef bass tuning bass }\nsection A { bl { " + body + " } }\nform main { A }\nscore { tab bl }\n"));
+            "part bl { clef bass octave 3 tuning bass }\nsection A { bl { " + body + " } }\nform main { A }\nscore { tab bl }\n"));
         return v.Diagnostics;
     }
 

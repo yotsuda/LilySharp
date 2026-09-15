@@ -11,9 +11,9 @@ part melody
 section A {
   melody {
     c4 c c c |
-    // ⚠️ cue の bass clef は相対 anchor を octave 3 に引くので(clef 依存 anchor)、
-    // LP の「C4 継続」に合わせるには先頭だけ c' が要る(検算: lysc check --pitches)。
-    voice { cue bass { c'4 c c c } } { R1 } |
+    // cue の bass clef は音高を動かさない(Lily# の clef は描画だけ・LP の \cueClef と同じ)ので、
+    // LP の綴りがそのまま写せる(検算: lysc check --pitches)。
+    voice { cue bass { c4 c c c } } { R1 } |
     c4 c c c |
   }
 }

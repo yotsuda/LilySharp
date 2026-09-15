@@ -11,7 +11,7 @@ part treblePart {
   clef treble
 }
 part bassPart {
-  clef bass
+  clef bass octave 3
 }
 
 phrase treblePhrase {

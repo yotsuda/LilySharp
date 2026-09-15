@@ -7,8 +7,20 @@ Learn the basics of writing music notation with Lily#.
 Create a file `hello.lys`:
 
 ```
-c4 d e f | g2 g | a4 a a a | g2. r4 |
+part melody
+
+section A {
+  melody { c4 c g' g | a a g2 | f4 f e e | d d c2 | }
+}
+
+form main { ~A }
+
+score main { staff melody }
 ```
+
+A file declares its **parts**, puts their music in **sections**, says in which order the
+sections play (the **form**), and says what to print (the **score**). The notes live
+inside the part's `{ … }`.
 
 Compile it:
 
@@ -16,9 +28,16 @@ Compile it:
 lysc svg hello.lys
 ```
 
-This creates `hello.svg` with a single staff showing "Twinkle Twinkle Little Star" melody.
+This creates `hello.svg` with a single staff showing the "Twinkle Twinkle Little Star" melody.
+
+**Octaves are relative.** Each note takes the octave nearest the note before it, and `'`
+(up) or `,` (down) shift from there. That is why the first `g` above is written `g'`: the
+nearest G to C4 is the G *below* it, and the mark lifts it to the G above. The next `g`
+needs no mark — it is already nearest to the one before.
 
 ## Adding Metadata
+
+Title, composer, tempo, meter and key go at the top of the file:
 
 ```
 title "Twinkle Twinkle Little Star"
@@ -27,20 +46,30 @@ tempo 100
 time 4/4
 key c major
 
-c4 c g g | a a g2 |
-f4 f e e | d d c2 |
+part melody
+
+section A {
+  melody { c4 c g' g | a a g2 | f4 f e e | d d c2 | }
+}
+
+form main { ~A }
+
+score main { staff melody }
 ```
+
+From here on, the examples show only the notes. They go inside a part's `{ … }`, where
+`c4 c g' g | …` stands in the score above.
 
 ## Working with Accidentals
 
 Sharps use `is`, flats use `es`:
 
 ```
-key g major
-
 // G major scale with F#
-g4 a b c' | d' e' fis' g' |
+g'4 a b c | d e fis g |
+```
 
+```
 // Chromatic passage
 c4 cis d dis | e f fis g |
 ```
@@ -51,15 +80,15 @@ Enclose pitches in angle brackets:
 
 ```
 <c e g>2 <d f a> |     // C major, D minor
-<e g b>2 <f a c'>  |    // E minor, F major
+<e g b>2 <f a c>  |    // E minor, F major
 ```
 
 ## Dynamics and Articulations
 
 ```
 c4@p d e f |              // Piano (soft)
-g4@cresc a b c' |         // Crescendo
-d'4@f@staccato e' f' g' | // Forte with staccato
+g4@cresc a b c |          // Crescendo
+d4@f@staccato e f g |     // Forte with staccato
 ```
 
 ## Ties and Slurs
@@ -67,7 +96,7 @@ d'4@f@staccato e' f' g' | // Forte with staccato
 Ties connect the same pitch:
 
 ```
-c2~ | c4 d e f |    // C held across the barline
+c2 c~ | c4 d e f |    // C held across the barline
 ```
 
 Slurs phrase different pitches:
@@ -84,11 +113,11 @@ tempo 120
 time 4/4
 
 part rightHand { clef treble }
-part leftHand { clef bass }
+part leftHand { clef bass octave 3 }   // a clef only draws; octave 3 puts bare c at C3
 
 section Main {
-  rightHand { e'4 d' c' d' | e' e' e'2 | }
-  leftHand  { c2 g, | c g, | }
+  rightHand { e4 d c d | e e e2 | }
+  leftHand  { c2 g | c g | }
 }
 
 score main {
@@ -132,10 +161,10 @@ bars; the repeat count defaults to 2 (or the number of endings), or state it as
 part melody { clef treble }
 
 section Body {
-  melody { c4 d e f | g4 a b c' | }
+  melody { c4 d e f | g4 a b c | }
 }
-section First  { melody { d'2 d' | } }   // First time
-section Second { melody { c'2 c' | } }   // Second time
+section First  { melody { d'2 d | } }   // First time
+section Second { melody { c'2 c | } }   // Second time
 
 form main { |: Body [1. ~First] :| [2. ~Second] }
 
@@ -148,8 +177,8 @@ ending is written the same way: `:| [3. Third]`.
 ## Grace Notes
 
 ```
-acciaccatura { d16 } c4 e g |   // Quick grace note
-appoggiatura { e8 } d4 f a |    // Longer grace note
+acciaccatura { d16 } c4 e g e |   // Quick grace note
+appoggiatura { e8 } d4 f a f |    // Longer grace note
 ```
 
 ## Tuplets
@@ -157,9 +186,11 @@ appoggiatura { e8 } d4 f a |    // Longer grace note
 ```
 // Triplets: 3 notes in time of 2
 tuplet 3/2 { c8 d e } f4 g a |
+```
 
+```
 // Quintuplets: 5 in time of 4
-tuplet 5/4 { c16 d e f g } a4 b c' |
+tuplet 5/4 { c16 d e f g } a4 b c |
 ```
 
 ## Lyrics

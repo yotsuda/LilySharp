@@ -784,7 +784,8 @@ public static class RenderSpecParser
             // guard. The row fold (FoldAdjacentRows / ParseGrandStaff) is the
             // only writer.
             WithLyrics: ImmutableArray<string>.Empty,
-            PedalStyle: pedalStyle);
+            PedalStyle: pedalStyle,
+            WrittenClef: explicitClef);
     }
 
     /// <summary>Maps the `as roman | names` selector text to its mode.</summary>

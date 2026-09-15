@@ -6,7 +6,7 @@ title "A pedal keeps its own staff baseline, clear of the vocal lyrics"
 time 4/4
 key c major
 part voc { clef treble }
-part pno { clef bass }
+part pno { clef bass octave 3 }
 section A {
   voc { c'4 d' e' f' | }
   lyrics words sings voc { la la la la | }

@@ -20,7 +20,7 @@ part melody {
   clef treble
 }
 part bass {
-  clef bass
+  clef bass octave 3
 }
 
 section Main {

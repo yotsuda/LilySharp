@@ -74,14 +74,14 @@ public class BareSectionPartTests
         score main { staff bl }
         """;
 
-    /// <summary>The clef the part reads in sets the octave a bare letter anchors to.</summary>
+    /// <summary>The part's own <c>octave</c> sets the octave a bare letter anchors to (its clef does not).</summary>
     [Fact]
     public void ABareSectionOpensInItsPartsRegister()
     {
-        Assert.Equal(Play(Blocked("clef bass")), Play(Bare("clef bass")));
-        // …and that register is the low one: reading in bass clef the part anchors an
-        // octave below treble, so `c'` is C4 (60) where a treble part gives C5 (72).
-        Assert.Equal(60, Play(Bare("clef bass"))[0]);
+        Assert.Equal(Play(Blocked("clef bass octave 3")), Play(Bare("clef bass octave 3")));
+        // …and that register is the low one: with `octave 3` the part anchors an octave
+        // below the default, so `c'` is C4 (60) where a treble part gives C5 (72).
+        Assert.Equal(60, Play(Bare("clef bass octave 3"))[0]);
         Assert.Equal(72, Play(Bare("clef treble"))[0]);
     }
 
@@ -107,12 +107,12 @@ public class BareSectionPartTests
     public void ABareSectionSoundsItsPartsTransposition()
     {
         // A bass guitar prints in bass clef and sounds an octave below it.
-        int[] played = Play(Bare("clef bass tuning bass"));
+        int[] played = Play(Bare("clef bass octave 3 tuning bass"));
 
-        Assert.Equal(Play(Blocked("clef bass tuning bass")), played);
+        Assert.Equal(Play(Blocked("clef bass octave 3 tuning bass")), played);
         Assert.Equal(48, played[0]);       // printed C4, sounding C3
         // The shift is the whole of the difference from the same part without the tuning.
-        Assert.Equal(Play(Bare("clef bass"))[0] - 12, played[0]);
+        Assert.Equal(Play(Bare("clef bass octave 3"))[0] - 12, played[0]);
     }
 
     /// <summary>A file with no <c>score</c> block has nobody to ask, and plays as it
@@ -156,7 +156,7 @@ public class BareSectionPartTests
     [Fact]
     public void OnePartOnTwoStavesIsStillOnePart()
     {
-        int[] played = Play(Bare("clef bass tuning bass", "score main { staff bl  tab bl }"));
+        int[] played = Play(Bare("clef bass octave 3 tuning bass", "score main { staff bl  tab bl }"));
 
         Assert.Equal(48, played[0]);
     }
@@ -168,9 +168,9 @@ public class BareSectionPartTests
     /// transposition whatever the part it is drawn on says.
     /// </summary>
     [Theory]
-    [InlineData("clef bass", "C4")]                    // the clef's own register
+    [InlineData("clef bass octave 3", "C4")]           // the part's own `octave` register
     [InlineData("clef treble", "C5")]                  // …and the control that is not it
-    [InlineData("clef bass tuning bass", "C4")]        // written pitch: the shift is <transpose>
+    [InlineData("clef bass octave 3 tuning bass", "C4")]        // written pitch: the shift is <transpose>
     public void TheMusicXmlAttributesABareSectionTheSameWay(string header, string firstPitch)
     {
         static (string Pitch, string Part) Read(string lys)
@@ -196,7 +196,7 @@ public class BareSectionPartTests
     public void TheBareSectionsTranspositionReachesTheDocument()
     {
         var doc = new MusicXmlExporter().Export(
-            SyntaxTree.Parse(Bare("clef bass tuning bass")));
+            SyntaxTree.Parse(Bare("clef bass octave 3 tuning bass")));
 
         var transpose = doc.Parts.SelectMany(p => p.Measures)
             .Select(m => m.Attributes?.TransposeSemitones)

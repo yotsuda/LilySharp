@@ -10,7 +10,7 @@ key c major
 transpose d
 
 part upper { clef treble }
-part lower { clef bass }
+part lower { clef bass octave 3 }
 
 section Main {
   upper { c'4 d e f }

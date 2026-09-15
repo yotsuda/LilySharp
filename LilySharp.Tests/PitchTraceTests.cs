@@ -48,7 +48,7 @@ public sealed class PitchTraceTests
         time 4/4
 
         part rh { clef treble }
-        part lh { clef bass }
+        part lh { clef bass octave 3 }
 
         section Main {
           rh { c'1 | }
@@ -70,7 +70,7 @@ public sealed class PitchTraceTests
         time 4/4
 
         part rh { clef treble }
-        part lh { clef bass }
+        part lh { clef bass octave 3 }
 
         section Main {
           lh { c4 d e f | }
@@ -101,7 +101,7 @@ public sealed class PitchTraceTests
     }
 
     [Fact]
-    public void EachPart_ResolvesFromItsOwnClefAnchor()
+    public void EachPart_ResolvesFromItsOwnAnchor()
     {
         // c'1 under a treble anchor is C5; c d e f under a bass anchor is C3 D3 E3 F3.
         Assert.Equal(

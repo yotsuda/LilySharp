@@ -789,12 +789,15 @@ public sealed partial class MeasureCollector
             // `clef` keeps the top-level one, so overwriting the offset regardless
             // dropped it to 0 — and 0 reads as "no position", which left the clef
             // with no data-pos and nothing to click through to.
+            // The staff item's own clef word overrides the part's (see the multi-staff pass).
+            if (renderSpec?.WrittenClefOf(voiceName) is { } writtenClef)
+                partClef = InstrumentDefaults.ClefWord(writtenClef);
             if (partClef != null)
             {
                 _meta.Clef = partClef;
                 _meta.ClefPosition = partClefPos;
             }
-            _octave.CurrentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
+            _octave.CurrentOctave = partOctave ?? InstrumentDefaults.DefaultAnchorOctave;
             // ABSOLUTE mode sees the part's OWN `octave N` and nothing else — not the preset
             // and not the clef. See GetPartDefaults' remarks for what folding them cost.
             _octave.OctaveBase = InstrumentDefaults.AbsoluteBaseOctave(partExplicitOctave);
@@ -810,7 +813,7 @@ public sealed partial class MeasureCollector
         }
         else
         {
-            _octave.CurrentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
+            _octave.CurrentOctave = InstrumentDefaults.DefaultAnchorOctave;
         }
         _octave.InitialOctave = _octave.CurrentOctave;
         _octave.InitialOctaveBase = _octave.OctaveBase; // absolute mode's section-reset target
@@ -1390,6 +1393,10 @@ public sealed partial class MeasureCollector
 
             // Set clef and octave for this voice from part definition
             var (partClef, partOctave, partExplicitOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(tree.GetRoot(), voiceName, ScoreConcert);
+            // A clef the staff item wrote (`staff bass melody`) wins over the part's: it is
+            // this rendering's clef, the one the page draws (pitches do not depend on it).
+            if (renderSpec.WrittenClefOf(voiceName) is { } writtenClef)
+                partClef = InstrumentDefaults.ClefWord(writtenClef);
             _meta.Clef = partClef ?? "treble";
             _meta.ClefPosition = partClefPos;
             // …and remember it per VOICE: the staff built for this part carries its own
@@ -1397,8 +1404,8 @@ public sealed partial class MeasureCollector
             // to the `clef` that set them (stamped after ToStaffGroups below).
             voiceClefPosDict[voiceName] = partClefPos;
 
-            // Set initial octave: explicit > instrument default > clef default
-            _octave.CurrentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
+            // Set initial octave: explicit > instrument default > 4. The clef is drawing only.
+            _octave.CurrentOctave = partOctave ?? InstrumentDefaults.DefaultAnchorOctave;
             _octave.InitialOctave = _octave.CurrentOctave;
             // …and the ABSOLUTE base from the part's OWN `octave N` alone (see GetPartDefaults).
             _octave.OctaveBase = InstrumentDefaults.AbsoluteBaseOctave(partExplicitOctave);

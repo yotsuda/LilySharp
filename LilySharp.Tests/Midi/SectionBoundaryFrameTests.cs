@@ -60,7 +60,7 @@ public class SectionBoundaryFrameTests
 
     [Theory]
     [InlineData("treble", 60)]  // anchor octave 4
-    [InlineData("bass", 48)]    // anchor octave 3 — the book that tells the two rules apart
+    [InlineData("bass octave 3", 48)]    // anchor octave 3 — the book that tells the two rules apart
     public void ASectionOpensAtThePartsOwnAnchor_NotWhereTheLastOneEnded(string clef, int expected)
     {
         var notes = ExportNotes(Book(clef));

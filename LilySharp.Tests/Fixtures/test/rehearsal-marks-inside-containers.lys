@@ -2,7 +2,7 @@ title "Rehearsal letters inside containers"
 key c major
 
 part melody {
-  clef bass
+  clef bass octave 3
   section A {
     c4@mark("A") d e f | tuplet 3/2 { g4@mark("B") a b } c4 d
   }

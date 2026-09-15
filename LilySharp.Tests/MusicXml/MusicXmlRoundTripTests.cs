@@ -85,7 +85,8 @@ public class MusicXmlRoundTripTests
     // Both sources at once — the case the import subtraction has to get exactly right,
     // because the clef word carries one octave of the two and the property the other.
     [InlineData("instrument bass clef bass_8", "C3", -1, -2)]
-    [InlineData("clef bass", "C3", null, null)]
+    [InlineData("clef bass", "C4", null, null)]           // the clef moves no pitch
+    [InlineData("clef bass octave 3", "C3", null, null)]  // …the part's `octave` does
     [InlineData("clef treble", "C4", null, null)]
     public void TransposingPart_DeclaresItsShiftOnceAndSurvivesRoundTrip(
         string header, string writtenPitch, int? clefOctaveChange, int? octaveChange)

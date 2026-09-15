@@ -27,7 +27,7 @@ part rh {
 }
 
 part lh {
-  clef bass
+  clef bass octave 3
 }
 
 // ⚠️ The phrases are kept, one bar each, because this book is also one of the 58 that

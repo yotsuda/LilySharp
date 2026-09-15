@@ -8,9 +8,9 @@ tempo 100
 time 4/4
 
 part sop { clef treble }
-part alt { clef alto }
-part ten { clef tenor }
-part bas { clef bass }
+part alt { clef alto octave 3 }
+part ten { clef tenor octave 3 }
+part bas { clef bass octave 3 }
 
 section M {
   sop { c'1 }

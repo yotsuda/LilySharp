@@ -13,7 +13,7 @@ time 4/4
 key g major
 
 part melody
-part lh { clef bass }
+part lh { clef bass octave 3 }
 
 section Main {
   melody {

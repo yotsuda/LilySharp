@@ -44,8 +44,9 @@ layout {                 // optional; the score-wide display switches (see the l
   accidentals default   // printed accidental. All three shown at their defaults.
 }
 
-part rightHand { clef treble }  // declare each part; clef lives here
-part leftHand  { clef bass }    // part names are identifiers, NOT reserved words
+part rightHand { clef treble }  // declare each part; clef lives here (it only DRAWS —
+part leftHand  { clef bass octave 3 }  // the register is `octave N` or an instrument preset)
+                                // part names are identifiers, NOT reserved words
                                 // (bass/treble/melody-as-keyword etc. are taken)
 
 phrase motif { c4 d e f | }     // optional reusable music, referenced by bare name

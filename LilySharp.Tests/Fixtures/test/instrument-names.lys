@@ -15,11 +15,11 @@ part violin2 "Violin II" {
 }
 
 part viola "Viola" {
-  clef alto
+  clef alto octave 3
 }
 
 part cello "Cello" {
-  clef bass
+  clef bass octave 3
 }
 
 phrase vln1Line {

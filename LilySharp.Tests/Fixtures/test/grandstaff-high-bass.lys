@@ -26,7 +26,7 @@ time 4/4
 key c major
 
 part rh { clef treble }
-part lh { clef bass }
+part lh { clef bass octave 3 }
 
 section Main {
   rh { c'1 | c'1 | }

@@ -4,8 +4,8 @@
 title "Alto and tenor clefs"
 time 4/4
 key f major
-part alt { clef alto }
-part ten { clef tenor }
+part alt { clef alto octave 3 }
+part ten { clef tenor octave 3 }
 section Main {
   alt { c4 d e f | g a bes c | }
   ten { c4 d e f | g a bes c | }

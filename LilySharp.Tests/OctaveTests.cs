@@ -105,10 +105,11 @@ public class OctaveTests
     }
 
     [Fact]
-    public void BassClef_StartsAtOctave3()
+    public void BassClef_DoesNotMoveTheOctave()
     {
-        // With bass clef part, initial octave should be 3
-        // Bass clef: staffPosition 0 = d3
+        // A clef is drawing only (user decision 2026-09-15): `clef bass` with no `octave` or
+        // `instrument` leaves bare c at C4, which a bass staff draws on the first ledger line
+        // above it (staffPosition 6; C3 would be −1).
         var source = @"
 part bassline { clef bass }
 section A {
@@ -121,9 +122,31 @@ score main ""test"" {
 ";
         var notes = CollectNotes(source, "bassline");
         Assert.Equal(4, notes.Count);
+        Assert.Equal(6, notes[0].StaffPosition);
+    }
 
-        // c3 in bass clef: staffPosition = pitchIndex(c) - pitchIndex(d) + (3-3)*7 = 0 - 1 = -1
-        Assert.Equal(-1, notes[0].StaffPosition);
+    // The clef word written on the score item (`staff bass melody`) is this rendering's
+    // clef even when the part header names none, and — like every clef — it is drawing
+    // only: the note keeps its pitch (C4 sits on the first ledger line above a bass staff)
+    // and the twin writes \clef without moving its \relative anchor.
+    [Theory]
+    [InlineData("score main { staff bass melody }")]
+    [InlineData("score main { staff treble other  staff bass melody }")]
+    public void AClefWrittenOnTheStaffItem_IsTheStaffsClef_AndMovesNoPitch(string score)
+    {
+        var source = "section A {\n  melody { c1 }\n  other { c1 }\n}\nform main { A }\n" + score + "\n";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+
+        var multi = LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var staff = multi.StaffGroups.SelectMany(g => g.Staves).Last();
+        Assert.Equal(ClefType.Bass, staff.Clef);
+        var first = staff.Voices[0].Measures.SelectMany(m => m.Items.OfType<NoteItem>()).First();
+        Assert.Equal(6, first.StaffPosition); // C4 drawn in bass clef
+
+        string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree);
+        Assert.Contains("\\clef \"bass\" \\melody", ly);
+        Assert.Contains("\\relative c' {", ly);
     }
 
     [Fact]
@@ -213,22 +236,21 @@ score main ""test"" {
         Assert.Equal(4, octave);
     }
 
-    [Fact]
-    public void ClefDefaultOctave_Treble_Is4()
+    [Theory]
+    [InlineData("bass")]
+    [InlineData("alto")]
+    [InlineData("tenor")]
+    [InlineData("treble_8")]
+    [InlineData("treble")]
+    public void AClefInThePartHeader_LeavesTheAnchorAtFour(string clef)
     {
-        Assert.Equal(4, InstrumentDefaults.GetDefaultOctave(ClefType.Treble));
-    }
-
-    [Fact]
-    public void ClefDefaultOctave_Bass_Is3()
-    {
-        Assert.Equal(3, InstrumentDefaults.GetDefaultOctave(ClefType.Bass));
-    }
-
-    [Fact]
-    public void ClefDefaultOctave_Alto_Is3()
-    {
-        Assert.Equal(3, InstrumentDefaults.GetDefaultOctave(ClefType.Alto));
+        // The relative anchor is `octave N` > instrument preset > 4 — never the clef
+        // (user decision 2026-09-15). The preset row is the positive control.
+        var part = SyntaxTree.Parse($"part p {{ clef {clef} }}").GetRoot()
+            .ChildNodes().OfType<PartDeclarationSyntax>().First();
+        Assert.Equal(4, LilySharp.Core.Semantics.PartHeaderDefaults.Read(part).AnchorOctave);
+        Assert.Equal(4, InstrumentDefaults.AnchorOctave(null, null));
+        Assert.Equal(3, InstrumentDefaults.AnchorOctave(null, "cello"));
     }
 
     [Theory]
@@ -341,7 +363,7 @@ score main ""test"" {
     public void SectionBoundary_ResetsOctaveForBassClef()
     {
         var source = @"
-part bassline { clef bass }
+part bassline { clef bass octave 3 }
 section A {
     bassline { c4 d e f | g a b c' | }
 }
@@ -387,12 +409,6 @@ score main ""test"" {
         // c should be LOWER than f (same octave, descending fourth)
         Assert.True(notes[1].StaffPosition < notes[0].StaffPosition,
             $"c after f should stay same octave c(pos={notes[1].StaffPosition}) should be < f(pos={notes[0].StaffPosition})");
-    }
-
-    [Fact]
-    public void ClefDefaultOctave_Treble8Below_Is4()
-    {
-        Assert.Equal(4, InstrumentDefaults.GetDefaultOctave(ClefType.Treble8Below));
     }
 
     [Fact]

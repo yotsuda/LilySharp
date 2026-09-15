@@ -34,7 +34,7 @@ part rh {
   clef treble
 }
 part lh {
-  clef bass
+  clef bass octave 3
 }
 
 // --- フレーズ（G2: 名前付き楽譜は phrase のみ。参照は裸の名前）-----------------

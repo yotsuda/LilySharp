@@ -2999,7 +2999,7 @@ public sealed partial class LilySharpLanguageServer
         "key c major",
         "",
         "part rh { clef treble }",
-        "part lh { clef bass }",
+        "part lh { clef bass octave 3 }",
         "",
         "section A {",
         "  rh { c4 c g' g | a a g2 | f4 f e e | d d c2 | }",

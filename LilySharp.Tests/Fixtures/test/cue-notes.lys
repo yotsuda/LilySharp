@@ -48,7 +48,7 @@ phrase cueMelody {
 // Chords: normal, then a cue region; then a cue region in another clef
 phrase cueChords {
   <c, e g>4 <d f a>4 cue { <e g b>4 <f a c'>4 } |
-  <c e g>2 cue bass { <c, e, g,>2 } |
+  <c e g>2 cue bass { <c,, e,, g,,>2 } |
 }
 
 section Main {

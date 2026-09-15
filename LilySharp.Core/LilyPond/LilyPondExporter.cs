@@ -41,12 +41,11 @@ namespace LilySharp.Core.LilyPond;
 ///     absolute mode is anchored at middle C whatever the clef — OctaveContext's
 ///     "clef default is deliberately NOT used here")
 ///   • relative input (the default) → <c>\relative</c> at THE PART'S OWN anchor, which is
-///     not always <c>c'</c>: Lily#'s relative anchor is the part's default octave, and that
-///     follows the clef (InstrumentDefaults.GetDefaultOctave — bass/alto/tenor anchor at
-///     octave 3, i.e. LilyPond <c>c</c>), with an explicit <c>octave N</c> part property
-///     overriding it. ⚠️ This file used to write <c>\relative c'</c> unconditionally and
-///     say so in this very comment, which made every non-treble part export AN OCTAVE HIGH
-///     — 54 of the 204 fixtures declare a bass, alto or tenor clef.
+///     not always <c>c'</c>: an explicit <c>octave N</c> part property, else the
+///     <c>instrument</c> preset's octave, else 4 (InstrumentDefaults.AnchorOctave). The clef
+///     is NOT a step: a Lily# clef is drawing only, like LilyPond's (user decision
+///     2026-09-15). ⚠️ This file used to write <c>\relative c'</c> unconditionally, which
+///     made every part with an octave-3 preset export AN OCTAVE HIGH.
 ///
 /// It reproduces the MUSIC and the staff/tab structure the score declares; it does
 /// NOT reconstruct anything the <c>.lys</c> does not hold (a hand <c>.ly</c>'s
@@ -95,7 +94,7 @@ public sealed class LilyPondExporter
 
     /// <summary>
     /// The octave the part being emitted anchors its relative pitches to — Lily#'s
-    /// "default octave", 4 for treble.
+    /// "default octave": 4 unless the part's <c>octave N</c> or <c>instrument</c> says otherwise.
     /// </summary>
     /// <remarks>
     /// It is state rather than a parameter because the two places that spell an anchor are
@@ -105,7 +104,7 @@ public sealed class LilyPondExporter
     /// wrapper, which is worse than both being wrong the same way.
     /// ⚠️ Sub-exporters must inherit it — see the phrase-body buffer.
     /// </remarks>
-    private int _anchorOctave = InstrumentDefaults.GetDefaultOctave(ClefType.Treble);
+    private int _anchorOctave = InstrumentDefaults.DefaultAnchorOctave;
 
     /// <summary>
     /// The running WRITTEN key signature (sharps positive, flats negative) and the tonic an
@@ -459,12 +458,11 @@ public sealed class LilyPondExporter
                 var part = parts.FirstOrDefault(p => p.Name.Text == name);
                 string varName = VarName(name);
                 partVars[name] = varName;
-                // An undeclared part has no clef property to anchor to, so it takes the
-                // same default the collector gives it (RenderSpecParser.GetPartClef returns
-                // null → ClefType.Treble → octave 4).
+                // An undeclared part has no `octave` or `instrument` to anchor to, so it takes
+                // the same default the collector gives it.
                 _anchorOctave = part != null
                     ? AnchorOctaveOf(part)
-                    : InstrumentDefaults.GetDefaultOctave(ClefType.Treble);
+                    : InstrumentDefaults.DefaultAnchorOctave;
                 // The clef a slash note's middle-line pitch is spelled against.
                 // Read from the part's own `clef` property (the same source
                 // AnchorOctaveOf reads); a preset-implied or staff-level clef is
@@ -995,22 +993,10 @@ public sealed class LilyPondExporter
 
     /// <summary>
     /// The octave a part's relative pitches are anchored to, resolved the way the layout
-    /// resolves it.
+    /// resolves it (InstrumentDefaults.AnchorOctave: explicit <c>octave N</c> &gt; the
+    /// <c>instrument</c> preset's octave &gt; 4 — the clef is not consulted).
     /// </summary>
     /// <remarks>
-    /// The same precedence MeasureCollector applies (MeasureCollector.cs GetPartDefaults →
-    /// <c>partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(clef))</c>, where
-    /// <c>partOctave</c> is the explicit <c>octave N</c> property or, failing that, the
-    /// <c>instrument</c> preset's own octave), read off the same part properties through the
-    /// same table.
-    /// <para>
-    /// ⚠️ The preset's octave beats the CLEF's default even when a clef is written too —
-    /// <c>instrument flute</c> anchors at octave 5 while <c>GetDefaultOctave(Treble)</c> is
-    /// 4 — because <c>resolvedOctave ??= defaultOctave</c> runs after the clef is resolved.
-    /// Mirrored here rather than approximated: an anchor that is off by an octave is a twin
-    /// that plays other pitches.
-    /// </para>
-    /// <para>
     /// ⚠️ An <c>instrument</c> preset is a BUNDLE — <c>instrument bass</c> means bass clef
     /// AND octave 3 AND a sounding pitch an octave down (InstrumentDefaults.GetTransposition;
     /// an electric bass is written an octave above where it sounds, and that −12 is
@@ -1018,15 +1004,9 @@ public sealed class LilyPondExporter
     /// the other two would move the twin's written pitch while its sounding pitch stayed
     /// wrong, i.e. make it wrong in a way that LOOKS right. See <see cref="PartClefWord"/>
     /// for why reading it is still a transpilation and not a re-derivation.
-    /// </para>
     /// </remarks>
     private static int AnchorOctaveOf(PartDeclarationSyntax part)
-        => InstrumentDefaults.AnchorOctave(
-            ExplicitPartOctave(part),
-            InstrumentPresetOf(part),
-            PartProperty(part, "clef") is { } clef
-                ? MeasureCollector.ParseClefType(clef.ToLowerInvariant())
-                : ClefType.Treble);
+        => InstrumentDefaults.AnchorOctave(ExplicitPartOctave(part), InstrumentPresetOf(part));
 
     /// <summary>The part's own <c>octave N</c> property, or null when it states none — the
     /// one input both anchors take from the part, read once so the relative anchor and
@@ -3766,35 +3746,16 @@ public sealed class LilyPondExporter
         return $"{kw} {{ {body} }}";
     }
 
-    // The clef the twin is reading in, so an UNCHANGED `clef` can be told from a change.
+    // The clef the twin is reading in — what a slash note's middle-line pitch is spelled against.
     private ClefType _lysClef = ClefType.Treble;
 
-    /// <summary>A mid-music <c>clef</c>: written across unchanged, and the LILY# frame — not
-    /// LilyPond's — reopened at the clef's own octave.</summary>
-    /// <remarks>
-    /// ⚠️ THE TWO FRAMES PART COMPANY HERE, deliberately. Lily# reads the notes after a clef
-    /// change in that clef's register (`clef bass c,4` is a low C); LilyPond's <c>\relative</c>
-    /// never looks at a clef and would carry on from the last note. Moving <see
-    /// cref="_lysOctave"/> alone is exactly what makes <see cref="EmitMusicPitch"/> write the
-    /// difference out as octave marks — the same machinery that already corrects a degree
-    /// chord — so the twin sounds the page's music while LilyPond does nothing unusual.
-    /// ⚠️ An UNCHANGED clef changes nothing: it engraves no grob and must not move the frame
-    /// either (MeasureCollector.MusicWalk's clef branch, citing
-    /// lily/clef-engraver.cc:139-166 inspect_clef_properties).
-    /// Decided 2026-08-17, HANDOFF §3; measured on `test/clef-change`, whose twin used to
-    /// hand LilyPond C5 D5 where the page prints C3 D3.
-    /// </remarks>
+    /// <summary>A mid-music <c>clef</c>: written across unchanged. It moves no octave frame on
+    /// either side — a Lily# clef is drawing only, and LilyPond's <c>\relative</c> never looks
+    /// at a clef (InstrumentDefaults.DefaultAnchorOctave).</summary>
     private string EmitClef(ClefDeclarationSyntax cl)
     {
-        string text = "\\clef " + LyClefName(cl.ClefName.Text);
-        var next = Svg.Collector.MeasureCollector.ParseClefType(cl.ClefName.Text.ToLowerInvariant());
-        if (next != _lysClef && !_octaveAbsolute)
-        {
-            _lysClef = next;
-            _lysOctave = InstrumentDefaults.GetDefaultOctave(next);
-        }
-        else _lysClef = next;
-        return text;
+        _lysClef = Svg.Collector.MeasureCollector.ParseClefType(cl.ClefName.Text.ToLowerInvariant());
+        return "\\clef " + LyClefName(cl.ClefName.Text);
     }
 
     /// <summary>
@@ -3815,24 +3776,12 @@ public sealed class LilyPondExporter
         var buf = new LilyPondExporter
         { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
         CarryFrameInto(buf);
-        // ⚠️ A cue clef reopens the LILY# frame at both edges, unconditionally — the page
-        // does it whether or not the cue clef differs from the staff's
-        // (MeasureCollector.MusicWalk.ProcessCueRegion). LilyPond's \cueClef does not touch
-        // its own \relative chain, so only buf._lysOctave moves and EmitMusicPitch writes
-        // the difference out. `audit/lp-regression/lys/cue-clef-manually` documents the rule
-        // in its own margin and compensates for it by hand.
-        if (cue.ClefKeyword is { } cueClefTok && !_octaveAbsolute)
-        {
-            buf._lysClef = Svg.Collector.MeasureCollector.ParseClefType(
-                cueClefTok.Text.ToLowerInvariant());
-            buf._lysOctave = InstrumentDefaults.GetDefaultOctave(buf._lysClef);
-        }
+        // A cue clef is drawing only: neither side's relative frame moves
+        // (InstrumentDefaults.DefaultAnchorOctave), so the body is written with its own marks.
         buf.EmitMusicStream(MusicItems(cue.Body).ToList(), "");
         // The body is written once and read once by the relative pass on both sides, so its
         // frame carries out like a tuplet's or a repeat's.
         CarryFrameBack(buf);
-        if (cue.ClefKeyword != null && !_octaveAbsolute)
-            _lysOctave = InstrumentDefaults.GetDefaultOctave(_lysClef); // the staff's own clef is back
         _warnings.AddRange(buf._warnings);
         string body = buf._sb.ToString().Replace("\n", " ").Trim();
         string region = $"\\new CueVoice {{ {body} }}";
@@ -4049,7 +3998,7 @@ public sealed class LilyPondExporter
                         break;
                     case StaffRenderSyntax st:
                         AddInlineChordRow(rows, RenderPartName(st), "    ");
-                        rows.Add(EmitStaff(RenderPartName(st), parts, partVars, tab: false, "    "));
+                        rows.Add(EmitStaff(RenderPartName(st), parts, partVars, tab: false, "    ", writtenClef: StaffClefWord(st)));
                         AddLyricRows(rows, RenderPartName(st), "    ", asRow: false);
                         lastMainStaffPart = RenderPartName(st) ?? lastMainStaffPart;
                         break;
@@ -4848,7 +4797,7 @@ public sealed class LilyPondExporter
             var groupRows = new List<string>(1);
             AddInlineChordRow(groupRows, RenderPartName(staff), memberIndent);
             foreach (var r in groupRows) sb.Append(r);
-            sb.Append(EmitStaff(RenderPartName(staff), parts, partVars, tab: false, memberIndent));
+            sb.Append(EmitStaff(RenderPartName(staff), parts, partVars, tab: false, memberIndent, writtenClef: StaffClefWord(staff)));
             groupRows.Clear();
             AddLyricRows(groupRows, RenderPartName(staff), memberIndent, asRow: false);
             foreach (var r in groupRows) sb.Append(r);
@@ -4923,6 +4872,12 @@ public sealed class LilyPondExporter
         var toks = OssiaTargetTokens(ossia);
         return toks.Count > 0 ? toks[^1].Text : null;
     }
+
+    /// <summary>The clef word of <c>staff [clef] part</c>, or null when the row names only the
+    /// part. Read through the renderer's own scan (RenderSpecParser.ParseStaffSpec), so the twin
+    /// and the page cannot disagree on whether a lone clef word is a clef or the part.</summary>
+    private static string? StaffClefWord(StaffRenderSyntax staff) =>
+        RenderSpecParser.ParseStaffSpec(staff)?.WrittenClef is { } c ? InstrumentDefaults.ClefWord(c) : null;
 
     /// <summary>The clef word of <c>ossia [clef] part</c>, or null when the row is just
     /// <c>ossia part</c> (a lone word is the PART, never a clef).</summary>
@@ -5117,13 +5072,13 @@ public sealed class LilyPondExporter
 
     private string EmitStaff(string? partName, List<PartDeclarationSyntax> parts,
         Dictionary<string, string> partVars, bool tab, string indent,
-        bool tabNumbersOnly = false)
+        bool tabNumbersOnly = false, string? writtenClef = null)
     {
         string varName = partName != null && partVars.TryGetValue(partName, out var v)
             ? v : partVars.Values.FirstOrDefault() ?? "music";
         var part = parts.FirstOrDefault(p => p.Name.Text == partName)
                    ?? (parts.Count == 1 ? parts[0] : null);
-        string? clef = PartClefWord(part);
+        string? clef = writtenClef ?? PartClefWord(part);
 
         var sb = new StringBuilder();
         if (tab)

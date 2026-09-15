@@ -56,7 +56,7 @@ public sealed class PartHeaderDefaults
     public ClefType Clef { get; private init; } = ClefType.Treble;
 
     /// <summary>
-    /// The RELATIVE-frame anchor: <c>octave N</c> &gt; preset &gt; the clef's own octave.
+    /// The RELATIVE-frame anchor: <c>octave N</c> &gt; preset &gt; 4. The clef is not consulted.
     /// </summary>
     public int AnchorOctave { get; private init; } = 4;
 
@@ -205,7 +205,7 @@ public sealed class PartHeaderDefaults
             Preset = preset,
             ClefWord = clefWord,
             Clef = clef,
-            AnchorOctave = InstrumentDefaults.AnchorOctave(explicitOctave, preset, clef),
+            AnchorOctave = InstrumentDefaults.AnchorOctave(explicitOctave, preset),
             AbsoluteBaseOctave = InstrumentDefaults.AbsoluteBaseOctave(explicitOctave),
             ClefOctaveSemitones = Tunings.ClefOctaveShift(clef),
             TranspositionSemitones = transposition,

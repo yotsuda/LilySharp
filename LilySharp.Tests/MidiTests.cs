@@ -589,14 +589,11 @@ score main ""x"" { staff lower }";
         var notes = midi.Tracks[1].Notes;
 
         Assert.Equal(3, notes.Count);
-        // transpose: c, drops every sounding pitch one octave (-12 semitones).
-        // ⚠️ The WRITTEN pitches are C3 D3 E3 (48 50 52), not C4 D4 E4: a `clef bass` part
-        // anchors its bare letters at octave 3 — the octave the page prints. These three
-        // assertions used to read 48/50/52 with comments saying "c (60)", which pinned the
-        // MIDI exporter's missing clef step rather than the transpose under test.
-        Assert.Equal(36, notes[0].Pitch); // written c (48) -> one octave down
-        Assert.Equal(38, notes[1].Pitch); // written d (50) -> d
-        Assert.Equal(40, notes[2].Pitch); // written e (52) -> e
+        // transpose: c, drops every sounding pitch one octave (-12 semitones). The clef moves
+        // no pitch (user decision 2026-09-15), so the written notes are C4 D4 E4 (60 62 64).
+        Assert.Equal(48, notes[0].Pitch); // c (60) -> one octave down
+        Assert.Equal(50, notes[1].Pitch); // d (62) -> d
+        Assert.Equal(52, notes[2].Pitch); // e (64) -> e
     }
 
     [Fact]

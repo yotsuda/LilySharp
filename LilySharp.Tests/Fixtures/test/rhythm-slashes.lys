@@ -7,7 +7,7 @@ time 4/4
 
 part comp { }
 part gtr { }
-part bass { clef bass }
+part bass { clef bass octave 3 }
 
 section Main {
   comp { /4 4 8 8 4 | /8 8 8 8 /2 | /4 4 c'8 d' /4 | /1 | }

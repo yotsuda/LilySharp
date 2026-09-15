@@ -5,7 +5,7 @@ title "Pedal text"
 time 4/4
 
 part lh {
-  clef bass
+  clef bass octave 3
   pedal text
 }
 

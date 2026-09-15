@@ -17,7 +17,7 @@ part rh {
 }
 
 part lh {
-  clef bass
+  clef bass octave 3
 }
 
 section Main {

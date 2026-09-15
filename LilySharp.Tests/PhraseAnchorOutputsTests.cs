@@ -54,7 +54,7 @@ public class PhraseAnchorOutputsTests
 {
     private const string InAPhrase = """
         time 4/4
-        part lh { clef bass }
+        part lh { clef bass octave 3 }
         phrase lhA { <c e>2 <c g> | }
         section Main { lh { lhA } }
         form main { Main }
@@ -66,7 +66,7 @@ public class PhraseAnchorOutputsTests
     /// the two spellings of one piece of music must not be two pieces.</summary>
     private const string Inline = """
         time 4/4
-        part lh { clef bass }
+        part lh { clef bass octave 3 }
         section Main { lh { <c e>2 <c g> | } }
         form main { Main }
         score main { staff lh }

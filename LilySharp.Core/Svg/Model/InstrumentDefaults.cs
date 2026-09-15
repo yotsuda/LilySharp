@@ -105,53 +105,38 @@ public static class InstrumentDefaults
     }
 
     /// <summary>
-    /// Gets the default octave for a clef type.
-    /// Used when no instrument is specified.
+    /// The octave a bare letter opens at when nothing in the part names one: middle C's.
     /// </summary>
-    /// <param name="clef">The clef type.</param>
-    /// <returns>The default starting octave.</returns>
-    public static int GetDefaultOctave(ClefType clef)
-    {
-        return clef switch
-        {
-            ClefType.Treble => 4,  // Middle C = c'
-            ClefType.Bass => 3,   // One octave below middle C
-            ClefType.Alto => 3,   // Middle C on middle line
-            ClefType.Tenor => 3,  // Middle C on 4th line
-            ClefType.Treble8Below => 4,  // Same written pitch as treble
-            _ => 4
-        };
-    }
+    /// <remarks>
+    /// ⚠️ NOT a function of the clef, on purpose (user decision 2026-09-15, reversing the
+    /// 2026-08-17 one): a clef only says how the staff is drawn, wherever it is written — a
+    /// part header, mid-music, a cue, or a score's <c>staff bass x</c>. Only <c>octave N</c>
+    /// and an <c>instrument</c> preset move a part's register. LilyPond's <c>\relative</c>
+    /// never looks at a clef either, so the twin writes the source's own marks.
+    /// </remarks>
+    public const int DefaultAnchorOctave = 4;
 
     /// <summary>
-    /// The octave a part's bare letters are anchored to, from the three things that can say
-    /// so: an explicit <c>octave N</c>, else an <c>instrument</c> preset's own octave, else
-    /// the octave the CLEF implies.
+    /// The octave a part's bare letters are anchored to in RELATIVE mode: an explicit
+    /// <c>octave N</c>, else an <c>instrument</c> preset's own octave, else
+    /// <see cref="DefaultAnchorOctave"/>.
     /// </summary>
     /// <param name="explicitOctave">The part's <c>octave N</c>, or null.</param>
     /// <param name="instrumentPreset">The part's <c>instrument</c> preset, or null.</param>
-    /// <param name="clef">The part's clef; treble when it names none.</param>
     /// <remarks>
     /// ⚠️ ONE HOME, because it is one quantity and it had drifted into three: the layout
-    /// (MeasureCollector.GetPartDefaults), the LilyPond exporter (which wrote
-    /// <c>\relative c'</c> for every part until it was given this chain) and the MIDI
-    /// exporter — which had the first two steps and NOT the clef, so a bare
-    /// <c>part m { clef bass }</c> printed C3 and played C4. MusicXML has none of the three
-    /// and writes C4 for everything; when that is fixed it comes here too.
-    /// <para>
-    /// ⚠️ The preset beats the clef even when both are written: <c>instrument flute</c>
-    /// anchors at 5 while its treble clef would say 4. See <see cref="GetDefaults"/>.
-    /// </para>
-    /// ⚠️ NOT used by ABSOLUTE mode, which anchors at middle C whatever the clef
-    /// (OctaveContext says so in as many words).
+    /// (MeasureCollector.GetPartDefaults), the LilyPond exporter and the MIDI exporter.
+    /// ⚠️ The clef is not a step of this chain (see <see cref="DefaultAnchorOctave"/>).
+    /// ⚠️ NOT used by ABSOLUTE mode, which anchors at middle C unless <c>octave N</c> says
+    /// otherwise (<see cref="AbsoluteBaseOctave"/>).
     /// </remarks>
-    public static int AnchorOctave(int? explicitOctave, string? instrumentPreset, ClefType clef)
+    public static int AnchorOctave(int? explicitOctave, string? instrumentPreset)
     {
         if (explicitOctave is { } o)
             return o;
         if (!string.IsNullOrEmpty(instrumentPreset))
             return GetDefaults(instrumentPreset!).Octave;
-        return GetDefaultOctave(clef);
+        return DefaultAnchorOctave;
     }
 
     /// <summary>

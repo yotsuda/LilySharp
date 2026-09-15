@@ -23,7 +23,7 @@ part pianoRH {
 
 // Piano left hand: bass clef
 part pianoLH {
-  clef bass
+  clef bass octave 3
 }
 
 phrase guitarLine {

@@ -33,7 +33,7 @@ section Main {
   melody {
     c4 d e f |
     clef bass R1*5 |
-    g4 a b c |
+    g,4 a b c |
   }
 }
 

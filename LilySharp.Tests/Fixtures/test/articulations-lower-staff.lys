@@ -9,7 +9,7 @@ time 4/4
 key c major
 
 part top { clef treble }
-part bot { clef bass }
+part bot { clef bass octave 3 }
 
 section Main {
   top { c'4 d e f | g1 | }

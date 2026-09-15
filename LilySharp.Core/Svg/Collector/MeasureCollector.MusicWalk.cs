@@ -1598,21 +1598,20 @@ public sealed partial class MeasureCollector
 
             case ClefDeclarationSyntax clefDecl:
                 {
-                    // Mid-measure clef change. An UNCHANGED clef engraves nothing and
-                    // changes nothing: LilyPond creates a Clef grob only when the
-                    // resolved glyph/position/transposition differ from the previous
-                    // ones, so a redundant `clef treble` neither prints nor takes
-                    // space (clef-unchanged.ly) — and it must not reset the relative
-                    // frame to the clef's default octave either. ClefType bundles
+                    // Mid-measure clef change. An UNCHANGED clef engraves nothing: LilyPond
+                    // creates a Clef grob only when the resolved glyph/position/transposition
+                    // differ from the previous ones, so a redundant `clef treble` neither
+                    // prints nor takes space (clef-unchanged.ly). ClefType bundles
                     // glyph+position+transposition, so one enum compare is that test;
                     // LilyPond's forceClef escape hatch has no Lily# spelling and is
                     // dropped with it.
+                    // A clef changes the DRAWING only: the relative frame carries on from the
+                    // last note, as LilyPond's \relative does (InstrumentDefaults.DefaultAnchorOctave).
                     // LILYPOND-REF: lily/clef-engraver.cc:139-166 inspect_clef_properties
                     string newClef = clefDecl.ClefName.Text.ToLowerInvariant();
                     if (ParseClefType(newClef) == ParseClefType(_meta.Clef))
                         break;
                     _meta.Clef = newClef;
-                    _octave.CurrentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
                     // The clef NAME's token span — `clef |bass`. Not clefDecl.SourceStart,
                     // which is the declaration's FULL span and so starts at the trivia
                     // in front of it (see TimeDataPos for what that costs).
@@ -1779,7 +1778,6 @@ public sealed partial class MeasureCollector
             outerClef = _meta.Clef;
             string cueClef = clefToken.Text.ToLowerInvariant();
             _meta.Clef = cueClef;
-            _octave.CurrentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
             // The token's span, not its Position — the clef name, not the trivia.
             builder.AddItem(new ClefChangeItem(
                 ParseClefType(cueClef), clefToken.Span.Start, isCue: true));
@@ -1802,7 +1800,6 @@ public sealed partial class MeasureCollector
         if (outerClef is not null)
         {
             _meta.Clef = outerClef;
-            _octave.CurrentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
             builder.AddItem(new ClefChangeItem(
                 ParseClefType(outerClef), cue.Body.SourceStart + cue.Body.FullWidth, isCue: true));
         }

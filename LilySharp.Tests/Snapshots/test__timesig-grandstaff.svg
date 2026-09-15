@@ -22,14 +22,14 @@
   <line x1="8.15" y1="16.29" x2="10.10" y2="16.29" stroke="#000000" stroke-width="0.200"/>
   <line x1="16.44" y1="15.29" x2="18.40" y2="15.29" stroke="#000000" stroke-width="0.200"/>
   <line x1="16.44" y1="16.29" x2="18.40" y2="16.29" stroke="#000000" stroke-width="0.200"/>
-  <text class="music" x="8.47" y="16.29" font-size="4.00" data-pos="824"></text>
+  <text class="music" x="8.47" y="16.29" font-size="4.00" data-pos="833"></text>
   <line x1="9.71" y1="16.14" x2="9.71" y2="12.29" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="10.23" y="15.79" font-size="4.00"></text>
-  <text class="music" x="16.77" y="16.29" font-size="4.00" data-pos="830"></text>
+  <text class="music" x="16.77" y="16.29" font-size="4.00" data-pos="839"></text>
   <line x1="18.01" y1="16.14" x2="18.01" y2="12.29" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="18.52" y="15.79" font-size="4.00"></text>
-  <rect x="15.68" y="10.29" width="0.19" height="4.00" data-pos="828"/>
-  <rect x="24.59" y="10.29" width="0.19" height="4.00" data-pos="831"/>
+  <rect x="15.68" y="10.29" width="0.19" height="4.00" data-pos="837"/>
+  <rect x="24.59" y="10.29" width="0.19" height="4.00" data-pos="840"/>
   <line x1="0.05" y1="19.29" x2="24.73" y2="19.29" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.05" y1="20.29" x2="24.73" y2="20.29" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.05" y1="21.29" x2="24.73" y2="21.29" stroke="#000000" stroke-width="0.100"/>
@@ -38,22 +38,22 @@
   <text class="music" x="0.80" y="20.29" font-size="4.00" data-pos="794"></text>
   <text class="music" x="5.07" y="21.29" font-size="4.00" data-pos="745">3</text>
   <text class="music" x="5.00" y="23.29" font-size="4.00" data-pos="745">8</text>
-  <text class="music" x="8.47" y="21.29" font-size="4.00" data-pos="843"></text>
-  <text class="music" x="10.67" y="20.79" font-size="4.00" data-pos="846"></text>
-  <text class="music" x="13.43" y="19.29" font-size="4.00" data-pos="848"></text>
-  <text class="music" x="16.77" y="21.29" font-size="4.00" data-pos="852"></text>
-  <text class="music" x="18.97" y="20.79" font-size="4.00" data-pos="855"></text>
-  <text class="music" x="20.87" y="19.79" font-size="4.00" data-pos="857"></text>
-  <text class="music" x="22.32" y="19.79" font-size="4.00" data-pos="857"></text>
-  <rect x="15.68" y="19.29" width="0.19" height="4.00" data-pos="850"/>
-  <rect x="24.59" y="19.29" width="0.19" height="4.00" data-pos="858"/>
+  <text class="music" x="8.47" y="21.29" font-size="4.00" data-pos="852"></text>
+  <text class="music" x="10.67" y="20.79" font-size="4.00" data-pos="855"></text>
+  <text class="music" x="13.43" y="19.29" font-size="4.00" data-pos="857"></text>
+  <text class="music" x="16.77" y="21.29" font-size="4.00" data-pos="861"></text>
+  <text class="music" x="18.97" y="20.79" font-size="4.00" data-pos="864"></text>
+  <text class="music" x="20.87" y="19.79" font-size="4.00" data-pos="866"></text>
+  <text class="music" x="22.32" y="19.79" font-size="4.00" data-pos="866"></text>
+  <rect x="15.68" y="19.29" width="0.19" height="4.00" data-pos="859"/>
+  <rect x="24.59" y="19.29" width="0.19" height="4.00" data-pos="867"/>
   <polygon points="10.67,23.05 13.56,22.24 13.56,22.72 10.67,23.53"/>
   <line x1="10.74" y1="20.94" x2="10.74" y2="23.27" stroke="#000000" stroke-width="0.130"/>
   <line x1="13.49" y1="19.44" x2="13.49" y2="22.50" stroke="#000000" stroke-width="0.130"/>
   <polygon points="18.97,23.86 22.45,23.24 22.45,23.72 18.97,24.34"/>
   <line x1="19.03" y1="20.94" x2="19.03" y2="24.09" stroke="#000000" stroke-width="0.130"/>
   <line x1="22.39" y1="19.94" x2="22.39" y2="23.49" stroke="#000000" stroke-width="0.130"/>
-  <rect x="3.48" y="6.69" width="8.08" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="802"/>
-  <text x="7.52" y="9.04" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="802">Main</text>
+  <rect x="3.48" y="6.69" width="8.08" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="811"/>
+  <text x="7.52" y="9.04" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="811">Main</text>
   </g>
 </svg>

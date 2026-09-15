@@ -137,7 +137,7 @@
 ## UNWATCHED — 観測者がゼロだと自認しているもの（54 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:2478** container, and the value stops being unobserved with the line above.
+- **:2458** container, and the value stops being unobserved with the line above.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:557** no observer; add the paren widths when a book brings one. The unpacked
 - **:559** bare glyph width, which is exact for one and unobserved for many.
@@ -231,13 +231,13 @@
 ## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（143 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:2473** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:5382** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:2453** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
+- **:5337** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:409** LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
-- **:2384** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+- **:2327** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
 - **:68** LILYSHARP-OWN: LilyPond's q takes no marks, so there is nothing to port.
 ### `LilySharp.Core/Parser/Parser.Music.cs`
@@ -279,12 +279,12 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:2420** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:4463** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:2427** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:4470** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
-- **:67** LILYSHARP-OWN: the DEFAULT five is LilyPond's (scm/define-grobs.scm:3396,
+- **:72** LILYSHARP-OWN: the DEFAULT five is LilyPond's (scm/define-grobs.scm:3396,
 ### `LilySharp.Core/Svg/Collector/ScoreAssembler.cs`
 - **:164** omission. LILYSHARP-OWN: a `|:` that opens the piece IS printed. LilyPond's default
 ### `LilySharp.Core/Svg/Collector/StaffAccidentalColumns.cs`
@@ -437,7 +437,7 @@
 ### `LilySharp.Core/Svg/Model/FiguredBassItem.cs`
 - **:158** LILYSHARP-OWN: the @fig(…) SPELLING is Lily#'s, not a port — LilyPond writes
 ### `LilySharp.Core/Svg/Model/InstrumentDefaults.cs`
-- **:287** LILYSHARP-OWN: LilyPond has no instrument presets, so which of its 128 sounds a preset
+- **:272** LILYSHARP-OWN: LilyPond has no instrument presets, so which of its 128 sounds a preset
 ### `LilySharp.Core/Svg/Model/Measure.cs`
 - **:278** ⚠️ LILYSHARP-OWN: THE FLAGGED ZERO-WIDTH MEASURE IS A TRANSLATION DEVICE. LilyPond
 ### `LilySharp.Core/Syntax/SyntaxNodes.cs`

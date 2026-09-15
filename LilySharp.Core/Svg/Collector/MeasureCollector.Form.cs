@@ -352,12 +352,11 @@ public sealed partial class MeasureCollector
         // own `clef` uses the part clef, so a mid-section clef change in a prior section
         // (or the same section played earlier) does not leak in. A section that opens with
         // its own `clef` overrides this at the music walk. Only redraw when it actually
-        // differs (first section is a no-op). Mirror the mid-music clef change so the
-        // default octave for relative pitches follows the reverted clef.
+        // differs (first section is a no-op). The octave frame is not touched: a clef is
+        // drawing only (InstrumentDefaults.DefaultAnchorOctave).
         if (_meta.Clef != _sectionResetClef)
         {
             _meta.Clef = _sectionResetClef;
-            _octave.CurrentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
             builder.AddItem(new ClefChangeItem(ParseClefType(_sectionResetClef), sectionPos));
         }
 

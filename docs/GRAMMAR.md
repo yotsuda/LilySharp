@@ -830,6 +830,15 @@ TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;
    preset's defaults: `instrument cello "Cello I"` = cello defaults, label "Cello I".
    A quoted string alone is a free-text name with no preset (default clef). *)
 
+(* octave: the octave a part's bare letters are anchored to in relative mode
+   (`octave 3` puts a bare `c` at C3). The anchor is `octave N`, else the `instrument`
+   preset's octave (cello and bass 3, tuba 2, flute 5), else 4. THE CLEF IS NOT A STEP
+   (user decision 2026-09-15, reversing 2026-08-17): a clef in a part header, mid-music,
+   on a cue or on a score's `staff bass x` only says how the staff is drawn and moves no
+   pitch, as LilyPond's \clef never moves \relative. A bass part without an instrument
+   preset writes `clef bass octave 3` to read bare letters in the bass register. In
+   absolute mode only `octave N` moves the base. *)
+
 (* Hara-kiri (removeEmpty) is NOT a part property: it is the score item's
    'as removeEmpty true|all|false' selector — see StaffRender, §7. *)
 

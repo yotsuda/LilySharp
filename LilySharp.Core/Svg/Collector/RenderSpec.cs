@@ -51,7 +51,12 @@ public sealed record StaffSpec(
     // (staff NAME with lyrics L [with lyrics L2 ...]); multiple stack as verses.
     ImmutableArray<string> WithLyrics = default,
     // How piano pedal marks render (part property `pedal`: bracket | text | mixed).
-    PedalStyle PedalStyle = PedalStyle.Bracket
+    PedalStyle PedalStyle = PedalStyle.Bracket,
+    // The clef word the score item itself wrote (`staff bass melody`), or null when the
+    // item names only the part and Clef came from the part header. Kept apart from Clef
+    // because the collector reads its clef off the part: without this it cannot tell an
+    // override from the part's own answer, and the override was dropped on the page.
+    ClefType? WrittenClef = null
 )
 {
     /// <summary>Fewest staff lines a written <c>lines N</c> may ask for.</summary>
@@ -317,6 +322,21 @@ public sealed record RenderSpec(
                 AddItem(item);
             return names.ToImmutable();
         }
+    }
+
+    /// <summary>The clef the first plain staff rendering <paramref name="voiceName"/> wrote
+    /// for itself (<c>staff bass melody</c>), or null when none did. Grand-staff members count;
+    /// tab, ossia and shared staves do not carry this clef.</summary>
+    public ClefType? WrittenClefOf(string voiceName)
+    {
+        static ClefType? Find(RenderItemSpec item, string name) => item switch
+        {
+            SingleStaffSpec s when s.Staff.VoiceName == name => s.Staff.WrittenClef,
+            GrandStaffRenderSpec g => g.GrandStaff.Members
+                .Select(m => Find(m, name)).FirstOrDefault(c => c != null),
+            _ => null,
+        };
+        return Items.Select(i => Find(i, voiceName)).FirstOrDefault(c => c != null);
     }
 
     /// <summary>Whether this render contains a grand staff.</summary>

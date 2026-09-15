@@ -19,6 +19,16 @@ workflow attaches that section to the GitHub Release verbatim.
   suggest — an electric guitar, a steel-string acoustic — is now written with `midiInstrument`
   (below).
 
+- **A clef no longer moves pitch.** The octave a part's bare letters start from is its
+  `octave N`, else its `instrument` preset's octave, else 4 — never its clef. Until now
+  `part x { clef bass }` read a bare `c` as C3, and a mid-music `clef bass` or `cue bass { }`
+  re-anchored the notes after it at octave 3 while keeping the previous letter, so the result
+  depended on the note before the clef. A clef anywhere — part header, mid-music, cue, or a
+  score's `staff bass x` — now only changes how the staff is drawn, as LilyPond's `\clef` never
+  moves `\relative`, and the LilyPond twin writes the source's own octave marks. To keep a bass
+  part's register, write `clef bass octave 3` (or use an `instrument` preset). A score's
+  `staff bass x` also draws the bass clef it names; it was silently ignored before.
+
 ### Added
 
 - **The `.mid` gives every part its own track, channel and General MIDI sound.** Until now

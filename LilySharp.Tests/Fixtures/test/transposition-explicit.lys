@@ -5,7 +5,7 @@
 title "explicit transposition"
 time 4/4
 key c major
-part bs { clef bass tuning bass transposition 8vb }
+part bs { clef bass octave 3 tuning bass transposition 8vb }
 section A { bs { c1 | } }
 form main { A }
 score main { staff bs tab bs }

@@ -14,9 +14,9 @@ part melody {
 // Phrase with mid-measure clef change: treble → bass → treble
 phrase clefChanges {
   c'4 d e f |
-  g4 a clef bass c,4 d |
+  g4 a clef bass c,,,4 d |
   e4 f g a |
-  clef treble c'2 r2 |
+  clef treble c''2 r2 |
 }
 
 section Main {

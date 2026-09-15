@@ -5,7 +5,7 @@ title "Staff group"
 time 4/4
 
 part vln { clef treble }
-part vla { clef alto }
+part vla { clef alto octave 3 }
 
 section Main {
   vln { c'4 b a b | c'1 | }

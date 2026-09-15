@@ -921,6 +921,7 @@ part rightHand {
 
 part leftHand {
   clef bass
+  octave 3        // a clef only draws; octave N (or an instrument preset) sets the register
 }
 ```
 

@@ -9,7 +9,7 @@ time 4/4
 key c major
 
 part rh { clef treble }
-part lh { clef bass }
+part lh { clef bass octave 3 }
 
 section Main {
   rh { c'4 d e f | voice { g'2 a } { c2 d }  | e'4 d c b | }

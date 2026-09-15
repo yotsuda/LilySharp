@@ -9,7 +9,7 @@ time 4/4
 key c major
 
 part top { clef treble }
-part bot { clef alto }
+part bot { clef alto octave 3 }
 
 section Main {
   top { c'4 d e f | voice { g'2@f a } { c2@p d }  | }
