@@ -75,6 +75,18 @@ workflow attaches that section to the GitHub Release verbatim.
   a new key or time signature, where LilyPond gives none, so that note sat 0.1 to 0.2 staff
   spaces too far right and the bar came out that much wider. Bars opening on a key or time
   change now match LilyPond's; the gap after a plain bar line is unchanged.
+- **The start of a bar is spaced from every staff, not only the one that needs the most room.**
+  When a key or time change (or anything else) opens a bar on one staff only, LilyPond takes
+  the gap each staff wants between the bar line and the first note and averages them, so the
+  staves without the change pull the first note back in. Lily# gave the whole bar the widest
+  staff's gap, so such a bar came out wider than LilyPond's — about half a staff space after a
+  five-sharp key change on one staff of two. A bar whose staves all open alike is unchanged.
+- **A bar that opens with a grace note is spaced as LilyPond spaces it.** The gap from the bar
+  line to the grace note was a fixed 0.8 staff space, and a main note with its stem down added
+  the small extra gap a bar line leaves before a down stem — although the stem that follows the
+  bar line there is the grace note's, which always points up. The grace note now sits 0.68 staff
+  space after the bar line as in LilyPond, and the main note and the rest of the bar follow
+  0.12 closer.
 
 ### MIDI, MusicXML and the LilyPond twin
 

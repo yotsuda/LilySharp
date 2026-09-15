@@ -182,7 +182,8 @@ internal sealed class MeasureLayouter
         SpacingOptions? spacing = null,
         IReadOnlyList<Measure>? allMeasures = null,
         Measure? nextMeasure = null,
-        BarlineType? leftBound = null)
+        BarlineType? leftBound = null,
+        IReadOnlyList<Staff>? stavesOfMeasures = null)
     {
         if (timings.Count == 0)
             return ImmutableArray<Spring>.Empty;
@@ -259,11 +260,12 @@ internal sealed class MeasureLayouter
             if (droppedOnsetFollows) break;
         }
 
-        // Spring 0: barline → first column (see CreateBarlineToFirstSpring).
+        // Spring 0: barline → first column (see CreateBarlineToFirstSpring), one Staff_spacing
+        // wish per staff when the caller says which staff each measure belongs to.
         springs.Add(CreateBarlineToFirstSpring(
             fonts, timings, timingToItems, measure,
             leftBound ?? (measure.StartBarline == BarlineType.None ? BarlineType.Single : measure.StartBarline),
-            droppedOnsetFollows, so));
+            droppedOnsetFollows, so, StaffItemsAt(measuresToScan, stavesOfMeasures, timings[0])));
 
         // Springs between adjacent timing columns (see CreateInterColumnSpring).
         for (int i = 1; i < timings.Count; i++)
@@ -403,7 +405,7 @@ internal sealed class MeasureLayouter
         Rendering.ScoreTextMetrics fonts,
         List<Fraction> timings, Dictionary<Fraction, List<MusicItem>> timingToItems,
         Measure measure, BarlineType leftBound, bool droppedOnsetFollows,
-        SpacingOptions spacing)
+        SpacingOptions spacing, IReadOnlyList<IReadOnlyList<MusicItem>>? staffFirstItems)
     {
         timingToItems.TryGetValue(timings[0], out var firstItems);
         // A bar that opens with a skip: the bar line's neighbour is a column at a later
@@ -416,7 +418,57 @@ internal sealed class MeasureLayouter
             && !droppedOnsetFollows
             && firstItems != null
             && firstItems.Any(SpacingRules.IsMusicalColumn);
-        return SpacingRules.BarlineToFirstColumnSpring(fonts, firstItems, fillsMeasure);
+        return SpacingRules.BarlineToFirstColumnSpring(fonts, firstItems, fillsMeasure, staffFirstItems, leftBound);
+    }
+
+    /// <summary>
+    /// The items starting at <paramref name="t"/>, one list per STAFF (every voice of the staff
+    /// together), for the staves that carry a Staff_spacing wish — or null when there is no
+    /// staff grouping or only one such staff, where the column's one list is that staff's.
+    /// </summary>
+    /// <remarks>
+    /// A lyric / chord row makes no Staff_spacing grob and is skipped, as the line-start merge
+    /// skips it (LineStartColumn.LineStartSpring). A staff with nothing starting at
+    /// <paramref name="t"/> keeps an EMPTY list: it still wishes off its own bar line.
+    /// MEASURED (2.26.0, scratch/p390/ks kse.ly): a lower staff holding only s1 pulls the upper
+    /// staff's key-change bar to the same 26.11 as one holding r1.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:478-536 Spacing_spanner::breakable_column_spacing — the left column's spacing-wishes
+    /// </remarks>
+    private static List<IReadOnlyList<MusicItem>>? StaffItemsAt(
+        IReadOnlyList<Measure> measures, IReadOnlyList<Staff>? staves, Fraction t)
+    {
+        if (staves == null || staves.Count != measures.Count)
+            return null;
+        var owners = new List<Staff>();
+        var lists = new List<IReadOnlyList<MusicItem>>();
+        for (int i = 0; i < measures.Count; i++)
+        {
+            var staff = staves[i];
+            if (staff.IsTextRow)
+                continue;
+            int k = owners.Count - 1;
+            while (k >= 0 && !ReferenceEquals(owners[k], staff))
+                k--;
+            if (k < 0)
+            {
+                owners.Add(staff);
+                lists.Add(new List<MusicItem>());
+                k = owners.Count - 1;
+            }
+            var items = (List<MusicItem>)lists[k];
+            var onset = Fraction.Zero;
+            foreach (var item in measures[i].Items)
+            {
+                if (onset > t)
+                    break;
+                // The same column membership BuildTimingToItemsMap uses: a grace item's column
+                // is its own.
+                if (onset == t && !item.GraceTime)
+                    items.Add(item);
+                onset += item.Duration;
+            }
+        }
+        return lists.Count > 1 ? lists : null;
     }
 
     /// <summary>

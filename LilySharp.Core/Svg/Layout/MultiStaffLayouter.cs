@@ -1439,7 +1439,8 @@ internal sealed class MultiStaffLayouter
                 ? primaryVoice.Measures[i + 1] : null;
             var springs = _measureLayouter.CreateTimingSprings(
                 score.TextMetrics, primaryMeasure, allTimings, spacing, allMeasures, nextMeasure,
-                SpacingRules.RunLeftBoundBarline(primaryVoice.Measures, i));
+                SpacingRules.RunLeftBoundBarline(primaryVoice.Measures, i),
+                CollectStavesOfMeasuresAtIndex(score, i));
 
             // An empty placeholder measure (`| |`) has no timing springs at all —
             // without a floor it collapses to its barlines and reads as a double
@@ -2308,6 +2309,34 @@ internal sealed class MultiStaffLayouter
         }
 
         return measures;
+    }
+
+    /// <summary>
+    /// The staff each measure of <see cref="CollectAllMeasuresAtIndex"/> belongs to, index for
+    /// index — the same walk, so a bar-start spring can be built per staff and merged.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:478-536 Spacing_spanner::breakable_column_spacing — one Staff_spacing wish per staff
+    /// </remarks>
+    internal static List<Staff> CollectStavesOfMeasuresAtIndex(MultiStaffScore score, int measureIndex)
+    {
+        var staves = new List<Staff>();
+
+        foreach (var staffGroup in score.StaffGroups)
+        {
+            foreach (var staff in staffGroup.Staves)
+            {
+                foreach (var voice in staff.Voices)
+                {
+                    if (measureIndex < voice.Measures.Length)
+                    {
+                        staves.Add(staff);
+                    }
+                }
+            }
+        }
+
+        return staves;
     }
 
     // --- Skyline-based staff spacing ---

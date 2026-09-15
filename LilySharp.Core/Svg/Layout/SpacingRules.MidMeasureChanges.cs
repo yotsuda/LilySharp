@@ -869,7 +869,9 @@ internal static partial class SpacingRules
     ///   measure AFTER the bar line, so the caller decides and passes it in.
     /// </remarks>
     internal static Spring BarlineToFirstColumnSpring(
-        Rendering.ScoreTextMetrics fonts, IReadOnlyList<MusicItem>? firstItems, bool fillsMeasure)
+        Rendering.ScoreTextMetrics fonts, IReadOnlyList<MusicItem>? firstItems, bool fillsMeasure,
+        IReadOnlyList<IReadOnlyList<MusicItem>>? staffFirstItems = null,
+        BarlineType leftBound = BarlineType.Single)
     {
         // `last_grob` is the RIGHTMOST break-aligned grob in the boundary column, which is
         // the bar line only when nothing else opens the measure. A key or time change shares
@@ -879,45 +881,9 @@ internal static partial class SpacingRules
         //   Spacing_interface::extremal_break_aligned_grob (me, LEFT, ...).
         var boundary = BoundaryChangePrefix(fonts, firstItems);
 
-        double distance;
-        double fixedDistance;
-        bool isStretchable;
-        if (boundary is var (prefix, lastChange) && boundary.HasValue)
-        {
-            var def = ChangeItemSpaceDef(lastChange);
-            distance = def.Distance;
-            // fixed opens at last_ext[RIGHT] — in this spring's frame, the bar line's own
-            // width is already behind us, so that is the prefix.
-            // LILYPOND-REF: lily/staff-spacing.cc:166.
-            fixedDistance = prefix + (def.SplitsFixed ? distance / 2 : 0);
-            isStretchable = def.Stretchable;
-        }
-        else
-        {
-            distance = EngravingDefaults.BarLineToNextNoteSpace;
-            // semi-fixed-space: fixed += d/2, ideal = fixed + d/2. `is_stretchable` stays
-            // TRUE — only shrink-space and semi-shrink-space clear it, so the resulting
-            // spring is NOT rigid. (LilySharp used to pass inverseStretchStrength 0 here on
-            // the strength of a comment claiming semi-fixed was unstretchable; the source
-            // says otherwise.)
-            // LILYPOND-REF: lily/staff-spacing.cc:164-180.
-            fixedDistance = distance / 2;
-            isStretchable = true;
-        }
-        // Every arm involved puts the IDEAL at last_ext[RIGHT] + distance; they differ only
-        // in what lands in `fixed`. LILYPOND-REF: lily/staff-spacing.cc:169-198.
-        double ideal = (boundary?.Prefix ?? 0) + distance;
-
-        // Fixed BEFORE situational_space and before the min-distance correction — the
-        // order matters, both of those move `ideal` away from `fixed` without making the
-        // spring any more stretchable.
-        // LILYPOND-REF: lily/staff-spacing.cc:200.
-        double stretchability = isStretchable ? ideal - fixedDistance : 0;
-
         // LILYPOND-REF: lily/staff-spacing.cc:202-204 — 'situational_space' passed by the
         //   caller could include full-measure-extra-space.
         double situationalSpace = fillsMeasure ? FullMeasureExtraSpace : 0;
-        ideal += situationalSpace;
 
         // min_dist = Paper_column::minimum_distance — a PURE skyline distance between the
         // two columns, with no space-alist value in it. See GetBarlineToItemMinimum.
@@ -968,54 +934,58 @@ internal static partial class SpacingRules
             startLeadGrace = LeadingGracePrefixWidth(firstItems, includeMainAccidental: true);
         }
 
-        if (startLeadGrace > 0)
+        // ONE Staff_spacing WISH PER STAFF, merged. The left column's spacing-wishes hold a
+        // Staff_spacing grob for every staff, each spring built from ITS OWN last break-aligned
+        // grob and ITS OWN note columns, against the column pair's one min_dist; the ideals are
+        // then averaged (merge_springs). A staff with no key or time change opening the bar ends
+        // on its bar line, so it pulls the average below the changed staff's ideal — and a staff
+        // with no item at all here (a spacer) still wishes off its bar line.
+        // LILYPOND-REF: lily/spacing-spanner.cc:478-536 Spacing_spanner::breakable_column_spacing — one Staff_spacing wish per staff
+        // LILYPOND-REF: lily/spring.cc:104-129 merge_springs — ideals averaged, the largest minimum
+        // MEASURED (2.26.0, scratch/p390/ks, key-signature-space's key change on the upper staff,
+        // first note off the bar line's ink right / ly:paper-column::print ideal): the lower
+        // staff resting r1 or s1 12.22 / 12.90, the key change written on BOTH staves 12.77 /
+        // 13.45 — the one-staff value. The page drew 12.77 in all three.
+        var spring = staffFirstItems is { Count: > 1 }
+            ? Spring.MergeSprings(staffFirstItems.Select(items => Wish(items, BoundaryChangePrefix(fonts, items))).ToList())
+            : Wish(firstItems, boundary);
+
+        // A GRACE RUN OPENING THE BAR: the merged spring stops at the grace column, and when that
+        // column has a grace part LilyPond scales the whole spring by 0.8 — column origin to
+        // column origin, so the bar line's own width is inside what is scaled. Lily# hangs the run
+        // off the main column, so the approach is scaled and the run added exactly as mid-bar
+        // (AdjustSpringForGraceNotes), in the column frame: shifted out by the bar line's width
+        // and back. This replaces a rigid GraceSpacing spacing-increment (0.8) taken as the gap.
+        // LILYPOND-REF: lily/spacing-spanner.cc:519-527 Spacing_spanner::breakable_column_spacing — spring *= 0.8 on a grace_part_ right column
+        // MEASURED (2.26.0, scratch/p390/kg kg1.ly, `\grace d''16 c''4` opening a bar): the grace
+        // head 0.682 off the bar line's ink right = 0.8 x (0.19 + 0.9) - 0.19, the main note 2.6207
+        // (the run's 1.9386 after it, ledger grace.column.single.to-main); the page drew 0.80 / 2.74.
+        // Not measured here: a clef before the bar line (it moves the column origin too), an
+        // accidental on the main note, grace runs on several staves (the widest run is taken).
+        if (startLeadGrace > 0 && firstItems != null)
         {
-            // The grace is now the FIRST musical column after the bar line, so the
-            // barline→grace gap uses tight GRACE spacing (spacing-increment). The
-            // whole front block is rigid (grace columns don't stretch), so this branch
-            // does NOT take the semi-fixed spring above.
-            // LILYPOND-REF: scm/define-grobs.scm:1721 GraceSpacing
-            //   (spacing-increment . 0.8) — grace columns space tighter than notes.
-            // LILYPOND-REF: lily/grace-spacing-engraver.cc — barline → first grace
-            //   column → … → main column.
-            double graceApproach = GraceSpacingParameters.Default.SpacingIncrement;
-            double front = Math.Max(Math.Max(distance, minDistance),
-                                    graceApproach + startLeadGrace);
-            return new Spring(front + situationalSpace, front, inverseStretchStrength: 0);
+            double origin = EngravingDefaults.BarlineDrawnWidth(leftBound);
+            var inColumnFrame = new Spring(spring.IdealDistance + origin, spring.MinDistance + origin,
+                spring.InverseStretchStrength, spring.InverseCompressStrength);
+            Spring? widest = null;
+            foreach (var item in firstItems)
+            {
+                var grace = item switch
+                {
+                    NoteItem n => n.LeadingGrace,
+                    ChordItem c => c.LeadingGrace,
+                    _ => ImmutableArray<GraceColumnInfo>.Empty,
+                };
+                if (grace.IsDefaultOrEmpty)
+                    continue;
+                var run = AdjustSpringForGraceNotes(inColumnFrame, grace, GraceSpacingParameters.Default, item);
+                if (widest == null || run.IdealDistance > widest.IdealDistance)
+                    widest = run;
+            }
+            if (widest != null)
+                spring = new Spring(widest.IdealDistance - origin, Math.Max(0.0, widest.MinDistance - origin),
+                    widest.InverseStretchStrength, widest.InverseCompressStrength);
         }
-
-        // The optical correction for a DOWN stem standing just after the bar line, applied
-        // to BOTH fixed and ideal — and AFTER stretchability was taken, so it widens the
-        // gap without making the spring any more stretchable.
-        // LILYPOND-REF: lily/staff-spacing.cc:206-208.
-        // Only when the BAR LINE is the column's last grob: a key or time change standing
-        // after it takes the stem's place beside the note, and the correction reads the
-        // last grob's bar extent, which only a bar line has.
-        // LILYPOND-REF: lily/staff-spacing.cc:72-93 Staff_spacing::bar_y_positions — empty unless bar-line-interface
-        // MEASURED (2.26.0, scratch/p390/keyw kn-b.ly / kn-u.ly, `\key b \major` opening a bar):
-        // a down-stem first note 9.00 off the bar line's ink right, the same as an up-stem one;
-        // the page drew the down-stem note 0.19 further right. LineStartColumn already gates
-        // the same correction on the staff bar being last.
-        double opticalCorrection = boundary.HasValue ? 0.0 : BarlineToNextNotesCorrection(firstItems);
-        fixedDistance += opticalCorrection;
-        ideal += opticalCorrection;
-
-        // "Ensure that the 'fixed' distance will leave a gap of at least 0.3 ss."
-        // LILYPOND-REF: lily/staff-spacing.cc:212-215.
-        double minDistanceCorrection =
-            Math.Max(0.0, StaffSpacingFixedHeadroom + minDistance - fixedDistance);
-        fixedDistance += minDistanceCorrection;
-        ideal = Math.Max(ideal, fixedDistance);
-
-        // LILYPOND-REF: lily/staff-spacing.cc:217-220 — the compress strength is measured
-        //   against `fixed`, not against the minimum, so it is NOT the Spring 3-argument
-        //   constructor's default.
-        // No ApplyMergeSpringsHeadroom call follows: breakable_column_spacing does hand this
-        // wish on to merge_springs, but the correction just above already guarantees
-        // ideal >= fixed >= 0.3 + min_distance, so the headroom is provably a no-op here.
-        var spring = new Spring(ideal, minDistance,
-                                Math.Max(0.0, stretchability),
-                                Math.Max(0.0, ideal - fixedDistance));
 
         // The column ROD over this pair: set_column_rods walks every adjacent column pair,
         // the breakable ones included, and the rod is the spanner's padding over the SAME
@@ -1030,6 +1000,95 @@ internal static partial class SpacingRules
         return firstItems == null
             ? spring
             : spring.EnsureMinDistance(minDistance + SeparationRodPadding);
+
+        // One staff's Staff_spacing::get_spacing, against the column pair's min_dist.
+        // LILYPOND-REF: lily/staff-spacing.cc:118-221 Staff_spacing::get_spacing
+        Spring Wish(IReadOnlyList<MusicItem>? items, (double Prefix, MusicItem LastChange)? own)
+        {
+            var (distance, fixedDistance, isStretchable) = SpaceFrom(own);
+            // Every arm involved puts the IDEAL at last_ext[RIGHT] + distance; they differ only
+            // in what lands in `fixed`. LILYPOND-REF: lily/staff-spacing.cc:169-198.
+            double ideal = (own?.Prefix ?? 0) + distance;
+
+            // Fixed BEFORE situational_space and before the min-distance correction — the
+            // order matters, both of those move `ideal` away from `fixed` without making the
+            // spring any more stretchable.
+            // LILYPOND-REF: lily/staff-spacing.cc:200.
+            double stretchability = isStretchable ? ideal - fixedDistance : 0;
+            ideal += situationalSpace;
+
+            // The optical correction for a DOWN stem standing just after the bar line, applied
+            // to BOTH fixed and ideal — and AFTER stretchability was taken, so it widens the
+            // gap without making the spring any more stretchable.
+            // LILYPOND-REF: lily/staff-spacing.cc:206-208.
+            // Only when the BAR LINE is the column's last grob: a key or time change standing
+            // after it takes the stem's place beside the note, and the correction reads the
+            // last grob's bar extent, which only a bar line has.
+            // LILYPOND-REF: lily/staff-spacing.cc:72-93 Staff_spacing::bar_y_positions — empty unless bar-line-interface
+            // MEASURED (2.26.0, scratch/p390/keyw kn-b.ly / kn-u.ly, `\key b \major` opening a bar):
+            // a down-stem first note 9.00 off the bar line's ink right, the same as an up-stem one;
+            // the page drew the down-stem note 0.19 further right. LineStartColumn already gates
+            // the same correction on the staff bar being last.
+            // The stem it reads is the WHOLE column's, though: a Staff_spacing's right-items is
+            // the musical PaperColumn itself, whose elements — every staff's note columns — are
+            // what get_note_columns walks. So a staff whose own first note has no down stem still
+            // carries the column's correction, and the merge does not dilute it.
+            // LILYPOND-REF: lily/separating-line-group-engraver.cc:147-150 Separating_line_group_engraver::stop_translation_timestep — right-items = currentMusicalColumn
+            // LILYPOND-REF: lily/spacing-interface.cc:150-169 get_note_columns — a Separation_item's elements, recursively
+            // MEASURED (2.26.0, scratch/p390/ks/verify): test/articulations-lower-staff,
+            // instrument-names and multi-staff-ottava put the first note 1.09 / 1.07 / 1.01 off
+            // the bar line — exactly the column-wide correction; each staff's own drew 0.10 short.
+            // And none when a grace run opens the bar: the spring then stops at the GRACE column,
+            // whose note columns are the graces alone, and a grace's stem is forced UP — the
+            // correction only answers a down stem. (The mid-bar approach hands its correction the
+            // first grace for the same reason, SpacingRules.ApproachColumn.)
+            // LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings — Voice Stem direction UP
+            // MEASURED (2.26.0, scratch/p390/kg kg1.ly, a down-stem c'' behind `\grace d''16`): the
+            // main note 2.6207 off the bar line, where the column's down stem would have added 0.13.
+            double opticalCorrection = own.HasValue || startLeadGrace > 0
+                ? 0.0
+                : BarlineToNextNotesCorrection(firstItems);
+            fixedDistance += opticalCorrection;
+            ideal += opticalCorrection;
+
+            // "Ensure that the 'fixed' distance will leave a gap of at least 0.3 ss."
+            // LILYPOND-REF: lily/staff-spacing.cc:212-215.
+            double minDistanceCorrection =
+                Math.Max(0.0, StaffSpacingFixedHeadroom + minDistance - fixedDistance);
+            fixedDistance += minDistanceCorrection;
+            ideal = Math.Max(ideal, fixedDistance);
+
+            // LILYPOND-REF: lily/staff-spacing.cc:217-220 — the compress strength is measured
+            //   against `fixed`, not against the minimum, so it is NOT the Spring 3-argument
+            //   constructor's default.
+            // A single wish needs no merge_springs headroom: the correction just above already
+            // guarantees ideal >= fixed >= 0.3 + min_distance.
+            return new Spring(ideal, minDistance,
+                              Math.Max(0.0, stretchability),
+                              Math.Max(0.0, ideal - fixedDistance));
+        }
+
+        // The last grob's space-alist entry: its distance, where `fixed` opens, and whether the
+        // spring may stretch.
+        static (double Distance, double Fixed, bool Stretchable) SpaceFrom((double Prefix, MusicItem LastChange)? own)
+        {
+            if (own is var (prefix, lastChange) && own.HasValue)
+            {
+                var def = ChangeItemSpaceDef(lastChange);
+                // fixed opens at last_ext[RIGHT] — in this spring's frame, the bar line's own
+                // width is already behind us, so that is the prefix.
+                // LILYPOND-REF: lily/staff-spacing.cc:166.
+                return (def.Distance, prefix + (def.SplitsFixed ? def.Distance / 2 : 0), def.Stretchable);
+            }
+            // semi-fixed-space: fixed += d/2, ideal = fixed + d/2. `is_stretchable` stays
+            // TRUE — only shrink-space and semi-shrink-space clear it, so the resulting
+            // spring is NOT rigid. (LilySharp used to pass inverseStretchStrength 0 here on
+            // the strength of a comment claiming semi-fixed was unstretchable; the source
+            // says otherwise.)
+            // LILYPOND-REF: lily/staff-spacing.cc:164-180.
+            double d = EngravingDefaults.BarLineToNextNoteSpace;
+            return (d, d / 2, true);
+        }
     }
 
     /// <summary>

@@ -217,7 +217,8 @@ internal static partial class SpacingRules
                 measure.StartBarline == BarlineType.None ? BarlineType.Single : measure.StartBarline,
                 measure.Items, new[] { firstItem }, firstOnset,
                 spacing ?? SpacingOptions.Default)
-            : BarlineToFirstColumnSpring(fonts, new[] { firstItem }, FillsMeasure(measure));
+            : BarlineToFirstColumnSpring(fonts, new[] { firstItem }, FillsMeasure(measure),
+                leftBound: measure.StartBarline == BarlineType.None ? BarlineType.Single : measure.StartBarline);
         springs.Add(firstSpring);
 
         // Springs between items (the spring into a grace-bearing note reserves its grace;

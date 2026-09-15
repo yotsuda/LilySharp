@@ -40,6 +40,48 @@ public class GraceSpacingTests
         Assert.Equal(0.125, p.BaseShortestDuration);
     }
 
+    /// <summary>
+    /// A grace run opening a bar: the bar line → grace spring is the ordinary Staff_spacing
+    /// spring scaled by 0.8 from the column ORIGIN (the bar line's own width inside what is
+    /// scaled), and the run follows. The main note's down stem earns no bar-line correction —
+    /// the spring stops at the grace, whose stem is forced up.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, scratch/p390/kg kg1.ly, `\grace d''16 c''4` opening the second bar): the
+    /// grace head 0.682 off the bar line's ink right = 0.8 x (0.19 + 0.9) - 0.19, the main note
+    /// 2.6207. The page drew 0.80 / 2.74 (a rigid 0.8 plus the run, then the column's down-stem
+    /// correction on top once the rigid branch went).
+    /// LILYPOND-REF: lily/spacing-spanner.cc:519-527 Spacing_spanner::breakable_column_spacing — spring *= 0.8 on a grace_part_ right column
+    /// </remarks>
+    [Fact]
+    public void AGraceRunOpeningABar_ScalesTheBarLineSpringFromTheColumnOrigin()
+    {
+        var src = """
+            octave absolute
+            time 4/4
+            part up
+            section Main {
+              up { c'4 c' c' c' | grace { d'16 } c'4 c' c' c' | }
+            }
+            form main { ~Main }
+            score main "x" { staff ~up }
+            """;
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(src);
+        var multi = new LilySharp.Core.Svg.Collector.MeasureCollector()
+            .CollectMultiStaff(tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree)!);
+        var layout = new LayoutEngine(new LayoutOptions()).Layout(multi);
+        var bar = layout.Systems.SelectMany(s => s.Measures).Single(m => m.MeasureIndex == 1);
+
+        var main = multi.StaffGroups[0].Staves[0].PrimaryVoice.Measures[1].Items
+            .OfType<NoteItem>().First(n => !n.GraceTime);
+        double bw = LilySharp.Core.Svg.EngravingDefaults.BarlineDrawnWidth(BarlineType.Single);
+        double run = SpacingRules.GraceColumns(main.LeadingGrace, main).Span;
+        double expected = SpacingRules.GraceApproachScale
+                          * (bw + LilySharp.Core.Svg.EngravingDefaults.BarLineToNextNoteSpace) - bw + run;
+
+        Assert.Equal(expected, bar.GetXForTiming(Fraction.Zero), 6);
+    }
+
     [Fact]
     public void CreateGraceSpring_TighterThanRegular()
     {

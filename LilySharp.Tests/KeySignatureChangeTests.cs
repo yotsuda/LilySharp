@@ -154,6 +154,56 @@ public class KeySignatureChangeTests
         Assert.True(down > up + 0.1, $"control: after a bare bar line the down stem keeps its correction ({down} vs {up})");
     }
 
+    /// <summary>
+    /// The bar line → first column spring is ONE Staff_spacing wish PER STAFF, merged: a key
+    /// change opening the bar on the upper staff only is averaged with the lower staff's wish off
+    /// its bar line, so the first column sits closer than when every staff carries the change —
+    /// and when every staff carries it, exactly where one staff puts it.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, scratch/p390/ks, key-signature-space's 4 flats → 5 sharps): the first
+    /// note 12.22 off the bar line's ink right with the lower staff resting (ksb.ly), 12.77 with
+    /// the change on both staves (ksd.ly) and on one staff alone (ksa.ly); ly:paper-column::print
+    /// reads the bar's non-musical column ideal 12.90 against 13.45.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:478-536 Spacing_spanner::breakable_column_spacing — one Staff_spacing wish per staff
+    /// LILYPOND-REF: lily/spring.cc:104-129 merge_springs — ideals averaged, the largest minimum
+    /// </remarks>
+    [Fact]
+    public void AKeyChangeOnOneStaffOnly_IsAveragedWithTheOtherStaffsBarLineWish()
+    {
+        static double FirstColumnX(bool lowerStaff, bool lowerKey)
+        {
+            string lower = lowerStaff
+                ? "vtwo { r1 | " + (lowerKey ? "key b major " : "") + "r1 | }"
+                : "";
+            string staves = lowerStaff ? "staff vone staff vtwo" : "staff vone";
+            var source = $$"""
+                octave absolute
+                time 4/4
+                key f minor
+                part vone
+                part vtwo
+                section Main {
+                  vone { f4@stemUp f@stemUp f@stemUp f@stemUp | key b major e'8@stemUp e'@stemUp e'4@stemUp e'2@stemUp | }
+                  {{lower}}
+                }
+                form main { ~Main }
+                score main "x" { {{staves}} }
+                """;
+            var tree = SyntaxTree.Parse(source);
+            var multi = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+            var layout = new LayoutEngine(new LayoutOptions()).Layout(multi);
+            var bar = Assert.Single(layout.Systems).Measures.Single(m => m.MeasureIndex == 1);
+            return bar.GetXForTiming(Fraction.Zero);
+        }
+
+        double one = FirstColumnX(lowerStaff: false, lowerKey: false);
+        double both = FirstColumnX(lowerStaff: true, lowerKey: true);
+        double upperOnly = FirstColumnX(lowerStaff: true, lowerKey: false);
+        Assert.Equal(one, both, 6);
+        Assert.True(upperOnly < both - 0.3, $"the lower staff's bar-line wish pulls the average in: {upperOnly} vs {both}");
+    }
+
     [Fact]
     public void KeySignatureChangeItem_ZeroDuration()
     {

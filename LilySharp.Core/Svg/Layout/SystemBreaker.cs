@@ -225,7 +225,8 @@ internal sealed class SystemBreaker
             var springs = layouter.CreateTimingSprings(
                 score.TextMetrics, primaryMeasure, allTimings, spacing, allMeasures,
                 i + 1 < measures.Length ? measures[i + 1] : null,
-                SpacingRules.RunLeftBoundBarline(measures, i));
+                SpacingRules.RunLeftBoundBarline(measures, i),
+                MultiStaffLayouter.CollectStavesOfMeasuresAtIndex(score, i));
 
             // The shared-column reservations (lyrics, chords, tab digits, wide
             // scripts) — the SAME list the system layout applies, from the one home
