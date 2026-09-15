@@ -4,6 +4,37 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
+## 0.8.0
+
+### Breaking changes
+
+- **An instrument preset has one name.** Fourteen presets were second names for another —
+  identical in clef, octave, tuning, transposition and, measured byte for byte, in the `.mid` —
+  and are gone: `uke` (write `ukulele`), `acoustic-guitar` and `electric-guitar` (`guitar`),
+  `bass-guitar` and `electric-bass` (`bass`), `5-string-bass` and `6-string-bass` (`bass5`,
+  `bass6`), `double-bass` (`contrabass`), `french-horn` (`horn`), `piano-treble` and `piano-bass`
+  (`piano-right`, `piano-left`), and `voice-soprano`, `voice-alto`, `voice-tenor` (`soprano`,
+  `alto`, `tenor`; `voice-bass` stays, since `bass` is the bass guitar). Each is refused as an
+  unknown preset ("Unknown instrument preset 'electric-guitar'"). The sound a name used to
+  suggest — an electric guitar, a steel-string acoustic — is now written with `midiInstrument`
+  (below).
+
+### Added
+
+- **The `.mid` gives every part its own track, channel and General MIDI sound.** Until now
+  every part of every book went into one track on channel 1 with no program change, so any MIDI
+  player sounded the whole score as a piano. A part's sound comes from its `instrument` preset
+  — `violin` plays "violin", `guitar` "acoustic guitar (nylon)", `bass` "electric bass
+  (finger)", `horn` "french horn", a voice "choir aahs" — and `midiInstrument "…"` in the part
+  header names any of LilyPond's 128 General MIDI sounds by LilyPond's own name:
+  `part gtr { instrument guitar  midiInstrument "electric guitar (clean)" }`. A part with
+  neither plays "acoustic grand", LilyPond's default. Drums stay on channel 10. Past fifteen
+  pitched parts a part shares the channel of an earlier part with the same sound, and the export
+  warns when there is none. An unknown name is refused with the list. The LilyPond twin writes
+  the sound as the staff's `midiInstrument`, the MusicXML as the part's `<midi-instrument>`, and
+  the editor's preview plays its timbre from the same sound (which also stops it reading
+  `piano-bass` as a bass guitar).
+
 ## 0.7.0
 
 A chord symbol is spelled and raised the way LilyPond draws it, a `layout { }` block gathers

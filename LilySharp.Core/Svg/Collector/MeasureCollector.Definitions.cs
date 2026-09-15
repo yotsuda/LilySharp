@@ -113,7 +113,7 @@ public sealed partial class MeasureCollector
                 }
                 else if (propName == "instrument")
                 {
-                    // Join ALL value tokens — a hyphenated preset ("electric-bass")
+                    // Join ALL value tokens — a hyphenated preset ("piano-left")
                     // is word+minus+word in the green tree, so child(2) alone is just
                     // "electric" and would fall through to the default treble clef.
                     var texts = new List<string>();

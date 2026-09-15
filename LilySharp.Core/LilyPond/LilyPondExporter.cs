@@ -5043,6 +5043,24 @@ public sealed class LilyPondExporter
     private static string QuoteLilyPondString(string s)
         => "\"" + s.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
 
+    /// <summary>The <c>\with { midiInstrument = … }</c> clause a staff carries, or null when the
+    /// part plays program 1 — LilyPond's own default ("acoustic grand"), so writing it would
+    /// change nothing the twin sounds and every twin that names no instrument stays as it was.</summary>
+    /// <remarks>
+    /// The part's program is <see cref="PartHeaderDefaults.MidiProgram"/> — its
+    /// <c>midiInstrument "…"</c>, else its preset's — read through the same table the
+    /// <c>.mid</c> reads, and written back as LilyPond's own name for it
+    /// (<see cref="Midi.GeneralMidi.InstrumentNames"/>). LILYPOND-REF: scm/midi.scm:21-180
+    /// instrument-names-alist — the names <c>midiInstrument</c> accepts.
+    /// </remarks>
+    private static string? MidiInstrumentClause(PartDeclarationSyntax? part)
+    {
+        int program = PartHeaderDefaults.Read(part).MidiProgram;
+        return program == 0
+            ? null
+            : "midiInstrument = " + QuoteLilyPondString(Midi.GeneralMidi.InstrumentNames[program]);
+    }
+
     private string EmitStaff(string? partName, List<PartDeclarationSyntax> parts,
         Dictionary<string, string> partVars, bool tab, string indent,
         bool tabNumbersOnly = false)
@@ -5058,9 +5076,10 @@ public sealed class LilyPondExporter
         {
             string tuning = TabTuning(part);
             sb.Append(indent).Append("\\new TabStaff");
-            var tabWith = new List<string>(2);
+            var tabWith = new List<string>(3);
             if (tuning.Length > 0) tabWith.Add("stringTunings = #" + tuning);
             if (InstrumentNameClause(partName) is { } tabName) tabWith.Add(tabName);
+            if (MidiInstrumentClause(part) is { } tabMidi) tabWith.Add(tabMidi);
             if (tabWith.Count > 0)
                 sb.Append(" \\with { ").Append(string.Join(" ", tabWith)).Append(" }");
             sb.Append(" { ");
@@ -5102,8 +5121,9 @@ public sealed class LilyPondExporter
         else
         {
             sb.Append(indent).Append("\\new Staff");
-            var staffWith = new List<string>(2);
+            var staffWith = new List<string>(3);
             if (InstrumentNameClause(partName) is { } staffName) staffWith.Add(staffName);
+            if (MidiInstrumentClause(part) is { } staffMidi) staffWith.Add(staffMidi);
             // LilyPond would print a circled digit for every `\N` on this staff; Lily#'s
             // notation staff never draws one (see _stringNumberParts).
             if (partName != null && _stringNumberParts.Contains(partName))
@@ -5177,7 +5197,7 @@ public sealed class LilyPondExporter
     /// </summary>
     /// <remarks>
     /// ⚠️ Every value token is joined, not just the first: a hyphenated preset
-    /// (<c>electric-bass</c>) is word+minus+word in the green tree, so
+    /// (<c>piano-left</c>) is word+minus+word in the green tree, so
     /// <see cref="PartProperty"/> alone would read "electric" and fall through to the
     /// defaults. This is the reading MeasureCollector.GetPartDefaults takes, through the
     /// same <c>SplitInstrument</c>.

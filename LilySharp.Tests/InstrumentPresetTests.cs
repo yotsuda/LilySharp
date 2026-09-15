@@ -105,7 +105,7 @@ public sealed class InstrumentPresetTests
 
     [Theory]
     [InlineData("bass", "bass")]
-    [InlineData("electric-bass", "bass")]
+    [InlineData("bass5", "bass5")]
     [InlineData("guitar", "guitar")]
     [InlineData("ukulele", "ukulele")]
     // Every string instrument LilyPond has a tuning for answers with it — the bowed ones too,

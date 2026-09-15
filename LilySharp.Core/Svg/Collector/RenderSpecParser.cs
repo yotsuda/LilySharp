@@ -965,9 +965,9 @@ public static class RenderSpecParser
             {
                 if (prop.NameToken.Text.ToLowerInvariant() == "instrument")
                 {
-                    // Join ALL value tokens — a hyphenated preset ("electric-bass")
+                    // Join ALL value tokens — a hyphenated preset ("piano-left")
                     // is word+minus+word in the green tree, so child(2) alone is just
-                    // "electric" and would fall through to the default treble clef.
+                    // "piano" and would fall through to the default treble clef.
                     var texts = new List<string>();
                     for (int vi = 2; vi < prop.SlotCount; vi++)
                         if (prop.GetChild(vi) is SyntaxTokenNode vt)
@@ -1027,7 +1027,7 @@ public static class RenderSpecParser
             {
                 if (prop.NameToken.Text.ToLowerInvariant() == propertyName)
                 {
-                    // The join (a hyphenated bare value like "bass-guitar" is
+                    // The join (a hyphenated bare value like "piano-left" is
                     // word+minus+word in the green tree) and the quote stripping are
                     // written once, on the node — this method used to hold the only
                     // live copy while the node's own accessor held a different,

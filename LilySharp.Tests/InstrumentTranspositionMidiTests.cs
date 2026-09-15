@@ -57,7 +57,6 @@ public class InstrumentTranspositionMidiTests
     [InlineData("trumpet", 70)]      // in B♭
     [InlineData("clarinet-a", 69)]   // in A, a minor 3rd down
     [InlineData("horn", 65)]         // in F, a perfect 5th down
-    [InlineData("french-horn", 65)]
     [InlineData("soprano-sax", 70)]  // in B♭
     [InlineData("alto-sax", 63)]     // in E♭, a major 6th down
     [InlineData("tenor-sax", 58)]    // in B♭, a major 9th down
@@ -81,8 +80,8 @@ public class InstrumentTranspositionMidiTests
     [InlineData("tenor-sax", 2)]
     [InlineData("soprano-sax", 2)]
     [InlineData("baritone-sax", 2)]
-    [InlineData("voice-alto", 8)]     // the control
-    [InlineData("voice-tenor", 8)]    // the control
+    [InlineData("alto", 8)]           // the control
+    [InlineData("tenor", 8)]          // the control
     public void ASaxophoneIsAReed_NotAVoice(string preset, int expectedTimbre)
     {
         var tree = SyntaxTree.Parse(

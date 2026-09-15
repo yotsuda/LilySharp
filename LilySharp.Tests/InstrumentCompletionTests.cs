@@ -80,8 +80,7 @@ public class InstrumentCompletionTests
         // GetTuning-only names are valid `instrument` values (they set the tab-tuning
         // default), so they must be in KnownInstruments — which is also exactly what
         // the completion offers.
-        foreach (var name in new[] { "ukulele", "uke", "bass-guitar", "electric-bass",
-                                     "bass5", "5-string-bass", "bass6", "6-string-bass",
+        foreach (var name in new[] { "ukulele", "bass5", "bass6",
                                      "violin", "viola", "cello", "mandolin", "banjo" })
         {
             Assert.True(InstrumentDefaults.IsKnownInstrument(name), $"{name} not known");

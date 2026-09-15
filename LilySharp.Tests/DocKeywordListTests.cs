@@ -448,7 +448,7 @@ public class DocKeywordListTests
         Assert.False(Compiles(Doc("foo-bar", "clef treble")));
 
         // …and the one place a '-' DOES join two words.
-        Assert.True(Compiles(Doc("vln", "instrument voice-soprano")));
+        Assert.True(Compiles(Doc("vln", "instrument voice-bass")));
     }
 
     [Fact]

@@ -875,7 +875,7 @@ internal sealed partial class Parser
     /// <summary>
     /// Parses a grob property name, reassembling a LilyPond-style hyphenated name
     /// (<c>force-hshift</c>, <c>X-offset</c>) that the lexer splits into
-    /// <c>Identifier '-' Identifier …</c>. Mirrors the instrument <c>bass-guitar</c>
+    /// <c>Identifier '-' Identifier …</c>. Mirrors the instrument <c>piano-left</c>
     /// merge: the hyphens (and any interior trivia) fold into the token TEXT so its
     /// width equals the source span and the tree round-trips, and the collector sees
     /// the full <c>"force-hshift"</c> name.

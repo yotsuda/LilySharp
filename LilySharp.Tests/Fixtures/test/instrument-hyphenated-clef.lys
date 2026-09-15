@@ -1,7 +1,7 @@
-title "electric-bass clef"
+title "piano-left clef"
 time 4/4
 key c major
-part m { instrument electric-bass }
+part m { instrument piano-left }
 section A {
   m { c,4 d e f }
 }

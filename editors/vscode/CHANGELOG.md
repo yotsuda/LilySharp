@@ -2,6 +2,23 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
+## 0.8.0
+
+### Breaking changes
+
+- **An instrument preset has one name** — fourteen second names are gone: `uke`,
+  `acoustic-guitar`, `electric-guitar`, `bass-guitar`, `electric-bass`, `5-string-bass`,
+  `6-string-bass`, `double-bass`, `french-horn`, `piano-treble`, `piano-bass`, `voice-soprano`,
+  `voice-alto`, `voice-tenor`. Write `ukulele`, `guitar`, `bass`, `bass5`, `bass6`,
+  `contrabass`, `horn`, `piano-right`, `piano-left`, `soprano`, `alto`, `tenor`, and name the
+  sound with `midiInstrument`.
+
+### Added
+
+- **`midiInstrument "…"`** in a part header names the part's General MIDI sound (LilyPond's 128
+  names, completed and checked); the `.mid` now gives every part its own track, channel and
+  sound, and the preview plays the same timbre.
+
 ## 0.7.0
 
 ### Breaking changes

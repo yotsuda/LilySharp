@@ -40,7 +40,11 @@ public readonly record struct MidiNote(
     // 2 clarinet, 3 strings, 4 guitar, 5 bass, 6 brass, 7 organ, 8 voice),
     // resolved from the part's `instrument` (or its name). Not written to
     // .mid files.
-    int Timbre = 0
+    int Timbre = 0,
+    // The part whose music made the note, or null for music no part claims. The exporter
+    // gives each part its own track and channel by it (MidiExporter.SplitIntoPartTracks).
+    // Not written to .mid files.
+    string? Part = null
 );
 
 /// <summary>

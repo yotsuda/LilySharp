@@ -112,6 +112,16 @@ public sealed class PartHeaderDefaults
     /// </remarks>
     public int ConcertShiftSemitones => TranspositionSemitones % 12 == 0 ? 0 : TranspositionSemitones;
 
+    /// <summary>
+    /// The General MIDI program the part plays (0-based): its <c>midiInstrument "…"</c>, else its
+    /// preset's default (<see cref="InstrumentDefaults.GetMidiProgram"/>), else 0 — LilyPond's own
+    /// default, "acoustic grand".
+    /// </summary>
+    public int MidiProgram { get; private init; }
+
+    /// <summary>The part's written <c>midiInstrument</c> name (quotes removed), or null.</summary>
+    public string? MidiInstrument { get; private init; }
+
     /// <summary>The defaults of a part that declares nothing.</summary>
     public static readonly PartHeaderDefaults Empty = new();
 
@@ -122,7 +132,7 @@ public sealed class PartHeaderDefaults
             return Empty;
 
         int? explicitOctave = null;
-        string? preset = null, clefText = null, transText = null, tuningText = null;
+        string? preset = null, clefText = null, transText = null, tuningText = null, midiName = null;
 
         foreach (var prop in part.Properties)
         {
@@ -158,8 +168,20 @@ public sealed class PartHeaderDefaults
                     string p = InstrumentDefaults.SplitInstrument(texts).Preset;
                     preset = p.Length == 0 ? null : p.ToLowerInvariant();
                     break;
+                case "midiinstrument":
+                    string written = Joined();
+                    midiName = written.Length >= 2 && written[0] == '"' && written[^1] == '"'
+                        ? written[1..^1]
+                        : written;
+                    break;
             }
         }
+
+        // The sound: the written name when it is one of the 128 (SymbolCaseValidator refuses any
+        // other), else the preset's, else LilyPond's default "acoustic grand".
+        int midiProgram = (midiName != null ? Midi.GeneralMidi.ProgramOf(midiName) : null)
+            ?? InstrumentDefaults.GetMidiProgram(preset)
+            ?? 0;
 
         // The clef: the part's own word, else the one its preset implies.
         string? clefWord = clefText
@@ -187,6 +209,8 @@ public sealed class PartHeaderDefaults
             AbsoluteBaseOctave = InstrumentDefaults.AbsoluteBaseOctave(explicitOctave),
             ClefOctaveSemitones = Tunings.ClefOctaveShift(clef),
             TranspositionSemitones = transposition,
+            MidiProgram = midiProgram,
+            MidiInstrument = midiName,
         };
     }
 

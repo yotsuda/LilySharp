@@ -287,7 +287,7 @@ public sealed partial class LilySharpLanguageServer
         }
         else if (node is PropertyAssignmentSyntax propAssign)
         {
-            // Property VALUE tokens (instrument bass-guitar, name Foo, …):
+            // Property VALUE tokens (instrument piano-left, name Foo, …):
             // color the whole value uniformly. Without this only value words
             // that happened to be keywords ("bass" = the clef name) lit up,
             // leaving "-guitar" plain. One span over first→last value token.

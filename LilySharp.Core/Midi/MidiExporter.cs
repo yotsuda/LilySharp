@@ -55,6 +55,11 @@ public sealed class MidiExporter
     // from its `instrument` property (or the part name itself).
     private int _currentTimbre;
 
+    // The part whose music is being played, stamped on every note (MidiNote.Part) so the
+    // finished stream splits into a track and a channel per part (SplitIntoPartTracks).
+    // Null for music no part claims. Set and cleared where _currentTimbre is.
+    private string? _currentPart;
+
     // Phrase bodies by name; a $reference expands in place (fresh default
     // frame), declarations are silent. _activePhrases guards recursion.
     private Dictionary<string, SyntaxNode>? _phraseBodies;
@@ -238,6 +243,7 @@ public sealed class MidiExporter
     public IReadOnlyList<string> Warnings => _outOfRange
         .Select(o => $"pitch out of MIDI range at offset {o.Position}: key {o.Key} "
             + $"sounds as {Math.Clamp(o.Key, 0, 127)} (the page and the MusicXML keep the written octave)")
+        .Concat(_channelWarnings)
         .ToList();
 
     // Phrase auto-transpose (movable motif): a phrase written in the score's home
@@ -371,10 +377,113 @@ public sealed class MidiExporter
         if (!conductorTrack.TimeSignatures.Any(ts => ts.Tick == 0))
             conductorTrack.TimeSignatures.Insert(0, new TimeSignatureChange(0, _timeNumerator, _timeDenominator));
 
-        if (mainTrack.Notes.Count > 0)
-            midi.Tracks.Add(mainTrack);
+        SplitIntoPartTracks(midi, mainTrack);
 
         return midi;
+    }
+
+    // One line per part the channel plan could not give a channel of its own or a same-sounding
+    // channel to share (SplitIntoPartTracks), reported through Warnings.
+    private readonly List<string> _channelWarnings = new();
+
+    /// <summary>
+    /// Splits the finished note stream into a track per part, each on its own channel with its
+    /// General MIDI program (HANDOFF §2 F-midi).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The stream is played into ONE track first and split afterwards, on purpose: ties,
+    /// voices, repeats and forms are resolved against that track while it is being written
+    /// (OpenTieTargets indexes its notes), and splitting the finished list leaves all of that
+    /// exactly as it was. Each note already knows its part (<see cref="MidiNote.Part"/>).
+    /// </para>
+    /// <para>
+    /// Tracks follow the order in which each part first sounds; music no part claims keeps the
+    /// old "Track 1". A pitched part takes the next channel from 0, stepping over 9 (the GM
+    /// drum channel); drum notes keep channel 9 inside their part's track. Past the fifteen
+    /// pitched channels a part shares the channel of an earlier part with the same program —
+    /// a channel carries one sound — and when there is none it shares the first channel and
+    /// says so in <see cref="Warnings"/>. A drum-only track sends no program change.
+    /// </para>
+    /// <para>
+    /// LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
+    /// but has no preset table; the sound a part plays is Lily#'s
+    /// <see cref="Semantics.PartHeaderDefaults.MidiProgram"/>.
+    /// </para>
+    /// </remarks>
+    private void SplitIntoPartTracks(MidiFile midi, MidiTrack mainTrack)
+    {
+        _channelWarnings.Clear();
+        if (mainTrack.Notes.Count == 0)
+            return;
+
+        var order = new List<string?>();
+        var byPart = new Dictionary<string, List<MidiNote>>(StringComparer.Ordinal);
+        List<MidiNote>? unclaimed = null;
+        foreach (var note in mainTrack.Notes)
+        {
+            if (note.Part is null)
+            {
+                if (unclaimed == null) { unclaimed = new List<MidiNote>(); order.Add(null); }
+                unclaimed.Add(note);
+                continue;
+            }
+            if (!byPart.TryGetValue(note.Part, out var list))
+            {
+                byPart[note.Part] = list = new List<MidiNote>();
+                order.Add(note.Part);
+            }
+            list.Add(note);
+        }
+
+        var channelByProgram = new Dictionary<int, int>();
+        int nextChannel = 0;
+        bool first = true;
+        foreach (var part in order)
+        {
+            var notes = part is null ? unclaimed! : byPart[part];
+            int program = part is null ? 0 : Header(part).MidiProgram;
+            bool pitched = notes.Any(n => n.Channel != 9);
+
+            int channel = 9;
+            if (pitched)
+            {
+                if (nextChannel == 9)
+                    nextChannel++;
+                if (nextChannel <= 15)
+                {
+                    channel = nextChannel++;
+                    channelByProgram.TryAdd(program, channel);
+                }
+                else if (channelByProgram.TryGetValue(program, out int shared))
+                {
+                    channel = shared;
+                }
+                else
+                {
+                    channel = 0;
+                    _channelWarnings.Add(
+                        $"part '{part ?? mainTrack.Name}' has no MIDI channel of its own: sixteen channels "
+                        + $"hold at most fifteen pitched sounds, so it plays on channel 1 with that "
+                        + $"channel's sound instead of \"{GeneralMidi.InstrumentNames[program]}\"");
+                }
+            }
+
+            var track = new MidiTrack
+            {
+                Name = part ?? mainTrack.Name,
+                Channel = channel,
+                Program = pitched ? program : null,
+            };
+            foreach (var note in notes)
+                track.Notes.Add(note.Channel == 9 ? note : note with { Channel = channel });
+            if (first)
+            {
+                track.Lyrics.AddRange(mainTrack.Lyrics);
+                first = false;
+            }
+            midi.Tracks.Add(track);
+        }
     }
 
     private void ProcessNode(SyntaxNode node, MidiTrack track, MidiTrack conductorTrack)
@@ -389,10 +498,12 @@ public sealed class MidiExporter
                 (_partOctaveAnchor, _partAbsoluteBase) = PartOctaveAnchors(part.Name.Text);
                 _currentClef = Header(part.Name.Text).Clef;
                 _currentTimbre = PartTimbre(part.Name.Text);
+                _currentPart = part.Name.Text;
                 ProcessChildren(part, track, conductorTrack);
                 (_partOctaveAnchor, _partAbsoluteBase) = (4, 4);
                 _currentClef = Svg.Model.ClefType.Treble;
                 _currentTimbre = 0;
+                _currentPart = null;
                 break;
 
             case SectionDeclarationSyntax sectionDecl:
@@ -688,6 +799,8 @@ public sealed class MidiExporter
         _partAbsoluteBase = absBase;
         _currentClef = Header(partName).Clef;  // a mid-music `clef` is a change FROM this
         _currentTimbre = PartTimbre(partName);
+        var outerPart = _currentPart;
+        _currentPart = partName;
         // Music without a PartBlockSyntax around it never passes the arming in ProcessNode,
         // so the part's shift is armed here — otherwise a bass or guitar sounded at
         // written pitch. ⚠️ The SAME shift as the part-block arm, transpose included: until
@@ -701,6 +814,7 @@ public sealed class MidiExporter
         (_partOctaveAnchor, _partAbsoluteBase) = (4, 4);
         _currentTimbre = 0;
         _currentTransposeSemitones = 0;
+        _currentPart = outerPart;
     }
 
     /// <summary>True when the section declares at least one <c>partName { }</c> block —
@@ -861,7 +975,10 @@ public sealed class MidiExporter
                 _partAbsoluteBase = absBase;
                 _currentClef = Header(pname).Clef; // a mid-music `clef` is a change FROM this
                 _currentTimbre = PartTimbre(pname);
+                var outerPart = _currentPart;
+                _currentPart = pname;
                 ProcessNode(sectionPart, track, conductorTrack);
+                _currentPart = outerPart;
                 _partPitchLanes[pname] = (_currentNoteName, _currentOctave, _defaultDuration);
                 _currentTick += PaddingTicks(sectionPart);
                 tickLanes[pname] = _currentTick;
@@ -1140,6 +1257,15 @@ public sealed class MidiExporter
                 }
             }
         }
+        // A part that NAMES its sound — a preset or a `midiInstrument` — takes the preview timbre
+        // from the General MIDI program the .mid gives it, so the preview and the file cannot
+        // disagree (the substring guess below read `double-bass` and `piano-bass` as a bass
+        // guitar). A part that names none keeps the guess from its name: "flute" sounds
+        // flute-ish without any property.
+        var header = Header(partName);
+        if (header.MidiInstrument != null
+            || LilySharp.Core.Svg.Model.InstrumentDefaults.GetMidiProgram(header.Preset) != null)
+            return GeneralMidi.PreviewTimbreFamily(header.MidiProgram);
         return TimbreFamily(source ?? partName);
     }
 
@@ -1661,7 +1787,7 @@ public sealed class MidiExporter
         int actualTicks = Math.Max(1, ticks * durationPercent / 100);
         track.Notes.Add(new MidiNote(track.Channel, SoundKey(midiPitch, pitch.Position), velocity,
             _currentTick, actualTicks, pitch.Position, QuarterBend: pitch.QuarterOffset,
-            SourceOrdinal: NextOrdinal(pitch.Position), Timbre: _currentTimbre));
+            SourceOrdinal: NextOrdinal(pitch.Position), Timbre: _currentTimbre, Part: _currentPart));
         // The last member is what a '~' after '>>' ties on from (OpenTieTargets).
         CloseOnset(track, [track.Notes.Count - 1], false);
         _currentTick += ticks;
@@ -1678,7 +1804,7 @@ public sealed class MidiExporter
         int ticks = FractionToTicks(_defaultDuration);
         track.Notes.Add(new MidiNote(track.Channel, SoundKey(midiPitch, degree.Position), _velocity,
             _currentTick, ticks, degree.Position,
-            SourceOrdinal: NextOrdinal(degree.Position), Timbre: _currentTimbre));
+            SourceOrdinal: NextOrdinal(degree.Position), Timbre: _currentTimbre, Part: _currentPart));
         CloseOnset(track, [track.Notes.Count - 1], false); // see EmitArpeggioMidiPitch
         _currentTick += ticks;
     }
@@ -1755,7 +1881,7 @@ public sealed class MidiExporter
         track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity,
             _currentTick, actualDuration, note.Position,
             QuarterBend: note.Pitch.QuarterOffset,
-            SourceOrdinal: NextOrdinal(note.Position), Timbre: _currentTimbre));
+            SourceOrdinal: NextOrdinal(note.Position), Timbre: _currentTimbre, Part: _currentPart));
         CloseOnset(track, [track.Notes.Count - 1], startsTie);
         _currentTick += durationTicks;
     }
@@ -1789,7 +1915,7 @@ public sealed class MidiExporter
 
         int actualDuration = Math.Max(1, durationTicks * durationPercent / 100);
         track.Notes.Add(new MidiNote(9, info.GmKey, velocity, _currentTick, actualDuration,
-            drum.Position, SourceOrdinal: NextOrdinal(drum.Position), Timbre: 9));
+            drum.Position, SourceOrdinal: NextOrdinal(drum.Position), Timbre: 9, Part: _currentPart));
         CloseOnset(track, [track.Notes.Count - 1], startsTie: false);
         _currentTick += durationTicks;
     }
@@ -1869,7 +1995,7 @@ public sealed class MidiExporter
                 track.Notes.Add(new MidiNote(track.Channel, sound.MidiPitch, velocity,
                     startTick, actualDuration, bare.Position,
                     QuarterBend: sound.QuarterBend,
-                    SourceOrdinal: NextOrdinal(bare.Position), Timbre: _currentTimbre));
+                    SourceOrdinal: NextOrdinal(bare.Position), Timbre: _currentTimbre, Part: _currentPart));
                 CloseOnset(track, [track.Notes.Count - 1], startsTie);
                 break;
             }
@@ -1887,14 +2013,14 @@ public sealed class MidiExporter
                     if (n.IsDrum)
                     {
                         track.Notes.Add(new MidiNote(9, n.MidiPitch, velocity, startTick, actualDuration,
-                            bare.Position, SourceOrdinal: ordinal, Timbre: 9));
+                            bare.Position, SourceOrdinal: ordinal, Timbre: 9, Part: _currentPart));
                         continue;
                     }
                     int pitch = n.MidiPitch + semitones;
                     int tiedInto = ExtendTied(track, tieTargets, pitch, durationTicks);
                     if (tiedInto >= 0) { onset.Add(tiedInto); continue; }
                     track.Notes.Add(new MidiNote(track.Channel, pitch, velocity, startTick, actualDuration,
-                        bare.Position, QuarterBend: n.QuarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre));
+                        bare.Position, QuarterBend: n.QuarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre, Part: _currentPart));
                     onset.Add(track.Notes.Count - 1);
                 }
                 CloseOnset(track, onset, startsTie);
@@ -1904,7 +2030,7 @@ public sealed class MidiExporter
             {
                 var info = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
                 track.Notes.Add(new MidiNote(9, info.GmKey, velocity, startTick, actualDuration,
-                    bare.Position, SourceOrdinal: NextOrdinal(bare.Position), Timbre: 9));
+                    bare.Position, SourceOrdinal: NextOrdinal(bare.Position), Timbre: 9, Part: _currentPart));
                 CloseOnset(track, [track.Notes.Count - 1], startsTie: false);
                 break;
             }
@@ -2034,7 +2160,7 @@ public sealed class MidiExporter
             {
                 track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position,
                     QuarterBend: pitch.QuarterOffset,
-                    SourceOrdinal: chordOrdinal, Timbre: _currentTimbre));
+                    SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart));
                 onset.Add(track.Notes.Count - 1);
             }
             resolved.Add((midiPitch, pitch.QuarterOffset, false));
@@ -2065,7 +2191,7 @@ public sealed class MidiExporter
             else
             {
                 track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position,
-                    SourceOrdinal: chordOrdinal, Timbre: _currentTimbre));
+                    SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart));
                 onset.Add(track.Notes.Count - 1);
             }
             resolved.Add((midiPitch, 0, false));
@@ -2078,7 +2204,7 @@ public sealed class MidiExporter
         {
             var dinfo = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
             track.Notes.Add(new MidiNote(9, dinfo.GmKey, _velocity, startTick, durationTicks, chord.Position,
-                SourceOrdinal: chordOrdinal, Timbre: 9));
+                SourceOrdinal: chordOrdinal, Timbre: 9, Part: _currentPart));
             resolved.Add((dinfo.GmKey, 0, true));
         }
         _resolvedChordNotes[chord] = resolved;
@@ -2125,14 +2251,14 @@ public sealed class MidiExporter
                 if (n.IsDrum)
                 {
                     track.Notes.Add(new MidiNote(9, n.MidiPitch, _velocity, startTick, durationTicks,
-                        rep.Position, SourceOrdinal: ordinal, Timbre: 9));
+                        rep.Position, SourceOrdinal: ordinal, Timbre: 9, Part: _currentPart));
                     continue;
                 }
                 int pitch = n.MidiPitch + semitones;
                 int tiedInto = ExtendTied(track, tieTargets, pitch, durationTicks);
                 if (tiedInto >= 0) { onset.Add(tiedInto); continue; }
                 track.Notes.Add(new MidiNote(track.Channel, pitch, _velocity, startTick, durationTicks,
-                    rep.Position, QuarterBend: n.QuarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre));
+                    rep.Position, QuarterBend: n.QuarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre, Part: _currentPart));
                 onset.Add(track.Notes.Count - 1);
             }
         }
@@ -2411,7 +2537,7 @@ public sealed class MidiExporter
                     int midiPitch = SoundKey(CalculateRelativeMidiPitch(note.Pitch), note.Position);
                     track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, _currentTick, g,
                         note.Position, QuarterBend: note.Pitch.QuarterOffset,
-                        SourceOrdinal: NextOrdinal(note.Position), Timbre: _currentTimbre));
+                        SourceOrdinal: NextOrdinal(note.Position), Timbre: _currentTimbre, Part: _currentPart));
                     _currentTick += g;
                     _pendingGraceSteal += g;
                     break;
@@ -2440,7 +2566,7 @@ public sealed class MidiExporter
                         isFirst = false;
                         track.Notes.Add(new MidiNote(track.Channel, mp, _velocity, _currentTick, g,
                             chord.Position, QuarterBend: pitch.QuarterOffset,
-                            SourceOrdinal: chordOrdinal, Timbre: _currentTimbre));
+                            SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart));
                     }
                     _currentNoteName = firstNoteName;
                     _currentOctave = firstOctave;

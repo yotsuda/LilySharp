@@ -46,7 +46,7 @@ public class PartHeaderParseTests
     [InlineData("part m { }")]
     [InlineData("part m { octave absolute }")]
     [InlineData("part m { transpose d' }")]
-    [InlineData("part m { instrument bass-guitar }")]        // hyphenated value is ONE word
+    [InlineData("part m { instrument piano-left }")]         // hyphenated value is ONE word
     [InlineData("part m { key fis major }")]                 // a key is legitimately per-part
     [InlineData("part m { override NoteHead.transparent = true }")]
     public void AcceptedHeaders_NoParseError(string parts) =>

@@ -735,7 +735,12 @@ PartProperty   = 'clef'          , PartClefName
                | 'octave'        , Integer
                | 'pitch'         , PitchMode        (* this part's convention — own wins
                                                        over the top-level PitchDecl, §2.3 *)
-               | 'pedal'         , PedalStyleName ;
+               | 'pedal'         , PedalStyleName
+               | 'midiInstrument' , String         (* the General MIDI sound: one of
+                                                       LilyPond's 128 names, e.g.
+                                                       midiInstrument "acoustic guitar (nylon)";
+                                                       default = the preset's, else
+                                                       "acoustic grand" *) ;
                (* 'lines' left this list 2026-08-19 and 'removeEmpty' 2026-09-08 (user
                   decisions): the staff-line count and hara-kiri are presentation, not
                   music, so the SCORE item that renders the part carries them —
@@ -750,7 +755,7 @@ PartProperty   = 'clef'          , PartClefName
                (* 'key' is per-part too, but the parser takes it as a KeySignature rather
                   than a PartProperty, so it is not an alternative here. *)
 
-(* A preset is ONE word that may be spelled with hyphens (piano-right, voice-soprano).
+(* A preset is ONE word that may be spelled with hyphens (piano-right, voice-bass).
    The tail after each '-' is any BARE WORD, whatever else that word is reserved for:
    until 2026-08-19 the parser gated it on "may this word name a part?", which admitted
    an identifier and the four clef words bass/treble/alto/tenor — so voice-alto and

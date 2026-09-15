@@ -563,7 +563,7 @@ internal sealed partial class Parser
 
     /// <summary>
     /// The token after the <c>-</c> in a hyphenated part-header value (<c>instrument
-    /// bass-guitar</c>): any BARE WORD, whatever else that word is reserved for.
+    /// piano-left</c>): any BARE WORD, whatever else that word is reserved for.
     /// </summary>
     /// <remarks>
     /// ⚠️ A separate predicate from <see cref="IsPartNameKind"/> on purpose. That one answers

@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 54 | 観測者がゼロだと自認しているもの |
-| `OWN` | 140 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **255** | |
+| `OWN` | 143 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **258** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -228,13 +228,16 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（140 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（143 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2425** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:5308** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:5328** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+### `LilySharp.Core/Midi/GeneralMidi.cs`
+- **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
-- **:2258** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+- **:409** LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
+- **:2384** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
 - **:68** LILYSHARP-OWN: LilyPond's q takes no marks, so there is nothing to port.
 ### `LilySharp.Core/Parser/Parser.Music.cs`
@@ -433,6 +436,8 @@
 - **:684** ⚠️ LILYSHARP-OWN: THIS EXISTS BECAUSE LILY# SCALES AT DRAW TIME. An ossia is drawn
 ### `LilySharp.Core/Svg/Model/FiguredBassItem.cs`
 - **:158** LILYSHARP-OWN: the @fig(…) SPELLING is Lily#'s, not a port — LilyPond writes
+### `LilySharp.Core/Svg/Model/InstrumentDefaults.cs`
+- **:287** LILYSHARP-OWN: LilyPond has no instrument presets, so which of its 128 sounds a preset
 ### `LilySharp.Core/Svg/Model/Measure.cs`
 - **:278** ⚠️ LILYSHARP-OWN: THE FLAGGED ZERO-WIDTH MEASURE IS A TRANSLATION DEVICE. LilyPond
 ### `LilySharp.Core/Syntax/SyntaxNodes.cs`

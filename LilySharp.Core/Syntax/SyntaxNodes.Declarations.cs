@@ -104,7 +104,7 @@ public sealed class PropertyAssignmentSyntax : SyntaxNode
             if (values.Count == 1 && values[0] is SyntaxTokenNode single)
                 return LysValue.FromToken(single.Kind, text);
             // MORE than one token is a run the lexer did not join for us —
-            // `instrument bass-guitar` (word+minus+word), `transpose d'` (pitch+mark).
+            // `instrument piano-left` (word+minus+word), `transpose d'` (pitch+mark).
             // Those are words, not numbers.
             return LysValue.FromToken(SyntaxKind.Identifier, text);
         }

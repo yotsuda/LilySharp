@@ -97,7 +97,6 @@ public sealed class AbsoluteModeAnchorTests
     [InlineData("clef bass", BassMiddleLine, 0)]
     // Presets whose ANCHOR octave is not 4. None of them may move the drawing.
     [InlineData("instrument bass", BassMiddleLine, -12)]
-    [InlineData("instrument bass-guitar", BassMiddleLine, -12)]
     [InlineData("instrument tuba", BassMiddleLine, 0)]
     [InlineData("instrument flute", TrebleMiddleLine, 0)]
     // The row that was right all along: the octave rides the treble_8 clef, not the preset.

@@ -98,14 +98,14 @@ public class LysValueTests
     public void APartPropertysValueIsTheWholeRunOfTokens()
     {
         // A hyphenated bare value is word+minus+word in the green tree. Reading only
-        // the FIRST token answered "bass" while the live reader answered "bass-guitar"
+        // the FIRST token answered "piano" while the live reader answered "piano-left"
         // — the same node with two values (docs/VALUE_SITE_AUDIT.md §7 ①).
-        var tree = SyntaxTree.Parse("part gtr { instrument bass-guitar }\nscore main { staff gtr }");
+        var tree = SyntaxTree.Parse("part gtr { instrument piano-left }\nscore main { staff gtr }");
         Assert.Empty(tree.Diagnostics);
         var prop = PartProperty(tree, "instrument");
 
-        Assert.Equal("bass-guitar", prop.ValueText);
-        Assert.Equal(new LysValue.Symbol("bass-guitar"), prop.Value);
+        Assert.Equal("piano-left", prop.ValueText);
+        Assert.Equal(new LysValue.Symbol("piano-left"), prop.Value);
     }
 
     [Fact]

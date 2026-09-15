@@ -171,6 +171,10 @@ public static class LanguageVocabulary
     /// <summary>Every instrument preset <c>instrument</c> accepts.</summary>
     public static IReadOnlyCollection<string> InstrumentPresets => InstrumentDefaults.KnownInstruments;
 
+    /// <summary>The names a part's <c>midiInstrument "…"</c> takes — LilyPond's General MIDI
+    /// table, in program order (<see cref="Midi.GeneralMidi.InstrumentNames"/>).</summary>
+    public static IReadOnlyCollection<string> MidiInstrumentNames => Midi.GeneralMidi.InstrumentNames;
+
     /// <summary>The staff-line counts <c>lines</c> accepts, inclusive. Published for the same
     /// reason as the word lists: a description that states a range is a copy of one.</summary>
     public static int MinStaffLines => Svg.Collector.StaffSpec.MinLines;

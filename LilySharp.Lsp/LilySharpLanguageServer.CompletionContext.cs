@@ -663,7 +663,7 @@ public sealed partial class LilySharpLanguageServer
     /// <paramref name="offset"/> (skipping the current word and any whitespace),
     /// e.g. "clef" in <c>clef tr|</c> or <c>clef |</c>. Empty if none. Hyphen counts
     /// as a word character: instrument presets are hyphenated (piano-right,
-    /// 5-string-bass), and the scan must not truncate at the hyphen — in
+    /// piano-left), and the scan must not truncate at the hyphen — in
     /// <c>instrument piano-|</c> the partial word is "piano-", and the preceding
     /// word must still come out as "instrument".
     /// </summary>

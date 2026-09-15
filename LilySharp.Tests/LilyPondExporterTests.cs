@@ -820,17 +820,17 @@ public class LilyPondExporterTests
         Assert.Contains("{ \\clef \"treble\" \\fl }", ly);
     }
 
-    /// <summary>A hyphenated preset (<c>electric-bass</c>) is read whole.</summary>
+    /// <summary>A hyphenated preset (<c>piano-left</c>) is read whole.</summary>
     /// <remarks>
     /// It is word+minus+word in the green tree, so reading only the property's FIRST value
-    /// token yields "electric", which no preset matches and which therefore falls silently
+    /// token yields "piano", which no preset matches and which therefore falls silently
     /// through to treble — the same failure the collector had to fix in its own reader.
     /// </remarks>
     [Fact]
     public void InstrumentPreset_HyphenatedNameIsReadWhole()
     {
         var ly = Export("""
-            part bs { instrument electric-bass section S { c d e } }
+            part bs { instrument piano-left section S { c d e } }
             form main { ~S }
             score main { staff bs }
             """);
@@ -925,7 +925,7 @@ public class LilyPondExporterTests
     [InlineData("")]                                   // nothing said → guitar, no shift
     [InlineData("  tuning bass")]                      // tuning alone carries −12
     [InlineData("  instrument bass")]                  // preset: bass clef + tuning + −12
-    [InlineData("  instrument electric-bass")]
+    [InlineData("  instrument bass5")]
     [InlineData("  instrument guitar")]                // treble_8: the octave rides the clef
     [InlineData("  instrument ukulele")]
     [InlineData("  clef bass\n  tuning bass")]

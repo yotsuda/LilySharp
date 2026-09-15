@@ -54,9 +54,27 @@ internal sealed class MusicXmlDocument
         for (int i = 0; i < Parts.Count; i++)
         {
             var part = Parts[i];
-            partList.Add(new XElement("score-part",
-                new XAttribute("id", $"P{i + 1}"),
-                new XElement("part-name", part.Name ?? $"Part {i + 1}")));
+            string id = $"P{i + 1}";
+            var scorePart = new XElement("score-part",
+                new XAttribute("id", id),
+                new XElement("part-name", part.Name ?? $"Part {i + 1}"));
+            if (part.MidiProgram is int program)
+            {
+                // The sound the .mid gives the part (HANDOFF §2 F-midi): <score-instrument>
+                // first, then the <midi-instrument> that points at it (the order the schema
+                // requires). MusicXML counts channels and programs from 1. Channels follow the
+                // part order and step over 10, the GM drum channel, as the .mid's do.
+                string instrumentId = id + "-I1";
+                int channel = i < 9 ? i + 1 : Math.Min(16, i + 2);
+                scorePart.Add(new XElement("score-instrument",
+                    new XAttribute("id", instrumentId),
+                    new XElement("instrument-name", Midi.GeneralMidi.InstrumentNames[program])));
+                scorePart.Add(new XElement("midi-instrument",
+                    new XAttribute("id", instrumentId),
+                    new XElement("midi-channel", channel),
+                    new XElement("midi-program", program + 1)));
+            }
+            partList.Add(scorePart);
         }
         scorePartwise.Add(partList);
 
@@ -88,6 +106,10 @@ internal sealed class MusicXmlDocument
 internal sealed class MusicXmlPart
 {
     public string? Name { get; set; }
+
+    /// <summary>The part's General MIDI program (0-based), written as its
+    /// <c>&lt;midi-instrument&gt;</c>; null writes none.</summary>
+    public int? MidiProgram { get; set; }
     public List<MusicXmlMeasure> Measures { get; } = new();
 
     public XElement ToXml(string id)

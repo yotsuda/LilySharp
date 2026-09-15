@@ -1697,6 +1697,10 @@ public sealed class MusicXmlExporter
         _partAnchorOctave = header.AnchorOctave;
         _octaveAnchor = header.AbsoluteBaseOctave;
 
+        // The part's General MIDI sound, the one the .mid gives it (HANDOFF §2 F-midi).
+        if (_currentPart != null)
+            _currentPart.MidiProgram = header.MidiProgram;
+
         // ⚠️ THE WHOLE written→sounding distance goes in <transpose>, the clef's octave
         // included. MusicXML's <pitch> is the WRITTEN pitch and <transpose> is what turns it
         // into the sounding one; <clef-octave-change> is notation — it says where the written

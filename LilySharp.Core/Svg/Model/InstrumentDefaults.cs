@@ -27,7 +27,7 @@ public static class InstrumentDefaults
 {
     /// <summary>
     /// Splits an <c>instrument</c> property's value tokens into the PRESET (the bare
-    /// words, e.g. <c>violin</c> / <c>bass-guitar</c> — which drive clef/octave/tuning
+    /// words, e.g. <c>violin</c> / <c>piano-left</c> — which drive clef/octave/tuning
     /// and MIDI) and the DISPLAY name (a trailing quoted <c>"…"</c> label if present,
     /// else the preset). A quoted-only value (<c>instrument "1st Violin"</c>) yields
     /// that string as both, so free-text names keep working.
@@ -61,16 +61,15 @@ public static class InstrumentDefaults
             "violin" => (ClefType.Treble, 4),
             "viola" => (ClefType.Alto, 3),
             "cello" => (ClefType.Bass, 3),
-            "bass" or "contrabass" or "double-bass" or "bass-guitar" or "electric-bass"
-                or "bass5" or "5-string-bass" or "bass6" or "6-string-bass" => (ClefType.Bass, 3),
-            
+            "bass" or "contrabass" or "bass5" or "bass6" => (ClefType.Bass, 3),
+
             // Piano
-            "piano-right" or "piano-treble" => (ClefType.Treble, 4),
-            "piano-left" or "piano-bass" => (ClefType.Bass, 3),
-            
+            "piano-right" => (ClefType.Treble, 4),
+            "piano-left" => (ClefType.Bass, 3),
+
             // Guitar (written octave higher than sounds). The banjo reads the same clef for the
             // same reason: MuseScore's instruments.xml gives it G8vb, exactly as the guitar.
-            "guitar" or "acoustic-guitar" or "electric-guitar" or "banjo" => (ClefType.Treble8Below, 4),
+            "guitar" or "banjo" => (ClefType.Treble8Below, 4),
 
             // Mandolin: treble at sounding pitch (MuseScore: clef G and no transposition). Its
             // four strings are the violin's.
@@ -90,14 +89,14 @@ public static class InstrumentDefaults
 
             // Brass
             "trumpet" or "trumpet-c" => (ClefType.Treble, 4),
-            "horn" or "french-horn" => (ClefType.Treble, 4),
+            "horn" => (ClefType.Treble, 4),
             "trombone" => (ClefType.Bass, 3),
             "tuba" => (ClefType.Bass, 2),
             
             // Voice
-            "soprano" or "voice-soprano" => (ClefType.Treble, 4),
-            "alto" or "voice-alto" => (ClefType.Treble, 4),
-            "tenor" or "voice-tenor" => (ClefType.Treble8Below, 4),  // treble_8 clef
+            "soprano" => (ClefType.Treble, 4),
+            "alto" => (ClefType.Treble, 4),
+            "tenor" => (ClefType.Treble8Below, 4),  // treble_8 clef
             "voice-bass" => (ClefType.Bass, 3),
             
             // Default
@@ -218,11 +217,11 @@ public static class InstrumentDefaults
     /// </remarks>
     public static string? GetTuning(string? instrument) => instrument?.ToLowerInvariant() switch
     {
-        "bass" or "bass-guitar" or "electric-bass" or "contrabass" or "double-bass" => "bass",
-        "bass5" or "5-string-bass" => "bass5",
-        "bass6" or "6-string-bass" => "bass6",
-        "guitar" or "acoustic-guitar" or "electric-guitar" => "guitar",
-        "ukulele" or "uke" => "ukulele",
+        "bass" or "contrabass" => "bass",
+        "bass5" => "bass5",
+        "bass6" => "bass6",
+        "guitar" => "guitar",
+        "ukulele" => "ukulele",
         // The bowed strings: LilyPond tunes each of them (ly/string-tunings-init.ly), so a tab of
         // one frets against its own four strings instead of falling back to a guitar's six. The
         // contrabass already did, through "bass". Until session 375 these three answered null
@@ -254,8 +253,7 @@ public static class InstrumentDefaults
     /// </remarks>
     public static int GetTransposition(string? instrument) => instrument?.ToLowerInvariant() switch
     {
-        "bass" or "bass-guitar" or "electric-bass" or "contrabass" or "double-bass"
-            or "bass5" or "5-string-bass" or "bass6" or "6-string-bass" => -12,
+        "bass" or "contrabass" or "bass5" or "bass6" => -12,
         "piccolo" => 12,
 
         // The CHROMATIC transposers. Written C sounds the named pitch, so the shift is
@@ -272,12 +270,56 @@ public static class InstrumentDefaults
         "clarinet" or "trumpet" or "soprano-sax" => -2,   // in B♭
         "clarinet-a" => -3,                               // in A
         "trumpet-c" => 0,                                 // in C — sounds as written
-        "horn" or "french-horn" => -7,                    // in F
+        "horn" => -7,                    // in F
         "alto-sax" => -9,                                 // in E♭
         "tenor-sax" => -14,                               // in B♭, an octave lower
         "baritone-sax" => -21,                            // in E♭, an octave lower
 
         _ => 0,
+    };
+
+    /// <summary>
+    /// The preset's default General MIDI program (0-based, as a MIDI program change carries
+    /// it), or null for a name that is not a preset. A part's <c>midiInstrument "…"</c>
+    /// overrides it (<see cref="Semantics.PartHeaderDefaults.MidiProgram"/>).
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond has no instrument presets, so which of its 128 sounds a preset
+    /// plays is Lily#'s choice (owner-approved 2026-09-15, HANDOFF §2 F-midi). The numbers are
+    /// the positions in <see cref="Midi.GeneralMidi.InstrumentNames"/>. Where GM splits a family
+    /// the preset takes the plain member: <c>guitar</c> is the nylon-string guitar, a bass the
+    /// fingered electric bass — any other member is one <c>midiInstrument "…"</c> away. The
+    /// ukulele and the mandolin have no GM sound and borrow the nylon and steel guitars; every
+    /// voice sings "choir aahs". ⚠️ Keep this in step with <see cref="KnownInstruments"/> —
+    /// InstrumentPresetTests holds the two lists to each other.
+    /// </remarks>
+    public static int? GetMidiProgram(string? preset) => preset?.ToLowerInvariant() switch
+    {
+        "violin" => 40,
+        "viola" => 41,
+        "cello" => 42,
+        "contrabass" => 43,
+        "bass" or "bass5" or "bass6" => 33,
+        "piano-right" or "piano-left" => 0,
+        "guitar" or "ukulele" => 24,
+        "mandolin" => 25,
+        "banjo" => 105,
+        "flute" => 73,
+        "piccolo" => 72,
+        "oboe" => 68,
+        "clarinet" or "clarinet-a" => 71,
+        "bassoon" => 70,
+        "soprano-sax" => 64,
+        "alto-sax" => 65,
+        "tenor-sax" => 66,
+        "baritone-sax" => 67,
+        "trumpet" or "trumpet-c" => 56,
+        "trombone" => 57,
+        "tuba" => 58,
+        "horn" => 60,
+        "soprano" or "alto"
+            or "tenor" or "voice-bass" => 52,
+        _ => null,
     };
 
     /// <summary>
@@ -331,22 +373,22 @@ public static class InstrumentDefaults
     public static readonly IReadOnlyList<string> KnownInstruments = new[]
     {
         // Strings
-        "violin", "viola", "cello", "bass", "contrabass", "double-bass",
+        "violin", "viola", "cello", "bass", "contrabass",
         // Piano
-        "piano-right", "piano-treble", "piano-left", "piano-bass",
-        // Guitar / fretted (incl. the tab-tuning presets from GetTuning)
-        "guitar", "acoustic-guitar", "electric-guitar",
-        "bass-guitar", "electric-bass", "bass5", "5-string-bass", "bass6", "6-string-bass",
-        "ukulele", "uke", "mandolin", "banjo",
+        "piano-right", "piano-left",
+        // Guitar / fretted (incl. the tab-tuning presets from GetTuning). One name per
+        // instrument (2026-09-15): the acoustic/electric/5-string spellings were second names
+        // with the same clef, tuning and sound — the sound is `midiInstrument "…"` now.
+        "guitar", "bass5", "bass6",
+        "ukulele", "mandolin", "banjo",
         // Woodwinds
         "flute", "piccolo", "oboe", "clarinet", "clarinet-a", "bassoon",
         // Saxophones — their own names, because "alto" and "tenor" are voices
         "soprano-sax", "alto-sax", "tenor-sax", "baritone-sax",
         // Brass
-        "trumpet", "trumpet-c", "horn", "french-horn", "trombone", "tuba",
-        // Voice
-        "soprano", "voice-soprano", "alto", "voice-alto",
-        "tenor", "voice-tenor", "voice-bass",
+        "trumpet", "trumpet-c", "horn", "trombone", "tuba",
+        // Voice ("voice-bass" because "bass" is the bass guitar)
+        "soprano", "alto", "tenor", "voice-bass",
     };
 
     private static readonly HashSet<string> KnownSet =

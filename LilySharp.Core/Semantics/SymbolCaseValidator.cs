@@ -43,7 +43,7 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
     private static readonly HashSet<string> PropertyNames = new(StringComparer.Ordinal)
     {
         "clef", "instrument", "transpose", "transposition", "tuning",
-        "octave", "pedal", "pitch",
+        "octave", "pedal", "pitch", "midiInstrument",
     };
 
     /// <summary>The two words <c>pitch</c> takes, read from their one home.</summary>
@@ -234,6 +234,18 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
                 // The same two words the top-level directive takes (the parser refuses a
                 // third there; here the header's generic value path leaves it to this rule).
                 CheckValue(valueTokens, PitchModes, "pitch", "modes");
+                break;
+            case "midiInstrument":
+                // One quoted name from LilyPond's General MIDI table, exactly as LilyPond
+                // spells it (Midi.GeneralMidi — spaces and parentheses included, so it is
+                // quoted). A bare word is refused too: none of the 128 names is one.
+                string midi = Joined(valueTokens);
+                if (valueTokens.Count != 1 || !IsQuoted(midi)
+                    || Midi.GeneralMidi.ProgramOf(midi[1..^1]) is null)
+                    Error(valueTokens[0],
+                        $"Unknown midiInstrument {midi}. midiInstrument takes one of LilyPond's "
+                        + "General MIDI names in quotes; known: "
+                        + string.Join(", ", Midi.GeneralMidi.InstrumentNames) + ".");
                 break;
         }
     }

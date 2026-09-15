@@ -267,7 +267,7 @@ internal sealed partial class Parser
             var value = Advance(); // identifier, string, number, or pitch
             // A transpose target may carry octave marks (transpose d' / c,);
             // harmless for the other properties, which never have trailing marks.
-            // A hyphenated bare value ('instrument bass-guitar') is ONE word:
+            // A hyphenated bare value ('instrument piano-left') is ONE word:
             // keep consuming minus+word pairs — it used to truncate silently
             // to "bass". (Lyrics/chords never reach this header-only path, so
             // merging hyphens here is safe.)

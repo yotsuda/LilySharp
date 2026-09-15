@@ -25,6 +25,9 @@ public class MidiTrack
     public string Name { get; set; } = "";
     /// <summary>The MIDI channel (0-based) this track's events are emitted on.</summary>
     public int Channel { get; set; }
+    /// <summary>The General MIDI program (0-based) sent at tick 0 on every channel the track's
+    /// pitched notes use, or null to send none (the conductor track, a drum-only track).</summary>
+    public int? Program { get; set; }
     /// <summary>The notes played on this track.</summary>
     public List<MidiNote> Notes { get; } = [];
     /// <summary>The tempo changes on this track.</summary>
@@ -144,6 +147,10 @@ public class MidiFile
 
             switch (evt.Type)
             {
+                case MidiEventType.ProgramChange:
+                    trackWriter.Write((byte)(0xC0 | (evt.Channel & 0x0F)));
+                    trackWriter.Write((byte)(evt.Data1 & 0x7F));
+                    break;
                 case MidiEventType.PitchBend:
                     trackWriter.Write((byte)(0xE0 | (evt.Channel & 0x0F)));
                     trackWriter.Write((byte)(evt.Data1 & 0x7F));
@@ -215,6 +222,19 @@ public class MidiFile
 
         if (!string.IsNullOrEmpty(track.Name))
             events.Add(new MidiEvent(0, MidiEventType.TrackName, track.Channel, 0, 0));
+
+        // The part's sound, at tick 0 on every channel its notes use: the track's own and any
+        // quarter-tone auxiliary channel the plan moved bent notes to (a program change is
+        // CHANNEL-wide, as the bend is). Channel 9 is the drum kit and takes none.
+        if (track.Program is int program)
+        {
+            var channels = new SortedSet<int> { track.Channel };
+            for (int ni = 0; ni < track.Notes.Count; ni++)
+                channels.Add(channelPlan != null ? channelPlan[ni] : track.Notes[ni].Channel);
+            channels.Remove(9);
+            foreach (int ch in channels)
+                events.Add(new MidiEvent(0, MidiEventType.ProgramChange, ch, program, 0));
+        }
 
         foreach (var tempo in track.TempoChanges)
             events.Add(new MidiEvent(tempo.Tick, MidiEventType.Tempo, 0, tempo.MicrosecondsPerBeat, 0));
@@ -292,6 +312,9 @@ public class MidiFile
         foreach (var b in bytes) writer.Write(b);
     }
 
-    private enum MidiEventType { NoteOff = 0, PitchBend = 1, NoteOn = 2, Tempo = 3, TimeSignature = 4, TrackName = 5, Lyric = 6 }
+    // ⚠️ THE ORDER IS THE SORT at a shared tick (BuildEventList): the track's name and its
+    // program change come before any note it starts at tick 0 — a player sets the sound
+    // before the first note-on — and a bend before the note-on it bends.
+    private enum MidiEventType { TrackName = 0, ProgramChange = 1, NoteOff = 2, PitchBend = 3, NoteOn = 4, Tempo = 5, TimeSignature = 6, Lyric = 7 }
     private readonly record struct MidiEvent(int Tick, MidiEventType Type, int Channel, int Data1, int Data2, string? Text = null);
 }

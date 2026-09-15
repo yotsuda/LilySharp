@@ -172,7 +172,7 @@ public sealed partial class LilySharpLanguageServer
     private static readonly string[] PartPropertyOrder =
     {
         "clef", "instrument", "tuning", "octave", "transpose",
-        "transposition", "pitch", "pedal",
+        "transposition", "pitch", "pedal", "midiInstrument",
     };
 
     // Prose per property, and whether the editor has a VALUE list to enumerate for it.
@@ -207,6 +207,8 @@ public sealed partial class LilySharpLanguageServer
             ["transposition"] = ($"Sounding-octave marker ({string.Join("/", LanguageVocabulary.TranspositionMarkers)})", false),
             ["pitch"] = ($"This part's pitch convention for a transposing instrument ({string.Join("/", LanguageVocabulary.PitchModes)}) — overrides the top-level directive", true),
             ["pedal"] = ($"Piano pedal style ({string.Join("/", LanguageVocabulary.PedalStyles)})", false),
+            ["midiInstrument"] = ("General MIDI sound for the .mid — one of LilyPond's 128 names in quotes, "
+                                  + "e.g. `midiInstrument \"flute\"`; the default is the preset's", false),
             // (`removeEmpty` left this table 2026-09-08 with the property: hara-kiri is the
             // score's `staff m as removeEmpty V` — GetStaffAttachNameCompletions.)
         };
@@ -2907,7 +2909,7 @@ public sealed partial class LilySharpLanguageServer
         return new CompletionList
         {
             // SortText (zero-padded) preserves the family grouping — VS Code otherwise
-            // sorts by label, which would scatter e.g. "double-bass" among the woodwinds.
+            // sorts by label, which would scatter e.g. "contrabass" among the woodwinds.
             Items = InstrumentDefaults.KnownInstruments.Select((name, i) => new CompletionItem
             {
                 Label = name,

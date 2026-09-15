@@ -328,8 +328,8 @@ public class SvgSnapshotTests
         // group puts staccatos BELOW every note (even the high ones), not above the
         // beam on the stem side.
         yield return new object[] { "test/beamed-script-side" };
-        // A hyphenated instrument preset ("electric-bass") is ONE word: its clef
-        // default (bass) resolves from the joined name, not the first "electric"
+        // A hyphenated instrument preset ("piano-left") is ONE word: its clef
+        // default (bass) resolves from the joined name, not the first "piano"
         // segment (which would fall through to the default treble).
         yield return new object[] { "test/instrument-hyphenated-clef" };
         // A rootless degree chord is order-independent: each degree resolves against

@@ -384,7 +384,7 @@
                 {
                     "comment": "The bare key, read AFTER every key/value pair above so the pair wins and the value is scoped as the value it is. `transposition` precedes `transpose`, which is a prefix of it.",
                     "name": "keyword.other.lilysharp",
-                    "match": "\\b(clef|instrument|transposition|transpose|tuning|octave|pitch|pedal|key)\\b"
+                    "match": "\\b(clef|instrument|transposition|transpose|tuning|octave|pitch|pedal|midiInstrument|key)\\b"
                 },
                 { "include": "#keywords" },
                 { "include": "#pitches" },
@@ -438,7 +438,7 @@
         "instrument-value": {
             "patterns": [
                 {
-                    "comment": "The preset after 'instrument' is ONE hyphenated word ('electric-bass', 'double-bass'). Highlight the whole name — without this, the generic keyword rule colours only the trailing 'bass' segment and leaves 'electric-' plain. A quoted display label (instrument violin \"1st Violin\") is left to the string rule.",
+                    "comment": "The preset after 'instrument' is ONE hyphenated word ('piano-left', 'voice-bass'). Highlight the whole name — without this, the generic keyword rule colours only the trailing 'bass' segment and leaves 'voice-' plain. A quoted display label (instrument violin \"1st Violin\") is left to the string rule.",
                     "match": "\\b(instrument)\\s+([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)",
                     "captures": {
                         "1": { "name": "keyword.other.lilysharp" },
