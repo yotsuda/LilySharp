@@ -184,13 +184,20 @@ internal static partial class SharedRenderer
     /// spaces) — the interactive hit rect only; the drawn ink is unchanged.</summary>
     private const double BarlineHitPad = 0.4;
 
-    /// <summary>True iff the measure lies inside a multi-measure-rest run.</summary>
-    private static bool IsMmrCovered(ScoreLayout layout, int measureIndex)
+    /// <summary>
+    /// True iff THIS staff's voice draws a multi-measure-rest symbol over the measure — a run's
+    /// or a lone R's — so its per-bar rest glyph must not print there. Asked per staff and
+    /// voice: a lone R shares its bar with other staves' and voices' music, whose rests still
+    /// print (the symbol belongs to the voice that wrote the R).
+    /// </summary>
+    private static bool IsMmrCovered(ScoreLayout layout, int staffIndex, int voiceIndex, int measureIndex)
     {
         if (layout.MultiMeasureRestLayouts.IsDefaultOrEmpty) return false;
         foreach (var mmr in layout.MultiMeasureRestLayouts)
         {
-            if (measureIndex >= mmr.StartMeasureIndex &&
+            if ((mmr.StaffIndex < 0 || mmr.StaffIndex == staffIndex) &&
+                mmr.VoiceIndex == voiceIndex &&
+                measureIndex >= mmr.StartMeasureIndex &&
                 measureIndex < mmr.StartMeasureIndex + mmr.MeasureCount)
                 return true;
         }

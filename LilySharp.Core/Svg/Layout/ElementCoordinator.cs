@@ -1413,7 +1413,7 @@ internal sealed class ElementCoordinator
     /// position (the PURE side of the offset chain — the collision push is unpure).
     /// </para>
     /// </remarks>
-    private static double VoicedRestPosition(int dir, int restValue)
+    internal static double VoicedRestPosition(int dir, int restValue)
     {
         const double VoicedPosition = 4.0;
         double pos = dir * VoicedPosition;

@@ -175,7 +175,11 @@ public sealed partial class MeasureCollector
                             => n with { StemUpOverride = forced },
                         ChordItem c when c.ForcedStemUp is null && c.StemUpOverride != forced
                             => c with { StemUpOverride = forced },
-                        RestItem { IsSpacer: false, IsMultiMeasure: false } r
+                        // ...and a multi-measure rest: MultiMeasureRest is in the same list,
+                        // so an R in a span's block draws at that voice's position
+                        // (MultiMeasureRestEngraver reads the stamp; the spacing does not).
+                        // LILYPOND-REF: scm/music-functions.scm:617-634 direction-polyphonic-grobs
+                        RestItem { IsSpacer: false } r
                                 when r.VoiceDirection != restDir
                             => r with { VoiceDirection = restDir },
                         _ => null,

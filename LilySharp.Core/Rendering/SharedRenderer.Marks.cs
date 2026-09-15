@@ -1037,13 +1037,28 @@ internal static partial class SharedRenderer
         // dy = -0.5 * spi converts a staff position to a device offset from cy.
         // Matches LilyPond 2.24 with \compressMMRests (verified by juxtaposition).
         // LILYPOND-REF: lily/rest.cc Rest::staff_position_internal; lily/multi-measure-rest.cc church_rest.
+        // A VOICED rest moves every symbol with the grob's staff-position. church_rest SETS that
+        // property before its symbol loop (`pos` = the semibreve's voiced position − 2 when the
+        // longest symbol is a semibreve, else the minim's), so each symbol's
+        // staff_position_internal then takes the position_override arm: the semibreve at
+        // pos + 2, every longer symbol at pos. For dir 0 that is the table above (pos 0).
+        // MEASURED (2.26.0, staff middle 11.69): R1 in voice one 9.69 / neutral 10.69 / voice
+        // two 13.69 (scratch/p388/mmr voice.ly, comb.ly); voice two's R1*3 draws its breve at
+        // 13.69 and its semibreve at 12.69 (scratch/p389/mmr v2.ly) — the override arm, where
+        // a fresh voiced position would have put both at 13.69. The count stays at the staff.
+        // LILYPOND-REF: lily/multi-measure-rest.cc:254-266 church_rest — staff-position set first;
+        // LILYPOND-REF: lily/rest.cc:53-74 staff_position_internal — position_override.
+        int dir = mmr.VoiceDirection;
+        double pos = mmr.MeasureCount == 1
+            ? ElementCoordinator.VoicedRestPosition(dir, 1) - 2.0
+            : ElementCoordinator.VoicedRestPosition(dir, 2);
         int remaining = mmr.MeasureCount;
         foreach (var (span, glyph, width, dy) in new[]
         {
-            (8, EmmentalerGlyphs.RestMaxima, MaximaWidth, 0.0),     // spi 0  → dy 0
-            (4, EmmentalerGlyphs.RestLonga, LongWidth, 0.0),       // spi 0  → dy 0
-            (2, EmmentalerGlyphs.RestDoubleWhole, BreveWidth, 0.0), // spi 0  → dy 0
-            (1, EmmentalerGlyphs.RestWhole, WholeWidth, -1.0),      // spi +2 → dy -1.0
+            (8, EmmentalerGlyphs.RestMaxima, MaximaWidth, -0.5 * pos),           // neutral spi 0  → dy 0
+            (4, EmmentalerGlyphs.RestLonga, LongWidth, -0.5 * pos),             // neutral spi 0  → dy 0
+            (2, EmmentalerGlyphs.RestDoubleWhole, BreveWidth, -0.5 * pos),      // neutral spi 0  → dy 0
+            (1, EmmentalerGlyphs.RestWhole, WholeWidth, -0.5 * (pos + 2.0)),    // neutral spi +2 → dy -1.0
         })
         {
             while (remaining >= span)
@@ -1087,7 +1102,7 @@ internal static partial class SharedRenderer
             gc.DrawGlyph(p.Glyph, x, p.Y, FontSize);
             x += p.Width + gap;
         }
-        if (mmr.MeasureCount > 1)
+        if (mmr.MeasureCount > 1 && mmr.DrawsCount)
             DrawMmrNumber(mmr.MeasureCount, cx, cy, gc);
     }
 
@@ -1141,7 +1156,8 @@ internal static partial class SharedRenderer
         gc.DrawRectangle(right - capThickness / 2, cy + endCapHeight,
             capThickness, 2 * endCapHeight, fill: Color.Black);
 
-        DrawMmrNumber(mmr.MeasureCount, (left + right) / 2, cy, gc);
+        if (mmr.DrawsCount)
+            DrawMmrNumber(mmr.MeasureCount, (left + right) / 2, cy, gc);
     }
 
     // ---------- Tie variants (laissez-vibrer / repeat-tie) ----------

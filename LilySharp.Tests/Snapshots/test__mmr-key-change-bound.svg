@@ -41,8 +41,8 @@
   <text x="6.66" y="23.08" font-size="2.20" data-pos="1204">= 120</text>
   <rect x="3.37" y="16.72" width="8.08" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1243"/>
   <text x="7.40" y="19.07" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="1243">Main</text>
-  <text class="music" x="26.59" y="25.96" font-size="4.00"></text>
-  <text class="music" x="30.90" y="24.96" font-size="4.00"></text>
-  <text class="music" x="28.83" y="23.56" font-size="4.00">5</text>
+  <text class="music" x="27.90" y="25.96" font-size="4.00"></text>
+  <text class="music" x="31.69" y="24.96" font-size="4.00"></text>
+  <text class="music" x="29.88" y="23.56" font-size="4.00">5</text>
   </g>
 </svg>

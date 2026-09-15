@@ -1699,7 +1699,9 @@ internal static class PartCombiner
     {
         NoteItem n when n.ForcedStemUp is null => n with { StemUpOverride = up },
         ChordItem c when c.ForcedStemUp is null => c with { StemUpOverride = up },
-        RestItem { IsSpacer: false, IsMultiMeasure: false } r => r with { VoiceDirection = up ? 1 : -1 },
+        // A multi-measure rest too — MultiMeasureRest is a direction-polyphonic grob.
+        // LILYPOND-REF: scm/music-functions.scm:617-634 direction-polyphonic-grobs
+        RestItem { IsSpacer: false } r => r with { VoiceDirection = up ? 1 : -1 },
         _ => item,
     };
 

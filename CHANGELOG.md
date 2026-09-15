@@ -43,6 +43,25 @@ workflow attaches that section to the GitHub Release verbatim.
   so the bar came out one staff space wider than LilyPond's. LilyPond places a column where the
   skip ends, and that column means the rest no longer fills the bar; the page now does the same
   (bar line to rest 1.09 instead of 2.09).
+- **Every `R` is drawn as a multi-measure rest, whichever voice wrote it and whatever else
+  sounds in its bar.** An `R` in a voice other than the first (`voice { s1 } { R1 }`, or a
+  combined staff whose second part rests against the first part's skip) was drawn as an
+  ordinary whole rest at the start of the bar and gave the bar none of a multi-measure rest's
+  width (7.69 or 6.69 where LilyPond has 7.89); an `R` sharing its bar with another staff's or
+  voice's notes was likewise drawn at the start of the bar. Now every `R` is a rest centred in
+  its bar at its voice's height — voice one's one staff space higher than a lone `R1`, voice
+  two's three lower, and `voice { R1 } { R1 }` draws both — and a bar every staff rests is
+  spaced like a bare `R1` whichever voice holds the rest. A condensed staff whose parts rest for
+  different lengths splits its rests where either part starts one, as LilyPond does. In a
+  multi-bar rest the breve moves with the voice and the semibreve sits two positions above it.
+  When two voices of a staff rest the same bars, the bar count is printed once, not once per
+  voice.
+- **A multi-measure rest centres in the room its bar actually leaves.** A key or time change
+  printed after the bar line that opens the rest's bar, and a clef change printed before the bar
+  line that closes it, now stay outside the space the rest centres in, as LilyPond keeps them —
+  also when the change stands on another staff. The rest used to centre between the bar lines
+  alone and sat too far left after a new signature (by half its width: 2.6 staff spaces after
+  five sharps) and too far right before a clef.
 
 ### MIDI, MusicXML and the LilyPond twin
 

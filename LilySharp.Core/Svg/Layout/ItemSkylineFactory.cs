@@ -412,9 +412,11 @@ internal static class ItemSkylineFactory
                 restY - restBox.Top, restY - restBox.Bottom,
                 noteheadLeftX + restBox.Left, noteheadLeftX + restBox.Right));
         }
-        else if (item is RestItem voicedRest
+        else if (item is RestItem { IsMultiMeasure: false } voicedRest
                  && (voicedRest.VoiceDirection != 0 || voicedRest.StaffPosition is not null))
         {
+            // (A multi-measure rest carries its voice direction too, for the MMR drawing,
+            // but it is a spanner spaced by its rod — it keeps the placeholder box below.)
             // A VOICED rest (inside a voice { } { } span) enters at its PURE voiced
             // position — rest.cc's staff_position_internal, dir × 4 with the per-duration
             // line alignment — with its REAL glyph box. The rest-collision push is NOT

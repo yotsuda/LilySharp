@@ -43,7 +43,21 @@ public readonly record struct MultiMeasureRestLayout(
     // (pageHeight - system.Y) and subtracts this. NOT an absolute page Y.
     double Y,
     // True ⇒ church_rest (1..ExpandLimit), false ⇒ big_rest (H-bar).
-    bool UseChurchRest);
+    bool UseChurchRest,
+    // The direction of the voice that wrote the rest (+1 voice one, −1 voice two, 0 outside
+    // a span) — the rest's own RestItem.VoiceDirection. The engraver lives in Voice context,
+    // so each voice holding an R draws its own symbol at its voiced position.
+    // LILYPOND-REF: ly/engraver-init.ly:374 Multi_measure_rest_engraver
+    int VoiceDirection = 0,
+    // Which staff (-1 = the unindexed single staff) and which of its voices wrote the rest —
+    // the renderer suppresses THAT voice's per-bar rest glyph under the symbol, and only it.
+    int StaffIndex = -1,
+    int VoiceIndex = 0,
+    // False for every voice of a staff after the first that rests the same run: the staff
+    // merges equal counts and keeps only the first one made.
+    // LILYPOND-REF: scm/scheme-engravers.scm:354-370 Merge_mmrest_numbers_engraver — suicides all but the first of equal texts
+    // LILYPOND-REF: ly/engraver-init.ly:98 Merge_mmrest_numbers_engraver — consisted in Staff
+    bool DrawsCount = true);
 
 /// <summary>
 /// A run of consecutive measures that EVERY staff rests with an explicit
@@ -141,14 +155,23 @@ internal static class MultiMeasureRestEngraver
         ImmutableArray<SystemLayout> systems,
         double staffHeight,
         int staffIndex = -1,
-        IReadOnlyList<ImmutableArray<Measure>>? allStaffMeasures = null)
+        IReadOnlyDictionary<int, ImmutableArray<Voice>>? voicesByStaff = null)
     {
         if (score.Voices.IsDefaultOrEmpty)
             return ImmutableArray<MultiMeasureRestLayout>.Empty;
 
+        // Every voice of a staff, by staff index — the -1 of the unindexed single-staff
+        // path is the score's own voices.
+        ImmutableArray<Voice> VoicesOf(int si)
+            => si >= 0 && voicesByStaff != null && voicesByStaff.TryGetValue(si, out var vs)
+                ? vs : score.Voices;
+
         var measureMap = LayoutUtilities.BuildMeasureMap(systems);
         var voice = score.Voice;
         var builder = ImmutableArray.CreateBuilder<MultiMeasureRestLayout>();
+        // Every staff's voices: the bounding columns a rest centres between span the system.
+        IEnumerable<ImmutableArray<Voice>> staves =
+            voicesByStaff != null ? voicesByStaff.Values : new[] { score.Voices };
 
         // Measures a staff repeats under a % sign print ONLY the sign there:
         // LilyPond's percent iterator plays the body once, so its MMR engraver
@@ -161,7 +184,8 @@ internal static class MultiMeasureRestEngraver
             for (int m = pr.FirstCoveredMeasure; m <= pr.MeasureIndex; m++)
                 (percentCovered ??= new()).Add((pr.StaffIndex, m));
 
-        foreach (var run in FindRuns(score, allStaffMeasures))
+        var runs = FindRuns(score, voicesByStaff?.Values.ToArray());
+        foreach (var run in runs)
         {
             int runLast = run.StartMeasureIndex + run.Count - 1;
             int pieceStart = run.StartMeasureIndex;
@@ -195,27 +219,24 @@ internal static class MultiMeasureRestEngraver
                     continue;
                 var (_, endMeasure) = endInfo;
 
-                // Centre the rest between the INNER edges of the bounding bar lines,
-                // not the outer measure box. A bar line's drawn stencil — especially a
-                // repeat `:|`, whose dots reach ~1.8 ss back into the measure — must be
-                // excluded, or the centre drifts toward the barline and a whole rest
-                // collides with the repeat dots.
-                // LILYPOND-REF: lily/multi-measure-rest.cc Multi_measure_rest::bar_width
-                // — centres between Paper_column::break_align_width(col,"staff-bar")[-d],
-                // i.e. each bounding bar line's INNER edge.
-                double startX = startMeasure.X
-                    + EngravingDefaults.BarlineDrawnWidth(voice.Measures[runStart].StartBarline);
-                double endX = endMeasure.X + endMeasure.Width
-                    - EngravingDefaults.BarlineDrawnWidth(voice.Measures[runEnd].EndBarline);
-                // EVERY resting staff gets its own symbol: in LilyPond the engraver lives
-                // in the Staff context, so a run (which only forms when all staves rest)
-                // prints one Multi_measure_rest per staff, each with its own count above
-                // it. Verified on 2.24.4 with a PianoStaff resting R1*4 in both staves.
+                // Centre the rest between the INNER edges of the bounding break alignments,
+                // not the outer measure box: a repeat `:|`'s dots, a key or time change after
+                // the opening bar line, a clef before the closing one all stay outside (BarWidth).
+                var (startX, endX) = BarWidth(score.TextMetrics, staves, startSystem,
+                    startMeasure, runStart, voice.Measures[runStart].StartBarline,
+                    endMeasure, runEnd, voice.Measures[runEnd].EndBarline);
+                // EVERY resting staff gets its own symbol, and within a staff every VOICE
+                // that wrote the R: the engraver lives in the Voice context, so a run (which
+                // only forms when all staves rest) prints one Multi_measure_rest per voice
+                // holding one, each at that voice's position. Verified on 2.24.4 with a
+                // PianoStaff resting R1*4 in both staves; the voiced position on 2.26.0
+                // (scratch/p388/mmr voice.ly: `<< { s1 } \\ { R1 } >>` draws voice two's).
                 // Lily# suppresses the per-bar rest glyphs for the whole run across all
                 // staves, so emitting only one symbol left every staff below the first
-                // blank. LILYPOND-REF: lily/multi-measure-rest-engraver.cc (Staff context).
+                // blank. LILYPOND-REF: ly/engraver-init.ly:374 Multi_measure_rest_engraver
                 foreach (int si in StaffIndicesIn(startSystem, staffIndex))
                 {
+                    var voices = VoicesOf(si);
                     // No symbol on a staff whose run is percent-covered (the % is the
                     // symbol). Checked over the whole piece so a run that ever merged
                     // a covered measure could not smuggle its rest back; other staves
@@ -239,18 +260,160 @@ internal static class MultiMeasureRestEngraver
                     double y = LayoutUtilities.StaffOffsetInSystemDown(startSystem, si)
                         + staffHeight / 2.0;
 
+                    // Every voice resting the run has the same count, so the staff's merge keeps
+                    // the first voice's number only (see MultiMeasureRestLayout.DrawsCount).
+                    bool counted = false;
+                    for (int vi = 0; vi < voices.Length; vi++)
+                    {
+                        if (runStart >= voices[vi].Measures.Length)
+                            continue;
+                        var bar = voices[vi].Measures[runStart];
+                        int ri = BarRestIndex(bar);
+                        if (ri < 0)
+                            continue;   // this voice holds the run's skips, not its rest
+                        bool drawsCount = !counted;
+                        counted = true;
+                        builder.Add(new MultiMeasureRestLayout(
+                            DrawsCount: drawsCount,
+                            StartMeasureIndex: runStart,
+                            MeasureCount: count,
+                            StartX: startX,
+                            EndX: endX,
+                            Y: y,
+                            UseChurchRest: count <= ExpandLimit,
+                            VoiceDirection: ((RestItem)bar.Items[ri]).VoiceDirection,
+                            StaffIndex: si,
+                            VoiceIndex: vi));
+                    }
+                }
+            }
+        }
+
+        // A written R OUTSIDE every run — another staff or voice sounds in its bar — is still
+        // a Multi_measure_rest: the grob is made by whichever voice wrote the R, whatever the
+        // rest of the score does. Nothing compresses such a bar, so it draws ONE symbol per
+        // bar (no count), centred between that bar's own bar lines at its voice's position.
+        // MEASURED (2.26.0, scratch/p389/mmr v3.ly): against a playing staff, `R1 | R1*3`
+        // draws four centred whole rests and no count; `<< { R1 } \\ { g2 g } >>` draws voice
+        // one's centred and high, `<< { c''2 c'' } \\ { R1 } >>` voice two's centred and low.
+        // LILYPOND-REF: ly/engraver-init.ly:374 Multi_measure_rest_engraver
+        var inRun = new HashSet<int>();
+        foreach (var run in runs)
+            for (int m = run.StartMeasureIndex; m < run.StartMeasureIndex + run.Count; m++)
+                inRun.Add(m);
+        var meters = PrevailingMeters(new[] { voice.Measures }, voice.Measures.Length,
+            score.TimeSignature.MeasureDuration);
+        foreach (int m in measureMap.Keys.OrderBy(k => k))
+        {
+            if (inRun.Contains(m) || m >= voice.Measures.Length)
+                continue;
+            var (system, measure) = measureMap[m];
+            var (startX, endX) = BarWidth(score.TextMetrics, staves, system,
+                measure, m, voice.Measures[m].StartBarline,
+                measure, m, voice.Measures[m].EndBarline);
+            foreach (int si in StaffIndicesIn(system, staffIndex))
+            {
+                if (percentCovered != null && percentCovered.Contains((si < 0 ? 0 : si, m)))
+                    continue;
+                var voices = VoicesOf(si);
+                double y = LayoutUtilities.StaffOffsetInSystemDown(system, si) + staffHeight / 2.0;
+                for (int vi = 0; vi < voices.Length; vi++)
+                {
+                    if (m >= voices[vi].Measures.Length)
+                        continue;
+                    var bar = voices[vi].Measures[m];
+                    int ri = BarRestIndex(bar);
+                    if (ri < 0 || ((RestItem)bar.Items[ri]).Duration < meters[m])
+                        continue;
                     builder.Add(new MultiMeasureRestLayout(
-                        StartMeasureIndex: runStart,
-                        MeasureCount: count,
+                        StartMeasureIndex: m,
+                        MeasureCount: 1,
                         StartX: startX,
                         EndX: endX,
                         Y: y,
-                        UseChurchRest: count <= ExpandLimit));
+                        UseChurchRest: true,
+                        VoiceDirection: ((RestItem)bar.Items[ri]).VoiceDirection,
+                        StaffIndex: si,
+                        VoiceIndex: vi));
                 }
             }
         }
 
         return builder.ToImmutable();
+    }
+
+    /// <summary>
+    /// The interval a multi-measure rest centres in: from the RIGHT edge of the break
+    /// alignment that opens <paramref name="first"/> to the LEFT edge of the one that closes
+    /// <paramref name="last"/>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/multi-measure-rest.cc:44-61 Multi_measure_rest::bar_width — iv[d] = coldim[-d]
+    /// LILYPOND-REF: scm/define-grobs.scm:2376-2378 ly:multi-measure-rest::print reads spacing-pair (break-alignment . break-alignment)
+    /// LILYPOND-REF: lily/paper-column.cc:167-218 Paper_column::break_align_width — break-alignment is the whole column
+    /// So a key or time change AFTER the opening bar line moves the left edge right, and a
+    /// clef change BEFORE the closing bar line (break-align order, <see cref="BoundaryColumn"/>)
+    /// moves the right edge left; the bar lines alone are the old staff-bar reading.
+    /// The column is the system's, not the voice's, so each edge takes the widest reach over
+    /// every staff's voices — derived, not literal: LilyPond aligns one group per symbol across
+    /// the staves, Lily# builds a <see cref="BoundaryColumn"/> per voice and unites their reaches.
+    /// The first bar of a system opens on the system prefix, which the measure X already clears.
+    /// MEASURED (2.26.0, from the plain centre): scratch/p389/mmr v3.ly bar 7 (time 3/4) +1.17,
+    /// lpchk keysigspace.ly bar 2 (5 sharps on the OTHER staff) +5.14, cue-clef-manually.ly
+    /// bar 2 (the cue clef back to treble before bar 3) −1.16.
+    /// </remarks>
+    private static (double StartX, double EndX) BarWidth(
+        Rendering.ScoreTextMetrics fonts, IEnumerable<ImmutableArray<Voice>> staves,
+        SystemLayout system, MeasureLayout first, int firstIndex, BarlineType firstStartBarline,
+        MeasureLayout last, int lastIndex, BarlineType lastEndBarline)
+    {
+        bool opensSystem = !system.Measures.IsDefaultOrEmpty
+            && system.Measures[0].MeasureIndex == firstIndex;
+        double reach = 0, clef = 0;
+        foreach (var voices in staves)
+        {
+            foreach (var v in voices)
+            {
+                if (!opensSystem && firstIndex > 0 && firstIndex < v.Measures.Length
+                    && OpensWithKeyOrTimeChange(v.Measures[firstIndex].Items))
+                {
+                    var column = BoundaryColumn.Build(fonts,
+                        v.Measures[firstIndex - 1].EndBarline, v.Measures[firstIndex].Items);
+                    double? barRight = null;
+                    double right = 0;
+                    foreach (var g in column.Grobs)
+                    {
+                        if (g.Symbol == BreakAlignSymbol.StaffBar)
+                            barRight = g.Right;
+                        right = Math.Max(right, g.Right);
+                    }
+                    if (barRight is { } br)
+                        reach = Math.Max(reach, right - br);
+                }
+                if (lastIndex < v.Measures.Length)
+                    clef = Math.Max(clef, SpacingRules.BoundaryClefAllowance(fonts,
+                        v.Measures[lastIndex].EndBarline,
+                        lastIndex + 1 < v.Measures.Length ? v.Measures[lastIndex + 1] : null));
+            }
+        }
+
+        double startX = first.X + EngravingDefaults.BarlineDrawnWidth(firstStartBarline) + reach;
+        double endX = last.X + last.Width - EngravingDefaults.BarlineDrawnWidth(lastEndBarline) - clef;
+        return (startX, endX);
+
+        // Only a key or time change reaches past the bar line (a clef sits before it), so a bar
+        // opening on music builds no column — the BoundaryColumn.OpensWithClefChange short-cut's shape.
+        static bool OpensWithKeyOrTimeChange(ImmutableArray<MusicItem> items)
+        {
+            foreach (var item in items)
+            {
+                if (item is KeySignatureChangeItem or TimeSignatureChangeItem { Blanked: false })
+                    return true;
+                if (item.Duration > Fraction.Zero)
+                    break;
+            }
+            return false;
+        }
     }
 
     /// <summary>
@@ -268,7 +431,7 @@ internal static class MultiMeasureRestEngraver
     /// </remarks>
     internal static ImmutableArray<MmrRun> FindRuns(
         Score score,
-        IReadOnlyList<ImmutableArray<Measure>>? allStaffMeasures = null)
+        IReadOnlyList<ImmutableArray<Voice>>? allStaffVoices = null)
     {
         if (score.Voices.IsDefaultOrEmpty)
             return ImmutableArray<MmrRun>.Empty;
@@ -283,8 +446,8 @@ internal static class MultiMeasureRestEngraver
             if (!cn.IsChordRow)
                 chordMeasures.Add(cn.MeasureIndex);
 
-        return FindRuns(score.Voice.Measures, allStaffMeasures, chordMeasures,
-            score.TimeSignature.MeasureDuration);
+        return FindRuns(score.Voice.Measures, allStaffVoices ?? new[] { score.Voices },
+            chordMeasures, score.TimeSignature.MeasureDuration);
     }
 
     /// <summary>
@@ -293,12 +456,17 @@ internal static class MultiMeasureRestEngraver
     /// </summary>
     internal static ImmutableArray<MmrRun> FindRuns(MultiStaffScore score)
     {
-        var staffMeasures = new List<ImmutableArray<Measure>>();
+        // EVERY voice of every staff: the rod belongs to the Multi_measure_rest grob, and
+        // that grob is made in whichever voice wrote the R (a second voice's R under a
+        // first voice's skip is still one — measured on 2.26.0, scratch/p388/mmr voice.ly:
+        // `<< { s1 } \\ { R1 } >>` spaces its bar 7.890 like a bare R1).
+        // LILYPOND-REF: ly/engraver-init.ly:374 Multi_measure_rest_engraver
+        var staffVoices = new List<ImmutableArray<Voice>>();
         foreach (var group in score.StaffGroups)
             foreach (var staff in group.Staves)
-                staffMeasures.Add(staff.PrimaryVoice.Measures);
+                staffVoices.Add(staff.Voices);
 
-        if (staffMeasures.Count == 0)
+        if (staffVoices.Count == 0)
             return ImmutableArray<MmrRun>.Empty;
 
         var chordMeasures = new HashSet<int>();
@@ -306,17 +474,17 @@ internal static class MultiMeasureRestEngraver
             if (!cn.IsChordRow)
                 chordMeasures.Add(cn.MeasureIndex);
 
-        return FindRuns(staffMeasures[0], staffMeasures, chordMeasures,
+        return FindRuns(staffVoices[0][0].Measures, staffVoices, chordMeasures,
             score.TimeSignature.MeasureDuration);
     }
 
     /// <summary>
     /// Run grouping from raw measures — the form the spacing path uses, where only
-    /// the staves' measures and the chord-bearing measure indices are on hand.
+    /// the staves' voices and the chord-bearing measure indices are on hand.
     /// </summary>
     internal static ImmutableArray<MmrRun> FindRuns(
         ImmutableArray<Measure> primaryMeasures,
-        IReadOnlyList<ImmutableArray<Measure>>? allStaffMeasures,
+        IReadOnlyList<ImmutableArray<Voice>> allStaffVoices,
         IReadOnlySet<int> chordMeasures,
         Fraction initialMeasureDuration)
     {
@@ -360,14 +528,40 @@ internal static class MultiMeasureRestEngraver
             return i >= 0 && ((RestItem)m.Items[i]).Duration >= meter;
         }
 
+        // A bar a voice keeps SILENT without engraving anything: nothing but skips (and the
+        // break-aligned changes that ride the column). An empty bar is a voice outside its
+        // span (MeasureCollector.BuildExtraVoiceTracks leaves those empty).
+        static bool IsSkipOnly(Measure m)
+        {
+            foreach (var it in m.Items)
+                if (it is not RestItem { IsSpacer: true } && !IsBreakAlignedChange(it))
+                    return false;
+            return true;
+        }
+
+        // The staff rests bar m when some voice writes the R and every other voice only skips.
+        bool StaffRests(ImmutableArray<Voice> voices, int m)
+        {
+            bool written = false;
+            foreach (var v in voices)
+            {
+                if (m >= v.Measures.Length)
+                    continue;
+                if (IsMmrMeasure(v.Measures[m], meters[m]))
+                    written = true;
+                else if (!IsSkipOnly(v.Measures[m]))
+                    return false;
+            }
+            return written;
+        }
+
         bool RestsEverywhere(int m)
         {
-            if (m >= primaryMeasures.Length || !IsMmrMeasure(primaryMeasures[m], meters[m]))
+            if (m >= primaryMeasures.Length)
                 return false;
-            if (allStaffMeasures != null)
-                foreach (var sm in allStaffMeasures)
-                    if (m >= sm.Length || !IsMmrMeasure(sm[m], meters[m]))
-                        return false;
+            foreach (var voices in allStaffVoices)
+                if (!StaffRests(voices, m))
+                    return false;
             return true;
         }
 
@@ -399,10 +593,10 @@ internal static class MultiMeasureRestEngraver
                 (HasLeadingBreakAlignedChange(primaryMeasures[m]) ||
                  StartsWrittenRest(primaryMeasures[m])))
                 return true;
-            if (allStaffMeasures != null)
-                foreach (var sm in allStaffMeasures)
-                    if (m < sm.Length &&
-                        (HasLeadingBreakAlignedChange(sm[m]) || StartsWrittenRest(sm[m])))
+            foreach (var voices in allStaffVoices)
+                foreach (var v in voices)
+                    if (m < v.Measures.Length &&
+                        (HasLeadingBreakAlignedChange(v.Measures[m]) || StartsWrittenRest(v.Measures[m])))
                         return true;
             return false;
         }

@@ -110,7 +110,7 @@ internal static partial class SharedRenderer
                     // drawing the per-measure whole rest too would double-print.
                     // LILYPOND-REF: lily/multi-measure-rest.cc — the MMR spanner
                     // replaces the individual rests.
-                    if (!rest.IsSpacer && !IsMmrCovered(layout, ml.MeasureIndex))
+                    if (!rest.IsSpacer && !IsMmrCovered(layout, staffIndex, voiceNumber - 1, ml.MeasureIndex))
                     {
                         // A rest under a beam is pushed clear of it. GetRestShift is
                         // in staff positions (up-positive); staffY is Y-up, so add
