@@ -413,11 +413,16 @@ internal sealed class MeasureLayouter
         if (timings[0] > Fraction.Zero)
             return SpacingRules.SkipOpenedBarFirstSpring(fonts,
                 leftBound, measure.Items, firstItems, timings[0], spacing);
+        // A grace run on ANY staff at this moment puts a grace column between the bar line and
+        // the first musical column, and fills_measure then sees a musical `next`
+        // (SpacingRules.HasLeadingGraceColumn).
         bool fillsMeasure =
             timings.Count == 1
             && !droppedOnsetFollows
             && firstItems != null
-            && firstItems.Any(SpacingRules.IsMusicalColumn);
+            && firstItems.Any(SpacingRules.IsMusicalColumn)
+            && !firstItems.Any(SpacingRules.HasLeadingGraceColumn)
+            && !(staffFirstItems?.Any(items => items.Any(SpacingRules.HasLeadingGraceColumn)) ?? false);
         return SpacingRules.BarlineToFirstColumnSpring(fonts, firstItems, fillsMeasure, staffFirstItems, leftBound);
     }
 

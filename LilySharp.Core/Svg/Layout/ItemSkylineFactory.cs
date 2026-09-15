@@ -336,9 +336,92 @@ internal static class ItemSkylineFactory
     /// </remarks>
     private static List<(double YBottom, double YTop, double XLeft, double XRight)> Boxes(
         MusicItem item, double referenceX, double staffY, ColumnElements which)
+        => BoxesOf(ColumnParts(item, referenceX, staffY), staffY, which);
+
+    /// <summary>
+    /// The ROD's view of a GRACE column's DOTS, right side, in the grace column's own frame:
+    /// origin the head's left edge, the staff's middle line at y = 0, y down.
+    /// </summary>
+    /// <remarks>
+    /// Only the dots: every other part of a grace column reaches its neighbour no further
+    /// through the rod (0.1 padding, 0.08 vertical) than through the spring floor the grace
+    /// island already takes (0.3 headroom, 0.15), so the dots are the one part whose rod can
+    /// win — see <c>SpacingRules.GraceDotRod</c>.
+    /// LILYPOND-REF: lily/separation-item.cc:120-190 Separation_item::boxes — each Dots box is
+    ///   its PURE Y extent, i.e. on its HEAD's own row (the dot column's shift is not pure),
+    ///   widened by the grob's extra-spacing-width and -height.
+    /// MEASURED (2.26.0, scratch/p393/lpdump RODPCSKY): a g'16. whose dot is DRAWN a space
+    /// higher boxes it centred on the g' line — the paper column's right skyline stands at
+    /// 2.2559 over the g' row ± 0.7343, i.e. the dot's box ± the 0.08 padding.
+    /// </remarks>
+    internal static HorizontalSkyline CreateGraceDotRightSkyline(GraceColumnInfo column, bool beamed)
+    {
+        var parts = new List<ColumnPart>();
+        if (column.Dots > 0 && !column.IsRest)
+        {
+            var (offset, _) = DotColumn.ReservedForGrace(column, beamed);
+            var dot = GraceNoteItem.Font.AugmentationDot;
+            double reach = dot.Height / 2 + SpacingRules.DotsExtraSpacingHeight;
+            foreach (var head in column.Heads)
+            {
+                double y = -head.StaffPosition / 2.0;
+                for (int d = 0; d < column.Dots; d++)
+                {
+                    double x = offset + d * 2 * dot.Width;
+                    parts.Add(new ColumnPart(y - reach, y + reach, x, x + dot.Width,
+                        0.0, SpacingRules.DotsExtraSpacingWidthRight, Conditional: false,
+                        NoteColumnMember: false));
+                }
+            }
+        }
+        return HorizontalSkyline.FromBoxes(BoxesOf(parts, 0.0, ColumnElements.Elements),
+                                           HorizontalDirection.Right)
+            .PaddedCopy(SpacingRules.MusicalColumnSkylineVerticalPadding);
+    }
+
+    /// <summary>
+    /// The ROD's view of a GRACE column's LEFT side, in the same frame: its heads out of the
+    /// grace font and its accidentals out of the grace accidental font, the accidentals
+    /// conditional as a full-size column's are.
+    /// </summary>
+    /// <remarks>
+    /// The parts <see cref="ColumnParts"/> gives a full-size note, stood where
+    /// <see cref="GraceColumnHeads"/> — the one house for a grace column's heads and
+    /// accidentals — puts them. A rest or spacer answers an empty skyline, so it prices no rod.
+    /// </remarks>
+    internal static HorizontalSkyline CreateGraceLeftSkyline(GraceColumnInfo column)
+    {
+        var parts = new List<ColumnPart>();
+        if (!column.IsRest)
+        {
+            var head = GlyphMetrics.GetNoteheadBBox(
+                GraceNoteItem.Font, GlyphMetrics.NoteValueOf(column.BaseDuration));
+            var headOffsets = GraceColumnHeads.HeadOffsets(column);
+            var accidentalXs = GraceColumnHeads.AccidentalOffsets(column);
+            for (int i = 0; i < column.Heads.Length; i++)
+            {
+                double y = -column.Heads[i].StaffPosition / 2.0;
+                double hx = headOffsets.IsDefaultOrEmpty ? 0.0 : headOffsets[i];
+                parts.Add(ColumnPart.Head(y - head.Top, y - head.Bottom,
+                                          hx + head.Left, hx + head.Right));
+                if (i < accidentalXs.Length && accidentalXs[i] is { } ax
+                    && column.Heads[i].Accidental is { } accidental)
+                {
+                    var box = GlyphMetrics.GetAccidentalBBox(GraceNoteItem.AccidentalFont, accidental);
+                    parts.Add(Accidental(y - box.Top, y - box.Bottom, ax, ax + box.Width));
+                }
+            }
+        }
+        return HorizontalSkyline.FromBoxes(BoxesOf(parts, 0.0, ColumnElements.All),
+                                           HorizontalDirection.Left)
+            .PaddedCopy(SpacingRules.MusicalColumnSkylineVerticalPadding);
+    }
+
+    private static List<(double YBottom, double YTop, double XLeft, double XRight)> BoxesOf(
+        IEnumerable<ColumnPart> parts, double staffY, ColumnElements which)
     {
         var boxes = new List<(double, double, double, double)>();
-        foreach (var p in ColumnParts(item, referenceX, staffY))
+        foreach (var p in parts)
         {
             var set = p.Conditional ? ColumnElements.Conditional
                     : p.NoteColumnMember ? ColumnElements.NoteColumn

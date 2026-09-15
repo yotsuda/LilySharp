@@ -82,6 +82,94 @@ public class GraceSpacingTests
         Assert.Equal(expected, bar.GetXForTiming(Fraction.Zero), 6);
     }
 
+    /// <summary>
+    /// A whole note behind a grace run earns no full-measure-extra-space: LilyPond's bar line
+    /// spring stops at the GRACE column, whose next column is the main note — musical — so
+    /// <c>fills_measure</c> is false. Both spring readers are asked: the line breaker's
+    /// <see cref="SpacingRules.FillsMeasure"/> and the drawn column.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, scratch/p390/ks/verify grace-dot-flag-column, `\grace { g8. } c'1`): the
+    /// grace head 0.68 off the bar line's ink right, as behind a quarter (kg1); the page drew 1.48,
+    /// i.e. 0.8 x 1.0 further. The first bar is the control — a lone whole note still fills.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:446-455 Spacing_spanner::fills_measure — false when the next column is musical
+    /// </remarks>
+    [Fact]
+    public void AWholeNoteBehindAGraceRun_EarnsNoFullMeasureExtraSpace()
+    {
+        var src = """
+            octave absolute
+            time 4/4
+            part up
+            section Main {
+              up { c'1 | grace { d'16 } c'1 | }
+            }
+            form main { ~Main }
+            score main "x" { staff ~up }
+            """;
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(src);
+        var multi = new LilySharp.Core.Svg.Collector.MeasureCollector()
+            .CollectMultiStaff(tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree)!);
+        var measures = multi.StaffGroups[0].Staves[0].PrimaryVoice.Measures;
+        Assert.True(SpacingRules.FillsMeasure(measures[0]));
+        Assert.False(SpacingRules.FillsMeasure(measures[1]));
+
+        var layout = new LayoutEngine(new LayoutOptions()).Layout(multi);
+        var bar = layout.Systems.SelectMany(s => s.Measures).Single(m => m.MeasureIndex == 1);
+        var main = measures[1].Items.OfType<NoteItem>().First(n => !n.GraceTime);
+        double bw = LilySharp.Core.Svg.EngravingDefaults.BarlineDrawnWidth(BarlineType.Single);
+        double run = SpacingRules.GraceColumns(main.LeadingGrace, main).Span;
+        double expected = SpacingRules.GraceApproachScale
+                          * (bw + LilySharp.Core.Svg.EngravingDefaults.BarLineToNextNoteSpace) - bw + run;
+
+        Assert.Equal(expected, bar.GetXForTiming(Fraction.Zero), 6);
+    }
+
+    /// <summary>
+    /// A dotted grace's gap to the next column is the larger of its spring and a paper-column
+    /// ROD through the dot's box — the dot boxed on its HEAD's row, not the row it is drawn on.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, scratch/p393/lpdump, grace-dot-flag-column's drawn gaps, main note
+    /// c''1): g'8. and f'8. 1.9386 (the spring — g'8.'s rod is 1.7945 and f'8.'s dot is below
+    /// the main head), d''8. and d''16. 2.4559 (the rod through a flag-pushed dot), g'16.
+    /// 2.3151 (the same dot boxed on the g' line, meeting the main head corner to corner), and
+    /// g'16. g'16 1.9352 between the two graces. e''8.'s 1.9352 is left out: its gap is the
+    /// SPRING, whose floor the grace island still reads as a flat reach (1.9386).
+    /// ⚠️ Those are LilyPond's names. Lily#'s absolute octave is one lower (`c'` is LilyPond's
+    /// c''), so the rows below spell the same pitches an apostrophe shorter.
+    /// LILYPOND-REF: lily/separation-item.cc:47-68 Separation_item::set_distance
+    /// </remarks>
+    [Theory]
+    [InlineData("grace { g8. } c'1", 1.9386)]
+    [InlineData("grace { f8. } c'1", 1.9386)]
+    [InlineData("grace { d'8. } c'1", 2.4559)]
+    [InlineData("grace { d'16. } c'1", 2.4559)]
+    [InlineData("grace { g16. } c'1", 2.3151)]
+    [InlineData("grace { g16. g16 } c'1", 1.9352)]
+    public void ADottedGraceGap_TakesTheRodThroughItsDot(string bar, double lilyPond)
+    {
+        var src = $$"""
+            octave absolute
+            time 4/4
+            part up
+            section Main {
+              up { {{bar}} | }
+            }
+            form main { ~Main }
+            score main "x" { staff ~up }
+            """;
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(src);
+        var multi = new LilySharp.Core.Svg.Collector.MeasureCollector()
+            .CollectMultiStaff(tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree)!);
+        var main = multi.StaffGroups[0].Staves[0].PrimaryVoice.Measures[0].Items
+            .OfType<NoteItem>().First(n => !n.GraceTime);
+        var run = SpacingRules.GraceColumns(main.LeadingGrace, main);
+        // The first gap of the run: grace to grace when there are two, else grace to main.
+        double actual = run.Offsets.Length > 1 ? run.Offsets[1] - run.Offsets[0] : run.ToMain;
+        Assert.Equal(lilyPond, actual, 3);
+    }
+
     [Fact]
     public void CreateGraceSpring_TighterThanRegular()
     {

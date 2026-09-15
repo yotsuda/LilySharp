@@ -303,4 +303,50 @@ internal static class DotColumn
         int[] rows = DotConfiguration.Resolve(headPositions);
         return (OffsetX(headInkRight, supports, rows, dotWidth), rows);
     }
+
+    /// <summary>
+    /// The same reservation for a GRACE column: where its first dot stands in the column's
+    /// frame, and the rows its dots sit on.
+    /// </summary>
+    /// <remarks>
+    /// The supports are the ones <c>SharedRenderer.DrawNote</c> hands <see cref="OffsetX"/> for
+    /// the grace it draws — the up stem at the grace font's attachment and, unbeamed, the flag
+    /// hung off the stem end the grace's own <see cref="GrobFontSize.GraceStemDetails"/> give —
+    /// so the dot the rod reserves is the dot that is drawn. MEASURED (2.26.0,
+    /// scratch/p393/lpdump RODDOTS, the dot's left in its paper column): 1.226585 where the flag
+    /// leaves the dot alone (g'8., f'8., e''8.), 1.747274 where it pushes it (d''8., d''16.,
+    /// g'16.) — the six-place pair session 315 already measured, which
+    /// <c>GraceBodyValidatorTests.AGraceDotClearsTheFlagOnlyWhenTheFlagIsOnItsRow</c> pins.
+    /// LILYPOND-REF: lily/dot-column.cc:81-141 Dot_column::calc_positioning_done.
+    /// </remarks>
+    internal static (double OffsetX, int[] Rows) ReservedForGrace(GraceColumnInfo column, bool beamed)
+    {
+        if (column.IsRest || column.Heads.IsDefaultOrEmpty)
+            return (0, Array.Empty<int>());
+        var font = GraceNoteItem.Font;
+        int noteValue = GlyphMetrics.NoteValueOf(column.BaseDuration);
+        int[] headPositions = column.Heads.Select(h => h.StaffPosition).ToArray();
+        var supports = new List<Support>();
+        if (noteValue >= 2 && !beamed)
+        {
+            // The stem stands on the TOP head: a grace stem is up (GraceColumnHeads.StemUp).
+            int top = headPositions.Max();
+            double stemX = LayoutUtilities.StemAttachX(
+                GraceColumnHeads.StemUp, noteValue, NoteheadStyle.Default, font);
+            supports.Add(StemSupport(top, GraceColumnHeads.StemUp,
+                stemX + EngravingDefaults.StemThickness / 2));
+            var flagBox = GlyphMetrics.GetFlagBBox(font, noteValue, GraceColumnHeads.StemUp);
+            if (noteValue >= 8 && flagBox != default)
+            {
+                double tip = StemCalculator.CalculateStemEndPosition(
+                    GraceColumnHeads.StemUp, StemCalculator.GetDurationLog(noteValue), top,
+                    GrobFontSize.GraceStemDetails) / 2.0;
+                supports.Add(FlagSupport(tip + flagBox.Bottom, tip + flagBox.Top,
+                                         stemX + flagBox.Right));
+            }
+        }
+        int[] rows = DotConfiguration.Resolve(headPositions);
+        return (OffsetX(GraceColumnHeads.HeadInkRight(column), supports, rows,
+                        font.AugmentationDot.Width), rows);
+    }
 }

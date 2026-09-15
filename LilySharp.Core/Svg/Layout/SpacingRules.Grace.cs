@@ -171,10 +171,45 @@ internal static partial class SpacingRules
             double leftReach = i + 1 < notes.Length
                 ? GraceColumnLeftReach(notes[i + 1])
                 : MainColumnLeftReach(mainItem);
-            double gap = GraceColumnGap(notes[i], dtMin, gp, rightReach + leftReach);
+            double gap = Math.Max(
+                GraceColumnGap(notes[i], dtMin, gp, rightReach + leftReach),
+                GraceDotRod(notes[i], beamed: i < beamedPrefix,
+                            i + 1 < notes.Length ? notes[i + 1] : null, mainItem));
             if (i + 1 < notes.Length) x += gap; else toMain = gap;
         }
         return new GraceColumnLayout(offsets.ToImmutable(), toMain);
+    }
+
+    /// <summary>
+    /// The paper-column ROD a dotted grace column puts on its gap: 0.1 plus the distance from
+    /// its dots' right skyline to the next column's left one. Negative infinity when there is
+    /// nothing to measure — no dots, or no next column known.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/separation-item.cc:47-68 Separation_item::set_distance — padding plus
+    ///   <c>lines[LEFT][RIGHT].distance (right)</c>, the right column's left skyline merged with
+    ///   its conditional one. The rod and the spring (<see cref="GraceColumnGap"/>) are separate
+    ///   constraints, and the gap is the larger.
+    /// MEASURED (2.26.0, scratch/p393/lpdump, grace-dot-flag-column, main note c''1): the rods
+    /// through the dots are 2.4559 (d''8., d''16.), 2.3151 (g'16.) and 1.9352 (g'16. to a
+    /// beamed g'16), each the drawn gap to four places; g'8.'s rod 1.7945 loses to its spring
+    /// 1.9386. The g'16.'s 2.3151 is its dot box's lower corner against the main head's upper
+    /// one, which no flat reach can give.
+    /// </remarks>
+    private static double GraceDotRod(GraceColumnInfo left, bool beamed,
+                                      GraceColumnInfo? next, MusicItem? mainItem)
+    {
+        if (left.Dots == 0 || left.IsRest)
+            return double.NegativeInfinity;
+        HorizontalSkyline? nextLeft = next is { } n
+            ? ItemSkylineFactory.CreateGraceLeftSkyline(n)
+            : mainItem is not null
+                ? ItemSkylineFactory.CreateLeftSkylineAtColumn(mainItem, 0.0, 0.0)
+                : null;
+        if (nextLeft is null)
+            return double.NegativeInfinity;
+        return SeparationRodPadding
+               + ItemSkylineFactory.CreateGraceDotRightSkyline(left, beamed).Distance(nextLeft);
     }
 
     /// <summary>One gap of a grace run — the spring, floored by the skyline distance.</summary>
@@ -275,25 +310,13 @@ internal static partial class SpacingRules
                         NoteheadStyle.Default, font)
                     + flag.Width);
         }
-        // ⚠️ THE DOTS ARE NOT ADDED HERE, AND THAT IS MEASURED RATHER THAN ASSUMED
-        // (2026-08-30, session 299). The Dots grob does declare a box in the separation
-        // (scm/define-grobs.scm:1272-1279 Dots, extra-spacing-width (0.0 . 0.2),
-        // extra-spacing-height (-0.5 . 0.5)), so the first thing this session did was widen
-        // the reach by the dot column — and LilyPond disagreed: `grace { d'8. }` and
-        // `grace { d'8 }` engrave with the SAME staff width, differing by the added dot glyph
-        // and no coordinate anywhere else (scratch/p299/lp, dot.svg against nodot.svg).
-        // ⇒ The reason is that LilyPond's separation is a SKYLINE and this reach is a flat
-        // scalar. The dot's box is one staff space tall, at a row the main note's head does
-        // not occupy, so the two columns' facing skylines never meet there; a flat term would
-        // reserve for a collision that only happens when the main head sits at the dot's
-        // height. Adding it makes the common case wrong to buy the rare one.
-        //   departs from: lily/separation-item.cc:120-190 Separation_item::boxes — LilyPond
-        //     puts the Dots box in and lets the skyline decide; this reach cannot ask.
-        //   goes away when: this island's reaches become skylines rather than scalars
-        //     (the same change docs/HANDOFF.md §2 wants for the accidental reach).
-        //   observed by: GraceBodyValidatorTests.ADottedGrace_IsDrawn, which asserts the
-        //     page is byte-identical outside the added dot — the assertion that went red
-        //     when the term was in, and the reason it came out.
+        // ⚠️ THE DOTS ARE NOT ADDED HERE, and not because they reserve nothing: a Dots grob is
+        // an element of the PAPER column, not of the note column, so it reaches a neighbour
+        // through the ROD and never through this spring floor — GraceDotRod, a skyline, is
+        // where it is priced (session 392). A flat term here was tried in session 299 and
+        // LilyPond disagreed: `grace { d'8. }` and `grace { d'8 }` engrave with the SAME staff
+        // width (scratch/p299/lp), because the dot's box sits at a row the main head does not
+        // occupy. GraceBodyValidatorTests.ADottedGrace_IsDrawn still watches that book.
         return ink + DefaultExtraSpacingWidth;
     }
 
@@ -519,6 +542,20 @@ internal static partial class SpacingRules
         ChordItem c => c.LeadingGrace,
         _ => ImmutableArray<GraceColumnInfo>.Empty
     };
+
+    /// <summary>
+    /// Whether a grace run hangs in front of <paramref name="item"/> — i.e. whether LilyPond
+    /// has a GRACE column between the previous column and this item's own.
+    /// </summary>
+    /// <remarks>
+    /// Lily# hangs the run off the main column, so a caller asking about the column AFTER a bar
+    /// line has to be told that LilyPond's spring stops one column earlier. That changes
+    /// <c>fills_measure</c>: its <c>next</c> column is then the main note, which is musical, so a
+    /// whole note behind a grace earns no full-measure-extra-space.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:446-455 Spacing_spanner::fills_measure — false when the next column is musical
+    /// </remarks>
+    internal static bool HasLeadingGraceColumn(MusicItem? item) =>
+        item != null && !GraceNotesOf(item).IsDefaultOrEmpty;
 
     // ========================================
     // Mid-measure change items (the missing non-musical column)

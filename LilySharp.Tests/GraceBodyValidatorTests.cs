@@ -313,6 +313,37 @@ public class GraceBodyValidatorTests
         AssertOffset(Head, Assert.Single(GraceDotOffsets("grace { g16. g16 } c'1 |")));
     }
 
+    /// <summary>
+    /// The dot the SPACING reserves for a grace stands where the page DRAWS it.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="LilySharp.Core.Svg.Layout.DotColumn.ReservedForGrace"/> assembles the stem and
+    /// flag supports again for the rod (SpacingRules.GraceDotRod), where
+    /// <c>SharedRenderer.DrawNote</c> assembles them off the stem it has just drawn — two
+    /// spellings of one position, which cannot be folded while the spacing runs before the
+    /// drawing. So both are asked the same six books and must agree (docs/RULES.md §7.7, the
+    /// difference net); <see cref="AGraceDotClearsTheFlagOnlyWhenTheFlagIsOnItsRow"/> pins the
+    /// drawn one to LilyPond. Positions are the middle-line frame (g is −2, d' is 2).
+    /// </remarks>
+    [Fact]
+    public void TheReservedGraceDotIsTheDrawnOne()
+    {
+        var drawn = GraceDotOffsets(
+            "grace { g8. } c'1 | grace { f8. } c'1 | grace { d'8. } c'1 | "
+            + "grace { e'8. } c'1 | grace { d'16. } c'1 | grace { g16. } c'1 |");
+        (int Position, int Value)[] books = [(-2, 8), (-3, 8), (2, 8), (3, 8), (2, 16), (-2, 16)];
+        Assert.Equal(books.Length, drawn.Length);
+        for (int i = 0; i < books.Length; i++)
+        {
+            var column = new LilySharp.Core.Svg.Model.GraceColumnInfo(
+                books[i].Position, accidental: null, needsLedger: false,
+                Fraction.FromNoteValue(books[i].Value), dots: 1);
+            AssertOffset(
+                LilySharp.Core.Svg.Layout.DotColumn.ReservedForGrace(column, beamed: false).OffsetX,
+                drawn[i]);
+        }
+    }
+
     /// <summary>Every grace dot's offset from its own head, in document order.</summary>
     /// <remarks>
     /// The head and the dot come out of the same −3 face, so both are read by GLYPH; the main

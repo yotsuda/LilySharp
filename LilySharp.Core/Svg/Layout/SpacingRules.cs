@@ -940,6 +940,18 @@ internal static partial class SpacingRules
     internal const double DotsExtraSpacingWidthRight = 0.2;
 
     /// <summary>
+    /// The Dots grob's <c>extra-spacing-height</c>: its spacing box reaches half a staff space
+    /// above and below the dots' own ink.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, scratch/p393/lpdump, grace-dot-flag-column's paper-column skylines):
+    /// a grace dot's box is 1.3085 tall = its 0.3085 of ink + 0.5 + 0.5.
+    /// LILYPOND-REF: scm/define-grobs.scm:1277 Dots
+    ///   <c>(extra-spacing-height . (-0.5 . 0.5))</c>.
+    /// </remarks>
+    internal const double DotsExtraSpacingHeight = 0.5;
+
+    /// <summary>
     /// The headroom <c>merge_springs</c> leaves above a spring's minimum distance.
     /// </summary>
     /// <remarks>
