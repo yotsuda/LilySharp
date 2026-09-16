@@ -167,8 +167,8 @@ internal static class PaperPlanReader
 
     /// <summary>Every named top-level paper declaration, in document order.</summary>
     internal static IReadOnlyList<PaperDeclarationSyntax> NamedDeclarations(SyntaxNode root) =>
-        [.. root.DescendantNodes().OfType<PaperDeclarationSyntax>()
-            .Where(p => p.NameToken != null && p.IsBlock && !FontPlanReader.IsInsideRender(p))];
+        [.. TopLevelNodes.OfRoot<PaperDeclarationSyntax>(root)
+            .Where(p => p.NameToken != null && p.IsBlock)];
 
     /// <summary>
     /// Resolves a score reference's name to its top-level declaration — ONE HOME for

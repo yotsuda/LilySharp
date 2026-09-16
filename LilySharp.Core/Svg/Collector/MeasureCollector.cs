@@ -1119,20 +1119,12 @@ public sealed partial class MeasureCollector
                 if (m.StartBarline == starts[i] && m.EndBarline == ends[i])
                     continue;
                 builder ??= measures.ToBuilder();
-                builder[i] = new Measure(
-                    m.Items, starts[i], ends[i], m.SectionLabel,
-                    m.SourceStart, m.SourceEnd,
-                    hasBreakAfter: m.HasBreakAfter,
-                    lineBreakPermission: m.LineBreakPermission,
-                    breakPenalty: m.BreakPenalty,
-                    pageBreakPermission: m.PageBreakPermission,
-                    pageTurnPermission: m.PageTurnPermission,
-                    sectionLabelPosition: m.SectionLabelPosition,
-                    isPickup: m.IsPickup,
-                    unmetered: m.Unmetered,
-                    breaksMidBar: m.BreaksMidBar,
-                    continuesBar: m.ContinuesBar,
-                    unmeteredPosition: m.UnmeteredPosition);
+                // A record COPY, not a re-construction: the constructor takes no
+                // EndHighlightAliases / ContinuedFromMeasure / IsEmptyPlaceholder /
+                // IsTrailingClefColumn, so rebuilding through it silently reset all four on
+                // every measure another voice out-ranked (session 395; MarkBarsSplitBySectionBoundaries
+                // already copies this way).
+                builder[i] = m with { StartBarline = starts[i], EndBarline = ends[i] };
             }
             if (builder != null)
                 voiceDict[name] = new Voice(voice.Name, builder.ToImmutable());

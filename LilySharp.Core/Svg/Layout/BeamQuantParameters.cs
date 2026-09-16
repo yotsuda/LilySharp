@@ -95,9 +95,12 @@ public sealed record BeamQuantParameters
     /// carries a beam of its own.
     /// </summary>
     /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:523 Beam details stem-collision-factor 0.1 — the
+    ///   DECLARED value, which is the one LilyPond reads (RULES §5.2: a `details` entry
+    ///   makes the C++ fallback dead). This remark said the grob did NOT declare it, and
+    ///   that the fallback was the value, until session 395; the number agreed by luck.
     /// LILYPOND-REF: lily/beam-quanting.cc:118-119 get_detail (details,
-    ///   stem-collision-factor, 0.1) — the Beam grob does NOT declare this one, so unlike
-    ///   collision-padding the C++ fallback IS the value (scm/define-grobs.scm:505-512).
+    ///   stem-collision-factor, 0.1) — where it is read.
     /// LILYPOND-REF: lily/beam-quanting.cc:414-416 STEM_COLLISION_FACTOR, get_object (s,
     ///   "beam") — a stem with no beam of its own is charged 1.0 instead, because its drawn
     ///   length is settled and this one's is not.

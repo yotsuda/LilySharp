@@ -100,8 +100,8 @@ internal static partial class SharedRenderer
         var options = layout.Options;
         var resolver = layout.GrobPropertyResolver;
         // Items participating in a beam — DrawNote/DrawChord skip stem & flag for these,
-        // because DrawBeams will draw the beam-aware stem instead. Mirrors SvgRenderer's
-        // _beamedStemEndYs gating (lily/stem.cc — beamed stem end is computed by beam layout).
+        // because DrawBeams will draw the beam-aware stem instead (lily/stem.cc — a beamed
+        // stem's end is computed by the beam layout).
         var beamedItems = BuildBeamedItemsSet(layout);
         // Ossia staves: their annotations (dynamics / scripts) shrink with the
         // notation, like every grob the magnified staff owns in LP

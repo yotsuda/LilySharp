@@ -31,7 +31,8 @@ namespace LilySharp.Core.Music;
 /// LILYPOND-REF: scm/music-functions.scm:923-946 expand-repeat-chords! — a fold
 /// over the music tree in document order threading last-chord; only music of
 /// type event-chord (a written <c>&lt;&gt;</c> chord) replaces it. The
-/// expansion runs in toplevel-music-functions (ly/music-functions-init.ly:2143),
+/// expansion runs in toplevel-music-functions (scm/music-functions.scm:1608-1613;
+/// ly/music-functions-init.ly:2143 is the SAME call inside <c>retrograde</c>, not the hook),
 /// AFTER \relative has been resolved — which is why a <c>q</c> copies the
 /// original chord's ABSOLUTE pitches and is transparent to the relative frame.
 /// The map resets at each top-level declaration: a body is its own walk, so a

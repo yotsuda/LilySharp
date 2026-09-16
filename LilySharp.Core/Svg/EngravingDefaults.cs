@@ -1125,8 +1125,8 @@ internal static class EngravingDefaults
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm:1408 DynamicLineSpanner padding, read by aligned_side.</remarks>
     public const double DynamicLineSpannerPadding = 0.6;
 
-    /// <summary>DynamicLineSpanner's staff-padding (see DynamicEngraver.BaselineY for
-    /// the full aligned_side transcription that consumes it).</summary>
+    /// <summary>DynamicLineSpanner's staff-padding (see <c>DynamicEngraver.SpannerOffsetY</c>
+    /// for the full aligned_side transcription that consumes it).</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm:1411 DynamicLineSpanner staff-padding, read by aligned_side.</remarks>
     public const double DynamicLineSpannerStaffPadding = 0.1;
 

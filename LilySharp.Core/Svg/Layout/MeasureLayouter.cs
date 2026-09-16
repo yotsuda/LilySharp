@@ -24,7 +24,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// Calculates item positions within a measure using Spring-Rod model.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/spacing-basic.cc:100-130 note_spacing()
+/// LILYPOND-REF: lily/spacing-basic.cc:108-111 Spacing_spanner::note_spacing
 /// LILYPOND-REF: lily/simple-spacer.cc (spring solver)
 /// </remarks>
 internal sealed class MeasureLayouter

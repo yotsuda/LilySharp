@@ -203,7 +203,7 @@ public static class Tunings
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: scm/translation-functions.scm determine-frets-and-strings;
-    /// scm/translation-functions.scm:864 maximumFretStretch default 4.
+    /// scm/translation-functions.scm:868 maximumFretStretch default 4.
     /// </remarks>
     public static (int stringNum, int fret)[] CalculateChordFrets(
         System.Collections.Generic.IReadOnlyList<(int Midi, int? StringNumber)> notes,

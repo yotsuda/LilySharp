@@ -33,7 +33,7 @@ internal sealed class DuplicateScoreNameValidator : ISemanticValidator
     public void Validate(SyntaxTree tree)
     {
         var seen = new HashSet<string>(System.StringComparer.Ordinal);
-        foreach (var render in tree.GetRoot().DescendantNodes().OfType<RenderDeclarationSyntax>())
+        foreach (var render in TopLevelNodes.OfRoot<RenderDeclarationSyntax>(tree.GetRoot()))
         {
             // The on-disk output name, from the ONE home that the renderer and the
             // preview's picker also read (RenderSpecParser.OutputNameOf). Two scores

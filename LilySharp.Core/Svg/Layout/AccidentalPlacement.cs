@@ -49,7 +49,7 @@ public readonly record struct AccidentalLayout(
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/accidental-placement.cc:393-439 position_apes
-/// LILYPOND-REF: scm/define-grobs.scm:84 AccidentalPlacement
+/// LILYPOND-REF: scm/define-grobs.scm:85 AccidentalPlacement right-padding
 /// </remarks>
 /// <remarks>
 /// ⚠️ NONE OF THESE SCALE WITH THE FONT. They are grob properties in the STAFF's spaces, and
@@ -70,7 +70,7 @@ internal sealed record AccidentalPlacementParameters
     public double Padding { get; init; } = 0.2;
 
     /// <summary>Extra padding from note head in staff spaces.</summary>
-    /// <remarks>LILYPOND-REF: define-grobs.scm:84 AccidentalPlacement.right-padding</remarks>
+    /// <remarks>LILYPOND-REF: define-grobs.scm:85 AccidentalPlacement.right-padding</remarks>
     public double RightPadding { get; init; } = 0.15;
 
     /// <summary>Y-axis padding for overlap detection in staff spaces.</summary>

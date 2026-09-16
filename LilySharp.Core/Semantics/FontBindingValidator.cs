@@ -44,7 +44,7 @@ internal sealed class FontBindingValidator : ISemanticValidator
     public void Validate(SyntaxTree tree)
     {
         var root = tree.GetRoot();
-        var all = root.DescendantNodes().OfType<FontDeclarationSyntax>().ToList();
+        var all = TopLevelNodes.OfRootOrScore<FontDeclarationSyntax>(root).ToList();
 
         // Each block's own entries, wherever the block stands — the unnamed default, a
         // named declaration, or a score's override block. The reading is

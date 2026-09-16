@@ -68,9 +68,7 @@ internal sealed class PartialScopeValidator : ISemanticValidator
         var root = tree.GetRoot();
         // Bare music (no structural nodes) is a plain note stream — a leading `partial` there
         // is the music's own pickup. The placement rule only bites once the file is structured.
-        bool structured = root.DescendantNodes().Any(n =>
-            n is PartDeclarationSyntax or SectionDeclarationSyntax or FormDeclarationSyntax);
-        if (!structured)
+        if (!TopLevelNodes.IsStructured(root))
             return;
 
         foreach (var partial in root.DescendantNodes().OfType<PartialDeclarationSyntax>())

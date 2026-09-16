@@ -242,7 +242,7 @@ internal sealed record SystemDetails
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/include/constrained-breaking.hh:61 tallness_, filled in by
-    /// lily/page-breaking.cc:1099-1142 Page_breaking::calc_line_heights.
+    /// lily/page-breaking.cc:1140-1184 Page_breaking::calc_line_heights.
     /// Only the FIRST system on a page contributes its full height; every one after it
     /// contributes this (lily/page-spacing.cc:53-62).
     /// </remarks>
@@ -445,7 +445,7 @@ internal sealed class PageSpacing
             // LILYPOND-REF: lily/page-spacing.cc:53-57 — only the FIRST system on a page
             // contributes full_height(); every one after it contributes tallness_, the
             // amount the stack GROWS when it is added at minimum spacing
-            // (page-breaking.cc:1136). Adding the full height here instead counted each
+            // (page-breaking.cc:1178). Adding the full height here instead counted each
             // system's own extents a second time, on top of a spring that already spanned
             // them, so the page looked about 1 ss per system fuller than it is.
             _rodHeight += system.Tallness;
@@ -1396,8 +1396,8 @@ internal sealed class PageBreaker
         }
         else
         {
-            // LILYPOND-REF: lily/page-spacing.cc:358, lily/page-breaking.cc:1360-1362
-            // demerits = force² × page_spacing_weight
+            // LILYPOND-REF: lily/page-spacing.cc:360 demerits = force², weighted by
+            //   lily/page-breaking.cc:1561-1562 page_weighting ("page-spacing-weight", 10)
             demerits = force * force * _params.PageSpacingWeight;
             demerits = Math.Min(demerits, BadSpacingPenalty);
         }
@@ -1500,7 +1500,7 @@ internal sealed class PageBreaker
     /// grows when it is added below its predecessor at minimum spacing.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/page-breaking.cc:1099-1142 Page_breaking::calc_line_heights,
+    /// LILYPOND-REF: lily/page-breaking.cc:1140-1184 Page_breaking::calc_line_heights,
     /// transcribed. Note it runs over the WHOLE sequence of systems, not per page: a
     /// system's tallness depends only on its predecessor, so the page breaker can then
     /// price any candidate page by summing them.
@@ -1522,7 +1522,7 @@ internal sealed class PageBreaker
     /// </para>
     /// <para>
     /// <c>tight_spacing_</c> has no Lily# counterpart, so the padding is never dropped
-    /// (page-breaking.cc:1123-1124 takes the padding unless the line is tight).
+    /// (page-breaking.cc:1165-1166 takes the padding unless the line is tight).
     /// </para>
     /// </remarks>
     internal static IReadOnlyList<SystemDetails> CalcLineHeights(
@@ -1534,7 +1534,7 @@ internal sealed class PageBreaker
 
         // refpoint_hanging is the y coordinate of the origin of this system. It may not
         // be the same as RefpointExtentUp, which is the refpoint of the first spaceable
-        // staff in this system. LILYPOND-REF: page-breaking.cc:1105-1107.
+        // staff in this system. LILYPOND-REF: page-breaking.cc:1147-1149.
         double prevRefpointHanging = 0;
 
         var result = new List<SystemDetails>(lines.Count);

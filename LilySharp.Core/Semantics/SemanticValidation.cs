@@ -125,6 +125,16 @@ public static class SemanticValidation
     /// they want them (the LSP converts the two sets separately).
     /// </summary>
     public static IReadOnlyList<Diagnostic> Run(SyntaxTree tree)
+        => Run(tree, System.Threading.CancellationToken.None);
+
+    /// <summary>
+    /// <see cref="Run(SyntaxTree)"/> with a cancellation token observed BETWEEN
+    /// validators: the language server runs this pass after every settled keystroke, and a
+    /// keystroke arriving mid-pass makes the rest of the pass worthless (its document version
+    /// is already stale) while it keeps sharing the machine with the render the new
+    /// keystroke started. Throws <see cref="OperationCanceledException"/>.
+    /// </summary>
+    public static IReadOnlyList<Diagnostic> Run(SyntaxTree tree, System.Threading.CancellationToken token)
     {
         var result = new List<Diagnostic>();
         // One shared single-staff collect, computed at most once and reused by every
@@ -132,6 +142,7 @@ public static class SemanticValidation
         var sharedCollect = new Lazy<MeasureCollector?>(() => TryCollect(tree));
         foreach (var v in CreateAll())
         {
+            token.ThrowIfCancellationRequested();
             if (v is ISharedCollectValidator sc)
                 sc.ValidateWith(tree, sharedCollect);
             else

@@ -157,6 +157,16 @@ internal sealed class BeamScoringProblem
     //               lily/stem.cc:1245 ideal_y -= shorten (applied to the ideal only).
     private readonly double _beamShorten;
 
+    // Per-member Stem_info (ideal and shortest beam Y), computed ONCE in the constructor —
+    // LilyPond fills stem_infos_ once (lily/beam-quanting.cc:301-303) and its header says why:
+    // "Precomputed to save time in scoring individual configurations"
+    // (lily/include/beam-scoring-problem.hh:111-114). Until session 395 the three readers
+    // (the seed, shift_region_to_valid and score_stem_lengths) each called
+    // StemCalculator.CalculateBeamedStemInfo afresh — the last one per CANDIDATE per stem,
+    // 256–2304 candidates a beam. The arguments were identical at all three sites, so this
+    // is the same value read three times, not a third spelling.
+    private readonly StemInfo[] _stemInfos;
+
     // True when this beam is quanted from TAB string lines (stemPositions) rather than
     // pitch. Forced-direction shortening keys off a note's natural (pitch) stem
     // direction, which a string line does not have, so it does not apply here.
@@ -451,6 +461,20 @@ internal sealed class BeamScoringProblem
                   NoStemExtend = noStemExtend,
               };
         _minStemLength = EngravingDefaults.MinStemLength;      // 2.5 staff spaces
+
+        // LILYPOND-REF: lily/beam-quanting.cc:301-303 stem_infos_.push_back — one
+        //   Stem::get_stem_info per stem, before any configuration is scored; every
+        //   input (head, direction, direction beam count, thickness, translation, the
+        //   stem details, knee, shorten) is settled above.
+        _stemInfos = new StemInfo[group.Members.Length];
+        for (int i = 0; i < _stemInfos.Length; i++)
+        {
+            int dir = StemDirOf(i);
+            _stemInfos[i] = StemCalculator.CalculateBeamedStemInfo(
+                BeamSideHead(i), dir > 0, DirectionBeamCount(dir),
+                _beamThickness, _beamTranslation, _stemDetails,
+                isKnee: _isKnee, beamShorten: _beamShorten);
+        }
 
         // The beam's own segments — the SAME maths the renderer draws with, so the ink a
         // collision is measured against is the ink that gets drawn. Their x is the
@@ -757,12 +781,7 @@ internal sealed class BeamScoringProblem
         var ideals = new List<(double x, double y)>();
         for (int i = 0; i < _headMin.Length; i++)
         {
-            int dir = StemDirOf(i);
-            var info = StemCalculator.CalculateBeamedStemInfo(
-                BeamSideHead(i), dir > 0, DirectionBeamCount(dir),
-                _beamThickness, _beamTranslation, _stemDetails,
-                isKnee: _isKnee, beamShorten: _beamShorten);
-            double idealY = info.IdealY; // staff-spaces (native quanter frame)
+            double idealY = _stemInfos[i].IdealY; // staff-spaces (native quanter frame)
             ideals.Add((_stemXPositions[i], idealY));
         }
 
@@ -1174,11 +1193,7 @@ internal sealed class BeamScoringProblem
             // constrained the tip note (shortest stem), pushing the whole beam up.
             // LILYPOND-REF: lily/beam-quanting.cc:794-805 (stem_infos_[i].shortest_y_).
             int dir = StemDirOf(i);
-            var info = StemCalculator.CalculateBeamedStemInfo(
-                BeamSideHead(i), dir > 0, DirectionBeamCount(dir),
-                _beamThickness, _beamTranslation, _stemDetails,
-                isKnee: _isKnee, beamShorten: _beamShorten);
-            double minBeamY = info.ShortestY; // staff-spaces (native quanter frame)
+            double minBeamY = _stemInfos[i].ShortestY; // staff-spaces (native quanter frame)
             // Convert to left Y: leftY = beamAtStem - slope * stemX
             double leftYForMin = minBeamY - slope * _stemXPositions[i];
 
@@ -1646,12 +1661,8 @@ internal sealed class BeamScoringProblem
             //   MISSED when the maximum was ported: the seed moved and the scorer went
             //   on grading it against a floor built from each stem's own count, which
             //   is how an 8-32-8 beam kept a quant LilyPond charges 5000 × 0.11 for.
-            var info = StemCalculator.CalculateBeamedStemInfo(
-                BeamSideHead(i), memberDir > 0, DirectionBeamCount(memberDir),
-                _beamThickness, _beamTranslation, _stemDetails,
-                isKnee: _isKnee, beamShorten: _beamShorten);
-            double idealY = info.IdealY;
-            double shortestY = info.ShortestY;
+            double idealY = _stemInfos[i].IdealY;
+            double shortestY = _stemInfos[i].ShortestY;
 
             // LILYPOND-REF: lily/beam-quanting.cc:1139-1140
             // Penalty for stems shorter than minimum

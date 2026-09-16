@@ -146,7 +146,7 @@ internal sealed record PageBreakingParameters
     /// Weight for page spacing penalties relative to line penalties.
     /// Higher values prioritize even page spacing over even line spacing.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/page-breaking.cc:1360-1362 page_spacing_weight = 10</remarks>
+    /// <remarks>LILYPOND-REF: lily/page-breaking.cc:1561-1562 page_weighting = paper's "page-spacing-weight", default 10</remarks>
     public double PageSpacingWeight { get; init; } = 10;
 
     /// <summary>

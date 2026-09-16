@@ -56,7 +56,7 @@ internal sealed class DuplicatePartPropertyValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        foreach (var part in tree.GetRoot().DescendantNodes().OfType<PartDeclarationSyntax>())
+        foreach (var part in TopLevelNodes.OfRoot<PartDeclarationSyntax>(tree.GetRoot()))
         {
             var seen = new Dictionary<string, SyntaxNode>(System.StringComparer.Ordinal);
             foreach (var prop in part.ChildNodes().OfType<PropertyAssignmentSyntax>())

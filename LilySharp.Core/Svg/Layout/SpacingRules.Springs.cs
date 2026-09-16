@@ -26,7 +26,7 @@ internal static partial class SpacingRules
     /// Creates a spring between two music items.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/spacing-basic.cc:100-130 note_spacing()
+    /// LILYPOND-REF: lily/spacing-basic.cc:108-111 Spacing_spanner::note_spacing
     /// LILYPOND-REF: lily/note-spacing.cc:204-315 stem_dir_correction()
     /// - ideal_distance = get_duration_space(duration)
     /// - min_distance = max(increment, skyline_collision_distance)

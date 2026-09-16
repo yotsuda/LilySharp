@@ -90,7 +90,8 @@ internal enum OverlayDrawerId
 /// <item>DECLINE CLASSES (per pass): grob overrides/reverts (spread spacing globally —
 /// same gate as every other memo), any ossia staff (OssiaAppearedBefore scans EARLIER
 /// systems — outside any per-system window), a custom `font "NAME"`
-/// (TextFontDrawingContext rewrites families in the emitted bytes), missing content
+/// (the font plan changes the family attributes in the emitted bytes — the decline is
+/// <c>!score.Fonts.IsDefault</c>), missing content
 /// keys. All are "no cache this pass", never a wrong reuse.</item>
 /// </list>
 /// </para>

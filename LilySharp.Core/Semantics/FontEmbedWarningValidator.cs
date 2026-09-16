@@ -52,7 +52,7 @@ internal sealed class FontEmbedWarningValidator : ISemanticValidator
     public void Validate(SyntaxTree tree)
     {
         var root = tree.GetRoot();
-        foreach (var font in root.DescendantNodes().OfType<FontDeclarationSyntax>())
+        foreach (var font in TopLevelNodes.OfRootOrScore<FontDeclarationSyntax>(root))
         {
             // EVERY name the directive asks for, not just the first: a block binds a face
             // per role, and a PDF embeds all of them. Checking `FontName` alone would

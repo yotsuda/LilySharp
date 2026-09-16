@@ -108,7 +108,7 @@ internal static class OutsideStaffStacker
     private const double TextScriptStaffPadding = EngravingDefaults.TextScriptStaffPadding;
 
     // (DynamicLineSpanner's side-position padding 0.6 is the ENGRAVER's quiet-position
-    // business — DynamicEngraver.BaselineY spends it against the supports. The stacker
+    // business — DynamicEngraver.PointwiseBaselineY spends it against the supports. The stacker
     // runs only the outside-staff COLLISION pass, whose padding is outside-staff-padding
     // 0.46 — the split LilyPond itself has between the two passes.
     // LILYPOND-REF: lily/side-position-interface.cc:361-370 aligned_side — the grob's

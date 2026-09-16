@@ -870,9 +870,10 @@ public static class DiagnosticCodes
     /// <summary>Measure warning: the same section spans a different number of bars in
     /// different parts, so the shorter parts are padded to align (often a miscount).</summary>
     public const string SectionBarCountMismatch = "LYS2007";
-    // LYS2008 (EmptyPlaceholderMeasure) was retired: an empty `| |` measure now
-    // reports the ordinary underfull warning (LYS2001, MeasureIncomplete) over the
-    // region between the barlines — zero duration is just the extreme underfull case.
+    // LYS2008 (EmptyPlaceholderMeasure) was retired, and an empty `| |` measure reports
+    // NOTHING: the engine fills it with one full-measure spacer (user decision
+    // 2026-08-28, MeasureBuilder.EmitEmptyMeasure) and MeasureModel prices it as a
+    // full bar, so neither LYS2001 nor any other code picks it up (MeasureValidator).
 
     /// <summary>Measure warning: a <c>partial</c> written inside <c>time none</c>. The clock
     /// stands still in an unmetered span (MeasureBuilder's frozen clock), so there is no bar

@@ -84,8 +84,8 @@ internal static class FontPlanReader
 
     /// <summary>Every named top-level fonts declaration, in document order.</summary>
     internal static IReadOnlyList<FontDeclarationSyntax> NamedDeclarations(SyntaxNode root) =>
-        [.. root.DescendantNodes().OfType<FontDeclarationSyntax>()
-            .Where(f => f.NameToken != null && f.IsBlock && !IsInsideRender(f))];
+        [.. TopLevelNodes.OfRoot<FontDeclarationSyntax>(root)
+            .Where(f => f.NameToken != null && f.IsBlock)];
 
     /// <summary>
     /// Resolves a score reference's name to its top-level declaration. ONE HOME for the

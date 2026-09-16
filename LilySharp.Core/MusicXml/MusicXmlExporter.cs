@@ -1971,6 +1971,8 @@ public sealed class MusicXmlExporter
         // normal frame; degrees stack on the root by diatonic steps in the key.
         bool savedAbsolute = _octaveAbsolute;
         int savedAnchor = _octaveAnchor;
+        // The frame the group leaves behind is the one it was given (see the end).
+        int frameStepIn = _currentStep, frameOctaveIn = _currentOctave;
         bool rootSet = false;
         int anchorOctave = 0;
         int rootStep = 0;
@@ -2047,12 +2049,12 @@ public sealed class MusicXmlExporter
         _octaveAnchor = savedAnchor;
         // Acts like one note: a trailing `>>N` carries N as the running duration.
         _defaultDuration = arpeggio.TotalDuration?.ToFraction() ?? savedDefault;
-        // After the group the running reference is the root (chord-after behavior).
-        if (rootSet)
-        {
-            _currentOctave = anchorOctave;
-            _currentStep = rootStep;
-        }
+        // THE GROUP DOES NOT MOVE THE FRAME (user decision, 2026-09-16 — the chord rule,
+        // which `<< >>` follows by design): what leaves is what came in, shifted only by
+        // the marks written after '>>'. `rootSet` decides nothing here: a group of rests
+        // leaves the frame alone because its shift is zero (MeasureCollector.MusicWalk).
+        _currentOctave = frameOctaveIn + groupOctave;
+        _currentStep = frameStepIn;
 
         if (sub.HasTuplet)
         {
@@ -2441,9 +2443,17 @@ public sealed class MusicXmlExporter
     /// STACKS above the anchor — the same octave placement as a scale degree, so the chord's
     /// pitches are independent of the written order (<c>&lt;c e g&gt;</c> ==
     /// <c>&lt;c 3 5&gt;</c> == <c>&lt;c g e&gt;</c>). Each member's own <c>'</c>/<c>,</c> marks
-    /// (the root's included) are LOCAL to that one note; the note after the chord is relative
-    /// to the anchor. A deliberate Lily# divergence from LilyPond, matching
-    /// <c>MidiExporter</c> and <c>MeasureCollector</c>.
+    /// (the root's included) are LOCAL to that one note. A deliberate Lily# divergence from
+    /// LilyPond, matching <c>MidiExporter</c> and <c>MeasureCollector</c>.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE FRAME THIS LEAVES IS THROWN AWAY BY THE CALLER. It advances the running state
+    /// to the root's anchor while the members are placed, and the caller then puts the
+    /// INCOMING frame back, shifted only by the marks after <c>&gt;</c> — the chord reads
+    /// the frame and never writes it (user decision 2026-09-16,
+    /// <c>MeasureCollector.CreateChordItem</c>; the twin does the same). Session 394 changed
+    /// the page and the twin and left this exporter and the MIDI one on the old rule for a
+    /// day — four readers of one sentence, again.
     /// </para>
     /// </remarks>
     private (string Step, int Alter, int Octave) ResolveChordMemberPitch(
@@ -2514,14 +2524,17 @@ public sealed class MusicXmlExporter
         // other member STACKS above the anchor — the same octave placement as a
         // scale degree, so the chord's pitches are independent of the written order
         // (<c e g> == <c 3 5> == <c g e>). Each member's own '/, marks (the root's
-        // included) are LOCAL to that one note; the note after the chord is relative
-        // to the anchor. A deliberate Lily# divergence from LilyPond, matching
-        // MidiExporter and MeasureCollector.
+        // included) are LOCAL to that one note. A deliberate Lily# divergence from
+        // LilyPond, matching MidiExporter and MeasureCollector.
         // Octave marks after the closing '>' (<1 3 5>' / <c e g>,,) shift the whole
-        // chord; folding it into firstOctave flows through every stacked/degree member
-        // and the following note, matching MidiExporter and MeasureCollector. extraOctave
-        // is the enclosing arpeggio's group shift when this chord is its root.
+        // chord; folding it into firstOctave flows through every stacked/degree member,
+        // matching MidiExporter and MeasureCollector. extraOctave is the enclosing
+        // arpeggio's group shift when this chord is its root.
         int chordOctave = chord.ChordOctaveOffset + extraOctave;
+        // THE CHORD DOES NOT MOVE THE FRAME (user decision, 2026-09-16): the note after
+        // the chord is relative to what came IN, shifted only by the marks after '>' —
+        // MeasureCollector.CreateChordItem's `frameOctaveIn + chordOctave`.
+        int frameStepIn = _currentStep, frameOctaveIn = _currentOctave;
 
         int firstStep = _currentStep, firstOctave = _currentOctave;
         var (tupletActual, tupletNormal) = CurrentTupletRatio();
@@ -2674,10 +2687,10 @@ public sealed class MusicXmlExporter
         _chordArpeggio = null;
         _chordMembers.Clear();
 
-        // Continue from the first chord note (LilyPond: next note is relative to
-        // the chord's first pitch).
-        _currentStep = firstStep;
-        _currentOctave = firstOctave;
+        // What leaves is what came in, shifted only by the whole-chord marks: the letters
+        // inside the chord (the root's included) were read to PLACE it and write nothing.
+        _currentStep = frameStepIn;
+        _currentOctave = frameOctaveIn + chordOctave;
         MaybeClosePickup(duration);
     }
 
@@ -3031,6 +3044,7 @@ public sealed class MusicXmlExporter
                     var (chordType, _) = GetNoteType(graceDuration);
                     var (chordActual, chordNormal) = CurrentTupletRatio();
                     int chordOctave = chord.ChordOctaveOffset;
+                    int frameStepIn = _currentStep, frameOctaveIn = _currentOctave;
                     int firstStep = _currentStep, firstOctave = _currentOctave;
                     bool firstMember = true;
                     foreach (var pitch in chord.Pitches)
@@ -3083,6 +3097,9 @@ public sealed class MusicXmlExporter
                         });
                         firstMember = false;
                     }
+                    // The chord reads the frame and never writes it — ProcessChord's rule.
+                    _currentStep = frameStepIn;
+                    _currentOctave = frameOctaveIn + chordOctave;
                     break;
                 }
 

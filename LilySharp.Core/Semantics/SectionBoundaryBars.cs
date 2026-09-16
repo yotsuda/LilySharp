@@ -120,7 +120,7 @@ internal sealed class SectionBoundaryBars
     {
         _before = new(StringComparer.Ordinal);
         _after = new(StringComparer.Ordinal);
-        foreach (var form in _root.DescendantNodes().OfType<FormDeclarationSyntax>())
+        foreach (var form in TopLevelNodes.OfRoot<FormDeclarationSyntax>(_root))
         {
             var plays = new List<string>();
             Expand(FormWalk.Read(form), plays);

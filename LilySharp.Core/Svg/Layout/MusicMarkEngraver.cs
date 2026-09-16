@@ -1572,7 +1572,7 @@ internal static class MusicMarkEngraver
     /// Used for collision avoidance stacking between marks.
     /// </summary>
     /// <remarks>
-    /// These values match the rendering sizes in SvgRenderer:
+    /// These values match the renderer's sizes (SharedRenderer.Marks):
     /// - Boxed marks (Rehearsal/SectionLabel): (fontSize + boxPadding*2) / 2
     ///   where boxPadding = 0.2 (LILYPOND-REF: define-markup-commands.scm)
     /// - Symbol marks (Segno/Coda): symbol glyph height / 2

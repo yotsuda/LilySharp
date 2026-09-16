@@ -46,7 +46,14 @@ internal sealed class NavigationPlacementValidator : ISemanticValidator
         // that voice, so collect each declared part and union what they record (a mark in
         // a secondary part would otherwise never warn). Dedup by source position.
         var root = tree.GetRoot();
-        var voices = root.DescendantNodes().OfType<PartDeclarationSyntax>()
+        // No navigation mark anywhere: nothing to place, so no collect — this validator
+        // used to run one FULL collect per declared part on every settled keystroke of a
+        // book that had no segno, coda or fine at all (session 395). A green walk for the
+        // kind costs a fraction of one collect; a mark in a form (not music) still reaches
+        // here, harmlessly, and the collect below answers for it as before.
+        if (!root.KindSites(SyntaxKind.NavigationMark).Any())
+            return;
+        var voices = TopLevelNodes.OfRoot<PartDeclarationSyntax>(root)
             .Select(p => p.Name.Text).Distinct().ToList();
         // Structureless top-level music has no part; fall back to the no-voice collect.
         IEnumerable<string?> toWalk = voices.Count > 0 ? voices : new string?[] { null };

@@ -41,8 +41,7 @@ internal sealed class RevertContextValidator : ISemanticValidator
     public void Validate(SyntaxTree tree)
     {
         var root = tree.GetRoot();
-        bool structured = root.DescendantNodes().Any(n =>
-            n is PartDeclarationSyntax or SectionDeclarationSyntax or FormDeclarationSyntax);
+        bool structured = TopLevelNodes.IsStructured(root);
 
         foreach (var node in root.DescendantNodes())
         {

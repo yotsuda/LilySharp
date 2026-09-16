@@ -85,6 +85,23 @@ internal sealed class UnscaledXDrawingContext : IDrawingContext
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
         => _inner.DrawGlyph(glyph, X(x), y, fontSize, fill);
 
+    // Forwarded, NOT left to the interface defaults (DrawGlyph / nothing): the
+    // interactive backend's tight notehead hit rect, the non-clickable accidental and
+    // the barline hit rect must reach it from an ossia staff too — until session 395
+    // this decorator dropped all three, so an ossia's preview had loose em-box click
+    // targets and no clickable barlines. The hit rect is a POSITION plus a WIDTH along
+    // X, both compensated; the ink width is a size the enclosing scale shrinks like the
+    // glyph, so it passes through as DrawEllipse's ry does.
+    public void DrawNotehead(char glyph, double x, double y, double fontSize, Color? fill,
+        double inkWidth, double inkHeight)
+        => _inner.DrawNotehead(glyph, X(x), y, fontSize, fill, inkWidth * _invScaleX, inkHeight);
+
+    public void DrawAttachedGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
+        => _inner.DrawAttachedGlyph(glyph, X(x), y, fontSize, fill);
+
+    public void DrawHitRect(double x, double y, double width, double height)
+        => _inner.DrawHitRect(X(x), y, width * _invScaleX, height);
+
     public void DrawText(
         string text, double x, double y, double fontSize,
         TextRole role, FontStyle style = FontStyle.Regular,
@@ -93,6 +110,11 @@ internal sealed class UnscaledXDrawingContext : IDrawingContext
         => _inner.DrawText(text, X(x), y, fontSize, role, style, anchor, fill, verticalAnchor);
 
     public IDisposable Source(int sourcePosition) => _inner.Source(sourcePosition);
+
+    // Forwarded so the data-alt aliases reach the interactive backend (the default
+    // drops them and calls Source(int)).
+    public IDisposable Source(int sourcePosition, System.Collections.Generic.IReadOnlyList<int> aliases)
+        => _inner.Source(sourcePosition, aliases);
 
     // Forwarded, NOT left to the interface default (which is a no-op): this decorator
     // compensates X only, and the music face has to reach the real backend.

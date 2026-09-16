@@ -41,7 +41,7 @@ public static class ScoreForms
 {
     /// <summary>Every <c>form</c> the file declares, in declaration order.</summary>
     public static IReadOnlyList<FormDeclarationSyntax> All(SyntaxNode root)
-        => root.DescendantNodes().OfType<FormDeclarationSyntax>().ToList();
+        => TopLevelNodes.OfRoot<FormDeclarationSyntax>(root).ToList();
 
     /// <summary>The form an output renders by default — <c>main</c>, else the first
     /// declared, else null when the file declares none (the sections then play in

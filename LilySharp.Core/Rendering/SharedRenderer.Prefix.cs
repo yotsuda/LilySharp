@@ -37,7 +37,7 @@ internal static partial class SharedRenderer
 
     /// <summary>
     /// Resolves the active clef at the start of a system by walking previous
-    /// measures' ClefChangeItems. Mirrors SvgRenderer.GetActiveClefStringForSystem.
+    /// measures' ClefChangeItems.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/clef-engraver.cc — clef at system start reflects last clef change.

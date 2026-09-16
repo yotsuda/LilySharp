@@ -78,6 +78,14 @@ public sealed class VsqxExporter
                 {
                     if (n.IsGrace || n.IsChord)
                         continue; // no metric time / stacked pitch — not a vocal event
+                    // Pseudo-entries the MusicXML model keeps in the note stream for their
+                    // PLACE, not their sound: a <backup> (multi-voice rewind) and a verbatim
+                    // element (<harmony>, <figured-bass> before their note). Neither has a
+                    // Step, so until session 395 each came out as a C — a lead sheet with
+                    // @chord marks exported a zero-length C per chord symbol, and a two-voice
+                    // part exported its backup as a note.
+                    if (n.IsBackup || n.RawElement != null)
+                        continue;
                     int dur = n.Duration * TickFactor;
                     if (n.IsRest)
                     {

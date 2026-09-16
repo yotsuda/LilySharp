@@ -312,12 +312,13 @@ public sealed partial class LilySharpLanguageServer
     /// so the overwhelmingly common path is unchanged.
     /// </remarks>
     internal static IReadOnlyList<CoreDiagnostic> DocumentDiagnostics(
-        string text, SyntaxTree unexpanded, string basePath, Func<string, string?> readFile)
+        string text, SyntaxTree unexpanded, string basePath, Func<string, string?> readFile,
+        CancellationToken token = default)
     {
         var (tree, usingDiagnostics) = ExpandUsings(text, unexpanded, basePath, readFile);
 
         var result = new List<CoreDiagnostic>(usingDiagnostics);
-        result.AddRange(SemanticValidation.Run(tree).Where(d => d.Span.Start < text.Length));
+        result.AddRange(SemanticValidation.Run(tree, token).Where(d => d.Span.Start < text.Length));
         return result;
     }
 

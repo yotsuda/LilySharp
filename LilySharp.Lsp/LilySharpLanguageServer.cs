@@ -382,7 +382,12 @@ public sealed partial class LilySharpLanguageServer
                 if (current == null || current.Version != doc.Version)
                     return;
 
-                PublishDiagnostics(doc);
+                // The token rides INTO the pass: a keystroke that arrives mid-pass cancels
+                // it between validators instead of letting the whole pass (measured
+                // 148–218 ms on a 1000-measure book, 400 ms on a real one) finish on top
+                // of the render that keystroke started, only to be dropped at the version
+                // check below (session 395).
+                PublishDiagnostics(doc, token);
             }
             catch (OperationCanceledException)
             {
@@ -403,14 +408,14 @@ public sealed partial class LilySharpLanguageServer
         }
     }
 
-    private void PublishDiagnostics(Document doc)
+    private void PublishDiagnostics(Document doc, CancellationToken token = default)
     {
         // Timed for the svg response's SvgTiming.DiagnosticsLastMs: this is the other
         // computation a keystroke starts, and it shares the machine with the render.
         long started = System.Diagnostics.Stopwatch.GetTimestamp();
         try
         {
-            PublishDiagnosticsCore(doc);
+            PublishDiagnosticsCore(doc, token);
         }
         finally
         {
@@ -419,7 +424,7 @@ public sealed partial class LilySharpLanguageServer
         }
     }
 
-    private void PublishDiagnosticsCore(Document doc)
+    private void PublishDiagnosticsCore(Document doc, CancellationToken token)
     {
         var diagnostics = new List<LilySharp.Lsp.Protocol.Diagnostic>();
 
@@ -446,16 +451,27 @@ public sealed partial class LilySharpLanguageServer
         {
             foreach (var d in DocumentDiagnostics(doc.Text, doc.Tree,
                          doc.Uri.IsFile ? doc.Uri.LocalPath : string.Empty,
-                         p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null))
+                         p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null,
+                         token))
             {
                 diagnostics.Add(ConvertDiagnostic(d, doc.Text));
             }
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded mid-pass: publish NOTHING (a partial list would clear real
+            // squiggles), the newer change's own run publishes the whole set.
+            return;
         }
         catch
         {
             // Swallow: keep the syntax diagnostics collected above. A validator crash is a
             // Lily# bug, not something the author can act on, and must not take down the LSP.
         }
+
+        // Superseded between the last validator and the publish: same reason.
+        if (token.IsCancellationRequested)
+            return;
 
         // publishDiagnostics params must be sent BY NAME (a single object). NotifyAsync
         // sends a single argument POSITIONALLY (params: [obj]); the client then rejects it

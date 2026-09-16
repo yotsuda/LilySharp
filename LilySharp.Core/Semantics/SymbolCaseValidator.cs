@@ -154,7 +154,7 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        foreach (var part in tree.GetRoot().DescendantNodes().OfType<PartDeclarationSyntax>())
+        foreach (var part in TopLevelNodes.OfRoot<PartDeclarationSyntax>(tree.GetRoot()))
             foreach (var prop in part.Properties)
                 Check(prop);
     }

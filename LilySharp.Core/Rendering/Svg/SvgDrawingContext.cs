@@ -20,6 +20,16 @@ using System.Text;
 namespace LilySharp.Core.Rendering.Svg;
 
 /// <summary>SVG implementation of <see cref="IDrawingContext"/>.</summary>
+/// <remarks>
+/// ⚠️ EVERY PRIMITIVE IS APPENDED PIECEWISE, NOT FORMATTED. Until session 395 each call
+/// built its line with <c>string.Format</c> — boxing every double, building the line, then
+/// copying it into the builder — plus a string per source attribute, per fill attribute and
+/// per escaped glyph: three to five transient strings for every notehead, beam and rest of a
+/// live-drawn system, which is the preview's floor for every system the fragment memo cannot
+/// replay. The numbers are formatted straight into the builder with the SAME format strings
+/// (<c>F2</c> / <c>F3</c> / <c>F4</c>, invariant culture), so the text is byte for byte what
+/// it was: the snapshot suite and the corpus hashes are the proof.
+/// </remarks>
 internal sealed class SvgDrawingContext : IDrawingContext
 {
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
@@ -58,72 +68,146 @@ internal sealed class SvgDrawingContext : IDrawingContext
         _fonts = fonts ?? TextFontPlan.Default;
     }
 
+    // ---- number formatting straight into the builder (no intermediate string) ----
+
+    private void Num(double value, string format)
+    {
+        Span<char> buffer = stackalloc char[32];
+        if (value.TryFormat(buffer, out int written, format, Inv))
+            _sb.Append(buffer[..written]);
+        else
+            _sb.Append(value.ToString(format, Inv)); // cannot happen for F2/F3/F4; kept honest
+    }
+
+    /// <summary>A coordinate, size or font size: two decimals.</summary>
+    private void F2(double value) => Num(value, "F2");
+
+    /// <summary>A stroke width: three decimals.</summary>
+    private void F3(double value) => Num(value, "F3");
+
+    /// <summary>A scale factor: four decimals.</summary>
+    private void F4(double value) => Num(value, "F4");
+
+    /// <summary>A named attribute with a two-decimal value: <c> name="1.23"</c>.</summary>
+    private void Attr(string name, double value)
+    {
+        _sb.Append(' ').Append(name).Append("=\"");
+        F2(value);
+        _sb.Append('"');
+    }
+
     /// <summary>A fill attribute for a glyph/shape whose default is black. SVG's initial
     /// <c>fill</c> is already black, so a black fill is redundant — omit it (this repeats
     /// across thousands of glyphs, beams and rests per score). Non-black colours emit
     /// normally; a null fill also defaults to black here (callers that need an UNFILLED
     /// shape use the <c>fill="none"</c> paths, not this helper).</summary>
-    private static string FillAttr(Color? fill) =>
-        fill is { } f && f != Color.Black ? string.Format(Inv, " fill=\"{0}\"", f.ToHex()) : "";
+    private void AppendFill(Color? fill)
+    {
+        if (fill is { } f && f != Color.Black)
+            _sb.Append(" fill=\"").Append(f.ToHex()).Append('"');
+    }
+
+    private void AppendStroke(Color stroke, double strokeWidth)
+    {
+        _sb.Append(" stroke=\"").Append(stroke.ToHex()).Append("\" stroke-width=\"");
+        F3(strokeWidth);
+        _sb.Append('"');
+    }
+
+    private void AppendPoint((double X, double Y) p)
+    {
+        F2(p.X);
+        _sb.Append(',');
+        F2(p.Y);
+    }
 
     public void DrawLine(double x1, double y1, double x2, double y2,
         Color? stroke = null, double strokeWidth = 0.1,
         (double On, double Off)? dash = null, LineCap cap = LineCap.Butt)
     {
-        var color = (stroke ?? Color.Black).ToHex();
-        var dashAttr = dash is { } d
-            ? string.Format(Inv, " stroke-dasharray=\"{0:F2} {1:F2}\"", d.On, d.Off)
-            : "";
+        _sb.Append("  <line");
+        Attr("x1", x1);
+        Attr("y1", y1);
+        Attr("x2", x2);
+        Attr("y2", y2);
+        AppendStroke(stroke ?? Color.Black, strokeWidth);
+        if (dash is { } d)
+        {
+            _sb.Append(" stroke-dasharray=\"");
+            F2(d.On);
+            _sb.Append(' ');
+            F2(d.Off);
+            _sb.Append('"');
+        }
         // SVG default linecap is butt; only emit the attribute when rounding.
-        var capAttr = cap == LineCap.Round ? " stroke-linecap=\"round\"" : "";
-        _sb.AppendLine(string.Format(Inv,
-            "  <line x1=\"{0:F2}\" y1=\"{1:F2}\" x2=\"{2:F2}\" y2=\"{3:F2}\" stroke=\"{4}\" stroke-width=\"{5:F3}\"{6}{7}{8}/>",
-            x1, y1, x2, y2, color, strokeWidth, dashAttr, capAttr, SourceAttr()));
+        if (cap == LineCap.Round)
+            _sb.Append(" stroke-linecap=\"round\"");
+        AppendSource();
+        _sb.Append("/>").AppendLine();
     }
 
     public void DrawRectangle(double x, double y, double width, double height,
         Color? fill = null, Color? stroke = null, double strokeWidth = 0)
     {
-        var attrs = new StringBuilder(96);
-        attrs.AppendFormat(Inv, " x=\"{0:F2}\" y=\"{1:F2}\" width=\"{2:F2}\" height=\"{3:F2}\"", x, y, width, height);
+        _sb.Append("  <rect");
+        Attr("x", x);
+        Attr("y", y);
+        Attr("width", width);
+        Attr("height", height);
         if (fill is { } f)
-            attrs.Append(FillAttr(f));       // black omitted (SVG default), non-black emitted
+            AppendFill(f);                   // black omitted (SVG default), non-black emitted
         else
-            attrs.Append(" fill=\"none\"");   // an explicitly UNFILLED rect
+            _sb.Append(" fill=\"none\"");    // an explicitly UNFILLED rect
         if (stroke is { } s)
-            attrs.AppendFormat(Inv, " stroke=\"{0}\" stroke-width=\"{1:F3}\"", s.ToHex(), strokeWidth);
-        attrs.Append(SourceAttr());
-        _sb.AppendLine($"  <rect{attrs}/>");
+            AppendStroke(s, strokeWidth);
+        AppendSource();
+        _sb.Append("/>").AppendLine();
     }
 
     public void DrawFilledQuad((double X, double Y) p0, (double X, double Y) p1,
         (double X, double Y) p2, (double X, double Y) p3, Color fill)
     {
-        _sb.AppendLine(string.Format(Inv,
-            "  <polygon points=\"{0:F2},{1:F2} {2:F2},{3:F2} {4:F2},{5:F2} {6:F2},{7:F2}\"{8}{9}/>",
-            p0.X, p0.Y, p1.X, p1.Y, p2.X, p2.Y, p3.X, p3.Y, FillAttr(fill), SourceAttr()));
+        _sb.Append("  <polygon points=\"");
+        AppendPoint(p0);
+        _sb.Append(' ');
+        AppendPoint(p1);
+        _sb.Append(' ');
+        AppendPoint(p2);
+        _sb.Append(' ');
+        AppendPoint(p3);
+        _sb.Append('"');
+        AppendFill(fill);
+        AppendSource();
+        _sb.Append("/>").AppendLine();
     }
 
     public void DrawEllipse(double cx, double cy, double rx, double ry,
         Color? fill = null, Color? stroke = null, double strokeWidth = 0)
     {
-        var attrs = new StringBuilder(96);
-        attrs.AppendFormat(Inv, " cx=\"{0:F2}\" cy=\"{1:F2}\" rx=\"{2:F2}\" ry=\"{3:F2}\"", cx, cy, rx, ry);
+        _sb.Append("  <ellipse");
+        Attr("cx", cx);
+        Attr("cy", cy);
+        Attr("rx", rx);
+        Attr("ry", ry);
         if (fill is { } f)
-            attrs.Append(FillAttr(f));       // black omitted (SVG default), non-black emitted
+            AppendFill(f);                   // black omitted (SVG default), non-black emitted
         else
-            attrs.Append(" fill=\"none\"");
+            _sb.Append(" fill=\"none\"");
         if (stroke is { } s)
-            attrs.AppendFormat(Inv, " stroke=\"{0}\" stroke-width=\"{1:F3}\"", s.ToHex(), strokeWidth);
-        attrs.Append(SourceAttr());
-        _sb.AppendLine($"  <ellipse{attrs}/>");
+            AppendStroke(s, strokeWidth);
+        AppendSource();
+        _sb.Append("/>").AppendLine();
     }
 
     public void DrawCircle(double cx, double cy, double r, Color? fill = null)
     {
-        _sb.AppendLine(string.Format(Inv,
-            "  <circle cx=\"{0:F2}\" cy=\"{1:F2}\" r=\"{2:F2}\"{3}{4}/>",
-            cx, cy, r, FillAttr(fill), SourceAttr()));
+        _sb.Append("  <circle");
+        Attr("cx", cx);
+        Attr("cy", cy);
+        Attr("r", r);
+        AppendFill(fill);
+        AppendSource();
+        _sb.Append("/>").AppendLine();
     }
 
     public void DrawClosedBezier(
@@ -131,18 +215,32 @@ internal sealed class SvgDrawingContext : IDrawingContext
         (double X, double Y) p1, (double X, double Y) c2Back, (double X, double Y) c1Back,
         Color? fill = null, double strokeWidth = 0)
     {
-        var color = (fill ?? Color.Black).ToHex();
-        var d = string.Format(Inv,
-            "M {0:F2},{1:F2} C {2:F2},{3:F2} {4:F2},{5:F2} {6:F2},{7:F2} C {8:F2},{9:F2} {10:F2},{11:F2} {0:F2},{1:F2} Z",
-            p0.X, p0.Y, c1.X, c1.Y, c2.X, c2.Y, p1.X, p1.Y, c2Back.X, c2Back.Y, c1Back.X, c1Back.Y);
+        _sb.Append("  <path d=\"M ");
+        AppendPoint(p0);
+        _sb.Append(" C ");
+        AppendPoint(c1);
+        _sb.Append(' ');
+        AppendPoint(c2);
+        _sb.Append(' ');
+        AppendPoint(p1);
+        _sb.Append(" C ");
+        AppendPoint(c2Back);
+        _sb.Append(' ');
+        AppendPoint(c1Back);
+        _sb.Append(' ');
+        AppendPoint(p0);
+        _sb.Append(" Z\"");
+        AppendFill(fill);
         // A round-cap/round-join stroke in the fill colour rounds the tapered ends,
         // matching LilyPond's slur/tie stencil (fill + round stroke).
-        var strokeAttr = strokeWidth > 0
-            ? string.Format(Inv,
-                " stroke=\"{0}\" stroke-width=\"{1:F2}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"",
-                color, strokeWidth)
-            : "";
-        _sb.AppendLine($"  <path d=\"{d}\"{FillAttr(fill)}{strokeAttr}{SourceAttr()}/>");
+        if (strokeWidth > 0)
+        {
+            _sb.Append(" stroke=\"").Append((fill ?? Color.Black).ToHex()).Append("\" stroke-width=\"");
+            F2(strokeWidth);
+            _sb.Append("\" stroke-linecap=\"round\" stroke-linejoin=\"round\"");
+        }
+        AppendSource();
+        _sb.Append("/>").AppendLine();
     }
 
     /// <summary>
@@ -151,7 +249,7 @@ internal sealed class SvgDrawingContext : IDrawingContext
     /// <c>font-family</c> — which overrides the class — for any other design. Also RECORDS
     /// the design, so the document embeds exactly the faces the score drew with.
     /// </summary>
-    private string MusicFaceAttr()
+    private void AppendMusicFace()
     {
         _usedDesigns?.Add(_musicDesign);
         DesignLog?.Add(_musicDesign);
@@ -159,19 +257,35 @@ internal sealed class SvgDrawingContext : IDrawingContext
         // (the VS Code preview injects Emmentaler itself and omits @font-face entirely) then
         // draws the glyph from the default design instead of showing tofu. It is the wrong
         // OUTLINE by ~0.5% and the right glyph, which is the better of the two failures.
-        return _musicDesign == EmmentalerFaces.DefaultDesign
-            ? ""
-            : string.Format(Inv, " font-family=\"{0}, Emmentaler, serif\"",
-                            EmmentalerFaces.Family(_musicDesign));
+        if (_musicDesign != EmmentalerFaces.DefaultDesign)
+            _sb.Append(" font-family=\"").Append(EmmentalerFaces.Family(_musicDesign))
+               .Append(", Emmentaler, serif\"");
+    }
+
+    /// <summary>
+    /// One music <c>&lt;text&gt;</c> element: <c>class="music"</c>, the face, an optional
+    /// <c>pointer-events="none"</c> (interactive, non-clickable glyphs), the anchor, the
+    /// font size, the fill, the source and the escaped glyph.
+    /// </summary>
+    private void MusicText(char glyph, double x, double y, double fontSize, Color? fill,
+        bool pointerEventsNone)
+    {
+        _sb.Append("  <text class=\"music\"");
+        AppendMusicFace();
+        if (pointerEventsNone)
+            _sb.Append(" pointer-events=\"none\"");
+        Attr("x", x);
+        Attr("y", y);
+        Attr("font-size", fontSize);
+        AppendFill(fill);
+        AppendSource();
+        _sb.Append('>');
+        AppendEscaped(glyph);
+        _sb.Append("</text>").AppendLine();
     }
 
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
-    {
-        var fillAttr = FillAttr(fill);
-        _sb.AppendLine(string.Format(Inv,
-            "  <text class=\"music\"{6} x=\"{0:F2}\" y=\"{1:F2}\" font-size=\"{2:F2}\"{3}{4}>{5}</text>",
-            x, y, fontSize, fillAttr, SourceAttr(), Escape(glyph), MusicFaceAttr()));
-    }
+        => MusicText(glyph, x, y, fontSize, fill, pointerEventsNone: false);
 
     public void DrawNotehead(char glyph, double x, double y, double fontSize,
         Color? fill, double inkWidth, double inkHeight)
@@ -191,13 +305,20 @@ internal sealed class SvgDrawingContext : IDrawingContext
         // head is clickable. Both carry the same data-pos (the glyph for
         // highlight, the rect for the click); the webview skips the .nh-hit rect
         // when it recolors highlights so the transparent box never shows.
-        var fillAttr = FillAttr(fill);
-        _sb.AppendLine(string.Format(Inv,
-            "  <text class=\"music\"{6} pointer-events=\"none\" x=\"{0:F2}\" y=\"{1:F2}\" font-size=\"{2:F2}\"{3}{4}>{5}</text>",
-            x, y, fontSize, fillAttr, SourceAttr(), Escape(glyph), MusicFaceAttr()));
-        _sb.AppendLine(string.Format(Inv,
-            "  <rect class=\"nh-hit\" x=\"{0:F2}\" y=\"{1:F2}\" width=\"{2:F2}\" height=\"{3:F2}\" fill=\"none\" pointer-events=\"all\"{4}/>",
-            x, y - inkHeight / 2, inkWidth, inkHeight, SourceAttr()));
+        MusicText(glyph, x, y, fontSize, fill, pointerEventsNone: true);
+        HitRect(x, y - inkHeight / 2, inkWidth, inkHeight);
+    }
+
+    private void HitRect(double x, double y, double width, double height)
+    {
+        _sb.Append("  <rect class=\"nh-hit\"");
+        Attr("x", x);
+        Attr("y", y);
+        Attr("width", width);
+        Attr("height", height);
+        _sb.Append(" fill=\"none\" pointer-events=\"all\"");
+        AppendSource();
+        _sb.Append("/>").AppendLine();
     }
 
     public void DrawHitRect(double x, double y, double width, double height)
@@ -205,9 +326,7 @@ internal sealed class SvgDrawingContext : IDrawingContext
         // Interactive preview only: a transparent click target (the nh-hit class
         // keeps it out of the webview's highlight recolor, like the notehead's).
         if (!_interactive) return;
-        _sb.AppendLine(string.Format(Inv,
-            "  <rect class=\"nh-hit\" x=\"{0:F2}\" y=\"{1:F2}\" width=\"{2:F2}\" height=\"{3:F2}\" fill=\"none\" pointer-events=\"all\"{4}/>",
-            x, y, width, height, SourceAttr()));
+        HitRect(x, y, width, height);
     }
 
     public void DrawAttachedGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
@@ -223,10 +342,7 @@ internal sealed class SvgDrawingContext : IDrawingContext
         // note's clickable area would spill left onto the (loose) accidental box.
         // pointer-events="none" keeps the highlight (fill recolor) while the
         // notehead's nh-hit rect owns the click.
-        var fillAttr = FillAttr(fill);
-        _sb.AppendLine(string.Format(Inv,
-            "  <text class=\"music\"{6} pointer-events=\"none\" x=\"{0:F2}\" y=\"{1:F2}\" font-size=\"{2:F2}\"{3}{4}>{5}</text>",
-            x, y, fontSize, fillAttr, SourceAttr(), Escape(glyph), MusicFaceAttr()));
+        MusicText(glyph, x, y, fontSize, fill, pointerEventsNone: true);
     }
 
     public void DrawText(string text, double x, double y, double fontSize,
@@ -234,27 +350,29 @@ internal sealed class SvgDrawingContext : IDrawingContext
         TextAnchor anchor = TextAnchor.Start, Color? fill = null,
         VerticalAnchor verticalAnchor = VerticalAnchor.Baseline)
     {
-        var attrs = new StringBuilder(128);
-        attrs.AppendFormat(Inv, " x=\"{0:F2}\" y=\"{1:F2}\" font-size=\"{2:F2}\"", x, y, fontSize);
+        _sb.Append("  <text");
+        Attr("x", x);
+        Attr("y", y);
+        Attr("font-size", fontSize);
         string? family = FamilyAttributeFor(role);
         // The document root names the bundled serif (SvgDocumentContext.WriteHeader), so a
         // role that resolves to it inherits and emits nothing — an element attribute
         // still overrides the inherited one where a role was bound to something else.
         if (family != null)
-            attrs.AppendFormat(Inv, " font-family=\"{0}\"", EscapeAttr(family));
+            _sb.Append(" font-family=\"").Append(EscapeAttr(family)).Append('"');
         if ((style & FontStyle.Bold) != 0)
-            attrs.Append(" font-weight=\"bold\"");
+            _sb.Append(" font-weight=\"bold\"");
         if ((style & FontStyle.Italic) != 0)
-            attrs.Append(" font-style=\"italic\"");
+            _sb.Append(" font-style=\"italic\"");
         if (anchor != TextAnchor.Start)
-            attrs.Append(anchor == TextAnchor.Middle ? " text-anchor=\"middle\"" : " text-anchor=\"end\"");
+            _sb.Append(anchor == TextAnchor.Middle ? " text-anchor=\"middle\"" : " text-anchor=\"end\"");
         if (verticalAnchor != VerticalAnchor.Baseline)
-            attrs.Append(verticalAnchor == VerticalAnchor.Middle
+            _sb.Append(verticalAnchor == VerticalAnchor.Middle
                 ? " dominant-baseline=\"central\""
                 : " dominant-baseline=\"hanging\"");
-        attrs.Append(FillAttr(fill));
-        attrs.Append(SourceAttr());
-        _sb.AppendLine($"  <text{attrs}>{EscapeText(text)}</text>");
+        AppendFill(fill);
+        AppendSource();
+        _sb.Append('>').Append(EscapeText(text)).Append("</text>").AppendLine();
     }
 
     /// <summary>
@@ -314,10 +432,15 @@ internal sealed class SvgDrawingContext : IDrawingContext
         }
         else
         {
-            var ts = string.Format(Inv,
-                "translate({0:F2},{1:F2}) scale({2:F4},{3:F4})",
-                transform.TranslateX, transform.TranslateY, transform.ScaleX, transform.ScaleY);
-            _sb.AppendLine($"  <g transform=\"{ts}\">");
+            _sb.Append("  <g transform=\"translate(");
+            F2(transform.TranslateX);
+            _sb.Append(',');
+            F2(transform.TranslateY);
+            _sb.Append(") scale(");
+            F4(transform.ScaleX);
+            _sb.Append(',');
+            F4(transform.ScaleY);
+            _sb.Append(")\">").AppendLine();
         }
         return new ScopeAction(() =>
         {
@@ -331,33 +454,63 @@ internal sealed class SvgDrawingContext : IDrawingContext
     {
         if (!_interactive)
             return NullScope.Instance;
-        _sb.AppendLine($"  <g class=\"{label}\">");
+        _sb.Append("  <g class=\"").Append(label).Append("\">").AppendLine();
         return new ScopeAction(() => _sb.AppendLine("  </g>"));
     }
 
-    private string SourceAttr()
+    /// <summary>
+    /// The source attribute(s) of the element being emitted: <c>data-pos</c>, and in
+    /// interactive mode the <c>data-alt</c> aliases. Also feeds the capture log.
+    /// </summary>
+    private void AppendSource()
     {
         if (!_currentSourcePosition.HasValue)
-            return "";
-        var s = string.Format(Inv, " data-pos=\"{0}\"", _currentSourcePosition.Value);
+            return;
+        int pos = _currentSourcePosition.Value;
+        _sb.Append(" data-pos=\"");
+        AppendInt(pos);
+        _sb.Append('"');
         if (SourceLog is { } capture)
         {
-            capture.Add(_currentSourcePosition.Value);
+            capture.Add(pos);
             if (_currentAliases is { Count: > 0 })
                 capture.AddRange(_currentAliases);
         }
         // data-alt lists the extra highlight offsets: a caret on any of them lights this
         // element too (the webview matches data-pos OR a data-alt member); the click still
         // uses data-pos. Only in interactive mode (aliases are null otherwise).
-        return _currentAliases is { Count: > 0 }
-            ? s + string.Format(Inv, " data-alt=\"{0}\"", string.Join(" ", _currentAliases))
-            : s;
+        if (_currentAliases is { Count: > 0 } aliases)
+        {
+            _sb.Append(" data-alt=\"");
+            for (int i = 0; i < aliases.Count; i++)
+            {
+                if (i > 0)
+                    _sb.Append(' ');
+                AppendInt(aliases[i]);
+            }
+            _sb.Append('"');
+        }
     }
 
-    private static string Escape(char c) => c switch
+    private void AppendInt(int value)
     {
-        '<' => "&lt;", '>' => "&gt;", '&' => "&amp;", _ => c.ToString()
-    };
+        Span<char> buffer = stackalloc char[16];
+        if (value.TryFormat(buffer, out int written, default, Inv))
+            _sb.Append(buffer[..written]);
+        else
+            _sb.Append(value.ToString(Inv));
+    }
+
+    private void AppendEscaped(char c)
+    {
+        switch (c)
+        {
+            case '<': _sb.Append("&lt;"); break;
+            case '>': _sb.Append("&gt;"); break;
+            case '&': _sb.Append("&amp;"); break;
+            default: _sb.Append(c); break;
+        }
+    }
 
     private static string EscapeText(string s) =>
         s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");

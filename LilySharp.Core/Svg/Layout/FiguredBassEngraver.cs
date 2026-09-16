@@ -71,7 +71,7 @@ internal static class FiguredBassEngraver
     /// LILYPOND-REF: lily/side-position-interface.cc:433-453 aligned_side's staff_padding floor:
     /// <c>diff = dir * staff_extent[dir] + staff_padding - dir * total_off;
     /// total_off += dir * max (diff, 0.0)</c>, the same block
-    /// <c>DynamicEngraver.BaselineY</c> transcribes; the staff extent comes from
+    /// <c>DynamicEngraver.SpannerOffsetY</c> transcribes; the staff extent comes from
     /// <see cref="DynamicEngraver.StaffExtent"/>, the one home for it.
     /// LILYPOND-REF: scm/define-grobs.scm:395 staff-padding 1.0 of BassFigureAlignmentPositioning (side-position-interface at :407).
     /// <para>

@@ -46,7 +46,7 @@ internal sealed class LyricPlainVerseShadowedValidator : ISemanticValidator
         // The occurrence count is only accurate when the form is walked with a voice
         // bound. The first declared part names the primary voice.
         var root = tree.GetRoot();
-        string? voice = root.DescendantNodes().OfType<PartDeclarationSyntax>().FirstOrDefault()?.Name.Text;
+        string? voice = TopLevelNodes.OfRoot<PartDeclarationSyntax>(root).FirstOrDefault()?.Name.Text;
 
         // Lyrics attach EXPLICITLY (`staff X with lyrics NAME`) — there is no auto-attach,
         // so resolve the tracks the score binds to this voice and collect them; otherwise

@@ -311,7 +311,7 @@ internal static class TrillSpannerEngraver
     ///   reads it through <c>get_maybe_pure_property</c> with a 0.0 default) and
     ///   <c>minimum-space</c>, so the :384-385 floor between padding and the refpoint floor
     ///   has nothing to read at all. DynamicLineSpanner DOES declare minimum-space (1.2),
-    ///   which is why <c>DynamicEngraver.BaselineY</c> spells that step and this does not.
+    ///   which is why <c>DynamicEngraver.SpannerOffsetY</c> spells that step and this does not.
     ///   The support set is the spanned NOTE COLUMNS — whole columns, not heads and stems
     ///   severally (scm/scheme-engravers.scm:1830 side-support-elements adds the
     ///   note-column-interface grob), so the Stem-direction skip at :273-281 never fires

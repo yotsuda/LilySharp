@@ -98,15 +98,15 @@ internal static class LayoutPlanReader
 
     /// <summary>Every named top-level layout declaration, in document order.</summary>
     internal static IReadOnlyList<LayoutDeclarationSyntax> NamedDeclarations(SyntaxNode root) =>
-        [.. root.DescendantNodes().OfType<LayoutDeclarationSyntax>()
-            .Where(l => l.NameToken != null && l.IsBlock && !FontPlanReader.IsInsideRender(l))];
+        [.. TopLevelNodes.OfRoot<LayoutDeclarationSyntax>(root)
+            .Where(l => l.NameToken != null && l.IsBlock)];
 
     /// <summary>The file's UNNAMED top-level block, or null — the default every score
     /// that references nothing lays out by. The LAST when there are several, as the
     /// collector reads them in document order (the repeat is warned about).</summary>
     internal static LayoutDeclarationSyntax? FileDefault(SyntaxNode root) =>
-        root.DescendantNodes().OfType<LayoutDeclarationSyntax>()
-            .LastOrDefault(l => l.NameToken == null && l.IsBlock && !FontPlanReader.IsInsideRender(l));
+        TopLevelNodes.OfRoot<LayoutDeclarationSyntax>(root)
+            .LastOrDefault(l => l.NameToken == null && l.IsBlock);
 
     /// <summary>
     /// Resolves a score reference's name to its top-level declaration — ONE HOME for the

@@ -130,6 +130,25 @@ public class IncrementalParseTests
         AssertTreesEquivalent(full, incremental);
     }
 
+    // The number scanner's glued suffixes look FIVE characters past the digits (the four
+    // letters of `isis`/`eses`, then the character after them). With the guard at two,
+    // typing the last `s` of `3isis` reused the old `3` token (it ended three characters
+    // before the edit) and the stream stayed `3` + `isis` where a full lex takes the
+    // ScaleDegree `3isis` whole — and the wrong stream then survived every later
+    // keystroke (session 395). Same shape for an ottava suffix (`8v` + `b`).
+    [Theory]
+    [InlineData("c4 d 3isi e |", "3isi", "s")]
+    [InlineData("c4 d 3ese e |", "3ese", "s")]
+    [InlineData("part m { transposition 8v }", "8v", "b")]
+    [InlineData("part m { transposition 15m }", "15m", "a")]
+    public void WithChange_GluedSuffixLookahead_MatchesFullParse(string src, string before, string typed)
+    {
+        var old = SyntaxTree.Parse(src);
+        int at = src.IndexOf(before, StringComparison.Ordinal) + before.Length;
+        var incremental = Edit(old, at, 0, typed, out var full);
+        AssertTreesEquivalent(full, incremental);
+    }
+
     [Fact]
     public void WithChange_OnTreeWithErrors_MatchesFullParse()
     {

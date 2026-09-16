@@ -240,21 +240,10 @@ internal static class StaffAccidentalColumns
                 if (!measureChanged)
                     continue;
 
-                measures[mi] = new Measure(
-                    items.ToImmutable(),
-                    measure.StartBarline, measure.EndBarline, measure.SectionLabel,
-                    measure.SourceStart, measure.SourceEnd,
-                    hasBreakAfter: measure.HasBreakAfter,
-                    lineBreakPermission: measure.LineBreakPermission,
-                    breakPenalty: measure.BreakPenalty,
-                    pageBreakPermission: measure.PageBreakPermission,
-                    pageTurnPermission: measure.PageTurnPermission,
-                    sectionLabelPosition: measure.SectionLabelPosition,
-                    isPickup: measure.IsPickup,
-                    unmetered: measure.Unmetered,
-                    breaksMidBar: measure.BreaksMidBar,
-                    continuesBar: measure.ContinuesBar,
-                    unmeteredPosition: measure.UnmeteredPosition);
+                // A record COPY: the constructor takes no EndHighlightAliases /
+                // ContinuedFromMeasure / IsEmptyPlaceholder / IsTrailingClefColumn, so
+                // rebuilding through it dropped all four (session 395).
+                measures[mi] = measure with { Items = items.ToImmutable() };
                 voiceChanged = true;
             }
 

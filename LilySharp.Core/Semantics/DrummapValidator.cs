@@ -68,7 +68,7 @@ internal sealed class DrummapValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        foreach (var dm in tree.GetRoot().DescendantNodes().OfType<DrummapDeclarationSyntax>())
+        foreach (var dm in TopLevelNodes.OfRoot<DrummapDeclarationSyntax>(tree.GetRoot()))
         {
             foreach (var (name, nameSpan, settings) in dm.Entries)
             {

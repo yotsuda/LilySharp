@@ -27,14 +27,17 @@ namespace LilySharp.Core.Parser;
 /// Soundness rests on the lexer being a pure function of (text, offset) with
 /// no carried state:
 /// <list type="bullet">
-/// <item><b>Prefix</b> — a token whose span ends more than two characters
-/// before the edit lexes from unchanged text AND its end was decided by
-/// unchanged characters, so it is reused verbatim. Two is the widest lookahead
-/// past a token's end in the lexer, and there are two of them: the trivia
-/// scanner (<c>//</c>, <c>/*</c>, <c>\r\n</c>) and the number scanner, which
-/// reads <c>.</c> plus one digit to decide whether an integer continues into a
-/// decimal. Typing the <c>.</c> of <c>3.5</c> falls inside the guard, so the
-/// <c>3</c> is re-lexed rather than reused.</item>
+/// <item><b>Prefix</b> — a token whose span ends more than <see cref="Guard"/>
+/// characters before the edit lexes from unchanged text AND its end was decided
+/// by unchanged characters, so it is reused verbatim. The guard is the widest
+/// lookahead past a token's end in the lexer: the trivia scanner (<c>//</c>,
+/// <c>/*</c>, <c>\r\n</c>) and the decimal test read two characters, and the
+/// number scanner's glued suffixes read up to five — the four letters of
+/// <c>isis</c>/<c>eses</c> plus the character after them, which must not be a
+/// letter (<c>Lexer.GluedDegreeAccidentalLength</c>; the ottava suffixes read
+/// three). Typing the <c>.</c> of <c>3.5</c>, or the last <c>s</c> of
+/// <c>3isis</c>, falls inside the guard, so the <c>3</c> is re-lexed rather
+/// than reused.</item>
 /// <item><b>Damage</b> — re-lexed from the first unreusable token's start.</item>
 /// <item><b>Suffix</b> — once the fresh lexer reaches a token start at or
 /// beyond the damage end that coincides with an OLD token start (shifted by
@@ -47,12 +50,15 @@ namespace LilySharp.Core.Parser;
 internal static class IncrementalLexer
 {
     /// <summary>
-    /// Two-character guard: the widest lookahead any scanner uses past the end of
-    /// what it has consumed — the trivia scanner deciding where trailing trivia
-    /// stops, and <c>ScanNumber</c> deciding whether <c>.</c> + a digit continues
-    /// the number. Widen this if a third scanner ever looks further.
+    /// Five-character guard: the widest lookahead any scanner uses past the end of
+    /// what it has consumed. The trivia scanner and <c>ScanNumber</c>'s decimal
+    /// test read two; <c>ScanNumber</c>'s glued degree-accidental test reads the
+    /// four letters of <c>isis</c>/<c>eses</c> and then the character after them
+    /// (it must not be a letter), so a number followed by <c>isi</c> was reused
+    /// while a full lex would have taken <c>3isis</c> whole once the last letter
+    /// arrived (session 395). Widen this if a scanner ever looks further.
     /// </summary>
-    private const int Guard = 2;
+    private const int Guard = 5;
 
     public static List<SyntaxToken> Splice(
         IReadOnlyList<SyntaxToken> oldTokens, string newText,

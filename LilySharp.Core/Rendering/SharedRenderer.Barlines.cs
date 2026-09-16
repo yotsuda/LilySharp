@@ -78,7 +78,7 @@ internal static partial class SharedRenderer
             }
 
             // End barline drawn so its right edge sits on the column boundary
-            // (matches SvgRenderer: endX - visualWidth). Normal measures carry
+            // (endX - visualWidth). Normal measures carry
             // BarlineType.Single from the collector.
             //
             // Plain barlines INSIDE a multi-measure-rest run are suppressed —
@@ -221,7 +221,7 @@ internal static partial class SharedRenderer
     }
 
     /// <summary>
-    /// Draws a barline of the given type. Mirrors <c>SvgRenderer.DrawBarline</c>.
+    /// Draws a barline of the given type.
     /// </summary>
     /// <remarks>LILYPOND-REF: scm/bar-line.scm — bar-line glyph composition.</remarks>
     private static void DrawBarline(BarlineType type, double x, double staffY, double height,

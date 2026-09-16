@@ -62,8 +62,7 @@ internal sealed class MeasureValidator : ISemanticValidator
     public void Validate(SyntaxTree tree)
     {
         var root = tree.GetRoot();
-        _structured = root.DescendantNodes().Any(n =>
-            n is PartDeclarationSyntax or SectionDeclarationSyntax or FormDeclarationSyntax);
+        _structured = TopLevelNodes.IsStructured(root);
         _phraseBodies = CollectPhraseBodies(root);
         _boundaries = new SectionBoundaryBars(root, _phraseBodies);
         ValidateNode(root);
@@ -115,10 +114,10 @@ internal sealed class MeasureValidator : ISemanticValidator
     {
         // Only for a file that asks to PRINT something: a fragment with no `score` block
         // (a parser fixture, an include) is making no claim about a page.
-        var score = root.DescendantNodes().OfType<RenderDeclarationSyntax>().FirstOrDefault();
+        var score = TopLevelNodes.OfRoot<RenderDeclarationSyntax>(root).FirstOrDefault();
         if (score is null
             || Svg.Collector.MeasureCollector.CountBarsInScope(root) > 0
-            || root.DescendantNodes().Any(n => n.Kind == SyntaxKind.LyricMeasure))
+            || root.KindSites(SyntaxKind.LyricMeasure).Any())
             return;
         _diagnostics.Warning(score.RenderKeyword.Span, DiagnosticCodes.ScoreHasNoMusic,
             "This score has no bars — every staff would print empty. Write some music, or "

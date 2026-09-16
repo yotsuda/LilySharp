@@ -33,7 +33,7 @@ internal sealed class EmptyScoreValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        foreach (var render in tree.GetRoot().DescendantNodes().OfType<RenderDeclarationSyntax>())
+        foreach (var render in TopLevelNodes.OfRoot<RenderDeclarationSyntax>(tree.GetRoot()))
         {
             // "What counts as a render item" is decided in exactly one place — the
             // parser that the engraver itself uses. Re-listing the item node kinds

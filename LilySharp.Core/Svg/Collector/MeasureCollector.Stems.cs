@@ -93,22 +93,11 @@ public sealed partial class MeasureCollector
             _ => Fraction.Zero,
         };
 
+        // A record COPY: the constructor takes no EndHighlightAliases / ContinuedFromMeasure /
+        // IsEmptyPlaceholder / IsTrailingClefColumn, so rebuilding through it dropped all four
+        // (session 395).
         static Measure WithItems(Measure measure, ImmutableArray<MusicItem> items) =>
-            new Measure(
-                items,
-                measure.StartBarline, measure.EndBarline, measure.SectionLabel,
-                measure.SourceStart, measure.SourceEnd,
-                hasBreakAfter: measure.HasBreakAfter,
-                lineBreakPermission: measure.LineBreakPermission,
-                breakPenalty: measure.BreakPenalty,
-                pageBreakPermission: measure.PageBreakPermission,
-                pageTurnPermission: measure.PageTurnPermission,
-                sectionLabelPosition: measure.SectionLabelPosition,
-                isPickup: measure.IsPickup,
-                unmetered: measure.Unmetered,
-                breaksMidBar: measure.BreaksMidBar,
-                continuesBar: measure.ContinuesBar,
-                unmeteredPosition: measure.UnmeteredPosition);
+            measure with { Items = items };
 
         var rebuilt = voices.ToBuilder();
         for (int vi = 0; vi < voices.Length; vi++)
@@ -496,22 +485,9 @@ public sealed partial class MeasureCollector
         {
             if (work[mi] is not { } items)
                 continue;
-            var m = measures[mi];
-            measures[mi] = new Measure(
-                ImmutableArray.Create(items),
-                m.StartBarline, m.EndBarline, m.SectionLabel,
-                m.SourceStart, m.SourceEnd,
-                hasBreakAfter: m.HasBreakAfter,
-                lineBreakPermission: m.LineBreakPermission,
-                breakPenalty: m.BreakPenalty,
-                pageBreakPermission: m.PageBreakPermission,
-                pageTurnPermission: m.PageTurnPermission,
-                sectionLabelPosition: m.SectionLabelPosition,
-                isPickup: m.IsPickup,
-                unmetered: m.Unmetered,
-                breaksMidBar: m.BreaksMidBar,
-                continuesBar: m.ContinuesBar,
-                unmeteredPosition: m.UnmeteredPosition);
+            // A record COPY (see WithItems above): every beamed measure went through here
+            // AFTER FinalizeMeasures set its EndHighlightAliases, and lost them (session 395).
+            measures[mi] = measures[mi] with { Items = ImmutableArray.Create(items) };
         }
     }
 
