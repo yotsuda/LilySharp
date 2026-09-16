@@ -168,9 +168,11 @@ public class CollectEditResumeTests
         // liveness assertion is what makes a silently-declining guard set fail
         // here instead of reading as a pass.
         var path = Path.Combine(CollectResumeTests.FindRepoRoot(),
-            "scratch", "lpreg", "perf-v2bow1k.lys");
-        if (!File.Exists(path))
-            return; // checkout without the perf corpus
+            "audit", "lpreg", "perf-v2bow1k.lys");
+        // ⚠️ No File.Exists skip: this read scratch/lpreg until 2026-09-16, the
+        // book was never there, and the skip passed the test on every machine.
+        // The book is tracked — a missing one is a failure, not a skip.
+        Assert.True(File.Exists(path), $"perf corpus book missing: {path}");
         var baseText = File.ReadAllText(path);
         int idx = baseText.IndexOf("e4(", baseText.Length / 2, StringComparison.Ordinal);
         Assert.True(idx >= 0, "bench token not found");
@@ -202,9 +204,11 @@ public class CollectEditResumeTests
         // A splice that fires anyway would adopt the OLD pitch: the deep
         // compare inside RunOneEdit is what bites then.
         var path = Path.Combine(CollectResumeTests.FindRepoRoot(),
-            "scratch", "lpreg", "perf-v2bow1k.lys");
-        if (!File.Exists(path))
-            return; // checkout without the perf corpus
+            "audit", "lpreg", "perf-v2bow1k.lys");
+        // ⚠️ No File.Exists skip: this read scratch/lpreg until 2026-09-16, the
+        // book was never there, and the skip passed the test on every machine.
+        // The book is tracked — a missing one is a failure, not a skip.
+        Assert.True(File.Exists(path), $"perf corpus book missing: {path}");
         var oldText = File.ReadAllText(path);
         // Mid-voice-0: the primary voice's block occupies the first half of the
         // book, so a token found from 25% sits strictly inside it.

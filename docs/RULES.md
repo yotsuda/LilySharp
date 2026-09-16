@@ -3799,7 +3799,14 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
   「skip しなかった回数」を数えないと在ることの証明にならない。**
   ⚠️ **組成が正しいかは別問題**——上の「勘で作り直さない」はそのまま生きている。
   ⚠️ **冊数は 82 ではなく 80**（§5.1 の本文は第171 時点で stale。数え直しは
-  `Get-ChildItem audit\lp-regression\lys -Filter *.lys`）。
+  `Get-ChildItem audit\lp-regression\lys -Filter *.lys`）。**2026-09-16 は 81。**
+  ★★★ **2026-09-16 の決着＝`scratch/` を private repo `LilySharp-Lab`（本体の兄弟フォルダ）へ出した。**
+  第171 が作り直した `-Compare` 版はこの機械には無く（ここの `scratch/lpreport/rerender-ls.ps1` は `-Compare` の無い
+  古い版で、`net9.0` の lysc を指していた）、**2 台の PC で別の道具が同じ名前で走っていた。**
+  道具は `LilySharp-Lab\tools\rerender-ls.ps1` の 1 本に揃え（repo は `..\LilySharp`・lysc は Release net10.0・
+  baseline は `runs\lpreport\baseline.json`＝gitignore・PC ごと）、**毒を入れて赤を見た**（コーパス 1 冊の中身を
+  隣の本に差し替え → `絵が動いた本 1 / 81`）。**baseline は HEAD と変更中のファイル数を記録する**＝下の
+  「baseline の日付を見る」は `-Compare` の 1 行目で読める。作業場所・読み替えは HANDOFF §0。
 - ★ **TFM は net10.0**（全 5 projects）、`global.json` は SDK **10.0.203** +
   `rollForward: latestFeature`。上の「net10 へ上げるなら TFM ごと専用の便で」を実行した便が
   これ——SDK ピンだけを動かさず、**5 つの csproj・CI/release workflow・BenchmarkDotNet の
@@ -3896,9 +3903,10 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
   既定は相対オクターブ。mid-music の key/time/clef 変更はバックスラッシュ無し。
   空小節は `| |` ペア。part 名に予約語を避ける（`p` は dynamic）
 - ★★ ⚠️ **baseline を持つ計器は、比べる前に baseline の*日付*を見る**
-  （2026-08-25・第254セッション）。§5.1 の証明 ⑴ は `scratch/lpreport/baseline.json` と
+  （2026-08-25・第254セッション）。§5.1 の証明 ⑴ は `scratch/lpreport/baseline.json`
+  （2026-09-16〜 `LilySharp-Lab\runs\lpreport\baseline.json`＝HEAD を中に記録する）と
   突き合わせるが、**`scratch/` は git 管理外なので「いつの木のものか」はファイルの日付にしか
-  書かれていない**。第254 は **コメントしか変えていない diff で「絵が動いた本 1 / 81」**を受け取った
+  書かれていない**（当時）。第254 は **コメントしか変えていない diff で「絵が動いた本 1 / 81」**を受け取った
   ——**baseline が 2 日 stale で、動かしたのは間に入った commit だった。**
   ⇒ ★★ **手順**: **`-Compare` が非ゼロを出したら、結論の前に
   `git stash` → **HEAD で baseline を取り直す** → `git stash pop` → 比べ直す**
@@ -4017,14 +4025,14 @@ dotnet build LilySharp.slnx --no-incremental -v q 2>&1 |
 dotnet test LilySharp.Tests\LilySharp.Tests.csproj --no-build -v q 2>&1 `
   | Select-String '成功!|失敗!|Passed!|Failed!|\[FAIL\]'
 
-# 出力同一の証明 ⑴（RULES §5.1）: LP 回帰コーパス 80 冊の SVG ハッシュ
-# ⚠️ scratch/ は git 管理外。無ければ作り直す（§5.5）。毒を入れて赤を見てから使うこと
+# 出力同一の証明 ⑴（RULES §5.1）: LP 回帰コーパス 81 冊の SVG ハッシュ（1 回 約 6.5 分）
+# 道具は兄弟の private repo LilySharp-Lab の tools/（§5.5・2026-09-16 に毒で赤を確認済み）
 # ⚠️ ★★ このコーパスは全冊*単一システム*＝**システム間の量（対最小距離・改ページ側）には盲目**
 #    （2026-08-27・第264 実測: InterSystemPairMinimum の全 return に +0.01 でも 0/81）。
 #    その量の計器は**台帳の複数システム点**（同じ毒で 23 点赤・Release を建て直して測ること
 #    ——`--no-build` は §5.5 の偽緑）と **p188 全木 sweep**。毒はこの盲点も込みで当てる
-.\scratch\lpreport\rerender-ls.ps1              # 変更前に baseline を取る
-.\scratch\lpreport\rerender-ls.ps1 -Compare     # 変更後（「絵が動いた本 0 / 80」を期待）
+..\LilySharp-Lab\tools\rerender-ls.ps1            # 変更前に baseline を取る（Release lysc を建ててから）
+..\LilySharp-Lab\tools\rerender-ls.ps1 -Compare   # 変更後（「絵が動いた本 0 / 81」を期待）
 
 # LP 忠実度スコア
 # ⚠️ これは台帳の記録値を印字するだけで Lily# を測っていない（§5.3）。
@@ -4145,7 +4153,7 @@ dotnet run --project LilySharp.Cli -- png --crop --scale 4.0 "NAME.lys" "out.png
 | **exact** | `\|residual\| -le 1e-6`（台帳が宣言する `tolerance`・**境界を含む**） | 素朴な `-eq 0` は 462（丸めだけ残った 28 点を落とす）／`-lt` は 581（境界ちょうどの 1 点を落とす）——§1 は 490／582 のほう |
 | **OPEN:** | `why` が `OPEN:` で*始まる*点 | 素朴な grep は 12（説明文と「deliberately OPEN:」の語が当たる）——接頭辞で意味が決まる札は grep ではなく*その場所*で数える |
 | **snapshot** | `git ls-files 'LilySharp.Tests/Snapshots/*'` | `*.snap`／`*.verified.*` で数えると 0（この木の snapshot は `.svg`・置き場所が名前） |
-| **追跡コーパス** | `git ls-files '*.lys'`（`Fixtures` も `samples` も含む） | `audit` 配下だけ数えて 341（正しくは 567 級）。**ディスク上の全 `.lys`**（scratch 込み・掃きの母集団）はさらに別の数 |
+| **追跡コーパス** | `git ls-files '*.lys'`（`Fixtures` も `samples` も含む） | `audit` 配下だけ数えて 341（正しくは 567 級）。**ディスク上の全 `.lys`**（repo ＋ `LilySharp-Lab`・旧 scratch 除く・掃きの母集団）はさらに別の数 |
 | **未追跡** | porcelain の `StartsWith('??')` | `-like '??*'` は PowerShell の `?` がワイルドカードで**全行に一致**——木が clean なら両者 0 で「正しい数を誤った理由で出す計器」になる |
 | **`$e.Count`** | `@($e).Count` | `$e` が PSPropertyInfo の配列だと各要素の `Count` が返る |
 | **full の合計** | trx の `UnitTestResult` を outcome で数える | `成功!`／`Passed!` の語と終了コードは別々では足りない（§0） |

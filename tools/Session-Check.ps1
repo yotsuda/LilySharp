@@ -7,7 +7,7 @@ re-derives (or mis-derives) a recipe.
 .DESCRIPTION
   tools/Session-Check.ps1                       # git state + every handed-over count
   tools/Session-Check.ps1 -Build                # + solution build (--no-incremental, Core warnings)
-  tools/Session-Check.ps1 -Test -Scratch p353   # + full suite with a trx under scratch/p353 (host-death check)
+  tools/Session-Check.ps1 -Test -Session p353   # + full suite with a trx under ..\LilySharp-Lab\sessions\p353 (host-death check)
   tools/Session-Check.ps1 -DiffBase 7cad95db    # §7.5: Core '+' lines and LILYPOND-REF / LILYSHARP-OWN counts since a base
   tools/Session-Check.ps1 -Archive 350          # §7 3.5: move "## 以下は第350セッションの経緯" verbatim to the top of HANDOFF-ARCHIVE.md
 
@@ -20,13 +20,15 @@ The counts and their definitions (RULES §6 「数え方」):
 param(
     [switch]$Build,
     [switch]$Test,
-    [string]$Scratch,
+    [string]$Session,
     [string]$DiffBase,
     [int]$Archive
 )
 
 $ErrorActionPreference = 'Continue'
 $repo = Split-Path $PSScriptRoot -Parent
+# The working notes live in a private sibling repo (git clone https://github.com/yotsuda/LilySharp-Lab next to this one).
+$lab = Join-Path (Split-Path $repo -Parent) 'LilySharp-Lab'
 Set-Location $repo
 
 function Section([string]$title) { Write-Host ""; Write-Host "== $title" -ForegroundColor Cyan }
@@ -44,8 +46,11 @@ $untracked = @($st | Where-Object { $_.StartsWith('??') }).Count
 if ($st.Count) { $st | ForEach-Object { "  $_" } }
 $tfm = @(Get-ChildItem LilySharp.Cli\bin\Debug -Directory -ErrorAction SilentlyContinue | ForEach-Object Name)
 "lysc TFM dirs: $($tfm -join ', ')   (net10.0 だけが生きている・化石が並んだら消す)"
-$scr = @(Get-ChildItem scratch -Directory -Filter 'p3*' -ErrorAction SilentlyContinue | Sort-Object Name | Select-Object -Last 3 | ForEach-Object Name)
-"scratch の最新: $($scr -join ', ')"
+if (Test-Path $lab) {
+    $scr = @(Get-ChildItem (Join-Path $lab 'sessions') -Directory -ErrorAction SilentlyContinue |
+        Where-Object Name -match '^p\d+$' | Sort-Object { [int]$_.Name.Substring(1) } | Select-Object -Last 3 | ForEach-Object Name)
+    "Lab sessions の最新: $($scr -join ', ')   (git -C $lab status -sb: $(git -C $lab status -sb | Select-Object -First 1))"
+} else { "⚠️ $lab が無い＝作業記録・実コーパスが無い（git clone https://github.com/yotsuda/LilySharp-Lab）" }
 
 # ---------------------------------------------------------------- counts
 Section 'counts (§0 の数え方)'
@@ -58,8 +63,10 @@ $exact = @($e | Where-Object { [math]::Abs($_.Value.residual) -le 1e-6 }).Count
 $open = @($e | Where-Object { $_.Value.why -like 'OPEN:*' }).Count
 "台帳 $($e.Count) 点 / ss 非ゼロ $($nz.Count) 総和 $([math]::Round($sum, 9)) / count 点 $($c.Count) うち非ゼロ $(@($c | Where-Object { $_.Value.residual -ne 0 }).Count) / exact(<=1e-6) $exact / OPEN: $open"
 "snapshot $(@(git ls-files 'LilySharp.Tests/Snapshots/*').Count) 枚 / 追跡 .lys $(@(git ls-files '*.lys').Count) 冊 (audit 配下 $(@(git ls-files 'audit/*.lys').Count))"
-$disk = @(Get-ChildItem -Recurse -Filter *.lys -File -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' }).Count
-"ディスク上の .lys $disk 冊（scratch 込み・掃きの母集団はこちら）"
+# The old in-repo scratch\ is excluded so every machine counts the same population.
+$disk = @(Get-ChildItem $repo, $lab -Recurse -Filter *.lys -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' -and -not $_.FullName.StartsWith((Join-Path $repo 'scratch\')) }).Count
+"ディスク上の .lys $disk 冊（repo ＋ LilySharp-Lab・掃きの母集団はこちら）"
 
 # ---------------------------------------------------------------- CI
 Section 'CI (gh run list)'
@@ -75,8 +82,8 @@ if ($Build) {
 
 # ---------------------------------------------------------------- test
 if ($Test) {
-    if (-not $Scratch) { throw '-Test needs -Scratch pNNN (the trx lands in scratch/pNNN/runN.trx)' }
-    $dir = Join-Path $repo "scratch\$Scratch"
+    if (-not $Session) { throw '-Test needs -Session pNNN (the trx lands in ..\LilySharp-Lab\sessions\pNNN\runN.trx)' }
+    $dir = Join-Path $lab "sessions\$Session"
     New-Item -ItemType Directory -Force $dir | Out-Null
     $n = 1; while (Test-Path (Join-Path $dir "run$n.trx")) { $n++ }
     $trx = Join-Path $dir "run$n.trx"

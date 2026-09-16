@@ -22,8 +22,20 @@
 
 ```powershell
 cd C:\MyProj\LilySharp
-tools\Session-Check.ps1 -Build -Test -Scratch pNNN    # git・数・CI・build・full（trx 付き）を 1 コマンドで（約 15 分）
+tools\Session-Check.ps1 -Build -Test -Session pNNN    # git・数・CI・build・full（trx 付き）を 1 コマンドで（約 15 分）
 ```
+
+★★★ **作業記録は兄弟の private repo `..\LilySharp-Lab`（github `yotsuda/LilySharp-Lab`・2026-09-16〜）。
+複数の PC で開発するため。** 旧 `scratch\`（git 管理外）から選んで移した。
+- **便の作業場所は `LilySharp-Lab\sessions\pNNN\`**（計器・プローブ・集計・commit 下書き）。svg/png/pdf/trx/mid・
+  `exe-*`/`bin-*`・`*-ly`/`*-midi` は Lab の gitignore が落とす＝そのまま出力してよい。**残す物は便の終わりに
+  Lab で commit して push**（push しないと他の PC には無い＝RULES §5.5）。**Lab は必ず private のまま**（実在曲の譜面を含む）。
+- **ユーザーの実コーパスの正本は `LilySharp-Lab\corpora\ベースタブLy\`**（旧 `scratch\ベースタブLy\` は古いコピー）。
+- ★ **過去の出典 `scratch/pNNN/…` は `LilySharp-Lab/sessions/pNNN/…` と読む**（直下の `*.md` は `notes/`、
+  `project-notes/` も `notes/`、`ベースタブLy`・`dogfood`・`samples-playground` は `corpora/`、その他の話題フォルダは
+  `probes/<名前>/`、直下の単発ファイルは `probes/loose/YYYY-MM/`）。**生成物（絵・trx・バイナリ）は移していない**
+  ＝要るなら取り直す。コード内コメントや ARCHIVE の `scratch/` 表記は書き換えない。
+- 証明 ⑴ の道具は `LilySharp-Lab\tools\rerender-ls.ps1`（RULES §5.5 のコマンド一覧）。
 出た数を §1 の「開始時裏取り」と突き合わせる（HEAD・未 push・木・**full の*合計***・台帳・snapshot・`.lys`）。
 **数え方の定義は RULES §6.1「引き継ぐ数の数え方」＝スクリプトが実装している。手で数え直さない**
 （10 便が 10 通りに数え間違えた履歴が §6.1 に在る）。**§1 に数を書くときも同じスクリプトの出力を写す。**
@@ -91,7 +103,7 @@ tools\Session-Check.ps1 -Build -Test -Scratch pNNN    # git・数・CI・build�
 ### U. ユーザー報告（2026-08-29・第286 起票）← **順に着手。ユーザーが優先度を与えた**
 
 > ⚠️ **この 3 点は「読み手が紙とプレビューで見た」もの**で、台帳の残差とは別の族。
-> ★ **⑵⑶ の本はユーザーの実コーパス** `scratch\ベースタブLy\`（未追跡・300 冊級）。
+> ★ **⑵⑶ の本はユーザーの実コーパス** `LilySharp-Lab\corpora\ベースタブLy\`（本体 repo の外・300 冊級）。
 > **追跡 573 冊には無い**ので、閉じるときは**射程を実コーパス側でも数えること**。
 
 - **U1. ✅ 閉じた（第286・報告は当たっていた）＝3 小節以上の `repeat percent` は LP のスラッシュ 1 本になり、LYS2014 は退役**。 → **本文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の同じ見出し**（第351 が落とした）
@@ -319,10 +331,11 @@ tools\Session-Check.ps1 -Build -Test -Scratch pNNN    # git・数・CI・build�
   ⚠️ **後者は第310 の掃きが出した 8 冊の 1 つだった**＝**射程の数え方が落としていた本が、実際に動いた。**
   ★★ **⒝2 が掃く母集団はこちらで数えること**:
   ```powershell
-  # ディスク全部（scratch を含む）— 第310 は 2007 冊中 172 冊。第312 は 1418 冊中 58 冊
+  # ディスク全部（第310/312 は scratch を含めた数）— 第310 は 2007 冊中 172 冊。第312 は 1418 冊中 58 冊
   #   ⚠️ 母集団が縮んだのは本が減ったから（scratch の掃除）。レシピは同じ、数だけ取り直す
-  @(Get-ChildItem . -Recurse -Filter *.lys -File |
-    Where-Object { $_.FullName -notmatch '\\(bin|obj|artifacts|output)\\' -and
+  #   ⚠️ 2026-09-16〜 母集団は repo ＋ ..\LilySharp-Lab（旧 scratch\ は数えない＝どの PC でも同じ数）
+  @(Get-ChildItem .,..\LilySharp-Lab -Recurse -Filter *.lys -File |
+    Where-Object { $_.FullName -notmatch '\\(bin|obj|artifacts|output|scratch)\\' -and
                    (Get-Content $_.FullName -Raw) -match '\b(grace|acciaccatura|appoggiatura)\b' }).Count
   # 追跡 .lys — 581 冊中 34 冊
   @(@(git ls-files '*.lys') |
@@ -811,7 +824,7 @@ tools\Session-Check.ps1 -Build -Test -Scratch pNNN    # git・数・CI・build�
 
 > ★★★ **なぜこの族が在るか**: **ユーザー実コーパス 314 冊の 93%（293 冊）がタブを書くのに、
 > 追跡コーパスでタブを書く本は 9%（52/585・fixture は 32）**。**回帰網が実使用と別のものを測っている。**
-> ★ **比較の基準は `scratch/ベースタブLy` の*手書き* `.ly` 286 本**（285 組が `.lys` と対）——
+> ★ **比較の基準は `LilySharp-Lab/corpora/ベースタブLy` の*手書き* `.ly` 286 本**（285 組が `.lys` と対）——
 > **exporter を通らない独立した正解**。**LP にそれを描かせ、Lily# に `.lys` を描かせて突き合わせる。**
 > ⚠️ **`.ly → .lys` の importer は要らない**（未知数が 2 つになるだけ）。第317 が測って撤回した。
 > ⚠️⚠️ **他人の `.ly` を正解に使うときは、その人が定義したマクロを先に読むこと**——
