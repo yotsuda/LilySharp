@@ -296,8 +296,26 @@ public class HistoryCitationTests
     /// group by group, and the old and new tips name the same tree object with an empty diff
     /// between them; the LIVE ratchet did not fall (824, floor 564).
     /// </para>
+    /// <para>
+    /// ⚠️ RAISED 687 → 699, THE SAME WAY, ON 2026-09-17 (after session 396). The unpushed
+    /// commits of sessions 393-396 — twenty by §1's own count at the end of session 396 — were
+    /// regrouped into six before pushing, outside any session's view: the session that followed
+    /// met the ceiling already red, at its start-of-session full run and on origin/master's CI
+    /// alike, and it worked from a fresh clone whose reflog holds only the pushed history, so
+    /// the group-by-group tree check the paragraphs above describe could not be repeated here;
+    /// what was measured is the census itself, 687 → 699 on the first run. The count was
+    /// predicted from the prose before the census was read: fifteen of the regrouped commits
+    /// are cited by SHA in §1 and the archive's top two blocks — each session's own "these
+    /// commits", the commit an approval was given on, the base a sweep was measured against —
+    /// and the twelve of those tokens this census reads as citation-shaped went dead with the
+    /// regroup; the other three carry a single letter in their abbreviation, so
+    /// <c>LooksLikeCitation</c> does not see them, which is the same honest miss the paragraphs
+    /// above declare. Not re-pointed, for the reason the paragraphs above give: the sentences
+    /// are the record of what those sessions committed. The LIVE ratchet did not fall (825,
+    /// floor 564).
+    /// </para>
     /// </remarks>
-    private const int DeadCitationsWhenWritten = 687;
+    private const int DeadCitationsWhenWritten = 699;
 
     /// <summary>
     /// Extensions scanned for citations. Chosen because they are where citations are actually
