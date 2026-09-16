@@ -172,7 +172,7 @@ block with staves uses `CollectMultiStaff`. Both share `CollectMeasures` per voi
 - **Push is HELD**: commit locally only; do NOT push/tag/release without an explicit GO
   (exception: the UiPathOrch repo, not relevant here). Don't create branches unprompted; work on
   master.
-- **Shell**: the Bash tool is banned — use the pwsh MCP or ripple. Don't wrap in `pwsh -Command`.
+- **Shell**: see `notes/CLAUDE-OPERATIONS.md` in the private LilySharp-Lab repo.
 - **Grob names are PascalCase, LilyPond-style** (`NoteHead`, `Stem`, `Beam`) — a distinct
   namespace from lowercase keywords (`title` keyword vs a future `Title` grob).
 - **Mimic the LilyPond source** for layout/engraving correctness: `C:\MyProj\lilypond-src\lily\*.cc`

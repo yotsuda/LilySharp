@@ -64,7 +64,7 @@
 
 ## 環境
 
-- **シェルは pwsh MCP / ripple（bash 禁止）。** ファイル書き込みは Write ツール
+- **シェルと道具の使い方は兄弟の private repo `LilySharp-Lab` の `notes/CLAUDE-OPERATIONS.md`**（HANDOFF §0）。ファイル書き込みは Write ツール
   （PowerShell に heredoc は無い。commit message はファイルに書いて `git commit -F`）
 - **`dotnet` の増分ビルドが腐る** → 前後比較は `--no-incremental` でビルドして `--no-build` で実行
 - **LilyPond は Guile デッドロックする** → `cmd /c "... < NUL"` でデタッチ必須

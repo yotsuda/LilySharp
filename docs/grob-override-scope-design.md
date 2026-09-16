@@ -97,6 +97,21 @@ This is what makes part-major and section-major layouts agree: both reduce to th
 grid, and `PartSectionLayoutConverter` only has to preserve "boundary reset + part-default
 persists".
 
+Learned after implementation:
+- ⚠️ **Every top-level (global) override/revert is seeded at `(measure 0, item 0)`** (the structured
+  seed in `CollectDefinitions`). An override and a revert both written at top level cancel at the
+  same position and have no effect, even if the revert is written "just before melody2". A colour
+  that should switch off part-way belongs inside section music (re-emitted per occurrence).
+- Colours are `#RRGGBB` or a ColorParser name (red/green/blue/yellow/cyan/magenta/white/gray|grey/
+  orange/purple/brown/black). `NoteColumn.force-hshift` is disabled because the source value is
+  normalised away by justification and applies to the whole column (re-enabling needs a
+  flag, per-voice scope, the amount honoured, and decimals). Hyphenated property names parse
+  generically. `<< \\ >>` is not supported — use `voice{}`. Overrides failing on
+  multi-staff scores was `ScoreAssembler.BuildMultiStaffScore` not passing them on.
+- `title` (a value keyword) and `Title` (a grob) live in separate namespaces. Aligning where a
+  thing is written is a different question from aligning its spelling: a new grob's overrides go
+  where that grob's own syntax can appear (a future `override Title.color` is top level).
+
 ## Staff-scoped resolver
 
 Today there is one score-wide `GrobPropertyResolver`. Change:
