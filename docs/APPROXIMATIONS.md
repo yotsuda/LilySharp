@@ -232,7 +232,7 @@
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2453** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:5337** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:5355** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`

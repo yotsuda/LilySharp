@@ -391,6 +391,10 @@ public sealed partial class MeasureCollector
         // normal frame; degrees stack on the root by diatonic steps in the key.
         bool savedAbsolute = _octave.OctaveAbsolute;
         int savedBase = _octave.OctaveBase;
+        // The incoming frame, saved because the group gives it back (see below): like a
+        // chord, an arpeggio READS the frame to place itself and never WRITES it.
+        int savedFrameOctave = _octave.CurrentOctave;
+        char savedFramePitchName = _octave.LastPitchName;
         bool rootSet = false;
         int anchorOctave = 0;
         char rootLetter = 'c';
@@ -451,12 +455,13 @@ public sealed partial class MeasureCollector
         }
         _octave.OctaveAbsolute = savedAbsolute;
         _octave.OctaveBase = savedBase;
-        // After the group the running reference is the root (chord-after behavior).
-        if (rootSet)
-        {
-            _octave.CurrentOctave = anchorOctave;
-            _octave.LastPitchName = rootLetter;
-        }
+        // THE GROUP DOES NOT MOVE THE FRAME EITHER (user decision, 2026-09-16 — the chord
+        // rule, and `<< >>` follows the chord anchor model by design). What leaves is what
+        // came in, shifted only by the marks written after '>>'. ⚠️ `rootSet` no longer
+        // decides anything here: a group of rests leaves the frame alone because its shift
+        // is zero, not because no root was found.
+        _octave.CurrentOctave = savedFrameOctave + groupOctave;
+        _octave.LastPitchName = savedFramePitchName;
 
         // Post-events after '>>': a chord name (bare '@chord' derives it from the
         // members; explicit '@chord(...)' shows as written) and a dynamic (@f — it

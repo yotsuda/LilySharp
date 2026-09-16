@@ -1603,7 +1603,12 @@ ChordNote      = PitchToken , { Annotation } ;
    attached to.
    - ANCHOR: letter mode anchors on the FIRST member's bare LETTER, resolved nearest in
      the incoming relative frame; degree mode anchors on the key TONIC (degree 1),
-     resolved the same way. The note AFTER the group is relative to the anchor.
+     resolved the same way. The anchor is where the group SITS — reading the frame is all
+     a group does to it. ⚠️ A GROUP NEVER WRITES THE FRAME (user decision, 2026-09-16):
+     the letters inside, the first member's included, leave it exactly as they found it,
+     so '<c e g> | <d f a> | <g b d> | <c e g>' cannot drift (the old rule chained anchor
+     to anchor and climbed a whole octave over those four bars). Only the marks below
+     move it.
    - MEMBERS place themselves at-or-above the anchor: a letter takes the same-letter
      pitch in the octave at/above it; degree N sits N−1 diatonic steps above it (8/9/13
      carry upward, no special case). A member's own '/, marks shift THAT ONE note only —
@@ -1611,10 +1616,14 @@ ChordNote      = PitchToken , { Annotation } ;
      Letter mode is order-independent except the first slot (<c e g> = <c g e>, but
      <g c e> anchors on g); degree mode is FULLY order-independent (<2 4 6> = <6 2 4>
      = D F A in C major, and degrees follow the key: Dm in C, D-major shapes in D).
-   - Marks AFTER '>' / '>>' move the WHOLE group an octave each, anchor included, so
-     they DO propagate: <c e g>' c = C5 E5 G5 then C5, whereas <c' e' g'> sounds the
-     same close-position chord but the next bare c stays C4. (A deliberate Lily#
-     divergence from LilyPond's per-member relative chain.) In 'octave absolute' mode
+   - Marks AFTER '>' / '>>' move the WHOLE group an octave each AND are the only thing
+     that moves the FRAME, by the same count, so they DO propagate: <c e g>' c = C5 E5 G5
+     then C5, whereas <c' e' g'> sounds the same close-position chord but the next bare c
+     stays C4. ⚠️ The frame lands at "where it was ± the marks", NOT on the group's own
+     anchor: what follows a group never depends on which letters the group holds. (A
+     deliberate Lily# divergence from LilyPond's per-member relative chain, whose frame
+     leaves a chord on its FIRST MEMBER — the twin exporter tracks the two frames apart
+     and spells the difference onto the next event.) In 'octave absolute' mode
      every member is a fixed pitch — no stacking, no frame — and the trailing marks
      STILL shift the whole group, so <c e g>' is C5 E5 G5 and <c e g>, is C3 E3 G3 there
      too. Read off the page: noteheads at y 13.85/12.85/11.85 and 20.85/19.85/18.85

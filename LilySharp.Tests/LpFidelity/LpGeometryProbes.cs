@@ -179,14 +179,19 @@ internal static class LpGeometryProbes
     // must print the SAME gap and a difference is a direction-dependence defect of its own —
     // the P/Q relationship.
 
+    // ⚠️ The tail is `a b c`, not `a b c'`, since 2026-09-16: a chord no longer moves the
+    // relative frame, so the note after the chord is measured from `f` (the note BEFORE it)
+    // and `a b c` lands on the twin's own `a' b' c''` = A4 B4 C5. The old spelling's `'` was
+    // compensating for the frame the chord used to leave behind, and keeping it now sends the
+    // last note to C6 — a book that measures the same but is DIFFERENT MUSIC from its twin.
     // LilyPond twin: c'4 d' e' f' | <dis' fis'>4 a' b' c''   (D#4/F#4, stems up)
-    private static readonly string CSB = Score("c4 d e f | <dis fis>4 a b c' |", "CSB");
+    private static readonly string CSB = Score("c4 d e f | <dis fis>4 a b c |", "CSB");
     // LilyPond twin: c'4 d' e' f' | <eis'' gis''>4 a' b' c''  (E#5/G#5, stems down) — mirror of CSB
-    private static readonly string CSA = Score("c4 d e f | <eis' gis'>4 a b c' |", "CSA");
+    private static readonly string CSA = Score("c4 d e f | <eis' gis'>4 a b c |", "CSA");
     // LilyPond twin: c'4 d' e' f' | <ees' ges'>4 a' b' c''    (Eb4/Gb4, stems up) — the flat-merge site
-    private static readonly string CFB = Score("c4 d e f | <ees ges>4 a b c' |", "CFB");
+    private static readonly string CFB = Score("c4 d e f | <ees ges>4 a b c |", "CFB");
     // LilyPond twin: c'4 d' e' f' | <des'' fes''>4 a' b' c''  (Db5/Fb5, stems down) — mirror of CFB
-    private static readonly string CFA = Score("c4 d e f | <des' fes'>4 a b c' |", "CFA");
+    private static readonly string CFA = Score("c4 d e f | <des' fes'>4 a b c |", "CFA");
 
     // --- two voices on ONE column: the accidental packing and the collision it stands on ---
     // Twins of probes/cross-voice-accidental.ly XCA..XCH. The rest of each second measure is

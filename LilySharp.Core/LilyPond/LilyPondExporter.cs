@@ -2561,6 +2561,11 @@ public sealed class LilyPondExporter
     private string EmitChord(ChordSyntax c)
     {
         int off = c.ChordOctaveOffset;
+        // The incoming Lily# frame, saved because the chord hands it back: Lily#'s chord
+        // READS the frame to place itself and never WRITES it, so what leaves is what came
+        // in, shifted only by `off` (MeasureCollector.ItemFactory CreateChordItem's
+        // restore). LilyPond's frame is a different story — see the update at the end.
+        int frameStepIn = _lysStep, frameOctaveIn = _lysOctave;
         bool hasDegrees = c.Degrees.Any();
         if (hasDegrees && !_frameTracked)
             _warnings.Add(
@@ -2718,12 +2723,16 @@ public sealed class LilyPondExporter
             first = false;
         }
 
-        // Where the two sides stand now: Lily# on the chord's anchor, LilyPond on its first
-        // member. Equal for an ordinary chord; a degree chord can part them (see _lysStep).
+        // Where the two sides stand now — and since 2026-09-16 they part on EVERY chord,
+        // not just a degree one. Lily#'s frame leaves the chord as it entered, shifted only
+        // by the whole-chord marks: the letters inside never move it. LilyPond's really
+        // does chain onto the chord's FIRST member (ret_first, cited in this method's
+        // remarks). Tracking the two apart is exactly what lets the events AFTER the chord
+        // be spelled against LilyPond's frame while sounding Lily#'s pitches.
         if (!_octaveAbsolute && firstStep >= 0)
         {
-            _lysStep = anchorStep;
-            _lysOctave = anchorOctave;
+            _lysStep = frameStepIn;
+            _lysOctave = frameOctaveIn + off;
             _lyStep = firstStep;
             _lyOctave = firstOctave;
         }
@@ -3323,7 +3332,8 @@ public sealed class LilyPondExporter
     /// LilyPond's <c>\relative</c> reads the members as a SEQUENCE, each against the previous
     /// pitch with rests passed over, so every mark is recomputed against that chain — the
     /// source's marks are not the twin's — and after the group the two frames part (Lily# on
-    /// the root, LilyPond on the last pitch) the way a degree chord parts them;
+    /// the frame it came in with, shifted only by the marks after <c>&gt;&gt;</c>; LilyPond on
+    /// the last pitch) the way every chord parts them since 2026-09-16;
     /// <see cref="EmitMusicPitch"/> closes the gap on the next note.
     /// LILYPOND-REF: lily/music-sequence.cc:142-160 music_list_to_relative — the chain, and
     ///   a rest has no pitch to hand it, which is why a rest leaves <c>last</c> alone.</para>
@@ -3368,6 +3378,9 @@ public sealed class LilyPondExporter
             arp.Articulations.Where(a => a is not StringNumberAnnotationSyntax));
 
         var body = new StringBuilder();
+        // The incoming Lily# frame, saved because the group hands it back (see the update
+        // after the member loop) — the chord rule, which `<< >>` follows by design.
+        int savedFrameStep = _lysStep, savedFrameOctave = _lysOctave;
         bool rootSet = false;
         int rootStep = 0, anchorOctave = 0;
         for (int i = 0; i < members.Count; i++)
@@ -3477,12 +3490,17 @@ public sealed class LilyPondExporter
             }
         }
 
-        // After the group Lily# stands on the root; LilyPond's frame already stands on the
-        // last pitch written (AdvanceLilyPondFrame).
-        if (!_octaveAbsolute && rootSet)
+        // After the group Lily#'s frame is the one that came IN, shifted only by the marks
+        // written after '>>' (user decision, 2026-09-16: a group READS the frame to place
+        // itself and never WRITES it — the chord rule, which `<< >>` follows by design).
+        // LilyPond's already stands on the last pitch written (AdvanceLilyPondFrame), and
+        // EmitMusicPitch closes the gap on the next note.
+        // ⚠️ `rootSet` no longer guards this: a group of rests carries its own marks too,
+        // and with no marks the assignment is an identity.
+        if (!_octaveAbsolute)
         {
-            _lysStep = rootStep;
-            _lysOctave = anchorOctave;
+            _lysStep = savedFrameStep;
+            _lysOctave = savedFrameOctave + groupOctave;
         }
 
         // Lily#'s carry after the group: the trailing `>>N` whole, or what ran before it.
