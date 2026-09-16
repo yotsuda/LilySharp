@@ -1315,6 +1315,23 @@ score main { staff m }
             }
         }
 
+        // Last " <pitch letter> " occurrence — a bare letter BETWEEN SPACES — swapped the
+        // same way (session 396). The digit-followed swap above ends its token exactly at
+        // the window, so the suffix parse agreement never compared it; a letter followed
+        // by a space carries trailing trivia across the window, and every pitch letter is
+        // its own token kind, so the agreement declined every splice of the walk until
+        // GreenSuffixAgrees learned that a token whose text lies in the window is the
+        // window's business. This is the commonest edit there is, and the net never made it.
+        for (int i = text.Length - 2; i > 0; i--)
+        {
+            char c = text[i];
+            if (c is >= 'a' and <= 'g' && text[i + 1] == ' ' && text[i - 1] == ' ')
+            {
+                yield return text.Remove(i, 1).Insert(i, c == 'g' ? "a" : ((char)(c + 1)).ToString());
+                break;
+            }
+        }
+
         // A lone mid-file `|` deleted (not `|:` `:|` `||` — those would change
         // the barline TYPE rather than the measure structure).
         int bar = -1;
