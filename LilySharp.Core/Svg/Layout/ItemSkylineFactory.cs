@@ -129,16 +129,23 @@ internal static class ItemSkylineFactory
     /// </summary>
     /// <remarks>
     /// ⚠️ <c>extra-spacing-height</c> (lily/separation-item.cc:168-169, default (0 . 0)) is
-    /// ported for ONE part: a note head's <see cref="LedgerReach"/> (LilyPond's
-    /// <c>ly:note-head::include-ledger-line-height</c>, applied in <see cref="Boxes"/>). The
-    /// other grobs that declare one in LilyPond — the (-inf . +inf) "never share a Y with a
-    /// note column" ones — have no Lily# counterpart yet; when one arrives it belongs on this
-    /// record, not in the caller.
+    /// ported for TWO parts: a note head's <see cref="LedgerReach"/> (LilyPond's
+    /// <c>ly:note-head::include-ledger-line-height</c>) and the symmetric
+    /// <see cref="ExtraHeight"/> an augmentation dot declares (<see cref="AddDots"/>), both
+    /// applied in <see cref="Boxes"/>. The other grobs that declare one in LilyPond — the
+    /// (-inf . +inf) "never share a Y with a note column" ones — have no Lily# counterpart
+    /// yet; when one arrives it belongs on this record, not in the caller.
     /// </remarks>
+    /// <param name="ExtraHeight">The part's own <c>extra-spacing-height</c>, applied
+    /// symmetrically: the box grows by this much at each end before it becomes a spacing box.
+    /// LilyPond's interval is asymmetric in general, and the one grob Lily# ports declares
+    /// (-0.5 . 0.5); an asymmetric one would take a second field here rather than a caller.
+    /// LILYPOND-REF: lily/separation-item.cc:168-183 Separation_item::boxes — the interval is
+    ///   added to the part's pure Y extent before the box is made.</param>
     private readonly record struct ColumnPart(
         double YBottom, double YTop, double XLeft, double XRight,
         double ExtraLeft, double ExtraRight, bool Conditional, bool LedgerReach = false,
-        bool NoteColumnMember = true)
+        bool NoteColumnMember = true, double ExtraHeight = 0.0)
     {
         /// <summary>A part taking the default <c>extra-spacing-width</c> (-0.1 . 0.1).</summary>
         public static ColumnPart Ink(double yBottom, double yTop, double xLeft, double xRight)
@@ -428,10 +435,19 @@ internal static class ItemSkylineFactory
                     : ColumnElements.ColumnOnly;
             if ((which & set) == 0)
                 continue;
-            // extra-spacing-height, for the one part that declares it (see WithLedgerReach).
+            // extra-spacing-height: the head's ledger reach (see WithLedgerReach), and the
+            // symmetric interval a part declares for itself (a dot's ±0.5). The horizon
+            // interval is [YBottom, YTop] with YBottom the numerically smaller end
+            // (HorizontalSkyline.BoxBuilding), so the box GROWS outward from both.
+            // LILYPOND-REF: lily/separation-item.cc:168-183 Separation_item::boxes.
             var (yBottom, yTop) = p.LedgerReach
                 ? WithLedgerReach(p.YBottom, p.YTop, staffY)
                 : (p.YBottom, p.YTop);
+            if (p.ExtraHeight != 0.0)
+            {
+                yBottom -= p.ExtraHeight;
+                yTop += p.ExtraHeight;
+            }
             boxes.Add((yBottom, yTop, p.XLeft + p.ExtraLeft, p.XRight + p.ExtraRight));
         }
         return boxes;
@@ -891,9 +907,32 @@ internal static class ItemSkylineFactory
             : maxNoteheadRightX - noteheadLeftX;
         var (offset, rows) = DotColumn.Reserved(item, noteValue, headInkRight);
 
-        foreach (int row in rows)
+        // ⚠️ THE BOX STANDS ON THE HEAD'S OWN ROW, NOT THE ROW THE DOT IS DRAWN ON, and it
+        // carries the Dots grob's extra-spacing-height. Separation_item::boxes takes each
+        // element's PURE Y extent, and a dot column's shift is not pure: LilyPond reports the
+        // head's row to the spacing pass while DRAWING the dot a space away (a line note's dot
+        // lifts into the adjacent space). The ±0.5 esh on top of the 0.45 of ink is what
+        // decides whether the dot meets a neighbouring column's band AT ALL.
+        // MEASURED (2.26.0, scratch/p394/probe, rods.ly's RODPCSKY/RODDOTS over `d'2.` against
+        // eighths moved down one row at a time): the paper column's right skyline stands at
+        // 2.4774 over a band 1.61 tall — 0.45 ink + 0.5 esh each way + the PaperColumn's 0.08
+        // padding each way — CENTRED ON THE HEAD's row (staff position 2), while RODDOTS
+        // reports the drawn dot on row 3. The rods that band yields are 2.6774 with the
+        // neighbour on position 0, 2.6074 on −1 (a 0.01 sliver of overlap, so the distance is
+        // taken on the skyline's ramp) and 1.6042 on −2, where the dot is clear of it and the
+        // pair falls back to head-to-head. Boxing 0.45 tall on the DRAWN row reads 1.6042 for
+        // all three — the two-row window is exactly what the esh buys.
+        // LILYPOND-REF: lily/separation-item.cc:163-183 Separation_item::boxes — pure_y_extent
+        //   widened by extra-spacing-height;
+        // LILYPOND-REF: scm/define-grobs.scm:1277 Dots extra-spacing-height (-0.5 . 0.5).
+        var headRows = DotColumn.HeadPositions(item);
+        for (int r = 0; r < rows.Length; r++)
         {
-            double dotYCenter = staffY - row / 2.0;
+            // ⚠️ A REST HAS NO HEAD, so it keeps the row DotColumn.Reserved drew its dot on.
+            // LilyPond's pure row for a rest's dots is its rest's own position and NOT row 1,
+            // but no measurement of that case exists yet, so it is left as it was rather than
+            // moved on a guess (RULES §7.6 ⒞).
+            double dotYCenter = staffY - (r < headRows.Length ? headRows[r] : rows[r]) / 2.0;
             for (int d = 0; d < dots; d++)
             {
                 double dotX = noteheadLeftX + offset + d * 2 * dotWidth;
@@ -905,7 +944,8 @@ internal static class ItemSkylineFactory
                 parts.Add(new ColumnPart(
                     dotYCenter - dotRadius, dotYCenter + dotRadius, dotX, dotX + dotWidth,
                     0.0, SpacingRules.DotsExtraSpacingWidthRight, Conditional: false,
-                    NoteColumnMember: false));
+                    NoteColumnMember: false,
+                    ExtraHeight: SpacingRules.DotsExtraSpacingHeight));
             }
         }
     }

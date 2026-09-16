@@ -51,6 +51,23 @@ tools\Session-Check.ps1 -Build -Test -Scratch pNNN    # git・数・CI・build�
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第393セッション（2026-09-16）＝**入り方は第298〜第392 の型**（ユーザーは `docs/HANDOFF.md` を読ませて「作業に着手して」だけ）。**§0 の裏取りを走らせた**（`Session-Check -Build -Test -Scratch p394`）。道具は pwsh MCP。**結果＝第392 ⑺⑻ が「未特定」と置いた*ページを動かす経路*を名指して閉じ、LP を字面移植した**。**骨は 5**:
+
+★★ **⑴ 開始時＝ユーザーが途中で push した**: HEAD `53bf3520`・**未 push 0**・`origin/master` も同じ（第392 末は「未 push 38」で、その 38 便分が regroup されて push 済み）。木 clean・未追跡 0・**台帳 851 点／ss 非ゼロ 215／総和 22.584727806／count 点 180 うち非ゼロ 0／exact 671／OPEN 0・snapshot 249・追跡 `.lys` 608**・lysc は net10.0 だけ・build 0 エラー・**full `scratch/p394/run1.trx` 8600 / 0 / 4 / 8604**（RunInfos は SKIP 4 だけ）・CI は success（開始時は in_progress だった）。
+
+★★★ **⑵ 経路の名前＝付点の箱の `extra-spacing-height`**（計器 `scratch/p394/probe`・`p393/lpdump/rods.ly` の RODPCSKY／RODDOTS）。**LP の紙 column の右 skyline は 2.4774 が高さ 1.61 の帯**＝**インク 0.45 ＋ esh 0.5 を両側 ＋ PaperColumn の 0.08 を両側**で、**中心は*符頭自身の段***（RODDOTS の `yext` は*描かれた*段＝**両方とも本当。`boxes` は pure を読む**）。**rod は隣の頭が位置 0 で 2.6774・−1 で 2.6074（帯が 0.01 だけ重なり、斜面で測るので −0.07）・−2 で 1.6042（届かず頭対頭）**。⇒ ★★★ **esh は「付点が隣に*届くかどうか*」を決める＝窓は 2 段**。**第392 第 4 便の毒が空振りしたのは*飽和した対*を読んだからで、あの網は無価値ではなかった。**
+
+★★ **⑶ 移植と網**: `ItemSkylineFactory.AddDots` は箱を*符頭の段*に立て `SpacingRules.DotsExtraSpacingHeight`（既存・`define-grobs.scm:1277` の REF 付き・今まで grace 側しか読んでいなかった）を足す。`ColumnPart.ExtraHeight` が新（esh の家は record の側・元のコメントがそう書いてあった）。**網 `DotSpacingTests`＝両側とまたぎの 5 冊。毒（移植を stash）で binding の 2 行が 2.5042 で赤・対照 3 行は緑。**
+
+★★ **⑷ 掃き 938 冊で 13 冊**（`scratch/p394/sweep`・base＝`53bf3520` の Debug）。**1 冊は追跡**＝`audit/tabfingering/amanda.lys`（**snapshot を持たないので全テストは緑のまま動く**）で、**その段は*詰まる***（31.54 53.60 77.04 → 31.30 53.36 76.75＝`DotConfiguration` が付点を 2 段ずらす密和音では新しい箱が旧箱を包まない）。残り 12 冊はユーザーの実コーパス。**`Universe.lys` は 33 段 → 38 段。**
+
+★★★ **⑸ LP の裁定が取れた**（ユーザーが原文の 15/16 小節を直し、双子が clean になった）: 段開始小節で対応させると **LP 33 段／base 34／port 37**。食い違いは**小節 16〜32 だけ**（0〜16 と 32〜末尾は三者一致）。**base も 18 で 1 回余計に割る＝移植前から LP と違う**。⇒ **port は LP から遠ざかる**（近づいた段は 0）。★★★ **原因は間隔ではなく*改行の門***（計器 `scratch/p394/bisect/b5.lys`＝小節 16〜19 を逐語移植・残す）: **自然幅は 4 小節とも一致**（LP 32.95／32.24／32.59／34.67 対 Lily# 32.97／32.24／32.58／34.67・合計 132.45 対 132.46）。行幅 102.24 に対し **LP は 4 小節を 77.2% に圧縮して 1 行に収め、base は 2 小節で割って 65.19 を引き伸ばす**。⇒ **差は「どこまで圧縮を許して改行を我慢するか」だけで、付点の箱は原因ではなく引き金**。⚠️ 「Lily# が 23% の圧縮を拒む」は*この 1 行からの推論*で**コード未読**。⚠️⚠️ **計器を 4 回壊した（全部「自信のある数字」の顔で出た）**: ページ相対 y で別ページの段が混ざる／`line-width` が紙幅を超えて LP に破棄される（`run off the page`＝LP 側の数が全部無効になる）／グリフ集合の不一致（LP は `<path>`・Lily# は `<text class="music">`）で「1 音あたりの間隔」を比べかけた／★★ **`raggedRight` が Lily# で効かず段末が 102.24 に揃い、圧縮後の幅を自然幅と誤読**——「Lily# は LP より 30% 狭い」と書きかけて**撤回**した。**発散小節の同定も 1 度外した**（`form` を展開すると全体 17 ＝ B の第 2 小節で、最初は発散していない B の第 1 小節を移植していた）。⇒ **次の一手＝改行の門**（`SystemBreaker`／`KnuthPlassBreaker` の力の上限を LP の `simple-spacer` と突き合わせる）。**本便は着手しない**——道具は `scratch/p394` に残って消えず、門を触ると全冊の段割りが動くので独立した掃きと承認が要る＝次便が §0 の裏取りから入るほうが有利。
+
+
+★ **終了時**: HEAD＝この §1 の commit（親＝コード commit `566ba31b`）・未 push 3・**full `scratch/p394/run5.trx` 8605 / 0 / 4 / 8609**（+5＝網）・台帳 851／総和 22.584727806 不変・**snapshot 249（1 枚も動かない）**・追跡 `.lys` 608・§7.5（対 `53bf3520`）: **Core `+` 72 行／`-` 16／REF 5／OWN 0**（新しい数値定数なし）・`docs/APPROXIMATIONS.md` は行番号 2 つだけ・§7 3.5: 第391 を `-Archive 391`（済）。⚠️ **計器を 3 回壊した**（`^\+` が ANSI 色で当たらず「Core + 0 行」／`$Matches` をパイプで潰して skyline の L 側が空／`Select-Object -First` が `-Archive` を途中で止めた）＝**出力を整形する前に生で 1 度読むこと**。⇒ **次の一手**: **⑸ の可否（ユーザー）**／**休符の付点の pure 段は未測**（今回は描かれた段のまま残した）／第392 ⑸ の ②③／cue clef の大きさ／第379 ⑺⑻。
+
+## 以下は第392セッションの経緯
+
 最終更新 第392セッション（2026-09-16）＝**入り方は第298〜第391 の型**（ユーザーは `docs/HANDOFF.md` を読ませて「作業に着手して」だけ）。**§0 の裏取りを走らせた**（`Session-Check -Build -Test -Scratch p393`）。道具は pwsh MCP。**結果＝第391 ⑸ が「次に要るのは推論ではなく LP の dump」と置いた ① を閉じた＝付点つき装飾音符の gap は spring と*rod* の大きいほう・rod は付点の箱を*その符頭の段*に置いて測る（snapshot 1 枚はユーザー承認のうえ再ベース）**。**骨は 5**:
 
 ★★ **⑴ 開始時の数は第391 末と一致**: HEAD `1236d365`・未 push 33（`origin/master` は `2554d59a`）・木 clean・未追跡 0・**台帳 851 点／ss 非ゼロ 215／総和 22.584727806／count 点 180 うち非ゼロ 0／exact 671／OPEN 0・snapshot 249・追跡 `.lys` 608**・lysc は net10.0 だけ・build 0 エラー・**full `scratch/p393/run1.trx` 8593 / 0 / 4 / 8597**（RunInfos は SKIP 4 だけ）・`2554d59a` の CI は success。
@@ -88,20 +105,6 @@ tools\Session-Check.ps1 -Build -Test -Scratch pNNN    # git・数・CI・build�
 ⚠️ **計器を 3 回壊した**（番人にならない網／7/8・15/16 の壊れた対照を 2 度／`check` の "No errors found." を `-match 'error'` が赤と読む門）。**どれも「変わらなかった」の顔をする** ⇒ ★★ **A/B の前に `check` clean と対照の拍数を刷ってから測る。**
 ⇒ **⒜ の残り**: 次は**複数声部の小節**と**改行の門**（`SystemBreaker` の幅見積もり）を A/B する。道具は `scratch/p393` に全部ある。
 ★ **第 4 便の数**: full `scratch/p393/run9.trx` **8600 / 0 / 4 / 8604**＝**第 1 便の run4 と同数**（網も Core も残っていない＝製品変更 0 の裏取り）・`docs/HANDOFF.md` は 449,360 バイト（上限 450,000・⑹ の 3 点を §2 U8 ⒝2 へ寄せて空けた。`Fold-ClosedHandoffItems.ps1` は**折れる項目が 0**＝§2 は既に畳み切ってある）・HEAD＝この §1 を書く commit・未 push 38。
-
-## 以下は第391セッションの経緯
-
-最終更新 第391セッション（2026-09-16）＝**入り方は第298〜第389 の型**（ユーザーは `docs/HANDOFF.md` を読ませて「作業に着手して」だけ）。**§0 の裏取りを走らせた**（`Session-Check -Build -Test -Scratch p392`）。道具は pwsh MCP。**結果＝第390 ⑷ の次の一手の筆頭「`grace-dot-flag-column` の grace 頭 1.48 対 LP 0.68」を閉じた＝装飾音符の後ろの全音符は full-measure-extra-space を取らない（snapshot 1 枚はユーザー承認のうえ再ベース）**。**骨は 4**:
-
-★★ **⑴ 開始時の数は第390 末と一致**: HEAD `e90f37dd`・未 push 30（`origin/master` は `2554d59a`）・木 clean・未追跡 0・**台帳 851 点／ss 非ゼロ 215／総和 22.584727806／count 点 180 うち非ゼロ 0／exact 671／OPEN 0・snapshot 249・追跡 `.lys` 608**・lysc は net10.0 だけ・build 0 エラー・**full `scratch/p392/run1.trx` 8592 / 0 / 4 / 8596**（RunInfos は SKIP 4 だけ）・`2554d59a` の CI は success。
-
-★★★ **⑵ 住所と移植**: +0.80 ＝ 0.8 × 1.0。**LP** `spacing-spanner.cc:446-455 fills_measure` は `next`（右 column の次の rank）が musical なら偽＝小節線の spring の右 column が grace column のとき `next` は主音で、full-measure-extra-space は付かない（その後 :519-527 で 0.8 倍）。**Lily#** は grace を主音にぶら下げるので `MeasureLayouter.CreateBarlineToFirstSpring` が `timings.Count == 1` で真にしていた ⇒ どの譜でも最初の項目に先行 grace があれば偽（`SpacingRules.HasLeadingGraceColumn`・REF 付き）。第389 の kg1 は主音 `c''4` で当たらなかった。⚠️ **改行側 `SpacingRules.FillsMeasure` にも同じ門を足して戻した**——grace 本体は `MeasureBuilder` が `GraceTime` 項目として `Measure.Items` に入れるので sole の数えで元から偽＝**毒で緑のまま＝死んだ 2 つ目の綴り**（§7.7）。**網** `GraceSpacingTests.AWholeNoteBehindAGraceRun_EarnsNoFullMeasureExtraSpace`（`c'1` の小節が対照・両読み手に訊く）・毒（描画側の門を外す）＝この網だけ赤。
-
-★★★ **⑶ 実測と射程**（小節線右端から・LP／前／後・`scratch/p392/kg/afterbar.ps1`）: `grace-dot-flag-column` grace 頭は全小節 0.68／1.48／0.68・1 小節目の主音 2.62／3.42／2.62・`voltagrace-ctl4` grace 1.10 2.01 主音 3.04／1.90 2.81 3.84／**LP と一致**。掃き 938 冊（base＝worktree `scratch/p392/base`＝`e90f37dd`）で **3 冊**＝snapshot `test/grace-dot-flag-column`・`audit/lpreg/voltagrace-ctl4`・実コーパス `青い珊瑚礁`（49 行 `grace { g,,16( } a,,1\4)` の段で再配分・双子に TabStaff が無く段が揃わず LP 直比較なし）。
-
-★★ **⑷ 数と次の一手**: **終了時**: HEAD＝この §1 を書く commit（親＝本便のコード commit）・未 push 32・**full `scratch/p392/run4.trx` 8593 / 0 / 4 / 8597**（+1＝網・この §1 を書いた後・archive 済み。run3 は 8592 / 1＝承認前の snapshot）・台帳 851／総和 22.584727806 不変・snapshot 249（1 枚更新）・追跡 `.lys` 608・`audit/magic_constants.csv` は行番号だけ再生成・§7.5（working tree 対 `e90f37dd`・commit 前に手で数えた）: **Core `+` 約 21 行／REF 1／OWN 0**＝数値定数なし・perf: 小節頭の項目を 1 回走査するだけ＝読んで数えた・§7 3.5: 第389 を `-Archive 389`（済）。★ LSP 配布要（ページが動く）。⚠️ **残した差（別の量）**: ① 付点が旗に押し上げられる grace（`grace-dot-flag-column` 2・4・5 小節目）で主音 2.62 対 LP 3.14／3.00＝**run の span に付点の押しが入っていない**／② 同 7 小節目の 2 つ目の grace 2.54 対 2.62／③ 第389 ⑩ ②（`grace-unfold` の最後の音→小節線 +0.72）。⇒ **次の一手**: ①／②／③／cue clef の大きさ／第379 ⑺⑻。
-
-★★ **⑸ 第 2 便（常設指示「このセッションが有利なら着手」）＝① を測って仮説を 1 つ反証し、コードに触らず止めた**。**LP 4 桁**（`scratch/p392/ks/verify/grace-dot-flag-column-lp.svg`・小節線右端から・grace 頭は全小節 0.6820・主音 `c''` は中線の 1 つ上の間・Y は中線から下向き正）: grace→主音の間隔＝ f8.（間・付点 +0）**1.9386**＝旗の spring（1.538627＋0.1＋0.3）／ d'8.（付点 −1.5 の段）**2.4559**／ e'8.（間）**1.9352**＝付点の右端 1.5352＋0.4（旗の spring より*小さい*＝旗が頭の段に届かない）／ d'16.（付点 −1.5）**2.4559**／ **g16.（付点 +0.5）2.3152**／ `g16. g16`（梁）1.9352。**仮説「付点は paper column の要素＝rod だけが見る（`ItemSkylineFactory.AddDots` の full-size 模型と同じ）・rod＝付点右端＋0.2＋0.1＋0.1」は d'8.／d'16.（2.4558）と e'8. には合うが g16. で外れる**（付点の X は同じ 1.7473、主音の頭との縦の隔たりは ±1.0 で対称なのに 0.1406 違う）。LP の住所は読んだ: `separation-item.cc:47-68 set_distance`（rod・`horizontal-skylines` は :92-110 で `skyline-vertical-padding` を*作るときに*足す）・:120-190 `boxes`（`pure_y_extent`＋`extra-spacing-height`・Dots は `define-grobs.scm:1277-1278` (-0.5 . 0.5)／(0.0 . 0.2)）・`note-spacing.cc:77-83`（spring の min は note column の skyline に右 column の padding）。⚠️ **Lily# の grace 島はスカラー（`SpacingRules.GraceColumnRightReach`＋`GraceColumnGap` の `minDistance + SpringHeadroom`）で rod が無い**。付点を足さない理由（第299 の実測）は同じ関数のコメントにあり、「島の reach を skyline にするとき消える」と書いてある＝**① はその変更そのもの**。⇒ **次に要るのは推論ではなく LP の dump**: 各 column 対の rod（`minimum-distances`）と spring（`ly:paper-column::print` の ideal/min）を `-dinclude-settings` で 6 冊ぶん吐き、g16. の 2.3152 が rod と spring のどちらかを決めてから模型を選ぶ。
 
 ## 2. 開いている作業
 

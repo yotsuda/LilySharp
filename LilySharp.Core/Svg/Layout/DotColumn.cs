@@ -261,12 +261,7 @@ internal static class DotColumn
         MusicItem item, int noteValue, double headInkRight)
     {
         double dotWidth = GlyphMetrics.AugmentationDot.Width;
-        int[] headPositions = item switch
-        {
-            NoteItem n => new[] { n.StaffPosition },
-            ChordItem c when c.Notes.Length > 0 => c.Notes.Select(x => x.StaffPosition).ToArray(),
-            _ => Array.Empty<int>(),
-        };
+        int[] headPositions = HeadPositions(item);
         if (headPositions.Length == 0)
             // A rest's dots: one dot width past its glyph, in the space above the middle line
             // (a whole rest hangs one space up and its dot one row DOWN off that — the same
@@ -303,6 +298,27 @@ internal static class DotColumn
         int[] rows = DotConfiguration.Resolve(headPositions);
         return (OffsetX(headInkRight, supports, rows, dotWidth), rows);
     }
+
+    /// <summary>
+    /// The staff positions of the column's HEADS, in the order <see cref="Reserved"/> resolves
+    /// their dot rows in — so <c>Rows[i]</c> is the row the dot of head <c>HeadPositions[i]</c>
+    /// is DRAWN on. Empty for a rest, which has no head.
+    /// </summary>
+    /// <remarks>
+    /// Written once and read twice: <see cref="Reserved"/> resolves the drawn rows from it, and
+    /// <c>ItemSkylineFactory.AddDots</c> boxes each dot on its head's own row, because
+    /// <c>Separation_item::boxes</c> takes the PURE Y extent and the dot column's shift is not
+    /// pure. Deriving the positions a second time beside either caller would be a second
+    /// spelling of one quantity (RULES §7.7).
+    /// LILYPOND-REF: lily/dot-configuration.cc:129-137 Dot_configuration::x_offset — the rows
+    ///   are resolved per head, in input order (DotConfiguration.Resolve).
+    /// </remarks>
+    internal static int[] HeadPositions(MusicItem item) => item switch
+    {
+        NoteItem n => new[] { n.StaffPosition },
+        ChordItem c when c.Notes.Length > 0 => c.Notes.Select(x => x.StaffPosition).ToArray(),
+        _ => Array.Empty<int>(),
+    };
 
     /// <summary>
     /// The same reservation for a GRACE column: where its first dot stands in the column's
