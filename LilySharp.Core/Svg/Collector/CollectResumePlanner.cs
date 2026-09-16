@@ -379,6 +379,20 @@ internal static class CollectResumePlanner
         GreenNode a, int aStart,
         GreenNode b, int bStart, int oldLimit, int delta)
     {
+        // A TOKEN whose text lies wholly before the limit is the window's (or the
+        // prefix's) business even when its trailing trivia reaches past it: trivia
+        // is not structure. Every pitch letter is its own token kind (PitchA …
+        // PitchG), so until session 396 a letter swap FOLLOWED BY A SPACE — `a`→`f`
+        // in `g4 a b d'`, the commonest edit there is — put a PitchA against a
+        // PitchF here and declined every splice of the walk, silently. (The
+        // synthetic net's letter swap picks a letter followed by a DIGIT, whose
+        // token ends exactly at the limit and is never compared.) Both sides must
+        // agree that the text is below their limit; a text that crosses it on one
+        // side falls through to the kind check as before.
+        if (a.IsToken && b.IsToken
+            && aStart + a.LeadingTriviaWidth + a.Width <= oldLimit
+            && bStart + b.LeadingTriviaWidth + b.Width <= oldLimit + delta)
+            return true;
         if (a.Kind != b.Kind)
             return false;
         bool aAbove = aStart >= oldLimit;

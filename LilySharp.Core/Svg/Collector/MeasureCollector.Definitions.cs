@@ -607,14 +607,31 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
-    /// A bar line passed: the walk's bar number advances, and under a style that remembers
-    /// nothing past it the memory is emptied (<see cref="Semantics.AccidentalStyleSpec.ForgetsAtBar"/>).
+    /// A bar line passed: the walk's bar number advances, and the entries no rule can still
+    /// read are dropped — all of them under a style that remembers nothing past the bar
+    /// (<see cref="Semantics.AccidentalStyleSpec.ForgetsAtBar"/>), those stamped further back
+    /// than the laziest rule's reach under a lazier one
+    /// (<see cref="Semantics.AccidentalStyleSpec.MemoryHorizon"/>), none under a style that
+    /// never forgets.
     /// </summary>
     private void AdvanceAccidentalBar()
     {
         _accidentalBar++;
-        if (_accidentalStyle.ForgetsAtBar)
+        int horizon = _accidentalStyle.MemoryHorizon;
+        if (horizon == Semantics.AccidentalRule.Forever)
+            return;
+        if (horizon == 0)
+        {
             _measureAccidentals.Clear();
+            return;
+        }
+        List<(int step, int octave)>? stale = null;
+        foreach (var (key, entry) in _measureAccidentals)
+            if (entry.Bar < _accidentalBar - horizon)
+                (stale ??= new()).Add(key);
+        if (stale != null)
+            foreach (var key in stale)
+                _measureAccidentals.Remove(key);
     }
 
     /// <summary>What one rule says about a pitch: whether an accidental is needed, and

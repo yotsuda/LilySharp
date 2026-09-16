@@ -1291,6 +1291,7 @@ internal sealed class MeasureBuilder
         bool ConfirmableBoundary,
         bool BoundaryRetargetable,
         bool LastEndAutoFill,
+        bool AtScopeStart,
         Fraction TimeSignature,
         bool SenzaMisura,
         Fraction FrozenPosition,
@@ -1313,8 +1314,14 @@ internal sealed class MeasureBuilder
     internal bool AtCleanBoundary
         => _currentItems.Count == 0 && _currentDuration == Fraction.Zero && !_continuesBar;
 
+    // ⚠️ EVERY cross-measure field goes in, including the ones only one arm reads:
+    // _atScopeStart was left out until session 396, and a prefix resume restored into a
+    // FRESH builder (still at its scope start) made the `|:` of `c1 | |: d1 :|` read
+    // itself as anchoring the scope — the `| |:` empty bar vanished from the
+    // incremental page only. The splice's state comparison reads the whole record
+    // (MeasureCollector.SuffixStateMatches), so a field captured here is compared there.
     internal BuilderCheckpoint Capture() => new(
-        _confirmableBoundary, _boundaryRetargetable, _lastEndAutoFill,
+        _confirmableBoundary, _boundaryRetargetable, _lastEndAutoFill, _atScopeStart,
         _timeSignature, _senzaMisura, _frozenPosition, _partialRestore,
         _pendingStartBarline, _pendingEndBarline,
         _pendingBreak, _pendingNoBreak, _pendingPageBreak, _pendingNoPageBreak,
@@ -1340,6 +1347,7 @@ internal sealed class MeasureBuilder
         _confirmableBoundary = ck.ConfirmableBoundary;
         _boundaryRetargetable = ck.BoundaryRetargetable;
         _lastEndAutoFill = ck.LastEndAutoFill;
+        _atScopeStart = ck.AtScopeStart;
         _timeSignature = ck.TimeSignature;
         _senzaMisura = ck.SenzaMisura;
         _frozenPosition = ck.FrozenPosition;

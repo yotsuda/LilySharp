@@ -55,7 +55,13 @@ public sealed partial class MeasureCollector
     /// <summary>True when no cross-measure carry is in flight — the shared
     /// eligibility of a mid-walk checkpoint (record side) and of a suffix
     /// splice boundary (live side; the same quiescence the recorded checkpoint
-    /// vouches for must hold in the live walk before their states can meet).</summary>
+    /// vouches for must hold in the live walk before their states can meet).
+    /// ⚠️ The accidental memory is NOT a carry: it is value state, captured and
+    /// compared (<see cref="WalkCheckpoint.Accidentals"/>). Demanding it empty
+    /// here — as this gate did until session 396 — was satisfiable under the
+    /// default style only (the map is cleared at the bar line); a book under
+    /// <c>modern</c> / <c>noReset</c> had no checkpoint after its first note and
+    /// re-collected in full on every keystroke.</summary>
     private bool WalkCarriesNothing()
         => _pendingGrace == null && _pendingLeadingGrace.IsDefaultOrEmpty
             && !_pendingEmptyChordSlurStart && !_pendingEmptyChordSlurEnd
@@ -63,8 +69,36 @@ public sealed partial class MeasureCollector
             && _tremoloPairShape == null
             && _cueDepth == 0 && _percentCoveredDepth == 0
             && _cursor.VoiceScope == null && _cursor.MetadataMeasureOffset == 0
-            && _phraseTransposeSaves.Count == 0
-            && _measureAccidentals.Count == 0;
+            && _phraseTransposeSaves.Count == 0;
+
+    /// <summary>The accidental memory as <see cref="AccidentalMemorySnapshot"/> reads
+    /// it: entries in engraving order, each bar as an offset behind the walk's current
+    /// bar.</summary>
+    private AccidentalMemorySnapshot CaptureAccidentalMemory()
+    {
+        if (_measureAccidentals.Count == 0)
+            return AccidentalMemorySnapshot.Empty;
+        var byOrder = new (int Step, int Octave, int Alter, int BarsBack, int Order)[_measureAccidentals.Count];
+        int n = 0;
+        foreach (var (key, entry) in _measureAccidentals)
+            byOrder[n++] = (key.step, key.octave, entry.Alter, _accidentalBar - entry.Bar, entry.Order);
+        Array.Sort(byOrder, static (a, b) => a.Order.CompareTo(b.Order));
+        var entries = new (int Step, int Octave, int Alter, int BarsBack)[byOrder.Length];
+        for (int i = 0; i < byOrder.Length; i++)
+            entries[i] = (byOrder[i].Step, byOrder[i].Octave, byOrder[i].Alter, byOrder[i].BarsBack);
+        return new AccidentalMemorySnapshot(entries);
+    }
+
+    /// <summary>Rebuilds the memory from a snapshot against the walk's CURRENT bar and
+    /// order counters — a prefix resume's fresh 0 as much as a splice's live count. Only
+    /// bar differences and the ordering are ever read, so the counters need not be the
+    /// recording's.</summary>
+    private void RestoreAccidentalMemory(AccidentalMemorySnapshot snapshot)
+    {
+        _measureAccidentals.Clear();
+        foreach (var (step, octave, alter, barsBack) in snapshot.Entries)
+            _measureAccidentals[(step, octave)] = (alter, _accidentalBar - barsBack, _accidentalOrder++);
+    }
 
     /// <summary>The checkpoint capture core (see <see cref="WalkCheckpoint"/>'s
     /// inventory remarks); the end-of-walk capture passes sentinel address
@@ -101,6 +135,7 @@ public sealed partial class MeasureCollector
             TremoloRepeatCount = _tremoloRepeatCount,
             TremoloPairShape = _tremoloPairShape,
             TremoloPairFirst = _tremoloPairFirst,
+            Accidentals = CaptureAccidentalMemory(),
             SectionActiveGrobProps = new(_sectionActiveGrobProps),
             KeyLogCount = _keyByMeasureLog.Count,
             SectionStartLogCount = _sectionStartLog.Count,
@@ -146,7 +181,7 @@ public sealed partial class MeasureCollector
         // the checkpoint's state — the same argument the side tables make below).
         RestoreKeyLog(plan.Source, rec.StartKeyLogCount, ck.KeyLogCount);
         RestoreSectionStartLog(plan.Source, rec.StartSectionStartLogCount, ck.SectionStartLogCount);
-        _measureAccidentals.Clear();
+        RestoreAccidentalMemory(ck.Accidentals);
         _pendingGrace = null;
         _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
         _pendingEmptyChordSlurStart = false;
@@ -236,13 +271,14 @@ public sealed partial class MeasureCollector
         var plan = _suffixPlan!;
         var rec = plan.Recording;
         var w = _suffixWindow;
+        _spliceCandidateStart = ck.NodeStart;
         if (rec.EndCheckpoint is not { } endCk || rec.PreFinalizeMeasures is not { } pre)
-            return false;
+            return DeclineSplice("the recording has no end checkpoint to jump to");
 
         // Live-side carry quiescence: the recorded boundary was carry-free, so
         // the live one must be too before their states are even comparable.
         if (!WalkCarriesNothing())
-            return false;
+            return DeclineSplice("a cross-measure carry is in flight at the live boundary");
 
         // Recorded-side rewrite quiescence: the recorded tail must not have
         // rewritten the measure standing AT this boundary (SetBreak /
@@ -252,7 +288,7 @@ public sealed partial class MeasureCollector
         // rewrote it" — a later candidate (past the rewrite) remains usable.
         if (ck.MeasureCount > 0
             && !pre[ck.MeasureCount - 1].Equals(ck.Builder.LastMeasure))
-            return false;
+            return DeclineSplice("the recorded tail rewrote the measure standing at this boundary");
 
         // Cheapest decline first: a tail measure whose source span overlaps a
         // NON-EMPTY dirty window can never be adopted (the window lies inside
@@ -303,7 +339,7 @@ public sealed partial class MeasureCollector
             if (ck.NodeStart < w.Prefix
                 && !extraVoiceWindow
                 && !CollectResumePlanner.WindowIsTriviaOnly(WalkProbe!))
-                return false;
+                return DeclineSplice("the candidate stands before a content window its tail walks across");
 
             for (int i = ck.MeasureCount; i < pre.Count; i++)
             {
@@ -330,7 +366,7 @@ public sealed partial class MeasureCollector
                     right = Math.Max(right, endCk.MaxSourceRead);
                 }
                 if (left < w.SuffixStart && right >= w.Prefix)
-                    return false;
+                    return DeclineSplice("a tail measure straddles the window");
             }
         }
 
@@ -353,12 +389,12 @@ public sealed partial class MeasureCollector
                 // the boundary — the whole span, because an edit INSIDE the original
                 // node leaves its start before the window while its value changed.
                 if (!(originalEnd <= w.Prefix || originalStart >= ck.NodeStart))
-                    return false;
+                    return DeclineSplice("a repetition in the tail copies an original re-walked live");
             }
         }
 
         if (!SuffixStateMatches(ck, builder, w))
-            return false;
+            return false; // SuffixStateMatches names the field
 
         // The adopted tail contains section spacer padding whose COUNT is the
         // canonical section bar count — a function of EVERY part's cell text,
@@ -367,14 +403,14 @@ public sealed partial class MeasureCollector
         var probe = WalkProbe!;
         probe.CanonicalBarsVerified ??= CanonicalBarsMatch(plan.Source);
         if (probe.CanonicalBarsVerified != true)
-            return false;
+            return DeclineSplice("a canonical section bar count changed (another part's cell)");
 
         // Layer 4's suffix half (lazy, memoized once per collect): the parse
         // agreements that make an adopted tail trustworthy at all — see
         // CollectResumePlanner.ParseAgreementsHold. Placed after the cheap
         // per-walk guards so a book that always declines never pays it.
         if (!CollectResumePlanner.ParseAgreementsHold(probe))
-            return false;
+            return DeclineSplice("the parse agreements do not hold for the suffix");
 
         // --- prepare: validate and copy everything before touching any state ---
         // IDENTITY fast path: an empty window with Δ=0 means the baseline and
@@ -397,7 +433,7 @@ public sealed partial class MeasureCollector
             for (int i = ck.MeasureCount; i < pre.Count; i++)
             {
                 if (CollectTailShifter.ShiftMeasure(pre[i], w) is not { } m)
-                    return false;
+                    return DeclineSplice("a tail measure holds a position inside the window");
                 tailMeasures.Add(m);
             }
         }
@@ -416,7 +452,7 @@ public sealed partial class MeasureCollector
                     continue;
                 }
                 if (CollectTailShifter.ShiftSideEntry(src[t][j]!, w) is not { } entry)
-                    return false;
+                    return DeclineSplice("a side-table entry holds a position inside the window");
                 slice.Add(entry);
             }
             tailSlices[t] = slice;
@@ -428,7 +464,7 @@ public sealed partial class MeasureCollector
         {
             var v = rec.PendingInlineVoltas![i];
             if (!w.TryShift(v.Item5, out int vp))
-                return false;
+                return DeclineSplice("a tail volta holds a position inside the window");
             voltaTail.Add((v.Item1, v.Item2, v.Item3, v.Item4, vp));
         }
 
@@ -449,7 +485,7 @@ public sealed partial class MeasureCollector
             if (_root == null
                 || CollectTailShifter.ResolveShifted(_root, oldNode, w)
                     is not ParallelExpressionSyntax resolved)
-                return false;
+                return DeclineSplice("a tail parallel span does not resolve on the new tree");
             spanTail.Add((resolved, startMeasure, startOffset, frame));
         }
 
@@ -468,26 +504,26 @@ public sealed partial class MeasureCollector
                 || CollectTailShifter.ResolveShifted(_root, oldNode, w)
                     is not { } rekeyed
                 || rekeyed is not (NoteSyntax or ChordSyntax))
-                return false;
+                return DeclineSplice("a tail resolved spelling does not re-key onto the new tree");
             spellTail.Add((rekeyed, resolvedMembers));
         }
 
         var endMeta = endCk.Meta.Clone();
         if (!identity && !ShiftMetaPositions(endMeta, w))
-            return false;
+            return DeclineSplice("an end-of-walk header position lies inside the window");
 
         var shiftedEndBuilder = endCk.Builder;
         if (!identity)
         {
             if (!w.TryShift(shiftedEndBuilder.SectionLabelPosition, out int endLabelPos)
                 || !w.TryShift(shiftedEndBuilder.MeasureSourceStart, out int endSourceStart))
-                return false;
+                return DeclineSplice("an end-of-walk builder position lies inside the window");
             Measure? endLast = null;
             if (shiftedEndBuilder.LastMeasure is { } last)
             {
                 endLast = CollectTailShifter.ShiftMeasure(last, w);
                 if (endLast == null)
-                    return false;
+                    return DeclineSplice("the end-of-walk last measure holds a position inside the window");
             }
             shiftedEndBuilder = shiftedEndBuilder with
             {
@@ -516,7 +552,7 @@ public sealed partial class MeasureCollector
         // measure indices carry no source positions — nothing to shift).
         RestoreKeyLog(plan.Source, rec.StartKeyLogCount, endCk.KeyLogCount);
         RestoreSectionStartLog(plan.Source, rec.StartSectionStartLogCount, endCk.SectionStartLogCount);
-        _measureAccidentals.Clear();
+        RestoreAccidentalMemory(endCk.Accidentals);
 
         for (int t = 0; t < dst.Length; t++)
             foreach (var entry in tailSlices[t])
@@ -537,7 +573,27 @@ public sealed partial class MeasureCollector
 
         _suffixSpliced = true;
         plan.SplicedMeasures = pre.Count - ck.MeasureCount;
+        plan.LastSpliceDecline = null;
         return true;
+    }
+
+    /// <summary>The candidate <see cref="TrySpliceSuffix"/> is judging (its recorded
+    /// node start), so a decline can be filed against it.</summary>
+    private int _spliceCandidateStart;
+
+    /// <summary>The one exit of every splice guard: names the reason on the plan
+    /// (<see cref="VoiceResumePlan.LastSpliceDecline"/>; every candidate's when
+    /// <see cref="CollectWalkProbe.RecordSpliceDeclines"/> is on) and returns false.
+    /// Reasons are literals on purpose — a decline is the common case at most
+    /// boundaries of most keystrokes, and formatting one would be paid with nobody
+    /// reading it.</summary>
+    private bool DeclineSplice(string why)
+    {
+        var plan = _suffixPlan!;
+        plan.LastSpliceDecline = why;
+        if (WalkProbe!.RecordSpliceDeclines)
+            (plan.SpliceDeclines ??= new()).Add((_spliceCandidateStart, why));
+        return false;
     }
 
     /// <summary>The suffix splice's state comparison: the live walk state at a
@@ -549,56 +605,62 @@ public sealed partial class MeasureCollector
     private bool SuffixStateMatches(WalkCheckpoint ck, MeasureBuilder builder, in CollectTailShifter.Window w)
     {
         if (builder.CurrentMeasureIndex != ck.MeasureCount)
-            return false;
+            return DeclineSplice("measure count differs");
         if (_sectionStartMeasureForResume != ck.SectionStartMeasure)
-            return false;
+            return DeclineSplice("section start measure differs");
 
-        // Builder cross-measure state. LastMeasure content is deliberately NOT
-        // compared — the boundary measure is the edited text's own (its content
-        // legitimately differs from the recording); what the tail needs from it
-        // is only that it will not be rewritten (checked by the caller).
+        // Builder cross-measure state: the WHOLE checkpoint record, less the three
+        // fields the boundary measure legitimately owns — LastMeasure is the edited
+        // text's own (its content differs from the recording; what the tail needs
+        // from it is only that it will not be rewritten, checked by the caller), and
+        // the two positions are compared through the window map below. Record
+        // equality on purpose: a field captured by MeasureBuilder.Capture is compared
+        // here without being named. The field-by-field spelling this replaced named
+        // eleven of fifteen (session 396): SenzaMisura, FrozenPosition and
+        // LogicalCount were skipped, and a cadenza's frozen clock reading — an edit
+        // BEFORE the `time none` — spliced the recorded bars with the old reading
+        // (Measure.UnmeteredPosition) while every named field matched.
         var live = builder.Capture();
         var recB = ck.Builder;
-        if (live.ConfirmableBoundary != recB.ConfirmableBoundary
-            || live.BoundaryRetargetable != recB.BoundaryRetargetable
-            || live.LastEndAutoFill != recB.LastEndAutoFill
-            || live.TimeSignature != recB.TimeSignature
-            || live.PartialRestore != recB.PartialRestore
-            || live.PendingStartBarline != recB.PendingStartBarline
-            || live.PendingEndBarline != recB.PendingEndBarline
-            || live.PendingBreak != recB.PendingBreak
-            || live.PendingNoBreak != recB.PendingNoBreak
-            || live.PendingPageBreak != recB.PendingPageBreak
-            || live.PendingNoPageBreak != recB.PendingNoPageBreak
-            || !string.Equals(live.SectionLabel, recB.SectionLabel, StringComparison.Ordinal))
-            return false;
+        static MeasureBuilder.BuilderCheckpoint Comparable(MeasureBuilder.BuilderCheckpoint b)
+            => b with { LastMeasure = null, SectionLabelPosition = 0, MeasureSourceStart = 0 };
+        if (Comparable(live) != Comparable(recB))
+            return DeclineSplice("builder state differs");
         if (!w.TryShift(recB.SectionLabelPosition, out int labelPos)
             || live.SectionLabelPosition != labelPos)
-            return false;
+            return DeclineSplice("section label position differs");
         if (!w.TryShift(recB.MeasureSourceStart, out int sourceStart)
             || live.MeasureSourceStart != sourceStart)
-            return false;
+            return DeclineSplice("measure source start differs");
 
         if (OctaveCheckpoint.Capture(_octave) != ck.Octave)
-            return false;
+            return DeclineSplice("octave frame differs");
         if (!MetaMatchesShifted(ck.Meta, w))
-            return false;
+            return DeclineSplice("metadata differs");
         if (_defaultDuration != ck.DefaultDuration || _defaultDots != ck.DefaultDots)
-            return false;
+            return DeclineSplice("default duration differs");
         if (_ambientTonicStep != ck.AmbientTonicStep
             || _ambientTonicAlter != ck.AmbientTonicAlter
             || _ambientTonicValid != ck.AmbientTonicValid)
-            return false;
+            return DeclineSplice("ambient tonic differs");
         if (_openingKeyOverride != ck.OpeningKeyOverride)
-            return false;
+            return DeclineSplice("opening key override differs");
         if (_tremoloRepeatCount != ck.TremoloRepeatCount
             || _tremoloPairShape != ck.TremoloPairShape
             || _tremoloPairFirst != ck.TremoloPairFirst)
-            return false;
+            return DeclineSplice("tremolo state differs");
+        // The accidental memory as the rules read it (re-based, so an inserted note
+        // before the boundary does not decline every later one). Under `modern` the
+        // edited bar's trace is dropped at the next bar line (the style's memory
+        // horizon) and the comparison reconverges; under `noReset` nothing is ever
+        // dropped, so a new pitch in the window declines until the tail rewrites
+        // every entry it touched — reuse lost, never correctness.
+        if (!CaptureAccidentalMemory().SameAs(ck.Accidentals))
+            return DeclineSplice("accidental memory differs");
 
         if (_sectionActiveGrobProps.Count != ck.SectionActiveGrobProps.Count
             || !_sectionActiveGrobProps.SetEquals(ck.SectionActiveGrobProps))
-            return false;
+            return DeclineSplice("section-active grob properties differ");
 
         // The journaled maps compare as JOURNAL PREFIXES against the source's logs
         // (the checkpoint holds watermarks, not copies). Same-event-sequence implies
@@ -610,19 +672,19 @@ public sealed partial class MeasureCollector
         var srcCollector = _suffixPlan!.Source;
         var srcRec = _suffixPlan.Recording;
         if (_keyByMeasureLog.Count != ck.KeyLogCount)
-            return false;
+            return DeclineSplice("key journal length differs");
         for (int i = srcRec.StartKeyLogCount; i < ck.KeyLogCount; i++)
             if (_keyByMeasureLog[i] != srcCollector._keyByMeasureLog[i])
-                return false;
+                return DeclineSplice("key journal entry differs");
         if (_sectionStartLog.Count != ck.SectionStartLogCount)
-            return false;
+            return DeclineSplice("section start journal length differs");
         for (int i = srcRec.StartSectionStartLogCount; i < ck.SectionStartLogCount; i++)
         {
             var (liveName, liveStart) = _sectionStartLog[i];
             var (recName, recStart) = srcCollector._sectionStartLog[i];
             if (liveStart != recStart
                 || !string.Equals(liveName, recName, StringComparison.Ordinal))
-                return false;
+                return DeclineSplice("section start journal entry differs");
         }
 
         // Watermark equality = "the window produced exactly the recorded item
@@ -631,35 +693,35 @@ public sealed partial class MeasureCollector
         var tables = CumulativeSideTables();
         for (int t = 0; t < tables.Length; t++)
             if (tables[t].Count != ck.TableCounts[t])
-                return false;
+                return DeclineSplice("a side-table count differs");
 
         if (_pendingInlineVoltas.Count != ck.PendingInlineVoltaCount)
-            return false;
+            return DeclineSplice("pending inline volta count differs");
         for (int i = 0; i < _pendingInlineVoltas.Count; i++)
         {
             var recorded = planVolta(i);
             if (!w.TryShift(recorded.Item5, out int pos))
-                return false;
+                return DeclineSplice("a pending inline volta lies inside the window");
             var liveVolta = _pendingInlineVoltas[i];
             if (liveVolta.Item1 != recorded.Item1 || liveVolta.Item2 != recorded.Item2
                 || !string.Equals(liveVolta.Item3, recorded.Item3, StringComparison.Ordinal)
                 || liveVolta.Item4 != recorded.Item4 || liveVolta.Item5 != pos)
-                return false;
+                return DeclineSplice("a pending inline volta differs");
         }
 
         if (_parallelSpans.Count != ck.ParallelSpanCount)
-            return false;
+            return DeclineSplice("parallel span count differs");
         for (int i = 0; i < _parallelSpans.Count; i++)
         {
             var (liveNode, liveStart, liveOffset, liveFrame) = _parallelSpans[i];
             var (recNode, recStart, recOffset, recFrame) = _suffixPlan!.Recording.ParallelSpans![i];
             if (liveStart != recStart || liveOffset != recOffset || liveFrame != recFrame)
-                return false;
+                return DeclineSplice("a parallel span's start or frame differs");
             if (!w.TryShift(recNode.FullSpan.Start, out int nodeStart)
                 || liveNode.FullSpan.Start != nodeStart
                 || liveNode.FullSpan.End - liveNode.FullSpan.Start
                     != recNode.FullSpan.End - recNode.FullSpan.Start)
-                return false;
+                return DeclineSplice("a parallel span's node differs");
         }
 
         return true;

@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
@@ -1091,6 +1092,195 @@ section S {
         var incremental = compiler.RenderIncremental(SyntaxTree.Parse(edited));
 
         Assert.Equal(SvgGenerator.Generate(SyntaxTree.Parse(edited), options), incremental);
+    }
+
+    // ---------- session 396: the resume gates HANDOFF §2 R6 / R6′ named ----------
+
+    /// <summary>Records a full collect of <paramref name="oldText"/>, plans and runs the
+    /// resumed collect of <paramref name="newText"/>, and returns it beside a fresh full
+    /// collect of the new text — the shape every gate test below asserts on. The planner
+    /// comes back too, so a test can require the reuse it is about (a gate that silently
+    /// declines everything reads as a pass otherwise).</summary>
+    private static (MultiStaffScore Full, MultiStaffScore Resumed, CollectWalkProbe Plan)
+        ResumeAcross(string oldText, string newText)
+    {
+        var recorder = CollectWalkProbe.Recorder();
+        var source = new MeasureCollector { WalkProbe = recorder };
+        var oldTree = SyntaxTree.Parse(oldText);
+        Assert.False(oldTree.HasErrors, string.Join(" | ", oldTree.Diagnostics.Select(d => d.Message)));
+        SvgGenerator.CollectScore(source, oldTree, RenderSpecParser.FindFirst(oldTree));
+
+        var newTree = SyntaxTree.Parse(newText);
+        Assert.False(newTree.HasErrors, string.Join(" | ", newTree.Diagnostics.Select(d => d.Message)));
+        var newSpec = RenderSpecParser.FindFirst(newTree);
+        var full = SvgGenerator.CollectScore(newTree, newSpec);
+
+        var plan = CollectResumePlanner.Plan(oldTree, newTree, recorder, source);
+        Assert.True(plan != null, "the edit produced no resume plan at all");
+        var collector = new MeasureCollector { WalkProbe = plan };
+        var resumed = SvgGenerator.CollectScore(collector, newTree, newSpec);
+        return (full, resumed, plan!);
+    }
+
+    private static int AdoptedMeasures(CollectWalkProbe plan)
+        => plan.ResumePlans.Values.Where(p => p.Consumed).Sum(p => p.Checkpoint!.MeasureCount);
+
+    private static int SplicedMeasures(CollectWalkProbe plan)
+        => plan.ResumePlans.Values.Sum(p => p.SplicedMeasures);
+
+    private static void AssertSameModel(MultiStaffScore full, MultiStaffScore resumed)
+    {
+        var diff = ModelDeepDiff.FirstDifference(full, resumed, "score");
+        Assert.True(diff == null, $"resumed differs from full: {diff}");
+    }
+
+    private static IReadOnlyList<Measure> PrimaryMeasures(MultiStaffScore score)
+        => score.StaffGroups[0].Staves[0].Voices[0].Measures;
+
+    [Fact]
+    public void SilentSectionReference_AfterASplice_RecordsNoSecondSectionStart()
+    {
+        // ProcessForm keeps running after a splice (the tail adopted every remaining
+        // section), and its labelled-reference and volta arms skip their bookkeeping
+        // then; the `~Name` arm checked only the prefix side, so a silent reference
+        // PAST the splice point journaled its section a second start at the walk's
+        // END. The page hides it (a start past the last measure places nothing), the
+        // NEXT walk does not: part n's entry validation counts the journal against
+        // the recording's and bails the whole resume — every keystroke in a two-part
+        // book with a `~Name` after the edit was a full collect, silently.
+        const string oldText = @"octave absolute
+time 4/4
+part m { clef treble }
+part n { clef bass }
+section A { m { c4 d e f | g4 a b c' | d'4 e' f' g' | }  n { c4 d e f | g4 a b c' | d'4 e' f' g' | } }
+section B { m { e4 f g a | b4 c' d' e' | }  n { e4 f g a | b4 c' d' e' | } }
+section C { m { c'4 b a g | }  n { c'4 b a g | } }
+form main { A ~B ~C }
+score main { staff m staff n }
+";
+        int at = oldText.IndexOf("f' g' |", StringComparison.Ordinal);
+        Assert.True(at > 0);
+        var newText = oldText.Remove(at + 3, 1).Insert(at + 3, "a");
+
+        var (full, resumed, plan) = ResumeAcross(oldText, newText);
+        Assert.True(SplicedMeasures(plan) > 0,
+            "the late edit spliced nothing — the arm under test never ran post-splice");
+        AssertSameModel(full, resumed);
+    }
+
+    [Fact]
+    public void PrefixResume_RestoresTheScopeStartFlag_SoTheEmptyBarBeforeARepeatSurvives()
+    {
+        // `c1 | |: d1 :| e1 |` is FOUR bars: the `| |:` pair is an empty bar
+        // (MeasureBuilder.HandleBarline's second-of-a-pair arm), because the scope's
+        // opening span ended when c1 was emitted. A prefix resume restored the
+        // builder at the boundary before `|:` into a FRESH builder whose
+        // _atScopeStart was still true — BuilderCheckpoint did not carry it — so
+        // the resumed `|:` read itself as anchoring the scope start, and the empty
+        // bar vanished from the incremental page only.
+        const string oldText = @"octave absolute
+time 4/4
+part m { clef treble }
+section A { m { c1 | |: d1 :| e1 | } }
+form main { A }
+score main { staff m }
+";
+        int at = oldText.IndexOf("d1", StringComparison.Ordinal);
+        Assert.True(at > 0);
+        var newText = oldText.Remove(at, 1).Insert(at, "f");
+
+        var (full, resumed, plan) = ResumeAcross(oldText, newText);
+        Assert.Equal(4, PrimaryMeasures(full).Count);
+        Assert.True(AdoptedMeasures(plan) > 0,
+            "the edit adopted no prefix — the restore under test never ran");
+        AssertSameModel(full, resumed);
+    }
+
+    [Fact]
+    public void SuffixSplice_DeclinesWhenOnlyTheFrozenClockDiffers()
+    {
+        // `time none` freezes the builder's clock at its reading
+        // (MeasureBuilder._frozenPosition), and every bar of the cadenza carries that
+        // reading (Measure.UnmeteredPosition). An edit BEFORE the freeze changes the
+        // reading and nothing else the boundary after it compared — so the splice
+        // adopted the recorded cadenza with the OLD reading. The comparison now
+        // covers the whole BuilderCheckpoint except the three fields the edited
+        // boundary measure legitimately owns.
+        const string oldText = @"octave absolute
+part m { clef treble }
+section A { m { time 4/4 c4 time none d4 e4 | f4 g4 | a4 b4 | time 4/4 c'1 | } }
+form main { A }
+score main { staff m }
+";
+        int at = oldText.IndexOf("c4 time none", StringComparison.Ordinal);
+        Assert.True(at > 0);
+        var newText = oldText.Remove(at + 1, 1).Insert(at + 1, "8");
+
+        var (full, resumed, plan) = ResumeAcross(oldText, newText);
+        // Premise: the cadenza bars carry the edited reading.
+        Assert.Equal(new Fraction(1, 8), PrimaryMeasures(full)[1].UnmeteredPosition);
+        Assert.True(plan.ResumePlans.Values.Any(p => p.SuffixCandidates is { Count: > 0 }),
+            "no walk kept suffix candidates — the guard under test is not even reachable");
+        AssertSameModel(full, resumed);
+        Assert.All(plan.ResumePlans.Values, p => Assert.Equal(0, p.SplicedMeasures));
+    }
+
+    [Theory]
+    [InlineData("noReset")]
+    [InlineData("modern")]
+    public void AccidentalMemory_IsCarriedAcrossTheResume_UnderAStyleThatRemembersPastTheBar(string style)
+    {
+        // Under a style whose laziness is not 0 the memory is never empty after the
+        // first note, and WalkCarriesNothing demanded it empty — so no boundary was
+        // ever a checkpoint and every keystroke in such a book was a full collect.
+        // The memory is walk state like the default duration: captured, restored,
+        // compared. The book makes it MATTER past the resume point: bar 0's cis is
+        // read six bars later by `c4` — remembered forever (noReset: no natural), or
+        // for one bar (modern: no natural either, while a restore that forgot the bar
+        // NUMBER along with the entries would read bar 0's cis as recent and print one).
+        string oldText = $"layout {{ accidentals {style} }}\n"
+            + "octave absolute\ntime 4/4\nkey c major\npart m { clef treble }\n"
+            + "section A { m { cis4 d e f | " + Bars("g4 a b d'", 5) + " | c4 d e f | "
+            + Bars("g4 a b d'", 3) + " | } }\n"
+            + "form main { A }\nscore main { staff m }\n";
+        // Edit bar 5 (the last `g4 a b d'` before `c4 d e f`): a → f.
+        int at = oldText.IndexOf("g4 a b d' | c4", StringComparison.Ordinal);
+        Assert.True(at > 0);
+        var newText = oldText.Remove(at + 3, 1).Insert(at + 3, "f");
+
+        var (full, resumed, plan) = ResumeAcross(oldText, newText);
+        Assert.True(AdoptedMeasures(plan) > 0,
+            "the edit adopted no prefix — the memory still switches the resume off");
+        Assert.True(SplicedMeasures(plan) > 0,
+            "the edit spliced nothing — the memory comparison never reconverges: " + LastDecline(plan));
+        AssertSameModel(full, resumed);
+    }
+
+    private static string LastDecline(CollectWalkProbe plan)
+        => string.Join("; ", plan.ResumePlans.Values.Select(p => p.LastSpliceDecline ?? "(no decline)"));
+
+    [Fact]
+    public void LetterSwapBeforeASpace_StillSplicesTheSuffix()
+    {
+        // Every pitch letter is its own token kind (PitchA … PitchG), and the suffix
+        // parse agreement compared a STRADDLING token's kind — a token whose text
+        // sits in the window while its trailing space reaches the suffix. `a`→`f`
+        // in `g4 a b d'` therefore declined every splice of the walk, silently
+        // (VoiceResumePlan.LastSpliceDecline is what made it sayable). The
+        // synthetic net's letter swap picks a letter followed by a DIGIT, whose
+        // token ends exactly at the window and is never compared — so the net's
+        // 15-book splice floor never noticed. Trivia is not structure.
+        string oldText = "octave absolute\ntime 4/4\npart m { clef treble }\n"
+            + "section A { m { " + Bars("g4 a b d'", 8) + " | } }\n"
+            + "form main { A }\nscore main { staff m }\n";
+        int at = oldText.IndexOf("g4 a b d'", oldText.Length / 2, StringComparison.Ordinal);
+        Assert.True(at > 0);
+        var newText = oldText.Remove(at + 3, 1).Insert(at + 3, "f");
+
+        var (full, resumed, plan) = ResumeAcross(oldText, newText);
+        Assert.True(SplicedMeasures(plan) > 0,
+            "the letter swap spliced nothing: " + LastDecline(plan));
+        AssertSameModel(full, resumed);
     }
 
     /// <summary>Deterministic mechanical edits: a duplicated space (pure position

@@ -119,6 +119,11 @@ internal sealed class CollectWalkProbe
     /// <inheritdoc cref="WindowPrefix"/>
     public int WindowDelta;
 
+    /// <summary>RESUME mode, opt-in: file every splice decline on its plan
+    /// (<see cref="VoiceResumePlan.SpliceDeclines"/>) instead of only the last one.
+    /// Off in production — a list append per declined boundary per keystroke.</summary>
+    public bool RecordSpliceDeclines;
+
     /// <summary>RESUME mode: whether the canonical section bar counts of the
     /// edited text were verified equal to the recording's (null = not yet
     /// checked; the first splice attempt of the collect computes it once).
@@ -309,6 +314,20 @@ internal sealed class VoiceResumePlan
     /// measures the splice adopted (the tail from the matched checkpoint to the
     /// walk's end). 0 = no splice (the walk ran live to its end).</summary>
     public int SplicedMeasures;
+
+    /// <summary>Why the LAST splice attempt declined (null when none did, or the
+    /// walk spliced): the guard's own words, one per <c>return false</c> of
+    /// <c>TrySpliceSuffix</c> / <c>SuffixStateMatches</c>. A declined splice is
+    /// silent by design — reuse lost, never correctness — which is exactly what
+    /// makes a guard that declines EVERYTHING invisible (session 396: a walk
+    /// whose every candidate declined read as "no splice" with nothing to grep).
+    /// Overwritten per attempt; read after the collect, beside <see cref="SplicedMeasures"/>.</summary>
+    public string? LastSpliceDecline;
+
+    /// <summary>Every decline of this walk, (candidate's recorded node start, reason),
+    /// in walk order — filled only when <see cref="CollectWalkProbe.RecordSpliceDeclines"/>
+    /// is on (a test or a probe asking WHICH boundary declined and why).</summary>
+    public List<(int NodeStart, string Why)>? SpliceDeclines;
 }
 
 /// <summary>Full snapshot of <see cref="OctaveContext"/> (the existing
@@ -348,8 +367,9 @@ internal readonly record struct OctaveCheckpoint(
 /// (section visit + node-list invocation + node index), the builder's state,
 /// the collector's value state, and how far every append-only output had grown.
 /// The inventory follows HANDOFF §1's session-145 design memo (checkpoint =
-/// value-state snapshot + per-table counts; accidentals are empty at a measure
-/// boundary by construction, so they contribute nothing).
+/// value-state snapshot + per-table counts). The memo's "accidentals are empty at a
+/// measure boundary by construction" held for the default style only; since session
+/// 396 the memory travels as <see cref="Accidentals"/>.
 /// </summary>
 internal sealed class WalkCheckpoint
 {
@@ -412,6 +432,8 @@ internal sealed class WalkCheckpoint
     public required int TremoloRepeatCount { get; init; }
     public required (int, int, int, int)? TremoloPairShape { get; init; }
     public required bool TremoloPairFirst { get; init; }
+    /// <summary>The accidental memory, as the rules read it (see the type).</summary>
+    public required AccidentalMemorySnapshot Accidentals { get; init; }
     public required HashSet<(string, string)> SectionActiveGrobProps { get; init; }
     /// <summary>Watermarks into the collector's key-modulation / section-start
     /// journals (<c>_keyByMeasureLog</c> / <c>_sectionStartLog</c>): the maps they
@@ -435,4 +457,36 @@ internal sealed class WalkCheckpoint
     public required int RepetitionReadCount { get; init; }
     /// <summary>Measures emitted so far (= prefix length to adopt).</summary>
     public required int MeasureCount { get; init; }
+}
+
+/// <summary>
+/// The accidental memory at a boundary, as the rules READ it and nothing more: each
+/// remembered (step, octave)'s alteration and how many bars BEHIND the boundary's bar
+/// it was stamped, in engraving order. The walk's absolute bar number and its order
+/// counter are deliberately not here — <c>AccidentalRule.RecentEnough</c> reads a bar
+/// DIFFERENCE and <c>MeasureCollector.MostRecentInAnyOctave</c> an ORDERING — so a
+/// resumed walk whose counters restart at 0, and a tail whose edit inserted a note
+/// (every later order shifts by one), still compare equal to the recording wherever
+/// the rules would answer the same. Under the default style every boundary's memory
+/// is empty (the map is cleared at the bar line), which is the old gate's case.
+/// </summary>
+internal sealed class AccidentalMemorySnapshot
+{
+    public static readonly AccidentalMemorySnapshot Empty = new([]);
+
+    /// <summary>In engraving order, the most recent last.</summary>
+    public readonly (int Step, int Octave, int Alter, int BarsBack)[] Entries;
+
+    public AccidentalMemorySnapshot((int Step, int Octave, int Alter, int BarsBack)[] entries)
+        => Entries = entries;
+
+    public bool SameAs(AccidentalMemorySnapshot other)
+    {
+        if (Entries.Length != other.Entries.Length)
+            return false;
+        for (int i = 0; i < Entries.Length; i++)
+            if (Entries[i] != other.Entries[i])
+                return false;
+        return true;
+    }
 }

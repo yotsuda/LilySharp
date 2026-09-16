@@ -276,8 +276,8 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:2419** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:4462** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:2423** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:4472** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`

@@ -92,13 +92,24 @@ public sealed record AccidentalStyleSpec(
     /// <remarks>
     /// A representation choice, not a rule change: with every laziness at 0 or −1,
     /// <see cref="AccidentalRule.RecentEnough"/> is false for every entry stamped in an
-    /// earlier bar, so clearing and keeping are observationally identical. It is worth
-    /// having because the collector's resume gate (MeasureCollector.WalkCarriesNothing)
-    /// asks whether the accidental memory is EMPTY — carrying entries across bars for
-    /// every book would switch incremental resume off for all of them.
+    /// earlier bar, so clearing and keeping are observationally identical. The
+    /// <see cref="MemoryHorizon"/> is the same choice for the lazier styles.
     /// </remarks>
     public bool ForgetsAtBar { get; } =
         Accidentals.Concat(Cautionaries).All(r => r.Laziness <= 0);
+
+    /// <summary>
+    /// How many bar lines back the laziest rule still reads an entry: 0 when every rule
+    /// forgets at the bar (<see cref="ForgetsAtBar"/>), <see cref="AccidentalRule.Forever"/>
+    /// when any rule never forgets. An entry stamped further back is read by NO rule
+    /// (<see cref="AccidentalRule.RecentEnough"/> is false for each), so the collector
+    /// drops it at the bar line (MeasureCollector.AdvanceAccidentalBar) — observationally
+    /// identical, and it keeps the memory a resume checkpoint carries and compares
+    /// (WalkCheckpoint.Accidentals) to what can still be read: under <c>modern</c> an
+    /// edit's trace leaves the memory a bar later, and the splice reconverges.
+    /// </summary>
+    public int MemoryHorizon { get; } =
+        Accidentals.Concat(Cautionaries).Select(r => Math.Max(0, r.Laziness)).DefaultIfEmpty(0).Max();
 }
 
 /// <summary>

@@ -384,10 +384,14 @@ public sealed partial class MeasureCollector
     //   new one is PREPENDED (ly_assoc_prepend_x), which is what Order reproduces: the
     //   any-octave rule reads the FIRST entry with a matching note name, i.e. the most
     //   recently engraved octave (scm/music-functions.scm:1713-1720).
-    // Under a style that forgets at the bar line (AccidentalStyleSpec.ForgetsAtBar — the
-    // default's, and every style whose laziness is 0) the map is CLEARED there instead of
-    // carrying stamps, which is observationally the same and keeps the resume gate
-    // (WalkCarriesNothing) satisfiable.
+    // At the bar line the map keeps only what a rule can still read: under a style that
+    // forgets there (AccidentalStyleSpec.ForgetsAtBar — the default's, and every style
+    // whose laziness is 0) it is CLEARED, under a lazier one the entries stamped further
+    // back than the laziest rule's reach are dropped (AdvanceAccidentalBar, the style's
+    // MemoryHorizon). Observationally the same as carrying every stamp — and what remains
+    // is what a checkpoint carries (WalkCheckpoint.Accidentals). ⚠️ The resume gate used
+    // to demand the map EMPTY at every boundary instead, which no book under `modern` /
+    // `noReset` satisfied after its first note: those books never resumed (session 396).
     private readonly Dictionary<(int step, int octave), (int Alter, int Bar, int Order)>
         _measureAccidentals = new();
 
@@ -3064,8 +3068,8 @@ public sealed partial class MeasureCollector
     /// whole collect (never cleared between walks), in a fixed order shared by
     /// capture (counts) and restore (prefix adoption). Excluded on purpose:
     /// <c>_pendingInlineVoltas</c>/<c>_parallelSpans</c> (cleared per walk —
-    /// adopted from the recording's copies), <c>_measureAccidentals</c> (empty at
-    /// every checkpoint by eligibility), <c>_courtesySourcePositions</c>/
+    /// adopted from the recording's copies), <c>_measureAccidentals</c> (value state —
+    /// carried as <see cref="WalkCheckpoint.Accidentals"/>), <c>_courtesySourcePositions</c>/
     /// <c>_fingeringByPosition</c> (position-keyed; an item only ever reads its
     /// OWN position, so prefix entries have no reader in the resumed tail), and
     /// the collaborators that run strictly post-walk (lyrics, tab).</summary>
@@ -3297,8 +3301,14 @@ public sealed partial class MeasureCollector
                         when !IsInsideRepeatBlock(silent)
                           && silent.GetChild(1) is SyntaxTokenNode nameTok
                           && _sectionState.Sections.TryGetValue(nameTok.Text, out var silentSection):
-                    // Resume: same skip as the labelled reference arm above.
-                    if (_resumePending == null)
+                    // Resume: same skip as the labelled reference arm above — BOTH
+                    // directions. This arm checked only the prefix side until session 396:
+                    // a `~Name` past the splice point journaled its section a second start
+                    // at the walk's END, which the page hid (nothing is placed past the
+                    // last measure) and the next part's walk-entry journal count turned
+                    // into a bail — a two-part book with a silent reference after the edit
+                    // never resumed at all.
+                    if (_resumePending == null && !_suffixSpliced)
                     {
                         RecordSectionStart(nameTok.Text, builder.CurrentMeasureIndex);
                         builder.SectionLabel = LabelForSilentReference(silent, nameTok.Text);
