@@ -129,6 +129,29 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第395セッションの経緯
+
+最終更新 第395セッション（2026-09-16）＝**入り方が違う**（ユーザーは `docs/HANDOFF.md` を読ませて「lily# のコードを包括的にレビューして」＝⑴ LP 字面移植の忠実さと LILYPOND-REF の誤り ⑵ プレビュー速度 ⑶ リファクタ余地、の 3 関心）。道具は pwsh MCP ＋ 読み取り専用 subagent 9 本（領域別・LP v2.26.0 の原文と突き合わせ）。**結果＝出力不変の修正を 2 commit で入れ、出力が動く字面移植 6 本を「patch＋掃きの数」で承認待ちに並べた**。**骨は 5**:
+
+★★★ **⑴ レビューの型**: 9 領域（spacing 横／頁縦／梁・弓／記号・歌詞・和音／collector／rendering／言語／exporter／プレビュー遅延）を並列に読ませ、**各指摘は C# と LP の引用行を両方読んで verified と印を付けたものだけ**を採った（判定表＝`scratch/p395/review-notes.md`）。⚠️ 5 本が rate limit（429）で途中終了し、同じ agentId に「続けて」を送って再開させた。**残件は §2 R に 15 項で一覧**（大きい移植・要 LP 実測・言語判断）。
+
+★★★ **⑵ 出荷した出力不変バッチ（`509d98df`）**: ⒜ **`IncrementalLexer.Guard` 2→5**（`3isi`＋`s` で古い `3` を再利用し full lex の `3isis` と食い違ったまま次の打鍵まで残る＝増分と全体の不一致。網 4 行）／⒝ **validator 20 本の全木走査を root 直下へ**（`Semantics/TopLevelNodes`＝parser が置く深さを根拠に書いた）＋ **`NavigationPlacementValidator` はナビ印が無い本で part ごとの full collect を 1 回もしない**／⒞ **診断 pass に CancellationToken**（validator 53 本の間で見る・superseded なら publish しない）／⒟ **`BeamScoringProblem` の StemInfo を ctor で 1 度**（LP の `stem_infos_`・候補×stem の再計算 3 箇所）／⒠ **`SvgDrawingContext` を piecewise append に**（`string.Format` と一時文字列 3〜5 本/primitive を消す・書式は同じ F2/F3/F4）／⒡ **`UnscaledXDrawingContext` が DrawNotehead/DrawAttachedGlyph/DrawHitRect/Source(aliases) を転送**（ossia の interactive hit rect・data-alt が落ちていた）／⒢ **MIDI・MusicXML の和音枠を第394 の決定に追従**（root anchor へ動かしていた＝**4 人目の読み手が 1 日遅れた**・grace 和音と `<< >>` も）／⒣ **VSQX が `<backup>`・`<harmony>` 擬似音を C として書いていた**／⒤ 引用の行ずれ・消えた記号名・LYS2008 の説明。**証明: 掃き 938 冊 moved 0／full 8607 / 0 / 4 / 8613／台帳 851 点不動／snapshot 0 枚。** **2 本目（P7）＝`new Measure(...)` ×4 が init-only 4 項目（`EndHighlightAliases`・`ContinuedFromMeasure`・`IsEmptyPlaceholder`・`IsTrailingClefColumn`）を落としていたのを record の `with` に**（掃き moved 0／full は終了時の数）。
+
+★★★★ **⑶ 承認待ち＝出力が動く字面移植（patch は `scratch/p395/patches/*.patch`・掃きは base `ea31a447` Debug 対 patch on `509d98df`・938 冊・data-pos 伏せ・比較ログ `scratch/p395/sweep/compare-*.log`）**:
+| | 何を | LP | moved / 938 | 形 |
+|---|---|---|---|---|
+| **P1** | 旗の Y＝renderer は stem 端に描くが LP は `stem_extent[d] − d·blot/2`（予約側 `FlagInkBand` は第358 から移植済み＝描画と予約の 2 綴り・`DotColumn.FlagSupport` が 3 綴り目）→ `LayoutUtilities.FlagPlacementY` 1 軒 | flag.cc:183-196 | **364**（追跡 85＋実コーパス 277） | 全冊 ink only＝旗の y ±0.04・小節線不動 |
+| **P2** | rod が IDEAL を動かす＝`Widen` ×3（chord row・tab・script）が `ideal = max(ideal, rod)`＋compress 0 → `EnsureMinDistance` | simple-spacer.cc:90-127 add_rod／spring.cc:183-195 set_blocking_force | **126**（追跡 3＋実コーパス 122＋sample 1） | **124 冊で小節線が動く**（和音行のリードシート・`showcase/04-advanced` は 1 段目が 5→6 小節に組み直る）⇒ **承認前に双子で 2 冊は LP に訊くこと** |
+| **P3** | 梁 seed＝min-dy で再中心化（LP は左端固定 :597）＋発明の 2.5ss 床 `EnsureMinimumStemLength` 撤去（LP に無い・床は `shift_region_to_valid` の `shortest_y_`） | beam-quanting.cc:590-597, 463-482 | **4**（実コーパス） | ink only・梁 +0.04 |
+| **P4** | articulation の非量子化床 `2.0+0.25`（誤差の打ち消し）→ `StaffExtent 2.05 + PaddingFor(type)` | side-position-interface.cc:323-330, :370 | **2**（`test/articulations` portato +0.25・`がくふ` +0.40） | ink only |
+| **P5** | hara-kiri の keepAliveInterfaces＝音符だけ→ dynamics・chord name・figure・percent も（lyrics は `LyricItem.StaffIndex` の意味が row 専用で保留） | engraver-init.ly:987-1001 | **2**（`lp-regression/hara-kiri-percent-repeat`・`lpreg/harakiri-percent`） | **percent 譜が生き残る＝LP 回帰本そのもの**（8 段の小節線 対 5） |
+| **P6** | `OssiaScale = 0.7071` の手丸め → `Magstep(-3)`（隣の remark は「閉じた」と主張していた） | lily-library.scm magstep | **2**（`test/ossia`・`ossia-beams`） | ink only・0.01 未満 |
+✅ **6 本ともユーザー承認（2026-09-16「承認する」）→ 同便で P5 `f3599742`・P4 `a7e67bc2`・P6 `134099d9`・P3 `1f519a32`・P1 `a18bfd15`・P2 `c6ee8665` として出荷**（各 commit に掃きの数・full・再ベースした snapshot を名指し）。**snapshot 再ベース 35 枚**（P4 1・P6 2・P1 30・P2 2）・台帳 851 点は 6 本とも不動。**P2 は先に LP に訊いた**: `04-advanced` の双子を 2.26.0 に通すと 1 段目 6 小節・2 段目 7 小節＝**P2 と一致、base（5＋…）は不一致**（`scratch/p395/lp/`）。⚠️ P2 の full は 11 分かかった（他は 3〜4 分）が、`lysc svg` の壁時計は 4 冊で誤差内＝機械の混雑と読んだ。**P5 の lyrics 除外は `LyricItem.StaffIndex` の意味が row 専用だから**（HaraKiri の remark）＝§2 R に載せない小さい残件。
+
+★★ **⑷ 報告だけ（§2 R）の上位**: exporter の `alternative` 節（MIDI だけ鳴らす）と MusicXML の section header `partial` 落とし＋空 `<part>`／collector の tuplet 腕が note 腕より薄い／voice span 越しの音価記憶 2 綴り／非既定 accidental style で resume 全滅／診断が preview と別に full collect＋~50 walk／SVG 全文が打鍵ごとに ~7 回コピー／debounce 既定 100ms（コードの 60 は死）。
+
+★ **終了時**: commit 10 本（`509d98df` バッチ・P7 `397fd46f`・HANDOFF `77c36b14`・承認後の P5/P4/P6/P3/P1/P2・この §1）・HEAD＝この §1 の commit・未 push 15・**承認後の full `scratch/p395/run4.trx` 8609 / 0 / 4 / 8613**・§7.5（対 `ea31a447`）**Core `+` 751 行／REF 21／OWN 0**・snapshot 249 枚（35 再ベース）・**第 1 便の数**: **full `scratch/p395/run3.trx` 8608 / 1 / 4 / 8613＝赤 1 は `ApproximationInventoryTests.TheInventoryIsNotStale`（P7 の行ずれ）で棚卸しを再生成して緑＝実質 8609 / 0 / 4 / 8613**（+4＝lexer の網）・台帳 851 点／総和 22.584727806 不変・snapshot 249 枚不動・追跡 `.lys` 608・§7.5（対 `ea31a447`）: **Core `+` 551 行／REF 10／OWN 0**（新しい数値定数なし・`TopLevelNodes` の根拠は parser の行を名指した remark）・§7 3.5 は済（第393 を `-Archive 393`＝18 行 3,439 chars）。⇒ **次の一手＝本便は着手しない**（判定を書き残す・第356 ⑹ の型）: 候補は §2 R の R3（tuplet 腕の helper＝出力が動く＝掃きと承認が要る）・R6（resume の門 3 本＝増分だけ・網は全体一致の fuzz）・R13⒜（診断の collect 共有＝LSP の設計）。**本便に残る道具は掃きの base（`scratch/p395/sweep/base`＝`ea31a447`）だが、承認 6 本で HEAD の絵が動いたので次の掃きは base を描き直す＝残る道具が効かない。** R6 は掃き不要で、§2 R の file:line から新しい便が読み直しても同じ費用。⇒ 次便が §0 の裏取り（承認後の HEAD で CI と数を取り直す）から入るほうが有利。
+
 ## 以下は第394セッションの経緯
 
 最終更新 第394セッション（2026-09-16）＝**入り方が違う**（ユーザーは `scratch/site-showcase/chord-axes.lys` の 1 行を示して「4 小節目がオクターブ高い。なぜだろうか。これは意図された動作？」と訊いた）。道具は pwsh MCP。**結果＝問いが言語の決定になり、和音のオクターブ枠の規則が変わった**。**骨は 5**:
