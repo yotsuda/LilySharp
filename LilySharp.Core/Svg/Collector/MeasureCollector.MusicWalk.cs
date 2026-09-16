@@ -932,26 +932,10 @@ public sealed partial class MeasureCollector
                     // Onset timing of this note (elapsed duration before it is added)
                     // — anchors note-attached marks to the right column.
                     Fraction noteAnchorTiming = builder.CurrentDuration;
-                    // Process grace notes BEFORE the main note so they get correct octave context
-                    if (_pendingGrace is { } pendingGrace)
-                    {
-                        // ⚠️ CLEARED BEFORE THE WALK, NOT AFTER. The grace body is walked by
-                        // THIS walker now, so its own first note reaches this same arm; a
-                        // field still holding the grace makes that note open the same grace
-                        // again, for ever. (It was safe to clear afterwards while the body
-                        // had a reader of its own that never re-entered the walk.)
-                        _pendingGrace = null;
-                        ProcessGraceRegion(pendingGrace, builder, measureIndex);
-                        TakeGraceSlurEnd(ref hasSlurEndAfter);
-                        // ⚠️ RE-READ, because the grace walk just added items. The index was
-                        // taken before the grace so the ANCHOR TIMING above could be read at
-                        // the same moment; a grace takes no measure time, so that one is
-                        // still right, but this note's column has moved along by however
-                        // many grace columns were engraved. Attaching this note's scripts
-                        // and dynamics to the stale index would hang them on the first
-                        // GRACE column instead.
-                        itemIndex = builder.CurrentItemCount;
-                    }
+                    // The grace group waiting for this note is walked BEFORE it (octave
+                    // context), and the index re-read — OpenSoundingItem says why.
+                    (itemIndex, bool isCue, int featherDir) =
+                        OpenSoundingItem(note, builder, measureIndex, itemIndex, ref hasSlurEndAfter);
                     // `a4@rest` is a REST written at a pitch — LilyPond's `a4\rest`.
                     // It leaves the walk here rather than further down because it is
                     // not a note at all: nothing note-shaped (dynamics, figured bass,
@@ -989,35 +973,9 @@ public sealed partial class MeasureCollector
                     }
 
                     bool hasGliss = HasGlissandoArticulation(note);
-                    int featherDir = GetFeatherDirection(note);
-                    bool isCue = _cueDepth > 0;
-                    // Pre-scan for @courtesy annotation before creating note
-                    if (HasCourtesyAnnotation(note))
-                        _courtesySourcePositions.Add(note.SourceStart);
-                    var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, hasGliss, featherDir, isCue);
-                    if (isCue && TakeCueRegionStart())
-                        noteItem = noteItem with { BeginsCueRegion = true };
-                    if (ExtractNoteheadStyle(note) is var nhStyle && nhStyle != NoteheadStyle.Default)
-                        noteItem = noteItem with { Notehead = nhStyle };
-                    if (_tremoloPairShape is { } tpn)
-                    {
-                        // Halve the sounding time (display stays the total)
-                        // and join the pair with the subdivision's beams.
-                        noteItem = noteItem with
-                        {
-                            TimeScale = noteItem.TimeScale * new Fraction(1, 2),
-                            TremoloPairBeams = tpn.Beams,
-                            TremoloGapCount = tpn.GapCount,
-                            HasBeamStart = _tremoloPairFirst,
-                            HasBeamEnd = !_tremoloPairFirst,
-                        };
-                        _tremoloPairFirst = false;
-                    }
-                    if (_graceDepth == 0 && !_pendingLeadingGrace.IsDefaultOrEmpty)
-                    {
-                        noteItem = noteItem with { LeadingGrace = _pendingLeadingGrace };
-                        _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
-                    }
+                    var noteItem = DecorateSoundingItem(
+                        CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, hasGliss, featherDir, isCue),
+                        note, isCue);
                     builder.AddItem(WithBowSources(noteItem, m));
                     CollectDynamics(note, measureIndex, itemIndex);
                     CollectArticulations(note, measureIndex, itemIndex, noteItem.StemUp,
@@ -1169,26 +1127,10 @@ public sealed partial class MeasureCollector
                         _pendingEmptyChordSlurEnd |= hasSlurEndAfter;
                         break;
                     }
-                    // Process grace notes BEFORE the main chord so they get correct octave context
-                    if (_pendingGrace is { } pendingGrace)
-                    {
-                        // ⚠️ CLEARED BEFORE THE WALK, NOT AFTER. The grace body is walked by
-                        // THIS walker now, so its own first note reaches this same arm; a
-                        // field still holding the grace makes that note open the same grace
-                        // again, for ever. (It was safe to clear afterwards while the body
-                        // had a reader of its own that never re-entered the walk.)
-                        _pendingGrace = null;
-                        ProcessGraceRegion(pendingGrace, builder, measureIndex);
-                        TakeGraceSlurEnd(ref hasSlurEndAfter);
-                        // ⚠️ RE-READ, because the grace walk just added items. The index was
-                        // taken before the grace so the ANCHOR TIMING above could be read at
-                        // the same moment; a grace takes no measure time, so that one is
-                        // still right, but this note's column has moved along by however
-                        // many grace columns were engraved. Attaching this note's scripts
-                        // and dynamics to the stale index would hang them on the first
-                        // GRACE column instead.
-                        itemIndex = builder.CurrentItemCount;
-                    }
+                    // The grace group waiting for this chord is walked BEFORE it (octave
+                    // context), and the index re-read — OpenSoundingItem says why.
+                    (itemIndex, bool isCue, _) =
+                        OpenSoundingItem(chord, builder, measureIndex, itemIndex, ref hasSlurEndAfter);
                     bool hasArpeggio = HasArpeggioArticulation(chord);
                     // @arpeggio(bracket) = non-arpeggiate (do NOT roll) — LilyPond's
                     // \nonArpeggiato, a ChordBracket rather than an Arpeggio.
@@ -1199,35 +1141,11 @@ public sealed partial class MeasureCollector
                     bool arpBracket = chord.Articulations.Any(art =>
                         art is MusicMarkSyntax { } am
                         && Semantics.AnnotationValues.IsArpeggioBracket(am));
-                    bool isCue = _cueDepth > 0;
-                    var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieAfter: hasTieAfter, hasSlurStartAfter: hasSlurStartAfter, hasSlurEndAfter: hasSlurEndAfter);
-                    if (isCue && TakeCueRegionStart())
-                        chordItem = chordItem with { BeginsCueRegion = true };
-                    if (_tremoloPairShape is { } tpc)
-                    {
-                        // Two-note tremolo with a chord body (`repeat tremolo N
-                        // { c32 <dis fis> }`): same halving/beam-joining as the
-                        // note case — the chord case used to skip this, so a
-                        // chord in a pair silently rendered at its written value.
-                        chordItem = chordItem with
-                        {
-                            TimeScale = chordItem.TimeScale * new Fraction(1, 2),
-                            TremoloPairBeams = tpc.Beams,
-                            TremoloGapCount = tpc.GapCount,
-                            HasBeamStart = _tremoloPairFirst,
-                            HasBeamEnd = !_tremoloPairFirst,
-                        };
-                        _tremoloPairFirst = false;
-                    }
+                    var chordItem = DecorateSoundingItem(
+                        CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieAfter: hasTieAfter, hasSlurStartAfter: hasSlurStartAfter, hasSlurEndAfter: hasSlurEndAfter),
+                        chord, isCue);
                     if (arpBracket)
                         chordItem = chordItem with { HasArpeggioBracket = true };
-                    if (ExtractNoteheadStyle(chord) is var chStyle && chStyle != NoteheadStyle.Default)
-                        chordItem = chordItem with { Notehead = chStyle };
-                    if (_graceDepth == 0 && !_pendingLeadingGrace.IsDefaultOrEmpty)
-                    {
-                        chordItem = chordItem with { LeadingGrace = _pendingLeadingGrace };
-                        _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
-                    }
                     builder.AddItem(WithBowSources(chordItem, m));
                     CollectDynamics(chord, measureIndex, itemIndex);
                     // Use chord stem direction for articulation placement
@@ -1254,30 +1172,12 @@ public sealed partial class MeasureCollector
                     int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
                     int itemIndex = builder.CurrentItemCount;
                     Fraction repAnchorTiming = builder.CurrentDuration;
-                    if (_pendingGrace is { } pendingGrace)
-                    {
-                        // ⚠️ CLEARED BEFORE THE WALK, NOT AFTER. The grace body is walked by
-                        // THIS walker now, so its own first note reaches this same arm; a
-                        // field still holding the grace makes that note open the same grace
-                        // again, for ever. (It was safe to clear afterwards while the body
-                        // had a reader of its own that never re-entered the walk.)
-                        _pendingGrace = null;
-                        ProcessGraceRegion(pendingGrace, builder, measureIndex);
-                        TakeGraceSlurEnd(ref hasSlurEndAfter);
-                        // ⚠️ RE-READ, because the grace walk just added items. The index was
-                        // taken before the grace so the ANCHOR TIMING above could be read at
-                        // the same moment; a grace takes no measure time, so that one is
-                        // still right, but this note's column has moved along by however
-                        // many grace columns were engraved. Attaching this note's scripts
-                        // and dynamics to the stale index would hang them on the first
-                        // GRACE column instead.
-                        itemIndex = builder.CurrentItemCount;
-                    }
+                    (itemIndex, bool isCue, _) =
+                        OpenSoundingItem(rep, builder, measureIndex, itemIndex, ref hasSlurEndAfter);
                     bool hasArpeggio = HasArpeggioArticulation(rep);
                     bool arpBracket = rep.Articulations.Any(art =>
                         art is MusicMarkSyntax { } am
                         && Semantics.AnnotationValues.IsArpeggioBracket(am));
-                    bool isCue = _cueDepth > 0;
                     var repItem = CreateChordRepetitionItem(rep, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieAfter: hasTieAfter, hasSlurStartAfter: hasSlurStartAfter, hasSlurEndAfter: hasSlurEndAfter);
                     if (repItem is not ChordItem chordCopy)
                     {
@@ -1286,34 +1186,9 @@ public sealed partial class MeasureCollector
                         builder.AddItem(WithBowSources(repItem, m));
                         break;
                     }
-                    if (isCue && TakeCueRegionStart())
-                        chordCopy = chordCopy with { BeginsCueRegion = true };
-                    if (_tremoloPairShape is { } tpr)
-                    {
-                        // Two-note tremolo with a chord-repetition body (`repeat
-                        // tremolo 4 { c16 q16 }`): same halving/beam-joining as the
-                        // note and chord arms — this arm used to skip it, so the
-                        // repeated chord silently rendered at its written value
-                        // with a flag (regression repeat-tremolo-chord-rep.ly).
-                        chordCopy = chordCopy with
-                        {
-                            TimeScale = chordCopy.TimeScale * new Fraction(1, 2),
-                            TremoloPairBeams = tpr.Beams,
-                            TremoloGapCount = tpr.GapCount,
-                            HasBeamStart = _tremoloPairFirst,
-                            HasBeamEnd = !_tremoloPairFirst,
-                        };
-                        _tremoloPairFirst = false;
-                    }
+                    chordCopy = DecorateSoundingItem(chordCopy, rep, isCue);
                     if (arpBracket)
                         chordCopy = chordCopy with { HasArpeggioBracket = true };
-                    if (ExtractNoteheadStyle(rep) is var repStyle && repStyle != NoteheadStyle.Default)
-                        chordCopy = chordCopy with { Notehead = repStyle };
-                    if (_graceDepth == 0 && !_pendingLeadingGrace.IsDefaultOrEmpty)
-                    {
-                        chordCopy = chordCopy with { LeadingGrace = _pendingLeadingGrace };
-                        _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
-                    }
                     builder.AddItem(WithBowSources(chordCopy, m));
                     CollectDynamics(rep, measureIndex, itemIndex);
                     CollectArticulations(rep, measureIndex, itemIndex, chordCopy.StemUp, anchorTiming: repAnchorTiming);
@@ -1339,46 +1214,11 @@ public sealed partial class MeasureCollector
                     int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
                     int itemIndex = builder.CurrentItemCount;
                     Fraction slashAnchorTiming = builder.CurrentDuration;
-                    if (_pendingGrace is { } pendingGrace)
-                    {
-                        // ⚠️ CLEARED BEFORE THE WALK, NOT AFTER. The grace body is walked by
-                        // THIS walker now, so its own first note reaches this same arm; a
-                        // field still holding the grace makes that note open the same grace
-                        // again, for ever. (It was safe to clear afterwards while the body
-                        // had a reader of its own that never re-entered the walk.)
-                        _pendingGrace = null;
-                        ProcessGraceRegion(pendingGrace, builder, measureIndex);
-                        TakeGraceSlurEnd(ref hasSlurEndAfter);
-                        // ⚠️ RE-READ, because the grace walk just added items. The index was
-                        // taken before the grace so the ANCHOR TIMING above could be read at
-                        // the same moment; a grace takes no measure time, so that one is
-                        // still right, but this note's column has moved along by however
-                        // many grace columns were engraved. Attaching this note's scripts
-                        // and dynamics to the stale index would hang them on the first
-                        // GRACE column instead.
-                        itemIndex = builder.CurrentItemCount;
-                    }
-                    bool isCue = _cueDepth > 0;
-                    var slashItem = CreateSlashNoteItem(slash, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, isCue);
-                    if (isCue && TakeCueRegionStart())
-                        slashItem = slashItem with { BeginsCueRegion = true };
-                    if (_tremoloPairShape is { } tps)
-                    {
-                        slashItem = slashItem with
-                        {
-                            TimeScale = slashItem.TimeScale * new Fraction(1, 2),
-                            TremoloPairBeams = tps.Beams,
-                            TremoloGapCount = tps.GapCount,
-                            HasBeamStart = _tremoloPairFirst,
-                            HasBeamEnd = !_tremoloPairFirst,
-                        };
-                        _tremoloPairFirst = false;
-                    }
-                    if (_graceDepth == 0 && !_pendingLeadingGrace.IsDefaultOrEmpty)
-                    {
-                        slashItem = slashItem with { LeadingGrace = _pendingLeadingGrace };
-                        _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
-                    }
+                    (itemIndex, bool isCue, _) =
+                        OpenSoundingItem(slash, builder, measureIndex, itemIndex, ref hasSlurEndAfter);
+                    var slashItem = DecorateSoundingItem(
+                        CreateSlashNoteItem(slash, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, isCue),
+                        slash, isCue);
                     builder.AddItem(WithBowSources(slashItem, m));
                     CollectDynamics(slash, measureIndex, itemIndex);
                     CollectArticulations(slash, measureIndex, itemIndex, slashItem.StemUp, anchorTiming: slashAnchorTiming);
@@ -1396,69 +1236,11 @@ public sealed partial class MeasureCollector
                     int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
                     int itemIndex = builder.CurrentItemCount;
                     Fraction bareAnchorTiming = builder.CurrentDuration;
-                    if (_pendingGrace is { } pendingGrace)
-                    {
-                        // ⚠️ CLEARED BEFORE THE WALK, NOT AFTER. The grace body is walked by
-                        // THIS walker now, so its own first note reaches this same arm; a
-                        // field still holding the grace makes that note open the same grace
-                        // again, for ever. (It was safe to clear afterwards while the body
-                        // had a reader of its own that never re-entered the walk.)
-                        _pendingGrace = null;
-                        ProcessGraceRegion(pendingGrace, builder, measureIndex);
-                        TakeGraceSlurEnd(ref hasSlurEndAfter);
-                        // ⚠️ RE-READ, because the grace walk just added items. The index was
-                        // taken before the grace so the ANCHOR TIMING above could be read at
-                        // the same moment; a grace takes no measure time, so that one is
-                        // still right, but this note's column has moved along by however
-                        // many grace columns were engraved. Attaching this note's scripts
-                        // and dynamics to the stale index would hang them on the first
-                        // GRACE column instead.
-                        itemIndex = builder.CurrentItemCount;
-                    }
-                    bool isCue = _cueDepth > 0;
-                    var bareItem = CreateBareDurationItem(bare, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, isCue);
-                    if (isCue && TakeCueRegionStart() && bareItem is NoteItem or ChordItem)
-                        bareItem = bareItem switch
-                        {
-                            NoteItem n => n with { BeginsCueRegion = true },
-                            ChordItem c => c with { BeginsCueRegion = true },
-                            _ => bareItem,
-                        };
-                    if (_tremoloPairShape is { } tpb)
-                    {
-                        bareItem = bareItem switch
-                        {
-                            NoteItem n => n with
-                            {
-                                TimeScale = n.TimeScale * new Fraction(1, 2),
-                                TremoloPairBeams = tpb.Beams,
-                                TremoloGapCount = tpb.GapCount,
-                                HasBeamStart = _tremoloPairFirst,
-                                HasBeamEnd = !_tremoloPairFirst,
-                            },
-                            ChordItem c => c with
-                            {
-                                TimeScale = c.TimeScale * new Fraction(1, 2),
-                                TremoloPairBeams = tpb.Beams,
-                                TremoloGapCount = tpb.GapCount,
-                                HasBeamStart = _tremoloPairFirst,
-                                HasBeamEnd = !_tremoloPairFirst,
-                            },
-                            _ => bareItem,
-                        };
-                        if (bareItem is NoteItem or ChordItem)
-                            _tremoloPairFirst = false;
-                    }
-                    if (_graceDepth == 0 && !_pendingLeadingGrace.IsDefaultOrEmpty && bareItem is NoteItem bn)
-                    {
-                        bareItem = bn with { LeadingGrace = _pendingLeadingGrace };
-                        _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
-                    }
-                    else if (_graceDepth == 0 && !_pendingLeadingGrace.IsDefaultOrEmpty && bareItem is ChordItem bc)
-                    {
-                        bareItem = bc with { LeadingGrace = _pendingLeadingGrace };
-                        _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
-                    }
+                    (itemIndex, bool isCue, _) =
+                        OpenSoundingItem(bare, builder, measureIndex, itemIndex, ref hasSlurEndAfter);
+                    var bareItem = DecorateSoundingItem(
+                        CreateBareDurationItem(bare, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, isCue),
+                        bare, isCue);
                     builder.AddItem(WithBowSources(bareItem, m));
                     bool bareStemUp = bareItem switch
                     {
@@ -1829,6 +1611,9 @@ public sealed partial class MeasureCollector
     {
         int measureIndex = builder.CurrentMeasureIndex;
         int startNoteIndex = builder.CurrentItemCount;
+        // A grace written BEFORE the tuplet is walked by the tuplet's first sounding item
+        // (OpenSoundingItem), so its columns land inside the index range opened above.
+        bool graceAhead = _pendingGrace != null;
 
         // Cumulative time scale for items inside this tuplet. Items store
         // their ACTUAL duration (written × base/ratio, compounded through
@@ -1897,6 +1682,17 @@ public sealed partial class MeasureCollector
         // reset and the indexes would be garbage — that dropped the second
         // nested tuplet's outer bracket and mis-indexed its inner one.
         int endNoteIndex = builder.CurrentItemCount - 1;
+        // …and those columns are not the tuplet's music: LilyPond's bracket starts at the
+        // first column of the SCALED music, and its if-no-beam visibility reads that column's
+        // stem, so the range is opened past the grace columns. A grace written INSIDE the
+        // body is the tuplet's own and stays in.
+        // LILYPOND-REF: lily/tuplet-bracket.cc:97-103 bracket_basic_visibility — equal_bounds of the parallel beam and the bracket hides it
+        if (graceAhead)
+        {
+            var current = builder.CurrentItems;
+            while (startNoteIndex <= endNoteIndex && current[startNoteIndex].GraceTime)
+                startNoteIndex++;
+        }
 
         // Only add bracket if we have at least 2 notes.
         // ⚠️ AND NEVER IN GRACE TIME. A tuplet inside a grace body is a CONTAINER there — its
@@ -1933,6 +1729,117 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
+    /// What the walk does BEFORE a sounding item (note, chord, <c>q</c>, slash, bare duration)
+    /// is built, written once for the main arm and the tuplet arm: the grace group waiting for
+    /// this item is walked now and the item index re-read, an explicit <c>@courtesy</c> is noted
+    /// where <see cref="CreateNoteItem"/> reads it, and the item learns whether it stands in a
+    /// cue region and which way its beam feathers.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE GRACE IS CLEARED BEFORE THE WALK, NOT AFTER. The grace body is walked by THIS
+    /// walker, so its own first note reaches this same method; a field still holding the grace
+    /// would open the same group again, for ever.
+    /// <para>
+    /// ⚠️ THE ITEM INDEX IS RE-READ after the grace walk, because that walk added columns. The
+    /// anchor timing the caller took before is still right (a grace takes no measure time), but
+    /// scripts and dynamics filed against the stale index would hang on the first GRACE column.
+    /// </para>
+    /// <para>
+    /// Until session 397 the five main-walk arms carried this block verbatim and the tuplet arm
+    /// had none of it (HANDOFF §2 R3): inside <c>tuplet { }</c> a pending grace rode the first
+    /// note AFTER the tuplet, <c>@courtesy</c> printed only on a form's second walk over the
+    /// same source, and <c>cue { tuplet { } }</c> came out full size. A tuplet scales TIME and
+    /// nothing else — the same note events, wrapped; no engraver can tell them from unscaled ones.
+    /// LILYPOND-REF: ly/music-functions-init.ly:2470-2495 tuplet — make-music 'TimeScaledMusic around the music given
+    /// </para>
+    /// </remarks>
+    private (int ItemIndex, bool IsCue, int FeatherDirection) OpenSoundingItem(
+        SyntaxNode node, MeasureBuilder builder, int measureIndex, int itemIndex, ref bool hasSlurEndAfter)
+    {
+        if (_pendingGrace is { } pendingGrace)
+        {
+            _pendingGrace = null;
+            ProcessGraceRegion(pendingGrace, builder, measureIndex);
+            TakeGraceSlurEnd(ref hasSlurEndAfter);
+            itemIndex = builder.CurrentItemCount;
+        }
+        if (node is NoteSyntax note && HasCourtesyAnnotation(note))
+            _courtesySourcePositions.Add(note.SourceStart);
+        return (itemIndex, _cueDepth > 0, GetFeatherDirection(node));
+    }
+
+    /// <summary>
+    /// What the walk stamps ON a sounding item once it is built — the cue region's edge, the
+    /// <c>@notehead</c> style, the two-note tremolo's halving and beam join, and the grace
+    /// columns that reserve space in front of it — written once for the main arm and the tuplet
+    /// arm. A spacer standing in for a bad <c>q</c> or bare duration passes through untouched
+    /// (and, unlike the bare-duration arm before session 397, does not take the cue stamp).
+    /// </summary>
+    /// <remarks>
+    /// The two-note tremolo halves the SOUNDING time while the display keeps the pair's total,
+    /// and joins the pair with the subdivision's beams — the same for a note, a chord, a <c>q</c>
+    /// (regression repeat-tremolo-chord-rep.ly) and a bare duration.
+    /// </remarks>
+    private T DecorateSoundingItem<T>(T item, SyntaxNode node, bool isCue) where T : MusicItem
+    {
+        switch (item)
+        {
+            case NoteItem n:
+            {
+                if (isCue && TakeCueRegionStart())
+                    n = n with { BeginsCueRegion = true };
+                if (ExtractNoteheadStyle(node) is var style && style != NoteheadStyle.Default)
+                    n = n with { Notehead = style };
+                if (_tremoloPairShape is { } pair)
+                {
+                    n = n with
+                    {
+                        TimeScale = n.TimeScale * new Fraction(1, 2),
+                        TremoloPairBeams = pair.Beams,
+                        TremoloGapCount = pair.GapCount,
+                        HasBeamStart = _tremoloPairFirst,
+                        HasBeamEnd = !_tremoloPairFirst,
+                    };
+                    _tremoloPairFirst = false;
+                }
+                if (_graceDepth == 0 && !_pendingLeadingGrace.IsDefaultOrEmpty)
+                {
+                    n = n with { LeadingGrace = _pendingLeadingGrace };
+                    _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
+                }
+                return (T)(MusicItem)n;
+            }
+            case ChordItem c:
+            {
+                if (isCue && TakeCueRegionStart())
+                    c = c with { BeginsCueRegion = true };
+                if (ExtractNoteheadStyle(node) is var style && style != NoteheadStyle.Default)
+                    c = c with { Notehead = style };
+                if (_tremoloPairShape is { } pair)
+                {
+                    c = c with
+                    {
+                        TimeScale = c.TimeScale * new Fraction(1, 2),
+                        TremoloPairBeams = pair.Beams,
+                        TremoloGapCount = pair.GapCount,
+                        HasBeamStart = _tremoloPairFirst,
+                        HasBeamEnd = !_tremoloPairFirst,
+                    };
+                    _tremoloPairFirst = false;
+                }
+                if (_graceDepth == 0 && !_pendingLeadingGrace.IsDefaultOrEmpty)
+                {
+                    c = c with { LeadingGrace = _pendingLeadingGrace };
+                    _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
+                }
+                return (T)(MusicItem)c;
+            }
+            default:
+                return item;
+        }
+    }
+
+    /// <summary>
     /// Emits one note / rest / chord at a tuplet-scaled duration (TimeScale carries the
     /// notation-vs-time factor) with its post-events, and returns its WRITTEN duration.
     /// Shared by <see cref="ProcessTuplet"/> and the arpeggio auto-tuplet.
@@ -1958,6 +1865,12 @@ public sealed partial class MeasureCollector
         Fraction annAnchor = builder.CurrentDuration;
         switch (item)
         {
+            case GraceExpressionSyntax grace:
+                // Waits for the next sounding item of the body, exactly as the main walk's
+                // arm does — until session 397 this arm did not exist, and a grace written
+                // inside a tuplet body was dropped without a word (HANDOFF §2 R3).
+                _pendingGrace = grace;
+                return Fraction.Zero;
             case NoteSyntax note:
             {
                 // `a4@rest` inside a tuplet body is the same pitched REST the main walk's
@@ -1988,15 +1901,21 @@ public sealed partial class MeasureCollector
                 // hasGlissando read here too — the main walk's arm reads it and this
                 // arm didn't, which is the same one-arm-of-two hole the rest dynamics
                 // above already had (a tuplet note's @glissando dropped silently).
-                var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, HasGlissandoArticulation(note));
-                builder.AddItemWithoutDuration(WithBowSources(noteItem with { TimeScale = scale }, m));
+                (annItemIndex, bool isCue, int featherDir) =
+                    OpenSoundingItem(note, builder, annMeasureIndex, annItemIndex, ref hasSlurEndAfter);
+                var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, HasGlissandoArticulation(note), featherDir, isCue);
+                // The WRITTEN duration is read off the item BEFORE the scale goes on — the
+                // caller's clock is fed the sum of written values and scales it once.
+                Fraction written = noteItem.Duration;
+                noteItem = DecorateSoundingItem(noteItem with { TimeScale = scale }, note, isCue);
+                builder.AddItemWithoutDuration(WithBowSources(noteItem, m));
                 CollectDynamics(note, annMeasureIndex, annItemIndex);
                 CollectArticulations(note, annMeasureIndex, annItemIndex, noteItem.StemUp,
                     noteItem.EditorialAccidental, annAnchor);
                 CollectFiguredBass(note, annMeasureIndex, annItemIndex);
                 CollectChordNames(note, annMeasureIndex, annItemIndex, annAnchor);
                 CollectCrossStaff(note, annMeasureIndex, annItemIndex);
-                return noteItem.Duration;
+                return written;
             }
             case RestSyntax rest:
             {
@@ -2017,32 +1936,40 @@ public sealed partial class MeasureCollector
             }
             case ChordSyntax chord:
             {
+                (annItemIndex, bool isCue, _) =
+                    OpenSoundingItem(chord, builder, annMeasureIndex, annItemIndex, ref hasSlurEndAfter);
                 var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter,
-                    hasArpeggio: false, isCue: false, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter);
-                builder.AddItemWithoutDuration(WithBowSources(chordItem with { TimeScale = scale }, m));
+                    hasArpeggio: false, isCue, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter);
+                Fraction written = chordItem.Duration;
+                chordItem = DecorateSoundingItem(chordItem with { TimeScale = scale }, chord, isCue);
+                builder.AddItemWithoutDuration(WithBowSources(chordItem, m));
                 CollectDynamics(chord, annMeasureIndex, annItemIndex);
                 CollectArticulations(chord, annMeasureIndex, annItemIndex, chordItem.StemUp, anchorTiming: annAnchor);
                 CollectFiguredBass(chord, annMeasureIndex, annItemIndex);
                 CollectChordNames(chord, annMeasureIndex, annItemIndex, annAnchor);
                 CollectCrossStaff(chord, annMeasureIndex, annItemIndex);
-                return chordItem.Duration;
+                return written;
             }
             case ChordRepetitionSyntax rep:
             {
                 // `q` inside a tuplet — LP expands repetitions late, so \times/
                 // \tuplet still applies to them (regression chord-repetition-times).
+                (annItemIndex, bool isCue, _) =
+                    OpenSoundingItem(rep, builder, annMeasureIndex, annItemIndex, ref hasSlurEndAfter);
                 var repItem = CreateChordRepetitionItem(rep, hasBeamStartAfter, hasBeamEndAfter,
-                    hasArpeggio: false, isCue: false, hasTieAfter: hasTieAfter,
+                    hasArpeggio: false, isCue, hasTieAfter: hasTieAfter,
                     hasSlurStartAfter: hasSlurStartAfter, hasSlurEndAfter: hasSlurEndAfter);
                 if (repItem is ChordItem chordCopy)
                 {
-                    builder.AddItemWithoutDuration(WithBowSources(chordCopy with { TimeScale = scale }, m));
+                    Fraction written = chordCopy.Duration;
+                    chordCopy = DecorateSoundingItem(chordCopy with { TimeScale = scale }, rep, isCue);
+                    builder.AddItemWithoutDuration(WithBowSources(chordCopy, m));
                     CollectDynamics(rep, annMeasureIndex, annItemIndex);
                     CollectArticulations(rep, annMeasureIndex, annItemIndex, chordCopy.StemUp, anchorTiming: annAnchor);
                     CollectFiguredBass(rep, annMeasureIndex, annItemIndex);
                     CollectChordNames(rep, annMeasureIndex, annItemIndex, annAnchor);
                     CollectCrossStaff(rep, annMeasureIndex, annItemIndex);
-                    return chordCopy.Duration;
+                    return written;
                 }
                 // Bad chord repetition: the spacer keeps the tuplet's time.
                 var spacer = (RestItem)repItem;
@@ -2051,34 +1978,48 @@ public sealed partial class MeasureCollector
             }
             case SlashNoteSyntax slash:
             {
+                (annItemIndex, bool isCue, _) =
+                    OpenSoundingItem(slash, builder, annMeasureIndex, annItemIndex, ref hasSlurEndAfter);
                 var slashItem = CreateSlashNoteItem(slash, hasTieAfter, hasSlurStartAfter,
-                    hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter);
-                builder.AddItemWithoutDuration(WithBowSources(slashItem with { TimeScale = scale }, m));
+                    hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, isCue);
+                Fraction written = slashItem.Duration;
+                slashItem = DecorateSoundingItem(slashItem with { TimeScale = scale }, slash, isCue);
+                builder.AddItemWithoutDuration(WithBowSources(slashItem, m));
                 CollectDynamics(slash, annMeasureIndex, annItemIndex);
                 CollectArticulations(slash, annMeasureIndex, annItemIndex, slashItem.StemUp, anchorTiming: annAnchor);
                 CollectChordNames(slash, annMeasureIndex, annItemIndex, annAnchor);
-                return slashItem.Duration;
+                return written;
             }
             case BareDurationSyntax bare:
             {
                 // Same late-expansion rule as `q`: the tuplet scale applies to
                 // the copy, whatever it resolved to.
+                (annItemIndex, bool isCue, _) =
+                    OpenSoundingItem(bare, builder, annMeasureIndex, annItemIndex, ref hasSlurEndAfter);
                 var bareItem = CreateBareDurationItem(bare, hasTieAfter, hasSlurStartAfter,
-                    hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter);
+                    hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, isCue);
                 switch (bareItem)
                 {
                     case NoteItem n:
-                        builder.AddItemWithoutDuration(WithBowSources(n with { TimeScale = scale }, m));
+                    {
+                        Fraction written = n.Duration;
+                        n = DecorateSoundingItem(n with { TimeScale = scale }, bare, isCue);
+                        builder.AddItemWithoutDuration(WithBowSources(n, m));
                         CollectDynamics(bare, annMeasureIndex, annItemIndex);
                         CollectArticulations(bare, annMeasureIndex, annItemIndex, n.StemUp, anchorTiming: annAnchor);
                         CollectChordNames(bare, annMeasureIndex, annItemIndex, annAnchor);
-                        return n.Duration;
+                        return written;
+                    }
                     case ChordItem c:
-                        builder.AddItemWithoutDuration(WithBowSources(c with { TimeScale = scale }, m));
+                    {
+                        Fraction written = c.Duration;
+                        c = DecorateSoundingItem(c with { TimeScale = scale }, bare, isCue);
+                        builder.AddItemWithoutDuration(WithBowSources(c, m));
                         CollectDynamics(bare, annMeasureIndex, annItemIndex);
                         CollectArticulations(bare, annMeasureIndex, annItemIndex, c.StemUp, anchorTiming: annAnchor);
                         CollectChordNames(bare, annMeasureIndex, annItemIndex, annAnchor);
-                        return c.Duration;
+                        return written;
+                    }
                     default:
                         var bareSpacer = (RestItem)bareItem;
                         builder.AddItemWithoutDuration(bareSpacer with { TimeScale = scale });
