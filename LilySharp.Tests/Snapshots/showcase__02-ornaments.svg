@@ -64,7 +64,7 @@
   <text class="music" x="16.40" y="26.52" font-size="4.00" data-pos="292"></text>
   <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="18.94" y="25.02" font-size="2.83" data-pos="314"></text>
   <line x1="19.79" y1="24.87" x2="19.79" y2="22.42" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="19.86" y="22.42" font-size="2.83"></text>
+  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="19.86" y="22.46" font-size="2.83"></text>
   <line x1="19.37" y1="23.94" x2="20.38" y2="23.12" stroke="#000000" stroke-width="0.138"/>
   <text class="music" x="20.88" y="24.52" font-size="4.00" data-pos="320"></text>
   <line x1="20.94" y1="24.67" x2="20.94" y2="28.02" stroke="#000000" stroke-width="0.130"/>

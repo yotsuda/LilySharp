@@ -20,7 +20,7 @@
   <line x1="80.00" y1="-0.35" x2="80.00" y2="3.00" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="89.99" y="0.50" font-size="4.00" data-pos="693"></text>
   <line x1="90.08" y1="0.65" x2="90.08" y2="4.00" stroke="#000000" stroke-width="0.130"/>
-  <rect x="99.97" y="0.00" width="0.27" height="4.00" data-pos="695"/>
+  <rect x="99.96" y="0.00" width="0.27" height="4.00" data-pos="695"/>
   </g>
   <line x1="0.05" y1="18.70" x2="102.38" y2="18.70" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.05" y1="19.70" x2="102.38" y2="19.70" stroke="#000000" stroke-width="0.100"/>

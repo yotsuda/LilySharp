@@ -67,7 +67,7 @@ internal static partial class SharedRenderer
     // to this size. The METRONOME MARK's own note is NOT this any more — it draws at
     // \smaller = magstep(-1) of the full size (MetronomeMarkGeometry.NoteSize).
     private const double SwingNoteSize = 1.6;
-    private const double OssiaScale = EngravingDefaults.OssiaScale; // magstep(-3), shared with the layouter
+    private static readonly double OssiaScale = EngravingDefaults.OssiaScale; // magstep(-3), shared with the layouter
 
     public static void RenderTo(
         MultiStaffScore score, ScoreLayout layout, IDocumentContext doc,

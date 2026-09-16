@@ -38,7 +38,7 @@ public interface ISemanticValidator
 
 /// <summary>
 /// A validator whose diagnostics come from warnings recorded as a side effect of a
-/// single-staff <see cref="MeasureCollector.Collect"/>. <see cref="SemanticValidation.Run"/>
+/// single-staff <see cref="MeasureCollector.Collect"/>. <see cref="SemanticValidation.Run(SyntaxTree, System.Threading.CancellationToken)"/>
 /// supplies ONE shared, lazily-computed collector so several such validators don't
 /// each re-walk the whole score.
 /// </summary>
@@ -58,7 +58,7 @@ internal interface ISharedCollectValidator : ISemanticValidator
 /// <summary>
 /// The single source of truth for which semantic validators run, and a helper to
 /// run them all. Both the CLI's <c>check</c> and the LSP's live diagnostics call
-/// <see cref="Run"/> so they can never diverge.
+/// <c>Run</c> (the two overloads share one body) so they can never diverge.
 /// </summary>
 public static class SemanticValidation
 {

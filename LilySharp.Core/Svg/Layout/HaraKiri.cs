@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System;
+using System.Collections.Generic;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -53,6 +55,30 @@ internal static class HaraKiri
     /// If remove-first is false and this is the first system, never hides.
     /// </remarks>
     public static bool ShouldHideStaff(Staff staff, int startMeasure, int endMeasure, bool isFirstSystem)
+        => ShouldHideStaff(staff, staffIndex: -1, score: null, startMeasure, endMeasure, isFirstSystem);
+
+    /// <summary>
+    /// The per-system suicide filter every <c>LayoutStaffGroups</c> overload hands down:
+    /// <see cref="ShouldHideStaff(Staff, int, MultiStaffScore?, int, int, bool)"/> bound to
+    /// this score and system, with each staff's global index resolved once.
+    /// </summary>
+    public static Func<Staff, bool> DeadFilter(
+        MultiStaffScore score, int startMeasure, int endMeasure, bool isFirstSystem)
+    {
+        var indexOf = new Dictionary<Staff, int>(ReferenceEqualityComparer.Instance);
+        foreach (var (_, staff, globalIndex) in score.EnumerateStaves())
+            indexOf.TryAdd(staff, globalIndex);
+        return staff => ShouldHideStaff(
+            staff, indexOf.TryGetValue(staff, out int i) ? i : -1, score,
+            startMeasure, endMeasure, isFirstSystem);
+    }
+
+    /// <summary>
+    /// <see cref="ShouldHideStaff(Staff, int, int, bool)"/> with the score's side tables in
+    /// reach, so the grobs LilyPond's <c>keepAliveInterfaces</c> names beyond note heads count.
+    /// </summary>
+    public static bool ShouldHideStaff(Staff staff, int staffIndex, MultiStaffScore? score,
+        int startMeasure, int endMeasure, bool isFirstSystem)
     {
         if (!staff.RemoveEmpty)
             return false;
@@ -62,20 +88,33 @@ internal static class HaraKiri
         if (isFirstSystem && !staff.RemoveFirst)
             return false;
 
-        return IsStaffEmpty(staff, startMeasure, endMeasure);
+        return IsStaffEmpty(staff, staffIndex, score, startMeasure, endMeasure);
     }
 
     /// <summary>
     /// Checks whether a staff has any musical content (keepAliveInterfaces grobs) in a measure range.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: ly/engraver-init.ly — keepAliveInterfaces list
-    /// In LilySharp, the equivalent of keepAliveInterfaces is:
-    ///   NoteItem → note-head-interface
-    ///   ChordItem → note-head-interface (contains multiple noteheads)
-    /// Future extensions could include dynamics, lyrics, etc. attached to the staff.
+    /// LILYPOND-REF: ly/engraver-init.ly:987-1001 keepAliveInterfaces — note-head-interface,
+    ///   tab-note-head-interface, dynamic-interface, lyric-syllable-interface,
+    ///   lyric-interface, chord-name-interface, bass-figure-interface,
+    ///   cluster-beacon-interface, fret-diagram-interface, percent-repeat-interface,
+    ///   stanza-number-interface.
+    /// In Lily#'s model those grobs live in two places: note heads are the staff's own
+    /// <see cref="NoteItem"/> / <see cref="ChordItem"/> (a tab staff's numbers are the same
+    /// items), and dynamics, chord names, bass figures and percent repeats are the score's
+    /// side tables, each entry carrying the global staff index it hangs on. Until session
+    /// 395 only the heads counted, so a rest-only bar carrying a dynamic, a chord symbol or
+    /// a figure was hidden where LilyPond keeps the staff.
+    /// ⚠️ Lyrics are NOT consulted: <see cref="LyricItem.StaffIndex"/> is the global index of
+    /// an independent lyrics ROW and 0 for lyrics under a staff whichever staff that is, so
+    /// it cannot say which staff a syllable keeps alive. A staff with syllables has the notes
+    /// they are sung to, which keep it alive anyway; the row case (a lyrics-only row is not a
+    /// removeEmpty staff) does not arise. Clusters, fret diagrams and stanza numbers have no
+    /// separate grob here.
     /// </remarks>
-    public static bool IsStaffEmpty(Staff staff, int startMeasure, int endMeasure)
+    public static bool IsStaffEmpty(Staff staff, int staffIndex, MultiStaffScore? score,
+        int startMeasure, int endMeasure)
     {
         foreach (var voice in staff.Voices)
         {
@@ -83,13 +122,37 @@ internal static class HaraKiri
             {
                 foreach (var item in voice.Measures[m].Items)
                 {
-                    // note-head-interface: NoteItem and ChordItem keep the staff alive
+                    // note-head-interface / tab-note-head-interface: NoteItem and ChordItem
                     if (item is NoteItem or ChordItem)
                         return false;
                 }
             }
         }
 
+        if (score == null || staffIndex < 0)
+            return true;
+
+        // dynamic-interface
+        foreach (var d in score.Dynamics)
+            if (d.StaffIndex == staffIndex && d.MeasureIndex >= startMeasure && d.MeasureIndex < endMeasure)
+                return false;
+        // chord-name-interface
+        foreach (var c in score.ChordNames)
+            if (c.StaffIndex == staffIndex && c.MeasureIndex >= startMeasure && c.MeasureIndex < endMeasure)
+                return false;
+        // bass-figure-interface
+        foreach (var f in score.FiguredBasses)
+            if (f.StaffIndex == staffIndex && f.MeasureIndex >= startMeasure && f.MeasureIndex < endMeasure)
+                return false;
+        // percent-repeat-interface
+        foreach (var p in score.PercentRepeats)
+            if (p.StaffIndex == staffIndex && p.MeasureIndex >= startMeasure && p.MeasureIndex < endMeasure)
+                return false;
+
         return true;
     }
+
+    /// <summary>The note-head-only reading, kept for callers without a score in reach.</summary>
+    public static bool IsStaffEmpty(Staff staff, int startMeasure, int endMeasure)
+        => IsStaffEmpty(staff, staffIndex: -1, score: null, startMeasure, endMeasure);
 }

@@ -773,7 +773,10 @@ internal static partial class SharedRenderer
                         using (GrobFontSize.IsReduced(note)
                                ? gc.MusicFace(GrobFontSize.DesignOf(note, SizedGrob.Flag))
                                : NullScope.Instance)
-                            gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX), stemEndY,
+                            // Half a blot inside the stem's end — LayoutUtilities.FlagPlacementY,
+                            // the same term the spacing reserves the flag's ink by.
+                            gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX),
+                                LayoutUtilities.FlagPlacementY(stemEndY, stemUp),
                                 flagFontSize, stemColor);
                     hasFlag = true;
                     // The flag as a dot support — the one support taken at its GLYPH's ink
@@ -789,10 +792,12 @@ internal static partial class SharedRenderer
                     var flagBox = GlyphMetrics.GetFlagBBox(
                         GrobFontSize.FontOf(note, SizedGrob.Flag), noteValue, stemUp);
                     if (flagBox != default)
+                    {
+                        double flagY = LayoutUtilities.FlagPlacementY(stemEndY, stemUp) - staffMiddleY;
                         dotSupports.Add(DotColumn.FlagSupport(
-                            stemEndY - staffMiddleY + flagBox.Bottom,
-                            stemEndY - staffMiddleY + flagBox.Top,
+                            flagY + flagBox.Bottom, flagY + flagBox.Top,
                             stemX - x + flagBox.Right));
+                    }
                 }
                 // An acciaccatura's stroke, drawn where the flag is because in LilyPond it IS
                 // the flag's — Flag.stroke-style = "grace" (MusicItem.GraceSlash). It follows
@@ -1060,10 +1065,12 @@ internal static partial class SharedRenderer
                 var flagBox = GlyphMetrics.GetFlagBBox(
                     GrobFontSize.FontOf(chord, SizedGrob.Flag), noteValue, stemUp);
                 if (flagBox != default)
+                {
+                    double flagY = LayoutUtilities.FlagPlacementY(stemEndY, stemUp) - staffMiddleY;
                     dotSupports.Add(DotColumn.FlagSupport(
-                        stemEndY - staffMiddleY + flagBox.Bottom,
-                        stemEndY - staffMiddleY + flagBox.Top,
+                        flagY + flagBox.Bottom, flagY + flagBox.Top,
                         stemX - x + flagBox.Right));
+                }
             }
         }
 
@@ -1163,7 +1170,8 @@ internal static partial class SharedRenderer
                         using (GrobFontSize.IsReduced(chord)
                                ? gc.MusicFace(GrobFontSize.DesignOf(chord, SizedGrob.Flag))
                                : NullScope.Instance)
-                            gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX), stemEndY,
+                            gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX),
+                                LayoutUtilities.FlagPlacementY(stemEndY, stemUp),
                                 flagFontSize, stemColor);
                     hasFlag = true;
                 }

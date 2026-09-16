@@ -53,7 +53,7 @@
   <text class="music" x="20.54" y="29.24" font-size="4.00"></text>
   <text class="music" x="25.11" y="29.74" font-size="4.00" data-pos="657"></text>
   <line x1="26.35" y1="29.59" x2="26.35" y2="26.24" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="26.41" y="26.24" font-size="4.00"></text>
+  <text class="music" x="26.41" y="26.28" font-size="4.00"></text>
   <text class="music" x="29.69" y="29.74" font-size="4.00" data-pos="660"></text>
   <line x1="30.93" y1="29.59" x2="30.93" y2="26.24" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="34.16" y="29.74" font-size="4.00" data-pos="663"></text>

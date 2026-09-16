@@ -288,8 +288,10 @@ internal static class DotColumn
                 if (flagBox != default)
                 {
                     // The stem's tip in staff spaces from the middle line; the flag's ink
-                    // hangs off it, and FlagSupport converts spaces to positions.
-                    double tip = (stem.StemUp ? stem.StemMax : stem.StemMin) / 2.0;
+                    // hangs half a blot inside it (LayoutUtilities.FlagPlacementY), and
+                    // FlagSupport converts spaces to positions.
+                    double tip = LayoutUtilities.FlagPlacementY(
+                        (stem.StemUp ? stem.StemMax : stem.StemMin) / 2.0, stem.StemUp);
                     supports.Add(FlagSupport(
                         tip + flagBox.Bottom, tip + flagBox.Top, stemX + flagBox.Right));
                 }
@@ -354,9 +356,11 @@ internal static class DotColumn
             var flagBox = GlyphMetrics.GetFlagBBox(font, noteValue, GraceColumnHeads.StemUp);
             if (noteValue >= 8 && flagBox != default)
             {
-                double tip = StemCalculator.CalculateStemEndPosition(
-                    GraceColumnHeads.StemUp, StemCalculator.GetDurationLog(noteValue), top,
-                    GrobFontSize.GraceStemDetails) / 2.0;
+                double tip = LayoutUtilities.FlagPlacementY(
+                    StemCalculator.CalculateStemEndPosition(
+                        GraceColumnHeads.StemUp, StemCalculator.GetDurationLog(noteValue), top,
+                        GrobFontSize.GraceStemDetails) / 2.0,
+                    GraceColumnHeads.StemUp);
                 supports.Add(FlagSupport(tip + flagBox.Bottom, tip + flagBox.Top,
                                          stemX + flagBox.Right));
             }

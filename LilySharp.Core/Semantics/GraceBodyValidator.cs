@@ -49,7 +49,7 @@ namespace LilySharp.Core.Semantics;
 /// argues about is the opposite one, and it turns on whether LilyPond can make the ink.
 /// </para>
 /// <para>
-/// ⚠️ IT RUNS ON EVERY KEYSTROKE. <see cref="SemanticValidation.Run"/> is the LSP's
+/// ⚠️ IT RUNS ON EVERY KEYSTROKE. <see cref="SemanticValidation.Run(SyntaxTree, System.Threading.CancellationToken)"/> is the LSP's
 /// diagnostics pass, so this walk is paid by every book, and the books that write no
 /// <c>grace</c> at all are nearly all of them (1697 on disk, a handful write one). That is
 /// why it goes through <see cref="SyntaxNode.KindSites"/> rather than

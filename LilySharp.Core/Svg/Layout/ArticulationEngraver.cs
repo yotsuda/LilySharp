@@ -2162,28 +2162,19 @@ internal static class ArticulationEngraver
         // TWO staff clearances stack on a non-quantized script, and they are
         // different quantities (probe-script-y measured both):
         // ① include_staff: with staff-padding set (and no quantize), the STAFF INK
-        //    itself joins the support skyline, so the glyph's near edge clears the
-        //    outer line's ink by the script's own padding: ink edge ≥ 2.05 + 0.20
-        //    = 2.25 — numerically the old StaffHalf + 0.25 clamp, kept as is.
-        //    LP's accent over c'' sits exactly there (origin 2.67 = 2.25 + 0.42).
-        //    ⚠️ NOT PORTED — the per-type padding: the 2.25 is FLAT, but under the
-        //    include_staff reading it should be 2.05 + PaddingFor(type) — identical
-        //    only for the padding-0.20 scripts, so the flat spelling is an
-        //    approximation of LP's formula, not a Lily#-own quantity (§5.2 audit,
-        //    session 158). A fermata (script.scm padding 0.40) would want
-        //    2.45; no ledger point or book observes a fermata where this floor
-        //    BINDS (the script.* ledger points all pass either way), so the flat
-        //    constant stays until a measurement decides it.
-        //    ⚠️ AUDITED 2026-08-28 (session 276) AND DELIBERATELY LEFT UNVERIFIED. The
-        //    parenthesis is a CANCELLATION claim — it names points and says they pass
-        //    either way — and those are the ones that turn out false (the volta line's
-        //    thickness was one, worth 85% of its point's residual). This one admits no
-        //    CHEAP discriminator: poisoning the flat 2.25 moves every script, not only
-        //    the fermata the claim is about, so the only check that isolates it is
-        //    2.05 + PaddingFor(type) — which IS the port. Per HANDOFF 5.0, a cancellation
-        //    claim whose discriminating check cannot be written is not verified; this one
-        //    is recorded as unverified rather than blessed by an audit that could not
-        //    reach it.
+        //    itself joins the support skyline (dim.set_minimum_height (staff_extents[dir]),
+        //    :323-330), so the glyph's near edge clears the outer line's ink by the
+        //    SCRIPT'S OWN padding (:370 total_off += dir * ss * padding): ink edge ≥
+        //    2.05 + padding — 2.25 for the 0.20 scripts (LP's accent over c'' sits exactly
+        //    there: origin 2.67 = 2.25 + 0.42), 2.45 for a fermata (script.scm 0.40),
+        //    2.50 for portato (0.45).
+        //    ⚠️ Until session 395 this was the FLAT `StaffHalf + StaffPadding` = 2.0 + 0.25,
+        //    the right number for the 0.20 scripts through two wrong terms cancelling
+        //    (2.0 + 0.25 = 2.05 + 0.20), and 0.20 / 0.25 too low for a fermata / portato
+        //    whose floor binds. Session 158 named it NOT PORTED and session 276 audited
+        //    it as an unverifiable cancellation claim; the port is the discriminator.
+        // LILYPOND-REF: lily/side-position-interface.cc:323-330 aligned_side — the staff
+        //   symbol's extent as the support floor (dim.set_minimum_height);
         // LILYPOND-REF: lily/side-position-interface.cc:217-223 include_staff —
         //   staff-padding present && !quantize_position puts staff_symbol in common.
         // ② the staff-padding floor proper, on the REFPOINT (total_off): refpoint ≥
@@ -2193,7 +2184,9 @@ internal static class ArticulationEngraver
         // LILYPOND-REF: lily/side-position-interface.cc:433-453 staff_padding —
         //   diff = dir * staff_extent[dir] + staff_padding - dir * total_off …;
         //   total_off += dir * max (diff, 0).
-        double inkFloor = StaffHalf + StaffPadding; // ① = 2.05 ink + 0.20 padding
+        // ① the staff's own ink (DynamicEngraver.StaffExtent, the one home = 2.05) plus
+        //   THIS script's padding — the aligned_side support floor.
+        double inkFloor = DynamicEngraver.StaffExtent + PaddingFor(articulation.Type);
         double refpointFloor = StaffHalf + EngravingDefaults.StaffLineThickness / 2
             + StaffPadding;                         // ② = 2.05 ink + 0.25
         if (isAbove)

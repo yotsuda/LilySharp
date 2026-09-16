@@ -8,9 +8,9 @@
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="424">Rows sheet</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <rect x="0.00" y="19.51" width="0.19" height="4.00"/>
-  <rect x="34.06" y="19.51" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="53.72" y="19.51" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="78.96" y="19.51" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="34.25" y="19.51" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="54.11" y="19.51" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="78.77" y="19.51" width="0.19" height="4.00" data-pos="0"/>
   <rect x="102.24" y="19.51" width="0.19" height="4.00" data-pos="0"/>
   <text class="music" x="0.80" y="21.51" font-size="4.00" data-pos="442"></text>
   <rect x="0.00" y="31.51" width="0.19" height="4.00"/>
@@ -19,19 +19,19 @@
   <rect x="80.29" y="31.51" width="0.19" height="4.00" data-pos="0"/>
   <rect x="102.24" y="31.51" width="0.19" height="4.00" data-pos="0"/>
   <text x="9.65" y="22.11" font-size="2.47" text-anchor="middle" data-pos="536">Twin</text>
-  <text x="16.72" y="22.11" font-size="2.47" text-anchor="middle" data-pos="542">kle</text>
-  <text x="23.77" y="22.11" font-size="2.47" text-anchor="middle" data-pos="546">twin</text>
-  <text x="30.46" y="22.11" font-size="2.47" text-anchor="middle" data-pos="552">kle</text>
-  <text x="36.27" y="22.11" font-size="2.47" text-anchor="middle" data-pos="558">lit</text>
-  <text x="42.35" y="22.11" font-size="2.47" text-anchor="middle" data-pos="563">tle</text>
-  <text x="49.23" y="22.11" font-size="2.47" text-anchor="middle" data-pos="567">star</text>
-  <text x="56.96" y="22.11" font-size="2.47" text-anchor="middle" data-pos="574">how</text>
-  <text x="63.27" y="22.11" font-size="2.47" text-anchor="middle" data-pos="578">I</text>
-  <text x="68.77" y="22.11" font-size="2.47" text-anchor="middle" data-pos="580">won</text>
-  <text x="75.31" y="22.11" font-size="2.47" text-anchor="middle" data-pos="585">der</text>
-  <text x="82.78" y="22.11" font-size="2.47" text-anchor="middle" data-pos="591">what</text>
-  <text x="90.78" y="22.11" font-size="2.47" text-anchor="middle" data-pos="596">you</text>
-  <text x="97.75" y="22.11" font-size="2.47" text-anchor="middle" data-pos="600">are</text>
+  <text x="16.78" y="22.11" font-size="2.47" text-anchor="middle" data-pos="542">kle</text>
+  <text x="23.87" y="22.11" font-size="2.47" text-anchor="middle" data-pos="546">twin</text>
+  <text x="30.62" y="22.11" font-size="2.47" text-anchor="middle" data-pos="552">kle</text>
+  <text x="36.48" y="22.11" font-size="2.47" text-anchor="middle" data-pos="558">lit</text>
+  <text x="42.62" y="22.11" font-size="2.47" text-anchor="middle" data-pos="563">tle</text>
+  <text x="49.57" y="22.11" font-size="2.47" text-anchor="middle" data-pos="567">star</text>
+  <text x="57.37" y="22.11" font-size="2.47" text-anchor="middle" data-pos="574">how</text>
+  <text x="62.93" y="22.11" font-size="2.47" text-anchor="middle" data-pos="578">I</text>
+  <text x="68.49" y="22.11" font-size="2.47" text-anchor="middle" data-pos="580">won</text>
+  <text x="75.08" y="22.11" font-size="2.47" text-anchor="middle" data-pos="585">der</text>
+  <text x="82.60" y="22.11" font-size="2.47" text-anchor="middle" data-pos="591">what</text>
+  <text x="90.66" y="22.11" font-size="2.47" text-anchor="middle" data-pos="596">you</text>
+  <text x="97.69" y="22.11" font-size="2.47" text-anchor="middle" data-pos="600">are</text>
   <text x="2.47" y="34.11" font-size="2.47" text-anchor="middle" data-pos="610">Up</text>
   <text x="8.27" y="34.11" font-size="2.47" text-anchor="middle" data-pos="613">a</text>
   <text x="14.48" y="34.11" font-size="2.47" text-anchor="middle" data-pos="616">bove</text>
@@ -47,9 +47,9 @@
   <text x="89.42" y="34.11" font-size="2.47" text-anchor="middle" data-pos="665">the</text>
   <text x="97.12" y="34.11" font-size="2.47" text-anchor="middle" data-pos="669">sky</text>
   <text x="8.98" y="18.01" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="478">C</text>
-  <text x="35.60" y="18.01" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="482">G</text>
-  <text x="56.29" y="18.01" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="486">Am</text>
-  <text x="82.11" y="18.01" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="491">F</text>
+  <text x="35.81" y="18.01" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="482">G</text>
+  <text x="56.69" y="18.01" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="486">Am</text>
+  <text x="81.93" y="18.01" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="491">F</text>
   <text x="1.80" y="30.01" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="495">C</text>
   <text x="29.86" y="30.01" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="499">G</text>
   <text x="54.26" y="30.01" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="503">F</text>
@@ -58,10 +58,10 @@
   <text x="0.00" y="30.49" font-size="1.75" font-weight="bold" text-anchor="end">5</text>
   <rect x="0.30" y="15.66" width="8.08" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="447"/>
   <text x="4.34" y="18.01" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="447">Main</text>
-  <line x1="13.46" y1="21.63" x2="14.12" y2="21.63" stroke="#000000" stroke-width="0.130"/>
-  <line x1="27.20" y1="21.63" x2="27.86" y2="21.63" stroke="#000000" stroke-width="0.130"/>
-  <line x1="38.87" y1="21.63" x2="39.53" y2="21.63" stroke="#000000" stroke-width="0.130"/>
-  <line x1="71.92" y1="21.63" x2="72.58" y2="21.63" stroke="#000000" stroke-width="0.130"/>
+  <line x1="13.49" y1="21.63" x2="14.15" y2="21.63" stroke="#000000" stroke-width="0.130"/>
+  <line x1="27.33" y1="21.63" x2="27.99" y2="21.63" stroke="#000000" stroke-width="0.130"/>
+  <line x1="39.11" y1="21.63" x2="39.77" y2="21.63" stroke="#000000" stroke-width="0.130"/>
+  <line x1="71.66" y1="21.63" x2="72.32" y2="21.63" stroke="#000000" stroke-width="0.130"/>
   <line x1="10.12" y1="33.63" x2="10.78" y2="33.63" stroke="#000000" stroke-width="0.130"/>
   <line x1="69.85" y1="33.63" x2="70.51" y2="33.63" stroke="#000000" stroke-width="0.130"/>
   </g>

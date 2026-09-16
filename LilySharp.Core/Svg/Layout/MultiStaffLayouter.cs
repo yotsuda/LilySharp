@@ -260,7 +260,7 @@ internal sealed class MultiStaffLayouter
     /// Shared with the renderer via EngravingDefaults so reserved heights
     /// match the drawn size exactly.
     /// </summary>
-    private const double OssiaScaleFactor = EngravingDefaults.OssiaScale;
+    private static readonly double OssiaScaleFactor = EngravingDefaults.OssiaScale;
 
     /// <summary>
     /// Gets the height of a staff in staff spaces.
@@ -687,7 +687,7 @@ internal sealed class MultiStaffLayouter
         MultiStaffScore score,
         int startMeasure, int endMeasure, bool isFirstSystem)
         => LayoutStaffGroups(score, staffSkylines: null,
-            staff => HaraKiri.ShouldHideStaff(staff, startMeasure, endMeasure, isFirstSystem));
+            HaraKiri.DeadFilter(score, startMeasure, endMeasure, isFirstSystem));
 
     /// <summary>
     /// The staff-stacking loop for one group: places each SURVIVING staff at its real
@@ -2457,7 +2457,7 @@ internal sealed class MultiStaffLayouter
         PairRunSources runSources = default)
         => LayoutStaffGroups(
             score, staffSkylines,
-            staff => HaraKiri.ShouldHideStaff(staff, startMeasure, endMeasure, isFirstSystem),
+            HaraKiri.DeadFilter(score, startMeasure, endMeasure, isFirstSystem),
             runSources);
 
     /// <summary>Builds the per-staff skylines one system is placed and sprung against,

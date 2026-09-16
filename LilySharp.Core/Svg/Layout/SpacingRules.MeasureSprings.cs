@@ -421,15 +421,14 @@ internal static partial class SpacingRules
         var result = springs.ToBuilder();
         void Widen(int springIndex, double needed)
         {
-            var s = result[springIndex];
-            // A rod: the minimum moves, the strengths do not (see ApplyTabChordSpacing's
-            // Widen for the measured consequence of resetting the compress strength).
-            // LILYPOND-REF: lily/simple-spacer.cc:90-127 Simple_spacer::add_rod.
-            if (needed > s.MinDistance)
-                result[springIndex] = new Spring(
-                    Math.Max(s.IdealDistance, needed), needed,
-                    s.InverseStretchStrength,
-                    needed >= s.IdealDistance ? 0.0 : s.InverseCompressStrength);
+            // A rod: the MINIMUM moves and nothing else — LilyPond's add_rod sets the blocking
+            // force, which rewrites min_distance_ to the rod and leaves the ideal and both
+            // strengths alone. Until session 395 this also raised the IDEAL to the rod and
+            // zeroed the compress strength, so a rod past the ideal made the spring RIGID at
+            // the rod where LilyPond stretches it from its ideal by the blocking force.
+            // LILYPOND-REF: lily/simple-spacer.cc:90-127 Simple_spacer::add_rod;
+            // LILYPOND-REF: lily/spring.cc:183-195 Spring::set_blocking_force — min_distance_ = length (f).
+            result[springIndex] = result[springIndex].EnsureMinDistance(needed);
         }
         // How far a column's symbol reaches on each side, extra-spacing-width included.
         // A column with no symbol reaches nowhere: LilyPond has no grob there to grow.
@@ -873,24 +872,18 @@ internal static partial class SpacingRules
         var result = springs.ToBuilder();
         void Widen(int idx, double needed)
         {
-            var s = result[idx];
-            // A reservation is a ROD: it moves the minimum (and the ideal up to it) and
-            // neither strength — LilyPond's add_rod raises blocking forces only. The
-            // 3-argument constructor here used to reset the compress strength to
-            // ideal − min, so a rest → note spring under a chord symbol blocked at
-            // −1.0 where LilyPond's blocks at −0.62 (Freedom bars 69-76, session 323).
-            // LILYPOND-REF: lily/simple-spacer.cc:90-127 Simple_spacer::add_rod.
-            // ⚠️ A rod that reaches the ideal leaves min == ideal, and LilyPond's blocking
-            // force is then 0 ONLY because the compress strength is 0 (spring.cc:78-82):
-            // compress_line takes a blocking-0 spring as already blocked, never adds its
-            // flexibility, and subtracts it anyway — a positive strength there breaks the
-            // solve (Simple_spacer::compress_line, 想い人 bars 84-87 read "does not fit").
-            // So the strength survives only while the rod stays under the ideal.
-            if (needed > s.MinDistance)
-                result[idx] = new Spring(
-                    Math.Max(s.IdealDistance, needed), needed,
-                    s.InverseStretchStrength,
-                    needed >= s.IdealDistance ? 0.0 : s.InverseCompressStrength);
+            // A reservation is a ROD: it moves the MINIMUM and nothing else — LilyPond's
+            // add_rod sets the blocking force, which rewrites min_distance_ to the rod and
+            // leaves the ideal and both strengths alone. The 3-argument constructor here used
+            // to reset the compress strength to ideal − min (a rest → note spring under a
+            // chord symbol blocked at −1.0 where LilyPond's blocks at −0.62, Freedom bars
+            // 69-76, session 323), and until session 395 the ideal was still raised to the
+            // rod with the compress strength zeroed past it — which is what made "min ==
+            // ideal with a positive compress strength" reachable at all (想い人 bars 84-87);
+            // LilyPond never writes that pair from a rod, and now neither does this.
+            // LILYPOND-REF: lily/simple-spacer.cc:90-127 Simple_spacer::add_rod;
+            // LILYPOND-REF: lily/spring.cc:183-195 Spring::set_blocking_force — min_distance_ = length (f).
+            result[idx] = result[idx].EnsureMinDistance(needed);
         }
         Widen(0, left[0]);
         for (int t = 0; t < timings.Count - 1; t++)
@@ -1247,24 +1240,11 @@ internal static partial class SpacingRules
         var result = springs.ToBuilder();
         void Widen(int idx, double needed)
         {
-            var s = result[idx];
-            // A reservation is a ROD: it moves the minimum (and the ideal up to it) and
-            // neither strength — LilyPond's add_rod raises blocking forces only. The
-            // 3-argument constructor here used to reset the compress strength to
-            // ideal − min, so a rest → note spring under a chord symbol blocked at
-            // −1.0 where LilyPond's blocks at −0.62 (Freedom bars 69-76, session 323).
-            // LILYPOND-REF: lily/simple-spacer.cc:90-127 Simple_spacer::add_rod.
-            // ⚠️ A rod that reaches the ideal leaves min == ideal, and LilyPond's blocking
-            // force is then 0 ONLY because the compress strength is 0 (spring.cc:78-82):
-            // compress_line takes a blocking-0 spring as already blocked, never adds its
-            // flexibility, and subtracts it anyway — a positive strength there breaks the
-            // solve (Simple_spacer::compress_line, 想い人 bars 84-87 read "does not fit").
-            // So the strength survives only while the rod stays under the ideal.
-            if (needed > s.MinDistance)
-                result[idx] = new Spring(
-                    Math.Max(s.IdealDistance, needed), needed,
-                    s.InverseStretchStrength,
-                    needed >= s.IdealDistance ? 0.0 : s.InverseCompressStrength);
+            // A reservation is a ROD: the MINIMUM moves and nothing else (LilyPond's add_rod
+            // → set_blocking_force; the chord-row and tab Widens above carry the account).
+            // LILYPOND-REF: lily/simple-spacer.cc:90-127 Simple_spacer::add_rod;
+            // LILYPOND-REF: lily/spring.cc:183-195 Spring::set_blocking_force — min_distance_ = length (f).
+            result[idx] = result[idx].EnsureMinDistance(needed);
         }
 
         // The between-column spring t+1 spans colItem[t] → colItem[t+1]. A script

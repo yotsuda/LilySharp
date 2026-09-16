@@ -221,6 +221,24 @@ internal static class LayoutUtilities
     public static double FlagDrawX(double stemX) => stemX + EngravingDefaults.StemThickness / 2;
 
     /// <summary>
+    /// The Y (page Y-up, staff spaces) a flag's glyph is placed at: half a blot diameter
+    /// INSIDE the stem's end — below the end of an up stem, above the end of a down one.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/flag.cc:183-196 Flag::internal_calc_y_offset — the Y-offset is
+    ///   <c>stem_extent[d] - d * blot / 2</c>, <c>blot</c> being the layout's blot-diameter.
+    /// ONE HOME for the drawn glyph (SharedRenderer's three flag sites), the flag as a dot
+    /// support (DotColumn, the renderer's two supports) and — in the device frame —
+    /// <c>ItemSkylineFactory.FlagInkBand</c>, which had ported this since session 358 while
+    /// the pen still put the glyph on the end itself: the drawn flag sat 0.04 ss further out
+    /// than the one the spacing reserved (session 395). MEASURED (2.26.0,
+    /// scratch/p359/lp/flag-low.ly): an eighth flag on a stem ending at +1.0 spans
+    /// −2.09 … +1.025 = the glyph box (−3.0502 … +0.065) at +0.96.
+    /// </remarks>
+    public static double FlagPlacementY(double stemEndY, bool stemUp)
+        => stemEndY - (stemUp ? 1 : -1) * EngravingDefaults.BlotDiameter / 2;
+
+    /// <summary>
     /// Gets note value (1=whole, 2=half, 4=quarter, 8=eighth) from duration fraction.
     /// </summary>
     /// <remarks>

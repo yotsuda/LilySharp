@@ -299,15 +299,18 @@ internal static class EngravingDefaults
     /// <c>ythick = hair-thickness·line-thickness·ss</c>.</remarks>
     public const double MultiMeasureRestHairThickness = 2.0 * LineThickness;
 
-    // LILYPOND-REF: scm/lily-library.scm (magstep s) = 2^(s/6); magstep(-3) = 2^(-1/2) ≈ 0.7071.
+    // LILYPOND-REF: scm/lily-library.scm (magstep s) = 2^(s/6), over the ossia's font-size −3.
     /// <summary>
-    /// Ossia staff scale: magstep(-3) = 2^(-3/6) ≈ 0.707 — the LP ossia
-    /// convention (fontSize = -3 with StaffSymbol.staff-space = magstep -3,
-    /// NR "Ossia staves"). Shared by the layouter (reserved heights and gaps)
-    /// and the renderer (drawing scale) so the two cannot drift apart and
-    /// leave phantom whitespace under the drawn ossia.
+    /// Ossia staff scale: magstep(-3) — the LP ossia convention (fontSize = -3 with
+    /// StaffSymbol.staff-space = magstep -3, NR "Ossia staves"). Shared by the layouter
+    /// (reserved heights and gaps) and the renderer (drawing scale) so the two cannot
+    /// drift apart and leave phantom whitespace under the drawn ossia.
+    /// ⚠️ It was the hand-rounded literal 0.7071 until session 395 — the very case the
+    /// CueScale remark below lists as closed (0.7071 against 0.70710678) while this line
+    /// still carried the rounding; <see cref="Layout.EmmentalerDesignSize.Magstep"/> is the
+    /// one home, and this is the same 2^(-3/6) a grace head is drawn at.
     /// </summary>
-    public const double OssiaScale = 0.7071;
+    public static readonly double OssiaScale = Layout.EmmentalerDesignSize.Magstep(-3);
 
     /// <summary>
     /// The <c>font-size</c> a CUE grob states — LilyPond's CueVoice number.

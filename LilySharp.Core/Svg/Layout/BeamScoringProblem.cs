@@ -103,10 +103,6 @@ internal sealed class BeamScoringProblem
     private readonly double _lineThickness;
     private readonly double _beamTranslation;
 
-    // Stem info — per-stem ideal/shortest now come from StemCalculator.CalculateBeamedStemInfo
-    // (LilyPond calc_stem_info); only the flat minimum floor remains for EnsureMinimumStemLength.
-    private readonly double _minStemLength;
-
     // This beam's length-fraction, which buys every stem's ideal and floor lengths.
     // LILYPOND-REF: lily/stem.cc:1164-1259 calc_stem_info — beamed-lengths,
     //   beamed-minimum-free-lengths and beamed-extreme-minimum-free-lengths are each
@@ -460,8 +456,6 @@ internal sealed class BeamScoringProblem
                   LengthFraction = lengthFraction,
                   NoStemExtend = noStemExtend,
               };
-        _minStemLength = EngravingDefaults.MinStemLength;      // 2.5 staff spaces
-
         // LILYPOND-REF: lily/beam-quanting.cc:301-303 stem_infos_.push_back — one
         //   Stem::get_stem_info per stem, before any configuration is scored; every
         //   input (head, direction, direction beam count, thickness, translation, the
@@ -767,8 +761,6 @@ internal sealed class BeamScoringProblem
         if (_normalStemCount == 0)
             return NoVisibleStemPositions();
 
-        double minStemLen = _minStemLength; // staff-spaces
-
         // Least-squares: find best fit line through ideal positions
         // LILYPOND-REF: lily/beam-quanting.cc:588-603
         // For kneed beams, use per-member stem direction so the ideal positions
@@ -836,29 +828,26 @@ internal sealed class BeamScoringProblem
                 MinimiseLeastSquares(ideals, out slope, out intercept);
             }
 
+            // LILYPOND-REF: lily/beam-quanting.cc:590-597 least_squares_positions —
+            //   minimise_least_squares (&slope, &y, ideals); dy = slope * x_span_;
+            //   set_minimum_dy (beam_, &dy); unquanted_y_ = {y, (y + dy)}. The LEFT end is
+            //   the least-squares intercept and the min-dy floor lengthens dy RIGHTWARD.
+            //   Until session 395 this recentred the pair about its midpoint, half the bump
+            //   off LilyPond whenever the floor bit, and gated the floor on |dy| > 0.001 where
+            //   set_minimum_dy (:463-482) gates on dy != 0.0.
             leftY = intercept;
-            rightY = intercept + slope * _xSpan;
-
-            // Ensure dy is not smaller than the smallest quant step.
-            // ⚠️ LilyPond keeps the LEFT end and lengthens dy rightward
-            // (:597 unquanted_y_ = {y, (y + dy)}); this recentres instead, so the two
-            // differ by half the bump whenever MinimumDy actually bites. Not ported here
-            // because it moves every gently-sloped beam, not just the ones under test.
-            double dy = rightY - leftY;
-            if (Math.Abs(dy) > 0.001)
-            {
+            double dy = slope * _xSpan;
+            if (dy != 0.0)
                 dy = MinimumDy(dy);
+            rightY = leftY + dy;
 
-                double center = (leftY + rightY) / 2;
-                leftY = center - dy / 2;
-                rightY = center + dy / 2;
-            }
-
-            _musicalDy = rightY - leftY;
+            _musicalDy = dy;
         }
 
-        // Ensure minimum stem length for all notes
-        EnsureMinimumStemLength(ref leftY, ref rightY, minStemLen);
+        // (No uniform "minimum stem length" shift here: LilyPond's least_squares_positions
+        // ends at unquanted_y_, and the only stem floor it applies is shift_region_to_valid's
+        // per-stem shortest_y_ (ShiftRegionToValid). A flat 2.5 ss floor stood here until
+        // session 395 with no LilyPond counterpart.)
 
         return (leftY, rightY);
     }
@@ -951,35 +940,6 @@ internal sealed class BeamScoringProblem
         {
             slope = (n * sumXY - sumX * sumY) / denom;
             intercept = (sumY - slope * sumX) / n;
-        }
-    }
-
-    private void EnsureMinimumStemLength(ref double leftY, ref double rightY, double minStemLen)
-    {
-        // For kneed beams, skip the uniform shift — per-member directions
-        // mean there's no single shift direction that helps all stems.
-        // The quanting scorer handles stem length penalties instead.
-        if (_isKnee)
-            return;
-
-        double slope = _xSpan > 0.001 ? (rightY - leftY) / _xSpan : 0;
-        double maxShortage = 0;
-
-        for (int i = 0; i < _headMin.Length; i++)
-        {
-            double beamY = leftY + slope * _stemXPositions[i];
-            // Y is in staff-spaces; the integer staff position is a half-space,
-            // so ×0.5 converts it. Stem length is then a staff-space quantity.
-            double stemLength = _beamDir * (beamY - BeamSideHead(i) * 0.5);
-
-            if (stemLength < minStemLen)
-                maxShortage = Math.Max(maxShortage, minStemLen - stemLength);
-        }
-
-        if (maxShortage > 0)
-        {
-            leftY += _beamDir * maxShortage;
-            rightY += _beamDir * maxShortage;
         }
     }
 

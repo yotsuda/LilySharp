@@ -514,7 +514,8 @@ internal static partial class SharedRenderer
             if (flag.HasValue)
                 // Same term as a notation staff's: the Flag grob and its rule do not change
                 // with the staff kind (LayoutUtilities.FlagDrawX).
-                gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX), farY, FontSize, null);
+                gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX),
+                    LayoutUtilities.FlagPlacementY(farY, stemUp), FontSize, null);
         }
     }
 
